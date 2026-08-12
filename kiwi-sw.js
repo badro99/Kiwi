@@ -20,7 +20,11 @@ var CACHE = 'kiwi-app-v370';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
-  '/kiwi-serveur.html',
+  /* SANS le .html. Pages sert /kiwi-serveur.html en 308 vers /kiwi-serveur :
+     c.add() sur une réponse redirigée jette, la salle n'entrait donc JAMAIS
+     dans la coquille — en silence, puisque install() avale l'échec. Et c'est
+     bien /kiwi-serveur que l'application ouvre partout ailleurs. */
+  '/kiwi-serveur',
   /* L'écran cuisine. Dans la coquille hors-ligne parce qu'une cuisine est
      l'endroit du commerce où le wifi est le plus mauvais — mur porteur, four,
      sous-sol. La tablette doit au minimum se rouvrir sur son dernier tableau
@@ -320,6 +324,7 @@ self.addEventListener('fetch', function (e) {
           var p = url.pathname;
           if (p.indexOf('/kiwi-cuisine') === 0) return caches.match('/kiwi-cuisine.html');
           if (p.indexOf('/kiwi-caisse') === 0) return caches.match('/kiwi-caisse.html');
+          if (p.indexOf('/kiwi-serveur') === 0) return caches.match('/kiwi-serveur');
           return caches.match('/dashboard.html');
         });
       })

@@ -25,7 +25,13 @@ entries.forEach(({ base, rev }) => {
 });
 
 const shell = [...sw.matchAll(/^\s*'(\/[^']+)'[,;]?/gm)].map((m) => m[1]);
-shell.forEach((url) => ok(`${url} exists`, fs.existsSync(path.join(ROOT, url.split('?')[0].slice(1)))));
+/* « Le fichier est là » ne veut pas dire « l'URL répond ». Pages sert une page
+   sur son URL canonique SANS .html et renvoie 308 sur la forme .html — et une
+   réponse redirigée fait jeter c.add(), donc l'entrée n'entre jamais dans la
+   coquille, en silence. On résout donc les deux formes, ce qui autorise (et
+   c'est le but) la forme canonique dans SHELL. */
+const onDisk = (rel) => fs.existsSync(path.join(ROOT, rel)) || (!path.extname(rel) && fs.existsSync(path.join(ROOT, `${rel}.html`)));
+shell.forEach((url) => ok(`${url} exists`, onDisk(url.split('?')[0].slice(1))));
 
 /* Une estampille ?v= n'a de valeur que si les deux côtés portent LA MÊME. La
    clé de cache est l'URL complète : si kiwi-sw.js pré-cache /assets/venues.js?v=2

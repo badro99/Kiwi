@@ -282,6 +282,33 @@ for (const test of ['platform-kernel-test.mjs', 'platform-ops-test.mjs']) {
   }
 }
 
+/* ── 4g · les suites du jour, branchées sur la barrière ────────────────────
+ * Une suite posée dans tools/ n'est pas une barrière : elle ne protège que ce
+ * que check.js appelle. Ces huit-là existaient, passaient, et ne gardaient
+ * rien — la régression de demain sur les réservations, le planning, la
+ * réservation en ligne, la livraison, l'encaissement des tables ou le schéma
+ * D1 serait passée sans un mot. */
+section('Réservations, planning, livraison, encaissement, schéma');
+for (const test of [
+  'booking-api-test.mjs',
+  'd1-schema-test.mjs',
+  'order-delivery-test.mjs',
+  'planning-core-test.mjs',
+  'reservations-test.mjs',
+  'serveur-menu-live-test.mjs',
+  'service-settlement-test.mjs',
+  'recipe-heal-test.js',
+]) {
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', test)], { encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0) ok(`${test} green (${Math.max(0, (out.match(/✓/g) || []).length - 1)} controls)`);
+  else {
+    out.split('\n').filter((line) => line.includes('✗')).forEach((line) => fail(line.replace(/^\s*✗\s*/, '')));
+    if (!out.includes('✗')) fail(`${test} exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+  }
+}
+
 /* ── Receipt numbers are allocated, not inferred from the sales ledger. ─── */
 section('Numérotation multi-caisse (tools/ticket-sequence-test.mjs)');
 {
