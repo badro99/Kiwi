@@ -38,7 +38,7 @@ for (const page of ['dashboard.html', 'kiwi-caisse.html', 'kiwi-serveur.html']) 
   const html = read(page);
   const dexieAt = html.indexOf('assets/vendor/dexie.min.js');
   const offlineAt = html.indexOf('assets/offline-db.js?v=3');
-  const liveAt = html.indexOf('assets/live-link.js?v=5');
+  const liveAt = html.indexOf('assets/live-link.js?v=6');
   ok(dexieAt >= 0 && dexieAt < offlineAt && offlineAt < liveAt, page + ' loads Dexie → KiwiOffline → Live Link');
 }
 

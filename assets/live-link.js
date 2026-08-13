@@ -527,6 +527,7 @@
   function watchFeed(onSales, intervalMs) {
     if (!on()) return function () {};
     var since = 0, stopped = false, timer = null, busy = false, again = false, backfill = true;
+    var drainBackfill = false;
     var lastTenant = null;
     var bound = [];
     function delay() {
@@ -541,6 +542,7 @@
       if (stopped) return;
       if (busy) { again = true; return; }      // coalesce: one poll in flight at a time
       busy = true; again = false;
+      drainBackfill = false;
       flushQueue();                            // this device may still owe the server a sale
       /* `since` is a per-tenant cursor. Switching store switches tenant, so a
        * cursor carried over from the previous one would skip the new store's
@@ -565,17 +567,25 @@
                entitled history has arrived, so local reconciliation is safe. */
             if (data.sales.length < 50) feedComplete[tenant] = true;
             try { onSales(data.sales, backfill, tenant); } catch (_) {}
+            /* The feed is paginated at 50 rows. A full first page does NOT end
+               startup history: every following page is still old ledger data
+               and must stay silent. Drain full pages immediately, and unlock
+               notifications only after a short (or empty) page proves we have
+               reached the live edge. This also handles histories containing an
+               exact multiple of 50 rows, whose final proof is an empty page. */
+            if (backfill) {
+              drainBackfill = data.sales.length === 50;
+              if (!drainBackfill) backfill = false;
+            }
           }
-          // Only a real answer retires "backfill": the first successful poll
-          // replays everything already banked today, which must not be announced
-          // as if it just happened.
-          backfill = false;
         })
         .catch(function () {})
         .then(function () {
           busy = false;
           if (stopped) return;
-          if (again) { again = false; arm(0); } else arm();
+          if (again) { again = false; arm(0); }
+          else if (drainBackfill) arm(0);
+          else arm();
         });
     }
     function poke() { if (stopped) return; if (busy) { again = true; return; } arm(0); }

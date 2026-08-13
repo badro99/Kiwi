@@ -17,7 +17,7 @@ assert.doesNotMatch(selectedDay, /var\(--ink\)|var\(--surface\)/,
   'theme-inverted foreground/background tokens must not be paired here');
 assert.match(dashboard, /assets\/pages-pro\.js\?v=2059/,
   'the dashboard must load the corrected sales-page asset');
-assert.match(sw, /var CACHE = 'kiwi-app-v406'/,
+assert.match(sw, /var CACHE = 'kiwi-app-v407'/,
   'the service worker must invalidate the stale selected-day CSS');
 
 console.log('sales-day-contrast-test: 6 controls passed');
