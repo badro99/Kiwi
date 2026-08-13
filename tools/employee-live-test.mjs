@@ -453,7 +453,10 @@ ok(liveSocketSource.includes('window.KiwiLiveSocket = {')
 ok(caisseSource.includes('setInterval(pollLiveTeam, 1000)'),
   'la caisse reflète en direct les employés pointés, en pause et sortis');
 ok(caisseSource.includes('function startEmployeeSaleJournalSync()')
-  && caisseSource.includes("String(sale.id || '').endsWith('-emp')")
+  && caisseSource.includes('if (!sale || !(Number(sale.amount) > 0)) return;')
+  && caisseSource.includes("saleRef && String(entry.ref || '') === saleRef")
+  && caisseSource.includes("'&from=' + from")
+  && caisseSource.includes('KiwiLive.watchFeed(ingestCloudSales)')
   && caisseSource.includes('DR.businessDay(saleTs || Date.now()) !== currentBusinessDay()')
   && caisseSource.includes('journal.push(entry)')
   && caisseSource.includes('saveProvisional(true)'),

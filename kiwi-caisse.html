@@ -10680,21 +10680,20 @@
       if ($('#journal-drawer').classList.contains('is-open')) renderJournal();
     }
 
-    /* Payments completed on a waiter phone already exist in the SAME cloud
-       sales ledger as till payments. Mirror only those employee-tagged rows
-       into this open till's local day journal: the cashier then sees the sale,
-       its products and tender without recording the money a second time.
-       Backfill is intentional after a caisse reload, but never crosses the
-       current shift boundary. */
+    /* Every completed payment already exists in the SAME cloud sales ledger
+       that feeds Dashboard Commandes. Mirror that ledger into the open caisse
+       journal too: OrderPro, waiter and another till must all produce the same
+       Transactions list after a reload. The server id is not always the local
+       id, so the printed reference is the cross-device deduplication key. */
     let employeeSaleFeedStarted = false;
     function startEmployeeSaleJournalSync() {
       if (employeeSaleFeedStarted || !window.KiwiLive || !KiwiLive.watchFeed) return;
       employeeSaleFeedStarted = true;
-      KiwiLive.watchFeed((sales) => {
+      const ingestCloudSales = (sales) => {
         if (!(shiftOpenedAt instanceof Date) || isNaN(shiftOpenedAt.getTime())) return;
         let changed = false;
         (sales || []).forEach((sale) => {
-          if (!sale || !String(sale.id || '').endsWith('-emp')) return;
+          if (!sale || !(Number(sale.amount) > 0)) return;
           /* A caisse reload/reopen must not hide employee payments already made
              during the same commercial day. The old shiftOpenedAt filter did:
              a waiter paid at 17:00, the till reopened at 17:02, and the journal
@@ -10703,17 +10702,23 @@
           const DR = window.KiwiDayReport;
           if (DR && DR.businessDay && DR.businessDay(saleTs || Date.now()) !== currentBusinessDay()) return;
           if (!DR && saleTs < shiftOpenedAt.getTime() - 18 * 60 * 60 * 1000) return;
-          if (journal.some((entry) => entry && String(entry.id) === String(sale.id))) return;
+          const saleRef = String(sale.ref || '');
+          if (journal.some((entry) => entry && (
+            String(entry.id) === String(sale.id)
+            || (saleRef && String(entry.ref || '') === saleRef)
+          ))) return;
           const entry = {
             id: String(sale.id), time: new Date(Number(sale.ts) || Date.now()),
-            label: String(sale.label || 'Paiement équipe'), amount: money(sale.amount),
+            label: String(sale.label || 'Vente'), amount: money(sale.amount),
             method: String(sale.method || 'cash'), ref: String(sale.ref || sale.id),
-            tip: 0, cashier: String(sale.label || '').split(' · ').slice(1).join(' · ') || 'Équipe',
+            tip: 0, cashier: String(sale.label || '').split(' · ').slice(1).join(' · ') || 'Caisse',
+            channel: String(sale.channel || ''),
           };
           if (Array.isArray(sale.lines) && sale.lines.length) {
             entry.lines = sale.lines.map((line) => ({
               name: String(line.name || 'Article'), qty: Math.max(1, Number(line.qty) || 1),
               total: money(line.total), cat: String(line.cat || ''),
+              itemId: String(line.itemId || ''),
             }));
           }
           attachReceipt(entry);
@@ -10725,7 +10730,8 @@
              par le comptoir ou par le miroir, elle ne sort la marchandise
              qu'une fois. */
           try { window.KiwiInventoryConsumption?.record?.(entry); } catch (_) {}
-          shift.tablesPaid++;
+          if (entry.channel === 'dining' || entry.channel === 'terrace'
+            || String(entry.id).endsWith('-emp')) shift.tablesPaid++;
           changed = true;
         });
         if (!changed) return;
@@ -10733,7 +10739,23 @@
         try { saveProvisional(true); } catch (_) {}
         renderShiftStats();
         if ($('#journal-drawer').classList.contains('is-open')) renderJournal();
-      });
+      };
+      /* `watchFeed` starts at the merchant's first-ever row and pages forward.
+         A busy restaurant could therefore wait minutes before today's OP sale
+         appeared. Seed the journal from the bounded business-day endpoint,
+         then keep the normal cursor feed for live updates. */
+      try {
+        const merchant = currentMerchantSlug();
+        const DR = window.KiwiDayReport;
+        const bounds = DR && DR.dayBounds ? DR.dayBounds(currentBusinessDay()) : null;
+        const from = Number(bounds && bounds.from) || (Date.now() - 18 * 60 * 60 * 1000);
+        if (merchant) fetch('/api/feed?merchant=' + encodeURIComponent(merchant) + '&from=' + from, {
+          credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' },
+        }).then((r) => r.ok ? r.json() : null)
+          .then((data) => { if (data && Array.isArray(data.sales)) ingestCloudSales(data.sales); })
+          .catch(() => {});
+      } catch (_) {}
+      KiwiLive.watchFeed(ingestCloudSales);
     }
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', startEmployeeSaleJournalSync, { once: true });
