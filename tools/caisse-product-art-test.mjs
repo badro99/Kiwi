@@ -3,6 +3,7 @@ import fs from 'node:fs';
 
 const caisse = fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8');
 const manifest = fs.readFileSync(new URL('../manifest.webmanifest', import.meta.url), 'utf8');
+const tablerLicense = fs.readFileSync(new URL('../assets/icons/tabler/LICENSE.txt', import.meta.url), 'utf8');
 
 assert.match(caisse, /rel="icon" href="assets\/kiwi-favicon-new\.svg\?v=3"/,
   'the caisse browser tab declares the current Kiwi favicon');
@@ -22,5 +23,15 @@ assert.match(caisse, /menuArt\(m\.id, m\.cat, m\.name\)/,
   'the renderer passes the real product name to the artwork resolver');
 assert.match(caisse, /const semantic = MENU_ART_RULES\.find/,
   'semantic artwork takes precedence before the category fallback');
+assert.match(caisse, /let art = semantic && semantic\[1\];[\s\S]*if \(!art\) art = MENU_ART\[id\]/,
+  'semantic artwork also supersedes legacy demo-id artwork');
+assert.match(caisse, /MENU_LIBRARY_ART = \{[\s\S]*salad:[\s\S]*soup:[\s\S]*teapot:[\s\S]*coffee:[\s\S]*citrus:/,
+  'the menu includes distinct, recognizable food and drink silhouettes');
+assert.match(caisse, /viewBox = '0 0 24 24'/,
+  'library artwork keeps its native optical grid instead of being distorted');
+assert.match(caisse, /menu-art--library/,
+  'open-source silhouettes receive an optical-size treatment');
+assert.match(tablerLicense, /MIT License[\s\S]*Paweł Kuna/,
+  'the bundled Tabler-derived silhouettes retain their license notice');
 
-console.log('caisse-product-art-test: 16 controls passed');
+console.log('caisse-product-art-test: 21 controls passed');
