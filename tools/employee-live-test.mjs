@@ -23,6 +23,8 @@ const env = { DB, AUTH_SECRET: crypto.randomUUID() + crypto.randomUUID() };
 const API = await import(path.join(ROOT, 'functions/api/employee.js'));
 const TEAM_LIVE = await import(path.join(ROOT, 'functions/api/team/live.js'));
 const STORE = await import(path.join(ROOT, 'functions/api/store.js'));
+const SALE = await import(path.join(ROOT, 'functions/api/sale.js'));
+const FEED = await import(path.join(ROOT, 'functions/api/feed.js'));
 const GATE = await import(path.join(ROOT, 'functions/_middleware.js'));
 const AUTH = await import(path.join(ROOT, 'functions/auth/_lib.js'));
 
@@ -71,6 +73,18 @@ async function teamLiveGet() {
   return TEAM_LIVE.onRequestGet({ env, request: new Request('https://kiwi.test/api/team/live?merchant=amira-cafe', {
     headers: { Cookie: tillCookie },
   }) });
+}
+async function salePost(body, cookie) {
+  return SALE.onRequestPost({ env, request: new Request('https://kiwi.test/api/sale', {
+    method: 'POST', headers: { 'Content-Type': 'application/json', Cookie: cookie },
+    body: JSON.stringify(body),
+  }) });
+}
+async function paidFeed(from) {
+  return FEED.onRequestGet({ env, request: new Request(
+    `https://kiwi.test/api/feed?merchant=amira-cafe&from=${from}`,
+    { headers: { Cookie: tillCookie } },
+  ) });
 }
 
 const bad = await post({ action: 'login', email: 'sara@amira.test', pin: '1111' });
@@ -280,6 +294,50 @@ ok(selfPause.status === 403, "un employé ne peut pas s'accorder sa propre pause
 const liveBeforePause = await teamLiveGet(); const liveBeforeState = await liveBeforePause.json();
 ok(liveBeforePause.status === 200 && liveBeforeState.members[0].status === 'on-duty',
   'la caisse lit le vrai pointage en cours, pas le roster sauvegardé');
+
+// Financial parity simulation: an editable employee order must remain outside
+// the immutable sales ledger. The one acknowledged settlement is then the
+// single row read by dashboard AND caisse, complete with its frozen basket.
+const ledgerNow = Date.now();
+put(`INSERT INTO table_sessions
+  (id,merchant,mode,table_no,status,closed_by,opened_ts,seen_ts)
+  VALUES (?,?,?,?,?,?,?,?)`,
+  'tsx-employee-ledger', 'amira-cafe', 'table', '99', 'open', '', ledgerNow - 60000, ledgerNow);
+put(`INSERT INTO orders
+  (id,merchant,number,mode,table_no,total,lines,status,created_ts,updated_ts,session_id,server_name,channel)
+  VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+  'ord-employee-ledger', 'amira-cafe', 990, 'table', '99', 85,
+  JSON.stringify([{ id: 'tajine-kefta', name: 'Tajine kefta œuf', qty: 1, unitPrice: 85 }]),
+  'served', ledgerNow - 30000, ledgerNow - 30000, 'tsx-employee-ledger', 'Sara Serveuse', 'kiwi');
+const beforeEmployeePayment = await paidFeed(ledgerNow - 120000);
+const beforeEmployeeRows = await beforeEmployeePayment.json();
+ok(beforeEmployeePayment.status === 200 && beforeEmployeeRows.sales.length === 0,
+  "une commande employé encore modifiable n'entre pas dans les ventes");
+const employeePaymentBody = {
+  merchant: 'amira-cafe', table: '99', session: 'tsx-employee-ledger',
+  amount: 85, method: 'cash', ts: ledgerNow, label: 'SB-PARITY', ref: 'SB-PARITY',
+  channel: 'dining',
+  lines: [{ itemId: 'tajine-kefta', name: 'Tajine kefta œuf', qty: 1, total: 85, cat: 'Plats' }],
+};
+const employeePayment = await salePost(employeePaymentBody, cookie);
+ok(employeePayment.status === 200,
+  "le paiement final de l'app employé est acquitté par le journal financier partagé");
+const afterEmployeePayment = await paidFeed(ledgerNow - 120000);
+const afterEmployeeRows = await afterEmployeePayment.json();
+const mirroredEmployeeSale = afterEmployeeRows.sales[0];
+ok(afterEmployeePayment.status === 200 && afterEmployeeRows.sales.length === 1
+  && mirroredEmployeeSale.amount === 85
+  && mirroredEmployeeSale.orderRef === 'SB-PARITY'
+  && mirroredEmployeeSale.server === 'Sara Serveuse'
+  && mirroredEmployeeSale.lines[0].name === 'Tajine kefta œuf',
+  'dashboard et caisse relisent la même vente employé, son serveur et ses articles');
+await salePost(employeePaymentBody, cookie);
+const afterEmployeeRetry = await paidFeed(ledgerNow - 120000);
+const afterEmployeeRetryRows = await afterEmployeeRetry.json();
+const settledEmployeeOrder = sqlite.prepare("SELECT paid_ts FROM orders WHERE id='ord-employee-ledger'").get();
+ok(afterEmployeeRetryRows.sales.length === 1 && Number(settledEmployeeOrder.paid_ts) > 0,
+  'un nouvel envoi du même paiement reste idempotent et la commande devient payée une seule fois');
+
 const pause = await teamLivePost({ action: 'manager-pause', memberId: 'mem-sara' });
 ok(pause.status === 200, 'la caisse donne la pause dans le pointage partagé');
 const duringPause = await get(cookie); const pausedState = await duringPause.json();
@@ -453,14 +511,35 @@ ok(liveSocketSource.includes('window.KiwiLiveSocket = {')
 ok(caisseSource.includes('setInterval(pollLiveTeam, 1000)'),
   'la caisse reflète en direct les employés pointés, en pause et sortis');
 ok(caisseSource.includes('function startEmployeeSaleJournalSync()')
+  && caisseSource.includes('function ingestSettledCloudSales(sales)')
+  && caisseSource.includes('function syncSettledBusinessDay()')
   && caisseSource.includes('if (!sale || !(Number(sale.amount) > 0)) return;')
-  && caisseSource.includes("saleRef && String(entry.ref || '') === saleRef")
+  && caisseSource.includes('saleRefs.some((ref) => String(entry.ref || \'\') === ref)')
   && caisseSource.includes("'&from=' + from")
-  && caisseSource.includes('KiwiLive.watchFeed(ingestCloudSales)')
+  && caisseSource.includes('KiwiLive.watchFeed(ingestSettledCloudSales)')
   && caisseSource.includes('DR.businessDay(saleTs || Date.now()) !== currentBusinessDay()')
   && caisseSource.includes('journal.push(entry)')
   && caisseSource.includes('saveProvisional(true)'),
   "un paiement téléphone rejoint une seule fois le journal du service caisse avec ses lignes");
+ok(/function doOpenService\(\)[\s\S]*?shiftOpenedAt = [\s\S]*?startEmployeeSaleJournalSync\(\)/.test(caisseSource)
+  && caisseSource.includes('if (shiftOpenedAt) startEmployeeSaleJournalSync();')
+  && caisseSource.includes('feed only contains SETTLED sales')
+  && serviceSource.includes('if (hasUnsent || dirtyOrders.has(id))')
+  && serviceSource.includes("await fetch('/api/sale'")
+  && serviceSource.includes('if (!response.ok || !saved || !saved.ok) throw'),
+  "le miroir financier démarre après ouverture/reprise et n'importe que les commandes définitivement payées");
+ok(caisseSource.includes("label: String(sale.orderRef || sale.label || 'Vente')")
+  && caisseSource.includes('cashier: String(sale.server || sourceLabel)')
+  && caisseSource.includes("origin === 'employee' ? 'App employé'")
+  && caisseSource.includes('if (e.origin)          entry.origin   = e.origin')
+  && caisseSource.includes('if (e.channel)         entry.channel  = e.channel'),
+  "le journal restauré conserve la référence, le serveur, la source et le canal du paiement");
+ok(caisseSource.includes('function renderResume(r)')
+  && caisseSource.includes('function renderItems(r)')
+  && caisseSource.includes("if (rpTab === 'resume') renderResume(r)")
+  && caisseSource.includes("else if (rpTab === 'items') renderItems(r)")
+  && caisseSource.includes("rpTab = b.dataset.rpTab"),
+  "Résumé et Ventes par article sont de vrais lecteurs du journal financier partagé");
 ok(caisseSource.includes('id="open-attendance-code"')
   && caisseSource.includes("action: 'generate-attendance-code'")
   && caisseSource.includes('Valide encore'),

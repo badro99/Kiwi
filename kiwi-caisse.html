@@ -4665,7 +4665,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=358" defer></script>
-  <script src="assets/caisse-pwa.js?v=373" defer></script>
+  <script src="assets/caisse-pwa.js?v=374" defer></script>
   <script src="assets/live-link.js?v=6" defer></script>
   <!-- The staff-role catalogue — says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -10763,80 +10763,125 @@
        Transactions list after a reload. The server id is not always the local
        id, so the printed reference is the cross-device deduplication key. */
     let employeeSaleFeedStarted = false;
-    function startEmployeeSaleJournalSync() {
-      if (employeeSaleFeedStarted || !window.KiwiLive || !KiwiLive.watchFeed) return;
-      employeeSaleFeedStarted = true;
-      const ingestCloudSales = (sales) => {
-        if (!(shiftOpenedAt instanceof Date) || isNaN(shiftOpenedAt.getTime())) return;
-        let changed = false;
-        (sales || []).forEach((sale) => {
-          if (!sale || !(Number(sale.amount) > 0)) return;
+    let employeeSaleFeedMerchant = '';
+
+    /* Convert one immutable /api/feed row into the caisse journal shape. The
+       feed only contains SETTLED sales: editable OrderPro / employee orders do
+       not enter this path until /api/sale has accepted their final payment. */
+    function cloudSaleJournalEntry(sale) {
+      const origin = String(sale.origin || 'caisse').toLowerCase();
+      const sourceLabel = origin === 'employee' ? 'App employé'
+        : (origin === 'orderpro' ? 'OrderPro' : 'Caisse');
+      const entry = {
+        id: String(sale.id), time: new Date(Number(sale.ts) || Date.now()),
+        label: String(sale.orderRef || sale.label || 'Vente'), amount: money(sale.amount),
+        method: String(sale.method || 'cash'), ref: String(sale.receiptRef || sale.ref || sale.id),
+        tip: 0, cashier: String(sale.server || sourceLabel),
+        channel: String(sale.channel || ''), origin: origin,
+      };
+      if (Array.isArray(sale.lines) && sale.lines.length) {
+        entry.lines = sale.lines.map((line) => ({
+          name: String(line.name || 'Article'), qty: Math.max(1, Number(line.qty) || 1),
+          total: money(line.total), cat: String(line.cat || ''),
+          itemId: String(line.itemId || ''),
+        }));
+      }
+      return entry;
+    }
+
+    function ingestSettledCloudSales(sales) {
+      /* Never advance/drop the financial feed before a register exists. This
+         was the parity bug: watchFeed started at DOMContentLoaded, called this
+         branch while shiftOpenedAt was null, then advanced its cursor forever. */
+      if (!(shiftOpenedAt instanceof Date) || isNaN(shiftOpenedAt.getTime())) return 0;
+      let changed = false;
+      (sales || []).forEach((sale) => {
+        if (!sale || !(Number(sale.amount) > 0)) return;
           /* A caisse reload/reopen must not hide employee payments already made
              during the same commercial day. The old shiftOpenedAt filter did:
              a waiter paid at 17:00, the till reopened at 17:02, and the journal
              stayed at zero forever. Use the shared business-day boundary. */
-          const saleTs = Number(sale.ts || 0);
-          const DR = window.KiwiDayReport;
-          if (DR && DR.businessDay && DR.businessDay(saleTs || Date.now()) !== currentBusinessDay()) return;
-          if (!DR && saleTs < shiftOpenedAt.getTime() - 18 * 60 * 60 * 1000) return;
-          const saleRef = String(sale.ref || '');
-          if (journal.some((entry) => entry && (
-            String(entry.id) === String(sale.id)
-            || (saleRef && String(entry.ref || '') === saleRef)
-          ))) return;
-          const entry = {
-            id: String(sale.id), time: new Date(Number(sale.ts) || Date.now()),
-            label: String(sale.label || 'Vente'), amount: money(sale.amount),
-            method: String(sale.method || 'cash'), ref: String(sale.ref || sale.id),
-            tip: 0, cashier: String(sale.label || '').split(' · ').slice(1).join(' · ') || 'Caisse',
-            channel: String(sale.channel || ''),
-          };
-          if (Array.isArray(sale.lines) && sale.lines.length) {
-            entry.lines = sale.lines.map((line) => ({
-              name: String(line.name || 'Article'), qty: Math.max(1, Number(line.qty) || 1),
-              total: money(line.total), cat: String(line.cat || ''),
-              itemId: String(line.itemId || ''),
-            }));
-          }
-          attachReceipt(entry);
-          journal.push(entry);
+        const saleTs = Number(sale.ts || 0);
+        const DR = window.KiwiDayReport;
+        if (DR && DR.businessDay && DR.businessDay(saleTs || Date.now()) !== currentBusinessDay()) return;
+        if (!DR && saleTs < shiftOpenedAt.getTime() - 18 * 60 * 60 * 1000) return;
+        const saleRefs = [sale.receiptRef, sale.ref, sale.orderRef]
+          .map((v) => String(v || '')).filter(Boolean);
+        if (journal.some((entry) => entry && (
+          String(entry.id) === String(sale.id)
+          || saleRefs.some((ref) => String(entry.ref || '') === ref)
+        ))) return;
+        const entry = cloudSaleJournalEntry(sale);
+        attachReceipt(entry);
+        journal.push(entry);
           /* Une addition réglée sur le téléphone d'un serveur est une vente du
              même commerce, sur le même stock. Ces lignes-là arrivent du serveur
              sans itemId — le moteur les repêche par nom de plat. L'identifiant
              de mouvement dérive de la référence du ticket : que la vente entre
              par le comptoir ou par le miroir, elle ne sort la marchandise
              qu'une fois. */
-          try { window.KiwiInventoryConsumption?.record?.(entry); } catch (_) {}
-          if (entry.channel === 'dining' || entry.channel === 'terrace'
-            || String(entry.id).endsWith('-emp')) shift.tablesPaid++;
-          changed = true;
-        });
-        if (!changed) return;
-        try { persistShift(); } catch (_) {}
-        try { saveProvisional(true); } catch (_) {}
-        renderShiftStats();
-        if ($('#journal-drawer').classList.contains('is-open')) renderJournal();
-      };
+        try { window.KiwiInventoryConsumption?.record?.(entry); } catch (_) {}
+        if (entry.channel === 'dining' || entry.channel === 'terrace'
+          || String(entry.id).endsWith('-emp')) shift.tablesPaid++;
+        changed = true;
+      });
+      if (!changed) return 0;
+      /* Chronological journal = stable report, stable last-ticket action, and
+         the same ordering after a reload no matter which device took payment. */
+      journal.sort((a, b) => (+new Date(a.time) || 0) - (+new Date(b.time) || 0));
+      try { persistShift(); } catch (_) {}
+      try { saveProvisional(true); } catch (_) {}
+      renderShiftStats();
+      if ($('#journal-drawer').classList.contains('is-open')) renderJournal();
+      return 1;
+    }
+
+    /* Reconcile the complete commercial day before listening for deltas. This
+       is the authoritative parity pass shared with Dashboard Commandes. */
+    function syncSettledBusinessDay() {
+      if (!(shiftOpenedAt instanceof Date) || isNaN(shiftOpenedAt.getTime())) return Promise.resolve(false);
+      const merchant = currentMerchantSlug();
+      if (!merchant) return Promise.resolve(false);
+      const DR = window.KiwiDayReport;
+      const bounds = DR && DR.dayBounds ? DR.dayBounds(currentBusinessDay()) : null;
+      const from = Number(bounds && bounds.from) || (Date.now() - 18 * 60 * 60 * 1000);
+      return fetch('/api/feed?merchant=' + encodeURIComponent(merchant) + '&from=' + from, {
+        credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' },
+      }).then((r) => r.ok ? r.json() : null)
+        .then((data) => {
+          if (!data || !Array.isArray(data.sales)) return false;
+          ingestSettledCloudSales(data.sales);
+          return true;
+        }).catch(() => false);
+    }
+
+    function startEmployeeSaleJournalSync() {
+      /* Opening/restoring the register is the start signal. Starting earlier
+         consumes history without somewhere to persist it. */
+      if (!(shiftOpenedAt instanceof Date) || isNaN(shiftOpenedAt.getTime())) return;
+      if (!window.KiwiLive || !KiwiLive.watchFeed) return;
+      const merchant = currentMerchantSlug();
+      if (employeeSaleFeedStarted && employeeSaleFeedMerchant === merchant) {
+        syncSettledBusinessDay();
+        return;
+      }
+      employeeSaleFeedStarted = true;
+      employeeSaleFeedMerchant = merchant;
       /* `watchFeed` starts at the merchant's first-ever row and pages forward.
          A busy restaurant could therefore wait minutes before today's OP sale
          appeared. Seed the journal from the bounded business-day endpoint,
          then keep the normal cursor feed for live updates. */
-      try {
-        const merchant = currentMerchantSlug();
-        const DR = window.KiwiDayReport;
-        const bounds = DR && DR.dayBounds ? DR.dayBounds(currentBusinessDay()) : null;
-        const from = Number(bounds && bounds.from) || (Date.now() - 18 * 60 * 60 * 1000);
-        if (merchant) fetch('/api/feed?merchant=' + encodeURIComponent(merchant) + '&from=' + from, {
-          credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' },
-        }).then((r) => r.ok ? r.json() : null)
-          .then((data) => { if (data && Array.isArray(data.sales)) ingestCloudSales(data.sales); })
-          .catch(() => {});
-      } catch (_) {}
-      KiwiLive.watchFeed(ingestCloudSales);
+      syncSettledBusinessDay();
+      KiwiLive.watchFeed(ingestSettledCloudSales);
     }
+    /* A restored register exists before deferred scripts run. A fresh register
+       does not: doOpenService() below starts the bridge at the exact moment it
+       creates shiftOpenedAt. */
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', startEmployeeSaleJournalSync, { once: true });
-    } else startEmployeeSaleJournalSync();
+      document.addEventListener('DOMContentLoaded', () => {
+        if (shiftOpenedAt) startEmployeeSaleJournalSync();
+      }, { once: true });
+    } else if (shiftOpenedAt) startEmployeeSaleJournalSync();
 
     /* ═══════════ CLIENT & FIDÉLITÉ SUR LA NOTE ══════════════════════════════
      * assets/clients-store.js (le carnet) et assets/clients-book.js (l'écran)
@@ -11484,6 +11529,9 @@
       if (!_realStore) seedJournal();
       renderShiftStats();
       try { saveProvisional(true); } catch (_) {}
+      /* Only now may the shared settled-sales ledger hydrate Transactions,
+         Résumé and Ventes par article. Unpaid orders remain outside it. */
+      startEmployeeSaleJournalSync();
 
       setTimeout(() => runEntrySequence(clockinEl), 540);
     }
@@ -12033,13 +12081,16 @@
           : fmtMAD(e.amount);
         const refundedTag = e.refunded
           ? `<span class="jr-tag-refunded">remboursé</span>` : '';
+        const sourceMeta = e.origin === 'employee'
+          ? ` · App employé${e.cashier ? ' · ' + rpEsc(e.cashier) : ''}`
+          : (e.origin === 'orderpro' ? ' · OrderPro' : '');
         const tipMeta = (!isRefund && e.tip > 0)
           ? ` · pourboire ${fmtMAD(e.tip)}` : '';
         return `<button class="jr-entry${fresh}" data-jr-ref="${e.ref}">`
              + `<span class="jr-entry-ic jr-entry-ic--${icCls}"><i data-lucide="${icon}"></i></span>`
              + `<span class="jr-entry-main">`
              +   `<span class="jr-entry-label">${e.label}${refundedTag}</span>`
-             +   `<span class="jr-entry-meta">${hh}:${mm} · ${mLabel} · ${e.ref}${tipMeta}</span>`
+             +   `<span class="jr-entry-meta">${hh}:${mm} · ${mLabel} · ${e.ref}${sourceMeta}${tipMeta}</span>`
              + `</span>`
              + `<span class="jr-entry-amount${isRefund ? ' is-refund' : ''}">${amtTxt}</span>`
              + `<span class="jr-entry-reprint" data-jr-print="${e.ref}" role="button" tabindex="0" aria-label="Réimprimer le ticket ${e.ref}"><i data-lucide="printer"></i></span>`
@@ -15868,6 +15919,8 @@
         if (e.tip)             entry.tip      = e.tip;       // pourboire
         if (e.lines)           entry.lines    = e.lines;     // itemised receipt
         if (e.cashier)         entry.cashier  = e.cashier;   // ringing cashier
+        if (e.channel)         entry.channel  = e.channel;   // dining / takeaway / OrderPro
+        if (e.origin)          entry.origin   = e.origin;    // caisse / employee / OrderPro
         /* Le reçu figé au moment de la vente. Cette boucle recopie champ par
            champ (elle ne fait pas Object.assign), donc tout ce qui n'est pas
            nommé ici est PERDU au rechargement — et une caisse recharge tous les

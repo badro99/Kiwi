@@ -57,7 +57,7 @@ ok('le règlement au comptoir sort la marchandise',
 ok('une vente sortie des livres rend la marchandise',
   /KiwiInventoryConsumption\?\.reverse\?\./.test(body('reconcileVoids')));
 ok('une addition réglée sur le téléphone du serveur sort la marchandise',
-  /KiwiInventoryConsumption\?\.record\?\.\(entry\)/.test(body('startEmployeeSaleJournalSync')));
+  /KiwiInventoryConsumption\?\.record\?\.\(entry\)/.test(body('ingestSettledCloudSales')));
 /* Les lignes doivent porter leur identifiant, sinon tout repose sur le nom. */
 ok('les lignes du comptoir portent leur itemId', /itemId:\s*(c\.id|l\.id)/.test(body('currentSaleLines')));
 
