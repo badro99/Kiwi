@@ -59,7 +59,13 @@ db.prepare('INSERT INTO accounts (id, business) VALUES (?, ?)').run('acc-owner',
 db.prepare('INSERT INTO merchant_config (merchant, account_id, status) VALUES (?, ?, ?)').run(MERCHANT, 'acc-owner', 'active');
 db.prepare('INSERT INTO merchant_config (merchant, account_id, status) VALUES (?, ?, ?)').run(OTHER, 'acc-stranger', 'active');
 db.prepare('INSERT INTO store_docs (merchant, feature, data, updated_ts) VALUES (?, ?, ?, ?)')
-  .run(MERCHANT, 'team', JSON.stringify({ members: [{ id: 'emp-1', name: 'Salma', function: 'Caissière' }] }), 2);
+  .run(MERCHANT, 'team', JSON.stringify({ members: [
+    { id: 'emp-1', name: 'Salma', function: 'Caissière' },
+    /* Une responsable de salle : elle porte `action:refund` sans porter
+       `write:payment`, ce qui est exactement la frontière que les liens de
+       paiement doivent respecter. */
+    { id: 'emp-2', name: 'Nadia', function: 'Manager' },
+  ] }), 2);
 
 const env = { DB: D1(db), AUTH_SECRET: SECRET };
 
@@ -68,6 +74,7 @@ const env = { DB: D1(db), AUTH_SECRET: SECRET };
 const ownerCookie = `kiwi_sess=${await makeSession('acc-owner', SECRET)}`;
 const tillCookie = `kiwi_till=${await tillToken(SECRET, MERCHANT)}`;
 const staffCookie = `kiwi_employee=${await employeeToken(SECRET, { merchant: MERCHANT, staffId: 'emp-1' })}`;
+const managerCookie = `kiwi_employee=${await employeeToken(SECRET, { merchant: MERCHANT, staffId: 'emp-2' })}`;
 
 function request(cookie, { method = 'GET', query = '', body } = {}) {
   const headers = {};
@@ -152,6 +159,78 @@ ok(liveLink.data.command.status === 'active' && liveLink.data.command.result.url
 
 const badAmount = await post(ownerCookie, command({ id: 'op:owner-pay-004', idempotencyKey: 'op:owner-pay-004', domain: 'payment', action: 'create-link', payload: { amount: -5 } }), payEnv);
 ok(badAmount.data.command.status === 'failed' && badAmount.data.command.lastError === 'invalid-amount', 'a negative amount never reaches the provider');
+
+/* ── Le lien de paiement, de l'encaissement au remboursement ──────────────────
+ *
+ * `create-link` était la seule des quatre actions réellement branchée : annuler
+ * et rembourser n'existaient que dans la liste blanche, retombaient sur la
+ * branche par défaut d'execute() et répondaient `draft` + {persisted:true} sans
+ * appeler personne.  Ce bloc conduit PAY-000001 — le lien que `liveLink` vient
+ * d'ouvrir — jusqu'au remboursement intégral, et vérifie que le plafond tient. */
+const payCmd = (id, action, payload) => command({
+  id, idempotencyKey: id, domain: 'payment', action, confirmed: true, payload,
+});
+
+const unknownRef = await post(ownerCookie, payCmd('op:owner-pay-005', 'cancel-link', { reference: 'PAY-999999' }), payEnv);
+ok(unknownRef.data.command.status === 'failed' && unknownRef.data.command.lastError === 'link-not-found', 'a reference the merchant never issued cannot be cancelled');
+
+const earlyRefund = await post(ownerCookie, payCmd('op:owner-pay-006', 'refund-link', { reference: 'PAY-000001', amount: 50 }), payEnv);
+ok(earlyRefund.data.command.status === 'failed' && earlyRefund.data.command.lastError === 'link-not-paid', 'a link nobody has paid cannot be refunded');
+
+/* Le fournisseur annonce 300 MAD sur un lien de 214 : on encaisse 214. */
+webhookReply = { status: 'paid', paidAmount: 300 };
+const paySettled = await post(ownerCookie, payCmd('op:owner-pay-007', 'settle-link', { reference: 'PAY-000001' }), payEnv);
+ok(paySettled.data.command.status === 'completed' && paySettled.data.command.result.status === 'paid'
+  && paySettled.data.command.result.paidCents === 21400, 'a talkative provider cannot bank more than the link asked for');
+
+const cancelPaid = await post(ownerCookie, payCmd('op:owner-pay-008', 'cancel-link', { reference: 'PAY-000001' }), payEnv);
+ok(cancelPaid.data.command.status === 'failed' && cancelPaid.data.command.lastError === 'link-already-paid', 'a paid link is refunded, never cancelled');
+
+webhookReply = { reference: 'REF-REFUND-1' };
+const partRefund = await post(ownerCookie, payCmd('op:owner-pay-009', 'refund-link', { reference: 'PAY-000001', amount: 100, reason: 'Article manquant' }), payEnv);
+ok(partRefund.data.command.status === 'completed' && partRefund.data.command.result.number === 'PAY-000001/R1'
+  && partRefund.data.command.result.refundedCents === 10000 && partRefund.data.command.result.status === 'partially-refunded',
+  'a partial refund is numbered against its link and moves it out of `paid`');
+
+const overRefund = await post(ownerCookie, payCmd('op:owner-pay-010', 'refund-link', { reference: 'PAY-000001', amount: 150 }), payEnv);
+ok(overRefund.data.command.status === 'failed' && overRefund.data.command.lastError === 'refund-exceeds-paid', 'the remboursé is a sum, not a counter: 100 + 150 cannot come out of 214');
+
+/* Une responsable de salle rembourse — c'est `action:refund` — mais n'émet pas
+   de lien, qui coûte `write:payment` et n'appartient qu'au propriétaire. */
+const managerAtTill = managerCookie + '; ' + tillCookie;
+const managerRefund = await post(managerAtTill, payCmd('op:mgr-pay-001', 'refund-link', { reference: 'PAY-000001', amount: 114 }), payEnv);
+ok(managerRefund.status === 200 && managerRefund.data.command.result.number === 'PAY-000001/R2'
+  && managerRefund.data.command.result.status === 'refunded' && managerRefund.data.command.result.refundableCents === 0,
+  'a manager may hand money back, and the second line closes the link');
+
+const managerIssues = await post(managerAtTill, command({ id: 'op:mgr-pay-002', idempotencyKey: 'op:mgr-pay-002', domain: 'payment', action: 'create-link', payload: { amount: 40 } }), payEnv);
+ok(managerIssues.status === 403 && managerIssues.data.error === 'permission-denied', 'refunding is not issuing: a manager cannot open a payment link');
+
+const tillRefund = await post(tillCookie, payCmd('op:till-pay-001', 'refund-link', { reference: 'PAY-000001', amount: 10 }), payEnv);
+ok(tillRefund.status === 403 && tillRefund.data.error === 'permission-denied', 'a pairing cookie cannot refund anything');
+
+webhookReply = { url: 'https://pay.example/def', reference: 'REF-OK-2' };
+const second = await post(ownerCookie, command({ id: 'op:owner-pay-011', idempotencyKey: 'op:owner-pay-011', domain: 'payment', action: 'create-link', payload: { amount: 60 } }), payEnv);
+ok(second.data.command.result.reference === 'PAY-000002', 'the merchant’s own numbering continues, whatever the provider calls it');
+
+webhookReply = { accepted: true };
+const cancelled = await post(ownerCookie, payCmd('op:owner-pay-012', 'cancel-link', { reference: 'PAY-000002' }), payEnv);
+ok(cancelled.data.command.status === 'completed' && cancelled.data.command.result.status === 'cancelled'
+  && cancelled.data.command.result.alreadyCancelled === false, 'an unpaid link is cancelled at the provider and in the book');
+
+const cancelAgain = await post(ownerCookie, payCmd('op:owner-pay-013', 'cancel-link', { reference: 'PAY-000002' }), payEnv);
+ok(cancelAgain.data.command.status === 'completed' && cancelAgain.data.command.result.alreadyCancelled === true,
+  'replaying a cancellation succeeds and admits it had nothing left to do');
+
+const payView = await get(ownerCookie, '?merchant=' + MERCHANT + '&view=payments');
+const linkBook = new Map((payView.data.links || []).map((l) => [l.reference, l]));
+ok(payView.status === 200 && payView.data.links.length === 2 && payView.data.links[0].reference === 'PAY-000002', 'the payments book reads back newest first');
+ok(linkBook.get('PAY-000001').status === 'refunded' && linkBook.get('PAY-000001').refundedCents === 21400
+  && linkBook.get('PAY-000001').refunds === 2, 'the book recomputes the remboursé from the refund lines themselves');
+
+const tillPayView = await get(tillCookie, '?merchant=' + MERCHANT + '&view=payments');
+ok(tillPayView.status === 403, 'a paired till cannot read the merchant’s payment book');
+
 provider.close();
 
 const staged = await post(ownerCookie, { merchant: MERCHANT, commandId: 'op:owner-po-001', transition: 'pending-approval' });
@@ -586,6 +665,23 @@ ok(/\['eq-export-payroll', 'pay-export', 'export-payroll', 'acct-paie'\]\.forEac
   'all four payroll entry points open the real console for a real merchant');
 ok(uiSource.includes('openPayroll:openPayroll') && browserSource.includes("view: 'payslips'"),
   'the payroll console is exported and reads the month back from the server');
+/* Paiements — un lien qu'on ne peut pas relire, annuler ni rembourser depuis le
+   produit n'est pas un livre, c'est un formulaire. */
+['settle-link', 'cancel-link', 'refund-link'].forEach((action) =>
+  ok(uiSource.includes(`data-lk-run="${action}"`), `the product can reach payment ${action}`));
+ok(uiSource.includes("O.create('payment', 'create-link'") && uiSource.includes('data-lk-book'),
+  'the payments console emits a link and reads the payment book back');
+/* create-link se termine en `active` : le lien vit, il n'est pas terminé. */
+ok(uiSource.includes("cmd.status !== 'completed' && cmd.status !== 'active'"), 'a live payment link is not reported as a failure');
+ok(uiSource.includes('data-lk-confirm="cancel-link"') && uiSource.includes('data-lk-confirm="refund-link"'),
+  'cancelling and refunding a link both demand an explicit confirmation');
+/* Le serveur rembourse tout le remboursable quand le montant est absent —
+   envoyer 0 se ferait refuser.  Le champ vide ne doit donc rien envoyer. */
+ok(uiSource.includes("if (asked !== '')") && uiSource.includes('payload.amount = Number(asked)'),
+  'an empty refund amount means the whole refundable, never a zero the server would refuse');
+ok(uiSource.includes('openPayments:openPayments') && uiSource.includes("openPayments('link')") && browserSource.includes("view: 'payments'"),
+  'the payments console is exported, opened from the payment-link button and reads the book from the server');
+
 /* Version-agnostic on purpose: a cache-stamp bump is how a fix ships, so the
    gate must assert the script is wired, never which generation it is on. */
 pages.forEach((page, i) => ok(/assets\/operations\.js\?v=\d+/.test(page), `operational shell ${i + 1} loads the command client`));

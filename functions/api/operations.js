@@ -17,7 +17,7 @@ const ACTIONS = {
   procurement: new Set(['create-po', 'submit-po', 'receive-po', 'supplier-return']),
   payroll: new Set(['export-payroll', 'prepare-payslips', 'submit-cnss']),
   accounting: new Set(['export-journal', 'create-invoice', 'credit-note', 'lock-period']),
-  payment: new Set(['create-link', 'cancel-link', 'refund-link']),
+  payment: new Set(['create-link', 'cancel-link', 'refund-link', 'settle-link']),
   device: new Set(['heartbeat', 'test-print', 'ack-alert']),
   ai: new Set(['reprint', 'update-order-status', 'message-customer', 'create-po']),
 };
@@ -141,6 +141,11 @@ function needed(domain, action) {
   if (domain === 'notification') return ['action', 'message'];
   if (domain === 'procurement') return ['write', 'inventory'];
   if (domain === 'payroll') return ['write', 'payroll'];
+  /* Rembourser, c'est rendre de l'argent : le droit qui compte est celui du
+     remboursement, pas celui d'émettre un lien.  Relever l'état auprès du
+     fournisseur ne change rien et reste une lecture. */
+  if (domain === 'payment' && action === 'refund-link') return ['action', 'refund'];
+  if (domain === 'payment' && action === 'settle-link') return ['read', 'payment'];
   if (domain === 'ai' && action === 'reprint') return ['action', 'reprint'];
   return ['write', domain];
 }
@@ -990,6 +995,236 @@ async function payroll(env, row, payload) {
   }, totals), '');
 }
 
+/* ————— Encaissement à distance —————————————————————————————————————————
+ *
+ * `create-link` appelait déjà un vrai fournisseur, mais `cancel-link` et
+ * `refund-link` n'existaient que dans la liste blanche : elles retombaient sur
+ * la branche par défaut d'execute() et répondaient `draft` + {persisted:true}
+ * sans rien annuler ni rembourser.  Trois invariants tiennent ici :
+ *
+ *   · le lien est une pièce du commerçant.  Sa référence PAY-000001 est
+ *     attribuée par le serveur ; celle du fournisseur n'est qu'un identifiant
+ *     externe rangé à côté, jamais la clé sur laquelle on raisonne ;
+ *   · un lien ne devient « payé » que parce que le fournisseur l'affirme
+ *     (`settle-link`), jamais parce qu'un client l'a cliqué — et le montant
+ *     annoncé est écrêté au montant demandé, sinon un fournisseur bavard
+ *     gonflerait la recette ;
+ *   · le remboursé est la SOMME des lignes de remboursement, pas un compteur.
+ *     L'index unique sur le numéro fait échouer la seconde écriture simultanée,
+ *     on relit alors le total et on re-vérifie le plafond avant de réessayer :
+ *     deux remboursements lancés ensemble ne peuvent pas dépasser l'encaissé.
+ */
+async function ensurePayments(env) {
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS payment_links (
+      merchant TEXT NOT NULL, reference TEXT NOT NULL, seq INTEGER NOT NULL,
+      command_id TEXT NOT NULL DEFAULT '', provider_ref TEXT NOT NULL DEFAULT '',
+      url TEXT NOT NULL DEFAULT '', amount_cents INTEGER NOT NULL,
+      paid_cents INTEGER NOT NULL DEFAULT 0, currency TEXT NOT NULL DEFAULT 'MAD',
+      description TEXT NOT NULL DEFAULT '', customer TEXT NOT NULL DEFAULT '',
+      status TEXT NOT NULL, created_ts INTEGER NOT NULL, updated_ts INTEGER NOT NULL,
+      PRIMARY KEY (merchant, reference)
+    )`
+  ).run();
+  await env.DB.prepare('CREATE UNIQUE INDEX IF NOT EXISTS idx_pay_seq ON payment_links (merchant, seq)').run();
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS payment_refunds (
+      id TEXT PRIMARY KEY, merchant TEXT NOT NULL, reference TEXT NOT NULL,
+      number TEXT NOT NULL, amount_cents INTEGER NOT NULL, reason TEXT NOT NULL DEFAULT '',
+      command_id TEXT NOT NULL DEFAULT '', provider_ref TEXT NOT NULL DEFAULT '',
+      created_ts INTEGER NOT NULL
+    )`
+  ).run();
+  await env.DB.prepare('CREATE UNIQUE INDEX IF NOT EXISTS idx_pay_refund_number ON payment_refunds (merchant, number)').run();
+  await env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_pay_refund_ref ON payment_refunds (merchant, reference, created_ts)').run();
+}
+
+async function refundedFor(env, merchant, reference) {
+  const seen = await env.DB.prepare(
+    'SELECT COUNT(*) AS lines, COALESCE(SUM(amount_cents), 0) AS total FROM payment_refunds WHERE merchant = ? AND reference = ?'
+  ).bind(merchant, reference).first();
+  return { lines: Number((seen && seen.lines) || 0), total: Number((seen && seen.total) || 0) };
+}
+
+/* L'état se déduit des montants, jamais de l'ordre d'arrivée des commandes :
+   un `settle-link` qui traîne ne doit pas repeindre en « payé » un lien déjà
+   remboursé. */
+function linkState(base, paidCents, refundedCents) {
+  if (refundedCents > 0) return refundedCents >= paidCents ? 'refunded' : 'partially-refunded';
+  if (paidCents > 0) return 'paid';
+  return base;
+}
+
+function linkView(link, paidCents, refundedCents) {
+  return {
+    reference: clean(link.reference, 40),
+    status: linkState(clean(link.status, 24), paidCents, refundedCents),
+    amountCents: Number(link.amount_cents || 0),
+    paidCents, refundedCents,
+    refundableCents: Math.max(0, paidCents - refundedCents),
+    currency: clean(link.currency, 3), url: clean(link.url, 800),
+    customer: clean(link.customer, 160), description: clean(link.description, 240),
+    providerRef: clean(link.provider_ref, 160),
+  };
+}
+
+async function writeLink(env, wish) {
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const top = await env.DB.prepare(
+      'SELECT COALESCE(MAX(seq), 0) AS taken FROM payment_links WHERE merchant = ?'
+    ).bind(wish.merchant).first();
+    const seq = Number((top && top.taken) || 0) + 1;
+    const reference = `PAY-${String(seq).padStart(6, '0')}`;
+    const at = now();
+    try {
+      await env.DB.prepare(
+        `INSERT INTO payment_links (merchant, reference, seq, command_id, provider_ref, url,
+           amount_cents, paid_cents, currency, description, customer, status, created_ts, updated_ts)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, 'active', ?, ?)`
+      ).bind(wish.merchant, reference, seq, wish.commandId, wish.providerRef, wish.url,
+        wish.amountCents, wish.currency, wish.description, wish.customer, at, at).run();
+      return { seq, reference };
+    } catch (_) { /* rang pris entre-temps — on recommence sur le suivant */ }
+  }
+  return null;
+}
+
+async function writeRefund(env, wish) {
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const seen = await refundedFor(env, wish.merchant, wish.reference);
+    if (wish.amountCents > wish.paidCents - seen.total) return { ok: false, reason: 'refund-exceeds-paid' };
+    const number = `${wish.reference}/R${seen.lines + 1}`;
+    try {
+      await env.DB.prepare(
+        `INSERT INTO payment_refunds (id, merchant, reference, number, amount_cents, reason,
+           command_id, provider_ref, created_ts)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ).bind(`${wish.merchant}:${number}`, wish.merchant, wish.reference, number, wish.amountCents,
+        wish.reason, wish.commandId, wish.providerRef, now()).run();
+      return { ok: true, number, refundedCents: seen.total + wish.amountCents };
+    } catch (_) { /* numéro pris — on relit le total et on re-vérifie le plafond */ }
+  }
+  return { ok: false, reason: 'refund-number-taken' };
+}
+
+const SETTLED = new Set(['pending', 'active', 'paid', 'expired', 'cancelled']);
+
+async function payments(env, row, payload) {
+  await ensurePayments(env);
+  const merchant = row.merchant;
+  const fail = (reason) => update(env, row, 'failed', 'payment-link', {}, reason);
+  const held = (reason) => update(env, row, 'blocked', 'payment-link', {}, reason);
+
+  if (row.action === 'create-link') {
+    const amountCents = cents(payload.amount);
+    if (!Number.isFinite(amountCents) || amountCents <= 0 || amountCents > 1000000000) return fail('invalid-amount');
+    const currency = clean(payload.currency || 'MAD', 3).toUpperCase();
+    const description = clean(payload.description, 240);
+    const customer = clean(payload.customer, 160);
+    const delivered = await postWebhook(env.PAYMENT_LINK_WEBHOOK, {
+      kind: 'payment-link', merchant, commandId: row.id,
+      amount: amountCents / 100, currency, description, customer,
+      expiresAt: Number(payload.expiresAt || 0) || null,
+    });
+    if (!delivered.ok) return held(delivered.reason || 'provider-failed');
+    const url = clean(delivered.data && delivered.data.url, 800);
+    const providerRef = clean(delivered.data && delivered.data.reference, 160);
+    if (!/^https:\/\//.test(url)) return fail('provider-returned-no-link');
+    const written = await writeLink(env, {
+      merchant, commandId: row.id, providerRef, url,
+      amountCents, currency, description, customer,
+    });
+    if (!written) return fail('reference-allocation-failed');
+    return update(env, row, 'active', 'payment-link', {
+      url, reference: written.reference, providerRef,
+      amountCents, currency, status: 'active',
+    }, '');
+  }
+
+  const reference = clean(payload.reference, 40);
+  if (!reference) return fail('reference-required');
+  const link = await env.DB.prepare(
+    'SELECT * FROM payment_links WHERE merchant = ? AND reference = ?'
+  ).bind(merchant, reference).first();
+  if (!link) return fail('link-not-found');
+  const refunds = await refundedFor(env, merchant, reference);
+  const refundedCents = refunds.total;
+  let paidCents = Number(link.paid_cents || 0);
+  const state = linkState(clean(link.status, 24), paidCents, refundedCents);
+
+  if (row.action === 'cancel-link') {
+    /* Rejouer une annulation ne doit pas rappeler le fournisseur ni échouer :
+       la commande a déjà eu l'effet demandé. */
+    if (state === 'cancelled') {
+      return update(env, row, 'completed', 'payment-link',
+        Object.assign(linkView(link, paidCents, refundedCents), { alreadyCancelled: true }), '');
+    }
+    if (paidCents > 0) return fail('link-already-paid');
+    const answer = await postWebhook(env.PAYMENT_LINK_WEBHOOK, {
+      kind: 'payment-cancel', merchant, commandId: row.id,
+      reference, providerRef: clean(link.provider_ref, 160),
+    });
+    if (!answer.ok) return held(answer.reason || 'provider-failed');
+    await env.DB.prepare(
+      'UPDATE payment_links SET status = ?, updated_ts = ? WHERE merchant = ? AND reference = ?'
+    ).bind('cancelled', now(), merchant, reference).run();
+    return update(env, row, 'completed', 'payment-link', Object.assign(
+      linkView(link, paidCents, refundedCents), { status: 'cancelled', alreadyCancelled: false }), '');
+  }
+
+  if (row.action === 'settle-link') {
+    const answer = await postWebhook(env.PAYMENT_LINK_WEBHOOK, {
+      kind: 'payment-status', merchant, commandId: row.id,
+      reference, providerRef: clean(link.provider_ref, 160),
+    });
+    if (!answer.ok) return held(answer.reason || 'provider-failed');
+    const observed = clean(answer.data && answer.data.status, 24).toLowerCase();
+    if (!SETTLED.has(observed)) return fail('provider-returned-no-status');
+    let base = clean(link.status, 24);
+    if (observed === 'paid') {
+      const seen = answer.data.paidAmount == null
+        ? Number(link.amount_cents || 0) : cents(answer.data.paidAmount);
+      if (!Number.isFinite(seen) || seen <= 0) return fail('provider-returned-no-amount');
+      paidCents = Math.min(seen, Number(link.amount_cents || 0));
+      base = 'paid';
+    } else if (observed === 'expired' || observed === 'cancelled') { base = observed; }
+    const status = linkState(base, paidCents, refundedCents);
+    await env.DB.prepare(
+      'UPDATE payment_links SET paid_cents = ?, status = ?, updated_ts = ? WHERE merchant = ? AND reference = ?'
+    ).bind(paidCents, status, now(), merchant, reference).run();
+    return update(env, row, 'completed', 'payment-link', Object.assign(
+      linkView(link, paidCents, refundedCents), { status, observed }), '');
+  }
+
+  if (row.action === 'refund-link') {
+    if (paidCents <= 0) return fail('link-not-paid');
+    const askedCents = payload.amount == null ? paidCents - refundedCents : cents(payload.amount);
+    if (!Number.isFinite(askedCents) || askedCents <= 0) return fail('invalid-amount');
+    if (askedCents > paidCents - refundedCents) return fail('refund-exceeds-paid');
+    const answer = await postWebhook(env.PAYMENT_LINK_WEBHOOK, {
+      kind: 'payment-refund', merchant, commandId: row.id, reference,
+      providerRef: clean(link.provider_ref, 160), amount: askedCents / 100,
+      currency: clean(link.currency, 3), reason: clean(payload.reason, 240),
+    });
+    if (!answer.ok) return held(answer.reason || 'provider-failed');
+    const written = await writeRefund(env, {
+      merchant, reference, amountCents: askedCents, paidCents,
+      reason: clean(payload.reason, 240), commandId: row.id,
+      providerRef: clean(answer.data && answer.data.reference, 160),
+    });
+    if (!written.ok) return fail(written.reason);
+    const status = linkState(clean(link.status, 24), paidCents, written.refundedCents);
+    await env.DB.prepare(
+      'UPDATE payment_links SET status = ?, updated_ts = ? WHERE merchant = ? AND reference = ?'
+    ).bind(status, now(), merchant, reference).run();
+    return update(env, row, 'completed', 'payment-link', Object.assign(
+      linkView(link, paidCents, written.refundedCents),
+      { status, number: written.number, refundCents: askedCents }), '');
+  }
+
+  return fail('unsupported-action');
+}
+
 async function execute(env, row, payload) {
   if (row.domain === 'device' && row.action === 'heartbeat') {
     return update(env, row, 'completed', 'kiwi-device', { recorded: true }, '');
@@ -1011,20 +1246,7 @@ async function execute(env, row, payload) {
       ? update(env, row, 'sent', provider, { delivered: true }, '')
       : update(env, row, 'blocked', provider, {}, delivered && delivered.reason || 'delivery-failed');
   }
-  if (row.domain === 'payment' && row.action === 'create-link') {
-    const amount = Number(payload.amount);
-    if (!(amount > 0 && amount <= 10000000)) return update(env, row, 'failed', 'payment-link', {}, 'invalid-amount');
-    const delivered = await postWebhook(env.PAYMENT_LINK_WEBHOOK, {
-      kind: 'payment-link', merchant: row.merchant, commandId: row.id,
-      amount: Math.round(amount * 100) / 100, currency: clean(payload.currency || 'MAD', 3).toUpperCase(),
-      description: clean(payload.description, 240), customer: clean(payload.customer, 160),
-      expiresAt: Number(payload.expiresAt || 0) || null,
-    });
-    const url = delivered && delivered.data && clean(delivered.data.url, 800);
-    if (!delivered.ok) return update(env, row, 'blocked', 'payment-link', {}, delivered.reason || 'provider-failed');
-    if (!/^https:\/\//.test(url)) return update(env, row, 'failed', 'payment-link', {}, 'provider-returned-no-link');
-    return update(env, row, 'active', 'payment-link', { url, reference: clean(delivered.data.reference, 160) }, '');
-  }
+  if (row.domain === 'payment') return payments(env, row, payload);
   if (row.domain === 'device' && row.action === 'test-print') {
     return update(env, row, 'pending-approval', 'local-device', { instruction: 'execute-on-requesting-device' }, '');
   }
@@ -1093,6 +1315,30 @@ export async function onRequestGet({ request, env }) {
   /* Le livre de paie se lit aussi à part.  Sans période, on renvoie l'état de
      chaque mois — préparé, journalisé, déclaré — parce que c'est la question
      que le commerçant pose en premier : « où j'en suis ? ». */
+  if (clean(url.searchParams.get('view'), 24) === 'payments') {
+    try {
+      await ensurePayments(env);
+      const links = await env.DB.prepare(
+        `SELECT * FROM payment_links WHERE merchant = ? ORDER BY seq DESC LIMIT 200`
+      ).bind(merchant).all();
+      const rows = (links && links.results) || [];
+      /* Le remboursé est relu ligne à ligne : c'est la seule valeur que le
+         journal des remboursements peut contredire. */
+      const paid = await env.DB.prepare(
+        `SELECT reference, COUNT(*) AS lines, COALESCE(SUM(amount_cents), 0) AS total
+           FROM payment_refunds WHERE merchant = ? GROUP BY reference`
+      ).bind(merchant).all();
+      const back = new Map(((paid && paid.results) || []).map((r) => [String(r.reference), r]));
+      return json({ merchant, providers: providers(env), links: rows.map((link) => {
+        const seen = back.get(String(link.reference));
+        const refundedCents = Number((seen && seen.total) || 0);
+        return Object.assign(linkView(link, Number(link.paid_cents || 0), refundedCents), {
+          refunds: Number((seen && seen.lines) || 0),
+          createdAt: Number(link.created_ts || 0), updatedAt: Number(link.updated_ts || 0),
+        });
+      }) });
+    } catch (_) { return json({ error: 'db' }, 503); }
+  }
   if (clean(url.searchParams.get('view'), 24) === 'payslips') {
     try {
       await ensurePayroll(env);

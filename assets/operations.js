@@ -29,6 +29,10 @@
        figures everywhere else in the product, and a payroll export is a list of
        salaries.  No role but owner/operator holds write:payroll. */
     if (domain === 'payroll') return ['write', 'payroll'];
+    /* Rendre l'argent est un droit distinct d'émettre un lien ; relever l'état
+       auprès du fournisseur reste une lecture.  Miroir du serveur. */
+    if (domain === 'payment' && action === 'refund-link') return ['action', 'refund'];
+    if (domain === 'payment' && action === 'settle-link') return ['read', 'payment'];
     if (domain === 'ai' && action === 'reprint') return ['action', 'reprint'];
     return ['write', domain];
   }
@@ -107,6 +111,15 @@
     if (opts.open) query.set('state', 'open');
     return responseJson(await fetch('/api/operations?' + query.toString(), { credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' } }));
   }
+  /* Le livre des liens de paiement : encaissé, remboursé, remboursable.  La
+     lecture est réservée au propriétaire côté serveur — le client ne recopie
+     pas cette règle, il laisse le 403 remonter tel quel. */
+  async function payments(opts) {
+    opts = opts || {};
+    var query = new URLSearchParams({ merchant: K.tenant(), view: 'payments' });
+    if (opts.limit) query.set('limit', String(Math.max(1, Math.min(200, +opts.limit || 50))));
+    return responseJson(await fetch('/api/operations?' + query.toString(), { credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' } }));
+  }
   async function payslips(opts) {
     opts = opts || {};
     var query = new URLSearchParams({ merchant: K.tenant(), view: 'payslips' });
@@ -165,7 +178,7 @@
   }, 1800);
 
   window.KiwiOperations = {
-    version: 1, create: create, list: list, purchaseOrders: purchaseOrders, payslips: payslips, transition: transition, flush: flush,
+    version: 1, create: create, list: list, purchaseOrders: purchaseOrders, payslips: payslips, payments: payments, transition: transition, flush: flush,
     allowed: allowed, subscribe: function (fn) { listeners.add(fn); return function () { listeners.delete(fn); }; },
   };
 })();

@@ -48,6 +48,21 @@
           payLoading:'Lecture du livre de paie…', payNone:'Aucun bulletin sur cette période.',
           payDone:'Bulletins calculés et enregistrés.', payAlready:'Déjà fait — rien n’a changé.',
           payStatus:{ prepared:'Préparée', exported:'Comptabilisée', declared:'Déclarée' },
+          lkTitle:'Paiements', lkSub:'Liens de paiement durables · encaissement, annulation, remboursement',
+          lkDenied:'Droit d’encaissement requis', lkDeniedD:'Votre session ne peut pas émettre de lien de paiement. Kiwi le dit avant de vous faire saisir un montant.',
+          tabLink:'Nouveau lien', tabLinks:'Liens émis',
+          lkHint:'Le lien n’existe que si le fournisseur en renvoie un. Tant qu’il ne répond pas, Kiwi conserve la demande et n’invente aucune adresse.',
+          lkNoProvider:'Aucun fournisseur de paiement n’est branché sur ce compte. La demande sera conservée, mais aucun lien ne sera créé.',
+          lkLoading:'Lecture du livre des paiements…', lkNone:'Aucun lien de paiement émis.',
+          lkAmountK:'Montant', lkPaid:'Encaissé', lkRefunded:'Remboursé', lkRefundable:'Remboursable', lkRefundCount:'Remboursements',
+          lkCopy:'Copier le lien', lkCopied:'Lien copié',
+          lkSettleTitle:'Relever l’état', lkSettleHint:'Kiwi interroge le fournisseur et recopie ce qu’il annonce — jamais plus que le montant du lien.',
+          lkCancelTitle:'Annuler le lien', lkCancelHint:'Un lien déjà encaissé ne s’annule pas : il se rembourse.',
+          lkRefundTitle:'Rembourser', lkRefundHint:'On ne rend que ce qui a été encaissé, et jamais deux fois la même somme.',
+          lkRefundAmount:'Montant à rembourser · MAD (vide = tout le remboursable)', lkRefundReason:'Motif (facultatif)',
+          lkSettle:'Relever', lkCancel:'Annuler le lien', lkRefund:'Rembourser',
+          lkDone:'Livre des paiements mis à jour.', lkAlready:'Déjà annulé — rien n’a changé.',
+          lkStatus:{ active:'Actif', pending:'En attente', paid:'Payé', 'partially-refunded':'Partiellement remboursé', refunded:'Remboursé', cancelled:'Annulé', expired:'Expiré' },
           acctTitle:'Comptabilité', acctSub:'Écritures durables · plan comptable marocain',
           tabInvoice:'Facture', tabCredit:'Avoir', tabPeriod:'Période', tabJournal:'Journal',
           acctDenied:'Réservé au propriétaire', acctDeniedD:'Seul le compte propriétaire — ou un opérateur Kiwi — peut écrire dans les livres. Votre session n’a pas ce droit, et Kiwi préfère le dire avant de vous faire remplir un formulaire.',
@@ -89,6 +104,19 @@
             'period-declared':'Période déjà déclarée à la CNSS — les bulletins sont figés.',
             'period-posted':'Période déjà comptabilisée — recalculer changerait une écriture passée.',
             'invalid-rate':'Taux invalide', 'invalid-ceiling':'Plafond CNSS invalide.',
+            'reference-required':'Référence du lien manquante.', 'link-not-found':'Ce lien de paiement n’existe pas.',
+            'link-already-paid':'Ce lien a déjà encaissé — il se rembourse, il ne s’annule pas.',
+            'link-not-paid':'Rien n’a été encaissé sur ce lien — il n’y a rien à rendre.',
+            'refund-exceeds-paid':'Le remboursement dépasse ce qui reste remboursable.',
+            'refund-number-taken':'Numéro de remboursement déjà pris — renvoyez la demande.',
+            'reference-allocation-failed':'Numérotation des liens saturée — renvoyez la demande.',
+            'provider-unconfigured':'Aucun fournisseur de paiement branché sur ce compte.',
+            'provider-network':'Le fournisseur n’a pas répondu — rien n’a été affirmé.',
+            'provider-http':'Le fournisseur a refusé la demande',
+            'provider-returned-no-link':'Le fournisseur n’a renvoyé aucun lien valide — Kiwi n’en invente pas.',
+            'provider-returned-no-status':'Le fournisseur n’a annoncé aucun état exploitable.',
+            'provider-returned-no-amount':'Le fournisseur n’a annoncé aucun montant exploitable.',
+            'unsupported-action':'Action inconnue.',
           },
         },
         en: {
@@ -128,6 +156,21 @@
           payLoading:'Reading the payroll book…', payNone:'No payslip in this period.',
           payDone:'Payslips computed and stored.', payAlready:'Already done — nothing changed.',
           payStatus:{ prepared:'Prepared', exported:'Posted', declared:'Filed' },
+          lkTitle:'Payments', lkSub:'Durable payment links · collection, cancellation, refund',
+          lkDenied:'Collection right required', lkDeniedD:'Your session cannot issue a payment link. Kiwi says so before it makes you type an amount.',
+          tabLink:'New link', tabLinks:'Issued links',
+          lkHint:'The link exists only if the provider returns one. Until it answers, Kiwi keeps the request and invents no address.',
+          lkNoProvider:'No payment provider is wired to this account. The request will be kept, but no link will be created.',
+          lkLoading:'Reading the payment book…', lkNone:'No payment link issued.',
+          lkAmountK:'Amount', lkPaid:'Collected', lkRefunded:'Refunded', lkRefundable:'Refundable', lkRefundCount:'Refunds',
+          lkCopy:'Copy the link', lkCopied:'Link copied',
+          lkSettleTitle:'Read the state', lkSettleHint:'Kiwi asks the provider and copies what it announces — never more than the link amount.',
+          lkCancelTitle:'Cancel the link', lkCancelHint:'A link already collected is not cancelled — it is refunded.',
+          lkRefundTitle:'Refund', lkRefundHint:'Only what was collected is given back, and never the same sum twice.',
+          lkRefundAmount:'Amount to refund · MAD (empty = the whole refundable)', lkRefundReason:'Reason (optional)',
+          lkSettle:'Read', lkCancel:'Cancel the link', lkRefund:'Refund',
+          lkDone:'Payment book updated.', lkAlready:'Already cancelled — nothing changed.',
+          lkStatus:{ active:'Active', pending:'Pending', paid:'Paid', 'partially-refunded':'Partially refunded', refunded:'Refunded', cancelled:'Cancelled', expired:'Expired' },
           acctTitle:'Accounting', acctSub:'Durable entries · Moroccan chart of accounts',
           tabInvoice:'Invoice', tabCredit:'Credit note', tabPeriod:'Period', tabJournal:'Journal',
           acctDenied:'Owner only', acctDeniedD:'Only the owner account — or a Kiwi operator — can write to the books. Your session does not hold that right, and Kiwi says so before you fill in a form.',
@@ -169,6 +212,19 @@
             'period-declared':'Period already filed with CNSS — the payslips are frozen.',
             'period-posted':'Period already posted — recomputing would change a past entry.',
             'invalid-rate':'Invalid rate', 'invalid-ceiling':'Invalid CNSS ceiling.',
+            'reference-required':'Missing link reference.', 'link-not-found':'This payment link does not exist.',
+            'link-already-paid':'This link already collected — it is refunded, not cancelled.',
+            'link-not-paid':'Nothing was collected on this link — there is nothing to give back.',
+            'refund-exceeds-paid':'The refund exceeds what is still refundable.',
+            'refund-number-taken':'Refund number already taken — send the request again.',
+            'reference-allocation-failed':'Link numbering saturated — send the request again.',
+            'provider-unconfigured':'No payment provider wired to this account.',
+            'provider-network':'The provider did not answer — nothing was claimed.',
+            'provider-http':'The provider refused the request',
+            'provider-returned-no-link':'The provider returned no valid link — Kiwi does not invent one.',
+            'provider-returned-no-status':'The provider announced no usable status.',
+            'provider-returned-no-amount':'The provider announced no usable amount.',
+            'unsupported-action':'Unknown action.',
           },
         },
         ar: {
@@ -208,6 +264,21 @@
           payLoading:'جارٍ قراءة دفتر الأجور…', payNone:'لا يوجد كشف في هذه الفترة.',
           payDone:'تم احتساب الكشوف وحفظها.', payAlready:'تم سابقًا — لم يتغيّر شيء.',
           payStatus:{ prepared:'محتسبة', exported:'مقيّدة', declared:'مصرَّح بها' },
+          lkTitle:'المدفوعات', lkSub:'روابط أداء دائمة · التحصيل والإلغاء والاسترجاع',
+          lkDenied:'يلزم حق التحصيل', lkDeniedD:'جلستك لا يمكنها إصدار رابط أداء. يقولها Kiwi قبل أن يطلب منك إدخال أي مبلغ.',
+          tabLink:'رابط جديد', tabLinks:'الروابط الصادرة',
+          lkHint:'لا يوجد الرابط إلا إذا أعاده المزوّد. وما دام لم يجب، يحتفظ Kiwi بالطلب ولا يخترع أي عنوان.',
+          lkNoProvider:'لا يوجد مزوّد أداء موصول بهذا الحساب. سيُحتفظ بالطلب، لكن لن يُنشأ أي رابط.',
+          lkLoading:'جارٍ قراءة دفتر المدفوعات…', lkNone:'لم يصدر أي رابط أداء.',
+          lkAmountK:'المبلغ', lkPaid:'المحصَّل', lkRefunded:'المسترجَع', lkRefundable:'القابل للاسترجاع', lkRefundCount:'الاسترجاعات',
+          lkCopy:'نسخ الرابط', lkCopied:'تم نسخ الرابط',
+          lkSettleTitle:'قراءة الحالة', lkSettleHint:'يسأل Kiwi المزوّد وينقل ما يعلنه — ولا يتجاوز أبدًا مبلغ الرابط.',
+          lkCancelTitle:'إلغاء الرابط', lkCancelHint:'الرابط المحصَّل لا يُلغى، بل يُسترجع.',
+          lkRefundTitle:'استرجاع', lkRefundHint:'لا يُرد إلا ما تم تحصيله، ولا يُرد المبلغ نفسه مرتين.',
+          lkRefundAmount:'المبلغ المراد استرجاعه · درهم (فارغ = كل القابل للاسترجاع)', lkRefundReason:'السبب (اختياري)',
+          lkSettle:'قراءة', lkCancel:'إلغاء الرابط', lkRefund:'استرجاع',
+          lkDone:'تم تحديث دفتر المدفوعات.', lkAlready:'ألغي سابقًا — لم يتغيّر شيء.',
+          lkStatus:{ active:'نشط', pending:'قيد الانتظار', paid:'مؤدّى', 'partially-refunded':'مسترجَع جزئيًا', refunded:'مسترجَع', cancelled:'ملغى', expired:'منتهي' },
           acctTitle:'المحاسبة', acctSub:'قيود دائمة · المخطط المحاسبي المغربي',
           tabInvoice:'فاتورة', tabCredit:'إشعار دائن', tabPeriod:'الفترة', tabJournal:'اليومية',
           acctDenied:'خاص بالمالك', acctDeniedD:'وحده حساب المالك — أو مشغّل Kiwi — يمكنه الكتابة في الدفاتر. جلستك لا تملك هذا الحق، ويقولها Kiwi قبل أن تملأ أي استمارة.',
@@ -249,6 +320,19 @@
             'period-declared':'الفترة مصرَّح بها لدى الضمان الاجتماعي — الكشوف مجمّدة.',
             'period-posted':'الفترة مقيَّدة سابقًا — إعادة الاحتساب ستغيّر قيدًا ماضيًا.',
             'invalid-rate':'نسبة غير صالحة', 'invalid-ceiling':'سقف الضمان الاجتماعي غير صالح.',
+            'reference-required':'مرجع الرابط ناقص.', 'link-not-found':'رابط الأداء هذا غير موجود.',
+            'link-already-paid':'هذا الرابط حصّل مبلغًا — يُسترجع ولا يُلغى.',
+            'link-not-paid':'لم يُحصَّل شيء على هذا الرابط — لا شيء يُرد.',
+            'refund-exceeds-paid':'الاسترجاع يتجاوز ما تبقى قابلًا للاسترجاع.',
+            'refund-number-taken':'رقم الاسترجاع مأخوذ — أعد إرسال الطلب.',
+            'reference-allocation-failed':'ترقيم الروابط مشبع — أعد إرسال الطلب.',
+            'provider-unconfigured':'لا يوجد مزوّد أداء موصول بهذا الحساب.',
+            'provider-network':'لم يجب المزوّد — ولم يُدَّع أي شيء.',
+            'provider-http':'رفض المزوّد الطلب',
+            'provider-returned-no-link':'لم يُعِد المزوّد أي رابط صالح — وKiwi لا يخترع رابطًا.',
+            'provider-returned-no-status':'لم يعلن المزوّد أي حالة قابلة للاستعمال.',
+            'provider-returned-no-amount':'لم يعلن المزوّد أي مبلغ قابل للاستعمال.',
+            'unsupported-action':'إجراء غير معروف.',
           },
         },
       })[lang()];
@@ -271,24 +355,12 @@
     }
 
     var legacyPayment = H['payment-link'];
+    /* Émettre un lien sans pouvoir le relire ensuite, c'était la moitié du
+       travail.  Le bouton ouvre maintenant la console : on émet dans un
+       onglet, on relit le livre dans l'autre. */
     H['payment-link'] = function () {
       if (!real() && legacyPayment) return legacyPayment.apply(this, arguments);
-      var c = text();
-      var modal = Kiwi.modal({ tag:'KIWI PAY', title:c.payment, desc:'Le lien n’apparaît qu’après confirmation du fournisseur.', width:520,
-        body:'<div class="kf-grid">' +
-          '<label><span class="l">'+c.amount+'</span><input type="number" min="1" max="10000000" step="0.01" data-op-amount></label>' +
-          '<label><span class="l">'+c.customer+'</span><input maxlength="160" data-op-customer></label>' +
-          '<label style="grid-column:1/-1"><span class="l">'+c.desc+'</span><input maxlength="240" data-op-desc></label>' +
-          '</div><button class="kb atlas" style="width:100%;justify-content:center;margin-top:14px" type="button" data-op-payment>'+c.create+'</button>' });
-      modal.el.querySelector('[data-op-payment]').addEventListener('click', async function () {
-        var amount = Number(modal.el.querySelector('[data-op-amount]').value);
-        if (!(amount > 0)) return Kiwi.toast(c.invalid, { type:'warning' });
-        this.disabled = true;
-        try {
-          var result = await O.create('payment', 'create-link', { amount:amount, currency:'MAD', customer:modal.el.querySelector('[data-op-customer]').value, description:modal.el.querySelector('[data-op-desc]').value });
-          modal.close(); toastResult(result);
-        } catch (error) { this.disabled = false; fail(error); }
-      });
+      openPayments('link');
     };
 
     var legacyPo = H['supplier-new-po'];
@@ -405,27 +477,29 @@
       var style = document.createElement('style');
       style.id = 'ops-console-css';
       style.textContent = [
-        '.ops-acct,.ops-proc,.ops-pay{padding:22px 26px 46px;max-width:1000px;margin:0 auto;}',
-        '.ops-acct-tabs,.ops-proc-tabs,.ops-pay-tabs{display:inline-flex;gap:2px;padding:4px;border-radius:999px;background:var(--n-100);border:1px solid var(--n-200);margin-bottom:22px;}',
-        '.ops-acct-tab,.ops-proc-tab,.ops-pay-tab{appearance:none;border:0;background:transparent;font:inherit;font-size:12.5px;font-weight:600;color:var(--n-500);padding:8px 18px;border-radius:999px;cursor:pointer;transition:color .2s;}',
+        /* `ops-pay-*` appartient déjà à la paie : les liens de paiement prennent
+           leur propre préfixe `ops-lk-*` et s'ajoutent aux listes partagées. */
+        '.ops-acct,.ops-proc,.ops-pay,.ops-lk{padding:22px 26px 46px;max-width:1000px;margin:0 auto;}',
+        '.ops-acct-tabs,.ops-proc-tabs,.ops-pay-tabs,.ops-lk-tabs{display:inline-flex;gap:2px;padding:4px;border-radius:999px;background:var(--n-100);border:1px solid var(--n-200);margin-bottom:22px;}',
+        '.ops-acct-tab,.ops-proc-tab,.ops-pay-tab,.ops-lk-tab{appearance:none;border:0;background:transparent;font:inherit;font-size:12.5px;font-weight:600;color:var(--n-500);padding:8px 18px;border-radius:999px;cursor:pointer;transition:color .2s;}',
         /* liquid-lens paints the pill; the button must not paint one under it. */
-        '.ops-acct-tab.on,.ops-proc-tab.on,.ops-pay-tab.on{background:transparent;color:#fff;}',
-        '.ops-acct-pane,.ops-proc-pane,.ops-pay-pane{display:none;}',
-        '.ops-acct-pane.on,.ops-proc-pane.on,.ops-pay-pane.on{display:block;}',
-        '.ops-acct-hint,.ops-proc-hint,.ops-pay-hint{font-size:12px;color:var(--n-500);margin:0 0 14px;max-width:62ch;line-height:1.55;}',
-        '.ops-acct-confirm{display:flex;align-items:flex-start;gap:9px;font-size:12.5px;color:var(--n-500);margin-top:14px;cursor:pointer;}',
-        '.ops-acct-confirm input{margin-top:2px;accent-color:var(--atlas);}',
-        '.ops-acct-out,.ops-proc-out,.ops-pay-out{margin-top:18px;}',
-        '.ops-acct-kpis,.ops-proc-kpis,.ops-pay-kpis{display:flex;flex-wrap:wrap;gap:22px;margin:12px 0 4px;}',
-        '.ops-acct-kpi,.ops-proc-kpi,.ops-pay-kpi{min-width:104px;}',
-        '.ops-acct-kpi .k,.ops-proc-kpi .k,.ops-pay-kpi .k{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--n-500);}',
-        '.ops-acct-kpi .v,.ops-proc-kpi .v,.ops-pay-kpi .v{font-size:17px;font-weight:600;margin-top:3px;font-variant-numeric:tabular-nums;}',
-        '.ops-acct-doc,.ops-proc-num,.ops-pay-num{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:18px;letter-spacing:.02em;}',
-        '.ops-acct-scroll,.ops-proc-scroll,.ops-pay-scroll{overflow-x:auto;max-height:50vh;overflow-y:auto;margin-top:12px;}',
+        '.ops-acct-tab.on,.ops-proc-tab.on,.ops-pay-tab.on,.ops-lk-tab.on{background:transparent;color:#fff;}',
+        '.ops-acct-pane,.ops-proc-pane,.ops-pay-pane,.ops-lk-pane{display:none;}',
+        '.ops-acct-pane.on,.ops-proc-pane.on,.ops-pay-pane.on,.ops-lk-pane.on{display:block;}',
+        '.ops-acct-hint,.ops-proc-hint,.ops-pay-hint,.ops-lk-hint{font-size:12px;color:var(--n-500);margin:0 0 14px;max-width:62ch;line-height:1.55;}',
+        '.ops-acct-confirm,.ops-lk-confirm{display:flex;align-items:flex-start;gap:9px;font-size:12.5px;color:var(--n-500);margin-top:14px;cursor:pointer;}',
+        '.ops-acct-confirm input,.ops-lk-confirm input{margin-top:2px;accent-color:var(--atlas);}',
+        '.ops-acct-out,.ops-proc-out,.ops-pay-out,.ops-lk-out{margin-top:18px;}',
+        '.ops-acct-kpis,.ops-proc-kpis,.ops-pay-kpis,.ops-lk-kpis{display:flex;flex-wrap:wrap;gap:22px;margin:12px 0 4px;}',
+        '.ops-acct-kpi,.ops-proc-kpi,.ops-pay-kpi,.ops-lk-kpi{min-width:104px;}',
+        '.ops-acct-kpi .k,.ops-proc-kpi .k,.ops-pay-kpi .k,.ops-lk-kpi .k{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--n-500);}',
+        '.ops-acct-kpi .v,.ops-proc-kpi .v,.ops-pay-kpi .v,.ops-lk-kpi .v{font-size:17px;font-weight:600;margin-top:3px;font-variant-numeric:tabular-nums;}',
+        '.ops-acct-doc,.ops-proc-num,.ops-pay-num,.ops-lk-num{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:18px;letter-spacing:.02em;}',
+        '.ops-acct-scroll,.ops-proc-scroll,.ops-pay-scroll,.ops-lk-scroll{overflow-x:auto;max-height:50vh;overflow-y:auto;margin-top:12px;}',
         '.ops-acct-table,.ops-proc-table,.ops-pay-table{width:100%;border-collapse:collapse;font-size:12.5px;}',
         '.ops-acct-table th,.ops-proc-table th,.ops-pay-table th{text-align:start;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--n-500);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--n-200);position:sticky;top:0;background:var(--surface);}',
         '.ops-acct-table td,.ops-proc-table td,.ops-pay-table td{padding:8px 10px;border-bottom:1px solid var(--n-100);}',
-        '.ops-acct-n,.ops-proc-n,.ops-pay-n{text-align:end;font-variant-numeric:tabular-nums;white-space:nowrap;}',
+        '.ops-acct-n,.ops-proc-n,.ops-pay-n,.ops-lk-n{text-align:end;font-variant-numeric:tabular-nums;white-space:nowrap;}',
         /* Saisie multiligne d'un bon : une ligne = une rangée, la référence et
            la désignation portent la largeur, les nombres restent serrés. */
         '.ops-proc-line{display:grid;grid-template-columns:1.1fr 1.5fr .7fr .7fr .9fr auto;gap:8px;align-items:end;margin-bottom:8px;}',
@@ -440,10 +514,10 @@
         '.ops-proc-total .k,.ops-pay-total .k{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--n-500);}',
         '.ops-proc-total .v,.ops-pay-total .v{font-size:19px;font-weight:600;font-variant-numeric:tabular-nums;}',
         '.ops-proc-order{margin-bottom:12px;}',
-        '.ops-proc-head,.ops-pay-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:10px;}',
-        '.ops-proc-sup{font-size:12.5px;color:var(--n-500);}',
-        '.ops-proc-act,.ops-pay-act{margin-top:14px;padding-top:14px;border-top:1px solid var(--n-100);}',
-        '.ops-proc-actTitle,.ops-pay-actTitle{font-size:12.5px;font-weight:600;margin:0 0 4px;}',
+        '.ops-proc-head,.ops-pay-head,.ops-lk-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:10px;}',
+        '.ops-proc-sup,.ops-lk-sub{font-size:12.5px;color:var(--n-500);}',
+        '.ops-proc-act,.ops-pay-act,.ops-lk-act{margin-top:14px;padding-top:14px;border-top:1px solid var(--n-100);}',
+        '.ops-proc-actTitle,.ops-pay-actTitle,.ops-lk-actTitle{font-size:12.5px;font-weight:600;margin:0 0 4px;}',
         '.ops-proc-qty{width:82px;box-sizing:border-box;}',
         /* Une paie tient huit colonnes là où un bon en tient six : le salarié et
            son matricule d'abord, puis cinq nombres et le retrait.  La grille des
@@ -455,6 +529,19 @@
         '.ops-pay-line.n .l{visibility:hidden;}',
         '@media (max-width:1000px){.ops-pay-line{grid-template-columns:1.4fr .9fr .8fr .8fr auto;}.ops-pay-line.n .l{visibility:visible;}}',
         '@media (max-width:720px){.ops-pay-line{grid-template-columns:1fr 1fr;}}',
+        /* Un lien de paiement se lit comme un ticket : la référence en tête, un
+           état nommé, l'adresse en clair — jamais tronquée, elle se replie. */
+        '.ops-lk-card{margin-bottom:12px;}',
+        '.ops-lk-state{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;font-weight:600;padding:3px 9px;border-radius:999px;border:1px solid var(--n-200);color:var(--n-500);}',
+        '.ops-lk-state.paid,.ops-lk-state.active{color:var(--atlas);border-color:color-mix(in srgb,var(--atlas) 34%,transparent);}',
+        '.ops-lk-state.refunded,.ops-lk-state.cancelled,.ops-lk-state.expired{color:var(--n-500);}',
+        '.ops-lk-url{display:block;margin-top:8px;font-size:12.5px;color:var(--atlas);overflow-wrap:anywhere;}',
+        '.ops-lk-refund{display:grid;grid-template-columns:.8fr 1.4fr auto;gap:8px;align-items:end;margin-top:10px;}',
+        '.ops-lk-refund label{display:block;min-width:0;}',
+        '.ops-lk-refund .l{display:block;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--n-500);margin-bottom:4px;}',
+        '.ops-lk-refund input{width:100%;box-sizing:border-box;}',
+        '@media (max-width:720px){.ops-lk-refund{grid-template-columns:1fr;}}',
+        '.ops-lk-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}',
       ].join('\n');
       document.head.appendChild(style);
     }
@@ -1090,6 +1177,215 @@
       if (tab === 'book') loadBook();
     }
 
+    /* ─────────────── PAIEMENTS ───────────────
+     * Le bouton « lien de paiement » ouvrait une boîte à trois champs : on
+     * émettait, et c'était tout.  Impossible de relire ce qu'on avait émis,
+     * d'annuler un lien qui n'a rien encaissé, de relever ce que le fournisseur
+     * annonce, ni de rendre l'argent.  Le serveur tient maintenant le livre —
+     * encaissé, remboursé, remboursable, numérotation des remboursements — et
+     * refuse le double remboursement comme l'annulation d'un lien déjà payé.
+     * Voici la console qui s'y branche. */
+    function linkOutcome(result) {
+      /* `create-link` se termine en `active` : le lien vit, il n'est pas
+         « terminé ».  outcome() lirait cet état comme un échec. */
+      if (result && result.offline) return { queued:true };
+      var cmd = result && result.command || {};
+      if (cmd.status === 'failed' || cmd.status === 'blocked' || cmd.lastError) return { error:cmd.lastError || cmd.status || 'operation-failed' };
+      if (cmd.status !== 'completed' && cmd.status !== 'active') return { error:cmd.status || 'operation-failed' };
+      return { data:cmd.result || {} };
+    }
+    function openPayments(tab) {
+      var c = text();
+      consoleCss();
+      tab = tab === 'links' ? 'links' : 'link';
+      if (O.allowed && !O.allowed('payment', 'create-link')) {
+        Kiwi.drawer({ title:c.lkTitle, subtitle:c.lkSub, fullpage:true,
+          body:'<div class="ops-lk"><div class="p-card"><b>' + esc(c.lkDenied) + '</b><p class="ops-lk-hint" style="margin:8px 0 0">' + esc(c.lkDeniedD) + '</p></div></div>' });
+        return;
+      }
+
+      var body = '<div class="ops-lk">' +
+        '<div class="ops-lk-tabs" data-lens-demo>' +
+          [['link', c.tabLink], ['links', c.tabLinks]].map(function (t) {
+            return '<button class="ops-lk-tab' + (t[0] === tab ? ' on' : '') + '" type="button" data-lens-item data-lk-tab="' + t[0] + '">' + esc(t[1]) + '</button>';
+          }).join('') +
+        '</div>' +
+        '<section class="ops-lk-pane' + (tab === 'link' ? ' on' : '') + '" data-lk-pane="link">' +
+          '<p class="ops-lk-hint">' + esc(c.lkHint) + '</p>' +
+          '<div class="ops-lk-warn" data-lk-warn hidden></div>' +
+          '<div class="kf-grid">' +
+            '<label><span class="l">' + esc(c.amount) + '</span><input type="number" min="1" max="10000000" step="0.01" data-lk-amount></label>' +
+            '<label><span class="l">' + esc(c.customer) + '</span><input maxlength="160" data-lk-customer></label>' +
+            '<label style="grid-column:1/-1"><span class="l">' + esc(c.desc) + '</span><input maxlength="240" data-lk-desc></label>' +
+          '</div>' +
+          '<button class="kb atlas" style="width:100%;justify-content:center;margin-top:14px" type="button" data-lk-create>' + esc(c.create) + '</button>' +
+          '<div class="ops-lk-out" data-lk-out></div>' +
+        '</section>' +
+        '<section class="ops-lk-pane' + (tab === 'links' ? ' on' : '') + '" data-lk-pane="links">' +
+          '<button class="kb ghost xs" type="button" data-lk-refresh>' + esc(c.pRefresh) + '</button>' +
+          '<div data-lk-book><p class="ops-lk-hint" style="margin-top:14px">' + esc(c.lkLoading) + '</p></div>' +
+        '</section>' +
+        '</div>';
+
+      var res = Kiwi.drawer({ title:c.lkTitle, subtitle:c.lkSub, body:body, fullpage:true });
+      var root = res.el;
+
+      function kpi(k, v) { return '<div class="ops-lk-kpi"><div class="k">' + esc(k) + '</div><div class="v">' + esc(v) + '</div></div>'; }
+      function card(el, code) { el.innerHTML = '<div class="p-card"><span class="chip pend">' + esc(acctError(code)) + '</span></div>'; }
+      function amountField(row, key) {
+        var input = row.querySelector('[data-lk-' + key + ']');
+        return input ? input.value.trim() : '';
+      }
+
+      function linkCard(link) {
+        var l = link || {};
+        var status = (c.lkStatus && c.lkStatus[l.status]) || l.status || '';
+        var refundable = Number(l.refundableCents || 0);
+        var open = l.status === 'active' || l.status === 'pending';
+        /* Ce que le serveur refuserait n'est pas peint : un lien encaissé n'a
+           pas de bouton « annuler », un lien sans encaissement n'a pas de
+           bouton « rembourser ».  Le refus reste côté serveur, mais le
+           marchand n'a pas à le découvrir en cliquant. */
+        return '<div class="p-card ops-lk-card" data-lk-row data-lk-ref="' + esc(l.reference) + '">' +
+          '<div class="ops-lk-head">' +
+            '<div class="ops-lk-num">' + esc(l.reference) + '</div>' +
+            '<span class="ops-lk-state ' + esc(l.status || '') + '">' + esc(status) + '</span>' +
+          '</div>' +
+          ((l.customer || l.description) ? '<div class="ops-lk-sub">' + esc([l.customer, l.description].filter(Boolean).join(' · ')) + '</div>' : '') +
+          '<div class="ops-lk-kpis">' +
+            kpi(c.lkAmountK, money(l.amountCents)) +
+            kpi(c.lkPaid, money(l.paidCents)) +
+            kpi(c.lkRefunded, money(l.refundedCents)) +
+            kpi(c.lkRefundable, money(refundable)) +
+            kpi(c.lkRefundCount, String(l.refunds || 0)) +
+          '</div>' +
+          (l.url ? '<a class="ops-lk-url" href="' + esc(l.url) + '" target="_blank" rel="noopener">' + esc(l.url) + '</a>' +
+            '<div class="ops-lk-btns"><button class="kb ghost xs" type="button" data-lk-copy>' + esc(c.lkCopy) + '</button></div>' : '') +
+          '<div class="ops-lk-act">' +
+            '<p class="ops-lk-actTitle">' + esc(c.lkSettleTitle) + '</p>' +
+            '<p class="ops-lk-hint">' + esc(c.lkSettleHint) + '</p>' +
+            '<div class="ops-lk-btns"><button class="kb ghost xs" type="button" data-lk-run="settle-link">' + esc(c.lkSettle) + '</button></div>' +
+          '</div>' +
+          (open ? '<div class="ops-lk-act">' +
+            '<p class="ops-lk-actTitle">' + esc(c.lkCancelTitle) + '</p>' +
+            '<p class="ops-lk-hint">' + esc(c.lkCancelHint) + '</p>' +
+            '<label class="ops-lk-confirm"><input type="checkbox" data-lk-confirm="cancel-link"><span>' + esc(c.confirmLabel) + '</span></label>' +
+            '<div class="ops-lk-btns"><button class="kb atlas xs" type="button" data-lk-run="cancel-link">' + esc(c.lkCancel) + '</button></div>' +
+          '</div>' : '') +
+          (refundable > 0 ? '<div class="ops-lk-act">' +
+            '<p class="ops-lk-actTitle">' + esc(c.lkRefundTitle) + '</p>' +
+            '<p class="ops-lk-hint">' + esc(c.lkRefundHint) + '</p>' +
+            '<div class="ops-lk-refund">' +
+              '<label><span class="l">' + esc(c.lkRefundAmount) + '</span><input type="number" min="0" step="0.01" data-lk-refund-amount></label>' +
+              '<label><span class="l">' + esc(c.lkRefundReason) + '</span><input maxlength="240" data-lk-refund-reason></label>' +
+              '<button class="kb atlas xs" type="button" data-lk-run="refund-link">' + esc(c.lkRefund) + '</button>' +
+            '</div>' +
+            '<label class="ops-lk-confirm"><input type="checkbox" data-lk-confirm="refund-link"><span>' + esc(c.confirmLabel) + '</span></label>' +
+          '</div>' : '') +
+          '<div class="ops-lk-out" data-lk-row-out></div>' +
+        '</div>';
+      }
+
+      async function loadLinks() {
+        var host = root.querySelector('[data-lk-book]');
+        host.innerHTML = '<p class="ops-lk-hint" style="margin-top:14px">' + esc(c.lkLoading) + '</p>';
+        try {
+          var data = await O.payments({ limit:200 });
+          warn(data && data.providers);
+          var list = (data && data.links) || [];
+          host.innerHTML = list.length ? list.map(linkCard).join('')
+            : '<p class="ops-lk-hint" style="margin-top:14px">' + esc(c.lkNone) + '</p>';
+        } catch (error) { card(host, error && (error.code || error.message)); }
+      }
+      /* Prévenir avant la saisie, pas après : sans fournisseur branché le
+         serveur conserve la demande et ne renvoie aucun lien. */
+      function warn(providers) {
+        var box = root.querySelector('[data-lk-warn]');
+        if (!providers || providers.payment !== false) { box.hidden = true; return; }
+        box.hidden = false;
+        box.innerHTML = '<div class="p-card"><span class="chip pend">' + esc(c.lkNoProvider) + '</span></div>';
+      }
+
+      root.addEventListener('click', function (event) {
+        var pill = event.target.closest('[data-lk-tab]');
+        if (pill) {
+          root.querySelectorAll('[data-lk-tab]').forEach(function (el) { el.classList.toggle('on', el === pill); });
+          root.querySelectorAll('[data-lk-pane]').forEach(function (el) { el.classList.toggle('on', el.getAttribute('data-lk-pane') === pill.getAttribute('data-lk-tab')); });
+          if (pill.getAttribute('data-lk-tab') === 'links') loadLinks();
+          return;
+        }
+        if (event.target.closest('[data-lk-refresh]')) return void loadLinks();
+        var copy = event.target.closest('[data-lk-copy]');
+        if (copy) {
+          var url = copy.closest('[data-lk-row]').querySelector('.ops-lk-url');
+          if (!url) return;
+          try { navigator.clipboard.writeText(url.getAttribute('href')).then(function () { Kiwi.toast(c.lkCopied, { type:'success' }); }, function () {}); }
+          catch (_) {}
+        }
+      });
+
+      root.addEventListener('click', async function (event) {
+        var button = event.target.closest('[data-lk-create]');
+        if (!button) return;
+        var amount = Number(root.querySelector('[data-lk-amount]').value);
+        if (!(amount > 0)) return Kiwi.toast(c.invalid, { type:'warning' });
+        button.disabled = true;
+        var host = root.querySelector('[data-lk-out]');
+        try {
+          var result = await O.create('payment', 'create-link', {
+            amount:amount, currency:'MAD',
+            customer:root.querySelector('[data-lk-customer]').value,
+            description:root.querySelector('[data-lk-desc]').value,
+          });
+          var got = linkOutcome(result);
+          if (got.queued) { host.innerHTML = ''; return toastResult(result); }
+          if (got.error) return card(host, got.error);
+          host.innerHTML = linkCard(got.data);
+          toastResult(result);
+        } catch (error) { card(host, error && (error.code || error.message)); }
+        finally { button.disabled = false; }
+      });
+
+      root.addEventListener('click', async function (event) {
+        var button = event.target.closest('[data-lk-run]');
+        if (!button) return;
+        var action = button.getAttribute('data-lk-run');
+        var row = button.closest('[data-lk-row]');
+        var reference = row.getAttribute('data-lk-ref');
+        /* Le serveur exige la confirmation pour annuler et pour rembourser —
+           relever un état n'engage rien et n'en demande pas. */
+        var need = action !== 'settle-link';
+        var box = need ? row.querySelector('[data-lk-confirm="' + action + '"]') : null;
+        if (need && !(box && box.checked)) return Kiwi.toast(c.confirmNeeded, { type:'warning' });
+        var payload = { reference:reference };
+        if (action === 'refund-link') {
+          var asked = amountField(row, 'refund-amount');
+          /* Vide = tout le remboursable : le serveur le calcule lui-même, et
+             envoyer 0 se ferait refuser comme montant invalide. */
+          if (asked !== '') {
+            if (!(Number(asked) > 0)) return Kiwi.toast(c.invalid, { type:'warning' });
+            payload.amount = Number(asked);
+          }
+          payload.reason = amountField(row, 'refund-reason');
+        }
+        button.disabled = true;
+        var host = row.querySelector('[data-lk-row-out]');
+        host.innerHTML = '';
+        try {
+          var result = await O.create('payment', action, payload, need ? { confirmed:true } : undefined);
+          var got = linkOutcome(result);
+          if (got.queued) return toastResult(result);
+          if (got.error) { button.disabled = false; return card(host, got.error); }
+          Kiwi.toast(got.data && got.data.alreadyCancelled ? c.lkAlready : c.lkDone,
+            { type:got.data && got.data.alreadyCancelled ? 'info' : 'success' });
+          loadLinks();
+        } catch (error) { button.disabled = false; card(host, error && (error.code || error.message)); }
+      });
+
+      if (tab === 'links') loadLinks();
+      else O.payments({ limit:1 }).then(function (data) { warn(data && data.providers); }, function () {});
+    }
+
     var legacyAcct = {};
     ['open-comptabilite', 'acct-livre', 'acct-etats', 'acct-tva'].forEach(function (key) {
       legacyAcct[key] = H[key];
@@ -1100,7 +1396,7 @@
       };
     });
 
-    window.KiwiOperationsUI = { toastResult:toastResult, openHistory:H['operations-history'], openLedger:openLedger, openProcurement:openProcurement, openPayroll:openPayroll };
+    window.KiwiOperationsUI = { toastResult:toastResult, openHistory:H['operations-history'], openLedger:openLedger, openProcurement:openProcurement, openPayroll:openPayroll, openPayments:openPayments };
   }
   boot();
 })();
