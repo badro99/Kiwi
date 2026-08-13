@@ -1120,14 +1120,16 @@
     .menu-item-add {
       width: 30px; height: 30px;
       border-radius: 50%;
-      background: var(--ink);
-      color: #fff;
+      background: var(--brand-deep);
+      color: var(--inverse-ink);
+      border: 1px solid var(--inverse-line);
       display: inline-flex; align-items: center; justify-content: center;
       font-size: 18px; font-weight: 600;
-      transition: background 150ms ease, transform 150ms ease;
+      line-height: 1;
+      transition: background 150ms ease, border-color 150ms ease, transform 150ms ease;
       flex: 0 0 30px;
     }
-    .menu-item:hover .menu-item-add { background: var(--forest); }
+    .menu-item:hover .menu-item-add { background: var(--atlas); border-color: var(--atlas); }
 
     /* Stepper (item is in cart): − qty + */
     .menu-item-stepper {
