@@ -8,6 +8,7 @@
 
 import {
   json, sendMail, readSession, readCookie, SESS_COOKIE, isOperator,
+  activeEmployee, isTillFor,
 } from '../auth/_lib.js';
 import { tenantFor } from './_private.js';
 
@@ -96,12 +97,85 @@ function publicRow(row) {
   };
 }
 
-async function privileged(request, env) {
+/* Server-side authorization.
+ *
+ * assets/platform-kernel.js carries the same relation table for the browser and
+ * says of itself that a front-end check "never replaces server authorization".
+ * This is that server authorization — the same table, minus the localStorage
+ * grant/deny document, which the client writes and therefore may not widen what
+ * a caller is allowed to do here.  Roles this file does not know fall through to
+ * `employee`, which can create nothing. */
+const ROLE = {
+  owner: ['*'], proprietaire: ['*'], operator: ['*'],
+  manager: ['read:*', 'write:catalog', 'write:inventory', 'write:planning', 'write:customers',
+    'write:orders', 'write:reservations', 'write:reports', 'action:refund', 'action:reprint', 'action:message'],
+  caisse: ['read:catalog', 'read:inventory', 'read:customers', 'read:orders', 'read:device',
+    'write:orders', 'write:customers', 'action:checkout', 'action:reprint'],
+  serveur: ['read:tables', 'read:orders', 'read:planning', 'write:orders', 'action:request-bill'],
+  kitchen: ['read:orders', 'write:order-status'],
+  stock: ['read:catalog', 'read:inventory', 'write:inventory'],
+  employee: ['read:planning'],
+  /* A pairing cookie is a device, not a person.  It proves which counter the
+     request came from and nothing else, so it may report its own health and
+     nothing else — exactly what this endpoint allowed an unpaired-to-a-person
+     till to do before roles existed. */
+  till: ['read:device'],
+};
+ROLE.cashier = ROLE.caisse; ROLE.caissier = ROLE.caisse; ROLE.caissiere = ROLE.caisse;
+ROLE.server = ROLE.serveur; ROLE.cuisinier = ROLE.kitchen; ROLE.magasinier = ROLE.stock;
+ROLE.employe = ROLE.employee;
+
+/* Same normalisation as normEmployeeRole in functions/auth/_lib.js: a job title
+   typed as "Caissière" must land on the same row as "caisse". */
+function normRole(value) {
+  let text = String(value == null ? '' : value).trim().toLowerCase();
+  try { text = text.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (_) {}
+  return text.replace(/[’`´]/g, "'").replace(/\s+/g, ' ').slice(0, 40);
+}
+
+/* The permission a (domain, action) pair costs.  Mirror of needed() in
+   assets/operations.js — if one side changes the other must change with it, or
+   the dashboard offers a button the Worker answers with 403. */
+function needed(domain, action) {
+  if (domain === 'device' && action === 'heartbeat') return ['read', 'device'];
+  if (domain === 'notification') return ['action', 'message'];
+  if (domain === 'procurement') return ['write', 'inventory'];
+  if (domain === 'payroll') return ['write', 'payroll'];
+  if (domain === 'ai' && action === 'reprint') return ['action', 'reprint'];
+  return ['write', domain];
+}
+
+function can(role, act, resource) {
+  const rules = ROLE[normRole(role)] || ROLE.employee;
+  const wanted = `${act}:${resource}`;
+  return rules.some((rule) => rule === '*' || rule === wanted || rule === `${act}:*`);
+}
+
+/* tenantFor() has already proved the caller may act on this merchant.  actorFor
+   answers the next question: as whom.  Cheapest identity first — the employee
+   branch costs two D1 reads because the role lives on the live roster, not in
+   the cookie. */
+async function actorFor(request, env, merchant) {
   try {
     const session = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET);
-    if (session && session.aid) return true;
+    if (session && session.aid) return { kind: 'owner', role: 'owner' };
   } catch (_) {}
-  try { return !!(await isOperator(request, env)); } catch (_) { return false; }
+  try { if (await isOperator(request, env)) return { kind: 'operator', role: 'operator' }; } catch (_) {}
+  try {
+    const staff = await activeEmployee(request, env, merchant);
+    if (staff && staff.member) {
+      return { kind: 'employee', role: normRole(staff.member.function || staff.member.department || 'employee') };
+    }
+  } catch (_) {}
+  try { if (await isTillFor(request, env, merchant)) return { kind: 'till', role: 'till' }; } catch (_) {}
+  return null;
+}
+
+async function mayCommand(request, env, merchant, domain, action) {
+  const actor = await actorFor(request, env, merchant);
+  if (!actor) return false;
+  const check = needed(domain, action);
+  return can(actor.role, check[0], check[1]);
 }
 
 async function event(env, command, name, status, detail) {
@@ -196,8 +270,13 @@ export async function onRequestGet({ request, env }) {
   if (!merchant) return json({ error: 'unauthorized' }, 401);
   /* Command payloads can contain customer contacts, payment references and
      payroll metadata.  A paired register may report health but must never be
-     able to enumerate the merchant's operational ledger. */
-  if (!(await privileged(request, env))) return json({ error: 'owner-session-required' }, 403);
+     able to enumerate the merchant's operational ledger — and neither may a
+     manager, who is kept out of salary figures everywhere else in the product.
+     Deliberately narrower than the per-command permissions below. */
+  const reader = await actorFor(request, env, merchant);
+  if (!reader || (reader.kind !== 'owner' && reader.kind !== 'operator')) {
+    return json({ error: 'owner-session-required' }, 403);
+  }
   try { await ensureSchema(env); } catch (_) { return json({ error: 'unmigrated' }, 503); }
   const domain = clean(url.searchParams.get('domain'), 32);
   const status = clean(url.searchParams.get('status'), 32);
@@ -224,11 +303,14 @@ export async function onRequestPost({ request, env }) {
     const id = clean(body.commandId, 128), wanted = clean(body.transition, 32);
     const row = await env.DB.prepare('SELECT * FROM operational_commands WHERE id = ? AND merchant = ?').bind(id, merchant).first();
     if (!row) return json({ error: 'not-found' }, 404);
-    /* A paired till may write its own device heartbeat/receipt, but it may not
-       approve, cancel or complete a durable command.  State transitions are
+    /* Moving a command through its lifecycle costs the same permission as
+       creating it.  A paired till may write its own device heartbeat, but it may
+       not approve, cancel or complete a purchase order: state transitions are
        management actions and must never be authorized by possession of a
        pairing cookie alone. */
-    if (!(await privileged(request, env))) return json({ error: 'owner-session-required' }, 403);
+    if (!(await mayCommand(request, env, merchant, row.domain, row.action))) {
+      return json({ error: 'permission-denied', domain: row.domain, action: row.action }, 403);
+    }
     if (!(TRANSITIONS[row.status] && TRANSITIONS[row.status].has(wanted))) return json({ error: 'invalid-transition', status: row.status }, 409);
     if (['approved', 'cancelled', 'completed'].includes(wanted) && body.confirmed !== true) return json({ error: 'confirmation-required' }, 409);
     const changed = await update(env, row, wanted, row.provider, parseJson(row.result) || {}, '');
@@ -241,12 +323,13 @@ export async function onRequestPost({ request, env }) {
   const idem = clean(body && body.idempotencyKey, 128);
   const payloadJson = safeJson(body && body.payload, 24000);
   if (!ACTIONS[domain] || !ACTIONS[domain].has(action)) return json({ error: 'unsupported-action' }, 400);
-  /* A paired till can report its own heartbeat. Purchasing, payroll,
-     accounting, notifications, payment links and agent actions require an
-     account/operator session; knowing a till pairing cookie is never enough to
-     create financial documents or contact arbitrary people. */
-  if (!(await privileged(request, env)) && !(domain === 'device' && action === 'heartbeat')) {
-    return json({ error: 'owner-session-required' }, 403);
+  /* Every command costs a named permission, resolved from the caller's real
+     role on this merchant.  A till reports its own heartbeat and nothing else;
+     purchasing, payroll, accounting, notifications, payment links and agent
+     actions each need the matching grant.  Knowing a pairing cookie is never
+     enough to create financial documents or contact arbitrary people. */
+  if (!(await mayCommand(request, env, merchant, domain, action))) {
+    return json({ error: 'permission-denied', domain, action }, 403);
   }
   if (!idOk(id) || !idOk(idem) || !payloadJson) return json({ error: 'invalid-command' }, 400);
   if (CONFIRM.has(`${domain}:${action}`) && body.confirmed !== true) return json({ error: 'confirmation-required' }, 409);

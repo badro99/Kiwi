@@ -84,9 +84,18 @@
       });
     };
 
+    var legacyPo = H['supplier-new-po'];
     H['supplier-new-po'] = function () {
+      /* The demo store has no durable ledger behind it, and the permission check
+         below would refuse the command anyway.  Leave the demo on its own
+         handler rather than writing a local purchase order and then telling the
+         merchant "accès refusé" for a document that now exists. */
+      if (!real() && legacyPo) return legacyPo.apply(this, arguments);
       var c = text(), P = window.KiwiProcurement, doc = P && P.doc && P.doc();
       if (!P || !doc || !(doc.suppliers || []).length) return Kiwi.toast(c.needSupplier, { type:'warning' });
+      /* Ask before writing.  createOrder() commits locally, so a refusal
+         discovered after the fact leaves an orphan the merchant cannot explain. */
+      if (O.allowed && !O.allowed('procurement', 'create-po')) return fail(new Error('permission-denied'));
       var options = doc.suppliers.filter(function (s) { return s.active !== false; }).map(function (s) { return '<option value="'+esc(s.id)+'">'+esc(s.name)+'</option>'; }).join('');
       var modal = Kiwi.modal({ tag:'APPROVISIONNEMENT', title:c.supplier, width:620, body:'<div class="kf-grid">' +
         '<label><span class="l">'+c.supplierPick+'</span><select data-po-supplier>'+options+'</select></label>' +

@@ -22,6 +22,9 @@ const swCache=+(sw.match(/kiwi-app-v(\d+)/)||[])[1];
 ok(Number.isFinite(swCache)&&swCache>=373,`service worker cache was advanced (kiwi-app-v${swCache} ≥ v373)`);
 ok(/dashboard-pwa\.js\?v=\d+/.test(pages[0])&&/caisse-pwa\.js\?v=\d+/.test(pages[1])&&/employee-live\.js\?v=\d+/.test(pages[2]),'all shells request a versioned service-worker bootstrap');
 bootstraps.forEach((bootstrap,i)=>ok(bootstrap.includes(`/kiwi-sw.js?v=${swCache}`),`service-worker bootstrap ${i+1} requests the active cache generation`));
-['platform-kernel.js?v=1','platform-ops.js?v=1','platform-ops.css?v=1','operations.js?v=1'].forEach(asset=>ok(sw.includes(asset),`${asset} is available offline`));
-pages.forEach((page,i)=>ok(page.includes('platform-kernel.js?v=1')&&page.includes('platform-ops.js?v=1')&&page.includes('operations.js?v=1'),`operational shell ${i+1} loads the platform adapters`));
+/* Même doctrine que le cache ci-dessus : on vérifie que l'asset est câblé, pas
+ * sur quelle génération il se trouve — un `?v=` figé casse au premier correctif. */
+const wired=(source,file)=>new RegExp(`${file.replace('.','\\.')}\\?v=\\d+`).test(source);
+['platform-kernel.js','platform-ops.js','platform-ops.css','operations.js'].forEach(asset=>ok(wired(sw,asset),`${asset} is available offline`));
+pages.forEach((page,i)=>ok(['platform-kernel.js','platform-ops.js','operations.js'].every(a=>wired(page,a)),`operational shell ${i+1} loads the platform adapters`));
 console.log(`\n✓ Platform adapters — ${n} controls`);

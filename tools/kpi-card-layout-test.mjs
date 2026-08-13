@@ -15,7 +15,10 @@ assert.match(value, /flex:\s*0\s+0\s+auto/, 'the financial value must remain ind
 assert.match(value, /max-width:\s*100%/, 'the financial value stays bounded by its card');
 assert.match(delta, /margin-inline-start:\s*auto/, 'a wrapped comparison remains aligned to the trailing edge');
 assert.match(delta, /white-space:\s*nowrap/, 'the sign, number and percentage unit stay together');
-assert.match(dashboard, /assets\/design-vexel\.css\?v=2085/);
-assert.match(sw, /var CACHE = 'kiwi-app-v410'/);
+/* Des planchers, pas des épingles — voir sales-day-contrast-test.mjs. */
+const skin = +(dashboard.match(/assets\/design-vexel\.css\?v=(\d+)/) || [])[1];
+assert.ok(Number.isFinite(skin) && skin >= 2085, `the dashboard loads the corrected skin (v${skin} ≥ v2085)`);
+const swCache = +(sw.match(/var CACHE = 'kiwi-app-v(\d+)'/) || [])[1];
+assert.ok(Number.isFinite(swCache) && swCache >= 409, `the cache was invalidated (v${swCache} ≥ v409)`);
 
 console.log('kpi-card-layout-test: 8 controls passed');

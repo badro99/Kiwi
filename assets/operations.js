@@ -25,7 +25,10 @@
     if (domain === 'device' && action === 'heartbeat') return ['read', 'device'];
     if (domain === 'notification') return ['action', 'message'];
     if (domain === 'procurement') return ['write', 'inventory'];
-    if (domain === 'payroll') return ['write', 'planning'];
+    /* Not write:planning — a manager plans shifts but is kept out of salary
+       figures everywhere else in the product, and a payroll export is a list of
+       salaries.  No role but owner/operator holds write:payroll. */
+    if (domain === 'payroll') return ['write', 'payroll'];
     if (domain === 'ai' && action === 'reprint') return ['action', 'reprint'];
     return ['write', domain];
   }
