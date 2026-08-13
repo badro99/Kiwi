@@ -32,7 +32,7 @@
   };
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     window.addEventListener('load', function () {
-      navigator.serviceWorker.register('/kiwi-sw.js?v=405').then(function (reg) {
+      navigator.serviceWorker.register('/kiwi-sw.js?v=406').then(function (reg) {
         if (window.KiwiPWAUpdate) window.KiwiPWAUpdate.watch(reg);
       }).catch(function () {});
     });

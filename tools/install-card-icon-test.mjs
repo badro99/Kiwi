@@ -19,7 +19,7 @@ assert.match(dashboard, /\.kiwi-install-mark\s*\{[^}]*border:\s*1px solid transp
   'the shared lockup must not add a tile behind the favicon');
 assert.doesNotMatch(dashboard, /html\[data-theme="dark"\] \.sidebar \.kiwi-install-(?:head|mark)/,
   'light and dark modes must use the exact same favicon lockup');
-assert.match(dashboard, /assets\/venues\.js\?v=10/);
+assert.match(dashboard, /assets\/venues\.js\?v=11/);
 assert.match(dashboard, /assets\/dashboard-pwa\.js\?v=373/);
 
 console.log('install-card-icon-test: 11 controls passed');

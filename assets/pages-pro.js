@@ -15174,7 +15174,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       '.rtx-total{font-size:14px;color:var(--ink)}.rtx-total b{font-family:var(--mono)}' +
       '.rtx-days{display:flex;gap:7px;overflow-x:auto;padding:0 0 16px;scrollbar-width:thin}' +
       '.rtx-day{border:1px solid var(--n-200);background:var(--surface);color:var(--ink);border-radius:999px;padding:8px 12px;white-space:nowrap;font:600 11px var(--sans);cursor:pointer}' +
-      '.rtx-day.on{background:var(--ink);border-color:var(--ink);color:var(--surface)}' +
+      '.rtx-day.on{background:var(--inverse-surface);border-color:var(--inverse-surface);color:var(--inverse-ink)}' +
       '.rtx-methods{display:flex;gap:7px;flex-wrap:wrap;padding:0 0 16px}' +
       '.rtx-method{border:1px solid var(--n-200);background:var(--surface);color:var(--ink);border-radius:999px;padding:7px 12px;font:600 11px var(--sans);cursor:pointer}' +
       '.rtx-method.on{background:var(--atlas);border-color:var(--atlas);color:#fff}' +
