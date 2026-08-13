@@ -11,9 +11,11 @@ for (const [name, source] of [['initial PWA renderer', pwa], ['venue-switch rend
 }
 
 assert.match(dashboard, /\.kiwi-install-mark img\s*\{[^}]*width:\s*18px[^}]*object-fit:\s*contain/s);
-assert.match(dashboard, /\.kiwi-install-mark\s*\{[^}]*background:\s*rgba\(247,245,240,\.96\)/s,
-  'the two-tone mark needs a stable light chip in both themes');
+assert.match(dashboard, /\.kiwi-install-mark\s*\{[^}]*border:\s*1px solid transparent[^}]*background:\s*transparent/s,
+  'the light theme must not add a tile behind the favicon');
+assert.match(dashboard, /html\[data-theme="dark"\] \.sidebar \.kiwi-install-mark\s*\{[^}]*background:\s*rgba\(247,245,240,\.96\)/s,
+  'dark mode keeps the visibility chip required by the two-tone favicon');
 assert.match(dashboard, /assets\/venues\.js\?v=10/);
 assert.match(dashboard, /assets\/dashboard-pwa\.js\?v=373/);
 
-console.log('install-card-icon-test: 8 controls passed');
+console.log('install-card-icon-test: 9 controls passed');
