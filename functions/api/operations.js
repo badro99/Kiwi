@@ -695,6 +695,301 @@ async function procurement(env, row, payload) {
   }, '');
 }
 
+/* ---- Paie --------------------------------------------------------------
+ * Un export de paie n'est pas un fichier : c'est un calcul qui engage
+ * l'employeur devant le salarié, la CNSS et le fisc.  Tant que le domaine
+ * tombait dans le fourre-tout générique, « préparer les bulletins » ne
+ * calculait rien et ne retenait rien — et trois écrans annonçaient pourtant
+ * un PDF envoyé au comptable.
+ *
+ * Les taux sont exprimés en points de base : 4,48 % s'écrit 448, donc aucun
+ * arrondi flottant ne se glisse dans un salaire.  Ce sont ceux publiés au
+ * Maroc au moment de l'écriture, et le commerçant peut les remplacer
+ * (`payload.rates`) parce qu'un taux légal change plus vite qu'un
+ * déploiement.  Chaque bulletin porte le jeu de taux qui l'a produit : un
+ * chiffre de paie sans son taux ne se vérifie pas.  Le barème de l'IGR, lui,
+ * n'est pas paramétrable — il n'appartient pas au commerçant. */
+const PAY = {
+  cnss: 448, amo: 226, cnssEmployer: 898, amoEmployer: 411, family: 640, training: 160,
+  ceilingCents: 600000,
+  fraisHigh: 3500, fraisLow: 2500, fraisThresholdCents: 650000, fraisCapCents: 291667,
+  dependentCents: 4167, dependentMax: 6,
+};
+const IGR = [[333300, 0], [500000, 1000], [666700, 2000], [833300, 3000], [1500000, 3400], [Infinity, 3700]];
+const PAYACC = { salaires: '6171', charges: '6174', avances: '3431', dus: '4432', cnss: '4441', igr: '4452' };
+const PAY_MAX_STAFF = 200;
+const bp = (base, rate) => Math.round((base * rate) / 10000);
+const monthEnd = (period) => new Date(Date.UTC(
+  Number(period.slice(0, 4)), Number(period.slice(5, 7)), 0
+)).toISOString().slice(0, 10);
+
+/* Barème progressif parcouru tranche par tranche.  La « somme à déduire » des
+   tables usuelles donnerait le même résultat, mais elle cache le calcul : ici
+   chaque tranche est visible et se relit contre le texte. */
+function igrCents(taxable) {
+  let tax = 0; let floor = 0;
+  for (const [ceiling, rate] of IGR) {
+    if (taxable <= floor) break;
+    tax += bp(Math.min(taxable, ceiling) - floor, rate);
+    floor = ceiling;
+  }
+  return tax;
+}
+
+function payRates(payload) {
+  const over = payload && payload.rates && typeof payload.rates === 'object' ? payload.rates : null;
+  const rates = Object.assign({}, PAY);
+  if (!over) return { rates, set: 'ma-2026' };
+  for (const key of ['cnss', 'amo', 'cnssEmployer', 'amoEmployer', 'family', 'training']) {
+    if (over[key] == null) continue;
+    const value = Number(over[key]);
+    if (!Number.isSafeInteger(value) || value < 0 || value > 10000) return { error: `invalid-rate:${key}` };
+    rates[key] = value;
+  }
+  if (over.ceilingCents != null) {
+    const ceiling = Number(over.ceilingCents);
+    if (!Number.isSafeInteger(ceiling) || ceiling < 0 || ceiling > 100000000) return { error: 'invalid-ceiling' };
+    rates.ceilingCents = ceiling;
+  }
+  return { rates, set: 'custom' };
+}
+
+function payStaff(payload) {
+  const raw = payload && Array.isArray(payload.employees) ? payload.employees : null;
+  if (!raw || !raw.length) return { error: 'no-employees' };
+  if (raw.length > PAY_MAX_STAFF) return { error: 'too-many-employees' };
+  const seen = new Set();
+  const staff = [];
+  for (let i = 0; i < raw.length; i += 1) {
+    const item = raw[i] || {};
+    const id = clean(item.id || item.memberId, 80);
+    if (!id) return { error: 'member-required' };
+    if (seen.has(id)) return { error: 'duplicate-member' };
+    seen.add(id);
+    const base = cents(item.base != null ? item.base : item.baseSalary);
+    const overtime = item.overtime != null ? cents(item.overtime) : 0;
+    const bonus = item.bonus != null ? cents(item.bonus) : 0;
+    const advance = item.advance != null ? cents(item.advance) : 0;
+    for (const part of [base, overtime, bonus, advance]) {
+      if (!Number.isFinite(part) || part < 0 || part > 100000000) return { error: 'invalid-amount' };
+    }
+    const dependents = item.dependents == null ? 0 : Number(item.dependents);
+    if (!Number.isSafeInteger(dependents) || dependents < 0 || dependents > 20) return { error: 'invalid-dependents' };
+    const gross = base + overtime + bonus;
+    if (gross <= 0) return { error: 'invalid-amount' };
+    if (advance > gross) return { error: 'advance-exceeds-gross' };
+    staff.push({ id, name: clean(item.name, 120), role: clean(item.role, 60), base, overtime, bonus, advance, dependents, gross });
+  }
+  return { staff };
+}
+
+function payslipFor(person, rates) {
+  const gross = person.gross;
+  const capped = Math.min(gross, rates.ceilingCents);
+  const cnss = bp(capped, rates.cnss);
+  const amo = bp(gross, rates.amo);
+  /* Frais professionnels : forfait plus généreux sous le seuil, plafonné dans
+     les deux cas — sans lui l'assiette imposable serait fausse pour tout le
+     monde, et surtout pour les petits salaires. */
+  const frais = Math.min(bp(gross, gross <= PAY.fraisThresholdCents ? PAY.fraisHigh : PAY.fraisLow), PAY.fraisCapCents);
+  const taxable = Math.max(0, gross - frais - cnss - amo);
+  const relief = Math.min(person.dependents, PAY.dependentMax) * PAY.dependentCents;
+  const igr = Math.max(0, igrCents(taxable) - relief);
+  const employer = bp(capped, rates.cnssEmployer) + bp(gross, rates.amoEmployer)
+    + bp(gross, rates.family) + bp(gross, rates.training);
+  return {
+    grossCents: gross, cappedCents: capped, cnssCents: cnss, amoCents: amo,
+    taxableCents: taxable, igrCents: igr, employerCents: employer,
+    advanceCents: person.advance, netCents: gross - cnss - amo - igr - person.advance,
+  };
+}
+
+async function ensurePayroll(env) {
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS payslips (
+      id TEXT PRIMARY KEY, merchant TEXT NOT NULL, period TEXT NOT NULL,
+      member_id TEXT NOT NULL, member_name TEXT NOT NULL DEFAULT '',
+      role TEXT NOT NULL DEFAULT '', rate_set TEXT NOT NULL DEFAULT '',
+      base_cents INTEGER NOT NULL DEFAULT 0, overtime_cents INTEGER NOT NULL DEFAULT 0,
+      bonus_cents INTEGER NOT NULL DEFAULT 0, advance_cents INTEGER NOT NULL DEFAULT 0,
+      gross_cents INTEGER NOT NULL, capped_cents INTEGER NOT NULL DEFAULT 0,
+      cnss_cents INTEGER NOT NULL DEFAULT 0, amo_cents INTEGER NOT NULL DEFAULT 0,
+      igr_cents INTEGER NOT NULL DEFAULT 0, employer_cents INTEGER NOT NULL DEFAULT 0,
+      net_cents INTEGER NOT NULL, dependents INTEGER NOT NULL DEFAULT 0,
+      command_id TEXT NOT NULL DEFAULT '', created_ts INTEGER NOT NULL, updated_ts INTEGER NOT NULL
+    )`
+  ).run();
+  await env.DB.prepare('CREATE UNIQUE INDEX IF NOT EXISTS idx_payslip_member ON payslips (merchant, period, member_id)').run();
+  await env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_payslip_period ON payslips (merchant, period)').run();
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS payroll_periods (
+      merchant TEXT NOT NULL, period TEXT NOT NULL, status TEXT NOT NULL,
+      employees INTEGER NOT NULL DEFAULT 0, gross_cents INTEGER NOT NULL DEFAULT 0,
+      net_cents INTEGER NOT NULL DEFAULT 0, employer_cents INTEGER NOT NULL DEFAULT 0,
+      journal_number TEXT NOT NULL DEFAULT '', declaration TEXT NOT NULL DEFAULT '',
+      updated_ts INTEGER NOT NULL, PRIMARY KEY (merchant, period)
+    )`
+  ).run();
+}
+
+const payTotals = (rows) => rows.reduce((sum, slip) => ({
+  employees: sum.employees + 1,
+  grossCents: sum.grossCents + Number(slip.gross_cents || 0),
+  cappedCents: sum.cappedCents + Number(slip.capped_cents || 0),
+  cnssCents: sum.cnssCents + Number(slip.cnss_cents || 0),
+  amoCents: sum.amoCents + Number(slip.amo_cents || 0),
+  igrCents: sum.igrCents + Number(slip.igr_cents || 0),
+  employerCents: sum.employerCents + Number(slip.employer_cents || 0),
+  advanceCents: sum.advanceCents + Number(slip.advance_cents || 0),
+  netCents: sum.netCents + Number(slip.net_cents || 0),
+}), { employees: 0, grossCents: 0, cappedCents: 0, cnssCents: 0, amoCents: 0, igrCents: 0, employerCents: 0, advanceCents: 0, netCents: 0 });
+
+async function payroll(env, row, payload) {
+  await ensurePayroll(env);
+  const merchant = row.merchant;
+  const fail = (reason) => update(env, row, 'failed', 'kiwi-payroll', {}, reason);
+  const period = clean(payload && payload.period, 7);
+  if (!PERIOD.test(period)) return fail('period-required');
+  const held = await env.DB.prepare(
+    'SELECT * FROM payroll_periods WHERE merchant = ? AND period = ?'
+  ).bind(merchant, period).first();
+
+  if (row.action === 'prepare-payslips') {
+    /* Une période déjà déclarée est un chiffre parti à la CNSS, et une période
+       déjà passée au journal est une écriture comptable : la recalculer en
+       silence ferait diverger le livre de ce que le salarié a touché. */
+    if (held && held.declaration) return fail('period-declared');
+    if (held && held.journal_number) return fail('period-posted');
+    const read = payStaff(payload);
+    if (read.error) return fail(read.error);
+    const rated = payRates(payload);
+    if (rated.error) return fail(rated.error);
+    const slips = [];
+    for (const person of read.staff) {
+      const slip = payslipFor(person, rated.rates);
+      /* Un net négatif n'est pas un bulletin : c'est une avance qu'on réclame
+         au salarié.  On refuse plutôt que d'écrire un salaire impossible. */
+      if (slip.netCents < 0) return fail(`net-negative:${person.id}`);
+      slips.push({ person, slip });
+    }
+    await env.DB.prepare('DELETE FROM payslips WHERE merchant = ? AND period = ?').bind(merchant, period).run();
+    for (let i = 0; i < slips.length; i += 1) {
+      const { person, slip } = slips[i];
+      await env.DB.prepare(
+        `INSERT INTO payslips
+         (id, merchant, period, member_id, member_name, role, rate_set, base_cents,
+          overtime_cents, bonus_cents, advance_cents, gross_cents, capped_cents,
+          cnss_cents, amo_cents, igr_cents, employer_cents, net_cents, dependents,
+          command_id, created_ts, updated_ts)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ).bind(`${row.id}:${i}`, merchant, period, person.id, person.name, person.role,
+        rated.set, person.base, person.overtime, person.bonus, person.advance,
+        slip.grossCents, slip.cappedCents, slip.cnssCents, slip.amoCents, slip.igrCents,
+        slip.employerCents, slip.netCents, person.dependents, row.id, now(), now()).run();
+    }
+    const totals = payTotals(slips.map(({ person, slip }) => ({
+      gross_cents: slip.grossCents, capped_cents: slip.cappedCents, cnss_cents: slip.cnssCents,
+      amo_cents: slip.amoCents, igr_cents: slip.igrCents, employer_cents: slip.employerCents,
+      advance_cents: slip.advanceCents, net_cents: slip.netCents,
+    })));
+    await env.DB.prepare(
+      `INSERT INTO payroll_periods (merchant, period, status, employees, gross_cents, net_cents, employer_cents, journal_number, declaration, updated_ts)
+       VALUES (?, ?, 'prepared', ?, ?, ?, ?, '', '', ?)
+       ON CONFLICT (merchant, period) DO UPDATE SET status = 'prepared', employees = excluded.employees,
+         gross_cents = excluded.gross_cents, net_cents = excluded.net_cents,
+         employer_cents = excluded.employer_cents, updated_ts = excluded.updated_ts`
+    ).bind(merchant, period, totals.employees, totals.grossCents, totals.netCents, totals.employerCents, now()).run();
+    return update(env, row, 'prepared', 'kiwi-payroll', Object.assign({
+      period, rateSet: rated.set, status: 'prepared',
+      payslips: slips.map(({ person, slip }) => ({
+        memberId: person.id, name: person.name, grossCents: slip.grossCents,
+        cnssCents: slip.cnssCents, amoCents: slip.amoCents, igrCents: slip.igrCents,
+        netCents: slip.netCents,
+      })),
+    }, totals), '', 60000);
+  }
+
+  const stored = await env.DB.prepare(
+    'SELECT * FROM payslips WHERE merchant = ? AND period = ? ORDER BY member_name, member_id'
+  ).bind(merchant, period).all();
+  const list = (stored && stored.results) || [];
+  /* Exporter ou déclarer une paie qui n'a jamais été calculée produirait un
+     fichier vide qui a l'air d'un fichier. */
+  if (!list.length) return fail('no-payslips');
+  const totals = payTotals(list);
+
+  if (row.action === 'export-payroll') {
+    if (held && held.journal_number) {
+      return update(env, row, 'completed', 'kiwi-payroll', Object.assign({
+        period, number: clean(held.journal_number, 40), alreadyPosted: true, status: 'exported',
+      }, totals), '');
+    }
+    await ensureLedger(env);
+    const date = monthEnd(period);
+    const locked = await lockedPeriod(env, merchant, date);
+    if (locked) return fail(`period-locked:${locked}`);
+    /* Le brut n'est pas une charge à lui seul : ce que l'entreprise supporte,
+       c'est le brut plus la part patronale, et ce qu'elle doit se répartit
+       entre le salarié, la CNSS, l'État et les avances déjà versées. */
+    const social = totals.cnssCents + totals.amoCents + totals.employerCents;
+    const lines = [
+      { account: PAYACC.salaires, label: 'Rémunérations du personnel', debit: totals.grossCents, credit: 0 },
+      { account: PAYACC.charges, label: 'Charges sociales employeur', debit: totals.employerCents, credit: 0 },
+      { account: PAYACC.dus, label: 'Rémunérations dues au personnel', debit: 0, credit: totals.netCents },
+      { account: PAYACC.cnss, label: 'CNSS · AMO', debit: 0, credit: social },
+      { account: PAYACC.igr, label: 'État · IGR', debit: 0, credit: totals.igrCents },
+      { account: PAYACC.avances, label: 'Avances et acomptes au personnel', debit: 0, credit: totals.advanceCents },
+    ].filter((line) => line.debit > 0 || line.credit > 0);
+    if (!balanced(lines)) return fail('unbalanced-entry');
+    const series = `PAIE-${period.slice(0, 4)}`;
+    const written = await writeDocument(env, {
+      id: row.id, merchant, kind: 'payroll', series, date, currency: 'MAD',
+      totalCents: totals.grossCents + totals.employerCents, taxCents: totals.igrCents,
+      customer: '', parent: '',
+    }, lines);
+    if (!written) return fail('numbering-conflict');
+    await env.DB.prepare(
+      "UPDATE payroll_periods SET status = 'exported', journal_number = ?, updated_ts = ? WHERE merchant = ? AND period = ?"
+    ).bind(written.number, now(), merchant, period).run();
+    /* Les lignes partent avec le résultat : l'écran de paie écrit un vrai CSV
+       à partir de ce que le serveur a calculé, jamais d'un tableau reconstruit
+       côté navigateur.  Un export tronqué le dit. */
+    const rows = list.map((slip) => ({
+      memberId: clean(slip.member_id, 80), name: clean(slip.member_name, 120), role: clean(slip.role, 60),
+      grossCents: Number(slip.gross_cents || 0), cnssCents: Number(slip.cnss_cents || 0),
+      amoCents: Number(slip.amo_cents || 0), igrCents: Number(slip.igr_cents || 0),
+      advanceCents: Number(slip.advance_cents || 0), employerCents: Number(slip.employer_cents || 0),
+      netCents: Number(slip.net_cents || 0),
+    }));
+    const summary = Object.assign({
+      period, number: written.number, series, seq: written.seq, date, status: 'exported',
+      entries: lines.length, balanced: true, alreadyPosted: false,
+    }, totals);
+    const full = Object.assign({ rows, truncated: false }, summary);
+    return update(env, row, 'completed', 'kiwi-payroll',
+      safeJson(full, 55000) ? full : Object.assign({ truncated: true }, summary), '', 60000);
+  }
+
+  /* submit-cnss — la déclaration fige la période : après elle, un recalcul
+     silencieux ferait mentir un bordereau déjà déposé. */
+  if (held && held.declaration) {
+    return update(env, row, 'completed', 'kiwi-payroll', Object.assign({
+      period, declaration: clean(held.declaration, 40), alreadyDeclared: true, status: 'declared',
+    }, totals), '');
+  }
+  const declaration = `DS-${period}`;
+  await env.DB.prepare(
+    `INSERT INTO payroll_periods (merchant, period, status, employees, gross_cents, net_cents, employer_cents, journal_number, declaration, updated_ts)
+     VALUES (?, ?, 'declared', ?, ?, ?, ?, '', ?, ?)
+     ON CONFLICT (merchant, period) DO UPDATE SET status = 'declared', declaration = excluded.declaration, updated_ts = excluded.updated_ts`
+  ).bind(merchant, period, totals.employees, totals.grossCents, totals.netCents,
+    totals.employerCents, declaration, now()).run();
+  return update(env, row, 'completed', 'kiwi-payroll', Object.assign({
+    period, declaration, alreadyDeclared: false, status: 'declared',
+    socialCents: totals.cnssCents + totals.amoCents + totals.employerCents,
+  }, totals), '');
+}
+
 async function execute(env, row, payload) {
   if (row.domain === 'device' && row.action === 'heartbeat') {
     return update(env, row, 'completed', 'kiwi-device', { recorded: true }, '');
@@ -738,6 +1033,7 @@ async function execute(env, row, payload) {
   }
   if (row.domain === 'accounting') return accounting(env, row, payload);
   if (row.domain === 'procurement') return procurement(env, row, payload);
+  if (row.domain === 'payroll') return payroll(env, row, payload);
   const initial = row.action.startsWith('export-') || row.action.startsWith('prepare-') ? 'prepared' : 'draft';
   return update(env, row, initial, 'kiwi-workflow', { persisted: true }, '');
 }
@@ -792,6 +1088,56 @@ export async function onRequestGet({ request, env }) {
         totalCents: Number(order.total_cents || 0), invoicedCents: Number(order.invoiced_cents || 0),
         updatedAt: Number(order.updated_ts || 0), lines: byNumber.get(order.number) || [],
       })) });
+    } catch (_) { return json({ error: 'db' }, 503); }
+  }
+  /* Le livre de paie se lit aussi à part.  Sans période, on renvoie l'état de
+     chaque mois — préparé, journalisé, déclaré — parce que c'est la question
+     que le commerçant pose en premier : « où j'en suis ? ». */
+  if (clean(url.searchParams.get('view'), 24) === 'payslips') {
+    try {
+      await ensurePayroll(env);
+      const period = clean(url.searchParams.get('period'), 7);
+      if (period && !PERIOD.test(period)) return json({ error: 'invalid-period' }, 400);
+      if (!period) {
+        const months = await env.DB.prepare(
+          `SELECT period, status, employees, gross_cents, net_cents, employer_cents, journal_number, declaration, updated_ts
+             FROM payroll_periods WHERE merchant = ? ORDER BY period DESC LIMIT 24`
+        ).bind(merchant).all();
+        return json({ merchant, periods: ((months && months.results) || []).map((month) => ({
+          period: clean(month.period, 7), status: clean(month.status, 20),
+          employees: Number(month.employees || 0), grossCents: Number(month.gross_cents || 0),
+          netCents: Number(month.net_cents || 0), employerCents: Number(month.employer_cents || 0),
+          number: clean(month.journal_number, 40), declaration: clean(month.declaration, 40),
+          updatedAt: Number(month.updated_ts || 0),
+        })) });
+      }
+      const header = await env.DB.prepare(
+        'SELECT * FROM payroll_periods WHERE merchant = ? AND period = ?'
+      ).bind(merchant, period).first();
+      const slips = await env.DB.prepare(
+        `SELECT member_id, member_name, role, rate_set, base_cents, overtime_cents, bonus_cents,
+                advance_cents, gross_cents, cnss_cents, amo_cents, igr_cents, employer_cents,
+                net_cents, dependents
+           FROM payslips WHERE merchant = ? AND period = ? ORDER BY member_name, member_id`
+      ).bind(merchant, period).all();
+      const rows = (slips && slips.results) || [];
+      return json({
+        merchant, period,
+        status: header ? clean(header.status, 20) : rows.length ? 'prepared' : 'none',
+        number: header ? clean(header.journal_number, 40) : '',
+        declaration: header ? clean(header.declaration, 40) : '',
+        totals: payTotals(rows),
+        payslips: rows.map((slip) => ({
+          memberId: clean(slip.member_id, 80), name: clean(slip.member_name, 120),
+          role: clean(slip.role, 60), rateSet: clean(slip.rate_set, 24),
+          baseCents: Number(slip.base_cents || 0), overtimeCents: Number(slip.overtime_cents || 0),
+          bonusCents: Number(slip.bonus_cents || 0), advanceCents: Number(slip.advance_cents || 0),
+          grossCents: Number(slip.gross_cents || 0), cnssCents: Number(slip.cnss_cents || 0),
+          amoCents: Number(slip.amo_cents || 0), igrCents: Number(slip.igr_cents || 0),
+          employerCents: Number(slip.employer_cents || 0), netCents: Number(slip.net_cents || 0),
+          dependents: Number(slip.dependents || 0),
+        })),
+      });
     } catch (_) { return json({ error: 'db' }, 503); }
   }
   const domain = clean(url.searchParams.get('domain'), 32);

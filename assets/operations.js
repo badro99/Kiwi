@@ -107,6 +107,12 @@
     if (opts.open) query.set('state', 'open');
     return responseJson(await fetch('/api/operations?' + query.toString(), { credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' } }));
   }
+  async function payslips(opts) {
+    opts = opts || {};
+    var query = new URLSearchParams({ merchant: K.tenant(), view: 'payslips' });
+    if (opts.period) query.set('period', clean(opts.period, 7));
+    return responseJson(await fetch('/api/operations?' + query.toString(), { credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' } }));
+  }
   async function transition(commandId, state, opts) {
     opts = opts || {};
     return responseJson(await fetch('/api/operations', {
@@ -159,7 +165,7 @@
   }, 1800);
 
   window.KiwiOperations = {
-    version: 1, create: create, list: list, purchaseOrders: purchaseOrders, transition: transition, flush: flush,
+    version: 1, create: create, list: list, purchaseOrders: purchaseOrders, payslips: payslips, transition: transition, flush: flush,
     allowed: allowed, subscribe: function (fn) { listeners.add(fn); return function () { listeners.delete(fn); }; },
   };
 })();

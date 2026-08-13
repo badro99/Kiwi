@@ -2318,7 +2318,11 @@
   };
   handlers['export-payroll'] = () => {
     if (usesOwnData()) return toast(tr({ fr: 'Export de paie non généré', en: 'Payroll export not generated', ar: 'لم يتم إنشاء تصدير الأجور' }), { type: 'info', desc: tr({ fr: 'Aucune source de paie vérifiée n’est disponible.', en: 'No verified payroll source is available.', ar: 'لا يتوفر مصدر أجور مؤكد.' }) });
-    return toast(tr({fr:'Export de paie · avril 2026', en:'Payroll export · April 2026', ar:'تصدير الرواتب · أبريل 2026'}), { type: 'info', desc: tr({fr:'PDF + CSV générés et envoyés à votre comptable.', en:'PDF + CSV generated and sent to your accountant.', ar:'تم إنشاء PDF + CSV وإرسالهما إلى محاسبك.'}) });
+    /* La démo ne calcule pas de bulletin et n'envoie rien à personne : dire le
+       contraire était le mensonge le plus coûteux de cet écran.  La console de
+       paie — calcul CNSS/AMO/IGR, CSV téléchargé, écriture au journal — ouvre
+       sur un vrai compte, à la place de ce handler. */
+    return toast(tr({fr:'Export de paie · démonstration', en:'Payroll export · demo', ar:'تصدير الرواتب · عرض توضيحي'}), { type: 'info', desc: tr({fr:'Aucun bulletin n’est calculé ni envoyé ici. La console de paie s’ouvre sur un compte réel.', en:'No payslip is computed or sent here. The payroll console opens on a real account.', ar:'لا يتم احتساب أو إرسال أي كشف راتب هنا. تُفتح وحدة الأجور على حساب حقيقي.'}) });
   };
 
   /* ═══════════════════ Sidebar nav router ═══════════════════

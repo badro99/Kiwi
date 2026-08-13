@@ -33,6 +33,21 @@
           pRun:'Enregistrer', pDone:'Livre des achats mis à jour.', pLoading:'Lecture du livre des achats…',
           pNoOrders:'Aucun bon de commande ouvert.', pRefresh:'Rafraîchir', pOrderCreated:'Bon de commande créé',
           pStatus:{ draft:'Brouillon', submitted:'Envoyé', partial:'Partiel', received:'Reçu' },
+          payTitle:'Paie', paySub:'Bulletins calculés · CNSS, AMO, IGR · écriture au journal',
+          payDenied:'Droit de paie requis', payDeniedD:'Les salaires ne se lisent pas avec une session de gérant. Seul le compte propriétaire — ou un opérateur Kiwi — ouvre la paie.',
+          tabPrepare:'Calculer', tabBook:'Livre de paie',
+          payPeriod:'Mois de paie', payTeam:'Reprendre l’équipe', payMember:'Salarié', payId:'Matricule',
+          payBase:'Base · MAD', payOt:'Heures sup · MAD', payBonus:'Prime · MAD', payAdvance:'Avance · MAD', payDeps:'Charges de famille',
+          payAddRow:'Ajouter un salarié', payRemoveRow:'Retirer', payRun:'Calculer les bulletins',
+          payHint:'Le calcul retient la CNSS plafonnée, l’AMO, les frais professionnels et l’IGR par tranches. Rien n’est envoyé à personne : les bulletins restent dans Kiwi tant que vous ne les comptabilisez pas.',
+          payGross:'Brut', payNet:'Net à payer', payCnss:'CNSS', payAmo:'AMO', payIgr:'IGR',
+          payEmployer:'Charges patronales', payHeads:'Salariés', payRates:'Jeu de taux',
+          payCsv:'Télécharger le livre de paie', payPost:'Comptabiliser la paie',
+          payPostHint:'Une écriture équilibrée est passée au journal, datée au dernier jour du mois. Une période comptable verrouillée la refuse.',
+          payDeclare:'Déclarer à la CNSS', payDeclareHint:'La déclaration fige la période : les bulletins ne se recalculent plus.',
+          payLoading:'Lecture du livre de paie…', payNone:'Aucun bulletin sur cette période.',
+          payDone:'Bulletins calculés et enregistrés.', payAlready:'Déjà fait — rien n’a changé.',
+          payStatus:{ prepared:'Préparée', exported:'Comptabilisée', declared:'Déclarée' },
           acctTitle:'Comptabilité', acctSub:'Écritures durables · plan comptable marocain',
           tabInvoice:'Facture', tabCredit:'Avoir', tabPeriod:'Période', tabJournal:'Journal',
           acctDenied:'Réservé au propriétaire', acctDeniedD:'Seul le compte propriétaire — ou un opérateur Kiwi — peut écrire dans les livres. Votre session n’a pas ce droit, et Kiwi préfère le dire avant de vous faire remplir un formulaire.',
@@ -65,6 +80,15 @@
             'exceeds-ordered':'La réception dépasse la quantité commandée — rien n’a été écrit.',
             'invoice-mismatch':'La facture ne correspond pas à la marchandise reçue — rien n’a été écrit.',
             'exceeds-received':'Le retour dépasse ce qui est encore détenu.',
+            'no-employees':'Ajoutez au moins un salarié.', 'too-many-employees':'Trop de salariés (200 au maximum).',
+            'member-required':'Matricule manquant sur une ligne.', 'duplicate-member':'Deux lignes portent le même salarié.',
+            'invalid-dependents':'Nombre de charges de famille invalide.',
+            'advance-exceeds-gross':'L’avance dépasse le brut du mois.',
+            'net-negative':'Le net serait négatif pour ce salarié',
+            'no-payslips':'Aucun bulletin calculé sur cette période — calculez-les d’abord.',
+            'period-declared':'Période déjà déclarée à la CNSS — les bulletins sont figés.',
+            'period-posted':'Période déjà comptabilisée — recalculer changerait une écriture passée.',
+            'invalid-rate':'Taux invalide', 'invalid-ceiling':'Plafond CNSS invalide.',
           },
         },
         en: {
@@ -89,6 +113,21 @@
           pRun:'Record', pDone:'Purchase ledger updated.', pLoading:'Reading the purchase ledger…',
           pNoOrders:'No open purchase order.', pRefresh:'Refresh', pOrderCreated:'Purchase order created',
           pStatus:{ draft:'Draft', submitted:'Sent', partial:'Partial', received:'Received' },
+          payTitle:'Payroll', paySub:'Computed payslips · CNSS, AMO, income tax · journal entry',
+          payDenied:'Payroll right required', payDeniedD:'Salaries are not read with a manager session. Only the owner account — or a Kiwi operator — opens payroll.',
+          tabPrepare:'Compute', tabBook:'Payroll book',
+          payPeriod:'Payroll month', payTeam:'Pull the team', payMember:'Employee', payId:'Staff ID',
+          payBase:'Base · MAD', payOt:'Overtime · MAD', payBonus:'Bonus · MAD', payAdvance:'Advance · MAD', payDeps:'Dependents',
+          payAddRow:'Add an employee', payRemoveRow:'Remove', payRun:'Compute the payslips',
+          payHint:'The computation withholds capped CNSS, AMO, the professional allowance and bracketed income tax. Nothing is sent to anyone: the payslips stay inside Kiwi until you post them.',
+          payGross:'Gross', payNet:'Net pay', payCnss:'CNSS', payAmo:'AMO', payIgr:'Income tax',
+          payEmployer:'Employer charges', payHeads:'Employees', payRates:'Rate set',
+          payCsv:'Download the payroll book', payPost:'Post payroll to the books',
+          payPostHint:'A balanced entry is written to the journal, dated the last day of the month. A locked accounting period refuses it.',
+          payDeclare:'File with CNSS', payDeclareHint:'Filing freezes the period: payslips can no longer be recomputed.',
+          payLoading:'Reading the payroll book…', payNone:'No payslip in this period.',
+          payDone:'Payslips computed and stored.', payAlready:'Already done — nothing changed.',
+          payStatus:{ prepared:'Prepared', exported:'Posted', declared:'Filed' },
           acctTitle:'Accounting', acctSub:'Durable entries · Moroccan chart of accounts',
           tabInvoice:'Invoice', tabCredit:'Credit note', tabPeriod:'Period', tabJournal:'Journal',
           acctDenied:'Owner only', acctDeniedD:'Only the owner account — or a Kiwi operator — can write to the books. Your session does not hold that right, and Kiwi says so before you fill in a form.',
@@ -121,6 +160,15 @@
             'exceeds-ordered':'The receipt exceeds what was ordered — nothing was written.',
             'invoice-mismatch':'The invoice does not match the goods received — nothing was written.',
             'exceeds-received':'The return exceeds what is still held.',
+            'no-employees':'Add at least one employee.', 'too-many-employees':'Too many employees (200 maximum).',
+            'member-required':'A line is missing its staff ID.', 'duplicate-member':'Two lines carry the same employee.',
+            'invalid-dependents':'Invalid number of dependents.',
+            'advance-exceeds-gross':'The advance exceeds this month’s gross.',
+            'net-negative':'Net pay would be negative for this employee',
+            'no-payslips':'No payslip computed for this period — compute them first.',
+            'period-declared':'Period already filed with CNSS — the payslips are frozen.',
+            'period-posted':'Period already posted — recomputing would change a past entry.',
+            'invalid-rate':'Invalid rate', 'invalid-ceiling':'Invalid CNSS ceiling.',
           },
         },
         ar: {
@@ -145,6 +193,21 @@
           pRun:'تسجيل', pDone:'تم تحديث دفتر المشتريات.', pLoading:'جارٍ قراءة دفتر المشتريات…',
           pNoOrders:'لا يوجد أمر شراء مفتوح.', pRefresh:'تحديث', pOrderCreated:'تم إنشاء أمر الشراء',
           pStatus:{ draft:'مسودة', submitted:'مُرسل', partial:'جزئي', received:'مستلم' },
+          payTitle:'الأجور', paySub:'كشوف محسوبة · الضمان الاجتماعي والتأمين الإجباري والضريبة على الدخل · قيد في اليومية',
+          payDenied:'يلزم حق الأجور', payDeniedD:'الأجور لا تُقرأ بجلسة مدير. وحده حساب المالك — أو مشغّل Kiwi — يفتح الأجور.',
+          tabPrepare:'الاحتساب', tabBook:'دفتر الأجور',
+          payPeriod:'شهر الأجور', payTeam:'استدعاء الفريق', payMember:'الأجير', payId:'رقم التسجيل',
+          payBase:'الأساسي · درهم', payOt:'ساعات إضافية · درهم', payBonus:'منحة · درهم', payAdvance:'تسبيق · درهم', payDeps:'الأشخاص المتكفَّل بهم',
+          payAddRow:'إضافة أجير', payRemoveRow:'حذف', payRun:'احتساب الكشوف',
+          payHint:'يقتطع الاحتساب الضمان الاجتماعي في حدود السقف، والتأمين الإجباري، والمصاريف المهنية، والضريبة على الدخل حسب الشرائح. لا يُرسل شيء إلى أحد: تبقى الكشوف داخل Kiwi حتى تُقيّدها.',
+          payGross:'الإجمالي', payNet:'الصافي المستحق', payCnss:'الضمان الاجتماعي', payAmo:'التأمين الإجباري', payIgr:'الضريبة على الدخل',
+          payEmployer:'مساهمات المشغّل', payHeads:'الأجراء', payRates:'جدول النسب',
+          payCsv:'تحميل دفتر الأجور', payPost:'تقييد الأجور في الدفاتر',
+          payPostHint:'يُكتب قيد متوازن في اليومية بتاريخ آخر يوم من الشهر. الفترة المحاسبية المقفلة ترفضه.',
+          payDeclare:'التصريح لدى الضمان الاجتماعي', payDeclareHint:'التصريح يجمّد الفترة: لا يمكن إعادة احتساب الكشوف بعده.',
+          payLoading:'جارٍ قراءة دفتر الأجور…', payNone:'لا يوجد كشف في هذه الفترة.',
+          payDone:'تم احتساب الكشوف وحفظها.', payAlready:'تم سابقًا — لم يتغيّر شيء.',
+          payStatus:{ prepared:'محتسبة', exported:'مقيّدة', declared:'مصرَّح بها' },
           acctTitle:'المحاسبة', acctSub:'قيود دائمة · المخطط المحاسبي المغربي',
           tabInvoice:'فاتورة', tabCredit:'إشعار دائن', tabPeriod:'الفترة', tabJournal:'اليومية',
           acctDenied:'خاص بالمالك', acctDeniedD:'وحده حساب المالك — أو مشغّل Kiwi — يمكنه الكتابة في الدفاتر. جلستك لا تملك هذا الحق، ويقولها Kiwi قبل أن تملأ أي استمارة.',
@@ -177,6 +240,15 @@
             'exceeds-ordered':'الاستلام يتجاوز الكمية المطلوبة — لم يُكتب شيء.',
             'invoice-mismatch':'الفاتورة لا تطابق البضاعة المستلمة — لم يُكتب شيء.',
             'exceeds-received':'المرتجع يتجاوز ما هو محتفظ به.',
+            'no-employees':'أضف أجيرًا واحدًا على الأقل.', 'too-many-employees':'عدد الأجراء كبير جدًا (200 كحد أقصى).',
+            'member-required':'رقم التسجيل ناقص في أحد السطور.', 'duplicate-member':'سطران يحملان نفس الأجير.',
+            'invalid-dependents':'عدد الأشخاص المتكفَّل بهم غير صالح.',
+            'advance-exceeds-gross':'التسبيق يتجاوز إجمالي هذا الشهر.',
+            'net-negative':'الصافي سيكون سالبًا لهذا الأجير',
+            'no-payslips':'لا يوجد كشف محتسب في هذه الفترة — احتسبها أولًا.',
+            'period-declared':'الفترة مصرَّح بها لدى الضمان الاجتماعي — الكشوف مجمّدة.',
+            'period-posted':'الفترة مقيَّدة سابقًا — إعادة الاحتساب ستغيّر قيدًا ماضيًا.',
+            'invalid-rate':'نسبة غير صالحة', 'invalid-ceiling':'سقف الضمان الاجتماعي غير صالح.',
           },
         },
       })[lang()];
@@ -241,13 +313,17 @@
       Kiwi.drawer({ title:row.number, subtitle:(supplier && supplier.name || '') + ' · ' + row.status, width:620, body:'<div class="p-card">'+row.lines.map(function (line) { return '<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--n-200)"><span>'+esc(line.name || line.itemId)+'</span><b>'+esc(line.qty)+' '+esc(line.unit)+'</b></div>'; }).join('')+'</div>' });
     };
 
-    /* Replace the two old payroll exports that only painted success. The real
-       CSV export in team.js remains the downloadable artifact; this command is
-       the durable accounting hand-off and says PREPARED, never emailed. */
-    ['eq-export-payroll', 'pay-export'].forEach(function (key) {
-      H[key] = async function () {
-        try { toastResult(await O.create('payroll', 'export-payroll', { format:'csv', source:'planning', teamCount:window.KiwiTeam && window.KiwiTeam.roster ? window.KiwiTeam.roster().length : 0 })); }
-        catch (error) { fail(error); }
+    /* Les trois anciens boutons « exporter la paie » peignaient un toast qui
+       annonçait un PDF envoyé au gérant ou au comptable — sans bulletin, sans
+       fichier, sans destinataire.  Ils ouvrent maintenant la console de paie,
+       qui calcule vraiment, télécharge vraiment et ne prétend rien envoyer.
+       La démo garde ses handlers locaux : le serveur refuserait la commande. */
+    var legacyPay = {};
+    ['eq-export-payroll', 'pay-export', 'export-payroll', 'acct-paie'].forEach(function (key) {
+      legacyPay[key] = H[key];
+      H[key] = function () {
+        if (!real() && legacyPay[key]) return legacyPay[key].apply(this, arguments);
+        openPayroll(key === 'acct-paie' ? 'prepare' : 'book');
       };
     });
 
@@ -329,27 +405,27 @@
       var style = document.createElement('style');
       style.id = 'ops-console-css';
       style.textContent = [
-        '.ops-acct,.ops-proc{padding:22px 26px 46px;max-width:1000px;margin:0 auto;}',
-        '.ops-acct-tabs,.ops-proc-tabs{display:inline-flex;gap:2px;padding:4px;border-radius:999px;background:var(--n-100);border:1px solid var(--n-200);margin-bottom:22px;}',
-        '.ops-acct-tab,.ops-proc-tab{appearance:none;border:0;background:transparent;font:inherit;font-size:12.5px;font-weight:600;color:var(--n-500);padding:8px 18px;border-radius:999px;cursor:pointer;transition:color .2s;}',
+        '.ops-acct,.ops-proc,.ops-pay{padding:22px 26px 46px;max-width:1000px;margin:0 auto;}',
+        '.ops-acct-tabs,.ops-proc-tabs,.ops-pay-tabs{display:inline-flex;gap:2px;padding:4px;border-radius:999px;background:var(--n-100);border:1px solid var(--n-200);margin-bottom:22px;}',
+        '.ops-acct-tab,.ops-proc-tab,.ops-pay-tab{appearance:none;border:0;background:transparent;font:inherit;font-size:12.5px;font-weight:600;color:var(--n-500);padding:8px 18px;border-radius:999px;cursor:pointer;transition:color .2s;}',
         /* liquid-lens paints the pill; the button must not paint one under it. */
-        '.ops-acct-tab.on,.ops-proc-tab.on{background:transparent;color:#fff;}',
-        '.ops-acct-pane,.ops-proc-pane{display:none;}',
-        '.ops-acct-pane.on,.ops-proc-pane.on{display:block;}',
-        '.ops-acct-hint,.ops-proc-hint{font-size:12px;color:var(--n-500);margin:0 0 14px;max-width:62ch;line-height:1.55;}',
+        '.ops-acct-tab.on,.ops-proc-tab.on,.ops-pay-tab.on{background:transparent;color:#fff;}',
+        '.ops-acct-pane,.ops-proc-pane,.ops-pay-pane{display:none;}',
+        '.ops-acct-pane.on,.ops-proc-pane.on,.ops-pay-pane.on{display:block;}',
+        '.ops-acct-hint,.ops-proc-hint,.ops-pay-hint{font-size:12px;color:var(--n-500);margin:0 0 14px;max-width:62ch;line-height:1.55;}',
         '.ops-acct-confirm{display:flex;align-items:flex-start;gap:9px;font-size:12.5px;color:var(--n-500);margin-top:14px;cursor:pointer;}',
         '.ops-acct-confirm input{margin-top:2px;accent-color:var(--atlas);}',
-        '.ops-acct-out,.ops-proc-out{margin-top:18px;}',
-        '.ops-acct-kpis,.ops-proc-kpis{display:flex;flex-wrap:wrap;gap:22px;margin:12px 0 4px;}',
-        '.ops-acct-kpi,.ops-proc-kpi{min-width:104px;}',
-        '.ops-acct-kpi .k,.ops-proc-kpi .k{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--n-500);}',
-        '.ops-acct-kpi .v,.ops-proc-kpi .v{font-size:17px;font-weight:600;margin-top:3px;font-variant-numeric:tabular-nums;}',
-        '.ops-acct-doc,.ops-proc-num{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:18px;letter-spacing:.02em;}',
-        '.ops-acct-scroll,.ops-proc-scroll{overflow-x:auto;max-height:50vh;overflow-y:auto;margin-top:12px;}',
-        '.ops-acct-table,.ops-proc-table{width:100%;border-collapse:collapse;font-size:12.5px;}',
-        '.ops-acct-table th,.ops-proc-table th{text-align:start;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--n-500);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--n-200);position:sticky;top:0;background:var(--surface);}',
-        '.ops-acct-table td,.ops-proc-table td{padding:8px 10px;border-bottom:1px solid var(--n-100);}',
-        '.ops-acct-n,.ops-proc-n{text-align:end;font-variant-numeric:tabular-nums;white-space:nowrap;}',
+        '.ops-acct-out,.ops-proc-out,.ops-pay-out{margin-top:18px;}',
+        '.ops-acct-kpis,.ops-proc-kpis,.ops-pay-kpis{display:flex;flex-wrap:wrap;gap:22px;margin:12px 0 4px;}',
+        '.ops-acct-kpi,.ops-proc-kpi,.ops-pay-kpi{min-width:104px;}',
+        '.ops-acct-kpi .k,.ops-proc-kpi .k,.ops-pay-kpi .k{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--n-500);}',
+        '.ops-acct-kpi .v,.ops-proc-kpi .v,.ops-pay-kpi .v{font-size:17px;font-weight:600;margin-top:3px;font-variant-numeric:tabular-nums;}',
+        '.ops-acct-doc,.ops-proc-num,.ops-pay-num{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:18px;letter-spacing:.02em;}',
+        '.ops-acct-scroll,.ops-proc-scroll,.ops-pay-scroll{overflow-x:auto;max-height:50vh;overflow-y:auto;margin-top:12px;}',
+        '.ops-acct-table,.ops-proc-table,.ops-pay-table{width:100%;border-collapse:collapse;font-size:12.5px;}',
+        '.ops-acct-table th,.ops-proc-table th,.ops-pay-table th{text-align:start;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--n-500);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--n-200);position:sticky;top:0;background:var(--surface);}',
+        '.ops-acct-table td,.ops-proc-table td,.ops-pay-table td{padding:8px 10px;border-bottom:1px solid var(--n-100);}',
+        '.ops-acct-n,.ops-proc-n,.ops-pay-n{text-align:end;font-variant-numeric:tabular-nums;white-space:nowrap;}',
         /* Saisie multiligne d'un bon : une ligne = une rangée, la référence et
            la désignation portent la largeur, les nombres restent serrés. */
         '.ops-proc-line{display:grid;grid-template-columns:1.1fr 1.5fr .7fr .7fr .9fr auto;gap:8px;align-items:end;margin-bottom:8px;}',
@@ -358,17 +434,27 @@
         '.ops-proc-line input{width:100%;box-sizing:border-box;}',
         '.ops-proc-line.n .l{visibility:hidden;}',
         '@media (max-width:720px){.ops-proc-line{grid-template-columns:1fr 1fr;}.ops-proc-line.n .l{visibility:visible;}}',
-        '.ops-proc-rm{appearance:none;border:1px solid var(--n-200);background:transparent;color:var(--n-500);border-radius:9px;height:34px;width:34px;cursor:pointer;font-size:15px;line-height:1;}',
-        '.ops-proc-rm:hover{color:var(--ink);border-color:var(--n-300);}',
-        '.ops-proc-total{display:flex;justify-content:space-between;align-items:baseline;margin-top:14px;padding-top:12px;border-top:1px solid var(--n-200);}',
-        '.ops-proc-total .k{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--n-500);}',
-        '.ops-proc-total .v{font-size:19px;font-weight:600;font-variant-numeric:tabular-nums;}',
+        '.ops-proc-rm,.ops-pay-rm{appearance:none;border:1px solid var(--n-200);background:transparent;color:var(--n-500);border-radius:9px;height:34px;width:34px;cursor:pointer;font-size:15px;line-height:1;}',
+        '.ops-proc-rm:hover,.ops-pay-rm:hover{color:var(--ink);border-color:var(--n-300);}',
+        '.ops-proc-total,.ops-pay-total{display:flex;justify-content:space-between;align-items:baseline;margin-top:14px;padding-top:12px;border-top:1px solid var(--n-200);}',
+        '.ops-proc-total .k,.ops-pay-total .k{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--n-500);}',
+        '.ops-proc-total .v,.ops-pay-total .v{font-size:19px;font-weight:600;font-variant-numeric:tabular-nums;}',
         '.ops-proc-order{margin-bottom:12px;}',
-        '.ops-proc-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:10px;}',
+        '.ops-proc-head,.ops-pay-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:10px;}',
         '.ops-proc-sup{font-size:12.5px;color:var(--n-500);}',
-        '.ops-proc-act{margin-top:14px;padding-top:14px;border-top:1px solid var(--n-100);}',
-        '.ops-proc-actTitle{font-size:12.5px;font-weight:600;margin:0 0 4px;}',
+        '.ops-proc-act,.ops-pay-act{margin-top:14px;padding-top:14px;border-top:1px solid var(--n-100);}',
+        '.ops-proc-actTitle,.ops-pay-actTitle{font-size:12.5px;font-weight:600;margin:0 0 4px;}',
         '.ops-proc-qty{width:82px;box-sizing:border-box;}',
+        /* Une paie tient huit colonnes là où un bon en tient six : le salarié et
+           son matricule d'abord, puis cinq nombres et le retrait.  La grille des
+           bons ne pouvait pas les porter, d'où cette règle à elle. */
+        '.ops-pay-line{display:grid;grid-template-columns:1.4fr .9fr .8fr .8fr .8fr .8fr .7fr auto;gap:8px;align-items:end;margin-bottom:8px;}',
+        '.ops-pay-line label{display:block;min-width:0;}',
+        '.ops-pay-line .l{display:block;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--n-500);margin-bottom:4px;}',
+        '.ops-pay-line input{width:100%;box-sizing:border-box;}',
+        '.ops-pay-line.n .l{visibility:hidden;}',
+        '@media (max-width:1000px){.ops-pay-line{grid-template-columns:1.4fr .9fr .8fr .8fr auto;}.ops-pay-line.n .l{visibility:visible;}}',
+        '@media (max-width:720px){.ops-pay-line{grid-template-columns:1fr 1fr;}}',
       ].join('\n');
       document.head.appendChild(style);
     }
@@ -744,11 +830,269 @@
       if (tab === 'orders') loadOrders();
     }
 
+    /* ─────────────── PAIE ───────────────
+     * Trois boutons annonçaient « PDF envoyé au gérant » ou « envoyé à votre
+     * comptable » sans fichier, sans destinataire et sans calcul.  Le serveur
+     * sait désormais établir un bulletin marocain — CNSS plafonnée, AMO, frais
+     * professionnels, IGR par tranches, charges de famille, charges patronales
+     * — le stocker par salarié et le passer au journal.  Voici l'entrée. */
+    function payOutcome(result) {
+      /* `prepare-payslips` se termine en `prepared` : la paie est calculée,
+         pas encore comptabilisée.  outcome() lirait cet état comme un échec. */
+      if (result && result.offline) return { queued:true };
+      var cmd = result && result.command || {};
+      if (cmd.status === 'failed' || cmd.lastError) return { error:cmd.lastError || 'operation-failed' };
+      if (cmd.status !== 'completed' && cmd.status !== 'prepared') return { error:cmd.status || 'operation-failed' };
+      return { data:cmd.result || {} };
+    }
+    function payLineRow(index, member) {
+      var c = text(), m = member || {};
+      /* Le rôle voyage sur la rangée, pas dans une colonne : KiwiTeam le
+         connaît, le serveur l'enregistre, et aucune des trois langues n'a de
+         libellé pour lui — mieux vaut le porter que l'inventer. */
+      return '<div class="ops-pay-line' + (index ? ' n' : '') + '" data-py-line' + (m.role ? ' data-py-role="' + esc(m.role) + '"' : '') + '>' +
+        '<label><span class="l">' + esc(c.payMember) + '</span><input maxlength="120" data-py-name value="' + esc(m.name || '') + '"></label>' +
+        '<label><span class="l">' + esc(c.payId) + '</span><input maxlength="60" data-py-id value="' + esc(m.id || '') + '"></label>' +
+        '<label><span class="l">' + esc(c.payBase) + '</span><input type="number" min="0" step="0.01" data-py-base></label>' +
+        '<label><span class="l">' + esc(c.payOt) + '</span><input type="number" min="0" step="0.01" data-py-ot></label>' +
+        '<label><span class="l">' + esc(c.payBonus) + '</span><input type="number" min="0" step="0.01" data-py-bonus></label>' +
+        '<label><span class="l">' + esc(c.payAdvance) + '</span><input type="number" min="0" step="0.01" data-py-advance></label>' +
+        '<label><span class="l">' + esc(c.payDeps) + '</span><input type="number" min="0" max="20" step="1" data-py-deps></label>' +
+        '<button class="ops-pay-rm" type="button" data-py-remove aria-label="' + esc(c.payRemoveRow) + '">×</button>' +
+        '</div>';
+    }
+    function openPayroll(tab) {
+      var c = text();
+      consoleCss();
+      tab = tab === 'book' ? 'book' : 'prepare';
+      if (O.allowed && !O.allowed('payroll', 'prepare-payslips')) {
+        Kiwi.drawer({ title:c.payTitle, subtitle:c.paySub, fullpage:true,
+          body:'<div class="ops-pay"><div class="p-card"><b>' + esc(c.payDenied) + '</b><p class="ops-pay-hint" style="margin:8px 0 0">' + esc(c.payDeniedD) + '</p></div></div>' });
+        return;
+      }
+      var month = iso(new Date()).slice(0, 7);
+      var confirmBox = '<label class="ops-acct-confirm"><input type="checkbox" data-acct-confirm><span>' + esc(c.confirmLabel) + '</span></label>';
+
+      var body = '<div class="ops-pay">' +
+        '<div class="ops-pay-tabs" data-lens-demo>' +
+          [['prepare', c.tabPrepare], ['book', c.tabBook]].map(function (t) {
+            return '<button class="ops-pay-tab' + (t[0] === tab ? ' on' : '') + '" type="button" data-lens-item data-py-tab="' + t[0] + '">' + esc(t[1]) + '</button>';
+          }).join('') +
+        '</div>' +
+        '<section class="ops-pay-pane' + (tab === 'prepare' ? ' on' : '') + '" data-py-pane="prepare">' +
+          '<p class="ops-pay-hint">' + esc(c.payHint) + '</p>' +
+          '<div class="kf-grid">' +
+            '<label><span class="l">' + esc(c.payPeriod) + '</span><input type="month" data-py-period value="' + esc(month) + '"></label>' +
+          '</div>' +
+          '<div style="margin-top:16px" data-py-lines>' + payLineRow(0) + '</div>' +
+          '<button class="kb ghost xs" type="button" data-py-add>' + esc(c.payAddRow) + '</button> ' +
+          '<button class="kb ghost xs" type="button" data-py-team>' + esc(c.payTeam) + '</button>' +
+          '<div class="ops-pay-total"><span class="k">' + esc(c.payGross) + '</span><span class="v" data-py-total>' + esc(money(0)) + '</span></div>' +
+          '<button class="kb atlas" style="width:100%;justify-content:center;margin-top:14px" type="button" data-py-run>' + esc(c.payRun) + '</button>' +
+          '<div class="ops-pay-out" data-py-out></div>' +
+        '</section>' +
+        '<section class="ops-pay-pane' + (tab === 'book' ? ' on' : '') + '" data-py-pane="book">' +
+          '<div class="kf-grid">' +
+            '<label><span class="l">' + esc(c.payPeriod) + '</span><input type="month" data-py-book-period value="' + esc(month) + '"></label>' +
+          '</div>' +
+          '<button class="kb ghost xs" style="margin-top:12px" type="button" data-py-refresh>' + esc(c.pRefresh) + '</button>' +
+          '<div data-py-book><p class="ops-pay-hint" style="margin-top:14px">' + esc(c.payLoading) + '</p></div>' +
+        '</section>' +
+        '</div>';
+
+      var res = Kiwi.drawer({ title:c.payTitle, subtitle:c.paySub, body:body, fullpage:true });
+      var root = res.el;
+      var loaded = null;
+
+      function rows() { return Array.prototype.slice.call(root.querySelectorAll('[data-py-line]')); }
+      function num(row, key) { return Number(row.querySelector('[data-py-' + key + ']').value || 0); }
+      function retotal() {
+        var total = rows().reduce(function (sum, row) { return sum + num(row, 'base') + num(row, 'ot') + num(row, 'bonus'); }, 0);
+        root.querySelector('[data-py-total]').textContent = money(Math.round(total * 100));
+      }
+      root.addEventListener('input', function (event) { if (event.target.closest('[data-py-line]')) retotal(); });
+
+      function kpi(k, v) { return '<div class="ops-pay-kpi"><div class="k">' + esc(k) + '</div><div class="v">' + esc(v) + '</div></div>'; }
+      function card(el, code) { el.innerHTML = '<div class="p-card"><span class="chip pend">' + esc(acctError(code)) + '</span></div>'; }
+
+      function bookCard(data) {
+        var t = data.totals || {}, list = data.payslips || [];
+        if (!list.length) return '<p class="ops-pay-hint" style="margin-top:14px">' + esc(c.payNone) + '</p>';
+        var status = (c.payStatus && c.payStatus[data.status]) || data.status || '';
+        var head = ['payId', 'payMember', 'payGross', 'payCnss', 'payAmo', 'payIgr', 'payAdvance', 'payEmployer', 'payNet'];
+        return '<div class="p-card" style="margin-top:14px">' +
+          '<div class="ops-pay-head">' +
+            '<div class="ops-pay-num">' + esc(data.number || data.period) + '</div>' +
+            '<span class="chip">' + esc(status) + '</span>' +
+          '</div>' +
+          '<div class="ops-pay-kpis">' +
+            kpi(c.payHeads, String(t.employees || list.length)) +
+            kpi(c.payGross, money(t.grossCents)) +
+            kpi(c.payNet, money(t.netCents)) +
+            kpi(c.payEmployer, money(t.employerCents)) +
+          '</div>' +
+          '<div class="ops-pay-scroll"><table class="ops-pay-table"><thead><tr>' +
+            head.map(function (k, i) { return '<th' + (i > 1 ? ' class="ops-pay-n"' : '') + '>' + esc(c[k]) + '</th>'; }).join('') +
+          '</tr></thead><tbody>' +
+            list.map(function (p) {
+              return '<tr><td>' + esc(p.memberId) + '</td><td>' + esc(p.name) + '</td>' +
+                [p.grossCents, p.cnssCents, p.amoCents, p.igrCents, p.advanceCents, p.employerCents, p.netCents]
+                  .map(function (v) { return '<td class="ops-pay-n">' + esc(money(v)) + '</td>'; }).join('') +
+                '</tr>';
+            }).join('') +
+          '</tbody></table></div>' +
+          '<div class="ops-pay-act">' +
+            '<button class="kb ghost xs" type="button" data-py-csv>' + esc(c.payCsv) + '</button>' +
+          '</div>' +
+          '<div class="ops-pay-act">' +
+            '<p class="ops-pay-actTitle">' + esc(c.payPost) + '</p>' +
+            '<p class="ops-pay-hint">' + esc(c.payPostHint) + '</p>' +
+            '<button class="kb atlas xs" type="button" data-py-run-book="export-payroll">' + esc(c.payPost) + '</button>' +
+          '</div>' +
+          '<div class="ops-pay-act" data-py-act>' +
+            '<p class="ops-pay-actTitle">' + esc(c.payDeclare) + '</p>' +
+            '<p class="ops-pay-hint">' + esc(c.payDeclareHint) + '</p>' +
+            confirmBox +
+            '<button class="kb atlas xs" style="margin-top:12px" type="button" data-py-run-book="submit-cnss">' + esc(c.payDeclare) + '</button>' +
+          '</div>' +
+          '<div class="ops-pay-out" data-py-book-out></div>' +
+        '</div>';
+      }
+
+      async function loadBook() {
+        var host = root.querySelector('[data-py-book]');
+        host.innerHTML = '<p class="ops-pay-hint" style="margin-top:14px">' + esc(c.payLoading) + '</p>';
+        try {
+          var data = await O.payslips({ period:root.querySelector('[data-py-book-period]').value || month });
+          loaded = data;
+          host.innerHTML = bookCard(data || {});
+        } catch (error) { loaded = null; card(host, error && (error.code || error.message)); }
+      }
+
+      function downloadBook() {
+        if (!loaded || !(loaded.payslips || []).length) return;
+        /* Un nom de salarié qui commence par = devient une formule dans Excel. */
+        var cell = function (v) {
+          var s = String(v == null ? '' : v);
+          if (/^[\t\r ]*[=+\-@]/.test(s)) s = "'" + s;
+          return /[";\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+        };
+        var amount = function (v) { return (Number(v || 0) / 100).toFixed(2).replace('.', ','); };
+        var head = [c.payId, c.payMember, c.payGross, c.payCnss, c.payAmo, c.payIgr, c.payAdvance, c.payEmployer, c.payNet].map(cell).join(';');
+        var body = loaded.payslips.map(function (p) {
+          return [cell(p.memberId), cell(p.name), amount(p.grossCents), amount(p.cnssCents), amount(p.amoCents),
+            amount(p.igrCents), amount(p.advanceCents), amount(p.employerCents), amount(p.netCents)].join(';');
+        });
+        var blob = new Blob(['﻿' + [head].concat(body).join('\r\n')], { type:'text/csv;charset=utf-8' });
+        var url = URL.createObjectURL(blob), a = document.createElement('a');
+        a.href = url; a.download = 'paie-' + (loaded.period || month) + '.csv';
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+      }
+
+      root.addEventListener('click', function (event) {
+        var pill = event.target.closest('[data-py-tab]');
+        if (pill) {
+          /* Basculer .on est tout le contrat — liquid-lens fait glisser la pastille. */
+          root.querySelectorAll('[data-py-tab]').forEach(function (el) { el.classList.toggle('on', el === pill); });
+          root.querySelectorAll('[data-py-pane]').forEach(function (el) { el.classList.toggle('on', el.getAttribute('data-py-pane') === pill.getAttribute('data-py-tab')); });
+          if (pill.getAttribute('data-py-tab') === 'book') loadBook();
+          return;
+        }
+        if (event.target.closest('[data-py-add]')) return void root.querySelector('[data-py-lines]').insertAdjacentHTML('beforeend', payLineRow(rows().length));
+        if (event.target.closest('[data-py-team]')) {
+          /* KiwiTeam.roster() porte l'identité et les heures, jamais un salaire :
+             on reprend le nom, le matricule et le poste, le marchand saisit les
+             montants.  Deux clics ne doivent pas doubler l'équipe. */
+          var roster = [];
+          try { roster = (window.KiwiTeam && window.KiwiTeam.roster && window.KiwiTeam.roster()) || []; } catch (_) { roster = []; }
+          if (!roster.length) return Kiwi.toast(c.payNone, { type:'warning' });
+          root.querySelector('[data-py-lines]').innerHTML = roster.map(function (m, i) { return payLineRow(i, m); }).join('');
+          return retotal();
+        }
+        var rm = event.target.closest('[data-py-remove]');
+        if (rm) {
+          /* Une paie sans salarié n'existe pas : la dernière rangée se vide. */
+          if (rows().length <= 1) rm.closest('[data-py-line]').querySelectorAll('input').forEach(function (i) { i.value = ''; });
+          else rm.closest('[data-py-line]').remove();
+          return retotal();
+        }
+        if (event.target.closest('[data-py-refresh]')) loadBook();
+        if (event.target.closest('[data-py-csv]')) downloadBook();
+      });
+
+      root.addEventListener('click', async function (event) {
+        var button = event.target.closest('[data-py-run]');
+        if (!button) return;
+        var bad = false;
+        var employees = rows().map(function (row) {
+          var id = row.querySelector('[data-py-id]').value.trim(), name = row.querySelector('[data-py-name]').value.trim();
+          var deps = row.querySelector('[data-py-deps]').value;
+          if (!id && !name) return null;
+          if (!id || !name || !(num(row, 'base') > 0)) bad = true;
+          return {
+            id:id, name:name, role:row.getAttribute('data-py-role') || '',
+            /* Le serveur multiplie par 100 : envoyer des dirhams, jamais des
+               centimes, sinon chaque salaire est centuplé. */
+            base:num(row, 'base'), overtime:num(row, 'ot'), bonus:num(row, 'bonus'),
+            advance:num(row, 'advance'), dependents:deps === '' ? 0 : Number(deps),
+          };
+        }).filter(Boolean);
+        var period = root.querySelector('[data-py-period]').value;
+        if (bad || !period || !employees.length) return Kiwi.toast(c.invalid, { type:'warning' });
+        button.disabled = true;
+        var host = root.querySelector('[data-py-out]');
+        try {
+          var result = await O.create('payroll', 'prepare-payslips', { period:period, employees:employees });
+          var got = payOutcome(result);
+          if (got.queued) { host.innerHTML = ''; return toastResult(result); }
+          if (got.error) return card(host, got.error);
+          var d = got.data, t = d || {};
+          host.innerHTML = '<div class="p-card" style="margin-top:14px">' +
+            '<div class="ops-pay-head"><div class="ops-pay-num">' + esc(d.period) + '</div><span class="chip">' + esc((c.payStatus && c.payStatus[d.status]) || d.status || '') + '</span></div>' +
+            '<div class="ops-pay-kpis">' +
+              kpi(c.payHeads, String(t.employees || (d.payslips || []).length)) +
+              kpi(c.payGross, money(t.grossCents)) +
+              kpi(c.payNet, money(t.netCents)) +
+              kpi(c.payCnss, money(t.cnssCents)) +
+              kpi(c.payAmo, money(t.amoCents)) +
+              kpi(c.payIgr, money(t.igrCents)) +
+              kpi(c.payEmployer, money(t.employerCents)) +
+              kpi(c.payRates, esc(d.rateSet || '')) +
+            '</div>' +
+          '</div>';
+          Kiwi.toast(c.payDone, { type:'success' });
+          root.querySelector('[data-py-book-period]').value = d.period || period;
+        } catch (error) { card(host, error && (error.code || error.message)); }
+        finally { button.disabled = false; }
+      });
+
+      root.addEventListener('click', async function (event) {
+        var button = event.target.closest('[data-py-run-book]');
+        if (!button) return;
+        var action = button.getAttribute('data-py-run-book');
+        var need = action === 'submit-cnss';
+        if (need && !button.closest('[data-py-act]').querySelector('[data-acct-confirm]').checked) return Kiwi.toast(c.confirmNeeded, { type:'warning' });
+        var period = (loaded && loaded.period) || root.querySelector('[data-py-book-period]').value || month;
+        button.disabled = true;
+        var host = root.querySelector('[data-py-book-out]');
+        try {
+          var result = await O.create('payroll', action, { period:period }, need ? { confirmed:true } : undefined);
+          var got = payOutcome(result);
+          if (got.queued) { host.innerHTML = ''; return toastResult(result); }
+          if (got.error) { button.disabled = false; return card(host, got.error); }
+          var d = got.data;
+          Kiwi.toast(d.alreadyPosted || d.alreadyDeclared ? c.payAlready : c.payDone, { type:d.alreadyPosted || d.alreadyDeclared ? 'info' : 'success' });
+          loadBook();
+        } catch (error) { button.disabled = false; card(host, error && (error.code || error.message)); }
+      });
+
+      if (tab === 'book') loadBook();
+    }
+
     var legacyAcct = {};
     ['open-comptabilite', 'acct-livre', 'acct-etats', 'acct-tva'].forEach(function (key) {
       legacyAcct[key] = H[key];
-      /* acct-paie stays on accounting.js: payroll is a different domain and
-         has no accounting server action to route to. */
       var tab = key === 'open-comptabilite' ? 'invoice' : 'journal';
       H[key] = function () {
         if (!real() && legacyAcct[key]) return legacyAcct[key].apply(this, arguments);
@@ -756,7 +1100,7 @@
       };
     });
 
-    window.KiwiOperationsUI = { toastResult:toastResult, openHistory:H['operations-history'], openLedger:openLedger, openProcurement:openProcurement };
+    window.KiwiOperationsUI = { toastResult:toastResult, openHistory:H['operations-history'], openLedger:openLedger, openProcurement:openProcurement, openPayroll:openPayroll };
   }
   boot();
 })();

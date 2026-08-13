@@ -357,6 +357,131 @@ const strangerBook = await get(ownerCookie, `?merchant=${OTHER}&view=purchase-or
 ok(strangerBook.status === 401 || (strangerBook.status === 200 && strangerBook.data.merchant === MERCHANT),
   'the purchase book cannot be read across tenants');
 
+/* ── Paie : du bulletin calculé à l'écriture au journal et à la déclaration ── */
+
+const pay = (id, action, payload) => command({ id, idempotencyKey: id, domain: 'payroll', action, payload });
+const pySlip = (period, member) => db.prepare('SELECT * FROM payslips WHERE merchant = ? AND period = ? AND member_id = ?').get(MERCHANT, period, member);
+const pyCount = (period) => db.prepare('SELECT COUNT(*) AS n FROM payslips WHERE merchant = ? AND period = ?').get(MERCHANT, period).n;
+const pyPeriod = (period) => db.prepare('SELECT * FROM payroll_periods WHERE merchant = ? AND period = ?').get(MERCHANT, period);
+/* Trois salaires choisis pour traverser le barème : au-dessus du plafond CNSS,
+   sous le premier seuil d'IGR avec deux enfants, et pile sur le seuil des frais
+   professionnels avec un seul.  Les montants sont en dirhams — le serveur
+   multiplie par cent, une saisie en centimes centuplerait chaque paie. */
+const JULY = [
+  { id: 'emp-amira', name: 'Amira Haddad', role: 'gérante', base: 8000, dependents: 0 },
+  { id: 'emp-bilal', name: 'Bilal Naji', role: 'serveur', base: 4000, dependents: 2, advance: 500 },
+  { id: 'emp-chaimae', name: 'Chaimae Ouali', role: 'cuisine', base: 6000, overtime: 500, dependents: 1 },
+];
+
+const tillPay = await post(tillCookie, pay('op:pay-till-001', 'prepare-payslips', { period: '2026-07', employees: JULY }));
+ok(tillPay.status === 403 && tillPay.data.error === 'permission-denied', 'a paired till cannot compute what the staff is owed');
+
+const staffPay = await post(staffAtTill, pay('op:pay-staff-01', 'prepare-payslips', { period: '2026-07', employees: JULY }));
+ok(staffPay.status === 403 && staffPay.data.error === 'permission-denied', 'a cashier at the register holds no key to the salary book');
+
+/* Un refus métier revient en HTTP 200 : le statut du commandement porte l'échec. */
+const noPeriod = await post(ownerCookie, pay('op:pay-noper-01', 'prepare-payslips', { employees: JULY }));
+ok(noPeriod.data.command.status === 'failed' && noPeriod.data.command.lastError === 'period-required',
+  'a payslip run without a month refuses instead of guessing one');
+
+const noStaff = await post(ownerCookie, pay('op:pay-nostaff1', 'prepare-payslips', { period: '2026-07', employees: [] }));
+ok(noStaff.data.command.lastError === 'no-employees', 'an empty payroll is a mistake, not an empty month');
+
+const overAdvance = await post(ownerCookie, pay('op:pay-adv-001', 'prepare-payslips',
+  { period: '2026-07', employees: [{ id: 'emp-amira', name: 'Amira Haddad', base: 3000, advance: 4000 }] }));
+ok(overAdvance.data.command.lastError === 'advance-exceeds-gross',
+  'an advance larger than the month refuses before it can become a negative payslip');
+
+const emptyBook = await post(ownerCookie, pay('op:pay-empty-01', 'export-payroll', { period: '2026-05' }));
+ok(emptyBook.data.command.lastError === 'no-payslips', 'a month nobody computed cannot be posted to the journal');
+
+const prepared = await post(ownerCookie, pay('op:pay-prep-001', 'prepare-payslips', { period: '2026-07', employees: JULY }));
+const pj = prepared.data.command.result || {};
+ok(prepared.data.command.status === 'prepared' && pj.rateSet === 'ma-2026' && pj.employees === 3,
+  'a prepared month stops at prepared — nothing has been posted and nothing has been declared');
+ok(pj.grossCents === 1850000 && pj.cappedCents === 1600000 && pj.cnssCents === 71680 && pj.amoCents === 41810
+  && pj.igrCents === 28274 && pj.employerCents === 367715 && pj.advanceCents === 50000 && pj.netCents === 1658236,
+  'the month totals hold: CNSS on the capped base, AMO on the whole, IGR by bracket, employer charges apart');
+
+const amira = pySlip('2026-07', 'emp-amira');
+ok(amira.gross_cents === 800000 && amira.capped_cents === 600000 && amira.cnss_cents === 26880
+  && amira.igr_cents === 27678 && amira.net_cents === 727362,
+  'a salary above the CNSS ceiling contributes on the ceiling and is taxed on the whole');
+const bilal = pySlip('2026-07', 'emp-bilal');
+ok(bilal.igr_cents === 0 && bilal.advance_cents === 50000 && bilal.net_cents === 323040,
+  'family relief cannot drive the income tax below zero, and an advance leaves the net, never the gross');
+const chaimae = pySlip('2026-07', 'emp-chaimae');
+ok(chaimae.gross_cents === 650000 && chaimae.igr_cents === 596 && chaimae.net_cents === 607834,
+  'one dependent shaves the tax without erasing it');
+
+const again = await post(ownerCookie, pay('op:pay-prep-002', 'prepare-payslips', { period: '2026-07', employees: JULY }));
+ok(again.data.command.status === 'prepared' && pyCount('2026-07') === 3,
+  'recomputing a month replaces its payslips instead of stacking a second set beside them');
+
+const payBook = await get(ownerCookie, `?merchant=${MERCHANT}&view=payslips&period=2026-07`);
+ok(payBook.data.status === 'prepared' && payBook.data.payslips.length === 3
+  && payBook.data.payslips.map((slip) => slip.memberId).join(',') === 'emp-amira,emp-bilal,emp-chaimae'
+  && payBook.data.totals.netCents === 1658236,
+  'the owner reads the month back in name order, line by line, with the totals');
+
+const tillSlips = await get(tillCookie, `?merchant=${MERCHANT}&view=payslips`);
+ok(tillSlips.status === 403 && tillSlips.data.error === 'owner-session-required', 'a paired till cannot read what the staff is paid');
+
+const posted = await post(ownerCookie, pay('op:pay-post-001', 'export-payroll', { period: '2026-07' }));
+const pb = posted.data.command.result || {};
+ok(posted.data.command.status === 'completed' && pb.number === 'PAIE-2026-000001' && pb.seq === 1
+  && pb.series === 'PAIE-2026' && pb.date === '2026-07-31' && pb.entries === 6 && pb.balanced === true
+  && pb.alreadyPosted === false && pb.rows.length === 3 && pb.truncated === false,
+  'posting a month writes one journal entry, numbered from its own series and dated on the last day');
+
+const payLines = db.prepare(
+  'SELECT account, debit_cents, credit_cents FROM accounting_entries WHERE merchant = ? AND number = ?'
+).all(MERCHANT, 'PAIE-2026-000001');
+const payDebit = payLines.reduce((sum, line) => sum + line.debit_cents, 0);
+const payCredit = payLines.reduce((sum, line) => sum + line.credit_cents, 0);
+ok(payLines.length === 6 && payDebit === payCredit && payDebit === 2217715,
+  'gross plus employer charges on the debit equals net, social, tax and advances on the credit');
+
+const reposted = await post(ownerCookie, pay('op:pay-post-002', 'export-payroll', { period: '2026-07' }));
+ok(reposted.data.command.result.alreadyPosted === true && reposted.data.command.result.number === 'PAIE-2026-000001',
+  'posting a month twice returns the entry already written rather than numbering a second one');
+
+const frozen = await post(ownerCookie, pay('op:pay-prep-003', 'prepare-payslips', { period: '2026-07', employees: JULY }));
+ok(frozen.data.command.lastError === 'period-posted', 'a month carried to the journal can no longer be recomputed under the ledger');
+
+const cnssRaw = await post(ownerCookie, pay('op:pay-cnss-001', 'submit-cnss', { period: '2026-07' }));
+ok(cnssRaw.status === 409 && cnssRaw.data.error === 'confirmation-required', 'declaring to the CNSS asks before it speaks for the merchant');
+
+const declared = await post(ownerCookie, confirmed(pay('op:pay-cnss-002', 'submit-cnss', { period: '2026-07' })));
+ok(declared.data.command.result.declaration === 'DS-2026-07' && declared.data.command.result.alreadyDeclared === false
+  && declared.data.command.result.socialCents === 481205 && pyPeriod('2026-07').journal_number === 'PAIE-2026-000001',
+  'the declaration carries employee and employer charges together and leaves the journal number standing');
+
+const redeclared = await post(ownerCookie, confirmed(pay('op:pay-cnss-003', 'submit-cnss', { period: '2026-07' })));
+ok(redeclared.data.command.result.alreadyDeclared === true, 'a month declared twice reports the first declaration instead of filing a second');
+
+/* Juin est verrouillé plus haut par la comptabilité : la paie doit s'y heurter. */
+const june = await post(ownerCookie, pay('op:pay-jun-0001', 'prepare-payslips',
+  { period: '2026-06', employees: [{ id: 'emp-amira', name: 'Amira Haddad', base: 5000 }] }));
+ok(june.data.command.status === 'prepared' && june.data.command.result.netCents === 466300, 'June computes on its own figures');
+
+const juneBlocked = await post(ownerCookie, pay('op:pay-jun-0002', 'export-payroll', { period: '2026-06' }));
+ok(juneBlocked.data.command.lastError === 'period-locked:2026-06',
+  'a closed accounting month refuses the payroll entry and names the month that closed it');
+
+const juneCnss = await post(ownerCookie, confirmed(pay('op:pay-jun-0003', 'submit-cnss', { period: '2026-06' })));
+ok(juneCnss.data.command.result.declaration === 'DS-2026-06' && juneCnss.data.command.result.socialCents === 139150,
+  'a month still reaches the CNSS even when the ledger is closed to it');
+
+const juneFrozen = await post(ownerCookie, pay('op:pay-jun-0004', 'prepare-payslips',
+  { period: '2026-06', employees: [{ id: 'emp-amira', name: 'Amira Haddad', base: 5200 }] }));
+ok(juneFrozen.data.command.lastError === 'period-declared', 'a declared month cannot quietly change under the figure already sent');
+
+const months = await get(ownerCookie, `?merchant=${MERCHANT}&view=payslips`);
+ok(months.data.periods.length === 2 && months.data.periods[0].period === '2026-07' && months.data.periods[1].period === '2026-06'
+  && months.data.periods[0].number === 'PAIE-2026-000001' && months.data.periods[1].declaration === 'DS-2026-06',
+  'the payroll index lists months newest first, each with whatever entry and declaration it carries');
+
 /* ── Browser: the client contract, simulated ──────────────────────────────── */
 
 const registrations = {};
@@ -449,6 +574,18 @@ ok(/\['open-comptabilite',[^\]]*\]\.forEach/.test(uiSource) && uiSource.includes
    try/catch ne le verrait jamais. */
 ok(uiSource.includes("cmd.status !== 'completed'") && uiSource.includes('cmd.lastError'), 'the console reads server-side domain refusals, not only thrown errors');
 ok(uiSource.includes('confirmed:true') && uiSource.includes('data-acct-confirm'), 'credit notes and period locks demand an explicit confirmation');
+/* Paie — les trois actions serveur doivent être atteignables depuis le produit. */
+ok(uiSource.includes("O.create('payroll', 'prepare-payslips'"), 'the payroll console computes through the durable command API');
+['export-payroll', 'submit-cnss'].forEach((action) =>
+  ok(uiSource.includes(`data-py-run-book="${action}"`), `the product can reach payroll ${action}`));
+ok(uiSource.includes('data-py-run') && uiSource.includes('data-py-period') && uiSource.includes('data-py-base'),
+  'the payroll console takes a month and real per-employee amounts, not a flat total');
+/* prepare-payslips se termine en `prepared` : la paie est calculée, pas payée. */
+ok(uiSource.includes("cmd.status !== 'completed' && cmd.status !== 'prepared'"), 'a prepared month is not reported as a failure');
+ok(/\['eq-export-payroll', 'pay-export', 'export-payroll', 'acct-paie'\]\.forEach/.test(uiSource) && uiSource.includes('openPayroll(key ==='),
+  'all four payroll entry points open the real console for a real merchant');
+ok(uiSource.includes('openPayroll:openPayroll') && browserSource.includes("view: 'payslips'"),
+  'the payroll console is exported and reads the month back from the server');
 /* Version-agnostic on purpose: a cache-stamp bump is how a fix ships, so the
    gate must assert the script is wired, never which generation it is on. */
 pages.forEach((page, i) => ok(/assets\/operations\.js\?v=\d+/.test(page), `operational shell ${i + 1} loads the command client`));

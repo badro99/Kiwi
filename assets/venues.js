@@ -3670,7 +3670,9 @@
     H['eq-edit-member']    = (_el, id) => eqOpenStaffModal(eqFindStaff(id));
     H['eq-view-profile']   = (_el, id) => eqOpenProfileModal(eqFindStaff(id));
     H['eq-plan-shifts']    = () => eqOpenPlannerModal();
-    H['eq-export-payroll'] = () => Kiwi.toast('Export paie généré', { type: 'success', desc: 'PDF envoyé au gérant' });
+    /* Rien n'était généré et rien n'était envoyé. Sur un compte réel, ce
+       bouton ouvre la console de paie (assets/operations-ui.js). */
+    H['eq-export-payroll'] = () => Kiwi.toast('Export paie · démonstration', { type: 'info', desc: 'Aucun bulletin calculé, aucun envoi. La console de paie s’ouvre sur un compte réel.' });
     H['eq-venue-filter']   = (el) => {
       eqVenueFilter = el.dataset.venue || 'all';
       const scope = eqVenueFilter === 'all' ? eqScopedStaff() : eqScopedStaff().filter(s => s.venue === eqVenueFilter);
@@ -7774,8 +7776,8 @@
       payOpenShiftModal(String(arg).slice(0, i), +String(arg).slice(i + 1));
     };
     H['pay-sort'] = (_el, key) => { paySort = key || 'salary'; renderPayroll(); };
-    H['pay-export'] = () => window.Kiwi.toast('Export paie généré', {
-      type: 'success', desc: 'Bulletin récapitulatif · PDF envoyé au gérant',
+    H['pay-export'] = () => window.Kiwi.toast('Export paie · démonstration', {
+      type: 'info', desc: 'Aucun bulletin calculé, aucun envoi. La console de paie s’ouvre sur un compte réel.',
     });
   }
   payWireHandlers();
