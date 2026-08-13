@@ -2429,6 +2429,18 @@ ar: {
       }, 1800);
     },
 
+    /* The prominent home-dashboard CTA must produce the same factual report
+     * as Rapport journalier.  Resolution lives with the exporter so this
+     * router never duplicates day boundaries, venue scoping or reconciliation. */
+    'day-report-export': (el) => {
+      const api = window.KiwiDayReportExport;
+      if (!api || typeof api.openCurrent !== 'function') {
+        toast(tr({fr:'Le rapport est encore en cours de chargement', en:'The report is still loading', ar:'لا يزال التقرير قيد التحميل'}), { type:'info' });
+        return;
+      }
+      api.openCurrent(el);
+    },
+
     'new-sale': () => {
       let amount = '';
       const m = modal({

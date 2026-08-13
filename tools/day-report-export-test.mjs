@@ -6,6 +6,8 @@ import { fileURLToPath } from 'node:url';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const src=fs.readFileSync(path.join(root,'assets/day-report-export.js'),'utf8');
+const layoutSrc=fs.readFileSync(path.join(root,'assets/design-vexel-layout.js'),'utf8');
+const interactiveSrc=fs.readFileSync(path.join(root,'assets/interactive.js'),'utf8');
 let pass=0;function ok(v,msg){if(!v)throw new Error(msg);pass++;}
 const ctx={console,setTimeout:function(){},window:{},document:{},Blob:function(){},URL:{}};ctx.window=ctx;
 vm.createContext(ctx);vm.runInContext(src,ctx);
@@ -38,4 +40,15 @@ ok(html.includes('@page{size:A4')&&html.includes('@media print'),'A4 print layou
 ok(html.includes('Ventes détaillées')&&html.includes('Marges par article'),'selected sections rendered into report');
 ok(html.includes('Fiabilité des données')&&!html.includes('## SYNTHÈSE'),'client report uses visual hierarchy, not CSV markers');
 ok(src.includes('Rapport professionnel · PDF')&&src.includes('Données brutes · CSV'),'professional report is default and raw data remains explicit');
+ctx.KiwiDayReport.storeSlug=()=> 'amira-cafe';
+ctx.KiwiDayReport.today=()=> '2026-08-13';
+ctx.KiwiDayReport.load=()=> null;
+ctx.KiwiDayReport.build=(opts)=>Object.assign({},report,{day:opts.day,store:opts.store,gross:opts.sales.reduce((n,s)=>n+s.amount,0),txns:opts.sales.length});
+ctx.KiwiDayReport.categoryIndex=()=>({});
+ctx.KiwiVenue={getCurrentVenueData:()=>({name:'Amira Cafe',slug:'amira-cafe',type:'restaurant'}),getCurrentVenue:()=> 'v-amira-cafe'};
+const current=X.resolveCurrent();
+ok(current&&current.day==='2026-08-13'&&current.store.name==='Amira Cafe','home CTA resolves the current business day and venue');
+ok(current.gross===100&&current.txns===1&&current.live===true,'home CTA derives its report from the real current sales ledger');
+ok(layoutSrc.includes("button.dataset.action = 'day-report-export'"),'prominent home CTA uses the dedicated report action');
+ok(interactiveSrc.includes("'day-report-export': (el) =>")&&interactiveSrc.includes('api.openCurrent(el)'),'dashboard router opens the shared configurable composer');
 console.log(`✓ day-report export builder (${pass} controls)`);

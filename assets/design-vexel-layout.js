@@ -72,7 +72,10 @@
     var labels = { fr: 'Générer le rapport', en: 'Generate report', ar: 'إنشاء التقرير' };
     var button = el('button', 'vexel-report-btn');
     button.type = 'button';
-    button.dataset.action = 'export';
+    /* This is the operational day report, not the generic transaction CSV.
+     * A dedicated action prevents interactive.js from routing the large home
+     * CTA through its legacy demo exporter. */
+    button.dataset.action = 'day-report-export';
     button.innerHTML =
       '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
         '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>' +

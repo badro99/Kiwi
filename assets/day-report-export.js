@@ -152,6 +152,40 @@
   function stockRows(report) { var b=bounds(report); try{return window.KiwiInventory&&window.KiwiInventory.between?window.KiwiInventory.between(b.from,b.to):[];}catch(_){return [];} }
   function context(report) { var sales=saleRows(report); return { sales:sales, products:products(report,sales), materials:materialRows(sales), team:teamRows(report), stock:stockRows(report), reservations:reservationRows(report) }; }
 
+  /* Resolve the current business day exactly once for every entry point.  The
+   * dashboard can have both a caisse snapshot and a fresher server sales feed:
+   * keep the snapshot when it is at least as complete, otherwise rebuild the
+   * commercial totals while inheriting the caisse-only drawer/session facts. */
+  function currentStore(d) {
+    var venue={};try{venue=window.KiwiVenue&&window.KiwiVenue.getCurrentVenueData?window.KiwiVenue.getCurrentVenueData()||{}:{};}catch(_){}
+    return {slug:d.storeSlug(),name:venue.name||'',location:venue.location||venue.city||'',type:venue.type||''};
+  }
+  function currentSales() {
+    try {
+      var venue=window.KiwiVenue&&window.KiwiVenue.getCurrentVenue?window.KiwiVenue.getCurrentVenue():undefined;
+      return window.KiwiSales&&window.KiwiSales.list?window.KiwiSales.list(venue)||[]:[];
+    } catch(_){return [];}
+  }
+  function sessionFrom(report) {
+    var c=report&&report.cash||{};
+    return {openedAt:report&&report.openedAt,closedAt:report&&report.closedAt,openedBy:report&&report.openedBy,closedBy:report&&report.closedBy,openingFloat:c.opening,cashMovements:c.movements||[],countedCash:c.counted,discounts:report&&report.discounts&&report.discounts.amount,discountsCount:report&&report.discounts&&report.discounts.count,cancels:report&&report.cancels,handovers:report&&report.handovers||[]};
+  }
+  function resolveCurrent() {
+    var d=window.KiwiDayReport;if(!d||!d.today||!d.build)return null;
+    var store=currentStore(d),day=d.today(store.slug),snap=null;
+    try{snap=d.load(day,store.slug);}catch(_){}
+    var live=null;
+    try{live=d.build({day:day,sales:currentSales(),session:snap?sessionFrom(snap):{},store:store,source:'dashboard',categoryIndex:d.categoryIndex&&d.categoryIndex()});}catch(_){}
+    if(!live)return snap;
+    if(!snap){live.live=true;return live;}
+    var liveTx=num(live.txns),snapTx=num(snap.txns),liveGross=num(live.gross),snapGross=num(snap.gross);
+    if(liveTx>snapTx||liveGross>snapGross+.005){
+      live.closedCount=snap.closedCount||0;live.revisions=snap.revisions||[];
+      live.closed=snap.closed;live.live=false;return live;
+    }
+    return snap;
+  }
+
   function build(report, chosen) {
     chosen=chosen||{}; var out=[], ctx=context(report), store=(report.store&&report.store.name)||'', closed=!!(report.closed||report.closedAt);
     out.push(q(['KIWI · RAPPORT JOURNALIER DÉTAILLÉ']));
@@ -238,5 +272,16 @@
     m.el.addEventListener('change',update);m.el.querySelectorAll('[data-kdx-preset]').forEach(function(b){b.onclick=function(){var wanted=sets[b.dataset.kdxPreset]||[];checks.forEach(function(x){x.checked=wanted.indexOf(x.value)>=0;});update();};});
     m.el.querySelector('[data-kdx-cancel]').onclick=m.close;go.onclick=function(){var chosen={},format=(m.el.querySelector('input[name="kdx-format"]:checked')||{}).value||'pdf';checks.forEach(function(x){if(x.checked)chosen[x.value]=true;});if(format==='csv')downloadCsv(report,chosen);else printReport(report,chosen);m.close();try{window.Kiwi.toast(format==='csv'?'Données CSV téléchargées':'Rapport prêt à imprimer ou enregistrer en PDF',{type:'success'});}catch(_){}};update();
   }
-  window.KiwiDayReportExport={open:open,build:build,reportHtml:reportHtml,context:context,kinds:KINDS.slice()};
+  function openCurrent(trigger) {
+    var wasDisabled=!!(trigger&&trigger.disabled);
+    if(trigger){trigger.disabled=true;trigger.setAttribute('aria-busy','true');}
+    try {
+      var report=resolveCurrent();
+      if(!report){try{window.Kiwi.toast('Le rapport du jour n\'est pas encore disponible',{type:'info'});}catch(_){}return false;}
+      open(report);return true;
+    } finally {
+      if(trigger){trigger.disabled=wasDisabled;trigger.removeAttribute('aria-busy');}
+    }
+  }
+  window.KiwiDayReportExport={open:open,openCurrent:openCurrent,resolveCurrent:resolveCurrent,build:build,reportHtml:reportHtml,context:context,kinds:KINDS.slice()};
 }());
