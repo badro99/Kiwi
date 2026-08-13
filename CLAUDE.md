@@ -51,16 +51,31 @@ should be appended to commit messages per the standard convention.
 
 ---
 
-## 2. Tech stack — real product, vanilla frontend
+## 2. Tech stack — real product, best tool for the job
 
 **This is a real, working product now — not a mock/pitch demo.** Build features to
 actually work, backed by real infrastructure. Where a surface is still placeholder
 data, that's tech debt to replace, not the intended end state.
 
-- **Frontend:** vanilla HTML + CSS + JS. No React, no build step, no framework, no
-  bundler. This is a pragmatic choice (fast, zero-toolchain, trivially hostable on
-  static CDNs) — NOT because the app is fake. Keep it vanilla unless a real need
-  forces otherwise; if you think a framework is warranted, raise it first.
+- **Frontend: no locked stack.** The vanilla-only rule is **lifted** (owner's call,
+  2026-08-13). A build step, a bundler, TypeScript, a framework, a test runner —
+  all are allowed where they make the product better. Pick the best tool for the
+  job and say why in the commit.
+  **What "best" means here, in practice.** The existing surfaces
+  (`dashboard.html`, `kiwi-caisse.html`, `kiwi-serveur.html` and ~156 files in
+  `assets/`) are shipped, load-bearing, and carry live merchant data. Rewriting
+  a working surface into a framework is not automatically an improvement — it is
+  a migration, with its own risk, and it needs a reason beyond taste. So:
+  - **New, self-contained surfaces** — build them however is genuinely best.
+  - **Tooling that touches no runtime code** (test runners, type-checking,
+    linting, a bundler for new code) — adopt freely; this is the fastest win and
+    the historic no-dependency rule was costing us real test coverage.
+  - **Rewriting an existing shipped surface** — allowed, but plan it, stage it,
+    keep the old path until the new one is verified against real data, and never
+    do it as a side effect of another task.
+  Whatever the stack, the deploy target stays static-hostable output on
+  Cloudflare Pages + GitHub Pages (build artefacts committed or built in CI) —
+  the two mirrors in §1 must both keep working.
 - **Real backend (live):** Cloudflare Pages Functions + D1 (`functions/`, `schema.sql`)
   — accounts/auth, Live Link sales, operator console, caisse↔dashboard pairing. See
   `LIVE_LINK.md` / `ADMIN.md`.

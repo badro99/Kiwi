@@ -267,7 +267,9 @@ generated data.
   no bold display weights, no emoji in titles or CTAs.
 - **Type is roman. Never italic.** (CLAUDE.md §3)
 - **One spring:** `cubic-bezier(0.34, 1.45, 0.5, 1)` · 310 ms.
-- **Vanilla HTML/CSS/JS.** No framework, no build step.
+- **Match the surface you're editing.** `plan-de-salle` ships as build-free
+  HTML/CSS/JS; stay consistent with it here. The stack is not locked project-wide
+  (CLAUDE.md §2) — but this rework is not the place to introduce a build step.
 - **i18n fr/en/ar** for every new string, RTL included.
 - **Cover counts are always derived**, never stored.
 - **Migration:** existing merchant plans must survive (v2 → v3 with the cm scale).

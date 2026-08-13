@@ -33,9 +33,9 @@ data. That gap is what this doc addresses.
 
 Everything below needs a server — to store real POS transactions, run a tax
 engine, hold a knowledge base, compute benchmarks, and proxy a hosted model
-(API keys cannot sit in client JS). `CLAUDE.md` locks the vanilla stack
-*"until a real backend lands."* Phase 2 **is** that moment — this is the
-trigger the roadmap anticipates, not a violation of it.
+(API keys cannot sit in client JS). That backend has since landed (Cloudflare
+Pages Functions + D1), and the frontend stack lock was lifted on 2026-08-13 —
+so nothing here is blocked on architecture any more, only on build time.
 
 ## The core principle: tools, not knowledge
 

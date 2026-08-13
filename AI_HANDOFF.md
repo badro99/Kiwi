@@ -11,8 +11,9 @@
 ## 1. What Kiwi is (in one paragraph)
 
 Kiwi is a **Moroccan merchant operating system**, POS-first, and it is now a **real,
-working product** — no longer a pitch/demo artifact. The **frontend** is vanilla
-HTML/CSS/JS (no build step, no framework) served as a static site, but a **real backend is
+working product** — no longer a pitch/demo artifact. The **frontend** is currently
+HTML/CSS/JS with no build step, served as a static site (a default, not a locked
+constraint — see `CLAUDE.md` §2), and a **real backend is
 LIVE**: **Cloudflare Pages Functions + D1** (`functions/`, `schema.sql`) power real
 accounts/auth, the passcode + operator gates, Live Link sales, the operator console, and
 caisse↔dashboard pairing — plus a real native **Kiwi Printer Bridge** (`bridge/`) for ESC/POS
@@ -42,10 +43,12 @@ hero KPI, the editorial pricing manifesto, JSON-LD offers, FAQ, meta, priceRange
 
 ## 3. Stack & conventions (the stuff that bites you)
 
-- **Vanilla frontend (by choice, not because it's a mock).** No React/Next/bundler for the
-  UI — keep it that way unless a real need forces otherwise (raise it first). IIFE modules
-  registering into `window.Kiwi.handlers`. Real server/native code lives in `functions/`
-  (Cloudflare Pages Functions + D1) and `bridge/` (the printer bridge) — see CLAUDE.md §2.
+- **No locked frontend stack (owner's call, 2026-08-13).** The UI ships today as
+  build-free HTML/CSS/JS — IIFE modules registering into `window.Kiwi.handlers` — but that's
+  the current shape, not a rule. Frameworks, bundlers, TypeScript and test runners are all
+  allowed where they're the better tool; rewriting a *shipped* surface still needs a staged
+  plan. Real server/native code lives in `functions/` (Cloudflare Pages Functions + D1) and
+  `bridge/` (the printer bridge) — see CLAUDE.md §2.
 - **Global click delegation** (`interactive.js`): `[data-action="x"]` `[data-arg="y"]` →
   `handlers['x'](element, 'y')`.
 - **i18n**: `data-i18n="key"` on DOM (FR captured from DOM, EN/AR in a `T` dict in
@@ -468,7 +471,8 @@ helper**, stock scroll-lock-leak fix.
 (Cloudflare D1 + Pages Functions: real accounts/auth, Live Link sales, operator console,
 caisse↔dashboard pairing; plus the Kiwi Printer Bridge for real thermal printing). The old
 "no backend — deliberate, that's the ceiling" framing is **obsolete** — production-readiness
-is now an active work item, not an accepted 3.5. The vanilla **frontend** stays by choice.
+is now an active work item, not an accepted 3.5. The **frontend** stack is no longer locked
+either (2026-08-13) — build tooling and frameworks are available where they earn their place.
 Open items:
 - **EN home-page accent scan returns zero leaks.** Standalone partner pages (kiwi-order,
   kiwi-caisse, kiwi-serveur) have their own inline dicts — out of i18n.js scope by design.

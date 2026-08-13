@@ -27,9 +27,10 @@ evidence-driven. **Reproduce every finding** before you report it.
 
 ## 1. What Kiwi is (context you must respect)
 
-- **Stack: vanilla HTML + CSS + JS. No framework, no build step, no bundler.**
-  This is a deliberate, locked decision. Do **not** propose migrating to React/
-  Next/Vite. Audit the vanilla app as-is.
+- **Stack: HTML + CSS + JS, no build step today.** No longer a locked decision
+  (lifted 2026-08-13) — but this is a *launch audit*, so audit the app as it
+  actually ships. A "migrate to React/Next/Vite" recommendation is out of scope
+  here regardless: it is a migration proposal, not a launch blocker.
 - A **real backend exists** (Cloudflare Pages Functions + D1 — accounts/auth,
   till pairing, live sales sync, clients, menus, orders) and surfaces fail soft
   to per-device state when it's unreachable. `localStorage` holds client state:
@@ -269,7 +270,8 @@ Read `assets/agent.js` fully. This is the highest-risk surface because it puts
   resetting at minute :00 is intentional — read the comments before flagging).
 - **Do not fix anything** unless the report is approved or the user asks; this is
   an audit. If you must, propose fixes separately from findings.
-- Respect the locked decisions (vanilla stack, brand system, Phase-1 scope).
+- Respect the locked decisions (brand system, Phase-1 scope). The stack is *not*
+  among them any more — but see §1: stack migration is out of scope for an audit.
 - If a check is impossible in your environment, **say so explicitly** and verify
   what you can statically — never claim a pass you didn't observe.
 

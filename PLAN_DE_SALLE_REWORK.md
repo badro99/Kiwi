@@ -289,8 +289,10 @@ top-down shapes (the existing `.pds-tbl` box-shadow already gestures at this).
 
 ## 5. Constraints (non-negotiable)
 
-- **Vanilla HTML/CSS/JS.** No framework, no build step, no bundler — see `CLAUDE.md` §2.
-  If you think this needs a canvas/WebGL library, raise it before starting.
+- **Match the surface you're editing** — `plan-de-salle` is build-free HTML/CSS/JS
+  today, so stay consistent with it. The project-wide stack lock was lifted
+  (`CLAUDE.md` §2), so a library is allowed if it genuinely earns its place; raise
+  it before starting rather than pulling one in mid-rework.
 - **Brand is locked** (`CLAUDE.md` §3): `--atlas` / `--riad` / `--mint` (≤5 %) /
   `--paper` / `--ink`. No new accent colors. No pure `#fff` backgrounds — use
   `var(--surface)`. **Type is roman, never italic.** No emoji in titles or CTAs.

@@ -26,9 +26,12 @@ Hardware is a Kiwi CapEx line — **never a revenue line**. The distribution moa
 
 ---
 
-## 1. Tech stack (deliberately boring)
+## 1. Tech stack (boring by default, not by law)
 
-- **Vanilla HTML + CSS + JS.** No React, no build step, no framework, no bundler.
+- **HTML + CSS + JS, no build step *today*.** Not a locked constraint — the
+  vanilla-only rule was lifted by the owner on 2026-08-13. Frameworks, bundlers,
+  TypeScript and test runners are all on the table where they're the better tool;
+  see `CLAUDE.md` §2 for how to weigh that against rewriting a shipped surface.
 - **Serves from a Python `http.server`** (sandboxed copy at `/tmp/kiwi-preview/`).
 - **Fonts:** Google Fonts — Inter Tight, Instrument Serif, IBM Plex Sans Arabic, JetBrains Mono.
 - **Real backend (landed July 2026).** Cloudflare Pages Functions + D1 (`functions/`, `schema.sql`): accounts/auth, merchant config, caisse↔dashboard pairing, live sales sync, clients, menus, orders, operator console. Surfaces fail soft to per-device state when it's unreachable.
@@ -275,7 +278,7 @@ If you're an agent inheriting this project:
 2. **Never edit `/tmp/kiwi-preview/` directly.** Always edit `/Users/zaka/Desktop/Gemma/kiwi/` and copy forward. The `/tmp` copy is the sandboxed preview runtime only.
 3. **The dark-mode toggle was removed from the UI** per the founder's explicit direction (2026-04-24). The CSS vars still work if you set `html[data-theme="dark"]` programmatically, but don't re-expose the toggle unless explicitly asked.
 4. **Simple Mode must remain sufficient for all daily merchant tasks** per founder direction (2026-04-24). Don't add features that are Pro-only by design — add them as mini-tiles, FAQ items, or contextual actions within Simple Mode too.
-5. **Don't rebuild in React.** Vanilla is the stated architecture. If the founder asks for it, push back first: we can ship backend + deploy to Vercel without ever leaving vanilla.
+5. **No locked stack (since 2026-08-13).** Frameworks, bundlers, TypeScript and test runners are allowed — use whichever is genuinely best. What still needs a plan and the owner's go-ahead is *rewriting a surface that already ships to merchants*; new surfaces and non-runtime tooling don't. See `CLAUDE.md` §2.
 6. **Memory system** — there are project memories at `/Users/zaka/.claude/projects/-Users-zaka-Desktop-Gemma/memory/` including user profile, brand system, and project context. Respect them.
 7. **When the founder says "make it feel like $100M"**, the playbook is in `premium.css` + `ux.css` — pill nav, gradient mesh, mouse parallax, word stagger, scroll reveals, 3D card tilts, ripple, grain texture, count-up, marquee. Compound these; don't replace them.
 8. **The 3 research agent briefs** (Moroccan market · $100M patterns · senior UX) were synthesized into this project. Re-deploying them is usually wasteful; read this file and the inline code comments instead.

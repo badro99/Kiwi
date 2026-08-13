@@ -1,6 +1,7 @@
 # Deploying Kiwi for a client — $0 hosting + passcode gate
 
-Kiwi is a static site (vanilla HTML/CSS/JS, no build step). It hosts for free on
+Kiwi deploys as a static site (HTML/CSS/JS, no build step today — if a build is
+ever introduced, it ships its output here the same way). It hosts for free on
 Cloudflare Pages, with a real, server-side passcode gate and a clean URL — all on
 the free tier.
 
@@ -75,7 +76,7 @@ remembered on that device for 30 days.
 
 - The gate (`functions/_middleware.js`) sits in front of the whole app **and**
   the `/api/*` backend (accounts, pairing, Live Link, orders — see `LIVE_LINK.md`
-  and `ADMIN.md`), so API calls ride behind it automatically. The frontend
-  itself stays 100% vanilla.
+  and `ADMIN.md`), so API calls ride behind it automatically — whatever the
+  frontend is built with.
 - The gate runs **only on Cloudflare Pages** — it is inert on the local static
   server and on GitHub Pages, which have no serverless layer.

@@ -38,9 +38,10 @@ demonstrations; real paired stores never see that seed data.
 
 ## Stack
 
-- **Frontend:** vanilla HTML / CSS / JavaScript — no framework, no build step.
-  A deliberate choice (fast, zero-toolchain, trivially hostable), not a
-  limitation. Open any `.html` file directly, or serve the folder statically.
+- **Frontend:** HTML / CSS / JavaScript, no build step *today* — open any `.html`
+  file directly, or serve the folder statically. This is the current shape, not a
+  locked constraint: build tooling and frameworks are allowed where they're the
+  better tool (see `CLAUDE.md` §2).
 - **Backend:** Cloudflare Pages Functions + D1 (`functions/`, `schema.sql`).
   Client state persists in `localStorage`; server-authoritative data lives
   in D1.

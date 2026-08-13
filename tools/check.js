@@ -4,7 +4,10 @@
  *
  *   node tools/check.js
  *
- * Zero dependencies, no build step (in keeping with the vanilla-stack rule).
+ * Zero dependencies, no build step — so it runs anywhere, instantly, with no
+ * install. The project stack lock was lifted 2026-08-13, so a real test runner
+ * is now allowed alongside this; keep THIS file dependency-free regardless, it
+ * is the gate that must never fail to start.
  * Checks, in order:
  *   1. SYNTAX     every assets/*.js compiles (vm.Script parse, no execution)
  *   2. ACTIONS    every data-action declared in HTML is known to some JS file
