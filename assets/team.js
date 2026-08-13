@@ -3531,6 +3531,38 @@
       }));
     } catch (_) { return []; }
   }
+  /* Public, read-only day snapshot for reports and the assistant.  Historical
+   * reports must not reuse `roster().hoursToday`: that would quietly attach
+   * today's hours to an older Z report.  This adapter reads the same realised
+   * hours and published/draft planning grids as the Planning page, for the
+   * requested calendar day, and says exactly which source each figure came
+   * from. */
+  function daySnapshot(dayKey) {
+    try {
+      dayKey = /^\d{4}-\d{2}-\d{2}$/.test(String(dayKey || '')) ? String(dayKey) : toISO(new Date());
+      const venue = window.KiwiVenue?.getCurrentVenueData?.() || {};
+      const key = teamKey(venue), members = getMembers(key) || [];
+      const realised = getHours(key) || {}, shifts = getShifts(key) || {};
+      return members.map((m) => {
+        const shift = normShift((shifts[m.id] || {})[dayKey]);
+        let plannedHours = 0;
+        if (shift && !shift.off) {
+          const from = hhmmToMin(shift.start), to = hhmmToMin(shift.end);
+          plannedHours = Math.max(0, (to > from ? to - from : 1440 - from + to) / 60);
+        }
+        return {
+          id: m.id,
+          name: memberFullName(m) || '—',
+          role: m.function || m.department || m.role || '',
+          plannedStart: shift && !shift.off ? shift.start : '',
+          plannedEnd: shift && !shift.off ? shift.end : '',
+          plannedHours: Math.round(plannedHours * 100) / 100,
+          workedHours: Math.max(0, +((realised[m.id] || {})[dayKey]) || 0),
+          dayOff: !!(shift && shift.off),
+        };
+      });
+    } catch (_) { return []; }
+  }
   /* Reservations consume the SAME planning grid as Paie, never a second staff
    * calendar.  A slot is covered only when a floor-capable team member's
    * planned shift spans the whole booking.  `configured` stays false when the
@@ -3557,7 +3589,7 @@
       return { configured: currentConfigured || covered.length > 0, members: covered };
     } catch (_) { return { configured: false, members: [] }; }
   }
-  window.KiwiTeam = Object.assign(window.KiwiTeam || {}, { importMembers, roster, bookingCoverage });
+  window.KiwiTeam = Object.assign(window.KiwiTeam || {}, { importMembers, roster, daySnapshot, bookingCoverage });
   try { window.dispatchEvent(new Event('kiwi-team-ready')); } catch (_) {}
 
   /* ═══════════════ HYDRATATION AU DÉMARRAGE ═══════════════════════════════

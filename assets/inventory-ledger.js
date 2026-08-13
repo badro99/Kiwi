@@ -144,6 +144,15 @@
     return read().rows.filter(function (r) { return !itemId || r.itemId === itemId; })
       .sort(function (a, b) { return b.occurredTs - a.occurredTs; });
   }
+  /* Read-only bounded range for exports.  Keeping this filtering in the ledger
+   * avoids reports reaching into its private localStorage shape (and therefore
+   * accidentally mixing tenants). */
+  function between(from, to) {
+    from = Math.max(0, +from || 0); to = Math.max(from, +to || Date.now());
+    return read().rows.filter(function (r) {
+      return (+r.occurredTs || 0) >= from && (+r.occurredTs || 0) < to;
+    }).sort(function (a, b) { return a.occurredTs - b.occurredTs; });
+  }
   async function push(d, m) {
     var ids = d.queued.slice(0, 200);
     if (!ids.length) return d;
@@ -204,7 +213,7 @@
 
   window.KiwiInventory = {
     isReal: real, merchant: merchant, add: add, reverse: reverse,
-    ensureOpening: ensureOpening, balance: balance, snapshot: snapshot, history: history,
+    ensureOpening: ensureOpening, balance: balance, snapshot: snapshot, history: history, between: between,
     sync: sync, pending: function () { return read().queued.length; },
     subscribe: function (fn) { subs.add(fn); return function () { subs.delete(fn); }; },
   };

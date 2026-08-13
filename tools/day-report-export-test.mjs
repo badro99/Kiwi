@@ -1,0 +1,35 @@
+#!/usr/bin/env node
+import fs from 'node:fs';
+import vm from 'node:vm';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
+const src=fs.readFileSync(path.join(root,'assets/day-report-export.js'),'utf8');
+let pass=0;function ok(v,msg){if(!v)throw new Error(msg);pass++;}
+const ctx={console,setTimeout:function(){},window:{},document:{},Blob:function(){},URL:{}};ctx.window=ctx;
+vm.createContext(ctx);vm.runInContext(src,ctx);
+const X=ctx.KiwiDayReportExport;
+ok(X&&X.kinds.length===10,'ten selectable factual sections');
+['sales','materials','margins','team','stock','reservations'].forEach(id=>ok(X.kinds.some(x=>x.id===id),'section '+id));
+ctx.KiwiDayReport={dayBounds:()=>({from:1000,to:2000})};
+ctx.KiwiSales={list:()=>[{ts:1500,ref:'T-1',amount:100,method:'cash',channel:'salle',cashier:'Sara',lines:[{itemId:'p1',name:'Tajine',cat:'Plats',qty:2,total:100}]}]};
+ctx.KiwiCost={of:()=>({mad:20,src:'recipe'}),netOf:n=>n,basis:()=>({}),doc:()=>({recipes:{},ingredients:[]})};
+ctx.KiwiTeam={daySnapshot:()=>[{name:'Sara',role:'Serveuse',plannedStart:'12:00',plannedEnd:'20:00',plannedHours:8,workedHours:7.5}]};
+ctx.KiwiInventory={between:()=>[{occurredTs:1500,itemId:'ing1',qty:-2,reason:'sale'}]};
+ctx.KiwiReservations={get:()=>({bookings:[],services:[],resources:[]})};
+const report={day:'2026-08-13',store:{slug:'amira-cafe',name:'Amira Cafe'},closed:true,source:'caisse',net:100,gross:100,txns:1,basket:100,coverage:100,methods:{cash:100},cash:{opening:200,sales:100,expected:300,counted:300,ecart:0,movements:[]},cashiers:[{name:'Sara',net:100,txns:1}],categories:[],handovers:[],revisions:[]};
+const csv=X.build(report,{summary:true,sales:true,products:true,margins:true,team:true,stock:true});
+ok(csv.includes('VENTES DÉTAILLÉES'),'sales detail exported');
+ok(csv.includes('CONTRÔLE')&&csv.includes('Rapproché'),'ticket ledger reconciled against closure');
+ok(csv.includes('MARGES PAR ARTICLE'),'margin section exported');
+ok(csv.includes('60'),'measured margin exported');
+ok(csv.includes('Sara')&&csv.includes('7.5'),'historical worked hours exported');
+ok(csv.includes('MOUVEMENTS DE STOCK')&&csv.includes('ing1'),'stock movements exported');
+ctx.KiwiCost.of=()=>({mad:null,src:null});
+const missing=X.build(report,{margins:true,materials:true});
+ok(missing.includes('Non chiffré'),'unknown cost is explicit');
+ok(missing.split('\r\n').some(line=>line.includes('Tajine')&&(line.match(/Non chiffré/g)||[]).length>=2), 'unknown cost does not fabricate a margin');
+ok(src.includes("/^[\\t\\r ]*[=+\\-@]/"),'spreadsheet injection guard retained');
+ok(src.includes("['service','tip','tax','payment','class','pt']"),'non-stock service lines excluded from material coverage');
+console.log(`✓ day-report export builder (${pass} controls)`);

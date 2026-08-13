@@ -807,7 +807,11 @@
         return;
       }
       if (a === 'print') { printReport(report); return; }
-      if (a === 'csv') { exportCsv(report); return; }
+      if (a === 'csv') {
+        if (window.KiwiDayReportExport && window.KiwiDayReportExport.open) window.KiwiDayReportExport.open(report);
+        else exportCsv(report); /* cache partiel : conserver l'ancien filet */
+        return;
+      }
     });
     var pick = page.el.querySelector('[data-kdr="pick"]');
     if (pick) {
