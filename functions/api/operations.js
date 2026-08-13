@@ -187,15 +187,18 @@ async function event(env, command, name, status, detail) {
   ).bind(id, command.id, command.merchant, clean(name, 48), clean(status, 32), safeJson(detail || {}, 4000), at).run();
 }
 
-async function update(env, command, status, provider, result, error) {
+async function update(env, command, status, provider, result, error, limit) {
   const at = now();
+  /* `limit` existe pour une seule raison : un export de journal rend des lignes,
+     pas un accusé de réception.  Les autres domaines gardent le plafond serré. */
+  const stored = safeJson(result || {}, limit || 12000);
   await env.DB.prepare(
     `UPDATE operational_commands SET status = ?, provider = ?, result = ?,
        last_error = ?, attempt_count = attempt_count + 1, updated_ts = ?
      WHERE id = ? AND merchant = ?`
-  ).bind(status, provider || '', safeJson(result || {}, 12000), clean(error, 240), at, command.id, command.merchant).run();
+  ).bind(status, provider || '', stored, clean(error, 240), at, command.id, command.merchant).run();
   await event(env, command, 'state', status, { provider: provider || '', reason: error || '' });
-  return Object.assign({}, command, { status, provider: provider || '', result: safeJson(result || {}, 12000), last_error: clean(error, 240), updated_ts: at, attempt_count: Number(command.attempt_count || 0) + 1 });
+  return Object.assign({}, command, { status, provider: provider || '', result: stored, last_error: clean(error, 240), updated_ts: at, attempt_count: Number(command.attempt_count || 0) + 1 });
 }
 
 async function postWebhook(url, body) {
@@ -216,6 +219,237 @@ function notificationProvider(action, payload) {
   if (action === 'send-whatsapp') return 'whatsapp';
   const channel = clean(payload && payload.channel, 20).toLowerCase();
   return ['email', 'sms', 'whatsapp'].includes(channel) ? channel : '';
+}
+
+/* ————— Comptabilité ————————————————————————————————————————————————
+ *
+ * Ces quatre actions n'existaient que sous forme de chaînes dans une liste
+ * blanche : elles retombaient sur la branche par défaut d'execute() et
+ * écrivaient `{persisted:true}`.  Une facture sans numéro, un avoir qui ne
+ * référence rien et une période « verrouillée » qui n'empêchait aucune écriture
+ * ne sont pas de la comptabilité.  Ce qui suit tient les trois invariants qui
+ * comptent vraiment : une numérotation continue attribuée par le serveur, des
+ * écritures en partie double dont le débit égale le crédit, et un verrou de
+ * période qui refuse réellement les écritures postérieures.
+ *
+ * Comptes du CGNC marocain : 3421 Clients · 7111 Ventes de marchandises ·
+ * 4455 État — TVA facturée.  La TVA n'est jamais inventée : sans `taxRate`
+ * explicite dans la charge utile, le taux est zéro et la pièce ne porte pas de
+ * ligne 4455. */
+const PERIOD = /^\d{4}-(0[1-9]|1[0-2])$/;
+const ACC = { client: '3421', ventes: '7111', tva: '4455' };
+
+function ymd(value) {
+  const text = clean(value, 10);
+  const parts = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text);
+  if (!parts) return '';
+  const [year, month, day] = [Number(parts[1]), Number(parts[2]), Number(parts[3])];
+  const probe = new Date(Date.UTC(year, month - 1, day));
+  const round = probe.getUTCFullYear() === year && probe.getUTCMonth() === month - 1 && probe.getUTCDate() === day;
+  return round ? text : '';
+}
+
+/* L'argent circule en centimes entiers.  Un total en flottant finit toujours
+   par produire un journal qui ne s'équilibre pas à un centime près. */
+function cents(value) {
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return NaN;
+  const exact = Math.round(amount * 100);
+  return Number.isSafeInteger(exact) ? exact : NaN;
+}
+
+async function ensureLedger(env) {
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS accounting_documents (
+      id TEXT PRIMARY KEY, merchant TEXT NOT NULL, kind TEXT NOT NULL,
+      series TEXT NOT NULL, seq INTEGER NOT NULL, number TEXT NOT NULL,
+      doc_date TEXT NOT NULL, currency TEXT NOT NULL DEFAULT 'MAD',
+      total_cents INTEGER NOT NULL, tax_cents INTEGER NOT NULL DEFAULT 0,
+      customer TEXT NOT NULL DEFAULT '', parent_number TEXT NOT NULL DEFAULT '',
+      command_id TEXT NOT NULL DEFAULT '', created_ts INTEGER NOT NULL
+    )`
+  ).run();
+  await env.DB.prepare('CREATE UNIQUE INDEX IF NOT EXISTS idx_acc_seq ON accounting_documents (merchant, series, seq)').run();
+  await env.DB.prepare('CREATE UNIQUE INDEX IF NOT EXISTS idx_acc_number ON accounting_documents (merchant, number)').run();
+  await env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_acc_parent ON accounting_documents (merchant, parent_number)').run();
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS accounting_entries (
+      id TEXT PRIMARY KEY, merchant TEXT NOT NULL, document_id TEXT NOT NULL,
+      number TEXT NOT NULL, doc_date TEXT NOT NULL, account TEXT NOT NULL,
+      label TEXT NOT NULL DEFAULT '', debit_cents INTEGER NOT NULL DEFAULT 0,
+      credit_cents INTEGER NOT NULL DEFAULT 0, created_ts INTEGER NOT NULL
+    )`
+  ).run();
+  await env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_acc_entries_period ON accounting_entries (merchant, doc_date)').run();
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS accounting_periods (
+      merchant TEXT NOT NULL, period TEXT NOT NULL, locked_ts INTEGER NOT NULL,
+      locked_by TEXT NOT NULL DEFAULT '', command_id TEXT NOT NULL DEFAULT '',
+      PRIMARY KEY (merchant, period)
+    )`
+  ).run();
+}
+
+async function lockedPeriod(env, merchant, date) {
+  const hit = await env.DB.prepare(
+    'SELECT period FROM accounting_periods WHERE merchant = ? AND period = ?'
+  ).bind(merchant, date.slice(0, 7)).first();
+  return hit ? hit.period : '';
+}
+
+/* La numérotation est continue parce que le numéro est attribué et consommé
+   dans le même geste : il n'existe qu'une fois la pièce écrite.  L'index unique
+   (merchant, series, seq) fait échouer bruyamment deux allocations simultanées
+   — on réessaie sur le suivant, on ne saute jamais un rang.  Les lignes sont
+   écrites après l'en-tête et non dans une transaction : D1 n'en offre pas ici,
+   et un en-tête sans lignes se voit immédiatement dans l'export, alors qu'un
+   numéro sauté serait invisible et irréparable. */
+async function writeDocument(env, doc, lines) {
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const top = await env.DB.prepare(
+      'SELECT COALESCE(MAX(seq), 0) AS taken FROM accounting_documents WHERE merchant = ? AND series = ?'
+    ).bind(doc.merchant, doc.series).first();
+    const seq = Number((top && top.taken) || 0) + 1;
+    const number = `${doc.series}-${String(seq).padStart(6, '0')}`;
+    try {
+      await env.DB.prepare(
+        `INSERT INTO accounting_documents
+         (id, merchant, kind, series, seq, number, doc_date, currency, total_cents,
+          tax_cents, customer, parent_number, command_id, created_ts)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ).bind(doc.id, doc.merchant, doc.kind, doc.series, seq, number, doc.date, doc.currency,
+        doc.totalCents, doc.taxCents, doc.customer, doc.parent || '', doc.id, now()).run();
+      for (let i = 0; i < lines.length; i += 1) {
+        await env.DB.prepare(
+          `INSERT INTO accounting_entries
+           (id, merchant, document_id, number, doc_date, account, label, debit_cents, credit_cents, created_ts)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        ).bind(`${doc.id}:${i}`, doc.merchant, doc.id, number, doc.date, lines[i].account,
+          lines[i].label, lines[i].debit || 0, lines[i].credit || 0, now()).run();
+      }
+      return { seq, number };
+    } catch (_) { /* rang pris entre-temps — on recommence sur le suivant */ }
+  }
+  return null;
+}
+
+const balanced = (lines) => lines.reduce((sum, line) => sum + (line.debit || 0), 0)
+  === lines.reduce((sum, line) => sum + (line.credit || 0), 0);
+
+async function accounting(env, row, payload) {
+  await ensureLedger(env);
+  const merchant = row.merchant;
+  const fail = (reason) => update(env, row, 'failed', 'kiwi-ledger', {}, reason);
+
+  if (row.action === 'lock-period') {
+    const period = clean(payload && payload.period, 7);
+    if (!PERIOD.test(period)) return fail('period-required');
+    const held = await env.DB.prepare(
+      'SELECT locked_ts FROM accounting_periods WHERE merchant = ? AND period = ?'
+    ).bind(merchant, period).first();
+    if (held) {
+      return update(env, row, 'completed', 'kiwi-ledger',
+        { period, lockedAt: Number(held.locked_ts || 0), alreadyLocked: true }, '');
+    }
+    const at = now();
+    await env.DB.prepare(
+      'INSERT INTO accounting_periods (merchant, period, locked_ts, locked_by, command_id) VALUES (?, ?, ?, ?, ?)'
+    ).bind(merchant, period, at, clean(row.requested_by, 100), row.id).run();
+    return update(env, row, 'completed', 'kiwi-ledger', { period, lockedAt: at, alreadyLocked: false }, '');
+  }
+
+  if (row.action === 'export-journal') {
+    const from = ymd(payload && payload.from);
+    const to = ymd(payload && payload.to);
+    if (!from || !to || from > to) return fail('range-required');
+    const found = await env.DB.prepare(
+      `SELECT number, doc_date, account, label, debit_cents, credit_cents
+       FROM accounting_entries WHERE merchant = ? AND doc_date >= ? AND doc_date <= ?
+       ORDER BY doc_date, number, account`
+    ).bind(merchant, from, to).all();
+    const rows = found.results || [];
+    const accounts = {};
+    let debit = 0; let credit = 0;
+    const lines = rows.map((entry) => {
+      const d = Number(entry.debit_cents || 0); const c = Number(entry.credit_cents || 0);
+      debit += d; credit += c;
+      const bucket = accounts[entry.account] || (accounts[entry.account] = { debitCents: 0, creditCents: 0 });
+      bucket.debitCents += d; bucket.creditCents += c;
+      return { number: entry.number, date: entry.doc_date, account: entry.account, label: entry.label, debitCents: d, creditCents: c };
+    });
+    const summary = { from, to, count: rows.length, debitCents: debit, creditCents: credit, balanced: debit === credit, accounts };
+    /* Un export tronqué qui ne le dit pas est pire qu'un export vide. */
+    const full = Object.assign({ lines, truncated: false }, summary);
+    const fits = !!safeJson(full, 55000);
+    return update(env, row, 'completed', 'kiwi-ledger',
+      fits ? full : Object.assign({ truncated: true }, summary), '', 60000);
+  }
+
+  const date = ymd(payload && payload.date);
+  if (!date) return fail('date-required');
+  const total = cents(payload && payload.amount);
+  if (!(total > 0 && total <= 1000000000)) return fail('invalid-amount');
+  const locked = await lockedPeriod(env, merchant, date);
+  if (locked) return fail(`period-locked:${locked}`);
+  const currency = clean((payload && payload.currency) || 'MAD', 3).toUpperCase();
+  const customer = clean(payload && payload.customer, 160);
+
+  if (row.action === 'create-invoice') {
+    const rate = Number((payload && payload.taxRate) || 0);
+    if (!(rate >= 0 && rate <= 100)) return fail('invalid-tax-rate');
+    const tax = Math.round((total * rate) / (100 + rate));
+    const net = total - tax;
+    const lines = [
+      { account: ACC.client, label: 'Clients', debit: total, credit: 0 },
+      { account: ACC.ventes, label: 'Ventes', debit: 0, credit: net },
+    ];
+    if (tax > 0) lines.push({ account: ACC.tva, label: 'TVA facturée', debit: 0, credit: tax });
+    if (!balanced(lines)) return fail('unbalanced-entry');
+    const written = await writeDocument(env, {
+      id: row.id, merchant, kind: 'invoice', series: `FA-${date.slice(0, 4)}`,
+      date, currency, totalCents: total, taxCents: tax, customer, parent: '',
+    }, lines);
+    if (!written) return fail('numbering-conflict');
+    return update(env, row, 'completed', 'kiwi-ledger', {
+      number: written.number, series: `FA-${date.slice(0, 4)}`, seq: written.seq, date,
+      currency, totalCents: total, taxCents: tax, netCents: net, customer,
+      entries: lines.length, balanced: true,
+    }, '');
+  }
+
+  /* credit-note — un avoir est toujours l'avoir de quelque chose. */
+  const target = clean(payload && payload.invoice, 40);
+  const invoice = await env.DB.prepare(
+    "SELECT * FROM accounting_documents WHERE merchant = ? AND number = ? AND kind = 'invoice'"
+  ).bind(merchant, target).first();
+  if (!invoice) return fail('invoice-not-found');
+  const already = await env.DB.prepare(
+    "SELECT COALESCE(SUM(total_cents), 0) AS credited FROM accounting_documents WHERE merchant = ? AND parent_number = ? AND kind = 'credit-note'"
+  ).bind(merchant, target).first();
+  const remaining = Number(invoice.total_cents || 0) - Number((already && already.credited) || 0);
+  if (!(total <= remaining)) return fail('exceeds-invoice');
+  /* L'avoir porte la même proportion de TVA que la facture qu'il annule. */
+  const tax = Number(invoice.total_cents) > 0
+    ? Math.round((total * Number(invoice.tax_cents || 0)) / Number(invoice.total_cents))
+    : 0;
+  const net = total - tax;
+  const lines = [
+    { account: ACC.client, label: 'Clients', debit: 0, credit: total },
+    { account: ACC.ventes, label: 'Ventes', debit: net, credit: 0 },
+  ];
+  if (tax > 0) lines.push({ account: ACC.tva, label: 'TVA facturée', debit: tax, credit: 0 });
+  if (!balanced(lines)) return fail('unbalanced-entry');
+  const written = await writeDocument(env, {
+    id: row.id, merchant, kind: 'credit-note', series: `AV-${date.slice(0, 4)}`,
+    date, currency, totalCents: total, taxCents: tax,
+    customer: customer || clean(invoice.customer, 160), parent: target,
+  }, lines);
+  if (!written) return fail('numbering-conflict');
+  return update(env, row, 'completed', 'kiwi-ledger', {
+    number: written.number, series: `AV-${date.slice(0, 4)}`, seq: written.seq, date,
+    invoice: target, currency, totalCents: total, taxCents: tax, netCents: net,
+    remainingCents: remaining - total, entries: lines.length, balanced: true,
+  }, '');
 }
 
 async function execute(env, row, payload) {
@@ -259,6 +493,7 @@ async function execute(env, row, payload) {
   if (row.domain === 'ai') {
     return update(env, row, 'pending-approval', 'kiwi-confirmation', { readOnly: true }, '');
   }
+  if (row.domain === 'accounting') return accounting(env, row, payload);
   const initial = row.action.startsWith('export-') || row.action.startsWith('prepare-') ? 'prepared' : 'draft';
   return update(env, row, initial, 'kiwi-workflow', { persisted: true }, '');
 }

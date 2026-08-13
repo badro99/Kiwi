@@ -180,8 +180,70 @@ const suspendedRead = await get(ownerCookie, '?merchant=' + MERCHANT);
 ok(suspendedRead.status === 200, 'a suspended store can still be read for support and settlement');
 db.prepare('UPDATE merchant_config SET status = ? WHERE merchant = ?').run('active', MERCHANT);
 
+/* ── Comptabilité : les quatre actions qui n'existaient que de nom ──────────── */
+
+const acct = (id, action, payload) => command({ id, idempotencyKey: id, domain: 'accounting', action, payload });
+
+const tillInvoice = await post(tillCookie, acct('op:acct-till-01', 'create-invoice', { date: '2026-08-03', amount: 100 }));
+ok(tillInvoice.status === 403 && tillInvoice.data.error === 'permission-denied', 'a paired till cannot write into the books');
+
+const noDate = await post(ownerCookie, acct('op:acct-nodate-1', 'create-invoice', { amount: 100 }));
+ok(noDate.data.command.status === 'failed' && noDate.data.command.lastError === 'date-required',
+  'an invoice without an explicit date is refused rather than dated by the server clock');
+
+const invoiceOne = await post(ownerCookie, acct('op:acct-inv-0001', 'create-invoice', { date: '2026-08-03', amount: 1200, taxRate: 20, customer: 'Traiteur Zniber' }));
+ok(invoiceOne.data.command.status === 'completed' && invoiceOne.data.command.result.number === 'FA-2026-000001',
+  'the first invoice of the year is numbered by the server, not the browser');
+ok(invoiceOne.data.command.result.taxCents === 20000 && invoiceOne.data.command.result.netCents === 100000,
+  'a 1 200 MAD TTC invoice at 20 % splits into 1 000 net and 200 of TVA');
+
+const invoiceTwo = await post(ownerCookie, acct('op:acct-inv-0002', 'create-invoice', { date: '2026-08-04', amount: 60 }));
+ok(invoiceTwo.data.command.result.number === 'FA-2026-000002', 'the second invoice takes the next number, with no gap');
+ok(invoiceTwo.data.command.result.taxCents === 0 && invoiceTwo.data.command.result.entries === 2,
+  'no tax rate means no invented TVA line');
+
+const creditUnconfirmed = await post(ownerCookie, acct('op:acct-cn-0001', 'credit-note', { date: '2026-08-05', amount: 300, invoice: 'FA-2026-000001' }));
+ok(creditUnconfirmed.status === 409 && creditUnconfirmed.data.error === 'confirmation-required', 'a credit note is never issued without confirmation');
+
+const orphan = await post(ownerCookie, Object.assign(acct('op:acct-cn-0009', 'credit-note', { date: '2026-08-05', amount: 10, invoice: 'FA-2026-999999' }), { confirmed: true }));
+ok(orphan.data.command.status === 'failed' && orphan.data.command.lastError === 'invoice-not-found', 'a credit note must point at an invoice that exists');
+
+const credit = await post(ownerCookie, Object.assign(acct('op:acct-cn-0001', 'credit-note', { date: '2026-08-05', amount: 300, invoice: 'FA-2026-000001' }), { confirmed: true }));
+ok(credit.data.command.status === 'completed' && credit.data.command.result.number === 'AV-2026-000001' && credit.data.command.result.remainingCents === 90000,
+  'a credit note is linked to its invoice and reports what is left to credit');
+ok(credit.data.command.result.taxCents === 5000, 'the credit note carries the same proportion of TVA as the invoice it cancels');
+
+const overCredit = await post(ownerCookie, Object.assign(acct('op:acct-cn-0002', 'credit-note', { date: '2026-08-05', amount: 1000, invoice: 'FA-2026-000001' }), { confirmed: true }));
+ok(overCredit.data.command.status === 'failed' && overCredit.data.command.lastError === 'exceeds-invoice', 'the books refuse to credit more than the invoice is worth');
+
+const journal = await post(ownerCookie, acct('op:acct-jrnl-01', 'export-journal', { from: '2026-08-01', to: '2026-08-31' }));
+ok(journal.data.command.status === 'completed' && journal.data.command.result.count === 8, 'the journal export returns actual entry lines, not an acknowledgement');
+ok(journal.data.command.result.balanced === true && journal.data.command.result.debitCents === journal.data.command.result.creditCents,
+  'the exported journal balances: total debit equals total credit');
+ok(journal.data.command.result.accounts['3421'].debitCents === 126000 && journal.data.command.result.accounts['4455'].creditCents === 20000,
+  'the lines land on the Moroccan CGNC accounts, client debit against TVA facturée');
+
+const badRange = await post(ownerCookie, acct('op:acct-jrnl-02', 'export-journal', { from: '2026-08-31', to: '2026-08-01' }));
+ok(badRange.data.command.status === 'failed' && badRange.data.command.lastError === 'range-required', 'an inverted date range exports nothing');
+
+const lock = await post(ownerCookie, Object.assign(acct('op:acct-lock-01', 'lock-period', { period: '2026-06' }), { confirmed: true }));
+ok(lock.data.command.status === 'completed' && lock.data.command.result.alreadyLocked === false, 'the owner locks a closed accounting period');
+
+const relock = await post(ownerCookie, Object.assign(acct('op:acct-lock-02', 'lock-period', { period: '2026-06' }), { confirmed: true }));
+ok(relock.data.command.status === 'completed' && relock.data.command.result.alreadyLocked === true, 'locking an already-locked period is idempotent, not an error');
+
+const backdated = await post(ownerCookie, acct('op:acct-inv-0003', 'create-invoice', { date: '2026-06-15', amount: 500 }));
+ok(backdated.data.command.status === 'failed' && backdated.data.command.lastError === 'period-locked:2026-06',
+  'a lock actually rejects a write into the closed period');
+ok(!db.prepare('SELECT id FROM accounting_documents WHERE merchant = ? AND doc_date = ?').get(MERCHANT, '2026-06-15'),
+  'the refused invoice left nothing behind in the ledger');
+
+const numbers = db.prepare('SELECT number FROM accounting_documents WHERE merchant = ? ORDER BY series, seq').all(MERCHANT).map((r) => r.number);
+ok(numbers.join(',') === 'AV-2026-000001,FA-2026-000001,FA-2026-000002', 'every written document — and only those — holds a number');
+
 /* Source invariants that no request can demonstrate: a schema constraint and the
    shape of the tenant call itself. */
+ok(apiSource.includes('CREATE UNIQUE INDEX IF NOT EXISTS idx_acc_seq'), 'the database refuses two documents on the same number');
 ok(apiSource.includes('UNIQUE INDEX IF NOT EXISTS idx_ops_merchant_idempotency'), 'the database enforces one command per merchant idempotency key');
 ok(apiSource.includes("tenantFor(request, env, body && body.merchant, { strict: true })"), 'writes resolve the tenant in strict mode');
 
@@ -251,6 +313,16 @@ ok(sent.at(-1).url.includes('merchant=amira-boutique') && sent.at(-1).url.includ
 ok(teamSource.includes("new Blob([content], { type: 'text/csv;charset=utf-8' })") && teamSource.includes("window.KiwiOperations?.create?.('payroll', 'export-payroll'"), 'payroll button downloads a real CSV and records its hand-off');
 ok(uiSource.includes("O.create('payment', 'create-link'") && !uiSource.includes('kiwi-pay.ma/'), 'payment UI calls the provider workflow and invents no URL');
 ok(uiSource.includes('window.KiwiProcurement') && uiSource.includes("O.create('procurement', 'create-po'"), 'purchase-order UI uses Kiwi procurement truth and durable audit');
+/* Comptabilité — les quatre actions serveur doivent être atteignables depuis le
+   produit, sinon le livre n'existe que dans les tests. */
+ok(uiSource.includes("O.create('accounting', action, payload"), 'the accounting console dispatches through the durable command API');
+['create-invoice', 'credit-note', 'lock-period', 'export-journal'].forEach((action) =>
+  ok(uiSource.includes(`action = '${action}'`), `the product can reach accounting ${action}`));
+ok(/\['open-comptabilite',[^\]]*\]\.forEach/.test(uiSource) && uiSource.includes('openLedger(tab)'), 'the accounting entry point opens the real ledger for a real merchant');
+/* Un refus métier revient en HTTP 200 avec status:'failed' — un simple
+   try/catch ne le verrait jamais. */
+ok(uiSource.includes("cmd.status !== 'completed'") && uiSource.includes('cmd.lastError'), 'the console reads server-side domain refusals, not only thrown errors');
+ok(uiSource.includes('confirmed:true') && uiSource.includes('data-acct-confirm'), 'credit notes and period locks demand an explicit confirmation');
 /* Version-agnostic on purpose: a cache-stamp bump is how a fix ships, so the
    gate must assert the script is wired, never which generation it is on. */
 pages.forEach((page, i) => ok(/assets\/operations\.js\?v=\d+/.test(page), `operational shell ${i + 1} loads the command client`));
