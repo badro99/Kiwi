@@ -1838,7 +1838,7 @@
     const A = APP_INSTALL_STR[fusionLang()] || APP_INSTALL_STR.fr;
     wrap.className = 'upsell kiwi-app-install-card';
     wrap.innerHTML = `
-      <div class="kiwi-install-head"><span class="kiwi-install-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M4 3v12c0 3.3 2.7 6 6 6h10l-6-6H9V8L4 3z" fill="currentColor"/><path d="M10 15h4l6 6h-7c-1.7 0-3-1.3-3-3v-3z" fill="currentColor" opacity=".48"/></svg></span><span class="t">${A.eye}</span></div>
+      <div class="kiwi-install-head"><span class="kiwi-install-mark" aria-hidden="true"><img src="assets/kiwi-favicon-new.svg" alt="" width="18" height="18"></span><span class="t">${A.eye}</span></div>
       <h4>${A.title}</h4>
       <p>${A.body}</p>
       <div class="kiwi-install-benefits"><span><i></i>${A.quick}</span><span><i></i>${A.offline}</span></div>

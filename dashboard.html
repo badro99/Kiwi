@@ -301,8 +301,8 @@
   .sidebar .kiwi-app-install-card { position: relative; overflow: hidden; flex: 0 0 auto; padding: 16px; }
   .sidebar .kiwi-app-install-card::after { content: ""; position: absolute; width: 110px; height: 110px; inset-inline-end: -56px; top: -54px; border-radius: 50%; background: rgba(49,225,160,.11); filter: blur(2px); pointer-events: none; }
   .sidebar .kiwi-install-head { display: flex; align-items: center; gap: 8px; position: relative; z-index: 1; }
-  .sidebar .kiwi-install-mark { width: 27px; height: 27px; display: grid; place-items: center; border: 1px solid rgba(49,225,160,.3); border-radius: 9px; background: rgba(49,225,160,.1); color: var(--mint); }
-  .sidebar .kiwi-install-mark svg { width: 16px; height: 16px; }
+  .sidebar .kiwi-install-mark { width: 27px; height: 27px; display: grid; place-items: center; border: 1px solid rgba(247,245,240,.34); border-radius: 9px; background: rgba(247,245,240,.96); }
+  .sidebar .kiwi-install-mark img { width: 18px; height: 18px; display: block; object-fit: contain; }
   .sidebar .kiwi-app-install-card h4 { margin: 12px 0 6px; font-size: 15px; line-height: 1.2; max-width: 180px; }
   .sidebar .kiwi-app-install-card p { font-size: 11.5px; line-height: 1.48; }
   .sidebar .kiwi-install-benefits { display: flex; flex-wrap: wrap; gap: 5px 10px; margin-top: 11px; color: rgba(247,250,248,.62); font-size: 10.5px; }
@@ -6009,7 +6009,7 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
      Une URL neuve rate le cache et part au réseau tout de suite. À incrémenter
      à CHAQUE modification de ces deux fichiers, et à recopier à l'identique
      dans la liste de pré-cache de kiwi-sw.js. -->
-<script src="assets/venues.js?v=9" defer></script>
+<script src="assets/venues.js?v=10" defer></script>
 <!-- The pressing till and dashboard share a tenant-scoped operational snapshot. -->
 <script src="assets/pressing-ops.js?v=2" defer></script>
 <script src="assets/pressing-garment-icons.js?v=1" defer></script>
@@ -6019,7 +6019,7 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
 <script src="assets/dateRange.js?v=7" defer></script>
 <script src="assets/mobile-nav.js?v=2" defer></script>
 <script defer src="assets/pwa-update.js?v=358"></script>
-<script defer src="assets/dashboard-pwa.js?v=372"></script>
+<script defer src="assets/dashboard-pwa.js?v=373"></script>
 <script defer src="assets/dashboard-native.js"></script>
 <!-- Same durable outbox as the tills. It also lets this surface report the
      real device sync state instead of inferring it from navigator.onLine. -->

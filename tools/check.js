@@ -756,6 +756,7 @@ section('Whole-project regressions');
     'channel-percentage-test.mjs',
     'kpi-card-layout-test.mjs',
     'dashboard-card-truth-test.mjs',
+    'install-card-icon-test.mjs',
     'check-godmode.mjs',
     'floorplan-sync-test.js',
     'kitchen-relay-test.js',

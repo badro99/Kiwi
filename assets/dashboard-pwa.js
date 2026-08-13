@@ -18,7 +18,7 @@
   // Register the shared root service worker.
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function () {
-      navigator.serviceWorker.register('/kiwi-sw.js?v=394').then(function (reg) {
+      navigator.serviceWorker.register('/kiwi-sw.js?v=395').then(function (reg) {
         if (window.KiwiPWAUpdate) window.KiwiPWAUpdate.watch(reg);
       }).catch(function () {});
     });
@@ -64,8 +64,7 @@
     wrap.className = 'upsell kiwi-app-install-card' + (installed ? ' is-installed' : '');
     wrap.innerHTML =
       '<div class="kiwi-install-head"><span class="kiwi-install-mark" aria-hidden="true">' +
-        '<svg viewBox="0 0 24 24" fill="none"><path d="M4 3v12c0 3.3 2.7 6 6 6h10l-6-6H9V8L4 3z" fill="currentColor"/>' +
-        '<path d="M10 15h4l6 6h-7c-1.7 0-3-1.3-3-3v-3z" fill="currentColor" opacity=".48"/></svg>' +
+        '<img src="assets/kiwi-favicon-new.svg" alt="" width="18" height="18">' +
       '</span><span class="t">' + c.eyebrow + '</span></div>' +
       '<h4>' + c.title + '</h4>' +
       '<p>' + c.body + '</p>' +
