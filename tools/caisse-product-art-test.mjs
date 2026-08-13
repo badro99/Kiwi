@@ -27,6 +27,8 @@ assert.match(caisse, /let art = semantic && semantic\[1\];[\s\S]*if \(!art\) art
   'semantic artwork also supersedes legacy demo-id artwork');
 assert.match(caisse, /MENU_LIBRARY_ART = \{[\s\S]*salad:[\s\S]*soup:[\s\S]*teapot:[\s\S]*coffee:[\s\S]*citrus:/,
   'the menu includes distinct, recognizable food and drink silhouettes');
+assert.match(caisse, /const _tajine = \(g\) => `[\s\S]*M28 20c0-4[\s\S]*M18 44c7-7[\s\S]*M14 47h36[\s\S]*M11 49h4M49 49h4/,
+  'the Moroccan tajine keeps a crown, steep conical lid, shallow base and handles');
 assert.match(caisse, /viewBox = '0 0 24 24'/,
   'library artwork keeps its native optical grid instead of being distorted');
 assert.match(caisse, /menu-art--library/,
@@ -34,4 +36,4 @@ assert.match(caisse, /menu-art--library/,
 assert.match(tablerLicense, /MIT License[\s\S]*Paweł Kuna/,
   'the bundled Tabler-derived silhouettes retain their license notice');
 
-console.log('caisse-product-art-test: 21 controls passed');
+console.log('caisse-product-art-test: 22 controls passed');
