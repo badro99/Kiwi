@@ -10,12 +10,18 @@ for (const [name, source] of [['initial PWA renderer', pwa], ['venue-switch rend
   assert.doesNotMatch(source, /M4 3v12c0 3\.3/, `${name} must not revive the retired generic leaf glyph`);
 }
 
-assert.match(dashboard, /\.kiwi-install-mark img\s*\{[^}]*width:\s*18px[^}]*object-fit:\s*contain/s);
+assert.match(dashboard, /\.kiwi-install-head\s*\{[^}]*gap:\s*6px[^}]*min-height:\s*27px/s,
+  'the light lockup must be compact and optically aligned');
+assert.match(dashboard, /\.kiwi-install-head \.t\s*\{[^}]*line-height:\s*1[^}]*white-space:\s*nowrap/s);
+assert.match(dashboard, /\.kiwi-install-mark img\s*\{[^}]*width:\s*24px[^}]*object-fit:\s*contain/s,
+  'the unboxed favicon must use enough of its visual bounds');
 assert.match(dashboard, /\.kiwi-install-mark\s*\{[^}]*border:\s*1px solid transparent[^}]*background:\s*transparent/s,
   'the light theme must not add a tile behind the favicon');
 assert.match(dashboard, /html\[data-theme="dark"\] \.sidebar \.kiwi-install-mark\s*\{[^}]*background:\s*rgba\(247,245,240,\.96\)/s,
   'dark mode keeps the visibility chip required by the two-tone favicon');
+assert.match(dashboard, /html\[data-theme="dark"\] \.sidebar \.kiwi-install-mark img\s*\{[^}]*width:\s*18px[^}]*height:\s*18px/s,
+  'the dark chip preserves the previously approved inset mark');
 assert.match(dashboard, /assets\/venues\.js\?v=10/);
 assert.match(dashboard, /assets\/dashboard-pwa\.js\?v=373/);
 
-console.log('install-card-icon-test: 9 controls passed');
+console.log('install-card-icon-test: 12 controls passed');

@@ -16,6 +16,6 @@ assert.match(value, /max-width:\s*100%/, 'the financial value stays bounded by i
 assert.match(delta, /margin-inline-start:\s*auto/, 'a wrapped comparison remains aligned to the trailing edge');
 assert.match(delta, /white-space:\s*nowrap/, 'the sign, number and percentage unit stay together');
 assert.match(dashboard, /assets\/design-vexel\.css\?v=2085/);
-assert.match(sw, /var CACHE = 'kiwi-app-v396'/);
+assert.match(sw, /var CACHE = 'kiwi-app-v397'/);
 
 console.log('kpi-card-layout-test: 8 controls passed');
