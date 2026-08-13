@@ -7971,7 +7971,11 @@
        NOM réellement publié : elles restent valables après import CSV, copie
        d'une carte ou recréation d'un article. */
     const _keftaEgg = _tajine(`<circle class="fill" cx="25" cy="50" r="2.5"/><circle cx="25" cy="50" r="2.5"/><circle class="fill" cx="39" cy="50" r="2.5"/><circle cx="39" cy="50" r="2.5"/><circle class="fill" cx="32" cy="49" r="4"/><circle cx="32" cy="49" r="4"/><circle cx="32" cy="49" r="1.4"/>`);
-    const _skewers = `<path class="thin" d="M17 48L45 20M22 52l28-28M14 51l5-1-4-4zM47 22l3-5-5 3z"/><path class="fill" d="M22 40l5-5 4 4-5 5zM31 31l5-5 4 4-5 5zM28 46l5-5 4 4-5 5zM37 37l5-5 4 4-5 5z"/><path d="M22 40l5-5 4 4-5 5zM31 31l5-5 4 4-5 5zM28 46l5-5 4 4-5 5zM37 37l5-5 4 4-5 5z"/>`;
+    /* Kiwi originals based on the real objects, not generic category marks.
+       The chunky food shapes and garnished glass survive the caisse's 28px
+       product-card size while remaining monochrome and theme-safe. */
+    const _brochettes = `<path d="M12 56L47 9M27 58L57 18"/><path class="fill" d="M17 43l6-7 7 5-6 7zM26 31l6-7 7 5-6 7zM35 19l6-7 7 5-6 7zM33 45l6-7 7 5-6 7zM41 34l6-7 7 5-6 7zM48 24l5-6 6 4-5 7z"/><path d="M17 43l6-7 7 5-6 7zM26 31l6-7 7 5-6 7zM35 19l6-7 7 5-6 7zM33 45l6-7 7 5-6 7zM41 34l6-7 7 5-6 7zM48 24l5-6 6 4-5 7z"/><path class="thin" d="M14 53c-5 0-5 7 1 7M29 55c-5 0-5 7 1 7"/>`;
+    const _orangeJuice = `<path class="fill" d="M17 24h27l-3 32H21z"/><path d="M17 24h27l-3 32H21z"/><path class="thin" d="M20 33h22M26 37v15M32 37v15M38 37v15"/><path d="M34 28l7-17h9"/><circle class="fill" cx="46" cy="24" r="9"/><circle cx="46" cy="24" r="9"/><path class="thin" d="M46 15v9l6.4 6.4M46 24l-6.4 6.4M37 24h9"/>`;
     const _msemen = `<path class="fill" d="M17 23h31v25H17z"/><path d="M17 23h31v25H17z"/><path class="thin" d="M20 27l25 17M44 27L20 44M23 20h27v22M20 17h27v4"/><path d="M32 31l6 5-6 5-6-5z"/>`;
     const normalizeMenuArtName = (value) => String(value || '')
       .normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[’']/g, ' ').trim();
@@ -7982,8 +7986,6 @@
       soup: '<path d="M4 11h16a1 1 0 0 1 1 1v.5c0 1.5-2.517 5.573-4 6.5v1a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1v-1c-1.687-1.054-4-5-4-6.5V12a1 1 0 0 1 1-1"/><path d="M8 4a2.4 2.4 0 0 0-1 2 2.4 2.4 0 0 0 1 2M12 4a2.4 2.4 0 0 0-1 2 2.4 2.4 0 0 0 1 2M16 4a2.4 2.4 0 0 0-1 2 2.4 2.4 0 0 0 1 2"/>',
       teapot: '<path d="M10.29 3h3.42a2 2 0 0 1 1.988 1.78l1.555 14A2 2 0 0 1 15.265 21h-6.53a2 2 0 0 1-1.988-2.22l1.555-14A2 2 0 0 1 10.29 3"/><path d="M7.47 12.5 3.213 7.481A.899.899 0 0 1 3.903 6h13.09A3 3 0 0 1 20 9v3c0 1.657-1.346 3-3.007 3M7 17h10"/>',
       coffee: '<path d="M3 14c.83.642 2.077 1.017 3.5 1 1.423.017 2.67-.358 3.5-1 .83-.642 2.077-1.017 3.5-1 1.423-.017 2.67.358 3.5 1M8 3a2.4 2.4 0 0 0-1 2 2.4 2.4 0 0 0 1 2M12 3a2.4 2.4 0 0 0-1 2 2.4 2.4 0 0 0 1 2"/><path d="M3 10h14v5a6 6 0 0 1-6 6H9a6 6 0 0 1-6-6zM16.746 16.726a3 3 0 1 0 .252-5.555"/>',
-      citrus: '<circle cx="12" cy="12" r="8"/><path d="M12 4v8l5.65 5.65M12 12l-5.65 5.65M4 12h8"/>',
-      skewers: '<path d="M4 20 20 4M8 20 20 8M5 16l3 3M8 13l3 3M11 10l3 3M14 7l3 3M12 20l2-2M18 14l2-2"/>',
       pancake: '<path d="M5 10c0-2 3.134-3 7-3s7 1 7 3-3.134 3-7 3-7-1-7-3zM5 10v4c0 2 3.134 3 7 3s7-1 7-3v-4M7 17v1c0 1.657 2.239 3 5 3s5-1.343 5-3v-1"/><path d="m10 9 2-1 2 1-2 1z"/>',
     };
     const MENU_ART_RULES = [
@@ -7992,10 +7994,10 @@
       [/tajine.*(?:poulet|citron)/, MENU_ART['m-008']],
       [/tajine.*(?:kefta|oeuf)/, _keftaEgg],
       [/tajine/, MENU_ART['m-010']],
-      [/brochette|grillade|kebab/, MENU_LIBRARY_ART.skewers, '24'],
+      [/brochette|grillade|kebab/, _brochettes],
       [/(?:the|atay).*(?:menthe)?/, MENU_LIBRARY_ART.teapot, '24'],
       [/cafe|espresso|americano/, MENU_LIBRARY_ART.coffee, '24'],
-      [/orange|jus.*agrume/, MENU_LIBRARY_ART.citrus, '24'],
+      [/orange|jus.*agrume/, _orangeJuice],
       [/msemen|crepe/, MENU_LIBRARY_ART.pancake, '24'],
       [/couscous/, MENU_ART['m-012']],
       [/pastilla/, MENU_ART['m-015']],
