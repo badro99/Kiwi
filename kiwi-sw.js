@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted — fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v415';
+var CACHE = 'kiwi-app-v416';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -83,7 +83,7 @@ var SHELL = [
      entrée pré-cachée sans estampille ne répondrait jamais à la requête de la
      page (donc pas de hors-ligne), tandis qu'une estampille périmée ici
      re-servirait l'ancien fichier. Voir le commentaire dans dashboard.html. */
-  '/assets/venues.js?v=11',
+  '/assets/venues.js?v=12',
   '/assets/trade-workspace-schema.js?v=3',
   '/assets/trade-workspaces.js?v=3',
   '/assets/reservations.js?v=7',
@@ -116,8 +116,8 @@ var SHELL = [
   '/assets/platform-kernel.js?v=1',
   '/assets/platform-ops.js?v=1',
   '/assets/platform-ops.css?v=1',
-  '/assets/operations.js?v=3',
-  '/assets/operations-ui.js?v=4',
+  '/assets/operations.js?v=4',
+  '/assets/operations-ui.js?v=5',
   '/assets/live-link.js?v=6',
   '/assets/channel-sales.js?v=3',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne

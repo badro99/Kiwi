@@ -19,7 +19,16 @@ assert.match(dashboard, /\.kiwi-install-mark\s*\{[^}]*border:\s*1px solid transp
   'the shared lockup must not add a tile behind the favicon');
 assert.doesNotMatch(dashboard, /html\[data-theme="dark"\] \.sidebar \.kiwi-install-(?:head|mark)/,
   'light and dark modes must use the exact same favicon lockup');
-assert.match(dashboard, /assets\/venues\.js\?v=11/);
-assert.match(dashboard, /assets\/dashboard-pwa\.js\?v=374/);
+/* Des planchers, pas des épingles : ce que ces deux lignes protègent, c'est que
+   le tableau de bord charge bien ces deux modules avec une empreinte de cache —
+   pas qu'elle vaille encore le numéro du jour où le test a été écrit.  Une
+   épingle exacte transforme chaque montée de version légitime en échec rouge. */
+const stamp = (file, floor) => {
+  const found = dashboard.match(new RegExp('assets/' + file + '\\.js\\?v=(\\d+)'));
+  assert.ok(found, `the dashboard must load assets/${file}.js with a cache stamp`);
+  assert.ok(Number(found[1]) >= floor, `assets/${file}.js?v= must not fall below ${floor}`);
+};
+stamp('venues', 11);
+stamp('dashboard-pwa', 374);
 
 console.log('install-card-icon-test: 11 controls passed');
