@@ -901,3 +901,44 @@ CREATE TABLE IF NOT EXISTS ai_usage (
   calls    INTEGER NOT NULL DEFAULT 0,
   PRIMARY KEY (merchant, day)
 );
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- KIWI OPERATIONS · commandes durables vers les fournisseurs externes
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Un bouton qui appelle WhatsApp, un prestataire de paiement, un export de
+-- paie ou un flux d'achat n'est pas un toast : c'est une commande métier. Elle
+-- garde le même identifiant quand le réseau revient, appartient explicitement
+-- à un établissement, expose son vrai état (bloquée si le fournisseur manque)
+-- et laisse une trace append-only de chaque transition.
+CREATE TABLE IF NOT EXISTS operational_commands (
+  id              TEXT PRIMARY KEY,
+  merchant        TEXT NOT NULL,
+  domain          TEXT NOT NULL,
+  action          TEXT NOT NULL,
+  status          TEXT NOT NULL,
+  provider        TEXT NOT NULL DEFAULT '',
+  idempotency_key TEXT NOT NULL,
+  payload         TEXT NOT NULL,
+  result          TEXT,
+  requested_by    TEXT NOT NULL DEFAULT '',
+  attempt_count   INTEGER NOT NULL DEFAULT 0,
+  last_error      TEXT NOT NULL DEFAULT '',
+  created_ts      INTEGER NOT NULL,
+  updated_ts      INTEGER NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_ops_merchant_idempotency
+  ON operational_commands (merchant, idempotency_key);
+CREATE INDEX IF NOT EXISTS idx_ops_merchant_domain_time
+  ON operational_commands (merchant, domain, updated_ts DESC);
+
+CREATE TABLE IF NOT EXISTS operational_events (
+  id          TEXT PRIMARY KEY,
+  command_id  TEXT NOT NULL,
+  merchant    TEXT NOT NULL,
+  event       TEXT NOT NULL,
+  status      TEXT NOT NULL,
+  detail      TEXT,
+  created_ts  INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_ops_events_command
+  ON operational_events (merchant, command_id, created_ts);

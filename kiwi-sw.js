@@ -116,6 +116,8 @@ var SHELL = [
   '/assets/platform-kernel.js?v=1',
   '/assets/platform-ops.js?v=1',
   '/assets/platform-ops.css?v=1',
+  '/assets/operations.js?v=1',
+  '/assets/operations-ui.js?v=1',
   '/assets/live-link.js?v=6',
   '/assets/channel-sales.js?v=3',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne
@@ -178,7 +180,7 @@ var SHELL = [
   '/assets/employee-planning.js?v=3',
   '/assets/planning-core.js?v=8',
   '/assets/planning-ui.css?v=10',
-  '/assets/team.js?v=272',
+  '/assets/team.js?v=273',
   '/assets/restaurant-menu-workspace.js?v=2',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).
   '/assets/catalog-import.js',

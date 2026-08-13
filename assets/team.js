@@ -2750,7 +2750,48 @@
 
   handlers['kt-export-csv'] = () => {
     const T = t();
+    const venue = window.KiwiVenue?.getCurrentVenueData?.() || { type: 'restaurant' };
+    const key = teamKey(venue), members = getMembers(key), hours = getHours(key);
+    const period = buildPeriod(window.__kiwiTeamV2.periodKind || 'week');
+    const csv = (value) => {
+      let safe = String(value == null ? '' : value);
+      /* Excel, Numbers and LibreOffice may execute cells beginning with a
+         formula sigil. Employee names/roles are merchant data, so keep them
+         literal even when somebody is genuinely called "@samir". */
+      if (/^[=+\-@]/.test(safe)) safe = "'" + safe;
+      return `"${safe.replace(/"/g, '""')}"`;
+    };
+    const rows = [[
+      'Période début', 'Période fin', 'ID membre', 'Employé', 'Fonction',
+      'Date', 'Heures', 'Taux horaire MAD', 'Coût heures MAD', 'Salaire de base MAD',
+    ]];
+    let totalHours = 0;
+    members.forEach((member) => {
+      period.days.forEach((day) => {
+        const value = Math.max(0, +(hours[member.id] || {})[day] || 0);
+        totalHours += value;
+        rows.push([
+          period.start, period.end, member.id, memberFullName(member), member.function || '', day,
+          value.toFixed(2), (+member.hourlyRate || 0).toFixed(2),
+          (value * (+member.hourlyRate || 0)).toFixed(2), (+member.baseSalary || 0).toFixed(2),
+        ]);
+      });
+    });
+    const content = '\uFEFF' + rows.map((row) => row.map(csv).join(';')).join('\r\n');
+    const blob = new Blob([content], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob), anchor = document.createElement('a');
+    const slug = String(venue.slug || venue.id || venue.type || 'kiwi').replace(/[^a-z0-9_-]+/gi, '-').toLowerCase();
+    const filename = `kiwi-paie-${slug}-${period.start}-${period.end}.csv`;
+    anchor.href = url; anchor.download = filename; anchor.hidden = true;
+    document.body.appendChild(anchor); anchor.click(); anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
     Kiwi.toast(T.tExport, { type: 'success', desc: T.tExportDesc });
+    /* The file is created locally first. The command is only the durable audit
+       hand-off; a provider failure can never eat the merchant's export. */
+    window.KiwiOperations?.create?.('payroll', 'export-payroll', {
+      format: 'csv', filename, periodStart: period.start, periodEnd: period.end,
+      teamCount: members.length, rowCount: rows.length - 1, totalHours,
+    }).catch(() => {});
   };
   handlers['kt-import-csv'] = () => {
     const T = t();

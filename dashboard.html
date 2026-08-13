@@ -6147,7 +6147,7 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
 <script src="assets/stock.js?v=2" defer fetchpriority="low"></script>
 <script src="assets/planning-core.js?v=8" defer fetchpriority="low"></script>
 <link rel="stylesheet" href="assets/planning-ui.css?v=10">
-<script src="assets/team.js?v=272" defer fetchpriority="low"></script>
+<script src="assets/team.js?v=273" defer fetchpriority="low"></script>
 <script src="assets/finance.js" defer fetchpriority="low"></script>
 <script src="assets/conformite.js" defer fetchpriority="low"></script>
 <!-- Final production boundary for presentation-only actions. -->
@@ -6175,6 +6175,10 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
 <!-- Unified reservation truth: real availability, conflict-safe bookings and
      the public booking link. Loaded last so it replaces legacy demo drawers. -->
 <script src="assets/reservations.js?v=7" defer fetchpriority="low"></script>
+<!-- Durable operational workflows. Loaded after every feature module and the
+     production honesty guard so its real handlers win over legacy demo toasts. -->
+<script src="assets/operations.js?v=1" defer fetchpriority="low"></script>
+<script src="assets/operations-ui.js?v=1" defer fetchpriority="low"></script>
 
 <!-- ═══════════════════════════════════════════════════════════════════
  *  ROLE GUARD — salary figures remain owner-only, while a manager may open

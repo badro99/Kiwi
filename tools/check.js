@@ -271,7 +271,7 @@ section('Offline transaction foundation (tools/offline-foundation-test.mjs)');
 }
 
 section('Shared platform kernel and adapters');
-for (const test of ['platform-kernel-test.mjs', 'platform-ops-test.mjs']) {
+for (const test of ['platform-kernel-test.mjs', 'platform-ops-test.mjs', 'operations-system-test.mjs']) {
   const { spawnSync } = require('child_process');
   const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', test)], { encoding:'utf8' });
   const out = (r.stdout || '') + (r.stderr || '');
