@@ -13,15 +13,13 @@ for (const [name, source] of [['initial PWA renderer', pwa], ['venue-switch rend
 assert.match(dashboard, /\.kiwi-install-head\s*\{[^}]*gap:\s*6px[^}]*min-height:\s*27px/s,
   'the light lockup must be compact and optically aligned');
 assert.match(dashboard, /\.kiwi-install-head \.t\s*\{[^}]*line-height:\s*1[^}]*white-space:\s*nowrap/s);
-assert.match(dashboard, /\.kiwi-install-mark img\s*\{[^}]*width:\s*24px[^}]*object-fit:\s*contain/s,
-  'the unboxed favicon must use enough of its visual bounds');
+assert.match(dashboard, /\.kiwi-install-mark img\s*\{[^}]*width:\s*24px[^}]*object-fit:\s*contain[^}]*transform:\s*translateY\(-2px\)/s,
+  'the favicon must use its visual bounds and align optically with the title');
 assert.match(dashboard, /\.kiwi-install-mark\s*\{[^}]*border:\s*1px solid transparent[^}]*background:\s*transparent/s,
-  'the light theme must not add a tile behind the favicon');
-assert.match(dashboard, /html\[data-theme="dark"\] \.sidebar \.kiwi-install-mark\s*\{[^}]*background:\s*rgba\(247,245,240,\.96\)/s,
-  'dark mode keeps the visibility chip required by the two-tone favicon');
-assert.match(dashboard, /html\[data-theme="dark"\] \.sidebar \.kiwi-install-mark img\s*\{[^}]*width:\s*18px[^}]*height:\s*18px/s,
-  'the dark chip preserves the previously approved inset mark');
+  'the shared lockup must not add a tile behind the favicon');
+assert.doesNotMatch(dashboard, /html\[data-theme="dark"\] \.sidebar \.kiwi-install-(?:head|mark)/,
+  'light and dark modes must use the exact same favicon lockup');
 assert.match(dashboard, /assets\/venues\.js\?v=10/);
 assert.match(dashboard, /assets\/dashboard-pwa\.js\?v=373/);
 
-console.log('install-card-icon-test: 12 controls passed');
+console.log('install-card-icon-test: 11 controls passed');
