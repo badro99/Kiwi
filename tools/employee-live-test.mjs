@@ -158,10 +158,16 @@ planningDoc.planning.publishedShifts = {
   'mem-sara': { [futureSaraDay]: { start:'10:00', end:'18:00' } },
   'mem-nora': { [futureNoraDay]: { start:'12:00', end:'20:00' } },
 };
+/* Un service « à venir » daté en dur cesse de l'être le jour où l'horloge le
+   dépasse : la suite se casserait toute seule au changement de calendrier, sans
+   qu'une ligne de code ait bougé.  Même convention que les jours publiés
+   ci-dessus — l'avenir est en 2099, le passé reste un jour révolu pour de bon. */
+const futureOpenDay = '2099-08-13';
+const pastOpenDay = '2020-08-01';
 planningDoc.planning.openShifts = [
-  { id:'open-1', day:'2026-08-13', start:'10:00', end:'18:00', role:'Serveur', note:'Renfort terrasse', status:'open', claimantId:'' },
-  { id:'open-cuisine', day:'2026-08-13', start:'10:00', end:'18:00', role:'Cuisine', note:'Préparation', status:'open', claimantId:'' },
-  { id:'open-past', day:'2026-08-01', start:'10:00', end:'18:00', role:'Serveur', status:'open', claimantId:'' },
+  { id:'open-1', day:futureOpenDay, start:'10:00', end:'18:00', role:'Serveur', note:'Renfort terrasse', status:'open', claimantId:'' },
+  { id:'open-cuisine', day:futureOpenDay, start:'10:00', end:'18:00', role:'Cuisine', note:'Préparation', status:'open', claimantId:'' },
+  { id:'open-past', day:pastOpenDay, start:'10:00', end:'18:00', role:'Serveur', status:'open', claimantId:'' },
 ];
 planningDoc.planning.swapRequests = [];
 planningDoc.planning.notices = [{ id:'notice-1', memberId:'mem-sara', type:'schedule-published', periodKey:'2026-08-10..2026-08-16', createdAt:'2026-08-01T10:00:00Z' }];
