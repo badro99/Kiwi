@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
-import { STARTER_ARTICLES, classify, ensureSupport, featureHash, seedArticles } from '../functions/api/_support.js';
+import { STARTER_ARTICLES, SUPPORT_WHATSAPP_PHONE, classify, ensureSupport, featureHash, seedArticles } from '../functions/api/_support.js';
 import { onRequestGet as getArticles, onRequestPost as articleEvent } from '../functions/api/support/articles.js';
 import { hasSignature } from '../functions/api/support/attachments.js';
 
@@ -30,6 +30,7 @@ await seedArticles(env);
 
 const rows = await env.DB.prepare('SELECT * FROM support_articles ORDER BY slug').all();
 ok(rows.results.length === STARTER_ARTICLES.length, 'starter guides seed idempotently');
+ok(STARTER_ARTICLES.length >= 35, 'help library covers substantially more daily workflows');
 ok(rows.results.every((a) => a.title_fr && a.title_en && a.title_ar), 'every starter guide has three titles');
 ok(rows.results.every((a) => a.body_fr && a.body_en && a.body_ar), 'every starter guide has three complete bodies');
 ok(rows.results.every((a) => a.status === 'published'), 'starter guides are immediately readable');
@@ -40,6 +41,13 @@ let payload = await response.json();
 ok(response.status === 200 && payload.lang === 'en', 'public library serves the requested language');
 ok(payload.articles.some((a) => a.slug === 'plan-de-salle'), 'restaurant library includes floor-plan help');
 ok(!payload.articles.some((a) => a.slug === 'pressing-tarifs'), 'restaurant library excludes pressing-only help');
+ok(payload.articles.some((a) => a.slug === 'impression-cuisine-automatique'), 'restaurant library covers automatic kitchen printing');
+
+for (const type of ['boutique','pressing','pharmacie','hotel','gym','boulangerie','pizzeria','traiteur']) {
+  response = await getArticles({ request: new Request(`https://kiwi.test/api/support/articles?lang=fr&type=${type}`), env });
+  payload = await response.json();
+  ok(payload.articles.length >= 5, `${type} receives shared and specialist guides`);
+}
 
 await env.DB.prepare("UPDATE support_articles SET feature_hash='old:0' WHERE slug='plan-de-salle'").run();
 response = await getArticles({ request: new Request('https://kiwi.test/api/support/articles?type=restaurant'), env });
@@ -74,13 +82,16 @@ const pdf = new TextEncoder().encode('%PDF-1.7').buffer;
 ok(hasSignature('image/png', png), 'valid PNG signature is accepted');
 ok(!hasSignature('image/png', fakePng), 'MIME-spoofed PNG is rejected');
 ok(hasSignature('application/pdf', pdf), 'valid PDF signature is accepted');
+ok(SUPPORT_WHATSAPP_PHONE === '491722451278', 'WhatsApp support routes to the approved Kiwi number');
 
 const help = fs.readFileSync(new URL('../assets/help-centre.js', import.meta.url), 'utf8');
 const account = fs.readFileSync(new URL('../assets/account.js', import.meta.url), 'utf8');
 const dashboard = fs.readFileSync(new URL('../dashboard.html', import.meta.url), 'utf8');
 const admin = fs.readFileSync(new URL('../kiwi-admin.html', import.meta.url), 'utf8');
+const tickets = fs.readFileSync(new URL('../functions/api/support/tickets.js', import.meta.url), 'utf8');
 ok(help.includes('sent.handoff&&sent.handoff.phone'), 'WhatsApp handoff opens only a configured support destination');
 ok(!help.includes("String(payload.contact).replace"), 'the client is never sent to a chat with their own number');
+ok(tickets.includes('phone: SUPPORT_WHATSAPP_PHONE'), 'ticket creation always returns the approved WhatsApp destination');
 ok(!account.includes('Support WhatsApp 7j/7'), 'billing no longer promises an unverified response schedule');
 ok(dashboard.includes('assets/help-centre.js?v=3'), 'dashboard loads the active help client');
 ok(admin.includes('assets/admin-support.js?v=2'), 'God Mode loads the support console');

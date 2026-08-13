@@ -1,6 +1,6 @@
 import { json, readSession, readCookie, SESS_COOKIE, sendMail } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
-import { ensureSupport, cleanText, classify } from '../_support.js';
+import { ensureSupport, cleanText, classify, SUPPORT_WHATSAPP_PHONE } from '../_support.js';
 
 async function diagnostics(env, merchant, client) {
   const out = { captured_ts: Date.now(), client: client || {} };
@@ -75,9 +75,8 @@ export async function onRequestPost({ request, env }) {
       text: `Votre demande ${reference} a bien été enregistrée.\n\n${summary}\n\nRépondez à cet e-mail en gardant la référence dans l’objet pour poursuivre l’échange.`,
     });
   } else {
-    const supportPhone = cleanText(env.SUPPORT_WHATSAPP_NUMBER || '', 32).replace(/\D/g, '');
-    if (supportPhone) confirmation.handoff = {
-      phone: supportPhone,
+    confirmation.handoff = {
+      phone: SUPPORT_WHATSAPP_PHONE,
       text: `${reference} · ${summary}`,
     };
   }
