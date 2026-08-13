@@ -20,6 +20,6 @@ assert.match(dashboard, /\.kiwi-install-mark\s*\{[^}]*border:\s*1px solid transp
 assert.doesNotMatch(dashboard, /html\[data-theme="dark"\] \.sidebar \.kiwi-install-(?:head|mark)/,
   'light and dark modes must use the exact same favicon lockup');
 assert.match(dashboard, /assets\/venues\.js\?v=11/);
-assert.match(dashboard, /assets\/dashboard-pwa\.js\?v=373/);
+assert.match(dashboard, /assets\/dashboard-pwa\.js\?v=374/);
 
 console.log('install-card-icon-test: 11 controls passed');

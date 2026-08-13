@@ -779,6 +779,7 @@ section('Whole-project regressions');
     'employee-live-test.mjs',
     'void-stock-test.js',
     'caisse-stock-test.mjs',
+    'caisse-stock-sync-test.mjs',
     'clients-sync-test.mjs',
     'pwa-shell-test.js',
     'api-boundaries-test.mjs',

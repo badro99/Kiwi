@@ -666,10 +666,12 @@
      l'identifiant est transitoire, on range par slug résolu. */
   const stOverlayScope = () => {
     const vid = currentVenueId();
-    if (vid !== 'scoped') return vid;
     try {
-      const s = window.KiwiCloudDoc && window.KiwiCloudDoc.slugFor('scoped');
-      if (s) return 'scoped:' + s;
+      /* Real dashboard + paired caisse use the SAME local key as well as the
+       * same server document. This gives same-browser tabs immediate storage
+       * events; carryForward below adopts the former venue-id/scoped key. */
+      const s = stShowReal() && window.KiwiCloudDoc && window.KiwiCloudDoc.slugFor(vid);
+      if (s) return s;
     } catch (_) {}
     return vid;
   };
@@ -704,6 +706,7 @@
    * comme état courant ferait adopter la copie serveur PAR-DESSUS une saisie
    * locale bien réelle. */
   let stDoc = null;
+  let stDocBound = false;
 
   function stOverlayRaw() {
     try {
@@ -726,6 +729,16 @@
       const a = Array.isArray(mine && mine[k]) ? mine[k] : [];
       const b = Array.isArray(theirs && theirs[k]) ? theirs[k] : [];
       out[k] = [...new Set([...a, ...b])];
+    });
+    /* The caisse edits user-created items through itemOv so it never needs a
+       second catalog. Resolve the rare same-item, two-device edit by its row
+       timestamp instead of whichever browser happened to pull last. */
+    ['itemOv', 'supOv'].forEach((k) => {
+      out[k] = { ...((theirs && theirs[k]) || {}) };
+      Object.entries((mine && mine[k]) || {}).forEach(([id, row]) => {
+        const other = out[k][id];
+        if (!other || (+row?.updatedAt || 0) >= (+other?.updatedAt || 0)) out[k][id] = row;
+      });
     });
     return out;
   }
@@ -797,14 +810,40 @@
     const vid = currentVenueId();
     const slug = window.KiwiCloudDoc.slugFor(vid);
     if (!slug) return;                                  // démo / pas un vrai magasin
-    window.KiwiCloudDoc.carryForward('stockOverlay', vid, slug, (raw) => {
+    let migratedLocal = false;
+    /* Operator view used `scoped:<slug>` before both surfaces standardized on
+       the canonical slug. Adopt that exact legacy key once; cloud-doc's generic
+       carryForward cannot infer a slug from the `scoped:` composite. */
+    try {
+      const currentKey = stOverlayKey();
+      const scopedKey = 'kiwi:stockOverlay:scoped:' + slug;
+      if (!localStorage.getItem(currentKey) && localStorage.getItem(scopedKey)) {
+        localStorage.setItem(currentKey, localStorage.getItem(scopedKey));
+        migratedLocal = true;
+      }
+    } catch (_) {}
+    const carried = window.KiwiCloudDoc.carryForward('stockOverlay', stOverlayScope(), slug, (raw) => {
       try {
         const d = JSON.parse(raw || 'null');
         return !!(d && ((d.items && d.items.length) || (d.sups && d.sups.length)));
       } catch (_) { return false; }
     }, 'kiwi:stockOverlay:');
+    if (carried || migratedLocal) {
+      stOverlayLoadedFor = null;
+      stEnsureOverlay();
+      if (stPageActive) render();
+    }
     const c = stCloud();
-    if (c) c.bind();
+    if (!c) return;
+    if (!stDocBound) {
+      stDocBound = true;
+      c.bind();
+    } else {
+      /* Re-opening the stock page is an explicit refresh boundary: fetch
+       * caisse movements/catalog edits even when this SPA never went hidden. */
+      c.pull(false);
+    }
+    try { window.KiwiInventory?.sync?.(); } catch (_) {}
   }
 
   /* ═══════════════════════════════════════════════════════════════════════
@@ -918,7 +957,7 @@
     } else {
       base = V.getInventory(currentVenueId());
     }
-    return [...applyItemOverlay(base), ...stUserItems.filter(it => !stDeletedItems.has(it.id))].map(normalizeStockItem);
+    return [...applyItemOverlay(base), ...applyItemOverlay(stUserItems)].map(normalizeStockItem);
   }
   function getSup() {
     const base = window.KiwiVenue?.getSuppliers?.() || [];
@@ -2853,7 +2892,12 @@
               stUserItems[i] = {
                 ...stUserItems[i],
                 name, category, unit, supplier,
-                parLevel, reorderLevel, costPerUnit, currentStock,
+                parLevel, reorderLevel, costPerUnit, currentStock, updatedAt: Date.now(),
+              };
+              stItemOverrides[existing.id] = {
+                ...(stItemOverrides[existing.id] || {}),
+                name, category, unit, supplier, parLevel, reorderLevel, costPerUnit,
+                updatedAt: Date.now(),
               };
               stSaveOverlay();   // article créé PAR le commerçant : sa correction compte autant
             }
@@ -2861,7 +2905,7 @@
             stItemOverrides[existing.id] = {
               ...(stItemOverrides[existing.id] || {}),
               name, category, unit, supplier,
-              parLevel, reorderLevel, costPerUnit, currentStock,
+              parLevel, reorderLevel, costPerUnit, currentStock, updatedAt: Date.now(),
             };
             // Reflect current stock in stStockOverrides so statusOf/daysOfStock pick it up.
             stStockOverrides[existing.id] = currentStock;
@@ -2889,7 +2933,7 @@
           deliveryFrequency: '—',
           usageThisWeek: 0,
           theoreticalUsage: 0,
-          status,
+          status, updatedAt: Date.now(),
         };
         stUserItems.push(item);
         try {
@@ -3215,6 +3259,17 @@
     // Re-render on venue/language changes
     window.KiwiVenue?.subscribe?.(() => { if (stPageActive) render(); });
     window.KiwiI18n?.onLangChange?.(() => { if (stPageActive) render(); });
+    let stockSyncPaint = 0;
+    const repaintFromSharedStock = () => {
+      if (!stPageActive || stockSyncPaint) return;
+      stockSyncPaint = setTimeout(() => { stockSyncPaint = 0; render(); }, 0);
+    };
+    window.KiwiInventory?.subscribe?.(repaintFromSharedStock);
+    window.addEventListener('storage', (e) => {
+      if (e.key !== stOverlayKey()) return;
+      stOverlayLoadedFor = null;
+      repaintFromSharedStock();
+    });
   }
 
   /* Private bridge used by restaurant recipes. It exposes the same persisted

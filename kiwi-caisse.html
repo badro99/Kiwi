@@ -4665,7 +4665,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=358" defer></script>
-  <script src="assets/caisse-pwa.js?v=372" defer></script>
+  <script src="assets/caisse-pwa.js?v=373" defer></script>
   <script src="assets/live-link.js?v=6" defer></script>
   <!-- The staff-role catalogue — says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -4696,6 +4696,10 @@
   <script src="assets/image-proof.js" defer></script>
   <script src="assets/operational-print.js" defer></script>
   <script src="assets/inventory-ledger.js?v=2" defer></script>
+  <!-- Catalogue, seuils, coûts et quantités : exactement le même stock que le
+       tableau de bord. Les quantités passent par le registre append-only ; ce
+       pont ne maintient jamais un second snapshot propre à la caisse. -->
+  <script src="assets/caisse-stock-sync.js?v=1" defer></script>
   <!-- Les horaires de l'établissement, réglés une seule fois côté tableau de
        bord. La caisse les LIT : ouvrir un service hors horaires demande une
        dérogation nommée, et la journée commerciale du Z suit l'heure de
@@ -7885,6 +7889,23 @@
       { id:'2842', supplier:'Boissons Atlas',        items:[{name:'Coca-Cola 33cl',qty:10,unit:'casier'},{name:'Eau minérale 1L',qty:8,unit:'casier'}], total:1284, status:'en-attente', when:'Jeu. · 08h' },
       { id:'2838', supplier:'Marché Central · Port', items:[{name:'Tomates fraîches',qty:20,unit:'kg'},{name:'Oignons',qty:15,unit:'kg'}], total:270, status:'recue', when:'Reçue hier' },
     ];
+    let skSharedStockUnsub = null;
+    function syncSharedStock(repaint){
+      if (!storeIsReal() || !window.KiwiCaisseStock) return;
+      const snap = window.KiwiCaisseStock.snapshot();
+      stockItems.splice(0, stockItems.length, ...(snap.items || []));
+      suppliers.splice(0, suppliers.length, ...(snap.suppliers || []));
+      updateStockBadge();
+      if (repaint && $('#stock-screen')?.classList.contains('is-open')) renderStock();
+    }
+    function bindSharedStock(){
+      if (!storeIsReal() || !window.KiwiCaisseStock) return;
+      if (!skSharedStockUnsub) skSharedStockUnsub = window.KiwiCaisseStock.subscribe(() => syncSharedStock(true));
+      syncSharedStock(false);
+      window.KiwiCaisseStock.bind().then(() => syncSharedStock(true));
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bindSharedStock);
+    else bindSharedStock();
 
     /* Réduction amount for the À emporter cart, clamped to the gross. */
     function vrapDiscountAmount(gross) {
@@ -14391,7 +14412,6 @@
        ============================================================ */
     const SK_CATS = { legumes:'Légumes', viandes:'Viandes', poissons:'Poisson', boissons:'Boissons', epicerie:'Épicerie', laitiers:'Laitiers', cafe:'Café', consommables:'Conso' };
     const SK_ORD_STATUS = { 'en-attente':['En attente','pending'], 'confirmee':['Confirmée','ok'], 'recue':['Reçue','done'] };
-    let skItemSeq = 100;
 
     function skStatusOf(it){ if (it.stock <= 0) return 'out'; if (it.stock <= it.reorder) return 'low'; return 'ok'; }
     function skAlertCount(){ return stockItems.filter(i => skStatusOf(i) !== 'ok').length; }
@@ -14530,10 +14550,15 @@
     }
     function saveEditItem(id){
       const it = stockItems.find(i=>i.id===id); if (!it) return;
-      it.stock   = Math.max(0, parseInt($('#sk-f-stock').value)   || 0);
-      it.par     = Math.max(0, parseInt($('#sk-f-par').value)     || 0);
-      it.reorder = Math.max(0, parseInt($('#sk-f-reorder').value) || 0);
-      it.cost    = Math.max(0, parseFloat($('#sk-f-cost').value)  || 0);
+      const patch = {
+        stock: Math.max(0, parseFloat($('#sk-f-stock').value) || 0),
+        par: Math.max(0, parseFloat($('#sk-f-par').value) || 0),
+        reorder: Math.max(0, parseFloat($('#sk-f-reorder').value) || 0),
+        cost: Math.max(0, parseFloat($('#sk-f-cost').value) || 0),
+      };
+      if (storeIsReal() && window.KiwiCaisseStock) window.KiwiCaisseStock.updateItem(id, patch);
+      else Object.assign(it, patch);
+      syncSharedStock(false);
       closeSkModal(); renderStock(); toast(`${it.name} mis à jour`);
     }
     function openAddItem(){
@@ -14555,9 +14580,12 @@
       const name = ($('#sk-f-name').value || '').trim();
       if (!name){ $('#sk-f-name').focus(); toast("Donne un nom à l'article"); return; }
       const par = Math.max(0, parseInt($('#sk-f-par').value) || 0);
-      stockItems.push({ id:'i'+(++skItemSeq), name, cat:$('#sk-f-cat').value, unit:($('#sk-f-unit').value||'unité').trim(),
+      const item = { id:'usr-'+Date.now().toString(36), name, cat:$('#sk-f-cat').value, unit:($('#sk-f-unit').value||'unité').trim(),
         supplier:$('#sk-f-supplier').value, stock:Math.max(0, parseInt($('#sk-f-stock').value)||0),
-        par, reorder:Math.max(1, Math.round(par * 0.4)), cost:Math.max(0, parseFloat($('#sk-f-cost').value)||0) });
+        par, reorder:Math.max(1, Math.round(par * 0.4)), cost:Math.max(0, parseFloat($('#sk-f-cost').value)||0) };
+      if (storeIsReal() && window.KiwiCaisseStock) window.KiwiCaisseStock.addItem(item);
+      else stockItems.push(item);
+      syncSharedStock(false);
       closeSkModal(); stockTab = 'articles'; renderStock(); toast(`${name} ajouté au stock`);
     }
 
@@ -14592,15 +14620,25 @@
       const o = supplyOrders.find(x=>x.id===id); if (!o) return;
       o.status = 'recue'; o.when = 'Reçue';
       let added = 0;
-      o.items.forEach(li=>{ const it = stockItems.find(i => i.name === li.name); if (it){ it.stock += li.qty; added++; } });
+      o.items.forEach(li=>{ const it = stockItems.find(i => i.name === li.name); if (it){
+        if (storeIsReal() && window.KiwiCaisseStock) window.KiwiCaisseStock.move(it.id, li.qty, 'receipt', 'purchase-'+id, it.cost);
+        else it.stock += li.qty;
+        added++;
+      } });
+      syncSharedStock(false);
       renderStock(); toast(`Commande #${id} reçue · ${added} article${added>1?'s':''} réapprovisionné${added>1?'s':''}`);
     }
     function validateInventory(){
       let changed = 0;
       $$('#sk-body [data-sk-count]').forEach(inp=>{
         const it = stockItems.find(i => i.id === inp.dataset.skCount);
-        if (it){ const v = Math.max(0, parseInt(inp.value) || 0); if (v !== it.stock){ it.stock = v; changed++; } }
+        if (it){ const v = Math.max(0, parseFloat(inp.value) || 0); if (v !== it.stock){
+          if (storeIsReal() && window.KiwiCaisseStock) window.KiwiCaisseStock.count(it.id, v, 'physical-'+Date.now().toString(36));
+          else it.stock = v;
+          changed++;
+        } }
       });
+      syncSharedStock(false);
       renderStock(); toast(changed ? `Inventaire validé · ${changed} article${changed>1?'s':''} ajusté${changed>1?'s':''}` : 'Inventaire validé · aucun écart');
     }
 
@@ -14662,16 +14700,35 @@
         const qty = parseInt(l.qty) || 0; const name = (l.name || '').trim();
         if (!name || qty <= 0) return;
         const it = stockItems.find(i => i.name.toLowerCase() === name.toLowerCase());
-        if (it){ it.stock += qty; added++; }
-        else { stockItems.push({ id:'i'+(++skItemSeq), name, cat:'epicerie', unit:'unité', supplier:(suppliers[0] || {}).name || '', stock:qty, par:Math.max(qty,5), reorder:Math.max(1,Math.round(qty*0.4)), cost:0 }); created++; }
+        if (it){
+          if (storeIsReal() && window.KiwiCaisseStock) window.KiwiCaisseStock.move(it.id, qty, 'receipt', 'delivery-'+Date.now().toString(36), it.cost);
+          else it.stock += qty;
+          added++;
+        }
+        else {
+          const fresh = { id:'usr-'+Date.now().toString(36)+'-'+created, name, cat:'epicerie', unit:'unité', supplier:(suppliers[0] || {}).name || '', stock:qty, par:Math.max(qty,5), reorder:Math.max(1,Math.round(qty*0.4)), cost:0 };
+          if (storeIsReal() && window.KiwiCaisseStock) window.KiwiCaisseStock.addItem(fresh);
+          else stockItems.push(fresh);
+          created++;
+        }
       });
       if (!added && !created){ toast('Aucune ligne valide'); return; }
-      closeSkModal(); stockTab = 'articles'; renderStock();
+      syncSharedStock(false); closeSkModal(); stockTab = 'articles'; renderStock();
       toast(`Stock mis à jour · ${added+created} article${(added+created)>1?'s':''}${created?` (${created} nouveau${created>1?'x':''})`:''}`);
     }
 
     /* ---- open / close + delegation ---- */
-    function openStock(){ renderStock(); $('#stock-screen').classList.add('is-open'); if (window.lucide) lucide.createIcons(); }
+    function openStock(){
+      bindSharedStock(); syncSharedStock(false); renderStock();
+      $('#stock-screen').classList.add('is-open');
+      if (window.lucide) lucide.createIcons();
+      /* Opening Stock is also a manual freshness boundary. The local ledger
+       * renders immediately; the shared cloud document then reconciles any
+       * dashboard edits made on another tab or device. */
+      if (storeIsReal() && window.KiwiCaisseStock?.pull) {
+        window.KiwiCaisseStock.pull().then(()=>{ syncSharedStock(false); renderStock(); }).catch(()=>{});
+      }
+    }
     function closeStock(){ $('#stock-screen').classList.remove('is-open'); }
     $('#open-stock').addEventListener('click', openStock);
     $('#stock-close-btn').addEventListener('click', closeStock);
