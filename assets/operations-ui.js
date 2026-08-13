@@ -21,6 +21,18 @@
           supplier:'Nouveau bon de commande', supplierPick:'Fournisseur', item:'Article / matière', qty:'Quantité', cost:'Coût unitaire · MAD', due:'Livraison souhaitée', note:'Note', save:'Enregistrer le brouillon',
           needSupplier:'Ajoutez d’abord un fournisseur dans Approvisionnement.', invalid:'Complétez les champs obligatoires.',
           history:'Activité opérationnelle', empty:'Aucune action enregistrée pour le moment.', openOps:'Voir l’activité',
+          procTitle:'Approvisionnement', procSub:'Bons de commande durables · réception, facture, retours',
+          procDenied:'Droit d’achat requis', procDeniedD:'Votre session ne peut pas écrire dans le livre des achats. Kiwi le dit avant de vous faire remplir un bon.',
+          tabNewPo:'Nouveau bon', tabOrders:'Bons ouverts',
+          pSku:'Référence', pLabel:'Désignation', pUnit:'Unité', pAddLine:'Ajouter une ligne', pRemove:'Retirer la ligne',
+          pCreate:'Créer le bon de commande', pTotal:'Total', pOrdered:'Commandé', pReceived:'Reçu', pReturned:'Retourné', pOpenQty:'Reste dû',
+          pSubmitTitle:'Envoyer au fournisseur', pSubmitHint:'Un bon envoyé ne se renvoie pas : le second envoi serait une seconde commande.',
+          pReceiveTitle:'Réception', pReceiveHint:'Saisissez ce qui est réellement entré. Rien n’est écrit si une seule ligne dépasse la quantité commandée.',
+          pInvoice:'Montant facturé · MAD (facultatif)', pInvoiceHint:'Renseigné, il doit valoir exactement la marchandise reçue, sinon rien n’est reçu.',
+          pReturnTitle:'Retour fournisseur', pReturnHint:'On ne rend que ce qui est entré, et jamais deux fois.',
+          pRun:'Enregistrer', pDone:'Livre des achats mis à jour.', pLoading:'Lecture du livre des achats…',
+          pNoOrders:'Aucun bon de commande ouvert.', pRefresh:'Rafraîchir', pOrderCreated:'Bon de commande créé',
+          pStatus:{ draft:'Brouillon', submitted:'Envoyé', partial:'Partiel', received:'Reçu' },
           acctTitle:'Comptabilité', acctSub:'Écritures durables · plan comptable marocain',
           tabInvoice:'Facture', tabCredit:'Avoir', tabPeriod:'Période', tabJournal:'Journal',
           acctDenied:'Réservé au propriétaire', acctDeniedD:'Seul le compte propriétaire — ou un opérateur Kiwi — peut écrire dans les livres. Votre session n’a pas ce droit, et Kiwi préfère le dire avant de vous faire remplir un formulaire.',
@@ -43,6 +55,16 @@
             'unbalanced-entry':'Écriture déséquilibrée — rien n’a été écrit.',
             'confirmation-required':'Confirmation requise.', 'permission-denied':'Accès refusé.',
             'period-locked':'Période verrouillée',
+            'owner-session-required':'Lecture réservée au compte propriétaire.', db:'Base indisponible — réessayez.',
+            'supplier-required':'Nom du fournisseur manquant.', 'invalid-date':'Date de livraison invalide.',
+            'no-lines':'Ajoutez au moins une ligne.', 'too-many-lines':'Trop de lignes (60 au maximum).',
+            'sku-required':'Référence manquante sur une ligne.', 'duplicate-sku':'Deux lignes portent la même référence.',
+            'invalid-quantity':'Quantité invalide.', 'invalid-price':'Prix unitaire invalide.',
+            'po-not-found':'Bon de commande introuvable.', 'line-not-found':'Référence absente de ce bon.',
+            'bad-transition':'Ce bon n’est plus au stade brouillon', 'not-submitted':'Ce bon n’attend pas de réception',
+            'exceeds-ordered':'La réception dépasse la quantité commandée — rien n’a été écrit.',
+            'invoice-mismatch':'La facture ne correspond pas à la marchandise reçue — rien n’a été écrit.',
+            'exceeds-received':'Le retour dépasse ce qui est encore détenu.',
           },
         },
         en: {
@@ -55,6 +77,18 @@
           supplier:'New purchase order', supplierPick:'Supplier', item:'Item / material', qty:'Quantity', cost:'Unit cost · MAD', due:'Expected delivery', note:'Note', save:'Save draft',
           needSupplier:'Add a supplier in Procurement first.', invalid:'Complete the required fields.',
           history:'Operational activity', empty:'No operational activity yet.', openOps:'View activity',
+          procTitle:'Procurement', procSub:'Durable purchase orders · receipt, invoice, returns',
+          procDenied:'Purchasing right required', procDeniedD:'Your session cannot write to the purchase ledger. Kiwi says so before you fill in an order.',
+          tabNewPo:'New order', tabOrders:'Open orders',
+          pSku:'SKU', pLabel:'Description', pUnit:'Unit', pAddLine:'Add a line', pRemove:'Remove line',
+          pCreate:'Create the purchase order', pTotal:'Total', pOrdered:'Ordered', pReceived:'Received', pReturned:'Returned', pOpenQty:'Still due',
+          pSubmitTitle:'Send to the supplier', pSubmitHint:'A sent order is not sent twice: the second send would be a second order.',
+          pReceiveTitle:'Receipt', pReceiveHint:'Enter what actually arrived. Nothing is written if a single line exceeds what was ordered.',
+          pInvoice:'Invoiced amount · MAD (optional)', pInvoiceHint:'If given, it must match the goods received exactly, otherwise nothing is received.',
+          pReturnTitle:'Supplier return', pReturnHint:'Only what came in can go back, and never twice.',
+          pRun:'Record', pDone:'Purchase ledger updated.', pLoading:'Reading the purchase ledger…',
+          pNoOrders:'No open purchase order.', pRefresh:'Refresh', pOrderCreated:'Purchase order created',
+          pStatus:{ draft:'Draft', submitted:'Sent', partial:'Partial', received:'Received' },
           acctTitle:'Accounting', acctSub:'Durable entries · Moroccan chart of accounts',
           tabInvoice:'Invoice', tabCredit:'Credit note', tabPeriod:'Period', tabJournal:'Journal',
           acctDenied:'Owner only', acctDeniedD:'Only the owner account — or a Kiwi operator — can write to the books. Your session does not hold that right, and Kiwi says so before you fill in a form.',
@@ -77,6 +111,16 @@
             'unbalanced-entry':'Unbalanced entry — nothing was written.',
             'confirmation-required':'Confirmation required.', 'permission-denied':'Access denied.',
             'period-locked':'Period locked',
+            'owner-session-required':'Reading is reserved to the owner account.', db:'Database unavailable — try again.',
+            'supplier-required':'Supplier name missing.', 'invalid-date':'Invalid delivery date.',
+            'no-lines':'Add at least one line.', 'too-many-lines':'Too many lines (60 maximum).',
+            'sku-required':'A line is missing its SKU.', 'duplicate-sku':'Two lines carry the same SKU.',
+            'invalid-quantity':'Invalid quantity.', 'invalid-price':'Invalid unit price.',
+            'po-not-found':'Purchase order not found.', 'line-not-found':'That SKU is not on this order.',
+            'bad-transition':'This order is no longer a draft', 'not-submitted':'This order is not awaiting receipt',
+            'exceeds-ordered':'The receipt exceeds what was ordered — nothing was written.',
+            'invoice-mismatch':'The invoice does not match the goods received — nothing was written.',
+            'exceeds-received':'The return exceeds what is still held.',
           },
         },
         ar: {
@@ -89,6 +133,18 @@
           supplier:'أمر شراء جديد', supplierPick:'المورد', item:'المادة', qty:'الكمية', cost:'ثمن الوحدة · درهم', due:'موعد التسليم', note:'ملاحظة', save:'حفظ المسودة',
           needSupplier:'أضف موردًا في التوريد أولًا.', invalid:'أكمل الحقول المطلوبة.',
           history:'سجل العمليات', empty:'لا توجد عمليات بعد.', openOps:'عرض السجل',
+          procTitle:'التوريد', procSub:'أوامر شراء دائمة · الاستلام والفاتورة والمرتجعات',
+          procDenied:'يلزم حق الشراء', procDeniedD:'جلستك لا يمكنها الكتابة في دفتر المشتريات. يقولها Kiwi قبل أن تملأ أمرًا.',
+          tabNewPo:'أمر جديد', tabOrders:'الأوامر المفتوحة',
+          pSku:'المرجع', pLabel:'البيان', pUnit:'الوحدة', pAddLine:'إضافة سطر', pRemove:'حذف السطر',
+          pCreate:'إنشاء أمر الشراء', pTotal:'الإجمالي', pOrdered:'المطلوب', pReceived:'المستلم', pReturned:'المرتجع', pOpenQty:'المتبقي',
+          pSubmitTitle:'إرسال إلى المورد', pSubmitHint:'الأمر المرسل لا يُرسل مرتين: الإرسال الثاني طلب ثانٍ.',
+          pReceiveTitle:'الاستلام', pReceiveHint:'أدخل ما دخل فعلًا. لا يُكتب شيء إذا تجاوز سطر واحد الكمية المطلوبة.',
+          pInvoice:'المبلغ المفوتر · درهم (اختياري)', pInvoiceHint:'إن أدخلته وجب أن يساوي البضاعة المستلمة تمامًا، وإلا لن يُستلم شيء.',
+          pReturnTitle:'مرتجع إلى المورد', pReturnHint:'لا يُرد إلا ما دخل، ولا يُرد مرتين.',
+          pRun:'تسجيل', pDone:'تم تحديث دفتر المشتريات.', pLoading:'جارٍ قراءة دفتر المشتريات…',
+          pNoOrders:'لا يوجد أمر شراء مفتوح.', pRefresh:'تحديث', pOrderCreated:'تم إنشاء أمر الشراء',
+          pStatus:{ draft:'مسودة', submitted:'مُرسل', partial:'جزئي', received:'مستلم' },
           acctTitle:'المحاسبة', acctSub:'قيود دائمة · المخطط المحاسبي المغربي',
           tabInvoice:'فاتورة', tabCredit:'إشعار دائن', tabPeriod:'الفترة', tabJournal:'اليومية',
           acctDenied:'خاص بالمالك', acctDeniedD:'وحده حساب المالك — أو مشغّل Kiwi — يمكنه الكتابة في الدفاتر. جلستك لا تملك هذا الحق، ويقولها Kiwi قبل أن تملأ أي استمارة.',
@@ -111,6 +167,16 @@
             'unbalanced-entry':'قيد غير متوازن — لم يُكتب شيء.',
             'confirmation-required':'التأكيد مطلوب.', 'permission-denied':'الوصول مرفوض.',
             'period-locked':'الفترة مقفلة',
+            'owner-session-required':'القراءة محجوزة لحساب المالك.', db:'قاعدة البيانات غير متاحة — أعد المحاولة.',
+            'supplier-required':'اسم المورّد ناقص.', 'invalid-date':'تاريخ التسليم غير صالح.',
+            'no-lines':'أضف سطرًا واحدًا على الأقل.', 'too-many-lines':'عدد السطور كبير (60 كحد أقصى).',
+            'sku-required':'مرجع ناقص في أحد السطور.', 'duplicate-sku':'سطران يحملان المرجع نفسه.',
+            'invalid-quantity':'كمية غير صالحة.', 'invalid-price':'سعر الوحدة غير صالح.',
+            'po-not-found':'أمر الشراء غير موجود.', 'line-not-found':'المرجع غير موجود في هذا الأمر.',
+            'bad-transition':'لم يعد هذا الأمر مسودة', 'not-submitted':'هذا الأمر لا ينتظر استلامًا',
+            'exceeds-ordered':'الاستلام يتجاوز الكمية المطلوبة — لم يُكتب شيء.',
+            'invoice-mismatch':'الفاتورة لا تطابق البضاعة المستلمة — لم يُكتب شيء.',
+            'exceeds-received':'المرتجع يتجاوز ما هو محتفظ به.',
           },
         },
       })[lang()];
@@ -160,34 +226,15 @@
          handler rather than writing a local purchase order and then telling the
          merchant "accès refusé" for a document that now exists. */
       if (!real() && legacyPo) return legacyPo.apply(this, arguments);
-      var c = text(), P = window.KiwiProcurement, doc = P && P.doc && P.doc();
-      if (!P || !doc || !(doc.suppliers || []).length) return Kiwi.toast(c.needSupplier, { type:'warning' });
-      /* Ask before writing.  createOrder() commits locally, so a refusal
-         discovered after the fact leaves an orphan the merchant cannot explain. */
-      if (O.allowed && !O.allowed('procurement', 'create-po')) return fail(new Error('permission-denied'));
-      var options = doc.suppliers.filter(function (s) { return s.active !== false; }).map(function (s) { return '<option value="'+esc(s.id)+'">'+esc(s.name)+'</option>'; }).join('');
-      var modal = Kiwi.modal({ tag:'APPROVISIONNEMENT', title:c.supplier, width:620, body:'<div class="kf-grid">' +
-        '<label><span class="l">'+c.supplierPick+'</span><select data-po-supplier>'+options+'</select></label>' +
-        '<label><span class="l">'+c.due+'</span><input type="date" data-po-date></label>' +
-        '<label><span class="l">'+c.item+'</span><input maxlength="120" data-po-name></label>' +
-        '<label><span class="l">ID / SKU</span><input maxlength="80" data-po-item></label>' +
-        '<label><span class="l">'+c.qty+'</span><input type="number" min="0.001" step="0.001" data-po-qty></label>' +
-        '<label><span class="l">'+c.cost+'</span><input type="number" min="0" step="0.01" data-po-cost></label>' +
-        '<label style="grid-column:1/-1"><span class="l">'+c.note+'</span><input maxlength="500" data-po-note></label>' +
-        '</div><button class="kb atlas" style="width:100%;justify-content:center;margin-top:14px" type="button" data-po-save>'+c.save+'</button>' });
-      modal.el.querySelector('[data-po-save]').addEventListener('click', async function () {
-        var name = modal.el.querySelector('[data-po-name]').value.trim(), item = modal.el.querySelector('[data-po-item]').value.trim() || name.toLowerCase().replace(/[^a-z0-9]+/g,'-');
-        var qty = Number(modal.el.querySelector('[data-po-qty]').value), cost = Number(modal.el.querySelector('[data-po-cost]').value || 0);
-        if (!name || !item || !(qty > 0)) return Kiwi.toast(c.invalid, { type:'warning' });
-        var input = { supplierId:modal.el.querySelector('[data-po-supplier]').value, expectedDate:modal.el.querySelector('[data-po-date]').value, note:modal.el.querySelector('[data-po-note]').value, lines:[{ itemId:item, name:name, qty:qty, unit:'unité', unitCost:cost }] };
-        var row = P.createOrder(input);
-        if (!row || row.error) return fail(new Error(row && row.error || 'purchase-order-failed'));
-        this.disabled = true;
-        try { var result = await O.create('procurement', 'create-po', { purchaseOrderId:row.id, number:row.number, supplierId:row.supplierId, expectedDate:row.expectedDate, lineCount:row.lines.length }); modal.close(); toastResult(result); }
-        catch (error) { this.disabled = false; fail(error); }
-      });
+      /* Le serveur tient désormais le livre des achats : numéro attribué,
+         quantités commandées/reçues/retournées par ligne. Un formulaire à une
+         seule ligne ne pouvait plus le remplir — la console le fait. */
+      openProcurement('create');
     };
     H['supplier-po-detail'] = function (_el, id) {
+      /* Un vrai marchand ouvre le bon qui existe côté serveur, avec ses soldes.
+         La démo garde son tiroir local, qui n'a rien derrière. */
+      if (real()) return openProcurement('orders');
       var P = window.KiwiProcurement, d = P && P.doc && P.doc(), row = d && (d.orders || []).find(function (x) { return x.id === id || x.number === id; });
       if (!row) return Kiwi.toast('Bon de commande introuvable', { type:'warning' });
       var supplier = (d.suppliers || []).find(function (x) { return x.id === row.supplierId; });
@@ -253,9 +300,16 @@
        isolated in the text itself — a class-level fix cannot reach inside. */
     function money(c) { return FSI + (Number(c || 0) / 100).toFixed(2) + ' MAD' + PDI; }
     function iso(d) { return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); }
+    /* Plusieurs refus du serveur portent leur contexte après un deux-points —
+       `period-locked:2026-07`, `bad-transition:submitted`, `not-submitted:received`.
+       Traduire la raison et garder l'état tel quel : le marchand a besoin des
+       deux, et un code inconnu vaut mieux affiché que masqué. */
     function acctError(code) {
-      var c = text(), key = String(code || '');
-      if (key.indexOf('period-locked:') === 0) return c.errs['period-locked'] + ' (' + key.slice(14) + ')';
+      var c = text(), key = String(code || ''), i = key.indexOf(':');
+      if (i > 0) {
+        var base = key.slice(0, i);
+        if (c.errs[base]) return c.errs[base] + ' (' + key.slice(i + 1) + ')';
+      }
       return c.errs[key] || key || 'operation-failed';
     }
     /* A server-side domain refusal comes back HTTP 200 with status:'failed' —
@@ -266,32 +320,55 @@
       if (cmd.status !== 'completed') return { error:cmd.lastError || cmd.status || 'operation-failed' };
       return { data:cmd.result || {} };
     }
-    function acctCss() {
-      if (document.getElementById('ops-acct-css')) return;
+    /* Une seule feuille pour les deux consoles : la comptabilité et
+       l'approvisionnement sont le même meuble — bandeau de pastilles, volets,
+       carte de sortie, table à en-tête collant. Les sélecteurs sont doublés
+       plutôt que renommés pour ne pas casser le balisage déjà écrit. */
+    function consoleCss() {
+      if (document.getElementById('ops-console-css')) return;
       var style = document.createElement('style');
-      style.id = 'ops-acct-css';
+      style.id = 'ops-console-css';
       style.textContent = [
-        '.ops-acct{padding:22px 26px 46px;max-width:1000px;margin:0 auto;}',
-        '.ops-acct-tabs{display:inline-flex;gap:2px;padding:4px;border-radius:999px;background:var(--n-100);border:1px solid var(--n-200);margin-bottom:22px;}',
-        '.ops-acct-tab{appearance:none;border:0;background:transparent;font:inherit;font-size:12.5px;font-weight:600;color:var(--n-500);padding:8px 18px;border-radius:999px;cursor:pointer;transition:color .2s;}',
+        '.ops-acct,.ops-proc{padding:22px 26px 46px;max-width:1000px;margin:0 auto;}',
+        '.ops-acct-tabs,.ops-proc-tabs{display:inline-flex;gap:2px;padding:4px;border-radius:999px;background:var(--n-100);border:1px solid var(--n-200);margin-bottom:22px;}',
+        '.ops-acct-tab,.ops-proc-tab{appearance:none;border:0;background:transparent;font:inherit;font-size:12.5px;font-weight:600;color:var(--n-500);padding:8px 18px;border-radius:999px;cursor:pointer;transition:color .2s;}',
         /* liquid-lens paints the pill; the button must not paint one under it. */
-        '.ops-acct-tab.on{background:transparent;color:#fff;}',
-        '.ops-acct-pane{display:none;}',
-        '.ops-acct-pane.on{display:block;}',
-        '.ops-acct-hint{font-size:12px;color:var(--n-500);margin:0 0 14px;max-width:62ch;line-height:1.55;}',
+        '.ops-acct-tab.on,.ops-proc-tab.on{background:transparent;color:#fff;}',
+        '.ops-acct-pane,.ops-proc-pane{display:none;}',
+        '.ops-acct-pane.on,.ops-proc-pane.on{display:block;}',
+        '.ops-acct-hint,.ops-proc-hint{font-size:12px;color:var(--n-500);margin:0 0 14px;max-width:62ch;line-height:1.55;}',
         '.ops-acct-confirm{display:flex;align-items:flex-start;gap:9px;font-size:12.5px;color:var(--n-500);margin-top:14px;cursor:pointer;}',
         '.ops-acct-confirm input{margin-top:2px;accent-color:var(--atlas);}',
-        '.ops-acct-out{margin-top:18px;}',
-        '.ops-acct-kpis{display:flex;flex-wrap:wrap;gap:22px;margin:12px 0 4px;}',
-        '.ops-acct-kpi{min-width:104px;}',
-        '.ops-acct-kpi .k{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--n-500);}',
-        '.ops-acct-kpi .v{font-size:17px;font-weight:600;margin-top:3px;font-variant-numeric:tabular-nums;}',
-        '.ops-acct-doc{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:18px;letter-spacing:.02em;}',
-        '.ops-acct-scroll{overflow-x:auto;max-height:50vh;overflow-y:auto;margin-top:12px;}',
-        '.ops-acct-table{width:100%;border-collapse:collapse;font-size:12.5px;}',
-        '.ops-acct-table th{text-align:start;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--n-500);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--n-200);position:sticky;top:0;background:var(--surface);}',
-        '.ops-acct-table td{padding:8px 10px;border-bottom:1px solid var(--n-100);}',
-        '.ops-acct-n{text-align:end;font-variant-numeric:tabular-nums;white-space:nowrap;}',
+        '.ops-acct-out,.ops-proc-out{margin-top:18px;}',
+        '.ops-acct-kpis,.ops-proc-kpis{display:flex;flex-wrap:wrap;gap:22px;margin:12px 0 4px;}',
+        '.ops-acct-kpi,.ops-proc-kpi{min-width:104px;}',
+        '.ops-acct-kpi .k,.ops-proc-kpi .k{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--n-500);}',
+        '.ops-acct-kpi .v,.ops-proc-kpi .v{font-size:17px;font-weight:600;margin-top:3px;font-variant-numeric:tabular-nums;}',
+        '.ops-acct-doc,.ops-proc-num{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:18px;letter-spacing:.02em;}',
+        '.ops-acct-scroll,.ops-proc-scroll{overflow-x:auto;max-height:50vh;overflow-y:auto;margin-top:12px;}',
+        '.ops-acct-table,.ops-proc-table{width:100%;border-collapse:collapse;font-size:12.5px;}',
+        '.ops-acct-table th,.ops-proc-table th{text-align:start;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--n-500);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--n-200);position:sticky;top:0;background:var(--surface);}',
+        '.ops-acct-table td,.ops-proc-table td{padding:8px 10px;border-bottom:1px solid var(--n-100);}',
+        '.ops-acct-n,.ops-proc-n{text-align:end;font-variant-numeric:tabular-nums;white-space:nowrap;}',
+        /* Saisie multiligne d'un bon : une ligne = une rangée, la référence et
+           la désignation portent la largeur, les nombres restent serrés. */
+        '.ops-proc-line{display:grid;grid-template-columns:1.1fr 1.5fr .7fr .7fr .9fr auto;gap:8px;align-items:end;margin-bottom:8px;}',
+        '.ops-proc-line label{display:block;min-width:0;}',
+        '.ops-proc-line .l{display:block;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--n-500);margin-bottom:4px;}',
+        '.ops-proc-line input{width:100%;box-sizing:border-box;}',
+        '.ops-proc-line.n .l{visibility:hidden;}',
+        '@media (max-width:720px){.ops-proc-line{grid-template-columns:1fr 1fr;}.ops-proc-line.n .l{visibility:visible;}}',
+        '.ops-proc-rm{appearance:none;border:1px solid var(--n-200);background:transparent;color:var(--n-500);border-radius:9px;height:34px;width:34px;cursor:pointer;font-size:15px;line-height:1;}',
+        '.ops-proc-rm:hover{color:var(--ink);border-color:var(--n-300);}',
+        '.ops-proc-total{display:flex;justify-content:space-between;align-items:baseline;margin-top:14px;padding-top:12px;border-top:1px solid var(--n-200);}',
+        '.ops-proc-total .k{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--n-500);}',
+        '.ops-proc-total .v{font-size:19px;font-weight:600;font-variant-numeric:tabular-nums;}',
+        '.ops-proc-order{margin-bottom:12px;}',
+        '.ops-proc-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:10px;}',
+        '.ops-proc-sup{font-size:12.5px;color:var(--n-500);}',
+        '.ops-proc-act{margin-top:14px;padding-top:14px;border-top:1px solid var(--n-100);}',
+        '.ops-proc-actTitle{font-size:12.5px;font-weight:600;margin:0 0 4px;}',
+        '.ops-proc-qty{width:82px;box-sizing:border-box;}',
       ].join('\n');
       document.head.appendChild(style);
     }
@@ -300,7 +377,7 @@
     }
     function openLedger(tab) {
       var c = text(), today = iso(new Date()), month = today.slice(0, 7), first = month + '-01';
-      acctCss();
+      consoleCss();
       if (O.allowed && !O.allowed('accounting', 'create-invoice')) {
         Kiwi.drawer({ title:c.acctTitle, subtitle:K && K.tenant ? K.tenant() : '', fullpage:true,
           body:'<div class="ops-acct"><div class="p-card"><b>' + esc(c.acctDenied) + '</b><p class="ops-acct-hint" style="margin:8px 0 0">' + esc(c.acctDeniedD) + '</p></div></div>' });
@@ -446,6 +523,227 @@
       }
     }
 
+    /* `create-po` se termine en `draft` : c'est l'état du bon lui-même, pas un
+       échec.  outcome() traite tout ce qui n'est pas `completed` comme une
+       erreur, d'où ce discriminateur propre à l'approvisionnement. */
+    function procOutcome(result) {
+      if (result && result.offline) return { queued:true };
+      var cmd = result && result.command || {};
+      if (cmd.status === 'failed' || cmd.lastError) return { error:cmd.lastError || 'operation-failed' };
+      if (cmd.status !== 'completed' && cmd.status !== 'draft') return { error:cmd.status || 'operation-failed' };
+      return { data:cmd.result || {} };
+    }
+
+    function procLineRow(index) {
+      var c = text();
+      return '<div class="ops-proc-line' + (index ? ' n' : '') + '" data-po-line>' +
+        '<label><span class="l">' + esc(c.pSku) + '</span><input maxlength="60" data-pl-sku></label>' +
+        '<label><span class="l">' + esc(c.pLabel) + '</span><input maxlength="160" data-pl-label></label>' +
+        '<label><span class="l">' + esc(c.pUnit) + '</span><input maxlength="24" data-pl-unit></label>' +
+        '<label><span class="l">' + esc(c.qty) + '</span><input type="number" min="1" step="1" data-pl-qty></label>' +
+        '<label><span class="l">' + esc(c.cost) + '</span><input type="number" min="0" step="0.01" data-pl-price></label>' +
+        '<button class="ops-proc-rm" type="button" data-pl-remove aria-label="' + esc(c.pRemove) + '">×</button>' +
+        '</div>';
+    }
+
+    function openProcurement(tab) {
+      var c = text();
+      consoleCss();
+      tab = tab === 'orders' ? 'orders' : 'create';
+      if (O.allowed && !O.allowed('procurement', 'create-po')) {
+        Kiwi.drawer({ title:c.procTitle, subtitle:c.procSub, fullpage:true,
+          body:'<div class="ops-proc"><div class="p-card"><b>' + esc(c.procDenied) + '</b><p class="ops-proc-hint" style="margin:8px 0 0">' + esc(c.procDeniedD) + '</p></div></div>' });
+        return;
+      }
+      /* Les fournisseurs déjà connus du poste servent de suggestions ; le champ
+         reste libre parce que le serveur ne tient pas de table fournisseurs. */
+      var P = window.KiwiProcurement, doc = P && P.doc && P.doc();
+      var suppliers = ((doc && doc.suppliers) || []).filter(function (s) { return s.active !== false; });
+      var confirmBox = '<label class="ops-acct-confirm"><input type="checkbox" data-acct-confirm><span>' + esc(c.confirmLabel) + '</span></label>';
+
+      var body = '<div class="ops-proc">' +
+        '<datalist id="ops-proc-suppliers">' + suppliers.map(function (s) { return '<option value="' + esc(s.name) + '"></option>'; }).join('') + '</datalist>' +
+        '<div class="ops-proc-tabs" data-lens-demo>' +
+          [['create', c.tabNewPo], ['orders', c.tabOrders]].map(function (t) {
+            return '<button class="ops-proc-tab' + (t[0] === tab ? ' on' : '') + '" type="button" data-lens-item data-po-tab="' + t[0] + '">' + esc(t[1]) + '</button>';
+          }).join('') +
+        '</div>' +
+        '<section class="ops-proc-pane' + (tab === 'create' ? ' on' : '') + '" data-po-pane="create">' +
+          '<p class="ops-proc-hint">' + esc(c.procSub) + '</p>' +
+          '<div class="kf-grid">' +
+            '<label><span class="l">' + esc(c.supplierPick) + '</span><input maxlength="160" list="ops-proc-suppliers" data-po-supplier></label>' +
+            '<label><span class="l">' + esc(c.due) + '</span><input type="date" data-po-date></label>' +
+          '</div>' +
+          '<div style="margin-top:16px" data-po-lines>' + procLineRow(0) + '</div>' +
+          '<button class="kb ghost xs" type="button" data-pl-add>' + esc(c.pAddLine) + '</button>' +
+          '<div class="ops-proc-total"><span class="k">' + esc(c.pTotal) + '</span><span class="v" data-po-total>' + esc(money(0)) + '</span></div>' +
+          '<button class="kb atlas" style="width:100%;justify-content:center;margin-top:14px" type="button" data-po-create>' + esc(c.pCreate) + '</button>' +
+          '<div class="ops-proc-out" data-po-out></div>' +
+        '</section>' +
+        '<section class="ops-proc-pane' + (tab === 'orders' ? ' on' : '') + '" data-po-pane="orders">' +
+          '<button class="kb ghost xs" type="button" data-po-refresh>' + esc(c.pRefresh) + '</button>' +
+          '<div data-po-orders><p class="ops-proc-hint" style="margin-top:14px">' + esc(c.pLoading) + '</p></div>' +
+        '</section>' +
+        '</div>';
+
+      var res = Kiwi.drawer({ title:c.procTitle, subtitle:c.procSub, body:body, fullpage:true });
+      var root = res.el;
+
+      function rows() { return Array.prototype.slice.call(root.querySelectorAll('[data-po-line]')); }
+      function retotal() {
+        var total = rows().reduce(function (sum, row) {
+          var qty = Number(row.querySelector('[data-pl-qty]').value || 0), price = Number(row.querySelector('[data-pl-price]').value || 0);
+          return sum + (qty > 0 && price > 0 ? Math.round(qty * price * 100) : 0);
+        }, 0);
+        root.querySelector('[data-po-total]').textContent = money(total);
+      }
+      root.addEventListener('input', function (event) { if (event.target.closest('[data-po-line]')) retotal(); });
+
+      function kpi(k, v) { return '<div class="ops-proc-kpi"><div class="k">' + esc(k) + '</div><div class="v">' + esc(v) + '</div></div>'; }
+      function card(el, code) { el.innerHTML = '<div class="p-card"><span class="chip pend">' + esc(acctError(code)) + '</span></div>'; }
+
+      function qtyInputs(lines, mode) {
+        return '<div style="margin-top:10px">' + lines.map(function (l) {
+          var open = Math.max(0, (l.qty || 0) - (l.receivedQty || 0));
+          var held = Math.max(0, (l.receivedQty || 0) - (l.returnedQty || 0));
+          var max = mode === 'receive' ? open : held;
+          if (!max) return '';
+          return '<label style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><span style="flex:1 1 auto;font-size:12.5px">' + esc(l.label || l.sku) + '</span>' +
+            '<input class="ops-proc-qty" type="number" min="0" step="1" max="' + max + '" value="' + (mode === 'receive' ? max : 0) + '" data-po-qty="' + esc(l.sku) + '"></label>';
+        }).join('') + '</div>';
+      }
+
+      function orderCard(o) {
+        var lines = o.lines || [];
+        var body = lines.map(function (l) {
+          var open = Math.max(0, (l.qty || 0) - (l.receivedQty || 0));
+          return '<tr><td>' + esc(l.sku) + '</td><td>' + esc(l.label || '') + '</td>' +
+            '<td class="ops-proc-n">' + esc(String(l.qty)) + '</td>' +
+            '<td class="ops-proc-n">' + esc(String(l.receivedQty || 0)) + '</td>' +
+            '<td class="ops-proc-n">' + esc(String(l.returnedQty || 0)) + '</td>' +
+            '<td class="ops-proc-n">' + esc(String(open)) + '</td></tr>';
+        }).join('');
+        var act = '';
+        if (o.status === 'draft') {
+          act += '<div class="ops-proc-act" data-po-act><p class="ops-proc-actTitle">' + esc(c.pSubmitTitle) + '</p>' +
+            '<p class="ops-proc-hint">' + esc(c.pSubmitHint) + '</p>' + confirmBox +
+            '<button class="kb atlas xs" style="margin-top:12px" type="button" data-po-run="submit-po">' + esc(c.pRun) + '</button></div>';
+        } else if (o.status === 'submitted' || o.status === 'partial') {
+          act += '<div class="ops-proc-act" data-po-act><p class="ops-proc-actTitle">' + esc(c.pReceiveTitle) + '</p>' +
+            '<p class="ops-proc-hint">' + esc(c.pReceiveHint) + '</p>' + qtyInputs(lines, 'receive') +
+            '<label style="display:block;margin-top:10px"><span class="l">' + esc(c.pInvoice) + '</span><input type="number" min="0" step="0.01" data-po-invoice></label>' +
+            '<p class="ops-proc-hint" style="margin:6px 0 0">' + esc(c.pInvoiceHint) + '</p>' +
+            '<button class="kb atlas xs" style="margin-top:12px" type="button" data-po-run="receive-po">' + esc(c.pRun) + '</button></div>';
+        }
+        if (lines.some(function (l) { return (l.receivedQty || 0) - (l.returnedQty || 0) > 0; })) {
+          act += '<div class="ops-proc-act" data-po-act><p class="ops-proc-actTitle">' + esc(c.pReturnTitle) + '</p>' +
+            '<p class="ops-proc-hint">' + esc(c.pReturnHint) + '</p>' + qtyInputs(lines, 'return') + confirmBox +
+            '<button class="kb atlas xs" style="margin-top:12px" type="button" data-po-run="supplier-return">' + esc(c.pRun) + '</button></div>';
+        }
+        return '<div class="p-card ops-proc-order" data-po-card="' + esc(o.number) + '">' +
+          '<div class="ops-proc-head"><div><div class="ops-proc-num">' + esc(o.number) + '</div>' +
+            '<div class="ops-proc-sup">' + esc(o.supplier || '') + (o.expectedDate ? ' · ' + esc(o.expectedDate) : '') + '</div></div>' +
+            '<div><span class="chip ' + (o.status === 'received' ? 'ok' : 'info-soft') + '">' + esc((c.pStatus && c.pStatus[o.status]) || o.status) + '</span> <b>' + esc(money(o.totalCents)) + '</b></div></div>' +
+          '<div class="ops-proc-scroll"><table class="ops-proc-table"><thead><tr><th>' + esc(c.pSku) + '</th><th>' + esc(c.pLabel) + '</th>' +
+            '<th class="ops-proc-n">' + esc(c.pOrdered) + '</th><th class="ops-proc-n">' + esc(c.pReceived) + '</th>' +
+            '<th class="ops-proc-n">' + esc(c.pReturned) + '</th><th class="ops-proc-n">' + esc(c.pOpenQty) + '</th></tr></thead><tbody>' + body + '</tbody></table></div>' +
+          act + '<div class="ops-proc-out" data-po-out-card></div></div>';
+      }
+
+      async function loadOrders() {
+        var host = root.querySelector('[data-po-orders]');
+        host.innerHTML = '<p class="ops-proc-hint" style="margin-top:14px">' + esc(c.pLoading) + '</p>';
+        try {
+          var data = await O.purchaseOrders({ open:true, limit:25 });
+          var orders = (data && data.orders) || [];
+          host.innerHTML = orders.length ? orders.map(orderCard).join('') : '<p class="ops-proc-hint" style="margin-top:14px">' + esc(c.pNoOrders) + '</p>';
+        } catch (error) { card(host, error && (error.code || error.message)); }
+      }
+
+      root.addEventListener('click', function (event) {
+        var pill = event.target.closest('[data-po-tab]');
+        if (pill) {
+          /* Basculer .on est tout le contrat — liquid-lens fait glisser la pastille. */
+          root.querySelectorAll('[data-po-tab]').forEach(function (el) { el.classList.toggle('on', el === pill); });
+          root.querySelectorAll('[data-po-pane]').forEach(function (el) { el.classList.toggle('on', el.getAttribute('data-po-pane') === pill.getAttribute('data-po-tab')); });
+          if (pill.getAttribute('data-po-tab') === 'orders') loadOrders();
+          return;
+        }
+        if (event.target.closest('[data-pl-add]')) return void root.querySelector('[data-po-lines]').insertAdjacentHTML('beforeend', procLineRow(rows().length));
+        var rm = event.target.closest('[data-pl-remove]');
+        if (rm) {
+          /* Un bon sans ligne n'existe pas : la dernière se vide, elle ne part pas. */
+          if (rows().length <= 1) rm.closest('[data-po-line]').querySelectorAll('input').forEach(function (i) { i.value = ''; });
+          else rm.closest('[data-po-line]').remove();
+          return retotal();
+        }
+        if (event.target.closest('[data-po-refresh]')) loadOrders();
+      });
+
+      root.addEventListener('click', async function (event) {
+        var button = event.target.closest('[data-po-create]');
+        if (!button) return;
+        var payload = { supplier:root.querySelector('[data-po-supplier]').value.trim(), expectedDate:root.querySelector('[data-po-date]').value, currency:'MAD', lines:[] };
+        var bad = false;
+        rows().forEach(function (row) {
+          var sku = row.querySelector('[data-pl-sku]').value.trim(), label = row.querySelector('[data-pl-label]').value.trim();
+          var qty = Number(row.querySelector('[data-pl-qty]').value), price = Number(row.querySelector('[data-pl-price]').value || 0);
+          if (!sku && !label && !row.querySelector('[data-pl-qty]').value) return;   /* ligne restée vide */
+          if (!sku || !(qty > 0) || !(price >= 0)) { bad = true; return; }
+          payload.lines.push({ sku:sku, label:label, unit:row.querySelector('[data-pl-unit]').value.trim(), qty:qty, unitPrice:price });
+        });
+        if (bad || !payload.supplier || !payload.lines.length) return Kiwi.toast(c.invalid, { type:'warning' });
+        button.disabled = true;
+        var host = root.querySelector('[data-po-out]');
+        try {
+          var result = await O.create('procurement', 'create-po', payload);
+          var got = procOutcome(result);
+          if (got.queued) { host.innerHTML = ''; return toastResult(result); }
+          if (got.error) return card(host, got.error);
+          var d = got.data;
+          host.innerHTML = '<div class="p-card"><div class="ops-proc-num">' + esc(d.number) + '</div>' +
+            '<div class="ops-proc-kpis">' + kpi(c.pTotal, money(d.totalCents)) + kpi(c.lines, String(d.lines)) + kpi(c.pOrdered, String(d.units)) + '</div>' +
+            '<div style="margin-top:10px"><span class="chip ok">' + esc(c.pOrderCreated) + '</span> <span class="chip info-soft">' + esc(d.supplier) + '</span>' +
+            (d.expectedDate ? ' <span class="chip info-soft">' + esc(d.expectedDate) + '</span>' : '') + '</div></div>';
+          /* Le formulaire repart à zéro : deux clics sur « créer » ne doivent pas
+             produire deux bons pour la même livraison. */
+          root.querySelector('[data-po-lines]').innerHTML = procLineRow(0);
+          root.querySelector('[data-po-supplier]').value = ''; root.querySelector('[data-po-date]').value = '';
+          retotal();
+        } catch (error) { card(host, error && (error.code || error.message)); }
+        finally { button.disabled = false; }
+      });
+
+      root.addEventListener('click', async function (event) {
+        var button = event.target.closest('[data-po-run]');
+        if (!button) return;
+        var action = button.getAttribute('data-po-run'), block = button.closest('[data-po-act]'), order = button.closest('[data-po-card]');
+        var need = action === 'submit-po' || action === 'supplier-return';
+        if (need && !block.querySelector('[data-acct-confirm]').checked) return Kiwi.toast(c.confirmNeeded, { type:'warning' });
+        var payload = { po:order.getAttribute('data-po-card') };
+        if (action !== 'submit-po') {
+          payload.lines = Array.prototype.slice.call(block.querySelectorAll('[data-po-qty]')).map(function (input) {
+            return { sku:input.getAttribute('data-po-qty'), qty:Number(input.value || 0) };
+          }).filter(function (l) { return l.qty > 0; });
+          if (!payload.lines.length) return Kiwi.toast(c.invalid, { type:'warning' });
+          var invoice = block.querySelector('[data-po-invoice]');
+          if (invoice && Number(invoice.value) > 0) payload.invoiceAmount = Number(invoice.value);
+        }
+        button.disabled = true;
+        var host = order.querySelector('[data-po-out-card]');
+        try {
+          var result = await O.create('procurement', action, payload, need ? { confirmed:true } : undefined);
+          var got = procOutcome(result);
+          if (got.queued) { host.innerHTML = ''; return toastResult(result); }
+          if (got.error) { button.disabled = false; return card(host, got.error); }
+          Kiwi.toast(c.pDone, { type:'success' });
+          loadOrders();
+        } catch (error) { button.disabled = false; card(host, error && (error.code || error.message)); }
+      });
+
+      if (tab === 'orders') loadOrders();
+    }
+
     var legacyAcct = {};
     ['open-comptabilite', 'acct-livre', 'acct-etats', 'acct-tva'].forEach(function (key) {
       legacyAcct[key] = H[key];
@@ -458,7 +756,7 @@
       };
     });
 
-    window.KiwiOperationsUI = { toastResult:toastResult, openHistory:H['operations-history'], openLedger:openLedger };
+    window.KiwiOperationsUI = { toastResult:toastResult, openHistory:H['operations-history'], openLedger:openLedger, openProcurement:openProcurement };
   }
   boot();
 })();

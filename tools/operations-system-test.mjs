@@ -118,10 +118,11 @@ ok(staffMessage.status === 403 && staffMessage.data.error === 'permission-denied
 const staffHistory = await get(staffAtTill, '?merchant=' + MERCHANT);
 ok(staffHistory.status === 403 && staffHistory.data.error === 'owner-session-required', 'an employee cannot read payroll metadata out of the ledger');
 
-const ownerPo = await post(ownerCookie, command({ id: 'op:owner-po-001', idempotencyKey: 'op:owner-po-001', domain: 'procurement', action: 'create-po', payload: { supplier: 'Sofrap' } }));
+const SOFRAP = { supplier: 'Sofrap', expectedDate: '2026-08-20', lines: [{ sku: 'FARINE-25', label: 'Farine T55 25 kg', unit: 'sac', qty: 4, unitPrice: 210 }] };
+const ownerPo = await post(ownerCookie, command({ id: 'op:owner-po-001', idempotencyKey: 'op:owner-po-001', domain: 'procurement', action: 'create-po', payload: SOFRAP }));
 ok(ownerPo.status === 200 && ownerPo.data.duplicate === false && ownerPo.data.command.status === 'draft', 'the owner opens a purchase order');
 
-const replay = await post(ownerCookie, command({ id: 'op:owner-po-002', idempotencyKey: 'op:owner-po-001', domain: 'procurement', action: 'create-po', payload: { supplier: 'Sofrap' } }));
+const replay = await post(ownerCookie, command({ id: 'op:owner-po-002', idempotencyKey: 'op:owner-po-001', domain: 'procurement', action: 'create-po', payload: SOFRAP }));
 ok(replay.status === 200 && replay.data.duplicate === true && replay.data.command.id === 'op:owner-po-001', 'a replayed idempotency key returns the original command, not a second one');
 
 const badAction = await post(ownerCookie, command({ id: 'op:owner-bad-01', idempotencyKey: 'op:owner-bad-01', domain: 'device', action: 'wipe-terminal' }));
@@ -247,6 +248,115 @@ ok(apiSource.includes('CREATE UNIQUE INDEX IF NOT EXISTS idx_acc_seq'), 'the dat
 ok(apiSource.includes('UNIQUE INDEX IF NOT EXISTS idx_ops_merchant_idempotency'), 'the database enforces one command per merchant idempotency key');
 ok(apiSource.includes("tenantFor(request, env, body && body.merchant, { strict: true })"), 'writes resolve the tenant in strict mode');
 
+/* ── Achats : le bon de commande, de l'engagement à la réception ────────────── */
+
+const proc = (id, action, payload) => command({ id, idempotencyKey: id, domain: 'procurement', action, payload });
+const confirmed = (body) => Object.assign(body, { confirmed: true });
+const poRow = (number) => db.prepare('SELECT * FROM purchase_orders WHERE merchant = ? AND number = ?').get(MERCHANT, number);
+const poLine = (number, sku) => db.prepare('SELECT * FROM purchase_order_lines WHERE merchant = ? AND number = ? AND sku = ?').get(MERCHANT, number, sku);
+
+ok(poRow('BC-2026-000001').total_cents === 84000 && poLine('BC-2026-000001', 'FARINE-25').qty === 4,
+  'the purchase order opened earlier persisted its supplier, its line and its value');
+
+const noLines = await post(ownerCookie, proc('op:po-nolines-1', 'create-po', { supplier: 'Sofrap' }));
+ok(noLines.data.command.status === 'failed' && noLines.data.command.lastError === 'no-lines',
+  'a purchase order without a single line is refused rather than stored empty');
+
+const noSupplier = await post(ownerCookie, proc('op:po-nosup-01', 'create-po', { lines: [{ sku: 'X', qty: 1, unitPrice: 1 }] }));
+ok(noSupplier.data.command.status === 'failed' && noSupplier.data.command.lastError === 'supplier-required', 'a purchase order must name who it engages');
+
+const dupSku = await post(ownerCookie, proc('op:po-dup-0001', 'create-po', { supplier: 'Sofrap', lines: [{ sku: 'LAIT-1L', qty: 2, unitPrice: 8.5 }, { sku: 'LAIT-1L', qty: 3, unitPrice: 8.5 }] }));
+ok(dupSku.data.command.status === 'failed' && dupSku.data.command.lastError === 'duplicate-sku',
+  'the same reference twice on one order is refused — reception could not tell the two apart');
+
+const fracQty = await post(ownerCookie, proc('op:po-frac-001', 'create-po', { supplier: 'Sofrap', lines: [{ sku: 'LAIT-1L', qty: 2.5, unitPrice: 8.5 }] }));
+ok(fracQty.data.command.status === 'failed' && fracQty.data.command.lastError === 'invalid-quantity', 'quantities are whole units, so "tout reçu" stays decidable');
+
+const COPAG = { supplier: 'Copag', expectedDate: '2026-08-22', lines: [{ sku: 'LAIT-1L', label: 'Lait demi-écrémé 1 L', qty: 24, unitPrice: 8.5 }, { sku: 'BEURRE-500', label: 'Beurre doux 500 g', qty: 6, unitPrice: 42 }] };
+const po2 = await post(ownerCookie, proc('op:po-copag-01', 'create-po', COPAG));
+ok(po2.data.command.result.number === 'BC-2026-000002' && po2.data.command.result.totalCents === 45600,
+  'the next purchase order takes the next number with no gap, and totals its own lines');
+
+const earlyReceive = await post(ownerCookie, proc('op:po-early-01', 'receive-po', { po: 'BC-2026-000002', lines: [{ sku: 'LAIT-1L', qty: 1 }] }));
+ok(earlyReceive.data.command.status === 'failed' && earlyReceive.data.command.lastError === 'not-submitted:draft',
+  'nothing can be received against an order the supplier was never sent');
+
+const unsentSubmit = await post(ownerCookie, proc('op:po-submit-01', 'submit-po', { po: 'BC-2026-000002' }));
+ok(unsentSubmit.status === 409 && unsentSubmit.data.error === 'confirmation-required', 'sending a purchase order to a supplier demands an explicit confirmation');
+
+const submitted = await post(ownerCookie, confirmed(proc('op:po-submit-01', 'submit-po', { po: 'BC-2026-000002' })));
+ok(submitted.data.command.status === 'completed' && poRow('BC-2026-000002').status === 'submitted', 'the confirmed order leaves for the supplier');
+
+const resubmit = await post(ownerCookie, confirmed(proc('op:po-submit-02', 'submit-po', { po: 'BC-2026-000002' })));
+ok(resubmit.data.command.status === 'failed' && resubmit.data.command.lastError === 'bad-transition:submitted',
+  'a second send is refused — it would be a second order nobody decided');
+
+const ghost = await post(ownerCookie, confirmed(proc('op:po-ghost-01', 'submit-po', { po: 'BC-2026-999999' })));
+ok(ghost.data.command.status === 'failed' && ghost.data.command.lastError === 'po-not-found', 'an order that does not exist cannot be acted on');
+
+const overReceive = await post(ownerCookie, proc('op:po-over-001', 'receive-po', { po: 'BC-2026-000002', lines: [{ sku: 'LAIT-1L', qty: 30 }] }));
+ok(overReceive.data.command.status === 'failed' && overReceive.data.command.lastError === 'exceeds-ordered', 'more cannot be received than was ordered');
+ok(poLine('BC-2026-000002', 'LAIT-1L').received_qty === 0, 'the refused reception wrote nothing at all');
+
+const mismatch = await post(ownerCookie, proc('op:po-mism-001', 'receive-po', { po: 'BC-2026-000002', lines: [{ sku: 'LAIT-1L', qty: 12 }], invoiceAmount: 150 }));
+ok(mismatch.data.command.status === 'failed' && mismatch.data.command.lastError === 'invoice-mismatch',
+  'a supplier invoice that does not equal what enters stock is refused — the three-way match');
+ok(poLine('BC-2026-000002', 'LAIT-1L').received_qty === 0 && poRow('BC-2026-000002').invoiced_cents === 0,
+  'the mismatched delivery left neither stock nor money behind');
+
+const partial = await post(ownerCookie, proc('op:po-recv-001', 'receive-po', { po: 'BC-2026-000002', lines: [{ sku: 'LAIT-1L', qty: 12 }], invoiceAmount: 102 }));
+ok(partial.data.command.status === 'completed' && partial.data.command.result.status === 'partial' && partial.data.command.result.outstandingUnits === 18,
+  'a half-delivered order stays partial and says what is still owed');
+ok(poRow('BC-2026-000002').invoiced_cents === 10200, 'the matched supplier invoice is booked against the order');
+
+const unknownLine = await post(ownerCookie, proc('op:po-line-001', 'receive-po', { po: 'BC-2026-000002', lines: [{ sku: 'SUCRE-1K', qty: 1 }] }));
+ok(unknownLine.data.command.status === 'failed' && unknownLine.data.command.lastError === 'line-not-found', 'a reference nobody ordered cannot be received against the order');
+
+const rest = await post(ownerCookie, proc('op:po-recv-002', 'receive-po', { po: 'BC-2026-000002', lines: [{ sku: 'LAIT-1L', qty: 12 }, { sku: 'BEURRE-500', qty: 6 }] }));
+ok(rest.data.command.result.status === 'received' && rest.data.command.result.outstandingUnits === 0, 'the closing delivery completes the order');
+
+const settled = await post(ownerCookie, proc('op:po-recv-003', 'receive-po', { po: 'BC-2026-000002', lines: [{ sku: 'LAIT-1L', qty: 1 }] }));
+ok(settled.data.command.status === 'failed' && settled.data.command.lastError === 'not-submitted:received', 'a closed order takes no further delivery');
+
+const overReturn = await post(ownerCookie, confirmed(proc('op:po-ret-001', 'supplier-return', { po: 'BC-2026-000002', lines: [{ sku: 'BEURRE-500', qty: 9 }] })));
+ok(overReturn.data.command.status === 'failed' && overReturn.data.command.lastError === 'exceeds-received', 'only what actually came in can be sent back');
+
+const returned = await post(ownerCookie, confirmed(proc('op:po-ret-002', 'supplier-return', { po: 'BC-2026-000002', lines: [{ sku: 'BEURRE-500', qty: 2 }] })));
+ok(returned.data.command.result.creditCents === 8400 && returned.data.command.result.heldUnits === 28,
+  'a return prices the credit at the ordered unit price and leaves what is still held');
+
+const doubleReturn = await post(ownerCookie, confirmed(proc('op:po-ret-003', 'supplier-return', { po: 'BC-2026-000002', lines: [{ sku: 'BEURRE-500', qty: 5 }] })));
+ok(doubleReturn.data.command.status === 'failed' && doubleReturn.data.command.lastError === 'exceeds-received', 'the same crate cannot be returned twice');
+
+const tillOrders = await post(tillCookie, proc('op:po-till-001', 'create-po', COPAG));
+ok(tillOrders.status === 403 && tillOrders.data.error === 'permission-denied', 'a paired till cannot engage the business with a supplier');
+
+ok(apiSource.includes('CREATE UNIQUE INDEX IF NOT EXISTS idx_po_seq'), 'the database refuses two purchase orders on the same rank');
+
+/* Un domaine qui ne sait qu'écrire ne peut pas porter d'écran de réception : le
+   commerçant taperait le numéro et la référence de mémoire.  Le livre des achats
+   se relit donc, ligne par ligne, avec le reste dû. */
+const book = await get(ownerCookie, `?merchant=${MERCHANT}&view=purchase-orders&limit=25`);
+ok(book.status === 200 && book.data.orders.map((o) => o.number).join(',') === 'BC-2026-000002,BC-2026-000001',
+  'the purchase book reads back, most recent order first');
+const closed = book.data.orders.find((o) => o.number === 'BC-2026-000002');
+const closedLine = closed.lines.find((l) => l.sku === 'BEURRE-500');
+ok(closed.status === 'received' && closed.invoicedCents === 10200 && closed.supplier === 'Copag',
+  'each order carries its state, its supplier and what has been invoiced against it');
+ok(closedLine.qty === 6 && closedLine.receivedQty === 6 && closedLine.returnedQty === 2 && closedLine.unitCents === 4200,
+  'every line reports ordered, received and returned quantities — the reception screen needs no memory');
+
+const openBook = await get(ownerCookie, `?merchant=${MERCHANT}&view=purchase-orders&state=open&limit=25`);
+ok(openBook.data.orders.length === 1 && openBook.data.orders[0].number === 'BC-2026-000001' && openBook.data.orders[0].status === 'draft',
+  'the open view hides settled orders and keeps what still owes something');
+
+const tillBook = await get(tillCookie, `?merchant=${MERCHANT}&view=purchase-orders`);
+ok(tillBook.status === 403 && tillBook.data.error === 'owner-session-required', 'a paired till cannot enumerate what the business owes its suppliers');
+
+const strangerBook = await get(ownerCookie, `?merchant=${OTHER}&view=purchase-orders`);
+ok(strangerBook.status === 401 || (strangerBook.status === 200 && strangerBook.data.merchant === MERCHANT),
+  'the purchase book cannot be read across tenants');
+
 /* ── Browser: the client contract, simulated ──────────────────────────────── */
 
 const registrations = {};
@@ -297,7 +407,7 @@ ok(first.command.status === 'active' && first.command.result.url.startsWith('htt
 ok(sent[0].body.merchant === 'amira-boutique' && sent[0].body.id === sent[0].body.idempotencyKey, 'online command carries tenant and stable idempotency');
 
 online = false;
-const offlineResult = await context.window.KiwiOperations.create('procurement', 'create-po', { purchaseOrderId: 'PO-1' });
+const offlineResult = await context.window.KiwiOperations.create('procurement', 'create-po', { supplier: 'Copag', lines: [{ sku: 'LAIT-1L', qty: 24, unitPrice: 8.5 }] });
 ok(offlineResult.queued === true && queued.length === 1, 'offline command is persisted instead of reported as completed');
 ok(queued[0].tenant === 'amira-boutique' && queued[0].payload.id === queued[0].opts.id, 'offline retry preserves tenant and command ID');
 
@@ -313,6 +423,22 @@ ok(sent.at(-1).url.includes('merchant=amira-boutique') && sent.at(-1).url.includ
 ok(teamSource.includes("new Blob([content], { type: 'text/csv;charset=utf-8' })") && teamSource.includes("window.KiwiOperations?.create?.('payroll', 'export-payroll'"), 'payroll button downloads a real CSV and records its hand-off');
 ok(uiSource.includes("O.create('payment', 'create-link'") && !uiSource.includes('kiwi-pay.ma/'), 'payment UI calls the provider workflow and invents no URL');
 ok(uiSource.includes('window.KiwiProcurement') && uiSource.includes("O.create('procurement', 'create-po'"), 'purchase-order UI uses Kiwi procurement truth and durable audit');
+/* Achats — le serveur valide désormais fournisseur et lignes ; un bouton qui
+   postait un identifiant plat passait le contrôle par grep et échouait en vrai. */
+ok(uiSource.includes("currency:'MAD', lines:[]") && uiSource.includes('payload.lines.push({ sku:sku') && !uiSource.includes('purchaseOrderId'),
+  'the purchase-order console sends a real supplier and real lines, not a flat identifier');
+ok(uiSource.includes("O.create('procurement', action, payload"), 'the procurement console dispatches the lifecycle through the durable command API');
+['submit-po', 'receive-po', 'supplier-return'].forEach((action) =>
+  ok(uiSource.includes(`data-po-run="${action}"`), `the product can reach procurement ${action}`));
+ok(uiSource.includes('invoiceAmount') && uiSource.includes('data-po-invoice'),
+  'the reception screen carries the supplier invoice, so the three-way match is reachable');
+ok(uiSource.includes('O.purchaseOrders({ open:true') && browserSource.includes("view: 'purchase-orders'"),
+  'the console reads the purchase book back instead of asking the merchant to recall a number');
+/* create-po se termine en `draft` — c'est l'état du bon, pas un échec.  Le
+   discriminateur partagé le lirait comme une erreur. */
+ok(uiSource.includes("cmd.status !== 'completed' && cmd.status !== 'draft'"), 'a freshly opened purchase order is not reported as a failure');
+ok(uiSource.includes("H['supplier-new-po']") && uiSource.includes("openProcurement('create')") && uiSource.includes("openProcurement('orders')"),
+  'both purchase-order entry points open the real console for a real merchant');
 /* Comptabilité — les quatre actions serveur doivent être atteignables depuis le
    produit, sinon le livre n'existe que dans les tests. */
 ok(uiSource.includes("O.create('accounting', action, payload"), 'the accounting console dispatches through the durable command API');

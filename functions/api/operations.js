@@ -452,6 +452,249 @@ async function accounting(env, row, payload) {
   }, '');
 }
 
+/* ---- Achats ------------------------------------------------------------
+ * Un bon de commande n'est pas un message : c'est un engagement qui vit
+ * plusieurs jours et que trois gestes différents viennent modifier.  Tant que
+ * `create-po` se contentait de persister sa charge utile, « réceptionner »
+ * ne voulait rien dire — rien ne retenait la quantité commandée, donc rien ne
+ * pouvait constater qu'on en recevait plus que prévu.
+ *
+ * Les trois invariants tenus ici : une numérotation continue attribuée par le
+ * serveur (BC-AAAA-000001), des quantités reçues cumulées ligne à ligne qui ne
+ * dépassent jamais la quantité commandée, et un rapprochement à trois voies —
+ * commandé / reçu / facturé — qui refuse une facture fournisseur qui ne
+ * correspond pas à ce qui est effectivement entré en stock. */
+const PO_MAX_LINES = 60;
+
+async function ensurePurchase(env) {
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS purchase_orders (
+      id TEXT PRIMARY KEY, merchant TEXT NOT NULL, seq INTEGER NOT NULL,
+      number TEXT NOT NULL, supplier TEXT NOT NULL, status TEXT NOT NULL,
+      currency TEXT NOT NULL DEFAULT 'MAD', expected_date TEXT NOT NULL DEFAULT '',
+      total_cents INTEGER NOT NULL DEFAULT 0, invoiced_cents INTEGER NOT NULL DEFAULT 0,
+      command_id TEXT NOT NULL DEFAULT '', created_ts INTEGER NOT NULL,
+      updated_ts INTEGER NOT NULL
+    )`
+  ).run();
+  await env.DB.prepare('CREATE UNIQUE INDEX IF NOT EXISTS idx_po_number ON purchase_orders (merchant, number)').run();
+  await env.DB.prepare('CREATE UNIQUE INDEX IF NOT EXISTS idx_po_seq ON purchase_orders (merchant, seq)').run();
+  await env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_po_status ON purchase_orders (merchant, status, updated_ts DESC)').run();
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS purchase_order_lines (
+      id TEXT PRIMARY KEY, merchant TEXT NOT NULL, number TEXT NOT NULL,
+      line_no INTEGER NOT NULL, sku TEXT NOT NULL, label TEXT NOT NULL DEFAULT '',
+      unit TEXT NOT NULL DEFAULT '', qty INTEGER NOT NULL, unit_cents INTEGER NOT NULL,
+      received_qty INTEGER NOT NULL DEFAULT 0, returned_qty INTEGER NOT NULL DEFAULT 0,
+      created_ts INTEGER NOT NULL
+    )`
+  ).run();
+  await env.DB.prepare('CREATE UNIQUE INDEX IF NOT EXISTS idx_po_line_sku ON purchase_order_lines (merchant, number, sku)').run();
+}
+
+/* Les quantités sont des entiers : une demi-bouteille commandée n'existe pas,
+   et un flottant finirait par rendre « tout reçu » indécidable. */
+function poLines(payload) {
+  const raw = payload && Array.isArray(payload.lines) ? payload.lines : null;
+  if (!raw || !raw.length) return { error: 'no-lines' };
+  if (raw.length > PO_MAX_LINES) return { error: 'too-many-lines' };
+  const seen = new Set();
+  const lines = [];
+  for (let i = 0; i < raw.length; i += 1) {
+    const item = raw[i] || {};
+    const sku = clean(item.sku || item.ref, 60);
+    if (!sku) return { error: 'sku-required' };
+    if (seen.has(sku)) return { error: 'duplicate-sku' };
+    seen.add(sku);
+    const qty = Number(item.qty);
+    if (!Number.isSafeInteger(qty) || qty <= 0 || qty > 1000000) return { error: 'invalid-quantity' };
+    const unitCents = cents(item.unitPrice != null ? item.unitPrice : item.unit_price);
+    if (!Number.isFinite(unitCents) || unitCents < 0) return { error: 'invalid-price' };
+    lines.push({
+      sku, qty, unitCents, label: clean(item.label, 160),
+      unit: clean(item.unit, 24),
+    });
+  }
+  return { lines };
+}
+
+/* Même geste que la numérotation comptable : le rang est consommé au moment
+   où l'en-tête s'écrit, l'index unique fait échouer une allocation simultanée,
+   et l'on réessaie sur le suivant plutôt que de sauter un numéro. */
+async function writePurchaseOrder(env, order, lines) {
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const top = await env.DB.prepare(
+      'SELECT COALESCE(MAX(seq), 0) AS taken FROM purchase_orders WHERE merchant = ?'
+    ).bind(order.merchant).first();
+    const seq = Number((top && top.taken) || 0) + 1;
+    const number = `BC-${order.year}-${String(seq).padStart(6, '0')}`;
+    try {
+      await env.DB.prepare(
+        `INSERT INTO purchase_orders
+         (id, merchant, seq, number, supplier, status, currency, expected_date,
+          total_cents, invoiced_cents, command_id, created_ts, updated_ts)
+         VALUES (?, ?, ?, ?, ?, 'draft', ?, ?, ?, 0, ?, ?, ?)`
+      ).bind(order.id, order.merchant, seq, number, order.supplier, order.currency,
+        order.expectedDate, order.totalCents, order.id, now(), now()).run();
+      for (let i = 0; i < lines.length; i += 1) {
+        await env.DB.prepare(
+          `INSERT INTO purchase_order_lines
+           (id, merchant, number, line_no, sku, label, unit, qty, unit_cents, received_qty, returned_qty, created_ts)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?)`
+        ).bind(`${order.id}:${i}`, order.merchant, number, i + 1, lines[i].sku,
+          lines[i].label, lines[i].unit, lines[i].qty, lines[i].unitCents, now()).run();
+      }
+      return { seq, number };
+    } catch (_) { /* rang pris entre-temps — on recommence sur le suivant */ }
+  }
+  return null;
+}
+
+/* Les mouvements de réception et de retour partagent leur forme : une liste de
+   couples (sku, quantité) rapprochée des lignes déjà en base. */
+function movement(payload) {
+  const raw = payload && Array.isArray(payload.lines) ? payload.lines : null;
+  if (!raw || !raw.length) return { error: 'no-lines' };
+  if (raw.length > PO_MAX_LINES) return { error: 'too-many-lines' };
+  const moves = [];
+  for (let i = 0; i < raw.length; i += 1) {
+    const item = raw[i] || {};
+    const sku = clean(item.sku || item.ref, 60);
+    if (!sku) return { error: 'sku-required' };
+    const qty = Number(item.qty);
+    if (!Number.isSafeInteger(qty) || qty <= 0 || qty > 1000000) return { error: 'invalid-quantity' };
+    moves.push({ sku, qty });
+  }
+  return { moves };
+}
+
+async function procurement(env, row, payload) {
+  await ensurePurchase(env);
+  const merchant = row.merchant;
+  const fail = (reason) => update(env, row, 'failed', 'kiwi-procurement', {}, reason);
+
+  if (row.action === 'create-po') {
+    const supplier = clean(payload && payload.supplier, 160);
+    if (!supplier) return fail('supplier-required');
+    const expected = payload && payload.expectedDate ? ymd(payload.expectedDate) : '';
+    if (payload && payload.expectedDate && !expected) return fail('invalid-date');
+    const read = poLines(payload);
+    if (read.error) return fail(read.error);
+    const total = read.lines.reduce((sum, line) => sum + line.qty * line.unitCents, 0);
+    if (!Number.isSafeInteger(total)) return fail('invalid-price');
+    const currency = clean((payload && payload.currency) || 'MAD', 3).toUpperCase();
+    const written = await writePurchaseOrder(env, {
+      id: row.id, merchant, supplier, currency, expectedDate: expected,
+      totalCents: total, year: (expected || new Date(now()).toISOString().slice(0, 10)).slice(0, 4),
+    }, read.lines);
+    if (!written) return fail('numbering-conflict');
+    /* La commande reste `draft` : c'est l'état du bon lui-même, et c'est ce
+       point d'entrée du cycle de vie que le tableau de bord fait avancer. */
+    return update(env, row, 'draft', 'kiwi-procurement', {
+      number: written.number, seq: written.seq, status: 'draft', supplier, currency,
+      expectedDate: expected, totalCents: total, lines: read.lines.length,
+      units: read.lines.reduce((sum, line) => sum + line.qty, 0),
+    }, '');
+  }
+
+  const number = clean(payload && (payload.po || payload.number), 40);
+  const order = await env.DB.prepare(
+    'SELECT * FROM purchase_orders WHERE merchant = ? AND number = ?'
+  ).bind(merchant, number).first();
+  if (!order) return fail('po-not-found');
+
+  if (row.action === 'submit-po') {
+    /* Un bon déjà parti chez le fournisseur ne se renvoie pas : le second envoi
+       serait une seconde commande sans que personne ne l'ait décidé. */
+    if (order.status !== 'draft') return fail(`bad-transition:${order.status}`);
+    await env.DB.prepare(
+      "UPDATE purchase_orders SET status = 'submitted', updated_ts = ? WHERE merchant = ? AND number = ?"
+    ).bind(now(), merchant, number).run();
+    return update(env, row, 'completed', 'kiwi-procurement', {
+      number, status: 'submitted', supplier: clean(order.supplier, 160),
+      totalCents: Number(order.total_cents || 0), expectedDate: clean(order.expected_date, 10),
+    }, '');
+  }
+
+  const rows = await env.DB.prepare(
+    'SELECT sku, label, qty, unit_cents, received_qty, returned_qty FROM purchase_order_lines WHERE merchant = ? AND number = ? ORDER BY line_no'
+  ).bind(merchant, number).all();
+  const book = new Map((rows && rows.results || []).map((line) => [String(line.sku), line]));
+
+  if (row.action === 'receive-po') {
+    if (order.status !== 'submitted' && order.status !== 'partial') return fail(`not-submitted:${order.status}`);
+    const read = movement(payload);
+    if (read.error) return fail(read.error);
+    /* On valide tout le bordereau avant d'écrire quoi que ce soit : une
+       réception à moitié appliquée serait un écart de stock invisible. */
+    let receivedCents = 0;
+    for (const move of read.moves) {
+      const line = book.get(move.sku);
+      if (!line) return fail('line-not-found');
+      if (Number(line.received_qty || 0) + move.qty > Number(line.qty)) return fail('exceeds-ordered');
+      receivedCents += move.qty * Number(line.unit_cents || 0);
+    }
+    /* Rapprochement à trois voies : si le fournisseur joint sa facture, elle
+       doit valoir exactement ce qui entre en stock, sinon rien n'est reçu. */
+    const invoiced = payload && payload.invoiceAmount != null ? cents(payload.invoiceAmount) : null;
+    if (invoiced != null && !Number.isFinite(invoiced)) return fail('invalid-amount');
+    if (invoiced != null && invoiced !== receivedCents) return fail('invoice-mismatch');
+    for (const move of read.moves) {
+      await env.DB.prepare(
+        'UPDATE purchase_order_lines SET received_qty = received_qty + ? WHERE merchant = ? AND number = ? AND sku = ?'
+      ).bind(move.qty, merchant, number, move.sku).run();
+      const line = book.get(move.sku);
+      line.received_qty = Number(line.received_qty || 0) + move.qty;
+    }
+    let outstanding = 0;
+    let receivedUnits = 0;
+    book.forEach((line) => {
+      outstanding += Number(line.qty) - Number(line.received_qty || 0);
+      receivedUnits += Number(line.received_qty || 0);
+    });
+    const status = outstanding > 0 ? 'partial' : 'received';
+    await env.DB.prepare(
+      'UPDATE purchase_orders SET status = ?, invoiced_cents = invoiced_cents + ?, updated_ts = ? WHERE merchant = ? AND number = ?'
+    ).bind(status, invoiced != null ? invoiced : 0, now(), merchant, number).run();
+    return update(env, row, 'completed', 'kiwi-procurement', {
+      number, status, receivedCents, receivedUnits, outstandingUnits: outstanding,
+      matched: invoiced != null, lines: read.moves.length,
+    }, '');
+  }
+
+  /* supplier-return — on ne rend que ce qui est entré, et jamais deux fois. */
+  const read = movement(payload);
+  if (read.error) return fail(read.error);
+  let creditCents = 0;
+  for (const move of read.moves) {
+    const line = book.get(move.sku);
+    if (!line) return fail('line-not-found');
+    const held = Number(line.received_qty || 0) - Number(line.returned_qty || 0);
+    if (move.qty > held) return fail('exceeds-received');
+    creditCents += move.qty * Number(line.unit_cents || 0);
+  }
+  for (const move of read.moves) {
+    await env.DB.prepare(
+      'UPDATE purchase_order_lines SET returned_qty = returned_qty + ? WHERE merchant = ? AND number = ? AND sku = ?'
+    ).bind(move.qty, merchant, number, move.sku).run();
+    const line = book.get(move.sku);
+    line.returned_qty = Number(line.returned_qty || 0) + move.qty;
+  }
+  let heldUnits = 0;
+  let returnedUnits = 0;
+  book.forEach((line) => {
+    heldUnits += Number(line.received_qty || 0) - Number(line.returned_qty || 0);
+    returnedUnits += Number(line.returned_qty || 0);
+  });
+  await env.DB.prepare(
+    'UPDATE purchase_orders SET updated_ts = ? WHERE merchant = ? AND number = ?'
+  ).bind(now(), merchant, number).run();
+  return update(env, row, 'completed', 'kiwi-procurement', {
+    number, status: clean(order.status, 20), creditCents, returnedUnits,
+    heldUnits, lines: read.moves.length,
+  }, '');
+}
+
 async function execute(env, row, payload) {
   if (row.domain === 'device' && row.action === 'heartbeat') {
     return update(env, row, 'completed', 'kiwi-device', { recorded: true }, '');
@@ -494,6 +737,7 @@ async function execute(env, row, payload) {
     return update(env, row, 'pending-approval', 'kiwi-confirmation', { readOnly: true }, '');
   }
   if (row.domain === 'accounting') return accounting(env, row, payload);
+  if (row.domain === 'procurement') return procurement(env, row, payload);
   const initial = row.action.startsWith('export-') || row.action.startsWith('prepare-') ? 'prepared' : 'draft';
   return update(env, row, initial, 'kiwi-workflow', { persisted: true }, '');
 }
@@ -513,6 +757,43 @@ export async function onRequestGet({ request, env }) {
     return json({ error: 'owner-session-required' }, 403);
   }
   try { await ensureSchema(env); } catch (_) { return json({ error: 'unmigrated' }, 503); }
+  /* Le livre des achats se lit à part : un bon de commande n'est pas une
+     commande opérationnelle de plus, et l'écran de réception a besoin du reste
+     dû ligne par ligne — sinon il demande au commerçant de taper un numéro et
+     une référence de mémoire. */
+  if (clean(url.searchParams.get('view'), 24) === 'purchase-orders') {
+    try {
+      await ensurePurchase(env);
+      const open = clean(url.searchParams.get('state'), 16) === 'open';
+      const orders = await env.DB.prepare(
+        `SELECT number, supplier, currency, status, expected_date, total_cents, invoiced_cents, updated_ts
+           FROM purchase_orders WHERE merchant = ?${open ? " AND status IN ('draft','submitted','partial')" : ''}
+          ORDER BY seq DESC LIMIT ?`
+      ).bind(merchant, Math.max(1, Math.min(60, Number(url.searchParams.get('limit')) || 25))).all();
+      const list = orders && orders.results || [];
+      if (!list.length) return json({ merchant, orders: [] });
+      const lines = await env.DB.prepare(
+        `SELECT number, sku, label, unit, qty, unit_cents, received_qty, returned_qty
+           FROM purchase_order_lines WHERE merchant = ? AND number IN (${list.map(() => '?').join(',')})
+          ORDER BY number, line_no`
+      ).bind(merchant, ...list.map((order) => order.number)).all();
+      const byNumber = new Map(list.map((order) => [order.number, []]));
+      (lines && lines.results || []).forEach((line) => {
+        const bucket = byNumber.get(line.number);
+        if (bucket) bucket.push({
+          sku: line.sku, label: clean(line.label, 160), unit: clean(line.unit, 24),
+          qty: Number(line.qty), unitCents: Number(line.unit_cents || 0),
+          receivedQty: Number(line.received_qty || 0), returnedQty: Number(line.returned_qty || 0),
+        });
+      });
+      return json({ merchant, orders: list.map((order) => ({
+        number: order.number, supplier: clean(order.supplier, 160), currency: clean(order.currency, 3),
+        status: clean(order.status, 20), expectedDate: clean(order.expected_date, 10),
+        totalCents: Number(order.total_cents || 0), invoicedCents: Number(order.invoiced_cents || 0),
+        updatedAt: Number(order.updated_ts || 0), lines: byNumber.get(order.number) || [],
+      })) });
+    } catch (_) { return json({ error: 'db' }, 503); }
+  }
   const domain = clean(url.searchParams.get('domain'), 32);
   const status = clean(url.searchParams.get('status'), 32);
   const limit = Math.max(1, Math.min(200, Number(url.searchParams.get('limit')) || 50));
