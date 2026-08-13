@@ -2044,6 +2044,10 @@
    * passages, a boutique ventes. Defaults mirror i18n.js dash.sidebar.orders
    * (this runs after i18n's langchange listener, so it has the last word). */
   const NAV_ORDERS_STR = { fr: 'Commandes', en: 'Orders', ar: 'الطلبات' };
+  /* The kitchen display is an operational caisse surface, not a dashboard
+   * workspace. Keep the KDS implementation available to the caisse while
+   * omitting its shortcut from every dashboard vertical/subtype sidebar. */
+  const DASHBOARD_HIDDEN_NAV = new Set(['kds']);
   function relabelOrdersNav() {
     const span = document.querySelector('[data-nav="transactions"] span[data-i18n="dash.sidebar.orders"]');
     if (!span) return;
@@ -2111,7 +2115,7 @@
      * "Stock & péremptions" answers to the same `inventory` switch. */
     const html = `
       <div class="sect"${sect.i18nHeader ? ` data-i18n="${sect.i18nHeader}"` : ''}>${headerTxt}</div>
-      ${sect.items.map(it => {
+      ${sect.items.filter(it => !DASHBOARD_HIDDEN_NAV.has(it.nav)).map(it => {
         const lbl = (it.i18n && T[it.i18n]) || it.label;
         return `
           <a href="#" data-nav="${it.nav}" data-feature="${it.nav}"${it.i18n ? ` data-i18n-attr="aria-label:${it.i18n}"` : ` aria-label="${lbl}"`}>
