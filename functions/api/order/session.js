@@ -33,6 +33,7 @@ import { json } from '../../auth/_lib.js';
 import {
   orderProEnabled, normTable, newSessionId, SESSION_ID, deskOpen,
 } from './_lib.js';
+import { publishGuestServiceRequest } from '../service/events.js';
 
 /* Une session oubliée (le client est parti sans qu'on encaisse, la caisse a
  * planté) ne doit pas garder la table prise pour l'éternité : au-delà de ça
@@ -55,6 +56,27 @@ export async function onRequestPost(context) {
   const merchant = slug(b && b.merchant);
   if (!merchant) return json({ error: 'merchant-required' }, 400);
   if (!(await orderProEnabled(env, merchant))) return json({ error: 'orderpro-off' }, 403);
+
+  /* Service buttons reuse the opaque table session already held by this
+   * phone. The table is read from that session, never trusted from the body. */
+  if (b && b.action) {
+    const action = String(b.action || '');
+    const session = String(b.session || '').trim();
+    if (!SESSION_ID.test(session)) return json({ error: 'session-required' }, 400);
+    let live = null;
+    try {
+      live = await env.DB.prepare(
+        `SELECT table_no, opened_ts FROM table_sessions
+          WHERE id = ? AND merchant = ? AND mode = 'table' AND status = 'open'`
+      ).bind(session, merchant).first();
+    } catch (_) {}
+    if (!live || (Date.now() - Number(live.opened_ts || 0)) >= SESSION_MAX_MS) {
+      return json({ error: 'session-closed' }, 409);
+    }
+    if (!(await deskOpen(env, merchant))) return json({ error: 'service-closed' }, 409);
+    const result = await publishGuestServiceRequest(env, merchant, live.table_no, action);
+    return result.ok ? json(result) : json({ error: result.error || 'service-request-failed' }, 503);
+  }
 
   const mode = (b && b.mode) === 'takeout' ? 'takeout' : 'table';
   const table = mode === 'table' ? normTable(b && b.table) : '';

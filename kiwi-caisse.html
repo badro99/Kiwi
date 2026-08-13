@@ -15530,7 +15530,7 @@
         let changed = false;
         Object.keys(data.states || {}).forEach((key) => {
           const state = data.states[key] || {};
-          if (state.source !== 'employee') return;
+          if (state.source !== 'employee' && state.source !== 'guest') return;
           /* A brand-new till service must not resurrect the previous service's
              employee tables. Keep a 30-minute handover window so an employee
              order placed just before the till opens is still recovered. A

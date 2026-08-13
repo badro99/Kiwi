@@ -142,8 +142,9 @@ async function syncTableSnapshot(env, merchant, rawTables, source) {
          acknowledgement is stale and is ignored. The first matching snapshot
          is the acknowledgement: it flips the source back to `caisse`, after
          which the next legitimate visit may change the table normally. */
-      const employeeAwaitingAck = source === 'caisse' && before && before.source === 'employee';
-      if (employeeAwaitingAck && stateChanged) return;
+      const operationalAwaitingAck = source === 'caisse' && before
+        && (before.source === 'employee' || before.source === 'guest');
+      if (operationalAwaitingAck && stateChanged) return;
       const sourceChanged = !!before && before.source !== (source || 'caisse');
       const changed = stateChanged || versionChanged || sourceChanged;
       if (!changed) return;
@@ -175,6 +176,38 @@ async function syncTableSnapshot(env, merchant, rawTables, source) {
     } catch (_) { return { ok: false, events: [] }; }
   }
   return { ok: false, events: [] };
+}
+
+/* A guest may only ask for service through an already-open table session (the
+ * session handler verifies that boundary before calling here). This keeps the
+ * public route from becoming a merchant-wide notification writer. */
+export async function publishGuestServiceRequest(env, merchant, rawTable, action) {
+  const table = tableKey(rawTable);
+  const targets = await floorTargets(env, merchant);
+  const target = targets[table];
+  if (!table || !target) return { ok: false, error: 'floor-table-required' };
+  if (action === 'ask-bill') {
+    const current = await readDoc(env, merchant);
+    const currentState = current.data.states && current.data.states[table];
+    const result = await syncTableSnapshot(env, merchant, [{
+      table, status: 'bgha-ykhlass',
+      covers: Math.max(0, Number(currentState && currentState.covers) || 0),
+      syncVersion: 4,
+    }], 'guest');
+    if (!result.ok) return { ok: false, error: 'state-write-failed' };
+    await poke(env, merchant, FEATURE);
+    return { ok: true, table, events: result.events };
+  }
+  if (action !== 'call-server') return { ok: false, error: 'bad-service-action' };
+  const ts = Date.now();
+  const event = {
+    id: 'evt-' + crypto.randomUUID(), type: 'guest-call', ts, table,
+    serverId: target.serverId || '', server: target.server || '',
+    serverIds: target.serverIds || [], servers: target.servers || [],
+  };
+  if (!await append(env, merchant, event, null)) return { ok: false, error: 'event-write-failed' };
+  await poke(env, merchant, FEATURE);
+  return { ok: true, table, event };
 }
 
 /* Payment is a core operation, not a loose UI notification. `/api/sale` calls

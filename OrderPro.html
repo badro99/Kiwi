@@ -3572,6 +3572,8 @@ em, i, cite, dfn, var { font-style: normal; }
            → { ok, status, closedBy, table, mode } */
         sessionStatus: (id) => getJSON('/api/order/session?merchant=' + encodeURIComponent(slug) +
                                        '&session=' + encodeURIComponent(id)),
+        serviceRequest: (session, action) => postJSON('/api/order/session',
+          { merchant: slug, session, action }),
       };
     })();
 
@@ -4700,10 +4702,23 @@ em, i, cite, dfn, var { font-style: normal; }
     }
 
     /* ============ Service bar (table mode) ============ */
-    function callServer() {
+    let serviceRequestPending = false;
+    async function sendServiceRequest(action) {
+      if (serviceRequestPending || !SESSION.id || SESSION.closed) return false;
+      serviceRequestPending = true;
+      const res = await NET.serviceRequest(SESSION.id, action);
+      serviceRequestPending = false;
+      if (res && res.ok) return true;
+      if (res && res.error === 'session-closed') SESSION.markClosed('settle');
+      else showToast(res && res.error === 'network' ? t('order_offline') : t('order_failed'));
+      return false;
+    }
+    async function callServer() {
       const pill = document.querySelector('[data-service="call-server"]');
       pill.classList.add('is-pulled');
-      showToast(`${t('toast_server_coming_pre')} ${tableNumber}`);
+      if (await sendServiceRequest('call-server')) {
+        showToast(`${t('toast_server_coming_pre')} ${tableNumber}`);
+      }
       setTimeout(() => pill.classList.remove('is-pulled'), 4000);
     }
 
@@ -4800,8 +4815,9 @@ em, i, cite, dfn, var { font-style: normal; }
       $('#bill-total-value').textContent = `${total} ${cur()}`;
     }
 
-    function confirmBill() {
+    async function confirmBill() {
       const tipAmt = Math.round(sessionTotal * tipPercent / 100);
+      if (!await sendServiceRequest('ask-bill')) return;
       closeBill();
       const msg = tipAmt > 0
         ? `${t('toast_bill_asked_pre')} ${sessionTotal + tipAmt} ${cur()} (+${tipAmt} ${t('toast_bill_tip_post')})`

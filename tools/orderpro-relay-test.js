@@ -90,6 +90,8 @@ function seed() {
   }
   DB._db.prepare('INSERT INTO menus (merchant,name,type,data,updated_ts) VALUES (?,?,?,?,?)')
     .run(SLUG, 'Chez Nadia', 'restaurant', JSON.stringify(CARTE), now);
+  DB._db.prepare('INSERT INTO store_docs (merchant,feature,data,rev,updated_ts) VALUES (?,?,?,?,?)')
+    .run(SLUG, 'floorplan', JSON.stringify({ tables: [{ id: 'T7', num: 'T7' }] }), 1, now);
 }
 const deskAt = (ts) => DB._db.prepare(
   'INSERT INTO order_desk (merchant,seen_ts) VALUES (?,?) ON CONFLICT(merchant) DO UPDATE SET seen_ts=excluded.seen_ts'
@@ -252,6 +254,26 @@ async function get(fn, qs, headers = {}) {
   ok('le téléphone lit son état', r.status === 200 && r.body.status === 'open');
   r = await get(readSession, 'merchant=' + OTHER + '&session=' + sess);
   ok('…mais pas à travers le slug d\'un autre', r.body.status === 'closed');
+
+  r = await post(openSession, { merchant: SLUG, session: sess, action: 'call-server' });
+  let serviceDoc = JSON.parse(DB._db.prepare(
+    "SELECT data FROM store_docs WHERE merchant=? AND feature='service-events'"
+  ).get(SLUG).data);
+  ok('Appeler un serveur publie une notification liée à la table ouverte',
+    r.status === 200 && serviceDoc.events.some((event) => event.type === 'guest-call' && event.table === '7'));
+
+  r = await post(openSession, { merchant: SLUG, session: sess, action: 'ask-bill' });
+  serviceDoc = JSON.parse(DB._db.prepare(
+    "SELECT data FROM store_docs WHERE merchant=? AND feature='service-events'"
+  ).get(SLUG).data);
+  ok('Demander l’addition passe la table au statut rose dans serveur et caisse',
+    r.status === 200 && serviceDoc.states['7'].status === 'bgha-ykhlass'
+      && serviceDoc.states['7'].source === 'guest');
+  r = await post(openSession, {
+    merchant: SLUG, session: 'tsx-AAAAAAAAAAAAAAAAAAAAAA', action: 'call-server',
+  });
+  ok('une session inventée ne peut pas notifier le personnel',
+    r.status === 409 && r.body.error === 'session-closed');
 
   /* ═══ 4. TRANSITIONS ════════════════════════════════════════════════════ */
   r = await post(queuePost, { merchant: SLUG, id: tableOrderId, status: 'ready' }, asStaff);

@@ -432,14 +432,14 @@ ok(caisseSource.includes('const FLOOR_POLL_FAST = 1000;')
   && caisseSource.includes('if (serviceFloorPolling) { serviceFloorPollQueued = true; return; }')
   && caisseSource.includes('if (serviceFloorPollQueued)')
   && caisseSource.includes('if (stateTs && stateTs <= lastRemoteTs) return;')
-  && caisseSource.includes("if (state.source !== 'employee') return;")
+  && caisseSource.includes("state.source !== 'employee' && state.source !== 'guest'")
   && !caisseSource.includes('stateTs <= Number(serviceFloorLocalVersion[String(id)] || 0)'),
   'la caisse consomme les fermetures employé sans attendre un rechargement navigateur');
 ok(caisseSource.includes('terminalHadLocalBill')
   && caisseSource.includes('if (!statusChanged && !terminalHadLocalBill) return;')
   && caisseSource.includes("serviceFloorSignature = ''")
   && caisseSource.includes('setTimeout(publishServiceFloor, 0)')
-  && eventsSource.includes('employeeAwaitingAck')
+  && eventsSource.includes('operationalAwaitingAck')
   && !eventsSource.includes('EMPLOYEE_CLOSE_GRACE_MS'),
   "le paiement efface aussi une ancienne addition locale et reste terminal jusqu'à l'acquittement caisse");
 const liveSocketSource = fs.readFileSync(path.join(ROOT, 'assets/live-socket.js'), 'utf8');

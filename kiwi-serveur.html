@@ -5445,6 +5445,12 @@ em, i, cite, dfn, var { font-style: normal; }
           serviceNotify(`Table ${id}`, `${event.customer || 'Clients'} installé${event.covers ? ` · ${event.covers} pers.` : ''} · menus à apporter`, { table: id, type: event.type, id: event.id, ts: event.ts });
           return;
         }
+        if (event.type === 'guest-call') {
+          serviceNotify(`Table ${id}`, 'Appelle un serveur', {
+            table: id, type: event.type, id: event.id, ts: event.ts,
+          });
+          return;
+        }
         if (event.type !== 'table-state') { serviceEventSeen.add(event.id); return; }
         const messages = {
           'a-commander': 'Clients installés · menus à apporter',
