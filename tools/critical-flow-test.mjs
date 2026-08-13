@@ -22,6 +22,7 @@ const dashPwa = read('assets/dashboard-pwa.js');
 const caissePwa = read('assets/caisse-pwa.js');
 const dashboard = read('dashboard.html');
 const merchantConfig = read('assets/merchant-config.js');
+const configApi = read('functions/api/config.js');
 
 ok('PIN roster network errors fail closed', pairing.includes("showPinLoadError(venue)") && !pairing.includes(".catch(function () { return []; })"));
 ok('pairing redemption is single-flight', pairing.includes('if (pairSubmitting) return;') && pairing.includes('pairSubmitting = true;'));
@@ -33,7 +34,11 @@ ok('cashier PIN can close the register without widening manager-only actions',
   && caisse.includes("requireManager('Remboursement'"));
 ok('owner dashboard PIN spans all stores while manager PIN stays store-scoped',
   merchantConfig.includes('accountPinsReady: false')
+  && merchantConfig.includes("readPinsFrom('/api/config?accountPins=owners')")
   && merchantConfig.includes("if (!ownerRole(x && x.role)")
+  && configApi.includes("url.searchParams.get('accountPins') === 'owners'")
+  && configApi.includes("c.account_id = ? OR p.merchant = ?")
+  && configApi.includes("rows.filter((row) => accountOwnerRole(row.role))")
   && merchantConfig.includes("document.dispatchEvent(new CustomEvent('kiwi-account-pins-ready'))")
   && dashboard.includes("window.KiwiConfig.accountPinsReady === false")
   && dashboard.includes("accessTier(x && x.role) === 'owner'"));

@@ -15,6 +15,12 @@ import {
 
 const VALID_PIN = /^\d{4}$/;
 
+function accountOwnerRole(value) {
+  let role = String(value || '').trim().toLowerCase();
+  try { role = role.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (_) {}
+  return new Set(['owner', 'proprietaire', 'direction', 'patron']).has(role);
+}
+
 /* ── Ce qu'un établissement TOUT NEUF reçoit ────────────────────────────────
  * Quatre modules qui ne servent qu'à une partie des clients : un snack de quartier
  * n'a ni terminal de paiement à recenser, ni dossier de conformité, ni cartes de
@@ -155,6 +161,37 @@ export async function onRequestGet(context) {
     } catch (_) { /* fall through to neutral */ }
   }
   const operator = await isOperator(request, env);
+
+  /* The dashboard owner code belongs to the ACCOUNT, not to the store selected
+   * in the sidebar. Resolve it here from the signed account's registry instead
+   * of asking the browser to enumerate stores from /api/me: legacy/partially
+   * registered stores can be absent from that list even though their config row
+   * is correctly attached to the account. Managers are deliberately excluded;
+   * their code remains scoped to the active store below. */
+  if (url.searchParams.get('accountPins') === 'owners') {
+    if (!sessionAid) return json({ pins: [] }, 401);
+    let rows = [];
+    try {
+      const result = await env.DB.prepare(
+        `SELECT p.pin, p.name, p.role
+           FROM staff_pins p
+           LEFT JOIN merchant_config c ON c.merchant = p.merchant
+          WHERE c.account_id = ? OR p.merchant = ?
+          ORDER BY p.created_ts`
+      ).bind(sessionAid, sessionMerchant).all();
+      rows = result.results || [];
+    } catch (_) {
+      // Pre-registry database: the account's original slug is still safe and
+      // preserves the former single-store behaviour until migrations land.
+      try {
+        const result = await env.DB.prepare(
+          'SELECT pin, name, role FROM staff_pins WHERE merchant = ? ORDER BY created_ts'
+        ).bind(sessionMerchant).all();
+        rows = result.results || [];
+      } catch (_) {}
+    }
+    return json({ pins: rows.filter((row) => accountOwnerRole(row.role)) });
+  }
 
   // A login can hold SEVERAL établissements, and each one is its own store with
   // its own type, its own modules and its own staff. So the account slug is no

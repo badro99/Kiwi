@@ -553,8 +553,12 @@
   function readPinsFrom(url) {
     return fetch(url, { headers: { Accept: 'application/json' } })
       .then(function (r) { return (r && r.ok) ? r.json() : null; })
-      .then(function (d) { if (d && Array.isArray(d.pins)) rememberPins(d.pins); })
-      .catch(function () {});
+      .then(function (d) {
+        if (!d || !Array.isArray(d.pins)) return false;
+        rememberPins(d.pins);
+        return true;
+      })
+      .catch(function () { return false; });
   }
   function fetchAccountPins() {
     if (isScoped() || !onDashboard()) { cfg.accountPinsReady = true; return; }
@@ -563,6 +567,17 @@
       cfg.accountPinsReady = true;
       try { document.dispatchEvent(new CustomEvent('kiwi-account-pins-ready')); } catch (_) {}
     }
+    /* The server can answer the account-wide question directly from the signed
+     * session and its store registry. This is the authoritative path: /api/me's
+     * browser-facing establishment list can omit a legacy store, which used to
+     * omit the owner's PIN with it. If an older backend does not expose the
+     * endpoint yet, retain the per-store fallback below. */
+    readPinsFrom('/api/config?accountPins=owners').then(function (ok) {
+      if (ok) { ready(); return; }
+      fallbackFromIdentity();
+    });
+
+    function fallbackFromIdentity() {
     /* On attend le portillon d'identité au lieu de le lire tout de suite : ce
      * fichier est chargé AVANT identity.js dans dashboard.html, et deux scripts
      * `defer` s'exécutent à la suite avant DOMContentLoaded — donc au moment où
@@ -595,6 +610,7 @@
         Promise.all(reads).then(ready, ready);
       }).catch(function () { readPinsFrom('/api/config').then(ready); });
     })();
+    }
   }
 
   function boot() { fetchConfig(); fetchAccountPins(); watchStore(); }
