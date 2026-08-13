@@ -2197,13 +2197,13 @@
     const v = VENUES[currentVenue];
     const lang = window.KiwiI18n?.getLang?.() || 'fr';
     const T = window.KiwiI18n?.T?.[lang] || {};
-    const help = T['dash.footer.help'] || 'aide WhatsApp';
+    const help = T['dash.footer.help'] || 'Centre d’aide';
     // The merchant name already sits in the demo bar — keep the footer to
     // legal / system info so the two bars don't echo each other.
     // No acquiring-sponsorship line: Kiwi holds no Bank Al-Maghrib licence,
     // and a demo footer is still a public claim. See mentions-legales.html.
     const legal = (isCustom(currentVenue) || isRealMerchant()) ? '' : `ICE ${v.ice} · `;
-    el['inner' + 'HTML'] = `${legal}Kiwi v2.38.1 · <a href="#" data-action="help-whatsapp">${help}</a>`;
+    el['inner' + 'HTML'] = `${legal}Kiwi v2.38.1 · <a href="#" data-action="account-help">${help}</a>`;
   }
 
   /* ═══════════════ RENDER: SIDEBAR COUNTS ═══════════════ */

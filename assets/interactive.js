@@ -2763,7 +2763,7 @@ ar: {
           `Appareils illimités · 1 établissement`,
           `S'intègre à votre caisse / TPE existant`,
           `Formation sur site + guides inclus`,
-          `Support WhatsApp 7j/7` ] },
+          `Demandes de support suivies` ] },
         { id: 'pro', name: 'KIWI PRO', price: '399 MAD', unit: '/mois', tagline: `Tout Basic + 1 caisse Kiwi offerte`, cta: 'Plan actuel', feats: [
           `Tout Kiwi Basic inclus`,
           `1 caisse Kiwi offerte · prêtée à vie`,

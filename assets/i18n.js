@@ -223,7 +223,7 @@
       'dash.kpi.fillRate':         'Fill rate',
       // Mix de paiement footer — venue-typed
       // Footer
-            'dash.footer.help':          'WhatsApp help',
+            'dash.footer.help':          'Help centre',
       'dash.mix.center.unit': 'MAD card',
       'dash.settle.instant': 'Settle instantly',
       'dash.kpi.tx': 'Orders',
@@ -741,7 +741,7 @@
       'final.desc': 'ابدؤوا بقبول البطاقات في 3 دقائق. بدون التزام، بدون عتاد للشراء، بدون رسوم خفية.',
       'final.cta.create': 'إنشاء حساب كيوي',
       'final.cta.advisor': 'التحدّث إلى مستشار',
-      'final.micro': 'التسجيل بالفرنسية أو الدارجة أو العربية · دعم WhatsApp 7/7',
+      'final.micro': 'التسجيل بالفرنسية أو الدارجة أو العربية · دعم عبر طلبات قابلة للتتبع',
 
       /* Footer */
       'foot.products': 'المنتجات',
@@ -839,7 +839,7 @@
       'dash.kpi.fillRate':         'نسبة الإشغال',
       // Mix
       // Footer
-            'dash.footer.help':          'مساعدة عبر واتساب',
+            'dash.footer.help':          'مركز المساعدة',
       'dash.mix.center.unit': 'درهم بطاقة',
       'dash.settle.instant': 'تسوية فورية',
       'dash.kpi.tx': 'الطلبات',

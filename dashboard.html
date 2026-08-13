@@ -5959,7 +5959,7 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
            cherchait à acheter avec ce chiffre. Ce qui reste est vrai et vérifié
            à la main, comme l'annonce status.html. -->
       <div><span class="pip"></span><span data-i18n="dash.status.operational">Opérationnel · aucun incident signalé</span></div>
-      <div data-footer-line>Café Atlas · ICE 0025938400014 · Kiwi v2.38.1 · <a href="#" data-action="help-whatsapp">aide WhatsApp</a></div>
+      <div data-footer-line>Café Atlas · ICE 0025938400014 · Kiwi v2.38.1 · <a href="#" data-action="account-help">Centre d’aide</a></div>
     </div>
   </main>
 </div>
@@ -5973,7 +5973,7 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
      no longer waits on 657 KB it doesn't need yet. (Codex roast P1) -->
 <!-- Env gate (demos local-only) — must run before venues.js and the app. -->
 <script src="assets/kiwi-env.js" defer></script>
-<script src="assets/i18n.js" defer></script>
+<script src="assets/i18n.js?v=2" defer></script>
 <!-- Les milliers en arabe (assets/rtl-numbers.js). Une espace ordinaire entre
      deux nombres prend la direction du paragraphe : « 31 500 » s'affichait
      « 500 31 » en RTL. Ne s'exécute que sur dir="rtl" — le français et
@@ -5983,7 +5983,7 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
      sa table métier→famille à l'évaluation, et les trois assistants
      d'inscription construisent leur grille pareil. Aucun DOM, ~7 Ko. -->
 <script src="assets/trades.js?v=4" defer></script>
-<script src="assets/interactive.js?v=3" defer></script>
+<script src="assets/interactive.js?v=4" defer></script>
 <script src="assets/features.js?v=2" defer></script>
 <script src="assets/invoicing.js?v=3" defer></script>
 <script src="assets/depenses.js" defer></script>
@@ -5999,7 +5999,7 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
 <script src="assets/dark-fixes.js" defer></script>
 <script src="assets/polish.js" defer></script>
 <script src="assets/channel-link.js" defer></script>
-<script src="assets/dashboard-extra.js" defer></script>
+<script src="assets/dashboard-extra.js?v=2" defer></script>
 <script src="assets/simple.js?v=1" defer></script>
 <script src="assets/ux.js" defer></script>
 <!-- venues.js et dateRange.js portent un ?v= depuis la migration v2. Sans lui,
@@ -6156,7 +6156,9 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
      from a barista whatever wording the role was filed under. Fail-soft — the
      gate falls back to its own small map for the access-critical values. -->
 <script src="assets/staff-roles.js" defer></script>
-<script src="assets/account.js" defer fetchpriority="low"></script>
+<link rel="stylesheet" href="assets/help-centre.css?v=3">
+<script src="assets/help-centre.js?v=3" defer fetchpriority="low"></script>
+<script src="assets/account.js?v=4" defer fetchpriority="low"></script>
 <script src="assets/design-2026.js" defer fetchpriority="low"></script>
 <script src="assets/design-ios27.js" defer fetchpriority="low"></script>
 <script src="assets/design-vexel-layout.js?v=2076" defer fetchpriority="low"></script>

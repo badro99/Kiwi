@@ -12,7 +12,6 @@
 
   const SIMPLE_PAGES = {};
   let currentTab = 'lyoum';
-  const SUPPORT_WA = '212522123456';
 
   /* Icônes Material Symbols (Outlined, 400, grade 0, grille 24) recopiées
    * depuis assets/icons/material/ — le nom du fichier est en commentaire.
@@ -283,13 +282,13 @@
 
       <div class="help-hero-xl">
         <div class="help-greet">Comment on peut t'aider ?</div>
-        <p>Un conseiller Kiwi répond en moins de 5 minutes. Ou regarde une réponse rapide ci-dessous.</p>
+        <p>Des réponses vérifiées pour ton établissement, puis une demande suivie si nécessaire.</p>
       </div>
 
-      <a href="tel:+${SUPPORT_WA}" class="simple-btn atlas" data-simple-action="call">
+      <button class="simple-btn atlas" data-simple-action="support">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.13.96.37 1.9.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
-        Appeler un conseiller Kiwi
-      </a>
+        Ouvrir le centre d'aide
+      </button>
 
       <div class="simple-section">
         <div class="h">Questions fréquentes</div>
@@ -305,11 +304,6 @@
           </details>
         `).join('')}
       </div>
-
-      <button class="simple-btn outline" data-simple-action="video" style="margin-top: 18px;">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M5 3l14 9-14 9V3z"/></svg>
-        Vidéo · Kiwi en 90 secondes
-      </button>
 
       <button class="simple-btn ghost" data-simple-action="pro-toggle" style="margin-top: 22px;">
         Passer en mode avancé →
@@ -400,8 +394,8 @@
       toast(isReal() ? 'Rapport envoyé à ton comptable' : 'Rapport envoyé à Mehdi Alami', { type: 'success', desc: 'PDF signé · totaux de la semaine.' });
       return;
     }
-    if (action === 'call') {
-      toast('Appel en cours…', { type: 'info', desc: 'Un conseiller va décrocher dans quelques secondes.' });
+    if (action === 'support') {
+      if (window.KiwiHelp) window.KiwiHelp.open();
       return;
     }
     if (action === 'video') {
@@ -432,7 +426,6 @@
     const actEl = e.target.closest('[data-simple-action]');
     if (actEl) {
       const a = actEl.dataset.simpleAction;
-      if (a === 'call' && actEl.tagName === 'A') return;
       e.preventDefault();
       onAction(a);
     }

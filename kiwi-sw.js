@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted — fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v403';
+var CACHE = 'kiwi-app-v404';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -42,6 +42,7 @@ var SHELL = [
   '/assets/simple.css',
   '/assets/ux.css',
   '/assets/pages-pro.css',
+  '/assets/help-centre.css?v=3',
   '/assets/polish-dashboard.css',
   '/assets/pressing-catalog.css?v=3',
   '/assets/pressing-dashboard.css?v=7',
@@ -64,7 +65,7 @@ var SHELL = [
   '/assets/agent-data.js',
   '/assets/agent-features.js?v=3',
   '/assets/agent-truth.js?v=2',
-  '/assets/i18n.js',
+  '/assets/i18n.js?v=2',
   /* Les milliers en arabe. Dans la coquille avec i18n : hors ligne, un
      commerçant arabophone lirait sinon son objectif du jour à l'envers. */
   '/assets/rtl-numbers.js',
@@ -72,7 +73,7 @@ var SHELL = [
      d'inscription la lisent à l'évaluation : sans elle hors ligne, un
      établissement retombe sur la famille par défaut. */
   '/assets/trades.js?v=4',
-  '/assets/interactive.js?v=3',
+  '/assets/interactive.js?v=4',
   '/assets/features.js?v=2',
   '/assets/invoicing.css?v=5',
   '/assets/invoicing.js?v=3',
@@ -95,6 +96,8 @@ var SHELL = [
   '/assets/mobile-nav.js?v=2',
   '/assets/liquid-lens.js',
   '/assets/pages.js',
+  '/assets/help-centre.js?v=3',
+  '/assets/account.js?v=4',
   '/assets/production-action-guard.js',
   // Shared floor-plan vocabulary — the dashboard designer AND the caisse both
   // read it, so leaving it out of the shell meant the till could come up

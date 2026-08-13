@@ -963,7 +963,7 @@
         tipToastT: 'Prompt pourboire activé',
         tipToastD: '+10 % suggéré après 20h sur toutes les tables',
         helpToastT: 'Support Kiwi',
-        helpToastD: 'WhatsApp +212 5 20 80 80 80 · 7j/7'
+        helpToastD: "Ouvrez le Centre d'aide pour une demande suivie"
     },
     en: {
         exportToast: 'CSV export downloaded',
@@ -973,7 +973,7 @@
         tipToastT: 'Tip prompt enabled',
         tipToastD: '+10% suggested after 8pm on all tables',
         helpToastT: 'Kiwi Support',
-        helpToastD: 'WhatsApp +212 5 20 80 80 80 · 7/7'
+        helpToastD: 'Open the Help centre to create a tracked request'
     },
     ar: {
         exportToast: 'تم تنزيل تصدير CSV',
@@ -983,7 +983,7 @@
         tipToastT: 'تم تفعيل موجه الإكرامية',
         tipToastD: 'مقترح +10% بعد الساعة 8 مساءً على جميع الطاولات',
         helpToastT: 'دعم كيوي',
-        helpToastD: 'واتساب +212 5 20 80 80 80 · 7/7'
+        helpToastD: 'افتح مركز المساعدة لإنشاء طلب قابل للتتبع'
     }
   };
 
@@ -1048,6 +1048,7 @@
     toast && toast(str.tipToastT, { type: 'success', desc: str.tipToastD });
   }
   handlers['help-whatsapp'] = () => {
+    if (window.KiwiHelp && window.KiwiHelp.openContact) { window.KiwiHelp.openContact('whatsapp'); return; }
     const str = MISC_STR[trLang()] || MISC_STR.fr;
     toast && toast(str.helpToastT, { type: 'info', desc: str.helpToastD });
   }

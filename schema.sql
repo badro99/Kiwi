@@ -653,6 +653,103 @@ CREATE TABLE IF NOT EXISTS account_audit (
 CREATE INDEX IF NOT EXISTS idx_account_audit ON account_audit (account_id, ts);
 CREATE INDEX IF NOT EXISTS idx_account_audit_merchant ON account_audit (merchant, ts);
 
+-- ── Help Centre: published knowledge + a real, auditable support queue ─────
+-- Articles are intentionally global product knowledge. `store_types` scopes
+-- what a merchant sees; all three languages are mandatory before publication.
+CREATE TABLE IF NOT EXISTS support_articles (
+  id            TEXT PRIMARY KEY,
+  slug          TEXT NOT NULL UNIQUE,
+  category      TEXT NOT NULL,
+  store_types   TEXT NOT NULL DEFAULT '["all"]',
+  feature_key   TEXT NOT NULL DEFAULT '',
+  feature_hash  TEXT NOT NULL DEFAULT '',
+  status        TEXT NOT NULL DEFAULT 'draft',
+  revision      INTEGER NOT NULL DEFAULT 1,
+  title_fr      TEXT NOT NULL DEFAULT '',
+  title_en      TEXT NOT NULL DEFAULT '',
+  title_ar      TEXT NOT NULL DEFAULT '',
+  body_fr       TEXT NOT NULL DEFAULT '',
+  body_en       TEXT NOT NULL DEFAULT '',
+  body_ar       TEXT NOT NULL DEFAULT '',
+  created_ts    INTEGER NOT NULL,
+  updated_ts    INTEGER NOT NULL,
+  published_ts  INTEGER,
+  actor         TEXT NOT NULL DEFAULT 'system'
+);
+CREATE INDEX IF NOT EXISTS idx_support_articles_status ON support_articles (status, category, updated_ts);
+
+CREATE TABLE IF NOT EXISTS support_article_versions (
+  id          TEXT PRIMARY KEY,
+  article_id  TEXT NOT NULL,
+  revision    INTEGER NOT NULL,
+  snapshot    TEXT NOT NULL,
+  actor       TEXT NOT NULL,
+  ts          INTEGER NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_support_article_revision ON support_article_versions (article_id, revision);
+
+CREATE TABLE IF NOT EXISTS support_tickets (
+  id              TEXT PRIMARY KEY,
+  reference       TEXT NOT NULL UNIQUE,
+  merchant        TEXT NOT NULL,
+  store_type      TEXT NOT NULL DEFAULT '',
+  category        TEXT NOT NULL,
+  priority        TEXT NOT NULL,
+  status          TEXT NOT NULL DEFAULT 'open',
+  channel         TEXT NOT NULL,
+  contact         TEXT NOT NULL,
+  summary         TEXT NOT NULL,
+  diagnostics     TEXT NOT NULL DEFAULT '{}',
+  assignee        TEXT NOT NULL DEFAULT '',
+  created_ts      INTEGER NOT NULL,
+  updated_ts      INTEGER NOT NULL,
+  closed_ts       INTEGER
+);
+CREATE INDEX IF NOT EXISTS idx_support_tickets_queue ON support_tickets (status, priority, updated_ts);
+CREATE INDEX IF NOT EXISTS idx_support_tickets_merchant ON support_tickets (merchant, updated_ts);
+
+CREATE TABLE IF NOT EXISTS support_messages (
+  id          TEXT PRIMARY KEY,
+  ticket_id   TEXT NOT NULL,
+  kind        TEXT NOT NULL,
+  channel     TEXT NOT NULL,
+  author      TEXT NOT NULL,
+  body        TEXT NOT NULL,
+  delivery    TEXT NOT NULL DEFAULT '',
+  ts          INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_support_messages_ticket ON support_messages (ticket_id, ts);
+
+CREATE TABLE IF NOT EXISTS support_attachments (
+  id          TEXT PRIMARY KEY,
+  ticket_id   TEXT NOT NULL,
+  merchant    TEXT NOT NULL,
+  object_key  TEXT NOT NULL UNIQUE,
+  name        TEXT NOT NULL,
+  mime        TEXT NOT NULL,
+  size        INTEGER NOT NULL,
+  created_ts  INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_support_attachments_ticket ON support_attachments (ticket_id, created_ts);
+
+-- Failed searches are deliberately anonymous: no merchant/account/IP column.
+CREATE TABLE IF NOT EXISTS support_searches (
+  id          TEXT PRIMARY KEY,
+  phrase      TEXT NOT NULL,
+  lang        TEXT NOT NULL,
+  store_type  TEXT NOT NULL DEFAULT '',
+  ts          INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS support_feedback (
+  id          TEXT PRIMARY KEY,
+  article_id  TEXT NOT NULL,
+  helpful     INTEGER NOT NULL,
+  store_type  TEXT NOT NULL DEFAULT '',
+  ts          INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_support_feedback_article ON support_feedback (article_id, ts);
+
 -- ── Liens de réinitialisation de mot de passe ───────────────────────────────
 -- Le lien vaut « je suis ce commerçant » : il est donc traité comme un mot de
 -- passe, et stocké comme un mot de passe — c'est-à-dire pas stocké du tout.

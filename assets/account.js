@@ -648,8 +648,8 @@
     handlers['account-add-business'] = () => addBusinessModal();
     handlers['account-plan-downgrade'] = () => planChangeModal('down');
     handlers['account-plan-cancel'] = () => planCancelModal();
-    if (!handlers['account-help-mail']) handlers['account-help-mail'] = () => Kiwi.toast('support@kiwi-os.com', { type: 'info', force: true });
-    if (!handlers['account-help-phone']) handlers['account-help-phone'] = () => Kiwi.toast('+212 5 39 00 12 00', { type: 'info', force: true });
+    if (!handlers['account-help-mail']) handlers['account-help-mail'] = () => window.KiwiHelp && window.KiwiHelp.openContact('email');
+    if (!handlers['account-help-phone']) handlers['account-help-phone'] = () => window.KiwiHelp && window.KiwiHelp.openContact('whatsapp');
   }
 
   /* ── Business editor (rich form, persists per-field / extras) ── */
@@ -845,16 +845,14 @@
         en: 'Cancellation goes through your Kiwi account manager, to export your data, plan the transition and avoid any service interruption. Reach us:',
         ar: 'يتم الإلغاء عبر مدير حسابك في كيوي, لتصدير بياناتك وتخطيط الانتقال وتجنّب أي انقطاع. تواصل معنا:' }))}</p>
         <div class="acc-contact" style="margin-bottom:0;">
-          <div class="acc-contact-card" data-action="help-whatsapp"><div class="t">WhatsApp</div><div class="d">${esc(pick({ fr: 'Réponse < 5 min', en: 'Reply < 5 min', ar: 'رد < 5 د' }))}</div></div>
-          <div class="acc-contact-card" data-action="account-help-mail"><div class="t">Email</div><div class="d">support@kiwi-os.com</div></div>
-          <div class="acc-contact-card" data-action="account-help-phone"><div class="t">${esc(pick({ fr: 'Téléphone', en: 'Phone', ar: 'الهاتف' }))}</div><div class="d">+212 5 39 00 12 00</div></div>
+          <div class="acc-contact-card" data-action="help-whatsapp"><div class="t">Kiwi Support</div><div class="d">${esc(pick({ fr: 'Créer une demande suivie', en: 'Create a tracked request', ar: 'إنشاء طلب متابع' }))}</div></div>
         </div>`,
       foot: `<button class="kb atlas" data-callback type="button" style="width:100%;justify-content:center;padding:12px;">${esc(pick({ fr: 'Demander un rappel pour résilier', en: 'Request a call-back to cancel', ar: 'طلب اتصال للإلغاء' }))}</button>`,
     });
     m.el.addEventListener('click', (e) => {
       if (!e.target.closest('[data-callback]')) return;
       m.close();
-      Kiwi.toast(pick({ fr: 'Demande envoyée, votre account manager vous rappelle sous 24 h.', en: 'Request sent, your account manager will call you within 24h.', ar: 'تم إرسال الطلب، سيتصل بك مدير حسابك خلال 24 ساعة.' }), { type: 'success', force: true });
+      if (window.KiwiHelp) window.KiwiHelp.openContact();
     });
   }
 
@@ -897,9 +895,9 @@
       return;
     }
     const incl = pick({
-      fr: ['Caisse complète multi-vertical', '1 caisse Kiwi offerte', 'Règlement T+1 garanti', "Jusqu'à 8 membres d'équipe", 'Maintenance & remplacement matériel', 'Support WhatsApp 7j/7'],
-      en: ['Full multi-vertical register', '1 free Kiwi cashier', 'Guaranteed T+1 settlement', 'Up to 8 team members', 'Hardware maintenance & replacement', '7-day WhatsApp support'],
-      ar: ['صندوق كامل متعدد الأنشطة', 'صندوق كيوي مجاني', 'تسوية T+1 مضمونة', 'حتى 8 أعضاء فريق', 'صيانة واستبدال العتاد', 'دعم واتساب 7/7'],
+      fr: ['Caisse complète multi-vertical', '1 caisse Kiwi offerte', 'Règlement T+1 garanti', "Jusqu'à 8 membres d'équipe", 'Maintenance & remplacement matériel', 'Support par demande suivie'],
+      en: ['Full multi-vertical register', '1 free Kiwi cashier', 'Guaranteed T+1 settlement', 'Up to 8 team members', 'Hardware maintenance & replacement', 'Tracked support requests'],
+      ar: ['صندوق كامل متعدد الأنشطة', 'صندوق كيوي مجاني', 'تسوية T+1 مضمونة', 'حتى 8 أعضاء فريق', 'صيانة واستبدال العتاد', 'طلبات دعم قابلة للتتبع'],
     });
     const months = pick({
       fr: ['Mai 2026', 'Avril 2026', 'Mars 2026', 'Février 2026', 'Janvier 2026', 'Décembre 2025'],
@@ -949,55 +947,7 @@
 
   /* ════════════════════════════ CENTRE D'AIDE ════════════════════════════ */
   function openHelp() {
-    const T = {
-      title: pick({ fr: "Centre d'aide", en: 'Help centre', ar: 'مركز المساعدة' }),
-      sub: pick({ fr: 'Support · guides · état du système', en: 'Support · guides · system status', ar: 'الدعم · الأدلة · حالة النظام' }),
-      search: pick({ fr: 'Rechercher dans l\'aide…', en: 'Search help…', ar: 'ابحث في المساعدة…' }),
-      waT: pick({ fr: 'WhatsApp', en: 'WhatsApp', ar: 'واتساب' }),
-      waD: pick({ fr: 'Réponse < 5 min · 7j/7', en: 'Reply < 5 min · 7 days', ar: 'رد خلال 5 دقائق · 7/7' }),
-      mailT: pick({ fr: 'Email', en: 'Email', ar: 'البريد' }),
-      mailD: 'support@kiwi-os.com',
-      phoneT: pick({ fr: 'Téléphone', en: 'Phone', ar: 'الهاتف' }),
-      phoneD: '+212 5 39 00 12 00',
-      topics: pick({ fr: 'Sujets populaires', en: 'Popular topics', ar: 'مواضيع شائعة' }),
-      guides: pick({ fr: 'Guides récents', en: 'Recent guides', ar: 'أدلة حديثة' }),
-      // Sans chiffre de disponibilité : aucune sonde ne le mesure, et
-      // status.html le dit. Voir dashboard.html, 'dash.status.operational'.
-      statusT: pick({ fr: 'Kiwi Status · opérationnel · aucun incident signalé', en: 'Kiwi Status · operational · no incident reported', ar: 'حالة كيوي · تعمل · لا أعطال مُبلَّغ عنها' }),
-      open: pick({ fr: 'Ouvrir le chat WhatsApp', en: 'Open WhatsApp chat', ar: 'فتح محادثة واتساب' }),
-    };
-    const topics = pick({
-      fr: [['Démarrer avec Kiwi', '6 articles'], ['Caisse & encaissement', '9 articles'], ['Matériel & terminaux', '5 articles'], ['Équipe & accès', '4 articles'], ['Stock & fournisseurs', '7 articles'], ['Facturation & abonnement', '3 articles']],
-      en: [['Getting started', '6 articles'], ['Register & payments', '9 articles'], ['Hardware & terminals', '5 articles'], ['Team & access', '4 articles'], ['Stock & suppliers', '7 articles'], ['Billing & subscription', '3 articles']],
-      ar: [['البدء مع كيوي', '6 مقالات'], ['الصندوق والتحصيل', '9 مقالات'], ['العتاد والطرفيات', '5 مقالات'], ['الفريق والصلاحيات', '4 مقالات'], ['المخزون والموردون', '7 مقالات'], ['الفواتير والاشتراك', '3 مقالات']],
-    });
-    const guides = pick({
-      fr: ['Configurer le plan de salle en 5 minutes', 'Router les commandes vers le bon écran cuisine', 'Clôturer la caisse et générer le rapport Z'],
-      en: ['Set up your floor plan in 5 minutes', 'Route orders to the right kitchen screen', 'Close the register and generate the Z report'],
-      ar: ['إعداد مخطط القاعة في 5 دقائق', 'توجيه الطلبات إلى شاشة المطبخ الصحيحة', 'إغلاق الصندوق وإنشاء تقرير Z'],
-    });
-    Kiwi.appPage('account-help', {
-      title: T.title, subtitle: T.sub,
-      body: `
-        <input class="acc-search" type="search" placeholder="${esc(T.search)}" data-action="" aria-label="${esc(T.search)}"/>
-        <div class="acc-contact">
-          <div class="acc-contact-card" data-action="help-whatsapp"><div class="t">${esc(T.waT)}</div><div class="d">${esc(T.waD)}</div></div>
-          <div class="acc-contact-card" data-action="account-help-mail"><div class="t">${esc(T.mailT)}</div><div class="d">${esc(T.mailD)}</div></div>
-          <div class="acc-contact-card" data-action="account-help-phone"><div class="t">${esc(T.phoneT)}</div><div class="d">${esc(T.phoneD)}</div></div>
-        </div>
-        <div class="acc-sec-title">${esc(T.topics)}</div>
-        <div class="acc-topics">
-          ${topics.map(([t, n]) => `<div class="acc-topic" data-action="account-help-topic"><b>${esc(t)}</b><span>${esc(n)} →</span></div>`).join('')}
-        </div>
-        <div class="acc-sec-title">${esc(T.guides)}</div>
-        <div class="acc-card span2">
-          ${guides.map((g) => `<div class="acc-venue" style="cursor:pointer;" data-action="account-help-topic"><b>${esc(g)}</b><span>→</span></div>`).join('')}
-        </div>
-        <div class="acc-status"><span class="dot"></span>${esc(T.statusT)}</div>`,
-    });
-    handlers['account-help-mail'] = () => Kiwi.toast(T.mailD, { type: 'info', force: true });
-    handlers['account-help-phone'] = () => Kiwi.toast(T.phoneD, { type: 'info', force: true });
-    handlers['account-help-topic'] = () => Kiwi.toast(pick({ fr: 'Article ouvert · help.kiwi.ma', en: 'Article opened · help.kiwi.ma', ar: 'تم فتح المقال · help.kiwi.ma' }), { type: 'info', force: true });
+    if (window.KiwiHelp && window.KiwiHelp.open) window.KiwiHelp.open();
   }
 
   /* ── Edit-profile modal (persists to kiwiSet:* like the Settings editors) ── */
