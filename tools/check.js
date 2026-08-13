@@ -758,6 +758,7 @@ section('Whole-project regressions');
     'dashboard-card-truth-test.mjs',
     'install-card-icon-test.mjs',
     'caisse-menu-add-contrast-test.mjs',
+    'caisse-product-art-test.mjs',
     'check-godmode.mjs',
     'floorplan-sync-test.js',
     'kitchen-relay-test.js',

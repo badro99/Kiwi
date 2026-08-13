@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Kiwi Caisse, Démo commerçant</title>
   <meta name="description" content="Écran caissier, démo Kiwi POS" />
+  <link rel="icon" href="assets/kiwi-favicon-new.svg?v=3" type="image/svg+xml" sizes="any" />
+  <link rel="shortcut icon" href="assets/kiwi-favicon-new.svg?v=3" type="image/svg+xml" />
 
   <!-- Thème de la caisse — appliqué avant le premier rendu pour éviter tout
        flash clair. Sombre = le même stage nuit que le dashboard 2026.
@@ -4657,7 +4659,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Caisse" />
-  <link rel="apple-touch-icon" href="assets/icons/kiwi-employee-k-180.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=358" defer></script>
   <script src="assets/caisse-pwa.js?v=372" defer></script>
   <script src="assets/live-link.js?v=5" defer></script>
@@ -7956,15 +7958,44 @@
       'm-034': `<path class="fill" d="M32 25c-3-3-9-3-11 2-2 4-1 11 3 16 2 3 4 4 8 4s6-1 8-4c4-5 5-12 3-16-2-5-8-5-11-2z"/><path d="M32 25c-3-3-9-3-11 2-2 4-1 11 3 16 2 3 4 4 8 4s6-1 8-4c4-5 5-12 3-16-2-5-8-5-11-2z"/><path d="M32 25v-5"/><path class="fill" d="M32 21c2-4 6-5 9-4-1 4-5 6-9 4z"/><path d="M32 21c2-4 6-5 9-4-1 4-5 6-9 4"/><path class="thin" d="M25 31c-1 3-1 6 1 9"/>`,
       'm-035': `<circle class="fill" cx="28" cy="26" r="6"/><circle class="fill" cx="37" cy="26" r="6"/><path class="fill" d="M24 31h16l-8 22z"/><path d="M24 31h16l-8 22z"/><path class="thin" d="M27 36h10M29 41h6M28 33l3 6M34 33l-3 6"/><circle cx="28" cy="26" r="6"/><circle cx="37" cy="26" r="6"/><circle class="fill" cx="32.5" cy="18" r="2"/><circle cx="32.5" cy="18" r="2"/>`,
     };
-    /* Les 35 dessins ci-dessus sont ceux de la démo, à l'assiette près. La carte
-       d'un vrai commerçant n'en a aucun — sans repli, ses tuiles sortaient avec
-       un carré vide. On retombe sur les silhouettes génériques déjà dessinées
-       (bol, assiette, dôme, pain), choisies par rang de catégorie : tous les
-       plats d'une même rubrique partagent alors une forme, ce qui se lit comme
-       un parti pris et non comme un dessin manquant. */
+    /* Les identifiants de la carte publiée (it_1, it_2…) ne sont pas ceux de la
+       démo (m-001…). Un dessin résolu uniquement par id transformait donc toute
+       une rubrique en neuf bols identiques. Les règles ci-dessous partent du
+       NOM réellement publié : elles restent valables après import CSV, copie
+       d'une carte ou recréation d'un article. */
+    const _keftaEgg = _tajine(`<circle class="fill" cx="25" cy="50" r="2.5"/><circle cx="25" cy="50" r="2.5"/><circle class="fill" cx="39" cy="50" r="2.5"/><circle cx="39" cy="50" r="2.5"/><circle class="fill" cx="32" cy="49" r="4"/><circle cx="32" cy="49" r="4"/><circle cx="32" cy="49" r="1.4"/>`);
+    const _skewers = `<path class="thin" d="M17 48L45 20M22 52l28-28M14 51l5-1-4-4zM47 22l3-5-5 3z"/><path class="fill" d="M22 40l5-5 4 4-5 5zM31 31l5-5 4 4-5 5zM28 46l5-5 4 4-5 5zM37 37l5-5 4 4-5 5z"/><path d="M22 40l5-5 4 4-5 5zM31 31l5-5 4 4-5 5zM28 46l5-5 4 4-5 5zM37 37l5-5 4 4-5 5z"/>`;
+    const _msemen = `<path class="fill" d="M17 23h31v25H17z"/><path d="M17 23h31v25H17z"/><path class="thin" d="M20 27l25 17M44 27L20 44M23 20h27v22M20 17h27v4"/><path d="M32 31l6 5-6 5-6-5z"/>`;
+    const normalizeMenuArtName = (value) => String(value || '')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[’']/g, ' ').trim();
+    const MENU_ART_RULES = [
+      [/salade/, MENU_ART['m-001']],
+      [/harira|soupe/, MENU_ART['m-003']],
+      [/tajine.*(?:poulet|citron)/, MENU_ART['m-008']],
+      [/tajine.*(?:kefta|oeuf)/, _keftaEgg],
+      [/tajine/, MENU_ART['m-010']],
+      [/brochette|grillade|kebab/, _skewers],
+      [/(?:the|atay).*(?:menthe)?/, MENU_ART['m-023']],
+      [/cafe|espresso|americano/, MENU_ART['m-024']],
+      [/orange|jus.*agrume/, MENU_ART['m-027']],
+      [/msemen|crepe/, _msemen],
+      [/couscous/, MENU_ART['m-012']],
+      [/pastilla/, MENU_ART['m-015']],
+      [/sandwich|bocadillo/, MENU_ART['m-018']],
+      [/wrap/, MENU_ART['m-022']],
+      [/glace/, MENU_ART['m-035']],
+      [/fruit/, MENU_ART['m-034']],
+    ];
+    /* Un article entièrement nouveau conserve un repli cohérent avec sa
+       catégorie, mais tout produit reconnu reçoit d'abord sa silhouette. */
     const CAT_GLYPH = [_dish(''), _bowl(''), _dome(''), _bag('')];
-    const menuArt = (id, cat) => {
+    const menuArt = (id, cat, name) => {
       let art = MENU_ART[id];
+      if (!art) {
+        const normalized = normalizeMenuArtName(name);
+        const semantic = MENU_ART_RULES.find(rule => rule[0].test(normalized));
+        art = semantic && semantic[1];
+      }
       if (!art) {
         const i = Math.max(0, catOrder.indexOf(cat) - 1);
         art = CAT_GLYPH[i % CAT_GLYPH.length];
@@ -8011,7 +8042,7 @@
         return `
           <div class="menu-item ${qty > 0 ? 'is-in-cart' : ''}" data-menu-id="${m.id}" data-cat="${m.cat}" style="--cat:${catColor[m.cat] || 'var(--forest)'}" role="button" tabindex="0">
             ${qty > 0 ? `<span class="menu-item-badge mono">${qty}</span>` : ''}
-            <span class="menu-item-art">${menuArt(m.id, m.cat)}</span>
+            <span class="menu-item-art">${menuArt(m.id, m.cat, m.name)}</span>
             <span class="menu-item-cat">${escTeam(catLabels[m.cat] || '')}</span>
             <span class="menu-item-name">${escTeam(m.name)}</span>
             <span class="menu-item-foot">
