@@ -7913,10 +7913,10 @@
        keep the 35 cohesive; per-plat garnish tells them apart. ---------- */
     const _bowl = (x) => `<ellipse class="fill" cx="32" cy="35" rx="18" ry="5"/><path d="M14 35a18 15 0 0 0 36 0"/><ellipse cx="32" cy="35" rx="18" ry="5"/>${x}`;
     const _dish = (x) => `<ellipse class="fill" cx="32" cy="38" rx="19" ry="5"/><path d="M16 38a16 9 0 0 0 32 0"/><ellipse cx="32" cy="38" rx="19" ry="5"/>${x}`;
-    /* Tajine marocain — steep conical lid, crown and shallow serving base.
-       The former bell-shaped dome collapsed into a generic covered plate at
-       28px. This silhouette keeps the three identifying parts separated. */
-    const _tajine = (g) => `<path class="fill" d="M28 20c0-4 1.7-7 4-7s4 3 4 7z"/><path d="M28 20c0-4 1.7-7 4-7s4 3 4 7z"/><path class="fill" d="M18 44c7-7 11-15 11-24h6c0 9 4 17 11 24z"/><path d="M18 44c7-7 11-15 11-24h6c0 9 4 17 11 24z"/><path class="thin" d="M24 39c5-6 7-12 7-18M40 39c-5-6-7-12-7-18"/><path d="M17 44h30"/><path class="fill" d="M14 47h36l-3 7c-1 2-3 3-6 3H23c-3 0-5-1-6-3z"/><path d="M14 47h36l-3 7c-1 2-3 3-6 3H23c-3 0-5-1-6-3z"/><path d="M11 49h4M49 49h4"/>${g}`;
+    /* Tajine marocain — an original Kiwi silhouette informed by traditional
+       ceramic cookware: crown, conical lid, zellige band and serving base.
+       Each part stays legible at the 28px optical size used by product cards. */
+    const _tajine = (g) => `<path class="fill" d="M29 18c0-3 1.3-5 3-5s3 2 3 5z"/><path d="M29 18c0-3 1.3-5 3-5s3 2 3 5z"/><path class="fill" d="M16 43c8-7 13-16 14-25h4c1 9 6 18 14 25z"/><path d="M16 43c8-7 13-16 14-25h4c1 9 6 18 14 25z"/><path class="thin" d="M21 38h22M22 38l3-3 4 3 3-3 3 3 4-3 3 3"/><path d="M14 44h36"/><path class="fill" d="M13 47h38l-2 5c-1 3-4 5-8 5H23c-4 0-7-2-8-5z"/><path d="M13 47h38l-2 5c-1 3-4 5-8 5H23c-4 0-7-2-8-5z"/><path d="M13 49H9c-2 0-3 1-3 3s1 3 4 3h7M51 49h4c2 0 3 1 3 3s-1 3-4 3h-7"/>${g}`;
     const _dome = (t) => `<ellipse class="fill" cx="32" cy="49" rx="21" ry="4.5"/><path class="fill" d="M14 49a18 17 0 0 1 36 0z"/><ellipse cx="32" cy="49" rx="21" ry="4.5"/><path d="M14 49a18 17 0 0 1 36 0"/><path class="thin" d="M20 45c8-3 16-3 24 0"/>${t}`;
     const _pie = (b) => `<ellipse class="fill" cx="32" cy="50" rx="20" ry="4"/><path class="fill" d="M14 44a18 11 0 0 1 36 0z"/><ellipse cx="32" cy="50" rx="20" ry="4"/><path d="M14 44a18 11 0 0 1 36 0"/><path d="M14 44h36"/><path class="thin" d="M21 41h22M24 36l16 8M40 36L24 44M32 33v11"/>${b}`;
     const _bag = (f) => `<rect class="fill" x="12" y="30" width="40" height="17" rx="8.5"/><rect x="12" y="30" width="40" height="17" rx="8.5"/><path class="thin" d="M20 31c1.5-2.5 5-2.5 6.5 0M32 31c1.5-2.5 5-2.5 6.5 0"/><path class="thin" d="M14 39l4-2.5 4 2.5 4-2.5 4 2.5 4-2.5 4 2.5 4-2.5 4 2.5"/>${f}`;
