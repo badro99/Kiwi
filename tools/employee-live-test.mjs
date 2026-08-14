@@ -557,7 +557,16 @@ ok(caisseSource.includes('assets/caisse-attendance-code.js?v=1')
   && attendanceCodeSource.includes("localStorage.getItem('kiwiPairedVenue')")
   && attendanceCodeSource.includes('data.merchant === id'),
   'toutes les caisses métier génèrent le même code de pointage, isolé sur leur magasin appairé');
-ok(teamSource.includes('data.pointedHours') && teamSource.includes('setInterval(pollLiveTeam, 1000)'),
+/* La seconde reste la cadence de la page Équipe/Paie, mais elle ne peut plus être
+ * un setInterval global : sur les autres pages du tableau de bord, ce battement
+ * faisait une requête et une réécriture localStorage par seconde pour personne.
+ * On exige donc la cadence rapide ET le fait qu'elle se lève quand la page sort
+ * de l'écran ou que l'onglet passe en arrière-plan. */
+ok(teamSource.includes('data.pointedHours')
+  && teamSource.includes('LIVE_TEAM_FAST_MS = 1000')
+  && teamSource.includes('(pageActive && !hidden) ? LIVE_TEAM_FAST_MS : LIVE_TEAM_IDLE_MS')
+  && teamSource.includes("document.addEventListener('visibilitychange', scheduleLiveTeam)")
+  && !teamSource.includes('setInterval(pollLiveTeam, 1000)'),
   'Équipe et Paie & planning reçoivent les heures de pointage du cloud sans rechargement');
 ok(serviceSource.includes('serviceStateVersion.has(id)')
   && serviceSource.includes('legacyBillState')

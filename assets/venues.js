@@ -1590,6 +1590,11 @@
    * sont qu'un cache de ce que le serveur détient. */
   const SCOPE_MARK = 'kiwiScopedSlug';
   const SCOPED_REC = /^kiwi:[^:]+:v1:scoped$/;
+  /* Le cache des ventes de la vue opérateur est nommé par locataire
+   * (`kiwiSales:scoped@<slug>`) : on garde CELUI du client regardé et on jette
+   * les autres. Sans ce ménage, un opérateur qui visite vingt magasins traîne
+   * vingt historiques et finit par saturer le quota du navigateur. */
+  const SCOPED_SALES = /^kiwiSales:scoped@(.+)$/;
   function resetScopedRecords(slug) {
     try {
       const mark = slug || '-';                       // '-' : magasin inconnu
@@ -1597,7 +1602,9 @@
       const doomed = [];
       for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
-        if (k && SCOPED_REC.test(k)) doomed.push(k);
+        if (k && SCOPED_REC.test(k)) { doomed.push(k); continue; }
+        const m = k && SCOPED_SALES.exec(k);
+        if (m && m[1] !== mark) doomed.push(k);
       }
       doomed.forEach(k => { try { localStorage.removeItem(k); } catch (_) {} });
       localStorage.setItem(SCOPE_MARK, mark);
@@ -7828,19 +7835,51 @@
    * "Nouvelle vente" keypad. Each sale is persisted per-venue and the
    * dashboard (hero / KPI band / feed) recomputes from this store. */
   const salesSubs = new Set();
-  const SALES_KEY = id => 'kiwiSales:' + id;
+  /* `own` and `scoped` are shared browser placeholders, not tenant ids: a plain
+   * `kiwiSales:scoped` bucket leaked client A's takings into client B when one
+   * browser served both accounts. The answer is a namespace, not a wipe — the
+   * bucket is stamped with the merchant slug the view resolved to, so a cache
+   * can survive a reload without ever being readable by the next tenant. A
+   * transient id with no slug yet has no cache at all, which is the old
+   * fail-closed behaviour. */
+  function salesTenant(vid) {
+    let s = '';
+    try { s = slugOf(vid) || ''; } catch (_) { s = ''; }
+    if (s) return s;
+    /* `own` est le magasin de CE navigateur : à défaut de venue résolue, le
+     * locataire apparié fait foi. Jamais pour `scoped` — là, l'appareil est
+     * apparié à la caisse de l'opérateur, pas au client qu'il regarde, et se
+     * rabattre dessus rangerait les ventes du client sous le nom de
+     * l'opérateur. Sans slug servi par /api/me, `scoped` n'a pas de cache. */
+    if (vid === 'scoped') return '';
+    try { s = String(localStorage.getItem('kiwiLiveMerchant') || '').trim(); } catch (_) { s = ''; }
+    return s;
+  }
+  function SALES_KEY(id) {
+    const vid = id || currentVenue;
+    if (TRANSIENT_IDS.indexOf(vid) < 0) return 'kiwiSales:' + vid;
+    const slug = salesTenant(vid);
+    return slug ? 'kiwiSales:' + vid + '@' + slug : '';
+  }
   function salesList(id) {
-    try { const a = JSON.parse(localStorage.getItem(SALES_KEY(id || currentVenue)) || '[]'); return Array.isArray(a) ? a : []; }
+    const key = SALES_KEY(id || currentVenue);
+    if (!key) return [];
+    try { const a = JSON.parse(localStorage.getItem(key) || '[]'); return Array.isArray(a) ? a : []; }
     catch (_) { return []; }
   }
+  /* Pas de clé ⇒ pas d'écriture. `localStorage.setItem('', …)` est légal et
+   * rangerait les ventes d'un locataire non résolu sous une clé vide, partagée
+   * par tout le navigateur : exactement la fuite que le nommage évite. */
+  function salesWrite(id, list) {
+    const key = SALES_KEY(id || currentVenue);
+    if (!key) return false;
+    try { localStorage.setItem(key, JSON.stringify(list)); return true; } catch (_) { return false; }
+  }
 
-  /* `own` and `scoped` are shared browser placeholders, not tenant ids. Moving
-   * their money into the next resolved venue leaked client A's takings into
-   * client B when one browser served both accounts. Live Link already replays a
-   * tenant-stamped server backlog after resolution, so fail closed and discard
-   * these unsafe local buckets. */
+  /* Legacy un-namespaced placeholder buckets written by older builds. They are
+   * the unsafe shape this file used to delete on every load; heal them once. */
   TRANSIENT_IDS.forEach((tid) => {
-    try { localStorage.removeItem(SALES_KEY(tid)); } catch (_) {}
+    try { localStorage.removeItem('kiwiSales:' + tid); } catch (_) {}
   });
   function salesAdd(id, sale) {
     id = id || currentVenue;
@@ -7898,7 +7937,7 @@
       if (!entry.lines.length) delete entry.lines;
     }
     list.push(entry);
-    try { localStorage.setItem(SALES_KEY(id), JSON.stringify(list)); } catch (_) {}
+    salesWrite(id, list);
     salesSubs.forEach(fn => { try { fn(id); } catch (_) {} });
     return entry;
   }
@@ -7915,7 +7954,10 @@
       if (value && entry[key] !== value) { entry[key] = value; changed = true; }
     });
     if (!changed) return false;
-    try { localStorage.setItem(SALES_KEY(id), JSON.stringify(list)); } catch (_) { return false; }
+    /* Passe par salesWrite comme les autres écritures : la clé d'un locataire
+     * non résolu est vide, et `localStorage.setItem('', …)` rangerait la vente
+     * dans un seau partagé par tout le navigateur. */
+    if (!salesWrite(id, list)) return false;
     salesSubs.forEach(fn => { try { fn(id); } catch (_) {} });
     return true;
   }
@@ -7948,7 +7990,7 @@
     const kept = list.filter((s) => !(s && s.cursor && kill.has(Number(s.cursor))));
     const gone = list.length - kept.length;
     if (!gone) return 0;
-    try { localStorage.setItem(SALES_KEY(id), JSON.stringify(kept)); } catch (_) {}
+    salesWrite(id, kept);
     salesSubs.forEach((fn) => { try { fn(id); } catch (_) {} });
     return gone;
   }
@@ -7963,7 +8005,7 @@
     const clean = list.filter((s) => !(s && s.cursor) || keep.has(Number(s.cursor)));
     const gone = list.length - clean.length;
     if (!gone) return 0;
-    try { localStorage.setItem(SALES_KEY(id), JSON.stringify(clean)); } catch (_) {}
+    salesWrite(id, clean);
     salesSubs.forEach((fn) => { try { fn(id); } catch (_) {} });
     return gone;
   }

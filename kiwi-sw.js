@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted — fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v431';
+var CACHE = 'kiwi-app-v432';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -83,7 +83,7 @@ var SHELL = [
      entrée pré-cachée sans estampille ne répondrait jamais à la requête de la
      page (donc pas de hors-ligne), tandis qu'une estampille périmée ici
      re-servirait l'ancien fichier. Voir le commentaire dans dashboard.html. */
-  '/assets/venues.js?v=12',
+  '/assets/venues.js?v=13',
   '/assets/phone.js?v=1',
   '/assets/trade-workspace-schema.js?v=4',
   '/assets/trade-workspaces.js?v=3',
@@ -133,13 +133,13 @@ var SHELL = [
   // offline with no table geometry at all.
   '/assets/floorplan-core.js',
   '/assets/oppo-cards.js',
-  '/assets/dashboard-pwa.js?v=376',
+  '/assets/dashboard-pwa.js?v=377',
   '/assets/dashboard-native.js',
   '/assets/pwa-update.js?v=358',
   '/assets/caisse-skin.css?v=3',
   '/assets/pos-mobile.css?v=3',
   '/assets/caisse-motion.js',
-  '/assets/caisse-pwa.js?v=375',
+  '/assets/caisse-pwa.js?v=376',
   '/assets/vendor/dexie.min.js',
   '/assets/offline-db.js?v=3',
   '/assets/platform-kernel.js?v=2',
@@ -213,13 +213,13 @@ var SHELL = [
   '/assets/menu-catalog.js?v=3',
   '/assets/restaurant-recipes.js?v=3',
   '/assets/restaurant-units.js',
-  '/assets/employee-live.js?v=375',
+  '/assets/employee-live.js?v=376',
   '/assets/employee-planning.js?v=3',
   '/assets/employee-trade-shell.css?v=1',
   '/assets/employee-trade-shell.js?v=2',
   '/assets/planning-core.js?v=8',
   '/assets/planning-ui.css?v=10',
-  '/assets/team.js?v=274',
+  '/assets/team.js?v=275',
   '/assets/restaurant-menu-workspace.js?v=2',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).
   '/assets/catalog-import.js',

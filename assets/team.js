@@ -1241,6 +1241,12 @@
     }).then((response) => response.ok ? response.json() : null).then((data) => {
       if (!data || !data.ok || data.merchant !== merchant) return;
       const signature = JSON.stringify([merchant, data.members || [], data.pointedHours || {}]);
+      /* Réponse identique à la précédente ⇒ rien à fusionner, rien à écrire.
+         La fusion des heures pointées se faisait à CHAQUE réponse, donc
+         persistTeams() réécrivait 70 ko de localStorage toutes les secondes
+         pour reposer exactement les mêmes octets. */
+      if (signature === liveTeamSignature) return;
+      liveTeamSignature = signature;
       liveTeam = { merchant, members: Array.isArray(data.members) ? data.members : [] };
       const venueKey = teamVenueKey();
       if (venueKey && data.pointedHours && typeof data.pointedHours === 'object') {
@@ -1266,7 +1272,24 @@
       }
     }).catch(() => {}).finally(() => { liveTeamBusy = false; });
   }
-  setInterval(pollLiveTeam, 1000);
+  /* Le pointage doit battre à la seconde QUAND on le regarde. Ailleurs — c'est
+     à dire sur chacune des autres pages du tableau de bord, où ce module n'a
+     rien à l'écran — la même seconde faisait une requête réseau et un tour de
+     JSON.stringify sur toute l'équipe, pour personne. Et le premier chargement
+     du tableau de bord, lui, a mieux à faire que ça pendant que les chiffres
+     arrivent. On garde la seconde sur Équipe/Paie, on lève le pied partout
+     ailleurs, et on s'arrête net quand l'onglet passe en arrière-plan. */
+  const LIVE_TEAM_FAST_MS = 1000, LIVE_TEAM_IDLE_MS = 20000;
+  let liveTeamTimer = null;
+  function scheduleLiveTeam() {
+    if (liveTeamTimer) { clearTimeout(liveTeamTimer); liveTeamTimer = null; }
+    let hidden = false;
+    try { hidden = !!document.hidden; } catch (_) {}
+    const wait = (pageActive && !hidden) ? LIVE_TEAM_FAST_MS : LIVE_TEAM_IDLE_MS;
+    liveTeamTimer = setTimeout(() => { try { pollLiveTeam(); } catch (_) {} scheduleLiveTeam(); }, wait);
+  }
+  scheduleLiveTeam();
+  try { document.addEventListener('visibilitychange', scheduleLiveTeam); } catch (_) {}
 
   /* ═══════════════ HELPERS ═══════════════ */
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -1330,6 +1353,7 @@
     const venue = window.KiwiVenue?.getCurrentVenueData?.() || { name: 'Votre établissement', type: 'restaurant' };
     ensureVenueData(venue);
     pollLiveTeam();
+    scheduleLiveTeam();          // la page est à l'écran : on repasse à la seconde
     /* Re-render when the venue or language changes. */
     if (!unsubscribeVenue && window.KiwiVenue?.subscribe) {
       unsubscribeVenue = window.KiwiVenue.subscribe(() => {
@@ -1351,6 +1375,7 @@
   function showDashboard() {
     if (!pageActive) return;
     pageActive = false;
+    scheduleLiveTeam();          // plus personne ne regarde : on lève le pied
     pageMode = null;
     document.body.classList.remove('page-equipe');
     const bc = document.querySelector('.breadcrumb');
@@ -3207,6 +3232,7 @@
     const venueType = teamKey(venue);
     const members = getMembers(venueType);
     pageActive = true;
+    scheduleLiveTeam();          // la paie lit le pointage : cadence rapide
     pageMode = 'payroll';
     const managerCopy = trLang() === 'en'
       ? { title: 'Planning', sub: 'shifts, availability and coverage' }
