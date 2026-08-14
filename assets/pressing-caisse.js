@@ -263,7 +263,11 @@
     recu:  { label: 'Reçu',          dot: 'recu'  },
     trait: { label: 'En traitement', dot: 'trait' },
     pret:  { label: 'Prêt',          dot: 'pret'  },
-    livre: { label: 'Livré',         dot: 'livre' },
+    /* The persisted key stays `livre` for backwards compatibility, but at the
+       pressing counter this state means the garments were physically handed
+       back to the customer. "Remis" is accurate for a pickup and does not
+       pretend that Kiwi ran a home-delivery route. */
+    livre: { label: 'Remis',         dot: 'livre' },
   };
   const STATUS_FLOW = ['recu', 'trait', 'pret', 'livre'];
 
@@ -1887,7 +1891,7 @@
     const late = isLate(o);
     const st = orderStatus(o);
     const when = st === 'livre'
-      ? `retiré ${fmtDay(o.collectedAt || o.readyAt)}`
+      ? `remis ${fmtDay(o.collectedAt || o.readyAt)}`
       : `prêt ${fmtDT(o.readyAt)}`;
     return `<button class="px-ocard ${late ? 'is-late' : ''}" data-px-order="${o.id}">
       <span class="px-ocard-top"><span class="px-ocard-num">${o.id}</span>
@@ -1995,6 +1999,7 @@
         ${st === 'pret' ? `<button class="px-btn ${o.notified ? 'secondary' : 'primary'}" id="px-dt-wa"><i data-lucide="message-circle"></i>${o.notified ? 'Re-notifier' : 'WhatsApp « c’est prêt »'}</button>` : ''}
         ${st === 'pret' && o.draftOpenedAt && !o.notified ? '<button class="px-btn primary" id="px-dt-wa-confirm"><i data-lucide="check-check"></i>Confirmer l’envoi</button>' : ''}
         ${st === 'pret' && !o.rack ? '<button class="px-btn primary" id="px-dt-rack"><i data-lucide="archive"></i>Ranger</button>' : ''}
+        ${st === 'pret' ? `<button class="px-btn primary" id="px-dt-handover"><i data-lucide="check"></i>${due > 0 ? `Encaisser puis remettre · ${due} MAD` : 'Passer au retrait'}</button>` : ''}
         ${o.rack && !delivered ? '<button class="px-btn ghost" id="px-dt-unrack">Libérer le cintre</button>' : ''}
       </div>`;
     openVeil('#px-detail-veil');
@@ -2041,6 +2046,12 @@
       closeVeil('#px-detail-veil');
       state.rackSelect = o.id;
       switchView('rangement');
+    };
+    const handoverB = $('#px-dt-handover', el);
+    if (handoverB) handoverB.onclick = () => {
+      closeVeil('#px-detail-veil');
+      state.rtQuery = o.id;
+      switchView('retrait');
     };
     const unrackB = $('#px-dt-unrack', el);
     if (unrackB) unrackB.onclick = () => {
@@ -2165,18 +2176,21 @@
   function renderRetrait() {
     const panel = $('[data-px-panel="retrait"]', root);
     const q = state.rtQuery;
-    const hits = q ? ORDERS.filter((o) => orderStatus(o) !== 'livre' && matchesQuery(o, q)) : [];
+    const active = ORDERS.filter((o) => orderStatus(o) !== 'livre');
+    /* Retrait is an operational queue, not an empty search page. With no query
+       it shows every ready order; typing or scanning narrows the same truth. */
+    const hits = q ? active.filter((o) => matchesQuery(o, q)) : active.filter((o) => orderStatus(o) === 'pret');
     const prets = hits.filter((o) => orderStatus(o) === 'pret');
-    const others = hits.filter((o) => orderStatus(o) !== 'pret');
+    const others = q ? hits.filter((o) => orderStatus(o) !== 'pret') : [];
     panel.innerHTML = `
       <div class="px-retrait">
         <div class="px-rt-inner">
           <header class="px-head" style="padding:22px 0 0;">
-            <div><h1>Retrait</h1><div class="px-head-sub">Le client donne son téléphone, ou on scanne son ticket / une étiquette</div></div>
+            <div><h1>Retrait</h1><div class="px-head-sub">${prets.length} commande${prets.length > 1 ? 's' : ''} prête${prets.length > 1 ? 's' : ''} · recherchez, scannez, encaissez si nécessaire, puis confirmez la remise</div></div>
           </header>
           <div class="px-rt-search">
             <div class="px-phone-in"><i data-lucide="phone"></i>
-              <input id="px-rt-q" inputmode="tel" placeholder="06… ou nom du client" value="${esc(q)}" autocomplete="off" /></div>
+              <input id="px-rt-q" inputmode="tel" placeholder="Téléphone, nom ou n° de ticket" value="${esc(q)}" autocomplete="off" /></div>
           </div>
           <div class="px-rt-or">ou</div>
           <button class="px-rt-scan" id="px-rt-scan"><i data-lucide="scan-line"></i>Scanner ticket ou étiquette</button>
@@ -2190,6 +2204,7 @@
                 </div>
               </div>`).join('')}
             ${q && !hits.length ? `<div class="px-bempty">Rien pour « ${esc(q)} », vérifiez le numéro, ou cherchez au tableau.</div>` : ''}
+            ${!q && !prets.length ? '<div class="px-bempty">Aucune commande prête à remettre pour le moment.</div>' : ''}
           </div>
         </div>
       </div>`;
