@@ -200,13 +200,15 @@ body.is-pos-pressing .px-screen.is-entering { animation: px-dive 640ms cubic-bez
 .px-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-1); border-color: var(--mint-edge); }
 .px-card:active { transform: scale(0.96); }
 .px-card-art {
-  width: 58px; height: 58px;
+  width: 72px; height: 72px;
   display: flex; align-items: center; justify-content: center;
   border-radius: 14px;
-  background: var(--paper-soft);
+  overflow: hidden;
+  border: 1px solid var(--line-soft);
+  background: var(--paper-elev);
   color: var(--forest);
 }
-.px-card-art svg { width: 44px; height: 44px; }
+.px-card-art .px-product-photo { width: 100%; height: 100%; display: block; object-fit: contain; }
 .px-material-art { display: block; fill: currentColor; color: var(--forest); }
 .px-line-art .px-material-art,
 .px-sheet-art .px-material-art,
@@ -281,7 +283,8 @@ body.is-pos-pressing .px-screen.is-entering { animation: px-dive 640ms cubic-bez
   animation: px-card-in 280ms ease-out both;
 }
 .px-line-art { width: 34px; height: 34px; border-radius: 9px; background: var(--paper-soft); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.px-line-art svg { width: 26px; height: 26px; }
+.px-line-art { overflow: hidden; }
+.px-line-art .px-product-photo { width: 100%; height: 100%; display: block; object-fit: contain; }
 .px-line-mid { flex: 1; min-width: 0; }
 .px-line-name { font-size: 13px; font-weight: 600; letter-spacing: -0.005em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .px-line-sub { display: flex; align-items: center; gap: 6px; font-size: 10.5px; color: var(--ink-3); margin-top: 2px; }
@@ -328,7 +331,8 @@ body.is-pos-pressing .px-screen.is-entering { animation: px-dive 640ms cubic-bez
 .modal.px-sheet { width: 560px; padding: 24px 24px 20px; }
 .px-sheet-head { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
 .px-sheet-art { width: 62px; height: 62px; border-radius: 16px; background: var(--paper-soft); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.px-sheet-art svg { width: 46px; height: 46px; }
+.px-sheet-art { overflow: hidden; border: 1px solid var(--line-soft); }
+.px-sheet-art .px-product-photo { width: 100%; height: 100%; display: block; object-fit: contain; }
 .px-sheet-title { flex: 1; min-width: 0; }
 .px-sheet-title h3 { margin: 0; font-size: 19px; font-weight: 700; letter-spacing: -0.015em; }
 .px-sheet-title .sub { font-size: 11.5px; color: var(--ink-3); margin-top: 2px; }
@@ -469,7 +473,7 @@ body.is-pos-pressing .px-screen.is-entering { animation: px-dive 640ms cubic-bez
 /* photo capture mock */
 .modal.px-photo { width: 420px; padding: 0; overflow: hidden; background: var(--ink-bg); }
 .px-vf { position: relative; height: 320px; display: flex; align-items: center; justify-content: center; }
-.px-vf svg.art { width: 130px; height: 130px; opacity: 0.5; }
+.px-vf img.art { width: 180px; height: 180px; object-fit: contain; opacity: 0.42; }
 .px-vf .px-art { stroke: var(--mint); }
 .px-vf-corner { position: absolute; width: 26px; height: 26px; border: 2.5px solid rgba(255,255,255,0.5); }
 .px-vf-corner.tl { top: 18px; left: 18px; border-right: 0; border-bottom: 0; border-radius: 6px 0 0 0; }
@@ -752,7 +756,9 @@ body.is-pos-pressing .px-screen.is-entering { animation: px-dive 640ms cubic-bez
   padding: 9px 11px;
 }
 .px-piece-art { width: 34px; height: 34px; border-radius: 9px; background: var(--paper-soft); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.px-piece-art svg { width: 25px; height: 25px; }
+.px-piece-art { overflow: hidden; }
+.px-piece-art .px-product-photo { width: 100%; height: 100%; display: block; object-fit: contain; }
+.px-wa-photo .th .px-product-photo, .px-photo-thumb .px-product-photo { width: 100%; height: 100%; display: block; object-fit: contain; }
 .px-piece-mid { flex: 1; min-width: 0; }
 .px-piece-name { font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 7px; }
 .px-piece-name .dot { width: 9px; height: 9px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.12); flex-shrink: 0; }

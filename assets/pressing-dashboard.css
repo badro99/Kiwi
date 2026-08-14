@@ -54,12 +54,9 @@
 .pxd-order-main b { color: var(--ink); font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
 .pxd-order-main span { color: var(--n-500); font-size: 11px; }
 .pxd-garments { display: flex; align-items: center; min-width: 72px; }
-.pxd-garment { width: 32px; height: 32px; display: grid; place-items: center; margin-left: -7px; border: 2px solid var(--surface); border-radius: 10px; background: var(--paper-soft); color: var(--atlas); }
+.pxd-garment { width: 36px; height: 36px; display: grid; place-items: center; overflow: hidden; margin-left: -7px; border: 2px solid var(--surface); border-radius: 10px; background: var(--surface); color: var(--atlas); }
 .pxd-garment:first-child { margin-left: 0; }
-.pxd-garment svg { width: 22px; height: 22px; }
-.pxd-garment .px-art { fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
-.pxd-garment .px-art .fill { fill: color-mix(in srgb,var(--atlas) 10%,var(--surface)); stroke: none; }
-.pxd-garment .px-art .thin { stroke-width: 1.6; opacity: .76; }
+.pxd-garment .px-product-photo { width: 100%; height: 100%; display: block; object-fit: contain; }
 .pxd-garment-more { min-width: 24px; height: 24px; display: grid; place-items: center; margin-left: -5px; border: 2px solid var(--surface); border-radius: 999px; background: var(--brand-deep); color: var(--inverse-ink); font-size: 9px; }
 .pxd-status { padding: 5px 9px; border-radius: 999px; color: var(--atlas); background: color-mix(in srgb, var(--atlas) 9%, var(--surface)); font-size: 10px; font-weight: 700; white-space: nowrap; }
 .pxd-status.ready { color: var(--brand-deep); background: color-mix(in srgb, var(--mint) 24%, var(--surface)); }

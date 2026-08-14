@@ -84,7 +84,7 @@
     if (!shared || !shared.render || !pieces.length) return '<span class="pxd-garments is-empty" aria-hidden="true"></span>';
     var labels = pieces.map(function (p) { return p.label || p.itemId || 'Article'; });
     var icons = pieces.slice(0,3).map(function (p) {
-      return '<span class="pxd-garment">' + shared.render({ id:p.itemId, art:p.art, label:p.label, cat:p.cat }, 'pxd-garment-art') + '</span>';
+      return '<span class="pxd-garment">' + shared.render({ id:p.itemId, art:p.art, label:p.label, cat:p.cat, variantId:p.variantId }, 'pxd-garment-art') + '</span>';
     }).join('');
     if (pieces.length > 3) icons += '<b class="pxd-garment-more">+' + (pieces.length-3) + '</b>';
     return '<span class="pxd-garments" aria-label="Articles : ' + esc(labels.join(', ')) + '">' + icons + '</span>';

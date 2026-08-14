@@ -1,4 +1,4 @@
-/* Kiwi · shared pressing garment silhouettes
+/* Kiwi · shared pressing product photography
  * One semantic product-art system for the owner dashboard and every paired till.
  */
 (function () {
@@ -32,6 +32,20 @@
     babouches: art(`<path class="fill" d="M10 40c0-3 3-4.6 8-5.4l22-3.6c8-1.3 14 1.6 14 5.5 0 3.6-4 5.5-10 5.5H14c-2.6 0-4-.8-4-2z"/><path d="M10 40c0-3 3-4.6 8-5.4l22-3.6c8-1.3 14 1.6 14 5.5 0 3.6-4 5.5-10 5.5H14c-2.6 0-4-.8-4-2z"/><path class="thin" d="M26 34.5c4 1.5 6 4 6 7.5"/><path class="thin" d="M40 32.6c-1 4.4-1 6.6 0 9.4"/>`),
   };
 
+  /* Real catalogue photography replaces the old line-art at every shared
+   * render site (catalogue, till, ticket, detail and owner dashboard). Variant
+   * assets keep suits and carpets visually truthful without changing the
+   * catalogue document or any historical ticket. */
+  var PHOTO = {
+    chemise:'chemise', tshirt:'tshirt', pull:'pull', veste:'veste',
+    costume:'costume-2p', manteau:'manteau', pantalon:'pantalon', jean:'jean',
+    jupe:'jupe', short:'short', robe:'robe', robe_soiree:'robe-soiree',
+    caftan:'caftan', drap:'drap', housse:'housse', couverture:'couverture',
+    nappe:'nappe', rideaux:'rideaux', tapis:'tapis-s', veste_cuir:'veste-cuir',
+    daim:'daim', doudoune:'doudoune', chaussures:'chaussures', baskets:'baskets',
+    babouches:'babouches'
+  };
+
   function resolve(item) {
     item = item || {};
     if (ART[item.id]) return item.id;
@@ -51,8 +65,13 @@
     return { bas:'pantalon', robes:'robe', linge:'drap', cuir:'veste_cuir', chaussures:'chaussures' }[item.cat] || 'chemise';
   }
   function render(item, cls) {
-    var svg = ART[resolve(item)] || ART.chemise;
-    return cls ? svg.replace('class="px-art"', 'class="px-art ' + cls + '"') : svg;
+    item = item || {};
+    var id = resolve(item);
+    var photo = PHOTO[id] || PHOTO.chemise;
+    if (id === 'costume' && item.variantId === '3p') photo = 'costume-3p';
+    if (id === 'tapis' && ['s','m','l'].indexOf(item.variantId) >= 0) photo = 'tapis-' + item.variantId;
+    var classes = 'px-product-photo' + (cls ? ' ' + String(cls).replace(/[^a-z0-9_-]+/gi, ' ') : '');
+    return '<img class="' + classes + '" src="assets/pressing-products/' + photo + '.png" alt="" aria-hidden="true" loading="lazy" decoding="async">';
   }
   window.KiwiPressingGarmentIcons = Object.freeze({
     render: render,

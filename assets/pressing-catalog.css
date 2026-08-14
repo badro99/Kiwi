@@ -30,13 +30,10 @@
 .pce-item { min-width: 0; padding: 0; overflow: hidden; border: 1px solid var(--n-200); border-radius: 15px; background: var(--surface); box-shadow: var(--elev-1); }
 .pce-item.is-open { grid-column: 1/-1; border-color: color-mix(in srgb,var(--atlas) 38%,var(--n-200)); }
 .pce-item.is-hidden { background: var(--paper-soft); }
-.pce-summary { width: 100%; min-height: 74px; display: grid; grid-template-columns: 42px minmax(120px,1fr) auto auto 22px; align-items: center; gap: 11px; padding: 10px 13px; border: 0; background: transparent; color: var(--ink); text-align: left; cursor: pointer; }
+.pce-summary { width: 100%; min-height: 82px; display: grid; grid-template-columns: 56px minmax(120px,1fr) auto auto 22px; align-items: center; gap: 11px; padding: 10px 13px; border: 0; background: transparent; color: var(--ink); text-align: left; cursor: pointer; }
 .pce-summary:hover { background: color-mix(in srgb,var(--atlas) 4%,transparent); }
-.pce-item-icon { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 11px; background: color-mix(in srgb,var(--atlas) 8%,var(--surface)); color: var(--atlas); }
-.pce-item-icon svg { width: 23px; height: 23px; }
-.pce-item-icon .px-art { fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
-.pce-item-icon .px-art .fill { fill: color-mix(in srgb,var(--atlas) 12%,var(--surface)); stroke: none; }
-.pce-item-icon .px-art .thin { stroke-width: 1.6; opacity: .76; }
+.pce-item-photo { width: 54px; height: 54px; display: grid; place-items: center; overflow: hidden; border: 1px solid var(--n-200); border-radius: 12px; background: var(--surface); }
+.pce-item-photo .px-product-photo { width: 100%; height: 100%; display: block; object-fit: contain; }
 .pce-summary-copy, .pce-summary-price { min-width: 0; display: grid; gap: 3px; }
 .pce-summary-copy b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
 .pce-summary-copy small, .pce-summary-price small { color: var(--n-500); font-size: 9.5px; }
@@ -78,7 +75,8 @@
   .pce-toolbar { align-items: stretch; flex-direction: column; }
   .pce-toolbar .pxd-btn { width: 100%; }
   .pce-item-main, .pce-prices { grid-template-columns: 1fr 1fr; }
-  .pce-summary { grid-template-columns: 38px minmax(100px,1fr) auto 20px; gap: 9px; padding: 9px 10px; }
+  .pce-summary { grid-template-columns: 48px minmax(100px,1fr) auto 20px; gap: 9px; padding: 9px 10px; }
+  .pce-item-photo { width: 46px; height: 46px; }
   .pce-summary-price { min-width: 74px; }
   .pce-status { display: none; }
   .pce-resultbar { align-items: flex-start; }

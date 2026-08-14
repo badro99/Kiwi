@@ -47,8 +47,7 @@
   const garmentIcon = (item, cls) => {
     const shared = window.KiwiPressingGarmentIcons;
     if (shared && shared.render) return shared.render(item, cls);
-    const garment = ART[(item && (item.art || item.id)) || 'chemise'] || ART.chemise;
-    return cls ? garment.replace('class="px-art"', `class="px-art ${cls}"`) : garment;
+    return `<img class="px-product-photo${cls ? ` ${cls}` : ''}" src="assets/pressing-products/chemise.png" alt="" aria-hidden="true">`;
   };
   const DAYS    = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
   const MONTHS  = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
@@ -266,7 +265,7 @@
           pieces.push({
             pid: `${orderId}-${n}`, n, lineIdx: li,
             label: plabel ? `${ln.label || item.label} · ${plabel}` : (ln.label || item.label),
-            itemId: ln.itemId, svcs: ln.services, color: ln.color,
+            itemId: ln.itemId, variantId: ln.variantId || null, svcs: ln.services, color: ln.color,
             notes: (ln.notes || []).slice(), freeNote: ln.freeNote || '',
             status: (statuses && statuses[n - 1]) || 'recu',
             photos: ln.photos || 0,
@@ -959,7 +958,7 @@
     const variant = item.variants ? (item.variants.find((v) => v.id === ln.variantId) || item.variants[0]) : null;
     const notesCt = ln.notes.length + (ln.freeNote ? 1 : 0);
     return `<div class="px-line">
-        <span class="px-line-art">${garmentIcon(item)}</span>
+        <span class="px-line-art">${garmentIcon({ ...item, variantId: ln.variantId })}</span>
       <span class="px-line-mid">
         <span class="px-line-name">${esc(ln.label || item.label)}${variant ? ` · ${esc(variant.label)}` : ''}</span>
         <span class="px-line-sub">
@@ -1016,7 +1015,7 @@
     el.innerHTML = `
       <button class="px-modal-x" data-px-close aria-label="Fermer"><i data-lucide="x"></i></button>
       <div class="px-sheet-head">
-        <span class="px-sheet-art">${garmentIcon(item)}</span>
+        <span class="px-sheet-art">${garmentIcon({ ...item, variantId: sheet.variantId })}</span>
         <span class="px-sheet-title"><h3>${esc(item.label)}</h3><span class="sub">${esc(CATALOG.find((c) => c.id === item.cat).label)}${item.sub ? ` · ${esc(item.sub)}` : ''}</span></span>
         <span class="px-sheet-price"><span class="val" id="px-sheet-total">${fmtMAD(unit * sheet.qty)}</span><span class="per">${unit} MAD × ${sheet.qty}</span></span>
       </div>
@@ -1162,7 +1161,7 @@
     el.innerHTML = `
       <div class="px-vf">
         <div class="px-vf-hint">Cadrez la zone (tache, accroc, bouton)…</div>
-        ${garmentIcon(item,'art')}
+        ${garmentIcon({ ...item, variantId: sheet.variantId },'art')}
         <span class="px-vf-corner tl"></span><span class="px-vf-corner tr"></span>
         <span class="px-vf-corner bl"></span><span class="px-vf-corner br"></span>
         <div class="px-vf-flash" id="px-vf-flash"></div>
@@ -1954,7 +1953,7 @@
           const care = [...(p.notes || []), p.freeNote].filter(Boolean);
           return `
           <div class="px-piece">
-            <span class="px-piece-art">${garmentIcon(ITEMS[p.itemId] || {})}</span>
+            <span class="px-piece-art">${garmentIcon({ ...(ITEMS[p.itemId] || {}), variantId: p.variantId })}</span>
             <span class="px-piece-mid">
               <span class="px-piece-name"><i class="dot" style="background:${COLOR[p.color] ? COLOR[p.color].hex : '#ccc'}"></i>${esc(p.label)} · ${esc((COLOR[p.color] || {}).label || 'Couleur non précisée')} · <span style="font-family:var(--mono);font-size:11px;">${svcCodes(p.svcs)}</span></span>
               <span class="px-piece-id">${p.pid}${p.photos ? `<span class="ph"><i data-lucide="camera"></i>${p.photos} photo${p.photos > 1 ? 's' : ''}</span>` : ''}</span>
@@ -2087,7 +2086,7 @@
         </div>
       </div>
       <button class="px-wa-photo" id="px-wa-photo">
-        <span class="th">${garmentIcon(ITEMS[photoPiece.itemId] || {})}</span>
+        <span class="th">${garmentIcon({ ...(ITEMS[photoPiece.itemId] || {}), variantId: photoPiece.variantId })}</span>
         <span class="l">Joindre une photo du vêtement fini, le client voit son linge avant de se déplacer</span>
         <span class="tick"><i data-lucide="check"></i></span>
       </button>
