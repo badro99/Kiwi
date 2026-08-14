@@ -1,5 +1,6 @@
 // Public Kiwi booking surface. It exposes availability, never another client's details.
 import { json, limitCheck, limitFail, limitClear } from '../auth/_lib.js';
+import { storeSubscriptionPending } from './_private.js';
 import { poke } from './_live.js';
 
 const ACTIVE = new Set(['requested', 'confirmed', 'checked_in']);
@@ -158,6 +159,7 @@ export async function onRequestPost({ request, env }) {
   const merchant=str(b?.merchant,64).toLowerCase(), ref=str(b?.ref,80), sid=str(b?.serviceId,64), asked=str(b?.resourceId,64), startAt=+b?.startAt||0;
   const name=str(b?.customer?.name,100), rawPhone=str(b?.customer?.phone,32), phone=normalizePhone(rawPhone), email=str(b?.customer?.email,160), partySize=num(b?.partySize,1,999,1);
   if(!ID.test(merchant)||!REF.test(ref)||!name||(!rawPhone&&!email)||rawPhone&&!phone||!sid||!startAt){await limitFail(request,env,'booking');return json({error:'invalid'},400);}
+  if(await storeSubscriptionPending(env,merchant))return json({error:'subscription-required'},402);
   for(let attempt=0;attempt<4;attempt++){
     let rows;try{rows=await readRows(env,merchant);}catch(_){return json({error:'unavailable'},503);}
     const doc=safeDoc(rows.reservation?.data), rev=+rows.reservation?.rev||0;

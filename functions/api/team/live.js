@@ -4,6 +4,7 @@
 // consume the resulting attendance/messages through /api/employee.
 
 import { json, entitledMerchant } from '../../auth/_lib.js';
+import { storeSubscriptionPending } from '../_private.js';
 
 const TEAM = 'team';
 const ACCESS = 'employee-access';
@@ -140,6 +141,7 @@ export async function onRequestPost({ request, env }) {
   const asked = String(body.merchant || '').trim().toLowerCase().slice(0, 64);
   const merchant = await entitledMerchant(request, env, asked, { allowTill: true });
   if (!merchant) return json({ error: 'forbidden-merchant' }, 403);
+  if (await storeSubscriptionPending(env, merchant)) return json({ error: 'subscription-required' }, 402);
   const action = String(body.action || '');
   const targetId = String(body.memberId || '').trim().slice(0, 96);
 

@@ -174,7 +174,10 @@ CREATE TABLE IF NOT EXISTS merchant_config (
                                      -- decides which module set the operator console shows
   account_id TEXT,                   -- accounts.id of the owner ("acc-<uuid>"); NULL = unclaimed
   name       TEXT,                   -- the store's own name ("Café Nord")
-  -- active | suspended, PER STORE. accounts.status freezes a whole LOGIN, which
+  -- active | pending | suspended, PER STORE. `pending` is a fully onboarded
+  -- establishment that may explore Kiwi but has not yet been accepted as a
+  -- subscriber by God Mode. Existing/legacy NULL rows remain active.
+  -- accounts.status freezes a whole LOGIN, which
   -- is the wrong instrument for a client who runs a boutique and a café and has
   -- stopped paying for one of them: freezing the login takes down the shop that
   -- is paid up too. A suspended store keeps every byte it owns — this only cuts

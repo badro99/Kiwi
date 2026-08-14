@@ -69,6 +69,7 @@
    * whose code was filed under their first shop could no longer open the
    * dashboard from their second, while that second shop's cashier could. */
   var cfg = { features: {}, pins: [], seenPins: [], type: '', plan: '', loaded: false,
+    subscription: { state: 'unknown', active: true },
     accountPinsReady: false,
     apply: applyFeatures, syncPins: syncPins, syncType: syncType,
     newStore: registerNewStore, off: featureOff,
@@ -454,6 +455,9 @@
         cfg.plan = /^(basic|pro|ultra|ultimate)$/.test(String(data.plan || '').toLowerCase())
           ? String(data.plan).toLowerCase()
           : '';
+        cfg.subscription = (data.subscription && typeof data.subscription === 'object')
+          ? { state: String(data.subscription.state || 'active'), active: data.subscription.active !== false }
+          : { state: 'active', active: true };
         cfg.loaded = true;
         applyFeatures();
         // Make the server-stored business type authoritative for the dashboard's

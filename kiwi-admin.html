@@ -248,6 +248,8 @@ em, i, cite, dfn, var { font-style: normal; }
     letter-spacing:0; color:var(--muted)}
   .biz-row .inp{width:170px}
   .biz-row .inp.n{width:120px}
+  .subscription-console{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:18px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(120deg,rgba(11,110,79,.08),transparent)}
+  .subscription-console strong{display:block;font-size:1rem}.subscription-console p{margin:5px 0 0;color:var(--muted);font-size:.84rem;line-height:1.45}.subscription-console .active{color:var(--ok)}.subscription-console .pending{color:var(--warn)}
   @media (max-width:880px){
     .ov-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
     .ov-split{grid-template-columns:1fr; gap:24px}
@@ -609,6 +611,13 @@ em, i, cite, dfn, var { font-style: normal; }
             <div id="type-row"></div>
             <div id="feat-list"></div>
             <p class="hint">Les modules affichés dépendent du type d’activité du client. Désactiver un module le masque partout dans son app — barre latérale, accueil, recherche, mobile, caisse et Kiwi AI — au prochain chargement. <b>Aucune donnée n’est effacée&nbsp;:</b> un module rallumé retrouve son contenu. Réservé à l’opérateur, lié à l’offre.</p>
+          </div>
+        </div>
+
+        <div class="blk">
+          <div class="subscription-console">
+            <div><strong id="subscription-title">Abonnement</strong><p id="subscription-copy"></p></div>
+            <button class="mini" id="subscription-action" type="button"></button>
           </div>
         </div>
 
@@ -1457,6 +1466,10 @@ em, i, cite, dfn, var { font-style: normal; }
     window.open('/dashboard.html?op=1&merchant=' + encodeURIComponent(merchant), '_blank');
   }
 
+  function openPrivateDashboard(merchant){
+    window.open('/dashboard.html?op=1&privacy=1&merchant=' + encodeURIComponent(merchant), '_blank');
+  }
+
   /* God-mode till access is a one-shot, store-scoped hand-off. The caisse still
      verifies the live named-operator cookie with /api/me before skipping the
      employee PIN; copying this localStorage record alone grants nothing. */
@@ -1568,6 +1581,7 @@ em, i, cite, dfn, var { font-style: normal; }
        affichait celle du compte et proposait un bouton qui, lui, gelait tout :
        le geste ne correspondait pas à l'endroit où on le posait. */
     var storeOff = c.store_status === 'suspended';
+    var subscriptionPending = c.store_status === 'pending' || c.subscription === 'pending';
     var accountOff = c.status === 'suspended';
     var suspended = storeOff || accountOff;
     // Actions. Suspend/Réactiver only shows for real accounts — a demo has no
@@ -1575,6 +1589,7 @@ em, i, cite, dfn, var { font-style: normal; }
     var open = !!(selected && selected.merchant === c.merchant);
     var actions = [
       h('button', { class:'mini', onClick:function(e){ e.stopPropagation(); openDashboard(c.merchant); } }, 'Ouvrir dashboard'),
+      h('button', { class:'mini', title:'Chiffres masqués, aucune écriture', onClick:function(e){ e.stopPropagation(); openPrivateDashboard(c.merchant); } }, 'Vue confidentielle'),
       h('button', { class:'mini', onClick:function(e){ e.stopPropagation(); openCaisse(c); } }, 'Accéder caisse'),
       // Le même bouton ouvre et referme, et il le dit. Un « Gérer » qui ne fait
       // rien parce que la boutique est déjà ouverte laisse croire à une panne.
@@ -1588,6 +1603,8 @@ em, i, cite, dfn, var { font-style: normal; }
       title: accountOff ? 'Le compte entier est suspendu — réactivez-le d’abord.' : '',
       onClick:function(e){ e.stopPropagation(); toggleStoreSuspend(c); } },
       storeOff ? 'Rouvrir' : 'Fermer'));
+    if (subscriptionPending) actions.push(h('button', { class:'mini', disabled:SENIOR === false,
+      onClick:function(e){ e.stopPropagation(); activateSubscription(c); } }, 'Activer abonnement'));
     /* La suppression d'un établissement existe désormais, et seulement celle-là :
        son périmètre est exactement ce que porte son slug, donc il se borne. Elle
        est irréversible, gardée par le code opérateur nommé, et demande de
@@ -1601,6 +1618,7 @@ em, i, cite, dfn, var { font-style: normal; }
     var tr = h('tr', { class: cls },
       h('td', null, h('div', { style:'font-weight:600' }, c.business || c.merchant,
                       storeOff ? h('span', { class:'sus-badge' }, 'fermé') : null,
+                      subscriptionPending ? h('span', { class:'sus-badge' }, 'abonnement à valider') : null,
                       (accountOff && !inGroup) ? h('span', { class:'sus-badge' }, 'compte suspendu') : null),
                     /* Le métier, et la ville quand elle est renseignée. La ville
                        est ce sur quoi on cherche le plus souvent après le nom —
@@ -1644,6 +1662,40 @@ em, i, cite, dfn, var { font-style: normal; }
         ? 'La base n’a pas encore la colonne `status` sur merchant_config — migration à passer.'
         : 'Échec : ' + err);
     }
+  }
+
+  async function activateSubscription(c){
+    try {
+      await store.setStoreStatus(c.merchant, 'active');
+      c.store_status = 'active'; c.subscription = 'active';
+      if (selected && selected.merchant === c.merchant) selected = c;
+      renderSubscription(); await renderClients();
+      notify('Abonnement activé pour cet établissement. Les actions sont maintenant ouvertes.');
+    } catch(e){ notify('Échec : ' + ((e && e.body && e.body.error) || (e && e.message) || 'erreur')); }
+  }
+
+  async function pauseSubscription(c){
+    try {
+      await store.setStoreStatus(c.merchant, 'pending');
+      c.store_status = 'pending'; c.subscription = 'pending';
+      if (selected && selected.merchant === c.merchant) selected = c;
+      renderSubscription(); await renderClients();
+      notify('Abonnement remis en attente. Le client peut explorer sans agir.');
+    } catch(e){ notify('Échec : ' + ((e && e.body && e.body.error) || (e && e.message) || 'erreur')); }
+  }
+
+  function renderSubscription(){
+    var title=document.getElementById('subscription-title'), copy=document.getElementById('subscription-copy'), btn=document.getElementById('subscription-action');
+    if(!title||!copy||!btn||!selected)return;
+    var pending=selected.store_status==='pending'||selected.subscription==='pending';
+    title.className=pending?'pending':'active';
+    title.textContent=pending?'Abonnement en attente':'Abonnement actif';
+    copy.textContent=pending
+      ? 'Onboarding terminé. Le client peut explorer ; ajouts, exports et écritures restent verrouillés.'
+      : 'Cet établissement peut utiliser ses fonctionnalités et enregistrer des opérations.';
+    btn.disabled=SENIOR===false;
+    btn.textContent=pending?'Activer cet établissement':'Remettre en attente';
+    btn.onclick=function(){ pending?activateSubscription(selected):pauseSubscription(selected); };
   }
 
   /* Supprimer un établissement. Irréversible, donc on montre d'abord ce qui va
@@ -1980,6 +2032,7 @@ em, i, cite, dfn, var { font-style: normal; }
     document.getElementById('manage').hidden = false;
     renderStoreSwitch(c);
     renderClients();
+    renderSubscription();
     await Promise.all([renderPins(), renderAttendanceLink(), renderFeatures(), renderBiz(), renderHealth(), renderAudit(), renderTestSales(), renderAccount()]);
     renderDanger();
     document.getElementById('manage').scrollIntoView({ behavior:'smooth', block:'nearest' });

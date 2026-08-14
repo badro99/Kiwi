@@ -8,7 +8,7 @@
 // binding is missing the endpoint fails soft (503) so the app never breaks.
 
 import { entitledMerchant, activeServiceEmployee } from '../auth/_lib.js';
-import { storeSuspended } from './_private.js';
+import { storeSuspended, storeSubscriptionPending } from './_private.js';
 import { startOfDay } from './order/_lib.js';
 import { settleServiceTable } from './service/events.js';
 import { poke } from './_live.js';
@@ -109,6 +109,9 @@ export async function onRequestPost({ request, env }) {
    * boutique rouvre avec sa journée à la réactivation. */
   if (await storeSuspended(env, merchant)) {
     return json({ error: 'store-suspended', merchant }, 423);
+  }
+  if (await storeSubscriptionPending(env, merchant)) {
+    return json({ error: 'subscription-required', merchant }, 402);
   }
   const method = String((b && b.method) || 'cash').slice(0, 16);
   const label = String((b && b.label) || 'Vente').slice(0, 80);

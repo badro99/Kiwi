@@ -27,7 +27,7 @@
 //     (GitHub Pages, local) are unaffected.
 
 import { json, readSession, readCookie, SESS_COOKIE, slugMerchant } from '../auth/_lib.js';
-import { storeSuspended } from './_private.js';
+import { storeSuspended, storeSubscriptionPending } from './_private.js';
 
 const str = (v, n) => String(v == null ? '' : v).slice(0, n);
 const OPTION_EMOJIS = new Set([
@@ -388,6 +388,9 @@ export async function onRequestPost(context) {
   // et rabattu sur le slug du compte si la base ne confirme pas la propriété.
   const merchant = await resolveMerchant(env, sess.aid, accSlug, body && body.merchant, true);
   if (!merchant) return json({ error: 'merchant-unknown' }, 404);
+  if (await storeSubscriptionPending(env, merchant)) {
+    return json({ error: 'subscription-required', merchant }, 402);
+  }
 
   // The display name defaults to the account's own business; a client may send a
   // trimmed override but never another merchant's identity (slug is session-bound).

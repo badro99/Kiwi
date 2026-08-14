@@ -30,6 +30,7 @@
 // l'identifiant — ni les commandes, ni les totaux, ni les autres tables.
 
 import { json } from '../../auth/_lib.js';
+import { storeSubscriptionPending } from '../_private.js';
 import {
   orderProEnabled, normTable, newSessionId, SESSION_ID, deskOpen,
 } from './_lib.js';
@@ -55,6 +56,7 @@ export async function onRequestPost(context) {
 
   const merchant = slug(b && b.merchant);
   if (!merchant) return json({ error: 'merchant-required' }, 400);
+  if (await storeSubscriptionPending(env, merchant)) return json({ error: 'subscription-required' }, 402);
   if (!(await orderProEnabled(env, merchant))) return json({ error: 'orderpro-off' }, 403);
 
   /* Service buttons reuse the opaque table session already held by this

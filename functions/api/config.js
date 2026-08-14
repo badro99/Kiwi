@@ -89,16 +89,31 @@ async function storeOwner(env, slug) {
 async function claimStore(env, merchant, accountId, name, seed) {
   try {
     await env.DB.prepare(
-      `INSERT INTO merchant_config (merchant, features, plan, type, account_id, name, updated_ts)
-       VALUES (?, ?, NULL, NULL, ?, ?, ?)
+      `INSERT INTO merchant_config (merchant, features, plan, type, account_id, name, status, updated_ts)
+       VALUES (?, ?, NULL, NULL, ?, ?, ?, ?)
        ON CONFLICT(merchant) DO UPDATE SET
          account_id = COALESCE(merchant_config.account_id, excluded.account_id),
          name       = COALESCE(NULLIF(excluded.name, ''), merchant_config.name),
          updated_ts = excluded.updated_ts`
     ).bind(merchant, seed ? JSON.stringify(NEW_STORE_FEATURES) : '{}',
-           accountId, String(name || ''), Date.now()).run();
+           accountId, String(name || ''), seed ? 'pending' : null, Date.now()).run();
     return true;
-  } catch (_) { return false; }
+  } catch (_) {
+    /* Pre-status databases keep working. They cannot enforce the subscription
+       boundary until the migration lands, but account creation must not fail. */
+    try {
+      await env.DB.prepare(
+        `INSERT INTO merchant_config (merchant, features, plan, type, account_id, name, updated_ts)
+         VALUES (?, ?, NULL, NULL, ?, ?, ?)
+         ON CONFLICT(merchant) DO UPDATE SET
+           account_id = COALESCE(merchant_config.account_id, excluded.account_id),
+           name       = COALESCE(NULLIF(excluded.name, ''), merchant_config.name),
+           updated_ts = excluded.updated_ts`
+      ).bind(merchant, seed ? JSON.stringify(NEW_STORE_FEATURES) : '{}',
+             accountId, String(name || ''), Date.now()).run();
+      return true;
+    } catch (__) { return false; }
+  }
 }
 
 /* Rattrapage de la course décrite plus haut : la fiche existait déjà, mais
@@ -226,6 +241,7 @@ export async function onRequestGet(context) {
    * laisser deviner à partir d'une suite de refus. Un écran qui explique vaut
    * mieux qu'un écran qui bugue. */
   let suspended = false;
+  let subscription = 'active';
   try {
     let cfg;
     try {
@@ -249,6 +265,7 @@ export async function onRequestGet(context) {
         : 'basic';
     }
     if (cfg && String(cfg.status || '') === 'suspended') suspended = true;
+    if (cfg && String(cfg.status || '') === 'pending') subscription = 'pending';
 
     if (mayReadPins) {
       const rows = await env.DB.prepare(
@@ -267,7 +284,8 @@ export async function onRequestGet(context) {
     }
   } catch (_) { /* table missing / db error → neutral config */ }
 
-  return json({ features, pins, pinGateConfigured, type, plan, suspended });
+  return json({ features, pins, pinGateConfigured, type, plan, suspended,
+    subscription: { state: subscription, active: subscription === 'active' } });
 }
 
 // POST /api/config — a merchant syncs ONE OF ITS STORES up to the server so the

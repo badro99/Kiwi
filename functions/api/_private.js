@@ -154,12 +154,26 @@ export async function storeSuspended(env, slug) {
   } catch (_) { return false; }
 }
 
+/* New stores finish onboarding before a human accepts their subscription.
+ * They may read every screen, but no operational write may cross this boundary.
+ * NULL and a missing column mean active so no existing client is retroactively
+ * locked by a deployment. */
+export async function storeSubscriptionPending(env, slug) {
+  slug = String(slug == null ? '' : slug).trim();
+  if (!slug || !env || !env.DB) return false;
+  try {
+    const r = await env.DB.prepare('SELECT status FROM merchant_config WHERE merchant = ?')
+      .bind(slug).first();
+    return !!(r && String(r.status || '') === 'pending');
+  } catch (_) { return false; }
+}
+
 export async function tenantFor(request, env, asked, opts) {
   /* `strict` — pour les ÉCRITURES. Deux règles s'y ajoutent, et aucune des deux
    * ne doit gêner une lecture :
    *   · un slug inconnu ne se rabat plus sur le magasin du compte (voir le
    *     repli en bas de resolveTenant) ;
-   *   · un magasin SUSPENDU n'écrit plus. Sa lecture reste ouverte — le patron
+   *   · un magasin SUSPENDU ou EN ATTENTE n'écrit plus. Sa lecture reste ouverte — le patron
    *     doit pouvoir consulter son historique et voir ce qu'il retrouvera en
    *     payant ; couper la lecture ferait passer une suspension pour une
    *     suppression.
@@ -167,7 +181,7 @@ export async function tenantFor(request, env, asked, opts) {
    * demandé : c'est le seul point par lequel toutes les branches repassent. */
   const strict = !!(opts && opts.strict);
   const who = await resolveTenant(request, env, asked, strict);
-  if (strict && who && await storeSuspended(env, who)) return '';
+  if (strict && who && (await storeSuspended(env, who) || await storeSubscriptionPending(env, who))) return '';
   return who;
 }
 

@@ -40,6 +40,7 @@
 //    rejoue la même commande au lieu d'en fabriquer une seconde.
 
 import { json } from '../../auth/_lib.js';
+import { storeSubscriptionPending } from '../_private.js';
 import {
   startOfDay, startOfWeek, orderProEnabled, normTable, priceOrder, deskOpen, SESSION_ID,
 } from './_lib.js';
@@ -59,6 +60,7 @@ export async function onRequestPost(context) {
 
   const merchant = String((b && b.merchant) || '').trim().toLowerCase().slice(0, 64);
   if (!merchant) return json({ error: 'merchant-required' }, 400);
+  if (await storeSubscriptionPending(env, merchant)) return json({ error: 'subscription-required' }, 402);
   if (!(await orderProEnabled(env, merchant))) return json({ error: 'orderpro-off' }, 403);
 
   /* Verrou d'ouverture. Il s'applique aussi à kiwi-order.html (le QR), qui ne

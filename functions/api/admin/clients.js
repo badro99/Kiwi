@@ -54,7 +54,7 @@ export async function onRequestGet(context) {
              * boutique-là (merchant_config.status). Les deux existent parce que
              * les deux gestes existent : couper l'accès d'un client, ou fermer
              * l'un de ses établissements en laissant l'autre ouvert. */
-            store_status: 'active',
+            store_status: 'active', subscription: 'active',
             owner: '', owner_name: '', owner_business: '', primary: false };
       map.set(m, r);
     }
@@ -105,6 +105,7 @@ export async function onRequestGet(context) {
       r.type = c.type || '';
       r.city = c.city || '';
       if (c.status === 'suspended') r.store_status = 'suspended';
+      if (c.status === 'pending') { r.store_status = 'pending'; r.subscription = 'pending'; }
       if (c.name) r.business = c.name;              // the store's own name
       if (c.account_id) ownerOf.set(c.merchant, c.account_id);
     }
@@ -172,7 +173,7 @@ export async function onRequestPatch(context) {
     merchant = (b.merchant || '').toString().trim().slice(0, 64);
     status = (b.status || '').toString().trim();
   } catch (_) { /* no body */ }
-  if (status !== 'active' && status !== 'suspended') return json({ error: 'bad-status' }, 400);
+  if (!['active', 'pending', 'suspended'].includes(status)) return json({ error: 'bad-status' }, 400);
 
   /* ── UN ÉTABLISSEMENT, ou TOUT LE COMPTE ──────────────────────────────────
    * `merchant` gèle UNE boutique ; `email` gèle le login, donc toutes.
