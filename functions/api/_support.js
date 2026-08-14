@@ -1,7 +1,7 @@
 import { operatorActor } from '../auth/_lib.js';
 
 // Public Kiwi Support destination. Keep digits only for wa.me deep links.
-export const SUPPORT_WHATSAPP_PHONE = '491722451278';
+export const SUPPORT_WHATSAPP_PHONE = '212624495159';
 
 export const SUPPORT_TABLES = [
   `CREATE TABLE IF NOT EXISTS support_articles (id TEXT PRIMARY KEY, slug TEXT NOT NULL UNIQUE, category TEXT NOT NULL, store_types TEXT NOT NULL DEFAULT '["all"]', feature_key TEXT NOT NULL DEFAULT '', feature_hash TEXT NOT NULL DEFAULT '', status TEXT NOT NULL DEFAULT 'draft', revision INTEGER NOT NULL DEFAULT 1, title_fr TEXT NOT NULL DEFAULT '', title_en TEXT NOT NULL DEFAULT '', title_ar TEXT NOT NULL DEFAULT '', body_fr TEXT NOT NULL DEFAULT '', body_en TEXT NOT NULL DEFAULT '', body_ar TEXT NOT NULL DEFAULT '', created_ts INTEGER NOT NULL, updated_ts INTEGER NOT NULL, published_ts INTEGER, actor TEXT NOT NULL DEFAULT 'system')`,
