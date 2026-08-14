@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted — fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v430';
+var CACHE = 'kiwi-app-v431';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -192,7 +192,7 @@ var SHELL = [
      qui a perdu ses promotions vend au prix plein pendant que la vitrine
      annonce −30 % — et c'est la caissière qui doit s'en expliquer. */
   '/assets/promos.js',
-  '/assets/boutique-promos-dashboard.js',
+  '/assets/boutique-promos-dashboard.js?v=2',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
   '/assets/caisse-lang.js',
