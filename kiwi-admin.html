@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="robots" content="noindex, nofollow" />
 <title>Kiwi · Console opérateur</title>
+<link rel="icon" href="assets/kiwi-favicon-new.svg" type="image/svg+xml" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -525,20 +526,209 @@ em, i, cite, dfn, var { font-style: normal; }
     scroll-behavior:auto !important;
   }
 }
+
+/* ══ CRM OPÉRATEUR ══════════════════════════════════════════════════════════
+   Le God Mode n'est plus une longue page technique. C'est un poste de travail :
+   une barre de commande stable, un résumé lisible, un portefeuille filtrable,
+   puis le dossier détaillé de l'établissement choisi. */
+body{
+  min-height:100vh; padding:0;
+  background:
+    radial-gradient(circle at 8% 0%, color-mix(in srgb,var(--accent-lit) 10%,transparent), transparent 27rem),
+    linear-gradient(180deg,color-mix(in srgb,var(--paper) 94%,var(--atlas)) 0,var(--paper) 28rem);
+}
+.top{
+  min-height:72px; padding:12px max(22px,calc((100vw - 1420px)/2)); gap:12px;
+  background:rgba(5,59,44,.97); border-bottom:1px solid rgba(125,242,176,.18);
+  backdrop-filter:blur(18px); box-shadow:0 16px 42px -30px rgba(5,59,44,.75);
+}
+.top-brand{display:flex;align-items:center;gap:12px;min-width:260px}
+.top-brand img{width:72px;height:40px;object-fit:contain;object-position:left center}
+.top-title{display:flex;flex-direction:column;gap:2px}
+.top-title h1{font-size:16px}
+.top-title small{color:rgba(234,255,244,.62);font-size:12px}
+.top-nav{display:flex;align-items:center;gap:4px;margin-left:22px}
+.top-nav a{color:rgba(234,255,244,.72);text-decoration:none;font-size:13px;font-weight:600;padding:9px 11px;border-radius:9px}
+.top-nav a:hover,.top-nav a:focus-visible{color:var(--on-accent);background:rgba(255,255,255,.09)}
+.top-actions{display:flex;align-items:center;gap:7px;margin-left:auto}
+.top .top-actions button{display:inline-flex;align-items:center;gap:7px;min-height:38px;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.09)}
+.top .top-actions button:hover{background:rgba(255,255,255,.16)}
+.top .top-actions #quit{background:transparent}
+.wrap{max-width:1420px;margin:0 auto;padding:34px 28px 80px}
+.crm-hero{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin:0 0 24px;padding:0 4px}
+.crm-eyebrow{margin:0 0 7px;color:var(--atlas);font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+.crm-hero h2{margin:0;font-size:clamp(32px,4vw,54px);line-height:.98;letter-spacing:-.055em;font-weight:650}
+.crm-hero p{max-width:650px;margin:12px 0 0;color:var(--muted);font-size:15px}
+.crm-time{display:flex;align-items:center;gap:9px;color:var(--muted);font-size:13px;white-space:nowrap}
+.crm-time:before{content:"";width:8px;height:8px;border-radius:50%;background:#26C281;box-shadow:0 0 0 5px rgba(38,194,129,.12)}
+section{border-color:color-mix(in srgb,var(--accent-lit) 16%,var(--line));border-radius:22px;margin-bottom:22px;box-shadow:0 20px 60px -50px rgba(5,59,44,.5);background:color-mix(in srgb,var(--surface) 96%,transparent)}
+.sec-head{padding:18px 20px;gap:12px;background:linear-gradient(180deg,color-mix(in srgb,var(--surface) 88%,var(--wash)),var(--surface))}
+.sec-head h2{font-size:18px;letter-spacing:-.025em}
+.sec-head .count{padding:5px 9px;border-radius:999px;background:var(--wash);font-size:12px}
+#overview{overflow:visible}
+#overview .sec-head{border:0;padding-bottom:10px}
+.ov-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;padding:0 18px 18px;background:transparent}
+.ov-card{position:relative;padding:18px;border:1px solid var(--line);border-radius:16px;background:var(--surface);overflow:hidden;min-height:142px}
+.ov-card:before{content:"";position:absolute;left:18px;top:0;width:32px;height:3px;border-radius:0 0 4px 4px;background:var(--atlas)}
+.ov-card:nth-child(2){background:linear-gradient(145deg,var(--riad),#0B513D);border-color:transparent;color:var(--on-accent)}
+.ov-card:nth-child(2):before{background:var(--mint)}
+.ov-card:nth-child(2) :is(.ov-k,.ov-sub,.ov-v .u){color:rgba(234,255,244,.68)}
+.ov-card:nth-child(2) :is(.ov-v,.ov-sub b){color:var(--on-accent)}
+.ov-v{font-size:34px;font-weight:650;margin-top:14px}
+.ov-body{padding:18px 20px 20px;border-top:1px solid var(--line);display:grid;grid-template-columns:minmax(0,1.25fr) minmax(340px,.75fr);gap:10px 28px;align-items:start}
+.ov-body>.ov-h:first-child,.ov-body>.ov-spark,.ov-body>.ov-axis{grid-column:1}
+.ov-spark{height:112px;padding-top:10px;border-bottom:1px solid var(--line);gap:5px}
+.ov-spark i{border-radius:5px 5px 0 0}
+.ov-body>.ov-split{grid-column:2;grid-row:1 / span 3;margin-top:0!important;grid-template-columns:1fr;gap:18px;padding:16px;border-radius:15px;background:var(--wash-2);border:1px solid var(--line)}
+.ov-top{grid-column:1 / -1;margin-top:10px;padding-top:16px;border-top:1px solid var(--line)}
+.ov-body>.ov-note{grid-column:1 / -1;margin-top:4px;font-size:12px}
+
+/* Customer 360 cockpit. It is deliberately derived from the authoritative
+   account roster: no invented lead score, no fake task count and no second
+   source of truth. As richer CRM objects arrive, these same lanes can consume
+   them without changing the operator's information architecture. */
+.crm-command{overflow:hidden}
+.crm-command>.sec-head{align-items:flex-start}
+.crm-command>.sec-head>div:first-child{margin-right:auto}
+.crm-command .sec-copy{margin:4px 0 0;color:var(--muted);font-size:13px}
+.crm-command .live-chip{display:inline-flex;align-items:center;gap:7px;padding:7px 10px;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:12px}
+.crm-command .live-chip:before{content:"";width:7px;height:7px;border-radius:50%;background:var(--mint);box-shadow:0 0 0 4px color-mix(in srgb,var(--mint) 15%,transparent)}
+.crm-cockpit{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(290px,.55fr);gap:14px;padding:0 18px 18px}
+.crm-card{border:1px solid var(--line);border-radius:16px;background:var(--surface);min-width:0}
+.crm-card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 16px 12px}
+.crm-card-head h3{margin:0;font-size:15px;letter-spacing:-.015em}
+.crm-card-head span{color:var(--muted);font-size:12px}
+.crm-pipeline{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:0 12px 12px}
+.crm-lane{min-height:164px;padding:14px;border-radius:13px;background:var(--wash-2);border:1px solid var(--line)}
+.crm-lane-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:13px}
+.crm-lane-k{font-size:12px;font-weight:700;color:var(--muted)}
+.crm-lane-n{display:grid;place-items:center;min-width:25px;height:25px;padding:0 7px;border-radius:999px;background:var(--surface);font-weight:700;font-size:12px}
+.crm-lane-item{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line);font-size:12px;min-width:0}
+.crm-lane-item:first-of-type{border-top:0}
+.crm-lane-item .signal{width:7px;height:7px;border-radius:50%;background:var(--atlas);flex:0 0 auto}
+.crm-lane-item.attention .signal{background:var(--ochre)}
+.crm-lane-item .label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.crm-lane-item .meta{margin-left:auto;color:var(--muted);white-space:nowrap}
+.crm-focus{padding:0 14px 14px}
+.crm-focus-item{display:grid;grid-template-columns:28px minmax(0,1fr) auto;align-items:center;gap:10px;padding:11px 4px;border-top:1px solid var(--line)}
+.crm-focus-item:first-child{border-top:0}
+.crm-focus-item .ico{width:28px;height:28px;display:grid;place-items:center;border-radius:9px;background:var(--wash);color:var(--atlas);font-size:12px;font-weight:800}
+.crm-focus-item strong{display:block;font-size:13px;line-height:1.2}
+.crm-focus-item small{display:block;margin-top:3px;color:var(--muted);font-size:11px;line-height:1.3}
+.crm-focus-item button{border:0;background:transparent;color:var(--atlas);font:700 11px/1 var(--sans);cursor:pointer;padding:7px}
+.crm-empty{padding:16px;color:var(--muted);font-size:13px;text-align:center}
+.crm-stream{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;overflow:hidden}
+.crm-signal{padding:15px 17px;border-left:1px solid var(--line)}
+.crm-signal:first-child{border-left:0}
+.crm-signal .k{display:block;color:var(--muted);font-size:11px;font-weight:700;margin-bottom:6px}
+.crm-signal .v{font-size:20px;font-weight:650;letter-spacing:-.025em}
+.crm-signal .s{display:block;color:var(--muted);font-size:11px;margin-top:3px}
+
+.crm-directory>.sec-head{align-items:center}
+.crm-directory .directory-title{display:flex;align-items:center;gap:10px;min-width:210px}
+.crm-toolbar{display:flex;align-items:center;gap:10px;margin-left:auto;flex-wrap:wrap}
+.crm-filter{display:flex;gap:3px;padding:3px;border-radius:11px;background:var(--wash)}
+.crm-filter button{border:0;background:transparent;color:var(--muted);font:600 12px/1 var(--sans);padding:8px 10px;border-radius:8px;cursor:pointer}
+.crm-filter button.on{background:var(--surface);color:var(--ink);box-shadow:0 2px 8px rgba(5,59,44,.08)}
+.crm-sort{border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font:500 13px/1 var(--sans);padding:10px 34px 10px 11px}
+.cli-search{position:relative;margin:0}
+.cli-search:before{content:"⌕";position:absolute;left:12px;top:50%;transform:translateY(-52%);color:var(--muted);font-size:19px;pointer-events:none}
+.cli-search input{width:260px;padding:10px 42px 10px 35px;border-radius:10px;background:var(--wash-2)}
+.cli-search .clr{position:absolute;right:10px;top:50%;transform:translateY(-50%)}
+.client-table-wrap{overflow-x:auto;padding:0 10px 10px}
+.client-table th:nth-child(2),.client-table td:nth-child(2){display:none}
+.client-table{border-collapse:separate;border-spacing:0 6px}
+.client-table thead th{border:0;padding:5px 12px 7px}
+.client-table tbody tr:not(.owner-row) td{background:var(--surface);border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:14px 12px;vertical-align:middle}
+.client-table tbody tr:not(.owner-row) td:first-child{border-left:1px solid var(--line);border-radius:13px 0 0 13px}
+.client-table tbody tr:not(.owner-row) td:last-child{border-right:1px solid var(--line);border-radius:0 13px 13px 0}
+.client-table tbody tr:not(.owner-row):hover td{background:var(--wash-2);border-color:var(--line-2)}
+.client-table tbody tr.sel td{background:var(--sel)!important;border-color:rgba(11,110,79,.32)!important}
+.owner-row td{border:0;padding:14px 12px 4px;background:transparent!important}
+.owner-row .who{font-size:13px}.owner-row .mail{font-size:12px}
+tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!important}
+.merchant-title{font-weight:650;font-size:15px;letter-spacing:-.01em;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.merchant-meta{display:flex;align-items:center;gap:6px;margin-top:5px;min-width:0;color:var(--muted);font-size:12px}
+.merchant-meta code{max-width:155px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:500 11px/1.2 var(--mono);color:var(--muted)}
+.type-chip,.plan{border-radius:999px;padding:4px 8px;background:var(--sel);color:var(--atlas)}
+.city-chip{margin:0}
+.online{font-size:12px}.online .d{width:8px;height:8px}.online.live .d{box-shadow:0 0 0 4px rgba(11,110,79,.09)}
+.row-actions{align-items:center;gap:6px;white-space:nowrap}
+.row-actions>.mini.crm-primary{background:var(--riad);border-color:var(--riad);color:var(--on-accent);padding:9px 13px}
+.row-actions>.mini.crm-manage{color:var(--atlas);background:var(--sel);border-color:transparent;padding:9px 13px}
+.action-menu{position:relative}
+.action-menu summary{list-style:none;width:38px;height:38px;display:grid;place-items:center;border:1px solid var(--line);border-radius:10px;cursor:pointer;font-size:18px;font-weight:700;color:var(--muted);background:var(--surface)}
+.action-menu summary::-webkit-details-marker{display:none}
+.action-menu[open] summary{border-color:var(--atlas);color:var(--atlas)}
+.action-pop{position:absolute;z-index:15;right:0;top:44px;width:218px;padding:7px;border:1px solid var(--line);border-radius:13px;background:var(--surface);box-shadow:0 22px 54px -24px rgba(5,59,44,.5)}
+.action-pop .mini{display:flex;width:100%;border:0;padding:10px 11px;justify-content:flex-start;background:transparent}
+.action-pop .mini:hover{background:var(--wash)}
+.action-pop .mini.danger{margin-top:4px;border-top:1px solid var(--line);border-radius:5px;color:var(--warn)}
+#manage{scroll-margin-top:92px;border:1px solid rgba(11,110,79,.3);box-shadow:0 24px 80px -52px rgba(5,59,44,.7)}
+#manage>.sec-head{position:sticky;top:72px;z-index:4;background:color-mix(in srgb,var(--surface) 95%,transparent);backdrop-filter:blur(16px)}
+#manage>.sec-head h2:before{content:"Dossier client";display:block;margin-bottom:3px;color:var(--atlas);font-size:11px;text-transform:uppercase;letter-spacing:.12em}
+.panel{padding:20px}.panel .grid2{gap:14px}.panel .grid2>div,.blk{padding:18px;border:1px solid var(--line);border-radius:15px;background:var(--wash-2)}
+.blk{margin-top:14px}.panel .grid2+.blk{margin-top:14px}
+.danger-zone{background:var(--warn-bg)!important;border-color:var(--warn-line)!important}
+#operators .panel{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:start}
+#operators .hint,#operators .err{grid-column:1/-1}
+.op-list{min-width:0}
+
+@media(max-width:1080px){
+  .top-nav{display:none}.ov-body{grid-template-columns:1fr}.ov-body>.ov-split{grid-column:1;grid-row:auto;grid-template-columns:1fr 1fr}.crm-toolbar{width:100%;margin-left:0}.crm-directory>.sec-head{align-items:flex-start}.crm-directory .directory-title{width:100%}
+  .crm-cockpit{grid-template-columns:1fr}.crm-stream{grid-column:1}
+}
+@media(max-width:760px){
+  .top{padding:10px 14px;min-height:64px}.top-brand{min-width:0;flex:1}.top-brand img{width:56px}.top-title small{display:none}.top-actions button{font-size:0!important;padding:8px!important;width:38px;justify-content:center}.top-actions button:before{font-size:15px}.top-actions #support-console:before{content:"?"}.top-actions #refresh:before{content:"↻"}.top-actions #quit:before{content:"↗"}
+  .wrap{padding:24px 14px 60px}.crm-hero{align-items:flex-start;flex-direction:column}.crm-time{display:none}.ov-grid{grid-template-columns:1fr 1fr;padding:0 12px 12px}.ov-card{min-height:130px;padding:15px}.ov-v{font-size:28px}.ov-body{padding:15px}.ov-body>.ov-split{grid-template-columns:1fr}
+  .crm-filter{width:100%;overflow-x:auto}.crm-filter button{flex:1;white-space:nowrap}.crm-sort,.cli-search,.cli-search input{width:100%}.crm-toolbar{gap:8px}
+  .crm-pipeline{grid-template-columns:1fr}.crm-lane{min-height:auto}.crm-stream{grid-template-columns:1fr}.crm-signal{border-left:0;border-top:1px solid var(--line)}.crm-signal:first-child{border-top:0}
+  .client-table th:nth-child(3),.client-table td:nth-child(3),.client-table th:nth-child(5),.client-table td:nth-child(5),.client-table th:nth-child(6),.client-table td:nth-child(6){display:none}
+  .row-actions>.mini.crm-primary{display:none}.action-pop{position:fixed;left:14px;right:14px;top:auto;bottom:14px;width:auto}
+  #manage>.sec-head{top:64px}.panel .grid2{grid-template-columns:1fr}#operators .panel{grid-template-columns:1fr}
+}
+@media(max-width:480px){.ov-grid{grid-template-columns:1fr}.crm-hero h2{font-size:38px}.top-title h1{font-size:14px}.badge{display:none}}
 </style>
 </head>
 <body>
   <header class="top">
-    <span class="dot" aria-hidden="true"></span>
-    <h1>Kiwi · Console opérateur</h1>
-    <span class="badge" id="mode-badge">…</span>
-    <span class="spacer"></span>
-    <button type="button" id="support-console">Support</button>
-    <button type="button" id="refresh">Rafraîchir</button>
-    <button type="button" id="quit">Quitter</button>
+    <div class="top-brand">
+      <img src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi" />
+      <div class="top-title"><h1>Console opérateur</h1><small>Pilotage &amp; relation client</small></div>
+      <span class="badge" id="mode-badge">…</span>
+    </div>
+    <nav class="top-nav" aria-label="Navigation de la console">
+      <a href="#crm-command">Cockpit</a><a href="#overview">Analyses</a><a href="#clients">Clients</a><a href="#operators">Accès équipe</a>
+    </nav>
+    <div class="top-actions">
+      <button type="button" id="support-console">Support</button>
+      <button type="button" id="refresh">Rafraîchir</button>
+      <button type="button" id="quit">Quitter</button>
+    </div>
   </header>
 
-  <div class="wrap">
+  <main class="wrap">
+    <div class="crm-hero">
+      <div><p class="crm-eyebrow">Kiwi customer intelligence</p><h2>Chaque client, en contexte.</h2><p>Relation, activation, revenus, activité et opérations réunis dans un cockpit pensé pour accompagner chaque établissement sur la durée.</p></div>
+      <div class="crm-time">Données opérationnelles en direct</div>
+    </div>
+    <section id="crm-command" class="crm-command">
+      <div class="sec-head">
+        <div><h2>Centre de relation client</h2><p class="sec-copy">Ce qui avance, ce qui demande une décision et qui contacter aujourd’hui.</p></div>
+        <span class="live-chip">Calculé depuis le parc réel</span>
+      </div>
+      <div class="crm-cockpit">
+        <div class="crm-card">
+          <div class="crm-card-head"><h3>Cycle de vie</h3><span>De l’activation à la fidélisation</span></div>
+          <div class="crm-pipeline" id="crm-pipeline"></div>
+        </div>
+        <div class="crm-card">
+          <div class="crm-card-head"><h3>À traiter</h3><span id="crm-focus-count"></span></div>
+          <div class="crm-focus" id="crm-focus"></div>
+        </div>
+        <div class="crm-card crm-stream" id="crm-signals"></div>
+      </div>
+    </section>
     <!-- ══ VUE D'ENSEMBLE ═══════════════════════════════════════════════════
          La console ouvrait sur le tableau des clients : une ligne par
          établissement, le chiffre du jour de chacun. C'est l'écran qu'il faut
@@ -557,17 +747,27 @@ em, i, cite, dfn, var { font-style: normal; }
       <div class="ov-body" id="ov-body"></div>
     </section>
 
-    <section>
+    <section id="clients" class="crm-directory">
       <div class="sec-head">
-        <h2>Clients</h2><span class="count" id="cli-count"></span>
-        <div class="cli-search">
-          <input id="cli-q" type="search" autocomplete="off" placeholder="Nom, ville, e-mail, clé…"
-                 aria-label="Rechercher un client" />
-          <button type="button" class="clr" id="cli-clr" hidden>Effacer</button>
+        <div class="directory-title"><h2>Portefeuille clients</h2><span class="count" id="cli-count"></span></div>
+        <div class="crm-toolbar">
+          <div class="crm-filter" id="crm-filter" aria-label="Filtrer les établissements">
+            <button type="button" class="on" data-filter="all">Tous</button>
+            <button type="button" data-filter="active">Actifs</button>
+            <button type="button" data-filter="pending">À activer</button>
+            <button type="button" data-filter="suspended">Suspendus</button>
+          </div>
+          <select class="crm-sort" id="crm-sort" aria-label="Trier les établissements">
+            <option value="recent">Activité récente</option><option value="revenue">CA du jour</option><option value="name">Nom</option>
+          </select>
+          <div class="cli-search">
+            <input id="cli-q" type="search" autocomplete="off" placeholder="Rechercher un client…" aria-label="Rechercher un client" />
+            <button type="button" class="clr" id="cli-clr" hidden aria-label="Effacer la recherche">×</button>
+          </div>
         </div>
       </div>
-      <div style="overflow-x:auto">
-        <table>
+      <div class="client-table-wrap">
+        <table class="client-table">
           <thead><tr>
             <th>Établissement</th><th>Clé</th><th>Plan</th>
             <th style="text-align:right">CA du jour</th><th style="text-align:right">Ventes</th>
@@ -747,7 +947,7 @@ em, i, cite, dfn, var { font-style: normal; }
       </div>
     </section>
 
-    <section>
+    <section id="operators">
       <div class="sec-head"><h2>Opérateurs</h2><span class="count" id="op-count"></span></div>
       <div class="panel">
         <div class="op-list" id="op-list"></div>
@@ -760,7 +960,7 @@ em, i, cite, dfn, var { font-style: normal; }
         <p class="hint">Ces codes ouvrent la console via l’appui long sur le logo de l’écran de connexion. Le premier code se crée depuis l’accès équipe.</p>
       </div>
     </section>
-  </div>
+  </main>
 
   <!-- The staff-role catalogue, shared with the staff apps: the console offers a
        role here and kiwi-serveur.html honours it there. Loaded synchronously —
@@ -1499,17 +1699,93 @@ em, i, cite, dfn, var { font-style: normal; }
      table de correspondance. Sur un navigateur sans normalize (aucun
      aujourd'hui), on retombe sur la comparaison brute plutôt que d'échouer. */
   var CLI_Q = '';
+  var CRM_FILTER = 'all';
+  var CRM_SORT = 'recent';
+  var CRM_CLIENTS = [];
   function foldText(s){
     s = String(s == null ? '' : s).toLowerCase();
     try { return s.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch(_) { return s; }
   }
   function filterClients(rows){
-    if (!CLI_Q) return rows;
-    var q = foldText(CLI_Q);
-    return rows.filter(function(c){
+    var filtered = rows.filter(function(c){
+      var pending = c.store_status === 'pending' || c.subscription === 'pending';
+      var suspended = c.store_status === 'suspended' || c.status === 'suspended';
+      if (CRM_FILTER === 'pending' && !pending) return false;
+      if (CRM_FILTER === 'suspended' && !suspended) return false;
+      if (CRM_FILTER === 'active' && (pending || suspended)) return false;
+      if (!CLI_Q) return true;
+      var q = foldText(CLI_Q);
       return foldText([c.business, c.city, c.name, c.email, c.owner, c.owner_name,
-                       c.owner_business, c.merchant, c.plan].join(' ')).indexOf(q) >= 0;
+                       c.owner_business, c.merchant, c.plan, typeLabel(c.type)].join(' ')).indexOf(q) >= 0;
     });
+    filtered.sort(function(a,b){
+      if (CRM_SORT === 'name') return String(a.business || a.merchant).localeCompare(String(b.business || b.merchant), 'fr');
+      if (CRM_SORT === 'revenue') return (b.today_amount || 0) - (a.today_amount || 0);
+      return (b.last_ts || 0) - (a.last_ts || 0);
+    });
+    return filtered;
+  }
+
+  function renderCrmHub(rows){
+    var pipeline = document.getElementById('crm-pipeline');
+    var focus = document.getElementById('crm-focus');
+    var focusCount = document.getElementById('crm-focus-count');
+    var signals = document.getElementById('crm-signals');
+    if (!pipeline || !focus || !signals) return;
+
+    var real = (rows || []).filter(function(c){ return !isDemoClient(c); });
+    var now = Date.now(), week = 7 * 24 * 60 * 60 * 1000;
+    function pending(c){ return c.store_status === 'pending' || c.subscription === 'pending' || !c.plan; }
+    function suspended(c){ return c.store_status === 'suspended' || c.status === 'suspended'; }
+    function stale(c){ return !c.last_ts || now - c.last_ts > week; }
+
+    var lanes = [
+      { key:'activation', title:'À activer', rows:real.filter(function(c){ return pending(c) && !suspended(c); }) },
+      { key:'active', title:'En croissance', rows:real.filter(function(c){ return !pending(c) && !suspended(c) && !stale(c); }) },
+      { key:'attention', title:'À reconquérir', rows:real.filter(function(c){ return suspended(c) || (!pending(c) && stale(c)); }) }
+    ];
+    clear(pipeline);
+    lanes.forEach(function(lane){
+      var box = h('div', { class:'crm-lane' },
+        h('div', { class:'crm-lane-top' }, h('span', { class:'crm-lane-k', text:lane.title }), h('span', { class:'crm-lane-n', text:String(lane.rows.length) })));
+      lane.rows.slice(0,3).forEach(function(c){
+        var meta = lane.key === 'activation' ? (c.plan ? planName(c.plan) : 'sans offre') : ago(c.last_ts);
+        box.appendChild(h('div', { class:'crm-lane-item' + (lane.key === 'attention' ? ' attention' : '') },
+          h('span', { class:'signal' }), h('span', { class:'label', text:c.business || c.merchant }), h('span', { class:'meta', text:meta })));
+      });
+      if (!lane.rows.length) box.appendChild(h('p', { class:'crm-empty', text:'Rien à signaler' }));
+      if (lane.rows.length > 3) box.appendChild(h('p', { class:'crm-empty', text:'+' + (lane.rows.length - 3) + ' autres' }));
+      pipeline.appendChild(box);
+    });
+
+    var tasks = [];
+    real.forEach(function(c){
+      if (pending(c)) tasks.push({ rank:1, icon:'01', c:c, title:'Valider l’abonnement', copy:(c.business || c.merchant) + ' attend son activation' });
+      else if (suspended(c)) tasks.push({ rank:2, icon:'02', c:c, title:'Compte suspendu', copy:'Décider de la suite avec ' + (c.business || c.merchant) });
+      else if (!c.city) tasks.push({ rank:3, icon:'03', c:c, title:'Compléter la fiche', copy:'Localisation manquante · ' + (c.business || c.merchant) });
+      else if (stale(c)) tasks.push({ rank:4, icon:'04', c:c, title:'Reprendre contact', copy:'Aucune vente récente · ' + (c.business || c.merchant) });
+    });
+    tasks.sort(function(a,b){ return a.rank - b.rank; });
+    clear(focus);
+    tasks.slice(0,5).forEach(function(t){
+      focus.appendChild(h('div', { class:'crm-focus-item' },
+        h('span', { class:'ico', text:t.icon }),
+        h('span', null, h('strong', { text:t.title }), h('small', { text:t.copy })),
+        h('button', { type:'button', onClick:function(){ select(t.c); } }, 'Ouvrir')));
+    });
+    if (!tasks.length) focus.appendChild(h('p', { class:'crm-empty', text:'Tout est à jour. Aucun suivi prioritaire.' }));
+    focusCount.textContent = tasks.length ? plural(tasks.length, 'priorité', 'priorités') : 'à jour';
+
+    var groups = groupByOwner(real);
+    var live = real.filter(function(c){ return c.last_ts && now - c.last_ts < 15 * 60 * 1000; }).length;
+    var withEmail = groups.filter(function(g){ var c=g.head; return !!(c.owner || c.email); }).length;
+    var dayAmount = real.reduce(function(sum,c){ return sum + (+c.today_amount || 0); }, 0);
+    clear(signals);
+    [
+      ['Relations unifiées', String(groups.length), real.length + ' établissements · ' + withEmail + ' contacts joignables'],
+      ['Activité maintenant', String(live), live === 1 ? 'établissement actif sur 15 min' : 'établissements actifs sur 15 min'],
+      ['Encaissements du jour', fmt(dayAmount) + ' MAD', 'Signal portefeuille, jamais un revenu Kiwi']
+    ].forEach(function(x){ signals.appendChild(h('div', { class:'crm-signal' }, h('span', { class:'k', text:x[0] }), h('span', { class:'v', text:x[1] }), h('span', { class:'s', text:x[2] }))); });
   }
 
   /* Group the roster by CLIENT, not by store. One login can hold several
@@ -1587,36 +1863,40 @@ em, i, cite, dfn, var { font-style: normal; }
     // Actions. Suspend/Réactiver only shows for real accounts — a demo has no
     // login to freeze. Reversible: suspend cuts access now, reactivate restores it.
     var open = !!(selected && selected.merchant === c.merchant);
-    var actions = [
-      h('button', { class:'mini', onClick:function(e){ e.stopPropagation(); openDashboard(c.merchant); } }, 'Ouvrir dashboard'),
+    var secondary = [
       h('button', { class:'mini', title:'Chiffres masqués, aucune écriture', onClick:function(e){ e.stopPropagation(); openPrivateDashboard(c.merchant); } }, 'Vue confidentielle'),
-      h('button', { class:'mini', onClick:function(e){ e.stopPropagation(); openCaisse(c); } }, 'Accéder caisse'),
-      // Le même bouton ouvre et referme, et il le dit. Un « Gérer » qui ne fait
-      // rien parce que la boutique est déjà ouverte laisse croire à une panne.
-      h('button', { class:'mini', onClick:function(e){ e.stopPropagation(); toggleSelect(c); } },
-        open ? 'Fermer' : 'Gérer')
+      h('button', { class:'mini', onClick:function(e){ e.stopPropagation(); openCaisse(c); } }, 'Accéder à la caisse')
     ];
     /* Le bouton de la LIGNE ferme la boutique de la ligne. Celui du compte est
        remonté sur la bande du propriétaire, où il désigne ce qu'il fait. */
-    actions.push(h('button', { class:'mini' + (storeOff ? ' warn' : ''),
+    secondary.push(h('button', { class:'mini' + (storeOff ? ' warn' : ''),
       disabled: SENIOR === false || accountOff,
       title: accountOff ? 'Le compte entier est suspendu — réactivez-le d’abord.' : '',
       onClick:function(e){ e.stopPropagation(); toggleStoreSuspend(c); } },
       storeOff ? 'Rouvrir' : 'Fermer'));
-    if (subscriptionPending) actions.push(h('button', { class:'mini', disabled:SENIOR === false,
+    if (subscriptionPending) secondary.unshift(h('button', { class:'mini', disabled:SENIOR === false,
       onClick:function(e){ e.stopPropagation(); activateSubscription(c); } }, 'Activer abonnement'));
     /* La suppression d'un établissement existe désormais, et seulement celle-là :
        son périmètre est exactement ce que porte son slug, donc il se borne. Elle
        est irréversible, gardée par le code opérateur nommé, et demande de
        recopier le slug — voir functions/api/admin/clients.js › onRequestDelete. */
-    actions.push(h('button', { class:'mini danger', disabled: SENIOR === false,
+    secondary.push(h('button', { class:'mini danger', disabled: SENIOR === false,
       onClick:function(e){ e.stopPropagation(); askDeleteStore(c); } }, 'Supprimer'));
+
+    var actions = [
+      h('button', { class:'mini crm-primary', onClick:function(e){ e.stopPropagation(); openDashboard(c.merchant); } }, 'Ouvrir'),
+      h('button', { class:'mini crm-manage', onClick:function(e){ e.stopPropagation(); toggleSelect(c); } },
+        open ? 'Refermer' : 'Gérer'),
+      h('details', { class:'action-menu', onClick:function(e){ e.stopPropagation(); } },
+        h('summary', { title:'Plus d’actions', 'aria-label':'Plus d’actions pour ' + (c.business || c.merchant) }, '···'),
+        h.apply(null, ['div', { class:'action-pop' }].concat(secondary)))
+    ];
 
     var cls = (selected && selected.merchant === c.merchant) ? 'sel' : '';
     if (suspended) cls += (cls ? ' ' : '') + 'suspended';
     if (inGroup) cls += (cls ? ' ' : '') + 'store-row';
     var tr = h('tr', { class: cls },
-      h('td', null, h('div', { style:'font-weight:600' }, c.business || c.merchant,
+      h('td', null, h('div', { class:'merchant-title' }, c.business || c.merchant,
                       storeOff ? h('span', { class:'sus-badge' }, 'fermé') : null,
                       subscriptionPending ? h('span', { class:'sus-badge' }, 'abonnement à valider') : null,
                       (accountOff && !inGroup) ? h('span', { class:'sus-badge' }, 'compte suspendu') : null),
@@ -1624,9 +1904,10 @@ em, i, cite, dfn, var { font-style: normal; }
                        est ce sur quoi on cherche le plus souvent après le nom —
                        « qui avons-nous à Tanger » — donc elle se lit sur la
                        ligne, pas seulement dans le panneau de gestion. */
-                    (c.type || c.city) ? h('div', null,
+                    h('div', { class:'merchant-meta' },
                       c.type ? h('span', { class:'type-chip' }, typeLabel(c.type) || c.type) : null,
-                      c.city ? h('span', { class:'city-chip' }, c.city) : null) : null,
+                      c.city ? h('span', { class:'city-chip' }, c.city) : null,
+                      h('code', null, c.merchant)),
                     // The contact sits on the band when the client has several
                     // shops — repeating it on every row would bury the one thing
                     // that differs between them, which is the shop itself.
@@ -1659,7 +1940,7 @@ em, i, cite, dfn, var { font-style: normal; }
     } catch(e){
       var err = (e && e.body && e.body.error) || (e && e.message) || 'erreur';
       notify(err === 'store-status-unavailable'
-        ? 'La base n’a pas encore la colonne `status` sur merchant_config — migration à passer.'
+        ? 'La fermeture d’un établissement demande une mise à niveau technique. Aucune donnée n’a été modifiée.'
         : 'Échec : ' + err);
     }
   }
@@ -1825,7 +2106,7 @@ em, i, cite, dfn, var { font-style: normal; }
     // 4 · Où nous sommes.
     cards.appendChild(ovCard('Villes', fmt(cities.length), '', [
       (o.columns && o.columns.city === false)
-        ? todo('colonne ville pas encore appliquée en base')
+        ? todo('localisation à compléter')
         : (o.untagged
             ? [strong(situated + '/' + (c.stores || 0)), ' situés · ', todo(o.untagged + ' à renseigner')]
             : [strong(situated + '/' + (c.stores || 0)), ' situés']),
@@ -1863,7 +2144,7 @@ em, i, cite, dfn, var { font-style: normal; }
     var left = h('div', null, h('p', { class:'ov-h', text:'Villes · par établissements' }));
     if (o.columns && o.columns.city === false){
       left.appendChild(h('p', { class:'ov-empty ov-todo', text:
-        'La colonne ville n’est pas encore appliquée sur cette base. Elle se pose une fois : ALTER TABLE merchant_config ADD COLUMN city TEXT;' }));
+        'Les localisations ne sont pas encore disponibles. Elles apparaîtront ici dès que les fiches commerciales pourront être complétées.' }));
     } else if (!cities.length){
       left.appendChild(h('p', { class:'ov-empty', text:
         'Aucun établissement situé pour l’instant. La ville se renseigne dans la fiche commerciale, en ouvrant « Gérer » sur un client.' }));
@@ -1918,7 +2199,7 @@ em, i, cite, dfn, var { font-style: normal; }
        une décision sur un périmètre qu'on n'avait pas compris. */
     var notes = ['Démos exclues.'];
     notes.push(o.voidAware ? 'Ventes sorties des livres exclues.'
-                           : 'Ventes de test NON exclues sur cette base (colonne void_ts absente).');
+                           : 'Les ventes de test ne peuvent pas encore être isolées sur cet environnement.');
     notes.push('MRR = montant convenu quand il est saisi, sinon le tarif du palier (basic 199 · pro 399 · ultra 1 499). Ultimate est sur devis : sans montant saisi, l’établissement est compté « sans tarif », pas zéro.');
     notes.push('Suspendus retirés du MRR.');
     body.appendChild(h('p', { class:'ov-note', text:notes.join(' ') }));
@@ -1942,6 +2223,8 @@ em, i, cite, dfn, var { font-style: normal; }
     var body = document.getElementById('cli-body');
     clear(body);
     var list = await store.clients();
+    CRM_CLIENTS = list.slice();
+    renderCrmHub(CRM_CLIENTS);
     var allReal = list.filter(function(c){ return !isDemoClient(c); });
     var allDemos = list.filter(isDemoClient);
     /* La recherche. Un back-office qui tient dix-huit clients se lit d'un coup
@@ -2035,7 +2318,7 @@ em, i, cite, dfn, var { font-style: normal; }
     renderSubscription();
     await Promise.all([renderPins(), renderAttendanceLink(), renderFeatures(), renderBiz(), renderHealth(), renderAudit(), renderTestSales(), renderAccount()]);
     renderDanger();
-    document.getElementById('manage').scrollIntoView({ behavior:'smooth', block:'nearest' });
+    document.getElementById('manage').scrollIntoView({ behavior:'smooth', block:'start' });
   }
 
   /* Reposer le dossier. Rien n'est supprimé et rien n'est enregistré : on ferme
@@ -2273,8 +2556,7 @@ em, i, cite, dfn, var { font-style: normal; }
       : 'ville non renseignée';
 
     if (noColumn){
-      hint.textContent = 'Les colonnes ville et abonnement ne sont pas encore appliquées sur cette base. ' +
-        'Une seule fois : ALTER TABLE merchant_config ADD COLUMN city TEXT; ALTER TABLE merchant_config ADD COLUMN mrr INTEGER;';
+      hint.textContent = 'La fiche commerciale n’est pas encore disponible sur cet environnement. Une mise à niveau technique est nécessaire ; aucune donnée client n’a été modifiée.';
     } else if (readOnly){
       hint.textContent = 'Lecture seule : modifier la fiche commerciale demande un code opérateur personnel, pas l’accès équipe partagé.';
     } else if (listed){
@@ -3025,6 +3307,23 @@ em, i, cite, dfn, var { font-style: normal; }
       if (e.key === 'Escape' && q.value){ e.stopPropagation(); q.value = ''; apply(); }
     });
     clr.addEventListener('click', function(){ q.value = ''; apply(); q.focus(); });
+  })();
+
+  /* Filtres CRM — locaux, instantanés et sans nouvelle requête. La recherche,
+     l'état et le tri peuvent donc se combiner sans faire clignoter le roster. */
+  (function(){
+    var filters = document.getElementById('crm-filter');
+    var sort = document.getElementById('crm-sort');
+    if (filters){
+      filters.addEventListener('click', function(e){
+        var b = e.target && e.target.closest && e.target.closest('button[data-filter]');
+        if (!b) return;
+        CRM_FILTER = b.getAttribute('data-filter') || 'all';
+        [].slice.call(filters.querySelectorAll('button')).forEach(function(x){ x.classList.toggle('on', x === b); });
+        renderClients();
+      });
+    }
+    if (sort){ sort.addEventListener('change', function(){ CRM_SORT = sort.value || 'recent'; renderClients(); }); }
   })();
 
   document.getElementById('manage-close').addEventListener('click', function(){ deselect(); });
