@@ -21,6 +21,38 @@
     var role = K.access.role({});
     return { role: role, id: clean(window.__kiwiStaffId || '', 80) };
   }
+  /* L'identité de l'appareil.  Sans jeton stable, un parc de six caisses
+     s'effondre à trois lignes — une par type d'application — et « santé des
+     appareils » ne veut plus rien dire.  Le jeton ne dit rien de la personne
+     qui tient l'appareil : il ne sert qu'à reconnaître la machine. */
+  function deviceId() {
+    var stored = '';
+    try { stored = clean(localStorage.getItem('kiwiDeviceId'), 80); } catch (_) {}
+    if (stored) return stored;
+    var minted = token('dev');
+    try { localStorage.setItem('kiwiDeviceId', minted); } catch (_) {}
+    return minted;
+  }
+  function appName() {
+    if (location.pathname.indexOf('kiwi-caisse') >= 0) return 'caisse';
+    if (location.pathname.indexOf('serveur') >= 0) return 'serveur';
+    return 'dashboard';
+  }
+  function printerState() {
+    var P = window.KiwiPrinter;
+    return {
+      configured: !!(P && P.isConfigured && P.isConfigured()),
+      connected: !!(P && P.isConnected && P.isConnected()),
+    };
+  }
+  function beat() {
+    var printer = printerState();
+    return create('device', 'heartbeat', {
+      deviceId: deviceId(), app: appName(), at: Date.now(),
+      online: navigator.onLine !== false, standalone: !!navigator.standalone,
+      printerConfigured: printer.configured, printerConnected: printer.connected,
+    }, { idempotencyKey: 'heartbeat:' + K.tenant() + ':' + deviceId() + ':' + Math.floor(Date.now() / 300000) });
+  }
   function needed(domain, action) {
     if (domain === 'device' && action === 'heartbeat') return ['read', 'device'];
     if (domain === 'notification') return ['action', 'message'];
@@ -120,6 +152,39 @@
     if (opts.limit) query.set('limit', String(Math.max(1, Math.min(200, +opts.limit || 50))));
     return responseJson(await fetch('/api/operations?' + query.toString(), { credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' } }));
   }
+  /* Le parc.  La lecture est réservée au propriétaire côté serveur ; comme
+     pour les paiements, le client laisse remonter le 403 tel quel. */
+  async function devices(opts) {
+    opts = opts || {};
+    var query = new URLSearchParams({ merchant: K.tenant(), view: 'devices' });
+    if (opts.limit) query.set('limit', String(Math.max(1, Math.min(200, +opts.limit || 50))));
+    return responseJson(await fetch('/api/operations?' + query.toString(), { credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' } }));
+  }
+  /* Un vrai ticket sur une vraie imprimante.  Le serveur ouvre la commande en
+     « processing » ; c'est cet appareil-ci qui imprime et rapporte le
+     résultat, réussite comme échec.  Rien n'est déclaré imprimé sans l'avoir
+     été : si l'encodeur ou le pont manquent, la commande échoue et le dit. */
+  async function testPrint() {
+    var printer = printerState();
+    var created = await create('device', 'test-print', { deviceId: deviceId(), app: appName(), printerConfigured: printer.configured });
+    var command = created && created.command;
+    if (!command || command.status !== 'processing') return created;
+    var outcome;
+    try {
+      var P = window.KiwiPrinter;
+      if (!P || !P.printBytes || !window.KiwiEscPos || !window.KiwiEscPos.testSlip) outcome = { ok: false, reason: 'no-printer-driver' };
+      else outcome = await P.printBytes(window.KiwiEscPos.testSlip({ paper: (P.getConfig && P.getConfig().paper) || '80', ip: (P.getConfig && P.getConfig().ip) || '' }));
+    } catch (error) { outcome = { ok: false, reason: clean(error && error.message, 120) || 'print-failed' }; }
+    var ok = !!(outcome && outcome.ok);
+    try { await transition(command.id, ok ? 'completed' : 'failed', { confirmed: true }); } catch (_) {}
+    /* Un battement immédiat : l'état de l'imprimante vient de changer sous nos
+       yeux, le parc doit le refléter sans attendre cinq minutes. */
+    beat().catch(function () {});
+    return { ok: true, command: command, printed: ok, via: clean(outcome && outcome.via, 24), reason: ok ? '' : clean(outcome && outcome.reason, 120) || 'print-failed' };
+  }
+  async function ackAlert(id) {
+    return create('device', 'ack-alert', { deviceId: clean(id, 80) || deviceId() });
+  }
   async function payslips(opts) {
     opts = opts || {};
     var query = new URLSearchParams({ merchant: K.tenant(), view: 'payslips' });
@@ -169,16 +234,15 @@
     flush();
     /* Heartbeat records capability, not customer or order data. Failure is
        silent and retryable; it never interrupts a cashier or merchant. */
-    create('device', 'heartbeat', {
-      app: location.pathname.indexOf('kiwi-caisse') >= 0 ? 'caisse' : location.pathname.indexOf('serveur') >= 0 ? 'serveur' : 'dashboard',
-      online: navigator.onLine !== false, standalone: !!navigator.standalone,
-      printerConfigured: !!(window.KiwiPrinter && window.KiwiPrinter.isConfigured && window.KiwiPrinter.isConfigured()),
-      printerConnected: !!(window.KiwiPrinter && window.KiwiPrinter.isConnected && window.KiwiPrinter.isConnected()),
-    }, { idempotencyKey: 'heartbeat:' + K.tenant() + ':' + Math.floor(Date.now() / 300000) }).catch(function () {});
+    beat().catch(function () {});
   }, 1800);
+  /* Le seuil « hors ligne » vaut trois battements manqués côté serveur ; un
+     battement toutes les cinq minutes est donc ce qui rend ce seuil honnête. */
+  setInterval(function () { if (navigator.onLine !== false) beat().catch(function () {}); }, 300000);
 
   window.KiwiOperations = {
     version: 1, create: create, list: list, purchaseOrders: purchaseOrders, payslips: payslips, payments: payments, transition: transition, flush: flush,
+    devices: devices, testPrint: testPrint, ackAlert: ackAlert, deviceId: deviceId, heartbeat: beat,
     allowed: allowed, subscribe: function (fn) { listeners.add(fn); return function () { listeners.delete(fn); }; },
   };
 })();

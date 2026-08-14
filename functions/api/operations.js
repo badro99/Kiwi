@@ -107,8 +107,12 @@ function publicRow(row) {
  * `employee`, which can create nothing. */
 const ROLE = {
   owner: ['*'], proprietaire: ['*'], operator: ['*'],
+  /* write:device permet d'acquitter une alarme de parc — un responsable de
+     salle fait taire une caisse tombée sans réveiller le propriétaire.  La
+     caisse elle-même ne l'a pas : un appareil ne se déclare pas sain. */
   manager: ['read:*', 'write:catalog', 'write:inventory', 'write:planning', 'write:customers',
-    'write:orders', 'write:reservations', 'write:reports', 'action:refund', 'action:reprint', 'action:message'],
+    'write:orders', 'write:reservations', 'write:reports', 'write:device',
+    'action:refund', 'action:reprint', 'action:message'],
   caisse: ['read:catalog', 'read:inventory', 'read:customers', 'read:orders', 'read:device',
     'write:orders', 'write:customers', 'action:checkout', 'action:reprint'],
   serveur: ['read:tables', 'read:orders', 'read:planning', 'write:orders', 'action:request-bill'],
@@ -117,9 +121,11 @@ const ROLE = {
   employee: ['read:planning'],
   /* A pairing cookie is a device, not a person.  It proves which counter the
      request came from and nothing else, so it may report its own health and
-     nothing else — exactly what this endpoint allowed an unpaired-to-a-person
-     till to do before roles existed. */
-  till: ['read:device'],
+     exercise its own printer — and nothing else.  action:reprint is here only
+     because the test page is executed by the very device that asks for it and
+     the verdict must come back from that same cookie; it grants no read of the
+     merchant's books and no state change on anyone else's work. */
+  till: ['read:device', 'action:reprint'],
 };
 ROLE.cashier = ROLE.caisse; ROLE.caissier = ROLE.caisse; ROLE.caissiere = ROLE.caisse;
 ROLE.server = ROLE.serveur; ROLE.cuisinier = ROLE.kitchen; ROLE.magasinier = ROLE.stock;
@@ -147,6 +153,10 @@ function needed(domain, action) {
   if (domain === 'payment' && action === 'refund-link') return ['action', 'refund'];
   if (domain === 'payment' && action === 'settle-link') return ['read', 'payment'];
   if (domain === 'ai' && action === 'reprint') return ['action', 'reprint'];
+  /* Imprimer un ticket d'essai, c'est réimprimer : une caissière teste sa
+     propre imprimante.  Faire taire une alarme est un acte d'exploitation et
+     coûte write:device, que la caisse n'a pas. */
+  if (domain === 'device' && action === 'test-print') return ['action', 'reprint'];
   return ['write', domain];
 }
 
@@ -163,24 +173,31 @@ function can(role, act, resource) {
 async function actorFor(request, env, merchant) {
   try {
     const session = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET);
-    if (session && session.aid) return { kind: 'owner', role: 'owner' };
+    if (session && session.aid) return { kind: 'owner', role: 'owner', name: 'Propriétaire' };
   } catch (_) {}
-  try { if (await isOperator(request, env)) return { kind: 'operator', role: 'operator' }; } catch (_) {}
+  try { if (await isOperator(request, env)) return { kind: 'operator', role: 'operator', name: 'Opérateur Kiwi' }; } catch (_) {}
   try {
     const staff = await activeEmployee(request, env, merchant);
     if (staff && staff.member) {
-      return { kind: 'employee', role: normRole(staff.member.function || staff.member.department || 'employee') };
+      return {
+        kind: 'employee',
+        role: normRole(staff.member.function || staff.member.department || 'employee'),
+        name: clean(staff.member.name, 100) || 'Équipe',
+      };
     }
   } catch (_) {}
-  try { if (await isTillFor(request, env, merchant)) return { kind: 'till', role: 'till' }; } catch (_) {}
+  try { if (await isTillFor(request, env, merchant)) return { kind: 'till', role: 'till', name: 'Caisse' }; } catch (_) {}
   return null;
 }
 
+/* Rend l'acteur, pas un booléen : ce qui signe un acquittement ou un document
+   doit venir de la session prouvée, jamais d'un nom que l'appelant se donne
+   lui-même dans le corps de la requête. */
 async function mayCommand(request, env, merchant, domain, action) {
   const actor = await actorFor(request, env, merchant);
-  if (!actor) return false;
+  if (!actor) return null;
   const check = needed(domain, action);
-  return can(actor.role, check[0], check[1]);
+  return can(actor.role, check[0], check[1]) ? actor : null;
 }
 
 async function event(env, command, name, status, detail) {
@@ -1225,10 +1242,174 @@ async function payments(env, row, payload) {
   return fail('unsupported-action');
 }
 
-async function execute(env, row, payload) {
-  if (row.domain === 'device' && row.action === 'heartbeat') {
-    return update(env, row, 'completed', 'kiwi-device', { recorded: true }, '');
+/* Parc et santé des appareils.
+ *
+ * Le battement de cœur existait déjà côté navigateur ; le serveur répondait
+ * « recorded: true » et n'écrivait rien.  Un parc dont on ne garde pas la
+ * dernière nouvelle ne dit pas si une caisse est tombée à midi.
+ *
+ * Trois invariants tiennent ce module.  Un appareil est identifié par un
+ * jeton stable qu'il porte lui-même — sans quoi le parc s'effondre à une
+ * ligne par type d'application.  Une alarme est un état qui s'ouvre et se
+ * ferme dans un journal, pas un booléen qu'on repeint.  Et « hors ligne » se
+ * calcule à la lecture : un appareil éteint n'envoie évidemment pas le
+ * battement qui le déclarerait absent, donc une machine à états qui ne
+ * tournerait qu'à l'écriture ne lèverait jamais cette alarme-là. */
+const BEAT_MS = 300000;                          /* période du battement client */
+const DEVICE_OFFLINE_MS = 3 * BEAT_MS + 60000;   /* trois battements manqués */
+const DEVICE_STALE_MS = 30 * 24 * 3600 * 1000;   /* un appareil oublié sort du parc */
+
+async function ensureDevices(env) {
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS device_health (
+      merchant TEXT NOT NULL, device_id TEXT NOT NULL,
+      app TEXT NOT NULL DEFAULT '', label TEXT NOT NULL DEFAULT '',
+      online INTEGER NOT NULL DEFAULT 1, standalone INTEGER NOT NULL DEFAULT 0,
+      printer_configured INTEGER NOT NULL DEFAULT 0, printer_connected INTEGER NOT NULL DEFAULT 0,
+      alert TEXT NOT NULL DEFAULT '', alert_since_ts INTEGER NOT NULL DEFAULT 0,
+      acked_ts INTEGER NOT NULL DEFAULT 0, acked_by TEXT NOT NULL DEFAULT '',
+      beats INTEGER NOT NULL DEFAULT 0,
+      first_seen_ts INTEGER NOT NULL, last_seen_ts INTEGER NOT NULL,
+      PRIMARY KEY (merchant, device_id)
+    )`
+  ).run();
+  await env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_device_seen ON device_health (merchant, last_seen_ts)').run();
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS device_alerts (
+      id TEXT PRIMARY KEY, merchant TEXT NOT NULL, device_id TEXT NOT NULL,
+      code TEXT NOT NULL, opened_ts INTEGER NOT NULL, closed_ts INTEGER NOT NULL DEFAULT 0,
+      acked_ts INTEGER NOT NULL DEFAULT 0, acked_by TEXT NOT NULL DEFAULT ''
+    )`
+  ).run();
+  await env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_device_alert_open ON device_alerts (merchant, device_id, closed_ts)').run();
+}
+
+/* Fonction pure, appelée à l'écriture ET à la lecture.  Une seule alarme à la
+   fois, par ordre de gravité : un appareil muet passe avant son imprimante. */
+function deviceAlarm(row, at) {
+  if (!row) return '';
+  if (at - Number(row.last_seen_ts || 0) > DEVICE_OFFLINE_MS) return 'device-offline';
+  if (Number(row.printer_configured) && !Number(row.printer_connected)) return 'printer-unreachable';
+  if (clean(row.app, 24) === 'caisse' && !Number(row.printer_configured)) return 'printer-unconfigured';
+  return '';
+}
+
+/* Un battement mis en file hors ligne arrive au serveur bien après avoir été
+   émis.  L'horodatage porté par le client fait foi tant qu'il n'est ni futur
+   ni vieux d'un jour ; sinon l'heure du serveur reprend la main. */
+function beatTime(payload, at) {
+  const claimed = Number(payload && payload.at) || 0;
+  if (!claimed || claimed > at || at - claimed > 86400000) return at;
+  return claimed;
+}
+
+async function reconcileAlert(env, merchant, deviceId, before, code, at) {
+  if (before === code) return;
+  if (before) {
+    await env.DB.prepare(
+      'UPDATE device_alerts SET closed_ts = ? WHERE merchant = ? AND device_id = ? AND code = ? AND closed_ts = 0'
+    ).bind(at, merchant, deviceId, before).run();
   }
+  if (code) {
+    await env.DB.prepare(
+      `INSERT OR IGNORE INTO device_alerts (id, merchant, device_id, code, opened_ts, closed_ts, acked_ts, acked_by)
+       VALUES (?, ?, ?, ?, ?, 0, 0, '')`
+    ).bind(merchant + ':' + deviceId + ':' + code + ':' + at, merchant, deviceId, code, at).run();
+  }
+  /* Une alarme neuve n'est pas acquittée : changer de code efface le silence. */
+  await env.DB.prepare(
+    "UPDATE device_health SET alert = ?, alert_since_ts = ?, acked_ts = 0, acked_by = '' WHERE merchant = ? AND device_id = ?"
+  ).bind(code, code ? at : 0, merchant, deviceId).run();
+}
+
+function deviceView(row, code, at) {
+  const held = code && code === clean(row.alert, 40);
+  return {
+    deviceId: clean(row.device_id, 80), app: clean(row.app, 24), label: clean(row.label, 80),
+    online: !!Number(row.online), standalone: !!Number(row.standalone),
+    printerConfigured: !!Number(row.printer_configured), printerConnected: !!Number(row.printer_connected),
+    alert: code, alertSince: held ? Number(row.alert_since_ts) || at : at,
+    acknowledged: !!(held && Number(row.acked_ts)), ackedBy: held ? clean(row.acked_by, 100) : '',
+    beats: Number(row.beats) || 0, firstSeen: Number(row.first_seen_ts) || 0,
+    lastSeen: Number(row.last_seen_ts) || 0, silentMs: Math.max(0, at - (Number(row.last_seen_ts) || 0)),
+  };
+}
+
+async function devices(env, row, payload) {
+  await ensureDevices(env);
+  const merchant = row.merchant;
+  const at = now();
+  const deviceId = clean(payload.deviceId, 80);
+  const fail = (reason) => update(env, row, 'failed', 'kiwi-device', {}, reason);
+  if (!deviceId) return fail('device-id-required');
+  const known = await env.DB.prepare(
+    'SELECT * FROM device_health WHERE merchant = ? AND device_id = ?'
+  ).bind(merchant, deviceId).first();
+
+  if (row.action === 'heartbeat') {
+    const seen = Math.max(beatTime(payload, at), Number(known && known.last_seen_ts) || 0);
+    const next = {
+      app: clean(payload.app, 24) || clean(known && known.app, 24) || 'dashboard',
+      label: clean(payload.label, 80) || clean(known && known.label, 80),
+      online: payload.online === false ? 0 : 1,
+      standalone: payload.standalone ? 1 : 0,
+      configured: payload.printerConfigured ? 1 : 0,
+      connected: payload.printerConnected ? 1 : 0,
+    };
+    await env.DB.prepare(
+      `INSERT INTO device_health (merchant, device_id, app, label, online, standalone,
+         printer_configured, printer_connected, alert, alert_since_ts, acked_ts, acked_by,
+         beats, first_seen_ts, last_seen_ts)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, '', 0, 0, '', 1, ?, ?)
+       ON CONFLICT (merchant, device_id) DO UPDATE SET
+         app = excluded.app, label = excluded.label, online = excluded.online,
+         standalone = excluded.standalone, printer_configured = excluded.printer_configured,
+         printer_connected = excluded.printer_connected, beats = device_health.beats + 1,
+         last_seen_ts = excluded.last_seen_ts`
+    ).bind(merchant, deviceId, next.app, next.label, next.online, next.standalone,
+      next.configured, next.connected, seen, seen).run();
+    const merged = {
+      app: next.app, last_seen_ts: seen,
+      printer_configured: next.configured, printer_connected: next.connected,
+    };
+    const code = deviceAlarm(merged, at);
+    await reconcileAlert(env, merchant, deviceId, clean(known && known.alert, 40), code, at);
+    return update(env, row, 'completed', 'kiwi-device',
+      { deviceId: deviceId, app: next.app, recorded: true, alert: code }, '');
+  }
+
+  if (row.action === 'ack-alert') {
+    if (!known) return fail('device-unknown');
+    const code = deviceAlarm(known, at);
+    await reconcileAlert(env, merchant, deviceId, clean(known.alert, 40), code, at);
+    /* Acquitter fait taire, pas guérir : un appareil toujours muet le reste. */
+    if (!code) return fail('no-open-alert');
+    const by = clean(row.requested_by, 100);
+    await env.DB.prepare(
+      'UPDATE device_health SET acked_ts = ?, acked_by = ? WHERE merchant = ? AND device_id = ?'
+    ).bind(at, by, merchant, deviceId).run();
+    await env.DB.prepare(
+      'UPDATE device_alerts SET acked_ts = ?, acked_by = ? WHERE merchant = ? AND device_id = ? AND code = ? AND closed_ts = 0'
+    ).bind(at, by, merchant, deviceId, code).run();
+    return update(env, row, 'completed', 'kiwi-device',
+      { deviceId: deviceId, code: code, acknowledged: true, ackedBy: by }, '');
+  }
+
+  if (row.action === 'test-print') {
+    if (payload.printerConfigured === false) {
+      return update(env, row, 'blocked', 'local-device', { deviceId: deviceId }, 'printer-unconfigured');
+    }
+    /* « processing » et non « pending-approval » : la table des transitions
+       n'ouvre completed/failed que depuis processing, et c'est l'appareil qui
+       rapportera ce que l'imprimante a réellement fait. */
+    return update(env, row, 'processing', 'local-device',
+      { deviceId: deviceId, instruction: 'execute-on-requesting-device' }, '');
+  }
+  return fail('unsupported-action');
+}
+
+async function execute(env, row, payload) {
+  if (row.domain === 'device') return devices(env, row, payload);
   if (row.domain === 'notification') {
     const provider = notificationProvider(row.action, payload);
     if (!provider) return update(env, row, 'blocked', '', {}, 'channel-required');
@@ -1247,9 +1428,6 @@ async function execute(env, row, payload) {
       : update(env, row, 'blocked', provider, {}, delivered && delivered.reason || 'delivery-failed');
   }
   if (row.domain === 'payment') return payments(env, row, payload);
-  if (row.domain === 'device' && row.action === 'test-print') {
-    return update(env, row, 'pending-approval', 'local-device', { instruction: 'execute-on-requesting-device' }, '');
-  }
   if (row.domain === 'ai') {
     return update(env, row, 'pending-approval', 'kiwi-confirmation', { readOnly: true }, '');
   }
@@ -1315,6 +1493,34 @@ export async function onRequestGet({ request, env }) {
   /* Le livre de paie se lit aussi à part.  Sans période, on renvoie l'état de
      chaque mois — préparé, journalisé, déclaré — parce que c'est la question
      que le commerçant pose en premier : « où j'en suis ? ». */
+  /* Le parc.  La lecture réévalue chaque ligne et ouvre les alarmes que le
+     temps a rendues vraies : un appareil éteint n'écrit rien, donc s'il fallait
+     un battement pour le déclarer absent, il ne le serait jamais. */
+  if (clean(url.searchParams.get('view'), 24) === 'devices') {
+    try {
+      await ensureDevices(env);
+      const at = now();
+      const seen = await env.DB.prepare(
+        'SELECT * FROM device_health WHERE merchant = ? AND last_seen_ts > ? ORDER BY last_seen_ts DESC LIMIT 200'
+      ).bind(merchant, at - DEVICE_STALE_MS).all();
+      const fleet = [];
+      for (const device of (seen && seen.results) || []) {
+        const code = deviceAlarm(device, at);
+        const view = deviceView(device, code, at);
+        if (code !== clean(device.alert, 40)) {
+          await reconcileAlert(env, merchant, clean(device.device_id, 80), clean(device.alert, 40), code, at);
+          view.acknowledged = false; view.ackedBy = '';
+        }
+        fleet.push(view);
+      }
+      return json({
+        merchant, devices: fleet,
+        thresholds: { beatMs: BEAT_MS, offlineMs: DEVICE_OFFLINE_MS },
+        alerts: fleet.filter((d) => d.alert && !d.acknowledged).length,
+        offline: fleet.filter((d) => d.alert === 'device-offline').length,
+      });
+    } catch (_) { return json({ error: 'db' }, 503); }
+  }
   if (clean(url.searchParams.get('view'), 24) === 'payments') {
     try {
       await ensurePayments(env);
@@ -1421,7 +1627,11 @@ export async function onRequestPost({ request, env }) {
     }
     if (!(TRANSITIONS[row.status] && TRANSITIONS[row.status].has(wanted))) return json({ error: 'invalid-transition', status: row.status }, 409);
     if (['approved', 'cancelled', 'completed'].includes(wanted) && body.confirmed !== true) return json({ error: 'confirmation-required' }, 409);
-    const changed = await update(env, row, wanted, row.provider, parseJson(row.result) || {}, '');
+    /* Un échec sans motif n'apprend rien à personne : quand l'appareil ou
+       l'opérateur ferme une commande sur un échec ou un blocage, sa raison est
+       conservée telle quelle dans last_error. */
+    const beaten = ['failed', 'blocked'].includes(wanted) ? clean(body.reason, 120) : '';
+    const changed = await update(env, row, wanted, row.provider, parseJson(row.result) || {}, beaten);
     return json({ ok: true, command: publicRow(changed) });
   }
 
@@ -1436,7 +1646,8 @@ export async function onRequestPost({ request, env }) {
      purchasing, payroll, accounting, notifications, payment links and agent
      actions each need the matching grant.  Knowing a pairing cookie is never
      enough to create financial documents or contact arbitrary people. */
-  if (!(await mayCommand(request, env, merchant, domain, action))) {
+  const actor = await mayCommand(request, env, merchant, domain, action);
+  if (!actor) {
     return json({ error: 'permission-denied', domain, action }, 403);
   }
   if (!idOk(id) || !idOk(idem) || !payloadJson) return json({ error: 'invalid-command' }, 400);
@@ -1450,7 +1661,12 @@ export async function onRequestPost({ request, env }) {
   const at = now();
   const row = {
     id, merchant, domain, action, status: 'queued', provider: '', idempotency_key: idem,
-    payload: payloadJson, result: null, requested_by: clean(body.requestedBy, 100),
+    /* La signature vient de la session prouvée, pas du corps de la requête :
+       un acquittement ou un bon d'achat signé d'un nom que l'appelant se donne
+       lui-même n'est pas une piste d'audit.  Le libellé client ne sert que
+       lorsque rien de mieux n'a pu être prouvé. */
+    payload: payloadJson, result: null,
+    requested_by: clean(actor.name, 100) || clean(body.requestedBy, 100),
     attempt_count: 0, last_error: '', created_ts: at, updated_ts: at,
   };
   try {

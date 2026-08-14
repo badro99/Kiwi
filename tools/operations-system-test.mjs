@@ -97,8 +97,11 @@ const command = (extra) => Object.assign({ merchant: MERCHANT, payload: {} }, ex
 const anonymous = await post('', command({ id: 'op:anon-0001', idempotencyKey: 'op:anon-0001', domain: 'device', action: 'heartbeat' }));
 ok(anonymous.status === 401 && anonymous.data.error === 'unauthorized', 'an unsigned caller cannot write a command');
 
-const beat = await post(tillCookie, command({ id: 'op:till-beat-01', idempotencyKey: 'op:till-beat-01', domain: 'device', action: 'heartbeat', payload: { app: 'caisse' } }));
+const beat = await post(tillCookie, command({ id: 'op:till-beat-01', idempotencyKey: 'op:till-beat-01', domain: 'device', action: 'heartbeat', payload: { app: 'caisse', deviceId: 'dev-till-01', label: 'Caisse comptoir', printerConfigured: true, printerConnected: true } }));
 ok(beat.status === 200 && beat.data.command.status === 'completed' && beat.data.command.provider === 'kiwi-device', 'a paired till records its own heartbeat');
+
+const beatAnon = await post(tillCookie, command({ id: 'op:till-beat-02', idempotencyKey: 'op:till-beat-02', domain: 'device', action: 'heartbeat', payload: { app: 'caisse' } }));
+ok(beatAnon.status === 200 && beatAnon.data.command.status === 'failed' && beatAnon.data.command.lastError === 'device-id-required', 'a heartbeat without a device identity is refused, not merged into one anonymous row');
 
 const tillPo = await post(tillCookie, command({ id: 'op:till-po-0001', idempotencyKey: 'op:till-po-0001', domain: 'procurement', action: 'create-po' }));
 ok(tillPo.status === 403 && tillPo.data.error === 'permission-denied', 'a pairing cookie cannot open a purchase order');
@@ -232,6 +235,92 @@ const tillPayView = await get(tillCookie, '?merchant=' + MERCHANT + '&view=payme
 ok(tillPayView.status === 403, 'a paired till cannot read the merchant’s payment book');
 
 provider.close();
+
+/* Parc d'appareils.  Un battement est un fait daté : le serveur le range,
+   en tire une alarme, et cette alarme ne se calme que si quelqu'un la tait
+   ou si l'appareil guérit. */
+const fleetOf = async (cookie, merchant) => {
+  const view = await get(cookie, '?merchant=' + (merchant || MERCHANT) + '&view=devices');
+  return { status: view.status, data: view.data, byId: new Map(((view.data && view.data.devices) || []).map((d) => [d.deviceId, d])) };
+};
+
+const fleetFirst = await fleetOf(ownerCookie);
+ok(fleetFirst.status === 200 && fleetFirst.byId.get('dev-till-01') && fleetFirst.byId.get('dev-till-01').alert === ''
+  && fleetFirst.byId.get('dev-till-01').label === 'Caisse comptoir' && fleetFirst.data.thresholds.beatMs === 300000,
+  'the fleet reads back the till that beat, healthy, with the thresholds it is judged against');
+
+const beatTwice = await post(tillCookie, command({ id: 'op:till-beat-03', idempotencyKey: 'op:till-beat-03', domain: 'device', action: 'heartbeat', payload: { app: 'caisse', deviceId: 'dev-till-01', printerConfigured: true, printerConnected: true } }));
+ok(beatTwice.data.command.status === 'completed', 'a second beat from the same device updates the row it already owns');
+const fleetTwice = await fleetOf(ownerCookie);
+ok(fleetTwice.data.devices.length === 1 && fleetTwice.byId.get('dev-till-01').beats === 2,
+  'the parc counts beats on one row per device — it does not grow a row per heartbeat');
+
+const noPrinter = await post(ownerCookie, command({ id: 'op:dev-noprint-01', idempotencyKey: 'op:dev-noprint-01', domain: 'device', action: 'heartbeat', payload: { app: 'caisse', deviceId: 'dev-caisse-02', label: 'Caisse terrasse' } }));
+ok(noPrinter.data.command.status === 'completed' && noPrinter.data.command.result.alert === 'printer-unconfigured',
+  'a till that has never been given a printer is an alarm, not a silence');
+
+const unreachable = await post(ownerCookie, command({ id: 'op:dev-unreach-01', idempotencyKey: 'op:dev-unreach-01', domain: 'device', action: 'heartbeat', payload: { app: 'caisse', deviceId: 'dev-caisse-03', printerConfigured: true, printerConnected: false } }));
+ok(unreachable.data.command.result.alert === 'printer-unreachable', 'a configured printer that answers nobody raises its own alarm');
+
+/* Un battement daté d'une heure passe le contrôle d'ancienneté (24 h) mais
+   dépasse largement les trois battements manqués : l'alarme tombe à l'écriture,
+   sans horloge truquée. */
+const aged = await post(ownerCookie, command({ id: 'op:dev-old-01', idempotencyKey: 'op:dev-old-01', domain: 'device', action: 'heartbeat', payload: { app: 'dashboard', deviceId: 'dev-old-01', label: 'Tablette salle', at: Date.now() - 3600000 } }));
+ok(aged.data.command.status === 'completed' && aged.data.command.result.alert === 'device-offline',
+  'an appliance whose last word is an hour old is offline, whatever it claims about itself');
+
+const tillAck = await post(tillCookie, command({ id: 'op:till-ack-01', idempotencyKey: 'op:till-ack-01', domain: 'device', action: 'ack-alert', payload: { deviceId: 'dev-old-01' } }));
+ok(tillAck.status === 403 && tillAck.data.error === 'permission-denied',
+  'a pairing cookie reports its own health but cannot silence the parc');
+
+const mgrAck = await post(managerAtTill, command({ id: 'op:mgr-ack-01', idempotencyKey: 'op:mgr-ack-01', domain: 'device', action: 'ack-alert', payload: { deviceId: 'dev-old-01' } }));
+ok(mgrAck.status === 200 && mgrAck.data.command.status === 'completed' && mgrAck.data.command.result.acknowledged === true
+  && mgrAck.data.command.result.code === 'device-offline' && mgrAck.data.command.result.ackedBy,
+  'a manager acquits the alarm and the acquittal carries a name');
+
+const fleetAcked = await fleetOf(ownerCookie);
+ok(fleetAcked.byId.get('dev-old-01').acknowledged === true && fleetAcked.byId.get('dev-old-01').alert === 'device-offline'
+  && fleetAcked.byId.get('dev-old-01').silentMs > 0,
+  'acquitting silences the alarm without curing it: the device is still offline in the book');
+ok(fleetAcked.data.offline === 1 && fleetAcked.data.alerts === 2,
+  'the fleet counts what is wrong, not what has been acknowledged away');
+
+const healthyAck = await post(managerAtTill, command({ id: 'op:mgr-ack-02', idempotencyKey: 'op:mgr-ack-02', domain: 'device', action: 'ack-alert', payload: { deviceId: 'dev-till-01' } }));
+ok(healthyAck.data.command.status === 'failed' && healthyAck.data.command.lastError === 'no-open-alert',
+  'there is nothing to acquit on a device that is well');
+
+const ghostAck = await post(managerAtTill, command({ id: 'op:mgr-ack-03', idempotencyKey: 'op:mgr-ack-03', domain: 'device', action: 'ack-alert', payload: { deviceId: 'dev-never-seen' } }));
+ok(ghostAck.data.command.status === 'failed' && ghostAck.data.command.lastError === 'device-unknown',
+  'an appliance that never beat cannot have its silence acquitted');
+
+/* L'impression d'essai est exécutée par l'appareil qui la demande : le serveur
+   la met en route et attend le verdict du matériel, il ne l'invente pas. */
+const testPrint = await post(tillCookie, command({ id: 'op:till-print-01', idempotencyKey: 'op:till-print-01', domain: 'device', action: 'test-print', payload: { deviceId: 'dev-till-01' } }));
+ok(testPrint.status === 200 && testPrint.data.command.status === 'processing' && testPrint.data.command.provider === 'local-device'
+  && testPrint.data.command.result.instruction === 'execute-on-requesting-device',
+  'a test print is handed to the device that asked for it, not declared a success by the server');
+
+const printFailed = await post(tillCookie, { merchant: MERCHANT, commandId: 'op:till-print-01', transition: 'failed', reason: 'printer-timeout' });
+ok(printFailed.status === 200 && printFailed.data.command.status === 'failed' && printFailed.data.command.lastError === 'printer-timeout',
+  'the device reports its own failure back and the command records it');
+
+const printBlocked = await post(tillCookie, command({ id: 'op:till-print-02', idempotencyKey: 'op:till-print-02', domain: 'device', action: 'test-print', payload: { deviceId: 'dev-till-01', printerConfigured: false } }));
+ok(printBlocked.data.command.status === 'blocked' && printBlocked.data.command.lastError === 'printer-unconfigured',
+  'a test print with no printer behind it is blocked, never queued into nowhere');
+
+const printNowhere = await post(tillCookie, command({ id: 'op:till-print-03', idempotencyKey: 'op:till-print-03', domain: 'device', action: 'test-print', payload: {} }));
+ok(printNowhere.data.command.status === 'failed' && printNowhere.data.command.lastError === 'device-id-required',
+  'no device, no print');
+
+const strangeAction = await post(managerAtTill, command({ id: 'op:mgr-dev-99', idempotencyKey: 'op:mgr-dev-99', domain: 'device', action: 'reboot', payload: { deviceId: 'dev-till-01' } }));
+ok(strangeAction.status === 400 && strangeAction.data.error === 'unsupported-action',
+  'an action the device module does not implement is refused at the door, never written down as a command');
+
+const otherFleet = await fleetOf(ownerCookie, OTHER);
+ok(otherFleet.status === 401 || (otherFleet.status === 200 && otherFleet.data.merchant === MERCHANT),
+  'a merchant cannot read another merchant’s parc');
+const tillFleet = await fleetOf(tillCookie);
+ok(tillFleet.status === 403, 'a paired till cannot enumerate the parc it belongs to');
 
 const staged = await post(ownerCookie, { merchant: MERCHANT, commandId: 'op:owner-po-001', transition: 'pending-approval' });
 ok(staged.status === 200 && staged.data.command.status === 'pending-approval', 'the owner advances a purchase order through its lifecycle');
@@ -681,6 +770,15 @@ ok(uiSource.includes("if (asked !== '')") && uiSource.includes('payload.amount =
   'an empty refund amount means the whole refundable, never a zero the server would refuse');
 ok(uiSource.includes('openPayments:openPayments') && uiSource.includes("openPayments('link')") && browserSource.includes("view: 'payments'"),
   'the payments console is exported, opened from the payment-link button and reads the book from the server');
+
+ok(uiSource.includes('openDevices:openDevices') && uiSource.includes("H['nav-terminaux']") && browserSource.includes("view: 'devices'"),
+  'the parc console is exported, takes over the Terminaux destination and reads the fleet from the server');
+ok(uiSource.includes('data-dv-ack') && uiSource.includes('data-dv-test'),
+  'the product can acquit an alarm and ask a device for a test print');
+ok(browserSource.includes("'device', 'heartbeat'") && /setInterval\([\s\S]{0,160}?beat\(\)/.test(browserSource),
+  'the client beats on its own, it does not wait to be asked');
+ok(uiSource.includes('legacyTerminals') && uiSource.includes('!real() && legacyTerminals'),
+  'a demo session keeps its storytelling fleet — only a real merchant is shown real appliances');
 
 /* Version-agnostic on purpose: a cache-stamp bump is how a fix ships, so the
    gate must assert the script is wired, never which generation it is on. */

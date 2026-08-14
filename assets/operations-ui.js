@@ -63,6 +63,18 @@
           lkSettle:'Relever', lkCancel:'Annuler le lien', lkRefund:'Rembourser',
           lkDone:'Livre des paiements mis à jour.', lkAlready:'Déjà annulé — rien n’a changé.',
           lkStatus:{ active:'Actif', pending:'En attente', paid:'Payé', 'partially-refunded':'Partiellement remboursé', refunded:'Remboursé', cancelled:'Annulé', expired:'Expiré' },
+          dvTitle:'Parc d’appareils', dvSub:'Battements réels · alarmes, silence, ticket d’essai',
+          dvDenied:'Droit d’exploitation requis', dvDeniedD:'Votre session ne peut pas faire taire une alarme de parc. Kiwi le dit avant de vous faire cliquer.',
+          dvLoading:'Lecture du parc…', dvNone:'Aucun appareil ne s’est manifesté depuis trente jours.',
+          dvRefresh:'Rafraîchir', dvAlerts:'Alarmes ouvertes', dvOffline:'Appareils muets', dvHeads:'Appareils',
+          dvHint:'Un appareil éteint n’écrit rien : c’est son silence qui le déclare absent, pas un message. Le seuil vaut trois battements manqués.',
+          dvApp:{ caisse:'Caisse', serveur:'Salle', dashboard:'Tableau de bord' },
+          dvAlert:{ 'device-offline':'Muet depuis trop longtemps', 'printer-unreachable':'Imprimante injoignable', 'printer-unconfigured':'Imprimante non configurée' },
+          dvOk:'Aucune alarme', dvSilent:'Silence', dvBeats:'Battements', dvFirst:'Premier contact', dvLast:'Dernier battement',
+          dvThis:'Cet appareil', dvAck:'Faire taire', dvAcked:'Acquittée', dvAckedBy:'par',
+          dvAckHint:'Faire taire n’éteint pas la cause : l’alarme se rouvre si le problème revient, et se referme seule quand il disparaît.',
+          dvTest:'Ticket d’essai', dvTestHint:'Le ticket part vraiment sur l’imprimante de cet appareil. Kiwi rapporte ce que le pont répond, réussite comme échec.',
+          dvPrinted:'Ticket imprimé.', dvNotPrinted:'Rien n’a été imprimé',
           acctTitle:'Comptabilité', acctSub:'Écritures durables · plan comptable marocain',
           tabInvoice:'Facture', tabCredit:'Avoir', tabPeriod:'Période', tabJournal:'Journal',
           acctDenied:'Réservé au propriétaire', acctDeniedD:'Seul le compte propriétaire — ou un opérateur Kiwi — peut écrire dans les livres. Votre session n’a pas ce droit, et Kiwi préfère le dire avant de vous faire remplir un formulaire.',
@@ -117,6 +129,11 @@
             'provider-returned-no-status':'Le fournisseur n’a annoncé aucun état exploitable.',
             'provider-returned-no-amount':'Le fournisseur n’a annoncé aucun montant exploitable.',
             'unsupported-action':'Action inconnue.',
+            'device-id-required':'Appareil non identifié.', 'device-unknown':'Cet appareil ne s’est jamais manifesté.',
+            'no-open-alert':'Aucune alarme ouverte sur cet appareil.',
+            'printer-unconfigured':'Aucune imprimante configurée sur cet appareil.',
+            'no-printer-driver':'Le pont d’impression n’est pas chargé sur cet appareil.',
+            'print-failed':'L’imprimante n’a rien imprimé.',
           },
         },
         en: {
@@ -171,6 +188,18 @@
           lkSettle:'Read', lkCancel:'Cancel the link', lkRefund:'Refund',
           lkDone:'Payment book updated.', lkAlready:'Already cancelled — nothing changed.',
           lkStatus:{ active:'Active', pending:'Pending', paid:'Paid', 'partially-refunded':'Partially refunded', refunded:'Refunded', cancelled:'Cancelled', expired:'Expired' },
+          dvTitle:'Device fleet', dvSub:'Real heartbeats · alerts, acknowledgement, test print',
+          dvDenied:'Operations right required', dvDeniedD:'Your session cannot silence a fleet alert. Kiwi says so before letting you click.',
+          dvLoading:'Reading the fleet…', dvNone:'No device has reported in thirty days.',
+          dvRefresh:'Refresh', dvAlerts:'Open alerts', dvOffline:'Silent devices', dvHeads:'Devices',
+          dvHint:'A device that is switched off writes nothing: its silence is what marks it absent, not a message. The threshold is three missed heartbeats.',
+          dvApp:{ caisse:'Register', serveur:'Floor', dashboard:'Dashboard' },
+          dvAlert:{ 'device-offline':'Silent for too long', 'printer-unreachable':'Printer unreachable', 'printer-unconfigured':'Printer not configured' },
+          dvOk:'No alert', dvSilent:'Silence', dvBeats:'Heartbeats', dvFirst:'First seen', dvLast:'Last heartbeat',
+          dvThis:'This device', dvAck:'Acknowledge', dvAcked:'Acknowledged', dvAckedBy:'by',
+          dvAckHint:'Acknowledging does not fix the cause: the alert reopens if the problem returns, and closes itself once it is gone.',
+          dvTest:'Test print', dvTestHint:'The slip really goes to this device’s printer. Kiwi reports what the bridge answers, success or failure.',
+          dvPrinted:'Slip printed.', dvNotPrinted:'Nothing was printed',
           acctTitle:'Accounting', acctSub:'Durable entries · Moroccan chart of accounts',
           tabInvoice:'Invoice', tabCredit:'Credit note', tabPeriod:'Period', tabJournal:'Journal',
           acctDenied:'Owner only', acctDeniedD:'Only the owner account — or a Kiwi operator — can write to the books. Your session does not hold that right, and Kiwi says so before you fill in a form.',
@@ -225,6 +254,11 @@
             'provider-returned-no-status':'The provider announced no usable status.',
             'provider-returned-no-amount':'The provider announced no usable amount.',
             'unsupported-action':'Unknown action.',
+            'device-id-required':'Device not identified.', 'device-unknown':'This device has never reported.',
+            'no-open-alert':'No open alert on this device.',
+            'printer-unconfigured':'No printer configured on this device.',
+            'no-printer-driver':'The printing bridge is not loaded on this device.',
+            'print-failed':'The printer printed nothing.',
           },
         },
         ar: {
@@ -279,6 +313,18 @@
           lkSettle:'قراءة', lkCancel:'إلغاء الرابط', lkRefund:'استرجاع',
           lkDone:'تم تحديث دفتر المدفوعات.', lkAlready:'ألغي سابقًا — لم يتغيّر شيء.',
           lkStatus:{ active:'نشط', pending:'قيد الانتظار', paid:'مؤدّى', 'partially-refunded':'مسترجَع جزئيًا', refunded:'مسترجَع', cancelled:'ملغى', expired:'منتهي' },
+          dvTitle:'أسطول الأجهزة', dvSub:'نبضات حقيقية · إنذارات، إسكات، تذكرة اختبار',
+          dvDenied:'يلزم حق التشغيل', dvDeniedD:'جلستك لا يمكنها إسكات إنذار في الأسطول. يقولها Kiwi قبل أن تضغط.',
+          dvLoading:'قراءة الأسطول…', dvNone:'لم يظهر أي جهاز منذ ثلاثين يومًا.',
+          dvRefresh:'تحديث', dvAlerts:'إنذارات مفتوحة', dvOffline:'أجهزة صامتة', dvHeads:'الأجهزة',
+          dvHint:'الجهاز المطفأ لا يكتب شيئًا: صمته هو ما يعلن غيابه، لا رسالة. العتبة ثلاث نبضات ضائعة.',
+          dvApp:{ caisse:'الصندوق', serveur:'القاعة', dashboard:'لوحة القيادة' },
+          dvAlert:{ 'device-offline':'صامت منذ وقت طويل', 'printer-unreachable':'الطابعة غير متاحة', 'printer-unconfigured':'الطابعة غير مهيّأة' },
+          dvOk:'لا إنذار', dvSilent:'الصمت', dvBeats:'النبضات', dvFirst:'أول اتصال', dvLast:'آخر نبضة',
+          dvThis:'هذا الجهاز', dvAck:'إسكات', dvAcked:'مُقرّ به', dvAckedBy:'بواسطة',
+          dvAckHint:'الإسكات لا يطفئ السبب: يعود الإنذار إن عاد العطل، ويُغلق وحده حين يزول.',
+          dvTest:'تذكرة اختبار', dvTestHint:'تخرج التذكرة فعلًا من طابعة هذا الجهاز. يبلّغ Kiwi بما يردّه الجسر، نجاحًا كان أو فشلًا.',
+          dvPrinted:'طُبعت التذكرة.', dvNotPrinted:'لم يُطبع شيء',
           acctTitle:'المحاسبة', acctSub:'قيود دائمة · المخطط المحاسبي المغربي',
           tabInvoice:'فاتورة', tabCredit:'إشعار دائن', tabPeriod:'الفترة', tabJournal:'اليومية',
           acctDenied:'خاص بالمالك', acctDeniedD:'وحده حساب المالك — أو مشغّل Kiwi — يمكنه الكتابة في الدفاتر. جلستك لا تملك هذا الحق، ويقولها Kiwi قبل أن تملأ أي استمارة.',
@@ -333,6 +379,11 @@
             'provider-returned-no-status':'لم يعلن المزوّد أي حالة قابلة للاستعمال.',
             'provider-returned-no-amount':'لم يعلن المزوّد أي مبلغ قابل للاستعمال.',
             'unsupported-action':'إجراء غير معروف.',
+            'device-id-required':'الجهاز غير معرَّف.', 'device-unknown':'هذا الجهاز لم يظهر قط.',
+            'no-open-alert':'لا إنذار مفتوح على هذا الجهاز.',
+            'printer-unconfigured':'لا طابعة مهيّأة على هذا الجهاز.',
+            'no-printer-driver':'جسر الطباعة غير محمَّل على هذا الجهاز.',
+            'print-failed':'لم تطبع الطابعة شيئًا.',
           },
         },
       })[lang()];
@@ -479,21 +530,21 @@
       style.textContent = [
         /* `ops-pay-*` appartient déjà à la paie : les liens de paiement prennent
            leur propre préfixe `ops-lk-*` et s'ajoutent aux listes partagées. */
-        '.ops-acct,.ops-proc,.ops-pay,.ops-lk{padding:22px 26px 46px;max-width:1000px;margin:0 auto;}',
+        '.ops-acct,.ops-proc,.ops-pay,.ops-lk,.ops-dv{padding:22px 26px 46px;max-width:1000px;margin:0 auto;}',
         '.ops-acct-tabs,.ops-proc-tabs,.ops-pay-tabs,.ops-lk-tabs{display:inline-flex;gap:2px;padding:4px;border-radius:999px;background:var(--n-100);border:1px solid var(--n-200);margin-bottom:22px;}',
         '.ops-acct-tab,.ops-proc-tab,.ops-pay-tab,.ops-lk-tab{appearance:none;border:0;background:transparent;font:inherit;font-size:12.5px;font-weight:600;color:var(--n-500);padding:8px 18px;border-radius:999px;cursor:pointer;transition:color .2s;}',
         /* liquid-lens paints the pill; the button must not paint one under it. */
         '.ops-acct-tab.on,.ops-proc-tab.on,.ops-pay-tab.on,.ops-lk-tab.on{background:transparent;color:#fff;}',
         '.ops-acct-pane,.ops-proc-pane,.ops-pay-pane,.ops-lk-pane{display:none;}',
         '.ops-acct-pane.on,.ops-proc-pane.on,.ops-pay-pane.on,.ops-lk-pane.on{display:block;}',
-        '.ops-acct-hint,.ops-proc-hint,.ops-pay-hint,.ops-lk-hint{font-size:12px;color:var(--n-500);margin:0 0 14px;max-width:62ch;line-height:1.55;}',
+        '.ops-acct-hint,.ops-proc-hint,.ops-pay-hint,.ops-lk-hint,.ops-dv-hint{font-size:12px;color:var(--n-500);margin:0 0 14px;max-width:62ch;line-height:1.55;}',
         '.ops-acct-confirm,.ops-lk-confirm{display:flex;align-items:flex-start;gap:9px;font-size:12.5px;color:var(--n-500);margin-top:14px;cursor:pointer;}',
         '.ops-acct-confirm input,.ops-lk-confirm input{margin-top:2px;accent-color:var(--atlas);}',
         '.ops-acct-out,.ops-proc-out,.ops-pay-out,.ops-lk-out{margin-top:18px;}',
-        '.ops-acct-kpis,.ops-proc-kpis,.ops-pay-kpis,.ops-lk-kpis{display:flex;flex-wrap:wrap;gap:22px;margin:12px 0 4px;}',
-        '.ops-acct-kpi,.ops-proc-kpi,.ops-pay-kpi,.ops-lk-kpi{min-width:104px;}',
-        '.ops-acct-kpi .k,.ops-proc-kpi .k,.ops-pay-kpi .k,.ops-lk-kpi .k{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--n-500);}',
-        '.ops-acct-kpi .v,.ops-proc-kpi .v,.ops-pay-kpi .v,.ops-lk-kpi .v{font-size:17px;font-weight:600;margin-top:3px;font-variant-numeric:tabular-nums;}',
+        '.ops-acct-kpis,.ops-proc-kpis,.ops-pay-kpis,.ops-lk-kpis,.ops-dv-kpis{display:flex;flex-wrap:wrap;gap:22px;margin:12px 0 4px;}',
+        '.ops-acct-kpi,.ops-proc-kpi,.ops-pay-kpi,.ops-lk-kpi,.ops-dv-kpi{min-width:104px;}',
+        '.ops-acct-kpi .k,.ops-proc-kpi .k,.ops-pay-kpi .k,.ops-lk-kpi .k,.ops-dv-kpi .k{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--n-500);}',
+        '.ops-acct-kpi .v,.ops-proc-kpi .v,.ops-pay-kpi .v,.ops-lk-kpi .v,.ops-dv-kpi .v{font-size:17px;font-weight:600;margin-top:3px;font-variant-numeric:tabular-nums;}',
         '.ops-acct-doc,.ops-proc-num,.ops-pay-num,.ops-lk-num{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:18px;letter-spacing:.02em;}',
         '.ops-acct-scroll,.ops-proc-scroll,.ops-pay-scroll,.ops-lk-scroll{overflow-x:auto;max-height:50vh;overflow-y:auto;margin-top:12px;}',
         '.ops-acct-table,.ops-proc-table,.ops-pay-table{width:100%;border-collapse:collapse;font-size:12.5px;}',
@@ -542,6 +593,22 @@
         '.ops-lk-refund input{width:100%;box-sizing:border-box;}',
         '@media (max-width:720px){.ops-lk-refund{grid-template-columns:1fr;}}',
         '.ops-lk-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}',
+        /* Un appareil se lit d'un coup d'œil : son nom, son état, puis les
+           chiffres qui disent depuis quand il se tait.  L'alarme prend la
+           couleur d'un avertissement, jamais celle d'une décoration. */
+        '.ops-dv-card{margin-bottom:12px;}',
+        '.ops-dv-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:10px;}',
+        '.ops-dv-name{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:14px;letter-spacing:.02em;overflow-wrap:anywhere;}',
+        '.ops-dv-app{font-size:12.5px;color:var(--n-500);}',
+        '.ops-dv-state{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;font-weight:600;padding:3px 9px;border-radius:999px;border:1px solid var(--n-200);color:var(--n-500);}',
+        '.ops-dv-state.ok{color:var(--atlas);border-color:color-mix(in srgb,var(--atlas) 34%,transparent);}',
+        '.ops-dv-state.bad{color:#B4381F;border-color:color-mix(in srgb,#B4381F 34%,transparent);}',
+        '.ops-dv-state.acked{color:var(--n-500);border-style:dashed;}',
+        '.ops-dv-meta{display:flex;flex-wrap:wrap;gap:18px;margin-top:10px;}',
+        '.ops-dv-meta div .k{display:block;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--n-500);}',
+        '.ops-dv-meta div .v{font-size:13px;font-variant-numeric:tabular-nums;}',
+        '.ops-dv-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;}',
+        '.ops-dv-this{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--atlas);font-weight:600;}',
       ].join('\n');
       document.head.appendChild(style);
     }
@@ -1386,6 +1453,141 @@
       else O.payments({ limit:1 }).then(function (data) { warn(data && data.providers); }, function () {});
     }
 
+    /* Le parc.  Un appareil éteint n'écrit rien : la carte lit donc ce que le
+       serveur recalcule à la lecture, jamais un état mis en cache par la
+       dernière visite.  Le ticket d'essai part vraiment, et ce qui est
+       rapporté est ce que le pont a répondu. */
+    function openDevices() {
+      var c = text();
+      consoleCss();
+      if (O.allowed && !O.allowed('device', 'ack-alert')) {
+        Kiwi.drawer({ title:c.dvTitle, subtitle:c.dvSub, fullpage:true,
+          body:'<div class="ops-dv"><div class="p-card"><b>' + esc(c.dvDenied) + '</b><p class="ops-dv-hint" style="margin:8px 0 0">' + esc(c.dvDeniedD) + '</p></div></div>' });
+        return;
+      }
+
+      var body = '<div class="ops-dv">' +
+        '<p class="ops-dv-hint">' + esc(c.dvHint) + '</p>' +
+        '<button class="kb ghost xs" type="button" data-dv-refresh>' + esc(c.dvRefresh) + '</button>' +
+        '<div data-dv-fleet><p class="ops-dv-hint" style="margin-top:14px">' + esc(c.dvLoading) + '</p></div>' +
+        '<p class="ops-dv-hint" style="margin-top:18px">' + esc(c.dvAckHint) + '</p>' +
+        '<p class="ops-dv-hint" style="margin:6px 0 0">' + esc(c.dvTestHint) + '</p>' +
+        '</div>';
+
+      var res = Kiwi.drawer({ title:c.dvTitle, subtitle:c.dvSub, body:body, fullpage:true });
+      var root = res.el;
+      var host = root.querySelector('[data-dv-fleet]');
+
+      function kpi(k, v) { return '<div class="ops-dv-kpi"><div class="k">' + esc(k) + '</div><div class="v">' + esc(v) + '</div></div>'; }
+      function card(el, code) { el.innerHTML = '<div class="p-card"><span class="chip pend">' + esc(acctError(code)) + '</span></div>'; }
+      /* Une durée se dit dans la langue lue, pas en millisecondes : Intl porte
+         déjà les trois langues, inutile d'inventer des abréviations. */
+      function ago(ms) {
+        var value = Math.max(0, Number(ms) || 0);
+        try {
+          var rtf = new Intl.RelativeTimeFormat(lang(), { numeric:'auto' });
+          if (value < 90000) return rtf.format(-Math.round(value / 1000), 'second');
+          if (value < 5400000) return rtf.format(-Math.round(value / 60000), 'minute');
+          if (value < 172800000) return rtf.format(-Math.round(value / 3600000), 'hour');
+          return rtf.format(-Math.round(value / 86400000), 'day');
+        } catch (_) { return Math.round(value / 60000) + ' min'; }
+      }
+      function stamp(ts) {
+        if (!ts) return '—';
+        try { return new Date(Number(ts)).toLocaleString(lang(), { dateStyle:'short', timeStyle:'short' }); }
+        catch (_) { return String(ts); }
+      }
+
+      function deviceCard(device) {
+        var mine = device.deviceId === (O.deviceId ? O.deviceId() : '');
+        var state = device.alert ? (c.dvAlert[device.alert] || device.alert) : c.dvOk;
+        var tone = device.alert ? (device.acknowledged ? 'acked' : 'bad') : 'ok';
+        var name = device.label || device.deviceId;
+        return '<div class="p-card ops-dv-card" data-dv-row data-dv-id="' + esc(device.deviceId) + '">' +
+          '<div class="ops-dv-head">' +
+            '<div><div class="ops-dv-name">' + esc(name) + '</div>' +
+              '<div class="ops-dv-app">' + esc(c.dvApp[device.app] || device.app || '—') +
+              (mine ? ' · <span class="ops-dv-this">' + esc(c.dvThis) + '</span>' : '') + '</div></div>' +
+            '<span class="ops-dv-state ' + tone + '">' + esc(state) + '</span>' +
+          '</div>' +
+          (device.alert && device.acknowledged
+            ? '<p class="ops-dv-hint" style="margin:8px 0 0">' + esc(c.dvAcked) +
+              (device.ackedBy ? ' · ' + esc(c.dvAckedBy) + ' ' + esc(device.ackedBy) : '') + '</p>'
+            : '') +
+          '<div class="ops-dv-meta">' +
+            '<div><span class="k">' + esc(c.dvSilent) + '</span><span class="v">' + esc(ago(device.silentMs)) + '</span></div>' +
+            '<div><span class="k">' + esc(c.dvBeats) + '</span><span class="v">' + esc(String(device.beats)) + '</span></div>' +
+            '<div><span class="k">' + esc(c.dvLast) + '</span><span class="v">' + esc(stamp(device.lastSeen)) + '</span></div>' +
+            '<div><span class="k">' + esc(c.dvFirst) + '</span><span class="v">' + esc(stamp(device.firstSeen)) + '</span></div>' +
+          '</div>' +
+          /* Ce que le serveur refuserait n'est pas peint : pas d'alarme, pas de
+             bouton pour la faire taire ; pas cet appareil-ci, pas de ticket. */
+          ((device.alert && !device.acknowledged) || mine
+            ? '<div class="ops-dv-btns">' +
+              (device.alert && !device.acknowledged ? '<button class="kb ghost xs" type="button" data-dv-ack>' + esc(c.dvAck) + '</button>' : '') +
+              (mine ? '<button class="kb ghost xs" type="button" data-dv-test>' + esc(c.dvTest) + '</button>' : '') +
+              '</div>'
+            : '') +
+          '<div class="ops-dv-out" data-dv-row-out></div>' +
+          '</div>';
+      }
+
+      async function loadFleet() {
+        host.innerHTML = '<p class="ops-dv-hint" style="margin-top:14px">' + esc(c.dvLoading) + '</p>';
+        try {
+          var data = await O.devices({ limit:200 });
+          var fleet = (data && data.devices) || [];
+          host.innerHTML = '<div class="ops-dv-kpis">' +
+            kpi(c.dvHeads, String(fleet.length)) +
+            kpi(c.dvAlerts, String((data && data.alerts) || 0)) +
+            kpi(c.dvOffline, String((data && data.offline) || 0)) +
+            '</div>' +
+            (fleet.length ? fleet.map(deviceCard).join('') : '<p class="ops-dv-hint" style="margin-top:14px">' + esc(c.dvNone) + '</p>');
+        } catch (error) { card(host, error && (error.code || error.message)); }
+      }
+
+      root.addEventListener('click', async function (event) {
+        var refresh = event.target.closest('[data-dv-refresh]');
+        if (refresh) return loadFleet();
+
+        var row = event.target.closest('[data-dv-row]');
+        if (!row) return;
+        var out = row.querySelector('[data-dv-row-out]');
+
+        var ack = event.target.closest('[data-dv-ack]');
+        if (ack) {
+          ack.disabled = true; out.innerHTML = '';
+          try {
+            var acked = linkOutcome(await O.ackAlert(row.getAttribute('data-dv-id')));
+            if (acked.queued) return;
+            if (acked.error) { ack.disabled = false; return card(out, acked.error); }
+            Kiwi.toast(c.dvAcked, { type:'success' });
+            loadFleet();
+          } catch (error) { ack.disabled = false; card(out, error && (error.code || error.message)); }
+          return;
+        }
+
+        var test = event.target.closest('[data-dv-test]');
+        if (test) {
+          test.disabled = true; out.innerHTML = '';
+          try {
+            var result = await O.testPrint();
+            if (result && result.offline) { test.disabled = false; return toastResult(result); }
+            /* Une commande bloquée ou échouée avant l'impression n'a pas de
+               champ printed : c'est le statut qui porte la vérité. */
+            var cmd = result && result.command || {};
+            if (cmd.status === 'blocked' || cmd.status === 'failed') { test.disabled = false; return card(out, cmd.lastError || cmd.status); }
+            test.disabled = false;
+            if (result && result.printed) Kiwi.toast(c.dvPrinted, { type:'success', desc:result.via || '' });
+            else Kiwi.toast(c.dvNotPrinted, { type:'warning', desc:acctError(result && result.reason) });
+            loadFleet();
+          } catch (error) { test.disabled = false; card(out, error && (error.code || error.message)); }
+        }
+      });
+
+      loadFleet();
+    }
+
     var legacyAcct = {};
     ['open-comptabilite', 'acct-livre', 'acct-etats', 'acct-tva'].forEach(function (key) {
       legacyAcct[key] = H[key];
@@ -1396,7 +1598,15 @@
       };
     });
 
-    window.KiwiOperationsUI = { toastResult:toastResult, openHistory:H['operations-history'], openLedger:openLedger, openProcurement:openProcurement, openPayroll:openPayroll, openPayments:openPayments };
+    /* Terminaux.  La démo garde son parc raconté ; un vrai commerçant voit
+       les appareils qui battent réellement, et rien d'autre. */
+    var legacyTerminals = H['nav-terminaux'];
+    H['nav-terminaux'] = function () {
+      if (!real() && legacyTerminals) return legacyTerminals.apply(this, arguments);
+      openDevices();
+    };
+
+    window.KiwiOperationsUI = { toastResult:toastResult, openHistory:H['operations-history'], openLedger:openLedger, openProcurement:openProcurement, openPayroll:openPayroll, openPayments:openPayments, openDevices:openDevices };
   }
   boot();
 })();

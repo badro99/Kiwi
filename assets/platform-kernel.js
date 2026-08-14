@@ -73,7 +73,7 @@
      but never replace server authorization. Unknown mutations are denied. */
   var ROLE = {
     owner: ['*'], proprietaire: ['*'], operator: ['*'],
-    manager: ['read:*','write:catalog','write:inventory','write:planning','write:customers','write:orders','write:reservations','write:reports','action:refund','action:reprint','action:message'],
+    manager: ['read:*','write:catalog','write:inventory','write:planning','write:customers','write:orders','write:reservations','write:reports','write:device','action:refund','action:reprint','action:message'],
     caisse: ['read:catalog','read:inventory','read:customers','read:orders','write:orders','write:customers','action:checkout','action:reprint'],
     cashier: ['read:catalog','read:inventory','read:customers','read:orders','write:orders','write:customers','action:checkout','action:reprint'],
     serveur: ['read:tables','read:orders','read:planning','write:orders','action:request-bill'],
