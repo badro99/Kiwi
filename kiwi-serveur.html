@@ -3817,6 +3817,8 @@ em, i, cite, dfn, var { font-style: normal; }
   <script src="assets/pwa-update.js?v=358" defer></script>
   <script src="assets/employee-live.js?v=374" defer></script>
   <script src="assets/employee-planning.js?v=3" defer></script>
+  <link rel="stylesheet" href="assets/employee-trade-shell.css?v=1">
+  <script src="assets/employee-trade-shell.js?v=1" defer></script>
   <!-- Canal de poussée facultatif : quand le concentrateur temps réel est
        déployé, le serveur relit dès qu'une table change en caisse, au lieu
        d'attendre son prochain tour. Absent → sondage d'origine, inchangé. -->
@@ -5008,6 +5010,18 @@ em, i, cite, dfn, var { font-style: normal; }
       if (!SV_DEMO && liveEmployeeState && liveEmployeeState.employee) {
         const emp = liveEmployeeState.employee;
         const raw = emp.role || '';
+        const storeType = String(liveEmployeeState.store && liveEmployeeState.store.type || '').toLowerCase();
+        const nonDining = storeType && !['restaurant', 'cafe', 'café'].includes(storeType);
+        if (nonDining) {
+          return Object.assign({}, ROLES.plongeur, {
+            id: emp.id || ROLES.plongeur.id,
+            name: emp.firstName || String(emp.name || 'Employé').split(/\s+/)[0],
+            fullName: emp.name || 'Employé', initials: emp.initials || 'E',
+            role: window.KiwiRoles ? KiwiRoles.label(raw) : (raw || 'Employé'),
+            tabs: ['tables', 'notifications', 'profil'], defaultTab: 'tables',
+            restricted: true, tradeWorkspace: true,
+          });
+        }
         const R = window.KiwiRoles;
         const floor = R ? R.isService(raw) : /serveur|service|salle|manager|propri/i.test(raw);
         const base = floor ? ROLES.serveur : ROLES.plongeur;

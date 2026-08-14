@@ -840,6 +840,22 @@
     renderBadges();
     queueIfOffline(`Commande #${order.num}`);
     relayKitchen(order, false);
+    /* The kitchen printer follows the same committed order as the KDS relay.
+       A stable order/station key makes retries and refreshes harmless. */
+    try {
+      if (window.KiwiFoodProductionPrint) KiwiFoodProductionPrint.enqueue({
+        trade: 'fastfood', ref: order.num, at: order.placedAt,
+        destination: order.channel === 'surplace' ? `Comptoir #${order.num}` : CHANNELS[order.channel].label,
+        lines: order.lines.map((ln) => {
+          const item = ITEM[ln.itemId];
+          const counter = item && item.cat === 'sides' && (ln.itemId === 'jus' || ln.itemId === 'soda');
+          const notes = [];
+          if (ln.combo) notes.push(`Menu · ${DRINK[ln.drink] ? DRINK[ln.drink].label : 'boisson'}`);
+          if ((ln.sauces || []).length) notes.push(`Sauces : ${ln.sauces.join(', ')}`);
+          return { qty: ln.qty, name: lineName(ln), note: notes.join(' · '), station: counter ? 'Boissons' : 'Cuisine' };
+        }),
+      });
+    } catch (_) {}
     icons(); lens();
   }
 

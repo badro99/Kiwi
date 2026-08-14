@@ -184,6 +184,8 @@ var SHELL = [
   '/assets/restaurant-units.js',
   '/assets/employee-live.js?v=374',
   '/assets/employee-planning.js?v=3',
+  '/assets/employee-trade-shell.css?v=1',
+  '/assets/employee-trade-shell.js?v=1',
   '/assets/planning-core.js?v=8',
   '/assets/planning-ui.css?v=10',
   '/assets/team.js?v=274',
@@ -202,6 +204,7 @@ var SHELL = [
      ligne, une commande prise pendant une coupure pourrait atteindre la
      cuisine à l'écran sans jamais sortir sur la thermique. */
   '/assets/kitchen-print-queue.js?v=1',
+  '/assets/food-production-print.js?v=1',
   '/assets/pos-sale.js?v=3',
   '/assets/pos-dispatch.js?v=15',
   '/assets/retail-scan.css?v=6',

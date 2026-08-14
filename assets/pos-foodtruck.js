@@ -590,6 +590,16 @@
     consumeBread(o.lines);
     state.ticket = { lines: [], name: '' };
     queueIfOffline(`Commande ${o.id}`);
+    try {
+      if (window.KiwiFoodProductionPrint) KiwiFoodProductionPrint.enqueue({
+        trade: 'foodtruck', ref: o.id, at: o.at,
+        destination: `${SPOT[o.spot] ? SPOT[o.spot].label : 'Food truck'} · ${o.name}`,
+        lines: o.lines.map((l) => ({
+          qty: l.qty, name: ITEM[l.id].label,
+          station: ['jus', 'the', 'limonada'].includes(l.id) ? 'Boissons' : 'Cuisine',
+        })),
+      });
+    } catch (_) {}
     renderTicket(); renderBadges(); renderVenteQueue(); icons();
     if (state.view === 'file') renderFile();
     return o;

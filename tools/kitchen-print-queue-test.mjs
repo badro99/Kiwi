@@ -119,7 +119,7 @@ ok('une commande en attente devenue acceptée déclenche aussi son bon',
 ok('l’impression locale relaie d’abord l’ordre pour partager son identifiant idempotent',
   /relayToKitchen\(order\);\s*printKitchenTickets\(order, items\)/.test(caisse));
 ok('le réglage explique qu’un seul ordinateur doit être hub',
-  /Activez cette option sur un seul ordinateur par restaurant/.test(bridge));
+  /Activez cette option sur un seul ordinateur par établissement/.test(bridge));
 ok('la file d’impression fait partie de la coquille hors ligne',
   /'\/assets\/kitchen-print-queue\.js\?v=1'/.test(sw));
 

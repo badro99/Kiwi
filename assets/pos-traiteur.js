@@ -649,6 +649,18 @@
       ev.status = 'confirme';
       ev.confirmedAt = new Date();
       ev.tranches[0].due = new Date();
+      try {
+        if (window.KiwiFoodProductionPrint) KiwiFoodProductionPrint.enqueue({
+          trade: 'traiteur', ref: ev.id, at: ev.confirmedAt,
+          destination: `${ev.name} · ${fmtN(ev.guests)} pers. · ${fmtDay(ev.date)}`,
+          lines: ev.menu.map((id) => ({
+            qty: 1, name: DISH[id].label, note: DISH[id].pack(ev.guests),
+            station: DISH[id].course === 'entrees' ? 'Entrées'
+              : DISH[id].course === 'desserts' ? 'Pâtisserie'
+              : DISH[id].course === 'boissons' ? 'Boissons' : 'Cuisine',
+          })),
+        });
+      } catch (_) {}
       queueIfOffline('Confirmation événement');
       toast(`${ev.name} confirmé, tranche 1 (30 %) à encaisser`);
       openDetail(ev.id);

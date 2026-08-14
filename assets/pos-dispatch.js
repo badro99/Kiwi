@@ -310,6 +310,9 @@
     /* Product-led métiers keep their specialist checkout, and gain an additive
        continuous-scan lane backed by the same catalog/stock/sales truth. */
     try { if (window.KiwiRetailScan && window.KiwiRetailScan.eligible(id)) window.KiwiRetailScan.mount(root, id); } catch (e) {}
+    /* Fast operational trades use the same durable automatic print queue as
+       the restaurant. Keep printer setup visible inside their native rail. */
+    try { if (window.KiwiFoodProductionPrint && KiwiFoodProductionPrint.eligible(id)) KiwiFoodProductionPrint.install(root, id); } catch (e) {}
     /* Visual-only restaurant-level chrome. Run last so the shared refresh,
        reprint and operational-workspace controls are present before the rail
        is classified. Their original nodes and handlers remain untouched. */

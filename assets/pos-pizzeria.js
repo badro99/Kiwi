@@ -1082,6 +1082,19 @@
     renderBadges();
     renderStats();
     queueIfOffline(`Commande ${o.id}`);
+    try {
+      if (window.KiwiFoodProductionPrint) KiwiFoodProductionPrint.enqueue({
+        trade: 'pizzeria', ref: o.id, at: o.createdAt, destination: destLabel(o),
+        lines: o.lines.map((ln) => ({
+          qty: ln.qty, name: lineName(ln), station: ln.kind === 'drink' ? 'Comptoir' : 'Four',
+          note: ln.kind === 'pizza'
+            ? [SIZE[ln.size] && SIZE[ln.size].label, ln.pate && `Pâte ${PATES.find((p) => p.id === ln.pate)?.label || ln.pate}`,
+                (ln.supps || []).length && `Suppléments : ${ln.supps.map((id) => SUPP[id] ? SUPP[id].label : id).join(', ')}`, ln.note]
+                .filter(Boolean).join(' · ')
+            : '',
+        })),
+      });
+    } catch (_) {}
     const n = o.jobs.length;
     toast(n
       ? `${o.id} en cuisine, ${n} pizza${n > 1 ? 's' : ''} en file, le four attend`

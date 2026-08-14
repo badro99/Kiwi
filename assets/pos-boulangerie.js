@@ -792,7 +792,14 @@
   function prevoirFournee(prodId) {
     const p = PROD[prodId];
     const time = nextSlot();
-    FOURNEES.push({ id: `F${fourSeq++}`, time, prod: prodId, qty: p.batch, status: 'prevue' });
+    const fournee = { id: `F${fourSeq++}`, time, prod: prodId, qty: p.batch, status: 'prevue' };
+    FOURNEES.push(fournee);
+    try {
+      if (window.KiwiFoodProductionPrint) KiwiFoodProductionPrint.enqueue({
+        trade: 'bakery', ref: fournee.id, destination: `Fournée prévue · ${time}`,
+        lines: [{ qty: fournee.qty, name: p.label, note: `Enfournement prévu à ${time}`, station: 'Fournil' }],
+      });
+    } catch (_) {}
     queueIfOffline(`Fournée prévue ${p.label}`);
     toast(`Fournée ${p.label} ×${p.batch} programmée à ${time}, le four est à vous`);
     refreshOps();
@@ -1121,6 +1128,13 @@
         retrait: form.retrait, status: 'encours', notified: false,
       };
       CAKES.push(cake);
+      try {
+        if (window.KiwiFoodProductionPrint) KiwiFoodProductionPrint.enqueue({
+          trade: 'bakery', ref: cake.id, destination: `${cake.name} · retrait ${fmtWhen(cake.retrait)}`,
+          lines: [{ qty: 1, name: `${PART[cake.parts].label} · ${cake.parfum}`,
+            note: [OCC[cake.occasion], cake.inscription && `Inscription : ${cake.inscription}`].filter(Boolean).join(' · '), station: 'Pâtisserie' }],
+        });
+      } catch (_) {}
       closeVeil('#bl-cake-veil');
       queueIfOffline(`Commande ${cake.id}`);
       toast(`${cake.id} enregistrée, retrait ${fmtWhen(cake.retrait)}`);

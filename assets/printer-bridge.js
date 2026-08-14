@@ -839,8 +839,8 @@
           '<div class="kpr-actions"><button class="kpr-btn kpr-test" type="button" id="kpr-usb-test"' + (usbLive ? '' : ' disabled') + '>Imprimer un ticket test</button></div>' +
         '</div>' : '') +
         (window.KiwiKitchenPrint ? '<div class="kpr-bt" id="kpr-kitchen">' +
-          '<h3>Tickets cuisine automatiques</h3>' +
-          '<p>Ce poste peut imprimer les commandes envoyées depuis la caisse, l’app serveur et les autres terminaux. Activez cette option sur un seul ordinateur par restaurant.</p>' +
+          '<h3>Tickets de production automatiques</h3>' +
+          '<p>Ce poste peut imprimer les commandes envoyées depuis la caisse, l’app employé et les autres terminaux. Activez cette option sur un seul ordinateur par établissement.</p>' +
           '<label class="kpr-hub"><input type="checkbox" id="kpr-hub"' + (KiwiKitchenPrint.isHub() ? ' checked' : '') + '>' +
             '<span><b>Faire de ce poste le hub d’impression</b><small id="kpr-hub-status"></small></span></label>' +
         '</div>' : '') +
