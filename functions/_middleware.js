@@ -30,7 +30,46 @@ import {
 const GATE_COOKIE = 'kiwi_gate';
 const UNLOCK_PATH = '/__unlock';
 const OPERATOR_PATH = '/__operator';
+const LANGUAGE_COOKIE = 'kiwi_lang';
 const MAX_AGE = 60 * 60 * 24 * 30; // 30 days
+
+const SUPPORTED_LANGUAGES = new Set(['fr', 'en', 'ar']);
+
+function landingDocumentLanguage(request) {
+  if (!request || (request.method !== 'GET' && request.method !== 'HEAD')) return '';
+  const url = new URL(request.url);
+  const path = url.pathname.replace(/\/index\.html$/, '/');
+  const isDocument = request.headers.get('Sec-Fetch-Dest') === 'document'
+    || (request.headers.get('Accept') || '').includes('text/html');
+  if (!isDocument) return '';
+  if (path === '/en' || path === '/en/') return 'en';
+  if (path === '/ar' || path === '/ar/') return 'ar';
+  if (path === '/' || path === '/fr' || path === '/fr/') return 'fr';
+  return '';
+}
+
+function requestedLanguage(request) {
+  try {
+    const url = new URL(request.url);
+    const explicit = (url.searchParams.get('lang') || '').toLowerCase();
+    if (SUPPORTED_LANGUAGES.has(explicit)) return explicit;
+    const saved = (readCookie(request, LANGUAGE_COOKIE) || '').toLowerCase();
+    if (SUPPORTED_LANGUAGES.has(saved)) return saved;
+    const ref = request.headers.get('Referer');
+    if (ref) {
+      const first = new URL(ref).pathname.split('/').filter(Boolean)[0];
+      if (SUPPORTED_LANGUAGES.has(first)) return first;
+    }
+    const preferred = (request.headers.get('Accept-Language') || '').toLowerCase();
+    if (/^ar(?:-|,|;|$)/.test(preferred)) return 'ar';
+    if (/^en(?:-|,|;|$)/.test(preferred)) return 'en';
+  } catch (_) {}
+  return 'fr';
+}
+
+function languageCookie(lang) {
+  return `${LANGUAGE_COOKIE}=${lang}; Path=/; Secure; SameSite=Lax; Max-Age=${MAX_AGE}`;
+}
 
 // Staff cookie value = HMAC-SHA256("kiwi-gate-v1", passcode). Unforgeable without
 // the passcode, so a stolen/guessed cookie cannot be constructed.
@@ -295,7 +334,7 @@ async function routeRequest(context) {
   // this route now accepts only the email + personal PIN from the private team
   // roster and creates a store-scoped employee session.
   if (request.method === 'POST' && path === UNLOCK_PATH) {
-    if (!authSecret || !env.DB) return htmlResponse(authPage({ staffError: true, allowStaff: false }));
+    if (!authSecret || !env.DB) return htmlResponse(authPage({ staffError: true, allowStaff: false, lang: requestedLanguage(request) }));
     const tooMany = await limitCheck(request, env, 'employee');
     if (tooMany) return tooMany;
     const form = await request.formData();
@@ -314,7 +353,7 @@ async function routeRequest(context) {
       });
     }
     await limitFail(request, env, 'employee');
-    return htmlResponse(authPage({ staffError: true, allowStaff: true }));
+    return htmlResponse(authPage({ staffError: true, allowStaff: true, lang: requestedLanguage(request) }));
   }
 
   // Operator unlock attempt — a code from the `operators` table, revealed by the
@@ -350,7 +389,7 @@ async function routeRequest(context) {
       return new Response(null, { status: 303, headers });
     }
     await limitFail(request, env, 'op');
-    return htmlResponse(authPage({ allowStaff: !!(authSecret && env.DB), operatorError: true }));
+    return htmlResponse(authPage({ allowStaff: !!(authSecret && env.DB), operatorError: true, lang: requestedLanguage(request) }));
   }
 
   // Locked → show the account screen. If we got here because a signed session
@@ -364,7 +403,7 @@ async function routeRequest(context) {
       headers: { ...lockHeaders, 'Content-Type': 'application/json' },
     });
   }
-  return new Response(authPage({ allowStaff: !!(authSecret && env.DB), revoked: sessionRevoked }), {
+  return new Response(authPage({ allowStaff: !!(authSecret && env.DB), revoked: sessionRevoked, lang: requestedLanguage(request) }), {
     status: 401,
     headers: { ...lockHeaders, 'Content-Type': 'text/html; charset=utf-8' },
   });
@@ -395,7 +434,16 @@ function secureResponse(response) {
 }
 
 export async function onRequest(context) {
-  return secureResponse(await routeRequest(context));
+  const response = secureResponse(await routeRequest(context));
+  const lang = landingDocumentLanguage(context.request);
+  if (!lang || !response || response.status === 101 || response.webSocket) return response;
+  const headers = new Headers(response.headers);
+  headers.append('Set-Cookie', languageCookie(lang));
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
 }
 
 function htmlResponse(body) {
@@ -418,26 +466,65 @@ function authPage(opts) {
   const allowStaff = opts && opts.allowStaff;
   const operatorError = opts && opts.operatorError;
   const revoked = opts && opts.revoked;
+  const lang = SUPPORTED_LANGUAGES.has(opts && opts.lang) ? opts.lang : 'fr';
+  const dir = lang === 'ar' ? 'rtl' : 'ltr';
+  const copy = {
+    fr: {
+      title: 'Kiwi · Votre compte', welcome: 'Bienvenue <em>chez Kiwi</em>.',
+      sub: 'Votre espace commerçant, en un seul lien.', login: 'Se connecter', signup: 'Créer un compte',
+      email: 'E-mail', password: 'Mot de passe', name: 'Nom', business: 'Établissement',
+      language: 'Langue', emailPlaceholder: 'vous@exemple.ma',
+      namePlaceholder: 'Prénom Nom', businessPlaceholder: 'Café Atlas', passwordHint: 'Au moins 8 caractères.',
+      create: 'Créer mon compte', staff: 'Accès équipe', revoked: 'Votre session a été fermée. Reconnectez-vous.',
+      encrypted: 'Données chiffrées', private: 'Jamais revendues', flexible: 'Sans engagement',
+      operatorBad: 'Code opérateur incorrect.', operatorCode: 'Code opérateur', enter: 'Entrer',
+      errors: { email: 'Adresse e-mail invalide.', name: 'Indiquez votre nom.', weak: 'Mot de passe : 8 caractères minimum.', exists: 'Cet e-mail a déjà un compte — connectez-vous.', 'bad-creds': 'E-mail ou mot de passe incorrect.', 'bad-json': 'Requête invalide.', 'not-configured': 'Service momentanément indisponible.', fallback: 'Une erreur est survenue. Réessayez.', network: 'Erreur réseau. Réessayez.' }
+    },
+    en: {
+      title: 'Kiwi · Your account', welcome: 'Welcome <em>to Kiwi</em>.',
+      sub: 'Your entire business, one secure sign-in.', login: 'Sign in', signup: 'Create an account',
+      email: 'Email', password: 'Password', name: 'Name', business: 'Business',
+      language: 'Language', emailPlaceholder: 'you@example.com',
+      namePlaceholder: 'First and last name', businessPlaceholder: 'Atlas Café', passwordHint: 'Use at least 8 characters.',
+      create: 'Create my account', staff: 'Team access', revoked: 'Your session has ended. Please sign in again.',
+      encrypted: 'Encrypted data', private: 'Never sold', flexible: 'No commitment',
+      operatorBad: 'Incorrect operator code.', operatorCode: 'Operator code', enter: 'Enter',
+      errors: { email: 'Enter a valid email address.', name: 'Enter your name.', weak: 'Password must contain at least 8 characters.', exists: 'This email already has an account — sign in instead.', 'bad-creds': 'Incorrect email or password.', 'bad-json': 'Invalid request.', 'not-configured': 'Service temporarily unavailable.', fallback: 'Something went wrong. Please try again.', network: 'Network error. Please try again.' }
+    },
+    ar: {
+      title: 'Kiwi · حسابك', welcome: 'مرحباً بك <em>في Kiwi</em>.',
+      sub: 'كل ما تحتاجه لإدارة نشاطك، بحساب واحد.', login: 'تسجيل الدخول', signup: 'إنشاء حساب',
+      email: 'البريد الإلكتروني', password: 'كلمة المرور', name: 'الاسم', business: 'اسم النشاط',
+      language: 'اللغة', emailPlaceholder: 'name@example.com',
+      namePlaceholder: 'الاسم الكامل', businessPlaceholder: 'مقهى أطلس', passwordHint: 'استعمل 8 أحرف على الأقل.',
+      create: 'إنشاء حسابي', staff: 'دخول فريق العمل', revoked: 'انتهت جلستك. يرجى تسجيل الدخول من جديد.',
+      encrypted: 'بيانات مشفّرة', private: 'لا نبيع بياناتك', flexible: 'دون التزام',
+      operatorBad: 'رمز المشغّل غير صحيح.', operatorCode: 'رمز المشغّل', enter: 'دخول',
+      errors: { email: 'أدخل بريداً إلكترونياً صحيحاً.', name: 'أدخل اسمك.', weak: 'يجب أن تتكون كلمة المرور من 8 أحرف على الأقل.', exists: 'يوجد حساب بهذا البريد — سجّل الدخول.', 'bad-creds': 'البريد الإلكتروني أو كلمة المرور غير صحيحة.', 'bad-json': 'الطلب غير صالح.', 'not-configured': 'الخدمة غير متاحة مؤقتاً.', fallback: 'حدث خطأ. حاول مرة أخرى.', network: 'تعذر الاتصال بالشبكة. حاول مرة أخرى.' }
+    }
+  };
+  const t = copy[lang];
   // Operator prompt — no visible affordance. Revealed only by a long-press on the
   // wordmark (see the script below), or shown pre-open when a code was rejected.
   const operatorBlock = `
     <form class="staff op" id="op-form" method="POST" action="${OPERATOR_PATH}"${operatorError ? '' : ' hidden'}>
-      ${operatorError ? `<p class="err staff-err" role="alert">Code opérateur incorrect.</p>` : ''}
+      ${operatorError ? `<p class="err staff-err" role="alert">${t.operatorBad}</p>` : ''}
       <div class="staff-row">
-        <input name="code" type="password" inputmode="numeric" autocomplete="off" placeholder="Code opérateur" aria-label="Code opérateur" />
-        <button type="submit">Entrer</button>
+        <input name="code" type="password" inputmode="numeric" autocomplete="off" placeholder="${t.operatorCode}" aria-label="${t.operatorCode}" />
+        <button type="submit">${t.enter}</button>
       </div>
     </form>`;
   const staffBlock = allowStaff ? `
-    <a class="staff-link" id="staff-toggle" href="/kiwi-serveur">Accès équipe</a>` : '';
+    <a class="staff-link" id="staff-toggle" href="/kiwi-serveur">${t.staff}</a>` : '';
 
   return `<!doctype html>
-<html lang="fr">
+<html lang="${lang}" dir="${dir}">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="robots" content="noindex, nofollow" />
-<title>Kiwi · Votre compte</title>
+<title>${t.title}</title>
+<script>try{localStorage.setItem('kiwiLang','${lang}');document.cookie='kiwi_lang=${lang}; Path=/; Max-Age=2592000; SameSite=Lax'+(location.protocol==='https:'?'; Secure':'')}catch(_){}</script>
 <!-- design-vexel.css habille la porte (33 règles .vx-auth-card) mais consomme les
      jetons --n-*, --sans, --elev-* qui vivent dans tokens.css. Sans ce lien, ces
      règles gagnaient la cascade puis échouaient en silence sur des var() vides,
@@ -506,6 +593,10 @@ function authPage(opts) {
       0 8px 24px -14px rgba(5,59,44,.20),
       0 1px 0 rgba(255,255,255,.6) inset;
   }
+  .brand-row { display:flex; align-items:center; justify-content:space-between; gap:20px; }
+  .auth-langs { display:inline-flex; align-items:center; gap:2px; padding:3px; border:1px solid var(--line); border-radius:999px; background:var(--field); }
+  .auth-langs a { min-width:31px; padding:5px 7px; border-radius:999px; color:var(--muted); font-size:11px; font-weight:650; text-align:center; text-decoration:none; }
+  .auth-langs a[aria-current="true"] { color:var(--surface); background:var(--atlas); }
   /* Canonical Kiwi vector. Long-press this to open the operator prompt. */
   .brand {
     display: inline-flex;
@@ -597,6 +688,7 @@ function authPage(opts) {
     transition: transform .31s cubic-bezier(0.34, 1.45, 0.5, 1);
   }
   .tabs[data-mode="signup"] .pill { transform: translateX(100%); }
+  html[dir="rtl"] .tabs[data-mode="signup"] .pill { transform: translateX(-100%); }
   form.pane {
     display: flex;
     flex-direction: column;
@@ -604,6 +696,7 @@ function authPage(opts) {
     text-align: left;
     margin: 0;
   }
+  html[dir="rtl"] form.pane, html[dir="rtl"] .revoked { text-align:right; }
   form.pane.hidden { display: none; }
   label {
     display: flex;
@@ -784,6 +877,7 @@ function authPage(opts) {
   html[data-theme="dark"] .revoked { background: rgba(255,157,138,.08); border-color: rgba(255,157,138,.28); color: #ff9d8a; }
   html[data-theme="dark"] .staff button { background: var(--atlas); }
   html[data-theme="dark"] .staff button:hover { background: #0e8560; }
+  html[data-theme="dark"] .auth-langs a[aria-current="true"] { color:#0A0F0D; background:var(--mint); }
 </style>
 <link rel="stylesheet" href="/assets/design-vexel.css" />
 <script src="/assets/design-vexel.js"></script>
@@ -817,61 +911,68 @@ function authPage(opts) {
     </filter>
   </svg>
   <main class="card vx-auth-card">
-    <div class="brand" id="brand-mark" aria-label="Kiwi">
-      <picture class="auth-brand-legacy"><source media="(prefers-color-scheme: dark)" srcset="/assets/kiwi-newlogo-inverse.svg"><img src="/assets/kiwi-newlogo.svg" alt=""></picture>
-      <span class="vx-entry-logo" aria-hidden="true">
-        <img class="brand-logo-light" src="/assets/kiwi-newlogo.svg" width="886" height="486" alt="" />
-        <img class="brand-logo-dark" src="/assets/kiwi-newlogo-inverse.svg" width="886" height="486" alt="" />
-      </span>
+    <div class="brand-row">
+      <div class="brand" id="brand-mark" aria-label="Kiwi">
+        <picture class="auth-brand-legacy"><source media="(prefers-color-scheme: dark)" srcset="/assets/kiwi-newlogo-inverse.svg"><img src="/assets/kiwi-newlogo.svg" alt=""></picture>
+        <span class="vx-entry-logo" aria-hidden="true">
+          <img class="brand-logo-light" src="/assets/kiwi-newlogo.svg" width="886" height="486" alt="" />
+          <img class="brand-logo-dark" src="/assets/kiwi-newlogo-inverse.svg" width="886" height="486" alt="" />
+        </span>
+      </div>
+      <nav class="auth-langs" aria-label="${t.language}">
+        <a href="/dashboard?lang=fr" aria-current="${lang === 'fr'}">FR</a>
+        <a href="/dashboard?lang=en" aria-current="${lang === 'en'}">EN</a>
+        <a href="/dashboard?lang=ar" aria-current="${lang === 'ar'}">AR</a>
+      </nav>
     </div>
     <div class="head">
-      <h1>Bienvenue <em>chez Kiwi</em>.</h1>
-      <p class="sub">Votre espace commerçant, en un seul lien.</p>
+      <h1>${t.welcome}</h1>
+      <p class="sub">${t.sub}</p>
     </div>
-    ${revoked ? `<p class="revoked" role="alert">Votre session a été fermée. Reconnectez-vous.</p>` : ''}
+    ${revoked ? `<p class="revoked" role="alert">${t.revoked}</p>` : ''}
 
     <div class="tabs" data-mode="login">
-      <button type="button" class="tab" id="tab-login" aria-selected="true">Se connecter</button>
-      <button type="button" class="tab" id="tab-signup" aria-selected="false">Créer un compte</button>
+      <button type="button" class="tab" id="tab-login" aria-selected="true">${t.login}</button>
+      <button type="button" class="tab" id="tab-signup" aria-selected="false">${t.signup}</button>
       <span class="pill" aria-hidden="true"></span>
     </div>
 
     <form class="pane" id="form-login" novalidate>
-      <label>E-mail
-        <input id="li-email" type="email" autocomplete="email" placeholder="vous@exemple.ma" required />
+      <label>${t.email}
+        <input id="li-email" type="email" autocomplete="email" placeholder="${t.emailPlaceholder}" required />
       </label>
-      <label>Mot de passe
+      <label>${t.password}
         <input id="li-pass" type="password" autocomplete="current-password" placeholder="••••••••" required />
       </label>
       <p class="err" id="li-err" role="alert"></p>
-      <button class="go" type="submit">Se connecter</button>
+      <button class="go" type="submit">${t.login}</button>
     </form>
 
     <form class="pane hidden" id="form-signup" novalidate>
-      <label>Nom
-        <input id="su-name" type="text" autocomplete="name" placeholder="Prénom Nom" required />
+      <label>${t.name}
+        <input id="su-name" type="text" autocomplete="name" placeholder="${t.namePlaceholder}" required />
       </label>
-      <label>Établissement
-        <input id="su-biz" type="text" autocomplete="organization" placeholder="Café Atlas" />
+      <label>${t.business}
+        <input id="su-biz" type="text" autocomplete="organization" placeholder="${t.businessPlaceholder}" />
       </label>
-      <label>E-mail
-        <input id="su-email" type="email" autocomplete="email" placeholder="vous@exemple.ma" required />
+      <label>${t.email}
+        <input id="su-email" type="email" autocomplete="email" placeholder="${t.emailPlaceholder}" required />
       </label>
-      <label>Mot de passe
-        <input id="su-pass" type="password" autocomplete="new-password" placeholder="8 caractères min." minlength="8" required />
+      <label>${t.password}
+        <input id="su-pass" type="password" autocomplete="new-password" placeholder="${t.passwordHint}" minlength="8" required />
       </label>
-      <p class="hint">Au moins 8 caractères.</p>
+      <p class="hint">${t.passwordHint}</p>
       <p class="err" id="su-err" role="alert"></p>
-      <button class="go" type="submit">Créer mon compte</button>
+      <button class="go" type="submit">${t.create}</button>
     </form>
     ${staffBlock}
     ${operatorBlock}
     <div class="foot">
-      <span>Données chiffrées</span>
+      <span>${t.encrypted}</span>
       <span class="dot-sep" aria-hidden="true"></span>
-      <span>Jamais revendues</span>
+      <span>${t.private}</span>
       <span class="dot-sep" aria-hidden="true"></span>
-      <span>Sans engagement</span>
+      <span>${t.flexible}</span>
     </div>
   </main>
 <script>
@@ -892,16 +993,8 @@ function authPage(opts) {
   tLogin.addEventListener('click', function(){ setMode('login'); });
   tSignup.addEventListener('click', function(){ setMode('signup'); });
 
-  var MSG = {
-    email: 'Adresse e-mail invalide.',
-    name: 'Indiquez votre nom.',
-    weak: 'Mot de passe : 8 caractères minimum.',
-    exists: 'Cet e-mail a déjà un compte — connectez-vous.',
-    'bad-creds': 'E-mail ou mot de passe incorrect.',
-    'bad-json': 'Requête invalide.',
-    'not-configured': 'Service momentanément indisponible.'
-  };
-  function fail(code){ return MSG[code] || 'Une erreur est survenue. Réessayez.'; }
+  var MSG = ${JSON.stringify(t.errors)};
+  function fail(code){ return MSG[code] || MSG.fallback; }
   function val(id){ var el = document.getElementById(id); return el ? el.value : ''; }
 
   // On success we go straight INTO the product, never a bare location.reload()
@@ -920,18 +1013,18 @@ function authPage(opts) {
         return r.json().then(function(j){ errEl.textContent = fail(j && j.error); btn.disabled = false; },
                              function(){ errEl.textContent = fail(); btn.disabled = false; });
       })
-      .catch(function(){ errEl.textContent = 'Erreur réseau. Réessayez.'; btn.disabled = false; });
+      .catch(function(){ errEl.textContent = MSG.network; btn.disabled = false; });
   }
 
   fLogin.addEventListener('submit', function(e){
     e.preventDefault();
     post('/auth/login', { email: val('li-email'), password: val('li-pass') },
-         document.getElementById('li-err'), fLogin.querySelector('.go'), '/dashboard');
+         document.getElementById('li-err'), fLogin.querySelector('.go'), '/dashboard?lang=${lang}');
   });
   fSignup.addEventListener('submit', function(e){
     e.preventDefault();
     post('/auth/signup', { name: val('su-name'), business: val('su-biz'), email: val('su-email'), password: val('su-pass') },
-         document.getElementById('su-err'), fSignup.querySelector('.go'), '/dashboard?onboarding=1');
+         document.getElementById('su-err'), fSignup.querySelector('.go'), '/dashboard?onboarding=1&lang=${lang}');
   });
 
   // Hidden operator entry — long-press (~1.4s) the wordmark to reveal the code

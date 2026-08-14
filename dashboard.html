@@ -4,6 +4,23 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Kiwi · Tableau de bord commerçant</title>
+<script>
+  /* The marketing site carries its selected locale into /dashboard. Apply it
+     before any deferred app module renders so auth/onboarding never flashes in
+     French first, and persist it for every redirect that follows. */
+  (function () {
+    try {
+      var picked = new URLSearchParams(location.search).get('lang');
+      if (!/^(fr|en|ar)$/.test(picked || '')) return;
+      localStorage.setItem('kiwiLang', picked);
+      document.cookie = 'kiwi_lang=' + picked
+        + '; Path=/; Max-Age=2592000; SameSite=Lax'
+        + (location.protocol === 'https:' ? '; Secure' : '');
+      document.documentElement.lang = picked;
+      document.documentElement.dir = picked === 'ar' ? 'rtl' : 'ltr';
+    } catch (_) {}
+  })();
+</script>
 <link rel="icon" href="assets/kiwi-favicon-new.svg" type="image/svg+xml" />
 <link rel="manifest" href="dashboard.webmanifest" />
 <meta name="theme-color" content="#053B2C" />
@@ -5973,7 +5990,7 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
      no longer waits on 657 KB it doesn't need yet. (Codex roast P1) -->
 <!-- Env gate (demos local-only) — must run before venues.js and the app. -->
 <script src="assets/kiwi-env.js" defer></script>
-<script src="assets/i18n.js?v=2" defer></script>
+<script src="assets/i18n.js?v=3" defer></script>
 <!-- Les milliers en arabe (assets/rtl-numbers.js). Une espace ordinaire entre
      deux nombres prend la direction du paragraphe : « 31 500 » s'affichait
      « 500 31 » en RTL. Ne s'exécute que sur dir="rtl" — le français et

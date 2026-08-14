@@ -782,6 +782,7 @@ section('Whole-project regressions');
     'restaurant-units-test.js',
     'employee-live-test.mjs',
     'employee-trade-shell-test.mjs',
+    'locale-handoff-test.mjs',
     'void-stock-test.js',
     'caisse-stock-test.mjs',
     'caisse-stock-sync-test.mjs',

@@ -1266,6 +1266,12 @@
     document.documentElement.lang = lang;
     document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
     localStorage.setItem('kiwiLang', lang);
+    /* Keep the edge-rendered account gate in the same language as the app.
+       localStorage is invisible to Cloudflare's middleware, so the cookie is
+       the server-readable half of the locale handoff. */
+    document.cookie = 'kiwi_lang=' + lang
+      + '; Path=/; Max-Age=2592000; SameSite=Lax'
+      + (location.protocol === 'https:' ? '; Secure' : '');
 
     document.querySelectorAll('[data-i18n]').forEach(el => {
       const key = el.dataset.i18n;
