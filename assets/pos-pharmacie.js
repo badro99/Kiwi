@@ -879,7 +879,7 @@
           <div class="ph-pt-form">
             <input class="ph-in" id="ph-pt-name" placeholder="Nom et prénom" value="${esc(/^[\\d\\s.+-]*$/.test(q || '') ? '' : (q || ''))}" />
             <div class="ph-in-row">
-              <input class="ph-in" id="ph-pt-tel" inputmode="tel" placeholder="Téléphone" value="${esc(/^[\\d\\s.+-]+$/.test(q || '') ? q : '')}" />
+              <input class="ph-in" id="ph-pt-tel" inputmode="tel" autocomplete="tel" placeholder="06… / +33…" value="${esc(/^[\\d\\s.+-]+$/.test(q || '') ? q : '')}" />
               <select class="ph-select" id="ph-pt-mut">
                 ${MUT_LIST.map((id) => `<option value="${id}">${esc(MUTUELLES[id].label)}</option>`).join('')}
               </select>

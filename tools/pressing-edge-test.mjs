@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
 
+const phoneSource = fs.readFileSync(new URL('../assets/phone.js', import.meta.url), 'utf8');
 const source = fs.readFileSync(new URL('../assets/pressing-caisse.js', import.meta.url), 'utf8');
 let registered = null;
 const local = new Map();
@@ -22,7 +23,8 @@ const context = {
     removeItem: (key) => local.delete(key),
   },
   navigator: { onLine: true },
-  document: {},
+  Event: class { constructor(type) { this.type = type; } },
+  document: { addEventListener: () => {} },
   window: {
     addEventListener: () => {},
     KiwiPosDispatch: {
@@ -40,6 +42,7 @@ context.window.localStorage = context.localStorage;
 context.window.navigator = context.navigator;
 context.window.document = context.document;
 vm.createContext(context);
+vm.runInContext(phoneSource, context, { filename: 'phone.js' });
 vm.runInContext(source, context, { filename: 'pressing-caisse.js' });
 
 assert.equal(registered?.id, 'pressing', 'pressing module still registers');
@@ -55,12 +58,23 @@ const validPhones = new Map([
   ['612345678', '06 12 34 56 78'],
 ]);
 for (const [input, expected] of validPhones) {
-  assert.equal(rules.normalizeMoroccanPhone(input), expected, `normalizes ${input}`);
+  assert.equal(rules.normalizePhone(input), expected, `normalizes ${input}`);
 }
-for (const input of ['', '1234', '+33 6 12 34 56 78', '0812345678', '06ABC345678', '061234567890']) {
-  assert.equal(rules.normalizeMoroccanPhone(input), '', `rejects ${input || 'empty phone'}`);
+const internationalPhones = new Map([
+  ['+49 179 5241112', '+491795241112'],
+  ['0044 7700 900123', '+447700900123'],
+  ['+33 (0) 6 12 34 56 78', '+33612345678'],
+  ['+1-202-555-0123', '+12025550123'],
+]);
+for (const [input, expected] of internationalPhones) {
+  assert.equal(rules.normalizePhone(input), expected, `accepts tourist number ${input}`);
+}
+for (const input of ['', '1234', '33 6 12 34 56 78', '0812345678', '06ABC345678', '061234567890', '+012345678', '+49+1795241112', '+1234567890123456']) {
+  assert.equal(rules.normalizePhone(input), '', `rejects ${input || 'empty phone'}`);
 }
 assert.equal(rules.whatsappPhone('+212 6 12 34 56 78'), '212612345678');
+assert.equal(rules.whatsappPhone('+49 179 5241112'), '491795241112', 'foreign WhatsApp target keeps country code');
+assert.equal(rules.normalizeMoroccanPhone('+49 179 5241112'), '+491795241112', 'legacy normalizer remains compatible');
 
 assert.equal(rules.validDeposit(10, 10), true, '10 MAD minimum is accepted');
 assert.equal(rules.validDeposit(10, 100), true);
@@ -94,4 +108,4 @@ assert.match(source, /new window\.BarcodeDetector/, 'scanner uses BarcodeDetecto
 assert.doesNotMatch(source, /state\.offline\s*=\s*!state\.offline/, 'network status cannot be manually faked');
 assert.doesNotMatch(source, /action.*synchronis[ée]/i, 'UI does not claim unconfirmed synchronization success');
 
-console.log(`✓ pressing edges (${validPhones.size + 31} controls)`);
+console.log(`✓ pressing edges (${validPhones.size + internationalPhones.size + 38} controls)`);

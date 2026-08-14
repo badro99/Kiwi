@@ -71,6 +71,7 @@
   <script src="assets/offline-db.js?v=3" defer></script>
   <script src="assets/platform-kernel.js?v=2" defer></script>
   <script src="assets/platform-ops.js?v=1" defer></script>
+  <script src="assets/phone.js?v=1" defer></script>
   <!-- Floor-plan vocabulary, shared verbatim with the dashboard designer. Not
        deferred: the inline app script below calls KiwiFloorCore while painting
        the salle view, so it has to be resolved by then. -->
@@ -4682,7 +4683,7 @@
   <script src="assets/cloud-doc.js" defer></script>
   <!-- Shared trade boards: reads the same tenant document as the owner
        dashboard and grafts a compact operational entry into each exact POS. -->
-  <script src="assets/trade-workspace-schema.js?v=3" defer></script>
+  <script src="assets/trade-workspace-schema.js?v=4" defer></script>
   <script src="assets/pos-workspaces.js?v=3" defer></script>
   <!-- Le rapport journalier (« Z ») : calcul + classeur, partagé mot pour mot
        avec le tableau de bord. Après cloud-doc.js, dont il tient sa copie
@@ -4722,8 +4723,8 @@
   <!-- Tenant-scoped operational outbox: receipt delivery and device health are
        server-confirmed or explicitly blocked, never presentation-only. -->
   <script src="assets/operations.js?v=6" defer></script>
-  <script src="assets/clients-store.js" defer></script>
-  <script src="assets/clients-book.js" defer></script>
+  <script src="assets/clients-store.js?v=2" defer></script>
+  <script src="assets/clients-book.js?v=2" defer></script>
   <!-- Le relais cuisine · « Envoyer en cuisine » posait son bon dans un tableau
        de CETTE page et l'imprimait : une tablette en cuisine ne recevait rien,
        et sans imprimante thermique il n'y avait aucun chemin du tout. Ce module
@@ -5366,7 +5367,7 @@
       <div class="cl-list" id="cl-list"></div>
       <div id="cl-new" hidden>
         <input type="text" class="wl-input" id="cl-new-name" placeholder="Nom du client" autocomplete="off" style="margin-top:12px;" />
-        <input type="tel" class="wl-input" id="cl-new-phone" placeholder="Téléphone" autocomplete="off" inputmode="tel" style="margin-top:8px;" />
+        <input type="tel" class="wl-input" id="cl-new-phone" placeholder="06… / +33… / +49…" autocomplete="tel" inputmode="tel" style="margin-top:8px;" />
         <label class="cl-consent">
           <input type="checkbox" id="cl-new-consent" />
           <span>Le client accepte d'être recontacté</span>

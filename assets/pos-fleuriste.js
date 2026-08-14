@@ -1580,7 +1580,7 @@
           </div>` : `
           <div class="fl-cl-form">
             <input class="fl-in" id="fl-cl-name" placeholder="Nom et prénom" value="${esc(/^[\d\s.+-]*$/.test(q || '') ? '' : (q || ''))}" />
-            <input class="fl-in" id="fl-cl-tel" inputmode="tel" placeholder="Téléphone (optionnel)" value="${esc(/^[\d\s.+-]+$/.test(q || '') ? q : '')}" />
+            <input class="fl-in" id="fl-cl-tel" inputmode="tel" autocomplete="tel" placeholder="06… / +33… (optionnel)" value="${esc(/^[\d\s.+-]+$/.test(q || '') ? q : '')}" />
             <div class="fl-sheet-foot" style="margin-top:4px;">
               <button class="fl-btn secondary" id="fl-cl-back">Retour</button>
               <button class="fl-btn primary" id="fl-cl-create"><i data-lucide="check"></i>Créer la fiche</button>

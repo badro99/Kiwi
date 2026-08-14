@@ -1064,7 +1064,7 @@
         </div>
         <div class="bl-f">
           <div class="bl-f-lbl">Téléphone <span class="opt">· pour le WhatsApp « prêt »</span></div>
-          <input class="bl-in" id="bl-ck-tel" inputmode="tel" placeholder="06…" />
+          <input class="bl-in" id="bl-ck-tel" inputmode="tel" autocomplete="tel" placeholder="06… / +33…" />
         </div>
       </div>
       <div class="bl-sheet-foot">

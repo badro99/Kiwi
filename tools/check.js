@@ -786,6 +786,7 @@ section('Whole-project regressions');
     'void-stock-test.js',
     'caisse-stock-test.mjs',
     'caisse-stock-sync-test.mjs',
+    'phone-test.mjs',
     'clients-sync-test.mjs',
     'pwa-shell-test.js',
     'api-boundaries-test.mjs',

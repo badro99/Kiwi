@@ -356,7 +356,7 @@
       '<div class="kcb-sub">' + (editing ? esc(c.name || '') : 'Renseignez un maximum d’informations — elles nourrissent la fidélité et le marketing.') + '</div>' +
       '<div class="kcb-field"><label>Nom complet</label><input id="kcb-f-name" value="' + esc(c.name || '') + '" placeholder="Prénom Nom" autocomplete="off"></div>' +
       '<div class="kcb-grid2">' +
-        '<div class="kcb-field"><label>Téléphone</label><input id="kcb-f-phone" inputmode="tel" value="' + esc(c.phone || '') + '" placeholder="06 12 34 56 78" autocomplete="off"></div>' +
+        '<div class="kcb-field"><label>Téléphone</label><input id="kcb-f-phone" inputmode="tel" autocomplete="tel" value="' + esc(c.phone || '') + '" placeholder="06… / +33… / +49…"></div>' +
         '<div class="kcb-field"><label>Email</label><input id="kcb-f-email" type="email" inputmode="email" value="' + esc(c.email || '') + '" placeholder="nom@email.com" autocomplete="off"></div>' +
       '</div>' +
       '<div class="kcb-grid2">' +
@@ -389,6 +389,7 @@
       var name = val('#kcb-f-name'), phone = val('#kcb-f-phone'), email = val('#kcb-f-email');
       var consent = sh.querySelector('#kcb-f-consent').checked;
       if (!name && !phone) { toast('Renseignez au moins un nom ou un numéro'); return; }
+      if (phone && window.KiwiPhone && !window.KiwiPhone.valid(phone)) { toast('Numéro invalide', 'Pour l’étranger, ajoutez + et l’indicatif pays.'); return; }
       if (!consent) { toast('Le consentement est requis', 'Cochez la case WhatsApp / SMS pour enregistrer.'); return; }
       // dedup on phone when adding
       if (!editing && phone) {

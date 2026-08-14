@@ -1027,7 +1027,7 @@
         <p class="modal-subtle">On ouvre une ardoise, ${fmtMAD2(total)} dessus.</p>
         <div class="ep-cp-form">
           <input class="ep-in" id="ep-cp-name" placeholder="Nom (ex. Mme Naïma)" />
-          <input class="ep-in" id="ep-cp-tel" inputmode="tel" placeholder="Téléphone (pour le rappel WhatsApp)" />
+          <input class="ep-in" id="ep-cp-tel" inputmode="tel" autocomplete="tel" placeholder="06… / +33… (rappel WhatsApp)" />
           <div class="ep-weigh-foot" style="margin-top:4px;">
             <button class="ep-btn secondary" id="ep-cp-back">Retour</button>
             <button class="ep-btn primary" id="ep-cp-create"><i data-lucide="check"></i>Ouvrir l'ardoise</button>

@@ -269,13 +269,14 @@
   }
 
   /* ── normalisation & dedup ─────────────────────────────────────────────── */
-  function normPhone(p) { return String(p == null ? '' : p).replace(/[^\d+]/g, ''); }
+  function normPhone(p) {
+    return window.KiwiPhone ? window.KiwiPhone.normalize(p) : String(p == null ? '' : p).replace(/[^\d+]/g, '');
+  }
   function samePhone(a, b) {
+    if (window.KiwiPhone) return window.KiwiPhone.same(a, b);
     a = normPhone(a); b = normPhone(b);
     if (!a || !b) return false;
-    // compare on the last 9 digits (Moroccan mobile) so 06… / +2126… match.
-    var ta = a.replace(/\D/g, '').slice(-9), tb = b.replace(/\D/g, '').slice(-9);
-    return ta.length >= 6 && ta === tb;
+    return a === b;
   }
   function blankClient() {
     return { id: '', name: '', phone: '', email: '', birthday: '', gender: '', city: '', address: '', notes: '', tags: [],

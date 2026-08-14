@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted — fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v424';
+var CACHE = 'kiwi-app-v425';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -84,9 +84,10 @@ var SHELL = [
      page (donc pas de hors-ligne), tandis qu'une estampille périmée ici
      re-servirait l'ancien fichier. Voir le commentaire dans dashboard.html. */
   '/assets/venues.js?v=12',
-  '/assets/trade-workspace-schema.js?v=3',
+  '/assets/phone.js?v=1',
+  '/assets/trade-workspace-schema.js?v=4',
   '/assets/trade-workspaces.js?v=3',
-  '/assets/reservations.js?v=7',
+  '/assets/reservations.js?v=8',
   '/assets/pressing-ops.js?v=3',
   '/assets/pressing-garment-icons.js?v=2',
   '/assets/pressing-catalog.js?v=4',
@@ -204,8 +205,8 @@ var SHELL = [
      sans lui hors ligne, elles retomberaient sur un tiret alors que le
      commerçant a bel et bien saisi ses coûts. */
   '/assets/cost.js?v=3',
-  '/assets/clients-store.js',
-  '/assets/clients-book.js',
+  '/assets/clients-store.js?v=2',
+  '/assets/clients-book.js?v=2',
   '/assets/clients-directory.js',
   '/assets/menu-catalog.js?v=3',
   '/assets/restaurant-recipes.js?v=3',
@@ -285,8 +286,8 @@ var SHELL = [
      qu'il faut pouvoir ressortir le ticket. Un bouton de secours qui a besoin du
      réseau n'est pas un secours. */
   '/assets/pos-reprint.js',
-  '/assets/pressing-caisse.js?v=12',
-  '/assets/pressing-caisse.css?v=12',
+  '/assets/pressing-caisse.js?v=13',
+  '/assets/pressing-caisse.css?v=13',
   '/assets/lucide.min.js',
   '/assets/kiwi-favicon-new.svg',
   '/assets/kiwi-newlogo.svg',

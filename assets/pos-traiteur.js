@@ -729,7 +729,7 @@
             <div class="tr-f-lbl">Client</div>
             <div class="tr-row-2">
               <input class="tr-in" id="tr-q-client" placeholder="Nom du client" value="${esc(draft.client)}" />
-              <input class="tr-in" id="tr-q-phone" inputmode="tel" placeholder="06…" value="${esc(draft.phone)}" />
+              <input class="tr-in" id="tr-q-phone" inputmode="tel" autocomplete="tel" placeholder="06… / +33…" value="${esc(draft.phone)}" />
             </div>
           </div>
           <div class="tr-f">

@@ -57,25 +57,41 @@
   const H = 3600 * 1000;
   const MAX_QTY = 99;
 
-  /* Morocco accepts local 05/06/07 numbers and the same numbers written with
-   * +212, 00212 or a bare 212.  A named customer must have a reachable number;
-   * the explicit guest path remains the correct choice when there is none. */
-  function normalizeMoroccanPhone(value) {
+  /* Customer phones use one canonical value for search, duplicate detection
+   * and WhatsApp. Moroccan numbers keep their familiar local display; tourist
+   * numbers are accepted in E.164 form (+country code) or with a 00 prefix.
+   * We intentionally do not guess a foreign country from a bare national
+   * number: the cashier must enter +33…, +49…, 0044…, etc. */
+  function normalizePhone(value) {
+    if (window.KiwiPhone) return window.KiwiPhone.normalize(value);
     const raw = String(value == null ? '' : value).trim();
     if (!raw || /[A-Za-z]/.test(raw)) return '';
-    let digits = raw.replace(/\D/g, '');
+    if (!/^[+]?[-.()\s\d]+$/.test(raw) || (raw.includes('+') && !raw.startsWith('+'))) return '';
+    /* A common travel-address-book form is +33 (0)6…: the trunk zero is used
+       only inside France and must not enter the international number. */
+    const prepared = raw.replace(/\(\s*0\s*\)/, '');
+    let digits = prepared.replace(/\D/g, '');
     if (digits.startsWith('00212')) digits = '0' + digits.slice(5);
     else if (digits.startsWith('212')) digits = '0' + digits.slice(3);
     else if (/^[5-7]\d{8}$/.test(digits)) digits = '0' + digits;
-    if (!/^0[5-7]\d{8}$/.test(digits)) return '';
-    return digits.replace(/^(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})$/, '$1 $2 $3 $4 $5');
+    if (/^0[5-7]\d{8}$/.test(digits)) {
+      return digits.replace(/^(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})$/, '$1 $2 $3 $4 $5');
+    }
+    if (!raw.startsWith('+') && !raw.startsWith('00')) return '';
+    if (raw.startsWith('+') && raw.indexOf('+', 1) !== -1) return '';
+    const international = raw.startsWith('00') ? prepared.replace(/\D/g, '').slice(2) : prepared.replace(/\D/g, '');
+    if (!/^[1-9]\d{6,14}$/.test(international)) return '';
+    return '+' + international;
   }
-  const phoneDigits = (value) => (normalizeMoroccanPhone(value) || String(value || '')).replace(/\D/g, '');
+  /* Compatibility for older extensions/tests that consumed the former name. */
+  const normalizeMoroccanPhone = normalizePhone;
+  const phoneDigits = (value) => (normalizePhone(value) || String(value || '')).replace(/\D/g, '');
   /* Comme phoneDigits, mais tolérant aux numéros INCOMPLETS : au retrait, la
      cliente dicte son numéro et la caissière tape au fur et à mesure. « +212 6 »
-     doit déjà filtrer comme « 06 », alors que normalizeMoroccanPhone refuse
+     doit déjà filtrer comme « 06 », alors que normalizePhone refuse
      (à juste titre) un numéro trop court. On coupe donc l'indicatif à la main. */
   function searchDigits(value) {
+    if (window.KiwiPhone) return window.KiwiPhone.digits(value) || String(value == null ? '' : value).replace(/\D/g, '');
     let d = String(value == null ? '' : value).replace(/\D/g, '');
     if (d.startsWith('00212')) d = '0' + d.slice(5);
     else if (d.startsWith('212')) d = '0' + d.slice(3);
@@ -83,8 +99,11 @@
     return d;
   }
   const whatsappPhone = (value) => {
-    const local = normalizeMoroccanPhone(value);
-    return local ? '212' + local.replace(/\D/g, '').slice(1) : '';
+    if (window.KiwiPhone) return window.KiwiPhone.whatsapp(value);
+    const phone = normalizePhone(value);
+    if (!phone) return '';
+    if (phone.startsWith('+')) return phone.slice(1);
+    return '212' + phone.replace(/\D/g, '').slice(1);
   };
   const clampQty = (value) => Math.max(1, Math.min(MAX_QTY, Math.floor(Number(value) || 1)));
   const validDeposit = (value, total) => Number.isFinite(+value) && +value >= 10 && +value <= +total;
@@ -1228,7 +1247,7 @@
           </div>` : `
           <div class="px-cl-form">
             <input class="px-in" id="px-cl-name" placeholder="Nom et prénom" value="${esc(/^[\d\s.+-]*$/.test(q || '') ? '' : (q || ''))}" />
-            <input class="px-in" id="px-cl-tel" inputmode="tel" placeholder="Téléphone marocain · 06…, 07…, 05… ou +212" value="${esc(/^[\d\s().+-]+$/.test(q || '') ? q : '')}" />
+            <input class="px-in" id="px-cl-tel" inputmode="tel" autocomplete="tel" placeholder="Téléphone · 06…, +212…, +33…, +49…" value="${esc(/^[\d\s().+-]+$/.test(q || '') ? q : '')}" />
             <div class="px-sheet-foot" style="margin-top:4px;">
               <button class="px-btn secondary" id="px-cl-back">Retour</button>
               <button class="px-btn primary" id="px-cl-create"><i data-lucide="check"></i>Créer la fiche</button>
@@ -1258,9 +1277,9 @@
       const create = $('#px-cl-create', el);
       if (create) create.onclick = () => {
         const name = $('#px-cl-name', el).value.trim();
-        const tel = normalizeMoroccanPhone($('#px-cl-tel', el).value);
+        const tel = normalizePhone($('#px-cl-tel', el).value);
         if (!name) { toast('Le nom est requis pour la fiche'); return; }
-        if (!tel) { toast('Téléphone marocain valide requis · utilisez « passage » si le client n’en a pas'); return; }
+        if (!tel) { toast('Numéro valide requis · pour l’étranger, ajoutez + et l’indicatif pays'); return; }
         const existing = CUSTOMERS.find((c) => phoneDigits(c.phone) === phoneDigits(tel));
         if (existing) { toast(`Ce numéro appartient déjà à ${existing.name}`); return; }
         const id = 'cx' + Date.now().toString(36);
@@ -1337,7 +1356,7 @@
     $('#px-date-ok', el).onclick = () => {
       const v = $('#px-date-input', el).value;
       const ready = v ? new Date(v) : null;
-      if (!validReady(ready)) { toast('La date promise doit être dans le futur'); return; }
+      if (!validReady(ready)) { toast('La date de retrait doit être dans le futur'); return; }
       state.ticket.ready = ready;
       closeVeil('#px-date-veil');
       renderTicket(); icons();
@@ -2489,6 +2508,7 @@
     },
     lock,
     rules: Object.freeze({
+      normalizePhone,
       normalizeMoroccanPhone,
       whatsappPhone,
       clampQty,

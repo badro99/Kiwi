@@ -136,7 +136,7 @@
       }
       if (field.lte && compareValue(field.type, value) > compareValue(field.type, rec.values[field.lte])) errors[field.id] = 'lte';
       if (field.gte && compareValue(field.type, value) < compareValue(field.type, rec.values[field.gte])) errors[field.id] = 'gte';
-      if (field.type === 'tel' && value && !/^[+()\d\s.-]{6,24}$/.test(value)) errors[field.id] = 'phone';
+      if (field.type === 'tel' && value && !(window.KiwiPhone ? window.KiwiPhone.valid(value) : /^[+()\d\s.-]{6,24}$/.test(value))) errors[field.id] = 'phone';
       if (field.unique && value && (existingRows || []).some((r) => r.id !== rec.id && normalize(schema, r).values[field.id] === value)) errors[field.id] = 'unique';
     });
     return { ok: !Object.keys(errors).length, errors, record: rec };

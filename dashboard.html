@@ -6102,6 +6102,7 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
      here; the caisse only consumes the resulting prices. -->
 <script src="assets/promos.js" defer fetchpriority="low"></script>
 <script src="assets/venue-store.js?v=2" defer fetchpriority="low"></script>
+<script src="assets/phone.js?v=1" defer fetchpriority="low"></script>
 <script src="assets/vertical-state.js" defer fetchpriority="low"></script>
 <!-- Registre de stock append-only : mouvements locaux immédiats, synchronisés
      et dédupliqués en D1. Avant stock.js, qui remplace ses anciens snapshots
@@ -6134,7 +6135,7 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
 <script src="assets/inventory-consumption.js?v=3" defer fetchpriority="low"></script>
 <script src="assets/procurement.js" defer fetchpriority="low"></script>
 <!-- Fidélité · client book read live into the Clients & Marketing surface (growth-crm.js). -->
-<script src="assets/clients-store.js" defer fetchpriority="low"></script>
+<script src="assets/clients-store.js?v=2" defer fetchpriority="low"></script>
 <!-- Clients · the owner's directory (contacts, fidélité, consent) — sidebar « Clients ». -->
 <script src="assets/clients-directory.js" defer fetchpriority="low"></script>
 <script src="assets/menu-catalog.js?v=3" defer fetchpriority="low"></script>
@@ -6188,11 +6189,11 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
 <script src="assets/hotel.js?v=2" defer fetchpriority="low"></script>
 <!-- Exact-trade operational boards. Loaded after the specialist modules so it
      only replaces the generic placeholders; Accueil and Hotel stay untouched. -->
-<script src="assets/trade-workspace-schema.js?v=3" defer fetchpriority="low"></script>
+<script src="assets/trade-workspace-schema.js?v=4" defer fetchpriority="low"></script>
 <script src="assets/trade-workspaces.js?v=3" defer fetchpriority="low"></script>
 <!-- Unified reservation truth: real availability, conflict-safe bookings and
      the public booking link. Loaded last so it replaces legacy demo drawers. -->
-<script src="assets/reservations.js?v=7" defer fetchpriority="low"></script>
+<script src="assets/reservations.js?v=8" defer fetchpriority="low"></script>
 <!-- Durable operational workflows. Loaded after every feature module and the
      production honesty guard so its real handlers win over legacy demo toasts. -->
 <script src="assets/operations.js?v=9" defer fetchpriority="low"></script>

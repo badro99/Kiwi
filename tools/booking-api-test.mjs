@@ -92,9 +92,12 @@ response = await callGet(`merchant=test-shop&service=svc-cut&date=${date}&partyS
 check(response.status === 200 && body.slots.length > 0, 'a scheduled floor shift restores covered slots');
 db.doc.settings.staffingEnabled = false;
 
-const request = { merchant:'test-shop', ref:'public-ref-0001', serviceId:'svc-cut', startAt:slot.startAt, partySize:4, customer:{ name:'Nora', phone:'0612345678', email:'' } };
+const request = { merchant:'test-shop', ref:'public-ref-0001', serviceId:'svc-cut', startAt:slot.startAt, partySize:4, customer:{ name:'Nora', phone:'+49 179 5241112', email:'' } };
+response = await callPost({ ...request, ref:'public-ref-invalid-phone', customer:{ name:'Nora', phone:'49 179 5241112', email:'' } });
+check(response.status === 400, 'ambiguous foreign numbers without a country-code prefix are rejected');
 response = await callPost(request); body = await response.json();
-check(response.status === 200 && body.ok && body.status === 'confirmed', 'valid public booking is committed');
+check(response.status === 200 && body.ok && body.status === 'confirmed', 'international public booking is committed');
+check(db.doc.bookings[0].customer.phone === '+491795241112', 'international customer number is stored canonically');
 check(/^R-[A-Z0-9]{8}$/.test(body.code), 'booking receives a customer-safe reference');
 check(typeof body.manageToken === 'string' && body.manageToken.length >= 24, 'booking receives an unguessable management token');
 check(db.doc.bookings.length === 1 && db.rev === 2, 'booking and document revision commit atomically');

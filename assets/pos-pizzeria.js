@@ -949,7 +949,7 @@
           ${forLiv ? '' : `<div class="pz-sheet-foot" style="margin-top:10px;"><button class="pz-btn ghost" id="pz-cl-guest">Client de passage, sans fiche</button></div>`}` : `
           <div class="pz-cl-form">
             <input class="pz-in" id="pz-cl-name" placeholder="Nom et prénom" value="${esc(/^[\d\s.+-]*$/.test(q || '') ? '' : (q || ''))}" />
-            <input class="pz-in" id="pz-cl-tel" inputmode="tel" placeholder="Téléphone${forLiv ? '' : ' (optionnel)'}" value="${esc(/^[\d\s.+-]+$/.test(q || '') ? q : '')}" />
+            <input class="pz-in" id="pz-cl-tel" inputmode="tel" autocomplete="tel" placeholder="06… / +33…${forLiv ? '' : ' (optionnel)'}" value="${esc(/^[\d\s.+-]+$/.test(q || '') ? q : '')}" />
             ${forLiv ? '<input class="pz-in" id="pz-cl-addr" placeholder="Adresse de livraison" />' : ''}
             <div class="pz-sheet-foot" style="margin-top:4px;">
               <button class="pz-btn secondary" id="pz-cl-back">Retour</button>

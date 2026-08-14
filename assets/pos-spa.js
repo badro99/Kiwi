@@ -1644,7 +1644,7 @@
             </div>` : ''}` : `
           <div class="sp-cl-form">
             <input class="sp-in" id="sp-pk-name" placeholder="Nom et prénom" value="${esc(/^[\d\s.+-]*$/.test(q || '') ? '' : (q || ''))}" />
-            <input class="sp-in" id="sp-pk-tel" inputmode="tel" placeholder="Téléphone" value="${esc(/^[\d\s.+-]+$/.test(q || '') ? q : '')}" />
+            <input class="sp-in" id="sp-pk-tel" inputmode="tel" autocomplete="tel" placeholder="06… / +33…" value="${esc(/^[\d\s.+-]+$/.test(q || '') ? q : '')}" />
             <input class="sp-in" id="sp-pk-alg" placeholder="Allergie connue (optionnel, ex. huile d'amande)" />
             <div class="sp-sheet-foot" style="margin-top:4px;">
               <button class="sp-btn secondary" id="sp-pk-back">Retour</button>

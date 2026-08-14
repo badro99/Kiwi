@@ -757,7 +757,7 @@
           </div>` : `
           <div class="lb-cl-form">
             <input class="lb-in" id="lb-cl-name" placeholder="Nom et prénom" value="${esc(/^[\d\s.+-]*$/.test(q || '') ? '' : (q || ''))}" />
-            <input class="lb-in" id="lb-cl-tel" inputmode="tel" placeholder="Téléphone (optionnel)" value="${esc(/^[\d\s.+-]+$/.test(q || '') ? q : '')}" />
+            <input class="lb-in" id="lb-cl-tel" inputmode="tel" autocomplete="tel" placeholder="06… / +33… (optionnel)" value="${esc(/^[\d\s.+-]+$/.test(q || '') ? q : '')}" />
             <div class="lb-foot" style="margin-top:4px;">
               <button class="lb-btn secondary" id="lb-cl-back">Retour</button>
               <button class="lb-btn primary" id="lb-cl-create"><i data-lucide="check"></i>Créer la fiche</button>

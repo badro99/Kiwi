@@ -2050,7 +2050,7 @@
           </div>` : `
           <div class="bq-cl-form">
             <input class="bq-in" id="bq-cl-name" placeholder="Nom et prénom" value="${esc(/^[\d\s.+-]*$/.test(q || '') ? '' : (q || ''))}" />
-            <input class="bq-in" id="bq-cl-tel" inputmode="tel" placeholder="Téléphone (optionnel)" value="${esc(/^[\d\s.+-]+$/.test(q || '') ? q : '')}" />
+            <input class="bq-in" id="bq-cl-tel" inputmode="tel" autocomplete="tel" placeholder="06… / +33… (optionnel)" value="${esc(/^[\d\s.+-]+$/.test(q || '') ? q : '')}" />
             <div class="bq-sheet-foot" style="margin-top:4px;">
               <button class="bq-btn secondary" id="bq-cl-back">Retour</button>
               <button class="bq-btn primary" id="bq-cl-create"><i data-lucide="check"></i>Créer la fiche</button>

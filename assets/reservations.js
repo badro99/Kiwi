@@ -7,6 +7,10 @@
   var DONE = { completed: 1, cancelled: 1, no_show: 1 };
   var store = null;
   var open = false;
+  function normalizePhone(value) {
+    var raw = cleanText(value, 32);
+    return !raw ? '' : (window.KiwiPhone ? window.KiwiPhone.normalize(raw) : raw);
+  }
 
   var COPY = {
     fr: {
@@ -278,7 +282,7 @@
     var val = function(d){ var z=new Date(d.getTime()-d.getTimezoneOffset()*60000); return z.toISOString().slice(0,16); };
     var m = window.Kiwi.modal({ title: existing ? t('edit') : t('add'), width: 700, body:'<form class="kr-form" data-kr-form>' +
       formField(t('client'), '<input name="name" maxlength="100" required autocomplete="name" value="'+esc(b.customer&&b.customer.name||'')+'">') +
-      formField(t('phone'), '<input name="phone" maxlength="32" inputmode="tel" autocomplete="tel" value="'+esc(b.customer&&b.customer.phone||'')+'">') +
+      formField(t('phone'), '<input name="phone" maxlength="32" inputmode="tel" autocomplete="tel" placeholder="06… / +33…" value="'+esc(b.customer&&b.customer.phone||'')+'">') +
       formField(t('email'), '<input name="email" maxlength="160" type="email" autocomplete="email" value="'+esc(b.customer&&b.customer.email||'')+'">') +
       formField(t('guests'), '<input name="partySize" type="number" min="1" max="999" value="'+esc(b.partySize||1)+'">') +
       formField(t('service'), '<select name="serviceId" required><option value="">—</option>'+services.map(function(x){return '<option value="'+esc(x.id)+'"'+(x.id===b.serviceId?' selected':'')+'>'+esc(x.name)+' · '+esc(x.duration)+' min · '+esc(money(x.price))+'</option>';}).join('')+'</select>') +
@@ -289,7 +293,7 @@
     var form=m.el.querySelector('[data-kr-form]');
     m.el.querySelector('[data-kr-close]').onclick=function(){m.close();};
     var del=m.el.querySelector('[data-kr-delete]'); if(del) del.onclick=function(){ var d=get(); d.bookings=d.bookings.map(function(x){return x.id===existing.id?Object.assign({},x,{status:'cancelled',updatedAt:Date.now()}):x;}); set(d); m.close(); render(); };
-    form.onsubmit=function(e){ e.preventDefault(); var fd=new FormData(form), startAt=new Date(fd.get('startAt')).getTime(), input={customer:{name:fd.get('name'),phone:fd.get('phone'),email:fd.get('email')},serviceId:fd.get('serviceId'),resourceId:fd.get('resourceId'),startAt:startAt,partySize:fd.get('partySize'),note:fd.get('note')}; var d=get(), check=validate(input,d,existing&&existing.id); if(!check.ok){form.querySelector('[data-kr-error]').textContent=t(check.error);return;} var now=Date.now(), rec={ id:existing&&existing.id||id('bk'), code:existing&&existing.code||('K'+Math.random().toString(36).slice(2,8).toUpperCase()), customer:{name:cleanText(input.customer.name,100),phone:cleanText(input.customer.phone,32),email:cleanText(input.customer.email,160)}, serviceId:check.service.id,resourceId:check.resource.id,startAt:check.startAt,endAt:check.endAt,partySize:number(input.partySize,1,999,1),status:existing&&existing.status||'confirmed',source:existing&&existing.source||'staff',note:cleanText(input.note,600),manageToken:existing&&existing.manageToken||'',createdAt:existing&&existing.createdAt||now,updatedAt:now}; var i=d.bookings.findIndex(function(x){return x.id===rec.id;}); if(i<0)d.bookings.push(rec);else d.bookings[i]=rec;set(d);m.close();window.Kiwi.toast(t('saved'),{type:'success'});render(); };
+    form.onsubmit=function(e){ e.preventDefault(); var fd=new FormData(form), rawPhone=cleanText(fd.get('phone'),32), phone=normalizePhone(rawPhone), startAt=new Date(fd.get('startAt')).getTime(), input={customer:{name:fd.get('name'),phone:phone,email:fd.get('email')},serviceId:fd.get('serviceId'),resourceId:fd.get('resourceId'),startAt:startAt,partySize:fd.get('partySize'),note:fd.get('note')}; if(rawPhone&&!phone){form.querySelector('[data-kr-error]').textContent=lang()==='ar'?'أدخل رقم الهاتف مع رمز الدولة، مثل +33 أو +49.':lang()==='en'?'Include the country code for foreign numbers, such as +33 or +49.':'Pour un numéro étranger, ajoutez l’indicatif pays, par exemple +33 ou +49.';return;} var d=get(), check=validate(input,d,existing&&existing.id); if(!check.ok){form.querySelector('[data-kr-error]').textContent=t(check.error);return;} var now=Date.now(), rec={ id:existing&&existing.id||id('bk'), code:existing&&existing.code||('K'+Math.random().toString(36).slice(2,8).toUpperCase()), customer:{name:cleanText(input.customer.name,100),phone:phone,email:cleanText(input.customer.email,160)}, serviceId:check.service.id,resourceId:check.resource.id,startAt:check.startAt,endAt:check.endAt,partySize:number(input.partySize,1,999,1),status:existing&&existing.status||'confirmed',source:existing&&existing.source||'staff',note:cleanText(input.note,600),manageToken:existing&&existing.manageToken||'',createdAt:existing&&existing.createdAt||now,updatedAt:now}; var i=d.bookings.findIndex(function(x){return x.id===rec.id;}); if(i<0)d.bookings.push(rec);else d.bookings[i]=rec;set(d);m.close();window.Kiwi.toast(t('saved'),{type:'success'});render(); };
     wireLifecycle(m, existing);
   }
   function lifecycle(b){ if(DONE[b.status])return''; var buttons=[]; if(b.status==='requested')buttons.push(['confirmed',t('confirm')]); if(b.status==='confirmed')buttons.push(['checked_in',t('checkin')]); if(b.status==='checked_in')buttons.push(['completed',t('complete')]); buttons.push(['no_show',t('noShow')]); buttons.push(['cancelled',t('cancel')]); return '<div class="kr-lifecycle">'+buttons.map(function(x){return '<button type="button" data-kr-status="'+x[0]+'">'+esc(x[1])+'</button>';}).join('')+'</div>'; }

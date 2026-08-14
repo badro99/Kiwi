@@ -10,6 +10,24 @@ const HHMM = /^([01]\d|2[0-3]):([0-5]\d)$/;
 const TZ = 'Africa/Casablanca';
 const str = (v, n) => String(v == null ? '' : v).trim().slice(0, n);
 const num = (v, min, max, fallback) => Number.isFinite(+v) ? Math.max(min, Math.min(max, +v)) : fallback;
+function normalizePhone(value) {
+  let s = str(value, 32);
+  if (!s) return '';
+  if (/[A-Za-z]/.test(s)) return '';
+  s = s.replace(/^(\+|00)(\d{1,3})\s*\(0\)/, '$1$2');
+  if ((s.match(/\+/g) || []).length > 1 || s.indexOf('+') > 0) return '';
+  s = s.replace(/[\s().-]/g, '');
+  const explicit = s.startsWith('+') || s.startsWith('00');
+  let digits = s.replace(/^\+|^00/, '');
+  if (/^212[567]\d{8}$/.test(digits)) digits = '0' + digits.slice(3);
+  else if (/^[567]\d{8}$/.test(digits)) digits = '0' + digits;
+  if (/^0[567]\d{8}$/.test(digits)) return digits.replace(/^(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})$/, '$1 $2 $3 $4 $5');
+  return explicit && /^[1-9]\d{6,14}$/.test(digits) ? '+' + digits : '';
+}
+function phoneKey(value) {
+  const phone = normalizePhone(value), digits = phone.replace(/\D/g, '');
+  return /^0[567]\d{8}$/.test(digits) ? '212' + digits.slice(1) : digits;
+}
 
 function blank() {
   return { v: 1, settings: { published: false, confirmation: 'instant', minNoticeMinutes: 60, windowDays: 60, cancellationHours: 12, slotStep: 15, staffingEnabled: false, tablesPerStaff: 4 }, services: [], resources: [], blocked: [], bookings: [] };
@@ -138,15 +156,15 @@ export async function onRequestPost({ request, env }) {
   const limited = await limitCheck(request,env,'booking'); if (limited) return limited;
   let b; try { b=await request.json(); } catch (_) { await limitFail(request,env,'booking'); return json({error:'bad-json'},400); }
   const merchant=str(b?.merchant,64).toLowerCase(), ref=str(b?.ref,80), sid=str(b?.serviceId,64), asked=str(b?.resourceId,64), startAt=+b?.startAt||0;
-  const name=str(b?.customer?.name,100), phone=str(b?.customer?.phone,32), email=str(b?.customer?.email,160), partySize=num(b?.partySize,1,999,1);
-  if(!ID.test(merchant)||!REF.test(ref)||!name||(!phone&&!email)||!sid||!startAt){await limitFail(request,env,'booking');return json({error:'invalid'},400);}
+  const name=str(b?.customer?.name,100), rawPhone=str(b?.customer?.phone,32), phone=normalizePhone(rawPhone), email=str(b?.customer?.email,160), partySize=num(b?.partySize,1,999,1);
+  if(!ID.test(merchant)||!REF.test(ref)||!name||(!rawPhone&&!email)||rawPhone&&!phone||!sid||!startAt){await limitFail(request,env,'booking');return json({error:'invalid'},400);}
   for(let attempt=0;attempt<4;attempt++){
     let rows;try{rows=await readRows(env,merchant);}catch(_){return json({error:'unavailable'},503);}
     const doc=safeDoc(rows.reservation?.data), rev=+rows.reservation?.rev||0;
     if(!rows.merchant||!doc.settings.published)return json({error:'booking-closed'},409);
     const prior=doc.bookings.find((x)=>x.publicRef===ref);if(prior){await limitClear(request,env,'booking');return json({ok:true,id:prior.id,code:prior.code,status:prior.status,startAt:prior.startAt,manageToken:prior.manageToken,replayed:true});}
-    const now=Date.now(), contactKey=(phone||email).toLowerCase();
-    const recentForContact=doc.bookings.filter((x)=>x.source==='public'&&x.createdAt>now-86400000&&(String(x.customer.phone||'').toLowerCase()===contactKey||String(x.customer.email||'').toLowerCase()===contactKey)).length;
+    const now=Date.now(), contactKey=(phoneKey(phone)||email).toLowerCase();
+    const recentForContact=doc.bookings.filter((x)=>x.source==='public'&&x.createdAt>now-86400000&&((phone&&phoneKey(x.customer.phone)===contactKey)||String(x.customer.email||'').toLowerCase()===contactKey)).length;
     const activeFuture=doc.bookings.filter((x)=>ACTIVE.has(x.status)&&x.endAt>now).length;
     if(recentForContact>=5||activeFuture>=2000){await limitFail(request,env,'booking');return json({error:'booking-limit'},429);}
     const svc=doc.services.find((x)=>x.id===sid&&x.active);if(!svc)return json({error:'service-not-found'},409);

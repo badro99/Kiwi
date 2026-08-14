@@ -1019,7 +1019,7 @@
           </div>` : ''}` : `
           <div class="cf-cl-form">
             <input class="cf-in" id="cf-cl-name" placeholder="Nom et prénom" value="${esc(/^[\d\s.+-]*$/.test(q || '') ? '' : (q || ''))}" />
-            <input class="cf-in" id="cf-cl-tel" inputmode="tel" placeholder="Téléphone (optionnel)" value="${esc(/^[\d\s.+-]+$/.test(q || '') ? q : '')}" />
+            <input class="cf-in" id="cf-cl-tel" inputmode="tel" autocomplete="tel" placeholder="06… / +33… (optionnel)" value="${esc(/^[\d\s.+-]+$/.test(q || '') ? q : '')}" />
             <div class="cf-sheet-foot" style="margin-top:4px;">
               <button class="cf-btn secondary" id="cf-cl-back">Retour</button>
               <button class="cf-btn primary" id="cf-cl-create"><i data-lucide="check"></i>Créer la fiche</button>
