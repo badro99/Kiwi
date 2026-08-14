@@ -532,6 +532,54 @@
       departments: ['Vente', 'Vitrine', 'Caisse', 'Stock', 'Management'],
       functions:   ['Vendeur conseil', 'Caissier', 'Magasinier', 'Visual merchandiser', 'Manager'],
     },
+    pressing: {
+      departments: ['Accueil', 'Atelier', 'Repassage', 'Retouches', 'Livraison', 'Caisse', 'Management'],
+      functions:   ['Agent de réception', 'Opérateur lavage', 'Détacheur', 'Repasseur', 'Retoucheur', 'Livreur', 'Caissier', "Responsable d'atelier", 'Manager'],
+    },
+    hotel: {
+      departments: ['Réception', 'Réservations', 'Étages', 'Restauration', 'Maintenance', 'Caisse', 'Management'],
+      functions:   ['Réceptionniste', 'Concierge', 'Veilleur de nuit', 'Responsable réservations', 'Gouvernante', 'Femme de chambre', 'Valet de chambre', 'Bagagiste', 'Technicien de maintenance', 'Caissier', 'Manager'],
+    },
+    fastfood: {
+      departments: ['Cuisine', 'Comptoir', 'Livraison', 'Caisse', 'Stock', 'Management'],
+      functions:   ['Équipier polyvalent', 'Cuisinier', 'Préparateur', 'Caissier', 'Livreur', 'Plongeur', 'Responsable de shift', 'Manager'],
+    },
+    bakery: {
+      departments: ['Fournil', 'Pâtisserie', 'Vente', 'Caisse', 'Livraison', 'Management'],
+      functions:   ['Boulanger', 'Pâtissier', 'Tourier', 'Vendeur', 'Caissier', 'Livreur', 'Responsable de production', 'Manager'],
+    },
+    pizzeria: {
+      departments: ['Cuisine', 'Four', 'Comptoir', 'Salle', 'Livraison', 'Caisse', 'Management'],
+      functions:   ['Pizzaiolo', 'Aide-pizzaiolo', 'Préparateur', 'Serveur', 'Caissier', 'Livreur', 'Responsable de shift', 'Manager'],
+    },
+    traiteur: {
+      departments: ['Production', 'Logistique', 'Service', 'Commercial', 'Caisse', 'Management'],
+      functions:   ['Chef traiteur', 'Cuisinier', 'Commis', "Maître d'hôtel", 'Serveur événementiel', 'Chauffeur-livreur', 'Responsable logistique', 'Commercial', 'Caissier', 'Manager'],
+    },
+    foodtruck: {
+      departments: ['Cuisine', 'Comptoir', 'Tournée', 'Caisse', 'Stock', 'Management'],
+      functions:   ['Équipier food truck', 'Cuisinier', 'Préparateur', 'Caissier', 'Chauffeur', 'Responsable de tournée', 'Manager'],
+    },
+    librairie: {
+      departments: ['Vente', 'Commandes', 'Caisse', 'Stock', 'Management'],
+      functions:   ['Libraire', 'Conseiller', 'Caissier', 'Magasinier', 'Responsable commandes', 'Manager'],
+    },
+    fleuriste: {
+      departments: ['Atelier floral', 'Vente', 'Livraison', 'Caisse', 'Stock', 'Management'],
+      functions:   ['Fleuriste', 'Aide-fleuriste', 'Conseiller', 'Livreur', 'Caissier', "Responsable d'atelier", 'Manager'],
+    },
+    coiffure: {
+      departments: ['Coiffure', 'Coloration', 'Barbier', 'Accueil', 'Caisse', 'Management'],
+      functions:   ['Coiffeur', 'Coiffeuse', 'Coloriste', 'Barbier', 'Shampouineur', 'Réceptionniste', 'Caissier', 'Manager'],
+    },
+    sport: {
+      departments: ['Accueil', 'Coaching', 'Cours collectifs', 'Vente', 'Caisse', 'Entretien', 'Management'],
+      functions:   ['Coach sportif', 'Personal trainer', 'Professeur de cours collectif', 'Conseiller abonnements', 'Réceptionniste', 'Caissier', "Agent d'entretien", 'Manager'],
+    },
+    autre: {
+      departments: ['Opérations', 'Vente', 'Service', 'Caisse', 'Stock', 'Management'],
+      functions:   ['Agent polyvalent', 'Conseiller', 'Technicien', 'Caissier', 'Magasinier', 'Responsable', 'Manager'],
+    },
   };
   function unionCatalog() {
     const allDept = new Set(), allFn = new Set();

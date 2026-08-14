@@ -82,6 +82,21 @@
     catch (_) { return ''; }
   })();
 
+  /* The active specialist till and the owner's dashboard read the same paid
+     ledger. When pos-sale finishes a tenant-bound day reconciliation, let the
+     métier refresh its native counters without teaching the shared ledger how
+     a bakery, truck or pharmacy lays out its screen. */
+  document.addEventListener('kiwi-pos-sales-synced', (event) => {
+    const detail = (event && event.detail) || {};
+    if (!current || detail.vertical !== current) return;
+    const spec = apps[current];
+    if (!spec) return;
+    try {
+      if (typeof spec.onSalesSync === 'function') spec.onSalesSync(detail);
+      else if (typeof spec.onShow === 'function') spec.onShow();
+    } catch (_) {}
+  });
+
   /* A loaded vertical is a long-lived closure: boutique SALES, pressing ORDERS
    * and several catalog maps survive removing their DOM.  Storage is purged by
    * caisse-pairing before this event, but remounting the same script would still
@@ -300,6 +315,10 @@
        is classified. Their original nodes and handlers remain untouched. */
     try { if (window.KiwiCaisseDna) window.KiwiCaisseDna.enhance(root, id); } catch (e) {}
     current = id;
+    /* Boutique owns a richer multi-day SALES journal and already imports the
+       tenant feed for returns. The shared day reconciler is for specialist
+       modules that use KiwiPosSale as their settled-sale ledger. */
+    try { if (id !== 'boutique' && window.KiwiPosSale && window.KiwiPosSale.activate) window.KiwiPosSale.activate(id); } catch (e) {}
     root.classList.add('is-on', 'is-entering');
     root.setAttribute('aria-hidden', 'false');
     setTimeout(() => root.classList.remove('is-entering'), 700);
@@ -317,6 +336,7 @@
       document.body.classList.remove(`is-pos-${current}`);
       current = null;
     }
+    try { if (window.KiwiPosSale && window.KiwiPosSale.deactivate) window.KiwiPosSale.deactivate(); } catch (e) {}
     document.body.classList.remove('is-pos', 'is-unlocked');
     if (typeof window.__kiwiPinReset === 'function') window.__kiwiPinReset();
     toast('Terminal verrouillé');

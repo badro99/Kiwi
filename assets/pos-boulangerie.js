@@ -241,17 +241,17 @@
       if (window.KiwiPosSale) window.KiwiPosSale.record('boulangerie', { total, method, label, ref, lines });
     } catch (_) {}
   }
-  (function restoreDay() {
+  function reconcileDay() {
     try {
       if (!window.KiwiPosSale) return;
       const t = window.KiwiPosSale.totals('boulangerie');
-      if (!t.count) return;
-      state.day.especes += t.cash;
-      state.day.carte += t.card + t.other;
-      state.day.tickets += t.count;
+      state.day.especes = t.cash;
+      state.day.carte = t.card + t.other;
+      state.day.tickets = t.count;
       state.seq = window.KiwiPosSale.nextSeq('boulangerie', state.seq);
     } catch (_) {}
-  })();
+  }
+  reconcileDay();
 
   function queueIfOffline(label) {
     bakeryOps?.save?.(label || 'operation');
@@ -1440,6 +1440,7 @@
       sub: 'Boulangerie Bab Kasbah <em>·</em> fournée du matin sortie, le msemen est au four',
     },
     mount(rootEl) { mount(rootEl); },
+    onSalesSync() { reconcileDay(); if (root) renderAll(); },
     onShow() { if (root) renderAll(); },
   });
 })();

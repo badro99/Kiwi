@@ -415,6 +415,148 @@
     return max >= base ? max + 1 : base;
   }
 
+  /* ─── serveur → caisse : une seule journée, un seul livre ────────────────
+   * record() above already makes every specialist till WRITE the canonical
+   * server ledger. Reading only kiwi:posDay:<métier> nevertheless left a
+   * second till, an employee checkout or an OrderPro payment invisible in the
+   * first till's « aujourd'hui » counters. The dashboard was right while the
+   * counter beside the cash drawer was lower — exactly the discrepancy a
+   * shared ledger is supposed to prevent.
+   *
+   * Reconcile by immutable receipt identity (server id/cursor, then printed
+   * reference). Never replace the local journal wholesale: an offline taking
+   * may still be waiting in KiwiLive's outbox and must remain visible locally.
+   * The union is therefore safe in both directions: server rows repair other
+   * devices; unsent local rows survive until their idempotent POST lands. */
+  var syncing = {};
+  var activeVertical = '';
+  var activeTimer = null;
+  var ACTIVE_MS = 5000, HIDDEN_MS = 30000;
+
+  function dayStart(slug) {
+    try {
+      var R = window.KiwiDayReport;
+      if (R && R.today && R.dayBounds) return R.dayBounds(R.today(slug), slug).from;
+    } catch (_) {}
+    var d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime();
+  }
+  function sameReceipt(a, b) {
+    if (!a || !b) return false;
+    if (a.saleId && b.saleId && String(a.saleId) === String(b.saleId)) return true;
+    if (a.cursor && b.cursor && Number(a.cursor) === Number(b.cursor)) return true;
+    var ar = String(a.ref || '').trim(), br = String(b.ref || '').trim();
+    if (!ar || !br) return false;
+    if (ar === br) return true;
+    try { return !!matcher([br])(ar); } catch (_) { return false; }
+  }
+  function fromServer(s, who) {
+    if (!s || !(+s.amount > 0)) return null;
+    var row = {
+      ts: Number(s.ts) || Date.now(), total: Math.round(+s.amount * 100) / 100,
+      m: who, method: normMethod(s.method), raw: String(s.method || ''),
+      label: String(s.label || 'Vente').slice(0, 80),
+      ref: String(s.ref || '').slice(0, 64),
+      saleId: String(s.id || '').slice(0, 80), cursor: Number(s.cursor) || 0,
+    };
+    var channel = String(s.channel || '').toLowerCase().replace(/[^a-z]/g, '').slice(0, 24);
+    if (channel) row.channel = channel;
+    if (Array.isArray(s.lines) && s.lines.length) row.lines = s.lines.slice(0, 40).map(cleanLine);
+    return row;
+  }
+  function ingest(vertical, sales, who) {
+    if (!isReal() || !who || who !== tenant() || !Array.isArray(sales)) return { changed: 0, added: 0 };
+    noteTenant(who);
+    var rows = read(vertical), changed = 0, added = 0;
+    sales.forEach(function (sale) {
+      var incoming = fromServer(sale, who);
+      if (!incoming || !isToday(incoming.ts)) return;
+      var at = -1;
+      for (var i = 0; i < rows.length; i++) { if (sameReceipt(rows[i], incoming)) { at = i; break; } }
+      if (at < 0) { rows.push(incoming); changed++; added++; return; }
+      /* The server is authoritative for financial fields; preserve local-only
+         split-payment metadata until the API carries it too. */
+      var keep = rows[at];
+      var before = JSON.stringify([keep.ts, keep.total, keep.m, keep.method, keep.raw,
+        keep.label, keep.ref, keep.saleId, keep.cursor, keep.channel, keep.lines]);
+      ['ts','total','m','method','raw','label','ref','saleId','cursor','channel','lines'].forEach(function (k) {
+        if (incoming[k] !== undefined) keep[k] = incoming[k];
+      });
+      var after = JSON.stringify([keep.ts, keep.total, keep.m, keep.method, keep.raw,
+        keep.label, keep.ref, keep.saleId, keep.cursor, keep.channel, keep.lines]);
+      if (before !== after) changed++;
+    });
+    if (changed) write(vertical, rows);
+    return { changed: changed, added: added };
+  }
+  function sync(vertical, notify) {
+    vertical = String(vertical || '');
+    var who = tenant();
+    if (!vertical || !who || !isReal() || typeof fetch !== 'function') return Promise.resolve({ changed: 0, added: 0 });
+    var slot = who + ':' + vertical;
+    if (syncing[slot]) return syncing[slot];
+    var url = '/api/feed?merchant=' + encodeURIComponent(who) + '&from=' + encodeURIComponent(dayStart(who));
+    syncing[slot] = fetch(url, { headers: { Accept: 'application/json' } })
+      .then(function (r) { return r && r.ok ? r.json() : null; })
+      .then(function (data) {
+        if (!data || (data.merchant && String(data.merchant) !== who)) return { changed: 0, added: 0 };
+        var removed = 0;
+        var voidRefs = [];
+        if (Array.isArray(data.voided) && data.voided.length) {
+          voidRefs = data.voided.map(function (v) { return v && v.r; }).filter(Boolean);
+          removed = dropRefs(voidRefs);
+        }
+        /* /api/feed may legitimately return the append-only sale row and its
+           later void marker in one response. A void is the final accounting
+           state, so never re-import that receipt from the historical rows. */
+        var voidHit = matcher(voidRefs);
+        var liveSales = (data.sales || []).filter(function (sale) {
+          return !(voidHit && sale && voidHit(sale.ref));
+        });
+        var result = ingest(vertical, liveSales, who);
+        result.removed = removed;
+        /* The first pull must repaint after each métier restores its own saved
+           snapshot. Later polls stay silent unless the canonical day changed,
+           otherwise a five-second refresh would steal focus from cashiers. */
+        if (notify || result.changed || removed) {
+          try {
+            document.dispatchEvent(new CustomEvent('kiwi-pos-sales-synced', {
+              detail: { vertical: vertical, merchant: who, changed: result.changed,
+                added: result.added, removed: removed, totals: totals(vertical) },
+            }));
+          } catch (_) {}
+        }
+        return result;
+      }).catch(function () { return { changed: 0, added: 0 }; })
+      .then(function (result) { delete syncing[slot]; return result; }, function (error) { delete syncing[slot]; throw error; });
+    return syncing[slot];
+  }
+  function activeDelay() {
+    try { return document.hidden ? HIDDEN_MS : ACTIVE_MS; } catch (_) { return ACTIVE_MS; }
+  }
+  function armActive(ms) {
+    if (activeTimer) clearTimeout(activeTimer);
+    activeTimer = activeVertical ? setTimeout(function tick() {
+      sync(activeVertical).then(function () { armActive(activeDelay()); });
+    }, ms == null ? activeDelay() : ms) : null;
+  }
+  function activate(vertical) {
+    activeVertical = String(vertical || '');
+    if (!activeVertical) return Promise.resolve({ changed: 0, added: 0 });
+    var job = sync(activeVertical, true);
+    armActive(activeDelay());
+    return job;
+  }
+  function deactivate() {
+    activeVertical = '';
+    if (activeTimer) clearTimeout(activeTimer);
+    activeTimer = null;
+  }
+  try {
+    document.addEventListener('visibilitychange', function () { if (activeVertical && !document.hidden) armActive(0); });
+    window.addEventListener('focus', function () { if (activeVertical) armActive(0); });
+    window.addEventListener('online', function () { if (activeVertical) armActive(0); });
+  } catch (_) {}
+
   /* ─── identifiant de terminal ───
    * Le compteur de tickets vit dans le stockage LOCAL : deux caisses du même
    * commerce partent donc du même numéro et impriment toutes les deux « T-642 »
@@ -456,5 +598,6 @@
     record: record, today: today, totals: totals, nextSeq: nextSeq,
     isReal: isReal, deviceTag: deviceTag, stamp: stamp, dropRefs: dropRefs,
     refMatcher: matcher, cleanLine: cleanLine,
+    ingest: ingest, sync: sync, activate: activate, deactivate: deactivate,
   };
 })();

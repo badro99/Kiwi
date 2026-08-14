@@ -403,18 +403,27 @@
      tiroir est plein. Le prochain numéro de commande repart AU-DELÀ du dernier
      encaissé, sinon deux commandes du même service portent le même nº.
      Démo : journal vide, aucun effet. */
-  (function restoreDay() {
+  function reconcileDay() {
     try {
       if (!window.KiwiPosSale) return;
       const t = window.KiwiPosSale.totals('fastfood');
-      if (!t.count) return;
-      tally.especes += t.cash;
-      tally.carte += t.card + t.other;
-      tally.revenue += t.total;
-      tally.orders += t.count;
+      tally.especes = t.cash;
+      tally.carte = t.card;
+      tally.glovo = t.other;
+      tally.revenue = t.total;
+      tally.orders = t.count;
+      const sold = {};
+      window.KiwiPosSale.today('fastfood').forEach((sale) => {
+        (sale.lines || []).forEach((line) => {
+          const id = String(line.itemId || '');
+          if (id) sold[id] = (sold[id] || 0) + (+line.qty || 0);
+        });
+      });
+      if (Object.keys(sold).length) tally.items = sold;
       state.seq = window.KiwiPosSale.nextSeq('fastfood', state.seq);
     } catch (_) {}
-  })();
+  }
+  reconcileDay();
 
   /* ═══════════════════════ MOUNT (shell) ═══════════════════════ */
   function mount(rootEl) {
@@ -1457,6 +1466,7 @@
       sub: 'Snack Chamal <em>·</em> coup de feu de midi, 5 commandes en file',
     },
     mount(rootEl) { mount(rootEl); },
+    onSalesSync() { reconcileDay(); if (root) renderAll(); },
     onShow() {
       if (!root) return;
       renderClock();

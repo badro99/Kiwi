@@ -282,16 +282,24 @@
      le tiroir est plein. Relu depuis le journal partagé, filtré sur aujourd'hui.
      Le numéro de ticket repart AU-DELÀ du dernier encaissé, sinon deux ventes
      différentes porteraient le même T-642. Démo : journal vide, aucun effet. */
-  (function restoreDay() {
+  function reconcileDay() {
     try {
       if (!window.KiwiPosSale) return;
       const t = window.KiwiPosSale.totals('epicerie');
-      if (!t.count) return;
-      day.especes += t.cash;
-      day.carte += t.card + t.other;
-      day.tickets += t.count;
+      day.especes = t.cash;
+      day.carte = t.card + t.other;
+      day.tickets = t.count;
+      const top = {};
+      window.KiwiPosSale.today('epicerie').forEach((sale) => {
+        (sale.lines || []).forEach((line) => {
+          const id = String(line.itemId || '');
+          if (id) top[id] = (top[id] || 0) + (+line.qty || 0);
+        });
+      });
+      if (Object.keys(top).length) day.top = Object.keys(top).map((id) => ({ id, qty: top[id] }));
     } catch (_) {}
-  })();
+  }
+  reconcileDay();
 
   /* ───────────────────────── state ───────────────────────── */
   let ticketSeq = 642;
@@ -1652,6 +1660,7 @@
     id: 'epicerie',
     greet: { line1: 'Bonjour Si Brahim,', em: 'bienvenue.', sub: 'Épicerie Si Brahim <em>·</em> caisse du hanout' },
     mount,
+    onSalesSync() { reconcileDay(); if (root) renderAll(); },
     onShow,
   });
 })();

@@ -186,7 +186,7 @@ var SHELL = [
   '/assets/employee-planning.js?v=3',
   '/assets/planning-core.js?v=8',
   '/assets/planning-ui.css?v=10',
-  '/assets/team.js?v=273',
+  '/assets/team.js?v=274',
   '/assets/restaurant-menu-workspace.js?v=2',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).
   '/assets/catalog-import.js',
@@ -202,8 +202,8 @@ var SHELL = [
      ligne, une commande prise pendant une coupure pourrait atteindre la
      cuisine à l'écran sans jamais sortir sur la thermique. */
   '/assets/kitchen-print-queue.js?v=1',
-  '/assets/pos-sale.js?v=2',
-  '/assets/pos-dispatch.js?v=14',
+  '/assets/pos-sale.js?v=3',
+  '/assets/pos-dispatch.js?v=15',
   '/assets/retail-scan.css?v=6',
   '/assets/vendor/zxing-browser.min.js?v=1',
   '/assets/retail-scan.js?v=5',

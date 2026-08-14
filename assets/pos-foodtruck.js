@@ -219,17 +219,22 @@
      restauré — c'est un compteur d'articles, pas d'argent. Le numéro d'appel
      repart au-delà du dernier encaissé, sinon deux clients sont appelés au même
      numéro. Démo : journal vide, aucun effet. */
-  (function restoreDay() {
+  function reconcileDay() {
     try {
       if (!window.KiwiPosSale) return;
-      const t = window.KiwiPosSale.totals('foodtruck');
-      if (!t.count) return;
-      recette.marina.especes += t.cash;
-      recette.marina.carte += t.card + t.other;
-      recette.marina.orders += t.count;
+      Object.keys(recette).forEach((id) => { recette[id].especes = 0; recette[id].carte = 0; recette[id].orders = 0; });
+      window.KiwiPosSale.today('foodtruck').forEach((sale) => {
+        const label = String(sale.label || '').toLowerCase();
+        const spotId = Object.keys(SPOT).find((id) => label.includes(String(SPOT[id].label || '').toLowerCase())) || 'marina';
+        const bucket = recette[spotId] || recette.marina;
+        bucket.orders++;
+        if (sale.method === 'cash') bucket.especes += +sale.total || 0;
+        else bucket.carte += +sale.total || 0;
+      });
       seq = window.KiwiPosSale.nextSeq('foodtruck', seq);
     } catch (_) {}
-  })();
+  }
+  reconcileDay();
 
   function queueIfOffline(label) {
     truckOps?.save?.(label || 'operation');
@@ -1127,6 +1132,7 @@
       sub: 'Karavan <em>·</em> service de midi, Marina Bay',
     },
     mount(rootEl) { mount(rootEl); },
+    onSalesSync() { reconcileDay(); if (root) renderAll(); },
     onShow() { if (root) renderAll(); },
   });
 })();
