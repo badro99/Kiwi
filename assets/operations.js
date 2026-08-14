@@ -55,6 +55,13 @@
   }
   function needed(domain, action) {
     if (domain === 'device' && action === 'heartbeat') return ['read', 'device'];
+    /* Imprimer un ticket d'essai, c'est réimprimer : une caissière teste sa
+       propre imprimante.  Miroir du serveur — sans cette ligne le bouton se
+       refuse ici alors que le Worker l'accepte. */
+    if (domain === 'device' && action === 'test-print') return ['action', 'reprint'];
+    /* Envoyer un message et régler par quel canal la maison écrit à ses
+       clients sont deux droits distincts.  Miroir du serveur. */
+    if (domain === 'notification' && action === 'set-preferences') return ['write', 'notification'];
     if (domain === 'notification') return ['action', 'message'];
     if (domain === 'procurement') return ['write', 'inventory'];
     /* Not write:planning — a manager plans shifts but is kept out of salary
@@ -152,6 +159,25 @@
     if (opts.limit) query.set('limit', String(Math.max(1, Math.min(200, +opts.limit || 50))));
     return responseJson(await fetch('/api/operations?' + query.toString(), { credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' } }));
   }
+  /* Les préférences d'envoi et le journal des tentatives.  Même porte que le
+     parc : propriétaire ou exploitant seulement. */
+  async function notifications(opts) {
+    opts = opts || {};
+    var query = new URLSearchParams({ merchant: K.tenant(), view: 'notifications' });
+    if (opts.limit) query.set('limit', String(Math.max(1, Math.min(200, +opts.limit || 40))));
+    return responseJson(await fetch('/api/operations?' + query.toString(), { credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' } }));
+  }
+  /* Une intention, pas un canal : « préviens ce client » descend l'ordre des
+     préférences de la maison et s'arrête au premier canal qui aboutit.  Passer
+     `channel` fige le canal et supprime le repli. */
+  async function notify(kindAction, payload, opts) {
+    return create('notification', kindAction, payload || {}, opts || {});
+  }
+  async function setNotifyPreferences(kind, channels, enabled) {
+    return create('notification', 'set-preferences', {
+      kind: kind, channels: channels, enabled: enabled !== false,
+    }, { idempotencyKey: 'notify-prefs:' + K.tenant() + ':' + kind + ':' + Date.now() });
+  }
   /* Le parc.  La lecture est réservée au propriétaire côté serveur ; comme
      pour les paiements, le client laisse remonter le 403 tel quel. */
   async function devices(opts) {
@@ -243,6 +269,7 @@
   window.KiwiOperations = {
     version: 1, create: create, list: list, purchaseOrders: purchaseOrders, payslips: payslips, payments: payments, transition: transition, flush: flush,
     devices: devices, testPrint: testPrint, ackAlert: ackAlert, deviceId: deviceId, heartbeat: beat,
+    notifications: notifications, notify: notify, setNotifyPreferences: setNotifyPreferences,
     allowed: allowed, subscribe: function (fn) { listeners.add(fn); return function () { listeners.delete(fn); }; },
   };
 })();

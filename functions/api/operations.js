@@ -13,7 +13,7 @@ import {
 import { tenantFor } from './_private.js';
 
 const ACTIONS = {
-  notification: new Set(['send-email', 'send-whatsapp', 'send-sms', 'send-receipt', 'send-reminder']),
+  notification: new Set(['send-email', 'send-whatsapp', 'send-sms', 'send-receipt', 'send-reminder', 'send-link', 'set-preferences']),
   procurement: new Set(['create-po', 'submit-po', 'receive-po', 'supplier-return']),
   payroll: new Set(['export-payroll', 'prepare-payslips', 'submit-cnss']),
   accounting: new Set(['export-journal', 'create-invoice', 'credit-note', 'lock-period']),
@@ -144,6 +144,10 @@ function normRole(value) {
    the dashboard offers a button the Worker answers with 403. */
 function needed(domain, action) {
   if (domain === 'device' && action === 'heartbeat') return ['read', 'device'];
+  /* Envoyer un message et décider par quel canal la maison écrit à ses
+     clients ne sont pas le même droit : le second est un réglage de
+     l'établissement, qu'aucun rôle de salle ne détient. */
+  if (domain === 'notification' && action === 'set-preferences') return ['write', 'notification'];
   if (domain === 'notification') return ['action', 'message'];
   if (domain === 'procurement') return ['write', 'inventory'];
   if (domain === 'payroll') return ['write', 'payroll'];
@@ -235,12 +239,225 @@ async function postWebhook(url, body) {
   } catch (_) { return { ok: false, reason: 'provider-network' }; }
 }
 
-function notificationProvider(action, payload) {
-  if (action === 'send-email') return 'email';
-  if (action === 'send-sms') return 'sms';
-  if (action === 'send-whatsapp') return 'whatsapp';
-  const channel = clean(payload && payload.channel, 20).toLowerCase();
-  return ['email', 'sms', 'whatsapp'].includes(channel) ? channel : '';
+/* ————— Notifications ——————————————————————————————————————————————
+ *
+ * Prévenir un client n'est pas un appel HTTP unique.  Trois choses
+ * manquaient : le commerçant ne pouvait pas dire par quel canal il veut
+ * joindre ses clients, un canal muet ne laissait aucune seconde chance, et
+ * un même reçu redemandé partait deux fois.  Ce bloc traite l'envoi comme un
+ * flux : ordre de canaux, repli, dédoublonnage, une ligne de journal par
+ * tentative — y compris les tentatives qui n'ont pas eu lieu.
+ *
+ * Le repli ne s'applique jamais à `send-email` / `send-sms` /
+ * `send-whatsapp` : ces actions NOMMENT leur canal, et livrer le corps d'un
+ * e-mail par SMS serait une erreur, pas un secours.  Seules les intentions
+ * — reçu, rappel, lien de paiement — descendent la liste des préférences. */
+const NOTIFY_CHANNELS = ['whatsapp', 'sms', 'email'];
+const NOTIFY_PINNED = { 'send-email': 'email', 'send-sms': 'sms', 'send-whatsapp': 'whatsapp' };
+const NOTIFY_KINDS = { 'send-receipt': 'receipt', 'send-reminder': 'reminder', 'send-link': 'payment-link' };
+const NOTIFY_KIND_LIST = ['receipt', 'reminder', 'payment-link', 'message'];
+const NOTIFY_DEDUPE_MS = 6 * 60 * 60 * 1000;
+
+async function ensureNotify(env) {
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS notification_prefs (
+      merchant TEXT NOT NULL,
+      kind TEXT NOT NULL,
+      channels TEXT NOT NULL,
+      enabled INTEGER NOT NULL DEFAULT 1,
+      updated_ts INTEGER NOT NULL,
+      PRIMARY KEY (merchant, kind)
+    )`,
+  ).run();
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS notification_deliveries (
+      id TEXT PRIMARY KEY,
+      merchant TEXT NOT NULL,
+      command_id TEXT NOT NULL,
+      dedupe_key TEXT NOT NULL DEFAULT '',
+      kind TEXT NOT NULL DEFAULT '',
+      channel TEXT NOT NULL,
+      recipient TEXT NOT NULL DEFAULT '',
+      status TEXT NOT NULL,
+      reason TEXT NOT NULL DEFAULT '',
+      created_ts INTEGER NOT NULL
+    )`,
+  ).run();
+  await env.DB.prepare(
+    'CREATE INDEX IF NOT EXISTS idx_notify_dedupe ON notification_deliveries (merchant, dedupe_key, created_ts DESC)',
+  ).run();
+  await env.DB.prepare(
+    'CREATE INDEX IF NOT EXISTS idx_notify_command ON notification_deliveries (merchant, command_id)',
+  ).run();
+}
+
+const looksEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+const looksPhone = (value) => /^\+?[0-9][0-9\s.-]{6,24}$/.test(value);
+
+/* Un canal ne peut être tenté que si l'on a l'adresse qu'il consomme.  Un
+   numéro de téléphone dans `to` ne rend pas l'e-mail possible, et une adresse
+   e-mail ne rend pas le SMS possible : le canal est alors sauté, pas échoué. */
+function recipientFor(channel, payload) {
+  const to = clean(payload && payload.to, 160);
+  if (channel === 'email') {
+    const mail = clean(payload && payload.email, 160) || to;
+    return looksEmail(mail) ? mail : '';
+  }
+  const phone = clean(payload && payload.phone, 40) || to;
+  return looksPhone(phone) ? phone.replace(/[\s.-]/g, '') : '';
+}
+
+/* sendMail() et postWebhook() vivent dans deux fichiers et ne parlent pas le
+   même vocabulaire d'échec : « unconfigured » d'un côté,
+   « provider-unconfigured » de l'autre.  Sans cette traduction, la même panne
+   se lirait de deux façons selon le canal essayé. */
+function normalizeMailReason(reason) {
+  const value = clean(reason, 60);
+  if (value === 'unconfigured') return 'provider-unconfigured';
+  if (value === 'no-recipient') return 'no-recipient';
+  if (value === 'network') return 'provider-network';
+  if (value.startsWith('http-')) return `provider-${value}`;
+  return 'delivery-failed';
+}
+
+async function deliverOne(env, channel, row, payload, to) {
+  if (channel === 'email') {
+    const sent = await sendMail(env, {
+      to, subject: clean(payload.subject, 160) || 'Kiwi', text: clean(payload.text, 4000),
+    });
+    return sent && sent.ok ? { ok: true } : { ok: false, reason: normalizeMailReason(sent && sent.reason) };
+  }
+  const endpoint = channel === 'sms' ? env.SMS_WEBHOOK : env.WHATSAPP_WEBHOOK;
+  const sent = await postWebhook(endpoint, {
+    kind: channel, to, text: clean(payload.text, 4000), subject: clean(payload.subject, 160),
+    reference: clean(payload.reference, 120), url: clean(payload.url, 400),
+    merchant: row.merchant, commandId: row.id,
+  });
+  return sent && sent.ok ? { ok: true } : { ok: false, reason: clean(sent && sent.reason, 60) || 'delivery-failed' };
+}
+
+function parseChannels(value) {
+  const raw = Array.isArray(value) ? value : String(value == null ? '' : value).split(',');
+  const seen = new Set();
+  const out = [];
+  raw.forEach((entry) => {
+    const channel = clean(entry, 20).toLowerCase();
+    if (NOTIFY_CHANNELS.includes(channel) && !seen.has(channel)) { seen.add(channel); out.push(channel); }
+  });
+  return out;
+}
+
+async function channelPlan(env, row, payload) {
+  const pinned = NOTIFY_PINNED[row.action];
+  if (pinned) return { order: [pinned], kind: 'message', pinned: true, enabled: true };
+  const kind = NOTIFY_KINDS[row.action] || 'message';
+  const asked = clean(payload && payload.channel, 20).toLowerCase();
+  if (NOTIFY_CHANNELS.includes(asked)) return { order: [asked], kind, pinned: true, enabled: true };
+  let stored = null;
+  try {
+    stored = await env.DB.prepare('SELECT channels, enabled FROM notification_prefs WHERE merchant = ? AND kind = ?')
+      .bind(row.merchant, kind).first();
+  } catch (_) { stored = null; }
+  const listed = stored ? parseChannels(stored.channels) : [];
+  return {
+    order: listed.length ? listed : NOTIFY_CHANNELS.slice(),
+    kind,
+    pinned: false,
+    enabled: !stored || Number(stored.enabled) !== 0,
+  };
+}
+
+async function recordDelivery(env, row, entry) {
+  const id = `nd-${clean(row.id, 60)}-${entry.channel}-${Math.random().toString(36).slice(2, 8)}`;
+  await env.DB.prepare(
+    `INSERT INTO notification_deliveries
+      (id, merchant, command_id, dedupe_key, kind, channel, recipient, status, reason, created_ts)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  ).bind(
+    id, row.merchant, row.id, clean(entry.dedupeKey, 120), clean(entry.kind, 30), entry.channel,
+    clean(entry.recipient, 160), entry.status, clean(entry.reason, 120), now(),
+  ).run();
+}
+
+async function notifyPrefs(env, row, payload) {
+  const kind = clean(payload && payload.kind, 30).toLowerCase();
+  if (!NOTIFY_KIND_LIST.includes(kind)) return update(env, row, 'failed', 'kiwi-notify', {}, 'unknown-kind');
+  const channels = parseChannels(payload && payload.channels);
+  if (!channels.length) return update(env, row, 'failed', 'kiwi-notify', {}, 'channels-required');
+  const enabled = payload && payload.enabled === false ? 0 : 1;
+  await env.DB.prepare(
+    `INSERT INTO notification_prefs (merchant, kind, channels, enabled, updated_ts) VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT (merchant, kind) DO UPDATE SET
+       channels = excluded.channels, enabled = excluded.enabled, updated_ts = excluded.updated_ts`,
+  ).bind(row.merchant, kind, channels.join(','), enabled, now()).run();
+  return update(env, row, 'completed', 'kiwi-notify',
+    { kind: kind, channels: channels, enabled: enabled === 1 }, '');
+}
+
+async function notifications(env, row, payload) {
+  try { await ensureNotify(env); } catch (_) { return update(env, row, 'failed', 'kiwi-notify', {}, 'unmigrated'); }
+  if (row.action === 'set-preferences') return notifyPrefs(env, row, payload);
+
+  const plan = await channelPlan(env, row, payload);
+  if (!plan.enabled) {
+    return update(env, row, 'blocked', 'kiwi-notify', { kind: plan.kind }, 'kind-disabled');
+  }
+  const configured = providers(env);
+  const order = plan.order.filter((channel) => configured[channel]);
+  if (!order.length) {
+    /* Un fournisseur absent est un commandement BLOQUÉ, jamais un « envoyé »
+       vert : le commerçant doit savoir que rien n'est parti. */
+    return update(env, row, 'blocked', plan.order[0] || '',
+      { kind: plan.kind, attempts: [] }, 'provider-unconfigured');
+  }
+
+  /* Dédoublonnage : un reçu redemandé pendant que le premier part encore ne
+     doit pas arriver deux fois chez le client.  La clé est explicite ou
+     dérivée de la référence — sans référence rien n'est dédoublonné, car deux
+     messages libres se ressemblent sans être le même message. */
+  const reference = clean(payload && payload.reference, 120);
+  const dedupeKey = clean(payload && payload.dedupeKey, 120) || (reference ? `${plan.kind}:${reference}` : '');
+  if (dedupeKey) {
+    const seen = await env.DB.prepare(
+      `SELECT command_id, channel FROM notification_deliveries
+        WHERE merchant = ? AND dedupe_key = ? AND status = 'sent' AND created_ts > ?
+        ORDER BY created_ts DESC LIMIT 1`,
+    ).bind(row.merchant, dedupeKey, now() - NOTIFY_DEDUPE_MS).first();
+    if (seen && clean(seen.command_id, 128) !== row.id) {
+      return update(env, row, 'sent', clean(seen.channel, 20),
+        { deduped: true, of: clean(seen.command_id, 128), kind: plan.kind, dedupeKey: dedupeKey }, '');
+    }
+  }
+
+  const attempts = [];
+  let last = 'delivery-failed';
+  let lastChannel = order[0];
+  for (let i = 0; i < order.length; i += 1) {
+    const channel = order[i];
+    lastChannel = channel;
+    const to = recipientFor(channel, payload);
+    if (!to) {
+      attempts.push({ channel: channel, status: 'skipped', reason: 'no-recipient' });
+      last = 'no-recipient';
+      await recordDelivery(env, row, { channel, status: 'skipped', reason: 'no-recipient', dedupeKey, kind: plan.kind, recipient: '' });
+      /* Le journal porte le canal et la raison, jamais le destinataire : la
+         piste d'audit ne doit pas devenir un carnet d'adresses. */
+      await event(env, row, 'delivery', 'skipped', { channel: channel, reason: 'no-recipient' });
+      continue;
+    }
+    const outcome = await deliverOne(env, channel, row, payload, to);
+    const status = outcome.ok ? 'sent' : 'failed';
+    const reason = outcome.ok ? '' : (outcome.reason || 'delivery-failed');
+    attempts.push({ channel: channel, status: status, reason: reason });
+    await recordDelivery(env, row, { channel, status, reason, dedupeKey, kind: plan.kind, recipient: to });
+    await event(env, row, 'delivery', status, { channel: channel, reason: reason });
+    if (outcome.ok) {
+      return update(env, row, 'sent', channel,
+        { delivered: true, channel: channel, kind: plan.kind, attempts: attempts, dedupeKey: dedupeKey }, '');
+    }
+    last = reason;
+  }
+  return update(env, row, 'blocked', lastChannel, { kind: plan.kind, attempts: attempts }, last);
 }
 
 /* ————— Comptabilité ————————————————————————————————————————————————
@@ -1410,23 +1627,7 @@ async function devices(env, row, payload) {
 
 async function execute(env, row, payload) {
   if (row.domain === 'device') return devices(env, row, payload);
-  if (row.domain === 'notification') {
-    const provider = notificationProvider(row.action, payload);
-    if (!provider) return update(env, row, 'blocked', '', {}, 'channel-required');
-    let delivered;
-    if (provider === 'email') {
-      delivered = await sendMail(env, { to: payload.to, subject: payload.subject || 'Kiwi', text: payload.text || '' });
-    } else {
-      const endpoint = provider === 'sms' ? env.SMS_WEBHOOK : env.WHATSAPP_WEBHOOK;
-      delivered = await postWebhook(endpoint, {
-        kind: provider, to: clean(payload.to, 120), text: clean(payload.text, 4000),
-        reference: clean(payload.reference, 120), merchant: row.merchant, commandId: row.id,
-      });
-    }
-    return delivered && delivered.ok
-      ? update(env, row, 'sent', provider, { delivered: true }, '')
-      : update(env, row, 'blocked', provider, {}, delivered && delivered.reason || 'delivery-failed');
-  }
+  if (row.domain === 'notification') return notifications(env, row, payload);
   if (row.domain === 'payment') return payments(env, row, payload);
   if (row.domain === 'ai') {
     return update(env, row, 'pending-approval', 'kiwi-confirmation', { readOnly: true }, '');
@@ -1457,6 +1658,45 @@ export async function onRequestGet({ request, env }) {
      commande opérationnelle de plus, et l'écran de réception a besoin du reste
      dû ligne par ligne — sinon il demande au commerçant de taper un numéro et
      une référence de mémoire. */
+  /* Les préférences d'envoi et le journal des tentatives se lisent ensemble :
+     l'écran doit pouvoir montrer « WhatsApp d'abord, puis SMS » ET la raison
+     pour laquelle le dernier reçu est parti par SMS.  Le journal ne rend
+     jamais le destinataire — le canal et la raison suffisent à comprendre. */
+  if (clean(url.searchParams.get('view'), 24) === 'notifications') {
+    try {
+      await ensureNotify(env);
+      const prefs = await env.DB.prepare(
+        'SELECT kind, channels, enabled, updated_ts FROM notification_prefs WHERE merchant = ? ORDER BY kind',
+      ).bind(merchant).all();
+      const stored = new Map((prefs && prefs.results || []).map((row) => [clean(row.kind, 30), row]));
+      const deliveries = await env.DB.prepare(
+        `SELECT command_id, dedupe_key, kind, channel, status, reason, created_ts
+           FROM notification_deliveries WHERE merchant = ? ORDER BY created_ts DESC LIMIT ?`,
+      ).bind(merchant, Math.max(1, Math.min(200, Number(url.searchParams.get('limit')) || 40))).all();
+      return json({
+        merchant,
+        providers: providers(env),
+        defaults: NOTIFY_CHANNELS.slice(),
+        preferences: NOTIFY_KIND_LIST.map((kind) => {
+          const row = stored.get(kind);
+          const listed = row ? parseChannels(row.channels) : [];
+          return {
+            kind: kind,
+            channels: listed.length ? listed : NOTIFY_CHANNELS.slice(),
+            enabled: !row || Number(row.enabled) !== 0,
+            custom: !!row,
+            updatedAt: row ? Number(row.updated_ts || 0) : 0,
+          };
+        }),
+        deliveries: (deliveries && deliveries.results || []).map((row) => ({
+          commandId: clean(row.command_id, 128), dedupeKey: clean(row.dedupe_key, 120),
+          kind: clean(row.kind, 30), channel: clean(row.channel, 20),
+          status: clean(row.status, 20), reason: clean(row.reason, 120),
+          createdAt: Number(row.created_ts || 0),
+        })),
+      });
+    } catch (_) { return json({ error: 'unmigrated' }, 503); }
+  }
   if (clean(url.searchParams.get('view'), 24) === 'purchase-orders') {
     try {
       await ensurePurchase(env);

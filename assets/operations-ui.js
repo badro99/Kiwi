@@ -63,6 +63,32 @@
           lkSettle:'Relever', lkCancel:'Annuler le lien', lkRefund:'Rembourser',
           lkDone:'Livre des paiements mis à jour.', lkAlready:'Déjà annulé — rien n’a changé.',
           lkStatus:{ active:'Actif', pending:'En attente', paid:'Payé', 'partially-refunded':'Partiellement remboursé', refunded:'Remboursé', cancelled:'Annulé', expired:'Expiré' },
+          tabNotify:'Envois clients',
+          ntHint:'Vous dites par quel canal la maison écrit à ses clients. Kiwi essaie dans cet ordre et s’arrête au premier qui aboutit ; un canal sans adresse est sauté, pas compté comme envoyé.',
+          ntProviders:'Canaux branchés', ntOn:'branché', ntOff:'non branché',
+          ntKind:{ receipt:'Reçu', reminder:'Rappel', 'payment-link':'Lien de paiement', message:'Message libre' },
+          ntChannel:{ whatsapp:'WhatsApp', sms:'SMS', email:'E-mail' },
+          ntOrder:'Ordre des canaux', ntEnabled:'Activé', ntDefault:'Ordre par défaut', ntCustom:'Réglage maison',
+          ntSave:'Enregistrer', ntSaved:'Préférences d’envoi enregistrées.', ntPickOne:'Choisissez au moins un canal.',
+          ntJournal:'Journal des envois', ntJournalHint:'Une ligne par tentative, y compris les tentatives sautées. Le journal porte le canal et la raison, jamais le destinataire.',
+          ntEmpty:'Aucune tentative enregistrée.', ntLoading:'Lecture des envois…',
+          ntStatus:{ sent:'Envoyé', failed:'Échec', skipped:'Sauté' },
+          ntCol:{ kind:'Type', channel:'Canal', status:'État', reason:'Raison' },
+          ntSendTitle:'Envoyer au client', ntSendHint:'Un lien déjà envoyé dans les six heures ne repart pas : le client le recevrait deux fois.',
+          ntTo:'Téléphone ou e-mail du client', ntSend:'Envoyer le lien',
+          ntSent:'Envoyé par', ntDeduped:'Déjà envoyé — Kiwi n’a pas renvoyé le même lien.',
+          ntText:'Voici votre lien de paiement.',
+          /* Le mot « fournisseur » ne veut pas dire la même chose ici que dans
+             la caisse : côté paiement c'est l'encaisseur, côté envoi c'est le
+             canal.  Deux dictionnaires plutôt qu'une phrase à double sens. */
+          ntReason:{
+            'provider-unconfigured':'Aucun canal d’envoi branché sur ce compte.',
+            'no-recipient':'Pas d’adresse pour ce canal — rien n’est parti.',
+            'kind-disabled':'Ce type d’envoi est désactivé pour la maison.',
+            'unknown-kind':'Type d’envoi inconnu.', 'channels-required':'Choisissez au moins un canal.',
+            'delivery-failed':'Le canal n’a rien remis.', unconfigured:'Canal non branché.',
+            unmigrated:'Journal des envois indisponible — réessayez.',
+          },
           dvTitle:'Parc d’appareils', dvSub:'Battements réels · alarmes, silence, ticket d’essai',
           dvDenied:'Droit d’exploitation requis', dvDeniedD:'Votre session ne peut pas faire taire une alarme de parc. Kiwi le dit avant de vous faire cliquer.',
           dvLoading:'Lecture du parc…', dvNone:'Aucun appareil ne s’est manifesté depuis trente jours.',
@@ -188,6 +214,29 @@
           lkSettle:'Read', lkCancel:'Cancel the link', lkRefund:'Refund',
           lkDone:'Payment book updated.', lkAlready:'Already cancelled — nothing changed.',
           lkStatus:{ active:'Active', pending:'Pending', paid:'Paid', 'partially-refunded':'Partially refunded', refunded:'Refunded', cancelled:'Cancelled', expired:'Expired' },
+          tabNotify:'Customer sends',
+          ntHint:'You decide which channel the house writes to its customers on. Kiwi tries them in that order and stops at the first one that lands; a channel with no address is skipped, never counted as sent.',
+          ntProviders:'Connected channels', ntOn:'connected', ntOff:'not connected',
+          ntKind:{ receipt:'Receipt', reminder:'Reminder', 'payment-link':'Payment link', message:'Free message' },
+          ntChannel:{ whatsapp:'WhatsApp', sms:'SMS', email:'Email' },
+          ntOrder:'Channel order', ntEnabled:'Enabled', ntDefault:'Default order', ntCustom:'House setting',
+          ntSave:'Save', ntSaved:'Send preferences saved.', ntPickOne:'Pick at least one channel.',
+          ntJournal:'Send log', ntJournalHint:'One line per attempt, skipped attempts included. The log carries the channel and the reason, never the recipient.',
+          ntEmpty:'No attempt recorded.', ntLoading:'Reading sends…',
+          ntStatus:{ sent:'Sent', failed:'Failed', skipped:'Skipped' },
+          ntCol:{ kind:'Kind', channel:'Channel', status:'State', reason:'Reason' },
+          ntSendTitle:'Send to the customer', ntSendHint:'A link already sent within six hours will not go again — the customer would receive it twice.',
+          ntTo:'Customer phone or email', ntSend:'Send the link',
+          ntSent:'Sent via', ntDeduped:'Already sent — Kiwi did not send the same link twice.',
+          ntText:'Here is your payment link.',
+          ntReason:{
+            'provider-unconfigured':'No sending channel is connected on this account.',
+            'no-recipient':'No address for that channel — nothing left.',
+            'kind-disabled':'This kind of send is switched off for the venue.',
+            'unknown-kind':'Unknown send kind.', 'channels-required':'Pick at least one channel.',
+            'delivery-failed':'The channel delivered nothing.', unconfigured:'Channel not connected.',
+            unmigrated:'Send log unavailable — try again.',
+          },
           dvTitle:'Device fleet', dvSub:'Real heartbeats · alerts, acknowledgement, test print',
           dvDenied:'Operations right required', dvDeniedD:'Your session cannot silence a fleet alert. Kiwi says so before letting you click.',
           dvLoading:'Reading the fleet…', dvNone:'No device has reported in thirty days.',
@@ -313,6 +362,29 @@
           lkSettle:'قراءة', lkCancel:'إلغاء الرابط', lkRefund:'استرجاع',
           lkDone:'تم تحديث دفتر المدفوعات.', lkAlready:'ألغي سابقًا — لم يتغيّر شيء.',
           lkStatus:{ active:'نشط', pending:'قيد الانتظار', paid:'مؤدّى', 'partially-refunded':'مسترجَع جزئيًا', refunded:'مسترجَع', cancelled:'ملغى', expired:'منتهي' },
+          tabNotify:'الإرسال للزبناء',
+          ntHint:'أنت تحدّد القناة التي تراسل بها المحلّ زبناءه. يجرّبها Kiwi بهذا الترتيب ويتوقّف عند أوّل قناة تنجح؛ والقناة بلا عنوان تُتخطّى ولا تُحسب مُرسَلة.',
+          ntProviders:'القنوات الموصولة', ntOn:'موصولة', ntOff:'غير موصولة',
+          ntKind:{ receipt:'إيصال', reminder:'تذكير', 'payment-link':'رابط أداء', message:'رسالة حرّة' },
+          ntChannel:{ whatsapp:'واتساب', sms:'رسالة قصيرة', email:'بريد إلكتروني' },
+          ntOrder:'ترتيب القنوات', ntEnabled:'مفعّل', ntDefault:'الترتيب الافتراضي', ntCustom:'إعداد المحلّ',
+          ntSave:'حفظ', ntSaved:'حُفظت تفضيلات الإرسال.', ntPickOne:'اختر قناة واحدة على الأقل.',
+          ntJournal:'سجلّ الإرسال', ntJournalHint:'سطر لكل محاولة، بما فيها المحاولات المتخطّاة. السجلّ يحمل القناة والسبب، لا المرسَل إليه.',
+          ntEmpty:'لا محاولة مسجّلة.', ntLoading:'قراءة الإرسال…',
+          ntStatus:{ sent:'أُرسل', failed:'فشل', skipped:'تُخطّي' },
+          ntCol:{ kind:'النوع', channel:'القناة', status:'الحالة', reason:'السبب' },
+          ntSendTitle:'إرسال إلى الزبون', ntSendHint:'رابط أُرسل خلال ست ساعات لا يُرسل ثانية: سيصل الزبون مرّتين.',
+          ntTo:'هاتف الزبون أو بريده', ntSend:'إرسال الرابط',
+          ntSent:'أُرسل عبر', ntDeduped:'أُرسل من قبل — لم يُعِد Kiwi إرسال نفس الرابط.',
+          ntText:'هذا رابط الأداء الخاص بك.',
+          ntReason:{
+            'provider-unconfigured':'لا توجد قناة إرسال موصولة بهذا الحساب.',
+            'no-recipient':'لا عنوان لهذه القناة — لم يُرسل شيء.',
+            'kind-disabled':'هذا النوع من الإرسال مُعطّل في المحل.',
+            'unknown-kind':'نوع إرسال غير معروف.', 'channels-required':'اختر قناة واحدة على الأقل.',
+            'delivery-failed':'القناة لم تُسلّم شيئًا.', unconfigured:'القناة غير موصولة.',
+            unmigrated:'سجل الإرسال غير متاح — أعد المحاولة.',
+          },
           dvTitle:'أسطول الأجهزة', dvSub:'نبضات حقيقية · إنذارات، إسكات، تذكرة اختبار',
           dvDenied:'يلزم حق التشغيل', dvDeniedD:'جلستك لا يمكنها إسكات إنذار في الأسطول. يقولها Kiwi قبل أن تضغط.',
           dvLoading:'قراءة الأسطول…', dvNone:'لم يظهر أي جهاز منذ ثلاثين يومًا.',
@@ -593,6 +665,27 @@
         '.ops-lk-refund input{width:100%;box-sizing:border-box;}',
         '@media (max-width:720px){.ops-lk-refund{grid-template-columns:1fr;}}',
         '.ops-lk-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}',
+        /* Un ordre de canaux se règle en cliquant : la puce allumée porte son
+           rang, et le rang EST la préférence.  Une case à cocher seule ne dirait
+           pas lequel des trois passe en premier. */
+        '.ops-nt-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}',
+        '.ops-nt-chip{appearance:none;font:inherit;font-size:12px;font-weight:600;padding:6px 13px;border-radius:999px;border:1px solid var(--n-200);background:transparent;color:var(--n-500);cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:color .18s,border-color .18s;}',
+        '.ops-nt-chip.on{color:var(--atlas);border-color:color-mix(in srgb,var(--atlas) 38%,transparent);}',
+        '.ops-nt-chip .r{font-size:10px;font-variant-numeric:tabular-nums;min-width:14px;height:14px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--atlas) 14%,transparent);}',
+        '.ops-nt-chip .r:empty{display:none;}',
+        '.ops-nt-chip[disabled]{opacity:.45;cursor:not-allowed;}',
+        '.ops-nt-row{margin-bottom:12px;}',
+        '.ops-nt-badge{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--n-500);}',
+        '.ops-nt-log{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:10px;}',
+        '.ops-nt-log th{text-align:start;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--n-500);font-weight:600;padding:0 12px 6px 0;white-space:nowrap;}',
+        '.ops-nt-log td{padding:6px 12px 6px 0;border-top:1px solid var(--n-100);vertical-align:top;}',
+        '.ops-nt-log td.s-failed,.ops-nt-log td.s-skipped{color:var(--n-500);}',
+        '.ops-nt-log td.s-sent{color:var(--atlas);}',
+        '.ops-nt-send{display:grid;grid-template-columns:1.6fr auto;gap:8px;align-items:end;margin-top:10px;}',
+        '.ops-nt-send label{display:block;min-width:0;}',
+        '.ops-nt-send .l{display:block;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--n-500);margin-bottom:4px;}',
+        '.ops-nt-send input{width:100%;box-sizing:border-box;}',
+        '@media (max-width:720px){.ops-nt-send{grid-template-columns:1fr;}}',
         /* Un appareil se lit d'un coup d'œil : son nom, son état, puis les
            chiffres qui disent depuis quand il se tait.  L'alarme prend la
            couleur d'un avertissement, jamais celle d'une décoration. */
@@ -1264,7 +1357,7 @@
     function openPayments(tab) {
       var c = text();
       consoleCss();
-      tab = tab === 'links' ? 'links' : 'link';
+      tab = (tab === 'links' || tab === 'notify') ? tab : 'link';
       if (O.allowed && !O.allowed('payment', 'create-link')) {
         Kiwi.drawer({ title:c.lkTitle, subtitle:c.lkSub, fullpage:true,
           body:'<div class="ops-lk"><div class="p-card"><b>' + esc(c.lkDenied) + '</b><p class="ops-lk-hint" style="margin:8px 0 0">' + esc(c.lkDeniedD) + '</p></div></div>' });
@@ -1273,7 +1366,7 @@
 
       var body = '<div class="ops-lk">' +
         '<div class="ops-lk-tabs" data-lens-demo>' +
-          [['link', c.tabLink], ['links', c.tabLinks]].map(function (t) {
+          [['link', c.tabLink], ['links', c.tabLinks], ['notify', c.tabNotify]].map(function (t) {
             return '<button class="ops-lk-tab' + (t[0] === tab ? ' on' : '') + '" type="button" data-lens-item data-lk-tab="' + t[0] + '">' + esc(t[1]) + '</button>';
           }).join('') +
         '</div>' +
@@ -1292,10 +1385,20 @@
           '<button class="kb ghost xs" type="button" data-lk-refresh>' + esc(c.pRefresh) + '</button>' +
           '<div data-lk-book><p class="ops-lk-hint" style="margin-top:14px">' + esc(c.lkLoading) + '</p></div>' +
         '</section>' +
+        '<section class="ops-lk-pane' + (tab === 'notify' ? ' on' : '') + '" data-lk-pane="notify">' +
+          '<p class="ops-lk-hint">' + esc(c.ntHint) + '</p>' +
+          '<button class="kb ghost xs" type="button" data-nt-refresh>' + esc(c.pRefresh) + '</button>' +
+          '<div data-nt-book><p class="ops-lk-hint" style="margin-top:14px">' + esc(c.ntLoading) + '</p></div>' +
+        '</section>' +
         '</div>';
 
       var res = Kiwi.drawer({ title:c.lkTitle, subtitle:c.lkSub, body:body, fullpage:true });
       var root = res.el;
+
+      /* Deux droits distincts : envoyer un message, et régler par quel canal la
+         maison écrit.  Un rôle de salle peut avoir le premier sans le second. */
+      var canNotify = !O.allowed || O.allowed('notification', 'send-link');
+      var canSetNotify = !O.allowed || O.allowed('notification', 'set-preferences');
 
       function kpi(k, v) { return '<div class="ops-lk-kpi"><div class="k">' + esc(k) + '</div><div class="v">' + esc(v) + '</div></div>'; }
       function card(el, code) { el.innerHTML = '<div class="p-card"><span class="chip pend">' + esc(acctError(code)) + '</span></div>'; }
@@ -1328,6 +1431,18 @@
           '</div>' +
           (l.url ? '<a class="ops-lk-url" href="' + esc(l.url) + '" target="_blank" rel="noopener">' + esc(l.url) + '</a>' +
             '<div class="ops-lk-btns"><button class="kb ghost xs" type="button" data-lk-copy>' + esc(c.lkCopy) + '</button></div>' : '') +
+          /* Copier un lien oblige encore à ouvrir WhatsApp soi-même.  Ici la
+             maison l'envoie depuis Kiwi, par le canal qu'elle a réglé, et
+             l'envoi laisse une trace dans le journal comme n'importe quel
+             autre commandement. */
+          ((l.url && canNotify) ? '<div class="ops-lk-act">' +
+            '<p class="ops-lk-actTitle">' + esc(c.ntSendTitle) + '</p>' +
+            '<p class="ops-lk-hint">' + esc(c.ntSendHint) + '</p>' +
+            '<div class="ops-nt-send">' +
+              '<label><span class="l">' + esc(c.ntTo) + '</span><input maxlength="160" data-nt-to></label>' +
+              '<button class="kb ghost xs" type="button" data-nt-send data-nt-url="' + esc(l.url) + '">' + esc(c.ntSend) + '</button>' +
+            '</div>' +
+          '</div>' : '') +
           '<div class="ops-lk-act">' +
             '<p class="ops-lk-actTitle">' + esc(c.lkSettleTitle) + '</p>' +
             '<p class="ops-lk-hint">' + esc(c.lkSettleHint) + '</p>' +
@@ -1373,15 +1488,161 @@
         box.innerHTML = '<div class="p-card"><span class="chip pend">' + esc(c.lkNoProvider) + '</span></div>';
       }
 
+      /* Envois clients.  L'ordre des canaux est une préférence ORDONNÉE : trois
+         cases à cocher diraient lesquels sont permis sans dire lequel passe en
+         premier.  On garde donc un tableau par type d'envoi, et la puce porte
+         son rang — cliquer ajoute à la fin, recliquer retire. */
+      var ntOrder = {};
+      function ntReason(code) {
+        var key = String(code || '');
+        if (!key) return '';
+        return (c.ntReason && c.ntReason[key]) || acctError(key);
+      }
+      function ntChips(kind, configured) {
+        var chosen = ntOrder[kind] || [];
+        return '<div class="ops-nt-chips">' + ['whatsapp', 'sms', 'email'].map(function (ch) {
+          var at = chosen.indexOf(ch);
+          /* Un canal non branché reste visible mais inerte : cacher la ligne
+             ferait croire que Kiwi n'écrit que par deux canaux. */
+          var off = configured && configured[ch] === false;
+          return '<button class="ops-nt-chip' + (at >= 0 ? ' on' : '') + '" type="button"' +
+            (off || !canSetNotify ? ' disabled' : '') +
+            ' data-nt-kind="' + esc(kind) + '" data-nt-chip="' + ch + '">' +
+            '<span class="r">' + (at >= 0 ? String(at + 1) : '') + '</span>' +
+            esc(c.ntChannel[ch]) + (off ? ' · ' + esc(c.ntOff) : '') +
+          '</button>';
+        }).join('') + '</div>';
+      }
+      function ntRow(pref, configured) {
+        return '<div class="p-card ops-nt-row" data-nt-row="' + esc(pref.kind) + '">' +
+          '<b>' + esc(c.ntKind[pref.kind] || pref.kind) + '</b> ' +
+          '<span class="ops-nt-badge">' + esc(pref.custom ? c.ntCustom : c.ntDefault) + '</span>' +
+          '<p class="ops-lk-hint" style="margin:6px 0 0">' + esc(c.ntOrder) + '</p>' +
+          ntChips(pref.kind, configured) +
+          (canSetNotify ? '<div class="ops-lk-btns" style="margin-top:10px">' +
+            '<label class="ops-lk-confirm"><input type="checkbox" data-nt-enabled' + (pref.enabled ? ' checked' : '') + '> ' + esc(c.ntEnabled) + '</label>' +
+            '<button class="kb ghost xs" type="button" data-nt-save="' + esc(pref.kind) + '">' + esc(c.ntSave) + '</button>' +
+          '</div>' : '') +
+        '</div>';
+      }
+      function ntLog(list) {
+        if (!list.length) return '<p class="ops-lk-hint" style="margin-top:10px">' + esc(c.ntEmpty) + '</p>';
+        return '<table class="ops-nt-log"><thead><tr>' +
+            '<th>' + esc(c.ntCol.kind) + '</th><th>' + esc(c.ntCol.channel) + '</th>' +
+            '<th>' + esc(c.ntCol.status) + '</th><th>' + esc(c.ntCol.reason) + '</th>' +
+          '</tr></thead><tbody>' +
+          list.map(function (d) {
+            return '<tr>' +
+              '<td>' + esc(c.ntKind[d.kind] || d.kind) + '</td>' +
+              '<td>' + esc(c.ntChannel[d.channel] || d.channel) + '</td>' +
+              '<td class="s-' + esc(d.status) + '">' + esc(c.ntStatus[d.status] || d.status) + '</td>' +
+              '<td>' + esc(ntReason(d.reason)) + '</td>' +
+            '</tr>';
+          }).join('') + '</tbody></table>';
+      }
+      async function loadNotify() {
+        var host = root.querySelector('[data-nt-book]');
+        host.innerHTML = '<p class="ops-lk-hint" style="margin-top:14px">' + esc(c.ntLoading) + '</p>';
+        try {
+          var data = await O.notifications({ limit:60 });
+          if (data && data.error) return card(host, data.error);
+          var configured = (data && data.providers) || {};
+          var prefs = (data && data.preferences) || [];
+          prefs.forEach(function (p) { ntOrder[p.kind] = (p.channels || []).slice(); });
+          host.innerHTML =
+            '<p class="ops-lk-hint" style="margin-top:14px">' + esc(c.ntProviders) + ' · ' +
+              ['whatsapp', 'sms', 'email'].map(function (ch) {
+                return esc(c.ntChannel[ch]) + ' ' + esc(configured[ch] ? c.ntOn : c.ntOff);
+              }).join(' · ') + '</p>' +
+            prefs.map(function (p) { return ntRow(p, configured); }).join('') +
+            '<p class="ops-lk-actTitle" style="margin-top:16px">' + esc(c.ntJournal) + '</p>' +
+            '<p class="ops-lk-hint">' + esc(c.ntJournalHint) + '</p>' +
+            ntLog((data && data.deliveries) || []);
+        } catch (error) { card(host, error && (error.code || error.message)); }
+      }
+
+      root.addEventListener('click', function (event) {
+        var chip = event.target.closest('[data-nt-chip]');
+        if (!chip || chip.disabled) return;
+        var kind = chip.getAttribute('data-nt-kind');
+        var channel = chip.getAttribute('data-nt-chip');
+        var list = (ntOrder[kind] || []).slice();
+        var at = list.indexOf(channel);
+        if (at >= 0) list.splice(at, 1); else list.push(channel);
+        ntOrder[kind] = list;
+        /* Retirer un canal renumérote les suivants : on repeint la rangée
+           entière plutôt que la seule puce cliquée. */
+        var row = chip.closest('[data-nt-row]');
+        var chips = row.querySelector('.ops-nt-chips');
+        var off = {};
+        row.querySelectorAll('[data-nt-chip]').forEach(function (el) {
+          if (el.disabled) off[el.getAttribute('data-nt-chip')] = false;
+        });
+        chips.outerHTML = ntChips(kind, off);
+      });
+
+      root.addEventListener('click', async function (event) {
+        var button = event.target.closest('[data-nt-save]');
+        if (!button) return;
+        var kind = button.getAttribute('data-nt-save');
+        var list = ntOrder[kind] || [];
+        if (!list.length) return Kiwi.toast(c.ntPickOne, { type:'warning' });
+        var row = button.closest('[data-nt-row]');
+        var enabled = row.querySelector('[data-nt-enabled]');
+        button.disabled = true;
+        try {
+          var result = await O.setNotifyPreferences(kind, list, !enabled || enabled.checked);
+          var got = outcome(result);
+          if (got.queued) return toastResult(result);
+          /* Une rangée est repeinte par loadNotify() : y écrire une carte
+             d'erreur la ferait disparaître au prochain rendu.  Le refus part
+             donc en toast, comme partout ailleurs dans cette console. */
+          if (got.error) return Kiwi.toast(ntReason(got.error), { type:'warning' });
+          Kiwi.toast(c.ntSaved, { type:'success' });
+          loadNotify();
+        } catch (error) { Kiwi.toast(ntReason(error && (error.code || error.message)), { type:'warning' }); }
+        finally { button.disabled = false; }
+      });
+
+      root.addEventListener('click', async function (event) {
+        var button = event.target.closest('[data-nt-send]');
+        if (!button) return;
+        var row = button.closest('[data-lk-row]');
+        var field = row.querySelector('[data-nt-to]');
+        var to = field ? String(field.value || '').trim() : '';
+        if (!to) return Kiwi.toast(c.ntPickOne, { type:'warning' });
+        var host = row.querySelector('[data-lk-row-out]');
+        host.innerHTML = '';
+        button.disabled = true;
+        try {
+          var result = await O.notify('send-link', {
+            reference:row.getAttribute('data-lk-ref'),
+            url:button.getAttribute('data-nt-url'), to:to, text:c.ntText,
+          });
+          if (result && result.offline) return toastResult(result);
+          var cmd = (result && result.command) || {};
+          if (cmd.status !== 'sent') return card(host, cmd.lastError || cmd.status || 'delivery-failed');
+          var got = cmd.result || {};
+          /* Un envoi dédoublonné est un succès qui n'a rien envoyé : le dire,
+             sinon la maison croit avoir écrit deux fois. */
+          Kiwi.toast(got.deduped ? c.ntDeduped
+            : c.ntSent + ' ' + (c.ntChannel[got.channel] || got.channel || ''),
+            { type:got.deduped ? 'info' : 'success' });
+        } catch (error) { card(host, error && (error.code || error.message)); }
+        finally { button.disabled = false; }
+      });
+
       root.addEventListener('click', function (event) {
         var pill = event.target.closest('[data-lk-tab]');
         if (pill) {
           root.querySelectorAll('[data-lk-tab]').forEach(function (el) { el.classList.toggle('on', el === pill); });
           root.querySelectorAll('[data-lk-pane]').forEach(function (el) { el.classList.toggle('on', el.getAttribute('data-lk-pane') === pill.getAttribute('data-lk-tab')); });
           if (pill.getAttribute('data-lk-tab') === 'links') loadLinks();
+          if (pill.getAttribute('data-lk-tab') === 'notify') loadNotify();
           return;
         }
         if (event.target.closest('[data-lk-refresh]')) return void loadLinks();
+        if (event.target.closest('[data-nt-refresh]')) return void loadNotify();
         var copy = event.target.closest('[data-lk-copy]');
         if (copy) {
           var url = copy.closest('[data-lk-row]').querySelector('.ops-lk-url');
@@ -1450,6 +1711,7 @@
       });
 
       if (tab === 'links') loadLinks();
+      else if (tab === 'notify') loadNotify();
       else O.payments({ limit:1 }).then(function (data) { warn(data && data.providers); }, function () {});
     }
 

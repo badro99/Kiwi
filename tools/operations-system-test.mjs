@@ -650,6 +650,128 @@ ok(months.data.periods.length === 2 && months.data.periods[0].period === '2026-0
   && months.data.periods[0].number === 'PAIE-2026-000001' && months.data.periods[1].declaration === 'DS-2026-06',
   'the payroll index lists months newest first, each with whatever entry and declaration it carries');
 
+/* ── Notifications: what actually left the building ───────────────────────────
+ *
+ * Un « envoyé ✓ » au-dessus d'un message jamais parti est le pire écran que
+ * puisse afficher une caisse.  Ces contrôles font tourner de VRAIS fournisseurs
+ * — un serveur http local dont on pilote le code de réponse par chemin — parce
+ * qu'un `fetch` stubé prouve que le code appelle quelque chose, jamais qu'il
+ * sait quoi faire quand ce quelque chose répond 500. */
+
+const ntHits = [];
+let waStatus = 200;
+let smsStatus = 200;
+let mailStatus = 200;
+const notifier = http.createServer((req, res) => {
+  const path = req.url;
+  req.resume();
+  req.on('end', () => {
+    ntHits.push(path);
+    const status = path === '/wa' ? waStatus : path === '/sms' ? smsStatus : mailStatus;
+    res.writeHead(status, { 'content-type': 'application/json' });
+    res.end('{}');
+  });
+});
+await new Promise((resolve) => notifier.listen(0, '127.0.0.1', resolve));
+const notifyBase = `http://127.0.0.1:${notifier.address().port}`;
+const ntEnv = Object.assign({}, env, {
+  WHATSAPP_WEBHOOK: `${notifyBase}/wa`,
+  SMS_WEBHOOK: `${notifyBase}/sms`,
+  MAIL_WEBHOOK: `${notifyBase}/mail`,
+});
+const nt = (id, action, payload) => command({ id, idempotencyKey: id, domain: 'notification', action, payload });
+
+const ntDark = await post(ownerCookie, nt('op:nt-0001', 'send-receipt',
+  { to: '+212600000001', reference: 'NT-DARK-1', text: 'Merci' }));
+ok(ntDark.data.command.status === 'blocked' && ntDark.data.command.lastError === 'provider-unconfigured'
+  && ntDark.data.command.result.attempts.length === 0,
+  'with no messaging provider configured nothing is attempted and nothing is called sent');
+
+waStatus = 500;
+const ntFall = await post(ownerCookie, nt('op:nt-0002', 'send-receipt',
+  { to: '+212600000002', reference: '260812-0001-UE', text: 'Reçu' }), ntEnv);
+const fall = ntFall.data.command;
+ok(fall.status === 'sent' && fall.result.channel === 'sms' && fall.result.attempts.length === 2
+  && fall.result.attempts[0].channel === 'whatsapp' && fall.result.attempts[0].status === 'failed'
+  && fall.result.attempts[0].reason === 'provider-http-500',
+  'a receipt whose WhatsApp provider answers 500 walks down to SMS instead of failing');
+
+const ntBefore = ntHits.length;
+const ntAgain = await post(ownerCookie, nt('op:nt-0003', 'send-receipt',
+  { to: '+212600000002', reference: '260812-0001-UE', text: 'Reçu' }), ntEnv);
+ok(ntAgain.data.command.status === 'sent' && ntAgain.data.command.result.deduped === true
+  && ntAgain.data.command.result.of === 'op:nt-0002' && ntHits.length === ntBefore,
+  'the same receipt asked twice inside the window reports the first send instead of messaging the client again');
+
+const ntPinned = await post(ownerCookie, nt('op:nt-0004', 'send-whatsapp',
+  { phone: '+212600000003', text: 'Bonjour' }), ntEnv);
+ok(ntPinned.data.command.status === 'blocked' && ntPinned.data.command.lastError === 'provider-http-500'
+  && ntPinned.data.command.result.attempts.length === 1,
+  'send-whatsapp names its channel: it fails rather than delivering the message by SMS');
+
+waStatus = 200;
+const ntMailOnly = await post(ownerCookie, nt('op:nt-0005', 'send-reminder',
+  { email: 'amira@example.com', subject: 'Rappel', text: 'Rappel' }), ntEnv);
+const mailOnly = ntMailOnly.data.command;
+ok(mailOnly.status === 'sent' && mailOnly.result.channel === 'email' && mailOnly.result.attempts.length === 3
+  && mailOnly.result.attempts[0].status === 'skipped' && mailOnly.result.attempts[0].reason === 'no-recipient'
+  && mailOnly.result.attempts[1].status === 'skipped',
+  'a channel with no usable address is skipped, not counted as a delivery failure');
+
+const ntPref = await post(ownerCookie, nt('op:nt-0006', 'set-preferences',
+  { kind: 'receipt', channels: ['email', 'whatsapp'] }));
+ok(ntPref.data.command.status === 'completed' && ntPref.data.command.result.channels.join(',') === 'email,whatsapp',
+  'a merchant can reorder the channels a receipt walks down');
+
+const ntOrdered = await post(ownerCookie, nt('op:nt-0007', 'send-receipt',
+  { email: 'client@example.com', phone: '+212600000004', reference: '260812-0002-UE', text: 'Reçu' }), ntEnv);
+ok(ntOrdered.data.command.result.channel === 'email',
+  'the stored order beats the default: WhatsApp is up and reachable, and the receipt still leaves by e-mail');
+
+const ntUnknown = await post(ownerCookie, nt('op:nt-0008', 'set-preferences', { kind: 'facture', channels: ['email'] }));
+ok(ntUnknown.data.command.status === 'failed' && ntUnknown.data.command.lastError === 'unknown-kind',
+  'preferences can only be set for a kind the server actually routes');
+
+const ntEmpty = await post(ownerCookie, nt('op:nt-0009', 'set-preferences', { kind: 'reminder', channels: [] }));
+ok(ntEmpty.data.command.status === 'failed' && ntEmpty.data.command.lastError === 'channels-required',
+  'a preference with no channel left is refused rather than stored as silence');
+
+const ntOff = await post(ownerCookie, nt('op:nt-0010', 'set-preferences',
+  { kind: 'payment-link', channels: ['sms'], enabled: false }));
+ok(ntOff.data.command.result.enabled === false, 'a merchant can switch a whole kind of message off');
+
+const ntBlocked = await post(ownerCookie, nt('op:nt-0011', 'send-link',
+  { phone: '+212600000005', url: 'https://pay.test/x', text: 'Lien' }), ntEnv);
+ok(ntBlocked.data.command.status === 'blocked' && ntBlocked.data.command.lastError === 'kind-disabled',
+  'a kind switched off blocks the send even when the provider is up');
+
+const ntMgrPref = await post(managerAtTill, nt('op:nt-0012', 'set-preferences',
+  { kind: 'reminder', channels: ['sms'] }), ntEnv);
+ok(ntMgrPref.status === 403 && ntMgrPref.data.error === 'permission-denied',
+  'a floor manager may message a client but may not rewrite the merchant-wide routing');
+
+const ntMgrSend = await post(managerAtTill, nt('op:nt-0013', 'send-whatsapp',
+  { phone: '+212600000006', text: 'Table prête' }), ntEnv);
+ok(ntMgrSend.data.command.status === 'sent', 'the same manager can still send the message itself');
+
+const ntView = await get(ownerCookie, `?merchant=${MERCHANT}&view=notifications&limit=100`);
+const ntReceipt = ntView.data.preferences.find((row) => row.kind === 'receipt');
+ok(ntView.data.preferences.length === 4 && ntReceipt.custom === true
+  && ntReceipt.channels.join(',') === 'email,whatsapp'
+  && ntView.data.preferences.find((row) => row.kind === 'payment-link').enabled === false
+  && ntView.data.preferences.find((row) => row.kind === 'message').custom === false,
+  'the console reads back every kind, marking which ones the merchant actually changed');
+
+/* La piste d'audit ne doit pas devenir un carnet d'adresses : elle dit quel
+   canal a été essayé et pourquoi il a échoué, jamais chez qui. */
+const ntJournal = JSON.stringify(ntView.data.deliveries);
+ok(ntView.data.deliveries.length > 0
+  && ntView.data.deliveries.every((row) => !('recipient' in row) && !('to' in row))
+  && !/212600000/.test(ntJournal) && !/example\.com/.test(ntJournal),
+  'the delivery journal carries the channel and the reason, never the customer address');
+
+notifier.close();
+
 /* ── Browser: the client contract, simulated ──────────────────────────────── */
 
 const registrations = {};
