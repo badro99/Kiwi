@@ -3,7 +3,7 @@
   'use strict';
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function () {
-      navigator.serviceWorker.register('/kiwi-sw.js?v=427').then(function (reg) {
+      navigator.serviceWorker.register('/kiwi-sw.js?v=428').then(function (reg) {
         if (window.KiwiPWAUpdate) window.KiwiPWAUpdate.watch(reg);
       }).catch(function () {});
     });

@@ -39,6 +39,38 @@
   function isDining(value) {
     return ['restaurant', 'cafe', 'café'].indexOf(String(value || '').trim().toLowerCase()) !== -1;
   }
+  /* The venue type is old/blank on some long-lived merchants. That missing
+     metadata must never demote a real waiter to the generic employee home: the
+     restaurant workspace (tables, menu, bill requests and checkout) is the
+     safer source of truth for an explicitly floor-facing role. Managers/owners
+     are only inferred from the presence of a floor, because those roles exist
+     in every vertical. */
+  function isRestaurantService(data) {
+    var employee = data && data.employee || {};
+    var raw = employee.role || employee.department || '';
+    var roles = window.KiwiRoles;
+    var id = roles && typeof roles.idOf === 'function' ? roles.idOf(raw) : '';
+    if (['serveur', 'chefrang', 'maitre', 'barman'].indexOf(id) !== -1) return true;
+
+    var label = String(raw || '').trim().toLowerCase();
+    try { label = label.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch (_) {}
+    label = label.replace(/[’`´]/g, "'").replace(/\s+/g, ' ');
+    if (/^(serveur|serveuse|server|waiter|waitress|chef de rang|maitre d[' ]hotel|barman|barmaid)$/.test(label)) return true;
+    if (!id && /^(manager|proprietaire|owner|accueil|host|hostess)$/.test(label)) {
+      id = /^(manager)$/.test(label) ? 'manager' : /^(proprietaire|owner)$/.test(label) ? 'proprietaire' : 'accueil';
+    }
+
+    var tables = data && data.floor && data.floor.tables;
+    var hasFloor = Array.isArray(tables) && tables.length > 0;
+    return hasFloor && ['manager', 'proprietaire', 'accueil'].indexOf(id) !== -1;
+  }
+  function usesTradeWorkspace(data) {
+    if (!data || !data.employee || !data.store) return false;
+    var type = String(data.store.type || '').trim();
+    if (isDining(type)) return false;
+    if (!type && isRestaurantService(data)) return false;
+    return true;
+  }
   function esc(value) {
     return String(value == null ? '' : value).replace(/[&<>"']/g, function (char) {
       return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char];
@@ -155,8 +187,26 @@
     }
     if (menu) menu.hidden = true;
   }
+  function restoreRestaurantWorkspace() {
+    document.body.classList.remove('employee-trade-mode');
+    Object.keys(TRADES).forEach(function (id) { document.body.classList.remove('trade-' + id); });
+    var root = document.getElementById('employee-trade-home');
+    if (root) root.remove();
+    var first = document.querySelector('.bt-btn[data-tab="tables"]');
+    var menu = document.querySelector('.bt-btn[data-tab="menu"]');
+    if (first) {
+      first.setAttribute('aria-label', 'Tables');
+      first.title = 'Tables';
+      first.innerHTML = '<i data-lucide="utensils-crossed"></i>';
+    }
+    if (menu) menu.hidden = false;
+    if (window.lucide) window.lucide.createIcons();
+  }
   function mount(data) {
-    if (!data || !data.employee || !data.store || isDining(data.store.type)) return;
+    if (!usesTradeWorkspace(data)) {
+      restoreRestaurantWorkspace();
+      return;
+    }
     lastData = data;
     currentTrade = canonical(data.store.type);
     var trade = TRADES[currentTrade] || TRADES.autre;
@@ -210,5 +260,8 @@
     var data = window.KiwiEmployeeLive && KiwiEmployeeLive.data && KiwiEmployeeLive.data();
     if (data) mount(data);
   });
-  window.KiwiEmployeeTradeShell = { canonical: canonical, isDining: isDining, trades: Object.keys(TRADES), mount: mount };
+  window.KiwiEmployeeTradeShell = {
+    canonical: canonical, isDining: isDining, isRestaurantService: isRestaurantService,
+    usesTradeWorkspace: usesTradeWorkspace, trades: Object.keys(TRADES), mount: mount,
+  };
 })();
