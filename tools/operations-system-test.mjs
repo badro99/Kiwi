@@ -348,6 +348,19 @@ ok(ledger.status === 200 && ledger.data.commands.some((c) => c.id === 'op:owner-
 const audit = db.prepare('SELECT event, status FROM operational_events WHERE command_id = ? ORDER BY rowid').all('op:owner-po-001');
 ok(audit[0].event === 'created' && audit.map((e) => e.status).join(',') === 'queued,draft,pending-approval,approved', 'every state change leaves an append-only audit row');
 
+/* Un cycle de vie qu'on peut ouvrir mais jamais refermer ne consigne rien.
+   Le registre des décisions doit pouvoir mener une commande jusqu'au bout. */
+const takenInHand = await post(ownerCookie, { merchant: MERCHANT, commandId: 'op:owner-po-001', transition: 'processing' });
+ok(takenInHand.status === 200 && takenInHand.data.command.status === 'processing', 'an approved command can be taken in hand');
+const closedUnconfirmed = await post(ownerCookie, { merchant: MERCHANT, commandId: 'op:owner-po-001', transition: 'completed' });
+ok(closedUnconfirmed.status === 409 && closedUnconfirmed.data.error === 'confirmation-required', 'closing a command demands an explicit confirmation too');
+const closedByHand = await post(ownerCookie, { merchant: MERCHANT, commandId: 'op:owner-po-001', transition: 'completed', confirmed: true });
+ok(closedByHand.status === 200 && closedByHand.data.command.status === 'completed', 'the lifecycle can be closed by a human, not only started');
+
+const noSuchCommand = await post(ownerCookie, { merchant: MERCHANT, commandId: 'op:owner-po-does-not-exist', transition: 'cancelled', confirmed: true });
+ok(noSuchCommand.status === 404 && noSuchCommand.data.error === 'not-found', 'a transition on a command that does not exist is a 404, never a silent success');
+
+
 db.prepare('UPDATE merchant_config SET status = ? WHERE merchant = ?').run('suspended', MERCHANT);
 const suspendedWrite = await post(ownerCookie, command({ id: 'op:owner-po-009', idempotencyKey: 'op:owner-po-009', domain: 'procurement', action: 'create-po' }));
 ok(suspendedWrite.status === 401 && suspendedWrite.data.error === 'unauthorized', 'a suspended store cannot write new commands');
@@ -923,6 +936,17 @@ ok((aiViewStranger.status === 401)
       && !aiViewStranger.data.orders.some((order) => order.id === 'ord-260814-9999')),
   "one merchant cannot read another merchant's tickets");
 
+/* Le motif est ce qui distingue « échouée » d'un constat muet : le client
+   l'envoie, le serveur l'écrit, et la commande le rend au registre. */
+const beaten = await post(ownerCookie, command({ id: 'op:owner-po-020', idempotencyKey: 'op:owner-po-020', domain: 'procurement', action: 'create-po', payload: SOFRAP }));
+ok(beaten.data.command.status === 'draft', 'a second purchase order opens as a draft');
+await post(ownerCookie, { merchant: MERCHANT, commandId: 'op:owner-po-020', transition: 'pending-approval' });
+await post(ownerCookie, { merchant: MERCHANT, commandId: 'op:owner-po-020', transition: 'approved', confirmed: true });
+await post(ownerCookie, { merchant: MERCHANT, commandId: 'op:owner-po-020', transition: 'processing' });
+const marked = await post(ownerCookie, { merchant: MERCHANT, commandId: 'op:owner-po-020', transition: 'failed', reason: 'Le fournisseur ne livre pas cette semaine' });
+ok(marked.status === 200 && marked.data.command.status === 'failed' && marked.data.command.lastError === 'Le fournisseur ne livre pas cette semaine',
+  'a human motif reaches the command instead of being dropped between client and server');
+
 /* ── Browser: the client contract, simulated ──────────────────────────────── */
 
 const registrations = {};
@@ -1074,6 +1098,26 @@ ok(browserSource.includes("'device', 'heartbeat'") && /setInterval\([\s\S]{0,160
   'the client beats on its own, it does not wait to be asked');
 ok(uiSource.includes('legacyTerminals') && uiSource.includes('!real() && legacyTerminals'),
   'a demo session keeps its storytelling fleet — only a real merchant is shown real appliances');
+
+/* Registre des décisions — la seule verbe du cycle de vie qui n'était appelée
+   par personne.  Une commande qu'aucun humain ne peut faire avancer depuis le
+   produit reste bloquée quoi qu'en dise le serveur. */
+ok(browserSource.includes("reason: clean(opts.reason || '', 120)"),
+  'the client sends the motif the server already reads, instead of always sending an empty one');
+ok(uiSource.includes('openCommands:openCommands') && uiSource.includes("H['operations-history'] = function () { return openCommands('all'); }"),
+  'the decision register is exported and takes over the read-only history drawer');
+ok(uiSource.includes('data-cm-move=') && uiSource.includes('O.transition(row.getAttribute'),
+  'the product can actually move a command, not only list it');
+ok(uiSource.includes('data-cm-ok') && uiSource.includes("CM_CONFIRM[wanted] && !(box && box.checked)"),
+  'the console demands the same explicit confirmation the server does');
+ok(uiSource.includes('data-cm-input') && uiSource.includes("!(why && why.value.trim())"),
+  'marking a command failed requires a written motif before it is sent');
+/* blocked → processing existe côté serveur ; l'offrir ici annoncerait une
+   reprise automatique que rien n'exécute. */
+ok(/blocked: \['cancelled'\],\s*\n\s*failed: \['cancelled'\],/.test(uiSource),
+  'a stopped command can only be closed by hand — the console never promises an automatic retry');
+ok(uiSource.includes("O.allowed('payroll', 'export')") && uiSource.includes('cmDenied'),
+  'the register is gated client-side on a permission only the owner holds, mirroring the server');
 
 /* Version-agnostic on purpose: a cache-stamp bump is how a fix ships, so the
    gate must assert the script is wired, never which generation it is on. */

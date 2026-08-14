@@ -239,7 +239,7 @@
     return responseJson(await fetch('/api/operations', {
       method: 'POST', credentials: 'same-origin', cache: 'no-store',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ merchant: K.tenant(), commandId: clean(commandId, 128), transition: clean(state, 32), confirmed: opts.confirmed === true }),
+      body: JSON.stringify({ merchant: K.tenant(), commandId: clean(commandId, 128), transition: clean(state, 32), confirmed: opts.confirmed === true, reason: clean(opts.reason || '', 120) }),
     }));
   }
   /* Une action dictée à l'assistant franchit deux portes.  La première est le

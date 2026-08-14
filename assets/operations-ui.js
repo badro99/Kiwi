@@ -114,6 +114,18 @@
           balancedOk:'Équilibré', balancedNo:'Déséquilibré', lines:'écritures',
           account:'Compte', label:'Libellé', debit:'Débit', credit:'Crédit',
           lockedAt:'Verrouillée le', already:'Cette période était déjà verrouillée — rien n’a changé.',
+          cmTitle:'Registre des décisions', cmSub:'Commandes opérationnelles · approbation, suivi, clôture',
+          cmHint:'Ce registre consigne des décisions humaines. Approuver, prendre en main ou clore n’exécute rien : Kiwi écrit qui a décidé quoi, et quand. Le travail lui-même se fait là où il se fait.',
+          cmDenied:'Registre réservé au propriétaire', cmDeniedD:'Le registre porte des montants de paie et des coordonnées client. Seul le compte propriétaire — ou un opérateur Kiwi — peut le lire.',
+          cmLoading:'Lecture du registre…', cmNone:'Aucune commande dans cette vue.', cmRefresh:'Rafraîchir',
+          cmAll:'Toutes', cmWait:'À approuver', cmStuck:'Arrêtées', cmDone:'Closes',
+          cmTotal:'Commandes', cmWaiting:'En attente', cmBlocked:'Arrêtées',
+          cmBy:'Demandée par', cmTries:'Tentatives', cmOpened:'Ouverte le', cmMoved:'Dernier mouvement',
+          cmConfirm:'Je confirme cette décision.', cmWhy:'Motif de l’échec', cmMoveOk:'Décision consignée',
+          cmActive:'Un lien de paiement actif se gère dans la console des paiements : l’annuler ici ne préviendrait pas le fournisseur.',
+          cmT:{ 'pending-approval':'Demander l’approbation', approved:'Approuver', rejected:'Refuser', cancelled:'Annuler', processing:'Prendre en main', completed:'Marquer terminée', failed:'Marquer échouée' },
+          cmS:{ draft:'Brouillon', prepared:'Préparée', 'pending-approval':'En attente d’approbation', approved:'Approuvée', rejected:'Refusée', processing:'En cours', completed:'Terminée', failed:'Échouée', blocked:'Arrêtée', cancelled:'Annulée', sent:'Envoyée', active:'Active' },
+          cmD:{ procurement:'Approvisionnement', payroll:'Paie', accounting:'Comptabilité', payment:'Paiement', notification:'Message', device:'Appareil', ai:'Assistant' },
           errs:{
             'date-required':'Date manquante ou invalide.', 'invalid-amount':'Montant invalide.',
             'invalid-tax-rate':'Taux de TVA invalide.', 'range-required':'Plage de dates invalide.',
@@ -160,6 +172,10 @@
             'printer-unconfigured':'Aucune imprimante configurée sur cet appareil.',
             'no-printer-driver':'Le pont d’impression n’est pas chargé sur cet appareil.',
             'print-failed':'L’imprimante n’a rien imprimé.',
+            'invalid-transition':'Ce mouvement n’est pas permis depuis l’état actuel.',
+            'not-found':'Cette commande n’existe plus.',
+            'reason-required':'Un motif est nécessaire pour consigner un échec.',
+            unauthorized:'Session expirée — reconnectez-vous.',
           },
         },
         en: {
@@ -262,6 +278,18 @@
           balancedOk:'Balanced', balancedNo:'Unbalanced', lines:'entries',
           account:'Account', label:'Label', debit:'Debit', credit:'Credit',
           lockedAt:'Locked on', already:'This period was already locked — nothing changed.',
+          cmTitle:'Decision register', cmSub:'Operational commands · approval, follow-up, closure',
+          cmHint:'This register records human decisions. Approving, taking a command in hand or closing it executes nothing: Kiwi writes down who decided what, and when. The work itself happens where it happens.',
+          cmDenied:'Owner-only register', cmDeniedD:'The register carries payroll amounts and customer contact details. Only the owner account — or a Kiwi operator — may read it.',
+          cmLoading:'Reading the register…', cmNone:'No command in this view.', cmRefresh:'Refresh',
+          cmAll:'All', cmWait:'To approve', cmStuck:'Stopped', cmDone:'Closed',
+          cmTotal:'Commands', cmWaiting:'Waiting', cmBlocked:'Stopped',
+          cmBy:'Requested by', cmTries:'Attempts', cmOpened:'Opened on', cmMoved:'Last move',
+          cmConfirm:'I confirm this decision.', cmWhy:'Reason for the failure', cmMoveOk:'Decision recorded',
+          cmActive:'An active payment link is handled in the payments console: cancelling it here would not tell the provider.',
+          cmT:{ 'pending-approval':'Request approval', approved:'Approve', rejected:'Reject', cancelled:'Cancel', processing:'Take in hand', completed:'Mark completed', failed:'Mark failed' },
+          cmS:{ draft:'Draft', prepared:'Prepared', 'pending-approval':'Waiting for approval', approved:'Approved', rejected:'Rejected', processing:'In progress', completed:'Completed', failed:'Failed', blocked:'Stopped', cancelled:'Cancelled', sent:'Sent', active:'Active' },
+          cmD:{ procurement:'Procurement', payroll:'Payroll', accounting:'Accounting', payment:'Payment', notification:'Message', device:'Device', ai:'Assistant' },
           errs:{
             'date-required':'Missing or invalid date.', 'invalid-amount':'Invalid amount.',
             'invalid-tax-rate':'Invalid VAT rate.', 'range-required':'Invalid date range.',
@@ -308,6 +336,10 @@
             'printer-unconfigured':'No printer configured on this device.',
             'no-printer-driver':'The printing bridge is not loaded on this device.',
             'print-failed':'The printer printed nothing.',
+            'invalid-transition':'That move isn’t allowed from the current state.',
+            'not-found':'This command no longer exists.',
+            'reason-required':'A reason is needed to record a failure.',
+            unauthorized:'Session expired — sign in again.',
           },
         },
         ar: {
@@ -410,6 +442,18 @@
           balancedOk:'متوازن', balancedNo:'غير متوازن', lines:'قيود',
           account:'الحساب', label:'البيان', debit:'مدين', credit:'دائن',
           lockedAt:'قُفلت في', already:'كانت هذه الفترة مقفلة أصلًا — لم يتغيّر شيء.',
+          cmTitle:'سجل القرارات', cmSub:'أوامر التشغيل · الموافقة والمتابعة والإغلاق',
+          cmHint:'هذا السجل يدوّن قرارات بشرية. الموافقة أو التكفّل أو الإغلاق لا ينفّذ شيئًا: كيوي يكتب من قرّر ماذا ومتى. أما العمل نفسه فيجري حيث يجري.',
+          cmDenied:'السجل للمالك وحده', cmDeniedD:'يحمل السجل مبالغ الأجور وبيانات اتصال الزبائن. لا يقرأه إلا حساب المالك — أو مشغّل كيوي.',
+          cmLoading:'جارٍ قراءة السجل…', cmNone:'لا أمر في هذا العرض.', cmRefresh:'تحديث',
+          cmAll:'الكل', cmWait:'بانتظار الموافقة', cmStuck:'متوقّفة', cmDone:'مُغلقة',
+          cmTotal:'الأوامر', cmWaiting:'قيد الانتظار', cmBlocked:'متوقّفة',
+          cmBy:'طلبها', cmTries:'المحاولات', cmOpened:'فُتحت في', cmMoved:'آخر حركة',
+          cmConfirm:'أؤكّد هذا القرار.', cmWhy:'سبب الإخفاق', cmMoveOk:'دُوّن القرار',
+          cmActive:'رابط الدفع النشط يُدار في وحدة المدفوعات: إلغاؤه هنا لن يُبلّغ المزوّد.',
+          cmT:{ 'pending-approval':'طلب الموافقة', approved:'الموافقة', rejected:'الرفض', cancelled:'الإلغاء', processing:'التكفّل', completed:'وسم كمنتهية', failed:'وسم كفاشلة' },
+          cmS:{ draft:'مسودة', prepared:'مُعدّة', 'pending-approval':'بانتظار الموافقة', approved:'موافَق عليها', rejected:'مرفوضة', processing:'قيد التنفيذ', completed:'منتهية', failed:'فاشلة', blocked:'متوقّفة', cancelled:'مُلغاة', sent:'مُرسلة', active:'نشطة' },
+          cmD:{ procurement:'التموين', payroll:'الأجور', accounting:'المحاسبة', payment:'الدفع', notification:'رسالة', device:'جهاز', ai:'المساعد' },
           errs:{
             'date-required':'تاريخ ناقص أو غير صالح.', 'invalid-amount':'مبلغ غير صالح.',
             'invalid-tax-rate':'نسبة ضريبة غير صالحة.', 'range-required':'مدة غير صالحة.',
@@ -456,6 +500,10 @@
             'printer-unconfigured':'لا طابعة مهيّأة على هذا الجهاز.',
             'no-printer-driver':'جسر الطباعة غير محمَّل على هذا الجهاز.',
             'print-failed':'لم تطبع الطابعة شيئًا.',
+            'invalid-transition':'هذه الحركة غير مسموحة من الحالة الراهنة.',
+            'not-found':'لم يعد هذا الأمر موجودًا.',
+            'reason-required':'يلزم سبب لتدوين الإخفاق.',
+            unauthorized:'انتهت الجلسة — أعد تسجيل الدخول.',
           },
         },
       })[lang()];
@@ -522,15 +570,10 @@
       };
     });
 
-    H['operations-history'] = async function () {
-      var c = text();
-      try {
-        var data = await O.list({ limit:80 }), rows = data.commands || [];
-        Kiwi.drawer({ title:c.history, subtitle:K.tenant(), width:720, body:rows.length ? rows.map(function (row) {
-          return '<div class="p-card" style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;gap:12px"><b>'+esc(row.domain+' · '+row.action)+'</b><span class="chip '+(row.status === 'blocked' || row.status === 'failed' ? 'pend' : row.status === 'completed' || row.status === 'sent' || row.status === 'active' ? 'ok' : 'info-soft')+'">'+esc(row.status)+'</span></div><div style="font-size:11px;color:var(--n-500);margin-top:5px">'+esc(new Date(row.updatedAt).toLocaleString())+(row.lastError ? ' · '+esc(row.lastError) : '')+'</div></div>';
-        }).join('') : '<div style="padding:32px;text-align:center;color:var(--n-500)">'+c.empty+'</div>' });
-      } catch (error) { fail(error); }
-    };
+    /* Ce point d'entrée listait les commandes sans permettre d'en bouger une
+       seule : un cycle de vie qu'on pouvait ouvrir mais jamais refermer.  Il
+       ouvre désormais le registre des décisions, défini plus bas. */
+    H['operations-history'] = function () { return openCommands('all'); };
 
     /* Keep the familiar integrations drawer and add an honest operational
        health card.  It reports configured providers from the server instead
@@ -602,21 +645,21 @@
       style.textContent = [
         /* `ops-pay-*` appartient déjà à la paie : les liens de paiement prennent
            leur propre préfixe `ops-lk-*` et s'ajoutent aux listes partagées. */
-        '.ops-acct,.ops-proc,.ops-pay,.ops-lk,.ops-dv{padding:22px 26px 46px;max-width:1000px;margin:0 auto;}',
-        '.ops-acct-tabs,.ops-proc-tabs,.ops-pay-tabs,.ops-lk-tabs{display:inline-flex;gap:2px;padding:4px;border-radius:999px;background:var(--n-100);border:1px solid var(--n-200);margin-bottom:22px;}',
-        '.ops-acct-tab,.ops-proc-tab,.ops-pay-tab,.ops-lk-tab{appearance:none;border:0;background:transparent;font:inherit;font-size:12.5px;font-weight:600;color:var(--n-500);padding:8px 18px;border-radius:999px;cursor:pointer;transition:color .2s;}',
+        '.ops-acct,.ops-proc,.ops-pay,.ops-lk,.ops-dv,.ops-cm{padding:22px 26px 46px;max-width:1000px;margin:0 auto;}',
+        '.ops-acct-tabs,.ops-proc-tabs,.ops-pay-tabs,.ops-lk-tabs,.ops-cm-tabs{display:inline-flex;gap:2px;padding:4px;border-radius:999px;background:var(--n-100);border:1px solid var(--n-200);margin-bottom:22px;}',
+        '.ops-acct-tab,.ops-proc-tab,.ops-pay-tab,.ops-lk-tab,.ops-cm-tab{appearance:none;border:0;background:transparent;font:inherit;font-size:12.5px;font-weight:600;color:var(--n-500);padding:8px 18px;border-radius:999px;cursor:pointer;transition:color .2s;}',
         /* liquid-lens paints the pill; the button must not paint one under it. */
-        '.ops-acct-tab.on,.ops-proc-tab.on,.ops-pay-tab.on,.ops-lk-tab.on{background:transparent;color:#fff;}',
+        '.ops-acct-tab.on,.ops-proc-tab.on,.ops-pay-tab.on,.ops-lk-tab.on,.ops-cm-tab.on{background:transparent;color:#fff;}',
         '.ops-acct-pane,.ops-proc-pane,.ops-pay-pane,.ops-lk-pane{display:none;}',
         '.ops-acct-pane.on,.ops-proc-pane.on,.ops-pay-pane.on,.ops-lk-pane.on{display:block;}',
-        '.ops-acct-hint,.ops-proc-hint,.ops-pay-hint,.ops-lk-hint,.ops-dv-hint{font-size:12px;color:var(--n-500);margin:0 0 14px;max-width:62ch;line-height:1.55;}',
-        '.ops-acct-confirm,.ops-lk-confirm{display:flex;align-items:flex-start;gap:9px;font-size:12.5px;color:var(--n-500);margin-top:14px;cursor:pointer;}',
-        '.ops-acct-confirm input,.ops-lk-confirm input{margin-top:2px;accent-color:var(--atlas);}',
+        '.ops-acct-hint,.ops-proc-hint,.ops-pay-hint,.ops-lk-hint,.ops-dv-hint,.ops-cm-hint{font-size:12px;color:var(--n-500);margin:0 0 14px;max-width:62ch;line-height:1.55;}',
+        '.ops-acct-confirm,.ops-lk-confirm,.ops-cm-confirm{display:flex;align-items:flex-start;gap:9px;font-size:12.5px;color:var(--n-500);margin-top:14px;cursor:pointer;}',
+        '.ops-acct-confirm input,.ops-lk-confirm input,.ops-cm-confirm input{margin-top:2px;accent-color:var(--atlas);}',
         '.ops-acct-out,.ops-proc-out,.ops-pay-out,.ops-lk-out{margin-top:18px;}',
-        '.ops-acct-kpis,.ops-proc-kpis,.ops-pay-kpis,.ops-lk-kpis,.ops-dv-kpis{display:flex;flex-wrap:wrap;gap:22px;margin:12px 0 4px;}',
-        '.ops-acct-kpi,.ops-proc-kpi,.ops-pay-kpi,.ops-lk-kpi,.ops-dv-kpi{min-width:104px;}',
-        '.ops-acct-kpi .k,.ops-proc-kpi .k,.ops-pay-kpi .k,.ops-lk-kpi .k,.ops-dv-kpi .k{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--n-500);}',
-        '.ops-acct-kpi .v,.ops-proc-kpi .v,.ops-pay-kpi .v,.ops-lk-kpi .v,.ops-dv-kpi .v{font-size:17px;font-weight:600;margin-top:3px;font-variant-numeric:tabular-nums;}',
+        '.ops-acct-kpis,.ops-proc-kpis,.ops-pay-kpis,.ops-lk-kpis,.ops-dv-kpis,.ops-cm-kpis{display:flex;flex-wrap:wrap;gap:22px;margin:12px 0 4px;}',
+        '.ops-acct-kpi,.ops-proc-kpi,.ops-pay-kpi,.ops-lk-kpi,.ops-dv-kpi,.ops-cm-kpi{min-width:104px;}',
+        '.ops-acct-kpi .k,.ops-proc-kpi .k,.ops-pay-kpi .k,.ops-lk-kpi .k,.ops-dv-kpi .k,.ops-cm-kpi .k{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--n-500);}',
+        '.ops-acct-kpi .v,.ops-proc-kpi .v,.ops-pay-kpi .v,.ops-lk-kpi .v,.ops-dv-kpi .v,.ops-cm-kpi .v{font-size:17px;font-weight:600;margin-top:3px;font-variant-numeric:tabular-nums;}',
         '.ops-acct-doc,.ops-proc-num,.ops-pay-num,.ops-lk-num{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:18px;letter-spacing:.02em;}',
         '.ops-acct-scroll,.ops-proc-scroll,.ops-pay-scroll,.ops-lk-scroll{overflow-x:auto;max-height:50vh;overflow-y:auto;margin-top:12px;}',
         '.ops-acct-table,.ops-proc-table,.ops-pay-table{width:100%;border-collapse:collapse;font-size:12.5px;}',
@@ -702,6 +745,22 @@
         '.ops-dv-meta div .v{font-size:13px;font-variant-numeric:tabular-nums;}',
         '.ops-dv-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;}',
         '.ops-dv-this{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--atlas);font-weight:600;}',
+        /* Le registre ressemble volontairement à la flotte : une carte, un état,
+           quelques champs.  Ce qu'il ajoute, ce sont les boutons de décision —
+           et le champ de motif qui n'apparaît que si un échec peut être écrit. */
+        '.ops-cm-card{margin-bottom:12px;}',
+        '.ops-cm-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:10px;}',
+        '.ops-cm-what{font-size:14px;font-weight:600;}',
+        '.ops-cm-act{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12.5px;color:var(--n-500);letter-spacing:.02em;overflow-wrap:anywhere;}',
+        '.ops-cm-state{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;font-weight:600;padding:3px 9px;border-radius:999px;border:1px solid var(--n-200);color:var(--n-500);}',
+        '.ops-cm-state.ok{color:var(--atlas);border-color:color-mix(in srgb,var(--atlas) 34%,transparent);}',
+        '.ops-cm-state.bad{color:#B4381F;border-color:color-mix(in srgb,#B4381F 34%,transparent);}',
+        '.ops-cm-state.wait{color:#8A6A12;border-color:color-mix(in srgb,#8A6A12 34%,transparent);}',
+        '.ops-cm-meta{display:flex;flex-wrap:wrap;gap:18px;margin-top:10px;}',
+        '.ops-cm-meta div .k{display:block;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--n-500);}',
+        '.ops-cm-meta div .v{font-size:13px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere;}',
+        '.ops-cm-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;}',
+        '.ops-cm-why{display:block;width:100%;max-width:420px;margin-top:12px;padding:9px 11px;border:1px solid var(--n-200);border-radius:10px;background:var(--paper);font:inherit;font-size:12.5px;color:inherit;}',
       ].join('\n');
       document.head.appendChild(style);
     }
@@ -1850,6 +1909,170 @@
       loadFleet();
     }
 
+    /* Le registre des décisions.  Le serveur accepte plus de mouvements qu'un
+       humain ne devrait en écrire à la main : on n'offre ici que ceux qui
+       consignent une décision — demander, approuver, refuser, annuler, prendre
+       en main, clore.  Jamais « blocked → processing » : aucun moteur ne
+       repartirait, et le registre annoncerait un travail qui n'a pas lieu.
+       « active » est laissé entier — un lien de paiement vivant s'annule dans
+       la console des paiements, qui prévient le fournisseur. */
+    var CM_MOVES = {
+      draft: ['pending-approval', 'cancelled'],
+      prepared: ['cancelled'],
+      'pending-approval': ['approved', 'rejected', 'cancelled'],
+      approved: ['processing', 'cancelled'],
+      processing: ['completed', 'failed'],
+      blocked: ['cancelled'],
+      failed: ['cancelled'],
+    };
+    /* Miroir du 409 du serveur : ces trois-là exigent une case cochée. */
+    var CM_CONFIRM = { approved:1, cancelled:1, completed:1 };
+    var CM_FILTERS = {
+      all: null,
+      wait: ['pending-approval'],
+      stuck: ['blocked', 'failed'],
+      done: ['completed', 'sent', 'cancelled', 'rejected'],
+    };
+
+    function openCommands(filter) {
+      var c = text();
+      consoleCss();
+      /* Le registre porte des montants de paie et des coordonnées client :
+         la lecture est réservée au propriétaire côté serveur, on ne peint
+         donc pas une console que le Worker refuserait de remplir. */
+      if (O.allowed && !O.allowed('payroll', 'export')) {
+        Kiwi.drawer({ title:c.cmTitle, subtitle:c.cmSub, fullpage:true,
+          body:'<div class="ops-cm"><div class="p-card"><b>' + esc(c.cmDenied) + '</b><p class="ops-cm-hint" style="margin:8px 0 0">' + esc(c.cmDeniedD) + '</p></div></div>' });
+        return;
+      }
+
+      var tab = CM_FILTERS[filter] !== undefined ? filter : 'all';
+      var tabs = [['all', c.cmAll], ['wait', c.cmWait], ['stuck', c.cmStuck], ['done', c.cmDone]];
+      var body = '<div class="ops-cm">' +
+        '<p class="ops-cm-hint">' + esc(c.cmHint) + '</p>' +
+        '<div class="ops-cm-tabs" data-lens-demo>' +
+          tabs.map(function (t) {
+            return '<button class="ops-cm-tab' + (t[0] === tab ? ' on' : '') + '" type="button" data-lens-item data-cm-tab="' + t[0] + '">' + esc(t[1]) + '</button>';
+          }).join('') +
+        '</div>' +
+        '<div><button class="kb ghost xs" type="button" data-cm-refresh>' + esc(c.cmRefresh) + '</button></div>' +
+        '<div data-cm-list><p class="ops-cm-hint" style="margin-top:14px">' + esc(c.cmLoading) + '</p></div>' +
+        '<p class="ops-cm-hint" style="margin-top:18px">' + esc(c.cmActive) + '</p>' +
+        '</div>';
+
+      var res = Kiwi.drawer({ title:c.cmTitle, subtitle:c.cmSub, body:body, fullpage:true });
+      var root = res.el;
+      var host = root.querySelector('[data-cm-list]');
+      var rows = [];
+
+      function kpi(k, v) { return '<div class="ops-cm-kpi"><div class="k">' + esc(k) + '</div><div class="v">' + esc(v) + '</div></div>'; }
+      function card(el, code) { el.innerHTML = '<div class="p-card"><span class="chip pend">' + esc(acctError(code)) + '</span></div>'; }
+      function stamp(ts) {
+        if (!ts) return '—';
+        try { return new Date(Number(ts)).toLocaleString(lang(), { dateStyle:'short', timeStyle:'short' }); }
+        catch (_) { return String(ts); }
+      }
+      function tone(status) {
+        if (status === 'failed' || status === 'blocked' || status === 'rejected') return 'bad';
+        if (status === 'pending-approval') return 'wait';
+        if (status === 'completed' || status === 'sent' || status === 'active' || status === 'approved') return 'ok';
+        return '';
+      }
+      function label(status) { return (c.cmS && c.cmS[status]) || status || '—'; }
+      function moves(row) {
+        var offered = CM_MOVES[row.status] || [];
+        /* Le serveur revérifie le droit sur le domaine de la commande : un
+           bouton qu'il refuserait n'est pas peint. */
+        if (O.allowed && !O.allowed(row.domain, row.action)) return [];
+        return offered;
+      }
+
+      function commandCard(row) {
+        var offered = moves(row);
+        var needsConfirm = offered.some(function (m) { return CM_CONFIRM[m]; });
+        var needsWhy = offered.indexOf('failed') >= 0;
+        return '<div class="p-card ops-cm-card" data-cm-row data-cm-id="' + esc(row.id) + '">' +
+          '<div class="ops-cm-head">' +
+            '<div><div class="ops-cm-what">' + esc((c.cmD && c.cmD[row.domain]) || row.domain) + '</div>' +
+              '<div class="ops-cm-act">' + esc(row.action) + ' · ' + esc(row.id) + '</div></div>' +
+            '<span class="ops-cm-state ' + tone(row.status) + '">' + esc(label(row.status)) + '</span>' +
+          '</div>' +
+          '<div class="ops-cm-meta">' +
+            '<div><span class="k">' + esc(c.cmBy) + '</span><span class="v">' + esc(row.requestedBy || '—') + '</span></div>' +
+            '<div><span class="k">' + esc(c.cmTries) + '</span><span class="v">' + esc(String(row.attempts == null ? 0 : row.attempts)) + '</span></div>' +
+            '<div><span class="k">' + esc(c.cmOpened) + '</span><span class="v">' + esc(stamp(row.createdAt)) + '</span></div>' +
+            '<div><span class="k">' + esc(c.cmMoved) + '</span><span class="v">' + esc(stamp(row.updatedAt)) + '</span></div>' +
+          '</div>' +
+          (row.lastError ? '<p class="ops-cm-hint" style="margin:10px 0 0">' + esc(acctError(row.lastError)) + '</p>' : '') +
+          (needsWhy ? '<input class="ops-cm-why" type="text" maxlength="120" data-cm-input placeholder="' + esc(c.cmWhy) + '">' : '') +
+          (needsConfirm ? '<label class="ops-cm-confirm"><input type="checkbox" data-cm-ok><span>' + esc(c.cmConfirm) + '</span></label>' : '') +
+          (offered.length
+            ? '<div class="ops-cm-btns">' + offered.map(function (m) {
+                return '<button class="kb ghost xs" type="button" data-cm-move="' + m + '">' + esc((c.cmT && c.cmT[m]) || m) + '</button>';
+              }).join('') + '</div>'
+            : '') +
+          '<div data-cm-row-out></div>' +
+          '</div>';
+      }
+
+      function render() {
+        var wanted = CM_FILTERS[tab];
+        var shown = wanted ? rows.filter(function (r) { return wanted.indexOf(r.status) >= 0; }) : rows;
+        host.innerHTML = '<div class="ops-cm-kpis">' +
+          kpi(c.cmTotal, String(rows.length)) +
+          kpi(c.cmWaiting, String(rows.filter(function (r) { return r.status === 'pending-approval'; }).length)) +
+          kpi(c.cmBlocked, String(rows.filter(function (r) { return r.status === 'blocked' || r.status === 'failed'; }).length)) +
+          '</div>' +
+          (shown.length ? shown.map(commandCard).join('') : '<p class="ops-cm-hint" style="margin-top:14px">' + esc(c.cmNone) + '</p>');
+      }
+
+      async function load() {
+        host.innerHTML = '<p class="ops-cm-hint" style="margin-top:14px">' + esc(c.cmLoading) + '</p>';
+        try {
+          var data = await O.list({ limit:200 });
+          rows = (data && data.commands) || [];
+          render();
+        } catch (error) { card(host, error && (error.code || error.message)); }
+      }
+
+      root.addEventListener('click', async function (event) {
+        var pill = event.target.closest('[data-cm-tab]');
+        if (pill) {
+          /* Basculer .on est tout le contrat — liquid-lens fait glisser la pastille. */
+          tab = pill.getAttribute('data-cm-tab');
+          root.querySelectorAll('[data-cm-tab]').forEach(function (el) { el.classList.toggle('on', el === pill); });
+          render();
+          return;
+        }
+        if (event.target.closest('[data-cm-refresh]')) return load();
+
+        var button = event.target.closest('[data-cm-move]');
+        if (!button) return;
+        var row = button.closest('[data-cm-row]');
+        var out = row.querySelector('[data-cm-row-out]');
+        var wanted = button.getAttribute('data-cm-move');
+        var box = row.querySelector('[data-cm-ok]');
+        var why = row.querySelector('[data-cm-input]');
+        out.innerHTML = '';
+        if (CM_CONFIRM[wanted] && !(box && box.checked)) return card(out, 'confirmation-required');
+        if ((wanted === 'failed' || wanted === 'blocked') && !(why && why.value.trim())) return card(out, 'reason-required');
+        button.disabled = true;
+        try {
+          var result = await O.transition(row.getAttribute('data-cm-id'), wanted, {
+            confirmed: !!(box && box.checked),
+            reason: why ? why.value.trim() : '',
+          });
+          /* « failed » est ici une cible légitime : ce qui revient n'est pas une
+             erreur mais le nouvel état, et c'est lui qu'on annonce. */
+          var cmd = (result && result.command) || {};
+          Kiwi.toast(c.cmMoveOk, { type:'success', desc:label(cmd.status || wanted) });
+          load();
+        } catch (error) { button.disabled = false; card(out, error && (error.code || error.message)); }
+      });
+
+      load();
+    }
+
     var legacyAcct = {};
     ['open-comptabilite', 'acct-livre', 'acct-etats', 'acct-tva'].forEach(function (key) {
       legacyAcct[key] = H[key];
@@ -1868,7 +2091,7 @@
       openDevices();
     };
 
-    window.KiwiOperationsUI = { toastResult:toastResult, openHistory:H['operations-history'], openLedger:openLedger, openProcurement:openProcurement, openPayroll:openPayroll, openPayments:openPayments, openDevices:openDevices };
+    window.KiwiOperationsUI = { toastResult:toastResult, openHistory:H['operations-history'], openCommands:openCommands, openLedger:openLedger, openProcurement:openProcurement, openPayroll:openPayroll, openPayments:openPayments, openDevices:openDevices };
   }
   boot();
 })();
