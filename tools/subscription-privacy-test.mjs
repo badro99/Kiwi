@@ -51,6 +51,7 @@ const team = fs.readFileSync(new URL('../functions/api/team/live.js', import.met
 const admin = fs.readFileSync(new URL('../kiwi-admin.html', import.meta.url), 'utf8');
 const dashboard = fs.readFileSync(new URL('../dashboard.html', import.meta.url), 'utf8');
 const entitlement = fs.readFileSync(new URL('../assets/entitlements.js', import.meta.url), 'utf8');
+const liveLink = fs.readFileSync(new URL('../assets/live-link.js', import.meta.url), 'utf8');
 const sw = fs.readFileSync(new URL('../kiwi-sw.js', import.meta.url), 'utf8');
 
 ok(/seed \? 'pending' : null/.test(config), 'newly onboarded stores start pending while legacy stores do not');
@@ -68,8 +69,16 @@ ok(entitlement.includes("operator=!!(state&&state.operator===true)") && !entitle
   'a URL flag cannot impersonate God Mode or bypass the client subscription gate');
 ok(entitlement.includes('lecture seule') && entitlement.includes('kiwi-private-value'),
   'confidential mode is visibly read-only and masks values without replacing data');
-ok(dashboard.includes('assets/entitlements.js?v=2') && dashboard.includes('assets/entitlements.css?v=2'),
+ok(liveLink.includes("identity.ready.then(function (state)") && liveLink.includes('initPump(true)'),
+  'God Mode client data starts only after the server confirms the operator');
+ok(liveLink.includes('{ oneShot: !!snapshot }') && liveLink.includes('else if (oneShot) stop()'),
+  'God Mode consumes a complete one-time snapshot instead of the merchant polling loop');
+ok(dashboard.includes('assets/entitlements.js?v=3') && dashboard.includes('assets/entitlements.css?v=3'),
   'the dashboard loads the entitlement layer with a cache-busting version');
+ok(dashboard.includes('assets/identity.js?v=2') &&
+   dashboard.indexOf('assets/identity.js?v=2') < dashboard.indexOf('assets/live-link.js?v=8') &&
+   dashboard.indexOf('assets/identity.js?v=2') < dashboard.indexOf('assets/entitlements.js?v=3'),
+  'God Mode data and confidential mode consume a fresh, already-published identity gate');
 ok(sw.includes('assets/entitlements.js') && sw.includes('assets/entitlements.css'),
   'the entitlement layer is available through the dashboard PWA cache');
 

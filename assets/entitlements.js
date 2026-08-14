@@ -40,7 +40,7 @@
   }
   function privacyToast(){var t=node('div','kiwi-privacy-toast','Mode confidentialité : action désactivée pour protéger le client.');document.body.append(t);setTimeout(function(){t.remove();},2600);}
   function sensitive(el){
-    if(!el||el.closest('.kiwi-privacy-bar,.kiwi-entitlement-layer,script,style,nav,.sidebar'))return false;
+    if(!el||el.closest('.kiwi-privacy-bar,.kiwi-entitlement-layer,script,style,nav,.sidebar,[role="tablist"],[data-range]'))return false;
     var direct=Array.prototype.filter.call(el.childNodes,function(n){return n.nodeType===3;}).map(function(n){return n.textContent||'';}).join(' ').trim();
     var s=el.children.length?direct:(el.textContent||'').trim();if(!s)return false;
     return /\d/.test(s)||/[\w.+-]+@[\w.-]+\.[a-z]{2,}/i.test(s);
@@ -51,7 +51,7 @@
     root.querySelectorAll('input[type="number"],input[type="tel"],input[type="email"],input[data-money]').forEach(function(el){el.classList.add('kiwi-private-input');el.readOnly=true;});
   }
   function installPrivacy(){
-    if(!privacy||privacyInstalled)return;privacyInstalled=true;document.documentElement.classList.add('kiwi-privacy-mode');
+    if(!privacy||privacyInstalled)return;privacyInstalled=true;document.documentElement.classList.remove('kiwi-privacy-pending');document.documentElement.classList.add('kiwi-privacy-mode');
     var bar=node('div','kiwi-privacy-bar','Mode confidentialité · chiffres masqués · lecture seule');var quit=node('button','',"Quitter");quit.type='button';quit.onclick=function(){params.delete('privacy');location.search=params.toString();};bar.append(quit);document.body.append(bar);
     mask(document.body);var queued=false;new MutationObserver(function(){if(queued)return;queued=true;setTimeout(function(){queued=false;mask(document.body);},40);}).observe(document.body,{childList:true,subtree:true,characterData:true});
     document.addEventListener('submit',function(e){e.preventDefault();e.stopImmediatePropagation();privacyToast();},true);
@@ -62,11 +62,13 @@
   document.addEventListener('kiwi-config',function(e){acceptConfig(e.detail||window.KiwiConfig);});
   function confirmIdentity(state){
     operator=!!(state&&state.operator===true);privacy=operator&&wantsPrivacy;
+    document.documentElement.classList.remove('kiwi-privacy-pending');
     if(operator){if(pill){pill.remove();pill=null;}if(modal){modal.remove();modal=null;}}
     if(privacy)installPrivacy();
   }
   function boot(){
     installSubscription();acceptConfig(window.KiwiConfig);
+    document.addEventListener('kiwi-identity',function(e){confirmIdentity(e&&e.detail);},{once:true});
     var identity=window.KiwiIdentity;
     if(identity&&identity.ready&&typeof identity.ready.then==='function')identity.ready.then(confirmIdentity,function(){confirmIdentity(null);});
     else confirmIdentity(null);

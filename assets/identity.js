@@ -53,6 +53,11 @@
     gateSettled = true;
     try { window.KiwiIdentity.state = state; } catch (_) {}
     try { settleGate(state); } catch (_) {}
+    /* A promise is enough for code that already knows about KiwiIdentity, but
+       late/independently cached modules also need an observable hand-off. Keep
+       the event payload identical to `ready`: one server-confirmed decision,
+       dispatched once, never a query-string guess. */
+    try { document.dispatchEvent(new CustomEvent('kiwi-identity', { detail: state })); } catch (_) {}
   }
 
   function ls(k, v) { try { if (v) localStorage.setItem(k, v); } catch (_) {} }

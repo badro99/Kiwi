@@ -524,8 +524,9 @@
    *    a bfcache restore, the network coming back, or a ping from a till in this
    *    same browser. Whatever happened while we were away lands immediately. */
   var FAST_MS = 2500, SLOW_MS = 20000;
-  function watchFeed(onSales, intervalMs) {
+  function watchFeed(onSales, intervalMs, options) {
     if (!on()) return function () {};
+    var oneShot = !!(options && options.oneShot);
     var since = 0, stopped = false, timer = null, busy = false, again = false, backfill = true;
     var drainBackfill = false;
     var lastTenant = null;
@@ -543,7 +544,9 @@
       if (busy) { again = true; return; }      // coalesce: one poll in flight at a time
       busy = true; again = false;
       drainBackfill = false;
-      flushQueue();                            // this device may still owe the server a sale
+      /* A God Mode client view is a read-only snapshot, not a till. Never flush
+         the operator browser's old outbox under the client tenant. */
+      if (!oneShot) flushQueue();              // this merchant device may still owe the server a sale
       /* `since` is a per-tenant cursor. Switching store switches tenant, so a
        * cursor carried over from the previous one would skip the new store's
        * whole history — it starts again from the beginning of its own feed. */
@@ -585,6 +588,10 @@
           if (stopped) return;
           if (again) { again = false; arm(0); }
           else if (drainBackfill) arm(0);
+          /* Snapshot mode never turns a failed request into an invisible polling
+             loop. One network attempt (plus immediate pagination when needed),
+             then the explicit Actualiser button owns the next attempt. */
+          else if (oneShot) stop();
           else arm();
         });
     }
@@ -592,23 +599,26 @@
     function listen(target, type, fn) {
       try { target.addEventListener(type, fn); bound.push([target, type, fn]); } catch (_) {}
     }
-    listen(document, 'visibilitychange', function () {
-      try { if (document.hidden) { arm(); return; } } catch (_) {}
-      poke();
-    });
-    listen(window, 'focus', poke);
-    listen(window, 'pageshow', poke);
-    listen(window, 'online', function () { flushQueue(); poke(); });
-    listen(window, 'storage', function (e) { if (e && e.key === PING_KEY) poke(); });
-    if (chan) listen(chan, 'message', poke);
+    if (!oneShot) {
+      listen(document, 'visibilitychange', function () {
+        try { if (document.hidden) { arm(); return; } } catch (_) {}
+        poke();
+      });
+      listen(window, 'focus', poke);
+      listen(window, 'pageshow', poke);
+      listen(window, 'online', function () { flushQueue(); poke(); });
+      listen(window, 'storage', function (e) { if (e && e.key === PING_KEY) poke(); });
+      if (chan) listen(chan, 'message', poke);
+    }
 
     tick();
-    return function () {
+    function stop() {
       stopped = true;
       if (timer) clearTimeout(timer);
       bound.forEach(function (b) { try { b[0].removeEventListener(b[1], b[2]); } catch (_) {} });
       bound = [];
-    };
+    }
+    return stop;
   }
 
   /* ─── announce a sale that just landed ───
@@ -799,15 +809,15 @@
    * card into, so a layout the module doesn't recognise can never silently stop
    * the dashboard from receiving sales. */
   var pumping = false;
-  function initPump() {
+  function initPump(snapshot) {
     if (!on() || pumping) return;
     pumping = true;
-    flushQueue();             // a sale this device banked offline, still owed to the server
+    if (!snapshot) flushQueue(); // a merchant device may still owe the server a sale
     watchFeed(function (sales, backfill, tenant) {
       accumulateFeed(sales, tenant);
       bridgeToStore();        // ← this is what moves the dashboard's real numbers
       if (!backfill) sales.forEach(notifySale);
-    });
+    }, null, { oneShot: !!snapshot });
     // Re-run the bridge whenever the venue settles/changes — the operator scoped
     // venue and the real-merchant "own" venue both resolve AFTER this first poll,
     // so without this the pre-resolution sales would never reach the venue the
@@ -823,8 +833,8 @@
   // When the console opens a client with ?op=1, make it unmistakable that this is
   // the operator looking at THAT client (not the operator's own account), and
   // give a one-click way back. Read-only affordance; no client data is altered.
-  function initOperatorBanner() {
-    if (!opMode() || document.getElementById('kiwi-op-banner')) return;
+  function initOperatorBanner(confirmed) {
+    if (!confirmed || !opMode() || document.getElementById('kiwi-op-banner')) return;
     var bar = el('div');
     bar.id = 'kiwi-op-banner';
     bar.setAttribute('style', 'position:fixed;top:0;left:0;right:0;z-index:2147482000;display:flex;align-items:center;' +
@@ -839,6 +849,13 @@
     back.setAttribute('href', '/kiwi-admin.html');
     back.setAttribute('style', 'margin-inline-start:14px;color:#7DF2B0;text-decoration:none;font-weight:700');
     bar.appendChild(back);
+    var refresh = el('button', null, 'Actualiser');
+    refresh.type = 'button';
+    refresh.setAttribute('aria-label', 'Actualiser les données du client');
+    refresh.setAttribute('style', 'margin-inline-start:4px;padding:5px 9px;border:1px solid rgba(125,242,176,.38);border-radius:999px;' +
+      'background:transparent;color:#eafff4;font:700 11px/1 inherit;cursor:pointer');
+    refresh.onclick = function () { location.reload(); };
+    bar.appendChild(refresh);
     document.body.appendChild(bar);
     try {
       var pt = parseFloat(getComputedStyle(document.body).paddingTop) || 0;
@@ -849,8 +866,8 @@
   // In operator view, skip the client's PIN lock — the operator is not the staff
   // and should land straight on the dashboard. Uses the app's own skip control so
   // the normal reveal (card entrance, etc.) still runs.
-  function opSkipLock() {
-    if (!opMode()) return;
+  function opSkipLock(confirmed) {
+    if (!confirmed || !opMode()) return;
     var tries = 0;
     (function attempt() {
       var lock = document.querySelector('[data-kiwi-lock]');
@@ -906,20 +923,46 @@
     // card and poll the feed on the caisse and the serveur too, purely because
     // those pages happen to have a <main> — a card the cashier had no use for
     // and a poll for data the page never read.
-    if (window.KiwiSales) initPump();
+    if (opMode()) {
+      /* Query parameters request a scope; /api/me authorizes it. A confirmed God
+         Mode view receives the whole entitled ledger exactly once, then becomes
+         a stable snapshot. Owners keep the normal live 2.5 s feed. */
+      var identity = window.KiwiIdentity;
+      if (identity && identity.ready && typeof identity.ready.then === 'function') {
+        identity.ready.then(function (state) {
+          var confirmed = !!(state && state.operator === true);
+          if (!confirmed) return;
+          /* The banner and PIN bypass do not depend on the sales store. Some
+             dashboard bundles publish KiwiSales a beat after DOMContentLoaded;
+             coupling all operator UI to its presence made an authenticated view
+             look half-authorized. Give that store one short boot window, never a
+             recurring data poll. */
+          initOperatorBanner(true);
+          opSkipLock(true);
+          var tries = 0;
+          (function startSnapshot() {
+            if (window.KiwiSales) { initPump(true); return; }
+            if (tries++ < 20) setTimeout(startSnapshot, 50);
+          })();
+        }, function () {});
+      }
+    }
+    else if (window.KiwiSales) initPump(false);
     // Pas de magasin de ventes ⇒ nous sommes sur une caisse : elle n'a pas
     // besoin du flux, mais elle doit apprendre les retraits (voir watchVoids).
     else watchVoids();
     // Retry the queue whenever the network comes back, on every page (a till is
     // where the sales are, and it is the device most likely to be offline).
-    try { window.addEventListener('online', function () { flushQueue(true); }); } catch (_) {}
+    if (!opMode()) {
+      try { window.addEventListener('online', function () { flushQueue(true); }); } catch (_) {}
+    }
     /* Opening IndexedDB and atomically importing the legacy queue is async.
        Flush only after that choice has settled, otherwise the old array and
        the new outbox could race to submit the same sale (the server would
        dedupe it, but the terminal would briefly report two debts). */
-    initOutbox().then(flushQueue);
-    initOperatorBanner();
-    opSkipLock();
+    if (!opMode()) initOutbox().then(flushQueue);
+    /* Operator UI is mounted only in the signed-identity branch above. An URL
+       containing `op=1` alone must show neither the banner nor the PIN bypass. */
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();

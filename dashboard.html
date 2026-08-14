@@ -6045,17 +6045,20 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
 <script defer src="assets/offline-db.js?v=3"></script>
 <script defer src="assets/platform-kernel.js?v=2"></script>
 <script defer src="assets/platform-ops.js?v=1"></script>
-<script defer src="assets/live-link.js?v=6"></script>
+<!-- Establish the signed account/operator identity before any tenant-scoped
+     data module starts. God Mode must never infer authority from ?op=1, and
+     its one-shot snapshot must not miss the identity promise at boot. -->
+<script defer src="assets/tenant-purge.js"></script>
+<script defer src="assets/identity.js?v=2"></script>
+<script defer src="assets/live-link.js?v=8"></script>
 <script defer src="assets/channel-sales.js?v=3"></script>
 <!-- Operator feature flags — hides modules the operator toggled off for this
      merchant. Fail-safe: no backend ⇒ nothing changes. See ADMIN.md. -->
 <script defer src="assets/merchant-config.js?v=262"></script>
-  <link rel="stylesheet" href="assets/entitlements.css?v=2">
-  <script defer src="assets/entitlements.js?v=2"></script>
 <!-- Real logged-in identity — swaps the demo owner/business (Rachid · Café Atlas)
      for the account's own via /api/me. No-op for the local demo / staff / operator. -->
-<script defer src="assets/tenant-purge.js"></script>
-<script defer src="assets/identity.js"></script>
+  <link rel="stylesheet" href="assets/entitlements.css?v=3">
+  <script defer src="assets/entitlements.js?v=3"></script>
 <!-- Auth guard: redirects to the auth page the moment the server signals
      the account has been deleted / suspended, so a revoked merchant never
      gets stranded in a half-broken shell (see assets/auth-guard.js). -->

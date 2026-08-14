@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted — fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v429';
+var CACHE = 'kiwi-app-v430';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -147,7 +147,7 @@ var SHELL = [
   '/assets/platform-ops.css?v=1',
   '/assets/operations.js?v=9',
   '/assets/operations-ui.js?v=11',
-  '/assets/live-link.js?v=6',
+  '/assets/live-link.js?v=8',
   '/assets/channel-sales.js?v=3',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
@@ -170,14 +170,14 @@ var SHELL = [
   '/assets/receipt.js',
   '/assets/receipt-ui.js',
   '/assets/merchant-config.js?v=262',
-  '/assets/entitlements.css?v=1',
-  '/assets/entitlements.js?v=1',
+  '/assets/entitlements.css?v=3',
+  '/assets/entitlements.js?v=3',
   '/assets/staff-roles.js',
   /* Ce qui appartient à un commerçant. Dans la coquille parce que la purge se
      déclenche au ré-appairage, et qu'un ré-appairage se fait souvent dans un
      réseau douteux : absente, la caisse s'ouvrirait chez B avec les ventes de A. */
   '/assets/tenant-purge.js',
-  '/assets/identity.js',
+  '/assets/identity.js?v=2',
   '/assets/caisse-link.js?v=7',
   '/assets/operator-access.js',
   '/assets/auth-guard.js',
