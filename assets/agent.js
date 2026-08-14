@@ -2416,6 +2416,126 @@
     return { text: a.lead(name), open: [{ label: a.btn(name), handler: target.h }] };
   }
 
+  /* ─────────────── FAIRE AVANCER UNE COMMANDE ───────────────
+   * La seule action que l'assistant peut proposer de bout en bout. Les trois
+   * autres actions du moteur (`functions/api/operations.js`, domaine `ai`) sont
+   * réelles mais ne se déduisent pas d'une phrase : réimprimer s'exécute sur
+   * l'appareil qui le demande et non sur un tableau de bord ; un bon d'achat
+   * exige un fournisseur et un prix unitaire par ligne ; un message client exige
+   * un destinataire que la table `orders` ne porte pas. Elles restent
+   * accessibles par `KiwiOperations.agentRun` depuis les écrans qui tiennent ces
+   * arguments. Promettre ici ce qu'on ne peut pas tenir serait pire que se
+   * taire.
+   *
+   * Deux conditions, jamais une seule : un verbe d'état ET un numéro précédé
+   * d'un mot qui désigne un ticket. « table 3 » n'est pas la commande 3, et
+   * « la commande arrive » n'est pas un ordre. Les motifs sont écrits sans
+   * accents ni diacritiques : `norm()` les a déjà retirés. */
+  const OP_STATUS = [
+    { status: 'accepted', rx: /\baccept|\bvalid|\bconfirm|\bok\s+(?:pour|la|le)\b|\bqbel\b|\bkbel\b|قبول|اقبل|وافق/ },
+    { status: 'rejected', rx: /\brefus|\breject|\bannul|\bcancel|\bdecline|\bredd\b|رفض|الغ/ },
+    { status: 'ready', rx: /\bprete?\b|\bprets?\b|\bready\b|\bprepare?e?\b|\bwajda\b|\bwajed\b|جاهز/ },
+    { status: 'served', rx: /\bservi|\bserve|\blivre|\bdeliver|\bremis|\bqdem\b|\bsift\b|قدم|سلم|تسليم/ },
+  ];
+  /* Le mot « numéro » peut se glisser entre le nom du ticket et le chiffre, et
+     c'est la forme normale en arabe : « الطلب رقم 9 ». Sans lui, la phrase la
+     plus courante de la cuisine ne se lisait pas. */
+  const OP_TICKET_RX = /(?:commande|commmande|ticket|order|bon|n\s*[°o]|numero|#|طلبية|طلب)\s*(?:(?:n\s*[°o]|numero|no|رقم)\s*)?#?\s*(\d{1,6})\b/;
+  function matchOperation(q) {
+    const num = OP_TICKET_RX.exec(fixDigits(q));
+    if (!num) return null;
+    const number = Number(num[1]);
+    if (!number) return null;
+    for (const s of OP_STATUS) if (s.rx.test(q)) return { status: s.status, number };
+    return null;
+  }
+  const OPS = {
+    fr: {
+      verb: { accepted: 'accepter', rejected: 'refuser', ready: 'passer en prête', served: 'passer en servie' },
+      state: { pending: 'en attente', accepted: 'acceptée', rejected: 'refusée', ready: 'prête', served: 'servie' },
+      lead: (v, n) => `Vous me demandez de ${v} la commande n° ${n}.`,
+      btn: (v, n) => `${v.charAt(0).toUpperCase() + v.slice(1)} la n° ${n}`,
+      pending: 'Rien n’est envoyé tant que vous n’avez pas confirmé.',
+      working: 'Un instant…',
+      done: (n, s) => `C’est fait : la commande n° ${n} est ${s}.`,
+      unknown: (n) => `Je ne trouve pas de commande n° ${n} en cours. Rien n’a été touché.`,
+      ambiguous: (n) => `Deux commandes ouvertes portent le n° ${n}. Faites-le depuis la page Commandes : je ne veux pas toucher la mauvaise.`,
+      already: (n, s) => `La commande n° ${n} est déjà ${s}. Rien n’a été touché.`,
+      bad: (n, s) => `La commande n° ${n} est ${s} : ce passage n’est pas permis. Rien n’a été touché.`,
+      off: 'Les commandes ne sont pas ouvertes ici. Rien n’a été touché.',
+      denied: 'Votre accès ne permet pas de faire avancer une commande. Rien n’a été touché.',
+      queued: (n) => `Vous êtes hors ligne : la commande n° ${n} avancera dès le retour du réseau.`,
+      fail: (why) => `Je n’ai pas pu : ${why}. Rien n’a été touché.`,
+      absent: 'Je ne peux pas toucher aux commandes depuis cet écran.',
+    },
+    en: {
+      verb: { accepted: 'accept', rejected: 'reject', ready: 'mark ready', served: 'mark served' },
+      state: { pending: 'pending', accepted: 'accepted', rejected: 'rejected', ready: 'ready', served: 'served' },
+      lead: (v, n) => `You are asking me to ${v} order no. ${n}.`,
+      btn: (v, n) => `${v.charAt(0).toUpperCase() + v.slice(1)} no. ${n}`,
+      pending: 'Nothing is sent until you confirm.',
+      working: 'One moment…',
+      done: (n, s) => `Done: order no. ${n} is ${s}.`,
+      unknown: (n) => `I can't find an open order no. ${n}. Nothing was touched.`,
+      ambiguous: (n) => `Two open orders carry no. ${n}. Do it from the Orders page — I won't risk the wrong one.`,
+      already: (n, s) => `Order no. ${n} is already ${s}. Nothing was touched.`,
+      bad: (n, s) => `Order no. ${n} is ${s}: that move isn't allowed. Nothing was touched.`,
+      off: 'Orders aren’t switched on here. Nothing was touched.',
+      denied: 'Your access doesn’t allow moving an order along. Nothing was touched.',
+      queued: (n) => `You’re offline: order no. ${n} will move as soon as the network is back.`,
+      fail: (why) => `I couldn’t: ${why}. Nothing was touched.`,
+      absent: 'I can’t touch orders from this screen.',
+    },
+    ar: {
+      verb: { accepted: 'قبول', rejected: 'رفض', ready: 'تعيينها جاهزة', served: 'تعيينها مقدَّمة' },
+      state: { pending: 'في الانتظار', accepted: 'مقبولة', rejected: 'مرفوضة', ready: 'جاهزة', served: 'مقدَّمة' },
+      lead: (v, n) => `تطلب مني ${v} الطلب رقم ${n}.`,
+      btn: (v, n) => `${v} رقم ${n}`,
+      pending: 'لا شيء يُرسل قبل تأكيدك.',
+      working: 'لحظة…',
+      done: (n, s) => `تم: الطلب رقم ${n} ${s}.`,
+      unknown: (n) => `لا أجد طلبًا مفتوحًا رقم ${n}. لم يُمسّ شيء.`,
+      ambiguous: (n) => `طلبان مفتوحان يحملان رقم ${n}. افعلها من صفحة الطلبات — لا أريد لمس الخطأ.`,
+      already: (n, s) => `الطلب رقم ${n} ${s} أصلًا. لم يُمسّ شيء.`,
+      bad: (n, s) => `الطلب رقم ${n} ${s}: هذا الانتقال غير مسموح. لم يُمسّ شيء.`,
+      off: 'الطلبات غير مفعّلة هنا. لم يُمسّ شيء.',
+      denied: 'صلاحيتك لا تسمح بتحريك طلب. لم يُمسّ شيء.',
+      queued: (n) => `أنت دون اتصال: سيتحرك الطلب رقم ${n} فور عودة الشبكة.`,
+      fail: (why) => `لم أستطع: ${why}. لم يُمسّ شيء.`,
+      absent: 'لا أستطيع لمس الطلبات من هذه الشاشة.',
+    },
+  };
+  const opCopy = () => OPS[L] || OPS.fr;
+  /* Le serveur ne jette pas sur un refus métier : il répond 200 avec
+     `command.status === 'failed'` et la raison dans `command.lastError`.
+     Traduire ce code plutôt que l'afficher brut est la différence entre « la 12
+     est déjà servie » et « bad-transition:served ». */
+  function opWhy(o, code, number) {
+    const c = String(code || '');
+    if (c.indexOf('already-') === 0) return o.already(number, o.state[c.slice(8)] || c.slice(8));
+    if (c.indexOf('bad-transition:') === 0) return o.bad(number, o.state[c.slice(15)] || c.slice(15));
+    if (c === 'order-unknown' || c === 'order-id-required') return o.unknown(number);
+    if (c === 'orders-unavailable') return o.off;
+    if (c === 'permission-denied' || c === 'forbidden' || c === 'role-forbidden') return o.denied;
+    return o.fail(c || '?');
+  }
+  function sOperation(op, said) {
+    const o = opCopy();
+    const K = window.KiwiOperations;
+    if (!K || typeof K.agentRun !== 'function' || typeof K.orders !== 'function') return { text: o.absent };
+    /* Le même droit que le même travail fait à la main. Un écran qui ne peut
+       pas faire avancer une commande ne doit pas afficher le bouton. */
+    let may = false;
+    try { may = K.agentAllowed('update-order-status'); } catch (_) { may = false; }
+    if (!may) return { text: o.denied };
+    const verb = o.verb[op.status] || op.status;
+    return {
+      text: o.lead(verb, op.number),
+      note: o.pending,
+      run: { action: 'update-order-status', status: op.status, number: op.number, said: said, label: o.btn(verb, op.number) },
+    };
+  }
+
   /* ─────────────── INTENT CLASSIFIER (scored · fr / en / ar) ───────────────
    * Replaces the old first-match regex chain. Every intent is scored by
    * weighted signals; the HIGHEST score wins (ties resolve by the historical
@@ -3149,6 +3269,11 @@
      * model is genuinely better at, and a deterministic answer would be the
      * worse failure: "write a thank you note" was answered "avec plaisir". */
     if (COMPOSE_RX.test(q)) return { kind: null, raw, q };
+    /* Avant matchAction : « valide la commande 12 » nomme une destination
+       (les commandes) autant qu'un ordre, et ouvrir la page serait une réponse
+       à côté. Le verbe d'état tranche. */
+    const op = matchOperation(q);
+    if (op) return { kind: 'operation', raw, q, op };
     const act = matchAction(q);
     if (act) return { kind: 'action', raw, q, action: act };
     if (META_RX.test(q)) return { kind: 'meta', raw, q };
@@ -3358,6 +3483,7 @@
     if (d.kind === 'hire' || d.kind === 'afford' || d.kind === 'price' || d.kind === 'compound') lastScenario = d.kind;
     if (d.kind === 'math') return sCalc(d.raw, evalMath(d.raw));
     if (d.kind === 'action') return sAction(d.action);
+    if (d.kind === 'operation') return sOperation(d.op, d.raw);
     if (d.kind === 'compound') return sCompound(d.raw);
     if (d.kind === 'illicit') return sIllicit();
     if (d.kind === 'negated') return sNegated();
@@ -3675,6 +3801,11 @@
   window.KiwiAgentProfile = function () { return syncProfile(); };
   window.KiwiAgentRedact = function (text, lang) { return redactUnsupported(text, lang || getLang()); };
   window.KiwiAgentTier = accessTier;
+  /* Le seul lecteur d'ordre de la maison, exposé nu : une phrase entre, un
+     `{status, number}` sort — ou `null`. Le distinguer de la route permet au
+     gate d'affirmer que « la 12 » a bien été lue comme la commande 12, et pas
+     seulement qu'une carte a été proposée. Lecture pure, rien n'est envoyé. */
+  window.KiwiAgentOperation = function (s) { return matchOperation(norm(String(s || ''))); };
   /* La route seule, sans exécuter le scénario — ce qu'il faut pour mesurer la
      robustesse aux fautes de frappe sur des milliers de variantes sans payer
      le coût de la réponse. Lecture pure. */
@@ -4575,6 +4706,15 @@
       h += '<div class="fa-follow">' + r.open.map((o) =>
         `<button class="fa-llm-btn" data-fa-open="${escAttr(o.handler)}">${o.label}</button>`).join('') + '</div>';
     }
+    /* Une proposition, pas une exécution : le bouton porte l'ordre, et rien ne
+       part avant que le commerçant ne clique dessus. La phrase qu'il a dite
+       voyage avec, parce que le journal côté serveur doit pouvoir répondre à
+       « pourquoi cette commande a-t-elle bougé ». */
+    if (r.run) {
+      h += '<div class="fa-follow"><button class="fa-llm-btn" data-fa-run="' + escAttr(r.run.action)
+        + '" data-fa-status="' + escAttr(r.run.status) + '" data-fa-number="' + escAttr(r.run.number)
+        + '" data-fa-said="' + escAttr(r.run.said || '') + '">' + r.run.label + '</button></div>';
+    }
     return h;
   }
 
@@ -4742,6 +4882,42 @@
       thread.appendChild(m);
       scrollDown();
       return m;
+    }
+
+    /* L'exécution vit ici, et pas dans le classifieur : `respond()` est
+       synchrone et rend une carte tout de suite. Résoudre « la 12 » en
+       identifiant demande un aller-retour réseau, et il ne doit avoir lieu
+       qu'après le clic — sinon le simple fait de poser la question aurait déjà
+       parlé au serveur. */
+    async function runOperation(btn) {
+      const o = opCopy();
+      const K = window.KiwiOperations;
+      const wanted = btn.getAttribute('data-fa-status') || '';
+      const number = Number(btn.getAttribute('data-fa-number')) || 0;
+      const said = btn.getAttribute('data-fa-said') || '';
+      btn.textContent = o.working;
+      const typing = pushTyping();
+      const done = (text) => { typing.remove(); pushAgent(replyHtml({ text: text })); };
+      if (!K || typeof K.agentRun !== 'function') { done(o.absent); return; }
+      let out;
+      try {
+        const inbox = await K.orders({ open: true, limit: 120 });
+        if (inbox && inbox.unavailable) { done(o.off); return; }
+        const hit = ((inbox && inbox.orders) || []).filter((row) => Number(row.number) === number);
+        if (!hit.length) { done(o.unknown(number)); return; }
+        /* Deux tickets ouverts au même numéro ne devraient pas exister — la
+           numérotation est hebdomadaire et par commerçant. Si cela arrive, on
+           refuse plutôt que de tirer au sort. */
+        if (hit.length > 1) { done(o.ambiguous(number)); return; }
+        out = await K.agentRun('update-order-status', { orderId: hit[0].id, status: wanted }, said);
+      } catch (error) {
+        done(opWhy(o, (error && error.code) || 'reseau', number));
+        return;
+      }
+      const cmd = (out && out.command) || {};
+      if (cmd.status === 'completed') { done(o.done(number, o.state[wanted] || wanted)); return; }
+      if (cmd.status === 'queued-offline') { done(o.queued(number)); return; }
+      done(opWhy(o, cmd.lastError || cmd.status, number));
     }
 
     function ask(text) {
@@ -5171,6 +5347,15 @@
           const link = nav && nav.querySelector('a[data-nav="' + navKey + '"]');
           if (link) { nav.querySelectorAll('a').forEach((a) => a.classList.remove('active')); link.classList.add('active'); }
         }, 360);
+        return;
+      }
+      const runBtn = e.target.closest('[data-fa-run]');
+      if (runBtn) {
+        /* Un ordre ne part qu'une fois : le second clic ne doit pas rejouer la
+           transition, même si le premier est encore en vol. */
+        if (runBtn.disabled) return;
+        runBtn.disabled = true;
+        runOperation(runBtn);
         return;
       }
       if (e.target.closest('[data-fa-activate]')) { activateLlm(); return; }

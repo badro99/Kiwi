@@ -72,7 +72,14 @@
        auprès du fournisseur reste une lecture.  Miroir du serveur. */
     if (domain === 'payment' && action === 'refund-link') return ['action', 'refund'];
     if (domain === 'payment' && action === 'settle-link') return ['read', 'payment'];
+    /* Une action dictée à l'assistant coûte le droit que coûterait le même
+       travail fait à la main. Miroir du serveur — `write:ai` n'appartient à
+       aucun rôle, et le laisser en défaut cachait le bouton à tout le monde
+       sauf au propriétaire. */
     if (domain === 'ai' && action === 'reprint') return ['action', 'reprint'];
+    if (domain === 'ai' && action === 'message-customer') return ['action', 'message'];
+    if (domain === 'ai' && action === 'create-po') return ['write', 'inventory'];
+    if (domain === 'ai' && action === 'update-order-status') return ['write', 'orders'];
     return ['write', domain];
   }
   function allowed(domain, action) {
@@ -178,6 +185,16 @@
       kind: kind, channels: channels, enabled: enabled !== false,
     }, { idempotencyKey: 'notify-prefs:' + K.tenant() + ':' + kind + ':' + Date.now() });
   }
+  /* Les tickets en cours, en lecture seule : de quoi traduire « la 12 » en
+     identifiant avant de proposer une action.  On ne passe pas par la file de
+     la cuisine — son GET réveille le comptoir au passage. */
+  async function orders(opts) {
+    opts = opts || {};
+    var query = new URLSearchParams({ merchant: K.tenant(), view: 'orders' });
+    if (opts.open) query.set('state', 'open');
+    if (opts.limit) query.set('limit', String(Math.max(1, Math.min(120, +opts.limit || 40))));
+    return responseJson(await fetch('/api/operations?' + query.toString(), { credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' } }));
+  }
   /* Le parc.  La lecture est réservée au propriétaire côté serveur ; comme
      pour les paiements, le client laisse remonter le 403 tel quel. */
   async function devices(opts) {
@@ -225,6 +242,17 @@
       body: JSON.stringify({ merchant: K.tenant(), commandId: clean(commandId, 128), transition: clean(state, 32), confirmed: opts.confirmed === true }),
     }));
   }
+  /* Une action dictée à l'assistant franchit deux portes.  La première est le
+     rôle : agentAllowed() recopie la règle du serveur pour qu'un bouton ne soit
+     jamais proposé à quelqu'un que le Worker refusera.  La seconde est la
+     confirmation : rien ne part tant que le commerçant n'a pas appuyé, et la
+     phrase qu'il a dite voyage avec la commande — c'est elle qui répondra plus
+     tard à « pourquoi ceci s'est-il produit ? ». */
+  function agentAllowed(action) { return allowed('ai', clean(action, 48).toLowerCase()); }
+  async function agentRun(action, payload, said) {
+    var body = Object.assign({}, payload && typeof payload === 'object' ? payload : {}, { said: clean(said, 240) });
+    return create('ai', action, body, { confirmed: true });
+  }
   async function flush() {
     var O = window.KiwiOffline;
     if (flushing || navigator.onLine === false || !O || !O.available || !O.available()) return false;
@@ -270,6 +298,7 @@
     version: 1, create: create, list: list, purchaseOrders: purchaseOrders, payslips: payslips, payments: payments, transition: transition, flush: flush,
     devices: devices, testPrint: testPrint, ackAlert: ackAlert, deviceId: deviceId, heartbeat: beat,
     notifications: notifications, notify: notify, setNotifyPreferences: setNotifyPreferences,
+    orders: orders, agentAllowed: agentAllowed, agentRun: agentRun,
     allowed: allowed, subscribe: function (fn) { listeners.add(fn); return function () { listeners.delete(fn); }; },
   };
 })();

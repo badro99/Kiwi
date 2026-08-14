@@ -156,7 +156,14 @@ function needed(domain, action) {
      fournisseur ne change rien et reste une lecture. */
   if (domain === 'payment' && action === 'refund-link') return ['action', 'refund'];
   if (domain === 'payment' && action === 'settle-link') return ['read', 'payment'];
+  /* Une action dictée à l'assistant coûte exactement le droit que coûterait le
+     même travail fait à la main : ni plus, ni moins.  `write:ai` ne figure dans
+     aucun rôle — le laisser en défaut faisait de ces trois actions un privilège
+     réservé au propriétaire par accident et non par décision. */
   if (domain === 'ai' && action === 'reprint') return ['action', 'reprint'];
+  if (domain === 'ai' && action === 'message-customer') return ['action', 'message'];
+  if (domain === 'ai' && action === 'create-po') return ['write', 'inventory'];
+  if (domain === 'ai' && action === 'update-order-status') return ['write', 'orders'];
   /* Imprimer un ticket d'essai, c'est réimprimer : une caissière teste sa
      propre imprimante.  Faire taire une alarme est un acte d'exploitation et
      coûte write:device, que la caisse n'a pas. */
@@ -1625,13 +1632,82 @@ async function devices(env, row, payload) {
   return fail('unsupported-action');
 }
 
+/* Le même tableau que functions/api/order/queue.js fait respecter à la file de
+   commandes.  Copié et non redérivé : deux surfaces qui décident séparément de
+   ce qu'est une transition légale finissent par ne plus décider la même chose.
+   « servi » accepte « accepté » parce qu'un café tendu au comptoir ne passe
+   jamais par « prêt » ; « servi » et « refusé » ne figurent dans aucun départ,
+   donc rien ne rouvre une commande close. */
+const AI_ORDER_FROM = {
+  accepted: ['pending'],
+  rejected: ['pending'],
+  ready: ['accepted'],
+  served: ['ready', 'accepted'],
+};
+const AI_ORDER_ID = /^ord-[a-z0-9-]{6,48}$/;
+
+async function aiActions(env, row, payload) {
+  const fail = (reason) => update(env, row, 'failed', 'kiwi-agent', {}, reason);
+  /* « Pourquoi ceci s'est-il produit ? » doit avoir une réponse.  La phrase du
+     commerçant est conservée telle qu'il l'a dite : sans elle, une action
+     déclenchée par l'assistant est un événement sans auteur ni motif. */
+  const said = clean(payload && payload.said, 240);
+  if (!said) return fail('intent-required');
+  await event(env, row, 'intent', row.status, { said, action: row.action });
+
+  /* Rien ici ne réécrit un envoi de message ni une numérotation de bon
+     d'achat : l'ordre dicté passe par le moteur qui fait déjà ce travail pour
+     un humain, et hérite donc du repli entre canaux, de l'anti-doublon, des
+     préférences de la maison et de la numérotation réelle.  Les deux moteurs
+     aiguillent sur row.action seul, jamais sur row.domain. */
+  if (row.action === 'message-customer') return notifications(env, row, payload);
+  if (row.action === 'create-po') return procurement(env, row, payload);
+
+  if (row.action === 'reprint') {
+    await ensureDevices(env);
+    const deviceId = clean(payload && payload.deviceId, 80);
+    if (!deviceId) return fail('device-id-required');
+    const known = await env.DB.prepare(
+      'SELECT * FROM device_health WHERE merchant = ? AND device_id = ?'
+    ).bind(row.merchant, deviceId).first();
+    if (!known) return fail('device-unknown');
+    /* Promettre une réimpression à une caisse muette ou sans imprimante, c'est
+       mentir : le même prédicat qui allume l'alarme refuse le travail. */
+    const alarm = deviceAlarm(known, now());
+    if (alarm) return update(env, row, 'blocked', 'local-device', { deviceId, said }, alarm);
+    return update(env, row, 'processing', 'local-device',
+      { deviceId, said, instruction: 'execute-on-requesting-device' }, '');
+  }
+
+  if (row.action === 'update-order-status') {
+    const orderId = clean(payload && payload.orderId, 64);
+    const wanted = clean(payload && payload.status, 16).toLowerCase();
+    if (!AI_ORDER_ID.test(orderId)) return fail('order-id-required');
+    if (!AI_ORDER_FROM[wanted]) return fail('unsupported-status');
+    let order;
+    try {
+      order = await env.DB.prepare(
+        'SELECT id, number, status FROM orders WHERE id = ? AND merchant = ?'
+      ).bind(orderId, row.merchant).first();
+    } catch (_) { return fail('orders-unavailable'); }
+    if (!order) return fail('order-unknown');
+    const from = clean(order.status, 16);
+    if (from === wanted) return fail(`already-${wanted}`);
+    if (!AI_ORDER_FROM[wanted].includes(from)) return fail(`bad-transition:${from}`);
+    const at = now();
+    await env.DB.prepare('UPDATE orders SET status = ?, updated_ts = ? WHERE id = ? AND merchant = ?')
+      .bind(wanted, at, orderId, row.merchant).run();
+    return update(env, row, 'completed', 'kiwi-agent',
+      { orderId, number: Number(order.number) || 0, from, status: wanted, said }, '');
+  }
+  return fail('unsupported-action');
+}
+
 async function execute(env, row, payload) {
   if (row.domain === 'device') return devices(env, row, payload);
   if (row.domain === 'notification') return notifications(env, row, payload);
   if (row.domain === 'payment') return payments(env, row, payload);
-  if (row.domain === 'ai') {
-    return update(env, row, 'pending-approval', 'kiwi-confirmation', { readOnly: true }, '');
-  }
+  if (row.domain === 'ai') return aiActions(env, row, payload);
   if (row.domain === 'accounting') return accounting(env, row, payload);
   if (row.domain === 'procurement') return procurement(env, row, payload);
   if (row.domain === 'payroll') return payroll(env, row, payload);
@@ -1831,6 +1907,32 @@ export async function onRequestGet({ request, env }) {
         })),
       });
     } catch (_) { return json({ error: 'db' }, 503); }
+  }
+  /* Les tickets, en lecture seule.  L'assistant a besoin de traduire « la 12 »
+     en `ord-…` avant de proposer quoi que ce soit, et la file de la cuisine ne
+     peut pas servir à ça : son GET marque le comptoir éveillé au passage
+     (`deskTouch`), ce qui rouvrirait la commande à distance pour les clients
+     depuis un simple écran de tableau de bord.  Ici on ne touche rien. */
+  if (clean(url.searchParams.get('view'), 24) === 'orders') {
+    const wanted = clean(url.searchParams.get('state'), 16);
+    const open = wanted === 'open';
+    try {
+      const rows = await env.DB.prepare(
+        `SELECT id, number, mode, table_no, total, status, created_ts, updated_ts
+           FROM orders WHERE merchant = ?${open ? " AND status IN ('pending','accepted','ready')" : ''}
+          ORDER BY created_ts DESC LIMIT ?`
+      ).bind(merchant, Math.max(1, Math.min(120, Number(url.searchParams.get('limit')) || 40))).all();
+      return json({ merchant, orders: ((rows && rows.results) || []).map((order) => ({
+        id: clean(order.id, 64), number: Number(order.number) || 0,
+        mode: clean(order.mode, 16), table: clean(order.table_no, 12),
+        total: Number(order.total || 0), status: clean(order.status, 16),
+        createdAt: Number(order.created_ts || 0), updatedAt: Number(order.updated_ts || 0),
+      })) });
+    } catch (_) {
+      /* La table est créée par le module des commandes, pas par `ensureSchema` :
+         une base qui n'a jamais vu de commande n'est pas une base en panne. */
+      return json({ merchant, orders: [], unavailable: true });
+    }
   }
   const domain = clean(url.searchParams.get('domain'), 32);
   const status = clean(url.searchParams.get('status'), 32);

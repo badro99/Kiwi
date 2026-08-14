@@ -131,6 +131,74 @@ for (const lang of ['fr', 'en', 'ar']) {
   } else ok(`[${lang}] ${r.pass}/${r.total} routes correct`);
 }
 
+/* ── 1b · faire avancer une commande ───────────────────────────────────────
+ * L'assistant peut proposer UNE action de bout en bout, et proposer une
+ * transition sur la mauvaise commande coûte plus cher que ne rien proposer du
+ * tout. Deux conditions doivent tenir ensemble : un verbe d'état ET un numéro
+ * précédé d'un mot qui désigne un ticket. Ce qui suit vérifie les deux sens —
+ * ce qui doit passer, et surtout ce qui ne doit pas. */
+section('Ordres de commande · lecture et refus');
+{
+  const w = load({ lang: 'fr' });
+  const parse = w.KiwiAgentOperation;
+  if (typeof parse !== 'function') {
+    fail('window.KiwiAgentOperation missing — agent.js must export the order reader');
+  } else {
+    const reads = [
+      ['accepte la commande 12', 'accepted', 12],
+      ['valide le ticket n° 4', 'accepted', 4],
+      ['refuse la commande 7', 'rejected', 7],
+      ['annule le ticket 31', 'rejected', 31],
+      ['la commande 9 est prête', 'ready', 9],
+      ['commande 15 servie', 'served', 15],
+      ['mark order 7 ready', 'ready', 7],
+      ['accept order #3', 'accepted', 3],
+      ['order 21 served', 'served', 21],
+      ['الطلب رقم 9 جاهز', 'ready', 9],
+      ['قبول الطلب 5', 'accepted', 5],
+      ['رفض الطلبية 8', 'rejected', 8],
+      ['wajda commande 6', 'ready', 6],
+      ['qbel commande 2', 'accepted', 2],
+    ];
+    let bad = [];
+    reads.forEach(([q, status, number]) => {
+      const got = parse(q);
+      if (!got || got.status !== status || got.number !== number)
+        bad.push(`"${q}" → ${got ? got.status + '/' + got.number : 'null'} ≠ ${status}/${number}`);
+    });
+    t(`${reads.length - bad.length}/${reads.length} phrases lues fr/en/ar/darija`, !bad.length, bad.slice(0, 4).join(' · '));
+
+    /* Le silence est la bonne réponse pour tout le reste. « table 3 » n'est pas
+       la commande 3, une commande qui « arrive » n'est pas un ordre, et
+       demander à VOIR les commandes ne doit rien déclencher. */
+    const silent = [
+      'table 3', 'la table 12 attend', 'combien j ai fait aujourd hui',
+      'montre les commandes', 'ouvre la commande 12', 'la commande arrive',
+      'accepte', 'j ai 12 commandes aujourd hui', 'commande 12',
+      'prête pour demain', 'add 3 cafés', 'الطاولة 3',
+    ];
+    const spoke = silent.filter((q) => parse(q));
+    t(`${silent.length - spoke.length}/${silent.length} phrases laissées tranquilles`, !spoke.length,
+      spoke.map((q) => `"${q}" a déclenché ${JSON.stringify(parse(q))}`).slice(0, 4).join(' · '));
+
+    /* Et la route : un ordre d'état doit sortir en `operation`, pas en `action`
+       (ouvrir la page Commandes serait une réponse à côté de la question). */
+    const routed = ['accepte la commande 12', 'refuse le ticket 4', 'la commande 9 est prête'];
+    const wrong = routed.filter((q) => w.KiwiAgentRoute(q) !== 'operation');
+    t('un ordre d\'état route en « operation », jamais en « action »', !wrong.length,
+      wrong.map((q) => `"${q}" → ${w.KiwiAgentRoute(q)}`).join(' · '));
+    /* …et l'inverse tient : voir les commandes reste une destination. */
+    t('« montre les commandes » reste une destination', w.KiwiAgentRoute('montre les commandes') !== 'operation',
+      'got ' + w.KiwiAgentRoute('montre les commandes'));
+
+    /* Sans KiwiOperations chargé, la carte ne doit porter aucun bouton : une
+       proposition qu'on ne peut pas exécuter est une promesse en l'air. */
+    const r = w.KiwiAgentAsk('accepte la commande 12');
+    t('aucun bouton proposé quand le moteur d\'opérations est absent', r && !r.run,
+      r && r.run ? 'a button was offered with no KiwiOperations on the page' : '');
+  }
+}
+
 /* ── 2 · multi-turn conversation + 3 · guardrail units ────────────────────── */
 section('Conversation memory & numeric guardrail');
 {

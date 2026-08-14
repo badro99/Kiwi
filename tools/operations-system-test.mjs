@@ -12,6 +12,7 @@ const browserSource = fs.readFileSync(new URL('../assets/operations.js', import.
 const uiSource = fs.readFileSync(new URL('../assets/operations-ui.js', import.meta.url), 'utf8');
 const apiSource = fs.readFileSync(new URL('../functions/api/operations.js', import.meta.url), 'utf8');
 const teamSource = fs.readFileSync(new URL('../assets/team.js', import.meta.url), 'utf8');
+const agentSource = fs.readFileSync(new URL('../assets/agent.js', import.meta.url), 'utf8');
 const sw = fs.readFileSync(new URL('../kiwi-sw.js', import.meta.url), 'utf8');
 const pages = ['dashboard.html', 'kiwi-caisse.html', 'kiwi-serveur.html']
   .map((name) => fs.readFileSync(new URL('../' + name, import.meta.url), 'utf8'));
@@ -119,8 +120,13 @@ const staffAtTill = staffCookie + '; ' + tillCookie;
 const staffReprint = await post(staffAtTill, command({ id: 'op:emp-print-01', idempotencyKey: 'op:emp-print-01', domain: 'ai', action: 'reprint', payload: { orderId: '260812-0001-UE' } }));
 ok(staffReprint.status === 409 && staffReprint.data.error === 'confirmation-required', 'a cashier holds action:reprint but still must confirm it');
 
+/* Le domaine `ai` avait un jeu d'actions et pas de moteur : n'importe quelle
+   demande restait « pending-approval » pour toujours, ce que l'ancienne
+   assertion prenait pour de la prudence. Maintenant qu'un moteur existe, une
+   action dictée sans la phrase qui l'a dictée est refusée : un ordre venu de
+   l'assistant doit pouvoir répondre à « pourquoi ceci s'est-il produit ». */
 const staffReprintOk = await post(staffAtTill, command({ id: 'op:emp-print-01', idempotencyKey: 'op:emp-print-01', domain: 'ai', action: 'reprint', confirmed: true, payload: { orderId: '260812-0001-UE' } }));
-ok(staffReprintOk.status === 200 && staffReprintOk.data.command.status === 'pending-approval', 'a confirmed reprint is staged, never silently executed');
+ok(staffReprintOk.status === 200 && staffReprintOk.data.command.status === 'failed' && staffReprintOk.data.command.lastError === 'intent-required', 'an assistant action with no recorded sentence is refused, not staged forever');
 
 const staffMessage = await post(staffAtTill, command({ id: 'op:emp-msg-0001', idempotencyKey: 'op:emp-msg-0001', domain: 'notification', action: 'send-whatsapp', confirmed: true, payload: { to: '+212600000000' } }));
 ok(staffMessage.status === 403 && staffMessage.data.error === 'permission-denied', 'the roster role, not the pairing, decides what a cashier may do');
@@ -772,6 +778,151 @@ ok(ntView.data.deliveries.length > 0
 
 notifier.close();
 
+/* ── L'assistant : ce qu'une phrase dictée a le droit de faire ─────────────── */
+
+const ai = (id, action, payload) => command({ id, idempotencyKey: id, domain: 'ai', action, confirmed: true, payload });
+
+const aiUnknownAction = await post(ownerCookie, command({ id: 'op:ai-x-01', idempotencyKey: 'op:ai-x-01', domain: 'ai', action: 'close-the-shop', confirmed: true, payload: { said: 'ferme la boutique' } }));
+ok(aiUnknownAction.status === 400 && aiUnknownAction.data.error === 'unsupported-action',
+  'the assistant may only ask for the four actions the Worker names, whatever the sentence says');
+
+/* La table des commandes appartient au module de la salle, pas au schéma des
+   opérations : une base qui n'a jamais pris de commande n'est pas une base en
+   panne, et l'assistant doit le dire ainsi plutôt que de prétendre au succès. */
+const aiNoTable = await post(ownerCookie, ai('op:ai-ord-00', 'update-order-status', { said: 'valide la 12', orderId: 'ord-260814-0001', status: 'accepted' }));
+ok(aiNoTable.data.command.status === 'failed' && aiNoTable.data.command.lastError === 'orders-unavailable',
+  'a merchant whose orders table was never created gets a named refusal, not a false confirmation');
+
+const aiNoView = await get(ownerCookie, `?merchant=${MERCHANT}&view=orders`);
+ok(aiNoView.status === 200 && aiNoView.data.unavailable === true && aiNoView.data.orders.length === 0,
+  'the read degrades to an empty, explicitly-unavailable list rather than a 500');
+
+db.exec(`
+  CREATE TABLE orders (
+    id TEXT PRIMARY KEY, merchant TEXT NOT NULL, number INTEGER NOT NULL,
+    mode TEXT NOT NULL, table_no TEXT, total INTEGER NOT NULL, lines TEXT NOT NULL,
+    status TEXT NOT NULL, created_ts INTEGER NOT NULL, updated_ts INTEGER NOT NULL
+  );
+`);
+const seedOrder = (id, number, table, status, total, ts) => db.prepare(
+  'INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status, created_ts, updated_ts) VALUES (?,?,?,?,?,?,?,?,?,?)'
+).run(id, MERCHANT, number, table ? 'table' : 'takeout', table || '', total, '[]', status, ts, ts);
+seedOrder('ord-260814-0001', 12, '12', 'pending', 214, 1786600000000);
+seedOrder('ord-260814-0002', 13, '4', 'ready', 131, 1786600001000);
+seedOrder('ord-260814-0003', 14, '', 'served', 102, 1786600002000);
+/* Le ticket d'un autre commerçant porte le même numéro de table : c'est
+   exactement la collision que le filtre par locataire doit absorber. */
+db.prepare('INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status, created_ts, updated_ts) VALUES (?,?,?,?,?,?,?,?,?,?)')
+  .run('ord-260814-9999', OTHER, 12, 'table', '12', 999, '[]', 'pending', 1786600003000, 1786600003000);
+
+const aiAccept = await post(staffAtTill, ai('op:ai-ord-01', 'update-order-status', { said: 'valide la commande 12', orderId: 'ord-260814-0001', status: 'accepted' }));
+ok(aiAccept.status === 200 && aiAccept.data.command.status === 'completed'
+  && aiAccept.data.command.result.from === 'pending' && aiAccept.data.command.result.status === 'accepted'
+  && aiAccept.data.command.result.number === 12 && aiAccept.data.command.result.said === 'valide la commande 12',
+  'a cashier can move a ticket by voice, and the ticket carries the sentence that moved it');
+
+ok(db.prepare('SELECT status FROM orders WHERE id = ?').get('ord-260814-0001').status === 'accepted',
+  'the order row itself changed — the command did not merely report a change');
+
+const aiAgain = await post(staffAtTill, ai('op:ai-ord-02', 'update-order-status', { said: 'valide la 12', orderId: 'ord-260814-0001', status: 'accepted' }));
+ok(aiAgain.data.command.status === 'failed' && aiAgain.data.command.lastError === 'already-accepted',
+  'asking twice for the same state is named as such, never replayed as a second acceptance');
+
+const aiBack = await post(staffAtTill, ai('op:ai-ord-03', 'update-order-status', { said: 'accepte la 14', orderId: 'ord-260814-0003', status: 'accepted' }));
+ok(aiBack.data.command.status === 'failed' && aiBack.data.command.lastError === 'bad-transition:served',
+  'a served ticket cannot be walked backwards into acceptance by a sentence');
+
+const aiReady = await post(staffAtTill, ai('op:ai-ord-04', 'update-order-status', { said: 'la 13 est servie', orderId: 'ord-260814-0002', status: 'served' }));
+ok(aiReady.data.command.status === 'completed' && aiReady.data.command.result.from === 'ready',
+  'a ready ticket can be served');
+
+const aiGhost = await post(staffAtTill, ai('op:ai-ord-05', 'update-order-status', { said: 'valide la 99', orderId: 'ord-260814-0404', status: 'accepted' }));
+ok(aiGhost.data.command.status === 'failed' && aiGhost.data.command.lastError === 'order-unknown',
+  'an order nobody has is unknown, not created on the way past');
+
+const aiStranger = await post(staffAtTill, ai('op:ai-ord-06', 'update-order-status', { said: 'valide la 12', orderId: 'ord-260814-9999', status: 'accepted' }));
+ok(aiStranger.data.command.status === 'failed' && aiStranger.data.command.lastError === 'order-unknown',
+  "another merchant's ticket is unknown here, whatever its identifier");
+
+const aiNoId = await post(staffAtTill, ai('op:ai-ord-07', 'update-order-status', { said: 'valide la commande', status: 'accepted' }));
+ok(aiNoId.data.command.status === 'failed' && aiNoId.data.command.lastError === 'order-id-required',
+  'a sentence that names no ticket is refused rather than applied to the newest one');
+
+const aiBadStatus = await post(staffAtTill, ai('op:ai-ord-08', 'update-order-status', { said: 'facture la 13', orderId: 'ord-260814-0002', status: 'facturee' }));
+ok(aiBadStatus.data.command.status === 'failed' && aiBadStatus.data.command.lastError === 'unsupported-status',
+  'only the four states of the kitchen board are reachable by voice');
+
+const aiTillOrder = await post(tillCookie, ai('op:ai-ord-09', 'update-order-status', { said: 'valide la 12', orderId: 'ord-260814-0001', status: 'served' }));
+ok(aiTillOrder.status === 403 && aiTillOrder.data.error === 'permission-denied',
+  'a pairing cookie is a counter, not a cashier: it cannot move anyone else’s ticket');
+
+/* Réimpression : le même prédicat qui allume l'alarme de parc refuse le
+   travail, et l'exécution revient à l'appareil qui l'a demandée. */
+const aiPrint = await post(staffAtTill, ai('op:ai-print-01', 'reprint', { said: 'réimprime le dernier ticket', deviceId: 'dev-till-01' }));
+ok(aiPrint.data.command.status === 'processing' && aiPrint.data.command.provider === 'local-device'
+  && aiPrint.data.command.result.instruction === 'execute-on-requesting-device',
+  'a reprint is handed back to the device that asked for it, never executed in the cloud');
+
+const aiPrintNoDevice = await post(staffAtTill, ai('op:ai-print-02', 'reprint', { said: 'réimprime' }));
+ok(aiPrintNoDevice.data.command.status === 'failed' && aiPrintNoDevice.data.command.lastError === 'device-id-required',
+  'a reprint with no printer named is refused rather than broadcast to the whole fleet');
+
+const aiPrintGhost = await post(staffAtTill, ai('op:ai-print-03', 'reprint', { said: 'réimprime', deviceId: 'dev-never-seen' }));
+ok(aiPrintGhost.data.command.status === 'failed' && aiPrintGhost.data.command.lastError === 'device-unknown',
+  'a device that never reported in cannot be promised a job');
+
+const aiPrintBlocked = await post(staffAtTill, ai('op:ai-print-04', 'reprint', { said: 'réimprime', deviceId: 'dev-caisse-03' }));
+ok(aiPrintBlocked.data.command.status === 'blocked' && aiPrintBlocked.data.command.lastError === 'printer-unreachable',
+  'promising a reprint to an unreachable printer would be a lie, so it is blocked');
+
+/* Déléguer : l'ordre dicté passe par le moteur qui fait déjà ce travail pour
+   un humain, invariants compris — il n'existe pas de deuxième numérotation de
+   bon d'achat ni de deuxième journal d'envois. */
+const aiPo = await post(managerAtTill, ai('op:ai-po-01', 'create-po', {
+  said: 'commande 10 kg de café chez Atlas', supplier: 'Atlas Torréfaction',
+  lines: [{ sku: 'CAFE-1KG', label: 'Café en grains 1 kg', qty: 10, unitPrice: 120 }],
+}));
+ok(aiPo.data.command.status === 'draft' && /^BC-\d{4}-000003$/.test(aiPo.data.command.result.number)
+  && aiPo.data.command.result.totalCents === 120000
+  && poRow(aiPo.data.command.result.number).supplier === 'Atlas Torréfaction',
+  'a purchase order dictated to the assistant takes the next rank in the same book as a typed one — and lands as a draft, not as an order already sent');
+
+const aiPoNoSupplier = await post(managerAtTill, ai('op:ai-po-02', 'create-po', { said: 'commande du café', lines: [{ sku: 'CAFE-1KG', qty: 1, unitPrice: 1 }] }));
+ok(aiPoNoSupplier.data.command.status === 'failed' && aiPoNoSupplier.data.command.lastError === 'supplier-required',
+  'the delegated engine keeps its own refusals: no supplier, no purchase order');
+
+const aiMessage = await post(managerAtTill, ai('op:ai-msg-01', 'message-customer', { said: 'préviens la table 4', phone: '+212600000009', text: 'Votre table est prête' }));
+ok(aiMessage.data.command.status === 'blocked' && aiMessage.data.command.lastError === 'provider-unconfigured',
+  'a dictated message goes through the notification engine, so an absent provider blocks it instead of faking a send');
+
+const aiSilent = await post(managerAtTill, command({ id: 'op:ai-msg-02', idempotencyKey: 'op:ai-msg-02', domain: 'ai', action: 'message-customer', confirmed: true, payload: { phone: '+212600000009', text: 'Bonjour' } }));
+ok(aiSilent.data.command.status === 'failed' && aiSilent.data.command.lastError === 'intent-required',
+  'the sentence is required before delegation, not after: nothing leaves without a recorded reason');
+
+const aiView = await get(ownerCookie, `?merchant=${MERCHANT}&view=orders&limit=10`);
+ok(aiView.status === 200 && !aiView.data.unavailable && aiView.data.orders.length === 3
+  && aiView.data.orders[0].id === 'ord-260814-0003' && aiView.data.orders[0].table === ''
+  && aiView.data.orders[2].number === 12 && aiView.data.orders[2].status === 'accepted',
+  'the read lists this merchant’s tickets newest-first, with the state the assistant just wrote');
+
+const aiOpen = await get(ownerCookie, `?merchant=${MERCHANT}&view=orders&state=open`);
+ok(aiOpen.data.orders.length === 1 && aiOpen.data.orders[0].id === 'ord-260814-0001',
+  'the open view keeps what the kitchen still owes and drops what is served');
+
+const aiViewTill = await get(tillCookie, `?merchant=${MERCHANT}&view=orders`);
+ok(aiViewTill.status === 403 && aiViewTill.data.error === 'owner-session-required',
+  'the ticket reader is a console read, not something a pairing cookie can enumerate');
+
+/* Le locataire est décidé par la session, pas par la requête : demander la
+   maison d'à côté ne la lit pas, cela relit la sienne. Le ticket semé sous
+   `OTHER` porte le même numéro de table que le nôtre — il ne doit jamais
+   apparaître ici. */
+const aiViewStranger = await get(ownerCookie, `?merchant=${OTHER}&view=orders`);
+ok((aiViewStranger.status === 401)
+  || (aiViewStranger.status === 200 && aiViewStranger.data.merchant === MERCHANT
+      && !aiViewStranger.data.orders.some((order) => order.id === 'ord-260814-9999')),
+  "one merchant cannot read another merchant's tickets");
+
 /* ── Browser: the client contract, simulated ──────────────────────────────── */
 
 const registrations = {};
@@ -834,6 +985,28 @@ ok(heartbeat.ok === true && sent.at(-1).body.domain === 'device', 'paired app ca
 
 await context.window.KiwiOperations.list({ domain: 'device', limit: 2 });
 ok(sent.at(-1).url.includes('merchant=amira-boutique') && sent.at(-1).url.includes('domain=device'), 'history reads are explicitly tenant and domain scoped');
+
+/* L'assistant, côté navigateur : il lit les tickets par la porte en lecture
+   seule, et tout ce qu'il déclenche emporte la phrase qui l'a déclenché. */
+role = 'owner';
+await context.window.KiwiOperations.orders({ open: true, limit: 5 });
+ok(sent.at(-1).url.includes('view=orders') && sent.at(-1).url.includes('state=open')
+  && sent.at(-1).url.includes('merchant=amira-boutique') && !sent.at(-1).url.includes('/api/order/queue'),
+  'the assistant reads tickets through the read-only view, never through the kitchen queue that wakes the counter');
+await context.window.KiwiOperations.agentRun('update-order-status', { orderId: 'ord-260814-0001', status: 'accepted' }, 'valide la commande 12');
+ok(sent.at(-1).body.domain === 'ai' && sent.at(-1).body.confirmed === true
+  && sent.at(-1).body.payload.said === 'valide la commande 12' && sent.at(-1).body.payload.orderId === 'ord-260814-0001',
+  'a dictated action leaves the browser already confirmed and carrying its sentence');
+ok(context.window.KiwiOperations.agentAllowed('update-order-status') === true, 'the client can tell in advance whether this seat may dictate the action');
+role = 'cashier';
+ok(context.window.KiwiOperations.agentAllowed('create-po') === false, 'a cashier is told no before the assistant offers the button, not after the server refuses');
+role = 'owner';
+
+/* La carte de proposition : rien ne part sans un deuxième geste, et le bouton
+   se désarme avant l'envoi pour qu'un double clic ne fasse pas deux ordres. */
+ok(agentSource.includes('data-fa-run') && agentSource.includes('data-fa-said') && agentSource.includes('KiwiOperations'),
+  'the assistant proposes the action as a card wired to the real command API');
+ok(agentSource.includes('window.KiwiAgentOperation'), 'the order reader is exposed so the gate can assert the sentence was read, not just answered');
 
 ok(teamSource.includes("new Blob([content], { type: 'text/csv;charset=utf-8' })") && teamSource.includes("window.KiwiOperations?.create?.('payroll', 'export-payroll'"), 'payroll button downloads a real CSV and records its hand-off');
 ok(uiSource.includes("O.create('payment', 'create-link'") && !uiSource.includes('kiwi-pay.ma/'), 'payment UI calls the provider workflow and invents no URL');
