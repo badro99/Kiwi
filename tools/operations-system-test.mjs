@@ -1246,6 +1246,26 @@ ok(/blocked: \['cancelled'\],\s*\n\s*failed: \['cancelled'\],/.test(uiSource),
 ok(uiSource.includes("O.allowed('payroll', 'export')") && uiSource.includes('cmDenied'),
   'the register is gated client-side on a permission only the owner holds, mirroring the server');
 
+/* Consoles — un panneau opérationnel est une vue de tiroir, pas une bande de
+   landing page. Le test protège l'erreur qui ajoutait 192 px de vide à chaque
+   onglet, ainsi que les garde-fous téléphone et thème qui l'accompagnent. */
+ok(uiSource.includes('.ops-acct-pane,.ops-proc-pane,.ops-pay-pane,.ops-lk-pane{display:none;padding:0;margin:0;}'),
+  'operational panes reset the global section spacing instead of opening behind a blank band');
+ok(uiSource.includes(':not([data-kw-lens])') && uiSource.includes('background:var(--inverse-surface);color:var(--inverse-ink);'),
+  'the selected operational tab stays legible when the optional liquid lens is unavailable');
+ok(uiSource.includes('overflow-x:auto;overscroll-behavior-inline:contain') && uiSource.includes('min-width:560px'),
+  'wide operational books scroll inside their frame rather than widening a phone page');
+ok(uiSource.includes('<div class="ops-nt-scroll"><table class="ops-nt-log">') && uiSource.includes('.ops-nt-scroll{max-width:100%;overflow-x:auto;'),
+  'the notification journal has its own horizontal scroller on a phone');
+ok(uiSource.includes('@media (max-width:420px)') && uiSource.includes('.ops-proc-line,.ops-pay-line{grid-template-columns:1fr;'),
+  'dense purchase and payroll entry rows become one-column touch cards at 320 pixels');
+ok(uiSource.includes('.ops-acct .kb,.ops-proc .kb,.ops-pay .kb,.ops-lk .kb,.ops-dv .kb,.ops-cm .kb{min-height:44px;}'),
+  'every operational action keeps a thumb-sized target on a phone');
+ok(uiSource.includes('function revealActiveTab(root)') && uiSource.includes("active.scrollIntoView({ block:'nearest', inline:'nearest' })"),
+  'a selected operational tab is brought fully into view instead of remaining clipped at the phone edge');
+ok(!uiSource.includes('color:#B4381F') && !uiSource.includes('color:#8A6A12'),
+  'operational alerts use theme-aware semantic tokens instead of light-only literals');
+
 /* Version-agnostic on purpose: a cache-stamp bump is how a fix ships, so the
    gate must assert the script is wired, never which generation it is on. */
 pages.forEach((page, i) => ok(/assets\/operations\.js\?v=\d+/.test(page), `operational shell ${i + 1} loads the command client`));

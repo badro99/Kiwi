@@ -654,12 +654,19 @@
       style.textContent = [
         /* `ops-pay-*` appartient déjà à la paie : les liens de paiement prennent
            leur propre préfixe `ops-lk-*` et s'ajoutent aux listes partagées. */
-        '.ops-acct,.ops-proc,.ops-pay,.ops-lk,.ops-dv,.ops-cm{padding:22px 26px 46px;max-width:1000px;margin:0 auto;}',
-        '.ops-acct-tabs,.ops-proc-tabs,.ops-pay-tabs,.ops-lk-tabs,.ops-cm-tabs{display:inline-flex;gap:2px;padding:4px;border-radius:999px;background:var(--n-100);border:1px solid var(--n-200);margin-bottom:22px;}',
-        '.ops-acct-tab,.ops-proc-tab,.ops-pay-tab,.ops-lk-tab,.ops-cm-tab{appearance:none;border:0;background:transparent;font:inherit;font-size:12.5px;font-weight:600;color:var(--n-500);padding:8px 18px;border-radius:999px;cursor:pointer;transition:color .2s;}',
-        /* liquid-lens paints the pill; the button must not paint one under it. */
-        '.ops-acct-tab.on,.ops-proc-tab.on,.ops-pay-tab.on,.ops-lk-tab.on,.ops-cm-tab.on{background:transparent;color:#fff;}',
-        '.ops-acct-pane,.ops-proc-pane,.ops-pay-pane,.ops-lk-pane{display:none;}',
+        '.ops-acct,.ops-proc,.ops-pay,.ops-lk,.ops-dv,.ops-cm{box-sizing:border-box;padding:22px 26px max(46px,calc(env(safe-area-inset-bottom) + 24px));max-width:1000px;margin:0 auto;}',
+        '.ops-acct-tabs,.ops-proc-tabs,.ops-pay-tabs,.ops-lk-tabs,.ops-cm-tabs{display:flex;width:fit-content;max-width:100%;box-sizing:border-box;gap:2px;padding:4px;border-radius:999px;background:var(--n-100);border:1px solid var(--n-200);margin-bottom:22px;overflow-x:auto;overscroll-behavior-inline:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none;}',
+        '.ops-acct-tabs::-webkit-scrollbar,.ops-proc-tabs::-webkit-scrollbar,.ops-pay-tabs::-webkit-scrollbar,.ops-lk-tabs::-webkit-scrollbar,.ops-cm-tabs::-webkit-scrollbar{display:none;}',
+        '.ops-acct-tab,.ops-proc-tab,.ops-pay-tab,.ops-lk-tab,.ops-cm-tab{flex:0 0 auto;appearance:none;border:0;background:transparent;font:inherit;font-size:12.5px;font-weight:600;color:var(--n-500);min-height:36px;padding:8px 18px;border-radius:999px;cursor:pointer;transition:color .2s,background-color .2s;}',
+        /* Fallback first: the active tab stays readable even when the optional
+           liquid lens is late or unavailable. Once attached, the lens carries
+           the fill and this button becomes transparent again. */
+        '.ops-acct-tabs:not([data-kw-lens]) .ops-acct-tab.on,.ops-proc-tabs:not([data-kw-lens]) .ops-proc-tab.on,.ops-pay-tabs:not([data-kw-lens]) .ops-pay-tab.on,.ops-lk-tabs:not([data-kw-lens]) .ops-lk-tab.on,.ops-cm-tabs:not([data-kw-lens]) .ops-cm-tab.on{background:var(--inverse-surface);color:var(--inverse-ink);}',
+        '.ops-acct-tabs[data-kw-lens] .ops-acct-tab.on,.ops-proc-tabs[data-kw-lens] .ops-proc-tab.on,.ops-pay-tabs[data-kw-lens] .ops-pay-tab.on,.ops-lk-tabs[data-kw-lens] .ops-lk-tab.on,.ops-cm-tabs[data-kw-lens] .ops-cm-tab.on{background:transparent;color:var(--inverse-ink);}',
+        /* These are semantic sections, but they are drawer panes rather than
+           landing-page bands. Reset the global `section { padding:96px 0 }` or
+           every tab opens behind a large, empty block. */
+        '.ops-acct-pane,.ops-proc-pane,.ops-pay-pane,.ops-lk-pane{display:none;padding:0;margin:0;}',
         '.ops-acct-pane.on,.ops-proc-pane.on,.ops-pay-pane.on,.ops-lk-pane.on{display:block;}',
         '.ops-acct-hint,.ops-proc-hint,.ops-pay-hint,.ops-lk-hint,.ops-dv-hint,.ops-cm-hint{font-size:12px;color:var(--n-500);margin:0 0 14px;max-width:62ch;line-height:1.55;}',
         '.ops-acct-confirm,.ops-lk-confirm,.ops-cm-confirm{display:flex;align-items:flex-start;gap:9px;font-size:12.5px;color:var(--n-500);margin-top:14px;cursor:pointer;}',
@@ -670,8 +677,8 @@
         '.ops-acct-kpi .k,.ops-proc-kpi .k,.ops-pay-kpi .k,.ops-lk-kpi .k,.ops-dv-kpi .k,.ops-cm-kpi .k{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--n-500);}',
         '.ops-acct-kpi .v,.ops-proc-kpi .v,.ops-pay-kpi .v,.ops-lk-kpi .v,.ops-dv-kpi .v,.ops-cm-kpi .v{font-size:17px;font-weight:600;margin-top:3px;font-variant-numeric:tabular-nums;}',
         '.ops-acct-doc,.ops-proc-num,.ops-pay-num,.ops-lk-num{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:18px;letter-spacing:.02em;}',
-        '.ops-acct-scroll,.ops-proc-scroll,.ops-pay-scroll,.ops-lk-scroll{overflow-x:auto;max-height:50vh;overflow-y:auto;margin-top:12px;}',
-        '.ops-acct-table,.ops-proc-table,.ops-pay-table{width:100%;border-collapse:collapse;font-size:12.5px;}',
+        '.ops-acct-scroll,.ops-proc-scroll,.ops-pay-scroll,.ops-lk-scroll{overflow:auto;max-height:50vh;margin-top:12px;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-color:var(--n-300) transparent;}',
+        '.ops-acct-table,.ops-proc-table,.ops-pay-table{width:100%;min-width:560px;border-collapse:collapse;font-size:12.5px;}',
         '.ops-acct-table th,.ops-proc-table th,.ops-pay-table th{text-align:start;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--n-500);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--n-200);position:sticky;top:0;background:var(--surface);}',
         '.ops-acct-table td,.ops-proc-table td,.ops-pay-table td{padding:8px 10px;border-bottom:1px solid var(--n-100);}',
         '.ops-acct-n,.ops-proc-n,.ops-pay-n,.ops-lk-n{text-align:end;font-variant-numeric:tabular-nums;white-space:nowrap;}',
@@ -683,7 +690,7 @@
         '.ops-proc-line input{width:100%;box-sizing:border-box;}',
         '.ops-proc-line.n .l{visibility:hidden;}',
         '@media (max-width:720px){.ops-proc-line{grid-template-columns:1fr 1fr;}.ops-proc-line.n .l{visibility:visible;}}',
-        '.ops-proc-rm,.ops-pay-rm{appearance:none;border:1px solid var(--n-200);background:transparent;color:var(--n-500);border-radius:9px;height:34px;width:34px;cursor:pointer;font-size:15px;line-height:1;}',
+        '.ops-proc-rm,.ops-pay-rm{appearance:none;border:1px solid var(--n-200);background:transparent;color:var(--n-500);border-radius:9px;height:44px;width:44px;cursor:pointer;font-size:15px;line-height:1;}',
         '.ops-proc-rm:hover,.ops-pay-rm:hover{color:var(--ink);border-color:var(--n-300);}',
         '.ops-proc-total,.ops-pay-total{display:flex;justify-content:space-between;align-items:baseline;margin-top:14px;padding-top:12px;border-top:1px solid var(--n-200);}',
         '.ops-proc-total .k,.ops-pay-total .k{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--n-500);}',
@@ -733,6 +740,7 @@
         '.ops-nt-log td{padding:6px 12px 6px 0;border-top:1px solid var(--n-100);vertical-align:top;}',
         '.ops-nt-log td.s-failed,.ops-nt-log td.s-skipped{color:var(--n-500);}',
         '.ops-nt-log td.s-sent{color:var(--atlas);}',
+        '.ops-nt-scroll{max-width:100%;overflow-x:auto;overscroll-behavior-inline:contain;-webkit-overflow-scrolling:touch;scrollbar-color:var(--n-300) transparent;}',
         '.ops-nt-send{display:grid;grid-template-columns:1.6fr auto;gap:8px;align-items:end;margin-top:10px;}',
         '.ops-nt-send label{display:block;min-width:0;}',
         '.ops-nt-send .l{display:block;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--n-500);margin-bottom:4px;}',
@@ -747,7 +755,7 @@
         '.ops-dv-app{font-size:12.5px;color:var(--n-500);}',
         '.ops-dv-state{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;font-weight:600;padding:3px 9px;border-radius:999px;border:1px solid var(--n-200);color:var(--n-500);}',
         '.ops-dv-state.ok{color:var(--atlas);border-color:color-mix(in srgb,var(--atlas) 34%,transparent);}',
-        '.ops-dv-state.bad{color:#B4381F;border-color:color-mix(in srgb,#B4381F 34%,transparent);}',
+        '.ops-dv-state.bad{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 34%,transparent);}',
         '.ops-dv-state.acked{color:var(--n-500);border-style:dashed;}',
         '.ops-dv-meta{display:flex;flex-wrap:wrap;gap:18px;margin-top:10px;}',
         '.ops-dv-meta div .k{display:block;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--n-500);}',
@@ -763,15 +771,52 @@
         '.ops-cm-act{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12.5px;color:var(--n-500);letter-spacing:.02em;overflow-wrap:anywhere;}',
         '.ops-cm-state{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;font-weight:600;padding:3px 9px;border-radius:999px;border:1px solid var(--n-200);color:var(--n-500);}',
         '.ops-cm-state.ok{color:var(--atlas);border-color:color-mix(in srgb,var(--atlas) 34%,transparent);}',
-        '.ops-cm-state.bad{color:#B4381F;border-color:color-mix(in srgb,#B4381F 34%,transparent);}',
-        '.ops-cm-state.wait{color:#8A6A12;border-color:color-mix(in srgb,#8A6A12 34%,transparent);}',
+        '.ops-cm-state.bad{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 34%,transparent);}',
+        '.ops-cm-state.wait{color:var(--warn-ink);border-color:color-mix(in srgb,var(--warning) 40%,transparent);}',
         '.ops-cm-meta{display:flex;flex-wrap:wrap;gap:18px;margin-top:10px;}',
         '.ops-cm-meta div .k{display:block;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--n-500);}',
         '.ops-cm-meta div .v{font-size:13px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere;}',
         '.ops-cm-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;}',
-        '.ops-cm-why{display:block;width:100%;max-width:420px;margin-top:12px;padding:9px 11px;border:1px solid var(--n-200);border-radius:10px;background:var(--paper);font:inherit;font-size:12.5px;color:inherit;}',
+        '.ops-cm-why{display:block;box-sizing:border-box;width:100%;max-width:420px;min-height:44px;margin-top:12px;padding:9px 11px;border:1px solid var(--n-200);border-radius:10px;background:var(--surface);font:inherit;font-size:12.5px;color:var(--ink);}',
+        /* The operational drawers are used on phones in the aisle, at the till
+           and beside a printer. Controls remain thumb-sized; wide books scroll
+           inside their own frame instead of widening the whole document. */
+        '@media (max-width:720px){',
+          '.ops-acct,.ops-proc,.ops-pay,.ops-lk,.ops-dv,.ops-cm{padding:16px 16px max(34px,calc(env(safe-area-inset-bottom) + 18px));}',
+          '.ops-acct-tabs,.ops-proc-tabs,.ops-pay-tabs,.ops-lk-tabs,.ops-cm-tabs{margin-bottom:16px;}',
+          '.ops-acct-tab,.ops-proc-tab,.ops-pay-tab,.ops-lk-tab,.ops-cm-tab{min-height:44px;padding:9px 16px;}',
+          '.ops-acct .kb,.ops-proc .kb,.ops-pay .kb,.ops-lk .kb,.ops-dv .kb,.ops-cm .kb{min-height:44px;}',
+          '.ops-acct-kpis,.ops-proc-kpis,.ops-pay-kpis,.ops-lk-kpis,.ops-dv-kpis,.ops-cm-kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}',
+          '.ops-acct-kpi,.ops-proc-kpi,.ops-pay-kpi,.ops-lk-kpi,.ops-dv-kpi,.ops-cm-kpi{min-width:0;}',
+          '.ops-acct-scroll,.ops-proc-scroll,.ops-pay-scroll,.ops-lk-scroll{max-height:58vh;padding-bottom:5px;}',
+          '.ops-lk-btns .kb,.ops-dv-btns .kb,.ops-cm-btns .kb{min-height:44px;}',
+          '.ops-dv-meta,.ops-cm-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}',
+          '.ops-nt-chip{min-height:44px;padding:8px 14px;}',
+          '.ops-nt-row{overflow-x:auto;overscroll-behavior-inline:contain;-webkit-overflow-scrolling:touch;}',
+          '.ops-nt-log{min-width:560px;}',
+        '}',
+        '@media (max-width:420px){',
+          '.ops-acct,.ops-proc,.ops-pay,.ops-lk,.ops-dv,.ops-cm{padding-left:12px;padding-right:12px;}',
+          '.ops-acct-tab,.ops-proc-tab,.ops-pay-tab,.ops-lk-tab,.ops-cm-tab{font-size:11.5px;padding-left:10px;padding-right:10px;}',
+          '.ops-proc-line,.ops-pay-line{grid-template-columns:1fr;padding:12px;border:1px solid var(--n-200);border-radius:12px;background:var(--surface);}',
+          '.ops-proc-line.n .l,.ops-pay-line.n .l{visibility:visible;}',
+          '.ops-proc-rm,.ops-pay-rm{width:100%;}',
+          '.ops-acct-kpis,.ops-proc-kpis,.ops-pay-kpis,.ops-lk-kpis,.ops-dv-kpis,.ops-cm-kpis{grid-template-columns:1fr 1fr;}',
+          '.ops-lk-btns .kb,.ops-dv-btns .kb,.ops-cm-btns .kb{flex:1 1 100%;justify-content:center;}',
+          '.ops-dv-meta,.ops-cm-meta{grid-template-columns:1fr;}',
+        '}',
       ].join('\n');
       document.head.appendChild(style);
+    }
+    function revealActiveTab(root) {
+      function reveal() {
+        var active = root && root.querySelector('[data-lens-item].on');
+        if (active && active.scrollIntoView) active.scrollIntoView({ block:'nearest', inline:'nearest' });
+      }
+      requestAnimationFrame(reveal);
+      if (root) root.addEventListener('click', function (event) {
+        if (event.target.closest('[data-lens-item]')) requestAnimationFrame(reveal);
+      });
     }
     function acctPane(id, on, inner) {
       return '<section class="ops-acct-pane' + (on ? ' on' : '') + '" data-acct-pane="' + id + '">' + inner + '</section>';
@@ -822,6 +867,7 @@
         '</div>';
       var res = Kiwi.drawer({ title:c.acctTitle, subtitle:c.acctSub, body:body, fullpage:true });
       var root = res.el;
+      revealActiveTab(root);
       var lastJournal = null;
 
       root.addEventListener('click', function (event) {
@@ -989,6 +1035,7 @@
 
       var res = Kiwi.drawer({ title:c.procTitle, subtitle:c.procSub, body:body, fullpage:true });
       var root = res.el;
+      revealActiveTab(root);
 
       function rows() { return Array.prototype.slice.call(root.querySelectorAll('[data-po-line]')); }
       function retotal() {
@@ -1217,6 +1264,7 @@
 
       var res = Kiwi.drawer({ title:c.payTitle, subtitle:c.paySub, body:body, fullpage:true });
       var root = res.el;
+      revealActiveTab(root);
       var loaded = null;
 
       function rows() { return Array.prototype.slice.call(root.querySelectorAll('[data-py-line]')); }
@@ -1462,6 +1510,7 @@
 
       var res = Kiwi.drawer({ title:c.lkTitle, subtitle:c.lkSub, body:body, fullpage:true });
       var root = res.el;
+      revealActiveTab(root);
 
       /* Deux droits distincts : envoyer un message, et régler par quel canal la
          maison écrit.  Un rôle de salle peut avoir le premier sans le second. */
@@ -1595,7 +1644,7 @@
       }
       function ntLog(list) {
         if (!list.length) return '<p class="ops-lk-hint" style="margin-top:10px">' + esc(c.ntEmpty) + '</p>';
-        return '<table class="ops-nt-log"><thead><tr>' +
+        return '<div class="ops-nt-scroll"><table class="ops-nt-log"><thead><tr>' +
             '<th>' + esc(c.ntCol.kind) + '</th><th>' + esc(c.ntCol.channel) + '</th>' +
             '<th>' + esc(c.ntCol.status) + '</th><th>' + esc(c.ntCol.reason) + '</th>' +
           '</tr></thead><tbody>' +
@@ -1606,7 +1655,7 @@
               '<td class="s-' + esc(d.status) + '">' + esc(c.ntStatus[d.status] || d.status) + '</td>' +
               '<td>' + esc(ntReason(d.reason)) + '</td>' +
             '</tr>';
-          }).join('') + '</tbody></table>';
+          }).join('') + '</tbody></table></div>';
       }
       async function loadNotify() {
         var host = root.querySelector('[data-nt-book]');
@@ -1971,6 +2020,7 @@
 
       var res = Kiwi.drawer({ title:c.cmTitle, subtitle:c.cmSub, body:body, fullpage:true });
       var root = res.el;
+      revealActiveTab(root);
       var host = root.querySelector('[data-cm-list]');
       var rows = [];
 
