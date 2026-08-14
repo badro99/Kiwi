@@ -263,7 +263,11 @@
         if (!row) break;
         try { await send(row.payload); await O.acknowledge(row.id, row.leaseToken); }
         catch (error) {
-          var permanent = !!(error && error.status && error.status >= 400 && error.status < 500);
+          /* 429 n'est pas un refus, c'est un « plus tard ».  La classer parmi
+             les 4xx permanentes jetait une commande que le serveur promet
+             d'accepter à la fenêtre suivante — et on s'arrête net plutôt que
+             de brûler la file entière contre le même plafond. */
+          var permanent = !!(error && error.status && error.status >= 400 && error.status < 500 && error.status !== 429);
           await O.reject(row.id, row.leaseToken, { permanent: permanent, status: error && error.status || 0, error: error && (error.code || error.message) || 'send-failed' });
           if (!permanent) break;
         }

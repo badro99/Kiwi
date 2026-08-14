@@ -947,6 +947,133 @@ const marked = await post(ownerCookie, { merchant: MERCHANT, commandId: 'op:owne
 ok(marked.status === 200 && marked.data.command.status === 'failed' && marked.data.command.lastError === 'Le fournisseur ne livre pas cette semaine',
   'a human motif reaches the command instead of being dropped between client and server');
 
+/* ── Plafonds : ce qui arrête une session emballée ──────────────────────────
+ *
+ * Trois bornes n'existaient pas.  Chacune se prouve contre le vrai Worker, et
+ * les deux qui comptent (le débit horaire, la relance) s'exécutent sur une base
+ * neuve : un plafond mesuré au milieu d'une suite qui a déjà écrit deux cents
+ * commandes ne mesure que le hasard de l'ordre des tests. */
+
+function freshEnv(extra) {
+  const other = new DatabaseSync(':memory:');
+  other.exec(`
+    CREATE TABLE accounts (id TEXT PRIMARY KEY, business TEXT);
+    CREATE TABLE merchant_config (merchant TEXT PRIMARY KEY, account_id TEXT, status TEXT);
+    CREATE TABLE store_docs (merchant TEXT, feature TEXT, data TEXT, updated_ts INTEGER);
+    CREATE TABLE operators (id TEXT PRIMARY KEY);
+  `);
+  other.prepare('INSERT INTO accounts (id, business) VALUES (?, ?)').run('acc-owner', BUSINESS);
+  other.prepare('INSERT INTO merchant_config (merchant, account_id, status) VALUES (?, ?, ?)').run(MERCHANT, 'acc-owner', 'active');
+  return Object.assign({ DB: D1(other), AUTH_SECRET: SECRET, RAW: other }, extra || {});
+}
+
+/* Un corps de quarante kilo-octets était auparavant lu en entier, parsé, puis
+   refusé pour « commande invalide » : le travail était déjà fait. */
+const tooBig = await post(ownerCookie, command({ id: 'op:big-0001', idempotencyKey: 'op:big-0001', domain: 'notification', action: 'send-whatsapp', payload: { to: '+212600000000', note: 'x'.repeat(40000) } }));
+ok(tooBig.status === 413 && tooBig.data.error === 'payload-too-large' && tooBig.data.limit === 32768,
+  'a body past the ceiling is refused on its size, before anything parses it');
+
+/* Sous le plafond du corps mais au-dessus de celui du payload : le client a le
+   droit de savoir laquelle des deux limites il vient de franchir. */
+const fatPayload = await post(ownerCookie, command({ id: 'op:big-0002', idempotencyKey: 'op:big-0002', domain: 'notification', action: 'send-whatsapp', payload: { to: '+212600000000', note: 'x'.repeat(26000) } }));
+ok(fatPayload.status === 413 && fatPayload.data.error === 'payload-too-large' && fatPayload.data.limit === 24000,
+  'an oversized payload is a size refusal, not a generic invalid command');
+
+const notAnObject = await post(ownerCookie, [1, 2, 3]);
+ok(notAnObject.status === 400 && notAnObject.data.error === 'bad-json',
+  'a JSON array is not a command — it is refused as malformed, not read as one');
+
+/* Trois passent, la quatrième non.  La tentative refusée est elle-même comptée :
+   marteler le plafond ne doit pas être gratuit. */
+const rateEnv = freshEnv({ OPS_RATE_PER_HOUR: '3' });
+const beatAt = (nth) => post(ownerCookie, command({ id: `op:rate-000${nth}`, idempotencyKey: `op:rate-000${nth}`, domain: 'device', action: 'heartbeat', payload: { app: 'caisse', deviceId: 'dev-rate-01', printerConfigured: true, printerConnected: true } }), rateEnv);
+const beatOne = await beatAt(1);
+const beatTwo = await beatAt(2);
+const beatThree = await beatAt(3);
+const beatFour = await beatAt(4);
+ok(beatOne.status === 200 && beatTwo.status === 200 && beatThree.status === 200,
+  'a session writes freely up to the hourly ceiling of its domain');
+ok(beatFour.status === 429 && beatFour.data.error === 'rate-limited' && beatFour.data.limit === 3 && beatFour.data.retryAfter > 0,
+  'past the ceiling the write is refused with the delay after which it may return');
+
+/* Le compteur est par domaine : une caisse qui bat trop ne doit pas empêcher
+   d'envoyer un message à un client. */
+const otherBucket = await post(ownerCookie, command({ id: 'op:rate-0009', idempotencyKey: 'op:rate-0009', domain: 'notification', action: 'send-whatsapp', payload: { to: '+212600000000' } }), rateEnv);
+ok(otherBucket.status !== 429, 'one saturated domain does not close the others — the counters are per domain');
+
+/* Une commande relancée sans fin n'est pas résiliente, c'est une boucle. */
+const loopEnv = freshEnv({ OPS_RATE_PER_HOUR: '500' });
+const loopId = 'op:loop-0001';
+await post(ownerCookie, command({ id: loopId, idempotencyKey: loopId, domain: 'procurement', action: 'create-po', payload: SOFRAP }), loopEnv);
+await post(ownerCookie, { merchant: MERCHANT, commandId: loopId, transition: 'pending-approval' }, loopEnv);
+await post(ownerCookie, { merchant: MERCHANT, commandId: loopId, transition: 'approved', confirmed: true }, loopEnv);
+let looped = null;
+for (let turn = 0; turn < 24 && !looped; turn++) {
+  const restart = await post(ownerCookie, { merchant: MERCHANT, commandId: loopId, transition: 'processing' }, loopEnv);
+  if (restart.status === 409 && restart.data.error === 'attempt-limit') { looped = restart; break; }
+  await post(ownerCookie, { merchant: MERCHANT, commandId: loopId, transition: 'failed', reason: 'le fournisseur ne répond pas' }, loopEnv);
+}
+ok(looped && looped.data.limit === 12 && looped.data.attempts >= 12,
+  'a command cannot be revived forever — the retry ceiling closes the loop');
+
+/* Une borne qui piégerait la commande dans un état ouvert serait pire que pas
+   de borne du tout : elle ne peut plus repartir, elle peut toujours se clore. */
+const stranded = await post(ownerCookie, { merchant: MERCHANT, commandId: loopId, transition: 'cancelled', confirmed: true }, loopEnv);
+ok(stranded.status === 200 && stranded.data.command.status === 'cancelled',
+  'the retry ceiling never strands a command — it can still be closed by hand');
+
+/* Le client, lui, doit lire 429 comme « plus tard » et non comme « jamais » :
+   la file hors-ligne classait toute 4xx en permanente et jetait le travail. */
+ok(/error\.status\s*!==\s*429/.test(browserSource) && /permanent\s*\)\s*break/.test(browserSource),
+  'the offline queue keeps a rate-limited command instead of discarding it as a permanent refusal');
+
+/* ── Le journal se relit contre lui-même ────────────────────────────────────
+ *
+ * Un audit qui se contente de réafficher ses propres lignes ne prouve rien :
+ * après une réécriture, la table répondrait exactement pareil.  Chaque événement
+ * scelle donc le précédent, et les trois épreuves ci-dessous sont les trois
+ * façons de mentir à un journal — réécrire une ligne, en retirer une, effacer
+ * l'histoire entière d'une commande. */
+
+async function sealedCommand(useEnv, id) {
+  await post(ownerCookie, command({ id, idempotencyKey: id, domain: 'procurement', action: 'create-po', payload: SOFRAP }), useEnv);
+  await post(ownerCookie, { merchant: MERCHANT, commandId: id, transition: 'pending-approval' }, useEnv);
+  await post(ownerCookie, { merchant: MERCHANT, commandId: id, transition: 'approved', confirmed: true }, useEnv);
+  return get(ownerCookie, `?merchant=${MERCHANT}&view=audit`, useEnv);
+}
+
+const auditEnv = freshEnv({ OPS_RATE_PER_HOUR: '500' });
+const auditId = 'op:seal-0001';
+const sealedBook = await sealedCommand(auditEnv, auditId);
+ok(sealedBook.status === 200 && sealedBook.data.ok === true && sealedBook.data.sealed >= 3 && sealedBook.data.unsealed === 0,
+  'every line of the operational journal carries a seal, and the chain reads back intact');
+
+auditEnv.RAW.prepare('UPDATE operational_events SET status = ? WHERE command_id = ? AND status = ?')
+  .run('approved', auditId, 'pending-approval');
+const tampered = await get(ownerCookie, `?merchant=${MERCHANT}&view=audit`, auditEnv);
+ok(tampered.data.ok === false && tampered.data.breaks.some((b) => b.reason === 'rewritten' && b.commandId === auditId),
+  'a line rewritten straight in the database no longer matches its own seal');
+
+const tornEnv = freshEnv({ OPS_RATE_PER_HOUR: '500' });
+await sealedCommand(tornEnv, 'op:seal-0002');
+tornEnv.RAW.prepare(
+  'DELETE FROM operational_events WHERE id = (SELECT id FROM operational_events ORDER BY created_ts ASC, id ASC LIMIT 1)'
+).run();
+const torn = await get(ownerCookie, `?merchant=${MERCHANT}&view=audit`, tornEnv);
+ok(torn.data.ok === false && torn.data.breaks.some((b) => b.reason === 'out-of-chain'),
+  'pulling a line out of the middle of the journal breaks every link that came after it');
+
+const wipedEnv = freshEnv({ OPS_RATE_PER_HOUR: '500' });
+await sealedCommand(wipedEnv, 'op:seal-0003');
+wipedEnv.RAW.prepare('DELETE FROM operational_events').run();
+const wiped = await get(ownerCookie, `?merchant=${MERCHANT}&view=audit`, wipedEnv);
+ok(wiped.data.ok === false && wiped.data.breaks.some((b) => b.reason === 'history-missing' && b.commandId === 'op:seal-0003'),
+  'erasing a command’s whole history is not silence — the command still counts its own attempts');
+
+const nosyTill = await get(tillCookie, `?merchant=${MERCHANT}&view=audit`);
+ok(nosyTill.status === 403 && nosyTill.data.error === 'owner-session-required',
+  'the audit is an owner read — a pairing cookie cannot audit the journal it writes into');
+
 /* ── Browser: the client contract, simulated ──────────────────────────────── */
 
 const registrations = {};

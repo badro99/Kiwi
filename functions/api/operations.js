@@ -38,6 +38,42 @@ const TRANSITIONS = {
   active: new Set(['cancelled', 'completed']),
 };
 
+/* ————— Plafonds ————————————————————————————————————————————————
+ *
+ * Trois choses n'avaient aucune borne : la taille du corps qu'on acceptait de
+ * parser, le nombre de commandes qu'une session pouvait écrire, et le nombre de
+ * fois qu'une commande pouvait être relancée.  Les deux premières coûtent de
+ * l'argent réel — un SMS, un e-mail, une ligne de journal — et la troisième
+ * transforme un incident en boucle.
+ *
+ * La fenêtre est fixe, pas glissante : à cheval sur deux heures, un appelant
+ * peut donc écrire jusqu'à deux fois le plafond.  C'est assumé.  Ce compteur
+ * n'est pas un pare-feu, c'est un frein contre l'emballement d'une session
+ * légitime ou volée ; un vrai anti-abus se joue au bord, pas dans D1. */
+const BODY_MAX = 32 * 1024;
+const PAYLOAD_MAX = 24000;
+const RATE_WINDOW = 60 * 60 * 1000;
+const RATE_PER_HOUR = {
+  device: 600,        /* une caisse bat toutes les cinq minutes, et un commerce en a plusieurs */
+  notification: 150,  /* prévenir 150 clients en une heure : au-delà, ce n'est plus un service */
+  payment: 150,
+  procurement: 120,
+  accounting: 120,
+  ai: 120,
+  payroll: 60,        /* une paie ne s'exporte pas soixante fois par heure */
+};
+const RATE_DEFAULT = 120;
+/* `attempt_count` compte chaque écriture d'état.  Au-delà, la commande peut
+   encore être close à la main — jamais relancée : une borne qui piégerait une
+   commande dans un état ouvert serait pire que l'absence de borne. */
+const ATTEMPT_MAX = 12;
+
+function rateCeiling(env, domain) {
+  const forced = Number(env && env.OPS_RATE_PER_HOUR);
+  if (Number.isFinite(forced) && forced > 0) return Math.floor(forced);
+  return RATE_PER_HOUR[domain] || RATE_DEFAULT;
+}
+
 const clean = (value, max = 120) => String(value == null ? '' : value).trim().slice(0, max);
 const idOk = (value) => /^[A-Za-z0-9._:-]{8,128}$/.test(clean(value, 128));
 const now = () => Date.now();
@@ -68,12 +104,49 @@ async function ensureSchema(env) {
     `CREATE TABLE IF NOT EXISTS operational_events (
       id TEXT PRIMARY KEY, command_id TEXT NOT NULL, merchant TEXT NOT NULL,
       event TEXT NOT NULL, status TEXT NOT NULL, detail TEXT,
-      created_ts INTEGER NOT NULL
+      created_ts INTEGER NOT NULL,
+      seq INTEGER NOT NULL DEFAULT 0,
+      prev_hash TEXT NOT NULL DEFAULT '', hash TEXT NOT NULL DEFAULT ''
     )`
   ).run();
   await env.DB.prepare(
     'CREATE INDEX IF NOT EXISTS idx_ops_events_command ON operational_events (merchant, command_id, created_ts)'
   ).run();
+  /* Les deux colonnes de la chaîne sont arrivées après la table : une base déjà
+     en production ne les a pas, et `CREATE TABLE IF NOT EXISTS` ne les ajoutera
+     jamais.  L'ALTER échoue bruyamment la deuxième fois — c'est le seul cas où
+     avaler l'erreur est la bonne réponse. */
+  for (const column of ['prev_hash', 'hash']) {
+    try {
+      await env.DB.prepare(`ALTER TABLE operational_events ADD COLUMN ${column} TEXT NOT NULL DEFAULT ''`).run();
+    } catch (_) { /* déjà présente */ }
+  }
+  try {
+    await env.DB.prepare('ALTER TABLE operational_events ADD COLUMN seq INTEGER NOT NULL DEFAULT 0').run();
+  } catch (_) { /* déjà présente */ }
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS operational_rate (
+      merchant TEXT NOT NULL, bucket TEXT NOT NULL, window_ts INTEGER NOT NULL,
+      hits INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (merchant, bucket, window_ts)
+    )`
+  ).run();
+}
+
+/* Compte d'abord, refuse ensuite : la tentative refusée est elle-même comptée,
+   sinon marteler le plafond resterait gratuit. */
+async function spend(env, merchant, bucket, ceiling) {
+  const at = now();
+  const window = Math.floor(at / RATE_WINDOW) * RATE_WINDOW;
+  await env.DB.prepare(
+    `INSERT INTO operational_rate (merchant, bucket, window_ts, hits) VALUES (?, ?, ?, 1)
+     ON CONFLICT (merchant, bucket, window_ts) DO UPDATE SET hits = hits + 1`
+  ).bind(merchant, bucket, window).run();
+  const row = await env.DB.prepare(
+    'SELECT hits FROM operational_rate WHERE merchant = ? AND bucket = ? AND window_ts = ?'
+  ).bind(merchant, bucket, window).first();
+  const hits = Number((row && row.hits) || 0);
+  return { ok: hits <= ceiling, hits, ceiling, retryAfter: Math.ceil((window + RATE_WINDOW - at) / 1000) };
 }
 
 function providers(env) {
@@ -211,13 +284,39 @@ async function mayCommand(request, env, merchant, domain, action) {
   return can(actor.role, check[0], check[1]) ? actor : null;
 }
 
+/* Le maillon, pas la ligne : chaque événement scelle le précédent, si bien
+   qu'effacer ou réécrire une ligne au milieu du journal casse tout ce qui suit.
+   La chaîne est par commande et non par marchand — deux commandes écrites en
+   même temps ne se disputent pas la même tête de chaîne, et l'effacement de
+   l'histoire entière d'une commande se voit quand même : la commande, elle,
+   garde son compteur de tentatives et le vérificateur les compare. */
+async function seal(parts) {
+  const bytes = new TextEncoder().encode(parts.join(' '));
+  const sum = await crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(sum)).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
 async function event(env, command, name, status, detail) {
   const at = now();
-  const id = `${command.id}:${at}:${Math.random().toString(36).slice(2, 8)}`;
+  const kind = clean(name, 48);
+  const state = clean(status, 32);
+  const body = safeJson(detail || {}, 4000) || '{}';
+  /* Le rang, pas l'horloge.  Quatre états d'une même commande tiennent dans la
+     même milliseconde, et le suffixe aléatoire de l'identifiant n'est pas un
+     départage : trier là-dessus revient à tirer au sort le maillon précédent,
+     et la chaîne se fend à l'écriture même. */
+  const last = await env.DB.prepare(
+    `SELECT hash, seq FROM operational_events WHERE merchant = ? AND command_id = ?
+      ORDER BY seq DESC LIMIT 1`
+  ).bind(command.merchant, command.id).first();
+  const prev = (last && last.hash) || '';
+  const seq = Number((last && last.seq) || 0) + 1;
+  const id = `${command.id}:${at}:${seq}`;
+  const hash = await seal([prev, id, command.id, command.merchant, kind, state, body, String(at), String(seq)]);
   await env.DB.prepare(
-    `INSERT INTO operational_events (id, command_id, merchant, event, status, detail, created_ts)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`
-  ).bind(id, command.id, command.merchant, clean(name, 48), clean(status, 32), safeJson(detail || {}, 4000), at).run();
+    `INSERT INTO operational_events (id, command_id, merchant, event, status, detail, created_ts, seq, prev_hash, hash)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).bind(id, command.id, command.merchant, kind, state, body, at, seq, prev, hash).run();
 }
 
 async function update(env, command, status, provider, result, error, limit) {
@@ -1738,6 +1837,87 @@ export async function onRequestGet({ request, env }) {
      l'écran doit pouvoir montrer « WhatsApp d'abord, puis SMS » ET la raison
      pour laquelle le dernier reçu est parti par SMS.  Le journal ne rend
      jamais le destinataire — le canal et la raison suffisent à comprendre. */
+  /* Le journal se relit contre lui-même.  Un audit qui se contente d'afficher
+     ses propres lignes ne prouve rien : c'est la même table qui répondrait après
+     une réécriture.  Ici chaque maillon est recalculé, et une ligne modifiée,
+     supprimée ou intercalée casse la chaîne à partir d'elle.  Les lignes
+     antérieures à la chaîne n'ont pas de sceau : elles sont comptées à part, pas
+     accusées. */
+  if (clean(url.searchParams.get('view'), 24) === 'audit') {
+    try {
+      const scope = clean(url.searchParams.get('commandId'), 128);
+      const cap = Math.max(1, Math.min(2000, Number(url.searchParams.get('limit')) || 500));
+      const rows = await env.DB.prepare(
+        `SELECT id, command_id, merchant, event, status, detail, created_ts, seq, prev_hash, hash
+           FROM operational_events
+          WHERE merchant = ?${scope ? ' AND command_id = ?' : ''}
+          ORDER BY command_id ASC, seq ASC LIMIT ?`
+      ).bind(...(scope ? [merchant, scope, cap + 1] : [merchant, cap + 1])).all();
+      const listed = (rows && rows.results) || [];
+      const truncated = listed.length > cap;
+      const events = truncated ? listed.slice(0, cap) : listed;
+      const breaks = [];
+      const byCommand = new Map();
+      let sealed = 0;
+      let unsealed = 0;
+      for (const row of events) {
+        if (!row.hash) { unsealed++; continue; }
+        const key = String(row.command_id || '');
+        if (!byCommand.has(key)) byCommand.set(key, []);
+        byCommand.get(key).push(row);
+        sealed++;
+      }
+      /* La vérification ne fait confiance ni à l'ordre rendu par SQL ni aux
+         horodatages : elle repart du premier maillon — celui qui ne scelle rien —
+         et suit les sceaux de proche en proche.  Une ligne que cette marche
+         n'atteint pas est hors chaîne, quelle que soit la place que la table lui
+         donne. */
+      for (const [command, kept] of byCommand) {
+        const followers = new Map();
+        for (const row of kept) {
+          const recomputed = await seal([
+            String(row.prev_hash || ''), String(row.id || ''), command, String(row.merchant || ''),
+            String(row.event || ''), String(row.status || ''), String(row.detail || '{}'),
+            String(Number(row.created_ts || 0)), String(Number(row.seq || 0)),
+          ]);
+          if (recomputed !== String(row.hash)) {
+            breaks.push({ commandId: command, eventId: String(row.id || ''), reason: 'rewritten', at: Number(row.created_ts || 0) });
+          }
+          const link = String(row.prev_hash || '');
+          if (!followers.has(link)) followers.set(link, row);
+        }
+        const walked = new Set();
+        let cursor = followers.get('');
+        while (cursor && !walked.has(String(cursor.id))) {
+          walked.add(String(cursor.id));
+          cursor = followers.get(String(cursor.hash));
+        }
+        for (const row of kept) {
+          if (walked.has(String(row.id))) continue;
+          breaks.push({ commandId: command, eventId: String(row.id || ''), reason: 'out-of-chain', at: Number(row.created_ts || 0) });
+        }
+      }
+      /* Une commande qui a bougé mais n'a plus une seule ligne d'état : son
+         histoire n'a pas été réécrite, elle a été effacée.  Le compteur de
+         tentatives vit dans l'autre table et ne ment pas avec elle. */
+      let orphans = [];
+      if (!scope) {
+        const moved = await env.DB.prepare(
+          `SELECT c.id FROM operational_commands c
+            WHERE c.merchant = ? AND c.attempt_count > 0
+              AND NOT EXISTS (SELECT 1 FROM operational_events e
+                               WHERE e.merchant = c.merchant AND e.command_id = c.id AND e.event = 'state')
+            LIMIT 50`
+        ).bind(merchant).all();
+        orphans = ((moved && moved.results) || []).map((row) => String(row.id || ''));
+        for (const id of orphans) breaks.push({ commandId: id, eventId: '', reason: 'history-missing', at: 0 });
+      }
+      return json({
+        merchant, ok: breaks.length === 0, checked: events.length,
+        sealed, unsealed, truncated, orphans, breaks,
+      });
+    } catch (_) { return json({ error: 'unmigrated' }, 503); }
+  }
   if (clean(url.searchParams.get('view'), 24) === 'notifications') {
     try {
       await ensureNotify(env);
@@ -1950,7 +2130,15 @@ export async function onRequestGet({ request, env }) {
 
 export async function onRequestPost({ request, env }) {
   if (!env || !env.DB || !env.AUTH_SECRET) return json({ error: 'not-configured' }, 503);
-  let body; try { body = await request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
+  /* Refuser AVANT de parser.  `safeJson` bornait ce qu'on stocke, jamais ce
+     qu'on lit : un corps de dix mégaoctets était intégralement mis en mémoire
+     puis rejeté pour « commande invalide ». */
+  const declared = Number(request.headers.get('content-length') || 0);
+  if (Number.isFinite(declared) && declared > BODY_MAX) return json({ error: 'payload-too-large', limit: BODY_MAX }, 413);
+  let raw; try { raw = await request.text(); } catch (_) { return json({ error: 'bad-json' }, 400); }
+  if (raw.length > BODY_MAX) return json({ error: 'payload-too-large', limit: BODY_MAX }, 413);
+  let body; try { body = JSON.parse(raw); } catch (_) { return json({ error: 'bad-json' }, 400); }
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return json({ error: 'bad-json' }, 400);
   const merchant = await tenantFor(request, env, body && body.merchant, { strict: true });
   if (!merchant) return json({ error: 'unauthorized' }, 401);
   try { await ensureSchema(env); } catch (_) { return json({ error: 'unmigrated' }, 503); }
@@ -1969,6 +2157,13 @@ export async function onRequestPost({ request, env }) {
     }
     if (!(TRANSITIONS[row.status] && TRANSITIONS[row.status].has(wanted))) return json({ error: 'invalid-transition', status: row.status }, 409);
     if (['approved', 'cancelled', 'completed'].includes(wanted) && body.confirmed !== true) return json({ error: 'confirmation-required' }, 409);
+    /* Une commande relancée sans fin n'est pas une commande résiliente, c'est
+       une boucle : passé le plafond, elle ne peut plus que se clore. */
+    if (wanted === 'processing' && Number(row.attempt_count || 0) >= ATTEMPT_MAX) {
+      return json({ error: 'attempt-limit', attempts: Number(row.attempt_count || 0), limit: ATTEMPT_MAX }, 409);
+    }
+    const moved = await spend(env, merchant, row.domain, rateCeiling(env, row.domain));
+    if (!moved.ok) return json({ error: 'rate-limited', limit: moved.ceiling, retryAfter: moved.retryAfter }, 429);
     /* Un échec sans motif n'apprend rien à personne : quand l'appareil ou
        l'opérateur ferme une commande sur un échec ou un blocage, sa raison est
        conservée telle quelle dans last_error. */
@@ -1981,7 +2176,8 @@ export async function onRequestPost({ request, env }) {
   const action = clean(body && body.action, 48).toLowerCase();
   const id = clean(body && body.id, 128);
   const idem = clean(body && body.idempotencyKey, 128);
-  const payloadJson = safeJson(body && body.payload, 24000);
+  const given = body && body.payload;
+  const payloadJson = safeJson(given, PAYLOAD_MAX);
   if (!ACTIONS[domain] || !ACTIONS[domain].has(action)) return json({ error: 'unsupported-action' }, 400);
   /* Every command costs a named permission, resolved from the caller's real
      role on this merchant.  A till reports its own heartbeat and nothing else;
@@ -1992,13 +2188,26 @@ export async function onRequestPost({ request, env }) {
   if (!actor) {
     return json({ error: 'permission-denied', domain, action }, 403);
   }
+  /* Un bon de commande de trente kilo-octets n'est pas une « commande
+     invalide » : c'est une commande trop grosse, et le client mérite de savoir
+     laquelle des deux il vient d'envoyer. */
+  if (given && typeof given === 'object' && !Array.isArray(given) && !payloadJson) {
+    return json({ error: 'payload-too-large', limit: PAYLOAD_MAX }, 413);
+  }
   if (!idOk(id) || !idOk(idem) || !payloadJson) return json({ error: 'invalid-command' }, 400);
   if (CONFIRM.has(`${domain}:${action}`) && body.confirmed !== true) return json({ error: 'confirmation-required' }, 409);
 
   const duplicate = await env.DB.prepare(
     'SELECT * FROM operational_commands WHERE merchant = ? AND idempotency_key = ?'
   ).bind(merchant, idem).first();
+  /* Un rejeu idempotent ne consomme rien : il ne crée pas de ligne, n'appelle
+     aucun fournisseur, et un client qui réessaie proprement ne doit pas être
+     puni pour ça.  Le plafond se paie après le contrôle de permission, sinon
+     une session autorisée mais sans droit sur ce domaine pourrait épuiser le
+     budget du commerçant à sa place. */
   if (duplicate) return json({ ok: true, duplicate: true, command: publicRow(duplicate), providers: providers(env) });
+  const spent = await spend(env, merchant, domain, rateCeiling(env, domain));
+  if (!spent.ok) return json({ error: 'rate-limited', limit: spent.ceiling, retryAfter: spent.retryAfter }, 429);
 
   const at = now();
   const row = {
