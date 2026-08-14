@@ -62,18 +62,33 @@ function makeDB() {
   for (const stmt of raw.replace(/--[^\n]*/g, '').split(';').map((s) => s.trim()).filter(Boolean)) {
     db.exec(stmt);
   }
+  const facade = { _db: db, _afterSessionClose: null, _rejectSessionOrderUpdate: false };
   const prepare = (query) => {
     let args = [];
     const st = {
       bind(...a) { args = a.map((v) => (v === undefined ? null : v)); return st; },
       first() { const r = db.prepare(query).get(...args); return r === undefined ? null : r; },
       all() { return { results: db.prepare(query).all(...args) }; },
-      run() { const r = db.prepare(query).run(...args); return { success: true, meta: { changes: r.changes } }; },
+      run() {
+        if (facade._rejectSessionOrderUpdate && /UPDATE\s+orders[\s\S]+session_id/i.test(query)) {
+          facade._rejectSessionOrderUpdate = false;
+          throw new Error('synthetic unmigrated orders.session_id');
+        }
+        const r = db.prepare(query).run(...args);
+        if (facade._afterSessionClose && /UPDATE\s+table_sessions\s+SET\s+status\s*=\s*'closed'/i.test(query)) {
+          const hook = facade._afterSessionClose;
+          facade._afterSessionClose = null;
+          hook();
+        }
+        return { success: true, meta: { changes: r.changes } };
+      },
       _exec() { return st.run(); },
     };
     return st;
   };
-  return { prepare, batch(s) { return s.map((x) => x._exec()); }, _db: db };
+  facade.prepare = prepare;
+  facade.batch = (s) => s.map((x) => x._exec());
+  return facade;
 }
 
 const db = makeDB();
@@ -245,6 +260,58 @@ async function main() {
     raw("SELECT paid_ts FROM orders WHERE id = 'ord-caisse-1'")[0].paid_ts !== null);
   check('la commande de la visite est soldée',
     raw('SELECT paid_ts FROM orders WHERE session_id = ?', visit4).every((r) => r.paid_ts !== null));
+
+  /* ── 3bis. Une nouvelle visite née pendant l'encaissement reste due ────── */
+  console.log('\n3bis · Le paiement ne traverse pas le changement de tablée');
+  const raceVisit = await post(queue.onRequestPost,
+    { merchant: MERCHANT, create: true, mode: 'table', table: '5', lines: [{ id: 'i1', qty: 1 }] }, cookie);
+  const oldVisit5 = raceVisit.body.session;
+  const newVisit5 = 'tsx-newvisitnewvisitnew01';
+  const newOrder5 = 'ord-new-visit-5';
+  db._afterSessionClose = () => {
+    /* Deliberately timestamp the next visit after sale.js captured its cutoff,
+       while still inserting it between the session close and orders UPDATE. */
+    const afterCutoff = Date.now() + 1000;
+    exec(`INSERT INTO table_sessions (id, merchant, mode, table_no, status, opened_ts, seen_ts)
+          VALUES (?, ?, 'table', '5', 'open', ?, ?)`, newVisit5, MERCHANT, afterCutoff, afterCutoff);
+    exec(`INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status,
+          created_ts, updated_ts, session_id) VALUES (?, ?, 150, 'table', '5', 40, '[]', 'pending', ?, ?, ?)`,
+      newOrder5, MERCHANT, afterCutoff, afterCutoff, newVisit5);
+  };
+  const racedPayment = await post(sale.onRequestPost,
+    { merchant: MERCHANT, table: '5', amount: 90, method: 'cash', id: 'employee-race5-emp', lines: [] }, cookie);
+  check('le règlement de la première visite aboutit', racedPayment.status === 200 && racedPayment.body.ok);
+  check('la commande de la visite fermée est soldée',
+    raw('SELECT paid_ts FROM orders WHERE session_id = ?', oldVisit5).every((r) => r.paid_ts !== null));
+  check('la commande de la nouvelle visite reste IMPAYÉE',
+    raw('SELECT paid_ts FROM orders WHERE id = ?', newOrder5)[0].paid_ts === null,
+    'le règlement précédent a traversé le changement de clients');
+  check('la nouvelle session reste ouverte',
+    sessionsOf('5').some((s) => s.id === newVisit5 && s.status === 'open'));
+  exec("UPDATE table_sessions SET status = 'closed', closed_ts = ?, closed_by = 'test-cleanup' WHERE id = ?",
+    Date.now(), newVisit5);
+
+  /* ── 3ter. Un schéma ancien ne déclenche jamais un paiement au jugé ────── */
+  console.log('\n3ter · Un schéma ancien échoue fermé, sans solder la visite suivante');
+  const legacyVisit = await post(queue.onRequestPost,
+    { merchant: MERCHANT, create: true, mode: 'table', table: '5', lines: [{ id: 'i1', qty: 1 }] }, cookie);
+  const oldLegacyOrder = raw('SELECT id FROM orders WHERE session_id = ?', legacyVisit.body.session)[0].id;
+  const sameCutoffOrder = 'ord-same-cutoff-6';
+  db._rejectSessionOrderUpdate = true;
+  db._afterSessionClose = () => {
+    const cutoff = Date.now();
+    exec(`INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status,
+          created_ts, updated_ts) VALUES (?, ?, 160, 'table', '5', 40, '[]', 'pending', ?, ?)`,
+      sameCutoffOrder, MERCHANT, cutoff, cutoff);
+  };
+  const legacyPayment = await post(sale.onRequestPost,
+    { merchant: MERCHANT, table: '5', amount: 90, method: 'cash', id: 'employee-legacy6-emp', lines: [] }, cookie);
+  check('le paiement durable signale la réconciliation en attente',
+    legacyPayment.status === 200 && legacyPayment.body.ok && legacyPayment.body.settlementPending === true);
+  check('la commande de la visite reste impayée plutôt que soldée sans preuve',
+    raw('SELECT paid_ts FROM orders WHERE id = ?', oldLegacyOrder)[0].paid_ts === null);
+  check('la nouvelle commande du même milliseconde reste IMPAYÉE',
+    raw('SELECT paid_ts FROM orders WHERE id = ?', sameCutoffOrder)[0].paid_ts === null);
 
   /* ── 4. L'argent enregistré n'est jamais rapporté comme un échec ──────── */
   console.log('\n4 · Une vente durable ne se rapporte pas comme un échec');

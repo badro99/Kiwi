@@ -120,6 +120,7 @@ async function get(fn, qs, headers = {}) {
   const line = (id, qty = 1) => ({ id, qty });
 
   const orderProPage = fs.readFileSync(path.join(ROOT, 'OrderPro.html'), 'utf8');
+  const publicOrderPage = fs.readFileSync(path.join(ROOT, 'kiwi-order.html'), 'utf8');
   const caissePage = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
   const kitchenPage = fs.readFileSync(path.join(ROOT, 'kiwi-cuisine.html'), 'utf8');
   ok('OrderPro affiche OPD sur le retrait',
@@ -142,6 +143,17 @@ async function get(fn, qs, headers = {}) {
   ok('le paiement employé envoie la référence commande au journal de caisse',
     /const orderRef = serviceTableOrderRef\(id\);[\s\S]{0,2400}label: orderRef,[\s\S]{0,80}ref: orderRef/.test(
       fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8')));
+  ok('le QR public ouvre une session de visite avant la commande',
+    /fetch\('\/api\/order\/session',\s*\{/.test(publicOrderPage)
+      && /ensureTableSession\(\)\.then/.test(publicOrderPage));
+  ok('le QR public joint la session à chaque commande à table',
+    /table:\s*tableNumber,\s*session:\s*session\s*\|\|\s*undefined/.test(publicOrderPage));
+  ok('le QR public sonde la révocation de sa session',
+    /setInterval\(check,\s*5000\)/.test(publicOrderPage)
+      && /d\.status\s*!==\s*'open'/.test(publicOrderPage));
+  ok('le QR ne montre pas un faux succès après un refus serveur',
+    /postOrderToTill\(totalNow,\s*linesCopy\)\.then/.test(publicOrderPage)
+      && /order_send_failed/.test(publicOrderPage));
 
   ok('la semaine restaurant commence lundi à minuit au Maroc',
     startOfWeek(Date.parse('2026-08-03T12:00:00Z')) === Date.parse('2026-08-02T23:00:00Z'));
@@ -150,8 +162,9 @@ async function get(fn, qs, headers = {}) {
 
   /* ═══ 1. PRIX ═══════════════════════════════════════════════════════════ */
   deskAt(Date.now());
+  const priceSession = (await post(openSession, { merchant: SLUG, mode: 'table', table: '7' })).body.session;
   let r = await post(placeOrder, {
-    merchant: SLUG, mode: 'table', table: '7',
+    merchant: SLUG, mode: 'table', table: '7', session: priceSession,
     total: 1,                                   // le mensonge
     lines: [{ id: 'i1', qty: 1, name: 'Caviar', unitPrice: 1,
       options: 'Tomate',
@@ -177,18 +190,22 @@ async function get(fn, qs, headers = {}) {
   ok('c\'est le prix recalculé qui est écrit', priced.total === 90);
   ok('la révision de carte est horodatée', !!priced.priced_ts && !!priced.menu_rev);
 
-  r = await post(placeOrder, { merchant: SLUG, mode: 'table', table: '7', lines: [line('i1', 2), line('i2', 3)] });
+  r = await post(placeOrder, { merchant: SLUG, mode: 'table', table: '7', session: priceSession, lines: [line('i1', 2), line('i2', 3)] });
   ok('les quantités multiplient bien', r.body.total === 90 * 2 + 15 * 3, 'total=' + r.body.total);
 
-  r = await post(placeOrder, { merchant: SLUG, mode: 'table', table: '7', lines: [line('inconnu')] });
+  r = await post(placeOrder, { merchant: SLUG, mode: 'table', table: '7', session: priceSession, lines: [line('inconnu')] });
   ok('un plat qui n\'est pas à la carte est refusé', r.status === 409 && r.body.error === 'menu-changed');
   ok('…et on dit lequel', Array.isArray(r.body.unknown) && r.body.unknown[0] === 'inconnu');
 
-  r = await post(placeOrder, { merchant: SLUG, mode: 'table', table: '7', lines: [line('i3')] });
+  r = await post(placeOrder, { merchant: SLUG, mode: 'table', table: '7', session: priceSession, lines: [line('i3')] });
   ok('un plat épuisé est refusé', r.status === 409 && r.body.unavailable[0] === 'Pastilla');
 
-  r = await post(placeOrder, { merchant: SLUG, mode: 'table', table: '7', lines: [] });
+  r = await post(placeOrder, { merchant: SLUG, mode: 'table', table: '7', session: priceSession, lines: [] });
   ok('une commande vide est refusée', r.status === 400 && r.body.error === 'empty-order');
+
+  r = await post(placeOrder, { merchant: SLUG, mode: 'table', table: '7', lines: [line('i1')] });
+  ok('une commande QR sans session de visite est refusée',
+    r.status === 409 && r.body.error === 'session-required', JSON.stringify(r.body));
 
   /* ═══ 2. PRÉSENCE DU COMPTOIR ═══════════════════════════════════════════ */
   deskAt(Date.now() - 30 * 60 * 1000);          // sondé il y a une demi-heure
@@ -536,21 +553,26 @@ async function get(fn, qs, headers = {}) {
      boucle — sans brider la salle entière, qui partage une seule adresse IP
      derrière le wifi du café. */
   const FLOOD = 'table-inondee';
+  const floodSession = (await post(openSession, { merchant: SLUG, mode: 'table', table: FLOOD })).body.session;
   for (let i = 0; i < 8; i++) {
     r = await post(placeOrder, {
-      merchant: SLUG, mode: 'table', table: FLOOD, ref: 'flood-' + i, lines: [line('i2')],
+      merchant: SLUG, mode: 'table', table: FLOOD, session: floodSession,
+      ref: 'flood-' + i, lines: [line('i2')],
     });
     ok(`commande ${i + 1}/8 sur une même table passe`, r.status === 200, JSON.stringify(r.body));
   }
   r = await post(placeOrder, {
-    merchant: SLUG, mode: 'table', table: FLOOD, ref: 'flood-9', lines: [line('i2')],
+    merchant: SLUG, mode: 'table', table: FLOOD, session: floodSession,
+    ref: 'flood-9', lines: [line('i2')],
   });
   ok('la neuvième est refusée', r.status === 429 && r.body.error === 'table-queue-full',
     r.status + ' ' + JSON.stringify(r.body));
 
   // …et une AUTRE table continue d'être servie normalement.
+  const neighborSession = (await post(openSession, { merchant: SLUG, mode: 'table', table: 'voisine' })).body.session;
   r = await post(placeOrder, {
-    merchant: SLUG, mode: 'table', table: 'voisine', ref: 'voisine-1', lines: [line('i2')],
+    merchant: SLUG, mode: 'table', table: 'voisine', session: neighborSession,
+    ref: 'voisine-1', lines: [line('i2')],
   });
   ok('la table d\'à côté commande toujours', r.status === 200, JSON.stringify(r.body));
 
@@ -560,7 +582,8 @@ async function get(fn, qs, headers = {}) {
   ).get(SLUG, FLOOD);
   await post(queuePost, { merchant: SLUG, id: stuck.id, status: 'accepted' }, asStaff);
   r = await post(placeOrder, {
-    merchant: SLUG, mode: 'table', table: FLOOD, ref: 'flood-10', lines: [line('i2')],
+    merchant: SLUG, mode: 'table', table: FLOOD, session: floodSession,
+    ref: 'flood-10', lines: [line('i2')],
   });
   ok('dès que le comptoir accepte, la table peut à nouveau commander', r.status === 200,
     JSON.stringify(r.body));

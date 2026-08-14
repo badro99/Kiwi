@@ -3100,6 +3100,9 @@ em, i, cite, dfn, var { font-style: normal; }
         cart_subtitle_takeout: "À emporter · Café Atlas",
         send_table: "Envoyer en cuisine",
         send_takeout: "Passer commande",
+        session_closed: "Cette visite est terminée. Rescannez le QR de la table pour commander.",
+        session_unavailable: "Impossible de relier cette table à la caisse. Réessayez ou appelez un serveur.",
+        order_send_failed: "La commande n'a pas été envoyée. Votre panier est conservé — réessayez.",
         success_title_a: "Commande envoyée",
         success_title_em: "en cuisine.",
         success_eta_pre: "Table",
@@ -3261,6 +3264,9 @@ em, i, cite, dfn, var { font-style: normal; }
         cart_subtitle_takeout: "Takeout · Café Atlas",
         send_table: "Send to kitchen",
         send_takeout: "Place order",
+        session_closed: "This visit has ended. Scan the table QR again to order.",
+        session_unavailable: "We couldn't connect this table to the till. Retry or call a waiter.",
+        order_send_failed: "The order was not sent. Your cart is safe — please retry.",
         success_title_a: "Order sent to",
         success_title_em: "the kitchen.",
         success_eta_pre: "Table",
@@ -3422,6 +3428,9 @@ em, i, cite, dfn, var { font-style: normal; }
         cart_subtitle_takeout: "للأخذ · كافي أطلس",
         send_table: "صيفط للمطبخ",
         send_takeout: "أكد الطلب",
+        session_closed: "انتهت هذه الجلسة. امسح رمز الطاولة من جديد للطلب.",
+        session_unavailable: "تعذر ربط الطاولة بصندوق الدفع. أعد المحاولة أو اطلب النادل.",
+        order_send_failed: "لم يتم إرسال الطلب. سلة طلبك محفوظة، أعد المحاولة.",
         success_title_a: "الطلب تصيفط",
         success_title_em: "للمطبخ.",
         success_eta_pre: "طاولة",
@@ -3705,6 +3714,10 @@ em, i, cite, dfn, var { font-style: normal; }
     let tableNumber = '';
     let orderNumber = '';       // takeout only — like "047"
     let prepRafId = null;       // animation handle for prep progress
+    let tableSessionId = '';
+    let tableSessionStatus = 'idle'; // idle | opening | open | closed | error
+    let tableSessionPromise = null;
+    let tableSessionPollId = null;
 
     // Cart: lineKey -> { id, options, note, unitPrice, qty }
     const cart = new Map();
@@ -3933,6 +3946,7 @@ em, i, cite, dfn, var { font-style: normal; }
       $('#cart-grand').textContent = `${total} ${cur()}`;
       pill.classList.toggle('is-visible', count > 0);
       $('#send-btn').disabled = count === 0;
+      syncSendGate();
 
       const itemsEl = $('#cart-items');
       if (count === 0) {
@@ -4401,27 +4415,107 @@ em, i, cite, dfn, var { font-style: normal; }
        réseau absent), on retombe sur l'affichage local plutôt que de laisser
        le client devant un bouton mort. */
     let liveOrderId = null;
+    function tableSessionKey() {
+      const slug = KiwiTenant && KiwiTenant.slug ? KiwiTenant.slug : '';
+      return 'kiwi.order.session.' + slug + '.' + String(tableNumber || '');
+    }
+    function rememberTableSession(id) {
+      tableSessionId = String(id || '');
+      try { sessionStorage.setItem(tableSessionKey(), tableSessionId); } catch (_) {}
+    }
+    function sessionError(code) {
+      const err = new Error(code || 'session-unavailable');
+      err.code = code || 'session-unavailable';
+      return err;
+    }
+    function setTableSessionClosed() {
+      tableSessionStatus = 'closed';
+      if (tableSessionPollId) clearInterval(tableSessionPollId);
+      tableSessionPollId = null;
+      syncSendGate();
+    }
+    function pollTableSession() {
+      if (tableSessionPollId || !tableSessionId || !KiwiTenant || !KiwiTenant.slug) return;
+      const check = () => fetch('/api/order/session?merchant=' + encodeURIComponent(KiwiTenant.slug)
+        + '&session=' + encodeURIComponent(tableSessionId), { headers: { Accept: 'application/json' } })
+        .then((r) => r.ok ? r.json() : null)
+        .then((d) => {
+          if (d && d.ok && d.status !== 'open') {
+            setTableSessionClosed();
+            showToast(t('session_closed'));
+          }
+        }).catch(() => { /* transient network errors do not revoke a live visit */ });
+      tableSessionPollId = setInterval(check, 5000);
+    }
+    function ensureTableSession() {
+      const T = KiwiTenant;
+      if (orderMode !== 'table' || !T || !T.hasTenant || !T.slug) return Promise.resolve(null);
+      if (tableSessionStatus === 'closed') return Promise.reject(sessionError('session-closed'));
+      if (tableSessionStatus === 'open' && tableSessionId) return Promise.resolve(tableSessionId);
+      if (tableSessionPromise) return tableSessionPromise;
+      tableSessionStatus = 'opening';
+      syncSendGate();
+      let saved = '';
+      try { saved = sessionStorage.getItem(tableSessionKey()) || ''; } catch (_) {}
+      const validate = saved
+        ? fetch('/api/order/session?merchant=' + encodeURIComponent(T.slug) + '&session=' + encodeURIComponent(saved),
+            { headers: { Accept: 'application/json' } })
+            .then((r) => r.ok ? r.json() : null)
+        : Promise.resolve(null);
+      tableSessionPromise = validate.then((existing) => {
+        if (existing && existing.ok && existing.status === 'open') return { ok: true, session: saved };
+        if (existing && existing.ok && existing.status === 'closed') throw sessionError('session-closed');
+        return fetch('/api/order/session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ merchant: T.slug, mode: 'table', table: tableNumber }),
+        }).then(async (r) => {
+          const data = await r.json().catch(() => null);
+          if (!r.ok || !data || !data.ok || data.status !== 'open') {
+            throw sessionError((data && data.error) || 'session-unavailable');
+          }
+          return data;
+        });
+      }).then((data) => {
+        rememberTableSession(data.session);
+        tableSessionStatus = 'open';
+        pollTableSession();
+        syncSendGate();
+        return tableSessionId;
+      }).catch((err) => {
+        if (err && err.code === 'session-closed') setTableSessionClosed();
+        else { tableSessionStatus = 'error'; syncSendGate(); }
+        throw err;
+      }).finally(() => { tableSessionPromise = null; });
+      return tableSessionPromise;
+    }
     function postOrderToTill(totalNow, linesCopy) {
       liveOrderId = null;
       const T = KiwiTenant;
-      if (!T || !T.hasTenant || !T.slug) return Promise.resolve(null);
+      if (!T || !T.hasTenant || !T.slug) return Promise.resolve({ ok: true, demo: true });
       const lines = linesCopy.map((l) => ({
         id: String(l.id || ''), name: nameOf(l.id), qty: l.qty, unitPrice: l.unitPrice,
         options: describeOptions(l),
         visuals: describeOptionVisuals(l),
         note: String(l.note || ''),
       }));
-      return fetch('/api/order', {
+      return ensureTableSession().then((session) => fetch('/api/order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({
           merchant: T.slug, mode: orderMode === 'takeout' ? 'takeout' : 'table',
-          table: tableNumber, total: totalNow, lines: lines,
+          table: tableNumber, session: session || undefined, total: totalNow, lines: lines,
         }),
-      })
-        .then((r) => (r.ok ? r.json() : null))
-        .then((d) => (d && d.ok ? (liveOrderId = d.id, d) : null))
-        .catch(() => null);
+      })).then(async (r) => {
+        const data = await r.json().catch(() => null);
+        if (!r.ok || !data || !data.ok) {
+          const code = (data && data.error) || 'order-send-failed';
+          if (code === 'session-closed' || code === 'session-required') setTableSessionClosed();
+          throw sessionError(code);
+        }
+        liveOrderId = data.id;
+        return data;
+      });
     }
 
     function sendOrder() {
@@ -4438,8 +4532,7 @@ em, i, cite, dfn, var { font-style: normal; }
       const totalNow = totals().total;
       // Snapshot current cart into sentLines (for à-table bill aggregation)
       const linesCopy = [...cart.values()].map(l => ({ ...l, options: { ...l.options } }));
-      const sent = postOrderToTill(totalNow, linesCopy);
-      setTimeout(() => {
+      postOrderToTill(totalNow, linesCopy).then((sent) => {
         btn.classList.remove('is-loading');
         closeCart();
         if (orderMode === 'takeout') {
@@ -4448,13 +4541,12 @@ em, i, cite, dfn, var { font-style: normal; }
              ne correspondait à rien — deux clients pouvaient recevoir le même, et
              aucun ne figurait sur l'écran de la caisse. */
           orderNumber = String(40 + Math.floor((performance.now() % 60))).padStart(3, '0');
-          sent.then((d) => {
-            if (!d || !d.number) return;
-            orderNumber = String(d.number).padStart(3, '0');
+          if (sent && sent.number) {
+            orderNumber = String(sent.number).padStart(3, '0');
             $('#cashier-number-digits').textContent = orderNumber;
             $('#prep-number').textContent = orderNumber;
             $('#ready-number').textContent = orderNumber;
-          });
+          }
           $('#cashier-number-digits').textContent = orderNumber;
           $('#prep-number').textContent = orderNumber;
           $('#ready-number').textContent = orderNumber;
@@ -4471,7 +4563,12 @@ em, i, cite, dfn, var { font-style: normal; }
         }
         cart.clear();
         refreshCartUI();
-      }, 1100);
+      }).catch((err) => {
+        btn.classList.remove('is-loading');
+        const closed = err && (err.code === 'session-closed' || err.code === 'session-required');
+        showToast(t(closed ? 'session_closed' : (orderMode === 'table' ? 'session_unavailable' : 'order_send_failed')));
+        syncSendGate();
+      });
     }
 
     /* ============ restart (back to menu after order sent) ============ */
@@ -4524,8 +4621,12 @@ em, i, cite, dfn, var { font-style: normal; }
     /* ============ continue from table-entry to menu ============ */
     function commitTable() {
       if (!tableNumber) return;
-      gotoScreen('screen-menu');
-      applyMenuMode();
+      ensureTableSession().then(() => {
+        gotoScreen('screen-menu');
+        applyMenuMode();
+      }).catch((err) => {
+        showToast(t(err && err.code === 'session-closed' ? 'session_closed' : 'session_unavailable'));
+      });
     }
 
     /* ============ takeout: cashier → preparing ============ */
@@ -4840,10 +4941,14 @@ em, i, cite, dfn, var { font-style: normal; }
       const btn = document.getElementById('send-btn');
       if (!btn) return;
       const closed = shopClosed();
-      btn.disabled = closed;
-      btn.style.opacity = closed ? '0.55' : '';
-      btn.style.pointerEvents = closed ? 'none' : '';
+      const noItems = totals().count === 0;
+      const visitClosed = orderMode === 'table' && tableSessionStatus === 'closed';
+      const opening = orderMode === 'table' && tableSessionStatus === 'opening';
+      btn.disabled = closed || noItems || visitClosed || opening;
+      btn.style.opacity = closed || visitClosed || opening ? '0.55' : '';
+      btn.style.pointerEvents = closed || visitClosed || opening ? 'none' : '';
       if (closed) btn.setAttribute('title', t('closed_why'));
+      else if (visitClosed) btn.setAttribute('title', t('session_closed'));
       else btn.removeAttribute('title');
     }
     function refreshHoursGate() { renderClosedBanner(); syncSendGate(); }
@@ -5026,6 +5131,9 @@ em, i, cite, dfn, var { font-style: normal; }
         if (modeScreen) modeScreen.classList.remove('is-active');
         if (menuScreen) menuScreen.classList.add('is-active');
         if (typeof applyMenuMode === 'function') applyMenuMode();
+        ensureTableSession().catch((err) => {
+          showToast(t(err && err.code === 'session-closed' ? 'session_closed' : 'session_unavailable'));
+        });
       }
 
       // Greeting plays on landing — demo-only flourish (its hero copy names the

@@ -64,7 +64,7 @@ const SIMULATED_GAP = {
     ['merchant_config', 'status'], ['merchant_config', 'city'], ['merchant_config', 'mrr'],
     ['sales', 'lines'], ['sales', 'void_ts'],
   ],
-  indexes: ['orders_client_ref', 'idx_orders_session', 'table_sessions_live'],
+  indexes: ['orders_client_ref', 'orders_ext_ref', 'idx_orders_session', 'table_sessions_live'],
   tables: ['order_desk'],
 };
 
@@ -159,6 +159,7 @@ async function main() {
     check('orders.session_id existe', cols.some((c) => c.name === 'session_id'));
     const idx = await sqlite(aged, "SELECT name FROM sqlite_master WHERE type = 'index'");
     check('l\'index orders_client_ref existe', idx.some((i) => i.name === 'orders_client_ref'));
+    check('l\'index orders_ext_ref existe', idx.some((i) => i.name === 'orders_ext_ref'));
     check('l\'index table_sessions_live existe', idx.some((i) => i.name === 'table_sessions_live'));
 
     /* L'index unique partiel doit réellement MORDRE — c'est lui, et pas la
@@ -173,6 +174,17 @@ async function main() {
         VALUES ('ord-b', 'm', 2, 'table', '3', 10, '[]', 'accepted', 1, 1, 'ref-1');`);
     } catch (_) { refused = true; }
     check('un doublon de client_ref est refusé par la base', refused);
+
+    await sqlite(aged, `INSERT INTO orders (id, merchant, number, mode, table_no, total, lines,
+      status, created_ts, updated_ts, channel, ext_ref)
+      VALUES ('ord-ext-a', 'm', 3, 'delivery', '', 10, '[]', 'pending', 1, 1, 'shopify', 'ext-1');`);
+    let extRefused = false;
+    try {
+      await sqlite(aged, `INSERT INTO orders (id, merchant, number, mode, table_no, total, lines,
+        status, created_ts, updated_ts, channel, ext_ref)
+        VALUES ('ord-ext-b', 'm', 4, 'delivery', '', 10, '[]', 'pending', 1, 1, 'shopify', 'ext-1');`);
+    } catch (_) { extRefused = true; }
+    check('un doublon de référence prestataire est refusé par la base', extRefused);
 
     /* ── 3. Le garde-fou sur ADD COLUMN ──────────────────────────────────── */
     console.log('\nGarde-fous');

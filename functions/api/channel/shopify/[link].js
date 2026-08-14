@@ -281,6 +281,20 @@ export async function onRequestPost(context) {
       merchant, startOfWeek(now)
     ).first();
   } catch (e) {
+    /* The SELECT before INSERT cannot serialize concurrent Shopify retries.
+     * The unique database index does; after losing that race, return the row
+     * created by the winner as a successful replay. */
+    if (t.ref) {
+      try {
+        const raced = await env.DB.prepare(
+          'SELECT id, number FROM orders WHERE merchant = ? AND channel = ? AND ext_ref = ?'
+        ).bind(merchant, CHANNEL, t.ref).first();
+        if (raced) {
+          await mark(env, link.id, true);
+          return json({ ok: true, id: raced.id, number: raced.number, duplicate: true });
+        }
+      } catch (_) { /* preserve the original write error below */ }
+    }
     const detail = String((e && e.message) || e);
     await mark(env, link.id, false, detail);
     return json({ error: 'write-failed', detail }, 500);

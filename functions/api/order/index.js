@@ -70,12 +70,11 @@ export async function onRequestPost(context) {
   const table = mode === 'table' ? normTable(b.table) : '';
   if (mode === 'table' && !table) return json({ error: 'table-required' }, 400);
 
-  /* La session, quand le téléphone en a une. OrderPro en ouvre toujours une ;
-   * le QR historique n'en a pas, et reste accepté — sa commande porte alors
-   * `session_id` NULL et ne bénéficie pas de la révocation à l'encaissement.
-   * Quand elle EST fournie, elle doit être vivante et désigner la même table :
-   * c'est ce qui fait qu'une addition encaissée coupe vraiment le robinet. */
+  /* Toute commande à table appartient à une visite révocable. Sans session,
+   * un ancien QR pouvait continuer à commander après l'encaissement et ouvrir
+   * une nouvelle dette sur la table libérée. Le retrait reste sans session. */
   const sessionId = String((b && b.session) || '').trim();
+  if (mode === 'table' && !sessionId) return json({ error: 'session-required' }, 409);
   let session = null;
   if (sessionId) {
     if (!SESSION_ID.test(sessionId)) return json({ error: 'bad-session' }, 400);
@@ -239,6 +238,9 @@ export async function onRequestPost(context) {
         }
       } catch (_) { /* colonne absente → c'était bien une base non migrée */ }
     }
+    /* A table order must never degrade to the legacy insert because that
+     * insert drops session_id and would recreate the revocation bypass. */
+    if (mode === 'table') return json({ error: 'session-storage-unavailable' }, 503);
     try {
       row = await env.DB.prepare(
         `INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status,

@@ -38,7 +38,7 @@ const ok = (l, c, d) => { if (c) pass++; else fails.push(l + (d ? ' — ' + d : 
 
 /* ── D1 de poche ─────────────────────────────────────────────────────────── */
 function makeDB() {
-  const T = { channel_links: [], orders: [], merchant_config: [], accounts: {} };
+  const T = { channel_links: [], orders: [], merchant_config: [], accounts: {}, hideDuplicateOnce: false };
   T.accounts[ACC_A] = { business: 'Atlas Casa' };
   T.accounts[ACC_B] = { business: 'Chez Rival' };
 
@@ -89,6 +89,7 @@ function makeDB() {
             return { id: a[0] };
           }
           if (q.startsWith('SELECT id, number FROM orders WHERE merchant = ? AND channel')) {
+            if (T.hideDuplicateOnce) { T.hideDuplicateOnce = false; return null; }
             return T.orders.find((o) => o.merchant === a[0] && o.channel === a[1] && o.ext_ref === a[2]) || null;
           }
           if (q.startsWith('SELECT COUNT(*) AS n FROM orders')) {
@@ -96,6 +97,9 @@ function makeDB() {
           }
           if (q.startsWith('INSERT INTO orders')) {
             const [id, merchant, mode, total, lines, created, updated, channel, ref, customer] = a;
+            if (ref && T.orders.some((o) => o.merchant === merchant && o.channel === channel && o.ext_ref === ref)) {
+              throw new Error('UNIQUE constraint failed: orders.merchant, orders.channel, orders.ext_ref');
+            }
             const number = T.orders.filter((o) => o.merchant === merchant).reduce((m, o) => Math.max(m, o.number), 0) + 1;
             T.orders.push({ id, merchant, number, mode, table_no: '', total, lines, status: 'pending', created_ts: created, updated_ts: updated, channel, ext_ref: ref, customer });
             return { number };
@@ -257,6 +261,12 @@ const ORDER = (over) => JSON.stringify(Object.assign({
   r = await signed(linkId, raw);
   ok('rejouer la même commande ne crée pas un second ticket', r.status === 200 && r.body.duplicate === true, JSON.stringify(r.body));
   ok('…il n\'y a toujours qu\'un ticket', DB._t.orders.length === 1);
+
+  DB._t.hideDuplicateOnce = true;
+  r = await signed(linkId, raw);
+  ok('une course perdue sur l\'INSERT est traitée comme un rejeu réussi',
+    r.status === 200 && r.body.duplicate === true && r.body.id === t.id, JSON.stringify(r.body));
+  ok('…sans second ticket Shopify', DB._t.orders.length === 1);
 
   /* ── 7 · les centimes ───────────────────────────────────────────────────── */
   const cents = ORDER({ id: 777, total_price: '129.90', note: '' });

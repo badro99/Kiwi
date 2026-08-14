@@ -881,6 +881,12 @@ CREATE INDEX IF NOT EXISTS idx_orders_session ON orders (session_id);
 -- entrent pas et ne peuvent donc pas se gêner entre elles.
 CREATE UNIQUE INDEX IF NOT EXISTS orders_client_ref
   ON orders (merchant, client_ref) WHERE client_ref IS NOT NULL;
+-- Les prestataires et Shopify rejouent leurs webhooks. La relecture dans les
+-- handlers évite le cas normal, cet index tranche la course où deux requêtes
+-- ont fait cette relecture avant que l'une des deux n'insère.
+CREATE UNIQUE INDEX IF NOT EXISTS orders_ext_ref
+  ON orders (merchant, channel, ext_ref)
+  WHERE ext_ref IS NOT NULL AND ext_ref <> '';
 
 -- ── Quota journalier de l'assistant IA côté serveur ───────────────────────
 -- /api/ai/ask est le modèle de SECOURS, proposé seulement aux appareils qui ne

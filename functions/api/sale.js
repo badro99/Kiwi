@@ -298,37 +298,35 @@ export async function onRequestPost({ request, env }) {
         const marks = ids.map(() => '?').join(',');
         /* Deux façons d'appartenir à cette addition, et il faut les deux :
          *  · porter l'identifiant d'une des sessions qu'on vient de fermer ;
-         *  · ou être né sur cette table PENDANT la visite. Ce second membre
-         *    rattrape les bons que la caisse dépose sans session (createTicket
-         *    n'en pose pas) et, surtout, la commande partie juste avant
-         *    l'encaissement : sa session était déjà close quand elle a atterri,
-         *    donc le premier membre la manquait, et elle serait restée servie
-         *    mais impayable à jamais.
+         *  · ou être un bon SANS session né sur cette table PENDANT la visite,
+         *    avant le début de cet encaissement. Ce second membre rattrape les
+         *    bons que la caisse dépose sans session (createTicket n'en pose
+         *    pas), sans aspirer une nouvelle visite ouverte pendant que les
+         *    deux écritures de règlement se succèdent.
          * Ce qui reste dehors est ce qu'on veut dehors : une commande d'une
-         * tablée précédente, née avant le début de cette visite. */
+         * tablée précédente, ou une commande née après le début du paiement. */
         await env.DB.prepare(
           `UPDATE orders SET paid_ts = ?, updated_ts = ?
             WHERE merchant = ? AND paid_ts IS NULL
               AND ( session_id IN (${marks})
-                 OR (table_no = ? AND created_ts >= ?) )`
-        ).bind(now, now, merchant, ...ids, settledTable, visitStart).run();
+                 OR (session_id IS NULL AND table_no = ?
+                     AND created_ts BETWEEN ? AND ?) )`
+        ).bind(now, now, merchant, ...ids, settledTable, visitStart, now).run();
       } else {
         await env.DB.prepare(
           `UPDATE orders SET paid_ts = ?, updated_ts = ?
-            WHERE merchant = ? AND table_no = ? AND created_ts >= ? AND paid_ts IS NULL`
-        ).bind(now, now, merchant, settledTable, visitStart).run();
+            WHERE merchant = ? AND table_no = ? AND session_id IS NULL
+              AND created_ts BETWEEN ? AND ? AND paid_ts IS NULL`
+        ).bind(now, now, merchant, settledTable, visitStart, now).run();
       }
     } catch (_) {
-      /* `session_id` pas encore migrée : la colonne nommée fait échouer
-       * l'énoncé entier. On solde alors comme avant — trop large, mais une
-       * addition non soldée coûte plus cher qu'un filtre imprécis, et le
-       * diagnostic est à un `node tools/d1-schema.mjs` de distance. */
-      try {
-        await env.DB.prepare(
-          `UPDATE orders SET paid_ts = ?, updated_ts = ?
-            WHERE merchant = ? AND table_no = ? AND created_ts >= ? AND paid_ts IS NULL`
-        ).bind(now, now, merchant, settledTable, visitStart).run();
-      } catch (_) {}
+      /* Fail closed. Without the session-aware schema there is no race-safe way
+       * to decide which same-table orders belong to this visit: even a bounded
+       * timestamp fallback can capture a new visit created in the cutoff
+       * millisecond. The money is already durable, so report reconciliation as
+       * pending and leave every order untouched until the schema is migrated or
+       * the idempotent settlement is retried. */
+      settlementPending = true;
     }
 
     /* ── L'ARGENT EST ENREGISTRÉ : CE N'EST PLUS UN ÉCHEC DE PAIEMENT ────────
@@ -343,7 +341,7 @@ export async function onRequestPost({ request, env }) {
      * c'est précisément pendant un coup de feu. Un plan de salle en retard se
      * rattrape au battement suivant. Une vente comptée deux fois, non. */
     const settled = await settleServiceTable(env, merchant, settledTable);
-    settlementPending = !settled.ok;
+    settlementPending = settlementPending || !settled.ok;
   }
   await poke(env, merchant, 'sales');
   return json({

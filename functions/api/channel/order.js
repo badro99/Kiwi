@@ -198,6 +198,21 @@ export async function onRequestPost(context) {
       merchant, startOfWeek(now)
     ).first();
   } catch (e) {
+    /* The pre-read above is only an optimisation. Two provider retries can
+     * both pass it before either INSERT commits; the database uniqueness
+     * constraint is the authority. Re-read after any failed insert and turn a
+     * winning concurrent insert into an idempotent success. */
+    if (ref) {
+      try {
+        const raced = await env.DB.prepare(
+          'SELECT id, number FROM orders WHERE merchant = ? AND channel = ? AND ext_ref = ?'
+        ).bind(merchant, channel, ref).first();
+        if (raced) {
+          await mark(env, link.id, true);
+          return json({ ok: true, id: raced.id, number: raced.number, duplicate: true });
+        }
+      } catch (_) { /* preserve the original write error below */ }
+    }
     const detail = String((e && e.message) || e);
     await mark(env, link.id, false, detail);
     return json({ error: 'write-failed', detail }, 500);
