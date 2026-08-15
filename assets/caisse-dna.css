@@ -3,7 +3,10 @@
  * mounted successfully. No business element is hidden or reordered. */
 
 .vx-screen.kiwi-dna {
-  --kiwi-dna-rail-w: 280px;
+  /* 244px keeps the restaurant-grade rail hierarchy without taxing every
+   * métier's selling canvas. The former 280px rail consumed a full product
+   * column on common 1280/1366px terminals. */
+  --kiwi-dna-rail-w: 244px;
 }
 
 .vx-screen.kiwi-dna .kiwi-dna-rail {
@@ -275,8 +278,34 @@
   #pos-autre.kiwi-dna .ot-app { grid-template-columns: var(--kiwi-dna-rail-w) minmax(0, 1fr); }
 }
 
+/* Product pickers are working surfaces, not marketing cards. On the common
+ * 1280/1366px caisse laptops these widths expose one or two more useful choices
+ * while keeping every tile comfortably finger-safe. */
+@media (min-width: 801px) and (max-width: 1366px) {
+  #pos-boutique.kiwi-dna .bq-grid,
+  #pos-spa.kiwi-dna .sp-grid,
+  #pos-epicerie.kiwi-dna .ep-grid,
+  #pos-librairie.kiwi-dna .lb-grid,
+  #pos-fleuriste.kiwi-dna .fl-grid,
+  #pos-coiffure.kiwi-dna .cf-grid {
+    grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+    gap: 8px;
+  }
+
+  #pos-fastfood.kiwi-dna .ff-grid,
+  #pos-boulangerie.kiwi-dna .bl-grid,
+  #pos-pizzeria.kiwi-dna .pz-grid,
+  #pos-traiteur.kiwi-dna .tr-dishgrid,
+  #pos-foodtruck.kiwi-dna .ft-menu,
+  #pos-pharmacie.kiwi-dna .ph-grid,
+  #pos-gym.kiwi-dna .gy-shop-grid {
+    grid-template-columns: repeat(auto-fill, minmax(124px, 1fr));
+    gap: 8px;
+  }
+}
+
 @media (max-width: 1180px) {
-  .vx-screen.kiwi-dna { --kiwi-dna-rail-w: 244px; }
+  .vx-screen.kiwi-dna { --kiwi-dna-rail-w: 224px; }
   .vx-screen.kiwi-dna .kiwi-dna-rail { padding-inline: 14px; }
   .vx-screen.kiwi-dna .kiwi-dna-nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

@@ -17,6 +17,7 @@ const dashboard = read('dashboard.html');
 const caisse = read('kiwi-caisse.html');
 const sw = read('kiwi-sw.js');
 const css = read('assets/pressing-dashboard.css');
+const caisseCss = read('assets/pressing-caisse.css');
 const pressingJs = read('assets/pressing-dashboard.js');
 const caisseJs = read('assets/pressing-caisse.js');
 const pairingJs = read('assets/caisse-pairing.js');
@@ -33,7 +34,7 @@ ok(venues.includes("v.subtype !== 'pressing'"), 'generic boutique Sold is not ap
 ok(venues.includes('active.subtype = exactSubtype'), 'server type keeps the exact pressing subtype');
 ok(pairingJs.includes("if (t && ids[t]) return { kind: 'vertical', id: t }"), 'operator hand-off routes an exact pressing type into the pressing till');
 ok(caisse.includes('assets/caisse-pairing.js?v=3') && sw.includes("'/assets/caisse-pairing.js?v=3'"), 'pressing route fix bypasses the old cached pairing router');
-ok(caisse.includes('assets/pos-dispatch.js?v=16') && sw.includes("'/assets/pos-dispatch.js?v=16'") && dispatchJs.includes("file: 'pressing-caisse', rev: '14'") && sw.includes("'/assets/pressing-caisse.js?v=14'") && sw.includes("'/assets/pressing-caisse.css?v=14'"), 'pressing loader and lazy assets use deploy-stable cache revisions');
+ok(caisse.includes('assets/pos-dispatch.js?v=17') && sw.includes("'/assets/pos-dispatch.js?v=17'") && dispatchJs.includes("file: 'pressing-caisse', rev: '15'") && sw.includes("'/assets/pressing-caisse.js?v=15'") && sw.includes("'/assets/pressing-caisse.css?v=15'"), 'pressing loader and lazy assets use deploy-stable cache revisions');
 ok(dashboard.includes('assets/pressing-dashboard.js?v=8'), 'dashboard loads the pressing subpages');
 ok(dashboard.includes('assets/pressing-ops.js?v=3') && caisse.includes('assets/pressing-ops.js?v=3'), 'dashboard and till share the same operations bridge');
 ok(sw.includes("'/assets/pressing-dashboard.css?v=8'") && sw.includes("'/assets/pressing-dashboard.js?v=8'"), 'pressing workspace is available offline');
@@ -43,6 +44,8 @@ ok(!css.includes('body.is-pressing .page-head') && css.includes('.pressing-home 
 ok(pressingJs.includes("window.addEventListener('click'") && pressingJs.includes('open.dataset.pxdOpen') && pressingJs.includes('page.dataset.pxdPage'), 'pressing subpage actions claim sidebar routing before the generic dashboard');
 ok(css.includes('@media (max-width: 390px)') && css.includes('@media (max-width: 760px)'), 'phone breakpoints cover narrow screens');
 ok(!/font-style\s*:\s*italic/.test(css + catalogCss), 'pressing workspace uses roman type only');
+ok(caisseJs.includes("catalogQuery: ''") && caisseJs.includes('px-catalog-search') && caisseJs.includes('cats.flatMap'), 'pressing counter exposes fast search and packs every visible garment into one continuous grid');
+ok(caisseCss.includes('@media (max-width: 1366px)') && caisseCss.includes('minmax(96px, 1fr)') && caisseCss.includes('.px-grid-all') && caisseCss.includes('min-height: 142px'), 'common terminals show an extra garment column without shrinking touch cards below a safe height');
 ok(caisseJs.includes("PRESSING_STORE_PREFIX = 'kiwi:pressing-store:v1:'") && caisseJs.includes("feature: 'pressing-orders'"), 'full garment tickets persist locally and through the tenant cloud document');
 ok(caisseJs.indexOf('ticketSeq++;\n        syncOwnerOps();') > 0, 'the next ticket number is persisted before a pay-at-pickup reload');
 ok(storeApi.includes("'pressing-orders': { keys: ['customers', 'orders', 'seq']"), 'the store API accepts the bounded pressing ticket document');

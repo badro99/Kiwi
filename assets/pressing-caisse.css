@@ -142,6 +142,22 @@ body.is-pos-pressing .px-screen.is-entering { animation: px-dive 640ms cubic-bez
 .px-head h1 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
 .px-head-sub { font-size: 12px; color: var(--ink-3); margin-top: 3px; }
 .px-head-hint { font-size: 12px; color: var(--ink-3); padding-bottom: 2px; }
+.px-head-hint b { color: var(--ink); font-family: var(--mono); font-weight: 700; }
+.px-head-tools { display: flex; align-items: center; justify-content: flex-end; gap: 12px; min-width: 0; }
+.px-catalog-search {
+  width: min(220px, 22vw); height: 38px;
+  display: flex; align-items: center; gap: 8px;
+  padding: 0 11px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--paper-elev);
+  color: var(--ink-3);
+  transition: border-color 140ms ease, box-shadow 140ms ease, background 140ms ease;
+}
+.px-catalog-search:focus-within { border-color: var(--atlas); box-shadow: 0 0 0 3px var(--mint-tint); background: var(--surface); }
+.px-catalog-search svg { width: 15px; height: 15px; flex: 0 0 15px; }
+.px-catalog-search input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--ink); font: 500 12.5px/1 var(--sans); }
+.px-catalog-search input::placeholder { color: var(--ink-4); }
 
 /* ═══════════════ COMPTOIR — visual intake grid + ticket ═══════════════ */
 .px-intake { flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 0; }
@@ -171,7 +187,7 @@ body.is-pos-pressing .px-screen.is-entering { animation: px-dive 640ms cubic-bez
 }
 .px-cat.on .px-cat-ct { background: rgba(255,255,255,0.18); color: #fff; }
 
-.px-grid-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 2px 22px 26px; overscroll-behavior: contain; }
+.px-grid-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 22px 26px; overscroll-behavior: contain; }
 .px-cat-head {
   display: flex; align-items: center; gap: 8px;
   font-family: var(--mono); font-size: 10.5px; font-weight: 600;
@@ -181,10 +197,12 @@ body.is-pos-pressing .px-screen.is-entering { animation: px-dive 640ms cubic-bez
 }
 .px-cat-head::after { content: ""; flex: 1; height: 1px; background: var(--line-soft); }
 
-.px-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 10px; }
+.px-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(108px, 1fr)); gap: 10px; align-content: start; }
+.px-grid-all { padding-top: 8px; }
 .px-card {
   display: flex; flex-direction: column; align-items: center; gap: 7px;
-  padding: 14px 10px 12px;
+  min-height: 150px;
+  padding: 12px 9px 11px;
   background: var(--paper-elev);
   border: 1px solid var(--line);
   border-radius: var(--r-xl);
@@ -200,7 +218,7 @@ body.is-pos-pressing .px-screen.is-entering { animation: px-dive 640ms cubic-bez
 .px-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-1); border-color: var(--mint-edge); }
 .px-card:active { transform: scale(0.96); }
 .px-card-art {
-  width: 72px; height: 72px;
+  width: 66px; height: 66px;
   display: flex; align-items: center; justify-content: center;
   border-radius: 14px;
   overflow: hidden;
@@ -209,6 +227,12 @@ body.is-pos-pressing .px-screen.is-entering { animation: px-dive 640ms cubic-bez
   color: var(--forest);
 }
 .px-card-art .px-product-photo { width: 100%; height: 100%; display: block; object-fit: contain; }
+.px-card-cat {
+  margin-bottom: -4px;
+  font-family: var(--mono); font-size: 8.5px; font-weight: 700;
+  letter-spacing: .08em; line-height: 1; text-transform: uppercase;
+  color: var(--forest);
+}
 .px-material-art { display: block; fill: currentColor; color: var(--forest); }
 .px-line-art .px-material-art,
 .px-sheet-art .px-material-art,
@@ -223,6 +247,14 @@ body.is-pos-pressing .px-screen.is-entering { animation: px-dive 640ms cubic-bez
   border: 1px solid var(--mint-edge);
   padding: 2px 7px; border-radius: 999px;
 }
+.px-grid-empty {
+  min-height: min(320px, 48vh);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px;
+  color: var(--ink-3); text-align: center;
+}
+.px-grid-empty svg { width: 25px; height: 25px; color: var(--forest); margin-bottom: 3px; }
+.px-grid-empty b { color: var(--ink); font-size: 14px; }
+.px-grid-empty span { font-size: 12px; }
 
 /* garment line-art */
 .px-art { fill: none; stroke: var(--forest); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
@@ -1003,9 +1035,19 @@ body.is-pos-pressing .px-screen.is-entering { animation: px-dive 640ms cubic-bez
 .px-modal-x svg { width: 16px; height: 16px; }
 .modal.px-rel { position: relative; }
 
-@media (max-width: 1240px) {
+/* Most deployed caisse laptops are 1280/1366px wide. Enter compact mode before
+ * that breakpoint so the catalogue gains a real sixth column instead of
+ * leaving the lower half of the counter empty. */
+@media (max-width: 1366px) {
   .px-ticket { width: 320px; flex-basis: 320px; }
+  .px-grid { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+  .px-card { min-height: 142px; padding-inline: 7px; }
+  .px-card-art { width: 60px; height: 60px; }
   .px-board-cols { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 1080px) {
+  .px-head-hint { display: none; }
+  .px-catalog-search { width: min(210px, 26vw); }
 }
 @media (prefers-reduced-motion: reduce) {
   .px-card, .px-ocard, .px-line, .px-rt-card { animation: none !important; }

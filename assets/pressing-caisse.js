@@ -487,6 +487,7 @@
   const state = {
     view: 'comptoir',
     cat: 'tous',
+    catalogQuery: '',
     ticket: null,            /* { num, lines:[], customer, ready } */
     boardQuery: '',
     rtQuery: '', rtOrder: null,
@@ -777,7 +778,13 @@
           <div class="px-intake">
             <header class="px-head">
               <div><h1>Comptoir de dépôt</h1><div class="px-head-sub" id="px-today"></div></div>
-              <div class="px-head-hint">Touchez un article pour l'ajouter au ticket</div>
+              <div class="px-head-tools">
+                <div class="px-head-hint"><b id="px-catalog-count"></b> articles · touchez pour ajouter</div>
+                <label class="px-catalog-search">
+                  <i data-lucide="search" aria-hidden="true"></i>
+                  <input id="px-catalog-search" type="search" autocomplete="off" placeholder="Trouver un article" aria-label="Rechercher un article">
+                </label>
+              </div>
             </header>
             <div class="px-cats" id="px-cats"></div>
             <div class="px-grid-scroll" id="px-gridwrap"></div>
@@ -805,6 +812,11 @@
     });
     $('#px-lock', root).addEventListener('click', lock);
     $('#px-net', root).addEventListener('click', toggleOffline);
+    $('#px-catalog-search', root).addEventListener('input', (event) => {
+      state.catalogQuery = event.target.value || '';
+      renderGrid();
+      icons();
+    });
     /* fermer un modal en cliquant le voile */
     $$('.modal-veil', root).forEach((v) => {
       v.addEventListener('click', (e) => {
@@ -918,17 +930,24 @@
   function renderGrid() {
     const visible = counterCatalog();
     const cats = state.cat === 'tous' ? visible : visible.filter((c) => c.id === state.cat);
+    const query = state.catalogQuery.trim().toLocaleLowerCase('fr');
+    const rows = cats.flatMap((category) => category.items.map((item) => ({ category, item }))).filter(({ category, item }) => {
+      if (!query) return true;
+      return [item.label, item.sub, category.label].some((value) => String(value || '').toLocaleLowerCase('fr').includes(query));
+    });
     let i = 0;
-    $('#px-gridwrap', root).innerHTML = cats.map((c) => `
-      <div class="px-cat-head">${esc(c.label)}</div>
-      <div class="px-grid">${c.items.map((it) => `
+    const count = $('#px-catalog-count', root);
+    if (count) count.textContent = rows.length;
+    $('#px-gridwrap', root).innerHTML = rows.length ? `
+      <div class="px-grid px-grid-all">${rows.map(({ category, item: it }) => `
         <button class="px-card" data-px-item="${it.id}" style="--i:${i++}">
           <span class="px-card-art">${garmentIcon(it)}</span>
+          <span class="px-card-cat">${esc(category.label)}</span>
           <span class="px-card-name">${esc(it.label)}</span>
           <span class="px-card-price">dès ${minPrice(it)} MAD${it.sub ? ` · ${esc(it.sub)}` : ''}</span>
           ${it.flag ? `<span class="px-card-flag">${esc(it.flag)}</span>` : ''}
         </button>`).join('')}
-      </div>`).join('');
+      </div>` : `<div class="px-grid-empty"><i data-lucide="search-x"></i><b>Aucun article trouvé</b><span>Essayez un autre nom ou choisissez une autre catégorie.</span></div>`;
     $('#px-gridwrap', root).onclick = (e) => {
       const b = e.target.closest('[data-px-item]');
       if (b) openSheet(b.dataset.pxItem);

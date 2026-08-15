@@ -15,11 +15,11 @@ const failed = [];
 const ok = (label, condition) => condition ? passed++ : failed.push(label);
 
 ok('shared visual DNA is loaded after the dispatcher and before operator use',
-  page.includes('assets/pos-dispatch.js?v=11') &&
-  page.includes('assets/caisse-dna.css?v=2') &&
+  page.includes('assets/pos-dispatch.js?v=17') &&
+  page.includes('assets/caisse-dna.css?v=3') &&
   page.includes('assets/caisse-dna.js?v=2'));
 ok('shared visual DNA remains available offline',
-  sw.includes("'/assets/caisse-dna.css?v=2'") && sw.includes("'/assets/caisse-dna.js?v=2'"));
+  sw.includes("'/assets/caisse-dna.css?v=3'") && sw.includes("'/assets/caisse-dna.js?v=2'"));
 ok('dispatcher enhances only after the vertical has mounted its own controls',
   dispatch.indexOf('spec.mount(root)') < dispatch.indexOf('KiwiCaisseDna.enhance(root, id)') &&
   dispatch.indexOf('KiwiPosWorkspaces.mount(root, id)') < dispatch.indexOf('KiwiCaisseDna.enhance(root, id)'));
@@ -38,6 +38,11 @@ ok('Santos boutique keeps its absolute content offset tied to the enhanced rail'
 ok('the generic caisse grid follows the enhanced rail width',
   css.includes('#pos-autre.kiwi-dna .ot-app') && css.includes('grid-template-columns: var(--kiwi-dna-rail-w)') &&
   css.includes('@media (max-width: 800px)'));
+ok('specialist product pickers expose more choices on common laptop tills',
+  css.includes('@media (min-width: 801px) and (max-width: 1366px)') &&
+  css.includes('#pos-boutique.kiwi-dna .bq-grid') &&
+  css.includes('#pos-pharmacie.kiwi-dna .ph-grid') &&
+  css.includes('minmax(112px, 1fr)') && css.includes('minmax(124px, 1fr)'));
 ok('the skin stays inside the locked Kiwi palette',
   !/#(?!0A0F0D|7DF2B0|F7F5F0|0B6E4F|053B2C)[0-9A-Fa-f]{6}\b/.test(css));
 ok('the skin introduces no italic type', !/font-style\s*:\s*italic/.test(css));
