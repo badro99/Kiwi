@@ -110,6 +110,61 @@
   const validReady = (value, now) => !!value && typeof value.getTime === 'function'
     && Number.isFinite(value.getTime()) && value.getTime() > +(now || Date.now());
 
+  /* The counter promises clock times, not vague 24/48-hour offsets. Building
+     from local calendar days keeps noon and 18:00 stable across DST changes.
+     Sunday was already excluded by the pressing flow; keep that operational
+     rule while making the label honest whenever "tomorrow" becomes Monday. */
+  function pressingServiceDay(from, count) {
+    const d = new Date(from);
+    d.setHours(0, 0, 0, 0);
+    let left = Math.max(0, Math.floor(+count || 0));
+    while (left > 0) {
+      d.setDate(d.getDate() + 1);
+      if (d.getDay() !== 0) left--;
+    }
+    return d;
+  }
+  function pressingSlot(from, serviceDays, hour) {
+    const d = pressingServiceDay(from, serviceDays);
+    d.setHours(hour, 0, 0, 0);
+    return d;
+  }
+  function relativeServiceDay(date, now) {
+    const a = new Date(now); a.setHours(0, 0, 0, 0);
+    const b = new Date(date); b.setHours(0, 0, 0, 0);
+    const days = Math.round((b - a) / (24 * H));
+    if (days === 0) return "Aujourd'hui";
+    if (days === 1) return 'Demain';
+    if (days === 2) return 'Après-demain';
+    return fmtDay(date);
+  }
+  function readyOptions(value) {
+    const now = value && typeof value.getTime === 'function' && Number.isFinite(value.getTime())
+      ? new Date(value.getTime())
+      : new Date();
+    const beforeCutoff = now.getHours() < 13;
+    const nextNoon = pressingSlot(now, 1, 12);
+    const nextEvening = pressingSlot(now, 1, 18);
+    const followingNoon = pressingSlot(now, 2, 12);
+    const options = beforeCutoff
+      ? [
+          { key: 'today-evening', d: pressingSlot(now, 0, 18), sub: 'Express · dépôt avant 13:00' },
+          { key: 'next-noon', d: nextNoon, sub: 'Retrait à midi' },
+          { key: 'next-evening', d: nextEvening, sub: 'Service standard', recommended: true },
+        ]
+      : [
+          { key: 'next-noon', d: nextNoon, sub: 'Premier créneau disponible' },
+          { key: 'next-evening', d: nextEvening, sub: 'Service standard', recommended: true },
+          { key: 'following-noon', d: followingNoon, sub: 'Délai confortable' },
+        ];
+    return options.map((option) => ({
+      ...option,
+      day: relativeServiceDay(option.d, now),
+      time: `${pad2(option.d.getHours())}:${pad2(option.d.getMinutes())}`,
+      label: `${relativeServiceDay(option.d, now)} · ${pad2(option.d.getHours())}:${pad2(option.d.getMinutes())}`,
+    }));
+  }
+
   function toast(msg, ms) {
     const stack = $('#toast-stack');
     if (!stack) return;
@@ -465,11 +520,9 @@
   function freshTicket() {
     state.ticket = { num: posRef(`P-${ticketSeq}`), lines: [], customer: null, ready: suggestReady() };
   }
-  function suggestReady() {
-    const d = new Date(Date.now() + 48 * H);
-    d.setHours(18, 0, 0, 0);
-    if (d.getDay() === 0) d.setDate(d.getDate() + 1);   /* dimanche → lundi */
-    return d;
+  function suggestReady(value) {
+    const options = readyOptions(value);
+    return new Date((options.find((option) => option.recommended) || options[0]).d);
   }
   function findOrder(id) { return ORDERS.find((o) => o.id === id); }
   function custOf(o) {
@@ -1327,23 +1380,27 @@
   /* ═══════════════════════ READY DATE ═══════════════════════ */
   function openDate() {
     const el = $('#px-datemm', root);
-    const mk = (h, hour) => { const d = new Date(Date.now() + h * H); d.setHours(hour, 0, 0, 0); if (d.getDay() === 0) d.setDate(d.getDate() + 1); return d; };
-    const opts = [
-      { label: 'Ce soir · 19:00', sub: 'express', d: (() => { const d = new Date(); d.setHours(19, 0, 0, 0); return d; })() },
-      { label: 'Demain · 18:00', sub: 'service standard', d: mk(24, 18) },
-      { label: fmtDay(mk(48, 18)) + ' · 18:00', sub: '48 h, suggéré', d: mk(48, 18) },
-      { label: fmtDay(mk(72, 18)) + ' · 18:00', sub: '72 h', d: mk(72, 18) },
-    ];
+    const now = new Date();
+    const beforeCutoff = now.getHours() < 13;
+    const opts = readyOptions(now);
     el.innerHTML = `
       <button class="px-modal-x" data-px-close aria-label="Fermer"><i data-lucide="x"></i></button>
+      <div class="px-date-kicker">PROMESSE CLIENT</div>
       <h3 class="modal-title">Prêt pour quand ?</h3>
-      <p class="modal-subtle">La date de retrait s'imprime sur le ticket et sert d'alerte au tableau.</p>
-      <div class="px-date-chips">
-        ${opts.map((o, i) => `<button class="px-date-chip ${Math.abs(o.d - state.ticket.ready) < 60000 ? 'on' : ''}" data-px-d="${i}" ${validReady(o.d) ? '' : 'disabled'}><b>${esc(o.label)}</b><span>${esc(validReady(o.d) ? o.sub : 'horaire dépassé')}</span></button>`).join('')}
+      <p class="modal-subtle">Choisissez un créneau réaliste. Il sera imprimé sur le ticket et suivi par l'atelier.</p>
+      <div class="px-date-status ${beforeCutoff ? 'is-express' : ''}">
+        <i data-lucide="${beforeCutoff ? 'sun' : 'clock-3'}"></i>
+        <div><b>${beforeCutoff ? "Dépôt du matin" : "L'express du jour est fermé"}</b><span>${beforeCutoff ? "Le retrait aujourd'hui reste possible jusqu'à 18:00." : "Après 13:00, Kiwi propose directement les prochains créneaux tenables."}</span></div>
       </div>
+      <div class="px-date-chips">
+        ${opts.map((o, i) => `<button class="px-date-chip ${Math.abs(o.d - state.ticket.ready) < 60000 ? 'on' : ''}" data-px-d="${i}" aria-label="${esc(o.label)}">
+          <span class="px-date-day">${esc(o.day)}</span><b>${esc(o.time)}</b><span class="px-date-meta">${esc(o.sub)}</span>${o.recommended ? '<em>RECOMMANDÉ</em>' : ''}<i data-lucide="check"></i>
+        </button>`).join('')}
+      </div>
+      <div class="px-date-divider"><span>Autre date</span></div>
       <div class="px-date-custom">
         <input class="px-in" id="px-date-input" type="datetime-local" min="${localDT(new Date(Date.now() + 60000))}" value="${localDT(state.ticket.ready)}" />
-        <button class="px-btn primary" id="px-date-ok" style="flex:0 0 auto;">OK</button>
+        <button class="px-btn primary" id="px-date-ok">Valider</button>
       </div>`;
     openVeil('#px-date-veil');
     icons();
@@ -2529,6 +2586,8 @@
       clampQty,
       validDeposit,
       validReady,
+      readyOptions,
+      suggestReady,
       findScannedOrder,
       barcode,
       maxQty: MAX_QTY,

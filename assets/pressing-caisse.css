@@ -568,20 +568,60 @@ body.is-pos-pressing .px-screen.is-entering { animation: px-dive 640ms cubic-bez
 .px-reco-row b { font-weight: 600; color: var(--ink); }
 
 /* ═══════════════ READY DATE ═══════════════ */
-.modal.px-datem { width: 460px; padding: 24px 24px 20px; }
-.px-date-chips { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 12px; }
-.px-date-chip {
-  padding: 13px 12px;
-  border: 1px solid var(--line); border-radius: 12px;
-  text-align: left;
-  transition: border-color 130ms, background 130ms;
+.modal.px-datem { width: 560px; max-width: calc(100vw - 32px); padding: 28px; overflow: hidden; }
+.px-date-kicker {
+  color: var(--forest); font-family: var(--mono); font-size: 9.5px; font-weight: 700;
+  letter-spacing: .14em; margin-bottom: 7px;
 }
-.px-date-chip:hover { border-color: var(--ink-4); }
-.px-date-chip.on { border-color: var(--forest); background: var(--px-ok-bg); }
-.px-date-chip b { display: block; font-size: 13.5px; font-weight: 600; }
-.px-date-chip span { display: block; font-size: 11px; color: var(--ink-3); margin-top: 2px; }
-.px-date-custom { display: flex; gap: 8px; align-items: center; }
+.px-datem .modal-title { font-size: 25px; letter-spacing: -.025em; margin-bottom: 5px; }
+.px-datem .modal-subtle { max-width: 470px; line-height: 1.45; margin-bottom: 16px; }
+.px-date-status {
+  display: flex; align-items: center; gap: 11px; padding: 11px 12px;
+  border: 1px solid var(--line); border-radius: 13px; background: var(--paper-mute);
+  margin-bottom: 14px;
+}
+.px-date-status.is-express { border-color: var(--mint-edge); background: var(--mint-tint); }
+.px-date-status > svg { width: 18px; height: 18px; color: var(--forest); flex: 0 0 auto; }
+.px-date-status div { min-width: 0; }
+.px-date-status b { display: block; font-size: 12px; line-height: 1.25; }
+.px-date-status span { display: block; color: var(--ink-3); font-size: 10.5px; line-height: 1.35; margin-top: 2px; }
+.px-date-chips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin-bottom: 16px; }
+.px-date-chip {
+  min-height: 112px; padding: 14px 13px 12px; position: relative;
+  border: 1px solid var(--line); border-radius: 14px; background: var(--paper-elev);
+  text-align: left; overflow: hidden;
+  transition: border-color 130ms, background 130ms, transform 130ms, box-shadow 130ms;
+}
+.px-date-chip:hover { border-color: var(--mint-edge); transform: translateY(-1px); box-shadow: var(--shadow-1); }
+.px-date-chip.on { border-color: var(--forest); background: var(--px-ok-bg); box-shadow: inset 0 0 0 1px var(--forest); }
+.px-date-chip .px-date-day { display: block; color: var(--ink-3); font-size: 10.5px; font-weight: 600; }
+.px-date-chip b { display: block; font-family: var(--mono); font-size: 22px; font-weight: 700; letter-spacing: -.03em; margin-top: 5px; }
+.px-date-chip .px-date-meta { display: block; font-size: 9.5px; color: var(--ink-3); line-height: 1.25; margin-top: 5px; }
+.px-date-chip em {
+  display: inline-flex; margin-top: 7px; padding: 3px 6px; border-radius: 999px;
+  background: var(--mint-tint); color: var(--forest); font-family: var(--mono);
+  font-size: 7.5px; font-style: normal; font-weight: 700; letter-spacing: .08em;
+}
+.px-date-chip > svg { display: none; position: absolute; top: 10px; right: 10px; width: 15px; height: 15px; color: var(--forest); }
+.px-date-chip.on > svg { display: block; }
+.px-date-divider { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; }
+.px-date-divider::before, .px-date-divider::after { content: ''; height: 1px; background: var(--line); flex: 1; }
+.px-date-divider span { color: var(--ink-4); font-family: var(--mono); font-size: 8.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
+.px-date-custom { display: flex; gap: 9px; align-items: center; }
 .px-date-custom input { flex: 1; }
+.px-date-custom .px-btn { flex: 0 0 auto; min-width: 94px; padding-inline: 17px; }
+
+@media (max-width: 620px) {
+  .modal.px-datem { width: calc(100vw - 20px); max-width: none; padding: 23px 18px 18px; }
+  .px-date-chips { grid-template-columns: 1fr; gap: 7px; }
+  .px-date-chip { min-height: 76px; padding: 11px 12px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 12px; }
+  .px-date-chip .px-date-day, .px-date-chip .px-date-meta { grid-column: 1; }
+  .px-date-chip b { grid-column: 2; grid-row: 1 / span 2; font-size: 20px; margin: 0; padding-right: 3px; }
+  .px-date-chip em { display: none; }
+  .px-date-chip > svg, .px-date-chip.on > svg { display: none; }
+  .px-date-custom { align-items: stretch; }
+  .px-date-custom .px-btn { min-width: 86px; }
+}
 
 /* ═══════════════ TAGS + RECEIPT PREVIEW ═══════════════ */
 .modal.px-tags { width: 880px; max-width: calc(100vw - 40px); padding: 24px; }

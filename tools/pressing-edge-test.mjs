@@ -93,6 +93,27 @@ assert.equal(rules.validReady(new Date(now + 60000), now), true);
 assert.equal(rules.validReady(new Date(now - 1), now), false, 'past promise is rejected');
 assert.equal(rules.validReady(new Date('invalid'), now), false);
 
+const morning = new Date(2026, 7, 10, 12, 59, 59);
+const morningSlots = rules.readyOptions(morning);
+assert.deepEqual(Array.from(morningSlots, (slot) => slot.key), ['today-evening', 'next-noon', 'next-evening'], 'morning offers same-day express and both next-day choices');
+assert.equal(morningSlots[0].label, "Aujourd'hui · 18:00");
+assert.equal(morningSlots[1].label, 'Demain · 12:00');
+assert.equal(morningSlots[2].label, 'Demain · 18:00');
+assert.equal(rules.suggestReady(morning).getTime(), morningSlots[2].d.getTime(), 'standard next-day evening is the safe default');
+
+const cutoff = new Date(2026, 7, 10, 13, 0, 0);
+const afternoonSlots = rules.readyOptions(cutoff);
+assert.deepEqual(Array.from(afternoonSlots, (slot) => slot.key), ['next-noon', 'next-evening', 'following-noon'], 'at 13:00 same-day disappears and following noon replaces it');
+assert.equal(afternoonSlots[0].label, 'Demain · 12:00');
+assert.equal(afternoonSlots[1].label, 'Demain · 18:00');
+assert.equal(afternoonSlots[2].label, 'Après-demain · 12:00');
+
+const saturdayAfternoon = new Date(2026, 7, 15, 14, 0, 0);
+const weekendSlots = rules.readyOptions(saturdayAfternoon);
+assert.equal(weekendSlots[0].d.getDay(), 1, 'Sunday is skipped for the first service day');
+assert.equal(weekendSlots[0].label, 'Après-demain · 12:00', 'weekend label reflects the real Monday date');
+assert.equal(weekendSlots[2].d.getDay(), 2, 'following service day continues to Tuesday');
+
 assert.equal(rules.findScannedOrder('P-1037')?.id, 'P-1037', 'order barcode resolves exact order');
 assert.equal(rules.findScannedOrder('*p-1037-1*')?.id, 'P-1037', 'garment barcode resolves its order');
 assert.equal(rules.findScannedOrder('unknown'), null, 'unknown scan never selects a fallback order');
