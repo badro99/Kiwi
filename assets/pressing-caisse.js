@@ -490,6 +490,9 @@
     catalogQuery: '',
     ticket: null,            /* { num, lines:[], customer, ready } */
     boardQuery: '',
+    boardFilter: 'todo',
+    boardSelected: [],
+    scanMode: 'pickup',
     rtQuery: '', rtOrder: null,
     rackSelect: null,
     offline: false, queued: 0,
@@ -2044,7 +2047,6 @@
   }
 
   /* ═══════════════════════ TABLEAU DES COMMANDES ═══════════════════════ */
-  const STATUS_DOT_HEX = { recu: 'var(--ink-4)', trait: '#D99A2B', pret: 'var(--emerald)', livre: 'var(--line)' };
 
   function payPill(o) {
     const { total } = orderTotals(o);
@@ -2068,45 +2070,107 @@
       (digits.length >= 2 && searchDigits(c.phone || '').includes(digits));
   }
 
+  function boardBucket(o) {
+    const st = orderStatus(o);
+    if (st === 'livre') return 'history';
+    if (st === 'pret') return 'ready';
+    return 'todo';
+  }
+
+  function boardPriority(o) {
+    const st = orderStatus(o);
+    const lateWeight = isLate(o) ? -100000000000000 : 0;
+    const stageWeight = st === 'trait' ? -1000000000000 : st === 'recu' ? 0 : 1000000000000;
+    const readyTs = new Date(o.readyAt).getTime();
+    return lateWeight + stageWeight + (Number.isFinite(readyTs) ? readyTs : Number.MAX_SAFE_INTEGER);
+  }
+
+  function setWholeOrderStatus(o, target, label) {
+    if (!o || orderStatus(o) === 'livre') return;
+    const wasPret = orderStatus(o) === 'pret';
+    o.pieces.forEach((p) => { if (p.status !== 'livre') p.status = target; });
+    queueIfOffline(label || 'Statut commande');
+    afterStatusChange(o, wasPret);
+  }
+
+  function setSelectedReady() {
+    const selected = state.boardSelected.map(findOrder).filter((o) => o && boardBucket(o) === 'todo');
+    if (!selected.length) return;
+    selected.forEach((o) => o.pieces.forEach((p) => { if (p.status !== 'livre') p.status = 'pret'; }));
+    state.boardSelected = [];
+    queueIfOffline(`${selected.length} commande${selected.length > 1 ? 's' : ''} prête${selected.length > 1 ? 's' : ''}`);
+    syncOwnerOps();
+    refreshOps();
+    toast(`${selected.length} commande${selected.length > 1 ? 's' : ''} marquée${selected.length > 1 ? 's' : ''} prête${selected.length > 1 ? 's' : ''}`);
+  }
+
   function orderCard(o) {
     const c = custOf(o);
     const late = isLate(o);
     const st = orderStatus(o);
+    const selected = state.boardSelected.includes(o.id);
     const when = st === 'livre'
       ? `remis ${fmtDay(o.collectedAt || o.readyAt)}`
       : `prêt ${fmtDT(o.readyAt)}`;
-    return `<button class="px-ocard ${late ? 'is-late' : ''}" data-px-order="${o.id}">
-      <span class="px-ocard-top"><span class="px-ocard-num">${o.id}</span>
-        <span class="px-ocard-when ${late ? 'late' : ''}">${late ? 'EN RETARD · ' : ''}${esc(when)}</span></span>
-      <span class="px-ocard-client"><i data-lucide="${o.b2b ? 'building-2' : 'user'}"></i>${esc(c.name)}</span>
-      <span class="px-ocard-meta">
+    const mainAction = st === 'recu' || st === 'trait'
+      ? `<button class="px-work-primary" data-px-ready="${o.id}"><i data-lucide="check-check"></i>Prête</button>`
+      : st === 'pret' && !o.rack
+        ? `<button class="px-work-primary" data-px-rack="${o.id}"><i data-lucide="archive"></i>Ranger</button>`
+        : st === 'pret'
+          ? `<button class="px-work-primary" data-px-pickup="${o.id}"><i data-lucide="package-check"></i>Retrait</button>`
+          : '';
+    return `<article class="px-ocard ${late ? 'is-late' : ''} ${selected ? 'is-selected' : ''}" data-px-order="${o.id}">
+      <div class="px-ocard-select">
+        ${boardBucket(o) === 'todo' ? `<button class="px-work-check" data-px-select="${o.id}" aria-label="${selected ? 'Retirer' : 'Ajouter'} ${o.id} de la sélection"><i data-lucide="${selected ? 'check' : 'circle'}"></i></button>` : '<span></span>'}
+        <button class="px-work-detail" data-px-detail="${o.id}">Détails <i data-lucide="chevron-right"></i></button>
+      </div>
+      <div class="px-ocard-top"><span class="px-ocard-num">${o.id}</span>
+        <span class="px-ocard-when ${late ? 'late' : ''}">${late ? 'EN RETARD · ' : ''}${esc(when)}</span></div>
+      <div class="px-ocard-client"><i data-lucide="${o.b2b ? 'building-2' : 'user'}"></i>${esc(c.name)}</div>
+      <div class="px-ocard-meta">
         <span class="px-pill"><i data-lucide="tag"></i>${o.pieces.length} pièce${o.pieces.length > 1 ? 's' : ''}</span>
+        <span class="px-pill ${st === 'trait' ? 'warn' : st === 'pret' ? 'ok' : ''}">${STATUS[st].label}</span>
         ${payPill(o)}
         ${o.rack ? `<span class="px-pill rack">${o.rack}</span>` : ''}
         ${o.notified && st === 'pret' ? '<span class="px-pill wa">Notifié</span>' : ''}
-      </span>
-      <span class="px-piece-dots">${o.pieces.map((p) => `<i class="px-pdot ${p.status}"></i>`).join('')}</span>
-    </button>`;
+      </div>
+      <div class="px-piece-dots">${o.pieces.map((p) => `<i class="px-pdot ${p.status}"></i>`).join('')}</div>
+      <div class="px-work-actions">
+        ${st === 'recu' ? `<button class="px-work-secondary" data-px-start="${o.id}">En cours <span>facultatif</span></button>` : ''}
+        ${st === 'pret' && !o.notified ? `<button class="px-work-secondary" data-px-notify="${o.id}"><i data-lucide="message-circle"></i>Prévenir</button>` : ''}
+        ${mainAction}
+      </div>
+    </article>`;
   }
 
   function renderBoard() {
     const panel = $('[data-px-panel="commandes"]', root);
     const q = state.boardQuery;
+    const counts = { todo: 0, ready: 0, history: 0 };
+    ORDERS.forEach((o) => { counts[boardBucket(o)]++; });
+    const list = ORDERS
+      .filter((o) => boardBucket(o) === state.boardFilter && matchesQuery(o, q))
+      .sort((a, b) => boardPriority(a) - boardPriority(b));
+    state.boardSelected = state.boardSelected.filter((id) => list.some((o) => o.id === id));
     panel.innerHTML = `
       <div class="px-board">
         <header class="px-head">
-          <div><h1>Tableau des commandes</h1><div class="px-head-sub">Chaque pièce a son statut, pas seulement le ticket</div></div>
-          <div class="px-search"><i data-lucide="search"></i>
-            <input id="px-board-q" placeholder="Téléphone, nom ou n° de ticket…" value="${esc(q)}" /></div>
+          <div><h1>File de travail</h1><div class="px-head-sub">Reçu automatiquement · « En cours » facultatif · une touche quand c’est prêt</div></div>
+          <div class="px-work-head-actions">
+            <button class="px-btn secondary" id="px-board-scan"><i data-lucide="scan-line"></i>Scanner</button>
+            <div class="px-search"><i data-lucide="search"></i>
+              <input id="px-board-q" placeholder="Téléphone, nom ou n° de ticket…" value="${esc(q)}" /></div>
+          </div>
         </header>
-        <div class="px-board-cols">
-          ${STATUS_FLOW.map((s) => {
-            const list = ORDERS.filter((o) => orderStatus(o) === s && matchesQuery(o, q));
-            return `<div class="px-bcol">
-              <div class="px-bcol-head"><i style="background:${STATUS_DOT_HEX[s]}"></i>${STATUS[s].label} <span class="ct">${list.length}</span></div>
-              ${list.map(orderCard).join('') || '<div class="px-bempty">—</div>'}
-            </div>`;
-          }).join('')}
+        <div class="px-work-toolbar">
+          <div class="px-work-tabs" role="tablist">
+            ${[['todo', 'À faire'], ['ready', 'Prêtes'], ['history', 'Historique']].map(([key, label]) => `<button class="${state.boardFilter === key ? 'on' : ''}" data-px-board-filter="${key}">${label}<span>${counts[key]}</span></button>`).join('')}
+          </div>
+          <div class="px-work-legend"><i data-lucide="sparkles"></i>${state.boardFilter === 'todo' ? 'Les urgences et retards remontent en premier' : state.boardFilter === 'ready' ? 'À ranger, notifier ou remettre' : 'Les commandes remises restent consultables'}</div>
+        </div>
+        ${state.boardSelected.length ? `<div class="px-work-batch"><span><b>${state.boardSelected.length}</b> sélectionnée${state.boardSelected.length > 1 ? 's' : ''}</span><button data-px-clear-selection>Annuler</button><button class="px-work-primary" data-px-batch-ready><i data-lucide="check-check"></i>Marquer prête${state.boardSelected.length > 1 ? 's' : ''}</button></div>` : ''}
+        <div class="px-work-list">
+          ${list.map(orderCard).join('') || `<div class="px-work-empty"><i data-lucide="${q ? 'search-x' : state.boardFilter === 'todo' ? 'check-circle-2' : 'archive'}"></i><b>${q ? 'Aucune commande trouvée' : state.boardFilter === 'todo' ? 'Le travail en attente apparaîtra ici' : state.boardFilter === 'ready' ? 'Aucune commande prête' : 'Aucune commande remise'}</b><span>${q ? 'Essayez un nom, un téléphone ou un numéro de ticket.' : state.boardFilter === 'todo' ? 'Vous pouvez quitter cet écran : le compteur du menu vous prévient.' : ''}</span></div>`}
         </div>
       </div>`;
     $('#px-board-q', panel).oninput = (e) => {
@@ -2114,9 +2178,32 @@
       renderBoard(); icons();
       const i = $('#px-board-q', panel); i.focus(); moveCaretEnd(i);
     };
+    $('#px-board-scan', panel).onclick = () => openScan('workflow');
     panel.onclick = (e) => {
-      const b = e.target.closest('[data-px-order]');
-      if (b) openDetail(b.dataset.pxOrder);
+      const filter = e.target.closest('[data-px-board-filter]');
+      if (filter) { state.boardFilter = filter.dataset.pxBoardFilter; state.boardSelected = []; renderBoard(); return; }
+      const select = e.target.closest('[data-px-select]');
+      if (select) {
+        const id = select.dataset.pxSelect;
+        state.boardSelected = state.boardSelected.includes(id) ? state.boardSelected.filter((x) => x !== id) : [...state.boardSelected, id];
+        renderBoard(); return;
+      }
+      if (e.target.closest('[data-px-clear-selection]')) { state.boardSelected = []; renderBoard(); return; }
+      if (e.target.closest('[data-px-batch-ready]')) { setSelectedReady(); return; }
+      const ready = e.target.closest('[data-px-ready]');
+      if (ready) { setWholeOrderStatus(findOrder(ready.dataset.pxReady), 'pret', 'Commande prête'); return; }
+      const start = e.target.closest('[data-px-start]');
+      if (start) { setWholeOrderStatus(findOrder(start.dataset.pxStart), 'trait', 'Commande en traitement'); return; }
+      const notify = e.target.closest('[data-px-notify]');
+      if (notify) { openWa(findOrder(notify.dataset.pxNotify)); return; }
+      const rack = e.target.closest('[data-px-rack]');
+      if (rack) { state.rackSelect = rack.dataset.pxRack; switchView('rangement'); return; }
+      const pickup = e.target.closest('[data-px-pickup]');
+      if (pickup) { state.rtQuery = pickup.dataset.pxPickup; switchView('retrait'); return; }
+      const detail = e.target.closest('[data-px-detail]');
+      if (detail) { openDetail(detail.dataset.pxDetail); return; }
+      const card = e.target.closest('[data-px-order]');
+      if (card) openDetail(card.dataset.pxOrder);
     };
     icons();
   }
@@ -2153,6 +2240,9 @@
         </div>
       </div>
       ${carePieces.length ? `<div class="px-dt-care-summary"><i data-lucide="triangle-alert"></i><div><b>${carePieces.length} pièce${carePieces.length > 1 ? 's' : ''} avec instruction${carePieces.length > 1 ? 's' : ''} à respecter</b><span>${carePieces.map((x) => `${esc(x.p.label)} : ${x.care.map(esc).join(' · ')}`).join(' — ')}</span></div></div>` : ''}
+      ${st === 'recu' || st === 'trait' ? `<div class="px-next-step"><div><b>Action habituelle</b><span>Quand tout est fini, marquez directement la commande prête. « En cours » reste facultatif.</span></div><button class="px-btn primary" id="px-dt-ready"><i data-lucide="check-check"></i>Commande prête</button></div>` : ''}
+      <details class="px-piece-exceptions" ${carePieces.length ? 'open' : ''}>
+        <summary><span>Pièces et exceptions</span><span>${o.pieces.length} pièce${o.pieces.length > 1 ? 's' : ''} · suivi détaillé facultatif</span></summary>
       <div class="px-dt-grid">
         ${o.pieces.map((p, i) => {
           const care = [...(p.notes || []), p.freeNote].filter(Boolean);
@@ -2171,11 +2261,10 @@
                 </span>`}
           </div>`;
         }).join('')}
-      </div>
+      </div></details>
       <div class="px-dt-actions">
         ${delivered ? '' : `
-          ${o.pieces.some((p) => p.status === 'recu') ? '<button class="px-btn secondary" data-px-all="trait"><i data-lucide="loader"></i>Tout en traitement</button>' : ''}
-          ${o.pieces.some((p) => p.status !== 'pret' && p.status !== 'livre') ? '<button class="px-btn secondary" data-px-all="pret"><i data-lucide="check-check"></i>Tout prêt</button>' : ''}`}
+          ${st === 'recu' ? '<button class="px-btn ghost" data-px-all="trait"><i data-lucide="loader"></i>Noter en cours</button>' : ''}`}
         <button class="px-btn secondary" id="px-dt-tags"><i data-lucide="printer"></i>Étiquettes</button>
         ${due > 0 && !delivered ? `<button class="px-btn secondary" id="px-dt-pay"><i data-lucide="banknote"></i>Solde · ${due} MAD</button>` : ''}
         ${st === 'pret' ? `<button class="px-btn ${o.notified ? 'secondary' : 'primary'}" id="px-dt-wa"><i data-lucide="message-circle"></i>${o.notified ? 'Re-notifier' : 'WhatsApp « c’est prêt »'}</button>` : ''}
@@ -2205,6 +2294,8 @@
         afterStatusChange(o, wasPret);
       };
     });
+    const readyB = $('#px-dt-ready', el);
+    if (readyB) readyB.onclick = () => setWholeOrderStatus(o, 'pret', 'Commande prête');
     /* tags/pay veils precede the detail veil in the DOM — close detail first
        so they don't paint underneath it */
     $('#px-dt-tags', el).onclick = () => { closeVeil('#px-detail-veil'); openTags(o, { fresh: false }); };
@@ -2250,8 +2341,7 @@
        rouvrir ici, et surtout plus de rendu en double. */
     refreshOps();
     if (nowSt === 'pret' && !wasPret && !o.notified) {
-      toast(`${o.id} est prêt, prévenez ${custOf(o).name.split(' ')[0]} ?`);
-      setTimeout(() => openWa(o), 450);
+      toast(`${o.id} est prêt · « Prévenir » reste disponible quand vous avez un moment`);
     }
   }
 
@@ -2395,7 +2485,7 @@
       renderRetrait(); icons();
       const i = $('#px-rt-q', panel); i.focus(); moveCaretEnd(i);
     };
-    $('#px-rt-scan', panel).onclick = openScan;
+    $('#px-rt-scan', panel).onclick = () => openScan('pickup');
     $$('[data-px-rt-pay]', panel).forEach((b) => {
       b.onclick = () => {
         const o = findOrder(b.dataset.pxRtPay);
@@ -2475,9 +2565,17 @@
   function acceptScan(raw) {
     const target = findScannedOrder(raw);
     if (!target) { toast('Code inconnu · vérifiez le ticket ou l’étiquette'); return false; }
-    if (orderStatus(target) === 'livre') { toast(`${target.id} a déjà été remis au client`); return false; }
+    if (orderStatus(target) === 'livre' && state.scanMode !== 'workflow') { toast(`${target.id} a déjà été remis au client`); return false; }
     stopScanner();
     closeVeil('#px-scan-veil');
+    if (state.scanMode === 'workflow') {
+      state.boardFilter = boardBucket(target);
+      state.boardQuery = target.id;
+      renderBoard(); icons();
+      openDetail(target.id);
+      toast(`${target.id} · Kiwi propose la prochaine action utile`);
+      return true;
+    }
     state.rtQuery = target.id;
     renderRetrait(); icons();
     toast(`Étiquette lue, ${target.id}${target.rack ? ' · cintre ' + target.rack : ''}`);
@@ -2518,13 +2616,15 @@
       toast('Caméra non ouverte · autorisez-la ou utilisez la douchette');
     }
   }
-  function openScan() {
+  function openScan(mode = 'pickup') {
     stopScanner();
+    state.scanMode = mode === 'workflow' ? 'workflow' : 'pickup';
     const el = $('#px-scanm', root);
+    const workflow = state.scanMode === 'workflow';
     el.innerHTML = `
       <button class="px-modal-x" id="px-scan-close" aria-label="Fermer"><i data-lucide="x"></i></button>
-      <h3 class="modal-title">Scanner ticket ou étiquette</h3>
-      <p class="modal-subtle">La douchette saisit le code automatiquement. Sur téléphone, utilisez la caméra si elle est disponible.</p>
+      <h3 class="modal-title">${workflow ? 'Avancer une commande' : 'Scanner ticket ou étiquette'}</h3>
+      <p class="modal-subtle">${workflow ? 'Scannez depuis l’atelier : Kiwi ouvre la commande et propose l’action utile. Rien ne change sans votre validation.' : 'La douchette saisit le code automatiquement. Sur téléphone, utilisez la caméra si elle est disponible.'}</p>
       <div class="px-scan-stage" id="px-scan-stage"><i data-lucide="scan-line" style="width:58px;height:58px;color:var(--mint)"></i></div>
       <div class="cash-input-row"><label class="cash-input-label" for="px-scan-input">N° commande ou étiquette</label>
         <input class="cash-input mono" id="px-scan-input" autocomplete="off" autocapitalize="characters" placeholder="P-1045 ou P-1045-1" />
