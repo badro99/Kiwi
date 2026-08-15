@@ -1529,7 +1529,7 @@
       <div class="px-reco-rows">
         ${(c.prefs || []).map((p) => `<div class="px-reco-row"><i data-lucide="heart"></i>${esc(p)}</div>`).join('')}
         ${c.contact ? `<div class="px-reco-row"><i data-lucide="user"></i>${esc(c.contact)}</div>` : ''}
-        ${hist.map((o) => `<div class="px-reco-row"><i data-lucide="history"></i><b>${o.id}</b> · ${o.pieces.length} pièces · ${STATUS[orderStatus(o)].label}</div>`).join('')}
+        ${hist.map((o) => `<div class="px-reco-row"><i data-lucide="history"></i><b>${publicOrderNo(o)}</b> · ${o.pieces.length} pièces · ${STATUS[orderStatus(o)].label}</div>`).join('')}
       </div>
     </div>`;
   }
@@ -2195,7 +2195,7 @@
         ${boardBucket(o) === 'todo' ? `<button class="px-work-check" data-px-select="${o.id}" aria-label="${selected ? 'Retirer' : 'Ajouter'} ${o.id} de la sélection"><i data-lucide="${selected ? 'check' : 'circle'}"></i></button>` : '<span></span>'}
         <button class="px-work-detail" data-px-detail="${o.id}">Détails <i data-lucide="chevron-right"></i></button>
       </div>
-      <div class="px-ocard-top"><span class="px-ocard-num">${o.id}</span>
+      <div class="px-ocard-top"><span class="px-ocard-num">${publicOrderNo(o)}</span>
         <span class="px-ocard-when ${late ? 'late' : ''}">${late ? 'EN RETARD · ' : ''}${esc(when)}</span></div>
       <div class="px-ocard-client"><i data-lucide="${o.b2b ? 'building-2' : 'user'}"></i>${esc(c.name)}</div>
       <div class="px-ocard-meta">
@@ -2230,7 +2230,7 @@
           <div class="px-work-head-actions">
             <button class="px-btn secondary" id="px-board-scan"><i data-lucide="scan-line"></i>Scanner</button>
             <div class="px-search"><i data-lucide="search"></i>
-              <input id="px-board-q" placeholder="Téléphone, nom ou n° de ticket…" value="${esc(q)}" /></div>
+              <input id="px-board-q" placeholder="Téléphone, nom ou n° de commande…" value="${esc(q)}" /></div>
           </div>
         </header>
         <div class="px-work-toolbar">
@@ -2241,7 +2241,7 @@
         </div>
         ${state.boardSelected.length ? `<div class="px-work-batch"><span><b>${state.boardSelected.length}</b> sélectionnée${state.boardSelected.length > 1 ? 's' : ''}</span><button data-px-clear-selection>Annuler</button><button class="px-work-primary" data-px-batch-ready><i data-lucide="check-check"></i>Marquer prête${state.boardSelected.length > 1 ? 's' : ''}</button></div>` : ''}
         <div class="px-work-list">
-          ${list.map(orderCard).join('') || `<div class="px-work-empty"><i data-lucide="${q ? 'search-x' : state.boardFilter === 'todo' ? 'check-circle-2' : 'archive'}"></i><b>${q ? 'Aucune commande trouvée' : state.boardFilter === 'todo' ? 'Le travail en attente apparaîtra ici' : state.boardFilter === 'ready' ? 'Aucune commande prête' : 'Aucune commande remise'}</b><span>${q ? 'Essayez un nom, un téléphone ou un numéro de ticket.' : state.boardFilter === 'todo' ? 'Vous pouvez quitter cet écran : le compteur du menu vous prévient.' : ''}</span></div>`}
+          ${list.map(orderCard).join('') || `<div class="px-work-empty"><i data-lucide="${q ? 'search-x' : state.boardFilter === 'todo' ? 'check-circle-2' : 'archive'}"></i><b>${q ? 'Aucune commande trouvée' : state.boardFilter === 'todo' ? 'Le travail en attente apparaîtra ici' : state.boardFilter === 'ready' ? 'Aucune commande prête' : 'Aucune commande remise'}</b><span>${q ? 'Essayez un nom, un téléphone ou un numéro de commande.' : state.boardFilter === 'todo' ? 'Vous pouvez quitter cet écran : le compteur du menu vous prévient.' : ''}</span></div>`}
         </div>
       </div>`;
     $('#px-board-q', panel).oninput = (e) => {
@@ -2299,7 +2299,7 @@
       <button class="px-modal-x" data-px-close aria-label="Fermer"><i data-lucide="x"></i></button>
       <div class="px-dt-head">
         <div>
-          <h3>${o.id}</h3>
+          <h3>${publicOrderNo(o)}</h3>
           <div class="px-dt-sub">${esc(c.name)} ${c.phone ? `<span class="tel">${esc(c.phone)}</span>` : ''}
             ${o.b2b ? '<span class="px-b2b-chip">B2B</span>' : ''}
             <span class="px-pill ${st === 'pret' ? 'ok' : st === 'trait' ? 'warn' : ''}">${STATUS[st].label}</span>
@@ -2322,7 +2322,7 @@
             <span class="px-piece-art">${garmentIcon({ ...(ITEMS[p.itemId] || {}), variantId: p.variantId })}</span>
             <span class="px-piece-mid">
               <span class="px-piece-name"><i class="dot" style="background:${COLOR[p.color] ? COLOR[p.color].hex : '#ccc'}"></i>${esc(p.label)} · ${esc((COLOR[p.color] || {}).label || 'Couleur non précisée')} · <span style="font-family:var(--mono);font-size:11px;">${svcCodes(p.svcs)}</span></span>
-              <span class="px-piece-id">${p.pid}${p.photos ? `<span class="ph"><i data-lucide="camera"></i>${p.photos} photo${p.photos > 1 ? 's' : ''}</span>` : ''}</span>
+              <span class="px-piece-id">${publicPieceNo(o, p)}${p.photos ? `<span class="ph"><i data-lucide="camera"></i>${p.photos} photo${p.photos > 1 ? 's' : ''}</span>` : ''}</span>
               ${care.length ? `<span class="px-piece-care"><i data-lucide="triangle-alert"></i>${care.map(esc).join(' · ')}</span>` : ''}
             </span>
             ${delivered || p.status === 'livre'
@@ -2382,7 +2382,7 @@
       o.notified = true;
       o.notifiedAt = new Date();
       queueIfOffline('Notification client confirmée');
-      toast(`${o.id}, notification confirmée`);
+      toast(`${publicOrderNo(o)}, notification confirmée`);
       openDetail(o.id); refreshOps();
     };
     const rackB = $('#px-dt-rack', el);
@@ -2400,7 +2400,7 @@
     const unrackB = $('#px-dt-unrack', el);
     if (unrackB) unrackB.onclick = () => {
       releaseSlot(o);
-      toast(`${o.id}, cintre libéré`);
+      toast(`${publicOrderNo(o)}, cintre libéré`);
       openDetail(o.id); refreshOps();
     };
   }
@@ -2412,7 +2412,7 @@
        rouvrir ici, et surtout plus de rendu en double. */
     refreshOps();
     if (nowSt === 'pret' && !wasPret && !o.notified) {
-      toast(`${o.id} est prêt · « Prévenir » reste disponible quand vous avez un moment`);
+      toast(`${publicOrderNo(o)} est prêt · « Prévenir » reste disponible quand vous avez un moment`);
     }
   }
 
@@ -2437,7 +2437,7 @@
     const first = c.b2b ? c.name : c.name.split(' ')[0];
     const { total } = orderTotals(o);
     const due = o.pay.mode === 'compte' ? 0 : Math.max(0, total - o.pay.paid);
-    return `Bonjour ${first}, votre commande ${o.id} (${o.pieces.length} pièce${o.pieces.length > 1 ? 's' : ''}) est prête chez ${pvName('Pressing Marshan')}.`
+    return `Bonjour ${first}, votre commande ${publicOrderNo(o)} (${o.pieces.length} pièce${o.pieces.length > 1 ? 's' : ''}) est prête chez ${pvName('Pressing Marshan')}.`
       + `\nRetrait dès maintenant.`
       + (due > 0 ? `\nSolde à régler au retrait : ${due} MAD.` : '')
       + `\n— envoyé via Kiwi`;
@@ -2542,7 +2542,7 @@
             ${others.map((o) => `
               <div class="px-rt-card">
                 <div class="px-rt-top">
-                  <div class="px-rt-who"><b>${o.id} · ${esc(custOf(o).name)}</b><span>${o.pieces.length} pièces · ${STATUS[orderStatus(o)].label}</span></div>
+                  <div class="px-rt-who"><b>${publicOrderNo(o)} · ${esc(custOf(o).name)}</b><span>${o.pieces.length} pièces · ${STATUS[orderStatus(o)].label}</span></div>
                   <span class="px-pill warn">Pas encore prêt, promis ${fmtDT(o.readyAt)}</span>
                 </div>
               </div>`).join('')}
@@ -2575,7 +2575,7 @@
         if (!o) return;
         o.notified = true; o.notifiedAt = new Date();
         queueIfOffline('Notification client confirmée');
-        renderRetrait(); toast(`${o.id}, notification confirmée`);
+        renderRetrait(); toast(`${publicOrderNo(o)}, notification confirmée`);
       };
     });
     icons();
@@ -2587,13 +2587,13 @@
     const due = o.pay.mode === 'compte' ? 0 : Math.max(0, total - o.pay.paid);
     return `<div class="px-rt-card">
       <div class="px-rt-top">
-        <div class="px-rt-who"><b>${o.id} · ${esc(c.name)}</b><span>${c.phone ? esc(c.phone) + ' · ' : ''}déposé ${fmtDay(o.droppedAt)}${o.notified ? ' · notifié' : ''}</span></div>
+        <div class="px-rt-who"><b>${publicOrderNo(o)} · ${esc(c.name)}</b><span>${c.phone ? esc(c.phone) + ' · ' : ''}déposé ${fmtDay(o.droppedAt)}${o.notified ? ' · notifié' : ''}</span></div>
         <div class="px-rt-slot ${o.rack ? '' : 'none'}">${o.rack ? `<b>${o.rack}</b><span>cintre</span>` : '<b>—</b><span>non rangé</span>'}</div>
       </div>
       <div class="px-rt-pieces">
         ${o.pieces.map((p) => {
           const care = [...(p.notes || []), p.freeNote].filter(Boolean);
-          return `<div class="px-rt-piece"><i data-lucide="check-circle-2"></i><span>${esc(p.label)} · ${esc((COLOR[p.color] || {}).label || 'Couleur non précisée')} · ${svcCodes(p.svcs)}${care.length ? `<small>Attention · ${care.map(esc).join(' · ')}</small>` : ''}</span><span class="pid">${p.pid}</span></div>`;
+          return `<div class="px-rt-piece"><i data-lucide="check-circle-2"></i><span>${esc(p.label)} · ${esc((COLOR[p.color] || {}).label || 'Couleur non précisée')} · ${svcCodes(p.svcs)}${care.length ? `<small>Attention · ${care.map(esc).join(' · ')}</small>` : ''}</span><span class="pid">${publicPieceNo(o, p)}</span></div>`;
         }).join('')}
       </div>
       <div class="px-rt-balance ${due > 0 ? '' : 'paid'}">
@@ -2617,7 +2617,7 @@
     releaseSlot(o);
     syncOwnerOps();
     queueIfOffline('Retrait');
-    toast(`${o.id} remis à ${custOf(o).name}, cintre libéré`);
+    toast(`${publicOrderNo(o)} remis à ${custOf(o).name}, cintre libéré`);
     refreshOps();
   }
 
@@ -2745,7 +2745,7 @@
           <div class="px-rack-queue-head"><i data-lucide="archive"></i>À ranger <span class="ct">${queue.length}</span></div>
           ${queue.map((o) => `
             <button class="px-qcard ${sel === o.id ? 'on' : ''}" data-px-q="${o.id}">
-              <div class="num">${o.id}</div>
+              <div class="num">${publicOrderNo(o)}</div>
               <div class="who">${esc(custOf(o).name)}</div>
               <div class="sub">${o.pieces.length} pièce${o.pieces.length > 1 ? 's' : ''} · ${o.notified ? 'client notifié' : 'pas encore notifié'}</div>
             </button>`).join('') || '<div class="px-rack-hint">Rien à ranger.<br>Quand une commande passe « prête », elle arrive ici.</div>'}
@@ -2779,7 +2779,7 @@
         assignSlot(o, slot.dataset.pxSlot);
         state.rackSelect = null;
         queueIfOffline('Rangement');
-        toast(`${o.id} → cintre ${o.rack}, retrouvable en un scan`);
+        toast(`${publicOrderNo(o)} → cintre ${o.rack}, retrouvable en un scan`);
         renderRack(); renderBadges(); icons();
         const flash = $(`[data-px-slot-full="${o.id}"]`, panel);
         if (flash) flash.classList.add('flash');
