@@ -34,7 +34,7 @@ ok(venues.includes("v.subtype !== 'pressing'"), 'generic boutique Sold is not ap
 ok(venues.includes('active.subtype = exactSubtype'), 'server type keeps the exact pressing subtype');
 ok(pairingJs.includes("if (t && ids[t]) return { kind: 'vertical', id: t }"), 'operator hand-off routes an exact pressing type into the pressing till');
 ok(caisse.includes('assets/caisse-pairing.js?v=3') && sw.includes("'/assets/caisse-pairing.js?v=3'"), 'pressing route fix bypasses the old cached pairing router');
-ok(caisse.includes('assets/pos-dispatch.js?v=24') && sw.includes("'/assets/pos-dispatch.js?v=24'") && dispatchJs.includes("file: 'pressing-caisse', rev: '26'") && sw.includes("'/assets/pressing-caisse.js?v=25'") && sw.includes("'/assets/pressing-caisse.css?v=26'"), 'pressing loader and lazy assets use deploy-stable cache revisions');
+ok(caisse.includes('assets/pos-dispatch.js?v=24') && sw.includes("'/assets/pos-dispatch.js?v=24'") && dispatchJs.includes("file: 'pressing-caisse', rev: '27'") && sw.includes("'/assets/pressing-caisse.js?v=27'") && sw.includes("'/assets/pressing-caisse.css?v=26'"), 'pressing loader and lazy assets use deploy-stable cache revisions');
 ok(dashboard.includes('assets/pressing-dashboard.js?v=9'), 'dashboard loads the pressing subpages');
 ok(dashboard.includes('assets/pressing-ops.js?v=4') && caisse.includes('assets/pressing-ops.js?v=4'), 'dashboard and till share the same operations bridge');
 ok(sw.includes("'/assets/pressing-dashboard.css?v=9'") && sw.includes("'/assets/pressing-dashboard.js?v=9'"), 'pressing workspace is available offline');
@@ -51,7 +51,7 @@ ok(caisseJs.includes("PRESSING_STORE_PREFIX = 'kiwi:pressing-store:v1:'") && cai
 ok(caisseJs.indexOf('ticketSeq++;\n        syncOwnerOps();') > 0, 'the next ticket number is persisted before a pay-at-pickup reload');
 ok(storeApi.includes("'pressing-orders': { keys: ['customers', 'orders', 'seq']"), 'the store API accepts the bounded pressing ticket document');
 ok(storeApi.includes("'pressing-catalog': { keys: ['categories', 'services', 'items']"), 'the store API accepts the bounded pressing catalogue document');
-ok(pressingJs.includes('data-pce-host') && caisseJs.includes('data-px-view="tarifs"') && caisseJs.includes('mountEditor(host, { compact: true })'), 'names and prices are editable from both dashboard and till');
+ok(pressingJs.includes('data-pce-host') && !caisseJs.includes('data-px-view="tarifs"'), 'names and prices are managed from the dashboard, caisse catalog is locked');
 ok(catalogJs.includes('data-pce-search') && catalogJs.includes('data-pce-filter') && catalogJs.includes('var pageSize = 8') && catalogJs.includes('class="pce-summary"'), 'the catalogue is searchable, filterable, paged and collapsed by default');
 ok(catalogCss.includes('grid-template-columns: repeat(2,minmax(0,1fr))') && catalogCss.includes('.pce-item.is-open { grid-column: 1/-1;'), 'compact rows use the available width and expand only on demand');
 ok(venues.includes('MATERIAL_PRESSING') && dashboard.includes('viewBox="0 -960 960 960"') && caisseJs.includes('const garmentIcon ='), 'pressing navigation uses official Material Symbols');

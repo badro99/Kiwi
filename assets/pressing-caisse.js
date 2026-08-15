@@ -890,7 +890,6 @@
           <button class="px-nav-it" data-px-view="commandes">${materialIcon('orders')}<span>Commandes</span><b class="px-nav-badge" id="px-badge-cmd"></b></button>
           <button class="px-nav-it" data-px-view="retrait">${materialIcon('pickup')}<span>Retrait</span><b class="px-nav-badge" id="px-badge-rt"></b></button>
           <button class="px-nav-it" data-px-view="rangement">${materialIcon('rack')}<span>Rangement</span><b class="px-nav-badge" id="px-badge-rack"></b></button>
-          <button class="px-nav-it" data-px-view="tarifs">${materialIcon('prices')}<span>Services &amp; tarifs</span></button>
         </nav>
         <div class="px-rail-foot">
           <button class="px-net" id="px-net" title="État réseau détecté par cet appareil">
@@ -934,7 +933,6 @@
         <section class="px-view" data-px-panel="commandes"></section>
         <section class="px-view" data-px-panel="retrait"></section>
         <section class="px-view" data-px-panel="rangement"></section>
-        <section class="px-view" data-px-panel="tarifs"><div class="px-tarifs-panel" id="px-tarifs"></div></section>
       </main>
       <div class="modal-veil" id="px-sheet-veil"><div class="modal px-sheet px-rel" id="px-sheet"></div></div>
       <div class="modal-veil" id="px-client-veil"><div class="modal px-client px-rel" id="px-clientm"></div></div>
@@ -986,7 +984,7 @@
     try {
       const requested = sessionStorage.getItem('kiwiPressingStartView');
       sessionStorage.removeItem('kiwiPressingStartView');
-      if (['comptoir', 'commandes', 'retrait', 'rangement', 'tarifs'].includes(requested)) state.view = requested;
+      if (['comptoir', 'commandes', 'retrait', 'rangement'].includes(requested)) state.view = requested;
     } catch (_) {}
     renderAll();
   }
@@ -1012,17 +1010,7 @@
     if (view === 'commandes') renderBoard();
     if (view === 'retrait') renderRetrait();
     if (view === 'rangement') renderRack();
-    if (view === 'tarifs') renderTarifs();
     icons();
-  }
-  function renderTarifs() {
-    const host = $('#px-tarifs', root);
-    if (!host) return;
-    if (!window.KiwiPressingCatalog || !KiwiPressingCatalog.mountEditor) {
-      host.innerHTML = '<div class="px-bempty">Catalogue indisponible. Rafraîchissez la caisse.</div>';
-      return;
-    }
-    KiwiPressingCatalog.mountEditor(host, { compact: true });
   }
   function renderBadges() {
     const active = ORDERS.filter((o) => orderStatus(o) !== 'livre').length;
