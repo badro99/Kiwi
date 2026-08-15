@@ -1496,11 +1496,19 @@
       </div>
       <div class="px-date-divider"><span>Autre date</span></div>
       <div class="px-date-custom">
-        <input class="px-in" id="px-date-input" type="datetime-local" min="${localDT(new Date(Date.now() + 60000))}" value="${localDT(state.ticket.ready)}" />
+        <label class="px-date-field" for="px-date-input" data-px-date-field>
+          <input class="px-in" id="px-date-input" type="datetime-local" min="${localDT(new Date(Date.now() + 60000))}" value="${localDT(state.ticket.ready)}" />
+        </label>
         <button class="px-btn primary" id="px-date-ok">Valider</button>
       </div>`;
     openVeil('#px-date-veil');
     icons();
+    const dateInput = $('#px-date-input', el);
+    const dateField = $('[data-px-date-field]', el);
+    dateField?.addEventListener('click', () => {
+      dateInput?.focus();
+      try { dateInput?.showPicker?.(); } catch (_) { /* iOS opens the native picker from focus. */ }
+    });
     $$('[data-px-close]', el).forEach((b) => { b.onclick = () => closeVeil('#px-date-veil'); });
     $$('[data-px-d]', el).forEach((b) => {
       b.onclick = () => {
