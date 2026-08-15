@@ -34,7 +34,7 @@ ok(venues.includes("v.subtype !== 'pressing'"), 'generic boutique Sold is not ap
 ok(venues.includes('active.subtype = exactSubtype'), 'server type keeps the exact pressing subtype');
 ok(pairingJs.includes("if (t && ids[t]) return { kind: 'vertical', id: t }"), 'operator hand-off routes an exact pressing type into the pressing till');
 ok(caisse.includes('assets/caisse-pairing.js?v=3') && sw.includes("'/assets/caisse-pairing.js?v=3'"), 'pressing route fix bypasses the old cached pairing router');
-ok(caisse.includes('assets/pos-dispatch.js?v=24') && sw.includes("'/assets/pos-dispatch.js?v=24'") && dispatchJs.includes("file: 'pressing-caisse', rev: '24'") && sw.includes("'/assets/pressing-caisse.js?v=24'") && sw.includes("'/assets/pressing-caisse.css?v=23'"), 'pressing loader and lazy assets use deploy-stable cache revisions');
+ok(caisse.includes('assets/pos-dispatch.js?v=24') && sw.includes("'/assets/pos-dispatch.js?v=24'") && dispatchJs.includes("file: 'pressing-caisse', rev: '24'") && sw.includes("'/assets/pressing-caisse.js?v=24'") && sw.includes("'/assets/pressing-caisse.css?v=24'"), 'pressing loader and lazy assets use deploy-stable cache revisions');
 ok(dashboard.includes('assets/pressing-dashboard.js?v=8'), 'dashboard loads the pressing subpages');
 ok(dashboard.includes('assets/pressing-ops.js?v=3') && caisse.includes('assets/pressing-ops.js?v=3'), 'dashboard and till share the same operations bridge');
 ok(sw.includes("'/assets/pressing-dashboard.css?v=8'") && sw.includes("'/assets/pressing-dashboard.js?v=8'"), 'pressing workspace is available offline');
