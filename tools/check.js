@@ -789,6 +789,10 @@ section('Whole-project regressions');
     'phone-test.mjs',
     'clients-sync-test.mjs',
     'pwa-shell-test.js',
+    /* pwa-shell-test vérifie que les copies d'une estampille s'accordent ;
+       celui-ci vérifie qu'elle a bougé quand le fichier a bougé. Sans lui, un
+       asset édité sans bump est parfaitement cohérent — sur l'ancienne URL. */
+    'stamp-drift-test.js',
     'api-boundaries-test.mjs',
     'security-regression-test.js',
     'sold-insights-test.js',

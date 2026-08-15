@@ -1,0 +1,446 @@
+{
+  "assets/account.js": {
+    "v": "4",
+    "sha": "848e7fa6aad5b235"
+  },
+  "assets/admin-support.css": {
+    "v": "2",
+    "sha": "a11e007869b4b084"
+  },
+  "assets/admin-support.js": {
+    "v": "2",
+    "sha": "07d83fcb7c4ceb3a"
+  },
+  "assets/agent-features.js": {
+    "v": "3",
+    "sha": "6605bfb259d33dfa"
+  },
+  "assets/agent-skin.css": {
+    "v": "8",
+    "sha": "86c16df44b26eb93"
+  },
+  "assets/agent-skin.js": {
+    "v": "4",
+    "sha": "61806f5b7ab810d5"
+  },
+  "assets/agent-truth.js": {
+    "v": "2",
+    "sha": "f629a0dfba4f6570"
+  },
+  "assets/agent.js": {
+    "v": "4",
+    "sha": "d879d1cd30c36529"
+  },
+  "assets/booking.css": {
+    "v": "7",
+    "sha": "499e4b76c4f1681b"
+  },
+  "assets/booking.js": {
+    "v": "8",
+    "sha": "23678abd5cd37676"
+  },
+  "assets/boutique-promos-dashboard.js": {
+    "v": "2",
+    "sha": "e73ec26dea9a5353"
+  },
+  "assets/caisse-attendance-code.js": {
+    "v": "1",
+    "sha": "bfde36611f22ddee"
+  },
+  "assets/caisse-dna.css": {
+    "v": "3",
+    "sha": "73250072492b1691"
+  },
+  "assets/caisse-dna.js": {
+    "v": "2",
+    "sha": "907c1ea564c48012"
+  },
+  "assets/caisse-link.js": {
+    "v": "7",
+    "sha": "6ff265aecbf0dbef"
+  },
+  "assets/caisse-pairing.js": {
+    "v": "3",
+    "sha": "7d01d0e26e24b5c7"
+  },
+  "assets/caisse-pwa.js": {
+    "v": "377",
+    "sha": "8c394d445e8ed2b8"
+  },
+  "assets/caisse-skin.css": {
+    "v": "3",
+    "sha": "509b94e540471caf"
+  },
+  "assets/caisse-stock-sync.js": {
+    "v": "1",
+    "sha": "98a5a52a07e48dc1"
+  },
+  "assets/channel-sales.js": {
+    "v": "3",
+    "sha": "ec5fa6bd71818a12"
+  },
+  "assets/clients-book.js": {
+    "v": "2",
+    "sha": "21ed48716f498960"
+  },
+  "assets/clients-store.js": {
+    "v": "2",
+    "sha": "d4643add88a25649"
+  },
+  "assets/cost.js": {
+    "v": "3",
+    "sha": "5c0938ec006b2275"
+  },
+  "assets/dashboard-extra.js": {
+    "v": "2",
+    "sha": "27f2f6686f92bed4"
+  },
+  "assets/dashboard-pwa.js": {
+    "v": "378",
+    "sha": "02eb1609fa35d4bc"
+  },
+  "assets/dateRange.js": {
+    "v": "7",
+    "sha": "8c9c3326904af6ec"
+  },
+  "assets/day-report-dash.js": {
+    "v": "2",
+    "sha": "00fc84b95a3bf010"
+  },
+  "assets/day-report-export.js": {
+    "v": "3",
+    "sha": "80f85ccf22ef841a"
+  },
+  "assets/day-report.js": {
+    "v": "2",
+    "sha": "f3edf376dc0c8c5f"
+  },
+  "assets/design-vexel-layout.js": {
+    "v": "2077",
+    "sha": "3c0afbfb9b7bd12e"
+  },
+  "assets/design-vexel.css": {
+    "v": "2085",
+    "sha": "a29a07029788d0cc"
+  },
+  "assets/design-vexel.js": {
+    "v": "2076",
+    "sha": "0f2e98a9521284c5"
+  },
+  "assets/employee-live.js": {
+    "v": "377",
+    "sha": "00a422ee6d82c9ee"
+  },
+  "assets/employee-planning.js": {
+    "v": "3",
+    "sha": "70cadf47fa3787a6"
+  },
+  "assets/employee-trade-shell.css": {
+    "v": "1",
+    "sha": "fdf8e04edeb4c370"
+  },
+  "assets/employee-trade-shell.js": {
+    "v": "2",
+    "sha": "4c26cfe5a65eb604"
+  },
+  "assets/entitlements.css": {
+    "v": "3",
+    "sha": "e8c337fbed8081b5"
+  },
+  "assets/entitlements.js": {
+    "v": "3",
+    "sha": "f8b0548c9bf82a7a"
+  },
+  "assets/escpos.js": {
+    "v": "3",
+    "sha": "338273c601e89f59"
+  },
+  "assets/features.js": {
+    "v": "2",
+    "sha": "8445e8fc6e209177"
+  },
+  "assets/floorplan-core.js": {
+    "v": "2049",
+    "sha": "fb8091b5ddf2a84f"
+  },
+  "assets/food-production-print.js": {
+    "v": "1",
+    "sha": "935b8133aefba053"
+  },
+  "assets/help-centre.css": {
+    "v": "3",
+    "sha": "aea5686fcd134267"
+  },
+  "assets/help-centre.js": {
+    "v": "3",
+    "sha": "6367b586ab5ca690"
+  },
+  "assets/hotel.js": {
+    "v": "2",
+    "sha": "26af195dc7279fe0"
+  },
+  "assets/i18n.js": {
+    "v": "3",
+    "sha": "83f82a94d49b4420"
+  },
+  "assets/identity.js": {
+    "v": "2",
+    "sha": "5f0a4000cc13db93"
+  },
+  "assets/interactive.js": {
+    "v": "5",
+    "sha": "35e507ccf9a03897"
+  },
+  "assets/inventory-consumption.js": {
+    "v": "3",
+    "sha": "e406ed46de8593ef"
+  },
+  "assets/inventory-ledger.js": {
+    "v": "2",
+    "sha": "b3bb03859de480da"
+  },
+  "assets/invoicing.css": {
+    "v": "5",
+    "sha": "254fafebd88a2d2f"
+  },
+  "assets/invoicing.js": {
+    "v": "3",
+    "sha": "0e69ac84d17d3996"
+  },
+  "assets/kitchen-print-queue.js": {
+    "v": "1",
+    "sha": "d1b3295d22c7cf58"
+  },
+  "assets/kitchen-relay.js": {
+    "v": "2",
+    "sha": "81a95b1716c54a6e"
+  },
+  "assets/landing-mobile.css": {
+    "v": "5",
+    "sha": "353ee0e439fd408e"
+  },
+  "assets/landing/components.css": {
+    "v": "2",
+    "sha": "5829242ec789b552"
+  },
+  "assets/live-link.js": {
+    "v": "8",
+    "sha": "f4af5f7fd50b2b3c"
+  },
+  "assets/live-socket.js": {
+    "v": "2",
+    "sha": "898481bdffccf542"
+  },
+  "assets/menu-catalog.js": {
+    "v": "3",
+    "sha": "8b7923bbefaa41b0"
+  },
+  "assets/merchant-config.js": {
+    "v": "262",
+    "sha": "a6fc638a78968278"
+  },
+  "assets/mobile-nav.js": {
+    "v": "2",
+    "sha": "bdf5a3ea22cc2931"
+  },
+  "assets/mobile.css": {
+    "v": "4",
+    "sha": "c78c1cbe33d08c4a"
+  },
+  "assets/morocco-holidays.js": {
+    "v": "1",
+    "sha": "0a1f2bda4e9b0357"
+  },
+  "assets/offline-db.js": {
+    "v": "3",
+    "sha": "d1b0f3fa2625e19d"
+  },
+  "assets/onboarding.js": {
+    "v": "2074",
+    "sha": "cf79bf6674357abd"
+  },
+  "assets/operations-ui.js": {
+    "v": "11",
+    "sha": "924a41cbe3b2f585"
+  },
+  "assets/operations.js": {
+    "v": "10",
+    "sha": "f530e5d41ee4a1a3"
+  },
+  "assets/order-qr.js": {
+    "v": "2",
+    "sha": "5a6bc6f909c5889e"
+  },
+  "assets/orderpro-inbox.js": {
+    "v": "4",
+    "sha": "e4e5bdae9b1ddb56"
+  },
+  "assets/orderpro-publish.js": {
+    "v": "2",
+    "sha": "95b24bb0b60af886"
+  },
+  "assets/pages-pro.js": {
+    "v": "2059",
+    "sha": "eb1cef9ec6718aaa"
+  },
+  "assets/phone.js": {
+    "v": "1",
+    "sha": "b26dcc02bc865757"
+  },
+  "assets/planning-core.js": {
+    "v": "8",
+    "sha": "bff7a04af944d3c0"
+  },
+  "assets/planning-ui.css": {
+    "v": "10",
+    "sha": "1d007969165ff8d2"
+  },
+  "assets/platform-kernel.js": {
+    "v": "2",
+    "sha": "689f0fa797ee3265"
+  },
+  "assets/platform-ops.css": {
+    "v": "1",
+    "sha": "5de0e6b683e8535a"
+  },
+  "assets/platform-ops.js": {
+    "v": "1",
+    "sha": "9255f20099d86810"
+  },
+  "assets/pos-dispatch.js": {
+    "v": "23",
+    "sha": "5effb0bea2ed70a8"
+  },
+  "assets/pos-mobile.css": {
+    "v": "3",
+    "sha": "476360c075a1c682"
+  },
+  "assets/pos-mobile.js": {
+    "v": "3",
+    "sha": "64722349ffceb013"
+  },
+  "assets/pos-sale.js": {
+    "v": "3",
+    "sha": "c4a6b46ca94510dd"
+  },
+  "assets/pos-workspaces.css": {
+    "v": "3",
+    "sha": "988babd341d2f1fd"
+  },
+  "assets/pos-workspaces.js": {
+    "v": "3",
+    "sha": "53302840d5c5fbcf"
+  },
+  "assets/pressing-caisse.css": {
+    "v": "23",
+    "sha": "988b6d3331f3de14"
+  },
+  "assets/pressing-caisse.js": {
+    "v": "23",
+    "sha": "f4f661959553209a"
+  },
+  "assets/pressing-catalog.css": {
+    "v": "4",
+    "sha": "3f8e50d3e85278bf"
+  },
+  "assets/pressing-catalog.js": {
+    "v": "4",
+    "sha": "05b5d7178c19ac2e"
+  },
+  "assets/pressing-dashboard.css": {
+    "v": "8",
+    "sha": "871955bb3e67efe0"
+  },
+  "assets/pressing-dashboard.js": {
+    "v": "8",
+    "sha": "5edfbd3f6d39546f"
+  },
+  "assets/pressing-garment-icons.js": {
+    "v": "2",
+    "sha": "aecf3f8d0801f109"
+  },
+  "assets/pressing-ops.js": {
+    "v": "3",
+    "sha": "7312394090c03e50"
+  },
+  "assets/print-paper.css": {
+    "v": "1",
+    "sha": "a855894281afedca"
+  },
+  "assets/pwa-update.js": {
+    "v": "358",
+    "sha": "338bf2cc5b9111e3"
+  },
+  "assets/reservations.css": {
+    "v": "4",
+    "sha": "ad2d2364ecd4457a"
+  },
+  "assets/reservations.js": {
+    "v": "8",
+    "sha": "af12a1b45e03e1d9"
+  },
+  "assets/restaurant-menu-workspace.js": {
+    "v": "2",
+    "sha": "04f39f699e4ea289"
+  },
+  "assets/restaurant-recipes.js": {
+    "v": "3",
+    "sha": "c42490df8bd217a2"
+  },
+  "assets/retail-scan.css": {
+    "v": "6",
+    "sha": "963f846e0bec8e94"
+  },
+  "assets/retail-scan.js": {
+    "v": "5",
+    "sha": "9bd7fce01cf948a1"
+  },
+  "assets/simple.js": {
+    "v": "1",
+    "sha": "b70cc02aa48e0a64"
+  },
+  "assets/stock.js": {
+    "v": "3",
+    "sha": "4b1bb42e4b76b744"
+  },
+  "assets/team.js": {
+    "v": "275",
+    "sha": "9e45a533bd9346a0"
+  },
+  "assets/tokens.css": {
+    "v": "2050",
+    "sha": "b7aab1d896735cac"
+  },
+  "assets/trade-workspace-schema.js": {
+    "v": "4",
+    "sha": "4b5bd14061b03143"
+  },
+  "assets/trade-workspaces.css": {
+    "v": "3",
+    "sha": "11dee930d49c5d2a"
+  },
+  "assets/trade-workspaces.js": {
+    "v": "3",
+    "sha": "21b80930aa81799d"
+  },
+  "assets/trades.js": {
+    "v": "4",
+    "sha": "ef5ca5dcea67f12b"
+  },
+  "assets/vendor/zxing-browser.min.js": {
+    "v": "1",
+    "sha": "066bc34edfcdd4a3"
+  },
+  "assets/venue-store.js": {
+    "v": "2",
+    "sha": "6e45834cf2c10e4e"
+  },
+  "assets/venues.js": {
+    "v": "13",
+    "sha": "1f7f43e3441b9c03"
+  },
+  "assets/vexel-neon.js": {
+    "v": "2046",
+    "sha": "f41c635fe8b48269"
+  }
+}
