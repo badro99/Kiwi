@@ -308,8 +308,8 @@
     "sha": "9255f20099d86810"
   },
   "assets/pos-dispatch.js": {
-    "v": "23",
-    "sha": "5effb0bea2ed70a8"
+    "v": "24",
+    "sha": "24f643d7ea1f4b68"
   },
   "assets/pos-mobile.css": {
     "v": "3",
@@ -332,12 +332,12 @@
     "sha": "53302840d5c5fbcf"
   },
   "assets/pressing-caisse.css": {
-    "v": "23",
+    "v": "24",
     "sha": "988b6d3331f3de14"
   },
   "assets/pressing-caisse.js": {
-    "v": "23",
-    "sha": "f4f661959553209a"
+    "v": "24",
+    "sha": "20c9c4cdb8a44bda"
   },
   "assets/pressing-catalog.css": {
     "v": "4",
