@@ -34,7 +34,7 @@ ok(venues.includes("v.subtype !== 'pressing'"), 'generic boutique Sold is not ap
 ok(venues.includes('active.subtype = exactSubtype'), 'server type keeps the exact pressing subtype');
 ok(pairingJs.includes("if (t && ids[t]) return { kind: 'vertical', id: t }"), 'operator hand-off routes an exact pressing type into the pressing till');
 ok(caisse.includes('assets/caisse-pairing.js?v=3') && sw.includes("'/assets/caisse-pairing.js?v=3'"), 'pressing route fix bypasses the old cached pairing router');
-ok(caisse.includes('assets/pos-dispatch.js?v=17') && sw.includes("'/assets/pos-dispatch.js?v=17'") && dispatchJs.includes("file: 'pressing-caisse', rev: '15'") && sw.includes("'/assets/pressing-caisse.js?v=15'") && sw.includes("'/assets/pressing-caisse.css?v=15'"), 'pressing loader and lazy assets use deploy-stable cache revisions');
+ok(caisse.includes('assets/pos-dispatch.js?v=18') && sw.includes("'/assets/pos-dispatch.js?v=18'") && dispatchJs.includes("file: 'pressing-caisse', rev: '16'") && sw.includes("'/assets/pressing-caisse.js?v=16'") && sw.includes("'/assets/pressing-caisse.css?v=16'"), 'pressing loader and lazy assets use deploy-stable cache revisions');
 ok(dashboard.includes('assets/pressing-dashboard.js?v=8'), 'dashboard loads the pressing subpages');
 ok(dashboard.includes('assets/pressing-ops.js?v=3') && caisse.includes('assets/pressing-ops.js?v=3'), 'dashboard and till share the same operations bridge');
 ok(sw.includes("'/assets/pressing-dashboard.css?v=8'") && sw.includes("'/assets/pressing-dashboard.js?v=8'"), 'pressing workspace is available offline');
@@ -65,6 +65,8 @@ ok(!garmentContext.window.KiwiPressingGarmentIcons.render({ id:'chemise' }).incl
   .forEach((id) => ok(fs.existsSync(path.join(root, 'assets/pressing-products/' + id + '.png')), id + ' product photo exists'));
 ok(caisseJs.includes('unitPrice: lineUnit(l)') && caisseJs.includes('label: ITEMS[l.itemId].label') && caisseJs.includes('Number.isFinite(+ln.unitPrice)'), 'confirmed tickets freeze their agreed name and unit price');
 ok(caisseJs.includes("notes: (ln.notes || []).slice(), freeNote: ln.freeNote || ''") && caisseJs.includes('px-dt-care-summary') && caisseJs.includes('px-piece-care') && caisseJs.includes('px-tag-care'), 'care instructions survive into the visible workshop summary, detail and physical labels');
+ok(caisseJs.includes("receiptHTML(order, 'DUPLICATA · ATELIER')") && caisseJs.includes("copy: 'DUPLICATA · ATELIER'") && caisseJs.includes('KP.printReceipt(duplicate)'), 'every pressing print job includes a clearly marked workshop duplicate');
+ok(caisseJs.includes('Imprimer 2 tickets +') && caisseJs.includes('commande, pièce, article, service et code à scanner') && caisseJs.includes('<strong>${esc(p.label)}</strong>') && caisseJs.includes('title: `${order.id}  ${p.n}/${p.of}`'), 'garment labels reserve their space for the large operational facts only');
 const whatsappDraftOpen = caisseJs.indexOf("window.open('', '_blank')");
 const whatsappConfirmedAfterOpen = caisseJs.indexOf('o.notified = true', whatsappDraftOpen);
 ok(caisseJs.includes('J’ai envoyé le message') && whatsappDraftOpen >= 0 && whatsappConfirmedAfterOpen > whatsappDraftOpen, 'WhatsApp notification is confirmed only after opening the draft');

@@ -1493,11 +1493,12 @@
       <div class="c mut">${rows.join('<br>')}</div>`;
   }
 
-  function receiptHTML(o) {
+  function receiptHTML(o, copyLabel) {
     const c = custOf(o);
     const { sub, remise, total } = orderTotals(o);
     const due = o.pay.mode === 'compte' ? 0 : Math.max(0, total - o.pay.paid);
     return `<div class="px-receipt">
+      <div class="px-receipt-copy${copyLabel ? ' is-workshop' : ''}">${copyLabel || 'EXEMPLAIRE CLIENT'}</div>
       ${receiptHead()}
       <hr>
       <div class="row"><span>Ticket</span><span class="b">${o.id}</span></div>
@@ -1526,12 +1527,10 @@
   }
 
   function tagHTML(p, o) {
-    const c = custOf(o);
     const care = [...(p.notes || []), p.freeNote].filter(Boolean);
     return `<div class="px-tag">
       <div class="px-tag-top"><span class="px-tag-num">${o.id}</span><span class="px-tag-i">pièce ${p.n}/${p.of}</span></div>
-      <div class="px-tag-client">${esc(c.name)}</div>
-      <div class="px-tag-item"><i class="dot" style="background:${COLOR[p.color] ? COLOR[p.color].hex : '#ccc'}"></i>${esc(p.label)} · <span class="svc">${svcCodes(p.svcs)}</span></div>
+      <div class="px-tag-item"><strong>${esc(p.label)}</strong><span aria-hidden="true">·</span><span class="svc">${svcCodes(p.svcs)}</span></div>
       ${care.length ? `<div class="px-tag-care">ATTENTION · ${care.map(esc).join(' · ')}</div>` : ''}
       ${barcode(p.pid, 26)}
       <div class="px-tag-id">${p.pid}</div>
@@ -1548,9 +1547,11 @@
    *
    * Deux chemins, jamais les deux en même temps (deux boîtes de dialogue
    * empilées, c'est pire que pas d'impression) :
-   *   · thermique appairée → ESC/POS, le ticket puis les étiquettes ;
-   *   · rien d'appairé     → le pilote du système, ticket ET étiquettes sur la
-   *                          même page (« Enregistrer en PDF » compris).
+   *   · thermique appairée → ESC/POS, le ticket client, son duplicata atelier,
+   *                          puis les étiquettes ;
+   *   · rien d'appairé     → le pilote du système, les deux tickets ET les
+   *                          étiquettes sur la même page (« Enregistrer en PDF »
+   *                          compris).
    * Les étiquettes partent en code128 : un identifiant de pièce comme
    * « K2418-3 » n'est pas un EAN-13 et ne s'encode pas comme tel. */
   function printOrderDocs(order) {
@@ -1561,10 +1562,10 @@
 
     if (!(KP.isConnected && KP.isConnected() && window.KiwiEscPos)) {
       KP.browserPrintHTML(
-        `<div class="px-print">${receiptHTML(order)}${order.pieces.map((p) => tagHTML(p, order)).join('')}</div>`,
+        `<div class="px-print"><div class="px-print-receipts">${receiptHTML(order)}${receiptHTML(order, 'DUPLICATA · ATELIER')}</div>${order.pieces.map((p) => tagHTML(p, order)).join('')}</div>`,
         (KP.getConfig && KP.getConfig().paper) || '80'
       );
-      toast(`Impression système, ticket + ${n} étiquette${plural}`);
+      toast(`Impression système, ticket + duplicata + ${n} étiquette${plural}`);
       return;
     }
 
@@ -1588,9 +1589,14 @@
       footer: `PRÊT LE ${fmtDT(order.readyAt)} · ${n} pièce${plural}`,
     };
 
+    const duplicate = {
+      ...doc,
+      copy: 'DUPLICATA · ATELIER',
+    };
+
     const labels = order.pieces.map((p) => ({
-      title: order.id,
-      sub: `${custOf(order).name} · pièce ${p.n}/${p.of}`,
+      title: `${order.id}  ${p.n}/${p.of}`,
+      sub: `${p.label} · ${svcCodes(p.svcs)}`,
       code: p.pid,
       format: 'code128',
     }));
@@ -1599,13 +1605,18 @@
     Promise.resolve(KP.printReceipt(doc))
       .then((r) => {
         if (!r || !r.ok) { toast('Ticket non imprimé, imprimante injoignable'); return null; }
+        return KP.printReceipt(duplicate);
+      })
+      .then((r) => {
+        if (r === null) return null;
+        if (!r || !r.ok) { toast('Ticket client imprimé, duplicata non imprimé'); return null; }
         return KP.printLabels(labels);
       })
       .then((r) => {
         if (r === null) return;
         toast(r && r.ok
-          ? `Ticket + ${n} étiquette${plural} imprimé${plural}`
-          : `Ticket imprimé, ${n} étiquette${plural} non imprimée${plural}`);
+          ? `Ticket + duplicata + ${n} étiquette${plural} imprimés`
+          : `Tickets imprimés, ${n} étiquette${plural} non imprimée${plural}`);
       })
       .catch(() => toast('Impression échouée'));
   }
@@ -1615,15 +1626,15 @@
     const fresh = ctx && ctx.fresh;
     el.innerHTML = `
       <button class="px-modal-x" data-px-close aria-label="Fermer"><i data-lucide="x"></i></button>
-      <h3 class="modal-title">Ticket &amp; étiquettes, ${order.id}</h3>
-      <p class="modal-subtle">${order.pieces.length} pièce${order.pieces.length > 1 ? 's' : ''} = ${order.pieces.length} étiquette${order.pieces.length > 1 ? 's' : ''} imperméables. Un costume 3 pièces sort avec 3 étiquettes, rien ne se perd.</p>
+      <h3 class="modal-title">Ticket, duplicata &amp; étiquettes · ${order.id}</h3>
+      <p class="modal-subtle">Le client garde son ticket. Le duplicata atelier reste avec la commande. Chaque pièce reçoit une étiquette lisible et scannable.</p>
       <div class="px-tags-grid">
-        ${receiptHTML(order)}
+        <div class="px-receipts-preview">${receiptHTML(order)}${receiptHTML(order, 'DUPLICATA · ATELIER')}</div>
         <div class="px-tags-list">${order.pieces.map((p) => tagHTML(p, order)).join('')}</div>
       </div>
-      <div class="px-tags-note"><i data-lucide="shield-check"></i>Chaque étiquette porte le n° de commande, la pièce, le client et le service, scannable au rangement et au retrait.</div>
+      <div class="px-tags-note"><i data-lucide="shield-check"></i>Sur chaque étiquette : commande, pièce, article, service et code à scanner. Rien d'autre.</div>
       <div class="px-tags-foot">
-        <button class="px-btn secondary" id="px-tags-print"><i data-lucide="printer"></i>Imprimer ticket + ${order.pieces.length} étiq.</button>
+        <button class="px-btn secondary" id="px-tags-print"><i data-lucide="printer"></i>Imprimer 2 tickets + ${order.pieces.length} étiq.</button>
         ${fresh
           ? `<button class="px-btn primary" id="px-tags-pay"><i data-lucide="banknote"></i>Encaissement</button>`
           : `<button class="px-btn primary" data-px-close><i data-lucide="check"></i>Fermer</button>`}

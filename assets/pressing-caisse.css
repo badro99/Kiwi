@@ -670,6 +670,18 @@ body.is-pos-pressing .px-screen.is-entering { animation: px-dive 640ms cubic-bez
   font-family: var(--mono); font-size: 10.8px; line-height: 1.55; color: var(--ink);
   position: sticky; top: 0;
 }
+.px-receipts-preview { display: grid; gap: 10px; position: sticky; top: 0; }
+.px-receipts-preview .px-receipt { position: static; }
+.px-receipt-copy {
+  margin: -5px 0 9px;
+  padding: 4px 6px;
+  border: 1px solid #0a0f0d;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-align: center;
+}
+.px-receipt-copy.is-workshop { font-size: 11px; border-width: 2px; }
 .px-receipt .c { text-align: center; }
 .px-receipt .b { font-weight: 700; }
 .px-receipt .lg { font-size: 13px; }
@@ -700,19 +712,25 @@ body.is-pos-pressing .px-screen.is-entering { animation: px-dive 640ms cubic-bez
   width: 13px; height: 13px; border-radius: 50%;
   background: #fff; border: 1.5px solid #0a0f0d;
 }
-.px-tag-top { display: flex; justify-content: space-between; align-items: baseline; font-family: var(--mono); }
-.px-tag-num { font-size: 12.5px; font-weight: 700; }
-.px-tag-i { font-size: 10px; color: var(--ink-2); }
-.px-tag-client { font-size: 11px; font-weight: 600; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-left: 8px; }
-.px-tag-item { display: flex; align-items: center; gap: 6px; font-size: 10.5px; color: var(--ink-2); margin-top: 1px; padding-left: 8px; }
-.px-tag-item .dot { width: 8px; height: 8px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.15); flex-shrink: 0; }
-.px-tag-item .svc { font-family: var(--mono); font-weight: 700; color: var(--ink); }
+.px-tag-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-family: var(--mono); }
+.px-tag-num { font-size: 18px; line-height: 1; font-weight: 800; letter-spacing: .025em; }
+.px-tag-i { font-size: 11px; font-weight: 700; color: var(--ink); white-space: nowrap; }
+.px-tag-item { display: flex; align-items: baseline; gap: 5px; min-width: 0; font-size: 13px; line-height: 1.15; color: var(--ink); margin-top: 6px; padding-left: 8px; text-transform: uppercase; }
+.px-tag-item strong { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.px-tag-item .svc { font-family: var(--mono); font-weight: 800; color: var(--ink); white-space: nowrap; }
 .px-tag-care { margin: 4px 0 0 8px; color: var(--px-warn); font-size: 9px; font-weight: 700; line-height: 1.25; text-transform: uppercase; }
 .px-tag svg { display: block; margin-top: 6px; width: 100%; }
 .px-tag-id { font-family: var(--mono); font-size: 8.5px; letter-spacing: 0.12em; color: var(--ink-2); text-align: center; margin-top: 2px; }
 .px-tags-note { display: flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--ink-3); margin-top: 12px; }
 .px-tags-note svg { width: 13px; height: 13px; color: var(--forest); flex-shrink: 0; }
 .px-tags-foot { display: flex; gap: 9px; margin-top: 14px; }
+
+@media print {
+  #kpr-print-root .px-print-receipts { display: contents; }
+  #kpr-print-root .px-receipt,
+  #kpr-print-root .px-tag { margin: 0 auto 3mm; width: calc(100% - 6mm); box-sizing: border-box; }
+  #kpr-print-root .px-receipt-copy { color: #000 !important; border-color: #000 !important; }
+}
 
 /* ═══════════════ PAYMENT ═══════════════ */
 .modal.px-pay { width: 520px; padding: 24px 24px 20px; }

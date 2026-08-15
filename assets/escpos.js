@@ -142,6 +142,7 @@
     if (o.address) b.line(fit(o.address, paper));
     if (o.phone) b.line(fit(o.phone, paper));
     if (o.ref || o.date) b.line(fit([o.ref, o.date].filter(Boolean).join('  '), paper));
+    if (o.copy) b.bold(true).size(1, 2).line(fit(o.copy, paper)).size(1, 1).bold(false);
     b.align('left').line(rule(paper));
     (o.lines || []).forEach(function (l) {
       var name = (l.qty ? l.qty + '× ' : '') + (l.name || '');
@@ -181,7 +182,8 @@
     // receipt-style three-line cutter feed used to make this path much taller
     // than the selected stock, so compact labels cut after a few printer dots.
     if (compact) {
-      if (o.title) b.bold(true).line(fit(o.title, paper)).bold(false);
+      if (o.title) b.bold(true).size(2, 2).line(fit(o.title, paper, 2)).size(1, 1).bold(false);
+      if (o.sub) b.bold(true).line(fit(o.sub, paper)).bold(false);
       if (o.price != null && o.price !== '') b.bold(true).size(2, 2).line(fit(String(o.price) + ' MAD', paper, 2)).size(1, 1).bold(false);
       b.barcode(o.code, { format: o.format || 'ean13', height: 32, module: 2 });
       b.feedDots(4).cutNow();

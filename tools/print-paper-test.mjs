@@ -7,6 +7,7 @@ const printer = read('assets/printer-bridge.js');
 const barcode = read('assets/barcode.js');
 const receipt = read('assets/receipt.js');
 const operational = read('assets/operational-print.js');
+const escpos = read('assets/escpos.js');
 const invoice = read('assets/invoicing.js');
 const qr = read('assets/order-qr.js');
 const report = read('assets/report.js');
@@ -17,6 +18,8 @@ const sw = read('kiwi-sw.js');
 const controls = [
   ['pressing ticket preview', paper.includes('.px-receipt')],
   ['pressing garment label preview', paper.includes('.px-tag')],
+  ['compact thermal labels retain article and service', escpos.includes("if (o.sub) b.bold(true).line(fit(o.sub, paper)).bold(false)")],
+  ['thermal receipts can mark workshop copies', escpos.includes("if (o.copy) b.bold(true).size(1, 2).line(fit(o.copy, paper))")],
   ['restaurant receipt preview', paper.includes('.receipt-paper')],
   ['other vertical print previews', ['.ff-receipt', '.ht-facture', '.lb-receipt', '.ph-receipt', '.fl-receipt', '.bq-avoir'].every((s) => paper.includes(s))],
   ['customer card and handover slip', paper.includes('.fl-card-preview') && paper.includes('.ho-slip')],
