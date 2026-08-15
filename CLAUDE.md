@@ -137,6 +137,20 @@ agree: the shell tag, the matching entry in `kiwi-sw.js`'s `SHELL` precache list
 REGISTRY. Bumping *some* of them is worse than bumping none;
 `tools/pwa-shell-test.js` goes red and takes `check.js` with it.
 
+**Don't move a stamp by hand. Run the tool:**
+
+```bash
+node tools/bump-stamp.js assets/venues.js assets/tokens.css
+```
+
+It finds every place that stamp lives, moves them together, and re-seals
+`tools/asset-stamps.json` — the manifest pairing each stamped asset with a hash
+of its content. `tools/stamp-drift-test.js` (wired into `check.js`) fails the
+build when a file's content moved and its stamp didn't, which is the one failure
+mode no amount of cross-file comparison can see: nothing *diverges*, everything
+is consistent — on the old URL. `--sync` re-seals without bumping; `--all` bumps
+every asset whose content changed.
+
 **Service-worker cache generation.** Bumping it costs four files, not one: `CACHE` in
 `kiwi-sw.js` plus the `register('/kiwi-sw.js?v=NNN')` call in **all three** PWA
 bootstraps (`assets/dashboard-pwa.js`, `assets/caisse-pwa.js`,
