@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted — fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v433';
+var CACHE = 'kiwi-app-v434';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -237,7 +237,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=1',
   '/assets/food-production-print.js?v=1',
   '/assets/pos-sale.js?v=3',
-  '/assets/pos-dispatch.js?v=22',
+  '/assets/pos-dispatch.js?v=23',
   '/assets/retail-scan.css?v=6',
   '/assets/vendor/zxing-browser.min.js?v=1',
   '/assets/retail-scan.js?v=5',
@@ -288,8 +288,8 @@ var SHELL = [
      qu'il faut pouvoir ressortir le ticket. Un bouton de secours qui a besoin du
      réseau n'est pas un secours. */
   '/assets/pos-reprint.js',
-  '/assets/pressing-caisse.js?v=21',
-  '/assets/pressing-caisse.css?v=21',
+  '/assets/pressing-caisse.js?v=23',
+  '/assets/pressing-caisse.css?v=23',
   '/assets/lucide.min.js',
   '/assets/kiwi-favicon-new.svg',
   '/assets/kiwi-newlogo.svg',
