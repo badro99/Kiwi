@@ -646,16 +646,6 @@ body.is-pos-pressing .px-screen.is-entering { animation: px-dive 640ms cubic-bez
 }
 .px-datem .modal-title { font-size: 25px; letter-spacing: -.025em; margin-bottom: 5px; }
 .px-datem .modal-subtle { max-width: 470px; line-height: 1.45; margin-bottom: 16px; }
-.px-date-status {
-  display: flex; align-items: center; gap: 11px; padding: 11px 12px;
-  border: 1px solid var(--line); border-radius: 13px; background: var(--paper-mute);
-  margin-bottom: 14px;
-}
-.px-date-status.is-express { border-color: var(--mint-edge); background: var(--mint-tint); }
-.px-date-status > svg { width: 18px; height: 18px; color: var(--forest); flex: 0 0 auto; }
-.px-date-status div { min-width: 0; }
-.px-date-status b { display: block; font-size: 12px; line-height: 1.25; }
-.px-date-status span { display: block; color: var(--ink-3); font-size: 10.5px; line-height: 1.35; margin-top: 2px; }
 .px-date-chips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin-bottom: 16px; }
 .px-date-chip {
   min-height: 112px; padding: 14px 13px 12px; position: relative;

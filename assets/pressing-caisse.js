@@ -1483,17 +1483,12 @@
       if (onSelected) setTimeout(() => onSelected(ready), 0);
     };
     const now = new Date();
-    const beforeCutoff = now.getHours() < 13;
     const opts = readyOptions(now);
     el.innerHTML = `
       <button class="px-modal-x" data-px-close aria-label="Fermer"><i data-lucide="x"></i></button>
       <div class="px-date-kicker">PROMESSE CLIENT</div>
       <h3 class="modal-title">Prêt pour quand ?</h3>
       <p class="modal-subtle">Choisissez un créneau réaliste. Il sera imprimé sur le ticket et suivi par l'atelier.</p>
-      <div class="px-date-status ${beforeCutoff ? 'is-express' : ''}">
-        <i data-lucide="${beforeCutoff ? 'sun' : 'clock-3'}"></i>
-        <div><b>${beforeCutoff ? "Dépôt du matin" : "L'express du jour est fermé"}</b><span>${beforeCutoff ? "Le retrait aujourd'hui reste possible jusqu'à 18:00." : "Après 13:00, Kiwi propose directement les prochains créneaux tenables."}</span></div>
-      </div>
       <div class="px-date-chips">
         ${opts.map((o, i) => `<button class="px-date-chip ${Math.abs(o.d - state.ticket.ready) < 60000 ? 'on' : ''}" data-px-d="${i}" aria-label="${esc(o.label)}">
           <span class="px-date-day">${esc(o.day)}</span><b>${esc(o.time)}</b><span class="px-date-meta">${esc(o.sub)}</span>${o.recommended ? '<em>RECOMMANDÉ</em>' : ''}<i data-lucide="check"></i>
