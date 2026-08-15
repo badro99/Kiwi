@@ -114,9 +114,11 @@
   function normalizeOrderNo(value) {
     const raw = String(value == null ? '' : value).trim();
     if (!raw) return '';
+    const m = raw.match(/(\d{4})/);
+    if (m) return m[1];
     const digits = raw.replace(/\D/g, '');
     if (!digits) return '';
-    if (digits.length >= 4) return digits.slice(-4);
+    if (digits.length >= 4) return digits.slice(0, 4);
     return digits.padStart(4, '0');
   }
 
@@ -488,43 +490,43 @@
 
   const ORDERS = pvReal() ? [] : [
     /* ── reçu ── */
-    mkOrder({ id: 'P-1044', custId: 'c4', droppedH: 0.6, readyH: 47, status: 'recu',
+    mkOrder({ id: '1044', custId: 'c4', droppedH: 0.6, readyH: 47, status: 'recu',
       pay: { mode: 'pickup', method: null, paid: 0 },
       lines: [['jean', 'lavage', 2, 'bleu'], ['pull', 'sec', 1, 'gris', ['Tache manche'], '', 1]] }),
-    mkOrder({ id: 'P-1043', custId: 'c1', droppedH: 1.4, readyH: 46, status: 'recu',
+    mkOrder({ id: '1043', custId: 'c1', droppedH: 1.4, readyH: 46, status: 'recu',
       pay: { mode: 'acompte', method: 'especes', paid: 40 },
       lines: [['chemise', ['lavage', 'repassage'], 4, 'blanc'], ['robe', 'sec', 1, 'rouge', ['Délicat'], '', 2]] }),
-    mkOrder({ id: 'P-1042', custId: 'c6', droppedH: 2.5, readyH: 22, status: 'recu',
+    mkOrder({ id: '1042', custId: 'c6', droppedH: 2.5, readyH: 22, status: 'recu',
       pay: { mode: 'pickup', method: null, paid: 0 },
       lines: [['chemise', 'repassage', 10, 'blanc', [], 'Lot du lundi'], ['pantalon', 'repassage', 2, 'noir']] }),
     /* ── en traitement ── */
-    mkOrder({ id: 'P-1041', custId: 'c2', droppedH: 6, readyH: 26, statuses: ['trait', 'trait', 'trait', 'recu'],
+    mkOrder({ id: '1041', custId: 'c2', droppedH: 6, readyH: 26, statuses: ['trait', 'trait', 'trait', 'recu'],
       pay: { mode: 'now', method: 'carte', paid: 170 },
       lines: [['costume', 'sec', 1, 'bleu', [], '', 1, '3p'], ['veste_cuir', 'sec', 1, 'noir', ['Délicat'], 'Col élimé', 2]] }),
-    mkOrder({ id: 'P-1040', custId: 'hb', droppedH: 8, readyH: 16, status: 'trait',
+    mkOrder({ id: '1040', custId: 'hb', droppedH: 8, readyH: 16, status: 'trait',
       pay: { mode: 'compte', method: 'compte', paid: 0 },
       lines: [['drap', 'lavage', 12, 'blanc'], ['nappe', 'lavage', 6, 'blanc'], ['housse', 'lavage', 4, 'blanc']] }),
-    mkOrder({ id: 'P-1039', custId: 'c3', droppedH: 20, readyH: 28, statuses: ['trait', 'pret'],
+    mkOrder({ id: '1039', custId: 'c3', droppedH: 20, readyH: 28, statuses: ['trait', 'pret'],
       pay: { mode: 'acompte', method: 'especes', paid: 100 },
       lines: [['caftan', 'sec', 1, 'vert', ['Délicat'], 'Sfifa fragile, nettoyage main', 3], ['robe_soiree', 'sec', 1, 'noir', [], '', 1]] }),
-    mkOrder({ id: 'P-1032', custId: 'c5', droppedH: 50, readyH: -14, status: 'trait',
+    mkOrder({ id: '1032', custId: 'c5', droppedH: 50, readyH: -14, status: 'trait',
       pay: { mode: 'pickup', method: null, paid: 0 },
       lines: [['rideaux', 'sec', 4, 'beige', [], 'Salon, 4 panneaux'], ['couverture', 'lavage', 1, 'marron']] }),
     /* ── prêt ── */
-    mkOrder({ id: 'P-1038', custId: 'c1', droppedH: 30, readyH: -2, status: 'pret', rack: 'A-04', notified: true,
+    mkOrder({ id: '1038', custId: 'c1', droppedH: 30, readyH: -2, status: 'pret', rack: 'A-04', notified: true,
       pay: { mode: 'now', method: 'especes', paid: 56 },
       lines: [['pantalon', 'sec', 2, 'noir']] }),
-    mkOrder({ id: 'P-1037', custId: 'c6', droppedH: 32, readyH: -1, status: 'pret', rack: 'B-07',
+    mkOrder({ id: '1037', custId: 'c6', droppedH: 32, readyH: -1, status: 'pret', rack: 'B-07',
       pay: { mode: 'pickup', method: null, paid: 0 },
       lines: [['chemise', ['lavage', 'repassage'], 8, 'blanc'], ['veste', 'sec', 1, 'gris']] }),
-    mkOrder({ id: 'P-1036', custId: 'c4', droppedH: 26, readyH: -4, status: 'pret',
+    mkOrder({ id: '1036', custId: 'c4', droppedH: 26, readyH: -4, status: 'pret',
       pay: { mode: 'acompte', method: 'carte', paid: 30 },
       lines: [['doudoune', 'lavage', 1, 'noir', [], '', 1], ['tshirt', 'lavage', 3, 'blanc']] }),
     /* ── livré ── */
-    mkOrder({ id: 'P-1035', custId: 'c2', droppedH: 54, readyH: -8, status: 'livre', collectedH: 5, notified: true,
+    mkOrder({ id: '1035', custId: 'c2', droppedH: 54, readyH: -8, status: 'livre', collectedH: 5, notified: true,
       pay: { mode: 'now', method: 'carte', paid: 105 },
       lines: [['costume', 'repassage', 1, 'gris', [], '', 0, '2p'], ['chemise', 'repassage', 7, 'blanc']] }),
-    mkOrder({ id: 'P-1031', custId: 'c5', droppedH: 76, readyH: -30, status: 'livre', collectedH: 26, notified: true,
+    mkOrder({ id: '1031', custId: 'c5', droppedH: 76, readyH: -30, status: 'livre', collectedH: 26, notified: true,
       pay: { mode: 'now', method: 'especes', paid: 102 },
       lines: [['jupe', 'sec', 2, 'noir'], ['babouches', 'sec', 1, 'beige']] }),
   ];
@@ -582,7 +584,8 @@
     },
   });
   function freshTicket() {
-    state.ticket = { num: posRef(`P-${ticketSeq}`), displayNo: nextAvailableOrderNo(ticketSeq, ORDERS), lines: [], customer: null, ready: suggestReady() };
+    const num = nextAvailableOrderNo(ticketSeq, ORDERS);
+    state.ticket = { num, displayNo: num, lines: [], customer: null, ready: suggestReady() };
   }
   function suggestReady(value) {
     const options = readyOptions(value);
@@ -1612,9 +1615,10 @@
     const t = state.ticket;
     if (!t || !t.lines.length || !t.customer) return;
     if (!validReady(t.ready)) { openDate({ onSelected: finalizeTicket }); toast('Choisissez une date de retrait dans le futur'); return; }
+    const num = normalizeOrderNo(t.displayNo || t.num) || nextAvailableOrderNo(ticketSeq, ORDERS);
     const order = {
-      id: t.num,
-      displayNo: t.displayNo || nextAvailableOrderNo(ticketSeq, ORDERS),
+      id: num,
+      displayNo: num,
       custId: t.customer.type === 'known' ? t.customer.id : null,
       guest: t.customer.type === 'guest' ? { name: 'Client de passage', phone: '' } : null,
       b2b: ticketTotals(t).b2b,
@@ -1759,8 +1763,8 @@
 
     const customer = custOf(order);
     const labels = order.pieces.map((p) => ({
-      title: customer.name,
-      sub: `${publicOrderNo(order)} · pièce ${p.n}/${p.of}`,
+      title: `${publicOrderNo(order)} · pièce ${p.n}/${p.of}`,
+      sub: customer.name,
       detail: `${p.label} · ${svcCodes(p.svcs)}`,
       footer: publicPieceNo(order, p),
       code: publicPieceNo(order, p),
@@ -2343,6 +2347,7 @@
         ${st === 'pret' && !o.rack ? '<button class="px-btn primary" id="px-dt-rack"><i data-lucide="archive"></i>Ranger</button>' : ''}
         ${st === 'pret' ? `<button class="px-btn primary" id="px-dt-handover"><i data-lucide="check"></i>${due > 0 ? `Encaisser puis remettre · ${due} MAD` : 'Passer au retrait'}</button>` : ''}
         ${o.rack && !delivered ? '<button class="px-btn ghost" id="px-dt-unrack">Libérer le cintre</button>' : ''}
+        ${!delivered ? '<button class="px-btn ghost danger" id="px-dt-cancel" style="color:var(--danger,#b53b31);border-color:rgba(181,59,49,0.3);"><i data-lucide="ban"></i>Annuler</button>' : ''}
       </div>`;
     openVeil('#px-detail-veil');
     icons();
@@ -2402,6 +2407,26 @@
       releaseSlot(o);
       toast(`${publicOrderNo(o)}, cintre libéré`);
       openDetail(o.id); refreshOps();
+    };
+    const cancelB = $('#px-dt-cancel', el);
+    if (cancelB) cancelB.onclick = () => {
+      const pin = prompt('Entrez le code manager à 4 chiffres pour annuler cette commande :');
+      if (pin === null) return;
+      if (!/^\d{4}$/.test(pin)) {
+        toast('Code manager à 4 chiffres requis.');
+        return;
+      }
+      const idx = ORDERS.findIndex((x) => x.id === o.id);
+      if (idx !== -1) {
+        releaseSlot(o);
+        ORDERS.splice(idx, 1);
+        syncOwnerOps();
+        queueIfOffline('Annulation commande');
+        if (window.KiwiPressingOps && KiwiPressingOps.cancelOrder) KiwiPressingOps.cancelOrder(o.id);
+        closeVeil('#px-detail-veil');
+        toast(`Commande ${publicOrderNo(o)} annulée`);
+        refreshOps();
+      }
     };
   }
 
@@ -2630,8 +2655,10 @@
   function findScannedOrder(raw) {
     const code = String(raw || '').trim().toUpperCase().replace(/^\*|\*$/g, '');
     if (!code) return null;
+    const norm = normalizeOrderNo(code);
     return ORDERS.find((o) => publicOrderNo(o) === code
       || String(o.id).toUpperCase() === code
+      || (norm && (publicOrderNo(o) === norm || String(o.id).toUpperCase() === norm))
       || (o.pieces || []).some((p) => String(p.pid).toUpperCase() === code
         || publicPieceNo(o, p).toUpperCase() === code)) || null;
   }

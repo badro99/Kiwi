@@ -198,6 +198,26 @@
     return cloudHandle;
   }
 
+  function cancelOrder(id) {
+    if (!id) return false;
+    var full = readFull();
+    if (full && Array.isArray(full.orders)) {
+      full.orders = full.orders.filter(function (o) { return o.id !== id; });
+      full.updatedAt = Date.now();
+      writeFull(full);
+      if (cloudHandle && cloudHandle.push) cloudHandle.push();
+    }
+    var rows = read();
+    var filtered = rows.filter(function (o) { return o.id !== id; });
+    var k = key();
+    if (k) {
+      try { localStorage.setItem(k, JSON.stringify(filtered)); } catch (_) {}
+    }
+    listeners.forEach(function (fn) { try { fn(filtered); } catch (_) {} });
+    try { window.dispatchEvent(new CustomEvent('kiwi:pressing-ops', { detail: { scope: scope() } })); } catch (_) {}
+    return true;
+  }
+
   window.addEventListener('storage', function (e) {
     if (e.key && e.key.indexOf(STORE_PREFIX) === 0) { projectFull(readFull()); return; }
     if (!e.key || e.key.indexOf(PREFIX) !== 0) return;
@@ -205,5 +225,5 @@
     listeners.forEach(function (fn) { try { fn(rows); } catch (_) {} });
   });
 
-  window.KiwiPressingOps = { read: read, replace: replace, summary: summary, subscribe: subscribe, scope: scope, bindCloud: bindCloud };
+  window.KiwiPressingOps = { read: read, replace: replace, summary: summary, subscribe: subscribe, scope: scope, bindCloud: bindCloud, cancelOrder: cancelOrder };
 })();

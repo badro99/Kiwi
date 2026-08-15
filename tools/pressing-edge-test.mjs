@@ -120,10 +120,10 @@ assert.equal(rules.normalizeOrderNo(''), '', 'handles empty input');
 assert.equal(rules.publicOrderNo({ id: 'P-1053-A9', displayNo: '1053' }), '1053');
 assert.equal(rules.publicPieceNo({ id: 'P-1053', displayNo: '1053' }, { n: 2 }), '1053-2');
 
-assert.equal(rules.findScannedOrder('P-1037')?.id, 'P-1037', 'order barcode resolves exact order');
-assert.equal(rules.findScannedOrder('*p-1037-1*')?.id, 'P-1037', 'garment barcode resolves its order');
-assert.equal(rules.findScannedOrder('1037')?.id, 'P-1037', '4-digit public order code resolves order');
-assert.equal(rules.findScannedOrder('1037-1')?.id, 'P-1037', '4-digit public piece code resolves order');
+assert.equal(rules.findScannedOrder('P-1037')?.id, '1037', 'order barcode resolves exact order');
+assert.equal(rules.findScannedOrder('*p-1037-1*')?.id, '1037', 'garment barcode resolves its order');
+assert.equal(rules.findScannedOrder('1037')?.id, '1037', '4-digit public order code resolves order');
+assert.equal(rules.findScannedOrder('1037-1')?.id, '1037', '4-digit public piece code resolves order');
 assert.equal(rules.findScannedOrder('unknown'), null, 'unknown scan never selects a fallback order');
 const code39 = rules.barcode('1037-1', 22);
 assert.match(code39, /^<svg /);

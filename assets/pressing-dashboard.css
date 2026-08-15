@@ -62,6 +62,9 @@
 .pxd-status.ready { color: var(--brand-deep); background: color-mix(in srgb, var(--mint) 24%, var(--surface)); }
 .pxd-status.late { background: color-mix(in srgb, var(--danger) 10%, var(--surface)); }
 .pxd-status.muted { color: var(--n-500); background: var(--paper-soft); }
+.pxd-order-right { display: flex; align-items: center; gap: 8px; }
+.pxd-cancel-btn { padding: 4px 8px; border: 1px solid rgba(181,59,49,0.3); border-radius: 8px; background: transparent; color: #b53b31; font-size: 10px; font-weight: 600; cursor: pointer; }
+.pxd-cancel-btn:hover { background: rgba(181,59,49,0.08); }
 
 .pxd-empty { min-height: 170px; padding: 28px 22px; display: grid; place-items: center; text-align: center; }
 .pxd-empty > div { max-width: 410px; }

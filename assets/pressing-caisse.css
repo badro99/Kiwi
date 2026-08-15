@@ -750,25 +750,24 @@ body.is-pos-pressing .px-screen.is-entering { animation: px-dive 640ms cubic-bez
   background: #fff; border: 1.5px solid #0a0f0d;
 }
 .px-tag-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-family: var(--mono); }
-.px-tag-num { font-size: 18px; line-height: 1; font-weight: 800; letter-spacing: .025em; }
-.px-tag-i { font-size: 11px; font-weight: 700; color: var(--ink); white-space: nowrap; }
-.px-tag-item { display: flex; align-items: baseline; gap: 5px; min-width: 0; font-size: 13px; line-height: 1.15; color: var(--ink); margin-top: 6px; padding-left: 8px; text-transform: uppercase; }
+.px-tag-num { font-size: 26px; line-height: 1; font-weight: 800; letter-spacing: .02em; }
+.px-tag-i { font-size: 11.5px; font-weight: 700; color: var(--ink-2); white-space: nowrap; }
+.px-tag-item { display: flex; align-items: baseline; gap: 5px; min-width: 0; font-size: 12px; line-height: 1.15; color: var(--ink); margin-top: 5px; padding-left: 8px; text-transform: uppercase; }
 .px-tag-item strong { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .px-tag-item .svc { font-family: var(--mono); font-weight: 800; color: var(--ink); white-space: nowrap; }
 .px-tag-care { margin: 4px 0 0 8px; color: var(--px-warn); font-size: 9px; font-weight: 700; line-height: 1.25; text-transform: uppercase; }
 .px-tag-client {
-  margin: 12px 0 4px 8px;
+  margin: 8px 0 2px 8px;
   color: #0a0f0d;
-  font-size: 20px;
-  line-height: 1.05;
-  font-weight: 800;
-  letter-spacing: -0.025em;
+  font-size: 13px;
+  line-height: 1.2;
+  font-weight: 600;
   text-transform: uppercase;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.px-tag-id { font-family: var(--mono); font-size: 9px; letter-spacing: 0.12em; color: var(--ink-2); text-align: left; margin: 5px 0 0 8px; }
+.px-tag-id { font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: 0.08em; color: var(--ink-3); text-align: left; margin: 4px 0 0 8px; }
 .px-tags-note { display: flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--ink-3); margin-top: 12px; }
 .px-tags-note svg { width: 13px; height: 13px; color: var(--forest); flex-shrink: 0; }
 .px-tags-foot { display: flex; gap: 9px; margin-top: 14px; }

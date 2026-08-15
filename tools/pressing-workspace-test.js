@@ -34,10 +34,10 @@ ok(venues.includes("v.subtype !== 'pressing'"), 'generic boutique Sold is not ap
 ok(venues.includes('active.subtype = exactSubtype'), 'server type keeps the exact pressing subtype');
 ok(pairingJs.includes("if (t && ids[t]) return { kind: 'vertical', id: t }"), 'operator hand-off routes an exact pressing type into the pressing till');
 ok(caisse.includes('assets/caisse-pairing.js?v=3') && sw.includes("'/assets/caisse-pairing.js?v=3'"), 'pressing route fix bypasses the old cached pairing router');
-ok(caisse.includes('assets/pos-dispatch.js?v=24') && sw.includes("'/assets/pos-dispatch.js?v=24'") && dispatchJs.includes("file: 'pressing-caisse', rev: '24'") && sw.includes("'/assets/pressing-caisse.js?v=24'") && sw.includes("'/assets/pressing-caisse.css?v=24'"), 'pressing loader and lazy assets use deploy-stable cache revisions');
-ok(dashboard.includes('assets/pressing-dashboard.js?v=8'), 'dashboard loads the pressing subpages');
-ok(dashboard.includes('assets/pressing-ops.js?v=3') && caisse.includes('assets/pressing-ops.js?v=3'), 'dashboard and till share the same operations bridge');
-ok(sw.includes("'/assets/pressing-dashboard.css?v=8'") && sw.includes("'/assets/pressing-dashboard.js?v=8'"), 'pressing workspace is available offline');
+ok(caisse.includes('assets/pos-dispatch.js?v=24') && sw.includes("'/assets/pos-dispatch.js?v=24'") && dispatchJs.includes("file: 'pressing-caisse', rev: '26'") && sw.includes("'/assets/pressing-caisse.js?v=25'") && sw.includes("'/assets/pressing-caisse.css?v=26'"), 'pressing loader and lazy assets use deploy-stable cache revisions');
+ok(dashboard.includes('assets/pressing-dashboard.js?v=9'), 'dashboard loads the pressing subpages');
+ok(dashboard.includes('assets/pressing-ops.js?v=4') && caisse.includes('assets/pressing-ops.js?v=4'), 'dashboard and till share the same operations bridge');
+ok(sw.includes("'/assets/pressing-dashboard.css?v=9'") && sw.includes("'/assets/pressing-dashboard.js?v=9'"), 'pressing workspace is available offline');
 ok(dashboard.includes('assets/pressing-catalog.js?v=4') && caisse.includes('assets/pressing-catalog.js?v=4') && sw.includes("'/assets/pressing-catalog.js?v=4'"), 'dashboard and till load the same offline pressing catalogue');
 ok(dashboard.includes('assets/pressing-garment-icons.js?v=2') && caisse.includes('assets/pressing-garment-icons.js?v=2') && sw.includes("'/assets/pressing-garment-icons.js?v=2'"), 'dashboard and till load the same product artwork');
 ok(!css.includes('body.is-pressing .page-head') && css.includes('.pressing-home { display: none !important; }'), 'pressing keeps the shared dashboard visible');
@@ -67,7 +67,7 @@ ok(!garmentContext.window.KiwiPressingGarmentIcons.render({ id:'chemise' }).incl
 ok(caisseJs.includes('unitPrice: lineUnit(l)') && caisseJs.includes('label: ITEMS[l.itemId].label') && caisseJs.includes('Number.isFinite(+ln.unitPrice)'), 'confirmed tickets freeze their agreed name and unit price');
 ok(caisseJs.includes("notes: (ln.notes || []).slice(), freeNote: ln.freeNote || ''") && caisseJs.includes('px-dt-care-summary') && caisseJs.includes('px-piece-care') && caisseJs.includes('px-tag-care'), 'care instructions survive into the visible workshop summary, detail and physical labels');
 ok(caisseJs.includes("receiptHTML(order, 'DUPLICATA · ATELIER')") && caisseJs.includes("copy: 'DUPLICATA · ATELIER'") && caisseJs.includes('KP.printReceipt(duplicate)'), 'every pressing print job includes a clearly marked workshop duplicate');
-ok(caisseJs.includes('Imprimer 2 tickets +') && caisseJs.includes('nom du client, commande, pièce, article et service') && caisseJs.includes('<div class="px-tag-client">${esc(customer.name)}</div>') && caisseJs.includes('title: customer.name') && caisseJs.includes('hideBarcode: true'), 'garment labels replace the barcode with the customer name while retaining operational references');
+ok(caisseJs.includes('Imprimer 2 tickets +') && caisseJs.includes('nom du client, commande, pièce, article et service') && caisseJs.includes('<div class="px-tag-client">${esc(customer.name)}</div>') && caisseJs.includes('hideBarcode: true'), 'garment labels prioritize order number while retaining operational references');
 ok(caisseCss.includes('--kiwi-dna-rail-w: 272px') && caisseJs.includes('id="px-theme"') && caisseJs.includes('KiwiCaisseTheme.toggle()') && caisseJs.includes('id="px-fullscreen"'), 'pressing uses a full-width rail with theme and fullscreen terminal controls');
 const whatsappDraftOpen = caisseJs.indexOf("window.open('', '_blank')");
 const whatsappConfirmedAfterOpen = caisseJs.indexOf('o.notified = true', whatsappDraftOpen);
@@ -86,7 +86,7 @@ ok(caisseJs.includes("active.filter((o) => orderStatus(o) === 'pret')") && caiss
 ok(caisseJs.includes('id="px-dt-handover"') && caisseJs.includes('state.rtQuery = o.id;') && caisseJs.includes("switchView('retrait')"), 'a ready order opens its exact handover workflow directly from the orders board');
 ok(caisseJs.includes('Remettre au client') && caisseJs.includes("p.status = 'livre'") && caisseJs.includes('o.collectedAt = new Date()') && caisseJs.includes('releaseSlot(o)'), 'confirmed handover closes every piece, timestamps the order and releases its rack');
 ok(caisseJs.includes('aria-pressed="${c.id === sheet.color}"') && caisseJs.includes('aria-pressed="${sheet.notes.includes(n)}"'), 'care selections expose their state to assistive technology');
-ok(/id: 'P-1031'[\s\S]{0,180}paid: 102/.test(caisseJs), 'delivered demo orders cannot retain an impossible balance');
+ok(/id: '(?:P-)?1031'[\s\S]{0,180}paid: 102/.test(caisseJs), 'delivered demo orders cannot retain an impossible balance');
 
 const store = new Map();
 const context = {

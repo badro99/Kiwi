@@ -95,11 +95,14 @@
     if (!rows.length) return empty('list', 'Aucune commande à afficher', 'Les nouveaux dépôts apparaîtront ici dès qu’ils seront enregistrés sur la caisse.', 'Nouveau dépôt', 'comptoir');
     return '<div class="pxd-order-list">' + rows.map(function (o) {
       var st = statusLabel(o);
-      return '<div class="pxd-order">' +
+      var canCancel = o.status !== 'livre';
+      return '<div class="pxd-order" data-pxd-order="' + esc(o.id) + '">' +
         '<div><span class="pxd-order-id">' + esc(o.id) + '</span><span class="pxd-order-time">' + esc(when(o.readyAt)) + '</span></div>' +
         garmentPreview(o.pieces) +
         '<div class="pxd-order-main"><b>' + esc((o.customer && o.customer.name) || 'Client de passage') + '</b><span>' + num((o.pieces || []).length) + ' pièce' + ((o.pieces || []).length === 1 ? '' : 's') + (o.rack ? ' · rack ' + esc(o.rack) : '') + (o.due ? ' · solde ' + num(o.due) + ' MAD' : '') + '</span></div>' +
-        '<span class="pxd-status ' + st[1] + '">' + st[0] + '</span></div>';
+        '<div class="pxd-order-right"><span class="pxd-status ' + st[1] + '">' + st[0] + '</span>' +
+        (canCancel ? '<button class="pxd-cancel-btn" type="button" data-pxd-cancel="' + esc(o.id) + '" title="Annuler la commande">Annuler</button>' : '') +
+        '</div></div>';
     }).join('') + '</div>';
   }
   function empty(ic, title, body, cta, view) {
@@ -224,6 +227,20 @@
   window.addEventListener('click', function (e) {
     var open = e.target.closest && e.target.closest('[data-pxd-open]');
     if (open) { e.preventDefault(); openTill(open.dataset.pxdOpen); return; }
+    var cancel = e.target.closest && e.target.closest('[data-pxd-cancel]');
+    if (cancel) {
+      e.preventDefault();
+      var id = cancel.dataset.pxdCancel;
+      if (confirm('Confirmer l’annulation de la commande ' + id + ' ?')) {
+        if (window.KiwiPressingOps && KiwiPressingOps.cancelOrder) {
+          KiwiPressingOps.cancelOrder(id);
+          if (typeof Kiwi !== 'undefined' && Kiwi.toast) Kiwi.toast('Commande ' + id + ' annulée');
+          if (currentPage) showPage(currentPage);
+          else renderHome();
+        }
+      }
+      return;
+    }
     var page = e.target.closest && e.target.closest('[data-pxd-page]');
     if (page) { e.preventDefault(); showPage(page.dataset.pxdPage); return; }
     var nav = e.target.closest && e.target.closest('.sidebar nav a[data-nav]');
