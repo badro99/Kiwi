@@ -110,6 +110,60 @@
   const validReady = (value, now) => !!value && typeof value.getTime === 'function'
     && Number.isFinite(value.getTime()) && value.getTime() > +(now || Date.now());
 
+  /* Public order / piece number handling (4-digit format) */
+  function normalizeOrderNo(value) {
+    const raw = String(value == null ? '' : value).trim();
+    if (!raw) return '';
+    const digits = raw.replace(/\D/g, '');
+    if (!digits) return '';
+    if (digits.length >= 4) return digits.slice(-4);
+    return digits.padStart(4, '0');
+  }
+
+  function publicOrderNo(order) {
+    if (!order) return '';
+    if (order.displayNo && /^\d{4}$/.test(String(order.displayNo))) return String(order.displayNo);
+    return normalizeOrderNo(order.id) || '0000';
+  }
+
+  function publicPieceNo(order, piece) {
+    const base = publicOrderNo(order);
+    const n = (piece && (piece.n != null ? piece.n : piece.pieceNo)) || 1;
+    return `${base}-${n}`;
+  }
+
+  function nextAvailableOrderNo(seq, orders) {
+    const used = new Set((orders || []).map((o) => publicOrderNo(o)));
+    let candidate = (Number(seq) || 1) % 10000;
+    if (candidate === 0) candidate = 1;
+    let attempts = 0;
+    while (attempts < 10000) {
+      const formatted = String(candidate).padStart(4, '0');
+      if (!used.has(formatted)) return formatted;
+      candidate = (candidate + 1) % 10000;
+      if (candidate === 0) candidate = 1;
+      attempts++;
+    }
+    return String((Number(seq) || 1) % 10000).padStart(4, '0');
+  }
+
+  function ensurePublicOrderNumbers(orders) {
+    if (!Array.isArray(orders)) return;
+    const used = new Set();
+    orders.forEach((o, i) => {
+      let num = o.displayNo ? normalizeOrderNo(o.displayNo) : normalizeOrderNo(o.id);
+      if (!num || used.has(num)) {
+        let candidate = ((i + 1) % 10000) || 1;
+        while (used.has(String(candidate).padStart(4, '0'))) {
+          candidate = ((candidate + 1) % 10000) || 1;
+        }
+        num = String(candidate).padStart(4, '0');
+      }
+      o.displayNo = num;
+      used.add(num);
+    });
+  }
+
   /* The counter promises clock times, not vague 24/48-hour offsets. Building
      from local calendar days keeps noon and 18:00 stable across DST changes.
      Sunday was already excluded by the pressing flow; keep that operational
@@ -412,7 +466,10 @@
   const NOW = Date.now();
   function mkOrder(cfg) {
     const o = {
-      id: cfg.id, custId: cfg.custId || null, guest: cfg.guest || null,
+      id: cfg.id,
+      displayNo: normalizeOrderNo(cfg.displayNo || cfg.id),
+      custId: cfg.custId || null,
+      guest: cfg.guest || null,
       b2b: !!(cfg.custId && CUST[cfg.custId] && CUST[cfg.custId].b2b),
       lines: cfg.lines.map((l) => ({ itemId: l[0], services: Array.isArray(l[1]) ? l[1] : [l[1]], qty: clampQty(l[2]), color: l[3], notes: l[4] || [], freeNote: l[5] || '', photos: l[6] || 0, variantId: l[7] || null })),
       droppedAt: new Date(NOW - cfg.droppedH * H),
@@ -471,6 +528,7 @@
       pay: { mode: 'now', method: 'especes', paid: 102 },
       lines: [['jupe', 'sec', 2, 'noir'], ['babouches', 'sec', 1, 'beige']] }),
   ];
+  ensurePublicOrderNumbers(ORDERS);
 
   /* rack — rails A/B/C × 12 positions */
   const RAILS = ['A', 'B', 'C'];
@@ -513,16 +571,18 @@
         o.collectedAt = o.collectedAt ? new Date(o.collectedAt) : null; return o;
       });
       ORDERS.splice(0, ORDERS.length, ...orders);
+      ensurePublicOrderNumbers(ORDERS);
       Object.keys(rackSlots).forEach((k) => delete rackSlots[k]);
       Object.assign(rackSlots, d.rackSlots || {});
       ticketSeq = Math.max(ticketSeq, +d.ticketSeq || 0);
       state.ticket = d.ticket || null;
       if (state.ticket?.ready) state.ticket.ready = new Date(state.ticket.ready);
+      if (state.ticket && !/^\d{4}$/.test(String(state.ticket.displayNo || ''))) state.ticket.displayNo = nextAvailableOrderNo(ticketSeq, ORDERS);
       (state.ticket?.lines || []).forEach((line) => { line.qty = clampQty(line.qty); });
     },
   });
   function freshTicket() {
-    state.ticket = { num: posRef(`P-${ticketSeq}`), lines: [], customer: null, ready: suggestReady() };
+    state.ticket = { num: posRef(`P-${ticketSeq}`), displayNo: nextAvailableOrderNo(ticketSeq, ORDERS), lines: [], customer: null, ready: suggestReady() };
   }
   function suggestReady(value) {
     const options = readyOptions(value);
@@ -544,7 +604,9 @@
   }
   function orderPayload(o) {
     return {
-      id: String(o.id || '').slice(0, 40), custId: o.custId || null,
+      id: String(o.id || '').slice(0, 40),
+      displayNo: publicOrderNo(o),
+      custId: o.custId || null,
       guest: o.guest ? { name: String(o.guest.name || 'Client de passage').slice(0, 100), phone: String(o.guest.phone || '').slice(0, 40) } : null,
       b2b: !!o.b2b,
       lines: (o.lines || []).map((l) => ({
@@ -623,7 +685,9 @@
       }).filter((l) => l.services.length);
       if (!lines.length) return;
       const o = {
-        id: String(raw.id).slice(0, 40), custId: raw.custId && CUST[raw.custId] ? raw.custId : null,
+        id: String(raw.id).slice(0, 40),
+        displayNo: normalizeOrderNo(raw.displayNo || raw.id),
+        custId: raw.custId && CUST[raw.custId] ? raw.custId : null,
         guest: raw.guest && { name: String(raw.guest.name || 'Client de passage').slice(0, 100), phone: String(raw.guest.phone || '').slice(0, 40) },
         b2b: !!raw.b2b, lines, droppedAt: new Date(raw.droppedAt), readyAt: new Date(raw.readyAt),
         pay: raw.pay && { mode: raw.pay.mode, method: raw.pay.method || null, paid: Math.max(0, +raw.pay.paid || 0) },
@@ -641,6 +705,7 @@
       ORDERS.push(o);
       persistedOrderHashes[o.id] = payloadHash(orderPayload(o));
     });
+    ensurePublicOrderNumbers(ORDERS);
     ticketSeq = Math.max(ticketSeq, +doc.seq || 0, 1);
     Object.keys(rackSlots).forEach((k) => { delete rackSlots[k]; });
     ORDERS.forEach((o) => { if (o.rack && !rackSlots[o.rack]) rackSlots[o.rack] = o.id; });
@@ -1549,6 +1614,7 @@
     if (!validReady(t.ready)) { openDate({ onSelected: finalizeTicket }); toast('Choisissez une date de retrait dans le futur'); return; }
     const order = {
       id: t.num,
+      displayNo: t.displayNo || nextAvailableOrderNo(ticketSeq, ORDERS),
       custId: t.customer.type === 'known' ? t.customer.id : null,
       guest: t.customer.type === 'guest' ? { name: 'Client de passage', phone: '' } : null,
       b2b: ticketTotals(t).b2b,
@@ -1596,7 +1662,7 @@
       <div class="px-receipt-copy${copyLabel ? ' is-workshop' : ''}">${copyLabel || 'EXEMPLAIRE CLIENT'}</div>
       ${receiptHead()}
       <hr>
-      <div class="row"><span>Ticket</span><span class="b">${o.id}</span></div>
+      <div class="row"><span>Commande</span><span class="b">${publicOrderNo(o)}</span></div>
       <div class="row"><span>Client</span><span>${esc(c.name)}</span></div>
       ${c.phone ? `<div class="row"><span>Tél</span><span>${esc(c.phone)}</span></div>` : ''}
       <div class="row"><span>Déposé</span><span>${fmtDT(o.droppedAt)}</span></div>
@@ -1616,8 +1682,8 @@
          ${due ? `<div class="row due"><span>SOLDE AU RETRAIT</span><span>${due} MAD</span></div>` : ''}`}
       <div class="row"><span>Pièces</span><span>${o.pieces.length} · ${o.pieces.length} étiq.</span></div>
       <hr>
-      <div class="c">${barcode(o.id, 26)}</div>
-      <div class="c mut">${o.id} · merci, l'lah ikhellik</div>
+      <div class="c">${barcode(publicOrderNo(o), 26)}</div>
+      <div class="c mut">${publicOrderNo(o)} · merci, l'lah ikhellik</div>
     </div>`;
   }
 
@@ -1625,11 +1691,11 @@
     const customer = custOf(o);
     const care = [...(p.notes || []), p.freeNote].filter(Boolean);
     return `<div class="px-tag">
-      <div class="px-tag-top"><span class="px-tag-num">${o.id}</span><span class="px-tag-i">pièce ${p.n}/${p.of}</span></div>
+      <div class="px-tag-top"><span class="px-tag-num">${publicOrderNo(o)}</span><span class="px-tag-i">pièce ${p.n}/${p.of}</span></div>
       <div class="px-tag-item"><strong>${esc(p.label)}</strong><span aria-hidden="true">·</span><span class="svc">${svcCodes(p.svcs)}</span></div>
       ${care.length ? `<div class="px-tag-care">ATTENTION · ${care.map(esc).join(' · ')}</div>` : ''}
       <div class="px-tag-client">${esc(customer.name)}</div>
-      <div class="px-tag-id">${p.pid}</div>
+      <div class="px-tag-id">${publicPieceNo(o, p)}</div>
     </div>`;
   }
 
@@ -1648,8 +1714,8 @@
    *   · rien d'appairé     → le pilote du système, les deux tickets ET les
    *                          étiquettes sur la même page (« Enregistrer en PDF »
    *                          compris).
-   * L'étiquette privilégie désormais le nom du client en grand. L'identifiant
-   * de pièce reste imprimé en clair pour la traçabilité et la saisie manuelle,
+   * L'étiquette privilégie désormais le numéro public à quatre chiffres. Le
+   * client reste un repère secondaire et l'identifiant de pièce est lisible,
    * sans sacrifier la surface utile à un code-barres rarement lu à l'atelier. */
   function printOrderDocs(order) {
     const KP = window.KiwiPrinter;
@@ -1674,7 +1740,7 @@
       shop: (b && (b.tradeName || b.name)) || pvName('Pressing Marshan'),
       address: [L.address, L.city].filter(Boolean).join(', '),
       phone: L.phone || '',
-      ref: order.id,
+      ref: publicOrderNo(order),
       date: fmtDT(order.droppedAt),
       lines: order.lines.map((ln) => {
         const item = ITEMS[ln.itemId];
@@ -1694,10 +1760,10 @@
     const customer = custOf(order);
     const labels = order.pieces.map((p) => ({
       title: customer.name,
-      sub: `${order.id} · pièce ${p.n}/${p.of}`,
+      sub: `${publicOrderNo(order)} · pièce ${p.n}/${p.of}`,
       detail: `${p.label} · ${svcCodes(p.svcs)}`,
-      footer: p.pid,
-      code: p.pid,
+      footer: publicPieceNo(order, p),
+      code: publicPieceNo(order, p),
       hideBarcode: true,
       format: 'code128',
     }));
@@ -1727,7 +1793,7 @@
     const fresh = ctx && ctx.fresh;
     el.innerHTML = `
       <button class="px-modal-x" data-px-close aria-label="Fermer"><i data-lucide="x"></i></button>
-      <h3 class="modal-title">Ticket, duplicata &amp; étiquettes · ${order.id}</h3>
+      <h3 class="modal-title">Ticket, duplicata &amp; étiquettes · ${publicOrderNo(order)}</h3>
       <p class="modal-subtle">Le client garde son ticket. Le duplicata atelier reste avec la commande. Chaque pièce reçoit une étiquette lisible au nom du client.</p>
       <div class="px-tags-grid">
         <div class="px-receipts-preview">${receiptHTML(order)}${receiptHTML(order, 'DUPLICATA · ATELIER')}</div>
@@ -2068,7 +2134,9 @@
        donc on ramène la RECHERCHE au même format local que la fiche avant de
        comparer — sinon +212 6… ne retrouvait jamais un 06… enregistré. */
     const digits = searchDigits(q);
-    return o.id.toLowerCase().includes(q.toLowerCase()) ||
+    const numeric = String(q).replace(/\D/g, '');
+    return (numeric && publicOrderNo(o).includes(numeric)) ||
+      o.id.toLowerCase().includes(q.toLowerCase()) ||
       c.name.toLowerCase().includes(q.toLowerCase()) ||
       (digits.length >= 2 && searchDigits(c.phone || '').includes(digits));
   }
@@ -2562,13 +2630,15 @@
   function findScannedOrder(raw) {
     const code = String(raw || '').trim().toUpperCase().replace(/^\*|\*$/g, '');
     if (!code) return null;
-    return ORDERS.find((o) => String(o.id).toUpperCase() === code
-      || (o.pieces || []).some((p) => String(p.pid).toUpperCase() === code)) || null;
+    return ORDERS.find((o) => publicOrderNo(o) === code
+      || String(o.id).toUpperCase() === code
+      || (o.pieces || []).some((p) => String(p.pid).toUpperCase() === code
+        || publicPieceNo(o, p).toUpperCase() === code)) || null;
   }
   function acceptScan(raw) {
     const target = findScannedOrder(raw);
     if (!target) { toast('Code inconnu · vérifiez le ticket ou l’étiquette'); return false; }
-    if (orderStatus(target) === 'livre' && state.scanMode !== 'workflow') { toast(`${target.id} a déjà été remis au client`); return false; }
+    if (orderStatus(target) === 'livre' && state.scanMode !== 'workflow') { toast(`${publicOrderNo(target)} a déjà été remis au client`); return false; }
     stopScanner();
     closeVeil('#px-scan-veil');
     if (state.scanMode === 'workflow') {
@@ -2576,12 +2646,12 @@
       state.boardQuery = target.id;
       renderBoard(); icons();
       openDetail(target.id);
-      toast(`${target.id} · Kiwi propose la prochaine action utile`);
+      toast(`${publicOrderNo(target)} · Kiwi propose la prochaine action utile`);
       return true;
     }
-    state.rtQuery = target.id;
+    state.rtQuery = publicOrderNo(target);
     renderRetrait(); icons();
-    toast(`Étiquette lue, ${target.id}${target.rack ? ' · cintre ' + target.rack : ''}`);
+    toast(`Étiquette lue, ${publicOrderNo(target)}${target.rack ? ' · cintre ' + target.rack : ''}`);
     return true;
   }
   async function startCameraScan(el) {
@@ -2630,7 +2700,7 @@
       <p class="modal-subtle">${workflow ? 'Scannez depuis l’atelier : Kiwi ouvre la commande et propose l’action utile. Rien ne change sans votre validation.' : 'La douchette saisit le code automatiquement. Sur téléphone, utilisez la caméra si elle est disponible.'}</p>
       <div class="px-scan-stage" id="px-scan-stage"><i data-lucide="scan-line" style="width:58px;height:58px;color:var(--mint)"></i></div>
       <div class="cash-input-row"><label class="cash-input-label" for="px-scan-input">N° commande ou étiquette</label>
-        <input class="cash-input mono" id="px-scan-input" autocomplete="off" autocapitalize="characters" placeholder="P-1045 ou P-1045-1" />
+        <input class="cash-input mono" id="px-scan-input" autocomplete="off" inputmode="numeric" placeholder="1054 ou 1054-1" />
       </div>
       <div class="px-sheet-foot" style="margin-top:12px">
         <button class="px-btn secondary" id="px-scan-camera"><i data-lucide="camera"></i>Caméra</button>
@@ -2647,10 +2717,10 @@
   }
   function tagInner(p, o) {
     const c = custOf(o);
-    return `<div class="px-tag-top"><span class="px-tag-num">${o.id}</span><span class="px-tag-i">pièce ${p.n}/${p.of}</span></div>
+    return `<div class="px-tag-top"><span class="px-tag-num">${publicOrderNo(o)}</span><span class="px-tag-i">pièce ${p.n}/${p.of}</span></div>
       <div class="px-tag-client">${esc(c.name)}</div>
       <div class="px-tag-item">${esc(p.label)} · <span class="svc">${svcCodes(p.svcs)}</span></div>
-      <div class="px-tag-id">${p.pid}</div>`;
+      <div class="px-tag-id">${publicPieceNo(o, p)}</div>`;
   }
 
   /* ═══════════════════════ RANGEMENT (rack) ═══════════════════════ */
@@ -2807,6 +2877,11 @@
     },
     lock,
     rules: Object.freeze({
+      normalizeOrderNo,
+      publicOrderNo,
+      publicPieceNo,
+      nextAvailableOrderNo,
+      ensurePublicOrderNumbers,
       normalizePhone,
       normalizeMoroccanPhone,
       whatsappPhone,

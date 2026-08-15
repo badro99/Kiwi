@@ -114,10 +114,18 @@ assert.equal(weekendSlots[0].d.getDay(), 1, 'Sunday is skipped for the first ser
 assert.equal(weekendSlots[0].label, 'Après-demain · 12:00', 'weekend label reflects the real Monday date');
 assert.equal(weekendSlots[2].d.getDay(), 2, 'following service day continues to Tuesday');
 
+assert.equal(rules.normalizeOrderNo('P-1053'), '1053', 'normalizes alphanumeric code to 4 digits');
+assert.equal(rules.normalizeOrderNo('45'), '0045', 'pads short numbers to 4 digits');
+assert.equal(rules.normalizeOrderNo(''), '', 'handles empty input');
+assert.equal(rules.publicOrderNo({ id: 'P-1053-A9', displayNo: '1053' }), '1053');
+assert.equal(rules.publicPieceNo({ id: 'P-1053', displayNo: '1053' }, { n: 2 }), '1053-2');
+
 assert.equal(rules.findScannedOrder('P-1037')?.id, 'P-1037', 'order barcode resolves exact order');
 assert.equal(rules.findScannedOrder('*p-1037-1*')?.id, 'P-1037', 'garment barcode resolves its order');
+assert.equal(rules.findScannedOrder('1037')?.id, 'P-1037', '4-digit public order code resolves order');
+assert.equal(rules.findScannedOrder('1037-1')?.id, 'P-1037', '4-digit public piece code resolves order');
 assert.equal(rules.findScannedOrder('unknown'), null, 'unknown scan never selects a fallback order');
-const code39 = rules.barcode('P-1037-1', 22);
+const code39 = rules.barcode('1037-1', 22);
 assert.match(code39, /^<svg /);
 assert.ok((code39.match(/<rect /g) || []).length > 20, 'label contains real Code 39 bars');
 
@@ -129,4 +137,4 @@ assert.match(source, /new window\.BarcodeDetector/, 'scanner uses BarcodeDetecto
 assert.doesNotMatch(source, /state\.offline\s*=\s*!state\.offline/, 'network status cannot be manually faked');
 assert.doesNotMatch(source, /action.*synchronis[ée]/i, 'UI does not claim unconfirmed synchronization success');
 
-console.log(`✓ pressing edges (${validPhones.size + internationalPhones.size + 38} controls)`);
+console.log(`✓ pressing edges (${validPhones.size + internationalPhones.size + 45} controls)`);
