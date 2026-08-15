@@ -34,7 +34,7 @@ ok(venues.includes("v.subtype !== 'pressing'"), 'generic boutique Sold is not ap
 ok(venues.includes('active.subtype = exactSubtype'), 'server type keeps the exact pressing subtype');
 ok(pairingJs.includes("if (t && ids[t]) return { kind: 'vertical', id: t }"), 'operator hand-off routes an exact pressing type into the pressing till');
 ok(caisse.includes('assets/caisse-pairing.js?v=3') && sw.includes("'/assets/caisse-pairing.js?v=3'"), 'pressing route fix bypasses the old cached pairing router');
-ok(caisse.includes('assets/pos-dispatch.js?v=21') && sw.includes("'/assets/pos-dispatch.js?v=21'") && dispatchJs.includes("file: 'pressing-caisse', rev: '19'") && sw.includes("'/assets/pressing-caisse.js?v=19'") && sw.includes("'/assets/pressing-caisse.css?v=19'"), 'pressing loader and lazy assets use deploy-stable cache revisions');
+ok(caisse.includes('assets/pos-dispatch.js?v=22') && sw.includes("'/assets/pos-dispatch.js?v=22'") && dispatchJs.includes("file: 'pressing-caisse', rev: '20'") && sw.includes("'/assets/pressing-caisse.js?v=20'") && sw.includes("'/assets/pressing-caisse.css?v=20'"), 'pressing loader and lazy assets use deploy-stable cache revisions');
 ok(dashboard.includes('assets/pressing-dashboard.js?v=8'), 'dashboard loads the pressing subpages');
 ok(dashboard.includes('assets/pressing-ops.js?v=3') && caisse.includes('assets/pressing-ops.js?v=3'), 'dashboard and till share the same operations bridge');
 ok(sw.includes("'/assets/pressing-dashboard.css?v=8'") && sw.includes("'/assets/pressing-dashboard.js?v=8'"), 'pressing workspace is available offline');
@@ -74,6 +74,7 @@ const whatsappConfirmedAfterOpen = caisseJs.indexOf('o.notified = true', whatsap
 ok(caisseJs.includes('J’ai envoyé le message') && whatsappDraftOpen >= 0 && whatsappConfirmedAfterOpen > whatsappDraftOpen, 'WhatsApp notification is confirmed only after opening the draft');
 ok(!caisseJs.includes("jusqu'à 20h00") && !caisseJs.includes('merci envoyé sur WhatsApp'), 'customer messages and handover confirmations make no false claims');
 ok(!caisseJs.includes('Date promise') && !caisseJs.includes('date promise'), 'withdrawal copy is idiomatic French');
+ok(caisseJs.includes('openClient({ onSelected: chooseReady })') && caisseJs.includes('openDate({ onSelected: finalizeTicket })') && caisseJs.includes('function finalizeTicket()'), 'validation guides the cashier through customer and pickup date before printing');
 ok(caisseJs.includes("livre: { label: 'Remis'") && caisseJs.includes("? `remis ${fmtDay"), 'completed counter handovers are labelled as handed over, not falsely home-delivered');
 ok(caisseJs.includes("active.filter((o) => orderStatus(o) === 'pret')") && caisseJs.includes('Aucune commande prête à remettre pour le moment.'), 'Retrait automatically presents the ready-order queue without requiring a search');
 ok(caisseJs.includes('id="px-dt-handover"') && caisseJs.includes('state.rtQuery = o.id;') && caisseJs.includes("switchView('retrait')"), 'a ready order opens its exact handover workflow directly from the orders board');

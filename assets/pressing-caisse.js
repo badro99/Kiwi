@@ -1358,8 +1358,14 @@
   }
 
   /* ═══════════════════════ CLIENT — phone-first ═══════════════════════ */
-  function openClient() {
+  function openClient(options = {}) {
     const el = $('#px-clientm', root);
+    const onSelected = typeof options.onSelected === 'function' ? options.onSelected : null;
+    const completeSelection = () => {
+      closeVeil('#px-client-veil');
+      renderTicket(); icons();
+      if (onSelected) setTimeout(onSelected, 0);
+    };
     let mode = 'search';
     const render = (q) => {
       const digits = phoneDigits(q);
@@ -1404,10 +1410,9 @@
       $$('[data-px-cl]', el).forEach((b) => {
         b.onclick = () => {
           state.ticket.customer = { type: 'known', id: b.dataset.pxCl };
-          closeVeil('#px-client-veil');
           const c = CUST[b.dataset.pxCl];
           toast(c.b2b ? `${c.name}, compte B2B, remise –15 % appliquée` : `${c.name}, ${c.orders} commandes, bienvenue`);
-          renderTicket(); icons();
+          completeSelection();
         };
       });
       const newBtn = $('#px-cl-new', el);
@@ -1415,8 +1420,7 @@
       const guest = $('#px-cl-guest', el);
       if (guest) guest.onclick = () => {
         state.ticket.customer = { type: 'guest' };
-        closeVeil('#px-client-veil');
-        renderTicket(); icons();
+        completeSelection();
       };
       const back = $('#px-cl-back', el);
       if (back) back.onclick = () => { mode = 'search'; render(q); icons(); };
@@ -1434,9 +1438,8 @@
         persistPressing();
         state.ticket.customer = { type: 'known', id };
         pressingOps?.save?.('customer-created');
-        closeVeil('#px-client-veil');
         toast(`Fiche créée, ${name}`);
-        renderTicket(); icons();
+        completeSelection();
       };
     };
     render('');
@@ -1467,8 +1470,15 @@
   }
 
   /* ═══════════════════════ READY DATE ═══════════════════════ */
-  function openDate() {
+  function openDate(options = {}) {
     const el = $('#px-datemm', root);
+    const onSelected = typeof options.onSelected === 'function' ? options.onSelected : null;
+    const completeSelection = (ready) => {
+      state.ticket.ready = ready;
+      closeVeil('#px-date-veil');
+      renderTicket(); icons();
+      if (onSelected) setTimeout(() => onSelected(ready), 0);
+    };
     const now = new Date();
     const beforeCutoff = now.getHours() < 13;
     const opts = readyOptions(now);
@@ -1498,18 +1508,14 @@
       b.onclick = () => {
         const ready = opts[+b.dataset.pxD].d;
         if (!validReady(ready)) { toast('Choisissez une date de retrait dans le futur'); return; }
-        state.ticket.ready = ready;
-        closeVeil('#px-date-veil');
-        renderTicket(); icons();
+        completeSelection(ready);
       };
     });
     $('#px-date-ok', el).onclick = () => {
       const v = $('#px-date-input', el).value;
       const ready = v ? new Date(v) : null;
       if (!validReady(ready)) { toast('La date de retrait doit être dans le futur'); return; }
-      state.ticket.ready = ready;
-      closeVeil('#px-date-veil');
-      renderTicket(); icons();
+      completeSelection(ready);
     };
   }
   function localDT(d) {
@@ -1520,8 +1526,21 @@
   function validateTicket() {
     const t = state.ticket;
     if (!t.lines.length) return;
-    if (!t.customer) { openClient(); toast("Attachez d'abord le client (ou « passage »)"); return; }
-    if (!validReady(t.ready)) { openDate(); toast('Choisissez une date de retrait dans le futur'); return; }
+    /* Validation is a guided hand-off, not a shortcut: identify the customer,
+       then explicitly confirm the pickup time before printing. */
+    const chooseReady = () => openDate({ onSelected: finalizeTicket });
+    if (!t.customer) {
+      openClient({ onSelected: chooseReady });
+      toast("Choisissez le client, puis la date de retrait");
+      return;
+    }
+    chooseReady();
+  }
+
+  function finalizeTicket() {
+    const t = state.ticket;
+    if (!t || !t.lines.length || !t.customer) return;
+    if (!validReady(t.ready)) { openDate({ onSelected: finalizeTicket }); toast('Choisissez une date de retrait dans le futur'); return; }
     const order = {
       id: t.num,
       custId: t.customer.type === 'known' ? t.customer.id : null,
