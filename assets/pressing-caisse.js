@@ -744,6 +744,65 @@
    * construit l'intérieur. Plus d'appendChild : la couche, l'animation
    * d'entrée et le verrouillage appartiennent au dispatcher. */
   let root = null;
+
+  function fullscreenOn() {
+    return !!(document.fullscreenElement || document.webkitFullscreenElement);
+  }
+  function paintFullscreenButton() {
+    const button = root && $('#px-fullscreen', root);
+    if (!button) return;
+    const on = fullscreenOn();
+    const enterIcon = button.querySelector('[data-px-fs="enter"]');
+    const exitIcon = button.querySelector('[data-px-fs="exit"]');
+    if (enterIcon) enterIcon.style.display = on ? 'none' : '';
+    if (exitIcon) exitIcon.style.display = on ? '' : 'none';
+    const label = button.querySelector('span');
+    if (label) label.textContent = on ? 'Quitter le plein écran' : 'Plein écran';
+    button.setAttribute('aria-pressed', on ? 'true' : 'false');
+    button.title = on ? 'Quitter le plein écran' : 'Plein écran';
+  }
+  function toggleFullscreen() {
+    try {
+      const action = fullscreenOn()
+        ? (document.exitFullscreen || document.webkitExitFullscreen || function () {}).call(document)
+        : (function () {
+            const el = document.documentElement;
+            return (el.requestFullscreen || el.webkitRequestFullscreen || function () {}).call(el);
+          })();
+      if (action && action.catch) action.catch(function () {});
+    } catch (_) {}
+  }
+  function paintThemeButton() {
+    const button = root && $('#px-theme', root);
+    if (!button) return;
+    const dark = !!(window.KiwiCaisseTheme && window.KiwiCaisseTheme.current() === 'dark');
+    const moon = button.querySelector('[data-px-theme="dark"]');
+    const sun = button.querySelector('[data-px-theme="light"]');
+    if (moon) moon.style.display = dark ? 'none' : '';
+    if (sun) sun.style.display = dark ? '' : 'none';
+    const label = button.querySelector('span');
+    if (label) label.textContent = dark ? 'Mode jour' : 'Mode nuit';
+    button.setAttribute('aria-pressed', dark ? 'true' : 'false');
+    button.title = dark ? 'Passer en mode jour' : 'Passer en mode nuit';
+  }
+  function setupTerminalControls() {
+    const theme = $('#px-theme', root);
+    const fullscreen = $('#px-fullscreen', root);
+    if (theme) theme.addEventListener('click', () => {
+      if (window.KiwiCaisseTheme) window.KiwiCaisseTheme.toggle();
+      paintThemeButton();
+    });
+    if (fullscreen) fullscreen.addEventListener('click', toggleFullscreen);
+    paintThemeButton();
+    paintFullscreenButton();
+    if (!setupTerminalControls._subscribed) {
+      setupTerminalControls._subscribed = true;
+      document.addEventListener('kiwi:caisse-theme', paintThemeButton);
+      document.addEventListener('fullscreenchange', paintFullscreenButton);
+      document.addEventListener('webkitfullscreenchange', paintFullscreenButton);
+    }
+  }
+
   function build(rootEl) {
     pressingOps?.hydrate?.();
     root = rootEl;
@@ -765,6 +824,16 @@
         <div class="px-rail-foot">
           <button class="px-net" id="px-net" title="État réseau détecté par cet appareil">
             <i class="px-net-dot"></i><span class="px-net-label">En ligne</span>
+          </button>
+          <button class="px-lock" id="px-theme" type="button" aria-pressed="false">
+            <i data-lucide="moon" data-px-theme="dark"></i>
+            <i data-lucide="sun" data-px-theme="light" style="display:none"></i>
+            <span>Mode nuit</span>
+          </button>
+          <button class="px-lock" id="px-fullscreen" type="button" aria-pressed="false">
+            <i data-lucide="maximize" data-px-fs="enter"></i>
+            <i data-lucide="minimize" data-px-fs="exit" style="display:none"></i>
+            <span>Plein écran</span>
           </button>
           <button class="px-lock" id="px-lock"><i data-lucide="lock"></i><span>Verrouiller</span></button>
         </div>
@@ -812,6 +881,7 @@
     });
     $('#px-lock', root).addEventListener('click', lock);
     $('#px-net', root).addEventListener('click', toggleOffline);
+    setupTerminalControls();
     $('#px-catalog-search', root).addEventListener('input', (event) => {
       state.catalogQuery = event.target.value || '';
       renderGrid();
@@ -1527,12 +1597,13 @@
   }
 
   function tagHTML(p, o) {
+    const customer = custOf(o);
     const care = [...(p.notes || []), p.freeNote].filter(Boolean);
     return `<div class="px-tag">
       <div class="px-tag-top"><span class="px-tag-num">${o.id}</span><span class="px-tag-i">pièce ${p.n}/${p.of}</span></div>
       <div class="px-tag-item"><strong>${esc(p.label)}</strong><span aria-hidden="true">·</span><span class="svc">${svcCodes(p.svcs)}</span></div>
       ${care.length ? `<div class="px-tag-care">ATTENTION · ${care.map(esc).join(' · ')}</div>` : ''}
-      ${barcode(p.pid, 26)}
+      <div class="px-tag-client">${esc(customer.name)}</div>
       <div class="px-tag-id">${p.pid}</div>
     </div>`;
   }
@@ -1552,8 +1623,9 @@
    *   · rien d'appairé     → le pilote du système, les deux tickets ET les
    *                          étiquettes sur la même page (« Enregistrer en PDF »
    *                          compris).
-   * Les étiquettes partent en code128 : un identifiant de pièce comme
-   * « K2418-3 » n'est pas un EAN-13 et ne s'encode pas comme tel. */
+   * L'étiquette privilégie désormais le nom du client en grand. L'identifiant
+   * de pièce reste imprimé en clair pour la traçabilité et la saisie manuelle,
+   * sans sacrifier la surface utile à un code-barres rarement lu à l'atelier. */
   function printOrderDocs(order) {
     const KP = window.KiwiPrinter;
     if (!KP) { toast('Impression indisponible sur cet appareil'); return; }
@@ -1594,10 +1666,14 @@
       copy: 'DUPLICATA · ATELIER',
     };
 
+    const customer = custOf(order);
     const labels = order.pieces.map((p) => ({
-      title: `${order.id}  ${p.n}/${p.of}`,
-      sub: `${p.label} · ${svcCodes(p.svcs)}`,
+      title: customer.name,
+      sub: `${order.id} · pièce ${p.n}/${p.of}`,
+      detail: `${p.label} · ${svcCodes(p.svcs)}`,
+      footer: p.pid,
       code: p.pid,
+      hideBarcode: true,
       format: 'code128',
     }));
 
@@ -1627,12 +1703,12 @@
     el.innerHTML = `
       <button class="px-modal-x" data-px-close aria-label="Fermer"><i data-lucide="x"></i></button>
       <h3 class="modal-title">Ticket, duplicata &amp; étiquettes · ${order.id}</h3>
-      <p class="modal-subtle">Le client garde son ticket. Le duplicata atelier reste avec la commande. Chaque pièce reçoit une étiquette lisible et scannable.</p>
+      <p class="modal-subtle">Le client garde son ticket. Le duplicata atelier reste avec la commande. Chaque pièce reçoit une étiquette lisible au nom du client.</p>
       <div class="px-tags-grid">
         <div class="px-receipts-preview">${receiptHTML(order)}${receiptHTML(order, 'DUPLICATA · ATELIER')}</div>
         <div class="px-tags-list">${order.pieces.map((p) => tagHTML(p, order)).join('')}</div>
       </div>
-      <div class="px-tags-note"><i data-lucide="shield-check"></i>Sur chaque étiquette : commande, pièce, article, service et code à scanner. Rien d'autre.</div>
+      <div class="px-tags-note"><i data-lucide="shield-check"></i>Sur chaque étiquette : nom du client, commande, pièce, article et service. Rien d'autre.</div>
       <div class="px-tags-foot">
         <button class="px-btn secondary" id="px-tags-print"><i data-lucide="printer"></i>Imprimer 2 tickets + ${order.pieces.length} étiq.</button>
         ${fresh
@@ -2452,7 +2528,6 @@
     return `<div class="px-tag-top"><span class="px-tag-num">${o.id}</span><span class="px-tag-i">pièce ${p.n}/${p.of}</span></div>
       <div class="px-tag-client">${esc(c.name)}</div>
       <div class="px-tag-item">${esc(p.label)} · <span class="svc">${svcCodes(p.svcs)}</span></div>
-      ${barcode(p.pid, 22)}
       <div class="px-tag-id">${p.pid}</div>`;
   }
 

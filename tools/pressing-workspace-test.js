@@ -34,7 +34,7 @@ ok(venues.includes("v.subtype !== 'pressing'"), 'generic boutique Sold is not ap
 ok(venues.includes('active.subtype = exactSubtype'), 'server type keeps the exact pressing subtype');
 ok(pairingJs.includes("if (t && ids[t]) return { kind: 'vertical', id: t }"), 'operator hand-off routes an exact pressing type into the pressing till');
 ok(caisse.includes('assets/caisse-pairing.js?v=3') && sw.includes("'/assets/caisse-pairing.js?v=3'"), 'pressing route fix bypasses the old cached pairing router');
-ok(caisse.includes('assets/pos-dispatch.js?v=19') && sw.includes("'/assets/pos-dispatch.js?v=19'") && dispatchJs.includes("file: 'pressing-caisse', rev: '17'") && sw.includes("'/assets/pressing-caisse.js?v=17'") && sw.includes("'/assets/pressing-caisse.css?v=17'"), 'pressing loader and lazy assets use deploy-stable cache revisions');
+ok(caisse.includes('assets/pos-dispatch.js?v=20') && sw.includes("'/assets/pos-dispatch.js?v=20'") && dispatchJs.includes("file: 'pressing-caisse', rev: '18'") && sw.includes("'/assets/pressing-caisse.js?v=18'") && sw.includes("'/assets/pressing-caisse.css?v=18'"), 'pressing loader and lazy assets use deploy-stable cache revisions');
 ok(dashboard.includes('assets/pressing-dashboard.js?v=8'), 'dashboard loads the pressing subpages');
 ok(dashboard.includes('assets/pressing-ops.js?v=3') && caisse.includes('assets/pressing-ops.js?v=3'), 'dashboard and till share the same operations bridge');
 ok(sw.includes("'/assets/pressing-dashboard.css?v=8'") && sw.includes("'/assets/pressing-dashboard.js?v=8'"), 'pressing workspace is available offline');
@@ -46,7 +46,7 @@ ok(css.includes('@media (max-width: 390px)') && css.includes('@media (max-width:
 ok(!/font-style\s*:\s*italic/.test(css + catalogCss), 'pressing workspace uses roman type only');
 ok(caisseJs.includes("catalogQuery: ''") && caisseJs.includes('px-catalog-search') && caisseJs.includes('cats.flatMap'), 'pressing counter exposes fast search and packs every visible garment into one continuous grid');
 ok(caisseCss.includes('@media (max-width: 1366px)') && caisseCss.includes('minmax(96px, 1fr)') && caisseCss.includes('.px-grid-all') && caisseCss.includes('min-height: 142px'), 'common terminals show an extra garment column without shrinking touch cards below a safe height');
-ok(caisseCss.includes('body.is-pos-pressing .px-view { padding: 0; }') && caisseCss.includes('html:not([data-theme="dark"]) body.is-pos-pressing .px-ticket') && caisseCss.includes('background: #fff;'), 'pressing resets landing-page section spacing and uses a pure-white light workspace');
+ok(caisseCss.includes('body.is-pos-pressing .px-view { padding: 0; }') && caisseCss.includes('html:not([data-caisse-theme="dark"]) body.is-pos-pressing .px-ticket') && caisseCss.includes('background: #fff;'), 'pressing resets landing-page section spacing and uses a pure-white light workspace');
 ok(caisseJs.includes("PRESSING_STORE_PREFIX = 'kiwi:pressing-store:v1:'") && caisseJs.includes("feature: 'pressing-orders'"), 'full garment tickets persist locally and through the tenant cloud document');
 ok(caisseJs.indexOf('ticketSeq++;\n        syncOwnerOps();') > 0, 'the next ticket number is persisted before a pay-at-pickup reload');
 ok(storeApi.includes("'pressing-orders': { keys: ['customers', 'orders', 'seq']"), 'the store API accepts the bounded pressing ticket document');
@@ -67,7 +67,8 @@ ok(!garmentContext.window.KiwiPressingGarmentIcons.render({ id:'chemise' }).incl
 ok(caisseJs.includes('unitPrice: lineUnit(l)') && caisseJs.includes('label: ITEMS[l.itemId].label') && caisseJs.includes('Number.isFinite(+ln.unitPrice)'), 'confirmed tickets freeze their agreed name and unit price');
 ok(caisseJs.includes("notes: (ln.notes || []).slice(), freeNote: ln.freeNote || ''") && caisseJs.includes('px-dt-care-summary') && caisseJs.includes('px-piece-care') && caisseJs.includes('px-tag-care'), 'care instructions survive into the visible workshop summary, detail and physical labels');
 ok(caisseJs.includes("receiptHTML(order, 'DUPLICATA · ATELIER')") && caisseJs.includes("copy: 'DUPLICATA · ATELIER'") && caisseJs.includes('KP.printReceipt(duplicate)'), 'every pressing print job includes a clearly marked workshop duplicate');
-ok(caisseJs.includes('Imprimer 2 tickets +') && caisseJs.includes('commande, pièce, article, service et code à scanner') && caisseJs.includes('<strong>${esc(p.label)}</strong>') && caisseJs.includes('title: `${order.id}  ${p.n}/${p.of}`'), 'garment labels reserve their space for the large operational facts only');
+ok(caisseJs.includes('Imprimer 2 tickets +') && caisseJs.includes('nom du client, commande, pièce, article et service') && caisseJs.includes('<div class="px-tag-client">${esc(customer.name)}</div>') && caisseJs.includes('title: customer.name') && caisseJs.includes('hideBarcode: true'), 'garment labels replace the barcode with the customer name while retaining operational references');
+ok(caisseCss.includes('--kiwi-dna-rail-w: 272px') && caisseJs.includes('id="px-theme"') && caisseJs.includes('KiwiCaisseTheme.toggle()') && caisseJs.includes('id="px-fullscreen"'), 'pressing uses a full-width rail with theme and fullscreen terminal controls');
 const whatsappDraftOpen = caisseJs.indexOf("window.open('', '_blank')");
 const whatsappConfirmedAfterOpen = caisseJs.indexOf('o.notified = true', whatsappDraftOpen);
 ok(caisseJs.includes('J’ai envoyé le message') && whatsappDraftOpen >= 0 && whatsappConfirmedAfterOpen > whatsappDraftOpen, 'WhatsApp notification is confirmed only after opening the draft');

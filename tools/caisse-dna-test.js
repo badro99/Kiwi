@@ -15,7 +15,7 @@ const failed = [];
 const ok = (label, condition) => condition ? passed++ : failed.push(label);
 
 ok('shared visual DNA is loaded after the dispatcher and before operator use',
-  page.includes('assets/pos-dispatch.js?v=19') &&
+  page.includes('assets/pos-dispatch.js?v=20') &&
   page.includes('assets/caisse-dna.css?v=3') &&
   page.includes('assets/caisse-dna.js?v=2'));
 ok('shared visual DNA remains available offline',

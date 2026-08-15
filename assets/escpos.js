@@ -177,22 +177,26 @@
     o = o || {}; var paper = o.paper || '80';
     var b = new Builder().init().align('center');
     var compact = o.label && Number(o.label.h) <= 24;
-    // A 50 × 20 mm label has room for exactly the hierarchy used by the browser
-    // and PDF renderers: name, dominant price, compact scannable barcode. The
-    // receipt-style three-line cutter feed used to make this path much taller
-    // than the selected stock, so compact labels cut after a few printer dots.
+    // A 50 × 20 mm label has room for one dominant identifier and two compact
+    // operational lines. Retail labels keep their barcode; pressing labels can
+    // explicitly trade it for a large customer name while retaining the piece
+    // reference in plain text. Compact stock still cuts after a few dots.
     if (compact) {
       if (o.title) b.bold(true).size(2, 2).line(fit(o.title, paper, 2)).size(1, 1).bold(false);
       if (o.sub) b.bold(true).line(fit(o.sub, paper)).bold(false);
+      if (o.detail) b.line(fit(o.detail, paper));
       if (o.price != null && o.price !== '') b.bold(true).size(2, 2).line(fit(String(o.price) + ' MAD', paper, 2)).size(1, 1).bold(false);
-      b.barcode(o.code, { format: o.format || 'ean13', height: 32, module: 2 });
+      if (!o.hideBarcode) b.barcode(o.code, { format: o.format || 'ean13', height: 32, module: 2 });
+      if (o.footer) b.line(fit(o.footer, paper));
       b.feedDots(4).cutNow();
       return b.bytes();
     }
     if (o.title) b.bold(true).line(fit(o.title, paper)).bold(false);
     if (o.sub) b.line(fit(o.sub, paper));
+    if (o.detail) b.line(fit(o.detail, paper));
     if (o.price != null && o.price !== '') b.bold(true).size(1, 2).line(fit(String(o.price) + ' MAD', paper)).size(1, 1).bold(false);
-    b.feed(1).barcode(o.code, { format: o.format || 'ean13', height: 60 });
+    if (!o.hideBarcode) b.feed(1).barcode(o.code, { format: o.format || 'ean13', height: 60 });
+    if (o.footer) b.line(fit(o.footer, paper));
     b.feed(1).cut();
     return b.bytes();
   }
