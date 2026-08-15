@@ -37,6 +37,19 @@ body.is-pos-pressing #toast-stack { z-index: 200; }
   font-family: var(--sans);
 }
 body.is-pos-pressing .px-screen { display: flex; }
+/* `.px-view` is a <section>; reset the global landing-page section rhythm so
+   the operational workspace uses the entire viewport instead of inheriting
+   96px blank bands above and below the caisse. */
+body.is-pos-pressing .px-screen,
+body.is-pos-pressing .px-view { padding: 0; }
+html:not([data-theme="dark"]) body.is-pos-pressing .px-screen,
+html:not([data-theme="dark"]) body.is-pos-pressing .px-main,
+html:not([data-theme="dark"]) body.is-pos-pressing .px-view,
+html:not([data-theme="dark"]) body.is-pos-pressing .px-intake,
+html:not([data-theme="dark"]) body.is-pos-pressing .px-ticket,
+html:not([data-theme="dark"]) body.is-pos-pressing .px-tk-foot {
+  background: #fff;
+}
 body.is-pos-pressing .px-screen.is-entering { animation: px-dive 640ms cubic-bezier(0.32, 0.72, 0, 1) both; }
 @keyframes px-dive {
   from { opacity: 0; transform: scale(1.04); }

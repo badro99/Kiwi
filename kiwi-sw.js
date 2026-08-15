@@ -237,7 +237,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=1',
   '/assets/food-production-print.js?v=1',
   '/assets/pos-sale.js?v=3',
-  '/assets/pos-dispatch.js?v=18',
+  '/assets/pos-dispatch.js?v=19',
   '/assets/retail-scan.css?v=6',
   '/assets/vendor/zxing-browser.min.js?v=1',
   '/assets/retail-scan.js?v=5',
@@ -288,8 +288,8 @@ var SHELL = [
      qu'il faut pouvoir ressortir le ticket. Un bouton de secours qui a besoin du
      réseau n'est pas un secours. */
   '/assets/pos-reprint.js',
-  '/assets/pressing-caisse.js?v=16',
-  '/assets/pressing-caisse.css?v=16',
+  '/assets/pressing-caisse.js?v=17',
+  '/assets/pressing-caisse.css?v=17',
   '/assets/lucide.min.js',
   '/assets/kiwi-favicon-new.svg',
   '/assets/kiwi-newlogo.svg',
