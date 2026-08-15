@@ -56,3 +56,15 @@ video/out/
 # Graphify knowledge graph — generated from the source by `graphify update .`,
 # ~8 Mo including its cache. Rebuild it locally, never commit it.
 graphify-out/
+
+# iCloud conflict copies. The repo lives on a synced Desktop, so iCloud
+# periodically drops "<name> 2.<ext>" duplicates next to real files. They are
+# never ours and must never be staged — a `git add -A` that swallows one has
+# shipped stale copies of dashboard.html and kiwi-caisse.html before.
+* 2.*
+* 3.*
+* copy.*
+* copie.*
+
+# Codex session hooks (machine-local agent config)
+.codex/
