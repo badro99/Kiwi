@@ -395,7 +395,7 @@
     return fetch('/api/sale/cancel', {
       method: 'POST', credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ merchant: m, id: entry.saleId, pin: String(pin || '') }),
+      body: JSON.stringify({ merchant: m, id: entry.saleId, pin: String(pin || ''), source: 'cashier' }),
     }).then(function (r) {
       return r.json().catch(function () { return {}; }).then(function (j) {
         if (!r.ok || !j.ok) { var err = new Error((j && j.error) || 'cancel-failed'); err.code = j && j.error; throw err; }
@@ -430,8 +430,8 @@
     var box = veil && veil.querySelector('.modal');
     if (!box) return;
     box.innerHTML = '<div class="kx-rp-head"><h3>Confirmer l’annulation</h3>'
-      + '<p>Entrez votre code personnel. Cette annulation sera visible par le propriétaire avec votre nom, le ticket et le montant.</p></div>'
-      + '<div class="kx-rp-pin"><input data-kx-rp-pin inputmode="numeric" maxlength="4" autocomplete="off" type="password" aria-label="Code personnel à 4 chiffres">'
+      + '<p>Entrez le code manager à 4 chiffres. Cette annulation sera journalisée avec votre nom, le ticket et le montant.</p></div>'
+      + '<div class="kx-rp-pin"><input data-kx-rp-pin inputmode="numeric" maxlength="4" autocomplete="off" type="password" aria-label="Code manager à 4 chiffres">'
       + '<div class="kx-rp-error" data-kx-rp-error></div><div class="kx-rp-ticket-actions">'
       + '<button type="button" class="ma-btn" data-kx-rp-back>Retour</button>'
       + '<button type="button" class="ma-btn kx-rp-cancel" data-kx-rp-confirm>Annuler définitivement</button></div></div>';
@@ -440,7 +440,7 @@
     var confirm = box.querySelector('[data-kx-rp-confirm]');
     box.querySelector('[data-kx-rp-back]').addEventListener('click', function () { showTicket(vertical, entry); });
     function submit() {
-      if (!/^\d{4}$/.test(input.value)) { error.textContent = 'Entrez votre code personnel à 4 chiffres.'; return; }
+      if (!/^\d{4}$/.test(input.value)) { error.textContent = 'Entrez le code manager à 4 chiffres.'; return; }
       confirm.disabled = true; error.textContent = '';
       cancelSale(entry, input.value).then(function () {
         serverDay[String(vertical)] = (serverDay[String(vertical)] || []).filter(function (e) { return e.saleId !== entry.saleId; });
@@ -449,7 +449,8 @@
         toast('Vente annulée · ' + (entry.ref || '') + ' · ' + mad(entry.total));
       }).catch(function (err) {
         confirm.disabled = false;
-        error.textContent = err && err.code === 'bad-pin' ? 'Code personnel incorrect.'
+        error.textContent = err && err.code === 'bad-pin' ? 'Code manager incorrect.'
+          : err && err.code === 'manager-required' ? 'Code manager requis. Un manager doit valider l’annulation.'
           : err && err.code === 'sale-too-old' ? 'Cette vente est trop ancienne pour être annulée en caisse.'
           : err && err.code === 'already-cancelled' ? 'Cette vente est déjà annulée.'
           : 'Annulation impossible. Vérifiez la connexion et réessayez.';

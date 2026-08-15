@@ -3980,6 +3980,7 @@
     .sk-search { width: 100%; padding: 10px 14px 10px 36px; border: 1px solid var(--line); border-radius: 10px; font-size: 13.5px; background: var(--surface); color: var(--ink); }
     .sk-search:focus { outline: none; border-color: var(--forest); box-shadow: 0 0 0 3px rgba(31,93,60,0.1); }
     .ma-btn.sk-add { flex: 0 0 auto; width: auto; height: 40px; padding: 0 16px; font-size: 13px; }
+    .sk-dashboard-only { margin-left: auto; padding: 9px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--paper-mute); color: var(--ink-3); font-size: 12px; white-space: nowrap; }
     .sk-filters { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 12px; }
     .sk-pill { padding: 7px 13px; border-radius: 999px; font-size: 12px; font-weight: 600; color: var(--ink-3); background: var(--paper-mute); cursor: pointer; transition: background 140ms, color 140ms; }
     .sk-pill:hover:not(.on) { color: var(--ink); }
@@ -14529,7 +14530,7 @@
           <td class="sk-mono">${fmtMAD(it.stock * it.cost)}</td>
           <td class="sk-cell-sup">${kdsEsc(it.supplier)}</td>
           <td><span class="sk-status ${st}"><span class="sd"></span>${st==='out'?'Rupture':(st==='low'?'Bas':'OK')}</span></td>
-          <td class="r"><div class="sk-actions"><button class="sk-icon-btn" data-sk-edit="${it.id}" title="Éditer"><i data-lucide="pencil"></i></button><button class="sk-icon-btn" data-sk-order="${it.id}" title="Commander"><i data-lucide="truck"></i></button></div></td>
+          <td class="r"><div class="sk-actions"><button class="sk-icon-btn" data-sk-order="${it.id}" title="Commander"><i data-lucide="truck"></i></button></div></td>
         </tr>`;
       }).join('');
     }
@@ -14541,7 +14542,7 @@
       const statusPills = [['all','Tous'],['ok','En stock'],['low','Bas'],['out','Rupture']].map(([v,l])=>`<button class="sk-pill ${skStatus===v?'on':''}" data-sk-status="${v}">${l}</button>`).join('');
       return `<div class="sk-toolbar">
           <div class="sk-search-wrap"><i data-lucide="search"></i><input class="sk-search" id="sk-search-input" placeholder="Chercher un article, fournisseur…" value="${kdsEsc(skSearch)}"></div>
-          <button class="ma-btn primary sk-add" data-sk-additem><i data-lucide="plus"></i>Article</button>
+          <span class="sk-dashboard-only">Articles et prix se gèrent dans le tableau de bord</span>
         </div>
         <div class="sk-filters">${catPills}</div>
         <div class="sk-filters">${statusPills}</div>
@@ -14589,6 +14590,8 @@
     function skCatOptions(sel){ return Object.entries(SK_CATS).map(([v,l])=>`<option value="${v}" ${v===sel?'selected':''}>${l}</option>`).join(''); }
 
     function openEditItem(id){
+      toast('Les articles et prix se gèrent dans le tableau de bord.');
+      return;
       const it = stockItems.find(i=>i.id===id); if (!it) return;
       openSkModal(`<div class="split-badge">Article</div><h3 class="modal-title" style="margin-bottom:12px;">${kdsEsc(it.name)}</h3>
         <div class="sk-field-row">
@@ -14602,6 +14605,8 @@
         <div class="nt-actions"><button class="ma-btn secondary" data-sk-cancel style="flex:1;">Annuler</button><button class="ma-btn primary" data-sk-save-item="${it.id}" style="flex:2;"><i data-lucide="check"></i>Enregistrer</button></div>`);
     }
     function saveEditItem(id){
+      toast('Les articles et prix se gèrent dans le tableau de bord.');
+      return;
       const it = stockItems.find(i=>i.id===id); if (!it) return;
       const patch = {
         stock: Math.max(0, parseFloat($('#sk-f-stock').value) || 0),
@@ -14615,6 +14620,8 @@
       closeSkModal(); renderStock(); toast(`${it.name} mis à jour`);
     }
     function openAddItem(){
+      toast('Ajoutez les articles et prix depuis le tableau de bord.');
+      return;
       openSkModal(`<div class="split-badge">Nouvel article</div><h3 class="modal-title" style="margin-bottom:12px;">Ajouter un article</h3>
         <div class="sk-field"><label>Nom</label><input class="sk-input" id="sk-f-name" placeholder="ex. Citrons confits" autocomplete="off"></div>
         <div class="sk-field-row">
@@ -14630,6 +14637,8 @@
         <div class="nt-actions"><button class="ma-btn secondary" data-sk-cancel style="flex:1;">Annuler</button><button class="ma-btn primary" data-sk-add-save style="flex:2;"><i data-lucide="plus"></i>Ajouter</button></div>`);
     }
     function saveNewItem(){
+      toast('Ajoutez les articles et prix depuis le tableau de bord.');
+      return;
       const name = ($('#sk-f-name').value || '').trim();
       if (!name){ $('#sk-f-name').focus(); toast("Donne un nom à l'article"); return; }
       const par = Math.max(0, parseInt($('#sk-f-par').value) || 0);
@@ -14748,7 +14757,7 @@
         const n = row.querySelector('[data-sk-rl-name]'); const q = row.querySelector('[data-sk-rl-qty]');
         if (skReceptLines[idx]){ skReceptLines[idx].name = (n ? n.value : '').trim(); skReceptLines[idx].qty = q ? q.value : ''; }
       });
-      let added = 0, created = 0;
+      let added = 0, unknown = 0;
       skReceptLines.forEach(l=>{
         const qty = parseInt(l.qty) || 0; const name = (l.name || '').trim();
         if (!name || qty <= 0) return;
@@ -14758,16 +14767,14 @@
           else it.stock += qty;
           added++;
         }
-        else {
-          const fresh = { id:'usr-'+Date.now().toString(36)+'-'+created, name, cat:'epicerie', unit:'unité', supplier:(suppliers[0] || {}).name || '', stock:qty, par:Math.max(qty,5), reorder:Math.max(1,Math.round(qty*0.4)), cost:0 };
-          if (storeIsReal() && window.KiwiCaisseStock) window.KiwiCaisseStock.addItem(fresh);
-          else stockItems.push(fresh);
-          created++;
-        }
+        else unknown++;
       });
-      if (!added && !created){ toast('Aucune ligne valide'); return; }
+      if (!added){
+        toast(unknown ? 'Article inconnu · créez-le dans le tableau de bord avant la réception.' : 'Aucune ligne valide');
+        return;
+      }
       syncSharedStock(false); closeSkModal(); stockTab = 'articles'; renderStock();
-      toast(`Stock mis à jour · ${added+created} article${(added+created)>1?'s':''}${created?` (${created} nouveau${created>1?'x':''})`:''}`);
+      toast(`Stock mis à jour · ${added} article${added>1?'s':''}`);
     }
 
     /* ---- open / close + delegation ---- */

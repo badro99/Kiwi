@@ -3813,12 +3813,10 @@
 
   /* ═══════════════════════ register ═══════════════════════ */
   /* ═══════════════════════════════════════════════════════════════════════════
-   * INVENTAIRE — the caisse is where products are CREATED and stock is INPUT.
-   * The physical douchette (barcode scanner) and the label printer are wired to
-   * this terminal, so this view owns: create product · colour×size variants ·
-   * generate + PRINT an EAN-13 label · register an EXISTING old-POS code verbatim
-   * (no reprint) · input/adjust stock. Everything persists to the shared
-   * KiwiBoutiqueCatalog → the dashboard sees it live, and vice-versa.
+   * INVENTAIRE — the caisse is for operational stock and barcode work only.
+   * Catalogue ownership (product names, prices, categories and variants) stays
+   * in the dashboard so the team has one controlled source of truth. The caisse
+   * can still receive/adjust stock and register or print existing labels.
    * ─────────────────────────────────────────────────────────────────────────── */
   const catDB = () => window.KiwiBoutiqueCatalog;
   const fmtNum = (n) => new Intl.NumberFormat('fr-FR').format(Math.round(n || 0));
@@ -3907,6 +3905,8 @@
          ligne variante et le rappel discret de la nuance d'origine. */
       .bqi-cbtn { display: inline-flex; align-items: center; gap: 6px; background: none; border: 0; padding: 2px 4px; margin: -2px -4px; border-radius: 7px; font: inherit; color: inherit; cursor: pointer; }
       .bqi-cbtn:hover { background: rgba(125,242,176,.14); }
+      .bqi-dashboard-only { display: inline-flex; align-items: center; min-height: 34px; padding: 0 12px; border: 1px solid rgba(10,15,13,.12); border-radius: 9px; background: var(--paper-soft, #f3f1eb); color: #77807b; font: 600 11px var(--sans, sans-serif); white-space: nowrap; }
+      .bqi-cbtn.is-locked, .bqi-mini.is-locked { opacity: .72; cursor: not-allowed; }
       .bqi-csrc { font-style: normal; font-size: 11px; opacity: .6; margin-left: 5px; }
       .bqi-iconpick { display: grid; grid-template-columns: repeat(auto-fill, minmax(46px, 1fr)); gap: 8px; max-height: 168px; overflow-y: auto; padding: 8px; border: 1px solid rgba(10,15,13,.14); border-radius: 12px; background: var(--paper); }
       .bqi-icon { aspect-ratio: 1; border: 1.5px solid rgba(10,15,13,.10); border-radius: 10px; background: var(--paper); cursor: pointer; padding: 5px; color: var(--riad); display: flex; align-items: center; justify-content: center; }
@@ -4930,6 +4930,11 @@
   }
 
   /* ─── the inventory panel ─── */
+  function catalogDashboardOnly() {
+    const msg = 'Articles et prix se gèrent dans le tableau de bord.';
+    if (typeof toast === 'function') toast(msg);
+  }
+
   function renderInventaire() {
     const cat = catDB();
     const panel = $('[data-bq-panel="inventaire"]', root);
@@ -4946,7 +4951,7 @@
         <div class="bqi-tools">
           <div class="bqi-scan"><i data-lucide="scan-line"></i><input id="bqi-scan" placeholder="Scannez un article, ou tapez un code…" autocomplete="off" /></div>
           <button class="bq-btn" id="bqi-intake"><i data-lucide="scan-barcode"></i>Reprendre le stock</button>
-          <button class="bq-btn secondary" id="bqi-new"><i data-lucide="plus"></i>Nouvel article</button>
+          <span class="bqi-dashboard-only">Articles et prix se gèrent dans le tableau de bord</span>
         </div>
         <div class="bqi-pills" id="bqi-pills">
           <button class="bqi-pill ${filter === 'all' ? 'on' : ''}" data-f="all">Tous · ${st.products}</button>
@@ -4964,13 +4969,12 @@
               <i data-lucide="scan-barcode"></i>
               <b>Votre stock porte déjà des codes-barres ?</b>
               <span>Touchez « Reprendre le stock » et scannez vos articles un par un : Kiwi garde le code du fournisseur tel quel. Aucune étiquette à réimprimer.</span>
-              <em>Pas de code sur l'article ? « Nouvel article » vous en génère un, imprimable.</em>
+              <em>Pour créer un article ou modifier un prix, ouvrez le tableau de bord. Ici, vous pouvez reprendre le stock et les codes existants.</em>
             </div>`}
         </div>
       </div>`;
     const scan = $('#bqi-scan', panel);
     if (scan) scan.onkeydown = (e) => { if (e.key === 'Enter') { const v = scan.value.trim(); scan.value = ''; if (v) invScanHandle(v); } };
-    const nb = $('#bqi-new', panel); if (nb) nb.onclick = () => openNewProduct();
     const ib = $('#bqi-intake', panel); if (ib) ib.onclick = () => openIntake();
     const pills = $('#bqi-pills', panel);
     if (pills) pills.addEventListener('click', (e) => { const b = e.target.closest('[data-f]'); if (b) { state.invFilter = b.dataset.f; renderInventaire(); } });
@@ -5025,30 +5029,25 @@
       <div class="bqi-modh">
         <span class="bqi-art">${artOf(p.art)}</span>
         <div><h3>${esc(p.name)}</h3><span>${d.category ? esc(d.category.name) : 'Divers'} · ${fmtMAD(p.priceMAD)} · ${d.stock} en stock</span></div>
-        <button class="bqi-mini" data-inv-edit title="Modifier le produit"><i data-lucide="pencil"></i></button>
+        <span class="bqi-dashboard-only">Modifier dans le tableau de bord</span>
       </div>
       <div class="bqi-vtable-wrap"><table class="bqi-vtable">
         <thead><tr><th>Couleur · Taille</th><th>Stock</th><th>Code-barres</th><th></th></tr></thead>
         <tbody>${rows}</tbody></table></div>
       <div class="bqi-modfoot">
-        <button class="bq-btn secondary" data-inv-addvar><i data-lucide="plus"></i>Ajouter une variante</button>
+        <span class="bqi-dashboard-only">Variantes dans le tableau de bord</span>
         <button class="bq-btn secondary" data-inv-printall><i data-lucide="printer"></i>Imprimer les étiquettes</button>
-        <button class="bq-btn secondary danger" data-inv-del><i data-lucide="trash-2"></i>Supprimer</button>
+        <span class="bqi-dashboard-only">Suppression dans le tableau de bord</span>
       </div>`;
     invSetModal(html, (el) => {
       const cat2 = catDB();
-      $('[data-inv-edit]', el).addEventListener('click', () => openEditProduct(pid));
-      $('[data-inv-addvar]', el).addEventListener('click', () => openAddVariant(pid));
       $('[data-inv-printall]', el).addEventListener('click', () => printProductLabels(pid));
-      $('[data-inv-del]', el).addEventListener('click', () => confirmDeleteProduct(pid));
       el.querySelectorAll('[data-vinc]').forEach((b) => b.addEventListener('click', () => { cat2.adjustStock(b.dataset.vinc, 1); openInvProduct(pid); }));
       el.querySelectorAll('[data-vdec]').forEach((b) => b.addEventListener('click', () => { cat2.adjustStock(b.dataset.vdec, -1); openInvProduct(pid); }));
       el.querySelectorAll('[data-vstock]').forEach((inp) => inp.addEventListener('change', () => { cat2.setStock(inp.dataset.vstock, parseInt(inp.value, 10) || 0); openInvProduct(pid); }));
       el.querySelectorAll('[data-vgen]').forEach((b) => b.addEventListener('click', () => { const code = cat2.generateBarcode(b.dataset.vgen); if (code) toast(`EAN-13 ${code} généré`); openInvProduct(pid); }));
       el.querySelectorAll('[data-vprint]').forEach((b) => b.addEventListener('click', () => printVariantLabel(b.dataset.vprint)));
       el.querySelectorAll('[data-vreg]').forEach((b) => b.addEventListener('click', () => openRegisterOnVariant(b.dataset.vreg, pid)));
-      el.querySelectorAll('[data-vdel]').forEach((b) => b.addEventListener('click', () => confirmDeleteVariant(b.dataset.vdel, pid)));
-      el.querySelectorAll('[data-vcolor]').forEach((b) => b.addEventListener('click', () => openVariantColor(b.dataset.vcolor, pid)));
     });
   }
 
@@ -5061,10 +5060,10 @@
       ? `<button class="bqi-mini" data-vprint="${v.id}" title="Imprimer l'étiquette"><i data-lucide="printer"></i></button>`
       : `<button class="bqi-mini" data-vgen="${v.id}" title="Générer un EAN-13"><i data-lucide="scan-line"></i></button>`;
     return `<tr>
-      <td><button class="bqi-cbtn" data-vcolor="${v.id}" title="Changer la couleur">${colorDot(v.colorFamily || v.colorId)} ${esc(colorLabel(v.colorFamily || v.colorId))}</button>${v.colorSource ? `<em class="bqi-csrc">${esc(v.colorSource)}</em>` : ''} · <b>${esc(v.size)}</b></td>
+      <td><span class="bqi-cbtn is-locked" aria-disabled="true" title="Modifier dans le tableau de bord">${colorDot(v.colorFamily || v.colorId)} ${esc(colorLabel(v.colorFamily || v.colorId))}</span>${v.colorSource ? `<em class="bqi-csrc">${esc(v.colorSource)}</em>` : ''} · <b>${esc(v.size)}</b></td>
       <td><span class="bqi-stk"><button data-vdec="${v.id}" aria-label="−1">−</button><input data-vstock="${v.id}" type="number" min="0" value="${v.stock}"/><button data-vinc="${v.id}" aria-label="+1">+</button></span></td>
       <td>${bc}</td>
-      <td class="bqi-vact">${genOrPrint}<button class="bqi-mini" data-vreg="${v.id}" title="Enregistrer un code existant"><i data-lucide="link"></i></button><button class="bqi-mini danger" data-vdel="${v.id}" title="Supprimer la variante"><i data-lucide="trash-2"></i></button></td>
+      <td class="bqi-vact">${genOrPrint}<button class="bqi-mini" data-vreg="${v.id}" title="Enregistrer un code existant"><i data-lucide="link"></i></button><span class="bqi-mini is-locked danger" aria-disabled="true" title="Supprimer dans le tableau de bord"><i data-lucide="trash-2"></i></span></td>
     </tr>`;
   }
 
@@ -5078,6 +5077,8 @@
       .map(([v, l]) => `<option value="${v}" ${v === sel ? 'selected' : ''}>${l}</option>`).join('');
   }
   function openNewProduct() {
+    catalogDashboardOnly();
+    return;
     const html = `
       <button class="bq-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button>
       <div class="bqi-modh"><div><h3>Nouvel article</h3><span>Créez le produit, puis ajoutez ses variantes couleur × taille</span></div></div>
@@ -5228,6 +5229,8 @@
   }
 
   function openEditProduct(pid) {
+    catalogDashboardOnly();
+    return;
     const cat = catDB(); const d = cat.getProduct(pid); if (!d) return; const p = d.product;
     const html = `
       <button class="bq-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button>
@@ -5258,6 +5261,8 @@
   }
 
   function confirmDeleteProduct(pid) {
+    catalogDashboardOnly();
+    return;
     const cat = catDB(); const d = cat.getProduct(pid); if (!d) return;
     const html = `
       <button class="bq-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button>
@@ -5275,6 +5280,8 @@
      rayon et l'historique de mouvements de cette déclinaison disparaissaient
      ensemble, et la ligne d'à côté est le bouton « −1 ». On nomme ce qui part. */
   function confirmDeleteVariant(vid, pid) {
+    catalogDashboardOnly();
+    return;
     const cat = catDB(); const d = cat.getProduct(pid); if (!d) return;
     const v = d.variants.find((x) => x.id === vid); if (!v) return;
     const codes = (v.barcodes || []).length;
@@ -5307,6 +5314,8 @@
   /* Changer la couleur d'une variante existante. La variante garde son stock,
      ses codes-barres et son identité : seule la famille affichée change. */
   function openVariantColor(vid, pid) {
+    catalogDashboardOnly();
+    return;
     const cat = catDB(); const d = cat.getProduct(pid); if (!d) return;
     const v = d.variants.find((x) => x.id === vid); if (!v) return;
     const html = `
@@ -5332,6 +5341,8 @@
     });
   }
   function openAddVariant(pid) {
+    catalogDashboardOnly();
+    return;
     const cat = catDB(); const d = cat.getProduct(pid); if (!d) return;
     const presets = cat.sizePresets(d.product.kind);
     const html = `
@@ -5406,11 +5417,10 @@
         <div class="bqi-fg"><label>Article</label><select id="bqi-or-prod">${products.map((p) => `<option value="${p.id}">${esc(p.name)}</option>`).join('')}</select></div>
         <div class="bqi-fg"><label>Variante (couleur · taille)</label><select id="bqi-or-var">${products.length ? varOptions(products[0].id) : ''}</select></div>
       </div>
-      <div class="bqi-modfoot"><button class="bq-btn secondary" id="bqi-or-new">Nouvel article…</button><button class="bq-btn" id="bqi-or-save">Rattacher le code</button></div>`;
+      <div class="bqi-modfoot"><span class="bqi-dashboard-only">Créer l’article dans le tableau de bord</span><button class="bq-btn" id="bqi-or-save">Rattacher le code</button></div>`;
     invSetModal(html, (el) => {
       const prodSel = $('#bqi-or-prod', el), varSel = $('#bqi-or-var', el);
       if (prodSel) prodSel.addEventListener('change', () => { varSel.innerHTML = varOptions(prodSel.value); });
-      $('#bqi-or-new', el).addEventListener('click', () => openNewProduct());
       $('#bqi-or-save', el).addEventListener('click', () => {
         const vid = varSel && varSel.value;
         if (!vid) { toast('Choisissez une variante (ajoutez-en une d\'abord)'); return; }

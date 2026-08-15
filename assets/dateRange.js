@@ -3902,6 +3902,7 @@
         // so spelling the unit here too printed "450,00 MADMAD" on every real sale.
         amt: (s.amount || 0).toFixed(2).replace('.', ','),
         tip: '—', neg: false, isNew: i === 0,
+        saleId: String(s.id || ''),
       };
     });
   }

@@ -5,7 +5,22 @@
 // revenue surface drops it, while sale_audit keeps the complete trail.
 // GET  — the signed-in owner reads those cancellations for the Ventes page.
 
-import { entitledMerchant, isTillFor, json, employeeRoleOpensTill } from '../../auth/_lib.js';
+import { entitledMerchant, isTillFor, json, operatorActor } from '../../auth/_lib.js';
+
+const MANAGER_ROLES = new Set([
+  'manager', 'owner', 'proprietaire', 'proprietary', 'admin', 'administrateur',
+  'direction', 'gerant', 'responsable', 'superviseur', 'manager-owner',
+]);
+
+function normalizedRole(role) {
+  return String(role || '').toLowerCase().normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
+function isManagerRole(role) {
+  const value = normalizedRole(role);
+  return MANAGER_ROLES.has(value) || /(?:^|-)manager$/.test(value);
+}
 
 function cleanLines(raw) {
   if (!raw) return [];
@@ -58,19 +73,41 @@ export async function onRequestPost({ request, env }) {
 
   const merchant = String((body && body.merchant) || '').slice(0, 64);
   const id = String((body && body.id) || '').slice(0, 64);
+  const source = String((body && body.source) || 'cashier').toLowerCase();
   const pin = String((body && body.pin) || '');
   if (!merchant || !id) return json({ error: 'sale-required' }, 400);
-  if (!/^\d{4}$/.test(pin)) return json({ error: 'bad-pin' }, 401);
-  if (!(await isTillFor(request, env, merchant))) return json({ error: 'forbidden-till' }, 403);
+  if (source !== 'dashboard' && source !== 'cashier') return json({ error: 'invalid-source' }, 400);
 
-  let staff;
-  try {
-    staff = await env.DB.prepare(
-      'SELECT id, name, role FROM staff_pins WHERE merchant = ? AND pin = ? LIMIT 1'
-    ).bind(merchant, pin).first();
-  } catch (_) { return json({ error: 'staff-unavailable' }, 503); }
-  if (!staff) return json({ error: 'bad-pin' }, 401);
-  if (!employeeRoleOpensTill(staff.role)) return json({ error: 'role-not-authorized' }, 403);
+  let actor = 'equipe';
+  let actorId = '';
+  let actorRole = '';
+  let reason = 'employee-cancel';
+  if (source === 'dashboard') {
+    /* Dashboard cancellation is an owner/operator action, never a public
+       browser write. entitledMerchant enforces the active account/tenant. */
+    if ((await entitledMerchant(request, env, merchant)) !== merchant) {
+      return json({ error: 'forbidden-dashboard' }, 403);
+    }
+    const op = await operatorActor(request, env);
+    actor = String((op && op.label) || 'propriétaire').slice(0, 80);
+    actorId = String((op && op.id) || '').slice(0, 80);
+    actorRole = 'dashboard-owner';
+    reason = 'dashboard-cancel';
+  } else {
+    if (!/^\d{4}$/.test(pin)) return json({ error: 'bad-pin' }, 401);
+    if (!(await isTillFor(request, env, merchant))) return json({ error: 'forbidden-till' }, 403);
+    let staff;
+    try {
+      staff = await env.DB.prepare(
+        'SELECT id, name, role FROM staff_pins WHERE merchant = ? AND pin = ? LIMIT 1'
+      ).bind(merchant, pin).first();
+    } catch (_) { return json({ error: 'staff-unavailable' }, 503); }
+    if (!staff) return json({ error: 'bad-pin' }, 401);
+    if (!isManagerRole(staff.role)) return json({ error: 'manager-required' }, 403);
+    actor = String(staff.name || staff.role || 'Manager').slice(0, 80);
+    actorId = String(staff.id || '').slice(0, 80);
+    actorRole = String(staff.role || '').slice(0, 80);
+  }
 
   let sale;
   try {
@@ -85,36 +122,39 @@ export async function onRequestPost({ request, env }) {
   if (sale.void_ts) return json({ error: 'already-cancelled' }, 409);
 
   // The reprint screen only offers today's sales. Keep a second server-side
-  // boundary so a modified client cannot cancel old accounting periods.
-  if (Date.now() - Number(sale.ts || 0) > 36 * 60 * 60 * 1000) {
+  // boundary so a modified cashier client cannot cancel old accounting periods.
+  // Dashboard owners may cancel a selected sale from the reporting period they
+  // are reviewing, subject to the authenticated merchant entitlement above.
+  if (source === 'cashier' && Date.now() - Number(sale.ts || 0) > 36 * 60 * 60 * 1000) {
     return json({ error: 'sale-too-old' }, 409);
   }
 
   const ts = Date.now();
-  const actor = String(staff.name || staff.role || 'Employé').slice(0, 80);
-  const actorId = String(staff.id || '').slice(0, 80);
-  const reason = 'employee-cancel';
   const impact = JSON.stringify({
-    source: 'cashier-reprint', totals: { amount: Number(sale.amount) || 0, count: 1 },
-    lines: cleanLines(sale.lines), role: String(staff.role || '').slice(0, 80),
+    source: source === 'dashboard' ? 'dashboard' : 'cashier-reprint',
+    totals: { amount: Number(sale.amount) || 0, count: 1 },
+    lines: cleanLines(sale.lines), role: actorRole,
   });
   try {
-    await env.DB.batch([
-      env.DB.prepare(
-        `UPDATE sales SET void_ts = ?, void_reason = ?, void_note = '', void_actor = ?, void_actor_id = ?
-          WHERE id = ? AND merchant = ? AND void_ts IS NULL`
-      ).bind(ts, reason, actor, actorId, id, merchant),
-      env.DB.prepare(
-        `INSERT INTO sale_audit (merchant, sale_id, action, reason, note, actor, actor_id,
-                                 amount, method, ref, sale_ts, impact, ts)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`
-      ).bind(merchant, id, 'void', reason, '', actor, actorId, Number(sale.amount) || 0,
-             sale.method || '', sale.ref || '', Number(sale.ts) || 0, impact, ts),
-    ]);
+    // Claim the sale first and inspect the affected-row count. A read-then-
+    // batch-write lets two manager clicks both append an audit row; the
+    // conditional UPDATE is the single-writer gate for cancellation.
+    const updated = await env.DB.prepare(
+      `UPDATE sales SET void_ts = ?, void_reason = ?, void_note = '', void_actor = ?, void_actor_id = ?
+        WHERE id = ? AND merchant = ? AND void_ts IS NULL`
+    ).bind(ts, reason, actor, actorId, id, merchant).run();
+    const changes = Number(updated?.meta?.changes ?? updated?.changes ?? 0);
+    if (!changes) return json({ error: 'already-cancelled' }, 409);
+    await env.DB.prepare(
+      `INSERT INTO sale_audit (merchant, sale_id, action, reason, note, actor, actor_id,
+                               amount, method, ref, sale_ts, impact, ts)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`
+    ).bind(merchant, id, 'void', reason, '', actor, actorId, Number(sale.amount) || 0,
+           sale.method || '', sale.ref || '', Number(sale.ts) || 0, impact, ts).run();
   } catch (e) {
     return json({ error: 'cancel-failed', detail: String((e && e.message) || e) }, 500);
   }
 
   return json({ ok: true, id, ref: sale.ref || '', amount: Number(sale.amount) || 0,
-                actor, actor_id: actorId, ts });
+                actor, actor_id: actorId, source, ts });
 }

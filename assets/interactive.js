@@ -2638,9 +2638,9 @@ ar: {
 
       const lang = kiwiLang();
       const T = {
-        fr: { tag: 'COMMANDE', status: 'Encaissée · règlement T+1', table: 'Table', server: 'Serveur', covers: 'Couverts', duration: 'Durée service', cover: 'couvert', covers_pl: 'couverts', minutes: 'min', items: 'Articles', payment: 'Paiement', subtotal: 'Sous-total', tva: 'TVA', total: 'Total encaissé', timeline: 'Chronologie', opened: 'Table ouverte', sent: 'Envoyé en cuisine', ready: 'Prêt', paid: 'Payé', closed: 'Table fermée', sendReceipt: 'Envoyer le reçu', refund: 'Rembourser', close: 'Fermer', receiptSent: 'Reçu envoyé par WhatsApp', refundPrompt: 'Choisir le montant à rembourser' },
-        en: { tag: 'ORDER', status: 'Captured · T+1 settlement', table: 'Table', server: 'Server', covers: 'Covers', duration: 'Service time', cover: 'cover', covers_pl: 'covers', minutes: 'min', items: 'Items', payment: 'Payment', subtotal: 'Subtotal', tva: 'VAT', total: 'Total paid', timeline: 'Timeline', opened: 'Table opened', sent: 'Sent to kitchen', ready: 'Ready', paid: 'Paid', closed: 'Table closed', sendReceipt: 'Send receipt', refund: 'Refund', close: 'Close', receiptSent: 'Receipt sent on WhatsApp', refundPrompt: 'Choose refund amount' },
-        ar: { tag: 'طلب', status: 'تمّ الدفع · تسوية T+1', table: 'الطاولة', server: 'النادل', covers: 'الضيوف', duration: 'مدة الخدمة', cover: 'ضيف', covers_pl: 'ضيوف', minutes: 'د', items: 'الأصناف', payment: 'الدفع', subtotal: 'الإجمالي', tva: 'الضريبة', total: 'المبلغ المدفوع', timeline: 'الجدول الزمني', opened: 'فُتحت الطاولة', sent: 'أُرسل للمطبخ', ready: 'جاهز', paid: 'مدفوع', closed: 'أُغلقت الطاولة', sendReceipt: 'إرسال الإيصال', refund: 'استرداد', close: 'إغلاق', receiptSent: 'تمّ إرسال الإيصال عبر واتساب', refundPrompt: 'اختر مبلغ الاسترداد' },
+        fr: { tag: 'COMMANDE', status: 'Encaissée · règlement T+1', table: 'Table', server: 'Serveur', covers: 'Couverts', duration: 'Durée service', cover: 'couvert', covers_pl: 'couverts', minutes: 'min', items: 'Articles', payment: 'Paiement', subtotal: 'Sous-total', tva: 'TVA', total: 'Total encaissé', timeline: 'Chronologie', opened: 'Table ouverte', sent: 'Envoyé en cuisine', ready: 'Prêt', paid: 'Payé', closed: 'Table fermée', sendReceipt: 'Envoyer le reçu', refund: 'Rembourser', cancel: 'Annuler la vente', cancelConfirm: 'Annuler cette vente ? Cette action sera journalisée.', cancelled: 'Vente annulée', cancelFailed: 'Annulation impossible. Vérifiez vos droits et réessayez.', close: 'Fermer', receiptSent: 'Reçu envoyé par WhatsApp', refundPrompt: 'Choisir le montant à rembourser' },
+        en: { tag: 'ORDER', status: 'Captured · T+1 settlement', table: 'Table', server: 'Server', covers: 'Covers', duration: 'Service time', cover: 'cover', covers_pl: 'covers', minutes: 'min', items: 'Items', payment: 'Payment', subtotal: 'Subtotal', tva: 'VAT', total: 'Total paid', timeline: 'Timeline', opened: 'Table opened', sent: 'Sent to kitchen', ready: 'Ready', paid: 'Paid', closed: 'Table closed', sendReceipt: 'Send receipt', refund: 'Refund', cancel: 'Cancel sale', cancelConfirm: 'Cancel this sale? This action will be logged.', cancelled: 'Sale cancelled', cancelFailed: 'Could not cancel the sale. Check your permissions and try again.', close: 'Close', receiptSent: 'Receipt sent on WhatsApp', refundPrompt: 'Choose refund amount' },
+        ar: { tag: 'طلب', status: 'تمّ الدفع · تسوية T+1', table: 'الطاولة', server: 'النادل', covers: 'الضيوف', duration: 'مدة الخدمة', cover: 'ضيف', covers_pl: 'ضيوف', minutes: 'د', items: 'الأصناف', payment: 'الدفع', subtotal: 'الإجمالي', tva: 'الضريبة', total: 'المبلغ المدفوع', timeline: 'الجدول الزمني', opened: 'فُتحت الطاولة', sent: 'أُرسل للمطبخ', ready: 'جاهز', paid: 'مدفوع', closed: 'أُغلقت الطاولة', sendReceipt: 'إرسال الإيصال', refund: 'استرداد', cancel: 'إلغاء البيع', cancelConfirm: 'إلغاء هذا البيع؟ سيتم تسجيل العملية.', cancelled: 'تم إلغاء البيع', cancelFailed: 'تعذر إلغاء البيع. تحقق من الصلاحيات وحاول مرة أخرى.', close: 'إغلاق', receiptSent: 'تمّ إرسال الإيصال عبر واتساب', refundPrompt: 'اختر مبلغ الاسترداد' },
       };
       const L = T[lang] || T.fr;
 
@@ -2686,6 +2686,7 @@ ar: {
         </div>
       `).join('');
 
+      const cancelFoot = o.saleId ? `<button class="kb ghost" data-ord-cancel>${L.cancel}</button>` : '';
       drawer({
         title: o.primary,
         subtitle: `${L.tag} · ${o.receiptNo || ''}`,
@@ -2748,6 +2749,7 @@ ar: {
           </div>
         `,
         foot: `
+          ${cancelFoot}
           <button class="kb ghost" data-ord-receipt>${L.sendReceipt}</button>
           <button class="kb ghost" data-ord-refund>${L.refund}</button>
           <button class="kb primary" data-dismiss>${L.close}</button>
@@ -2756,6 +2758,31 @@ ar: {
 
       /* Footer actions — light demo wiring, mirrors tx-detail's pattern. */
       document.body.addEventListener('click', function once(e) {
+        const cancelButton = e.target.closest('[data-ord-cancel]');
+        if (cancelButton && o.saleId) {
+          if (!window.confirm(L.cancelConfirm)) return;
+          cancelButton.disabled = true;
+          const url = new URL(location.href);
+          const venue = window.KiwiVenue?.getVenue?.() || {};
+          const merchant = url.searchParams.get('merchant') || venue.merchant || venue.id || '';
+          fetch('/api/sale/cancel', {
+            method: 'POST', credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify({ merchant: String(merchant), id: String(o.saleId), source: 'dashboard' }),
+          }).then(async (r) => {
+            const payload = await r.json().catch(() => ({}));
+            if (!r.ok || !payload.ok) throw new Error(payload.error || 'cancel-failed');
+            return payload;
+          }).then(() => {
+            toast(L.cancelled, { type: 'success' });
+            document.querySelector('.kiwi-drawer-backdrop .kiwi-drawer-close')?.click();
+            document.dispatchEvent(new CustomEvent('kiwi-sales-voided', { detail: { refs: [o.receiptNo || o.ref || ''], merchant } }));
+          }).catch(() => {
+            cancelButton.disabled = false;
+            toast(L.cancelFailed, { type: 'error' });
+          }).finally(() => document.body.removeEventListener('click', once));
+          return;
+        }
         if (e.target.closest('[data-ord-receipt]')) { toast(L.receiptSent + (o.customer ? ' · ' + o.customer : ''), { type: 'success' }); }
         if (e.target.closest('[data-ord-refund]'))  { document.querySelector('.kiwi-drawer-backdrop .kiwi-drawer-close')?.click(); setTimeout(() => toast(L.refundPrompt, { type: 'info' }), 220); }
         if (e.target.closest('[data-dismiss]'))     { document.querySelector('.kiwi-drawer-backdrop .kiwi-drawer-close')?.click(); }
