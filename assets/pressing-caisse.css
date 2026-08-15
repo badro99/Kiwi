@@ -101,11 +101,32 @@ body.is-pos-pressing .px-screen.is-entering { animation: px-dive 640ms cubic-bez
 .px-nav-it.on svg { color: var(--mint); }
 .px-nav-badge {
   margin-left: auto;
-  font-family: var(--mono); font-style: normal; font-weight: 600; font-size: 10.5px;
-  line-height: 1; padding: 3px 7px; border-radius: 999px;
+  min-width: 20px; height: 20px; padding: 0 5px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid rgba(255,255,255,0.08); border-radius: 999px;
   background: rgba(255,255,255,0.10); color: #d5d9d6;
+  font-family: var(--sans); font-style: normal; font-weight: 700; font-size: 10px;
+  font-variant-numeric: tabular-nums; line-height: 1;
+  box-sizing: border-box;
 }
 .px-nav-it.on .px-nav-badge { background: rgba(125,242,176,0.18); color: var(--mint); }
+
+/* The three primary destinations are deliberately narrow so the catalogue
+   keeps a useful extra column.  Give their longest label enough optical room
+   and make the counter feel attached to the card instead of floating over it. */
+.vx-screen.kiwi-dna[data-kiwi-dna-vertical="pressing"] .kiwi-dna-primary {
+  gap: 8px;
+  padding-inline: 4px;
+}
+.vx-screen.kiwi-dna[data-kiwi-dna-vertical="pressing"] .kiwi-dna-primary > span {
+  font-size: 10.75px;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+.vx-screen.kiwi-dna[data-kiwi-dna-vertical="pressing"] .kiwi-dna-primary > .px-nav-badge {
+  inset: 8px 8px auto auto;
+  margin: 0;
+}
 
 .px-rail-foot { display: flex; flex-direction: column; gap: 6px; }
 .px-net {
