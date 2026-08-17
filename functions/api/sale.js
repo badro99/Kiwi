@@ -45,7 +45,10 @@ export async function onRequestPost({ request, env }) {
     amountCents = Math.round(rawAmount * 100);
   }
 
-  // If both provided, verify they agree within rounding tolerance (<= 50 cents)
+  // If both provided, verify they agree within rounding tolerance (<= 50 cents).
+  // LOAD-BEARING: Must remain strict `> 50`, never `>= 50`. A .50 MAD sale (e.g. 12.50 MAD = 1250 cents)
+  // sends rounded amount: 13 (1300 cents), giving an exact difference of 50. Changing to `>=`
+  // produces a terminal 400 that permanently drops every half-dirham sale in the outbox.
   if (hasAmountCents && hasAmount) {
     const rawFromAmount = Math.round(Number(b.amount) * 100);
     if (Math.abs(amountCents - rawFromAmount) > 50) {
