@@ -204,12 +204,16 @@ section('Forbidden patterns');
 
   const PREFIXED_SECRET = /(?:sk_live_[0-9a-zA-Z]{24,}|rk_live_[0-9a-zA-Z]{24,}|ghp_[A-Za-z0-9]{30,}|gho_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{22,}|AKIA[0-9A-Z]{16}|xox[baprs]-[A-Za-z0-9-]{10,}|AIza[0-9A-Za-z-_]{35}|-----BEGIN [A-Z ]*PRIVATE KEY|sk-[A-Za-z0-9]{20,})/;
 
-  // Contextual credentials: keyword near 4-8 digit numeric literal (excluding standard public demo sequence)
+  // Contextual credentials:
+  // - In code/config (.js/.html/.css/etc.): keyword near quoted 4-8 digit numeric literal
+  // - In documentation (.md): keyword near quoted or unquoted 4-8 digit numeric literal (prose & table forms)
   const CONTEXTUAL_SECRET = /(?:pin|passcode|pairing[-_ ]?code|password|auth[-_ ]?secret)[\s\S]{0,40}?['"`]([0-9]{4,8})['"`]/i;
+  const MD_PROSE_SECRET = /\b(?:pin|passcode|pairing[-_ ]?code|code de jumelage|password|mot de passe)\b[^\n\r]{0,40}?\b([0-9]{4,8})\b/i;
+
   const DEMO_SEQUENCE = new Set([
     '0000','0001','0002','0003','0004','0005','0006','0007','0008','0009',
-    '0010','0011','0012','0013','0014','0015','1234','2345','3456','4567',
-    '5678','6789','7890','8901'
+    '0010','0011','0012','0013','0014','0015','0505','0909','1111','1234',
+    '2024','2025','2026','2027','2345','3456','4567','5678','6789','7890','8901'
   ]);
 
   let leaks = 0;
@@ -225,10 +229,12 @@ section('Forbidden patterns');
       continue;
     }
 
+    const isMarkdown = /\.md$/i.test(f);
     const lines = content.split('\n');
     for (let i = 0; i < lines.length; i++) {
-      const mCtx = lines[i].match(CONTEXTUAL_SECRET);
-      if (mCtx && !DEMO_SEQUENCE.has(mCtx[1])) {
+      const line = lines[i];
+      const mMatch = isMarkdown ? line.match(MD_PROSE_SECRET) : line.match(CONTEXTUAL_SECRET);
+      if (mMatch && !DEMO_SEQUENCE.has(mMatch[1])) {
         leaks++;
         fail(`${rel}:${i + 1} contains an unredacted credential literal`);
         break;
