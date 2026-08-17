@@ -127,8 +127,20 @@ function isMissingVoidColumn(e) {
 }
 
 const SELECT_COLS =
-  'rowid AS cursor, id, amount, method, label, ref, ts, lines, ' +
+  'rowid AS cursor, id, amount, amount_cents, method, label, ref, ts, lines, ' +
   'void_ts, void_reason, void_note, void_actor';
+
+function normSaleRow(r) {
+  if (!r) return r;
+  const cents = r.amount_cents != null ? Number(r.amount_cents) : Math.round(Number(r.amount || 0) * 100);
+  return {
+    ...r,
+    amountCents: cents,
+    amount: cents / 100,
+    lines: parseLines(r.lines),
+    returnish: looksLikeReturn(r),
+  };
+}
 
 async function guard(context, senior) {
   if (!(await isOperator(context.request, context.env))) return json({ error: 'forbidden' }, 403);
@@ -184,8 +196,8 @@ export async function onRequestGet(context) {
   if (to) { where.push('ts <= ?'); args.push(to); }
   const min = Number(url.searchParams.get('min')) || 0;
   const max = Number(url.searchParams.get('max')) || 0;
-  if (min) { where.push('amount >= ?'); args.push(Math.round(min)); }
-  if (max) { where.push('amount <= ?'); args.push(Math.round(max)); }
+  if (min) { where.push('COALESCE(amount_cents, amount * 100) >= ?'); args.push(Math.round(min * 100)); }
+  if (max) { where.push('COALESCE(amount_cents, amount * 100) <= ?'); args.push(Math.round(max * 100)); }
   const method = (url.searchParams.get('method') || '').trim().slice(0, 16);
   if (method) { where.push('method = ?'); args.push(method); }
 
@@ -203,7 +215,7 @@ export async function onRequestGet(context) {
     const truncated = rows.length > limit;
     if (truncated) rows.pop();
     return json({
-      sales: rows.map((r) => ({ ...r, lines: parseLines(r.lines), returnish: looksLikeReturn(r) })),
+      sales: rows.map(normSaleRow),
       truncated, merchant, reasons: REASONS,
     });
   } catch (e) {
@@ -215,7 +227,8 @@ export async function onRequestGet(context) {
        plutôt que `void_ts`. Ne reconnaître que `void_` renvoyait alors un 500
        opaque sur une base qui pouvait parfaitement être servie. */
     if (isMissingColumn(e)) {
-      const plain = where.filter((w) => !w.includes('void_ts'));
+      const plain = where.filter((w) => !w.includes('void_ts')).map((w) =>
+        w.replace(/COALESCE\(amount_cents,\s*amount\s*\*\s*100\)/g, 'amount * 100'));
       /* Sur une base sans colonnes d'annulation, AUCUNE vente ne peut être
          sortie des livres : « les sorties » est donc une liste vide, pas la
          liste entière. Retirer la condition du WHERE sans traiter ce cas aurait
@@ -234,7 +247,7 @@ export async function onRequestGet(context) {
             `SELECT ${cols} FROM sales WHERE ${plain.join(' AND ')} ORDER BY ts DESC LIMIT ?`
           ).bind(...args, limit).all();
           return json({
-            sales: ((rs && rs.results) || []).map((r) => ({ ...r, lines: parseLines(r.lines), returnish: looksLikeReturn(r) })),
+            sales: ((rs && rs.results) || []).map(normSaleRow),
             truncated: false, merchant, reasons: REASONS, migration: 'needed',
           });
         } catch (_) { /* forme suivante */ }
@@ -251,10 +264,20 @@ export async function onRequestGet(context) {
 async function byIds(env, merchant, ids) {
   if (!ids.length) return [];
   const holes = ids.map(() => '?').join(',');
-  const rs = await env.DB.prepare(
-    `SELECT ${SELECT_COLS} FROM sales WHERE merchant = ? AND id IN (${holes})`
-  ).bind(merchant, ...ids).all();
-  return ((rs && rs.results) || []).map((r) => ({ ...r, lines: parseLines(r.lines) }));
+  try {
+    const rs = await env.DB.prepare(
+      `SELECT ${SELECT_COLS} FROM sales WHERE merchant = ? AND id IN (${holes})`
+    ).bind(merchant, ...ids).all();
+    return ((rs && rs.results) || []).map(normSaleRow);
+  } catch (e) {
+    if (isMissingColumn(e)) {
+      const rs = await env.DB.prepare(
+        `SELECT rowid AS cursor, id, amount, method, label, ref, ts, lines FROM sales WHERE merchant = ? AND id IN (${holes})`
+      ).bind(merchant, ...ids).all();
+      return ((rs && rs.results) || []).map(normSaleRow);
+    }
+    throw e;
+  }
 }
 
 /* ── L'APERÇU : tout ce que le geste emporte, avant de le faire ─────────────*/

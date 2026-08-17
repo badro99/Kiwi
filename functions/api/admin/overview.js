@@ -38,19 +38,16 @@ const DAY = 86400000;
  * et on retombe sur la version sans elle plutôt que de rendre 500 : une base en
  * retard d'un ALTER doit dégrader la vue, pas la fermer. Le booléen rendu dit
  * laquelle des deux a répondu, et il remonte jusqu'à l'écran. */
-async function tryAll(env, sql, fallbackSql, binds = []) {
-  try {
-    const r = await env.DB.prepare(sql).bind(...binds).all();
-    return { rows: r.results || [], full: true };
-  } catch (_) {
-    if (!fallbackSql) return { rows: [], full: false };
+async function tryAll(env, queries, binds = []) {
+  const list = Array.isArray(queries) ? queries : [queries];
+  for (let i = 0; i < list.length; i++) {
+    if (!list[i]) continue;
     try {
-      const r = await env.DB.prepare(fallbackSql).bind(...binds).all();
-      return { rows: r.results || [], full: false };
-    } catch (__) {
-      return { rows: [], full: false };
-    }
+      const r = await env.DB.prepare(list[i]).bind(...binds).all();
+      return { rows: r.results || [], full: i === 0 };
+    } catch (_) {}
   }
+  return { rows: [], full: false };
 }
 
 export async function onRequestGet(context) {
@@ -76,9 +73,10 @@ export async function onRequestGet(context) {
       return s;
     };
 
-    const cfg = await tryAll(env,
+    const cfg = await tryAll(env, [
       'SELECT merchant, plan, account_id, status, city, mrr FROM merchant_config',
-      'SELECT merchant, plan, account_id, status FROM merchant_config');
+      'SELECT merchant, plan, account_id, status FROM merchant_config',
+    ]);
     const columns = { city: cfg.full, mrr: cfg.full };
     for (const c of cfg.rows) {
       const s = store(c.merchant);
@@ -104,13 +102,13 @@ export async function onRequestGet(context) {
     /* Les ventes révèlent des établissements que ni la config ni les comptes ne
      * connaissent (une caisse appairée avant tout compte). Ils existent, donc
      * ils apparaissent — en démo, faute de propriétaire. */
-    const perStore = await tryAll(env,
+    const perStore = await tryAll(env, [
       `SELECT merchant,
-              COALESCE(SUM(CASE WHEN ts >= ? THEN amount ELSE 0 END),0) AS today,
-              COALESCE(SUM(CASE WHEN ts >= ? THEN amount ELSE 0 END),0) AS w,
-              COALESCE(SUM(CASE WHEN ts >= ? THEN amount ELSE 0 END),0) AS m,
+              COALESCE(SUM(CASE WHEN ts >= ? THEN COALESCE(amount_cents, amount * 100) ELSE 0 END),0) / 100.0 AS today,
+              COALESCE(SUM(CASE WHEN ts >= ? THEN COALESCE(amount_cents, amount * 100) ELSE 0 END),0) / 100.0 AS w,
+              COALESCE(SUM(CASE WHEN ts >= ? THEN COALESCE(amount_cents, amount * 100) ELSE 0 END),0) / 100.0 AS m,
               COALESCE(SUM(CASE WHEN ts >= ? THEN 1 ELSE 0 END),0)      AS mcount,
-              COALESCE(SUM(amount),0)                                   AS total,
+              COALESCE(SUM(COALESCE(amount_cents, amount * 100)),0) / 100.0 AS total,
               COALESCE(COUNT(*),0)                                      AS tcount,
               MAX(ts)                                                   AS last_ts
          FROM sales WHERE void_ts IS NULL GROUP BY merchant`,
@@ -123,7 +121,7 @@ export async function onRequestGet(context) {
               COALESCE(COUNT(*),0)                                      AS tcount,
               MAX(ts)                                                   AS last_ts
          FROM sales GROUP BY merchant`,
-      [dayStart, d7, d30, d30]);
+    ], [dayStart, d7, d30, d30]);
     const voidAware = perStore.full;
     const salesOf = new Map();
     for (const r of perStore.rows) {
@@ -173,12 +171,14 @@ export async function onRequestGet(context) {
     /* La courbe des 30 jours. Groupée en SQL par (magasin, jour) — au plus
      * trente lignes par établissement — puis partagée réel/démo ici, parce que
      * SQL ne connaît pas la règle « un magasin sans propriétaire est une démo ». */
-    const perDay = await tryAll(env,
+    const perDay = await tryAll(env, [
+      `SELECT merchant, date(ts/1000,'unixepoch') AS d, COALESCE(SUM(COALESCE(amount_cents, amount * 100)),0) / 100.0 AS amount
+         FROM sales WHERE ts >= ? AND void_ts IS NULL GROUP BY merchant, d`,
       `SELECT merchant, date(ts/1000,'unixepoch') AS d, COALESCE(SUM(amount),0) AS amount
          FROM sales WHERE ts >= ? AND void_ts IS NULL GROUP BY merchant, d`,
       `SELECT merchant, date(ts/1000,'unixepoch') AS d, COALESCE(SUM(amount),0) AS amount
          FROM sales WHERE ts >= ? GROUP BY merchant, d`,
-      [d30]);
+    ], [d30]);
     const realSet = new Set(real.map((s) => s.merchant));
     const byDay = new Map();
     for (const r of perDay.rows) {

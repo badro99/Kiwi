@@ -415,8 +415,14 @@
 
   function postSale(entry) {
     if (!on() || !entry) return;
-    var amt = Math.round(entry.amount || 0);
-    if (amt <= 0) return;
+    var rawAmt = entry.amountCents != null
+      ? (Number(entry.amountCents) / 100)
+      : Number(entry.amount || 0);
+    var amountCents = entry.amountCents != null
+      ? Math.round(Number(entry.amountCents))
+      : Math.round(rawAmt * 100);
+    if (!Number.isFinite(amountCents) || amountCents <= 0) return;
+    var amt = Math.round(amountCents / 100);
     // No resolved tenant ⇒ don't post. The server refuses an unattributed sale
     // (it used to file it under a shared 'default' bucket other stores read), so
     // this just skips a guaranteed 400 rather than changing behaviour.
@@ -472,7 +478,8 @@
     var body = {
       id: stableId(m, entry),                                 // stable receipt key = row PK
       merchant: m,
-      amount: amt,                                            // MAD, integer
+      amount: amt,                                            // MAD, legacy integer
+      amountCents: amountCents,                               // MAD centimes, authoritative
       method: entry.method || 'cash',                         // cash|card|tap|qr|wallet
       label: entry.label || 'Vente',
       ref: entry.ref || '',
@@ -783,14 +790,19 @@
         } catch (_) {}
         return;
       }
-      var amt = Math.round(s.amount) || 0;
-      if (amt <= 0) return;
+      var amt = s.amountCents != null
+        ? Math.round(Number(s.amountCents)) / 100
+        : (Math.round((Number(s.amount || 0) + Number.EPSILON) * 100) / 100);
+      if (!(amt > 0)) return;
+      var amtCents = s.amountCents != null
+        ? Math.round(Number(s.amountCents))
+        : Math.round(amt * 100);
       /* `lines` travels the last leg. Without it the dashboard's store held
          the money and the ticket summary only, so assets/agent-data.js fell back
          to its honest refusal on "quel est mon produit le plus vendu" for every
          merchant whose caisse is not in this same browser. */
       try { window.KiwiSales.add(vid, {
-        amount: amt, method: s.method || 'cash', cursor: cur, ts: s.ts,
+        amount: amt, amountCents: amtCents, method: s.method || 'cash', cursor: cur, ts: s.ts,
         label: s.label, ref: s.orderRef || s.ref || '', receiptRef: s.receiptRef || s.ref || '', origin: s.origin || '',
         server: s.server || '', channel: s.channel || '', lines: s.lines,
       }); have[cur] = 1; } catch (_) {}

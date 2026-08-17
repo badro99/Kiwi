@@ -50,19 +50,45 @@ export async function onRequestGet({ request, env }) {
   const from = Math.max(0, Number(url.searchParams.get('from')) || 0);
   try {
     const rs = await env.DB.prepare(
-      `SELECT a.sale_id AS id, a.actor, a.actor_id, a.amount, a.method, a.ref,
+      `SELECT a.sale_id AS id, a.actor, a.actor_id, a.amount, a.amount_cents, a.method, a.ref,
               a.sale_ts, a.ts, a.reason, a.note, s.label, s.lines
          FROM sale_audit a LEFT JOIN sales s ON s.id = a.sale_id AND s.merchant = a.merchant
         WHERE a.merchant = ? AND a.action = 'void' AND a.ts >= ?
         ORDER BY a.ts DESC LIMIT 200`
     ).bind(merchant, from).all();
-    const cancellations = ((rs && rs.results) || []).map((r) => ({
-      ...r, lines: cleanLines(r.lines),
-    }));
+    const cancellations = ((rs && rs.results) || []).map((r) => {
+      const cents = r.amount_cents != null ? Number(r.amount_cents) : Math.round(Number(r.amount || 0) * 100);
+      return {
+        ...r,
+        amountCents: cents,
+        amount: cents / 100,
+        lines: cleanLines(r.lines),
+      };
+    });
     return json({ merchant, cancellations });
   } catch (_) {
-    // Deploying code before the audit migration must not break Ventes.
-    return json({ merchant, cancellations: [] });
+    try {
+      const rs = await env.DB.prepare(
+        `SELECT a.sale_id AS id, a.actor, a.actor_id, a.amount, a.method, a.ref,
+                a.sale_ts, a.ts, a.reason, a.note, s.label, s.lines
+           FROM sale_audit a LEFT JOIN sales s ON s.id = a.sale_id AND s.merchant = a.merchant
+          WHERE a.merchant = ? AND a.action = 'void' AND a.ts >= ?
+          ORDER BY a.ts DESC LIMIT 200`
+      ).bind(merchant, from).all();
+      const cancellations = ((rs && rs.results) || []).map((r) => {
+        const cents = Math.round(Number(r.amount || 0) * 100);
+        return {
+          ...r,
+          amountCents: cents,
+          amount: cents / 100,
+          lines: cleanLines(r.lines),
+        };
+      });
+      return json({ merchant, cancellations });
+    } catch (__) {
+      // Deploying code before the audit migration must not break Ventes.
+      return json({ merchant, cancellations: [] });
+    }
   }
 }
 
@@ -112,11 +138,18 @@ export async function onRequestPost({ request, env }) {
   let sale;
   try {
     sale = await env.DB.prepare(
-      `SELECT id, amount, method, label, ref, ts, lines, void_ts
+      `SELECT id, amount, amount_cents, method, label, ref, ts, lines, void_ts
          FROM sales WHERE id = ? AND merchant = ? LIMIT 1`
     ).bind(id, merchant).first();
   } catch (e) {
-    return json({ error: 'migration-needed', detail: String((e && e.message) || e) }, 503);
+    try {
+      sale = await env.DB.prepare(
+        `SELECT id, amount, method, label, ref, ts, lines, void_ts
+           FROM sales WHERE id = ? AND merchant = ? LIMIT 1`
+      ).bind(id, merchant).first();
+    } catch (e2) {
+      return json({ error: 'migration-needed', detail: String((e2 && e2.message) || e2) }, 503);
+    }
   }
   if (!sale) return json({ error: 'sale-not-found' }, 404);
   if (sale.void_ts) return json({ error: 'already-cancelled' }, 409);
@@ -129,10 +162,16 @@ export async function onRequestPost({ request, env }) {
     return json({ error: 'sale-too-old' }, 409);
   }
 
+  const saleAmountCents = sale.amount_cents != null
+    ? Number(sale.amount_cents)
+    : Math.round(Number(sale.amount || 0) * 100);
+  const saleAmount = saleAmountCents / 100;
+  const legacyAmount = Math.round(saleAmountCents / 100);
+
   const ts = Date.now();
   const impact = JSON.stringify({
     source: source === 'dashboard' ? 'dashboard' : 'cashier-reprint',
-    totals: { amount: Number(sale.amount) || 0, count: 1 },
+    totals: { amount: saleAmount, amountCents: saleAmountCents, count: 1 },
     lines: cleanLines(sale.lines), role: actorRole,
   });
   try {
@@ -145,16 +184,25 @@ export async function onRequestPost({ request, env }) {
     ).bind(ts, reason, actor, actorId, id, merchant).run();
     const changes = Number(updated?.meta?.changes ?? updated?.changes ?? 0);
     if (!changes) return json({ error: 'already-cancelled' }, 409);
-    await env.DB.prepare(
-      `INSERT INTO sale_audit (merchant, sale_id, action, reason, note, actor, actor_id,
-                               amount, method, ref, sale_ts, impact, ts)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`
-    ).bind(merchant, id, 'void', reason, '', actor, actorId, Number(sale.amount) || 0,
-           sale.method || '', sale.ref || '', Number(sale.ts) || 0, impact, ts).run();
+    try {
+      await env.DB.prepare(
+        `INSERT INTO sale_audit (merchant, sale_id, action, reason, note, actor, actor_id,
+                                 amount, amount_cents, method, ref, sale_ts, impact, ts)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+      ).bind(merchant, id, 'void', reason, '', actor, actorId, legacyAmount,
+             saleAmountCents, sale.method || '', sale.ref || '', Number(sale.ts) || 0, impact, ts).run();
+    } catch (_) {
+      await env.DB.prepare(
+        `INSERT INTO sale_audit (merchant, sale_id, action, reason, note, actor, actor_id,
+                                 amount, method, ref, sale_ts, impact, ts)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`
+      ).bind(merchant, id, 'void', reason, '', actor, actorId, legacyAmount,
+             sale.method || '', sale.ref || '', Number(sale.ts) || 0, impact, ts).run();
+    }
   } catch (e) {
     return json({ error: 'cancel-failed', detail: String((e && e.message) || e) }, 500);
   }
 
-  return json({ ok: true, id, ref: sale.ref || '', amount: Number(sale.amount) || 0,
+  return json({ ok: true, id, ref: sale.ref || '', amount: saleAmount, amountCents: saleAmountCents,
                 actor, actor_id: actorId, source, ts });
 }

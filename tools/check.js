@@ -305,6 +305,8 @@ for (const test of [
   'serveur-menu-live-test.mjs',
   'service-settlement-test.mjs',
   'recipe-heal-test.js',
+  'sale-line-v2-test.mjs',
+  'sales-centime-precision-test.mjs',
 ]) {
   const { spawnSync } = require('child_process');
   const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', test)], { encoding: 'utf8' });

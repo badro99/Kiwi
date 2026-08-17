@@ -36,11 +36,15 @@ const ok = (label, condition) => condition ? (passed++, console.log('  ✓ ' + l
 
 let r = await callSale({ id: 'too-large', merchant: 'cafe-atlas', amount: 200001 });
 ok('sale endpoint rejects implausibly large amounts', r.status === 400);
+r = await callSale({ id: 'too-large-cents', merchant: 'cafe-atlas', amountCents: 20000001 });
+ok('sale endpoint rejects implausibly large amountCents', r.status === 400);
 r = await callSale({ id: 'max-sale', merchant: 'cafe-atlas', amount: 200000, ts: Date.now() + 365 * 86400000 });
 ok('sale endpoint accepts its documented upper boundary', r.status === 200);
-const row = sqlite.prepare('SELECT amount, ts FROM sales WHERE id=?').get('max-sale');
+r = await callSale({ id: 'max-sale-cents', merchant: 'cafe-atlas', amountCents: 20000000 });
+ok('sale endpoint accepts its documented upper boundary in centimes', r.status === 200);
+const row = sqlite.prepare('SELECT amount, amount_cents, ts FROM sales WHERE id=?').get('max-sale');
 ok('future device clocks are normalised instead of poisoning reports',
-  row && row.amount === 200000 && row.ts <= Date.now() + 1000);
+  row && row.amount === 200000 && row.amount_cents === 20000000 && row.ts <= Date.now() + 1000);
 
 let mediaTouched = false;
 r = await mediaGet({

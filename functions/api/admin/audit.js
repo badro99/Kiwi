@@ -30,11 +30,15 @@
 
 import { isOperator, json } from '../../auth/_lib.js';
 
-async function safeAll(env, sql, args) {
-  try {
-    const rs = await env.DB.prepare(sql).bind(...args).all();
-    return (rs && rs.results) || [];
-  } catch (_) { return []; }
+async function safeAll(env, sqls, args) {
+  const list = Array.isArray(sqls) ? sqls : [sqls];
+  for (const sql of list) {
+    try {
+      const rs = await env.DB.prepare(sql).bind(...args).all();
+      return (rs && rs.results) || [];
+    } catch (_) {}
+  }
+  return [];
 }
 
 export async function onRequestGet(context) {
@@ -52,9 +56,16 @@ export async function onRequestGet(context) {
     `SELECT feature, enabled, actor, ts FROM config_audit
       WHERE merchant = ? ORDER BY ts DESC, id DESC LIMIT ?`, [merchant, limit]);
 
-  const sales = await safeAll(env,
+  const rawSales = await safeAll(env, [
+    `SELECT sale_id, action, reason, note, actor, amount, amount_cents, method, ref, sale_ts, ts
+       FROM sale_audit WHERE merchant = ? ORDER BY ts DESC, id DESC LIMIT ?`,
     `SELECT sale_id, action, reason, note, actor, amount, method, ref, sale_ts, ts
-       FROM sale_audit WHERE merchant = ? ORDER BY ts DESC, id DESC LIMIT ?`, [merchant, limit]);
+       FROM sale_audit WHERE merchant = ? ORDER BY ts DESC, id DESC LIMIT ?`,
+  ], [merchant, limit]);
+  const sales = rawSales.map((r) => {
+    const cents = r.amount_cents != null ? Number(r.amount_cents) : Math.round(Number(r.amount || 0) * 100);
+    return { ...r, amountCents: cents, amount: cents / 100 };
+  });
 
   /* Les gestes de compte sont rangés par COMPTE, pas par magasin — une adresse
      de connexion appartient au client, pas à l'une de ses boutiques. On les

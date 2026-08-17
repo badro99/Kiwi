@@ -63,13 +63,24 @@ export async function onRequestGet(context) {
 
   try {
     // Sales aggregate per merchant.
-    const sales = await env.DB.prepare(
-      `SELECT merchant,
-              COALESCE(SUM(CASE WHEN ts >= ? THEN amount ELSE 0 END), 0) AS today_amount,
-              COALESCE(SUM(CASE WHEN ts >= ? THEN 1 ELSE 0 END), 0)      AS today_count,
-              MAX(ts) AS last_ts
-       FROM sales GROUP BY merchant`
-    ).bind(dayStart, dayStart).all();
+    let sales = null;
+    try {
+      sales = await env.DB.prepare(
+        `SELECT merchant,
+                COALESCE(SUM(CASE WHEN ts >= ? THEN COALESCE(amount_cents, amount * 100) ELSE 0 END), 0) / 100.0 AS today_amount,
+                COALESCE(SUM(CASE WHEN ts >= ? THEN 1 ELSE 0 END), 0)      AS today_count,
+                MAX(ts) AS last_ts
+         FROM sales GROUP BY merchant`
+      ).bind(dayStart, dayStart).all();
+    } catch (_) {
+      sales = await env.DB.prepare(
+        `SELECT merchant,
+                COALESCE(SUM(CASE WHEN ts >= ? THEN amount ELSE 0 END), 0) AS today_amount,
+                COALESCE(SUM(CASE WHEN ts >= ? THEN 1 ELSE 0 END), 0)      AS today_count,
+                MAX(ts) AS last_ts
+         FROM sales GROUP BY merchant`
+      ).bind(dayStart, dayStart).all();
+    }
     for (const s of (sales.results || [])) {
       const r = row(s.merchant);
       r.today_amount = s.today_amount || 0;

@@ -160,12 +160,12 @@ export async function onRequestGet({ request, env }) {
     if (!voidsOnly) {
       const rs = byDay
         ? await env.DB.prepare(
-          'SELECT rowid AS cursor, id, amount, method, label, ref, ts, lines, channel ' +
+          'SELECT rowid AS cursor, id, amount, amount_cents, method, label, ref, ts, lines, channel ' +
           'FROM sales WHERE merchant IN (?, ?) AND ts >= ? AND void_ts IS NULL ' +
           `ORDER BY ts DESC LIMIT ${DAY_LIMIT}`
         ).bind(merchant, legacy || merchant, from).all()
         : await env.DB.prepare(
-          'SELECT rowid AS cursor, id, amount, method, label, ref, ts, lines, channel ' +
+          'SELECT rowid AS cursor, id, amount, amount_cents, method, label, ref, ts, lines, channel ' +
           'FROM sales WHERE merchant IN (?, ?) AND rowid > ? AND void_ts IS NULL ORDER BY rowid ASC LIMIT 50'
         ).bind(merchant, legacy || merchant, since).all();
       rows = (rs && rs.results) || [];
@@ -177,27 +177,18 @@ export async function onRequestGet({ request, env }) {
     voided = ((vs && vs.results) || []).map((r) => ({ c: r.cursor, r: r.ref || '' }));
   } catch (e) {
     const msg = String((e && e.message) || e);
-    /* Base sans void_ts (migration pas encore passée) : on sert le flux comme
-     * avant, sans liste de retraits. Une console qui ne peut pas encore annuler
-     * est un manque ; un tableau de bord qui n'affiche plus aucune vente serait
-     * une panne. */
     const noVoid = msg.includes('void_ts');
-    /* Base sans `lines` : on sert les ventes sans le panier plutôt que rien —
-     * ne pas savoir classer les produits vaut mieux que ne pas voir sa recette. */
     const noLines = msg.includes('lines');
     const noChannel = msg.includes('channel');
-    if (!noVoid && !noLines && !noChannel) {
+    const noAmountCents = msg.includes('amount_cents');
+    if (!noVoid && !noLines && !noChannel && !noAmountCents) {
       return json({ sales: [], cursor: since, error: 'db', detail: msg }, 500);
     }
-    /* La caisse ne demandait que les retraits : sans la colonne, il n'y en a
-       aucun à annoncer, et il n'y a rien d'autre à servir. */
     if (voidsOnly) return json({ sales: [], cursor: since, merchant, voided: [] });
-    const cols = 'rowid AS cursor, id, amount, method, label, ref, ts'
+    const cols = 'rowid AS cursor, id, amount'
+      + (noAmountCents ? '' : ', amount_cents')
+      + ', method, label, ref, ts'
       + (noLines ? '' : ', lines') + (noChannel ? '' : ', channel');
-    /* Les mêmes replis, dans la forme demandée. Servir le curseur à qui a
-       demandé une journée renverrait les toutes premières ventes du commerce
-       sous le titre « aujourd'hui » — une erreur plus coûteuse qu'une liste
-       vide, parce qu'elle a l'air juste. */
     const where = byDay ? 'ts >= ?' : 'rowid > ?';
     const order = byDay ? `ts DESC LIMIT ${DAY_LIMIT}` : 'rowid ASC LIMIT 50';
     const bound = byDay ? from : since;
@@ -207,7 +198,6 @@ export async function onRequestGet({ request, env }) {
       ).bind(merchant, legacy || merchant, bound).all();
       rows = (rs && rs.results) || [];
     } catch (e2) {
-      /* Il restait la combinaison des deux manques : ni void_ts, ni lines. */
       try {
         const rs = await env.DB.prepare(
           'SELECT rowid AS cursor, id, amount, method, label, ref, ts ' +
@@ -274,6 +264,11 @@ export async function onRequestGet({ request, env }) {
   }
   rows.forEach((sale) => {
     if (!sale) return;
+    const cents = sale.amount_cents != null
+      ? Number(sale.amount_cents)
+      : Math.round(Number(sale.amount || 0) * 100);
+    sale.amountCents = cents;
+    sale.amount = cents / 100;
     const id = String(sale.id || '');
     const visit = id.startsWith('visit-') && id.endsWith('-emp') ? id.slice(6, -4) : '';
     const order = visit ? orderByVisit.get(visit) : null;

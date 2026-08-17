@@ -5,9 +5,10 @@
 
 CREATE TABLE IF NOT EXISTS sales (
   id       TEXT PRIMARY KEY,   -- client-supplied unique id
-  merchant TEXT NOT NULL,      -- tenant key (one value for the pilot)
-  amount   INTEGER NOT NULL,   -- MAD, whole dirhams
-  method   TEXT NOT NULL,      -- cash | card | tap | qr | wallet
+  merchant     TEXT NOT NULL,      -- tenant key (one value for the pilot)
+  amount       INTEGER NOT NULL,   -- legacy whole MAD; retained for backward compatibility with pre-migration rows and unmigrated readers
+  amount_cents INTEGER,            -- centimes; authoritative when present. Legacy rows use amount (whole MAD).
+  method       TEXT NOT NULL,      -- cash | card | tap | qr | wallet
   label    TEXT,               -- "À emporter #12", "Table 4", …
   ref      TEXT,               -- caisse receipt ref
   ts       INTEGER NOT NULL,   -- epoch ms of the sale
@@ -615,8 +616,9 @@ CREATE TABLE IF NOT EXISTS sale_audit (
   note       TEXT NOT NULL DEFAULT '',  -- l'explication écrite
   actor      TEXT NOT NULL DEFAULT '',  -- libellé du code opérateur, ou 'equipe'
   actor_id   TEXT NOT NULL DEFAULT '',  -- operators.id quand il est connu
-  amount     INTEGER NOT NULL DEFAULT 0,
-  method     TEXT NOT NULL DEFAULT '',
+  amount       INTEGER NOT NULL DEFAULT 0, -- legacy whole MAD
+  amount_cents INTEGER,                    -- centimes; authoritative when present. Legacy rows use amount (whole MAD).
+  method       TEXT NOT NULL DEFAULT '',
   ref        TEXT NOT NULL DEFAULT '',
   sale_ts    INTEGER NOT NULL DEFAULT 0,
   impact     TEXT NOT NULL DEFAULT '',  -- JSON : ce qui était annoncé comme touché

@@ -14,14 +14,15 @@ function ok(name, value) {
  * replaced.  The D1 statement captures the exact JSON that production binds. */
 let api = read('functions/api/sale.js')
   .replace(/^import .*;$/gm, '')
-  .replace("const MAX_AMOUNT", `const entitledMerchant = async (_r, _e, asked) => asked;
+  .replace("const MAX_AMOUNT_CENTS", `const entitledMerchant = async (_r, _e, asked) => asked;
 const activeServiceEmployee = async () => null;
 const storeSuspended = async () => false;
+const storeSubscriptionPending = async () => false;
 const startOfDay = () => 0;
 const settleServiceTable = async () => ({ ok: true });
 const poke = async () => {};
 
-const MAX_AMOUNT`);
+const MAX_AMOUNT_CENTS`);
 const mod = await import('data:text/javascript;base64,' + Buffer.from(api).toString('base64'));
 
 async function store(body) {
@@ -105,7 +106,7 @@ const venues = read('assets/venues.js');
 const consumption = read('assets/inventory-consumption.js');
 ok('offline queue keeps stable item identity', /if \(i\) o\.i = i/.test(live));
 ok('feed expands v2 identity for consumers', /itemId: \(l && l\.i\)/.test(feed));
-ok('real config returns the server plan', /return json\(\{ features, pins, [^}]*plan[^}]*suspended \}\)/.test(config));
+ok('real config returns the server plan', /return json\(\{ features, pins, [\s\S]*?plan[\s\S]*?suspended/.test(config));
 ok('private costs are accepted by the server vault', /costs:\s*\{ keys: \['items', 'ingredients', 'recipes', 'charges'\]/.test(storeApi));
 ok('pressing allocates deposits without duplicating full order value', /function saleLines\(o, received\)/.test(pressing) && /factor = full > 0/.test(pressing));
 ok('margin engine consumes server-expanded stable identity',

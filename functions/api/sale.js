@@ -13,7 +13,8 @@ import { startOfDay } from './order/_lib.js';
 import { settleServiceTable } from './service/events.js';
 import { poke } from './_live.js';
 
-const MAX_AMOUNT = 200000; // same sanity ceiling as Order Pro
+const MAX_AMOUNT_CENTS = 20000000; // 200,000 MAD in centimes
+const MAX_AMOUNT_DIRHAMS = 200000; // legacy ceiling
 
 function json(obj, status) {
   return new Response(JSON.stringify(obj), {
@@ -28,9 +29,35 @@ export async function onRequestPost({ request, env }) {
   let b;
   try { b = await request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
 
-  const rawAmount = Number(b && b.amount);
-  const amount = Math.round(rawAmount);
-  if (!Number.isFinite(rawAmount) || amount <= 0 || amount > MAX_AMOUNT) {
+  const hasAmountCents = b && b.amountCents != null && Number.isFinite(Number(b.amountCents));
+  const hasAmount = b && b.amount != null && Number.isFinite(Number(b.amount));
+
+  if (!hasAmountCents && !hasAmount) {
+    return json({ error: 'bad-amount' }, 400);
+  }
+
+  let amountCents = 0;
+  if (hasAmountCents) {
+    amountCents = Math.round(Number(b.amountCents));
+  } else {
+    // Legacy client passed float or integer dirhams (e.g. 12.50 or 13)
+    const rawAmount = Number(b.amount);
+    amountCents = Math.round(rawAmount * 100);
+  }
+
+  // If both provided, verify they agree within rounding tolerance (1 MAD = 100 cents)
+  if (hasAmountCents && hasAmount) {
+    const rawFromAmount = Math.round(Number(b.amount) * 100);
+    if (Math.abs(amountCents - rawFromAmount) > 100) {
+      return json({ error: 'bad-amount' }, 400);
+    }
+  }
+
+  // Legacy whole dirham column value (rounded for backward-compatibility)
+  const amount = Math.round(amountCents / 100);
+
+  // Validate floor (> 0) and ceiling (<= 20,000,000 cents) on centime level
+  if (amountCents <= 0 || amountCents > MAX_AMOUNT_CENTS) {
     return json({ error: 'bad-amount' }, 400);
   }
 
@@ -214,13 +241,10 @@ export async function onRequestPost({ request, env }) {
   let linesMode = 'stored';
   try {
     await env.DB.prepare(
-      'INSERT OR IGNORE INTO sales (id, merchant, amount, method, label, ref, ts, lines, channel) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
-    ).bind(id, merchant, amount, method, label, ref, ts, lines, channel || null).run();
+      'INSERT OR IGNORE INTO sales (id, merchant, amount, method, label, ref, ts, lines, channel, amount_cents) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+    ).bind(id, merchant, amount, method, label, ref, ts, lines, channel || null, amountCents).run();
   } catch (e) {
     const missing = String((e && e.message) || e);
-    /* `channel` is newer than `lines`. During a rolling deploy, keep the basket
-     * on databases that have lines but not channel; dropping both would make a
-     * harmless reporting migration damage product and stock truth. */
     if (missing.includes('channel')) {
       try {
         await env.DB.prepare(
@@ -232,8 +256,28 @@ export async function onRequestPost({ request, env }) {
           return json({ error: 'db', detail: String(legacyError && legacyError.message || legacyError) }, 500);
         }
       }
+    } else if (missing.includes('amount_cents')) {
+      try {
+        await env.DB.prepare(
+          'INSERT OR IGNORE INTO sales (id, merchant, amount, method, label, ref, ts, lines, channel) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        ).bind(id, merchant, amount, method, label, ref, ts, lines, channel || null).run();
+        linesMode = 'stored-no-cents';
+      } catch (channelError) {
+        if (String((channelError && channelError.message) || channelError).includes('channel')) {
+          try {
+            await env.DB.prepare(
+              'INSERT OR IGNORE INTO sales (id, merchant, amount, method, label, ref, ts, lines) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+            ).bind(id, merchant, amount, method, label, ref, ts, lines).run();
+            linesMode = 'stored-channel-unmigrated';
+          } catch (legacyError) {
+            if (!String((legacyError && legacyError.message) || legacyError).includes('lines')) {
+              return json({ error: 'db', detail: String(legacyError && legacyError.message || legacyError) }, 500);
+            }
+          }
+        }
+      }
     }
-    if (missing.includes('lines') || (missing.includes('channel') && linesMode === 'stored')) {
+    if (missing.includes('lines') || ((missing.includes('channel') || missing.includes('amount_cents')) && linesMode === 'stored')) {
       try {
         await env.DB.prepare(
           'INSERT OR IGNORE INTO sales (id, merchant, amount, method, label, ref, ts) VALUES (?, ?, ?, ?, ?, ?, ?)'
@@ -246,7 +290,7 @@ export async function onRequestPost({ request, env }) {
       } else {
         return json({ error: 'db', detail: String(e && e.message || e) }, 500);
       }
-    } else if (linesMode !== 'stored-channel-unmigrated') {
+    } else if (linesMode !== 'stored-channel-unmigrated' && linesMode !== 'stored-no-cents') {
       return json({ error: 'db', detail: String(e && e.message || e) }, 500);
     }
   }
