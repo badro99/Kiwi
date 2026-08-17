@@ -37,7 +37,7 @@
 import {
   PASSWORD_MAX, json, hashPassword, makeSession, sessionCookie,
   splitResetToken, resetVerifierHash,
-  limitCheck, limitFail, limitClear,
+  limitCheck, limitFail, limitClear, passwordProblem,
 } from './_lib.js';
 
 /* Le seul motif renvoyé au monde extérieur. Voir l'en-tête : la précision
@@ -89,12 +89,17 @@ export async function onRequestPost(context) {
   try { body = await request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
 
   const password = String(body.password || '');
-  /* Le même plancher qu'à l'inscription (functions/auth/signup.js). Un seuil
-     plus bas ici ferait de la réinitialisation le chemin faible pour arriver à
-     un compte, ce qui viderait la règle de son sens. */
-  if (password.length < 8 || password.length > PASSWORD_MAX) return json({ error: 'weak' }, 400);
-
+  let accountEmail = '';
   const row = await lookup(env, body.token);
+  if (row && row.account_id) {
+    try {
+      const acc = await env.DB.prepare('SELECT email FROM accounts WHERE id = ?').bind(row.account_id).first();
+      if (acc && acc.email) accountEmail = acc.email;
+    } catch (_) {}
+  }
+  const problem = passwordProblem(password, { email: accountEmail });
+  if (problem) return json({ error: 'weak', reason: problem }, 400);
+
   if (!row) { await limitFail(request, env, 'reset'); return json({ error: 'invalid' }, 400); }
 
   /* La consommation D'ABORD, en un énoncé conditionnel : c'est elle qui décide

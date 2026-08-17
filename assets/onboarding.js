@@ -957,6 +957,61 @@
     });
   }
 
+  /* ── Password strength evaluation (NIST SP 800-63B) ─────────────────────── */
+  const STRENGTH_LABELS = {
+    weak: { fr: 'faible', en: 'weak', ar: 'ضعيفة' },
+    medium: { fr: 'moyen', en: 'medium', ar: 'متوسطة' },
+    strong: { fr: 'fort', en: 'strong', ar: 'قوية' },
+  };
+
+  const REASON_MESSAGES = {
+    short: { fr: 'Au moins 10 caractères.', en: 'At least 10 characters.', ar: '10 أحرف على الأقل.' },
+    long: { fr: 'Mot de passe trop long.', en: 'Password is too long.', ar: 'كلمة المرور طويلة جداً.' },
+    common: { fr: 'Ce mot de passe est trop courant.', en: 'This password is too common.', ar: 'كلمة المرور هذه شائعة جداً.' },
+    personal: { fr: 'Évitez votre e-mail ou le nom de votre commerce.', en: 'Avoid your email or business name.', ar: 'تجنب بريدك الإلكتروني أو اسم نشاطك.' },
+    weak: { fr: 'Au moins 10 caractères.', en: 'At least 10 characters.', ar: '10 أحرف على الأقل.' },
+  };
+
+  function passwordStrength(password) {
+    const s = String(password || '');
+    if (s.length < 10) return 'weak';
+    let variety = 0;
+    if (/[a-z]/.test(s)) variety++;
+    if (/[A-Z]/.test(s)) variety++;
+    if (/[0-9]/.test(s)) variety++;
+    if (/[^a-zA-Z0-9]|\s/.test(s)) variety++;
+    if (s.length >= 16 || (s.length >= 12 && variety >= 2) || (s.length >= 10 && variety >= 3)) return 'strong';
+    return 'medium';
+  }
+
+  function passwordReason(reason) {
+    return tr(REASON_MESSAGES[reason] || REASON_MESSAGES.weak);
+  }
+
+  function passwordStrengthText(strength) {
+    return tr(STRENGTH_LABELS[strength] || STRENGTH_LABELS.weak);
+  }
+
+  function attachPasswordHint(inputEl, hintEl) {
+    if (!inputEl || !hintEl) return;
+    const update = () => {
+      const v = inputEl.value || '';
+      if (!v) {
+        hintEl.textContent = passwordReason('short');
+        return;
+      }
+      if (v.length < 10) {
+        hintEl.textContent = passwordReason('short') + ' · ' + passwordStrengthText('weak');
+        return;
+      }
+      const st = passwordStrength(v);
+      const prefix = tr({ fr: 'Force', en: 'Strength', ar: 'القوة' });
+      hintEl.textContent = prefix + ' : ' + passwordStrengthText(st);
+    };
+    inputEl.addEventListener('input', update);
+    update();
+  }
+
   function initHandler() {
     try {
       if (window.Kiwi && Kiwi.handlers) {
@@ -967,6 +1022,7 @@
 
   window.KiwiOnboarding = {
     open, close, isComplete, reset, shouldAutoLaunch,
+    passwordStrength, passwordReason, passwordStrengthText, attachPasswordHint,
     get profile() { return { ownerName: LS.get('kiwiOwnerName'), bizName: LS.get('kiwiBizName'), type: LS.get('kiwiBizType') }; },
   };
 

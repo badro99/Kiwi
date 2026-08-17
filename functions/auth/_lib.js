@@ -71,6 +71,46 @@ export async function verifyPassword(password, saltHex, hashHex) {
   return timingSafeEqualHex(toHex(hash), hashHex);
 }
 
+/* ── Account password policy (NIST SP 800-63B) ──────────────────────────────
+ * Length floor (10 characters) + blocklist + personal info check.
+ * No composition rules (uppercase/symbols), no forced rotation.
+ * Returns null if acceptable, or 'short' | 'long' | 'common' | 'personal'. */
+const COMMON_PASSWORDS = new Set([
+  'password', 'passwords', 'password123', 'pass1234',
+  'motdepasse', 'motdepasse123', 'azerty', 'azerty123', 'azertyuiop',
+  'qwerty', 'qwerty123', 'qwertyuiop', '123456789', '1234567890',
+  '12345678901', '0123456789', '1111111111', '0000000000',
+  'kiwi', 'kiwipos', 'kiwicafe', 'kiwiresto',
+  'marrakech', 'casablanca', 'rabat', 'tanger', 'agadir', 'fes',
+  'bismillah', 'alhamdulillah', 'inshallah',
+  'welcome', 'bienvenue', 'bonjour', 'admin123', 'administrator',
+  'secret', 'test1234', 'iloveyou', 'sunshine', 'princess'
+]);
+
+export function passwordProblem(password, ctx = {}) {
+  const p = String(password || '');
+  if (p.length < 10) return 'short';
+  if (p.length > PASSWORD_MAX) return 'long';
+
+  const norm = p.trim().toLowerCase();
+  if (COMMON_PASSWORDS.has(norm) || /^\d+$/.test(norm) || /^(.)\1+$/.test(norm)) {
+    return 'common';
+  }
+
+  if (ctx && typeof ctx === 'object') {
+    if (ctx.email) {
+      const local = String(ctx.email).split('@')[0].trim().toLowerCase();
+      if (local.length >= 4 && norm.includes(local)) return 'personal';
+    }
+    if (ctx.business) {
+      const biz = String(ctx.business).trim().toLowerCase();
+      if (biz.length >= 4 && norm.includes(biz)) return 'personal';
+    }
+  }
+
+  return null;
+}
+
 async function hmacHex(secret, message) {
   const key = await crypto.subtle.importKey(
     'raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']

@@ -474,33 +474,36 @@ function authPage(opts) {
       sub: 'Votre espace commerçant, en un seul lien.', login: 'Se connecter', signup: 'Créer un compte',
       email: 'E-mail', password: 'Mot de passe', name: 'Nom', business: 'Établissement',
       language: 'Langue', emailPlaceholder: 'vous@exemple.ma',
-      namePlaceholder: 'Prénom Nom', businessPlaceholder: 'Café Atlas', passwordHint: 'Au moins 8 caractères.',
+      namePlaceholder: 'Prénom Nom', businessPlaceholder: 'Café Atlas', passwordHint: 'Au moins 10 caractères.',
       create: 'Créer mon compte', staff: 'Accès équipe', revoked: 'Votre session a été fermée. Reconnectez-vous.',
       encrypted: 'Données chiffrées', private: 'Jamais revendues', flexible: 'Sans engagement',
       operatorBad: 'Code opérateur incorrect.', operatorCode: 'Code opérateur', enter: 'Entrer',
-      errors: { email: 'Adresse e-mail invalide.', name: 'Indiquez votre nom.', weak: 'Mot de passe : 8 caractères minimum.', exists: 'Cet e-mail a déjà un compte — connectez-vous.', 'bad-creds': 'E-mail ou mot de passe incorrect.', 'bad-json': 'Requête invalide.', 'not-configured': 'Service momentanément indisponible.', fallback: 'Une erreur est survenue. Réessayez.', network: 'Erreur réseau. Réessayez.' }
+      strength: { label: 'Force', weak: 'faible', medium: 'moyen', strong: 'fort' },
+      errors: { email: 'Adresse e-mail invalide.', name: 'Indiquez votre nom.', weak: 'Mot de passe : 10 caractères minimum.', short: 'Au moins 10 caractères.', common: 'Ce mot de passe est trop courant.', personal: 'Évitez votre e-mail ou le nom de votre commerce.', long: 'Mot de passe trop long.', exists: 'Cet e-mail a déjà un compte — connectez-vous.', 'bad-creds': 'E-mail ou mot de passe incorrect.', 'bad-json': 'Requête invalide.', 'not-configured': 'Service momentanément indisponible.', fallback: 'Une erreur est survenue. Réessayez.', network: 'Erreur réseau. Réessayez.' }
     },
     en: {
       title: 'Kiwi · Your account', welcome: 'Welcome <em>to Kiwi</em>.',
       sub: 'Your entire business, one secure sign-in.', login: 'Sign in', signup: 'Create an account',
       email: 'Email', password: 'Password', name: 'Name', business: 'Business',
       language: 'Language', emailPlaceholder: 'you@example.com',
-      namePlaceholder: 'First and last name', businessPlaceholder: 'Atlas Café', passwordHint: 'Use at least 8 characters.',
+      namePlaceholder: 'First and last name', businessPlaceholder: 'Atlas Café', passwordHint: 'Use at least 10 characters.',
       create: 'Create my account', staff: 'Team access', revoked: 'Your session has ended. Please sign in again.',
       encrypted: 'Encrypted data', private: 'Never sold', flexible: 'No commitment',
       operatorBad: 'Incorrect operator code.', operatorCode: 'Operator code', enter: 'Enter',
-      errors: { email: 'Enter a valid email address.', name: 'Enter your name.', weak: 'Password must contain at least 8 characters.', exists: 'This email already has an account — sign in instead.', 'bad-creds': 'Incorrect email or password.', 'bad-json': 'Invalid request.', 'not-configured': 'Service temporarily unavailable.', fallback: 'Something went wrong. Please try again.', network: 'Network error. Please try again.' }
+      strength: { label: 'Strength', weak: 'weak', medium: 'medium', strong: 'strong' },
+      errors: { email: 'Enter a valid email address.', name: 'Enter your name.', weak: 'Password must contain at least 10 characters.', short: 'At least 10 characters.', common: 'This password is too common.', personal: 'Avoid your email or business name.', long: 'Password is too long.', exists: 'This email already has an account — sign in instead.', 'bad-creds': 'Incorrect email or password.', 'bad-json': 'Invalid request.', 'not-configured': 'Service temporarily unavailable.', fallback: 'Something went wrong. Please try again.', network: 'Network error. Please try again.' }
     },
     ar: {
       title: 'Kiwi · حسابك', welcome: 'مرحباً بك <em>في Kiwi</em>.',
       sub: 'كل ما تحتاجه لإدارة نشاطك، بحساب واحد.', login: 'تسجيل الدخول', signup: 'إنشاء حساب',
       email: 'البريد الإلكتروني', password: 'كلمة المرور', name: 'الاسم', business: 'اسم النشاط',
       language: 'اللغة', emailPlaceholder: 'name@example.com',
-      namePlaceholder: 'الاسم الكامل', businessPlaceholder: 'مقهى أطلس', passwordHint: 'استعمل 8 أحرف على الأقل.',
+      namePlaceholder: 'الاسم الكامل', businessPlaceholder: 'مقهى أطلس', passwordHint: 'استعمل 10 أحرف على الأقل.',
       create: 'إنشاء حسابي', staff: 'دخول فريق العمل', revoked: 'انتهت جلستك. يرجى تسجيل الدخول من جديد.',
       encrypted: 'بيانات مشفّرة', private: 'لا نبيع بياناتك', flexible: 'دون التزام',
       operatorBad: 'رمز المشغّل غير صحيح.', operatorCode: 'رمز المشغّل', enter: 'دخول',
-      errors: { email: 'أدخل بريداً إلكترونياً صحيحاً.', name: 'أدخل اسمك.', weak: 'يجب أن تتكون كلمة المرور من 8 أحرف على الأقل.', exists: 'يوجد حساب بهذا البريد — سجّل الدخول.', 'bad-creds': 'البريد الإلكتروني أو كلمة المرور غير صحيحة.', 'bad-json': 'الطلب غير صالح.', 'not-configured': 'الخدمة غير متاحة مؤقتاً.', fallback: 'حدث خطأ. حاول مرة أخرى.', network: 'تعذر الاتصال بالشبكة. حاول مرة أخرى.' }
+      strength: { label: 'القوة', weak: 'ضعيفة', medium: 'متوسطة', strong: 'قوية' },
+      errors: { email: 'أدخل بريداً إلكترونياً صحيحاً.', name: 'أدخل اسمك.', weak: 'يجب أن تتكون كلمة المرور من 10 أحرف على الأقل.', short: '10 أحرف على الأقل.', common: 'كلمة المرور هذه شائعة جداً.', personal: 'تجنب بريدك الإلكتروني أو اسم نشاطك.', long: 'كلمة المرور طويلة جداً.', exists: 'يوجد حساب بهذا البريد — سجّل الدخول.', 'bad-creds': 'البريد الإلكتروني أو كلمة المرور غير صحيحة.', 'bad-json': 'الطلب غير صالح.', 'not-configured': 'الخدمة غير متاحة مؤقتاً.', fallback: 'حدث خطأ. حاول مرة أخرى.', network: 'تعذر الاتصال بالشبكة. حاول مرة أخرى.' }
     }
   };
   const t = copy[lang];
@@ -959,7 +962,7 @@ function authPage(opts) {
         <input id="su-email" type="email" autocomplete="email" placeholder="${t.emailPlaceholder}" required />
       </label>
       <label>${t.password}
-        <input id="su-pass" type="password" autocomplete="new-password" placeholder="${t.passwordHint}" minlength="8" required />
+        <input id="su-pass" type="password" autocomplete="new-password" placeholder="${t.passwordHint}" minlength="10" required />
       </label>
       <p class="hint">${t.passwordHint}</p>
       <p class="err" id="su-err" role="alert"></p>
@@ -1010,8 +1013,11 @@ function authPage(opts) {
     fetch(u, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(data) })
       .then(function(r){
         if (r.ok){ location.assign(dest || '/dashboard'); return; }
-        return r.json().then(function(j){ errEl.textContent = fail(j && j.error); btn.disabled = false; },
-                             function(){ errEl.textContent = fail(); btn.disabled = false; });
+        return r.json().then(function(j){
+          var msg = (j && j.reason && MSG[j.reason]) || fail(j && j.error);
+          errEl.textContent = msg;
+          btn.disabled = false;
+        }, function(){ errEl.textContent = fail(); btn.disabled = false; });
       })
       .catch(function(){ errEl.textContent = MSG.network; btn.disabled = false; });
   }
@@ -1026,6 +1032,27 @@ function authPage(opts) {
     post('/auth/signup', { name: val('su-name'), business: val('su-biz'), email: val('su-email'), password: val('su-pass') },
          document.getElementById('su-err'), fSignup.querySelector('.go'), '/dashboard?onboarding=1&lang=${lang}');
   });
+
+  var suPass = document.getElementById('su-pass');
+  var suHint = document.querySelector('#form-signup .hint');
+  if (suPass && suHint) {
+    var STR = ${JSON.stringify(t.strength)};
+    suPass.addEventListener('input', function() {
+      var v = suPass.value || '';
+      if (!v) { suHint.textContent = '${t.passwordHint}'; return; }
+      if (v.length < 10) {
+        suHint.textContent = '${t.errors.short}' + ' · ' + STR.weak;
+        return;
+      }
+      var variety = 0;
+      if (/[a-z]/.test(v)) variety++;
+      if (/[A-Z]/.test(v)) variety++;
+      if (/[0-9]/.test(v)) variety++;
+      if (/[^a-zA-Z0-9]|\s/.test(v)) variety++;
+      var st = (v.length >= 16 || (v.length >= 12 && variety >= 2) || (v.length >= 10 && variety >= 3)) ? STR.strong : STR.medium;
+      suHint.textContent = STR.label + ' : ' + st;
+    });
+  }
 
   // Hidden operator entry — long-press (~1.4s) the wordmark to reveal the code
   // prompt. No visible affordance; clients never stumble onto it.

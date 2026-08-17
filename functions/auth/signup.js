@@ -2,7 +2,7 @@
 // lead. Body JSON: { email, name, business, password }.
 import {
   PASSWORD_MAX, hashPassword, makeSession, sessionCookie, json, normEmail, mirrorLead,
-  limitCheck, limitFail, limitClear,
+  limitCheck, limitFail, limitClear, passwordProblem,
 } from './_lib.js';
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
@@ -34,9 +34,10 @@ export async function onRequestPost(context) {
     await limitFail(request, env, 'signup');
     return json({ error: 'name' }, 400);
   }
-  if (password.length < 8 || password.length > PASSWORD_MAX) {
+  const problem = passwordProblem(password, { email, business });
+  if (problem) {
     await limitFail(request, env, 'signup');
-    return json({ error: 'weak' }, 400);
+    return json({ error: 'weak', reason: problem }, 400);
   }
 
   const existing = await env.DB.prepare('SELECT id FROM accounts WHERE email = ?').bind(email).first();
