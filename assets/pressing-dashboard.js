@@ -62,15 +62,28 @@
       return KiwiSales.totals(id, start, start + 86400000).revenue || 0;
     } catch (_) { return 0; }
   }
+  /* The ops snapshot freezes `status` when the till syncs. An order that crosses
+     its readyAt while the till is idle still reads 'trait' there, even though
+     summary() — which recomputes — already counts it ready. Deriving here keeps
+     the lists and the counters above them answering the same question. */
+  function effStatus(o) {
+    try {
+      if (window.KiwiPressingOps && KiwiPressingOps.orderStatus) {
+        return KiwiPressingOps.orderStatus(o.pieces, o.readyAt);
+      }
+    } catch (_) {}
+    return o.status;
+  }
   function statusLabel(o) {
-    if (o.status === 'pret') return ['Prêt', 'ready'];
-    if (o.status === 'trait') return ['En traitement', ''];
-    if (o.status === 'livre') return ['Retiré', 'muted'];
+    var st = effStatus(o);
+    if (st === 'pret') return ['Prêt', 'ready'];
+    if (st === 'trait') return ['En traitement', ''];
+    if (st === 'livre') return ['Retiré', 'muted'];
     var late = o.readyAt && new Date(o.readyAt).getTime() < Date.now();
     return late ? ['En attente de retrait', 'ready'] : ['Reçu', ''];
   }
   function sortedActive(s) {
-    return s.orders.filter(function (o) { return o.status !== 'livre'; }).sort(function (a,b) {
+    return s.orders.filter(function (o) { return effStatus(o) !== 'livre'; }).sort(function (a,b) {
       var al = a.readyAt && new Date(a.readyAt).getTime() < Date.now();
       var bl = b.readyAt && new Date(b.readyAt).getTime() < Date.now();
       if (al !== bl) return al ? -1 : 1;
@@ -95,7 +108,7 @@
     if (!rows.length) return empty('list', 'Aucune commande à afficher', 'Les nouveaux dépôts apparaîtront ici dès qu’ils seront enregistrés sur la caisse.', 'Nouveau dépôt', 'comptoir');
     return '<div class="pxd-order-list">' + rows.map(function (o) {
       var st = statusLabel(o);
-      var canCancel = o.status !== 'livre';
+      var canCancel = effStatus(o) !== 'livre';
       return '<div class="pxd-order" data-pxd-order="' + esc(o.id) + '">' +
         '<div><span class="pxd-order-id">' + esc(o.id) + '</span><span class="pxd-order-time">' + esc(when(o.readyAt)) + '</span></div>' +
         garmentPreview(o.pieces) +
@@ -143,7 +156,7 @@
     }).join('') + '</div>';
   }
   function rackBody(s) {
-    var ready = s.orders.filter(function (o) { return o.status === 'pret'; }).sort(function (a,b) { return new Date(a.readyAt || 0) - new Date(b.readyAt || 0); });
+    var ready = s.orders.filter(function (o) { return effStatus(o) === 'pret'; }).sort(function (a,b) { return new Date(a.readyAt || 0) - new Date(b.readyAt || 0); });
     if (!ready.length) return empty('rack', 'Rack disponible', 'Les commandes prêtes et leur emplacement apparaîtront ici.', 'Ouvrir le rangement', 'rangement');
     return '<div class="pxd-rack">' + ready.slice(0,5).map(function (o) {
       return '<div class="pxd-rack-row"><div><b>' + esc(o.customer && o.customer.name || o.id) + '</b><span>' + esc(o.id) + (o.notified ? ' · client prévenu' : ' · à prévenir') + '</span></div><span class="pxd-rack-slot">' + esc(o.rack || 'À ranger') + '</span></div>';
@@ -186,7 +199,7 @@
   function pageBody(nav) {
     var s = summary();
     var active = sortedActive(s);
-    if (nav === 'pressing-orders') return '<div class="pxd-page-grid"><section class="pxd-card">' + cardHead('list','Commandes actives','Triées par urgence et date de retrait','','') + orderRows(active) + '</section><section class="pxd-card">' + cardHead('check','Commandes retirées','Historique conservé pour le suivi client','','') + orderRows(s.orders.filter(function(o){return o.status==='livre';}),20) + '</section></div>';
+    if (nav === 'pressing-orders') return '<div class="pxd-page-grid"><section class="pxd-card">' + cardHead('list','Commandes actives','Triées par urgence et date de retrait','','') + orderRows(active) + '</section><section class="pxd-card">' + cardHead('check','Commandes retirées','Historique conservé pour le suivi client','','') + orderRows(s.orders.filter(function(o){return effStatus(o)==='livre';}),20) + '</section></div>';
     if (nav === 'pressing-workshop') return '<div class="pxd-page-grid"><section class="pxd-card">' + cardHead('workflow','Vue atelier','Une commande avance selon l’état réel de ses pièces','','') + flow(s) + '</section><section class="pxd-card">' + cardHead('clock','File de production','Promesses échues en premier, puis échéances les plus proches','','') + orderRows(active) + '</section></div>';
     if (nav === 'pressing-pickup') return '<div class="pxd-page-grid two"><section class="pxd-card">' + cardHead('rack','Prêtes au retrait','Rack, notification et solde sur le même écran','','') + rackBody(s) + '</section><section class="pxd-page-card"><h3>Retrait en trois gestes</h3><p>Recherchez le téléphone, confirmez les pièces, encaissez le solde.</p><div class="pxd-checks"><div class="pxd-check"><span>1 · Identifier le client</span><small>Téléphone ou scan</small></div><div class="pxd-check"><span>2 · Vérifier les pièces</span><small>Bon détaillé</small></div><div class="pxd-check"><span>3 · Libérer le rack</span><small>Après remise</small></div></div><button class="pxd-btn primary" style="margin-top:14px" data-pxd-open="retrait">Ouvrir le retrait express</button></section></div>';
     if (nav === 'pressing-services') {

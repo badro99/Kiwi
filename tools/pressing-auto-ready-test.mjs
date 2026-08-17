@@ -172,4 +172,66 @@ check('deliverOrder source has no readiness guard and delivers any order',
   caisseCode.includes('o.collectedAt = new Date();') &&
   caisseCode.includes('releaseSlot(o);'));
 
-console.log(`\n✓ All ${n} pressing auto-ready and early retrait checks passed.\n`);
+/* ── 6 · the stale-snapshot case ──────────────────────────────────────────────
+ * sanitizeOrder() freezes `status` when the till syncs. If the till then sits
+ * idle while an order crosses its readyAt — a shop closed for the evening — the
+ * owner dashboard used to read that frozen field and show "En traitement" under
+ * a ready count that had already moved. These checks pin the write-then-read
+ * gap: the snapshot stays frozen (it is a record of a moment), and every
+ * dashboard consumer derives on read instead. */
+const dashCode = read('assets/pressing-dashboard.js');
+const { ctx: staleCtx } = makeCaisseContext();
+vm.runInNewContext(opsCode, staleCtx, { filename: 'pressing-ops.js' });
+
+const staleOrders = [
+  { id: 'O-CROSSES', droppedAt: new Date(T - 7200000), readyAt: new Date(T),
+    pay: { mode: 'pickup', paid: 50 }, rack: 'R-04', pieces: [{ pid: '9', status: 'trait' }] },
+];
+
+const nowReal6 = Date.now;
+Date.now = () => T - 3600000;                    // sync an hour BEFORE the promise
+try {
+  staleCtx.KiwiPressingOps.replace(staleOrders, {
+    customer: () => ({ name: 'Soir Client', phone: '0600000001' }),
+    total: () => 50,
+  });
+} finally { Date.now = nowReal6; }
+
+const frozen = staleCtx.KiwiPressingOps.summary().orders.find((o) => o.id === 'O-CROSSES');
+check('snapshot freezes status at sync time (record of a moment, not a live value)',
+  frozen && frozen.status === 'trait');
+check('exported orderStatus derives pret once readyAt has passed',
+  staleCtx.KiwiPressingOps.orderStatus(frozen.pieces, frozen.readyAt, T + 1) === 'pret');
+
+/* Run the dashboard's own effStatus against the real ops module rather than
+   asserting on source text — a source match cannot prove the helper works. */
+const effSrc = dashCode.match(/function effStatus\(o\)\s*\{[\s\S]*?\n {2}\}/);
+check('pressing-dashboard.js defines effStatus', !!effSrc);
+if (effSrc) {
+  const effCtx = { window: { KiwiPressingOps: staleCtx.KiwiPressingOps }, Date };
+  effCtx.KiwiPressingOps = staleCtx.KiwiPressingOps;
+  vm.runInNewContext(effSrc[0] + '\n; globalThis.__eff = effStatus;', effCtx, { filename: 'eff.js' });
+  const nowReal7 = Date.now;
+  Date.now = () => T + 1;
+  try {
+    check('dashboard effStatus reads pret from a snapshot frozen at trait',
+      effCtx.__eff(frozen) === 'pret');
+  } finally { Date.now = nowReal7; }
+  const nowReal8 = Date.now;
+  Date.now = () => T - 1;
+  try {
+    check('dashboard effStatus still reads trait one ms before readyAt',
+      effCtx.__eff(frozen) === 'trait');
+  } finally { Date.now = nowReal8; }
+}
+
+/* Regression guard: every consumer that used to read the frozen field. */
+check('dashboard active list derives status', dashCode.includes("return effStatus(o) !== 'livre'; }).sort("));
+check('dashboard cancel guard derives status', dashCode.includes("var canCancel = effStatus(o) !== 'livre';"));
+check('dashboard rack ready list derives status', dashCode.includes("return effStatus(o) === 'pret'; }).sort("));
+check('dashboard delivered history derives status', dashCode.includes("return effStatus(o)==='livre';"));
+check('dashboard status label derives status', dashCode.includes('var st = effStatus(o);'));
+check('no dashboard consumer still reads the frozen o.status field',
+  (dashCode.match(/o\.status/g) || []).length === 1); // the fallback inside effStatus itself
+
+console.log(`\n✓ All ${n} pressing auto-ready, early retrait and snapshot-freshness checks passed.\n`);

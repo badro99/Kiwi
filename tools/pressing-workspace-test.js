@@ -36,9 +36,21 @@ ok(pairingJs.includes("if (t && ids[t]) return { kind: 'vertical', id: t }"), 'o
 const pairingMatch = caisse.match(/assets\/caisse-pairing\.js\?v=(\d+)/);
 ok(pairingMatch && sw.includes(`'/assets/caisse-pairing.js?v=${pairingMatch[1]}'`), 'pressing route fix bypasses the old cached pairing router');
 ok(caisse.includes('assets/pos-dispatch.js?v=24') && sw.includes("'/assets/pos-dispatch.js?v=24'") && dispatchJs.includes("file: 'pressing-caisse', rev: '31'") && sw.includes("'/assets/pressing-caisse.js?v=31'") && sw.includes("'/assets/pressing-caisse.css?v=31'"), 'pressing loader and lazy assets use deploy-stable cache revisions');
-ok(dashboard.includes('assets/pressing-dashboard.js?v=10'), 'dashboard loads the pressing subpages');
-ok(dashboard.includes('assets/pressing-ops.js?v=5') && caisse.includes('assets/pressing-ops.js?v=5'), 'dashboard and till share the same operations bridge');
-ok(sw.includes("'/assets/pressing-dashboard.css?v=9'") && sw.includes("'/assets/pressing-dashboard.js?v=10'"), 'pressing workspace is available offline');
+/* Read the stamp rather than pinning it: this assertion is about the dashboard
+   and the service worker agreeing, not about any particular version number.
+   A hardcoded literal here goes red on every legitimate bump-stamp run. */
+const pdMatch = dashboard.match(/assets\/pressing-dashboard\.js\?v=(\d+)/);
+ok(pdMatch, 'dashboard loads the pressing subpages');
+ok(pdMatch && sw.includes(`'/assets/pressing-dashboard.js?v=${pdMatch[1]}'`), 'pressing dashboard shell and service worker agree on one stamp');
+/* The claim is that both surfaces load the SAME bridge — pinning a number
+   asserts something weaker and breaks on every bump. Extract, then compare. */
+const opsMatch = dashboard.match(/assets\/pressing-ops\.js\?v=(\d+)/);
+ok(opsMatch && caisse.includes(`assets/pressing-ops.js?v=${opsMatch[1]}`), 'dashboard and till share the same operations bridge');
+/* Offline means the service worker precaches whatever the shell actually asks
+   for. Compare the two, don't freeze the numbers. */
+const pdCssMatch = dashboard.match(/assets\/pressing-dashboard\.css\?v=(\d+)/);
+ok(pdCssMatch && sw.includes(`'/assets/pressing-dashboard.css?v=${pdCssMatch[1]}'`)
+  && pdMatch && sw.includes(`'/assets/pressing-dashboard.js?v=${pdMatch[1]}'`), 'pressing workspace is available offline');
 ok(dashboard.includes('assets/pressing-catalog.js?v=4') && caisse.includes('assets/pressing-catalog.js?v=4') && sw.includes("'/assets/pressing-catalog.js?v=4'"), 'dashboard and till load the same offline pressing catalogue');
 ok(dashboard.includes('assets/pressing-garment-icons.js?v=2') && caisse.includes('assets/pressing-garment-icons.js?v=2') && sw.includes("'/assets/pressing-garment-icons.js?v=2'"), 'dashboard and till load the same product artwork');
 ok(!css.includes('body.is-pressing .page-head') && css.includes('.pressing-home { display: none !important; }'), 'pressing keeps the shared dashboard visible');

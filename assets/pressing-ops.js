@@ -236,5 +236,8 @@
     listeners.forEach(function (fn) { try { fn(rows); } catch (_) {} });
   });
 
-  window.KiwiPressingOps = { read: read, replace: replace, summary: summary, subscribe: subscribe, scope: scope, bindCloud: bindCloud, cancelOrder: cancelOrder };
+  /* `orderStatus` is exported so the owner dashboard derives readiness the same
+     way `summary()` does. The snapshot's stored `status` is frozen at sync time;
+     anything reading it after an order crosses `readyAt` gets a stale answer. */
+  window.KiwiPressingOps = { read: read, replace: replace, summary: summary, subscribe: subscribe, scope: scope, bindCloud: bindCloud, cancelOrder: cancelOrder, orderStatus: orderStatus };
 })();
