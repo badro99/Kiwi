@@ -267,5 +267,204 @@ const getMerchantParam = (u) => new URL(u, 'http://localhost').searchParams.get(
 ok(getMerchantParam(rpWith) === 'santos-store', 'pos-reprint.js queries /api/feed for santos-store with KiwiPlatform present');
 ok(getMerchantParam(rpWithout) === 'santos-store', 'pos-reprint.js queries /api/feed for santos-store via fallback without KiwiPlatform');
 
+// 6. assets/cloud-doc.js (KiwiCloudDoc.isReal())
+function testCloudDoc(withPlatform) {
+  const mem = new Map([['kiwiPairedVenue', JSON.stringify(santosFixture)]]);
+  const storage = { getItem: (k) => mem.get(k) || null, setItem: (k, v) => mem.set(k, String(v)), removeItem: (k) => mem.delete(k) };
+  const win = { localStorage: storage, addEventListener: () => {} };
+  win.window = win;
+  const ctx = vm.createContext({
+    window: win, localStorage: storage, console, Date, Math, JSON, Map, Set, Promise, Array, Object, String, Number, RegExp,
+    setTimeout: () => 0, setInterval: () => 0, clearTimeout: () => {},
+  });
+  if (withPlatform) vm.runInContext(src, ctx);
+  vm.runInContext(readAsset('assets/cloud-doc.js'), ctx);
+  return win.KiwiCloudDoc ? win.KiwiCloudDoc.isReal('v-1') : null;
+}
+ok(testCloudDoc(true) === true, 'cloud-doc.js isReal is true with KiwiPlatform present');
+ok(testCloudDoc(false) === true, 'cloud-doc.js isReal is true via fallback without KiwiPlatform');
+
+// 7. assets/hotel.js (isCustomHotel())
+function testHotel(withPlatform) {
+  const hotelFixture = { merchant: 'hotel-atlas', type: 'hotel', name: 'Atlas Hotel' };
+  const mem = new Map([
+    ['kiwiPairedVenue', JSON.stringify(hotelFixture)],
+    ['kiwiPaired', '1'],
+  ]);
+  const storage = { getItem: (k) => mem.get(k) || null, setItem: (k, v) => mem.set(k, String(v)), removeItem: (k) => mem.delete(k) };
+  const win = { localStorage: storage, addEventListener: () => {} };
+  win.window = win;
+  const ctx = vm.createContext({
+    window: win, localStorage: storage, console, Date, Math, JSON, Map, Set, Promise, Array, Object, String, Number, RegExp,
+    setTimeout: () => 0, setInterval: () => 0, clearTimeout: () => {},
+  });
+  if (withPlatform) vm.runInContext(src, ctx);
+  const hotelSrc = readAsset('assets/hotel.js');
+  const match = hotelSrc.match(/const isCustomHotel = \(\) => \{([\s\S]*?)\n  \};/);
+  if (!match) return null;
+  const fn = new Function('window', 'localStorage', match[1]);
+  return fn(win, storage);
+}
+ok(testHotel(true) === true, 'hotel.js isCustomHotel is true with KiwiPlatform present');
+ok(testHotel(false) === true, 'hotel.js isCustomHotel is true via fallback without KiwiPlatform');
+
+// 8. assets/hours.js (KiwiHours venueKey resolution)
+function testHours(withPlatform) {
+  const mem = new Map([['kiwiPairedVenue', JSON.stringify(santosFixture)]]);
+  const storage = { getItem: (k) => mem.get(k) || null, setItem: (k, v) => mem.set(k, String(v)), removeItem: (k) => mem.delete(k) };
+  let queriedKey = null;
+  const win = {
+    localStorage: storage,
+    addEventListener: () => {},
+    KiwiStore: {
+      define: (name) => ({
+        get: (k) => { queriedKey = k; return null; },
+        set: (v, k) => { queriedKey = k; },
+      }),
+      subscribe: () => {},
+    },
+  };
+  win.window = win;
+  const ctx = vm.createContext({
+    window: win, localStorage: storage, console, Date, Math, JSON, Map, Set, Promise, Array, Object, String, Number, RegExp,
+    setTimeout: () => 0, setInterval: () => 0, clearTimeout: () => {},
+  });
+  if (withPlatform) vm.runInContext(src, ctx);
+  vm.runInContext(readAsset('assets/hours.js'), ctx);
+  win.KiwiHours.get();
+  return queriedKey;
+}
+ok(testHours(true) === 'santos-store', 'hours.js queries store with santos-store with KiwiPlatform present');
+ok(testHours(false) === 'santos-store', 'hours.js queries store with santos-store via fallback without KiwiPlatform');
+
+// 9. assets/live-link.js (KiwiLive.merchant())
+function testLiveLink(withPlatform) {
+  const mem = new Map([['kiwiPairedVenue', JSON.stringify(santosFixture)]]);
+  const storage = { getItem: (k) => mem.get(k) || null, setItem: (k, v) => mem.set(k, String(v)), removeItem: (k) => mem.delete(k) };
+  const doc = { addEventListener: () => {}, readyState: 'complete' };
+  const win = {
+    localStorage: storage, document: doc, addEventListener: () => {}, KiwiEnv: { isReal: () => true },
+    location: { hostname: 'localhost', search: '' },
+    fetch: () => Promise.resolve({ ok: true, json: () => Promise.resolve({}) }),
+  };
+  win.window = win;
+  const ctx = vm.createContext({
+    window: win, document: doc, localStorage: storage, console, Date, Math, JSON, Map, Set, Promise, Array, Object, String, Number, RegExp,
+    fetch: win.fetch, location: win.location, encodeURIComponent, URLSearchParams: globalThis.URLSearchParams,
+    setTimeout: () => 0, setInterval: () => 0, clearTimeout: () => {},
+  });
+  if (withPlatform) vm.runInContext(src, ctx);
+  vm.runInContext(readAsset('assets/live-link.js'), ctx);
+  return win.KiwiLive ? win.KiwiLive.merchant() : null;
+}
+ok(testLiveLink(true) === 'santos-store', 'live-link.js resolves santos-store with KiwiPlatform present');
+ok(testLiveLink(false) === 'santos-store', 'live-link.js resolves santos-store via fallback without KiwiPlatform');
+
+// 10. assets/retail-scan.js (KiwiRetailScan storageKey resolution)
+function testRetailScan(withPlatform) {
+  const mem = new Map([['kiwiPairedVenue', JSON.stringify(santosFixture)]]);
+  const storage = { getItem: (k) => mem.get(k) || null, setItem: (k, v) => mem.set(k, String(v)), removeItem: (k) => mem.delete(k) };
+  let queriedKey = null;
+  const originalGetItem = storage.getItem;
+  storage.getItem = (k) => {
+    if (k && k.startsWith('kiwi:retailScan:v1:')) queriedKey = k;
+    return originalGetItem(k);
+  };
+  const makeEl = () => ({
+    isConnected: true,
+    appendChild: () => {},
+    setAttribute: () => {},
+    classList: { contains: () => false, add: () => {}, remove: () => {} },
+    addEventListener: () => {},
+    querySelector: () => makeEl(),
+    querySelectorAll: () => [],
+    textContent: '',
+    hidden: false,
+  });
+  const doc = {
+    addEventListener: () => {},
+    createElement: makeEl,
+    getElementById: () => null,
+    querySelector: () => makeEl(),
+    querySelectorAll: () => [],
+    body: { appendChild: () => {} },
+  };
+  const win = { localStorage: storage, document: doc, addEventListener: () => {} };
+  win.window = win;
+  const ctx = vm.createContext({
+    window: win, document: doc, localStorage: storage, console, Date, Math, JSON, Map, Set, Promise, Array, Object, String, Number, RegExp,
+    setTimeout: () => 0, setInterval: () => 0, clearTimeout: () => {},
+  });
+  if (withPlatform) vm.runInContext(src, ctx);
+  vm.runInContext(readAsset('assets/retail-scan.js'), ctx);
+  const root = { isConnected: true, appendChild: () => {}, querySelector: () => makeEl(), querySelectorAll: () => [] };
+  win.KiwiRetailScan.mount(root, 'boutique');
+  return queriedKey;
+}
+ok(testRetailScan(true) === 'kiwi:retailScan:v1:santos-store', 'retail-scan.js mounts on santos-store key with KiwiPlatform present');
+ok(testRetailScan(false) === 'kiwi:retailScan:v1:santos-store', 'retail-scan.js mounts on santos-store key via fallback without KiwiPlatform');
+
+// 11. assets/pressing-caisse.js (pvReal and pvName resolution)
+function testPressingCaisse(withPlatform) {
+  const mem = new Map([['kiwiPairedVenue', JSON.stringify(santosFixture)]]);
+  const storage = { getItem: (k) => mem.get(k) || null, setItem: (k, v) => mem.set(k, String(v)), removeItem: (k) => mem.delete(k) };
+  const win = { localStorage: storage, addEventListener: () => {} };
+  win.window = win;
+  const ctx = vm.createContext({
+    window: win, localStorage: storage, console, Date, Math, JSON, Map, Set, Promise, Array, Object, String, Number, RegExp,
+    setTimeout: () => 0, setInterval: () => 0, clearTimeout: () => {},
+  });
+  if (withPlatform) vm.runInContext(src, ctx);
+  const pSrc = readAsset('assets/pressing-caisse.js');
+  const match = pSrc.match(/function pvPaired\(\)[\s\S]*?function pvReal\(\)[\s\S]*?function pvName\(demo\) \{([\s\S]*?)\}/);
+  if (!match) return null;
+  const snippet = match[0] + '; return { real: pvReal(), name: pvName("demo") };';
+  const fn = new Function('window', 'localStorage', snippet);
+  return fn(win, storage);
+}
+const pcWith = testPressingCaisse(true);
+const pcWithout = testPressingCaisse(false);
+ok(pcWith && pcWith.real === true && pcWith.name === 'Santos Store', 'pressing-caisse.js pvReal and pvName resolve with KiwiPlatform present');
+ok(pcWithout && pcWithout.real === true && pcWithout.name === 'Santos Store', 'pressing-caisse.js pvReal and pvName resolve via fallback without KiwiPlatform');
+
+// 12. assets/pressing-catalog.js (KiwiPressingCatalog.read() scoped storage)
+function testPressingCatalog(withPlatform) {
+  const mem = new Map([
+    ['kiwiPairedVenue', JSON.stringify(santosFixture)],
+    ['kiwi:pressing-catalog:v1:santos-store', JSON.stringify({ items: [{ id: 'chemise', label: 'Chemise Santos Custom', updatedAt: 1000 }] })],
+  ]);
+  const storage = { getItem: (k) => mem.get(k) || null, setItem: (k, v) => mem.set(k, String(v)), removeItem: (k) => mem.delete(k) };
+  const win = { localStorage: storage, addEventListener: () => {} };
+  win.window = win;
+  const ctx = vm.createContext({
+    window: win, localStorage: storage, console, Date, Math, JSON, Map, Set, Promise, Array, Object, String, Number, RegExp,
+    setTimeout: () => 0, setInterval: () => 0, clearTimeout: () => {},
+  });
+  if (withPlatform) vm.runInContext(src, ctx);
+  vm.runInContext(readAsset('assets/pressing-catalog.js'), ctx);
+  const data = win.KiwiPressingCatalog ? win.KiwiPressingCatalog.read() : null;
+  const item = data && data.items && data.items.find((x) => x.id === 'chemise');
+  return item && item.label;
+}
+ok(testPressingCatalog(true) === 'Chemise Santos Custom', 'pressing-catalog.js reads scoped santos-store data with KiwiPlatform present');
+ok(testPressingCatalog(false) === 'Chemise Santos Custom', 'pressing-catalog.js reads scoped santos-store data via fallback without KiwiPlatform');
+
+// 13. assets/pressing-ops.js (KiwiPressingOps.scope())
+function testPressingOps(withPlatform) {
+  const mem = new Map([['kiwiPairedVenue', JSON.stringify(santosFixture)]]);
+  const storage = { getItem: (k) => mem.get(k) || null, setItem: (k, v) => mem.set(k, String(v)), removeItem: (k) => mem.delete(k) };
+  const win = { localStorage: storage, addEventListener: () => {} };
+  win.window = win;
+  const ctx = vm.createContext({
+    window: win, localStorage: storage, console, Date, Math, JSON, Map, Set, Promise, Array, Object, String, Number, RegExp,
+    setTimeout: () => 0, setInterval: () => 0, clearTimeout: () => {},
+  });
+  if (withPlatform) vm.runInContext(src, ctx);
+  vm.runInContext(readAsset('assets/pressing-ops.js'), ctx);
+  return win.KiwiPressingOps ? win.KiwiPressingOps.scope() : null;
+}
+ok(testPressingOps(true) === 'santos-store', 'pressing-ops.js resolves scope santos-store with KiwiPlatform present');
+ok(testPressingOps(false) === 'santos-store', 'pressing-ops.js resolves scope santos-store via fallback without KiwiPlatform');
+
 if (process.exitCode) process.exit(process.exitCode);
-console.log(`  ✓ pairing resolver (${pass} controls: pairing agreement, storage fallback, purge immediacy, fail-soft JSON, isPaired invariant, direct module tests with/without platform)`);
+console.log(`  ✓ pairing resolver (${pass} controls: pairing agreement, storage fallback, purge immediacy, fail-soft JSON, isPaired invariant, direct module tests with/without platform across 13 modules)`);

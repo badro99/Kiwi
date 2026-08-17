@@ -265,6 +265,10 @@
       if (dr) return dr;
     } catch (_) {}
     try {
+      if (window.KiwiPlatform && typeof window.KiwiPlatform.pairedMerchant === 'function') {
+        var pm = window.KiwiPlatform.pairedMerchant();
+        if (pm) return pm;
+      }
       var pv = JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
       if (pv && pv.merchant) return pv.merchant;
     } catch (_) {}

@@ -351,8 +351,8 @@
   /* Real/paired store never shows the demo "Pressing Marshan" customers, orders
      or name — it opens on its own empty counter. Local pitch demo unchanged.
      (Mirrors the pvReal() gate every other vertical uses.) */
-  function pvPaired() { try { return JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
-  function pvReal()   { try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || !!pvPaired(); } catch (_) { return !!pvPaired(); } }
+  function pvPaired() { try { return window.KiwiPlatform?.pairedVenue?.() || JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
+  function pvReal()   { try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || !!window.KiwiPlatform?.isPaired?.() || !!pvPaired(); } catch (_) { return !!pvPaired(); } }
   function pvName(demo) { var p = pvPaired(); return (p && p.name) || (pvReal() ? 'Mon pressing' : demo); }
 
   const CUSTOMERS = pvReal() ? [] : [

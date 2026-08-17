@@ -43,8 +43,14 @@
   }
   function icons() { try { if (window.lucide) window.lucide.createIcons(); } catch (_) {} }
 
-  function paired() { try { return JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
+  function paired() { try { return window.KiwiPlatform?.pairedVenue?.() || JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
   function venueKey(vertical) {
+    try {
+      if (window.KiwiPlatform && typeof window.KiwiPlatform.pairedMerchant === 'function') {
+        var pm = window.KiwiPlatform.pairedMerchant();
+        if (pm) return pm;
+      }
+    } catch (_) {}
     var p = paired();
     if (p && (p.merchant || p.venueId || p.id)) return String(p.merchant || p.venueId || p.id);
     try { var s = window.KiwiCloudDoc && window.KiwiCloudDoc.currentSlug(); if (s) return String(s); } catch (_) {}

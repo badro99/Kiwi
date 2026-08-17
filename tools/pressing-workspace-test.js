@@ -56,7 +56,8 @@ ok(opsMatch && caisse.includes(`assets/pressing-ops.js?v=${opsMatch[1]}`), 'dash
 const pdCssMatch = dashboard.match(/assets\/pressing-dashboard\.css\?v=(\d+)/);
 ok(pdCssMatch && sw.includes(`'/assets/pressing-dashboard.css?v=${pdCssMatch[1]}'`)
   && pdMatch && sw.includes(`'/assets/pressing-dashboard.js?v=${pdMatch[1]}'`), 'pressing workspace is available offline');
-ok(dashboard.includes('assets/pressing-catalog.js?v=4') && caisse.includes('assets/pressing-catalog.js?v=4') && sw.includes("'/assets/pressing-catalog.js?v=4'"), 'dashboard and till load the same offline pressing catalogue');
+const catMatch = dashboard.match(/assets\/pressing-catalog\.js\?v=(\d+)/);
+ok(catMatch && caisse.includes(`assets/pressing-catalog.js?v=${catMatch[1]}`) && sw.includes(`'/assets/pressing-catalog.js?v=${catMatch[1]}'`), 'dashboard and till load the same offline pressing catalogue');
 ok(dashboard.includes('assets/pressing-garment-icons.js?v=2') && caisse.includes('assets/pressing-garment-icons.js?v=2') && sw.includes("'/assets/pressing-garment-icons.js?v=2'"), 'dashboard and till load the same product artwork');
 ok(!css.includes('body.is-pressing .page-head') && css.includes('.pressing-home { display: none !important; }'), 'pressing keeps the shared dashboard visible');
 ok(pressingJs.includes("window.addEventListener('click'") && pressingJs.includes('open.dataset.pxdOpen') && pressingJs.includes('page.dataset.pxdPage'), 'pressing subpage actions claim sidebar routing before the generic dashboard');

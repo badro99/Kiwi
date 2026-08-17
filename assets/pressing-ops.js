@@ -27,6 +27,10 @@
       if (v) return slug(v.slug || v.id || v.name);
     } catch (_) {}
     try {
+      if (window.KiwiPlatform && typeof window.KiwiPlatform.pairedMerchant === 'function') {
+        var pm = window.KiwiPlatform.pairedMerchant();
+        if (pm) return slug(pm);
+      }
       var p = JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
       if (p) return slug(p.merchant || p.slug || p.venueId || p.name);
     } catch (_) {}

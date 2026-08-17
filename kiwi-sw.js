@@ -90,9 +90,9 @@ var SHELL = [
   '/assets/trade-workspace-schema.js?v=4',
   '/assets/trade-workspaces.js?v=3',
   '/assets/reservations.js?v=8',
-  '/assets/pressing-ops.js?v=6',
+  '/assets/pressing-ops.js?v=7',
   '/assets/pressing-garment-icons.js?v=2',
-  '/assets/pressing-catalog.js?v=4',
+  '/assets/pressing-catalog.js?v=5',
   '/assets/pressing-dashboard.js?v=12',
   '/assets/pressing-products/chemise.png',
   '/assets/pressing-products/tshirt.png',
@@ -149,7 +149,7 @@ var SHELL = [
   '/assets/platform-ops.css?v=1',
   '/assets/operations.js?v=10',
   '/assets/operations-ui.js?v=11',
-  '/assets/live-link.js?v=9',
+  '/assets/live-link.js?v=10',
   '/assets/channel-sales.js?v=3',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
@@ -242,7 +242,7 @@ var SHELL = [
   '/assets/pos-dispatch.js?v=27',
   '/assets/retail-scan.css?v=6',
   '/assets/vendor/zxing-browser.min.js?v=1',
-  '/assets/retail-scan.js?v=5',
+  '/assets/retail-scan.js?v=6',
   '/assets/caisse-dna.css?v=3',
   '/assets/caisse-dna.js?v=2',
   '/assets/pos-mobile.js?v=3',
@@ -290,8 +290,8 @@ var SHELL = [
      qu'il faut pouvoir ressortir le ticket. Un bouton de secours qui a besoin du
      réseau n'est pas un secours. */
   '/assets/pos-reprint.js',
-  '/assets/pressing-caisse.js?v=31',
-  '/assets/pressing-caisse.css?v=31',
+  '/assets/pressing-caisse.js?v=33',
+  '/assets/pressing-caisse.css?v=33',
   '/assets/lucide.min.js',
   '/assets/kiwi-favicon-new.svg',
   '/assets/kiwi-newlogo.svg',

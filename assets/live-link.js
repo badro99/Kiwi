@@ -144,6 +144,10 @@
       // real answer — and it is account-scoped (kiwiPairedVenue is purged on an
       // account switch), so it can never be another merchant's leftover.
       try {
+        if (window.KiwiPlatform && typeof window.KiwiPlatform.pairedMerchant === 'function') {
+          var pm = window.KiwiPlatform.pairedMerchant();
+          if (pm) return pm;
+        }
         var pv = JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
         if (pv && pv.merchant) return pv.merchant;
       } catch (_) {}

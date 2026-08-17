@@ -94,6 +94,10 @@
   function scope() {
     try { if (window.KiwiPressingOps && KiwiPressingOps.scope) return KiwiPressingOps.scope(); } catch (_) {}
     try {
+      if (window.KiwiPlatform && typeof window.KiwiPlatform.pairedMerchant === 'function') {
+        var pm = window.KiwiPlatform.pairedMerchant();
+        if (pm) return cleanText(pm, 120).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+      }
       var p = JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
       return cleanText(p && (p.merchant || p.slug || p.venueId || p.name), 120).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
     } catch (_) { return ''; }

@@ -120,6 +120,9 @@
          L'appairage ne donne aucun droit ici : /api/store vérifie encore le
          cookie httpOnly kiwi_till et le slug. Il dit seulement au navigateur
          qu'il doit tenter la synchronisation de CE terminal réel. */
+      if (window.KiwiPlatform && typeof window.KiwiPlatform.isPaired === 'function') {
+        if (window.KiwiPlatform.isPaired()) return true;
+      }
       var pv = window.KiwiCaissePairing && window.KiwiCaissePairing.pairedVenue
         && window.KiwiCaissePairing.pairedVenue();
       if (pv && pv.merchant) return true;
