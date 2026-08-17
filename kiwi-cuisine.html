@@ -388,6 +388,14 @@
 <!-- Le transport, partagé avec la caisse : même route, même garde, même
      protocole. La cuisine LIT et fait avancer ; la caisse ÉCRIT. -->
 <script src="assets/kitchen-relay.js?v=3" defer></script>
+<!-- L'appairage, partagé avec la caisse. Une tablette du passe change de
+     commerçant sans que personne ne se connecte — exactement comme une caisse —
+     et doit donc oublier le commerce précédent de la même façon. Ces deux-là
+     sont dans la coquille hors-ligne : une cuisine se ré-appaire souvent dans un
+     réseau douteux, et absents, l'écran s'ouvrirait chez B avec l'état de A.
+     tenant-purge AVANT pairing-commit : c'est la liste que la purge consomme. -->
+<script src="assets/tenant-purge.js?v=1" defer></script>
+<script src="assets/pairing-commit.js?v=1" defer></script>
 <script>
 /* ═══════════════════════════════════════════════════════════════════════════
  * KIWI CUISINE — l'écran du passe
@@ -495,16 +503,26 @@
             : 'Code invalide ou expiré.');
           return;
         }
-        var v = { merchant: j.merchant, type: j.type || '', subtype: j.subtype || '', name: j.name || '' };
-        put('kiwiLiveMerchant', v.merchant);
-        put('kiwiPaired', '1');
-        put('kiwiLive', '1');
-        put('kiwiPairedVenue', JSON.stringify(v));
-        /* Nouveau commerce ⇒ l'état local de l'ANCIEN n'a plus de sens : les
-           bons « je m'en occupe » désignaient la cuisine d'un autre
-           restaurant. */
-        put(COOK_KEY, '[]');
-        S.cooking = {}; S.orders = {}; S.since = 0; S.seen = {};
+        /* Poser l'appairage passe par le geste PARTAGÉ avec la caisse
+           (assets/pairing-commit.js). Écrire les quatre clés ici, comme on le
+           faisait, laissait cette tablette hériter de tout l'état local du
+           commerce précédent : ses ventes, son catalogue, ses établissements,
+           son service en cours — mêmes clés, même origine que la caisse, sans
+           la purge. Le module manque ⇒ on REFUSE d'appairer, plutôt que de
+           lier un nouveau commerçant par-dessus les données de l'ancien. */
+        var commit = window.KiwiPairingCommit && window.KiwiPairingCommit.commit;
+        if (!commit) { padFail('Écran incomplet. Recharge la page.'); return; }
+        var res = commit(code, j, {
+          /* Nouveau commerce ⇒ l'état local de l'ANCIEN n'a plus de sens : les
+             bons « je m'en occupe » désignaient la cuisine d'un autre
+             restaurant. La purge partagée emporte déjà COOK_KEY ; la mémoire
+             vive de CETTE page, elle, n'appartient qu'à elle. */
+          onTenantSwitch: function () { S.cooking = {}; S.orders = {}; S.since = 0; S.seen = {}; },
+        });
+        if (!res || !res.ok) { padFail('Appairage impossible. Recharge la page.'); return; }
+        /* Ré-appairage au MÊME commerce (on rebranche la même cuisine) : rien
+           n'a été purgé, mais la file repart d'un état propre comme avant. */
+        if (!res.switched) { put(COOK_KEY, '[]'); S.cooking = {}; S.orders = {}; S.since = 0; S.seen = {}; }
         start();
       })
       .catch(function () { padFail('Connexion impossible. Vérifie le wifi.'); });

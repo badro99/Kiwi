@@ -178,7 +178,11 @@ var SHELL = [
   /* Ce qui appartient à un commerçant. Dans la coquille parce que la purge se
      déclenche au ré-appairage, et qu'un ré-appairage se fait souvent dans un
      réseau douteux : absente, la caisse s'ouvrirait chez B avec les ventes de A. */
-  '/assets/tenant-purge.js',
+  '/assets/tenant-purge.js?v=1',
+  /* Le geste qui pose un appairage — et qui déclenche la purge ci-dessus. La
+     caisse ET l'écran cuisine passent par lui : absent, l'un des deux lierait un
+     nouveau commerçant par-dessus les données de l'ancien. */
+  '/assets/pairing-commit.js?v=1',
   '/assets/identity.js?v=2',
   '/assets/caisse-link.js?v=8',
   '/assets/operator-access.js',
@@ -284,7 +288,7 @@ var SHELL = [
   '/assets/pos-gym.js?v=2',
   '/assets/pos-autre.css?v=2',
   '/assets/pos-autre.js?v=2',
-  '/assets/caisse-pairing.js?v=6',
+  '/assets/caisse-pairing.js?v=7',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là
      qu'il faut pouvoir ressortir le ticket. Un bouton de secours qui a besoin du

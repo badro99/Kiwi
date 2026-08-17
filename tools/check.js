@@ -851,6 +851,11 @@ section('Whole-project regressions');
     'caisse-stock-test.mjs',
     'inventory-ledger-test.mjs',
     'pairing-resolver-test.mjs',
+    /* pairing-resolver vérifie qui LIT l'appairage ; celui-ci vérifie qu'il n'y
+       a qu'un seul ÉCRIVAIN. La cuisine s'appaire sur la même route que la
+       caisse et écrivait les quatre clés à la main — sans la purge du commerce
+       précédent. */
+    'pairing-parity-test.mjs',
     'caisse-stock-sync-test.mjs',
     'phone-test.mjs',
     'clients-sync-test.mjs',

@@ -32,6 +32,12 @@
        bons cuisine et les mouvements d'espèces — c'est-à-dire l'argent d'un
        commerce, qu'une caisse ré-appairée pousserait sous le nom de l'autre. */
     'kiwi-caisse-shift', 'kiwiTillStaff',
+    /* La file du passe. Une tablette de cuisine s'appaire elle aussi
+       (kiwi-cuisine.html), et les bons « je m'en occupe » qu'elle garde
+       désignent la cuisine d'un commerce précis. kiwiCuisineMute, lui, n'est
+       PAS ici : le son coupé est une préférence de cette tablette, pas la
+       donnée d'un commerçant. */
+    'kiwiCuisineCookingV2',
   ];
   // Toute clé commençant par l'un de ces préfixes est de la donnée par
   // établissement → elle part au changement de commerçant.

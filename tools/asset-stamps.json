@@ -60,8 +60,8 @@
     "sha": "5dd5229188e8ff8e"
   },
   "assets/caisse-pairing.js": {
-    "v": "6",
-    "sha": "055a3b842937fa4f"
+    "v": "7",
+    "sha": "d534e92eea4fffff"
   },
   "assets/caisse-pwa.js": {
     "v": "380",
@@ -286,6 +286,10 @@
   "assets/pages-pro.js": {
     "v": "2061",
     "sha": "4a25e4240b3ace16"
+  },
+  "assets/pairing-commit.js": {
+    "v": "1",
+    "sha": "83f9e0cf3f55606c"
   },
   "assets/phone.js": {
     "v": "1",
@@ -534,6 +538,10 @@
   "assets/team.js": {
     "v": "275",
     "sha": "9e45a533bd9346a0"
+  },
+  "assets/tenant-purge.js": {
+    "v": "1",
+    "sha": "a118015a9b97ba95"
   },
   "assets/tokens.css": {
     "v": "2050",

@@ -39,14 +39,11 @@
   function pairedVenue() { try { return JSON.parse(ls('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
 
   /* Tenant data leaves with the pairing; hardware identity stays with the
-     physical till. KiwiTenantPurge quite correctly removes every `kiwi:` key,
-     so preserve the POS device suffix explicitly around that shared purge. */
+     physical till. Implemented once in assets/pairing-commit.js — the kitchen
+     screen pairs through the same door and must purge the same way. */
   function purgeTenantData() {
-    var deviceTag = ls('kiwi:posDevice');
-    try {
-      if (window.KiwiTenantPurge && window.KiwiTenantPurge.purge) window.KiwiTenantPurge.purge();
-    } catch (_) {}
-    if (deviceTag) set('kiwi:posDevice', deviceTag);
+    var commit = window.KiwiPairingCommit;
+    if (commit && commit.purgeTenantData) commit.purgeTenantData();
   }
 
   // Same-device hand-off: the dashboard opens kiwi-caisse.html?pair=1 in this
@@ -117,82 +114,37 @@
 
   /* ── redeem: backend first, fail-soft to the same-browser map ──────────── */
   function applyPairing(code, d) {
-    var venue = {
-      merchant: d.merchant || '', venueId: d.venueId || '', type: d.type || '',
-      subtype: d.subtype || '', name: d.name || '', location: d.location || '',
-    };
-    // Re-binding to a DIFFERENT store: the cashier who unlocked the old till is
-    // not standing at this one, and their code belongs to the other store's
-    // roster. Forget them so the staff pad asks again.
-    try {
-      var was = pairedVenue();
-      if (was && was.merchant && was.merchant !== venue.merchant) {
+    /* Poser l'appairage est un geste PARTAGÉ : la caisse n'est pas le seul
+     * appareil qui s'appaire (kiwi-cuisine.html le fait aussi, sur la même
+     * route). Il vit donc une fois, dans assets/pairing-commit.js, et ce qui
+     * reste ici est ce qui n'appartient qu'à la caisse : le caissier et la
+     * boutique appairée. Le module manque ⇒ on REFUSE d'appairer plutôt que de
+     * lier un nouveau commerçant par-dessus les données de l'ancien. */
+    var commit = window.KiwiPairingCommit && window.KiwiPairingCommit.commit;
+    if (!commit) {
+      var err = new Error('pairing-commit-unavailable');
+      if (window.KiwiReportError) window.KiwiReportError(err, 'tenant:pairing_commit_missing');
+      return { ok: false, error: 'commit-unavailable' };
+    }
+    return commit(code, d, {
+      // Re-binding to a DIFFERENT store: the cashier who unlocked the old till is
+      // not standing at this one, and their code belongs to the other store's
+      // roster. Forget them so the staff pad asks again.
+      onTenantSwitch: function () {
         setStaff(null);
         window.__kiwiPairedBoutiqueVenue = null;
-        /* …et le SERVICE de l'autre commerce avec le caissier. Oublier la
-           personne sans oublier sa caisse ne suffisait pas : le service ouvert
-           chez A — journal, additions, tickets cuisine, mouvements d'espèces —
-           restait en place, et le rapport de journée suivant le poussait sous
-           le nom de B, jusque sur le serveur. Le raisonnement est le même que
-           trois lignes plus haut : ce qui appartenait à l'autre commerce n'a
-           rien à faire ici.
-
-           Effacé MAINTENANT, et pas seulement contrôlé au rechargement : la
-           caisse garde son journal en mémoire, et le prochain autosave (toutes
-           les 5 s) le réécrirait estampillé du nouveau commerçant — un blob
-           qui dit B en contenant A passe alors tous les contrôles au
-           rechargement. La garde à la relecture rattrape les appareils déjà
-           dans cet état ; celle-ci empêche d'y entrer. */
-        try { localStorage.removeItem('kiwi-caisse-shift'); } catch (_) {}
-
-        /* ── ET TOUT LE RESTE DE L'AUTRE COMMERCE ────────────────────────────
-           Le caissier et le service partaient ; le JOURNAL DES VENTES restait.
-           Une caisse ré-appairée d'une enseigne à une autre gardait donc, sous
-           le nom du nouveau commerçant : ses ventes de la semaine (kiwi:bqDay),
-           son catalogue, son carnet de clientes, ses réglages par établissement.
-           Concrètement, chez un client : l'écran « Échanges & avoirs » listait
-           les ventes d'un AUTRE commerce, « Réimprimer » proposait leurs
-           tickets, et l'en-tête comptait l'une d'elles dans la recette du jour.
-           Constaté le 30/07/2026 sur une caisse en production.
-
-           Le tableau de bord connaît déjà cette porte-là : identity.js purge
-           l'état du locataire quand un AUTRE COMPTE se connecte. Mais une caisse
-           ne se connecte pas — elle s'appaire. La deuxième porte n'avait pas de
-           serrure. On appelle donc exactement la même purge, plutôt que d'en
-           écrire une seconde qui divergera au premier ajout de clé.
-
-           Purge AVANT d'écrire kiwiLiveMerchant : la règle balaye tout ce qui
-           commence par « kiwi: », et l'ordre inverse effacerait l'appairage
-           qu'on vient de poser. */
-        purgeTenantData();
-      }
-    } catch (err) {
-      if (window.KiwiReportError) window.KiwiReportError(err, 'tenant:caisse_tenant_switch_purge_failed');
-    }
-    set('kiwiLiveMerchant', venue.merchant);
-    set('kiwiLive', '1');
-    set('kiwiPaired', '1');
-    set('kiwiPairedVenue', JSON.stringify(venue));
-    /* Surfaces paint their store name at DOMContentLoaded, which is BEFORE redeem()
-     * has answered — so on a re-pair they kept the previous store's name (the till
-     * said "Caissier · Amira Boutique" while bound to the restaurant). Announce the
-     * binding so they can repaint. */
-    try { document.dispatchEvent(new CustomEvent('kiwi-paired', { detail: venue })); } catch (_) {}
-    // Reflect "connected" back into the map so the dashboard tab's storage
-    // listener flips its status pill to "Caisse connectée" (same-browser). The
-    // hand-off path carries no code, so record one against the store itself —
-    // connectedCodeFor() only looks at merchant + status, and without a row the
-    // panel would sit on "En attente de la caisse…" next to a working till.
-    try {
-      var map = readMap();
-      var key = code || ('dev:' + venue.merchant);
-      map[key] = map[key] || { merchant: venue.merchant, venueId: venue.venueId, type: venue.type,
-        subtype: venue.subtype, name: venue.name, location: venue.location, createdAt: Date.now() };
-      map[key].status = 'connected';
-      map[key].connectedAt = Date.now();
-      set('kiwiPairings', JSON.stringify(map));
-    } catch (_) {}
-    return { ok: true, venue: venue };
+        /* Le SERVICE de l'autre commerce, le JOURNAL DES VENTES, le catalogue,
+           le carnet de clientes — tout cela part aussi, mais dans
+           pairing-commit.js : ce n'est pas propre à la caisse. Historique de
+           cette purge, pour qui la remettrait en cause : une caisse ré-appairée
+           d'une enseigne à une autre affichait, chez un client en production le
+           30/07/2026, les ventes d'un AUTRE commerce dans « Échanges & avoirs »,
+           leurs tickets dans « Réimprimer », et l'une d'elles dans la recette du
+           jour. Le tableau de bord fermait déjà cette porte-là (identity.js, au
+           changement de COMPTE) ; une caisse, elle, ne se connecte pas — elle
+           s'appaire, et cette seconde porte n'avait pas de serrure. */
+      },
+    });
   }
   function localRedeem(code) {
     var map = readMap();

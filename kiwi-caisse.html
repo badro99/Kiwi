@@ -4717,9 +4717,12 @@
   <!-- Ce qui appartient à un commerçant, et part quand cet appareil en change.
        AVANT caisse-pairing.js : c'est l'appairage qui déclenche la purge, et une
        serrure chargée après la porte ne ferme rien. -->
-  <script src="assets/tenant-purge.js" defer></script>
+  <script src="assets/tenant-purge.js?v=1" defer></script>
+  <!-- Le geste partagé qui pose l'appairage et déclenche cette purge. Partagé
+       avec kiwi-cuisine.html, qui s'appaire sur la même route. -->
+  <script src="assets/pairing-commit.js?v=1" defer></script>
   <!-- Hosted: 6-digit pairing pad binds this caisse to its store (no demo PINs). -->
-  <script src="assets/caisse-pairing.js?v=6" defer></script>
+  <script src="assets/caisse-pairing.js?v=7" defer></script>
   <!-- La copie serveur des données d'établissement (fidélité, carnet) : une
        caisse neuve doit retrouver le magasin, pas repartir vide. AVANT
        venue-store.js, qui s'y branche. -->
