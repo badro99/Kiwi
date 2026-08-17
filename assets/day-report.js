@@ -134,7 +134,9 @@
       var pv = window.KiwiCaissePairing && window.KiwiCaissePairing.pairedVenue
         && window.KiwiCaissePairing.pairedVenue();
       if (pv && pv.merchant) return pv.merchant;
-    } catch (_) {}
+    } catch (err) {
+      if (window.KiwiReportError) window.KiwiReportError(err, 'ledger:day_report_paired_merchant_scope_failed');
+    }
     try {
       var pv2 = JSON.parse(ls('kiwiPairedVenue') || 'null');
       if (pv2 && pv2.name) return slugStore(pv2.name);

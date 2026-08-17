@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted — fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v436';
+var CACHE = 'kiwi-app-v437';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -135,13 +135,13 @@ var SHELL = [
   // offline with no table geometry at all.
   '/assets/floorplan-core.js',
   '/assets/oppo-cards.js',
-  '/assets/dashboard-pwa.js?v=379',
+  '/assets/dashboard-pwa.js?v=380',
   '/assets/dashboard-native.js',
   '/assets/pwa-update.js?v=358',
   '/assets/caisse-skin.css?v=3',
   '/assets/pos-mobile.css?v=3',
   '/assets/caisse-motion.js',
-  '/assets/caisse-pwa.js?v=378',
+  '/assets/caisse-pwa.js?v=379',
   '/assets/vendor/dexie.min.js',
   '/assets/offline-db.js?v=3',
   '/assets/platform-kernel.js?v=2',
@@ -155,7 +155,7 @@ var SHELL = [
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
      dans un sous-sol sans wifi, et c'est précisément le moment où le Z doit
      s'écrire et s'imprimer. La remontée serveur, elle, retentera plus tard. */
-  '/assets/day-report.js?v=2',
+  '/assets/day-report.js?v=3',
   '/assets/day-report-dash.js?v=2',
   '/assets/day-report-export.js?v=3',
   /* Les horaires d'ouverture. Dans la coquille hors-ligne parce que la caisse
@@ -215,7 +215,7 @@ var SHELL = [
   '/assets/menu-catalog.js?v=4',
   '/assets/restaurant-recipes.js?v=3',
   '/assets/restaurant-units.js',
-  '/assets/employee-live.js?v=378',
+  '/assets/employee-live.js?v=379',
   '/assets/employee-planning.js?v=3',
   '/assets/employee-trade-shell.css?v=1',
   '/assets/employee-trade-shell.js?v=2',
@@ -284,7 +284,7 @@ var SHELL = [
   '/assets/pos-gym.js',
   '/assets/pos-autre.css',
   '/assets/pos-autre.js',
-  '/assets/caisse-pairing.js?v=5',
+  '/assets/caisse-pairing.js?v=6',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là
      qu'il faut pouvoir ressortir le ticket. Un bouton de secours qui a besoin du

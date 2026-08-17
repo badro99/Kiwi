@@ -364,7 +364,9 @@
   function disconnectUsb() {
     try {
       if (usb.device && usb.device.opened) {
-        usb.device.releaseInterface(usb.iface).catch(function () {}).then(function () {
+        usb.device.releaseInterface(usb.iface).catch(function (err) {
+          if (window.KiwiReportError) window.KiwiReportError(err, 'hardware:printer_usb_release_interface_failed');
+        }).then(function () {
           try { usb.device.close(); } catch (_) {}
         });
       }

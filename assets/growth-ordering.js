@@ -144,7 +144,9 @@
         const pv = JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
         return !!(pv?.merchant || localStorage.getItem('kiwiLiveMerchant'));
       }
-    } catch (_) {}
+    } catch (err) {
+      if (window.KiwiReportError) window.KiwiReportError(err, 'growth:ordering_demo_isolation_failed');
+    }
     return false;
   };
   const ordBiz = () => {

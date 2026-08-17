@@ -166,7 +166,9 @@
            qu'on vient de poser. */
         purgeTenantData();
       }
-    } catch (_) {}
+    } catch (err) {
+      if (window.KiwiReportError) window.KiwiReportError(err, 'tenant:caisse_tenant_switch_purge_failed');
+    }
     set('kiwiLiveMerchant', venue.merchant);
     set('kiwiLive', '1');
     set('kiwiPaired', '1');
@@ -220,7 +222,11 @@
     purgeTenantData();
     window.__kiwiPairedBoutiqueVenue = null;
     setStaff(null);                     // this device is nobody's till any more
-    try { if (window.KiwiPosDispatch && window.KiwiPosDispatch.lock) window.KiwiPosDispatch.lock(); } catch (_) {}
+    try {
+      if (window.KiwiPosDispatch && window.KiwiPosDispatch.lock) window.KiwiPosDispatch.lock();
+    } catch (err) {
+      if (window.KiwiReportError) window.KiwiReportError(err, 'tenant:unpair_sale_lock_failed');
+    }
     showPad();
   }
 
@@ -617,7 +623,9 @@
         };
         window.KiwiPosDispatch.__cpWrapped = true;
       }
-    } catch (_) {}
+    } catch (err) {
+      if (window.KiwiReportError) window.KiwiReportError(err, 'tenant:sale_lock_wrapper_failed');
+    }
 
     /* Explicit same-device hand-off from the dashboard ("Ouvrir la caisse sur cet
      * appareil"): redeem the freshly-issued code with no typing, on any env.
