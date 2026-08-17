@@ -146,7 +146,10 @@
         })
         .then(function (j) { if (j && j.ok && j.code && j.code !== localCode) adoptServerCode(localCode, j.code, biz); })
         .catch(function () { remoteState = 'absent'; applyRemoteState(); });   // offline/static host → same-browser demo
-    } catch (_) {}
+    } catch (_) {
+      remoteState = 'absent';
+      applyRemoteState();
+    }
   }
   function adoptServerCode(localCode, serverCode, biz) {
     var m = readMap(), now = Date.now();

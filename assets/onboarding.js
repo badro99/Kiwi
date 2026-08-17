@@ -633,7 +633,11 @@
         profile: { goals: S.goals, venueCount: S.venueCount, owner: S.ownerName.trim() },
       });
       if (vid && KiwiVenue.setVenue) KiwiVenue.setVenue(vid);
-    } catch (_) {}
+    } catch (_) {
+      if (typeof Kiwi !== 'undefined' && Kiwi.toast) {
+        Kiwi.toast('Impossible d’enregistrer l’établissement', { type: 'warn', force: true });
+      }
+    }
 
     /* Seed the entered staff into the REAL per-venue roster (team.js) so they
      * persist and show on the Équipe page — not just the login-lock's kiwiPins. */

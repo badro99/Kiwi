@@ -1860,8 +1860,12 @@
         if (!j || !j.ok) return;
         c.updatedTs = +j.updatedTs || c.updatedTs;
         if (empty) c.explicitEmpty = false;
-      }).catch(function () {});                    // fire-and-forget, fail-soft
-    } catch (_) {}
+      }).catch(function () {
+        if (window.Kiwi?.toast) window.Kiwi.toast('Échec de synchronisation de la carte', { type: 'warn', force: true });
+      });
+    } catch (_) {
+      if (window.Kiwi?.toast) window.Kiwi.toast('Échec de synchronisation de la carte', { type: 'warn', force: true });
+    }
   }
   function schedulePublish(vid) {
     if (!isRealSession()) return;

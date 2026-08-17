@@ -46,6 +46,16 @@
         return;
       }
     } catch (_) {}
+    try {
+      if (document.body) {
+        var fb = document.createElement('div');
+        fb.setAttribute('role', 'alert');
+        fb.style.cssText = 'position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f2937;color:#fff;padding:8px 16px;border-radius:8px;z-index:99999;font-size:14px;';
+        fb.innerHTML = '<div style="font-weight:600">' + esc(msg) + '</div>' + (desc ? '<div style="opacity:.7;font-size:.85em;margin-top:2px">' + esc(desc) + '</div>' : '');
+        document.body.appendChild(fb);
+        setTimeout(function () { fb.remove(); }, 2500);
+      }
+    } catch (_) {}
   }
 
   var ICON = {

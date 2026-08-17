@@ -2185,7 +2185,13 @@ ar: {
           /* Le vestige a fini son office : il disparaît, pour qu'aucun écran ne
            * puisse plus afficher deux horaires différents du même commerce. */
           try { localStorage.removeItem('kiwiSet:hours'); } catch (_) {}
-          try { if (vd.hours && KV && KV.updateVenue) KV.updateVenue(KV.getVenue(), { hours: '' }); } catch (_) {}
+          try {
+            if (vd.hours && KV && KV.updateVenue) KV.updateVenue(KV.getVenue(), { hours: '' });
+          } catch (_) {
+            if (typeof Kiwi !== 'undefined' && Kiwi.toast) {
+              Kiwi.toast('Erreur de réinitialisation des horaires', { type: 'warn', force: true });
+            }
+          }
           document.querySelectorAll('.kiwi-drawer-backdrop').forEach((b) => b.__kiwiClose && b.__kiwiClose());
           setTimeout(() => { try { handlers.settings(); } catch (_) {} }, 110);
         },

@@ -110,7 +110,10 @@
           ? 'Connectez l’imprimante : Kiwi réessaiera automatiquement.'
           : 'Imprimante indisponible : le ticket reste dans la file et sera réessayé.'
       );
-    } catch (_) {}
+    } catch (_) {
+      var b = document.getElementById('kitchen-print-count');
+      if (b) b.classList.add('warn');
+    }
   }
   function schedule() {
     if (timer || !readQueue().length) return;

@@ -75,7 +75,7 @@ var SHELL = [
      d'inscription la lisent à l'évaluation : sans elle hors ligne, un
      établissement retombe sur la famille par défaut. */
   '/assets/trades.js?v=4',
-  '/assets/interactive.js?v=6',
+  '/assets/interactive.js?v=7',
   '/assets/features.js?v=2',
   '/assets/invoicing.css?v=5',
   '/assets/invoicing.js?v=3',
@@ -127,8 +127,8 @@ var SHELL = [
   '/assets/mobile-nav.js?v=2',
   '/assets/liquid-lens.js',
   '/assets/pages.js',
-  '/assets/help-centre.js?v=3',
-  '/assets/account.js?v=4',
+  '/assets/help-centre.js?v=4',
+  '/assets/account.js?v=5',
   '/assets/production-action-guard.js',
   // Shared floor-plan vocabulary — the dashboard designer AND the caisse both
   // read it, so leaving it out of the shell meant the till could come up
@@ -180,7 +180,7 @@ var SHELL = [
      réseau douteux : absente, la caisse s'ouvrirait chez B avec les ventes de A. */
   '/assets/tenant-purge.js',
   '/assets/identity.js?v=2',
-  '/assets/caisse-link.js?v=7',
+  '/assets/caisse-link.js?v=8',
   '/assets/operator-access.js',
   '/assets/auth-guard.js',
   '/assets/caisse-hardware.js',
@@ -210,9 +210,9 @@ var SHELL = [
      commerçant a bel et bien saisi ses coûts. */
   '/assets/cost.js?v=3',
   '/assets/clients-store.js?v=2',
-  '/assets/clients-book.js?v=2',
+  '/assets/clients-book.js?v=3',
   '/assets/clients-directory.js',
-  '/assets/menu-catalog.js?v=3',
+  '/assets/menu-catalog.js?v=4',
   '/assets/restaurant-recipes.js?v=3',
   '/assets/restaurant-units.js',
   '/assets/employee-live.js?v=378',
@@ -236,7 +236,7 @@ var SHELL = [
   /* File locale durable et dédupliquée des bons cuisine. Sans ce module hors
      ligne, une commande prise pendant une coupure pourrait atteindre la
      cuisine à l'écran sans jamais sortir sur la thermique. */
-  '/assets/kitchen-print-queue.js?v=1',
+  '/assets/kitchen-print-queue.js?v=2',
   '/assets/food-production-print.js?v=1',
   '/assets/pos-sale.js?v=3',
   '/assets/pos-dispatch.js?v=24',
@@ -284,7 +284,7 @@ var SHELL = [
   '/assets/pos-gym.js',
   '/assets/pos-autre.css',
   '/assets/pos-autre.js',
-  '/assets/caisse-pairing.js?v=4',
+  '/assets/caisse-pairing.js?v=5',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là
      qu'il faut pouvoir ressortir le ticket. Un bouton de secours qui a besoin du

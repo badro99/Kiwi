@@ -321,6 +321,16 @@
       var stack = document.getElementById('toast-stack');
       if (stack) { var el = document.createElement('div'); el.className = 'toast'; el.textContent = msg; stack.appendChild(el); setTimeout(function () { el.classList.add('fade'); }, 2200); setTimeout(function () { el.remove(); }, 2480); return; }
     } catch (_) {}
+    try {
+      if (document.body) {
+        var fb = document.createElement('div');
+        fb.setAttribute('role', 'alert');
+        fb.style.cssText = 'position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#1f2937;color:#fff;padding:8px 16px;border-radius:8px;z-index:99999;font-size:14px;';
+        fb.textContent = msg;
+        document.body.appendChild(fb);
+        setTimeout(function () { fb.remove(); }, 2500);
+      }
+    } catch (_) {}
   }
 
   /* ── staff PIN gate (F8) ─────────────────────────────────────────────────

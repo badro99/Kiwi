@@ -355,7 +355,7 @@ const SW = fs.readFileSync(path.join(ROOT, 'kiwi-sw.js'), 'utf8');
 
   ok('la coquille hors-ligne embarque la page cuisine', /'\/kiwi-cuisine\.html'/.test(SW));
   ok('…et le relais', /'\/assets\/kitchen-relay\.js'/.test(SW));
-  ok('…ainsi que la file des bons papier', /'\/assets\/kitchen-print-queue\.js\?v=1'/.test(SW));
+  ok('…ainsi que la file des bons papier', /'\/assets\/kitchen-print-queue\.js(?:\?v=\d+)?'/.test(SW));
   /* Un écran cuisine hors ligne qui se rouvre sur le tableau de bord du patron
      n'est pas un repli : sur une tablette murale sans clavier, personne n'en
      sort. */

@@ -341,7 +341,11 @@
           try { localStorage.removeItem('kiwiSet:biz:' + b.id + ':type'); } catch (_) {}
           return true;
         }
-      } catch (_) {}
+      } catch (_) {
+        if (typeof Kiwi !== 'undefined' && Kiwi.toast) {
+          Kiwi.toast(pick({ fr: 'Impossible de modifier l’activité', en: 'Failed to update activity type', ar: 'تعذّر تعديل نوع النشاط' }), { type: 'warn', force: true });
+        }
+      }
     }
     try { localStorage.setItem('kiwiSet:biz:' + b.id + ':type', trade); } catch (_) {}
     return true;
@@ -749,7 +753,11 @@
       } else if (v.name && window.KiwiVenue && window.KiwiVenue.updateVenue) {
         /* Renommer l'établissement ici doit renommer l'établissement, pas
          * seulement l'étiquette de cette carte. */
-        try { window.KiwiVenue.updateVenue(bizVenueId(b), { name: v.name }); } catch (_) {}
+        try { window.KiwiVenue.updateVenue(bizVenueId(b), { name: v.name }); } catch (_) {
+          if (typeof Kiwi !== 'undefined' && Kiwi.toast) {
+            Kiwi.toast(pick({ fr: 'Erreur d’enregistrement du nom', en: 'Failed to save business name', ar: 'خطأ في حفظ اسم المؤسسة' }), { type: 'warn', force: true });
+          }
+        }
       }
       m.close(); setTimeout(openProfile, 80);
       Kiwi.toast(pick({ fr: 'Établissement mis à jour', en: 'Business updated', ar: 'تم تحديث المؤسسة' }), { type: 'success', force: true });
@@ -801,7 +809,11 @@
         if (KR()) {
           const legal = {};
           BIZ_FIELDS.forEach((f) => { if (!['name', 'type', 'logo', 'slogan'].includes(f.k)) legal[f.k] = v[f.k] || ''; });
-          try { KR().saveBusiness({ name: v.name, logo: v.logo || '', slogan: v.slogan || '', legal }, nid); } catch (_) {}
+          try { KR().saveBusiness({ name: v.name, logo: v.logo || '', slogan: v.slogan || '', legal }, nid); } catch (_) {
+            if (typeof Kiwi !== 'undefined' && Kiwi.toast) {
+              Kiwi.toast(pick({ fr: 'Erreur de sauvegarde des mentions légales', en: 'Failed to save legal details', ar: 'خطأ في حفظ البيانات القانونية' }), { type: 'warn', force: true });
+            }
+          }
         }
         m.close(); setTimeout(openProfile, 80);
         Kiwi.toast(pick({ fr: 'Établissement créé', en: 'Business created', ar: 'تم إنشاء المؤسسة' }), { type: 'success', force: true,
