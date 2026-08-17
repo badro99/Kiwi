@@ -252,8 +252,16 @@ export async function findEmployeeCredential(env, emailValue, pinValue) {
   const seen = new Set();
   for (const [merchant, pair] of byMerchant) {
     let accessDoc = null, teamDoc = null;
-    try { accessDoc = pair.access ? JSON.parse(pair.access.data || '{}') : null; } catch (_) {}
-    try { teamDoc = pair.team ? JSON.parse(pair.team.data || '{}') : null; } catch (_) {}
+    try {
+      accessDoc = pair.access ? JSON.parse(pair.access.data || '{}') : null;
+    } catch (_) {
+      console.error('[auth] Corrupted JSON in access document for merchant', merchant);
+    }
+    try {
+      teamDoc = pair.team ? JSON.parse(pair.team.data || '{}') : null;
+    } catch (_) {
+      console.error('[auth] Corrupted JSON in team document for merchant', merchant);
+    }
     const accessMembers = Array.isArray(accessDoc && accessDoc.members) ? accessDoc.members : [];
     const teamMembers = Array.isArray(teamDoc && teamDoc.members) ? teamDoc.members : [];
     const accessIdentity = accessMembers.find((member) =>
