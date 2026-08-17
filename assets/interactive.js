@@ -2782,7 +2782,8 @@ ar: {
           }).then(() => {
             toast(L.cancelled, { type: 'success' });
             document.querySelector('.kiwi-drawer-backdrop .kiwi-drawer-close')?.click();
-            document.dispatchEvent(new CustomEvent('kiwi-sales-voided', { detail: { refs: [o.receiptNo || o.ref || ''], merchant } }));
+            const targetRef = String(o.ref || o.receiptNo || o.saleId || '').trim();
+            document.dispatchEvent(new CustomEvent('kiwi-sales-voided', { detail: { refs: [targetRef], merchant } }));
           }).catch(() => {
             cancelButton.disabled = false;
             toast(L.cancelFailed, { type: 'error' });

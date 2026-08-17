@@ -41,7 +41,7 @@ ok('opening balance is deterministic and never duplicates', I.balance('shirt') =
 
 window.KiwiCost = { doc: () => ({
   recipes: {
-    dish: { status: 'complete', yield: 2, lines: [{ ing: 'flour', qty: 0.4 }, { ing: 'sauce', qty: 0.1 }] },
+    dish: { status: 'complete', yield: 2, lines: [{ ing: 'stock:flour', stock: 'flour', qty: 0.4 }, { ing: 'stock:sauce', stock: 'sauce', qty: 0.1 }] },
   },
 }) };
 vm.runInContext(read('assets/inventory-consumption.js'), context, { filename: 'inventory-consumption.js' });
@@ -70,5 +70,61 @@ ok('server exposes no destructive update/delete route', !/onRequestDelete|\bUPDA
 ok('server writes are tenant-checked and idempotent', /strict:\s*true/.test(api) && /INSERT OR IGNORE INTO inventory_movements/.test(api));
 ok('server returns the stored cursor on a retried UUID', /SELECT srv_ts AS cursor/.test(api));
 
+/* ── Dashboard cancellation & void restock wiring ── */
+const dateRangeCode = read('assets/dateRange.js');
+const customFeedBlock = dateRangeCode.slice(
+  dateRangeCode.indexOf('function buildCustomFeed('),
+  dateRangeCode.indexOf('function renderFeed(')
+);
+ok('buildCustomFeed propage ref et receiptNo',
+  /^\s*ref:\s*String\(s\.ref/m.test(customFeedBlock) && /^\s*receiptNo:\s*String\(s\.ref/m.test(customFeedBlock));
+
+const interactiveCode = read('assets/interactive.js');
+ok('le tiroir de commande dispatche la référence de commande',
+  /^\s*const targetRef = String\(o\.ref \|\| o\.receiptNo/m.test(interactiveCode));
+
+const pagesProCode = read('assets/pages-pro.js');
+ok('pages-pro reverse le stock sur kiwi-sales-voided et alerte si non recrédité',
+  /^\s*reversed\s*=\s*window\.KiwiInventoryConsumption\.reverse/m.test(pagesProCode) && /stock non recrédité/.test(pagesProCode));
+
+/* Exécution de l'écouteur extrait directement de pages-pro.js */
+let toastWarning = null;
+context.toast = (msg, opts) => { if (opts && opts.type === 'warning') toastWarning = msg; };
+context.loadCancelAudit = () => {};
+context.cancelAuditVoidSig = '';
+
+const startMarker = "document.addEventListener('kiwi-sales-voided', (e) => {";
+const startIdx = pagesProCode.indexOf(startMarker);
+let handlerBody = '';
+if (startIdx >= 0) {
+  const bodyStart = startIdx + startMarker.length;
+  let depth = 1;
+  let idx = bodyStart;
+  while (idx < pagesProCode.length && depth > 0) {
+    if (pagesProCode[idx] === '{') depth++;
+    else if (pagesProCode[idx] === '}') depth--;
+    idx++;
+  }
+  handlerBody = pagesProCode.slice(bodyStart, idx - 1);
+}
+ok('l’écouteur kiwi-sales-voided est présent dans pages-pro.js', !!handlerBody);
+const runVoidHandler = (refs) => {
+  context.eventMock = { detail: { refs } };
+  vm.runInContext(`((e) => { ${handlerBody} })(eventMock)`, context);
+};
+
+C.record({ ref: 'T-3', ts: 3000, lines: [{ itemId: 'shirt', name: 'Chemise', kind: 'product', qty: 1 }] });
+ok('nouvelle vente T-3 décrémente le stock', I.balance('shirt') === 2);
+runVoidHandler(['T-3']);
+ok('l’annulation tableau de bord recrédite le stock', I.balance('shirt') === 3);
+
+toastWarning = null;
+runVoidHandler(['']);
+ok('une référence vide déclenche l’alerte visible', !!toastWarning && toastWarning.includes('stock non recrédité'));
+
+toastWarning = null;
+runVoidHandler(['T-UNKNOWN-99']);
+ok('une référence sans ligne de stock déclenche l’alerte visible', !!toastWarning && toastWarning.includes('stock non recrédité'));
+
 if (process.exitCode) process.exit(process.exitCode);
-console.log(`  ✓ inventory ledger (${pass} controls: append-only truth, product/service split, recipes, reversal, tenant-safe server contract)`);
+console.log(`  ✓ inventory ledger (${pass} controls: append-only truth, product/service split, recipes, reversal, dashboard void restock, tenant-safe server contract)`);

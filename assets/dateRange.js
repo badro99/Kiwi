@@ -3903,6 +3903,8 @@
         amt: (s.amount || 0).toFixed(2).replace('.', ','),
         tip: '—', neg: false, isNew: i === 0,
         saleId: String(s.id || ''),
+        ref: String(s.ref || s.receiptRef || s.id || '').trim(),
+        receiptNo: String(s.ref || s.receiptRef || '').trim(),
       };
     });
   }

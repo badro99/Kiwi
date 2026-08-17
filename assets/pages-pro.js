@@ -15466,6 +15466,22 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       if (sig === cancelAuditVoidSig) return;
       cancelAuditVoidSig = sig;
       loadCancelAudit(true);
+      const refs = (e && e.detail && e.detail.refs) || [];
+      refs.forEach((ref) => {
+        let reversed = 0;
+        try {
+          if (ref && window.KiwiInventoryConsumption && window.KiwiInventoryConsumption.reverse) {
+            reversed = window.KiwiInventoryConsumption.reverse(ref, 'Annulation tableau de bord');
+          }
+        } catch (_) {}
+        if (!reversed) {
+          try {
+            const msg = 'Vente annulée · stock non recrédité (référence introuvable)';
+            if (typeof toast === 'function') toast(msg, { type: 'warning' });
+            else if (window.Kiwi && window.Kiwi.toast) window.Kiwi.toast(msg, { type: 'warning' });
+          } catch (_) {}
+        }
+      });
     });
   });
 })();
