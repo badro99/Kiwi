@@ -474,10 +474,23 @@ export async function onRequestPost(context) {
     const employeeMergeTarget = b && b.mergeTables ? normTable(b.mergeTables.targetTable || b.mergeTables.target) : '';
     const validMerge = employeeMergeSource && employeeMergeTarget && scope && scope.allTables.has(employeeMergeSource) && scope.allTables.has(employeeMergeTarget);
 
-    const employeeVoidTable = b && b.voidLine ? normTable(b.voidLine.tableNo || b.voidLine.table) : '';
-    const validVoid = b && b.voidLine && b.voidLine.orderId && (!employeeVoidTable || (scope && scope.allTables.has(employeeVoidTable)));
+    let employeeVoidTable = b && b.voidLine ? normTable(b.voidLine.tableNo || b.voidLine.table) : '';
+    if (b && b.voidLine && b.voidLine.orderId && !employeeVoidTable && env.DB) {
+      try {
+        const ord = await env.DB.prepare('SELECT table_no FROM orders WHERE id = ? AND merchant = ?').bind(b.voidLine.orderId, merchant).first();
+        if (ord && ord.table_no) employeeVoidTable = normTable(ord.table_no);
+      } catch (_) {}
+    }
+    const validVoid = b && b.voidLine && b.voidLine.orderId && employeeVoidTable && scope && scope.allTables.has(employeeVoidTable);
 
-    const validAck = b && b.ackVoid && b.ackVoid.orderId;
+    let employeeAckTable = b && b.ackVoid ? normTable(b.ackVoid.tableNo || b.ackVoid.table) : '';
+    if (b && b.ackVoid && b.ackVoid.orderId && !employeeAckTable && env.DB) {
+      try {
+        const ord = await env.DB.prepare('SELECT table_no FROM orders WHERE id = ? AND merchant = ?').bind(b.ackVoid.orderId, merchant).first();
+        if (ord && ord.table_no) employeeAckTable = normTable(ord.table_no);
+      } catch (_) {}
+    }
+    const validAck = b && b.ackVoid && b.ackVoid.orderId && employeeAckTable && scope && scope.allTables.has(employeeAckTable);
 
     if (!validCreate && !validOpen && !validClose && !validTransfer && !validMerge && !validVoid && !validAck) {
       return json({ error: 'floor-table-required' }, 403);

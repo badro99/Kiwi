@@ -209,5 +209,39 @@ check('Steak line retained with note marked [DÉJÀ PRÊT]', linesAfterAckReject
 const voidAuditAfterReject = db._db.prepare("SELECT status FROM kitchen_voids WHERE order_id = ? AND item_id = ?").get('ord-v2', 'item-steak');
 check('kitchen_voids status updated to rejected', voidAuditAfterReject && voidAuditAfterReject.status === 'rejected');
 
+// 5. Security & Boundary: Attack vectors against floor scope
+// Seed an order on Table 99 (outside floor plan scope)
+exec(`INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status, created_ts, updated_ts)
+      VALUES ('ord-out', ?, 299, 'table', '99', 100, ?, 'accepted', ?, ?)`,
+      MERCHANT, JSON.stringify([{ id: 'item-steak', name: 'Steak', qty: 1, unitPrice: 100 }]), now, now);
+
+// 5a. voidLine with table: '99' outside scope -> 403
+const outVoidExplicit = await postQueue({
+  merchant: MERCHANT,
+  voidLine: { orderId: 'ord-out', table: '99', itemId: 'item-steak', qty: 1 },
+}, employeeCookie);
+check('voidLine with explicit table outside scope returns 403', outVoidExplicit.status === 403 && outVoidExplicit.data.error === 'floor-table-required');
+
+// 5b. voidLine WITHOUT table field on out-of-scope order -> 403 (resolved table '99' is rejected)
+const outVoidNoTable = await postQueue({
+  merchant: MERCHANT,
+  voidLine: { orderId: 'ord-out', itemId: 'item-steak', qty: 1 },
+}, employeeCookie);
+check('voidLine with omitted table on out-of-scope order returns 403', outVoidNoTable.status === 403 && outVoidNoTable.data.error === 'floor-table-required');
+
+// 5c. ackVoid on out-of-scope order -> 403
+const outAck = await postQueue({
+  merchant: MERCHANT,
+  ackVoid: { orderId: 'ord-out', action: 'accept' },
+}, employeeCookie);
+check('ackVoid on out-of-scope order returns 403', outAck.status === 403 && outAck.data.error === 'floor-table-required');
+
+// 5d. voidLine with omitted table on in-scope order Table 1 -> succeeds (table '1' resolved and allowed)
+const inScopeNoTable = await postQueue({
+  merchant: MERCHANT,
+  voidLine: { orderId: 'ord-v2', itemId: 'item-steak', qty: 1 },
+}, employeeCookie);
+check('voidLine with omitted table on in-scope order resolves and succeeds', inScopeNoTable.status === 200 && inScopeNoTable.data.ok === true);
+
 console.log(failures ? `\n✗ ${failures} failure(s)\n` : `\n✓ All kitchen void protocol behavioural checks green.\n`);
 process.exitCode = failures ? 1 : 0;
