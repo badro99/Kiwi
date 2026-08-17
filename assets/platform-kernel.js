@@ -40,6 +40,10 @@
     return null;
   }
 
+  /* Resolves the paired merchant identity (merchant > slug > venueId).
+   * Note: On a pairing with an empty merchant, scoping to venueId rather than
+   * falling through to ambient KiwiLive.merchant() is deliberate — the ambient
+   * session merchant can be a different tenant than the one the till is bound to. */
   function pairedMerchant() {
     var pv = pairedVenue();
     if (!pv) return '';

@@ -123,5 +123,18 @@ ls.setItem('kiwiPairedVenue', JSON.stringify({ merchant: longMerchant }));
 ok(K2.pairedMerchant().length === 64, 'pairedMerchant truncates >64 char merchant to exactly 64');
 ok(K2.pairedMerchant() === 'a'.repeat(64), 'pairedMerchant content matches first 64 characters');
 
+// Case H: Live Pairing Fixture Equivalence (Santos Store)
+// For a live-shaped pairing object produced by Cloudflare D1 pair redemption,
+// verify that KiwiPlatform helpers return identical values to the legacy raw expressions.
+const santosFixture = { merchant: 'santos-store', venueId: '', type: 'boutique', name: 'Santos Store' };
+ls.setItem('kiwiPairedVenue', JSON.stringify(santosFixture));
+
+// receipt.js:118 & pos-reprint.js:359 & pos-sale.js:96 & inventory-ledger.js:32 & caisse-stock-sync.js:27
+const legacyRaw = JSON.parse(ls.getItem('kiwiPairedVenue') || 'null');
+ok(K2.pairedMerchant() === (legacyRaw && legacyRaw.merchant), 'receipt.js:118 & reprint.js:359 pairedMerchant matches legacy pv.merchant');
+ok(K2.pairedMerchant() === String(legacyRaw.merchant).slice(0, 64), 'pos-sale.js:96 & ledger.js:32 pairedMerchant matches legacy sliced merchant');
+ok(K2.pairedVenue() && K2.pairedVenue().name === legacyRaw.name, 'receipt.js:389 pairedVenue().name matches legacy pv.name');
+ok(K2.isPaired() === true, 'isPaired() is true for live Santos Store fixture');
+
 if (process.exitCode) process.exit(process.exitCode);
 console.log(`  ✓ pairing resolver (${pass} controls: pairing agreement, storage fallback, purge immediacy, fail-soft JSON, isPaired invariant)`);

@@ -356,6 +356,10 @@
   function startOfToday() { var d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); }
   function merchant() {
     try {
+      if (window.KiwiPlatform && typeof window.KiwiPlatform.pairedMerchant === 'function') {
+        var pm = window.KiwiPlatform.pairedMerchant();
+        if (pm) return pm;
+      }
       var pv = JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
       return String((pv && pv.merchant) || localStorage.getItem('kiwiLiveMerchant') || '');
     } catch (_) { return ''; }

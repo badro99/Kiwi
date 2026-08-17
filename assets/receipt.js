@@ -115,6 +115,7 @@
     try { var v = window.KiwiStore && window.KiwiStore.currentVenue && window.KiwiStore.currentVenue(); if (v) return v; } catch (_) {}
     try { var s = window.KiwiCloudDoc && window.KiwiCloudDoc.currentSlug && window.KiwiCloudDoc.currentSlug(); if (s) return s; } catch (_) {}
     try { var dr = window.KiwiDayReport && window.KiwiDayReport.storeSlug && window.KiwiDayReport.storeSlug(); if (dr) return dr; } catch (_) {}
+    try { if (window.KiwiPlatform && typeof window.KiwiPlatform.pairedMerchant === 'function') { var pm = window.KiwiPlatform.pairedMerchant(); if (pm) return pm; } } catch (_) {}
     try { var pv = JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); if (pv && pv.merchant) return pv.merchant; } catch (_) {}
     return null;
   }
@@ -386,7 +387,7 @@
       if (KV && KV.VENUES && KV.VENUES[vid]) return KV.VENUES[vid].name || '';
       if (KV && KV.getCurrentVenueData) { var d = KV.getCurrentVenueData(); if (d && d.name) return d.name; }
     } catch (_) {}
-    try { var pv = JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); if (pv && pv.name) return pv.name; } catch (_) {}
+    try { var pv = (window.KiwiPlatform && typeof window.KiwiPlatform.pairedVenue === 'function' && window.KiwiPlatform.pairedVenue()) || JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); if (pv && pv.name) return pv.name; } catch (_) {}
     try { if (window.KiwiMe && window.KiwiMe.business) return String(window.KiwiMe.business); } catch (_) {}
     return '';
   }
