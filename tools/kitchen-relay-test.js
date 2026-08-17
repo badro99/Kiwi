@@ -354,8 +354,10 @@ const SW = fs.readFileSync(path.join(ROOT, 'kiwi-sw.js'), 'utf8');
   ok('le romain, même ici', /em, i, cite \{ font-style: normal; \}/.test(CUISINE));
 
   ok('la coquille hors-ligne embarque la page cuisine', /'\/kiwi-cuisine\.html'/.test(SW));
-  ok('…et le relais', /'\/assets\/kitchen-relay\.js'/.test(SW));
-  ok('…ainsi que la file des bons papier', /'\/assets\/kitchen-print-queue\.js(?:\?v=\d+)?'/.test(SW));
+  const stampMatch = CAISSE.match(/assets\/kitchen-print-queue\.js\?v=(\d+)/);
+  ok('la caisse charge la file des bons papier avec estampille', !!stampMatch);
+  ok('…ainsi que la file des bons papier (accord caisse/service-worker)',
+    !!(stampMatch && SW.includes(`'/assets/kitchen-print-queue.js?v=${stampMatch[1]}'`)));
   /* Un écran cuisine hors ligne qui se rouvre sur le tableau de bord du patron
      n'est pas un repli : sur une tablette murale sans clavier, personne n'en
      sort. */

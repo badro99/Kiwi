@@ -120,8 +120,10 @@ ok('l’impression locale relaie d’abord l’ordre pour partager son identifia
   /relayToKitchen\(order\);\s*printKitchenTickets\(order, items\)/.test(caisse));
 ok('le réglage explique qu’un seul ordinateur doit être hub',
   /Activez cette option sur un seul ordinateur par établissement/.test(bridge));
-ok('la file d’impression fait partie de la coquille hors ligne',
-  /'\/assets\/kitchen-print-queue\.js(?:\?v=\d+)?'/.test(sw));
+const stampMatch = caisse.match(/assets\/kitchen-print-queue\.js\?v=(\d+)/);
+ok('la caisse charge la file d’impression avec estampille', !!stampMatch);
+ok('la caisse et le service worker s’accordent sur l’estampille de la file d’impression',
+  !!(stampMatch && sw.includes(`'/assets/kitchen-print-queue.js?v=${stampMatch[1]}'`)));
 
 if (fail.length) {
   fail.forEach((line) => console.error('  ✗ ' + line));
