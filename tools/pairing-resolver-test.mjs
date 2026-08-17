@@ -466,5 +466,155 @@ function testPressingOps(withPlatform) {
 ok(testPressingOps(true) === 'santos-store', 'pressing-ops.js resolves scope santos-store with KiwiPlatform present');
 ok(testPressingOps(false) === 'santos-store', 'pressing-ops.js resolves scope santos-store via fallback without KiwiPlatform');
 
+// 14. assets/day-report.js (KiwiDayReport storeSlug, isReal, and canonical slug preservation)
+function testDayReport(withPlatform, fixture) {
+  const mem = new Map([['kiwiPairedVenue', JSON.stringify(fixture !== undefined ? fixture : santosFixture)]]);
+  const storage = { getItem: (k) => mem.get(k) || null, setItem: (k, v) => mem.set(k, String(v)), removeItem: (k) => mem.delete(k) };
+  const win = { localStorage: storage, addEventListener: () => {}, dispatchEvent: () => {} };
+  win.window = win;
+  const ctx = vm.createContext({
+    window: win, localStorage: storage, console, Date, Math, JSON, Map, Set, Promise, Array, Object, String, Number, RegExp,
+    setTimeout: () => 0, setInterval: () => 0, clearTimeout: () => {},
+  });
+  if (withPlatform) vm.runInContext(src, ctx);
+  vm.runInContext(readAsset('assets/day-report.js'), ctx);
+  return {
+    slug: win.KiwiDayReport ? win.KiwiDayReport.storeSlug() : null,
+    real: win.KiwiDayReport ? win.KiwiDayReport.isReal() : null,
+  };
+}
+const drWith = testDayReport(true);
+const drWithout = testDayReport(false);
+ok(drWith.slug === 'santos-store' && drWith.real === true, 'day-report.js resolves santos-store and real with KiwiPlatform present');
+ok(drWithout.slug === 'santos-store' && drWithout.real === true, 'day-report.js resolves santos-store and real via fallback without KiwiPlatform');
+
+// Canonical slug preservation: fixture with name and slug (no merchant) MUST return slug, never name-derived slug
+const drCanonWith = testDayReport(true, { name: 'Santos Super Boutique', slug: 'santos-canonical' });
+const drCanonWithout = testDayReport(false, { name: 'Santos Super Boutique', slug: 'santos-canonical' });
+ok(drCanonWith.slug === 'santos-canonical', 'day-report.js preserves canonical slug over name with KiwiPlatform present');
+ok(drCanonWithout.slug === 'santos-canonical', 'day-report.js preserves canonical slug over name via fallback without KiwiPlatform');
+
+// 15. assets/sold-insights.js (slug() resolution)
+function testSoldInsights(withPlatform) {
+  const mem = new Map([['kiwiPairedVenue', JSON.stringify(santosFixture)]]);
+  const storage = { getItem: (k) => mem.get(k) || null, setItem: (k, v) => mem.set(k, String(v)), removeItem: (k) => mem.delete(k) };
+  const win = { localStorage: storage, addEventListener: () => {} };
+  win.window = win;
+  const ctx = vm.createContext({
+    window: win, localStorage: storage, console, Date, Math, JSON, Map, Set, Promise, Array, Object, String, Number, RegExp,
+    setTimeout: () => 0, setInterval: () => 0, clearTimeout: () => {},
+  });
+  if (withPlatform) vm.runInContext(src, ctx);
+  const sSrc = readAsset('assets/sold-insights.js');
+  const match = sSrc.match(/function slug\(\) \{([\s\S]*?)\n  \}/);
+  if (!match) return null;
+  const fn = new Function('window', 'localStorage', 'KiwiLive', match[0] + '; return slug();');
+  return fn(win, storage, win.KiwiLive);
+}
+ok(testSoldInsights(true) === 'santos-store', 'sold-insights.js resolves santos-store with KiwiPlatform present');
+ok(testSoldInsights(false) === 'santos-store', 'sold-insights.js resolves santos-store via fallback without KiwiPlatform');
+
+// 16. assets/vertical-state.js (KiwiVerticalState.isReal and venueKey)
+function testVerticalState(withPlatform) {
+  const mem = new Map([['kiwiPairedVenue', JSON.stringify(santosFixture)]]);
+  const storage = { getItem: (k) => mem.get(k) || null, setItem: (k, v) => mem.set(k, String(v)), removeItem: (k) => mem.delete(k) };
+  const win = {
+    localStorage: storage, addEventListener: () => {},
+    KiwiStore: { define: () => ({}) },
+  };
+  win.window = win;
+  const doc = { addEventListener: () => {} };
+  const ctx = vm.createContext({
+    window: win, document: doc, localStorage: storage, console, Date, Math, JSON, Map, Set, Promise, Array, Object, String, Number, RegExp,
+    setTimeout: () => 0, setInterval: () => 0, clearTimeout: () => {},
+  });
+  if (withPlatform) vm.runInContext(src, ctx);
+  const vSrc = readAsset('assets/vertical-state.js');
+  vm.runInContext(vSrc, ctx);
+  const match = vSrc.match(/function venueKey\(value\) \{([\s\S]*?)\n  \}/);
+  let vKey = null;
+  if (match) {
+    const fn = new Function('window', 'localStorage', 'pairedVenue', match[0] + '; return venueKey();');
+    const pVenueMatch = vSrc.match(/function pairedVenue\(value\) \{([\s\S]*?)\n  \}/);
+    const pVenueFn = new Function('window', 'localStorage', pVenueMatch[0] + '; return pairedVenue;');
+    vKey = fn(win, storage, pVenueFn(win, storage));
+  }
+  return {
+    real: win.KiwiVerticalState ? win.KiwiVerticalState.isReal() : null,
+    venueKey: vKey,
+  };
+}
+const vsWith = testVerticalState(true);
+const vsWithout = testVerticalState(false);
+ok(vsWith.real === true && vsWith.venueKey === 'santos-store', 'vertical-state.js resolves real and santos-store venueKey with KiwiPlatform present');
+ok(vsWithout.real === true && vsWithout.venueKey === 'santos-store', 'vertical-state.js resolves real and santos-store venueKey via fallback without KiwiPlatform');
+
+// 17. assets/simple.js (pairedVenue and isReal)
+function testSimple(withPlatform) {
+  const mem = new Map([
+    ['kiwiPaired', '1'],
+    ['kiwiPairedVenue', JSON.stringify(santosFixture)],
+  ]);
+  const storage = { getItem: (k) => mem.get(k) || null, setItem: (k, v) => mem.set(k, String(v)), removeItem: (k) => mem.delete(k) };
+  const win = { localStorage: storage, addEventListener: () => {} };
+  win.window = win;
+  const ctx = vm.createContext({
+    window: win, localStorage: storage, console, Date, Math, JSON, Map, Set, Promise, Array, Object, String, Number, RegExp,
+    setTimeout: () => 0, setInterval: () => 0, clearTimeout: () => {},
+  });
+  if (withPlatform) vm.runInContext(src, ctx);
+  const sSrc = readAsset('assets/simple.js');
+  const match = sSrc.match(/const pairedVenue = \(\) => \{[\s\S]*?const isReal = \(\) => !!\([\s\S]*?\);/);
+  if (!match) return null;
+  const fn = new Function('window', 'localStorage', match[0] + '; return { paired: pairedVenue(), real: isReal() };');
+  return fn(win, storage);
+}
+const smpWith = testSimple(true);
+const smpWithout = testSimple(false);
+ok(smpWith && smpWith.real === true && smpWith.paired && smpWith.paired.merchant === 'santos-store', 'simple.js resolves pairedVenue and isReal with KiwiPlatform present');
+ok(smpWithout && smpWithout.real === true && smpWithout.paired && smpWithout.paired.merchant === 'santos-store', 'simple.js resolves pairedVenue and isReal via fallback without KiwiPlatform');
+
+// 18. assets/account.js (pairedVenue and isReal)
+function testAccount(withPlatform) {
+  const mem = new Map([
+    ['kiwiPaired', '1'],
+    ['kiwiPairedVenue', JSON.stringify(santosFixture)],
+  ]);
+  const storage = { getItem: (k) => mem.get(k) || null, setItem: (k, v) => mem.set(k, String(v)), removeItem: (k) => mem.delete(k) };
+  const win = { localStorage: storage, addEventListener: () => {} };
+  win.window = win;
+  const ctx = vm.createContext({
+    window: win, localStorage: storage, console, Date, Math, JSON, Map, Set, Promise, Array, Object, String, Number, RegExp,
+    setTimeout: () => 0, setInterval: () => 0, clearTimeout: () => {},
+  });
+  if (withPlatform) vm.runInContext(src, ctx);
+  const aSrc = readAsset('assets/account.js');
+  const match = aSrc.match(/const pairedVenue = \(\) => \{[\s\S]*?const isReal = \(\) => !!\([\s\S]*?\);/);
+  if (!match) return null;
+  const fn = new Function('window', 'localStorage', match[0] + '; return { paired: pairedVenue(), real: isReal() };');
+  return fn(win, storage);
+}
+const accWith = testAccount(true);
+const accWithout = testAccount(false);
+ok(accWith && accWith.real === true && accWith.paired && accWith.paired.merchant === 'santos-store', 'account.js resolves pairedVenue and isReal with KiwiPlatform present');
+ok(accWithout && accWithout.real === true && accWithout.paired && accWithout.paired.merchant === 'santos-store', 'account.js resolves pairedVenue and isReal via fallback without KiwiPlatform');
+
+// 19. assets/venue-store.js (KiwiStore.currentVenue() paired resolution)
+function testVenueStore(withPlatform) {
+  const mem = new Map([['kiwiPairedVenue', JSON.stringify(santosFixture)]]);
+  const storage = { getItem: (k) => mem.get(k) || null, setItem: (k, v) => mem.set(k, String(v)), removeItem: (k) => mem.delete(k) };
+  const win = { localStorage: storage, addEventListener: () => {} };
+  win.window = win;
+  const ctx = vm.createContext({
+    window: win, localStorage: storage, console, Date, Math, JSON, Map, Set, Promise, Array, Object, String, Number, RegExp,
+    setTimeout: () => 0, setInterval: () => 0, clearTimeout: () => {},
+  });
+  if (withPlatform) vm.runInContext(src, ctx);
+  vm.runInContext(readAsset('assets/venue-store.js'), ctx);
+  return win.KiwiStore ? win.KiwiStore.currentVenue() : null;
+}
+ok(testVenueStore(true) === 'santos-store', 'venue-store.js resolves currentVenue santos-store with KiwiPlatform present');
+ok(testVenueStore(false) === 'santos-store', 'venue-store.js resolves currentVenue santos-store via fallback without KiwiPlatform');
+
 if (process.exitCode) process.exit(process.exitCode);
-console.log(`  ✓ pairing resolver (${pass} controls: pairing agreement, storage fallback, purge immediacy, fail-soft JSON, isPaired invariant, direct module tests with/without platform across 13 modules)`);
+console.log(`  ✓ pairing resolver (${pass} controls: pairing agreement, storage fallback, purge immediacy, fail-soft JSON, isPaired invariant, direct module tests with/without platform across 19 modules)`);

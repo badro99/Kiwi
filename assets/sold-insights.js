@@ -15,6 +15,10 @@
   function fmt(v) { try { return Math.round(Number(v) || 0).toLocaleString('fr-FR'); } catch (_) { return String(Math.round(Number(v) || 0)); } }
   function slug() {
     try {
+      if (window.KiwiPlatform && typeof window.KiwiPlatform.pairedMerchant === 'function') {
+        var pm = window.KiwiPlatform.pairedMerchant();
+        if (pm) return pm;
+      }
       var p = JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
       return String((window.KiwiLive && KiwiLive.merchant && KiwiLive.merchant()) || (p && p.merchant) || localStorage.getItem('kiwiLiveMerchant') || '');
     } catch (_) { return ''; }

@@ -52,7 +52,7 @@ var SHELL = [
   '/assets/hotel.css',
   '/assets/genpage.css?v=1',
   '/assets/mobile.css?v=4',
-  '/assets/sold-insights.js?v=1',
+  '/assets/sold-insights.js?v=2',
   '/assets/design-2026.css',
   '/assets/design-ios27.css',
   '/assets/design-vitrine.css',
@@ -128,7 +128,7 @@ var SHELL = [
   '/assets/liquid-lens.js',
   '/assets/pages.js',
   '/assets/help-centre.js?v=4',
-  '/assets/account.js?v=5',
+  '/assets/account.js?v=6',
   '/assets/production-action-guard.js',
   // Shared floor-plan vocabulary — the dashboard designer AND the caisse both
   // read it, so leaving it out of the shell meant the till could come up
@@ -155,7 +155,7 @@ var SHELL = [
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
      dans un sous-sol sans wifi, et c'est précisément le moment où le Z doit
      s'écrire et s'imprimer. La remontée serveur, elle, retentera plus tard. */
-  '/assets/day-report.js?v=4',
+  '/assets/day-report.js?v=5',
   '/assets/day-report-dash.js?v=2',
   '/assets/day-report-export.js?v=3',
   /* Les horaires d'ouverture. Dans la coquille hors-ligne parce que la caisse
@@ -198,7 +198,7 @@ var SHELL = [
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
   '/assets/caisse-lang.js',
-  '/assets/venue-store.js?v=2',
+  '/assets/venue-store.js?v=3',
   /* One stock across owner dashboard and till. Catalog metadata is a cloud
      document; quantities are append-only movements, both usable offline. */
   '/assets/inventory-ledger.js?v=3',

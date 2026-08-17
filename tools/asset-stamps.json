@@ -1,7 +1,7 @@
 {
   "assets/account.js": {
-    "v": "5",
-    "sha": "10fba1017622c3ed"
+    "v": "6",
+    "sha": "caf243a157ed70c4"
   },
   "assets/admin-support.css": {
     "v": "2",
@@ -112,8 +112,8 @@
     "sha": "80f85ccf22ef841a"
   },
   "assets/day-report.js": {
-    "v": "4",
-    "sha": "8469be6a727e6b04"
+    "v": "5",
+    "sha": "db87c2940f314de9"
   },
   "assets/design-vexel-layout.js": {
     "v": "2077",
@@ -520,12 +520,12 @@
     "sha": "18d82faaebb5bb78"
   },
   "assets/simple.js": {
-    "v": "1",
-    "sha": "b70cc02aa48e0a64"
+    "v": "2",
+    "sha": "e5159ad7ac85ccbf"
   },
   "assets/sold-insights.js": {
-    "v": "1",
-    "sha": "f253f071db9609f1"
+    "v": "2",
+    "sha": "a4c3a6b89b6ee0d0"
   },
   "assets/stock.js": {
     "v": "3",
@@ -560,8 +560,8 @@
     "sha": "066bc34edfcdd4a3"
   },
   "assets/venue-store.js": {
-    "v": "2",
-    "sha": "6e45834cf2c10e4e"
+    "v": "3",
+    "sha": "dfa3b4d5ebb25d51"
   },
   "assets/venues.js": {
     "v": "14",

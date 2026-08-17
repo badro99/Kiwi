@@ -131,6 +131,10 @@
     var m = ls('kiwiLiveMerchant'); if (m) return m;
     /* 3) CAISSE : le magasin appairé. */
     try {
+      if (window.KiwiPlatform && typeof window.KiwiPlatform.pairedMerchant === 'function') {
+        var pm = window.KiwiPlatform.pairedMerchant();
+        if (pm) return pm;
+      }
       var pv = window.KiwiCaissePairing && window.KiwiCaissePairing.pairedVenue
         && window.KiwiCaissePairing.pairedVenue();
       if (pv && pv.merchant) return pv.merchant;
@@ -150,6 +154,7 @@
   function isReal() {
     try {
       if (window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) return true;
+      if (window.KiwiPlatform && typeof window.KiwiPlatform.isPaired === 'function' && window.KiwiPlatform.isPaired()) return true;
       if (JSON.parse(ls('kiwiPairedVenue') || 'null')) return true;
     } catch (_) {}
     try { return !!(window.KiwiVenue && window.KiwiVenue.isCustom && window.KiwiVenue.isCustom()); } catch (_) {}
@@ -264,7 +269,7 @@
     var t = '';
     try { t = (window.KiwiConfig && window.KiwiConfig.type) || ''; } catch (_) {}
     if (!t) { try { t = (window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && (window.KiwiVenue.getCurrentVenueData() || {}).type) || ''; } catch (_) {} }
-    if (!t) { try { t = (JSON.parse(ls('kiwiPairedVenue') || 'null') || {}).type || ''; } catch (_) {} }
+    if (!t) { try { var pv = (window.KiwiPlatform && typeof window.KiwiPlatform.pairedVenue === 'function' && window.KiwiPlatform.pairedVenue()) || JSON.parse(ls('kiwiPairedVenue') || 'null'); t = (pv || {}).type || ''; } catch (_) {} }
     t = String(t || '').toLowerCase();
     return BASE_OF[t] || (VOCAB[t] ? t : 'generic');
   }

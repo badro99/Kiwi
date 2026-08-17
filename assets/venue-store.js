@@ -85,8 +85,13 @@
    * pour son seul enregistrement ; il vaut pour tous. */
   function pairedId() {
     try {
+      if (window.KiwiPlatform && typeof window.KiwiPlatform.pairedMerchant === 'function') {
+        const pm = window.KiwiPlatform.pairedMerchant();
+        if (pm) return pm;
+      }
       const P = window.KiwiCaissePairing;
-      const p = (P && P.pairedVenue && P.pairedVenue())
+      const p = (window.KiwiPlatform && window.KiwiPlatform.pairedVenue && window.KiwiPlatform.pairedVenue())
+        || (P && P.pairedVenue && P.pairedVenue())
         || JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
       const id = p && (p.merchant || p.venueId || p.id);
       return id ? String(id) : null;

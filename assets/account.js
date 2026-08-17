@@ -145,6 +145,10 @@
   const meVal = (k) => { try { return (window.KiwiMe && window.KiwiMe[k]) || ''; } catch (_) { return ''; } };
   const pairedVenue = () => {
     try {
+      if (window.KiwiPlatform && typeof window.KiwiPlatform.pairedVenue === 'function') {
+        const pv = window.KiwiPlatform.pairedVenue();
+        if (window.KiwiPlatform.isPaired() && pv?.merchant) return pv;
+      }
       const P = window.KiwiCaissePairing;
       const pv = P?.pairedVenue?.();
       if (P?.isPaired?.() && pv?.merchant) return pv;

@@ -10,7 +10,10 @@
   var handles = new Map();
   function pairedVenue(value) {
     if (value && typeof value === 'object') return value;
-    try { return JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; }
+    try {
+      return (window.KiwiPlatform && typeof window.KiwiPlatform.pairedVenue === 'function' && window.KiwiPlatform.pairedVenue())
+        || JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
+    } catch (_) { return null; }
   }
   /* The caisse deliberately does not load venues.js.  Consequently the venue
    * store's implicit currentVenue() is null there: every get()/update() without
@@ -19,6 +22,14 @@
    * merchant slug is stable across devices; venueId is retained for older
    * pairings that pre-date it. */
   function venueKey(value) {
+    if (!value) {
+      try {
+        if (window.KiwiPlatform && typeof window.KiwiPlatform.pairedMerchant === 'function') {
+          var pm = window.KiwiPlatform.pairedMerchant();
+          if (pm) return pm;
+        }
+      } catch (_) {}
+    }
     var p = pairedVenue(value);
     var id = p && (p.merchant || p.venueId || p.id);
     if (id) return String(id);
@@ -26,7 +37,10 @@
   }
   function real() {
     try { if (window.KiwiEnv?.isReal?.()) return true; } catch (_) {}
-    try { return !!JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return false; }
+    try {
+      if (window.KiwiPlatform && typeof window.KiwiPlatform.isPaired === 'function' && window.KiwiPlatform.isPaired()) return true;
+      return !!JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
+    } catch (_) { return false; }
   }
   function copy(v) { try { return JSON.parse(JSON.stringify(v)); } catch (_) { return null; } }
   function device() {
