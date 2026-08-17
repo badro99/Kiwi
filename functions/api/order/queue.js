@@ -465,10 +465,26 @@ export async function onRequestPost(context) {
     const validCreate = b && b.create === true && employeeTable && scope && scope.allTables.has(employeeTable);
     const validOpen = employeeOpenTable && scope && scope.allTables.has(employeeOpenTable);
     const validClose = employeeCloseTable && scope && scope.allTables.has(employeeCloseTable);
-    if (!validCreate && !validOpen && !validClose) {
+
+    const employeeTransferFrom = b && b.transferTable ? normTable(b.transferTable.fromTable || b.transferTable.from) : '';
+    const employeeTransferTo = b && b.transferTable ? normTable(b.transferTable.toTable || b.transferTable.to) : '';
+    const validTransfer = employeeTransferFrom && employeeTransferTo && scope && scope.allTables.has(employeeTransferFrom) && scope.allTables.has(employeeTransferTo);
+
+    const employeeMergeSource = b && b.mergeTables ? normTable(b.mergeTables.sourceTable || b.mergeTables.source) : '';
+    const employeeMergeTarget = b && b.mergeTables ? normTable(b.mergeTables.targetTable || b.mergeTables.target) : '';
+    const validMerge = employeeMergeSource && employeeMergeTarget && scope && scope.allTables.has(employeeMergeSource) && scope.allTables.has(employeeMergeTarget);
+
+    const employeeVoidTable = b && b.voidLine ? normTable(b.voidLine.tableNo || b.voidLine.table) : '';
+    const validVoid = b && b.voidLine && b.voidLine.orderId && (!employeeVoidTable || (scope && scope.allTables.has(employeeVoidTable)));
+
+    const validAck = b && b.ackVoid && b.ackVoid.orderId;
+
+    if (!validCreate && !validOpen && !validClose && !validTransfer && !validMerge && !validVoid && !validAck) {
       return json({ error: 'floor-table-required' }, 403);
     }
-    if (validCreate) b.server = employeeName(employee.member);
+    if (validCreate || validTransfer || validMerge || validVoid) {
+      if (!b.server && employee.member) b.server = employeeName(employee.member);
+    }
   }
 
   const now = Date.now();
@@ -797,7 +813,7 @@ export async function onRequestPost(context) {
    * 3. Toutes les annulations sont auditées dans `kitchen_voids` avec leur motif et statut. */
   if (b && b.voidLine && typeof b.voidLine === 'object') {
     const table = normTable(b.voidLine.table);
-    const lineId = String(b.voidLine.lineId || b.voidLine.id || '').trim();
+    const lineId = String(b.voidLine.lineId || b.voidLine.itemId || b.voidLine.id || '').trim();
     const qtyToVoid = Math.max(1, Number(b.voidLine.qty) || 1);
     const reason = String(b.voidLine.reason || 'client_change').trim();
     const isWaste = b.voidLine.isWaste ? 1 : 0;
@@ -835,7 +851,7 @@ export async function onRequestPost(context) {
       } else {
         lines = lines.filter(l => l !== targetLine);
       }
-      const newTotal = lines.reduce((s, l) => s + ((Number(l.price) || 0) * (Number(l.qty) || 0)), 0);
+      const newTotal = lines.reduce((s, l) => s + ((Number(l.unitPrice ?? l.price) || 0) * (Number(l.qty) || 0)), 0);
       const nextTs = Math.max(now, (Number(targetOrder.updated_ts) || 0) + 1);
 
       await env.DB.prepare(
@@ -846,11 +862,13 @@ export async function onRequestPost(context) {
         await env.DB.prepare(
           `INSERT INTO kitchen_voids (id, merchant, order_id, table_no, item_id, item_name, qty, price, reason, is_waste, actor, status, created_ts)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'approved', ?)`
-        ).bind(voidId, merchant, targetOrder.id, targetOrder.table_no, targetLine.id || lineId, targetLine.name || lineId, qtyToVoid, targetLine.price || 0, reason, isWaste, actor, now).run();
+        ).bind(voidId, merchant, targetOrder.id, targetOrder.table_no, targetLine.id || lineId, targetLine.name || lineId, qtyToVoid, targetLine.unitPrice ?? targetLine.price ?? 0, reason, isWaste, actor, now).run();
       } catch (_) {}
 
       return json({
         ok: true,
+        tier: 1,
+        action: 'voided',
         voidId,
         directVoid: true,
         orderId: targetOrder.id,
@@ -859,7 +877,7 @@ export async function onRequestPost(context) {
         total: newTotal,
       });
     } else {
-      // ── Niveau 2 : Alerte d'annulation urgente en cuisine (plat en cuisson) ─
+      // ── Niveau 2 : Alerte d'annulation prioritaire (plat en cours de cuisson) ─
       targetLine.voidAlert = {
         id: voidId,
         qty: qtyToVoid,
@@ -878,11 +896,13 @@ export async function onRequestPost(context) {
         await env.DB.prepare(
           `INSERT INTO kitchen_voids (id, merchant, order_id, table_no, item_id, item_name, qty, price, reason, is_waste, actor, status, created_ts)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)`
-        ).bind(voidId, merchant, targetOrder.id, targetOrder.table_no, targetLine.id || lineId, targetLine.name || lineId, qtyToVoid, targetLine.price || 0, reason, isWaste, actor, now).run();
+        ).bind(voidId, merchant, targetOrder.id, targetOrder.table_no, targetLine.id || lineId, targetLine.name || lineId, qtyToVoid, targetLine.unitPrice ?? targetLine.price ?? 0, reason, isWaste, actor, now).run();
       } catch (_) {}
 
       return json({
         ok: true,
+        tier: 2,
+        action: 'alert_dispatched',
         voidId,
         directVoid: false,
         alertSent: true,
@@ -930,7 +950,7 @@ export async function onRequestPost(context) {
       return line;
     }).filter(Boolean);
 
-    const newTotal = lines.reduce((s, l) => s + ((Number(l.price) || 0) * (Number(l.qty) || 0)), 0);
+    const newTotal = lines.reduce((s, l) => s + ((Number(l.unitPrice ?? l.price) || 0) * (Number(l.qty) || 0)), 0);
     const nextTs = Math.max(now, (Number(targetOrder.updated_ts) || 0) + 1);
 
     await env.DB.prepare(
@@ -947,10 +967,11 @@ export async function onRequestPost(context) {
 
     return json({
       ok: true,
+      action: action === 'accept' ? 'accepted' : 'rejected',
       orderId: targetOrder.id,
-      action,
-      lines,
+      table: targetOrder.table_no,
       total: newTotal,
+      lines,
     });
   }
 

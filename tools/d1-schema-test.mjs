@@ -64,8 +64,8 @@ const SIMULATED_GAP = {
     ['merchant_config', 'status'], ['merchant_config', 'city'], ['merchant_config', 'mrr'],
     ['sales', 'lines'], ['sales', 'void_ts'],
   ],
-  indexes: ['orders_client_ref', 'orders_ext_ref', 'idx_orders_session', 'table_sessions_live'],
-  tables: ['order_desk'],
+  indexes: ['orders_client_ref', 'orders_ext_ref', 'idx_orders_session', 'table_sessions_live', 'idx_table_transfers_live', 'idx_kitchen_voids_live'],
+  tables: ['order_desk', 'table_transfers', 'kitchen_voids'],
 };
 
 async function main() {

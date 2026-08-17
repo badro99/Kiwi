@@ -235,9 +235,6 @@ export function diff(expected, live) {
     }
   }
   for (const [name, index] of expected.indexes) {
-    /* Un index sur une table absente viendra avec elle : son CREATE TABLE est
-     * déjà dans le plan, et le proposer deux fois ferait échouer le second. */
-    if (!live.tables.has(index.table)) continue;
     if (!live.indexes.has(name)) missingIndexes.push(index);
   }
   return { missingTables, missingColumns, missingIndexes, blocked };
