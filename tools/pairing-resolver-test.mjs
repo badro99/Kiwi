@@ -99,5 +99,11 @@ ok(K2.isPaired() === false, 'isPaired() returns false on null string');
 ok(K2.pairedMerchant() === '', 'pairedMerchant() returns empty on null string');
 ok(K2.pairedVenue() === null, 'pairedVenue() returns null on null string');
 
+// Case F: Invariant — isPaired() === true strictly implies pairedMerchant() !== ''
+ls.setItem('kiwiPairedVenue', JSON.stringify({ name: 'Orphan Store Name', type: 'restaurant' }));
+ok(K2.isPaired() === false, 'name-only payload without merchant/slug/venueId is not paired');
+ok(K2.pairedMerchant() === '', 'name-only payload yields empty merchant string');
+ok(K2.isPaired() === (K2.pairedMerchant() !== ''), 'isPaired() strictly implies pairedMerchant() is non-empty');
+
 if (process.exitCode) process.exit(process.exitCode);
-console.log(`  ✓ pairing resolver (${pass} controls: pairing agreement, storage fallback, purge immediacy, fail-soft JSON)`);
+console.log(`  ✓ pairing resolver (${pass} controls: pairing agreement, storage fallback, purge immediacy, fail-soft JSON, isPaired invariant)`);

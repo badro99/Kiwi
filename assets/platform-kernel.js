@@ -49,7 +49,7 @@
 
   function isPaired() {
     var pv = pairedVenue();
-    return !!(pv && (pv.merchant || pv.slug || pv.venueId || pv.id || pv.name || pv.type));
+    return !!(pv && (pv.merchant || pv.slug || pv.venueId));
   }
 
   function tenant() {
