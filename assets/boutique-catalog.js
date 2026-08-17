@@ -519,8 +519,8 @@
          On n'ouvre que LE magasin lié à ce terminal. Le serveur revérifie le
          cookie httpOnly kiwi_till dans /api/catalog ; ce test client décide
          seulement s'il faut tenter la synchro, il n'accorde aucun accès. */
-      const paired = JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
-      return !!(paired && paired.merchant && String(paired.merchant) === String(VENUE));
+      const pairedMerchant = window.KiwiPlatform?.pairedMerchant?.() || (JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null') || {}).merchant;
+      return !!(pairedMerchant && String(pairedMerchant) === String(VENUE));
     } catch (e) { return false; }
   }
   function readRev(slug) {

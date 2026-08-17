@@ -63,6 +63,7 @@
     try { if (window.KiwiEnv && KiwiEnv.isReal && KiwiEnv.isReal()) return true; } catch (_) {} // hosted / signed-in → always real
     try { if (window.KiwiMe) return true; } catch (_) {}
     try {
+      if (window.KiwiPlatform && typeof window.KiwiPlatform.isPaired === 'function' && window.KiwiPlatform.isPaired()) return true;
       var P = window.KiwiCaissePairing;
       if (P && P.isPaired && P.isPaired() && P.pairedVenue && (P.pairedVenue() || {}).merchant) return true;
       if (localStorage.getItem('kiwiPaired') === '1') {

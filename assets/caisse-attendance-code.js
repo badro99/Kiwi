@@ -5,6 +5,9 @@
 
   function merchant() {
     try {
+      if (window.KiwiPlatform && typeof window.KiwiPlatform.pairedMerchant === 'function') {
+        return window.KiwiPlatform.pairedMerchant();
+      }
       var p = JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
       return String((p && (p.merchant || p.venueId || p.id)) || '');
     } catch (_) { return ''; }

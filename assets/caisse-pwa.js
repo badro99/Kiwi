@@ -142,7 +142,7 @@
      real/paired till, drive every mounted vertical from the browser signal. */
   function realTill() {
     try {
-      return !!window.KiwiEnv?.isReal?.() || !!JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
+      return !!window.KiwiEnv?.isReal?.() || !!window.KiwiPlatform?.isPaired?.() || !!JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
     } catch (_) { return false; }
   }
   function netButtons() {

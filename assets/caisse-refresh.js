@@ -75,6 +75,7 @@
   function real() {
     try {
       if (window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) return true;
+      if (window.KiwiPlatform && typeof window.KiwiPlatform.isPaired === 'function') return window.KiwiPlatform.isPaired();
       return !!JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
     } catch (_) { return false; }
   }

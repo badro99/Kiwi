@@ -550,7 +550,7 @@ ok(caisseSource.includes('id="open-attendance-code"')
   && caisseSource.includes("action: 'generate-attendance-code'")
   && caisseSource.includes('Valide encore'),
   'la caisse possède un bouton séparé qui régénère et chronomètre le code de pointage');
-ok(caisseSource.includes('assets/caisse-attendance-code.js?v=1')
+ok(/assets\/caisse-attendance-code\.js\?v=\d+/.test(caisseSource)
   && dispatchSource.includes('window.KiwiCaisseAttendanceCode.mount(root)')
   && attendanceCodeSource.includes("action: 'generate-attendance-code'")
   && attendanceCodeSource.includes('button[id$="-lock"]')
