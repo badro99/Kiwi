@@ -3984,7 +3984,15 @@ em, i, cite, dfn, var { font-style: normal; }
        so derive from the 6-digit pairing (kiwiPairedVenue) or, on a hosted domain,
        the pinned merchant slug. A real venue shows ITS name — never the demo
        "Café Atlas · Maarif". Local demo (unpaired localhost) is unchanged. */
-    function svPaired() { try { return JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
+    function svPaired() {
+      try {
+        if (window.KiwiPlatform && typeof window.KiwiPlatform.pairedVenue === 'function') {
+          var pv = window.KiwiPlatform.pairedVenue();
+          if (pv) return pv;
+        }
+      } catch (_) {}
+      try { return JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; }
+    }
     function svMerchant() {
       try {
         var q = new URLSearchParams(location.search).get('merchant');

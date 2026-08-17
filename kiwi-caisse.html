@@ -11542,7 +11542,15 @@
      * {name,location,…}) or a hosted session. A real store prints ITS OWN name +
      * city and NO legal ICE/phone (we don't hold them) — never the "Café Atlas"
      * demo. The local demo (unpaired localhost) is unchanged. */
-    function storePaired() { try { return JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
+    function storePaired() {
+      try {
+        if (window.KiwiPlatform && typeof window.KiwiPlatform.pairedVenue === 'function') {
+          var pv = window.KiwiPlatform.pairedVenue();
+          if (pv) return pv;
+        }
+      } catch (_) {}
+      try { return JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; }
+    }
     function storeIsReal() { try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || !!storePaired(); } catch (_) { return !!storePaired(); } }
     function storeName()   { const p = storePaired(); return (p && p.name) || (storeIsReal() ? '' : 'Café Atlas'); }
     function storeCity()   { const p = storePaired(); return (p && p.location) || (storeIsReal() ? '' : 'Maarif · Casablanca'); }

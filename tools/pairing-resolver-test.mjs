@@ -730,5 +730,62 @@ const ppWithout = testPagesPro(false);
 ok(Array.isArray(ppWith) && ppWith[0] === 'Caisse Kiwi · Santos Store · connectée', 'pages-pro.js resolves pairedDeviceLines with KiwiPlatform present');
 ok(Array.isArray(ppWithout) && ppWithout[0] === 'Caisse Kiwi · Santos Store · connectée', 'pages-pro.js resolves pairedDeviceLines via fallback without KiwiPlatform');
 
+/* 23-24. Les deux coquilles HTML. Un fichier HTML ne se charge pas dans une
+   sandbox VM : on extrait le résolveur en ligne et on l'exécute pour de vrai,
+   comme aux contrôles 20 et 22. Ce n'est pas un chargement de module — mais le
+   code exécuté est bien celui du shell, et l'extraction échoue en rouge si la
+   fonction est renommée ou reformatée. */
+function testShellResolver(shell, fnName) {
+  const html = readAsset(shell);
+  const match = html.match(new RegExp('function ' + fnName + '\\(\\) \\{[\\s\\S]*?\\n    \\}'));
+  if (!match) return { found: false };
+  const run = (withPlatform) => {
+    const mem = new Map([['kiwiPairedVenue', JSON.stringify(santosFixture)]]);
+    const storage = { getItem: (k) => mem.get(k) || null, setItem: (k, v) => mem.set(k, String(v)), removeItem: (k) => mem.delete(k) };
+    const win = { localStorage: storage, addEventListener: () => {} };
+    win.window = win;
+    const ctx = vm.createContext({
+      window: win, localStorage: storage, console, Date, Math, JSON, Map, Set, Promise, Array, Object, String, Number, RegExp,
+      setTimeout: () => 0, setInterval: () => 0, clearTimeout: () => {},
+    });
+    if (withPlatform) vm.runInContext(src, ctx);
+    const fn = new Function('window', 'localStorage', match[0] + '; return ' + fnName + '();');
+    return fn(win, storage);
+  };
+  return { found: true, withPlatform: run(true), fallback: run(false) };
+}
+
+for (const [shell, fnName] of [['kiwi-caisse.html', 'storePaired'], ['kiwi-serveur.html', 'svPaired']]) {
+  const r = testShellResolver(shell, fnName);
+  ok(r.found, `${shell} exposes an extractable ${fnName}() resolver`);
+  ok(r.found && r.withPlatform && r.withPlatform.merchant === 'santos-store',
+    `${shell} ${fnName}() resolves santos-store with KiwiPlatform present`);
+  ok(r.found && r.fallback && r.fallback.merchant === 'santos-store',
+    `${shell} ${fnName}() resolves santos-store via fallback without KiwiPlatform`);
+}
+
+/* Le shell est prioritaire sur le brut : si le noyau répond, c'est SA valeur
+   qui sort. Sans cette assertion, un résolveur qui ignore KiwiPlatform et lit
+   toujours localStorage passerait les deux contrôles ci-dessus. */
+for (const [shell, fnName] of [['kiwi-caisse.html', 'storePaired'], ['kiwi-serveur.html', 'svPaired']]) {
+  const html = readAsset(shell);
+  const match = html.match(new RegExp('function ' + fnName + '\\(\\) \\{[\\s\\S]*?\\n    \\}'));
+  let out = null;
+  if (match) {
+    const mem = new Map([['kiwiPairedVenue', JSON.stringify({ merchant: 'stale-store', name: 'Stale' })]]);
+    const storage = { getItem: (k) => mem.get(k) || null, setItem: () => {}, removeItem: () => {} };
+    const win = {
+      localStorage: storage,
+      addEventListener: () => {},
+      KiwiPlatform: { pairedVenue: () => ({ merchant: 'fresh-store', name: 'Fresh' }) },
+    };
+    win.window = win;
+    const fn = new Function('window', 'localStorage', match[0] + '; return ' + fnName + '();');
+    out = fn(win, storage);
+  }
+  ok(out && out.merchant === 'fresh-store',
+    `${shell} ${fnName}() prefers KiwiPlatform over a stale localStorage copy`);
+}
+
 if (process.exitCode) process.exit(process.exitCode);
-console.log(`  ✓ pairing resolver (${pass} controls: pairing agreement, storage fallback, purge immediacy, fail-soft JSON, isPaired invariant, direct module tests with/without platform across 21 modules + cycle safety)`);
+console.log(`  ✓ pairing resolver (${pass} controls: pairing agreement, storage fallback, purge immediacy, fail-soft JSON, isPaired invariant, direct module tests with/without platform across 21 modules + cycle safety + 2 HTML shell resolvers)`);
