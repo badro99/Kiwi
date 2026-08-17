@@ -155,7 +155,12 @@ export async function staffToken(sitePassword) {
 // pairing is meant to last until the merchant unpairs.
 export const TILL_COOKIE = 'kiwi_till';
 
-export async function tillToken(authSecret, merchant) {
+export async function tillToken(authSecret, merchant, deviceId = '') {
+  const dev = String(deviceId || '').trim();
+  if (dev) {
+    const sig = await hmacHex(authSecret, 'kiwi-till-v1:' + String(merchant || '') + ':' + dev);
+    return `${sig}.${dev}`;
+  }
   return hmacHex(authSecret, 'kiwi-till-v1:' + String(merchant || ''));
 }
 
@@ -178,6 +183,13 @@ export async function isTillFor(request, env, merchant) {
   if (!secret || !merchant) return false;
   const got = readCookie(request, TILL_COOKIE);
   if (!got) return false;
+  if (got.includes('.')) {
+    const dot = got.lastIndexOf('.');
+    const sig = got.slice(0, dot);
+    const dev = got.slice(dot + 1);
+    const want = await hmacHex(secret, 'kiwi-till-v1:' + String(merchant || '') + ':' + dev);
+    return timingSafeEqualHex(sig, want);
+  }
   return timingSafeEqualHex(got, await tillToken(secret, merchant));
 }
 
@@ -792,6 +804,18 @@ const LIMIT_BLOCK_MS  = 15 * 60 * 1000;   // durée du blocage
 const LIMIT_MAX_FAILS = 8;                // essais ratés tolérés par fenêtre
 
 function limiterKey(request, scope) {
+  // Key on authenticated device token (till cookie), session cookie, or operator cookie
+  // when present, rather than the shared public NAT IP of the entire venue.
+  // This prevents cashier typos on one till from locking out other tills or the manager.
+  const till = readCookie(request, TILL_COOKIE);
+  if (till) return `${scope}|till:${till.slice(-32)}`;
+
+  const sess = readCookie(request, SESS_COOKIE);
+  if (sess) return `${scope}|sess:${sess.slice(-32)}`;
+
+  const op = readCookie(request, OP_COOKIE);
+  if (op) return `${scope}|op:${op.slice(-32)}`;
+
   const ip = request.headers.get('CF-Connecting-IP')
           || request.headers.get('X-Forwarded-For')
           || '';

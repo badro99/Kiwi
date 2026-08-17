@@ -221,6 +221,7 @@ console.log('\n1 · Server-Side PIN Verification (/api/pin/verify)');
 console.log('\n2 · Attempt Rate-Limiting on Verification');
 
 {
+  sqlite.prepare('DELETE FROM pair_attempts').run();
   const testIp = '192.168.1.100';
   // Send 8 failed attempts
   for (let i = 0; i < 8; i++) {
@@ -254,6 +255,72 @@ console.log('\n2 · Attempt Rate-Limiting on Verification');
   const blockedData = await blockedRes.json();
   check('9th attempt is blocked with 429 too_many_attempts', blockedRes.status === 429 && blockedData.error === 'too_many_attempts');
   check('returns retry_after header or field', typeof blockedData.retry_after === 'number');
+
+  // Multi-till isolation on shared NAT IP:
+  const till1 = await tillToken(AUTH_SECRET, 'cafe-atlas', 'reg-1');
+  const till2 = await tillToken(AUTH_SECRET, 'cafe-atlas', 'reg-2');
+  const sharedShopIp = '192.168.50.1';
+
+  // Till 1 makes 8 wrong attempts
+  for (let i = 0; i < 8; i++) {
+    const req = new Request('https://kiwi.test/api/pin/verify', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: `kiwi_till=${till1}`,
+        'CF-Connecting-IP': sharedShopIp,
+      },
+      body: JSON.stringify({ merchant: 'cafe-atlas', pin: '0000' }),
+    });
+    await verifyPinPost({ request: req, env });
+  }
+
+  // Till 1 is throttled on 9th attempt
+  const t1Blocked = await verifyPinPost({
+    request: new Request('https://kiwi.test/api/pin/verify', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: `kiwi_till=${till1}`,
+        'CF-Connecting-IP': sharedShopIp,
+      },
+      body: JSON.stringify({ merchant: 'cafe-atlas', pin: '1234' }),
+    }),
+    env,
+  });
+  check('Till 1 is throttled after 8 failed attempts', t1Blocked.status === 429);
+
+  // Till 2 on the SAME IP is NOT throttled and can verify PIN
+  const t2Success = await verifyPinPost({
+    request: new Request('https://kiwi.test/api/pin/verify', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: `kiwi_till=${till2}`,
+        'CF-Connecting-IP': sharedShopIp,
+      },
+      body: JSON.stringify({ merchant: 'cafe-atlas', pin: '1234' }),
+    }),
+    env,
+  });
+  const t2Data = await t2Success.json();
+  check('Till 2 on same shop IP is NOT locked out by Till 1 mistakes', t2Success.status === 200 && t2Data.ok === true);
+
+  // Manager on same shop IP is NOT locked out from voiding
+  const mgrCancel = await cancelPost({
+    request: new Request('https://kiwi.test/api/sale/cancel', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: `kiwi_sess=${ownerSessToken}`,
+        'CF-Connecting-IP': sharedShopIp,
+      },
+      body: JSON.stringify({ merchant: 'cafe-atlas', id: 'sale-1', source: 'dashboard' }),
+    }),
+    env,
+  });
+  check('Manager on same shop IP can void sale without lockout', mgrCancel.status === 200);
+  sqlite.prepare('UPDATE sales SET void_ts = NULL WHERE id = ?').run('sale-1');
 
   // Clear IP block for next tests
   sqlite.prepare('DELETE FROM pair_attempts').run();
