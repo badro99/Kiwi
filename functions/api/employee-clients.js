@@ -16,11 +16,13 @@ export async function onRequestGet({ request, env }) {
   const asked = text(url.searchParams.get('merchant'), 64).toLowerCase();
   const employee = await activeServiceEmployee(request, env, asked);
   if (!employee) return json({ error: 'on-shift-service-required' }, 403);
-  const q = '%' + text(url.searchParams.get('q'), 80).toLowerCase() + '%';
+  const rawQ = text(url.searchParams.get('q'), 80).toLowerCase();
+  const escapedQ = rawQ.replace(/[%_\\]/g, '\\$&');
+  const q = '%' + escapedQ + '%';
   try {
     const rows = await env.DB.prepare(`SELECT id, name, phone, points, stamps, visits, spend
       FROM clients WHERE merchant = ? AND deleted = 0
-        AND (LOWER(name) LIKE ? OR phone LIKE ?)
+        AND (LOWER(name) LIKE ? ESCAPE '\\' OR phone LIKE ? ESCAPE '\\')
       ORDER BY last_seen DESC, name LIMIT 100`).bind(employee.merchant, q, q).all();
     return json({ ok: true, clients: rows.results || [] });
   } catch (_) { return json({ ok: true, clients: [], unmigrated: true }); }

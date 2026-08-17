@@ -88,15 +88,28 @@ function translate(o) {
   const rawLines = Array.isArray(o && o.line_items) ? o.line_items : [];
   const lines = rawLines.slice(0, MAX_LINES).map((l) => {
     const variant = str(l && l.variant_title, 120);
-    return {
+    const hasVariant = variant && variant !== 'Default Title';
+    const rawProps = Array.isArray(l && l.properties) ? l.properties : [];
+    const propStrs = rawProps.map((p) => {
+      const k = str(p && (p.name || p.key), 40);
+      const val = str(p && p.value, 60);
+      return k && val ? `${k}: ${val}` : '';
+    }).filter(Boolean);
+    const optionsText = [hasVariant ? variant : '', ...propStrs].filter(Boolean).join(' · ');
+    const visuals = [];
+    if (hasVariant) visuals.push({ emoji: '', name: variant });
+    propStrs.forEach((p) => visuals.push({ emoji: '', name: p }));
+
+    const item = {
       id: str(l && l.id, 40),
       name: str((l && (l.title || l.name)) || '', 80),
       qty: Math.min(99, Math.max(1, Math.round(Number(l && l.quantity) || 1))),
       unitPrice: Math.max(0, Math.round(Number(l && l.price) || 0)),
-      // « Taille M / Rouge » : sans ça le comptoir prépare le mauvais article.
-      options: variant && variant !== 'Default Title' ? variant : '',
+      options: str(optionsText, 200),
       note: '',
     };
+    if (visuals.length) item.visuals = visuals.slice(0, 12);
+    return item;
   });
 
   const ship = (o && o.shipping_address) || null;

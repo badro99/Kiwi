@@ -129,14 +129,24 @@ export async function onRequestPost(context) {
     return json({ error: 'too-many-lines' }, 400);
   }
 
-  const lines = rawLines.map((l) => ({
-    id: str(l && l.id, 40),
-    name: str(l && l.name, 80),
-    qty: Math.min(99, Math.max(1, Math.round(Number(l && l.qty) || 1))),
-    unitPrice: Math.max(0, Math.round(Number(l && l.unitPrice) || 0)),
-    options: str(l && l.options, 200),
-    note: str(l && l.note, 200),
-  }));
+  const lines = rawLines.map((l) => {
+    const item = {
+      id: str(l && l.id, 40),
+      name: str(l && l.name, 80),
+      qty: Math.min(99, Math.max(1, Math.round(Number(l && l.qty) || 1))),
+      unitPrice: Math.max(0, Math.round(Number(l && l.unitPrice) || 0)),
+      options: str(l && l.options, 200),
+      note: str(l && l.note, 200),
+    };
+    const rawVisuals = Array.isArray(l && l.visuals) ? l.visuals : [];
+    if (rawVisuals.length) {
+      item.visuals = rawVisuals.slice(0, 12).map((v) => ({
+        emoji: str((v && (v.emoji || v.e)) || '', 16),
+        name: str((v && (v.name || v.label || v.cn)) || '', 60),
+      })).filter((v) => v.name);
+    }
+    return item;
+  });
 
   /* Le coursier n'est pas le client. Un ticket de livraison sans adresse ni
    * téléphone renvoie le comptoir vers la tablette du prestataire, ce qui

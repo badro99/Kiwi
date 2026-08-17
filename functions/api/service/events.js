@@ -312,6 +312,12 @@ export async function onRequestPost({ request, env }) {
     const actorId = String(body.lock.actorId || (employee && (employee.member.id || employee.session.staffId)) || '').trim().slice(0, 64);
     if (!table) return json({ error: 'table-required' }, 400);
 
+    const targets = await floorTargets(env, merchant);
+    if (!targets[table]) return json({ error: 'floor-table-required' }, 403);
+    if (employee && employee.attendance && employee.attendance.pauseTs) {
+      return json({ error: 'employee-on-pause' }, 403);
+    }
+
     const now = Date.now();
     for (let attempt = 0; attempt < 4; attempt++) {
       const row = await readDoc(env, merchant);
@@ -325,7 +331,10 @@ export async function onRequestPost({ request, env }) {
       if (action === 'acquire') {
         locks[table] = { table, actor, actorId, ts: now };
       } else {
-        delete locks[table];
+        // An employee can only release their own lock unless called by a till
+        if (!employee || !locks[table] || !locks[table].actorId || locks[table].actorId === actorId) {
+          delete locks[table];
+        }
       }
 
       const text = JSON.stringify({ ...row.data, locks });

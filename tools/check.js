@@ -802,6 +802,7 @@ section('Whole-project regressions');
     'multi-device-collision-test.mjs',
     'kitchen-modifiers-and-seating-test.mjs',
     'live-amira-verification.mjs',
+    'security-and-channel-hardening-test.mjs',
   ];
   suites.forEach((name) => {
     const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', name)], { encoding: 'utf8' });
