@@ -431,11 +431,24 @@ ok(serviceSource.includes('id="employee-login"') && serviceSource.includes('Kiwi
    un numéro figé : épinglé, il retombait en rouge à chaque génération de cache
    alors que le pont était juste. La coquille et le précache doivent demander le
    même fichier, sinon un ancien cache NFC ressert l'ancien pont. */
-const SW_LIVE = (fs.readFileSync(path.join(ROOT, 'kiwi-sw.js'), 'utf8').match(/employee-live\.js\?v=(\d+)/) || [])[1] || '';
-ok(!!SW_LIVE && serviceSource.includes(`assets/employee-live.js?v=${SW_LIVE}`)
-  && serviceSource.includes('assets/employee-planning.js?v=3')
-  && serviceSource.includes('assets/pwa-update.js?v=358'),
-  "le pont live du portail est versionné pour qu'un ancien cache NFC ne puisse pas avaler le code caisse");
+/* La règle valait déjà pour employee-live.js, mais les deux autres restaient
+   épinglés à un numéro en dur — ce qui fait retomber le contrôle en rouge au
+   premier bump légitime, précisément le travers que le commentaire ci-dessus
+   décrit. On applique donc la même règle aux trois.
+   On vérifie l'ACCORD, pas la simple présence : se contenter de « une
+   estampille existe » rendrait le contrôle aveugle au seul défaut qu'il
+   surveille — une coquille et un précache qui demandent deux fichiers
+   différents. */
+const swSource = fs.readFileSync(path.join(ROOT, 'kiwi-sw.js'), 'utf8');
+const bridgeStamps = ['employee-live', 'employee-planning', 'pwa-update'].map((asset) => {
+  const re = new RegExp(`${asset}\\.js\\?v=(\\d+)`);
+  const sw = (swSource.match(re) || [])[1] || '';
+  const shell = (serviceSource.match(re) || [])[1] || '';
+  return { asset, sw, shell, agrees: !!sw && sw === shell };
+});
+ok(bridgeStamps.every((s) => s.agrees),
+  "le pont live du portail est versionné pour qu'un ancien cache NFC ne puisse pas avaler le code caisse"
+  + bridgeStamps.filter((s) => !s.agrees).map((s) => ` [${s.asset}: coquille=${s.shell || '—'} sw=${s.sw || '—'}]`).join(''));
 ok(employeePlanningSource.includes("requestPlanning(body)")
   && employeePlanningSource.includes("cancelPlanningRequest")
   && employeePlanningSource.includes("@media(max-width:600px)"),

@@ -59,7 +59,15 @@
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <!-- Exactement la requête du tableau de bord. Trois écarts corrigés :
+       · IBM Plex Sans Arabic MANQUAIT alors que cet écran a un sélecteur
+         arabe (العربية) et des règles html[dir="rtl"] — l'arabe tombait donc
+         sur une police système, à côté du reste du produit ;
+       · le graisse 800 n'est plus chargée : la charte écarte les graisses
+         d'affichage grasses et le tableau de bord s'arrête à 700 ;
+       · JetBrains Mono ne sert plus (voir --mono), on ne la télécharge donc
+         plus — une requête de police en moins sur une tablette de salle. -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet" />
 
   <!-- Lucide icons -->
   <!-- Copie locale : ces pages tiraient lucide@latest depuis unpkg à chaque
@@ -188,23 +196,45 @@
       --forest-edge:     #0B6E4F;
       --ring:          var(--surface);  /* l'anneau de 2px autour d'un point */
 
-      --sans:  "Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-      --serif: "Instrument Serif", "Times New Roman", serif;
-      --mono:  "JetBrains Mono", "SF Mono", ui-monospace, monospace;
+      /* ── Type ───────────────────────────────────────────────────────────────
+         Recopié de assets/tokens.css, que ce fichier unique ne charge pas. Les
+         mêmes noms y portaient des valeurs différentes : d'où deux produits qui
+         ne se ressemblaient pas tout en se croyant accordés. */
+      --sans:   "Inter Tight", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      --serif:  "Instrument Serif", "Times New Roman", serif;
+      --arabic: "IBM Plex Sans Arabic", "Cairo", sans-serif;
+      /* PAS JetBrains Mono, et c'est délibéré côté tableau de bord : « les
+         relevés chiffrés utilisent le même zéro clair que les codes-barres
+         imprimés ; garder JetBrains Mono hors de ce jeton évite son zéro pointé
+         sous Windows. » Cet écran affichait donc ses heures et ses montants
+         dans une police que le tableau de bord a écartée exprès. */
+      --mono:   Arial, Helvetica, sans-serif;
 
+      /* ── Formes ─────────────────────────────────────────────────────────────
+         L'échelle du tableau de bord. La précédente (12/16/20) était plus dure
+         d'un cran à chaque palier — c'est ce qui donnait à cet écran son air
+         d'appartenir à un autre produit. */
       --r-sm: 6px;
       --r-md: 10px;
-      --r-lg: 12px;
-      --r-xl: 16px;
-      --r-2xl: 20px;
+      --r-lg: 16px;
+      --r-xl: 24px;
+      --r-2xl: 32px;
 
-      --shadow-1: 0 1px 2px rgba(17,17,17,.04), 0 4px 10px rgba(17,17,17,.05);
-      --shadow-2: 0 8px 28px rgba(17,17,17,.12), 0 2px 6px rgba(17,17,17,.06);
+      /* ── Élévation ──────────────────────────────────────────────────────────
+         --elev-1/-2 du tableau de bord : l'ombre y est TEINTÉE de vert Atlas,
+         jamais grise, et coiffée d'un liseré blanc qui fait lire la carte comme
+         du papier éclairé. Une ombre grise neutre, à côté, fait sale. */
+      --shadow-1: 0 1px 2px -1px rgba(11,110,79,.10), 0 10px 26px -20px rgba(11,110,79,.22), inset 0 1px 0 rgba(255,255,255,.7);
+      --shadow-2: 0 3px 8px -3px rgba(11,110,79,.16), 0 24px 48px -22px rgba(11,110,79,.32), inset 0 1px 0 rgba(255,255,255,.85);
       --shadow-3: 0 30px 60px rgba(0,0,0,.5);
-      /* Le liseré haut qui fait exister une carte. Nul le jour (l'ombre
-         suffit), lumineux la nuit : sans lui, une carte sombre sur un fond
-         sombre n'a pas de bord et l'écran s'aplatit. */
-      --rim: none;
+      /* Le liseré haut qui fait exister une carte : nul le jour (l'ombre
+         suffit), lumineux la nuit, sans quoi une carte sombre sur fond sombre
+         n'a pas de bord et l'écran s'aplatit.
+         Sa valeur « éteinte » est une ombre TRANSPARENTE, pas `none` : `none`
+         est interdit dans une liste d'ombres, si bien que
+         `box-shadow: var(--shadow-1), none` était rejeté EN ENTIER — les cartes
+         du jour n'avaient aucune ombre, sans une ligne en console. */
+      --rim: 0 0 0 0 transparent;
       /* L'atmosphère du sol. Le tableau de bord pose un dégradé maillé ; ici
          une seule lueur froide en haut, assez discrète pour ne pas salir un
          écran lu en diagonale entre deux tables. */
@@ -298,6 +328,19 @@
    Italics that DEPICT something (icing piped on a cake, an imitated masthead)
    set font-style on their own class, which outranks this. */
 em, i, cite, dfn, var { font-style: normal; }
+
+/* L'arabe a sa propre police dans la charte. Sans cette règle, un serveur qui
+   choisit العربية lisait son écran dans la police système du téléphone pendant
+   que le tableau de bord servait bien la police de marque — deux voix pour le
+   même commerçant. `document.documentElement.lang` est déjà posé au changement
+   de langue, il n'y a donc rien à câbler.
+
+   On REDÉFINIT --sans, exactement comme assets/tokens.css:153, plutôt que
+   d'ajouter la police arabe en fin de pile : --sans contient -apple-system et
+   se termine par sans-serif, deux familles qui ONT des glyphes arabes et
+   auraient donc gagné avant IBM Plex. Une pile allongée n'aurait rien changé
+   à l'écran. */
+html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-serif; }
 
     *, *::before, *::after { box-sizing: border-box; }
     html, body {
@@ -612,7 +655,7 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .ci-clock-time {
       font-feature-settings: "tnum" 1;
-      font-size: 64px; font-weight: 800;
+      font-size: 64px; font-weight: 700;
       letter-spacing: -0.04em;
       line-height: 1;
       margin-top: 16px;
@@ -1189,7 +1232,7 @@ em, i, cite, dfn, var { font-style: normal; }
       font-family: var(--serif); font-size: 15px; color: var(--ink-2);
     }
     .td-total-row .val {
-      font-size: 22px; font-weight: 800; color: var(--ink);
+      font-size: 22px; font-weight: 700; color: var(--ink);
       font-feature-settings: "tnum" 1;
       letter-spacing: -0.02em;
     }
@@ -1433,7 +1476,7 @@ em, i, cite, dfn, var { font-style: normal; }
     .menu-item {
       position: relative;
       background: var(--surface);
-      border-radius: 14px;
+      border-radius: var(--r-lg);
       border: 1.5px solid var(--line);
       box-shadow: var(--shadow-1), var(--rim);
       padding: 12px 12px 10px;
@@ -2381,7 +2424,7 @@ em, i, cite, dfn, var { font-style: normal; }
 
     /* Card / cash modals */
     .modal-amount {
-      font-size: 40px; font-weight: 800; color: var(--forest-ink);
+      font-size: 40px; font-weight: 700; color: var(--forest-ink);
       letter-spacing: -0.03em;
       font-feature-settings: "tnum" 1;
       text-align: center;
@@ -2513,7 +2556,7 @@ em, i, cite, dfn, var { font-style: normal; }
       display: flex; justify-content: space-between; align-items: baseline;
     }
     .cash-rendu .lbl { font-size: 13px; color: var(--ink-3); }
-    .cash-rendu .val { font-size: 20px; font-weight: 800; color: var(--ink); font-feature-settings: "tnum" 1; }
+    .cash-rendu .val { font-size: 20px; font-weight: 700; color: var(--ink); font-feature-settings: "tnum" 1; }
     .cash-rendu.is-positive .val { color: var(--emerald); }
     .cash-rendu.is-short .val { color: var(--danger-mute); font-size: 13px; font-weight: 600; }
     .cash-confirm {
@@ -2526,7 +2569,7 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .cash-confirm[disabled] { opacity: .35; }
     .cash-success-rendu {
-      font-size: 32px; font-weight: 800; color: var(--emerald);
+      font-size: 32px; font-weight: 700; color: var(--emerald);
       font-feature-settings: "tnum" 1;
       letter-spacing: -0.02em;
       text-align: center;
@@ -2604,7 +2647,7 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .split-per-person .lbl { font-size: 14px; font-weight: 600; color: var(--ink); }
     .split-per-person .val {
-      font-size: 22px; font-weight: 800; color: var(--forest-ink);
+      font-size: 22px; font-weight: 700; color: var(--forest-ink);
       font-feature-settings: "tnum" 1; letter-spacing: -0.02em;
     }
 
@@ -2951,7 +2994,7 @@ em, i, cite, dfn, var { font-style: normal; }
     .split-part-num svg { width: 14px; height: 14px; }
     .split-part-card.is-paid .split-part-num { background: var(--emerald); color: var(--on-accent); }
     .split-part-info { flex: 1; min-width: 0; }
-    .split-part-amount { font-size: 16px; font-weight: 800; color: var(--ink); font-feature-settings: "tnum" 1; letter-spacing: -0.02em; }
+    .split-part-amount { font-size: 16px; font-weight: 700; color: var(--ink); font-feature-settings: "tnum" 1; letter-spacing: -0.02em; }
     .split-part-card.is-paid .split-part-amount { color: var(--forest-ink); }
     .split-part-label { font-size: 10.5px; color: var(--ink-4); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; }
     .split-part-paid-label { font-size: 11.5px; font-weight: 600; color: var(--forest-ink); margin-top: 2px; }
@@ -4212,7 +4255,7 @@ em, i, cite, dfn, var { font-style: normal; }
   <!-- Real employee identity, planning, floor and attendance bridge. -->
   <script src="assets/pwa-update.js?v=358" defer></script>
   <script src="assets/employee-live.js?v=379" defer></script>
-  <script src="assets/employee-planning.js?v=3" defer></script>
+  <script src="assets/employee-planning.js?v=4" defer></script>
   <link rel="stylesheet" href="assets/employee-trade-shell.css?v=1">
   <script src="assets/employee-trade-shell.js?v=2" defer></script>
   <!-- Canal de poussée facultatif : quand le concentrateur temps réel est
