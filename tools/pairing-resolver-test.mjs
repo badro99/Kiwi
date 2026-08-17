@@ -661,16 +661,25 @@ ok(vWithout && vWithout.real === true && vWithout.ownName === 'Santos Store', 'v
 
 // 21. venues.js ↔ platform-kernel.js cycle safety invariant
 function testCycleSafety() {
-  const mem = new Map([
-    ['kiwiPaired', '1'],
-    ['kiwiPairedVenue', JSON.stringify(santosFixture)],
-  ]);
+  const mem = new Map(); // Unpaired session: pairedMerchant() is empty, forcing tenant() to evaluate window.KiwiVenue.getCurrentVenueData()
   const storage = { getItem: (k) => mem.get(k) || null, setItem: (k, v) => mem.set(k, String(v)), removeItem: (k) => mem.delete(k) };
-  const doc = {
-    addEventListener: () => {},
-    documentElement: { setAttribute: () => {} },
+  const makeEl = () => ({
+    setAttribute: () => {},
+    removeAttribute: () => {},
+    getAttribute: () => null,
+    classList: { remove: () => {}, add: () => {}, contains: () => false },
     querySelector: () => null,
     querySelectorAll: () => [],
+    addEventListener: () => {},
+    appendChild: () => {},
+  });
+  const doc = {
+    addEventListener: () => {},
+    documentElement: makeEl(),
+    body: makeEl(),
+    querySelector: () => null,
+    querySelectorAll: () => [],
+    createElement: makeEl,
   };
   const win = {
     localStorage: storage,
@@ -684,17 +693,20 @@ function testCycleSafety() {
     window: win, document: doc, localStorage: storage, location: win.location, console, Date, Math, JSON, Map, Set, Promise, Array, Object, String, Number, RegExp,
     setTimeout: () => 0, setInterval: () => 0, clearTimeout: () => {},
   });
-  // Load platform-kernel first, then venues.js, in the same window
+  // Load real platform-kernel first, then real venues.js, in the same window
   vm.runInContext(src, ctx);
-  // Verify tenant() does not recurse infinitely when KiwiVenue is active
-  win.KiwiVenue = {
-    getCurrentVenueData: () => ({ id: 'v-custom', slug: 'santos-custom', name: 'Santos Custom' }),
-    isCustom: () => true,
-  };
+  vm.runInContext(readAsset('assets/venues.js'), ctx);
+
+  ok(win.KiwiPlatform && typeof win.KiwiPlatform.tenant === 'function', 'KiwiPlatform.tenant is mounted');
+  ok(win.KiwiVenue && typeof win.KiwiVenue.getCurrentVenueData === 'function', 'real KiwiVenue.getCurrentVenueData is mounted');
+
+  const vId = win.KiwiVenue.createVenue('Atlas Spa', 'spa', 'Gauthier');
+  win.KiwiVenue.setVenue(vId);
+
   const t = win.KiwiPlatform.tenant();
   return t;
 }
-ok(testCycleSafety() === 'santos-store', 'platform-kernel tenant() with KiwiVenue evaluates without recursion or stack overflow');
+ok(testCycleSafety() === 'mon-activite', 'platform-kernel tenant() calls real venues.js getCurrentVenueData without recursion or stack overflow');
 
 // 22. assets/pages-pro.js (pairedDeviceLines paired venue resolution)
 function testPagesPro(withPlatform) {
