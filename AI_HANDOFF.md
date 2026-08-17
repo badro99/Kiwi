@@ -86,7 +86,7 @@ hero KPI, the editorial pricing manifesto, JSON-LD offers, FAQ, meta, priceRange
 **unlocks the Croissance growth suite** (session only; `body.growth-locked` removed), any
 other 4-digit → Café Atlas owner demo. "Entrer dans la démo" = skip. **Every passcode now
 also enables the Design 2026 skin** (see below).
-To drive the demo in the preview: enter a PIN (e.g. `1111`) into the lock input, or remove
+To drive the demo in the preview: enter a PIN (e.g. demo PIN) into the lock input, or remove
 `.kiwi-lock`/`.kiwi-greet` and `.kw-app-hidden` and call `Kiwi.handlers['account-profile']()`.
 
 ## 5. Design 2026 — "Liquid Glass" skin (reversible, gated)

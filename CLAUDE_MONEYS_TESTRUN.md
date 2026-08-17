@@ -83,14 +83,14 @@ store — no Café Atlas, no Ghali, no seed shift.
 ### 🟢 Caisse staff-PIN gate (F8) — verified live end-to-end
 Owner asked: "the caisse shouldn't open unless the owner or a cashier PIN is entered."
 **Already works — no code change needed.** Chain verified:
-1. Onboarding wrote owner 1234 + cashier 4321 and **synced them to the server** —
-   `GET /api/config?merchant=claude-s-moneys` → `pins:[{Claude,1234,owner},{Hamza,4321,staff}]`.
-2. Paired a caisse (dashboard "Connecter la caisse" → code 447748 → redeem) — the till
+1. Onboarding wrote owner and cashier PINs and **synced them to the server** —
+   `GET /api/config?merchant=claude-s-moneys` → `pins:[{Claude,••••,owner},{Hamza,••••,staff}]`.
+2. Paired a caisse (dashboard "Connecter la caisse" → code `••••••` → redeem) — the till
    bound to **"Claude's Moneys"** (correct slug, not cafe-atlas).
 3. `bootWithPin()` saw pins existed → showed the **"CODE PERSONNEL · 4 CHIFFRES"** pad
    instead of opening (gate active, not fail-soft).
-4. Wrong code `9999` → **rejected** (dots cleared, till stayed locked).
-5. `submitPin()` accepts any configured PIN → owner 1234 **or** cashier 4321 opens it;
+4. Invalid code → **rejected** (dots cleared, till stayed locked).
+5. `submitPin()` accepts any configured PIN → owner or cashier PIN opens it;
    nothing else does.
 
 **🟡 caveat — fail-soft opens the till if `/api/config` is unreachable OR returns no PINs.**
@@ -228,7 +228,7 @@ tills already deployed — owner's call before shipping.
 
 ## Dashboard sweep — live, on the real Claude's Moneys account
 
-Owner unlocked both surfaces (PIN 1234). Every finding below was seen on screen by a
+Owner unlocked both surfaces (PIN `••••`). Every finding below was seen on screen by a
 signed-in real merchant, not inferred from code.
 
 ### 🟢 Verified working end-to-end

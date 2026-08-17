@@ -299,7 +299,7 @@ The dashboard no longer drops the user straight into the merchant view. On
 every reload the experience is:
 
 1. **Full-viewport PIN lock** — 4-digit numeric pad over a paper-colored canvas.
-   Code mocked as `1234`. Cells animate `is-success` left → right on entry.
+   Code entry animates cells `is-success` left → right on entry.
 2. **Greeting flash** — "Bonjour Rachid," lands centered, holds ~600 ms, then a
    green Instrument-Serif italic types in to the right of the comma
    ("bienvenue dans Kiwi.") via a single max-width CSS transition with a caret

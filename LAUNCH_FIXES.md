@@ -26,9 +26,9 @@ after the mainline is verified.
 | **F8** staff PIN after pairing | ✅ DONE (9c4827a, v51) | code, **fail-soft (worst case = no lockout)** — needs a real pairing e2e |
 | **F6** restaurant floor blanked for real stores | ✅ DONE (v53) | real caisse/serveur floor renders empty ("0 / 0 occupées"), no cafe-atlas geometry; demo untouched |
 
-Ground truth (D1 `kiwi-sales`): accounts **adam** (doukaliadam80@gmail.com, slug `adam`,
-type boutique, PIN 8888) and **Ghali/MixMax** (badromail9@gmail.com, slug `mixmax-test`,
-type boutique, PIN 7777). Both boutiques → F6 (restaurant) is not launch-blocking.
+Ground truth (D1 `kiwi-sales`): accounts **adam** (adam@example.test, slug `adam`,
+type boutique, PIN `••••`) and **Ghali/MixMax** (mixmax@example.test, slug `mixmax-test`,
+type boutique, PIN `••••`). Both boutiques → F6 (restaurant) is not launch-blocking.
 
 ---
 
@@ -45,7 +45,7 @@ Live proof captured on the owner's Mac (one browser):
 - `kiwiCustomVenues` = one global array holding `vix`, `trt`, … (every account's stores).
 - 5 venue-data sets piled up: `boutique-culto`, `adam`, `scoped`, `own`, `vmr5c4ki2`.
 - `/api/me` = MixMax/Ghali, but sidebar rendered a stale venue; `staffCount:6` on an empty custom venue.
-- `kiwiPins` = `[{code:"1211",name:"Zakariae"}]` — a different account's PIN (the "code incorrect" cause).
+- `kiwiPins` = `[{code:"••••",name:"Zakariae"}]` — a different account's PIN (the "code incorrect" cause).
 
 ---
 
@@ -55,10 +55,10 @@ Live proof captured on the owner's Mac (one browser):
 - **Cause:** `merchant-config.js` `merchant()` read the merchant slug from the stale
   global `kiwiLiveMerchant` (`"vix"`) / demo default, so the dashboard fetched
   `/api/config?merchant=vix` → empty pins → lock fell back to stale local
-  `kiwiPins` (1211) → real 7777 rejected.
+  `kiwiPins` (••••) → real PIN rejected.
 - **Fix shipped:** GET `/api/config` now derives the merchant from the authenticated
   session when no `?merchant=` is given (mirrors POST); the dashboard (non-operator)
-  calls bare `/api/config`. Verified live: returns `{pins:[{pin:"7777",...}],type:"boutique"}`.
+  calls bare `/api/config`. Verified live: returns `{pins:[{pin:"••••",...}],type:"boutique"}`.
 - **Hardened by F1** (clears the stale local `kiwiPins`).
 
 ### F1 · KEYSTONE — account-scoped tenant reset  → fixes P4, P5, P6, P7-team, P1-stale, hardens F0
