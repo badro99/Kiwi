@@ -8272,7 +8272,7 @@
     }
     const optSig  = (opts) => (opts || []).map(o => o.c).join('|');
     const optText = (opts) => (opts || []).map(o => o.cn).join(' · ');
-    const optVisuals = (opts) => (opts || []).filter(o => o && o.e).map(o => ({ emoji: o.e, name: o.cn }));
+    const optVisuals = (opts) => (opts || []).filter(o => o && (o.cn || o.name || o.label)).map(o => ({ emoji: o.e || o.emoji || '', name: o.cn || o.name || o.label }));
 
     /* Le papier garde une phrase lisible avec tous les choix. Le KDS reçoit en
        plus les repères visuels structurés (`optVisuals`) afin de pouvoir rendre
@@ -9438,12 +9438,12 @@
       try {
         const assigned = t && t.server && servers[t.server];
         const merchant = currentMerchantSlug();
-        if (t && t.server && merchant) {
+        if (t && merchant) {
           fetch('/api/service/events', {
             method: 'POST', credentials: 'same-origin', cache: 'no-store',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ merchant, event: {
-              type: 'table-seated', table: tableId, serverId: t.server,
+              type: 'table-seated', table: tableId, serverId: (t && t.server) || '',
               server: (assigned && assigned.name) || '', customer: e.name, covers: e.size,
             } }),
           }).catch(() => {});
@@ -9557,6 +9557,10 @@
       toT.discount = fromT.discount;
       tableOrders[to] = tableOrders[from] || [];
       orders[to] = orders[from] || [];
+      if (typeof tableSplits !== 'undefined' && tableSplits.has(from)) {
+        tableSplits.set(to, tableSplits.get(from));
+        tableSplits.delete(from);
+      }
 
       // Clear source table
       fromT.status = 'khawya';
@@ -9648,6 +9652,10 @@
       const targetLines = tableOrders[target] || [];
       tableOrders[target] = targetLines.concat(sourceLines);
       targetT.covers = (targetT.covers || 0) + (sourceT.covers || 0);
+      if (typeof tableSplits !== 'undefined') {
+        tableSplits.delete(source);
+        tableSplits.delete(target);
+      }
 
       // Clear source table
       sourceT.status = 'khawya';
@@ -14635,8 +14643,11 @@
       const items = o.items.map(i => {
         const off = kdsActiveStation !== 'all' && !i.stations.includes(kdsActiveStation);
         const note = (i.note || '').trim();
-        const visuals = (Array.isArray(i.visuals) ? i.visuals : []).filter(v => v && v.emoji && v.name);
-        const visualHtml = visuals.length ? `<span class="kit-visuals">${visuals.map(v => `<span class="kit-visual"><span class="kit-visual-emoji">${kdsEsc(v.emoji)}</span><span>${kdsEsc(v.name)}</span></span>`).join('')}</span>` : '';
+        const visuals = (Array.isArray(i.visuals) ? i.visuals : []).filter(v => v && (v.name || v.label || v.cn)).map(v => ({
+          emoji: v.emoji || v.e || '',
+          name: v.name || v.label || v.cn,
+        }));
+        const visualHtml = visuals.length ? `<span class="kit-visuals">${visuals.map(v => `<span class="kit-visual">${v.emoji ? `<span class="kit-visual-emoji">${kdsEsc(v.emoji)}</span>` : ''}<span>${kdsEsc(v.name)}</span></span>`).join('')}</span>` : '';
         const hasRec = kdsHasRecipe(i.n);
         return `<li class="kit-item${off ? ' kit-item-off' : ''}${hasRec ? ' has-recipe' : ''}"${hasRec ? ` data-kit-recipe="${kdsEsc(i.n)}"` : ''}><span class="kit-q">${i.q}</span><span class="kit-nm">${kdsEsc(i.n)}${visualHtml}${note ? `<span class="kit-inote">${KDS_SVG.note}<span>${kdsEsc(note)}</span></span>` : ''}</span>${hasRec ? KDS_SVG.book : ''}</li>`;
       }).join('');

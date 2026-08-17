@@ -307,10 +307,10 @@ export async function priceOrder(env, merchant, rawLines) {
     const note = String((l && l.note) || '').slice(0, 200);
     const visuals = (Array.isArray(l && l.visuals) ? l.visuals.slice(0, 12) : [])
       .map((v) => ({
-        emoji: String((v && v.emoji) || '').trim().slice(0, 16),
-        name: String((v && v.name) || '').trim().slice(0, 60),
+        emoji: String((v && (v.emoji || v.e)) || '').trim().slice(0, 16),
+        name: String((v && (v.name || v.label || v.cn)) || '').trim().slice(0, 60),
       }))
-      .filter((v) => v.emoji && v.name);
+      .filter((v) => v.name);
 
     const ref = id && index.get(id);
     if (!ref) { unknown.push(id || '?'); continue; }
@@ -336,7 +336,7 @@ export async function priceOrder(env, merchant, rawLines) {
         if (group.kind === 'one') oneSeen.add(groupId);
         labels.push(`${group.name}: ${choice.name}`);
         optionExtra += choice.price;
-        if (choice.emoji) canonicalVisuals.push({ emoji: choice.emoji, name: choice.name });
+        canonicalVisuals.push({ emoji: choice.emoji || '', name: choice.name });
       }
       if (!valid) { invalidOptions.push(ref.name || id); continue; }
       options = labels.join(' · ').slice(0, 200);

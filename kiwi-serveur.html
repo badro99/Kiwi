@@ -4778,8 +4778,14 @@ em, i, cite, dfn, var { font-style: normal; }
         const opts = Array.isArray(l.opts)
           ? l.opts.map(o => o && o.label).filter(Boolean).join(', ')
           : '';
+        const visuals = Array.isArray(l.opts)
+          ? l.opts.filter(o => o && (o.label || o.name || o.cn)).map(o => ({
+              emoji: o.emoji || o.e || '',
+              name: o.label || o.name || o.cn || '',
+            }))
+          : [];
         delta.push({
-          id: l.id, qty: dq, options: opts,
+          id: l.id, qty: dq, options: opts, visuals: visuals,
           optionChoices: Array.isArray(l.opts)
             ? l.opts.map(o => ({ group: o.group, label: o.label }))
             : [],

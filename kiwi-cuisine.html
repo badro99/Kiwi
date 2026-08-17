@@ -730,9 +730,13 @@
     var items = (o.lines || []).map(function (l) {
       var off = S.station !== 'all' && l.station !== S.station;
       var note = String(l.note || '').trim();
-      var visuals = (Array.isArray(l.visuals) ? l.visuals : []).filter(function (v) { return v && v.emoji && v.name; });
+      var visuals = (Array.isArray(l.visuals) ? l.visuals : []).filter(function (v) {
+        return v && (v.name || v.label || v.cn);
+      }).map(function (v) {
+        return { emoji: v.emoji || v.e || '', name: v.name || v.label || v.cn };
+      });
       var visualHtml = visuals.length ? '<span class="tk-visuals">' + visuals.map(function (v) {
-        return '<span class="tk-visual"><span class="tk-visual-emoji">' + esc(v.emoji) + '</span><span>' + esc(v.name) + '</span></span>';
+        return '<span class="tk-visual">' + (v.emoji ? '<span class="tk-visual-emoji">' + esc(v.emoji) + '</span>' : '') + '<span>' + esc(v.name) + '</span></span>';
       }).join('') + '</span>' : '';
       return '<li class="' + (off ? 'off' : '') + '"><span class="tk-q">' + (l.qty || 1) + '×</span>'
         + '<span class="tk-n">' + esc(l.name) + visualHtml + (note ? '<span class="tk-note">' + esc(note) + '</span>' : '') + '</span></li>';

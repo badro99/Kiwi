@@ -4495,7 +4495,8 @@ em, i, cite, dfn, var { font-style: normal; }
         const ids = opt.type === 'multi' ? (Array.isArray(sel) ? sel : []) : (sel == null ? [] : [sel]);
         ids.forEach(id => {
           const emoji = choiceEmoji(opt.key, id);
-          if (emoji) out.push({ emoji, name: choiceLabel(opt.key, id) });
+          const name = choiceLabel(opt.key, id);
+          if (name) out.push({ emoji: emoji || '', name });
         });
       }
       return out;

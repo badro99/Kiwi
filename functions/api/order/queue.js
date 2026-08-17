@@ -1312,10 +1312,10 @@ function cleanLines(raw) {
       note: String(l.note || '').slice(0, 200),
       visuals: (Array.isArray(l.visuals) ? l.visuals.slice(0, 12) : [])
         .map((v) => ({
-          emoji: String((v && v.emoji) || '').trim().slice(0, 16),
-          name: String((v && v.name) || '').trim().slice(0, 60),
+          emoji: String((v && (v.emoji || v.e)) || '').trim().slice(0, 16),
+          name: String((v && (v.name || v.label || v.cn)) || '').trim().slice(0, 60),
         }))
-        .filter((v) => v.emoji && v.name),
+        .filter((v) => v.name),
       station: String(l.station || '').slice(0, 40),
     });
   }
