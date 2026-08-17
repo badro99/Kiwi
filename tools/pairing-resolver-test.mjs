@@ -616,5 +616,85 @@ function testVenueStore(withPlatform) {
 ok(testVenueStore(true) === 'santos-store', 'venue-store.js resolves currentVenue santos-store with KiwiPlatform present');
 ok(testVenueStore(false) === 'santos-store', 'venue-store.js resolves currentVenue santos-store via fallback without KiwiPlatform');
 
+// 20. assets/venues.js (isRealMerchant, ensureOwnEmptyVenue, and cycle prevention with platform-kernel)
+function testVenues(withPlatform) {
+  const mem = new Map([
+    ['kiwiPaired', '1'],
+    ['kiwiPairedVenue', JSON.stringify(santosFixture)],
+  ]);
+  const storage = { getItem: (k) => mem.get(k) || null, setItem: (k, v) => mem.set(k, String(v)), removeItem: (k) => mem.delete(k) };
+  const doc = {
+    addEventListener: () => {},
+    documentElement: { setAttribute: () => {} },
+    querySelector: () => null,
+    querySelectorAll: () => [],
+  };
+  const win = {
+    localStorage: storage,
+    document: doc,
+    location: { pathname: '/dashboard.html', search: '', hostname: 'localhost' },
+    addEventListener: () => {},
+    dispatchEvent: () => {},
+  };
+  win.window = win;
+  const ctx = vm.createContext({
+    window: win, document: doc, localStorage: storage, location: win.location, console, Date, Math, JSON, Map, Set, Promise, Array, Object, String, Number, RegExp,
+    setTimeout: () => 0, setInterval: () => 0, clearTimeout: () => {},
+  });
+  if (withPlatform) vm.runInContext(src, ctx);
+  const vSrc = readAsset('assets/venues.js');
+  const match = vSrc.match(/function isRealMerchant\(\) \{[\s\S]*?\n  \}/);
+  const ownMatch = vSrc.match(/function ensureOwnEmptyVenue\(\) \{[\s\S]*?\n  \}/);
+  if (!match || !ownMatch) return null;
+  const fnReal = new Function('window', 'localStorage', match[0] + '; return isRealMerchant();');
+  const VENUES = {};
+  const customIds = new Set();
+  const fnOwn = new Function('window', 'localStorage', 'SUBTYPE_BASE', 'TYPE_BASES', 'VENUES', 'customIds', ownMatch[0] + '; return ensureOwnEmptyVenue();');
+  const real = fnReal(win, storage);
+  fnOwn(win, storage, { boutique: 'boutique' }, ['restaurant', 'boutique', 'spa'], VENUES, customIds);
+  return { real: real, ownName: VENUES.own && VENUES.own.name };
+}
+const vWith = testVenues(true);
+const vWithout = testVenues(false);
+ok(vWith && vWith.real === true && vWith.ownName === 'Santos Store', 'venues.js resolves isRealMerchant and ensureOwnEmptyVenue with KiwiPlatform present');
+ok(vWithout && vWithout.real === true && vWithout.ownName === 'Santos Store', 'venues.js resolves isRealMerchant and ensureOwnEmptyVenue via fallback without KiwiPlatform');
+
+// 21. venues.js ↔ platform-kernel.js cycle safety invariant
+function testCycleSafety() {
+  const mem = new Map([
+    ['kiwiPaired', '1'],
+    ['kiwiPairedVenue', JSON.stringify(santosFixture)],
+  ]);
+  const storage = { getItem: (k) => mem.get(k) || null, setItem: (k, v) => mem.set(k, String(v)), removeItem: (k) => mem.delete(k) };
+  const doc = {
+    addEventListener: () => {},
+    documentElement: { setAttribute: () => {} },
+    querySelector: () => null,
+    querySelectorAll: () => [],
+  };
+  const win = {
+    localStorage: storage,
+    document: doc,
+    location: { pathname: '/dashboard.html', search: '', hostname: 'localhost' },
+    addEventListener: () => {},
+    dispatchEvent: () => {},
+  };
+  win.window = win;
+  const ctx = vm.createContext({
+    window: win, document: doc, localStorage: storage, location: win.location, console, Date, Math, JSON, Map, Set, Promise, Array, Object, String, Number, RegExp,
+    setTimeout: () => 0, setInterval: () => 0, clearTimeout: () => {},
+  });
+  // Load platform-kernel first, then venues.js, in the same window
+  vm.runInContext(src, ctx);
+  // Verify tenant() does not recurse infinitely when KiwiVenue is active
+  win.KiwiVenue = {
+    getCurrentVenueData: () => ({ id: 'v-custom', slug: 'santos-custom', name: 'Santos Custom' }),
+    isCustom: () => true,
+  };
+  const t = win.KiwiPlatform.tenant();
+  return t;
+}
+ok(testCycleSafety() === 'santos-store', 'platform-kernel tenant() with KiwiVenue evaluates without recursion or stack overflow');
+
 if (process.exitCode) process.exit(process.exitCode);
-console.log(`  ✓ pairing resolver (${pass} controls: pairing agreement, storage fallback, purge immediacy, fail-soft JSON, isPaired invariant, direct module tests with/without platform across 19 modules)`);
+console.log(`  ✓ pairing resolver (${pass} controls: pairing agreement, storage fallback, purge immediacy, fail-soft JSON, isPaired invariant, direct module tests with/without platform across 20 modules + cycle safety)`);

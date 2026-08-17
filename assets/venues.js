@@ -1692,7 +1692,11 @@
   function ensureOwnEmptyVenue() {
     const me = window.KiwiMe || {};
     let paired = null;
-    try { paired = window.KiwiCaissePairing?.pairedVenue?.() || JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) {}
+    try {
+      paired = (window.KiwiPlatform && typeof window.KiwiPlatform.pairedVenue === 'function' && window.KiwiPlatform.pairedVenue())
+        || window.KiwiCaissePairing?.pairedVenue?.()
+        || JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
+    } catch (_) {}
     const ownType = me.type || (paired && (paired.subtype || paired.type)) || '';
     const name = String(me.business || me.name || (paired && paired.name) || '').trim() || 'Mon établissement';
     const base = SUBTYPE_BASE[ownType] ||
@@ -3382,6 +3386,10 @@
       if (window.KiwiEnv?.isReal?.()) return true;
       if (window.KiwiMe) return true;
       if (localStorage.getItem('kiwiOnboarded') === '1') return true;
+      if (window.KiwiPlatform && typeof window.KiwiPlatform.isPaired === 'function') {
+        const pv = window.KiwiPlatform.pairedVenue();
+        if (window.KiwiPlatform.isPaired() && pv?.merchant) return true;
+      }
       const P = window.KiwiCaissePairing;
       const pv = P?.pairedVenue?.();
       if (P?.isPaired?.() && pv?.merchant) return true;
