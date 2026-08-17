@@ -123,18 +123,149 @@ ls.setItem('kiwiPairedVenue', JSON.stringify({ merchant: longMerchant }));
 ok(K2.pairedMerchant().length === 64, 'pairedMerchant truncates >64 char merchant to exactly 64');
 ok(K2.pairedMerchant() === 'a'.repeat(64), 'pairedMerchant content matches first 64 characters');
 
-// Case H: Live Pairing Fixture Equivalence (Santos Store)
-// For a live-shaped pairing object produced by Cloudflare D1 pair redemption,
-// verify that KiwiPlatform helpers return identical values to the legacy raw expressions.
+// Case H: Live Pairing Fixture Invariant on Helper
+// Verify that KiwiPlatform helpers resolve the expected values for a live-shaped pairing object.
 const santosFixture = { merchant: 'santos-store', venueId: '', type: 'boutique', name: 'Santos Store' };
 ls.setItem('kiwiPairedVenue', JSON.stringify(santosFixture));
+ok(K2.pairedMerchant() === 'santos-store', 'helper pairedMerchant resolves santos-store');
+ok(K2.pairedVenue() && K2.pairedVenue().name === 'Santos Store', 'helper pairedVenue().name resolves Santos Store');
+ok(K2.isPaired() === true, 'helper isPaired() is true for live Santos Store fixture');
 
-// receipt.js:118 & pos-reprint.js:359 & pos-sale.js:96 & inventory-ledger.js:32 & caisse-stock-sync.js:27
-const legacyRaw = JSON.parse(ls.getItem('kiwiPairedVenue') || 'null');
-ok(K2.pairedMerchant() === (legacyRaw && legacyRaw.merchant), 'receipt.js:118 & reprint.js:359 pairedMerchant matches legacy pv.merchant');
-ok(K2.pairedMerchant() === String(legacyRaw.merchant).slice(0, 64), 'pos-sale.js:96 & ledger.js:32 pairedMerchant matches legacy sliced merchant');
-ok(K2.pairedVenue() && K2.pairedVenue().name === legacyRaw.name, 'receipt.js:389 pairedVenue().name matches legacy pv.name');
-ok(K2.isPaired() === true, 'isPaired() is true for live Santos Store fixture');
+// Case I: Direct Module Execution on Actual Files (Both With and Without KiwiPlatform)
+// Rather than testing only the helper, load each actual migrated money/transaction module
+// in a sandboxed VM and verify it resolves the correct merchant under both runtime states.
+const readAsset = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
+
+// 1. assets/inventory-ledger.js (window.KiwiInventory.merchant())
+function testInventoryLedger(withPlatform) {
+  const mem = new Map([['kiwiPairedVenue', JSON.stringify(santosFixture)]]);
+  const storage = { getItem: (k) => mem.get(k) || null, setItem: (k, v) => mem.set(k, String(v)), removeItem: (k) => mem.delete(k) };
+  const win = { localStorage: storage, addEventListener: () => {}, KiwiEnv: { isReal: () => true } };
+  win.window = win;
+  const ctx = vm.createContext({
+    window: win, localStorage: storage, console, Date, Math, JSON, Map, Set, Promise,
+    setTimeout: () => 0, setInterval: () => 0, clearTimeout: () => {},
+  });
+  if (withPlatform) vm.runInContext(src, ctx);
+  vm.runInContext(readAsset('assets/inventory-ledger.js'), ctx);
+  return win.KiwiInventory ? win.KiwiInventory.merchant() : null;
+}
+ok(testInventoryLedger(true) === 'santos-store', 'inventory-ledger.js resolves santos-store with KiwiPlatform present');
+ok(testInventoryLedger(false) === 'santos-store', 'inventory-ledger.js resolves santos-store via fallback without KiwiPlatform');
+
+// 2. assets/caisse-stock-sync.js (window.KiwiCaisseStock.slug())
+function testCaisseStockSync(withPlatform) {
+  const mem = new Map([['kiwiPairedVenue', JSON.stringify(santosFixture)]]);
+  const storage = { getItem: (k) => mem.get(k) || null, setItem: (k, v) => mem.set(k, String(v)), removeItem: (k) => mem.delete(k) };
+  const doc = { addEventListener: () => {} };
+  const win = { localStorage: storage, document: doc, addEventListener: () => {} };
+  win.window = win;
+  const ctx = vm.createContext({ window: win, document: doc, localStorage: storage, console, Date, Math, JSON, Map, Set, Promise });
+  if (withPlatform) vm.runInContext(src, ctx);
+  vm.runInContext(readAsset('assets/caisse-stock-sync.js'), ctx);
+  return win.KiwiCaisseStock ? win.KiwiCaisseStock.slug() : null;
+}
+ok(testCaisseStockSync(true) === 'santos-store', 'caisse-stock-sync.js resolves santos-store with KiwiPlatform present');
+ok(testCaisseStockSync(false) === 'santos-store', 'caisse-stock-sync.js resolves santos-store via fallback without KiwiPlatform');
+
+// 3. assets/pos-sale.js (KiwiPosSale.record & today)
+function testPosSale(withPlatform) {
+  const mem = new Map([['kiwiPairedVenue', JSON.stringify(santosFixture)]]);
+  const storage = { getItem: (k) => mem.get(k) || null, setItem: (k, v) => mem.set(k, String(v)), removeItem: (k) => mem.delete(k) };
+  const win = { localStorage: storage, addEventListener: () => {}, KiwiEnv: { isReal: () => true } };
+  win.window = win;
+  const ctx = vm.createContext({
+    window: win, localStorage: storage, console, Date, Math, JSON, Map, Set, Promise, Array, Object, String, Number, RegExp, isNaN,
+    setTimeout: () => 0, setInterval: () => 0, clearTimeout: () => {},
+  });
+  if (withPlatform) vm.runInContext(src, ctx);
+  vm.runInContext(readAsset('assets/pos-sale.js'), ctx);
+  if (!win.KiwiPosSale) return null;
+  const rec = win.KiwiPosSale.record('boutique', { ref: 'T-100', total: 50, lines: [{ name: 'Test', qty: 1, total: 50 }] });
+  const rows = win.KiwiPosSale.today('boutique');
+  return { isReal: win.KiwiPosSale.isReal(), merchant: (rec && rec.m) || (rows[0] && rows[0].m) };
+}
+const psWith = testPosSale(true);
+const psWithout = testPosSale(false);
+ok(psWith && psWith.isReal === true && psWith.merchant === 'santos-store', 'pos-sale.js scopes sale to santos-store with KiwiPlatform present');
+ok(psWithout && psWithout.isReal === true && psWithout.merchant === 'santos-store', 'pos-sale.js scopes sale to santos-store via fallback without KiwiPlatform');
+
+// 4. assets/receipt.js (KiwiReceipt.venueKey() & business())
+function testReceipt(withPlatform) {
+  const mem = new Map([['kiwiPairedVenue', JSON.stringify(santosFixture)]]);
+  const storage = { getItem: (k) => mem.get(k) || null, setItem: (k, v) => mem.set(k, String(v)), removeItem: (k) => mem.delete(k) };
+  const doc = {
+    addEventListener: () => {},
+    createElement: () => ({ appendChild: () => {}, setAttribute: () => {} }),
+    getElementById: () => null,
+    querySelector: () => null,
+    querySelectorAll: () => [],
+    head: { appendChild: () => {} },
+    body: { appendChild: () => {} },
+  };
+  const win = { localStorage: storage, document: doc, addEventListener: () => {} };
+  win.window = win;
+  const ctx = vm.createContext({
+    window: win, document: doc, localStorage: storage, console, Date, Math, JSON, Map, Set, Promise, Array, Object, String, Number, RegExp,
+    Intl, setTimeout: () => 0, setInterval: () => 0, clearTimeout: () => {},
+  });
+  if (withPlatform) vm.runInContext(src, ctx);
+  vm.runInContext(readAsset('assets/receipt.js'), ctx);
+  if (!win.KiwiReceipt) return null;
+  return {
+    venueKey: win.KiwiReceipt.venueKey(),
+    businessName: win.KiwiReceipt.business() && win.KiwiReceipt.business().name,
+  };
+}
+const rcWith = testReceipt(true);
+const rcWithout = testReceipt(false);
+ok(rcWith && rcWith.venueKey === 'santos-store' && rcWith.businessName === 'Santos Store', 'receipt.js resolves venueKey and business name with KiwiPlatform present');
+ok(rcWithout && rcWithout.venueKey === 'santos-store' && rcWithout.businessName === 'Santos Store', 'receipt.js resolves venueKey and business name via fallback without KiwiPlatform');
+
+// 5. assets/pos-reprint.js (fetch query parameter)
+function testPosReprint(withPlatform) {
+  const mem = new Map([['kiwiPairedVenue', JSON.stringify(santosFixture)]]);
+  const storage = { getItem: (k) => mem.get(k) || null, setItem: (k, v) => mem.set(k, String(v)), removeItem: (k) => mem.delete(k) };
+  let fetchedUrl = '';
+  const makeEl = () => ({
+    appendChild: () => {},
+    setAttribute: () => {},
+    classList: { contains: () => false, add: () => {}, remove: () => {} },
+    addEventListener: () => {},
+    querySelector: () => makeEl(),
+    querySelectorAll: () => [],
+  });
+  const doc = {
+    addEventListener: () => {},
+    createElement: makeEl,
+    getElementById: () => null,
+    querySelector: () => makeEl(),
+    querySelectorAll: () => [],
+    head: { appendChild: () => {} },
+    body: { appendChild: () => {} },
+  };
+  const win = {
+    localStorage: storage,
+    document: doc,
+    addEventListener: () => {},
+    fetch: (url) => { fetchedUrl = url; return Promise.resolve({ ok: true, json: () => Promise.resolve({ sales: [] }) }); },
+    KiwiEnv: { isReal: () => true },
+  };
+  win.window = win;
+  const ctx = vm.createContext({
+    window: win, document: doc, localStorage: storage, console, Date, Math, JSON, Map, Set, Promise, Array, Object, String, Number, RegExp, encodeURIComponent,
+    fetch: win.fetch, setTimeout: () => 0, setInterval: () => 0, clearTimeout: () => {},
+  });
+  if (withPlatform) vm.runInContext(src, ctx);
+  vm.runInContext(readAsset('assets/pos-reprint.js'), ctx);
+  win.KiwiPosReprint.open('boutique');
+  return fetchedUrl;
+}
+const rpWith = testPosReprint(true);
+const rpWithout = testPosReprint(false);
+const getMerchantParam = (u) => new URL(u, 'http://localhost').searchParams.get('merchant');
+ok(getMerchantParam(rpWith) === 'santos-store', 'pos-reprint.js queries /api/feed for santos-store with KiwiPlatform present');
+ok(getMerchantParam(rpWithout) === 'santos-store', 'pos-reprint.js queries /api/feed for santos-store via fallback without KiwiPlatform');
 
 if (process.exitCode) process.exit(process.exitCode);
-console.log(`  ✓ pairing resolver (${pass} controls: pairing agreement, storage fallback, purge immediacy, fail-soft JSON, isPaired invariant)`);
+console.log(`  ✓ pairing resolver (${pass} controls: pairing agreement, storage fallback, purge immediacy, fail-soft JSON, isPaired invariant, direct module tests with/without platform)`);

@@ -126,5 +126,40 @@ toastWarning = null;
 runVoidHandler(['T-UNKNOWN-99']);
 ok('une référence sans ligne de stock déclenche l’alerte visible', !!toastWarning && toastWarning.includes('stock non recrédité'));
 
+// Test pairing resolution when KiwiCloudDoc is absent
+const pairedMem = new Map([['kiwiPairedVenue', JSON.stringify({ merchant: 'santos-store', name: 'Santos Store' })]]);
+const pairedStorage = { getItem: (k) => pairedMem.get(k) || null, setItem: (k, v) => pairedMem.set(k, String(v)), removeItem: (k) => pairedMem.delete(k) };
+
+// With KiwiPlatform present
+const pairedWinWith = {
+  localStorage: pairedStorage,
+  KiwiEnv: { isReal: () => true },
+  addEventListener: () => {},
+};
+pairedWinWith.window = pairedWinWith;
+const pairedCtxWith = vm.createContext({
+  window: pairedWinWith, localStorage: pairedStorage, navigator: { onLine: false }, crypto: globalThis.crypto,
+  console, Date, Math, JSON, Map, Set, Promise,
+  setTimeout: () => 0, setInterval: () => 0, clearTimeout: () => {},
+});
+vm.runInContext(read('assets/platform-kernel.js'), pairedCtxWith);
+vm.runInContext(read('assets/inventory-ledger.js'), pairedCtxWith);
+ok('inventory ledger resolves paired merchant via KiwiPlatform when CloudDoc absent', pairedWinWith.KiwiInventory && pairedWinWith.KiwiInventory.merchant() === 'santos-store');
+
+// Without KiwiPlatform (fallback)
+const pairedWinWithout = {
+  localStorage: pairedStorage,
+  KiwiEnv: { isReal: () => true },
+  addEventListener: () => {},
+};
+pairedWinWithout.window = pairedWinWithout;
+const pairedCtxWithout = vm.createContext({
+  window: pairedWinWithout, localStorage: pairedStorage, navigator: { onLine: false }, crypto: globalThis.crypto,
+  console, Date, Math, JSON, Map, Set, Promise,
+  setTimeout: () => 0, setInterval: () => 0, clearTimeout: () => {},
+});
+vm.runInContext(read('assets/inventory-ledger.js'), pairedCtxWithout);
+ok('inventory ledger resolves paired merchant via fallback when KiwiPlatform absent', pairedWinWithout.KiwiInventory && pairedWinWithout.KiwiInventory.merchant() === 'santos-store');
+
 if (process.exitCode) process.exit(process.exitCode);
-console.log(`  ✓ inventory ledger (${pass} controls: append-only truth, product/service split, recipes, reversal, dashboard void restock, tenant-safe server contract)`);
+console.log(`  ✓ inventory ledger (${pass} controls: append-only truth, product/service split, recipes, reversal, dashboard void restock, tenant-safe server contract, paired merchant resolution)`);
