@@ -176,7 +176,7 @@ shared DB).** Two new engine modules, loaded in `kiwi-caisse.html`, `dashboard.h
   + `storage` event so the caisse tab and dashboard tab stay live-synced; seeds once from the
   caisse's old `RAYONS` (each product fanned into colour×size variants; legacy EANs kept as
   aliases). `compat()` rebuilds the old `{RAYONS,P,BY_EAN}` shape the caisse renders from.
-- **Caisse (`pos-boutique.js`, boutique module demo)** — now catalog-backed (sale grid, sheet, scanner
+- **Caisse (`pos-boutique.js`, PIN 0002)** — now catalog-backed (sale grid, sheet, scanner
   all track the live DB). New **Inventaire** nav view: create product · colour×size variants ·
   input stock · **generate + print EAN-13 labels** · **register an existing old-POS barcode**
   (no reprint). A **global keyboard-wedge scanner** (document keydown buffer) adds the exact
@@ -211,8 +211,8 @@ budget bar), 4 team **Kiwi cards** with per-category limits + freeze/unfreeze, *
 refuse** spend requests, budgets-by-category growing bars, recent-spend feed, supplier
 bills (Payer). « Émettre une carte » modal issues a live virtual card. **Honest framing:**
 a `KIWI PAY · PHASE 2` banner states cards + supplier payments need a Bank Al-Maghrib
-payment-institution licence — roadmap preview, no real money. Custom venues get a
-starter (no demo leak); manager role hides it like Marges/Paie. Wired: `nav-depenses`
+payment-institution licence — roadmap preview, no real money. Custom (0000) venues get a
+starter (no demo leak); manager role (0909) hides it like Marges/Paie. Wired: `nav-depenses`
 handler, `FULL_PAGE_NAVS` (pages.js), i18n `dash.sidebar.{kiwipay,depenses}` EN+AR,
 `role-manager` hide rule. Trilingual + dark-mode verified. To extend: edit the `cards` /
 `pending` / `budgets` / `suppliers` seed + the `T`/`CAT` dicts in depenses.js. This was the
@@ -221,7 +221,7 @@ explicitly asked. Don't add more Pay/Banking surfaces beyond this without the sa
 
 **Jun 11 (later):** `47c2002` **the whole home enters alive** — the c98e317 card entrance
 played at DOM load, hidden BEHIND the PIN lock; users saw a frozen page. Now all three
-reveal paths (PIN unlock 3 200 ms dive-in, demo onboard unlock, « Entrer dans la démo »
+reveal paths (PIN unlock 3 200 ms dive-in, 0000 onboard unlock, « Entrer dans la démo »
 skipToApp) add `body.cards-enter`, and every entrance animation (blocks, .settle, oppo
 cards, mix legend) is gated on it. Hover on every card upgraded to −2px lift + atlas border
 tint. Heures-de-pointe bars rise (hh-rise, `--i` stagger) and feed rows cascade on real
@@ -234,23 +234,23 @@ tick never replays them. GOTCHA: any new load-time animation on the dashboard is
 per métier** — the dashboard's venue universe (boutique, spa, hôtel, fast-food, boulangerie,
 pizzeria, traiteur, food truck, épicerie, pharmacie, librairie, fleuriste, coiffure, salle
 de sport) now each has a real hardware POS app behind its own PIN. **`assets/pos-dispatch.js`**
-is the router: vertical modules lazy-load `assets/pos-<id>.{js,css}` on first
+is the router: registry `0002`–`0015` → lazy-loads `assets/pos-<id>.{js,css}` on first
 unlock, owns the shared unlock/greet/lock choreography (dot success → fade → greeting flash →
 `body.is-pos.is-pos-<id>`, lock-back via `__kiwiPinReset`), a tappable **code legend** on the
 pin-foot, and an honest "module indisponible" toast if a module is missing. Modules
 self-register: `KiwiPosDispatch.register({id, greet, mount(root), onShow})` — `mount` builds
 into the dispatcher-provided root (`<div class="vx-screen" id="pos-<id>">`, fixed inset-0,
-z-90), never `document.body`. **Verticals list:** pressing · cuisine(KDS) · boutique
-(Maison Mansour — échanges & avoirs, stock par taille) · spa (Spa Bahia — cures à carte
-poinçonnée) · hôtel (Riad Yasmina — folio + taxe de séjour) · fast-food (Snack
-Chamal — combo upsell, file d'appel) · boulangerie (Bab Kasbah — fournées/restant,
-précommandes gâteaux) · pizzeria (La Marsa — moitié-moitié, livraison) · traiteur
-(Dar Zellij — devis/personne, échéancier d'acomptes) · food truck (Karavan — vente 2
-taps) · épicerie (Si Brahim — **le carnet de crédit/ardoise**, vente au poids) · pharmacie
-(Ibn Batouta — **tiers payant** part mutuelle/patient, opérationnel only) · librairie
-(Al Boughaz — commandes spéciales, listes scolaires) · fleuriste (Fleurs du
-Détroit — composer de bouquet, carte message) · coiffure (Salon Yasmine — formule
-couleur mémorisée) · gym (Atlas Fitness — check-in vert/rouge) · **tout autre code →
+z-90), never `document.body`. **PIN map:** 0000 pressing · 0001 cuisine(KDS) · 0002 boutique
+(Maison Mansour — échanges & avoirs, stock par taille) · 0003 spa (Spa Bahia — cures à carte
+poinçonnée) · 0004 hôtel (Riad Yasmina — folio + taxe de séjour) · 0005 fast-food (Snack
+Chamal — combo upsell, file d'appel) · 0006 boulangerie (Bab Kasbah — fournées/restant,
+précommandes gâteaux) · 0007 pizzeria (La Marsa — moitié-moitié, livraison) · 0008 traiteur
+(Dar Zellij — devis/personne, échéancier d'acomptes) · 0009 food truck (Karavan — vente 2
+taps) · 0010 épicerie (Si Brahim — **le carnet de crédit/ardoise**, vente au poids) · 0011
+pharmacie (Ibn Batouta — **tiers payant** part mutuelle/patient, opérationnel only) · 0012
+librairie (Al Boughaz — commandes spéciales, listes scolaires) · 0013 fleuriste (Fleurs du
+Détroit — composer de bouquet, carte message) · 0014 coiffure (Salon Yasmine — formule
+couleur mémorisée) · 0015 gym (Atlas Fitness — check-in vert/rouge) · **tout autre code →
 caisse restaurant Café Atlas, le démo principal, intact.** Each module (~1 100–1 700 lignes
 JS) reuses the caisse tokens + modal kit (`.modal-veil/.cash-*/.reader-*/.ma-btn/.pay-tip`)
 and `#toast-stack`, with its own `<prefix>-` CSS namespace, dark rail, SVG line-art, phone-
@@ -269,9 +269,9 @@ superseded by `pressing-caisse.js`, referenced nowhere) — it's the sole `node 
 failure (`data-action="modal-close"` unwired, + 3 `var(--ink)` warnings). Safe to delete;
 left in place pending the owner's OK (not created by this session).
 
-**Jun 11 (night):** `50bdbce`+`57b181b` **Pressing module demo on kiwi-caisse** —
-the Tangier-prospect demo: one terminal, two métiers. His restaurant = any standard code
-(caisse untouched), his pressing = pressing demo switch; the KDS station has its own vertical switch (pin-foot
+**Jun 11 (night):** `50bdbce`+`57b181b` **PIN 0000 turns kiwi-caisse into a pressing** —
+the Tangier-prospect demo: one terminal, two métiers. His restaurant = any 4-digit code
+(caisse untouched), his pressing = **0000**; the KDS station moved to **0001** (pin-foot
 hint updated). New `assets/pressing-caisse.{js,css}` (~2 700 lines) inject a full laundry
 counter scoped to `body.is-pressing` — the only shared surface is the 3-way PIN branch +
 `window.__kiwiPinReset()` (extracted from lockoutKitchen). The **headline differentiator

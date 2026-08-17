@@ -238,22 +238,11 @@ section('Forbidden patterns');
     const lines = content.split('\n');
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
-      if (isMarkdown) {
-        // Markdown files have ZERO value exemptions. Any match is an unredacted credential.
-        const mMd = line.match(MD_PROSE_SECRET);
-        if (mMd) {
-          leaks++;
-          fail(`${rel}:${i + 1} contains an unredacted credential literal`);
-          break;
-        }
-      } else {
-        // Code/config files exempt only known public demo fixtures
-        const mCtx = line.match(CONTEXTUAL_SECRET);
-        if (mCtx && !CODE_DEMO_SEQUENCE.has(mCtx[1])) {
-          leaks++;
-          fail(`${rel}:${i + 1} contains an unredacted credential literal`);
-          break;
-        }
+      const mMatch = isMarkdown ? line.match(MD_PROSE_SECRET) : line.match(CONTEXTUAL_SECRET);
+      if (mMatch && !CODE_DEMO_SEQUENCE.has(mMatch[1])) {
+        leaks++;
+        fail(`${rel}:${i + 1} contains an unredacted credential literal`);
+        break;
       }
     }
   }
