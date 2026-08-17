@@ -41,7 +41,7 @@
      shared KiwiEnv marks the session real). Demo people (staff roster + seeded
      clientes/ventes/avoirs) are neutralized whenever pvReal() is true so a real
      store never inherits the Maison Mansour cast. Local demo ⇒ pvReal() false. */
-  function pvPaired() { try { return JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
+  function pvPaired() { try { return window.KiwiPlatform?.pairedVenue?.() || JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
 
   /* Prix et coûts saisis par le commerçant. C'était `parseInt(v, 10)`, qui coupe
    * tout ce qui suit la virgule : une chemise à 129,90 était enregistrée à 129 —
@@ -1220,7 +1220,7 @@
     syncTillStaff();
     /* A PAIRED caisse shows the real store's name/city (from onboarding); the
        unpaired demo (PIN 0002) keeps the Maison Mansour identity. */
-    const _pv = (function () { try { return JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } })();
+    const _pv = (function () { try { return window.KiwiPlatform?.pairedVenue?.() || JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } })();
     const _esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const _vName = (_pv && _pv.name) ? _esc(_pv.name) : 'Maison Mansour';
     const _vSub = (_pv && _pv.location) ? _esc(_pv.location) : (_pv ? '' : 'Casablanca · Maarif');
@@ -2932,8 +2932,8 @@
   // Real boutique identity from the pairing / hosted session — the printed credit
   // note (BON D'AVOIR) shows the real store name+city, never the demo "Maison
   // Mansour" / its street address. Local demo (unpaired) unchanged.
-  function bqPaired() { try { return JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
-  function bqReal()   { try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || !!bqPaired(); } catch (_) { return !!bqPaired(); } }
+  function bqPaired() { try { return window.KiwiPlatform?.pairedVenue?.() || JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
+  function bqReal()   { try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || !!window.KiwiPlatform?.isPaired?.() || !!bqPaired(); } catch (_) { return !!bqPaired(); } }
   function bqName(demo) { const p = bqPaired(); return (p && p.name) || (bqReal() ? '' : demo); }
   function bqCity(demo) { const p = bqPaired(); return (p && p.location) || (bqReal() ? '' : demo); }
 

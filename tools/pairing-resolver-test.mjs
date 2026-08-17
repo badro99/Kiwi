@@ -99,8 +99,17 @@ ok(K2.isPaired() === false, 'isPaired() returns false on null string');
 ok(K2.pairedMerchant() === '', 'pairedMerchant() returns empty on null string');
 ok(K2.pairedVenue() === null, 'pairedVenue() returns null on null string');
 
-// Case F: Invariant — isPaired() === true strictly implies pairedMerchant() !== ''
-ls.setItem('kiwiPairedVenue', JSON.stringify({ name: 'Orphan Store Name', type: 'restaurant' }));
+// Case F: Invariant & Deliberate Behaviour Change:
+// Unlike the legacy raw `!!JSON.parse(...)` check (which returned true for any
+// object, including `{}` or `{ name: 'foo' }`), `isPaired()` strictly requires
+// genuine tenant identity (`merchant`, `slug`, or `venueId`). An empty object or
+// a name-only object cannot scope ledger data, inventory, or transactions, so it
+// must deliberately evaluate to `isPaired() === false`.
+ls.setItem('kiwiPairedVenue', JSON.stringify({}));
+ok(K2.isPaired() === false, 'empty object {} deliberately yields isPaired() === false');
+ok(K2.pairedMerchant() === '', 'empty object {} yields empty pairedMerchant()');
+
+ls.setItem('kiwiPairedVenue', JSON.stringify({ name: 'Maison Test', location: 'Tanger' }));
 ok(K2.isPaired() === false, 'name-only payload without merchant/slug/venueId is not paired');
 ok(K2.pairedMerchant() === '', 'name-only payload yields empty merchant string');
 ok(K2.isPaired() === (K2.pairedMerchant() !== ''), 'isPaired() strictly implies pairedMerchant() is non-empty');

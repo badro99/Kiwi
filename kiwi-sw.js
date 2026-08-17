@@ -239,7 +239,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=2',
   '/assets/food-production-print.js?v=1',
   '/assets/pos-sale.js?v=3',
-  '/assets/pos-dispatch.js?v=26',
+  '/assets/pos-dispatch.js?v=27',
   '/assets/retail-scan.css?v=6',
   '/assets/vendor/zxing-browser.min.js?v=1',
   '/assets/retail-scan.js?v=5',
@@ -247,12 +247,12 @@ var SHELL = [
   '/assets/caisse-dna.js?v=2',
   '/assets/pos-mobile.js?v=3',
   '/assets/pos-workspaces.css?v=3',
-  '/assets/pos-workspaces.js?v=3',
+  '/assets/pos-workspaces.js?v=4',
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css',
-  '/assets/pos-boutique.js',
+  '/assets/pos-boutique.css?v=2',
+  '/assets/pos-boutique.js?v=2',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */
@@ -266,8 +266,8 @@ var SHELL = [
   '/assets/pos-boulangerie.js?v=2',
   '/assets/pos-pizzeria.css?v=2',
   '/assets/pos-pizzeria.js?v=2',
-  '/assets/pos-traiteur.css',
-  '/assets/pos-traiteur.js',
+  '/assets/pos-traiteur.css?v=2',
+  '/assets/pos-traiteur.js?v=2',
   '/assets/pos-foodtruck.css?v=2',
   '/assets/pos-foodtruck.js?v=2',
   '/assets/pos-epicerie.css?v=2',

@@ -327,6 +327,14 @@
     "v": "2",
     "sha": "ac78c0749459ae37"
   },
+  "assets/pos-boutique.css": {
+    "v": "2",
+    "sha": "42a2a9683aad20a9"
+  },
+  "assets/pos-boutique.js": {
+    "v": "2",
+    "sha": "bdb51da38d1a9efb"
+  },
   "assets/pos-coiffure.css": {
     "v": "2",
     "sha": "8e3713916dc1f3ab"
@@ -336,8 +344,8 @@
     "sha": "7e8c999fe50a7b06"
   },
   "assets/pos-dispatch.js": {
-    "v": "26",
-    "sha": "3a99f89f7c6240d8"
+    "v": "27",
+    "sha": "cee0386f64c0917c"
   },
   "assets/pos-epicerie.css": {
     "v": "2",
@@ -431,13 +439,21 @@
     "v": "2",
     "sha": "48f7fadb3219f6f6"
   },
+  "assets/pos-traiteur.css": {
+    "v": "2",
+    "sha": "45d7b1720fd65004"
+  },
+  "assets/pos-traiteur.js": {
+    "v": "2",
+    "sha": "bd883deb09555f74"
+  },
   "assets/pos-workspaces.css": {
     "v": "3",
     "sha": "988babd341d2f1fd"
   },
   "assets/pos-workspaces.js": {
-    "v": "3",
-    "sha": "53302840d5c5fbcf"
+    "v": "4",
+    "sha": "6873661f23bb3c5d"
   },
   "assets/pressing-caisse.css": {
     "v": "31",

@@ -55,13 +55,13 @@
      * vertical ordinaire, en tête de liste, et non plus une branche codée en
      * dur dans kiwi-caisse.html. */
     '0000': { id: 'pressing',    file: 'pressing-caisse', rev: '31', label: 'Pressing · Pressing Marshan' },
-    '0002': { id: 'boutique',    file: 'pos-boutique',    label: 'Boutique · Maison Mansour' },
+    '0002': { id: 'boutique',    file: 'pos-boutique',    rev: '2', label: 'Boutique · Maison Mansour' },
     '0003': { id: 'spa',         file: 'pos-spa',         rev: '2', label: 'Spa · Spa Bahia' },
     '0004': { id: 'hotel',       file: 'pos-hotel',       rev: '2', label: 'Hôtel / Riad · Riad Yasmina' },
     '0005': { id: 'fastfood',    file: 'pos-fastfood',    rev: '2', label: 'Fast-food · Snack Chamal' },
     '0006': { id: 'boulangerie', file: 'pos-boulangerie', rev: '2', label: 'Boulangerie · Bab Kasbah' },
     '0007': { id: 'pizzeria',    file: 'pos-pizzeria',    rev: '2', label: 'Pizzeria · La Marsa' },
-    '0008': { id: 'traiteur',    file: 'pos-traiteur',    label: 'Traiteur · Dar Zellij' },
+    '0008': { id: 'traiteur',    file: 'pos-traiteur',    rev: '2', label: 'Traiteur · Dar Zellij' },
     '0009': { id: 'foodtruck',   file: 'pos-foodtruck',   rev: '2', label: 'Food truck · Karavan' },
     '0010': { id: 'epicerie',    file: 'pos-epicerie',    rev: '2', label: 'Épicerie · Si Brahim' },
     '0011': { id: 'pharmacie',   file: 'pos-pharmacie',   rev: '2', label: 'Pharmacie · Ibn Batouta' },

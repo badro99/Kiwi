@@ -25,7 +25,7 @@
   const lang=()=>window.KiwiCaisseLang?.get?.()||document.documentElement.lang||'fr';
   const pick=(o)=>o?.[lang()]??o?.fr??(typeof o==='string'?o:'');
   const esc=(s)=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const paired=()=>{try{return JSON.parse(localStorage.getItem('kiwiPairedVenue')||'null')||{};}catch(_){return{};}};
+  const paired=()=>{try{return window.KiwiPlatform?.pairedVenue?.()||JSON.parse(localStorage.getItem('kiwiPairedVenue')||'null')||{};}catch(_){return{};}};
   const posTrade=(id)=>TRADE_ALIAS[id]||id;
   const key=()=>`kiwi:workspaces:v1:${paired().venueId||paired().merchant||'demo'}`;
   const blank=()=>({trade:posTrade(String(paired().subtype||paired().type||'')),records:{}});
