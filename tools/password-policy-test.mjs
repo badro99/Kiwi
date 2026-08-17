@@ -6,12 +6,23 @@
  *   - 9 chars rejected ('short')
  *   - 10 chars accepted (null)
  *   - Passphrase with spaces accepted ('mon cafe a casablanca')
- *   - Common passwords rejected ('common')
+ *   - Over-blocking regression guards:
+ *       'mon cafe a casablanca' (accepted)
+ *       'le pressing du marshan' (accepted)
+ *       '2026 fut une bonne annee' (accepted)
+ *       'AtlasSecret1!' (accepted, proves NO composition rules)
+ *   - Common passwords rejected ('common'):
+ *       'password1234'
+ *       'casablanca2024'
+ *       'marrakech2026'
+ *       'motdepasse2026'
+ *       'azerty123456'
+ *       'Password1!' (root 'password' + suffix)
  *   - Digit-only strings rejected ('common')
  *   - Single repeated character rejected ('common')
- *   - Email local part rejected ('personal')
- *   - Business name rejected ('personal')
- *   - 10-char "Password1!" accepted (proves NO composition rules)
+ *   - Personal context checks with spaces and dots stripped ('personal'):
+ *       'spabahia2026xx' with business 'Spa Bahia'
+ *       'amirabenali2026' with email 'amira.benali@test.ma'
  *   - 4-char password reports 'short' (order precedence over 'common')
  *   - /auth/signup endpoint returns { error: 'weak', reason: ... } with 400
  *   - /auth/reset endpoint returns { error: 'weak', reason: ... } with 400
@@ -40,25 +51,37 @@ check('10 characters accepted', passwordProblem('abcdefghij') === null);
 check('Passphrase with spaces accepted', passwordProblem('mon cafe a casablanca') === null);
 check('Oversized password rejected with "long"', passwordProblem('a'.repeat(PASSWORD_MAX + 1)) === 'long');
 
-// 2. Blocklist & Pattern checks ('common')
+// 2. Blocklist & Pattern checks ('common') with de-suffixing
 check('Blocklist entry "motdepasse" rejected with "common"', passwordProblem('motdepasse') === 'common');
 check('Blocklist entry "casablanca" rejected with "common"', passwordProblem('casablanca') === 'common');
 check('Blocklist entry "1234567890" rejected with "common"', passwordProblem('1234567890') === 'common');
+check('Blocklist + digits "password1234" rejected with "common"', passwordProblem('password1234') === 'common');
+check('Blocklist + year "casablanca2024" rejected with "common"', passwordProblem('casablanca2024') === 'common');
+check('Blocklist + year "marrakech2026" rejected with "common"', passwordProblem('marrakech2026') === 'common');
+check('Blocklist + year "motdepasse2026" rejected with "common"', passwordProblem('motdepasse2026') === 'common');
+check('Blocklist + digits "azerty123456" rejected with "common"', passwordProblem('azerty123456') === 'common');
+check('Blocklist + suffix "Password1!" rejected with "common"', passwordProblem('Password1!') === 'common');
 check('Digit-only password rejected with "common"', passwordProblem('9876543210123') === 'common');
 check('Single repeated character rejected with "common"', passwordProblem('aaaaaaaaaaaa') === 'common');
 
-// 3. Personal context checks ('personal')
+// 3. Personal context checks ('personal') with squashing (spaces/dots stripped)
 const ctxSignup = { email: 'karim.atlas@kiwi.ma', business: 'Café Atlas' };
 check('Password containing email local part rejected with "personal"',
   passwordProblem('my-karim.atlas-pass', ctxSignup) === 'personal');
 check('Password containing business name rejected with "personal"',
   passwordProblem('secret-café atlas', ctxSignup) === 'personal');
+check('Password containing squashed business "spabahia2026xx" rejected with "personal"',
+  passwordProblem('spabahia2026xx', { business: 'Spa Bahia' }) === 'personal');
+check('Password containing squashed email "amirabenali2026" rejected with "personal"',
+  passwordProblem('amirabenali2026', { email: 'amira.benali@test.ma' }) === 'personal');
 check('Password with unrelated personal info accepted',
   passwordProblem('unrelated-passphrase-secure', ctxSignup) === null);
 
-// 4. Tripwire: Composition rule absence (NIST compliance)
-check('10-character "Password1!" accepted (proves NO composition rules)',
-  passwordProblem('Password1!') === null);
+// 4. Over-blocking regression guards (valid passphrases accepted)
+check('Passphrase "mon cafe a casablanca" accepted', passwordProblem('mon cafe a casablanca') === null);
+check('Passphrase "le pressing du marshan" accepted', passwordProblem('le pressing du marshan') === null);
+check('Passphrase "2026 fut une bonne annee" accepted', passwordProblem('2026 fut une bonne annee') === null);
+check('Mixed string "AtlasSecret1!" accepted (proves NO composition rules)', passwordProblem('AtlasSecret1!') === null);
 
 // 5. Order precedence: 4-character password reports "short", NOT "common"
 check('4-character "1234" reports "short" (length check precedes blocklist)',
@@ -124,7 +147,7 @@ const verifierHmac = await resetVerifierHash(env.AUTH_SECRET, verifier);
 db.prepare(`INSERT INTO reset_tokens (selector, account_id, verifier, expires_ts, created_ts)
             VALUES (?, 'acc-1', ?, ?, ?)`).run(selector, verifierHmac, Date.now() + 3600000, Date.now());
 db.prepare(`INSERT INTO accounts (id, email, name, business, salt, hash, created_ts)
-            VALUES ('acc-1', 'reset-user@test.ma', 'User', 'Test Biz', '00', '00', ?)`).run(Date.now());
+            VALUES ('acc-1', 'reset-user@test.ma', 'User', 'Spa Bahia', '00', '00', ?)`).run(Date.now());
 
 const postReset = (body) => new Request('https://kiwi.test/auth/reset', {
   method: 'POST',
@@ -141,12 +164,12 @@ check('Reset returns 400 with { error: "weak", reason: "short" }',
   resetWeakRes.status === 400 && resetWeakData.error === 'weak' && resetWeakData.reason === 'short');
 
 const resetPersonalRes = await reset({
-  request: postReset({ token, password: 'reset-user-newpass' }),
+  request: postReset({ token, password: 'spabahia2026xx' }),
   env,
 });
 const resetPersonalData = await resetPersonalRes.json();
-check('Reset returns 400 with { error: "weak", reason: "personal" } when password contains account email',
-  resetWeakRes.status === 400 && resetPersonalData.error === 'weak' && resetPersonalData.reason === 'personal');
+check('Reset returns 400 with { error: "weak", reason: "personal" } when password contains account email or business',
+  resetPersonalRes.status === 400 && resetPersonalData.error === 'weak' && resetPersonalData.reason === 'personal');
 
 console.log(failures ? `\n✗ ${failures} failure(s)\n` : `\n✓ All password policy checks green.\n`);
 process.exitCode = failures ? 1 : 0;

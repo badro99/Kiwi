@@ -90,14 +90,18 @@ export async function onRequestPost(context) {
 
   const password = String(body.password || '');
   let accountEmail = '';
+  let accountBusiness = '';
   const row = await lookup(env, body.token);
   if (row && row.account_id) {
     try {
-      const acc = await env.DB.prepare('SELECT email FROM accounts WHERE id = ?').bind(row.account_id).first();
-      if (acc && acc.email) accountEmail = acc.email;
+      const acc = await env.DB.prepare('SELECT email, business FROM accounts WHERE id = ?').bind(row.account_id).first();
+      if (acc) {
+        if (acc.email) accountEmail = acc.email;
+        if (acc.business) accountBusiness = acc.business;
+      }
     } catch (_) {}
   }
-  const problem = passwordProblem(password, { email: accountEmail });
+  const problem = passwordProblem(password, { email: accountEmail, business: accountBusiness });
   if (problem) return json({ error: 'weak', reason: problem }, 400);
 
   if (!row) { await limitFail(request, env, 'reset'); return json({ error: 'invalid' }, 400); }
