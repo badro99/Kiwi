@@ -30,6 +30,7 @@ var SHELL = [
      sous-sol. La tablette doit au minimum se rouvrir sur son dernier tableau
      quand le réseau tousse, au lieu d'une page blanche au milieu du service. */
   '/kiwi-cuisine.html',
+  '/assets/err-reporter.js',
   '/assets/kiwi-env.js',
   '/dashboard.webmanifest',
   '/manifest.webmanifest',

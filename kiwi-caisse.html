@@ -63,6 +63,8 @@
   <!-- Lucide icons — self-hosted so missing/blocked CDN never strips the UI of icons.
        Version pinned at download (v1.17.0). To upgrade, re-download from
        https://unpkg.com/lucide@latest/dist/umd/lucide.min.js into assets/. -->
+  <!-- Client error reporter & observability (fail-soft telemetry) -->
+  <script src="assets/err-reporter.js"></script>
   <!-- ENV first: separates the owner's local demo copy from the hosted app. -->
   <script src="assets/kiwi-env.js"></script><!-- must run FIRST (before the inline app script), so KiwiEnv.isReal() is ready when demo data is seeded -->
   <!-- Durable tenant-scoped command outbox. Dexie is vendored: the caisse can
