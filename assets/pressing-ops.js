@@ -59,8 +59,18 @@
     return Number.isFinite(x.getTime()) ? x.toISOString() : '';
   }
 
-  function orderStatus(pieces) {
-    var st = (pieces || []).map(function (p) { return p.status; });
+  function effectiveStatus(p, readyAt, now) {
+    if (!p) return 'recu';
+    if (p.status === 'livre') return 'livre';
+    if (p.status === 'pret') return 'pret';
+    var rTs = readyAt instanceof Date ? readyAt.getTime() : (readyAt ? new Date(readyAt).getTime() : 0);
+    if (rTs && rTs <= (now || Date.now())) return 'pret';
+    return p.status || 'recu';
+  }
+
+  function orderStatus(pieces, readyAt, now) {
+    var t = now || Date.now();
+    var st = (pieces || []).map(function (p) { return effectiveStatus(p, readyAt, t); });
     if (st.length && st.every(function (s) { return s === 'livre'; })) return 'livre';
     if (st.length && st.every(function (s) { return s === 'pret' || s === 'livre'; })) return 'pret';
     if (st.some(function (s) { return s === 'trait' || s === 'pret'; })) return 'trait';
@@ -83,7 +93,7 @@
       id: text(o.id, 40),
       customer: { name: text(customer && customer.name, 100), phone: text(customer && customer.phone, 40), b2b: !!(customer && customer.b2b) },
       droppedAt: iso(o.droppedAt), readyAt: iso(o.readyAt), collectedAt: iso(o.collectedAt),
-      status: orderStatus(pieces), pieces: pieces, rack: text(o.rack, 20),
+      status: orderStatus(pieces, o.readyAt), pieces: pieces, rack: text(o.rack, 20),
       notified: !!o.notified, total: amount, paid: Math.min(amount, paid),
       due: o.pay && o.pay.mode === 'compte' ? 0 : Math.max(0, amount - paid),
       channel: text(o.channel || 'counter', 24)
@@ -110,21 +120,22 @@
     var now = Date.now();
     var out = { orders: rows, active: 0, received: 0, treating: 0, ready: 0, delivered: 0, late: 0, due: 0, pieces: 0, attention: 0, racks: 0, unnotified: 0, services: {} };
     rows.forEach(function (o) {
-      var live = o.status !== 'livre';
+      var st = orderStatus(o.pieces, o.readyAt, now);
+      var live = st !== 'livre';
       if (live) out.active++;
-      if (o.status === 'recu') out.received++;
-      if (o.status === 'trait') out.treating++;
-      if (o.status === 'pret') out.ready++;
-      if (o.status === 'livre') out.delivered++;
-      if (live && o.status !== 'pret' && o.readyAt && new Date(o.readyAt).getTime() < now) out.late++;
+      if (st === 'recu') out.received++;
+      if (st === 'trait') out.treating++;
+      if (st === 'pret') out.ready++;
+      if (st === 'livre') out.delivered++;
+      if (live && o.readyAt && new Date(o.readyAt).getTime() < now) out.late++;
       if (live) out.due += number(o.due);
-      if (live) out.pieces += (o.pieces || []).filter(function (p) { return p.status !== 'livre'; }).length;
+      if (live) out.pieces += (o.pieces || []).filter(function (p) { return effectiveStatus(p, o.readyAt, now) !== 'livre'; }).length;
       if (live) out.attention += (o.pieces || []).filter(function (p) { return p.notes; }).length;
       if (live) (o.pieces || []).forEach(function (p) {
         (p.services || []).forEach(function (service) { out.services[service] = number(out.services[service]) + 1; });
       });
       if (live && o.rack) out.racks++;
-      if (o.status === 'pret' && !o.notified) out.unnotified++;
+      if (st === 'pret' && !o.notified) out.unnotified++;
     });
     return out;
   }

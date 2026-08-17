@@ -67,12 +67,12 @@
     if (o.status === 'trait') return ['En traitement', ''];
     if (o.status === 'livre') return ['Retiré', 'muted'];
     var late = o.readyAt && new Date(o.readyAt).getTime() < Date.now();
-    return late ? ['En retard', 'late'] : ['Reçu', ''];
+    return late ? ['En attente de retrait', 'ready'] : ['Reçu', ''];
   }
   function sortedActive(s) {
     return s.orders.filter(function (o) { return o.status !== 'livre'; }).sort(function (a,b) {
-      var al = a.status !== 'pret' && a.readyAt && new Date(a.readyAt).getTime() < Date.now();
-      var bl = b.status !== 'pret' && b.readyAt && new Date(b.readyAt).getTime() < Date.now();
+      var al = a.readyAt && new Date(a.readyAt).getTime() < Date.now();
+      var bl = b.readyAt && new Date(b.readyAt).getTime() < Date.now();
       if (al !== bl) return al ? -1 : 1;
       return new Date(a.readyAt || 0) - new Date(b.readyAt || 0);
     });
@@ -109,9 +109,26 @@
     return '<div class="pxd-empty"><div><span class="pxd-empty-icon">' + icon(ic) + '</span><b>' + esc(title) + '</b><p>' + esc(body) + '</p>' +
       (cta ? '<button class="pxd-btn" type="button" data-pxd-open="' + esc(view || 'comptoir') + '">' + esc(cta) + '</button>' : '') + '</div></div>';
   }
-  function cardHead(ic, title, sub, link, page) {
-    return '<div class="pxd-card-head"><div class="pxd-card-title"><span class="pxd-card-mark">' + icon(ic) + '</span><div><h2>' + esc(title) + '</h2><p>' + esc(sub) + '</p></div></div>' +
-      (link ? '<button class="pxd-link" type="button" data-pxd-page="' + esc(page) + '">' + esc(link) + '</button>' : '') + '</div>';
+  function icon(name) {
+    var icons = {
+      shirt: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"/></svg>',
+      workflow: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect width="8" height="8" x="3" y="3" rx="2"/><path d="M7 11v4a2 2 0 0 0 2 2h4"/><rect width="8" height="8" x="13" y="13" rx="2"/></svg>',
+      rack: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m15 12-8.5 8.5c-.83.83-2.17.83-3 0 0 0 0 0 0 0a2.12 2.12 0 0 1 0-3L12 9"/><path d="M17.64 15 22 10.64"/><path d="m20.91 3.26-2.17-2.17a2.12 2.12 0 0 0-3 0L12 4.82l6.91 6.91 3.73-3.73a2.12 2.12 0 0 0 0-3z"/></svg>',
+      alert: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+      money: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>',
+      play: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>',
+      scan: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/></svg>',
+      bell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>',
+      check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"/></svg>',
+      list: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>',
+      clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+      van: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect width="14" height="10" x="1" y="6" rx="2"/><polygon points="15 8 19 8 23 12 23 16 15 16 15 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>'
+    };
+    return icons[name] || '';
+  }
+  function cardHead(ic,title,sub,cta,view) {
+    return '<div class="pxd-card-head"><div><span class="pxd-card-ic">' + icon(ic) + '</span><div><h3>' + esc(title) + '</h3><p>' + esc(sub) + '</p></div></div>' +
+      (cta ? '<button class="pxd-link-btn" type="button" data-pxd-page="' + esc(view) + '">' + esc(cta) + ' →</button>' : '') + '</div>';
   }
   function flow(s) {
     var stages = [
@@ -145,12 +162,12 @@
         kpi('shirt','Pièces dans l’atelier',s.pieces,'Toutes les pièces non retirées','') +
         kpi('workflow','Commandes en traitement',s.treating,'Nettoyage et finition en cours','') +
         kpi('rack','Prêtes au retrait',s.ready,s.racks + ' rangée' + (s.racks === 1 ? '' : 's') + ' sur le rack','') +
-        kpi('alert','À risque ou en retard',s.late,'Promesse dépassée, à traiter en priorité',s.late ? 'alert' : '') +
+        kpi('alert','En attente de retrait',s.late,'Promesse dépassée, non retirée',s.late ? 'alert' : '') +
         kpi('money','Solde à encaisser',num(s.due) + ' MAD','CA encaissé aujourd’hui · ' + num(todayRevenue()) + ' MAD','') +
       '</section>' +
       '<div class="pxd-grid"><div class="pxd-stack">' +
         '<section class="pxd-card">' + cardHead('workflow','Flux atelier','La charge réelle à chaque étape','Ouvrir l’atelier','pressing-workshop') + flow(s) + '</section>' +
-        '<section class="pxd-card">' + cardHead('clock','Priorités du jour','Échéances les plus proches et retards','Toutes les commandes','pressing-orders') + orderRows(active,6) + '</section>' +
+        '<section class="pxd-card">' + cardHead('clock','Priorités du jour','Échéances les plus proches et retraits en attente','Toutes les commandes','pressing-orders') + orderRows(active,6) + '</section>' +
       '</div><aside class="pxd-stack side">' +
         '<section class="pxd-card">' + cardHead('play','Actions rapides','Les gestes de comptoir les plus fréquents','','') +
           '<div class="pxd-action-grid">' + action('shirt','Nouveau dépôt','Créer le bon et étiqueter','comptoir') + action('scan','Retrait express','Téléphone ou scan du ticket','retrait') + action('rack','Ranger au rack','Attribuer un cintre','rangement') + action('bell','Clients à prévenir',s.unnotified ? num(s.unnotified) + ' message' + (s.unnotified > 1 ? 's' : '') + ' en attente' : 'Tout est à jour','retrait') + '</div></section>' +
@@ -170,7 +187,7 @@
     var s = summary();
     var active = sortedActive(s);
     if (nav === 'pressing-orders') return '<div class="pxd-page-grid"><section class="pxd-card">' + cardHead('list','Commandes actives','Triées par urgence et date de retrait','','') + orderRows(active) + '</section><section class="pxd-card">' + cardHead('check','Commandes retirées','Historique conservé pour le suivi client','','') + orderRows(s.orders.filter(function(o){return o.status==='livre';}),20) + '</section></div>';
-    if (nav === 'pressing-workshop') return '<div class="pxd-page-grid"><section class="pxd-card">' + cardHead('workflow','Vue atelier','Une commande avance selon l’état réel de ses pièces','','') + flow(s) + '</section><section class="pxd-card">' + cardHead('clock','File de production','Retards en premier, puis promesses les plus proches','','') + orderRows(active) + '</section></div>';
+    if (nav === 'pressing-workshop') return '<div class="pxd-page-grid"><section class="pxd-card">' + cardHead('workflow','Vue atelier','Une commande avance selon l’état réel de ses pièces','','') + flow(s) + '</section><section class="pxd-card">' + cardHead('clock','File de production','Promesses échues en premier, puis échéances les plus proches','','') + orderRows(active) + '</section></div>';
     if (nav === 'pressing-pickup') return '<div class="pxd-page-grid two"><section class="pxd-card">' + cardHead('rack','Prêtes au retrait','Rack, notification et solde sur le même écran','','') + rackBody(s) + '</section><section class="pxd-page-card"><h3>Retrait en trois gestes</h3><p>Recherchez le téléphone, confirmez les pièces, encaissez le solde.</p><div class="pxd-checks"><div class="pxd-check"><span>1 · Identifier le client</span><small>Téléphone ou scan</small></div><div class="pxd-check"><span>2 · Vérifier les pièces</span><small>Bon détaillé</small></div><div class="pxd-check"><span>3 · Libérer le rack</span><small>Après remise</small></div></div><button class="pxd-btn primary" style="margin-top:14px" data-pxd-open="retrait">Ouvrir le retrait express</button></section></div>';
     if (nav === 'pressing-services') {
       var serviceLabels = { sec:'Nettoyage à sec', lavage:'Lavage', repassage:'Repassage', detachage:'Détachage', retouche:'Retouche' };

@@ -89,10 +89,10 @@ var SHELL = [
   '/assets/trade-workspace-schema.js?v=4',
   '/assets/trade-workspaces.js?v=3',
   '/assets/reservations.js?v=8',
-  '/assets/pressing-ops.js?v=4',
+  '/assets/pressing-ops.js?v=5',
   '/assets/pressing-garment-icons.js?v=2',
   '/assets/pressing-catalog.js?v=4',
-  '/assets/pressing-dashboard.js?v=9',
+  '/assets/pressing-dashboard.js?v=10',
   '/assets/pressing-products/chemise.png',
   '/assets/pressing-products/tshirt.png',
   '/assets/pressing-products/pull.png',
@@ -289,8 +289,8 @@ var SHELL = [
      qu'il faut pouvoir ressortir le ticket. Un bouton de secours qui a besoin du
      réseau n'est pas un secours. */
   '/assets/pos-reprint.js',
-  '/assets/pressing-caisse.js?v=27',
-  '/assets/pressing-caisse.css?v=27',
+  '/assets/pressing-caisse.js?v=31',
+  '/assets/pressing-caisse.css?v=31',
   '/assets/lucide.min.js',
   '/assets/kiwi-favicon-new.svg',
   '/assets/kiwi-newlogo.svg',

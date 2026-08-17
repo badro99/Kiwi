@@ -35,10 +35,10 @@ ok(venues.includes('active.subtype = exactSubtype'), 'server type keeps the exac
 ok(pairingJs.includes("if (t && ids[t]) return { kind: 'vertical', id: t }"), 'operator hand-off routes an exact pressing type into the pressing till');
 const pairingMatch = caisse.match(/assets\/caisse-pairing\.js\?v=(\d+)/);
 ok(pairingMatch && sw.includes(`'/assets/caisse-pairing.js?v=${pairingMatch[1]}'`), 'pressing route fix bypasses the old cached pairing router');
-ok(caisse.includes('assets/pos-dispatch.js?v=24') && sw.includes("'/assets/pos-dispatch.js?v=24'") && dispatchJs.includes("file: 'pressing-caisse', rev: '27'") && sw.includes("'/assets/pressing-caisse.js?v=27'") && sw.includes("'/assets/pressing-caisse.css?v=27'"), 'pressing loader and lazy assets use deploy-stable cache revisions');
-ok(dashboard.includes('assets/pressing-dashboard.js?v=9'), 'dashboard loads the pressing subpages');
-ok(dashboard.includes('assets/pressing-ops.js?v=4') && caisse.includes('assets/pressing-ops.js?v=4'), 'dashboard and till share the same operations bridge');
-ok(sw.includes("'/assets/pressing-dashboard.css?v=9'") && sw.includes("'/assets/pressing-dashboard.js?v=9'"), 'pressing workspace is available offline');
+ok(caisse.includes('assets/pos-dispatch.js?v=24') && sw.includes("'/assets/pos-dispatch.js?v=24'") && dispatchJs.includes("file: 'pressing-caisse', rev: '31'") && sw.includes("'/assets/pressing-caisse.js?v=31'") && sw.includes("'/assets/pressing-caisse.css?v=31'"), 'pressing loader and lazy assets use deploy-stable cache revisions');
+ok(dashboard.includes('assets/pressing-dashboard.js?v=10'), 'dashboard loads the pressing subpages');
+ok(dashboard.includes('assets/pressing-ops.js?v=5') && caisse.includes('assets/pressing-ops.js?v=5'), 'dashboard and till share the same operations bridge');
+ok(sw.includes("'/assets/pressing-dashboard.css?v=9'") && sw.includes("'/assets/pressing-dashboard.js?v=10'"), 'pressing workspace is available offline');
 ok(dashboard.includes('assets/pressing-catalog.js?v=4') && caisse.includes('assets/pressing-catalog.js?v=4') && sw.includes("'/assets/pressing-catalog.js?v=4'"), 'dashboard and till load the same offline pressing catalogue');
 ok(dashboard.includes('assets/pressing-garment-icons.js?v=2') && caisse.includes('assets/pressing-garment-icons.js?v=2') && sw.includes("'/assets/pressing-garment-icons.js?v=2'"), 'dashboard and till load the same product artwork');
 ok(!css.includes('body.is-pressing .page-head') && css.includes('.pressing-home { display: none !important; }'), 'pressing keeps the shared dashboard visible');
@@ -115,17 +115,18 @@ vm.runInNewContext(catalogJs, context, { filename: 'pressing-catalog.js' });
 
 const now = Date.now();
 const orders = [
-  { id:'P-1', droppedAt:new Date(now - 1000), readyAt:new Date(now - 500), pay:{mode:'pickup',paid:20}, pieces:[{pid:'1',label:'Veste',status:'trait',photos:0,notes:['Tache col'],svcs:['sec']}] },
+  { id:'P-1', droppedAt:new Date(now - 1000), readyAt:new Date(now - 500), pay:{mode:'pickup',paid:20}, notified:true, pieces:[{pid:'1',label:'Veste',status:'trait',photos:0,notes:['Tache col'],svcs:['sec']}] },
   { id:'P-2', droppedAt:new Date(now - 1000), readyAt:new Date(now + 5000), pay:{mode:'pickup',paid:0}, rack:'B-07', notified:false, pieces:[{pid:'1',label:'Robe',status:'pret',photos:0}] },
+  { id:'P-3', droppedAt:new Date(now - 1000), readyAt:new Date(now + 10000), pay:{mode:'pickup',paid:10}, pieces:[{pid:'1',label:'Pantalon',status:'trait',photos:0,svcs:['lavage']}] },
 ];
 context.KiwiPressingOps.replace(orders, {
-  customer: (o) => ({ name: o.id === 'P-1' ? 'Amal' : 'Youssef', phone: '0600000000' }),
-  total: (o) => o.id === 'P-1' ? 100 : 80,
+  customer: (o) => ({ name: o.id === 'P-1' ? 'Amal' : o.id === 'P-2' ? 'Youssef' : 'Karim', phone: '0600000000' }),
+  total: (o) => o.id === 'P-1' ? 100 : o.id === 'P-2' ? 80 : 50,
 });
 const s = context.KiwiPressingOps.summary();
-ok(s.pieces === 2 && s.treating === 1 && s.ready === 1, 'summary follows real garment states');
-ok(s.late === 1, 'late promise is derived from the promised date');
-ok(s.due === 160, 'outstanding balance is derived from totals and payments');
+ok(s.pieces === 3 && s.treating === 1 && s.ready === 2, 'summary derives auto-ready and preserves future treating');
+ok(s.late === 1, 'late uncollected count is derived from promised date');
+ok(s.due === 200, 'outstanding balance is derived from totals and payments');
 ok(s.racks === 1 && s.unnotified === 1, 'rack and notification queues stay in sync');
 ok(s.attention === 1 && s.services.sec === 1, 'dashboard derives care and treatment load from real pieces');
 const snapshotText = [...store.values()].join('');

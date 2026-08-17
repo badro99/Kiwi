@@ -453,16 +453,28 @@
       };
     });
   }
-  function orderStatus(o) {
-    const st = o.pieces.map((p) => p.status);
-    if (st.every((s) => s === 'livre')) return 'livre';
-    if (st.every((s) => s === 'pret' || s === 'livre')) return 'pret';
+  function effectiveStatus(o, p, now) {
+    if (!p) return 'recu';
+    if (p.status === 'livre') return 'livre';
+    if (p.status === 'pret') return 'pret';
+    const rTs = o && o.readyAt instanceof Date ? o.readyAt.getTime() : (o && o.readyAt ? new Date(o.readyAt).getTime() : 0);
+    if (rTs && rTs <= (now || Date.now())) return 'pret';
+    return p.status || 'recu';
+  }
+  function orderStatus(o, now) {
+    if (!o || !Array.isArray(o.pieces)) return 'recu';
+    const t = now || Date.now();
+    const st = o.pieces.map((p) => effectiveStatus(o, p, t));
+    if (st.length && st.every((s) => s === 'livre')) return 'livre';
+    if (st.length && st.every((s) => s === 'pret' || s === 'livre')) return 'pret';
     if (st.some((s) => s === 'trait' || s === 'pret')) return 'trait';
     return 'recu';
   }
-  function isLate(o) {
-    const s = orderStatus(o);
-    return (s === 'recu' || s === 'trait') && o.readyAt.getTime() < Date.now();
+  function isLate(o, now) {
+    if (!o) return false;
+    const t = now || Date.now();
+    const rTs = o.readyAt instanceof Date ? o.readyAt.getTime() : (o.readyAt ? new Date(o.readyAt).getTime() : 0);
+    return orderStatus(o, t) !== 'livre' && rTs > 0 && rTs < t;
   }
 
   const NOW = Date.now();
@@ -2188,7 +2200,7 @@
         <button class="px-work-detail" data-px-detail="${o.id}">Détails <i data-lucide="chevron-right"></i></button>
       </div>
       <div class="px-ocard-top"><span class="px-ocard-num">${publicOrderNo(o)}</span>
-        <span class="px-ocard-when ${late ? 'late' : ''}">${late ? 'EN RETARD · ' : ''}${esc(when)}</span></div>
+        <span class="px-ocard-when ${late ? 'late' : ''}">${late ? 'EN ATTENTE DE RETRAIT · ' : ''}${esc(when)}</span></div>
       <div class="px-ocard-client"><i data-lucide="${o.b2b ? 'building-2' : 'user'}"></i>${esc(c.name)}</div>
       <div class="px-ocard-meta">
         <span class="px-pill"><i data-lucide="tag"></i>${o.pieces.length} pièce${o.pieces.length > 1 ? 's' : ''}</span>
@@ -2197,7 +2209,7 @@
         ${o.rack ? `<span class="px-pill rack">${o.rack}</span>` : ''}
         ${o.notified && st === 'pret' ? '<span class="px-pill wa">Notifié</span>' : ''}
       </div>
-      <div class="px-piece-dots">${o.pieces.map((p) => `<i class="px-pdot ${p.status}"></i>`).join('')}</div>
+      <div class="px-piece-dots">${o.pieces.map((p) => `<i class="px-pdot ${effectiveStatus(o, p)}"></i>`).join('')}</div>
       <div class="px-work-actions">
         ${st === 'recu' ? `<button class="px-work-secondary" data-px-start="${o.id}">En cours <span>facultatif</span></button>` : ''}
         ${st === 'pret' && !o.notified ? `<button class="px-work-secondary" data-px-notify="${o.id}"><i data-lucide="message-circle"></i>Prévenir</button>` : ''}
@@ -2295,7 +2307,7 @@
           <div class="px-dt-sub">${esc(c.name)} ${c.phone ? `<span class="tel">${esc(c.phone)}</span>` : ''}
             ${o.b2b ? '<span class="px-b2b-chip">B2B</span>' : ''}
             <span class="px-pill ${st === 'pret' ? 'ok' : st === 'trait' ? 'warn' : ''}">${STATUS[st].label}</span>
-            ${isLate(o) ? '<span class="px-pill due">En retard</span>' : ''}
+            ${isLate(o) ? '<span class="px-pill due">En attente de retrait</span>' : ''}
             ${payPill(o)}
             ${o.rack ? `<span class="px-pill rack">${o.rack}</span>` : ''}
           </div>
@@ -2552,13 +2564,7 @@
           <button class="px-rt-scan" id="px-rt-scan"><i data-lucide="scan-line"></i>Scanner ticket ou étiquette</button>
           <div class="px-rt-results">
             ${prets.map(rtCard).join('')}
-            ${others.map((o) => `
-              <div class="px-rt-card">
-                <div class="px-rt-top">
-                  <div class="px-rt-who"><b>${publicOrderNo(o)} · ${esc(custOf(o).name)}</b><span>${o.pieces.length} pièces · ${STATUS[orderStatus(o)].label}</span></div>
-                  <span class="px-pill warn">Pas encore prêt, promis ${fmtDT(o.readyAt)}</span>
-                </div>
-              </div>`).join('')}
+            ${others.map(rtCard).join('')}
             ${q && !hits.length ? `<div class="px-bempty">Rien pour « ${esc(q)} », vérifiez le numéro, ou cherchez au tableau.</div>` : ''}
             ${!q && !prets.length ? '<div class="px-bempty">Aucune commande prête à remettre pour le moment.</div>' : ''}
           </div>
@@ -2598,15 +2604,17 @@
     const c = custOf(o);
     const { total } = orderTotals(o);
     const due = o.pay.mode === 'compte' ? 0 : Math.max(0, total - o.pay.paid);
+    const st = orderStatus(o);
+    const early = st !== 'pret';
     return `<div class="px-rt-card">
       <div class="px-rt-top">
         <div class="px-rt-who"><b>${publicOrderNo(o)} · ${esc(c.name)}</b><span>${c.phone ? esc(c.phone) + ' · ' : ''}déposé ${fmtDay(o.droppedAt)}${o.notified ? ' · notifié' : ''}</span></div>
-        <div class="px-rt-slot ${o.rack ? '' : 'none'}">${o.rack ? `<b>${o.rack}</b><span>cintre</span>` : '<b>—</b><span>non rangé</span>'}</div>
+        ${early ? `<span class="px-pill warn">Pas encore prêt, promis ${fmtDT(o.readyAt)}</span>` : `<div class="px-rt-slot ${o.rack ? '' : 'none'}">${o.rack ? `<b>${o.rack}</b><span>cintre</span>` : '<b>—</b><span>non rangé</span>'}</div>`}
       </div>
       <div class="px-rt-pieces">
         ${o.pieces.map((p) => {
           const care = [...(p.notes || []), p.freeNote].filter(Boolean);
-          return `<div class="px-rt-piece"><i data-lucide="check-circle-2"></i><span>${esc(p.label)} · ${esc((COLOR[p.color] || {}).label || 'Couleur non précisée')} · ${svcCodes(p.svcs)}${care.length ? `<small>Attention · ${care.map(esc).join(' · ')}</small>` : ''}</span><span class="pid">${publicPieceNo(o, p)}</span></div>`;
+          return `<div class="px-rt-piece"><i data-lucide="${early ? 'clock' : 'check-circle-2'}"></i><span>${esc(p.label)} · ${esc((COLOR[p.color] || {}).label || 'Couleur non précisée')} · ${svcCodes(p.svcs)}${care.length ? `<small>Attention · ${care.map(esc).join(' · ')}</small>` : ''}</span><span class="pid">${publicPieceNo(o, p)}</span></div>`;
         }).join('')}
       </div>
       <div class="px-rt-balance ${due > 0 ? '' : 'paid'}">
@@ -2616,8 +2624,8 @@
       <div class="px-rt-actions">
         ${due > 0 ? `<button class="px-btn secondary" style="flex:1;" data-px-rt-pay="${o.id}"><i data-lucide="banknote"></i>Encaisser ${fmtMAD(due)}</button>` : ''}
         <button class="px-btn primary" style="flex:1;" data-px-rt-give="${o.id}" ${due > 0 ? 'disabled title="Encaissez le solde d’abord"' : ''}><i data-lucide="check"></i>Remettre au client</button>
-        ${!o.notified ? `<button class="px-btn ghost" data-px-rt-wa="${o.id}" title="Ouvrir le brouillon WhatsApp"><i data-lucide="message-circle"></i></button>` : ''}
-        ${o.draftOpenedAt && !o.notified ? `<button class="px-btn secondary" data-px-rt-wa-confirm="${o.id}"><i data-lucide="check-check"></i>Confirmer envoi</button>` : ''}
+        ${!early && !o.notified ? `<button class="px-btn ghost" data-px-rt-wa="${o.id}" title="Ouvrir le brouillon WhatsApp"><i data-lucide="message-circle"></i></button>` : ''}
+        ${!early && o.draftOpenedAt && !o.notified ? `<button class="px-btn secondary" data-px-rt-wa-confirm="${o.id}"><i data-lucide="check-check"></i>Confirmer envoi</button>` : ''}
       </div>
     </div>`;
   }
