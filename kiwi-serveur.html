@@ -6,7 +6,49 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
   <title>Kiwi · Équipe</title>
   <meta name="description" content="Application mobile Kiwi pour le service, le planning et le pointage de l'équipe" />
-  <meta name="theme-color" content="#FFFFFF" />
+  <meta name="theme-color" content="#F8F7F3" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#080B0A" media="(prefers-color-scheme: dark)" />
+  <!-- Le climat est posé AVANT la première peinture, et non au DOMContentLoaded :
+       autrement une tablette réglée sur la nuit affiche un plein écran blanc le
+       temps du chargement — en pleine salle, à 23 h, c'est un flash au visage.
+       Clé `kiwiTheme` partagée avec le tableau de bord (light|dark) ; absente,
+       on suit le téléphone via prefers-color-scheme, d'où l'absence d'attribut. -->
+  <script>
+    (function () {
+      var mq = null;
+      try { mq = window.matchMedia('(prefers-color-scheme: dark)'); } catch (_) {}
+      /* `data-theme` est un état DÉRIVÉ : la source de vérité reste
+         localStorage, où l'ABSENCE de clé veut dire « suis le téléphone ».
+         Résoudre ici plutôt que dans une media query évite de tenir deux
+         palettes sombres accordées à la main. */
+      function apply() {
+        var t = null;
+        try { t = localStorage.getItem('kiwiTheme'); } catch (_) {}
+        if (t !== 'dark' && t !== 'light') t = (mq && mq.matches) ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', t);
+        /* La barre d'état du téléphone doit suivre le CHOIX, pas le système :
+           les deux balises `media` ci-dessus ne connaissent que le second, si
+           bien qu'une nuit choisie à la main gardait une barre blanche au-dessus
+           d'un écran noir. On écrase donc la valeur effective ici. */
+        try {
+          var metas = document.querySelectorAll('meta[name="theme-color"]');
+          for (var i = 0; i < metas.length; i++) metas[i].removeAttribute('media');
+          for (var j = 0; j < metas.length; j++) metas[j].setAttribute('content', t === 'dark' ? '#080B0A' : '#F8F7F3');
+        } catch (_) {}
+      }
+      apply();
+      window.__kiwiApplyTheme = apply;
+      /* Le téléphone bascule au coucher du soleil pendant le service : on suit,
+         mais seulement si le serveur n'a pas choisi lui-même. */
+      try {
+        if (mq) mq.addEventListener('change', function () {
+          var t = null;
+          try { t = localStorage.getItem('kiwiTheme'); } catch (_) {}
+          if (t !== 'dark' && t !== 'light') apply();
+        });
+      } catch (_) {}
+    })();
+  </script>
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="Kiwi Équipe" />
@@ -51,29 +93,100 @@
       stroke-linecap: round; stroke-linejoin: round;
     }
 
+    /* ═══════════════════════════════════════════════════════════════════════
+       LES DEUX CLIMATS — jour et nuit
+       -----------------------------------------------------------------------
+       Un serveur travaille dans les deux : la mise en place se fait en plein
+       jour, le service à la lampe. L'écran doit donc exister deux fois, pas
+       une fois avec un filtre.
+
+       Toute couleur de SURFACE passe par un jeton ci-dessous ; le thème sombre
+       ne fait que redéfinir ces jetons. Deux pièges y sont désamorcés :
+
+       1. --ink PEINT et ENCRE à la fois. Utilisé en fond de bouton
+          (`background: var(--ink)`), il s'inverse la nuit et le bouton
+          disparaît — c'est le bug qui a cassé la barre latérale du tableau de
+          bord, et tools/check.js le surveille depuis. Le fond fort a donc son
+          propre couple : --fill-strong / --on-strong.
+       2. Le blanc du texte sur un bouton vert n'est PAS le blanc d'une carte.
+          Le premier ne bouge jamais (--on-accent), le second suit le climat
+          (--surface). Les confondre repeint le texte en noir la nuit.
+
+       Le jour reprend le rapport du tableau de bord — fond bone tiède, cartes
+       lumineuses — et non l'inverse (fond blanc, cartes grises) qui donnait à
+       cet écran son air terne.
+       ═══════════════════════════════════════════════════════════════════════ */
     :root {
+      color-scheme: light;
+
+      /* ── Constantes de marque : identiques dans les deux climats ── */
       --forest:        #0B6E4F;  /* brand --atlas (primary) */
       --forest-deep:   #053B2C;  /* brand --riad (deep) */
       --emerald:       #3FB67A;  /* accent — functional mid-green (success/paid); brand has no equivalent, kept for contrast */
-      --mint-tint:     #EBF5F0;
-      --mint-edge:     #C5E0D3;
-
-      --paper:         #F7F5F0;  /* brand warm paper */
-      --paper-cream:   #F7F5F0;
-      --paper-soft:    #F7F7F5;
-      --paper-mute:    #F4F4F2;
-      --surface:       #FFFFFF;
       --mint:          #7DF2B0;
-      --ink-bg:        #0A0F0D;
-      --line:          #E5E5E5;
-      --line-soft:     #EEEEEE;
+      --danger-mute:   #B85245;
+      /* Le blanc porté PAR un bouton vert. Ne suit pas le climat : le bouton
+         reste vert la nuit, donc son texte reste clair. */
+      --on-accent:     #FFFFFF;
 
-      --ink:           #0A0F0D;  /* brand ink */
+      /* ── Surfaces (redéfinies en nuit) ────────────────────────────────────
+         Rapport du tableau de bord : sol bone tiède, carte lumineuse qui s'en
+         détache. --surface reste le blanc le plus proche que la charte tolère
+         (#FFFDFA, le même que --paper-elev du tableau de bord) : le blanc
+         franc #FFFFFF est explicitement exclu pour un fond. */
+      --bg:            #F8F7F3;  /* sol de l'app — le fond du tableau de bord */
+      --surface:       #FFFDFA;  /* carte / panneau — blanc chaud lumineux */
+      --surface-2:     #F4F2EC;  /* creux : champs, cases, rangées calmes */
+      --surface-3:     #ECEAE5;  /* état pressé */
+      --paper:         #F5F3ED;  /* écran d'accueil, papier chaud */
+      --paper-cream:   #F7F5F0;
+      --paper-soft:    var(--bg);
+      --paper-mute:    var(--surface-2);
+
+      --line:          #E4E1D9;
+      --line-soft:     #EFEDE6;
+
+      --ink:           #0A0F0D;  /* brand ink — ENCRE seulement, jamais un fond */
       --ink-2:         #4A4A4A;
       --ink-3:         #6B6B6B;
       --ink-4:         #6F6C65;
 
-      --danger-mute:   #B85245;
+      /* Le fond fort : pastille active, « Encaisser ». Le jour il est encre,
+         la nuit il devient menthe — l'accent unique, sur moins de 5 % de
+         l'écran, exactement là où l'œil doit tomber. */
+      --fill-strong:   #0A0F0D;
+      --on-strong:     #FFFDFA;
+      --ink-bg:        var(--fill-strong);
+
+      /* Teintes vertes des rangées occupées / réglées. */
+      --tint:          #EBF5F0;
+      --tint-edge:     #C5E0D3;
+      --tint-strong:   #DEF2E5;
+      --mint-tint:     var(--tint);
+      --mint-edge:     var(--tint-edge);
+
+      /* Famille ambre : pause, alerte douce. */
+      --warn-bg:       #FEF3C7;
+      --warn-edge:     #FCD34D;
+      --warn-ink:      #92400E;
+      --warn-solid:    #F59E0B;
+      --warn-soft-bg:  #FFF8ED;
+      --warn-soft-ink: #9A5A1B;
+
+      --frame:         #E3E3DF;  /* la coque du téléphone en aperçu bureau */
+      /* Le verre de la barre de navigation flottante. */
+      --glass:        rgba(255,255,255,0.94);
+      --glass-ring:   rgba(10,15,13,0.08);
+      --glass-shadow: 0 14px 36px -16px rgba(10,15,13,0.28), 0 3px 10px -4px rgba(10,15,13,0.16);
+      --glass-pill:   var(--tint);
+      --glass-on:     var(--forest-deep);
+      /* Le vert de marque ENCRE aussi bien qu-il PEINT. Sur un fond sombre une
+         encre #0B6E4F devient illisible : elle a donc son propre jeton, qui
+         s-eclaircit la nuit. Meme piege que --ink, meme remede. */
+      --forest-ink:      #0B6E4F;
+      --forest-ink-deep: #053B2C;
+      --forest-edge:     #0B6E4F;
+      --ring:          var(--surface);  /* l'anneau de 2px autour d'un point */
 
       --sans:  "Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
       --serif: "Instrument Serif", "Times New Roman", serif;
@@ -88,6 +201,14 @@
       --shadow-1: 0 1px 2px rgba(17,17,17,.04), 0 4px 10px rgba(17,17,17,.05);
       --shadow-2: 0 8px 28px rgba(17,17,17,.12), 0 2px 6px rgba(17,17,17,.06);
       --shadow-3: 0 30px 60px rgba(0,0,0,.5);
+      /* Le liseré haut qui fait exister une carte. Nul le jour (l'ombre
+         suffit), lumineux la nuit : sans lui, une carte sombre sur un fond
+         sombre n'a pas de bord et l'écran s'aplatit. */
+      --rim: none;
+      /* L'atmosphère du sol. Le tableau de bord pose un dégradé maillé ; ici
+         une seule lueur froide en haut, assez discrète pour ne pas salir un
+         écran lu en diagonale entre deux tables. */
+      --atmos: none;
 
       --gradient: linear-gradient(135deg, var(--forest) 0%, #3FB67A 100%);
 
@@ -102,6 +223,74 @@
     @supports (height: 100dvh) {
       :root { --app-height: 100dvh; }
     }
+
+    /* ── LA NUIT ──────────────────────────────────────────────────────────────
+       Pas un négatif du jour : une salle éclairée à la bougie. Le noir est
+       verdi (le vert Atlas traverse tout le produit) et jamais pur — #000 sur
+       un écran OLED fait « trou », et le moindre bord blanc y devient une
+       lame. Le texte est du papier chaud, pas du blanc clinique.
+
+       Trois choses font le relief, à la place des ombres qui ne portent pas
+       sur fond sombre : l'empilement des surfaces, le liseré haut (--rim), et
+       la menthe réservée à l'action principale. */
+    html[data-theme="dark"] {
+      color-scheme: dark;
+
+      --bg:            #080B0A;
+      --surface:       #101614;
+      --surface-2:     #161E1B;
+      --surface-3:     #1E2823;
+      --paper:         #0B100E;
+      --paper-cream:   #101614;
+
+      --line:          rgba(255,255,255,0.09);
+      --line-soft:     rgba(255,255,255,0.055);
+
+      --ink:           #F1EFE9;  /* papier chaud, jamais #FFF */
+      --ink-2:         #AAB3AD;
+      --ink-3:         #868F8A;
+      --ink-4:         #868F8A;
+
+      /* Le noir devient menthe : c'est LE geste du thème sombre. */
+      --fill-strong:   #7DF2B0;
+      --on-strong:     #06281A;
+
+      --tint:          rgba(63,182,122,0.13);
+      --tint-edge:     rgba(125,242,176,0.22);
+      --tint-strong:   rgba(63,182,122,0.20);
+
+      --warn-bg:       rgba(245,158,11,0.14);
+      --warn-edge:     rgba(252,211,77,0.34);
+      --warn-ink:      #F0C877;
+      --warn-solid:    #E0940A;
+      --warn-soft-bg:  rgba(199,117,38,0.14);
+      --warn-soft-ink: #E2A264;
+
+      --frame:         #1A211E;
+      --glass:        rgba(20,27,24,0.86);
+      --glass-ring:   rgba(255,255,255,0.10);
+      --glass-shadow: 0 16px 42px -16px rgba(0,0,0,0.72), 0 3px 12px -4px rgba(0,0,0,0.5);
+      --glass-pill:   rgba(125,242,176,0.16);
+      --glass-on:     #7DF2B0;
+      --forest-ink:      #7DF2B0;
+      --forest-ink-deep: #A9F5C9;
+      --forest-edge:     rgba(125,242,176,0.55);
+
+      --shadow-1: 0 1px 2px rgba(0,0,0,.45), 0 6px 16px rgba(0,0,0,.38);
+      --shadow-2: 0 10px 34px rgba(0,0,0,.60), 0 2px 8px rgba(0,0,0,.45);
+      --shadow-3: 0 34px 70px rgba(0,0,0,.75);
+      --rim: inset 0 1px 0 rgba(255,255,255,0.055);
+      --atmos:
+        radial-gradient(120% 70% at 50% -12%, rgba(11,110,79,0.30) 0%, rgba(11,110,79,0) 62%),
+        radial-gradient(90% 55% at 100% 104%, rgba(125,242,176,0.07) 0%, rgba(125,242,176,0) 60%);
+    }
+
+    /* Pas de second bloc sombre pour `prefers-color-scheme`. Le dupliquer, ce
+       serait deux palettes à tenir accordées à la main — et la première teinte
+       ajoutée d'un seul côté ferait un thème sombre à moitié appliqué, sans
+       aucune erreur pour le dire. Le démarrage RÉSOUT donc « système » en un
+       `data-theme` explicite (voir le script du <head>), et le tableau
+       ci-dessus reste la seule définition de la nuit. */
 
 /* Emphasis is roman. <em>/<i>/<cite> default to italic in every browser, and a
    sheared sans at UI sizes reads as a rendering fault rather than as emphasis —
@@ -139,9 +328,9 @@ em, i, cite, dfn, var { font-style: normal; }
       width: 420px;
       height: 880px;
       max-height: calc(var(--app-height) - 48px);
-      background: var(--surface);
+      background: var(--bg);
       border-radius: 36px;
-      border: 6px solid #E3E3DF;
+      border: 6px solid var(--frame);
       box-shadow: var(--shadow-3);
       position: relative;
       overflow: hidden;
@@ -149,7 +338,7 @@ em, i, cite, dfn, var { font-style: normal; }
 
     /* Mobile: fill viewport, no frame */
     @media (max-width: 500px) {
-      body { background: var(--surface); }
+      body { background: var(--bg); }
       .phone-frame { padding: 0; }
       .app {
         width: 100%;
@@ -167,7 +356,11 @@ em, i, cite, dfn, var { font-style: normal; }
       inset: 0;
       display: none;
       flex-direction: column;
-      background: var(--surface);
+      /* Le sol, plus son atmosphère. Nulle le jour (`--atmos: none` est une
+         image de fond parfaitement valide), une lueur forêt en haut la nuit :
+         c'est ce qui empêche un thème sombre de ressembler à un aplat de
+         peinture noire. */
+      background: var(--atmos), var(--bg);
       overflow: hidden;
     }
     .screen[aria-hidden="true"] { visibility: hidden; }
@@ -203,6 +396,16 @@ em, i, cite, dfn, var { font-style: normal; }
       line-height: 0;
     }
     .pin-brand img { display: block; width: 100%; height: auto; }
+    /* Le mot-de-marque est en encre foncée : sur fond nuit il disparaît. La
+       variante inverse existe déjà (mot #F7F5F0, feuille #AAF0C1) et est déjà
+       dans la coquille hors-ligne — on ÉCHANGE les deux fichiers plutôt que de
+       filtrer : un `invert(1)` retournerait aussi le vert de la feuille.
+       Classes sans le mot « brand » : operator-access.js cible
+       `[class*="brand"]` avec closest(), qui remonte donc au conteneur —
+       l'appui long qui ouvre la console opérateur est préservé. */
+    .logo-night { display: none; }
+    html[data-theme="dark"] .logo-day { display: none; }
+    html[data-theme="dark"] .logo-night { display: block; }
     .pin-tagline {
       font-family: var(--serif);
       font-size: 14px;
@@ -286,7 +489,7 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .pin-key:active {
       background: var(--forest);
-      border-color: var(--forest);
+      border-color: var(--forest-edge);
       color: var(--mint-tint);
       box-shadow: none;
       transform: scale(0.95);
@@ -346,7 +549,7 @@ em, i, cite, dfn, var { font-style: normal; }
       font-size: 16px;
       outline: none;
     }
-    .employee-login input:focus { border-color: var(--forest); background: var(--mint-tint); }
+    .employee-login input:focus { border-color: var(--forest-edge); background: var(--mint-tint); }
     .employee-login button {
       margin-top: 4px;
       border-radius: 13px;
@@ -402,7 +605,7 @@ em, i, cite, dfn, var { font-style: normal; }
       text-align: center;
       letter-spacing: -0.02em;
     }
-    .ci-greeting em { font-family: var(--serif); font-weight: 400; color: var(--forest); }
+    .ci-greeting em { font-family: var(--serif); font-weight: 400; color: var(--forest-ink); }
     .ci-role {
       font-size: 13px; color: var(--ink-3);
       letter-spacing: 0.08em; text-transform: uppercase;
@@ -426,7 +629,7 @@ em, i, cite, dfn, var { font-style: normal; }
       height: 64px;
       border-radius: 18px;
       background: var(--gradient);
-      color: #fff;
+      color: var(--on-accent);
       font-size: 17px; font-weight: 600;
       display: inline-flex; align-items: center; justify-content: center; gap: 10px;
       box-shadow: 0 8px 24px rgba(63,182,122,0.25);
@@ -455,7 +658,7 @@ em, i, cite, dfn, var { font-style: normal; }
       display: inline-flex; align-items: center; gap: 6px;
     }
     .ci-secondary:hover { color: var(--ink); }
-    .ci-secondary:active { color: var(--forest); }
+    .ci-secondary:active { color: var(--forest-ink); }
     .ci-secondary svg { width: 14px; height: 14px; }
 
     /* Six-digit pointage code generated by the paired caisse. */
@@ -472,7 +675,7 @@ em, i, cite, dfn, var { font-style: normal; }
       border-radius: 50%;
       background: var(--mint-tint);
       display: flex; align-items: center; justify-content: center;
-      color: var(--forest);
+      color: var(--forest-ink);
       transition: background 220ms ease, box-shadow 220ms ease, transform 220ms ease;
     }
     .nfc-disc::before, .nfc-disc::after {
@@ -521,7 +724,7 @@ em, i, cite, dfn, var { font-style: normal; }
       transition: color 200ms ease;
     }
     .nfc-zone.is-tapped .nfc-caption {
-      color: var(--forest);
+      color: var(--forest-ink);
     }
 
     /* Pointer l'arrivée — locked until a six-digit code is entered. */
@@ -555,7 +758,7 @@ em, i, cite, dfn, var { font-style: normal; }
       width: 36px; height: 36px;
       border-radius: 50%;
       background: var(--gradient);
-      color: #fff;
+      color: var(--on-accent);
       display: inline-flex; align-items: center; justify-content: center;
       font-size: 14px; font-weight: 700;
       letter-spacing: -0.01em;
@@ -626,13 +829,10 @@ em, i, cite, dfn, var { font-style: normal; }
       gap: 2px;
       padding: 7px 9px;
       border-radius: 999px;
-      background: rgba(255,255,255,0.94);
+      background: var(--glass);
       -webkit-backdrop-filter: blur(28px) saturate(1.8);
       backdrop-filter: blur(28px) saturate(1.8);
-      box-shadow:
-        0 14px 36px -16px rgba(10,15,13,0.28),
-        0 3px 10px -4px rgba(10,15,13,0.16),
-        inset 0 0 0 1px rgba(10,15,13,0.08);
+      box-shadow: var(--glass-shadow), inset 0 0 0 1px var(--glass-ring);
     }
     /* the bright glass "lens" that slides + rubber-band stretches between tabs */
     .bt-pill {
@@ -641,7 +841,7 @@ em, i, cite, dfn, var { font-style: normal; }
       height: calc(100% - 14px);
       width: 0;
       border-radius: 999px;
-      background: var(--mint-tint);
+      background: var(--glass-pill);
       box-shadow: inset 0 0 0 1px var(--mint-edge), 0 2px 6px -2px rgba(10,15,13,0.14);
       transform: translateX(0);
       transition: transform 310ms cubic-bezier(0.34, 1.45, 0.5, 1), width 310ms cubic-bezier(0.34, 1.45, 0.5, 1);
@@ -673,7 +873,7 @@ em, i, cite, dfn, var { font-style: normal; }
       stroke-width: 1.9;
       transition: transform 200ms cubic-bezier(0.34, 1.45, 0.5, 1);
     }
-    .bt-btn[aria-pressed="true"] { color: var(--forest-deep); }
+    .bt-btn[aria-pressed="true"] { color: var(--glass-on); }
     .bt-btn[aria-pressed="true"] svg { transform: translateY(-1px) scale(1.06); }
     .bt-btn:active svg { transform: scale(0.86); }
     .bt-btn .bt-badge {
@@ -683,11 +883,11 @@ em, i, cite, dfn, var { font-style: normal; }
       padding: 0 4px;
       border-radius: 999px;
       background: var(--danger-mute);
-      color: #fff;
+      color: var(--on-accent);
       font-size: 9px; font-weight: 700;
       display: flex; align-items: center; justify-content: center;
       line-height: 1;
-      box-shadow: 0 0 0 2px #fff;
+      box-shadow: 0 0 0 2px var(--ring);
       z-index: 2;
     }
 
@@ -730,7 +930,7 @@ em, i, cite, dfn, var { font-style: normal; }
       white-space: nowrap;
       transition: background 150ms, color 150ms;
     }
-    .filter-chip.is-active { background: var(--ink); color: #fff; }
+    .filter-chip.is-active { background: var(--fill-strong); color: var(--on-strong); }
     .filter-chip .count { opacity: .6; margin-left: 5px; font-feature-settings: "tnum" 1; }
     .filter-chip.is-active .count { opacity: .7; }
 
@@ -767,22 +967,28 @@ em, i, cite, dfn, var { font-style: normal; }
 
     .table-list { display: flex; flex-direction: column; gap: 8px; }
 
+    /* Une carte est POSÉE sur le sol, elle n'est pas creusée dedans. C'est le
+       rapport du tableau de bord — sol bone, carte lumineuse, filet d'ombre —
+       et l'inverse de ce qu'était cet écran : des cartes grises sur un fond
+       blanc, d'où son air terne. La nuit, l'ombre ne porte plus : c'est --rim,
+       le liseré haut, qui redonne l'épaisseur. */
     .table-card {
       display: flex; align-items: center; gap: 12px;
       width: 100%;
       text-align: left;
       padding: 12px 14px;
       border-radius: var(--r-lg);
-      background: var(--paper-mute);
-      border: 1px solid transparent;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow-1), var(--rim);
       transition: background 150ms ease, transform 100ms ease, border-color 150ms ease;
       cursor: pointer;
       position: relative;
     }
     .table-card:active { transform: scale(0.98); }
     .table-card[data-status="khawya"] {
-      background: var(--paper-mute);
-      border-color: var(--line-soft);
+      background: var(--surface);
+      border-color: var(--line);
     }
     .table-card[data-status="ka-yaklo"] {
       background: var(--mint-tint);
@@ -790,12 +996,12 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .table-card[data-status="bgha-ykhlass"] {
       background: var(--forest);
-      color: #fff;
+      color: var(--on-accent);
       animation: urgent-pulse 2.4s ease-in-out infinite;
     }
     .table-card[data-status="ka-tkhdam"] {
       background: var(--emerald);
-      color: #fff;
+      color: var(--on-accent);
     }
     .table-card[data-status="khlass"] {
       background: var(--surface);
@@ -809,7 +1015,7 @@ em, i, cite, dfn, var { font-style: normal; }
     .tc-num {
       flex: 0 0 44px;
       width: 44px; height: 44px;
-      background: rgba(0,0,0,0.06);
+      background: var(--surface-3);
       border-radius: var(--r-md);
       display: flex; align-items: center; justify-content: center;
       font-size: 16px; font-weight: 700;
@@ -818,11 +1024,11 @@ em, i, cite, dfn, var { font-style: normal; }
     .table-card[data-status="bgha-ykhlass"] .tc-num,
     .table-card[data-status="ka-tkhdam"] .tc-num {
       background: rgba(255,255,255,0.18);
-      color: #fff;
+      color: var(--on-accent);
     }
     .table-card[data-status="khlass"] .tc-num {
       background: var(--mint-tint);
-      color: var(--forest);
+      color: var(--forest-ink);
     }
     .tc-info { flex: 1; min-width: 0; }
     .tc-line1 {
@@ -900,10 +1106,10 @@ em, i, cite, dfn, var { font-style: normal; }
       display: inline-flex; align-items: center; gap: 5px;
     }
     .td-status-pill[data-status="khawya"] { background: var(--paper-mute); color: var(--ink-3); }
-    .td-status-pill[data-status="ka-yaklo"] { background: var(--mint-tint); color: var(--forest); }
-    .td-status-pill[data-status="bgha-ykhlass"] { background: var(--forest); color: #fff; }
-    .td-status-pill[data-status="ka-tkhdam"] { background: var(--emerald); color: #fff; }
-    .td-status-pill[data-status="khlass"] { background: var(--mint-tint); color: var(--forest); border: 1px solid var(--mint-edge); }
+    .td-status-pill[data-status="ka-yaklo"] { background: var(--mint-tint); color: var(--forest-ink); }
+    .td-status-pill[data-status="bgha-ykhlass"] { background: var(--forest); color: var(--on-accent); }
+    .td-status-pill[data-status="ka-tkhdam"] { background: var(--emerald); color: var(--on-accent); }
+    .td-status-pill[data-status="khlass"] { background: var(--mint-tint); color: var(--forest-ink); border: 1px solid var(--mint-edge); }
 
     .td-body {
       flex: 1; overflow-y: auto;
@@ -934,7 +1140,7 @@ em, i, cite, dfn, var { font-style: normal; }
       flex: 0 0 28px;
     }
     .td-qty-btn.minus { color: var(--danger-mute); background: rgba(184,82,69,0.1); }
-    .td-qty-btn.plus { color: #fff; background: var(--emerald); }
+    .td-qty-btn.plus { color: var(--on-accent); background: var(--emerald); }
     .td-qty-btn:active { transform: scale(0.94); }
     .td-qty-num {
       min-width: 22px;
@@ -998,12 +1204,12 @@ em, i, cite, dfn, var { font-style: normal; }
       transition: border-color 150ms, background 150ms, color 150ms;
     }
     .td-item-note::placeholder { color: var(--ink-4); }
-    .td-item-note:focus { outline: none; border-color: var(--forest); }
-    .td-item-note.has-note { border-color: var(--forest); background: rgba(31,93,60,.07); color: var(--forest); font-weight: 500; }
+    .td-item-note:focus { outline: none; border-color: var(--forest-edge); }
+    .td-item-note.has-note { border-color: var(--forest-edge); background: rgba(31,93,60,.07); color: var(--forest-ink); font-weight: 500; }
     /* read-only note sub-line under a sent order item */
     .td-item-noteline {
       flex: 1 0 100%;
-      font-size: 11.5px; color: var(--forest);
+      font-size: 11.5px; color: var(--forest-ink);
       padding-left: 2px;
     }
 
@@ -1028,10 +1234,10 @@ em, i, cite, dfn, var { font-style: normal; }
     .td-btn:active { transform: scale(0.98); }
     .td-btn:disabled { opacity: .58; cursor: not-allowed; transform: none; }
     .td-btn svg { width: 18px; height: 18px; }
-    .td-btn.primary { background: var(--gradient); color: #fff; }
-    .td-btn.dark    { background: var(--ink);   color: #fff; }
+    .td-btn.primary { background: var(--gradient); color: var(--on-accent); }
+    .td-btn.dark    { background: var(--fill-strong); color: var(--on-strong); }
     .td-btn.ghost   { background: var(--paper-mute); color: var(--ink-2); }
-    .td-btn.warn    { background: var(--forest); color: #fff; }
+    .td-btn.warn    { background: var(--forest); color: var(--on-accent); }
     .td-btn.danger  { background: rgba(184,82,69,0.12); color: var(--danger-mute); }
     .td-btn.sm      { height: 44px; font-size: 13.5px; }
     .td-btn.row-pair { width: auto; flex: 1; }
@@ -1059,8 +1265,8 @@ em, i, cite, dfn, var { font-style: normal; }
       display: flex; flex-direction: column; align-items: center; gap: 4px;
       transition: border-color 150ms, background 150ms, transform 100ms;
     }
-    .trf-target-card:hover { border-color: var(--forest); background: var(--mint-tint); transform: translateY(-1px); }
-    .trf-target-card.is-selected { border-color: var(--forest); background: var(--mint-tint); box-shadow: 0 0 0 2px var(--forest); font-weight: 600; }
+    .trf-target-card:hover { border-color: var(--forest-edge); background: var(--mint-tint); transform: translateY(-1px); }
+    .trf-target-card.is-selected { border-color: var(--forest-edge); background: var(--mint-tint); box-shadow: 0 0 0 2px var(--forest-edge); font-weight: 600; }
     .trf-target-card .trf-tname { font-size: 15px; font-weight: 700; color: var(--ink); }
     .trf-target-card .trf-tmeta { font-size: 11px; color: var(--ink-3); }
 
@@ -1071,16 +1277,16 @@ em, i, cite, dfn, var { font-style: normal; }
       background: var(--surface); text-align: left; cursor: pointer;
       transition: border-color 150ms, background 150ms, transform 100ms;
     }
-    .void-reason-chip:hover { border-color: var(--forest); background: var(--mint-tint); }
-    .void-reason-chip.is-active { border-color: var(--forest); background: var(--mint-tint); box-shadow: 0 0 0 2px var(--forest); }
-    .void-reason-chip svg { width: 20px; height: 20px; color: var(--forest); flex: 0 0 20px; }
+    .void-reason-chip:hover { border-color: var(--forest-edge); background: var(--mint-tint); }
+    .void-reason-chip.is-active { border-color: var(--forest-edge); background: var(--mint-tint); box-shadow: 0 0 0 2px var(--forest-edge); }
+    .void-reason-chip svg { width: 20px; height: 20px; color: var(--forest-ink); flex: 0 0 20px; }
     .void-reason-chip .vrc-text { display: flex; flex-direction: column; gap: 2px; }
     .void-reason-chip .vrc-title { font-size: 14px; font-weight: 600; color: var(--ink); }
     .void-reason-chip .vrc-sub { font-size: 11.5px; color: var(--ink-3); }
 
     .td-lock-banner {
-      background: #FEF3C7;
-      border: 1px solid #FCD34D;
+      background: var(--warn-bg);
+      border: 1px solid var(--warn-edge);
       border-radius: var(--r-md);
       padding: 9px 12px;
       margin-bottom: 12px;
@@ -1089,13 +1295,13 @@ em, i, cite, dfn, var { font-style: normal; }
       gap: 8px;
       font-size: 13px;
       font-weight: 600;
-      color: #92400E;
+      color: var(--warn-ink);
     }
-    .td-lock-banner svg { width: 16px; height: 16px; flex-shrink: 0; color: #B45309; }
+    .td-lock-banner svg { width: 16px; height: 16px; flex-shrink: 0; color: var(--warn-ink); }
     .tc-lock-indicator {
       position: absolute; top: 6px; right: 6px;
       width: 22px; height: 22px; border-radius: 50%;
-      background: #F59E0B; color: #FFF;
+      background: var(--warn-solid); color: var(--on-accent);
       display: flex; align-items: center; justify-content: center;
       box-shadow: 0 1px 3px rgba(0,0,0,0.15);
     }
@@ -1103,7 +1309,7 @@ em, i, cite, dfn, var { font-style: normal; }
 
     /* Split-in-progress banner */
     .td-split-banner {
-      background: linear-gradient(135deg, var(--mint-tint) 0%, #DEF2E5 100%);
+      background: linear-gradient(135deg, var(--tint) 0%, var(--tint-strong) 100%);
       border: 1px solid var(--mint-edge);
       border-radius: 14px;
       padding: 14px 16px;
@@ -1113,7 +1319,7 @@ em, i, cite, dfn, var { font-style: normal; }
     .td-split-banner-icon {
       width: 40px; height: 40px; border-radius: 50%;
       background: var(--gradient);
-      color: #fff;
+      color: var(--on-accent);
       display: flex; align-items: center; justify-content: center;
       flex: 0 0 40px;
       box-shadow: 0 4px 12px rgba(31,93,60,0.25);
@@ -1122,7 +1328,7 @@ em, i, cite, dfn, var { font-style: normal; }
     .td-split-banner-text { flex: 1; min-width: 0; }
     .td-split-banner-title {
       font-size: 13.5px; font-weight: 700;
-      color: var(--forest-deep);
+      color: var(--forest-ink-deep);
       letter-spacing: -0.005em;
     }
     .td-split-banner-sub {
@@ -1170,7 +1376,7 @@ em, i, cite, dfn, var { font-style: normal; }
       width: 32px; height: 32px;
       border-radius: 50%;
       background: var(--forest);
-      color: #fff;
+      color: var(--on-accent);
       display: inline-flex; align-items: center; justify-content: center;
       font-size: 13px; font-weight: 700;
       flex: 0 0 32px;
@@ -1216,7 +1422,7 @@ em, i, cite, dfn, var { font-style: normal; }
       white-space: nowrap;
       transition: background 150ms, color 150ms;
     }
-    .cat-pill.is-active { background: var(--ink); color: #fff; }
+    .cat-pill.is-active { background: var(--fill-strong); color: var(--on-strong); }
     .cat-pill .count { font-size: 10.5px; opacity: .55; margin-left: 5px; font-feature-settings: "tnum" 1; }
 
     .menu-grid {
@@ -1226,9 +1432,10 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .menu-item {
       position: relative;
-      background: var(--paper-mute);
+      background: var(--surface);
       border-radius: 14px;
-      border: 1.5px solid transparent;
+      border: 1.5px solid var(--line);
+      box-shadow: var(--shadow-1), var(--rim);
       padding: 12px 12px 10px;
       display: flex; flex-direction: column;
       cursor: pointer;
@@ -1265,15 +1472,14 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .menu-item-price {
       font-size: 13.5px; font-weight: 700;
-      color: var(--forest);
+      color: var(--forest-ink);
       font-feature-settings: "tnum" 1;
       letter-spacing: -0.01em;
     }
     .menu-item-add {
       width: 28px; height: 28px;
       border-radius: 50%;
-      background: var(--ink);
-      color: #fff;
+      background: var(--fill-strong); color: var(--on-strong);
       display: inline-flex; align-items: center; justify-content: center;
       font-size: 17px; font-weight: 600;
       flex: 0 0 28px;
@@ -1293,7 +1499,7 @@ em, i, cite, dfn, var { font-style: normal; }
       flex: 0 0 26px;
     }
     .step-btn.step-minus { background: rgba(184,82,69,0.12); color: var(--danger-mute); }
-    .step-btn.step-plus  { background: var(--emerald); color: #fff; }
+    .step-btn.step-plus  { background: var(--emerald); color: var(--on-accent); }
     .step-num {
       min-width: 22px;
       text-align: center;
@@ -1314,7 +1520,7 @@ em, i, cite, dfn, var { font-style: normal; }
       position: absolute; top: 9px; right: 9px;
       display: inline-flex; align-items: center; gap: 3px;
       font-size: 8px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
-      color: var(--forest);
+      color: var(--forest-ink);
       background: var(--mint-tint);
       border: 1px solid var(--mint-edge);
       padding: 2px 6px 2px 5px; border-radius: 999px;
@@ -1334,7 +1540,7 @@ em, i, cite, dfn, var { font-style: normal; }
       font-size: 9px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase;
       flex: 0 0 auto;
     }
-    .opt-group-tag.req { color: var(--forest); }
+    .opt-group-tag.req { color: var(--forest-ink); }
     .opt-group-tag.opt { color: var(--ink-4); }
     .opt-group.missing .opt-group-name { color: var(--danger-mute); }
     .opt-group.missing .opt-group-tag.req { color: var(--danger-mute); }
@@ -1348,8 +1554,8 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .opt-pill:active { transform: scale(0.96); }
     .opt-pill .opt-pr { font-size: 11px; color: var(--ink-4); font-feature-settings: "tnum" 1; }
-    .opt-pill.on { background: var(--mint-tint); border-color: var(--forest); color: var(--forest); font-weight: 600; }
-    .opt-pill.on .opt-pr { color: var(--forest); }
+    .opt-pill.on { background: var(--mint-tint); border-color: var(--forest-edge); color: var(--forest-ink); font-weight: 600; }
+    .opt-pill.on .opt-pr { color: var(--forest-ink); }
     .opt-foot {
       position: sticky; bottom: -24px;
       background: var(--surface); padding: 12px 0 0;
@@ -1361,7 +1567,7 @@ em, i, cite, dfn, var { font-style: normal; }
     /* read-only options sub-line under an order item */
     .td-item-optline {
       flex: 1 0 100%;
-      font-size: 11.5px; color: var(--forest); font-weight: 500;
+      font-size: 11.5px; color: var(--forest-ink); font-weight: 500;
       display: flex; align-items: flex-start; gap: 5px;
       line-height: 1.35;
     }
@@ -1373,7 +1579,7 @@ em, i, cite, dfn, var { font-style: normal; }
       left: 16px; right: 16px;
       bottom: var(--nav-clearance);
       background: var(--gradient);
-      color: #fff;
+      color: var(--on-accent);
       border-radius: 16px;
       padding: 14px 18px;
       align-items: center; justify-content: space-between;
@@ -1424,7 +1630,7 @@ em, i, cite, dfn, var { font-style: normal; }
     .notification-card.is-unread { border-color: var(--mint-edge); background: var(--mint-tint); }
     .notification-icon {
       width: 38px; height: 38px; flex: 0 0 38px; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center; color: var(--forest);
+      display: flex; align-items: center; justify-content: center; color: var(--forest-ink);
       background: var(--paper-mute);
     }
     .notification-card.is-unread .notification-icon { background: var(--surface); }
@@ -1468,7 +1674,7 @@ em, i, cite, dfn, var { font-style: normal; }
       background: var(--gradient);
       display: inline-flex; align-items: center; justify-content: center;
       font-size: 22px; font-weight: 700;
-      color: #fff;
+      color: var(--on-accent);
       flex: 0 0 56px;
     }
     .profil-info { flex: 1; }
@@ -1517,7 +1723,7 @@ em, i, cite, dfn, var { font-style: normal; }
       font-size: 14px; font-weight: 600;
       display: inline-flex; align-items: center; justify-content: center; gap: 8px;
     }
-    .profil-pause.is-paused { color: var(--forest); border-color: var(--mint); background: var(--mint-tint); }
+    .profil-pause.is-paused { color: var(--forest-ink); border-color: var(--mint); background: var(--mint-tint); }
     .profil-pause svg { width: 18px; height: 18px; }
 
     .profil-language {
@@ -1536,7 +1742,7 @@ em, i, cite, dfn, var { font-style: normal; }
       font-size: 13px;
       font-weight: 700;
     }
-    .profil-language-head svg { width: 17px; height: 17px; color: var(--forest); }
+    .profil-language-head svg { width: 17px; height: 17px; color: var(--forest-ink); }
     .profil-language-options {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1554,9 +1760,37 @@ em, i, cite, dfn, var { font-style: normal; }
       transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
     }
     .profil-language-option.is-active {
-      border-color: var(--forest);
+      border-color: var(--forest-edge);
       background: var(--forest);
-      color: #fff;
+      color: var(--on-accent);
+    }
+
+    /* ---------- Choix du climat (jour · nuit · système) ----------
+       Même grammaire que le sélecteur de langue : trois cases, celle qui est
+       active se remplit de vert. « Système » suit le téléphone, ce qui est le
+       bon défaut pour une tablette de salle qui bascule au coucher du soleil. */
+    .profil-theme-options {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .profil-theme-option {
+      min-width: 0;
+      height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--surface);
+      color: var(--ink-2);
+      font-size: 12px;
+      font-weight: 600;
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
+    }
+    .profil-theme-option svg { width: 15px; height: 15px; }
+    .profil-theme-option[aria-pressed="true"] {
+      border-color: var(--forest-edge);
+      background: var(--forest);
+      color: var(--on-accent);
     }
 
     /* ===========================================================
@@ -1591,7 +1825,7 @@ em, i, cite, dfn, var { font-style: normal; }
       border: 1px solid var(--line);
       border-radius: 10px;
       background: var(--surface);
-      color: var(--forest-deep);
+      color: var(--forest-ink-deep);
       font-size: 11px; font-weight: 600;
     }
     .kg-month-open svg { width: 14px; height: 14px; }
@@ -1619,11 +1853,11 @@ em, i, cite, dfn, var { font-style: normal; }
     .kg-month-day.is-blank { visibility: hidden; }
     .kg-month-day.is-today { border-color: var(--mint); background: var(--mint-tint); }
     .kg-month-day-num { font-size: 13px; font-weight: 700; }
-    .kg-month-day-shift { margin-top: 6px; font-family: var(--mono); font-size: 8px; line-height: 1.35; color: var(--forest); }
+    .kg-month-day-shift { margin-top: 6px; font-family: var(--mono); font-size: 8px; line-height: 1.35; color: var(--forest-ink); }
     .kg-month-day-rest { margin-top: 8px; font-size: 9px; color: var(--ink-4); }
     .kg-month-close {
       width: 100%; height: 46px; margin-top: 18px; border-radius: 12px;
-      background: var(--ink-bg); color: #fff; font-size: 14px; font-weight: 600;
+      background: var(--fill-strong); color: var(--on-strong); font-size: 14px; font-weight: 600;
     }
     .kg-day {
       display: flex; flex-direction: column;
@@ -1660,15 +1894,15 @@ em, i, cite, dfn, var { font-style: normal; }
     .kg-day-hours {
       font-family: var(--mono);
       font-size: 9.5px;
-      color: var(--forest);
+      color: var(--forest-ink);
       margin-top: 3px;
       white-space: nowrap;
       letter-spacing: -0.01em;
     }
     .kg-day.is-rest .kg-day-hours { color: var(--ink-4); }
     .kg-day.is-today .kg-day-name,
-    .kg-day.is-today .kg-day-num { color: var(--forest-deep); }
-    .kg-day.is-today .kg-day-hours { color: var(--forest-deep); font-weight: 600; }
+    .kg-day.is-today .kg-day-num { color: var(--forest-ink-deep); }
+    .kg-day.is-today .kg-day-hours { color: var(--forest-ink-deep); font-weight: 600; }
 
     .kg-sched-shift {
       display: flex; justify-content: space-between; align-items: center;
@@ -1706,13 +1940,13 @@ em, i, cite, dfn, var { font-style: normal; }
     .kg-hours-open {
       display: inline-flex; align-items: center; gap: 6px; padding: 8px 10px;
       border: 1px solid var(--line); border-radius: 10px; background: var(--surface);
-      color: var(--forest-deep); font-size: 11px; font-weight: 600;
+      color: var(--forest-ink-deep); font-size: 11px; font-weight: 600;
     }
     .kg-hours-open svg { width: 14px; height: 14px; }
     .hours-history-summary {
       display: flex; justify-content: space-between; align-items: baseline;
       padding: 13px 14px; margin-bottom: 10px; border-radius: 12px;
-      background: var(--mint-tint); color: var(--forest-deep);
+      background: var(--mint-tint); color: var(--forest-ink-deep);
     }
     .hours-history-summary span { font-size: 12px; }
     .hours-history-summary strong { font-family: var(--mono); font-size: 17px; }
@@ -1745,7 +1979,7 @@ em, i, cite, dfn, var { font-style: normal; }
       white-space: nowrap;
       letter-spacing: -0.02em;
     }
-    .kg-hours-tile.is-today .kg-hours-num { color: var(--forest-deep); }
+    .kg-hours-tile.is-today .kg-hours-num { color: var(--forest-ink-deep); }
     .kg-hours-label {
       font-size: 10px;
       letter-spacing: 0.10em;
@@ -1799,7 +2033,7 @@ em, i, cite, dfn, var { font-style: normal; }
       flex: 0 0 36px; width: 36px; height: 36px;
       border-radius: 50%;
       background: rgba(11,110,79,0.1);
-      color: var(--forest-deep);
+      color: var(--forest-ink-deep);
       display: inline-flex; align-items: center; justify-content: center;
     }
     .offshift-banner-icon svg { width: 18px; height: 18px; }
@@ -1822,7 +2056,7 @@ em, i, cite, dfn, var { font-style: normal; }
       height: 42px;
       border-radius: 12px;
       background: var(--gradient);
-      color: #fff;
+      color: var(--on-accent);
       font-size: 14px; font-weight: 600;
       display: inline-flex; align-items: center; justify-content: center; gap: 8px;
       box-shadow: 0 6px 16px rgba(63,182,122,0.20);
@@ -1857,7 +2091,7 @@ em, i, cite, dfn, var { font-style: normal; }
     .kg-rank-xp { text-align: right; flex: 0 0 auto; }
     .kg-rank-xp-num {
       font-family: var(--mono); font-size: 16px; font-weight: 500;
-      color: var(--forest); font-feature-settings: "tnum" 1;
+      color: var(--forest-ink); font-feature-settings: "tnum" 1;
     }
     .kg-rank-xp-label {
       font-size: 10px; color: var(--ink-4);
@@ -1931,12 +2165,12 @@ em, i, cite, dfn, var { font-style: normal; }
     .kg-rec-flag {
       display: none; margin-top: 6px;
       font-size: 9px; font-weight: 600;
-      color: var(--forest); letter-spacing: 0.02em;
+      color: var(--forest-ink); letter-spacing: 0.02em;
     }
     .kg-rec-tile.is-record {
       background: var(--mint-tint); border-color: var(--mint-edge);
     }
-    .kg-rec-tile.is-record .kg-rec-num { color: var(--forest-deep); }
+    .kg-rec-tile.is-record .kg-rec-num { color: var(--forest-ink-deep); }
     .kg-rec-tile.is-record .kg-rec-flag { display: block; }
     .kg-rec-tile.kg-just-broke { animation: kg-record-pop 1500ms ease; }
     @keyframes kg-record-pop {
@@ -1951,7 +2185,7 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .kg-defi-check {
       width: 22px; height: 22px; border-radius: 50%;
-      background: var(--emerald); color: #fff;
+      background: var(--emerald); color: var(--on-accent);
       display: none; align-items: center; justify-content: center;
       flex: 0 0 22px;
     }
@@ -1979,7 +2213,7 @@ em, i, cite, dfn, var { font-style: normal; }
       box-shadow: 0 0 0 1px var(--emerald), 0 12px 30px rgba(31,93,60,0.28);
     }
     .kg-defi.is-done .kg-eyebrow  { color: var(--mint); }
-    .kg-defi.is-done .kg-defi-text { color: #fff; }
+    .kg-defi.is-done .kg-defi-text { color: var(--on-accent); }
     .kg-defi.is-done .kg-defi-check { display: inline-flex; }
     .kg-defi.is-done .kg-defi-bar { background: rgba(255,255,255,0.14); border-color: transparent; }
     .kg-defi.is-done .kg-defi-meta { color: var(--mint); }
@@ -2053,7 +2287,7 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .kg-sc-hl-icon {
       width: 34px; height: 34px; border-radius: 50%;
-      background: var(--emerald); color: #fff;
+      background: var(--emerald); color: var(--on-accent);
       display: inline-flex; align-items: center; justify-content: center;
       flex: 0 0 34px;
     }
@@ -2141,13 +2375,13 @@ em, i, cite, dfn, var { font-style: normal; }
       transition: background 120ms, color 120ms, transform 80ms;
     }
     .nt-chip:active { transform: scale(0.95); }
-    .nt-chip.is-active { background: var(--forest); color: #fff; }
+    .nt-chip.is-active { background: var(--forest); color: var(--on-accent); }
     .nt-actions { display: flex; gap: 8px; margin-top: 4px; }
     .nt-actions .td-btn { flex: 1; }
 
     /* Card / cash modals */
     .modal-amount {
-      font-size: 40px; font-weight: 800; color: var(--forest);
+      font-size: 40px; font-weight: 800; color: var(--forest-ink);
       letter-spacing: -0.03em;
       font-feature-settings: "tnum" 1;
       text-align: center;
@@ -2169,7 +2403,7 @@ em, i, cite, dfn, var { font-style: normal; }
       transition: background 300ms ease;
     }
     .reader-disc.flash { background: rgba(63,182,122,.32); }
-    .reader-disc svg { width: 34px; height: 34px; color: var(--forest); }
+    .reader-disc svg { width: 34px; height: 34px; color: var(--forest-ink); }
     .reader-disc.is-pulsing svg { animation: icon-pulse 1.5s ease-in-out infinite; }
     @keyframes icon-pulse {
       0%, 100% { opacity: 1; transform: scale(1); }
@@ -2233,7 +2467,7 @@ em, i, cite, dfn, var { font-style: normal; }
       display: inline-flex; align-items: center; justify-content: center; gap: 6px;
     }
     .ma-btn svg { width: 15px; height: 15px; }
-    .ma-btn.primary { background: var(--gradient); color: #fff; }
+    .ma-btn.primary { background: var(--gradient); color: var(--on-accent); }
     .ma-btn.secondary { background: var(--paper-mute); color: var(--ink); }
     .modal-foot {
       text-align: center;
@@ -2260,7 +2494,7 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .cash-input:focus {
       outline: none;
-      border-color: var(--forest);
+      border-color: var(--forest-edge);
       box-shadow: 0 0 0 3px rgba(31,93,60,.12);
     }
     .cash-presets { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -2271,7 +2505,7 @@ em, i, cite, dfn, var { font-style: normal; }
       font-size: 12px; font-weight: 600;
       color: var(--ink-2);
     }
-    .cash-preset:active { background: #ECEAE5; }
+    .cash-preset:active { background: var(--surface-3); }
     .cash-rendu {
       padding: 14px 16px;
       border-radius: var(--r-lg);
@@ -2287,7 +2521,7 @@ em, i, cite, dfn, var { font-style: normal; }
       height: 52px;
       border-radius: var(--r-lg);
       background: var(--gradient);
-      color: #fff;
+      color: var(--on-accent);
       font-size: 15px; font-weight: 600;
     }
     .cash-confirm[disabled] { opacity: .35; }
@@ -2309,7 +2543,7 @@ em, i, cite, dfn, var { font-style: normal; }
     .split-badge {
       display: inline-flex; align-items: center;
       padding: 4px 10px; border-radius: 999px;
-      background: var(--mint-tint); color: var(--forest);
+      background: var(--mint-tint); color: var(--forest-ink);
       font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
       text-transform: uppercase; margin-bottom: 10px;
     }
@@ -2321,7 +2555,7 @@ em, i, cite, dfn, var { font-style: normal; }
       text-align: left;
       background: var(--surface);
     }
-    .split-tab.is-active { border-color: var(--forest); background: var(--mint-tint); }
+    .split-tab.is-active { border-color: var(--forest-edge); background: var(--mint-tint); }
     .split-tab-icon {
       width: 36px; height: 36px; border-radius: 9px;
       background: var(--paper-mute);
@@ -2329,7 +2563,7 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .split-tab.is-active .split-tab-icon { background: rgba(31,93,60,.14); }
     .split-tab-icon svg { width: 17px; height: 17px; color: var(--ink-3); }
-    .split-tab.is-active .split-tab-icon svg { color: var(--forest); }
+    .split-tab.is-active .split-tab-icon svg { color: var(--forest-ink); }
     .split-tab-title { font-size: 13px; font-weight: 600; color: var(--ink); line-height: 1.2; }
     .split-tab-desc { font-size: 11px; color: var(--ink-4); margin-top: 2px; line-height: 1.3; }
 
@@ -2343,7 +2577,7 @@ em, i, cite, dfn, var { font-style: normal; }
       font-size: 12.5px; font-weight: 600;
       background: var(--paper-mute); color: var(--ink-2);
     }
-    .split-chip.is-active { background: var(--forest); color: #fff; }
+    .split-chip.is-active { background: var(--forest); color: var(--on-accent); }
 
     .split-tip-custom { display: none; margin-top: -8px; margin-bottom: 16px; }
     .split-tip-custom.is-visible { display: block; }
@@ -2353,7 +2587,7 @@ em, i, cite, dfn, var { font-style: normal; }
       border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface);
       font-family: var(--mono);
     }
-    .split-tip-input:focus { outline: none; border-color: var(--forest); box-shadow: 0 0 0 3px rgba(31,93,60,.1); }
+    .split-tip-input:focus { outline: none; border-color: var(--forest-edge); box-shadow: 0 0 0 3px rgba(31,93,60,.1); }
 
     .split-summary {
       background: var(--paper-soft); border-radius: var(--r-lg);
@@ -2370,7 +2604,7 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .split-per-person .lbl { font-size: 14px; font-weight: 600; color: var(--ink); }
     .split-per-person .val {
-      font-size: 22px; font-weight: 800; color: var(--forest);
+      font-size: 22px; font-weight: 800; color: var(--forest-ink);
       font-feature-settings: "tnum" 1; letter-spacing: -0.02em;
     }
 
@@ -2387,18 +2621,18 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .split-help-box svg {
       width: 18px; height: 18px;
-      color: var(--forest);
+      color: var(--forest-ink);
       flex: 0 0 18px;
       margin-top: 2px;
     }
     .split-help-text {
       font-size: 12.5px;
-      color: var(--forest-deep);
+      color: var(--forest-ink-deep);
       line-height: 1.5;
     }
     .split-help-text strong {
       font-weight: 700;
-      color: var(--forest);
+      color: var(--forest-ink);
     }
     .split-step-label {
       font-size: 12.5px;
@@ -2414,7 +2648,7 @@ em, i, cite, dfn, var { font-style: normal; }
       width: 20px; height: 20px;
       border-radius: 50%;
       background: var(--forest);
-      color: #fff;
+      color: var(--on-accent);
       font-size: 11px; font-weight: 700;
       flex: 0 0 20px;
     }
@@ -2451,8 +2685,8 @@ em, i, cite, dfn, var { font-style: normal; }
     .split-conv-tab:active { transform: scale(0.96); }
     .split-conv-tab.is-active {
       background: var(--forest);
-      border-color: var(--forest);
-      color: #fff;
+      border-color: var(--forest-edge);
+      color: var(--on-accent);
       box-shadow: 0 4px 12px rgba(31,93,60,0.22);
     }
     .split-conv-tab-label {
@@ -2470,7 +2704,7 @@ em, i, cite, dfn, var { font-style: normal; }
       font-feature-settings: "tnum" 1;
       letter-spacing: -0.01em;
     }
-    .split-conv-tab.is-active .split-conv-tab-total { color: #fff; }
+    .split-conv-tab.is-active .split-conv-tab-total { color: var(--on-accent); }
 
     /* Item pool — one card per unique dish */
     .split-pool {
@@ -2490,7 +2724,7 @@ em, i, cite, dfn, var { font-style: normal; }
       text-align: left;
     }
     .split-pool-item:not(.is-empty):active { transform: scale(0.99); }
-    .split-pool-item:not(.is-empty):hover { background: #ECEAE5; }
+    .split-pool-item:not(.is-empty):hover { background: var(--surface-3); }
     .split-pool-item.is-empty {
       opacity: 0.45;
       pointer-events: none;
@@ -2509,7 +2743,7 @@ em, i, cite, dfn, var { font-style: normal; }
       font-feature-settings: "tnum" 1;
     }
     .split-pool-item-meta .remaining {
-      color: var(--forest);
+      color: var(--forest-ink);
       font-weight: 700;
     }
     .split-pool-item.is-empty .remaining { color: var(--ink-4); font-weight: 500; }
@@ -2517,7 +2751,7 @@ em, i, cite, dfn, var { font-style: normal; }
       width: 34px; height: 34px;
       border-radius: 50%;
       background: var(--forest);
-      color: #fff;
+      color: var(--on-accent);
       font-size: 20px;
       display: inline-flex; align-items: center; justify-content: center;
       font-weight: 600;
@@ -2539,7 +2773,7 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .split-convive-cart-title {
       font-size: 10.5px;
-      color: var(--forest-deep);
+      color: var(--forest-ink-deep);
       font-weight: 700;
       letter-spacing: 0.06em;
       text-transform: uppercase;
@@ -2549,7 +2783,7 @@ em, i, cite, dfn, var { font-style: normal; }
     .split-convive-cart-total {
       font-size: 13px;
       font-weight: 700;
-      color: var(--forest);
+      color: var(--forest-ink);
       font-feature-settings: "tnum" 1;
       letter-spacing: -0.01em;
     }
@@ -2642,8 +2876,8 @@ em, i, cite, dfn, var { font-style: normal; }
     .split-convive-pick:active { transform: scale(0.9); }
     .split-convive-pick.is-assigned {
       background: var(--forest);
-      border-color: var(--forest);
-      color: #fff;
+      border-color: var(--forest-edge);
+      color: var(--on-accent);
       box-shadow: 0 2px 8px rgba(31,93,60,0.28);
     }
 
@@ -2666,7 +2900,7 @@ em, i, cite, dfn, var { font-style: normal; }
       font-size: 10.5px; font-weight: 700;
       display: flex; align-items: center; justify-content: center;
     }
-    .split-convive-chip.is-assigned { background: var(--forest); color: #fff; }
+    .split-convive-chip.is-assigned { background: var(--forest); color: var(--on-accent); }
 
     .split-article-totals { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
     .split-convive-total {
@@ -2680,7 +2914,7 @@ em, i, cite, dfn, var { font-style: normal; }
 
     .split-launch {
       width: 100%; height: 52px; border-radius: var(--r-lg);
-      background: var(--gradient); color: #fff;
+      background: var(--gradient); color: var(--on-accent);
       font-size: 15px; font-weight: 600;
     }
     .split-cancel-link {
@@ -2699,7 +2933,7 @@ em, i, cite, dfn, var { font-style: normal; }
       flex: 0 0 32px;
       transition: background 150ms ease;
     }
-    .split-flow-close:active { background: #ECEAE5; }
+    .split-flow-close:active { background: var(--surface-3); }
     .split-flow-close svg { width: 16px; height: 16px; }
 
     .split-parts-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 6px; transition: opacity 300ms; }
@@ -2715,12 +2949,12 @@ em, i, cite, dfn, var { font-style: normal; }
       display: flex; align-items: center; justify-content: center; flex: 0 0 28px;
     }
     .split-part-num svg { width: 14px; height: 14px; }
-    .split-part-card.is-paid .split-part-num { background: var(--emerald); color: #fff; }
+    .split-part-card.is-paid .split-part-num { background: var(--emerald); color: var(--on-accent); }
     .split-part-info { flex: 1; min-width: 0; }
     .split-part-amount { font-size: 16px; font-weight: 800; color: var(--ink); font-feature-settings: "tnum" 1; letter-spacing: -0.02em; }
-    .split-part-card.is-paid .split-part-amount { color: var(--forest); }
+    .split-part-card.is-paid .split-part-amount { color: var(--forest-ink); }
     .split-part-label { font-size: 10.5px; color: var(--ink-4); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; }
-    .split-part-paid-label { font-size: 11.5px; font-weight: 600; color: var(--forest); margin-top: 2px; }
+    .split-part-paid-label { font-size: 11.5px; font-weight: 600; color: var(--forest-ink); margin-top: 2px; }
     .split-part-btns { display: flex; gap: 5px; flex: 0 0 auto; }
     .split-part-btn {
       padding: 7px 10px; border-radius: 999px;
@@ -2728,8 +2962,8 @@ em, i, cite, dfn, var { font-style: normal; }
       display: flex; align-items: center; gap: 4px;
     }
     .split-part-btn svg { width: 12px; height: 12px; }
-    .split-part-btn.carte { background: var(--gradient); color: #fff; }
-    .split-part-btn.cash-dark { background: var(--ink); color: #fff; }
+    .split-part-btn.carte { background: var(--gradient); color: var(--on-accent); }
+    .split-part-btn.cash-dark { background: var(--fill-strong); color: var(--on-strong); }
 
     .split-all-done { text-align: center; padding: 16px 0 4px; }
     .split-done-icon {
@@ -2756,13 +2990,13 @@ em, i, cite, dfn, var { font-style: normal; }
       height: 56px;
       border-radius: var(--r-lg);
       display: inline-flex; align-items: center; justify-content: center;
-      color: #fff;
+      color: var(--on-accent);
       box-shadow: var(--shadow-1);
       transition: transform 150ms ease, filter 150ms ease;
     }
     .pay-icon:active { transform: scale(0.98); }
     .pay-icon svg { width: 23px; height: 23px; }
-    .pay-icon.card { background: var(--ink); }
+    .pay-icon.card { background: var(--fill-strong); color: var(--on-strong); }
     .pay-icon.cash { background: var(--gradient); }
 
     /* ---------- Toast ---------- */
@@ -2778,8 +3012,7 @@ em, i, cite, dfn, var { font-style: normal; }
       max-width: 360px;
     }
     .toast {
-      background: var(--ink);
-      color: #fff;
+      background: var(--fill-strong); color: var(--on-strong);
       padding: 10px 16px;
       border-radius: 999px;
       font-size: 12.5px;
@@ -2805,7 +3038,7 @@ em, i, cite, dfn, var { font-style: normal; }
       opacity: 0; transform: scale(0.4);
       pointer-events: none;
     }
-    .ci-btn-check svg { width: 28px; height: 28px; color: #fff; stroke-width: 3; }
+    .ci-btn-check svg { width: 28px; height: 28px; color: var(--on-accent); stroke-width: 3; }
     .ci-btn.is-loading {
       background: var(--emerald);
       box-shadow: 0 8px 32px rgba(63,182,122,0.45), 0 0 0 6px rgba(63,182,122,0.18);
@@ -2855,7 +3088,7 @@ em, i, cite, dfn, var { font-style: normal; }
     .kiwi-greet {
       position: absolute; inset: 0; z-index: 200;
       display: flex; align-items: center; justify-content: center;
-      background: linear-gradient(160deg, #F8F7F3 0%, #F1EFE8 55%, #ECEAE3 100%);
+      background: linear-gradient(160deg, var(--bg) 0%, var(--surface-2) 55%, var(--surface-3) 100%);
       opacity: 0; pointer-events: none;
       visibility: hidden;
       transition: opacity 600ms cubic-bezier(0.32, 0.72, 0, 1);
@@ -2890,7 +3123,7 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .kiwi-greet h1 em {
       font-family: var(--serif); font-weight: 400;
-      color: var(--forest);
+      color: var(--forest-ink);
       display: inline;
     }
     .kiwi-greet h1 .em-clip {
@@ -2924,7 +3157,7 @@ em, i, cite, dfn, var { font-style: normal; }
     .kiwi-greet-sub em {
       font-family: var(--serif);
       text-transform: none; letter-spacing: normal;
-      color: var(--forest);
+      color: var(--forest-ink);
     }
     @media (prefers-reduced-motion: reduce) {
       .kiwi-greet, .kiwi-greet-inner { transition: opacity 180ms ease !important; }
@@ -2955,7 +3188,7 @@ em, i, cite, dfn, var { font-style: normal; }
       top: calc(var(--topbar-h) + max(env(safe-area-inset-top), 14px) + 14px);
       left: 16px; right: 16px;
       background: var(--gradient);
-      color: #fff;
+      color: var(--on-accent);
       border-radius: 16px;
       padding: 14px 16px;
       display: flex; align-items: center; gap: 12px;
@@ -3037,13 +3270,13 @@ em, i, cite, dfn, var { font-style: normal; }
       padding: 4px 10px;
       border-radius: 999px;
       background: var(--mint-tint);
-      color: var(--forest);
+      color: var(--forest-ink);
       letter-spacing: -0.01em;
     }
 
     /* Colleague pause alert (shown in "Mes tables" view) */
     .colleague-alert {
-      background: #FFF8ED;
+      background: var(--warn-soft-bg);
       color: var(--ink);
       border: 1px solid rgba(199,117,38,0.24);
       border-radius: 11px;
@@ -3056,7 +3289,7 @@ em, i, cite, dfn, var { font-style: normal; }
     .colleague-alert:active { transform: scale(0.99); }
     .colleague-alert-icon {
       width: 28px; height: 28px; border-radius: 50%;
-      background: rgba(199,117,38,0.12); color: #9A5A1B;
+      background: var(--warn-soft-bg); color: var(--warn-soft-ink);
       display: flex; align-items: center; justify-content: center;
       flex: 0 0 28px;
     }
@@ -3073,8 +3306,8 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .colleague-avatar {
       width: 32px; height: 32px; border-radius: 50%;
-      background: var(--ink-bg);
-      color: var(--paper-cream);
+      background: var(--fill-strong);
+      color: var(--on-strong);
       font-size: 11px; font-weight: 700;
       display: flex; align-items: center; justify-content: center;
       flex: 0 0 32px;
@@ -3088,7 +3321,7 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .colleague-you {
       font-weight: 400;
-      color: var(--forest);
+      color: var(--forest-ink);
       font-size: 11px;
       letter-spacing: -0.005em;
     }
@@ -3122,7 +3355,7 @@ em, i, cite, dfn, var { font-style: normal; }
     .table-card[data-status="bgha-ykhlass"] .tc-server-chip,
     .table-card[data-status="ka-tkhdam"]    .tc-server-chip {
       background: rgba(255,255,255,0.22);
-      color: #fff;
+      color: var(--on-accent);
     }
 
     /* Empty state for own tables when filter has no matches */
@@ -3183,7 +3416,7 @@ em, i, cite, dfn, var { font-style: normal; }
           <i data-lucide="refresh-cw"></i>
         </button>
         <div class="pin-top">
-          <div class="pin-brand" data-kiwi-logo><img src="assets/kiwi-newlogo.svg?v=2" alt="Kiwi" /></div>
+          <div class="pin-brand" data-kiwi-logo><img class="logo-day" src="assets/kiwi-newlogo.svg?v=2" alt="Kiwi" /><img class="logo-night" src="assets/kiwi-newlogo-inverse.svg" alt="" aria-hidden="true" /></div>
           <div class="pin-tagline">— Équipe</div>
         </div>
 
@@ -3230,7 +3463,7 @@ em, i, cite, dfn, var { font-style: normal; }
           <i data-lucide="refresh-cw"></i>
         </button>
         <div class="ci-top">
-          <div class="ci-brand" data-kiwi-logo><img src="assets/kiwi-newlogo.svg?v=2" alt="Kiwi" /></div>
+          <div class="ci-brand" data-kiwi-logo><img class="logo-day" src="assets/kiwi-newlogo.svg?v=2" alt="Kiwi" /><img class="logo-night" src="assets/kiwi-newlogo-inverse.svg" alt="" aria-hidden="true" /></div>
           <div class="ci-tagline">— Équipe</div>
         </div>
 
@@ -3486,6 +3719,24 @@ em, i, cite, dfn, var { font-style: normal; }
               </div>
             </section>
 
+            <section class="profil-language" aria-labelledby="profil-theme-title">
+              <div class="profil-language-head" id="profil-theme-title">
+                <i data-lucide="sun-moon"></i>
+                <span>Apparence</span>
+              </div>
+              <div class="profil-theme-options" role="group" aria-label="Apparence de l'application">
+                <button class="profil-theme-option" type="button" data-theme-choice="light" aria-pressed="false" aria-label="Apparence : jour">
+                  <i data-lucide="sun"></i><span>Jour</span>
+                </button>
+                <button class="profil-theme-option" type="button" data-theme-choice="dark" aria-pressed="false" aria-label="Apparence : nuit">
+                  <i data-lucide="moon"></i><span>Nuit</span>
+                </button>
+                <button class="profil-theme-option" type="button" data-theme-choice="auto" aria-pressed="false" aria-label="Apparence : suivre le système">
+                  <i data-lucide="smartphone"></i><span>Système</span>
+                </button>
+              </div>
+            </section>
+
             <button class="profil-clockout" id="profil-clockout">
               <i data-lucide="log-out"></i>
               <span>Pointer le départ</span>
@@ -3725,7 +3976,7 @@ em, i, cite, dfn, var { font-style: normal; }
           <h3 class="modal-title">Client &amp; fidélité</h3>
           <p class="modal-subtle">Attachez un client existant à cette addition.</p>
           <input id="service-client-search" type="search" placeholder="Nom ou téléphone"
-            style="width:100%;padding:13px 14px;border:1px solid var(--line);border-radius:12px;font:inherit;background:#fff;" />
+            style="width:100%;padding:13px 14px;border:1px solid var(--line);border-radius:12px;font:inherit;background:var(--surface);" />
           <div id="service-client-list" style="display:grid;gap:8px;max-height:42vh;overflow:auto;margin:12px 0;"></div>
           <button class="td-btn ghost sm" id="service-client-none" type="button">Client de passage</button>
           <button class="td-btn ghost sm" id="service-client-close" type="button">Fermer</button>
@@ -4343,7 +4594,41 @@ em, i, cite, dfn, var { font-style: normal; }
       updateShiftMeta();
       translateEmployeeElement(document.body);
     }
+    /* ── Le climat ──────────────────────────────────────────────────────────
+     * Trois choix, deux états stockés : 'light' et 'dark' s'écrivent dans
+     * `kiwiTheme` (la clé du tableau de bord, préservée par tenant-purge parce
+     * qu'une préférence d'affichage appartient à l'APPAREIL, pas au
+     * commerçant) ; 'auto' EFFACE la clé et retire l'attribut, ce qui rend la
+     * main à prefers-color-scheme. C'est pour cela que « système » ne peut pas
+     * être une troisième valeur stockée : l'absence est le signal. */
+    function currentThemeChoice() {
+      try {
+        const t = localStorage.getItem('kiwiTheme');
+        return (t === 'dark' || t === 'light') ? t : 'auto';
+      } catch (_) { return 'auto'; }
+    }
+    function renderThemeChoice() {
+      const choice = currentThemeChoice();
+      $$('.profil-theme-option').forEach((b) => {
+        b.setAttribute('aria-pressed', b.dataset.themeChoice === choice ? 'true' : 'false');
+      });
+    }
+    function setThemeChoice(choice) {
+      try {
+        if (choice === 'auto') localStorage.removeItem('kiwiTheme');
+        else localStorage.setItem('kiwiTheme', choice);
+      } catch (_) {}
+      /* On repasse par le même résolveur que le démarrage : « système » doit
+         retomber sur le téléphone, pas laisser l'attribut précédent en place. */
+      if (window.__kiwiApplyTheme) window.__kiwiApplyTheme();
+      renderThemeChoice();
+      /* Les icônes Lucide sont des <svg> déjà peints : ils héritent de
+         currentColor, donc rien à re-créer ici. */
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
+      $$('.profil-theme-option').forEach((button) => button.addEventListener('click', () => setThemeChoice(button.dataset.themeChoice)));
+      renderThemeChoice();
       $$('.profil-language-option').forEach((button) => button.addEventListener('click', () => setEmployeeLanguage(button.dataset.employeeLanguage)));
       renderEmployeeLanguage();
       if (window.MutationObserver) {
