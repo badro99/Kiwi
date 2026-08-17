@@ -49,8 +49,9 @@ var SHELL = [
   '/assets/trade-workspaces.css?v=3',
   '/assets/reservations.css?v=4',
   '/assets/hotel.css',
+  '/assets/genpage.css?v=1',
   '/assets/mobile.css?v=4',
-  '/assets/sold-insights.js',
+  '/assets/sold-insights.js?v=1',
   '/assets/design-2026.css',
   '/assets/design-ios27.css',
   '/assets/design-vitrine.css',
@@ -73,7 +74,7 @@ var SHELL = [
      d'inscription la lisent à l'évaluation : sans elle hors ligne, un
      établissement retombe sur la famille par défaut. */
   '/assets/trades.js?v=4',
-  '/assets/interactive.js?v=5',
+  '/assets/interactive.js?v=6',
   '/assets/features.js?v=2',
   '/assets/invoicing.css?v=5',
   '/assets/invoicing.js?v=3',

@@ -1205,7 +1205,14 @@ body.design-vexel :is(
   .p-card, .sh-section, .comp-score, .comp-item, .pr-card,
   .resv-card, .resv-section, .kds-ticket, .kds-side,
   .b-inv-card, .b-promo-card, .b-ret-row, .kw-cat-card, .kw-item,
-  .kw-st-card, .kx-pane, .kx-kpi, .kx-sku-row, .gp-starter,
+  /* .kx-kpi is deliberately absent: as of assets/genpage.css it is a cell
+     inside one bordered readout panel, not a free-standing card. Giving it a
+     border and a 22px radius here re-scattered the strip into four boxes and
+     outranked the base rule (0,2,0 beats 0,1,0), which is the whole reason the
+     KPI strips looked different on every sub-page. The strip is not listed
+     either — its own background is what paints the hairlines between cells, so
+     a skin repaint here would erase the dividers. */
+  .kw-st-card, .kx-pane, .kx-sku-row, .gp-starter,
   .s-kpi, .s-detail-hero, .s-cal-shell, .s-heat-shell,
   .pds-rail-card, .pds-inspector, .pds-wiz-card, .pds-strat-card
 ) {

@@ -4101,12 +4101,13 @@ ar: {
       body.page-genpage .dash-stock,
       body.page-genpage .dash-finance,
       body.page-genpage .dash-payroll { display: none !important; }
-      body.page-genpage .dash-genpage { display: block; animation: fade-in 220ms ease-out; }
-      .dash-genpage .genpage-head { padding: 8px 0 20px; }
-      .dash-genpage .genpage-head h1 { font-size: 34px; font-weight: 600; letter-spacing: -0.03em; color: var(--ink); margin: 0; line-height: 1.05; }
-      .dash-genpage .genpage-head p { font-family: var(--mono); font-size: 13px; color: var(--n-500); margin: 8px 0 0; }
-      .dash-genpage .genpage-body { max-width: 1080px; }
-      .dash-genpage .genpage-foot { max-width: 1080px; margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }`;
+      body.page-genpage .dash-genpage { display: block; animation: fade-in 220ms ease-out; }`;
+    /* Head/body/foot TYPOGRAPHY lives in assets/genpage.css, not here. This
+     * block is injected into <head> at runtime, so it sits after every <link>
+     * and would outrank the stylesheet on every tie — which is exactly how the
+     * old 34px/Arial head survived three attempts to restyle it from CSS. What
+     * stays here is the shell gating above (which page-* class hides which
+     * sibling), because that is structural and other modules depend on it. */
     const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
   })();
   function appPage(navKey, opts) {
@@ -4127,7 +4128,20 @@ ar: {
     // Head — plain text via textContent (native-escaped, no injection).
     const head = document.createElement('div'); head.className = 'genpage-head';
     const h1 = document.createElement('h1'); h1.textContent = o.title || ''; head.appendChild(h1);
-    if (o.subtitle) { const p = document.createElement('p'); p.textContent = o.subtitle; head.appendChild(p); }
+    /* Context line. Callers pass one " · "-joined string ("Maison Mansour ·
+     * Guéliz · 20 produits · base partagée avec la caisse"). Rendered flat, the
+     * separators carry the same weight as the words and the line reads as a
+     * run-on. Split into spans and the middots become 3px dots at n-300, so the
+     * eye gets the rhythm for free — and no caller has to change. Still
+     * textContent per segment, so this is native-escaped exactly as before. */
+    if (o.subtitle) {
+      const p = document.createElement('p');
+      String(o.subtitle).split(' · ').forEach((seg, i) => {
+        if (i) { const d = document.createElement('i'); d.className = 'dot'; d.setAttribute('aria-hidden', 'true'); p.appendChild(d); }
+        const s = document.createElement('span'); s.className = 'seg'; s.textContent = seg; p.appendChild(s);
+      });
+      head.appendChild(p);
+    }
     host.appendChild(head);
     // Body / foot — trusted app-rendered HTML (same contract as Kiwi.drawer's body).
     const bodyEl = document.createElement('div'); bodyEl.className = 'genpage-body';

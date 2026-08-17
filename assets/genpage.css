@@ -1,0 +1,367 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+ * genpage.css — the shared design language for every Kiwi.appPage() destination
+ * ───────────────────────────────────────────────────────────────────────────
+ * Thirteen sidebar destinations mount through one shell (Kiwi.appPage in
+ * assets/interactive.js) and then each invented its own stat card, its own
+ * section header and its own empty state. Inventaire got `.kx-kpi`, Vendus got
+ * `.ksold-kpi`, Dépenses got a bespoke three-up, Retours a one-off block. Same
+ * idea, four implementations, four different paddings — which is exactly what
+ * "these sub-pages look sloppy" reads as on screen.
+ *
+ * This file is the single answer. It owns the page head, the KPI readout, the
+ * section header and the empty state, and every destination consumes it.
+ *
+ * TWO THINGS TO KNOW BEFORE EDITING
+ *
+ * 1 · Load order is the mechanism. dashboard.html loads this LAST, after
+ *     pages-pro.css, so equal-specificity rules here win the tie and the older
+ *     component CSS can stay where it is instead of being surgically removed
+ *     from a 2 000-line stylesheet. That also means: never raise specificity
+ *     here beyond what you need — a per-surface override elsewhere (0,2,1)
+ *     should still be able to beat a base rule here (0,1,1).
+ *
+ * 2 · Numbers are NOT set in var(--mono). tokens.css defines --mono as Arial on
+ *     purpose (it keeps JetBrains Mono's dotted zero off Windows), which is
+ *     correct for the caisse and wrong for the dashboard: Arial's wide, soft
+ *     figures sitting next to Inter Tight's tight geometric ones is the single
+ *     loudest "broken font load" tell on these pages. --num below is Inter
+ *     Tight driven through tabular-nums, so digits still align in a column but
+ *     the page reads as one typeface. Do not "fix" a readout by pointing it
+ *     back at --mono.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* Numeric readouts — same family as the UI, monospaced digits only.
+     A new name rather than a redefinition of --mono: a reused custom-property
+     name fails silently as `inherit`, never as an error. */
+  --num: "Inter Tight", "Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  /* Micro-labels above a number or a section. */
+  --gp-label-size: 10px;
+  --gp-label-track: 0.085em;
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * 1 · PAGE HEAD
+ * The title, the context line, and the rule that separates them from the page.
+ * The 48px atlas tick sitting on that rule is the signature — it is the only
+ * decoration on the page and it is the same on all thirteen destinations, so
+ * the shell reads as one product rather than thirteen screens.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+/* THE ONE-LINE FIX, and the reason this file exists.
+ *
+ * pages-pro.css alone reaches for var(--mono) 131 times — every micro-label,
+ * every readout, every ref and timestamp on the thirteen sub-pages. tokens.css
+ * defines --mono as `Arial, Helvetica, sans-serif`. So a third of the text on
+ * these pages was Arial sitting inside a page set in Inter Tight, which is what
+ * "the fonts look sloppy" actually was: not a missing font, a *wrong* one, on
+ * purpose, 131 times.
+ *
+ * Nothing is lost by re-pointing it. --mono has no monospaced font in it — it
+ * is a proportional grotesque wearing a mono token's name — so the only thing
+ * Arial contributed was unambiguous digits, and tabular-nums below covers that
+ * for every column that has to line up.
+ *
+ * Scoped to .dash-genpage on purpose. The caisse is a separate document and
+ * keeps Arial (the comment in tokens.css about JetBrains Mono's dotted zero on
+ * Windows is about printed barcodes, and that reasoning still holds there).
+ * Redefining the token rather than rewriting 131 declarations also means a
+ * later per-surface `font-family: var(--mono)` picks the new face up for free.
+ */
+.dash-genpage {
+  --mono: var(--num);
+  font-variant-numeric: tabular-nums;
+}
+
+.dash-genpage .genpage-head {
+  position: relative;
+  padding: 4px 0 20px;
+  margin-bottom: 22px;
+  border-bottom: 1px solid var(--n-200);
+}
+.dash-genpage .genpage-head::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  width: 48px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--atlas);
+}
+
+.dash-genpage .genpage-head h1 {
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: clamp(30px, 3.2vw, 42px);
+  line-height: 1.04;
+  letter-spacing: -0.032em;
+  color: var(--ink);
+  margin: 0;
+}
+/* appPage() moves focus to the h1 so the page change is announced. That is
+   correct for screen readers and wrong for a mouse click, which would otherwise
+   draw a ring around the title on every navigation. */
+.dash-genpage .genpage-head h1:focus { outline: none; }
+.dash-genpage .genpage-head h1:focus-visible {
+  outline: 2px solid var(--atlas);
+  outline-offset: 6px;
+  border-radius: 4px;
+}
+
+/* The context line. Callers pass one " · "-joined string; appPage() splits it
+   into .seg spans separated by .dot, so the separators stop competing with the
+   text for weight. First segment is the establishment — it gets to be darker. */
+.dash-genpage .genpage-head p {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 9px;
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: -0.005em;
+  color: var(--n-500);
+  margin: 10px 0 0;
+  max-width: 78ch;
+}
+.dash-genpage .genpage-head p .seg:first-child {
+  color: var(--n-600);
+  font-weight: 500;
+}
+.dash-genpage .genpage-head p .dot {
+  flex: none;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--n-300);
+}
+
+.dash-genpage .genpage-body { max-width: 1080px; }
+.dash-genpage .genpage-foot {
+  max-width: 1080px;
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid var(--n-100);
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * 2 · KPI READOUT
+ * One bordered panel with hairline-separated cells, not four floating boxes.
+ * The hairlines are the container's own background showing through a 1px grid
+ * gap — so a 4-up that wraps to 2-up at 720px gets its row rules for free, with
+ * no nth-child arithmetic to get wrong.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+.kx-kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--n-200);
+  border: 1px solid var(--n-200);
+  border-radius: 18px;
+  overflow: hidden;
+  margin-bottom: 18px;
+  box-shadow: 0 1px 2px rgba(10, 15, 13, 0.04), 0 10px 26px -16px rgba(10, 15, 13, 0.10);
+}
+.kx-kpi-strip.cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.kx-kpi-strip.cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 760px) {
+  .kx-kpi-strip,
+  .kx-kpi-strip.cols-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 420px) {
+  .kx-kpi-strip,
+  .kx-kpi-strip.cols-3,
+  .kx-kpi-strip.cols-2 { grid-template-columns: minmax(0, 1fr); }
+}
+
+.kx-kpi {
+  background: var(--surface);
+  border: 0;
+  border-radius: 0;
+  padding: 15px 18px 16px;
+  min-width: 0;
+}
+.kx-kpi .l {
+  font-family: var(--sans);
+  font-size: var(--gp-label-size);
+  font-weight: 500;
+  letter-spacing: var(--gp-label-track);
+  line-height: 1.3;
+  color: var(--n-500);
+  text-transform: uppercase;
+}
+.kx-kpi .v {
+  font-family: var(--num);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+  font-size: 29px;
+  font-weight: 600;
+  letter-spacing: -0.032em;
+  line-height: 1.02;
+  color: var(--ink);
+  margin-top: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* The unit rides the number without inheriting its size or its tracking. */
+.kx-kpi .v .u {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--n-500);
+  margin-left: 6px;
+}
+.kx-kpi .d {
+  font-family: var(--sans);
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--n-500);
+  margin-top: 7px;
+}
+/* States. Tinting the cell (not just its border) is what makes a warning
+   readable at a glance in a strip of five. */
+.kx-kpi.warn { background: color-mix(in srgb, #D99A2B 8%, var(--surface)); }
+.kx-kpi.warn .v { color: #A8741A; }
+.kx-kpi.good .v { color: var(--atlas); }
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * 3 · SECTION HEADER
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+.kx-sec {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin: 28px 0 13px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--n-100);
+}
+.kx-sec:first-child { margin-top: 0; }
+.kx-sec h2 {
+  font-family: var(--sans);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.25;
+  color: var(--ink);
+  margin: 0;
+}
+.kx-sec .kx-sec-note {
+  font-family: var(--sans);
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--n-500);
+  margin: 4px 0 0;
+  max-width: 68ch;
+}
+.kx-sec .kx-sec-act {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * 4 · EMPTY STATE
+ * "Aucune vente sur cette période." centred in a 200px-tall empty box is the
+ * laziest surface in the product and it is the FIRST thing a new merchant sees
+ * on half these pages. Icon tile, a title worth reading, one explaining line,
+ * and — where the page has one — the action that fills the page.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+.kx-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 54px 24px 56px;
+  border: 1px dashed var(--n-200);
+  border-radius: 18px;
+  background: var(--paper-soft);
+}
+.kx-empty .ico {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid var(--n-200);
+  color: var(--atlas);
+  margin-bottom: 15px;
+}
+.kx-empty .ico svg { width: 22px; height: 22px; fill: currentColor; }
+.kx-empty h3 {
+  font-family: var(--sans);
+  font-size: 16.5px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  margin: 0;
+}
+.kx-empty p {
+  font-family: var(--sans);
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--n-500);
+  margin: 8px 0 0;
+  max-width: 42ch;
+}
+.kx-empty .kx-empty-act { margin-top: 18px; }
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * 5 · HOSTED MODULES
+ * Vendus (assets/sold-insights.js) renders the SAME markup into two places: a
+ * standalone panel in the boutique caisse, and — here — inside the page shell.
+ * Its own wrapper therefore carries a 24px padding and a max-width that are
+ * right at the till and wrong here, where .genpage-body already supplies both.
+ * Left as-is, every row on the page sat 24px to the right of its own title.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+.dash-genpage .ksold { padding: 0; max-width: none; }
+.dash-genpage .ksold-head {
+  align-items: center;
+  margin-bottom: 14px;
+  padding-bottom: 11px;
+  border-bottom: 1px solid var(--n-100);
+}
+.dash-genpage .ksold-sub {
+  font-family: var(--sans);
+  font-size: var(--gp-label-size);
+  font-weight: 500;
+  letter-spacing: var(--gp-label-track);
+  text-transform: uppercase;
+  color: var(--n-500);
+  margin-top: 0;
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * 6 · DARK
+ * Most of the above is already theme-correct: theme.css inverts --ink and the
+ * whole neutral ramp, so anything built on --ink / --n-500 / --surface follows
+ * for free. What does NOT follow is anything with a literal colour or a shadow
+ * tuned for a light ground — those are listed here and nowhere else.
+ *
+ * Legacy html[data-theme="dark"] outranks the Vexel skin, so these are written
+ * against it deliberately; do not "simplify" them onto the newer selector.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+html[data-theme="dark"] .kx-kpi-strip {
+  background: var(--n-200);
+  box-shadow: none;
+}
+html[data-theme="dark"] .kx-kpi { background: var(--paper-muted); }
+html[data-theme="dark"] .kx-kpi.warn { background: color-mix(in srgb, #D99A2B 13%, var(--paper-muted)); }
+html[data-theme="dark"] .kx-kpi.warn .v { color: #E8B85C; }
+html[data-theme="dark"] .kx-empty { background: var(--paper-muted); }
+html[data-theme="dark"] .kx-empty .ico { background: var(--paper-soft); }

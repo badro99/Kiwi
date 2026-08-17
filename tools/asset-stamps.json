@@ -120,8 +120,8 @@
     "sha": "3c0afbfb9b7bd12e"
   },
   "assets/design-vexel.css": {
-    "v": "2085",
-    "sha": "a29a07029788d0cc"
+    "v": "2086",
+    "sha": "3f68082a04d8fd11"
   },
   "assets/design-vexel.js": {
     "v": "2076",
@@ -167,6 +167,10 @@
     "v": "1",
     "sha": "935b8133aefba053"
   },
+  "assets/genpage.css": {
+    "v": "1",
+    "sha": "025c0d9956885926"
+  },
   "assets/help-centre.css": {
     "v": "3",
     "sha": "aea5686fcd134267"
@@ -188,8 +192,8 @@
     "sha": "5f0a4000cc13db93"
   },
   "assets/interactive.js": {
-    "v": "5",
-    "sha": "35e507ccf9a03897"
+    "v": "6",
+    "sha": "5edeab106a35b3d2"
   },
   "assets/inventory-consumption.js": {
     "v": "3",
@@ -398,6 +402,10 @@
   "assets/simple.js": {
     "v": "1",
     "sha": "b70cc02aa48e0a64"
+  },
+  "assets/sold-insights.js": {
+    "v": "1",
+    "sha": "f253f071db9609f1"
   },
   "assets/stock.js": {
     "v": "3",
