@@ -696,5 +696,27 @@ function testCycleSafety() {
 }
 ok(testCycleSafety() === 'santos-store', 'platform-kernel tenant() with KiwiVenue evaluates without recursion or stack overflow');
 
+// 22. assets/pages-pro.js (pairedDeviceLines paired venue resolution)
+function testPagesPro(withPlatform) {
+  const mem = new Map([['kiwiPairedVenue', JSON.stringify(santosFixture)]]);
+  const storage = { getItem: (k) => mem.get(k) || null, setItem: (k, v) => mem.set(k, String(v)), removeItem: (k) => mem.delete(k) };
+  const win = { localStorage: storage, addEventListener: () => {} };
+  win.window = win;
+  const ctx = vm.createContext({
+    window: win, localStorage: storage, console, Date, Math, JSON, Map, Set, Promise, Array, Object, String, Number, RegExp,
+    setTimeout: () => 0, setInterval: () => 0, clearTimeout: () => {},
+  });
+  if (withPlatform) vm.runInContext(src, ctx);
+  const pSrc = readAsset('assets/pages-pro.js');
+  const match = pSrc.match(/function pairedDeviceLines\(nav\) \{([\s\S]*?)\n  \}/);
+  if (!match) return null;
+  const fn = new Function('window', 'localStorage', match[0] + '; return pairedDeviceLines("terminaux");');
+  return fn(win, storage);
+}
+const ppWith = testPagesPro(true);
+const ppWithout = testPagesPro(false);
+ok(Array.isArray(ppWith) && ppWith[0] === 'Caisse Kiwi · Santos Store · connectée', 'pages-pro.js resolves pairedDeviceLines with KiwiPlatform present');
+ok(Array.isArray(ppWithout) && ppWithout[0] === 'Caisse Kiwi · Santos Store · connectée', 'pages-pro.js resolves pairedDeviceLines via fallback without KiwiPlatform');
+
 if (process.exitCode) process.exit(process.exitCode);
-console.log(`  ✓ pairing resolver (${pass} controls: pairing agreement, storage fallback, purge immediacy, fail-soft JSON, isPaired invariant, direct module tests with/without platform across 20 modules + cycle safety)`);
+console.log(`  ✓ pairing resolver (${pass} controls: pairing agreement, storage fallback, purge immediacy, fail-soft JSON, isPaired invariant, direct module tests with/without platform across 21 modules + cycle safety)`);

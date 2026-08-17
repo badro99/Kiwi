@@ -14979,7 +14979,10 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
   function pairedDeviceLines(nav) {
     if (nav !== 'terminaux') return [];
     let pv = null;
-    try { pv = JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return []; }
+    try {
+      pv = (window.KiwiPlatform && typeof window.KiwiPlatform.pairedVenue === 'function' && window.KiwiPlatform.pairedVenue())
+        || JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
+    } catch (_) { return []; }
     if (!pv || !pv.name) return [];
     return ['Caisse Kiwi · ' + pv.name + (pv.location ? ' · ' + pv.location : '') + ' · connectée'];
   }
