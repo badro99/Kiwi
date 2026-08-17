@@ -91,10 +91,12 @@ function testClientRedaction() {
 function makeMockDB() {
   const errors = [];
   const operators = [];
+  const attempts = new Map();
 
   const db = {
     _errors: errors,
     _operators: operators,
+    _attempts: attempts,
     prepare(sql) {
       const q = sql.replace(/\s+/g, ' ').trim();
       let binds = [];
@@ -105,6 +107,17 @@ function makeMockDB() {
         },
         async run() {
           if (q.startsWith('CREATE TABLE') || q.startsWith('CREATE INDEX')) {
+            return { success: true };
+          }
+          if (q.startsWith('INSERT INTO pair_attempts')) {
+            attempts.set(binds[0], { ip: binds[0], fails: 1, first_ts: binds[1], blocked_until: null });
+            return { success: true };
+          }
+          if (q.startsWith('UPDATE pair_attempts SET fails = ?, blocked_until = ? WHERE ip = ?')) {
+            const row = attempts.get(binds[2]) || { ip: binds[2] };
+            row.fails = binds[0];
+            row.blocked_until = binds[1];
+            attempts.set(binds[2], row);
             return { success: true };
           }
           if (q.startsWith('INSERT INTO client_errors')) {
@@ -142,6 +155,14 @@ function makeMockDB() {
           return { success: true };
         },
         async first() {
+          if (q.startsWith('SELECT blocked_until FROM pair_attempts WHERE ip = ?')) {
+            const a = attempts.get(binds[0]);
+            return a ? { blocked_until: a.blocked_until } : null;
+          }
+          if (q.startsWith('SELECT fails, first_ts FROM pair_attempts WHERE ip = ?')) {
+            const a = attempts.get(binds[0]);
+            return a ? { fails: a.fails, first_ts: a.first_ts } : null;
+          }
           if (q.startsWith('SELECT id, count FROM client_errors WHERE merchant = ? AND file = ? AND line = ? AND message = ?')) {
             const m = binds[0], f = binds[1], l = binds[2], msg = binds[3], minTs = binds[4];
             const row = errors.find(e => e.merchant === m && e.file === f && e.line === l && e.message === msg && e.last_seen_ts > minTs);
@@ -259,6 +280,32 @@ async function runIngestionTests() {
   });
   const dNoDb = await resNoDb.json();
   assert('Missing DB fails soft with ok:false', resNoDb.status === 200 && dNoDb.ok === false);
+
+  // E. Server-side Rate Limiting (Flood Protection)
+  const spammerMerchant = 'flooding-merchant';
+  let spamBlocked = false;
+  for (let i = 0; i < 10; i++) {
+    const resSpam = await postError({
+      request: new Request('https://kiwi-os.com/api/error', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'CF-Connecting-IP': '192.168.1.50' },
+        body: JSON.stringify({
+          merchant: spammerMerchant,
+          message: `Looping error #${i}`,
+          file: 'assets/dashboard.js',
+          line: 100
+        })
+      }),
+      env
+    });
+    if (resSpam.status === 429) {
+      spamBlocked = true;
+      const dSpam = await resSpam.json();
+      assert('Rate limiter returns 429 too_many_attempts on excessive error burst', dSpam.error === 'too_many_attempts');
+      break;
+    }
+  }
+  assert('Server-side rate limiter actively throttles error flood', spamBlocked === true);
 
   // E. Admin Diagnostics Gating
   const resAdminUnauth = await getAdminErrors({

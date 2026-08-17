@@ -7,6 +7,8 @@
  * ensures robust redaction of any sensitive patterns, and records to D1.
  * ═══════════════════════════════════════════════════════════════════════════ */
 
+import { limitCheck, limitFail } from '../auth/_lib.js';
+
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -88,6 +90,13 @@ export async function onRequestPost(context) {
 
   const message = sanitize(rawMessage, 300);
   const merchant = String(body.merchant || '').trim().slice(0, 64);
+  const identity = merchant || request.headers.get('CF-Connecting-IP') || 'anon';
+
+  // Server-side rate limit check keyed per merchant/till/IP
+  const blocked = await limitCheck(request, env, 'err', identity);
+  if (blocked) return blocked;
+  await limitFail(request, env, 'err', identity);
+
   const file = String(body.file || '').trim().slice(0, 120);
   const line = parseInt(body.line, 10) || 0;
   const col = parseInt(body.col, 10) || 0;
