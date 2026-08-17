@@ -24,10 +24,37 @@
     return clean(value, 80).normalize('NFD').replace(/[\u0300-\u036f]/g, '')
       .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
   }
-  function paired() { try { return JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
+  function pairedVenue() {
+    try {
+      if (window.KiwiCaissePairing && typeof window.KiwiCaissePairing.pairedVenue === 'function') {
+        var pv = window.KiwiCaissePairing.pairedVenue();
+        if (pv && (pv.merchant || pv.venueId || pv.slug || pv.name || pv.type)) return pv;
+      }
+    } catch (_) {}
+    try {
+      var raw = localStorage.getItem('kiwiPairedVenue');
+      if (!raw) return null;
+      var obj = JSON.parse(raw);
+      if (obj && typeof obj === 'object') return obj;
+    } catch (_) {}
+    return null;
+  }
+
+  function pairedMerchant() {
+    var pv = pairedVenue();
+    if (!pv) return '';
+    var m = pv.merchant || pv.slug || pv.venueId || '';
+    return clean(m, 80);
+  }
+
+  function isPaired() {
+    var pv = pairedVenue();
+    return !!(pv && (pv.merchant || pv.slug || pv.venueId || pv.id || pv.name || pv.type));
+  }
+
   function tenant() {
-    var p = paired();
-    if (p && (p.merchant || p.slug)) return clean(p.merchant || p.slug, 80);
+    var m = pairedMerchant();
+    if (m) return m;
     try {
       var v = window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && window.KiwiVenue.getCurrentVenueData();
       if (v && (v.slug || v.merchant)) return clean(v.slug || v.merchant, 80);
@@ -174,6 +201,7 @@
 
   window.KiwiPlatform = {
     version: VERSION, tenant: tenant, register: register, capability: capability, capabilities: capabilities,
+    isPaired: isPaired, pairedMerchant: pairedMerchant, pairedVenue: pairedVenue,
     subscribe: function (fn) { listeners.add(fn); return function () { listeners.delete(fn); }; }, emit: emit,
     access: { can:can, role:roleOf, read:accessDoc, write:setAccess },
     telemetry: { start:startSpan, list:function () { return clone(telemetry); }, summary:telemetrySummary, clear:function () { telemetry.length=0; } },

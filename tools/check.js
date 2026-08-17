@@ -850,6 +850,7 @@ section('Whole-project regressions');
     'void-stock-test.js',
     'caisse-stock-test.mjs',
     'inventory-ledger-test.mjs',
+    'pairing-resolver-test.mjs',
     'caisse-stock-sync-test.mjs',
     'phone-test.mjs',
     'clients-sync-test.mjs',

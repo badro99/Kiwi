@@ -144,7 +144,7 @@ var SHELL = [
   '/assets/caisse-pwa.js?v=379',
   '/assets/vendor/dexie.min.js',
   '/assets/offline-db.js?v=3',
-  '/assets/platform-kernel.js?v=2',
+  '/assets/platform-kernel.js?v=3',
   '/assets/platform-ops.js?v=1',
   '/assets/platform-ops.css?v=1',
   '/assets/operations.js?v=10',
