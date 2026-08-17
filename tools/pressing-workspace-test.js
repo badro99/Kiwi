@@ -36,7 +36,11 @@ ok(pairingJs.includes("if (t && ids[t]) return { kind: 'vertical', id: t }"), 'o
 const pairingMatch = caisse.match(/assets\/caisse-pairing\.js\?v=(\d+)/);
 ok(pairingMatch && sw.includes(`'/assets/caisse-pairing.js?v=${pairingMatch[1]}'`), 'pressing route fix bypasses the old cached pairing router');
 const dispatchMatch = caisse.match(/assets\/pos-dispatch\.js\?v=(\d+)/);
-ok(dispatchMatch && sw.includes(`'/assets/pos-dispatch.js?v=${dispatchMatch[1]}'`) && dispatchJs.includes("file: 'pressing-caisse', rev: '31'") && sw.includes("'/assets/pressing-caisse.js?v=31'") && sw.includes("'/assets/pressing-caisse.css?v=31'"), 'pressing loader and lazy assets use deploy-stable cache revisions');
+const pressingRevMatch = dispatchJs.match(/file:\s*'pressing-caisse',\s*rev:\s*'([^']+)'/);
+ok(dispatchMatch && sw.includes(`'/assets/pos-dispatch.js?v=${dispatchMatch[1]}'`) &&
+   pressingRevMatch && sw.includes(`'/assets/pressing-caisse.js?v=${pressingRevMatch[1]}'`) &&
+   sw.includes(`'/assets/pressing-caisse.css?v=${pressingRevMatch[1]}'`),
+   'pressing loader and lazy assets use deploy-stable cache revisions');
 /* Read the stamp rather than pinning it: this assertion is about the dashboard
    and the service worker agreeing, not about any particular version number.
    A hardcoded literal here goes red on every legitimate bump-stamp run. */

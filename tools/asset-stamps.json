@@ -319,6 +319,14 @@
     "v": "2",
     "sha": "9c6fcb0017f2d043"
   },
+  "assets/pos-boulangerie.css": {
+    "v": "2",
+    "sha": "49f3510a3b0ed423"
+  },
+  "assets/pos-boulangerie.js": {
+    "v": "2",
+    "sha": "ac78c0749459ae37"
+  },
   "assets/pos-coiffure.css": {
     "v": "2",
     "sha": "8e3713916dc1f3ab"
@@ -328,8 +336,8 @@
     "sha": "7e8c999fe50a7b06"
   },
   "assets/pos-dispatch.js": {
-    "v": "25",
-    "sha": "6cdabdd968679a03"
+    "v": "26",
+    "sha": "3a99f89f7c6240d8"
   },
   "assets/pos-epicerie.css": {
     "v": "2",
@@ -355,6 +363,38 @@
     "v": "2",
     "sha": "0f46f52706cec560"
   },
+  "assets/pos-foodtruck.css": {
+    "v": "2",
+    "sha": "30250c7a8e40a516"
+  },
+  "assets/pos-foodtruck.js": {
+    "v": "2",
+    "sha": "fcdbbd02ed324021"
+  },
+  "assets/pos-gym.css": {
+    "v": "2",
+    "sha": "afcedd82cdc715c3"
+  },
+  "assets/pos-gym.js": {
+    "v": "2",
+    "sha": "cde22673204e2afe"
+  },
+  "assets/pos-hotel.css": {
+    "v": "2",
+    "sha": "df4cc5fd09c59430"
+  },
+  "assets/pos-hotel.js": {
+    "v": "2",
+    "sha": "064a8a5953e23602"
+  },
+  "assets/pos-librairie.css": {
+    "v": "2",
+    "sha": "9e38290620c45b6c"
+  },
+  "assets/pos-librairie.js": {
+    "v": "2",
+    "sha": "56c1f39c972283b8"
+  },
   "assets/pos-mobile.css": {
     "v": "3",
     "sha": "476360c075a1c682"
@@ -363,9 +403,33 @@
     "v": "3",
     "sha": "64722349ffceb013"
   },
+  "assets/pos-pharmacie.css": {
+    "v": "2",
+    "sha": "48f9f2f85cf97f7d"
+  },
+  "assets/pos-pharmacie.js": {
+    "v": "2",
+    "sha": "e8ba90552f5f6fbd"
+  },
+  "assets/pos-pizzeria.css": {
+    "v": "2",
+    "sha": "1a1795ad2525dc1c"
+  },
+  "assets/pos-pizzeria.js": {
+    "v": "2",
+    "sha": "6d37239977a1dca2"
+  },
   "assets/pos-sale.js": {
     "v": "3",
     "sha": "c4a6b46ca94510dd"
+  },
+  "assets/pos-spa.css": {
+    "v": "2",
+    "sha": "9d7374ff923841b1"
+  },
+  "assets/pos-spa.js": {
+    "v": "2",
+    "sha": "48f7fadb3219f6f6"
   },
   "assets/pos-workspaces.css": {
     "v": "3",

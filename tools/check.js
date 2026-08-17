@@ -859,6 +859,7 @@ section('Whole-project regressions');
        celui-ci vérifie qu'elle a bougé quand le fichier a bougé. Sans lui, un
        asset édité sans bump est parfaitement cohérent — sur l'ancienne URL. */
     'stamp-drift-test.js',
+    'pos-registry-sync-test.mjs',
     'api-boundaries-test.mjs',
     'security-regression-test.js',
     'sold-insights-test.js',
