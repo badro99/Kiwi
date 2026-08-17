@@ -5182,6 +5182,8 @@ em, i, cite, dfn, var { font-style: normal; }
           role: R ? R.label(raw) : (raw || 'Employé'),
         });
       }
+      // Temporary skew-window fallback: while KiwiConfig.pins still carries pin values,
+      // resolve against it if liveEmployeeState is unpopulated. Removed in Commit 3 with projection drop.
       try {
         const pins = (window.KiwiConfig && window.KiwiConfig.pins) || [];
         const R = window.KiwiRoles;

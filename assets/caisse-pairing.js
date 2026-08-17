@@ -500,17 +500,15 @@
   }
   function submitPin() {
     var code = pinBuf;
-    var who = null;
-    (pinList || []).forEach(function (p) {
-      if (!who && String((p && (p.pin || p.code)) || '') === code) who = p;
-    });
+    var venue = pinVenue || pairedVenue();
+    var merchant = (venue && venue.merchant) || '';
     var scr = document.getElementById('cp-pin-screen');
     function refuse(msg) {
       if (scr) { scr.classList.add('is-error'); setTimeout(function () { scr.classList.remove('is-error'); }, 420); }
       toast(msg);
       pinBuf = ''; renderPinDots();
     }
-    if (who) {
+    function acceptStaff(who) {
       /* A code that EXISTS is still not automatically a till code. The staff list
        * is the whole payroll — servers and kitchen staff carry one to clock in,
        * but only cashier/manager/owner assignments open money operations.
@@ -525,10 +523,48 @@
       }
       setStaff(who);                                  // the till now knows whose shift this is
       if (scr) scr.style.display = 'none';
-      bootVertical(pinVenue);
-      return;
+      bootVertical(venue);
     }
-    refuse('Code incorrect.');
+    function localFallback() {
+      var who = null;
+      (pinList || []).forEach(function (p) {
+        if (!who && String((p && (p.pin || p.code)) || '') === code) who = p;
+      });
+      if (who) { acceptStaff(who); return; }
+      refuse('Code incorrect.');
+    }
+
+    if (!merchant) { localFallback(); return; }
+
+    fetch('/api/pin/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ merchant: merchant, pin: code }),
+    })
+      .then(function (r) {
+        if (r.status === 401 || r.status === 403) {
+          refuse('Code incorrect.');
+          return;
+        }
+        if (r.status === 429) {
+          refuse('Trop d’essais. Réessayez dans quelques instants.');
+          return;
+        }
+        if (!r.ok) {
+          localFallback();
+          return;
+        }
+        return r.json().then(function (d) {
+          if (d && d.ok && d.staff) {
+            acceptStaff(d.staff);
+          } else {
+            localFallback();
+          }
+        });
+      })
+      .catch(function () {
+        localFallback();
+      });
   }
 
   // Delegated pad handling (survives re-renders of #cp-screen / #cp-pin-screen).
