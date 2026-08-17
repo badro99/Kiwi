@@ -1076,6 +1076,29 @@ em, i, cite, dfn, var { font-style: normal; }
     .void-reason-chip .vrc-title { font-size: 14px; font-weight: 600; color: var(--ink); }
     .void-reason-chip .vrc-sub { font-size: 11.5px; color: var(--ink-3); }
 
+    .td-lock-banner {
+      background: #FEF3C7;
+      border: 1px solid #FCD34D;
+      border-radius: var(--r-md);
+      padding: 9px 12px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #92400E;
+    }
+    .td-lock-banner svg { width: 16px; height: 16px; flex-shrink: 0; color: #B45309; }
+    .tc-lock-indicator {
+      position: absolute; top: 6px; right: 6px;
+      width: 22px; height: 22px; border-radius: 50%;
+      background: #F59E0B; color: #FFF;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    }
+    .tc-lock-indicator svg { width: 12px; height: 12px; }
+
     /* Split-in-progress banner */
     .td-split-banner {
       background: linear-gradient(135deg, var(--mint-tint) 0%, #DEF2E5 100%);
@@ -5397,6 +5420,26 @@ em, i, cite, dfn, var { font-style: normal; }
           unpaid: Number(closeData && closeData.unpaid) || 0 };
       }
     }
+
+    let serviceTableLocks = {};
+    async function setTableLock(id, action) {
+      const merchant = (liveEmployeeState && liveEmployeeState.merchant) || svSlug();
+      if (!merchant || SV_DEMO || !id) return;
+      try {
+        await fetch('/api/service/events', {
+          method: 'POST', credentials: 'same-origin', cache: 'no-store',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            merchant,
+            lock: {
+              table: id,
+              action: action || 'acquire',
+              actor: activeRole.fullName || activeRole.name || 'Serveur'
+            }
+          })
+        });
+      } catch (_) {}
+    }
     function serviceNotify(title, body, meta) {
       const noticeId = (meta && meta.id) || ('notice-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7));
       loadServiceHistory();
@@ -5503,6 +5546,7 @@ em, i, cite, dfn, var { font-style: normal; }
     function ingestServiceEvents(data) {
       if (!data || !data.ok) return;
       serviceEventSince = data.now || serviceEventSince;
+      if (data.locks && typeof data.locks === 'object') serviceTableLocks = data.locks;
       Object.keys(data.states || {}).forEach((key) => {
         const state = data.states[key] || {};
         const id = serviceTableId(state.table || key) || String(state.table || key);
@@ -6129,8 +6173,14 @@ em, i, cite, dfn, var { font-style: normal; }
         ? `<span class="tc-server-chip">${esc(serverInfo.initials)}</span>`
         : '';
 
+      const currentActor = (activeRole && (activeRole.fullName || activeRole.name)) || 'Serveur';
+      const activeLock = serviceTableLocks && serviceTableLocks[id];
+      const isLockedByOther = activeLock && activeLock.actor && activeLock.actor !== currentActor && (Date.now() - Number(activeLock.ts || 0) < 60000);
+      const lockChip = isLockedByOther ? `<span class="tc-lock-indicator" title="Prise en cours par ${esc(activeLock.actor)}"><i data-lucide="lock"></i></span>` : '';
+
       return `
         <button type="button" class="table-card" data-status="${esc(t.status)}" data-table="${esc(id)}">
+          ${lockChip}
           <div class="tc-num">${esc(id)}</div>
           <div class="tc-info">
             <div class="tc-line1">${esc(id)} · ${employeeCoverCount(t.covers)} ${serverChip} ${urgentDot}</div>
@@ -6331,6 +6381,7 @@ em, i, cite, dfn, var { font-style: normal; }
         return;
       }
       activeTableId = id;
+      setTableLock(id, 'acquire');
       ensureTableOrder(id);
       renderTableDetail();
       showScreen('screen-table');
@@ -6350,6 +6401,16 @@ em, i, cite, dfn, var { font-style: normal; }
       const total = order.reduce((s, l) => s + l.price * l.qty, 0);
       const isDirty = dirtyOrders.has(id);
 
+      const currentActor = (activeRole && (activeRole.fullName || activeRole.name)) || 'Serveur';
+      const activeLock = serviceTableLocks && serviceTableLocks[id];
+      const isLockedByOther = activeLock && activeLock.actor && activeLock.actor !== currentActor && (Date.now() - Number(activeLock.ts || 0) < 60000);
+      const lockBannerHtml = isLockedByOther ? `
+        <div class="td-lock-banner">
+          <i data-lucide="lock"></i>
+          <span><strong>${esc(activeLock.actor)}</strong> prend la commande sur cette table</span>
+        </div>
+      ` : '';
+
       $('#td-table-name').textContent = `${id} · ${employeeCoverCount(t.covers)}`;
       $('#td-table-meta').textContent = (t.status === 'khawya' || t.status === 'khlass')
         ? employeeTranslation(statusLabel[t.status])
@@ -6361,7 +6422,7 @@ em, i, cite, dfn, var { font-style: normal; }
       // Body
       const body = $('#td-body');
       if (order.length === 0) {
-        body.innerHTML = `
+        body.innerHTML = lockBannerHtml + `
           <div class="td-empty">
             <i data-lucide="utensils"></i>
             <p>Aucun article, appuyez sur <strong>Prendre la commande</strong> pour ouvrir le menu.</p>
@@ -6557,6 +6618,7 @@ em, i, cite, dfn, var { font-style: normal; }
        "Commande pour Tx", with no back affordance. The screen felt frozen.
        Always return to the Tables floor and clear the lingering order context. */
     function returnToFloor() {
+      if (activeTableId) setTableLock(activeTableId, 'release');
       activeTableId = null;
       menuContextId = null;
       showScreen('screen-main');

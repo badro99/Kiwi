@@ -7403,6 +7403,7 @@
       const vrapTitle = $('.main-head[data-mode-section="vrap"] .main-title');
       if (vrapTitle) {
         if (newMode === 'order' && selectedId) {
+          setCaisseTableLock(selectedId, 'acquire');
           const t = tables[selectedId];
           vrapTitle.innerHTML = `Commande <strong style="color:var(--forest)">${selectedId}</strong>
             <span class="order-mode-badge"><i data-lucide="pencil-line"></i> en cours</span>
@@ -7485,6 +7486,24 @@
 
     /* ---------- Right panel state ---------- */
     let selectedId = null;
+    let caisseTableLocks = {};
+
+    function setCaisseTableLock(tableId, action) {
+      const merchant = currentMerchantSlug();
+      if (!merchant || !storeIsReal() || !tableId) return;
+      fetch('/api/service/events', {
+        method: 'POST', credentials: 'same-origin', cache: 'no-store',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          merchant,
+          lock: {
+            table: tableId,
+            action: action || 'acquire',
+            actor: (typeof cashierName !== 'undefined' && cashierName) || 'Caisse'
+          }
+        })
+      }).catch(() => {});
+    }
 
     function renderRightPanel(id) {
       const t = tables[id];
@@ -7542,7 +7561,16 @@
           <span class="rp-item-price mono">−${fmtMAD(discAmt)}</span>
         </div>`;
       }
-      $('#rp-items').innerHTML = itemsHTML;
+      const currentCashier = (typeof cashierName !== 'undefined' && cashierName) || 'Caisse';
+      const activeLock = caisseTableLocks && caisseTableLocks[id];
+      const isLockedByOther = activeLock && activeLock.actor && activeLock.actor !== currentCashier && (Date.now() - Number(activeLock.ts || 0) < 60000);
+      const lockBanner = isLockedByOther ? `
+        <div class="td-lock-banner" style="margin-bottom:10px;background:#FEF3C7;border:1px solid #FCD34D;border-radius:10px;padding:8px 12px;display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:#92400E;">
+          <i data-lucide="lock" style="width:16px;height:16px;color:#B45309;flex-shrink:0;"></i>
+          <span><b>${esc(activeLock.actor)}</b> prend la commande sur cette table</span>
+        </div>
+      ` : '';
+      $('#rp-items').innerHTML = lockBanner + itemsHTML;
 
       $('#rp-subtotal').textContent = fmtMAD(total);
       $('#rp-total').textContent = fmtMAD(net);
@@ -10072,6 +10100,7 @@
      * fermé la table, il vient d'en finir avec le menu. Sans argument, la
      * salle revient à vide (annulation, table disparue). */
     function backToSalle(keepId) {
+      if (selectedId) setCaisseTableLock(selectedId, 'release');
       const vrapTitle = $('.main-head[data-mode-section="vrap"] .main-title');
       if (vrapTitle) vrapTitle.innerHTML = 'À emporter<em>— vente au comptoir</em>';
       mode = 'salle';
@@ -16154,6 +16183,7 @@
       }).then((r) => r.ok ? r.json() : null).then((data) => {
         if (!data || !data.ok) return;
         serviceFloorSince = Number(data.now) || serviceFloorSince;
+        if (data.locks && typeof data.locks === 'object') caisseTableLocks = data.locks;
         let changed = false;
         Object.keys(data.states || {}).forEach((key) => {
           const state = data.states[key] || {};

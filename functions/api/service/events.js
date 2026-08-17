@@ -236,10 +236,16 @@ export async function onRequestGet({ request, env }) {
     if (!merchant) return json({ error: 'forbidden-merchant' }, 403);
     const row = await readDoc(env, merchant);
     const since = Math.max(0, Number(url.searchParams.get('since')) || 0);
+    const now = Date.now();
+    const rawLocks = (row && row.data && row.data.locks && typeof row.data.locks === 'object') ? row.data.locks : {};
+    const activeLocks = {};
+    Object.keys(rawLocks).forEach(t => {
+      if (rawLocks[t] && rawLocks[t].ts && (now - Number(rawLocks[t].ts)) <= 60000) activeLocks[t] = rawLocks[t];
+    });
     return json({
       ok: true,
       events: (Array.isArray(row.data.events) ? row.data.events : []).filter((event) => event && Number(event.ts) > since).slice(-MAX_EVENTS),
-      states: row.data.states || {}, now: pollCursor(Date.now()),
+      states: row.data.states || {}, locks: activeLocks, now: pollCursor(Date.now()),
     });
   }
   const employee = await activeServiceEmployee(request, env, asked);
@@ -280,7 +286,13 @@ export async function onRequestGet({ request, env }) {
       return direct || coverage || unassigned;
     })
     .slice(-MAX_EVENTS);
-  return json({ ok: true, events, states: row.data.states || {}, now: pollCursor(Date.now()) });
+  const now = Date.now();
+  const rawLocks = (row && row.data && row.data.locks && typeof row.data.locks === 'object') ? row.data.locks : {};
+  const activeLocks = {};
+  Object.keys(rawLocks).forEach(t => {
+    if (rawLocks[t] && rawLocks[t].ts && (now - Number(rawLocks[t].ts)) <= 60000) activeLocks[t] = rawLocks[t];
+  });
+  return json({ ok: true, events, states: row.data.states || {}, locks: activeLocks, now: pollCursor(Date.now()) });
 }
 
 export async function onRequestPost({ request, env }) {
@@ -291,6 +303,50 @@ export async function onRequestPost({ request, env }) {
   const employee = await activeServiceEmployee(request, env, asked);
   const merchant = employee ? employee.merchant : await entitledMerchant(request, env, asked, { allowTill: true });
   if (!merchant) return json({ error: 'forbidden-merchant' }, 403);
+
+  /* ── Soft-lock d'une table pendant la prise de commande (anti-collision) ── */
+  if (body.lock && typeof body.lock === 'object') {
+    const table = tableKey(body.lock.table);
+    const action = body.lock.action === 'release' ? 'release' : 'acquire';
+    const actor = String(body.lock.actor || (employee && memberName(employee.member)) || 'Serveur').trim().slice(0, 40);
+    const actorId = String(body.lock.actorId || (employee && (employee.member.id || employee.session.staffId)) || '').trim().slice(0, 64);
+    if (!table) return json({ error: 'table-required' }, 400);
+
+    const now = Date.now();
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const row = await readDoc(env, merchant);
+      const locks = { ...(row.data.locks && typeof row.data.locks === 'object' ? row.data.locks : {}) };
+
+      // Purge expired locks (> 60s)
+      Object.keys(locks).forEach(t => {
+        if (!locks[t] || !locks[t].ts || (now - Number(locks[t].ts)) > 60000) delete locks[t];
+      });
+
+      if (action === 'acquire') {
+        locks[table] = { table, actor, actorId, ts: now };
+      } else {
+        delete locks[table];
+      }
+
+      const text = JSON.stringify({ ...row.data, locks });
+      try {
+        if (row.rev) {
+          const res = await env.DB.prepare(
+            'UPDATE store_docs SET data = ?, rev = ?, updated_ts = ? WHERE merchant = ? AND feature = ? AND rev = ?'
+          ).bind(text, row.rev + 1, now, merchant, FEATURE, row.rev).run();
+          if (Number(res && res.meta && res.meta.changes) > 0) break;
+        } else {
+          const res = await env.DB.prepare(
+            'INSERT OR IGNORE INTO store_docs (merchant, feature, data, rev, updated_ts) VALUES (?, ?, ?, 1, ?)'
+          ).bind(merchant, FEATURE, text, now).run();
+          if (Number(res && res.meta && res.meta.changes) > 0) break;
+        }
+      } catch (_) {}
+    }
+
+    await poke(env, merchant, FEATURE);
+    return json({ ok: true, table, action, lock: action === 'acquire' ? { table, actor, actorId, ts: now } : null });
+  }
   if (body.state && employee) {
     const table = tableKey(body.state.table);
     const status = String(body.state.status || '');
