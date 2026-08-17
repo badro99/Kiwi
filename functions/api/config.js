@@ -361,6 +361,38 @@ export async function onRequestPost(context) {
     if (owner === '') {          // on est déjà dans la branche wanted !== accSlug
       return json({ error: 'merchant-reserved' }, 403);
     }
+    /* ── VÉRIFICATION DU PLAFOND D'ÉTABLISSEMENTS PAR OFFRE ───────────────
+     * Règles :
+     *   - Basic (199 MAD)  : 1 établissement max
+     *   - Pro (399 MAD)    : 1 établissement max (même que Basic)
+     *   - Ultra (1 499 MAD): Illimité
+     *   - Ultimate         : Illimité
+     *   - NULL / vide      : Illimité (propriété de sécurité permissive pour l'existant)
+     *
+     * Seul un compte portant explicitement une offre 'basic' ou 'pro' est bloqué
+     * à la création d'un 2e établissement. Un établissement déjà possédé n'est
+     * jamais bloqué en mise à jour (owner === sess.aid). */
+    if (owner !== sess.aid) {
+      try {
+        const existingStores = await env.DB.prepare(
+          "SELECT plan FROM merchant_config WHERE account_id = ? AND (status IS NULL OR status != 'suspended')"
+        ).bind(sess.aid).all();
+        const rows = existingStores.results || [];
+        const activeCount = rows.length;
+        const explicitPlans = rows
+          .map((r) => String(r.plan || '').trim().toLowerCase())
+          .filter((p) => ['basic', 'pro', 'ultra', 'ultimate'].includes(p));
+
+        const isUltraOrUltimate = explicitPlans.includes('ultra') || explicitPlans.includes('ultimate');
+        const isExplicitBasicOrPro = !isUltraOrUltimate && (explicitPlans.includes('basic') || explicitPlans.includes('pro'));
+
+        if (isExplicitBasicOrPro && activeCount >= 1) {
+          const tier = explicitPlans.includes('pro') ? 'pro' : 'basic';
+          return json({ error: 'plan-limit-exceeded', limit: 'venues', max: 1, tier }, 403);
+        }
+      } catch (_) { /* fail-soft permissif */ }
+    }
+
     /* ── LE GARDE-FOU DU MAGASIN FANTÔME ──────────────────────────────────
      * `owner === null` : aucune fiche sous ce slug. Deux situations très
      * différentes se ressemblent ici, et il a fallu un incident pour les

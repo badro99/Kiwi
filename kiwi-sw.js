@@ -84,7 +84,7 @@ var SHELL = [
      entrée pré-cachée sans estampille ne répondrait jamais à la requête de la
      page (donc pas de hors-ligne), tandis qu'une estampille périmée ici
      re-servirait l'ancien fichier. Voir le commentaire dans dashboard.html. */
-  '/assets/venues.js?v=13',
+  '/assets/venues.js?v=14',
   '/assets/phone.js?v=1',
   '/assets/trade-workspace-schema.js?v=4',
   '/assets/trade-workspaces.js?v=3',
@@ -170,7 +170,7 @@ var SHELL = [
      et un client qui repart sans reçu ne revient pas le chercher. */
   '/assets/receipt.js',
   '/assets/receipt-ui.js',
-  '/assets/merchant-config.js?v=262',
+  '/assets/merchant-config.js?v=263',
   '/assets/entitlements.css?v=3',
   '/assets/entitlements.js?v=3',
   '/assets/staff-roles.js',

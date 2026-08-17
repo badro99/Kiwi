@@ -229,6 +229,17 @@
     if (slug) { payload.merchant = slug; payload.name = name; freshAdd(slug); }
     if (opts.type) payload.type = String(opts.type);
     return postRaw(payload).then(function (r) {
+      if (r && r.status === 403) {
+        try {
+          r.json().then(function (d) {
+            if (d && d.error === 'plan-limit-exceeded') {
+              if (window.Kiwi && window.Kiwi.toast) {
+                window.Kiwi.toast("Votre forfait couvre un établissement. Kiwi Ultra en gère un nombre illimité.", 6000);
+              }
+            }
+          }).catch(function () {});
+        } catch (_) {}
+      }
       var ok = !!(r && r.ok);
       if (ok && slug) freshDrop(slug);
       return ok;

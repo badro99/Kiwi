@@ -136,6 +136,14 @@ export async function onRequestGet(context) {
       ownerOf.set(m, a.id);
     }
 
+    // Count non-suspended venues per account
+    const venuesPerAccount = new Map();
+    for (const c of (cfg.results || [])) {
+      if (c.account_id && c.status !== 'suspended') {
+        venuesPerAccount.set(c.account_id, (venuesPerAccount.get(c.account_id) || 0) + 1);
+      }
+    }
+
     // Attach the owner to every store, primary or not. This is what turns a flat
     // list of slugs into a list of CLIENTS: two stores of the same merchant now
     // carry the same `owner`, and a store with no owner stays a demo.
@@ -151,6 +159,7 @@ export async function onRequestGet(context) {
       r.status = a.status || 'active'; // active | suspended (frozen for non-payment)
       r.demo = false; // real email+password signup → a real client
       if (!r.business) r.business = a.business || '';
+      r.account_venues = venuesPerAccount.get(aid) || 1;
     }
   } catch (e) {
     return json({ error: 'query-failed', detail: String(e) }, 500);

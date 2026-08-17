@@ -836,7 +836,16 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
             <p class="sub">Fiche commerciale</p>
             <span class="count" id="biz-state"></span>
           </div>
-          <div class="biz-row">
+          <div class="biz-row" style="flex-wrap:wrap;gap:10px;">
+            <label>Offre commerciale
+              <select class="inp" id="biz-plan" aria-label="Offre commerciale">
+                <option value="">Sans offre (illimité)</option>
+                <option value="basic">Kiwi Basic (199 MAD · 1 étab.)</option>
+                <option value="pro">Kiwi Pro (399 MAD · 1 étab.)</option>
+                <option value="ultra">Kiwi Ultra (1 499 MAD · illimité)</option>
+                <option value="ultimate">Kiwi Ultimate (sur devis)</option>
+              </select>
+            </label>
             <label>Ville
               <input class="inp" id="biz-city" placeholder="Casablanca" autocomplete="off"
                      aria-label="Ville de l’établissement" />
@@ -1454,16 +1463,16 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
     /* On renvoie les modules et le palier courants avec : le PUT écrase la
        ligne entière, donc n'envoyer que la ville effacerait les interrupteurs.
        Même précaution que setType(), pour la même raison. */
-    async setBiz(merchant, city, mrr){
+    async setBiz(merchant, city, mrr, plan){
       if (LIVE) {
         var features = await store.config(merchant);
-        var plan = (selected && selected.merchant === merchant && selected.plan) || '';
+        var p = (plan !== undefined) ? plan : ((selected && selected.merchant === merchant && selected.plan) || '');
         return api('/config', { method:'PUT', body:JSON.stringify({
-          merchant:merchant, features:features, plan:plan, city:city, mrr:mrr }) });
+          merchant:merchant, features:features, plan:p, city:city, mrr:mrr }) });
       }
       var m = mock();
       (m.clients || []).forEach(function(c){
-        if (c.merchant === merchant){ c.city = city; c.mrr = mrr; }
+        if (c.merchant === merchant){ c.city = city; c.mrr = mrr; if (plan !== undefined) c.plan = plan; }
       });
       saveMock(m);
       return { ok:true, columns:{ city:true, mrr:true } };
@@ -2530,6 +2539,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
   async function renderBiz(){
     var city = document.getElementById('biz-city');
     var mrr = document.getElementById('biz-mrr');
+    var planSel = document.getElementById('biz-plan');
     var save = document.getElementById('biz-save');
     var state = document.getElementById('biz-state');
     var hint = document.getElementById('biz-hint');
@@ -2544,21 +2554,27 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
 
     city.value = b.city || '';
     mrr.value = (b.mrr == null ? '' : String(b.mrr));
+    if (planSel) planSel.value = (selected.plan || '').toLowerCase();
 
     var noColumn = b.columns && b.columns.city === false;
     var readOnly = SENIOR === false;
     city.disabled = mrr.disabled = save.disabled = noColumn || readOnly;
+    if (planSel) planSel.disabled = readOnly;
 
     var plan = (selected.plan || '').toLowerCase();
     var listed = TIER_PRICE[plan] || null;
-    state.textContent = b.city
+    var vCount = selected.account_venues || 1;
+    var vText = vCount > 1 ? (' · ' + vCount + ' établissements') : '';
+    state.textContent = (b.city
       ? (b.city + (b.mrr != null ? ' · ' + fmt(b.mrr) + ' MAD/mois' : ''))
-      : 'ville non renseignée';
+      : 'ville non renseignée') + vText;
 
     if (noColumn){
       hint.textContent = 'La fiche commerciale n’est pas encore disponible sur cet environnement. Une mise à niveau technique est nécessaire ; aucune donnée client n’a été modifiée.';
     } else if (readOnly){
       hint.textContent = 'Lecture seule : modifier la fiche commerciale demande un code opérateur personnel, pas l’accès équipe partagé.';
+    } else if (vCount > 1 && !plan) {
+      hint.innerHTML = '<span style="color:var(--amber,#b45309);font-weight:600;">⚠️ Compte multi-établissements (' + vCount + ' établissements actifs) sans offre explicite.</span> Définir son offre (ex: Ultra) pour formaliser son statut multi-sites.';
     } else if (listed){
       hint.textContent = 'La ville alimente le classement de la vue d’ensemble ; sans elle l’établissement y est compté « non situé », jamais rangé ailleurs. ' +
         'Le montant est facultatif — laissé vide, le tarif du palier ' + planName(plan) + ' (' + fmt(listed) + ' MAD/mois) s’applique. Renseigné, il l’emporte : c’est là qu’on inscrit une remise.';
@@ -2574,15 +2590,17 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
     if (!selected) return;
     var city = document.getElementById('biz-city');
     var mrr = document.getElementById('biz-mrr');
+    var planSel = document.getElementById('biz-plan');
     var err = document.getElementById('biz-err');
     err.textContent = '';
     var raw = mrr.value.trim();
     var amount = raw === '' ? null : Number(raw);
+    var nextPlan = planSel ? planSel.value.trim() : (selected.plan || '');
     if (amount != null && (!isFinite(amount) || amount < 0)){
       err.textContent = 'Montant invalide.'; return;
     }
     try {
-      var r = await store.setBiz(selected.merchant, city.value.trim(), amount);
+      var r = await store.setBiz(selected.merchant, city.value.trim(), amount, nextPlan);
       /* Une base sans les colonnes accepte l'enregistrement des MODULES et
          laisse tomber la ville. Le dire : « enregistré » sur un geste à moitié
          fait est le mensonge le plus coûteux d'une console d'assistance. */
@@ -2591,6 +2609,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
         return;
       }
       selected.city = city.value.trim();
+      selected.plan = nextPlan;
       notify('Fiche commerciale enregistrée.');
       await Promise.all([renderBiz(), renderClients(), renderOverview()]);
     } catch (e) {

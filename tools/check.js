@@ -867,6 +867,7 @@ section('Whole-project regressions');
     'amira-integration-test.mjs',
     'security-and-channel-hardening-test.mjs',
     'password-policy-test.mjs',
+    'plan-tier-test.mjs',
   ];
   suites.forEach((name) => {
     const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', name)], { encoding: 'utf8' });

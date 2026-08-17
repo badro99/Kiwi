@@ -1387,6 +1387,14 @@
   /* Build + register a venue from the wizard config. Returns the new id. */
   function createVenue(cfg) {
     cfg = cfg || {};
+    const plan = (isRealMerchant() ? (window.KiwiConfig?.plan || '') : currentPlan).toLowerCase();
+    const customCount = Object.keys(VENUES).filter(id => VENUES[id] && VENUES[id].custom && TRANSIENT_IDS.indexOf(id) < 0).length;
+    if (isRealMerchant() && (plan === 'basic' || plan === 'pro') && customCount >= 1) {
+      if (window.Kiwi && window.Kiwi.toast) {
+        window.Kiwi.toast("Votre forfait couvre un établissement. Kiwi Ultra en gère un nombre illimité.", 6000);
+      }
+      return null;
+    }
     const id = 'v' + Date.now().toString(36);
     const type = ['restaurant', 'boutique', 'spa', 'hotel'].includes(cfg.type) ? cfg.type : 'restaurant';
     const name = (cfg.name || 'Mon activité').trim();
