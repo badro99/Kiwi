@@ -218,15 +218,15 @@ console.log('\n2 · Server Ingest (/api/sale)');
   check('D1 populates amount_cents = 4575 and amount = 46 from legacy float',
     rowLegacy && rowLegacy.amount_cents === 4575 && rowLegacy.amount === 46);
 
-  // Conflicting amounts (contradiction > 1 MAD)
-  r = await callSale({
-    id: 'sale-conflict',
-    merchant: 'cafe-atlas',
-    amount: 10,
-    amountCents: 5000,
-    method: 'cash',
-  });
-  check('ingest rejects conflicting amount and amountCents', r.status === 400);
+  // Tolerance checks (<= 50 cents difference allowed between amount and amountCents)
+  r = await callSale({ id: 'sale-drift-50', merchant: 'cafe-atlas', amount: 13, amountCents: 1250, method: 'cash', ts: now });
+  check('ingest accepts 50 centime rounding difference (13 MAD vs 1250 cents)', r.status === 200);
+
+  r = await callSale({ id: 'sale-drift-51', merchant: 'cafe-atlas', amount: 12, amountCents: 1251, method: 'cash', ts: now });
+  check('ingest rejects > 50 centime contradiction (12 MAD vs 1251 cents)', r.status === 400);
+
+  r = await callSale({ id: 'sale-drift-100', merchant: 'cafe-atlas', amount: 12, amountCents: 1300, method: 'cash', ts: now });
+  check('ingest rejects 1 MAD contradiction (12 MAD vs 1300 cents)', r.status === 400);
 
   // Ceiling and floor checks
   r = await callSale({ id: 'sale-zero', merchant: 'cafe-atlas', amountCents: 0 });
@@ -390,9 +390,9 @@ console.log('\n6 · Mixed-Vintage Aggregation (COALESCE fallback)');
     "SELECT COALESCE(SUM(COALESCE(amount_cents, amount * 100)), 0) AS total_cents FROM sales WHERE merchant = 'cafe-atlas' AND void_ts IS NULL"
   ).get();
 
-  // Active sales: sale-30cents (30) + sale-legacy-float (4575) + sale-at-max (20000000) + legacy-null-cents (10000) = 20014605 cents
+  // Active sales: sale-30cents (30) + sale-legacy-float (4575) + sale-drift-50 (1250) + sale-at-max (20000000) + legacy-null-cents (10000) = 20015855 cents
   check('mixed-vintage SQL aggregation sums legacy amount * 100 and new amount_cents seamlessly',
-    agg && agg.total_cents === (30 + 4575 + 20000000 + 10000));
+    agg && agg.total_cents === (30 + 4575 + 1250 + 20000000 + 10000));
 }
 
 if (failures.length) {
