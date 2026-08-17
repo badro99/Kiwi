@@ -139,7 +139,7 @@
     }
     try {
       var pv2 = JSON.parse(ls('kiwiPairedVenue') || 'null');
-      if (pv2 && pv2.name) return slugStore(pv2.name);
+      if (pv2 && (pv2.merchant || pv2.slug)) return pv2.merchant || pv2.slug;
     } catch (_) {}
     return '';
   }

@@ -155,7 +155,7 @@ var SHELL = [
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
      dans un sous-sol sans wifi, et c'est précisément le moment où le Z doit
      s'écrire et s'imprimer. La remontée serveur, elle, retentera plus tard. */
-  '/assets/day-report.js?v=3',
+  '/assets/day-report.js?v=4',
   '/assets/day-report-dash.js?v=2',
   '/assets/day-report-export.js?v=3',
   /* Les horaires d'ouverture. Dans la coquille hors-ligne parce que la caisse

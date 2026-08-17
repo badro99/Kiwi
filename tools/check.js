@@ -825,6 +825,7 @@ section('Whole-project regressions');
     'channel-percentage-test.mjs',
     'sales-day-contrast-test.mjs',
     'day-report-export-test.mjs',
+    'day-report-paired-scope-test.mjs',
     'live-feed-backfill-test.mjs',
     'kpi-card-layout-test.mjs',
     'dashboard-card-truth-test.mjs',
