@@ -41,33 +41,6 @@ function sanitize(str, maxLen = 300) {
   return s.slice(0, maxLen);
 }
 
-let tableEnsured = false;
-async function ensureTable(db) {
-  if (tableEnsured) return;
-  try {
-    await db.prepare(
-      `CREATE TABLE IF NOT EXISTS client_errors (
-        id TEXT PRIMARY KEY,
-        merchant TEXT NOT NULL DEFAULT '',
-        message TEXT NOT NULL,
-        file TEXT NOT NULL DEFAULT '',
-        line INTEGER NOT NULL DEFAULT 0,
-        col INTEGER NOT NULL DEFAULT 0,
-        stack TEXT NOT NULL DEFAULT '',
-        url TEXT NOT NULL DEFAULT '',
-        version TEXT NOT NULL DEFAULT '',
-        user_agent TEXT NOT NULL DEFAULT '',
-        count INTEGER NOT NULL DEFAULT 1,
-        first_seen_ts INTEGER NOT NULL,
-        last_seen_ts INTEGER NOT NULL
-      )`
-    ).run();
-    await db.prepare('CREATE INDEX IF NOT EXISTS idx_client_errors_seen ON client_errors (merchant, last_seen_ts)').run();
-    await db.prepare('CREATE INDEX IF NOT EXISTS idx_client_errors_sig ON client_errors (merchant, file, line, message)').run();
-    tableEnsured = true;
-  } catch (_) {}
-}
-
 export async function onRequestPost(context) {
   const { request, env } = context;
   if (!env.DB) return json({ ok: false, error: 'no-db' }, 200);
@@ -107,8 +80,6 @@ export async function onRequestPost(context) {
   const now = Date.now();
 
   try {
-    await ensureTable(env.DB);
-
     // Look for existing error signature in last 7 days to aggregate
     const existing = await env.DB.prepare(
       'SELECT id, count FROM client_errors WHERE merchant = ? AND file = ? AND line = ? AND message = ? AND last_seen_ts > ? LIMIT 1'

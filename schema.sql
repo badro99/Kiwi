@@ -992,3 +992,24 @@ CREATE TABLE IF NOT EXISTS operational_events (
 );
 CREATE INDEX IF NOT EXISTS idx_ops_events_command
   ON operational_events (merchant, command_id, created_ts);
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- OBSERVABILITÉ · Rapporteur d'erreurs client & télémétrie fail-soft
+-- ═══════════════════════════════════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS client_errors (
+  id            TEXT PRIMARY KEY,
+  merchant      TEXT NOT NULL DEFAULT '',
+  message       TEXT NOT NULL,
+  file          TEXT NOT NULL DEFAULT '',
+  line          INTEGER NOT NULL DEFAULT 0,
+  col           INTEGER NOT NULL DEFAULT 0,
+  stack         TEXT NOT NULL DEFAULT '',
+  url           TEXT NOT NULL DEFAULT '',
+  version       TEXT NOT NULL DEFAULT '',
+  user_agent    TEXT NOT NULL DEFAULT '',
+  count         INTEGER NOT NULL DEFAULT 1,
+  first_seen_ts INTEGER NOT NULL,
+  last_seen_ts  INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_client_errors_seen ON client_errors (merchant, last_seen_ts);
+CREATE INDEX IF NOT EXISTS idx_client_errors_sig ON client_errors (merchant, file, line, message);
