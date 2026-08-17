@@ -44,7 +44,7 @@
     var pv = pairedVenue();
     if (!pv) return '';
     var m = pv.merchant || pv.slug || pv.venueId || '';
-    return clean(m, 80);
+    return clean(m, 64);
   }
 
   function isPaired() {

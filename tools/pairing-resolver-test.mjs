@@ -114,5 +114,14 @@ ok(K2.isPaired() === false, 'name-only payload without merchant/slug/venueId is 
 ok(K2.pairedMerchant() === '', 'name-only payload yields empty merchant string');
 ok(K2.isPaired() === (K2.pairedMerchant() !== ''), 'isPaired() strictly implies pairedMerchant() is non-empty');
 
+// Case G: Slice Width Convention (64 characters)
+// The whole Kiwi codebase convention (pos-sale, caisse-stock-sync, inventory-ledger,
+// cloud-doc, KiwiLive) slices merchant strings to 64 chars. pairedMerchant must
+// strictly adhere to 64 chars so namespaced storage keys match across modules.
+const longMerchant = 'a'.repeat(70);
+ls.setItem('kiwiPairedVenue', JSON.stringify({ merchant: longMerchant }));
+ok(K2.pairedMerchant().length === 64, 'pairedMerchant truncates >64 char merchant to exactly 64');
+ok(K2.pairedMerchant() === 'a'.repeat(64), 'pairedMerchant content matches first 64 characters');
+
 if (process.exitCode) process.exit(process.exitCode);
 console.log(`  ✓ pairing resolver (${pass} controls: pairing agreement, storage fallback, purge immediacy, fail-soft JSON, isPaired invariant)`);
