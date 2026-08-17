@@ -801,6 +801,7 @@ section('Whole-project regressions');
     'kitchen-void-protocol-test.mjs',
     'multi-device-collision-test.mjs',
     'kitchen-modifiers-and-seating-test.mjs',
+    'live-amira-verification.mjs',
   ];
   suites.forEach((name) => {
     const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', name)], { encoding: 'utf8' });
