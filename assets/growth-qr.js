@@ -92,6 +92,7 @@
   const realTenant = () => {
     try {
       if (window.KiwiEnv?.isReal?.() || window.KiwiMe || window.KiwiVenue?.isCustom?.()) return true;
+      if (window.KiwiPlatform?.isPaired?.()) return true;
       const P = window.KiwiCaissePairing;
       if (P?.isPaired?.() && P?.pairedVenue?.()?.merchant) return true;
       if (localStorage.getItem('kiwiPaired') === '1') {

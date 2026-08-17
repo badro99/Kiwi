@@ -58,18 +58,18 @@
     '0002': { id: 'boutique',    file: 'pos-boutique',    label: 'Boutique · Maison Mansour' },
     '0003': { id: 'spa',         file: 'pos-spa',         label: 'Spa · Spa Bahia' },
     '0004': { id: 'hotel',       file: 'pos-hotel',       label: 'Hôtel / Riad · Riad Yasmina' },
-    '0005': { id: 'fastfood',    file: 'pos-fastfood',    label: 'Fast-food · Snack Chamal' },
+    '0005': { id: 'fastfood',    file: 'pos-fastfood',    rev: '2', label: 'Fast-food · Snack Chamal' },
     '0006': { id: 'boulangerie', file: 'pos-boulangerie', label: 'Boulangerie · Bab Kasbah' },
     '0007': { id: 'pizzeria',    file: 'pos-pizzeria',    label: 'Pizzeria · La Marsa' },
     '0008': { id: 'traiteur',    file: 'pos-traiteur',    label: 'Traiteur · Dar Zellij' },
     '0009': { id: 'foodtruck',   file: 'pos-foodtruck',   label: 'Food truck · Karavan' },
-    '0010': { id: 'epicerie',    file: 'pos-epicerie',    label: 'Épicerie · Si Brahim' },
+    '0010': { id: 'epicerie',    file: 'pos-epicerie',    rev: '2', label: 'Épicerie · Si Brahim' },
     '0011': { id: 'pharmacie',   file: 'pos-pharmacie',   label: 'Pharmacie · Ibn Batouta' },
     '0012': { id: 'librairie',   file: 'pos-librairie',   label: 'Librairie · Al Boughaz' },
-    '0013': { id: 'fleuriste',   file: 'pos-fleuriste',   label: 'Fleuriste · Fleurs du Détroit' },
-    '0014': { id: 'coiffure',    file: 'pos-coiffure',    label: 'Coiffure · Salon Yasmine' },
+    '0013': { id: 'fleuriste',   file: 'pos-fleuriste',   rev: '2', label: 'Fleuriste · Fleurs du Détroit' },
+    '0014': { id: 'coiffure',    file: 'pos-coiffure',    rev: '2', label: 'Coiffure · Salon Yasmine' },
     '0015': { id: 'gym',         file: 'pos-gym',         label: 'Salle de sport · Atlas Fitness' },
-    '0016': { id: 'autre',       file: 'pos-autre',       label: 'Autre activité · caisse polyvalente' },
+    '0016': { id: 'autre',       file: 'pos-autre',       rev: '2', label: 'Autre activité · caisse polyvalente' },
   };
 
   const apps = {};       /* id → registered spec */
@@ -78,7 +78,12 @@
   let current = null;    /* id of the open vertical */
   const pairingKey = (pairing) => String((pairing && (pairing.merchant || pairing.venueId || pairing.id)) || '');
   let pairedMerchant = (() => {
-    try { return pairingKey(JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null')); }
+    try {
+      if (window.KiwiPlatform && typeof window.KiwiPlatform.pairedMerchant === 'function') {
+        return window.KiwiPlatform.pairedMerchant();
+      }
+      return pairingKey(JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'));
+    }
     catch (_) { return ''; }
   })();
 
@@ -246,7 +251,14 @@
     }, 940);
   }
 
-  function pvPaired() { try { return JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
+  function pvPaired() {
+    try {
+      if (window.KiwiPlatform && typeof window.KiwiPlatform.pairedVenue === 'function') {
+        return window.KiwiPlatform.pairedVenue();
+      }
+      return JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
+    } catch (_) { return null; }
+  }
   function escGreet(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
   function entryFlash(spec, done) {

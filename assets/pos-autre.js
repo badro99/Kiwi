@@ -2,8 +2,8 @@
 (function(){
   'use strict';
   let root, view='sale', cart=[];
-  const paired=()=>{try{return JSON.parse(localStorage.getItem('kiwiPairedVenue')||'null')||{};}catch(_){return{};}};
-  const merchant=()=>paired().merchant||'demo-autre';
+  const paired=()=>{try{return window.KiwiPlatform?.pairedVenue?.()||JSON.parse(localStorage.getItem('kiwiPairedVenue')||'null')||{};}catch(_){return{};}};
+  const merchant=()=>window.KiwiPlatform?.pairedMerchant?.()||paired().merchant||'demo-autre';
   const catalogKey=()=>`kiwi:posAutre:catalog:${merchant()}`;
   function catalog(){try{const a=JSON.parse(localStorage.getItem(catalogKey())||'[]');return Array.isArray(a)?a:[];}catch(_){return[];}}
   function saveCatalog(a){try{localStorage.setItem(catalogKey(),JSON.stringify(a.slice(0,300)));}catch(_) {}}

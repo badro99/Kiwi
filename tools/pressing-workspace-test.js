@@ -35,7 +35,8 @@ ok(venues.includes('active.subtype = exactSubtype'), 'server type keeps the exac
 ok(pairingJs.includes("if (t && ids[t]) return { kind: 'vertical', id: t }"), 'operator hand-off routes an exact pressing type into the pressing till');
 const pairingMatch = caisse.match(/assets\/caisse-pairing\.js\?v=(\d+)/);
 ok(pairingMatch && sw.includes(`'/assets/caisse-pairing.js?v=${pairingMatch[1]}'`), 'pressing route fix bypasses the old cached pairing router');
-ok(caisse.includes('assets/pos-dispatch.js?v=24') && sw.includes("'/assets/pos-dispatch.js?v=24'") && dispatchJs.includes("file: 'pressing-caisse', rev: '31'") && sw.includes("'/assets/pressing-caisse.js?v=31'") && sw.includes("'/assets/pressing-caisse.css?v=31'"), 'pressing loader and lazy assets use deploy-stable cache revisions');
+const dispatchMatch = caisse.match(/assets\/pos-dispatch\.js\?v=(\d+)/);
+ok(dispatchMatch && sw.includes(`'/assets/pos-dispatch.js?v=${dispatchMatch[1]}'`) && dispatchJs.includes("file: 'pressing-caisse', rev: '31'") && sw.includes("'/assets/pressing-caisse.js?v=31'") && sw.includes("'/assets/pressing-caisse.css?v=31'"), 'pressing loader and lazy assets use deploy-stable cache revisions');
 /* Read the stamp rather than pinning it: this assertion is about the dashboard
    and the service worker agreeing, not about any particular version number.
    A hardcoded literal here goes red on every legitimate bump-stamp run. */

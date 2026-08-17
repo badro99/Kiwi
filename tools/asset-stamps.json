@@ -311,9 +311,49 @@
     "v": "1",
     "sha": "9255f20099d86810"
   },
+  "assets/pos-autre.css": {
+    "v": "2",
+    "sha": "5c5b1b046c9866f8"
+  },
+  "assets/pos-autre.js": {
+    "v": "2",
+    "sha": "9c6fcb0017f2d043"
+  },
+  "assets/pos-coiffure.css": {
+    "v": "2",
+    "sha": "8e3713916dc1f3ab"
+  },
+  "assets/pos-coiffure.js": {
+    "v": "2",
+    "sha": "7e8c999fe50a7b06"
+  },
   "assets/pos-dispatch.js": {
-    "v": "24",
-    "sha": "c76f228a3de56e83"
+    "v": "25",
+    "sha": "6cdabdd968679a03"
+  },
+  "assets/pos-epicerie.css": {
+    "v": "2",
+    "sha": "2ef8ca4ef7968710"
+  },
+  "assets/pos-epicerie.js": {
+    "v": "2",
+    "sha": "8e1cd627c452de88"
+  },
+  "assets/pos-fastfood.css": {
+    "v": "2",
+    "sha": "339dff04cdb82825"
+  },
+  "assets/pos-fastfood.js": {
+    "v": "2",
+    "sha": "38b087470c5a225a"
+  },
+  "assets/pos-fleuriste.css": {
+    "v": "2",
+    "sha": "8ab207b9bb8ae11a"
+  },
+  "assets/pos-fleuriste.js": {
+    "v": "2",
+    "sha": "0f46f52706cec560"
   },
   "assets/pos-mobile.css": {
     "v": "3",

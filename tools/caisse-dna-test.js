@@ -14,8 +14,9 @@ let passed = 0;
 const failed = [];
 const ok = (label, condition) => condition ? passed++ : failed.push(label);
 
+const dispatchMatch = page.match(/assets\/pos-dispatch\.js\?v=(\d+)/);
 ok('shared visual DNA is loaded after the dispatcher and before operator use',
-  page.includes('assets/pos-dispatch.js?v=24') &&
+  !!dispatchMatch &&
   page.includes('assets/caisse-dna.css?v=3') &&
   page.includes('assets/caisse-dna.js?v=2'));
 ok('shared visual DNA remains available offline',
