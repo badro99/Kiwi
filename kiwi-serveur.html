@@ -1062,6 +1062,20 @@ em, i, cite, dfn, var { font-style: normal; }
     .trf-target-card .trf-tname { font-size: 15px; font-weight: 700; color: var(--ink); }
     .trf-target-card .trf-tmeta { font-size: 11px; color: var(--ink-3); }
 
+    .void-reasons-grid { display: flex; flex-direction: column; gap: 8px; margin: 12px 0 18px; }
+    .void-reason-chip {
+      display: flex; align-items: center; gap: 12px; padding: 12px 14px;
+      border: 1px solid var(--line); border-radius: var(--r-md);
+      background: var(--surface); text-align: left; cursor: pointer;
+      transition: border-color 150ms, background 150ms, transform 100ms;
+    }
+    .void-reason-chip:hover { border-color: var(--forest); background: var(--mint-tint); }
+    .void-reason-chip.is-active { border-color: var(--forest); background: var(--mint-tint); box-shadow: 0 0 0 2px var(--forest); }
+    .void-reason-chip svg { width: 20px; height: 20px; color: var(--forest); flex: 0 0 20px; }
+    .void-reason-chip .vrc-text { display: flex; flex-direction: column; gap: 2px; }
+    .void-reason-chip .vrc-title { font-size: 14px; font-weight: 600; color: var(--ink); }
+    .void-reason-chip .vrc-sub { font-size: 11.5px; color: var(--ink-3); }
+
     /* Split-in-progress banner */
     .td-split-banner {
       background: linear-gradient(135deg, var(--mint-tint) 0%, #DEF2E5 100%);
@@ -3564,6 +3578,52 @@ em, i, cite, dfn, var { font-style: normal; }
             <button class="td-btn ghost" id="mrg-cancel">Annuler</button>
             <button class="td-btn primary" id="mrg-confirm" disabled>
               <i data-lucide="merge"></i> <span id="mrg-btn-text">Fusionner</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ VOID REASON MODAL ============ -->
+      <div class="modal-veil" id="void-reason-modal" role="dialog" aria-modal="true">
+        <div class="modal">
+          <div class="modal-handle"></div>
+          <div class="split-badge">Cuisine &amp; Pertes</div>
+          <h3 class="modal-title">Annuler <span id="void-dish-name">1× Plat</span></h3>
+          <p class="modal-subtle">Ce plat a déjà été transmis en cuisine. Motif de l'annulation :</p>
+          <div class="void-reasons-grid" id="void-reasons-chips">
+            <button class="void-reason-chip is-active" data-void-reason="client_change" data-is-waste="0">
+              <i data-lucide="user-round-x"></i>
+              <div class="vrc-text">
+                <span class="vrc-title">Changement client</span>
+                <span class="vrc-sub">Le client change d'avis · pas de perte</span>
+              </div>
+            </button>
+            <button class="void-reason-chip" data-void-reason="order_error" data-is-waste="0">
+              <i data-lucide="edit-3"></i>
+              <div class="vrc-text">
+                <span class="vrc-title">Erreur de saisie</span>
+                <span class="vrc-sub">Erreur serveur avant cuisson</span>
+              </div>
+            </button>
+            <button class="void-reason-chip" data-void-reason="kitchen_waste" data-is-waste="1">
+              <i data-lucide="trash-2"></i>
+              <div class="vrc-text">
+                <span class="vrc-title">Perte cuisine</span>
+                <span class="vrc-sub">Déjà sur le feu / jeté · décompte stock</span>
+              </div>
+            </button>
+            <button class="void-reason-chip" data-void-reason="quality_return" data-is-waste="1">
+              <i data-lucide="alert-triangle"></i>
+              <div class="vrc-text">
+                <span class="vrc-title">Retour qualité</span>
+                <span class="vrc-sub">Plat refusé ou non conforme · perte</span>
+              </div>
+            </button>
+          </div>
+          <div class="nt-actions">
+            <button class="td-btn ghost" id="void-cancel">Conserver le plat</button>
+            <button class="td-btn danger" id="void-confirm">
+              <i data-lucide="alert-circle"></i> Confirmer l'annulation
             </button>
           </div>
         </div>
@@ -6657,11 +6717,96 @@ em, i, cite, dfn, var { font-style: normal; }
       }
     });
 
+    let voidLineTarget = null;
+    let selectedVoidReason = 'client_change';
+    let selectedVoidIsWaste = 0;
+
+    function openVoidReasonModal(tableId, line) {
+      voidLineTarget = { tableId: tableId, line: line };
+      selectedVoidReason = 'client_change';
+      selectedVoidIsWaste = 0;
+      $('#void-dish-name').textContent = `1× ${line.name}`;
+      const chips = document.querySelectorAll('#void-reasons-chips .void-reason-chip');
+      chips.forEach(c => c.classList.toggle('is-active', c.dataset.voidReason === 'client_change'));
+      $('#void-reason-modal').classList.add('is-open');
+      lucide.createIcons();
+    }
+
+    async function confirmVoidLine() {
+      if (!voidLineTarget) return;
+      const { tableId, line } = voidLineTarget;
+      const confirmBtn = $('#void-confirm');
+      if (confirmBtn) confirmBtn.disabled = true;
+
+      if (!SV_DEMO) {
+        try {
+          const res = await fetch('/api/order/queue', {
+            method: 'POST', credentials: 'same-origin', cache: 'no-store',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              merchant: svSlug(),
+              voidLine: {
+                table: tableId,
+                lineId: line.id || line.uid,
+                qty: 1,
+                reason: selectedVoidReason,
+                isWaste: selectedVoidIsWaste,
+                actor: activeRole.fullName || activeRole.name || 'Serveur'
+              }
+            })
+          });
+          const data = await res.json().catch(() => null);
+          if (!res.ok || !data || !data.ok) throw new Error((data && data.error) || 'void-failed');
+          if (data.alertSent) {
+            toast(`Alerte annulation envoyée en cuisine · ${line.name}`);
+          } else {
+            toast(`${line.name} annulé en cuisine`);
+          }
+        } catch (err) {
+          toast(`Annulation : ${err.message || 'erreur réseau'}`);
+        }
+      }
+
+      line.qty -= 1;
+      if (line.sentQty) line.sentQty = Math.max(0, line.sentQty - 1);
+      if (line.qty <= 0) {
+        tableOrders[tableId] = (tableOrders[tableId] || []).filter(l => l.uid !== line.uid);
+      }
+      markDirty(tableId);
+      $('#void-reason-modal').classList.remove('is-open');
+      if (confirmBtn) confirmBtn.disabled = false;
+      voidLineTarget = null;
+      renderTableDetail();
+    }
+
+    $('#void-reasons-chips') && $('#void-reasons-chips').addEventListener('click', (e) => {
+      const chip = e.target.closest('.void-reason-chip');
+      if (!chip) return;
+      selectedVoidReason = chip.dataset.voidReason;
+      selectedVoidIsWaste = Number(chip.dataset.isWaste) || 0;
+      document.querySelectorAll('#void-reasons-chips .void-reason-chip').forEach(c => c.classList.remove('is-active'));
+      chip.classList.add('is-active');
+    });
+
+    document.getElementById('void-reason-modal').addEventListener('click', (e) => {
+      if (e.target.closest('#void-confirm')) { confirmVoidLine(); return; }
+      if (e.target.closest('#void-cancel') || e.target === $('#void-reason-modal')) {
+        $('#void-reason-modal').classList.remove('is-open');
+        voidLineTarget = null;
+        return;
+      }
+    });
+
     function changeOrderQty(tableId, uid, delta) {
       const order = tableOrders[tableId];
       if (!order) return;
       const line = order.find(l => l.uid === uid);
       if (!line) return;
+      if (delta < 0 && line.sentQty > 0 && line.qty <= line.sentQty) {
+        // Line was already sent to kitchen: require void reason and kitchen sync
+        openVoidReasonModal(tableId, line);
+        return;
+      }
       line.qty += delta;
       if (line.qty <= 0) tableOrders[tableId] = order.filter(l => l.uid !== uid);
       markDirty(tableId);

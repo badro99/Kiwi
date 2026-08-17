@@ -259,6 +259,34 @@
     .tk.pass { border-color: rgba(11,110,79,.4); background: var(--mint-tint); }
     .tk.pass .tk-items li { font-size: 16px; }
 
+    .tk-void-banner {
+      background: #FEF2F2;
+      border: 1.5px solid #FCA5A5;
+      border-radius: 10px;
+      padding: 9px 12px;
+      margin: 10px 13px 4px;
+      animation: tk-void-pulse 1.4s infinite ease-in-out;
+    }
+    @keyframes tk-void-pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4); }
+      50% { box-shadow: 0 0 0 6px rgba(220, 38, 38, 0); }
+    }
+    .tk-void-header {
+      font-size: 13px; font-weight: 700; color: #991B1B;
+      display: flex; align-items: center; gap: 6px; margin-bottom: 8px;
+    }
+    .tk-void-acts {
+      display: flex; gap: 8px;
+    }
+    .act-void-accept {
+      flex: 1; padding: 8px 10px; border-radius: 8px; border: 1px solid #DC2626;
+      background: #DC2626; color: #fff; font-size: 12.5px; font-weight: 700; cursor: pointer;
+    }
+    .act-void-reject {
+      flex: 1; padding: 8px 10px; border-radius: 8px; border: 1px solid #D1D5DB;
+      background: #fff; color: #374151; font-size: 12.5px; font-weight: 700; cursor: pointer;
+    }
+
     .empty {
       display: flex; flex-direction: column; align-items: center; justify-content: center;
       gap: 12px; color: var(--ink-4); font-size: 14.5px; text-align: center;
@@ -359,7 +387,7 @@
 
 <!-- Le transport, partagé avec la caisse : même route, même garde, même
      protocole. La cuisine LIT et fait avancer ; la caisse ÉCRIT. -->
-<script src="assets/kitchen-relay.js?v=2" defer></script>
+<script src="assets/kitchen-relay.js?v=3" defer></script>
 <script>
 /* ═══════════════════════════════════════════════════════════════════════════
  * KIWI CUISINE — l'écran du passe
@@ -406,6 +434,7 @@
     station: 'all',
     stations: [],
     seen: {},
+    seenVoids: {},
     live: null,        // null = on n'a pas encore parlé au serveur
     muted: false,
   };
@@ -544,6 +573,7 @@
           delete S.orders[id]; delete S.cooking[id];
         }
       });
+      var newVoidAlerts = 0;
       (j.orders || []).forEach(function (o) {
         if (!o || !o.id) return;
         /* Un bon `pending` appartient encore au comptoir : la cuisine ne doit
@@ -553,9 +583,18 @@
         /* Défense locale complémentaire à la borne de la file serveur. */
         if (o.created_ts && (Date.now() - o.created_ts) > STALE_MS) { delete S.orders[o.id]; return; }
         if (!S.seen[o.id] && o.status === 'accepted') { if (!firstPass) fresh++; S.seen[o.id] = 1; }
+        if (Array.isArray(o.lines)) {
+          o.lines.forEach(function (l) {
+            if (l && l.voidAlert && l.voidAlert.id && !S.seenVoids[l.voidAlert.id]) {
+              S.seenVoids[l.voidAlert.id] = 1;
+              if (!firstPass) newVoidAlerts++;
+            }
+          });
+        }
         S.orders[o.id] = o;
       });
-      if (fresh) announce(fresh);
+      if (newVoidAlerts) announceVoid();
+      else if (fresh) announce(fresh);
       saveCooking();
       paint();
     });
@@ -589,6 +628,28 @@
         o.start(t0); o.stop(t0 + 0.38);
       });
       setTimeout(function () { try { ctx.close(); } catch (_) {} }, 1100);
+    } catch (_) {}
+  }
+
+  /* Une alerte d'annulation doit sonner fort et distinctement pour que le cuisinier arrête immédiatement la cuisson */
+  function announceVoid() {
+    try { if (navigator.vibrate) navigator.vibrate([150, 100, 150, 100, 150]); } catch (_) {}
+    if (S.muted) return;
+    try {
+      var Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      var ctx = new Ctx();
+      [880, 660, 440].forEach(function (f, i) {
+        var o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = 'sawtooth'; o.frequency.value = f;
+        var t0 = ctx.currentTime + i * 0.2;
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.exponentialRampToValueAtTime(0.25, t0 + 0.03);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.18);
+        o.connect(g); g.connect(ctx.destination);
+        o.start(t0); o.stop(t0 + 0.2);
+      });
+      setTimeout(function () { try { ctx.close(); } catch (_) {} }, 1200);
     } catch (_) {}
   }
 
@@ -686,12 +747,29 @@
     var right = kind === 'pass'
       ? '<span class="tk-timer ok">' + SVG.check + hm(o.updated_ts) + '</span>'
       : '<span class="tk-timer ' + u + '">' + SVG.clock + '<span>' + mmss(el) + '</span></span>';
+
+    var voidBanner = '';
+    var voidLine = (o.lines || []).find(function (l) { return l && l.voidAlert; });
+    if (voidLine && voidLine.voidAlert) {
+      var va = voidLine.voidAlert;
+      var reasonLabel = va.reason === 'client_change' ? 'Changement client'
+        : va.reason === 'order_error' ? 'Erreur saisie'
+        : va.reason === 'kitchen_waste' ? 'Perte cuisine'
+        : va.reason === 'quality_return' ? 'Retour qualité' : (va.reason || 'Annulation');
+      voidBanner = '<div class="tk-void-banner">'
+        + '<div class="tk-void-header">⚠️ ANNULATION : ' + (va.qty || 1) + '× ' + esc(voidLine.name) + ' (' + esc(reasonLabel) + ')</div>'
+        + '<div class="tk-void-acts">'
+        + '<button class="act-void-accept" data-void-ack="' + esc(o.id) + '" data-void-action="accept">Accepter arrêt</button>'
+        + '<button class="act-void-reject" data-void-ack="' + esc(o.id) + '" data-void-action="reject">Déjà prêt</button>'
+        + '</div></div>';
+    }
+
     return '<article class="tk ' + (kind === 'new' ? 'is-new' : kind === 'pass' ? 'pass' : '')
       + (u === 'over' && kind !== 'pass' ? ' is-late' : '') + '" data-tk="' + esc(o.id) + '">'
       + '<div class="tk-top"><span class="tk-no">' + ticketNo(o) + '</span>' + right + '</div>'
       + '<div class="tk-meta">' + whereChip(o)
       + (o.server ? '<span class="chip who">' + esc(o.server) + '</span>' : '') + '</div>'
-      + '<ul class="tk-items">' + items + '</ul>' + act + '</article>';
+      + '<ul class="tk-items">' + items + '</ul>' + voidBanner + act + '</article>';
   }
 
   function emptyBox(msg) {
@@ -753,6 +831,33 @@
 
   /* ── Les gestes du passe ─────────────────────────────────────────────────── */
   document.addEventListener('click', function (e) {
+    var voidAck = e.target.closest('[data-void-ack]');
+    if (voidAck) {
+      var vOrderId = voidAck.dataset.voidAck;
+      var vAction = voidAck.dataset.voidAction;
+      var vOrder = S.orders[vOrderId];
+      if (vOrder && Array.isArray(vOrder.lines)) {
+        var vLine = vOrder.lines.find(function (l) { return l && l.voidAlert; });
+        if (vLine) {
+          if (vAction === 'accept') {
+            var vq = (vLine.voidAlert && vLine.voidAlert.qty) || 1;
+            if (vLine.qty > vq) {
+              vLine.qty -= vq;
+              delete vLine.voidAlert;
+            } else {
+              vOrder.lines = vOrder.lines.filter(function (l) { return l !== vLine; });
+            }
+          } else {
+            delete vLine.voidAlert;
+            vLine.note = (vLine.note ? vLine.note + ' ' : '') + '[DÉJÀ PRÊT]';
+          }
+        }
+      }
+      paint();
+      KiwiKitchenRelay.ackVoid(vOrderId, vAction);
+      return;
+    }
+
     var st = e.target.closest('[data-st]');
     if (st) { S.station = st.dataset.st; paint(); return; }
 

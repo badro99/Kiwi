@@ -193,6 +193,30 @@
       .catch(function () { return null; });
   }
 
+  /* Annuler une ligne en cuisine (pré-cuisson immédiat ou alerte cuisson) */
+  function voidLine(payload) {
+    var m = merchant();
+    if (!m || !payload) return Promise.resolve(null);
+    return fetch('/api/order/queue', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ merchant: m, voidLine: payload }),
+      cache: 'no-store',
+    }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; });
+  }
+
+  /* Acquitter une demande d'annulation (chef valide l'arrêt ou dit "déjà prêt") */
+  function ackVoid(orderId, action, isWaste) {
+    var m = merchant();
+    if (!m || !orderId) return Promise.resolve(null);
+    return fetch('/api/order/queue', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ merchant: m, ackVoid: { orderId: orderId, action: action || 'accept', isWaste: isWaste } }),
+      cache: 'no-store',
+    }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; });
+  }
+
   // Le réseau revient : on vide la file sans attendre le prochain quart d'heure.
   window.addEventListener('online', function () {
     backendAbsent = false;
@@ -208,6 +232,8 @@
     bump: bump,
     pull: pull,
     pending: pending,
+    voidLine: voidLine,
+    ackVoid: ackVoid,
     reachable: function () { return !backendAbsent; },
   };
 })();

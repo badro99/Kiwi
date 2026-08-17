@@ -788,6 +788,172 @@ export async function onRequestPost(context) {
     }
   }
 
+  /* ── Annuler / Modifier une ligne de commande en cuisine (Protocole à 2 niveaux) ──
+   * 1. Si le plat n'a pas encore été accepté par la brigade (stationAccepted falsy) :
+   *    -> Annulation directe en temps réel (le plat est retiré de la commande).
+   * 2. Si le plat est en cours de préparation (stationAccepted true / cooking) :
+   *    -> Une alerte d'annulation prioritaire (voidAlert) est posée sur la commande.
+   *    -> La brigade reçoit une alerte visuelle et sonore sur le KDS avec boutons d'acquittement.
+   * 3. Toutes les annulations sont auditées dans `kitchen_voids` avec leur motif et statut. */
+  if (b && b.voidLine && typeof b.voidLine === 'object') {
+    const table = normTable(b.voidLine.table);
+    const lineId = String(b.voidLine.lineId || b.voidLine.id || '').trim();
+    const qtyToVoid = Math.max(1, Number(b.voidLine.qty) || 1);
+    const reason = String(b.voidLine.reason || 'client_change').trim();
+    const isWaste = b.voidLine.isWaste ? 1 : 0;
+    const actor = String(b.voidLine.actor || (employee && employeeName(employee.member)) || 'Serveur').trim().slice(0, 40);
+
+    if (!lineId) return json({ error: 'line-id-required' }, 400);
+
+    // Trouver la commande active
+    let targetOrder = null;
+    if (b.voidLine.orderId) {
+      targetOrder = await env.DB.prepare(
+        `SELECT id, table_no, total, lines, status, updated_ts, number FROM orders WHERE id = ? AND merchant = ? AND paid_ts IS NULL`
+      ).bind(b.voidLine.orderId, merchant).first();
+    } else if (table) {
+      targetOrder = await env.DB.prepare(
+        `SELECT id, table_no, total, lines, status, updated_ts, number FROM orders WHERE merchant = ? AND table_no = ? AND paid_ts IS NULL ORDER BY created_ts DESC LIMIT 1`
+      ).bind(merchant, table).first();
+    }
+
+    if (!targetOrder) return json({ error: 'order-not-found' }, 404);
+
+    let lines = [];
+    try { lines = JSON.parse(targetOrder.lines) || []; } catch (_) { lines = []; }
+
+    const targetLine = lines.find(l => String(l.id || l.uid) === lineId || String(l.name) === lineId);
+    if (!targetLine) return json({ error: 'line-not-on-order' }, 404);
+
+    const isCooking = targetLine.stationAccepted === true;
+    const voidId = 'voi-' + now.toString(36) + '-' + crypto.randomUUID().slice(0, 8);
+
+    if (!isCooking) {
+      // ── Niveau 1 : Annulation immédiate (plat non entamé) ──────────────────
+      if (targetLine.qty > qtyToVoid) {
+        targetLine.qty -= qtyToVoid;
+      } else {
+        lines = lines.filter(l => l !== targetLine);
+      }
+      const newTotal = lines.reduce((s, l) => s + ((Number(l.price) || 0) * (Number(l.qty) || 0)), 0);
+      const nextTs = Math.max(now, (Number(targetOrder.updated_ts) || 0) + 1);
+
+      await env.DB.prepare(
+        `UPDATE orders SET lines = ?, total = ?, updated_ts = ? WHERE id = ? AND merchant = ?`
+      ).bind(JSON.stringify(lines), newTotal, nextTs, targetOrder.id, merchant).run();
+
+      try {
+        await env.DB.prepare(
+          `INSERT INTO kitchen_voids (id, merchant, order_id, table_no, item_id, item_name, qty, price, reason, is_waste, actor, status, created_ts)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'approved', ?)`
+        ).bind(voidId, merchant, targetOrder.id, targetOrder.table_no, targetLine.id || lineId, targetLine.name || lineId, qtyToVoid, targetLine.price || 0, reason, isWaste, actor, now).run();
+      } catch (_) {}
+
+      return json({
+        ok: true,
+        voidId,
+        directVoid: true,
+        orderId: targetOrder.id,
+        table: targetOrder.table_no,
+        remainingLines: lines,
+        total: newTotal,
+      });
+    } else {
+      // ── Niveau 2 : Alerte d'annulation urgente en cuisine (plat en cuisson) ─
+      targetLine.voidAlert = {
+        id: voidId,
+        qty: qtyToVoid,
+        reason: reason,
+        actor: actor,
+        isWaste: isWaste,
+        ts: now,
+      };
+      const nextTs = Math.max(now, (Number(targetOrder.updated_ts) || 0) + 1);
+
+      await env.DB.prepare(
+        `UPDATE orders SET lines = ?, updated_ts = ? WHERE id = ? AND merchant = ?`
+      ).bind(JSON.stringify(lines), nextTs, targetOrder.id, merchant).run();
+
+      try {
+        await env.DB.prepare(
+          `INSERT INTO kitchen_voids (id, merchant, order_id, table_no, item_id, item_name, qty, price, reason, is_waste, actor, status, created_ts)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)`
+        ).bind(voidId, merchant, targetOrder.id, targetOrder.table_no, targetLine.id || lineId, targetLine.name || lineId, qtyToVoid, targetLine.price || 0, reason, isWaste, actor, now).run();
+      } catch (_) {}
+
+      return json({
+        ok: true,
+        voidId,
+        directVoid: false,
+        alertSent: true,
+        orderId: targetOrder.id,
+        table: targetOrder.table_no,
+        voidAlert: targetLine.voidAlert,
+      });
+    }
+  }
+
+  /* ── Acquittement de l'annulation par la cuisine (KDS) ─────────────────────
+   * Le chef valide l'arrêt de la préparation ou signale que le plat est déjà prêt. */
+  if (b && b.ackVoid && typeof b.ackVoid === 'object') {
+    const orderId = String(b.ackVoid.orderId || b.ackVoid.id || '').trim();
+    const action = b.ackVoid.action === 'reject' ? 'reject' : 'accept';
+    const isWaste = b.ackVoid.isWaste !== undefined ? (b.ackVoid.isWaste ? 1 : 0) : null;
+
+    if (!orderId) return json({ error: 'order-id-required' }, 400);
+
+    const targetOrder = await env.DB.prepare(
+      `SELECT id, table_no, total, lines, status, updated_ts FROM orders WHERE id = ? AND merchant = ?`
+    ).bind(orderId, merchant).first();
+
+    if (!targetOrder) return json({ error: 'order-not-found' }, 404);
+
+    let lines = [];
+    try { lines = JSON.parse(targetOrder.lines) || []; } catch (_) { lines = []; }
+
+    let voidIdFound = null;
+    lines = lines.map(line => {
+      if (line && line.voidAlert) {
+        voidIdFound = line.voidAlert.id;
+        if (action === 'accept') {
+          const vQty = Math.max(1, Number(line.voidAlert.qty) || 1);
+          if (line.qty > vQty) {
+            return { ...line, qty: line.qty - vQty, voidAlert: null };
+          } else {
+            return null; // line removed
+          }
+        } else {
+          // Chef rejected void: dish was already plated
+          return { ...line, voidAlert: null, voidRejected: true, note: (line.note ? line.note + ' ' : '') + '[DÉJÀ PRÊT]' };
+        }
+      }
+      return line;
+    }).filter(Boolean);
+
+    const newTotal = lines.reduce((s, l) => s + ((Number(l.price) || 0) * (Number(l.qty) || 0)), 0);
+    const nextTs = Math.max(now, (Number(targetOrder.updated_ts) || 0) + 1);
+
+    await env.DB.prepare(
+      `UPDATE orders SET lines = ?, total = ?, updated_ts = ? WHERE id = ? AND merchant = ?`
+    ).bind(JSON.stringify(lines), newTotal, nextTs, targetOrder.id, merchant).run();
+
+    if (voidIdFound) {
+      try {
+        await env.DB.prepare(
+          `UPDATE kitchen_voids SET status = ?, is_waste = COALESCE(?, is_waste) WHERE id = ? AND merchant = ?`
+        ).bind(action === 'accept' ? 'approved' : 'rejected', isWaste, voidIdFound, merchant).run();
+      } catch (_) {}
+    }
+
+    return json({
+      ok: true,
+      orderId: targetOrder.id,
+      action,
+      lines,
+      total: newTotal,
+    });
+  }
+
   /* ── Fermer une session ────────────────────────────────────────────────────
    * C'est le geste qui coupe le robinet : l'addition est réglée, le téléphone
    * du client cesse de pouvoir commander et bascule sur le remerciement. La

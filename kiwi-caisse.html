@@ -1389,6 +1389,20 @@
     .trf-target-card .trf-tname { font-size: 15px; font-weight: 700; color: var(--ink); }
     .trf-target-card .trf-tmeta { font-size: 11px; color: var(--ink-3); }
 
+    .void-reasons-grid { display: flex; flex-direction: column; gap: 8px; margin: 12px 0 18px; }
+    .void-reason-chip {
+      display: flex; align-items: center; gap: 12px; padding: 12px 14px;
+      border: 1px solid var(--line); border-radius: var(--r-md);
+      background: var(--surface); text-align: left; cursor: pointer;
+      transition: border-color 150ms, background 150ms, transform 100ms;
+    }
+    .void-reason-chip:hover { border-color: var(--forest); background: var(--mint-tint); }
+    .void-reason-chip.is-active { border-color: var(--forest); background: var(--mint-tint); box-shadow: 0 0 0 2px var(--forest); }
+    .void-reason-chip svg { width: 20px; height: 20px; color: var(--forest); flex: 0 0 20px; }
+    .void-reason-chip .vrc-text { display: flex; flex-direction: column; gap: 2px; }
+    .void-reason-chip .vrc-title { font-size: 14px; font-weight: 600; color: var(--ink); }
+    .void-reason-chip .vrc-sub { font-size: 11.5px; color: var(--ink-3); }
+
     .pay-btn {
       display: flex; align-items: center; justify-content: center; gap: 10px;
       height: 56px;
@@ -4758,7 +4772,7 @@
        pose le bon sur le serveur (file de secours hors ligne comprise) pour que
        kiwi-cuisine.html l'affiche. Après caisse-pairing.js : il lit le magasin
        appairé. -->
-  <script src="assets/kitchen-relay.js?v=2" defer></script>
+  <script src="assets/kitchen-relay.js?v=3" defer></script>
   <script src="assets/kitchen-print-queue.js?v=1" defer></script>
   <script src="assets/food-production-print.js?v=1" defer></script>
   <!-- OrderPro · orders placed on a customer's phone arrive here over WiFi;
@@ -5475,6 +5489,51 @@
         <button class="ma-btn secondary" id="cmrg-cancel" style="flex:1;">Annuler</button>
         <button class="ma-btn primary" id="cmrg-confirm" style="flex:2;" disabled>
           <i data-lucide="merge"></i> <span id="cmrg-btn-text">Fusionner</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ CAISSE VOID REASON MODAL ============ -->
+  <div class="modal-veil" id="caisse-void-modal" role="dialog" aria-modal="true" aria-labelledby="cvoi-title">
+    <div class="modal modal-void" style="max-width:440px;">
+      <div class="split-badge">Cuisine &amp; Pertes</div>
+      <h3 class="modal-title" id="cvoi-title" style="margin-bottom:6px;">Annuler <span id="cvoi-dish-name">1× Plat</span></h3>
+      <p class="modal-subtle" style="margin-bottom:12px;">Ce plat a été transmis en cuisine. Motif de l'annulation :</p>
+      <div class="void-reasons-grid" id="cvoi-reasons-chips">
+        <button class="void-reason-chip is-active" data-cvoi-reason="client_change" data-is-waste="0">
+          <i data-lucide="user-round-x"></i>
+          <div class="vrc-text">
+            <span class="vrc-title">Changement client</span>
+            <span class="vrc-sub">Le client change d'avis · pas de perte</span>
+          </div>
+        </button>
+        <button class="void-reason-chip" data-cvoi-reason="order_error" data-is-waste="0">
+          <i data-lucide="edit-3"></i>
+          <div class="vrc-text">
+            <span class="vrc-title">Erreur de saisie</span>
+            <span class="vrc-sub">Erreur caisse avant cuisson</span>
+          </div>
+        </button>
+        <button class="void-reason-chip" data-cvoi-reason="kitchen_waste" data-is-waste="1">
+          <i data-lucide="trash-2"></i>
+          <div class="vrc-text">
+            <span class="vrc-title">Perte cuisine</span>
+            <span class="vrc-sub">Déjà sur le feu / jeté · décompte stock</span>
+          </div>
+        </button>
+        <button class="void-reason-chip" data-cvoi-reason="quality_return" data-is-waste="1">
+          <i data-lucide="alert-triangle"></i>
+          <div class="vrc-text">
+            <span class="vrc-title">Retour qualité</span>
+            <span class="vrc-sub">Plat refusé ou non conforme · perte</span>
+          </div>
+        </button>
+      </div>
+      <div class="nt-actions">
+        <button class="ma-btn secondary" id="cvoi-cancel" style="flex:1;">Conserver</button>
+        <button class="ma-btn primary" id="cvoi-confirm" style="flex:2;background:var(--danger-mute);border-color:var(--danger-mute);">
+          <i data-lucide="alert-circle"></i> Confirmer l'annulation
         </button>
       </div>
     </div>
@@ -9624,6 +9683,86 @@
       }
     });
 
+    let caisseVoidTarget = null;
+    let caisseSelectedVoidReason = 'client_change';
+    let caisseSelectedVoidIsWaste = 0;
+
+    function openCaisseVoidModal(tableId, line) {
+      caisseVoidTarget = { tableId, line };
+      caisseSelectedVoidReason = 'client_change';
+      caisseSelectedVoidIsWaste = 0;
+      const dName = $('#cvoi-dish-name');
+      if (dName) dName.textContent = `1× ${line.name}`;
+      const chips = document.querySelectorAll('#cvoi-reasons-chips .void-reason-chip');
+      chips.forEach(c => c.classList.toggle('is-active', c.dataset.cvoiReason === 'client_change'));
+      const modal = $('#caisse-void-modal');
+      if (modal) modal.classList.add('is-open');
+      if (window.lucide) lucide.createIcons();
+    }
+
+    async function confirmCaisseVoid() {
+      if (!caisseVoidTarget) return;
+      const { tableId, line } = caisseVoidTarget;
+      const confirmBtn = $('#cvoi-confirm');
+      if (confirmBtn) confirmBtn.disabled = true;
+
+      const slug = (window.KiwiCaissePairing && KiwiCaissePairing.merchant && KiwiCaissePairing.merchant()) || ls('kiwiLiveMerchant') || '';
+      if (slug) {
+        try {
+          const res = await fetch('/api/order/queue', {
+            method: 'POST', credentials: 'same-origin', cache: 'no-store',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              merchant: slug,
+              voidLine: {
+                table: tableId,
+                lineId: line.id || line.uid,
+                qty: 1,
+                reason: caisseSelectedVoidReason,
+                isWaste: caisseSelectedVoidIsWaste,
+                actor: (typeof cashierName !== 'undefined' && cashierName) || 'Caisse'
+              }
+            })
+          });
+          const data = await res.json().catch(() => null);
+          if (data && data.alertSent) {
+            toast(`Alerte transmise en cuisine · ${line.name}`);
+          } else {
+            toast(`${line.name} annulé en cuisine`);
+          }
+        } catch (err) {
+          toast(`Annulation : ${err.message || 'erreur réseau'}`);
+        }
+      }
+
+      line.qty -= 1;
+      if (line.qty <= 0) tableOrders[tableId] = (tableOrders[tableId] || []).filter(l => l.uid !== line.uid);
+      const modal = $('#caisse-void-modal');
+      if (modal) modal.classList.remove('is-open');
+      if (confirmBtn) confirmBtn.disabled = false;
+      caisseVoidTarget = null;
+      renderMenu();
+      renderOrderPanel(tableId);
+    }
+
+    $('#cvoi-reasons-chips') && $('#cvoi-reasons-chips').addEventListener('click', (e) => {
+      const chip = e.target.closest('.void-reason-chip');
+      if (!chip) return;
+      caisseSelectedVoidReason = chip.dataset.cvoiReason;
+      caisseSelectedVoidIsWaste = Number(chip.dataset.isWaste) || 0;
+      document.querySelectorAll('#cvoi-reasons-chips .void-reason-chip').forEach(c => c.classList.remove('is-active'));
+      chip.classList.add('is-active');
+    });
+
+    document.getElementById('caisse-void-modal') && document.getElementById('caisse-void-modal').addEventListener('click', (e) => {
+      if (e.target.closest('#cvoi-confirm')) { confirmCaisseVoid(); return; }
+      if (e.target.closest('#cvoi-cancel') || e.target === $('#caisse-void-modal')) {
+        $('#caisse-void-modal').classList.remove('is-open');
+        caisseVoidTarget = null;
+        return;
+      }
+    });
+
     /* ---- table order management ---- */
     function pushTableOrderLine(tableId, item, opts) {
       if (!tableOrders[tableId]) tableOrders[tableId] = [];
@@ -9670,10 +9809,11 @@
       if (!tableOrders[tableId]) return;
       const line = tableOrders[tableId].find(l => l.uid === uid);
       if (!line) return;
-      /* Le plat est en cuisson. Le décrémenter ici ne le décuit pas : ça ne
-         ferait qu'installer un écart entre l'addition et ce qui sort du passe.
-         Un plat lancé s'annule à la cuisine, pas à la caisse. */
-      if (line.sent) { toast('Déjà en cuisine · ça s\'annule à la cuisine'); return; }
+      /* Si le plat a déjà été transmis en cuisine, on ouvre le motif d'annulation pour avertir la brigade */
+      if (line.sent) {
+        if (delta < 0) openCaisseVoidModal(tableId, line);
+        return;
+      }
       line.qty += delta;
       if (line.qty <= 0) tableOrders[tableId] = tableOrders[tableId].filter(l => l.uid !== uid);
       renderMenu();

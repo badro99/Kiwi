@@ -851,6 +851,27 @@ CREATE TABLE IF NOT EXISTS table_transfers (
 );
 CREATE INDEX IF NOT EXISTS idx_table_transfers_live ON table_transfers (merchant, created_ts);
 
+-- ── KITCHEN VOIDS & PERTES · Traçabilité des annulations et pertes cuisine ──
+-- Annuler ou modifier un plat envoyé en cuisine ne doit jamais effacer l'écriture.
+-- Chaque annulation est tracée avec son motif (erreur, changement client, perte, retour),
+-- l'impact perte matière éventuel et l'accord de la cuisine.
+CREATE TABLE IF NOT EXISTS kitchen_voids (
+  id           TEXT PRIMARY KEY,  -- "voi-<uuid>"
+  merchant     TEXT NOT NULL,
+  order_id     TEXT,
+  table_no     TEXT,
+  item_id      TEXT,
+  item_name    TEXT,
+  qty          INTEGER NOT NULL,
+  price        INTEGER,
+  reason       TEXT NOT NULL,    -- 'client_change' | 'order_error' | 'kitchen_waste' | 'quality_return'
+  is_waste     INTEGER NOT NULL DEFAULT 0,  -- 1 si perte matière réelle
+  actor        TEXT,             -- serveur ou caissier
+  status       TEXT NOT NULL DEFAULT 'approved', -- 'pending' | 'approved' | 'rejected'
+  created_ts   INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_kitchen_voids_live ON kitchen_voids (merchant, created_ts);
+
 -- ── PRÉSENCE DE LA CAISSE · le service est-il ouvert ? ──────────────────────
 -- La protection contre la commande passée de chez soi ne peut pas venir du
 -- téléphone : il ment. Elle vient d'ici. La caisse interroge déjà sa file toutes
