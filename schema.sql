@@ -833,6 +833,24 @@ CREATE UNIQUE INDEX IF NOT EXISTS table_sessions_live
 -- La caisse relève « qui est assis en ce moment » à chaque tour de sondage.
 CREATE INDEX IF NOT EXISTS idx_tsess_live ON table_sessions (merchant, status, seen_ts);
 
+-- ── TABLE TRANSFERS & MERGES · Traçabilité des déplacements de tables ───────
+-- Déplacer ou fusionner une table ne doit jamais effacer l'historique comptable.
+-- Chaque déplacement d'une session ou d'une commande est consigné ici, avec la
+-- table d'origine, la table de destination, le serveur et l'horodatage.
+CREATE TABLE IF NOT EXISTS table_transfers (
+  id           TEXT PRIMARY KEY,  -- "trf-<uuid>"
+  merchant     TEXT NOT NULL,
+  from_table   TEXT NOT NULL,
+  to_table     TEXT NOT NULL,
+  session_id   TEXT,
+  server       TEXT,
+  covers       INTEGER,
+  orders_count INTEGER,
+  is_merge     INTEGER NOT NULL DEFAULT 0,  -- 1 si fusion de tables
+  created_ts   INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_table_transfers_live ON table_transfers (merchant, created_ts);
+
 -- ── PRÉSENCE DE LA CAISSE · le service est-il ouvert ? ──────────────────────
 -- La protection contre la commande passée de chez soi ne peut pas venir du
 -- téléphone : il ment. Elle vient d'ici. La caisse interroge déjà sa file toutes

@@ -10,7 +10,7 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
 const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((d) => {
   const p = path.join(dir, d.name);
-  if (d.isDirectory()) return ['node_modules', '.git', '_next', 'material-symbols'].includes(d.name) ? [] : walk(p);
+  if (d.isDirectory()) return (['node_modules', '.git', '_next', 'material-symbols', '.claude'].includes(d.name) || d.name.startsWith('.')) ? [] : walk(p);
   return /\.(?:css|html|js)$/.test(d.name) ? [p] : [];
 });
 

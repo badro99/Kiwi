@@ -1036,6 +1036,32 @@ em, i, cite, dfn, var { font-style: normal; }
 
     .td-btn-row { display: flex; gap: 8px; }
 
+    .td-extra-row { display: flex; gap: 8px; margin-top: 4px; }
+    .td-extra-btn {
+      flex: 1; height: 38px; border-radius: var(--r-md);
+      background: var(--paper-soft); border: 1px solid var(--line);
+      color: var(--ink-2); font-size: 12.5px; font-weight: 500;
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      transition: background 150ms, border-color 150ms;
+    }
+    .td-extra-btn:hover { background: var(--paper-mute); border-color: var(--line-soft); }
+    .td-extra-btn svg { width: 14px; height: 14px; }
+
+    .transfer-table-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+      max-height: 280px; overflow-y: auto; padding: 4px 0; margin-bottom: 16px;
+    }
+    .trf-target-card {
+      padding: 12px 8px; border-radius: 12px; border: 1px solid var(--line);
+      background: var(--surface); text-align: center; cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      transition: border-color 150ms, background 150ms, transform 100ms;
+    }
+    .trf-target-card:hover { border-color: var(--forest); background: var(--mint-tint); transform: translateY(-1px); }
+    .trf-target-card.is-selected { border-color: var(--forest); background: var(--mint-tint); box-shadow: 0 0 0 2px var(--forest); font-weight: 600; }
+    .trf-target-card .trf-tname { font-size: 15px; font-weight: 700; color: var(--ink); }
+    .trf-target-card .trf-tmeta { font-size: 11px; color: var(--ink-3); }
+
     /* Split-in-progress banner */
     .td-split-banner {
       background: linear-gradient(135deg, var(--mint-tint) 0%, #DEF2E5 100%);
@@ -3509,6 +3535,40 @@ em, i, cite, dfn, var { font-style: normal; }
         </div>
       </div>
 
+      <!-- ============ TRANSFER TABLE MODAL ============ -->
+      <div class="modal-veil" id="transfer-table-modal" role="dialog" aria-modal="true">
+        <div class="modal">
+          <div class="modal-handle"></div>
+          <div class="split-badge">Déplacement</div>
+          <h3 class="modal-title">Changer la table <span id="trf-from-id">T3</span></h3>
+          <p class="modal-subtle">Choisissez la nouvelle table libre pour ces convives :</p>
+          <div class="transfer-table-grid" id="trf-target-grid"></div>
+          <div class="nt-actions">
+            <button class="td-btn ghost" id="trf-cancel">Annuler</button>
+            <button class="td-btn primary" id="trf-confirm" disabled>
+              <i data-lucide="arrow-right-left"></i> <span id="trf-btn-text">Déplacer</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ MERGE TABLE MODAL ============ -->
+      <div class="modal-veil" id="merge-table-modal" role="dialog" aria-modal="true">
+        <div class="modal">
+          <div class="modal-handle"></div>
+          <div class="split-badge">Grand groupe</div>
+          <h3 class="modal-title">Fusionner <span id="mrg-source-id">T3</span></h3>
+          <p class="modal-subtle">Rattacher cette table et son addition à :</p>
+          <div class="transfer-table-grid" id="mrg-target-grid"></div>
+          <div class="nt-actions">
+            <button class="td-btn ghost" id="mrg-cancel">Annuler</button>
+            <button class="td-btn primary" id="mrg-confirm" disabled>
+              <i data-lucide="merge"></i> <span id="mrg-btn-text">Fusionner</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div class="modal-veil" id="month-schedule-modal" role="dialog" aria-modal="true" aria-labelledby="month-schedule-title">
         <div class="modal">
           <div class="modal-handle"></div>
@@ -3815,7 +3875,7 @@ em, i, cite, dfn, var { font-style: normal; }
   <script src="assets/staff-roles.js" defer></script>
   <!-- Real employee identity, planning, floor and attendance bridge. -->
   <script src="assets/pwa-update.js?v=358" defer></script>
-  <script src="assets/employee-live.js?v=377" defer></script>
+  <script src="assets/employee-live.js?v=378" defer></script>
   <script src="assets/employee-planning.js?v=3" defer></script>
   <link rel="stylesheet" href="assets/employee-trade-shell.css?v=1">
   <script src="assets/employee-trade-shell.js?v=2" defer></script>
@@ -6361,6 +6421,14 @@ em, i, cite, dfn, var { font-style: normal; }
           </button>
         `;
       }
+      if (t.status === 'a-commander' || t.status === 'ka-yaklo' || t.status === 'bgha-ykhlass') {
+        fHTML += `
+          <div class="td-extra-row">
+            <button class="td-extra-btn" data-action="transfer-table"><i data-lucide="arrow-right-left"></i>Changer table</button>
+            <button class="td-extra-btn" data-action="merge-table"><i data-lucide="merge"></i>Fusionner</button>
+          </div>
+        `;
+      }
       footer.innerHTML = fHTML;
       lucide.createIcons();
     }
@@ -6559,6 +6627,10 @@ em, i, cite, dfn, var { font-style: normal; }
         renderTableDetail();
         if (currentTab === 'tables') renderTables();
         toast('Split annulé');
+      } else if (action === 'transfer-table') {
+        openTransferTableModal(activeTableId);
+      } else if (action === 'merge-table') {
+        openMergeTableModal(activeTableId);
       }
     });
 
@@ -6659,6 +6731,252 @@ em, i, cite, dfn, var { font-style: normal; }
       if (e.target.closest('#nt-confirm')) { confirmNewTable(); return; }
       if (e.target.closest('#nt-cancel') || e.target === $('#new-table-modal'))
         { $('#new-table-modal').classList.remove('is-open'); return; }
+    });
+
+    /* ---------- Transfer Table modal ---------- */
+    let trfFromId = null;
+    let trfSelectedToId = null;
+
+    function openTransferTableModal(tableId) {
+      trfFromId = tableId;
+      trfSelectedToId = null;
+      $('#trf-from-id').textContent = tableId;
+      const btnText = $('#trf-btn-text');
+      if (btnText) btnText.textContent = 'Déplacer';
+      const confirmBtn = $('#trf-confirm');
+      if (confirmBtn) confirmBtn.disabled = true;
+      renderTransferTableGrid();
+      $('#transfer-table-modal').classList.add('is-open');
+      lucide.createIcons();
+    }
+
+    function renderTransferTableGrid() {
+      const grid = $('#trf-target-grid');
+      if (!grid) return;
+      const freeTables = Object.keys(tables).filter(id => id !== trfFromId && tables[id] && tables[id].status === 'khawya');
+      if (!freeTables.length) {
+        grid.innerHTML = '<div style="grid-column:1/-1;padding:16px;text-align:center;color:var(--ink-3);font-size:13px;">Aucune table libre disponible actuellement.</div>';
+        return;
+      }
+      grid.innerHTML = freeTables.map(id => {
+        const t = tables[id];
+        const isSel = id === trfSelectedToId;
+        return `
+          <div class="trf-target-card ${isSel ? 'is-selected' : ''}" data-trf-to="${id}">
+            <div class="trf-tname">${id}</div>
+            <div class="trf-tmeta">${t.covers || 2} pl. · Libre</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function confirmTransferTable() {
+      if (!trfFromId || !trfSelectedToId) return;
+      const from = trfFromId;
+      const to = trfSelectedToId;
+      const confirmBtn = $('#trf-confirm');
+      if (confirmBtn) confirmBtn.disabled = true;
+
+      const fromT = tables[from];
+      const toT = tables[to];
+      if (!fromT || !toT) return;
+
+      if (!SV_DEMO) {
+        try {
+          const res = await fetch('/api/order/queue', {
+            method: 'POST', credentials: 'same-origin', cache: 'no-store',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              merchant: svSlug(),
+              transferTable: { from, to, covers: fromT.covers, server: activeRole.fullName || activeRole.name || '' }
+            })
+          });
+          const data = await res.json().catch(() => null);
+          if (!res.ok || !data || !data.ok) throw new Error((data && data.error) || 'transfer-failed');
+        } catch (err) {
+          if (confirmBtn) confirmBtn.disabled = false;
+          toast(`Déplacement impossible : ${err.message || 'erreur réseau'}`, 4800);
+          return;
+        }
+      }
+
+      // Local State Migration
+      toT.status = fromT.status;
+      toT.covers = fromT.covers;
+      toT.elapsed = fromT.elapsed;
+      toT.orderNo = fromT.orderNo;
+      tableOrders[to] = tableOrders[from] || [];
+      if (dirtyOrders.has(from)) {
+        dirtyOrders.delete(from);
+        dirtyOrders.add(to);
+      }
+      if (tableSplits.has(from)) {
+        tableSplits.set(to, tableSplits.get(from));
+        tableSplits.delete(from);
+      }
+      if (serviceTableSessions.has(from)) {
+        serviceTableSessions.set(to, serviceTableSessions.get(from));
+        serviceTableSessions.delete(from);
+      }
+
+      // Reset Source Table
+      fromT.status = 'khawya';
+      fromT.covers = 0;
+      fromT.elapsed = 0;
+      delete fromT.orderNo;
+      delete tableOrders[from];
+
+      // Update Canonical Orders cached on this device
+      Array.from(serviceCanonicalOrders.values()).forEach(order => {
+        if (order && String(order.table) === String(from)) order.table = to;
+      });
+
+      publishServiceTableState(from, 'khawya', 0, false);
+      publishServiceTableState(to, toT.status, toT.covers, false);
+
+      $('#transfer-table-modal').classList.remove('is-open');
+      activeTableId = to;
+      toast(`Table ${from} déplacée vers Table ${to}`);
+      renderTableDetail();
+      if (currentTab === 'tables') renderTables();
+    }
+
+    $('#transfer-table-modal').addEventListener('click', (e) => {
+      const card = e.target.closest('[data-trf-to]');
+      if (card) {
+        trfSelectedToId = card.dataset.trfTo;
+        renderTransferTableGrid();
+        const btnText = $('#trf-btn-text');
+        if (btnText) btnText.textContent = `Déplacer vers ${trfSelectedToId}`;
+        const confirmBtn = $('#trf-confirm');
+        if (confirmBtn) confirmBtn.disabled = false;
+        return;
+      }
+      if (e.target.closest('#trf-confirm')) { confirmTransferTable(); return; }
+      if (e.target.closest('#trf-cancel') || e.target === $('#transfer-table-modal')) {
+        $('#transfer-table-modal').classList.remove('is-open');
+        return;
+      }
+    });
+
+    /* ---------- Merge Table modal ---------- */
+    let mrgSourceId = null;
+    let mrgSelectedTargetId = null;
+
+    function openMergeTableModal(tableId) {
+      mrgSourceId = tableId;
+      mrgSelectedTargetId = null;
+      $('#mrg-source-id').textContent = tableId;
+      const btnText = $('#mrg-btn-text');
+      if (btnText) btnText.textContent = 'Fusionner';
+      const confirmBtn = $('#mrg-confirm');
+      if (confirmBtn) confirmBtn.disabled = true;
+      renderMergeTableGrid();
+      $('#merge-table-modal').classList.add('is-open');
+      lucide.createIcons();
+    }
+
+    function renderMergeTableGrid() {
+      const grid = $('#mrg-target-grid');
+      if (!grid) return;
+      // Other active tables
+      const otherTables = Object.keys(tables).filter(id => id !== mrgSourceId && tables[id] && tables[id].status !== 'khawya' && tables[id].status !== 'khlass');
+      if (!otherTables.length) {
+        grid.innerHTML = '<div style="grid-column:1/-1;padding:16px;text-align:center;color:var(--ink-3);font-size:13px;">Aucune autre table active à fusionner.</div>';
+        return;
+      }
+      grid.innerHTML = otherTables.map(id => {
+        const t = tables[id];
+        const isSel = id === mrgSelectedTargetId;
+        return `
+          <div class="trf-target-card ${isSel ? 'is-selected' : ''}" data-mrg-target="${id}">
+            <div class="trf-tname">${id}</div>
+            <div class="trf-tmeta">${t.covers || 2} cvts · ${employeeTranslation(statusLabel[t.status] || t.status)}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function confirmMergeTable() {
+      if (!mrgSourceId || !mrgSelectedTargetId) return;
+      const source = mrgSourceId;
+      const target = mrgSelectedTargetId;
+      const confirmBtn = $('#mrg-confirm');
+      if (confirmBtn) confirmBtn.disabled = true;
+
+      const sourceT = tables[source];
+      const targetT = tables[target];
+      if (!sourceT || !targetT) return;
+
+      if (!SV_DEMO) {
+        try {
+          const res = await fetch('/api/order/queue', {
+            method: 'POST', credentials: 'same-origin', cache: 'no-store',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              merchant: svSlug(),
+              mergeTables: { targetTable: target, sourceTable: source, server: activeRole.fullName || activeRole.name || '' }
+            })
+          });
+          const data = await res.json().catch(() => null);
+          if (!res.ok || !data || !data.ok) throw new Error((data && data.error) || 'merge-failed');
+        } catch (err) {
+          if (confirmBtn) confirmBtn.disabled = false;
+          toast(`Fusion impossible : ${err.message || 'erreur réseau'}`, 4800);
+          return;
+        }
+      }
+
+      // Merge order lines
+      const sourceLines = tableOrders[source] || [];
+      const targetLines = tableOrders[target] || [];
+      tableOrders[target] = targetLines.concat(sourceLines);
+      targetT.covers = (targetT.covers || 0) + (sourceT.covers || 0);
+
+      if (dirtyOrders.has(source)) {
+        dirtyOrders.delete(source);
+        dirtyOrders.add(target);
+      }
+
+      // Clear Source Table
+      sourceT.status = 'khawya';
+      sourceT.covers = 0;
+      sourceT.elapsed = 0;
+      delete sourceT.orderNo;
+      delete tableOrders[source];
+      serviceTableSessions.delete(source);
+
+      // Update Canonical Orders cached on this device
+      Array.from(serviceCanonicalOrders.values()).forEach(order => {
+        if (order && String(order.table) === String(source)) order.table = target;
+      });
+
+      publishServiceTableState(source, 'khawya', 0, true);
+      publishServiceTableState(target, targetT.status, targetT.covers, false);
+
+      $('#merge-table-modal').classList.remove('is-open');
+      activeTableId = target;
+      toast(`Table ${source} fusionnée dans Table ${target}`);
+      renderTableDetail();
+      if (currentTab === 'tables') renderTables();
+    }
+
+    $('#merge-table-modal').addEventListener('click', (e) => {
+      const card = e.target.closest('[data-mrg-target]');
+      if (card) {
+        mrgSelectedTargetId = card.dataset.mrgTarget;
+        renderMergeTableGrid();
+        const btnText = $('#mrg-btn-text');
+        if (btnText) btnText.textContent = `Fusionner avec ${mrgSelectedTargetId}`;
+        const confirmBtn = $('#mrg-confirm');
+        if (confirmBtn) confirmBtn.disabled = false;
+        return;
+      }
+      if (e.target.closest('#mrg-confirm')) { confirmMergeTable(); return; }
+      if (e.target.closest('#mrg-cancel') || e.target === $('#merge-table-modal')) {
+        $('#merge-table-modal').classList.remove('is-open');
+        return;
+      }
     });
 
     /* ---------- Menu tab ---------- */

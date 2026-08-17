@@ -637,6 +637,157 @@ export async function onRequestPost(context) {
     });
   }
 
+  /* ── Transférer une table (Déplacement de convives) ─────────────────────────
+   * Les convives changent de table (ex. de la salle vers la terrasse).
+   * 1. On vérifie que la table de destination n'a pas déjà une session ouverte.
+   * 2. On met à jour la session ouverte de la table d'origine vers la table de destination.
+   * 3. On met à jour les commandes ouvertes de cette session vers la nouvelle table
+   *    (pour que la cuisine et les additions pointent vers la bonne table physique).
+   * 4. On consigne le transfert dans `table_transfers` pour l'historique comptable et d'audit. */
+  if (b && b.transferTable && typeof b.transferTable === 'object') {
+    const fromTable = normTable(b.transferTable.from);
+    const toTable = normTable(b.transferTable.to);
+    if (!fromTable || !toTable) return json({ error: 'invalid-tables' }, 400);
+    if (fromTable === toTable) return json({ ok: true, same: true, table: toTable });
+
+    const server = String((b.transferTable && b.transferTable.server) || (employee && employeeName(employee.member)) || '').trim().slice(0, 40);
+    const covers = Math.max(1, Number(b.transferTable.covers) || 1);
+
+    try {
+      // 1. Vérifier si la table destination a déjà une session ouverte
+      const targetBusy = await env.DB.prepare(
+        `SELECT id FROM table_sessions WHERE merchant = ? AND table_no = ? AND mode = 'table' AND status = 'open' LIMIT 1`
+      ).bind(merchant, toTable).first();
+      if (targetBusy && targetBusy.id) {
+        return json({ error: 'target-table-occupied', targetTable: toTable }, 409);
+      }
+
+      // 2. Trouver la session active de la table d'origine
+      const sourceSession = await env.DB.prepare(
+        `SELECT id, opened_ts FROM table_sessions WHERE merchant = ? AND table_no = ? AND mode = 'table' AND status = 'open' ORDER BY opened_ts DESC LIMIT 1`
+      ).bind(merchant, fromTable).first();
+
+      const sessionId = sourceSession ? String(sourceSession.id) : null;
+
+      // 3. Déplacer la session
+      if (sessionId) {
+        await env.DB.prepare(
+          `UPDATE table_sessions SET table_no = ?, seen_ts = ? WHERE id = ? AND merchant = ? AND status = 'open'`
+        ).bind(toTable, now, sessionId, merchant).run();
+      }
+
+      // 4. Déplacer les commandes en cours de cette session ou table
+      let orderCount = 0;
+      if (sessionId) {
+        const res = await env.DB.prepare(
+          `UPDATE orders SET table_no = ?, updated_ts = ? WHERE merchant = ? AND session_id = ? AND paid_ts IS NULL`
+        ).bind(toTable, now, merchant, sessionId).run();
+        orderCount = (res && res.meta && res.meta.changes) || 0;
+      } else {
+        const res = await env.DB.prepare(
+          `UPDATE orders SET table_no = ?, updated_ts = ? WHERE merchant = ? AND table_no = ? AND paid_ts IS NULL`
+        ).bind(toTable, now, merchant, fromTable).run();
+        orderCount = (res && res.meta && res.meta.changes) || 0;
+      }
+
+      // 5. Enregistrer le déplacement dans le registre d'audit table_transfers
+      const transferId = 'trf-' + now.toString(36) + '-' + crypto.randomUUID().slice(0, 8);
+      try {
+        await env.DB.prepare(
+          `INSERT INTO table_transfers (id, merchant, from_table, to_table, session_id, server, covers, orders_count, is_merge, created_ts)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?)`
+        ).bind(transferId, merchant, fromTable, toTable, sessionId, server || null, covers, orderCount, now).run();
+      } catch (_) { /* table pas encore migrée */ }
+
+      return json({
+        ok: true,
+        transferId,
+        fromTable,
+        toTable,
+        sessionId,
+        ordersMoved: orderCount,
+        now,
+      });
+    } catch (e) {
+      return json({ error: 'transfer-failed', detail: String((e && e.message) || e) }, 500);
+    }
+  }
+
+  /* ── Fusionner deux tables (ex. Table 5 et Table 6 combinées) ───────────────
+   * Deux tables sont rassemblées pour un grand groupe.
+   * Les commandes de la table source sont rattachées à la session de la table cible.
+   * La session source est close avec 'merged-into-X'. */
+  if (b && b.mergeTables && typeof b.mergeTables === 'object') {
+    const targetTable = normTable(b.mergeTables.targetTable || b.mergeTables.target);
+    const sourceTable = normTable(b.mergeTables.sourceTable || b.mergeTables.source);
+    if (!targetTable || !sourceTable) return json({ error: 'invalid-tables' }, 400);
+    if (targetTable === sourceTable) return json({ ok: true, same: true, table: targetTable });
+
+    const server = String((b.mergeTables && b.mergeTables.server) || (employee && employeeName(employee.member)) || '').trim().slice(0, 40);
+
+    try {
+      // 1. Session cible
+      let targetSession = await env.DB.prepare(
+        `SELECT id FROM table_sessions WHERE merchant = ? AND table_no = ? AND mode = 'table' AND status = 'open' ORDER BY opened_ts DESC LIMIT 1`
+      ).bind(merchant, targetTable).first();
+      if (!targetSession) {
+        targetSession = await ensureServiceTableSession(env, merchant, targetTable, now);
+      }
+      const targetSessionId = targetSession ? String(targetSession.id) : null;
+
+      // 2. Session source
+      const sourceSession = await env.DB.prepare(
+        `SELECT id FROM table_sessions WHERE merchant = ? AND table_no = ? AND mode = 'table' AND status = 'open' ORDER BY opened_ts DESC LIMIT 1`
+      ).bind(merchant, sourceTable).first();
+      const sourceSessionId = sourceSession ? String(sourceSession.id) : null;
+
+      // 3. Déplacer les commandes de source vers target
+      let movedOrders = 0;
+      if (sourceSessionId && targetSessionId) {
+        const res = await env.DB.prepare(
+          `UPDATE orders SET table_no = ?, session_id = ?, updated_ts = ?
+            WHERE merchant = ? AND session_id = ? AND paid_ts IS NULL`
+        ).bind(targetTable, targetSessionId, now, merchant, sourceSessionId).run();
+        movedOrders = (res && res.meta && res.meta.changes) || 0;
+      } else {
+        const res = await env.DB.prepare(
+          `UPDATE orders SET table_no = ?, session_id = COALESCE(?, session_id), updated_ts = ?
+            WHERE merchant = ? AND table_no = ? AND paid_ts IS NULL`
+        ).bind(targetTable, targetSessionId, now, merchant, sourceTable).run();
+        movedOrders = (res && res.meta && res.meta.changes) || 0;
+      }
+
+      // 4. Clore la session source
+      if (sourceSessionId) {
+        await env.DB.prepare(
+          `UPDATE table_sessions SET status = 'closed', closed_ts = ?, closed_by = ?
+            WHERE id = ? AND merchant = ? AND status = 'open'`
+        ).bind(now, 'merged-into-' + targetTable, sourceSessionId, merchant).run();
+      }
+
+      // 5. Enregistrer la fusion dans table_transfers
+      const mergeId = 'trf-' + now.toString(36) + '-' + crypto.randomUUID().slice(0, 8);
+      try {
+        await env.DB.prepare(
+          `INSERT INTO table_transfers (id, merchant, from_table, to_table, session_id, server, covers, orders_count, is_merge, created_ts)
+           VALUES (?, ?, ?, ?, ?, ?, 0, ?, 1, ?)`
+        ).bind(mergeId, merchant, sourceTable, targetTable, targetSessionId, server || null, movedOrders, now).run();
+      } catch (_) {}
+
+      return json({
+        ok: true,
+        mergeId,
+        targetTable,
+        sourceTable,
+        targetSessionId,
+        ordersMerged: movedOrders,
+        now,
+      });
+    } catch (e) {
+      return json({ error: 'merge-failed', detail: String((e && e.message) || e) }, 500);
+    }
+  }
+
   /* ── Fermer une session ────────────────────────────────────────────────────
    * C'est le geste qui coupe le robinet : l'addition est réglée, le téléphone
    * du client cesse de pouvoir commander et bascule sur le remerciement. La

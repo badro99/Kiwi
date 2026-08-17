@@ -1363,6 +1363,32 @@
       padding: 0 20px 14px;
       display: flex; flex-direction: column; gap: 8px;
     }
+    .rp-table-tools { display: flex; gap: 8px; margin-top: 4px; }
+    .rp-table-tool-btn {
+      flex: 1; height: 42px; border-radius: var(--r-md);
+      background: var(--paper-soft); border: 1px solid var(--line);
+      color: var(--ink-2); font-size: 13px; font-weight: 600;
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      cursor: pointer; transition: background 150ms, border-color 150ms;
+    }
+    .rp-table-tool-btn:hover { background: var(--paper-mute); border-color: var(--line-soft); }
+    .rp-table-tool-btn svg { width: 15px; height: 15px; }
+
+    .transfer-table-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+      max-height: 280px; overflow-y: auto; padding: 4px 0; margin-bottom: 16px;
+    }
+    .trf-target-card {
+      padding: 12px 8px; border-radius: 12px; border: 1px solid var(--line);
+      background: var(--surface); text-align: center; cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      transition: border-color 150ms, background 150ms, transform 100ms;
+    }
+    .trf-target-card:hover { border-color: var(--forest); background: var(--mint-tint); transform: translateY(-1px); }
+    .trf-target-card.is-selected { border-color: var(--forest); background: var(--mint-tint); box-shadow: 0 0 0 2px var(--forest); font-weight: 600; }
+    .trf-target-card .trf-tname { font-size: 15px; font-weight: 700; color: var(--ink); }
+    .trf-target-card .trf-tmeta { font-size: 11px; color: var(--ink-3); }
+
     .pay-btn {
       display: flex; align-items: center; justify-content: center; gap: 10px;
       height: 56px;
@@ -4667,7 +4693,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=358" defer></script>
-  <script src="assets/caisse-pwa.js?v=377" defer></script>
+  <script src="assets/caisse-pwa.js?v=378" defer></script>
   <script src="assets/live-link.js?v=8" defer></script>
   <!-- The staff-role catalogue — says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -5294,6 +5320,10 @@
             <i data-lucide="plus"></i>
             <span>Ajouter des articles</span>
           </button>
+          <div class="rp-table-tools" id="rp-table-tools">
+            <button class="rp-table-tool-btn" id="rp-transfer-table" type="button"><i data-lucide="arrow-right-left"></i>Déplacer table</button>
+            <button class="rp-table-tool-btn" id="rp-merge-table" type="button"><i data-lucide="merge"></i>Fusionner</button>
+          </div>
           <!-- Normal payment buttons (salle read-to-pay + vrap) -->
           <div id="rp-pay-normal">
             <!-- Le geste principal d'une caisse : encaisser. Total affiché sur
@@ -5413,6 +5443,38 @@
         <button class="ma-btn secondary" id="wl-cancel" style="flex:1;">Annuler</button>
         <button class="ma-btn primary" id="wl-confirm" style="flex:2;">
           <i data-lucide="user-plus"></i> Ajouter
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ CAISSE TRANSFER TABLE MODAL ============ -->
+  <div class="modal-veil" id="caisse-transfer-modal" role="dialog" aria-modal="true" aria-labelledby="ctrf-title">
+    <div class="modal modal-transfer" style="max-width:440px;">
+      <div class="split-badge">Déplacement</div>
+      <h3 class="modal-title" id="ctrf-title" style="margin-bottom:6px;">Déplacer <span id="ctrf-from-id">T3</span></h3>
+      <p class="modal-subtle" style="margin-bottom:12px;">Choisissez la nouvelle table libre pour ces convives :</p>
+      <div class="transfer-table-grid" id="ctrf-target-grid"></div>
+      <div class="nt-actions">
+        <button class="ma-btn secondary" id="ctrf-cancel" style="flex:1;">Annuler</button>
+        <button class="ma-btn primary" id="ctrf-confirm" style="flex:2;" disabled>
+          <i data-lucide="arrow-right-left"></i> <span id="ctrf-btn-text">Déplacer</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ CAISSE MERGE TABLE MODAL ============ -->
+  <div class="modal-veil" id="caisse-merge-modal" role="dialog" aria-modal="true" aria-labelledby="cmrg-title">
+    <div class="modal modal-merge" style="max-width:440px;">
+      <div class="split-badge">Grand groupe</div>
+      <h3 class="modal-title" id="cmrg-title" style="margin-bottom:6px;">Fusionner <span id="cmrg-source-id">T3</span></h3>
+      <p class="modal-subtle" style="margin-bottom:12px;">Rattacher cette table et son addition à :</p>
+      <div class="transfer-table-grid" id="cmrg-target-grid"></div>
+      <div class="nt-actions">
+        <button class="ma-btn secondary" id="cmrg-cancel" style="flex:1;">Annuler</button>
+        <button class="ma-btn primary" id="cmrg-confirm" style="flex:2;" disabled>
+          <i data-lucide="merge"></i> <span id="cmrg-btn-text">Fusionner</span>
         </button>
       </div>
     </div>
@@ -9331,6 +9393,236 @@
     $('#wl-seat-banner-cancel') && $('#wl-seat-banner-cancel').addEventListener('click', () => endSeating(true));
     // keep wait times fresh while the waitlist is on screen
     setInterval(() => { if (mode === 'waitlist') renderWaitlist(); }, 30000);
+
+    /* ---------- Caisse Table Transfer & Merge Handlers ---------- */
+    let ctrfFromId = null;
+    let ctrfSelectedToId = null;
+
+    function openCaisseTransferModal(tableId) {
+      ctrfFromId = tableId;
+      ctrfSelectedToId = null;
+      $('#ctrf-from-id').textContent = tableId;
+      const btnText = $('#ctrf-btn-text');
+      if (btnText) btnText.textContent = 'Déplacer';
+      const confirmBtn = $('#ctrf-confirm');
+      if (confirmBtn) confirmBtn.disabled = true;
+      renderCaisseTransferGrid();
+      $('#caisse-transfer-modal').classList.add('is-open');
+      lucide.createIcons();
+    }
+
+    function renderCaisseTransferGrid() {
+      const grid = $('#ctrf-target-grid');
+      if (!grid) return;
+      const freeTables = Object.keys(tables).filter(id => id !== ctrfFromId && tables[id] && tables[id].status === 'khawya');
+      if (!freeTables.length) {
+        grid.innerHTML = '<div style="grid-column:1/-1;padding:16px;text-align:center;color:var(--ink-3);font-size:13px;">Aucune table libre disponible actuellement.</div>';
+        return;
+      }
+      grid.innerHTML = freeTables.map(id => {
+        const t = tables[id];
+        const isSel = id === ctrfSelectedToId;
+        return `
+          <div class="trf-target-card ${isSel ? 'is-selected' : ''}" data-ctrf-to="${id}">
+            <div class="trf-tname">${id}</div>
+            <div class="trf-tmeta">${t.covers || 2} pl. · Libre</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function confirmCaisseTransfer() {
+      if (!ctrfFromId || !ctrfSelectedToId) return;
+      const from = ctrfFromId;
+      const to = ctrfSelectedToId;
+      const confirmBtn = $('#ctrf-confirm');
+      if (confirmBtn) confirmBtn.disabled = true;
+
+      const fromT = tables[from];
+      const toT = tables[to];
+      if (!fromT || !toT) return;
+
+      if (!IS_DEMO) {
+        try {
+          const res = await fetch('/api/order/queue', {
+            method: 'POST', credentials: 'same-origin', cache: 'no-store',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              merchant: (window.KiwiSales && window.KiwiSales.getMerchant && window.KiwiSales.getMerchant()) || '',
+              transferTable: { from, to, covers: fromT.covers, server: fromT.server || 'Caisse' }
+            })
+          });
+          const data = await res.json().catch(() => null);
+          if (!res.ok || !data || !data.ok) throw new Error((data && data.error) || 'transfer-failed');
+        } catch (err) {
+          if (confirmBtn) confirmBtn.disabled = false;
+          toast(`Déplacement impossible : ${err.message || 'erreur réseau'}`);
+          return;
+        }
+      }
+
+      // Local state migration
+      toT.status = fromT.status;
+      toT.covers = fromT.covers;
+      toT.elapsed = fromT.elapsed;
+      toT.server = fromT.server;
+      toT.orderNo = fromT.orderNo;
+      toT.discount = fromT.discount;
+      tableOrders[to] = tableOrders[from] || [];
+      orders[to] = orders[from] || [];
+
+      // Clear source table
+      fromT.status = 'khawya';
+      fromT.covers = 0;
+      fromT.elapsed = 0;
+      delete fromT.orderNo;
+      delete fromT.server;
+      delete fromT.discount;
+      delete tableOrders[from];
+      delete orders[from];
+
+      refreshTableNode(from);
+      refreshTableNode(to);
+
+      $('#caisse-transfer-modal').classList.remove('is-open');
+      selectedId = to;
+      openTable(to);
+      toast(`Table ${from} déplacée vers Table ${to}`);
+    }
+
+    let cmrgSourceId = null;
+    let cmrgSelectedTargetId = null;
+
+    function openCaisseMergeModal(tableId) {
+      cmrgSourceId = tableId;
+      cmrgSelectedTargetId = null;
+      $('#cmrg-source-id').textContent = tableId;
+      const btnText = $('#cmrg-btn-text');
+      if (btnText) btnText.textContent = 'Fusionner';
+      const confirmBtn = $('#cmrg-confirm');
+      if (confirmBtn) confirmBtn.disabled = true;
+      renderCaisseMergeGrid();
+      $('#caisse-merge-modal').classList.add('is-open');
+      lucide.createIcons();
+    }
+
+    function renderCaisseMergeGrid() {
+      const grid = $('#cmrg-target-grid');
+      if (!grid) return;
+      const otherTables = Object.keys(tables).filter(id => id !== cmrgSourceId && tables[id] && tables[id].status !== 'khawya' && tables[id].status !== 'khlass');
+      if (!otherTables.length) {
+        grid.innerHTML = '<div style="grid-column:1/-1;padding:16px;text-align:center;color:var(--ink-3);font-size:13px;">Aucune autre table active à fusionner.</div>';
+        return;
+      }
+      grid.innerHTML = otherTables.map(id => {
+        const t = tables[id];
+        const isSel = id === cmrgSelectedTargetId;
+        return `
+          <div class="trf-target-card ${isSel ? 'is-selected' : ''}" data-cmrg-target="${id}">
+            <div class="trf-tname">${id}</div>
+            <div class="trf-tmeta">${t.covers || 2} cvts · ${statusLabel[t.status] || t.status}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function confirmCaisseMerge() {
+      if (!cmrgSourceId || !cmrgSelectedTargetId) return;
+      const source = cmrgSourceId;
+      const target = cmrgSelectedTargetId;
+      const confirmBtn = $('#cmrg-confirm');
+      if (confirmBtn) confirmBtn.disabled = true;
+
+      const sourceT = tables[source];
+      const targetT = tables[target];
+      if (!sourceT || !targetT) return;
+
+      if (!IS_DEMO) {
+        try {
+          const res = await fetch('/api/order/queue', {
+            method: 'POST', credentials: 'same-origin', cache: 'no-store',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              merchant: (window.KiwiSales && window.KiwiSales.getMerchant && window.KiwiSales.getMerchant()) || '',
+              mergeTables: { targetTable: target, sourceTable: source, server: targetT.server || 'Caisse' }
+            })
+          });
+          const data = await res.json().catch(() => null);
+          if (!res.ok || !data || !data.ok) throw new Error((data && data.error) || 'merge-failed');
+        } catch (err) {
+          if (confirmBtn) confirmBtn.disabled = false;
+          toast(`Fusion impossible : ${err.message || 'erreur réseau'}`);
+          return;
+        }
+      }
+
+      // Merge order lines
+      const sourceLines = tableOrders[source] || [];
+      const targetLines = tableOrders[target] || [];
+      tableOrders[target] = targetLines.concat(sourceLines);
+      targetT.covers = (targetT.covers || 0) + (sourceT.covers || 0);
+
+      // Clear source table
+      sourceT.status = 'khawya';
+      sourceT.covers = 0;
+      sourceT.elapsed = 0;
+      delete sourceT.orderNo;
+      delete sourceT.server;
+      delete sourceT.discount;
+      delete tableOrders[source];
+      delete orders[source];
+
+      refreshTableNode(source);
+      refreshTableNode(target);
+
+      $('#caisse-merge-modal').classList.remove('is-open');
+      selectedId = target;
+      openTable(target);
+      toast(`Table ${source} fusionnée dans Table ${target}`);
+    }
+
+    $('#rp-transfer-table') && $('#rp-transfer-table').addEventListener('click', () => {
+      if (selectedId) openCaisseTransferModal(selectedId);
+    });
+    $('#rp-merge-table') && $('#rp-merge-table').addEventListener('click', () => {
+      if (selectedId) openCaisseMergeModal(selectedId);
+    });
+
+    document.getElementById('caisse-transfer-modal').addEventListener('click', (e) => {
+      const card = e.target.closest('[data-ctrf-to]');
+      if (card) {
+        ctrfSelectedToId = card.dataset.ctrfTo;
+        renderCaisseTransferGrid();
+        const btnText = $('#ctrf-btn-text');
+        if (btnText) btnText.textContent = `Déplacer vers ${ctrfSelectedToId}`;
+        const confirmBtn = $('#ctrf-confirm');
+        if (confirmBtn) confirmBtn.disabled = false;
+        return;
+      }
+      if (e.target.closest('#ctrf-confirm')) { confirmCaisseTransfer(); return; }
+      if (e.target.closest('#ctrf-cancel') || e.target === $('#caisse-transfer-modal')) {
+        $('#caisse-transfer-modal').classList.remove('is-open');
+        return;
+      }
+    });
+
+    document.getElementById('caisse-merge-modal').addEventListener('click', (e) => {
+      const card = e.target.closest('[data-cmrg-target]');
+      if (card) {
+        cmrgSelectedTargetId = card.dataset.cmrgTarget;
+        renderCaisseMergeGrid();
+        const btnText = $('#cmrg-btn-text');
+        if (btnText) btnText.textContent = `Fusionner avec ${cmrgSelectedTargetId}`;
+        const confirmBtn = $('#cmrg-confirm');
+        if (confirmBtn) confirmBtn.disabled = false;
+        return;
+      }
+      if (e.target.closest('#cmrg-confirm')) { confirmCaisseMerge(); return; }
+      if (e.target.closest('#cmrg-cancel') || e.target === $('#caisse-merge-modal')) {
+        $('#caisse-merge-modal').classList.remove('is-open');
+        return;
+      }
+    });
 
     /* ---- table order management ---- */
     function pushTableOrderLine(tableId, item, opts) {
