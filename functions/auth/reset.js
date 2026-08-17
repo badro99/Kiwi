@@ -134,7 +134,9 @@ export async function onRequestPost(context) {
     await env.DB.prepare(
       'UPDATE reset_tokens SET used_ts = ? WHERE account_id = ? AND used_ts IS NULL'
     ).bind(now, row.account_id).run();
-  } catch (_) {}
+  } catch (err) {
+    console.error('[reset] Failed to invalidate reset tokens for account', row.account_id);
+  }
 
   /* « La réinitialisation a-t-elle abouti ? » — la question que la console pose
      et à laquelle rien ne répondait. On l'inscrit, sans jeton et sans adresse. */
@@ -144,7 +146,9 @@ export async function onRequestPost(context) {
        VALUES (?,?,?,?,?,?,?,?,?,?)`
     ).bind(row.account_id, '', 'reset', '', '', '', 'client', '',
            JSON.stringify({ completed: true }), now).run();
-  } catch (_) {}
+  } catch (err) {
+    console.error('[reset] Failed to record account audit for reset on account', row.account_id);
+  }
 
   await limitClear(request, env, 'reset');
 

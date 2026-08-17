@@ -350,7 +350,9 @@ export async function onRequestPost({ request, env }) {
           ).bind(merchant, FEATURE, text, now).run();
           if (Number(res && res.meta && res.meta.changes) > 0) break;
         }
-      } catch (_) {}
+      } catch (err) {
+        console.error('[service] Failed to persist service locks for merchant', merchant);
+      }
     }
 
     await poke(env, merchant, FEATURE);

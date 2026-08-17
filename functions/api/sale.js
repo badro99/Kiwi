@@ -128,7 +128,10 @@ export async function onRequestPost({ request, env }) {
         sent = await env.DB.prepare(
           `SELECT id FROM orders WHERE merchant = ? AND session_id = ? AND paid_ts IS NULL LIMIT 1`
         ).bind(merchant, serviceSession.id).first();
-      } catch (_) { sent = null; }
+      } catch (err) {
+        console.error('[sale] Order verification query threw for session', serviceSession.id);
+        return json({ error: 'db-read-failed' }, 500);
+      }
       if (!sent || !sent.id) return json({ error: 'send-order-before-payment' }, 409);
     }
   }
@@ -333,7 +336,9 @@ export async function onRequestPost({ request, env }) {
         `UPDATE table_sessions SET status = 'closed', closed_ts = ?, closed_by = 'service-payment'
           WHERE merchant = ? AND table_no = ? AND status = 'open'`
       ).bind(now, merchant, settledTable).run();
-    } catch (_) {}
+    } catch (err) {
+      console.error('[sale] Failed to mark table session closed for table', settledTable, 'merchant', merchant);
+    }
 
     /* Le début de la visite : la plus ancienne session encore ouverte. Aucune
      * session connue (base sans `table_sessions`, ou table jamais ouverte

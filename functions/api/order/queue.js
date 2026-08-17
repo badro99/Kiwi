@@ -269,7 +269,9 @@ export async function onRequestGet(context) {
           WHERE merchant = ? AND status = 'open' AND mode = 'table'
             AND seen_ts < ? AND table_no IN (${marks})`
       ).bind(now, merchant, now - SERVICE_TOUCH_MS, ...tables).run();
-    } catch (_) { /* table absente → la présence reste ce qu'elle était */ }
+    } catch (err) {
+      console.error('[queue] Failed to update table sessions seen_ts for merchant', merchant);
+    }
   }
 
   /* A phone order nobody accepted is not a kitchen ticket forever. Test taps,
@@ -280,7 +282,9 @@ export async function onRequestGet(context) {
       `UPDATE orders SET status = 'rejected', updated_ts = ?
         WHERE merchant = ? AND status = 'pending' AND created_ts < ?`
     ).bind(now, merchant, now - PENDING_TTL_MS).run();
-  } catch (_) { /* older schema / unavailable table: the read below stays fail-soft */ }
+  } catch (err) {
+    console.error('[queue] Failed to auto-reject expired pending orders for merchant', merchant);
+  }
 
   /* La file est un tableau de SERVICE, pas l'archive des commandes. Un bon
    * accepté mais jamais marqué prêt restait auparavant lisible sans aucune
@@ -876,7 +880,9 @@ export async function onRequestPost(context) {
           `INSERT INTO kitchen_voids (id, merchant, order_id, table_no, item_id, item_name, qty, price, reason, is_waste, actor, status, created_ts)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'approved', ?)`
         ).bind(voidId, merchant, targetOrder.id, targetOrder.table_no, targetLine.id || lineId, targetLine.name || lineId, qtyToVoid, targetLine.unitPrice ?? targetLine.price ?? 0, reason, isWaste, actor, now).run();
-      } catch (_) {}
+      } catch (err) {
+        console.error('[queue] Failed to insert approved kitchen void record', voidId, 'merchant', merchant);
+      }
 
       return json({
         ok: true,
@@ -910,7 +916,9 @@ export async function onRequestPost(context) {
           `INSERT INTO kitchen_voids (id, merchant, order_id, table_no, item_id, item_name, qty, price, reason, is_waste, actor, status, created_ts)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)`
         ).bind(voidId, merchant, targetOrder.id, targetOrder.table_no, targetLine.id || lineId, targetLine.name || lineId, qtyToVoid, targetLine.unitPrice ?? targetLine.price ?? 0, reason, isWaste, actor, now).run();
-      } catch (_) {}
+      } catch (err) {
+        console.error('[queue] Failed to insert pending kitchen void alert', voidId, 'merchant', merchant);
+      }
 
       return json({
         ok: true,
@@ -975,7 +983,9 @@ export async function onRequestPost(context) {
         await env.DB.prepare(
           `UPDATE kitchen_voids SET status = ?, is_waste = COALESCE(?, is_waste) WHERE id = ? AND merchant = ?`
         ).bind(action === 'accept' ? 'approved' : 'rejected', isWaste, voidIdFound, merchant).run();
-      } catch (_) {}
+      } catch (err) {
+        console.error('[queue] Failed to update kitchen void status for void', voidIdFound, 'merchant', merchant);
+      }
     }
 
     return json({
