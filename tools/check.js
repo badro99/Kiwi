@@ -869,6 +869,7 @@ section('Whole-project regressions');
     'password-policy-test.mjs',
     'plan-tier-test.mjs',
     'error-reporter-test.mjs',
+    'depenses-demo-gate-test.mjs',
   ];
   suites.forEach((name) => {
     const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', name)], { encoding: 'utf8' });

@@ -163,6 +163,16 @@
     }).join('') + '</div>' + (s.unnotified ? '<div class="pxd-callout"><b>' + num(s.unnotified) + ' client' + (s.unnotified > 1 ? 's' : '') + ' à prévenir</b><span>Ouvrez WhatsApp depuis la fiche de retrait pour envoyer le message “c’est prêt”.</span></div>' : '');
   }
 
+  function kpisBand(s) {
+    return '<section class="pxd-kpis" aria-label="État de l’atelier">' +
+      kpi('shirt','Pièces dans l’atelier',s.pieces,'Toutes les pièces non retirées','') +
+      kpi('workflow','Commandes en traitement',s.treating,'Nettoyage et finition en cours','') +
+      kpi('rack','Prêtes au retrait',s.ready,s.racks + ' rangée' + (s.racks === 1 ? '' : 's') + ' sur le rack','') +
+      kpi('alert','En attente de retrait',s.late,'Promesse dépassée, non retirée',s.late ? 'alert' : '') +
+      kpi('money','Solde à encaisser',num(s.due) + ' MAD','CA encaissé aujourd’hui · ' + num(todayRevenue()) + ' MAD','') +
+    '</section>';
+  }
+
   function renderHome() {
     if (!host || !current) return;
     var s = summary();
@@ -171,13 +181,7 @@
     host.innerHTML = '<div class="pxd-shell">' +
       '<header class="pxd-hero"><div><div class="pxd-eyebrow">Pilotage pressing</div><h1>Votre atelier, sans angle mort.</h1><p>' + esc(v.fullDisplay || v.name || 'Pressing') + ' · du dépôt au retrait, pièce par pièce</p></div>' +
       '<div class="pxd-hero-actions"><button class="pxd-btn" type="button" data-pxd-open="retrait">' + icon('scan') + 'Retrait express</button><button class="pxd-btn primary" type="button" data-pxd-open="comptoir">' + icon('play') + 'Nouveau dépôt</button></div></header>' +
-      '<section class="pxd-kpis" aria-label="État de l’atelier">' +
-        kpi('shirt','Pièces dans l’atelier',s.pieces,'Toutes les pièces non retirées','') +
-        kpi('workflow','Commandes en traitement',s.treating,'Nettoyage et finition en cours','') +
-        kpi('rack','Prêtes au retrait',s.ready,s.racks + ' rangée' + (s.racks === 1 ? '' : 's') + ' sur le rack','') +
-        kpi('alert','En attente de retrait',s.late,'Promesse dépassée, non retirée',s.late ? 'alert' : '') +
-        kpi('money','Solde à encaisser',num(s.due) + ' MAD','CA encaissé aujourd’hui · ' + num(todayRevenue()) + ' MAD','') +
-      '</section>' +
+      kpisBand(s) +
       '<div class="pxd-grid"><div class="pxd-stack">' +
         '<section class="pxd-card">' + cardHead('workflow','Flux atelier','La charge réelle à chaque étape','Ouvrir l’atelier','pressing-workshop') + flow(s) + '</section>' +
         '<section class="pxd-card">' + cardHead('clock','Priorités du jour','Échéances les plus proches et retraits en attente','Toutes les commandes','pressing-orders') + orderRows(active,6) + '</section>' +
@@ -199,22 +203,27 @@
   function pageBody(nav) {
     var s = summary();
     var active = sortedActive(s);
-    if (nav === 'pressing-orders') return '<div class="pxd-page-grid"><section class="pxd-card">' + cardHead('list','Commandes actives','Triées par urgence et date de retrait','','') + orderRows(active) + '</section><section class="pxd-card">' + cardHead('check','Commandes retirées','Historique conservé pour le suivi client','','') + orderRows(s.orders.filter(function(o){return effStatus(o)==='livre';}),20) + '</section></div>';
-    if (nav === 'pressing-workshop') return '<div class="pxd-page-grid"><section class="pxd-card">' + cardHead('workflow','Vue atelier','Une commande avance selon l’état réel de ses pièces','','') + flow(s) + '</section><section class="pxd-card">' + cardHead('clock','File de production','Promesses échues en premier, puis échéances les plus proches','','') + orderRows(active) + '</section></div>';
-    if (nav === 'pressing-pickup') return '<div class="pxd-page-grid two"><section class="pxd-card">' + cardHead('rack','Prêtes au retrait','Rack, notification et solde sur le même écran','','') + rackBody(s) + '</section><section class="pxd-page-card"><h3>Retrait en trois gestes</h3><p>Recherchez le téléphone, confirmez les pièces, encaissez le solde.</p><div class="pxd-checks"><div class="pxd-check"><span>1 · Identifier le client</span><small>Téléphone ou scan</small></div><div class="pxd-check"><span>2 · Vérifier les pièces</span><small>Bon détaillé</small></div><div class="pxd-check"><span>3 · Libérer le rack</span><small>Après remise</small></div></div><button class="pxd-btn primary" style="margin-top:14px" data-pxd-open="retrait">Ouvrir le retrait express</button></section></div>';
-    if (nav === 'pressing-services') {
+    var band = kpisBand(s);
+    var content = '';
+    if (nav === 'pressing-orders') content = '<div class="pxd-page-grid"><section class="pxd-card">' + cardHead('list','Commandes actives','Triées par urgence et date de retrait','','') + orderRows(active) + '</section><section class="pxd-card">' + cardHead('check','Commandes retirées','Historique conservé pour le suivi client','','') + orderRows(s.orders.filter(function(o){return effStatus(o)==='livre';}),20) + '</section></div>';
+    else if (nav === 'pressing-workshop') content = '<div class="pxd-page-grid"><section class="pxd-card">' + cardHead('workflow','Vue atelier','Une commande avance selon l’état réel de ses pièces','','') + flow(s) + '</section><section class="pxd-card">' + cardHead('clock','File de production','Promesses échues en premier, puis échéances les plus proches','','') + orderRows(active) + '</section></div>';
+    else if (nav === 'pressing-pickup') content = '<div class="pxd-page-grid two"><section class="pxd-card">' + cardHead('rack','Prêtes au retrait','Rack, notification et solde sur le même écran','','') + rackBody(s) + '</section><section class="pxd-page-card"><h3>Retrait en trois gestes</h3><p>Recherchez le téléphone, confirmez les pièces, encaissez le solde.</p><div class="pxd-checks"><div class="pxd-check"><span>1 · Identifier le client</span><small>Téléphone ou scan</small></div><div class="pxd-check"><span>2 · Vérifier les pièces</span><small>Bon détaillé</small></div><div class="pxd-check"><span>3 · Libérer le rack</span><small>Après remise</small></div></div><button class="pxd-btn primary" style="margin-top:14px" data-pxd-open="retrait">Ouvrir le retrait express</button></section></div>';
+    else if (nav === 'pressing-services') {
       var serviceLabels = { sec:'Nettoyage à sec', lavage:'Lavage', repassage:'Repassage', detachage:'Détachage', retouche:'Retouche' };
       var serviceRows = Object.keys(serviceLabels).map(function (id) {
         var count = num((s.services || {})[id] || 0);
         return '<div class="pxd-check"><span>' + serviceLabels[id] + '</span><small>' + count + ' pièce' + (count === '1' ? '' : 's') + ' active' + (count === '1' ? '' : 's') + '</small></div>';
       }).join('');
-      return '<div class="pxd-page-grid"><div data-pce-host></div><div class="pxd-page-grid two"><section class="pxd-page-card"><h3>Charge par traitement</h3><p>Volumes réels des commandes encore présentes dans l’atelier.</p><div class="pxd-checks">' + serviceRows + '</div></section><section class="pxd-page-card"><h3>Application des tarifs</h3><p>Une modification s’applique aux prochains dépôts. Les anciens tickets gardent le nom et le prix convenus avec le client.</p><div class="pxd-checks"><div class="pxd-check"><span>Caisse appairée</span><small>Synchronisée par établissement</small></div><div class="pxd-check"><span>Article masqué</span><small>Conservé dans l’historique</small></div><div class="pxd-check"><span>Prix vide</span><small>Service non proposé</small></div></div><button class="pxd-btn primary" style="margin-top:14px" data-pxd-open="tarifs">Ouvrir les tarifs sur la caisse</button></section></div></div>';
+      content = '<div class="pxd-page-grid"><div data-pce-host></div><div class="pxd-page-grid two"><section class="pxd-page-card"><h3>Charge par traitement</h3><p>Volumes réels des commandes encore présentes dans l’atelier.</p><div class="pxd-checks">' + serviceRows + '</div></section><section class="pxd-page-card"><h3>Application des tarifs</h3><p>Une modification s’applique aux prochains dépôts. Les anciens tickets gardent le nom et le prix convenus avec le client.</p><div class="pxd-checks"><div class="pxd-check"><span>Caisse appairée</span><small>Synchronisée par établissement</small></div><div class="pxd-check"><span>Article masqué</span><small>Conservé dans l’historique</small></div><div class="pxd-check"><span>Prix vide</span><small>Service non proposé</small></div></div><button class="pxd-btn primary" style="margin-top:14px" data-pxd-open="tarifs">Ouvrir les tarifs sur la caisse</button></section></div></div>';
     }
-    if (nav === 'pressing-quality') {
+    else if (nav === 'pressing-quality') {
       var attention = active.filter(function (o) { return (o.pieces || []).some(function (p) { return p.notes; }); });
-      return '<div class="pxd-page-grid"><section class="pxd-card">' + cardHead('alert','Vigilances actives','Commandes avec photo, tache ou instruction particulière','','') + (attention.length ? orderRows(attention) + '<div class="pxd-page-action"><button class="pxd-btn primary" data-pxd-open="commandes">Ouvrir le contrôle atelier</button></div>' : empty('check','Aucune vigilance ouverte','Une tache, une photo ou une instruction saisie au comptoir apparaîtra ici.','Nouveau dépôt','comptoir')) + '</section><section class="pxd-page-card"><h3>Contrôle avant remise</h3><p>La commande ne devient prête qu’après vérification de toutes ses pièces.</p><div class="pxd-checks"><div class="pxd-check"><span>Commandes prêtes</span><small>' + num(s.ready) + '</small></div><div class="pxd-check"><span>Pièces documentées</span><small>' + num(s.attention) + '</small></div><div class="pxd-check"><span>Clients encore à prévenir</span><small>' + num(s.unnotified) + '</small></div></div></section></div>';
+      content = '<div class="pxd-page-grid"><section class="pxd-card">' + cardHead('alert','Vigilances actives','Commandes avec photo, tache ou instruction particulière','','') + (attention.length ? orderRows(attention) + '<div class="pxd-page-action"><button class="pxd-btn primary" data-pxd-open="commandes">Ouvrir le contrôle atelier</button></div>' : empty('check','Aucune vigilance ouverte','Une tache, une photo ou une instruction saisie au comptoir apparaîtra ici.','Nouveau dépôt','comptoir')) + '</section><section class="pxd-page-card"><h3>Contrôle avant remise</h3><p>La commande ne devient prête qu’après vérification de toutes ses pièces.</p><div class="pxd-checks"><div class="pxd-check"><span>Commandes prêtes</span><small>' + num(s.ready) + '</small></div><div class="pxd-check"><span>Pièces documentées</span><small>' + num(s.attention) + '</small></div><div class="pxd-check"><span>Clients encore à prévenir</span><small>' + num(s.unnotified) + '</small></div></div></section></div>';
     }
-    return '<div class="pxd-page-grid two"><section class="pxd-page-card"><h3>Collecte & livraison</h3><p>Cette caisse ne promet pas une tournée qu’elle ne sait pas encore exécuter.</p>' + empty('van','Aucune tournée active','Les dépôts et retraits restent au comptoir tant qu’un module de tournée n’est pas activé.','Créer un dépôt comptoir','comptoir') + '</section><section class="pxd-page-card"><h3>Commandes prêtes</h3><p>Utilisez le rack et la notification client pour organiser les retraits actuels.</p>' + rackBody(s) + '</section></div>';
+    else {
+      content = '<div class="pxd-page-grid two"><section class="pxd-page-card"><h3>Collecte & livraison</h3><p>Cette caisse ne promet pas une tournée qu’elle ne sait pas encore exécuter.</p>' + empty('van','Aucune tournée active','Les dépôts et retraits restent au comptoir tant qu’un module de tournée n’est pas activé.','Créer un dépôt comptoir','comptoir') + '</section><section class="pxd-page-card"><h3>Commandes prêtes</h3><p>Utilisez le rack et la notification client pour organiser les retraits actuels.</p>' + rackBody(s) + '</section></div>';
+    }
+    return band + content;
   }
 
   function showPage(nav) {

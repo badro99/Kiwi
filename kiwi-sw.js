@@ -93,7 +93,7 @@ var SHELL = [
   '/assets/pressing-ops.js?v=6',
   '/assets/pressing-garment-icons.js?v=2',
   '/assets/pressing-catalog.js?v=4',
-  '/assets/pressing-dashboard.js?v=11',
+  '/assets/pressing-dashboard.js?v=12',
   '/assets/pressing-products/chemise.png',
   '/assets/pressing-products/tshirt.png',
   '/assets/pressing-products/pull.png',
