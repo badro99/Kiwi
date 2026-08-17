@@ -5,7 +5,7 @@
 // revenue surface drops it, while sale_audit keeps the complete trail.
 // GET  — the signed-in owner reads those cancellations for the Ventes page.
 
-import { entitledMerchant, isTillFor, json, operatorActor } from '../../auth/_lib.js';
+import { entitledMerchant, isTillFor, json, operatorActor, verifyStaffPin } from '../../auth/_lib.js';
 
 const MANAGER_ROLES = new Set([
   'manager', 'owner', 'proprietaire', 'proprietary', 'admin', 'administrateur',
@@ -120,15 +120,12 @@ export async function onRequestPost({ request, env }) {
     actorRole = 'dashboard-owner';
     reason = 'dashboard-cancel';
   } else {
-    if (!/^\d{4}$/.test(pin)) return json({ error: 'bad-pin' }, 401);
-    if (!(await isTillFor(request, env, merchant))) return json({ error: 'forbidden-till' }, 403);
-    let staff;
-    try {
-      staff = await env.DB.prepare(
-        'SELECT id, name, role FROM staff_pins WHERE merchant = ? AND pin = ? LIMIT 1'
-      ).bind(merchant, pin).first();
-    } catch (_) { return json({ error: 'staff-unavailable' }, 503); }
-    if (!staff) return json({ error: 'bad-pin' }, 401);
+    const verified = await verifyStaffPin(request, env, merchant, pin, { requireTill: true });
+    if (!verified.ok) {
+      if (verified.response) return verified.response;
+      return json({ error: verified.error }, verified.status);
+    }
+    const staff = verified.staff;
     if (!isManagerRole(staff.role)) return json({ error: 'manager-required' }, 403);
     actor = String(staff.name || staff.role || 'Manager').slice(0, 80);
     actorId = String(staff.id || '').slice(0, 80);

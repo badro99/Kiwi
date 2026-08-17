@@ -848,3 +848,71 @@ export async function limitClear(request, env, scope) {
   if (!k || !env.DB) return;
   try { await env.DB.prepare('DELETE FROM pair_attempts WHERE ip = ?').bind(k).run(); } catch (_) {}
 }
+
+/* ─────────────────────── VÉRIFICATION DU CODE PERSONNEL ───────────────────────
+ * Un seul point d'entrée pour valider le code d'un membre du personnel côté
+ * serveur. Partagé entre /api/pin/verify (déverrouillage de caisse) et
+ * /api/sale/cancel (annulation de vente par un manager).
+ *
+ * Propriétés indispensables :
+ *  1. Limiteur de force brute : 10 000 combinaisons pour un code à 4 chiffres.
+ *     Sans plafond, un script découvre tous les codes en quelques minutes.
+ *  2. Frontière d'accès : réservé aux caisses appairées (isTillFor), aux
+ *     propriétaires connectés (entitledMerchant) et aux opérateurs nommés.
+ *  3. Projection stricte : ne sélectionne et ne retourne JAMAIS le code PIN,
+ *     uniquement l'identité { id, name, role }.
+ * ───────────────────────────────────────────────────────────────────────── */
+export async function verifyStaffPin(request, env, merchant, pin, { requireTill = true } = {}) {
+  if (!env || !env.DB) return { ok: false, error: 'not-configured', status: 503 };
+  merchant = slugMerchant(merchant);
+  pin = String(pin || '').trim();
+
+  if (!merchant || !/^\d{4}$/.test(pin)) {
+    return { ok: false, error: 'bad-pin', status: 401 };
+  }
+
+  // Attempt rate-limiting by scope: 'pin:<merchant>'
+  const blocked = await limitCheck(request, env, `pin:${merchant}`);
+  if (blocked) return { ok: false, response: blocked };
+
+  // Authorization check: requester must prove they are a paired till for this
+  // merchant, an authenticated session owner of this merchant, or a named operator.
+  if (requireTill) {
+    const isTill = await isTillFor(request, env, merchant);
+    let isOwner = false;
+    const sess = await readSession(readCookie(request, SESS_COOKIE), env && env.AUTH_SECRET);
+    if (sess && sess.aid) {
+      const entitled = await entitledMerchant(request, env, merchant);
+      isOwner = entitled === merchant;
+    }
+    const isOp = await isOperator(request, env);
+    if (!isTill && !isOwner && !isOp) {
+      return { ok: false, error: 'forbidden-till', status: 403 };
+    }
+  }
+
+  let staff;
+  try {
+    staff = await env.DB.prepare(
+      'SELECT id, name, role FROM staff_pins WHERE merchant = ? AND pin = ? LIMIT 1'
+    ).bind(merchant, pin).first();
+  } catch (_) {
+    return { ok: false, error: 'staff-unavailable', status: 503 };
+  }
+
+  if (!staff) {
+    await limitFail(request, env, `pin:${merchant}`);
+    return { ok: false, error: 'bad-pin', status: 401 };
+  }
+
+  await limitClear(request, env, `pin:${merchant}`);
+  return {
+    ok: true,
+    staff: {
+      id: String(staff.id || ''),
+      name: String(staff.name || ''),
+      role: String(staff.role || ''),
+    },
+  };
+}
+
