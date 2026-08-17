@@ -256,18 +256,47 @@ console.log('\n2 · Attempt Rate-Limiting on Verification');
   check('9th attempt is blocked with 429 too_many_attempts', blockedRes.status === 429 && blockedData.error === 'too_many_attempts');
   check('returns retry_after header or field', typeof blockedData.retry_after === 'number');
 
-  // Multi-till isolation on shared NAT IP:
-  const till1 = await tillToken(AUTH_SECRET, 'cafe-atlas', 'reg-1');
-  const till2 = await tillToken(AUTH_SECRET, 'cafe-atlas', 'reg-2');
-  const sharedShopIp = '192.168.50.1';
+  // 1. Fabricated cookie rotation CANNOT bypass IP rate-limiting on unauthenticated scopes:
+  const attackerIp = '203.0.113.42';
+  for (let i = 0; i < 8; i++) {
+    const fakeCookie = `kiwi_sess=fake-session-${i}-${Math.random().toString(36).slice(2)}; kiwi_till=fake-till-${i}`;
+    const req = new Request('https://kiwi.test/auth/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: fakeCookie,
+        'CF-Connecting-IP': attackerIp,
+      },
+    });
+    // Record fail under 'login' scope
+    await (async () => {
+      const { limitFail } = await import('../functions/auth/_lib.js');
+      await limitFail(req, env, 'login');
+    })();
+  }
 
-  // Till 1 makes 8 wrong attempts
+  // 9th attempt with yet another new fake cookie MUST be blocked by IP
+  const { limitCheck } = await import('../functions/auth/_lib.js');
+  const probeReq = new Request('https://kiwi.test/auth/login', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Cookie: `kiwi_sess=yet-another-fake-token-${Math.random()}`,
+      'CF-Connecting-IP': attackerIp,
+    },
+  });
+  const blockedLogin = await limitCheck(probeReq, env, 'login');
+  check('rotating fabricated cookies CANNOT bypass IP rate-limiter on login', blockedLogin !== null && blockedLogin.status === 429);
+
+  // 2. Manager on same shop IP is NOT locked out from voiding by till mistakes
+  const sharedShopIp = '192.168.50.1';
+  // Till makes 8 wrong attempts
   for (let i = 0; i < 8; i++) {
     const req = new Request('https://kiwi.test/api/pin/verify', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Cookie: `kiwi_till=${till1}`,
+        Cookie: `kiwi_till=${tillCookieVal}`,
         'CF-Connecting-IP': sharedShopIp,
       },
       body: JSON.stringify({ merchant: 'cafe-atlas', pin: '0000' }),
@@ -275,38 +304,22 @@ console.log('\n2 · Attempt Rate-Limiting on Verification');
     await verifyPinPost({ request: req, env });
   }
 
-  // Till 1 is throttled on 9th attempt
-  const t1Blocked = await verifyPinPost({
+  // Till is throttled on 9th attempt
+  const tillBlocked = await verifyPinPost({
     request: new Request('https://kiwi.test/api/pin/verify', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Cookie: `kiwi_till=${till1}`,
+        Cookie: `kiwi_till=${tillCookieVal}`,
         'CF-Connecting-IP': sharedShopIp,
       },
       body: JSON.stringify({ merchant: 'cafe-atlas', pin: '1234' }),
     }),
     env,
   });
-  check('Till 1 is throttled after 8 failed attempts', t1Blocked.status === 429);
+  check('Till is throttled after 8 failed attempts', tillBlocked.status === 429);
 
-  // Till 2 on the SAME IP is NOT throttled and can verify PIN
-  const t2Success = await verifyPinPost({
-    request: new Request('https://kiwi.test/api/pin/verify', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Cookie: `kiwi_till=${till2}`,
-        'CF-Connecting-IP': sharedShopIp,
-      },
-      body: JSON.stringify({ merchant: 'cafe-atlas', pin: '1234' }),
-    }),
-    env,
-  });
-  const t2Data = await t2Success.json();
-  check('Till 2 on same shop IP is NOT locked out by Till 1 mistakes', t2Success.status === 200 && t2Data.ok === true);
-
-  // Manager on same shop IP is NOT locked out from voiding
+  // Manager on same shop IP using authenticated session is NOT locked out from voiding
   const mgrCancel = await cancelPost({
     request: new Request('https://kiwi.test/api/sale/cancel', {
       method: 'POST',

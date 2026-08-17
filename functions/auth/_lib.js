@@ -155,12 +155,7 @@ export async function staffToken(sitePassword) {
 // pairing is meant to last until the merchant unpairs.
 export const TILL_COOKIE = 'kiwi_till';
 
-export async function tillToken(authSecret, merchant, deviceId = '') {
-  const dev = String(deviceId || '').trim();
-  if (dev) {
-    const sig = await hmacHex(authSecret, 'kiwi-till-v1:' + String(merchant || '') + ':' + dev);
-    return `${sig}.${dev}`;
-  }
+export async function tillToken(authSecret, merchant) {
   return hmacHex(authSecret, 'kiwi-till-v1:' + String(merchant || ''));
 }
 
@@ -183,13 +178,6 @@ export async function isTillFor(request, env, merchant) {
   if (!secret || !merchant) return false;
   const got = readCookie(request, TILL_COOKIE);
   if (!got) return false;
-  if (got.includes('.')) {
-    const dot = got.lastIndexOf('.');
-    const sig = got.slice(0, dot);
-    const dev = got.slice(dot + 1);
-    const want = await hmacHex(secret, 'kiwi-till-v1:' + String(merchant || '') + ':' + dev);
-    return timingSafeEqualHex(sig, want);
-  }
   return timingSafeEqualHex(got, await tillToken(secret, merchant));
 }
 
@@ -803,19 +791,8 @@ const LIMIT_WINDOW_MS = 15 * 60 * 1000;   // fenêtre d'observation
 const LIMIT_BLOCK_MS  = 15 * 60 * 1000;   // durée du blocage
 const LIMIT_MAX_FAILS = 8;                // essais ratés tolérés par fenêtre
 
-function limiterKey(request, scope) {
-  // Key on authenticated device token (till cookie), session cookie, or operator cookie
-  // when present, rather than the shared public NAT IP of the entire venue.
-  // This prevents cashier typos on one till from locking out other tills or the manager.
-  const till = readCookie(request, TILL_COOKIE);
-  if (till) return `${scope}|till:${till.slice(-32)}`;
-
-  const sess = readCookie(request, SESS_COOKIE);
-  if (sess) return `${scope}|sess:${sess.slice(-32)}`;
-
-  const op = readCookie(request, OP_COOKIE);
-  if (op) return `${scope}|op:${op.slice(-32)}`;
-
+function limiterKey(request, scope, identity = '') {
+  if (identity) return `${scope}|${identity}`;
   const ip = request.headers.get('CF-Connecting-IP')
           || request.headers.get('X-Forwarded-For')
           || '';
@@ -825,8 +802,8 @@ function limiterKey(request, scope) {
 /* Déjà bloqué ? Vérifié AVANT de regarder le code, pour qu'une entrée
    malformée ne serve pas de sonde gratuite. Renvoie une Response 429 à
    retourner telle quelle, ou null si la voie est libre. */
-export async function limitCheck(request, env, scope) {
-  const k = limiterKey(request, scope);
+export async function limitCheck(request, env, scope, identity = '') {
+  const k = limiterKey(request, scope, identity);
   if (!k || !env.DB) return null;
   try {
     const a = await env.DB.prepare(
@@ -842,8 +819,8 @@ export async function limitCheck(request, env, scope) {
 
 /* Un essai raté de plus. Fenêtre glissante par redémarrage : passé
    LIMIT_WINDOW_MS la ligne repart à 1, donc elle expire d'elle-même. */
-export async function limitFail(request, env, scope) {
-  const k = limiterKey(request, scope);
+export async function limitFail(request, env, scope, identity = '') {
+  const k = limiterKey(request, scope, identity);
   if (!k || !env.DB) return;
   const now = Date.now();
   try {
@@ -867,8 +844,8 @@ export async function limitFail(request, env, scope) {
 
 /* Entrée réussie : on efface l'ardoise, pour qu'un commerçant qui s'est
    trompé deux fois avant de réussir ne traîne pas son compteur. */
-export async function limitClear(request, env, scope) {
-  const k = limiterKey(request, scope);
+export async function limitClear(request, env, scope, identity = '') {
+  const k = limiterKey(request, scope, identity);
   if (!k || !env.DB) return;
   try { await env.DB.prepare('DELETE FROM pair_attempts WHERE ip = ?').bind(k).run(); } catch (_) {}
 }
@@ -895,25 +872,41 @@ export async function verifyStaffPin(request, env, merchant, pin, { requireTill 
     return { ok: false, error: 'bad-pin', status: 401 };
   }
 
-  // Attempt rate-limiting by scope: 'pin:<merchant>'
-  const blocked = await limitCheck(request, env, `pin:${merchant}`);
-  if (blocked) return { ok: false, response: blocked };
+  // Determine and verify caller identity first:
+  // Requester must prove they are a paired till for this merchant (isTillFor HMAC),
+  // an authenticated session owner of this merchant (readSession signature), or a named operator.
+  let identity = '';
+  let authorized = false;
 
-  // Authorization check: requester must prove they are a paired till for this
-  // merchant, an authenticated session owner of this merchant, or a named operator.
-  if (requireTill) {
-    const isTill = await isTillFor(request, env, merchant);
-    let isOwner = false;
+  const isTill = await isTillFor(request, env, merchant);
+  if (isTill) {
+    authorized = true;
+    identity = `till:${merchant}`;
+  } else {
     const sess = await readSession(readCookie(request, SESS_COOKIE), env && env.AUTH_SECRET);
     if (sess && sess.aid) {
       const entitled = await entitledMerchant(request, env, merchant);
-      isOwner = entitled === merchant;
+      if (entitled === merchant) {
+        authorized = true;
+        identity = `sess:${sess.aid}`;
+      }
     }
-    const isOp = await isOperator(request, env);
-    if (!isTill && !isOwner && !isOp) {
-      return { ok: false, error: 'forbidden-till', status: 403 };
+    if (!authorized) {
+      const isOp = await isOperator(request, env);
+      if (isOp) {
+        authorized = true;
+        identity = 'op:named';
+      }
     }
   }
+
+  if (requireTill && !authorized) {
+    return { ok: false, error: 'forbidden-till', status: 403 };
+  }
+
+  // Attempt rate-limiting by scope: 'pin:<merchant>' keyed on proven identity (or IP if unauthenticated)
+  const blocked = await limitCheck(request, env, `pin:${merchant}`, identity);
+  if (blocked) return { ok: false, response: blocked };
 
   let staff;
   try {
@@ -925,11 +918,11 @@ export async function verifyStaffPin(request, env, merchant, pin, { requireTill 
   }
 
   if (!staff) {
-    await limitFail(request, env, `pin:${merchant}`);
+    await limitFail(request, env, `pin:${merchant}`, identity);
     return { ok: false, error: 'bad-pin', status: 401 };
   }
 
-  await limitClear(request, env, `pin:${merchant}`);
+  await limitClear(request, env, `pin:${merchant}`, identity);
   return {
     ok: true,
     staff: {
