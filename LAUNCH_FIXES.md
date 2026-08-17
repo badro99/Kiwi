@@ -114,7 +114,7 @@ Live proof captured on the owner's Mac (one browser):
   authenticated **merchant slug** (`slugMerchant(KiwiMe.business)` / `kiwiLiveMerchant`,
   the same key the client book already uses). `pages-pro.js` `_bqxVenue()` and
   `pos-boutique.js` `_bqKey` resolve slug-first; only fall to `maisonMansour` for a
-  genuinely unpaired **local** PIN-0002 demo (guard: `KiwiEnv.isReal()===false && no
+  genuinely unpaired **local** boutique demo (guard: `KiwiEnv.isReal()===false && no
   kiwiPairedVenue && no kiwiLiveMerchant`). `boutique-catalog.use()` default must
   NEVER be `DEMO_VENUE` for a real session. Longer term: D1 `products` table + `/api/inventory`.
 

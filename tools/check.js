@@ -210,10 +210,15 @@ section('Forbidden patterns');
   const CONTEXTUAL_SECRET = /(?:pin|passcode|pairing[-_ ]?code|password|auth[-_ ]?secret)[\s\S]{0,40}?['"`]([0-9]{4,8})['"`]/i;
   const MD_PROSE_SECRET = /\b(?:pin|passcode|pairing[-_ ]?code|code de jumelage|password|mot de passe)\b[^\n\r]{0,40}?\b([0-9]{4,8})\b/i;
 
-  const DEMO_SEQUENCE = new Set([
-    '0000','0001','0002','0003','0004','0005','0006','0007','0008','0009',
-    '0010','0011','0012','0013','0014','0015','0505','0909','1111','1234',
-    '2024','2025','2026','2027','2345','3456','4567','5678','6789','7890','8901'
+  // Exact 24-entry mock seed allowlist (for code/config files only; markdown has zero exemptions):
+  // - 16 public demo métier switch codes in assets/pos-dispatch.js & kiwi-caisse.html ('0000'..'0015')
+  // - 8 sequential mock PINs for demo shift team members in assets/pages-pro.js ('1234'..'8901')
+  const CODE_DEMO_SEQUENCE = new Set([
+    // 16 caisse vertical demo switch codes (kiwi-caisse.html, assets/pos-dispatch.js)
+    '0000', '0001', '0002', '0003', '0004', '0005', '0006', '0007',
+    '0008', '0009', '0010', '0011', '0012', '0013', '0014', '0015',
+    // 8 mock staff roster PINs (assets/pages-pro.js team seed)
+    '1234', '2345', '3456', '4567', '5678', '6789', '7890', '8901'
   ]);
 
   let leaks = 0;
@@ -233,11 +238,22 @@ section('Forbidden patterns');
     const lines = content.split('\n');
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
-      const mMatch = isMarkdown ? line.match(MD_PROSE_SECRET) : line.match(CONTEXTUAL_SECRET);
-      if (mMatch && !DEMO_SEQUENCE.has(mMatch[1])) {
-        leaks++;
-        fail(`${rel}:${i + 1} contains an unredacted credential literal`);
-        break;
+      if (isMarkdown) {
+        // Markdown files have ZERO value exemptions. Any match is an unredacted credential.
+        const mMd = line.match(MD_PROSE_SECRET);
+        if (mMd) {
+          leaks++;
+          fail(`${rel}:${i + 1} contains an unredacted credential literal`);
+          break;
+        }
+      } else {
+        // Code/config files exempt only known public demo fixtures
+        const mCtx = line.match(CONTEXTUAL_SECRET);
+        if (mCtx && !CODE_DEMO_SEQUENCE.has(mCtx[1])) {
+          leaks++;
+          fail(`${rel}:${i + 1} contains an unredacted credential literal`);
+          break;
+        }
       }
     }
   }
