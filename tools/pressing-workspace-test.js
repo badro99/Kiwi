@@ -35,7 +35,7 @@ ok(venues.includes('active.subtype = exactSubtype'), 'server type keeps the exac
 ok(pairingJs.includes("if (t && ids[t]) return { kind: 'vertical', id: t }"), 'operator hand-off routes an exact pressing type into the pressing till');
 const pairingMatch = caisse.match(/assets\/caisse-pairing\.js\?v=(\d+)/);
 ok(pairingMatch && sw.includes(`'/assets/caisse-pairing.js?v=${pairingMatch[1]}'`), 'pressing route fix bypasses the old cached pairing router');
-ok(caisse.includes('assets/pos-dispatch.js?v=24') && sw.includes("'/assets/pos-dispatch.js?v=24'") && dispatchJs.includes("file: 'pressing-caisse', rev: '27'") && sw.includes("'/assets/pressing-caisse.js?v=27'") && (sw.includes("'/assets/pressing-caisse.css?v=26'") || sw.includes("'/assets/pressing-caisse.css?v=27'")), 'pressing loader and lazy assets use deploy-stable cache revisions');
+ok(caisse.includes('assets/pos-dispatch.js?v=24') && sw.includes("'/assets/pos-dispatch.js?v=24'") && dispatchJs.includes("file: 'pressing-caisse', rev: '27'") && sw.includes("'/assets/pressing-caisse.js?v=27'") && sw.includes("'/assets/pressing-caisse.css?v=27'"), 'pressing loader and lazy assets use deploy-stable cache revisions');
 ok(dashboard.includes('assets/pressing-dashboard.js?v=9'), 'dashboard loads the pressing subpages');
 ok(dashboard.includes('assets/pressing-ops.js?v=4') && caisse.includes('assets/pressing-ops.js?v=4'), 'dashboard and till share the same operations bridge');
 ok(sw.includes("'/assets/pressing-dashboard.css?v=9'") && sw.includes("'/assets/pressing-dashboard.js?v=9'"), 'pressing workspace is available offline');
