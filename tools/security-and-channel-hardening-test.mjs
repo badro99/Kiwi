@@ -192,5 +192,28 @@ const searchRes = await employeeClients.onRequestGet({ request: searchWildcardRe
 const searchData = await searchRes.json();
 check('Employee client search escapes % and finds exact match', searchRes.status === 200 && searchData.clients.some(c => c.id === 'c-100'));
 
+// 4. Signup Rate Limiting
+import * as signup from '../functions/auth/signup.js';
+
+// Multiple failed signup attempts from the same IP
+const badIp = '198.51.100.42';
+for (let i = 0; i < 8; i++) {
+  const badReq = new Request('https://kiwi-os.com/auth/signup', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'CF-Connecting-IP': badIp },
+    body: JSON.stringify({ email: 'bad-email', name: '', business: '', password: 'short' }),
+  });
+  await signup.onRequestPost({ request: badReq, env, waitUntil: () => {} });
+}
+
+// 9th attempt should be blocked with 429 Too Many Requests
+const blockedReq = new Request('https://kiwi-os.com/auth/signup', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json', 'CF-Connecting-IP': badIp },
+  body: JSON.stringify({ email: 'valid@example.com', name: 'Valid User', business: 'Valid Store', password: 'validPassword123' }),
+});
+const blockedRes = await signup.onRequestPost({ request: blockedReq, env, waitUntil: () => {} });
+check('Signup rate limiter blocks flood with 429 Too Many Requests', blockedRes.status === 429);
+
 console.log(failures ? `\n✗ ${failures} failure(s)\n` : `\n✓ All security and channel hardening checks green.\n`);
 process.exitCode = failures ? 1 : 0;

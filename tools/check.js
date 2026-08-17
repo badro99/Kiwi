@@ -801,7 +801,7 @@ section('Whole-project regressions');
     'kitchen-void-protocol-test.mjs',
     'multi-device-collision-test.mjs',
     'kitchen-modifiers-and-seating-test.mjs',
-    'live-amira-verification.mjs',
+    'amira-integration-test.mjs',
     'security-and-channel-hardening-test.mjs',
   ];
   suites.forEach((name) => {

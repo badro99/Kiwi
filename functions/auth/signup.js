@@ -1,6 +1,9 @@
 // POST /auth/signup — create a merchant account, start a session, mirror the
 // lead. Body JSON: { email, name, business, password }.
-import { PASSWORD_MAX, hashPassword, makeSession, sessionCookie, json, normEmail, mirrorLead } from './_lib.js';
+import {
+  PASSWORD_MAX, hashPassword, makeSession, sessionCookie, json, normEmail, mirrorLead,
+  limitCheck, limitFail, limitClear,
+} from './_lib.js';
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
@@ -9,20 +12,38 @@ export async function onRequestPost(context) {
   const secret = env.AUTH_SECRET;
   if (!env.DB || !secret) return json({ error: 'not-configured' }, 503);
 
+  const blocked = await limitCheck(request, env, 'signup');
+  if (blocked) return blocked;
+
   let body;
-  try { body = await request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
+  try { body = await request.json(); } catch (_) {
+    await limitFail(request, env, 'signup');
+    return json({ error: 'bad-json' }, 400);
+  }
 
   const email = normEmail(body.email);
   const name = String(body.name || '').trim().slice(0, 120);
   const business = String(body.business || '').trim().slice(0, 120);
   const password = String(body.password || '');
 
-  if (email.length > 254 || !EMAIL_RE.test(email)) return json({ error: 'email' }, 400);
-  if (!name) return json({ error: 'name' }, 400);
-  if (password.length < 8 || password.length > PASSWORD_MAX) return json({ error: 'weak' }, 400);
+  if (email.length > 254 || !EMAIL_RE.test(email)) {
+    await limitFail(request, env, 'signup');
+    return json({ error: 'email' }, 400);
+  }
+  if (!name) {
+    await limitFail(request, env, 'signup');
+    return json({ error: 'name' }, 400);
+  }
+  if (password.length < 8 || password.length > PASSWORD_MAX) {
+    await limitFail(request, env, 'signup');
+    return json({ error: 'weak' }, 400);
+  }
 
   const existing = await env.DB.prepare('SELECT id FROM accounts WHERE email = ?').bind(email).first();
-  if (existing) return json({ error: 'exists' }, 409);
+  if (existing) {
+    await limitFail(request, env, 'signup');
+    return json({ error: 'exists' }, 409);
+  }
 
   const { salt, hash } = await hashPassword(password);
   const id = 'acc-' + crypto.randomUUID();
@@ -34,8 +55,11 @@ export async function onRequestPost(context) {
     ).bind(id, email, name, business, salt, hash, ts).run();
   } catch (e) {
     // UNIQUE(email) race → treat as already-registered.
+    await limitFail(request, env, 'signup');
     return json({ error: 'exists' }, 409);
   }
+
+  await limitClear(request, env, 'signup');
 
   // Best-effort lead mirror to the Google Sheet — never blocks the response.
   context.waitUntil(mirrorLead(env, { email, name, business, ts }));

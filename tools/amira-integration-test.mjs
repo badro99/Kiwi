@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /* ═══════════════════════════════════════════════════════════════════════════
- * Kiwi · LIVE AMIRA VENUE VERIFICATION PASS
- * End-to-end validation of:
+ * Kiwi · AMIRA CAFÉ INTEGRATION TEST
+ * End-to-end integration test of:
  *   1. Text-only "sans oignon" allergy modifier rendered on KDS screen.
  *   2. Waiter tablet table transfer and line void (verifying 200 OK, not 403).
- *   3. Production D1 schema migration verification for audit ledgers.
+ *   3. D1 schema migration SQL file integrity for audit ledgers.
  * ═══════════════════════════════════════════════════════════════════════════ */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -13,10 +13,10 @@ import { DatabaseSync } from 'node:sqlite';
 
 import { employeeToken, EMPLOYEE_COOKIE } from '../functions/auth/_lib.js';
 import * as queue from '../functions/api/order/queue.js';
-import { parseSchema, diff } from './d1-schema.mjs';
+import { parseSchema } from './d1-schema.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const AUTH_SECRET = 'amira-live-verification-secret';
+const AUTH_SECRET = 'amira-integration-test-secret';
 const MERCHANT = 'amira-cafe';
 const STAFF_ID = 'mem-amira-waiter';
 
@@ -143,7 +143,7 @@ function renderKdsCard(order) {
 }
 
 console.log('\n═══════════════════════════════════════════════════════════════════════');
-console.log('  AMIRA CAFÉ — LIVE OPERATIONAL VERIFICATION PASS');
+console.log('  AMIRA CAFÉ — INTEGRATION TEST PASS');
 console.log('═══════════════════════════════════════════════════════════════════════\n');
 
 await setupAmiraVenue();
@@ -205,7 +205,7 @@ const transferRes = await postQueue({
 check('Waiter tablet transfers Table 4 to Table 6 (200 OK — NOT 403)', transferRes.status === 200 && transferRes.data.ok === true);
 
 const auditTransferRow = db._db.prepare('SELECT from_table, to_table, is_merge FROM table_transfers WHERE merchant = ?').get(MERCHANT);
-check('Audit row written to table_transfers ledger in D1',
+check('Audit row written to table_transfers ledger in test DB',
   auditTransferRow && auditTransferRow.from_table === '4' && auditTransferRow.to_table === '6');
 
 // Waiter voids the Shawarma line on Table 6 from waiter tablet
@@ -224,11 +224,11 @@ const voidRes = await postQueue({
 check('Waiter tablet voids line on Table 6 (200 OK — NOT 403)', voidRes.status === 200 && voidRes.data.ok === true);
 
 const auditVoidRow = db._db.prepare('SELECT order_id, table_no, item_name, reason, status FROM kitchen_voids WHERE merchant = ?').get(MERCHANT);
-check('Audit row written to kitchen_voids pertes ledger in D1 with status approved',
+check('Audit row written to kitchen_voids pertes ledger in test DB with status approved',
   auditVoidRow && auditVoidRow.order_id === kdsOrder.id && auditVoidRow.table_no === '6' && auditVoidRow.status === 'approved');
 
 /* ── 3. D1 SCHEMA MIGRATION INTEGRITY ────────────────────────────────────── */
-console.log('\n■ 3. Production D1 Schema Migration Integrity');
+console.log('\n■ 3. D1 Schema Migration File Integrity');
 
 const schemaSql = fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8');
 const parsed = parseSchema(schemaSql);
@@ -243,5 +243,5 @@ const migrationVoids = fs.existsSync(path.join(ROOT, 'migrations', '2026-08-17-k
 check('Migration file for table_transfers exists in migrations/', migrationTransfers);
 check('Migration file for kitchen_voids exists in migrations/', migrationVoids);
 
-console.log(failures ? `\n✗ ${failures} failure(s)\n` : `\n✓ All live Amira verification checks green.\n`);
+console.log(failures ? `\n✗ ${failures} failure(s)\n` : `\n✓ All Amira integration checks green.\n`);
 process.exitCode = failures ? 1 : 0;
