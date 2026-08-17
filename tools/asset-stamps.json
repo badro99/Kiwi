@@ -72,8 +72,8 @@
     "sha": "509b94e540471caf"
   },
   "assets/caisse-stock-sync.js": {
-    "v": "1",
-    "sha": "98a5a52a07e48dc1"
+    "v": "2",
+    "sha": "e69f655ad449a30d"
   },
   "assets/channel-sales.js": {
     "v": "3",
@@ -200,8 +200,8 @@
     "sha": "e406ed46de8593ef"
   },
   "assets/inventory-ledger.js": {
-    "v": "2",
-    "sha": "b3bb03859de480da"
+    "v": "3",
+    "sha": "47bd012249ddba28"
   },
   "assets/invoicing.css": {
     "v": "5",
@@ -428,8 +428,8 @@
     "sha": "6d37239977a1dca2"
   },
   "assets/pos-sale.js": {
-    "v": "3",
-    "sha": "c4a6b46ca94510dd"
+    "v": "4",
+    "sha": "ca61760d42c6dca3"
   },
   "assets/pos-spa.css": {
     "v": "2",

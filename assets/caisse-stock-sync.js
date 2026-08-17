@@ -24,6 +24,10 @@
       if (s) return String(s).slice(0, 64);
     } catch (_) {}
     try {
+      if (window.KiwiPlatform && typeof window.KiwiPlatform.pairedMerchant === 'function') {
+        var pm = window.KiwiPlatform.pairedMerchant();
+        if (pm) return pm;
+      }
       var p = JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
       return p && p.merchant ? String(p.merchant).slice(0, 64) : '';
     } catch (_) { return ''; }

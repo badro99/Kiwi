@@ -201,8 +201,8 @@ var SHELL = [
   '/assets/venue-store.js?v=2',
   /* One stock across owner dashboard and till. Catalog metadata is a cloud
      document; quantities are append-only movements, both usable offline. */
-  '/assets/inventory-ledger.js?v=2',
-  '/assets/caisse-stock-sync.js?v=1',
+  '/assets/inventory-ledger.js?v=3',
+  '/assets/caisse-stock-sync.js?v=2',
   '/assets/stock.js?v=3',
   /* Le coût de revient. Dans la coquille parce que les tuiles Marge brute,
      Bénéfice brut et Coût matière du tableau de bord passent toutes par lui :
@@ -238,7 +238,7 @@ var SHELL = [
      cuisine à l'écran sans jamais sortir sur la thermique. */
   '/assets/kitchen-print-queue.js?v=2',
   '/assets/food-production-print.js?v=1',
-  '/assets/pos-sale.js?v=3',
+  '/assets/pos-sale.js?v=4',
   '/assets/pos-dispatch.js?v=27',
   '/assets/retail-scan.css?v=6',
   '/assets/vendor/zxing-browser.min.js?v=1',

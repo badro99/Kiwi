@@ -9,10 +9,10 @@
   var syncing = false;
 
   function real() {
-    try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || !!paired(); }
+    try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || !!window.KiwiPlatform?.isPaired?.() || !!paired(); }
     catch (_) { return !!paired(); }
   }
-  function paired() { try { return JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
+  function paired() { try { return window.KiwiPlatform?.pairedVenue?.() || JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
   /* QUEL MAGASIN ÉCRIT CE MOUVEMENT DE STOCK ?
    * L'appairage (`kiwiPairedVenue`) est l'identité du COMPTE derrière ce
    * comptoir, pas de l'établissement qu'on regarde. Un commerçant qui tient un
@@ -27,6 +27,12 @@
     try {
       if (window.KiwiCloudDoc && window.KiwiCloudDoc.currentSlug) {
         var cur = window.KiwiCloudDoc.currentSlug(); if (cur) return String(cur).slice(0, 64);
+      }
+    } catch (_) {}
+    try {
+      if (window.KiwiPlatform && typeof window.KiwiPlatform.pairedMerchant === 'function') {
+        var pm = window.KiwiPlatform.pairedMerchant();
+        if (pm) return pm;
       }
     } catch (_) {}
     var p = paired();

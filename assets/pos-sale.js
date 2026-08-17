@@ -44,12 +44,12 @@
   var PREFIX = 'kiwi:posDay:';
   var MAX_ROWS = 800;          /* garde-fou mémoire : ~une journée très chargée */
 
-  function paired() { try { return JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
+  function paired() { try { return window.KiwiPlatform?.pairedVenue?.() || JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
   /* Vrai commerce = session hébergée OU terminal appairé. Même règle que les
      modules métier (pvReal) et que pos-boutique.js (isDemoStore), pour qu'un
      seul et même terminal ne soit jamais « réel » ici et « démo » là-bas. */
   function isReal() {
-    try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || !!paired(); }
+    try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || !!window.KiwiPlatform?.isPaired?.() || !!paired(); }
     catch (_) { return !!paired(); }
   }
 
@@ -93,6 +93,10 @@
     /* A till changes owner by PAIRING. The dashboard/session live target may be
        stale for a tick during re-pairing, so the device binding must win. */
     try {
+      if (window.KiwiPlatform && typeof window.KiwiPlatform.pairedMerchant === 'function') {
+        var pm = window.KiwiPlatform.pairedMerchant();
+        if (pm) return pm;
+      }
       var pv = paired();
       if (pv && pv.merchant) return String(pv.merchant).slice(0, 64);
     } catch (_) {}
