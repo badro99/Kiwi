@@ -787,16 +787,19 @@ for (const [shell, fnName] of [['kiwi-caisse.html', 'storePaired'], ['kiwi-serve
     `${shell} ${fnName}() prefers KiwiPlatform over a stale localStorage copy`);
 }
 
-/* 25. Invariant d'écrivain unique pour kiwiPairedVenue.
+/* 25. Invariant d'écrivain unique pour kiwiPairedVenue (liste blanche de lecture).
    Écrire kiwiPairedVenue n'est pas une simple écriture de clé : cela engage la
    détection de changement de commerce (onTenantSwitch), la purge des données de
    l'ancien locataire (ventes, catalogue, shifts) et l'événement 'kiwi-paired'.
-   Pour empêcher qu'un écran (cuisine, serveur, caisse) ou un module d'arrière-plan
-   ne réintroduise une écriture directe qui contourne la purge, ce contrôle statique
-   garantit qu'il n'existe EXACTEMENT QU'UN SEUL écrivain dans toute la base de production :
-   assets/pairing-commit.js. */
+   
+   Règle d'inversion : en dehors des deux fichiers propriétaires (assets/pairing-commit.js
+   pour l'écriture et assets/tenant-purge.js pour la liste des clés à purger),
+   TOUTE occurrence du littéral 'kiwiPairedVenue' / "kiwiPairedVenue" doit être
+   strictement une LECTURE autorisée (getItem, ls, get, .has, parse, read).
+   Toute autre forme — assignation par constante, écriture sur plusieurs lignes,
+   alias, suppression, crochet — est immédiatement en échec. */
 
-function findPairingWriterSites() {
+function auditPairingKeyUsage() {
   const scanFiles = [];
   function scanDir(dir, relPrefix = '') {
     const entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -824,42 +827,80 @@ function findPairingWriterSites() {
   }
   scanDir(root);
 
-  const hits = [];
-  function isPairingWrite(line) {
-    const trimmed = line.trim();
-    if (trimmed.startsWith('//') || trimmed.startsWith('/*') || trimmed.startsWith('*')) return false;
-    if (!/['"]kiwiPairedVenue['"]/.test(line)) return false;
-
-    // Mutating actions: setItem, removeItem, bracket assignment, delete, .set(), bare set()
-    if (/setItem|removeItem|\[\s*['"]kiwiPairedVenue['"]\s*\]\s*=|\bdelete\s+/.test(line)) return true;
-    if (/(?:\.|\b)set\s*\(/.test(line)) return true;
-
-    return false;
-  }
+  const READ_ALLOW_LIST = /(?:\.getItem|\bls|\bget|\.has|\bparse|\bread)\s*\(\s*$/i;
+  const violations = [];
+  let canonicalWriterCount = 0;
+  let canonicalWriterLine = null;
 
   for (const rel of scanFiles) {
     const full = path.join(root, rel);
     const content = fs.readFileSync(full, 'utf8');
-    const lines = content.split('\n');
-    for (let i = 0; i < lines.length; i++) {
-      if (isPairingWrite(lines[i])) {
-        hits.push({ file: rel, line: i + 1, snippet: lines[i].trim() });
+    const regex = /['"]kiwiPairedVenue['"]/g;
+    let match;
+
+    while ((match = regex.exec(content)) !== null) {
+      const idx = match.index;
+
+      // 1. Skip comments
+      const lineStart = content.lastIndexOf('\n', idx) + 1;
+      const linePrefix = content.slice(lineStart, idx);
+      if (linePrefix.includes('//')) continue;
+      const lastBlockOpen = content.lastIndexOf('/*', idx);
+      if (lastBlockOpen !== -1) {
+        const lastBlockClose = content.lastIndexOf('*/', idx);
+        if (lastBlockClose < lastBlockOpen) continue;
+      }
+
+      // Compute line number and context snippet
+      const line = content.slice(0, idx).split('\n').length;
+      const snippetStart = Math.max(0, idx - 30);
+      const snippetEnd = Math.min(content.length, idx + match[0].length + 30);
+      const snippet = content.slice(snippetStart, snippetEnd).replace(/\s+/g, ' ').trim();
+
+      // 2. Canonical owner: assets/pairing-commit.js
+      if (rel === 'assets/pairing-commit.js') {
+        const prefix = content.slice(0, idx);
+        if (/(?:\.|\b)set\s*\(\s*$/.test(prefix)) {
+          canonicalWriterCount++;
+          canonicalWriterLine = line;
+        } else if (!READ_ALLOW_LIST.test(prefix)) {
+          violations.push({ file: rel, line, snippet, reason: 'unrecognized call pattern in pairing-commit.js' });
+        }
+        continue;
+      }
+
+      // 3. Purge list owner: assets/tenant-purge.js
+      if (rel === 'assets/tenant-purge.js') {
+        // Assert it is in TENANT_KEYS list and not an assignment target
+        const prefix = content.slice(0, idx);
+        const suffix = content.slice(idx + match[0].length);
+        if (/\[\s*$/.test(prefix) || /,\s*$/.test(prefix) || /\]\s*=/.test(suffix.slice(0, 20))) {
+          if (/\]\s*=/.test(suffix.slice(0, 20))) {
+            violations.push({ file: rel, line, snippet, reason: 'bracket assignment target in tenant-purge.js' });
+          }
+        }
+        continue;
+      }
+
+      // 4. All other production files: MUST be an allow-listed read
+      const prefix = content.slice(0, idx);
+      if (!READ_ALLOW_LIST.test(prefix)) {
+        violations.push({ file: rel, line, snippet, reason: 'not an allow-listed read (getItem, ls, get, .has, parse, read)' });
       }
     }
   }
-  return { scanFiles, hits };
+
+  return { violations, canonicalWriterCount, canonicalWriterLine };
 }
 
-const pairingScan = findPairingWriterSites();
-const nonCanonicalHits = pairingScan.hits.filter(h => h.file !== 'assets/pairing-commit.js');
+const auditResult = auditPairingKeyUsage();
 
-ok(pairingScan.hits.length === 1,
-  `exactly 1 writer of kiwiPairedVenue across production files (found ${pairingScan.hits.length}: ${pairingScan.hits.map(h => `${h.file}:${h.line}`).join(', ') || 'none'})`);
-ok(nonCanonicalHits.length === 0,
-  `zero rogue writers or removers of kiwiPairedVenue outside assets/pairing-commit.js (offending: ${nonCanonicalHits.map(h => `${h.file}:${h.line} [${h.snippet}]`).join(', ') || 'none'})`);
-ok(pairingScan.hits.length > 0 && pairingScan.hits[0].file === 'assets/pairing-commit.js',
-  `canonical writer is located in assets/pairing-commit.js (at line ${pairingScan.hits[0]?.line || '?'})`);
+ok(auditResult.canonicalWriterCount === 1,
+  `exactly 1 canonical writer of kiwiPairedVenue in assets/pairing-commit.js (found ${auditResult.canonicalWriterCount}${auditResult.canonicalWriterLine ? ` at line ${auditResult.canonicalWriterLine}` : ''})`);
+ok(auditResult.violations.length === 0,
+  `zero unauthorized pairing key uses across production files (violations: ${auditResult.violations.map(v => `${v.file}:${v.line} [${v.snippet}] (${v.reason})`).join(', ') || 'none'})`);
 
 if (process.exitCode) process.exit(process.exitCode);
 console.log(`  ✓ pairing resolver (${pass} controls: pairing agreement, storage fallback, purge immediacy, fail-soft JSON, isPaired invariant, direct module tests with/without platform across 21 modules + cycle safety + 2 HTML shell resolvers + single writer invariant)`);
+
 
