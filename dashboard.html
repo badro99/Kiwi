@@ -5208,16 +5208,11 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
       </a>
 
       <!-- La bande « Croissance » — Commande en ligne, Commander à table,
-           Clients & Marketing, Cartes cadeaux — est retirée. Ces quatre
-           surfaces sont encore en chantier et n'ont rien à faire sur l'écran
-           d'un client qui paie. Elles vivaient ici, cachées derrière un code :
-           mais une porte fermée reste une porte, et 1111 l'ouvrait. On enlève
-           la porte plutôt que de la surveiller.
-           Les modules restent sur le disque (assets/growth-*.js) — rien de
-           votre travail n'est perdu, il n'est simplement plus servi. Seul
-           growth-crm.js est encore chargé : c'est le compositeur de campagne
-           qu'ouvre le bouton du VRAI Clients & Marketing, qui lui est vendu
-           et reste en place plus haut dans cette même barre. -->
+           Clients & Marketing, Cartes cadeaux — est retirée. growth-ordering,
+           growth-qr et growth-giftcards ont été supprimés du projet. Seul
+           growth-crm.js reste — c'est le compositeur de campagne qu'ouvre
+           le bouton du VRAI Clients & Marketing (clients-directory.js), qui lui
+           est vendu et reste en place plus haut dans cette même barre. -->
 
       <div data-vertical-section></div>
 
@@ -5997,7 +5992,7 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
 <script src="assets/err-reporter.js" defer></script>
 <!-- Env gate (demos local-only) — must run before venues.js and the app. -->
 <script src="assets/kiwi-env.js" defer></script>
-<script src="assets/i18n.js?v=3" defer></script>
+<script src="assets/i18n.js?v=4" defer></script>
 <!-- Les milliers en arabe (assets/rtl-numbers.js). Une espace ordinaire entre
      deux nombres prend la direction du paragraphe : « 31 500 » s'affichait
      « 500 31 » en RTL. Ne s'exécute que sur dir="rtl" — le français et
@@ -6016,8 +6011,8 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
 <script src="assets/qrcode.js" defer></script>
 <script src="assets/growth-kit.js" defer></script>
 <script src="assets/order-qr.js?v=2" defer></script>
-<!-- growth-ordering / growth-qr / growth-giftcards ne sont plus servis : chantier
-     en cours, aucun point d'entrée sur le tableau de bord. growth-crm reste — le
+<!-- growth-ordering / growth-qr / growth-giftcards ont été supprimés du dépôt :
+     morts depuis le chantier, aucun point d'entrée sur le tableau de bord. growth-crm reste — le
      bouton « Campagne » du vrai Clients & Marketing l'ouvre. -->
 <script src="assets/growth-crm.js" defer></script>
 <script src="assets/dark-fixes.js" defer></script>
