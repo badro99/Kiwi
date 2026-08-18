@@ -133,6 +133,9 @@
       --emerald:       #3FB67A;  /* accent — functional mid-green (success/paid); brand has no equivalent, kept for contrast */
       --mint:          #7DF2B0;
       --danger-mute:   #B85245;
+      /* Le rouge qui ENCRE, distinct de celui qui peint : --danger-mute posé
+         sur son propre voile ne mesurait que 4,19:1 le jour et 3,48 la nuit. */
+      --danger-ink:    #AE3A2A;
       /* Le blanc porté PAR un bouton vert. Ne suit pas le climat : le bouton
          reste vert la nuit, donc son texte reste clair. */
       --on-accent:     #FFFFFF;
@@ -200,6 +203,14 @@
       /* Valeurs qui vivaient en dur dans des keyframes et un dégradé, donc
          hors du jeu de jetons et aveugles au climat. */
       --on-forest:       #EAFFF4;
+      /* La table qui RÉCLAME l'addition. Le fond bat entre --pulse-lo et
+         --pulse-hi ; l'encre posée dessus est donc du même couple et bascule
+         avec lui. Sans quoi : un fond qui s'éclaircit la nuit sous une encre
+         restée blanche — c'est exactement ce qui était arrivé ici, à 1,6:1,
+         sur LA carte qu'un serveur doit repérer en premier. */
+      --urgent-bg:       var(--forest);
+      --urgent-ink:      var(--on-accent);
+      --urgent-halo:     rgba(255,255,255,.7);
       --pulse-lo:        #1F5D3C;
       --pulse-hi:        #2A6F4A;
       --pause-lo:        #C77526;
@@ -252,7 +263,18 @@
          écran lu en diagonale entre deux tables. */
       --atmos: none;
 
-      --gradient: linear-gradient(135deg, var(--forest) 0%, #3FB67A 100%);
+      /* Le dégradé reste — mais pour ce qu'il sait faire : une JAUGE, où la
+         transition lit le trajet. Sur un bouton, c'est la signature d'un SaaS
+         de 2018, là où le reste du produit pose des aplats et un micro-relief. */
+      --gradient: linear-gradient(135deg, var(--forest) 0%, var(--emerald) 100%);
+
+      /* L'action principale : aplat de marque + élévation TEINTÉE Atlas, jamais
+         une lueur menthe. Fond et encre forment UN couple, parce qu'ils
+         basculent ensemble : repeindre l'un sans l'autre donne du blanc sur
+         menthe, soit 2,4:1. */
+      --btn-primary-bg:  var(--forest);
+      --btn-primary-ink: var(--on-accent);
+      --elev-accent: 0 1px 2px -1px rgba(11,110,79,.30), 0 10px 24px -14px rgba(11,110,79,.50);
 
       --topbar-h: 56px;
       --bottom-h: 64px;
@@ -310,6 +332,7 @@
       --warn-solid:    #E0940A;
       --warn-soft-bg:  rgba(199,117,38,0.14);
       --warn-soft-ink: #E2A264;
+      --danger-ink:    #FF9A8A;
 
       --frame:         #1A211E;
       --glass:        rgba(20,27,24,0.86);
@@ -321,6 +344,12 @@
       --forest-ink-deep: #A9F5C9;
       --forest-edge:     rgba(125,242,176,0.55);
       --on-forest:       #06281A;
+      /* La nuit, la carte urgente passe en menthe pleine — « le noir devient
+         menthe » — et son encre redevient sombre avec elle. Un aplat forest
+         sur une carte #101614 ne se détacherait qu'à 2,99:1 du fond. */
+      --urgent-bg:       #14E08A;
+      --urgent-ink:      #06281A;
+      --urgent-halo:     rgba(6,40,26,.55);
       --pulse-lo:        #14E08A;
       --pulse-hi:        #7DF2B0;
       --pause-lo:        #E8974A;
@@ -328,6 +357,14 @@
 
       --shadow-1: 0 1px 2px rgba(0,0,0,.45), 0 6px 16px rgba(0,0,0,.38);
       --shadow-2: 0 10px 34px rgba(0,0,0,.60), 0 2px 8px rgba(0,0,0,.45);
+      /* Un aplat #0B6E4F sur une carte #101614 ne mesure que 2,99:1 : sous les
+         3:1 que la WCAG demande pour la LIMITE d'un composant — un bouton qui
+         se fond dans son fond. La nuit, l'aplat monte à --emerald (7,0:1
+         contre la carte) et son encre redevient sombre. */
+      --btn-primary-bg:  var(--emerald);
+      --btn-primary-ink: var(--on-emerald);
+      --elev-accent: 0 1px 2px rgba(0,0,0,.5), 0 10px 26px -14px rgba(0,0,0,.65);
+
       --shadow-3: 0 34px 70px rgba(0,0,0,.75);
       --rim: inset 0 1px 0 rgba(255,255,255,0.055);
       --atmos:
@@ -699,11 +736,11 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       width: 100%;
       height: 64px;
       border-radius: 18px;
-      background: var(--gradient);
-      color: var(--on-accent);
+      background: var(--btn-primary-bg);
+      color: var(--btn-primary-ink);
       font-size: 17px; font-weight: 600;
       display: inline-flex; align-items: center; justify-content: center; gap: 10px;
-      box-shadow: 0 8px 24px rgba(63,182,122,0.25);
+      box-shadow: var(--elev-accent);
       transition: transform 150ms ease, box-shadow 150ms ease;
     }
     .ci-btn:active { transform: scale(0.98); }
@@ -995,6 +1032,8 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     }
     .filter-chips::-webkit-scrollbar { display: none; }
     .filter-chip {
+      min-height: 44px;
+      display: inline-flex; align-items: center;
       padding: 7px 14px;
       border-radius: 999px;
       background: var(--paper-mute);
@@ -1068,13 +1107,13 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       border-color: var(--mint-edge);
     }
     .table-card[data-status="bgha-ykhlass"] {
-      background: var(--forest);
-      color: var(--on-accent);
+      background: var(--urgent-bg);
+      color: var(--urgent-ink);
       animation: urgent-pulse 2.4s ease-in-out infinite;
     }
     .table-card[data-status="ka-tkhdam"] {
       background: var(--emerald);
-      color: var(--on-accent);
+      color: var(--on-emerald);
     }
     .table-card[data-status="khlass"] {
       background: var(--surface);
@@ -1094,10 +1133,13 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       font-size: 16px; font-weight: 700;
       letter-spacing: -0.01em;
     }
+    /* Le voile et l-encre se DÉDUISENT de l-encre de la carte : une valeur
+       blanche en dur ne survit ni au passage en menthe la nuit, ni a un
+       aplat clair comme --emerald. */
     .table-card[data-status="bgha-ykhlass"] .tc-num,
     .table-card[data-status="ka-tkhdam"] .tc-num {
-      background: rgba(255,255,255,0.18);
-      color: var(--on-accent);
+      background: color-mix(in srgb, currentColor 18%, transparent);
+      color: currentColor;
     }
     .table-card[data-status="khlass"] .tc-num {
       background: var(--mint-tint);
@@ -1115,8 +1157,8 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       opacity: 0.7;
     }
     .table-card[data-status="bgha-ykhlass"] .tc-line2,
-    .table-card[data-status="ka-tkhdam"] .tc-line2 { color: rgba(255,255,255,0.85); opacity: 1; }
-    .table-card[data-status="khlass"] .tc-line2 { color: var(--emerald); font-weight: 600; opacity: 1; }
+    .table-card[data-status="ka-tkhdam"] .tc-line2 { color: color-mix(in srgb, currentColor 85%, transparent); opacity: 1; }
+    .table-card[data-status="khlass"] .tc-line2 { color: var(--forest-ink); font-weight: 600; opacity: 1; }
     .tc-right {
       display: flex; flex-direction: column; align-items: flex-end; gap: 2px;
       flex: 0 0 auto;
@@ -1134,14 +1176,14 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     .tc-arrow svg { width: 16px; height: 16px; }
     .tc-pulse-dot {
       width: 7px; height: 7px;
-      background: var(--surface);
+      background: currentColor;
       border-radius: 50%;
       animation: pulse-dot 1.5s infinite;
     }
     @keyframes pulse-dot {
-      0%   { box-shadow: 0 0 0 0 rgba(255,255,255,.7); }
-      70%  { box-shadow: 0 0 0 5px rgba(255,255,255,0); }
-      100% { box-shadow: 0 0 0 0 rgba(255,255,255,0); }
+      0%   { box-shadow: 0 0 0 0 var(--urgent-halo); }
+      70%  { box-shadow: 0 0 0 5px transparent; }
+      100% { box-shadow: 0 0 0 0 transparent; }
     }
 
     /* ===========================================================
@@ -1160,7 +1202,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       gap: 8px;
     }
     .td-back {
-      width: 40px; height: 40px;
+      width: 44px; height: 44px;
       display: inline-flex; align-items: center; justify-content: center;
       border-radius: 50%;
       transition: background 150ms ease;
@@ -1205,15 +1247,15 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       padding: 2px;
     }
     .td-qty-btn {
-      width: 28px; height: 28px;
+      width: 44px; height: 44px;
       border-radius: 50%;
       display: inline-flex; align-items: center; justify-content: center;
       font-size: 16px; font-weight: 700;
       transition: background 150ms;
-      flex: 0 0 28px;
+      flex: 0 0 44px;
     }
-    .td-qty-btn.minus { color: var(--danger-mute); background: rgba(184,82,69,0.1); }
-    .td-qty-btn.plus { color: var(--on-accent); background: var(--emerald); }
+    .td-qty-btn.minus { color: var(--danger-ink); background: rgba(184,82,69,0.12); }
+    .td-qty-btn.plus { color: var(--on-emerald); background: var(--emerald); }
     .td-qty-btn:active { transform: scale(0.94); }
     .td-qty-num {
       min-width: 22px;
@@ -1269,6 +1311,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
 
     /* Per-dish kitchen note — one note per order line (allergies, requests) */
     .td-item-note {
+      min-height: 44px;
       flex: 1 0 100%;
       border: 1px solid var(--line); border-radius: 8px;
       background: var(--surface);
@@ -1307,7 +1350,8 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     .td-btn:active { transform: scale(0.98); }
     .td-btn:disabled { opacity: .58; cursor: not-allowed; transform: none; }
     .td-btn svg { width: 18px; height: 18px; }
-    .td-btn.primary { background: var(--gradient); color: var(--on-accent); }
+    .td-btn.primary { background: var(--btn-primary-bg); color: var(--btn-primary-ink); box-shadow: var(--elev-accent);
+    }
     .td-btn.dark    { background: var(--fill-strong); color: var(--on-strong); }
     .td-btn.ghost   { background: var(--paper-mute); color: var(--ink-2); }
     .td-btn.warn    { background: var(--forest); color: var(--on-accent); }
@@ -1319,6 +1363,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
 
     .td-extra-row { display: flex; gap: 8px; margin-top: 4px; }
     .td-extra-btn {
+      min-height: 44px;
       flex: 1; height: 38px; border-radius: var(--r-md);
       background: var(--paper-soft); border: 1px solid var(--line);
       color: var(--ink-2); font-size: 12.5px; font-weight: 500;
@@ -1651,12 +1696,12 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       position: absolute;
       left: 16px; right: 16px;
       bottom: var(--nav-clearance);
-      background: var(--gradient);
-      color: var(--on-accent);
+      background: var(--btn-primary-bg);
+      color: var(--btn-primary-ink);
       border-radius: 16px;
       padding: 14px 18px;
       align-items: center; justify-content: space-between;
-      box-shadow: 0 12px 28px rgba(31,93,60,0.28);
+      box-shadow: var(--elev-accent);
       z-index: 15;
       display: none;
       animation: slide-up-bar 280ms cubic-bezier(0.32, 0.72, 0, 1);
@@ -2132,11 +2177,11 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       flex: 1;
       min-height: 44px;
       border-radius: var(--r-md);
-      background: var(--gradient);
-      color: var(--on-accent);
+      background: var(--btn-primary-bg);
+      color: var(--btn-primary-ink);
       font-size: 14px; font-weight: 600;
       display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-      box-shadow: 0 6px 16px rgba(63,182,122,0.20);
+      box-shadow: var(--elev-accent);
       transition: transform 150ms ease;
     }
     .offshift-cta:active { transform: scale(0.98); }
@@ -2545,7 +2590,8 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       display: inline-flex; align-items: center; justify-content: center; gap: 6px;
     }
     .ma-btn svg { width: 15px; height: 15px; }
-    .ma-btn.primary { background: var(--gradient); color: var(--on-accent); }
+    .ma-btn.primary { background: var(--btn-primary-bg); color: var(--btn-primary-ink); box-shadow: var(--elev-accent);
+    }
     .ma-btn.secondary { background: var(--paper-mute); color: var(--ink); }
     .modal-foot {
       text-align: center;
@@ -2598,9 +2644,9 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       width: 100%;
       height: 52px;
       border-radius: var(--r-lg);
-      background: var(--gradient);
-      color: var(--on-accent);
-      font-size: 15px; font-weight: 600;
+      background: var(--btn-primary-bg);
+      color: var(--btn-primary-ink);
+      font-size: 15px; font-weight: 600; box-shadow: var(--elev-accent);
     }
     .cash-confirm[disabled] { opacity: .35; }
     .cash-success-rendu {
@@ -2992,8 +3038,8 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
 
     .split-launch {
       width: 100%; height: 52px; border-radius: var(--r-lg);
-      background: var(--gradient); color: var(--on-accent);
-      font-size: 15px; font-weight: 600;
+      background: var(--btn-primary-bg); color: var(--btn-primary-ink);
+      font-size: 15px; font-weight: 600; box-shadow: var(--elev-accent);
     }
     .split-cancel-link {
       display: block; text-align: center; margin-top: 10px;
@@ -3040,7 +3086,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       display: flex; align-items: center; gap: 4px;
     }
     .split-part-btn svg { width: 12px; height: 12px; }
-    .split-part-btn.carte { background: var(--gradient); color: var(--on-accent); }
+    .split-part-btn.carte { background: var(--btn-primary-bg); color: var(--btn-primary-ink); }
     .split-part-btn.cash-dark { background: var(--fill-strong); color: var(--on-strong); }
 
     .split-all-done { text-align: center; padding: 16px 0 4px; }
@@ -3308,6 +3354,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       margin-bottom: 8px;
     }
     .scope-btn {
+      min-height: 44px;
       flex: 1;
       padding: 9px 12px;
       border-radius: 9px;
