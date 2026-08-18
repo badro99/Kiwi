@@ -1054,7 +1054,7 @@
    * Data access
    * ═══════════════════════════════════════════════════════════════════════ */
   function isFusion() {
-    return (window.KiwiVenue?.isFusion?.() === true) || document.body.classList.contains('fusion-mode');
+    return (window.KiwiVenue?.isFusion?.() === true) || !!document.body?.classList?.contains('fusion-mode');
   }
   function currentVenueId() {
     return window.KiwiVenue?.getVenue?.() || 'cafeAtlas';
@@ -1983,7 +1983,10 @@
     const priceIco = pcl > 1 ? 'trendingUp' : pcl < -1 ? 'trendingDown' : 'minus';
     const priceLabel = pcl === 0 ? t('priceStable') : fmtPct(pcl, 1);
     const risePill = pcl > 5 ? `<span class="st-sup-rise-pill">${esc(t('priceUp'))}</span>` : '';
-    const stars = Math.round(s.rating);
+    const rateVal = (s.rating != null && !isNaN(s.rating) && s.rating !== '') ? Number(s.rating) : null;
+    const rateHtml = rateVal != null
+      ? `<span class="st-sup-rate"><span class="st">${'★'.repeat(Math.round(rateVal))}</span>${esc(rateVal.toFixed(1))}</span>`
+      : `<span class="st-sup-rate muted" style="color:var(--n-500);">—</span>`;
     return `
       <tr>
         <td>
@@ -1998,11 +2001,11 @@
           <div class="st-sup-deliv">${esc(s.deliverySchedule)}</div>
           <div class="st-sup-deliv-sub">${esc(s.paymentTerms)}</div>
         </td>
-        <td><span class="st-sup-rate"><span class="st">${'★'.repeat(stars)}</span>${esc(s.rating.toFixed(1))}</span></td>
+        <td>${rateHtml}</td>
         <td class="r">
           <div class="st-actions">
-            <button class="st-icon-btn" type="button" data-action="stock-call-supplier" data-name="${esc(s.name)}" data-phone="${esc(s.contact)}" title="${esc(t('mSupCall'))}" aria-label="${esc(t('mSupCall'))}">${svg('phone', 14)}</button>
-            <button class="st-icon-btn" type="button" data-action="stock-wa-supplier" data-name="${esc(s.name)}" title="${esc(t('mSupWa'))}" aria-label="${esc(t('mSupWa'))}">${svg('messageCircle', 14)}</button>
+            <button class="st-icon-btn" type="button" data-action="stock-call-supplier" data-supplier-id="${esc(s.id)}" data-name="${esc(s.name)}" data-phone="${esc(s.contact)}" title="${esc(t('mSupCall'))}" aria-label="${esc(t('mSupCall'))}">${svg('phone', 14)}</button>
+            <button class="st-icon-btn" type="button" data-action="stock-wa-supplier" data-supplier-id="${esc(s.id)}" data-name="${esc(s.name)}" data-phone="${esc(s.contact)}" title="${esc(t('mSupWa'))}" aria-label="${esc(t('mSupWa'))}">${svg('messageCircle', 14)}</button>
             <button class="st-icon-btn" type="button" data-action="stock-supplier-detail" data-supplier-id="${esc(s.id)}" title="${esc(t('btnDetail'))}" aria-label="${esc(t('btnDetail'))}">${svg('eye', 14)}</button>
             <button class="st-icon-btn" type="button" data-action="stock-edit-supplier" data-supplier-id="${esc(s.id)}" title="${esc(t('titleEdit'))}" aria-label="${esc(t('titleEdit'))}">${svg('edit', 14)}</button>
             <button class="st-icon-btn" type="button" data-action="stock-new-po" data-supplier-id="${esc(s.id)}" title="${esc(t('mSupOrd'))}" aria-label="${esc(t('mSupOrd'))}">${svg('plus', 14)}</button>
@@ -2417,14 +2420,23 @@
   /* ═══════════════════════════════════════════════════════════════════════
    * MODAL · Scan invoice
    * ═══════════════════════════════════════════════════════════════════════ */
-  function openInvoiceScan() {
+  function openInvoiceScan(opts) {
+    const preSupId = typeof opts === 'string' ? opts : opts?.supplierId;
+    const sup = preSupId ? getSup().find(s => s.id === preSupId) : null;
     const m = window.Kiwi.modal({
       title: t('mScanTitle'),
       width: 640,
-      body: `<div data-stock-scan-stage>${renderScanStage1()}</div>`,
+      body: `<div data-stock-scan-stage>${sup ? renderRealReceiptReview({ supplier: sup }) : renderScanStage1()}</div>`,
       foot: `<button class="st-btn" data-dismiss-modal>${esc(STR[lang()].btnCancel || 'Annuler')}</button>`,
     });
-    requestAnimationFrame(() => { wireDismiss(m?.el || topBackdrop()); wireScanStage1(); });
+    requestAnimationFrame(() => {
+      wireDismiss(m?.el || topBackdrop());
+      if (sup) {
+        wireScanReview();
+      } else {
+        wireScanStage1();
+      }
+    });
   }
 
   function renderScanStage1() {
@@ -2467,8 +2479,8 @@
     });
   }
 
-  function renderScanReview() {
-    if (stShowReal()) return renderRealReceiptReview();
+  function renderScanReview(opts) {
+    if (stShowReal() || opts?.supplier) return renderRealReceiptReview(opts);
     const inv = getInv();
     const rows = [
       { id: 'inv01', name: 'Viande hachée bœuf', qty: 12, total: 1140 },
@@ -2504,12 +2516,29 @@
     `;
   }
 
-  function renderRealReceiptReview() {
-    const items = getInv();
+  function renderRealReceiptReview(opts) {
+    const preSupplier = opts?.supplier || null;
+    const allItems = getInv();
+    let items = allItems;
+    if (preSupplier) {
+      const match = allItems.filter(it => {
+        const hasCard = (it.suppliers || []).some(card =>
+          String(card.supplierName || '').trim().toLowerCase() === preSupplier.name.toLowerCase() || card.id === preSupplier.id
+        );
+        return hasCard || (it.category === preSupplier.category) || (String(it.supplier || '').trim().toLowerCase() === preSupplier.name.toLowerCase());
+      });
+      if (match.length > 0) items = match;
+    }
+
     const today = new Date().toISOString().slice(0, 10);
-    const optionHtml = `<option value="">Choisir un article</option>${items.map(it =>
-      `<option value="${esc(it.id)}">${esc(it.name)} · ${esc(it.unit || 'unité')}</option>`
-    ).join('')}`;
+    const optionHtml = `<option value="">Choisir un article</option>${items.map(it => {
+      const card = (it.suppliers || []).find(c =>
+        preSupplier && (String(c.supplierName || '').trim().toLowerCase() === preSupplier.name.toLowerCase() || c.id === preSupplier.id)
+      );
+      const defaultCost = card?.defaultPrice ?? it.costPerUnit ?? 0;
+      return `<option value="${esc(it.id)}" data-default-cost="${defaultCost}">${esc(it.name)} · ${esc(it.unit || 'unité')}</option>`;
+    }).join('')}`;
+
     const row = () => `
       <tr data-stock-receive-row>
         <td><select class="st-mb-input" data-stock-receive-item>${optionHtml}</select></td>
@@ -2517,11 +2546,16 @@
         <td class="r"><input class="st-mb-input mono" data-stock-receive-cost type="number" min="0" step="0.01" placeholder="0,00" /></td>
         <td class="r"><button class="st-btn" type="button" data-stock-receive-remove aria-label="Retirer">×</button></td>
       </tr>`;
+
+    const supInputHtml = preSupplier
+      ? `<input class="st-mb-input" data-stock-receive-supplier value="${esc(preSupplier.name)}" readonly style="background:var(--n-100,#f4f5f6); cursor:not-allowed;" />`
+      : `<input class="st-mb-input" data-stock-receive-supplier autocomplete="organization" placeholder="Nom du fournisseur" />`;
+
     return `
       <div class="st-mb-eyebrow">Réception fournisseur</div>
       <div class="st-notice ok">${svg('checkCircle', 14)}<div>Le document reste à vérifier : aucune ligne ni aucun montant n’est inventé automatiquement.</div></div>
       <div class="st-mb-row three">
-        <div class="st-mb-field"><label class="st-mb-label">Fournisseur</label><input class="st-mb-input" data-stock-receive-supplier autocomplete="organization" placeholder="Nom du fournisseur" /></div>
+        <div class="st-mb-field"><label class="st-mb-label">Fournisseur</label>${supInputHtml}</div>
         <div class="st-mb-field"><label class="st-mb-label">Date de réception</label><input class="st-mb-input mono" data-stock-receive-date type="date" value="${today}" /></div>
         <div class="st-mb-field"><label class="st-mb-label">Référence</label><input class="st-mb-input mono" data-stock-receive-ref placeholder="BL / facture" /></div>
       </div>
@@ -2538,7 +2572,7 @@
   }
 
   function wireScanReview() {
-    if (stShowReal()) {
+    if (stShowReal() || document.querySelector('[data-stock-receive-rows]')) {
       const scope = topBackdrop() || document;
       const tbody = scope.querySelector('[data-stock-receive-rows]');
       const firstRow = tbody?.querySelector('[data-stock-receive-row]')?.outerHTML || '';
@@ -2553,6 +2587,17 @@
       };
       const wireRows = () => {
         scope.querySelectorAll('[data-stock-receive-qty],[data-stock-receive-cost]').forEach(el => { el.oninput = recompute; });
+        scope.querySelectorAll('[data-stock-receive-item]').forEach(sel => {
+          sel.onchange = () => {
+            const opt = sel.options[sel.selectedIndex];
+            const defCost = opt?.dataset?.defaultCost;
+            const costInp = sel.closest('tr')?.querySelector('[data-stock-receive-cost]');
+            if (costInp && defCost && !costInp.value) {
+              costInp.value = defCost;
+            }
+            recompute();
+          };
+        });
         scope.querySelectorAll('[data-stock-receive-remove]').forEach(el => {
           el.onclick = () => { if (scope.querySelectorAll('[data-stock-receive-row]').length > 1) el.closest('tr')?.remove(); recompute(); };
         });
@@ -2772,13 +2817,10 @@
     if (!s) return;
     const deliveriesCount = Math.round(s.monthlySpend / s.avgInvoice);
     const pcl = s.priceChangeLast30d;
-    const trendCls = pcl > 1 ? 'up' : pcl < -1 ? 'down' : '';
-    // Mock price history — 6 months
-    const ph = [s.avgInvoice * 0.95, s.avgInvoice * 0.97, s.avgInvoice * 1.0, s.avgInvoice * 0.99, s.avgInvoice * 1.02, s.avgInvoice];
-
+    const rateStr = s.rating != null && !isNaN(s.rating) && s.rating !== '' ? ` · ★ ${Number(s.rating).toFixed(1)}` : '';
     const m = window.Kiwi.modal({
       title: s.name,
-      desc: `${esc(s.location)} · ${catLabel(s.category)} · ★ ${s.rating.toFixed(1)}`,
+      desc: `${esc(s.location)} · ${catLabel(s.category)}${rateStr}`,
       width: 720,
       body: `
         <div class="st-md-stats">
@@ -2811,23 +2853,13 @@
         </div>
       `,
       foot: `
-        <button class="st-btn" data-stock-call-supplier data-name="${esc(s.name)}" data-phone="${esc(s.contact)}">${svg('phone', 12)}<span>${esc(t('mSupCall'))}</span></button>
-        <button class="st-btn" data-stock-wa-supplier data-name="${esc(s.name)}">${svg('messageCircle', 12)}<span>${esc(t('mSupWa'))}</span></button>
-        <button class="st-btn primary" data-stock-new-po data-supplier-id="${esc(s.id)}">${esc(t('mSupOrd'))}</button>
+        <button class="st-btn" data-action="stock-call-supplier" data-supplier-id="${esc(s.id)}" data-name="${esc(s.name)}" data-phone="${esc(s.contact)}">${svg('phone', 12)}<span>${esc(t('mSupCall'))}</span></button>
+        <button class="st-btn" data-action="stock-wa-supplier" data-supplier-id="${esc(s.id)}" data-name="${esc(s.name)}" data-phone="${esc(s.contact)}">${svg('messageCircle', 12)}<span>${esc(t('mSupWa'))}</span></button>
+        <button class="st-btn primary" data-action="stock-new-po" data-supplier-id="${esc(s.id)}">${esc(t('mSupOrd'))}</button>
       `,
     });
     requestAnimationFrame(() => {
       wireDismiss(m?.el || topBackdrop());
-      document.querySelector('[data-stock-call-supplier]')?.addEventListener('click', (e) => {
-        window.Kiwi.toast(`Appel à ${e.currentTarget.dataset.name} · ${e.currentTarget.dataset.phone}`, { type: 'info' });
-      });
-      document.querySelector('[data-stock-wa-supplier]')?.addEventListener('click', (e) => {
-        window.Kiwi.toast(`Message WhatsApp envoyé à ${e.currentTarget.dataset.name}`, { type: 'success' });
-      });
-      document.querySelector('[data-stock-new-po]')?.addEventListener('click', () => {
-        closeTopModal();
-        window.Kiwi.toast(t('poNewToast'), { type: 'info' });
-      });
     });
   }
 
@@ -3401,7 +3433,7 @@
         <div class="st-mb-row">
           <div class="st-mb-field">
             <label class="st-mb-label">${esc(t('supRating'))}</label>
-            <input class="st-mb-input mono" type="number" min="1" max="5" step="0.1" placeholder="4.5" value="${esc(existing?.rating ?? '')}" data-stock-sup-rating />
+            <input class="st-mb-input mono" type="number" min="1" max="5" step="0.1" placeholder="—" value="${esc(existing?.rating != null ? existing.rating : '')}" data-stock-sup-rating />
           </div>
           <div class="st-mb-field">
             <label class="st-mb-label">${esc(t('supSpend'))}</label>
@@ -3421,8 +3453,9 @@
       const location = (scope.querySelector('[data-stock-sup-loc]')?.value || '').trim();
       const paymentTerms = scope.querySelector('[data-stock-sup-pay]')?.value || 'Net 30';
       const deliverySchedule = (scope.querySelector('[data-stock-sup-deliv]')?.value || '—').trim();
-      const ratingRaw = parseFloat(scope.querySelector('[data-stock-sup-rating]')?.value);
-      const rating = isNaN(ratingRaw) ? 4.5 : Math.min(5, Math.max(1, ratingRaw));
+      const ratingVal = (scope.querySelector('[data-stock-sup-rating]')?.value || '').trim();
+      const ratingRaw = ratingVal ? parseFloat(ratingVal) : NaN;
+      const rating = isNaN(ratingRaw) ? null : Math.min(5, Math.max(1, ratingRaw));
       const spendRaw = parseFloat(scope.querySelector('[data-stock-sup-spend]')?.value);
       const monthlySpend = isNaN(spendRaw) ? 0 : spendRaw;
 
@@ -3594,11 +3627,45 @@
     // Category pill add
     H['stock-add-cat'] = () => openAddCategory();
 
+    function isPhone(v) { return /^\+?[\d\s.-]{8,}$/.test(String(v || '').trim()); }
+    function phoneDigits(v) {
+      const d = String(v || '').replace(/\D/g, '');
+      return String(v || '').trim().startsWith('+') ? '+' + d : d;
+    }
+    function waDigits(v) {
+      let d = String(v || '').replace(/\D/g, '');
+      if (/^0[67]\d{8}$/.test(d)) d = '212' + d.slice(1);
+      return d;
+    }
+
     // Supplier actions
     H['stock-supplier-detail'] = (el) => openSupplierProfile(el.dataset.supplierId);
-    H['stock-call-supplier'] = (el) => window.Kiwi.toast(`Appel à ${el.dataset.name} · ${el.dataset.phone}`, { type: 'info' });
-    H['stock-wa-supplier'] = (el) => window.Kiwi.toast(`Message WhatsApp envoyé à ${el.dataset.name}`, { type: 'success' });
-    H['stock-new-po'] = (el) => window.Kiwi.toast(t('poNewToast'), { type: 'info' });
+    H['stock-call-supplier'] = (el) => {
+      const contact = (el.dataset.phone || '').trim();
+      const name = (el.dataset.name || '').trim();
+      const supId = el.dataset.supplierId;
+      if (isPhone(contact)) {
+        location.href = 'tel:' + phoneDigits(contact);
+      } else {
+        window.Kiwi.toast('Pas de numéro — modifiez le fournisseur', { type: 'warn' });
+        const sup = getSup().find(s => s.id === supId || s.name === name);
+        if (sup) openEditSupplier(sup.id);
+      }
+    };
+    H['stock-wa-supplier'] = (el) => {
+      const contact = (el.dataset.phone || '').trim();
+      const name = (el.dataset.name || '').trim();
+      const supId = el.dataset.supplierId;
+      if (isPhone(contact)) {
+        const text = `Bonjour ${name}, `;
+        window.open(`https://wa.me/${waDigits(contact)}?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
+      } else {
+        window.Kiwi.toast('Pas de numéro — modifiez le fournisseur', { type: 'warn' });
+        const sup = getSup().find(s => s.id === supId || s.name === name);
+        if (sup) openEditSupplier(sup.id);
+      }
+    };
+    H['stock-new-po'] = (el) => openInvoiceScan({ supplierId: el.dataset.supplierId });
     H['stock-add-supplier'] = () => openAddSupplier();
     H['stock-edit-supplier'] = (el) => openEditSupplier(el.dataset.supplierId);
     H['stock-delete-supplier'] = (el) => confirmDeleteSupplier(el.dataset.supplierId);
