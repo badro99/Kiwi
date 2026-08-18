@@ -5,20 +5,68 @@
   let busy = false;
 
   const css = `
-    .kep-card{border:1px solid rgba(10,15,13,.12);border-radius:22px;padding:20px;background:var(--paper,#f7f5f0);color:var(--ink,#0a0f0d);margin-top:16px}.kep-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}.kep-title{font-size:19px;font-weight:700}.kep-sub{font-size:13px;color:#68716d;margin-top:4px}.kep-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}.kep-btn{min-height:42px;border:1px solid rgba(10,15,13,.15);border-radius:12px;padding:0 14px;background:transparent;color:inherit;font-weight:600}.kep-btn.primary{background:#0b6e4f;border-color:#0b6e4f;color:#fff}.kep-btn:disabled{opacity:.5}.kep-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;margin-top:17px;border:1px solid rgba(10,15,13,.1);border-radius:15px;overflow:hidden;background:rgba(10,15,13,.1)}.kep-metric{padding:12px;background:var(--paper,#f7f5f0)}.kep-metric b{display:block;font-size:20px}.kep-metric span{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#68716d}.kep-section{margin-top:18px}.kep-section-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}.kep-section-head b{font-size:13px}.kep-count{min-width:25px;height:25px;display:grid;place-items:center;border-radius:999px;background:rgba(11,110,79,.1);color:#0b6e4f;font-size:11px;font-weight:700.kep-list,.kep-requests{display:grid;gap:8px}.kep-row,.kep-request{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid rgba(10,15,13,.1);border-radius:14px;padding:12px}.kep-row-main,.kep-request>div:first-child{min-width:0}.kep-row b,.kep-request b{font-size:13px}.kep-row span,.kep-request span{display:block;font-size:12px;color:#68716d;margin-top:3px}.kep-row-actions{display:flex;gap:6px;flex:0 0 auto}.kep-row-actions .kep-btn{min-height:34px;padding:0 9px;font-size:11px}.kep-status{font-style:normal;border-radius:999px;padding:6px 9px;background:rgba(10,15,13,.07);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}.kep-status.approved,.kep-status.assigned{background:rgba(11,110,79,.12);color:#0b6e4f}.kep-status.rejected,.kep-status.cancelled{background:rgba(10,15,13,.07);color:#68716d}.kep-notice{border-inline-start:3px solid #0b6e4f;padding:8px 10px;background:rgba(11,110,79,.06);border-radius:0 10px 10px 0;font-size:12px}.kep-overlay{position:fixed;inset:0;z-index:10050;background:rgba(5,12,9,.6);display:grid;place-items:center;padding:18px}.kep-sheet{width:min(540px,100%);max-height:min(760px,92dvh);overflow:auto;background:#f7f5f0;color:#0a0f0d;border-radius:24px;padding:22px;box-shadow:0 24px 80px rgba(0,0,0,.28)}.kep-sheet-head{display:flex;justify-content:space-between;gap:16px}.kep-sheet h2{margin:0;font-size:25px}.kep-close{width:42px;height:42px;border:1px solid #cdd3cf;border-radius:12px;background:transparent;font-size:24px}.kep-field{display:grid;gap:7px;margin-top:17px}.kep-field label,.kep-label{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}.kep-field input,.kep-field textarea,.kep-field select{width:100%;box-sizing:border-box;border:1px solid #cdd3cf;border-radius:13px;background:#fff;color:#0a0f0d;min-height:48px;padding:11px 13px;font:inherit}.kep-days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:8px}.kep-day{aspect-ratio:1;border:1px solid #cdd3cf;border-radius:11px;background:#fff;font-weight:700}.kep-day.on{background:#053b2c;color:#fff;border-color:#053b2c}.kep-check{display:flex;align-items:center;gap:10px;margin-top:17px}.kep-sheet-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:22px}.kep-error{margin-top:12px;color:#0b6e4f;font-size:13px}.kep-empty{font-size:12px;color:#68716d;margin-top:10px}
-    [data-theme="dark"] .kep-card,.dark .kep-card{background:#111713;color:#f7f5f0;border-color:#2b3731}[data-theme="dark"] .kep-sub,[data-theme="dark"] .kep-request span,.dark .kep-sub,.dark .kep-request span{color:#aeb8b2}
-/* Le calendrier de disponibilités manquait à l'appel : .kep-day est un #fff en
-   dur bordé de #cdd3cf, soit une grille blanche en pleine feuille sombre. Il
-   n'apparaît que dans la modale « Mes disponibilités », qui a besoin du
-   backend — d'où l'oubli, et d'où le fait qu'aucun écran de démo ne le montre.
-   Les autres blocs de ce fichier avaient déjà leur override. */
-[data-theme="dark"] .kep-day,.dark .kep-day{background:#161e1b;border-color:#2b3731;color:#f1efe9}
-[data-theme="dark"] .kep-day.on,.dark .kep-day.on{background:#7df2b0;border-color:#7df2b0;color:#06281a}
-[data-theme="dark"] .kep-count,.dark .kep-count{background:rgba(125,242,176,.16);color:#7df2b0}
-[data-theme="dark"] .kep-status,.dark .kep-status{background:rgba(255,255,255,.09);color:#f1efe9}
-[data-theme="dark"] .kep-btn,.dark .kep-btn{border-color:rgba(255,255,255,.15)}
-    @media(max-width:600px){.kep-card{padding:17px;border-radius:18px}.kep-head{display:block}.kep-actions{display:grid;grid-template-columns:1fr 1fr}.kep-btn{padding:0 9px}.kep-row,.kep-request{align-items:flex-start;flex-direction:column}.kep-row-actions{width:100%}.kep-row-actions .kep-btn{flex:1}.kep-overlay{align-items:end;padding:0}.kep-sheet{width:100%;border-radius:24px 24px 0 0;padding:20px 18px calc(20px + env(safe-area-inset-bottom));max-height:90dvh}.kep-days{gap:4px}.kep-day{border-radius:9px}}
-  `;
+    /* Une accolade manquante après « .kep-count{…font-weight:700 » avalait TOUT
+       ce qui suivait : le parseur lisait la fin du fichier comme un bloc imbriqué
+       dans « .kep-count », et 34 des 50 règles n'existaient pas. Disparaissaient
+       ainsi la modale entière (.kep-overlay/.kep-sheet/.kep-field), la grille de
+       disponibilités, TOUS les correctifs de nuit et la requête mobile — sur une
+       app de téléphone. Rien en console : une erreur CSS est silencieuse.
+
+       C'est ce qui explique le commentaire d'une session précédente disant que
+       « le calendrier manquait à l'appel » et lui ajoutant une règle de nuit :
+       cette règle-là tombait elle aussi après l'accolade, donc ne s'appliquait
+       pas davantage. Le symptôme avait été traité avec du code mort.
+
+       Le fichier consomme désormais les jetons de kiwi-serveur.html, son unique
+       hôte, et n'a plus de palette sombre à lui : elle divergeait de celle de
+       l'app, et de toute façon elle n'a jamais été lue. */
+    .kep-card{border:1px solid var(--line);border-radius:var(--r-xl);padding:20px;background:var(--surface);color:var(--ink);margin-top:16px;box-shadow:var(--rim)}
+    .kep-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+    .kep-title{font-size:19px;font-weight:700}
+    .kep-sub{font-size:13px;color:var(--ink-3);margin-top:4px}
+    .kep-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
+    .kep-btn{min-height:42px;border:1px solid var(--line);border-radius:var(--r-md);padding:0 14px;background:transparent;color:inherit;font-weight:600}
+    .kep-btn.primary{background:var(--fill-strong);border-color:var(--fill-strong);color:var(--on-strong)}
+    .kep-btn:disabled{opacity:.5}
+    .kep-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;margin-top:17px;border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;background:var(--line)}
+    .kep-metric{padding:12px;background:var(--surface)}
+    .kep-metric b{display:block;font-size:20px}
+    .kep-metric span{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+    .kep-section{margin-top:18px}
+    .kep-section-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
+    .kep-section-head b{font-size:13px}
+    .kep-count{min-width:25px;height:25px;display:grid;place-items:center;border-radius:999px;background:var(--tint);color:var(--forest-ink);font-size:11px;font-weight:700}
+    .kep-list,.kep-requests{display:grid;gap:8px}
+    .kep-row,.kep-request{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid var(--line);border-radius:var(--r-md);padding:12px}
+    .kep-row-main,.kep-request>div:first-child{min-width:0}
+    .kep-row b,.kep-request b{font-size:13px}
+    .kep-row span,.kep-request span{display:block;font-size:12px;color:var(--ink-3);margin-top:3px}
+    .kep-row-actions{display:flex;gap:6px;flex:0 0 auto}
+    .kep-row-actions .kep-btn{min-height:34px;padding:0 9px;font-size:11px}
+    .kep-status{font-style:normal;border-radius:999px;padding:6px 9px;background:var(--surface-2);color:var(--ink-2);font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
+    .kep-status.approved,.kep-status.assigned{background:var(--tint);color:var(--forest-ink)}
+    .kep-status.rejected,.kep-status.cancelled{background:var(--surface-2);color:var(--ink-3)}
+    .kep-notice{border-inline-start:3px solid var(--forest-edge);padding:8px 10px;background:var(--tint);border-radius:0 var(--r-md) var(--r-md) 0;font-size:12px}
+    .kep-overlay{position:fixed;inset:0;z-index:10050;background:rgba(5,12,9,.6);display:grid;place-items:center;padding:18px}
+    .kep-sheet{width:min(540px,100%);max-height:min(760px,92dvh);overflow:auto;background:var(--surface);color:var(--ink);border-radius:var(--r-xl);padding:22px;box-shadow:var(--shadow-2)}
+    .kep-sheet-head{display:flex;justify-content:space-between;gap:16px}
+    .kep-sheet h2{margin:0;font-size:25px}
+    .kep-close{width:42px;height:42px;border:1px solid var(--line);border-radius:var(--r-md);background:transparent;color:inherit;font-size:24px}
+    .kep-field{display:grid;gap:7px;margin-top:17px}
+    .kep-field label,.kep-label{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+    .kep-field input,.kep-field textarea,.kep-field select{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface-2);color:var(--ink);min-height:48px;padding:11px 13px;font:inherit}
+    .kep-days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:8px}
+    .kep-day{aspect-ratio:1;border:1px solid var(--line);border-radius:var(--r-md);background:var(--surface-2);color:inherit;font-weight:700}
+    .kep-day.on{background:var(--fill-strong);color:var(--on-strong);border-color:var(--fill-strong)}
+    .kep-check{display:flex;align-items:center;gap:10px;margin-top:17px}
+    .kep-sheet-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:22px}
+    /* Un message d'ERREUR était peint en vert de marque — la couleur du succès
+       partout ailleurs dans le produit. */
+    .kep-error{margin-top:12px;color:var(--danger-mute);font-size:13px}
+    .kep-empty{font-size:12px;color:var(--ink-3);margin-top:10px}
+    @media(max-width:600px){.kep-card{padding:17px;border-radius:var(--r-lg)}.kep-head{display:block}.kep-actions{display:grid;grid-template-columns:1fr 1fr}.kep-btn{padding:0 9px}.kep-row,.kep-request{align-items:flex-start;flex-direction:column}.kep-row-actions{width:100%}.kep-row-actions .kep-btn{flex:1}.kep-overlay{align-items:end;padding:0}.kep-sheet{width:100%;border-radius:var(--r-xl) var(--r-xl) 0 0;padding:20px 18px calc(20px + env(safe-area-inset-bottom));max-height:90dvh}.kep-days{gap:4px}.kep-day{border-radius:var(--r-sm)}}
+  
+`;
 
   function esc(value) { return String(value == null ? '' : value).replace(/[&<>'"]/g, (char) => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char])); }
   function copy() {

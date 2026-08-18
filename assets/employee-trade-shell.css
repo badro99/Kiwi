@@ -1,4 +1,15 @@
-/* Non-dining employee app: mobile-first, truthful trade workspace. */
+/* Non-dining employee app: mobile-first, truthful trade workspace.
+
+   Ce fichier n'a qu'UN consommateur, kiwi-serveur.html, et hérite donc de ses
+   jetons sans repli : les `var(--x, #hex)` d'avant laissaient croire qu'il
+   pouvait vivre ailleurs, tout en recopiant une palette qui avait divergé.
+
+   Il n'y a PLUS de bloc sombre ici. L'ancien en tenait un second à la main
+   (#111713, #2b3731, #aeb8b2) qui ne tombait pas sur celui de l'app
+   (--surface #101614, --line rgba(255,255,255,.09)) : deux nuits légèrement
+   désaccordées, avec une couture visible là où l'atelier touchait le reste.
+   Les jetons basculent déjà ; les redéclarer, c'était refaire le travail à
+   l'envers. */
 body.employee-trade-mode .tab-tables .scope-toggle,
 body.employee-trade-mode .tab-tables .filter-chips,
 body.employee-trade-mode #tables-zones { display: none !important; }
@@ -6,62 +17,68 @@ body.employee-trade-mode .tab-tables { padding: 14px 14px 112px; }
 body.employee-trade-mode .bottom-tabs .bt-btn[data-tab="menu"] { display: none !important; }
 body.employee-trade-mode .bottom-tabs .bt-capsule { grid-template-columns: repeat(3, 1fr); }
 
-.ets-home { display: grid; gap: 14px; color: var(--ink, #0a0f0d); }
-.ets-hero { display: grid; grid-template-columns: 54px minmax(0, 1fr) 44px; gap: 13px; align-items: center; padding: 16px; border: 1px solid rgba(10,15,13,.11); border-radius: 22px; background: var(--paper, #f7f5f0); }
-.ets-hero-icon { width: 54px; height: 54px; display: grid; place-items: center; border-radius: 17px; background: #053b2c; color: #7df2b0; }
+.ets-home {
+  display: grid; gap: 14px; color: var(--ink);
+  /* L'encre portée PAR la carte vert nuit, qui ne suit pas le climat : la
+     carte reste sombre à midi comme à minuit, donc son texte reste clair. */
+  --ets-on-deep:     #F7F5F0;
+  --ets-on-deep-mute: #B7C9C1;
+}
+.ets-hero { display: grid; grid-template-columns: 54px minmax(0, 1fr) 44px; gap: 13px; align-items: center; padding: 16px; border: 1px solid var(--line); border-radius: var(--r-xl); background: var(--surface); box-shadow: var(--rim); }
+.ets-hero-icon { width: 54px; height: 54px; display: grid; place-items: center; border-radius: var(--r-lg); background: var(--forest-deep); color: var(--mint); }
 .ets-hero-icon svg { width: 27px; height: 27px; stroke-width: 1.8; }
 .ets-hero-copy { min-width: 0; }
-.ets-eyebrow, .ets-section-head span, .ets-metrics article > span { display: block; color: #0b6e4f; font-size: 10px; font-weight: 850; letter-spacing: .105em; text-transform: uppercase; }
+/* Le vert de marque en ENCRE, pas en peinture : var(--forest-ink) s'éclaircit
+   la nuit, là où un #0b6e4f en dur tombait à 2,9:1 sur la carte sombre. */
+.ets-eyebrow, .ets-section-head span, .ets-metrics article > span { display: block; color: var(--forest-ink); font-size: 10px; font-weight: 700; letter-spacing: .105em; text-transform: uppercase; }
 .ets-hero-copy h1 { margin: 4px 0 2px; font-size: clamp(23px, 7vw, 31px); line-height: 1; }
-.ets-hero-copy p { margin: 0; color: #68716d; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ets-icon-btn { width: 44px; height: 44px; display: grid; place-items: center; border: 1px solid rgba(10,15,13,.12); border-radius: 14px; color: inherit; background: transparent; }
+.ets-hero-copy p { margin: 0; color: var(--ink-3); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ets-icon-btn { width: 44px; height: 44px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: var(--r-md); color: inherit; background: transparent; }
 .ets-icon-btn:disabled { opacity: .45; }
 
-.ets-live-card { display: grid; gap: 14px; padding: 17px; color: #f7f5f0; background: #053b2c; border-radius: 22px; box-shadow: 0 15px 34px rgba(5,59,44,.14); }
+.ets-live-card { display: grid; gap: 14px; padding: 17px; color: var(--ets-on-deep); background: var(--forest-deep); border-radius: var(--r-xl); box-shadow: var(--shadow-1); }
 .ets-live-card > div:first-child { display: flex; align-items: center; gap: 8px; }
 .ets-live-card b { font-size: 18px; }
-.ets-live-card small { margin-inline-start: auto; color: #b7c9c1; }
-.ets-status-dot { width: 10px; height: 10px; border-radius: 999px; background: #7df2b0; box-shadow: 0 0 0 6px rgba(125,242,176,.12); }
-.ets-live-card.off .ets-status-dot { background: #b7c0bb; box-shadow: none; }
-.ets-live-card.pause .ets-status-dot { background: #f3bd55; }
+.ets-live-card small { margin-inline-start: auto; color: var(--ets-on-deep-mute); }
+.ets-status-dot { width: 10px; height: 10px; border-radius: 999px; background: var(--mint); box-shadow: 0 0 0 6px rgba(125,242,176,.12); }
+.ets-live-card.off .ets-status-dot { background: #B7C0BB; box-shadow: none; }
+.ets-live-card.pause .ets-status-dot { background: var(--warn-solid); }
 .ets-next { border-top: 1px solid rgba(247,245,240,.16); padding-top: 13px; }
-.ets-next span { display: block; margin-bottom: 4px; color: #b7c9c1; font-size: 10px; font-weight: 850; letter-spacing: .09em; text-transform: uppercase; }
+.ets-next span { display: block; margin-bottom: 4px; color: var(--ets-on-deep-mute); font-size: 10px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; }
 .ets-next strong { font-size: 14px; }
 
-.ets-flow, .ets-messages { padding: 17px; border: 1px solid rgba(10,15,13,.11); border-radius: 22px; background: var(--paper, #f7f5f0); }
+.ets-flow, .ets-messages { padding: 17px; border: 1px solid var(--line); border-radius: var(--r-xl); background: var(--surface); box-shadow: var(--rim); }
 .ets-section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 13px; }
 .ets-section-head > div { display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 10px; }
 .ets-section-head b { font-size: 13px; }
 .ets-flow-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
-.ets-flow-step { min-height: 52px; display: flex; align-items: center; gap: 9px; padding: 10px; border-radius: 14px; background: rgba(11,110,79,.055); }
-.ets-flow-step em { width: 25px; height: 25px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 9px; background: rgba(11,110,79,.11); color: #0b6e4f; font-size: 10px; font-style: normal; font-weight: 900; }
-.ets-flow-step span { font-size: 12px; font-weight: 750; }
+.ets-flow-step { min-height: 52px; display: flex; align-items: center; gap: 9px; padding: 10px; border-radius: var(--r-md); background: var(--tint); }
+/* Encre profonde et non --forest-ink : sur la pastille teintée, le vert moyen
+   mesurait 4,49:1 le jour — sous la barre, d'un cheveu, donc invisible à la
+   lecture du code. */
+.ets-flow-step em { width: 25px; height: 25px; flex: 0 0 auto; display: grid; place-items: center; border-radius: var(--r-sm); background: var(--tint-strong); color: var(--forest-ink-deep); font-size: 10px; font-style: normal; font-weight: 700; }
+.ets-flow-step span { font-size: 12px; font-weight: 600; }
 
 .ets-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.ets-metrics article { min-width: 0; min-height: 112px; padding: 15px; border: 1px solid rgba(10,15,13,.11); border-radius: 19px; background: var(--paper, #f7f5f0); }
+.ets-metrics article { min-width: 0; min-height: 112px; padding: 15px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); box-shadow: var(--rim); }
 .ets-metrics strong { display: block; margin: 6px 0 2px; font-size: 28px; }
-.ets-metrics small { display: -webkit-box; color: #68716d; font-size: 11px; line-height: 1.35; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.ets-metrics small { display: -webkit-box; color: var(--ink-3); font-size: 11px; line-height: 1.35; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .ets-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
-.ets-actions button { min-height: 76px; display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; gap: 9px; padding: 13px; border: 1px solid rgba(10,15,13,.12); border-radius: 17px; background: var(--paper, #f7f5f0); color: inherit; text-align: start; font-weight: 780; }
-.ets-actions button:first-child { border-color: #0b6e4f; background: #0b6e4f; color: #fff; }
+.ets-actions button { min-height: 76px; display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; gap: 9px; padding: 13px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); color: inherit; text-align: start; font-weight: 600; box-shadow: var(--rim); }
+/* Le fond fort de l'app — encre le jour, menthe la nuit — et non un vert fixe.
+   L'ancienne règle peignait #0b6e4f, que le bloc sombre d'alors écrasait à
+   spécificité ÉGALE (0,2,1 contre 0,2,1) : la nuit, le bouton principal
+   reprenait le fond des trois autres et la hiérarchie disparaissait. Aucun
+   test de contraste ne pouvait le voir — 18:1 des deux côtés. */
+.ets-actions button:first-child { border-color: var(--fill-strong); background: var(--fill-strong); color: var(--on-strong); }
 .ets-actions svg { width: 21px; height: 21px; }
 .ets-message-list { display: grid; gap: 8px; }
-.ets-message-list article { padding: 12px; border-radius: 14px; background: rgba(10,15,13,.045); }
+.ets-message-list article { padding: 12px; border-radius: var(--r-md); background: var(--surface-2); }
 .ets-message-list article > div { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .ets-message-list b { font-size: 12px; }
-.ets-message-list time { color: #68716d; font-size: 10px; }
-.ets-message-list p { margin: 6px 0 0; color: #424b47; font-size: 12px; line-height: 1.45; }
-.ets-empty { margin: 0; color: #68716d; font-size: 12px; }
-
-[data-theme="dark"] .ets-home, .dark .ets-home { color: #f7f5f0; }
-[data-theme="dark"] .ets-hero, [data-theme="dark"] .ets-flow, [data-theme="dark"] .ets-messages,
-[data-theme="dark"] .ets-metrics article, [data-theme="dark"] .ets-actions button,
-.dark .ets-hero, .dark .ets-flow, .dark .ets-messages, .dark .ets-metrics article, .dark .ets-actions button { background: #111713; border-color: #2b3731; }
-[data-theme="dark"] .ets-hero-copy p, [data-theme="dark"] .ets-metrics small, [data-theme="dark"] .ets-empty,
-[data-theme="dark"] .ets-message-list time, .dark .ets-hero-copy p, .dark .ets-metrics small, .dark .ets-empty, .dark .ets-message-list time { color: #aeb8b2; }
-[data-theme="dark"] .ets-message-list article, .dark .ets-message-list article { background: rgba(247,245,240,.055); }
-[data-theme="dark"] .ets-message-list p, .dark .ets-message-list p { color: #d6ddd9; }
-[data-theme="dark"] .ets-icon-btn, .dark .ets-icon-btn { border-color: #35413b; }
+.ets-message-list time { color: var(--ink-3); font-size: 10px; }
+.ets-message-list p { margin: 6px 0 0; color: var(--ink-2); font-size: 12px; line-height: 1.45; }
+.ets-empty { margin: 0; color: var(--ink-3); font-size: 12px; }
 
 @media (min-width: 650px) {
   .ets-home { max-width: 780px; margin: 0 auto; grid-template-columns: 1fr 1fr; }
@@ -72,7 +89,7 @@ body.employee-trade-mode .bottom-tabs .bt-capsule { grid-template-columns: repea
 
 @media (max-width: 360px) {
   .ets-hero { grid-template-columns: 47px minmax(0, 1fr) 40px; padding: 13px; }
-  .ets-hero-icon { width: 47px; height: 47px; border-radius: 15px; }
+  .ets-hero-icon { width: 47px; height: 47px; border-radius: var(--r-md); }
   .ets-actions { grid-template-columns: 1fr; }
   .ets-actions button { min-height: 58px; flex-direction: row; align-items: center; justify-content: flex-start; }
 }

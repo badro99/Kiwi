@@ -41,7 +41,15 @@ const server = source('kiwi-serveur.html');
 ok(server.includes("tabs: ['tables', 'notifications', 'profil']"), 'non-dining staff receive self-service tabs without menu');
 ok(server.includes('tradeWorkspace: true'), 'role explicitly identifies trade workspace');
 ok(server.includes('assets/employee-trade-shell.js?v=2'), 'employee app loads the role-safe workspace');
-ok(server.includes('assets/employee-trade-shell.css?v=1'), 'employee app loads its responsive design');
+/* L'estampille est VOLATILE : toute modification du fichier la déplace, et la
+   figer ici faisait échouer la suite sur un correctif parfaitement valide. On
+   n'assouplit pas pour autant jusqu'à ne plus rien prouver — on vérifie que la
+   coquille et le service worker citent la MÊME, ce qui est l'invariant réel :
+   deux estampilles divergentes servent l'ancien fichier hors ligne. */
+const cssStamp = (file) => (source(file).match(/assets\/employee-trade-shell\.css\?v=(\d+)/) || [])[1];
+ok(cssStamp('kiwi-serveur.html'), 'employee app loads its responsive design, stamped');
+ok(cssStamp('kiwi-serveur.html') === cssStamp('kiwi-sw.js'),
+  'the shell and the offline precache agree on the design stamp');
 const shell = source('assets/employee-trade-shell.js');
 for (const field of ['attendance', 'schedule', 'planning', 'colleagues', 'messages']) ok(shell.includes(field), `workspace reads live ${field} data`);
 ok(!/Math\.random|setInterval\s*\(/.test(shell), 'workspace does not invent operational activity');
