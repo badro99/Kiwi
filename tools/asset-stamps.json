@@ -344,8 +344,8 @@
     "sha": "7e8c999fe50a7b06"
   },
   "assets/pos-dispatch.js": {
-    "v": "27",
-    "sha": "38215ed5f3879f36"
+    "v": "28",
+    "sha": "9d619a72360a0796"
   },
   "assets/pos-epicerie.css": {
     "v": "2",
@@ -402,6 +402,14 @@
   "assets/pos-librairie.js": {
     "v": "2",
     "sha": "56c1f39c972283b8"
+  },
+  "assets/pos-maison.css": {
+    "v": "1",
+    "sha": "c538dbcd74fa43a7"
+  },
+  "assets/pos-maison.js": {
+    "v": "1",
+    "sha": "3ccfc038f63c1fe7"
   },
   "assets/pos-mobile.css": {
     "v": "3",
