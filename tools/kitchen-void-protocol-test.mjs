@@ -302,7 +302,7 @@ I.add({
 check('Receipt adds 10 units @ 110 MAD (balance 18)', I.balance('patty-beef') === 18);
 
 // 6d. Execute non-waste void (qty 1): must restore to frozen 92 MAD lot, NOT 110 MAD lot
-const voidCount = C.reverseVoid({
+const voidCount = await C.reverseVoid({
   voidId: 'voi-test-101', orderId: 'ord-v1', itemId: 'item-burger', qty: 1, isWaste: 0, reason: 'client_change',
 });
 check('reverseVoid writes 1 reversal movement for non-waste void', voidCount === 1);
@@ -319,26 +319,28 @@ check('Lot 92 MAD restored to 9 units remaining', lot92 && lot92.remainingQty ==
 check('Lot 110 MAD remains untouched at 10 units', lot110 && lot110.remainingQty === 10);
 
 // 6e. Waste void (isWaste = 1): zero stock movements, loss stands
-const wasteVoidCount = C.reverseVoid({
+const wasteVoidCount = await C.reverseVoid({
   voidId: 'voi-test-waste', orderId: 'ord-v1', itemId: 'item-burger', qty: 1, isWaste: 1, reason: 'kitchen_waste',
 });
 check('Waste void (isWaste = 1) produces zero stock movements', wasteVoidCount === 0);
 check('Stock balance remains at 19 after waste void', I.balance('patty-beef') === 19);
 
 // 6f. Idempotency: re-dispatching same voidId produces zero duplicate movements
-const dupVoidCount = C.reverseVoid({
+const dupVoidCount = await C.reverseVoid({
   voidId: 'voi-test-101', orderId: 'ord-v1', itemId: 'item-burger', qty: 1, isWaste: 0,
 });
 check('Duplicate reverseVoid call is idempotent (0 new rows)', dupVoidCount === 0 || I.history('patty-beef').filter(r => r.id === voidMovements[0].id).length === 1);
 check('Stock balance remains 19 without double-restocking', I.balance('patty-beef') === 19);
 
 // 6g. Remote device derivation without local original sale movement
-const remoteVoidCount = C.reverseVoid({
+const remoteVoidCount = await C.reverseVoid({
   voidId: 'voi-remote-888', orderId: 'ord-remote-999', itemId: 'item-burger', qty: 1, isWaste: 0, lineIndex: 0,
 });
 check('Remote device derives recipe reversal with deterministic ID', remoteVoidCount === 1);
 const remoteMv = I.history('patty-beef').find(r => r.meta && r.meta.voidId === 'voi-remote-888');
 check('Remote void movement created with correct item and qty', remoteMv && remoteMv.itemId === 'patty-beef' && remoteMv.qty === 1);
+check('Remote estimate records costSource recipe-estimate and null reversalOf',
+  remoteMv && remoteMv.meta && remoteMv.meta.costSource === 'recipe-estimate' && !remoteMv.reversalOf);
 
 function fnv1a(s) {
   let h = 2166136261;
@@ -347,6 +349,112 @@ function fnv1a(s) {
 }
 const expectedRemoteId = 'inv-void-' + fnv1a([MERCHANT, 'voi-remote-888', 'patty-beef', 0].join('|'));
 check('Remote void movement ID is deterministic and matches formula', remoteMv && remoteMv.id === expectedRemoteId);
+
+// 7. Multi-device ID agreement and remote D1 cost fetch (Constraints A, B, C)
+function makeIsolatedEnv(fetchStub) {
+  const store = new Map();
+  const mockLs = {
+    getItem: (k) => store.get(k) || null,
+    setItem: (k, v) => store.set(k, String(v)),
+    removeItem: (k) => store.delete(k),
+  };
+  const mockWin = {
+    localStorage: mockLs,
+    addEventListener: () => {},
+    fetch: fetchStub || (() => Promise.reject(new Error('offline'))),
+    KiwiEnv: { isReal: () => true },
+    KiwiPlatform: { isPaired: () => true, pairedMerchant: () => MERCHANT },
+    KiwiCost: {
+      doc: () => ({
+        ingredients: [
+          { id: 'stock:patty', stockId: 'patty-beef', useCost: 110 }, // Recipe says 110 today
+          { id: 'stock:cheese', stockId: 'cheese-cheddar', useCost: 15 },
+        ],
+        recipes: {
+          'item-deluxe-burger': {
+            status: 'complete', name: 'Burger Deluxe', yield: 1,
+            lines: [
+              { ing: 'stock:patty', stock: 'patty-beef', qty: 1, stockQty: 1 },
+              { ing: 'stock:cheese', stock: 'cheese-cheddar', qty: 1, stockQty: 1 },
+            ],
+          },
+        },
+      }),
+    },
+  };
+  mockWin.window = mockWin;
+  const ctx = vm.createContext({
+    window: mockWin, localStorage: mockLs, console, Date, Math, JSON, Map, Set, Promise, Array, Object, String, Number, RegExp,
+    fetch: mockWin.fetch, setTimeout: () => 0, setInterval: () => 0, clearTimeout: () => {},
+  });
+  vm.runInContext(fs.readFileSync(path.join(ROOT, 'assets/inventory-ledger.js'), 'utf8'), ctx);
+  vm.runInContext(fs.readFileSync(path.join(ROOT, 'assets/inventory-consumption.js'), 'utf8'), ctx);
+  return { win: mockWin, I: mockWin.KiwiInventory, C: mockWin.KiwiInventoryConsumption };
+}
+
+// 7a. Control A: Local sale and remote void generate identical IDs
+const envLocal = makeIsolatedEnv();
+envLocal.I.ensureOpening('patty-beef', 10, { unitCost: 92, occurredTs: t0 });
+envLocal.I.ensureOpening('cheese-cheddar', 10, { unitCost: 12, occurredTs: t0 });
+envLocal.C.record({
+  id: 'ord-shared-1', ref: 'ord-shared-1', time: t0 + 1000,
+  lines: [{ itemId: 'item-deluxe-burger', name: 'Burger Deluxe', qty: 1 }],
+});
+const localSaleRows = envLocal.I.history().filter(r => r.reason === 'sale');
+check('Local sale writes part: 0 and part: 1 into meta',
+  localSaleRows.length === 2 && localSaleRows.every(r => r.meta && r.meta.part != null));
+
+await envLocal.C.reverseVoid({
+  voidId: 'voi-shared-multi', orderId: 'ord-shared-1', itemId: 'item-deluxe-burger', qty: 1, isWaste: 0,
+});
+const localVoidIds = envLocal.I.history().filter(r => r.refType === 'kitchen-void').map(r => r.id).sort();
+
+const envRemote = makeIsolatedEnv(); // Empty ledger
+await envRemote.C.reverseVoid({
+  voidId: 'voi-shared-multi', orderId: 'ord-shared-1', itemId: 'item-deluxe-burger', qty: 1, isWaste: 0,
+});
+const remoteVoidIds = envRemote.I.history().filter(r => r.refType === 'kitchen-void').map(r => r.id).sort();
+
+check('Control A: Local and remote empty ledger produce exactly identical void IDs',
+  localVoidIds.length === 2 && remoteVoidIds.length === 2 && localVoidIds.join(',') === remoteVoidIds.join(','));
+
+// 7b. Control B: Remote path fetches frozen cost from D1 before estimating
+const d1StubFetch = async (url) => {
+  if (url.includes('/api/inventory/movements') && url.includes('refId=ord-d1-sale')) {
+    return {
+      ok: true,
+      json: async () => ({
+        merchant: MERCHANT,
+        movements: [
+          {
+            id: 'inv-sale-d1-1', itemId: 'patty-beef', qty: -1, reason: 'sale',
+            unitCost: 92, refType: 'sale', refId: 'ord-d1-sale', occurredTs: t0,
+            meta: { sourceItemId: 'item-deluxe-burger', line: 0, part: 0 },
+          },
+        ],
+      }),
+    };
+  }
+  return { ok: false, status: 404 };
+};
+
+const envD1 = makeIsolatedEnv(d1StubFetch);
+await envD1.C.reverseVoid({
+  voidId: 'voi-d1-001', orderId: 'ord-d1-sale', itemId: 'patty-beef', qty: 1, isWaste: 0,
+});
+const d1VoidMv = envD1.I.history('patty-beef').find(r => r.refType === 'kitchen-void');
+check('Control B: D1 remote fetch gets frozen cost (92 MAD) instead of recipe rate (110 MAD)',
+  d1VoidMv && d1VoidMv.unitCost === 92 && (!d1VoidMv.meta || d1VoidMv.meta.costSource !== 'recipe-estimate'));
+
+// 7c. Control B fallback: Broken fetch falls back to recipe estimate and stamps meta.costSource
+const brokenFetch = () => Promise.reject(new Error('D1 offline'));
+const envFallback = makeIsolatedEnv(brokenFetch);
+await envFallback.C.reverseVoid({
+  voidId: 'voi-fb-001', orderId: 'ord-offline-sale', itemId: 'patty-beef', qty: 1, isWaste: 0,
+});
+const fbVoidMv = envFallback.I.history('patty-beef').find(r => r.refType === 'kitchen-void');
+check('Control B fallback: Offline fetch stamps costSource recipe-estimate @ 110 MAD',
+  fbVoidMv && fbVoidMv.unitCost === 110 && fbVoidMv.meta && fbVoidMv.meta.costSource === 'recipe-estimate');
 
 console.log(failures ? `\n✗ ${failures} failure(s)\n` : `\n✓ All kitchen void protocol behavioural checks green.\n`);
 process.exitCode = failures ? 1 : 0;

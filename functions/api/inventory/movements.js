@@ -117,6 +117,39 @@ export async function onRequestGet({ request, env }) {
     } catch (_) { return json({ error: 'db' }, 503); }
   }
 
+  const refIdFilter = str(url.searchParams.get('refId') || url.searchParams.get('ref_id'), 100);
+  const reasonFilter = str(url.searchParams.get('reason'), 32).toLowerCase();
+
+  if (refIdFilter) {
+    try {
+      let query = `SELECT id, item_id, variant_id, location_id, qty_milli, reason,
+                          unit_cost_cents, currency, ref_type, ref_id, note, actor,
+                          occurred_ts, srv_ts, reversal_of, meta
+                     FROM inventory_movements
+                    WHERE merchant = ? AND ref_id = ?`;
+      const args = [merchant, refIdFilter];
+      if (reasonFilter) {
+        query += ` AND reason = ?`;
+        args.push(reasonFilter);
+      }
+      query += ` ORDER BY occurred_ts ASC, srv_ts ASC LIMIT 200`;
+      const res = await env.DB.prepare(query).bind(...args).all();
+      const rows = (res && res.results) || [];
+      const movements = rows.map((r) => {
+        let meta = null; try { meta = r.meta ? JSON.parse(r.meta) : null; } catch (_) {}
+        return {
+          id: r.id, itemId: r.item_id, variantId: r.variant_id, locationId: r.location_id,
+          qty: Number(r.qty_milli || 0) / 1000, reason: r.reason,
+          unitCost: r.unit_cost_cents == null ? null : Number(r.unit_cost_cents) / 100,
+          currency: r.currency, refType: r.ref_type, refId: r.ref_id, note: r.note,
+          actor: r.actor, occurredTs: r.occurred_ts, cursor: r.srv_ts,
+          reversalOf: r.reversal_of, meta,
+        };
+      });
+      return json({ merchant, movements, cursor: 0, more: false });
+    } catch (_) { return json({ error: 'db' }, 503); }
+  }
+
   const since = Math.max(0, Math.round(Number(url.searchParams.get('since')) || 0));
   try {
     const res = await env.DB.prepare(

@@ -229,7 +229,7 @@
           unitCost: realizedCost,
           occurredTs: n(sale.ts || sale.time) || Date.now(),
           note: x.direct ? String(line.name || 'Vente') : `Recette · ${line.name || itemId}`,
-          meta: { sourceItemId: itemId, recipe: x.recipe || '', line: idx },
+          meta: { sourceItemId: itemId, recipe: x.recipe || '', line: idx, part: part, lineQty: n(line.qty || line.quantity || 1) },
         });
         if (m) written++;
       });
@@ -248,7 +248,82 @@
     return nrows;
   }
 
-  function reverseVoid(voidRecord, note) {
+  function reverseSaleRows(saleRows, voidRecord, note) {
+    var I = window.KiwiInventory;
+    if (!I || !Array.isArray(saleRows) || !saleRows.length || !voidRecord) return 0;
+    var orderId = String(voidRecord.orderId || voidRecord.order_id || voidRecord.ref || '').slice(0, 100);
+    var voidId = String(voidRecord.voidId || voidRecord.void_id || voidRecord.id || '').slice(0, 80);
+    var voidQty = Math.max(0, n(voidRecord.qty || voidRecord.quantity || 1));
+    var merchant = I.merchant?.() || '';
+    var history = (I.history && I.history()) || [];
+    var written = 0;
+
+    // Group matching sale rows by itemId so recipe ingredients reverse together
+    var byItem = new Map();
+    for (var i = 0; i < saleRows.length; i++) {
+      var r = saleRows[i];
+      if (!r || !r.itemId) continue;
+      if (!byItem.has(r.itemId)) byItem.set(r.itemId, []);
+      byItem.get(r.itemId).push(r);
+    }
+
+    byItem.forEach(function (rowsForItem, itemId) {
+      var totalItemSold = rowsForItem.reduce(function (sum, r) { return sum + Math.abs(+r.qty || 0); }, 0);
+      var origDishQty = 0;
+      if (rowsForItem[0] && rowsForItem[0].meta && rowsForItem[0].meta.lineQty != null) {
+        origDishQty = Math.max(0, +rowsForItem[0].meta.lineQty || 0);
+      }
+      var targetVoidQty = 0;
+      if (origDishQty > 0) {
+        targetVoidQty = Math.min(totalItemSold, Math.round((totalItemSold * (voidQty / origDishQty)) * 1000) / 1000);
+      } else {
+        targetVoidQty = Math.min(totalItemSold, voidQty);
+      }
+
+      var remainingToReverse = targetVoidQty;
+      // Unwind rows for this item in reverse depletion order
+      for (var j = rowsForItem.length - 1; j >= 0 && remainingToReverse > 0; j--) {
+        var sRow = rowsForItem[j];
+        var sQty = Math.abs(+sRow.qty || 0);
+        if (!(sQty > 0)) continue;
+
+        var alreadyReversed = history.reduce(function (sum, r) {
+          return (r.reversalOf === sRow.id && r.reason === 'sale-reversal') ? sum + (+r.qty || 0) : sum;
+        }, 0);
+        var availableToReverse = Math.max(0, Math.round((sQty - alreadyReversed) * 1000) / 1000);
+        if (!(availableToReverse > 0)) continue;
+
+        var revQty = Math.min(availableToReverse, remainingToReverse);
+        // Both local and remote paths hash identical tuple [merchant, voidId, sRow.itemId, part]
+        // where part is the recipe-target index persisted in meta.part
+        var part = (sRow.meta && sRow.meta.part != null) ? sRow.meta.part : (sRow.meta && sRow.meta.line != null ? sRow.meta.line : 0);
+        var voidMvId = 'inv-void-' + hash([merchant, voidId, sRow.itemId, part].join('|'));
+
+        var m = I.add({
+          id: voidMvId,
+          itemId: sRow.itemId,
+          variantId: sRow.variantId || '',
+          locationId: sRow.locationId || 'principal',
+          qty: revQty,
+          reason: 'sale-reversal',
+          refType: 'kitchen-void',
+          refId: orderId,
+          unitCost: sRow.unitCost != null ? sRow.unitCost : null, // Frozen cost from original sale!
+          occurredTs: Math.max(Date.now(), (sRow && sRow.occurredTs ? +sRow.occurredTs + 1 : Date.now())),
+          note: note || (voidRecord.reason ? `Annulation cuisine · ${voidRecord.reason}` : 'Annulation cuisine'),
+          reversalOf: sRow.id,
+          meta: Object.assign({}, sRow.meta || {}, { voidId: voidId, voidReason: voidRecord.reason || '' }),
+        });
+        if (m) {
+          written++;
+          remainingToReverse = Math.round((remainingToReverse - revQty) * 1000) / 1000;
+        }
+      }
+    });
+    return written;
+  }
+
+  async function reverseVoid(voidRecord, note) {
     var I = window.KiwiInventory;
     if (!I || !I.isReal?.() || !voidRecord) return 0;
     // Waste voids (is_waste = 1): the loss stands, zero stock movements.
@@ -263,87 +338,82 @@
     var merchant = I.merchant?.() || '';
     var history = (I.history && I.history()) || [];
 
-    // Match original sale movements by order reference and item identity
+    // 1. Check local ledger for original sale movements
     var saleRows = history.filter(function (r) {
       if (r.reason !== 'sale' || r.refId !== orderId) return false;
       if (!itemId) return true;
       return r.itemId === itemId || (r.meta && (r.meta.sourceItemId === itemId || r.meta.recipe === itemId));
     });
 
-    var written = 0;
     if (saleRows.length > 0) {
-      // Reverse matching sale movements unwinding in reverse depletion order
-      var remainingVoidQty = voidQty;
-      for (var i = saleRows.length - 1; i >= 0 && remainingVoidQty > 0; i--) {
-        var sRow = saleRows[i];
-        var sQty = Math.abs(+sRow.qty || 0);
-        if (!(sQty > 0)) continue;
+      return reverseSaleRows(saleRows, voidRecord, note);
+    }
 
-        var alreadyReversed = history.reduce(function (sum, r) {
-          return (r.reversalOf === sRow.id && r.reason === 'sale-reversal') ? sum + (+r.qty || 0) : sum;
-        }, 0);
-        var availableToReverse = Math.max(0, Math.round((sQty - alreadyReversed) * 1000) / 1000);
-        if (!(availableToReverse > 0)) continue;
-
-        var revQty = Math.min(availableToReverse, remainingVoidQty);
-        var part = (sRow.meta && sRow.meta.part != null) ? sRow.meta.part : i;
-        var voidMvId = 'inv-void-' + hash([merchant, voidId, sRow.itemId, part].join('|'));
-
-        var m = I.add({
-          id: voidMvId,
-          itemId: sRow.itemId,
-          variantId: sRow.variantId || '',
-          locationId: sRow.locationId || 'principal',
-          qty: revQty,
-          reason: 'sale-reversal',
-          refType: 'kitchen-void',
-          refId: orderId,
-          unitCost: sRow.unitCost != null ? sRow.unitCost : null, // Frozen cost from the original sale movement!
-          occurredTs: Math.max(Date.now(), (sRow && sRow.occurredTs ? +sRow.occurredTs + 1 : Date.now())),
-          note: note || (voidRecord.reason ? `Annulation cuisine · ${voidRecord.reason}` : 'Annulation cuisine'),
-          reversalOf: sRow.id,
-          meta: Object.assign({}, sRow.meta || {}, { voidId: voidId, voidReason: voidRecord.reason || '' }),
-        });
-        if (m) {
-          written++;
-          remainingVoidQty = Math.round((remainingVoidQty - revQty) * 1000) / 1000;
+    // 2. Remote device path: fetch original frozen sale movements from D1 before estimating
+    var remoteRows = null;
+    try {
+      if (typeof fetch === 'function' && merchant && orderId) {
+        var u = '/api/inventory/movements?merchant=' + encodeURIComponent(merchant) + '&refId=' + encodeURIComponent(orderId) + '&reason=sale';
+        var res = await fetch(u, { credentials: 'same-origin', cache: 'no-store' });
+        if (res.ok) {
+          var body = await res.json();
+          if (Array.isArray(body && body.movements) && body.movements.length) {
+            remoteRows = body.movements.filter(function (r) {
+              if (r.reason !== 'sale' || r.refId !== orderId) return false;
+              if (!itemId) return true;
+              return r.itemId === itemId || (r.meta && (r.meta.sourceItemId === itemId || r.meta.recipe === itemId));
+            });
+          }
         }
       }
-    } else {
-      // Remote device fallback / sale movement not in local ledger:
-      // Derive recipe ingredients from KiwiCost.doc() with deterministic void IDs
-      var d = doc();
-      var ingredients = itemId ? recipeLines(itemId, voidQty, d, 0, []) : null;
-      if (!itemId && voidRecord.name) {
-        var alias = recipeByName(voidRecord.name, d);
-        ingredients = alias ? recipeLines(alias, voidQty, d, 0, []) : null;
-        if (alias) itemId = alias;
-      }
-      var targets = ingredients || (itemId ? [{ itemId: itemId, qty: voidQty, direct: true }] : []);
-      targets.forEach(function (x, part) {
-        var voidMvId = 'inv-void-' + hash([merchant, voidId, x.itemId, part || 0].join('|'));
-        var origSaleMvId = movementId(orderId, (voidRecord.lineIndex || 0), x.itemId, part || 0);
-        var baseCost = x.direct
-          ? (voidRecord.unitCost != null ? n(voidRecord.unitCost) : null)
-          : (x.unitCost != null ? n(x.unitCost) : null);
-        var m = I.add({
-          id: voidMvId,
-          itemId: x.itemId,
-          variantId: '',
-          locationId: 'principal',
-          qty: x.qty,
-          reason: 'sale-reversal',
-          refType: 'kitchen-void',
-          refId: orderId,
-          unitCost: voidRecord.unitCost != null ? n(voidRecord.unitCost) : baseCost,
-          occurredTs: Date.now(),
-          note: note || (voidRecord.reason ? `Annulation cuisine · ${voidRecord.reason}` : 'Annulation cuisine'),
-          reversalOf: origSaleMvId,
-          meta: { sourceItemId: itemId, recipe: x.recipe || '', voidId: voidId, line: voidRecord.lineIndex || 0, part: part || 0 },
-        });
-        if (m) written++;
-      });
+    } catch (_) {}
+
+    if (remoteRows && remoteRows.length > 0) {
+      return reverseSaleRows(remoteRows, voidRecord, note);
     }
+
+    // 3. Fallback to recipe estimation (offline or unrecorded original sale)
+    var d = doc();
+    var ingredients = itemId ? recipeLines(itemId, voidQty, d, 0, []) : null;
+    if (!itemId && voidRecord.name) {
+      var alias = recipeByName(voidRecord.name, d);
+      ingredients = alias ? recipeLines(alias, voidQty, d, 0, []) : null;
+      if (alias) itemId = alias;
+    }
+    var targets = ingredients || (itemId ? [{ itemId: itemId, qty: voidQty, direct: true }] : []);
+    var written = 0;
+    targets.forEach(function (x, part) {
+      var voidMvId = 'inv-void-' + hash([merchant, voidId, x.itemId, part || 0].join('|'));
+      var baseCost = null;
+      if (x.direct) {
+        if (voidRecord.unitCost != null) {
+          baseCost = n(voidRecord.unitCost);
+        } else {
+          var known = (d.ingredients || []).find(function (ing) {
+            return String(ing.id) === x.itemId || String(ing.stockId) === x.itemId || String(ing.id) === ('stock:' + x.itemId);
+          });
+          if (known && known.useCost != null) baseCost = n(known.useCost);
+        }
+      } else {
+        baseCost = x.unitCost != null ? n(x.unitCost) : null;
+      }
+      var m = I.add({
+        id: voidMvId,
+        itemId: x.itemId,
+        variantId: '',
+        locationId: 'principal',
+        qty: x.qty,
+        reason: 'sale-reversal',
+        refType: 'kitchen-void',
+        refId: orderId,
+        unitCost: voidRecord.unitCost != null ? n(voidRecord.unitCost) : baseCost,
+        occurredTs: Date.now(),
+        note: note || (voidRecord.reason ? `Annulation cuisine · ${voidRecord.reason}` : 'Annulation cuisine'),
+        reversalOf: '', // Do not invent lineIndex link
+        meta: { sourceItemId: itemId, recipe: x.recipe || '', voidId: voidId, part: part || 0, costSource: 'recipe-estimate' },
+      });
+      if (m) written++;
+    });
     return written;
   }
 
