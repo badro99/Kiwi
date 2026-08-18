@@ -9,7 +9,7 @@
 // hours document used by Dashboard → Paie & planning.
 
 import {
-  json, employeeToken, employeeCookie, clearEmployeeCookie, readEmployee,
+  json, employeeToken, employeeCookie, clearEmployeeCookie, readEmployee, employeeNeedsRefresh,
   findEmployeeCredential, limitCheck, limitFail, limitClear,
 } from '../auth/_lib.js';
 
@@ -275,7 +275,18 @@ export async function onRequestGet({ request, env }) {
   const data = await payloadFor(request, env);
   if (!data) return json({ error: 'employee-session-required' }, 401);
   if (data.suspended) return json({ error: 'store-suspended' }, 403);
-  return json(data, 200, { 'Cache-Control': 'no-store' });
+  const res = json(data, 200, { 'Cache-Control': 'no-store' });
+  /* Fenêtre glissante — voir employeeNeedsRefresh(). C'est le sondage que
+   * l'app employé fait déjà tourner : le seul point du service traversé par
+   * une session VALIDE à chaque service, donc le seul endroit où la prolonger
+   * sans ajouter d'appel. Rien n'est prolongé si la session est déjà morte —
+   * payloadFor() a répondu 401 plus haut. */
+  const session = await readEmployee(request, env);
+  if (employeeNeedsRefresh(session)) {
+    res.headers.append('Set-Cookie', employeeCookie(
+      await employeeToken(env.AUTH_SECRET, { merchant: session.merchant, staffId: session.staffId })));
+  }
+  return res;
 }
 
 export async function onRequestPost({ request, env }) {

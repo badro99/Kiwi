@@ -224,6 +224,14 @@ export function employeeCookie(value) {
   return `${EMPLOYEE_COOKIE}=${value}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${Math.floor(EMPLOYEE_SESSION_MS / 1000)}`;
 }
 
+// Même raison que sessionNeedsRefresh, côté employé : la session de service a
+// elle aussi une fenêtre fixe, et l'app employé d'une salle qui tourne tous les
+// jours n'a aucune raison de redemander un code au bout d'un mois pile.
+export function employeeNeedsRefresh(payload) {
+  if (!payload || typeof payload.exp !== 'number') return false;
+  return payload.exp - Date.now() < EMPLOYEE_SESSION_MS / 2;
+}
+
 // Resolve the credentials the owner records on Dashboard → Équipe. Email is
 // read from the private access mirror written with the cashier PIN roster. Old
 // stores without that mirror still fall back to their Team document.
@@ -522,6 +530,19 @@ export function sessionCookie(value) {
 }
 export function clearSessionCookie() {
   return `${SESS_COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`;
+}
+
+// Une caisse en mode kiosque ne se reconnecte jamais d'elle-même : on l'allume
+// le matin, on l'éteint le soir, et personne ne retape jamais un mot de passe.
+// Avec une fenêtre FIXE de 30 jours elle finit donc, un matin sur trente, sur
+// l'écran de connexion au lieu du comptoir — et le commerçant ouvre sans caisse.
+// Le jeton est donc réémis dès qu'il a passé la moitié de sa vie : un appareil
+// qui sert reste connecté indéfiniment, un appareil oublié expire toujours au
+// bout de 30 jours. Ne prolonge AUCUN droit : la révocation reste vérifiée en
+// base à chaque requête, et un compte supprimé est coupé au chargement suivant.
+export function sessionNeedsRefresh(sess) {
+  if (!sess || typeof sess.exp !== 'number') return false;
+  return sess.exp - Date.now() < (SESS_DAYS * 86400 * 1000) / 2;
 }
 
 export function readCookie(request, name) {

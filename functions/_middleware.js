@@ -22,6 +22,7 @@
 
 import {
   readSession, readCookie, SESS_COOKIE, clearSessionCookie,
+  makeSession, sessionCookie, sessionNeedsRefresh,
   operatorToken, OP_COOKIE, operatorIdToken, OPID_COOKIE, namedOperatorId, verifyPassword,
   findEmployeeCredential, employeeToken, employeeCookie, activeServiceEmployee,
   limitCheck, limitFail, limitClear,
@@ -311,7 +312,20 @@ async function routeRequest(context) {
       const wantsDoc = dest === 'document' ||
         (!dest && (request.headers.get('Accept') || '').indexOf('text/html') !== -1);
       if (!(wantsDoc || isApi)) return next();         // asset → trust the token
-      if (await accountActive(env, sess.aid)) return next();
+      if (await accountActive(env, sess.aid)) {
+        /* Fenêtre glissante — voir sessionNeedsRefresh(). Uniquement sur un
+         * CHARGEMENT DE PAGE arrivé à mi-vie : jamais sur un asset (le cookie
+         * repartirait sur chaque fichier), jamais sur une réponse 101, parce
+         * que reconstruire une réponse tue la bascule WebSocket. */
+        if (wantsDoc && sessionNeedsRefresh(sess)) {
+          const res = await next();
+          if (res.status === 101) return res;
+          const out = new Response(res.body, res);
+          out.headers.append('Set-Cookie', sessionCookie(await makeSession(sess.aid, authSecret)));
+          return out;
+        }
+        return next();
+      }
       sessionRevoked = true;                           // deleted/suspended → lock out below
     }
   }

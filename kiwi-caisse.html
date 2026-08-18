@@ -4709,7 +4709,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=358" defer></script>
-  <script src="assets/caisse-pwa.js?v=380" defer></script>
+  <script src="assets/caisse-pwa.js?v=381" defer></script>
   <script src="assets/live-link.js?v=10" defer></script>
   <!-- The staff-role catalogue — says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -4917,6 +4917,76 @@
     </div>
   </div>
   <script>
+    /* ── Kiosque : rester sur la caisse après une coupure ────────────────────
+       Une caisse est allumée le matin, éteinte le soir, et personne ne la
+       reconfigure entre les deux. Deux choses l'en empêchaient :
+
+       · l'écran s'endormait — et l'écran de verrouillage de l'OS passe devant
+         la caisse, ce qui est le même échec qu'une app fermée ;
+       · le plein écran était oublié à chaque redémarrage.
+
+       Le démarrage automatique lui-même reste un réglage du SYSTÈME (voir
+       KIOSK.md) : aucune page web ne peut se relancer après une coupure de
+       courant, et requestFullscreen() exige un geste de l'utilisateur — c'est
+       exactement pourquoi le navigateur doit être lancé en mode kiosque. Ce
+       bloc-ci couvre tout le reste. */
+    (function () {
+      'use strict';
+      var KEY = 'kiwiCaisseFullscreen';
+
+      /* 1 · Garder l'écran allumé. Même motif que le KDS (kiwi-cuisine.html) :
+         le verrou est relâché par le navigateur dès que l'onglet passe en
+         arrière-plan, donc il faut le reprendre au retour. */
+      var lock = null;
+      function keepAwake() {
+        if (!navigator.wakeLock || lock || document.visibilityState !== 'visible') return;
+        navigator.wakeLock.request('screen').then(function (l) {
+          lock = l;
+          l.addEventListener('release', function () { lock = null; });
+        }).catch(function () {});
+      }
+      document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'visible') keepAwake();
+      });
+      keepAwake();
+
+      /* 2 · Se souvenir du plein écran. */
+      function fsEl() { return document.fullscreenElement || document.webkitFullscreenElement || null; }
+      function remember() { try { localStorage.setItem(KEY, fsEl() ? '1' : '0'); } catch (_) {} }
+      document.addEventListener('fullscreenchange', remember);
+      document.addEventListener('webkitfullscreenchange', remember);
+
+      /* 3 · Le rétablir au redémarrage. L'API refuse hors d'un geste : on
+         attend donc le premier — en pratique le premier chiffre du code. On
+         écoute « click » et non « pointerdown » : passer en plein écran
+         redimensionne la page, et le faire entre l'appui et le relâchement
+         ferait atterrir le doigt sur une autre touche que celle visée. */
+      function installed() {
+        try {
+          return (window.matchMedia && (matchMedia('(display-mode: fullscreen)').matches
+            || matchMedia('(display-mode: standalone)').matches)) || navigator.standalone === true;
+        } catch (_) { return false; }
+      }
+      function wanted() { try { return localStorage.getItem(KEY) === '1'; } catch (_) { return false; } }
+      function unhook() {
+        document.removeEventListener('click', restore, true);
+        document.removeEventListener('keydown', restore, true);
+      }
+      function restore() {
+        unhook();
+        if (fsEl()) return;
+        try {
+          var el = document.documentElement;
+          var r = (el.requestFullscreen || el.webkitRequestFullscreen || function () {}).call(el);
+          if (r && r.catch) r.catch(function () {});
+        } catch (_) {}
+      }
+      if (wanted() && !installed()) {
+        document.addEventListener('click', restore, true);
+        document.addEventListener('keydown', restore, true);
+      }
+    })();
+
     /* Fullscreen toggle — one tap puts the till in kiosk-style fullscreen so the
        cashier stays in the app the whole shift (no tab-switching, no other
        sites). Fullscreen API with a webkit fallback for older Safari. */
