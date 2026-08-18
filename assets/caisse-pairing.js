@@ -294,21 +294,23 @@
   /* ── staff PIN gate (F8) ─────────────────────────────────────────────────
    * Pairing binds the DEVICE to a store; it must not also authenticate the
    * PERSON. Before the register becomes usable, require one of the store's staff
-   * PINs — the same PINs the dashboard lock validates, served by
-   * /api/config?merchant=slug. An explicitly empty list may open without a PIN,
-   * but an unreachable or malformed response is UNKNOWN, not "no PINs": the till
-   * stays locked and offers a retry. */
+   * PINs. /api/config?merchant=slug says WHETHER a gate is configured and WHO is
+   * on the roster; it no longer says what the codes are, so the code typed on the
+   * pad is checked by POST /api/pin/verify — rate-limited, server-side, and the
+   * only place a four-digit code is ever compared. An explicitly empty roster
+   * with no gate may open without a PIN, but an unreachable or malformed response
+   * is UNKNOWN, not "no PINs": the till stays locked and offers a retry. */
   var pinBuf = '';
   var pinVenue = null;
-  var pinList = null;   // [{pin,name,role}] once fetched
+  var pinList = null;   // [{name,role}] once fetched — the roster, never the codes
 
   /* ── who is at the till right now ─────────────────────────────────────────
-   * A staff code is a PERSON, not just a door code: the list /api/config serves
-   * carries {pin, name, role}, so matching one says exactly who opened the
-   * register. That was thrown away — submitPin only asked "is this code in the
-   * list?" — and every surface downstream fell back to pins[0]. So the register
-   * greeted the first name on the roster, printed it on tickets and filed every
-   * sale under it, whoever had actually unlocked it.
+   * A staff code is a PERSON, not just a door code: /api/pin/verify answers with
+   * the {id, name, role} the code proved, so unlocking says exactly who opened
+   * the register. That was thrown away — submitPin only asked "is this code in
+   * the list?" — and every surface downstream fell back to pins[0]. So the
+   * register greeted the first name on the roster, printed it on tickets and
+   * filed every sale under it, whoever had actually unlocked it.
    *
    * Published as window.KiwiStaff (+ a `kiwi-staff` event for surfaces already
    * painted by the time the code is entered). Session-scoped: a reload re-asks
@@ -493,16 +495,13 @@
       if (scr) scr.style.display = 'none';
       bootVertical(venue);
     }
-    function localFallback() {
-      var who = null;
-      (pinList || []).forEach(function (p) {
-        if (!who && String((p && (p.pin || p.code)) || '') === code) who = p;
-      });
-      if (who) { acceptStaff(who); return; }
-      refuse('Code incorrect.');
-    }
-
-    if (!merchant) { localFallback(); return; }
+    /* Le serveur est le SEUL juge. Il n'y a plus de liste de codes ici pour se
+     * rabattre dessus, et c'est le but : une comparaison locale suppose que le
+     * navigateur détient les codes. Quand la vérification n'aboutit pas — panne,
+     * coupure réseau — on le DIT au lieu d'ouvrir : une caisse dont on ne peut
+     * pas prouver qui l'ouvre reste fermée, exactement comme quand /api/config
+     * lui-même est injoignable (showPinLoadError plus haut). */
+    if (!merchant) { refuse('Caisse non appairée.'); return; }
 
     fetch('/api/pin/verify', {
       method: 'POST',
@@ -519,19 +518,16 @@
           return;
         }
         if (!r.ok) {
-          localFallback();
+          refuse('Vérification impossible. Réessayez.');
           return;
         }
         return r.json().then(function (d) {
-          if (d && d.ok && d.staff) {
-            acceptStaff(d.staff);
-          } else {
-            localFallback();
-          }
+          if (d && d.ok && d.staff) acceptStaff(d.staff);
+          else refuse('Code incorrect.');
         });
       })
       .catch(function () {
-        localFallback();
+        refuse('Vérification impossible. Réessayez.');
       });
   }
 
@@ -622,37 +618,54 @@
     showPad();               // hosted + unpaired → pairing pad
   }
 
+  /* Le code frappé, soumis au serveur, contre l'identité qu'il prouve — ou null.
+   * Un seul chemin pour toutes les portes de la caisse, et aucune comparaison
+   * de code dans le navigateur. */
+  function verifyCode(code) {
+    code = String(code || '');
+    var venue = pinVenue || pairedVenue();
+    var merchant = (venue && venue.merchant) || '';
+    if (!/^\d{4}$/.test(code) || !merchant) return Promise.resolve(null);
+    return fetch('/api/pin/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ merchant: merchant, pin: code }),
+    })
+      .then(function (r) { return r && r.ok ? r.json() : null; })
+      .then(function (d) { return (d && d.ok && d.staff) ? d.staff : null; })
+      .catch(function () { return null; });
+  }
+
   window.KiwiCaissePairing = {
     isPaired: isPaired, pairedVenue: pairedVenue, showPad: showPad, redeem: redeem,
     unpair: unpair, bootVertical: bootVertical,
     // Who unlocked this till, for any surface that needs to name them.
     staff: function () { return window.KiwiStaff || null; }, setStaff: setStaff,
+    /* ── Autoriser une opération protégée (remise, annulation, retrait) ──────
+     * Ces deux fonctions comparaient le code frappé à `pinList`, ce qui n'était
+     * possible que parce que /api/config expédiait les codes. Elles interrogent
+     * maintenant le même vérificateur que le pavé d'ouverture, et rendent donc
+     * une PROMESSE — l'appelant (kiwi-caisse.html › managerCodeValid) l'attend.
+     * En cas de panne on répond false : une autorisation qu'on ne peut pas
+     * prouver n'est pas une autorisation. */
     authorizeTill: function (code) {
-      code = String(code || '');
-      if (!/^\d{4}$/.test(code) || !Array.isArray(pinList)) return false;
       var roles = window.KiwiRoles;
-      if (!roles || typeof roles.opensTill !== 'function') return false;
-      return pinList.some(function (p) {
-        var same = String((p && (p.pin || p.code)) || '') === code;
-        return same && roles.opensTill((p && p.role) || '');
+      if (!roles || typeof roles.opensTill !== 'function') return Promise.resolve(false);
+      return verifyCode(code).then(function (who) {
+        return !!who && roles.opensTill(who.role || '');
       });
     },
     authorizeManager: function (code) {
-      code = String(code || '');
-      if (!/^\d{4}$/.test(code) || !Array.isArray(pinList)) return false;
-      var hit = null;
-      pinList.some(function (p) {
-        var same = String((p && (p.pin || p.code)) || '') === code;
-        var role = String((p && p.role) || '').toLowerCase();
-        if (same && /owner|propri|manager|g[eé]rant|responsable|admin/.test(role)) { hit = p; return true; }
-        return false;
+      return verifyCode(code).then(function (who) {
+        var role = String((who && who.role) || '').toLowerCase();
+        if (!who || !/owner|propri|manager|g[eé]rant|responsable|admin/.test(role)) return false;
+        /* Une autorisation qui ne dit pas QUI a autorisé ne vaut rien le jour où
+         * on la relit : le code prouve une personne, on garde donc son nom
+         * (jamais le code) pour que la surface qui a demandé l'accord puisse
+         * l'écrire dans sa vente. */
+        lastManager = { name: String(who.name || '').trim() || 'Responsable', role: String(who.role || '').trim() };
+        return true;
       });
-      /* Une autorisation qui ne dit pas QUI a autorisé ne vaut rien le jour où on
-       * la relit : le code prouve une personne, on garde donc son nom (jamais le
-       * code) pour que la surface qui a demandé l'accord puisse l'écrire dans sa
-       * vente. Le code lui-même ne quitte pas cette fonction. */
-      if (hit) lastManager = { name: String(hit.name || '').trim() || 'Responsable', role: String(hit.role || '').trim() };
-      return !!hit;
     },
     // Le dernier responsable ayant validé un code, pour l'écrire dans un journal.
     lastManager: function () { return lastManager; },

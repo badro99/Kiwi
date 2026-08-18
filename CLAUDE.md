@@ -284,8 +284,18 @@ figures; treat them as production data.
 - **Demo data leaks live in the real-session / non-custom-venue gap.** Gate on
   `KiwiEnv.isReal()`, not on "is this a demo account".
 - **Never log, print, or commit credentials.** Member objects in
-  `__kiwiTeamV2.byVenue` carry `password` and `pinCode` fields. Do not fetch
-  `/api/config?merchant=…` — it returns plaintext PINs.
+  `__kiwiTeamV2.byVenue` still carry `password` and `pinCode` fields, and so does
+  the `employee-access` document `POST /api/config` writes into `store_docs`.
+  `GET /api/config?merchant=…` no longer returns codes — its `pins` array is the
+  roster, `{name, role}` — but treat any *other* surface that hands you a
+  four-digit code as a credential you must not print.
+- **A four-digit code is compared server-side, nowhere else.** `POST
+  /api/pin/verify` is the only place a staff code is checked: `{merchant, pin}`
+  for a till, `{pin}` alone for the account-wide dashboard lock. It is
+  rate-limited and answers with an identity (`{id, name, role}`), never with a
+  code. If you find yourself wanting the code list in the browser to compare it
+  there, that is the bug this endpoint exists to prevent —
+  `tools/config-pin-projection-test.mjs` fails the build for it.
 - **Never enter merchant PINs, staff PINs, caisse personal codes, or pairing codes**,
   and never bypass the account gate programmatically. Enter demo surfaces through
   the demo entry points.

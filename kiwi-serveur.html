@@ -5602,33 +5602,11 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
           role: R ? R.label(raw) : (raw || 'Employé'),
         });
       }
-      // Temporary skew-window fallback: while KiwiConfig.pins still carries pin values,
-      // resolve against it if liveEmployeeState is unpopulated. Removed in Commit 3 with projection drop.
-      try {
-        const pins = (window.KiwiConfig && window.KiwiConfig.pins) || [];
-        const R = window.KiwiRoles;
-        for (let i = 0; i < pins.length; i++) {
-          if (String(pins[i].pin) === entered) {
-            const raw = pins[i].role;
-            const floor = R ? R.isService(raw) : (raw !== 'plongeur');
-            const base = floor ? ROLES.serveur : ROLES.plongeur;
-            const over = {};
-            // Say the job they actually do — on the clock-in card and the profile.
-            // Both tiers: the owner is not "Serveur" and a cook is not "Plongeur".
-            // No stored role ⇒ keep the base wording rather than invent one.
-            if (raw && R) over.role = R.label(raw);
-            else if (!floor) over.role = 'Plongeur';
-            const nm = (pins[i].name || '').trim();
-            if (nm) {
-              const parts = nm.split(/\s+/);
-              over.name = parts[0];
-              over.fullName = nm;
-              over.initials = parts.map(w => w[0]).join('').slice(0, 2).toUpperCase();
-            }
-            return Object.keys(over).length ? Object.assign({}, base, over) : base;
-          }
-        }
-      } catch (_) { /* fall through to the demo rule */ }
+      /* Ici vivait un repli qui comparait `entered` aux codes de KiwiConfig.pins.
+         Il ne pouvait plus rien décider — le portail réel appelle resolveRole('')
+         et le pavé à quatre chiffres est réservé à la démo — et il n'existait que
+         parce que /api/config expédiait les codes au navigateur. Ce n'est plus le
+         cas : le rôle vient de la session employé (liveEmployeeState), sinon rien. */
       return SV_DEMO ? ((entered === '0000') ? ROLES.plongeur : ROLES.serveur) : null;
     }
 

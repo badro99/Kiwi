@@ -1,12 +1,24 @@
 // GET /api/config?merchant=slug — the client apps' own config read.
 //
 // Returns { features, pins } for one merchant so the caisse/serveur/dashboard can
-// (a) hide modules an operator toggled off and (b) resolve PINs the operator
-// manages remotely. This is NOT operator-gated: any authenticated same-origin
-// session reaches it (the site gate already stands in front of every request), and
-// a merchant only ever reads its own slug. Absent config ⇒ empty, and every app
-// falls back to its current hardcoded behavior — so this endpoint being missing
-// (GitHub Pages, local static) changes nothing.
+// (a) hide modules an operator toggled off and (b) name the staff on the roster.
+// This is NOT operator-gated: any authenticated same-origin session reaches it
+// (the site gate already stands in front of every request), and a merchant only
+// ever reads its own slug. Absent config ⇒ empty, and every app falls back to its
+// current hardcoded behavior — so this endpoint being missing (GitHub Pages,
+// local static) changes nothing.
+//
+// THE ROSTER CARRIES NO CODES. `pins` used to ship the four-digit staff code
+// itself, so every till, every dashboard and every browser extension on the shop
+// floor held the credential that opens the money drawer — and kiwi-sw.js could
+// bank it in the HTTP cache on the way past. Each row is now { name, role } only:
+// enough to say WHO is on the roster, never enough to become them. Whether a code
+// is correct is a question for POST /api/pin/verify, which is rate-limited, tells
+// the caller nothing but yes/no + the identity it proved, and never echoes a code.
+// Anything that needs to CHANGE a code goes through POST /api/config (write-only)
+// or the operator console. Do not reintroduce `pin` into these projections; the
+// SELECTs below are deliberately narrow and tools/config-pin-projection-test.mjs
+// fails the build if a code finds its way back in.
 
 import {
   json, readSession, readCookie, SESS_COOKIE, slugMerchant, isOperator, isTillFor,
@@ -134,12 +146,13 @@ export async function onRequestGet(context) {
   if (!env.DB) return json({ features: {}, pins: [] }); // no backend → neutral
   let merchant = (url.searchParams.get('merchant') || '').trim();
 
-  // Whose config is this? The response carries staff PINs — the credential that
-  // opens a till — so the slug must never be taken on the client's word when we
-  // can do better. The signed-in account is authoritative and OVERRIDES an
-  // explicit ?merchant=: the site gate admits every merchant (and the shared
-  // staff passcode), so honouring the parameter let any account read any other
-  // account's till PINs just by knowing its slug.
+  // Whose config is this? The response carries the staff ROSTER — who works at
+  // this shop — so the slug must never be taken on the client's word when we can
+  // do better. The signed-in account is authoritative and OVERRIDES an explicit
+  // ?merchant=: the site gate admits every merchant (and the shared staff
+  // passcode), so honouring the parameter let any account read any other
+  // account's roster just by knowing its slug. (It once read their four-digit
+  // codes too; those no longer leave the database — see the file header.)
   //
   // That first fix left one door open for months: `operator` below still
   // counted the SHARED team passcode as God mode, so a browser that had been
@@ -151,19 +164,17 @@ export async function onRequestGet(context) {
   //   · operator (God mode) → ?merchant= honoured; that is what the console is.
   //   · no session (a paired caisse) → ?merchant= is still honoured for the
   //     FEATURE FLAGS and the type, which are not secrets and which a till needs
-  //     to hide modules the operator switched off. PINs, however, are now only
+  //     to hide modules the operator switched off. The roster, however, is only
   //     returned when the caller can PROVE it is that merchant: an account
   //     session, an operator, or the httpOnly till token that /api/pair/redeem
-  //     hands out (see isTillFor). Knowing a slug is no longer enough to read a
-  //     store's staff PINs.
+  //     hands out (see isTillFor). Knowing a slug is no longer enough to read who
+  //     works at a store.
   //
   //     Tills paired BEFORE this shipped carry no token, so they receive an
   //     empty `pins` until they re-pair. That degrades gracefully and opens
-  //     nothing: the only PIN-validating surface is the dashboard lock, which
-  //     always has an account session and is unaffected. A session-less caisse
-  //     uses these rows for staff NAMES (kiwi-caisse.html) and for the optional
-  //     role match in kiwi-serveur.html, both of which already fall back to
-  //     "Caissier" / "Serveur N" when the list is empty.
+  //     nothing: entering a code is verified against /api/pin/verify regardless,
+  //     and a session-less caisse uses these rows only for staff NAMES, which
+  //     already fall back to "Caissier" / "Serveur N" when the list is empty.
   let sessionMerchant = '';
   let sessionAid = '';
   if (env.AUTH_SECRET) {
@@ -188,7 +199,7 @@ export async function onRequestGet(context) {
     let rows = [];
     try {
       const result = await env.DB.prepare(
-        `SELECT p.pin, p.name, p.role
+        `SELECT p.name, p.role
            FROM staff_pins p
            LEFT JOIN merchant_config c ON c.merchant = p.merchant
           WHERE c.account_id = ? OR p.merchant = ?
@@ -200,7 +211,7 @@ export async function onRequestGet(context) {
       // preserves the former single-store behaviour until migrations land.
       try {
         const result = await env.DB.prepare(
-          'SELECT pin, name, role FROM staff_pins WHERE merchant = ? ORDER BY created_ts'
+          'SELECT name, role FROM staff_pins WHERE merchant = ? ORDER BY created_ts'
         ).bind(sessionMerchant).all();
         rows = result.results || [];
       } catch (_) {}
@@ -222,9 +233,10 @@ export async function onRequestGet(context) {
   if (sessionMerchant && !operator && !ownsRequested) merchant = sessionMerchant;
   if (!merchant) return json({ features: {}, pins: [], pinGateConfigured: false });
 
-  // May this caller read THIS merchant's staff PINs? Its own session, another of
-  // its own stores, the operator console, or a till that redeemed a pairing code
-  // for this store.
+  // May this caller read THIS merchant's staff roster? Its own session, another
+  // of its own stores, the operator console, or a till that redeemed a pairing
+  // code for this store. The codes themselves are never in the answer, but a
+  // roster is still a list of the shop's employees by name.
   const mayReadPins = (merchant === sessionMerchant) || ownsRequested || operator
     || (await isTillFor(request, env, merchant));
 
@@ -269,10 +281,10 @@ export async function onRequestGet(context) {
 
     if (mayReadPins) {
       const rows = await env.DB.prepare(
-        `SELECT pin, name, role FROM staff_pins WHERE merchant = ? ORDER BY created_ts`
+        `SELECT name, role FROM staff_pins WHERE merchant = ? ORDER BY created_ts`
       ).bind(merchant).all();
-      // Older databases may still contain waiter/kitchen PIN rows. Never send
-      // them to a till: employee login remains available through the separate
+      // Older databases may still contain waiter/kitchen rows. Never send them
+      // to a till: employee login remains available through the separate
       // private employee-access roster.
       pins = (rows.results || []).filter((row) => employeeRoleOpensTill(row.role));
       const access = await env.DB.prepare(

@@ -35,7 +35,16 @@ const ACCOUNTS = [
   { business: 'Snack Medina', email: 'medina@snack.ma', name: 'Karim' },
   { business: 'Riad Noor', email: 'noor@riad.ma', name: 'Salma' },
 ];
-const pinsByMerchant = { 'cafe-atlas': [{ id: 'p1', pin: '0000', name: 'Plongeur', role: 'plongeur' }, { id: 'p2', pin: '1234', name: 'Yassine', role: 'serveur' }] };
+/* Un plongeur, un serveur — et personne qui ouvre la caisse. Le banc ne pouvait
+   donc montrer QUE des refus : ni une ouverture de caisse, ni une autorisation
+   manager n'avait de code capable de réussir. On ajoute les deux rôles qui en
+   décident (assets/staff-roles.js › opensTill). */
+const pinsByMerchant = { 'cafe-atlas': [
+  { id: 'p1', pin: '0000', name: 'Plongeur', role: 'plongeur' },
+  { id: 'p2', pin: '1234', name: 'Yassine', role: 'serveur' },
+  { id: 'p3', pin: '2580', name: 'Samira L.', role: 'caisse' },
+  { id: 'p4', pin: '1379', name: 'Rachid O.', role: 'proprietaire' },
+] };
 const featuresByMerchant = { 'snack-medina': { stock: false, reservations: false, kds: false, tables: false, payroll: false } };
 const planByMerchant = { 'cafe-atlas': 'pro', 'snack-medina': 'basic', 'riad-noor': 'ultra' };
 const operators = [{ id: 'o1', label: 'Badr (mock)', created_ts: Date.now() }];
@@ -120,9 +129,36 @@ http.createServer((req, res) => {
   }
 
   // ── client-app config read ────────────────────────────────────────────────
+  // Même contrat que functions/api/config.js : le roster, JAMAIS les codes. Le
+  // banc les servait, si bien qu'une surface qui compare encore dans la page
+  // marchait ici et cassait en production. `/api/admin/pins` plus bas garde les
+  // codes — c'est la console opérateur, elle les gère.
   if (u.pathname === '/api/config' && req.method === 'GET') {
     const m = u.searchParams.get('merchant') || 'default';
-    return sendJson(res, { features: featuresByMerchant[m] || {}, pins: pinsByMerchant[m] || [] });
+    const roster = (pinsByMerchant[m] || []).map((p) => ({ name: p.name, role: p.role }));
+    return sendJson(res, {
+      features: featuresByMerchant[m] || {},
+      pins: roster,
+      pinGateConfigured: roster.length > 0,
+    });
+  }
+
+  // ── le seul juge d'un code frappé (mock de functions/api/pin/verify.js) ────
+  // Sans merchant : la question du tableau de bord, posée à tout le compte.
+  if (u.pathname === '/api/pin/verify' && req.method === 'POST') {
+    return readBody(req, (b) => {
+      const pin = String((b && b.pin) || '');
+      const asked = String((b && b.merchant) || '');
+      const scopes = asked ? [asked] : Object.keys(pinsByMerchant);
+      for (const m of scopes) {
+        const hit = (pinsByMerchant[m] || []).find((p) => p.pin === pin);
+        if (hit) return sendJson(res, {
+          ok: true, merchant: m,
+          staff: { id: hit.id, name: hit.name, role: hit.role },
+        });
+      }
+      return sendJson(res, { error: 'bad-pin' }, 401);
+    });
   }
 
   // ── customer self-order menu (kiwi-order.html?merchant=<slug>) ─────────────

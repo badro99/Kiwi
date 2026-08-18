@@ -962,3 +962,72 @@ export async function verifyStaffPin(request, env, merchant, pin, { requireTill 
   };
 }
 
+/* ──────────────── LE MÊME CODE, MAIS POUR TOUT UN COMPTE ────────────────────
+ * Le dashboard est la surface du PATRON et il embrasse tous ses établissements :
+ * son code doit l'ouvrir depuis n'importe lequel, alors que les codes sont rangés
+ * par BOUTIQUE (`staff_pins.merchant`). C'est exactement la question à laquelle
+ * `GET /api/config?accountPins=owners` répondait — en expédiant les codes au
+ * navigateur pour qu'il compare lui-même. Il les compare désormais ici.
+ *
+ * Dérivé de la SESSION, jamais d'un paramètre : on ne cherche que dans les
+ * boutiques que ce compte possède réellement (`merchant_config.account_id`), plus
+ * son slug d'origine pour une base pas encore migrée. Même limiteur, même
+ * projection stricte que verifyStaffPin : { id, name, role } et le slug où le
+ * code a été trouvé — jamais le code.
+ * ───────────────────────────────────────────────────────────────────────── */
+export async function verifyAccountPin(request, env, pin) {
+  if (!env || !env.DB || !env.AUTH_SECRET) return { ok: false, error: 'not-configured', status: 503 };
+  pin = String(pin || '').trim();
+  if (!/^\d{4}$/.test(pin)) return { ok: false, error: 'bad-pin', status: 401 };
+
+  let sess = null;
+  try { sess = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET); } catch (_) {}
+  if (!sess || !sess.aid) return { ok: false, error: 'unauthorized', status: 401 };
+
+  let accSlug = '';
+  try {
+    const acc = await env.DB.prepare('SELECT business FROM accounts WHERE id = ?').bind(sess.aid).first();
+    if (acc && acc.business) accSlug = slugMerchant(acc.business);
+  } catch (_) {}
+
+  const identity = `sess:${sess.aid}`;
+  const blocked = await limitCheck(request, env, 'pin:account', identity);
+  if (blocked) return { ok: false, response: blocked };
+
+  let staff = null;
+  try {
+    staff = await env.DB.prepare(
+      `SELECT p.id, p.name, p.role, p.merchant
+         FROM staff_pins p
+         LEFT JOIN merchant_config c ON c.merchant = p.merchant
+        WHERE p.pin = ? AND (c.account_id = ? OR p.merchant = ?)
+        ORDER BY p.created_ts
+        LIMIT 1`
+    ).bind(pin, sess.aid, accSlug).first();
+  } catch (_) {
+    /* Base pré-registre : on retombe sur la boutique d'origine du compte, ce qui
+     * préserve le comportement d'avant les multi-établissements. */
+    try {
+      staff = await env.DB.prepare(
+        'SELECT id, name, role, merchant FROM staff_pins WHERE merchant = ? AND pin = ? LIMIT 1'
+      ).bind(accSlug, pin).first();
+    } catch (__) { return { ok: false, error: 'staff-unavailable', status: 503 }; }
+  }
+
+  if (!staff) {
+    await limitFail(request, env, 'pin:account', identity);
+    return { ok: false, error: 'bad-pin', status: 401 };
+  }
+
+  await limitClear(request, env, 'pin:account', identity);
+  return {
+    ok: true,
+    merchant: String(staff.merchant || ''),
+    staff: {
+      id: String(staff.id || ''),
+      name: String(staff.name || ''),
+      role: String(staff.role || ''),
+    },
+  };
+}
+

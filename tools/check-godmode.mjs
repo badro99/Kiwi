@@ -387,8 +387,8 @@ G('4bis · Le voisin — un ?merchant= ne suffit jamais à ouvrir un autre comme
     JSON.stringify(leakFeed.sales || []));
 
   const leakPins = await cfgFor('snack-rif', 'merchantWithGate');
-  ok(!(leakPins.pins || []).some((p) => p.pin === '9876'),
-    'session commerçant + code d’équipe : les PIN de caisse du voisin restent fermés',
+  ok(!(leakPins.pins || []).some((p) => p.name === 'Youssef'),
+    'session commerçant + code d’équipe : le personnel du voisin reste fermé',
     JSON.stringify(leakPins.pins || []));
 
   /* c) Le code d'équipe SEUL, sans aucun compte : il n'ouvre plus rien non plus. */
@@ -399,14 +399,27 @@ G('4bis · Le voisin — un ?merchant= ne suffit jamais à ouvrir un autre comme
   /* d) …et l'on n'a rien cassé : chacun lit toujours CHEZ LUI, et l'opérateur
      nommé garde le God mode dont la console a besoin. */
   const own = await cfgFor('amira-boutique', 'merchant');
-  ok((own.pins || []).some((p) => p.pin === '1234'),
-    'le commerçant lit toujours les PIN de son propre magasin');
+  ok((own.pins || []).some((p) => p.name === 'Sara Idrissi'),
+    'le commerçant lit toujours le personnel de son propre magasin');
   const sibling = await cfgFor('amira-cafe', 'merchant');
   ok(sibling.type === 'cafe',
     '…et ceux de son second établissement (le registre dit qu’il lui appartient)');
   const godmode = await cfgFor('snack-rif', 'operator');
-  ok((godmode.pins || []).some((p) => p.pin === '9876'),
+  ok((godmode.pins || []).some((p) => p.name === 'Youssef'),
     'un opérateur NOMMÉ garde l’accès transversal — c’est à cela que sert la console');
+
+  /* Et le point de tout ceci : PERSONNE ne reçoit le code lui-même. Ni le
+     commerçant chez lui, ni l'opérateur en God mode. Le roster dit qui travaille
+     ici ; « ce code est-il le bon ? » est une question pour /api/pin/verify. */
+  for (const [label, res] of [['le commerçant chez lui', own],
+                              ['l’opérateur en God mode', godmode],
+                              ['le voisin', leakPins]]) {
+    const leaked = JSON.stringify(res.pins || []);
+    ok(!(res.pins || []).some((p) => p && (p.pin != null || p.code != null)),
+      `${label} : aucune ligne de roster ne porte de champ pin/code`);
+    ok(!/\b(1234|9876)\b/.test(leaked),
+      `${label} : aucun code à quatre chiffres dans la réponse /api/config`);
+  }
   const opFeed = await feedFor('snack-rif', 'operator');
   ok(opFeed.sales.some((s) => s.id === 's-rif'),
     '…et le flux d’un client s’ouvre bien depuis la console');

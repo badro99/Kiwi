@@ -60,8 +60,8 @@
     "sha": "5dd5229188e8ff8e"
   },
   "assets/caisse-pairing.js": {
-    "v": "7",
-    "sha": "d534e92eea4fffff"
+    "v": "8",
+    "sha": "72c825b1c1a2a0a1"
   },
   "assets/caisse-pwa.js": {
     "v": "381",
@@ -240,8 +240,8 @@
     "sha": "0e37cce13b280b97"
   },
   "assets/merchant-config.js": {
-    "v": "263",
-    "sha": "c0cd44df26600299"
+    "v": "264",
+    "sha": "5d6b4ae0df5d23bc"
   },
   "assets/mobile-nav.js": {
     "v": "2",

@@ -2,7 +2,7 @@
  *
  * Reads the per-merchant config an operator set in kiwi-admin.html:
  *   • features — modules toggled OFF (pricing/tier control) are hidden here.
- *   • pins     — staff PINs the operator manages remotely.
+ *   • pins     — the staff ROSTER ({ name, role }), never the four-digit codes.
  *
  * Fail-safe by design: if /api/config is missing (GitHub Pages, local static
  * server) or the request errors, NOTHING changes — every app keeps its current
@@ -12,8 +12,18 @@
  * app; when the operator sets features[key] === false, every matching node is
  * hidden and  body.feat-off-<key>  is added (for CSS that needs it). Apps that
  * build nav dynamically can call  window.KiwiConfig.apply()  after rendering, or
- * listen for the  kiwi-config  event. PINs are exposed on window.KiwiConfig.pins
- * for the caisse/serveur to consult additively (never replacing their defaults).
+ * listen for the  kiwi-config  event. The roster is exposed on
+ * window.KiwiConfig.pins for the caisse/serveur to consult additively (never
+ * replacing their defaults).
+ *
+ * IL N'Y A PLUS DE CODE DANS CETTE RÉPONSE. `pins` portait autrefois le code à
+ * quatre chiffres lui-même, et chaque surface comparait dans le navigateur : le
+ * code qui ouvre le tiroir-caisse vivait donc en clair dans la mémoire de la
+ * page, à portée de n'importe quel script ou extension, et le service worker
+ * pouvait le déposer dans le cache HTTP au passage. Le nom garde son rôle —
+ * dire QUI est sur la liste — et « ce code est-il le bon ? » est désormais une
+ * question posée à POST /api/pin/verify, qui répond par une identité et jamais
+ * par un code. Ne remettez pas `pin`/`code` ici.
  * Vanilla, no deps, no innerHTML.
  */
 (function () {
@@ -60,14 +70,13 @@
   }
 
   /* `pins` is the ACTIVE store's staff list — the till pad's answer to "who is
-   * standing here". `seenPins` is every pin list this session has been handed,
-   * across every store of this account, deduped by code.
+   * standing here". `seenPins` is every roster this session has been handed,
+   * across every store of this account, restricted to account owners.
    *
-   * The dashboard needs the second one. It is the OWNER's surface and it spans
-   * all their shops, so the code that opens it cannot be scoped to whichever
-   * shop happens to be selected: once the staff list went per-store, an owner
-   * whose code was filed under their first shop could no longer open the
-   * dashboard from their second, while that second shop's cashier could. */
+   * The dashboard needs the second one, but only to COUNT it: "has this account
+   * configured anyone at all?", which is what decides whether its pad may refuse
+   * a code. Which code is correct is settled by /api/pin/verify — neither list
+   * carries one any more. */
   var cfg = { features: {}, pins: [], seenPins: [], type: '', plan: '', loaded: false,
     subscription: { state: 'unknown', active: true },
     accountPinsReady: false,
@@ -108,12 +117,16 @@
   function rememberPins(list) {
     if (!Array.isArray(list)) return;
     list.forEach(function (x) {
-      var code = String((x && (x.code || x.pin)) || '').trim();
       /* `seenPins` crosses store boundaries, so it must contain account owners
        * only. Managers remain in cfg.pins, the active store's roster. */
-      if (!ownerRole(x && x.role) || !/^\d{4}$/.test(code) || pinSeen[code]) return;
-      pinSeen[code] = 1;
-      cfg.seenPins.push({ code: code, name: (x && x.name) || '', role: (x && x.role) || '' });
+      if (!ownerRole(x && x.role)) return;
+      /* Dédoublonné par personne, plus par code : le code n'arrive plus. Un
+       * patron présent dans deux boutiques ne compte donc qu'une fois, ce qui
+       * est bien ce que « ce compte a-t-il quelqu'un de configuré ? » demande. */
+      var key = String((x && x.name) || '').trim().toLowerCase() + '|' + String((x && x.role) || '').trim().toLowerCase();
+      if (pinSeen[key]) return;
+      pinSeen[key] = 1;
+      cfg.seenPins.push({ name: (x && x.name) || '', role: (x && x.role) || '' });
     });
   }
 

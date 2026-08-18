@@ -171,7 +171,7 @@ var SHELL = [
      et un client qui repart sans reçu ne revient pas le chercher. */
   '/assets/receipt.js',
   '/assets/receipt-ui.js',
-  '/assets/merchant-config.js?v=263',
+  '/assets/merchant-config.js?v=264',
   '/assets/entitlements.css?v=3',
   '/assets/entitlements.js?v=3',
   '/assets/staff-roles.js',
@@ -288,7 +288,7 @@ var SHELL = [
   '/assets/pos-gym.js?v=2',
   '/assets/pos-autre.css?v=2',
   '/assets/pos-autre.js?v=2',
-  '/assets/caisse-pairing.js?v=7',
+  '/assets/caisse-pairing.js?v=8',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là
      qu'il faut pouvoir ressortir le ticket. Un bouton de secours qui a besoin du

@@ -99,6 +99,32 @@ sqlite.prepare(`
     ('pin-3', 'other-shop', '9999', 'Other Staff', 'Caissier', ?)
 `).run(now, now, now);
 
+// 2b. Store registry — one account, two établissements. C'est la forme que la
+//     porte du dashboard doit savoir traverser : le code du patron n'est déposé
+//     qu'une fois, sous la boutique qui existait ce jour-là.
+sqlite.exec(`
+  CREATE TABLE merchant_config (
+    merchant TEXT PRIMARY KEY,
+    features TEXT,
+    plan TEXT,
+    type TEXT,
+    account_id TEXT,
+    name TEXT,
+    status TEXT,
+    updated_ts INTEGER
+  );
+`);
+sqlite.prepare(`
+  INSERT INTO merchant_config (merchant, features, account_id, name, updated_ts)
+  VALUES ('cafe-atlas', '{}', 'acc-1', 'Café Atlas', ?),
+         ('atlas-medina', '{}', 'acc-1', 'Atlas Médina', ?),
+         ('other-shop', '{}', 'acc-2', 'Other Shop', ?)
+`).run(now, now, now);
+sqlite.prepare(`
+  INSERT INTO staff_pins (id, merchant, pin, name, role, created_ts)
+  VALUES ('pin-4', 'atlas-medina', '4321', 'Rachid O.', 'Proprietaire', ?)
+`).run(now);
+
 // 3. Sale fixture for cancel tests
 sqlite.prepare(`
   INSERT INTO sales (id, merchant, amount, amount_cents, method, label, ref, ts, lines)
@@ -216,6 +242,53 @@ console.log('\n1 · Server-Side PIN Verification (/api/pin/verify)');
   const res = await verifyPinPost({ request: req, env });
   const data = await res.json();
   check('authenticated owner session can verify PIN', res.status === 200 && data.staff && data.staff.name === 'Samira L.');
+}
+
+console.log('\n1b · Account-wide verification (the dashboard lock)');
+
+/* Le tableau de bord embrasse tous les établissements du compte, alors que les
+   codes sont rangés par boutique. Cette question-là recevait autrefois sa réponse
+   en RECEVANT les codes (GET /api/config?accountPins=owners) et en comparant dans
+   le navigateur. Elle se pose maintenant ici. */
+const accountVerify = (body, headers = {}) => verifyPinPost({
+  request: new Request('https://kiwi.test/api/pin/verify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'CF-Connecting-IP': '10.9.0.1', ...headers },
+    body: JSON.stringify(body),
+  }),
+  env,
+});
+
+{
+  const res = await accountVerify({ pin: '4321' }, { Cookie: sessionCookie(ownerSessToken) });
+  const data = await res.json();
+  check('owner session resolves a code filed under ANOTHER of its own stores',
+    res.status === 200 && data.ok === true && data.staff && data.staff.name === 'Rachid O.');
+  check('…and names which store it was found in', data.merchant === 'atlas-medina');
+  check('…without echoing the code back',
+    data.pin === undefined && data.staff.pin === undefined && !JSON.stringify(data).includes('4321'));
+}
+
+{
+  const res = await accountVerify({ pin: '1234' }, { Cookie: sessionCookie(ownerSessToken) });
+  const data = await res.json();
+  check('…and still resolves a code in the account\u2019s original store',
+    res.status === 200 && data.ok === true && data.staff.name === 'Karim B.');
+}
+
+{
+  const res = await accountVerify({ pin: '9999' }, { Cookie: sessionCookie(ownerSessToken) });
+  check('another account\u2019s code is refused (401), slug or no slug', res.status === 401);
+}
+
+{
+  const res = await accountVerify({ pin: '4321' });
+  check('no session at all \u2192 401, never a roster read', res.status === 401);
+}
+
+{
+  const res = await accountVerify({ pin: '99' }, { Cookie: sessionCookie(ownerSessToken) });
+  check('a malformed code is refused before any database read', res.status === 401);
 }
 
 console.log('\n2 · Attempt Rate-Limiting on Verification');

@@ -4722,7 +4722,7 @@
        avec kiwi-cuisine.html, qui s'appaire sur la même route. -->
   <script src="assets/pairing-commit.js?v=1" defer></script>
   <!-- Hosted: 6-digit pairing pad binds this caisse to its store (no demo PINs). -->
-  <script src="assets/caisse-pairing.js?v=7" defer></script>
+  <script src="assets/caisse-pairing.js?v=8" defer></script>
   <!-- La copie serveur des données d'établissement (fidélité, carnet) : une
        caisse neuve doit retrouver le magasin, pas repartir vide. AVANT
        venue-store.js, qui s'y branche. -->
@@ -6377,11 +6377,12 @@
        Équipe page (team.js publishPins → /api/config → window.KiwiConfig.pins).
        Never the demo servers (Yassir A., Karim B.…). Empty roster → empty drawer
        and no server badges, exactly like an untouched dashboard. The local demo
-       (unpaired localhost) keeps its seeded five servers, verbatim. */
+       (unpaired localhost) keeps its seeded five servers, verbatim.
+       Des NOMS et des rôles, jamais des codes : /api/config ne les envoie plus. */
     function currentRoster() {
       try {
         const p = window.KiwiConfig && window.KiwiConfig.pins;
-        if (Array.isArray(p)) return p.filter(m => m && (m.name || m.code));
+        if (Array.isArray(p)) return p.filter(m => m && m.name);
       } catch (_) {}
       return [];
     }
@@ -13122,14 +13123,19 @@
       if (window.lucide) lucide.createIcons();
     }
 
+    /* Le verdict vient du serveur (assets/caisse-pairing.js › verifyCode), donc
+       il ARRIVE : la caisse ne détient plus les codes et ne peut plus trancher
+       elle-même. Toujours une promesse, y compris en démo locale, pour que
+       l'appelant n'ait qu'un seul chemin à gérer. */
     function managerCodeValid(code) {
       let protectedTill = false;
       try { protectedTill = !!(window.KiwiEnv?.isReal?.() || window.KiwiCaissePairing?.isPaired?.()); } catch (_) {}
-      if (!protectedTill) return true;
-      if (mgrAccess === 'till') {
-        try { return window.KiwiCaissePairing?.authorizeTill?.(code) === true; } catch (_) { return false; }
-      }
-      try { return window.KiwiCaissePairing?.authorizeManager?.(code) === true; } catch (_) { return false; }
+      if (!protectedTill) return Promise.resolve(true);
+      const P = window.KiwiCaissePairing;
+      const ask = mgrAccess === 'till' ? P?.authorizeTill : P?.authorizeManager;
+      if (typeof ask !== 'function') return Promise.resolve(false);
+      try { return Promise.resolve(ask.call(P, code)).then((ok) => ok === true, () => false); }
+      catch (_) { return Promise.resolve(false); }
     }
 
     function mgrPushDigit(v) {
@@ -13137,29 +13143,42 @@
       mgrBuffer += v;
       renderMgrDots();
       if (mgrBuffer.length === 4) {
-        if (!managerCodeValid(mgrBuffer)) {
-          mgrBusy = true;
-          mgrModal.classList.add('is-error');
-          toast((mgrAccess === 'till' ? 'Code caisse' : 'Code manager') + ' incorrect ou impossible à vérifier');
-          setTimeout(() => {
-            mgrModal.classList.remove('is-error');
-            mgrBuffer = ''; mgrBusy = false; renderMgrDots();
-          }, 520);
-          return;
-        }
+        /* La vérification part sur le réseau : on VERROUILLE le pavé le temps de
+           la réponse, sinon un cinquième chiffre frappé pendant l'aller-retour
+           repartait sur une seconde vérification et le refus de la première
+           effaçait un tampon qui n'était déjà plus le sien. */
         mgrBusy = true;
-        const action  = $('#manager-modal-sub').textContent;
-        const approve = mgrOnApprove;
-        // Success beat — dots pop left → right, mirroring the access PIN.
-        $$('#mgr-dots .mgr-dot').forEach((d, i) => {
-          setTimeout(() => d.classList.add('is-success'), i * 70);
+        const attempt = mgrBuffer;
+        managerCodeValid(attempt).then((valid) => {
+          if (attempt !== mgrBuffer) return;   // annulé / rouvert entre-temps
+          if (!valid) {
+            mgrModal.classList.add('is-error');
+            toast((mgrAccess === 'till' ? 'Code caisse' : 'Code manager') + ' incorrect ou impossible à vérifier');
+            setTimeout(() => {
+              mgrModal.classList.remove('is-error');
+              mgrBuffer = ''; mgrBusy = false; renderMgrDots();
+            }, 520);
+            return;
+          }
+          mgrApprove();
         });
-        setTimeout(() => {
-          if (mgrAccess === 'manager') authorizations.push({ id: 'auth-' + Date.now(), time: new Date(), action: action });
-          closeManagerModal();
-          if (approve) approve();
-        }, 520);
       }
+    }
+
+    /* Le code est bon : la chorégraphie de succès puis l'action autorisée. */
+    function mgrApprove() {
+      mgrBusy = true;
+      const action  = $('#manager-modal-sub').textContent;
+      const approve = mgrOnApprove;
+      // Success beat — dots pop left → right, mirroring the access PIN.
+      $$('#mgr-dots .mgr-dot').forEach((d, i) => {
+        setTimeout(() => d.classList.add('is-success'), i * 70);
+      });
+      setTimeout(() => {
+        if (mgrAccess === 'manager') authorizations.push({ id: 'auth-' + Date.now(), time: new Date(), action: action });
+        closeManagerModal();
+        if (approve) approve();
+      }, 520);
     }
 
     $('#mgr-pad').addEventListener('click', (e) => {

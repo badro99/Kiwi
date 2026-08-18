@@ -326,6 +326,11 @@ Functions (all under the site gate; the `/admin/*` ones additionally require an
 - `functions/api/admin/operators.js` — `GET`/`POST`/`DELETE` operator codes.
 - `functions/api/config.js` — `GET ?merchant=…` the client apps' own read of
   `{features, pins}` (any authenticated session; a merchant reads its own slug).
+  `pins` is the ROSTER — `{name, role}` — never the four-digit codes; those are
+  checked by `POST /api/pin/verify` and never leave D1.
+- `functions/api/pin/verify.js` — the only judge of a staff code. `{merchant, pin}`
+  for a paired till / owner / operator; `{pin}` alone resolves against every store
+  on the signed-in account, which is what the dashboard lock asks.
 - `functions/_middleware.js` — operator cookie is a 3rd "way in"; `POST /__operator`
   verifies a code and sets `kiwi_op` (`HMAC(AUTH_SECRET,"kiwi-operator-v1")`).
 

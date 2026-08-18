@@ -6061,7 +6061,7 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
 <script defer src="assets/channel-sales.js?v=3"></script>
 <!-- Operator feature flags — hides modules the operator toggled off for this
      merchant. Fail-safe: no backend ⇒ nothing changes. See ADMIN.md. -->
-<script defer src="assets/merchant-config.js?v=263"></script>
+<script defer src="assets/merchant-config.js?v=264"></script>
 <!-- Real logged-in identity — swaps the demo owner/business (Rachid · Café Atlas)
      for the account's own via /api/me. No-op for the local demo / staff / operator. -->
   <link rel="stylesheet" href="assets/entitlements.css?v=3">
@@ -6303,17 +6303,22 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
     catch (_) { return false; }
   }
 
-  /* Every 4-digit code this ACCOUNT is known to have, from both sources, each
-   * tagged with its tier. `seenPins` is the union across all of the account's
-   * stores (see assets/merchant-config.js); `kiwiPins` is what the onboarding
-   * wizard wrote locally, and is usually where the owner's own code lives.
+  /* Every 4-digit code this BROWSER holds locally, tagged with its tier.
+   *
+   * Il n'y a plus que celui-là. `KiwiConfig.seenPins` et `KiwiConfig.pins`
+   * portaient jusqu'ici les codes du serveur, et cette porte les comparait
+   * elle-même : le code qui ouvre le tiroir-caisse était donc lisible dans la
+   * mémoire de la page du patron. Le serveur ne les envoie plus (functions/api/
+   * config.js), et « ce code est-il le bon ? » part maintenant à
+   * POST /api/pin/verify, qui répond par une identité — voir askServer().
+   * `kiwiPins` reste, lui : c'est ce que l'assistant d'installation a écrit dans
+   * CE navigateur, et c'est le seul chemin qui survit à une panne réseau.
    *
    * `kiwiPins` belongs to THIS BROWSER, so it must never be consulted on a
    * scoped view. It was: an operator who had set up a shop of their own carried
    * that shop's code into every client they opened, and it unlocked all of them
    * — one browser's PIN was a passkey to the whole roster, while the client's
-   * real code (filed on the server, under their slug) was refused. Server-held
-   * codes only when we are looking at somebody else's business. */
+   * real code (filed on the server, under their slug) was refused. */
   function allPins() {
     const out = [], seen = Object.create(null);
     const add = (x) => {
@@ -6322,10 +6327,6 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
       seen[code] = 1;
       out.push({ code, name: (x && x.name) || '', access: accessTier(x && x.role) });
     };
-    try {
-      const kc = window.KiwiConfig;
-      if (kc) { (kc.seenPins || []).forEach(add); if (kc.loaded) (kc.pins || []).forEach(add); }
-    } catch (_) {}
     if (!scopedView()) {
       try {
         const p = JSON.parse(localStorage.getItem('kiwiPins') || '[]');
@@ -6338,6 +6339,39 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
       } catch (_) {}
     }
     return out;
+  }
+
+  /* « Ce compte a-t-il configuré quelqu'un ? » — la question que la porte pose
+   * avant de s'autoriser à refuser quoi que ce soit. Elle se répond en COMPTANT
+   * le personnel, ce qui n'a jamais eu besoin des codes eux-mêmes : le serveur
+   * envoie toujours la liste des noms et des rôles. Une boutique dont les seuls
+   * codes sont ceux des caissiers est très configurée, donc on compte tout le
+   * monde et pas seulement les patrons. */
+  function serverRosterSize() {
+    try {
+      const kc = window.KiwiConfig;
+      if (!kc) return 0;
+      return (kc.seenPins || []).length + (kc.loaded ? (kc.pins || []).length : 0);
+    } catch (_) { return 0; }
+  }
+
+  /* Le serveur tranche : le code frappé contre le personnel de TOUT le compte
+   * (verifyAccountPin, dérivé de la session — un slug n'est jamais demandé).
+   *   { name, access }  le code appartient à cette personne
+   *   'no'              le serveur a dit non
+   *   null              on n'a pas pu savoir (hors ligne, backend absent) */
+  function askServer(code) {
+    return fetch('/api/pin/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ pin: code }),
+    }).then((r) => {
+      if (r.status === 401 || r.status === 403) return 'no';
+      if (!r.ok) return null;
+      return r.json().then((d) => (d && d.ok && d.staff)
+        ? { name: String(d.staff.name || ''), access: accessTier(d.staff.role) }
+        : 'no');
+    }).catch(() => null);
   }
 
   /* THE CODES THAT MAY OPEN THIS DASHBOARD.
@@ -6374,8 +6408,11 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
    * démo, aucun aperçu ne s'ouvre, quel que soit le code. Même barrière que le
    * bouton « Entrer dans la démo » plus bas, qui passe déjà par demosOn().
    * 0000 n'est pas concerné : la mise en route d'un vrai compte, pas un aperçu. */
-  function isPreviewCode(code) {
-    if (!demosOn()) return false;
+  /* `matched` : quelqu'un — ici ou sur le serveur — a reconnu ce code comme
+     étant le sien. Un code d'équipe n'est jamais un code d'aperçu, sans quoi la
+     caissière qui a choisi 1111 se retrouve en vue patron. */
+  function isPreviewCode(code, matched) {
+    if (!demosOn() || matched) return false;
     try { if (allPins().some((p) => p.code === code)) return false; } catch (_) {}
     return true;
   }
@@ -6500,80 +6537,98 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
        * "Has this account been configured" must be asked of ALL its codes, not
        * of the privileged ones: a shop whose only codes are its cashiers is very
        * much configured, and testing the short list would have read as "nothing
-       * set up yet" and let any four digits through. */
-      if (!demosOn()) {
-        const allowed = configuredPins();
-        if (allPins().length && !allowed.some((p) => p.code === val)) { rejectPin(); return; }
-      }
-      /* Résolu une fois : ce code ouvre-t-il un aperçu, ou est-ce quelqu'un qui
-       * se connecte ? Les deux lectures de 0505 / 1111 doivent tomber d'accord,
-       * sans quoi on refuserait l'aperçu tout en traitant le code comme réservé
-       * — et la caissière qui a choisi 1111 se retrouverait en vue patron. */
-      const previewCode = isPreviewCode(val);
-      /* PIN 0000 is the doorway to "your own dashboard" — any other
-       * 4-digit PIN unlocks the Café Atlas demo. */
-      if (val === '0000') window.__kiwiOnboard = true;
-      /* PIN 0505 is the "future updates preview" hook — after the
-       * normal Café-Atlas unlock + Bonjour Rachid greeting finishes,
-       * an Apple-keynote-style "Introducing Marketing Suite" reveal
-       * plays. See assets/marketing-suite-tease.js. */
-      if (val === '0505' && previewCode) window.__kiwiMarketingTease = true;
-      /* PIN 1111 unlocks the experimental iOS-27 Liquid Glass tier (WWDC-2026
-       * refinements: refractive sidebar, colored icons, transparency control).
-       * Reversible: KiwiDesignIOS27.disable(). C'est une PEAU, pas un module :
-       * la bande Croissance qu'il révélait autrefois a quitté le code, ce code
-       * ne déverrouille donc plus aucune fonctionnalité. Aperçu de démonstration
-       * quand même : isPreviewCode() le refuse hors démo, et le refuse aussi
-       * quand 1111 est un vrai code d'équipe du client. */
-      if (val === '1111' && previewCode) {
-        if (window.KiwiDesignIOS27) window.KiwiDesignIOS27.enable();
-        else { try { localStorage.setItem('kiwiDesignIOS27', '1'); } catch (e) {} }
-      }
-      /* Role gate:
-       *   0000 / 0505 → reserved (onboard / marketing tease)
-       *   0909        → manager view (restricted sidebar — no Marges,
-       *                  no Paie; financial visibility hidden)
-       *   anything else → owner view (full sidebar)
-       * The flag is read by the role-filter script in assets/roleGate.js
-       * and reflected as body.role-manager / body.role-owner. */
-      let role = 'owner';
-      if (val === '0000' || val === '0505') role = 'owner';  /* config / tease both run as owner */
-      else if (val === '0909') role = 'manager';
-      /* Client-configured team codes (chosen during onboarding) win for any
-       * non-reserved PIN — each maps to the role + person the owner assigned.
+       * set up yet" and let any four digits through.
        *
-       * « Réservé » se juge désormais à l'usage, pas au chiffre : 0505 et 1111
-       * ne le sont que lorsqu'ils viennent réellement d'ouvrir un aperçu. Hors
-       * de là ils appartiennent à la personne qui les a enregistrés, et c'est
-       * SON rôle qui s'applique. Auparavant un code d'équipe valant 1111 sautait
-       * cette recherche et retombait sur le rôle par défaut — vue patron, marges
-       * et paie comprises, pour une caissière. */
-      const reserved = val === '0000' || val === '0909'
-        || ((val === '0505' || val === '1111') && previewCode);
-      try {
-        if (!reserved) {
-          /* Same set the gate validated against — so an operator-added PIN also
-           * gets its assigned tier. accessTier() has already resolved whatever
-           * wording the role was stored in; no second guess here. */
-          const hit = configuredPins().find((p) => p && p.code === val);
-          if (hit) {
-            role = hit.access;
-            if (hit.name) setGreetName(hit.name);
-          }
-        }
-      } catch (_) {}
-      window.__kiwiRole = role;
-      try { localStorage.setItem('kiwiRole', role); } catch (_) {}
-      document.body.classList.remove('role-owner', 'role-manager', 'role-staff');
-      document.body.classList.add('role-' + role);
-      if (role === 'staff') { const b = document.querySelector('[data-role-badge] span'); if (b) { b.textContent = 'Vue équipe'; b.removeAttribute('data-i18n'); } }
-      /* Every passcode enables the stable Design 2026 "Liquid Glass" skin
-       * (no on-screen toggle — KiwiDesign2026.disable() reverts; persists). */
-      if (window.KiwiDesign2026) window.KiwiDesign2026.enable();
-      else { try { localStorage.setItem('kiwiDesign2026', '1'); } catch (e) {} }
-      /* Slight delay so the user sees the 4th cell fill before the celebration. */
-      setTimeout(unlock, 140);
+       * Deux juges, dans cet ordre. Les codes de CE navigateur d'abord, parce
+       * qu'ils répondent sans réseau et que c'est ce qui laisse un patron entrer
+       * chez lui quand le backend est tombé. Puis le serveur, seul détenteur des
+       * codes depuis qu'ils ne sont plus expédiés au navigateur. Un serveur
+       * injoignable ne refuse rien de plus qu'avant : on retombe exactement sur
+       * l'ancienne règle, celle qui ne connaissait que les codes locaux. */
+      const local = configuredPins().find((p) => p && p.code === val) || null;
+      const knownHere = allPins().length;
+      const askable = !demosOn() || serverRosterSize() > 0;
+      if (local || !askable) { finishUnlock(val, local, !!local); return; }
+      askServer(val).then((answer) => {
+        if (val !== pinInput.value.replace(/\D/g, '').slice(0, 4)) return;   // la saisie a bougé
+        if (answer && answer !== 'no') { finishUnlock(val, answer, true); return; }
+        const configured = knownHere || serverRosterSize();
+        // 'no' = le serveur a tranché. null = on ne sait pas → règle d'avant.
+        if (!demosOn() && configured && (answer === 'no' || knownHere)) { rejectPin(); return; }
+        finishUnlock(val, null, false);
+      });
     }
+  }
+
+  /* La porte s'ouvre : le code a été reconnu (`hit`), ou personne n'était encore
+     configuré et on laisse passer pour que le client atteigne son installation.
+     `matched` dit lequel des deux, parce que 0505/1111 en dépendent. */
+  function finishUnlock(val, hit, matched) {
+    /* Résolu une fois : ce code ouvre-t-il un aperçu, ou est-ce quelqu'un qui
+     * se connecte ? Les deux lectures de 0505 / 1111 doivent tomber d'accord,
+     * sans quoi on refuserait l'aperçu tout en traitant le code comme réservé
+     * — et la caissière qui a choisi 1111 se retrouverait en vue patron. */
+    const previewCode = isPreviewCode(val, matched);
+    /* PIN 0000 is the doorway to "your own dashboard" — any other
+     * 4-digit PIN unlocks the Café Atlas demo. */
+    if (val === '0000') window.__kiwiOnboard = true;
+    /* PIN 0505 is the "future updates preview" hook — after the
+     * normal Café-Atlas unlock + Bonjour Rachid greeting finishes,
+     * an Apple-keynote-style "Introducing Marketing Suite" reveal
+     * plays. See assets/marketing-suite-tease.js. */
+    if (val === '0505' && previewCode) window.__kiwiMarketingTease = true;
+    /* PIN 1111 unlocks the experimental iOS-27 Liquid Glass tier (WWDC-2026
+     * refinements: refractive sidebar, colored icons, transparency control).
+     * Reversible: KiwiDesignIOS27.disable(). C'est une PEAU, pas un module :
+     * la bande Croissance qu'il révélait autrefois a quitté le code, ce code
+     * ne déverrouille donc plus aucune fonctionnalité. Aperçu de démonstration
+     * quand même : isPreviewCode() le refuse hors démo, et le refuse aussi
+     * quand 1111 est un vrai code d'équipe du client. */
+    if (val === '1111' && previewCode) {
+      if (window.KiwiDesignIOS27) window.KiwiDesignIOS27.enable();
+      else { try { localStorage.setItem('kiwiDesignIOS27', '1'); } catch (e) {} }
+    }
+    /* Role gate:
+     *   0000 / 0505 → reserved (onboard / marketing tease)
+     *   0909        → manager view (restricted sidebar — no Marges,
+     *                  no Paie; financial visibility hidden)
+     *   anything else → owner view (full sidebar)
+     * The flag is read by the role-filter script in assets/roleGate.js
+     * and reflected as body.role-manager / body.role-owner. */
+    let role = 'owner';
+    if (val === '0000' || val === '0505') role = 'owner';  /* config / tease both run as owner */
+    else if (val === '0909') role = 'manager';
+    /* Client-configured team codes (chosen during onboarding) win for any
+     * non-reserved PIN — each maps to the role + person the owner assigned.
+     *
+     * « Réservé » se juge désormais à l'usage, pas au chiffre : 0505 et 1111
+     * ne le sont que lorsqu'ils viennent réellement d'ouvrir un aperçu. Hors
+     * de là ils appartiennent à la personne qui les a enregistrés, et c'est
+     * SON rôle qui s'applique. Auparavant un code d'équipe valant 1111 sautait
+     * cette recherche et retombait sur le rôle par défaut — vue patron, marges
+     * et paie comprises, pour une caissière. */
+    const reserved = val === '0000' || val === '0909'
+      || ((val === '0505' || val === '1111') && previewCode);
+    try {
+      /* Celui que la porte vient de reconnaître — code local ou identité que le
+         serveur a prouvée. accessTier() a déjà ramené l'orthographe du rôle à
+         un palier ; pas de seconde lecture ici. */
+      if (!reserved && hit) {
+        role = hit.access;
+        if (hit.name) setGreetName(hit.name);
+      }
+    } catch (_) {}
+    window.__kiwiRole = role;
+    try { localStorage.setItem('kiwiRole', role); } catch (_) {}
+    document.body.classList.remove('role-owner', 'role-manager', 'role-staff');
+    document.body.classList.add('role-' + role);
+    if (role === 'staff') { const b = document.querySelector('[data-role-badge] span'); if (b) { b.textContent = 'Vue équipe'; b.removeAttribute('data-i18n'); } }
+    /* Every passcode enables the stable Design 2026 "Liquid Glass" skin
+     * (no on-screen toggle — KiwiDesign2026.disable() reverts; persists). */
+    if (window.KiwiDesign2026) window.KiwiDesign2026.enable();
+    else { try { localStorage.setItem('kiwiDesign2026', '1'); } catch (e) {} }
+    /* Slight delay so the user sees the 4th cell fill before the celebration. */
+    setTimeout(unlock, 140);
   }
 
   /* Pre-hide the dashboard underneath so it can "dive in" after the

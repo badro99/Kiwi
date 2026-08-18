@@ -1,6 +1,13 @@
 // POST /api/pin/verify — verify a candidate staff PIN server-side.
-// Body JSON: { merchant, pin }
-import { verifyStaffPin, json } from '../../auth/_lib.js';
+// Body JSON: { merchant, pin }  → this store's roster (till, owner, operator)
+//            { pin }            → account-wide, session-derived (the dashboard lock)
+//
+// The second shape exists because the dashboard spans every établissement on the
+// account while codes are filed per boutique. It used to be answered by shipping
+// the codes to the browser (GET /api/config?accountPins=owners) and comparing them
+// there; the comparison now happens here, so no four-digit code ever leaves D1.
+// Both shapes are rate-limited and answer with an identity, never with a code.
+import { verifyStaffPin, verifyAccountPin, json } from '../../auth/_lib.js';
 
 export async function onRequestPost(context) {
   const { request, env } = context;
@@ -12,9 +19,15 @@ export async function onRequestPost(context) {
   const merchant = String(body && body.merchant || '').trim();
   const pin = String(body && body.pin || '').trim();
 
-  if (!merchant || !pin) return json({ error: 'missing-fields' }, 400);
+  if (!pin) return json({ error: 'missing-fields' }, 400);
 
-  const verified = await verifyStaffPin(request, env, merchant, pin, { requireTill: true });
+  // No merchant named ⇒ ask the signed-in account's whole estate. Not a widening:
+  // verifyAccountPin derives the store list from the session's own registry and
+  // refuses outright without a session.
+  const verified = merchant
+    ? await verifyStaffPin(request, env, merchant, pin, { requireTill: true })
+    : await verifyAccountPin(request, env, pin);
+
   if (!verified.ok) {
     if (verified.response) return verified.response;
     return json({ error: verified.error }, verified.status);
@@ -23,5 +36,6 @@ export async function onRequestPost(context) {
   return json({
     ok: true,
     staff: verified.staff,
+    ...(verified.merchant ? { merchant: verified.merchant } : {}),
   });
 }
