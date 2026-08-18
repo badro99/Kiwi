@@ -145,7 +145,7 @@ var SHELL = [
   '/assets/vendor/dexie.min.js',
   '/assets/offline-db.js?v=3',
   '/assets/platform-kernel.js?v=5',
-  '/assets/platform-ops.js?v=1',
+  '/assets/platform-ops.js?v=2',
   '/assets/platform-ops.css?v=1',
   '/assets/operations.js?v=10',
   '/assets/operations-ui.js?v=11',
@@ -216,7 +216,7 @@ var SHELL = [
   '/assets/clients-store.js?v=2',
   '/assets/clients-book.js?v=3',
   '/assets/clients-directory.js',
-  '/assets/menu-catalog.js?v=4',
+  '/assets/menu-catalog.js?v=5',
   '/assets/restaurant-recipes.js?v=3',
   '/assets/restaurant-units.js',
   '/assets/employee-live.js?v=381',
@@ -226,11 +226,11 @@ var SHELL = [
   '/assets/planning-core.js?v=8',
   '/assets/planning-ui.css?v=10',
   '/assets/team.js?v=276',
-  '/assets/restaurant-menu-workspace.js?v=2',
+  '/assets/restaurant-menu-workspace.js?v=3',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).
   '/assets/catalog-import.js',
   // OrderPro — publisher + NFC panel (dashboard), inbox (caisse).
-  '/assets/orderpro-publish.js?v=2',
+  '/assets/orderpro-publish.js?v=3',
   '/assets/orderpro-panel.js',
   '/assets/orderpro-inbox.js?v=4',
   /* Le relais cuisine — la caisse pose ses bons, la tablette du passe les lit.

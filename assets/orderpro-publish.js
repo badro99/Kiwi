@@ -235,12 +235,36 @@
   /* ───────────────── media upload ─────────────────
    * Turns a chosen File into a URL. Everything about media in Kiwi hangs off
    * this: catalogues store what it returns, never the bytes. */
+  var MAX_PHOTO = 8 * 1024 * 1024;
+  var MAX_VIDEO = 24 * 1024 * 1024;
+
+  /* Tout échec sort d'ici avec les MÊMES champs — code, taille réelle, plafond,
+   * type, extension — pour qu'un appelant n'ait jamais à redeviner ce qui s'est
+   * passé. Trois surfaces appellent uploadMedia (carte restaurant, boutique,
+   * atelier menu) et les trois écrivaient leur propre échelle de messages : la
+   * même phrase vague y était recopiée trois fois, et aucune des trois ne
+   * connaissait les chiffres. */
+  function fileFacts(file) {
+    var type = (file && file.type) || '';
+    return {
+      name: (file && file.name) || '', type: type, size: (file && file.size) || 0,
+      kind: /^video\//.test(type) ? 'video' : 'photo',
+    };
+  }
+  function failure(code, file, extra) {
+    var out = { ok: false, error: code || 'upload-failed' }, facts = fileFacts(file), k;
+    for (k in facts) out[k] = facts[k];
+    if (extra) for (k in extra) if (extra[k] != null) out[k] = extra[k];
+    if (!out.max) out.max = out.kind === 'video' ? MAX_VIDEO : MAX_PHOTO;
+    return out;
+  }
+
   function uploadMedia(file) {
-    if (!file) return Promise.resolve({ ok: false, error: 'no-file' });
+    if (!file) return Promise.resolve(failure('no-file', file));
     var resilient = window.KiwiPlatformOps && window.KiwiPlatformOps.uploads;
     if (resilient && typeof resilient.upload === 'function') {
       return resilient.upload(file).catch(function (error) {
-        return { ok: false, error: String(error && error.message || 'upload-failed') };
+        return failure((error && (error.code || error.message)) || 'upload-failed', file, error && error.detail);
       });
     }
     return fetch('/api/media?name=' + encodeURIComponent(file.name || 'file'), {
@@ -250,9 +274,89 @@
     }).then(function (r) {
       return r.json().catch(function () { return null; }).then(function (j) {
         if (r.ok && j && j.ok) return j;             // { ok, url, kind }
-        return { ok: false, error: (j && j.error) || ('http-' + r.status), status: r.status };
+        return failure((j && j.error) || ('http-' + r.status), file, { status: r.status, max: j && j.max });
       });
-    }).catch(function () { return { ok: false, error: 'network' }; });
+    }).catch(function () { return failure('network', file); });
+  }
+
+  /* ── Dire ce qui ne va pas, avec le chiffre ──────────────────────────
+   * « Envoi impossible, réessayez » demande à un commerçant de refaire ce qui
+   * vient d'échouer, sans lui dire que sa vidéo fait 38 Mo pour un plafond de
+   * 24. Chaque refus rend ici sa cause ET sa mesure ; seule une vraie panne
+   * réseau mérite « réessayez », parce que c'est la seule où réessayer marche. */
+  function lang() {
+    try { if (window.KiwiI18n && KiwiI18n.getLang) return KiwiI18n.getLang() || 'fr'; } catch (_) {}
+    try { return localStorage.getItem('kiwiLang') || 'fr'; } catch (_) {}
+    return 'fr';
+  }
+  function pick(d) { var l = lang(); return d[l] || d.fr; }
+  /* Un nombre suivi de son unité se fait couper en RTL et se relit « Mo 38 ».
+   * L'isolat le tient ensemble sans toucher au sens. */
+  function unit(n, u) { var s = n + ' ' + u; return lang() === 'ar' ? '\u2068' + s + '\u2069' : s; }
+  function mb(bytes) {
+    var v = (Number(bytes) || 0) / 1048576;
+    return unit(v >= 10 ? Math.round(v) : Math.round(v * 10) / 10,
+                pick({ fr: 'Mo', en: 'MB', ar: '\u0645.\u0628' }));
+  }
+  function extOf(name) {
+    var m = String(name || '').match(/\.([A-Za-z0-9]{1,6})$/);
+    return m ? '.' + m[1].toLowerCase() : '';
+  }
+
+  function uploadError(res) {
+    var code = (res && res.error) || 'upload-failed';
+    var video = (res && res.kind) === 'video';
+    var size = mb(res && res.size);
+    var max = mb((res && res.max) || (video ? MAX_VIDEO : MAX_PHOTO));
+    var got = extOf(res && res.name) || (res && res.type) || '';
+    var okList = video ? 'MP4, WebM, MOV' : 'JPG, PNG, WebP, AVIF, GIF';
+
+    if (code === 'too-large') return pick({
+      fr: (video ? 'Vidéo trop lourde' : 'Photo trop lourde') + ' : ' + size + '. Le maximum est ' + max + '.',
+      en: (video ? 'Video too large' : 'Photo too large') + ': ' + size + '. The maximum is ' + max + '.',
+      ar: (video ? '\u0627\u0644\u0641\u064a\u062f\u064a\u0648 \u062b\u0642\u064a\u0644 \u0628\u0632\u0627\u0641' : '\u0627\u0644\u0635\u0648\u0631\u0629 \u062b\u0642\u064a\u0644\u0629 \u0628\u0632\u0627\u0641') + ': ' + size + '. \u0627\u0644\u062d\u062f \u0627\u0644\u0623\u0642\u0635\u0649 ' + max + '.',
+    });
+    if (code === 'bad-type') return pick({
+      fr: (got ? 'Format ' + got + ' non pris en charge.' : 'Format non pris en charge.') + ' Formats acceptés : ' + okList + '.',
+      en: (got ? 'Format ' + got + ' is not supported.' : 'Format not supported.') + ' Accepted: ' + okList + '.',
+      ar: (got ? '\u0635\u064a\u063a\u0629 ' + got + ' \u0645\u0627\u062e\u062f\u0627\u0645\u0627\u0634.' : '\u0627\u0644\u0635\u064a\u063a\u0629 \u0645\u0627\u062e\u062f\u0627\u0645\u0627\u0634.') + ' \u0627\u0644\u0635\u064a\u063a \u0627\u0644\u0645\u0642\u0628\u0648\u0644\u0629: ' + okList + '.',
+    });
+    if (code === 'empty' || code === 'no-file') return pick({
+      fr: 'Ce fichier est vide — rien à envoyer.',
+      en: 'That file is empty — there is nothing to send.',
+      ar: '\u0647\u0627\u062f \u0627\u0644\u0645\u0644\u0641 \u062e\u0627\u0648\u064a.',
+    });
+    if (code === 'offline') return pick({
+      fr: 'Vous êtes hors ligne. Le fichier partira dès le retour du réseau.',
+      en: "You're offline. The file will go out as soon as the network is back.",
+      ar: '\u0646\u062a\u0627 \u062e\u0627\u0631\u062c \u0627\u0644\u0634\u0628\u0643\u0629. \u0627\u0644\u0645\u0644\u0641 \u063a\u0627\u062f\u064a \u064a\u0645\u0634\u064a \u0645\u0644\u064a \u062a\u0631\u062c\u0639.',
+    });
+    if (code === 'no-media' || code === 'not-configured') return pick({
+      fr: 'Stockage média pas encore activé sur votre compte.',
+      en: "Media storage isn't enabled on your account yet.",
+      ar: '\u062a\u062e\u0632\u064a\u0646 \u0627\u0644\u0645\u064a\u062f\u064a\u0627 \u0645\u0627\u0632\u0627\u0644 \u0645\u0627\u062a\u0641\u0639\u0651\u0644\u0634 \u0641\u0627\u0644\u062d\u0633\u0627\u0628 \u062f\u064a\u0627\u0644\u0643.',
+    });
+    if (code === 'unauthorized' || code === 'http-401') return pick({
+      fr: 'Votre session a expiré. Reconnectez-vous, puis renvoyez le fichier.',
+      en: 'Your session expired. Sign in again, then send the file.',
+      ar: '\u0627\u0644\u062c\u0644\u0633\u0629 \u0633\u0627\u0644\u0627\u062a. \u062f\u062e\u0644 \u0645\u0646 \u062c\u062f\u064a\u062f \u0648\u0639\u0627\u0648\u062f \u0635\u064a\u0641\u0637.',
+    });
+    if (code === 'cancelled') return pick({
+      fr: 'Envoi annulé.', en: 'Upload cancelled.',
+      ar: '\u062a\u0644\u063a\u0627\u062a \u0627\u0644\u0639\u0645\u0644\u064a\u0629.',
+    });
+    if (code === 'network') return pick({
+      fr: 'Réseau interrompu pendant l’envoi. Réessayez.',
+      en: 'The network dropped during the upload. Try again.',
+      ar: '\u0627\u0644\u0634\u0628\u0643\u0629 \u062a\u0642\u0637\u0639\u0627\u062a. \u0639\u0627\u0648\u062f \u062c\u0631\u0651\u0628.',
+    });
+    /* Reste les pannes serveur : on nomme le code plutôt que de le cacher, il
+     * fait la différence entre un support qui devine et un support qui sait. */
+    return pick({
+      fr: 'Envoi impossible (' + code + '). Réessayez ; si cela persiste, envoyez ce code au support.',
+      en: 'Upload failed (' + code + '). Try again; if it persists, send that code to support.',
+      ar: '\u0645\u0627\u0645\u0634\u0627\u0634 \u0627\u0644\u0635\u064a\u0641\u0637 (' + code + '). \u0639\u0627\u0648\u062f \u062c\u0631\u0651\u0628.',
+    });
   }
 
   /* Is media storage actually live? The dashboard can ask before offering the
@@ -307,6 +411,7 @@
     diagnose: diagnose,
     schedule: schedule,
     uploadMedia: uploadMedia,
+    uploadError: uploadError,
     mediaReady: mediaReady,
     merchant: function () { var b = currentBiz(); return b ? b.merchant : ''; },
     type: function () { var b = currentBiz(); return b ? b.type : ''; },

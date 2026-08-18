@@ -6046,7 +6046,7 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
 <script defer src="assets/vendor/dexie.min.js"></script>
 <script defer src="assets/offline-db.js?v=3"></script>
 <script defer src="assets/platform-kernel.js?v=5"></script>
-<script defer src="assets/platform-ops.js?v=1"></script>
+<script defer src="assets/platform-ops.js?v=2"></script>
 <!-- Establish the signed account/operator identity before any tenant-scoped
      data module starts. God Mode must never infer authority from ?op=1, and
      its one-shot snapshot must not miss the identity promise at boot. -->
@@ -6145,24 +6145,24 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
 <script src="assets/clients-store.js?v=2" defer fetchpriority="low"></script>
 <!-- Clients · the owner's directory (contacts, fidélité, consent) — sidebar « Clients ». -->
 <script src="assets/clients-directory.js" defer fetchpriority="low"></script>
-<script src="assets/menu-catalog.js?v=4" defer fetchpriority="low"></script>
+<script src="assets/menu-catalog.js?v=5" defer fetchpriority="low"></script>
 <!-- La voie d'entrée : reprendre le fichier d'articles de l'ancienne caisse au
      lieu de le retaper. Sert l'inventaire boutique ET la carte restaurant, donc
      APRÈS boutique-catalog.js et menu-catalog.js dont il écrit les données. -->
 <script src="assets/catalog-import.js" defer fetchpriority="low"></script>
 <!-- OrderPro · publishes boutique stock + owns media upload (menu-catalog.js
      already publishes the carte), and the NFC-tag panel. AFTER both catalogues. -->
-<script src="assets/orderpro-publish.js?v=2" defer fetchpriority="low"></script>
+<script src="assets/orderpro-publish.js?v=3" defer fetchpriority="low"></script>
 <script src="assets/orderpro-panel.js" defer fetchpriority="low"></script>
 <!-- Floor-plan vocabulary shared with the caisse. MUST load before pages-pro.js,
      which reads its top-level declarations as globals. -->
 <script src="assets/floorplan-core.js?v=2049" defer fetchpriority="low"></script>
-<script src="assets/pages-pro.js?v=2062" defer fetchpriority="low"></script>
+<script src="assets/pages-pro.js?v=2063" defer fetchpriority="low"></script>
 <!-- Restaurant-only menu redesign. Recipes stay in a private document; the
      workspace is loaded last so it can present the new shell over MenuStore. -->
 <script src="assets/restaurant-units.js" defer fetchpriority="low"></script>
 <script src="assets/restaurant-recipes.js?v=3" defer fetchpriority="low"></script>
-<script src="assets/restaurant-menu-workspace.js?v=2" defer fetchpriority="low"></script>
+<script src="assets/restaurant-menu-workspace.js?v=3" defer fetchpriority="low"></script>
 <script src="assets/sold-insights.js?v=2" defer fetchpriority="low"></script>
 <script src="assets/boutique-promos-dashboard.js?v=2" defer fetchpriority="low"></script>
 <!-- Rapport journalier : le calcul (partagé avec la caisse) puis la page.

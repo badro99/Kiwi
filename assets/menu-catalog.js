@@ -1401,10 +1401,20 @@
           ${del}
         </div>`;
     }
-    function uploadErr(error) {
-      if (error === 'no-media' || error === 'not-configured') return tr(T.mediaOff);
-      if (error === 'too-large') return tr(T.mediaBig);
-      if (error === 'bad-type') return tr(T.mediaBad);
+    /* La phrase vient de KiwiOrderPro.uploadError : c'est lui qui connaît la
+       taille réelle, le plafond et l'extension refusée. Le repli local ne sert
+       qu'au cas où le publisher n'est pas chargé — il reste vague parce qu'il
+       n'a, lui, aucun chiffre à donner. */
+    function uploadErr(res) {
+      var code = (res && res.error) || res;
+      try {
+        if (window.KiwiOrderPro && window.KiwiOrderPro.uploadError && res && res.error) {
+          return window.KiwiOrderPro.uploadError(res);
+        }
+      } catch (_) {}
+      if (code === 'no-media' || code === 'not-configured') return tr(T.mediaOff);
+      if (code === 'too-large') return tr(T.mediaBig);
+      if (code === 'bad-type') return tr(T.mediaBad);
       return tr(T.mediaErr);
     }
     /* Ce que le fichier contient VRAIMENT, avant de l'envoyer. Le navigateur
@@ -1441,7 +1451,7 @@
       }
       msg(tr(T.mediaUp));
       const res = await window.KiwiOrderPro.uploadMedia(file);
-      if (!res || !res.ok) { msg(uploadErr(res && res.error)); return; }
+      if (!res || !res.ok) { msg(uploadErr(res)); return; }
       // One medium per item: a video supersedes a photo and vice-versa, so the
       // card can never show two competing things.
       if (kind === 'video') { media.video = res.url; media.photo = ''; }

@@ -39,17 +39,31 @@
     engine:'Kiwi R2 resilient uploader', available:function(){return typeof XMLHttpRequest==='function';},
     upload:function(file,opts){
       opts=opts||{}; return new Promise(function(resolve,reject){
-        if(!file||!file.size){reject(new Error('empty-file'));return;}
-        var isVideo=/^video\//.test(file.type),limit=isVideo?24*1024*1024:8*1024*1024;
-        if(!/^(image\/(jpeg|png|webp|gif|avif)|video\/(mp4|webm|quicktime))$/.test(file.type||'')){reject(new Error('unsupported-type'));return;}
-        if(file.size>limit){reject(new Error('too-large'));return;}
-        if(navigator.onLine===false){reject(new Error('offline-wait-required'));return;}
+        /* Un refus doit porter SA raison et SES chiffres jusqu'à l'écran. Les
+         * codes ci-dessous sont exactement ceux du serveur
+         * (functions/api/media/index.js) et non des synonymes : un
+         * `unsupported-type` local en face d'un `bad-type` distant, et
+         * l'appelant retombe sur « envoi impossible, réessayez » pour un
+         * fichier qui ne passera jamais. Le détail (taille réelle, plafond,
+         * type, extension) voyage sur l'erreur elle-même, sinon le message
+         * final ne peut pas dire de combien on dépasse. */
+        var isVideo=/^video\//.test((file&&file.type)||''),limit=isVideo?24*1024*1024:8*1024*1024;
+        function fail(code,extra){
+          var e=new Error(code); e.code=code;
+          e.detail={name:(file&&file.name)||'',type:(file&&file.type)||'',size:(file&&file.size)||0,max:limit,kind:isVideo?'video':'photo'};
+          if(extra)for(var k in extra)if(extra[k]!=null)e.detail[k]=extra[k];
+          reject(e);
+        }
+        if(!file||!file.size){fail('empty');return;}
+        if(!/^(image\/(jpeg|png|webp|gif|avif)|video\/(mp4|webm|quicktime))$/.test(file.type||'')){fail('bad-type');return;}
+        if(file.size>limit){fail('too-large');return;}
+        if(navigator.onLine===false){fail('offline');return;}
         var span=K.telemetry.start('media.upload',{capability:'uploads',bytes:file.size}),xhr=new XMLHttpRequest();
         xhr.open('POST','/api/media?name='+encodeURIComponent(clean(file.name,120)),true); xhr.setRequestHeader('Content-Type',file.type);
         xhr.upload.onprogress=function(e){if(e.lengthComputable&&typeof opts.progress==='function')opts.progress(Math.round(e.loaded/e.total*100));};
-        xhr.onerror=function(){span.end('network-error');reject(new Error('network'));};
-        xhr.onabort=function(){span.end('cancelled');reject(new Error('cancelled'));};
-        xhr.onload=function(){var body={};try{body=JSON.parse(xhr.responseText||'{}');}catch(_){}if(xhr.status>=200&&xhr.status<300&&body.url){span.end('success',{status:xhr.status});resolve(body);}else{span.end('http-error',{status:xhr.status});reject(new Error(body.error||'upload-failed'));}};
+        xhr.onerror=function(){span.end('network-error');fail('network');};
+        xhr.onabort=function(){span.end('cancelled');fail('cancelled');};
+        xhr.onload=function(){var body={};try{body=JSON.parse(xhr.responseText||'{}');}catch(_){}if(xhr.status>=200&&xhr.status<300&&body.url){span.end('success',{status:xhr.status});resolve(body);}else{span.end('http-error',{status:xhr.status});fail(body.error||'upload-failed',{status:xhr.status,max:body.max});}};
         xhr.send(file); if(opts.signal)opts.signal.addEventListener('abort',function(){xhr.abort();},{once:true});
       });
     }

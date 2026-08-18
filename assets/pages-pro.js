@@ -10402,10 +10402,10 @@ function _bqxWirePhoto(photo, video) {
     msg.textContent = 'Envoi…';
     const res = await window.KiwiOrderPro.uploadMedia(file);
     if (!res || !res.ok) {
-      msg.textContent = (res && (res.error === 'no-media' || res.error === 'not-configured'))
-        ? "Stockage média pas encore activé sur votre compte."
-        : (res && res.error === 'too-large') ? 'Fichier trop lourd.'
-        : (res && res.error === 'bad-type') ? 'Format non pris en charge.'
+      /* Une échelle de messages recopiée ici disait « fichier trop lourd »
+         sans jamais dire de combien. KiwiOrderPro.uploadError porte les chiffres. */
+      msg.textContent = (window.KiwiOrderPro && window.KiwiOrderPro.uploadError)
+        ? window.KiwiOrderPro.uploadError(res)
         : 'Envoi impossible, réessayez.';
       return;
     }

@@ -10,7 +10,18 @@ let n=0;const ok=(c,m)=>{assert.ok(c,m);n++;console.log('  ✓ '+m);};
 ['products','uploads','routes','collaboration','analytics'].forEach(name=>ok(ops.includes(`K.register('${name}'`),`${name} adapter is registered`));
 ok(/world\.openfoodfacts\.org\/api\/v2\/product/.test(ops),'product enrichment uses the official v2 product endpoint');
 ok(/router\.project-osrm\.org/.test(ops)&&/\/route\/v1\/driving\//.test(ops),'routing uses OSRM and never invents a route');
-ok(/offline-wait-required/.test(ops),'uploads refuse false offline success');
+ok(/navigator\.onLine===false\)\{fail\('offline'\)/.test(ops),'uploads refuse false offline success');
+/* Le refus doit arriver à l'écran avec SA raison. Les codes du téléverseur
+ * local et ceux du serveur (functions/api/media/index.js) doivent être le MÊME
+ * vocabulaire, et chacun doit avoir sa phrase dans KiwiOrderPro.uploadError :
+ * un `unsupported-type` local face à un `bad-type` distant, et le commerçant
+ * reçoit « envoi impossible, réessayez » pour une vidéo trop lourde. On teste
+ * l'ACCORD entre les trois, pas la présence d'une chaîne. */
+const refusals=[...ops.matchAll(/fail\('([a-z-]+)'/g)].map(m=>m[1]);
+['empty','bad-type','too-large','offline'].forEach(c=>ok(refusals.includes(c),`upload refusal '${c}' uses the server vocabulary`));
+[...new Set(refusals)].forEach(c=>ok(new RegExp("code === '"+c+"'").test(publish),`refusal '${c}' has its own sentence in uploadError`));
+ok(/uploadError:\s*uploadError/.test(publish),'uploadError is exported for every media surface');
+[['too-large',/Le maximum est/],['bad-type',/Formats accept/]].forEach(([c,re])=>ok(re.test(publish),`'${c}' message states the limit, not just the failure`));
 ok(/KIWI_OSRM_ENDPOINT/.test(ops),'routing endpoint is configurable for production hosting');
 ok(/enrichUnknown\(code\)/.test(scan)&&/KiwiPlatformOps/.test(scan),'unknown scans request product truth');
 ok(/KiwiPlatformOps\s*&&\s*window\.KiwiPlatformOps\.uploads/.test(publish),'catalog media uses the resilient upload adapter');

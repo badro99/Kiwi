@@ -232,8 +232,8 @@
     "sha": "898481bdffccf542"
   },
   "assets/menu-catalog.js": {
-    "v": "4",
-    "sha": "0e37cce13b280b97"
+    "v": "5",
+    "sha": "b43190353fb3467b"
   },
   "assets/merchant-config.js": {
     "v": "264",
@@ -276,12 +276,12 @@
     "sha": "e4e5bdae9b1ddb56"
   },
   "assets/orderpro-publish.js": {
-    "v": "2",
-    "sha": "95b24bb0b60af886"
+    "v": "3",
+    "sha": "34ba1e6354ccc770"
   },
   "assets/pages-pro.js": {
-    "v": "2062",
-    "sha": "0a2ce0081d029077"
+    "v": "2063",
+    "sha": "9d2d1a1768c5dd95"
   },
   "assets/pairing-commit.js": {
     "v": "1",
@@ -308,8 +308,8 @@
     "sha": "5de0e6b683e8535a"
   },
   "assets/platform-ops.js": {
-    "v": "1",
-    "sha": "9255f20099d86810"
+    "v": "2",
+    "sha": "aaa30a4b7a734877"
   },
   "assets/pos-autre.css": {
     "v": "2",
@@ -504,8 +504,8 @@
     "sha": "af12a1b45e03e1d9"
   },
   "assets/restaurant-menu-workspace.js": {
-    "v": "2",
-    "sha": "04f39f699e4ea289"
+    "v": "3",
+    "sha": "fc6395e61a43d0b3"
   },
   "assets/restaurant-recipes.js": {
     "v": "3",
