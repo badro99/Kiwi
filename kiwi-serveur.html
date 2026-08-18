@@ -1000,6 +1000,13 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       box-shadow: 0 0 0 2px var(--ring);
       z-index: 2;
     }
+    /* `badge.hidden = serviceUnread < 1` était juste — et ne faisait rien. La
+       règle du dessus pose display:flex en (0,2,0) et bat `[hidden]{display:none}`
+       du navigateur en (0,1,0) : la pastille rouge restait donc affichée, à
+       « 0 », en permanence, à côté d'un onglet qui annonce « Aucune
+       notification ». Même piège que le reset `svg{display:block}` signalé plus
+       bas — un attribut d'état perd toujours contre une règle de classe. */
+    .bt-btn .bt-badge[hidden] { display: none; }
 
     /* ===========================================================
        TABLES TAB
@@ -4336,7 +4343,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
   <script src="assets/staff-roles.js" defer></script>
   <!-- Real employee identity, planning, floor and attendance bridge. -->
   <script src="assets/pwa-update.js?v=358" defer></script>
-  <script src="assets/employee-live.js?v=380" defer></script>
+  <script src="assets/employee-live.js?v=381" defer></script>
   <script src="assets/employee-planning.js?v=6" defer></script>
   <link rel="stylesheet" href="assets/employee-trade-shell.css?v=2">
   <script src="assets/employee-trade-shell.js?v=2" defer></script>
