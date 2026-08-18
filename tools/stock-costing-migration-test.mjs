@@ -98,6 +98,9 @@ function drainTimers() {
   }
 }
 
+let stockAttachOpts = null;
+let caisseAttachOpts = null;
+
 const context = {
   window: {
     KiwiStore: fakeKiwiStore,
@@ -113,11 +116,15 @@ const context = {
     KiwiCloudDoc: {
       slugFor: () => 'mon-resto',
       currentSlug: () => 'mon-resto',
-      attach: (cfg) => ({
-        bind: () => Promise.resolve(false),
-        push: () => {},
-        pull: () => {},
-      }),
+      attach: (cfg) => {
+        if (cfg.localKey && typeof cfg.localKey === 'function') caisseAttachOpts = cfg;
+        else stockAttachOpts = cfg;
+        return {
+          bind: () => Promise.resolve(false),
+          push: () => {},
+          pull: () => {},
+        };
+      },
       mergeDefault: (mine, theirs) => Object.assign({}, theirs, mine),
       carryForward: () => false,
     },
@@ -285,4 +292,200 @@ for (const file of ['assets/stock.js', 'assets/caisse-stock-sync.js']) {
     kept.lastDelivery === '2026-05-13' && kept.status === 'low' && kept.sku === 'BF-001');
 }
 
-console.log(`✓ stock costing migration Phase 1 (${pass} controls: v2 schema migration, subcategory resolution, dual-write envelope, zero recipe regressions, exact consumption costing)`);
+/* ── 8. Retail Vertical Direct Deductions ───────────────────────────────────
+ * All fourteen POS verticals share this stock document. Retail paths (boutique,
+ * épicerie, pharmacie) sell direct products without recipe explosion. */
+const Inv = win.KiwiInventory;
+Inv.ensureOpening('robe-01', 10, { unitCost: 150 });
+ok('Opening balance for retail item robe-01 is 10', Inv.balance('robe-01') === 10);
+
+const retailSale = {
+  id: 'sale-boutique-101',
+  ts: 2000,
+  lines: [
+    { itemId: 'robe-01', name: 'Robe en soie', qty: 2, unitCost: 150 },
+    { itemId: 'service-giftwrap', name: 'Emballage cadeau', kind: 'service', qty: 1 },
+  ],
+};
+const retailRes = Consumption.record(retailSale);
+ok('Retail sale wrote 1 movement and skipped 1 service', retailRes.written === 1 && retailRes.skipped === 1);
+ok('Retail item stock balance decreased to 8', Inv.balance('robe-01') === 8);
+const retailMvt = Inv.history('robe-01').find((m) => m.refId === 'sale-boutique-101');
+ok('Retail movement preserved direct unitCost 150', retailMvt && retailMvt.unitCost === 150 && retailMvt.qty === -2);
+
+/* ── 9. Historical Report Invariant ─────────────────────────────────────────
+ * Past reports and margin sums evaluated over past date ranges must produce
+ * byte-identical numbers before and after schema migration. */
+const histBeforeSum = Inv.history('robe-01').reduce((s, m) => s + (m.unitCost || 0) * Math.abs(m.qty), 0);
+const preDocValuation = JSON.parse(localStorage.getItem('kiwi:stockOverlay:mon-resto'));
+migrationOf('assets/stock.js')(preDocValuation);
+const histAfterSum = Inv.history('robe-01').reduce((s, m) => s + (m.unitCost || 0) * Math.abs(m.qty), 0);
+ok('Historical movement cost evaluation is byte-identical across migration', histBeforeSum === histAfterSum);
+
+/* ── 10. Stale v1 Client Timestamp Reconciliation in stMergeOverlay ─────────
+ * When a stale v1 client (only editing d.items) posts an update with a newer
+ * timestamp, the merge function must promote the edit into subcategories. */
+const v2Doc = {
+  schemaVersion: 2,
+  subcategories: [{ id: 'inv-saffron', name: 'Safran pur', categoryId: 'epices', unit: 'g', defaultCost: 18, updatedAt: 1000, suppliers: [] }],
+  items: [{ id: 'inv-saffron', name: 'Safran pur', category: 'epices', unit: 'g', costPerUnit: 18, updatedAt: 1000 }],
+};
+const staleV1Doc = {
+  items: [{ id: 'inv-saffron', name: 'Safran pur', category: 'epices', unit: 'g', costPerUnit: 22, updatedAt: 3000 }],
+};
+const mergedOut = caisseAttachOpts.merge(v2Doc, staleV1Doc);
+const mergedSaffron = mergedOut.subcategories.find((s) => s.id === 'inv-saffron');
+ok('merge reconciles newer v1 item timestamp into subcategory defaultCost (22)', mergedSaffron && mergedSaffron.defaultCost === 22);
+ok('merge keeps backward-compatible items costPerUnit in sync (22)', mergedOut.items.find((it) => it.id === 'inv-saffron')?.costPerUnit === 22);
+
+/* ── 11. Multi-Supplier Reception, Frozen Price & Ranked Depletion ──────────
+ * Tests the core Phase 2 workflow:
+ *   - Reception 1: 10 kg butter @ 70 MAD/kg from Centrale Danone (Rank 1)
+ *   - Reception 2: 10 kg butter @ 95 MAD/kg from Copag (Rank 2)
+ *   - Ranked depletion consumes Rank 1 first, then Rank 2, then legacy opening. */
+Inv.ensureOpening('inv-butter-test', 5, { unitCost: 65, note: 'Opening legacy' }); // 5 kg legacy @ 65
+
+// Reception #1 from Supplier 1 @ 70
+Inv.add({
+  id: 'rcpt-butter-01', itemId: 'inv-butter-test', qty: 10, reason: 'receipt', refType: 'receipt', refId: 'PO-101',
+  unitCost: 70, occurredTs: 10000,
+  meta: { supplierId: 'sup-danone', supplierName: 'Centrale Danone', rank: 1 },
+});
+
+// Reception #2 from Supplier 2 @ 95
+Inv.add({
+  id: 'rcpt-butter-02', itemId: 'inv-butter-test', qty: 10, reason: 'receipt', refType: 'receipt', refId: 'PO-102',
+  unitCost: 95, occurredTs: 20000,
+  meta: { supplierId: 'sup-copag', supplierName: 'Copag', rank: 2 },
+});
+
+// Verify active lots derived
+const derived = Consumption.deriveLots('inv-butter-test');
+ok('deriveLots finds 3 active lots (Rank 1, Rank 2, Legacy)', derived.length === 3);
+ok('Lot 1 is Rank 1 @ 70', derived[0].rank === 1 && derived[0].unitCost === 70);
+ok('Lot 2 is Rank 2 @ 95', derived[1].rank === 2 && derived[1].unitCost === 95);
+ok('Lot 3 is Legacy @ 65', derived[2].rank === 999 && derived[2].unitCost === 65);
+
+// Depletion 1: Sale of 3 kg butter -> completely covered by Rank 1 @ 70
+const cost1 = Consumption.allocateCost('inv-butter-test', 3, 70);
+ok('Depletion 1 (3 kg) allocates exactly 70.00 MAD/kg from Rank 1', cost1 === 70);
+
+// Book consumption movement 1
+Inv.add({
+  id: 'sale-mvt-01', itemId: 'inv-butter-test', qty: -3, reason: 'sale', refType: 'sale', refId: 'sale-01',
+  unitCost: cost1, occurredTs: 30000,
+});
+
+// Depletion 2: Sale of 8 kg butter -> consumes remaining 7 kg @ 70 + 1 kg @ 95 -> (7*70 + 1*95)/8 = 73.125
+const cost2 = Consumption.allocateCost('inv-butter-test', 8, 70);
+ok('Depletion 2 (8 kg straddling Rank 1 and Rank 2) allocates 73.125 MAD/kg', cost2 === 73.125, `got ${cost2}`);
+
+// Book consumption movement 2
+Inv.add({
+  id: 'sale-mvt-02', itemId: 'inv-butter-test', qty: -8, reason: 'sale', refType: 'sale', refId: 'sale-02',
+  unitCost: cost2, occurredTs: 40000,
+});
+
+// Depletion 3: Sale of 9 kg butter -> completely covered by remaining 9 kg of Rank 2 @ 95
+const cost3 = Consumption.allocateCost('inv-butter-test', 9, 70);
+ok('Depletion 3 (9 kg) allocates exactly 95.00 MAD/kg from Rank 2', cost3 === 95, `got ${cost3}`);
+
+// Book consumption movement 3
+Inv.add({
+  id: 'sale-mvt-03', itemId: 'inv-butter-test', qty: -9, reason: 'sale', refType: 'sale', refId: 'sale-03',
+  unitCost: cost3, occurredTs: 50000,
+});
+
+// Depletion 4: Sale of 4 kg butter -> supplier lots exhausted, draws 4 kg from legacy opening @ 65
+const cost4 = Consumption.allocateCost('inv-butter-test', 4, 70);
+ok('Depletion 4 (4 kg) falls back to finite legacy opening @ 65 MAD/kg', cost4 === 65, `got ${cost4}`);
+
+/* ── 12. Reversals Restore Lots (Defect 1 Guard) ───────────────────────────
+ * When a sale is voided/reversed at the register, positive movements with
+ * non-inbound reasons (e.g. sale-reversal, return) must reduce depletions so
+ * that stock returned to the shelf restores lot balances.
+ * Reproduction test:
+ *   - Receipt 5 kg @ 70 (Rank 1) + Receipt 5 kg @ 95 (Rank 2) -> 10 kg
+ *   - Sell 6 kg -> unitCost = 74.1667 (5kg @ 70 + 1kg @ 95)
+ *   - Reverse sale -> balance returns to 10 kg
+ *   - Sell 5 kg -> MUST cost exactly 70 MAD/kg (Rank 1 restored), not 76! */
+Inv.add({
+  id: 'rcpt-void-01', itemId: 'item-void-test', qty: 5, reason: 'receipt', refType: 'receipt', refId: 'PO-V1',
+  unitCost: 70, occurredTs: 100000,
+  meta: { supplierId: 'sup-1', supplierName: 'Fournisseur 1', rank: 1 },
+});
+Inv.add({
+  id: 'rcpt-void-02', itemId: 'item-void-test', qty: 5, reason: 'receipt', refType: 'receipt', refId: 'PO-V2',
+  unitCost: 95, occurredTs: 100001,
+  meta: { supplierId: 'sup-2', supplierName: 'Fournisseur 2', rank: 2 },
+});
+ok('Pre-sale balance for item-void-test is 10 kg', Inv.balance('item-void-test') === 10);
+
+const costVoid1 = Consumption.allocateCost('item-void-test', 6, 70);
+ok('Initial 6 kg allocation costs 74.1667 MAD/kg', Math.abs(costVoid1 - (350 + 95) / 6) < 1e-4);
+
+Inv.add({
+  id: 'sale-void-mvt-01', itemId: 'item-void-test', qty: -6, reason: 'sale', refType: 'sale', refId: 'sale-v100',
+  unitCost: costVoid1, occurredTs: 100002,
+});
+ok('Post-sale balance for item-void-test is 4 kg', Inv.balance('item-void-test') === 4);
+
+// Void the sale
+const reversedCount = Consumption.reverse('sale-v100');
+ok('Sale was reversed in ledger', reversedCount === 1);
+ok('Post-reversal balance for item-void-test returned to 10 kg', Inv.balance('item-void-test') === 10);
+
+// Next sale of 5 kg must be fully allocated from Rank 1 @ 70
+const costAfterVoid = Consumption.allocateCost('item-void-test', 5, 70);
+ok('Sale after reversal allocates from restored Rank 1 lot @ 70.00 MAD/kg (not 76)', costAfterVoid === 70, `got ${costAfterVoid}`);
+
+/* ── 13. Partial Coverage Signals Incompleteness (Defect 2 Guard) ───────────
+ * When defaultUnitCost is null and lots only partially cover the required quantity,
+ * allocateCost must return null (admitted gap) rather than diluting the average
+ * by costing the unbacked portion at 0 MAD. */
+Inv.add({
+  id: 'rcpt-partial-01', itemId: 'item-partial-test', qty: 5, reason: 'receipt', refType: 'receipt', refId: 'PO-P1',
+  unitCost: 95, occurredTs: 200000,
+  meta: { supplierId: 'sup-partial', supplierName: 'Fournisseur Partiel', rank: 1 },
+});
+
+// Require 10 kg when only 5 kg @ 95 exists and default is null
+const costPartialIncomplete = Consumption.allocateCost('item-partial-test', 10, null);
+ok('Partial coverage with null default returns null (not diluted 47.50)', costPartialIncomplete === null, `got ${costPartialIncomplete}`);
+
+// Require 5 kg when 5 kg @ 95 exists and default is null
+const costPartialComplete = Consumption.allocateCost('item-partial-test', 5, null);
+ok('Full coverage with null default returns exact lot cost (95.00)', costPartialComplete === 95, `got ${costPartialComplete}`);
+
+/* ── 14. stMergeOverlay ne doit RIEN détruire non plus ────────────────────────
+ * Troisième site de reconstruction de d.items. Il tourne à CHAQUE sync cloud :
+ * un correctif à la migration seule est défait au premier pull. Le contrôle
+ * exige window.KiwiCloudDoc.mergeDefault — sans lui la fonction rend `mine`
+ * intact et un test naïf passe au vert sans avoir rien exercé. */
+{
+  const all = R('assets/stock.js');
+  const grab = (name) => {
+    const i = all.indexOf('function ' + name);
+    let depth = 0, k = all.indexOf('{', i);
+    do { if (all[k] === '{') depth++; else if (all[k] === '}') depth--; k++; } while (depth > 0);
+    return all.slice(i, k);
+  };
+  const win = { KiwiCloudDoc: { mergeDefault: (mine, theirs) => Object.assign({}, theirs, mine) } };
+  const merge = new Function('window', grab('migrateStockDocV2') + '\n' + grab('stMergeOverlay') + '; return stMergeOverlay;')(win);
+  const item = { id: 'inv01', name: 'Beurre', category: 'laitiers', unit: 'kg', costPerUnit: 70,
+    lastDelivery: '2026-05-13', deliveryFrequency: 'mardi-vendredi', status: 'low', sku: 'BT-1', notes: 'bio', updatedAt: 2000 };
+  const sub = { id: 'inv01', categoryId: 'laitiers', name: 'Beurre', unit: 'kg', defaultCost: 70, suppliers: [],
+    currentStock: 5, parLevel: 10, reorderLevel: 3, usageThisWeek: 0, theoreticalUsage: 0, updatedAt: 2000 };
+  const mk = () => ({ schemaVersion: 2, items: [JSON.parse(JSON.stringify(item))], subcategories: [JSON.parse(JSON.stringify(sub))],
+    itemOv: {}, supOv: {}, sups: [], cats: [], delItems: [], delSups: [], stockOv: {} });
+  const out = merge(mk(), mk());
+  const kept = (out.items && out.items[0]) || {};
+  ok('stMergeOverlay · le merge a bien reconstruit les articles (mergeDefault present)', 'costPerUnit' in kept && out.items.length === 1);
+  const lost = Object.keys(item).filter((f) => !(f in kept));
+  ok('stMergeOverlay · le merge cloud preserve les champs hors liste projetee', lost.length === 0,
+    lost.length ? 'champs detruits : ' + lost.join(', ') : '');
+  ok('stMergeOverlay · le merge ne fuit pas la forme v2 dans l article plat', !('suppliers' in kept) && !('defaultCost' in kept));
+}
+console.log(`✓ stock costing Phase 1 & Phase 2 (${pass} controls: v2 migration, subcategories, zero field loss, retail direct depletions, historical stability, v1 merge, multi-supplier ranked depletion, reversal restoration, partial coverage honesty)`);
+
+

@@ -207,8 +207,8 @@
     return out;
   }
   function merge(mine, theirs) {
-    mine = migrateStockDocV2(Object.assign(blank(), mine || {}));
-    theirs = migrateStockDocV2(Object.assign(blank(), theirs || {}));
+    mine = Object.assign(blank(), migrateStockDocV2(mine) || {});
+    theirs = Object.assign(blank(), migrateStockDocV2(theirs) || {});
     var M = window.KiwiCloudDoc && window.KiwiCloudDoc.mergeDefault;
     var out = M ? M(mine, theirs) : Object.assign({}, theirs, mine);
     out.schemaVersion = 2;

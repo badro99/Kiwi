@@ -72,8 +72,8 @@
     "sha": "509b94e540471caf"
   },
   "assets/caisse-stock-sync.js": {
-    "v": "3",
-    "sha": "9342d3cfd13ca877"
+    "v": "5",
+    "sha": "c13afe8ab6a3def5"
   },
   "assets/channel-sales.js": {
     "v": "3",
@@ -196,8 +196,8 @@
     "sha": "b0e0530634e33ee2"
   },
   "assets/inventory-consumption.js": {
-    "v": "3",
-    "sha": "e406ed46de8593ef"
+    "v": "5",
+    "sha": "a47b9fd42d545e46"
   },
   "assets/inventory-ledger.js": {
     "v": "3",
@@ -528,8 +528,8 @@
     "sha": "a4c3a6b89b6ee0d0"
   },
   "assets/stock.js": {
-    "v": "4",
-    "sha": "0c1fba509a771c80"
+    "v": "6",
+    "sha": "7f9dbc193085bfb2"
   },
   "assets/team.js": {
     "v": "276",

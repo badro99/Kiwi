@@ -841,19 +841,32 @@
       if (!other || (+s.updatedAt || 0) >= (+other.updatedAt || 0)) subMap.set(String(s.id), s);
     });
     out.subcategories = Array.from(subMap.values());
+    /* Même règle qu'à la migration : on PART de l'article existant, jamais de
+       la sous-catégorie seule — elle n'a jamais porté lastDelivery, status, sku,
+       notes… Ce merge tourne à CHAQUE synchronisation cloud ; reconstruire depuis
+       la sous-catégorie défaisait le correctif de la migration au premier pull. */
+    const prevItems = new Map();
+    [theirs, mine].forEach((side) => {
+      (Array.isArray(side && side.items) ? side.items : []).forEach((it) => {
+        if (it && it.id != null) prevItems.set(String(it.id), Object.assign({}, prevItems.get(String(it.id)) || {}, it));
+      });
+    });
     out.items = out.subcategories.map(s => {
       const ov = (out.itemOv && out.itemOv[s.id]) || {};
-      return {
+      return Object.assign({}, prevItems.get(String(s.id)) || {}, {
         id: s.id,
         name: ov.name != null ? String(ov.name) : s.name,
-        category: ov.category != null ? String(ov.category) : s.categoryId,
+        category: ov.category != null ? String(ov.category) : (ov.cat != null ? String(ov.cat) : s.categoryId),
         unit: ov.unit != null ? String(ov.unit) : s.unit,
-        costPerUnit: ov.costPerUnit != null ? +ov.costPerUnit : s.defaultCost,
+        costPerUnit: ov.costPerUnit != null ? +ov.costPerUnit : (ov.cost != null ? +ov.cost : s.defaultCost),
         supplier: ov.supplier != null ? String(ov.supplier) : ((s.suppliers && s.suppliers[0] && s.suppliers[0].supplierName) || ''),
-        parLevel: ov.parLevel != null ? +ov.parLevel : s.parLevel,
-        reorderLevel: ov.reorderLevel != null ? +ov.reorderLevel : s.reorderLevel,
+        currentStock: s.currentStock != null ? +s.currentStock : 0,
+        parLevel: ov.parLevel != null ? +ov.parLevel : (ov.par != null ? +ov.par : s.parLevel),
+        reorderLevel: ov.reorderLevel != null ? +ov.reorderLevel : (ov.reorder != null ? +ov.reorder : s.reorderLevel),
+        usageThisWeek: s.usageThisWeek != null ? +s.usageThisWeek : 0,
+        theoreticalUsage: s.theoreticalUsage != null ? +s.theoreticalUsage : 0,
         updatedAt: Math.max(+s.updatedAt || 0, +ov.updatedAt || 0),
-      };
+      });
     });
     return out;
   }
@@ -1114,7 +1127,7 @@
   }
   const currentStockFor = (it) => ledgerOpeningFor(it);
 
-  function moveStock(it, qty, reason, refType, refId, note, unitCost) {
+  function moveStock(it, qty, reason, refType, refId, note, unitCost, meta) {
     if (!it || !qty) return null;
     try {
       const L = window.KiwiInventory;
@@ -1122,6 +1135,7 @@
         return L.add({
           itemId: it.id, qty, reason, refType: refType || 'manual', refId: refId || '',
           note: note || '', unitCost: unitCost == null ? (+it.costPerUnit || null) : unitCost,
+          meta: meta || null,
         });
       }
     } catch (_) {}
@@ -2403,6 +2417,7 @@
           return;
         }
         const receiptRef = 'receipt-' + Date.now().toString(36);
+        const receivedAt = date ? new Date(`${date}T12:00:00`).getTime() : Date.now();
         const inv = getInv();
         const receivingLines = lines.map(line => {
           const it = inv.find(x => x.id === line.itemId);
@@ -2411,13 +2426,46 @@
         if (window.KiwiProcurement?.receiveDirect) {
           let known = window.KiwiProcurement.doc()?.suppliers?.find(s => String(s.name || '').toLowerCase() === supplier.toLowerCase());
           if (!known) known = window.KiwiProcurement.addSupplier({ name: supplier });
-          const receivedAt = date ? new Date(`${date}T12:00:00`).getTime() : Date.now();
           window.KiwiProcurement.receiveDirect({ supplierId: known?.id || supplier, externalRef, receivedAt, lines: receivingLines });
         } else {
           lines.forEach(line => {
             const it = inv.find(x => x.id === line.itemId); if (!it) return;
+            // Update supplier card on item if real
+            let supRank = 1;
+            let supId = 'sup-' + Date.now().toString(36);
+            if (stShowReal()) {
+              const ov = stItemOverrides[it.id] || {};
+              const cards = Array.isArray(it.suppliers) ? it.suppliers.slice() : [];
+              let existing = cards.find(s => String(s.supplierName || '').trim().toLowerCase() === supplier.toLowerCase());
+              if (!existing) {
+                supRank = cards.length + 1;
+                existing = {
+                  id: supId,
+                  supplierName: supplier,
+                  defaultPrice: line.cost || +it.costPerUnit || 0,
+                  purchaseUnit: it.unit || 'unité',
+                  factor: 1,
+                  rank: supRank,
+                };
+                cards.push(existing);
+              } else {
+                supId = existing.id;
+                supRank = existing.rank || 1;
+                if (line.cost > 0) existing.defaultPrice = line.cost;
+              }
+              ov.suppliers = cards;
+              ov.updatedAt = Date.now();
+              stItemOverrides[it.id] = ov;
+            }
             moveStock(it, line.qty, 'receipt', 'receipt', receiptRef,
-              [supplier, externalRef, date].filter(Boolean).join(' · '), line.cost || null);
+              [supplier, externalRef, date].filter(Boolean).join(' · '), line.cost || null, {
+                supplierId: supId,
+                supplierName: supplier,
+                externalRef,
+                receiptRef,
+                receivedAt,
+                rank: supRank,
+              });
             if (line.cost > 0 && window.KiwiCost?.setItemCost) window.KiwiCost.setItemCost(it.id, line.cost, supplier);
           });
         }

@@ -85,6 +85,93 @@
     return out;
   }
 
+  function deriveLots(itemId) {
+    var I = window.KiwiInventory;
+    if (!I || !I.history) return [];
+    var rows = (I.history(itemId) || []).slice().reverse(); // Chronological order
+    var lots = [];
+    var depletions = 0;
+
+    for (var i = 0; i < rows.length; i++) {
+      var m = rows[i];
+      if (!m || m.itemId !== itemId) continue;
+      var q = +m.qty || 0;
+      if (q > 0) {
+        if (m.reason === 'opening' || m.reason === 'receipt') {
+          var rank = m.meta && m.meta.rank != null ? +m.meta.rank : (m.reason === 'opening' ? 999 : 50);
+          lots.push({
+            id: m.id,
+            initialQty: q,
+            remainingQty: q,
+            unitCost: m.unitCost != null && Number.isFinite(+m.unitCost) ? +m.unitCost : null,
+            rank: rank,
+            ts: +m.occurredTs || 0,
+          });
+        } else {
+          // Positive quantity that does not open an inbound lot (e.g. sale-reversal, return,
+          // un-voided correction) reduces prior depletions so restored stock restores lot balances.
+          depletions = Math.max(0, Math.round((depletions - q) * 1000) / 1000);
+        }
+      } else if (q < 0) {
+        depletions = Math.round((depletions + Math.abs(q)) * 1000) / 1000;
+      }
+    }
+
+    // Sort lots: rank ASC (primary supplier rank 1 first, rank 2 next, legacy opening last), then ts ASC (FIFO within rank)
+    lots.sort(function (a, b) {
+      if (a.rank !== b.rank) return a.rank - b.rank;
+      return a.ts - b.ts;
+    });
+
+    // Replay past net depletions against sorted lots
+    for (var j = 0; j < lots.length && depletions > 0; j++) {
+      var lot = lots[j];
+      var take = Math.min(lot.remainingQty, depletions);
+      lot.remainingQty = Math.round((lot.remainingQty - take) * 1000) / 1000;
+      depletions = Math.round((depletions - take) * 1000) / 1000;
+    }
+
+    return lots.filter(function (l) { return l.remainingQty > 0; });
+  }
+
+  function allocateCost(itemId, reqQty, defaultUnitCost) {
+    reqQty = Math.max(0, +reqQty || 0);
+    if (!(reqQty > 0)) return defaultUnitCost;
+    var lots = deriveLots(itemId);
+    var remainingReq = reqQty;
+    var totalCost = 0;
+    var coveredQty = 0;
+
+    for (var i = 0; i < lots.length && remainingReq > 0; i++) {
+      var lot = lots[i];
+      if (lot.remainingQty <= 0) continue;
+      var take = Math.min(lot.remainingQty, remainingReq);
+      var cost = lot.unitCost != null ? lot.unitCost : defaultUnitCost;
+      if (cost != null) {
+        totalCost += take * cost;
+        coveredQty += take;
+      }
+      lot.remainingQty = Math.round((lot.remainingQty - take) * 1000) / 1000;
+      remainingReq = Math.round((remainingReq - take) * 1000) / 1000;
+    }
+
+    // Terminal fallback for unbacked deficit portion
+    if (remainingReq > 0) {
+      if (defaultUnitCost != null && Number.isFinite(+defaultUnitCost) && +defaultUnitCost > 0) {
+        totalCost += remainingReq * +defaultUnitCost;
+        coveredQty += remainingReq;
+      } else {
+        // Partial coverage with no default rate: return null rather than diluting average
+        return null;
+      }
+    }
+
+    if (coveredQty >= reqQty && reqQty > 0) {
+      return Math.round((totalCost / reqQty) * 10000) / 10000;
+    }
+    return null;
+  }
+
   function movementId(ref, lineIndex, itemId, part) {
     var merchant = window.KiwiInventory?.merchant?.() || '';
     return 'inv-sale-' + hash([merchant, ref, lineIndex, itemId, part || 0].join('|'));
@@ -114,13 +201,15 @@
       }
       var targets = ingredients || [{ itemId: itemId, qty: qty, direct: true }];
       targets.forEach(function (x, part) {
+        var baseCost = x.direct
+          ? (line.unitCost != null ? n(line.unitCost) : null)
+          : (x.unitCost != null ? n(x.unitCost) : null);
+        var realizedCost = allocateCost(x.itemId, x.qty, baseCost);
         var m = I.add({
           id: movementId(ref, idx, x.itemId, part), itemId: x.itemId,
           variantId: x.direct ? String(line.variantId || '') : '', qty: -x.qty,
           reason: 'sale', refType: 'sale', refId: ref,
-          unitCost: x.direct
-            ? (line.unitCost != null ? n(line.unitCost) : null)
-            : (x.unitCost != null ? n(x.unitCost) : null),
+          unitCost: realizedCost,
           occurredTs: n(sale.ts || sale.time) || Date.now(),
           note: x.direct ? String(line.name || 'Vente') : `Recette · ${line.name || itemId}`,
           meta: { sourceItemId: itemId, recipe: x.recipe || '', line: idx },
@@ -142,5 +231,5 @@
     return nrows;
   }
 
-  window.KiwiInventoryConsumption = { record: record, reverse: reverse, recipeLines: recipeLines };
+  window.KiwiInventoryConsumption = { record: record, reverse: reverse, recipeLines: recipeLines, deriveLots: deriveLots, allocateCost: allocateCost };
 })();
