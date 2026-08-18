@@ -787,5 +787,70 @@ for (const [shell, fnName] of [['kiwi-caisse.html', 'storePaired'], ['kiwi-serve
     `${shell} ${fnName}() prefers KiwiPlatform over a stale localStorage copy`);
 }
 
+/* 25. Invariant d'écrivain unique pour kiwiPairedVenue.
+   Écrire kiwiPairedVenue n'est pas une simple écriture de clé : cela engage la
+   détection de changement de commerce (onTenantSwitch), la purge des données de
+   l'ancien locataire (ventes, catalogue, shifts) et l'événement 'kiwi-paired'.
+   Pour empêcher qu'un écran (cuisine, serveur, caisse) ou un module d'arrière-plan
+   ne réintroduise une écriture directe qui contourne la purge, ce contrôle statique
+   garantit qu'il n'existe EXACTEMENT QU'UN SEUL écrivain dans toute la base de production :
+   assets/pairing-commit.js. */
+
+function findPairingWriterSites() {
+  const scanFiles = [];
+  function scanDir(dir, relPrefix = '') {
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    for (const ent of entries) {
+      if (ent.name.startsWith('.') || ent.name === 'node_modules' || ent.name === 'tools') continue;
+      if (ent.name.includes(' 2.')) continue; // exclude iCloud conflict copies
+      const rel = relPrefix ? path.join(relPrefix, ent.name) : ent.name;
+      const full = path.join(dir, ent.name);
+      if (ent.isDirectory()) {
+        if (!relPrefix && (ent.name === 'assets' || ent.name === 'functions')) {
+          scanDir(full, rel);
+        } else if (relPrefix.startsWith('functions')) {
+          scanDir(full, rel);
+        }
+      } else if (ent.isFile()) {
+        if (!relPrefix && ((ent.name.startsWith('kiwi-') && ent.name.endsWith('.html')) || ent.name === 'dashboard.html')) {
+          scanFiles.push(rel);
+        } else if (relPrefix === 'assets' && ent.name.endsWith('.js')) {
+          scanFiles.push(rel);
+        } else if (relPrefix.startsWith('functions') && ent.name.endsWith('.js')) {
+          scanFiles.push(rel);
+        }
+      }
+    }
+  }
+  scanDir(root);
+
+  const hits = [];
+  const writerRegex = /(?:localStorage\s*\.\s*setItem|\bset)\s*\(\s*['"]kiwiPairedVenue['"]/;
+  for (const rel of scanFiles) {
+    const full = path.join(root, rel);
+    const content = fs.readFileSync(full, 'utf8');
+    const lines = content.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+      const trimmed = lines[i].trim();
+      if (trimmed.startsWith('//') || trimmed.startsWith('/*') || trimmed.startsWith('*')) continue;
+      if (writerRegex.test(lines[i])) {
+        hits.push({ file: rel, line: i + 1, snippet: lines[i].trim() });
+      }
+    }
+  }
+  return { scanFiles, hits };
+}
+
+const pairingScan = findPairingWriterSites();
+const nonCanonicalHits = pairingScan.hits.filter(h => h.file !== 'assets/pairing-commit.js');
+
+ok(pairingScan.hits.length === 1,
+  `exactly 1 writer of kiwiPairedVenue across production files (found ${pairingScan.hits.length}: ${pairingScan.hits.map(h => `${h.file}:${h.line}`).join(', ') || 'none'})`);
+ok(nonCanonicalHits.length === 0,
+  `zero rogue writers of kiwiPairedVenue outside assets/pairing-commit.js (offending: ${nonCanonicalHits.map(h => `${h.file}:${h.line} [${h.snippet}]`).join(', ') || 'none'})`);
+ok(pairingScan.hits.length > 0 && pairingScan.hits[0].file === 'assets/pairing-commit.js',
+  `canonical writer is located in assets/pairing-commit.js (at line ${pairingScan.hits[0]?.line || '?'})`);
+
 if (process.exitCode) process.exit(process.exitCode);
-console.log(`  ✓ pairing resolver (${pass} controls: pairing agreement, storage fallback, purge immediacy, fail-soft JSON, isPaired invariant, direct module tests with/without platform across 21 modules + cycle safety + 2 HTML shell resolvers)`);
+console.log(`  ✓ pairing resolver (${pass} controls: pairing agreement, storage fallback, purge immediacy, fail-soft JSON, isPaired invariant, direct module tests with/without platform across 21 modules + cycle safety + 2 HTML shell resolvers + single writer invariant)`);
+
