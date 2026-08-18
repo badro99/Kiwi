@@ -825,15 +825,24 @@ function findPairingWriterSites() {
   scanDir(root);
 
   const hits = [];
-  const writerRegex = /(?:localStorage\s*\.\s*setItem|\bset)\s*\(\s*['"]kiwiPairedVenue['"]/;
+  function isPairingWrite(line) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith('//') || trimmed.startsWith('/*') || trimmed.startsWith('*')) return false;
+    if (!/['"]kiwiPairedVenue['"]/.test(line)) return false;
+
+    // Mutating actions: setItem, removeItem, bracket assignment, delete, .set(), bare set()
+    if (/setItem|removeItem|\[\s*['"]kiwiPairedVenue['"]\s*\]\s*=|\bdelete\s+/.test(line)) return true;
+    if (/(?:\.|\b)set\s*\(/.test(line)) return true;
+
+    return false;
+  }
+
   for (const rel of scanFiles) {
     const full = path.join(root, rel);
     const content = fs.readFileSync(full, 'utf8');
     const lines = content.split('\n');
     for (let i = 0; i < lines.length; i++) {
-      const trimmed = lines[i].trim();
-      if (trimmed.startsWith('//') || trimmed.startsWith('/*') || trimmed.startsWith('*')) continue;
-      if (writerRegex.test(lines[i])) {
+      if (isPairingWrite(lines[i])) {
         hits.push({ file: rel, line: i + 1, snippet: lines[i].trim() });
       }
     }
@@ -847,7 +856,7 @@ const nonCanonicalHits = pairingScan.hits.filter(h => h.file !== 'assets/pairing
 ok(pairingScan.hits.length === 1,
   `exactly 1 writer of kiwiPairedVenue across production files (found ${pairingScan.hits.length}: ${pairingScan.hits.map(h => `${h.file}:${h.line}`).join(', ') || 'none'})`);
 ok(nonCanonicalHits.length === 0,
-  `zero rogue writers of kiwiPairedVenue outside assets/pairing-commit.js (offending: ${nonCanonicalHits.map(h => `${h.file}:${h.line} [${h.snippet}]`).join(', ') || 'none'})`);
+  `zero rogue writers or removers of kiwiPairedVenue outside assets/pairing-commit.js (offending: ${nonCanonicalHits.map(h => `${h.file}:${h.line} [${h.snippet}]`).join(', ') || 'none'})`);
 ok(pairingScan.hits.length > 0 && pairingScan.hits[0].file === 'assets/pairing-commit.js',
   `canonical writer is located in assets/pairing-commit.js (at line ${pairingScan.hits[0]?.line || '?'})`);
 
