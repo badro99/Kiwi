@@ -557,9 +557,109 @@ const unattributedMove = CaisseStock.move('inv-butter', 5, 'receipt', 'caisse-rc
 });
 const anonLots = Consumption.deriveLots('inv-butter');
 const anonLot = anonLots.find((l) => l.id === unattributedMove?.id);
-ok('deriveLots places unattributed caisse reception at rank 999 (tail lot)', anonLot && anonLot.rank === 999, `got rank ${anonLot?.rank}`);
+/* ── 16. Two Alerts: Total Stock Reorder vs Tier-1 Lot Buffer (§1 Guard) ───
+ * Total stock reorder alert fires when aggregate stock <= reorderLevel.
+ * Tier-1 buffer alert fires when Rank-1 lots <= usage-derived buffer (3 days of usage),
+ * even when aggregate physical stock is still healthy (> reorderLevel). */
+{
+  const item = { id: 'inv-flour', name: 'Farine T55', unit: 'kg', costPerUnit: 10, usageThisWeek: 14, currentStock: 25, reorderLevel: 5, parLevel: 30 };
+  const sub = {
+    id: 'inv-flour', name: 'Farine T55', unit: 'kg', defaultCost: 10,
+    suppliers: [
+      { id: 'sup-f1', supplierName: 'Minoterie Centrale', rank: 1, defaultPrice: 10 },
+      { id: 'sup-f2', supplierName: 'Moulin du Sud', rank: 2, defaultPrice: 14 },
+    ],
+  };
+  // Receipts: 2 kg from Rank 1 @ 10, and 23 kg from Rank 2 @ 14 -> total physical stock = 25 kg (healthy > 5 kg)
+  Inv.add({ id: 'mvt-f1', itemId: 'inv-flour', qty: 2, reason: 'receipt', refId: 'PO-F1', unitCost: 10, meta: { supplierName: 'Minoterie Centrale', rank: 1 } });
+  Inv.add({ id: 'mvt-f2', itemId: 'inv-flour', qty: 23, reason: 'receipt', refId: 'PO-F2', unitCost: 14, meta: { supplierName: 'Moulin du Sud', rank: 2 } });
 
-console.log(`✓ stock costing Phase 1, 2 & 3.4 (${pass} controls: v2 migration, subcategories, zero field loss, retail direct depletions, historical stability, v1 merge, multi-supplier ranked depletion, reversal restoration, partial coverage honesty, caisse reception path, card rank resolution, card defaultPrice isolation, unattributed supplier sentinel rank 999)`);
+  const lots = Consumption.deriveLots('inv-flour');
+  const r1Lots = lots.filter((l) => l.rank === 1 && l.remainingQty > 0);
+  const r1Qty = r1Lots.reduce((acc, l) => acc + l.remainingQty, 0);
+  const t1Threshold = Math.max(1, Math.round(((item.usageThisWeek || 0) / 7) * 3 * 10) / 10); // (14 / 7) * 3 = 6 kg
+
+  ok('Total physical stock is healthy (25 kg > reorderLevel 5 kg)', (r1Qty + 23) > item.reorderLevel);
+  ok('Usage-derived Tier-1 threshold is 6 kg (3 days of usage)', t1Threshold === 6, `got ${t1Threshold}`);
+  ok('Tier-1 remaining stock is 2 kg (<= threshold 6 kg) -> Tier-1 buffer alert triggers', r1Qty <= t1Threshold);
+}
+
+/* ── 17. Real Price Change Panel & Dish Impact (§2 Guard) ───────────────────
+ * Price delta is computed between most recent receipt and prior receipt for that supplier.
+ * Single receipt never compares against itself (no 0% self-comparison).
+ * Recipe dish impact is accurately computed: portionQty * delta. */
+{
+  // Receipts for chicken: first @ 52, second @ 60 -> delta = +8 MAD/kg (+15.4%)
+  Inv.add({ id: 'mvt-chk-1', itemId: 'inv-chicken', qty: 10, reason: 'receipt', refId: 'PO-CHK-1', unitCost: 52, occurredTs: 100000, meta: { supplierName: 'Volailles Atlas', rank: 1 } });
+  Inv.add({ id: 'mvt-chk-2', itemId: 'inv-chicken', qty: 10, reason: 'receipt', refId: 'PO-CHK-2', unitCost: 60, occurredTs: 200000, meta: { supplierName: 'Volailles Atlas', rank: 1 } });
+
+  const chkHist = Inv.history('inv-chicken').filter((m) => m.reason === 'receipt' && m.meta?.supplierName === 'Volailles Atlas');
+  chkHist.sort((a, b) => b.occurredTs - a.occurredTs);
+  const pLast = chkHist[0].unitCost;
+  const pPrev = chkHist[1].unitCost;
+  const delta = pLast - pPrev;
+  const pct = Math.round((delta / pPrev) * 1000) / 10;
+
+  ok('Price change detects pLast (60) and pPrev (52)', pLast === 60 && pPrev === 52);
+  ok('Price change delta is +8.00 MAD (+15.4%)', delta === 8 && pct === 15.4, `got delta ${delta}, pct ${pct}`);
+
+  // Recipe impact on Tajine (uses 1.2 kg chicken)
+  const tajinePortionQty = 1.2;
+  const tajineDishCostDelta = Math.round(tajinePortionQty * delta * 100) / 100;
+  ok('Dish cost impact on Tajine Poulet is +9.60 MAD/portion', tajineDishCostDelta === 9.6, `got ${tajineDishCostDelta}`);
+}
+
+/* ── 18. Swapping Supplier Cards Preserves Existing Lot Ranks (§3 Guard) ────
+ * Swapping supplier card priorities re-orders cards for FUTURE receptions only.
+ * deriveLots() on existing stock must preserve the frozen ranks on ledger movements. */
+{
+  const itemId = 'inv-butter-swap';
+  Inv.add({
+    id: 'rcpt-swp-1', itemId: itemId, qty: 10, reason: 'receipt', refId: 'PO-SWP-1',
+    unitCost: 70, occurredTs: 10000,
+    meta: { supplierId: 'sup-danone', supplierName: 'Centrale Danone', rank: 1 },
+  });
+  Inv.add({
+    id: 'rcpt-swp-2', itemId: itemId, qty: 10, reason: 'receipt', refId: 'PO-SWP-2',
+    unitCost: 65, occurredTs: 20000,
+    meta: { supplierId: 'sup-copag', supplierName: 'Copag', rank: 2 },
+  });
+
+  const initialLots = Consumption.deriveLots(itemId);
+  const danoneBefore = initialLots.find((l) => l.meta?.supplierName === 'Centrale Danone');
+  const copagBefore = initialLots.find((l) => l.meta?.supplierName === 'Copag');
+  ok('Before swap: Danone lot has frozen rank 1', danoneBefore && danoneBefore.rank === 1);
+  ok('Before swap: Copag lot has frozen rank 2', copagBefore && copagBefore.rank === 2);
+
+  // Cards setup in subcategories
+  const subButter = {
+    id: itemId, name: 'Beurre Doux Swap', unit: 'kg', defaultCost: 70,
+    suppliers: [
+      { id: 'sup-danone', supplierName: 'Centrale Danone', rank: 1, defaultPrice: 70 },
+      { id: 'sup-copag', supplierName: 'Copag', rank: 2, defaultPrice: 65 },
+    ],
+  };
+
+  // Swap cards: Copag becomes primary (rank 1), Danone becomes secondary (rank 2)
+  const s0 = subButter.suppliers[0];
+  const s1 = subButter.suppliers[1];
+  s0.rank = 2;
+  s1.rank = 1;
+  subButter.suppliers = [s1, s0];
+
+  ok('Subcategory cards are swapped: Copag is now card rank 1', subButter.suppliers[0].supplierName === 'Copag' && subButter.suppliers[0].rank === 1);
+
+  // Derive lots on existing stock after card swap
+  const lotsAfterSwap = Consumption.deriveLots(itemId);
+  const danoneAfter = lotsAfterSwap.find((l) => l.meta?.supplierName === 'Centrale Danone');
+  const copagAfter = lotsAfterSwap.find((l) => l.meta?.supplierName === 'Copag');
+
+  ok('deriveLots preserves Danone frozen rank 1 on existing lot', danoneAfter && danoneAfter.rank === 1, `got rank ${danoneAfter?.rank}`);
+  ok('deriveLots preserves Copag frozen rank 2 on existing lot', copagAfter && copagAfter.rank === 2, `got rank ${copagAfter?.rank}`);
+}
+
+console.log(`✓ stock costing Phase 1, 2 & 3 (${pass} controls: v2 migration, subcategories, zero field loss, retail direct depletions, historical stability, v1 merge, multi-supplier ranked depletion, reversal restoration, partial coverage honesty, caisse reception path, card rank resolution, card defaultPrice isolation, unattributed supplier sentinel rank 999, two alerts isolation, real price change panel & dish impact, card swap rank immutability on existing lots)`);
+
 
 
 

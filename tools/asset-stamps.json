@@ -196,8 +196,8 @@
     "sha": "b0e0530634e33ee2"
   },
   "assets/inventory-consumption.js": {
-    "v": "5",
-    "sha": "a47b9fd42d545e46"
+    "v": "6",
+    "sha": "bb9a7070a08439ac"
   },
   "assets/inventory-ledger.js": {
     "v": "3",
@@ -528,8 +528,8 @@
     "sha": "a4c3a6b89b6ee0d0"
   },
   "assets/stock.js": {
-    "v": "6",
-    "sha": "7f9dbc193085bfb2"
+    "v": "7",
+    "sha": "e5ff9d991acde6e9"
   },
   "assets/team.js": {
     "v": "276",

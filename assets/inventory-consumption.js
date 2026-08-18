@@ -106,6 +106,8 @@
             unitCost: m.unitCost != null && Number.isFinite(+m.unitCost) ? +m.unitCost : null,
             rank: rank,
             ts: +m.occurredTs || 0,
+            meta: m.meta || null,
+            supplierName: (m.meta && m.meta.supplierName) || null,
           });
         } else {
           // Positive quantity that does not open an inbound lot (e.g. sale-reversal, return,

@@ -1359,10 +1359,47 @@
   /* ═══════════════════════════════════════════════════════════════════════
    * TAB 1 · Vue d'ensemble
    * ═══════════════════════════════════════════════════════════════════════ */
+  function computeTier1LowAlerts(items) {
+    if (!window.KiwiInventoryConsumption?.deriveLots) return [];
+    const raw = stOverlayRaw();
+    const subMap = new Map((raw.subcategories || []).map(s => [s.id, s]));
+    const list = [];
+    (items || []).forEach(it => {
+      if (!it || !it.id) return;
+      if (statusOf(it) === 'out' || statusOf(it) === 'low') return;
+      const lots = window.KiwiInventoryConsumption.deriveLots(it.id) || [];
+      if (!lots.length) return;
+      const r1Lots = lots.filter(l => l.rank === 1 && l.remainingQty > 0);
+      const r1Qty = Math.round(r1Lots.reduce((sum, l) => sum + l.remainingQty, 0) * 1000) / 1000;
+      const sub = subMap.get(it.id);
+      const cards = sub && Array.isArray(sub.suppliers) ? sub.suppliers : [];
+      const primaryCard = cards.find(c => c.rank === 1);
+      const secondaryCard = cards.find(c => c.rank === 2);
+      const secondaryLot = lots.find(l => l.rank > 1 && l.remainingQty > 0);
+      
+      const threshold = (primaryCard && primaryCard.lowBuffer > 0)
+        ? primaryCard.lowBuffer
+        : Math.max(1, Math.round(((it.usageThisWeek || 0) / 7) * 3 * 10) / 10);
+      
+      if (r1Qty <= threshold && (secondaryLot || (secondaryCard && secondaryCard.defaultPrice > (primaryCard ? primaryCard.defaultPrice : it.costPerUnit)))) {
+        list.push(Object.assign({}, it, {
+          alertKind: 'tierLow',
+          r1Qty: r1Qty,
+          t1Threshold: threshold,
+          p1Cost: (primaryCard && primaryCard.defaultPrice != null) ? primaryCard.defaultPrice : it.costPerUnit,
+          p2Cost: secondaryLot ? secondaryLot.unitCost : (secondaryCard ? secondaryCard.defaultPrice : null),
+          p2SupName: secondaryLot ? (secondaryLot.supplierName || 'Fournisseur secondaire') : (secondaryCard ? secondaryCard.supplierName : 'Fournisseur secondaire'),
+        }));
+      }
+    });
+    return list;
+  }
+
   function renderOverview() {
     const items = getInv();
     const out = items.filter(it => statusOf(it) === 'out');
     const low = items.filter(it => statusOf(it) === 'low');
+    const tierLow = computeTier1LowAlerts(items);
     const ok  = items.filter(it => statusOf(it) === 'ok');
     const totalVal = totalValue(items);
     const costMonth = foodCostMonth(items);
@@ -1377,19 +1414,21 @@
     // Mock 4-week trend bars
     const trendBars = [62, 70, 66, 74].map(h => `<i style="height:${h}%;"></i>`).join('');
 
-    // Alerts sorted: out first, then low (by daysOfStock asc)
+    // Alerts sorted: out first, then low (by daysOfStock asc), then tierLow
     const alerts = [
       ...out,
       ...low.sort((a, b) => daysOfStock(a) - daysOfStock(b)),
+      ...tierLow,
     ].slice(0, 12);
+    const totalAlertCount = out.length + low.length + tierLow.length;
 
     return `
-      ${renderKpiCards({ totalVal, items, out, low, costWeek, ratio, ratioClass, nextDelivery, trendBars })}
+      ${renderKpiCards({ totalVal, items, out, low, tierLow, costWeek, ratio, ratioClass, nextDelivery, trendBars })}
 
       <div class="st-section">
         <div class="st-section-head">
           <h3>${esc(t('alertsT'))}</h3>
-          ${(out.length + low.length) > 0 ? `<span class="st-count-badge warn">${out.length + low.length}</span>` : ''}
+          ${totalAlertCount > 0 ? `<span class="st-count-badge warn">${totalAlertCount}</span>` : ''}
         </div>
         <div class="st-alerts">
           ${alerts.length === 0 ? `<div style="color:var(--n-500); font-size:13px; padding:6px 2px;">${esc(t('alertsEmpty'))}</div>` :
@@ -1414,8 +1453,8 @@
     `;
   }
 
-  function renderKpiCards({ totalVal, items, out, low, costWeek, ratio, ratioClass, nextDelivery, trendBars }) {
-    const alertCount = out.length + low.length;
+  function renderKpiCards({ totalVal, items, out, low, tierLow = [], costWeek, ratio, ratioClass, nextDelivery, trendBars }) {
+    const alertCount = out.length + low.length + tierLow.length;
     const alertColor = alertCount > 0 ? 'warn' : 'ok';
     return `
       <div class="st-kpis">
@@ -1428,7 +1467,7 @@
         <div class="st-kpi">
           <div class="st-kpi-l">${esc(t('kpiAlertL'))}<span class="st-kpi-ico ${alertColor}">${svg('alertTriangle', 14)}</span></div>
           <div class="st-kpi-v ${alertColor}">${alertCount}</div>
-          <div class="st-kpi-sub">${esc(alertCount === 0 ? t('kpiAlertOk') : t('kpiAlertSub', out.length, low.length))}</div>
+          <div class="st-kpi-sub">${esc(alertCount === 0 ? t('kpiAlertOk') : t('kpiAlertSub', out.length, low.length + tierLow.length))}</div>
         </div>
         <div class="st-kpi">
           <div class="st-kpi-l">${esc(t('kpiCostL'))}<span class="st-kpi-ico">${svg('receipt', 14)}</span></div>
@@ -1449,6 +1488,30 @@
   }
 
   function renderAlertCard(it) {
+    if (it.alertKind === 'tierLow') {
+      const priceDiff = it.p2Cost != null ? (it.p2Cost - it.p1Cost) : null;
+      return `
+        <div class="st-alert tier-low">
+          <div class="st-alert-ico" style="color:var(--warning);">${svg('alertTriangle', 18)}</div>
+          <div class="st-alert-body">
+            <div class="st-alert-top">
+              <span class="st-alert-name">${esc(it.name)}</span>
+              <span class="st-alert-cat">${esc(catLabel(it.category))}</span>
+              <span class="st-alert-status low">Fournisseur principal bas · ${esc(fmtUnit(it.r1Qty, it.unit))} restant</span>
+            </div>
+            <div class="st-alert-meta">
+              Lot principal : ${esc(fmtMad(it.p1Cost))}/${esc(it.unit)}${it.p2Cost != null ? ` · Lot suivant : ${esc(it.p2SupName)} (${esc(fmtMad(it.p2Cost))}/${esc(it.unit)}${priceDiff > 0 ? ` +${esc(fmtMad(priceDiff))}` : ''})` : ''}
+            </div>
+            <div class="st-alert-impact">
+              Seuil tampon : <b>${esc(fmtUnit(it.t1Threshold, it.unit))}</b> (calculé sur 3j d'usage) · Transition prochaine vers tarif secondaire.
+            </div>
+          </div>
+          <div class="st-alert-acts">
+            <button class="st-btn primary" type="button" data-action="stock-reorder" data-item-id="${esc(it.id)}">Commander chez principal</button>
+          </div>
+        </div>
+      `;
+    }
     const st = statusOf(it);
     const isOut = st === 'out';
     const days = isOut ? 0 : Math.max(0, Math.round(daysOfStock(it)));
@@ -1776,6 +1839,101 @@
   /* ═══════════════════════════════════════════════════════════════════════
    * TAB 3 · Fournisseurs
    * ═══════════════════════════════════════════════════════════════════════ */
+  function computeRealSupplierPriceChanges() {
+    if (!window.KiwiInventory || !window.KiwiInventory.history) return [];
+    const raw = stOverlayRaw();
+    const subList = Array.isArray(raw.subcategories) ? raw.subcategories : [];
+    const changes = [];
+    
+    subList.forEach(sub => {
+      const hist = (window.KiwiInventory.history(sub.id) || []).filter(m => m.reason === 'receipt' && m.unitCost != null);
+      if (!hist.length) return;
+      
+      const bySup = new Map();
+      hist.forEach(m => {
+        const supName = (m.meta && m.meta.supplierName) || (m.meta && m.meta.supplierId) || 'Fournisseur';
+        if (!bySup.has(supName)) bySup.set(supName, []);
+        bySup.get(supName).push(m);
+      });
+
+      bySup.forEach((mList, supName) => {
+        mList.sort((a, b) => (+b.occurredTs || 0) - (+a.occurredTs || 0));
+        const latest = mList[0];
+        const prev = mList[1] || null;
+        if (!prev) return;
+        const pLast = latest.unitCost;
+        const pPrev = prev.unitCost;
+        if (pLast != null && pPrev != null && pLast !== pPrev) {
+          const delta = Math.round((pLast - pPrev) * 100) / 100;
+          const pct = Math.round(((delta) / pPrev) * 1000) / 10;
+          
+          const impactedRecipes = [];
+          try {
+            const costDoc = window.KiwiCost && window.KiwiCost.doc ? window.KiwiCost.doc() : (window.KiwiCost && window.KiwiCost.store ? window.KiwiCost.store.get(stOverlayScope()) : null);
+            const recipes = (costDoc && costDoc.recipes) || (window.KiwiRestaurantRecipes && window.KiwiRestaurantRecipes.getAll ? window.KiwiRestaurantRecipes.getAll() : {});
+            Object.entries(recipes).forEach(([rId, rec]) => {
+              if (!rec || !Array.isArray(rec.ingredients)) return;
+              const line = rec.ingredients.find(ing => ing.stockId === sub.id || ing.name === sub.name);
+              if (line) {
+                const portionQty = +line.qty || 0;
+                const dishCostDelta = Math.round(portionQty * delta * 100) / 100;
+                impactedRecipes.push({
+                  id: rId,
+                  name: rec.itemName || rec.name || rId,
+                  dishCostDelta: dishCostDelta,
+                });
+              }
+            });
+          } catch (_) {}
+
+          changes.push({
+            subId: sub.id,
+            subName: sub.name,
+            unit: sub.unit,
+            supplierName: supName,
+            pLast: pLast,
+            pPrev: pPrev,
+            delta: delta,
+            pct: pct,
+            date: latest.occurredTs || Date.now(),
+            impactedRecipes: impactedRecipes,
+          });
+        }
+      });
+    });
+
+    return changes;
+  }
+
+  function renderRealSupplierPriceChanges() {
+    const changes = computeRealSupplierPriceChanges();
+    if (!changes.length) {
+      return `
+        <div class="st-ai" style="margin-top:16px;">
+          <div class="st-ai-t">Évolution des tarifs fournisseurs</div>
+          <div class="st-ai-b">Tous les tarifs facturés lors des dernières réceptions sont stables. Kiwi analyse automatiquement l'historique des bons de livraison pour détecter les variations de prix.</div>
+        </div>
+      `;
+    }
+    return changes.map(ch => {
+      const isUp = ch.delta > 0;
+      const recipesText = ch.impactedRecipes.length > 0
+        ? ` · Impact sur ${ch.impactedRecipes.length} recette${ch.impactedRecipes.length > 1 ? 's' : ''} (ex: ${esc(ch.impactedRecipes[0].name)} ${isUp ? '+' : ''}${fmtMad(ch.impactedRecipes[0].dishCostDelta)}/portion)`
+        : '';
+      return `
+        <div class="st-ai ${isUp ? 'warn' : 'ok'}" style="margin-top:14px;">
+          <div class="st-ai-t" style="display:flex; align-items:center; gap:6px;">
+            ${svg(isUp ? 'trendingUp' : 'trendingDown', 14)}
+            <span>${esc(ch.supplierName)} : variation de tarif sur ${esc(ch.subName)} (${isUp ? '+' : ''}${fmtPct(ch.pct, 1)})</span>
+          </div>
+          <div class="st-ai-b">
+            Passage de <b>${esc(fmtMad(ch.pPrev))}</b> à <b>${esc(fmtMad(ch.pLast))}</b> / ${esc(ch.unit)}${recipesText}.
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
   function renderSuppliers() {
     const sup = getSup();
     const totalSpend = sup.reduce((s, x) => s + x.monthlySpend, 0);
@@ -1815,7 +1973,7 @@
         </div>
       </div>
 
-      ${stShowReal() ? '' : renderAiCard(t('aiPriceUpT'), t('aiPriceUpB'), t('aiPriceUpA'))}
+      ${stShowReal() ? renderRealSupplierPriceChanges() : renderAiCard(t('aiPriceUpT'), t('aiPriceUpB'), t('aiPriceUpA'))}
     `;
   }
 
@@ -2722,9 +2880,53 @@
         <div>${rows.length ? 'Le stock affiché est reconstruit depuis le registre de mouvements.' : 'Aucun mouvement n’a encore été enregistré pour cet article.'}</div>
       </div>`;
   }
+  function swapSupplierRanks(itemId) {
+    if (!itemId) return;
+    const raw = stOverlayRaw();
+    const sub = (raw.subcategories || []).find(s => s.id === itemId);
+    if (!sub || !Array.isArray(sub.suppliers) || sub.suppliers.length < 2) return;
+    const s0 = sub.suppliers[0];
+    const s1 = sub.suppliers[1];
+    s0.rank = 2;
+    s1.rank = 1;
+    sub.suppliers = [s1, s0, ...sub.suppliers.slice(2)];
+    sub.updatedAt = Date.now();
+    stItemOverrides[itemId] = Object.assign({}, stItemOverrides[itemId] || {}, {
+      suppliers: sub.suppliers,
+      supplier: s1.supplierName,
+      updatedAt: Date.now(),
+    });
+    stSaveOverlay();
+    window.Kiwi?.toast?.(`Fournisseur principal défini sur ${s1.supplierName} (s'applique aux prochaines livraisons)`, { type: 'success' });
+    closeTopModal();
+    if (stPageActive) render();
+  }
+
   function renderRealItemHistory(it) {
+    const raw = stOverlayRaw();
+    const sub = (raw.subcategories || []).find(s => s.id === it.id);
+    const cards = sub && Array.isArray(sub.suppliers) ? sub.suppliers : [];
+    let advisoryHtml = '';
+    if (cards.length >= 2) {
+      const c1 = cards[0];
+      const c2 = cards[1];
+      if (c2.defaultPrice != null && c1.defaultPrice != null && c2.defaultPrice < c1.defaultPrice) {
+        advisoryHtml = `
+          <div class="st-notice info" style="margin:10px 0; display:flex; align-items:flex-start; gap:8px;">
+            ${svg('info', 16)}
+            <div style="flex:1;">
+              <div><b>Opportunité tarifaire :</b> ${esc(c2.supplierName)} propose <b>${esc(fmtMad(c2.defaultPrice))}/${esc(sub.unit)}</b> (vs ${esc(fmtMad(c1.defaultPrice))}/${esc(sub.unit)} chez ${esc(c1.supplierName)}).</div>
+              <button class="st-btn small" type="button" data-stock-swap-ranks data-item-id="${esc(it.id)}" style="margin-top:6px;">
+                Définir en fournisseur principal (s'applique aux prochaines livraisons)
+              </button>
+            </div>
+          </div>
+        `;
+      }
+    }
     const rows = itemHistory(it).slice(0, 12);
     return `
+      ${advisoryHtml}
       <div class="st-md-section">
         <div class="st-md-section-t">Historique des mouvements</div>
         <div class="st-md-list">
@@ -2875,6 +3077,9 @@
     scope?.querySelector('[data-stock-detail-move]')?.addEventListener('click', (e) => {
       const id = e.currentTarget.dataset.itemId;
       closeTopModal(); openItemMovement(id);
+    });
+    scope?.querySelector('[data-stock-swap-ranks]')?.addEventListener('click', (e) => {
+      swapSupplierRanks(e.currentTarget.dataset.itemId);
     });
     scope?.querySelector('[data-stock-detail-delete]')?.addEventListener('click', (e) => {
       const id = e.currentTarget.dataset.itemId;
