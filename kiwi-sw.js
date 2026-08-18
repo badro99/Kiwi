@@ -220,7 +220,7 @@ var SHELL = [
   '/assets/restaurant-recipes.js?v=3',
   '/assets/restaurant-units.js',
   '/assets/employee-live.js?v=379',
-  '/assets/employee-planning.js?v=5',
+  '/assets/employee-planning.js?v=6',
   '/assets/employee-trade-shell.css?v=2',
   '/assets/employee-trade-shell.js?v=2',
   '/assets/planning-core.js?v=8',

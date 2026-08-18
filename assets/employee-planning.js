@@ -25,7 +25,7 @@
     .kep-title{font-size:19px;font-weight:700}
     .kep-sub{font-size:13px;color:var(--ink-3);margin-top:4px}
     .kep-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
-    .kep-btn{min-height:42px;border:1px solid var(--line);border-radius:var(--r-md);padding:0 14px;background:transparent;color:inherit;font-weight:600}
+    .kep-btn{min-height:44px;border:1px solid var(--line);border-radius:var(--r-md);padding:0 14px;background:transparent;color:inherit;font-weight:600}
     .kep-btn.primary{background:var(--fill-strong);border-color:var(--fill-strong);color:var(--on-strong)}
     .kep-btn:disabled{opacity:.5}
     .kep-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;margin-top:17px;border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;background:var(--line)}
