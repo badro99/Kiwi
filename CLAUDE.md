@@ -300,13 +300,18 @@ figures; treat them as production data.
   half of it. **Whoever may not read a secret must not be able to write the
   document that holds it**, or they will read the redacted copy, push it back,
   and erase the real values. `tools/team-doc-redaction-test.mjs` holds both.
-- **A four-digit code is compared server-side, nowhere else.** `POST
-  /api/pin/verify` is the only place a staff code is checked: `{merchant, pin}`
-  for a till, `{pin}` alone for the account-wide dashboard lock. It is
-  rate-limited and answers with an identity (`{id, name, role}`), never with a
-  code. If you find yourself wanting the code list in the browser to compare it
-  there, that is the bug this endpoint exists to prevent —
-  `tools/config-pin-projection-test.mjs` fails the build for it.
+- **A four-digit code is compared server-side, nowhere else.** Three verifiers do
+  it, and all three live in `functions/auth/_lib.js` — never in a route, never in
+  the browser: `verifyStaffPin` (a till code, `{merchant, pin}`), `verifyAccountPin`
+  (the account-wide dashboard lock, `{pin}` alone) and `findEmployeeCredential`
+  (the employee app's e-mail + code login). `POST /api/pin/verify` fronts the first
+  two, `POST /api/employee` (`action:'login'`) the third, and the manager override
+  in `POST /api/sale/cancel` calls `verifyStaffPin` rather than comparing anything
+  itself. Each is rate-limited and answers with an identity (`{id, name, role}`),
+  never with a code. A new surface that needs to check a code calls one of the
+  three; it does not write its own comparison. If you find yourself wanting the
+  code list in the browser to compare it there, that is the bug this design exists
+  to prevent — `tools/config-pin-projection-test.mjs` fails the build for it.
 - **Never enter merchant PINs, staff PINs, caisse personal codes, or pairing codes**,
   and never bypass the account gate programmatically. Enter demo surfaces through
   the demo entry points.

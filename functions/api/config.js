@@ -13,8 +13,16 @@
 // floor held the credential that opens the money drawer — and kiwi-sw.js could
 // bank it in the HTTP cache on the way past. Each row is now { name, role } only:
 // enough to say WHO is on the roster, never enough to become them. Whether a code
-// is correct is a question for POST /api/pin/verify, which is rate-limited, tells
-// the caller nothing but yes/no + the identity it proved, and never echoes a code.
+// is correct is answered SERVER-SIDE and nowhere else — by three verifiers that all
+// live in functions/auth/_lib.js, never in a route and never in the browser:
+// verifyStaffPin (a till code, `{merchant, pin}` — reached by POST /api/pin/verify
+// and by the manager override in POST /api/sale/cancel), verifyAccountPin (the
+// account-wide dashboard lock, `{pin}` alone, also via /api/pin/verify) and
+// findEmployeeCredential (the employee app's e-mail + code login, via POST
+// /api/employee). Each one is rate-limited, tells the caller nothing but yes/no +
+// the identity it proved, and never echoes a code back. Add a fourth entry point
+// if you must, but add it BY CALLING one of those three — a comparison written
+// inline in a route is a comparison nobody reviewed.
 // Anything that needs to CHANGE a code goes through POST /api/config (write-only)
 // or the operator console. Do not reintroduce `pin` into these projections; the
 // SELECTs below are deliberately narrow and tools/config-pin-projection-test.mjs
