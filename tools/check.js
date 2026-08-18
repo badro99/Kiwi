@@ -131,8 +131,16 @@ section('i18n key parity (data-i18n → i18n.js EN/AR)');
   const i18nSrc = read(path.join(ROOT, 'assets', 'i18n.js'));
   const used = new Set();
   // Only pages that actually load assets/i18n.js — the standalone surfaces
-  // (kiwi-order, kiwi-caisse, kiwi-serveur, …) carry their own inline dicts.
-  for (const f of HTML_FILES.filter((f) => read(f).includes('assets/i18n.js'))) {
+  // (kiwi-order, kiwi-caisse, kiwi-serveur, kiwi-cuisine, …) carry their own
+  // inline dicts.
+  //
+  // La balise, pas la sous-chaîne. Un simple includes() attrapait aussi toute
+  // page qui se contente de NOMMER le module — l'écran du passe explique en
+  // commentaire pourquoi son dictionnaire n'est pas dans assets/i18n.js, et se
+  // faisait auditer contre un dictionnaire qu'il ne charge pas : douze
+  // avertissements pour des clés parfaitement traduites, sur place.
+  const LOADS_I18N = /<script[^>]+src="[^"]*assets\/i18n\.js/;
+  for (const f of HTML_FILES.filter((f) => LOADS_I18N.test(read(f)))) {
     const src = read(f);
     let m;
     const A = /data-i18n="([\w.-]+)"/g;
@@ -856,6 +864,12 @@ section('Whole-project regressions');
        caisse et écrivait les quatre clés à la main — sans la purge du commerce
        précédent. */
     'pairing-parity-test.mjs',
+    /* Les écarts de SURFACE : jetons recopiés, gris froids inventés, palette
+       étrangère collée, sélecteur d'élément nu qui fuit dans une page qui ne
+       l'attendait pas. Cette famille-là ne casse rien — la page rend 200, la
+       console reste vide — et le produit se met simplement à ressembler à deux
+       produits. Rien d'autre ici ne la voit. */
+    'surface-parity-test.mjs',
     'caisse-stock-sync-test.mjs',
     'phone-test.mjs',
     'clients-sync-test.mjs',

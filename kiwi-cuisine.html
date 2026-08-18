@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
   <title>Kiwi Cuisine</title>
   <meta name="description" content="Écran cuisine Kiwi — les bons de la caisse arrivent ici, sans imprimante." />
-  <meta name="theme-color" content="#053B2C" />
+  <meta name="theme-color" content="#F7F5F0" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#080B0A" media="(prefers-color-scheme: dark)" />
   <link rel="manifest" href="cuisine.webmanifest" />
   <link rel="apple-touch-icon" href="assets/landing/kiwi-mark-app-icon.png" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -13,12 +14,49 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Instrument+Serif&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <!-- Le même jeu de fontes que le tableau de bord et la salle, à la lettre près.
+       JetBrains Mono a disparu d'ici : assets/tokens.css l'écarte explicitement
+       de --mono (« le même zéro clair que les codes-barres imprimés ») et cette
+       page la chargeait quand même pour son horloge et ses quantités. IBM Plex
+       Sans Arabic entre parce que la brigade lit désormais l'écran en arabe. -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Instrument+Serif&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet" />
 
   <!-- Les jetons de marque, partagés avec le tableau de bord et la caisse.
        L'écran cuisine est le MÊME produit vu depuis le passe : il n'a pas sa
-       propre palette. -->
-  <link rel="stylesheet" href="assets/tokens.css" />
+       propre palette. Le timbre compte : sans ?v=, une modification des jetons
+       n'atteint jamais une tablette déjà ouverte — l'URL est identique au byte
+       près et le service worker sert la copie tiède. -->
+  <link rel="stylesheet" href="assets/tokens.css?v=2050" />
+
+  <!-- Le climat, posé AVANT la première peinture. Sans ce bloc la tablette
+       s'ouvrirait en clair puis basculerait — un flash blanc en pleine nuit,
+       au-dessus d'un piano de cuisson. On résout « auto » ici en attribut
+       explicite : une seule définition de la nuit plus bas, jamais deux
+       palettes à tenir d'accord. -->
+  <script>
+    (function () {
+      var mq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+      function apply() {
+        var t = null;
+        try { t = localStorage.getItem('kiwiTheme'); } catch (_) {}
+        if (t !== 'dark' && t !== 'light') t = (mq && mq.matches) ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', t);
+        var metas = document.querySelectorAll('meta[name="theme-color"]');
+        for (var i = 0; i < metas.length; i++) {
+          metas[i].removeAttribute('media');
+          metas[i].setAttribute('content', t === 'dark' ? '#080B0A' : '#F7F5F0');
+        }
+      }
+      /* Le système ne reprend la main que si personne n'a tranché ici. */
+      if (mq && mq.addEventListener) mq.addEventListener('change', function () {
+        var t = null;
+        try { t = localStorage.getItem('kiwiTheme'); } catch (_) {}
+        if (t !== 'dark' && t !== 'light') apply();
+      });
+      window.__kiwiApplyTheme = apply;
+      apply();
+    })();
+  </script>
 
   <style>
     /* ═══════════════════════════════════════════════════════════════════════
@@ -33,30 +71,137 @@
          · rien ne s'imprime. La tablette EST le passe. Il n'y a volontairement
            aucun bouton d'impression sur cette page.
        ═══════════════════════════════════════════════════════════════════════ */
+    /* ── Les jetons de cet écran ────────────────────────────────────────────
+       Ils ne redéfinissent plus ni les fontes ni les neutres : assets/tokens.css
+       les porte déjà, et les recopier ici est précisément ce qui faisait deux
+       produits. Ce qui reste est ce que le passe seul possède — des ALIAS de
+       rôle qui pointent dans l'échelle partagée, pour que la nuit n'ait qu'un
+       seul endroit à retourner.
+
+       Ce que ce bloc contenait et qui est parti :
+         --sans/--serif/--mono   recopiés, dont JetBrains Mono que le tableau
+                                 de bord écarte exprès (zéro pointé sous
+                                 Windows) — l'horloge murale et les quantités
+                                 tournaient donc dans une fonte bannie ;
+         --warn-ink              doublon exact de tokens.css ;
+         #E5E5E5 #EEEEEE #4A4A4A #6B6B6B  quatre gris FROIDS inventés, quand
+                                 l'échelle partagée --n-* est tiède de bout en
+                                 bout : c'est ce qui donnait à cet écran son
+                                 air d'utilitaire posé à côté du produit. */
     :root {
-      --forest:      #0B6E4F;
-      --forest-deep: #053B2C;
-      --danger-mute: #B85245;
-      --warn-ink:    #8A6210;
-      --sans: "Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-      --serif: "Instrument Serif", Georgia, serif;
-      --mono: "JetBrains Mono", "SF Mono", ui-monospace, monospace;
-      --line:      #E5E5E5;
-      --line-soft: #EEEEEE;
-      --ink-2: #4A4A4A;
-      --ink-3: #6B6B6B;
-      --ink-4: #6F6C65;
-      --paper-soft: #F7F7F5;
-      --paper-mute: #F4F4F2;
+      --forest:      var(--atlas);
+      /* PEINTURE : l'extrémité sombre du dégradé de « Prête ». */
+      --forest-deep: var(--riad);
+      /* ENCRE : les pastilles « Table 12 » et les repères visuels d'un plat.
+         Les deux rôles partageaient --forest-deep. En clair ça passe — les
+         deux sens veulent un vert sombre. La nuit les sépare : le dégradé
+         veut toujours un vert sombre, la pastille veut un vert CLAIR sur son
+         fond sombre. Un seul nom rendait #0B6E4F sur #12241C, soit 2,59:1 sur
+         le numéro de table que le passe crie à la salle. */
+      --forest-ink:  var(--riad);
+
+      /* Rouge d'ALERTE, pas de décor. L'ancien #B85245 mesurait 4,45:1 sur le
+         papier — sous le plancher de 4,5, sur le seul libellé qu'une brigade
+         doit lire de loin. Celui-ci tient 5,61:1 sur le papier et 4,95:1 sur
+         son propre fond teinté. */
+      --danger-ink:  #AE3A2A;
+
+      --line:      var(--n-200);
+      --line-soft: var(--n-100);
+      --ink-2:     var(--n-600);
+      --ink-3:     var(--n-500);
+      /* Le bouton « son coupé » ne se signale PAS par sa couleur : un gris
+         assez pâle pour lire « éteint » ne tient pas les 3:1 d'une icône. Le
+         glyphe change (haut-parleur barré), l'encre reste lisible. */
+      --ink-4:     var(--n-500);
+      --paper-soft: var(--n-50);
+      --paper-mute: var(--paper-soft-t);
       --mint-tint:  #EBF5F0;
+
+      /* Fonds teintés des minuteurs et des pastilles. Nommés pour que la nuit
+         les retourne d'un bloc au lieu d'être écrits en dur dans dix règles. */
+      --paper-soft-t: #EFECE3;
+      --tint-ok:    rgba(11,110,79,.10);
+      --tint-warn:  rgba(217,154,43,.17);
+      --tint-over:  rgba(174,58,42,.13);
+      --tint-note:  rgba(217,154,43,.14);
+      --tint-new:   rgba(11,110,79,.09);
+      --tint-late:  rgba(174,58,42,.12);
+      --tint-pass-edge: rgba(11,110,79,.40);
+      --on-forest:  #EAFFF4;
+
+      /* Le SLAB : le poste sélectionné, et « Je prends ». Une dalle franche
+         portant du texte. Il s'écrivait `background: var(--ink); color: #fff`
+         — correct tant que l'encre est sombre, et catastrophique dès que la
+         nuit la retourne : le fond serait devenu #F1EFE9 avec du blanc dessus.
+         Même piège que la note des surfaces inverses dans tokens.css : un seul
+         nom, deux sens, aucune erreur — juste la mauvaise couleur. */
+      --fill-strong: var(--ink);
+      --on-strong:   var(--surface);
+
+      --pad-fill:   rgba(255,255,255,.04);
+      --pad-line:   rgba(255,255,255,.10);
+      --pair-bg:    #07130F;
+      --pair-ink:   #FFFFFF;
+      /* Encre de la touche « Valider », sur un vert qui ne bascule jamais. */
+      --pair-ok-ink: #EAFFF4;
+      --pair-err:   #F0B3A4;
+    }
+
+    /* ── La nuit ────────────────────────────────────────────────────────────
+       Un service du soir se fait dans une cuisine éclairée à la plaque. Cet
+       écran, lui, restait un aplat #F7F5F0 de 10 pouces braqué sur le passe :
+       la seule surface blanche de la pièce. Le tableau de bord et la salle
+       avaient déjà leur nuit ; le passe, non.
+
+       On retourne les JETONS, pas les règles — chaque valeur ci-dessous a un
+       correspondant exact au-dessus, donc rien en bas de la feuille n'a besoin
+       de savoir quel climat tourne. */
+    html[data-theme="dark"] {
+      --paper:       #080B0A;
+      --surface:     #101614;
+      --paper-soft:  #161E1B;
+      --paper-soft-t:#161E1B;
+      --paper-mute:  #1E2823;
+      --ink:         #F1EFE9;
+      --ink-2:       #C3C9C5;
+      --ink-3:       #A8B0AB;
+      --ink-4:       #A8B0AB;
+      --line:        #232D29;
+      --line-soft:   #1A211E;
+
+      /* Le vert de marque est une ENCRE ici, plus une peinture : #0B6E4F sur
+         un fond noir tombe à 1,9:1. La menthe le remplace partout où le vert
+         portait du texte, et garde son fond sombre là où elle remplit. */
+      --forest:      #7DF2B0;
+      /* L'extrémité sombre du dégradé de « Prête » ne peut PAS rester le vert
+         Atlas la nuit : l'encre du bouton est sombre dans ce climat, et
+         #06281A sur #0B6E4F mesure 2,53:1 — sur la touche la plus pressée de
+         l'écran, celle qu'on frappe sans regarder. L'émeraude partagée tient
+         6,17:1 et garde la descente du dégradé. */
+      --forest-deep: var(--emerald);
+      --forest-ink:  #7DF2B0;
+      --danger-ink:  #FF9A8A;
+      --warn-ink:    #F0C36B;
+      --mint-tint:   #12241C;
+      --tint-ok:     rgba(125,242,176,.14);
+      --tint-warn:   rgba(240,195,107,.16);
+      --tint-over:   rgba(255,154,138,.16);
+      --tint-note:   rgba(240,195,107,.14);
+      --tint-new:    rgba(125,242,176,.13);
+      --tint-late:   rgba(255,154,138,.15);
+      --on-forest:   #06281A;
+      --fill-strong: #7DF2B0;
+      --on-strong:   #06281A;
+      --pair-bg:     #05100C;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; }
     body {
       font-family: var(--sans);
-      background: var(--paper, #F7F5F0);
-      color: var(--ink, #0A0F0D);
+      background: var(--paper);
+      color: var(--ink);
       -webkit-font-smoothing: antialiased;
       overflow: hidden;
       /* Une tablette au passe ne se sélectionne pas, ne se zoome pas et ne
@@ -82,10 +227,15 @@
        seule voix typographique, le vert de marque réservé au strict minimum —
        les pastilles saisies et la touche de validation. Rien d'autre ne
        brille. ───────────────────────────────────────────────────────────── */
+    /* Cet écran est une dalle sombre dans LES DEUX climats — c'est un seuil,
+       pas une surface de travail. Il ne suit donc pas --forest, qui devient
+       menthe la nuit : sa touche de validation resterait verte avec une encre
+       presque blanche dessus, soit 1,4:1. Le vert de marque est nommé en clair
+       ici (--atlas), et il ne bouge pas. */
     #pair {
       position: fixed; inset: 0; z-index: 60;
-      background: #07130F;
-      color: #fff; display: none; flex-direction: column;
+      background: var(--pair-bg);
+      color: var(--pair-ink); display: none; flex-direction: column;
       align-items: center; justify-content: center; gap: 0; padding: 30px;
     }
     #pair.on { display: flex; }
@@ -111,13 +261,13 @@
       background: rgba(255,255,255,.16);
       transition: background 150ms cubic-bezier(0,0,.2,1);
     }
-    .dot.on { background: var(--mint, #7DF2B0); }
+    .dot.on { background: var(--mint); }
     .pad { display: grid; grid-template-columns: repeat(3, 84px); gap: 10px; }
     .pad button {
       height: 66px; border-radius: 14px;
-      background: rgba(255,255,255,.04);
-      border: 1px solid rgba(255,255,255,.1);
-      color: #fff; font-size: 22px; font-weight: 500;
+      background: var(--pad-fill);
+      border: 1px solid var(--pad-line);
+      color: var(--pair-ink); font-size: 22px; font-weight: 500;
       font-variant-numeric: tabular-nums lining-nums;
       letter-spacing: -0.01em;
       transition: background 150ms cubic-bezier(0,0,.2,1),
@@ -127,9 +277,9 @@
     /* Effacer / Valider : du texte, pas des chiffres — ils descendent d'un cran
        dans la hiérarchie, et seule la validation porte le vert. */
     .pad button.wide { grid-column: span 1; font-size: 14px; font-weight: 500; color: rgba(255,255,255,.6); }
-    .pad button.wide.ok { background: var(--forest); border-color: var(--forest); color: #EAFFF4; font-weight: 600; }
-    .pad button.wide.ok:active { background: #0E845E; border-color: #0E845E; }
-    #pair-msg { min-height: 22px; margin-top: 22px; font-size: 13.5px; color: #F0B3A4; letter-spacing: -0.005em; }
+    .pad button.wide.ok { background: var(--atlas); border-color: var(--atlas); color: var(--pair-ok-ink); font-weight: 600; }
+    .pad button.wide.ok:active { background: var(--atlas-600); border-color: var(--atlas-600); }
+    #pair-msg { min-height: 22px; margin-top: 22px; font-size: 13.5px; color: var(--pair-err); letter-spacing: -0.005em; }
     #pair.err { animation: shake .4s; }
     @keyframes shake { 10%,90%{transform:translateX(-2px)} 30%,70%{transform:translateX(5px)} 50%{transform:translateX(-8px)} }
 
@@ -138,7 +288,7 @@
 
     .top {
       display: flex; align-items: center; gap: 14px;
-      padding: 13px 20px; background: var(--surface, #fff);
+      padding: 13px 20px; background: var(--surface);
       border-bottom: 1px solid var(--line);
       flex-shrink: 0;
     }
@@ -147,26 +297,66 @@
     .brand .store { font-size: 13px; color: var(--ink-3); max-width: 30ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .top .spacer { flex: 1; }
     .clock { font-family: var(--mono); font-size: 21px; font-weight: 600; letter-spacing: -0.02em; font-feature-settings: "tnum" 1; }
+    /* 56 px, comme l'annonce l'en-tête de cette feuille. Ils faisaient 46 :
+       l'écran promettait une cible gantée et livrait une cible d'ongle. */
     .tool {
-      width: 46px; height: 46px; border-radius: 12px; border: 1px solid var(--line);
-      background: var(--surface, #fff); display: grid; place-items: center; color: var(--ink-3);
+      width: 56px; height: 56px; border-radius: 14px; border: 1px solid var(--line);
+      background: var(--surface); display: grid; place-items: center; color: var(--ink-3);
       flex-shrink: 0;
+      transition: background 120ms, border-color 120ms, transform 90ms;
     }
-    .tool svg { width: 21px; height: 21px; }
-    .tool:active { background: var(--paper-mute); }
+    .tool svg { width: 23px; height: 23px; }
+    .tool:active { background: var(--paper-mute); transform: scale(.94); }
     .tool.off { color: var(--ink-4); }
+    /* La langue est un mot, pas un drapeau : « ع » est plus vite lu par la
+       brigade que n'importe quel fanion, et un drapeau ne désigne pas une
+       langue. */
+    .tool--lang { font-size: 15px; font-weight: 700; letter-spacing: .02em; color: var(--ink-2); }
+
+    /* ── L'arabe ─────────────────────────────────────────────────────────────
+       assets/tokens.css bascule --sans sur IBM Plex Sans Arabic dès que
+       <html lang="ar">, donc la fonte se règle seule. Restent les trois choses
+       qu'un simple dir="rtl" ne retourne pas correctement ici. */
+    html[dir="rtl"] .brand .store,
+    html[dir="rtl"] .tk-note { text-align: right; }
+    /* Les colonnes se relisent de droite à gauche d'elles-mêmes (grid suit la
+       direction). Le minuteur, lui, est un nombre : il reste LTR, sinon
+       « 02:45 » se lit « 45:02 ». */
+    html[dir="rtl"] .tk-timer,
+    html[dir="rtl"] .clock,
+    html[dir="rtl"] .tk-q,
+    html[dir="rtl"] .st .ct { direction: ltr; unicode-bidi: isolate; }
+    html[dir="rtl"] .tk-visual { padding: 5px 7px 5px 9px; }
+    /* Les noms de plats, de serveurs et d'établissement viennent du commerçant
+       et restent souvent en latin. Sans isolation, la ponctuation finale part
+       à l'autre bout — « Samir B. » s'affiche « .Samir B ». C'est du texte
+       étranger dans un flux arabe, pas du texte arabe. */
+    html[dir="rtl"] .chip.who,
+    html[dir="rtl"] .brand .store,
+    html[dir="rtl"] .tk-n,
+    html[dir="rtl"] .tk-note,
+    html[dir="rtl"] .st span { unicode-bidi: isolate; }
     /* Le lien vivant avec le comptoir. Une cuisine qui ne reçoit plus rien doit
        le SAVOIR : sans ce point, un wifi tombé ressemble exactement à un
        service calme, et on ne s'en aperçoit qu'aux clients qui s'impatientent. */
     .link { display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 600; color: var(--ink-3); flex-shrink: 0; }
     .link i { width: 10px; height: 10px; border-radius: 50%; background: var(--ink-4); display: block; }
     .link.ok i { background: var(--forest); }
-    .link.down i { background: var(--danger-mute); animation: blink 1.4s infinite; }
+    .link.down i { background: var(--danger-ink); animation: blink 1.4s infinite; }
     @keyframes blink { 50% { opacity: .28; } }
+    /* Le clignotement est le SEUL signal d'urgence de cette ligne, et la règle
+       « mouvement réduit » plus bas l'éteint. Un cuisinier qui a coché cette
+       préférence sur la tablette perdait donc l'alerte réseau — la couleur
+       seule ne dit pas « en ce moment ». On la remplace par une bordure
+       franche, qui ne bouge pas et se voit d'aussi loin. */
+    @media (prefers-reduced-motion: reduce) {
+      .link.down i { box-shadow: 0 0 0 3px var(--tint-late); }
+      .link.down { color: var(--danger-ink); }
+    }
 
     .bar {
       display: flex; align-items: center; gap: 9px; padding: 11px 20px;
-      background: var(--surface, #fff); border-bottom: 1px solid var(--line);
+      background: var(--surface); border-bottom: 1px solid var(--line);
       overflow-x: auto; flex-shrink: 0; scrollbar-width: none;
     }
     .bar::-webkit-scrollbar { display: none; }
@@ -174,22 +364,32 @@
        c'est le MÊME écran cuisine vu d'un autre appareil, pas un second style
        de sélection. */
     .st {
-      display: inline-flex; align-items: center; gap: 8px; padding: 12px 15px;
-      flex-shrink: 0; border-radius: 11px; border: 1px solid var(--line);
-      background: var(--surface, #fff); font-size: 14px; font-weight: 500;
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 0 16px; min-height: 56px;
+      flex-shrink: 0; border-radius: 14px; border: 1px solid var(--line);
+      background: var(--surface); font-size: 14px; font-weight: 500;
       color: var(--ink-2); white-space: nowrap;
-      transition: background 130ms, border-color 130ms, color 130ms;
+      transition: background 130ms, border-color 130ms, color 130ms, transform 90ms;
     }
+    .st:active { transform: scale(.97); }
     .st i { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-    .st.on { background: var(--ink, #0A0F0D); border-color: var(--ink, #0A0F0D); color: #fff; }
+    .st.on { background: var(--fill-strong); border-color: var(--fill-strong); color: var(--on-strong); }
     .st .ct {
       font-family: var(--mono); font-size: 12px; font-weight: 600; line-height: 1;
       padding: 3px 7px; border-radius: 999px; background: var(--paper-soft); color: var(--ink-2);
     }
-    .st.on .ct { background: rgba(255,255,255,.2); color: #fff; }
+    .st.on .ct { background: color-mix(in srgb, var(--on-strong) 22%, transparent); color: var(--on-strong); }
 
     .cols { flex: 1; display: grid; grid-template-columns: 1.05fr 1.55fr 1fr; gap: 1px; background: var(--line-soft); min-height: 0; }
-    .col { background: var(--paper, #F7F5F0); display: flex; flex-direction: column; min-height: 0; }
+    /* padding: 0 n'est PAS décoratif. assets/tokens.css porte un sélecteur
+       d'élément nu — `section { padding: 96px 0 }`, pensé pour les pages
+       vitrines — et les trois colonnes du passe sont des <section>. Le reset
+       `*` de cette feuille a une spécificité de 0 et perd contre lui : chaque
+       colonne portait donc 96 px de vide en haut ET en bas, soit près de
+       200 px volés à un écran mural, et le premier bon poussé sous la ligne
+       de flottaison. Rien ne le signalait — la page rendait 200, la console
+       restait vide. Mesurer ce qui peint, pas ce qui est écrit. */
+    .col { background: var(--paper); display: flex; flex-direction: column; min-height: 0; padding: 0; }
     .col-head {
       display: flex; align-items: center; gap: 10px; padding: 13px 17px 11px;
       font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
@@ -197,7 +397,7 @@
     }
     .col-head .n {
       font-family: var(--mono); font-size: 12px; letter-spacing: 0;
-      padding: 3px 8px; border-radius: 999px; background: var(--surface, #fff);
+      padding: 3px 8px; border-radius: 999px; background: var(--surface);
       border: 1px solid var(--line); color: var(--ink-2);
     }
     .stack { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 0 15px 22px; display: flex; flex-direction: column; gap: 12px; }
@@ -205,7 +405,7 @@
 
     /* ── Un bon ─────────────────────────────────────────────────────────────── */
     .tk {
-      background: var(--surface, #fff); border: 1px solid var(--line);
+      background: var(--surface); border: 1px solid var(--line);
       border-radius: 15px; overflow: hidden; display: flex; flex-direction: column;
       /* La colonne défile ; les bons, eux, ne se compriment JAMAIS. Sans ça,
          deux bons dans une colonne courte se partagent la hauteur, `overflow:
@@ -213,9 +413,9 @@
          qu'on vienne y toucher — qui disparaît en premier. */
       flex-shrink: 0;
     }
-    .tk.is-new { border: 2px solid var(--forest); box-shadow: 0 0 0 4px rgba(11,110,79,.09); }
-    .tk.is-late { border-color: var(--danger-mute); }
-    .tk.is-late.is-new { box-shadow: 0 0 0 4px rgba(184,82,69,.12); }
+    .tk.is-new { border: 2px solid var(--forest); box-shadow: 0 0 0 4px var(--tint-new); }
+    .tk.is-late { border-color: var(--danger-ink); }
+    .tk.is-late.is-new { box-shadow: 0 0 0 4px var(--tint-late); }
     .tk-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 15px 0; }
     .tk-no { font-size: 27px; font-weight: 700; letter-spacing: -0.03em; line-height: 1; }
     .tk-timer {
@@ -224,27 +424,34 @@
       line-height: 1; font-feature-settings: "tnum" 1; flex-shrink: 0;
     }
     .tk-timer svg { width: 14px; height: 14px; }
-    .tk-timer.ok   { color: var(--forest); background: rgba(11,110,79,.10); }
-    .tk-timer.warn { color: var(--warn-ink); background: rgba(217,154,43,.17); }
-    .tk-timer.over { color: var(--danger-mute); background: rgba(184,82,69,.13); }
+    .tk-timer.ok   { color: var(--forest); background: var(--tint-ok); }
+    .tk-timer.warn { color: var(--warn-ink); background: var(--tint-warn); }
+    .tk-timer.over { color: var(--danger-ink); background: var(--tint-over); }
     .tk-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 15px 0; }
     .chip { font-size: 13px; font-weight: 600; padding: 5px 11px; border-radius: 999px; }
-    .chip.table { background: var(--mint-tint); color: var(--forest-deep); }
+    .chip.table { background: var(--mint-tint); color: var(--forest-ink); }
     .chip.away  { background: var(--paper-mute); color: var(--ink-2); }
     .chip.who   { background: none; color: var(--ink-3); padding-left: 0; font-weight: 500; }
     .tk-items { list-style: none; padding: 12px 15px 4px; display: flex; flex-direction: column; gap: 9px; }
     .tk-items li { display: flex; gap: 11px; align-items: flex-start; font-size: 17px; line-height: 1.3; }
-    .tk-items li.off { opacity: .3; }
+    /* Une ligne qui n'est pas de ce poste reste LISIBLE. Elle s'écrivait
+       `opacity: .3` — soit 2,00:1 sur la surface, sous le plancher de 3:1 même
+       pour du gros texte. Or c'est justement ce qu'un cuisinier lit pour savoir
+       ce qui reste à faire sur le bon, à deux mètres et dans la vapeur. Le
+       retrait passe donc par la BARRE et l'encre secondaire (5,16:1), pas par
+       l'effacement. */
+    .tk-items li.off { color: var(--ink-3); text-decoration: line-through; text-decoration-thickness: 1px; }
+    .tk-items li.off .tk-q { color: var(--ink-3); }
     .tk-q { font-family: var(--mono); font-size: 18px; font-weight: 600; color: var(--forest); min-width: 30px; flex-shrink: 0; }
     .tk-n { font-weight: 500; }
     .tk-note {
       display: block; margin-top: 3px; font-size: 14px; font-weight: 600;
-      color: var(--warn-ink); background: rgba(217,154,43,.14);
+      color: var(--warn-ink); background: var(--tint-note);
       border-radius: 7px; padding: 4px 9px; width: fit-content;
     }
     .tk-visuals { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
     .tk-visual { display: inline-flex; align-items: center; gap: 6px; padding: 5px 9px 5px 7px;
-      border-radius: 8px; color: var(--forest-deep); background: var(--mint-tint); font-size: 14px; font-weight: 700; }
+      border-radius: 8px; color: var(--forest-ink); background: var(--mint-tint); font-size: 14px; font-weight: 700; }
     .tk-visual-emoji { font-size: 25px; line-height: 1; }
     .tk-act {
       margin: 12px 13px 13px; height: 58px; border-radius: 13px;
@@ -253,38 +460,64 @@
     }
     .tk-act:active { transform: scale(.985); filter: brightness(.95); }
     .tk-act svg { width: 20px; height: 20px; }
-    .act-accept { background: var(--ink, #0A0F0D); color: #fff; }
-    .act-ready   { background: linear-gradient(135deg, var(--forest) 0%, var(--forest-deep) 100%); color: #fff; }
-    .act-served  { background: var(--paper-mute); color: var(--ink-2); border: 1px solid var(--line); height: 50px; font-size: 15px; }
-    .tk.pass { border-color: rgba(11,110,79,.4); background: var(--mint-tint); }
+    /* « Poste prêt » est rendu désactivé et ne le disait que par sa couleur de
+       fond. Trois canaux, comme partout ailleurs dans le produit : l'attribut
+       natif, le curseur, et une opacité — jamais l'opacité seule. */
+    .tk-act:disabled { opacity: .62; cursor: not-allowed; }
+    .tk-act:disabled:active { transform: none; filter: none; }
+    .act-accept { background: var(--fill-strong); color: var(--on-strong); }
+    .act-ready   { background: linear-gradient(135deg, var(--forest) 0%, var(--forest-deep) 100%); color: var(--on-forest); }
+    .act-served  { background: var(--paper-mute); color: var(--ink-2); border: 1px solid var(--line); height: 56px; font-size: 15px; }
+    .tk.pass { border-color: var(--tint-pass-edge); background: var(--mint-tint); }
     .tk.pass .tk-items li { font-size: 16px; }
 
+    /* ── L'annulation ───────────────────────────────────────────────────────
+       Ce bloc arrivait d'ailleurs : #FEF2F2 #FCA5A5 #991B1B #DC2626 #D1D5DB
+       #374151 — six valeurs de la palette par défaut de Tailwind, collées dans
+       une page qui n'a que des jetons de marque, avec un SECOND rouge à côté
+       du rouge d'alerte du produit. C'est le seul endroit des deux écrans qui
+       se lisait comme généré plutôt que fabriqué. Il reprend ici l'alerte
+       maison, et ses touches montent à 56 px comme le reste du passe : on y
+       répond avec les mains dans une poêle. */
     .tk-void-banner {
-      background: #FEF2F2;
-      border: 1.5px solid #FCA5A5;
-      border-radius: 10px;
-      padding: 9px 12px;
+      background: var(--tint-over);
+      border: 1.5px solid var(--danger-ink);
+      border-radius: var(--r-md);
+      padding: 10px 12px;
       margin: 10px 13px 4px;
       animation: tk-void-pulse 1.4s infinite ease-in-out;
     }
     @keyframes tk-void-pulse {
-      0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4); }
-      50% { box-shadow: 0 0 0 6px rgba(220, 38, 38, 0); }
+      0%, 100% { box-shadow: 0 0 0 0 var(--tint-late); }
+      50% { box-shadow: 0 0 0 6px transparent; }
+    }
+    /* Même raison que le point « hors ligne » : la pulsation est le signal
+       d'urgence, et le mode « mouvement réduit » l'éteint. La bordure épaissit
+       alors au lieu de battre. */
+    @media (prefers-reduced-motion: reduce) {
+      .tk-void-banner { border-width: 3px; }
     }
     .tk-void-header {
-      font-size: 13px; font-weight: 700; color: #991B1B;
-      display: flex; align-items: center; gap: 6px; margin-bottom: 8px;
+      font-size: 14px; font-weight: 700; color: var(--danger-ink);
+      display: flex; align-items: center; gap: 7px; margin-bottom: 9px;
     }
+    .tk-void-header svg { width: 18px; height: 18px; flex-shrink: 0; }
     .tk-void-acts {
       display: flex; gap: 8px;
     }
+    .act-void-accept, .act-void-reject {
+      flex: 1; min-height: 56px; padding: 8px 10px; border-radius: var(--r-md);
+      font-size: 14px; font-weight: 700; cursor: pointer;
+      transition: filter 120ms, transform 90ms;
+    }
+    .act-void-accept:active, .act-void-reject:active { transform: scale(.97); filter: brightness(.95); }
     .act-void-accept {
-      flex: 1; padding: 8px 10px; border-radius: 8px; border: 1px solid #DC2626;
-      background: #DC2626; color: #fff; font-size: 12.5px; font-weight: 700; cursor: pointer;
+      border: 1px solid var(--danger-ink);
+      background: var(--danger-ink); color: var(--surface);
     }
     .act-void-reject {
-      flex: 1; padding: 8px 10px; border-radius: 8px; border: 1px solid #D1D5DB;
-      background: #fff; color: #374151; font-size: 12.5px; font-weight: 700; cursor: pointer;
+      border: 1px solid var(--line);
+      background: var(--surface); color: var(--ink-2);
     }
 
     .empty {
@@ -311,9 +544,16 @@
       .link span { display: none; }
       .link { gap: 0; }
       .clock { font-size: 17px; }
-      .tool { width: 44px; height: 44px; border-radius: 11px; }
+      /* Les outils NE rétrécissent PLUS sous les 56 px annoncés en tête de
+         feuille : ils passaient à 44 ici, c'est-à-dire que la promesse « on
+         tape à travers un gant » tombait précisément sur le plus petit écran.
+         C'est la barre qui cède — elle défile — pas la cible. */
+      .top { overflow-x: auto; scrollbar-width: none; }
+      .top::-webkit-scrollbar { display: none; }
+      /* 100vw compte la barre de défilement et déborde d'autant sur un bureau ;
+         le parent porte déjà sa marge. */
       .pad {
-        width: min(278px, calc(100vw - 40px));
+        width: min(278px, 100%);
         grid-template-columns: repeat(3, minmax(0, 1fr));
       }
     }
@@ -347,9 +587,9 @@
      Même code à six chiffres que la caisse : le patron en édite un depuis son
      tableau de bord, on le tape ici, et la tablette devient l'écran cuisine de
      CE restaurant. Le code est à usage unique — une tablette, un code. -->
-<div id="pair" role="dialog" aria-label="Appairer l'écran cuisine">
-  <div class="kw"><img src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"><span>Cuisine</span></div>
-  <p class="sub">Entre le code d'appairage à six chiffres généré depuis le tableau de bord pour lier cette tablette à ta cuisine.</p>
+<div id="pair" role="dialog" data-i18n-attr="aria-label:pair.aria">
+  <div class="kw"><img src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"><span data-i18n="app.name">Cuisine</span></div>
+  <p class="sub" data-i18n="pair.sub">Entre le code d'appairage à six chiffres généré depuis le tableau de bord pour lier cette tablette à ta cuisine.</p>
   <div class="dots" id="pair-dots"></div>
   <div class="pad" id="pair-pad"></div>
   <div id="pair-msg" role="status" aria-live="polite"></div>
@@ -357,29 +597,31 @@
 
 <div class="screen" id="screen" hidden>
   <header class="top">
-    <div class="brand"><b>Cuisine</b><span class="store" id="store-name"></span></div>
+    <div class="brand"><b data-i18n="app.name">Cuisine</b><span class="store" id="store-name"></span></div>
     <div class="spacer"></div>
-    <span class="link" id="link"><i></i><span id="link-txt">Connexion…</span></span>
+    <span class="link" id="link"><i></i><span id="link-txt" data-i18n="link.wait">Connexion…</span></span>
     <span class="clock" id="clock">--:--</span>
-    <button class="tool" id="sound" aria-label="Son des nouvelles commandes"></button>
-    <button class="tool" id="full" aria-label="Plein écran">
+    <button class="tool" id="sound" data-i18n-attr="aria-label:tool.sound"></button>
+    <button class="tool" id="theme" data-i18n-attr="aria-label:tool.theme"></button>
+    <button class="tool tool--lang" id="lang" data-i18n-attr="aria-label:tool.lang">FR</button>
+    <button class="tool" id="full" data-i18n-attr="aria-label:tool.full">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
     </button>
   </header>
 
-  <nav class="bar" id="bar" aria-label="Postes de préparation"></nav>
+  <nav class="bar" id="bar" data-i18n-attr="aria-label:bar.aria"></nav>
 
   <div class="cols" id="cols">
     <section class="col col--new">
-      <div class="col-head"><span>Nouvelles</span><span class="n" id="n-new">0</span></div>
+      <div class="col-head"><span data-i18n="col.new">Nouvelles</span><span class="n" id="n-new">0</span></div>
       <div class="stack" id="s-new"></div>
     </section>
     <section class="col col--cook">
-      <div class="col-head"><span>En préparation</span><span class="n" id="n-cook">0</span></div>
+      <div class="col-head"><span data-i18n="col.cook">En préparation</span><span class="n" id="n-cook">0</span></div>
       <div class="stack" id="s-cook"></div>
     </section>
     <section class="col col--pass">
-      <div class="col-head"><span>Au passe</span><span class="n" id="n-pass">0</span></div>
+      <div class="col-head"><span data-i18n="col.pass">Au passe</span><span class="n" id="n-pass">0</span></div>
       <div class="stack" id="s-pass"></div>
     </section>
   </div>
@@ -448,6 +690,186 @@
   };
 
   var $ = function (id) { return document.getElementById(id); };
+
+  /* ── Les trois langues du passe ──────────────────────────────────────────
+   * Cet écran était le seul du produit figé en français : `<html lang="fr">`
+   * en dur, zéro `data-i18n`, pendant que la salle offre déjà FR/EN/AR depuis
+   * son profil. C'était l'écran le plus mal servi par ce choix — une brigade
+   * marocaine lit l'arabe plus souvent qu'une clientèle de salle, et c'est
+   * elle qui doit décoder « Remise au serveur » à deux mètres, dans la vapeur,
+   * en plein coup de feu.
+   *
+   * Le dictionnaire est ici et non dans assets/i18n.js : ce module capture ses
+   * originaux depuis le DOM du tableau de bord et ne couvre pas ces libellés.
+   * La caisse a fait le même choix (assets/caisse-lang.js) pour la même raison.
+   * ---------------------------------------------------------------------- */
+  var LANG_KEY = 'kiwiCuisineLang';
+  var LANGS = ['fr', 'en', 'ar'];
+  var LANG_LABEL = { fr: 'FR', en: 'EN', ar: 'ع' };
+  var DICT = {
+    fr: {
+      'app.name': 'Cuisine',
+      'pair.aria': "Appairer l'écran cuisine",
+      'pair.sub': "Entre le code d'appairage à six chiffres généré depuis le tableau de bord pour lier cette tablette à ta cuisine.",
+      'pair.clear': 'Effacer',
+      'pair.ok': 'Valider',
+      'pair.err.attempts': 'Trop d’essais. Réessaie dans un quart d’heure.',
+      'pair.err.code': 'Code invalide ou expiré.',
+      'pair.err.incomplete': 'Écran incomplet. Recharge la page.',
+      'pair.err.commit': 'Appairage impossible. Recharge la page.',
+      'pair.err.net': 'Connexion impossible. Vérifie le wifi.',
+      'link.wait': 'Connexion…',
+      'link.up': 'Comptoir lié',
+      'link.down': 'Hors ligne',
+      'tool.sound': 'Son des nouvelles commandes',
+      'tool.full': 'Plein écran',
+      'tool.theme': 'Jour ou nuit',
+      'tool.lang': 'Langue de l’écran',
+      'bar.aria': 'Postes de préparation',
+      'bar.all': 'Tous',
+      'col.new': 'Nouvelles',
+      'col.cook': 'En préparation',
+      'col.pass': 'Au passe',
+      'empty.new': 'Rien de neuf. Les bons du comptoir arrivent ici.',
+      'empty.cook': 'Aucun plat en cours.',
+      'empty.pass': 'Le passe est vide.',
+      'chip.table': 'Table',
+      'chip.delivery': 'Livraison',
+      'chip.takeout': 'À emporter',
+      'act.take': 'Je prends',
+      'act.ready': 'Prête',
+      'act.served': 'Remise au serveur',
+      'act.stationReady': 'Poste prêt',
+      'void.title': 'ANNULATION',
+      'void.accept': 'Accepter arrêt',
+      'void.reject': 'Déjà prêt',
+      'void.rejectNote': '[DÉJÀ PRÊT]',
+      'void.client_change': 'Changement client',
+      'void.order_error': 'Erreur saisie',
+      'void.kitchen_waste': 'Perte cuisine',
+      'void.quality_return': 'Retour qualité',
+      'void.other': 'Annulation',
+    },
+    en: {
+      'app.name': 'Kitchen',
+      'pair.aria': 'Pair the kitchen screen',
+      'pair.sub': 'Enter the six-digit pairing code generated from the dashboard to link this tablet to your kitchen.',
+      'pair.clear': 'Clear',
+      'pair.ok': 'Confirm',
+      'pair.err.attempts': 'Too many tries. Come back in fifteen minutes.',
+      'pair.err.code': 'Invalid or expired code.',
+      'pair.err.incomplete': 'Screen incomplete. Reload the page.',
+      'pair.err.commit': 'Pairing failed. Reload the page.',
+      'pair.err.net': 'No connection. Check the wifi.',
+      'link.wait': 'Connecting…',
+      'link.up': 'Counter linked',
+      'link.down': 'Offline',
+      'tool.sound': 'Sound for new orders',
+      'tool.full': 'Full screen',
+      'tool.theme': 'Day or night',
+      'tool.lang': 'Screen language',
+      'bar.aria': 'Prep stations',
+      'bar.all': 'All',
+      'col.new': 'New',
+      'col.cook': 'Cooking',
+      'col.pass': 'On the pass',
+      'empty.new': 'Nothing new. Counter tickets land here.',
+      'empty.cook': 'Nothing cooking.',
+      'empty.pass': 'The pass is clear.',
+      'chip.table': 'Table',
+      'chip.delivery': 'Delivery',
+      'chip.takeout': 'Takeaway',
+      'act.take': 'I’ve got it',
+      'act.ready': 'Ready',
+      'act.served': 'Handed over',
+      'act.stationReady': 'Station done',
+      'void.title': 'CANCELLED',
+      'void.accept': 'Stop cooking',
+      'void.reject': 'Already plated',
+      'void.rejectNote': '[ALREADY PLATED]',
+      'void.client_change': 'Customer changed',
+      'void.order_error': 'Entry error',
+      'void.kitchen_waste': 'Kitchen waste',
+      'void.quality_return': 'Quality return',
+      'void.other': 'Cancelled',
+    },
+    ar: {
+      'app.name': 'المطبخ',
+      'pair.aria': 'اربط شاشة المطبخ',
+      'pair.sub': 'أدخل رمز الربط المكوّن من ستة أرقام من لوحة التحكم لربط هذا الجهاز بمطبخك.',
+      'pair.clear': 'مسح',
+      'pair.ok': 'تأكيد',
+      'pair.err.attempts': 'محاولات كثيرة. أعد المحاولة بعد ربع ساعة.',
+      'pair.err.code': 'رمز غير صالح أو منتهٍ.',
+      'pair.err.incomplete': 'الشاشة غير مكتملة. أعد تحميل الصفحة.',
+      'pair.err.commit': 'تعذّر الربط. أعد تحميل الصفحة.',
+      'pair.err.net': 'لا يوجد اتصال. تحقّق من الواي فاي.',
+      'link.wait': 'جارٍ الاتصال…',
+      'link.up': 'مرتبط بالكاشير',
+      'link.down': 'غير متصل',
+      'tool.sound': 'صوت الطلبات الجديدة',
+      'tool.full': 'ملء الشاشة',
+      'tool.theme': 'نهار أو ليل',
+      'tool.lang': 'لغة الشاشة',
+      'bar.aria': 'مراكز التحضير',
+      'bar.all': 'الكل',
+      'col.new': 'جديدة',
+      'col.cook': 'قيد التحضير',
+      'col.pass': 'جاهزة للتقديم',
+      'empty.new': 'لا جديد. طلبات الكاشير تصل هنا.',
+      'empty.cook': 'لا يوجد طبق قيد التحضير.',
+      'empty.pass': 'لا شيء في انتظار التقديم.',
+      'chip.table': 'طاولة',
+      'chip.delivery': 'توصيل',
+      'chip.takeout': 'للأخذ',
+      'act.take': 'أتكفّل به',
+      'act.ready': 'جاهز',
+      'act.served': 'سُلّم للنادل',
+      'act.stationReady': 'المركز جاهز',
+      'void.title': 'إلغاء',
+      'void.accept': 'أوقف التحضير',
+      'void.reject': 'جاهز مسبقًا',
+      'void.rejectNote': '[جاهز مسبقًا]',
+      'void.client_change': 'تغيير من الزبون',
+      'void.order_error': 'خطأ في الإدخال',
+      'void.kitchen_waste': 'هدر في المطبخ',
+      'void.quality_return': 'إرجاع لعيب',
+      'void.other': 'إلغاء',
+    },
+  };
+
+  function lang() {
+    var l = ls(LANG_KEY);
+    return LANGS.indexOf(l) >= 0 ? l : 'fr';
+  }
+  /* Une clé absente retombe sur le français, jamais sur la clé nue : mieux
+     vaut un mot dans la mauvaise langue qu'un « act.ready » sur le passe. */
+  function T(k) {
+    var d = DICT[lang()] || DICT.fr;
+    return d[k] != null ? d[k] : (DICT.fr[k] != null ? DICT.fr[k] : k);
+  }
+  function applyLang() {
+    var l = lang();
+    var html = document.documentElement;
+    html.setAttribute('lang', l);
+    html.setAttribute('dir', l === 'ar' ? 'rtl' : 'ltr');
+    document.querySelectorAll('[data-i18n]').forEach(function (el) {
+      el.textContent = T(el.getAttribute('data-i18n'));
+    });
+    document.querySelectorAll('[data-i18n-attr]').forEach(function (el) {
+      String(el.getAttribute('data-i18n-attr')).split(',').forEach(function (pair) {
+        var bits = pair.split(':');
+        if (bits.length === 2) el.setAttribute(bits[0].trim(), T(bits[1].trim()));
+      });
+    });
+    var lb = $('lang');
+    if (lb) lb.textContent = LANG_LABEL[l];
+    if (S.live !== null) $('link-txt').textContent = T(S.live ? 'link.up' : 'link.down');
+    buf = '';
+    drawPad();
+    paint();
+  }
+
   function ls(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }
   function put(k, v) { try { localStorage.setItem(k, v); } catch (_) {} }
   function esc(v) {
@@ -463,6 +885,12 @@
     empty: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>',
     on: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a9 9 0 0 1 0 14"/></svg>',
     off: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M22 9l-6 6M16 9l6 6"/></svg>',
+    /* L'annulation portait un ⚠️ — un glyphe rendu par le système, d'une tout
+       autre graisse que les six icônes dessinées au-dessus, et différent sur
+       chaque tablette. Toutes les icônes de cet écran viennent d'ici. */
+    warn: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M10.3 3.9 1.8 18.4A2 2 0 0 0 3.5 21.4h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4.5"/><path d="M12 17.2h.01"/></svg>',
+    sun: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.2 5.2l1.4 1.4M17.4 17.4l1.4 1.4M18.8 5.2l-1.4 1.4M6.6 17.4l-1.4 1.4"/></svg>',
+    moon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.5 14.2A8.5 8.5 0 1 1 9.8 3.5a6.8 6.8 0 0 0 10.7 10.7z"/></svg>',
   };
 
   /* ── L'appairage ─────────────────────────────────────────────────────────── */
@@ -477,8 +905,8 @@
     if (!$('pair-pad').childNodes.length) {
       $('pair-pad').innerHTML = [1, 2, 3, 4, 5, 6, 7, 8, 9].map(function (n) {
         return '<button data-k="' + n + '">' + n + '</button>';
-      }).join('') + '<button class="wide" data-k="del">Effacer</button>'
-        + '<button data-k="0">0</button><button class="wide ok" data-k="ok">Valider</button>';
+      }).join('') + '<button class="wide" data-k="del">' + T('pair.clear') + '</button>'
+        + '<button data-k="0">0</button><button class="wide ok" data-k="ok">' + T('pair.ok') + '</button>';
     }
   }
   function padFail(msg) {
@@ -499,8 +927,8 @@
       .then(function (j) {
         if (!j || !j.ok || !j.merchant) {
           padFail(j && j.error === 'too_many_attempts'
-            ? 'Trop d’essais. Réessaie dans un quart d’heure.'
-            : 'Code invalide ou expiré.');
+            ? T('pair.err.attempts')
+            : T('pair.err.code'));
           return;
         }
         /* Poser l'appairage passe par le geste PARTAGÉ avec la caisse
@@ -511,7 +939,7 @@
            la purge. Le module manque ⇒ on REFUSE d'appairer, plutôt que de
            lier un nouveau commerçant par-dessus les données de l'ancien. */
         var commit = window.KiwiPairingCommit && window.KiwiPairingCommit.commit;
-        if (!commit) { padFail('Écran incomplet. Recharge la page.'); return; }
+        if (!commit) { padFail(T('pair.err.incomplete')); return; }
         var res = commit(code, j, {
           /* Nouveau commerce ⇒ l'état local de l'ANCIEN n'a plus de sens : les
              bons « je m'en occupe » désignaient la cuisine d'un autre
@@ -519,13 +947,13 @@
              vive de CETTE page, elle, n'appartient qu'à elle. */
           onTenantSwitch: function () { S.cooking = {}; S.orders = {}; S.since = 0; S.seen = {}; },
         });
-        if (!res || !res.ok) { padFail('Appairage impossible. Recharge la page.'); return; }
+        if (!res || !res.ok) { padFail(T('pair.err.commit')); return; }
         /* Ré-appairage au MÊME commerce (on rebranche la même cuisine) : rien
            n'a été purgé, mais la file repart d'un état propre comme avant. */
         if (!res.switched) { put(COOK_KEY, '[]'); S.cooking = {}; S.orders = {}; S.since = 0; S.seen = {}; }
         start();
       })
-      .catch(function () { padFail('Connexion impossible. Vérifie le wifi.'); });
+      .catch(function () { padFail(T('pair.err.net')); });
   }
 
   document.addEventListener('click', function (e) {
@@ -623,7 +1051,7 @@
     S.live = up;
     var el = $('link');
     el.className = 'link ' + (up ? 'ok' : 'down');
-    $('link-txt').textContent = up ? 'Comptoir lié' : 'Hors ligne';
+    $('link-txt').textContent = T(up ? 'link.up' : 'link.down');
   }
 
   /* Un bon qui arrive ne doit pas pouvoir passer inaperçu : personne ne
@@ -738,9 +1166,9 @@
   }
 
   function whereChip(o) {
-    if (o.mode === 'table' && o.table) return '<span class="chip table">Table ' + esc(o.table) + '</span>';
-    if (o.mode === 'delivery') return '<span class="chip away">Livraison</span>';
-    return '<span class="chip away">À emporter</span>';
+    if (o.mode === 'table' && o.table) return '<span class="chip table">' + T('chip.table') + ' ' + esc(o.table) + '</span>';
+    if (o.mode === 'delivery') return '<span class="chip away">' + T('chip.delivery') + '</span>';
+    return '<span class="chip away">' + T('chip.takeout') + '</span>';
   }
 
   function card(o, kind) {
@@ -760,12 +1188,12 @@
         + '<span class="tk-n">' + esc(l.name) + visualHtml + (note ? '<span class="tk-note">' + esc(note) + '</span>' : '') + '</span></li>';
     }).join('');
     var act = kind === 'new'
-      ? '<button class="tk-act act-accept" data-take="' + esc(o.id) + '">' + SVG.hand + 'Je prends</button>'
+      ? '<button class="tk-act act-accept" data-take="' + esc(o.id) + '">' + SVG.hand + T('act.take') + '</button>'
       : kind === 'cook'
-        ? '<button class="tk-act act-ready" data-ready="' + esc(o.id) + '">' + SVG.check + 'Prête</button>'
+        ? '<button class="tk-act act-ready" data-ready="' + esc(o.id) + '">' + SVG.check + T('act.ready') + '</button>'
         : (o.status === 'ready'
-          ? '<button class="tk-act act-served" data-served="' + esc(o.id) + '">Remise au serveur</button>'
-          : '<button class="tk-act act-served" disabled>Poste prêt</button>');
+          ? '<button class="tk-act act-served" data-served="' + esc(o.id) + '">' + T('act.served') + '</button>'
+          : '<button class="tk-act act-served" disabled>' + T('act.stationReady') + '</button>');
     var right = kind === 'pass'
       ? '<span class="tk-timer ok">' + SVG.check + hm(o.updated_ts) + '</span>'
       : '<span class="tk-timer ' + u + '">' + SVG.clock + '<span>' + mmss(el) + '</span></span>';
@@ -774,15 +1202,17 @@
     var voidLine = (o.lines || []).find(function (l) { return l && l.voidAlert; });
     if (voidLine && voidLine.voidAlert) {
       var va = voidLine.voidAlert;
-      var reasonLabel = va.reason === 'client_change' ? 'Changement client'
-        : va.reason === 'order_error' ? 'Erreur saisie'
-        : va.reason === 'kitchen_waste' ? 'Perte cuisine'
-        : va.reason === 'quality_return' ? 'Retour qualité' : (va.reason || 'Annulation');
+      /* La RAISON est une clé persistée par la caisse : on traduit le
+         libellé, jamais le jeton — une raison inconnue reste affichée telle
+         quelle plutôt que d'être avalée. */
+      var known = ['client_change', 'order_error', 'kitchen_waste', 'quality_return'];
+      var reasonLabel = known.indexOf(va.reason) >= 0 ? T('void.' + va.reason)
+        : (va.reason || T('void.other'));
       voidBanner = '<div class="tk-void-banner">'
-        + '<div class="tk-void-header">⚠️ ANNULATION : ' + (va.qty || 1) + '× ' + esc(voidLine.name) + ' (' + esc(reasonLabel) + ')</div>'
+        + '<div class="tk-void-header">' + SVG.warn + '<span>' + T('void.title') + ' : ' + (va.qty || 1) + '× ' + esc(voidLine.name) + ' (' + esc(reasonLabel) + ')</span></div>'
         + '<div class="tk-void-acts">'
-        + '<button class="act-void-accept" data-void-ack="' + esc(o.id) + '" data-void-action="accept">Accepter arrêt</button>'
-        + '<button class="act-void-reject" data-void-ack="' + esc(o.id) + '" data-void-action="reject">Déjà prêt</button>'
+        + '<button class="act-void-accept" data-void-ack="' + esc(o.id) + '" data-void-action="accept">' + T('void.accept') + '</button>'
+        + '<button class="act-void-reject" data-void-ack="' + esc(o.id) + '" data-void-action="reject">' + T('void.reject') + '</button>'
         + '</div></div>';
     }
 
@@ -816,7 +1246,7 @@
     };
     /* Un seul poste ne se filtre pas : « Tous » et « Cuisine » montreraient
        exactement la même chose. On garde la barre pour le compteur. */
-    return (list.length > 1 ? btn('all', '#0A0F0D', 'Tous') : '')
+    return (list.length > 1 ? btn('all', '#0A0F0D', T('bar.all')) : '')
       + list.map(function (s) { return btn(s.id, s.color, s.name); }).join('');
   }
 
@@ -827,11 +1257,11 @@
     $('n-cook').textContent = c.length;
     $('n-pass').textContent = p.length;
     $('s-new').innerHTML = n.length ? n.map(function (o) { return card(o, 'new'); }).join('')
-      : emptyBox('Rien de neuf. Les bons du comptoir arrivent ici.');
+      : emptyBox(T('empty.new'));
     $('s-cook').innerHTML = c.length ? c.map(function (o) { return card(o, 'cook'); }).join('')
-      : emptyBox('Aucun plat en cours.');
+      : emptyBox(T('empty.cook'));
     $('s-pass').innerHTML = p.length ? p.map(function (o) { return card(o, 'pass'); }).join('')
-      : emptyBox('Le passe est vide.');
+      : emptyBox(T('empty.pass'));
   }
 
   /* Les minuteurs seuls, sans reconstruire le DOM : repeindre une carte sous le
@@ -871,7 +1301,7 @@
             }
           } else {
             delete vLine.voidAlert;
-            vLine.note = (vLine.note ? vLine.note + ' ' : '') + '[DÉJÀ PRÊT]';
+            vLine.note = (vLine.note ? vLine.note + ' ' : '') + T('void.rejectNote');
           }
         }
       }
@@ -934,11 +1364,29 @@
 
   /* ── Confort d'un écran mural ────────────────────────────────────────────── */
   function paintSound() { $('sound').innerHTML = S.muted ? SVG.off : SVG.on; $('sound').classList.toggle('off', S.muted); }
+  /* Le climat suit le système tant que personne n'a tranché ; la première
+     pression fige le contraire de ce qui est affiché, et ça reste. Une cuisine
+     n'a pas d'écran de réglages : le geste est le réglage. */
+  function currentTheme() {
+    return document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+  }
+  function paintTheme() { $('theme').innerHTML = currentTheme() === 'dark' ? SVG.moon : SVG.sun; }
   function bindTools() {
     S.muted = ls(MUTE_KEY) === '1';
     paintSound();
+    paintTheme();
     $('sound').addEventListener('click', function () {
       S.muted = !S.muted; put(MUTE_KEY, S.muted ? '1' : '0'); paintSound();
+    });
+    $('theme').addEventListener('click', function () {
+      put('kiwiTheme', currentTheme() === 'dark' ? 'light' : 'dark');
+      if (window.__kiwiApplyTheme) window.__kiwiApplyTheme();
+      paintTheme();
+    });
+    $('lang').addEventListener('click', function () {
+      var next = LANGS[(LANGS.indexOf(lang()) + 1) % LANGS.length];
+      put(LANG_KEY, next);
+      applyLang();
     });
     $('full').addEventListener('click', function () {
       try {
@@ -979,6 +1427,7 @@
 
   function boot() {
     bindTools();
+    applyLang();
     setInterval(tickTimers, 1000);
     start();
   }

@@ -194,6 +194,15 @@
       --forest-ink:      #0B6E4F;
       --forest-ink-deep: #053B2C;
       --forest-edge:     #0B6E4F;
+      /* Valeurs qui vivaient en dur dans des keyframes et un dégradé, donc
+         hors du jeu de jetons et aveugles au climat. */
+      --on-forest:       #EAFFF4;
+      --pulse-lo:        #1F5D3C;
+      --pulse-hi:        #2A6F4A;
+      --pause-lo:        #C77526;
+      --pause-hi:        #B85245;
+      /* --emerald ne bascule pas d'un climat à l'autre : son encre non plus. */
+      --on-emerald:      #06281A;
       --ring:          var(--surface);  /* l'anneau de 2px autour d'un point */
 
       /* ── Type ───────────────────────────────────────────────────────────────
@@ -305,6 +314,11 @@
       --forest-ink:      #7DF2B0;
       --forest-ink-deep: #A9F5C9;
       --forest-edge:     rgba(125,242,176,0.55);
+      --on-forest:       #06281A;
+      --pulse-lo:        #14E08A;
+      --pulse-hi:        #7DF2B0;
+      --pause-lo:        #E8974A;
+      --pause-hi:        #FF9A8A;
 
       --shadow-1: 0 1px 2px rgba(0,0,0,.45), 0 6px 16px rgba(0,0,0,.38);
       --shadow-2: 0 10px 34px rgba(0,0,0,.60), 0 2px 8px rgba(0,0,0,.45);
@@ -598,7 +612,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       border-radius: 13px;
       padding: 15px;
       background: var(--forest);
-      color: #EAFFF4;
+      color: var(--on-forest);
       font-size: 16px;
       font-weight: 600;
     }
@@ -841,7 +855,9 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     .content {
       flex: 1;
       overflow-y: auto;
-      overflow-x: hidden;
+      /* clip, pas hidden : hidden fabrique un conteneur de défilement et casse
+         position:sticky sur les descendants ; clip coupe sans rien créer. */
+      overflow-x: clip;
       -webkit-overflow-scrolling: touch;
       /* clear the floating glass bar so the last items aren't stuck under it */
       padding-bottom: var(--nav-clearance);
@@ -1051,8 +1067,8 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       border: 2px solid var(--emerald);
     }
     @keyframes urgent-pulse {
-      0%, 100% { background-color: #1F5D3C; }
-      50%      { background-color: #2A6F4A; }
+      0%, 100% { background-color: var(--pulse-lo); }
+      50%      { background-color: var(--pulse-hi); }
     }
 
     .tc-num {
@@ -2356,7 +2372,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     }
     .kg-sc-btn:active { transform: scale(0.985); }
     .kg-sc-btn svg { width: 17px; height: 17px; }
-    .kg-sc-btn.kg-primary { background: var(--emerald); color: #06281A; }
+    .kg-sc-btn.kg-primary { background: var(--emerald); color: var(--on-emerald); }
     .kg-sc-btn.kg-secondary {
       background: var(--paper-mute); color: var(--ink-2);
       border: 1px solid var(--line);
@@ -3357,7 +3373,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       letter-spacing: -0.01em;
     }
     .colleague-avatar.on-pause {
-      background: linear-gradient(135deg, #C77526, #B85245);
+      background: linear-gradient(135deg, var(--pause-lo), var(--pause-hi));
     }
     .colleague-avatar.is-me {
       background: var(--gradient);

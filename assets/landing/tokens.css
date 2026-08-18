@@ -1,8 +1,24 @@
 /* ==========================================================================
-   Kiwi v2 — Design Tokens
-   The single source of truth for color, typography, spacing, motion.
-   If you find yourself writing a hex value or a px value outside this file,
-   stop and add a token first.
+   Kiwi v2 — Design Tokens · PAGES SATELLITES
+
+   Portée réelle : status.html, terms.html, privacy.html, cookies.html,
+   mentions-legales.html. Rien d'autre ne charge ce fichier.
+
+   Ce cartouche annonçait « the single source of truth for color, typography,
+   motion » pour tout le produit. C'était faux, et cher : il en existe trois.
+     · assets/tokens.css        — dashboard, caisse, salle, cuisine, brand.
+                                  Inter Tight + Instrument Serif. FAIT AUTORITÉ.
+     · ce fichier               — les cinq pages légales ci-dessus.
+     · index.html (build Next)  — DM Sans + IBM Plex Sans Arabic, compilé hors
+                                  de ce dépôt (voir kiwi-landing).
+   Trois jeux de noms identiques portant des valeurs différentes : c'est
+   exactement ce qui faisait qu'un commerçant cliquant « Conditions » depuis
+   l'application changeait de police en chemin.
+
+   Les fontes de ce fichier s'alignent maintenant sur assets/tokens.css, à la
+   lettre près. Les COULEURS restent locales : ces pages ont leur propre
+   échelle de neutres, et elles sont déjà accordées à la marque.
+   Toute nouvelle valeur va dans assets/tokens.css, pas ici.
    ========================================================================== */
 
 :root {
@@ -63,11 +79,16 @@
                     0 0 12px 0 rgba(125, 242, 176, 0.15);
 
   /* ----- TYPOGRAPHY ----------------------------------------------------- */
-  --font-display:   "Geist", -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
-  --font-body:      "Geist", -apple-system, "SF Pro Text", system-ui, sans-serif;
+  /* Recopiées de assets/tokens.css, au byte près. Geist n'apparaît plus :
+     l'application entière est en Inter Tight, et ces pages sont le même
+     produit vu depuis son pied de page. */
+  --font-display:   "Inter Tight", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --font-body:      "Inter Tight", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   --font-editorial: "Instrument Serif", "Times New Roman", serif;
-  --font-mono:      "JetBrains Mono", "SF Mono", ui-monospace, monospace;
-  --font-arabic:    "Cairo", "IBM Plex Sans Arabic", "Tajawal", sans-serif;
+  /* PAS JetBrains Mono — même raison que dans assets/tokens.css : son zéro
+     pointé sous Windows. Les deux usages ici sont des libellés, pas du code. */
+  --font-mono:      Arial, Helvetica, sans-serif;
+  --font-arabic:    "IBM Plex Sans Arabic", "Cairo", sans-serif;
 
   /* Type scale — paired with weight + line-height + letter-spacing */
   --t-hero:    clamp(56px, 7.2vw, 112px);
