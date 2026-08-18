@@ -895,6 +895,7 @@ section('Whole-project regressions');
     'password-policy-test.mjs',
     'plan-tier-test.mjs',
     'error-reporter-test.mjs',
+    'error-redaction-test.mjs',
     'err-reporter-silence-test.mjs',
     'depenses-demo-gate-test.mjs',
   ];

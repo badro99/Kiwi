@@ -70,13 +70,18 @@ export async function onRequestPost(context) {
   if (blocked) return blocked;
   await limitFail(request, env, 'err', identity);
 
-  const file = String(body.file || '').trim().slice(0, 120);
+  function cleanPath(raw) {
+    if (!raw) return '';
+    return String(raw).split('?')[0].split('#')[0].trim();
+  }
+
+  const file = sanitize(cleanPath(body.file || ''), 120);
   const line = parseInt(body.line, 10) || 0;
   const col = parseInt(body.col, 10) || 0;
   const stack = sanitize(body.stack || '', 1000);
-  const url = String(body.url || '').trim().slice(0, 120);
-  const version = String(body.version || '').trim().slice(0, 32);
-  const userAgent = String(body.userAgent || body.user_agent || '').slice(0, 200);
+  const url = sanitize(cleanPath(body.url || ''), 120);
+  const version = sanitize(String(body.version || '').trim(), 32);
+  const userAgent = sanitize(String(body.userAgent || body.user_agent || '').trim(), 200);
   const now = Date.now();
 
   try {
@@ -97,6 +102,21 @@ export async function onRequestPost(context) {
       `INSERT INTO client_errors (id, merchant, message, file, line, col, stack, url, version, user_agent, count, first_seen_ts, last_seen_ts)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`
     ).bind(id, merchant, message, file, line, col, stack, url, version, userAgent, now, now).run();
+
+    // Retention: cap 500 rows per merchant and purge rows older than 90 days
+    try {
+      if (merchant) {
+        await env.DB.prepare(
+          `DELETE FROM client_errors WHERE merchant = ? AND id NOT IN (
+            SELECT id FROM client_errors WHERE merchant = ? ORDER BY last_seen_ts DESC LIMIT 500
+          )`
+        ).bind(merchant, merchant).run();
+      }
+      const ninetyDaysAgo = now - 90 * 86400000;
+      await env.DB.prepare(
+        `DELETE FROM client_errors WHERE last_seen_ts < ?`
+      ).bind(ninetyDaysAgo).run();
+    } catch (_) {}
 
     return json({ ok: true, created: true, id });
   } catch (err) {
