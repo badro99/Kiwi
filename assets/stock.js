@@ -678,14 +678,93 @@
   const stOverlayKey = () => 'kiwi:stockOverlay:' + stOverlayScope();
   let stOverlayLoadedFor = null;
 
+  function migrateStockDocV2(d) {
+    if (!d || typeof d !== 'object') return d;
+    if ((d.schemaVersion || 1) >= 2 && Array.isArray(d.subcategories)) return d;
+
+    const categories = Array.isArray(d.cats) ? [...d.cats] : (Array.isArray(d.categories) ? [...d.categories] : []);
+    const knownCatIds = new Set(categories.map(c => c && c.id));
+    const subcategories = [];
+
+    const originals = new Map();
+    (Array.isArray(d.items) ? d.items : []).forEach(item => {
+      if (!item || !item.id) return;
+      originals.set(String(item.id), item);
+      const catId = String(item.category || item.cat || 'epicerie');
+      if (!knownCatIds.has(catId)) {
+        categories.push({ id: catId, label: String(item.category || item.cat || 'Épicerie') });
+        knownCatIds.add(catId);
+      }
+      const supCards = [];
+      if (item.supplier) {
+        supCards.push({
+          id: 'sup-card-' + item.id,
+          supplierName: String(item.supplier),
+          defaultPrice: Number.isFinite(+item.costPerUnit) ? +item.costPerUnit : (Number.isFinite(+item.cost) ? +item.cost : 0),
+          purchaseUnit: String(item.unit || 'unité'),
+          factor: 1,
+          rank: 1,
+        });
+      }
+      subcategories.push({
+        id: String(item.id),
+        categoryId: catId,
+        name: String(item.name || 'Article'),
+        unit: String(item.unit || 'unité'),
+        defaultCost: Number.isFinite(+item.costPerUnit) ? +item.costPerUnit : (Number.isFinite(+item.cost) ? +item.cost : 0),
+        suppliers: supCards,
+        currentStock: Number.isFinite(+item.currentStock) ? +item.currentStock : (Number.isFinite(+item.stock) ? +item.stock : 0),
+        parLevel: item.parLevel != null ? +item.parLevel : (item.par != null ? +item.par : null),
+        reorderLevel: item.reorderLevel != null ? +item.reorderLevel : (item.reorder != null ? +item.reorder : null),
+        usageThisWeek: +item.usageThisWeek || 0,
+        theoreticalUsage: +item.theoreticalUsage || 0,
+        updatedAt: +item.updatedAt || Date.now(),
+      });
+    });
+
+    d.schemaVersion = 2;
+    d.cats = categories;
+    d.categories = categories;
+    d.subcategories = subcategories;
+
+    /* Enveloppe de compatibilité. On PART de l'article d'origine et on n'écrase
+       que les champs projetés : reconstruire depuis une liste fixe détruit en
+       silence tout champ hors liste (lastDelivery, deliveryFrequency, status,
+       sku, notes…), et stOverlayRaw() réécrit le document migré dans
+       localStorage dès la lecture — la perte est immédiate et irréversible. */
+    d.items = subcategories.map(s => Object.assign({}, originals.get(s.id) || {}, {
+      id: s.id,
+      name: s.name,
+      category: s.categoryId,
+      unit: s.unit,
+      costPerUnit: s.defaultCost,
+      supplier: (s.suppliers && s.suppliers[0] && s.suppliers[0].supplierName) || '',
+      currentStock: s.currentStock != null ? +s.currentStock : 0,
+      parLevel: s.parLevel,
+      reorderLevel: s.reorderLevel,
+      usageThisWeek: s.usageThisWeek != null ? +s.usageThisWeek : 0,
+      theoreticalUsage: s.theoreticalUsage != null ? +s.theoreticalUsage : 0,
+      updatedAt: s.updatedAt,
+    }));
+    return d;
+  }
+
   function stSaveOverlay() {
     if (!stShowReal()) return;
     try {
-      localStorage.setItem(stOverlayKey(), JSON.stringify({
-        items: stUserItems, itemOv: stItemOverrides, delItems: [...stDeletedItems],
-        sups: stUserSuppliers, supOv: stSupOverrides, delSups: [...stDeletedSups],
-        cats: stUserCategories, stockOv: stStockOverrides,
-      }));
+      const doc = migrateStockDocV2({
+        schemaVersion: 2,
+        items: stUserItems,
+        itemOv: stItemOverrides,
+        delItems: [...stDeletedItems],
+        sups: stUserSuppliers,
+        supOv: stSupOverrides,
+        delSups: [...stDeletedSups],
+        cats: stUserCategories,
+        categories: stUserCategories,
+        stockOv: stStockOverrides,
+      });
+      localStorage.setItem(stOverlayKey(), JSON.stringify(doc));
     } catch (_) { /* quota plein → on ne casse pas la saisie en cours */ }
     try { window.dispatchEvent(new CustomEvent('kiwi-stock-changed', { detail: { venue: stOverlayScope() } })); } catch (_) {}
     const c = stCloud();
@@ -710,10 +789,18 @@
 
   function stOverlayRaw() {
     try {
-      const s = JSON.parse(localStorage.getItem(stOverlayKey()) || 'null');
-      if (s && typeof s === 'object') return s;
+      const raw = localStorage.getItem(stOverlayKey());
+      const s = JSON.parse(raw || 'null');
+      if (s && typeof s === 'object') {
+        const hadV2 = (s.schemaVersion || 1) >= 2 && Array.isArray(s.subcategories);
+        const migrated = migrateStockDocV2(s);
+        if (!hadV2 && stShowReal()) {
+          try { localStorage.setItem(stOverlayKey(), JSON.stringify(migrated)); } catch (_) {}
+        }
+        return migrated;
+      }
     } catch (_) {}
-    return { items: [], sups: [], cats: [], itemOv: {}, supOv: {}, stockOv: {}, delItems: [], delSups: [] };
+    return { schemaVersion: 2, items: [], subcategories: [], sups: [], cats: [], categories: [], itemOv: {}, supOv: {}, stockOv: {}, delItems: [], delSups: [] };
   }
 
   /* Union par identifiant (le défaut de cloud-doc.js) — SAUF les suppressions.
@@ -722,9 +809,12 @@
    * supprimé sur la tablette réapparaissait donc au premier envoi du portable,
    * en boucle. Deux suppressions s'additionnent, elles ne s'arbitrent pas. */
   function stMergeOverlay(mine, theirs) {
+    mine = migrateStockDocV2(mine);
+    theirs = migrateStockDocV2(theirs);
     const M = window.KiwiCloudDoc && window.KiwiCloudDoc.mergeDefault;
     if (!M || !theirs) return mine;
     const out = M(mine, theirs);
+    out.schemaVersion = 2;
     ['delItems', 'delSups'].forEach((k) => {
       const a = Array.isArray(mine && mine[k]) ? mine[k] : [];
       const b = Array.isArray(theirs && theirs[k]) ? theirs[k] : [];
@@ -739,6 +829,31 @@
         const other = out[k][id];
         if (!other || (+row?.updatedAt || 0) >= (+other?.updatedAt || 0)) out[k][id] = row;
       });
+    });
+    // Merge subcategories by id and updatedAt
+    const subMap = new Map();
+    (Array.isArray(theirs && theirs.subcategories) ? theirs.subcategories : []).forEach(s => {
+      if (s && s.id) subMap.set(String(s.id), s);
+    });
+    (Array.isArray(mine && mine.subcategories) ? mine.subcategories : []).forEach(s => {
+      if (!s || !s.id) return;
+      const other = subMap.get(String(s.id));
+      if (!other || (+s.updatedAt || 0) >= (+other.updatedAt || 0)) subMap.set(String(s.id), s);
+    });
+    out.subcategories = Array.from(subMap.values());
+    out.items = out.subcategories.map(s => {
+      const ov = (out.itemOv && out.itemOv[s.id]) || {};
+      return {
+        id: s.id,
+        name: ov.name != null ? String(ov.name) : s.name,
+        category: ov.category != null ? String(ov.category) : s.categoryId,
+        unit: ov.unit != null ? String(ov.unit) : s.unit,
+        costPerUnit: ov.costPerUnit != null ? +ov.costPerUnit : s.defaultCost,
+        supplier: ov.supplier != null ? String(ov.supplier) : ((s.suppliers && s.suppliers[0] && s.suppliers[0].supplierName) || ''),
+        parLevel: ov.parLevel != null ? +ov.parLevel : s.parLevel,
+        reorderLevel: ov.reorderLevel != null ? +ov.reorderLevel : s.reorderLevel,
+        updatedAt: Math.max(+s.updatedAt || 0, +ov.updatedAt || 0),
+      };
     });
     return out;
   }
@@ -762,7 +877,8 @@
       /* Un commerçant qui n'a rien saisi porte quand même les huit champs
        * vides : sans ce test, ouvrir la page suffisait à créer une ligne. */
       isEmpty: (d) => !d || !(
-        (d.items && d.items.length) || (d.sups && d.sups.length) || (d.cats && d.cats.length)
+        (d.items && d.items.length) || (d.subcategories && d.subcategories.length)
+        || (d.sups && d.sups.length) || (d.cats && d.cats.length)
         || (d.itemOv && Object.keys(d.itemOv).length) || (d.supOv && Object.keys(d.supOv).length)
         || (d.stockOv && Object.keys(d.stockOv).length)
         || (d.delItems && d.delItems.length) || (d.delSups && d.delSups.length)
@@ -786,6 +902,7 @@
     let s = null;
     try { s = JSON.parse(localStorage.getItem(stOverlayKey()) || 'null'); } catch (_) { return; }
     if (!s || typeof s !== 'object') return;
+    s = migrateStockDocV2(s);
     if (Array.isArray(s.items)) stUserItems = s.items.map(normalizeStockItem);
     if (Array.isArray(s.sups)) stUserSuppliers = s.sups;
     if (Array.isArray(s.cats)) stUserCategories = s.cats;

@@ -206,8 +206,8 @@ var SHELL = [
   /* One stock across owner dashboard and till. Catalog metadata is a cloud
      document; quantities are append-only movements, both usable offline. */
   '/assets/inventory-ledger.js?v=3',
-  '/assets/caisse-stock-sync.js?v=2',
-  '/assets/stock.js?v=3',
+  '/assets/caisse-stock-sync.js?v=3',
+  '/assets/stock.js?v=4',
   /* Le coût de revient. Dans la coquille parce que les tuiles Marge brute,
      Bénéfice brut et Coût matière du tableau de bord passent toutes par lui :
      sans lui hors ligne, elles retomberaient sur un tiret alors que le

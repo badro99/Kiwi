@@ -860,6 +860,7 @@ section('Whole-project regressions');
     'void-stock-test.js',
     'caisse-stock-test.mjs',
     'inventory-ledger-test.mjs',
+    'stock-costing-migration-test.mjs',
     'pairing-resolver-test.mjs',
     /* pairing-resolver vérifie qui LIT l'appairage ; celui-ci vérifie qu'il n'y
        a qu'un seul ÉCRIVAIN. La cuisine s'appaire sur la même route que la
