@@ -388,7 +388,7 @@
   /* ═══════════════════ PAYMENT LINK ═══════════════════ */
   handlers['payment-link'] = () => {
     let step = 'form';
-    /* The generated link is `kiwi.ma/p/<random>`, which nothing serves, the
+    /* The generated link is `kiwi-os.com/p/<random>`, which nothing serves, the
      * "QR" is a CSS stripe pattern rather than a real code, and the WhatsApp /
      * email / SMS share buttons only raise a toast. This control sits in the
      * dashboard header for EVERY merchant, so a real client would send a paying
@@ -466,7 +466,7 @@
     }
     function result() {
       const slug = Math.random().toString(36).slice(2, 9);
-      const link = `kiwi.ma/p/${slug}`;
+      const link = `kiwi-os.com/p/${slug}`;
       let expiryText;
       switch(data.expiry) {
         case 'none': expiryText = T.expiryValueNone; break;

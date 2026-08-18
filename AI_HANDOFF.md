@@ -148,7 +148,7 @@ The owner's command center, fully editable, trilingual, light+dark correct:
 - **Two GitHub remotes — every `main` commit must land on BOTH. Their remote NAMES reshuffle
   each session, so match by URL, not name:**
   - `github.com/zaka33333-hash/Kiwi` → **Cloudflare Pages `kiwi-maroc`** →
-    kiwi-maroc.pages.dev / app.kiwi.ma. **Auto-deploys on push** — this is where the live
+    kiwi-maroc.pages.dev / kiwi-os.com. **Auto-deploys on push** — this is where the live
     product AND the demo run. (This is the one that must never go stale.)
   - `github.com/badro99/Kiwi` → **GitHub Pages + the business partner's copy.**
   Push `main` to both by URL. If a push is rejected: `git fetch`, inspect `HEAD..<remote>/main`,

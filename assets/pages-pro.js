@@ -1666,7 +1666,7 @@ handlers['nav-conformite'] = () => {
   ];
   const audit = [
     ['14:02', 'Screening AML automatique', 'Système · 4 listes', 'ok'],
-    ['09:18', 'Export ledger anonymisé', 'badromail9@kiwi.ma', 'ok'],
+    ['09:18', 'Export ledger anonymisé', 'badromail9@kiwi-os.com', 'ok'],
     ['Hier 23:11', 'Rotation token webhook', 'Système · cron', 'ok'],
     ['Hier 18:44', 'Accès données client (RGPD art. 15)', 'Sara L. · demande satisfaite', 'ok'],
     ['22 avril', 'Audit trail exporté pour DGI', 'Comptable Hassani', 'ok'],

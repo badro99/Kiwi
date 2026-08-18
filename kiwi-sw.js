@@ -76,7 +76,7 @@ var SHELL = [
      établissement retombe sur la famille par défaut. */
   '/assets/trades.js?v=4',
   '/assets/interactive.js?v=8',
-  '/assets/features.js?v=2',
+  '/assets/features.js?v=3',
   '/assets/invoicing.css?v=5',
   '/assets/invoicing.js?v=3',
   '/assets/order-qr.js?v=2',
@@ -85,7 +85,7 @@ var SHELL = [
      entrée pré-cachée sans estampille ne répondrait jamais à la requête de la
      page (donc pas de hors-ligne), tandis qu'une estampille périmée ici
      re-servirait l'ancien fichier. Voir le commentaire dans dashboard.html. */
-  '/assets/venues.js?v=15',
+  '/assets/venues.js?v=16',
   '/assets/phone.js?v=1',
   '/assets/trade-workspace-schema.js?v=4',
   '/assets/trade-workspaces.js?v=3',
@@ -225,7 +225,7 @@ var SHELL = [
   '/assets/employee-trade-shell.js?v=2',
   '/assets/planning-core.js?v=8',
   '/assets/planning-ui.css?v=10',
-  '/assets/team.js?v=275',
+  '/assets/team.js?v=276',
   '/assets/restaurant-menu-workspace.js?v=2',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).
   '/assets/catalog-import.js',

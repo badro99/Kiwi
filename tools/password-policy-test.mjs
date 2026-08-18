@@ -65,7 +65,7 @@ check('Digit-only password rejected with "common"', passwordProblem('98765432101
 check('Single repeated character rejected with "common"', passwordProblem('aaaaaaaaaaaa') === 'common');
 
 // 3. Personal context checks ('personal') with squashing (spaces/dots stripped)
-const ctxSignup = { email: 'karim.atlas@kiwi.ma', business: 'Café Atlas' };
+const ctxSignup = { email: 'karim.atlas@kiwi-os.com', business: 'Café Atlas' };
 check('Password containing email local part rejected with "personal"',
   passwordProblem('my-karim.atlas-pass', ctxSignup) === 'personal');
 check('Password containing business name rejected with "personal"',

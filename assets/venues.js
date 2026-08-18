@@ -2742,7 +2742,7 @@
       transferToastD: 'En attente de leur confirmation WhatsApp. Yasmine est en copie.',
       callToast: 'Appel demandé, Yasmine vous rappelle',
       callToastD: 'Créneau confirmé par WhatsApp d\'ici 30 min.',
-      apiToast: 'docs.kiwi.ma/api',
+      apiToast: 'kiwi-os.com/api',
       apiToastD: 'Référence complète : endpoints, webhooks, exports SFTP.',
     },
     en: {
@@ -2763,7 +2763,7 @@
       transferToastD: 'Awaiting their WhatsApp confirmation. Yasmine is cc\'d.',
       callToast: 'Call requested, Yasmine will call you back',
       callToastD: 'Slot confirmed by WhatsApp within 30 min.',
-      apiToast: 'docs.kiwi.ma/api',
+      apiToast: 'kiwi-os.com/api',
       apiToastD: 'Full reference: endpoints, webhooks, SFTP exports.',
     },
     ar: {
@@ -2784,7 +2784,7 @@
       transferToastD: 'في انتظار تأكيدهما عبر واتساب. ياسمين في النسخة.',
       callToast: 'تم طلب المكالمة، ياسمين ستتصل بك',
       callToastD: 'تأكيد الموعد عبر واتساب خلال 30 دقيقة.',
-      apiToast: 'docs.kiwi.ma/api',
+      apiToast: 'kiwi-os.com/api',
       apiToastD: 'مرجع كامل: النقاط، الويبهوكس، تصدير SFTP.',
     },
   };

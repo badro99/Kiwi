@@ -156,8 +156,8 @@
     "sha": "338273c601e89f59"
   },
   "assets/features.js": {
-    "v": "2",
-    "sha": "8445e8fc6e209177"
+    "v": "3",
+    "sha": "d64db7f9e4791366"
   },
   "assets/floorplan-core.js": {
     "v": "2049",
@@ -218,10 +218,6 @@
   "assets/kitchen-relay.js": {
     "v": "3",
     "sha": "a2750f30b03e3002"
-  },
-  "assets/landing-mobile.css": {
-    "v": "5",
-    "sha": "353ee0e439fd408e"
   },
   "assets/landing/components.css": {
     "v": "2",
@@ -284,8 +280,8 @@
     "sha": "95b24bb0b60af886"
   },
   "assets/pages-pro.js": {
-    "v": "2061",
-    "sha": "4a25e4240b3ace16"
+    "v": "2062",
+    "sha": "0a2ce0081d029077"
   },
   "assets/pairing-commit.js": {
     "v": "1",
@@ -536,8 +532,8 @@
     "sha": "4b1bb42e4b76b744"
   },
   "assets/team.js": {
-    "v": "275",
-    "sha": "9e45a533bd9346a0"
+    "v": "276",
+    "sha": "251f71e44ee183cb"
   },
   "assets/tenant-purge.js": {
     "v": "1",
@@ -572,8 +568,8 @@
     "sha": "dfa3b4d5ebb25d51"
   },
   "assets/venues.js": {
-    "v": "15",
-    "sha": "91fb773820c932d0"
+    "v": "16",
+    "sha": "88e0db822d769dde"
   },
   "assets/vexel-neon.js": {
     "v": "2046",

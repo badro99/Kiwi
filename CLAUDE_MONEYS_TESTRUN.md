@@ -277,7 +277,7 @@ useful, so it stays**; for a real merchant the recipient picker and payout butto
 replaced with an honest note pointing them at their usual channel.
 
 ### 🔴 #18 — "Lien de paiement" hands the client a URL that 404s (FIXED)
-In the dashboard header for **every** merchant. Generated `kiwi.ma/p/<random>` (nothing
+In the dashboard header for **every** merchant. Generated `kiwi-os.com/p/<random>` (nothing
 serves `/p/`), the "QR" is a CSS stripe pattern rather than a scannable code, and the
 WhatsApp/email/SMS share buttons only toast. A merchant would send a paying customer a
 dead link. Gated to an honest "bientôt" for real merchants.
