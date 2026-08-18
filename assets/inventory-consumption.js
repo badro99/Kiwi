@@ -90,32 +90,55 @@
     if (!I || !I.history) return [];
     var rows = (I.history(itemId) || []).slice().reverse(); // Chronological order
     var lots = [];
-    var depletions = 0;
 
     for (var i = 0; i < rows.length; i++) {
       var m = rows[i];
       if (!m || m.itemId !== itemId) continue;
       var q = +m.qty || 0;
-      if (q > 0) {
-        if (m.reason === 'opening' || m.reason === 'receipt') {
-          var rank = m.meta && m.meta.rank != null ? +m.meta.rank : (m.reason === 'opening' ? 999 : 50);
-          lots.push({
-            id: m.id,
-            initialQty: q,
-            remainingQty: q,
-            unitCost: m.unitCost != null && Number.isFinite(+m.unitCost) ? +m.unitCost : null,
-            rank: rank,
-            ts: +m.occurredTs || 0,
-            meta: m.meta || null,
-            supplierName: (m.meta && m.meta.supplierName) || null,
-          });
-        } else {
-          // Positive quantity that does not open an inbound lot (e.g. sale-reversal, return,
-          // un-voided correction) reduces prior depletions so restored stock restores lot balances.
-          depletions = Math.max(0, Math.round((depletions - q) * 1000) / 1000);
-        }
+      if (!(q !== 0)) continue;
+
+      if (q > 0 && (m.reason === 'opening' || m.reason === 'receipt')) {
+        var rank = m.meta && m.meta.rank != null ? +m.meta.rank : (m.reason === 'opening' ? 999 : 50);
+        lots.push({
+          id: m.id,
+          initialQty: q,
+          remainingQty: q,
+          unitCost: m.unitCost != null && Number.isFinite(+m.unitCost) ? +m.unitCost : null,
+          rank: rank,
+          ts: +m.occurredTs || 0,
+          meta: m.meta || null,
+          supplierName: (m.meta && m.meta.supplierName) || null,
+        });
       } else if (q < 0) {
-        depletions = Math.round((depletions + Math.abs(q)) * 1000) / 1000;
+        // Deplete from available active lots sorted by rank ASC, ts ASC
+        var needed = Math.abs(q);
+        var active = lots.filter(function (l) { return l.remainingQty > 0; });
+        active.sort(function (a, b) {
+          if (a.rank !== b.rank) return a.rank - b.rank;
+          return a.ts - b.ts;
+        });
+        for (var j = 0; j < active.length && needed > 0; j++) {
+          var lot = active[j];
+          var take = Math.min(lot.remainingQty, needed);
+          lot.remainingQty = Math.round((lot.remainingQty - take) * 1000) / 1000;
+          needed = Math.round((needed - take) * 1000) / 1000;
+        }
+      } else if (q > 0) {
+        // Reversal / restitution: restore to lot matching frozen unitCost (or most recently depleted lot)
+        var restored = q;
+        var candidates = lots.filter(function (l) {
+          return l.remainingQty < l.initialQty && (m.unitCost == null || l.unitCost === m.unitCost);
+        });
+        if (!candidates.length) {
+          candidates = lots.filter(function (l) { return l.remainingQty < l.initialQty; });
+        }
+        candidates.sort(function (a, b) { return b.ts - a.ts; });
+        for (var k = 0; k < candidates.length && restored > 0; k++) {
+          var cLot = candidates[k];
+          var canAdd = Math.min(cLot.initialQty - cLot.remainingQty, restored);
+          cLot.remainingQty = Math.round((cLot.remainingQty + canAdd) * 1000) / 1000;
+          restored = Math.round((restored - canAdd) * 1000) / 1000;
+        }
       }
     }
 
@@ -124,14 +147,6 @@
       if (a.rank !== b.rank) return a.rank - b.rank;
       return a.ts - b.ts;
     });
-
-    // Replay past net depletions against sorted lots
-    for (var j = 0; j < lots.length && depletions > 0; j++) {
-      var lot = lots[j];
-      var take = Math.min(lot.remainingQty, depletions);
-      lot.remainingQty = Math.round((lot.remainingQty - take) * 1000) / 1000;
-      depletions = Math.round((depletions - take) * 1000) / 1000;
-    }
 
     return lots.filter(function (l) { return l.remainingQty > 0; });
   }
@@ -233,5 +248,104 @@
     return nrows;
   }
 
-  window.KiwiInventoryConsumption = { record: record, reverse: reverse, recipeLines: recipeLines, deriveLots: deriveLots, allocateCost: allocateCost };
+  function reverseVoid(voidRecord, note) {
+    var I = window.KiwiInventory;
+    if (!I || !I.isReal?.() || !voidRecord) return 0;
+    // Waste voids (is_waste = 1): the loss stands, zero stock movements.
+    if (voidRecord.isWaste || voidRecord.is_waste) return 0;
+
+    var orderId = String(voidRecord.orderId || voidRecord.order_id || voidRecord.ref || '').slice(0, 100);
+    var voidId = String(voidRecord.voidId || voidRecord.void_id || voidRecord.id || '').slice(0, 80);
+    var itemId = String(voidRecord.itemId || voidRecord.item_id || voidRecord.lineId || '');
+    var voidQty = Math.max(0, n(voidRecord.qty || voidRecord.quantity || 1));
+    if (!voidId || !(voidQty > 0)) return 0;
+
+    var merchant = I.merchant?.() || '';
+    var history = (I.history && I.history()) || [];
+
+    // Match original sale movements by order reference and item identity
+    var saleRows = history.filter(function (r) {
+      if (r.reason !== 'sale' || r.refId !== orderId) return false;
+      if (!itemId) return true;
+      return r.itemId === itemId || (r.meta && (r.meta.sourceItemId === itemId || r.meta.recipe === itemId));
+    });
+
+    var written = 0;
+    if (saleRows.length > 0) {
+      // Reverse matching sale movements unwinding in reverse depletion order
+      var remainingVoidQty = voidQty;
+      for (var i = saleRows.length - 1; i >= 0 && remainingVoidQty > 0; i--) {
+        var sRow = saleRows[i];
+        var sQty = Math.abs(+sRow.qty || 0);
+        if (!(sQty > 0)) continue;
+
+        var alreadyReversed = history.reduce(function (sum, r) {
+          return (r.reversalOf === sRow.id && r.reason === 'sale-reversal') ? sum + (+r.qty || 0) : sum;
+        }, 0);
+        var availableToReverse = Math.max(0, Math.round((sQty - alreadyReversed) * 1000) / 1000);
+        if (!(availableToReverse > 0)) continue;
+
+        var revQty = Math.min(availableToReverse, remainingVoidQty);
+        var part = (sRow.meta && sRow.meta.part != null) ? sRow.meta.part : i;
+        var voidMvId = 'inv-void-' + hash([merchant, voidId, sRow.itemId, part].join('|'));
+
+        var m = I.add({
+          id: voidMvId,
+          itemId: sRow.itemId,
+          variantId: sRow.variantId || '',
+          locationId: sRow.locationId || 'principal',
+          qty: revQty,
+          reason: 'sale-reversal',
+          refType: 'kitchen-void',
+          refId: orderId,
+          unitCost: sRow.unitCost != null ? sRow.unitCost : null, // Frozen cost from the original sale movement!
+          occurredTs: Math.max(Date.now(), (sRow && sRow.occurredTs ? +sRow.occurredTs + 1 : Date.now())),
+          note: note || (voidRecord.reason ? `Annulation cuisine · ${voidRecord.reason}` : 'Annulation cuisine'),
+          reversalOf: sRow.id,
+          meta: Object.assign({}, sRow.meta || {}, { voidId: voidId, voidReason: voidRecord.reason || '' }),
+        });
+        if (m) {
+          written++;
+          remainingVoidQty = Math.round((remainingVoidQty - revQty) * 1000) / 1000;
+        }
+      }
+    } else {
+      // Remote device fallback / sale movement not in local ledger:
+      // Derive recipe ingredients from KiwiCost.doc() with deterministic void IDs
+      var d = doc();
+      var ingredients = itemId ? recipeLines(itemId, voidQty, d, 0, []) : null;
+      if (!itemId && voidRecord.name) {
+        var alias = recipeByName(voidRecord.name, d);
+        ingredients = alias ? recipeLines(alias, voidQty, d, 0, []) : null;
+        if (alias) itemId = alias;
+      }
+      var targets = ingredients || (itemId ? [{ itemId: itemId, qty: voidQty, direct: true }] : []);
+      targets.forEach(function (x, part) {
+        var voidMvId = 'inv-void-' + hash([merchant, voidId, x.itemId, part || 0].join('|'));
+        var origSaleMvId = movementId(orderId, (voidRecord.lineIndex || 0), x.itemId, part || 0);
+        var baseCost = x.direct
+          ? (voidRecord.unitCost != null ? n(voidRecord.unitCost) : null)
+          : (x.unitCost != null ? n(x.unitCost) : null);
+        var m = I.add({
+          id: voidMvId,
+          itemId: x.itemId,
+          variantId: '',
+          locationId: 'principal',
+          qty: x.qty,
+          reason: 'sale-reversal',
+          refType: 'kitchen-void',
+          refId: orderId,
+          unitCost: voidRecord.unitCost != null ? n(voidRecord.unitCost) : baseCost,
+          occurredTs: Date.now(),
+          note: note || (voidRecord.reason ? `Annulation cuisine · ${voidRecord.reason}` : 'Annulation cuisine'),
+          reversalOf: origSaleMvId,
+          meta: { sourceItemId: itemId, recipe: x.recipe || '', voidId: voidId, line: voidRecord.lineIndex || 0, part: part || 0 },
+        });
+        if (m) written++;
+      });
+    }
+    return written;
+  }
+
+  window.KiwiInventoryConsumption = { record: record, reverse: reverse, reverseVoid: reverseVoid, recipeLines: recipeLines, deriveLots: deriveLots, allocateCost: allocateCost };
 })();

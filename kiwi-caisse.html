@@ -4742,7 +4742,7 @@
   <script src="assets/vertical-state.js" defer></script>
   <script src="assets/image-proof.js" defer></script>
   <script src="assets/operational-print.js" defer></script>
-  <script src="assets/inventory-ledger.js?v=3" defer></script>
+  <script src="assets/inventory-ledger.js?v=4" defer></script>
   <!-- Catalogue, seuils, coûts et quantités : exactement le même stock que le
        tableau de bord. Les quantités passent par le registre append-only ; ce
        pont ne maintient jamais un second snapshot propre à la caisse. -->
@@ -4764,7 +4764,7 @@
   <!-- Coûts privés + recettes : nécessaires pour transformer une vente de
        produit en sorties d'ingrédients sans exposer les prix d'achat. -->
   <script src="assets/cost.js?v=3" defer></script>
-  <script src="assets/inventory-consumption.js?v=6" defer></script>
+  <script src="assets/inventory-consumption.js?v=7" defer></script>
   <script src="assets/procurement.js" defer></script>
   <!-- Tenant-scoped operational outbox: receipt delivery and device health are
        server-confirmed or explicitly blocked, never presentation-only. -->
@@ -4777,7 +4777,7 @@
        pose le bon sur le serveur (file de secours hors ligne comprise) pour que
        kiwi-cuisine.html l'affiche. Après caisse-pairing.js : il lit le magasin
        appairé. -->
-  <script src="assets/kitchen-relay.js?v=3" defer></script>
+  <script src="assets/kitchen-relay.js?v=4" defer></script>
   <script src="assets/kitchen-print-queue.js?v=2" defer></script>
   <script src="assets/food-production-print.js?v=1" defer></script>
   <!-- OrderPro · orders placed on a customer's phone arrive here over WiFi;

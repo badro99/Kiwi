@@ -892,6 +892,10 @@ export async function onRequestPost(context) {
         directVoid: true,
         orderId: targetOrder.id,
         table: targetOrder.table_no,
+        itemId: targetLine.id || lineId,
+        itemName: targetLine.name || lineId,
+        qty: qtyToVoid,
+        isWaste: isWaste,
         remainingLines: lines,
         total: newTotal,
       });
@@ -953,11 +957,15 @@ export async function onRequestPost(context) {
     try { lines = JSON.parse(targetOrder.lines) || []; } catch (_) { lines = []; }
 
     let voidIdFound = null;
+    let voidItemFound = null;
+    let voidQtyFound = 1;
     lines = lines.map(line => {
       if (line && line.voidAlert) {
         voidIdFound = line.voidAlert.id;
+        voidItemFound = line.id || line.uid || line.name;
+        voidQtyFound = Math.max(1, Number(line.voidAlert.qty) || 1);
         if (action === 'accept') {
-          const vQty = Math.max(1, Number(line.voidAlert.qty) || 1);
+          const vQty = voidQtyFound;
           if (line.qty > vQty) {
             return { ...line, qty: line.qty - vQty, voidAlert: null };
           } else {
@@ -992,6 +1000,10 @@ export async function onRequestPost(context) {
       ok: true,
       action: action === 'accept' ? 'accepted' : 'rejected',
       orderId: targetOrder.id,
+      voidId: voidIdFound,
+      itemId: voidItemFound,
+      qty: voidQtyFound,
+      isWaste: isWaste !== null ? isWaste : 0,
       table: targetOrder.table_no,
       total: newTotal,
       lines,

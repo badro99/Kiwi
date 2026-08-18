@@ -202,7 +202,16 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ merchant: m, voidLine: payload }),
       cache: 'no-store',
-    }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; });
+    }).then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (res) {
+        if (res && res.directVoid && !payload.isWaste && !res.isWaste) {
+          try {
+            window.KiwiInventoryConsumption?.reverseVoid?.(res);
+          } catch (_) {}
+        }
+        return res;
+      })
+      .catch(function () { return null; });
   }
 
   /* Acquitter une demande d'annulation (chef valide l'arrêt ou dit "déjà prêt") */
@@ -214,7 +223,16 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ merchant: m, ackVoid: { orderId: orderId, action: action || 'accept', isWaste: isWaste } }),
       cache: 'no-store',
-    }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; });
+    }).then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (res) {
+        if (res && res.action === 'accepted' && !res.isWaste && !isWaste) {
+          try {
+            window.KiwiInventoryConsumption?.reverseVoid?.(res);
+          } catch (_) {}
+        }
+        return res;
+      })
+      .catch(function () { return null; });
   }
 
   // Le réseau revient : on vide la file sans attendre le prochain quart d'heure.

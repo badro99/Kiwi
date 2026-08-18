@@ -126,6 +126,7 @@
       id: 'inv-open-' + hash(seed), itemId: itemId, variantId: opts.variantId,
       locationId: opts.locationId, qty: qty, reason: 'opening', unitCost: opts.unitCost,
       refType: 'opening', refId: itemId, note: opts.note || 'Solde initial migré',
+      occurredTs: opts.occurredTs,
     });
   }
   function snapshot() {

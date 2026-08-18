@@ -196,12 +196,12 @@
     "sha": "b0e0530634e33ee2"
   },
   "assets/inventory-consumption.js": {
-    "v": "6",
-    "sha": "bb9a7070a08439ac"
+    "v": "7",
+    "sha": "754814da7055fab2"
   },
   "assets/inventory-ledger.js": {
-    "v": "3",
-    "sha": "47bd012249ddba28"
+    "v": "4",
+    "sha": "e2ef9f5ade7b41d3"
   },
   "assets/invoicing.css": {
     "v": "5",
@@ -216,8 +216,8 @@
     "sha": "4a31113d2bbb065e"
   },
   "assets/kitchen-relay.js": {
-    "v": "3",
-    "sha": "a2750f30b03e3002"
+    "v": "4",
+    "sha": "d66f67e7bc8d4e4b"
   },
   "assets/landing/components.css": {
     "v": "2",

@@ -243,5 +243,110 @@ const inScopeNoTable = await postQueue({
 }, employeeCookie);
 check('voidLine with omitted table on in-scope order resolves and succeeds', inScopeNoTable.status === 200 && inScopeNoTable.data.ok === true);
 
+// 6. Stock Restock & Lot Integrity on Kitchen Voids
+import vm from 'node:vm';
+const memStore = new Map();
+const lsMock = {
+  getItem: (k) => memStore.get(k) || null,
+  setItem: (k, v) => memStore.set(k, String(v)),
+  removeItem: (k) => memStore.delete(k),
+};
+const win = {
+  localStorage: lsMock,
+  addEventListener: () => {},
+  KiwiEnv: { isReal: () => true },
+  KiwiPlatform: { isPaired: () => true, pairedMerchant: () => MERCHANT },
+  KiwiCost: {
+    doc: () => ({
+      ingredients: [
+        { id: 'stock:patty', stockId: 'patty-beef', useCost: 92 },
+      ],
+      recipes: {
+        'item-burger': {
+          status: 'complete', name: 'Cheeseburger', yield: 1,
+          lines: [{ ing: 'stock:patty', stock: 'patty-beef', qty: 1, stockQty: 1 }],
+        },
+      },
+    }),
+  },
+};
+win.window = win;
+const vmCtx = vm.createContext({
+  window: win, localStorage: lsMock, console, Date, Math, JSON, Map, Set, Promise, Array, Object, String, Number, RegExp,
+  setTimeout: () => 0, setInterval: () => 0, clearTimeout: () => {},
+});
+vm.runInContext(fs.readFileSync(path.join(ROOT, 'assets/inventory-ledger.js'), 'utf8'), vmCtx);
+vm.runInContext(fs.readFileSync(path.join(ROOT, 'assets/inventory-consumption.js'), 'utf8'), vmCtx);
+
+const I = win.KiwiInventory;
+const C = win.KiwiInventoryConsumption;
+
+const t0 = 1770000000000;
+// 6a. Seed initial lot: 10 units of beef patty @ 92 MAD
+I.ensureOpening('patty-beef', 10, { unitCost: 92, occurredTs: t0 });
+check('Initial opening lot seeded with 10 units @ 92 MAD', I.balance('patty-beef') === 10);
+
+// 6b. Record sale of 2 cheeseburgers (consumed @ frozen cost 92 MAD)
+C.record({
+  id: 'ord-v1', ref: 'ord-v1', time: t0 + 1000,
+  lines: [{ itemId: 'item-burger', name: 'Cheeseburger', qty: 2 }],
+});
+check('Sale of 2 burgers deducts 2 patties (balance 8)', I.balance('patty-beef') === 8);
+
+// 6c. Receive subsequent receipt lot: 10 units @ 110 MAD (higher cost)
+I.add({
+  id: 'inv-rec-1', itemId: 'patty-beef', qty: 10, reason: 'receipt', unitCost: 110,
+  refType: 'receipt', refId: 'rec-1', occurredTs: t0 + 2000,
+  meta: { rank: 1, supplierName: 'Boucherie Atlas' },
+});
+check('Receipt adds 10 units @ 110 MAD (balance 18)', I.balance('patty-beef') === 18);
+
+// 6d. Execute non-waste void (qty 1): must restore to frozen 92 MAD lot, NOT 110 MAD lot
+const voidCount = C.reverseVoid({
+  voidId: 'voi-test-101', orderId: 'ord-v1', itemId: 'item-burger', qty: 1, isWaste: 0, reason: 'client_change',
+});
+check('reverseVoid writes 1 reversal movement for non-waste void', voidCount === 1);
+check('Stock balance restored to 19 (8 + 10 + 1)', I.balance('patty-beef') === 19);
+
+const voidMovements = I.history('patty-beef').filter(r => r.refType === 'kitchen-void');
+check('Reversal movement carries frozen unitCost of 92 MAD (not 110)',
+  voidMovements.length === 1 && voidMovements[0].unitCost === 92 && voidMovements[0].qty === 1);
+
+const lotsAfterVoid = C.deriveLots('patty-beef');
+const lot92 = lotsAfterVoid.find(l => l.unitCost === 92);
+const lot110 = lotsAfterVoid.find(l => l.unitCost === 110);
+check('Lot 92 MAD restored to 9 units remaining', lot92 && lot92.remainingQty === 9);
+check('Lot 110 MAD remains untouched at 10 units', lot110 && lot110.remainingQty === 10);
+
+// 6e. Waste void (isWaste = 1): zero stock movements, loss stands
+const wasteVoidCount = C.reverseVoid({
+  voidId: 'voi-test-waste', orderId: 'ord-v1', itemId: 'item-burger', qty: 1, isWaste: 1, reason: 'kitchen_waste',
+});
+check('Waste void (isWaste = 1) produces zero stock movements', wasteVoidCount === 0);
+check('Stock balance remains at 19 after waste void', I.balance('patty-beef') === 19);
+
+// 6f. Idempotency: re-dispatching same voidId produces zero duplicate movements
+const dupVoidCount = C.reverseVoid({
+  voidId: 'voi-test-101', orderId: 'ord-v1', itemId: 'item-burger', qty: 1, isWaste: 0,
+});
+check('Duplicate reverseVoid call is idempotent (0 new rows)', dupVoidCount === 0 || I.history('patty-beef').filter(r => r.id === voidMovements[0].id).length === 1);
+check('Stock balance remains 19 without double-restocking', I.balance('patty-beef') === 19);
+
+// 6g. Remote device derivation without local original sale movement
+const remoteVoidCount = C.reverseVoid({
+  voidId: 'voi-remote-888', orderId: 'ord-remote-999', itemId: 'item-burger', qty: 1, isWaste: 0, lineIndex: 0,
+});
+check('Remote device derives recipe reversal with deterministic ID', remoteVoidCount === 1);
+const remoteMv = I.history('patty-beef').find(r => r.meta && r.meta.voidId === 'voi-remote-888');
+check('Remote void movement created with correct item and qty', remoteMv && remoteMv.itemId === 'patty-beef' && remoteMv.qty === 1);
+
+function fnv1a(s) {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return (h >>> 0).toString(36);
+}
+const expectedRemoteId = 'inv-void-' + fnv1a([MERCHANT, 'voi-remote-888', 'patty-beef', 0].join('|'));
+check('Remote void movement ID is deterministic and matches formula', remoteMv && remoteMv.id === expectedRemoteId);
+
 console.log(failures ? `\n✗ ${failures} failure(s)\n` : `\n✓ All kitchen void protocol behavioural checks green.\n`);
 process.exitCode = failures ? 1 : 0;
