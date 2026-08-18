@@ -486,6 +486,81 @@ ok('Full coverage with null default returns exact lot cost (95.00)', costPartial
     lost.length ? 'champs detruits : ' + lost.join(', ') : '');
   ok('stMergeOverlay · le merge ne fuit pas la forme v2 dans l article plat', !('suppliers' in kept) && !('defaultCost' in kept));
 }
-console.log(`✓ stock costing Phase 1 & Phase 2 (${pass} controls: v2 migration, subcategories, zero field loss, retail direct depletions, historical stability, v1 merge, multi-supplier ranked depletion, reversal restoration, partial coverage honesty)`);
+
+/* ── 15. Caisse Reception Path Preserves Supplier & Rank (Blocking §4 Guard) ───
+ * KiwiCaisseStock.move() must accept and forward meta.
+ * resolveSupplierCard() must resolve existing card ranks (e.g. rank 2 for Copag)
+ * and append new suppliers at the end of the ranking (rank 3), NEVER defaulting to 1.
+ * updateSupplierPrice() must update card defaultPrice while leaving sub.defaultCost alone. */
+
+// Setup multi-supplier subcategory for testing
+const butterSub = CaisseStock.snapshot().subcategories?.find((s) => s.id === 'inv-butter');
+if (butterSub) {
+  butterSub.defaultCost = 70;
+  butterSub.suppliers = [
+    { id: 'sup-danone', supplierName: 'Centrale Danone', rank: 1, defaultPrice: 70, factor: 1 },
+    { id: 'sup-copag', supplierName: 'Copag', rank: 2, defaultPrice: 95, factor: 1 },
+  ];
+  CaisseStock.updateItem('inv-butter', { suppliers: butterSub.suppliers });
+}
+
+// 1. Test resolveSupplierCard for existing rank 2 supplier
+const copagCard = CaisseStock.resolveSupplierCard('inv-butter', 'Copag');
+ok('resolveSupplierCard resolves rank 2 for Copag', copagCard && copagCard.rank === 2, `got rank ${copagCard?.rank}`);
+ok('resolveSupplierCard resolves card.id sup-copag', copagCard && copagCard.id === 'sup-copag');
+
+// 2. Test resolveSupplierCard for brand new supplier (appended at rank 3, not 1!)
+const newCard = CaisseStock.resolveSupplierCard('inv-butter', 'Laiterie Doukkala');
+ok('resolveSupplierCard appends unknown supplier at rank 3 (not rank 1)', newCard && newCard.rank === 3, `got rank ${newCard?.rank}`);
+
+// 3. Book a reception through CaisseStock for Copag @ 98 MAD/kg
+const preDefaultCost = CaisseStock.snapshot().subcategories?.find((s) => s.id === 'inv-butter')?.defaultCost;
+const caisseMoveRes = CaisseStock.move('inv-butter', 10, 'receipt', 'caisse-rcpt-copag', 98, {
+  supplierId: copagCard.id,
+  supplierName: 'Copag',
+  rank: copagCard.rank,
+  receiptRef: 'caisse-rcpt-copag',
+});
+ok('CaisseStock.move returned movement', caisseMoveRes && caisseMoveRes.id);
+
+const caisseRcptMvt = Inv.history('inv-butter').find((m) => m.refId === 'caisse-rcpt-copag');
+ok('Caisse reception movement carries meta', caisseRcptMvt && caisseRcptMvt.meta && typeof caisseRcptMvt.meta === 'object');
+ok('Caisse reception preserves supplierName Copag', caisseRcptMvt && caisseRcptMvt.meta && caisseRcptMvt.meta.supplierName === 'Copag');
+ok('Caisse reception preserves rank 2 for Copag', caisseRcptMvt && caisseRcptMvt.meta && caisseRcptMvt.meta.rank === 2);
+ok('Caisse reception preserves frozen unitCost 98', caisseRcptMvt && caisseRcptMvt.unitCost === 98);
+
+// 4. Update supplier price through updateSupplierPrice
+CaisseStock.updateSupplierPrice('inv-butter', 'Copag', 98);
+const postSub = CaisseStock.snapshot().subcategories?.find((s) => s.id === 'inv-butter');
+ok('Subcategory defaultCost is preserved at baseline (NOT overwritten to 98)', postSub && postSub.defaultCost === preDefaultCost, `got defaultCost ${postSub?.defaultCost}`);
+const postCopag = postSub && postSub.suppliers?.find((s) => s.supplierName === 'Copag');
+ok('Copag card defaultPrice is updated to 98', postCopag && postCopag.defaultPrice === 98, `got defaultPrice ${postCopag?.defaultPrice}`);
+
+// 5. Verify deriveLots places Copag lot at rank 2 (after rank 1)
+const butterLots = Consumption.deriveLots('inv-butter');
+const copagLot = butterLots.find((l) => l.id === caisseMoveRes.id);
+ok('deriveLots on caisse reception assigns rank 2 to Copag (not rank 1)', copagLot && copagLot.rank === 2, `got rank ${copagLot?.rank}`);
+ok('deriveLots on caisse reception preserves unitCost 98', copagLot && copagLot.unitCost === 98);
+
+// 6. Test blank/unattributed supplier handling (falls back to rank 999, never rank 1)
+const blankCard = CaisseStock.resolveSupplierCard('inv-butter', '');
+ok('resolveSupplierCard with blank supplier returns null', blankCard === null);
+
+const unattributedRank = blankCard && blankCard.rank != null ? blankCard.rank : 999;
+ok('Unattributed supplier resolution falls back to sentinel rank 999 (not rank 1)', unattributedRank === 999, `got rank ${unattributedRank}`);
+
+const unattributedMove = CaisseStock.move('inv-butter', 5, 'receipt', 'caisse-rcpt-anon', 70, {
+  supplierId: '',
+  supplierName: '',
+  rank: unattributedRank,
+  receiptRef: 'caisse-rcpt-anon',
+});
+const anonLots = Consumption.deriveLots('inv-butter');
+const anonLot = anonLots.find((l) => l.id === unattributedMove?.id);
+ok('deriveLots places unattributed caisse reception at rank 999 (tail lot)', anonLot && anonLot.rank === 999, `got rank ${anonLot?.rank}`);
+
+console.log(`✓ stock costing Phase 1, 2 & 3.4 (${pass} controls: v2 migration, subcategories, zero field loss, retail direct depletions, historical stability, v1 merge, multi-supplier ranked depletion, reversal restoration, partial coverage honesty, caisse reception path, card rank resolution, card defaultPrice isolation, unattributed supplier sentinel rank 999)`);
+
+
 
 

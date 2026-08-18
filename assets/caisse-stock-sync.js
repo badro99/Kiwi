@@ -266,7 +266,16 @@
       .map(function (row) { return Object.assign({}, row, d.supOv[row.id] || {}); });
   }
   function categories() { return (read().cats || []).slice(); }
-  function snapshot() { return { items: materialize(), suppliers: suppliers(), categories: categories() }; }
+  function snapshot() {
+    var d = read();
+    return {
+      schemaVersion: d.schemaVersion,
+      items: materialize(),
+      suppliers: suppliers(),
+      categories: categories(),
+      subcategories: (d.subcategories || []).slice(),
+    };
+  }
 
   function addItem(raw) {
     raw = raw || {}; var d = read(); var now = Date.now();
@@ -323,6 +332,7 @@
     if (patch.par != null || patch.parLevel != null) ov.parLevel = Math.max(0, +(patch.par != null ? patch.par : patch.parLevel) || 0);
     if (patch.reorder != null || patch.reorderLevel != null) ov.reorderLevel = Math.max(0, +(patch.reorder != null ? patch.reorder : patch.reorderLevel) || 0);
     if (patch.cost != null || patch.costPerUnit != null) ov.costPerUnit = Math.max(0, +(patch.cost != null ? patch.cost : patch.costPerUnit) || 0);
+    if (patch.suppliers != null && Array.isArray(patch.suppliers)) ov.suppliers = patch.suppliers.slice();
     d.itemOv[id] = ov;
     var sub = (d.subcategories || []).find(function (s) { return s.id === id; });
     if (sub) {
@@ -332,13 +342,14 @@
       if (patch.cost != null || patch.costPerUnit != null) sub.defaultCost = Math.max(0, +(patch.cost != null ? patch.cost : patch.costPerUnit) || 0);
       if (patch.par != null || patch.parLevel != null) sub.parLevel = Math.max(0, +(patch.par != null ? patch.par : patch.parLevel) || 0);
       if (patch.reorder != null || patch.reorderLevel != null) sub.reorderLevel = Math.max(0, +(patch.reorder != null ? patch.reorder : patch.reorderLevel) || 0);
+      if (patch.suppliers != null && Array.isArray(patch.suppliers)) sub.suppliers = patch.suppliers.slice();
       sub.updatedAt = Date.now();
     }
     save(d);
     if (patch.stock != null) count(id, Math.max(0, +patch.stock || 0), 'caisse-edit');
     return true;
   }
-  function move(id, qty, reason, refId, unitCost) {
+  function move(id, qty, reason, refId, unitCost, meta) {
     qty = Math.round((+qty || 0) * 1000) / 1000;
     if (!id || !qty || !window.KiwiInventory) return null;
     var it = materialize().find(function (row) { return row.id === String(id); });
@@ -347,6 +358,7 @@
       refId: String(refId || ('caisse-' + Date.now().toString(36))),
       note: 'Mouvement saisi depuis la caisse',
       unitCost: unitCost == null ? (it ? it.cost || null : null) : unitCost,
+      meta: meta || null,
     });
   }
   function count(id, value, refId) {
@@ -383,6 +395,55 @@
      a newly paired till cannot stay attached to the empty pre-pair tenant. */
   document.addEventListener('kiwi-paired', function () { bound = ''; doc = null; bind(); });
 
+  function resolveSupplierCard(id, supplierName) {
+    id = String(id || ''); if (!id || !supplierName) return null;
+    var d = read();
+    var sub = (d.subcategories || []).find(function (s) { return s.id === id; });
+    var cards = sub && Array.isArray(sub.suppliers) ? sub.suppliers : [];
+    var normName = String(supplierName).trim().toLowerCase();
+    var card = cards.find(function (c) { return String(c.supplierName || '').trim().toLowerCase() === normName; });
+    if (card) return card;
+    return {
+      id: 'sup-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6),
+      supplierName: String(supplierName).trim(),
+      defaultPrice: null,
+      purchaseUnit: sub ? sub.unit : 'unité',
+      factor: 1,
+      rank: cards.length + 1,
+      isNew: true,
+    };
+  }
+
+  function updateSupplierPrice(id, supplierName, price) {
+    id = String(id || ''); if (!id || !supplierName || !(+price > 0)) return false;
+    var d = read();
+    var sub = (d.subcategories || []).find(function (s) { return s.id === id; });
+    if (!sub) return false;
+    var cards = Array.isArray(sub.suppliers) ? sub.suppliers.slice() : [];
+    var normName = String(supplierName).trim().toLowerCase();
+    var card = cards.find(function (c) { return String(c.supplierName || '').trim().toLowerCase() === normName; });
+    if (card) {
+      card.defaultPrice = Math.round(+price * 10000) / 10000;
+    } else {
+      card = {
+        id: 'sup-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6),
+        supplierName: String(supplierName).trim(),
+        defaultPrice: Math.round(+price * 10000) / 10000,
+        purchaseUnit: sub.unit || 'unité',
+        factor: 1,
+        rank: cards.length + 1,
+      };
+      cards.push(card);
+    }
+    sub.suppliers = cards;
+    sub.updatedAt = Date.now();
+    var ov = Object.assign({}, d.itemOv[id] || {}, { updatedAt: Date.now() });
+    ov.suppliers = cards;
+    d.itemOv[id] = ov;
+    save(d);
+    return card;
+  }
+
   window.KiwiCaisseStock = {
     bind: bind,
     pull: function () {
@@ -395,6 +456,7 @@
     },
     snapshot: snapshot, items: materialize, suppliers: suppliers, categories: categories,
     addItem: addItem, updateItem: updateItem, move: move, count: count,
+    resolveSupplierCard: resolveSupplierCard, updateSupplierPrice: updateSupplierPrice,
     subscribe: function (fn) { listeners.add(fn); return function () { listeners.delete(fn); }; },
     slug: slug,
   };

@@ -4746,7 +4746,7 @@
   <!-- Catalogue, seuils, coûts et quantités : exactement le même stock que le
        tableau de bord. Les quantités passent par le registre append-only ; ce
        pont ne maintient jamais un second snapshot propre à la caisse. -->
-  <script src="assets/caisse-stock-sync.js?v=5" defer></script>
+  <script src="assets/caisse-stock-sync.js?v=8" defer></script>
   <!-- Les horaires de l'établissement, réglés une seule fois côté tableau de
        bord. La caisse les LIT : ouvrir un service hors horaires demande une
        dérogation nommée, et la journée commerciale du Z suit l'heure de
@@ -15256,8 +15256,27 @@
       const o = supplyOrders.find(x=>x.id===id); if (!o) return;
       o.status = 'recue'; o.when = 'Reçue';
       let added = 0;
+      const receiptRef = 'purchase-' + id;
       o.items.forEach(li=>{ const it = stockItems.find(i => i.name === li.name); if (it){
-        if (storeIsReal() && window.KiwiCaisseStock) window.KiwiCaisseStock.move(it.id, li.qty, 'receipt', 'purchase-'+id, it.cost);
+        if (storeIsReal() && window.KiwiCaisseStock) {
+          const card = window.KiwiCaisseStock.resolveSupplierCard ? window.KiwiCaisseStock.resolveSupplierCard(it.id, o.supplier) : null;
+          const supRank = card && card.rank != null ? card.rank : 999;
+          const supId = card && card.id ? card.id : (o.supplier ? 'sup-' + Date.now().toString(36) : '');
+          const factor = card && card.factor > 0 ? card.factor : 1;
+          const stockQty = Math.round(li.qty * factor * 1000) / 1000;
+          const unitCost = card && card.defaultPrice != null ? card.defaultPrice : (it.cost || null);
+          const meta = {
+            supplierId: supId,
+            supplierName: o.supplier || '',
+            rank: supRank,
+            receiptRef: receiptRef,
+            receivedAt: Date.now(),
+            purchaseQty: li.qty,
+            purchaseUnit: card?.purchaseUnit || it.unit || 'unité',
+            factor: factor,
+          };
+          window.KiwiCaisseStock.move(it.id, stockQty, 'receipt', receiptRef, unitCost, meta);
+        }
         else it.stock += li.qty;
         added++;
       } });
@@ -15281,12 +15300,24 @@
     /* ---- Réception — real photo reference or manual entry ---- */
     let skReceptMode = 'photo';  // 'photo' | 'manual'
     let skReceptState = 'idle';  // 'idle' | 'scanning' | 'done'
-    let skReceptLines = [];      // [{ name, qty }]
+    let skReceptLines = [];      // [{ name, qty, cost }]
     let skReceptPhoto = null;
-    function openRecept(){ skReceptMode = 'photo'; skReceptState = 'idle'; skReceptLines = []; skReceptPhoto = null; openSkModal(renderReceptModal()); }
+    let skReceptSupplier = '';
+    let skReceptRef = '';
+    function openRecept(){ skReceptMode = 'photo'; skReceptState = 'idle'; skReceptLines = []; skReceptPhoto = null; skReceptSupplier = ''; skReceptRef = ''; openSkModal(renderReceptModal()); }
     function renderReceptModal(){
+      const sups = storeIsReal() && window.KiwiCaisseStock?.suppliers ? window.KiwiCaisseStock.suppliers() : [];
+      const supOptions = (Array.isArray(sups) ? sups : []).map(s => `<option value="${kdsEsc(s.name || s)}">`).join('');
       return `<div class="split-badge">Réception</div><h3 class="modal-title" style="margin-bottom:4px;">Entrer du stock</h3>
-        <p class="modal-subtle" style="margin:0 0 14px;">Photographie le bon comme référence, puis vérifie chaque ligne avant d’entrer le stock.</p>
+        <p class="modal-subtle" style="margin:0 0 14px;">Sélectionne le fournisseur, renseigne les quantités reçues et vérifie le prix unitaire facturé.</p>
+        <div class="sk-field" style="margin-bottom:10px;">
+          <label style="font-size:12px;font-weight:600;color:var(--n-600);display:block;margin-bottom:4px;">Fournisseur &amp; Réf. bon</label>
+          <div style="display:flex;gap:8px;">
+            <input class="sk-input" id="sk-recept-sup" placeholder="Fournisseur…" list="sk-sup-list" value="${kdsEsc(skReceptSupplier || '')}" style="flex:2;" autocomplete="off">
+            <datalist id="sk-sup-list">${supOptions}</datalist>
+            <input class="sk-input" id="sk-recept-ref" placeholder="Réf. bon / facture" value="${kdsEsc(skReceptRef || '')}" style="flex:1;">
+          </div>
+        </div>
         <div class="sk-recept-modes">
           <button class="sk-rmode ${skReceptMode==='photo'?'on':''}" data-sk-rmode="photo"><i data-lucide="scan-line"></i>Photo du bon</button>
           <button class="sk-rmode ${skReceptMode==='manual'?'on':''}" data-sk-rmode="manual"><i data-lucide="keyboard"></i>Saisie manuelle</button>
@@ -15304,12 +15335,24 @@
       return skReceptLinesHTML() + `<div class="sk-rline-add" data-sk-rline-add><i data-lucide="plus"></i>Ajouter une ligne</div>` + skReceptFootHTML();
     }
     function skReceptLinesHTML(){
-      if (!skReceptLines.length) skReceptLines = [{ name:'', qty:'' }];
-      return skReceptLines.map((l,idx)=>`<div class="sk-rline">
-          <input class="sk-rl-name" data-sk-rl-name="${idx}" placeholder="Article" value="${kdsEsc(l.name)}" list="sk-items-list" autocomplete="off">
-          <input class="sk-rl-qty" data-sk-rl-qty="${idx}" type="number" min="0" placeholder="Qté" value="${l.qty}">
+      if (!skReceptLines.length) skReceptLines = [{ name:'', qty:'', cost:'' }];
+      return skReceptLines.map((l,idx)=>{
+        const it = stockItems.find(i => i.name.toLowerCase() === (l.name || '').toLowerCase());
+        const unit = it ? it.unit : 'unité';
+        const costVal = l.cost !== '' && l.cost != null ? l.cost : (it && it.cost != null ? it.cost : '');
+        return `<div class="sk-rline" style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
+          <input class="sk-rl-name" data-sk-rl-name="${idx}" placeholder="Article" value="${kdsEsc(l.name)}" list="sk-items-list" autocomplete="off" style="flex:2;">
+          <div style="display:flex;align-items:center;gap:4px;flex:1.2;">
+            <input class="sk-rl-qty" data-sk-rl-qty="${idx}" type="number" min="0" step="any" placeholder="Qté" value="${l.qty}" style="width:100%;">
+            <span style="font-size:11px;color:var(--n-500);white-space:nowrap;">${kdsEsc(unit)}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:4px;flex:1.4;">
+            <input class="sk-rl-cost" data-sk-rl-cost="${idx}" type="number" min="0" step="any" placeholder="Prix unit." value="${costVal}" style="width:100%;">
+            <span style="font-size:11px;color:var(--n-500);white-space:nowrap;">MAD</span>
+          </div>
           <button class="sk-rl-del" data-sk-rl-del="${idx}" aria-label="Retirer"><i data-lucide="x"></i></button>
-        </div>`).join('') + `<datalist id="sk-items-list">${stockItems.map(i=>`<option value="${kdsEsc(i.name)}">`).join('')}</datalist>`;
+        </div>`;
+      }).join('') + `<datalist id="sk-items-list">${stockItems.map(i=>`<option value="${kdsEsc(i.name)}">`).join('')}</datalist>`;
     }
     function skReceptFootHTML(){
       return `<div class="nt-actions" style="margin-top:14px"><button class="ma-btn secondary" data-sk-cancel style="flex:1;">Annuler</button><button class="ma-btn primary" data-sk-commit-recept style="flex:2;"><i data-lucide="plus-circle"></i>Ajouter au stock</button></div>`;
@@ -15322,23 +15365,68 @@
         const photo = await KiwiImageProof.pick({ maxDimension: 960, quality: 0.72 });
         if (!photo) return;
         skReceptPhoto = photo;
-        skReceptLines = [{ name:'', qty:'' }];
+        skReceptLines = [{ name:'', qty:'', cost:'' }];
         skReceptState = 'done'; rerenderReceptBody();
       } catch (_){ toast('Photo non jointe · vérifie l’accès à l’appareil'); }
     }
     function commitRecept(){
+      const supInput = $('#sk-recept-sup');
+      const refInput = $('#sk-recept-ref');
+      const supplier = (supInput ? supInput.value : skReceptSupplier || '').trim();
+      const externalRef = (refInput ? refInput.value : skReceptRef || '').trim();
+
+      if (!supplier) {
+        toast('Indique le fournisseur pour enregistrer la réception');
+        if (supInput) supInput.focus();
+        return;
+      }
+
       $$('#sk-recept-body .sk-rline').forEach((row,idx)=>{
-        const n = row.querySelector('[data-sk-rl-name]'); const q = row.querySelector('[data-sk-rl-qty]');
-        if (skReceptLines[idx]){ skReceptLines[idx].name = (n ? n.value : '').trim(); skReceptLines[idx].qty = q ? q.value : ''; }
+        const n = row.querySelector('[data-sk-rl-name]');
+        const q = row.querySelector('[data-sk-rl-qty]');
+        const c = row.querySelector('[data-sk-rl-cost]');
+        if (skReceptLines[idx]){
+          skReceptLines[idx].name = (n ? n.value : '').trim();
+          skReceptLines[idx].qty = q ? q.value : '';
+          skReceptLines[idx].cost = c && c.value !== '' ? parseFloat(c.value) : null;
+        }
       });
       let added = 0, unknown = 0;
+      const receiptRef = 'delivery-' + Date.now().toString(36);
       skReceptLines.forEach(l=>{
-        const qty = parseInt(l.qty) || 0; const name = (l.name || '').trim();
+        const qty = parseFloat(l.qty) || 0; const name = (l.name || '').trim();
         if (!name || qty <= 0) return;
         const it = stockItems.find(i => i.name.toLowerCase() === name.toLowerCase());
         if (it){
-          if (storeIsReal() && window.KiwiCaisseStock) window.KiwiCaisseStock.move(it.id, qty, 'receipt', 'delivery-'+Date.now().toString(36), it.cost);
-          else it.stock += qty;
+          if (storeIsReal() && window.KiwiCaisseStock) {
+            const card = window.KiwiCaisseStock.resolveSupplierCard ? window.KiwiCaisseStock.resolveSupplierCard(it.id, supplier) : null;
+            const supRank = card && card.rank != null ? card.rank : 999;
+            const supId = card && card.id ? card.id : (supplier ? 'sup-' + Date.now().toString(36) : '');
+            const factor = card && card.factor > 0 ? card.factor : 1;
+            const stockQty = Math.round(qty * factor * 1000) / 1000;
+            const unitCost = l.cost != null && !isNaN(l.cost) && l.cost >= 0
+              ? Math.round((l.cost / factor) * 10000) / 10000
+              : (card && card.defaultPrice != null ? card.defaultPrice : (it.cost || null));
+
+            const meta = {
+              supplierId: supId,
+              supplierName: supplier,
+              rank: supRank,
+              externalRef: externalRef,
+              receiptRef: receiptRef,
+              receivedAt: Date.now(),
+              purchaseQty: qty,
+              purchaseUnit: card?.purchaseUnit || it.unit || 'unité',
+              factor: factor,
+            };
+            window.KiwiCaisseStock.move(it.id, stockQty, 'receipt', receiptRef, unitCost, meta);
+            if (unitCost != null && unitCost > 0 && window.KiwiCaisseStock.updateSupplierPrice) {
+              window.KiwiCaisseStock.updateSupplierPrice(it.id, supplier, unitCost);
+            }
+          } else {
+            it.stock += qty;
+            if (l.cost != null && l.cost > 0) it.cost = l.cost;
+          }
           added++;
         }
         else unknown++;
@@ -15384,15 +15472,18 @@
       const si = e.target.closest('[data-sk-save-item]'); if (si){ saveEditItem(si.dataset.skSaveItem); return; }
       if (e.target.closest('[data-sk-add-save]'))   { saveNewItem(); return; }
       if (e.target.closest('[data-sk-create-order]')){ createOrder(); return; }
-      const rm = e.target.closest('[data-sk-rmode]'); if (rm){ skReceptMode = rm.dataset.skRmode; if (skReceptMode==='manual' && !skReceptLines.length) skReceptLines=[{name:'',qty:''}]; refreshReceptModal(); return; }
+      const rm = e.target.closest('[data-sk-rmode]'); if (rm){ skReceptMode = rm.dataset.skRmode; if (skReceptMode==='manual' && !skReceptLines.length) skReceptLines=[{name:'',qty:'',cost:''}]; refreshReceptModal(); return; }
       if (e.target.closest('[data-sk-scan]')){ skScan(); return; }
-      if (e.target.closest('[data-sk-rline-add]')){ skReceptLines.push({name:'',qty:''}); rerenderReceptBody(); return; }
-      const rd = e.target.closest('[data-sk-rl-del]'); if (rd){ skReceptLines.splice(+rd.dataset.skRlDel,1); if (!skReceptLines.length) skReceptLines=[{name:'',qty:''}]; rerenderReceptBody(); return; }
+      if (e.target.closest('[data-sk-rline-add]')){ skReceptLines.push({name:'',qty:'',cost:''}); rerenderReceptBody(); return; }
+      const rd = e.target.closest('[data-sk-rl-del]'); if (rd){ skReceptLines.splice(+rd.dataset.skRlDel,1); if (!skReceptLines.length) skReceptLines=[{name:'',qty:'',cost:''}]; rerenderReceptBody(); return; }
       if (e.target.closest('[data-sk-commit-recept]')){ commitRecept(); return; }
     });
     $('#sk-modal').addEventListener('input', (e)=>{
       const nm = e.target.closest('[data-sk-rl-name]'); if (nm){ const i=+nm.dataset.skRlName; if (skReceptLines[i]) skReceptLines[i].name = nm.value; return; }
       const qt = e.target.closest('[data-sk-rl-qty]'); if (qt){ const i=+qt.dataset.skRlQty; if (skReceptLines[i]) skReceptLines[i].qty  = qt.value; return; }
+      const cs = e.target.closest('[data-sk-rl-cost]'); if (cs){ const i=+cs.dataset.skRlCost; if (skReceptLines[i]) skReceptLines[i].cost = cs.value; return; }
+      if (e.target.id === 'sk-recept-sup') skReceptSupplier = e.target.value;
+      if (e.target.id === 'sk-recept-ref') skReceptRef = e.target.value;
     });
     $('#sk-modal').addEventListener('change', (e)=>{ if (e.target.id === 'sk-order-supplier'){ $('#sk-order-lines').innerHTML = skOrderLinesHTML(e.target.value); if (window.lucide) lucide.createIcons(); } });
     $('#sk-recept-btn').addEventListener('click', openRecept);
