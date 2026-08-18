@@ -7192,6 +7192,37 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       }
     });
 
+    $('#td-body').addEventListener('change', async (e) => {
+      const inp = e.target.closest('.td-item-note');
+      if (!inp || !activeTableId) return;
+      const line = (tableOrders[activeTableId] || []).find(l => l.uid === inp.dataset.noteUid);
+      if (line && line.sentQty > 0 && !SV_DEMO) {
+        try {
+          const res = await fetch('/api/order/queue', {
+            method: 'POST', credentials: 'same-origin', cache: 'no-store',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              merchant: svSlug(),
+              editLine: {
+                table: activeTableId,
+                lineId: line.id || line.uid,
+                note: inp.value,
+                actor: activeRole.fullName || activeRole.name || 'Serveur'
+              }
+            })
+          });
+          const data = await res.json().catch(() => null);
+          if (!res.ok || (data && !data.ok)) {
+            if (data && data.reason === 'accepted') {
+              toast('Plat déjà en cuisine — parlez au chef ou annulez');
+            } else {
+              toast(`Note : ${(data && data.error) || 'erreur de modification'}`);
+            }
+          }
+        } catch (_) {}
+      }
+    });
+
     let voidLineTarget = null;
     let selectedVoidReason = 'client_change';
     let selectedVoidIsWaste = 0;

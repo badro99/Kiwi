@@ -243,6 +243,116 @@ const inScopeNoTable = await postQueue({
 }, employeeCookie);
 check('voidLine with omitted table on in-scope order resolves and succeeds', inScopeNoTable.status === 200 && inScopeNoTable.data.ok === true);
 
+// 5e. EditLine protocol checks
+const editLines = [
+  { id: 'item-edit-burger', name: 'Cheeseburger', qty: 2, unitPrice: 70, note: 'bien cuit', stationAccepted: false },
+  { id: 'item-edit-tajine', name: 'Tajine Poulet', qty: 3, unitPrice: 100, note: '', stationAccepted: true },
+];
+exec(`INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status, session_id, created_ts, updated_ts)
+      VALUES ('ord-edit-1', ?, 205, 'table', '1', 440, ?, 'accepted', 'ses-v1', ?, ?)`,
+      MERCHANT, JSON.stringify(editLines), now - 3000, now - 3000);
+
+const voidsBeforeEdit = db._db.prepare('SELECT COUNT(*) AS total FROM kitchen_voids WHERE order_id = ?').get('ord-edit-1').total;
+
+// Control 1: Pre-accept edit mutates lines in place without a kitchen_voids row
+const preEditRes = await postQueue({
+  merchant: MERCHANT,
+  editLine: {
+    orderId: 'ord-edit-1',
+    lineId: 'item-edit-burger',
+    qty: 1,
+    note: 'saignant',
+  },
+}, employeeCookie);
+check('Pre-accept edit succeeds with tier 1 and action mutated', preEditRes.status === 200 && preEditRes.data.ok === true && preEditRes.data.tier === 1 && preEditRes.data.action === 'mutated');
+
+const orderAfterPreEdit = db._db.prepare('SELECT total, lines FROM orders WHERE id = ?').get('ord-edit-1');
+const linesAfterPreEdit = JSON.parse(orderAfterPreEdit.lines);
+const editedBurger = linesAfterPreEdit.find(l => l.id === 'item-edit-burger');
+check('Pre-accept edit mutates qty to 1 and note to saignant in place', editedBurger && editedBurger.qty === 1 && editedBurger.note === 'saignant');
+check('Order total recalculated using line unitPrice (70 + 300 = 370)', orderAfterPreEdit.total === 370);
+
+const voidsAfterPreEdit = db._db.prepare('SELECT COUNT(*) AS total FROM kitchen_voids WHERE order_id = ?').get('ord-edit-1').total;
+check('Pre-accept edit produces zero kitchen_voids rows', voidsAfterPreEdit === voidsBeforeEdit);
+
+// Control 2: Post-accept qty-down produces exactly one 'pending' void for delta
+const postDownRes = await postQueue({
+  merchant: MERCHANT,
+  editLine: {
+    orderId: 'ord-edit-1',
+    lineId: 'item-edit-tajine',
+    qty: 2, // 3 -> 2 (delta = 1)
+    isWaste: 0,
+    actor: 'Hamza',
+  },
+}, employeeCookie);
+check('Post-accept qty-down returns tier 2 alert_dispatched', postDownRes.status === 200 && postDownRes.data.ok === true && postDownRes.data.tier === 2 && postDownRes.data.action === 'alert_dispatched');
+
+const tajineVoid = db._db.prepare("SELECT qty, status, reason, is_waste FROM kitchen_voids WHERE order_id = ? AND item_id = ?").get('ord-edit-1', 'item-edit-tajine');
+check('Post-accept qty-down produces exactly one pending void for delta (qty 1)', tajineVoid && tajineVoid.qty === 1 && tajineVoid.status === 'pending');
+
+// Control 3: Post-accept qty-up produces zero void rows and appends unaccepted line delta
+const postUpRes = await postQueue({
+  merchant: MERCHANT,
+  editLine: {
+    orderId: 'ord-edit-1',
+    lineId: 'item-edit-tajine',
+    qty: 4, // from base 3 to 4 (delta = +1)
+  },
+}, employeeCookie);
+check('Post-accept qty-up returns tier 1 appended', postUpRes.status === 200 && postUpRes.data.ok === true && postUpRes.data.tier === 1 && postUpRes.data.action === 'appended');
+
+const orderAfterPostUp = db._db.prepare('SELECT total, lines FROM orders WHERE id = ?').get('ord-edit-1');
+const linesAfterPostUp = JSON.parse(orderAfterPostUp.lines);
+const tajineLines = linesAfterPostUp.filter(l => l.id === 'item-edit-tajine');
+check('Post-accept qty-up appends unaccepted line fragment with stationAccepted: false',
+  tajineLines.length === 2 && tajineLines.some(l => l.stationAccepted === true) && tajineLines.some(l => l.stationAccepted === false && l.qty === 1));
+
+const tajineVoidCount = db._db.prepare("SELECT COUNT(*) AS total FROM kitchen_voids WHERE order_id = ? AND item_id = ?").get('ord-edit-1', 'item-edit-tajine').total;
+check('Post-accept qty-up creates zero additional void rows', tajineVoidCount === 1);
+
+// Control 4: Post-accept note change refuses with 409 and tier 2
+const postNoteRes = await postQueue({
+  merchant: MERCHANT,
+  editLine: {
+    orderId: 'ord-edit-1',
+    lineId: 'item-edit-tajine',
+    note: 'sans oignons',
+  },
+}, employeeCookie);
+check('Post-accept note change is refused with 409 and tier 2', postNoteRes.status === 409 && postNoteRes.data.reason === 'accepted' && postNoteRes.data.tier === 2);
+
+// Control 5: CAS race control — chef accepts between read and write
+const raceLines = [
+  { id: 'item-race-dish', name: 'Pastilla', qty: 2, unitPrice: 85, note: '', stationAccepted: false },
+];
+exec(`INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status, session_id, created_ts, updated_ts)
+      VALUES ('ord-race-1', ?, 206, 'table', '1', 170, ?, 'accepted', 'ses-v1', ?, ?)`,
+      MERCHANT, JSON.stringify(raceLines), now - 2000, now - 2000);
+
+// Simulate chef acceptance concurrently updating the order on D1
+exec(`UPDATE orders SET lines = ?, updated_ts = ? WHERE id = 'ord-race-1'`,
+  JSON.stringify([{ id: 'item-race-dish', name: 'Pastilla', qty: 2, unitPrice: 85, note: '', stationAccepted: true }]), now - 1000);
+
+// Waiter submits pre-accept edit (reducing qty 2 -> 1)
+const raceEditRes = await postQueue({
+  merchant: MERCHANT,
+  editLine: {
+    orderId: 'ord-race-1',
+    lineId: 'item-race-dish',
+    qty: 1,
+    isWaste: 0,
+    actor: 'Hamza',
+  },
+}, employeeCookie);
+
+check('CAS conflict gracefully re-evaluates and falls through to tier-2 pending void',
+  raceEditRes.status === 200 && raceEditRes.data.ok === true && raceEditRes.data.tier === 2 && raceEditRes.data.action === 'alert_dispatched');
+
+const orderAfterRace = db._db.prepare('SELECT lines FROM orders WHERE id = ?').get('ord-race-1');
+const raceLinesAfter = JSON.parse(orderAfterRace.lines);
+check('Chef acceptance was preserved (stationAccepted remains true)', raceLinesAfter[0].stationAccepted === true && raceLinesAfter[0].voidAlert != null);
+
 // 6. Stock Restock & Lot Integrity on Kitchen Voids
 import vm from 'node:vm';
 const memStore = new Map();
