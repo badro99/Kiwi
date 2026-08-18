@@ -353,6 +353,12 @@ const orderAfterRace = db._db.prepare('SELECT lines FROM orders WHERE id = ?').g
 const raceLinesAfter = JSON.parse(orderAfterRace.lines);
 check('Chef acceptance was preserved (stationAccepted remains true)', raceLinesAfter[0].stationAccepted === true && raceLinesAfter[0].voidAlert != null);
 
+// 5f. Waiter Stepper UI Integration Logic Check
+// Verify kiwi-serveur.html contains the sent-line stepper wiring
+const serveurHtml = fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8');
+check('Serveur HTML wires editLine to sent-line stepper',
+  serveurHtml.includes('editLine:') && serveurHtml.includes('newQty <= 0') && serveurHtml.includes('openVoidReasonModal') && serveurHtml.includes('appendedLine'));
+
 // 6. Stock Restock & Lot Integrity on Kitchen Voids
 import vm from 'node:vm';
 const memStore = new Map();

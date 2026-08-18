@@ -7176,7 +7176,6 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       const row = qBtn.closest('[data-order-uid]');
       if (!row) return;
       changeOrderQty(activeTableId, row.dataset.orderUid, qBtn.dataset.qty === 'inc' ? 1 : -1);
-      renderTableDetail();
     });
 
     /* ---- per-dish kitchen note — persist as the serveur types (no re-render,
@@ -7303,19 +7302,113 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       }
     });
 
-    function changeOrderQty(tableId, uid, delta) {
+    async function changeOrderQty(tableId, uid, delta) {
       const order = tableOrders[tableId];
       if (!order) return;
       const line = order.find(l => l.uid === uid);
       if (!line) return;
-      if (delta < 0 && line.sentQty > 0 && line.qty <= line.sentQty) {
-        // Line was already sent to kitchen: require void reason and kitchen sync
-        openVoidReasonModal(tableId, line);
+
+      // Pre-send local modification
+      if (!line.sentQty || (line.qty > line.sentQty && delta < 0 && line.qty - 1 >= line.sentQty)) {
+        line.qty += delta;
+        if (line.qty <= 0) tableOrders[tableId] = order.filter(l => l.uid !== uid);
+        markDirty(tableId);
+        renderTableDetail();
         return;
       }
-      line.qty += delta;
-      if (line.qty <= 0) tableOrders[tableId] = order.filter(l => l.uid !== uid);
-      markDirty(tableId);
+
+      // Sent line modification
+      if (delta < 0) {
+        const newQty = line.qty + delta;
+        if (newQty <= 0) {
+          openVoidReasonModal(tableId, line);
+          return;
+        }
+
+        if (!SV_DEMO) {
+          try {
+            const res = await fetch('/api/order/queue', {
+              method: 'POST', credentials: 'same-origin', cache: 'no-store',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                merchant: svSlug(),
+                editLine: {
+                  table: tableId,
+                  lineId: line.id || line.uid,
+                  qty: newQty,
+                  isWaste: 0,
+                  actor: activeRole.fullName || activeRole.name || 'Serveur'
+                }
+              })
+            });
+            const data = await res.json().catch(() => null);
+            if (!res.ok || (data && !data.ok)) {
+              toast(`Modification refusée : ${(data && data.error) || 'erreur'}`);
+              return;
+            }
+            if (data.alertSent || data.tier === 2) {
+              toast(`Réduction envoyée en cuisine · ${line.name}`);
+            } else {
+              toast(`${line.name} modifié (${newQty}×)`);
+            }
+          } catch (err) {
+            toast(`Erreur réseau : ${err.message || ''}`);
+            return;
+          }
+        }
+        line.qty = newQty;
+        line.sentQty = Math.min(line.sentQty, line.qty);
+        renderTableDetail();
+        return;
+      }
+
+      if (delta > 0) {
+        const targetQty = line.qty + delta;
+        if (!SV_DEMO) {
+          try {
+            const res = await fetch('/api/order/queue', {
+              method: 'POST', credentials: 'same-origin', cache: 'no-store',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                merchant: svSlug(),
+                editLine: {
+                  table: tableId,
+                  lineId: line.id || line.uid,
+                  qty: targetQty,
+                  actor: activeRole.fullName || activeRole.name || 'Serveur'
+                }
+              })
+            });
+            const data = await res.json().catch(() => null);
+            if (!res.ok || (data && !data.ok)) {
+              toast(`Ajout refusé : ${(data && data.error) || 'erreur'}`);
+              return;
+            }
+            if (data.action === 'appended' && data.appendedLine) {
+              tableOrders[tableId].push({
+                uid: data.appendedLine.uid || newLineUid(),
+                id: line.id,
+                name: line.name,
+                price: line.price,
+                qty: data.appendedLine.qty || delta,
+                opts: line.opts || [],
+                note: '',
+                sentQty: 0,
+              });
+              toast(`+1 ${line.name} ajouté`);
+              renderTableDetail();
+              return;
+            }
+          } catch (err) {
+            toast(`Erreur réseau : ${err.message || ''}`);
+            return;
+          }
+        }
+        line.qty = targetQty;
+        if (line.sentQty) line.sentQty = targetQty;
+        renderTableDetail();
+        return;
+      }
     }
 
     /* ---------- New Table modal ---------- */
