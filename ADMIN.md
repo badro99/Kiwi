@@ -331,6 +331,11 @@ Functions (all under the site gate; the `/admin/*` ones additionally require an
 - `functions/api/pin/verify.js` — the only judge of a staff code. `{merchant, pin}`
   for a paired till / owner / operator; `{pin}` alone resolves against every store
   on the signed-in account, which is what the dashboard lock asks.
+- `functions/api/store.js` — the generic doc vault. `GET ?feature=team` is
+  **redacted** (`pinCode`/`password` removed) for every caller but the owner
+  session and a named operator, and writing `team` is refused to the same set:
+  a paired till can reach this endpoint, and a redacted copy pushed back would
+  wipe the real codes.
 - `functions/_middleware.js` — operator cookie is a 3rd "way in"; `POST /__operator`
   verifies a code and sets `kiwi_op` (`HMAC(AUTH_SECRET,"kiwi-operator-v1")`).
 

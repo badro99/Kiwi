@@ -284,11 +284,22 @@ figures; treat them as production data.
 - **Demo data leaks live in the real-session / non-custom-venue gap.** Gate on
   `KiwiEnv.isReal()`, not on "is this a demo account".
 - **Never log, print, or commit credentials.** Member objects in
-  `__kiwiTeamV2.byVenue` still carry `password` and `pinCode` fields, and so does
-  the `employee-access` document `POST /api/config` writes into `store_docs`.
-  `GET /api/config?merchant=…` no longer returns codes — its `pins` array is the
-  roster, `{name, role}` — but treat any *other* surface that hands you a
-  four-digit code as a credential you must not print.
+  `__kiwiTeamV2.byVenue` carry `password` and `pinCode`, and so do the `team` and
+  `employee-access` documents in `store_docs`. `GET /api/config?merchant=…` no
+  longer returns codes — its `pins` array is the roster, `{name, role}` — and
+  `GET /api/store?feature=team` only returns them to the surface that manages
+  them (see below). Treat any four-digit code a surface hands you as a
+  credential you must not print.
+- **A store doc can be readable by more people than its author.** `tenantFor()`
+  accepts a **paired till token**, so every `FEATURES` entry in
+  `functions/api/store.js` is readable from the counter device. That is fine for
+  a menu and wrong for `team`, whose members carry their personal codes: it is
+  redacted for anyone who is not the owner session or a named operator
+  (`REDACT` / `editsRoster`). If you add a feature holding anything
+  credential-shaped, add it to `REDACT` — and remember the redaction is only
+  half of it. **Whoever may not read a secret must not be able to write the
+  document that holds it**, or they will read the redacted copy, push it back,
+  and erase the real values. `tools/team-doc-redaction-test.mjs` holds both.
 - **A four-digit code is compared server-side, nowhere else.** `POST
   /api/pin/verify` is the only place a staff code is checked: `{merchant, pin}`
   for a till, `{pin}` alone for the account-wide dashboard lock. It is

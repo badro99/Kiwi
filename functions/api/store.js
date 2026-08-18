@@ -33,7 +33,7 @@
 // erreur base — 200 neutre en lecture, 503 en écriture. Le client garde sa copie
 // locale et retentera. Un serveur qui tousse ne doit jamais coûter une donnée.
 
-import { json } from '../auth/_lib.js';
+import { json, entitledMerchant } from '../auth/_lib.js';
 import { tenantFor } from './_private.js';
 import { poke } from './_live.js';
 
@@ -278,6 +278,52 @@ function shapeOk(feature, raw) {
  * endpoint and write both rows in the same D1 batch. `tenantFor()` has already
  * resolved the real store, so this also remains correctly scoped when one
  * owner has several dashboards/stores. */
+/* ── LE CODE PERSONNEL N'EST PAS UNE DONNÉE D'ÉQUIPE COMME UNE AUTRE ─────────
+ * Le document `team` porte, pour chaque salarié, le code à quatre chiffres qui
+ * lui ouvre l'app employé — dans `pinCode` et `password`, deux champs qui
+ * portent la même valeur. La page Équipe du tableau de bord les AFFICHE, et
+ * c'est voulu : c'est là que le patron lit le code qu'il va donner à sa
+ * caissière.
+ *
+ * Une caisse appairée n'a rien à voir là-dedans, et elle y avait accès. Le
+ * jeton de caisse est un cookie httpOnly posé sur un appareil de comptoir que
+ * n'importe qui peut approcher : `tenantFor()` l'accepte (voir _private.js ›
+ * resolveTenant), donc `GET /api/store?feature=team` rendait à ce comptoir
+ * l'intégralité des codes du personnel. C'est la même fuite que celle que
+ * /api/config vient de perdre, par une autre porte.
+ *
+ * On rend donc l'équipe SANS les codes à qui n'est pas en train de la tenir à
+ * jour. La caisse garde ce qu'elle utilise — des noms, des rôles, des heures —
+ * et perd ce qu'elle n'a jamais lu. */
+function stripTeamCodes(doc) {
+  if (!doc || typeof doc !== 'object') return doc;
+  const members = Array.isArray(doc.members) ? doc.members : null;
+  if (!members) return doc;
+  return { ...doc, members: members.map((m) => {
+    if (!m || typeof m !== 'object') return m;
+    const { pinCode, password, ...rest } = m;
+    return rest;
+  }) };
+}
+
+/* Quelles fonctionnalités cachent un secret à qui ne l'écrit pas. */
+const REDACT = { team: stripTeamCodes };
+
+/* Celui-ci tient-il la fiche, ou ne fait-il que la consulter ?
+ * `entitledMerchant` SANS `allowTill` répond exactement à ça : la session du
+ * compte propriétaire, ou un opérateur nommé — les deux seules surfaces qui
+ * éditent l'équipe. Une caisse appairée, un employé connecté : non.
+ * L'opérateur reste dedans volontairement. Sa vue portée ouvre la même page
+ * Équipe, et un champ code vidé n'y serait pas anodin : le formulaire
+ * régénère un code quand il n'en relit pas un (assets/team.js › makeCode),
+ * donc masquer sans plus reviendrait à faire tourner les codes du client dans
+ * son dos. */
+async function editsRoster(request, env, merchant) {
+  if (!merchant) return false;
+  try { return (await entitledMerchant(request, env, merchant)) === merchant; }
+  catch (_) { return false; }
+}
+
 function employeeAccessFromTeam(team, merchant) {
   const members = Array.isArray(team && team.members) ? team.members : [];
   const seen = new Set();
@@ -327,7 +373,9 @@ export async function onRequestGet(context) {
     if (!row) return json({ feature, merchant, data: null, rev: 0 });
     let data = null;
     try { data = JSON.parse(row.data); } catch (_) { data = null; }
-    return json({ feature, merchant, data, rev: row.rev || 0, updated_ts: row.updated_ts || 0 });
+    const redact = REDACT[feature];
+    const safe = (redact && !(await editsRoster(request, env, merchant))) ? redact(data) : data;
+    return json({ feature, merchant, data: safe, rev: row.rev || 0, updated_ts: row.updated_ts || 0 });
   } catch (_) {
     // Table absente (migration pas encore passée) → neutre, surtout pas une
     // erreur : le client doit continuer à fonctionner en local.
@@ -347,6 +395,17 @@ export async function onRequestPost(context) {
 
   const merchant = await tenantFor(request, env, body && body.merchant, { strict: true });
   if (!merchant) return json({ error: 'unauthorized' }, 401);
+
+  /* Qui ne peut pas LIRE les codes ne peut pas RÉÉCRIRE le document qui les
+   * porte. Sans cette ligne, la rédaction du GET creuse un trou pire que celui
+   * qu'elle bouche : une caisse relit l'équipe expurgée, la repousse telle
+   * quelle, et tous les codes du magasin disparaissent de la base — une panne
+   * silencieuse le lendemain matin, quand personne n'arrive à se connecter.
+   * Aucune surface de caisse n'écrit l'équipe (seul assets/team.js le fait,
+   * depuis le tableau de bord), donc c'est un verrou, pas un retrait. */
+  if (REDACT[feature] && !(await editsRoster(request, env, merchant))) {
+    return json({ error: 'forbidden-feature', feature }, 403);
+  }
 
   const raw = (body && body.data) || null;
 

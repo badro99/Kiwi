@@ -375,6 +375,7 @@ for (const test of [
   'sales-centime-precision-test.mjs',
   'pin-hardening-test.mjs',
   'config-pin-projection-test.mjs',
+  'team-doc-redaction-test.mjs',
   'pressing-workspace-test.js',
   'pressing-auto-ready-test.mjs',
 ]) {
