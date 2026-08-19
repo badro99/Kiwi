@@ -7506,7 +7506,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       line.qty -= 1;
       if (line.sentQty) line.sentQty = Math.max(0, line.sentQty - 1);
       if (line.qty <= 0) {
-        tableOrders[tableId] = (tableOrders[tableId] || []).filter(l => l.uid !== line.uid && (!line.formulaUid || l.formulaUid !== line.formulaUid));
+        tableOrders[tableId] = (tableOrders[tableId] || []).filter(l => l.uid !== line.uid);
       }
       markDirty(tableId);
       $('#void-reason-modal').classList.remove('is-open');
@@ -7538,6 +7538,12 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       if (!order) return;
       const line = order.find(l => l.uid === uid);
       if (!line) return;
+      if (line.kind === 'formula-part') return;
+
+      if (line.kind === 'formula' && delta > 0) {
+        openFormulaSheet(line.id, 1);
+        return;
+      }
 
       // Pre-send local modification
       if (!line.sentQty || (line.qty > line.sentQty && delta < 0 && line.qty - 1 >= line.sentQty)) {

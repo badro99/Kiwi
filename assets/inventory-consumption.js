@@ -202,7 +202,7 @@
     sale.lines.forEach(function (line, idx) {
       if (!line) return;
       var kind = String(line.kind || '').toLowerCase();
-      if (['service', 'tip', 'tax', 'payment', 'class', 'pt'].indexOf(kind) >= 0) { skipped++; return; }
+      if (['service', 'tip', 'tax', 'payment', 'class', 'pt', 'formula'].indexOf(kind) >= 0) { skipped++; return; }
       var itemId = String(line.itemId || line.id || '');
       var qty = Math.max(0, n(line.qty || line.quantity));
       if (!(qty > 0)) { skipped++; return; }

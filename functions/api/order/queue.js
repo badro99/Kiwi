@@ -871,41 +871,58 @@ export async function onRequestPost(context) {
     }
   }
 
-  async function dispatchPendingVoid(targetOrder, targetLine, lines, qtyToVoid, isWaste, actor, reason) {
-    const voidId = 'voi-' + now.toString(36) + '-' + crypto.randomUUID().slice(0, 8);
-    targetLine.voidAlert = {
-      id: voidId,
-      qty: qtyToVoid,
-      reason: reason || 'client_change',
-      actor: actor,
-      isWaste: isWaste ? 1 : 0,
-      ts: now,
-    };
+  async function dispatchPendingVoid(targetOrder, targetLines, lines, qtyToVoid, isWaste, actor, reason) {
+    const list = Array.isArray(targetLines) ? targetLines : [targetLines];
+    /* La quantité annulée est CELLE QUE L'APPELANT DEMANDE — le delta d'une
+     * réduction (3 → 2 annule 1), jamais la ligne entière. Sur une formule,
+     * le parent porte ce delta et chaque composant suit au prorata de sa
+     * propre quantité : un menu enfant ×2 dont on retire un exemplaire rend
+     * une frite, pas deux. Le premier élément de `list` est toujours la
+     * ligne visée ; les suivants sont ses composants. */
+    const primary = list[0];
+    const askedQty = Math.max(1, Math.round(Number(qtyToVoid) || 1));
+    const primaryQty = Math.max(1, Math.round(Number(primary && primary.qty) || 1));
+    const ratio = Math.min(1, askedQty / primaryQty);
+    let primaryVoidId = null;
+    for (const tl of list) {
+      const voidId = 'voi-' + now.toString(36) + '-' + crypto.randomUUID().slice(0, 8);
+      if (!primaryVoidId) primaryVoidId = voidId;
+      const lineQty = Math.max(1, Math.round(Number(tl.qty) || 1));
+      const voidQty = tl === primary ? Math.min(askedQty, lineQty) : Math.max(1, Math.min(lineQty, Math.round(lineQty * ratio)));
+      tl.voidAlert = {
+        id: voidId,
+        qty: voidQty,
+        reason: reason || 'client_change',
+        actor: actor,
+        isWaste: isWaste ? 1 : 0,
+        ts: now,
+      };
+      try {
+        await env.DB.prepare(
+          `INSERT INTO kitchen_voids (id, merchant, order_id, table_no, item_id, item_name, qty, price, reason, is_waste, actor, status, created_ts)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)`
+        ).bind(voidId, merchant, targetOrder.id, targetOrder.table_no, tl.id || tl.uid || '', tl.name || '', voidQty, tl.unitPrice ?? tl.price ?? 0, reason || 'client_change', isWaste ? 1 : 0, actor, now).run();
+      } catch (err) {
+        console.error('[queue] Failed to insert pending kitchen void alert', voidId, 'merchant', merchant);
+      }
+    }
     const nextTs = Math.max(now, (Number(targetOrder.updated_ts) || 0) + 1);
 
     await env.DB.prepare(
       `UPDATE orders SET lines = ?, updated_ts = ? WHERE id = ? AND merchant = ?`
     ).bind(JSON.stringify(lines), nextTs, targetOrder.id, merchant).run();
 
-    try {
-      await env.DB.prepare(
-        `INSERT INTO kitchen_voids (id, merchant, order_id, table_no, item_id, item_name, qty, price, reason, is_waste, actor, status, created_ts)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)`
-      ).bind(voidId, merchant, targetOrder.id, targetOrder.table_no, targetLine.id || targetLine.name || '', targetLine.name || targetLine.id || '', qtyToVoid, targetLine.unitPrice ?? targetLine.price ?? 0, reason || 'client_change', isWaste ? 1 : 0, actor, now).run();
-    } catch (err) {
-      console.error('[queue] Failed to insert pending kitchen void alert', voidId, 'merchant', merchant);
-    }
-
     return {
       ok: true,
       tier: 2,
       action: 'alert_dispatched',
-      voidId,
+      voidId: primaryVoidId,
       directVoid: false,
       alertSent: true,
       orderId: targetOrder.id,
       table: targetOrder.table_no,
-      voidAlert: targetLine.voidAlert,
+      voidAlert: list[0] ? list[0].voidAlert : null,
+      remainingLines: lines,
     };
   }
 
@@ -943,18 +960,23 @@ export async function onRequestPost(context) {
     let lines = [];
     try { lines = JSON.parse(targetOrder.lines) || []; } catch (_) { lines = []; }
 
-    const targetLine = lines.find(l => String(l.id || l.uid) === lineId || String(l.name) === lineId);
+    const targetLine = lines.find(l => String(l.id) === lineId || String(l.uid) === lineId || String(l.name) === lineId);
     if (!targetLine) return json({ error: 'line-not-on-order' }, 404);
 
-    const isCooking = targetLine.stationAccepted === true;
+    const isFormula = targetLine.kind === 'formula' && !!targetLine.formulaUid;
+    const affectedLines = isFormula
+      ? lines.filter(l => l.formulaUid === targetLine.formulaUid || l === targetLine)
+      : [targetLine];
+
+    const isCooking = affectedLines.some(l => l.stationAccepted === true);
     const voidId = 'voi-' + now.toString(36) + '-' + crypto.randomUUID().slice(0, 8);
 
     if (!isCooking) {
       // ── Niveau 1 : Annulation immédiate (plat non entamé) ──────────────────
-      if (targetLine.qty > qtyToVoid) {
+      if (!isFormula && targetLine.qty > qtyToVoid) {
         targetLine.qty -= qtyToVoid;
       } else {
-        lines = lines.filter(l => l !== targetLine);
+        lines = lines.filter(l => !affectedLines.includes(l));
       }
       const newTotal = lines.reduce((s, l) => s + ((Number(l.unitPrice ?? l.price) || 0) * (Number(l.qty) || 0)), 0);
       const nextTs = Math.max(now, (Number(targetOrder.updated_ts) || 0) + 1);
@@ -963,13 +985,16 @@ export async function onRequestPost(context) {
         `UPDATE orders SET lines = ?, total = ?, updated_ts = ? WHERE id = ? AND merchant = ?`
       ).bind(JSON.stringify(lines), newTotal, nextTs, targetOrder.id, merchant).run();
 
-      try {
-        await env.DB.prepare(
-          `INSERT INTO kitchen_voids (id, merchant, order_id, table_no, item_id, item_name, qty, price, reason, is_waste, actor, status, created_ts)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'approved', ?)`
-        ).bind(voidId, merchant, targetOrder.id, targetOrder.table_no, targetLine.id || lineId, targetLine.name || lineId, qtyToVoid, targetLine.unitPrice ?? targetLine.price ?? 0, reason, isWaste, actor, now).run();
-      } catch (err) {
-        console.error('[queue] Failed to insert approved kitchen void record', voidId, 'merchant', merchant);
+      for (const affLine of affectedLines) {
+        const vId = 'voi-' + now.toString(36) + '-' + crypto.randomUUID().slice(0, 8);
+        try {
+          await env.DB.prepare(
+            `INSERT INTO kitchen_voids (id, merchant, order_id, table_no, item_id, item_name, qty, price, reason, is_waste, actor, status, created_ts)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'approved', ?)`
+          ).bind(vId, merchant, targetOrder.id, targetOrder.table_no, affLine.id || affLine.uid || lineId, affLine.name || lineId, affLine.qty || qtyToVoid, affLine.unitPrice ?? affLine.price ?? 0, reason, isWaste, actor, now).run();
+        } catch (err) {
+          console.error('[queue] Failed to insert approved kitchen void record', vId, 'merchant', merchant);
+        }
       }
 
       return json({
@@ -988,7 +1013,7 @@ export async function onRequestPost(context) {
         total: newTotal,
       });
     } else {
-      return json(await dispatchPendingVoid(targetOrder, targetLine, lines, qtyToVoid, isWaste, actor, reason));
+      return json(await dispatchPendingVoid(targetOrder, affectedLines, lines, qtyToVoid, isWaste, actor, reason));
     }
   }
 
@@ -1025,7 +1050,7 @@ export async function onRequestPost(context) {
     let lines = [];
     try { lines = JSON.parse(targetOrder.lines) || []; } catch (_) { lines = []; }
 
-    const targetLine = lines.find(l => String(l.id || l.uid) === lineId || String(l.name) === lineId);
+    const targetLine = lines.find(l => String(l.id) === lineId || String(l.uid) === lineId || String(l.name) === lineId);
     if (!targetLine) return json({ error: 'line-not-on-order' }, 404);
 
     const oldQty = Number(targetLine.qty) || 0;
@@ -1035,13 +1060,20 @@ export async function onRequestPost(context) {
     const noteChanged = b.editLine.note != null && newNote !== oldNote;
     const qtyDelta = newQty - oldQty;
 
+    const isFormula = targetLine.kind === 'formula' && !!targetLine.formulaUid;
+    const affectedLines = isFormula
+      ? lines.filter(l => l.formulaUid === targetLine.formulaUid || l === targetLine)
+      : [targetLine];
+
+    const isCooking = affectedLines.some(l => l.stationAccepted === true);
+
     // ── Branche post-acceptation ───────────────────────────────────────────
-    if (targetLine.stationAccepted === true) {
+    if (isCooking) {
       if (noteChanged) {
         return json({ ok: false, error: 'accepted-cannot-edit-note', reason: 'accepted', tier: 2 }, 409);
       }
       if (qtyDelta < 0) {
-        return json(await dispatchPendingVoid(targetOrder, targetLine, lines, Math.abs(qtyDelta), isWaste, actor, reason));
+        return json(await dispatchPendingVoid(targetOrder, affectedLines, lines, Math.abs(qtyDelta), isWaste, actor, reason));
       }
       if (qtyDelta > 0) {
         const newLine = {
@@ -1077,7 +1109,7 @@ export async function onRequestPost(context) {
     let draftLines = lines.map(l => ({ ...l }));
     let draftLine = draftLines.find(l => String(l.id || l.uid) === lineId || String(l.name) === lineId);
     if (newQty === 0) {
-      draftLines = draftLines.filter(l => l !== draftLine);
+      draftLines = draftLines.filter(l => !affectedLines.some(al => (al.uid && al.uid === l.uid) || al === l));
     } else {
       draftLine.qty = newQty;
       if (b.editLine.note != null) draftLine.note = newNote;
@@ -1103,12 +1135,17 @@ export async function onRequestPost(context) {
       const freshLine = freshLines.find(l => String(l.id || l.uid) === lineId || String(l.name) === lineId);
       if (!freshLine) return json({ error: 'line-not-on-order' }, 404);
 
-      if (freshLine.stationAccepted === true) {
+      const freshAffected = isFormula
+        ? freshLines.filter(l => l.formulaUid === targetLine.formulaUid || l === freshLine)
+        : [freshLine];
+      const freshCooking = freshAffected.some(l => l.stationAccepted === true);
+
+      if (freshCooking) {
         if (noteChanged) {
           return json({ ok: false, error: 'accepted-cannot-edit-note', reason: 'accepted', tier: 2 }, 409);
         }
         if (qtyDelta < 0) {
-          return json(await dispatchPendingVoid(freshOrder, freshLine, freshLines, Math.abs(qtyDelta), isWaste, actor, reason));
+          return json(await dispatchPendingVoid(freshOrder, freshAffected, freshLines, Math.abs(qtyDelta), isWaste, actor, reason));
         }
         if (qtyDelta > 0) {
           const newLine = {

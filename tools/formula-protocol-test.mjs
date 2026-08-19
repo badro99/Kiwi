@@ -565,6 +565,7 @@ if (!confirmVoidLineMatch || !changeOrderQtyMatch) {
     const SV_DEMO = true;
     const markDirty = () => {};
     const renderTableDetail = () => {};
+    const openFormulaSheet = () => {};
     const $ = (s) => ({ textContent: '', classList: { remove: () => {} }, disabled: false });
     const toast = () => {};
     const openVoidReasonModal = (tableId, line) => {
@@ -598,7 +599,18 @@ if (!confirmVoidLineMatch || !changeOrderQtyMatch) {
   const postPreSendOrders = voidHarness.getTableOrders().T1;
   ok(postPreSendOrders.length === 1 && postPreSendOrders[0].uid === 'u-norm', 'pre-send decrement to 0 cascaded deletion of parent and all formula-part lines');
 
-  // Test 2: Sent line void cascade via confirmVoidLine
+  // Test 2: Stepper is locked on child parts (changeOrderQty on formula-part is a no-op)
+  voidHarness.setTableOrders({
+    T1: [
+      { uid: 'u-c1', id: 'm-p1', name: 'Pain', kind: 'formula-part', price: 0, qty: 1, formulaUid: 'fml-casc-1', sentQty: 0 }
+    ]
+  });
+  await voidHarness.changeOrderQty('T1', 'u-c1', -1);
+  ok(voidHarness.getTableOrders().T1[0].qty === 1, 'stepper decrement on kind: formula-part is locked (no-op)');
+  await voidHarness.changeOrderQty('T1', 'u-c1', 1);
+  ok(voidHarness.getTableOrders().T1[0].qty === 1, 'stepper increment on kind: formula-part is locked (no-op)');
+
+  // Test 3: Sent line void client honesty (client sends no sibling deletions of its own)
   voidHarness.setTableOrders({
     T1: [
       { uid: 'u-parent-sent', id: 'm-brunch', name: 'Formule Brunch', kind: 'formula', price: 104, qty: 1, formulaUid: 'fml-casc-2', sentQty: 1 },
@@ -612,8 +624,189 @@ if (!confirmVoidLineMatch || !changeOrderQtyMatch) {
   ok(voidHarness.getVoidLineTarget() != null, 'sent formula decrement triggered void modal target');
   await voidHarness.confirmVoidLine();
   const postVoidOrders = voidHarness.getTableOrders().T1;
-  ok(postVoidOrders.length === 1 && postVoidOrders[0].uid === 'u-norm-sent', 'confirmVoidLine cascaded deletion of parent and all formula-part lines');
+  ok(postVoidOrders.length === 3, 'client confirmVoidLine removes only targeted parent, sending no sibling deletions of its own');
+  ok(!postVoidOrders.some(l => l.uid === 'u-parent-sent'), 'parent line removed from client tableOrders');
+  ok(postVoidOrders.some(l => l.uid === 'u-c1-sent') && postVoidOrders.some(l => l.uid === 'u-c2-sent'), 'child lines preserved on client until server confirmation');
 }
+
+// ── 7B. Server-Side Void Cascade Extraction (queue.js) ──────────────────────
+const dispatchPendingVoidMatch = queueSource.match(/async function dispatchPendingVoid\(targetOrder, targetLines, lines, qtyToVoid, isWaste, actor, reason\) \{[\s\S]*?\n  \}/);
+const voidLineServerBlockMatch = queueSource.match(/if \(b && b\.voidLine && typeof b\.voidLine === 'object'\) \{[\s\S]*?dispatchPendingVoid\(targetOrder, affectedLines, lines, qtyToVoid, isWaste, actor, reason\)\);[\s\S]*?\n  \}/);
+
+if (!dispatchPendingVoidMatch || !voidLineServerBlockMatch) {
+  ok(false, 'dispatchPendingVoid or voidLine block missing in queue.js');
+} else {
+  const serverVoidHarnessCode = `
+    const crypto = globalThis.crypto || { randomUUID: () => '12345678-1234' };
+    const now = 1724000000000;
+    const merchant = 'test-merchant';
+    const normTable = (t) => String(t || '');
+    const json = (data, status = 200) => ({ data, status });
+    const employee = { member: 'Hamza' };
+    const employeeName = (m) => m;
+
+    let insertedKitchenVoids = [];
+    let updatedOrders = [];
+
+    const env = {
+      DB: {
+        prepare: (sql) => ({
+          bind: (...args) => ({
+            first: async () => {
+              if (sql.includes('SELECT id, table_no')) {
+                return {
+                  id: 'ord-server-1',
+                  table_no: 'T1',
+                  total: 104,
+                  status: 'open',
+                  updated_ts: 100,
+                  number: 12,
+                  lines: JSON.stringify([
+                    { uid: 'u-fml', id: 'm-brunch', name: 'Formule Brunch', kind: 'formula', price: 104, qty: 1, formulaUid: 'fml-srv-1', stationAccepted: true },
+                    { uid: 'u-p1', id: 'm-p1', name: 'Pain', kind: 'formula-part', price: 0, qty: 1, formulaUid: 'fml-srv-1', station: 'cuisine', stationAccepted: true },
+                    { uid: 'u-b1', id: 'm-b1', name: 'Boisson', kind: 'formula-part', price: 0, qty: 1, formulaUid: 'fml-srv-1', station: 'bar', stationAccepted: true },
+                    { uid: 'u-norm', id: 'm-cafe', name: 'Café', price: 15, qty: 1, station: 'bar', stationAccepted: true }
+                  ])
+                };
+              }
+              return null;
+            },
+            run: async () => {
+              if (sql.includes('INSERT INTO kitchen_voids')) {
+                insertedKitchenVoids.push({
+                  id: args[0],
+                  merchant: args[1],
+                  order_id: args[2],
+                  table_no: args[3],
+                  item_id: args[4],
+                  item_name: args[5],
+                  qty: args[6],
+                  price: args[7],
+                  reason: args[8],
+                  is_waste: args[9],
+                  actor: args[10],
+                  status: args[11] || 'pending'
+                });
+              } else if (sql.includes('UPDATE orders SET lines')) {
+                updatedOrders.push({
+                  lines: JSON.parse(args[0]),
+                  updated_ts: args[1],
+                  orderId: args[2]
+                });
+              }
+              return { success: true };
+            }
+          })
+        })
+      }
+    };
+
+    ${dispatchPendingVoidMatch[0]}
+
+    async function handleVoidLine(b) {
+      ${voidLineServerBlockMatch[0]}
+    }
+
+    return {
+      handleVoidLine,
+      getInsertedKitchenVoids: () => insertedKitchenVoids,
+      getUpdatedOrders: () => updatedOrders,
+    };
+  `;
+  const serverVoidHarness = new Function(serverVoidHarnessCode)();
+
+  const res = await serverVoidHarness.handleVoidLine({
+    voidLine: {
+      orderId: 'ord-server-1',
+      lineId: 'u-fml',
+      qty: 1,
+      reason: 'client_change',
+      isWaste: 1,
+      actor: 'Hamza'
+    }
+  });
+
+  const voids = serverVoidHarness.getInsertedKitchenVoids();
+  ok(voids.length === 3, 'voiding sent formula parent produces kitchen_voids for every affected line (parent + 2 child stations)');
+  ok(voids.some(v => v.item_name === 'Pain') && voids.some(v => v.item_name === 'Boisson'), 'pending void rows created for both child stations (cuisine and bar)');
+  ok(voids.every(v => v.is_waste === 1 && v.reason === 'client_change'), 'one waste question/reason applied consistently across the affected formula set');
+
+  const updatedOrders = serverVoidHarness.getUpdatedOrders();
+  const remainingLines = updatedOrders[0].lines;
+  ok(remainingLines.find(l => l.uid === 'u-p1').voidAlert != null, 'child 1 has voidAlert dispatched on server');
+  ok(remainingLines.find(l => l.uid === 'u-b1').voidAlert != null, 'child 2 has voidAlert dispatched on server');
+
+  /* ── La quantité annulée est le DELTA demandé, au prorata sur les composants.
+   * Le piège qui a cassé kitchen-void-protocol : booker `tl.qty` (la ligne
+   * entière) au lieu du delta. Un menu enfant ×2 dont on retire UN exemplaire
+   * doit rendre une frite — pas deux, et pas la ligne complète. ─────────── */
+  const voidsQty2 = [];
+  const harnessQty2 = new Function(serverVoidHarnessCode
+    .replace("qty: 1, formulaUid: 'fml-srv-1', stationAccepted: true },\n                    { uid: 'u-p1'", "qty: 2, formulaUid: 'fml-srv-1', stationAccepted: true },\n                    { uid: 'u-p1'")
+    .replace("name: 'Pain', kind: 'formula-part', price: 0, qty: 1", "name: 'Pain', kind: 'formula-part', price: 0, qty: 2")
+    .replace("name: 'Boisson', kind: 'formula-part', price: 0, qty: 1", "name: 'Boisson', kind: 'formula-part', price: 0, qty: 2"))();
+  await harnessQty2.handleVoidLine({ voidLine: { orderId: 'ord-server-1', lineId: 'u-fml', qty: 1, reason: 'client_change', isWaste: 0, actor: 'Hamza' } });
+  const v2 = harnessQty2.getInsertedKitchenVoids();
+  ok(v2.length === 3, 'qty-2 formula voided by 1 still touches parent + 2 children');
+  ok(v2.every(v => Number(v.qty) === 1), 'voiding ONE of a ×2 formula books qty 1 on the parent and on each child — the delta, never the whole line');
+}
+
+// ── 7C. Inventory Consumption Skip for Kind: Formula ─────────────────────────
+const invSource = fs.readFileSync(path.join(ROOT, 'assets/inventory-consumption.js'), 'utf8');
+const invHarnessCode = `
+  let addedMovements = [];
+  const window = {
+    KiwiCost: {
+      doc: () => ({
+        recipes: {
+          'm-brunch': { status: 'complete', name: 'Formule Brunch', lines: [{ ing: 'ing-brunch', qty: 1 }] },
+          'm-p1': { status: 'complete', name: 'Pain artisanal', lines: [{ ing: 'ing-flour', qty: 0.2 }] },
+          'm-b1': { status: 'complete', name: 'Jus frais', lines: [{ ing: 'ing-orange', qty: 0.3 }] }
+        },
+        ingredients: [
+          { id: 'ing-brunch', stockId: 'stk-brunch-direct' },
+          { id: 'ing-flour', stockId: 'stk-flour' },
+          { id: 'ing-orange', stockId: 'stk-orange' }
+        ]
+      })
+    },
+    KiwiInventory: {
+      isReal: () => true,
+      merchant: () => 'test-merchant',
+      add: (m) => {
+        addedMovements.push(m);
+        return m;
+      }
+    }
+  };
+
+  ${invSource}
+
+  return {
+    record: window.KiwiInventoryConsumption.record,
+    getMovements: () => addedMovements
+  };
+`;
+const invHarness = new Function(invHarnessCode)();
+
+const testSaleWithFormula = {
+  id: 'sale-fml-1',
+  ts: 1724000000000,
+  lines: [
+    { itemId: 'm-brunch', name: 'Formule Brunch', kind: 'formula', qty: 1, total: 104 },
+    { itemId: 'm-p1', name: 'Pain artisanal', kind: 'formula-part', qty: 1, total: 0 },
+    { itemId: 'm-b1', name: 'Jus frais', kind: 'formula-part', qty: 1, total: 0 }
+  ]
+};
+
+const recordResult = invHarness.record(testSaleWithFormula);
+const movements = invHarness.getMovements();
+
+ok(!movements.some(m => m.itemId === 'stk-brunch-direct'), 'record() skips kind: formula parent carrying a recipe (0 double deduction)');
+ok(movements.some(m => m.itemId === 'stk-flour'), 'record() consumes child part 1 ingredients');
+ok(movements.some(m => m.itemId === 'stk-orange'), 'record() consumes child part 2 ingredients');
+ok(recordResult.skipped === 1, 'record() increments skipped counter for kind: formula');
+
 
 // ── 8. Backoffice & Restaurant Menu Workspace Formule Builder ───────────────
 const rmwSource = fs.readFileSync(path.join(ROOT, 'assets/restaurant-menu-workspace.js'), 'utf8');
@@ -752,7 +945,7 @@ if (!nidMatch || !cleanFormulaCatalogMatch || !addItemMatch || !updateItemMatch 
 }
 
 // ── 9. Hard Count Pinning ───────────────────────────────────────────────────
-const EXPECTED_COUNT = 87;
+const EXPECTED_COUNT = 102;
 ok(passed + 1 === EXPECTED_COUNT, `exact control count verified (${passed + 1}/${EXPECTED_COUNT})`);
 
 console.log(`\n✓ ${passed} controls green (${failures.length} failure(s))`);
