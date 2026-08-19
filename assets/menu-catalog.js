@@ -139,6 +139,23 @@
        « aucun » qui laisserait croire que le plat ne part nulle part. */
     catStationL:{ fr: 'Part vers', en: 'Goes to', ar: 'كيمشي ل' },
     catStationD:{ fr: 'par défaut', en: 'default', ar: 'افتراضي' },
+    formulaIs:      { fr: 'C\'est une formule (menu composé)', en: 'This is a set menu / combo', ar: 'هذه وجبة مركبة (قائمة محددة)' },
+    formulaHint:    { fr: 'Composez les étapes de la formule (ex. Pain, Boisson, Dessert). Chaque choix correspond à un produit existant de la carte.',
+                      en: 'Build the combo steps (e.g. Bread, Drink, Dessert). Each choice points to an existing menu item.',
+                      ar: 'أنشئ مراحل الوجبة المركبة (مثل: الخبز، المشروب، التحلية). كل اختيار يرتبط بمنتج موجود في القائمة.' },
+    formulaSlots:   { fr: 'Étapes de la formule', en: 'Combo slots', ar: 'مراحل الوجبة' },
+    formulaAddSlot: { fr: 'Ajouter une étape', en: 'Add a slot', ar: 'إضافة مرحلة' },
+    formulaSlotNm:  { fr: 'Nom de l\'étape (ex. La boisson)', en: 'Slot label (e.g. Drink)', ar: 'اسم المرحلة (مثل: المشروب)' },
+    formulaMinMax:  { fr: 'Choix min / max', en: 'Min / max choices', ar: 'الحد الأدنى / الأقصى' },
+    formulaMin:     { fr: 'Min', en: 'Min', ar: 'أدنى' },
+    formulaMax:     { fr: 'Max', en: 'Max', ar: 'أقصى' },
+    formulaChoices: { fr: 'Choix proposés', en: 'Choices offered', ar: 'الخيارات المقترحة' },
+    formulaAddCh:   { fr: 'Ajouter un produit', en: 'Add an item', ar: 'إضافة منتج' },
+    formulaPickIt:  { fr: 'Choisir un produit de la carte', en: 'Pick a menu item', ar: 'اختر منتجاً من القائمة' },
+    formulaExtra:   { fr: 'Supplément (+ MAD)', en: 'Extra (+ MAD)', ar: 'زيادة (+ درهم)' },
+    formulaDelSlot: { fr: 'Supprimer l\'étape', en: 'Delete slot', ar: 'حذف المرحلة' },
+    formulaNoSlots: { fr: 'Aucune étape définie. Cliquez sur « Ajouter une étape » pour commencer.', en: 'No slots defined yet. Click "Add a slot" to start.', ar: 'لم يتم تحديد مراحل بعد. انقر على "إضافة مرحلة" للبدء.' },
+    formulaTag:     { fr: 'Formule', en: 'Combo', ar: 'وجبة مركبة' },
   };
 
   /* La palette des postes — exactement les sept teintes que l'écran cuisine de
@@ -209,6 +226,30 @@
   const itemsIn = (d, catId, subId) => (d.items || []).filter((i) => i.catId === catId && (subId == null || i.subId === subId));
   const stationsOf = (d) => (d && Array.isArray(d.stations)) ? d.stations : [];
   const stationById = (d, id) => stationsOf(d).find((s) => s && s.id === id) || null;
+
+  /* Une formule compose des choix parmi des articles existants de la carte.
+   * RÈGLE DE LECTURE : un choix qui pointe un article supprimé est retiré dès
+   * la lecture (pas de fantôme sélectionnable pour le serveur). */
+  function cleanFormula(formula, items) {
+    if (!formula || typeof formula !== 'object' || !Array.isArray(formula.slots)) return null;
+    const itemMap = new Set((items || []).map((i) => i && i.id).filter(Boolean));
+    const rawSlots = Array.isArray(formula.slots) ? formula.slots.slice(0, 10) : [];
+    const slots = rawSlots.map((s, idx) => {
+      if (!s || typeof s !== 'object') return null;
+      const id = String(s.id || ('sl_' + (idx + 1))).slice(0, 40);
+      const label = String(s.label || '').trim().slice(0, 60);
+      let min = Math.max(0, Math.min(10, Math.round(Number(s.min) || 0)));
+      let max = Math.max(1, Math.min(10, Math.round(Number(s.max) || 1)));
+      if (min > max) min = max;
+      const rawChoices = Array.isArray(s.choices) ? s.choices.slice(0, 20) : [];
+      const choices = rawChoices.filter((c) => c && c.itemId && itemMap.has(c.itemId)).map((c) => ({
+        itemId: String(c.itemId).slice(0, 40),
+        extra: Math.max(0, Math.min(1e5, Number(c.extra) || 0)),
+      }));
+      return { id, label, min, max, choices };
+    }).filter((s) => s && s.id);
+    return slots.length ? { slots } : null;
+  }
 
   /* ─── postes de préparation ───
    * LE ROUTAGE VIT SUR LA CATÉGORIE. « Boissons → Bar » se dit une fois et vaut
@@ -468,7 +509,8 @@
   }
   function addItem(data) {
     return store.update((d) => {
-      d.items.push({
+      const formula = cleanFormula(data && data.formula, d.items);
+      const item = {
         id: nid(d, 'it'),
         name: String(data.name || 'Produit').trim() || 'Produit',
         price: Math.max(0, +data.price || 0),
@@ -488,7 +530,9 @@
         // l'ajoute d'un geste, sans rien demander — c'est le cas de presque
         // tout ce qui se vend.
         opts: Array.isArray(data.opts) ? data.opts.slice() : [],
-      });
+      };
+      if (formula) item.formula = formula;
+      d.items.push(item);
       return d;
     });
   }
@@ -504,11 +548,26 @@
       if ('opts' in patch) it.opts = Array.isArray(patch.opts) ? patch.opts.slice() : [];
       if ('photo' in patch) it.photo = String(patch.photo || '');
       if ('video' in patch) it.video = String(patch.video || '');
+      if ('formula' in patch) {
+        const formula = cleanFormula(patch.formula, d.items);
+        if (formula) it.formula = formula;
+        else delete it.formula;
+      }
       return d;
     });
   }
   function deleteItem(id) {
-    const next = store.update((d) => { d.items = (d.items || []).filter((i) => i.id !== id); return d; });
+    const next = store.update((d) => {
+      d.items = (d.items || []).filter((i) => i.id !== id);
+      (d.items || []).forEach((it) => {
+        if (it && it.formula) {
+          const cleaned = cleanFormula(it.formula, d.items);
+          if (cleaned) it.formula = cleaned;
+          else delete it.formula;
+        }
+      });
+      return d;
+    });
     authorizeExplicitEmpty(next);
     return next;
   }
@@ -724,6 +783,30 @@
       .mx-product-card .sw.on { background: var(--atlas); }
       .mx-product-card .sw::after { content: ''; position: absolute; inset: 2px auto auto 2px; width: 15px; height: 15px; border-radius: 50%; background: var(--surface); transition: transform 150ms; }
       .mx-product-card .sw.on::after { transform: translateX(13px); }
+      /* Formule / menu composé dans la fiche produit */
+      .mx-formula-toggle-wrap { margin: 14px 0 10px; padding: 12px 14px; border: 1px solid var(--n-200); border-radius: 12px; background: var(--paper-soft); }
+      .mx-formula-toggle-label { display: flex; align-items: center; gap: 9px; cursor: pointer; font-size: 13.5px; font-weight: 600; color: var(--ink); }
+      .mx-formula-toggle-label input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--atlas); }
+      .mx-formula-hint { font-size: 11.5px; color: var(--n-500); margin-top: 5px; line-height: 1.4; }
+      .mx-formula-wrap { margin-top: 12px; display: flex; flex-direction: column; gap: 10px; }
+      .mx-formula-wrap[hidden] { display: none; }
+      .mx-slot-card { border: 1px solid var(--line); border-radius: 11px; padding: 12px; background: var(--surface); margin-bottom: 8px; }
+      .mx-slot-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+      .mx-slot-label-inp { flex: 1; min-width: 140px; padding: 6px 10px; border: 1.5px solid var(--n-200); border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--ink); }
+      .mx-slot-label-inp:focus { border-color: var(--atlas); }
+      .mx-slot-bounds { display: flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--n-600); }
+      .mx-slot-bounds input { width: 44px; padding: 4px 6px; text-align: center; border: 1px solid var(--n-200); border-radius: 6px; font-size: 12px; font-family: var(--mono); }
+      .mx-slot-del-btn, .mx-slot-move-btn { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--n-200); background: var(--surface); color: var(--n-500); cursor: pointer; }
+      .mx-slot-del-btn:hover { color: var(--danger); border-color: var(--danger); }
+      .mx-slot-choices-list { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; }
+      .mx-slot-choice-row { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; padding: 6px 10px; background: var(--paper-soft); border-radius: 8px; }
+      .mx-slot-choice-name { font-size: 12.5px; font-weight: 500; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .mx-slot-choice-extra { display: flex; align-items: center; gap: 4px; font-size: 11.5px; font-family: var(--mono); color: var(--n-600); }
+      .mx-slot-choice-extra input { width: 54px; padding: 4px 6px; border: 1px solid var(--n-200); border-radius: 6px; text-align: right; font-size: 11.5px; font-family: var(--mono); }
+      .mx-slot-add-ch-bar { display: flex; gap: 8px; margin-top: 6px; }
+      .mx-slot-add-ch-bar select { flex: 1; font-size: 12.5px; padding: 6px 8px; border: 1px solid var(--n-200); border-radius: 8px; background: var(--surface); }
+      .mx-slot-add-ch-btn { padding: 6px 12px; font-size: 12px; border-radius: 8px; border: 1px solid var(--atlas); background: var(--mint-soft); color: var(--riad); font-weight: 500; cursor: pointer; white-space: nowrap; }
+      .mx-formula-add-slot-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 12px; border: 1.5px dashed var(--atlas); border-radius: 10px; background: var(--mint-soft); color: var(--riad); font-size: 13px; font-weight: 600; cursor: pointer; width: 100%; box-sizing: border-box; }
       @media (max-width: 1280px) { .mx-card-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
       @media (max-width: 980px) { .mx-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .mx-catalog-tools { align-items: flex-start; flex-direction: column; } }
       @media (max-width: 640px) { .mx-catalog { padding: 14px; } .mx-card-grid { grid-template-columns: 1fr; } }
@@ -1297,6 +1380,9 @@
     // Live media state for this modal — mutated by the picker, read on save.
     const media = { photo: it.photo || '', video: it.video || '' };
 
+    const initialFormula = cleanFormula(it.formula, d.items);
+    let formulaSlots = initialFormula && initialFormula.slots ? JSON.parse(JSON.stringify(initialFormula.slots)) : [];
+
     const catOpts = cats.map((c) => `<option value="${c.id}" ${c.id === it.catId ? 'selected' : ''}>${esc(c.name)}</option>`).join('');
     const subsFor = (cid) => (catById(d, cid) ? (catById(d, cid).sub || []) : []);
     const subOptsHtml = (cid, sel) => `<option value="">${esc(tr(T.none))}</option>` + subsFor(cid).map((s) => `<option value="${s.id}" ${s.id === sel ? 'selected' : ''}>${esc(s.name)}</option>`).join('');
@@ -1304,7 +1390,7 @@
     const m = K.modal({
       tag: venueName(),
       title: existing ? tr(T.rename) : tr(T.addItem),
-      width: 460,
+      width: 480,
       body: `
         <div class="mx-field"><label>${esc(tr(T.nameL))}</label><input data-f-name type="text" value="${esc(it.name)}" placeholder="${esc(tr(T.nameL))}"/></div>
         <div class="mx-field two">
@@ -1335,6 +1421,17 @@
             </label>`).join('')}
           </div>` : `<div class="mx-opts-none">${esc(tr(T.optNoneYet))}</div>`}
         </div>
+        <div class="mx-formula-toggle-wrap">
+          <label class="mx-formula-toggle-label">
+            <input type="checkbox" data-f-is-formula ${formulaSlots.length ? 'checked' : ''} />
+            <span>${esc(tr(T.formulaIs))}</span>
+          </label>
+          <div class="mx-formula-hint">${esc(tr(T.formulaHint))}</div>
+          <div class="mx-formula-wrap" data-f-formula-wrap ${formulaSlots.length ? '' : 'hidden'}>
+            <div data-f-slots-container></div>
+            <button type="button" class="mx-formula-add-slot-btn" data-f-add-slot>${PLUS}<span>${esc(tr(T.formulaAddSlot))}</span></button>
+          </div>
+        </div>
         <div class="mx-field"><label>${esc(tr(T.descL))}</label><textarea data-f-desc placeholder="${esc(tr(T.descL))}">${esc(it.desc || '')}</textarea></div>
         <div class="mx-field">
           <label>${esc(tr(T.mediaL))}</label>
@@ -1348,6 +1445,157 @@
     });
     const q = (s) => m.el.querySelector(s);
     q('[data-f-cat]').addEventListener('change', (e) => { q('[data-f-sub]').innerHTML = subOptsHtml(e.target.value, null); });
+
+    /* ── formule / menu composé ─────────────────────────────────────────── */
+    const availableItems = (d.items || []).filter((x) => x && x.id && (!existing || x.id !== existing.id));
+    const isFormulaCb = q('[data-f-is-formula]');
+    const formulaWrap = q('[data-f-formula-wrap]');
+    const slotsContainer = q('[data-f-slots-container]');
+
+    function renderFormulaSlots() {
+      if (!slotsContainer) return;
+      if (!formulaSlots.length) {
+        slotsContainer.innerHTML = `<div style="font-size:12px;color:var(--n-500);padding:6px 2px;">${esc(tr(T.formulaNoSlots))}</div>`;
+        return;
+      }
+      slotsContainer.innerHTML = formulaSlots.map((slot, si) => {
+        const choicesHtml = (slot.choices || []).map((ch, ci) => {
+          const match = (d.items || []).find((x) => x.id === ch.itemId);
+          const chName = match ? match.name : ch.itemId;
+          const matchCat = match && catById(d, match.catId);
+          return `
+            <div class="mx-slot-choice-row" data-si="${si}" data-ci="${ci}">
+              <div class="mx-slot-choice-name">
+                ${esc(chName)} ${matchCat ? `<span style="font-size:10px;color:var(--n-500);margin-left:4px;">(${esc(matchCat.name)})</span>` : ''}
+              </div>
+              <div class="mx-slot-choice-extra">
+                <span>+</span>
+                <input type="number" min="0" max="100000" step="1" data-f-ch-extra="${si}-${ci}" value="${ch.extra || 0}" />
+                <span>MAD</span>
+              </div>
+              <button type="button" class="mx-slot-del-btn" data-f-del-choice="${si}-${ci}" title="${esc(tr(T.del))}">${TRASH}</button>
+            </div>`;
+        }).join('');
+
+        const availableToAdd = availableItems.filter((it) => !(slot.choices || []).some((c) => c.itemId === it.id));
+        const selectOptions = availableToAdd.map((it) => `<option value="${it.id}">${esc(it.name)} (${fmt(it.price)} MAD)</option>`).join('');
+
+        return `
+          <div class="mx-slot-card" data-slot-index="${si}">
+            <div class="mx-slot-head">
+              <input type="text" class="mx-slot-label-inp" data-f-slot-label="${si}" value="${esc(slot.label)}" placeholder="${esc(tr(T.formulaSlotNm))}" />
+              <div class="mx-slot-bounds">
+                <label>${esc(tr(T.formulaMin))}</label>
+                <input type="number" min="0" max="10" data-f-slot-min="${si}" value="${slot.min != null ? slot.min : 1}" />
+                <label>${esc(tr(T.formulaMax))}</label>
+                <input type="number" min="1" max="10" data-f-slot-max="${si}" value="${slot.max != null ? slot.max : 1}" />
+              </div>
+              ${si > 0 ? `<button type="button" class="mx-slot-move-btn" data-f-slot-move="${si},-1" title="Monter">↑</button>` : ''}
+              ${si < formulaSlots.length - 1 ? `<button type="button" class="mx-slot-move-btn" data-f-slot-move="${si},1" title="Descendre">↓</button>` : ''}
+              <button type="button" class="mx-slot-del-btn" data-f-slot-del="${si}" title="${esc(tr(T.formulaDelSlot))}">${TRASH}</button>
+            </div>
+            <div class="mx-slot-choices-list">${choicesHtml || `<div style="font-size:11.5px;color:var(--n-500);padding:2px 0;">${esc(tr(T.formulaChoices))} : aucun produit</div>`}</div>
+            ${availableToAdd.length ? `
+              <div class="mx-slot-add-ch-bar">
+                <select data-f-slot-pick="${si}"><option value="">-- ${esc(tr(T.formulaPickIt))} --</option>${selectOptions}</select>
+                <button type="button" class="mx-slot-add-ch-btn" data-f-slot-add-ch="${si}">${esc(tr(T.formulaAddCh))}</button>
+              </div>` : ''}
+          </div>`;
+      }).join('');
+    }
+
+    if (isFormulaCb) {
+      isFormulaCb.addEventListener('change', () => {
+        const on = isFormulaCb.checked;
+        if (on && !formulaSlots.length) {
+          formulaSlots.push({ id: 'sl_1', label: '', min: 1, max: 1, choices: [] });
+        }
+        if (formulaWrap) formulaWrap.hidden = !on;
+        renderFormulaSlots();
+      });
+    }
+
+    if (m.el.querySelector('[data-f-add-slot]')) {
+      m.el.querySelector('[data-f-add-slot]').addEventListener('click', () => {
+        if (formulaSlots.length >= 10) return;
+        const nextId = 'sl_' + (formulaSlots.length + 1);
+        formulaSlots.push({ id: nextId, label: '', min: 1, max: 1, choices: [] });
+        renderFormulaSlots();
+      });
+    }
+
+    slotsContainer && slotsContainer.addEventListener('input', (e) => {
+      const lblInp = e.target.closest('[data-f-slot-label]');
+      if (lblInp) {
+        const si = Number(lblInp.dataset.fSlotLabel);
+        if (formulaSlots[si]) formulaSlots[si].label = lblInp.value;
+        return;
+      }
+      const minInp = e.target.closest('[data-f-slot-min]');
+      if (minInp) {
+        const si = Number(minInp.dataset.fSlotMin);
+        if (formulaSlots[si]) formulaSlots[si].min = Math.max(0, Math.min(10, Math.round(Number(minInp.value) || 0)));
+        return;
+      }
+      const maxInp = e.target.closest('[data-f-slot-max]');
+      if (maxInp) {
+        const si = Number(maxInp.dataset.fSlotMax);
+        if (formulaSlots[si]) formulaSlots[si].max = Math.max(1, Math.min(10, Math.round(Number(maxInp.value) || 1)));
+        return;
+      }
+      const extInp = e.target.closest('[data-f-ch-extra]');
+      if (extInp) {
+        const [si, ci] = extInp.dataset.fChExtra.split('-').map(Number);
+        if (formulaSlots[si] && formulaSlots[si].choices && formulaSlots[si].choices[ci]) {
+          formulaSlots[si].choices[ci].extra = Math.max(0, Math.min(1e5, Number(extInp.value) || 0));
+        }
+      }
+    });
+
+    slotsContainer && slotsContainer.addEventListener('click', (e) => {
+      const delSlotBtn = e.target.closest('[data-f-slot-del]');
+      if (delSlotBtn) {
+        const si = Number(delSlotBtn.dataset.fSlotDel);
+        formulaSlots.splice(si, 1);
+        renderFormulaSlots();
+        return;
+      }
+      const moveSlotBtn = e.target.closest('[data-f-slot-move]');
+      if (moveSlotBtn) {
+        const [si, delta] = moveSlotBtn.dataset.fSlotMove.split(',').map(Number);
+        const target = si + delta;
+        if (target >= 0 && target < formulaSlots.length) {
+          const item = formulaSlots.splice(si, 1)[0];
+          formulaSlots.splice(target, 0, item);
+          renderFormulaSlots();
+        }
+        return;
+      }
+      const delChBtn = e.target.closest('[data-f-del-choice]');
+      if (delChBtn) {
+        const [si, ci] = delChBtn.dataset.fDelChoice.split('-').map(Number);
+        if (formulaSlots[si] && formulaSlots[si].choices) {
+          formulaSlots[si].choices.splice(ci, 1);
+          renderFormulaSlots();
+        }
+        return;
+      }
+      const addChBtn = e.target.closest('[data-f-slot-add-ch]');
+      if (addChBtn) {
+        const si = Number(addChBtn.dataset.fSlotAddCh);
+        const sel = slotsContainer.querySelector(`[data-f-slot-pick="${si}"]`);
+        const pickedId = sel ? sel.value : '';
+        if (pickedId && formulaSlots[si]) {
+          formulaSlots[si].choices = formulaSlots[si].choices || [];
+          if (formulaSlots[si].choices.length < 20 && !formulaSlots[si].choices.some((c) => c.itemId === pickedId)) {
+            formulaSlots[si].choices.push({ itemId: pickedId, extra: 0 });
+            renderFormulaSlots();
+          }
+        }
+      }
+    });
+
+    renderFormulaSlots();
 
     /* ── la marge, pendant qu'il tape ──────────────────────────────────────
        Le patron apprend le rapport prix/coût en le VOYANT bouger, pas en lisant
@@ -1472,10 +1720,13 @@
 
     q('[data-f-cancel]').addEventListener('click', () => m.close());
     q('[data-f-save]').addEventListener('click', () => {
+      const isFormula = isFormulaCb && isFormulaCb.checked;
+      const formulaData = isFormula && formulaSlots.length ? { slots: formulaSlots } : null;
       const data = {
         name: q('[data-f-name]').value, price: q('[data-f-price]').value,
         catId: q('[data-f-cat]').value, subId: q('[data-f-sub]').value || null, desc: q('[data-f-desc]').value,
         photo: media.photo, video: media.video,
+        formula: formulaData,
         // Aucun poste ici : un plat part au poste de SA catégorie. Changer de
         // catégorie dans ce formulaire change donc son poste — c'est la même
         // phrase dite une fois, et c'est tout l'intérêt.
@@ -1951,8 +2202,18 @@
   window.KiwiMenuStore = {
     data: (vid) => store.get(vid),
     categories: (vid) => (store.get(vid).cats || []),
-    items: (vid) => (store.get(vid).items || []),
-    availableItems: (vid) => (store.get(vid).items || []).filter((i) => i.avail !== false),
+    items: (vid) => {
+      const d = store.get(vid);
+      return (d.items || []).map((it) => {
+        if (!it || !it.formula) return it;
+        const cleaned = cleanFormula(it.formula, d.items);
+        if (cleaned) it.formula = cleaned;
+        else delete it.formula;
+        return it;
+      });
+    },
+    availableItems: (vid) => (window.KiwiMenuStore.items(vid) || []).filter((i) => i.avail !== false),
+    cleanFormula,
     isEmpty: (vid) => store.isEmpty(vid),
     subscribe: (fn) => store.subscribe(fn),
     loadExample: (vid) => store.loadExample(vid),

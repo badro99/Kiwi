@@ -884,6 +884,7 @@ section('Whole-project regressions');
     'stamp-drift-test.js',
     'pos-registry-sync-test.mjs',
     'pos-maison-test.mjs',
+    'formula-protocol-test.mjs',
     'api-boundaries-test.mjs',
     'security-regression-test.js',
     'sold-insights-test.js',

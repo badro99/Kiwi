@@ -102,6 +102,27 @@ function sanitizeHours(raw) {
   return { v: 1, week, exceptions };
 }
 
+function sanitizeFormula(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  const rawSlots = Array.isArray(raw.slots) ? raw.slots.slice(0, 10) : [];
+  const slots = rawSlots.map((s, idx) => {
+    if (!s || typeof s !== 'object') return null;
+    const id = str(s.id, 40) || ('sl_' + (idx + 1));
+    const label = str(s.label, 60);
+    let min = Math.max(0, Math.min(10, Math.round(Number(s.min) || 0)));
+    let max = Math.max(1, Math.min(10, Math.round(Number(s.max) || 1)));
+    if (min > max) min = max;
+    const rawChoices = Array.isArray(s.choices) ? s.choices.slice(0, 20) : [];
+    const choices = rawChoices.map((c) => ({
+      itemId: str(c && c.itemId, 40),
+      extra: Math.max(0, Math.min(1e5, Number(c && c.extra) || 0)),
+    })).filter((c) => c.itemId);
+    return { id, label, min, max, choices };
+  }).filter((s) => s && s.id);
+  if (!slots.length) return null;
+  return { slots };
+}
+
 // Keep the stored menu small and well-shaped. We trust the merchant (it's their
 // own carte) but still bound sizes so a runaway client can't bloat the row.
 function sanitizeMenu(raw) {
@@ -157,31 +178,36 @@ function sanitizeMenu(raw) {
     })) : [],
   })).filter((c) => c.id);
   const items = Array.isArray(raw.items) ? raw.items.slice(0, 1000) : [];
-  out.items = items.map((it) => ({
-    id: str(it && it.id, 40),
-    name: str(it && it.name, 120),
-    price: Math.max(0, Math.min(1e7, Number(it && it.price) || 0)),
-    catId: str(it && it.catId, 40) || null,
-    subId: str(it && it.subId, 40) || null,
-    desc: str(it && it.desc, 400),
-    avail: !(it && it.avail === false),
-    // Le poste de préparation (bar, cuisson, froid…). La caisse route le bon de
-    // cuisine dessus ; sans ce champ dans la liste blanche il était retiré
-    // silencieusement à la publication, et tous les plats d'un vrai restaurant
-    // retombaient sur « cuisson ». Additif : les cartes publiées avant lui
-    // renvoient une chaîne vide, et les deux pages client l'ignorent.
-    station: str(it && it.station, 40),
-    // Les groupes d'options portés par ce produit — des identifiants, pas des
-    // copies : le libellé vit une seule fois, dans out.opts. Un groupe supprimé
-    // laisse un identifiant orphelin, que la caisse écarte à la lecture.
-    opts: (Array.isArray(it && it.opts) ? it.opts.slice(0, 12) : [])
-      .map((x) => str(x, 40)).filter(Boolean),
-    // OrderPro additions — a dish photo or a short vertical clip. Absent for
-    // every menu published before they existed, and both pages fall back to
-    // their icon tile, so this is purely additive.
-    photo: mediaUrl(it && it.photo),
-    video: mediaUrl(it && it.video),
-  })).filter((it) => it.id && it.name);
+  out.items = items.map((it) => {
+    const formula = sanitizeFormula(it && it.formula);
+    const item = {
+      id: str(it && it.id, 40),
+      name: str(it && it.name, 120),
+      price: Math.max(0, Math.min(1e7, Number(it && it.price) || 0)),
+      catId: str(it && it.catId, 40) || null,
+      subId: str(it && it.subId, 40) || null,
+      desc: str(it && it.desc, 400),
+      avail: !(it && it.avail === false),
+      // Le poste de préparation (bar, cuisson, froid…). La caisse route le bon de
+      // cuisine dessus ; sans ce champ dans la liste blanche il était retiré
+      // silencieusement à la publication, et tous les plats d'un vrai restaurant
+      // retombaient sur « cuisson ». Additif : les cartes publiées avant lui
+      // renvoient une chaîne vide, et les deux pages client l'ignorent.
+      station: str(it && it.station, 40),
+      // Les groupes d'options portés par ce produit — des identifiants, pas des
+      // copies : le libellé vit une seule fois, dans out.opts. Un groupe supprimé
+      // laisse un identifiant orphelin, que la caisse écarte à la lecture.
+      opts: (Array.isArray(it && it.opts) ? it.opts.slice(0, 12) : [])
+        .map((x) => str(x, 40)).filter(Boolean),
+      // OrderPro additions — a dish photo or a short vertical clip. Absent for
+      // every menu published before they existed, and both pages fall back to
+      // their icon tile, so this is purely additive.
+      photo: mediaUrl(it && it.photo),
+      video: mediaUrl(it && it.video),
+    };
+    if (formula) item.formula = formula;
+    return item;
+  }).filter((it) => it.id && it.name);
   if (raw.hours) { const h = sanitizeHours(raw.hours); if (h) out.hours = h; }
   return out;
 }

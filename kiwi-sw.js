@@ -216,7 +216,7 @@ var SHELL = [
   '/assets/clients-store.js?v=2',
   '/assets/clients-book.js?v=3',
   '/assets/clients-directory.js',
-  '/assets/menu-catalog.js?v=5',
+  '/assets/menu-catalog.js?v=6',
   '/assets/restaurant-recipes.js?v=3',
   '/assets/restaurant-units.js',
   '/assets/employee-live.js?v=383',
