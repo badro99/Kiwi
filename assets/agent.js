@@ -440,34 +440,13 @@
       },
       calc: { title: 'Calcul', result: 'résultat' },
       llm: {
-        noGpu: 'Cette question sort de mes calculs, je suis votre copilote chiffres : embauche, prix, investissement, seuil de rentabilité, prévisions, marges et charges. Demandez-moi l’un de ceux-là et la réponse arrive aussitôt. Et pour savoir quels articles de votre menu marchent, ou non, ouvrez la page Menu du tableau de bord.',
-        loading: (p) => `Mon assistant IA finit de se charger (${p} %). Je réponds dès qu’il est prêt.`,
-        offerLead: 'Cette question sort de mes calculs prédéfinis, mais je peux y répondre librement avec un <b>assistant IA open-source</b> qui s’exécute <b>entièrement dans votre navigateur</b> : aucune donnée ne part ailleurs.',
-        offerSize: (sz) => `Premier lancement : un téléchargement unique de ${sz}, ensuite instantané.`,
-        activate: 'Activer l’assistant IA',
-        installing: 'Installation de l’assistant IA, modèle open-source exécuté dans votre navigateur.',
-        initializing: 'Initialisation…',
-        ready: 'Assistant IA prêt.',
-        readyMsg: 'Mon assistant IA est prêt. Posez-moi vos questions sur la gestion, les finances, l’équipe ou le marketing de votre café, je reste concentré sur votre activité.',
-        loadFail: 'Échec du chargement.',
-        loadFailMsg: 'Je n’ai pas pu charger l’assistant IA (connexion, mémoire ou navigateur incompatible). Mes calculs financiers restent pleinement disponibles.',
         runErr: 'Une erreur est survenue côté assistant IA. Réessayez, ou demandez-moi un calcul précis.',
-        cancel: 'Annuler',
         stop: 'Arrêter',
-        cancelled: 'Téléchargement annulé. Mes calculs restent disponibles, et vous pourrez relancer l’installation quand vous voudrez.',
-        queued: (n) => n === 1 ? 'Je garde votre question, j’y réponds dès que l’assistant est prêt.' : `Je garde vos ${n} questions, j’y réponds dès que l’assistant est prêt.`,
-        timeout: 'Le téléchargement s’est arrêté en route, sans erreur du navigateur — le plus souvent le wifi de la boutique ou un pare-feu. Mes calculs restent disponibles.',
-        diag: (c) => `Code à donner au support : ${c}`,
-        unfitAdapter: 'Votre navigateur annonce WebGPU mais aucune carte graphique ne répond. L’assistant libre ne pourra pas s’exécuter ici, et je préfère vous le dire maintenant plutôt qu’après 1,2 Go de téléchargement.',
-        unfitSpace: 'Il n’y a pas assez d’espace de stockage libre dans ce navigateur pour garder le modèle (1,2 Go). Libérez de la place, ou continuez avec mes calculs, qui ne demandent rien.',
-        unfitMemory: 'Cet appareil a trop peu de mémoire pour faire tourner le modèle sans bloquer votre caisse. Je ne vais pas le tenter.',
         unfitTail: 'Ce que je calcule reste entier : embauche, prix, seuil de rentabilité, prévisions, marges, charges, trésorerie, et vos ventes par article, par client et par jour.',
-        /* La route serveur. Elle n'est proposée QUE sur les appareils qui ne
-         * peuvent pas faire tourner le modèle en local, et elle dit ce qu'elle
-         * fait : le mode local ne laisse rien sortir, celui-ci si. Le
-         * commerçant tranche une fois, et son refus est gardé. */
-        cloudLead: 'Cet appareil ne peut pas faire tourner l’assistant libre en local. Kiwi peut répondre depuis ses serveurs à la place.',
-        cloudPrivacy: 'À dire franchement : dans ce mode, votre question et les chiffres de votre établissement sont envoyés à Kiwi pour être traités. Le mode local, lui, ne fait rien sortir de l’appareil.',
+        privateLead: 'Mode privé : cette question sort de mes calculs, et vous avez choisi que rien ne quitte cet appareil. Vous pouvez activer l’IA serveur dans le panneau de droite.',
+        unavailable: 'Cette question sort de mes calculs, et le serveur Kiwi n’est pas joignable pour l’instant.',
+        cloudLead: 'Cette question sort de mes calculs prédéfinis. Kiwi peut y répondre depuis ses serveurs.',
+        cloudPrivacy: 'À dire franchement : dans ce mode, votre question et les chiffres de votre établissement nécessaires à la réponse sont envoyés à Kiwi pour être traités, de façon sécurisée. En mode privé, rien ne sort et mes calculs restent entiers. Vous choisissez une fois ; c’est modifiable dans le panneau.',
         cloudActivate: 'Répondre depuis les serveurs Kiwi',
         cloudDecline: 'Non merci, garder mes calculs seuls',
         cloudQuota: 'L’assistant serveur a atteint sa limite du jour pour votre établissement. Il repart demain ; d’ici là mes calculs restent entiers.',
@@ -629,30 +608,13 @@
       },
       calc: { title: 'Calculation', result: 'result' },
       llm: {
-        noGpu: 'That’s outside what I calculate, I’m your numbers copilot: hiring, pricing, investment, break-even, forecasts, margins and charges. Ask me any of those and the answer comes right back. And to see which menu items are working, or not, open the Menu page in your dashboard.',
-        loading: (p) => `My AI assistant is finishing loading (${p}%). I'll answer as soon as it's ready.`,
-        offerLead: 'This question is beyond my preset calculations, but I can answer it freely with an <b>open-source AI assistant</b> that runs <b>entirely in your browser</b>: no data goes anywhere.',
-        offerSize: (sz) => `First launch: a one-time download of ${sz}, instant after that.`,
-        activate: 'Turn on the AI assistant',
-        installing: 'Installing the AI assistant, open-source model running in your browser.',
-        initializing: 'Initialising…',
-        ready: 'AI assistant ready.',
-        readyMsg: 'My AI assistant is ready. Ask me about managing, financing, staffing or marketing your café, I stay focused on your business.',
-        loadFail: 'Loading failed.',
-        loadFailMsg: 'I couldn\'t load the AI assistant (connection, memory, or an incompatible browser). My financial calculations remain fully available.',
         runErr: 'Something went wrong on the AI assistant side. Try again, or ask me for a precise calculation.',
-        cancel: 'Cancel',
         stop: 'Stop',
-        cancelled: 'Download cancelled. My calculations are still here, and you can start the install again whenever you like.',
-        queued: (n) => n === 1 ? "I'll hold your question and answer it as soon as the assistant is ready." : `I'll hold your ${n} questions and answer them as soon as the assistant is ready.`,
-        timeout: 'The download stalled part-way with no browser error — usually shop wifi or a firewall. My calculations are still available.',
-        diag: (c) => `Code for support: ${c}`,
-        unfitAdapter: 'Your browser advertises WebGPU but no graphics adapter answers. The open model cannot run here, and I would rather say so now than after a 1.2 GB download.',
-        unfitSpace: 'There is not enough free storage in this browser to keep the model (1.2 GB). Free some space, or carry on with my calculations, which need none.',
-        unfitMemory: 'This device has too little memory to run the model without freezing your till. I am not going to try.',
         unfitTail: 'What I calculate is untouched: hiring, pricing, break-even, forecasts, margins, costs, cash, and your sales by item, by customer and by day.',
-        cloudLead: 'This device can’t run the open-source assistant locally. Kiwi can answer from its own servers instead.',
-        cloudPrivacy: 'Plainly: in this mode your question and your business’s figures are sent to Kiwi to be processed. The local mode sends nothing off the device.',
+        privateLead: 'Private mode: this question is outside my calculations, and you chose that nothing leaves this device. You can enable server AI in the right-hand panel.',
+        unavailable: 'This question is outside my calculations, and Kiwi’s server can’t be reached right now.',
+        cloudLead: 'This question is beyond my preset calculations. Kiwi can answer it from its servers.',
+        cloudPrivacy: 'Plainly: in this mode your question and the figures of your business needed for the answer are sent to Kiwi for processing, securely. In private mode nothing leaves, and my calculations stay untouched. You choose once; it can be changed in the panel.',
         cloudActivate: 'Answer from Kiwi’s servers',
         cloudDecline: 'No thanks, keep my calculations only',
         cloudQuota: 'The server assistant has reached today’s limit for your business. It resets tomorrow; until then my calculations are untouched.',
@@ -816,30 +778,13 @@
       },
       calc: { title: 'حساب', result: 'النتيجة' },
       llm: {
-        noGpu: 'هذا السؤال خارج نطاق حساباتي، أنا مساعدك في الأرقام: التوظيف، الأسعار، الاستثمار، عتبة الربحية، التوقّعات، الهوامش والمصاريف. اسألني عن أيٍّ منها وتصلك الإجابة فوراً. ولمعرفة أصناف قائمتك الناجحة من غيرها، افتح صفحة القائمة في لوحة التحكم.',
-        loading: (p) => `مساعد الذكاء الاصطناعي يكمل التحميل (${p}%). سأجيب فور جاهزيته.`,
-        offerLead: 'هذا السؤال خارج حساباتي المُعدّة مسبقاً، لكن يمكنني الإجابة عنه بحرية عبر <b>مساعد ذكاء اصطناعي مفتوح المصدر</b> يعمل <b>كلياً داخل متصفّحك</b>: لا تغادر أي بيانات.',
-        offerSize: (sz) => `الإطلاق الأول: تنزيل واحد بحجم ${sz}، ثم فوري بعد ذلك.`,
-        activate: 'تشغيل مساعد الذكاء الاصطناعي',
-        installing: 'تثبيت مساعد الذكاء الاصطناعي، نموذج مفتوح المصدر يعمل في متصفّحك.',
-        initializing: 'جارٍ التهيئة…',
-        ready: 'مساعد الذكاء الاصطناعي جاهز.',
-        readyMsg: 'مساعد الذكاء الاصطناعي جاهز. اسألني عن تسيير مقهاك وتمويله وفريقه وتسويقه، أبقى مركّزاً على نشاطك.',
-        loadFail: 'فشل التحميل.',
-        loadFailMsg: 'تعذّر تحميل مساعد الذكاء الاصطناعي (الاتصال أو الذاكرة أو متصفّح غير متوافق). تبقى حساباتي المالية متاحة بالكامل.',
         runErr: 'حدث خطأ من جهة مساعد الذكاء الاصطناعي. أعد المحاولة، أو اطلب مني حساباً دقيقاً.',
-        cancel: 'إلغاء',
         stop: 'إيقاف',
-        cancelled: 'تمّ إلغاء التنزيل. حساباتي ما زالت متاحة، ويمكنك إعادة التثبيت متى شئت.',
-        queued: (n) => n === 1 ? 'سأحتفظ بسؤالك وأجيب عنه فور جهوز المساعد.' : `سأحتفظ بأسئلتك الـ${n} وأجيب عنها فور جهوز المساعد.`,
-        timeout: 'توقّف التنزيل في منتصفه دون خطأ من المتصفّح — غالباً شبكة المحل أو جدار حماية. حساباتي ما زالت متاحة.',
-        diag: (c) => `رمز للدعم التقني: ${c}`,
-        unfitAdapter: 'متصفّحك يعلن دعم WebGPU لكن لا تستجيب أي بطاقة رسومات. لن يعمل النموذج المفتوح هنا، وأفضّل إخبارك الآن بدل أن أخبرك بعد تنزيل 1,2 غيغابايت.',
-        unfitSpace: 'لا توجد مساحة تخزين كافية في هذا المتصفّح للاحتفاظ بالنموذج (1,2 غيغابايت). أفرغ بعض المساحة، أو تابع مع حساباتي التي لا تحتاج شيئاً.',
-        unfitMemory: 'ذاكرة هذا الجهاز أقل من أن تشغّل النموذج دون تجميد صندوقك. لن أحاول.',
         unfitTail: 'ما أحسبه يبقى كاملاً: التوظيف، الأسعار، عتبة الربحية، التوقّعات، الهوامش، المصاريف، الخزينة، ومبيعاتك حسب الصنف والزبون واليوم.',
-        cloudLead: 'هذا الجهاز لا يستطيع تشغيل المساعد الحرّ محلياً. يمكن لـ Kiwi أن يجيب من خوادمه بدلاً من ذلك.',
-        cloudPrivacy: 'بصراحة: في هذا الوضع تُرسل أسئلتك وأرقام محلّك إلى Kiwi لمعالجتها. أمّا الوضع المحلي فلا يُخرج أي شيء من الجهاز.',
+        privateLead: 'الوضع الخاص: هذا السؤال خارج نطاق حساباتي، وقد اخترت ألا يغادر أي شيء هذا الجهاز. يمكنك تفعيل الذكاء الاصطناعي عبر الخادم من اللوحة الجانبية.',
+        unavailable: 'هذا السؤال خارج نطاق حساباتي، وخادم Kiwi غير متاح حالياً.',
+        cloudLead: 'هذا السؤال خارج حساباتي المعدّة مسبقاً. يمكن لـ Kiwi الإجابة عنه من خوادمه.',
+        cloudPrivacy: 'بصراحة: في هذا الوضع يُرسل سؤالك وأرقام محلّك اللازمة للإجابة إلى Kiwi لمعالجتها بشكل آمن. في الوضع الخاص لا يغادر أي شيء، وتبقى حساباتي كاملة. تختار مرة واحدة، ويمكن تغييره من اللوحة.',
         cloudActivate: 'الإجابة من خوادم Kiwi',
         cloudDecline: 'لا، شكراً — الاكتفاء بحساباتي',
         cloudQuota: 'بلغ المساعد على الخادم حدّه اليومي لمحلّك. يُستأنف غداً، وحساباتي تبقى كاملة حتى ذلك الحين.',
@@ -1337,14 +1282,16 @@
     let c = null;
     try { c = window.KiwiFeatureTruth && window.KiwiFeatureTruth.context ? window.KiwiFeatureTruth.context({ role: accessTier() }) : null; } catch (_) {}
     const label = (B.tradeLabel || B.trade || (L === 'en' ? 'business' : L === 'ar' ? 'النشاط' : 'activité'));
-    const mode = c && c.aiMode || 'local';
-    const title = L === 'en' ? `Kiwi copilot · ${label}` : L === 'ar' ? `مساعد Kiwi · ${label}` : `Copilote Kiwi · ${label}`;
+    const mode = c && c.aiMode || 'ask';
     const privacy = mode === 'cloud'
-      ? (L === 'en' ? 'Cloud AI enabled: the question and only the required business context are sent securely. The assistant remains read-only.' : L === 'ar' ? 'وضع السحابة مفعل: يُرسل السؤال والسياق الضروري فقط بأمان. يبقى المساعد للقراءة فقط.' : 'IA cloud activée : la question et le seul contexte nécessaire sont envoyés de façon sécurisée. Le copilote reste en lecture seule.')
+      ? (L === 'en' ? 'Server AI on: a free-text question and only the business context it needs are sent securely to Kiwi. Your figures are computed here. The assistant remains read-only.' : L === 'ar' ? 'الذكاء الاصطناعي عبر الخادم مفعّل: يُرسل السؤال الحر والسياق الضروري فقط بأمان إلى Kiwi. أرقامك تُحسب هنا. يبقى المساعد للقراءة فقط.' : 'IA serveur activée : une question libre et le seul contexte nécessaire sont envoyés de façon sécurisée à Kiwi. Vos chiffres sont calculés ici. Le copilote reste en lecture seule.')
       : mode === 'deterministic'
-        ? (L === 'en' ? 'Private deterministic mode: no question leaves this device. Read-only.' : L === 'ar' ? 'وضع خاص حتمي: لا يغادر أي سؤال هذا الجهاز. قراءة فقط.' : 'Mode privé déterministe : aucune question ne quitte cet appareil. Lecture seule.')
-        : (L === 'en' ? 'Local AI mode: processing stays on this device. Read-only.' : L === 'ar' ? 'وضع الذكاء المحلي: المعالجة على هذا الجهاز فقط. قراءة فقط.' : 'IA locale : le traitement reste sur cet appareil. Lecture seule.');
-    return { title, privacy };
+        ? (L === 'en' ? 'Private mode: calculations only, nothing leaves this device. Read-only.' : L === 'ar' ? 'الوضع الخاص: حسابات فقط، لا يغادر أي شيء هذا الجهاز. قراءة فقط.' : 'Mode privé : calculs seuls, rien ne quitte cet appareil. Lecture seule.')
+        : (L === 'en' ? 'Your figures are computed on this device. A free-text question goes to Kiwi’s server only after you agree, once. Read-only.' : L === 'ar' ? 'أرقامك تُحسب على هذا الجهاز. السؤال الحر يُرسل إلى خادم Kiwi فقط بعد موافقتك، مرة واحدة. قراءة فقط.' : 'Vos chiffres sont calculés sur cet appareil. Une question libre part vers le serveur Kiwi seulement après votre accord, une fois. Lecture seule.');
+    const modeToggle = mode === 'cloud'
+      ? (L === 'en' ? 'Switch to private mode' : L === 'ar' ? 'الانتقال إلى الوضع الخاص' : 'Passer en mode privé')
+      : (L === 'en' ? 'Enable server AI' : L === 'ar' ? 'تفعيل الذكاء الاصطناعي عبر الخادم' : 'Activer l’IA serveur');
+    return { title, privacy, modeToggle };
   }
 
   function renderHero() {
@@ -3828,95 +3775,26 @@
      le coût de la réponse. Lecture pure. */
   window.KiwiAgentRoute = routeLabel;
 
-  /* ═══════════════ IN-BROWSER LLM · WebLLM ═══════════════
-   * Anything the deterministic engine doesn't recognise is answered by an
-   * open-source model running fully in the browser via WebGPU — no backend,
-   * no API key, no data leaves the device. Opt-in download. */
-  const LLM = {
-    /* Qwen3.5-2B — Qwen stays the strongest small family for FR/AR (Phi is
-     * English-centric, Llama/Gemma are weak on Arabic), and 3.5-2B is a
-     * generation newer than the 4B it replaces at roughly HALF the download.
-     * Download size is the real adoption blocker on a shop till, so a smaller
-     * newer model beats a bigger older one here.
-     * Thinking: Qwen3.5 dropped Qwen3's `/no_think` prompt switch. Its chat
-     * template now emits a pre-closed `<think></think>` block unless the
-     * caller passes enable_thinking:true — i.e. NON-thinking is the default
-     * and needs no flag. Passing `/no_think` would just be dead text in the
-     * system prompt. stripThink() below stays as the safety net.
-     * CDN is version-pinned so model availability/behaviour can't drift. */
-    model: 'Qwen3.5-2B-q4f16_1-MLC',
-    sizeLabel: '≈ 1,2 Go',
-    cdn: 'https://esm.run/@mlc-ai/web-llm@0.2.84',
-    status: 'idle',
-    engine: null,
-    progress: 0,
-    /* A QUEUE, not a slot. `LLM.pending = question` meant a merchant who typed
-     * a second question during the 1,2 Go download silently lost the first —
-     * and the one that survived was the one they had already given up on. */
-    pending: [],
-    cancelled: false,
-    diag: '',
-    lastProgressAt: 0,
-  };
-  /* Roughly what the weights need on disk, with room for the browser's own
-   * bookkeeping. Checked BEFORE the download, not discovered at 94 %. */
-  const LLM_NEED_BYTES = 1.6 * 1024 * 1024 * 1024;
-  /* No progress callback for this long means the transfer is dead. WebLLM has
-   * no timeout of its own, so without this the merchant watches a bar that
-   * will never move again, with no way to leave. */
-  const LLM_STALL_MS = 60000;
-  /* A code the merchant can read down the phone. Short, no personal data. */
-  function diagCode() {
-    let n = 0;
-    try { n = Date.now() % 1679616; } catch (_) { n = 0; }
-    return 'KAI-' + n.toString(36).toUpperCase().padStart(4, '0');
-  }
-  /* A device that cannot run the model should stop being asked to try. */
-  function llmDisabled() {
-    try { return localStorage.getItem('kiwiAiLocal') === 'off'; } catch (_) { return false; }
-  }
-  function disableLlm() {
-    try { localStorage.setItem('kiwiAiLocal', 'off'); } catch (_) {}
-  }
-
-  /* La route serveur (/api/ai/ask), pour les seuls appareils où le modèle local
-   * est impossible. Le choix du commerçant est PERSISTÉ dans les deux sens :
-   * redemander à chaque question serait du harcèlement, et un « non » qui ne
-   * tient pas n'est pas un non. Rien n'est activé par défaut — le mode local
-   * promet que rien ne sort de l'appareil, et cette promesse ne se contourne
-   * pas en silence. */
+  /* ═══════════════ MODÈLE DE REPLI · serveur Kiwi ═══════════════ */
+  /* Le repli hors calculs est le modèle SERVEUR (/api/ai/ask, Workers AI).
+   * Le modèle téléchargé dans le navigateur (WebLLM, 1,2 Go, WebGPU) a été
+   * retiré le 2026-08-19 : il excluait l'iPad du comptoir, le vieux portable
+   * et les téléphones — exactement les appareils des commerçants — et un
+   * modèle de 2 milliards de paramètres répondait « regardez votre tableau de
+   * bord » à « quel est mon stock ». Le moteur déterministe reste PREMIER :
+   * aucun chiffre du commerçant ne passe par un modèle. Le consentement est
+   * demandé UNE fois, et un « non » tient : mode privé, calculs seuls. */
+  const LLM = { pending: [], cancelled: false };
   function cloudAccepted() {
     try { return localStorage.getItem('kiwiAiCloud') === 'on'; } catch (_) { return false; }
   }
   function cloudDeclined() {
     try { return localStorage.getItem('kiwiAiCloud') === 'off'; } catch (_) { return false; }
   }
-
-  /* Can this machine actually do it? `'gpu' in navigator` only says the API is
-   * declared. Asking for an adapter, for free disk and for memory takes a few
-   * milliseconds and replaces the worst outcome available here: a shop till on
-   * shop wifi spending eight minutes downloading 1,2 Go to arrive at "Failed to
-   * fetch". A straight no, now, is kinder and truer. */
-  async function llmCapability() {
-    if (!('gpu' in navigator)) return { ok: false, why: 'noGpu' };
-    let adapter = null;
-    try { adapter = await navigator.gpu.requestAdapter(); } catch (_) { adapter = null; }
-    if (!adapter) return { ok: false, why: 'unfitAdapter' };
-    try {
-      if (navigator.storage && navigator.storage.estimate) {
-        const est = await navigator.storage.estimate();
-        const free = (est && est.quota ? est.quota : 0) - (est && est.usage ? est.usage : 0);
-        if (est && est.quota && free < LLM_NEED_BYTES) return { ok: false, why: 'unfitSpace' };
-      }
-    } catch (_) {}
-    if (navigator.deviceMemory && navigator.deviceMemory < 4) return { ok: false, why: 'unfitMemory' };
-    return { ok: true };
+  function setCloud(on) {
+    try { localStorage.setItem('kiwiAiCloud', on ? 'on' : 'off'); } catch (_) {}
   }
 
-  /* Qwen can emit <think>…</think> reasoning blocks. Qwen3.5 defaults to
-   * non-thinking (see LLM above), but we strip defensively so the merchant
-   * never sees a stray tag — handles both a closed block, the empty
-   * `<think></think>` the template itself emits, and one still mid-stream. */
   function stripThink(s) {
     return String(s)
       .replace(/<think>[\s\S]*?<\/think>/gi, '')
@@ -4589,6 +4467,8 @@
     .fa-ctx-note { margin-top:20px; font-size:11.5px; color:var(--n-500); line-height:1.55; }
     .fa-ctx-trust { margin-top:13px; display:flex; gap:7px; align-items:flex-start; font-size:11px; color:var(--n-500); line-height:1.45; }
     .fa-ctx-trust svg { width:13px; height:13px; color:var(--atlas); flex-shrink:0; margin-top:1px; }
+    .fa-ctx-mode { margin-top:8px; background:none; border:1px solid var(--n-200); border-radius:999px; padding:4px 10px; font:inherit; font-size:11px; color:var(--atlas); cursor:pointer; }
+    .fa-ctx-mode:hover { border-color:var(--atlas); }
     @media (max-width:920px) { .fa-context { display:none; } }
 
     /* ─── empty-state hero — the first screen, before any conversation ─── */
@@ -4765,7 +4645,8 @@
               `<button class="fa-ctx-kpi" type="button" data-fa-fact="${escAttr(k + ' : ' + v)}"><span class="k">${k}</span><span class="v">${v}</span></button>`).join('')}</div>`
           : '') +
         `<div class="fa-ctx-detail" style="display:block;font-size:12.5px;color:var(--n-500);line-height:1.55;">${p.railEmpty}</div>` +
-        `<div class="fa-ctx-trust">${ICON.lock}<span>${dynamicUi.privacy}</span></div>`;
+        `<div class="fa-ctx-trust" data-fa-trust>${ICON.lock}<span data-fa-trust-text>${dynamicUi.privacy}</span></div>` +
+        `<button type="button" class="fa-ctx-mode" data-fa-mode-toggle>${dynamicUi.modeToggle}</button>`;
     } else {
       const f = tr().facts;
       const opexItems = Object.entries(B.opex).sort((a, b) => b[1] - a[1])
@@ -4814,7 +4695,8 @@
         `</div>` +
         `<button class="fa-ctx-more" type="button" data-fa-ctx-more>${HL().more}</button>` +
         `<div class="fa-ctx-detail" data-fa-detail hidden>${ctxRail}</div>` +
-        `<div class="fa-ctx-trust">${ICON.lock}<span>${dynamicUi.privacy}</span></div>`;
+        `<div class="fa-ctx-trust" data-fa-trust>${ICON.lock}<span data-fa-trust-text>${dynamicUi.privacy}</span></div>` +
+        `<button type="button" class="fa-ctx-mode" data-fa-mode-toggle>${dynamicUi.modeToggle}</button>`;
     }
 
     const body = `
@@ -4970,28 +4852,28 @@
       } catch (_) {}
     }
 
-    /* The deterministic-only answer: what Kiwi computes, said plainly. Used
-     * when the device cannot run the model and when the merchant has turned it
-     * off — never as a shrug, always with the list of what still works. */
+    /* Le panneau dit le mode courant ; on le repeint quand il change. */
+    function refreshTrustLine() {
+      const u = assistantUiCopy();
+      root.querySelectorAll('[data-fa-trust-text]').forEach((el) => { el.textContent = u.privacy; });
+      root.querySelectorAll('[data-fa-mode-toggle]').forEach((el) => { el.textContent = u.modeToggle; });
+    }
+
+    /* Hors calculs et sans modèle : on le dit, avec la liste de ce qui
+     * marche toujours — jamais un haussement d'épaules. */
     function deterministicOnly(why) {
       const m = tr().llm;
-      const lead = why && m[why] ? m[why] : m.noGpu;
+      const lead = why === 'private' ? m.privateLead : m.unavailable;
       pushAgent(replyHtml({
-        text: why && m[why] ? lead + ' ' + m.unfitTail : lead,
+        text: lead + ' ' + m.unfitTail,
         follow: [tr().chips.charges, tr().chips.breakeven],
       }));
     }
 
-    /* Jusqu'ici les quatre refus de llmCapability() finissaient sur une phrase
-     * polie et rien d'autre : pas de WebGPU, pas de carte, pas de place, pas de
-     * mémoire. Ce sont exactement les appareils qui ne peuvent pas télécharger
-     * 1,2 Go — la population pour laquelle un modèle serveur existe. On ne
-     * bascule PAS en silence : l'offre dit, dans la langue du commerçant, que
-     * la question et les chiffres quittent l'appareil, et c'est à lui
-     * d'accepter une fois ou de refuser pour de bon. */
-    function offerCloud(question, why) {
+    /* Le consentement, une fois. La question attend dans la file ; « oui »
+     * l'envoie, « non » est gardé (mode privé) et se change dans le panneau. */
+    function offerCloud(question) {
       const m = tr().llm;
-      if (cloudDeclined()) { deterministicOnly(why); return; }
       LLM.pending.push(question);
       pushAgent(
         `<div>${m.cloudLead}</div>
@@ -5001,169 +4883,29 @@
     }
 
     async function acceptCloud() {
-      try { localStorage.setItem('kiwiAiCloud', 'on'); } catch (_) {}
+      setCloud(true);
+      refreshTrustLine();
       const queued = LLM.pending.slice();
       LLM.pending.length = 0;
-      for (const q of queued) await runLlm(q, 'cloud');
+      for (const q of queued) await runLlm(q);
     }
 
     function declineCloud() {
-      try { localStorage.setItem('kiwiAiCloud', 'off'); } catch (_) {}
+      setCloud(false);
+      refreshTrustLine();
       LLM.pending.length = 0;
-      deterministicOnly('noGpu');
+      deterministicOnly('private');
     }
 
-    async function routeToLlm(question) {
-      const m = tr().llm;
-      if (LLM.status === 'ready') { runLlm(question); return; }
-      /* Le serveur passe avant le contrôle local : c'est la route que le
-       * commerçant a explicitement choisie, et sur ces appareils il n'y a rien
-       * de local vers quoi retomber. */
-      if (cloudAccepted()) { runLlm(question, 'cloud'); return; }
-      if (llmDisabled()) { offerCloud(question, 'noGpu'); return; }
-      if (LLM.status === 'loading') {
-        /* Queue. The old line was `LLM.pending = question`, so asking a second
-         * thing during a 1,2 Go download threw the first one away in silence. */
-        LLM.pending.push(question);
-        pushAgent(replyHtml({ text: m.loading(Math.round(LLM.progress * 100)) + ' ' + m.queued(LLM.pending.length) }));
-        return;
-      }
-      /* Ask the machine before asking the merchant. A device that will fail at
-       * 94 % should be told so at 0 %. */
-      const cap = await llmCapability();
-      if (!cap.ok) {
-        if (cap.why !== 'noGpu') disableLlm();
-        offerCloud(question, cap.why);
-        return;
-      }
-      LLM.pending.push(question);
-      pushAgent(
-        `<div>${m.offerLead}</div>
-         <div class="fa-note" style="font-style:normal;">${m.offerSize(LLM.sizeLabel)}</div>
-         <div class="fa-follow"><button type="button" class="fa-llm-btn" data-fa-activate>${m.activate}</button></div>`);
+    function routeToLlm(question) {
+      if (cloudDeclined()) { deterministicOnly('private'); return; }
+      if (cloudAccepted()) { runLlm(question); return; }
+      offerCloud(question);
     }
 
-    async function activateLlm() {
-      if (LLM.status === 'loading' || LLM.status === 'ready') return;
-      const m = tr().llm;
-      LLM.status = 'loading';
-      LLM.cancelled = false;
-      LLM.diag = diagCode();
-      LLM.lastProgressAt = Date.now();
-      /* A cancel button, because 1,2 Go on shop wifi is a decision a merchant
-       * is allowed to change their mind about — and because a progress bar
-       * with no way out is what makes people close the tab on the whole app. */
-      const card = pushAgent(
-        `<div>${m.installing}</div>
-         <div class="fa-llm-prog"><div class="fa-llm-bar" data-fa-bar></div></div>
-         <div class="fa-llm-ptxt" data-fa-ptxt>${m.initializing}</div>
-         <div class="fa-follow"><button type="button" class="fa-llm-btn" data-fa-cancel-llm>${m.cancel}</button></div>`);
-      const bar = card.querySelector('[data-fa-bar]');
-      const ptxt = card.querySelector('[data-fa-ptxt]');
-      /* WebLLM offers no timeout and no abort. A transfer that dies mid-way
-       * simply stops calling back, so the bar freezes at 61 % for ever. Watch
-       * the callback clock instead and give up out loud. */
-      const stall = setInterval(() => {
-        if (LLM.status !== 'loading') { clearInterval(stall); return; }
-        if (Date.now() - LLM.lastProgressAt < LLM_STALL_MS) return;
-        clearInterval(stall);
-        LLM.cancelled = true;
-        LLM.status = 'error';
-        LLM.pending.length = 0;
-        try { card.remove(); } catch (_) {}
-        pushAgent(replyHtml({ text: m.timeout, note: m.diag(LLM.diag) }));
-      }, 4000);
-      const done = () => { try { clearInterval(stall); } catch (_) {} };
-      try {
-        const webllm = await import(LLM.cdn);
-        /* The model's WASM lib defaults to raw.githubusercontent.com, which many
-         * ISPs, firewalls and privacy/ad-blocker extensions drop — causing a
-         * "Failed to fetch" before the download even starts. Swap it for
-         * jsDelivr's GitHub mirror (a real CDN with proper CORS) so activation
-         * works on real networks. Weights still come from Hugging Face. */
-        const base = webllm.prebuiltAppConfig;
-        const appConfig = {
-          ...base,
-          model_list: base.model_list.map((mm) => mm.model_lib && mm.model_lib.includes('raw.githubusercontent.com')
-            ? { ...mm, model_lib: mm.model_lib.replace(/https:\/\/raw\.githubusercontent\.com\/([^/]+)\/([^/]+)\/([^/]+)\//, 'https://cdn.jsdelivr.net/gh/$1/$2@$3/') }
-            : mm),
-        };
-        LLM.engine = await webllm.CreateMLCEngine(LLM.model, {
-          appConfig,
-          initProgressCallback: (p) => {
-            LLM.lastProgressAt = Date.now();   // feeds the stall watchdog
-            LLM.progress = p.progress || 0;
-            if (bar) bar.style.width = Math.round(LLM.progress * 100) + '%';
-            if (ptxt) ptxt.textContent = p.text || `${Math.round(LLM.progress * 100)} %`;
-          },
-        });
-        done();
-        /* Cancelled while the weights were still arriving: the engine resolves
-         * anyway, and we must not silently light it up after the merchant said
-         * no. Drop it and leave the door open for later. */
-        if (LLM.cancelled) { LLM.status = 'idle'; LLM.engine = null; return; }
-        LLM.status = 'ready';
-        logAi({ route: 'llm-activate', provenance: 'deterministic', ms: 0, qLength: 0 });
-        if (bar) bar.style.width = '100%';
-        if (ptxt) ptxt.textContent = m.ready;
-        const cancelBtn = card.querySelector('[data-fa-cancel-llm]');
-        if (cancelBtn) cancelBtn.remove();
-        pushAgent(replyHtml({ text: m.readyMsg }));
-        /* Drain the whole queue, oldest first — every question the merchant
-         * asked while waiting gets its answer, in the order they asked. */
-        const queued = LLM.pending.slice();
-        LLM.pending.length = 0;
-        for (const q of queued) { await runLlm(q); }
-      } catch (e) {
-        done();
-        if (LLM.cancelled) { LLM.status = 'idle'; return; }
-        console.error('[Kiwi] In-browser LLM failed to load:', LLM.diag, e);
-        /* Into the same buffer the support team already reads
-         * (window.KiwiErrors.report()), tagged with the code shown on screen. */
-        try { window.dispatchEvent(new ErrorEvent('error', { message: 'LLM ' + LLM.diag + ': ' + (e && e.message), filename: 'agent.js' })); } catch (_) {}
-        LLM.status = 'error';
-        logAi({ route: 'llm-activate', provenance: 'error', ms: 0, qLength: 0, diag: LLM.diag });
-        LLM.pending.length = 0;
-        if (ptxt) ptxt.textContent = m.loadFail;
-        pushAgent(replyHtml({ text: m.loadFailMsg, note: m.diag(LLM.diag) }));
-      }
-    }
-
-    /* The merchant changed their mind. Mark it before the engine resolves so
-     * the success path knows to throw the result away. */
-    function cancelLlm() {
-      if (LLM.status !== 'loading') return;
-      LLM.cancelled = true;
-      LLM.status = 'idle';
-      LLM.pending.length = 0;
-      pushAgent(replyHtml({ text: tr().llm.cancelled }));
-    }
-
-    /* Les deux moteurs ne diffèrent QUE par le transport. WebLLM rend un
-     * itérable de morceaux à la forme OpenAI ; le serveur rend du SSE sur HTTP.
-     * On les ramène tous les deux à un flux de bouts de texte, pour que tout ce
-     * qui suit — découpage par phrase terminée, redactUnsupported(), note de
-     * garde, télémétrie, boutons d'avis, historique qui ne garde que la version
-     * expurgée — soit écrit UNE fois et ne puisse pas diverger entre les
-     * routes. Chacune est `async` et ne rend son itérateur qu'une fois la
-     * connexion établie : l'indicateur de frappe reste tant que rien n'arrive. */
-    async function localDeltas(messages) {
-      const stream = await LLM.engine.chat.completions.create({
-        messages,
-        /* Deliberately below Qwen3.5's packaged default (temp 1.0 / top_p
-         * 1.0): this assistant answers with the merchant's real money, so
-         * the failure we most need to suppress is an invented MAD figure.
-         * 0.7/0.8 stays clear of the repetition that greedy decoding
-         * triggers while keeping output tight against the grounding. */
-        temperature: 0.7,
-        top_p: 0.8,
-        stream: true,
-      });
-      return (async function* () {
-        for await (const chunk of stream) yield chunk.choices?.[0]?.delta?.content || '';
-      })();
-    }
-
+    /* Le serveur rend du SSE sur HTTP ; on le ramène à un flux de bouts de
+     * texte pour que découpage par phrase, redactUnsupported(), note de garde,
+     * télémétrie, boutons d'avis et historique expurgé soient écrits UNE fois. */
     async function cloudDeltas(messages) {
       const res = await fetch('/api/ai/ask', {
         method: 'POST',
@@ -5220,8 +4962,7 @@
       })();
     }
 
-    async function runLlm(question, via) {
-      const cloud = via === 'cloud';
+    async function runLlm(question) {
       const tLlm = Date.now();
       const typing = pushTyping();
       llmHistory.push({ role: 'user', content: question });
@@ -5231,7 +4972,7 @@
       const sys = buildSystemPrompt(detectQLang(question));
       const messages = [{ role: 'system', content: sys }, ...llmHistory.slice(-8)];
       try {
-        const deltas = await (cloud ? cloudDeltas(messages) : localDeltas(messages));
+        const deltas = await cloudDeltas(messages);
         typing.remove();
         LLM.cancelled = false;
         const bubble = pushAgent('<span data-fa-stream></span><div class="fa-follow" data-fa-stopwrap><button type="button" class="fa-llm-btn" data-fa-stop-llm>' + tr().llm.stop + '</button></div>');
@@ -5278,7 +5019,7 @@
           cav.textContent = red.caveat;
           bubble.appendChild(cav);
         }
-        logAi({ route: cloud ? 'cloud' : 'model', provenance: red.redacted === -1 ? 'error' : 'model', ms: Date.now() - tLlm, qLength: question.length, redacted: Math.max(0, red.redacted) });
+        logAi({ route: 'cloud', provenance: red.redacted === -1 ? 'error' : 'model', ms: Date.now() - tLlm, qLength: question.length, redacted: Math.max(0, red.redacted) });
         /* The merchant's own verdict — the only signal that says whether the
          * answer was any good. Two buttons, no free text, nothing transmitted. */
         if (bubble && red.redacted !== -1) {
@@ -5304,7 +5045,7 @@
         if (code === 'quota') {
           pushAgent(replyHtml({ text: tr().llm.cloudQuota }));
         } else if (code === 'unbound' || code === 'auth' || code === 'model' || code === 'messages' || code === 'body') {
-          deterministicOnly('noGpu');
+          deterministicOnly('unavailable');
         } else {
           pushAgent(replyHtml({ text: tr().llm.runErr }));
         }
@@ -5375,10 +5116,9 @@
         runOperation(runBtn);
         return;
       }
-      if (e.target.closest('[data-fa-activate]')) { activateLlm(); return; }
       if (e.target.closest('[data-fa-cloud]')) { acceptCloud(); return; }
       if (e.target.closest('[data-fa-cloud-no]')) { declineCloud(); return; }
-      if (e.target.closest('[data-fa-cancel-llm]')) { cancelLlm(); return; }
+      if (e.target.closest('[data-fa-mode-toggle]')) { setCloud(!cloudAccepted()); refreshTrustLine(); return; }
       const rateBtn = e.target.closest('[data-fa-rate]');
       if (rateBtn) {
         try { window.KiwiAiTelemetry && window.KiwiAiTelemetry.rate(rateBtn.getAttribute('data-fa-rate')); } catch (_) {}

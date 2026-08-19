@@ -790,6 +790,38 @@ section('Supplier-invoice reader from the copilot');
     /\$\{supplierInvoiceOn\(\) \? `<button class="fa-hero-card" type="button" data-fa-open="stock-scan-invoice">/.test(src));
 }
 
+/* ── 12 · server model is the fallback; WebLLM download is gone ──────────────
+ * The deterministic engine stays first. What it cannot answer goes to
+ * /api/ai/ask — after ONE explicit consent — or stays private (calculations
+ * only) if the merchant declined. No 1,2 Go download may ever be offered. */
+section('Server-model fallback, no in-browser download');
+{
+  const src = fs.readFileSync(AGENT, 'utf8');
+  const truthSrc = fs.readFileSync(TRUTH, 'utf8');
+  /* static guards — code, not comments: strip block + line comments first */
+  const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+  t('no WebLLM engine / CDN / WebGPU capability code remains in agent.js',
+    !/CreateMLCEngine|esm\.run|navigator\.gpu|requestAdapter|llmCapability|activateLlm|localDeltas/.test(code));
+  t('no download-offer strings remain in the llm dictionaries',
+    !/offerSize|unfitAdapter|unfitSpace|unfitMemory|loadFailMsg/.test(code));
+  t('routeToLlm: declined → private, accepted → server, otherwise consent offer',
+    /function routeToLlm\(question\) \{\s*if \(cloudDeclined\(\)\) \{ deterministicOnly\('private'\); return; \}\s*if \(cloudAccepted\(\)\) \{ runLlm\(question\); return; \}\s*offerCloud\(question\);\s*\}/.test(code));
+  t('runLlm has a single transport: cloudDeltas', /const deltas = await cloudDeltas\(messages\);/.test(code) && !/localDeltas\(/.test(code));
+  t('the panel carries a mode toggle wired to setCloud', /data-fa-mode-toggle/.test(code) && /\[data-fa-mode-toggle\]'\)\) \{ setCloud\(!cloudAccepted\(\)\); refreshTrustLine\(\); return; \}/.test(code));
+
+  /* aiMode(), executed from agent-truth.js: three states */
+  const am = truthSrc.match(/function aiMode\(\) \{[\s\S]*?\n  \}/);
+  t('aiMode() exists in agent-truth.js', !!am);
+  const mode = (store) => new Function('storage', am[0] + '\nreturn aiMode();')((k) => store[k] == null ? null : store[k]);
+  t('aiMode: kiwiAiCloud=on → cloud', mode({ kiwiAiCloud: 'on' }) === 'cloud');
+  t('aiMode: kiwiAiCloud=off → deterministic (private)', mode({ kiwiAiCloud: 'off' }) === 'deterministic');
+  t('aiMode: undecided → ask (never "local")', mode({}) === 'ask' && mode({ kiwiAiLocal: 'off' }) === 'ask');
+
+  /* the three trust sentences exist, and the undecided one promises the consent step */
+  t('trust line: cloud / private / undecided sentences present',
+    /IA serveur activée/.test(src) && /Mode privé : calculs seuls/.test(src) && /seulement après votre accord, une fois/.test(src));
+}
+
 /* ── summary ──────────────────────────────────────────────────────────────── */
 console.log('\n' + '─'.repeat(60));
 if (failures) { console.log(`✗ assistant gate: ${failures} failure(s)`); process.exit(1); }

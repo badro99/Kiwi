@@ -31,10 +31,16 @@
     try { return String((window.KiwiVenue && window.KiwiVenue.getPlan && window.KiwiVenue.getPlan()) || (window.KiwiConfig && window.KiwiConfig.plan) || 'standard'); }
     catch (_) { return 'standard'; }
   }
+  /* Trois états, pas deux : « cloud » quand le commerçant a accepté l'IA
+   * serveur, « deterministic » quand il l'a refusée (mode privé), « ask » tant
+   * qu'il n'a pas tranché — le copilote demande alors une fois. L'ancien
+   * drapeau kiwiAiLocal (appareil inapte au modèle téléchargé) n'a plus de
+   * sens depuis le retrait de WebLLM et n'est plus lu. */
   function aiMode() {
-    if (storage('kiwiAiCloud') === 'on') return 'cloud';
-    if (storage('kiwiAiLocal') === 'off') return 'deterministic';
-    return 'local';
+    var c = storage('kiwiAiCloud');
+    if (c === 'on') return 'cloud';
+    if (c === 'off') return 'deterministic';
+    return 'ask';
   }
   function venueId() {
     var v = venue();
