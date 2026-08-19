@@ -150,6 +150,14 @@
       mScanBtnFile: 'Choisir un fichier', mScanBtnCam: 'Utiliser la caméra',
       mScanManual: 'Saisir manuellement',
       mScanReadingT: 'Lecture de la facture…', mScanReadingS: 'Extraction OCR · reconnaissance des articles',
+      mScanReadingFile: 'Extraction du texte PDF…',
+      mScanServerNotice: 'La facture est analysée sur le serveur Kiwi pour pré-remplir les lignes.',
+      mScanFailFallback: 'Lecture automatique indisponible — passage en saisie manuelle.',
+      mScanUpdateCost: 'Mettre à jour le prix d\'achat',
+      mScanColCurrentCost: 'Prix réf.',
+      mScanColInvoicedCost: 'Facturé',
+      mScanIgnore: 'Ignorer cette ligne',
+      mScanChoose: 'Choisir un article…',
       mScanReviewT: 'Facture détectée',
       mScanSupplier: 'Fournisseur', mScanDate: 'Date', mScanNum: 'Numéro',
       mScanTva: 'TVA', mScanTotal: 'Total',
@@ -339,6 +347,14 @@
       mScanBtnFile: 'Choose file', mScanBtnCam: 'Use camera',
       mScanManual: 'Enter manually',
       mScanReadingT: 'Reading invoice…', mScanReadingS: 'OCR extraction · item recognition',
+      mScanReadingFile: 'Extracting PDF text…',
+      mScanServerNotice: 'The invoice is analyzed on Kiwi\'s server to pre-fill lines.',
+      mScanFailFallback: 'Automatic reading unavailable — switched to manual entry.',
+      mScanUpdateCost: 'Update purchase price',
+      mScanColCurrentCost: 'Ref. price',
+      mScanColInvoicedCost: 'Invoiced',
+      mScanIgnore: 'Ignore this line',
+      mScanChoose: 'Choose an item…',
       mScanReviewT: 'Invoice detected',
       mScanSupplier: 'Supplier', mScanDate: 'Date', mScanNum: 'Number',
       mScanTva: 'VAT', mScanTotal: 'Total',
@@ -513,6 +529,14 @@
       mScanBtnFile: 'اختيار ملف', mScanBtnCam: 'استخدام الكاميرا',
       mScanManual: 'إدخال يدوي',
       mScanReadingT: 'قراءة الفاتورة…', mScanReadingS: 'استخراج OCR · تعرف على المنتجات',
+      mScanReadingFile: 'استخراج نص PDF…',
+      mScanServerNotice: 'تتم قراءة الفاتورة على خادم Kiwi لملء البنود مسبقاً.',
+      mScanFailFallback: 'القراءة التلقائية غير متوفرة — التحويل إلى الإدخال اليدوي.',
+      mScanUpdateCost: 'تحديث سعر الشراء',
+      mScanColCurrentCost: 'السعر المرجعي',
+      mScanColInvoicedCost: 'المفوتر',
+      mScanIgnore: 'تجاهل هذا السطر',
+      mScanChoose: 'اختر منتجاً…',
       mScanReviewT: 'تم اكتشاف فاتورة',
       mScanSupplier: 'المورد', mScanDate: 'التاريخ', mScanNum: 'الرقم',
       mScanTva: 'الضريبة', mScanTotal: 'المجموع',
@@ -2418,14 +2442,195 @@
   }
 
   /* ═══════════════════════════════════════════════════════════════════════
+   * EXTRACTION & MATCHING FACTURES FOURNISSEUR
+   * ═══════════════════════════════════════════════════════════════════════ */
+  function normalizeMatchStr(s) {
+    return String(s || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function tokenizeMatchStr(s) {
+    return normalizeMatchStr(s).split(' ').filter((w) => w.length >= 2);
+  }
+
+  function tokenOverlapScore(a, b) {
+    const setA = new Set(tokenizeMatchStr(a));
+    const setB = new Set(tokenizeMatchStr(b));
+    if (!setA.size || !setB.size) return 0;
+    let inter = 0;
+    for (const t of setA) {
+      if (setB.has(t)) inter++;
+    }
+    return inter / Math.max(setA.size, setB.size);
+  }
+
+  function matchInvoiceLines(lines, items) {
+    const allItems = Array.isArray(items) ? items : [];
+    return (lines || []).map((line) => {
+      if (!line) return { itemId: null, confidence: 0 };
+
+      // 1. EAN / Code-barres
+      if (line.ean) {
+        const eanHit = allItems.find((it) => it.barcode === line.ean || it.ean === line.ean);
+        if (eanHit) return { itemId: eanHit.id, confidence: 1.0 };
+      }
+
+      // 2. Ref / SKU sur la carte fournisseur ou sur l'article
+      if (line.ref) {
+        const refHit = allItems.find((it) => {
+          if (it.sku === line.ref) return true;
+          const cards = Array.isArray(it.suppliers) ? it.suppliers : [];
+          return cards.some((c) => c.ref === line.ref);
+        });
+        if (refHit) return { itemId: refHit.id, confidence: 0.95 };
+      }
+
+      // 3. Correspondance exacte du nom normalisé
+      const normLabel = normalizeMatchStr(line.label);
+      if (normLabel) {
+        const exactHit = allItems.find((it) => normalizeMatchStr(it.name) === normLabel);
+        if (exactHit) return { itemId: exactHit.id, confidence: 0.9 };
+      }
+
+      // 4. Chevauchement de jetons (seuil >= 0.6)
+      let bestHit = null;
+      let bestScore = 0;
+      for (const it of allItems) {
+        const score = tokenOverlapScore(line.label, it.name);
+        if (score > bestScore) {
+          bestScore = score;
+          bestHit = it;
+        }
+      }
+      if (bestScore >= 0.6 && bestHit) {
+        return { itemId: bestHit.id, confidence: Math.round(bestScore * 100) / 100 };
+      }
+
+      return { itemId: null, confidence: 0 };
+    });
+  }
+
+  function compareLineCost(item, invoicedCost, supplierName) {
+    const invCostNum = Math.max(0, Number(invoicedCost) || 0);
+    if (!item) {
+      return {
+        currentCost: 0,
+        invoicedPerUnit: invCostNum,
+        pct: 0,
+        isRise: false,
+        isDrop: false,
+        isChecked: invCostNum > 0,
+        factor: 1,
+        card: null,
+      };
+    }
+
+    const cards = Array.isArray(item.suppliers) ? item.suppliers : [];
+    let card = null;
+    if (supplierName) {
+      card = cards.find((c) => String(c.supplierName || '').trim().toLowerCase() === String(supplierName).trim().toLowerCase());
+    }
+    if (!card) card = cards[0] || null;
+
+    const factor = (card && Number.isFinite(+card.factor) && +card.factor > 0) ? +card.factor : 1;
+    const current = (card && card.defaultPrice != null && Number.isFinite(+card.defaultPrice))
+      ? +card.defaultPrice
+      : (Number.isFinite(+item.costPerUnit) ? +item.costPerUnit : 0);
+
+    // Facture en unité d'achat ramenée à l'unité de la carte
+    const invoicedPerUnit = Math.round((invCostNum / factor) * 10000) / 10000;
+
+    if (current <= 0) {
+      return {
+        currentCost: current,
+        invoicedPerUnit,
+        pct: 0,
+        isRise: false,
+        isDrop: false,
+        isChecked: invoicedPerUnit > 0,
+        factor,
+        card,
+      };
+    }
+
+    const diff = invoicedPerUnit - current;
+    const pct = Math.round((diff / current) * 100);
+    const isRise = diff > 0.001;
+    const isDrop = diff < -0.001;
+    const isChecked = isRise; // Coché par défaut uniquement en cas de hausse réelle
+
+    return {
+      currentCost: current,
+      invoicedPerUnit,
+      pct,
+      isRise,
+      isDrop,
+      isChecked,
+      factor,
+      card,
+    };
+  }
+
+  let _pdfjsPromise = null;
+  function loadPdfJs() {
+    if (typeof window === 'undefined' || typeof document === 'undefined') return Promise.reject(new Error('no-dom'));
+    if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+    if (_pdfjsPromise) return _pdfjsPromise;
+    _pdfjsPromise = new Promise((resolve, reject) => {
+      if (typeof document.createElement !== 'function') {
+        return resolve(window.pdfjsLib || null);
+      }
+      const script = document.createElement('script');
+      script.src = 'assets/vendor/pdfjs/pdf.min.js';
+      script.onload = () => {
+        if (window.pdfjsLib) {
+          window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'assets/vendor/pdfjs/pdf.worker.min.js';
+          resolve(window.pdfjsLib);
+        } else {
+          resolve(null);
+        }
+      };
+      script.onerror = () => reject(new Error('Erreur de chargement pdf.js'));
+      const target = document.head || document.body || document.documentElement;
+      if (target && target.appendChild) target.appendChild(script);
+      else resolve(null);
+    });
+    return _pdfjsPromise;
+  }
+
+  async function extractPdfText(file) {
+    const pdfjs = await loadPdfJs();
+    const ab = await file.arrayBuffer();
+    const loadingTask = pdfjs.getDocument({ data: ab, isEvalSupported: false });
+    const pdf = await loadingTask.promise;
+    const maxPages = Math.min(pdf.numPages, 10);
+    let fullText = '';
+    for (let i = 1; i <= maxPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      const strings = (content.items || []).map((it) => it.str);
+      fullText += strings.join(' ') + '\n';
+    }
+    return fullText.trim();
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════
    * MODAL · Scan invoice
    * ═══════════════════════════════════════════════════════════════════════ */
   function openInvoiceScan(opts) {
+    // Pré-chargement discret en tâche de fond de pdf.js
+    try { loadPdfJs(); } catch (_) {}
+
     const preSupId = typeof opts === 'string' ? opts : opts?.supplierId;
-    const sup = preSupId ? getSup().find(s => s.id === preSupId) : null;
+    const sup = preSupId ? getSup().find((s) => s.id === preSupId) : null;
     const m = window.Kiwi.modal({
       title: t('mScanTitle'),
-      width: 640,
+      width: 720,
       body: `<div data-stock-scan-stage>${sup ? renderRealReceiptReview({ supplier: sup }) : renderScanStage1()}</div>`,
       foot: `<button class="st-btn" data-dismiss-modal>${esc(STR[lang()].btnCancel || 'Annuler')}</button>`,
     });
@@ -2441,42 +2646,124 @@
 
   function renderScanStage1() {
     return `
-      <div class="st-dropzone" data-stock-scan-trigger>
+      <div class="st-dropzone" data-stock-dropzone>
+        <input type="file" data-stock-file-input accept="application/pdf,image/*" style="display:none;" />
+        <input type="file" data-stock-cam-input accept="image/*" capture="environment" style="display:none;" />
         <div class="st-dropzone-ico">${svg('upload', 26)}</div>
         <div class="st-dropzone-t">${esc(t('mScanDropT'))}</div>
         <div class="st-dropzone-s">${esc(t('mScanDropS'))}</div>
-        <div class="st-dropzone-acts">
-          <button class="st-btn" type="button">${esc(t('mScanBtnFile'))}</button>
-          <button class="st-btn" type="button">${svg('camera', 12)}<span>${esc(t('mScanBtnCam'))}</span></button>
+        <div class="st-dropzone-acts" style="display:flex;gap:10px;margin-top:12px;">
+          <button class="st-btn" type="button" data-stock-pick-file>${esc(t('mScanBtnFile'))}</button>
+          <button class="st-btn" type="button" data-stock-pick-cam>${svg('camera', 12)}<span>${esc(t('mScanBtnCam'))}</span></button>
         </div>
       </div>
-      <div class="st-dropzone-link" data-stock-scan-trigger>${esc(t('mScanManual'))}</div>
+      <div style="font-size:11.5px;color:var(--n-500,#6b7280);text-align:center;margin-top:8px;">
+        ${esc(t('mScanServerNotice'))}
+      </div>
+      <div class="st-dropzone-link" data-stock-scan-manual style="text-align:center;margin-top:12px;cursor:pointer;color:var(--primary,#0070f3);font-size:13px;text-decoration:underline;">
+        ${esc(t('mScanManual'))}
+      </div>
     `;
   }
 
   function wireScanStage1() {
-    document.querySelectorAll('[data-stock-scan-trigger]').forEach(el => {
-      el.addEventListener('click', () => {
-        const stage = document.querySelector('[data-stock-scan-stage]');
+    const scope = topBackdrop() || document;
+    const dropzone = scope.querySelector('[data-stock-dropzone]');
+    const fileInp = scope.querySelector('[data-stock-file-input]');
+    const camInp = scope.querySelector('[data-stock-cam-input]');
+    const btnFile = scope.querySelector('[data-stock-pick-file]');
+    const btnCam = scope.querySelector('[data-stock-pick-cam]');
+    const linkManual = scope.querySelector('[data-stock-scan-manual]');
+    const stage = scope.querySelector('[data-stock-scan-stage]');
+
+    if (linkManual) {
+      linkManual.onclick = () => {
         if (!stage) return;
-        if (stShowReal()) {
-          stage.innerHTML = renderScanReview();
+        stage.innerHTML = renderRealReceiptReview({ supplier: null });
+        wireScanReview();
+      };
+    }
+
+    if (btnFile && fileInp) {
+      btnFile.onclick = () => fileInp.click();
+    }
+    if (btnCam && camInp) {
+      btnCam.onclick = () => camInp.click();
+    }
+
+    const processFile = async (file) => {
+      if (!file || !stage) return;
+      const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+
+      stage.innerHTML = `
+        <div class="st-scanning" style="text-align:center;padding:40px 20px;">
+          <div class="st-scanning-spinner" style="margin:0 auto 16px;"></div>
+          <div class="st-scanning-t" style="font-weight:600;font-size:15px;margin-bottom:4px;">${esc(isPdf ? t('mScanReadingFile') : t('mScanReadingT'))}</div>
+          <div class="st-scanning-s" style="font-size:12px;color:var(--n-500);">${esc(t('mScanReadingS'))}</div>
+        </div>
+      `;
+
+      if (isPdf) {
+        try {
+          const text = await extractPdfText(file);
+          if (!text) throw new Error('empty-text');
+
+          const venue = (window.Kiwi && window.Kiwi.venue && window.Kiwi.venue()) || '';
+          const res = await fetch('/api/ai/invoice', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ merchant: venue, kind: 'text', text }),
+          });
+
+          if (!res.ok) {
+            throw new Error('server-error-' + res.status);
+          }
+          const data = await res.json();
+          if (data.ok && Array.isArray(data.lines) && data.lines.length) {
+            stage.innerHTML = renderRealReceiptReview({ parsed: data });
+            wireScanReview();
+            return;
+          }
+          throw new Error(data.error || data.reason || 'unparsed');
+        } catch (err) {
+          window.Kiwi.toast?.(t('mScanFailFallback'), { type: 'warn' });
+          stage.innerHTML = renderRealReceiptReview({ supplier: null });
           wireScanReview();
           return;
         }
-        stage.innerHTML = `
-          <div class="st-scanning">
-            <div class="st-scanning-spinner"></div>
-            <div class="st-scanning-t">${esc(t('mScanReadingT'))}</div>
-            <div class="st-scanning-s">${esc(t('mScanReadingS'))}</div>
-          </div>
-        `;
+      } else {
+        // Image scan / photo — repli sur la table pour l'instant (Commit 1)
         setTimeout(() => {
-          stage.innerHTML = renderScanReview();
+          stage.innerHTML = renderRealReceiptReview({ supplier: null });
           wireScanReview();
-        }, 2000);
+        }, 800);
+      }
+    };
+
+    if (fileInp) {
+      fileInp.onchange = (e) => {
+        if (e.target.files && e.target.files[0]) processFile(e.target.files[0]);
+      };
+    }
+    if (camInp) {
+      camInp.onchange = (e) => {
+        if (e.target.files && e.target.files[0]) processFile(e.target.files[0]);
+      };
+    }
+
+    if (dropzone) {
+      ['dragenter', 'dragover'].forEach((eventName) => {
+        dropzone.addEventListener(eventName, (e) => { e.preventDefault(); e.stopPropagation(); dropzone.classList.add('is-dragover'); });
       });
-    });
+      ['dragleave', 'drop'].forEach((eventName) => {
+        dropzone.addEventListener(eventName, (e) => { e.preventDefault(); e.stopPropagation(); dropzone.classList.remove('is-dragover'); });
+      });
+      dropzone.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        const files = dt?.files;
+        if (files && files[0]) processFile(files[0]);
+      });
+    }
   }
 
   function renderScanReview(opts) {
@@ -2518,11 +2805,12 @@
 
   function renderRealReceiptReview(opts) {
     const preSupplier = opts?.supplier || null;
+    const parsed = opts?.parsed || null;
     const allItems = getInv();
     let items = allItems;
     if (preSupplier) {
-      const match = allItems.filter(it => {
-        const hasCard = (it.suppliers || []).some(card =>
+      const match = allItems.filter((it) => {
+        const hasCard = (it.suppliers || []).some((card) =>
           String(card.supplierName || '').trim().toLowerCase() === preSupplier.name.toLowerCase() || card.id === preSupplier.id
         );
         return hasCard || (it.category === preSupplier.category) || (String(it.supplier || '').trim().toLowerCase() === preSupplier.name.toLowerCase());
@@ -2530,41 +2818,109 @@
       if (match.length > 0) items = match;
     }
 
+    const supName = parsed?.supplier?.name || preSupplier?.name || '';
     const today = new Date().toISOString().slice(0, 10);
-    const optionHtml = `<option value="">Choisir un article</option>${items.map(it => {
-      const card = (it.suppliers || []).find(c =>
-        preSupplier && (String(c.supplierName || '').trim().toLowerCase() === preSupplier.name.toLowerCase() || c.id === preSupplier.id)
-      );
-      const defaultCost = card?.defaultPrice ?? it.costPerUnit ?? 0;
-      return `<option value="${esc(it.id)}" data-default-cost="${defaultCost}">${esc(it.name)} · ${esc(it.unit || 'unité')}</option>`;
-    }).join('')}`;
+    const invoiceDate = parsed?.date || today;
+    const invoiceNum = parsed?.number || '';
 
-    const row = () => `
-      <tr data-stock-receive-row>
-        <td><select class="st-mb-input" data-stock-receive-item>${optionHtml}</select></td>
-        <td class="r"><input class="st-mb-input mono" data-stock-receive-qty type="number" min="0" step="0.001" placeholder="0" /></td>
-        <td class="r"><input class="st-mb-input mono" data-stock-receive-cost type="number" min="0" step="0.01" placeholder="0,00" /></td>
-        <td class="r"><button class="st-btn" type="button" data-stock-receive-remove aria-label="Retirer">×</button></td>
-      </tr>`;
+    const matches = parsed?.lines ? matchInvoiceLines(parsed.lines, items) : [];
+
+    const makeRow = (line, matchHit) => {
+      const matchedId = matchHit?.itemId || '';
+      const matchedItem = matchedId ? items.find((it) => it.id === matchedId) : null;
+
+      const lineQty = line ? line.qty : '';
+      const lineCost = line ? line.unitCost : '';
+
+      const comparison = compareLineCost(matchedItem, lineCost, supName);
+      const isChecked = comparison.isChecked;
+
+      let badgeHtml = '';
+      if (matchedItem && comparison.currentCost > 0 && Number.isFinite(lineCost) && lineCost > 0) {
+        if (comparison.isRise) {
+          badgeHtml = `<span style="display:inline-block;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:600;background:var(--warn-bg,#fffbeb);color:var(--warn-fg,#b45309);margin-right:6px;">↑ +${comparison.pct}%</span>`;
+        } else if (comparison.isDrop) {
+          badgeHtml = `<span style="display:inline-block;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:600;background:var(--ok-bg,#ecfdf5);color:var(--ok-fg,#047857);margin-right:6px;">↓ −${Math.abs(comparison.pct)}%</span>`;
+        }
+      }
+
+      const optionsHtml = `<option value="">${esc(t('mScanChoose'))}</option>` + items.map((it) => {
+        const isSel = it.id === matchedId;
+        const card = (it.suppliers || []).find((c) =>
+          preSupplier && (String(c.supplierName || '').trim().toLowerCase() === preSupplier.name.toLowerCase() || c.id === preSupplier.id)
+        );
+        const defaultCost = card?.defaultPrice ?? it.costPerUnit ?? 0;
+        return `<option value="${esc(it.id)}" data-default-cost="${defaultCost}" ${isSel ? 'selected' : ''}>${esc(it.name)} (${esc(it.unit || 'unité')})</option>`;
+      }).join('');
+
+      return `
+        <tr data-stock-receive-row>
+          <td style="min-width:180px;">
+            <div style="font-size:12px;font-weight:500;margin-bottom:3px;color:var(--n-800);">${line ? esc(line.label) : ''}</div>
+            <select class="st-mb-input" data-stock-receive-item style="width:100%;font-size:12px;">${optionsHtml}</select>
+          </td>
+          <td class="r" style="width:90px;">
+            <input class="st-mb-input mono" data-stock-receive-qty type="number" min="0" step="0.001" placeholder="0" value="${lineQty}" style="font-size:12px;" />
+          </td>
+          <td class="r" style="width:100px;">
+            <input class="st-mb-input mono" data-stock-receive-cost type="number" min="0" step="0.01" placeholder="0.00" value="${lineCost}" style="font-size:12px;" />
+          </td>
+          <td class="r mono" data-stock-receive-ref-cost style="width:90px;font-size:12px;color:var(--n-600);">
+            ${comparison.currentCost > 0 ? fmtMad(comparison.currentCost) : '—'}
+          </td>
+          <td style="min-width:170px;font-size:12px;">
+            <div style="display:flex;align-items:center;">
+              <span data-stock-receive-badge>${badgeHtml}</span>
+              <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:11.5px;color:var(--n-700);">
+                <input type="checkbox" data-stock-receive-update-cost ${isChecked ? 'checked' : ''} />
+                <span>${esc(t('mScanUpdateCost'))}</span>
+              </label>
+            </div>
+          </td>
+          <td class="r" style="width:30px;">
+            <button class="st-btn" type="button" data-stock-receive-remove aria-label="${esc(t('mScanIgnore'))}" style="padding:4px 8px;font-size:12px;">×</button>
+          </td>
+        </tr>`;
+    };
+
+    let rowsHtml = '';
+    if (parsed?.lines?.length) {
+      rowsHtml = parsed.lines.map((l, i) => makeRow(l, matches[i])).join('');
+    } else {
+      rowsHtml = makeRow(null, null) + makeRow(null, null) + makeRow(null, null);
+    }
 
     const supInputHtml = preSupplier
       ? `<input class="st-mb-input" data-stock-receive-supplier value="${esc(preSupplier.name)}" readonly style="background:var(--n-100,#f4f5f6); cursor:not-allowed;" />`
-      : `<input class="st-mb-input" data-stock-receive-supplier autocomplete="organization" placeholder="Nom du fournisseur" />`;
+      : `<input class="st-mb-input" data-stock-receive-supplier autocomplete="organization" placeholder="Nom du fournisseur" value="${esc(supName)}" />`;
 
     return `
-      <div class="st-mb-eyebrow">Réception fournisseur</div>
-      <div class="st-notice ok">${svg('checkCircle', 14)}<div>Le document reste à vérifier : aucune ligne ni aucun montant n’est inventé automatiquement.</div></div>
-      <div class="st-mb-row three">
-        <div class="st-mb-field"><label class="st-mb-label">Fournisseur</label>${supInputHtml}</div>
-        <div class="st-mb-field"><label class="st-mb-label">Date de réception</label><input class="st-mb-input mono" data-stock-receive-date type="date" value="${today}" /></div>
-        <div class="st-mb-field"><label class="st-mb-label">Référence</label><input class="st-mb-input mono" data-stock-receive-ref placeholder="BL / facture" /></div>
+      <div class="st-mb-eyebrow">${parsed ? esc(t('mScanReviewT')) : 'Réception fournisseur'}</div>
+      <div class="st-notice ok">${svg('checkCircle', 14)}<div>Le document reste à vérifier : les prix et quantités sont pré-remplis pour vérification humaine.</div></div>
+      <div class="st-mb-row three" style="margin-top:12px;">
+        <div class="st-mb-field"><label class="st-mb-label">${esc(t('mScanSupplier'))}</label>${supInputHtml}</div>
+        <div class="st-mb-field"><label class="st-mb-label">${esc(t('mScanDate'))}</label><input class="st-mb-input mono" data-stock-receive-date type="date" value="${invoiceDate}" /></div>
+        <div class="st-mb-field"><label class="st-mb-label">${esc(t('mScanNum'))}</label><input class="st-mb-input mono" data-stock-receive-ref placeholder="BL / facture" value="${esc(invoiceNum)}" /></div>
       </div>
-      <table class="st-inv-items">
-        <thead><tr><th>Article reçu</th><th class="r">Quantité</th><th class="r">Coût unitaire MAD</th><th></th></tr></thead>
-        <tbody data-stock-receive-rows>${row()}${row()}${row()}</tbody>
-      </table>
-      <button class="st-btn" type="button" data-stock-receive-add>+ Ajouter une ligne</button>
-      <div class="st-inv-foot"><span>Total document</span><b data-stock-receive-total>0,00 MAD</b></div>
+      <div style="overflow-x:auto;max-height:360px;margin-top:12px;border:1px solid var(--n-200,#e5e7eb);border-radius:6px;">
+        <table class="st-inv-items" style="margin:0;width:100%;">
+          <thead>
+            <tr>
+              <th>Article reçu</th>
+              <th class="r">Quantité</th>
+              <th class="r">${esc(t('mScanColInvoicedCost'))} MAD</th>
+              <th class="r">${esc(t('mScanColCurrentCost'))}</th>
+              <th>Évolution & MAJ</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody data-stock-receive-rows>${rowsHtml}</tbody>
+        </table>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;">
+        <button class="st-btn" type="button" data-stock-receive-add>+ Ajouter une ligne</button>
+        <div class="st-inv-foot" style="margin:0;padding:0;border:none;"><span>Total document</span><b data-stock-receive-total>0,00 MAD</b></div>
+      </div>
       <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:14px;">
         <button class="st-btn" data-dismiss-modal>${esc(STR[lang()].btnCancel || 'Annuler')}</button>
         <button class="st-btn primary" data-stock-scan-confirm>Enregistrer la réception</button>
@@ -2572,134 +2928,228 @@
   }
 
   function wireScanReview() {
-    if (stShowReal() || document.querySelector('[data-stock-receive-rows]')) {
-      const scope = topBackdrop() || document;
-      const tbody = scope.querySelector('[data-stock-receive-rows]');
-      const firstRow = tbody?.querySelector('[data-stock-receive-row]')?.outerHTML || '';
-      const recompute = () => {
-        let total = 0;
-        scope.querySelectorAll('[data-stock-receive-row]').forEach(row => {
-          total += Math.max(0, +(row.querySelector('[data-stock-receive-qty]')?.value || 0))
-            * Math.max(0, +(row.querySelector('[data-stock-receive-cost]')?.value || 0));
-        });
-        const out = scope.querySelector('[data-stock-receive-total]');
-        if (out) out.textContent = fmtMad(total);
-      };
-      const wireRows = () => {
-        scope.querySelectorAll('[data-stock-receive-qty],[data-stock-receive-cost]').forEach(el => { el.oninput = recompute; });
-        scope.querySelectorAll('[data-stock-receive-item]').forEach(sel => {
-          sel.onchange = () => {
-            const opt = sel.options[sel.selectedIndex];
-            const defCost = opt?.dataset?.defaultCost;
-            const costInp = sel.closest('tr')?.querySelector('[data-stock-receive-cost]');
-            if (costInp && defCost && !costInp.value) {
-              costInp.value = defCost;
+    const scope = topBackdrop() || document;
+    const tbody = scope.querySelector('[data-stock-receive-rows]');
+    const allItems = getInv();
+
+    const recompute = () => {
+      let total = 0;
+      const supInput = scope.querySelector('[data-stock-receive-supplier]');
+      const currentSup = supInput ? supInput.value.trim() : '';
+
+      scope.querySelectorAll('[data-stock-receive-row]').forEach((row) => {
+        const qty = Math.max(0, +(row.querySelector('[data-stock-receive-qty]')?.value || 0));
+        const cost = Math.max(0, +(row.querySelector('[data-stock-receive-cost]')?.value || 0));
+        total += qty * cost;
+
+        const sel = row.querySelector('[data-stock-receive-item]');
+        const itemId = sel ? sel.value : '';
+        const item = itemId ? allItems.find((candidate) => candidate.id === itemId) : null;
+
+        const comp = compareLineCost(item, cost, currentSup);
+        const refCostEl = row.querySelector('[data-stock-receive-ref-cost]');
+        if (refCostEl) {
+          refCostEl.textContent = comp.currentCost > 0 ? fmtMad(comp.currentCost) : '—';
+        }
+
+        const badgeSpan = row.querySelector('[data-stock-receive-badge]');
+        if (badgeSpan) {
+          if (item && comp.currentCost > 0 && cost > 0) {
+            if (comp.isRise) {
+              badgeSpan.innerHTML = `<span style="display:inline-block;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:600;background:var(--warn-bg,#fffbeb);color:var(--warn-fg,#b45309);margin-right:6px;">↑ +${comp.pct}%</span>`;
+            } else if (comp.isDrop) {
+              badgeSpan.innerHTML = `<span style="display:inline-block;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:600;background:var(--ok-bg,#ecfdf5);color:var(--ok-fg,#047857);margin-right:6px;">↓ −${Math.abs(comp.pct)}%</span>`;
+            } else {
+              badgeSpan.innerHTML = '';
             }
-            recompute();
-          };
-        });
-        scope.querySelectorAll('[data-stock-receive-remove]').forEach(el => {
-          el.onclick = () => { if (scope.querySelectorAll('[data-stock-receive-row]').length > 1) el.closest('tr')?.remove(); recompute(); };
-        });
-      };
-      scope.querySelector('[data-stock-receive-add]')?.addEventListener('click', () => {
-        tbody?.insertAdjacentHTML('beforeend', firstRow); wireRows();
+          } else {
+            badgeSpan.innerHTML = '';
+          }
+        }
       });
+
+      const out = scope.querySelector('[data-stock-receive-total]');
+      if (out) out.textContent = fmtMad(total);
+    };
+
+    const wireRows = () => {
+      scope.querySelectorAll('[data-stock-receive-qty],[data-stock-receive-cost]').forEach((el) => {
+        el.oninput = recompute;
+      });
+      scope.querySelectorAll('[data-stock-receive-item]').forEach((sel) => {
+        sel.onchange = () => {
+          const row = sel.closest('tr');
+          const costInp = row?.querySelector('[data-stock-receive-cost]');
+          const itemId = sel.value;
+          const it = itemId ? allItems.find((candidate) => candidate.id === itemId) : null;
+          if (it && costInp && !costInp.value) {
+            const comp = compareLineCost(it, 0, scope.querySelector('[data-stock-receive-supplier]')?.value);
+            if (comp.currentCost > 0) costInp.value = comp.currentCost;
+          }
+          recompute();
+        };
+      });
+      scope.querySelectorAll('[data-stock-receive-remove]').forEach((el) => {
+        el.onclick = () => {
+          if (scope.querySelectorAll('[data-stock-receive-row]').length > 1) {
+            el.closest('tr')?.remove();
+          }
+          recompute();
+        };
+      });
+    };
+
+    scope.querySelector('[data-stock-receive-add]')?.addEventListener('click', () => {
+      const optionsHtml = `<option value="">${esc(t('mScanChoose'))}</option>` + allItems.map((it) => `<option value="${esc(it.id)}">${esc(it.name)} (${esc(it.unit || 'unité')})</option>`).join('');
+      const emptyRowHtml = `
+        <tr data-stock-receive-row>
+          <td style="min-width:180px;">
+            <select class="st-mb-input" data-stock-receive-item style="width:100%;font-size:12px;">${optionsHtml}</select>
+          </td>
+          <td class="r" style="width:90px;">
+            <input class="st-mb-input mono" data-stock-receive-qty type="number" min="0" step="0.001" placeholder="0" style="font-size:12px;" />
+          </td>
+          <td class="r" style="width:100px;">
+            <input class="st-mb-input mono" data-stock-receive-cost type="number" min="0" step="0.01" placeholder="0.00" style="font-size:12px;" />
+          </td>
+          <td class="r mono" data-stock-receive-ref-cost style="width:90px;font-size:12px;color:var(--n-600);">—</td>
+          <td style="min-width:170px;font-size:12px;">
+            <div style="display:flex;align-items:center;">
+              <span data-stock-receive-badge></span>
+              <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:11.5px;color:var(--n-700);">
+                <input type="checkbox" data-stock-receive-update-cost checked />
+                <span>${esc(t('mScanUpdateCost'))}</span>
+              </label>
+            </div>
+          </td>
+          <td class="r" style="width:30px;">
+            <button class="st-btn" type="button" data-stock-receive-remove aria-label="${esc(t('mScanIgnore'))}" style="padding:4px 8px;font-size:12px;">×</button>
+          </td>
+        </tr>`;
+      tbody?.insertAdjacentHTML('beforeend', emptyRowHtml);
       wireRows();
-      scope.querySelector('[data-stock-scan-confirm]')?.addEventListener('click', () => {
-        const supplier = scope.querySelector('[data-stock-receive-supplier]')?.value.trim() || '';
-        const externalRef = scope.querySelector('[data-stock-receive-ref]')?.value.trim() || '';
-        const date = scope.querySelector('[data-stock-receive-date]')?.value || '';
-        const lines = Array.from(scope.querySelectorAll('[data-stock-receive-row]')).map(row => ({
-          itemId: row.querySelector('[data-stock-receive-item]')?.value || '',
-          qty: Math.max(0, +(row.querySelector('[data-stock-receive-qty]')?.value || 0)),
-          cost: Math.max(0, +(row.querySelector('[data-stock-receive-cost]')?.value || 0)),
-        })).filter(line => line.itemId && line.qty > 0);
-        if (!supplier || !lines.length) {
-          window.Kiwi.toast('Indiquez le fournisseur et au moins une ligne reçue.', { type: 'warning' });
-          return;
-        }
-        const receiptRef = 'receipt-' + Date.now().toString(36);
-        const receivedAt = date ? new Date(`${date}T12:00:00`).getTime() : Date.now();
-        const inv = getInv();
-        const receivingLines = lines.map(line => {
-          const it = inv.find(x => x.id === line.itemId);
-          return { itemId: line.itemId, name: it?.name || line.itemId, qty: line.qty, unit: it?.unit || 'unité', unitCost: line.cost };
-        });
-        if (window.KiwiProcurement?.receiveDirect) {
-          let known = window.KiwiProcurement.doc()?.suppliers?.find(s => String(s.name || '').toLowerCase() === supplier.toLowerCase());
-          if (!known) known = window.KiwiProcurement.addSupplier({ name: supplier });
-          window.KiwiProcurement.receiveDirect({ supplierId: known?.id || supplier, externalRef, receivedAt, lines: receivingLines });
-        } else {
-          lines.forEach(line => {
-            const it = inv.find(x => x.id === line.itemId); if (!it) return;
-            // Update supplier card on item if real
-            let supRank = 1;
-            let supId = 'sup-' + Date.now().toString(36);
-            if (stShowReal()) {
-              const ov = stItemOverrides[it.id] || {};
-              const cards = Array.isArray(it.suppliers) ? it.suppliers.slice() : [];
-              let existing = cards.find(s => String(s.supplierName || '').trim().toLowerCase() === supplier.toLowerCase());
-              if (!existing) {
-                supRank = cards.length + 1;
-                existing = {
-                  id: supId,
-                  supplierName: supplier,
-                  defaultPrice: line.cost || +it.costPerUnit || 0,
-                  purchaseUnit: it.unit || 'unité',
-                  factor: 1,
-                  rank: supRank,
-                };
-                cards.push(existing);
-              } else {
-                supId = existing.id;
-                supRank = existing.rank || 1;
-                if (line.cost > 0) existing.defaultPrice = line.cost;
-              }
-              ov.suppliers = cards;
-              ov.updatedAt = Date.now();
-              stItemOverrides[it.id] = ov;
-            }
-            moveStock(it, line.qty, 'receipt', 'receipt', receiptRef,
-              [supplier, externalRef, date].filter(Boolean).join(' · '), line.cost || null, {
-                supplierId: supId,
-                supplierName: supplier,
-                externalRef,
-                receiptRef,
-                receivedAt,
-                rank: supRank,
-              });
-            if (line.cost > 0 && window.KiwiCost?.setItemCost) window.KiwiCost.setItemCost(it.id, line.cost, supplier);
-          });
-        }
-        stSaveOverlay(); closeTopModal();
-        window.Kiwi.toast(`${lines.length} ligne${lines.length > 1 ? 's' : ''} reçue${lines.length > 1 ? 's' : ''} et ajoutée${lines.length > 1 ? 's' : ''} au stock.`, { type: 'success', duration: 3800 });
-        if (stPageActive) render();
-      });
-      return;
-    }
-    document.querySelector('[data-stock-scan-confirm]')?.addEventListener('click', () => {
-      const inv = getInv();
-      const received = [];
-      for (const row of document.querySelectorAll('[data-stock-scan-row]')) {
-        const id = row.dataset.stockScanRow, it = inv.find((candidate) => candidate.id === id);
-        if (!it) continue;
-        const qty = Math.max(0, parseFloat(row.querySelector('[data-stock-scan-qty]')?.value) || 0);
-        const from = row.querySelector('[data-stock-scan-unit]')?.value || it.unit;
-        const converted = unitApi()?.convert?.(qty, from, it.unit);
-        if (converted == null) {
-          window.Kiwi.toast(`Unité incompatible pour ${it.name}`, { type: 'warn', desc: `Réception en ${from}, stock suivi en ${it.unit}. Indiquez la même unité ou une unité métrique convertible.` });
-          return;
-        }
-        received.push({ id, it, qty: converted });
+      recompute();
+    });
+
+    wireRows();
+    recompute();
+
+    scope.querySelector('[data-stock-scan-confirm]')?.addEventListener('click', () => {
+      const supplier = scope.querySelector('[data-stock-receive-supplier]')?.value.trim() || '';
+      const externalRef = scope.querySelector('[data-stock-receive-ref]')?.value.trim() || '';
+      const date = scope.querySelector('[data-stock-receive-date]')?.value || '';
+
+      const lines = Array.from(scope.querySelectorAll('[data-stock-receive-row]')).map((row) => ({
+        itemId: row.querySelector('[data-stock-receive-item]')?.value || '',
+        qty: Math.max(0, +(row.querySelector('[data-stock-receive-qty]')?.value || 0)),
+        cost: Math.max(0, +(row.querySelector('[data-stock-receive-cost]')?.value || 0)),
+        updateCost: !!row.querySelector('[data-stock-receive-update-cost]')?.checked,
+      })).filter((line) => line.itemId && line.qty > 0);
+
+      if (!supplier || !lines.length) {
+        window.Kiwi.toast?.('Indiquez le fournisseur et au moins une ligne reçue.', { type: 'warning' });
+        return;
       }
+
       const receiptRef = 'receipt-' + Date.now().toString(36);
-      received.forEach(({ it, qty }) => {
-        moveStock(it, qty, 'receipt', 'receipt', receiptRef, 'Réception fournisseur', +it.costPerUnit || null);
+      const receivedAt = date ? new Date(`${date}T12:00:00`).getTime() : Date.now();
+      const inv = getInv();
+
+      const receivingLines = lines.map((line) => {
+        const it = inv.find((x) => x.id === line.itemId);
+        return {
+          itemId: line.itemId,
+          name: it?.name || line.itemId,
+          qty: line.qty,
+          unit: it?.unit || 'unité',
+          unitCost: line.cost,
+        };
       });
+
+      if (window.KiwiProcurement?.receiveDirect) {
+        let known = window.KiwiProcurement.doc()?.suppliers?.find((s) => String(s.name || '').toLowerCase() === supplier.toLowerCase());
+        if (!known) known = window.KiwiProcurement.addSupplier({ name: supplier });
+        window.KiwiProcurement.receiveDirect({
+          supplierId: known?.id || supplier,
+          externalRef,
+          receivedAt,
+          lines: receivingLines,
+        });
+        if (window.KiwiProcurement?.attachInvoice) {
+          try {
+            window.KiwiProcurement.attachInvoice({
+              supplierId: known?.id || supplier,
+              number: externalRef,
+              date,
+              receiptId: receiptRef,
+              lines: receivingLines,
+              source: 'pdf',
+            });
+          } catch (_) {}
+        }
+      }
+
+      // Toujours enregistrer les mouvements dans KiwiInventory / moveStock et MAJ conditionnelle des cartes fournisseur
+      lines.forEach((line) => {
+        const it = inv.find((x) => x.id === line.itemId);
+        if (!it) return;
+
+        let supRank = 1;
+        let supId = 'sup-' + Date.now().toString(36);
+
+        if (stShowReal()) {
+          const ov = stItemOverrides[it.id] || {};
+          const cards = Array.isArray(it.suppliers) ? it.suppliers.slice() : [];
+          let existing = cards.find((s) => String(s.supplierName || '').trim().toLowerCase() === supplier.toLowerCase());
+
+          if (!existing) {
+            supRank = cards.length + 1;
+            existing = {
+              id: supId,
+              supplierName: supplier,
+              defaultPrice: line.cost || +it.costPerUnit || 0,
+              purchaseUnit: it.unit || 'unité',
+              factor: 1,
+              rank: supRank,
+            };
+            if (line.updateCost) {
+              cards.push(existing);
+            }
+          } else {
+            supId = existing.id;
+            supRank = existing.rank || 1;
+            // MISE À JOUR DE defaultPrice SEULEMENT SI LA CASE EST COCHÉE
+            if (line.updateCost && line.cost > 0) {
+              const factor = (Number.isFinite(+existing.factor) && +existing.factor > 0) ? +existing.factor : 1;
+              existing.defaultPrice = Math.round((line.cost / factor) * 100) / 100;
+            }
+          }
+          if (cards.length > 0) {
+            ov.suppliers = cards;
+            ov.updatedAt = Date.now();
+            stItemOverrides[it.id] = ov;
+          }
+        }
+
+        // moveStock enregistre TOUJOURS le coût réel facturé pour l'historique d'achat
+        moveStock(it, line.qty, 'receipt', 'receipt', receiptRef,
+          [supplier, externalRef, date].filter(Boolean).join(' · '), line.cost || null, {
+            supplierId: supId,
+            supplierName: supplier,
+            externalRef,
+            receiptRef,
+            receivedAt,
+            rank: supRank,
+          });
+
+        if (line.updateCost && line.cost > 0 && window.KiwiCost?.setItemCost) {
+          window.KiwiCost.setItemCost(it.id, line.cost, supplier);
+        }
+      });
+
       stSaveOverlay();
       closeTopModal();
-      window.Kiwi.toast(t('mScanToast'), { type: 'success', duration: 3800 });
+      window.Kiwi.toast?.(`${lines.length} ligne${lines.length > 1 ? 's' : ''} reçue${lines.length > 1 ? 's' : ''} et ajoutée${lines.length > 1 ? 's' : ''} au stock.`, { type: 'success', duration: 3800 });
       if (stPageActive) render();
     });
   }

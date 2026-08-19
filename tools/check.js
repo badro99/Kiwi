@@ -912,6 +912,7 @@ section('Whole-project regressions');
     'supplier-actions-test.mjs',
     'err-reporter-silence-test.mjs',
     'depenses-demo-gate-test.mjs',
+    'invoice-receipt-test.mjs',
   ];
   suites.forEach((name) => {
     const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', name)], { encoding: 'utf8' });
