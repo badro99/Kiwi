@@ -3418,7 +3418,7 @@
   /* Revue des écarts avant application. Seul chemin d'écriture : countStock →
    * moveStock → registre. Rien ne bouge tant que le propriétaire n'a pas vu
    * chaque écart, sa valeur en MAD et sa cause probable. */
-  function openCountReview(lines) {
+  function openCountReview(lines, countBack) {
     const countRef = 'count-' + Date.now().toString(36);
     const gaps = lines.filter((l) => l.diff);
     gaps.forEach((l) => {
@@ -3473,6 +3473,7 @@
         stSaveOverlay();
         stSaveCountHistory(countRef, lines);
         closeTopModal();
+        try { countBack?.querySelector('.kiwi-modal-close')?.click(); } catch (_) {}
         window.Kiwi.toast(t('mCountToast', fmtMad(totalVar)), { type: 'success', duration: 4200 });
         if (stPageActive) render();
       }, { once: true });
@@ -3587,8 +3588,9 @@
         const diff = Math.round((v - theo) * 1000) / 1000;
         lines.push({ it, theo, counted: v, diff, costDiff: diff * (+it.costPerUnit || 0) });
       });
-      closeTopModal();
-      openCountReview(lines);
+      /* La revue s'empile SUR la grille de comptage : Annuler doit rendre les
+       * 40 saisies intactes (corriger une erreur d'unité), pas une page vide. */
+      openCountReview(lines, topBackdrop());
     });
   }
 

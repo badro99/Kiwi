@@ -81,15 +81,17 @@ ok(/\.st-pc-blindrow \{/.test(html), 'dashboard.html has the blind-row styles');
 
 // ── 4. Validate → review; the review is the only write path ─────────────────
 const valStart = src.indexOf("document.querySelector('[data-stock-pc-validate]')?.addEventListener");
-const valEnd = src.indexOf('openCountReview(lines);', valStart);
-ok(valStart !== -1 && valEnd !== -1, 'validate handler routes to openCountReview');
+const valEnd = src.indexOf('openCountReview(lines, topBackdrop());', valStart);
+ok(valStart !== -1 && valEnd !== -1, 'validate handler routes to openCountReview, stacked over the count grid');
 const valBody = valStart !== -1 && valEnd !== -1 ? src.slice(valStart, valEnd) : '';
 ok(valBody && !/countStock\(/.test(valBody) && !/KiwiInventory\.add/.test(valBody), 'validate handler itself writes nothing (no countStock, no ledger add)');
+ok(valBody && !/closeTopModal\(\)/.test(valBody), 'validate keeps the count grid open — Annuler in the review returns to intact entries');
 
 const revSrc = extractFn('openCountReview');
 ok(/countStock\(l\.it, l\.counted, countRef\)/.test(revSrc), 'review apply adjusts through countStock (ledger-backed path)');
 ok(/stSaveCountHistory\(countRef, lines\)/.test(revSrc) && /stSaveOverlay\(\)/.test(revSrc), 'review apply persists overlay + count history');
 ok(!/KiwiInventory\.add/.test(revSrc), 'review never bypasses countStock with a direct ledger write');
+ok(/countBack\?\.querySelector\('\.kiwi-modal-close'\)\?\.click\(\)/.test(revSrc), 'apply closes both the review and the underlying count grid');
 ok(/stCountReason\(\{/.test(revSrc) && /stRecentMoves\(l\.it\.id\)/.test(revSrc) && /theoreticalUsageFor\(l\.it\)/.test(revSrc), 'review feeds the reason engine with ledger moves + recipe usage');
 ok(/mRevColReason/.test(revSrc) && /st-rev-reason/.test(revSrc), 'review renders the probable-cause column');
 
@@ -115,7 +117,7 @@ const missing = KEYS.filter((k) => (src.match(new RegExp('(?:^      |, )' + k + 
 ok(missing.length === 0, `all ${KEYS.length} new strings exist in FR + EN + AR${missing.length ? ' — missing: ' + missing.join(', ') : ''}`);
 
 // ── 7. Hard count pinning ────────────────────────────────────────────────────
-const EXPECTED_COUNT = 41;
+const EXPECTED_COUNT = 43;
 ok(passed + 1 === EXPECTED_COUNT, `exact control count verified (${passed + 1}/${EXPECTED_COUNT})`);
 
 if (failures.length) {
