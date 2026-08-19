@@ -231,9 +231,46 @@ if (compareLineCost) {
   const itemNoPrice = { id: 'it-new', name: 'Nouveau', costPerUnit: 0 };
   const compNew = compareLineCost(itemNoPrice, 45, 'Fournisseur');
   ok(compNew.isChecked === true, 'new item without reference cost is checked by default');
+
+  // ── 3bis. Recompute Checkbox Behavior (Dynamic sync with input) ─────────────
+  // (a) Ligne manuelle, saisie d'un coût inférieur à la référence -> case décochée
+  const mockItem = { id: 'it-cafe', name: 'Café', costPerUnit: 50 };
+  const syncCbBlock = stockSource.match(/const cb = row\.querySelector\('\[data-stock-receive-update-cost\]'\);[\s\S]*?cb\.checked = ([\s\S]*?);\s*\}/);
+  ok(!!syncCbBlock, 'found active cb.checked assignment block in stock.js');
+
+  const recomputeRowFn = (rowState, item, cost, sup) => {
+    const comp = compareLineCost(item, cost, sup);
+    if (syncCbBlock) {
+      new Function('row', 'item', 'comp', 'cost', `${syncCbBlock[0]}`)(rowState, item, comp, cost);
+    }
+    const cb = rowState.querySelector('[data-stock-receive-update-cost]');
+    return { comp, checked: cb ? cb.checked : false };
+  };
+
+  const createMockRow = (initialChecked, userSet) => {
+    const cbEl = { checked: initialChecked, dataset: userSet ? { userSet: '1' } : {} };
+    return {
+      querySelector: (sel) => (sel === '[data-stock-receive-update-cost]' ? cbEl : null)
+    };
+  };
+
+  const rowA = createMockRow(true, false);
+  const resA = recomputeRowFn(rowA, mockItem, 40, 'Fournisseur');
+  ok(resA.checked === false, '(a) manual entry of lower cost unchecks update checkbox');
+
+  // (b) Saisie supérieure -> cochée
+  const rowB = createMockRow(false, false);
+  const resB = recomputeRowFn(rowB, mockItem, 60, 'Fournisseur');
+  ok(resB.checked === true, '(b) manual entry of higher cost checks update checkbox');
+
+  // (c) Case décochée manuellement puis saisie supérieure -> reste décochée (userSet)
+  const rowC = createMockRow(false, true);
+  const resC = recomputeRowFn(rowC, mockItem, 65, 'Fournisseur');
+  ok(resC.checked === false, '(c) userSet flag preserves manual uncheck even on higher cost');
 }
 
 // ── 4. UI & Gating Invariants in assets/stock.js ─────────────────────────────
+ok(stockSource.includes("cb.dataset.userSet !== '1'"), "stock.js guards recompute checkbox update with userSet check");
 ok(stockSource.includes('assets/vendor/pdfjs/pdf.min.js'), 'stock.js references vendored pdf.min.js');
 ok(stockSource.includes('assets/vendor/pdfjs/pdf.worker.min.js'), 'stock.js references vendored pdf.worker.min.js');
 ok(!stockSource.includes('cdn.jsdelivr.net') && !stockSource.includes('cdnjs.cloudflare.com'), 'no CDN references in stock.js (CSP compliant)');
@@ -250,7 +287,7 @@ ok(fs.existsSync(pdfWorkerPath) && fs.statSync(pdfWorkerPath).size > 500000, 'pd
 ok(fs.existsSync(pdfLicensePath), 'pdfjs LICENSE file exists');
 
 // ── 5. Hard Count Pinning ───────────────────────────────────────────────────
-const EXPECTED_COUNT = 51;
+const EXPECTED_COUNT = 56;
 ok(passed + 1 === EXPECTED_COUNT, `exact control count verified (${passed + 1}/${EXPECTED_COUNT})`);
 
 console.log(`\n✓ ${passed} controls green (${failures.length} failure(s))`);

@@ -2952,6 +2952,11 @@
           refCostEl.textContent = comp.currentCost > 0 ? fmtMad(comp.currentCost) : '—';
         }
 
+        const cb = row.querySelector('[data-stock-receive-update-cost]');
+        if (cb && cb.dataset.userSet !== '1') {
+          cb.checked = !!(item && comp.currentCost > 0 && cost > 0 && comp.isRise);
+        }
+
         const badgeSpan = row.querySelector('[data-stock-receive-badge]');
         if (badgeSpan) {
           if (item && comp.currentCost > 0 && cost > 0) {
@@ -2976,9 +2981,16 @@
       scope.querySelectorAll('[data-stock-receive-qty],[data-stock-receive-cost]').forEach((el) => {
         el.oninput = recompute;
       });
+      scope.querySelectorAll('[data-stock-receive-update-cost]').forEach((cb) => {
+        cb.onchange = () => {
+          cb.dataset.userSet = '1';
+        };
+      });
       scope.querySelectorAll('[data-stock-receive-item]').forEach((sel) => {
         sel.onchange = () => {
           const row = sel.closest('tr');
+          const cb = row?.querySelector('[data-stock-receive-update-cost]');
+          if (cb) delete cb.dataset.userSet;
           const costInp = row?.querySelector('[data-stock-receive-cost]');
           const itemId = sel.value;
           const it = itemId ? allItems.find((candidate) => candidate.id === itemId) : null;
@@ -3017,7 +3029,7 @@
             <div style="display:flex;align-items:center;">
               <span data-stock-receive-badge></span>
               <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:11.5px;color:var(--n-700);">
-                <input type="checkbox" data-stock-receive-update-cost checked />
+                <input type="checkbox" data-stock-receive-update-cost />
                 <span>${esc(t('mScanUpdateCost'))}</span>
               </label>
             </div>
