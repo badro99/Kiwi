@@ -194,8 +194,9 @@ if (formatInvoiceNumber) {
   ok(formatInvoiceNumber(2026, 10000) === 'F-2026-10000', 'formats 5-digit invoice F-2026-10000');
 }
 
-// Test Idempotence serveur avec Mock D1 DB
+// Test Idempotence serveur avec Mock D1 DB & vérification de la table sales
 if (getOrCreateSaleInvoice) {
+  const knownSales = new Set(['shop-casa|sale-A', 'shop-casa|sale-B', 'shop-casa|sale-ref-x']);
   const dbRows = new Map(); // key: merchant|sale_id
   const seqMap = new Map(); // key: merchant -> max seq
 
@@ -204,6 +205,10 @@ if (getOrCreateSaleInvoice) {
       return {
         bind: (...args) => ({
           first: async () => {
+            if (query.includes('FROM sales WHERE merchant = ? AND id = ?')) {
+              const [m, sid] = args;
+              return knownSales.has(`${m}|${sid}`) ? { 1: 1 } : null;
+            }
             if (query.includes('FROM sale_invoices WHERE merchant = ? AND sale_id = ?')) {
               const [m, sid] = args;
               return dbRows.get(`${m}|${sid}`) || null;
@@ -256,31 +261,90 @@ if (getOrCreateSaleInvoice) {
   ok(res3.existing === false, 'Different sale creates new invoice');
   ok(res3.number === 'F-2026-0002', 'Next invoice receives number F-2026-0002');
   ok(res3.seq === 2, 'Next invoice receives seq 2');
+
+  // Test (d) : ID de vente inconnu => 404 inconnu, rien d'inséré
+  let unknownSaleThrew404 = false;
+  try {
+    await getOrCreateSaleInvoice(mockEnv, 'shop-casa', 'sale-unknown-999', null, { issuedTs: Date.now(), totals: { ttc: 80 } });
+  } catch (e) {
+    unknownSaleThrew404 = (e.message === 'unknown-sale' || e.status === 404);
+  }
+  ok(unknownSaleThrew404, 'Test (d): Server getOrCreateSaleInvoice throws 404 unknown-sale when sale ID is absent from D1');
+  ok(!dbRows.has('shop-casa|sale-unknown-999'), 'Test (d): No invoice inserted for unknown sale ID');
 }
 
-// ── 3. Correction 1 : Unicité de la formule de hachage stableId ──────────────
+// ── 3. Correction & Traçabilité de l'ID D1 (Tableau de bord vs Caisse) ─────────
 const liveLinkSource = fs.readFileSync(path.join(ROOT, 'assets/live-link.js'), 'utf8');
+const venuesSource = fs.readFileSync(path.join(ROOT, 'assets/venues.js'), 'utf8');
 
-ok(liveLinkSource.includes('saleIdFor: function'), 'assets/live-link.js exports saleIdFor on window.KiwiLive');
-ok(liveLinkSource.includes('window.KiwiLiveLink = window.KiwiLive'), 'assets/live-link.js exports window.KiwiLiveLink');
+ok(liveLinkSource.includes('saleId: s.id || s.saleId || \'\''), 'assets/live-link.js passes saleId: s.id on feed ingestion');
 
-// Test de calcul déterministe identique
-{
-  const fakeWin = { crypto: null, Kiwi: {}, location: { search: '' }, localStorage: { getItem: () => null, setItem: () => {} } };
-  const fakeDoc = { readyState: 'complete', addEventListener: () => {}, querySelector: () => null, documentElement: { lang: 'fr' } };
-  const fn = new Function('window', 'document', `${liveLinkSource}; return window.KiwiLive;`);
-  const KiwiLive = fn(fakeWin, fakeDoc);
+// Test (a) : Ingestion et conservation de l'id réel dans KiwiSales (venues.js) via le code de live-link.js
+let storageMap = new Map();
+const fakeVenuesWin = {
+  localStorage: {
+    getItem: (k) => storageMap.get(k) || null,
+    setItem: (k, v) => storageMap.set(k, v),
+    removeItem: (k) => storageMap.delete(k),
+  },
+  document: {
+    addEventListener: () => {},
+    body: { classList: { remove: () => {}, add: () => {}, contains: () => false } },
+    documentElement: { removeAttribute: () => {}, setAttribute: () => {}, getAttribute: () => null },
+    getElementById: () => null,
+    querySelector: () => null,
+    querySelectorAll: () => [],
+  },
+  addEventListener: () => {},
+  location: { search: '', pathname: '/dashboard.html' },
+  setInterval: () => 0,
+  setTimeout: () => 0,
+  clearInterval: () => {},
+  clearTimeout: () => {},
+  window: {},
+};
+fakeVenuesWin.window = fakeVenuesWin;
+const venuesFn = new Function('window', 'localStorage', 'document', 'location', `${venuesSource}; return window.KiwiSales;`);
+const KiwiSales = venuesFn(fakeVenuesWin, fakeVenuesWin.localStorage, fakeVenuesWin.document, fakeVenuesWin.location);
 
-  const entry1 = { ref: 'A-0042' };
-  const idA = KiwiLive.saleIdFor(entry1, 'resto-marrakech');
-  const idB = KiwiLive.saleIdFor(entry1, 'resto-marrakech');
-  ok(idA === idB, 'saleIdFor is 100% deterministic for same merchant and ref');
-  ok(idA.startsWith('sale-ref-') && idA.endsWith('A-0042'), 'saleIdFor matches D1 key pattern');
-
-  // Deux marchands distincts avec même réf obtiennent deux IDs disjoints
-  const idOtherMerchant = KiwiLive.saleIdFor(entry1, 'autre-magasin');
-  ok(idA !== idOtherMerchant, 'saleIdFor isolates tenants for same ticket ref');
+// Simulation de l'ingestion live-link avec le fragment de code réel de live-link.js
+const addCallMatch = liveLinkSource.match(/window\.KiwiSales\.add\(vid,\s*(\{[\s\S]*?\})\s*\)/);
+const feedRow = { id: 'sale-ref-x', ref: 'T-1', orderRef: 'Table 4', amount: 50, ts: 1770000000000, cursor: 42 };
+let mappedSale = null;
+if (addCallMatch) {
+  const mapFn = new Function('s', 'amt', 'amtCents', 'cur', `return ${addCallMatch[1]};`);
+  mappedSale = mapFn(feedRow, 50, 5000, 42);
 }
+
+KiwiSales.add('v1', mappedSale);
+const storedList = KiwiSales.list('v1');
+const ingestedEntry = storedList && storedList[0];
+ok(ingestedEntry && ingestedEntry.saleId === 'sale-ref-x', 'Test (a): Feed row with id "sale-ref-x" yields entry with saleId === "sale-ref-x"');
+
+// Test (b) : invoice.js résout cette entrée en 'sale-ref-x' SANS appeler saleIdFor
+let saleIdForSpyCalled = false;
+const fakeWindowSpy = {
+  KiwiReceipt: { business: () => ({ name: 'Test' }), config: () => ({}) },
+  KiwiLive: {
+    merchant: () => 'm1',
+    saleIdFor: () => { saleIdForSpyCalled = true; return 'wrong-hash'; },
+  },
+  document: { baseURI: 'https://app.kiwi-pos.com/' },
+  localStorage: { getItem: () => null, setItem: () => {} },
+};
+const invoiceWithSpy = new Function('window', 'document', 'localStorage', `${invoiceSource}; return window.KiwiInvoice;`)(fakeWindowSpy, fakeWindowSpy.document, fakeWindowSpy.localStorage);
+
+const docResolved = invoiceWithSpy.build(ingestedEntry);
+ok(docResolved.saleId === 'sale-ref-x', 'Test (b): invoice.js build() resolves doc.saleId to "sale-ref-x"');
+ok(!saleIdForSpyCalled, 'Test (b): CRITICAL: saleIdFor was NOT called when saleId is present');
+
+// Test (c) : Entrée sans saleId côté tableau de bord => pas d'appel serveur, bouton désactivé
+let fetchCalledOnMissingId = false;
+fakeWindowSpy.fetch = async () => { fetchCalledOnMissingId = true; return { ok: true, json: async () => ({}) }; };
+const unsyncedSale = { ref: 'T-local-unsynced', amount: 30, ts: Date.now() }; // no saleId, no id
+const genMissingResult = await invoiceWithSpy.generate(unsyncedSale, 'pdf');
+ok(genMissingResult === null, 'Test (c): invoice.js generate() returns null immediately when saleId is missing');
+ok(!fetchCalledOnMissingId, 'Test (c): invoice.js generate() makes zero network fetch when saleId is missing');
 
 // ── 4. Surface Ventes (assets/pages-pro.js) ──────────────────────────────────
 const pagesProSource = fs.readFileSync(path.join(ROOT, 'assets/pages-pro.js'), 'utf8');
@@ -288,16 +352,20 @@ ok(pagesProSource.includes('data-action="sale-invoice-pdf"'), 'pages-pro.js cont
 ok(pagesProSource.includes('data-action="sale-invoice-print"'), 'pages-pro.js contains sale-invoice-print action button');
 ok(pagesProSource.includes("H['sale-invoice-pdf']"), "pages-pro.js registers H['sale-invoice-pdf'] handler");
 ok(pagesProSource.includes("H['sale-invoice-print']"), "pages-pro.js registers H['sale-invoice-print'] handler");
+ok(pagesProSource.includes('disabled aria-disabled="true"'), 'pages-pro.js renders disabled button when saleId is missing');
+ok(pagesProSource.includes('Facture disponible après synchronisation de la vente'), 'pages-pro.js sets correct tooltip when saleId is missing');
 
 // ── 5. Invoicing module delegation (assets/invoicing.js) ─────────────────────
 const invoicingSource = fs.readFileSync(path.join(ROOT, 'assets/invoicing.js'), 'utf8');
 ok(invoicingSource.includes('window.KiwiInvoice.html(doc)'), 'invoicing.js delegates printable() layout to KiwiInvoice.html');
 
 // ── 6. Hard Count Pinning ───────────────────────────────────────────────────
-const EXPECTED_COUNT = 54;
+const EXPECTED_COUNT = 59;
 ok(passed + 1 === EXPECTED_COUNT, `exact control count verified (${passed + 1}/${EXPECTED_COUNT})`);
 
 console.log(`\n✓ ${passed} controls green (${failures.length} failure(s))`);
 if (failures.length) {
   process.exit(1);
+} else {
+  process.exit(0);
 }

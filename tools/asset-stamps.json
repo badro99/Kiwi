@@ -224,8 +224,8 @@
     "sha": "5829242ec789b552"
   },
   "assets/live-link.js": {
-    "v": "11",
-    "sha": "cc60de1e451faa2a"
+    "v": "12",
+    "sha": "02f89b712cf5b1f9"
   },
   "assets/live-socket.js": {
     "v": "2",
@@ -280,8 +280,8 @@
     "sha": "34ba1e6354ccc770"
   },
   "assets/pages-pro.js": {
-    "v": "2070",
-    "sha": "15a130426af773db"
+    "v": "2071",
+    "sha": "143eb9b3c34b2ec0"
   },
   "assets/pairing-commit.js": {
     "v": "1",
@@ -580,8 +580,8 @@
     "sha": "dfa3b4d5ebb25d51"
   },
   "assets/venues.js": {
-    "v": "16",
-    "sha": "88e0db822d769dde"
+    "v": "17",
+    "sha": "d76ccf020d72bd95"
   },
   "assets/vexel-neon.js": {
     "v": "2046",

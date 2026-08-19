@@ -7912,11 +7912,13 @@
     const origin = String((sale && sale.origin) || '').trim().slice(0, 16);
     const server = String((sale && sale.server) || '').trim().slice(0, 80);
     const channel = String((sale && sale.channel) || '').trim().slice(0, 24);
+    const saleId = String((sale && (sale.saleId || sale.id)) || '').trim().slice(0, 80);
     if (ref) entry.ref = ref;
     if (receiptRef) entry.receiptRef = receiptRef;
     if (origin) entry.origin = origin;
     if (server) entry.server = server;
     if (channel) entry.channel = channel;
+    if (saleId) entry.saleId = saleId;
     // Live-Link sales carry the feed rowid as `cursor` — persisted so the bridge
     // dedups against the store itself and can never double-count or drift below it.
     if (sale && sale.cursor) entry.cursor = sale.cursor;
@@ -7965,8 +7967,8 @@
     const entry = list.find((sale) => Number(sale && sale.cursor) === cursor);
     if (!entry) return false;
     let changed = false;
-    [['ref', 80], ['receiptRef', 80], ['origin', 16], ['server', 80], ['channel', 24]].forEach(([key, limit]) => {
-      const value = String(meta && meta[key] || '').trim().slice(0, limit);
+    [['ref', 80], ['receiptRef', 80], ['origin', 16], ['server', 80], ['channel', 24], ['saleId', 80]].forEach(([key, limit]) => {
+      const value = String(meta && (meta[key] || (key === 'saleId' ? (meta.saleId || meta.id) : '')) || '').trim().slice(0, limit);
       if (value && entry[key] !== value) { entry[key] = value; changed = true; }
     });
     if (!changed) return false;

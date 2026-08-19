@@ -128,7 +128,7 @@
     }
 
     const saleRef = String(sale?.ref || sale?.label || '').trim();
-    const saleId = String(sale?.id || sale?.saleId || (window.KiwiLive?.saleIdFor?.(sale)) || '').trim();
+    const saleId = String(sale?.saleId || sale?.id || opts.saleId || '').trim();
 
     let lines = [];
     if (Array.isArray(sale?.lines) && sale.lines.length) {
@@ -446,10 +446,10 @@
     if (!sale) return null;
     const saleRef = sale.ref || sale.label || '';
     const m = window.KiwiLive?.merchant?.() || window.KiwiVenue?.getVenue?.() || localStorage.getItem('kiwiLiveMerchant') || '';
-    const saleId = sale.id || sale.saleId || (window.KiwiLive?.saleIdFor?.(sale, m)) || '';
+    const saleId = String(sale.saleId || sale.id || '').trim();
 
     if (!saleId) {
-      toast('Identifiant de vente introuvable.', 'error');
+      toast('Facture disponible après synchronisation de la vente', 'warning');
       return null;
     }
 
@@ -469,7 +469,7 @@
     }
 
     // 3. Préparer le snapshot client
-    const docDraft = build(sale, { customer });
+    const docDraft = build(sale, { customer, saleId });
 
     // 4. Appel serveur obligatoire pour la numérotation séquentielle D1
     toast('Numérotation de la facture…');
@@ -489,6 +489,10 @@
         const err = await res.json().catch(() => ({}));
         if (err?.error === 'invalid-ice') {
           toast('ICE client invalide (15 chiffres requis).', 'error');
+          return null;
+        }
+        if (err?.error === 'unknown-sale' || res.status === 404) {
+          toast('Facture disponible après synchronisation de la vente', 'warning');
           return null;
         }
         throw new Error(err?.detail || err?.error || 'server-refusal');

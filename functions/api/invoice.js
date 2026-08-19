@@ -74,6 +74,17 @@ export async function getOrCreateSaleInvoice(env, merchant, saleId, customerData
     };
   }
 
+  // Filet de sécurité serveur : la vente doit exister dans la table D1 sales
+  const saleRow = await env.DB.prepare(
+    'SELECT 1 FROM sales WHERE merchant = ? AND id = ?'
+  ).bind(merchant, saleId).first();
+
+  if (!saleRow) {
+    const err = new Error('unknown-sale');
+    err.status = 404;
+    throw err;
+  }
+
   // 2. Création d'une nouvelle facture avec retry sur collision séquentielle
   const customer = validateCustomer(customerData);
   const now = Date.now();
@@ -178,6 +189,9 @@ export async function onRequestPost({ request, env }) {
     const result = await getOrCreateSaleInvoice(env, merchant, saleId, customerData, clientSnapshot);
     return json({ ok: true, invoice: result });
   } catch (e) {
+    if (e?.message === 'unknown-sale' || e?.status === 404) {
+      return json({ error: 'unknown-sale', detail: 'Vente introuvable dans le grand livre D1.' }, 404);
+    }
     return json({ error: 'invoice-creation-failed', detail: String(e?.message || e) }, 500);
   }
 }

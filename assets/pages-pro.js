@@ -15303,15 +15303,27 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     const H = window.Kiwi && window.Kiwi.handlers; if (!H) return;
     if (!H['starter-add']) H['starter-add'] = (_el, nav) => openAddModal(nav);
     H['sale-invoice-pdf'] = (_el, saleId) => {
+      if (!saleId) {
+        if (window.Kiwi && typeof window.Kiwi.toast === 'function') {
+          window.Kiwi.toast('Facture disponible après synchronisation de la vente', { type: 'warning' });
+        }
+        return;
+      }
       const sales = window.KiwiSales?.list?.() || [];
-      const sale = sales.find((s) => (s.id === saleId || s.saleId === saleId || s.ref === saleId || window.KiwiLive?.saleIdFor?.(s) === saleId));
+      const sale = sales.find((s) => (s.saleId === saleId || s.id === saleId));
       if (sale && window.KiwiInvoice) {
         window.KiwiInvoice.generate(sale, 'pdf');
       }
     };
     H['sale-invoice-print'] = (_el, saleId) => {
+      if (!saleId) {
+        if (window.Kiwi && typeof window.Kiwi.toast === 'function') {
+          window.Kiwi.toast('Facture disponible après synchronisation de la vente', { type: 'warning' });
+        }
+        return;
+      }
       const sales = window.KiwiSales?.list?.() || [];
-      const sale = sales.find((s) => (s.id === saleId || s.saleId === saleId || s.ref === saleId || window.KiwiLive?.saleIdFor?.(s) === saleId));
+      const sale = sales.find((s) => (s.saleId === saleId || s.id === saleId));
       if (sale && window.KiwiInvoice) {
         window.KiwiInvoice.generate(sale, 'print');
       }
@@ -15386,6 +15398,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       '.rtx-actions{display:flex;align-items:center;gap:6px;margin-inline-start:4px}' +
       '.rtx-act-btn{border:1px solid var(--n-200);background:var(--surface);color:var(--n-600);border-radius:6px;padding:5px 7px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:all .15s}' +
       '.rtx-act-btn:hover{background:var(--n-100);color:var(--ink);border-color:var(--n-300)}' +
+      '.rtx-act-btn:disabled{opacity:.35;cursor:not-allowed}' +
       '.rtx-inv-badge{font-family:var(--mono);font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px;background:var(--ok-bg,#ecfdf5);color:var(--ok-fg,#047857);margin-right:2px}' +
       '.rtx-voids{margin-top:26px;padding-top:18px;border-top:1px solid var(--n-200)}' +
       '.rtx-void-title{font-size:14px;font-weight:650;margin-bottom:4px}.rtx-void-sub{font-size:12px;color:var(--n-500);margin-bottom:10px}' +
@@ -15506,18 +15519,21 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
         const lineAmount = Number(l.total);
         return `<div class="rtx-product"><span class="rtx-product-name">${qty} × ${escS(l.name)}</span>${Number.isFinite(lineAmount) ? `<span class="rtx-product-amount">${fmt(lineAmount)} MAD</span>` : ''}</div>`;
       }).join('') : `<span class="rtx-products-missing">${escS(T({ fr: 'Détail produit indisponible', en: 'Product detail unavailable', ar: 'تفاصيل المنتج غير متوفرة' }))}</span>`;
-      const saleId = s.id || s.saleId || (window.KiwiLive?.saleIdFor?.(s)) || '';
-      const cachedInv = window.KiwiInvoice?.getCachedInvoices?.()[saleId];
+      const saleId = String(s.saleId || s.id || '').trim();
+      const hasId = !!saleId;
+      const cachedInv = hasId && window.KiwiInvoice?.getCachedInvoices?.()[saleId];
       const invBadge = cachedInv?.number
         ? `<span class="rtx-inv-badge" title="Facture ${escS(cachedInv.number)}">${escS(cachedInv.number)}</span>`
         : '';
+      const tooltip = hasId ? '' : ' title="Facture disponible après synchronisation de la vente"';
+      const disabledAttr = hasId ? '' : ' disabled aria-disabled="true"';
       const invoiceActions = `
         <div class="rtx-actions">
           ${invBadge}
-          <button class="rtx-act-btn" type="button" data-action="sale-invoice-pdf" data-arg="${escS(saleId)}" title="Facture PDF" aria-label="Facture PDF">
+          <button class="rtx-act-btn" type="button" data-action="sale-invoice-pdf" data-arg="${escS(saleId)}"${disabledAttr}${tooltip || ' title="Facture PDF"'} aria-label="Facture PDF">
             <svg viewBox="0 -960 960 960" width="15" height="15" fill="currentColor"><path d="M360-460h40v-80h40q17 0 28.5-11.5T480-580v-40q0-17-11.5-28.5T440-660h-80v200Zm40-120v-40h40v40h-40Zm120 120h80q17 0 28.5-11.5T640-500v-120q0-17-11.5-28.5T600-660h-80v200Zm40-40v-120h40v120h-40Zm120 40h40v-80h40v-40h-40v-40h40v-40h-80v200ZM320-240q-33 0-56.5-23.5T240-320v-480q0-33 23.5-56.5T320-880h480q33 0 56.5 23.5T880-800v480q0 33-23.5 56.5T800-240H320Zm0-80h480v-480H320v480ZM160-80q-33 0-56.5-23.5T80-160v-560h80v560h560v80H160Zm160-720v480-480Z"/></svg>
           </button>
-          <button class="rtx-act-btn" type="button" data-action="sale-invoice-print" data-arg="${escS(saleId)}" title="Imprimer A4" aria-label="Imprimer A4">
+          <button class="rtx-act-btn" type="button" data-action="sale-invoice-print" data-arg="${escS(saleId)}"${disabledAttr}${tooltip || ' title="Imprimer A4"'} aria-label="Imprimer A4">
             <svg viewBox="0 -960 960 960" width="15" height="15" fill="currentColor"><path d="M640-640v-120H320v120h-80v-200h480v200h-80Zm-480 80h640-640Zm560 100q17 0 28.5-11.5T760-500q0-17-11.5-28.5T720-540q-17 0-28.5 11.5T680-500q0 17 11.5 28.5T720-460Zm-80 260v-160H320v160h320Zm80 80H240v-160H80v-240q0-51 35-85.5t85-34.5h560q51 0 85.5 34.5T880-520v240H720v160Zm80-240v-160q0-17-11.5-28.5T760-560H200q-17 0-28.5 11.5T160-520v160h80v-80h480v80h80Z"/></svg>
           </button>
         </div>`;
