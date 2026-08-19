@@ -744,6 +744,52 @@ section('Typos do not change a high-impact decision');
   if (!invented) ok(`${INNOCENT.length} ordinary questions are not corrected into another intent`);
 }
 
+/* ── 11 · supplier-invoice reader reachable from the copilot ─────────────────
+ * The copilot is read-only; it may OPEN the Stock reception (handler
+ * stock-scan-invoice) and the merchant confirms there. The typed intent must
+ * win over the generic "stock" target, vanish when the operator has not sold
+ * the stock module, and the hero card must be gated by the very same rule. */
+section('Supplier-invoice reader from the copilot');
+{
+  const base = (cfg) => load({
+    lang: 'fr', role: 'owner',
+    env: { isReal: () => true },
+    venue: { isCustom: () => true, getVenue: () => 'v1', getCurrentVenueData: () => ({ name: 'Zaka Vogue', subtype: 'maison' }) },
+    sales: { list: () => [], totals: () => ({ revenue: 0, count: 0, basket: 0 }) },
+    globals: { KiwiConfig: cfg },
+  });
+  const on = base({ off: () => false });
+  const r1 = on.KiwiAgentAsk('lis ma facture fournisseur');
+  t('"lis ma facture fournisseur" opens the invoice reader, not the stock page',
+    !!(r1 && r1.open && r1.open.some((x) => x.handler === 'stock-scan-invoice') && !r1.open.some((x) => x.handler === 'nav-stock')), flatten(r1));
+  const r1b = on.KiwiAgentAsk('scanner une facture');
+  t('"scanner une facture" opens the invoice reader',
+    !!(r1b && r1b.open && r1b.open.some((x) => x.handler === 'stock-scan-invoice')), flatten(r1b));
+  const r2 = on.KiwiAgentAsk('ouvre le stock');
+  t('"ouvre le stock" still opens the stock page (ordering did not break the generic target)',
+    !!(r2 && r2.open && r2.open.some((x) => x.handler === 'nav-stock')), flatten(r2));
+  const off = base({ off: (k) => k === 'stock' });
+  const r3 = off.KiwiAgentAsk('lis ma facture fournisseur');
+  t('without the stock module, no invoice-reader button is offered',
+    !(r3 && r3.open && r3.open.some((x) => x.handler === 'stock-scan-invoice')), flatten(r3));
+
+  /* Hero card: same gate as the intent. Run the real supplierInvoiceOn() from
+   * agent.js, and pin that the card markup is guarded by it. */
+  const src = fs.readFileSync(AGENT, 'utf8');
+  const fnm = src.match(/function supplierInvoiceOn\(\) \{[\s\S]*?\n  \}/);
+  t('supplierInvoiceOn() exists in agent.js', !!fnm);
+  const gate = (w) => new Function('window', fnm[0] + '\nreturn supplierInvoiceOn();')(w);
+  const handlers = { 'stock-scan-invoice': () => {} };
+  t('hero card gate: real + stock sold + handler present → on',
+    gate({ KiwiEnv: { isReal: () => true }, KiwiConfig: { off: () => false }, Kiwi: { handlers } }) === true);
+  t('hero card gate: demo → off',
+    gate({ KiwiEnv: { isReal: () => false }, KiwiConfig: { off: () => false }, Kiwi: { handlers } }) === false);
+  t('hero card gate: stock module not sold → off',
+    gate({ KiwiEnv: { isReal: () => true }, KiwiConfig: { off: (k) => k === 'stock' }, Kiwi: { handlers } }) === false);
+  t('hero card markup is guarded by supplierInvoiceOn()',
+    /\$\{supplierInvoiceOn\(\) \? `<button class="fa-hero-card" type="button" data-fa-open="stock-scan-invoice">/.test(src));
+}
+
 /* ── summary ──────────────────────────────────────────────────────────────── */
 console.log('\n' + '─'.repeat(60));
 if (failures) { console.log(`✗ assistant gate: ${failures} failure(s)`); process.exit(1); }

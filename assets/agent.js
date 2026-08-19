@@ -1307,10 +1307,21 @@
   };
   const HL = () => HERO_L[L] || HERO_L.fr;
   const PRODUCT_HERO = {
-    fr: { c1t: 'Mes fonctions Kiwi', c1s: 'Selon mon métier', c2t: 'Configurer mon activité', c2s: 'Parcours guidé en 3 questions' },
-    en: { c1t: 'My Kiwi features', c1s: 'Matched to my trade', c2t: 'Configure my business', c2s: '3-question guided setup' },
-    ar: { c1t: 'وظائف Kiwi لدي', c1s: 'حسب نشاطي', c2t: 'إعداد نشاطي', c2s: 'مسار موجه في 3 أسئلة' },
+    fr: { c1t: 'Mes fonctions Kiwi', c1s: 'Selon mon métier', c2t: 'Configurer mon activité', c2s: 'Parcours guidé en 3 questions', c4t: 'Lire une facture fournisseur', c4s: 'PDF → réception pré-remplie, vous confirmez' },
+    en: { c1t: 'My Kiwi features', c1s: 'Matched to my trade', c2t: 'Configure my business', c2s: '3-question guided setup', c4t: 'Read a supplier invoice', c4s: 'PDF → pre-filled receipt, you confirm' },
+    ar: { c1t: 'وظائف Kiwi لدي', c1s: 'حسب نشاطي', c2t: 'إعداد نشاطي', c2s: 'مسار موجه في 3 أسئلة', c4t: 'قراءة فاتورة مورد', c4s: 'PDF ← استلام مُعبّأ مسبقاً، أنت تؤكد' },
   };
+  /* La carte « facture fournisseur » ouvre la réception du module Stock
+   * (assets/stock.js › stock-scan-invoice) : le copilote n'écrit rien, c'est le
+   * commerçant qui confirme. Réel seulement, et seulement si l'opérateur a
+   * vendu le module — même filtre que les intentions de navigation (navOff). */
+  function supplierInvoiceOn() {
+    try {
+      if (!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal())) return false;
+      if (window.KiwiConfig && window.KiwiConfig.off && window.KiwiConfig.off('stock')) return false;
+      return !!(window.Kiwi && window.Kiwi.handlers && typeof window.Kiwi.handlers['stock-scan-invoice'] === 'function');
+    } catch (_) { return false; }
+  }
   const OPS_HERO = {
     fr: { pressing: ['État de l’atelier', 'Prêtes, retards et soldes', 'Combien de commandes pressing sont prêtes ou en retard ?'], restaurant: ['État de la salle', 'Tables libres et occupées', 'Combien de tables sont libres ou occupées maintenant ?'], boutique: ['État du stock', 'Positions et synchronisation', 'Quel est l’état du stock maintenant ?'], other: ['État des opérations', 'Données reliées en direct', 'Quelles données opérationnelles sont disponibles maintenant ?'] },
     en: { pressing: ['Workshop status', 'Ready, late and balances', 'How many pressing orders are ready or late?'], restaurant: ['Floor status', 'Free and occupied tables', 'How many tables are free or occupied now?'], boutique: ['Inventory status', 'Positions and synchronisation', 'What is the inventory status now?'], other: ['Operations status', 'Live connected data', 'Which operational data is available now?'] },
@@ -1345,6 +1356,7 @@
     const icSetup = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>';
     const icBook = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 4a2 2 0 012-2h12v20H7a2 2 0 01-2-2z"/><path d="M9 2v20"/></svg>';
     const icIns  = '<svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M289-329q-29-29-29-71t29-71q29-29 71-29t71 29q29 29 29 71t-29 71q-29 29-71 29t-71-29ZM200-80q-33 0-56.5-23.5T120-160v-560q0-33 23.5-56.5T200-800h40v-80h80v80h320v-80h80v80h40q33 0 56.5 23.5T840-720v560q0 33-23.5 56.5T760-80H200Zm0-80h560v-400H200v400Zm0-480h560v-80H200v80Z"/></svg>';
+    const icInv  = '<svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M240-80q-50 0-85-35t-35-85v-120h120v-560l60 60 60-60 60 60 60-60 60 60 60-60 60 60 60-60 60 60 60-60v680q0 50-35 85t-85 35H240Zm480-80q17 0 28.5-11.5T760-200v-560H320v440h360v120q0 17 11.5 28.5T720-160ZM360-600v-80h240v80H360Zm0 120v-80h240v80H360Zm320-120q-17 0-28.5-11.5T640-640q0-17 11.5-28.5T680-680q17 0 28.5 11.5T720-640q0 17-11.5 28.5T680-600Zm0 120q-17 0-28.5-11.5T640-520q0-17 11.5-28.5T680-560q17 0 28.5 11.5T720-520q0 17-11.5 28.5T680-480ZM240-160h360v-80H200v40q0 17 11.5 28.5T240-160Zm-40 0v-80 80Z"/></svg>';
     const heroH   = B.partial ? nv().heroGreet        : h.greet;
     const heroP   = B.partial ? nv().heroLead(escHtml(B.name)) : h.lead;
     const heroIns = B.partial ? nv().heroIns          : h.ins(fmt1(B.netMargin), fmt1(safety));
@@ -1364,6 +1376,8 @@
         ${B.partial ? `<button class="fa-hero-card" type="button" data-fa-follow="${escAttr(op[2])}">
           <span class="ic">${icBook}</span><span class="t">${op[0]}</span><span class="s">${op[1]}</span></button>` : `<button class="fa-hero-card" type="button" data-fa-open="open-comptabilite">
           <span class="ic">${icBook}</span><span class="t">${h.c3t}</span><span class="s">${h.c3s}</span></button>`}
+        ${supplierInvoiceOn() ? `<button class="fa-hero-card" type="button" data-fa-open="stock-scan-invoice">
+          <span class="ic">${icInv}</span><span class="t">${ph.c4t}</span><span class="s">${ph.c4s}</span></button>` : ''}
       </div>
       <div class="fa-hero-insight">${icIns}<div><b>${h.insT}</b> ${heroIns}</div></div>
     </div>`;
@@ -2360,6 +2374,9 @@
     { rx: /\bequipe\b|\bteam\b|personnel|\btravaille\b|\bon\s+shift\b|\bplanning\b|\bhoraires?\b|\bstaff\b|\bkhddam\b|\bkhdam\b|فريق|يعمل/, h: 'nav-equipe', key: 'equipe' },
     { rx: /\btables?\b|plan de salle|floor plan|طاولات/, h: 'nav-tables', key: 'tables' },
     { rx: /cuisine|\bkds\b|kitchen|مطبخ/, h: 'nav-kds', key: 'kds' },
+    /* Avant l'entrée générique « stock », sinon elle ne gagne jamais. `noun` :
+     * « ma facture fournisseur » nomme la chose à faire, pas besoin d'impératif. */
+    { rx: /factures?\s+fournisseur|(?:lire|lis|scanner?|scanne|read|scan)\s+(?:une|ma|la|cette|a|my|the)?\s*facture|supplier\s+invoice|فاتورة\s+(?:مورد|الممون|المورد)/, h: 'stock-scan-invoice', key: 'stock', label: 'supplierInvoice', noun: true },
     { rx: /stock|inventaire|inventory|ingredient|مخزون/, h: 'nav-stock', key: 'stock' },
     { rx: /reservation|booking|\brdv\b|حجز|حجوزات/, h: 'nav-reservations', key: 'reservations' },
     { rx: /lien de paiement|payment link|رابط دفع/, h: 'payment-link', key: 'paymentLink' },
@@ -2377,7 +2394,7 @@
     if (!ACTION_VERB.test(q)) {
       /* "un lien de paiement" and "nouvelle vente" name a thing to create; the
        * noun IS the instruction, so these two need no imperative in front. */
-      for (const t of NAV_TARGETS) if ((t.key === 'paymentLink' || t.key === 'newSale') && t.rx.test(q)) return t;
+      for (const t of NAV_TARGETS) if ((t.key === 'paymentLink' || t.key === 'newSale' || t.noun) && t.rx.test(q) && !navOff(t)) return t;
       return null;
     }
     for (const t of NAV_TARGETS) if (t.rx.test(q) && !navOff(t)) return t;
@@ -2400,19 +2417,19 @@
     fr: { lead: (x) => `J’ouvre ${x}.`, btn: (x) => `Ouvrir ${x}`,
       menu: 'la carte', transactions: 'les commandes', terminaux: 'les terminaux', reglements: 'les règlements',
       conformite: 'la conformité', equipe: 'l’équipe', tables: 'les tables', kds: 'l’écran cuisine', stock: 'le stock',
-      reservations: 'les réservations', paymentLink: 'un lien de paiement', newSale: 'une nouvelle vente' },
+      reservations: 'les réservations', paymentLink: 'un lien de paiement', newSale: 'une nouvelle vente', supplierInvoice: 'la lecture d’une facture fournisseur' },
     en: { lead: (x) => `Opening ${x}.`, btn: (x) => `Open ${x}`,
       menu: 'the menu', transactions: 'orders', terminaux: 'the terminals', reglements: 'settlements',
       conformite: 'compliance', equipe: 'the team', tables: 'the tables', kds: 'the kitchen screen', stock: 'stock',
-      reservations: 'reservations', paymentLink: 'a payment link', newSale: 'a new sale' },
+      reservations: 'reservations', paymentLink: 'a payment link', newSale: 'a new sale', supplierInvoice: 'the supplier-invoice reader' },
     ar: { lead: (x) => `أفتح ${x}.`, btn: (x) => `افتح ${x}`,
       menu: 'القائمة', transactions: 'الطلبات', terminaux: 'الأجهزة', reglements: 'التسويات',
       conformite: 'الامتثال', equipe: 'الفريق', tables: 'الطاولات', kds: 'شاشة المطبخ', stock: 'المخزون',
-      reservations: 'الحجوزات', paymentLink: 'رابط دفع', newSale: 'عملية بيع جديدة' },
+      reservations: 'الحجوزات', paymentLink: 'رابط دفع', newSale: 'عملية بيع جديدة', supplierInvoice: 'قراءة فاتورة مورد' },
   };
   function sAction(target) {
     const a = ACT[L] || ACT.fr;
-    const name = a[target.key] || target.key;
+    const name = a[target.label] || a[target.key] || target.key;
     return { text: a.lead(name), open: [{ label: a.btn(name), handler: target.h }] };
   }
 
@@ -4582,7 +4599,7 @@
     .fa-hero-mark svg { width:21px; height:21px; }
     .fa-hero-h { font-family:'Instrument Serif',serif; font-size:31px; color:var(--ink); margin:17px 0 0; line-height:1.08; }
     .fa-hero-p { font-size:14px; color:var(--n-600); line-height:1.62; margin-top:9px; max-width:540px; }
-    .fa-hero-cards { display:grid; grid-template-columns:repeat(3,1fr); gap:11px; margin-top:24px; }
+    .fa-hero-cards { display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:11px; margin-top:24px; }
     .fa-hero-card { display:flex; flex-direction:column; align-items:flex-start; text-align:start;
       background:var(--surface); border:1px solid var(--n-200); border-radius:16px; padding:15px 14px; cursor:pointer;
       font:inherit; transition:transform 160ms var(--fa-ease), border-color 160ms, box-shadow 160ms;
