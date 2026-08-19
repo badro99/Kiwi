@@ -1763,7 +1763,7 @@
         <button class="mz-card ${stockOf(p) === 0 ? 'is-out' : ''}${pr ? ' is-promo' : ''}" data-mz-item="${p.id}" style="--i:${i++}">
           <span class="mz-card-art">${artOf(p.art)}</span>
           ${p.marque ? `<span class="mz-card-brand">${esc(p.marque)}</span>` : ''}
-          ${isConsignedProduct(p) ? `<span class="mz-consign-tag" title="Catégorie B · dépôt-vente : la vente est enregistrée en entier, le montant n’entre pas dans la recette">B</span>` : ''}
+          ${isConsignedProduct(p) ? `<span class="mz-consign-tag" title="Catégorie B">B</span>` : ''}
           <span class="mz-card-name">${esc(p.name)}</span>
           <div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:2px;">
             ${p.motif ? `<span class="mz-card-motif">${esc(p.motif)}</span>` : ''}
@@ -1958,7 +1958,7 @@
       <span class="mz-line-art">${artOf(p.art)}</span>
       <span class="mz-line-mid">
         ${(ln.marque || p.marque) ? `<span class="mz-line-brand">${esc(ln.marque || p.marque)}</span>` : ''}
-        ${isConsignedProduct(p) ? `<span class="mz-consign-tag" title="Catégorie B · dépôt-vente : la vente est enregistrée en entier, le montant n’entre pas dans la recette">B</span>` : ''}
+        ${isConsignedProduct(p) ? `<span class="mz-consign-tag" title="Catégorie B">B</span>` : ''}
         <span class="mz-line-name">${esc(p.name)}</span>
         <span class="mz-line-sub">
           ${colorDot(ln.color)}
@@ -2151,7 +2151,7 @@
         <span class="mz-sheet-art">${artOf(p.art)}</span>
         <span class="mz-sheet-title">
           ${p.marque ? `<div class="mz-card-brand">${esc(p.marque)}</div>` : ''}
-          ${isConsignedProduct(p) ? `<div class="mz-f-hint"><span class="mz-consign-tag" title="Catégorie B · dépôt-vente : la vente est enregistrée en entier, le montant n’entre pas dans la recette">B</span> Catégorie B (dépôt-vente) — vendue pour ${esc(p.consignor || 'un tiers')}. Le montant n’entre pas dans la recette du magasin.</div>` : ''}
+          ${isConsignedProduct(p) ? `<div class="mz-f-hint"><span class="mz-consign-tag" title="Catégorie B">B</span> Catégorie B${p.consignor ? ` · ${esc(p.consignor)}` : ''}</div>` : ''}
           <h3>${esc(p.name)}</h3>
           <span class="sub">
             ${esc((RAYONS.find((r) => r.id === p.rayon) || { label: 'Divers' }).label)}
@@ -6164,14 +6164,14 @@
         <!-- Dépôt-vente : la marchandise appartient à un tiers. La vente reste
              enregistrée normalement ; c'est l'argent qui ne lui appartient pas. -->
         <div class="mzi-fg">
-          <label>Propriété de la marchandise</label>
+          <label>Catégorie</label>
           <label class="mzi-check"><input type="checkbox" id="mzi-e-depot" ${isConsignedProduct(p) ? 'checked' : ''} />
-            <span>En dépôt-vente — vendue pour le compte d’un tiers</span></label>
+            <span>Catégorie B</span></label>
         </div>
         <div class="mzi-fg" id="mzi-e-depot-who" style="${isConsignedProduct(p) ? '' : 'display:none'}">
           <label>Déposant</label>
           <input id="mzi-e-consignor" value="${esc(p.consignor || '')}" placeholder="Nom du propriétaire de la marchandise" />
-          <small class="mzi-help">Simple repère : le montant encaissé sur cet article n’entre pas dans la recette du magasin. La caisse ne tient pas le compte de ce qui lui est reversé.</small>
+          
         </div>
       </div>
       <div class="mzi-modfoot"><button class="mz-btn secondary" data-inv-back>Retour</button><button class="mz-btn" id="mzi-e-save">Enregistrer</button></div>`;

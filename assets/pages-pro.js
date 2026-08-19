@@ -9684,12 +9684,11 @@ function _bqxCss() {
     .bqx-price-tag { font-family: var(--mono, monospace); }
     /* Catégorie A / B — la propriété de la marchandise, choisie à la création. */
     .bqx-ab { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .bqx-ab label { display: flex; align-items: flex-start; gap: 8px; padding: 10px 12px; border: 1px solid var(--line, #e7e3da);
+    .bqx-ab label { display: flex; align-items: center; gap: 9px; padding: 12px 13px; border: 1px solid var(--line, #e7e3da);
       border-radius: 11px; cursor: pointer; background: var(--paper, #fff); }
     .bqx-ab label:has(input:checked) { border-color: var(--atlas, #0B6E4F); box-shadow: inset 0 0 0 1px var(--atlas, #0B6E4F); }
-    .bqx-ab input { margin-top: 2px; accent-color: var(--atlas, #0B6E4F); }
+    .bqx-ab input { accent-color: var(--atlas, #0B6E4F); }
     .bqx-ab b { display: block; font-size: 13px; font-weight: 600; }
-    .bqx-ab span { display: block; font-size: 11.5px; color: var(--n-500, #77807b); margin-top: 1px; }
     .bqx-ab-b { font-family: var(--mono, monospace); font-size: 10px; letter-spacing: .06em; color: var(--atlas, #0B6E4F);
       border: 1px solid var(--atlas, #0B6E4F); border-radius: 999px; padding: 0 5px; margin-left: 6px; vertical-align: 1px; }
   `;
@@ -9772,7 +9771,7 @@ function _bqxGridHtml() {
       </div>
       <div class="kx-sku-body">
         <div class="kx-sku-head"><div class="n">${_esc(p.name)}${_bqxAbOn() && p.ownership === 'consignment'
-          ? '<span class="bqx-ab-b" title="Catégorie B · dépôt-vente : vendue pour un tiers, hors recette">B</span>' : ''}</div><span class="chip neutral">${cat ? _esc(cat.name) : 'Divers'}</span></div>
+          ? '<span class="bqx-ab-b" title="Catégorie B">B</span>' : ''}</div><span class="chip neutral">${cat ? _esc(cat.name) : 'Divers'}</span></div>
         <div class="bqx-card-cols">${(data.colors || []).slice(0, 8).map((c) => (window.KiwiColors ? window.KiwiColors.swatch(c.id) : '')).join('')}${data.colors.length > 8 ? `<em>+${data.colors.length - 8}</em>` : ''}</div>
         <div class="kx-sku-sku mono">${data.sizes.length} taille${data.sizes.length > 1 ? 's' : ''} · ${_bqxN(data.variants.length, 'variante')}</div>
         <div class="kx-sku-row">
@@ -10399,19 +10398,17 @@ function _bqxAbField(p) {
   const who = p ? (p.consignor || '') : '';
   return `
     <div class="kf-group">
-      <label class="kf-label">Catégorie de marchandise</label>
+      <label class="kf-label">Catégorie</label>
       <div class="bqx-ab">
         <label><input type="radio" name="bqx-ab" value="outright" ${own === 'outright' ? 'checked' : ''} data-bqx-ab />
-          <div><b>Catégorie A</b><span>Achetée ferme — la vente est votre recette.</span></div></label>
+          <div><b>Catégorie A</b></div></label>
         <label><input type="radio" name="bqx-ab" value="consignment" ${own === 'consignment' ? 'checked' : ''} data-bqx-ab />
-          <div><b>Catégorie B</b><span>Dépôt-vente — vendue pour un tiers, hors recette.</span></div></label>
+          <div><b>Catégorie B</b></div></label>
       </div>
     </div>
     <div class="kf-group" data-bqx-ab-who style="${own === 'consignment' ? '' : 'display:none'}">
       <label class="kf-label">Propriétaire de la marchandise (option)</label>
       <input class="kf-input" value="${_esc(who)}" data-bqx-consignor placeholder="Ex. Baobab Collection" maxlength="60" />
-      <div class="bqx-photo-msg">Un repère pour vous. La caisse n'en tient aucun compte : elle enregistre
-        la vente en entier et laisse le montant hors de votre recette, rien de plus.</div>
     </div>`;
 }
 /* Révèle le nom du déposant quand B est choisie. Le champ vit dans la modale,
@@ -10525,7 +10522,7 @@ handlers['bqx-new-save'] = () => {
   /* Pas de défaut : tant que A ou B n'est pas choisie, rien n'est créé. Option
      éteinte, la question n'est pas posée et rien n'est exigé. */
   const ab = _bqxAbRead(b);
-  if (_bqxAbOn() && !ab) { toast('Choisissez la catégorie', { desc: 'A = achetée ferme · B = dépôt-vente.', type: 'warn' }); return; }
+  if (_bqxAbOn() && !ab) { toast('Choisissez la catégorie', { desc: 'Catégorie A ou Catégorie B.', type: 'warn' }); return; }
   const p = CAT().addProduct({
     name, categoryId: b.querySelector('[data-bqx-cat]').value || null,
     kind: b.querySelector('[data-bqx-kind]').value,

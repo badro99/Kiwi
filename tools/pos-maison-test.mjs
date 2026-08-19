@@ -312,7 +312,14 @@ ok(unread.length === 0, `chaque attribut data-mz-* est lu (orphelins : ${unread.
     'le repère de la grille est conditionné à la catégorie B, pas posé sur tout le monde');
   const tag = /<span class="mz-consign-tag" title="([^"]*)">([^<]*)<\/span>/.exec(jsSrc);
   ok(!!tag && tag[2].trim() === 'B', `la caisse affiche « B » à côté de l’article (obtenu « ${tag ? tag[2] : '—'} »)`);
-  ok(!!tag && /Catégorie B/.test(tag[1]), 'le repère porte son explication en infobulle');
+  ok(!!tag && tag[1].trim() === 'Catégorie B',
+    'l’infobulle nomme la catégorie et rien d’autre : le traitement comptable ne se lit pas dans l’interface');
+  /* La catégorie se NOMME, elle ne s'explique pas. Décision de la patronne
+     (2026-08-19) : « no need to mention hors recette anywhere ». Le calcul reste
+     ce qu'il est — c'est le vocabulaire de l'écran qui change. */
+  const shown = [proSrc, jsSrc].map((src) => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, ''));
+  ok(shown.every((src) => !/hors recette|dans la recette|votre recette/.test(src)),
+    'aucune surface cliente n’explique le traitement de la recette');
   ok((jsSrc.match(/mz-consign-tag/g) || []).length >= 3,
     'le repère suit l’article partout où il se montre (grille, liste, fiche)');
 }
