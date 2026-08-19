@@ -208,8 +208,8 @@
     "sha": "254fafebd88a2d2f"
   },
   "assets/invoicing.js": {
-    "v": "3",
-    "sha": "0e69ac84d17d3996"
+    "v": "4",
+    "sha": "9b05065356608770"
   },
   "assets/kitchen-print-queue.js": {
     "v": "2",
@@ -224,8 +224,8 @@
     "sha": "5829242ec789b552"
   },
   "assets/live-link.js": {
-    "v": "10",
-    "sha": "4351297bd82415d6"
+    "v": "11",
+    "sha": "cc60de1e451faa2a"
   },
   "assets/live-socket.js": {
     "v": "2",
@@ -280,8 +280,8 @@
     "sha": "34ba1e6354ccc770"
   },
   "assets/pages-pro.js": {
-    "v": "2069",
-    "sha": "edcd1218f52e9452"
+    "v": "2070",
+    "sha": "15a130426af773db"
   },
   "assets/pairing-commit.js": {
     "v": "1",

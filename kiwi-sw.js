@@ -78,7 +78,7 @@ var SHELL = [
   '/assets/interactive.js?v=10',
   '/assets/features.js?v=3',
   '/assets/invoicing.css?v=5',
-  '/assets/invoicing.js?v=3',
+  '/assets/invoicing.js?v=4',
   '/assets/order-qr.js?v=2',
   /* Ces deux-là sont estampillées ?v= dans dashboard.html. La chaîne doit être
      RIGOUREUSEMENT identique : c'est l'URL qui sert de clé de cache, et une
@@ -149,7 +149,7 @@ var SHELL = [
   '/assets/platform-ops.css?v=1',
   '/assets/operations.js?v=10',
   '/assets/operations-ui.js?v=11',
-  '/assets/live-link.js?v=10',
+  '/assets/live-link.js?v=11',
   '/assets/channel-sales.js?v=3',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
@@ -171,6 +171,7 @@ var SHELL = [
      et un client qui repart sans reçu ne revient pas le chercher. */
   '/assets/receipt.js',
   '/assets/receipt-ui.js',
+  '/assets/invoice.js',
   '/assets/merchant-config.js?v=264',
   '/assets/entitlements.css?v=4',
   '/assets/entitlements.js?v=5',

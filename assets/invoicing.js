@@ -273,6 +273,29 @@
   }
 
   function printable(inv) {
+    if (window.KiwiInvoice && typeof window.KiwiInvoice.html === 'function') {
+      const sums = invoiceTotal(inv);
+      const doc = {
+        number: String(inv.number || (inv.id ? ('#' + inv.id) : 'Facture')),
+        issuedTs: inv.issueDate ? new Date(inv.issueDate + 'T12:00:00').getTime() : Date.now(),
+        seller: { name: businessName(), city: 'Maroc' },
+        customer: { name: inv.customer || '', ice: inv.ice || '', if: inv.if || '' },
+        lines: (inv.items || []).map(x => ({
+          name: x.description || 'Article',
+          qty: num(x.qty) || 1,
+          unitTTC: num(x.price),
+          totalTTC: round2(num(x.qty) * num(x.price)),
+        })),
+        tvaRate: num(inv.taxRate),
+        totals: {
+          ht: round2(sums.subtotal),
+          tva: round2(sums.tax),
+          ttc: round2(sums.total),
+        },
+        method: inv.method || 'Virement / Espèces',
+      };
+      return window.KiwiInvoice.html(doc);
+    }
     const t = T(), sums = invoiceTotal(inv), biz = businessName();
     return `<!doctype html><html lang="${esc(lang())}"><head><meta charset="utf-8"><base href="${esc(document.baseURI)}"><title>${esc(t.no)} #${inv.id}</title><style>@page{size:A4;margin:18mm}*{box-sizing:border-box}body{font:13px Arial,sans-serif;color:#102019;margin:0}.top{display:flex;justify-content:space-between;border-bottom:3px solid #087653;padding-bottom:24px}.logo img{display:block;width:auto;height:32px}.meta{color:#69746e;line-height:1.6;margin-top:7px}.parties{display:grid;grid-template-columns:1fr 1fr;gap:40px;padding:28px 0}.label{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#777;margin-bottom:8px}.party strong{display:block;font-size:15px;margin-bottom:4px}table{width:100%;border-collapse:collapse}th{background:#f1f6f3;text-align:left;color:#65716b;padding:11px}td{padding:12px 11px;border-bottom:1px solid #e2e8e4}th:not(:first-child),td:not(:first-child){text-align:right}.totals{width:280px;margin:20px 0 0 auto}.row{display:flex;justify-content:space-between;padding:7px 0}.total{border-top:2px solid #087653;margin-top:8px;padding-top:12px;font-size:18px;font-weight:bold;color:#087653}.note{margin-top:38px;background:#f3f7f5;border-left:3px solid #087653;padding:14px;color:#58645e;line-height:1.5}.foot{position:fixed;bottom:0;color:#849089;font-size:10px}</style></head><body><div class="top"><div><div class="logo">${BRAND_LOGO}</div><div class="meta">${esc(biz)}<br>Maroc</div></div><div style="text-align:right"><h1>${esc(t.no)} #${inv.id}</h1><div class="meta">${esc(t.issued)} · ${esc(fmtDate(inv.issueDate))}<br>${esc(t.due)} · ${esc(fmtDate(inv.dueDate))}</div></div></div><div class="parties"><div><div class="label">${esc(t.from)}</div><div class="party"><strong>${esc(biz)}</strong>Document commercial Kiwi</div></div><div><div class="label">${esc(t.invoiceTo)}</div><div class="party"><strong>${esc(inv.customer)}</strong>${esc(inv.contact)}</div></div></div><table><thead><tr><th>${esc(t.item)}</th><th>${esc(t.qty)}</th><th>${esc(t.unit)}</th><th>${esc(t.lineTotal)}</th></tr></thead><tbody>${inv.items.map(x=>`<tr><td>${esc(x.description)}</td><td>${money(x.qty)}</td><td>${money(x.price)} MAD</td><td>${money(num(x.qty)*num(x.price))} MAD</td></tr>`).join('')}</tbody></table><div class="totals"><div class="row"><span>${esc(t.subtotal)}</span><b>${money(sums.subtotal)} MAD</b></div><div class="row"><span>${esc(t.vat)} (${num(inv.taxRate)} %)</span><b>${money(sums.tax)} MAD</b></div><div class="row total"><span>${esc(t.total)}</span><span>${money(sums.total)} MAD</span></div></div>${inv.note?`<div class="note">${esc(inv.note)}</div>`:''}<div class="foot">${esc(biz)} · ${esc(t.no)} #${inv.id}</div><script>addEventListener('load',()=>setTimeout(()=>print(),150))<\/script></body></html>`;
   }

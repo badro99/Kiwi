@@ -1013,3 +1013,19 @@ CREATE TABLE IF NOT EXISTS client_errors (
 );
 CREATE INDEX IF NOT EXISTS idx_client_errors_seen ON client_errors (merchant, last_seen_ts);
 CREATE INDEX IF NOT EXISTS idx_client_errors_sig ON client_errors (merchant, file, line, message);
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- FACTURES DE VENTE · Émission et numérotation D1 idempotente
+-- ═══════════════════════════════════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS sale_invoices (
+  merchant   TEXT NOT NULL,
+  seq        INTEGER NOT NULL,
+  number     TEXT NOT NULL,
+  sale_id    TEXT NOT NULL,
+  customer   TEXT,
+  snapshot   TEXT NOT NULL,
+  created_ts INTEGER NOT NULL,
+  PRIMARY KEY (merchant, sale_id),
+  UNIQUE (merchant, seq)
+);
+CREATE INDEX IF NOT EXISTS idx_sale_invoices_merchant_seq ON sale_invoices (merchant, seq);

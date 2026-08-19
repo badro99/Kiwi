@@ -1003,6 +1003,9 @@
        when the server last answered, how many rows it has bridged, and how
        many sales this device still owes the server. A number a merchant can
        trace is a number a merchant can argue with. */
+    /* Unique identifier formula for sales rows in D1. Deterministic across all
+       surfaces (dashboard, caisses, reprints) to guarantee 1 sale = 1 invoice. */
+    saleIdFor: function (entry, m) { return stableId(m || merchant(), entry); },
     status: function () {
       return {
         on: on(), merchant: merchant(), lastSync: lastSync,
@@ -1011,4 +1014,5 @@
       };
     },
   };
+  window.KiwiLiveLink = window.KiwiLive;
 })();
