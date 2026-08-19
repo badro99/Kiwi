@@ -205,6 +205,60 @@ ok(unread.length === 0, `chaque attribut data-mz-* est lu (orphelins : ${unread.
   ok(u === 2 && P3.plate.sizes.TU === 22, `assiette simple → décompte direct (u=${u}, stock=${P3.plate.sizes.TU})`);
 }
 
+/* 11. DÉPÔT-VENTE (catégorie B) — la marchandise appartient à un tiers.
+ * La règle qui compte, et qui est vérifiée ici en premier : la vente est
+ * ENREGISTRÉE INTÉGRALEMENT. Ce qui change est l'ATTRIBUTION de l'argent, pas
+ * l'existence de la vente. Un jour où quelqu'un « optimisera » ce code, c'est
+ * ce test-là qui doit l'arrêter. */
+{
+  // a) le journal des ventes reçoit TOUTES les lignes — aucun filtre sur consigned
+  const saleBlock = jsSrc.slice(jsSrc.indexOf('          lines: t.lines.map((ln) => ({'), jsSrc.indexOf('          reward: rewardUsed'));
+  ok(saleBlock.length > 0 && !/filter\s*\(/.test(saleBlock),
+    'le journal des ventes enregistre toutes les lignes, sans filtrer le dépôt-vente');
+  ok(/consigned: Math\.round\(tot\.consigned\)/.test(jsSrc) && /consignors: consignorSplit\(t\.lines\)/.test(jsSrc) && /own: Math\.round\(tot\.own\)/.test(jsSrc),
+    'la vente écrit les trois montants : total payé, part des déposants, recette propre');
+
+  // b) la recette du jour exclut le dépôt-vente, avec repli pour l'historique
+  ok(/caToday = \(\) => salesToday\(\)\.reduce\(\(s, x\) => s \+ \(x\.own != null \? x\.own : x\.total\)/.test(jsSrc),
+    'la recette du jour lit `own`, et retombe sur `total` pour les ventes d’avant');
+  ok(/cashIn = Math\.max\(0, cashIn - Math\.round\(tot\.consigned\)\)/.test(jsSrc),
+    'ce qui remonte au tableau de bord exclut la part des déposants');
+
+  // c) le journal dépôt-vente est atteignable
+  ok(/data-mz-view="depot"/.test(jsSrc) && /if \(view === 'depot'\) renderDepot\(\);/.test(jsSrc),
+    'le journal dépôt-vente a son entrée de nav ET sa route');
+  ok(/if \(!ln\.consigned\) return;/.test(jsSrc) && /consignor: ln\.consignor \|\| 'Déposant'/.test(jsSrc),
+    'le journal lit la propriété FIGÉE sur la vente, pas le catalogue du jour');
+
+  // d) le catalogue partagé n'accepte pas une propriété devinée
+  ok(/ownership: data\.ownership === 'consignment' \? 'consignment' : 'outright'/.test(catSrc),
+    'addProduct ne retient « consignment » que s’il est explicite');
+  ok(/consignor: String\(data\.consignor \|\| ''\)\.trim\(\)/.test(catSrc), 'le déposant est porté par le produit');
+
+  // e) l'arithmétique, exécutée sur la source expédiée
+  const from = jsSrc.indexOf('  const isConsigned = (ln) =>');
+  const to = jsSrc.indexOf('  function ticketTotals(t) {');
+  ok(from > 0 && to > from, 'le bloc dépôt-vente est isolable dans la source');
+  const shim = 'const lineTotal = (ln) => ln.unit * ln.qty; const P = __P;';
+  const api = new Function('__P', shim + jsSrc.slice(from, to) + '\n; return { isConsigned, consignedOf, consignorSplit };');
+  const PROD = {
+    bougie: { ownership: 'consignment', consignor: 'Baobab Collection' },
+    aurum:  { ownership: 'consignment', consignor: 'Baobab Collection' },
+    vase:   { ownership: 'outright', consignor: '' },
+  };
+  const a = api(PROD);
+  const lines = [
+    { pid: 'vase', unit: 650, qty: 1 },
+    { pid: 'bougie', unit: 1850, qty: 1 },
+    { pid: 'aurum', unit: 1250, qty: 2 },
+  ];
+  ok(a.consignedOf(lines) === 1850 + 2500, `part des déposants = 4350 (obtenu ${a.consignedOf(lines)})`);
+  const split = a.consignorSplit(lines);
+  ok(split['Baobab Collection'] === 4350 && !('' in split), `regroupé par déposant (${JSON.stringify(split)})`);
+  ok(a.consignedOf([{ pid: 'vase', unit: 650, qty: 1 }]) === 0, 'un ticket sans dépôt-vente ne doit rien');
+  ok(a.isConsigned({ pid: 'inconnu' }) === false, 'un article absent du catalogue n’est jamais réputé en dépôt-vente');
+}
+
 console.log(`\n✓ ${passed} controls green (${failures.length} failure(s))`);
 if (failures.length) {
   process.exit(1);

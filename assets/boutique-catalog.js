@@ -160,8 +160,8 @@
       { id: 'mz_coupes_dessert', name: 'Coupes à dessert dorées', price: 75, art: 'coupe', kind: 'tu', format: 'piece', marque: 'Cristal Atlas', motif: 'Sahara Or', fragile: true, sizes: { TU: 12 }, colors: ['dore', 'transparent'] },
     ] },
     { rayon: 'bougies', rayonLabel: 'Bougies & Senteurs', items: [
-      { id: 'mz_baobab_feathers', name: 'Bougie Max 24 Totem Feathers', price: 1850, art: 'bougie', kind: 'tu', format: 'piece', marque: 'Baobab Collection', motif: 'Totem', fragile: true, sizes: { TU: 5 }, colors: ['ivoire', 'noir'] },
-      { id: 'mz_baobab_aurum', name: 'Bougie Max 16 Aurum Platinum', price: 1250, art: 'bougie', kind: 'tu', format: 'piece', marque: 'Baobab Collection', motif: 'Aurum', fragile: true, sizes: { TU: 4 }, colors: ['dore', 'argent'] },
+      { id: 'mz_baobab_feathers', name: 'Bougie Max 24 Totem Feathers', price: 1850, art: 'bougie', kind: 'tu', format: 'piece', marque: 'Baobab Collection', motif: 'Totem', ownership: 'consignment', consignor: 'Baobab Collection', fragile: true, sizes: { TU: 5 }, colors: ['ivoire', 'noir'] },
+      { id: 'mz_baobab_aurum', name: 'Bougie Max 16 Aurum Platinum', price: 1250, art: 'bougie', kind: 'tu', format: 'piece', marque: 'Baobab Collection', motif: 'Aurum', ownership: 'consignment', consignor: 'Baobab Collection', fragile: true, sizes: { TU: 4 }, colors: ['dore', 'argent'] },
       { id: 'mz_diffuseur_oranger', name: 'Diffuseur Fleur d’Oranger Tanger', price: 480, art: 'diffuseur', kind: 'tu', format: 'piece', marque: 'Les Senteurs de Tanger', motif: 'Botanique', fragile: true, sizes: { TU: 9 }, colors: ['ambre', 'blanc'] },
     ] },
     { rayon: 'decoration', rayonLabel: 'Décoration & Cadeaux', items: [
@@ -973,11 +973,13 @@
           piecePriceMAD: it.piecePriceMAD != null ? (+it.piecePriceMAD || 0) : null,
           motif: it.motif || '',
           fragile: !!it.fragile,
-          /* Seam: Stock ownership (owns outright vs holds on consignment/dépôt-vente for a brand)
-           * is undecided pending the client's answer. Add an optional ownership field with a single
-           * value ('outright') for now. Do NOT implement consignment logic, commission-only revenue,
-           * or supplier settlement yet. */
-          ownership: it.ownership || 'outright',
+          /* PROPRIÉTÉ DU STOCK. 'outright' = la marchandise est au commerce.
+           * 'consignment' = dépôt-vente : elle appartient à un tiers (`consignor`),
+           * le commerce la vend POUR LUI. La vente est enregistrée normalement —
+           * ticket, journal, stock — mais l'argent ne lui appartient pas : il est
+           * dû au déposant. Voir le journal dépôt-vente dans assets/pos-maison.js. */
+          ownership: it.ownership === 'consignment' ? 'consignment' : 'outright',
+          consignor: String(it.consignor || '').trim(),
           createdAt: Date.now(), archived: false,
         };
         db.products.push(prod);
@@ -1251,11 +1253,11 @@
       piecePriceMAD: data.piecePriceMAD != null ? (+data.piecePriceMAD || 0) : null,
       motif: String(data.motif || '').trim(),
       fragile: !!data.fragile,
-      /* Seam: Stock ownership (owns outright vs holds on consignment/dépôt-vente for a brand)
-       * is undecided pending the client's answer. Add an optional ownership field with a single
-       * value ('outright') for now. Do NOT implement consignment logic, commission-only revenue,
-       * or supplier settlement yet. */
-      ownership: String(data.ownership || 'outright').trim(),
+      /* Voir le commentaire dans seed() : 'consignment' = dépôt-vente, la
+       * marchandise est au déposant nommé par `consignor`. Toute autre valeur
+       * retombe sur 'outright' — on ne devine pas une propriété tierce. */
+      ownership: data.ownership === 'consignment' ? 'consignment' : 'outright',
+      consignor: String(data.consignor || '').trim(),
       /* La RÉFÉRENCE COMMUNE — ce qui dit que le jean de Casa et le jean de
        * Rabat sont le même article. Deux magasins d'un même compte tiennent
        * deux catalogues séparés : rien ne les relie sauf le code-barres, et un
@@ -1277,7 +1279,7 @@
   function updateProduct(id, patch) {
     const p = prodById(id); if (!p) return null;
     ['name', 'categoryId', 'priceMAD', 'cost', 'art', 'kind', 'flag', 'grad', 'photo', 'video', 'sku',
-     'marque', 'format', 'servicePieces', 'piecePriceMAD', 'motif', 'fragile', 'ownership'].forEach((k) => {
+     'marque', 'format', 'servicePieces', 'piecePriceMAD', 'motif', 'fragile', 'ownership', 'consignor'].forEach((k) => {
       if (patch[k] !== undefined) {
         if (k === 'priceMAD' || k === 'cost' || k === 'piecePriceMAD') {
           p[k] = patch[k] == null ? null : (+patch[k] || 0);
@@ -1602,7 +1604,8 @@
         piecePriceMAD: p.piecePriceMAD || null,
         motif: p.motif || '',
         fragile: !!p.fragile,
-        ownership: p.ownership || 'outright',
+        ownership: p.ownership === 'consignment' ? 'consignment' : 'outright',
+        consignor: p.consignor || '',
         ean: primaryV ? primaryBarcode(primaryV) : '', sizes, colors: colorSet.length ? colorSet : ['gris'],
         rayon: p.categoryId, _variants: vs,
         /* Deux champs que la vente ne dessine pas mais dont les PROMOTIONS ont

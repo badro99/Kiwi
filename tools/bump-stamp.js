@@ -65,16 +65,35 @@ function bump(asset, scanned) {
     console.warn(`  · ${asset} — aucune estampille trouvée (ni shell, ni SW, ni rev) ; rien à bumper`);
     return false;
   }
-  const current = Math.max(...[...entry.stamps].map(Number));
-  const next = String(current + 1);
   const revSite = entry.sites.find((s) => s.kind === 'rev');
+  /* Une verticale POS n'a QU'UN rev pour son .js ET son .css. Les bumper l'un
+     après l'autre laissait le premier en arrière : le second lisait le rev déjà
+     avancé, sautait encore d'un cran, et n'écrivait ce nouveau numéro que dans
+     SES fichiers — d'où un .js à ?v=6 face à un rev à 7, et un gate rouge.
+     Un rev partagé se déplace donc en bloc : on bouge l'asset demandé ET ses
+     frères de rev, vers le même numéro. */
+  const siblings = revSite
+    ? [...scanned.entries()]
+        .filter(([a, e]) => a !== asset && e.sites.some((s) => s.kind === 'rev' && s.base === revSite.base))
+        .map(([a, e]) => ({ asset: a, entry: e }))
+    : [];
+  /* Le numéro de départ tient compte des frères, sinon un bloc déjà à moitié
+     avancé repartirait en arrière. */
+  const allStamps = [...entry.stamps].concat(...siblings.map((s) => [...s.entry.stamps]));
+  const current = Math.max(...allStamps.map(Number));
+  const next = String(current + 1);
   const files = new Set(entry.sites.filter((s) => s.kind !== 'rev').map((s) => s.file));
 
   let hits = 0;
   for (const f of files) hits += replaceIn(f, asset, next);
+  for (const sib of siblings) {
+    for (const s of sib.entry.sites) {
+      if (s.kind !== 'rev') hits += replaceIn(s.file, sib.asset, next);
+    }
+  }
   if (revSite && replaceRev(revSite.base, next)) hits++;
 
-  const where = [...files].concat(revSite ? [`${S.DISPATCH} (rev ${revSite.base})`] : []);
+  const where = [...files].concat(siblings.map((s) => s.asset)).concat(revSite ? [`${S.DISPATCH} (rev ${revSite.base})`] : []);
   console.log(`  ✓ ${asset}  ?v=${current} → ?v=${next}   ${hits} occurrence(s) dans ${where.join(', ')}`);
   return true;
 }
