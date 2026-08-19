@@ -74,8 +74,8 @@ var SHELL = [
   /* Les métiers. Dans la coquille parce que venues.js et les assistants
      d'inscription la lisent à l'évaluation : sans elle hors ligne, un
      établissement retombe sur la famille par défaut. */
-  '/assets/trades.js?v=5',
-  '/assets/interactive.js?v=9',
+  '/assets/trades.js?v=6',
+  '/assets/interactive.js?v=10',
   '/assets/features.js?v=3',
   '/assets/invoicing.css?v=5',
   '/assets/invoicing.js?v=3',
@@ -157,7 +157,7 @@ var SHELL = [
      s'écrire et s'imprimer. La remontée serveur, elle, retentera plus tard. */
   '/assets/day-report.js?v=5',
   '/assets/day-report-dash.js?v=2',
-  '/assets/day-report-export.js?v=3',
+  '/assets/day-report-export.js?v=4',
   /* Les horaires d'ouverture. Dans la coquille hors-ligne parce que la caisse
      s'en sert au moment le plus hors-ligne qui soit : l'ouverture du service.
      Sans eux le contrôle « ouvre-t-on maintenant ? » ne peut pas se faire, et
@@ -243,7 +243,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=2',
   '/assets/food-production-print.js?v=1',
   '/assets/pos-sale.js?v=4',
-  '/assets/pos-dispatch.js?v=28',
+  '/assets/pos-dispatch.js?v=29',
   '/assets/retail-scan.css?v=6',
   '/assets/vendor/zxing-browser.min.js?v=1',
   '/assets/retail-scan.js?v=6',

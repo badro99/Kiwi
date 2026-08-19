@@ -108,8 +108,8 @@
     "sha": "00fc84b95a3bf010"
   },
   "assets/day-report-export.js": {
-    "v": "3",
-    "sha": "80f85ccf22ef841a"
+    "v": "4",
+    "sha": "2e9ea0b5feddd285"
   },
   "assets/day-report.js": {
     "v": "5",
@@ -180,8 +180,8 @@
     "sha": "7a0b181ecedf5f85"
   },
   "assets/hotel.js": {
-    "v": "5",
-    "sha": "98624760653a5f4d"
+    "v": "6",
+    "sha": "05c5b3311fdc6b45"
   },
   "assets/i18n.js": {
     "v": "4",
@@ -192,8 +192,8 @@
     "sha": "5f0a4000cc13db93"
   },
   "assets/interactive.js": {
-    "v": "9",
-    "sha": "6e35f38329917944"
+    "v": "10",
+    "sha": "be57d248fa241507"
   },
   "assets/inventory-consumption.js": {
     "v": "8",
@@ -256,8 +256,8 @@
     "sha": "d1b0f3fa2625e19d"
   },
   "assets/onboarding.js": {
-    "v": "2078",
-    "sha": "7cd385f2bb8bf8c9"
+    "v": "2079",
+    "sha": "d5b0c1dd191d81af"
   },
   "assets/operations-ui.js": {
     "v": "11",
@@ -344,8 +344,8 @@
     "sha": "7e8c999fe50a7b06"
   },
   "assets/pos-dispatch.js": {
-    "v": "28",
-    "sha": "c18d74d8d443c53f"
+    "v": "29",
+    "sha": "914c060a3381c3ff"
   },
   "assets/pos-epicerie.css": {
     "v": "2",
@@ -564,8 +564,8 @@
     "sha": "21b80930aa81799d"
   },
   "assets/trades.js": {
-    "v": "5",
-    "sha": "307ef1ef0fac5461"
+    "v": "6",
+    "sha": "85b12b9390c4a27c"
   },
   "assets/vendor/zxing-browser.min.js": {
     "v": "1",

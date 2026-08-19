@@ -7,6 +7,25 @@
 (function () {
   'use strict';
 
+  /* Le journal d'inventaire range ses motifs en CLÉS MACHINE — 'sale', 'waste',
+   * 'sale-reversal' — parce que c'est ce qui se compare, se rapproche et se
+   * synchronise avec D1. On ne les traduit donc pas à la source : on les traduit
+   * ICI, au moment de les écrire dans un rapport qui, lui, se lit en français.
+   * Une clé inconnue retombe sur elle-même : un motif inattendu doit rester
+   * visible dans la colonne, pas disparaître derrière un tiret. */
+  var MOTIF = {
+    opening: 'Solde initial', receipt: 'Réception', sale: 'Vente',
+    'sale-reversal': 'Annulation de vente', waste: 'Casse / perte',
+    manual: 'Saisie manuelle',
+  };
+  var REF_TYPE = {
+    opening: 'solde initial', receipt: 'réception', sale: 'vente',
+    'kitchen-void': 'annulation cuisine', breakage: 'casse',
+    'assistant-confirmed': 'confirmé par l’assistant', manual: 'saisie manuelle',
+  };
+  function motif(k) { return MOTIF[k] || k || ''; }
+  function refType(k) { return REF_TYPE[k] || k || ''; }
+
   var KINDS = [
     { id: 'summary', title: 'Synthèse de la journée', desc: 'Ouverture, clôture, encaissements, transactions et ticket moyen.', on: true },
     { id: 'sales', title: 'Ventes détaillées', desc: 'Chaque ticket, son heure, son moyen de paiement, son canal et son panier.', on: true },
@@ -198,7 +217,7 @@
     if(chosen.materials){section(out,'MATIÈRES UTILISÉES',['Matière','Identifiant stock','Quantité','Unité','Coût mesuré (MAD)','Produits concernés']);out.push(q(['Couverture des lignes avec fiche technique',ctx.materials.eligible?Math.round(ctx.materials.covered/ctx.materials.eligible*100)+' %':'Non mesurable']));if(!ctx.materials.rows.length)out.push(q(['Aucune matière dérivable : aucune fiche technique complète reliée aux ventes détaillées.']));ctx.materials.rows.forEach(function(m){out.push(q([m.name,m.id,raw(m.qty),m.unit,m.costKnown?raw(m.cost):'Coût non configuré',Object.keys(m.recipes).join(' · ')]));});}
     if(chosen.margins){section(out,'MARGES PAR ARTICLE',['Article','Qté','CA brut (MAD)','CA net HT (MAD)','Coût (MAD)','Marge (MAD)','Marge (%)','Source coût']);var knownRevenue=0,totalRevenue=0;ctx.products.forEach(function(p){totalRevenue+=p.revenue;var net=p.revenue;try{if(window.KiwiCost&&window.KiwiCost.netOf)net=window.KiwiCost.netOf(p.revenue,window.KiwiCost.basis&&window.KiwiCost.basis());}catch(_){}var profit=p.costKnown?r2(net-p.cost):null,pct=p.costKnown&&net>0?r2(profit/net*100):null;if(p.costKnown)knownRevenue+=p.revenue;out.push(q([p.name,raw(p.qty),raw(p.revenue),raw(net),p.costKnown?raw(p.cost):'Non chiffré',profit==null?'Non chiffré':raw(profit),pct==null?'Non chiffré':raw(pct),p.costSrc||'Non configuré']));});out.push(q(['Couverture du chiffrage','','',totalRevenue?Math.round(knownRevenue/totalRevenue*100)+' %':'Non mesurable']));}
     if(chosen.team){section(out,'ÉQUIPE & HEURES',['Collaborateur','Fonction','Début planifié','Fin planifiée','Heures planifiées','Heures réalisées','CA encaissé (MAD)','Transactions']);if(!ctx.team.length)out.push(q(['Aucune présence, heure réalisée ou responsabilité tracée pour cette journée.']));ctx.team.forEach(function(p){out.push(q([p.name,p.role,p.plannedStart||'',p.plannedEnd||'',raw(p.plannedHours),raw(p.workedHours),raw(p.sales),p.txns||0]));});}
-    if(chosen.stock){section(out,'MOUVEMENTS DE STOCK',['Heure','Article','Déclinaison','Quantité','Motif','Coût unitaire (MAD)','Référence','Acteur','Note']);if(!ctx.stock.length)out.push(q(['Aucun mouvement de stock enregistré pour cette journée.']));ctx.stock.forEach(function(m){out.push(q([hm(m.occurredTs),m.itemId,m.variantId||'',raw(m.qty),m.reason||'',m.unitCost==null?'Non renseigné':raw(m.unitCost),[m.refType,m.refId].filter(Boolean).join(' · '),m.actor||'',m.note||'']));});}
+    if(chosen.stock){section(out,'MOUVEMENTS DE STOCK',['Heure','Article','Déclinaison','Quantité','Motif','Coût unitaire (MAD)','Référence','Acteur','Note']);if(!ctx.stock.length)out.push(q(['Aucun mouvement de stock enregistré pour cette journée.']));ctx.stock.forEach(function(m){out.push(q([hm(m.occurredTs),m.itemId,m.variantId||'',raw(m.qty),motif(m.reason),m.unitCost==null?'Non renseigné':raw(m.unitCost),[refType(m.refType),m.refId].filter(Boolean).join(' · '),m.actor||'',m.note||'']));});}
     if(chosen.reservations){section(out,'RÉSERVATIONS',['Heure','Client','Couverts','Service','Ressource','Statut','Source']);if(!ctx.reservations.length)out.push(q(['Aucune réservation enregistrée pour cette journée.']));ctx.reservations.forEach(function(x){out.push(q([x.time,x.customer,x.party,x.service,x.resource,x.status,x.source]));});}
     if(chosen.adjustments){section(out,'AJUSTEMENTS & TRAÇABILITÉ',['Événement','Montant / valeur','Responsable','Heure']);out.push(q(['Remboursements',raw(report.refunds&&report.refunds.amount),report.refunds&&report.refunds.count||0,'']));out.push(q(['Remises',raw(report.discounts&&report.discounts.amount),report.discounts&&report.discounts.count||0,'']));out.push(q(['Annulations',report.cancels&&report.cancels.count||report.cancels||0,'','']));(report.handovers||[]).forEach(function(h){out.push(q(['Passation',raw(h.ecart),[h.from,h.to].filter(Boolean).join(' → '),hm(h.ts)]));});(report.revisions||[]).forEach(function(v){out.push(q(['Clôture / réouverture',raw(v.gross),v.by||'',hm(v.at)]));});}
     return out.join('\r\n');
@@ -241,7 +260,7 @@
       sectionHtml('Marges par article','RENTABILITÉ','<div class="kr-coverage"><span>CA couvert par un coût fiable</span><b>'+(total?Math.round(known/total*100)+' %':'Non mesurable')+'</b></div>'+table(['Article','Qté','CA brut','CA net HT','Coût','Marge','Taux'],marginRows));
     }
     if(chosen.team)sectionHtml('Équipe & heures','COLLABORATEURS',table(['Collaborateur','Fonction','Planning','Heures prévues','Heures réalisées','CA encaissé','Tickets'],ctx.team.map(function(p){return[p.name,p.role||'—',[p.plannedStart,p.plannedEnd].filter(Boolean).join('–')||'—',raw(p.plannedHours)+' h',raw(p.workedHours)+' h',money(p.sales),String(p.txns||0)];})));
-    if(chosen.stock)sectionHtml('Mouvements de stock','STOCK',table(['Heure','Article','Quantité','Motif','Coût unitaire','Référence','Acteur'],ctx.stock.map(function(m){return[hm(m.occurredTs),m.itemId,raw(m.qty),m.reason||'—',m.unitCost==null?'Non renseigné':money(m.unitCost),[m.refType,m.refId].filter(Boolean).join(' · ')||'—',m.actor||'—'];})));
+    if(chosen.stock)sectionHtml('Mouvements de stock','STOCK',table(['Heure','Article','Quantité','Motif','Coût unitaire','Référence','Acteur'],ctx.stock.map(function(m){return[hm(m.occurredTs),m.itemId,raw(m.qty),motif(m.reason)||'—',m.unitCost==null?'Non renseigné':money(m.unitCost),[refType(m.refType),m.refId].filter(Boolean).join(' · ')||'—',m.actor||'—'];})));
     if(chosen.reservations)sectionHtml('Réservations','SERVICE CLIENT',table(['Heure','Client','Couverts','Service','Ressource','Statut','Source'],ctx.reservations.map(function(x){return[x.time,x.customer||'—',String(x.party),x.service||'—',x.resource||'—',x.status||'—',x.source||'—'];})));
     if(chosen.adjustments){
       var audit=[['Remboursements',money(report.refunds&&report.refunds.amount),(report.refunds&&report.refunds.count||0)+' opération(s)'],['Remises',money(report.discounts&&report.discounts.amount),(report.discounts&&report.discounts.count||0)+' opération(s)'],['Annulations',String(report.cancels&&report.cancels.count||report.cancels||0),'']];
