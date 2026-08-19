@@ -72,8 +72,16 @@ ok(/@media\(prefers-reduced-motion:reduce\)/.test(css) && /animation:none/.test(
 
 /* 6. CE QUI NE DOIT PAS CHANGER — le panneau ne s'ouvre jamais pour un
       opérateur ni pour un compte à jour. */
-ok(/function showPaywall\(\)\{\s*if\(operator\|\|!pending\)return true;/.test(js),
+/* La garde peut S'AJOUTER des raisons de refuser (l'installation en cours en
+   est une), jamais en perdre : on exige que `operator` et `!pending` restent
+   en tête et que le refus soit un `return true`, tout en laissant passer les
+   conditions supplémentaires. Épingler la chaîne exacte faisait tomber la
+   suite sur un durcissement de la garde — un refus de PLUS lu comme une
+   régression. */
+ok(/function showPaywall\(\)\{\s*if\(operator\|\|!pending(\|\|[^)]+)?\)return true;/.test(js),
   'ni l’opérateur ni un abonnement actif ne voient le panneau');
+ok(/function showPaywall\(\)\{\s*if\(operator\|\|!pending\|\|!onboarded\)return true;/.test(js),
+  'et le panneau reste fermé tant que l’installation n’est pas finie');
 
 console.log(`\n✓ ${passed} controls green (${failures.length} failure(s))`);
 if (failures.length) process.exit(1);

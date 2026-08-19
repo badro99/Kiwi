@@ -173,7 +173,7 @@ var SHELL = [
   '/assets/receipt-ui.js',
   '/assets/merchant-config.js?v=264',
   '/assets/entitlements.css?v=4',
-  '/assets/entitlements.js?v=4',
+  '/assets/entitlements.js?v=5',
   '/assets/staff-roles.js',
   /* Ce qui appartient à un commerçant. Dans la coquille parce que la purge se
      déclenche au ré-appairage, et qu'un ré-appairage se fait souvent dans un

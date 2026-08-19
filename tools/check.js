@@ -889,6 +889,7 @@ section('Whole-project regressions');
     'entitlements-test.mjs',
     'formula-protocol-test.mjs',
     'floor-accept-test.mjs',
+    'onboarding-gate-test.mjs',
     'api-boundaries-test.mjs',
     'security-regression-test.js',
     'sold-insights-test.js',
