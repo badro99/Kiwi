@@ -6,40 +6,29 @@
 //
 // Même modèle de sécurité que /api/ai/ask :
 // - tenantFor() obligatoire (session gérant, caisse appairée, ou opérateur)
-// - quota partagé dans ai_usage(merchant, day, calls)
+// - quota partagé dans ai_usage_kind(merchant, day, kind) via functions/api/ai/_quota.js
 // - fail-soft : code d'erreur précis pour permettre un repli sur la table manuelle
 // - AUCUN log du texte de facture (confidentialité marchande absolue)
 
 import { json } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
+import { quotaOk } from './_quota.js';
+import { GATEWAY_OPTS, runAiWithGateway, runWithFallback } from './_run.js';
+export { GATEWAY_OPTS, runAiWithGateway };
 
-const MODEL = '@cf/qwen/qwen3-30b-a3b-fp8';
+/* Qwen3-30b reste le lecteur de factures : vérifié sans faute sur une vraie
+ * facture le 2026-08-19, 0,0006 $ l'appel. On ne change pas ce qui marche ;
+ * le copilote (ask.js) a ses propres raisons de passer à gpt-oss. */
+export const MODEL = '@cf/qwen/qwen3-30b-a3b-fp8';
+/* Secours : autre éditeur, même gamme de prix, appel de fonctions — une panne
+ * Qwen ne couche pas les deux. */
+export const FALLBACK_MODEL = '@cf/zai-org/glm-4.7-flash';
+
 const MAX_TOKENS = 2500;
 const TEMPERATURE = 0.1;
 const TOP_P = 0.9;
 const DAILY_CAP = 200;
 const MAX_TEXT_CHARS = 40000;
-
-function today() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-async function quotaOk(env, merchant) {
-  if (!env.DB) return true;
-  try {
-    const row = await env.DB.prepare(
-      'SELECT calls FROM ai_usage WHERE merchant = ? AND day = ?'
-    ).bind(merchant, today()).first();
-    if (row && row.calls >= DAILY_CAP) return false;
-    await env.DB.prepare(
-      'INSERT INTO ai_usage (merchant, day, calls) VALUES (?, ?, 1) ' +
-      'ON CONFLICT(merchant, day) DO UPDATE SET calls = calls + 1'
-    ).bind(merchant, today()).run();
-    return true;
-  } catch (_) {
-    return true;
-  }
-}
 
 /* Validation et bornage strict des données extraites.
    Garantit : <= 200 lignes, label <= 120 car., nombres >= 0, format propre. */
@@ -157,7 +146,7 @@ export async function onRequestPost(context) {
   const text = String(body.text || '').trim();
   if (!text) return json({ ok: false, error: 'empty-text' }, 400);
 
-  if (!(await quotaOk(env, who))) return json({ ok: false, error: 'quota' }, 429);
+  if (!(await quotaOk(env, who, 'invoice', DAILY_CAP))) return json({ ok: false, error: 'quota' }, 429);
 
   const cleanText = text.slice(0, MAX_TEXT_CHARS);
 
@@ -186,33 +175,38 @@ Règles :
 - Si un champ est inconnu, mets une chaîne vide ou omet-le.
 - Les nombres (qty, unitCost, total) doivent être des nombres numériques (pas de chaînes).`;
 
+  const payload = {
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: `Voici le texte de la facture :\n\n${cleanText}` },
+    ],
+    max_tokens: MAX_TOKENS,
+    temperature: TEMPERATURE,
+    top_p: TOP_P,
+  };
+
   let aiRes;
+  let usedModel = MODEL;
   try {
-    aiRes = await env.AI.run(MODEL, {
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: `Voici le texte de la facture :\n\n${cleanText}` },
-      ],
-      max_tokens: MAX_TOKENS,
-      temperature: TEMPERATURE,
-      top_p: TOP_P,
-    });
+    const r = await runWithFallback(env, MODEL, FALLBACK_MODEL, payload);
+    aiRes = r.result;
+    usedModel = r.model;
   } catch (_) {
     return json({ ok: false, error: 'model' }, 502);
   }
 
   const parsed = parseModelResponse(aiRes);
   if (!parsed) {
-    return json({ ok: false, reason: 'unparsed' });
+    return json({ ok: false, reason: 'unparsed' }, 200, { 'x-kiwi-ai-model': usedModel });
   }
 
   const validated = validateInvoiceData(parsed);
   if (!validated || !validated.lines.length) {
-    return json({ ok: false, reason: 'unparsed' });
+    return json({ ok: false, reason: 'unparsed' }, 200, { 'x-kiwi-ai-model': usedModel });
   }
 
   return json({
     ok: true,
     ...validated,
-  });
+  }, 200, { 'x-kiwi-ai-model': usedModel });
 }

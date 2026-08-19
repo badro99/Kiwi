@@ -34,13 +34,36 @@
 
 import { json } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
+import { quotaOk } from './_quota.js';
+import { GATEWAY_OPTS, runAiWithGateway, runWithFallback } from './_run.js';
+export { GATEWAY_OPTS, runAiWithGateway };
 
-/* Qwen plutôt que Llama, et le choix se chiffre. Fenêtre 32 768 jetons contre
- * 24 000, multilingue annoncé (le commerçant marocain écrit en français, en
- * arabe, et souvent dans la même phrase), et 0,051 $/M en entrée contre 0,29 —
- * six fois moins cher des deux côtés. C'est aussi la famille sur laquelle
- * assets/agent.js a déjà arbitré pour l'arabe côté navigateur. */
-const MODEL = '@cf/qwen/qwen3-30b-a3b-fp8';
+/* gpt-oss-120b plutôt que Qwen, et l'arbitrage est mesuré, pas lu sur une
+ * fiche. Même question de seuil de rentabilité posée en darija aux deux, le
+ * 2026-08-19 : gpt-oss répond EN DARIJA, juste, en 1,3 s ; Qwen3-30b répond en
+ * français, juste, en 7,5 s après deux mille caractères de raisonnement caché.
+ * C'est le modèle ouvert d'OpenAI, mais il tourne CHEZ Cloudflare (binding
+ * @cf/, données dans la région du compte) — pas un modèle tiers. 0,35 $/M en
+ * entrée, 0,75 $/M en sortie : sept fois Qwen à l'entrée, deux fois en sortie,
+ * soit quelques dirhams par mois pour cent commerçants.
+ *
+ * Deux particularités, et sans elles la bascule casse en silence :
+ * - `reasoning_effort: 'low'` est OBLIGATOIRE : par défaut le modèle dépense
+ *   tout max_tokens à réfléchir et renvoie un contenu vide (constaté) ;
+ * - il streame au format OpenAI (`choices[0].delta.content`, avec des deltas
+ *   `reasoning` intercalés), pas au format `{response}` de Qwen. Le lecteur
+ *   côté navigateur (assets/agent.js, llmChunkText) accepte les deux formes et
+ *   ignore le raisonnement. Qwen ignore reasoning_effort (vérifié), ce qui en
+ *   fait un secours enfichable sans second payload. */
+export const MODEL = '@cf/openai/gpt-oss-120b';
+
+/* Modèle de secours si gpt-oss est indisponible : le précédent titulaire, le
+ * meilleur des modèles bon marché en arabe. */
+export const FALLBACK_MODEL = '@cf/qwen/qwen3-30b-a3b-fp8';
+
+/* Effort de raisonnement : voir ci-dessus. 'low' suffit à un copilote qui
+ * rédige ; les chiffres viennent du moteur déterministe, pas de sa réflexion. */
+const REASONING_EFFORT = 'low';
 
 /* Workers AI plafonne max_tokens à 256 par défaut. Une question sur un prix de
  * vente recevrait une phrase et demie, coupée au milieu d'un chiffre. 700 laisse
@@ -55,9 +78,7 @@ const MAX_TOKENS = 700;
 const TEMPERATURE = 0.7;
 const TOP_P = 0.8;
 
-/* Le quota journalier par établissement. Généreux — un commerçant curieux ne
- * doit pas se cogner à un mur — mais il empêche une boucle de câblage cassée de
- * consommer l'allocation du compte en une nuit. */
+/* Le quota journalier par établissement pour le copilote. */
 const DAILY_CAP = 200;
 
 /* Bornes d'entrée. La fenêtre du modèle est large, la facture ne l'est pas :
@@ -66,35 +87,9 @@ const DAILY_CAP = 200;
 const MAX_MESSAGES = 12;
 const MAX_CHARS = 24000;
 
-function today() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-/* Compte l'appel et dit s'il reste du quota. Fail-soft dans les deux sens :
- * sans D1 et sans table (migration pas passée), on laisse passer plutôt que de
- * livrer une fonctionnalité morte — MAX_TOKENS borne déjà le coût unitaire. Le
- * jour où la table existe, le plafond s'applique tout seul. */
-async function quotaOk(env, merchant) {
-  if (!env.DB) return true;
-  try {
-    const row = await env.DB.prepare(
-      'SELECT calls FROM ai_usage WHERE merchant = ? AND day = ?'
-    ).bind(merchant, today()).first();
-    if (row && row.calls >= DAILY_CAP) return false;
-    await env.DB.prepare(
-      'INSERT INTO ai_usage (merchant, day, calls) VALUES (?, ?, 1) ' +
-      'ON CONFLICT(merchant, day) DO UPDATE SET calls = calls + 1'
-    ).bind(merchant, today()).run();
-    return true;
-  } catch (_) {
-    /* pas de table → pas de compteur */
-    return true;
-  }
-}
-
 /* Ne garde que ce qu'un échange de chat peut contenir. Un rôle inventé ou un
  * contenu non textuel n'a aucune raison d'atteindre le modèle. */
-function cleanMessages(raw) {
+export function cleanMessages(raw) {
   if (!Array.isArray(raw)) return null;
   const out = [];
   let chars = 0;
@@ -129,17 +124,23 @@ export async function onRequestPost(context) {
   const messages = cleanMessages(body.messages);
   if (!messages) return json({ ok: false, error: 'messages' }, 400);
 
-  if (!(await quotaOk(env, who))) return json({ ok: false, error: 'quota' }, 429);
+  if (!(await quotaOk(env, who, 'ask', DAILY_CAP))) return json({ ok: false, error: 'quota' }, 429);
 
-  let stream;
+  const payload = {
+    messages,
+    stream: true,
+    max_tokens: MAX_TOKENS,
+    temperature: TEMPERATURE,
+    top_p: TOP_P,
+    reasoning_effort: REASONING_EFFORT,
+  };
+
+  let stream = null;
+  let usedModel = MODEL;
   try {
-    stream = await env.AI.run(MODEL, {
-      messages,
-      stream: true,
-      max_tokens: MAX_TOKENS,
-      temperature: TEMPERATURE,
-      top_p: TOP_P,
-    });
+    const r = await runWithFallback(env, MODEL, FALLBACK_MODEL, payload);
+    stream = r.result;
+    usedModel = r.model;
   } catch (_) {
     return json({ ok: false, error: 'model' }, 502);
   }
@@ -153,6 +154,7 @@ export async function onRequestPost(context) {
       'content-type': 'text/event-stream; charset=utf-8',
       'cache-control': 'no-store',
       'x-kiwi-ai': 'cloud',
+      'x-kiwi-ai-model': usedModel,
     },
   });
 }

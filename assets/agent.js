@@ -3764,6 +3764,23 @@
   window.KiwiAgentAsk = function (q, lang) { L = lang || getLang(); return respond(q); };
   window.KiwiAgentProfile = function () { return syncProfile(); };
   window.KiwiAgentRedact = function (text, lang) { return redactUnsupported(text, lang || getLang()); };
+  /* Une trame SSE de /api/ai/ask n'a pas UNE forme. Qwen streame `{response}` ;
+   * gpt-oss-120b (le titulaire depuis le 2026-08-19) streame au format OpenAI,
+   * `choices[0].delta.content`, avec des deltas `delta.reasoning` INTERCALÉS —
+   * son brouillon de réflexion, en anglais, qui ne doit jamais atteindre ni
+   * l'écran ni le redacteur (un « 33.33% » de brouillon corroborerait une
+   * réponse). Une seule fonction, pure, pour les deux ; le lecteur ne fait
+   * que l'appeler. Renvoie '' pour tout ce qui n'est pas du texte de réponse. */
+  function llmChunkText(o) {
+    if (!o || typeof o !== 'object') return '';
+    if (typeof o.response === 'string' && o.response) return o.response;
+    var c = Array.isArray(o.choices) && o.choices[0];
+    if (!c) return '';
+    var d = c.delta || c.message || null;
+    if (d && typeof d.content === 'string' && d.content) return d.content;
+    return '';
+  }
+  window.KiwiAgentChunkText = llmChunkText;
   window.KiwiAgentTier = accessTier;
   /* Le seul lecteur d'ordre de la maison, exposé nu : une phrase entre, un
      `{status, number}` sort — ou `null`. Le distinguer de la route permet au
@@ -4942,8 +4959,8 @@
             const payload = line.slice(5).trim();
             if (!payload || payload === '[DONE]') continue;
             try {
-              const o = JSON.parse(payload);
-              if (o && o.response) yield String(o.response);
+              const t = llmChunkText(JSON.parse(payload));
+              if (t) yield t;
             } catch (_) { /* trame partielle ou commentaire : on ignore */ }
           }
         }
@@ -4954,8 +4971,8 @@
           const payload = tail.slice(5).trim();
           if (payload && payload !== '[DONE]') {
             try {
-              const o = JSON.parse(payload);
-              if (o && o.response) yield String(o.response);
+              const t = llmChunkText(JSON.parse(payload));
+              if (t) yield t;
             } catch (_) {}
           }
         }

@@ -952,6 +952,14 @@ CREATE TABLE IF NOT EXISTS ai_usage (
   PRIMARY KEY (merchant, day)
 );
 
+CREATE TABLE IF NOT EXISTS ai_usage_kind (
+  merchant TEXT    NOT NULL,     -- slugMerchant
+  day      TEXT    NOT NULL,     -- AAAA-MM-JJ, UTC
+  kind     TEXT    NOT NULL,     -- 'ask', 'invoice', 'index', 'resolve', 'transcribe', 'image'
+  calls    INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (merchant, day, kind)
+);
+
 -- ═══════════════════════════════════════════════════════════════════════════
 -- KIWI OPERATIONS · commandes durables vers les fournisseurs externes
 -- ═══════════════════════════════════════════════════════════════════════════

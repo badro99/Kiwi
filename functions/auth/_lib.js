@@ -555,10 +555,11 @@ export function readCookie(request, name) {
   return null;
 }
 
-export function json(obj, status) {
+export function json(obj, status, extraHeaders) {
+  const headers = Object.assign({ 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }, extraHeaders || {});
   return new Response(JSON.stringify(obj), {
     status: status || 200,
-    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+    headers,
   });
 }
 
