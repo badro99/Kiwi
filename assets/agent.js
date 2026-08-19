@@ -3801,7 +3801,7 @@
    * bord » à « quel est mon stock ». Le moteur déterministe reste PREMIER :
    * aucun chiffre du commerçant ne passe par un modèle. Le consentement est
    * demandé UNE fois, et un « non » tient : mode privé, calculs seuls. */
-  const LLM = { pending: [], cancelled: false };
+  const LLM = { pending: [], cancelled: false, proposals: [] };
   function cloudAccepted() {
     try { return localStorage.getItem('kiwiAiCloud') === 'on'; } catch (_) { return false; }
   }
@@ -3865,8 +3865,26 @@
     { type: 'function', function: { name: 'stock_summary', description: 'Résumé du stock : positions, ruptures, sous seuil, noms concernés.', parameters: { type: 'object', properties: {} } } },
     { type: 'function', function: { name: 'tables_now', description: 'État des tables maintenant (libres, occupées, réservées, addition).', parameters: { type: 'object', properties: {} } } },
     { type: 'function', function: { name: 'reservations_today', description: "Réservations du jour d'après le plan de salle.", parameters: { type: 'object', properties: {} } } },
+    { type: 'function', function: { name: 'orders_open', description: 'Les commandes ouvertes (id, numéro, statut, total) — à appeler AVANT de proposer un changement de statut.', parameters: { type: 'object', properties: {} } } },
+    { type: 'function', function: { name: 'propose_action', description: "Modifier quelque chose. Actions : stock-adjust {itemId, qty (négatif pour retirer), reason, note} · order-status {orderId, status: accepted|rejected|ready|served} · reprint {ref} · customer-message-draft {phone, text}. Résous d'abord l'id exact (stock_level → items[].id ; orders_open → orders[].id) ; ne devine jamais un id. Le résultat dit si l'action est exécutée (executed) ou attend la confirmation du commerçant (awaiting_confirmation).", parameters: { type: 'object', properties: { name: { type: 'string', enum: ['stock-adjust', 'order-status', 'reprint', 'customer-message-draft'] }, args: { type: 'object' }, summary: { type: 'string', description: 'Une ligne lisible décrivant l\'action, dans la langue du commerçant.' } }, required: ['name', 'args', 'summary'] } } },
   ];
+  /* ── Exécution directe. Par défaut le modèle PROPOSE : la bulle porte un
+   * bouton, le commerçant confirme, le code existant (KiwiAgentActions)
+   * exécute avec son sas — rôles, validation, idempotence, jeton 120 s. Le
+   * propriétaire peut lever la confirmation pour son établissement : l'action
+   * part alors tout de suite et la réponse dit ce qui a été fait. Réglage par
+   * établissement, jamais global. */
+  function autoActKey() { const v = (window.KiwiVenue && window.KiwiVenue.getCurrentVenueId) ? window.KiwiVenue.getCurrentVenueId() : 'default'; return 'kiwiAiAutoAct:' + String(v || 'default'); }
+  function autoActOn() { try { return localStorage.getItem(autoActKey()) === 'on'; } catch (_) { return false; } }
+  function setAutoAct(on) { try { localStorage.setItem(autoActKey(), on ? 'on' : 'off'); } catch (_) {} }
+  const ACTION_NAME_RX = /^(stock-adjust|order-status|reprint|customer-message-draft)$/;
   const TOOL_RESULT_MAX = 2000;
+  const ACTION_COPY = {
+    fr: { confirm: 'Confirmer', cancel: 'Annuler', done: 'Fait.', refused: 'Action refusée', expired: 'Proposition expirée — redemandez.', cancelled: 'Annulé, rien n’a été modifié.', autoOn: 'Exécution directe : activée — l’assistant modifie stock, commandes et réimpressions sans confirmation.', autoOff: 'Exécution directe : désactivée — chaque action attend votre confirmation.', autoToggleOn: 'Désactiver l’exécution directe', autoToggleOff: 'Activer l’exécution directe' },
+    en: { confirm: 'Confirm', cancel: 'Cancel', done: 'Done.', refused: 'Action refused', expired: 'Proposal expired — ask again.', cancelled: 'Cancelled, nothing changed.', autoOn: 'Direct execution: on — the assistant changes stock, orders and reprints without confirmation.', autoOff: 'Direct execution: off — every action waits for your confirmation.', autoToggleOn: 'Turn off direct execution', autoToggleOff: 'Turn on direct execution' },
+    ar: { confirm: 'تأكيد', cancel: 'إلغاء', done: 'تم.', refused: 'رُفض الإجراء', expired: 'انتهت صلاحية الاقتراح — أعد الطلب.', cancelled: 'أُلغي، لم يتغيّر شيء.', autoOn: 'التنفيذ المباشر: مفعّل — يغيّر المساعد المخزون والطلبات وإعادة الطباعة دون تأكيد.', autoOff: 'التنفيذ المباشر: معطّل — كل إجراء ينتظر تأكيدك.', autoToggleOn: 'إيقاف التنفيذ المباشر', autoToggleOff: 'تفعيل التنفيذ المباشر' },
+  };
+  const TOOLS_RULE = "OUTILS — les chiffres viennent des outils ou du bloc FAITS, jamais de toi. Pour agir (retirer ou ajouter du stock, changer le statut d'une commande, réimprimer, rédiger un message client) appelle propose_action après avoir résolu l'identifiant exact par stock_level ou orders_open ; quantité négative = retrait. Ne devine jamais un id : si tu ne trouves pas l'article ou la commande, dis-le. Le résultat de propose_action dit si c'est fait (executed) ou en attente de confirmation (awaiting_confirmation) : annonce exactement cela, en une phrase.";
   const FACTS_LEAD = "FAITS — calculés par Kiwi pour cette question, à partir des données réelles du commerce. Ils font autorité : reformule-les clairement dans la langue de la question, garde le fil de la conversation, ne modifie AUCUN chiffre et n'en invente aucun. Si la question demande une donnée absente des faits, appelle un outil. Pas de markdown.\n";
   const TOOL_DATE_RX = /^\d{4}-\d{2}-\d{2}$/;
   function toolDayBounds(day) {
@@ -3912,10 +3930,43 @@
           const score = nn === q ? 3 : nn.indexOf(q) >= 0 ? 2 : q.split(' ').every((w) => nn.indexOf(w) >= 0) ? 1 : 0;
           if (!score) return;
           const stock = [it.stock, it.qty, it.quantity, it.onHand].find((v) => typeof v === 'number');
-          hits.push({ name: nm, stock: stock == null ? null : stock, unit: it.unit || it.stockUnit || '', threshold: it.threshold == null ? undefined : it.threshold, score });
+          hits.push({ id: String((it && it.id) || ''), name: nm, stock: stock == null ? null : stock, unit: it.unit || it.stockUnit || '', threshold: it.threshold == null ? undefined : it.threshold, score });
         }));
         hits.sort((x, y) => y.score - x.score);
         return { query: a.query, found: hits.length > 0, items: hits.slice(0, 5).map((h) => { delete h.score; return h; }) };
+      }
+      if (name === 'orders_open') {
+        const I = window.KiwiOrderInbox; if (!I || typeof I.orders !== 'function') return { available: false };
+        const raw = I.orders() || {}; const rows = Array.isArray(raw) ? raw : Object.keys(raw).map((k) => raw[k]);
+        const open = rows.filter((o) => o && !/^(served|rejected|cancelled|closed)$/.test(String(o.status || ''))).slice(0, 20)
+          .map((o) => ({ id: String(o.id || ''), number: o.number == null ? undefined : o.number, status: String(o.status || ''), total_mad: o.total == null ? undefined : +o.total, table: o.table || o.tableNum || undefined }));
+        return { available: true, orders: open };
+      }
+      if (name === 'propose_action') {
+        const A = window.KiwiAgentActions;
+        if (!A || typeof A.request !== 'function') return { error: 'actions indisponibles' };
+        const act = String(a.name || '');
+        if (!ACTION_NAME_RX.test(act)) return { error: 'action inconnue' };
+        const args = Object.assign({}, a.args && typeof a.args === 'object' ? a.args : {});
+        /* Un id de commande par proposition : le sas d'idempotence de
+         * KiwiAgentActions est à lui — on ne le contourne pas, on le nourrit. */
+        args.commandId = 'llm-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+        const req = A.request(act, args);
+        if (!req || !req.ok) return { proposed: false, action: act, reason: (req && req.reason) || 'refused' };
+        if (req.replayed) return { executed: true, replayed: true, action: act, result: req.result };
+        const summary = String(a.summary || '').slice(0, 200);
+        if (autoActOn()) {
+          /* Exécution directe : le même confirm que le bouton, sans le bouton.
+           * Synchrone quand confirm l'est (stock), promesse quand il ne l'est
+           * pas (commande, réimpression) — l'appelant attend dans les deux cas. */
+          let res;
+          try { res = A.confirm(req.token); } catch (_) { return { executed: false, action: act, summary, reason: 'failed' }; }
+          const shape = (r) => ({ executed: !!(r && r.ok), action: act, summary, result: r });
+          if (res && typeof res.then === 'function') return res.then(shape, () => ({ executed: false, action: act, summary, reason: 'failed' }));
+          return shape(res);
+        }
+        LLM.proposals.push({ token: req.token, action: act, summary, args: req.summary });
+        return { proposed: true, action: act, summary, awaiting_confirmation: true, note: 'Le commerçant doit confirmer par le bouton affiché sous la réponse.' };
       }
     } catch (e) { return { error: 'lecture impossible' }; }
     return { error: 'outil inconnu' };
@@ -3930,7 +3981,7 @@
     if (reply.verdict && reply.verdict.text) out += '\n' + strip(reply.verdict.text);
     return out.slice(0, 3000);
   }
-  window.KiwiAgentTools = { list: LLM_TOOLS, run: runTool, noteFacts: noteTurnFacts, clearFacts: clearTurnFacts, facts: TURN_FACTS, draftFacts: draftFacts };
+  window.KiwiAgentTools = { list: LLM_TOOLS, run: runTool, noteFacts: noteTurnFacts, clearFacts: clearTurnFacts, facts: TURN_FACTS, draftFacts: draftFacts, autoActOn: autoActOn, setAutoAct: setAutoAct, pending: function () { return LLM.proposals.slice(); }, resetPending: function () { LLM.proposals = []; } };
 
   const SP_DIR = {
     fr: 'IMPÉRATIF : rédige ta réponse entièrement en FRANÇAIS.',
@@ -4775,7 +4826,8 @@
           : '') +
         `<div class="fa-ctx-detail" style="display:block;font-size:12.5px;color:var(--n-500);line-height:1.55;">${p.railEmpty}</div>` +
         `<div class="fa-ctx-trust" data-fa-trust>${ICON.lock}<span data-fa-trust-text>${dynamicUi.privacy}</span></div>` +
-        `<button type="button" class="fa-ctx-mode" data-fa-mode-toggle>${dynamicUi.modeToggle}</button>`;
+        `<button type="button" class="fa-ctx-mode" data-fa-mode-toggle>${dynamicUi.modeToggle}</button>` +
+        autoActMarkup();
     } else {
       const f = tr().facts;
       const opexItems = Object.entries(B.opex).sort((a, b) => b[1] - a[1])
@@ -4825,7 +4877,8 @@
         `<button class="fa-ctx-more" type="button" data-fa-ctx-more>${HL().more}</button>` +
         `<div class="fa-ctx-detail" data-fa-detail hidden>${ctxRail}</div>` +
         `<div class="fa-ctx-trust" data-fa-trust>${ICON.lock}<span data-fa-trust-text>${dynamicUi.privacy}</span></div>` +
-        `<button type="button" class="fa-ctx-mode" data-fa-mode-toggle>${dynamicUi.modeToggle}</button>`;
+        `<button type="button" class="fa-ctx-mode" data-fa-mode-toggle>${dynamicUi.modeToggle}</button>` +
+        autoActMarkup();
     }
 
     const body = `
@@ -5003,6 +5056,17 @@
       const u = assistantUiCopy();
       root.querySelectorAll('[data-fa-trust-text]').forEach((el) => { el.textContent = u.privacy; });
       root.querySelectorAll('[data-fa-mode-toggle]').forEach((el) => { el.textContent = u.modeToggle; });
+      const ac = ACTION_COPY[L] || ACTION_COPY.fr;
+      root.querySelectorAll('[data-fa-auto-text]').forEach((el) => { el.textContent = autoActOn() ? ac.autoOn : ac.autoOff; });
+      root.querySelectorAll('[data-fa-auto-toggle]').forEach((el) => { el.textContent = autoActOn() ? ac.autoToggleOn : ac.autoToggleOff; });
+    }
+    /* Le réglage n'est montré qu'au propriétaire, et seulement quand le modèle
+     * serveur est accepté : sans modèle, personne ne propose rien. */
+    function autoActMarkup() {
+      if (accessTier() !== 'owner' || !cloudAccepted()) return '';
+      const ac = ACTION_COPY[L] || ACTION_COPY.fr;
+      return `<div class="fa-ctx-trust" data-fa-auto>${ICON.lock}<span data-fa-auto-text>${autoActOn() ? ac.autoOn : ac.autoOff}</span></div>` +
+        `<button type="button" class="fa-ctx-mode" data-fa-auto-toggle>${autoActOn() ? ac.autoToggleOn : ac.autoToggleOff}</button>`;
     }
 
     /* Hors calculs et sans modèle : on le dit, avec la liste de ce qui
@@ -5138,13 +5202,14 @@
         const text = typeof r1.text === 'string' ? r1.text : '';
         return { deltas: (async function* () { if (text) yield text; })(), tools: 0 };
       }
-      const results = calls.map((c) => {
+      const results = [];
+      for (const c of calls) {
         let args = {};
         try { args = typeof c.arguments === 'string' ? JSON.parse(c.arguments) : (c.arguments || {}); } catch (_) { args = {}; }
-        const out = runTool(String(c.name || ''), args);
+        const out = await runTool(String(c.name || ''), args);
         noteTurnFacts(out);
-        return { id: String(c.id || ''), name: String(c.name || ''), content: toolResultText(out) };
-      });
+        results.push({ id: String(c.id || ''), name: String(c.name || ''), content: toolResultText(out) });
+      }
       const toolMsgs = [
         { role: 'assistant', content: '', tool_calls: calls.map((c) => ({ id: String(c.id || ''), type: 'function', function: { name: String(c.name || ''), arguments: typeof c.arguments === 'string' ? c.arguments : JSON.stringify(c.arguments || {}) } })) },
         ...results.map((r) => ({ role: 'tool', tool_call_id: r.id, name: r.name, content: r.content })),
@@ -5164,7 +5229,8 @@
       const sys = buildSystemPrompt(detectQLang(question));
       const facts = hasDraft ? draftFacts(draft.reply) : '';
       if (facts) noteTurnFacts(facts);
-      const messages = [{ role: 'system', content: sys }]
+      LLM.proposals = [];
+      const messages = [{ role: 'system', content: sys }, { role: 'system', content: TOOLS_RULE }]
         .concat(facts ? [{ role: 'system', content: FACTS_LEAD + facts }] : [])
         .concat(llmHistory.slice(-8));
       try {
@@ -5230,6 +5296,19 @@
           bubble.appendChild(cav);
         }
         logAi({ route: hasDraft ? 'cloud+deterministic' : 'cloud', provenance: red.redacted === -1 ? 'error' : 'model', ms: Date.now() - tLlm, qLength: question.length, redacted: Math.max(0, red.redacted), tools: run.tools });
+        /* Ce que le modèle a PROPOSÉ attend un doigt : un bouton par action,
+         * avec le résumé exact, qui appelle le même confirm que le reste. */
+        if (bubble && LLM.proposals.length) {
+          const ac = ACTION_COPY[L] || ACTION_COPY.fr;
+          LLM.proposals.forEach((pr) => {
+            const row = document.createElement('div');
+            row.className = 'fa-follow';
+            row.innerHTML = '<button type="button" class="fa-llm-btn" data-fa-confirm="' + escAttr(pr.token) + '">' + ac.confirm + ' · ' + escHtml(pr.summary || pr.action) + '</button>'
+              + '<button type="button" class="fa-llm-btn" data-fa-confirm-no="' + escAttr(pr.token) + '">' + ac.cancel + '</button>';
+            bubble.appendChild(row);
+          });
+          LLM.proposals = [];
+        }
         /* The merchant's own verdict — the only signal that says whether the
          * answer was any good. Two buttons, no free text, nothing transmitted. */
         if (bubble && red.redacted !== -1) {
@@ -5332,6 +5411,23 @@
       if (e.target.closest('[data-fa-cloud]')) { acceptCloud(); return; }
       if (e.target.closest('[data-fa-cloud-no]')) { declineCloud(); return; }
       if (e.target.closest('[data-fa-mode-toggle]')) { setCloud(!cloudAccepted()); refreshTrustLine(); return; }
+      if (e.target.closest('[data-fa-auto-toggle]')) { setAutoAct(!autoActOn()); refreshTrustLine(); return; }
+      const confirmBtn = e.target.closest('[data-fa-confirm]');
+      if (confirmBtn) {
+        if (confirmBtn.disabled) return;
+        const row = confirmBtn.parentElement; const token = confirmBtn.getAttribute('data-fa-confirm');
+        const ac = ACTION_COPY[L] || ACTION_COPY.fr;
+        row.querySelectorAll('button').forEach((b) => { b.disabled = true; });
+        const A = window.KiwiAgentActions;
+        Promise.resolve().then(() => A && A.confirm ? A.confirm(token) : { ok: false, reason: 'unavailable' }).then((res) => {
+          const okRes = !!(res && res.ok);
+          row.textContent = okRes ? ac.done : (res && res.reason === 'expired' ? ac.expired : ac.refused + (res && res.reason ? ' (' + res.reason + ')' : ''));
+          logAi({ route: 'action', provenance: okRes ? 'executed' : 'refused', ms: 0, qLength: 0 });
+        }, () => { row.textContent = ac.refused; });
+        return;
+      }
+      const cancelBtn = e.target.closest('[data-fa-confirm-no]');
+      if (cancelBtn) { const row = cancelBtn.parentElement; row.textContent = (ACTION_COPY[L] || ACTION_COPY.fr).cancelled; return; }
       const rateBtn = e.target.closest('[data-fa-rate]');
       if (rateBtn) {
         try { window.KiwiAiTelemetry && window.KiwiAiTelemetry.rate(rateBtn.getAttribute('data-fa-rate')); } catch (_) {}

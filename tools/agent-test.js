@@ -843,7 +843,7 @@ section('Collaboration · draft + tools + corroboration');
   t('two rounds at most: tool calls capped at 4 and the answer round streams with the tool results',
     /r1\.tool_calls\.slice\(0, 4\)/.test(code) && /deltas: await cloudDeltas\(\[\.\.\.messages, \.\.\.toolMsgs\]\)/.test(code));
   t('tool results enter the corroboration corpus BEFORE rendering (noteTurnFacts in the executor loop)',
-    /const out = runTool\(String\(c\.name \|\| ''\), args\);\s*noteTurnFacts\(out\);/.test(code));
+    /const out = await runTool\(String\(c\.name \|\| ''\), args\);\s*noteTurnFacts\(out\);/.test(code));
   t('the draft facts enter the corpus and the FAITS block before the first call',
     /const facts = hasDraft \? draftFacts\(draft\.reply\) : '';\s*if \(facts\) noteTurnFacts\(facts\);/.test(code) && /FACTS_LEAD \+ facts/.test(code));
   t('TURN_FACTS is cleared at the start of every turn', /clearTurnFacts\(\);\s*llmHistory\.push\(\{ role: 'user', content: question \}\);/.test(code));
@@ -852,11 +852,17 @@ section('Collaboration · draft + tools + corroboration');
 
   /* tools: every declared tool has an executor, no write tool */
   const names = Array.from(code.matchAll(/function: \{ name: '([a-z_]+)'/g)).map((m) => m[1]);
-  const EXPECTED_TOOLS = ['sales_between', 'top_products', 'stock_level', 'stock_summary', 'tables_now', 'reservations_today'];
-  t('LLM_TOOLS declares exactly the six read tools', JSON.stringify(names) === JSON.stringify(EXPECTED_TOOLS), names.join(','));
+  const EXPECTED_TOOLS = ['sales_between', 'top_products', 'stock_level', 'stock_summary', 'tables_now', 'reservations_today', 'orders_open', 'propose_action'];
+  t('LLM_TOOLS declares exactly seven read tools + propose_action', JSON.stringify(names) === JSON.stringify(EXPECTED_TOOLS), names.join(','));
   t('every declared tool has an executor branch in runTool', EXPECTED_TOOLS.every((n) => new RegExp("name === '" + n + "'").test(code)));
-  t('no write tool: runTool never touches requestAction/confirmAction/salesAdd/KiwiInventory.set',
-    !/function runTool[\s\S]*?\n  \}\n[\s\S]{0,0}/.test('') && !/runTool[\s\S]{0,4000}(requestAction|confirmAction|salesAdd|\.set\(|\.write\()/.test(code.slice(code.indexOf('function runTool'), code.indexOf('function toolResultText'))));
+  const runToolSrc = code.slice(code.indexOf('function runTool'), code.indexOf('function toolResultText'));
+  t('the only write path is propose_action → KiwiAgentActions.request (+ confirm only under autoActOn); no direct salesAdd / KiwiInventory / setStatus',
+    /A\.request\(act, args\)/.test(runToolSrc) && /if \(autoActOn\(\)\) \{[\s\S]*?A\.confirm\(req\.token\)/.test(runToolSrc) && !/salesAdd|KiwiInventory\.add|setStatus\(|KiwiPosReprint\.reprint/.test(runToolSrc));
+  t('propose_action only accepts the four existing action names', /const ACTION_NAME_RX = \/\^\(stock-adjust\|order-status\|reprint\|customer-message-draft\)\$\//.test(code));
+  t('the prompt carries the tools rule: resolve ids first, never guess, announce executed vs awaiting', /const TOOLS_RULE = "OUTILS/.test(src) && /stock_level ou orders_open/.test(src) && /Ne devine jamais un id/.test(src) && /\{ role: 'system', content: TOOLS_RULE \}/.test(code));
+  t('pending proposals render a Confirm + Cancel button per action, then are cleared', /data-fa-confirm="' \+ escAttr\(pr\.token\)/.test(code) && /data-fa-confirm-no="/.test(code) && /LLM\.proposals = \[\];\s*\}\s*\n/.test(code));
+  t('the Confirm handler calls KiwiAgentActions.confirm(token) and disables the row first', /data-fa-confirm\]'\);\s*if \(confirmBtn\) \{[\s\S]*?row\.querySelectorAll\('button'\)\.forEach\(\(b\) => \{ b\.disabled = true; \}\);[\s\S]*?A\.confirm\(token\)/.test(code));
+  t('the direct-execution switch is owner-only and per venue', /if \(accessTier\(\) !== 'owner' \|\| !cloudAccepted\(\)\) return '';/.test(code) && /'kiwiAiAutoAct:' \+ String\(v \|\| 'default'\)/.test(code));
 
   /* executed: the tools against a stubbed ledger, through the loaded window */
   const day = (d, h) => new Date(2026, 7, d, h, 0, 0).getTime();   // Aug 2026, local
@@ -872,8 +878,14 @@ section('Collaboration · draft + tools + corroboration');
   ];
   const truth = { read: (k) => k === 'inventory' ? { available: true, source: 'inventory-ledger', data: { positions: 12, out: 1, low: 2, outNames: ['Citron'], lowNames: ['Menthe', 'Sucre'] } } : { available: false, source: k } };
   const dayReport = { dayBounds: (d) => { const p = d.split('-').map(Number); const from = new Date(p[0], p[1] - 1, p[2], 5, 0, 0).getTime(); return { from, to: from + 86400000 }; } };
-  const w = load({ lang: 'fr', sales, globals: { KiwiAgentTruth: truth, KiwiDayReport: dayReport, KiwiRestaurantStock: { items: () => [{ name: 'Thé à la menthe', stock: 42, unit: 'sachet' }, { name: 'Tajine poulet', stock: 7 }] } } });
+  const actLog = [];
+  const actions = {
+    request: (name, args) => { actLog.push(['request', name, args]); if (name === 'stock-adjust' && !(args.itemId && isFinite(+args.qty) && +args.qty !== 0)) return { ok: false, reason: 'invalid' }; return { ok: true, confirmationRequired: true, token: 'confirm-' + actLog.length, summary: args }; },
+    confirm: (token) => { actLog.push(['confirm', token]); return { ok: true, id: 'mv-1' }; },
+  };
+  const w = load({ lang: 'fr', sales, globals: { KiwiAgentTruth: truth, KiwiDayReport: dayReport, KiwiAgentActions: actions, KiwiRestaurantStock: { items: () => [{ id: 'it-the', name: 'Thé à la menthe', stock: 42, unit: 'sachet' }, { id: 'it-taj', name: 'Tajine poulet', stock: 7 }] } } });
   const T = w.KiwiAgentTools;
+  w.KiwiAgentActions = actions;   // agent-truth.js installs the real one on load; the stub must win for these controls
   t('window.KiwiAgentTools is exposed with list/run/noteFacts/clearFacts/draftFacts', !!(T && T.list && T.run && T.noteFacts && T.clearFacts && T.draftFacts));
   const sb = T.run('sales_between', { from: '2026-08-10', to: '2026-08-11' });
   t('sales_between follows the 5 h business day: the 01:00 sale on the 12th belongs to the 11th', sb.total_mad === 4785 && sb.tickets === 3 && sb.day_cutoff === '5h', JSON.stringify(sb));
@@ -883,7 +895,19 @@ section('Collaboration · draft + tools + corroboration');
   const tp = T.run('top_products', { from: '2026-08-10', to: '2026-08-13', n: 2 });
   t('top_products aggregates lines by name and ranks by quantity', tp.items.length === 2 && tp.items[0].name === 'Thé' && tp.items[0].qty === 13 && tp.items[1].name === 'Tajine poulet' && tp.items[1].qty === 10, JSON.stringify(tp));
   const sl = T.run('stock_level', { query: 'the menthe' });
-  t('stock_level matches approximately (accents, case) and returns the level', sl.found && sl.items[0].name === 'Thé à la menthe' && sl.items[0].stock === 42);
+  t('stock_level matches approximately (accents, case) and returns the level AND the id the model must reuse', sl.found && sl.items[0].name === 'Thé à la menthe' && sl.items[0].stock === 42 && sl.items[0].id === 'it-the');
+  /* actions through the model: propose by default, execute only under the owner switch */
+  T.setAutoAct(false); T.resetPending();
+  const p1 = T.run('propose_action', { name: 'stock-adjust', args: { itemId: 'it-the', qty: -3, reason: 'casse' }, summary: '− 3 Thé à la menthe' });
+  t('propose_action (switch off) → KiwiAgentActions.request with a commandId, NO confirm, awaiting_confirmation', p1.proposed === true && p1.awaiting_confirmation === true && actLog.filter((x) => x[0] === 'request').length === 1 && /^llm-/.test(actLog[0][2].commandId) && !actLog.some((x) => x[0] === 'confirm'), JSON.stringify(p1));
+  t('the pending proposal carries the token for the Confirm button', T.pending().length === 1 && T.pending()[0].token === 'confirm-1' && T.pending()[0].summary === '− 3 Thé à la menthe');
+  t('an invalid proposal is refused by the existing validator, not executed', T.run('propose_action', { name: 'stock-adjust', args: { itemId: '', qty: 0 }, summary: 'x' }).proposed === false);
+  t('an unknown action name is rejected before reaching KiwiAgentActions', !!T.run('propose_action', { name: 'delete-venue', args: {}, summary: 'x' }).error && actLog.filter((x) => x[0] === 'request').length === 2);
+  T.setAutoAct(true); T.resetPending();
+  const p2 = T.run('propose_action', { name: 'stock-adjust', args: { itemId: 'it-the', qty: -3, reason: 'casse' }, summary: '− 3 Thé à la menthe' });
+  t('propose_action (switch ON) → request then confirm immediately, executed:true, nothing pending', p2.executed === true && actLog.some((x) => x[0] === 'confirm') && T.pending().length === 0, JSON.stringify(p2));
+  T.setAutoAct(false);
+  t('the switch is per venue in localStorage (kiwiAiAutoAct:<venue>)', w.localStorage.getItem('kiwiAiAutoAct:default') === 'off');
   t('stock_level says not found rather than guessing', T.run('stock_level', { query: 'caviar' }).found === false);
   t('stock_summary reads KiwiAgentTruth inventory', T.run('stock_summary', {}).data.positions === 12);
   t('tables_now reports unavailable when the floor plan is absent', T.run('tables_now', {}).available === false);
