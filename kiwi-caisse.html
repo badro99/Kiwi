@@ -11263,9 +11263,10 @@
         entry.channel = 'takeaway';
       }
       if (Array.isArray(lines) && lines.length) {
-        entry.lines = lines.map(l => Object.assign(
-          { name: l.name, qty: l.qty, total: money(l.total), cat: l.cat || '' },
-          l.itemId ? { itemId: l.itemId } : null));
+        entry.lines = lines.filter(l => l.kind !== 'formula-part').map(l => Object.assign(
+          { name: l.name, qty: l.qty, total: money(l.total != null ? l.total : (l.price * l.qty)), cat: l.cat || '' },
+          l.itemId ? { itemId: l.itemId } : null,
+          l.kind ? { kind: l.kind } : null));
       }
       /* Le reçu se fige ICI, au moment de la vente. Si le propriétaire change
          de raison sociale, de logo ou de pied de page en septembre, les tickets
@@ -15514,7 +15515,7 @@
         const time = pad2HO(sentAt.getHours()) + ':' + pad2HO(sentAt.getMinutes());
         const fallback = kdsStationFor(null);
         const byStation = new Map();
-        (items || []).forEach((it) => {
+        (items || []).filter(it => it.kind !== 'formula').forEach((it) => {
           const sids = (it.stations && it.stations.length) ? it.stations : [fallback];
           sids.forEach((sid) => {
             if (!byStation.has(sid)) byStation.set(sid, []);
@@ -16038,20 +16039,28 @@
           status: (isTakeaway && o.status === 'pending') ? 'held'
                 : (o.status === 'ready' ? 'ready' : 'new'),
           readyAt: o.status === 'ready' ? kdsNowHM() : null,
-          items: (o.lines || []).map(l => ({
-            q: l.qty || 1, n: l.name || '', p: l.unitPrice || 0,
-            note: [(Array.isArray(l.visuals) && l.visuals.length) ? '' : l.options, l.note].filter(Boolean).join(' · '),
-            visuals: Array.isArray(l.visuals) ? l.visuals.slice() : [],
-            /* Le poste porté PAR LA LIGNE gagne. Un bon posé par une caisse le
-               transporte (kitchen-relay.js), figé à l'instant de l'envoi : le
-               retrouver par le nom du plat serait le recalculer contre une
-               carte qui a pu changer depuis. Le repli par nom reste pour les
-               commandes du téléphone, qui n'ont jamais porté de poste. */
-            stations: [(l.station && kdsStations().some(s => s.id === l.station))
-              ? l.station : kdsStationForName(l.name)],
-            stationReady: l.stationReady === true,
-            stationAccepted: l.stationAccepted === true,
-          })),
+          items: (o.lines || []).filter(l => l.kind !== 'formula').map(l => {
+            const formulaTag = l.kind === 'formula-part' ? (l.formulaName ? `${l.formulaName}${l.slotLabel ? ' · ' + l.slotLabel : ''}` : (l.slotLabel || 'Formule')) : '';
+            const formulaNote = formulaTag ? `[${formulaTag}]` : '';
+            return {
+              q: l.qty || 1, n: l.name || '', p: l.unitPrice || 0,
+              kind: l.kind || '',
+              formulaUid: l.formulaUid || '',
+              slotLabel: l.slotLabel || '',
+              formulaName: l.formulaName || '',
+              note: [formulaNote, (Array.isArray(l.visuals) && l.visuals.length) ? '' : l.options, l.note].filter(Boolean).join(' · '),
+              visuals: Array.isArray(l.visuals) ? l.visuals.slice() : [],
+              /* Le poste porté PAR LA LIGNE gagne. Un bon posé par une caisse le
+                 transporte (kitchen-relay.js), figé à l'instant de l'envoi : le
+                 retrouver par le nom du plat serait le recalculer contre une
+                 carte qui a pu changer depuis. Le repli par nom reste pour les
+                 commandes du téléphone, qui n'ont jamais porté de poste. */
+              stations: [(l.station && kdsStations().some(s => s.id === l.station))
+                ? l.station : kdsStationForName(l.name)],
+              stationReady: l.stationReady === true,
+              stationAccepted: l.stationAccepted === true,
+            };
+          }),
           sentAt: new Date(o.created_ts || Date.now()),
           paid: !!o.paid, pickedUp: o.status === 'served',
           pickedUpAt: o.status === 'served' ? kdsNowHM() : null,

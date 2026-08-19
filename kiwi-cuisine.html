@@ -444,6 +444,11 @@
     .tk-items li.off .tk-q { color: var(--ink-3); }
     .tk-q { font-family: var(--mono); font-size: 18px; font-weight: 600; color: var(--forest); min-width: 30px; flex-shrink: 0; }
     .tk-n { font-weight: 500; }
+    .tk-formula-tag {
+      display: inline-block; margin-right: 6px; font-size: 13px; font-weight: 700;
+      color: var(--forest-ink); background: var(--mint-tint);
+      border-radius: 6px; padding: 2px 7px; vertical-align: middle;
+    }
     .tk-note {
       display: block; margin-top: 3px; font-size: 14px; font-weight: 600;
       color: var(--warn-ink); background: var(--tint-note);
@@ -1124,17 +1129,17 @@
 
   function matches(o) {
     if (S.station === 'all') return true;
-    return (o.lines || []).some(function (l) { return l.station === S.station; });
+    return (o.lines || []).filter(function (l) { return l.kind !== 'formula'; }).some(function (l) { return l.station === S.station; });
   }
   function stationIsReady(o) {
     if (S.station === 'all') return o.status === 'ready';
-    var lines = (o.lines || []).filter(function (l) { return l.station === S.station; });
+    var lines = (o.lines || []).filter(function (l) { return l.kind !== 'formula' && l.station === S.station; });
     return lines.length > 0 && lines.every(function (l) { return l.stationReady === true; });
   }
   function stationIsAccepted(o) {
     var lines = S.station === 'all'
-      ? (o.lines || [])
-      : (o.lines || []).filter(function (l) { return l.station === S.station; });
+      ? (o.lines || []).filter(function (l) { return l.kind !== 'formula'; })
+      : (o.lines || []).filter(function (l) { return l.kind !== 'formula' && l.station === S.station; });
     return lines.length > 0 && lines.every(function (l) { return l.stationAccepted === true; });
   }
   function bucket(o) {
@@ -1173,7 +1178,7 @@
 
   function card(o, kind) {
     var el = elapsed(o), u = urgency(el);
-    var items = (o.lines || []).map(function (l) {
+    var items = (o.lines || []).filter(function (l) { return l.kind !== 'formula'; }).map(function (l) {
       var off = S.station !== 'all' && l.station !== S.station;
       var note = String(l.note || '').trim();
       var visuals = (Array.isArray(l.visuals) ? l.visuals : []).filter(function (v) {
@@ -1184,8 +1189,11 @@
       var visualHtml = visuals.length ? '<span class="tk-visuals">' + visuals.map(function (v) {
         return '<span class="tk-visual">' + (v.emoji ? '<span class="tk-visual-emoji">' + esc(v.emoji) + '</span>' : '') + '<span>' + esc(v.name) + '</span></span>';
       }).join('') + '</span>' : '';
+      var formulaTag = l.kind === 'formula-part'
+        ? '<span class="tk-formula-tag">' + esc((l.formulaName ? l.formulaName + (l.slotLabel ? ' · ' + l.slotLabel : '') : (l.slotLabel || 'Formule'))) + '</span>'
+        : '';
       return '<li class="' + (off ? 'off' : '') + '"><span class="tk-q">' + (l.qty || 1) + '×</span>'
-        + '<span class="tk-n">' + esc(l.name) + visualHtml + (note ? '<span class="tk-note">' + esc(note) + '</span>' : '') + '</span></li>';
+        + '<span class="tk-n">' + formulaTag + esc(l.name) + visualHtml + (note ? '<span class="tk-note">' + esc(note) + '</span>' : '') + '</span></li>';
     }).join('');
     var act = kind === 'new'
       ? '<button class="tk-act act-accept" data-take="' + esc(o.id) + '">' + SVG.hand + T('act.take') + '</button>'

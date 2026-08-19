@@ -7506,7 +7506,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       line.qty -= 1;
       if (line.sentQty) line.sentQty = Math.max(0, line.sentQty - 1);
       if (line.qty <= 0) {
-        tableOrders[tableId] = (tableOrders[tableId] || []).filter(l => l.uid !== line.uid);
+        tableOrders[tableId] = (tableOrders[tableId] || []).filter(l => l.uid !== line.uid && (!line.formulaUid || l.formulaUid !== line.formulaUid));
       }
       markDirty(tableId);
       $('#void-reason-modal').classList.remove('is-open');
@@ -7542,7 +7542,9 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       // Pre-send local modification
       if (!line.sentQty || (line.qty > line.sentQty && delta < 0 && line.qty - 1 >= line.sentQty)) {
         line.qty += delta;
-        if (line.qty <= 0) tableOrders[tableId] = order.filter(l => l.uid !== uid);
+        if (line.qty <= 0) {
+          tableOrders[tableId] = order.filter(l => l.uid !== uid && (!line.formulaUid || l.formulaUid !== line.formulaUid));
+        }
         markDirty(tableId);
         renderTableDetail();
         return;
@@ -8504,7 +8506,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       const line = lines.find(l => !(l.note || '').trim()) || lines[lines.length - 1];
       if (!line) return;
       line.qty--;
-      if (line.qty <= 0) tableOrders[tableId] = tableOrders[tableId].filter(l => l.uid !== line.uid);
+      if (line.qty <= 0) tableOrders[tableId] = tableOrders[tableId].filter(l => l.uid !== line.uid && (!line.formulaUid || l.formulaUid !== line.formulaUid));
       markDirty(tableId);
       renderMenu();
       renderCartBar();

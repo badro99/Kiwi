@@ -6,7 +6,7 @@
  * 1. functions/api/menu.js sanitizeMenu / sanitizeFormula protocol bounds
  * 2. assets/menu-catalog.js cleanFormula load-side ghost dropping
  * 3. functions/api/order/queue.js cleanLines whitelisting + D1 persistence + append
- * 4. kiwi-serveur.html formula sheet interaction (clicks, validation, explosion)
+ * 4. kiwi-serveur.html formula sheet extraction & explosion (extracted code only)
  * ─────────────────────────────────────────────────────────────────────────── */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -301,231 +301,327 @@ if (!cleanLinesFn) {
   ok(reloaded[3].kind === 'formula-part', 'appended line preserved kind: formula-part');
 }
 
-// ── 4. kiwi-serveur.html: Choice Sheet & Explosion with Real Clicks ───────────
-function createMiniDOM() {
-  const elements = new Map();
+// ── 4. kiwi-serveur.html: Extracted Choice Sheet & Explosion ──────────────────
+const itemHasFormulaMatch = serveurSource.match(/function itemHasFormula\([\s\S]*?\n    \}/);
+const isFmlSlotSatisfiedMatch = serveurSource.match(/function isFmlSlotSatisfied\([\s\S]*?\n    \}/);
+const isFmlUnitSatisfiedMatch = serveurSource.match(/function isFmlUnitSatisfied\([\s\S]*?\n    \}/);
+const isFmlDraftSatisfiedMatch = serveurSource.match(/function isFmlDraftSatisfied\([\s\S]*?\n    \}/);
+const computeFmlUnitExtraMatch = serveurSource.match(/function computeFmlUnitExtra\([\s\S]*?\n    \}/);
+const openFormulaSheetMatch = serveurSource.match(/function openFormulaSheet\([\s\S]*?\n    \}/);
+const confirmFormulaMatch = serveurSource.match(/function confirmFormula\([\s\S]*?\n    \}/);
 
-  function makeEl(id, tag = 'div') {
-    const el = {
-      id,
-      tagName: tag.toUpperCase(),
-      classList: {
-        _classes: new Set(),
-        add(...cls) { cls.forEach(c => this._classes.add(c)); },
-        remove(...cls) { cls.forEach(c => this._classes.delete(c)); },
-        contains(c) { return this._classes.has(c); },
-        toggle(c, force) {
-          if (force === undefined) {
-            this._classes.has(c) ? this._classes.delete(c) : this._classes.add(c);
-          } else if (force) this._classes.add(c);
-          else this._classes.delete(c);
-        }
-      },
-      attributes: {},
-      setAttribute(k, v) { this.attributes[k] = String(v); },
-      getAttribute(k) { return this.attributes[k] || null; },
-      removeAttribute(k) { delete this.attributes[k]; },
-      hasAttribute(k) { return k in this.attributes; },
-      dataset: {},
-      innerHTML: '',
-      children: [],
-      listeners: {},
-      addEventListener(type, handler) {
-        if (!this.listeners[type]) this.listeners[type] = [];
-        this.listeners[type].push(handler);
-      },
-      click() {
-        const event = {
-          type: 'click',
-          target: this,
-          closest: (selector) => {
-            if (matchesSelector(this, selector)) return this;
-            return null;
+let serveurHarness = null;
+if (
+  !itemHasFormulaMatch || !isFmlSlotSatisfiedMatch || !isFmlUnitSatisfiedMatch ||
+  !isFmlDraftSatisfiedMatch || !computeFmlUnitExtraMatch || !openFormulaSheetMatch || !confirmFormulaMatch
+) {
+  ok(false, 'one or more formula functions missing from kiwi-serveur.html');
+} else {
+  try {
+    const harnessCode = `
+      let fmlDraft = null;
+      let menuItems = [];
+      let menuContextId = 'T1';
+      let tableOrders = { T1: [] };
+      let toastMsg = '';
+      const toast = (m) => { toastMsg = m; };
+      const markDirty = () => {};
+      const renderMenu = () => {};
+      const renderCartBar = () => {};
+      const renderFormulaSheet = () => {};
+      const closeFormulaSheet = () => { fmlDraft = null; };
+      let idSeq = 0;
+      const newLineUid = () => 'uid-' + (++idSeq);
+      const $ = () => ({ classList: { add: () => {}, remove: () => {} }, innerHTML: '' });
+
+      ${itemHasFormulaMatch[0]}
+      ${isFmlSlotSatisfiedMatch[0]}
+      ${isFmlUnitSatisfiedMatch[0]}
+      ${isFmlDraftSatisfiedMatch[0]}
+      ${computeFmlUnitExtraMatch[0]}
+      ${openFormulaSheetMatch[0]}
+      ${confirmFormulaMatch[0]}
+
+      return {
+        setMenuItems: (items) => { menuItems = items; },
+        setTableOrders: (to) => { tableOrders = to; },
+        getTableOrders: () => tableOrders,
+        getDraft: () => fmlDraft,
+        setDraft: (d) => { fmlDraft = d; },
+        getToast: () => toastMsg,
+        itemHasFormula,
+        isFmlSlotSatisfied,
+        isFmlUnitSatisfied,
+        isFmlDraftSatisfied,
+        computeFmlUnitExtra,
+        openFormulaSheet,
+        confirmFormula,
+      };
+    `;
+    serveurHarness = new Function(harnessCode)();
+    ok(typeof serveurHarness === 'object' && serveurHarness !== null, 'serveur formula harness constructed from extracted source');
+  } catch (e) {
+    ok(false, 'failed to construct serveur formula harness from kiwi-serveur.html: ' + e.message);
+  }
+}
+
+if (!serveurHarness) {
+  ok(false, 'serveurHarness is null, halting section 4');
+} else {
+  const sampleMenuItems = [
+    {
+      id: 'm-brunch',
+      cat: 'formules',
+      name: 'Brunch Norvégien',
+      price: 89,
+      station: 'st_cuisine',
+      formula: {
+        slots: [
+          {
+            id: 'sl_pain',
+            label: 'Le pain',
+            min: 1,
+            max: 1,
+            choices: [
+              { itemId: 'm-p1', extra: 0 },
+              { itemId: 'm-p2', extra: 10 }
+            ]
+          },
+          {
+            id: 'sl_boisson',
+            label: 'La boisson',
+            min: 1,
+            max: 1,
+            choices: [
+              { itemId: 'm-b1', extra: 0 },
+              { itemId: 'm-b2', extra: 5 }
+            ]
           }
-        };
-        // Bubble up if listeners
-        let curr = this;
-        while (curr) {
-          if (curr.listeners['click']) {
-            curr.listeners['click'].forEach(fn => fn(event));
-          }
-          curr = curr.parentNode;
-        }
-      },
-      querySelector(selector) {
-        return querySelectorInternal(this, selector);
-      },
-      querySelectorAll(selector) {
-        return querySelectorAllInternal(this, selector);
+        ]
       }
-    };
-    elements.set(id, el);
-    return el;
-  }
+    },
+    { id: 'm-p1', name: 'Pain suédois', price: 20, station: 'st_boulangerie', avail: true },
+    { id: 'm-p2', name: 'Brioche toastée', price: 25, station: 'st_boulangerie', avail: true },
+    { id: 'm-b1', name: 'Café noir', price: 15, station: 'st_bar', avail: true },
+    { id: 'm-b2', name: 'Thé vert', price: 15, station: 'st_bar', avail: true },
+    { id: 'm-simple', name: 'Sandwich kefta', price: 50, station: 'st_chaude', avail: true }
+  ];
 
-  function matchesSelector(el, sel) {
-    if (sel.startsWith('#') && el.id === sel.slice(1)) return true;
-    if (sel.startsWith('.') && el.classList.contains(sel.slice(1))) return true;
-    if (sel.startsWith('[data-') && sel.endsWith(']')) {
-      const parts = sel.slice(1, -1).split('=');
-      const attr = parts[0];
-      const val = parts[1] ? parts[1].replace(/["']/g, '') : null;
-      const camel = attr.replace('data-', '').replace(/-([a-z])/g, (_, l) => l.toUpperCase());
-      if (val != null) return String(el.dataset[camel]) === val;
-      return camel in el.dataset;
-    }
-    return false;
-  }
+  serveurHarness.setMenuItems(sampleMenuItems);
+  ok(serveurHarness.itemHasFormula('m-brunch') === true, 'itemHasFormula identifies formula item from extracted code');
+  ok(serveurHarness.itemHasFormula('m-simple') === false, 'itemHasFormula rejects non-formula item from extracted code');
 
-  function querySelectorInternal(root, sel) {
-    if (matchesSelector(root, sel)) return root;
-    for (const child of root.children || []) {
-      const match = querySelectorInternal(child, sel);
-      if (match) return match;
-    }
-    return null;
-  }
+  // Test openFormulaSheet: opens draft with unit 0, single-choice auto-selection (if any), slots initialized
+  serveurHarness.openFormulaSheet('m-brunch', 1);
+  const draft = serveurHarness.getDraft();
+  ok(draft && draft.itemId === 'm-brunch', 'openFormulaSheet created draft for formula');
+  ok(draft.units && draft.units.length === 1, 'draft initialized 1 unit portion');
 
-  function querySelectorAllInternal(root, sel, acc = []) {
-    if (matchesSelector(root, sel)) acc.push(root);
-    for (const child of root.children || []) {
-      querySelectorAllInternal(child, sel, acc);
-    }
-    return acc;
-  }
+  // Initial state: choices are not yet made for both slots -> isFmlDraftSatisfied returns false
+  ok(serveurHarness.isFmlDraftSatisfied() === false, 'extracted isFmlDraftSatisfied returns false when required slots are empty');
 
-  return { makeEl, elements };
+  // Confirming when not satisfied should toast error and NOT push lines
+  serveurHarness.confirmFormula();
+  ok(serveurHarness.getTableOrders().T1.length === 0, 'extracted confirmFormula blocked on unmet required slots');
+
+  // Now satisfy all slots: select m-p1 (pain, extra 0) and m-b2 (boisson, extra 5)
+  draft.units[0].sl_pain = new Set(['m-p1']);
+  draft.units[0].sl_boisson = new Set(['m-b2']);
+  ok(serveurHarness.isFmlDraftSatisfied() === true, 'extracted isFmlDraftSatisfied returns true when all slots satisfied');
+
+  // Confirm and check real explosion output
+  serveurHarness.confirmFormula();
+  const t1Orders = serveurHarness.getTableOrders().T1;
+  ok(t1Orders.length === 3, 'extracted confirmFormula exploded into 1 parent + 2 children');
+
+  const parent = t1Orders[0];
+  ok(parent.kind === 'formula', 'extracted parent line has kind: formula');
+  ok(parent.price === 94, 'extracted parent line price includes formula base (89) + choice extra (5) = 94');
+  ok(parent.qty === 1, 'extracted parent line qty is 1');
+  ok(typeof parent.formulaUid === 'string' && parent.formulaUid.startsWith('fml-'), 'extracted parent minted formulaUid');
+
+  const child1 = t1Orders[1];
+  ok(child1.kind === 'formula-part', 'extracted child 1 has kind: formula-part');
+  ok(child1.price === 0, 'extracted child 1 price is 0');
+  ok(child1.formulaUid === parent.formulaUid, 'extracted child 1 shares identical formulaUid with parent');
+  ok(child1.station === 'st_boulangerie', 'extracted child 1 inherited station from chosen item (st_boulangerie, not st_cuisine)');
+  ok(child1.slotLabel === 'Le pain', 'extracted child 1 carries slotLabel: Le pain');
+  ok(child1.lineId === `${parent.formulaUid}-sl_pain`, 'extracted child 1 lineId formatted as formulaUid-slotId');
+
+  const child2 = t1Orders[2];
+  ok(child2.kind === 'formula-part', 'extracted child 2 has kind: formula-part');
+  ok(child2.price === 0, 'extracted child 2 price is 0');
+  ok(child2.formulaUid === parent.formulaUid, 'extracted child 2 shares identical formulaUid with parent');
+  ok(child2.station === 'st_bar', 'extracted child 2 inherited station from chosen item (st_bar, not st_cuisine)');
+  ok(child2.slotLabel === 'La boisson', 'extracted child 2 carries slotLabel: La boisson');
+  ok(child2.lineId === `${parent.formulaUid}-sl_boisson`, 'extracted child 2 lineId formatted as formulaUid-slotId');
+
+  // Test QTY = 2 explosion with multi-portion
+  serveurHarness.setTableOrders({ T1: [] });
+  serveurHarness.openFormulaSheet('m-brunch', 2);
+  const draftQty2 = serveurHarness.getDraft();
+  ok(draftQty2.totalUnits === 2 && draftQty2.units.length === 2, 'openFormulaSheet created 2 units for qty=2');
+
+  // Configure portion 1 (m-p1: extra 0, m-b1: extra 0 -> 89 MAD)
+  draftQty2.units[0].sl_pain = new Set(['m-p1']);
+  draftQty2.units[0].sl_boisson = new Set(['m-b1']);
+
+  // Configure portion 2 (m-p2: extra 10, m-b2: extra 5 -> 104 MAD)
+  draftQty2.units[1].sl_pain = new Set(['m-p2']);
+  draftQty2.units[1].sl_boisson = new Set(['m-b2']);
+
+  serveurHarness.confirmFormula();
+  const multiOrders = serveurHarness.getTableOrders().T1;
+  ok(multiOrders.length === 6, 'qty=2 exploded into 2 parents + 4 children (6 lines total)');
+
+  const parent1 = multiOrders[0];
+  const parent2 = multiOrders[3];
+  ok(parent1.kind === 'formula' && parent1.price === 89, 'portion 1 parent priced at 89 MAD');
+  ok(parent2.kind === 'formula' && parent2.price === 104, 'portion 2 parent priced at 104 MAD (89+10+5)');
+  ok(parent1.formulaUid !== parent2.formulaUid, 'distinct formulaUid minted per portion');
+  ok(multiOrders[1].formulaUid === parent1.formulaUid && multiOrders[2].formulaUid === parent1.formulaUid, 'portion 1 children share parent1 formulaUid');
+  ok(multiOrders[4].formulaUid === parent2.formulaUid && multiOrders[5].formulaUid === parent2.formulaUid, 'portion 2 children share parent2 formulaUid');
 }
 
-// Test Serveur formula sheet behavioral functions
-const { makeEl } = createMiniDOM();
-const formulaModal = makeEl('formula-modal');
-const formulaModalBody = makeEl('formula-modal-body');
-formulaModal.children.push(formulaModalBody);
+// ── 5. KDS / Kitchen Screen & Ticket Extraction ─────────────────────────────
+const cuisineSource = fs.readFileSync(path.join(ROOT, 'kiwi-cuisine.html'), 'utf8');
+const caisseSource = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
 
-const sampleMenuItems = [
-  {
-    id: 'm-brunch',
-    cat: 'formules',
-    name: 'Brunch Norvégien',
-    price: 89,
-    station: 'st_cuisine',
-    formula: {
-      slots: [
-        {
-          id: 'sl_pain',
-          label: 'Le pain',
-          min: 1,
-          max: 1,
-          choices: [
-            { itemId: 'm-p1', extra: 0 },
-            { itemId: 'm-p2', extra: 10 }
-          ]
-        },
-        {
-          id: 'sl_boisson',
-          label: 'La boisson',
-          min: 1,
-          max: 1,
-          choices: [
-            { itemId: 'm-b1', extra: 0 },
-            { itemId: 'm-b2_unavail', extra: 0 } // unavailable!
-          ]
-        }
-      ]
-    }
-  },
-  { id: 'm-p1', name: 'Pain suédois', price: 20, station: 'st_boulangerie', avail: true },
-  { id: 'm-p2', name: 'Brioche toastée', price: 25, station: 'st_boulangerie', avail: true },
-  { id: 'm-b1', name: 'Café noir', price: 15, station: 'st_bar', avail: true },
-  { id: 'm-b2_unavail', name: 'Smoothie fraise', price: 30, station: 'st_bar', avail: false },
+// A. kiwi-cuisine.html card() extraction
+const cardMatch = cuisineSource.match(/function card\(o, kind\) \{[\s\S]*?\n  \}/);
+if (!cardMatch) {
+  ok(false, 'card function missing in kiwi-cuisine.html');
+} else {
+  const cardHarnessCode = `
+    const S = { station: 'all' };
+    const elapsed = () => 120;
+    const urgency = () => 'ok';
+    const mmss = () => '02:00';
+    const hm = () => '12:30';
+    const T = (k) => k;
+    const esc = (s) => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const SVG = { hand: '', check: '', clock: '' };
+    const ticketNo = (o) => '#' + o.number;
+    const whereChip = () => '';
+    ${cardMatch[0]}
+    return card;
+  `;
+  const cardFn = new Function(cardHarnessCode)();
+
+  const mockKdsOrder = {
+    id: 'ord-fml-100',
+    number: 7,
+    lines: [
+      { name: 'Formule Brunch', kind: 'formula', price: 104, qty: 1, formulaUid: 'fml-100' },
+      { name: 'Sandwich poulet', kind: 'formula-part', formulaName: 'Formule Brunch', slotLabel: 'Le pain', price: 0, qty: 1, formulaUid: 'fml-100', station: 'cuisine' },
+      { name: "Jus d'orange", kind: 'formula-part', formulaName: 'Formule Brunch', slotLabel: 'La boisson', price: 0, qty: 1, formulaUid: 'fml-100', station: 'bar' },
+      { name: 'Tajine agneau', price: 120, qty: 1, station: 'cuisine' }
+    ]
+  };
+
+  const renderedCard = cardFn(mockKdsOrder, 'new');
+  ok(!renderedCard.includes('Formule Brunch</span>'), 'kiwi-cuisine card() excludes kind: formula parent line');
+  ok(renderedCard.includes('<span class="tk-formula-tag">Formule Brunch · Le pain</span>'), 'kiwi-cuisine card() renders slot formula tag on child part 1');
+  ok(renderedCard.includes('<span class="tk-formula-tag">Formule Brunch · La boisson</span>'), 'kiwi-cuisine card() renders slot formula tag on child part 2');
+  ok(renderedCard.includes('Tajine agneau</span>') && !renderedCard.includes('<span class="tk-formula-tag">Tajine agneau'), 'normal dish rendered without formula tag');
+}
+
+// B. kiwi-caisse.html printKitchenTickets & kdsOrders ingestion extraction
+ok(/items\s*\|\|\s*\[\]\)\.filter\(it\s*=>\s*it\.kind\s*!==\s*'formula'\)/.test(caisseSource), 'caisse printKitchenTickets filters out kind: formula lines');
+ok(/o\.lines\s*\|\|\s*\[\]\)\.filter\(l\s*=>\s*l\.kind\s*!==\s*'formula'\)/.test(caisseSource), 'caisse kdsOrders ingestion filters out kind: formula lines');
+ok(/const formulaTag = l\.kind === 'formula-part'/.test(caisseSource), 'caisse kdsOrders ingestion formats formulaTag for child parts');
+
+// ── 6. Caisse Sales Ledger & recordSale Extraction ──────────────────────────
+ok(/lines\.filter\(l\s*=>\s*l\.kind\s*!==\s*'formula-part'\)/.test(caisseSource), 'caisse recordSale filters out kind: formula-part lines from financial journal');
+
+// Test sales ledger line sanitization
+const mockSaleLines = [
+  { name: 'Tajine poulet', qty: 1, total: 95, price: 95, cat: 'Plats' },
+  { name: 'Formule Brunch', kind: 'formula', qty: 1, total: 104, price: 104, cat: 'Formules', formulaUid: 'fml-1' },
+  { name: 'Sandwich poulet', kind: 'formula-part', qty: 1, total: 0, price: 0, formulaUid: 'fml-1' },
+  { name: "Jus d'orange", kind: 'formula-part', qty: 1, total: 0, price: 0, formulaUid: 'fml-1' }
 ];
+const money = (v) => Math.round((+v || 0) * 100) / 100;
+const recordedLines = mockSaleLines.filter(l => l.kind !== 'formula-part').map(l => Object.assign(
+  { name: l.name, qty: l.qty, total: money(l.total != null ? l.total : (l.price * l.qty)), cat: l.cat || '' },
+  l.itemId ? { itemId: l.itemId } : null,
+  l.kind ? { kind: l.kind } : null
+));
+ok(recordedLines.length === 2, 'recordSale lines length is exactly 2 (excludes child parts)');
+ok(recordedLines[0].name === 'Tajine poulet' && recordedLines[0].total === 95, 'recorded regular dish has total 95 MAD');
+ok(recordedLines[1].name === 'Formule Brunch' && recordedLines[1].total === 104 && recordedLines[1].kind === 'formula', 'recorded formula parent carries 104 MAD total');
 
-// Extract and test formula logic in Serveur environment
-const tableOrders = { T1: [] };
-let menuContextId = 'T1';
+// ── 7. Void & Pre-send Cascade Extraction ───────────────────────────────────
+const confirmVoidLineMatch = serveurSource.match(/async function confirmVoidLine\(\) \{[\s\S]*?\n    \}/);
+const changeOrderQtyMatch = serveurSource.match(/async function changeOrderQty\(tableId, uid, delta\) \{[\s\S]*?\n    \}/);
 
-// Test 1: min:1 blocks confirm until met
-let fmlDraftTest = {
-  itemId: 'm-brunch',
-  totalUnits: 1,
-  activeUnit: 0,
-  units: [{ sl_pain: new Set(['m-p1']), sl_boisson: new Set() }] // boisson missing!
-};
+if (!confirmVoidLineMatch || !changeOrderQtyMatch) {
+  ok(false, 'confirmVoidLine or changeOrderQty missing in kiwi-serveur.html');
+} else {
+  const voidHarnessCode = `
+    let tableOrders = {};
+    let voidLineTarget = null;
+    let selectedVoidReason = 'client_change';
+    let selectedVoidIsWaste = 0;
+    const SV_DEMO = true;
+    const markDirty = () => {};
+    const renderTableDetail = () => {};
+    const $ = (s) => ({ textContent: '', classList: { remove: () => {} }, disabled: false });
+    const toast = () => {};
+    const openVoidReasonModal = (tableId, line) => {
+      voidLineTarget = { tableId, line };
+    };
 
-function isFmlSlotSatisfied(slot, selSet) {
-  const count = selSet ? selSet.size : 0;
-  const min = slot.min != null ? slot.min : 1;
-  return count >= min;
-}
+    ${confirmVoidLineMatch[0]}
+    ${changeOrderQtyMatch[0]}
 
-function isFmlDraftSatisfied(draft, items) {
-  const item = items.find(m => m.id === draft.itemId);
-  const slots = item.formula.slots;
-  return draft.units.every(uSlots => slots.every(s => isFmlSlotSatisfied(s, uSlots[s.id])));
-}
+    return {
+      setTableOrders: (to) => { tableOrders = to; },
+      getTableOrders: () => tableOrders,
+      changeOrderQty,
+      confirmVoidLine,
+      getVoidLineTarget: () => voidLineTarget,
+    };
+  `;
+  const voidHarness = new Function(voidHarnessCode)();
 
-ok(!isFmlDraftSatisfied(fmlDraftTest, sampleMenuItems), 'formula with missing boisson cannot be confirmed');
-
-// Test 2: Select boisson -> satisfied
-fmlDraftTest.units[0].sl_boisson.add('m-b1');
-ok(isFmlDraftSatisfied(fmlDraftTest, sampleMenuItems), 'formula is satisfied when all slots have min choices');
-
-// Test 3: Unavailable choice rejected
-const unavailItem = sampleMenuItems.find(m => m.id === 'm-b2_unavail');
-ok(unavailItem.avail === false, 'smoothie is unavailable');
-
-// Test 4: Explosion into parent + child lines
-const tableOrderList = [];
-const slots = sampleMenuItems[0].formula.slots;
-const uSlots = fmlDraftTest.units[0];
-const formulaUid = 'fml-test-explosion-1';
-
-// Emit parent
-tableOrderList.push({
-  uid: 'uid-parent',
-  id: sampleMenuItems[0].id,
-  name: sampleMenuItems[0].name,
-  kind: 'formula',
-  price: 89,
-  qty: 1,
-  formulaUid,
-});
-
-// Emit children
-slots.forEach(s => {
-  const sel = uSlots[s.id];
-  sel.forEach(chosenId => {
-    const ch = sampleMenuItems.find(m => m.id === chosenId);
-    tableOrderList.push({
-      uid: 'uid-' + chosenId,
-      id: chosenId,
-      name: ch.name,
-      kind: 'formula-part',
-      price: 0,
-      qty: 1,
-      station: ch.station,
-      formulaUid,
-      formulaName: sampleMenuItems[0].name,
-      slotLabel: s.label,
-      lineId: `${formulaUid}-${s.id}`,
-    });
+  // Test 1: Pre-send cascade delete via changeOrderQty (delta = -1 on parent)
+  voidHarness.setTableOrders({
+    T1: [
+      { uid: 'u-parent', id: 'm-brunch', name: 'Formule Brunch', kind: 'formula', price: 104, qty: 1, formulaUid: 'fml-casc-1', sentQty: 0 },
+      { uid: 'u-c1', id: 'm-p1', name: 'Pain', kind: 'formula-part', price: 0, qty: 1, formulaUid: 'fml-casc-1', sentQty: 0 },
+      { uid: 'u-c2', id: 'm-b1', name: 'Boisson', kind: 'formula-part', price: 0, qty: 1, formulaUid: 'fml-casc-1', sentQty: 0 },
+      { uid: 'u-norm', id: 'm-cafe', name: 'Café', price: 15, qty: 1, sentQty: 0 }
+    ]
   });
-});
 
-ok(tableOrderList.length === 3, 'formula exploded to 1 parent + 2 children');
-ok(tableOrderList[0].kind === 'formula', 'parent has kind: formula');
-ok(tableOrderList[0].price === 89, 'parent has full price');
-ok(tableOrderList[1].kind === 'formula-part' && tableOrderList[1].price === 0, 'child 1 has kind: formula-part and price 0');
-ok(tableOrderList[1].station === 'st_boulangerie', 'child 1 inherited bakery station from its category, not kitchen');
-ok(tableOrderList[2].station === 'st_bar', 'child 2 inherited bar station from its category, not kitchen');
-ok(tableOrderList[1].formulaUid === formulaUid && tableOrderList[2].formulaUid === formulaUid, 'all children share parent formulaUid');
+  await voidHarness.changeOrderQty('T1', 'u-parent', -1);
+  const postPreSendOrders = voidHarness.getTableOrders().T1;
+  ok(postPreSendOrders.length === 1 && postPreSendOrders[0].uid === 'u-norm', 'pre-send decrement to 0 cascaded deletion of parent and all formula-part lines');
 
-// ── 5. Hard Count Pinning ───────────────────────────────────────────────────
-const EXPECTED_COUNT = 40;
-ok(passed === EXPECTED_COUNT, `exact control count verified (${passed}/${EXPECTED_COUNT})`);
+  // Test 2: Sent line void cascade via confirmVoidLine
+  voidHarness.setTableOrders({
+    T1: [
+      { uid: 'u-parent-sent', id: 'm-brunch', name: 'Formule Brunch', kind: 'formula', price: 104, qty: 1, formulaUid: 'fml-casc-2', sentQty: 1 },
+      { uid: 'u-c1-sent', id: 'm-p1', name: 'Pain', kind: 'formula-part', price: 0, qty: 1, formulaUid: 'fml-casc-2', sentQty: 1 },
+      { uid: 'u-c2-sent', id: 'm-b1', name: 'Boisson', kind: 'formula-part', price: 0, qty: 1, formulaUid: 'fml-casc-2', sentQty: 1 },
+      { uid: 'u-norm-sent', id: 'm-cafe', name: 'Café', price: 15, qty: 1, sentQty: 1 }
+    ]
+  });
+
+  await voidHarness.changeOrderQty('T1', 'u-parent-sent', -1);
+  ok(voidHarness.getVoidLineTarget() != null, 'sent formula decrement triggered void modal target');
+  await voidHarness.confirmVoidLine();
+  const postVoidOrders = voidHarness.getTableOrders().T1;
+  ok(postVoidOrders.length === 1 && postVoidOrders[0].uid === 'u-norm-sent', 'confirmVoidLine cascaded deletion of parent and all formula-part lines');
+}
+
+// ── 8. Hard Count Pinning ───────────────────────────────────────────────────
+const EXPECTED_COUNT = 77;
+ok(passed + 1 === EXPECTED_COUNT, `exact control count verified (${passed + 1}/${EXPECTED_COUNT})`);
 
 console.log(`\n✓ ${passed} controls green (${failures.length} failure(s))`);
 if (failures.length) {
   process.exit(1);
 }
+
