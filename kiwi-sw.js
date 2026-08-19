@@ -194,6 +194,7 @@ var SHELL = [
   '/assets/barcode.js',
   '/assets/color-palette.js',
   '/assets/boutique-catalog.js',
+  '/assets/store-templates.js?v=1',
   /* Les promotions. Dans la coquille avec le catalogue : hors ligne, une caisse
      qui a perdu ses promotions vend au prix plein pendant que la vitrine
      annonce −30 % — et c'est la caissière qui doit s'en expliquer. */

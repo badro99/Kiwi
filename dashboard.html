@@ -6068,7 +6068,7 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
 <!-- Global operator access — long-press any Kiwi logo to open the console. -->
 <script defer src="assets/operator-access.js"></script>
 <script src="assets/liquid-lens.js" defer></script>
-<script src="assets/onboarding.js?v=2079" defer></script>
+<script src="assets/onboarding.js?v=2080" defer></script>
 <!-- Connect-your-caisse: auto side-panel + 6-digit code that binds a till to this
      store (same-browser today, cross-device once /api/pair/* deploys). Real
      merchants only; the pitch demo never sees it. -->
@@ -6101,6 +6101,10 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
 <script src="assets/escpos.js?v=3" defer fetchpriority="low"></script>
 <script src="assets/printer-bridge.js" defer fetchpriority="low"></script>
 <script src="assets/boutique-catalog.js" defer fetchpriority="low"></script>
+<!-- Les rayons tout prêts proposés à un magasin qui démarre (Maison / arts de
+     la table). APRÈS boutique-catalog.js, dont il écrit les catégories et les
+     articles ; il ne fait rien tant que personne ne l'ouvre. -->
+<script src="assets/store-templates.js?v=1" defer fetchpriority="low"></script>
 <!-- La copie serveur de tout ce qu'un commerçant configure (carte, équipe,
      fidélité…) : un deuxième appareil ne doit pas trouver un établissement
      vide. AVANT venue-store.js et team.js, qui s'y branchent. -->
@@ -6157,7 +6161,7 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
 <!-- Floor-plan vocabulary shared with the caisse. MUST load before pages-pro.js,
      which reads its top-level declarations as globals. -->
 <script src="assets/floorplan-core.js?v=2049" defer fetchpriority="low"></script>
-<script src="assets/pages-pro.js?v=2066" defer fetchpriority="low"></script>
+<script src="assets/pages-pro.js?v=2067" defer fetchpriority="low"></script>
 <!-- Restaurant-only menu redesign. Recipes stay in a private document; the
      workspace is loaded last so it can present the new shell over MenuStore. -->
 <script src="assets/restaurant-units.js" defer fetchpriority="low"></script>

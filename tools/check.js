@@ -887,6 +887,10 @@ section('Whole-project regressions');
     /* Le panneau d'activation : il doit pouvoir se fermer. Il ne le pouvait
        pas, et rien ne le disait — voir l'en-tête de la suite. */
     'entitlements-test.mjs',
+    /* Les modèles de rayons écrivent dans le catalogue d'un vrai commerce :
+       la suite tient le stock à zéro et interdit qu'un modèle posé deux fois
+       double le catalogue. */
+    'store-templates-test.mjs',
     'formula-protocol-test.mjs',
     'floor-accept-test.mjs',
     'onboarding-gate-test.mjs',

@@ -9751,6 +9751,18 @@ function _bqxGridHtml() {
   // toutes les deux, et restent malgré tout deux articles distincts.
   if (_bqxColorFilter) products = products.filter((p) => (CAT().getProduct(p.id).families || []).includes(_bqxColorFilter));
   if (!products.length) {
+    /* Catalogue entièrement vide et métier pourvu de modèles : on ouvre la porte
+       plutôt que de constater le vide. Un filtre ou une recherche sans résultat
+       reste un simple constat — le magasin, lui, n'est pas vide. */
+    const virgin = !_bqxColorFilter && !_bqxQuery && _bqxFilter === 'all' && !CAT().listProducts({ includeArchived: true }).length;
+    if (virgin && _bqxTemplatesOn()) {
+      return `<div class="kx-foot-hint" style="align-items:center;">
+        <div class="lh">Catalogue vide</div>
+        <div class="rh">Partez d'un modèle de rayons — arts de la table, verrerie, bougies, décoration — puis ajustez les prix et saisissez vos quantités.
+          <div style="margin-top:10px;"><button class="kb atlas" data-action="bqx-templates">${window.KiwiStoreTemplates.mark(14)}Choisir mes rayons</button></div>
+        </div>
+      </div>`;
+    }
     return `<div class="kx-foot-hint"><div class="lh">Aucun produit</div><div class="rh">${
       _bqxColorFilter ? 'Aucun article de cette couleur. Touchez la pastille à nouveau pour tout revoir.'
         : _bqxQuery ? 'Aucun résultat pour cette recherche.'
@@ -9955,6 +9967,16 @@ function _bqxStockKPI(st) {
   };
 }
 
+/* Les rayons tout prêts (assets/store-templates.js). Le bouton n'apparaît que
+   pour un métier qui en a — aujourd'hui « Maison » : proposer des assiettes à
+   un caviste serait pire que ne rien proposer. */
+function _bqxTemplatesOn() {
+  try {
+    const T = window.KiwiStoreTemplates;
+    return !!(T && T.has(T.currentTrade()));
+  } catch (_) { return false; }
+}
+
 function _renderInventory() {
   const cat = CAT();
   cat.use(_bqxVenue());
@@ -9976,6 +9998,7 @@ function _renderInventory() {
           <input data-bqx-search placeholder="Rechercher produit, catégorie, code-barres…" value="${_esc(_bqxQuery)}" style="border:none;background:transparent;outline:none;margin-left:6px;font:inherit;color:inherit;flex:1;min-width:120px;" /></div>
         <button class="kb ghost" data-action="bqx-import">${_ICN.download}Importer CSV</button>
         <button class="kb ghost" data-action="bqx-export">${_ICN.upload}Exporter CSV</button>
+        ${_bqxTemplatesOn() ? `<button class="kb ghost" data-action="bqx-templates">${window.KiwiStoreTemplates.mark(14)}Modèles de rayons</button>` : ''}
         ${_orderProOn() ? `<button class="kb ghost" data-action="orderpro-tags">Tags NFC</button>` : ''}
         <button class="kb primary" data-action="bqx-new">${_ICN.plus}Nouveau produit</button>
       </div>
@@ -10489,6 +10512,13 @@ function _bqxWirePhoto(photo, video) {
 }
 
 /* new product */
+handlers['bqx-templates'] = () => {
+  const T = window.KiwiStoreTemplates;
+  if (!T) return;
+  CAT().use(_bqxVenue());
+  T.open({ onApplied: () => _renderInventory() });
+};
+
 handlers['bqx-new'] = () => {
   _bqxModal = modal({
     // The store's OWN name — this modal is reachable by every real boutique, and

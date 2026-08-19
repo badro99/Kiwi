@@ -699,7 +699,24 @@
     } catch (_) {}
     /* Brand-new business: surface the "Connectez votre caisse" panel so the owner
      * pairs their till immediately (once the entry choreography has settled). */
-    try { setTimeout(function () { if (window.KiwiCaisseLink && KiwiCaisseLink.promptNewMerchant) KiwiCaisseLink.promptNewMerchant(); }, 1300); } catch (_) {}
+    try {
+      setTimeout(function () {
+        const pair = function () {
+          try { if (window.KiwiCaisseLink && KiwiCaisseLink.promptNewMerchant) KiwiCaisseLink.promptNewMerchant(); } catch (_) {}
+        };
+        /* Avant l'appairage, pour les métiers qui en ont, les MODÈLES DE RAYONS :
+           un magasin qui démarre a un catalogue vide, et le remplir article par
+           article est son premier mur. Les deux fenêtres s'ENCHAÎNENT au lieu de
+           s'empiler — d'où le rappel passé à `then`, appelé que le commerçant
+           choisisse ses rayons ou passe son chemin. */
+        let offered = false;
+        try {
+          offered = !!(window.KiwiStoreTemplates && KiwiStoreTemplates.offer
+            && KiwiStoreTemplates.offer(S.typeId, { then: function () { setTimeout(pair, 500); } }));
+        } catch (_) { offered = false; }
+        if (!offered) pair();
+      }, 1300);
+    } catch (_) {}
   }
 
   /* ── Explore the demo instead (bail to the PIN lock) ─────────────────── */
