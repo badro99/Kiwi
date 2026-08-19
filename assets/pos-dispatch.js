@@ -70,7 +70,7 @@
     '0014': { id: 'coiffure',    file: 'pos-coiffure',    rev: '2', label: 'Coiffure · Salon Yasmine' },
     '0015': { id: 'gym',         file: 'pos-gym',         rev: '2', label: 'Salle de sport · Atlas Fitness' },
     '0016': { id: 'autre',       file: 'pos-autre',       rev: '2', label: 'Autre activité · caisse polyvalente' },
-    '0017': { id: 'maison',      file: 'pos-maison',      rev: '14', label: 'Maison · Vogue Home' },
+    '0017': { id: 'maison',      file: 'pos-maison',      rev: '16', label: 'Maison · Vogue Home' },
   };
 
   const apps = {};       /* id → registered spec */

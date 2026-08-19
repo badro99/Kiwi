@@ -392,7 +392,7 @@
     return touched;
   }
 
-  const sizeWord  = (p) => p.kind === 'pointure' ? 'Pointure' : p.kind === 'tu' ? 'Taille unique' : 'Taille';
+  const sizeWord  = (p) => p.kind === 'pointure' ? 'Pointure' : p.kind === 'tu' ? 'Pièce unique' : 'Format';
   const firstFree = (p) => sizesOf(p).find((k) => p.sizes[k] > 0) || null;
 
   /* ───────────────────────── équipe & clientes (Tanger · Centre) ───────────── */
@@ -5599,7 +5599,7 @@
 
           <div class="mz-f">
             <div class="mz-f-lbl">Nom <span class="opt">· ce que la cliente lira sur son reçu</span></div>
-            <input class="mz-input" id="mz-prc-name" maxlength="80" placeholder="Soldes d'été, Déstockage caftans…" value="${esc(d.name)}" />
+            <input class="mz-input" id="mz-prc-name" maxlength="80" placeholder="Soldes d'été, Déstockage annuel…" value="${esc(d.name)}" />
           </div>
 
           <div class="mz-f">
@@ -5982,161 +5982,13 @@
     return `<option value="">— Sans catégorie</option>` + cats.map((c) => `<option value="${c.id}" ${c.id === sel ? 'selected' : ''}>${esc(c.name)}</option>`).join('');
   }
   function kindSelectOptions(sel) {
-    return [['taille', 'Vêtement (S–XL)'], ['pointure', 'Chaussure (pointures)'], ['tu', 'Taille unique']]
-      .map(([v, l]) => `<option value="${v}" ${v === sel ? 'selected' : ''}>${l}</option>`).join('');
+    const opts = [['tu', 'Pièce unique (sans taille)'], ['taille', 'Formats (S · M · L)']];
+    if (sel === 'pointure') opts.push(['pointure', 'Pointure']);
+    return opts.map(([v, l]) => `<option value="${v}" ${v === sel ? 'selected' : ''}>${l}</option>`).join('');
   }
   function openNewProduct() {
     catalogDashboardOnly();
     return;
-    const html = `
-      <button class="mz-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button>
-      <div class="mzi-modh"><div><h3>Nouvel article</h3><span>Créez le produit, puis ajoutez ses variantes couleur × taille</span></div></div>
-      <div class="mzi-form">
-        <div class="mzi-fg"><label>Nom du produit</label><input id="mzi-n-name" placeholder="Ex. Caftan brodé main" /></div>
-        <div class="mzi-frow">
-          <div class="mzi-fg"><label>Catégorie</label><select id="mzi-n-cat">${catSelectOptions(state.invFilter && state.invFilter !== 'all' ? state.invFilter : '')}</select></div>
-          <div class="mzi-fg"><label>Type</label><select id="mzi-n-kind">${kindSelectOptions('taille')}</select></div>
-        </div>
-        <div class="mzi-fg"><label>Ou nouvelle catégorie (optionnel)</label><input id="mzi-n-newcat" placeholder="Laisser vide pour utiliser la catégorie ci-dessus" /></div>
-        <div class="mzi-frow">
-          <div class="mzi-fg"><label>Prix de vente (MAD)</label><input id="mzi-n-price" type="number" min="0" placeholder="1890" /></div>
-          <div class="mzi-fg"><label>Coût d'achat (MAD)</label><input id="mzi-n-cost" type="number" min="0" placeholder="optionnel" /></div>
-        </div>
-
-        <!-- Le choix qui évite d'imprimer des milliers d'étiquettes pour rien :
-             l'article porte peut-être déjà un code du fournisseur. -->
-        <div class="mzi-fg"><label>Code-barres de cet article</label>
-          <div class="bqx-choice" id="mzi-n-bcpick" role="radiogroup" aria-label="Code-barres de cet article" data-lens-demo>
-            <button type="button" class="bqx-opt on" data-bc="existing" data-lens-item role="radio" aria-checked="true">
-              <i data-lucide="scan-line"></i><b>Il en a déjà un</b><span>Code fournisseur ou fabricant — conservé tel quel</span>
-            </button>
-            <button type="button" class="bqx-opt" data-bc="gen" data-lens-item role="radio" aria-checked="false">
-              <i data-lucide="sparkles"></i><b>Générer un code Kiwi</b><span>EAN-13 imprimable, pour un article non étiqueté</span>
-            </button>
-            <button type="button" class="bqx-opt" data-bc="later" data-lens-item role="radio" aria-checked="false">
-              <i data-lucide="clock"></i><b>Plus tard</b><span>Créer l'article maintenant, le code après</span>
-            </button>
-          </div>
-        </div>
-
-        <div id="mzi-n-bcwrap">
-          <div class="mzi-fg"><label>Scannez ou tapez le code existant</label>
-            <div class="bqx-scanbox slim"><i data-lucide="scan-line"></i><input id="mzi-n-code" placeholder="Scannez l'étiquette de l'article…" autocomplete="off" spellcheck="false" /></div>
-            <div class="mzi-help" id="mzi-n-codehint">La douchette écrit ici directement. Rien n'est mis au ticket, rien n'est vendu.</div>
-          </div>
-        </div>
-
-        <div class="mzi-frow">
-          <div class="mzi-fg"><label>Couleur</label><div id="mzi-n-sw">${colorPicker('noir')}</div></div>
-        </div>
-        <div class="mzi-frow">
-          <div class="mzi-fg"><label>Taille</label><input id="mzi-n-size" list="mzi-n-sizes" placeholder="M" autocomplete="off" /><datalist id="mzi-n-sizes"></datalist></div>
-          <div class="mzi-fg"><label>Stock initial</label><input id="mzi-n-stock" type="number" min="0" step="1" inputmode="numeric" value="0" /></div>
-        </div>
-        <div class="mzi-fg"><label>Icône du produit</label>${iconPickerHtml('tshirt')}</div>
-      </div>
-      <div class="mzi-modfoot"><button class="mz-btn secondary" data-inv-x>Annuler</button><button class="mz-btn" id="mzi-n-save">Créer l'article</button></div>`;
-    invSetModal(html, (el) => {
-      const cat = catDB();
-      let icon = 'tshirt';
-      let mode = 'existing';
-      wireIconPicker(el, (k) => { icon = k; });
-      const depotBox = $('#mzi-e-depot', el), depotWho = $('#mzi-e-depot-who', el);
-      if (depotBox && depotWho) depotBox.addEventListener('change', () => { depotWho.style.display = depotBox.checked ? '' : 'none'; });
-      const pickedColor = () => { const k = KC(); return (k && k.value($('#mzi-n-sw', el))) || 'noir'; };
-      const kindSel = $('#mzi-n-kind', el), sizeList = $('#mzi-n-sizes', el);
-      const fillSizes = () => { sizeList.innerHTML = cat.sizePresets(kindSel.value).map((s) => `<option value="${esc(s)}">`).join(''); };
-      kindSel.onchange = fillSizes; fillSizes();
-
-      const wrap = $('#mzi-n-bcwrap', el), codeIn = $('#mzi-n-code', el), codeHint = $('#mzi-n-codehint', el);
-      const setMode = (m) => {
-        mode = m;
-        el.querySelectorAll('#mzi-n-bcpick .bqx-opt').forEach((b) => {
-          const on = b.dataset.bc === m;
-          b.classList.toggle('on', on);
-          b.setAttribute('aria-checked', on ? 'true' : 'false');
-        });
-        wrap.style.display = m === 'existing' ? '' : 'none';
-        if (m === 'existing') setTimeout(() => codeIn.focus(), 20);
-        lens();
-      };
-      el.querySelectorAll('#mzi-n-bcpick .bqx-opt').forEach((b) => b.addEventListener('click', () => setMode(b.dataset.bc)));
-
-      /* Le code scanné remplit le champ, et RIEN d'autre ne se produit. */
-      const judgeInto = (raw) => {
-        const j = intakeJudge(raw);
-        if (j.kind === 'invalide') { codeHint.textContent = INVALID_MSG[j.reason] || 'Code illisible.'; codeHint.className = 'mzi-help is-bad'; return j; }
-        if (j.kind === 'connu') {
-          codeHint.innerHTML = `Ce code est déjà porté par <b>${esc(j.hit.product.name)} · ${esc(j.hit.variant.colorLabel)} ${esc(j.hit.variant.size)}</b>. Un code ne peut désigner qu'un seul article.`;
-          codeHint.className = 'mzi-help is-bad'; return j;
-        }
-        const KB = window.KiwiBarcode;
-        codeHint.textContent = `Code lu · ${KB && KB.symLabel ? KB.symLabel(j.sym) : ''}${j.check === 'bad' ? ' — clé de contrôle inhabituelle, accepté tel quel' : ''}. Conservé sans réimpression.`;
-        codeHint.className = 'mzi-help is-good';
-        return j;
-      };
-      armScanCapture((c) => { codeIn.value = normScan(c); judgeInto(c); });
-      /* Même verdict à la douchette et au clavier — « input » et pas seulement
-         « change », sinon la saisie manuelle reste muette jusqu'à la validation. */
-      const liveJudge = () => { if (codeIn.value.trim()) judgeInto(codeIn.value); };
-      codeIn.addEventListener('input', liveJudge);
-      codeIn.addEventListener('change', liveJudge);
-
-      const save = () => {
-        const name = $('#mzi-n-name', el).value.trim();
-        if (!name) { toast('Nom requis'); $('#mzi-n-name', el).focus(); return; }
-        const raw = codeIn.value.trim();
-        if (mode === 'existing') {
-          if (!raw) { toast('Scannez le code existant, ou choisissez « Générer » / « Plus tard »'); codeIn.focus(); return; }
-          const j = judgeInto(raw);
-          if (j.kind !== 'nouveau') {
-            toast(j.kind === 'connu' ? `Code déjà utilisé par ${j.hit.product.name}` : (INVALID_MSG[j.reason] || 'Code illisible'));
-            return;
-          }
-        }
-        let catId = $('#mzi-n-cat', el).value || null;
-        const newCat = $('#mzi-n-newcat', el).value.trim();
-        if (newCat) catId = cat.addCategory(newCat).id;
-        const size = $('#mzi-n-size', el).value.trim() || 'TU';
-        const stock = Math.max(0, parseInt($('#mzi-n-stock', el).value, 10) || 0);
-        const saveBtn = $('#mzi-n-save', el);
-        const oldSave = saveBtn.innerHTML;
-        saveBtn.disabled = true;
-        saveBtn.classList.add('is-busy');
-        saveBtn.innerHTML = '<span class="mz-btn-spinner" aria-hidden="true"></span><span>Création…</span>';
-        const restoreSave = () => { saveBtn.disabled = false; saveBtn.classList.remove('is-busy', 'is-done'); saveBtn.innerHTML = oldSave; };
-        let p = null, ev = null, res = null, genCode = null;
-        cat.batch(() => {
-          p = cat.addProduct({ name, categoryId: catId, kind: kindSel.value, art: icon, priceMAD: bqMoney($('#mzi-n-price', el).value), cost: bqMoney($('#mzi-n-cost', el).value) });
-          ev = cat.ensureVariant({ productId: p.id, colorId: pickedColor(), size, stock });
-          if (mode === 'existing' && ev.variant) {
-            res = cat.attachBarcode(ev.variant.id, raw);
-            if (!res.ok) cat.deleteProduct(p.id);   // jamais d'article orphelin
-          } else if (mode === 'gen' && ev.variant) {
-            genCode = cat.generateBarcode(ev.variant.id);
-          }
-        });
-        if (mode === 'existing') {
-          if (!res || !res.ok) {
-            restoreSave();
-            toast(res && res.reason === 'doublon' ? `Ce code vient d'être attribué à ${res.owner.product.name}` : 'Code refusé, rien n\'a été créé', 3600, 'danger');
-            return;
-          }
-          toast(`${name} ajouté à l'inventaire`, 3800, 'success', `${stock} pièce${stock === 1 ? '' : 's'} · taille ${size} · code fournisseur conservé`);
-        } else if (mode === 'gen') {
-          toast(`${name} ajouté à l'inventaire`, 3800, 'success', `${stock} pièce${stock === 1 ? '' : 's'} · taille ${size}${genCode ? ' · code Kiwi généré' : ''}`);
-        } else {
-          toast(`${name} ajouté à l'inventaire`, 3800, 'success', `${stock} pièce${stock === 1 ? '' : 's'} · taille ${size} · code à ajouter plus tard`);
-        }
-        saveBtn.classList.remove('is-busy'); saveBtn.classList.add('is-done');
-        saveBtn.innerHTML = '<span aria-hidden="true">✓</span><span>Article créé</span>';
-        disarmScanCapture();
-        setTimeout(() => openInvProduct(p.id), 320);
-      };
-      $('#mzi-n-save', el).addEventListener('click', save);
-      setMode('existing');
-      setTimeout(() => { const i = $('#mzi-n-name', el); if (i) i.focus(); }, 40);
-    });
   }
 
   function openEditProduct(pid) {
@@ -6593,10 +6445,10 @@
         <button class="mz-btn" id="bqx-link">Chercher l'article</button>
       </div>` : ''}
       <div class="mzi-form bqx-form">
-        <div class="mzi-fg"><label>Nom du produit</label><input id="bqx-name" placeholder="Ex. Jean Noir" autocomplete="off" /></div>
+        <div class="mzi-fg"><label>Nom du produit</label><input id="bqx-name" placeholder="Ex. Vase en céramique" autocomplete="off" /></div>
         <div class="mzi-frow">
           <div class="mzi-fg"><label>Catégorie</label><select id="bqx-cat">${catSelectOptions(state.invFilter && state.invFilter !== 'all' ? state.invFilter : (prev ? prev.product.categoryId : ''))}</select></div>
-          <div class="mzi-fg"><label>Type de taille</label><select id="bqx-kind">${kindSelectOptions(prev ? prev.product.kind : 'taille')}</select></div>
+          <div class="mzi-fg"><label>Type</label><select id="bqx-kind">${kindSelectOptions(prev ? prev.product.kind : 'tu')}</select></div>
         </div>
         <div class="mzi-fg"><label>Ou nouvelle catégorie</label><input id="bqx-newcat" placeholder="Laisser vide pour garder celle ci-dessus" autocomplete="off" /></div>
         <div class="mzi-frow">
@@ -6607,7 +6459,7 @@
           <div class="mzi-fg"><label>Couleur</label><div id="bqx-sw">${colorPicker('noir')}</div></div>
         </div>
         <div class="mzi-frow">
-          <div class="mzi-fg"><label>Taille</label><input id="bqx-size" list="bqx-sizes" placeholder="M" autocomplete="off" /><datalist id="bqx-sizes"></datalist></div>
+          <div class="mzi-fg"><label>Format</label><input id="bqx-size" list="bqx-sizes" placeholder="TU" autocomplete="off" /><datalist id="bqx-sizes"></datalist></div>
           <div class="mzi-fg"><label>Quantité reçue</label><input id="bqx-qty" type="number" min="0" step="1" inputmode="numeric" value="1" /></div>
         </div>
         <div class="mzi-fg"><label>Autre précision (optionnel)</label><input id="bqx-flag" placeholder="Ex. coupe droite, lot été" autocomplete="off" /></div>
@@ -7023,7 +6875,7 @@
         <div class="mzi-fg"><label>Nom</label><input id="bqx-fname" value="${esc(p.name)}" /></div>
         <div class="mzi-frow">
           <div class="mzi-fg"><label>Catégorie</label><select id="bqx-fcat">${catSelectOptions(p.categoryId)}</select></div>
-          <div class="mzi-fg"><label>Type de taille</label><select id="bqx-fkind">${kindSelectOptions(p.kind)}</select></div>
+          <div class="mzi-fg"><label>Type</label><select id="bqx-fkind">${kindSelectOptions(p.kind)}</select></div>
         </div>
         <div class="mzi-frow">
           <div class="mzi-fg"><label>Prix de vente (MAD)</label><input id="bqx-fprice" type="number" min="0" step="0.01" value="${p.priceMAD}" /></div>

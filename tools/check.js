@@ -892,6 +892,7 @@ section('Whole-project regressions');
        double le catalogue. */
     'store-templates-test.mjs',
     'formula-protocol-test.mjs',
+    'trade-copy-test.mjs',
     'floor-accept-test.mjs',
     'onboarding-gate-test.mjs',
     'api-boundaries-test.mjs',

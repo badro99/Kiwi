@@ -9736,9 +9736,64 @@ function _catOptions(sel, includeNone) {
   const none = includeNone ? `<option value="">— Sans catégorie</option>` : '';
   return none + CAT().listCategories().map((c) => `<option value="${c.id}" ${c.id === sel ? 'selected' : ''}>${_esc(c.name)}</option>`).join('');
 }
-function _kindOptions(sel) {
-  const k = [['taille', 'Vêtement (tailles S-XL)'], ['pointure', 'Chaussure (pointures)'], ['tu', 'Taille unique']];
-  return k.map(([v, l]) => `<option value="${v}" ${v === sel ? 'selected' : ''}>${l}</option>`).join('');
+/* Vocabulaire par métier : boutique garde le caftan/vêtement/taille, maison et les autres reçoivent des termes neutres. */
+function _bqxCopy(trade) {
+  const tr = trade !== undefined ? String(trade || '') : (window.KiwiStoreTemplates && window.KiwiStoreTemplates.currentTrade ? window.KiwiStoreTemplates.currentTrade() : '');
+  const isBoutique = (tr === 'boutique');
+  const isMaison = (tr === 'maison');
+
+  if (isBoutique) {
+    return {
+      trade: 'boutique',
+      modalDesc: 'Créez le produit, puis ajoutez ses variantes couleur × taille et leurs codes-barres.',
+      namePlaceholder: 'Ex. Caftan brodé main',
+      pricePlaceholder: '1890',
+      catPlaceholder: 'Ex. Caftans de mariée',
+      defaultKind: 'taille',
+      varTag: 'COULEUR × TAILLE',
+      varCreatedDesc: 'Ajoutez maintenant ses variantes couleur × taille.',
+      varEmpty: 'Aucune variante. Ajoutez une couleur × taille ci-dessous.',
+      gridHint: 'Cliquez un produit pour ouvrir sa matrice couleur × taille : stock par variante, génération et impression d\'étiquettes EAN-13, ou enregistrement d\'un ancien code-barres.',
+      sizeColHeader: (_kind) => 'Taille',
+      sizeInputLabel: (kind) => (kind === 'pointure' ? 'Pointure' : 'Taille'),
+      kindList: (_sel) => [
+        ['taille', 'Vêtement (tailles S-XL)'],
+        ['pointure', 'Chaussure (pointures)'],
+        ['tu', 'Taille unique'],
+      ],
+    };
+  }
+
+  return {
+    trade: isMaison ? 'maison' : (tr || 'autre'),
+    modalDesc: 'Créez le produit, puis ajoutez ses déclinaisons et leurs codes-barres.',
+    namePlaceholder: isMaison ? 'Ex. Vase en terre cuite 30 cm' : 'Ex. Article',
+    pricePlaceholder: isMaison ? '450' : '150',
+    catPlaceholder: isMaison ? 'Ex. Arts de la table' : 'Ex. Rayon principal',
+    defaultKind: 'tu',
+    varTag: 'DÉCLINAISON',
+    varCreatedDesc: 'Ajoutez maintenant ses déclinaisons.',
+    varEmpty: 'Aucune variante. Ajoutez une déclinaison ci-dessous.',
+    gridHint: 'Cliquez un produit pour ouvrir ses déclinaisons : stock par variante, génération et impression d\'étiquettes EAN-13, ou enregistrement d\'un ancien code-barres.',
+    sizeColHeader: (kind) => (kind === 'taille' ? 'Format' : kind === 'pointure' ? 'Pointure' : ' — '),
+    sizeInputLabel: (kind) => (kind === 'pointure' ? 'Pointure' : kind === 'taille' ? 'Format' : 'Format'),
+    kindList: (sel) => {
+      const opts = [
+        ['tu', 'Pièce unique (sans taille)'],
+        ['taille', 'Formats (S · M · L)'],
+      ];
+      if (sel === 'pointure') {
+        opts.push(['pointure', 'Pointure']);
+      }
+      return opts;
+    },
+  };
+}
+function _kindOptions(sel, trade) {
+  const copy = _bqxCopy(trade);
+  const effectiveSel = sel || copy.defaultKind;
+  const list = copy.kindList(effectiveSel);
+  return list.map(([v, l]) => `<option value="${v}" ${v === effectiveSel ? 'selected' : ''}>${l}</option>`).join('');
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -10014,7 +10069,7 @@ function _renderInventory() {
 
       <div class="kx-foot-hint">
         <div class="lh">Astuce</div>
-        <div class="rh">Cliquez un produit pour ouvrir sa matrice couleur × taille : stock par variante, génération et impression d'étiquettes EAN-13, ou enregistrement d'un ancien code-barres.</div>
+        <div class="rh">${_esc(_bqxCopy().gridHint)}</div>
       </div>
     `,
   });
@@ -10112,11 +10167,12 @@ function _bqxProductBody(pid) {
    * chasse — et il apparaissait par défaut sur CHAQUE produit d'une boutique qui
    * vient d'importer son stock. null ⇒ la ligne dit « prix d'achat manquant »,
    * ce qui est à la fois vrai et actionnable. */
+  const copy = _bqxCopy();
   const cost = +p.cost > 0 ? +p.cost : null;
   const margin = (cost != null && p.priceMAD > 0) ? Math.round((1 - cost / p.priceMAD) * 100) : null;
   const rows = data.variants.length
     ? data.variants.map((v) => _variantRow(v, p.kind)).join('')
-    : `<tr><td colspan="5" style="text-align:center;color:var(--n-500,#99a);padding:18px;">Aucune variante. Ajoutez une couleur × taille ci-dessous.</td></tr>`;
+    : `<tr><td colspan="5" style="text-align:center;color:var(--n-500,#99a);padding:18px;">${_esc(copy.varEmpty)}</td></tr>`;
   return `
     <div class="kx-stat-3">
       <div class="stat"><div class="l">PRIX VENTE</div><div class="v bqx-price-tag">${_mad(p.priceMAD)} MAD</div><div class="sub">${margin == null ? 'Prix d’achat manquant' : `Marge ${margin} %`}</div></div>
@@ -10125,7 +10181,7 @@ function _bqxProductBody(pid) {
     </div>
     <div class="bqx-vwrap">
       <table class="bqx-vtable">
-        <thead><tr><th>Couleur</th><th>Taille</th><th>Stock</th><th>Code-barres</th><th style="text-align:right;">Actions</th></tr></thead>
+        <thead><tr><th>Couleur</th><th>${_esc(copy.sizeColHeader(p.kind))}</th><th>Stock</th><th>Code-barres</th><th style="text-align:right;">Actions</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>
@@ -10275,16 +10331,17 @@ handlers['bqx-var-reg-save'] = (_el, arg) => {
 /* add a variant (colour × size × stock) */
 handlers['bqx-var-add'] = (_el, arg) => {
   const data = CAT().getProduct(arg);
-  const kind = data ? data.product.kind : 'taille';
+  const copy = _bqxCopy();
+  const kind = data ? data.product.kind : copy.defaultKind;
   const presets = CAT().sizePresets(kind);
   _bqxModal = modal({
-    title: 'Ajouter une variante', tag: 'COULEUR × TAILLE',
+    title: 'Ajouter une variante', tag: copy.varTag,
     desc: 'Chaque variante est un article distinct avec son propre code-barres.',
     width: 480,
     body: `
       <div class="kf-row">
         <div class="kf-group"><label class="kf-label">Couleur</label>${_colorPicker('noir')}</div>
-        <div class="kf-group"><label class="kf-label">${kind === 'pointure' ? 'Pointure' : kind === 'tu' ? 'Taille' : 'Taille'}</label>
+        <div class="kf-group"><label class="kf-label">${_esc(copy.sizeInputLabel(kind))}</label>
           <input class="kf-input" list="bqx-sizes" data-bqx-vsize value="${_esc(presets[0] || '')}" />
           <datalist id="bqx-sizes">${presets.map((s) => `<option value="${_esc(s)}">`).join('')}</datalist></div>
       </div>
@@ -10421,7 +10478,7 @@ function _bqxAbField(p) {
   const who = p ? (p.consignor || '') : '';
   return `
     <div class="kf-group">
-      <label class="kf-label">Catégorie</label>
+      <label class="kf-label">Catégorie A / B</label>
       <div class="bqx-ab">
         <label><input type="radio" name="bqx-ab" value="outright" ${own === 'outright' ? 'checked' : ''} data-bqx-ab />
           <div><b>Catégorie A</b></div></label>
@@ -10520,20 +10577,21 @@ handlers['bqx-templates'] = () => {
 };
 
 handlers['bqx-new'] = () => {
+  const copy = _bqxCopy();
   _bqxModal = modal({
     // The store's OWN name — this modal is reachable by every real boutique, and
     // a hardcoded demo tag put "MAISON MANSOUR" on a real client's screen.
     title: 'Nouveau produit', tag: 'INVENTAIRE · ' + _bqxTag(),
-    desc: 'Créez le produit, puis ajoutez ses variantes couleur × taille et leurs codes-barres.',
+    desc: copy.modalDesc,
     width: 520,
     body: `
-      <div class="kf-group"><label class="kf-label">Nom du produit</label><input class="kf-input" placeholder="Ex. Caftan brodé main" data-bqx-name /></div>
+      <div class="kf-group"><label class="kf-label">Nom du produit</label><input class="kf-input" placeholder="${_esc(copy.namePlaceholder)}" data-bqx-name /></div>
       <div class="kf-row">
         <div class="kf-group"><label class="kf-label">Catégorie</label><select class="kf-input" data-bqx-cat>${_catOptions(_bqxFilter !== 'all' ? _bqxFilter : '', true)}</select></div>
-        <div class="kf-group"><label class="kf-label">Type</label><select class="kf-input" data-bqx-kind>${_kindOptions('taille')}</select></div>
+        <div class="kf-group"><label class="kf-label">Type</label><select class="kf-input" data-bqx-kind>${_kindOptions()}</select></div>
       </div>
       <div class="kf-row">
-        <div class="kf-group"><label class="kf-label">Prix vente (MAD)</label><input class="kf-input" type="number" min="0" placeholder="1890" data-bqx-price /></div>
+        <div class="kf-group"><label class="kf-label">Prix vente (MAD)</label><input class="kf-input" type="number" min="0" placeholder="${_esc(copy.pricePlaceholder)}" data-bqx-price /></div>
         <div class="kf-group"><label class="kf-label">Coût d'achat (MAD)</label><input class="kf-input" type="number" min="0" placeholder="optionnel" data-bqx-cost /></div>
       </div>
       ${_bqxAbField(null)}
@@ -10566,7 +10624,7 @@ handlers['bqx-new-save'] = () => {
     video: _bqxVideo,
   });
   if (_bqxModal) _bqxModal.close();
-  toast('Produit créé', { desc: 'Ajoutez maintenant ses variantes couleur × taille.', type: 'success' });
+  toast('Produit créé', { desc: _bqxCopy().varCreatedDesc, type: 'success' });
   setTimeout(() => _bqxOpenProduct(p.id), 260);
 };
 
@@ -10697,7 +10755,7 @@ handlers['bqx-cat-new'] = () => {
   _bqxModal = modal({
     title: 'Ajouter une catégorie', tag: 'RAYON', width: 480,
     body: `
-      <div class="kf-group"><label class="kf-label">Nom de la catégorie</label><input class="kf-input" placeholder="Ex. Caftans de mariée" data-bqx-cname /></div>
+      <div class="kf-group"><label class="kf-label">Nom de la catégorie</label><input class="kf-input" placeholder="${_esc(_bqxCopy().catPlaceholder)}" data-bqx-cname /></div>
       <div class="kf-group"><label class="kf-label">Couleur</label>
         <div class="bqx-cat-sw" data-bqx-cnewsw>${_TAGS.map((t, i) => `<button class="${i === 0 ? 'on' : ''}" style="background:${t.hex};width:24px;height:24px;" title="${t.name}" data-tone="${t.id}"></button>`).join('')}</div></div>`,
     foot: `<button class="kb ghost" data-dismiss>Annuler</button><button class="kb atlas" data-action="bqx-cat-new-save">Créer la catégorie</button>`,
