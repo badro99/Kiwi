@@ -1520,7 +1520,7 @@ function cleanLines(raw) {
     if (!l) continue;
     const name = String(l.name || '').trim().slice(0, 80);
     if (!name) continue;
-    out.push({
+    const line = {
       name,
       qty: Math.min(MAX_QTY, Math.max(1, Math.round(Number(l.qty) || 1))),
       unitPrice: Math.max(0, Math.round(Number(l.unitPrice) || 0)),
@@ -1532,7 +1532,15 @@ function cleanLines(raw) {
         }))
         .filter((v) => v.name),
       station: String(l.station || '').slice(0, 40),
-    });
+    };
+    if (l.kind) line.kind = String(l.kind).slice(0, 20);
+    if (l.formulaUid) line.formulaUid = String(l.formulaUid).slice(0, 40);
+    if (l.formulaName) line.formulaName = String(l.formulaName).slice(0, 80);
+    if (l.slotLabel) line.slotLabel = String(l.slotLabel).slice(0, 80);
+    if (l.lineId) line.lineId = String(l.lineId).slice(0, 60);
+    if (l.uid) line.uid = String(l.uid).slice(0, 60);
+    if (l.id) line.id = String(l.id).slice(0, 60);
+    out.push(line);
   }
   return out;
 }

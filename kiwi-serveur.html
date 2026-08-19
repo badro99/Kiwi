@@ -1689,6 +1689,67 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     .opt-foot .td-btn { flex: 1; }
     .opt-foot .td-btn.primary { flex: 1.6; }
 
+    /* Formula choice sheet */
+    .fml-units-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px; padding: 8px 12px; background: var(--paper-mute); border-radius: 12px;
+    }
+    .fml-units-tabs { display: flex; gap: 6px; }
+    .fml-unit-tab {
+      padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border);
+      background: var(--surface); color: var(--ink-2); font-size: 12px; font-weight: 600; cursor: pointer;
+    }
+    .fml-unit-tab.active {
+      background: var(--mint-tint); border-color: var(--forest-edge); color: var(--forest-ink);
+    }
+    .fml-same-btn {
+      font-size: 11.5px; font-weight: 600; color: var(--forest-ink); background: transparent;
+      border: 1px dashed var(--forest-edge); border-radius: 8px; padding: 5px 10px; cursor: pointer;
+    }
+    .fml-slot {
+      margin-bottom: 14px; padding: 12px; border-radius: 14px; background: var(--paper-mute);
+      border: 1.5px solid transparent; transition: border-color 150ms;
+    }
+    .fml-slot.active { border-color: var(--forest-edge); background: var(--surface); box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+    .fml-slot.missing { border-color: var(--danger-mute); }
+    .fml-slot-head {
+      display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; gap: 8px;
+    }
+    .fml-slot-title { font-size: 13.5px; font-weight: 700; color: var(--ink); }
+    .fml-slot-badge { font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--ink-4); }
+    .fml-slot-badge.req { color: var(--forest-ink); }
+    .fml-slot-collapsed {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 12px; border-radius: 10px; background: var(--mint-tint);
+      color: var(--forest-ink); font-size: 12.5px; font-weight: 600; cursor: pointer;
+    }
+    .fml-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .fml-chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 10px 14px; min-height: 44px; border-radius: 12px;
+      background: var(--surface); border: 1.5px solid var(--border);
+      font-size: 13px; color: var(--ink); font-weight: 500; cursor: pointer;
+      box-sizing: border-box; transition: background 130ms, border-color 130ms, color 130ms;
+    }
+    .fml-chip:active { transform: scale(0.97); }
+    .fml-chip.on {
+      background: var(--mint-tint); border-color: var(--forest-edge); color: var(--forest-ink); font-weight: 600;
+    }
+    .fml-chip.disabled {
+      opacity: 0.4; cursor: not-allowed; pointer-events: none; background: var(--paper-mute); border-color: transparent;
+    }
+    .fml-chip .fml-extra {
+      font-size: 11px; color: var(--ink-4); font-feature-settings: "tnum" 1; font-weight: 500;
+    }
+    .fml-chip.on .fml-extra { color: var(--forest-ink); }
+    .fml-foot {
+      position: sticky; bottom: -24px; background: var(--surface); padding: 12px 0 0;
+      margin: 4px -2px 0; display: flex; gap: 8px;
+    }
+    .fml-foot .td-btn { flex: 1; }
+    .fml-foot .td-btn.primary { flex: 1.6; }
+    .fml-foot .td-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
     /* read-only options sub-line under an order item */
     .td-item-optline {
       flex: 1 0 100%;
@@ -4076,6 +4137,14 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         </div>
       </div>
 
+      <!-- ============ FORMULA CHOICE SHEET ============ -->
+      <div class="modal-veil" id="formula-modal" role="dialog" aria-modal="true">
+        <div class="modal">
+          <div class="modal-handle"></div>
+          <div id="formula-modal-body"></div>
+        </div>
+      </div>
+
       <!-- ============ PAYMENT CHOICE MODAL ============ -->
       <div class="modal-veil" id="pay-choice-modal" role="dialog" aria-modal="true">
         <div class="modal">
@@ -5033,7 +5102,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       const catStation = {};
       cats.forEach((c) => { labels[c.id] = c.name || 'Sans nom'; catStation[c.id] = String(c.station || ''); order.push(c.id); });
       let loose = false;
-      const items = d.items.filter(it => it && it.id && it.name && it.avail !== false).map((it) => ({
+      const items = (d.items || []).filter(it => it && it.id && it.name).map((it) => ({
         id: it.id,
         cat: (it.catId && labels[it.catId]) ? it.catId : (loose = true, '_autres'),
         name: it.name,
@@ -5042,6 +5111,8 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         // serveur OÙ part sa commande (voir svStationNames).
         station: catStation[(it.catId && labels[it.catId]) ? it.catId : ''] || '',
         opts: Array.isArray(it.opts) ? it.opts.slice() : [],
+        formula: it.formula || null,
+        avail: it.avail !== false,
       }));
       if (loose) { labels._autres = 'Autres'; order.push('_autres'); }
       svStations = (Array.isArray(d.stations) ? d.stations : [])
@@ -5211,13 +5282,25 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
               name: o.label || o.name || o.cn || '',
             }))
           : [];
-        delta.push({
-          id: l.id, qty: dq, options: opts, visuals: visuals,
+        const linePayload = {
+          id: l.id,
+          name: l.name || '',
+          qty: dq,
+          unitPrice: Math.max(0, +l.price || +l.unitPrice || 0),
+          options: opts,
+          visuals: visuals,
           optionChoices: Array.isArray(l.opts)
             ? l.opts.map(o => ({ group: o.group, label: o.label }))
             : [],
           note: (l.note || '').trim(),
-        });
+          station: l.station || '',
+        };
+        if (l.kind) linePayload.kind = l.kind;
+        if (l.formulaUid) linePayload.formulaUid = l.formulaUid;
+        if (l.formulaName) linePayload.formulaName = l.formulaName;
+        if (l.slotLabel) linePayload.slotLabel = l.slotLabel;
+        if (l.lineId) linePayload.lineId = l.lineId;
+        delta.push(linePayload);
       });
       if (!delta.length) return Promise.resolve({ ok: true, nothing: true });
       const slug = svSlug();
@@ -6850,16 +6933,29 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
           const noteTxt = (l.note || '').trim();
           const optTxt = optsSummary(l.opts);
           const optLine = optTxt ? `<span class="td-item-optline">${SLIDERS_SVG}${esc(optTxt)}</span>` : '';
+          const isPart = l.kind === 'formula-part';
+          const isFormula = l.kind === 'formula';
+          const displayName = isPart
+            ? `<span style="color:var(--forest-ink);font-size:11px;font-weight:600;margin-right:4px;">[${esc(l.slotLabel || 'Choix')}]</span> ${esc(l.name)}`
+            : (isFormula ? `${esc(l.name)} <span style="font-size:9.5px;font-weight:700;letter-spacing:0.05em;color:var(--forest-ink);background:var(--mint-tint);padding:1px 6px;border-radius:4px;margin-left:6px;">FORMULE</span>` : esc(l.name));
+          const displayPrice = isPart
+            ? `<span class="td-item-price" style="font-size:12px;color:var(--ink-4);">inclus</span>`
+            : `<span class="td-item-price">${fmtMAD(l.price * l.qty)}</span>`;
+
           if (isEditable) {
-            return `
-              <div class="td-item" data-order-uid="${l.uid}">
+            const stepper = isPart
+              ? `<div class="td-item-qty" style="justify-content:center;color:var(--ink-4);font-size:13px;">↳</div>`
+              : `
                 <div class="td-item-qty">
                   <button class="td-qty-btn minus" data-qty="dec" aria-label="Moins">−</button>
                   <span class="td-qty-num">${l.qty}</span>
                   <button class="td-qty-btn plus" data-qty="inc" aria-label="Plus">+</button>
-                </div>
-                <span class="td-item-name">${esc(l.name)}</span>
-                <span class="td-item-price">${fmtMAD(l.price * l.qty)}</span>
+                </div>`;
+            return `
+              <div class="td-item" data-order-uid="${l.uid}">
+                ${stepper}
+                <span class="td-item-name">${displayName}</span>
+                ${displayPrice}
                 ${optLine}
                 <input class="td-item-note${noteTxt ? ' has-note' : ''}" data-note-uid="${l.uid}"
                   placeholder="Note cuisine, ex. bien chaud, sans oignon" aria-label="Note cuisine, ${esc(l.name)}" />
@@ -6869,8 +6965,8 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
             return `
               <div class="td-item">
                 <span style="font-weight:700;width:32px;text-align:center;font-feature-settings:'tnum' 1;">${l.qty}×</span>
-                <span class="td-item-name">${esc(l.name)}</span>
-                <span class="td-item-price">${fmtMAD(l.price * l.qty)}</span>
+                <span class="td-item-name">${displayName}</span>
+                ${displayPrice}
                 ${optLine}
                 ${noteTxt ? `<span class="td-item-noteline">Note cuisine · ${esc(noteTxt)}</span>` : ''}
               </div>
@@ -7781,9 +7877,12 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
                <button class="step-btn step-plus" data-step="inc">+</button>
              </span>`
           : `<span class="menu-item-add">+</span>`;
+        const tag = itemHasFormula(m.id)
+          ? `<span class="menu-item-optflag">Formule</span>`
+          : (itemHasOptions(m.id) ? `<span class="menu-item-optflag">${SLIDERS_SVG}Options</span>` : '');
         return `
           <div class="menu-item ${qty > 0 ? 'is-in-cart' : ''}" data-menu-id="${esc(m.id)}" role="button" tabindex="0">
-            ${itemHasOptions(m.id) ? `<span class="menu-item-optflag">${SLIDERS_SVG}Options</span>` : ''}
+            ${tag}
             <span class="menu-item-cat">${esc(catLabels[m.cat] || '')}</span>
             <span class="menu-item-name">${esc(m.name)}</span>
             <span class="menu-item-foot">
@@ -7824,7 +7923,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
          until their own canonical ticket returns from /api/order/queue. */
       const line = tableOrders[tableId].find(l => l.sourceLocal === true && l.id === itemId && !(l.note || '').trim());
       if (line) line.qty++;
-      else tableOrders[tableId].push({ uid: newLineUid(), id: itemId, name: item.name, price: item.price, qty: 1, sentQty: 0, note: '', sourceLocal: true });
+      else tableOrders[tableId].push({ uid: newLineUid(), id: itemId, name: item.name, price: item.price, basePrice: item.price, qty: 1, sentQty: 0, note: '', sourceLocal: true });
       markDirty(tableId);
       const card = document.querySelector(`.menu-item[data-menu-id="${itemId}"]`);
       if (card) { card.classList.remove('pop'); void card.offsetWidth; card.classList.add('pop'); }
@@ -7924,9 +8023,345 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       renderOptionsSheet(false);
     });
 
+    /* ---------- Formule / Menus Composés Sheet ---------- */
+    let fmlDraft = null;
+
+    function itemHasFormula(itemId) {
+      const it = menuItems.find(m => m.id === itemId);
+      return !!(it && it.formula && Array.isArray(it.formula.slots) && it.formula.slots.length);
+    }
+
+    function isFmlSlotSatisfied(slot, selSet) {
+      const count = selSet ? selSet.size : 0;
+      const min = slot.min != null ? slot.min : 1;
+      return count >= min;
+    }
+
+    function isFmlUnitSatisfied(slots, uSlots) {
+      return slots.every(s => isFmlSlotSatisfied(s, uSlots[s.id]));
+    }
+
+    function isFmlDraftSatisfied() {
+      if (!fmlDraft) return false;
+      const item = menuItems.find(m => m.id === fmlDraft.itemId);
+      if (!item || !item.formula || !item.formula.slots) return false;
+      const slots = item.formula.slots;
+      return fmlDraft.units.every(uSlots => isFmlUnitSatisfied(slots, uSlots));
+    }
+
+    function computeFmlUnitExtra(slots, uSlots) {
+      let extra = 0;
+      slots.forEach(s => {
+        const sel = uSlots[s.id];
+        if (sel) {
+          (s.choices || []).forEach(ch => {
+            if (sel.has(ch.itemId)) extra += (Number(ch.extra) || 0);
+          });
+        }
+      });
+      return extra;
+    }
+
+    function openFormulaSheet(itemId, qty = 1) {
+      const item = menuItems.find(m => m.id === itemId);
+      if (!item || !itemHasFormula(itemId)) return;
+      const slots = item.formula.slots;
+      const count = Math.max(1, qty || 1);
+      const units = [];
+
+      for (let u = 0; u < count; u++) {
+        const uSlots = {};
+        slots.forEach(s => {
+          const sel = new Set();
+          if (s.choices && s.choices.length === 1) {
+            const ch = s.choices[0];
+            const chItem = menuItems.find(x => x.id === ch.itemId);
+            if (chItem && chItem.avail !== false) {
+              sel.add(ch.itemId);
+            }
+          }
+          uSlots[s.id] = sel;
+        });
+        units.push(uSlots);
+      }
+
+      const firstIncomplete = slots.find(s => (units[0][s.id] ? units[0][s.id].size : 0) < (s.min != null ? s.min : 1));
+
+      fmlDraft = {
+        itemId,
+        tableId: menuContextId,
+        totalUnits: count,
+        activeUnit: 0,
+        activeSlotId: firstIncomplete ? firstIncomplete.id : (slots[0] && slots[0].id),
+        collapsedSlots: {},
+        units,
+      };
+
+      slots.forEach(s => {
+        if (s.choices && s.choices.length === 1) {
+          fmlDraft.collapsedSlots[s.id] = true;
+        }
+      });
+
+      renderFormulaSheet(false);
+      $('#formula-modal').classList.add('is-open');
+    }
+
+    function closeFormulaSheet() {
+      $('#formula-modal').classList.remove('is-open');
+      fmlDraft = null;
+    }
+
+    function renderFormulaSheet(showMissing) {
+      if (!fmlDraft) return;
+      const item = menuItems.find(m => m.id === fmlDraft.itemId);
+      if (!item || !item.formula) return;
+      const slots = item.formula.slots;
+      const curUnitSlots = fmlDraft.units[fmlDraft.activeUnit] || {};
+
+      let unitsBarHTML = '';
+      if (fmlDraft.totalUnits > 1) {
+        const tabsHTML = Array.from({ length: fmlDraft.totalUnits }, (_, i) => {
+          const satisfied = isFmlUnitSatisfied(slots, fmlDraft.units[i]);
+          return `<button type="button" class="fml-unit-tab ${i === fmlDraft.activeUnit ? 'active' : ''}" data-fml-unit="${i}">Portion ${i + 1}${satisfied ? ' ✓' : ''}</button>`;
+        }).join('');
+        unitsBarHTML = `
+          <div class="fml-units-bar">
+            <div class="fml-units-tabs">${tabsHTML}</div>
+            ${fmlDraft.activeUnit === 0 ? `<button type="button" class="fml-same-btn" data-fml-same="1">Même chose pour tous</button>` : ''}
+          </div>`;
+      }
+
+      const slotsHTML = slots.map((s, idx) => {
+        const sel = curUnitSlots[s.id] || new Set();
+        const min = s.min != null ? s.min : 1;
+        const max = s.max != null ? s.max : 1;
+        const satisfied = sel.size >= min;
+        const unmet = showMissing && !satisfied;
+        const isSingle = s.choices && s.choices.length === 1;
+        const isCollapsed = fmlDraft.collapsedSlots[s.id] && isSingle && sel.size === 1;
+
+        if (isCollapsed) {
+          const ch = s.choices[0];
+          const chItem = menuItems.find(x => x.id === ch.itemId);
+          const chName = chItem ? chItem.name : ch.itemId;
+          const extraTxt = ch.extra ? `+${ch.extra} MAD` : 'inclus';
+          return `
+            <div class="fml-slot">
+              <div class="fml-slot-head">
+                <span class="fml-slot-title">${esc(s.label || `Étape ${idx + 1}`)}</span>
+                <span class="fml-slot-badge req">Sélectionné</span>
+              </div>
+              <div class="fml-slot-collapsed" data-fml-expand="${s.id}">
+                <span>${esc(chName)} · ${esc(extraTxt)}</span>
+                <span style="font-size:11px;text-decoration:underline;">Modifier</span>
+              </div>
+            </div>`;
+        }
+
+        const chips = (s.choices || []).map(ch => {
+          const chItem = menuItems.find(x => x.id === ch.itemId);
+          const chName = chItem ? chItem.name : ch.itemId;
+          const avail = chItem ? (chItem.avail !== false) : true;
+          const on = sel.has(ch.itemId);
+          const extraTxt = ch.extra ? `+${ch.extra} MAD` : 'inclus';
+          return `
+            <button type="button" class="fml-chip ${on ? 'on' : ''} ${!avail ? 'disabled' : ''}"
+              data-fml-slot="${s.id}" data-fml-item="${ch.itemId}" ${!avail ? 'disabled' : ''}>
+              <span>${esc(chName)}</span>
+              <span class="fml-extra">${esc(extraTxt)}</span>
+            </button>`;
+        }).join('');
+
+        const badgeText = min === max ? (min === 1 ? '1 choix' : `${min} choix`) : `${min} à ${max} choix`;
+
+        return `
+          <div class="fml-slot ${s.id === fmlDraft.activeSlotId ? 'active' : ''} ${unmet ? 'missing' : ''}" data-fml-slot-box="${s.id}">
+            <div class="fml-slot-head">
+              <span class="fml-slot-title">${esc(s.label || `Étape ${idx + 1}`)}</span>
+              <span class="fml-slot-badge ${satisfied ? 'req' : ''}">${esc(badgeText)}${satisfied ? ' · ✓' : ''}</span>
+            </div>
+            <div class="fml-chips">${chips}</div>
+          </div>`;
+      }).join('');
+
+      let grandTotal = 0;
+      fmlDraft.units.forEach(uSlots => {
+        grandTotal += item.price + computeFmlUnitExtra(slots, uSlots);
+      });
+
+      const allSatisfied = isFmlDraftSatisfied();
+
+      $('#formula-modal-body').innerHTML = `
+        <h3 class="modal-title">${esc(item.name)}</h3>
+        <p class="modal-subtle">${item.price} MAD · Choisissez les composants de la formule</p>
+        ${unitsBarHTML}
+        ${slotsHTML}
+        <div class="fml-foot">
+          <button type="button" class="td-btn ghost" id="fml-cancel">Annuler</button>
+          <button type="button" class="td-btn primary" id="fml-confirm" ${allSatisfied ? '' : 'disabled'}>
+            Ajouter · ${fmtMAD(grandTotal)}
+          </button>
+        </div>`;
+    }
+
+    function confirmFormula() {
+      if (!fmlDraft || !menuContextId) return;
+      if (!isFmlDraftSatisfied()) {
+        renderFormulaSheet(true);
+        toast('Complétez tous les choix obligatoires');
+        return;
+      }
+      const item = menuItems.find(m => m.id === fmlDraft.itemId);
+      if (!item || !item.formula) return;
+      const slots = item.formula.slots;
+      const tableId = menuContextId;
+
+      if (!tableOrders[tableId]) tableOrders[tableId] = [];
+
+      fmlDraft.units.forEach((uSlots, uIdx) => {
+        const unitExtra = computeFmlUnitExtra(slots, uSlots);
+        const rawUid = 'fml-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
+        const formulaUid = fmlDraft.totalUnits > 1 ? `${rawUid}-${uIdx + 1}` : rawUid;
+
+        // 1. Parent formula line
+        const parentLine = {
+          uid: newLineUid(),
+          id: item.id,
+          name: item.name,
+          kind: 'formula',
+          price: item.price + unitExtra,
+          basePrice: item.price,
+          unitPrice: item.price + unitExtra,
+          qty: 1,
+          sentQty: 0,
+          formulaUid,
+          formulaName: item.name,
+          note: '',
+          sourceLocal: true,
+        };
+        tableOrders[tableId].push(parentLine);
+
+        // 2. Children lines (one per chosen item)
+        slots.forEach(s => {
+          const sel = uSlots[s.id];
+          if (!sel) return;
+          sel.forEach(chosenId => {
+            const chItem = menuItems.find(x => x.id === chosenId);
+            const chName = chItem ? chItem.name : chosenId;
+            const chStation = (chItem && chItem.station) || '';
+            const childLine = {
+              uid: newLineUid(),
+              id: chosenId,
+              name: chName,
+              kind: 'formula-part',
+              price: 0,
+              basePrice: 0,
+              unitPrice: 0,
+              qty: 1,
+              sentQty: 0,
+              station: chStation,
+              formulaUid,
+              formulaName: item.name,
+              slotLabel: s.label || '',
+              lineId: `${formulaUid}-${s.id}`,
+              note: '',
+              sourceLocal: true,
+            };
+            tableOrders[tableId].push(childLine);
+          });
+        });
+      });
+
+      markDirty(tableId);
+      renderMenu();
+      renderCartBar();
+      toast(`${item.name} ajouté`);
+      closeFormulaSheet();
+    }
+
+    $('#formula-modal').addEventListener('click', (e) => {
+      if (e.target === $('#formula-modal') || e.target.closest('#fml-cancel')) {
+        closeFormulaSheet();
+        return;
+      }
+      if (e.target.closest('#fml-confirm')) {
+        confirmFormula();
+        return;
+      }
+      const unitBtn = e.target.closest('[data-fml-unit]');
+      if (unitBtn && fmlDraft) {
+        fmlDraft.activeUnit = Number(unitBtn.dataset.fmlUnit);
+        renderFormulaSheet(false);
+        return;
+      }
+      const sameBtn = e.target.closest('[data-fml-same]');
+      if (sameBtn && fmlDraft) {
+        const u0 = fmlDraft.units[0];
+        for (let i = 1; i < fmlDraft.totalUnits; i++) {
+          fmlDraft.units[i] = {};
+          Object.keys(u0).forEach(k => {
+            fmlDraft.units[i][k] = new Set(u0[k]);
+          });
+        }
+        renderFormulaSheet(false);
+        toast('Choix dupliqués pour toutes les portions');
+        return;
+      }
+      const expandBtn = e.target.closest('[data-fml-expand]');
+      if (expandBtn && fmlDraft) {
+        const sid = expandBtn.dataset.fmlExpand;
+        fmlDraft.collapsedSlots[sid] = false;
+        fmlDraft.activeSlotId = sid;
+        renderFormulaSheet(false);
+        return;
+      }
+      const chip = e.target.closest('.fml-chip');
+      if (chip && fmlDraft) {
+        if (chip.classList.contains('disabled')) return;
+        const sid = chip.dataset.fmlSlot;
+        const itemId = chip.dataset.fmlItem;
+        const item = menuItems.find(m => m.id === fmlDraft.itemId);
+        if (!item || !item.formula) return;
+        const slot = item.formula.slots.find(s => s.id === sid);
+        if (!slot) return;
+
+        const curUnitSlots = fmlDraft.units[fmlDraft.activeUnit];
+        if (!curUnitSlots[sid]) curUnitSlots[sid] = new Set();
+        const sel = curUnitSlots[sid];
+        const max = slot.max != null ? slot.max : 1;
+
+        if (max === 1) {
+          if (sel.has(itemId)) {
+            if ((slot.min != null ? slot.min : 1) === 0) sel.delete(itemId);
+          } else {
+            sel.clear();
+            sel.add(itemId);
+          }
+        } else {
+          if (sel.has(itemId)) {
+            sel.delete(itemId);
+          } else {
+            if (sel.size < max) sel.add(itemId);
+          }
+        }
+
+        const satisfied = isFmlSlotSatisfied(slot, sel);
+        if (satisfied) {
+          const nextIncomplete = item.formula.slots.find(s => !isFmlSlotSatisfied(s, curUnitSlots[s.id]));
+          if (nextIncomplete) {
+            fmlDraft.activeSlotId = nextIncomplete.id;
+          }
+        }
+
+        renderFormulaSheet(false);
+      }
+    });
+
     /* Menu-card +/- — + adds a unit, - removes from the plain line (else the last). */
     function changeMenuQty(tableId, itemId, delta) {
       if (delta > 0) {
+        if (itemHasFormula(itemId)) { openFormulaSheet(itemId); return; }
         if (itemHasOptions(itemId)) { openOptionsSheet(itemId); return; }
         addToTableOrder(tableId, itemId); return;
       }
@@ -7952,7 +8387,8 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       if (card) {
         if (!menuContextId) { toast('Sélectionnez une table d\'abord'); return; }
         const id = card.dataset.menuId;
-        if (itemHasOptions(id)) openOptionsSheet(id);
+        if (itemHasFormula(id)) openFormulaSheet(id);
+        else if (itemHasOptions(id)) openOptionsSheet(id);
         else addToTableOrder(menuContextId, id);
         return;
       }

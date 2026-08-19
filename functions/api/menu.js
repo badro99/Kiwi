@@ -118,7 +118,7 @@ function sanitizeFormula(raw) {
       extra: Math.max(0, Math.min(1e5, Number(c && c.extra) || 0)),
     })).filter((c) => c.itemId);
     return { id, label, min, max, choices };
-  }).filter((s) => s && s.id);
+  }).filter((s) => s && s.id && s.choices.length);
   if (!slots.length) return null;
   return { slots };
 }
