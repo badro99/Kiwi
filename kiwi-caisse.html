@@ -6563,7 +6563,7 @@
       // Live order built by cashier — convert to {qty,name,total} format
       if (tableId in tableOrders) {
         return tableOrders[tableId].map(l => ({ id: l.id, qty: l.qty, name: lineLabel(l),
-          total: l.price * l.qty, note: l.note || '' }));
+          total: l.price * l.qty, note: l.note || '', kind: l.kind, formulaUid: l.formulaUid, formulaName: l.formulaName, slotLabel: l.slotLabel }));
       }
       /* Chez un vrai commerçant on s'arrête ici. Ce qui suit FABRIQUE des lignes
          — un couscous royal par couvert — et c'est appelé sans condition par
@@ -8910,7 +8910,7 @@
       }
       if (selectedId && tables[selectedId]) {
         return generateOrder(selectedId, tables[selectedId])
-          .map(l => ({ itemId: l.id || '', name: l.name, qty: l.qty, total: l.total, cat: lineCat(l.id, l.name) }));
+          .map(l => ({ itemId: l.id || '', name: l.name, qty: l.qty, total: l.total, cat: lineCat(l.id, l.name), kind: l.kind, formulaUid: l.formulaUid }));
       }
       return [];
     }
