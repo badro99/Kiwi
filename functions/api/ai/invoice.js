@@ -70,13 +70,26 @@ export function validateInvoiceData(raw) {
     const unitCost = Math.max(0, Math.round((Number(l.unitCost != null ? l.unitCost : l.price) || 0) * 100) / 100);
     const total = Math.max(0, Math.round((Number(l.total != null ? l.total : (qty * unitCost)) || 0) * 100) / 100);
 
+    /* Une remise de ligne vit dans le TOTAL, pas dans le prix unitaire : « 2 ×
+     * 780, remise 5 %, total 1 482 ». Comparer 780 au prix d'achat de référence
+     * signale une hausse que le commerçant n'a pas payée, et la confirmer
+     * inscrirait 780 comme nouveau coût. Le prix retenu est donc le NET payé
+     * (total ÷ qté) dès que le total s'écarte du brut de plus de 0,5 % ; le
+     * brut reste disponible dans grossUnitCost. Un total ABSENT (qty × unitCost
+     * recalculé ci-dessus) ne déclenche rien : net = brut. */
+    let netUnitCost = unitCost;
+    if (qty > 0 && total > 0 && unitCost > 0) {
+      const gross = qty * unitCost;
+      if (Math.abs(gross - total) / gross > 0.005) netUnitCost = Math.round((total / qty) * 100) / 100;
+    }
     const line = {
       label,
       qty,
       unit,
-      unitCost,
+      unitCost: netUnitCost,
       total,
     };
+    if (netUnitCost !== unitCost) line.grossUnitCost = unitCost;
     if (l.ref) line.ref = String(l.ref).slice(0, 60).trim();
     if (l.ean) line.ean = String(l.ean).slice(0, 30).trim();
 
@@ -96,6 +109,32 @@ export function validateInvoiceData(raw) {
     lines,
     total,
   };
+}
+
+/* Ce que Workers AI renvoie n'a pas UNE forme. Qwen3 sur l'API REST renvoie
+ * `response` déjà PARSÉ (un objet) quand le modèle a produit du JSON ; d'autres
+ * chemins renvoient une chaîne, avec ou sans clôture ```json ; la forme
+ * OpenAI-compatible met le texte dans choices[0].message.content. Une seule
+ * de ces formes traitée = toutes les factures en « unparsed » sur les autres,
+ * et le commerçant retombe en saisie manuelle sans savoir pourquoi.
+ * (Vérifié le 2026-08-19 sur une vraie facture : `response` est un objet.) */
+export function parseModelResponse(aiRes) {
+  if (!aiRes) return null;
+  let raw = aiRes;
+  if (typeof aiRes === 'object') {
+    if (aiRes.response != null && aiRes.response !== '') raw = aiRes.response;
+    else if (Array.isArray(aiRes.choices) && aiRes.choices[0]) {
+      const c = aiRes.choices[0];
+      raw = (c.message && c.message.content) || c.text || '';
+    } else raw = '';
+  }
+  if (raw && typeof raw === 'object') return raw;
+  let str = String(raw || '').trim();
+  if (!str) return null;
+  if (str.startsWith('```')) str = str.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+  const a = str.indexOf('{'), b = str.lastIndexOf('}');
+  if (a >= 0 && b > a) str = str.slice(a, b + 1);
+  try { return JSON.parse(str); } catch (_) { return null; }
 }
 
 export async function onRequestPost(context) {
@@ -162,25 +201,9 @@ Règles :
     return json({ ok: false, error: 'model' }, 502);
   }
 
-  const responseText = aiRes?.response || (typeof aiRes === 'string' ? aiRes : '');
-  if (!responseText) {
+  const parsed = parseModelResponse(aiRes);
+  if (!parsed) {
     return json({ ok: false, reason: 'unparsed' });
-  }
-
-  let parsed = null;
-  try {
-    let jsonStr = responseText.trim();
-    if (jsonStr.startsWith('```')) {
-      jsonStr = jsonStr.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
-    }
-    const firstBrace = jsonStr.indexOf('{');
-    const lastBrace = jsonStr.lastIndexOf('}');
-    if (firstBrace >= 0 && lastBrace > firstBrace) {
-      jsonStr = jsonStr.slice(firstBrace, lastBrace + 1);
-    }
-    parsed = JSON.parse(jsonStr);
-  } catch (_) {
-    parsed = null;
   }
 
   const validated = validateInvoiceData(parsed);

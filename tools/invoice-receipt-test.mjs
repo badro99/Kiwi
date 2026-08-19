@@ -286,8 +286,33 @@ ok(fs.existsSync(pdfMinPath) && fs.statSync(pdfMinPath).size > 100000, 'pdf.min.
 ok(fs.existsSync(pdfWorkerPath) && fs.statSync(pdfWorkerPath).size > 500000, 'pdf.worker.min.js exists and is > 500KB');
 ok(fs.existsSync(pdfLicensePath), 'pdfjs LICENSE file exists');
 
+// ── 4b. Réponse modèle : TROIS formes, et le net de remise ─────────────────
+// Vérifié sur une vraie facture le 2026-08-19 : Qwen3 via Workers AI renvoie
+// `response` déjà parsé (objet). La première version faisait `.trim()` dessus
+// → « unparsed » sur toutes les factures. Le parseur est extrait du fichier
+// serveur et exécuté tel quel.
+{
+  const pmMatch = invoiceServerSource.match(/export function parseModelResponse\([\s\S]*?\n\}/);
+  ok(!!pmMatch, 'parseModelResponse exported in functions/api/ai/invoice.js');
+  const parseModelResponse = new Function(pmMatch[0].replace(/^export /, '') + '\nreturn parseModelResponse;')();
+  ok(JSON.stringify(parseModelResponse({ response: { a: 1 } })) === '{"a":1}', 'model response as OBJECT is accepted as-is');
+  ok(JSON.stringify(parseModelResponse({ response: '```json\n{"a":2}\n```' })) === '{"a":2}', 'model response as fenced STRING is parsed');
+  ok(JSON.stringify(parseModelResponse({ choices: [{ message: { content: 'x {"a":3} y' } }] })) === '{"a":3}', 'OpenAI-style choices[0].message.content is parsed');
+  ok(parseModelResponse({ response: 'pas du json' }) === null && parseModelResponse(null) === null, 'non-JSON and empty → null (unparsed)');
+
+  // Remise de ligne : 2 × 780 HT, remise 5 %, total 1 482 → le prix retenu est le net 741.
+  const v = validateInvoiceData({ lines: [
+    { label: 'Service 18 pièces', qty: 2, unit: 'pièce', unitCost: 780, total: 1482 },
+    { label: 'Assiette', qty: 24, unit: 'pièce', unitCost: 48, total: 1152 },
+    { label: 'Sans total', qty: 3, unit: 'pièce', unitCost: 10 },
+  ] });
+  ok(v.lines[0].unitCost === 741 && v.lines[0].grossUnitCost === 780, 'line discount → unitCost is the NET paid (741), gross kept (780)');
+  ok(v.lines[1].unitCost === 48 && v.lines[1].grossUnitCost == null, 'no discount → unitCost unchanged, no gross field');
+  ok(v.lines[2].unitCost === 10 && v.lines[2].total === 30 && v.lines[2].grossUnitCost == null, 'missing total → recomputed, net = gross');
+}
+
 // ── 5. Hard Count Pinning ───────────────────────────────────────────────────
-const EXPECTED_COUNT = 56;
+const EXPECTED_COUNT = 64;
 ok(passed + 1 === EXPECTED_COUNT, `exact control count verified (${passed + 1}/${EXPECTED_COUNT})`);
 
 console.log(`\n✓ ${passed} controls green (${failures.length} failure(s))`);
