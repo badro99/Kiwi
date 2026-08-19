@@ -188,10 +188,9 @@ if (!cleanFormulaFn) {
 
   const cleaned = cleanFormulaFn(formulaWithGhost, existingItems);
   ok(cleaned && cleaned.slots, 'cleaned formula returned');
+  ok(cleaned.slots.length === 1, 'slot with 0 surviving choices was cleanly dropped');
   ok(cleaned.slots[0].choices.length === 1, 'ghost choice dropped from slot 1');
   ok(cleaned.slots[0].choices[0].itemId === 'm-001', 'valid choice preserved');
-  ok(cleaned.slots[1].choices.length === 0, 'slot 2 choice list emptied of deleted item');
-  ok(cleaned.slots[1].min <= cleaned.slots[1].max, 'slot 2 min/max normalized');
 }
 
 // ── 3. functions/api/order/queue.js: cleanLines & D1 persistence ─────────────
@@ -616,12 +615,149 @@ if (!confirmVoidLineMatch || !changeOrderQtyMatch) {
   ok(postVoidOrders.length === 1 && postVoidOrders[0].uid === 'u-norm-sent', 'confirmVoidLine cascaded deletion of parent and all formula-part lines');
 }
 
-// ── 8. Hard Count Pinning ───────────────────────────────────────────────────
-const EXPECTED_COUNT = 77;
+// ── 8. Backoffice & Restaurant Menu Workspace Formule Builder ───────────────
+const rmwSource = fs.readFileSync(path.join(ROOT, 'assets/restaurant-menu-workspace.js'), 'utf8');
+
+// A. Test restaurant-menu-workspace.js card() formula badge
+const rmwCardMatch = rmwSource.match(/function card\(x\)\{[\s\S]*?\n  \}/);
+if (!rmwCardMatch) {
+  ok(false, 'card function missing in restaurant-menu-workspace.js');
+} else {
+  const rmwCardCode = `
+    const cat = () => ({ name: 'Formules' });
+    const S = () => ({ kitchenId: () => 'k1' });
+    const venue = () => 'v1';
+    const station = () => ({ name: 'Cuisine' });
+    const esc = (s) => String(s == null ? '' : s);
+    const cash = (n) => n + ' MAD';
+    const ic = () => '';
+    ${rmwCardMatch[0]}
+    return card;
+  `;
+  const rmwCardFn = new Function(rmwCardCode)();
+
+  const formulaItem = {
+    id: 'it-fml-1',
+    name: 'Formule Midi Express',
+    price: 65,
+    catId: 'c1',
+    formula: {
+      slots: [
+        { id: 'sl_plat', label: 'Le plat', min: 1, max: 1, choices: [{ itemId: 'it-p1', extra: 0 }] },
+        { id: 'sl_boisson', label: 'La boisson', min: 1, max: 1, choices: [{ itemId: 'it-b1', extra: 5 }] }
+      ]
+    }
+  };
+  const standardItem = {
+    id: 'it-std-1',
+    name: 'Salade César',
+    price: 45,
+    catId: 'c1',
+    opts: ['g1']
+  };
+
+  const formulaCardHtml = rmwCardFn(formulaItem);
+  const standardCardHtml = rmwCardFn(standardItem);
+
+  ok(formulaCardHtml.includes('FORMULE'), 'rmw card() displays FORMULE badge on formula item');
+  ok(formulaCardHtml.includes('2 étape(s)'), 'rmw card() displays slot count on formula item');
+  ok(!standardCardHtml.includes('FORMULE'), 'rmw card() does not display FORMULE badge on regular item');
+  ok(standardCardHtml.includes('1 groupe(s) d’options'), 'rmw card() displays modifier group count on regular item');
+}
+
+// B. Test menu-catalog.js addItem, updateItem, and ghost item cascade deletion
+const nidMatch = menuCatalogSource.match(/function nid\(d, prefix\) \{[\s\S]*?\}/);
+const cleanFormulaCatalogMatch = menuCatalogSource.match(/function cleanFormula\(formula, items\) \{[\s\S]*?\n  \}/);
+const addItemMatch = menuCatalogSource.match(/function addItem\(data\) \{[\s\S]*?\n  \}/);
+const updateItemMatch = menuCatalogSource.match(/function updateItem\(id, patch\) \{[\s\S]*?\n  \}/);
+const deleteItemMatch = menuCatalogSource.match(/function deleteItem\(id\) \{[\s\S]*?\n  \}/);
+
+if (!nidMatch || !cleanFormulaCatalogMatch || !addItemMatch || !updateItemMatch || !deleteItemMatch) {
+  ok(false, 'menu-catalog functions missing for backoffice formula testing');
+} else {
+  const catalogHarnessCode = `
+    let db = {
+      cats: [{ id: 'cat-1', name: 'Plats' }],
+      items: [
+        { id: 'it-p1', name: 'Sandwich poulet', price: 40, catId: 'cat-1' },
+        { id: 'it-b1', name: 'Soda', price: 15, catId: 'cat-1' }
+      ]
+    };
+    const tr = (t) => t.fr || 'Produit';
+    const T = { subName: { fr: 'Sous-cat' } };
+    const itemById = (d, id) => d.items.find(x => x.id === id);
+    const catById = (d, id) => d.cats.find(x => x.id === id);
+    const authorizeExplicitEmpty = () => {};
+    const store = {
+      update: (fn) => {
+        db = fn(db);
+        return db;
+      }
+    };
+
+    ${nidMatch[0]}
+    ${cleanFormulaCatalogMatch[0]}
+    ${addItemMatch[0]}
+    ${updateItemMatch[0]}
+    ${deleteItemMatch[0]}
+
+    return {
+      getDb: () => db,
+      addItem,
+      updateItem,
+      deleteItem
+    };
+  `;
+  const catHarness = new Function(catalogHarnessCode)();
+
+  // Test adding formula item
+  catHarness.addItem({
+    name: 'Menu Duo',
+    price: 85,
+    formula: {
+      slots: [
+        { id: 'sl_plat', label: 'Plat principal', min: 1, max: 1, choices: [{ itemId: 'it-p1', extra: 0 }] },
+        { id: 'sl_boisson', label: 'Boisson fraîche', min: 1, max: 1, choices: [{ itemId: 'it-b1', extra: 2 }] }
+      ]
+    }
+  });
+
+  let state = catHarness.getDb();
+  const addedFormula = state.items.find(x => x.name === 'Menu Duo');
+  ok(addedFormula != null, 'addItem successfully persisted formula item');
+  ok(addedFormula.formula && addedFormula.formula.slots.length === 2, 'persisted formula item has 2 slots');
+  ok(addedFormula.formula.slots[1].choices[0].extra === 2, 'persisted formula slot carries choice extra');
+
+  // Test updating formula item
+  catHarness.updateItem(addedFormula.id, {
+    price: 90,
+    formula: {
+      slots: [
+        { id: 'sl_plat', label: 'Plat principal', min: 1, max: 2, choices: [{ itemId: 'it-p1', extra: 5 }] }
+      ]
+    }
+  });
+
+  state = catHarness.getDb();
+  const updatedFormula = state.items.find(x => x.id === addedFormula.id);
+  ok(updatedFormula.price === 90, 'updateItem updated formula price');
+  ok(updatedFormula.formula.slots.length === 1 && updatedFormula.formula.slots[0].max === 2, 'updateItem updated slots and bounds');
+  ok(updatedFormula.formula.slots[0].choices[0].extra === 5, 'updateItem updated choice extra');
+
+  // Test deleting ingredient item cascades and purges formula
+  catHarness.deleteItem('it-p1');
+  state = catHarness.getDb();
+  const cleanedFormula = state.items.find(x => x.id === addedFormula.id);
+  ok(cleanedFormula.formula == null, 'deleteItem of last ingredient cascaded cleanup: formula dropped completely');
+}
+
+// ── 9. Hard Count Pinning ───────────────────────────────────────────────────
+const EXPECTED_COUNT = 87;
 ok(passed + 1 === EXPECTED_COUNT, `exact control count verified (${passed + 1}/${EXPECTED_COUNT})`);
 
 console.log(`\n✓ ${passed} controls green (${failures.length} failure(s))`);
 if (failures.length) {
   process.exit(1);
 }
+
 

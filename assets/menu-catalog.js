@@ -247,7 +247,7 @@
         extra: Math.max(0, Math.min(1e5, Number(c.extra) || 0)),
       }));
       return { id, label, min, max, choices };
-    }).filter((s) => s && s.id);
+    }).filter((s) => s && s.id && s.choices && s.choices.length > 0);
     return slots.length ? { slots } : null;
   }
 
