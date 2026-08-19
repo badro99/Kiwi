@@ -420,9 +420,32 @@
       + '<div class="kx-rp-ticket"><div class="kx-rp-ticket-lines">' + (lines || '<div class="kx-rp-ticket-line">Détail indisponible</div>') + '</div>'
       + '<div class="kx-rp-ticket-actions"><button type="button" class="ma-btn" data-kx-rp-back>Retour</button>'
       + '<button type="button" class="ma-btn" data-kx-rp-print>Réimprimer</button>'
+      + '<button type="button" class="ma-btn" data-kx-rp-invoice>Facture PDF</button>'
       + '<button type="button" class="ma-btn kx-rp-cancel" data-kx-rp-cancel>Annuler la vente</button></div></div>';
     box.querySelector('[data-kx-rp-back]').addEventListener('click', function () { open(vertical, { noFetch: true }); });
     box.querySelector('[data-kx-rp-print]').addEventListener('click', function () { close(); reprint(vertical, entry); });
+    var invBtn = box.querySelector('[data-kx-rp-invoice]');
+    if (invBtn) {
+      invBtn.addEventListener('click', function () {
+        if (!window.KiwiInvoice || typeof window.KiwiInvoice.generate !== 'function') {
+          toast('Module facture non disponible');
+          return;
+        }
+        var m = merchant();
+        var saleObj = {
+          saleId: entry.saleId || (window.KiwiLive && window.KiwiLive.saleIdFor && window.KiwiLive.saleIdFor(entry, m)) || '',
+          id: entry.saleId || (window.KiwiLive && window.KiwiLive.saleIdFor && window.KiwiLive.saleIdFor(entry, m)) || '',
+          ref: entry.ref || '',
+          label: entry.label || '',
+          ts: entry.ts || Date.now(),
+          amount: entry.total || 0,
+          total: entry.total || 0,
+          method: entry.method || 'cash',
+          lines: entry.lines || [],
+        };
+        window.KiwiInvoice.generate(saleObj, 'pdf');
+      });
+    }
     var cancel = box.querySelector('[data-kx-rp-cancel]');
     if (!entry.saleId) {
       cancel.disabled = true;

@@ -24,6 +24,7 @@
       collected: 'encaissé', totalDocs: 'documents', all: 'Toutes', collect: 'À encaisser', paid: 'Payées',
       search: 'Rechercher client ou numéro…', no: 'Facture', customer: 'Client', issued: 'Émise le', due: 'Échéance',
       status: 'Statut', amount: 'Montant', draft: 'Brouillon', sent: 'Envoyée', paidStatus: 'Payée', overdueStatus: 'En retard',
+      sales: 'Factures de vente', salesSub: 'Factures officielles émises depuis les ventes du comptoir.',
       empty: 'Aucune facture ici', emptySub: 'Créez une facture professionnelle avec lignes, TVA, échéance et PDF A4.',
       newTitle: 'Nouvelle facture', step: 'Brouillon automatique', clientInfo: 'Client et échéance',
       clientName: 'Nom du client', contact: 'E-mail ou téléphone', issueDate: 'Date d’émission', terms: 'Conditions de paiement',
@@ -45,10 +46,13 @@
       label: 'Invoicing', title: 'Invoicing', sub: 'Create, send and track your invoices', overview: 'Overview', overviewSub: 'A clear view of billed, collected and overdue revenue.',
       create: 'New invoice', export: 'Export', outstanding: 'Outstanding', overdue: 'Overdue', paidMonth: 'Paid this month', invoices: 'Invoices', awaiting: 'invoices awaiting payment', needsFollowup: 'to follow up', collected: 'collected', totalDocs: 'documents',
       all: 'All', collect: 'Outstanding', paid: 'Paid', search: 'Search customer or number…', no: 'Invoice', customer: 'Customer', issued: 'Issued', due: 'Due', status: 'Status', amount: 'Amount', draft: 'Draft', sent: 'Sent', paidStatus: 'Paid', overdueStatus: 'Overdue',
+      sales: 'Sales Invoices', salesSub: 'Official invoices issued from store sales.',
       empty: 'No invoices here', emptySub: 'Create a professional invoice with line items, tax, payment terms and A4 PDF output.', newTitle: 'New invoice', step: 'Autosaved draft', clientInfo: 'Customer and due date', clientName: 'Customer name', contact: 'Email or phone', issueDate: 'Issue date', terms: 'Payment terms', now: 'Due on receipt', days7: 'Net 7', days15: 'Net 15', days30: 'Net 30', lines: 'Items and services', description: 'Description', qty: 'Qty', unit: 'Unit price', lineTotal: 'Total', addLine: '+ Add a line', details: 'Tax and note', tax: 'Tax rate', note: 'Customer note', notePh: 'Thank you for your business. Payment is due by the date shown.', saveDraft: 'Save draft', saveOpen: 'Create and open', subtotal: 'Subtotal', vat: 'Tax', total: 'Total', assurance1: 'Simple automatic number', assurance2: 'A4 layout ready for PDF', assurance3: 'Due-date and follow-up tracking', back: 'Back', detail: 'Invoice details', print: 'Print / PDF', whatsapp: 'Prepare WhatsApp', email: 'Prepare email', markSent: 'Mark as sent', markPaid: 'Mark as paid', delete: 'Delete draft', invoiceTo: 'Bill to', from: 'From', item: 'Item', message: 'Customer message', timeline: 'Timeline', createdOn: 'Created', sentOn: 'Marked sent', paidOn: 'Marked paid', localNote: 'Data is saved on this device. Sending and payment stay under your control.', created: 'Invoice created', saved: 'Draft saved', updated: 'Status updated', exported: 'CSV export downloaded', validation: 'Add a customer and at least one valid line.', confirmPaid: 'Confirm this invoice was paid?', confirmDelete: 'Permanently delete this draft?', printBlocked: 'Allow pop-ups to print.', noContact: 'Add an email or phone for this customer.',
     },
     ar: {
-      label: 'الفوترة', title: 'الفوترة', sub: 'أنشئ فواتيرك وأرسلها وتابعها', overview: 'نظرة عامة', overviewSub: 'متابعة واضحة للمبالغ المفوترة والمحصلة والمتأخرة.', create: 'فاتورة جديدة', export: 'تصدير', outstanding: 'قيد التحصيل', overdue: 'متأخرة', paidMonth: 'مدفوع هذا الشهر', invoices: 'الفواتير', awaiting: 'فواتير في الانتظار', needsFollowup: 'للمتابعة', collected: 'تم تحصيله', totalDocs: 'مستندات', all: 'الكل', collect: 'قيد التحصيل', paid: 'مدفوعة', search: 'ابحث عن عميل أو رقم…', no: 'الفاتورة', customer: 'العميل', issued: 'تاريخ الإصدار', due: 'الاستحقاق', status: 'الحالة', amount: 'المبلغ', draft: 'مسودة', sent: 'مرسلة', paidStatus: 'مدفوعة', overdueStatus: 'متأخرة', empty: 'لا توجد فواتير هنا', emptySub: 'أنشئ فاتورة احترافية تشمل البنود والضريبة والأجل ونسخة PDF.', newTitle: 'فاتورة جديدة', step: 'مسودة تلقائية', clientInfo: 'العميل والاستحقاق', clientName: 'اسم العميل', contact: 'البريد أو الهاتف', issueDate: 'تاريخ الإصدار', terms: 'أجل الدفع', now: 'عند الاستلام', days7: 'خلال 7 أيام', days15: 'خلال 15 يوماً', days30: 'خلال 30 يوماً', lines: 'المنتجات والخدمات', description: 'الوصف', qty: 'الكمية', unit: 'السعر', lineTotal: 'المجموع', addLine: '+ إضافة بند', details: 'الضريبة والملاحظة', tax: 'نسبة الضريبة', note: 'ملاحظة للعميل', notePh: 'شكراً لثقتكم. يرجى الدفع قبل تاريخ الاستحقاق.', saveDraft: 'حفظ المسودة', saveOpen: 'إنشاء وفتح', subtotal: 'المجموع قبل الضريبة', vat: 'الضريبة', total: 'الإجمالي', assurance1: 'رقم بسيط وتلقائي', assurance2: 'تصميم A4 جاهز لـ PDF', assurance3: 'متابعة الاستحقاق والتذكير', back: 'رجوع', detail: 'تفاصيل الفاتورة', print: 'طباعة / PDF', whatsapp: 'تحضير واتساب', email: 'تحضير البريد', markSent: 'تحديد كمرسلة', markPaid: 'تحديد كمدفوعة', delete: 'حذف المسودة', invoiceTo: 'فاتورة إلى', from: 'صادرة عن', item: 'البند', message: 'رسالة للعميل', timeline: 'السجل', createdOn: 'أنشئت', sentOn: 'حددت كمرسلة', paidOn: 'حددت كمدفوعة', localNote: 'تُحفظ البيانات على هذا الجهاز. الإرسال والدفع تحت تحكمك.', created: 'تم إنشاء الفاتورة', saved: 'تم حفظ المسودة', updated: 'تم تحديث الحالة', exported: 'تم تنزيل ملف CSV', validation: 'أضف عميلاً وبنداً صالحاً واحداً على الأقل.', confirmPaid: 'هل تؤكد أن الفاتورة مدفوعة؟', confirmDelete: 'حذف هذه المسودة نهائياً؟', printBlocked: 'اسمح بالنوافذ المنبثقة للطباعة.', noContact: 'أضف بريداً أو هاتفاً للعميل.',
+      label: 'الفوترة', title: 'الفوترة', sub: 'أنشئ فواتيرك وأرسلها وتابعها', overview: 'نظرة عامة', overviewSub: 'متابعة واضحة للمبالغ المفوترة والمحصلة والمتأخرة.', create: 'فاتورة جديدة', export: 'تصدير', outstanding: 'قيد التحصيل', overdue: 'متأخرة', paidMonth: 'مدفوع هذا الشهر', invoices: 'الفواتير', awaiting: 'فواتير في الانتظار', needsFollowup: 'للمتابعة', collected: 'تم تحصيله', totalDocs: 'مستندات', all: 'الكل', collect: 'قيد التحصيل', paid: 'مدفوعة', search: 'ابحث عن عميل أو رقم…', no: 'الفاتورة', customer: 'العميل', issued: 'تاريخ الإصدار', due: 'الاستحقاق', status: 'الحالة', amount: 'المبلغ', draft: 'مسودة', sent: 'مرسلة', paidStatus: 'مدفوعة', overdueStatus: 'متأخرة',
+      sales: 'فواتير المبيعات', salesSub: 'فواتير رسمية صادرة عن مبيعات المحل.',
+      empty: 'لا توجد فواتير هنا', emptySub: 'أنشئ فاتورة احترافية تشمل البنود والضريبة والأجل ونسخة PDF.', newTitle: 'فاتورة جديدة', step: 'مسودة تلقائية', clientInfo: 'العميل والاستحقاق', clientName: 'اسم العميل', contact: 'البريد أو الهاتف', issueDate: 'تاريخ الإصدار', terms: 'أجل الدفع', now: 'عند الاستلام', days7: 'خلال 7 أيام', days15: 'خلال 15 يوماً', days30: 'خلال 30 يوماً', lines: 'المنتجات والخدمات', description: 'الوصف', qty: 'الكمية', unit: 'السعر', lineTotal: 'المجموع', addLine: '+ إضافة بند', details: 'الضريبة والملاحظة', tax: 'نسبة الضريبة', note: 'ملاحظة للعميل', notePh: 'شكراً لثقتكم. يرجى الدفع قبل تاريخ الاستحقاق.', saveDraft: 'حفظ المسودة', saveOpen: 'إنشاء وفتح', subtotal: 'المجموع قبل الضريبة', vat: 'الضريبة', total: 'الإجمالي', assurance1: 'رقم بسيط وتلقائي', assurance2: 'تصميم A4 جاهز لـ PDF', assurance3: 'متابعة الاستحقاق والتذكير', back: 'رجوع', detail: 'تفاصيل الفاتورة', print: 'طباعة / PDF', whatsapp: 'تحضير واتساب', email: 'تحضير البريد', markSent: 'تحديد كمرسلة', markPaid: 'تحديد كمدفوعة', delete: 'حذف المسودة', invoiceTo: 'فاتورة إلى', from: 'صادرة عن', item: 'البند', message: 'رسالة للعميل', timeline: 'السجل', createdOn: 'أنشئت', sentOn: 'حددت كمرسلة', paidOn: 'حددت كمدفوعة', localNote: 'تُحفظ البيانات على هذا الجهاز. الإرسال والدفع تحت تحكمك.', created: 'تم إنشاء الفاتورة', saved: 'تم حفظ المسودة', updated: 'تم تحديث الحالة', exported: 'تم تنزيل ملف CSV', validation: 'أضف عميلاً وبنداً صالحاً واحداً على الأقل.', confirmPaid: 'هل تؤكد أن الفاتورة مدفوعة؟', confirmDelete: 'حذف هذه المسودة نهائياً؟', printBlocked: 'اسمح بالنوافذ المنبثقة للطباعة.', noContact: 'أضف بريداً أو هاتفاً للعميل.',
     }
   };
 
@@ -164,6 +168,53 @@
     return {outstanding, late, paidMonth, waiting, lateCount};
   }
 
+  function getSaleInvoices() {
+    try {
+      const cached = window.KiwiInvoice?.getCachedInvoices?.() || {};
+      return Object.values(cached).map((doc) => {
+        const id = String(doc.number || (doc.seq ? ('F-' + doc.seq) : 'Facture'));
+        const customer = (doc.customer && doc.customer.name) || 'Client de passage';
+        const contact = (doc.customer && doc.customer.ice) ? ('ICE ' + doc.customer.ice) : 'Vente comptoir';
+        const issueDate = doc.issuedTs ? iso(doc.issuedTs) : today();
+        const total = (doc.totals && Number(doc.totals.ttc)) || 0;
+        return {
+          id,
+          customer,
+          contact,
+          issueDate,
+          dueDate: issueDate,
+          status: 'paid',
+          total,
+          isSaleInvoice: true,
+          rawDoc: doc,
+        };
+      });
+    } catch (_) { return []; }
+  }
+
+  function syncServerInvoices() {
+    const m = window.KiwiLive?.merchant?.() || window.KiwiVenue?.getVenue?.() || localStorage.getItem('kiwiLiveMerchant') || '';
+    if (!m || typeof fetch !== 'function') return;
+    fetch('/api/invoice?merchant=' + encodeURIComponent(m), { credentials: 'same-origin' })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data && Array.isArray(data.invoices)) {
+          const cache = window.KiwiInvoice?.getCachedInvoices?.() || {};
+          data.invoices.forEach(inv => {
+            if (inv && inv.saleId && inv.snapshot) {
+              cache[inv.saleId] = inv.snapshot;
+              cache[inv.saleId].number = inv.number;
+              cache[inv.saleId].seq = inv.seq;
+              if (inv.customer) cache[inv.saleId].customer = inv.customer;
+            }
+          });
+          try { localStorage.setItem('kiwi:sale_invoices:v1', JSON.stringify(cache)); } catch (_) {}
+          if (overlay && filter === 'sales') renderList();
+        }
+      })
+      .catch(() => {});
+  }
+
   function statusHtml(status) {
     const t = T();
     return `<span class="inv-status ${status}">${esc({draft:t.draft,sent:t.sent,paid:t.paidStatus,overdue:t.overdueStatus}[status])}</span>`;
@@ -171,24 +222,38 @@
 
   function renderList() {
     const t = T(), s = stats();
-    const rows = invoices.slice().sort((a,b) => Number(b.id)-Number(a.id)).filter(inv => {
-      const status = effectiveStatus(inv);
-      const statusMatch = filter === 'all' || filter === 'paid' && status === 'paid' || filter === 'overdue' && status === 'overdue' || filter === 'collect' && (status === 'sent' || status === 'overdue');
+    const saleInvs = getSaleInvoices();
+    let rows = [];
+
+    if (filter === 'sales') {
       const q = query.trim().toLowerCase();
-      return statusMatch && (!q || String(inv.id).includes(q) || String(inv.customer).toLowerCase().includes(q));
-    });
+      rows = saleInvs.slice().reverse().filter(inv => {
+        return !q || String(inv.id).toLowerCase().includes(q) || String(inv.customer).toLowerCase().includes(q);
+      });
+    } else {
+      rows = invoices.slice().sort((a,b) => Number(b.id)-Number(a.id)).filter(inv => {
+        const status = effectiveStatus(inv);
+        const statusMatch = filter === 'all' || filter === 'paid' && status === 'paid' || filter === 'overdue' && status === 'overdue' || filter === 'collect' && (status === 'sent' || status === 'overdue');
+        const q = query.trim().toLowerCase();
+        return statusMatch && (!q || String(inv.id).includes(q) || String(inv.customer).toLowerCase().includes(q));
+      });
+    }
+
     const table = rows.length ? `<div class="inv-table-wrap"><table class="inv-table"><thead><tr><th>${esc(t.no)}</th><th>${esc(t.customer)}</th><th>${esc(t.issued)}</th><th>${esc(t.due)}</th><th>${esc(t.status)}</th><th>${esc(t.amount)}</th></tr></thead><tbody>${rows.map(inv => {
+      if (inv.isSaleInvoice) {
+        return `<tr data-inv-sale-open="${esc(inv.id)}" tabindex="0"><td><span class="inv-no">${esc(inv.id)}</span></td><td><span class="inv-customer">${esc(inv.customer)}</span><span class="inv-customer-sub">${esc(inv.contact || '—')}</span></td><td>${esc(fmtDate(inv.issueDate))}</td><td>${esc(fmtDate(inv.dueDate))}</td><td>${statusHtml('paid')}</td><td class="inv-money">${money(inv.total)} MAD</td></tr>`;
+      }
       const status = effectiveStatus(inv);
       return `<tr data-inv-open="${inv.id}" tabindex="0"><td><span class="inv-no">#${inv.id}</span></td><td><span class="inv-customer">${esc(inv.customer)}</span><span class="inv-customer-sub">${esc(inv.contact || '—')}</span></td><td>${esc(fmtDate(inv.issueDate))}</td><td>${esc(fmtDate(inv.dueDate))}</td><td>${statusHtml(status)}</td><td class="inv-money">${money(invoiceTotal(inv).total)} MAD</td></tr>`;
-    }).join('')}</tbody></table></div>` : `<div class="inv-empty"><div class="inv-empty-mark">${ICON.invoice}</div><h4>${esc(t.empty)}</h4><p>${esc(t.emptySub)}</p><button class="inv-btn primary" type="button" data-inv-new>${ICON.plus}${esc(t.create)}</button></div>`;
+    }).join('')}</tbody></table></div>` : `<div class="inv-empty"><div class="inv-empty-mark">${ICON.invoice}</div><h4>${esc(filter === 'sales' ? (t.salesSub || t.empty) : t.empty)}</h4><p>${esc(filter === 'sales' ? '' : t.emptySub)}</p>${filter === 'sales' ? '' : `<button class="inv-btn primary" type="button" data-inv-new>${ICON.plus}${esc(t.create)}</button>`}</div>`;
     overlay.querySelector('[data-inv-list]').innerHTML = `<div class="inv-toolbar"><div class="inv-toolbar-copy"><h3>${esc(t.overview)}</h3><p>${esc(t.overviewSub)}</p></div><div class="inv-toolbar-actions"><button class="inv-btn" type="button" data-inv-export>${ICON.export}${esc(t.export)}</button><button class="inv-btn primary" type="button" data-inv-new>${ICON.plus}${esc(t.create)}</button></div></div>
       <div class="inv-stats">
         <article class="inv-stat"><div class="inv-stat-label">${esc(t.outstanding)}</div><div class="inv-stat-value">${money(s.outstanding)} <small>MAD</small></div><div class="inv-stat-note">${s.waiting} ${esc(t.awaiting)}</div></article>
         <article class="inv-stat alert"><div class="inv-stat-label">${esc(t.overdue)}</div><div class="inv-stat-value">${money(s.late)} <small>MAD</small></div><div class="inv-stat-note">${s.lateCount} ${esc(t.needsFollowup)}</div></article>
         <article class="inv-stat"><div class="inv-stat-label">${esc(t.paidMonth)}</div><div class="inv-stat-value">${money(s.paidMonth)} <small>MAD</small></div><div class="inv-stat-note">${esc(t.collected)}</div></article>
-        <article class="inv-stat"><div class="inv-stat-label">${esc(t.invoices)}</div><div class="inv-stat-value">${invoices.length}</div><div class="inv-stat-note">${esc(t.totalDocs)}</div></article>
+        <article class="inv-stat"><div class="inv-stat-label">${esc(t.invoices)}</div><div class="inv-stat-value">${invoices.length + saleInvs.length}</div><div class="inv-stat-note">${esc(t.totalDocs)}</div></article>
       </div>
-      <section class="inv-register"><div class="inv-register-head"><div class="inv-filters">${[['all',t.all],['collect',t.collect],['overdue',t.overdue],['paid',t.paid]].map(([key,label]) => `<button class="inv-filter${filter===key?' on':''}" type="button" data-inv-filter="${key}">${esc(label)}</button>`).join('')}</div><input class="inv-search" type="search" value="${esc(query)}" data-inv-search placeholder="${esc(t.search)}" aria-label="${esc(t.search)}"></div>${table}</section>`;
+      <section class="inv-register"><div class="inv-register-head"><div class="inv-filters">${[['all',t.all],['sales',t.sales],['collect',t.collect],['overdue',t.overdue],['paid',t.paid]].map(([key,label]) => `<button class="inv-filter${filter===key?' on':''}" type="button" data-inv-filter="${key}">${esc(label)}</button>`).join('')}</div><input class="inv-search" type="search" value="${esc(query)}" data-inv-search placeholder="${esc(t.search)}" aria-label="${esc(t.search)}"></div>${table}</section>`;
     show('list');
   }
 
@@ -311,7 +376,12 @@
 
   function exportCsv() {
     const t = T();
-    const cells = [[t.no,t.customer,t.issued,t.due,t.status,t.amount], ...invoices.map(inv => ['#'+inv.id,inv.customer,inv.issueDate,inv.dueDate,effectiveStatus(inv),invoiceTotal(inv).total.toFixed(2)])];
+    let rowsToExport = invoices.map(inv => ['#'+inv.id,inv.customer,inv.issueDate,inv.dueDate,effectiveStatus(inv),invoiceTotal(inv).total.toFixed(2)]);
+    if (filter === 'sales') {
+      const saleInvs = getSaleInvoices();
+      rowsToExport = saleInvs.map(inv => [inv.id, inv.customer, inv.issueDate, inv.dueDate, 'paid', inv.total.toFixed(2)]);
+    }
+    const cells = [[t.no,t.customer,t.issued,t.due,t.status,t.amount], ...rowsToExport];
     /* Quoting is not enough: spreadsheets still execute a quoted cell whose
        first character is = + - or @. Client names are untrusted merchant data. */
     const csvCell = (v) => {
@@ -326,13 +396,22 @@
 
   function onClick(e) {
     if (e.target === overlay) return close();
-    const target = e.target.closest('button,[data-inv-open]'); if (!target) return;
+    const target = e.target.closest('button,[data-inv-open],[data-inv-sale-open]'); if (!target) return;
     if (target.matches('[data-inv-close]')) return close();
     if (target.matches('[data-inv-new]')) return renderComposer();
     if (target.matches('[data-inv-back]')) return renderList();
     if (target.matches('[data-inv-export]')) return exportCsv();
     if (target.matches('[data-inv-filter]')) { filter=target.dataset.invFilter; return renderList(); }
     if (target.matches('[data-inv-open]')) return renderDetail(target.dataset.invOpen);
+    if (target.matches('[data-inv-sale-open]')) {
+      const num = target.dataset.invSaleOpen;
+      const saleInvs = getSaleInvoices();
+      const match = saleInvs.find(x => x.id === num);
+      if (match && match.rawDoc && window.KiwiInvoice) {
+        window.KiwiInvoice.open(match.rawDoc, 'pdf');
+      }
+      return;
+    }
     if (target.matches('[data-line-add]')) { overlay.querySelector('[data-inv-lines]').insertAdjacentHTML('beforeend',lineRow()); return updateComposer(); }
     if (target.matches('[data-line-remove]')) { const rows=overlay.querySelectorAll('.inv-line-row'); if(rows.length>1) target.closest('.inv-line-row').remove(); else target.closest('.inv-line-row').querySelectorAll('input').forEach((x,i)=>x.value=i===1?'1':''); return updateComposer(); }
     if (target.matches('[data-inv-save]')) return saveComposer(target.dataset.invSave);
@@ -348,7 +427,18 @@
   }
   function onKeydown(e) {
     if (e.key === 'Escape') return close();
-    if (e.key === 'Enter' && e.target.matches('[data-inv-open]')) return renderDetail(e.target.dataset.invOpen);
+    if (e.key === 'Enter') {
+      if (e.target.matches('[data-inv-open]')) return renderDetail(e.target.dataset.invOpen);
+      if (e.target.matches('[data-inv-sale-open]')) {
+        const num = e.target.dataset.invSaleOpen;
+        const saleInvs = getSaleInvoices();
+        const match = saleInvs.find(x => x.id === num);
+        if (match && match.rawDoc && window.KiwiInvoice) {
+          window.KiwiInvoice.open(match.rawDoc, 'pdf');
+        }
+        return;
+      }
+    }
     if (e.key !== 'Tab') return;
     const focusable = [...overlay.querySelectorAll('button:not([disabled]),input,select,textarea,[tabindex="0"]')].filter(x => !x.closest('[hidden]'));
     if (!focusable.length) return;
@@ -362,6 +452,7 @@
     priorFocus = document.activeElement;
     invoices = load(); filter='all'; query=''; currentId=null;
     shell(); renderList();
+    syncServerInvoices();
   }
   function updatePill() { document.querySelectorAll('[data-invoicing-label]').forEach(el => { el.textContent = T().label; }); }
   function install() {

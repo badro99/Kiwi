@@ -358,9 +358,17 @@ ok(pagesProSource.includes('Facture disponible après synchronisation de la vent
 // ── 5. Invoicing module delegation (assets/invoicing.js) ─────────────────────
 const invoicingSource = fs.readFileSync(path.join(ROOT, 'assets/invoicing.js'), 'utf8');
 ok(invoicingSource.includes('window.KiwiInvoice.html(doc)'), 'invoicing.js delegates printable() layout to KiwiInvoice.html');
+ok(invoicingSource.includes('getSaleInvoices()'), 'invoicing.js contains getSaleInvoices helper');
+ok(invoicingSource.includes('data-inv-sale-open'), 'invoicing.js handles data-inv-sale-open');
+ok(invoicingSource.includes("['sales',t.sales]") || invoicingSource.includes("['sales', t.sales]"), 'invoicing.js contains sales filter tab');
 
-// ── 6. Hard Count Pinning ───────────────────────────────────────────────────
-const EXPECTED_COUNT = 59;
+// ── 6. Caisse reprint invoice action (assets/pos-reprint.js) ─────────────────
+const posReprintSource = fs.readFileSync(path.join(ROOT, 'assets/pos-reprint.js'), 'utf8');
+ok(posReprintSource.includes('data-kx-rp-invoice'), 'pos-reprint.js contains data-kx-rp-invoice action button');
+ok(posReprintSource.includes('KiwiInvoice.generate'), 'pos-reprint.js invokes KiwiInvoice.generate on invoice button click');
+
+// ── 7. Hard Count Pinning ───────────────────────────────────────────────────
+const EXPECTED_COUNT = 64;
 ok(passed + 1 === EXPECTED_COUNT, `exact control count verified (${passed + 1}/${EXPECTED_COUNT})`);
 
 console.log(`\n✓ ${passed} controls green (${failures.length} failure(s))`);
