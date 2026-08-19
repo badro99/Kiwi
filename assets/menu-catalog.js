@@ -145,7 +145,7 @@
                       ar: 'أنشئ مراحل الوجبة المركبة (مثل: الخبز، المشروب، التحلية). كل اختيار يرتبط بمنتج موجود في القائمة.' },
     formulaSlots:   { fr: 'Étapes de la formule', en: 'Combo slots', ar: 'مراحل الوجبة' },
     formulaAddSlot: { fr: 'Ajouter une étape', en: 'Add a slot', ar: 'إضافة مرحلة' },
-    formulaSlotNm:  { fr: 'Nom de l\'étape (ex. La boisson)', en: 'Slot label (e.g. Drink)', ar: 'اسم المرحلة (مثل: المشروب)' },
+    formulaSlotNm:  { fr: 'Titre de l\'étape (ex. La boisson)', en: 'Step title (e.g. The beverage)', ar: 'عنوان الخطوة (مثال: المشروب)' },
     formulaMinMax:  { fr: 'Choix min / max', en: 'Min / max choices', ar: 'الحد الأدنى / الأقصى' },
     formulaMin:     { fr: 'Min', en: 'Min', ar: 'أدنى' },
     formulaMax:     { fr: 'Max', en: 'Max', ar: 'أقصى' },
@@ -155,6 +155,21 @@
     formulaExtra:   { fr: 'Supplément (+ MAD)', en: 'Extra (+ MAD)', ar: 'زيادة (+ درهم)' },
     formulaDelSlot: { fr: 'Supprimer l\'étape', en: 'Delete slot', ar: 'حذف المرحلة' },
     formulaNoSlots: { fr: 'Aucune étape définie. Cliquez sur « Ajouter une étape » pour commencer.', en: 'No slots defined yet. Click "Add a slot" to start.', ar: 'لم يتم تحديد مراحل بعد. انقر على "إضافة مرحلة" للبدء.' },
+    formulaNoItems: {
+      fr: 'Aucun produit sur la carte pour l\'instant. Créez d\'abord vos produits (ex. Café noir, Croissant), puis revenez composer la formule : les choix se sélectionnent dans la liste, jamais à la main.',
+      en: 'No items on the menu yet. Create your items first (e.g. Black coffee, Croissant), then return to build the set menu: choices are picked from the list, never typed manually.',
+      ar: 'لا توجد منتجات في القائمة حالياً. أنشئ منتجاتك أولاً (مثل: قهوة سوداء، كرواسون)، ثم عد لتكوين الوجبة: يتم اختيار الأصناف من القائمة وليس يدوياً.'
+    },
+    formulaSaveAndCreate: {
+      fr: 'Enregistrer et créer un produit',
+      en: 'Save and create an item',
+      ar: 'حفظ وإنشاء منتج'
+    },
+    formulaAllChosen: {
+      fr: 'Tous les produits de la carte sont déjà proposés dans cette étape.',
+      en: 'All menu items are already offered in this step.',
+      ar: 'جميع منتجات القائمة مقترحة بالفعل في هذه المرحلة.'
+    },
     formulaTag:     { fr: 'Formule', en: 'Combo', ar: 'وجبة مركبة' },
   };
 
@@ -1480,6 +1495,26 @@
         const availableToAdd = availableItems.filter((it) => !(slot.choices || []).some((c) => c.itemId === it.id));
         const selectOptions = availableToAdd.map((it) => `<option value="${it.id}">${esc(it.name)} (${fmt(it.price)} MAD)</option>`).join('');
 
+        let addChBarHtml = '';
+        if (availableItems.length === 0) {
+          addChBarHtml = `
+            <div class="mx-slot-empty-notice" style="background:var(--n-50,#f8f9fa);border:1px dashed var(--n-300,#d0d5dd);border-radius:6px;padding:10px 12px;margin-top:6px;font-size:12px;color:var(--n-700,#344054);">
+              <div>${esc(tr(T.formulaNoItems))}</div>
+              <button type="button" class="kb ghost sm" data-f-save-and-create style="margin-top:8px;font-size:11.5px;font-weight:600;">${esc(tr(T.formulaSaveAndCreate))}</button>
+            </div>`;
+        } else if (availableToAdd.length === 0) {
+          addChBarHtml = `
+            <div class="mx-slot-all-chosen" style="font-size:11.5px;color:var(--n-500);padding:6px 2px;">
+              ${esc(tr(T.formulaAllChosen))}
+            </div>`;
+        } else {
+          addChBarHtml = `
+            <div class="mx-slot-add-ch-bar">
+              <select data-f-slot-pick="${si}"><option value="">-- ${esc(tr(T.formulaPickIt))} --</option>${selectOptions}</select>
+              <button type="button" class="mx-slot-add-ch-btn" data-f-slot-add-ch="${si}">${esc(tr(T.formulaAddCh))}</button>
+            </div>`;
+        }
+
         return `
           <div class="mx-slot-card" data-slot-index="${si}">
             <div class="mx-slot-head">
@@ -1495,11 +1530,7 @@
               <button type="button" class="mx-slot-del-btn" data-f-slot-del="${si}" title="${esc(tr(T.formulaDelSlot))}">${TRASH}</button>
             </div>
             <div class="mx-slot-choices-list">${choicesHtml || `<div style="font-size:11.5px;color:var(--n-500);padding:2px 0;">${esc(tr(T.formulaChoices))} : aucun produit</div>`}</div>
-            ${availableToAdd.length ? `
-              <div class="mx-slot-add-ch-bar">
-                <select data-f-slot-pick="${si}"><option value="">-- ${esc(tr(T.formulaPickIt))} --</option>${selectOptions}</select>
-                <button type="button" class="mx-slot-add-ch-btn" data-f-slot-add-ch="${si}">${esc(tr(T.formulaAddCh))}</button>
-              </div>` : ''}
+            ${addChBarHtml}
           </div>`;
       }).join('');
     }
@@ -1553,6 +1584,11 @@
     });
 
     slotsContainer && slotsContainer.addEventListener('click', (e) => {
+      const saveAndCreateBtn = e.target.closest('[data-f-save-and-create]');
+      if (saveAndCreateBtn) {
+        saveCurrent(() => { itemModal(null); });
+        return;
+      }
       const delSlotBtn = e.target.closest('[data-f-slot-del]');
       if (delSlotBtn) {
         const si = Number(delSlotBtn.dataset.fSlotDel);
@@ -1718,8 +1754,7 @@
     q('[data-f-video-input]').addEventListener('change', (e) => handleFile(e.target.files && e.target.files[0], 'video'));
     renderMedia();
 
-    q('[data-f-cancel]').addEventListener('click', () => m.close());
-    q('[data-f-save]').addEventListener('click', () => {
+    function saveCurrent(onSuccess) {
       const isFormula = isFormulaCb && isFormulaCb.checked;
       const formulaData = isFormula && formulaSlots.length ? { slots: formulaSlots } : null;
       const data = {
@@ -1756,7 +1791,12 @@
       }
       m.close(); render();
       if (window.Kiwi.toast) window.Kiwi.toast(tr(T.saved), { type: 'success', force: true });
-    });
+      if (typeof onSuccess === 'function') onSuccess();
+      return true;
+    }
+
+    q('[data-f-cancel]').addEventListener('click', () => m.close());
+    q('[data-f-save]').addEventListener('click', () => saveCurrent());
     setTimeout(() => { try { q('[data-f-name]').focus(); } catch (_) {} }, 180);
   }
 

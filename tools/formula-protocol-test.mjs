@@ -944,8 +944,87 @@ if (!nidMatch || !cleanFormulaCatalogMatch || !addItemMatch || !updateItemMatch 
   ok(cleanedFormula.formula == null, 'deleteItem of last ingredient cascaded cleanup: formula dropped completely');
 }
 
-// ── 9. Hard Count Pinning ───────────────────────────────────────────────────
-const EXPECTED_COUNT = 102;
+// ── 9. Composer Slot Rendering & Empty States (Extracted Code) ──────────────
+const renderSlotsMatch = menuCatalogSource.match(/function renderFormulaSlots\(\)\s*\{([\s\S]*?)\n    \}/);
+if (!renderSlotsMatch) {
+  ok(false, 'renderFormulaSlots function missing in menu-catalog.js');
+} else {
+  try {
+    const harnessCode = `
+      return function testRender(formulaSlots, d, existing) {
+        const availableItems = (d.items || []).filter((x) => x && x.id && (!existing || x.id !== existing.id));
+        let container = { innerHTML: '' };
+        const slotsContainer = container;
+        const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        const tr = (k) => (k && k.fr) || '';
+        const fmt = (n) => String(n);
+        const TRASH = '<trash>';
+        const catById = (d, id) => (d.cats || []).find(c => c.id === id);
+        const T = {
+          formulaNoSlots: { fr: 'Aucune étape définie.' },
+          formulaSlotNm: { fr: 'Titre de l\\'étape (ex. La boisson)' },
+          formulaMin: { fr: 'Min' },
+          formulaMax: { fr: 'Max' },
+          formulaDelSlot: { fr: 'Supprimer' },
+          formulaChoices: { fr: 'Choix proposés' },
+          formulaNoItems: { fr: 'Aucun produit sur la carte pour l\\'instant. Créez d\\'abord vos produits (ex. Café noir, Croissant), puis revenez composer la formule : les choix se sélectionnent dans la liste, jamais à la main.' },
+          formulaSaveAndCreate: { fr: 'Enregistrer et créer un produit' },
+          formulaAllChosen: { fr: 'Tous les produits de la carte sont déjà proposés dans cette étape.' },
+          formulaPickIt: { fr: 'Choisir un produit de la carte' },
+          formulaAddCh: { fr: 'Ajouter un produit' },
+          del: { fr: 'Supprimer' }
+        };
+        ${renderSlotsMatch[0]}
+        renderFormulaSlots();
+        return container.innerHTML;
+      };
+    `;
+    const renderFn = new Function(harnessCode)();
+
+    // Control 1: carte vide -> le bloc d'explication est rendu et aucun <select data-f-slot-pick>
+    const emptyHtml = renderFn(
+      [{ id: 'sl_1', label: '', min: 1, max: 1, choices: [] }],
+      { items: [], cats: [] },
+      null
+    );
+    ok(
+      emptyHtml.includes('Aucun produit sur la carte') &&
+      emptyHtml.includes('data-f-save-and-create') &&
+      !emptyHtml.includes('data-f-slot-pick'),
+      'composer: carte vide → bloc d\'explication rendu et aucun <select data-f-slot-pick>'
+    );
+
+    // Control 2: carte non vide -> le select est rendu
+    const nonEmptyHtml = renderFn(
+      [{ id: 'sl_1', label: '', min: 1, max: 1, choices: [] }],
+      { items: [{ id: 'it_cafe', name: 'Café noir', price: 15 }], cats: [] },
+      null
+    );
+    ok(
+      nonEmptyHtml.includes('data-f-slot-pick="0"') &&
+      nonEmptyHtml.includes('Café noir') &&
+      !nonEmptyHtml.includes('Aucun produit sur la carte'),
+      'composer: carte non vide → select data-f-slot-pick rendu avec options'
+    );
+
+    // Control 3: tous déjà choisis -> message « déjà proposés »
+    const allChosenHtml = renderFn(
+      [{ id: 'sl_1', label: '', min: 1, max: 1, choices: [{ itemId: 'it_cafe', extra: 0 }] }],
+      { items: [{ id: 'it_cafe', name: 'Café noir', price: 15 }], cats: [] },
+      null
+    );
+    ok(
+      allChosenHtml.includes('Tous les produits de la carte sont déjà proposés dans cette étape') &&
+      !allChosenHtml.includes('data-f-slot-pick'),
+      'composer: tous déjà choisis → message « déjà proposés » rendu sans select'
+    );
+  } catch (e) {
+    ok(false, 'harness failed to test composer slot rendering: ' + e.message);
+  }
+}
+
+// ── 10. Hard Count Pinning ──────────────────────────────────────────────────
+const EXPECTED_COUNT = 105;
 ok(passed + 1 === EXPECTED_COUNT, `exact control count verified (${passed + 1}/${EXPECTED_COUNT})`);
 
 console.log(`\n✓ ${passed} controls green (${failures.length} failure(s))`);
