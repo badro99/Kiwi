@@ -564,6 +564,10 @@
       departments: ['Vente', 'Commandes', 'Caisse', 'Stock', 'Management'],
       functions:   ['Libraire', 'Conseiller', 'Caissier', 'Magasinier', 'Responsable commandes', 'Manager'],
     },
+    maison: {
+      departments: ['Vente', 'Vitrine', 'Liste de mariage', 'Emballage', 'Livraison', 'Caisse', 'Stock', 'Management'],
+      functions:   ['Vendeur conseil', 'Conseiller liste de mariage', 'Emballeur', 'Livreur', 'Caissier', 'Magasinier', 'Visual merchandiser', 'Manager'],
+    },
     fleuriste: {
       departments: ['Atelier floral', 'Vente', 'Livraison', 'Caisse', 'Stock', 'Management'],
       functions:   ['Fleuriste', 'Aide-fleuriste', 'Conseiller', 'Livreur', 'Caissier', "Responsable d'atelier", 'Manager'],

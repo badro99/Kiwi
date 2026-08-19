@@ -64,8 +64,8 @@
     "sha": "72c825b1c1a2a0a1"
   },
   "assets/caisse-pwa.js": {
-    "v": "382",
-    "sha": "d2d292315e0f37ee"
+    "v": "383",
+    "sha": "08ac2fc48e046700"
   },
   "assets/caisse-skin.css": {
     "v": "3",
@@ -96,8 +96,8 @@
     "sha": "27f2f6686f92bed4"
   },
   "assets/dashboard-pwa.js": {
-    "v": "382",
-    "sha": "e8c68a06e67ddf27"
+    "v": "383",
+    "sha": "4d8bd3ad1f3bd06a"
   },
   "assets/dateRange.js": {
     "v": "8",
@@ -128,8 +128,8 @@
     "sha": "0f2e98a9521284c5"
   },
   "assets/employee-live.js": {
-    "v": "381",
-    "sha": "f26d00ff9236f999"
+    "v": "382",
+    "sha": "de300456e62d1065"
   },
   "assets/employee-planning.js": {
     "v": "6",
@@ -180,8 +180,8 @@
     "sha": "7a0b181ecedf5f85"
   },
   "assets/hotel.js": {
-    "v": "4",
-    "sha": "3474f46b866fb442"
+    "v": "5",
+    "sha": "98624760653a5f4d"
   },
   "assets/i18n.js": {
     "v": "4",
@@ -192,8 +192,8 @@
     "sha": "5f0a4000cc13db93"
   },
   "assets/interactive.js": {
-    "v": "8",
-    "sha": "b0e0530634e33ee2"
+    "v": "9",
+    "sha": "6e35f38329917944"
   },
   "assets/inventory-consumption.js": {
     "v": "8",
@@ -256,8 +256,8 @@
     "sha": "d1b0f3fa2625e19d"
   },
   "assets/onboarding.js": {
-    "v": "2077",
-    "sha": "19f9cb532c290fc5"
+    "v": "2078",
+    "sha": "7cd385f2bb8bf8c9"
   },
   "assets/operations-ui.js": {
     "v": "11",
@@ -540,8 +540,8 @@
     "sha": "d4274c8620a2dacb"
   },
   "assets/team.js": {
-    "v": "276",
-    "sha": "251f71e44ee183cb"
+    "v": "277",
+    "sha": "f5a0ae15d2795030"
   },
   "assets/tenant-purge.js": {
     "v": "1",
@@ -564,8 +564,8 @@
     "sha": "21b80930aa81799d"
   },
   "assets/trades.js": {
-    "v": "4",
-    "sha": "ef5ca5dcea67f12b"
+    "v": "5",
+    "sha": "307ef1ef0fac5461"
   },
   "assets/vendor/zxing-browser.min.js": {
     "v": "1",

@@ -138,7 +138,7 @@ console.log('\n■ All shipped merchant types');
     vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), real, { filename: f });
   }
   const all = live.KiwiTrades.LIST.map((x) => x.id);
-  check('canonical registry contains all 18 supported merchant types', all.length === 18, all.join(', '));
+  check('canonical registry contains all 19 supported merchant types', all.length === 19, all.join(', '));
   for (const id of all) {
     const profile = live.KiwiVenue.getSubtypeProfile(id) || { items: [] };
     const merchantFeatures = live.KiwiFeatureGuide.features(id);

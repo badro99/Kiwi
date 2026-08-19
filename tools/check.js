@@ -475,7 +475,7 @@ section('Assistant behaviour (tools/agent-test.js)');
 }
 
 /* The assistant's product knowledge must ship with the product. These gates
- * compare all 18 merchant profiles with the feature registry and exercise 40
+ * compare all 19 merchant profiles with the feature registry and exercise 40
  * live operational questions against their real adapter contracts. */
 section('Assistant feature truth + 40 operational simulations');
 for (const script of ['agent-features-test.mjs', 'agent-ops-simulations.mjs']) {

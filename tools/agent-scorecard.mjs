@@ -80,7 +80,7 @@ vm.runInContext(source, context, { filename: 'agent-truth.js' });
 const Truth = window.KiwiFeatureTruth, Ops = window.KiwiAgentOps, Actions = window.KiwiAgentActions;
 
 score('Feature knowledge', [
-  ['all 18 merchant profiles are covered', featureSuite.status === 0],
+  ['all 19 merchant profiles are covered', featureSuite.status === 0],
   ['feature truth has no failing control', !/✗/.test((featureSuite.stdout || '') + (featureSuite.stderr || ''))],
 ]);
 score('Merchant-specific explanations', [
