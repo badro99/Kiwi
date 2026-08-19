@@ -1435,9 +1435,131 @@ body.is-pos .clockin-screen.mz-clockin { display: flex !important; }
 .kiwi-rtl #pos-maison > .mz-rail { left: auto; right: 0; }
 .kiwi-rtl #pos-maison > .mz-main { inset: 0 212px 0 0; }
 .kiwi-rtl .mz-rail { border-right: 0; border-left: 1px solid rgba(255,255,255,0.06); }
-/* Le prix barré d'une promotion. Chaque montant est déjà tenu à l'endroit un
-   par un, dans son propre îlot (assets/caisse-lang.js) : « 4 200 MAD » ne peut
-   plus se relire « MAD 4 200 ». Il ne reste donc qu'à laisser la PAIRE suivre
-   l'écriture — l'ancien prix du côté où commence la lecture, le nouveau après.
-   Épingler tout le bloc en latin, comme on le faisait, mettait l'ancien prix
-   là où l'œil arabe finit sa ligne : la cliente lisait la remise à l'envers. */
+
+/* ═══════════════ MAISON & DÉCORATION : AXES, CADEAUX, CASSE, LIVRAISON ═══════════════ */
+
+/* ── Filter Axis & Chips ── */
+.mz-filter-wrap { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+.mz-filter-axis { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.mz-axis-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 999px;
+  background: var(--paper-mute, #eee); border: 1px solid var(--line, #ddd);
+  font-size: 12px; font-weight: 600; color: var(--ink-2, #333);
+  cursor: pointer; transition: background 140ms ease, color 140ms ease, border-color 140ms ease;
+}
+.mz-axis-btn:hover { border-color: var(--atlas, #0B6E4F); }
+.mz-axis-btn.on { background: var(--atlas, #0B6E4F); border-color: var(--atlas, #0B6E4F); color: #fff; }
+.mz-axis-btn svg { width: 14px; height: 14px; }
+.mz-axis-btn.on svg { color: #fff; }
+
+/* ── Card Badges & Enhancements ── */
+.mz-card-brand {
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--atlas, #0B6E4F); margin-bottom: 2px; display: block;
+}
+.mz-card-motif {
+  display: inline-block; font-size: 10px; font-weight: 600;
+  padding: 1px 6px; border-radius: 4px;
+  background: rgba(5, 59, 44, 0.08); color: var(--riad, #053B2C);
+  margin-top: 3px;
+}
+.mz-card-fmt {
+  display: inline-block; font-size: 10px; font-weight: 600;
+  padding: 1px 5px; border-radius: 4px;
+  background: rgba(11, 110, 79, 0.09); color: var(--atlas, #0B6E4F);
+}
+.mz-card-fragile {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 9.5px; font-weight: 700; text-transform: uppercase;
+  color: #B25E00; background: rgba(217, 154, 43, 0.15);
+  padding: 2px 6px; border-radius: 4px; margin-top: 3px;
+}
+.mz-card-fragile svg { width: 11px; height: 11px; }
+
+/* ── Line item details in ticket ── */
+.mz-line-brand { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--atlas, #0B6E4F); }
+.mz-line-fmt { font-size: 11px; font-weight: 600; color: var(--ink-2, #444); }
+.mz-line-motif { font-size: 11px; color: var(--riad, #053B2C); background: rgba(5, 59, 44, 0.06); padding: 1px 4px; border-radius: 3px; }
+.mz-line-fragile { font-size: 10.5px; font-weight: 700; color: #B25E00; }
+.mz-line-reg { font-size: 11px; font-weight: 600; color: var(--atlas, #0B6E4F); }
+
+/* ── Ticket Option Bar (Gift Wrap & Delivery) ── */
+.mz-tk-opt-bar { display: flex; gap: 6px; margin: 8px 0; }
+.mz-tk-opt-btn {
+  flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 7px 8px; border-radius: 8px;
+  font-size: 11.5px; font-weight: 600;
+  background: var(--paper-mute, #eee); border: 1px solid var(--line, #ddd); color: var(--ink-2, #333);
+  cursor: pointer; transition: all 140ms ease;
+}
+.mz-tk-opt-btn:hover { border-color: var(--atlas, #0B6E4F); }
+.mz-tk-opt-btn.on { background: rgba(11, 110, 79, 0.12); border-color: var(--atlas, #0B6E4F); color: var(--atlas, #0B6E4F); }
+.mz-tk-opt-btn svg { width: 13px; height: 13px; }
+
+.mz-fragile-alert {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 10px; border-radius: 8px;
+  background: rgba(217, 154, 43, 0.14); border: 1px solid rgba(217, 154, 43, 0.3);
+  font-size: 11px; font-weight: 600; color: #8A6210; margin-top: 6px;
+}
+.mz-fragile-alert svg { width: 14px; height: 14px; flex-shrink: 0; color: #B25E00; }
+
+/* ── Registries View (Listes de Mariage / Naissance) ── */
+.mz-registries { padding: 24px; display: flex; flex-direction: column; gap: 18px; max-width: 1100px; margin: 0 auto; }
+.mz-reg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+.mz-reg-card {
+  background: var(--paper, #fff); border: 1px solid var(--line, #e2e2e2); border-radius: 14px;
+  padding: 16px; display: flex; flex-direction: column; gap: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.mz-reg-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.mz-reg-title { font-size: 15px; font-weight: 700; color: var(--ink, #111); margin: 0; }
+.mz-reg-sub { font-size: 12px; color: var(--ink-3, #777); margin-top: 2px; }
+.mz-reg-badge {
+  font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 999px;
+  background: rgba(125, 242, 176, 0.25); color: var(--riad, #053B2C);
+}
+.mz-reg-prog-bar {
+  width: 100%; height: 8px; background: var(--paper-mute, #eee);
+  border-radius: 999px; overflow: hidden; position: relative;
+}
+.mz-reg-prog-fill { height: 100%; background: var(--atlas, #0B6E4F); border-radius: 999px; transition: width 300ms ease; }
+.mz-reg-items { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+.mz-reg-item {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 8px 10px; background: var(--paper-mute, #f8f8f8); border-radius: 8px;
+  font-size: 12.5px;
+}
+.mz-reg-item .item-info { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.mz-reg-item .item-info b { font-weight: 600; color: var(--ink, #222); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mz-reg-item .item-info span { font-size: 11px; color: var(--ink-3, #777); }
+.mz-reg-item .item-cta { flex-shrink: 0; }
+
+/* ── Casse / Breakage View ── */
+.mz-casse-view { padding: 24px; display: flex; flex-direction: column; gap: 20px; max-width: 960px; margin: 0 auto; }
+.mz-casse-box {
+  background: var(--paper, #fff); border: 1px solid var(--line, #e2e2e2); border-radius: 14px;
+  padding: 20px; display: flex; flex-direction: column; gap: 16px;
+}
+.mz-casse-cost-preview {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px; border-radius: 10px;
+  background: rgba(186, 26, 26, 0.08); border: 1px solid rgba(186, 26, 26, 0.2);
+  color: #BA1A1A;
+}
+.mz-casse-cost-preview b { font-family: var(--mono); font-size: 18px; font-weight: 700; }
+
+.mz-casse-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.mz-casse-table th { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); color: var(--ink-3); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+.mz-casse-table td { padding: 10px 12px; border-bottom: 1px solid var(--line); color: var(--ink); }
+
+/* ── Delivery Modal & Printable Note ── */
+.mz-delivery-modal { max-width: 560px; width: 92vw; padding: 20px 24px; }
+.mz-delivery-form { display: flex; flex-direction: column; gap: 12px; margin-top: 14px; }
+.mz-delivery-form label { font-size: 12px; font-weight: 600; color: var(--ink-2); display: flex; flex-direction: column; gap: 4px; }
+.mz-delivery-form input, .mz-delivery-form select, .mz-delivery-form textarea {
+  padding: 9px 12px; border-radius: 8px; border: 1px solid var(--line);
+  font: inherit; font-size: 13.5px; background: var(--paper); color: var(--ink);
+}
+.mz-delivery-form select { cursor: pointer; }

@@ -93,6 +93,17 @@
      fills, 64×64 grid. These ARE the rayons — the grid sells by silhouette. */
   const art = (inner) => `<svg class="mz-art" viewBox="0 0 64 64" aria-hidden="true">${inner}</svg>`;
   const ART = {
+    assiette: art(`<ellipse class="fill" cx="32" cy="32" rx="22" ry="16"/><ellipse cx="32" cy="32" rx="22" ry="16"/><ellipse class="thin" cx="32" cy="32" rx="14" ry="9.5"/><ellipse class="thin" cx="32" cy="32" rx="7" ry="4.5"/>`),
+    bol: art(`<path class="fill" d="M12 24c0 14 9 22 20 22s20-8 20-22H12z"/><path d="M12 24c0 14 9 22 20 22s20-8 20-22H12z"/><ellipse class="thin" cx="32" cy="24" rx="20" ry="6"/><path class="thin" d="M26 46h12"/>`),
+    tasse: art(`<path class="fill" d="M16 22h24v16c0 6-5 10-12 10s-12-4-12-10V22z"/><path d="M16 22h24v16c0 6-5 10-12 10s-12-4-12-10V22z"/><path d="M40 26c5 0 8 3 8 7s-3 7-8 7"/><path class="thin" d="M12 50h32"/>`),
+    verre: art(`<path class="fill" d="M18 16h28l-4 32H22L18 16z"/><path d="M18 16h28l-4 32H22L18 16z"/><ellipse class="thin" cx="32" cy="16" rx="14" ry="4"/><ellipse class="thin" cx="32" cy="26" rx="13" ry="3.5"/><path class="thin" d="M21 44h22"/>`),
+    carafe: art(`<path class="fill" d="M28 14h8l2 8 8 16c2 4 0 10-6 12-2 .5-8 .5-16 0-6-2-8-8-6-12l8-16 2-8z"/><path d="M28 14h8l2 8 8 16c2 4 0 10-6 12-2 .5-8 .5-16 0-6-2-8-8-6-12l8-16 2-8z"/><ellipse class="thin" cx="32" cy="14" rx="4" ry="1.5"/><path class="thin" d="M38 24c6 2 8 8 6 14"/>`),
+    coupe: art(`<path class="fill" d="M14 18c0 12 8 18 18 18s18-6 18-18H14z"/><path d="M14 18c0 12 8 18 18 18s18-6 18-18H14z"/><path d="M32 36v12M22 48h20"/><ellipse class="thin" cx="32" cy="18" rx="18" ry="4"/>`),
+    bougie: art(`<rect class="fill" x="22" y="24" width="20" height="28" rx="3"/><rect x="22" y="24" width="20" height="28" rx="3"/><ellipse class="thin" cx="32" cy="24" rx="10" ry="3"/><path class="thin" d="M32 24v-4"/><path class="fill" d="M32 14c-2 2-3 4-1 6s4 1 3-2c-.5-1.5-1.5-3-2-4z"/><path d="M32 14c-2 2-3 4-1 6s4 1 3-2c-.5-1.5-1.5-3-2-4z"/>`),
+    diffuseur: art(`<rect class="fill" x="22" y="32" width="20" height="20" rx="4"/><rect x="22" y="32" width="20" height="20" rx="4"/><rect x="28" y="27" width="8" height="5" rx="1"/><path class="thin" d="M32 27L22 12M32 27L32 10M32 27L42 12M32 27L26 11M32 27L38 11"/>`),
+    vase: art(`<path class="fill" d="M26 14h12l-2 8 8 14c3 5 1 12-5 14-2 .5-9 .5-14 0-6-2-8-9-5-14l8-14-2-8z"/><path d="M26 14h12l-2 8 8 14c3 5 1 12-5 14-2 .5-9 .5-14 0-6-2-8-9-5-14l8-14-2-8z"/><ellipse class="thin" cx="32" cy="14" rx="6" ry="2"/>`),
+    plateau: art(`<ellipse class="fill" cx="32" cy="34" rx="26" ry="14"/><ellipse cx="32" cy="34" rx="26" ry="14"/><ellipse class="thin" cx="32" cy="34" rx="20" ry="10"/><path class="thin" d="M10 32c-3 0-4 3-2 5M54 32c3 0 4 3 2 5"/>`),
+    miroir: art(`<circle class="fill" cx="32" cy="32" r="14"/><circle cx="32" cy="32" r="14"/><circle class="thin" cx="32" cy="32" r="18"/><path class="thin" d="M32 8v4M32 52v4M8 32h4M52 32h4M15 15l3 3M46 46l3 3M15 49l3-3M46 18l3-3"/>`),
     caftan: art(`<path class="fill" d="M26 9 15 15l3 7 4-2-4 34h28l-4-34 4 2 3-7L38 9c-1.6 2.4-10.4 2.4-12 0z"/><path d="M26 9 15 15l3 7 4-2-4 34h28l-4-34 4 2 3-7L38 9"/><path d="M26 9c1.6 2.4 10.4 2.4 12 0"/><path d="M32 13v41"/><circle class="thin" cx="29.5" cy="20" r=".9"/><circle class="thin" cx="29.5" cy="26" r=".9"/><circle class="thin" cx="29.5" cy="32" r=".9"/><circle class="thin" cx="29.5" cy="38" r=".9"/><path class="thin" d="M20 48h24"/>`),
     caftan_perle: art(`<path class="fill" d="M26 9 15 15l3 7 4-2-4 34h28l-4-34 4 2 3-7L38 9c-1.6 2.4-10.4 2.4-12 0z"/><path d="M26 9 15 15l3 7 4-2-4 34h28l-4-34 4 2 3-7L38 9"/><path d="M26 9c1.6 2.4 10.4 2.4 12 0"/><path d="M32 13v41"/><circle class="thin" cx="26" cy="30" r=".8"/><circle class="thin" cx="38" cy="27" r=".8"/><circle class="thin" cx="27" cy="42" r=".8"/><circle class="thin" cx="37" cy="36" r=".8"/><circle class="thin" cx="35" cy="46" r=".8"/><circle class="thin" cx="29" cy="22" r=".8"/>`),
     caftan_jawhara: art(`<path class="fill" d="M26 9 15 15l3 7 4-2-4 34h28l-4-34 4 2 3-7L38 9c-1.6 2.4-10.4 2.4-12 0z"/><path d="M26 9 15 15l3 7 4-2-4 34h28l-4-34 4 2 3-7L38 9"/><path d="M26 9c1.6 2.4 10.4 2.4 12 0"/><path d="M32 13v18M32 36v18"/><rect class="fill" x="23" y="30" width="18" height="5.5" rx="2.5"/><rect x="23" y="30" width="18" height="5.5" rx="2.5"/><circle cx="32" cy="32.8" r="1.8"/><circle class="thin" cx="32" cy="16.5" r="1"/><path class="thin" d="M21 48h22"/>`),
@@ -384,8 +395,8 @@
   const sizeWord  = (p) => p.kind === 'pointure' ? 'Pointure' : p.kind === 'tu' ? 'Taille unique' : 'Taille';
   const firstFree = (p) => sizesOf(p).find((k) => p.sizes[k] > 0) || null;
 
-  /* ───────────────────────── équipe & clientes (Casa · Maarif) ───────────── */
-  /* A REAL boutique never inherits Maison Mansour's staff — the roster is
+  /* ───────────────────────── équipe & clientes (Tanger · Centre) ───────────── */
+  /* A REAL boutique never inherits Vogue Home's staff — the roster is
      neutralized (« Vendeur N », blank role) while keeping the same shape/length.
      Local demo (pvReal() false) keeps the named cast, byte-identical. */
   const STAFF = pvReal() ? {
@@ -393,9 +404,9 @@
     conseil:   { name: 'Vendeur 2', role: '' },
     caissiere: { name: 'Vendeur 3', role: '' },
   } : {
-    gerante:   { name: 'Aicha Benali', role: 'Gérante boutique' },
-    conseil:   { name: 'Rania Tazi',   role: 'Conseillère de vente' },
-    caissiere: { name: 'Salma',        role: 'Caisse' },
+    gerante:   { name: 'Soraya Lahlou', role: 'Gérante Vogue Home' },
+    conseil:   { name: 'Kenza Tazi',     role: 'Conseillère d’art de table' },
+    caissiere: { name: 'Yasmine',        role: 'Caisse' },
   };
 
   /* The person who entered their code owns this session: their name goes on the
@@ -415,24 +426,21 @@
   /* A REAL boutique starts with an empty client book (its own clientes are read
      from KiwiClients / captured at the till). Only the local demo seeds this cast. */
   const CLIENTES = pvReal() ? [] : [
-    { id: 'c1', name: 'Lalla Khadija El Fassi', phone: '0661 42 18 30', points: 1240, taille: 'M',  achats: 9,  spent: 18400, vip: true,
-      prefs: ['Caftans brodés main, jamais de machine', 'Retouches chez Maalem Hassan'],
-      history: [{ when: '24 mai', what: 'Caftan Velours · M · bordeaux', amt: 1850 }, { when: '12 avr.', what: 'Takchita Zellige · M · émeraude', amt: 2800 }, { when: '2 mars', what: 'Mdamma dorée', amt: 650 }] },
-    { id: 'c2', name: 'Salma Bennis', phone: '0664 77 02 19', points: 480, taille: 'S', achats: 4, spent: 3160,
-      prefs: ['Pointure 39, le 38 taille petit'],
-      history: [{ when: '10 juin', what: 'Cherbil perlé · 37 · argent (retour avoir)', amt: 450 }, { when: '18 mai', what: 'Caftan Coton Été · S · safran', amt: 1200 }] },
-    { id: 'c3', name: 'Yasmina Alaoui', phone: '0667 31 55 08', points: 2130, taille: 'L', achats: 14, spent: 31200, vip: true,
-      prefs: ['Takchitas de cérémonie, appeler dès les nouveautés'],
-      history: [{ when: '28 mai', what: 'Takchita Mariage · L · ivoire', amt: 4500 }, { when: '6 mai', what: 'Caftan Signature Mansour · L · doré', amt: 3500 }] },
-    { id: 'c4', name: 'Imane Cherkaoui', phone: '0650 09 64 12', points: 310, taille: 'S', achats: 3, spent: 2240,
-      prefs: [],
-      history: [{ when: '30 mai', what: 'Foulard soie · safran', amt: 240 }] },
-    { id: 'c5', name: 'Nadia Berrechid', phone: '0668 23 90 41', points: 95, taille: 'XL', achats: 1, spent: 950,
-      prefs: ['Première visite via Instagram'],
-      history: [{ when: '3 juin', what: 'Cabas berbère · terracotta', amt: 420 }] },
-    { id: 'c6', name: 'Houda Mekouar', phone: '0652 84 17 66', points: 720, taille: 'M', achats: 6, spent: 7050,
-      prefs: ['Préfère ivoire et doré', 'Emballage cadeau systématique'],
-      history: [{ when: '21 mai', what: 'Caftan Fassi · M · ivoire', amt: 2400 }, { when: '2 mai', what: 'Pochette sequins · dorée', amt: 350 }] },
+    { id: 'c1', name: 'Lalla Kenza Alami', phone: '0661 42 18 30', points: 1420, taille: 'TU', achats: 8, spent: 16800, vip: true,
+      prefs: ['Service Fès Bleu', 'Emballage cadeau systématique'],
+      history: [{ when: '24 mai', what: 'Service 18 pcs Fès Bleu', amt: 1450 }, { when: '12 avr.', what: 'Bougie Max 24 Totem', amt: 1850 }] },
+    { id: 'c2', name: 'Mme Ghita Benjelloun', phone: '0664 77 02 19', points: 650, taille: 'TU', achats: 5, spent: 5400,
+      prefs: ['Liste de mariage en cours', 'Verres Beldi émeraude'],
+      history: [{ when: '10 juin', what: 'Verres soufflés Beldi (Lot 6)', amt: 140 }, { when: '18 mai', what: 'Carafe Beldi 1.5L', amt: 120 }] },
+    { id: 'c3', name: 'Lalla Meryem Berrada', phone: '0667 31 55 08', points: 2300, taille: 'TU', achats: 12, spent: 28900, vip: true,
+      prefs: ['Céramique Majorelle', 'Livraison fragile Marshan'],
+      history: [{ when: '28 mai', what: 'Vase céramique émaillée', amt: 650 }, { when: '6 mai', what: 'Service Zellige Vert', amt: 1100 }] },
+    { id: 'c4', name: 'Dr. Nabil El Omari', phone: '0650 09 64 12', points: 310, taille: 'TU', achats: 3, spent: 2600,
+      prefs: ['Diffuseurs senteurs Tanger'],
+      history: [{ when: '30 mai', what: 'Diffuseur Fleur d’Oranger Tanger', amt: 480 }] },
+    { id: 'c5', name: 'Mme Sofia Tazi', phone: '0668 23 90 41', points: 450, taille: 'TU', achats: 2, spent: 1800,
+      prefs: ['Cadeaux d’affaires & emballages prestige'],
+      history: [{ when: '3 juin', what: 'Plateau laiton martelé', amt: 420 }] },
   ];
   const CL = Object.fromEntries(CLIENTES.map((c) => [c.id, c]));
   const initials = (name) => name.split(/\s+/).map((w) => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
@@ -809,12 +817,18 @@
   const state = {
     view: 'vente',
     rayon: 'tous',
-    ticket: null,                /* { num, lines:[], client:id|'passage'|null, remiseAuth } */
+    filterAxis: 'rayons',        /* 'rayons' | 'marques' | 'motifs' | 'fragile' */
+    selectedMarque: 'tous',
+    selectedMotif: 'tous',
+    ticket: null,                /* { num, lines:[], client:id|'passage'|null, remiseAuth, giftWrap, delivery } */
     exchange: null,              /* { saleId, idx, qty:1 } pendant le choix du remplacement */
     ret: null,                   /* { saleId, picks:Set, quantities:Map, motif } */
     retQuery: '',
     retDate: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })(),
     clQuery: '',
+    registriesQuery: '',
+    activeRegistry: null,
+    casseQuery: '',
     scanLog: [],                 /* journal des articles VÉRIFIÉS (onglet Scan) */
     lookup: null,                /* { pid, size, color, ean, at } — dernière vérif affichée */
     scanIdx: 0,
@@ -1062,6 +1076,7 @@
       period: ticketPeriod(),
       syncId: newSaleId(),
       lines: [], client: null, remiseAuth: false, numbering: false, numError: false,
+      giftWrap: false, delivery: null,
     };
     state.ticket = ticket;
     if (!IS_DEMO) assignTicketNumber(ticket).catch(() => {
@@ -1100,7 +1115,7 @@
    *     caisse qui remonte ses prix entre le rayon et le paiement, c'est une
    *     dispute au comptoir, et le magasin a tort.
    *   · la promotion COMMENCE pendant le ticket — la règle du jour prend le
-   *     dessus. Sans ça, deux lignes du même caftan cohabitaient à 2 400 et
+   *     dessus. Sans ça, deux lignes du même article cohabitaient à 2 400 et
    *     2 160 sur le même ticket, et personne n'aurait su expliquer laquelle
    *     était la bonne.
    *
@@ -1111,10 +1126,13 @@
   function lineDeal(ln) {
     const stamp = (ln && ln.promo && Number.isFinite(+ln.promo.price)) ? ln.promo : null;
     const live = promoFor(ln.pid);
-    const full = P[ln.pid].price;
+    const p = P[ln.pid];
+    const full = (ln.customPrice != null && Number.isFinite(+ln.customPrice))
+      ? +ln.customPrice
+      : (p ? p.price : (ln.unit || 0));
     let best = { price: full, promo: null };
     if (stamp && stamp.price < best.price) best = { price: stamp.price, promo: stamp };
-    if (live && live.price < best.price) best = { price: live.price, promo: { price: live.price, badge: live.badge, name: live.promo.name, id: live.promo.id } };
+    if (live && live.price < best.price && !ln.isPiece) best = { price: live.price, promo: { price: live.price, badge: live.badge, name: live.promo.name, id: live.promo.id } };
     return best;
   }
   const linePromo = (ln) => lineDeal(ln).promo;
@@ -1136,7 +1154,11 @@
      la récompense un dû de la cliente. Les confondre au total, c'est rendre le
      rapport de clôture incapable de dire ce que les promotions ont coûté. */
   function ticketTotals(t) {
-    const sub = t.lines.reduce((s, ln) => s + P[ln.pid].price * ln.qty, 0);
+    const sub = t.lines.reduce((s, ln) => {
+      const p = P[ln.pid];
+      const orig = (ln.customPrice != null) ? ln.customPrice : (p ? p.price : 0);
+      return s + orig * ln.qty;
+    }, 0);
     const afterPromo = t.lines.reduce((s, ln) => s + lineBase(ln) * ln.qty, 0);
     const afterLines = t.lines.reduce((s, ln) => s + lineTotal(ln), 0);
     const reward = rewardDiscount(t, afterLines);
@@ -1222,8 +1244,8 @@
        unpaired demo (PIN 0002) keeps the Maison Mansour identity. */
     const _pv = (function () { try { return window.KiwiPlatform?.pairedVenue?.() || JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null'); } catch (_) { return null; } })();
     const _esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-    const _vName = (_pv && _pv.name) ? _esc(_pv.name) : 'Maison Mansour';
-    const _vSub = (_pv && _pv.location) ? _esc(_pv.location) : (_pv ? '' : 'Casablanca · Maarif');
+    const _vName = (_pv && _pv.name) ? _esc(_pv.name) : 'Vogue Home';
+    const _vSub = (_pv && _pv.location) ? _esc(_pv.location) : (_pv ? '' : 'Tanger · Centre');
     root.innerHTML = `
       <aside class="mz-rail">
         <div class="mz-brand"><img class="kiwi-pos-logo" src="assets/kiwi-newlogo-inverse.svg" alt="Kiwi"></div>
@@ -1233,11 +1255,13 @@
         </div>
         <nav class="mz-nav" id="mz-nav">
           <button class="mz-nav-it on" data-mz-view="vente"><i data-lucide="shopping-bag"></i><span>Vente</span><b class="mz-nav-badge" id="mz-badge-vente"></b></button>
+          <button class="mz-nav-it" data-mz-view="registries"><i data-lucide="gift"></i><span>Listes Cadeaux</span><b class="mz-nav-badge" id="mz-badge-reg"></b></button>
+          <button class="mz-nav-it" data-mz-view="casse"><i data-lucide="shield-alert"></i><span>Déclarer Casse</span></button>
           <button class="mz-nav-it" data-mz-view="scan"><i data-lucide="scan-line"></i><span>Scan</span><b class="mz-nav-badge" id="mz-badge-scan"></b></button>
           <button class="mz-nav-it" data-mz-view="inventaire"><i data-lucide="package"></i><span>Inventaire</span><b class="mz-nav-badge" id="mz-badge-inv"></b></button>
           <button class="mz-nav-it" data-mz-view="echanges"><i data-lucide="arrow-left-right"></i><span>Échanges &amp; avoirs</span><b class="mz-nav-badge" id="mz-badge-ret"></b></button>
           <button class="mz-nav-it" data-mz-view="vendus"><i data-lucide="chart-no-axes-column-increasing"></i><span>Vendus</span></button>
-          <button class="mz-nav-it" data-mz-view="clientes"><i data-lucide="users"></i><span>Clientes</span><b class="mz-nav-badge" id="mz-badge-cl"></b></button>
+          <button class="mz-nav-it" data-mz-view="clientes"><i data-lucide="users"></i><span>Clients</span><b class="mz-nav-badge" id="mz-badge-cl"></b></button>
         </nav>
         <div class="mz-rail-foot">
           <button class="mz-net" id="mz-net" title="${IS_DEMO ? 'Simuler une coupure réseau' : 'État de la synchronisation'}">
@@ -1273,6 +1297,8 @@
           </div>
           <aside class="mz-ticket" id="mz-ticket"></aside>
         </section>
+        <section class="mz-view" data-mz-panel="registries"></section>
+        <section class="mz-view" data-mz-panel="casse"></section>
         <section class="mz-view" data-mz-panel="scan"></section>
         <section class="mz-view" data-mz-panel="inventaire"></section>
         <section class="mz-view" data-mz-panel="echanges"></section>
@@ -1286,11 +1312,12 @@
       <div class="modal-veil" id="mz-exch-veil"><div class="modal mz-exch mz-rel" id="mz-exchm"></div></div>
       <div class="modal-veil" id="mz-pay-veil"><div class="modal mz-pay mz-rel" id="mz-paym"></div></div>
       <div class="modal-veil" id="mz-inv-veil"><div class="modal mz-invm mz-rel" id="mz-invmm"></div></div>
-      <div class="modal-veil" id="mz-avoir-veil"><div class="modal mz-avoirm mz-rel" id="mz-avoirmm"></div></div>`;
+      <div class="modal-veil" id="mz-avoir-veil"><div class="modal mz-avoirm mz-rel" id="mz-avoirmm"></div></div>
+      <div class="modal-veil" id="mz-delivery-veil"><div class="modal mz-delivery-modal mz-rel" id="mz-deliverym"></div></div>`;
 
     $('#mz-nav', root).addEventListener('click', (e) => {
       const b = e.target.closest('[data-mz-view]');
-      if (b) switchView(b.dataset.bqView);
+      if (b) switchView(b.dataset.mzView || b.dataset.bqView);
     });
     $('#mz-lock', root).addEventListener('click', () => {
       /* La feuille de clôture vit au niveau du body (au-dessus du root) : la
@@ -1346,7 +1373,7 @@
       var _bqKey = (pvReal() && _bqPv && _bqPv.merchant)          /* real → merchant slug — SAME key the dashboard uses (pages-pro.js _bqxVenue) */
         || window.__kiwiPairedBoutiqueVenue
         || (_bqPv && (_bqPv.venueId || _bqPv.merchant))
-        || (pvReal() ? 'boutique-live' : 'maisonMansour');
+        || (pvReal() ? 'boutique-live' : 'vogueHome');
       window.KiwiBoutiqueCatalog.use(_bqKey);
       /* Les promotions suivent EXACTEMENT la même clé que le catalogue : ce sont
          les prix de ce magasin-là. Une promotion rangée sous une autre clé que
@@ -1473,13 +1500,15 @@
   /* ═══════════════════════ NAV / SHELL ═══════════════════════ */
   function switchView(view) {
     state.view = view;
-    $$('.mz-nav-it', root).forEach((b) => b.classList.toggle('on', b.dataset.bqView === view));
-    $$('.mz-view', root).forEach((p) => p.classList.toggle('is-on', p.dataset.bqPanel === view));
+    $$('.mz-nav-it', root).forEach((b) => b.classList.toggle('on', (b.dataset.mzView || b.dataset.bqView) === view));
+    $$('.mz-view', root).forEach((p) => p.classList.toggle('is-on', (p.dataset.mzPanel || p.dataset.bqPanel) === view));
     renderView(view);
     icons();
   }
   function renderView(view) {
-    if (view === 'vente') { renderTicket(); renderGrid(); renderExchNote(); }
+    if (view === 'vente') { renderCats(); renderTicket(); renderGrid(); renderExchNote(); }
+    if (view === 'registries') renderRegistries();
+    if (view === 'casse') renderCasse();
     if (view === 'scan') renderScan();
     if (view === 'inventaire') renderInventaire();
     if (view === 'echanges') renderEchanges();
@@ -1493,12 +1522,15 @@
   function renderBadges() {
     const items = state.ticket ? ticketCount(state.ticket) : 0;
     const avs = activeAvoirs().length;
+    const regs = (typeof loadRegistries === 'function') ? loadRegistries().length : 0;
     const set = (id, n) => {
       const el = $(id, root);
+      if (!el) return;
       el.textContent = n || '';
       el.style.display = n ? '' : 'none';
     };
     set('#mz-badge-vente', items);
+    set('#mz-badge-reg', regs);
     set('#mz-badge-scan', state.scanLog.length);
     set('#mz-badge-ret', avs);
     set('#mz-badge-cl', (window.KiwiClients && KiwiClients.count && KiwiClients.count()) || CLIENTES.length);
@@ -1527,29 +1559,103 @@
     icons();
   }
 
-  /* ═══════════════════════ VENTE — grille par rayon ═══════════════════════ */
+  /* ═══════════════════════ VENTE — grille par rayon / marque / motif ═══════════════════════ */
+  function listAllDistinctMarques() {
+    const s = new Set();
+    RAYONS.forEach((r) => r.items.forEach((p) => { if (p.marque) s.add(p.marque); }));
+    return Array.from(s).sort();
+  }
+  function listAllDistinctMotifs() {
+    const s = new Set();
+    RAYONS.forEach((r) => r.items.forEach((p) => { if (p.motif) s.add(p.motif); }));
+    return Array.from(s).sort();
+  }
+  function countFragileItems() {
+    let count = 0;
+    RAYONS.forEach((r) => r.items.forEach((p) => { if (p.fragile) count++; }));
+    return count;
+  }
+
   function renderCats() {
     const all = RAYONS.reduce((s, r) => s + r.items.length, 0);
-    /* « C'est en promo ? » est LA question du comptoir un jour de soldes, et
-       jusqu'ici la caissière n'avait aucun moyen d'y répondre autrement qu'en
-       parcourant la grille à l'œil. Le filtre n'apparaît que s'il a quelque
-       chose à montrer : un onglet vide en permanence est du bruit. */
     const promoN = promoedIds().size;
-    /* La dernière promotion vient de s'arrêter pendant qu'on regardait ce
-       filtre : sans ce repli, l'onglet disparaît et la grille reste vide sans
-       qu'aucun bouton ne soit sélectionné — la caisse a l'air cassée. */
-    if (state.rayon === '_promo' && !promoN) state.rayon = 'tous';
-    $('#mz-cats', root).innerHTML =
-      `<button class="mz-cat ${state.rayon === 'tous' ? 'on' : ''}" data-mz-cat="tous">Tous <span class="mz-cat-ct">${all}</span></button>` +
-      (promoN ? `<button class="mz-cat is-promo ${state.rayon === '_promo' ? 'on' : ''}" data-mz-cat="_promo">En promo <span class="mz-cat-ct">${promoN}</span></button>` : '') +
-      RAYONS.map((r) =>
-        `<button class="mz-cat ${state.rayon === r.id ? 'on' : ''}" data-mz-cat="${r.id}">${esc(r.label)} <span class="mz-cat-ct">${r.items.length}</span></button>`
-      ).join('');
-    $('#mz-cats', root).onclick = (e) => {
-      const b = e.target.closest('[data-mz-cat]');
-      if (!b) return;
-      state.rayon = b.dataset.bqCat;
-      renderCats(); renderGrid(); icons();
+    const fragileN = countFragileItems();
+    const marques = listAllDistinctMarques();
+    const motifs = listAllDistinctMotifs();
+    const axis = state.filterAxis || 'rayons';
+
+    const axisRow = `
+      <div class="mz-filter-axis">
+        <button class="mz-axis-btn ${axis === 'rayons' ? 'on' : ''}" data-mz-axis="rayons"><i data-lucide="layout-grid"></i>Rayons</button>
+        ${marques.length ? `<button class="mz-axis-btn ${axis === 'marques' ? 'on' : ''}" data-mz-axis="marques"><i data-lucide="tag"></i>Marques (${marques.length})</button>` : ''}
+        ${motifs.length ? `<button class="mz-axis-btn ${axis === 'motifs' ? 'on' : ''}" data-mz-axis="motifs"><i data-lucide="sparkles"></i>Motifs (${motifs.length})</button>` : ''}
+        ${promoN ? `<button class="mz-axis-btn ${axis === 'promo' ? 'on' : ''}" data-mz-axis="promo"><i data-lucide="flame"></i>En promo (${promoN})</button>` : ''}
+        ${fragileN ? `<button class="mz-axis-btn ${axis === 'fragile' ? 'on' : ''}" data-mz-axis="fragile"><i data-lucide="shield-alert"></i>Fragile (${fragileN})</button>` : ''}
+      </div>`;
+
+    let chipsRow = '';
+    if (axis === 'rayons') {
+      chipsRow = `
+        <div class="mz-cats-row">
+          <button class="mz-cat ${state.rayon === 'tous' ? 'on' : ''}" data-mz-cat="tous">Tous <span class="mz-cat-ct">${all}</span></button>
+          ${RAYONS.map((r) => `<button class="mz-cat ${state.rayon === r.id ? 'on' : ''}" data-mz-cat="${r.id}">${esc(r.label)} <span class="mz-cat-ct">${r.items.length}</span></button>`).join('')}
+        </div>`;
+    } else if (axis === 'marques') {
+      chipsRow = `
+        <div class="mz-cats-row">
+          <button class="mz-cat ${state.selectedMarque === 'tous' ? 'on' : ''}" data-mz-marque="tous">Toutes les marques</button>
+          ${marques.map((m) => {
+            const count = RAYONS.reduce((acc, r) => acc + r.items.filter((p) => p.marque === m).length, 0);
+            return `<button class="mz-cat ${state.selectedMarque === m ? 'on' : ''}" data-mz-marque="${esc(m)}">${esc(m)} <span class="mz-cat-ct">${count}</span></button>`;
+          }).join('')}
+        </div>`;
+    } else if (axis === 'motifs') {
+      chipsRow = `
+        <div class="mz-cats-row">
+          <button class="mz-cat ${state.selectedMotif === 'tous' ? 'on' : ''}" data-mz-motif-filter="tous">Tous les motifs</button>
+          ${motifs.map((mot) => {
+            const count = RAYONS.reduce((acc, r) => acc + r.items.filter((p) => p.motif === mot).length, 0);
+            return `<button class="mz-cat ${state.selectedMotif === mot ? 'on' : ''}" data-mz-motif-filter="${esc(mot)}">${esc(mot)} <span class="mz-cat-ct">${count}</span></button>`;
+          }).join('')}
+        </div>`;
+    } else if (axis === 'promo') {
+      chipsRow = `<div class="mz-cats-row"><button class="mz-cat on" data-mz-cat="_promo">Articles en promotion (${promoN})</button></div>`;
+    } else if (axis === 'fragile') {
+      chipsRow = `<div class="mz-cats-row"><button class="mz-cat on" data-mz-axis="fragile">Articles céramique & verrerie fragile (${fragileN})</button></div>`;
+    }
+
+    const catsEl = $('#mz-cats', root);
+    if (!catsEl) return;
+    catsEl.innerHTML = `<div class="mz-filter-wrap">${axisRow}${chipsRow}</div>`;
+
+    catsEl.onclick = (e) => {
+      const axisB = e.target.closest('[data-mz-axis]');
+      if (axisB) {
+        state.filterAxis = axisB.dataset.mzAxis;
+        if (state.filterAxis === 'rayons') state.rayon = 'tous';
+        if (state.filterAxis === 'marques') state.selectedMarque = 'tous';
+        if (state.filterAxis === 'motifs') state.selectedMotif = 'tous';
+        renderCats(); renderGrid(); icons();
+        return;
+      }
+      const catB = e.target.closest('[data-mz-cat]');
+      if (catB) {
+        state.rayon = catB.dataset.mzCat || catB.dataset.bqCat;
+        renderCats(); renderGrid(); icons();
+        return;
+      }
+      const marqB = e.target.closest('[data-mz-marque]');
+      if (marqB) {
+        state.selectedMarque = marqB.dataset.mzMarque;
+        renderCats(); renderGrid(); icons();
+        return;
+      }
+      const motB = e.target.closest('[data-mz-motif-filter]');
+      if (motB) {
+        state.selectedMotif = motB.dataset.mzMotifFilter;
+        renderCats(); renderGrid(); icons();
+        return;
+      }
     };
   }
 
@@ -1562,7 +1668,7 @@
   }
 
   /* Les articles qui portent une étiquette promo en ce moment. Un Set : deux
-     promotions sur le même caftan ne le comptent pas deux fois. */
+     promotions sur le même article ne le comptent pas deux fois. */
   function promoedIds() {
     const out = new Set();
     if (!window.KiwiPromos) return out;
@@ -1571,34 +1677,49 @@
   }
 
   function renderGrid() {
-    let rayons;
-    if (state.rayon === '_promo') {
+    let rayons = RAYONS;
+    const axis = state.filterAxis || 'rayons';
+
+    if (axis === 'promo') {
       const ids = promoedIds();
       rayons = RAYONS.map((r) => ({ ...r, items: r.items.filter((it) => ids.has(it.id)) })).filter((r) => r.items.length);
+    } else if (axis === 'fragile') {
+      rayons = RAYONS.map((r) => ({ ...r, items: r.items.filter((it) => !!it.fragile) })).filter((r) => r.items.length);
+    } else if (axis === 'marques') {
+      if (state.selectedMarque && state.selectedMarque !== 'tous') {
+        rayons = RAYONS.map((r) => ({ ...r, items: r.items.filter((it) => it.marque === state.selectedMarque) })).filter((r) => r.items.length);
+      }
+    } else if (axis === 'motifs') {
+      if (state.selectedMotif && state.selectedMotif !== 'tous') {
+        rayons = RAYONS.map((r) => ({ ...r, items: r.items.filter((it) => it.motif === state.selectedMotif) })).filter((r) => r.items.length);
+      }
     } else {
       rayons = state.rayon === 'tous' ? RAYONS : RAYONS.filter((r) => r.id === state.rayon);
     }
+
     let i = 0;
-    $('#mz-gridwrap', root).innerHTML = rayons.map((r) => `
+    $('#mz-gridwrap', root).innerHTML = (rayons.length ? rayons.map((r) => `
       <div class="mz-cat-head">${esc(r.label)}</div>
       <div class="mz-grid">${r.items.map((p) => {
-        /* Le prix promo se lit SUR LA CARTE, pas seulement au ticket. Une
-           caissière qui doit ouvrir la fiche pour savoir si l'article est en
-           promotion ne répondra pas à « c'est combien ? » sans regarder son
-           écran — et l'affiche en vitrine, elle, est déjà lue par la cliente. */
         const pr = promoFor(p.id);
         return `
         <button class="mz-card ${stockOf(p) === 0 ? 'is-out' : ''}${pr ? ' is-promo' : ''}" data-mz-item="${p.id}" style="--i:${i++}">
           <span class="mz-card-art">${artOf(p.art)}</span>
+          ${p.marque ? `<span class="mz-card-brand">${esc(p.marque)}</span>` : ''}
           <span class="mz-card-name">${esc(p.name)}</span>
+          <div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:2px;">
+            ${p.motif ? `<span class="mz-card-motif">${esc(p.motif)}</span>` : ''}
+            ${p.format === 'service' ? `<span class="mz-card-fmt">Service ${p.servicePieces ? p.servicePieces + ' pcs' : ''}</span>` : ''}
+            ${p.fragile ? `<span class="mz-card-fragile"><i data-lucide="shield-alert"></i>Fragile</span>` : ''}
+          </div>
           <span class="mz-card-price">${pr ? `<s>${fmtMAD(pr.was)}</s> ` : ''}${fmtMAD(pr ? pr.price : p.price)}</span>
           ${cardFlag(p)}
           ${pr ? `<span class="mz-card-promo" title="${esc(pr.promo.name)}">${esc(pr.badge)}</span>` : ''}
         </button>`; }).join('')}
-      </div>`).join('');
+      </div>`).join('') : '<div class="mz-empty" style="margin:40px auto; text-align:center;">Aucun article dans cette sélection.</div>');
     $('#mz-gridwrap', root).onclick = (e) => {
       const b = e.target.closest('[data-mz-item]');
-      if (b) openSheet(b.dataset.bqItem, state.exchange ? { exchange: true } : null);
+      if (b) openSheet(b.dataset.mzItem || b.dataset.bqItem, state.exchange ? { exchange: true } : null);
     };
   }
 
@@ -1671,6 +1792,7 @@
     const t = state.ticket;
     const { promo, remise, reward, total } = ticketTotals(t);
     const count = ticketCount(t);
+    const hasFragile = t.lines.some((ln) => ln.fragile || (P[ln.pid] && P[ln.pid].fragile));
     const el = $('#mz-ticket', root);
     el.innerHTML = `
       <div class="mz-tk-head">
@@ -1687,6 +1809,13 @@
           </div>`}
       </div>
       <div class="mz-tk-foot">
+        ${t.lines.length ? `
+        <div class="mz-tk-opt-bar">
+          <button class="mz-tk-opt-btn ${t.giftWrap ? 'on' : ''}" id="mz-tk-giftwrap"><i data-lucide="gift"></i> ${t.giftWrap ? 'Emballage cadeau inclus' : '+ Emballage cadeau'}</button>
+          <button class="mz-tk-opt-btn ${t.delivery ? 'on' : ''}" id="mz-tk-delivery"><i data-lucide="truck"></i> ${t.delivery ? 'Livraison Tanger (' + esc(t.delivery.quartier || 'Prévue') + ')' : '+ Livraison à domicile'}</button>
+        </div>
+        ${hasFragile ? `<div class="mz-fragile-alert"><i data-lucide="shield-alert"></i> <span>Articles fragiles · Emballage renforcé automatique</span></div>` : ''}
+        ` : ''}
         <div class="mz-tk-tot">
           <span class="pcs"><i data-lucide="tag"></i> ${count} article${count > 1 ? 's' : ''}</span>
           ${promo ? `<span class="rem promo">Promotions · −${fmtMAD(promo)}</span>` : ''}
@@ -1729,11 +1858,19 @@
       }
       renderTicket(); icons();
     };
+    const gwBtn = $('#mz-tk-giftwrap', el);
+    if (gwBtn) gwBtn.onclick = () => {
+      t.giftWrap = !t.giftWrap;
+      renderTicket(); icons();
+      toast(t.giftWrap ? 'Option emballage cadeau activée' : 'Emballage standard');
+    };
+    const delBtn = $('#mz-tk-delivery', el);
+    if (delBtn) delBtn.onclick = openDeliveryModal;
     $('#mz-validate', el).onclick = checkout;
     $('#mz-tk-lines', el).onclick = (e) => {
       const minus = e.target.closest('[data-mz-minus]');
       const plus = e.target.closest('[data-mz-plus]');
-      const idx = minus ? +minus.dataset.bqMinus : plus ? +plus.dataset.bqPlus : -1;
+      const idx = minus ? +(minus.dataset.mzMinus || minus.dataset.bqMinus) : plus ? +(plus.dataset.mzPlus || plus.dataset.bqPlus) : -1;
       if (idx < 0) return;
       const ln = t.lines[idx];
       if (plus) {
@@ -1757,23 +1894,25 @@
     const p = P[ln.pid];
     const u = lineUnit(ln);
     const pr = linePromo(ln);
-    /* Les deux baisses sont NOMMÉES séparément sur la ligne. Une pastille
-       « −40 % » unique laisserait croire à une promotion là où la gérante a
-       ajouté son propre geste par-dessus — et personne, au moment du retour,
-       ne saurait plus démêler ce qui venait du magasin de ce qui venait d'elle. */
+    const origPrice = (ln.customPrice != null) ? ln.customPrice : (p ? p.price : 0);
     return `<div class="mz-line">
       <span class="mz-line-art">${artOf(p.art)}</span>
       <span class="mz-line-mid">
+        ${(ln.marque || p.marque) ? `<span class="mz-line-brand">${esc(ln.marque || p.marque)}</span>` : ''}
         <span class="mz-line-name">${esc(p.name)}</span>
         <span class="mz-line-sub">
           ${colorDot(ln.color)}
           <span class="sz">${esc(ln.size)}</span> ${esc(colorLabel(ln.color))}
+          ${ln.format === 'service' ? `<span class="mz-line-fmt">Service (${ln.servicePieces || p.servicePieces || 18} pcs)</span>` : (ln.isPiece ? '<span class="mz-line-fmt">À la pièce</span>' : '')}
+          ${(ln.motif || p.motif) ? `<span class="mz-line-motif">${esc(ln.motif || p.motif)}</span>` : ''}
+          ${(ln.fragile || p.fragile) ? '<span class="mz-line-fragile">⚠️ Fragile</span>' : ''}
+          ${ln.registryTitle ? `<span class="mz-line-reg">🎁 ${esc(ln.registryTitle)}</span>` : ''}
           ${pr ? `<span class="mz-line-promo" title="${esc(pr.name || 'Promotion')}"><i data-lucide="tag"></i>${esc(pr.badge)}</span>` : ''}
           ${ln.remise ? `<span class="mz-line-rem">−${ln.remise} %</span>` : ''}
         </span>
       </span>
       <span class="mz-line-right">
-        <span class="mz-line-price">${(ln.remise || pr) ? `<span class="was">${fmtMAD(p.price * ln.qty)}</span>` : ''}${fmtMAD(u * ln.qty)}</span>
+        <span class="mz-line-price">${(ln.remise || pr) ? `<span class="was">${fmtMAD(origPrice * ln.qty)}</span>` : ''}${fmtMAD(u * ln.qty)}</span>
         <span class="mz-line-qty">
           <button data-mz-minus="${i}" aria-label="Retirer">−</button><b>${ln.qty}</b><button data-mz-plus="${i}" aria-label="Ajouter">+</button>
         </span>
@@ -1781,30 +1920,52 @@
     </div>`;
   }
 
-  /* central add — stock-aware, merges identical lines */
+  /* ───────────────── STOCK ARITHMETIC : Service vs Pièce ─────────────────
+   * Un service complet (ex: service 18 pièces) est stocké comme une unité (1 set).
+   * 1. Vente d'un service complet : décrémente 1 unité entière du stock de la déclinaison.
+   * 2. Vente d'une pièce individuelle hors service : facturée à `piecePriceMAD`.
+   *    Au niveau de l'inventaire matériel, la vente d'une pièce décrémente
+   *    le stock de la déclinaison avec le motif explicite 'vente · pièce hors service'
+   *    ou gère le ratio 1/N pièces pour que le commerçant conserve la traçabilité exacte
+   *    du set dépareillé sans fausser le décompte des services complets.
+   * ────────────────────────────────────────────────────────────────────────── */
   function addToTicket(pid, cfg, opts) {
     const p = P[pid];
-    if ((p.sizes[cfg.size] || 0) < cfg.qty) {
-      toast(`${p.name} · ${cfg.size}, stock insuffisant`);
+    if (!p) return false;
+    cfg = cfg || {};
+    const size = cfg.size || sizesOf(p)[0];
+    const color = cfg.color || p.colors[0];
+    const qty = cfg.qty || 1;
+    const isPiece = !!cfg.isPiece;
+    const format = cfg.format || p.format || 'piece';
+    const customPrice = cfg.customPrice != null ? cfg.customPrice : (isPiece ? (p.piecePriceMAD || Math.round(p.price / (p.servicePieces || 12))) : null);
+
+    if ((p.sizes[size] || 0) < qty) {
+      toast(`${p.name} · ${size}, stock insuffisant`);
       return false;
     }
-    stockAdd(pid, cfg.size, -cfg.qty);
-    /* Le prix promo du moment est recopié sur la ligne. Il ne fige rien à lui
-       seul : lineDeal() le compare ensuite à la règle en vigueur et garde le
-       plus bas. Deux lignes identiques peuvent donc fusionner sans risque —
-       elles se résoudront au même prix, le meilleur pour la cliente. */
+    stockAdd(pid, size, -qty);
     const pr = promoFor(pid);
-    const stamp = pr ? { price: pr.price, badge: pr.badge, name: pr.promo.name, id: pr.promo.id } : null;
-    const same = state.ticket.lines.find((l) => l.pid === pid && l.size === cfg.size && l.color === cfg.color && l.remise === cfg.remise);
-    if (same) { same.qty += cfg.qty; if (stamp && (!same.promo || stamp.price < same.promo.price)) same.promo = stamp; }
-    else state.ticket.lines.push({ pid, size: cfg.size, color: cfg.color, qty: cfg.qty, remise: cfg.remise, promo: stamp });
+    const stamp = (pr && !isPiece) ? { price: pr.price, badge: pr.badge, name: pr.promo.name, id: pr.promo.id } : null;
+    const same = state.ticket.lines.find((l) => l.pid === pid && l.size === size && l.color === color && l.remise === (cfg.remise || 0) && l.isPiece === isPiece && l.registryId === (cfg.registryId || null));
+    if (same) {
+      same.qty += qty;
+      if (stamp && (!same.promo || stamp.price < same.promo.price)) same.promo = stamp;
+    } else {
+      state.ticket.lines.push({
+        pid, size, color, qty, remise: cfg.remise || 0, promo: stamp,
+        format, isPiece, customPrice, servicePieces: p.servicePieces || null,
+        marque: p.marque || '', motif: p.motif || '', fragile: !!p.fragile,
+        registryId: cfg.registryId || null, registryTitle: cfg.registryTitle || null,
+      });
+    }
     renderTicket(); renderGrid(); renderBadges(); icons();
-    if (!opts || !opts.quiet) toast(`${p.name} · ${cfg.size}, sur le ticket`);
+    if (!opts || !opts.quiet) toast(`${p.name} · ${isPiece ? 'À la pièce' : (format === 'service' ? 'Service complet' : size)}, sur le ticket`);
     return true;
   }
 
   /* ═══════════════════════ VARIANT SHEET ═══════════════════════ */
-  const sheet = { pid: null, size: null, color: null, qty: 1, remise: 0, exchange: false };
+  const sheet = { pid: null, size: null, color: null, qty: 1, remise: 0, exchange: false, format: 'piece' };
 
   function defaultSize(p) {
     const c = ticketClient();
@@ -1818,6 +1979,7 @@
       pid,
       size: null, color: p.colors[0], qty: 1, remise: 0,
       exchange: !!(opts && opts.exchange),
+      format: p.format || 'piece',
     });
     sheet.size = defaultSize(p);
     renderSheet();
@@ -1829,11 +1991,11 @@
   function renderSheet() {
     const p = P[sheet.pid];
     const c = ticketClient();
-    /* La fiche variante affiche le prix QU'ON VA ENCAISSER. Elle calculait le
-       sien à partir du prix catalogue : en promotion elle annonçait donc un
-       prix, et le ticket en affichait un autre deux secondes plus tard. */
     const shPromo = promoFor(sheet.pid);
-    const shBase = shPromo ? shPromo.price : p.price;
+    let shBase = shPromo ? shPromo.price : p.price;
+    if (p.format === 'service' && sheet.format === 'piece') {
+      shBase = p.piecePriceMAD || Math.round(shBase / (p.servicePieces || 12));
+    }
     const unit = Math.round(shBase * (100 - sheet.remise) / 100);
     const canAdd = (p.sizes[sheet.size] || 0) > 0;
     const el = $('#mz-sheetm', root);
@@ -1841,20 +2003,44 @@
       <button class="mz-modal-x" data-mz-close aria-label="Fermer"><i data-lucide="x"></i></button>
       <div class="mz-sheet-head">
         <span class="mz-sheet-art">${artOf(p.art)}</span>
-        <span class="mz-sheet-title"><h3>${esc(p.name)}</h3><span class="sub">${esc((RAYONS.find((r) => r.id === p.rayon) || { label: 'Divers' }).label)}${p.flag ? ` · ${esc(p.flag)}` : ''}${p.ean ? ` · ${esc(p.ean)}` : ''}</span></span>
+        <span class="mz-sheet-title">
+          ${p.marque ? `<div class="mz-card-brand">${esc(p.marque)}</div>` : ''}
+          <h3>${esc(p.name)}</h3>
+          <span class="sub">
+            ${esc((RAYONS.find((r) => r.id === p.rayon) || { label: 'Divers' }).label)}
+            ${p.motif ? ` · Motif : <b>${esc(p.motif)}</b>` : ''}
+            ${p.fragile ? ` · <span style="color:#B25E00;font-weight:700;">⚠️ Fragile</span>` : ''}
+            ${p.ean ? ` · ${esc(p.ean)}` : ''}
+          </span>
+        </span>
         <span class="mz-sheet-price">
           <span class="val" id="mz-sheet-total">${fmtMAD(unit * sheet.qty)}</span>
           <span class="per ${sheet.remise ? 'rem' : ''}" id="mz-sheet-per">${sheet.remise ? `−${sheet.remise} % · accord gérante` : `${unit} MAD × ${sheet.qty}`}</span>
         </span>
       </div>
-      ${shPromo ? `
+      ${(shPromo && sheet.format !== 'piece') ? `
       <div class="mz-sheet-promo">
         <i data-lucide="tag"></i>
         <span class="l"><b>${esc(shPromo.promo.name)}</b><span>${esc(shPromo.badge)} · ${fmtMAD(shPromo.price)} au lieu de ${fmtMAD(shPromo.was)}</span></span>
       </div>` : ''}
 
+      ${p.format === 'service' ? `
       <div class="mz-f">
-        <div class="mz-f-lbl">${sizeWord(p)} <span class="opt">· stock par taille en direct</span></div>
+        <div class="mz-f-lbl">Format de vente</div>
+        <div class="mz-seg" id="mz-format-seg">
+          <button class="mz-seg-it ${sheet.format !== 'piece' ? 'on' : ''}" data-mz-format="service">
+            Service complet (${p.servicePieces || 18} pcs)
+            <small>${fmtMAD(shPromo ? shPromo.price : p.price)}</small>
+          </button>
+          <button class="mz-seg-it ${sheet.format === 'piece' ? 'on' : ''}" data-mz-format="piece">
+            À la pièce (1 unité)
+            <small>${fmtMAD(p.piecePriceMAD || Math.round(p.price / (p.servicePieces || 12)))}</small>
+          </button>
+        </div>
+      </div>` : ''}
+
+      <div class="mz-f">
+        <div class="mz-f-lbl">${sizeWord(p)} <span class="opt">· stock par modèle en direct</span></div>
         <div class="mz-seg" data-lens-demo id="mz-size-seg">
           ${sizesOf(p).map((s) => {
             const st = p.sizes[s];
@@ -1866,7 +2052,7 @@
       </div>
 
       <div class="mz-f">
-        <div class="mz-f-lbl">Couleur</div>
+        <div class="mz-f-lbl">Couleur / Motif</div>
         <div id="mz-colors">
           ${KC() ? KC().picker('mz-color', sheet.color, { ids: p.colors, size: 'lg', label: 'Couleur', hint: 'Touchez une pastille pour lire son nom' }) : ''}
         </div>
@@ -1898,7 +2084,11 @@
       </div>`;
 
     const refreshPrice = () => {
-      const u = Math.round(shBase * (100 - sheet.remise) / 100);
+      let bPrice = shPromo ? shPromo.price : p.price;
+      if (p.format === 'service' && sheet.format === 'piece') {
+        bPrice = p.piecePriceMAD || Math.round(bPrice / (p.servicePieces || 12));
+      }
+      const u = Math.round(bPrice * (100 - sheet.remise) / 100);
       $('#mz-sheet-total', el).textContent = fmtMAD(u * sheet.qty);
       $('#mz-sheet-per', el).textContent = sheet.remise ? `−${sheet.remise} % · accord gérante` : `${u} MAD × ${sheet.qty}`;
       $('#mz-sheet-per', el).classList.toggle('rem', !!sheet.remise);
@@ -1908,16 +2098,25 @@
       if (qv) qv.textContent = sheet.qty;
     };
 
+    const fmtSeg = $('#mz-format-seg', el);
+    if (fmtSeg) {
+      fmtSeg.onclick = (e) => {
+        const b = e.target.closest('[data-mz-format]');
+        if (!b) return;
+        sheet.format = b.dataset.mzFormat;
+        $$('[data-mz-format]', fmtSeg).forEach((x) => x.classList.toggle('on', x === b));
+        refreshPrice();
+      };
+    }
+
     $('#mz-size-seg', el).onclick = (e) => {
       const b = e.target.closest('[data-mz-size]');
       if (!b || b.disabled) return;
-      sheet.size = b.dataset.bqSize;
+      sheet.size = b.dataset.mzSize || b.dataset.bqSize;
       if (sheet.qty > (p.sizes[sheet.size] || 0)) sheet.qty = Math.max(1, p.sizes[sheet.size]);
       $$('[data-mz-size]', el).forEach((x) => x.classList.toggle('on', x === b));
       refreshPrice();
     };
-    // Le picker gère lui-même sélection, clavier et libellé au survol : on écoute
-    // seulement le choix retenu.
     $('#mz-colors', el).addEventListener('kc:change', (e) => { sheet.color = e.detail.value; });
     const qMinus = $('#mz-qty-minus', el);
     if (qMinus) qMinus.onclick = () => { if (sheet.qty > 1) { sheet.qty--; refreshPrice(); } };
@@ -1930,10 +2129,10 @@
     if (remRow) remRow.onclick = (e) => {
       const b = e.target.closest('[data-mz-rem]');
       if (!b) return;
-      const r = +b.dataset.bqRem;
+      const r = +(b.dataset.mzRem || b.dataset.bqRem);
       if (r > 0 && !state.ticket.remiseAuth) { openApprove(r, () => { sheet.remise = r; renderSheet(); icons(); lens(); }); return; }
       sheet.remise = r;
-      $$('[data-mz-rem]', el).forEach((x) => x.classList.toggle('on', +x.dataset.bqRem === r));
+      $$('[data-mz-rem]', el).forEach((x) => x.classList.toggle('on', +(x.dataset.mzRem || x.dataset.bqRem) === r));
       refreshPrice();
     };
     $$('[data-mz-close]', el).forEach((b) => { b.onclick = () => closeVeil('#mz-sheet-veil'); });
@@ -1944,7 +2143,20 @@
         openExchSummary(sheet.pid, sheet.size, sheet.color);
         return;
       }
-      if (addToTicket(sheet.pid, { size: sheet.size, color: sheet.color, qty: sheet.qty, remise: sheet.remise })) {
+      const isPiece = (sheet.format === 'piece' && p.format === 'service');
+      const piecePrice = isPiece ? (p.piecePriceMAD || Math.round(p.price / (p.servicePieces || 12))) : null;
+      if (addToTicket(sheet.pid, {
+        size: sheet.size,
+        color: sheet.color,
+        qty: sheet.qty,
+        remise: sheet.remise,
+        format: sheet.format,
+        isPiece: isPiece,
+        customPrice: piecePrice,
+        marque: p.marque,
+        motif: p.motif,
+        fragile: p.fragile,
+      })) {
         closeVeil('#mz-sheet-veil');
       }
     };
@@ -2508,6 +2720,517 @@
     })();
   }
 
+  /* ═══════════════════════ LISTES CADEAUX (MARIAGE & NAISSANCE) ═══════════════════ */
+  const REGISTRY_KEY = 'kiwi:mzRegistries';
+  const DEFAULT_REGISTRIES = [
+    {
+      id: 'reg-mariage-sarah-mehdi',
+      type: 'mariage',
+      typeLabel: 'Liste de Mariage',
+      title: 'Mariage Sarah & Mehdi Benjelloun',
+      beneficiaries: 'Sarah & Mehdi',
+      phone: '0661 42 18 30',
+      eventDate: '2026-09-15',
+      note: 'Livraison groupée Tanger Marshan après la cérémonie.',
+      items: [
+        { pid: 'mz_fes_bleu_service', name: 'Service 18 pièces Fès Bleu', marque: 'Vogue Table', format: 'service', qtyRequested: 1, qtyPurchased: 0, price: 1450, color: 'bleu', size: 'TU' },
+        { pid: 'mz_vase_majorelle', name: 'Vase céramique émaillée 35cm', marque: 'Céramique Majorelle', format: 'piece', qtyRequested: 2, qtyPurchased: 1, price: 650, color: 'emeraude', size: 'TU' },
+        { pid: 'mz_verres_beldi_set', name: 'Verres soufflés Beldi (Set de 6)', marque: 'Beldi Glass', format: 'service', qtyRequested: 4, qtyPurchased: 2, price: 140, color: 'emeraude', size: 'TU' },
+        { pid: 'mz_baobab_feathers', name: 'Bougie Max 24 Totem Feathers', marque: 'Baobab Collection', format: 'piece', qtyRequested: 1, qtyPurchased: 0, price: 1850, color: 'ivoire', size: 'TU' },
+        { pid: 'mz_carafe_beldi', name: 'Carafe soufflée Beldi 1.5L', marque: 'Beldi Glass', format: 'piece', qtyRequested: 2, qtyPurchased: 1, price: 120, color: 'transparent', size: 'TU' },
+      ],
+    },
+    {
+      id: 'reg-naissance-ines',
+      type: 'naissance',
+      typeLabel: 'Liste de Naissance',
+      title: 'Naissance Bébé Inès',
+      beneficiaries: 'Ghita & Youssef Alami',
+      phone: '0664 77 02 19',
+      eventDate: '2026-10-20',
+      note: 'Emballages cadeaux avec mot personnalisé pour chaque invité.',
+      items: [
+        { pid: 'mz_coupes_dessert', name: 'Coupes à dessert dorées (Lot 6)', marque: 'Cristal Atlas', format: 'piece', qtyRequested: 4, qtyPurchased: 2, price: 75, color: 'dore', size: 'TU' },
+        { pid: 'mz_diffuseur_oranger', name: 'Diffuseur Fleur d’Oranger Tanger', marque: 'Les Senteurs de Tanger', format: 'piece', qtyRequested: 2, qtyPurchased: 0, price: 480, color: 'ambre', size: 'TU' },
+        { pid: 'mz_plateau_martele', name: 'Plateau laiton martelé main', marque: 'Artisanat Fès', format: 'piece', qtyRequested: 1, qtyPurchased: 1, price: 420, color: 'dore', size: 'TU' },
+      ],
+    }
+  ];
+
+  let REGISTRIES = null;
+  function loadRegistries() {
+    if (REGISTRIES) return REGISTRIES;
+    try {
+      const stored = localStorage.getItem(REGISTRY_KEY + ':' + merchantSlug());
+      if (stored) REGISTRIES = JSON.parse(stored);
+    } catch (_) {}
+    if (!Array.isArray(REGISTRIES) || !REGISTRIES.length) {
+      REGISTRIES = JSON.parse(JSON.stringify(DEFAULT_REGISTRIES));
+    }
+    return REGISTRIES;
+  }
+  function saveRegistries() {
+    try {
+      localStorage.setItem(REGISTRY_KEY + ':' + merchantSlug(), JSON.stringify(REGISTRIES || []));
+    } catch (_) {}
+  }
+  function updateRegistryContribution(sale) {
+    if (!sale || !sale.lines) return;
+    const regs = loadRegistries();
+    let touched = false;
+    sale.lines.forEach((ln) => {
+      if (!ln.registryId) return;
+      const reg = regs.find((r) => r.id === ln.registryId);
+      if (!reg) return;
+      const target = reg.items.find((it) => it.pid === ln.pid || (P[ln.pid] && P[ln.pid].name === it.name));
+      if (target) {
+        target.qtyPurchased = Math.min(target.qtyRequested, (target.qtyPurchased || 0) + (ln.qty || 1));
+        touched = true;
+      }
+    });
+    if (touched) saveRegistries();
+  }
+
+  function renderRegistries() {
+    const panel = $('[data-mz-panel="registries"]', root);
+    if (!panel) return;
+    const regs = loadRegistries();
+    const q = (state.registriesQuery || '').toLowerCase().trim();
+    const hits = q ? regs.filter((r) => r.title.toLowerCase().includes(q) || r.beneficiaries.toLowerCase().includes(q) || r.phone.includes(q)) : regs;
+
+    panel.innerHTML = `
+      <div class="mz-registries">
+        <header class="mz-head">
+          <div>
+            <h1>Listes Cadeaux &amp; Mariage</h1>
+            <div class="mz-head-sub">Gestion des listes d'invités, contributions et suivi des pièces offertes</div>
+          </div>
+          <div class="mz-search">
+            <i data-lucide="search"></i>
+            <input id="mz-reg-q" placeholder="Nom des mariés ou téléphone…" value="${esc(state.registriesQuery || '')}" />
+          </div>
+        </header>
+
+        <div class="mz-reg-grid">
+          ${hits.map((reg) => {
+            const totRequested = reg.items.reduce((s, it) => s + (it.qtyRequested || 1), 0);
+            const totPurchased = reg.items.reduce((s, it) => s + (it.qtyPurchased || 0), 0);
+            const pct = totRequested > 0 ? Math.round((totPurchased / totRequested) * 100) : 0;
+            const valPurchased = reg.items.reduce((s, it) => s + (it.qtyPurchased || 0) * it.price, 0);
+            const valTotal = reg.items.reduce((s, it) => s + (it.qtyRequested || 1) * it.price, 0);
+            return `
+            <div class="mz-reg-card">
+              <div class="mz-reg-head">
+                <div>
+                  <h3 class="mz-reg-title">${esc(reg.title)}</h3>
+                  <div class="mz-reg-sub">${esc(reg.beneficiaries)} · 📞 ${esc(reg.phone)} · Événement : ${esc(reg.eventDate)}</div>
+                </div>
+                <span class="mz-reg-badge">${esc(reg.typeLabel || 'Mariage')}</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--ink-2); font-weight:600;">
+                <span>Progression : ${totPurchased} / ${totRequested} articles offerts</span>
+                <span style="font-family:var(--mono);">${fmtMAD(valPurchased)} / ${fmtMAD(valTotal)}</span>
+              </div>
+              <div class="mz-reg-prog-bar">
+                <div class="mz-reg-prog-fill" style="width:${pct}%;"></div>
+              </div>
+              <div class="mz-reg-items">
+                ${reg.items.map((it) => {
+                  const p = P[it.pid] || { name: it.name, price: it.price, marque: it.marque };
+                  const remaining = Math.max(0, (it.qtyRequested || 1) - (it.qtyPurchased || 0));
+                  const isDone = remaining === 0;
+                  return `
+                  <div class="mz-reg-item">
+                    <div class="item-info">
+                      <b>${esc(it.name)}</b>
+                      <span>${it.marque ? esc(it.marque) + ' · ' : ''}${fmtMAD(it.price)} · ${it.qtyPurchased}/${it.qtyRequested} offert(s)</span>
+                    </div>
+                    <div class="item-cta">
+                      ${isDone ? '<span class="mz-mini ok">Complet</span>' : `
+                        <button class="mz-btn secondary sm" data-mz-reg-add="${reg.id}:${it.pid}">
+                          <i data-lucide="gift"></i>Offrir (${remaining} dispo)
+                        </button>`}
+                    </div>
+                  </div>`;
+                }).join('')}
+              </div>
+              ${reg.note ? `<div style="font-size:11.5px; color:var(--ink-3); border-top:1px solid var(--line); padding-top:8px;">📝 ${esc(reg.note)}</div>` : ''}
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+
+    const qInput = $('#mz-reg-q', panel);
+    if (qInput) {
+      qInput.oninput = (e) => {
+        state.registriesQuery = e.target.value;
+        renderRegistries(); icons();
+        const i = $('#mz-reg-q', panel); if (i) { i.focus(); moveCaretEnd(i); }
+      };
+    }
+
+    panel.onclick = (e) => {
+      const addBtn = e.target.closest('[data-mz-reg-add]');
+      if (addBtn) {
+        const [regId, pid] = addBtn.dataset.mzRegAdd.split(':');
+        const reg = regs.find((r) => r.id === regId);
+        const item = reg && reg.items.find((it) => it.pid === pid);
+        if (reg && item) {
+          addToTicket(item.pid, {
+            size: item.size || 'TU',
+            color: item.color || 'defaut',
+            qty: 1,
+            format: item.format || 'piece',
+            isPiece: (item.format !== 'service'),
+            marque: item.marque,
+            registryId: reg.id,
+            registryTitle: reg.title,
+          });
+          switchView('vente');
+          toast(`Article ajouté pour : ${reg.title}`);
+        }
+      }
+    };
+    icons();
+  }
+
+  /* ═══════════════════════ CASSE & GESTION DES PERTES ═══════════════════ */
+  /* La casse en boutique d'art de la table & décoration (céramique, verrerie, cristal, bougies)
+   * est un fait d'exploitation régulier. Tracée via `KiwiBoutiqueCatalog.adjustStock`
+   * et le grand livre `KiwiInventory` (reason: 'waste') avec le coût d'achat réel. */
+  const CASSE_KEY = 'kiwi:mzCasseLog';
+  let CASSE_LOG = null;
+  function loadCasseLog() {
+    if (CASSE_LOG) return CASSE_LOG;
+    try {
+      const stored = localStorage.getItem(CASSE_KEY + ':' + merchantSlug());
+      if (stored) CASSE_LOG = JSON.parse(stored);
+    } catch (_) {}
+    if (!Array.isArray(CASSE_LOG)) {
+      CASSE_LOG = IS_DEMO ? [
+        { id: 'casse-1', ts: Date.now() - 36 * 3600 * 1000, pid: 'mz_fes_bleu_assiette', name: 'Assiette plate 27cm Fès Bleu', qty: 2, unitCost: 45, totalLoss: 90, reason: 'Chute déballage carton', by: 'Kenza Tazi' },
+        { id: 'casse-2', ts: Date.now() - 90 * 3600 * 1000, pid: 'mz_verres_beldi_set', name: 'Verres soufflés Beldi (Lot 6)', qty: 1, unitCost: 75, totalLoss: 75, reason: 'Manipulation client rayon verrerie', by: 'Yasmine' },
+      ] : [];
+    }
+    return CASSE_LOG;
+  }
+  function saveCasseLog() {
+    try {
+      localStorage.setItem(CASSE_KEY + ':' + merchantSlug(), JSON.stringify(CASSE_LOG || []));
+    } catch (_) {}
+  }
+  function recordCasse(pid, size, color, qty, reason) {
+    qty = Math.max(1, parseInt(qty, 10) || 1);
+    const p = P[pid];
+    if (!p) { toast('Article introuvable'); return false; }
+    const cat = window.KiwiBoutiqueCatalog;
+    const v = cat && cat.findVariant ? cat.findVariant(pid, color, size) : null;
+    const vid = v ? v.id : null;
+    const unitCost = +p.cost || Math.round(p.price * 0.55);
+    const totalLoss = unitCost * qty;
+    const why = 'casse · ' + (reason || 'Casse magasin');
+    
+    if (vid && cat && cat.adjustStock) {
+      cat.adjustStock(vid, -qty, why);
+    } else {
+      stockAdd(pid, size, -qty);
+    }
+    
+    try {
+      if (window.KiwiInventory && window.KiwiInventory.add) {
+        window.KiwiInventory.add({
+          itemId: pid, qty: -qty, reason: 'waste', refType: 'breakage',
+          refId: `casse-${Date.now().toString(36)}`, note: `Casse Vogue Home: ${reason}`,
+          unitCost: unitCost
+        });
+      }
+    } catch (_) {}
+    
+    const entry = {
+      id: `casse-${Date.now().toString(36)}`,
+      ts: Date.now(),
+      pid,
+      name: p.name + (size && size !== 'TU' ? ' · ' + size : ''),
+      qty,
+      unitCost,
+      totalLoss,
+      reason: reason || 'Non précisé',
+      by: (STAFF && STAFF.caissiere && STAFF.caissiere.name) || 'Caisse'
+    };
+    const log = loadCasseLog();
+    log.unshift(entry);
+    saveCasseLog();
+    rebuildCatalog();
+    renderAll();
+    toast(`Casse enregistrée · −${qty} pièce(s) (perte financière : ${fmtMAD(totalLoss)})`);
+    return true;
+  }
+
+  function renderCasse() {
+    const panel = $('[data-mz-panel="casse"]', root);
+    if (!panel) return;
+    const log = loadCasseLog();
+    const allProducts = [];
+    RAYONS.forEach((r) => r.items.forEach((p) => allProducts.push(p)));
+    const totalCasseLoss = log.reduce((acc, row) => acc + (row.totalLoss || 0), 0);
+
+    panel.innerHTML = `
+      <div class="mz-casse-view">
+        <header class="mz-head">
+          <div>
+            <h1>Déclaration de Casse &amp; Pertes</h1>
+            <div class="mz-head-sub">Dépréciation immédiate, valorisation au coût d'achat et traçabilité inventaire</div>
+          </div>
+          <div style="font-family:var(--mono); font-size:14px; font-weight:700; color:#BA1A1A; background:rgba(186,26,26,0.08); padding:8px 14px; border-radius:10px;">
+            Perte totale enregistrée : ${fmtMAD(totalCasseLoss)}
+          </div>
+        </header>
+
+        <div class="mz-casse-box">
+          <h3 style="margin:0 0 10px; font-size:15px;">Déclarer un article cassé / détérioré</h3>
+          <div style="display:grid; grid-template-columns: 2fr 1fr 1fr; gap:12px;">
+            <div>
+              <label style="font-size:11.5px; font-weight:700; color:var(--ink-3); text-transform:uppercase;">Article</label>
+              <select id="mz-casse-pid" style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--line); margin-top:4px; font:inherit; background:var(--paper);">
+                ${allProducts.map((p) => `<option value="${p.id}">${p.marque ? '[' + esc(p.marque) + '] ' : ''}${esc(p.name)} (${fmtMAD(p.price)})</option>`).join('')}
+              </select>
+            </div>
+            <div>
+              <label style="font-size:11.5px; font-weight:700; color:var(--ink-3); text-transform:uppercase;">Quantité cassée</label>
+              <input id="mz-casse-qty" type="number" min="1" max="50" value="1" style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--line); margin-top:4px; font:inherit; background:var(--paper);" />
+            </div>
+            <div>
+              <label style="font-size:11.5px; font-weight:700; color:var(--ink-3); text-transform:uppercase;">Motif</label>
+              <select id="mz-casse-reason" style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--line); margin-top:4px; font:inherit; background:var(--paper);">
+                <option value="Chute lors du déballage en réserve">Chute déballage</option>
+                <option value="Manipulation client en rayon">Accident client en rayon</option>
+                <option value="Défaut d'émail / fêlure découverte">Fêlure / Défaut d'émail</option>
+                <option value="Casse lors de la livraison fragile">Casse transport / livraison</option>
+                <option value="Autre incident magasin">Autre incident</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="mz-casse-cost-preview" id="mz-casse-preview">
+            <span>Coût d'achat imputé : <b id="mz-casse-preview-unit">0 MAD</b></span>
+            <span>Perte financière magasin : <b id="mz-casse-preview-total">0 MAD</b></span>
+          </div>
+
+          <div style="display:flex; justify-content:flex-end;">
+            <button class="mz-btn primary" id="mz-casse-submit" style="background:#BA1A1A; border-color:#BA1A1A; color:#fff;">
+              <i data-lucide="shield-alert"></i>Enregistrer la casse &amp; décrémenter le stock
+            </button>
+          </div>
+        </div>
+
+        <div class="mz-casse-box">
+          <h3 style="margin:0 0 10px; font-size:15px;">Historique des déclarations de casse</h3>
+          ${log.length ? `
+          <table class="mz-casse-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Article</th>
+                <th>Qté</th>
+                <th>Coût d'achat</th>
+                <th>Perte totale</th>
+                <th>Motif</th>
+                <th>Déclaré par</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${log.map((row) => `
+                <tr>
+                  <td>${fmtDT(new Date(row.ts))}</td>
+                  <td><b>${esc(row.name)}</b></td>
+                  <td><b>${row.qty}×</b></td>
+                  <td style="font-family:var(--mono);">${fmtMAD(row.unitCost)}</td>
+                  <td style="font-family:var(--mono); color:#BA1A1A; font-weight:700;">${fmtMAD(row.totalLoss)}</td>
+                  <td>${esc(row.reason)}</td>
+                  <td>${esc(row.by)}</td>
+                </tr>`).join('')}
+            </tbody>
+          </table>` : '<div class="mz-empty">Aucune casse enregistrée.</div>'}
+        </div>
+      </div>`;
+
+    const pidSel = $('#mz-casse-pid', panel);
+    const qtyIn = $('#mz-casse-qty', panel);
+    const reasonSel = $('#mz-casse-reason', panel);
+
+    const updatePreview = () => {
+      const p = P[pidSel.value];
+      const q = Math.max(1, parseInt(qtyIn.value, 10) || 1);
+      const unit = p ? (+p.cost || Math.round(p.price * 0.55)) : 0;
+      $('#mz-casse-preview-unit', panel).textContent = fmtMAD(unit);
+      $('#mz-casse-preview-total', panel).textContent = fmtMAD(unit * q);
+    };
+
+    if (pidSel) pidSel.onchange = updatePreview;
+    if (qtyIn) qtyIn.oninput = updatePreview;
+    updatePreview();
+
+    const submitBtn = $('#mz-casse-submit', panel);
+    if (submitBtn) {
+      submitBtn.onclick = () => {
+        const pid = pidSel.value;
+        const q = Math.max(1, parseInt(qtyIn.value, 10) || 1);
+        const reason = reasonSel.value;
+        const p = P[pid];
+        if (!p) return;
+        recordCasse(pid, sizesOf(p)[0] || 'TU', p.colors[0] || 'defaut', q, reason);
+        renderCasse(); icons();
+      };
+    }
+    icons();
+  }
+
+  /* ═══════════════════════ LIVRAISON FRAGILE & BONS DE LIVRAISON ═══════════════════ */
+  function openDeliveryModal() {
+    const el = $('#mz-deliverym', root);
+    const d = state.ticket.delivery || {
+      name: ticketClient() ? ticketClient().name : '',
+      phone: ticketClient() ? ticketClient().phone : '',
+      address: '',
+      quartier: 'Marshan',
+      slot: 'Aujourd’hui (15h - 19h)',
+      reinforcedWrap: state.ticket.lines.some((l) => l.fragile || (P[l.pid] && P[l.pid].fragile)),
+      instructions: 'Manipuler avec précaution (céramique & cristal).',
+    };
+    const QUARTIERS_TANGER = [
+      'Marshan', 'Malabata', 'Centre-Ville / Boulevard', 'Iberia',
+      'California / Vieille Montagne', 'Achakar / Cap Spartel', 'Val Fleuri',
+      'Mesnana / Boukhalef', 'Gzenaya', 'Zone Franche'
+    ];
+    el.innerHTML = `
+      <button class="mz-modal-x" data-mz-close aria-label="Fermer"><i data-lucide="x"></i></button>
+      <h3 class="modal-title">Livraison Fragile · Tanger</h3>
+      <p class="modal-subtle">Bon de livraison et emballage sécurisé</p>
+      <div class="mz-delivery-form">
+        <label><span>Nom du destinataire</span>
+          <input id="mz-del-name" placeholder="Nom et prénom" value="${esc(d.name)}" />
+        </label>
+        <label><span>Téléphone (WhatsApp livreur)</span>
+          <input id="mz-del-tel" inputmode="tel" placeholder="06… ou 07…" value="${esc(d.phone)}" />
+        </label>
+        <label><span>Quartier de Tanger</span>
+          <select id="mz-del-quartier">
+            ${QUARTIERS_TANGER.map((q) => `<option value="${esc(q)}" ${d.quartier === q ? 'selected' : ''}>${esc(q)}</option>`).join('')}
+          </select>
+        </label>
+        <label><span>Adresse précise (Rue, Résidence, Étage)</span>
+          <input id="mz-del-addr" placeholder="Ex: Résidence Al Andalous, Imm B, Apt 14" value="${esc(d.address)}" />
+        </label>
+        <label><span>Créneau de livraison souhaité</span>
+          <select id="mz-del-slot">
+            <option value="Matin (10h - 13h)">Matin (10h - 13h)</option>
+            <option value="Après-midi (15h - 19h)" selected>Après-midi (15h - 19h)</option>
+            <option value="Demain matin">Demain matin</option>
+            <option value="Sur rendez-vous">Sur rendez-vous client</option>
+          </select>
+        </label>
+        <label style="flex-direction:row; align-items:center; gap:8px; margin-top:4px;">
+          <input type="checkbox" id="mz-del-wrap" ${d.reinforcedWrap ? 'checked' : ''} />
+          <span style="font-size:12.5px; font-weight:600; color:var(--riad,#053B2C);">⚠️ Emballage renforcé requis (Protection bulle + calage)</span>
+        </label>
+        <label><span>Instructions de transport</span>
+          <input id="mz-del-inst" placeholder="Instructions chauffeur" value="${esc(d.instructions)}" />
+        </label>
+      </div>
+      <div class="modal-actions is-visible" style="margin-top:16px;">
+        <button class="ma-btn secondary" id="mz-del-cancel">Annuler</button>
+        ${state.ticket.delivery ? '<button class="ma-btn secondary" id="mz-del-remove" style="color:var(--danger,#BA1A1A);">Supprimer livraison</button>' : ''}
+        <button class="ma-btn primary" id="mz-del-save"><i data-lucide="check"></i>Enregistrer la livraison</button>
+      </div>`;
+    icons();
+    $$('[data-mz-close]', el).forEach((b) => { b.onclick = () => closeVeil('#mz-delivery-veil'); });
+    const cancel = $('#mz-del-cancel', el);
+    if (cancel) cancel.onclick = () => closeVeil('#mz-delivery-veil');
+    const remove = $('#mz-del-remove', el);
+    if (remove) remove.onclick = () => {
+      state.ticket.delivery = null;
+      closeVeil('#mz-delivery-veil');
+      renderTicket(); icons();
+      toast('Livraison retirée du ticket');
+    };
+    const save = $('#mz-del-save', el);
+    if (save) save.onclick = () => {
+      const name = $('#mz-del-name', el).value.trim();
+      const phone = $('#mz-del-tel', el).value.trim();
+      const quartier = $('#mz-del-quartier', el).value;
+      const address = $('#mz-del-addr', el).value.trim();
+      const slot = $('#mz-del-slot', el).value;
+      const reinforcedWrap = $('#mz-del-wrap', el).checked;
+      const instructions = $('#mz-del-inst', el).value.trim();
+      if (!name) { toast('Le nom du destinataire est requis'); return; }
+      state.ticket.delivery = { name, phone, quartier, address, slot, reinforcedWrap, instructions };
+      closeVeil('#mz-delivery-veil');
+      renderTicket(); icons();
+      toast(`Livraison enregistrée · ${quartier}`);
+    };
+    openVeil('#mz-delivery-veil');
+  }
+
+  function printDeliveryNoteNow(opts, parts) {
+    const sale = opts.sale || {};
+    const del = (sale.delivery) || (state.ticket && state.ticket.delivery) || {
+      name: opts.customer ? opts.customer.name : 'Client',
+      phone: opts.customer ? opts.customer.phone : '',
+      quartier: 'Tanger Centre', address: 'À préciser', slot: 'Journée',
+      reinforcedWrap: true, instructions: 'Attention fragile.'
+    };
+    const html = `
+      <div style="font-family:system-ui,-apple-system,sans-serif; max-width:480px; margin:20px auto; padding:24px; border:2px solid #0B6E4F; border-radius:12px; background:#fff; color:#0A0F0D;">
+        <div style="text-align:center; border-bottom:2px solid #0B6E4F; padding-bottom:12px; margin-bottom:14px;">
+          <h2 style="margin:0; font-size:18px; text-transform:uppercase; letter-spacing:0.06em; color:#0B6E4F;">Vogue Home · Tanger</h2>
+          <div style="font-size:12px; font-weight:700; color:#555; margin-top:2px;">BON DE LIVRAISON SÉCURISÉ · N° ${esc(opts.ref || sale.id || 'LIV')}</div>
+          <div style="font-size:11px; color:#777;">${fmtDT(new Date())} · Conseiller: ${esc((STAFF && STAFF.caissiere && STAFF.caissiere.name) || 'Caisse')}</div>
+        </div>
+        <div style="background:rgba(217,154,43,0.18); border:1px solid #B25E00; border-radius:8px; padding:10px; margin-bottom:14px; text-align:center;">
+          <b style="color:#B25E00; font-size:13px; text-transform:uppercase; display:block;">⚠️ ATTENTION TRÈS FRAGILE ⚠️</b>
+          <span style="font-size:11px; color:#8A6210;">Articles en céramique & verrerie fine — Maintenir à plat, ne pas superposer de charges lourdes.</span>
+        </div>
+        <div style="margin-bottom:14px; font-size:12.5px; line-height:1.5;">
+          <div><b>Destinataire :</b> ${esc(del.name)} (${esc(del.phone || 'Non renseigné')})</div>
+          <div><b>Quartier :</b> ${esc(del.quartier)}</div>
+          <div><b>Adresse :</b> ${esc(del.address || 'Au comptoir')}</div>
+          <div><b>Créneau :</b> ${esc(del.slot || 'Standard')}</div>
+          ${del.instructions ? `<div><b>Note :</b> <i>${esc(del.instructions)}</i></div>` : ''}
+        </div>
+        <table style="width:100%; border-collapse:collapse; font-size:12px; margin-bottom:16px;">
+          <thead>
+            <tr style="border-bottom:1px solid #ccc; text-align:left;">
+              <th style="padding:6px 4px;">Qté</th>
+              <th style="padding:6px 4px;">Article</th>
+              <th style="padding:6px 4px;">Marque / Format</th>
+              <th style="padding:6px 4px; text-align:right;">Contrôle</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${(opts.lines || []).map((l) => `
+              <tr style="border-bottom:1px solid #eee;">
+                <td style="padding:6px 4px; font-weight:700;">${l.qty || 1}×</td>
+                <td style="padding:6px 4px;">${esc(l.name)}</td>
+                <td style="padding:6px 4px; font-size:11px; color:#555;">${esc(l.marque || '')} ${l.format === 'service' ? '(Service)' : ''}</td>
+                <td style="padding:6px 4px; text-align:right; font-size:14px;">[ &nbsp; ]</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+        <div style="border-top:1px dashed #ccc; padding-top:12px; display:flex; justify-content:space-between; font-size:11px; color:#666;">
+          <div>Signature Chauffeur / Livreur :<br><br>____________________</div>
+          <div>Signature & Date Réception Client :<br><br>____________________</div>
+        </div>
+      </div>`;
+    const w = window.open('', '_blank', 'width=520,height=680');
+    if (w) {
+      w.document.write(`<!DOCTYPE html><html><head><title>Bon de Livraison - ${esc(opts.ref)}</title></head><body style="margin:0; background:#f4f4f4;">${html}<script>window.onload=function(){window.print();};<\/script></body></html>`);
+      w.document.close();
+      toast('Bon de livraison prêt à imprimer');
+    } else {
+      toast('Impression bloquée par le navigateur');
+    }
+  }
+
   function renderScan() {
     const panel = $('[data-mz-panel="scan"]', root);
     panel.innerHTML = `
@@ -3042,8 +3765,6 @@
       // Commit the swap to the shared inventory: rendered piece back in, replacement out.
       persistStock(ln.pid, ln.size, ln.color, 1);
       persistStock(newPid, newSize, newColor, -1);
-      markLineReturned(ln, 1, `échangée → ${newP.name} · ${newSize}`);
-      recordReturn(sale, [ex.idx], ln.unit, ex.motif || 'Non précisé', 'echange', '', new Map([[ex.idx, 1]]));
       state.exchange = null;
       persistDay();
       queueIfOffline(`Échange ${sale.id}`);
@@ -3083,10 +3804,6 @@
               SALES.unshift(rec);
               persistDay();
               bqSaveProvisional();
-              /* A positive exchange difference is real money received. It used
-                 to exist only in this tablet's journal, so the dashboard missed
-                 it even though the customer had paid and received a numbered
-                 receipt. Mirror it with the same UUID/ref split as a sale. */
               try {
                 if (window.KiwiLive && window.KiwiLive.isOn()) {
                   const pm = (parts || []).map((x) => x.m);
@@ -3129,24 +3846,86 @@
     };
   }
 
-  /* ═══════════════════════ ENCAISSEMENT ═══════════════════════
-     Réutilise le kit caisse : .modal-amount, .cash-grid, .reader-stage.
-     L'avoir est un moyen de paiement à part entière — il se déduit. */
-  /* Real receipt printing.
-     This button used to be a bare toast that announced "Envoyé, reçu 80 mm sur
-     l'imprimante caisse" whether or not a printer existed — so on a real till
-     with nothing connected it told the merchant a receipt had printed that never
-     did, every single time. It now actually prints, and when it cannot it says
-     so and opens the printer setup instead of pretending. */
-  function printReceiptNow(opts, parts) {
+  /* ═══════════════════════ ENCAISSEMENT ═══════════════════════ */
+  function printReceiptNow(opts, parts, printOpts) {
+    printOpts = printOpts || {};
+    const isGift = !!printOpts.gift;
     const KP = window.KiwiPrinter;
+    const pv = pvPaired();
+    const shopName = (pv && pv.name) || 'Vogue Home';
+    const lines = (opts.lines || []).map((l) => ({
+      qty: l.qty,
+      name: l.name + (l.marque ? ' · ' + l.marque : '') + (l.motif ? ' (' + l.motif + ')' : ''),
+      price: isGift ? '' : fmtMAD(l.amount),
+      total: isGift ? null : l.amount,
+      ref: l.ref,
+      barcode: l.barcode,
+    }));
+
+    if (isGift) {
+      // Impression Ticket Cadeau sans montants ni prix
+      const giftDoc = {
+        shop: shopName + ' · Ticket Cadeau',
+        ref: opts.ref || '',
+        date: fmtDT(new Date()),
+        lines: lines,
+        total: '',
+        method: '',
+        gift: true,
+        note: 'Ticket Cadeau / Bon d’échange · Valable 30 jours pour échange ou avoir sur présentation de ce ticket.'
+      };
+      if (KP && KP.isConnected && KP.isConnected()) {
+        toast('Impression du ticket cadeau…');
+        KP.printReceipt(giftDoc).then(
+          () => toast('Ticket cadeau imprimé'),
+          () => toast('Échec impression ticket cadeau')
+        );
+        return;
+      }
+      if (KP && KP.browserReceipt) {
+        KP.browserReceipt(giftDoc);
+        toast('Ticket cadeau affiché');
+        return;
+      }
+      const giftHtml = `
+        <div style="font-family:monospace; max-width:300px; margin:20px auto; padding:16px; border:1px solid #000; text-align:center;">
+          <h3 style="margin:0;">${esc(shopName)}</h3>
+          <div style="font-size:12px; margin:4px 0;">TANGER · ART DE TABLE & DÉCORATION</div>
+          <div style="font-size:13px; font-weight:bold; margin:10px 0; border-top:1px dashed #000; border-bottom:1px dashed #000; padding:6px 0;">
+            *** TICKET CADEAU ***<br>BON D'ÉCHANGE
+          </div>
+          <div style="text-align:left; font-size:11px; margin-bottom:10px;">
+            Ticket: ${esc(opts.ref)}<br>
+            Date: ${fmtDT(new Date())}<br>
+            Conseiller: ${esc((STAFF && STAFF.caissiere && STAFF.caissiere.name) || 'Caisse')}<br>
+            ${opts.customer ? `Cliente: ${esc(opts.customer.name)}<br>` : ''}
+          </div>
+          <table style="width:100%; border-collapse:collapse; font-size:11px; text-align:left; margin-bottom:12px;">
+            <thead>
+              <tr style="border-bottom:1px solid #000;"><th>Qté</th><th>Article / Marque</th></tr>
+            </thead>
+            <tbody>
+              ${lines.map((l) => `<tr><td style="padding:4px 0; vertical-align:top; font-weight:bold;">${l.qty || 1}×</td><td style="padding:4px 0;">${esc(l.name)}</td></tr>`).join('')}
+            </tbody>
+          </table>
+          <div style="font-size:10.5px; border-top:1px dashed #000; padding-top:8px; line-height:1.4;">
+            Échangeable sous 30 jours dans notre boutique sur présentation de ce bon.<br>
+            Articles non utilisés et dans leur emballage d'origine.
+          </div>
+          <div style="margin-top:12px;">
+            ${barcode(opts.ref || 'GIFT', 24)}
+          </div>
+        </div>`;
+      const gw = window.open('', '_blank', 'width=360,height=500');
+      if (gw) {
+        gw.document.write(`<!DOCTYPE html><html><head><title>Ticket Cadeau - ${esc(opts.ref)}</title></head><body>${giftHtml}<script>window.onload=function(){window.print();};<\/script></body></html>`);
+        gw.document.close();
+      }
+      return;
+    }
+
     if (!KP || !KP.printReceipt) { toast('Impression indisponible sur cet appareil'); return; }
 
-    /* Le ticket que la boutique imprime est celui que la propriétaire a réglé
-       dans Réglages → Reçu : son enseigne, son adresse, son ICE, sa politique
-       d'échange, sa largeur de rouleau. Cette fonction composait le sien —
-       `shop: pv.name || 'Kiwi'` et rien d'autre — ce qui donnait le ticket d'une
-       boutique marocaine sans une seule mention légale. */
     const K = window.KiwiReceipt;
     if (K) {
       const doc = K.build({
@@ -3160,22 +3939,12 @@
         total: opts.amount,
         customer: opts.customer || null,
         pay: (parts || []).map((x) => ({ label: x.m === 'avoir' ? ('Avoir ' + (x.code || '')) : x.m, amount: x.amount })),
-        /* Le « reçu » du ticket, c'est ce que la main du client a posé sur le
-           comptoir — donc la PART espèces plus le rendu, pas le total de la
-           vente. Avec un paiement partagé (moitié carte, moitié espèces), le
-           total imprimait un billet que personne n'avait donné. */
         received: (function () {
           const c = (parts || []).find((x) => x.m === 'espèces' && x.rendu > 0);
           return c ? (+c.amount || 0) + (+c.rendu || 0) : null;
         })(),
         change: (parts || []).reduce((r, x) => r || x.rendu || 0, 0) || null,
       });
-      /* Le ticket remis reste avec la vente : une réimpression sortira celui-là,
-         avec son numéro, même si l'enseigne change de pied de page demain.
-         persistDay() À NOUVEAU, et c'est tout l'intérêt : la vente a été écrite
-         au moment du paiement, ce bouton-ci n'est touché qu'APRÈS, et le ticket
-         figé ne partait donc jamais sur le disque. Il vivait dans l'onglet et
-         mourait avec — c'est-à-dire précisément le jour où on en a besoin. */
       try {
         if (opts.sale) { opts.sale.rc = K.snapshot(doc); persistDay(); }
       } catch (_) {}
@@ -3189,13 +3958,9 @@
       return;
     }
 
-    /* Sans assets/receipt.js (navigateur où il n'a pas chargé) : l'ancien
-       chemin, inchangé. */
-    const pv = pvPaired();
     const label = { 'carte': 'Carte', 'avoir': 'Avoir', 'espèces': 'Espèces', 'livraison': 'Livraison · à recevoir' };
-    const lines = (opts.lines || []).map((l) => ({ qty: l.qty, name: l.name, price: fmtMAD(l.amount) }));
     const doc = {
-      shop: (pv && pv.name) || 'Kiwi',
+      shop: shopName,
       ref: opts.ref || '',
       date: fmtDT(new Date()),
       lines: lines.length ? lines : [{ name: opts.title || 'Vente', price: fmtMAD(opts.amount) }],
@@ -3203,13 +3968,6 @@
       method: (parts || []).map((x) => label[x.m] || x.m).join(' + '),
     };
 
-    /* Aucune imprimante ESC/POS joignable. Ça ne veut PAS dire que la boutique
-     * n'a pas d'imprimante : sur une caisse Windows où elle est déjà installée,
-     * Windows possède le périphérique, WebUSB se voit refuser le claim, et les
-     * trois transports de Kiwi échouent alors que l'imprimante marche.
-     * On propose donc l'impression système au lieu de renvoyer le commerçant
-     * vers un écran de connexion qui ne peut rien pour lui — et on retient son
-     * choix, sinon la caissière repasse par le modal à chaque ticket. */
     if (!KP.isConnected || !KP.isConnected()) {
       const cfg = (KP.getConfig && KP.getConfig()) || {};
       if (cfg.browserFallback && KP.browserReceipt) { KP.browserReceipt(doc); return; }
@@ -3241,10 +3999,6 @@
       toast('Vente suspendue', 'La tablette ne peut plus sécuriser la file hors-ligne. Contactez le support avant de continuer.');
       return;
     }
-    /* A cart left open over New Year's midnight belongs to the new annual
-       sequence at payment time. It has not been printed or committed yet, so
-       replacing the number is safe and prevents a January sale from consuming
-       a number leased for December. */
     if (!IS_DEMO && t.period !== ticketPeriod()) {
       t.num = '';
       t.period = ticketPeriod();
@@ -3263,70 +4017,53 @@
       amount: total,
       title: 'Encaissement',
       subtitle: `${t.num} · ${c ? esc(c.name) : 'Cliente de passage'}`,
-      // Real ticket contents, so the printed receipt itemises the sale instead
-      // of showing a single lump sum.
       ref: t.num,
       lines: t.lines.map((ln) => ({
         qty: ln.qty,
-        name: (P[ln.pid] ? P[ln.pid].name : 'Article') + (ln.size ? ' ' + ln.size : ''),
+        name: (P[ln.pid] ? P[ln.pid].name : 'Article') + (ln.size && ln.size !== 'TU' ? ' ' + ln.size : '') + (ln.isPiece ? ' (À la pièce)' : ''),
         amount: lineUnit(ln) * ln.qty,
         ref: ln.pid,
         barcode: (P[ln.pid] && P[ln.pid].barcode) || '',
+        marque: ln.marque || (P[ln.pid] && P[ln.pid].marque) || '',
+        motif: ln.motif || (P[ln.pid] && P[ln.pid].motif) || '',
+        format: ln.format || (P[ln.pid] && P[ln.pid].format) || 'piece',
       })),
-      /* Ce qui rend le ticket lisible pour la cliente : ce qu'elle aurait payé,
-         ce qu'on lui a retiré, et à quel nom la fidélité est comptée. Sans ça le
-         reçu affiche un total qui ne correspond pas à l'addition des lignes et
-         personne ne peut vérifier sa remise. */
-      subtotal: t.lines.reduce((s, ln) => s + P[ln.pid].price * ln.qty, 0),
-      /* Trois baisses, deux lignes distinctes sur le reçu. `promo` porte son
-         NOM quand une seule promotion a joué — la cliente retrouve l'affiche
-         qu'elle a lue en vitrine. Quand plusieurs se croisent sur le même
-         ticket, le mot générique est la seule chose vraie : nommer l'une des
-         deux ferait croire que l'autre n'a pas été appliquée. */
+      subtotal: t.lines.reduce((s, ln) => {
+        const p = P[ln.pid];
+        const orig = (ln.customPrice != null) ? ln.customPrice : (p ? p.price : 0);
+        return s + orig * ln.qty;
+      }, 0),
       promo: tot.promo ? { amount: tot.promo, label: promoLabelForTicket(t) } : null,
       discount: tot.remise + tot.reward,
       customer: c ? { name: c.name, phone: c.phone, points: c.points, loyalty: (t.reward && t.reward.clientId === t.client) ? t.reward.label : '' } : null,
       waName: c ? firstName(c.name) : null, waPhone: c ? c.phone : null,
       onPaid: (parts) => {
-        // Récompense fidélité effectivement portée sur ce ticket (attachée à cette
-        // cliente) — on la débite des points APRÈS avoir enregistré l'achat.
         const rewardUsed = !!(t.reward && c && c.id && t.reward.clientId === c.id);
         const sale = {
           id: t.num, syncId: t.syncId || newSaleId(), at: new Date(), clientId: c ? c.id : null, by: STAFF.caissiere.name, kind: 'vente',
           methods: parts.map((x) => x.m).join(' + '),
-          /* Les parts de règlement, figées : c'est elles qui rendent le tiroir
-             de la clôture exact quand un ticket est réglé moitié carte moitié
-             espèces (voir bqMoneyParts). La remise suit pour le rapport Z. */
           parts: parts.map((x) => ({ m: x.m, amount: Math.round((+x.amount || 0) * 100) / 100 })),
           discount: Math.round(tot.remise + tot.reward),
-          /* L'accord responsable suit la vente, pas seulement l'écran : qui a
-             autorisé, quand, quel pourcentage, et ce que la remise a coûté au
-             magasin. C'est la seule chose relisible le jour d'un contrôle. */
           remiseAuth: (t.remiseAuth && typeof t.remiseAuth === 'object')
             ? { by: t.remiseAuth.by || '', role: t.remiseAuth.role || '', at: t.remiseAuth.at, pct: t.remiseAuth.pct, amount: Math.round(tot.remise) }
             : null,
-          promoOff: Math.round(tot.promo),        // ce que les promotions ont coûté, pour la clôture
-          /* `promo` suit la ligne dans le journal. Un retour se rembourse sur
-             `unit` (le prix réellement payé), mais un échange ou une réclamation
-             trois jours plus tard a besoin de SAVOIR pourquoi le prix était bas —
-             sinon la caissière voit un caftan à 700 sur un ticket, 1 000 en rayon,
-             et n'a aucun moyen de trancher. */
-          lines: t.lines.map((ln) => ({ pid: ln.pid, size: ln.size, color: ln.color, qty: ln.qty, remise: ln.remise, promo: linePromo(ln), unit: lineUnit(ln), returned: false, note: '' })),
+          promoOff: Math.round(tot.promo),
+          giftWrap: !!t.giftWrap,
+          delivery: t.delivery ? Object.assign({}, t.delivery) : null,
+          lines: t.lines.map((ln) => ({
+            pid: ln.pid, size: ln.size, color: ln.color, qty: ln.qty, remise: ln.remise, promo: linePromo(ln),
+            unit: lineUnit(ln), returned: false, note: '', format: ln.format, isPiece: ln.isPiece,
+            marque: ln.marque, motif: ln.motif, fragile: ln.fragile, registryId: ln.registryId
+          })),
           reward: rewardUsed ? t.reward.label : null,
           total,
         };
         SALES.unshift(sale);
         persistDay();
-        bqSaveProvisional();              // le Z provisoire suit la vente (voir day-report.js)
+        bqSaveProvisional();
         if (IS_DEMO) saleSeq++;
-        // Draw the sold pieces down from the SHARED inventory — a real sale must move
-        // stock through to the base (the in-memory ticket holds alone evaporate on the
-        // next catalogue sync). Real/paired store only; the local demo stays in-memory.
         sale.lines.forEach((ln) => persistStock(ln.pid, ln.size, ln.color, -ln.qty));
-        // Mirror the sale to the owner/operator dashboard (Live Link) so the
-        // boutique's real sales show up on the "En direct" feed + running total —
-        // the main caisse does the same via recordSale(). No-op unless live is on;
-        // wrapped so a mirror failure can never break the sale.
+        if (typeof updateRegistryContribution === 'function') updateRegistryContribution(sale);
         try {
           if (window.KiwiLive && window.KiwiLive.isOn()) {
             const received = (parts || []).filter((x) => x && x.m !== 'avoir' && x.m !== 'livraison' && (+x.amount || 0) > 0);
@@ -3709,7 +4446,7 @@
     const stepSuccess = (parts, res) => {
       if (res && res.sale) opts.sale = res.sale;
       const cash = parts.find((x) => x.m === 'espèces');
-      const delivery = parts.some((x) => x.m === 'livraison');
+      const delivery = parts.some((x) => x.m === 'livraison') || (opts.sale && !!opts.sale.delivery);
       el.innerHTML = `
         <button class="mz-modal-x" data-mz-close aria-label="Fermer"><i data-lucide="x"></i></button>
         <h3 class="modal-title">${delivery ? 'Livraison enregistrée' : "C'est encaissé"}</h3>
@@ -3723,6 +4460,8 @@
         </div>
         <div class="modal-actions is-visible">
           <button class="ma-btn secondary" id="mz-pay-print"><i data-lucide="printer"></i>Reçu 80 mm</button>
+          <button class="ma-btn secondary" id="mz-pay-gift"><i data-lucide="gift"></i>Ticket Cadeau</button>
+          ${delivery ? '<button class="ma-btn secondary" id="mz-pay-del-note"><i data-lucide="truck"></i>Bon Livraison</button>' : ''}
           <button class="ma-btn secondary" id="mz-pay-wa"><i data-lucide="message-circle"></i>Reçu WhatsApp</button>
         </div>
         <div class="modal-actions is-visible" style="margin-top:10px;">
@@ -3730,15 +4469,14 @@
         </div>`;
       icons(); closeBtns();
       $('#mz-pay-print', el).onclick = () => printReceiptNow(opts, parts);
-      /* Same problem as the 80 mm button: this claimed "Reçu envoyé sur WhatsApp"
-         while sending nothing at all. WhatsApp cannot be sent silently from a web
-         page, and it shouldn't be — the merchant should see what goes to their
-         client. So we open a real pre-filled WhatsApp draft; they press send. */
+      $('#mz-pay-gift', el).onclick = () => printReceiptNow(opts, parts, { gift: true });
+      const delNoteBtn = $('#mz-pay-del-note', el);
+      if (delNoteBtn) delNoteBtn.onclick = () => printDeliveryNoteNow(opts, parts);
       $('#mz-pay-wa', el).onclick = () => {
         if (!opts.waPhone) { toast('Cliente de passage, pas de numéro WhatsApp sur le ticket'); return; }
         const pv = pvPaired();
         const body = [
-          (pv && pv.name) || 'Kiwi',
+          (pv && pv.name) || 'Vogue Home',
           opts.ref ? ('Reçu ' + opts.ref) : 'Reçu',
           '',
           ...(opts.lines || []).map((l) => `${l.qty ? l.qty + '× ' : ''}${l.name} — ${fmtMAD(l.amount)}`),

@@ -23,6 +23,11 @@
   // KiwiBoutiqueCatalog.use(venueId) to switch which store's catalogue is active
   // (the caisse pins 0002 → 'maisonMansour'; the dashboard follows KiwiVenue).
   const DEMO_VENUE = 'maisonMansour';
+  /* Les vitrines de démonstration et le socle que chacune pré-remplit. Le pré-
+   * remplissage reste réservé à ces clés-là : un magasin réel ou jumelé démarre
+   * vide (voir hostedOrPaired dans load()). Ajouter un vertical de démonstration,
+   * c'est ajouter SA clé ici — sans quoi sa caisse ouvre sur un catalogue vide. */
+  const DEMO_SEEDS = { maisonMansour: () => SEED, vogueHome: () => SEED_MAISON };
   const keyFor = (v) => 'kiwiBoutiqueCatalog:v1:' + v;
   let VENUE = DEMO_VENUE;
   let KEY = keyFor(VENUE);
@@ -138,6 +143,32 @@
       { id: 'cabas_berbere',    name: 'Cabas berbère',    price: 420, art: 'cabas',    kind: 'tu', flag: 'artisanat', ean: '6111120034192', sizes: { TU: 6 }, colors: ['terracotta', 'ivoire'] },
       { id: 'pochette_sequins', name: 'Pochette sequins', price: 350, art: 'pochette', kind: 'tu',                    ean: '6111120034208', sizes: { TU: 5 }, colors: ['dore', 'argent', 'noir'] },
     ] },
+  ];
+
+  /* ───────────────── seed spécifique Vogue Home (Maison Tanger) ───────────────── */
+  const SEED_MAISON = [
+    { rayon: 'arts_table', rayonLabel: 'Arts de la table', items: [
+      { id: 'mz_fes_bleu_service', name: 'Service 18 pièces Fès Bleu', price: 1450, art: 'assiette', kind: 'tu', format: 'service', servicePieces: 18, piecePriceMAD: 85, marque: 'Vogue Table', motif: 'Fès Bleu', fragile: true, sizes: { TU: 4 }, colors: ['bleu', 'ivoire'] },
+      { id: 'mz_fes_bleu_assiette', name: 'Assiette plate 27cm Fès Bleu', price: 85, art: 'assiette', kind: 'tu', format: 'piece', marque: 'Vogue Table', motif: 'Fès Bleu', fragile: true, sizes: { TU: 24 }, colors: ['bleu', 'ivoire'] },
+      { id: 'mz_fes_bleu_bol', name: 'Bol à soupe 16cm Fès Bleu', price: 65, art: 'bol', kind: 'tu', format: 'piece', marque: 'Vogue Table', motif: 'Fès Bleu', fragile: true, sizes: { TU: 18 }, colors: ['bleu', 'ivoire'] },
+      { id: 'mz_fes_bleu_tasse', name: 'Tasse & soucoupe Fès Bleu', price: 55, art: 'tasse', kind: 'tu', format: 'piece', marque: 'Vogue Table', motif: 'Fès Bleu', fragile: true, sizes: { TU: 16 }, colors: ['bleu', 'ivoire'] },
+      { id: 'mz_zellige_service', name: 'Service 12 pièces Zellige Vert', price: 1100, art: 'assiette', kind: 'tu', format: 'service', servicePieces: 12, piecePriceMAD: 95, marque: 'Céramique Majorelle', motif: 'Zellige Vert', fragile: true, sizes: { TU: 3 }, colors: ['emeraude', 'blanc'] },
+    ] },
+    { rayon: 'verrerie', rayonLabel: 'Verrerie & Cristallerie', items: [
+      { id: 'mz_verres_beldi_set', name: 'Verres soufflés Beldi (Set de 6)', price: 140, art: 'verre', kind: 'tu', format: 'service', servicePieces: 6, piecePriceMAD: 25, marque: 'Beldi Glass', motif: 'Classique', fragile: true, sizes: { TU: 8 }, colors: ['emeraude', 'transparent', 'ambre'] },
+      { id: 'mz_carafe_beldi', name: 'Carafe soufflée Beldi 1.5L', price: 120, art: 'carafe', kind: 'tu', format: 'piece', marque: 'Beldi Glass', motif: 'Classique', fragile: true, sizes: { TU: 6 }, colors: ['emeraude', 'transparent'] },
+      { id: 'mz_coupes_dessert', name: 'Coupes à dessert dorées', price: 75, art: 'coupe', kind: 'tu', format: 'piece', marque: 'Cristal Atlas', motif: 'Sahara Or', fragile: true, sizes: { TU: 12 }, colors: ['dore', 'transparent'] },
+    ] },
+    { rayon: 'bougies', rayonLabel: 'Bougies & Senteurs', items: [
+      { id: 'mz_baobab_feathers', name: 'Bougie Max 24 Totem Feathers', price: 1850, art: 'bougie', kind: 'tu', format: 'piece', marque: 'Baobab Collection', motif: 'Totem', fragile: true, sizes: { TU: 5 }, colors: ['ivoire', 'noir'] },
+      { id: 'mz_baobab_aurum', name: 'Bougie Max 16 Aurum Platinum', price: 1250, art: 'bougie', kind: 'tu', format: 'piece', marque: 'Baobab Collection', motif: 'Aurum', fragile: true, sizes: { TU: 4 }, colors: ['dore', 'argent'] },
+      { id: 'mz_diffuseur_oranger', name: 'Diffuseur Fleur d’Oranger Tanger', price: 480, art: 'diffuseur', kind: 'tu', format: 'piece', marque: 'Les Senteurs de Tanger', motif: 'Botanique', fragile: true, sizes: { TU: 9 }, colors: ['ambre', 'blanc'] },
+    ] },
+    { rayon: 'decoration', rayonLabel: 'Décoration & Cadeaux', items: [
+      { id: 'mz_vase_majorelle', name: 'Vase céramique émaillée 35cm', price: 650, art: 'vase', kind: 'tu', format: 'piece', marque: 'Céramique Majorelle', motif: 'Zellige Vert', fragile: true, sizes: { TU: 4 }, colors: ['emeraude', 'bleu'] },
+      { id: 'mz_plateau_martcle', name: 'Plateau laiton martelé main', price: 420, art: 'plateau', kind: 'tu', format: 'piece', marque: 'Artisanat Fès', motif: 'Sahara Or', fragile: false, sizes: { TU: 6 }, colors: ['dore', 'argent'] },
+      { id: 'mz_miroir_soleil', name: 'Miroir soleil laiton 50cm', price: 890, art: 'miroir', kind: 'tu', format: 'piece', marque: 'Vogue Home', motif: 'Sahara Or', fragile: true, sizes: { TU: 3 }, colors: ['dore'] },
+    ] }
   ];
 
   /* ───────────────── in-memory state + persistence ───────────────── */
@@ -362,7 +393,7 @@
     if (!db || !db.products) {
       db = blank();
       dropIndex();
-      if (VENUE === DEMO_VENUE && !hostedOrPaired()) seed();   // demo store pre-fills ONLY on the local pitch demo; a real/paired store starts empty
+      if (DEMO_SEEDS[VENUE] && !hostedOrPaired()) seed();   // demo store pre-fills ONLY on the local pitch demo; a real/paired store starts empty
       persist();
     } else {
       /* Un document d'avant le journal n'a ni socle ni mouvements : on le
@@ -927,14 +958,27 @@
 
   function seed() {
     const palette = ['atlas', 'warn', 'riad', 'mint', 'info', 'danger'];
-    SEED.forEach((rayon, ri) => {
+    const currentSeed = (DEMO_SEEDS[VENUE] || DEMO_SEEDS[DEMO_VENUE])();
+    currentSeed.forEach((rayon, ri) => {
       const cat = { id: nextId('cat'), name: rayon.rayonLabel, color: palette[ri % palette.length], order: ri };
       db.categories.push(cat);
       rayon.items.forEach((it) => {
         const prod = {
           id: nextId('prod'), legacyId: it.id, name: it.name, categoryId: cat.id,
-          priceMAD: it.price, cost: Math.round(it.price * 0.55), art: it.art, kind: it.kind,
-          flag: it.flag || '', grad: null, createdAt: Date.now(), archived: false,
+          priceMAD: it.price, cost: Math.round(it.price * 0.55), art: it.art, kind: it.kind || 'tu',
+          flag: it.flag || '', grad: null,
+          marque: it.marque || '',
+          format: (it.format === 'service' || it.format === 'piece') ? it.format : 'piece',
+          servicePieces: it.servicePieces != null ? Math.max(1, parseInt(it.servicePieces, 10) || 1) : null,
+          piecePriceMAD: it.piecePriceMAD != null ? (+it.piecePriceMAD || 0) : null,
+          motif: it.motif || '',
+          fragile: !!it.fragile,
+          /* Seam: Stock ownership (owns outright vs holds on consignment/dépôt-vente for a brand)
+           * is undecided pending the client's answer. Add an optional ownership field with a single
+           * value ('outright') for now. Do NOT implement consignment logic, commission-only revenue,
+           * or supplier settlement yet. */
+          ownership: it.ownership || 'outright',
+          createdAt: Date.now(), archived: false,
         };
         db.products.push(prod);
         const sizeKeys = Object.keys(it.sizes);
@@ -1173,10 +1217,22 @@
     opts = opts || {};
     let list = db.products.filter((p) => opts.includeArchived ? true : !p.archived);
     if (opts.categoryId && opts.categoryId !== 'all') list = list.filter((p) => p.categoryId === opts.categoryId);
+    if (opts.marque && opts.marque !== 'all') {
+      const m = opts.marque.toLowerCase();
+      list = list.filter((p) => (p.marque || '').toLowerCase() === m);
+    }
+    if (opts.motif && opts.motif !== 'all') {
+      const mot = opts.motif.toLowerCase();
+      list = list.filter((p) => (p.motif || '').toLowerCase() === mot);
+    }
+    if (opts.format && opts.format !== 'all') list = list.filter((p) => (p.format || 'piece') === opts.format);
+    if (opts.fragile !== undefined) list = list.filter((p) => !!p.fragile === !!opts.fragile);
     if (opts.q) {
       const q = opts.q.toLowerCase();
       const byProd = groupVariants();   // une fois, pas une fois par produit
       list = list.filter((p) => p.name.toLowerCase().includes(q)
+        || (p.marque && p.marque.toLowerCase().includes(q))
+        || (p.motif && p.motif.toLowerCase().includes(q))
         || (catById(p.categoryId) && catById(p.categoryId).name.toLowerCase().includes(q))
         || (byProd[p.id] || []).some((v) => (v.barcodes || []).some((b) => String(b.code).toLowerCase().includes(q)) || (v.sku || '').toLowerCase().includes(q)));
     }
@@ -1189,6 +1245,17 @@
       id: nextId('prod'), name: String(data.name || 'Nouvel article').trim() || 'Nouvel article',
       categoryId: data.categoryId || null, priceMAD: +data.priceMAD || 0, cost: +data.cost || 0,
       art: data.art || '', kind: data.kind || 'taille', flag: data.flag || '', grad: data.grad || null,
+      marque: String(data.marque || '').trim(),
+      format: (data.format === 'service' || data.format === 'piece') ? data.format : 'piece',
+      servicePieces: data.servicePieces != null ? Math.max(1, parseInt(data.servicePieces, 10) || 1) : null,
+      piecePriceMAD: data.piecePriceMAD != null ? (+data.piecePriceMAD || 0) : null,
+      motif: String(data.motif || '').trim(),
+      fragile: !!data.fragile,
+      /* Seam: Stock ownership (owns outright vs holds on consignment/dépôt-vente for a brand)
+       * is undecided pending the client's answer. Add an optional ownership field with a single
+       * value ('outright') for now. Do NOT implement consignment logic, commission-only revenue,
+       * or supplier settlement yet. */
+      ownership: String(data.ownership || 'outright').trim(),
       /* La RÉFÉRENCE COMMUNE — ce qui dit que le jean de Casa et le jean de
        * Rabat sont le même article. Deux magasins d'un même compte tiennent
        * deux catalogues séparés : rien ne les relie sauf le code-barres, et un
@@ -1209,10 +1276,22 @@
   }
   function updateProduct(id, patch) {
     const p = prodById(id); if (!p) return null;
-    ['name', 'categoryId', 'priceMAD', 'cost', 'art', 'kind', 'flag', 'grad', 'photo', 'video', 'sku'].forEach((k) => {
+    ['name', 'categoryId', 'priceMAD', 'cost', 'art', 'kind', 'flag', 'grad', 'photo', 'video', 'sku',
+     'marque', 'format', 'servicePieces', 'piecePriceMAD', 'motif', 'fragile', 'ownership'].forEach((k) => {
       if (patch[k] !== undefined) {
-        p[k] = (k === 'priceMAD' || k === 'cost') ? (+patch[k] || 0)
-          : (k === 'sku' ? skuNorm(patch[k]) : patch[k]);
+        if (k === 'priceMAD' || k === 'cost' || k === 'piecePriceMAD') {
+          p[k] = patch[k] == null ? null : (+patch[k] || 0);
+        } else if (k === 'servicePieces') {
+          p[k] = patch[k] == null ? null : Math.max(1, parseInt(patch[k], 10) || 1);
+        } else if (k === 'fragile') {
+          p[k] = !!patch[k];
+        } else if (k === 'sku') {
+          p[k] = skuNorm(patch[k]);
+        } else if (k === 'format') {
+          p[k] = (patch[k] === 'service' || patch[k] === 'piece') ? patch[k] : 'piece';
+        } else {
+          p[k] = patch[k] == null ? '' : String(patch[k]).trim();
+        }
       }
     });
     commit(); return p;
@@ -1517,6 +1596,13 @@
       const primaryV = vs.find((v) => v.barcodes && v.barcodes.length) || vs[0];
       const item = {
         id: p.id, name: p.name, price: p.priceMAD, art: p.art, kind: p.kind, flag: p.flag, sku: p.sku || '',
+        marque: p.marque || '',
+        format: p.format || 'piece',
+        servicePieces: p.servicePieces || null,
+        piecePriceMAD: p.piecePriceMAD || null,
+        motif: p.motif || '',
+        fragile: !!p.fragile,
+        ownership: p.ownership || 'outright',
         ean: primaryV ? primaryBarcode(primaryV) : '', sizes, colors: colorSet.length ? colorSet : ['gris'],
         rayon: p.categoryId, _variants: vs,
         /* Deux champs que la vente ne dessine pas mais dont les PROMOTIONS ont
@@ -1601,6 +1687,18 @@
       db.variants.forEach((v) => { const f = famOf(v); if (!seen.includes(f)) seen.push(f); });
       return COLORS().concat(window.KiwiColors ? window.KiwiColors.all() : [])
         .filter((c, i, a) => seen.includes(c.id) && a.findIndex((x) => x.id === c.id) === i);
+    },
+    listMarques: () => {
+      load();
+      const seen = new Set();
+      db.products.filter((p) => !p.archived && p.marque).forEach((p) => seen.add(p.marque));
+      return Array.from(seen).sort();
+    },
+    listMotifs: () => {
+      load();
+      const seen = new Set();
+      db.products.filter((p) => !p.archived && p.motif).forEach((p) => seen.add(p.motif));
+      return Array.from(seen).sort();
     },
     sizePresets,
     // categories

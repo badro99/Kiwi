@@ -218,13 +218,14 @@ section('Forbidden patterns');
   const CONTEXTUAL_SECRET = /(?:pin|passcode|pairing[-_ ]?code|password|auth[-_ ]?secret)[\s\S]{0,40}?['"`]([0-9]{4,8})['"`]/i;
   const MD_PROSE_SECRET = /\b(?:pin|passcode|pairing[-_ ]?code|code de jumelage|password|mot de passe)\b[^\n\r]{0,40}?\b([0-9]{4,8})\b/i;
 
-  // Exact 24-entry mock seed allowlist (for code/config files only; markdown has zero exemptions):
-  // - 16 public demo métier switch codes in assets/pos-dispatch.js & kiwi-caisse.html ('0000'..'0015')
+  // Exact 26-entry mock seed allowlist (for code/config files only; markdown has zero exemptions):
+  // - 18 public demo métier switch codes in assets/pos-dispatch.js & kiwi-caisse.html ('0000'..'0017')
   // - 8 sequential mock PINs for demo shift team members in assets/pages-pro.js ('1234'..'8901')
   const CODE_DEMO_SEQUENCE = new Set([
-    // 16 caisse vertical demo switch codes (kiwi-caisse.html, assets/pos-dispatch.js)
+    // 18 caisse vertical demo switch codes (kiwi-caisse.html, assets/pos-dispatch.js)
     '0000', '0001', '0002', '0003', '0004', '0005', '0006', '0007',
     '0008', '0009', '0010', '0011', '0012', '0013', '0014', '0015',
+    '0016', '0017',
     // 8 mock staff roster PINs (assets/pages-pro.js team seed)
     '1234', '2345', '3456', '4567', '5678', '6789', '7890', '8901'
   ]);
@@ -882,6 +883,7 @@ section('Whole-project regressions');
        asset édité sans bump est parfaitement cohérent — sur l'ancienne URL. */
     'stamp-drift-test.js',
     'pos-registry-sync-test.mjs',
+    'pos-maison-test.mjs',
     'api-boundaries-test.mjs',
     'security-regression-test.js',
     'sold-insights-test.js',
