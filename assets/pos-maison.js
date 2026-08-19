@@ -1317,7 +1317,7 @@
 
     $('#mz-nav', root).addEventListener('click', (e) => {
       const b = e.target.closest('[data-mz-view]');
-      if (b) switchView(b.dataset.mzView || b.dataset.bqView);
+      if (b) switchViewb.dataset.mzView;
     });
     $('#mz-lock', root).addEventListener('click', () => {
       /* La feuille de clôture vit au niveau du body (au-dessus du root) : la
@@ -1467,7 +1467,7 @@
       if (picks.length >= 2) break;
     }
     state.ticket.lines = picks;
-    picks.forEach((ln) => stockAdd(ln.pid, ln.size, -ln.qty));
+    picks.forEach((ln) => holdStock(ln.pid, ln.size, ln.qty, ln.isPiece));
   }
   /* Drop ticket lines whose product vanished from the catalogue. */
   function pruneTicket() { if (state.ticket) state.ticket.lines = state.ticket.lines.filter((ln) => P[ln.pid]); }
@@ -1500,8 +1500,8 @@
   /* ═══════════════════════ NAV / SHELL ═══════════════════════ */
   function switchView(view) {
     state.view = view;
-    $$('.mz-nav-it', root).forEach((b) => b.classList.toggle('on', (b.dataset.mzView || b.dataset.bqView) === view));
-    $$('.mz-view', root).forEach((p) => p.classList.toggle('is-on', (p.dataset.mzPanel || p.dataset.bqPanel) === view));
+    $$('.mz-nav-it', root).forEach((b) => b.classList.toggle('on', b.dataset.mzView === view));
+    $$('.mz-view', root).forEach((p) => p.classList.toggle('is-on', p.dataset.mzPanel === view));
     renderView(view);
     icons();
   }
@@ -1640,7 +1640,7 @@
       }
       const catB = e.target.closest('[data-mz-cat]');
       if (catB) {
-        state.rayon = catB.dataset.mzCat || catB.dataset.bqCat;
+        state.rayon = catB.dataset.mzCat || catB.dataset.mzCat;
         renderCats(); renderGrid(); icons();
         return;
       }
@@ -1719,7 +1719,7 @@
       </div>`).join('') : '<div class="mz-empty" style="margin:40px auto; text-align:center;">Aucun article dans cette sélection.</div>');
     $('#mz-gridwrap', root).onclick = (e) => {
       const b = e.target.closest('[data-mz-item]');
-      if (b) openSheet(b.dataset.mzItem || b.dataset.bqItem, state.exchange ? { exchange: true } : null);
+      if (b) openSheet(b.dataset.mzItem || b.dataset.mzItem, state.exchange ? { exchange: true } : null);
     };
   }
 
@@ -1839,7 +1839,7 @@
     };
     const reset = $('#mz-tk-reset', el);
     if (reset) reset.onclick = () => {
-      t.lines.forEach((ln) => stockAdd(ln.pid, ln.size, ln.qty));
+      t.lines.forEach((ln) => releaseStock(ln.pid, ln.size, ln.qty, ln.isPiece));
       freshTicket();                      /* ticket ET cliente remis à zéro — pas d'attache auto */
       renderTicket(); renderGrid(); renderBadges(); icons();
       toast('Ticket vidé, articles remis en stock');
@@ -1870,18 +1870,19 @@
     $('#mz-tk-lines', el).onclick = (e) => {
       const minus = e.target.closest('[data-mz-minus]');
       const plus = e.target.closest('[data-mz-plus]');
-      const idx = minus ? +(minus.dataset.mzMinus || minus.dataset.bqMinus) : plus ? +(plus.dataset.mzPlus || plus.dataset.bqPlus) : -1;
+      const idx = minus ? +minus.dataset.mzMinus : plus ? +plus.dataset.mzPlus : -1;
       if (idx < 0) return;
       const ln = t.lines[idx];
       if (plus) {
-        if ((P[ln.pid].sizes[ln.size] || 0) <= 0) {
+        const u = holdStock(ln.pid, ln.size, 1, ln.isPiece);
+        if (u === false) {
           toast(`${P[ln.pid].name} · ${ln.size}, plus de stock, dernière pièce déjà sur le ticket`);
           return;
         }
-        stockAdd(ln.pid, ln.size, -1);
+        ln.units = (ln.units || 0) + u;
         ln.qty++;
       } else {
-        stockAdd(ln.pid, ln.size, 1);
+        ln.units = (ln.units || 0) - releaseStock(ln.pid, ln.size, 1, ln.isPiece);
         ln.qty--;
         if (ln.qty <= 0) t.lines.splice(idx, 1);
       }
@@ -1929,6 +1930,88 @@
    *    ou gère le ratio 1/N pièces pour que le commerçant conserve la traçabilité exacte
    *    du set dépareillé sans fausser le décompte des services complets.
    * ────────────────────────────────────────────────────────────────────────── */
+  /* ───────────────── PIÈCES DÉPAREILLÉES ─────────────────
+   * Une cliente qui casse une assiette revient en racheter UNE, pas un service
+   * de dix-huit. Décrémenter un set entier à chaque pièce vendue sortait
+   * 1 450 MAD de stock pour 85 MAD encaissés : après quatre assiettes le stock
+   * de services affichait zéro pendant que 68 pièces restaient en rayon.
+   *
+   * On fait donc ce que fait le magasin : on OUVRE un set, et les N−1 pièces
+   * restantes deviennent du dépareillé qui sert les ventes suivantes. Le
+   * décompte des services complets reste vrai, les pièces libres sont comptées,
+   * et un retour qui reconstitue un set entier le referme.
+   *
+   * Rangé par commerce, comme les listes cadeaux et le journal de casse : une
+   * caisse qui change de commerce par jumelage ne doit pas hériter du
+   * dépareillé du voisin. */
+  const LOOSE_KEY = 'kiwi:mzLoose';
+  let LOOSE = null;
+  function loadLoose() {
+    if (LOOSE) return LOOSE;
+    try { LOOSE = JSON.parse(localStorage.getItem(LOOSE_KEY + ':' + merchantSlug()) || '{}'); } catch (_) { LOOSE = null; }
+    if (!LOOSE || typeof LOOSE !== 'object') LOOSE = {};
+    return LOOSE;
+  }
+  function saveLoose() {
+    try { localStorage.setItem(LOOSE_KEY + ':' + merchantSlug(), JSON.stringify(loadLoose())); } catch (_) {}
+  }
+  const looseKey = (pid, size) => pid + '·' + size;
+  function looseOf(pid, size) { return +loadLoose()[looseKey(pid, size)] || 0; }
+  function setLoose(pid, size, n) {
+    const d = loadLoose(), k = looseKey(pid, size);
+    if (n > 0) d[k] = n; else delete d[k];
+    saveLoose();
+  }
+  const piecesPerSet = (p) => Math.max(1, +p.servicePieces || 1);
+  /* Une ligne se compte en pièces détachées seulement si elle est vendue à la
+     pièce ET que l'article est un service — une assiette vendue seule, qui est
+     son propre article, garde le décompte normal. */
+  const sellsLoose = (p, isPiece) => !!isPiece && (p.format === 'service' || +p.servicePieces > 0);
+
+  /* Retire `qty` pièces : d'abord le dépareillé, puis en ouvrant des sets.
+     Renvoie false si les sets ne suffisent pas — et ne modifie alors RIEN. */
+  function takeLoose(pid, size, qty) {
+    const p = P[pid], per = piecesPerSet(p);
+    let free = looseOf(pid, size);
+    const open = free >= qty ? 0 : Math.ceil((qty - free) / per);
+    if (open > (p.sizes[size] || 0)) return false;
+    if (open) { stockAdd(pid, size, -open); free += open * per; }
+    setLoose(pid, size, free - qty);
+    return open;
+  }
+  /* Rend `qty` pièces, et referme tout set entier reconstitué. */
+  function giveLoose(pid, size, qty) {
+    const p = P[pid], per = piecesPerSet(p);
+    let free = looseOf(pid, size) + qty;
+    const whole = Math.floor(free / per);
+    if (whole) { stockAdd(pid, size, whole); free -= whole * per; }
+    setLoose(pid, size, free);
+    return whole;
+  }
+  /* Les quatre chemins qui bougent du stock pour un ticket passent par ces
+     deux-là — ajout, stepper, vidage, reprise — pour que la règle pièce/set
+     n'existe qu'à un seul endroit. */
+  /* Les deux renvoient un nombre d'UNITÉS DE CATALOGUE — des sets, pas des
+     pièces. C'est ce que le catalogue partagé compte, donc c'est ce que la
+     vente doit lui écrire : vendre une assiette prise dans du dépareillé ne
+     bouge rien côté catalogue (0), n'ouvrir un set en écrit qu'un seul.
+     holdStock renvoie false, et n'a rien modifié, si le stock ne suffit pas. */
+  function holdStock(pid, size, qty, isPiece) {
+    const p = P[pid];
+    if (!p) return false;
+    if (sellsLoose(p, isPiece)) return takeLoose(pid, size, qty);
+    if ((p.sizes[size] || 0) < qty) return false;
+    stockAdd(pid, size, -qty);
+    return qty;
+  }
+  function releaseStock(pid, size, qty, isPiece) {
+    const p = P[pid];
+    if (!p) return 0;
+    if (sellsLoose(p, isPiece)) return giveLoose(pid, size, qty);
+    stockAdd(pid, size, qty);
+    return qty;
+  }
+
   function addToTicket(pid, cfg, opts) {
     const p = P[pid];
     if (!p) return false;
@@ -1940,20 +2023,24 @@
     const format = cfg.format || p.format || 'piece';
     const customPrice = cfg.customPrice != null ? cfg.customPrice : (isPiece ? (p.piecePriceMAD || Math.round(p.price / (p.servicePieces || 12))) : null);
 
-    if ((p.sizes[size] || 0) < qty) {
+    const heldUnits = holdStock(pid, size, qty, isPiece);
+    if (heldUnits === false) {
       toast(`${p.name} · ${size}, stock insuffisant`);
       return false;
     }
-    stockAdd(pid, size, -qty);
     const pr = promoFor(pid);
     const stamp = (pr && !isPiece) ? { price: pr.price, badge: pr.badge, name: pr.promo.name, id: pr.promo.id } : null;
     const same = state.ticket.lines.find((l) => l.pid === pid && l.size === size && l.color === color && l.remise === (cfg.remise || 0) && l.isPiece === isPiece && l.registryId === (cfg.registryId || null));
     if (same) {
       same.qty += qty;
+      same.units = (same.units || 0) + heldUnits;
       if (stamp && (!same.promo || stamp.price < same.promo.price)) same.promo = stamp;
     } else {
       state.ticket.lines.push({
         pid, size, color, qty, remise: cfg.remise || 0, promo: stamp,
+        /* `units` = ce que le CATALOGUE doit bouger au règlement ; `qty` = ce
+           que la cliente emporte. Les deux diffèrent dès qu'on vend à la pièce. */
+        units: heldUnits,
         format, isPiece, customPrice, servicePieces: p.servicePieces || null,
         marque: p.marque || '', motif: p.motif || '', fragile: !!p.fragile,
         registryId: cfg.registryId || null, registryTitle: cfg.registryTitle || null,
@@ -2037,6 +2124,14 @@
             <small>${fmtMAD(p.piecePriceMAD || Math.round(p.price / (p.servicePieces || 12)))}</small>
           </button>
         </div>
+        ${(() => {
+          /* Le dépareillé se VOIT, sinon la vendeuse ouvre un set neuf sans
+             savoir qu'il reste des pièces d'un set déjà entamé. */
+          const free = looseOf(p.id, sheet.size || sizesOf(p)[0]);
+          return free
+            ? `<div class="mz-f-hint">${free} pièce${free > 1 ? 's' : ''} dépareillée${free > 1 ? 's' : ''} d’un set déjà ouvert — servies en premier.</div>`
+            : `<div class="mz-f-hint">Aucune pièce dépareillée : vendre à la pièce ouvrira un set.</div>`;
+        })()}
       </div>` : ''}
 
       <div class="mz-f">
@@ -2112,7 +2207,7 @@
     $('#mz-size-seg', el).onclick = (e) => {
       const b = e.target.closest('[data-mz-size]');
       if (!b || b.disabled) return;
-      sheet.size = b.dataset.mzSize || b.dataset.bqSize;
+      sheet.size = b.dataset.mzSize || b.dataset.mzSize;
       if (sheet.qty > (p.sizes[sheet.size] || 0)) sheet.qty = Math.max(1, p.sizes[sheet.size]);
       $$('[data-mz-size]', el).forEach((x) => x.classList.toggle('on', x === b));
       refreshPrice();
@@ -2129,10 +2224,10 @@
     if (remRow) remRow.onclick = (e) => {
       const b = e.target.closest('[data-mz-rem]');
       if (!b) return;
-      const r = +(b.dataset.mzRem || b.dataset.bqRem);
+      const r = +b.dataset.mzRem;
       if (r > 0 && !state.ticket.remiseAuth) { openApprove(r, () => { sheet.remise = r; renderSheet(); icons(); lens(); }); return; }
       sheet.remise = r;
-      $$('[data-mz-rem]', el).forEach((x) => x.classList.toggle('on', +(x.dataset.mzRem || x.dataset.bqRem) === r));
+      $$('[data-mz-rem]', el).forEach((x) => x.classList.toggle('on', +x.dataset.mzRem === r));
       refreshPrice();
     };
     $$('[data-mz-close]', el).forEach((b) => { b.onclick = () => closeVeil('#mz-sheet-veil'); });
@@ -2272,7 +2367,7 @@
       $$('[data-mz-close]', el).forEach((b) => { b.onclick = () => closeVeil('#mz-client-veil'); });
       $$('[data-mz-cl]', el).forEach((b) => {
         b.onclick = () => {
-          const c = clById(b.dataset.bqCl);
+          const c = clById(b.dataset.mzCl);
           if (!c) return;
           state.ticket.client = c.id;
           closeVeil('#mz-client-veil');
@@ -2361,7 +2456,7 @@
     };
     panel.onclick = (e) => {
       const b = e.target.closest('[data-mz-fiche]');
-      if (b) openFiche(b.dataset.bqFiche);
+      if (b) openFiche(b.dataset.mzFiche);
     };
     icons();
   }
@@ -3445,12 +3540,12 @@
     };
     panel.onclick = (e) => {
       const dayB = e.target.closest('[data-mz-ret-day]');
-      if (dayB) { state.retDate = dayB.dataset.bqRetDay; state.ret = null; renderEchanges(); icons(); return; }
+      if (dayB) { state.retDate = dayB.dataset.mzRetDay; state.ret = null; renderEchanges(); icons(); return; }
       const avB = e.target.closest('[data-mz-av]');
-      if (avB) { openVoucher(AVOIRS.find((a) => a.code === avB.dataset.bqAv), { mode: 'view' }); return; }
+      if (avB) { openVoucher(AVOIRS.find((a) => a.code === avB.dataset.mzAv), { mode: 'view' }); return; }
       const qtyB = e.target.closest('[data-mz-ret-qty]');
       if (qtyB && state.ret) {
-        const [saleId, idxS, deltaS] = qtyB.dataset.bqRetQty.split(':');
+        const [saleId, idxS, deltaS] = qtyB.dataset.mzRetQty.split(':');
         const idx = Number(idxS), sale = findSale(saleId);
         if (sale && state.ret.saleId === saleId && state.ret.picks.has(idx)) {
           const current = pickedQty(state.ret, idx, sale.lines[idx]);
@@ -3460,11 +3555,11 @@
         return;
       }
       const lnB = e.target.closest('[data-mz-pick]');
-      if (lnB) { togglePick(lnB.dataset.bqPick); return; }
+      if (lnB) { togglePick(lnB.dataset.mzPick); return; }
       const lockB = e.target.closest('[data-mz-locked]');
       if (lockB) { toast('Pièce déjà retournée, rien à reprendre dessus'); return; }
       const motif = e.target.closest('[data-mz-motif]');
-      if (motif && state.ret) { state.ret.motif = motif.dataset.bqMotif; renderEchanges(); icons(); return; }
+      if (motif && state.ret) { state.ret.motif = motif.dataset.mzMotif; renderEchanges(); icons(); return; }
       const exch = e.target.closest('[data-mz-do-exch]');
       if (exch) { doExchange(); return; }
       const avoir = e.target.closest('[data-mz-do-avoir]');
@@ -3626,9 +3721,10 @@
       const qty = Math.min(lineAvailableQty(ln), Number(quantities.get(i)) || 0);
       if (!qty) return;
       markLineReturned(ln, qty, note);
-      stockAdd(ln.pid, ln.size, qty);
-      // Returned pieces go back into the real inventory too, not just the display.
-      persistStock(ln.pid, ln.size, ln.color, qty);
+      /* Une pièce rendue retourne au dépareillé ; le catalogue ne rebouge que
+         si le retour reconstitue un set entier. */
+      const back = releaseStock(ln.pid, ln.size, qty, ln.isPiece);
+      persistStock(ln.pid, ln.size, ln.color, back);
     });
     persistDay();  // le retour change la recette du jour, pas seulement l'affichage
   }
@@ -3760,10 +3856,10 @@
     const apply = () => {
       if (applied) return;
       applied = true;
-      stockAdd(ln.pid, ln.size, 1);
+      const back = releaseStock(ln.pid, ln.size, 1, ln.isPiece);
       stockAdd(newPid, newSize, -1);
       // Commit the swap to the shared inventory: rendered piece back in, replacement out.
-      persistStock(ln.pid, ln.size, ln.color, 1);
+      persistStock(ln.pid, ln.size, ln.color, back);
       persistStock(newPid, newSize, newColor, -1);
       state.exchange = null;
       persistDay();
@@ -4062,7 +4158,7 @@
         persistDay();
         bqSaveProvisional();
         if (IS_DEMO) saleSeq++;
-        sale.lines.forEach((ln) => persistStock(ln.pid, ln.size, ln.color, -ln.qty));
+        sale.lines.forEach((ln) => persistStock(ln.pid, ln.size, ln.color, -(ln.units != null ? ln.units : ln.qty)));
         if (typeof updateRegistryContribution === 'function') updateRegistryContribution(sale);
         try {
           if (window.KiwiLive && window.KiwiLive.isOn()) {
@@ -4249,7 +4345,7 @@
       const inp = $('#mz-split-in', el);
       $$('[data-mz-share]', el).forEach((b) => {
         b.onclick = () => {
-          const v = b.dataset.bqShare;
+          const v = b.dataset.mzShare;
           if (v === 'x') {
             /* On ne re-rend pas : le champ apparaît sous la main de la caissière
                et prend le curseur. Un re-rendu le lui reprendrait. */
@@ -4266,7 +4362,7 @@
              perdrait le curseur en pleine frappe), donc on déplace le marqueur
              à la main — sans quoi « Tout » reste allumé sur une part de 100 MAD. */
           $$('[data-mz-share]', el).forEach((b) => {
-            b.classList.toggle('is-on', custom > 0 ? b.dataset.bqShare === 'x' : b.dataset.bqShare === String(share));
+            b.classList.toggle('is-on', custom > 0 ? b.dataset.mzShare === 'x' : b.dataset.mzShare === String(share));
           });
           const note = $('.mz-split-note', el);
           if (note) {
@@ -4278,7 +4374,7 @@
              et son plafond propre (le solde du bon). */
           $$('[data-mz-m]', el).forEach((b) => {
             const a = $('.amt', b); if (!a) return;
-            if (/^avoir/.test(b.dataset.bqM)) {
+            if (/^avoir/.test(b.dataset.mzM)) {
               const bal = (activeAvoirs()[0] || {}).balance;
               if (bal != null) a.textContent = '−' + fmtMAD(Math.min(bal, portion()));
               return;
@@ -4289,7 +4385,7 @@
       }
       $$('[data-mz-m]', el).forEach((b) => {
         b.onclick = () => {
-          const m = b.dataset.bqM;
+          const m = b.dataset.mzM;
           if (m === 'especes') stepCash(portion());
           else if (m === 'carte') stepCard(portion());
           else if (m === 'livraison') settle({ m: 'livraison', amount: portion() });
@@ -4328,7 +4424,7 @@
       $('#mz-av-back', el).onclick = stepMethods;
       $$('[data-mz-av-use]', el).forEach((b) => {
         b.onclick = () => {
-          const av = AVOIRS.find((a) => a.code === b.dataset.bqAvUse);
+          const av = AVOIRS.find((a) => a.code === b.dataset.mzAvUse);
           /* `portion()`, pas `due()`. Sans part choisie les deux sont égaux et
              le bon se déduit entièrement, comme avant. Mais quand la caissière
              a explicitement demandé la moitié, le bon prenait quand même tout :

@@ -345,7 +345,7 @@
   },
   "assets/pos-dispatch.js": {
     "v": "29",
-    "sha": "914c060a3381c3ff"
+    "sha": "04c98712f069114a"
   },
   "assets/pos-epicerie.css": {
     "v": "2",
@@ -404,12 +404,12 @@
     "sha": "56c1f39c972283b8"
   },
   "assets/pos-maison.css": {
-    "v": "3",
-    "sha": "90a72081c56aeba9"
+    "v": "5",
+    "sha": "3ebbc0f7dfaceb90"
   },
   "assets/pos-maison.js": {
-    "v": "3",
-    "sha": "7b21c026ec5fb9a8"
+    "v": "5",
+    "sha": "7b7dd3f16f682736"
   },
   "assets/pos-mobile.css": {
     "v": "3",

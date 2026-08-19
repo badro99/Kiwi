@@ -110,6 +110,101 @@ ok(cssSrc.includes('.mz-casse-box'), 'Casse box CSS styles present');
 ok(cssSrc.includes('.mz-fragile-alert'), 'Fragile alert CSS styles present');
 ok(cssSrc.includes('.mz-tk-opt-bar'), 'Ticket option bar CSS styles present');
 
+/* 9. Le fork boutique → maison a renommé les ATTRIBUTS (data-bq-* → data-mz-*)
+ * mais pas toujours les LECTURES, qui sont en camelCase : `dataset.bqM` ne
+ * contient aucun tiret, donc un balayage de « bq- » le rate entièrement. Le
+ * résultat ne lève rien et ne loggue rien — le bouton est simplement mort. On
+ * avait ainsi perdu le choix du moyen de paiement, la sélection client, la
+ * fiche produit, les avoirs et le paiement fractionné.
+ *
+ * Deux sens à vérifier, parce qu'un seul laisse passer la moitié des cas :
+ *   a) plus aucune lecture `dataset.bq*` ;
+ *   b) tout attribut data-mz-* posé dans le markup est effectivement LU
+ *      quelque part — sinon le contrôle est décoratif. */
+/* data-mz-ret-qty → mzRetQty : on retire « data- », PAS « data-mz- » — la clé
+   dataset garde le préfixe mz. */
+const camel = (attr) => attr.replace(/^data-/, '').replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+const staleReads = [...jsSrc.matchAll(/\.dataset\.bq([A-Z][A-Za-z]*)/g)].map((m) => 'bq' + m[1]);
+ok(staleReads.length === 0, `aucune lecture dataset.bq* résiduelle (trouvé : ${[...new Set(staleReads)].join(', ') || 'aucune'})`);
+
+const emitted = [...new Set([...jsSrc.matchAll(/\b(data-mz-[a-z-]+)=/g)].map((m) => m[1]))];
+ok(emitted.length >= 20, `le markup pose bien ses attributs data-mz-* (${emitted.length})`);
+/* Marqueurs de PRÉSENCE : leur valeur ne veut rien dire, seul le fait qu'ils
+ * existent compte (`closest('[data-mz-locked]')`). Ils sont nommés un par un —
+ * accepter n'importe quelle requête `[data-mz-*]` comme une lecture aurait
+ * laissé passer le bug d'origine, puisque `$$('[data-mz-m]')` existait bel et
+ * bien pendant que `dataset.bqM` renvoyait undefined. */
+const PRESENCE_ONLY = new Set(['data-mz-locked']);
+const unread = emitted.filter((attr) => !PRESENCE_ONLY.has(attr)).filter((attr) => {
+  const key = camel(attr);
+  /* lu soit via dataset.mzFoo, soit via une requête [data-mz-foo] suivie d'un
+     accès générique (getAttribute) — les deux comptent comme une lecture. */
+  return !new RegExp(`dataset\\.${key}\\b`).test(jsSrc)
+      && !new RegExp(`getAttribute\\(\\s*['"\`]${attr}['"\`]`).test(jsSrc);
+});
+ok(unread.length === 0, `chaque attribut data-mz-* est lu (orphelins : ${unread.join(', ') || 'aucun'})`);
+
+/* 10. ARITHMÉTIQUE PIÈCE / SET — exécutée, pas relue.
+ * On découpe le vrai bloc de pos-maison.js (de LOOSE_KEY jusqu'à addToTicket)
+ * et on l'exécute avec un stock et un localStorage bouchonnés. C'est le CODE
+ * EXPÉDIÉ qui tourne ici : une copie de l'algorithme dans le test ne prouverait
+ * que la copie. Le bug d'origine — un set entier sorti du stock à chaque pièce
+ * vendue, soit 1 450 MAD de stock pour 85 MAD encaissés — tombe sur le scénario 1. */
+{
+  const from = jsSrc.indexOf("  const LOOSE_KEY = 'kiwi:mzLoose';");
+  const to = jsSrc.indexOf('  function addToTicket(pid, cfg, opts) {');
+  ok(from > 0 && to > from, 'le bloc pièces dépareillées est isolable dans la source');
+  const block = jsSrc.slice(from, to);
+
+  const store = {};
+  const shim = `
+    const localStorage = { getItem: (k) => (k in __store ? __store[k] : null), setItem: (k, v) => { __store[k] = String(v); } };
+    const merchantSlug = () => 'vogueHome';
+    const P = __P;
+    const stockAdd = (pid, size, d) => { P[pid].sizes[size] = Math.max(0, (P[pid].sizes[size] || 0) + d); };
+  `;
+  const api = new Function('__store', '__P', shim + block + '\n; return { holdStock, releaseStock, looseOf, sellsLoose };');
+
+  const SET = () => ({ sizes: { TU: 4 }, format: 'service', servicePieces: 18 });
+  const PLATE = () => ({ sizes: { TU: 24 }, format: 'piece', servicePieces: null });
+
+  // 1 — vendre UNE pièce ouvre un seul set, pas un par pièce
+  let P1 = { svc: SET() }, S1 = {};
+  let a = api(S1, P1);
+  let u = a.holdStock('svc', 'TU', 1, true);
+  ok(u === 1 && P1.svc.sizes.TU === 3 && a.looseOf('svc', 'TU') === 17,
+    `1 pièce → 1 set ouvert, 17 dépareillées (u=${u}, sets=${P1.svc.sizes.TU}, loose=${a.looseOf('svc','TU')})`);
+
+  // 2 — la pièce suivante sort du dépareillé : le catalogue ne bouge PAS
+  u = a.holdStock('svc', 'TU', 1, true);
+  ok(u === 0 && P1.svc.sizes.TU === 3 && a.looseOf('svc', 'TU') === 16,
+    `2e pièce → 0 unité catalogue, 16 dépareillées (u=${u}, sets=${P1.svc.sizes.TU})`);
+
+  // 3 — 19 pièces au total = 2 sets, jamais 19
+  u = a.holdStock('svc', 'TU', 17, true);
+  ok(P1.svc.sizes.TU === 2 && a.looseOf('svc', 'TU') === 17,
+    `19 pièces vendues = 2 sets consommés (sets=${P1.svc.sizes.TU}, loose=${a.looseOf('svc','TU')})`);
+
+  // 4 — un retour qui reconstitue un set entier le referme
+  const back = a.releaseStock('svc', 'TU', 1, true);
+  ok(back === 1 && P1.svc.sizes.TU === 3 && a.looseOf('svc', 'TU') === 0,
+    `retour reconstituant un set → set refermé (back=${back}, sets=${P1.svc.sizes.TU}, loose=${a.looseOf('svc','TU')})`);
+
+  // 5 — garde anti-survente : refus SANS rien modifier
+  let P2 = { svc: SET() }, S2 = {};
+  let b = api(S2, P2);
+  const refused = b.holdStock('svc', 'TU', 4 * 18 + 1, true);
+  ok(refused === false && P2.svc.sizes.TU === 4 && b.looseOf('svc', 'TU') === 0,
+    `survente refusée sans effet de bord (ret=${refused}, sets=${P2.svc.sizes.TU})`);
+
+  // 6 — un article vendu à la pièce QUI N'EST PAS un service garde le compte normal
+  let P3 = { plate: PLATE() }, S3 = {};
+  let c = api(S3, P3);
+  ok(c.sellsLoose(P3.plate, true) === false, 'une assiette vendue seule n’est pas du dépareillé');
+  u = c.holdStock('plate', 'TU', 2, true);
+  ok(u === 2 && P3.plate.sizes.TU === 22, `assiette simple → décompte direct (u=${u}, stock=${P3.plate.sizes.TU})`);
+}
+
 console.log(`\n✓ ${passed} controls green (${failures.length} failure(s))`);
 if (failures.length) {
   process.exit(1);
