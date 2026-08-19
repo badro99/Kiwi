@@ -1160,26 +1160,19 @@
    * On ne retire donc rien du journal, on ATTRIBUE.
    *
    * Deux vérités cohabitent, et il faut les deux :
-   *   · le TIROIR encaisse le montant plein — elle détient l'argent jusqu'au
-   *     reversement, et la clôture doit tomber juste ;
+   *   · le TIROIR encaisse le montant plein — la cliente paie ici, et la
+   *     clôture doit tomber juste ;
    *   · sa RECETTE exclut ces lignes — ce n'est pas son chiffre d'affaires.
    * C'est exactement la discipline des avoirs plus bas : ce qui rentre en
-   * caisse et ce qui compte comme vente ne sont pas le même nombre. */
+   * caisse et ce qui compte comme vente ne sont pas le même nombre.
+   *
+   * Ce que la caisse ne fait PAS, volontairement : tenir le compte de ce qui
+   * est dû à chaque déposant. Le reversement se règle ailleurs, hors caisse ;
+   * un solde tenu ici serait un second livre à maintenir, jamais consulté et
+   * faux dès le premier virement fait à côté. La caisse marque l'article,
+   * enregistre la vente en entier, et sort le montant de la recette. */
   const isConsigned = (ln) => { const p = P[ln.pid]; return !!p && p.ownership === 'consignment'; };
-  const consignorOf = (ln) => { const p = P[ln.pid]; return (p && p.consignor) || 'Déposant'; };
   const consignedOf = (lines) => (lines || []).reduce((s, ln) => s + (isConsigned(ln) ? lineTotal(ln) : 0), 0);
-  /* Ce qu'on doit à chacun, déposant par déposant — c'est la seule forme
-     utilisable au moment de reverser. */
-  function consignorSplit(lines) {
-    const by = {};
-    (lines || []).forEach((ln) => {
-      if (!isConsigned(ln)) return;
-      const k = consignorOf(ln);
-      by[k] = Math.round(((by[k] || 0) + lineTotal(ln)) * 100) / 100;
-    });
-    return by;
-  }
-
   function ticketTotals(t) {
     const sub = t.lines.reduce((s, ln) => {
       const p = P[ln.pid];
@@ -1292,7 +1285,6 @@
           <button class="mz-nav-it on" data-mz-view="vente"><i data-lucide="shopping-bag"></i><span>Vente</span><b class="mz-nav-badge" id="mz-badge-vente"></b></button>
           <button class="mz-nav-it" data-mz-view="registries"><i data-lucide="gift"></i><span>Listes Cadeaux</span><b class="mz-nav-badge" id="mz-badge-reg"></b></button>
           <button class="mz-nav-it" data-mz-view="casse"><i data-lucide="shield-alert"></i><span>Déclarer Casse</span></button>
-          <button class="mz-nav-it" data-mz-view="depot"><i data-lucide="handshake"></i><span>Dépôt-vente</span><b class="mz-nav-badge" id="mz-badge-depot"></b></button>
           <button class="mz-nav-it" data-mz-view="scan"><i data-lucide="scan-line"></i><span>Scan</span><b class="mz-nav-badge" id="mz-badge-scan"></b></button>
           <button class="mz-nav-it" data-mz-view="inventaire"><i data-lucide="package"></i><span>Inventaire</span><b class="mz-nav-badge" id="mz-badge-inv"></b></button>
           <button class="mz-nav-it" data-mz-view="echanges"><i data-lucide="arrow-left-right"></i><span>Échanges &amp; avoirs</span><b class="mz-nav-badge" id="mz-badge-ret"></b></button>
@@ -1335,7 +1327,6 @@
         </section>
         <section class="mz-view" data-mz-panel="registries"></section>
         <section class="mz-view" data-mz-panel="casse"></section>
-        <section class="mz-view" data-mz-panel="depot"></section>
         <section class="mz-view" data-mz-panel="scan"></section>
         <section class="mz-view" data-mz-panel="inventaire"></section>
         <section class="mz-view" data-mz-panel="echanges"></section>
@@ -1546,7 +1537,6 @@
     if (view === 'vente') { renderCats(); renderTicket(); renderGrid(); renderExchNote(); }
     if (view === 'registries') renderRegistries();
     if (view === 'casse') renderCasse();
-    if (view === 'depot') renderDepot();
     if (view === 'scan') renderScan();
     if (view === 'inventaire') renderInventaire();
     if (view === 'echanges') renderEchanges();
@@ -1570,10 +1560,6 @@
     set('#mz-badge-vente', items);
     set('#mz-badge-reg', regs);
     set('#mz-badge-scan', state.scanLog.length);
-    /* Le badge dépôt-vente compte les DÉPOSANTS à qui il reste de l'argent :
-       c'est le geste en attente, pas le nombre de ventes. */
-    set('#mz-badge-depot', (typeof depotByConsignor === 'function')
-      ? depotByConsignor().filter((g) => g.due > 0).length : 0);
     set('#mz-badge-ret', avs);
     set('#mz-badge-cl', (window.KiwiClients && KiwiClients.count && KiwiClients.count()) || CLIENTES.length);
     const invBadge = $('#mz-badge-inv', root);
@@ -1748,7 +1734,7 @@
         <button class="mz-card ${stockOf(p) === 0 ? 'is-out' : ''}${pr ? ' is-promo' : ''}" data-mz-item="${p.id}" style="--i:${i++}">
           <span class="mz-card-art">${artOf(p.art)}</span>
           ${p.marque ? `<span class="mz-card-brand">${esc(p.marque)}</span>` : ''}
-          ${p.ownership === 'consignment' ? `<span class="mz-consign-tag" title="Marchandise en dépôt-vente : l’argent revient au déposant">dépôt-vente</span>` : ''}
+          ${p.ownership === 'consignment' ? `<span class="mz-consign-tag" title="Marchandise en dépôt-vente : la vente est enregistrée, le montant n’entre pas dans la recette">dépôt-vente</span>` : ''}
           <span class="mz-card-name">${esc(p.name)}</span>
           <div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:2px;">
             ${p.motif ? `<span class="mz-card-motif">${esc(p.motif)}</span>` : ''}
@@ -1943,7 +1929,7 @@
       <span class="mz-line-art">${artOf(p.art)}</span>
       <span class="mz-line-mid">
         ${(ln.marque || p.marque) ? `<span class="mz-line-brand">${esc(ln.marque || p.marque)}</span>` : ''}
-        ${p.ownership === 'consignment' ? `<span class="mz-consign-tag" title="Marchandise en dépôt-vente : l’argent revient au déposant">dépôt-vente</span>` : ''}
+        ${p.ownership === 'consignment' ? `<span class="mz-consign-tag" title="Marchandise en dépôt-vente : la vente est enregistrée, le montant n’entre pas dans la recette">dépôt-vente</span>` : ''}
         <span class="mz-line-name">${esc(p.name)}</span>
         <span class="mz-line-sub">
           ${colorDot(ln.color)}
@@ -2136,7 +2122,7 @@
         <span class="mz-sheet-art">${artOf(p.art)}</span>
         <span class="mz-sheet-title">
           ${p.marque ? `<div class="mz-card-brand">${esc(p.marque)}</div>` : ''}
-          ${p.ownership === 'consignment' ? `<div class="mz-f-hint"><span class="mz-consign-tag" title="Marchandise en dépôt-vente : l’argent revient au déposant">dépôt-vente</span> Vendue pour ${esc(p.consignor || 'un déposant')} — le montant lui sera reversé, il n’entre pas dans la recette.</div>` : ''}
+          ${p.ownership === 'consignment' ? `<div class="mz-f-hint"><span class="mz-consign-tag" title="Marchandise en dépôt-vente : la vente est enregistrée, le montant n’entre pas dans la recette">dépôt-vente</span> Vendue pour ${esc(p.consignor || 'un déposant')} — le montant n’entre pas dans la recette du magasin.</div>` : ''}
           <h3>${esc(p.name)}</h3>
           <span class="sub">
             ${esc((RAYONS.find((r) => r.id === p.rayon) || { label: 'Divers' }).label)}
@@ -3104,117 +3090,6 @@
     renderAll();
     toast(`Casse enregistrée · −${qty} pièce(s) (perte financière : ${fmtMAD(totalLoss)})`);
     return true;
-  }
-
-  /* ═══════════════════════ JOURNAL DÉPÔT-VENTE ═══════════════════════
-   * Le second journal qu'elle tient : ce qui a été vendu POUR chaque déposant,
-   * et ce qu'il reste à lui reverser. Il ne remplace pas le journal des ventes
-   * — chaque ligne d'ici a son ticket là-bas. Il en est la LECTURE par
-   * propriétaire de la marchandise.
-   *
-   * Les reversements sont rangés par commerce, comme le reste de l'état local
-   * du vertical : une caisse qui change de commerce par jumelage ne doit pas
-   * hériter des dettes du voisin. */
-  const DEPOT_KEY = 'kiwi:mzDepotRemis';
-  let DEPOT_REMIS = null;
-  function loadRemis() {
-    if (DEPOT_REMIS) return DEPOT_REMIS;
-    try { DEPOT_REMIS = JSON.parse(localStorage.getItem(DEPOT_KEY + ':' + merchantSlug()) || '[]'); } catch (_) { DEPOT_REMIS = null; }
-    if (!Array.isArray(DEPOT_REMIS)) DEPOT_REMIS = [];
-    return DEPOT_REMIS;
-  }
-  function saveRemis() {
-    try { localStorage.setItem(DEPOT_KEY + ':' + merchantSlug(), JSON.stringify(loadRemis())); } catch (_) {}
-  }
-  /* Toutes les lignes en dépôt-vente du journal des ventes, déposant par
-     déposant. On lit `ln.consigned` figé sur la vente, pas le catalogue
-     d'aujourd'hui : un article sorti du dépôt-vente ne doit pas réécrire
-     l'historique. Les lignes rendues ne sont plus dues. */
-  function depotRows() {
-    const rows = [];
-    SALES.forEach((sale) => {
-      (sale.lines || []).forEach((ln, i) => {
-        if (!ln.consigned) return;
-        const qty = Math.max(0, (+ln.qty || 0) - (+ln.returnedQty || 0));
-        if (!qty) return;
-        rows.push({
-          saleId: sale.id, at: sale.at, idx: i,
-          consignor: ln.consignor || 'Déposant',
-          name: (P[ln.pid] && P[ln.pid].name) || 'Article',
-          qty, amount: Math.round((+ln.unit || 0) * qty),
-        });
-      });
-    });
-    return rows.sort((a, b) => new Date(b.at) - new Date(a.at));
-  }
-  function depotByConsignor() {
-    const by = {};
-    depotRows().forEach((r) => {
-      const e = by[r.consignor] || (by[r.consignor] = { consignor: r.consignor, sold: 0, rows: [] });
-      e.sold += r.amount; e.rows.push(r);
-    });
-    loadRemis().forEach((r) => {
-      const e = by[r.consignor] || (by[r.consignor] = { consignor: r.consignor, sold: 0, rows: [] });
-      e.remis = (e.remis || 0) + (+r.amount || 0);
-    });
-    return Object.values(by).map((e) => Object.assign(e, {
-      remis: e.remis || 0, due: Math.max(0, e.sold - (e.remis || 0)),
-    })).sort((a, b) => b.due - a.due);
-  }
-  const depotDue = () => depotByConsignor().reduce((s, e) => s + e.due, 0);
-
-  function renderDepot() {
-    const panel = $('[data-mz-panel="depot"]', root);
-    if (!panel) return;
-    const groups = depotByConsignor();
-    const due = depotDue();
-    panel.innerHTML = `
-      <div class="mz-depot-view">
-        <header class="mz-depot-head">
-          <div>
-            <h2>Dépôt-vente</h2>
-            <p class="mz-depot-sub">Marchandise vendue pour le compte d’un tiers. Chaque vente est
-            enregistrée normalement au journal des ventes ; elle apparaît ici parce que l’argent
-            appartient au déposant, pas au magasin.</p>
-          </div>
-          <div class="mz-depot-due">
-            <span class="l">Reste à reverser</span>
-            <b>${fmtMAD(due)}</b>
-          </div>
-        </header>
-        ${groups.length ? groups.map((g) => `
-          <section class="mz-depot-card">
-            <div class="mz-depot-card-head">
-              <div>
-                <b>${esc(g.consignor)}</b>
-                <span>${g.rows.length} vente${g.rows.length > 1 ? 's' : ''} · encaissé ${fmtMAD(g.sold)}${g.remis ? ` · déjà reversé ${fmtMAD(g.remis)}` : ''}</span>
-              </div>
-              <div class="mz-depot-card-due">
-                <b>${fmtMAD(g.due)}</b>
-                ${g.due > 0 ? `<button class="mz-btn sm" data-mz-remis="${esc(g.consignor)}">Marquer reversé</button>` : '<span class="mz-depot-ok">à jour</span>'}
-              </div>
-            </div>
-            <ul class="mz-depot-lines">
-              ${g.rows.slice(0, 40).map((r) => `
-                <li><span>${fmtDT(new Date(r.at))}</span><span>${esc(r.name)}</span><span>×${r.qty}</span><b>${fmtMAD(r.amount)}</b></li>`).join('')}
-            </ul>
-          </section>`).join('')
-        : '<div class="mz-empty" style="margin:40px;">Aucune vente en dépôt-vente. Marquez un article « dépôt-vente » dans sa fiche pour qu’il apparaisse ici.</div>'}
-      </div>`;
-    $$('[data-mz-remis]', panel).forEach((b) => {
-      b.onclick = () => {
-        const who = b.dataset.mzRemis;
-        const g = depotByConsignor().find((x) => x.consignor === who);
-        if (!g || g.due <= 0) return;
-        /* Un reversement est un ÉVÉNEMENT daté, pas un solde écrasé : on empile,
-           pour que l'historique reste lisible et vérifiable par le déposant. */
-        loadRemis().push({ consignor: who, amount: g.due, ts: Date.now(), by: STAFF.caissiere.name });
-        saveRemis();
-        renderDepot(); renderBadges(); icons();
-        toast(`${fmtMAD(g.due)} reversé à ${who}`);
-      };
-    });
-    icons();
   }
 
   function renderCasse() {
@@ -4308,16 +4183,15 @@
             marque: ln.marque, motif: ln.motif, fragile: ln.fragile, registryId: ln.registryId,
             /* Figé à l'encaissement : si l'article cesse d'être en dépôt-vente
                demain, le journal d'hier doit rester vrai. */
-            consigned: isConsigned(ln), consignor: isConsigned(ln) ? consignorOf(ln) : ''
+            consigned: isConsigned(ln)
           })),
           reward: rewardUsed ? t.reward.label : null,
           total,
           /* `total` = ce que la cliente a payé (et ce que le tiroir contient).
-             `consigned` = la part qui appartient aux déposants et qu'il faudra
-             reverser. `own` = la recette réelle du commerce. Les trois sont
-             écrites : rien n'est retiré du journal, tout est attribué. */
+             `consigned` = la part qui appartient aux déposants. `own` = la
+             recette réelle du commerce. Les trois sont écrites : rien n'est
+             retiré du journal, tout est attribué. */
           consigned: Math.round(tot.consigned),
-          consignors: consignorSplit(t.lines),
           own: Math.round(tot.own),
         };
         SALES.unshift(sale);
@@ -6268,7 +6142,7 @@
         <div class="mzi-fg" id="mzi-e-depot-who" style="${p.ownership === 'consignment' ? '' : 'display:none'}">
           <label>Déposant</label>
           <input id="mzi-e-consignor" value="${esc(p.consignor || '')}" placeholder="Nom du propriétaire de la marchandise" />
-          <small class="mzi-help">Le montant encaissé sur cet article lui est dû. Il apparaît dans « Dépôt-vente » et n’entre pas dans la recette.</small>
+          <small class="mzi-help">Simple repère : le montant encaissé sur cet article n’entre pas dans la recette du magasin. La caisse ne tient pas le compte de ce qui lui est reversé.</small>
         </div>
       </div>
       <div class="mzi-modfoot"><button class="mz-btn secondary" data-inv-back>Retour</button><button class="mz-btn" id="mzi-e-save">Enregistrer</button></div>`;

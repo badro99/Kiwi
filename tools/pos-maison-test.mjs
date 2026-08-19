@@ -215,7 +215,7 @@ ok(unread.length === 0, `chaque attribut data-mz-* est lu (orphelins : ${unread.
   const saleBlock = jsSrc.slice(jsSrc.indexOf('          lines: t.lines.map((ln) => ({'), jsSrc.indexOf('          reward: rewardUsed'));
   ok(saleBlock.length > 0 && !/filter\s*\(/.test(saleBlock),
     'le journal des ventes enregistre toutes les lignes, sans filtrer le dépôt-vente');
-  ok(/consigned: Math\.round\(tot\.consigned\)/.test(jsSrc) && /consignors: consignorSplit\(t\.lines\)/.test(jsSrc) && /own: Math\.round\(tot\.own\)/.test(jsSrc),
+  ok(/consigned: Math\.round\(tot\.consigned\)/.test(jsSrc) && /own: Math\.round\(tot\.own\)/.test(jsSrc),
     'la vente écrit les trois montants : total payé, part des déposants, recette propre');
 
   // b) la recette du jour exclut le dépôt-vente, avec repli pour l'historique
@@ -224,11 +224,14 @@ ok(unread.length === 0, `chaque attribut data-mz-* est lu (orphelins : ${unread.
   ok(/cashIn = Math\.max\(0, cashIn - Math\.round\(tot\.consigned\)\)/.test(jsSrc),
     'ce qui remonte au tableau de bord exclut la part des déposants');
 
-  // c) le journal dépôt-vente est atteignable
-  ok(/data-mz-view="depot"/.test(jsSrc) && /if \(view === 'depot'\) renderDepot\(\);/.test(jsSrc),
-    'le journal dépôt-vente a son entrée de nav ET sa route');
-  ok(/if \(!ln\.consigned\) return;/.test(jsSrc) && /consignor: ln\.consignor \|\| 'Déposant'/.test(jsSrc),
-    'le journal lit la propriété FIGÉE sur la vente, pas le catalogue du jour');
+  // c) la caisse ne tient AUCUN solde de reversement — décision explicite de la
+  //    patronne : l'argent des déposants se règle hors caisse. Un solde ici
+  //    serait un second livre jamais tenu à jour. Ce contrôle est là pour que
+  //    la remise en place soit une décision, pas une dérive.
+  ok(!/mzDepotRemis/.test(jsSrc) && !/depotByConsignor|depotDue/.test(jsSrc),
+    'aucun compte de « reste à reverser » n’est tenu par la caisse');
+  ok(/consigned: isConsigned\(ln\)/.test(jsSrc),
+    'la ligne vendue garde la propriété FIGÉE au moment de l’encaissement');
 
   // d) le catalogue partagé n'accepte pas une propriété devinée
   ok(/ownership: data\.ownership === 'consignment' \? 'consignment' : 'outright'/.test(catSrc),
@@ -240,7 +243,7 @@ ok(unread.length === 0, `chaque attribut data-mz-* est lu (orphelins : ${unread.
   const to = jsSrc.indexOf('  function ticketTotals(t) {');
   ok(from > 0 && to > from, 'le bloc dépôt-vente est isolable dans la source');
   const shim = 'const lineTotal = (ln) => ln.unit * ln.qty; const P = __P;';
-  const api = new Function('__P', shim + jsSrc.slice(from, to) + '\n; return { isConsigned, consignedOf, consignorSplit };');
+  const api = new Function('__P', shim + jsSrc.slice(from, to) + '\n; return { isConsigned, consignedOf };');
   const PROD = {
     bougie: { ownership: 'consignment', consignor: 'Baobab Collection' },
     aurum:  { ownership: 'consignment', consignor: 'Baobab Collection' },
@@ -253,8 +256,6 @@ ok(unread.length === 0, `chaque attribut data-mz-* est lu (orphelins : ${unread.
     { pid: 'aurum', unit: 1250, qty: 2 },
   ];
   ok(a.consignedOf(lines) === 1850 + 2500, `part des déposants = 4350 (obtenu ${a.consignedOf(lines)})`);
-  const split = a.consignorSplit(lines);
-  ok(split['Baobab Collection'] === 4350 && !('' in split), `regroupé par déposant (${JSON.stringify(split)})`);
   ok(a.consignedOf([{ pid: 'vase', unit: 650, qty: 1 }]) === 0, 'un ticket sans dépôt-vente ne doit rien');
   ok(a.isConsigned({ pid: 'inconnu' }) === false, 'un article absent du catalogue n’est jamais réputé en dépôt-vente');
 }
