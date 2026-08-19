@@ -1049,17 +1049,27 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
   // base decides which module set the operator sees. Mirrors assets/onboarding.js
   // TYPES and assets/venues.js VERTICAL_SECTIONS — a boutique is NOT a relabeled
   // restaurant, so it shows boutique modules, never Plan de salle / KDS.
+  // CINQUIÈME copie du registre des métiers (les autres : trades.js, onboarding.js,
+  // interactive.js, hotel.js). Elle décide de deux choses ici : le libellé du métier
+  // et, par `base`, QUELS MODULES la console propose. Un métier absent retombe sur
+  // « restaurant » : le client « Maison » n'a longtemps eu ni son nom ni ses modules
+  // boutique dans cette console, sans une seule erreur. À synchroniser avec
+  // assets/trades.js — tools/pos-maison-test.mjs compare les deux listes.
   var TYPES = [
     { id:'restaurant', base:'restaurant', label:'Restaurant' },
     { id:'cafe',       base:'restaurant', label:'Café / Salon de thé' },
     { id:'fastfood',   base:'restaurant', label:'Fast-food / Snack' },
     { id:'bakery',     base:'restaurant', label:'Boulangerie / Pâtisserie' },
     { id:'pizzeria',   base:'restaurant', label:'Pizzeria' },
+    { id:'traiteur',   base:'restaurant', label:'Traiteur' },
     { id:'foodtruck',  base:'restaurant', label:'Food truck' },
     { id:'boutique',   base:'boutique',   label:'Boutique' },
     { id:'epicerie',   base:'boutique',   label:'Épicerie / Superette' },
     { id:'pharmacie',  base:'boutique',   label:'Pharmacie' },
+    { id:'librairie',  base:'boutique',   label:'Librairie / Papeterie' },
     { id:'fleuriste',  base:'boutique',   label:'Fleuriste' },
+    { id:'maison',     base:'boutique',   label:'Maison' },
+    { id:'pressing',   base:'boutique',   label:'Pressing / Blanchisserie' },
     { id:'spa',        base:'spa',        label:'Spa / Bien-être' },
     { id:'coiffure',   base:'spa',        label:'Salon de coiffure' },
     { id:'sport',      base:'spa',        label:'Salle de sport' },

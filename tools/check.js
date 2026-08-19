@@ -884,6 +884,9 @@ section('Whole-project regressions');
     'stamp-drift-test.js',
     'pos-registry-sync-test.mjs',
     'pos-maison-test.mjs',
+    /* Le panneau d'activation : il doit pouvoir se fermer. Il ne le pouvait
+       pas, et rien ne le disait — voir l'en-tête de la suite. */
+    'entitlements-test.mjs',
     'formula-protocol-test.mjs',
     'api-boundaries-test.mjs',
     'security-regression-test.js',

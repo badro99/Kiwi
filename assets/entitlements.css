@@ -1,15 +1,44 @@
 :root{--kiwi-paywall-deep:#052b20;--kiwi-paywall-green:#19d89a}
 .kiwi-entitlement-pill{position:fixed;right:24px;bottom:24px;z-index:2147483000;display:flex;align-items:center;gap:10px;padding:11px 15px;border:1px solid rgba(125,242,176,.35);border-radius:999px;background:#052b20;color:#fff;box-shadow:0 18px 55px rgba(5,43,32,.28);font:700 13px/1.2 Inter,system-ui,sans-serif;cursor:pointer}
 .kiwi-entitlement-pill i{width:8px;height:8px;border-radius:50%;background:#7df2b0;box-shadow:0 0 0 5px rgba(125,242,176,.12)}
-.kiwi-entitlement-layer{position:fixed;inset:0;z-index:2147483640;display:grid;place-items:center;padding:24px;background:rgba(3,13,10,.72);backdrop-filter:blur(16px) saturate(.8)}
-.kiwi-entitlement-card{position:relative;width:min(680px,100%);overflow:hidden;border:1px solid rgba(125,242,176,.25);border-radius:32px;background:linear-gradient(145deg,#073d2e 0%,#052b20 58%,#041a14 100%);color:#fff;box-shadow:0 35px 110px rgba(0,0,0,.4);font-family:Inter,system-ui,sans-serif}
+/* La fermeture passe par une CLASSE, jamais par le seul attribut [hidden] : la
+   règle display ci-dessous vient de NOTRE feuille et bat celle du navigateur,
+   donc `hidden` seul laissait le panneau peint et son bouton sans effet. */
+/* Le panneau s'injecte dans trois surfaces : il ne peut pas parier sur le reset
+   de la page hôte. Sans border-box, `width:100%` + padding faisait dépasser le
+   bouton pleine largeur du mobile de 40 px hors de la carte. */
+.kiwi-entitlement-layer,.kiwi-entitlement-layer *{box-sizing:border-box}
+.kiwi-entitlement-layer{position:fixed;inset:0;z-index:2147483640;display:grid;grid-template-columns:minmax(0,1fr);place-items:center;padding:24px;background:rgba(3,13,10,.66);backdrop-filter:blur(14px) saturate(.85);animation:kiwi-ent-in .22s ease-out both}
+.kiwi-entitlement-layer.is-off,.kiwi-entitlement-layer[hidden]{display:none!important}
+.kiwi-entitlement-open,.kiwi-entitlement-open body{overflow:hidden}
+@keyframes kiwi-ent-in{from{opacity:0}to{opacity:1}}
+@keyframes kiwi-ent-rise{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:none}}
+.kiwi-entitlement-card{position:relative;width:min(620px,100%);max-height:calc(100vh - 48px);overflow:hidden auto;overscroll-behavior:contain;border:1px solid rgba(125,242,176,.2);border-radius:28px;background:linear-gradient(155deg,#0a4735 0%,#052b20 55%,#03150f 100%);color:#fff;box-shadow:0 30px 90px rgba(0,0,0,.45);font-family:'Inter Tight',Inter,system-ui,sans-serif;animation:kiwi-ent-rise .34s cubic-bezier(.22,1,.3,1) both}
+.kiwi-entitlement-card:focus{outline:none}
+/* La sortie, visible avant d'avoir lu quoi que ce soit. */
+.kiwi-entitlement-x{position:absolute;right:14px;top:14px;z-index:2;width:36px;height:36px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.16);border-radius:50%;background:rgba(255,255,255,.06);color:rgba(255,255,255,.8);font:400 20px/1 Inter,system-ui,sans-serif;cursor:pointer;transition:background .18s,color .18s,border-color .18s}
+.kiwi-entitlement-x:hover{background:rgba(255,255,255,.14);color:#fff;border-color:rgba(255,255,255,.3)}
+.kiwi-entitlement-x:focus-visible{outline:2px solid #7df2b0;outline-offset:2px}
 .kiwi-entitlement-card:before{content:"";position:absolute;right:-100px;top:-120px;width:330px;height:330px;border-radius:50%;background:radial-gradient(circle,rgba(125,242,176,.22),transparent 67%);pointer-events:none}
-.kiwi-entitlement-head{padding:34px 38px 12px}.kiwi-entitlement-kicker{display:flex;align-items:center;gap:9px;color:#7df2b0;font-size:12px;font-weight:800;letter-spacing:.16em;text-transform:uppercase}.kiwi-entitlement-kicker span{width:9px;height:9px;border-radius:3px;background:#7df2b0}
-.kiwi-entitlement-card h2{margin:20px 0 12px;max-width:560px;font-size:clamp(30px,5vw,48px);line-height:1.02;letter-spacing:-.045em}.kiwi-entitlement-card p{margin:0;color:rgba(255,255,255,.72);font-size:16px;line-height:1.6}
-.kiwi-entitlement-benefits{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:26px 38px}.kiwi-entitlement-benefits div{padding:16px;border:1px solid rgba(255,255,255,.1);border-radius:18px;background:rgba(255,255,255,.055);font-size:13px;line-height:1.35}.kiwi-entitlement-benefits b{display:block;margin-bottom:5px;color:#fff;font-size:14px}
-.kiwi-entitlement-actions{display:flex;gap:12px;padding:10px 38px 38px}.kiwi-entitlement-actions a,.kiwi-entitlement-actions button{min-height:54px;border:0;border-radius:16px;padding:0 22px;font:800 15px Inter,system-ui,sans-serif;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;cursor:pointer}.kiwi-entitlement-actions a{flex:1;background:#7df2b0;color:#052b20;box-shadow:0 12px 32px rgba(125,242,176,.18)}.kiwi-entitlement-actions button{background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.13)}
+.kiwi-entitlement-head{padding:36px 36px 4px}.kiwi-entitlement-kicker{display:flex;align-items:center;gap:9px;color:#7df2b0;font-size:12px;font-weight:800;letter-spacing:.16em;text-transform:uppercase}.kiwi-entitlement-kicker span{width:9px;height:9px;border-radius:3px;background:#7df2b0}
+.kiwi-entitlement-card h2{margin:18px 0 10px;max-width:15ch;font-family:'Instrument Serif','Inter Tight',Georgia,serif;font-style:normal;font-weight:400;font-size:clamp(30px,4.4vw,40px);line-height:1.06;letter-spacing:-.01em}.kiwi-entitlement-card p{margin:0;max-width:52ch;color:rgba(255,255,255,.7);font-size:14.5px;line-height:1.62}
+.kiwi-entitlement-benefits{display:grid;gap:2px;padding:24px 36px 20px}
+.kiwi-entitlement-benefits div{position:relative;display:grid;grid-template-columns:26px 1fr;align-items:baseline;column-gap:12px;padding:11px 0;border-top:1px solid rgba(255,255,255,.09);color:rgba(255,255,255,.66);font-size:13.5px;line-height:1.5}
+.kiwi-entitlement-benefits div:last-child{border-bottom:1px solid rgba(255,255,255,.09)}
+.kiwi-entitlement-benefits em{font-style:normal;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:#7df2b0;opacity:.85}
+.kiwi-entitlement-benefits b{grid-column:2;display:block;margin-bottom:2px;color:#fff;font-size:14px;font-weight:600}
+.kiwi-entitlement-benefits span{grid-column:2}
+.kiwi-entitlement-actions{display:flex;gap:10px;padding:4px 36px 0}
+.kiwi-entitlement-actions a,.kiwi-entitlement-actions button{min-height:50px;border:0;border-radius:14px;padding:0 20px;font:600 14.5px 'Inter Tight',Inter,system-ui,sans-serif;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;cursor:pointer;transition:transform .16s,background .16s,border-color .16s,box-shadow .16s}
+.kiwi-entitlement-actions a{flex:1.2;background:#7df2b0;color:#052b20;box-shadow:0 10px 26px rgba(125,242,176,.16)}
+.kiwi-entitlement-actions a:hover{transform:translateY(-1px);box-shadow:0 14px 32px rgba(125,242,176,.24)}
+.kiwi-entitlement-actions button{flex:1;background:transparent;color:rgba(255,255,255,.9);border:1px solid rgba(255,255,255,.24)}
+.kiwi-entitlement-actions button:hover{background:rgba(255,255,255,.09);border-color:rgba(255,255,255,.42);color:#fff}
+.kiwi-entitlement-actions a:active,.kiwi-entitlement-actions button:active{transform:translateY(1px)}
+.kiwi-entitlement-actions a:focus-visible,.kiwi-entitlement-actions button:focus-visible{outline:2px solid #7df2b0;outline-offset:3px}
+.kiwi-entitlement-foot{padding:14px 36px 30px;color:rgba(255,255,255,.55);font-size:12px;line-height:1.5}
 .kiwi-privacy-bar{position:fixed;left:50%;top:48px;transform:translateX(-50%);z-index:2147483500;display:flex;align-items:center;gap:12px;padding:9px 12px 9px 15px;border:1px solid rgba(125,242,176,.28);border-radius:999px;background:#052b20;color:#fff;box-shadow:0 12px 45px rgba(0,0,0,.25);font:700 12px Inter,system-ui,sans-serif}.kiwi-privacy-bar:before{content:"";width:8px;height:8px;border-radius:50%;background:#7df2b0}.kiwi-privacy-bar button{border:0;border-radius:999px;padding:7px 11px;background:#7df2b0;color:#052b20;font:800 11px Inter,system-ui,sans-serif;cursor:pointer}
 .kiwi-private-value{filter:blur(9px)!important;opacity:.48!important;user-select:none!important;pointer-events:none!important}.kiwi-private-input{filter:blur(9px)!important;opacity:.48!important;user-select:none!important;pointer-events:none!important}
 .kiwi-privacy-toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:2147483600;padding:12px 18px;border-radius:14px;background:#052b20;color:#fff;box-shadow:0 15px 45px rgba(0,0,0,.25);font:700 13px Inter,system-ui,sans-serif}
-@media(max-width:640px){.kiwi-entitlement-pill{left:14px;right:14px;justify-content:center;bottom:14px}.kiwi-entitlement-layer{padding:12px}.kiwi-entitlement-card{border-radius:24px}.kiwi-entitlement-head{padding:28px 24px 8px}.kiwi-entitlement-benefits{grid-template-columns:1fr;padding:20px 24px}.kiwi-entitlement-actions{padding:8px 24px 26px;flex-direction:column}.kiwi-privacy-bar{top:46px;max-width:calc(100vw - 16px);white-space:nowrap}}
-@media(prefers-reduced-motion:reduce){.kiwi-entitlement-layer{backdrop-filter:none}}
+@media(max-width:640px){.kiwi-entitlement-pill{left:14px;right:14px;justify-content:center;bottom:14px}.kiwi-entitlement-layer{padding:10px}.kiwi-entitlement-card{border-radius:22px;max-height:calc(100vh - 20px)}.kiwi-entitlement-head{padding:30px 22px 4px}.kiwi-entitlement-card h2{max-width:none}.kiwi-entitlement-benefits{padding:18px 22px 14px}.kiwi-entitlement-actions{padding:4px 22px 0;flex-direction:column-reverse}.kiwi-entitlement-actions a,.kiwi-entitlement-actions button{width:100%}.kiwi-entitlement-foot{padding:14px 22px 24px}.kiwi-privacy-bar{top:46px;max-width:calc(100vw - 16px);white-space:nowrap}}
+@media(prefers-reduced-motion:reduce){.kiwi-entitlement-layer{backdrop-filter:none;animation:none}.kiwi-entitlement-card{animation:none}.kiwi-entitlement-actions a:hover,.kiwi-entitlement-actions button:hover{transform:none}}

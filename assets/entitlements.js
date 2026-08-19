@@ -11,15 +11,74 @@
   var nativeFetch=window.fetch&&window.fetch.bind(window);
 
   function node(tag,cls,text){var n=document.createElement(tag);if(cls)n.className=cls;if(text!=null)n.textContent=text;return n;}
+  /* ── LE PANNEAU D'ACTIVATION ───────────────────────────────────────────────
+   * Il s'ouvre quand un compte encore en attente touche une action payante, et
+   * il doit se REFERMER : « Continuer à explorer » est la moitié utile de
+   * l'écran, celle qui rend le tableau de bord visitable en attendant.
+   *
+   * Il ne se refermait pas. `modal.hidden = true` posait bien l'attribut, mais
+   * la règle `.kiwi-entitlement-layer{display:grid}` d'entitlements.css bat le
+   * `[hidden]{display:none}` de la feuille du navigateur : le panneau restait
+   * peint, par-dessus tout, et le bouton semblait mort. Rien en console, rien
+   * dans le réseau — le clic partait, il n'avait simplement aucun effet visible.
+   * On ferme donc par CLASSE (`.is-off`, écrite dans notre propre feuille, donc
+   * de force égale et déclarée après), et l'attribut reste pour l'accessibilité.
+   *
+   * Trois sorties plutôt qu'une, parce qu'un panneau dont on doute qu'il se
+   * ferme est un panneau qu'on essaie de fermer par tous les moyens : la croix,
+   * la touche Échap, le fond. */
+  var lastFocus=null;
+  function closePaywall(){
+    if(!modal)return;
+    modal.classList.add('is-off');modal.hidden=true;
+    document.documentElement.classList.remove('kiwi-entitlement-open');
+    try{if(lastFocus&&lastFocus.focus)lastFocus.focus();else if(pill)pill.focus();}catch(_){}
+  }
+  function openPaywall(){
+    modal.classList.remove('is-off');modal.hidden=false;
+    document.documentElement.classList.add('kiwi-entitlement-open');
+  }
   function showPaywall(){
     if(operator||!pending)return true;
-    if(modal){modal.hidden=false;return false;}
+    try{lastFocus=document.activeElement;}catch(_){lastFocus=null;}
+    if(modal){openPaywall();focusFirst();return false;}
     modal=node('div','kiwi-entitlement-layer');modal.setAttribute('role','dialog');modal.setAttribute('aria-modal','true');modal.setAttribute('aria-label','Abonnement Kiwi requis');
-    var card=node('section','kiwi-entitlement-card'),head=node('div','kiwi-entitlement-head'),kick=node('div','kiwi-entitlement-kicker');kick.append(node('span'),document.createTextNode(' Activation Kiwi'));
-    head.append(kick,node('h2','',"Votre espace est prêt. Activez Kiwi pour passer à l'action."),node('p','',"Explorez librement votre tableau de bord. Dès que votre abonnement est validé, les ajouts, exports, encaissements et réglages deviennent disponibles, sans perdre votre configuration."));
-    var benefits=node('div','kiwi-entitlement-benefits');[['Tout est conservé','Votre onboarding et vos réglages restent en place.'],['Activation humaine','L’équipe Kiwi vérifie votre formule avec vous.'],['Ouverture immédiate','God Mode active uniquement votre établissement.']].forEach(function(x){var d=node('div');d.append(node('b','',x[0]),document.createTextNode(x[1]));benefits.append(d);});
-    var actions=node('div','kiwi-entitlement-actions'),cta=node('a','',"Parler à Kiwi sur WhatsApp"),later=node('button','',"Continuer à explorer");cta.href=WA;cta.target='_blank';cta.rel='noopener';later.type='button';later.onclick=function(){modal.hidden=true;};actions.append(cta,later);card.append(head,benefits,actions);modal.append(card);document.body.append(modal);cta.focus();return false;
+    var card=node('section','kiwi-entitlement-card');card.tabIndex=-1;var head=node('div','kiwi-entitlement-head'),kick=node('div','kiwi-entitlement-kicker');kick.append(node('span'),document.createTextNode(' Activation Kiwi'));
+    /* La croix : une sortie visible, avant même de lire les boutons du bas. */
+    var x=node('button','kiwi-entitlement-x');x.type='button';x.setAttribute('aria-label','Fermer et continuer à explorer');x.textContent='\u00d7';x.onclick=closePaywall;
+    head.append(kick,node('h2','',"Votre espace est prêt."),node('p','',"Explorez tout le tableau de bord dès maintenant. L\u2019activation ouvre les ajouts, les exports et les encaissements \u2014 votre configuration reste en place, rien n\u2019est \u00e0 refaire."));
+    var benefits=node('div','kiwi-entitlement-benefits');
+    /* « God Mode » est notre mot d'atelier, pas celui du commerçant : il lisait
+       ici le nom d'une console qu'il ne verra jamais. */
+    [['Rien ne se perd','Votre param\u00e9trage et vos articles restent en place.'],
+     ['Une vraie personne','L\u2019\u00e9quipe Kiwi valide votre formule avec vous.'],
+     ['Ouverture le jour m\u00eame','Votre \u00e9tablissement s\u2019ouvre d\u00e8s l\u2019accord, sans r\u00e9installation.']].forEach(function(x2,i){var d=node('div');d.append(node('em','',String(i+1)),node('b','',x2[0]),node('span','',x2[1]));benefits.append(d);});
+    var actions=node('div','kiwi-entitlement-actions'),cta=node('a','',"Parler \u00e0 Kiwi sur WhatsApp"),later=node('button','',"Continuer \u00e0 explorer");
+    cta.href=WA;cta.target='_blank';cta.rel='noopener';
+    later.type='button';later.className='kiwi-entitlement-later';later.onclick=closePaywall;
+    actions.append(cta,later);
+    var foot=node('div','kiwi-entitlement-foot','Vous gardez l\u2019acc\u00e8s en lecture aussi longtemps que vous le souhaitez.');
+    card.append(x,head,benefits,actions,foot);modal.append(card);
+    /* Le fond ferme, la carte non : un clic dans la carte ne doit pas la fermer. */
+    modal.addEventListener('mousedown',function(e){if(e.target===modal)closePaywall();});
+    modal.addEventListener('keydown',function(e){
+      if(e.key==='Escape'){e.stopPropagation();closePaywall();return;}
+      if(e.key!=='Tab')return;
+      /* Piège à focus : sans lui, la tabulation sort du panneau et parcourt un
+         tableau de bord que le panneau recouvre — on tabule dans le vide. */
+      var f=modal.querySelectorAll('button,a[href]');if(!f.length)return;
+      var first=f[0],last=f[f.length-1];
+      if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
+      else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
+    });
+    document.body.append(modal);openPaywall();focusFirst();return false;
   }
+  /* Le focus va sur la CARTE, pas sur un bouton : posé sur « Continuer à
+     explorer », l'anneau de focus faisait de la sortie l'action la plus voyante
+     de l'écran ; posé sur WhatsApp, c'était une main sur l'épaule. La carte
+     reçoit le focus (tabindex=-1), la lecture d'écran annonce le dialogue, et
+     la première tabulation tombe sur la croix. */
+  function focusFirst(){try{modal.querySelector('.kiwi-entitlement-card').focus({preventScroll:true});}catch(_){}}
   function showPill(){if(pill||operator||!pending)return;pill=node('button','kiwi-entitlement-pill');pill.type='button';pill.append(node('i'),document.createTextNode('Mode découverte · Activer Kiwi'));pill.onclick=showPaywall;document.body.append(pill);}
   function blockedWord(el){
     if(!el)return false;if(el.closest('nav,.sidebar,[role="tablist"],.kiwi-entitlement-layer,.kiwi-entitlement-pill'))return false;
@@ -63,7 +122,7 @@
   function confirmIdentity(state){
     operator=!!(state&&state.operator===true);privacy=operator&&wantsPrivacy;
     document.documentElement.classList.remove('kiwi-privacy-pending');
-    if(operator){if(pill){pill.remove();pill=null;}if(modal){modal.remove();modal=null;}}
+    if(operator){if(pill){pill.remove();pill=null;}if(modal){modal.remove();modal=null;}document.documentElement.classList.remove('kiwi-entitlement-open');}
     if(privacy)installPrivacy();
   }
   function boot(){
