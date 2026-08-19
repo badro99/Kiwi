@@ -260,6 +260,50 @@ ok(unread.length === 0, `chaque attribut data-mz-* est lu (orphelins : ${unread.
   ok(a.isConsigned({ pid: 'inconnu' }) === false, 'un article absent du catalogue n’est jamais réputé en dépôt-vente');
 }
 
+/* 12. CATÉGORIE A / B — le choix se pose là où les articles sont VRAIMENT créés.
+ * La caisse ne crée plus d'article (openNewProduct/openEditProduct renvoient au
+ * tableau de bord) : une case à cocher posée dans ce formulaire-là ne serait
+ * jamais vue. Le contrôle vérifie donc les deux bouts — le choix côté tableau
+ * de bord, le repère « B » côté caisse. */
+{
+  const proSrc = fs.readFileSync(path.join(ROOT, 'assets/pages-pro.js'), 'utf8');
+
+  // a) la caisse ne crée pas d'article : c'est ce qui rend le point b) obligatoire
+  ok(/function openNewProduct\(\)\s*\{\s*catalogDashboardOnly\(\);\s*return;/.test(jsSrc),
+    'la caisse renvoie la création d’article au tableau de bord (donc le choix A/B y vit)');
+
+  // b) le formulaire de création propose A et B, et n'en pré-coche aucune
+  const abField = proSrc.slice(proSrc.indexOf('function _bqxAbField'), proSrc.indexOf('function _bqxWireAb'));
+  ok(/value="outright"/.test(abField) && /value="consignment"/.test(abField), 'le formulaire propose les deux catégories');
+  ok(/const own = p \? \(p\.ownership === 'consignment' \? 'consignment' : 'outright'\) : '';/.test(abField),
+    'à la création (p absent) aucune des deux n’est pré-cochée');
+  ok(/_bqxAbField\(null\)/.test(proSrc) && /_bqxAbField\(p\)/.test(proSrc),
+    'le champ est monté dans les DEUX formulaires : création et modification');
+
+  // c) rien n'est créé tant que la catégorie n'est pas choisie
+  const newSave = proSrc.slice(proSrc.indexOf("handlers['bqx-new-save']"), proSrc.indexOf("/* edit / delete product */"));
+  ok(/const ab = _bqxAbRead\(b\);[\s\S]{0,200}if \(!ab\) \{[\s\S]{0,160}return; \}/.test(newSave),
+    'la création refuse d’enregistrer tant qu’aucune catégorie n’est choisie');
+  ok(newSave.indexOf('if (!ab)') < newSave.indexOf('addProduct'),
+    'le refus tombe AVANT addProduct : aucun article n’est créé à moitié');
+  ok(/ownership: ab\.ownership/.test(newSave) && /consignor: ab\.consignor/.test(newSave),
+    'le choix voyage jusqu’au catalogue partagé');
+  ok(/ownership: ab \? ab\.ownership : undefined/.test(proSrc),
+    'à la modification, un formulaire sans choix laisse la valeur en base au lieu de la réécrire');
+
+  // d) le repère B, des deux côtés
+  ok(/class="bqx-ab-b"[^`]*>B</.test(proSrc), 'la grille d’inventaire marque les articles B');
+  const headAt = proSrc.indexOf('<div class="kx-sku-head">');
+  const gridCard = proSrc.slice(headAt, proSrc.indexOf('bqx-card-cols', headAt));
+  ok(/p\.ownership === 'consignment'/.test(gridCard) && /bqx-ab-b/.test(gridCard),
+    'le repère de la grille est conditionné à la catégorie B, pas posé sur tout le monde');
+  const tag = /<span class="mz-consign-tag" title="([^"]*)">([^<]*)<\/span>/.exec(jsSrc);
+  ok(!!tag && tag[2].trim() === 'B', `la caisse affiche « B » à côté de l’article (obtenu « ${tag ? tag[2] : '—'} »)`);
+  ok(!!tag && /Catégorie B/.test(tag[1]), 'le repère porte son explication en infobulle');
+  ok((jsSrc.match(/mz-consign-tag/g) || []).length >= 3,
+    'le repère suit l’article partout où il se montre (grille, liste, fiche)');
+}
+
 console.log(`\n✓ ${passed} controls green (${failures.length} failure(s))`);
 if (failures.length) {
   process.exit(1);

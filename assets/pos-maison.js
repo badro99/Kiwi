@@ -1734,7 +1734,7 @@
         <button class="mz-card ${stockOf(p) === 0 ? 'is-out' : ''}${pr ? ' is-promo' : ''}" data-mz-item="${p.id}" style="--i:${i++}">
           <span class="mz-card-art">${artOf(p.art)}</span>
           ${p.marque ? `<span class="mz-card-brand">${esc(p.marque)}</span>` : ''}
-          ${p.ownership === 'consignment' ? `<span class="mz-consign-tag" title="Marchandise en dépôt-vente : la vente est enregistrée, le montant n’entre pas dans la recette">dépôt-vente</span>` : ''}
+          ${p.ownership === 'consignment' ? `<span class="mz-consign-tag" title="Catégorie B · dépôt-vente : la vente est enregistrée en entier, le montant n’entre pas dans la recette">B</span>` : ''}
           <span class="mz-card-name">${esc(p.name)}</span>
           <div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:2px;">
             ${p.motif ? `<span class="mz-card-motif">${esc(p.motif)}</span>` : ''}
@@ -1929,7 +1929,7 @@
       <span class="mz-line-art">${artOf(p.art)}</span>
       <span class="mz-line-mid">
         ${(ln.marque || p.marque) ? `<span class="mz-line-brand">${esc(ln.marque || p.marque)}</span>` : ''}
-        ${p.ownership === 'consignment' ? `<span class="mz-consign-tag" title="Marchandise en dépôt-vente : la vente est enregistrée, le montant n’entre pas dans la recette">dépôt-vente</span>` : ''}
+        ${p.ownership === 'consignment' ? `<span class="mz-consign-tag" title="Catégorie B · dépôt-vente : la vente est enregistrée en entier, le montant n’entre pas dans la recette">B</span>` : ''}
         <span class="mz-line-name">${esc(p.name)}</span>
         <span class="mz-line-sub">
           ${colorDot(ln.color)}
@@ -2122,7 +2122,7 @@
         <span class="mz-sheet-art">${artOf(p.art)}</span>
         <span class="mz-sheet-title">
           ${p.marque ? `<div class="mz-card-brand">${esc(p.marque)}</div>` : ''}
-          ${p.ownership === 'consignment' ? `<div class="mz-f-hint"><span class="mz-consign-tag" title="Marchandise en dépôt-vente : la vente est enregistrée, le montant n’entre pas dans la recette">dépôt-vente</span> Vendue pour ${esc(p.consignor || 'un déposant')} — le montant n’entre pas dans la recette du magasin.</div>` : ''}
+          ${p.ownership === 'consignment' ? `<div class="mz-f-hint"><span class="mz-consign-tag" title="Catégorie B · dépôt-vente : la vente est enregistrée en entier, le montant n’entre pas dans la recette">B</span> Catégorie B (dépôt-vente) — vendue pour ${esc(p.consignor || 'un tiers')}. Le montant n’entre pas dans la recette du magasin.</div>` : ''}
           <h3>${esc(p.name)}</h3>
           <span class="sub">
             ${esc((RAYONS.find((r) => r.id === p.rayon) || { label: 'Divers' }).label)}

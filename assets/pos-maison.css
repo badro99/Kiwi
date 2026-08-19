@@ -1568,9 +1568,9 @@ body.is-pos .clockin-screen.mz-clockin { display: flex !important; }
 
 /* ── Dépôt-vente ─────────────────────────────────────────────────────────
    Le repère « cette marchandise n'est pas à moi », partout où l'article passe. */
-.mz-consign-tag { display: inline-flex; align-items: center; gap: 4px; font-family: var(--mono); font-size: 9.5px;
-  letter-spacing: .07em; text-transform: uppercase; color: var(--atlas);
-  border: 1px solid color-mix(in srgb, var(--atlas) 35%, transparent); border-radius: 999px; padding: 1px 6px; }
+.mz-consign-tag { display: inline-flex; align-items: center; justify-content: center; min-width: 16px;
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .04em; color: var(--atlas);
+  border: 1px solid color-mix(in srgb, var(--atlas) 45%, transparent); border-radius: 999px; padding: 1px 5px; }
 /* Case à cocher des fiches d'inventaire (propriété de la marchandise). */
 .mzi-check { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-2, var(--ink)); cursor: pointer; }
 .mzi-check input { width: 15px; height: 15px; accent-color: var(--atlas); cursor: pointer; }

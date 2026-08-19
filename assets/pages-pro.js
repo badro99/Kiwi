@@ -9682,6 +9682,16 @@ function _bqxCss() {
     .bqx-cat-sw button { width: 18px; height: 18px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; padding: 0; }
     .bqx-cat-sw button.on { border-color: var(--ink, #0A0F0D); }
     .bqx-price-tag { font-family: var(--mono, monospace); }
+    /* Catégorie A / B — la propriété de la marchandise, choisie à la création. */
+    .bqx-ab { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .bqx-ab label { display: flex; align-items: flex-start; gap: 8px; padding: 10px 12px; border: 1px solid var(--line, #e7e3da);
+      border-radius: 11px; cursor: pointer; background: var(--paper, #fff); }
+    .bqx-ab label:has(input:checked) { border-color: var(--atlas, #0B6E4F); box-shadow: inset 0 0 0 1px var(--atlas, #0B6E4F); }
+    .bqx-ab input { margin-top: 2px; accent-color: var(--atlas, #0B6E4F); }
+    .bqx-ab b { display: block; font-size: 13px; font-weight: 600; }
+    .bqx-ab span { display: block; font-size: 11.5px; color: var(--n-500, #77807b); margin-top: 1px; }
+    .bqx-ab-b { font-family: var(--mono, monospace); font-size: 10px; letter-spacing: .06em; color: var(--atlas, #0B6E4F);
+      border: 1px solid var(--atlas, #0B6E4F); border-radius: 999px; padding: 0 5px; margin-left: 6px; vertical-align: 1px; }
   `;
   document.head.appendChild(st);
 }
@@ -9761,7 +9771,8 @@ function _bqxGridHtml() {
         <div class="kx-sku-img-tag">${cat ? _esc(cat.name.charAt(0).toUpperCase()) : '·'}</div>
       </div>
       <div class="kx-sku-body">
-        <div class="kx-sku-head"><div class="n">${_esc(p.name)}</div><span class="chip neutral">${cat ? _esc(cat.name) : 'Divers'}</span></div>
+        <div class="kx-sku-head"><div class="n">${_esc(p.name)}${p.ownership === 'consignment'
+          ? '<span class="bqx-ab-b" title="Catégorie B · dépôt-vente : vendue pour un tiers, hors recette">B</span>' : ''}</div><span class="chip neutral">${cat ? _esc(cat.name) : 'Divers'}</span></div>
         <div class="bqx-card-cols">${(data.colors || []).slice(0, 8).map((c) => (window.KiwiColors ? window.KiwiColors.swatch(c.id) : '')).join('')}${data.colors.length > 8 ? `<em>+${data.colors.length - 8}</em>` : ''}</div>
         <div class="kx-sku-sku mono">${data.sizes.length} taille${data.sizes.length > 1 ? 's' : ''} · ${_bqxN(data.variants.length, 'variante')}</div>
         <div class="kx-sku-row">
@@ -10364,6 +10375,59 @@ function _bqxSkuField(sku) {
     </div>`;
 }
 
+/* ── Catégorie A / B : à qui appartient la marchandise ───────────────────────
+ * A = achetée ferme, c'est le stock du magasin et la vente est sa recette.
+ * B = dépôt-vente, vendue pour le compte d'un tiers : la vente est enregistrée
+ * en entier (ticket, journal, stock), mais le montant ne compte pas dans sa
+ * recette. C'est une PROPRIÉTÉ de l'article, pas un rayon : elle se pose à la
+ * création, parce qu'après coup personne ne repasse sur un catalogue.
+ *
+ * Aucune option n'est pré-cochée à la création : un défaut silencieux ferait
+ * entrer toute la marchandise d'un tiers dans le chiffre d'affaires du magasin
+ * sans que personne ait rien décidé. Le choix est donc explicite, une fois. */
+function _bqxAbField(p) {
+  const own = p ? (p.ownership === 'consignment' ? 'consignment' : 'outright') : '';
+  const who = p ? (p.consignor || '') : '';
+  return `
+    <div class="kf-group">
+      <label class="kf-label">Catégorie de marchandise</label>
+      <div class="bqx-ab">
+        <label><input type="radio" name="bqx-ab" value="outright" ${own === 'outright' ? 'checked' : ''} data-bqx-ab />
+          <div><b>Catégorie A</b><span>Achetée ferme — la vente est votre recette.</span></div></label>
+        <label><input type="radio" name="bqx-ab" value="consignment" ${own === 'consignment' ? 'checked' : ''} data-bqx-ab />
+          <div><b>Catégorie B</b><span>Dépôt-vente — vendue pour un tiers, hors recette.</span></div></label>
+      </div>
+    </div>
+    <div class="kf-group" data-bqx-ab-who style="${own === 'consignment' ? '' : 'display:none'}">
+      <label class="kf-label">Propriétaire de la marchandise (option)</label>
+      <input class="kf-input" value="${_esc(who)}" data-bqx-consignor placeholder="Ex. Baobab Collection" maxlength="60" />
+      <div class="bqx-photo-msg">Un repère pour vous. La caisse n'en tient aucun compte : elle enregistre
+        la vente en entier et laisse le montant hors de votre recette, rien de plus.</div>
+    </div>`;
+}
+/* Révèle le nom du déposant quand B est choisie. Le champ vit dans la modale,
+   donc on se raccroche au backdrop plutôt qu'au document. */
+function _bqxWireAb() {
+  const b = document.querySelector('.kiwi-backdrop');
+  if (!b) return;
+  const who = b.querySelector('[data-bqx-ab-who]');
+  b.querySelectorAll('[data-bqx-ab]').forEach((r) => r.addEventListener('change', () => {
+    if (who) who.style.display = r.checked && r.value === 'consignment' ? '' : 'none';
+  }));
+}
+/* Ce que les deux formulaires écrivent. `null` = rien de coché : l'appelant
+   refuse d'enregistrer, il ne devine pas. */
+function _bqxAbRead(b) {
+  const picked = b.querySelector('[data-bqx-ab]:checked');
+  if (!picked) return null;
+  const consignment = picked.value === 'consignment';
+  const who = b.querySelector('[data-bqx-consignor]');
+  return {
+    ownership: consignment ? 'consignment' : 'outright',
+    consignor: consignment ? ((who && who.value.trim()) || '') : '',
+  };
+}
+
 function _bqxPhotoField(photo, video) {
   _bqxPhoto = photo || '';
   _bqxVideo = video || '';
@@ -10436,10 +10500,12 @@ handlers['bqx-new'] = () => {
         <div class="kf-group"><label class="kf-label">Prix vente (MAD)</label><input class="kf-input" type="number" min="0" placeholder="1890" data-bqx-price /></div>
         <div class="kf-group"><label class="kf-label">Coût d'achat (MAD)</label><input class="kf-input" type="number" min="0" placeholder="optionnel" data-bqx-cost /></div>
       </div>
+      ${_bqxAbField(null)}
       ${_bqxPhotoField('', '')}`,
     foot: `<button class="kb ghost" data-dismiss>Annuler</button><button class="kb atlas" data-action="bqx-new-save">Créer le produit</button>`,
   });
   _bqxWirePhoto('', '');
+  _bqxWireAb();
   setTimeout(() => { const i = document.querySelector('.kiwi-backdrop [data-bqx-name]'); if (i) i.focus(); }, 60);
 };
 handlers['bqx-new-save'] = () => {
@@ -10447,11 +10513,16 @@ handlers['bqx-new-save'] = () => {
   if (!b) return;
   const name = b.querySelector('[data-bqx-name]').value.trim();
   if (!name) { toast('Nom requis', { type: 'warn' }); return; }
+  /* Pas de défaut : tant que A ou B n'est pas choisie, rien n'est créé. */
+  const ab = _bqxAbRead(b);
+  if (!ab) { toast('Choisissez la catégorie', { desc: 'A = achetée ferme · B = dépôt-vente.', type: 'warn' }); return; }
   const p = CAT().addProduct({
     name, categoryId: b.querySelector('[data-bqx-cat]').value || null,
     kind: b.querySelector('[data-bqx-kind]').value,
     priceMAD: parseInt(b.querySelector('[data-bqx-price]').value, 10) || 0,
     cost: parseInt(b.querySelector('[data-bqx-cost]').value, 10) || 0,
+    ownership: ab.ownership,
+    consignor: ab.consignor,
     photo: _bqxPhoto,
     video: _bqxVideo,
   });
@@ -10477,16 +10548,24 @@ handlers['bqx-prod-edit'] = (_el, arg) => {
         <div class="kf-group"><label class="kf-label">Prix vente (MAD)</label><input class="kf-input" type="number" min="0" value="${p.priceMAD}" data-bqx-eprice /></div>
         <div class="kf-group"><label class="kf-label">Coût d'achat (MAD)</label><input class="kf-input" type="number" min="0" value="${p.cost || 0}" data-bqx-ecost /></div>
       </div>
+      ${_bqxAbField(p)}
       ${_bqxSkuField(p.sku)}
       ${_bqxPhotoField(p.photo, p.video)}`,
     foot: `<button class="kb ghost" data-dismiss>Annuler</button><button class="kb atlas" data-action="bqx-prod-edit-save" data-arg="${arg}">Enregistrer</button>`,
   });
   _bqxWirePhoto(p.photo || '', p.video || '');
+  _bqxWireAb();
 };
 handlers['bqx-prod-edit-save'] = (_el, arg) => {
   const b = document.querySelector('.kiwi-backdrop');
   if (!b) return;
+  /* Une fiche ouverte porte déjà sa catégorie : rien de coché ne peut arriver
+     ici, mais si cela arrivait, on laisse la valeur en base plutôt que de la
+     réécrire au hasard — d'où les `undefined`. */
+  const ab = _bqxAbRead(b);
   CAT().updateProduct(arg, {
+    ownership: ab ? ab.ownership : undefined,
+    consignor: ab ? ab.consignor : undefined,
     name: b.querySelector('[data-bqx-ename]').value.trim() || undefined,
     categoryId: b.querySelector('[data-bqx-ecat]').value || null,
     kind: b.querySelector('[data-bqx-ekind]').value,
