@@ -9771,7 +9771,7 @@ function _bqxGridHtml() {
         <div class="kx-sku-img-tag">${cat ? _esc(cat.name.charAt(0).toUpperCase()) : '·'}</div>
       </div>
       <div class="kx-sku-body">
-        <div class="kx-sku-head"><div class="n">${_esc(p.name)}${p.ownership === 'consignment'
+        <div class="kx-sku-head"><div class="n">${_esc(p.name)}${_bqxAbOn() && p.ownership === 'consignment'
           ? '<span class="bqx-ab-b" title="Catégorie B · dépôt-vente : vendue pour un tiers, hors recette">B</span>' : ''}</div><span class="chip neutral">${cat ? _esc(cat.name) : 'Divers'}</span></div>
         <div class="bqx-card-cols">${(data.colors || []).slice(0, 8).map((c) => (window.KiwiColors ? window.KiwiColors.swatch(c.id) : '')).join('')}${data.colors.length > 8 ? `<em>+${data.colors.length - 8}</em>` : ''}</div>
         <div class="kx-sku-sku mono">${data.sizes.length} taille${data.sizes.length > 1 ? 's' : ''} · ${_bqxN(data.variants.length, 'variante')}</div>
@@ -10385,7 +10385,16 @@ function _bqxSkuField(sku) {
  * Aucune option n'est pré-cochée à la création : un défaut silencieux ferait
  * entrer toute la marchandise d'un tiers dans le chiffre d'affaires du magasin
  * sans que personne ait rien décidé. Le choix est donc explicite, une fois. */
+/* L'option est posée par l'opérateur Kiwi, commerce par commerce
+   (kiwi-admin.html › Modules → « Dépôt-vente »). Comparaison stricte, comme
+   Order Pro : clé absente, backend injoignable, réponse vide → NON. Éteinte,
+   le formulaire ne pose pas la question et la création n'exige rien. */
+function _bqxAbOn() {
+  try { return !!(window.KiwiConfig && window.KiwiConfig.features
+    && window.KiwiConfig.features.depotvente === true); } catch (_) { return false; }
+}
 function _bqxAbField(p) {
+  if (!_bqxAbOn()) return '';
   const own = p ? (p.ownership === 'consignment' ? 'consignment' : 'outright') : '';
   const who = p ? (p.consignor || '') : '';
   return `
@@ -10513,16 +10522,19 @@ handlers['bqx-new-save'] = () => {
   if (!b) return;
   const name = b.querySelector('[data-bqx-name]').value.trim();
   if (!name) { toast('Nom requis', { type: 'warn' }); return; }
-  /* Pas de défaut : tant que A ou B n'est pas choisie, rien n'est créé. */
+  /* Pas de défaut : tant que A ou B n'est pas choisie, rien n'est créé. Option
+     éteinte, la question n'est pas posée et rien n'est exigé. */
   const ab = _bqxAbRead(b);
-  if (!ab) { toast('Choisissez la catégorie', { desc: 'A = achetée ferme · B = dépôt-vente.', type: 'warn' }); return; }
+  if (_bqxAbOn() && !ab) { toast('Choisissez la catégorie', { desc: 'A = achetée ferme · B = dépôt-vente.', type: 'warn' }); return; }
   const p = CAT().addProduct({
     name, categoryId: b.querySelector('[data-bqx-cat]').value || null,
     kind: b.querySelector('[data-bqx-kind]').value,
     priceMAD: parseInt(b.querySelector('[data-bqx-price]').value, 10) || 0,
     cost: parseInt(b.querySelector('[data-bqx-cost]').value, 10) || 0,
-    ownership: ab.ownership,
-    consignor: ab.consignor,
+    /* Option éteinte → `ab` est nul : addProduct retombe alors sur « achetée
+       ferme », son défaut, plutôt que de recevoir undefined.ownership. */
+    ownership: ab ? ab.ownership : 'outright',
+    consignor: ab ? ab.consignor : '',
     photo: _bqxPhoto,
     video: _bqxVideo,
   });

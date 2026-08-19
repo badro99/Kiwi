@@ -280,8 +280,8 @@
     "sha": "34ba1e6354ccc770"
   },
   "assets/pages-pro.js": {
-    "v": "2064",
-    "sha": "a79efcaa87a5ddb4"
+    "v": "2065",
+    "sha": "8b83bdf36b642ef7"
   },
   "assets/pairing-commit.js": {
     "v": "1",
@@ -345,7 +345,7 @@
   },
   "assets/pos-dispatch.js": {
     "v": "29",
-    "sha": "de25f568498c9abb"
+    "sha": "497dd5a7ad031323"
   },
   "assets/pos-epicerie.css": {
     "v": "2",
@@ -404,12 +404,12 @@
     "sha": "56c1f39c972283b8"
   },
   "assets/pos-maison.css": {
-    "v": "12",
+    "v": "13",
     "sha": "ae3c4dedfa5d7971"
   },
   "assets/pos-maison.js": {
-    "v": "12",
-    "sha": "180f1d72905834b4"
+    "v": "13",
+    "sha": "96b34858cfead990"
   },
   "assets/pos-mobile.css": {
     "v": "3",

@@ -239,17 +239,18 @@ ok(unread.length === 0, `chaque attribut data-mz-* est lu (orphelins : ${unread.
   ok(/consignor: String\(data\.consignor \|\| ''\)\.trim\(\)/.test(catSrc), 'le déposant est porté par le produit');
 
   // e) l'arithmétique, exécutée sur la source expédiée
-  const from = jsSrc.indexOf('  const isConsigned = (ln) =>');
+  const from = jsSrc.indexOf('  function depotOn() {');
   const to = jsSrc.indexOf('  function ticketTotals(t) {');
   ok(from > 0 && to > from, 'le bloc dépôt-vente est isolable dans la source');
   const shim = 'const lineTotal = (ln) => ln.unit * ln.qty; const P = __P;';
-  const api = new Function('__P', shim + jsSrc.slice(from, to) + '\n; return { isConsigned, consignedOf };');
+  const build = (feats) => new Function('__P', 'window',
+    shim + jsSrc.slice(from, to) + '\n; return { depotOn, isConsigned, isConsignedProduct, consignedOf };');
   const PROD = {
     bougie: { ownership: 'consignment', consignor: 'Baobab Collection' },
     aurum:  { ownership: 'consignment', consignor: 'Baobab Collection' },
     vase:   { ownership: 'outright', consignor: '' },
   };
-  const a = api(PROD);
+  const a = build()(PROD, { KiwiConfig: { features: { depotvente: true } } });
   const lines = [
     { pid: 'vase', unit: 650, qty: 1 },
     { pid: 'bougie', unit: 1850, qty: 1 },
@@ -258,6 +259,18 @@ ok(unread.length === 0, `chaque attribut data-mz-* est lu (orphelins : ${unread.
   ok(a.consignedOf(lines) === 1850 + 2500, `part des déposants = 4350 (obtenu ${a.consignedOf(lines)})`);
   ok(a.consignedOf([{ pid: 'vase', unit: 650, qty: 1 }]) === 0, 'un ticket sans dépôt-vente ne doit rien');
   ok(a.isConsigned({ pid: 'inconnu' }) === false, 'un article absent du catalogue n’est jamais réputé en dépôt-vente');
+
+  /* L'INTERRUPTEUR, exécuté : option éteinte, la notion n'existe plus — un
+     article resté marqué compte comme n'importe quel autre. C'est le contrôle
+     qui dit que « éteint par défaut » est un comportement, pas une intention. */
+  const off = build()(PROD, { KiwiConfig: { features: {} } });
+  ok(off.depotOn() === false, 'sans clé, l’option est éteinte');
+  ok(off.consignedOf(lines) === 0, 'éteinte, aucune ligne n’est attribuée à un déposant');
+  ok(off.isConsignedProduct(PROD.bougie) === false, 'éteinte, aucun repère B ne s’affiche');
+  const strict = build()(PROD, { KiwiConfig: { features: { depotvente: 'true' } } });
+  ok(strict.depotOn() === false, 'seule la valeur booléenne true allume l’option (pas la chaîne)');
+  const noCfg = build()(PROD, {});
+  ok(noCfg.depotOn() === false, 'sans /api/config (démo, Pages, backend injoignable) l’option est éteinte');
 }
 
 /* 12. CATÉGORIE A / B — le choix se pose là où les articles sont VRAIMENT créés.
@@ -282,12 +295,12 @@ ok(unread.length === 0, `chaque attribut data-mz-* est lu (orphelins : ${unread.
 
   // c) rien n'est créé tant que la catégorie n'est pas choisie
   const newSave = proSrc.slice(proSrc.indexOf("handlers['bqx-new-save']"), proSrc.indexOf("/* edit / delete product */"));
-  ok(/const ab = _bqxAbRead\(b\);[\s\S]{0,200}if \(!ab\) \{[\s\S]{0,160}return; \}/.test(newSave),
+  ok(/const ab = _bqxAbRead\(b\);[\s\S]{0,240}if \(_bqxAbOn\(\) && !ab\) \{[\s\S]{0,160}return; \}/.test(newSave),
     'la création refuse d’enregistrer tant qu’aucune catégorie n’est choisie');
-  ok(newSave.indexOf('if (!ab)') < newSave.indexOf('addProduct'),
+  ok(newSave.indexOf('if (_bqxAbOn() && !ab)') < newSave.indexOf('addProduct'),
     'le refus tombe AVANT addProduct : aucun article n’est créé à moitié');
-  ok(/ownership: ab\.ownership/.test(newSave) && /consignor: ab\.consignor/.test(newSave),
-    'le choix voyage jusqu’au catalogue partagé');
+  ok(/ownership: ab \? ab\.ownership : 'outright'/.test(newSave) && /consignor: ab \? ab\.consignor : ''/.test(newSave),
+    'le choix voyage jusqu’au catalogue partagé, et l’option éteinte retombe sur « achetée ferme »');
   ok(/ownership: ab \? ab\.ownership : undefined/.test(proSrc),
     'à la modification, un formulaire sans choix laisse la valeur en base au lieu de la réécrire');
 
@@ -302,6 +315,44 @@ ok(unread.length === 0, `chaque attribut data-mz-* est lu (orphelins : ${unread.
   ok(!!tag && /Catégorie B/.test(tag[1]), 'le repère porte son explication en infobulle');
   ok((jsSrc.match(/mz-consign-tag/g) || []).length >= 3,
     'le repère suit l’article partout où il se montre (grille, liste, fiche)');
+}
+
+/* 13. L'INTERRUPTEUR — posé par l'opérateur, éteint partout ailleurs.
+ * Trois surfaces doivent s'accorder : la console opérateur qui le pose, le
+ * tableau de bord qui pose la question, la caisse qui marque l'article. Une
+ * seule qui oublie la garde, et l'option est « allumée » chez tout le monde. */
+{
+  const adminSrc = fs.readFileSync(path.join(ROOT, 'kiwi-admin.html'), 'utf8');
+  const proSrc2 = fs.readFileSync(path.join(ROOT, 'assets/pages-pro.js'), 'utf8');
+
+  // a) la console : un interrupteur, sur le métier boutique, éteint par défaut
+  const optin = adminSrc.slice(adminSrc.indexOf('var OPTIN_MODULES'), adminSrc.indexOf('var ADDON_MODULES'));
+  ok(/boutique:\s*\[/.test(optin) && /key:'depotvente'/.test(optin),
+    'l’option vit dans la console opérateur, côté boutique');
+  ok(/key:'depotvente'[^}]*off:true/.test(optin),
+    'elle est marquée off:true — clé absente ⇒ éteinte, comme Order Pro');
+  ok(/{ title:'Options à la demande', items:\(OPTIN_MODULES\[base\] \|\| \[\]\) }/.test(adminSrc),
+    'la bande n’apparaît que pour les métiers qui en ont une');
+  ok(/Object\.keys\(OPTIN_MODULES\)\.forEach/.test(adminSrc),
+    'le journal d’audit sait nommer la clé (moduleLabel la connaît)');
+
+  // b) les deux consommateurs comparent STRICTEMENT à true
+  [['assets/pages-pro.js', proSrc2], ['assets/pos-maison.js', jsSrc]].forEach(([name, src]) => {
+    ok(/window\.KiwiConfig\.features\.depotvente === true/.test(src),
+      `${name} exige features.depotvente === true`);
+    ok(!/features\.depotvente\s*(\|\||\?\?|!==\s*false)/.test(src),
+      `${name} ne se contente pas d’une clé « pas fausse »`);
+  });
+
+  // c) la caisse redessine si l’option arrive après le premier rendu
+  ok(/addEventListener\('kiwi-config'/.test(jsSrc) && /_depotWas/.test(jsSrc),
+    'la caisse se redessine quand /api/config arrive après le premier rendu');
+
+  // d) le tableau de bord ne pose pas la question quand l’option est éteinte
+  ok(/function _bqxAbField\(p\) \{\s*\n\s*if \(!_bqxAbOn\(\)\) return '';/.test(proSrc2),
+    'formulaire : option éteinte ⇒ aucun champ A/B rendu');
+  ok(/_bqxAbOn\(\) && p\.ownership === 'consignment'/.test(proSrc2),
+    'grille : option éteinte ⇒ aucun repère B');
 }
 
 console.log(`\n✓ ${passed} controls green (${failures.length} failure(s))`);

@@ -1171,7 +1171,24 @@
    * un solde tenu ici serait un second livre à maintenir, jamais consulté et
    * faux dès le premier virement fait à côté. La caisse marque l'article,
    * enregistre la vente en entier, et sort le montant de la recette. */
-  const isConsigned = (ln) => { const p = P[ln.pid]; return !!p && p.ownership === 'consignment'; };
+  /* ── L'INTERRUPTEUR ──────────────────────────────────────────────────────
+   * Le dépôt-vente est une option posée par l'opérateur Kiwi, commerce par
+   * commerce (kiwi-admin.html › Modules → « Dépôt-vente »), et ÉTEINTE partout
+   * ailleurs. La comparaison est stricte (`=== true`) pour la même raison
+   * qu'Order Pro : une clé absente, un backend injoignable, une réponse vide —
+   * tout cela doit répondre NON. Éteinte, la notion n'existe pas : pas de
+   * repère B, pas de choix A/B, et un article resté marqué compte comme
+   * n'importe quel autre. Les ventes DÉJÀ encaissées gardent, elles, les
+   * montants figés sur leur ticket : allumer ou éteindre l'option ne réécrit
+   * jamais le passé. */
+  function depotOn() {
+    try {
+      return !!(window.KiwiConfig && window.KiwiConfig.features
+        && window.KiwiConfig.features.depotvente === true);
+    } catch (_) { return false; }
+  }
+  const isConsigned = (ln) => { const p = P[ln.pid]; return depotOn() && !!p && p.ownership === 'consignment'; };
+  const isConsignedProduct = (p) => depotOn() && !!p && p.ownership === 'consignment';
   const consignedOf = (lines) => (lines || []).reduce((s, ln) => s + (isConsigned(ln) ? lineTotal(ln) : 0), 0);
   function ticketTotals(t) {
     const sub = t.lines.reduce((s, ln) => {
@@ -1581,6 +1598,18 @@
     renderNet();
     icons();
   }
+  /* merchant-config.js est en `defer` et interroge /api/config : la réponse
+     arrive APRÈS le premier rendu. Si l'option s'allume à ce moment-là, la
+     caisse redessine — sinon les repères B n'apparaîtraient qu'au prochain
+     changement d'écran. */
+  let _depotWas = depotOn();
+  document.addEventListener('kiwi-config', () => {
+    const now = depotOn();
+    if (now === _depotWas) return;
+    _depotWas = now;
+    try { renderAll(); } catch (_) {}
+  });
+
   function refreshOps() {
     renderBadges();
     renderView(state.view);
@@ -1734,7 +1763,7 @@
         <button class="mz-card ${stockOf(p) === 0 ? 'is-out' : ''}${pr ? ' is-promo' : ''}" data-mz-item="${p.id}" style="--i:${i++}">
           <span class="mz-card-art">${artOf(p.art)}</span>
           ${p.marque ? `<span class="mz-card-brand">${esc(p.marque)}</span>` : ''}
-          ${p.ownership === 'consignment' ? `<span class="mz-consign-tag" title="Catégorie B · dépôt-vente : la vente est enregistrée en entier, le montant n’entre pas dans la recette">B</span>` : ''}
+          ${isConsignedProduct(p) ? `<span class="mz-consign-tag" title="Catégorie B · dépôt-vente : la vente est enregistrée en entier, le montant n’entre pas dans la recette">B</span>` : ''}
           <span class="mz-card-name">${esc(p.name)}</span>
           <div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:2px;">
             ${p.motif ? `<span class="mz-card-motif">${esc(p.motif)}</span>` : ''}
@@ -1929,7 +1958,7 @@
       <span class="mz-line-art">${artOf(p.art)}</span>
       <span class="mz-line-mid">
         ${(ln.marque || p.marque) ? `<span class="mz-line-brand">${esc(ln.marque || p.marque)}</span>` : ''}
-        ${p.ownership === 'consignment' ? `<span class="mz-consign-tag" title="Catégorie B · dépôt-vente : la vente est enregistrée en entier, le montant n’entre pas dans la recette">B</span>` : ''}
+        ${isConsignedProduct(p) ? `<span class="mz-consign-tag" title="Catégorie B · dépôt-vente : la vente est enregistrée en entier, le montant n’entre pas dans la recette">B</span>` : ''}
         <span class="mz-line-name">${esc(p.name)}</span>
         <span class="mz-line-sub">
           ${colorDot(ln.color)}
@@ -2122,7 +2151,7 @@
         <span class="mz-sheet-art">${artOf(p.art)}</span>
         <span class="mz-sheet-title">
           ${p.marque ? `<div class="mz-card-brand">${esc(p.marque)}</div>` : ''}
-          ${p.ownership === 'consignment' ? `<div class="mz-f-hint"><span class="mz-consign-tag" title="Catégorie B · dépôt-vente : la vente est enregistrée en entier, le montant n’entre pas dans la recette">B</span> Catégorie B (dépôt-vente) — vendue pour ${esc(p.consignor || 'un tiers')}. Le montant n’entre pas dans la recette du magasin.</div>` : ''}
+          ${isConsignedProduct(p) ? `<div class="mz-f-hint"><span class="mz-consign-tag" title="Catégorie B · dépôt-vente : la vente est enregistrée en entier, le montant n’entre pas dans la recette">B</span> Catégorie B (dépôt-vente) — vendue pour ${esc(p.consignor || 'un tiers')}. Le montant n’entre pas dans la recette du magasin.</div>` : ''}
           <h3>${esc(p.name)}</h3>
           <span class="sub">
             ${esc((RAYONS.find((r) => r.id === p.rayon) || { label: 'Divers' }).label)}
@@ -6136,10 +6165,10 @@
              enregistrée normalement ; c'est l'argent qui ne lui appartient pas. -->
         <div class="mzi-fg">
           <label>Propriété de la marchandise</label>
-          <label class="mzi-check"><input type="checkbox" id="mzi-e-depot" ${p.ownership === 'consignment' ? 'checked' : ''} />
+          <label class="mzi-check"><input type="checkbox" id="mzi-e-depot" ${isConsignedProduct(p) ? 'checked' : ''} />
             <span>En dépôt-vente — vendue pour le compte d’un tiers</span></label>
         </div>
-        <div class="mzi-fg" id="mzi-e-depot-who" style="${p.ownership === 'consignment' ? '' : 'display:none'}">
+        <div class="mzi-fg" id="mzi-e-depot-who" style="${isConsignedProduct(p) ? '' : 'display:none'}">
           <label>Déposant</label>
           <input id="mzi-e-consignor" value="${esc(p.consignor || '')}" placeholder="Nom du propriétaire de la marchandise" />
           <small class="mzi-help">Simple repère : le montant encaissé sur cet article n’entre pas dans la recette du magasin. La caisse ne tient pas le compte de ce qui lui est reversé.</small>

@@ -1156,6 +1156,19 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
   // merchant, so it must never appear by accident: the key has to be explicitly
   // true. functions/api/menu.js and functions/api/order/index.js enforce the same
   // rule server-side — this switch is the UI for it, not the guard.
+  // Options POSÉES À LA DEMANDE, par métier. Même règle que les options payantes
+  // — la clé doit valoir explicitement true — mais ce n'est pas une vente : ce
+  // sont des façons de travailler que tout le monde n'a pas. Le dépôt-vente en
+  // est une : la boutique vend une partie de son rayon pour le compte de tiers,
+  // ses articles se marquent A (achetée ferme) ou B (au tiers), et les ventes B
+  // sortent de sa recette. Proposer ce choix à une boutique qui achète tout son
+  // stock, c'est une question de plus à chaque création d'article, pour rien.
+  var OPTIN_MODULES = {
+    boutique: [
+      { key:'depotvente', label:'Dépôt-vente (catégories A / B)', off:true,
+        hint:'L’article se marque A (achetée ferme) ou B (vendue pour un tiers). La vente B est enregistrée en entier mais sort de la recette du magasin.' },
+    ],
+  };
   var ADDON_MODULES = [
     { key:'orderpro', label:'Order Pro', off:true,
       hint:'Commande depuis le téléphone du client (tag NFC) · carte + stock en ligne.' },
@@ -1169,6 +1182,8 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
       { title:'Modules communs', items:CORE_MODULES },
       { title:VERTICAL_TITLES[base] || VERTICAL_TITLES.restaurant,
         items:(VERTICAL_MODULES[base] || VERTICAL_MODULES.restaurant) },
+      // Bande vide ⇒ non affichée (renderFeatures saute les groupes sans item).
+      { title:'Options à la demande', items:(OPTIN_MODULES[base] || []) },
       { title:'Options payantes', items:ADDON_MODULES },
     ];
   }
@@ -2663,6 +2678,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
   function moduleLabel(key){
     var all = [CORE_MODULES, ADDON_MODULES];
     Object.keys(VERTICAL_MODULES).forEach(function(k){ all.push(VERTICAL_MODULES[k]); });
+    Object.keys(OPTIN_MODULES).forEach(function(k){ all.push(OPTIN_MODULES[k]); });
     for (var i=0;i<all.length;i++) for (var j=0;j<all[i].length;j++)
       if (all[i][j].key === key) return all[i][j].label;
     return key;
