@@ -84,8 +84,20 @@ const DAILY_CAP = 200;
 /* Bornes d'entrée. La fenêtre du modèle est large, la facture ne l'est pas :
  * l'historique côté navigateur est déjà coupé à 8 tours, on refuse simplement
  * qu'un client bricolé envoie autre chose. */
-const MAX_MESSAGES = 12;
+const MAX_MESSAGES = 16;
 const MAX_CHARS = 24000;
+
+/* Appel de fonctions. Le navigateur décrit des outils (lectures sur ce que le
+ * tableau de bord tient déjà), le modèle en demande l'exécution, le NAVIGATEUR
+ * exécute — les données du commerce sont côté client — et renvoie les résultats.
+ * Deux tours au plus : round 'tools' (JSON : appels ou réponse directe), puis
+ * round 'answer' (flux, tool_choice 'none' : le modèle ne peut plus redemander).
+ * Bornes serrées : un client bricolé ne décrit pas cent outils. */
+const MAX_TOOLS = 12;
+const TOOL_NAME_RX = /^[a-z_]{3,32}$/;
+const MAX_TOOL_JSON = 2000;
+const MAX_TOOL_CALLS = 4;
+const MAX_TOOL_RESULT = 2000;
 
 /* Ne garde que ce qu'un échange de chat peut contenir. Un rôle inventé ou un
  * contenu non textuel n'a aucune raison d'atteindre le modèle. */
@@ -95,14 +107,70 @@ export function cleanMessages(raw) {
   let chars = 0;
   for (const m of raw.slice(-MAX_MESSAGES)) {
     if (!m || typeof m !== 'object') continue;
-    const role = m.role === 'system' || m.role === 'assistant' ? m.role : 'user';
+    const role = m.role === 'system' || m.role === 'assistant' || m.role === 'tool' ? m.role : 'user';
     const content = String(m.content == null ? '' : m.content);
-    if (!content.trim()) continue;
+    /* Un message outil : résultat borné, id d'appel et nom propres. */
+    if (role === 'tool') {
+      const name = String(m.name || '');
+      if (!TOOL_NAME_RX.test(name) || !content.trim()) continue;
+      const c = content.slice(0, MAX_TOOL_RESULT);
+      chars += c.length;
+      if (chars > MAX_CHARS) break;
+      out.push({ role, content: c, tool_call_id: String(m.tool_call_id || '').slice(0, 80), name });
+      continue;
+    }
+    /* Un message assistant qui porte des appels d'outils : noms valides,
+     * arguments texte bornés, quatre au plus. */
+    const calls = role === 'assistant' && Array.isArray(m.tool_calls) ? cleanToolCalls(m.tool_calls) : null;
+    if (!content.trim() && !(calls && calls.length)) continue;
     chars += content.length;
     if (chars > MAX_CHARS) break;
-    out.push({ role, content });
+    const msg = { role, content };
+    if (calls && calls.length) msg.tool_calls = calls;
+    out.push(msg);
   }
   return out.length ? out : null;
+}
+
+export function cleanToolCalls(raw) {
+  if (!Array.isArray(raw)) return [];
+  const out = [];
+  for (const c of raw.slice(0, MAX_TOOL_CALLS)) {
+    const fn = c && (c.function || c);
+    const name = String((fn && fn.name) || '');
+    if (!TOOL_NAME_RX.test(name)) continue;
+    let args = fn && fn.arguments;
+    args = typeof args === 'string' ? args : JSON.stringify(args || {});
+    out.push({ id: String((c && c.id) || '').slice(0, 80), type: 'function', function: { name, arguments: args.slice(0, MAX_TOOL_JSON) } });
+  }
+  return out;
+}
+
+/* Les outils décrits par le client : nom, description courte, schéma JSON
+ * borné en taille. Tout le reste est jeté. */
+export function cleanTools(raw) {
+  if (!Array.isArray(raw)) return null;
+  const out = [];
+  for (const t of raw.slice(0, MAX_TOOLS)) {
+    const fn = t && (t.function || t);
+    const name = String((fn && fn.name) || '');
+    if (!TOOL_NAME_RX.test(name)) continue;
+    const description = String((fn && fn.description) || '').slice(0, 300);
+    let parameters = fn && fn.parameters && typeof fn.parameters === 'object' ? fn.parameters : { type: 'object', properties: {} };
+    let json = '';
+    try { json = JSON.stringify(parameters); } catch (_) { json = ''; }
+    if (!json || json.length > MAX_TOOL_JSON) parameters = { type: 'object', properties: {} };
+    out.push({ type: 'function', function: { name, description, parameters } });
+  }
+  return out.length ? out : null;
+}
+
+/* Ce que le modèle a demandé, filtré sur les outils que le client a
+ * déclarés : un nom inconnu est ignoré, jamais relayé. */
+export function allowedToolCalls(message, tools) {
+  const names = new Set((tools || []).map((t) => t.function.name));
+  const calls = message && Array.isArray(message.tool_calls) ? message.tool_calls : [];
+  return cleanToolCalls(calls).filter((c) => names.has(c.function.name)).map((c) => ({ id: c.id, name: c.function.name, arguments: c.function.arguments }));
 }
 
 export async function onRequestPost(context) {
@@ -126,24 +194,51 @@ export async function onRequestPost(context) {
 
   if (!(await quotaOk(env, who, 'ask', DAILY_CAP))) return json({ ok: false, error: 'quota' }, 429);
 
+  const tools = cleanTools(body.tools);
+  const round = body.round === 'tools' && tools ? 'tools' : 'answer';
+
   const payload = {
     messages,
-    stream: true,
+    stream: round === 'answer',
     max_tokens: MAX_TOKENS,
     temperature: TEMPERATURE,
     top_p: TOP_P,
     reasoning_effort: REASONING_EFFORT,
   };
+  if (tools) {
+    payload.tools = tools;
+    /* Au tour de réponse le modèle ne peut PLUS demander d'outil : deux tours
+     * au plus, jamais de boucle. Les outils restent déclarés pour qu'il
+     * comprenne les appels déjà présents dans l'historique. */
+    payload.tool_choice = round === 'tools' ? 'auto' : 'none';
+  }
 
-  let stream = null;
+  let result = null;
   let usedModel = MODEL;
   try {
     const r = await runWithFallback(env, MODEL, FALLBACK_MODEL, payload);
-    stream = r.result;
+    result = r.result;
     usedModel = r.model;
   } catch (_) {
     return json({ ok: false, error: 'model' }, 502);
   }
+
+  if (round === 'tools') {
+    /* Réponse JSON non streamée : soit des appels d'outils (filtrés sur la
+     * liste déclarée), soit le texte directement quand le modèle n'avait
+     * besoin de rien. */
+    const msg = result && Array.isArray(result.choices) && result.choices[0] ? result.choices[0].message : null;
+    /* gpt-oss : choices[0].message.tool_calls ; Qwen (secours) : tool_calls au
+     * niveau racine à côté de response. Les deux passent par le même filtre. */
+    const calls = allowedToolCalls(msg && msg.tool_calls ? msg : result, tools);
+    let text = '';
+    if (!calls.length) {
+      if (msg && typeof msg.content === 'string') text = msg.content;
+      else if (result && typeof result.response === 'string') text = result.response;
+    }
+    return json({ ok: true, tool_calls: calls, text }, 200, { 'x-kiwi-ai': 'cloud', 'x-kiwi-ai-model': usedModel });
+  }
+  const stream = result;
 
   /* On relaie le SSE tel quel. Le navigateur relit les `data:` et applique
    * EXACTEMENT les mêmes garde-fous que pour le modèle local — découpage par

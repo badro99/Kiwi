@@ -806,7 +806,7 @@ section('Server-model fallback, no in-browser download');
     !/offerSize|unfitAdapter|unfitSpace|unfitMemory|loadFailMsg/.test(code));
   t('routeToLlm: declined → private, accepted → server, otherwise consent offer',
     /function routeToLlm\(question\) \{\s*if \(cloudDeclined\(\)\) \{ deterministicOnly\('private'\); return; \}\s*if \(cloudAccepted\(\)\) \{ runLlm\(question\); return; \}\s*offerCloud\(question\);\s*\}/.test(code));
-  t('runLlm has a single transport: cloudDeltas', /const deltas = await cloudDeltas\(messages\);/.test(code) && !/localDeltas\(/.test(code));
+  t('runLlm has a single transport: llmAnswerStream → cloudToolRound / cloudDeltas', /const run = await llmAnswerStream\(messages\);/.test(code) && /await cloudToolRound\(messages\)/.test(code) && /await cloudDeltas\(\[\.\.\.messages, \.\.\.toolMsgs\]\)/.test(code) && !/localDeltas\(/.test(code));
   t('the panel carries a mode toggle wired to setCloud', /data-fa-mode-toggle/.test(code) && /\[data-fa-mode-toggle\]'\)\) \{ setCloud\(!cloudAccepted\(\)\); refreshTrustLine\(\); return; \}/.test(code));
 
   /* aiMode(), executed from agent-truth.js: three states */
@@ -820,6 +820,91 @@ section('Server-model fallback, no in-browser download');
   /* the three trust sentences exist, and the undecided one promises the consent step */
   t('trust line: cloud / private / undecided sentences present',
     /IA serveur activée/.test(src) && /Mode privé : calculs seuls/.test(src) && /seulement après votre accord, une fois/.test(src));
+}
+
+
+/* ── 13 · decision engine + model work TOGETHER, the numbers stay ours ──────
+ * Every question: the deterministic draft renders at once, the model rewrites
+ * it in the same bubble and may call read-only tools; anything it says that
+ * neither the draft nor a tool result supports is redacted. */
+section('Collaboration · draft + tools + corroboration');
+{
+  const src = fs.readFileSync(AGENT, 'utf8');
+  const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+  /* flow */
+  t('ask(): a deterministic reply renders first, then runLlm(t, { reply, bubble }) refines it in place',
+    /const bubble = pushAgent\(replyHtml\(reply\)\);\s*runLlm\(t, \{ reply, bubble \}\);\s*return;/.test(code));
+  t('collaboration is gated on consent + real session and never on a refusal or an action proposal',
+    /const collaborate = !reply\.refused && !reply\.run && cloudAccepted\(\) && window\.KiwiEnv && window\.KiwiEnv\.isReal && window\.KiwiEnv\.isReal\(\);/.test(code));
+  t('with a draft, a model failure leaves the draft and says nothing',
+    /if \(hasDraft\) \{ llmHistory\.push\(\{ role: 'assistant', content: draftFacts\(draft\.reply\)\.slice\(0, 600\) \}\); return; \}/.test(code));
+  t('with a draft, an empty or unverifiable model answer restores the draft text',
+    /if \(hasDraft && \(red\.redacted === -1 \|\| !red\.text\.trim\(\)\)\) target\.textContent = draftText;/.test(code));
+  t('two rounds at most: tool calls capped at 4 and the answer round streams with the tool results',
+    /r1\.tool_calls\.slice\(0, 4\)/.test(code) && /deltas: await cloudDeltas\(\[\.\.\.messages, \.\.\.toolMsgs\]\)/.test(code));
+  t('tool results enter the corroboration corpus BEFORE rendering (noteTurnFacts in the executor loop)',
+    /const out = runTool\(String\(c\.name \|\| ''\), args\);\s*noteTurnFacts\(out\);/.test(code));
+  t('the draft facts enter the corpus and the FAITS block before the first call',
+    /const facts = hasDraft \? draftFacts\(draft\.reply\) : '';\s*if \(facts\) noteTurnFacts\(facts\);/.test(code) && /FACTS_LEAD \+ facts/.test(code));
+  t('TURN_FACTS is cleared at the start of every turn', /clearTurnFacts\(\);\s*llmHistory\.push\(\{ role: 'user', content: question \}\);/.test(code));
+  t('the redactor unions TURN_FACTS into all three namespaces',
+    /knownFigures\(\)\)\.concat\(Array\.from\(TURN_FACTS\.money\)\)/.test(code) && /knownPercents\(\)\)\.concat\(Array\.from\(TURN_FACTS\.pct\)\)/.test(code) && /knownCounts\(kind\)\)\.concat\(Array\.from\(TURN_FACTS\.counts\)\)/.test(code));
+
+  /* tools: every declared tool has an executor, no write tool */
+  const names = Array.from(code.matchAll(/function: \{ name: '([a-z_]+)'/g)).map((m) => m[1]);
+  const EXPECTED_TOOLS = ['sales_between', 'top_products', 'stock_level', 'stock_summary', 'tables_now', 'reservations_today'];
+  t('LLM_TOOLS declares exactly the six read tools', JSON.stringify(names) === JSON.stringify(EXPECTED_TOOLS), names.join(','));
+  t('every declared tool has an executor branch in runTool', EXPECTED_TOOLS.every((n) => new RegExp("name === '" + n + "'").test(code)));
+  t('no write tool: runTool never touches requestAction/confirmAction/salesAdd/KiwiInventory.set',
+    !/function runTool[\s\S]*?\n  \}\n[\s\S]{0,0}/.test('') && !/runTool[\s\S]{0,4000}(requestAction|confirmAction|salesAdd|\.set\(|\.write\()/.test(code.slice(code.indexOf('function runTool'), code.indexOf('function toolResultText'))));
+
+  /* executed: the tools against a stubbed ledger, through the loaded window */
+  const day = (d, h) => new Date(2026, 7, d, h, 0, 0).getTime();   // Aug 2026, local
+  const sales = {
+    totals: (id, lo, hi) => { const rows = SALES.filter((x) => x.ts >= lo && x.ts < hi); const rev = rows.reduce((a, x) => a + x.amount, 0); return { revenue: rev, count: rows.length, basket: rows.length ? rev / rows.length : 0 }; },
+    list: () => SALES,
+  };
+  const SALES = [
+    { ts: day(10, 12), amount: 1200, lines: [{ name: 'Tajine poulet', qty: 4, total: 480 }, { name: 'Thé', qty: 8, total: 160 }] },
+    { ts: day(11, 20), amount: 2585, lines: [{ name: 'Tajine poulet', qty: 6, total: 720 }, { name: 'Pastilla', qty: 3, total: 450 }] },
+    { ts: day(12, 1), amount: 1000, lines: [{ name: 'Thé', qty: 5, total: 100 }] },   // 01:00 on the 12th = business day of the 11th
+    { ts: day(13, 12), amount: 999, lines: [] },
+  ];
+  const truth = { read: (k) => k === 'inventory' ? { available: true, source: 'inventory-ledger', data: { positions: 12, out: 1, low: 2, outNames: ['Citron'], lowNames: ['Menthe', 'Sucre'] } } : { available: false, source: k } };
+  const dayReport = { dayBounds: (d) => { const p = d.split('-').map(Number); const from = new Date(p[0], p[1] - 1, p[2], 5, 0, 0).getTime(); return { from, to: from + 86400000 }; } };
+  const w = load({ lang: 'fr', sales, globals: { KiwiAgentTruth: truth, KiwiDayReport: dayReport, KiwiRestaurantStock: { items: () => [{ name: 'Thé à la menthe', stock: 42, unit: 'sachet' }, { name: 'Tajine poulet', stock: 7 }] } } });
+  const T = w.KiwiAgentTools;
+  t('window.KiwiAgentTools is exposed with list/run/noteFacts/clearFacts/draftFacts', !!(T && T.list && T.run && T.noteFacts && T.clearFacts && T.draftFacts));
+  const sb = T.run('sales_between', { from: '2026-08-10', to: '2026-08-11' });
+  t('sales_between follows the 5 h business day: the 01:00 sale on the 12th belongs to the 11th', sb.total_mad === 4785 && sb.tickets === 3 && sb.day_cutoff === '5h', JSON.stringify(sb));
+  const sb2 = T.run('sales_between', { from: '2026-08-13', to: '2026-08-13' });
+  t('sales_between isolates a single day', sb2.total_mad === 999 && sb2.tickets === 1);
+  t('sales_between refuses malformed dates', !!T.run('sales_between', { from: 'hier', to: '2026-08-13' }).error);
+  const tp = T.run('top_products', { from: '2026-08-10', to: '2026-08-13', n: 2 });
+  t('top_products aggregates lines by name and ranks by quantity', tp.items.length === 2 && tp.items[0].name === 'Thé' && tp.items[0].qty === 13 && tp.items[1].name === 'Tajine poulet' && tp.items[1].qty === 10, JSON.stringify(tp));
+  const sl = T.run('stock_level', { query: 'the menthe' });
+  t('stock_level matches approximately (accents, case) and returns the level', sl.found && sl.items[0].name === 'Thé à la menthe' && sl.items[0].stock === 42);
+  t('stock_level says not found rather than guessing', T.run('stock_level', { query: 'caviar' }).found === false);
+  t('stock_summary reads KiwiAgentTruth inventory', T.run('stock_summary', {}).data.positions === 12);
+  t('tables_now reports unavailable when the floor plan is absent', T.run('tables_now', {}).available === false);
+  t('unknown tool → error, never a throw', !!T.run('nope', {}).error);
+
+  /* corroboration: the redactor keeps figures the tools produced and removes the rest */
+  T.clearFacts();
+  const before = w.KiwiAgentRedact('Votre chiffre est de 4 785 MAD sur 62 tickets.', 'fr');
+  t('before any tool result, an unknown amount is redacted', before.redacted >= 1 && !/4 785 MAD/.test(before.text), before.text);
+  T.noteFacts({ total_mad: 4785, tickets: 62 });
+  const after = w.KiwiAgentRedact('Votre chiffre est de 4 785 MAD sur 62 tickets.', 'fr');
+  t('after the tool result, the same sentence passes intact', after.redacted === 0 && /4 785 MAD/.test(after.text), after.text);
+  const other = w.KiwiAgentRedact('Votre chiffre est de 5 000 MAD.', 'fr');
+  t('a figure that no tool produced is still redacted', other.redacted === 1 && !/5 000 MAD/.test(other.text), other.text);
+  T.clearFacts();
+  const cleared = w.KiwiAgentRedact('Votre chiffre est de 4 785 MAD.', 'fr');
+  t('clearFacts forgets the previous turn', cleared.redacted === 1);
+  /* draft facts: numbers in the deterministic draft count as ours */
+  T.noteFacts(T.draftFacts({ text: '<b>Marge</b> de 33 %', stats: [{ l: 'CA', v: '12 400 MAD', h: '' }] }));
+  const dr = w.KiwiAgentRedact('Votre CA atteint 12 400 MAD avec une marge de 33 %.', 'fr');
+  t('figures from the deterministic draft are corroborated (money and percent)', dr.redacted === 0, dr.text);
 }
 
 /* ── summary ──────────────────────────────────────────────────────────────── */

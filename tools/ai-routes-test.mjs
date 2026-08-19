@@ -227,8 +227,29 @@ ok(resCounting === 'fallback-stream-ok', 'Fallback succeeds when primary fails')
 ok(primaryModelCalls === 2, 'Primary model attempted with gateway then without gateway (2 calls)');
 ok(fallbackModelCalls === 2, 'Fallback model attempted with gateway then without gateway (2 calls)');
 
+
+// ── 7. Function calling on /api/ai/ask (pure functions + route shape) ─────────
+const { cleanTools, cleanToolCalls, allowedToolCalls, cleanMessages: cleanMsgs } = await import(path.join(ROOT, 'functions/api/ai/ask.js'));
+const goodTool = { type: 'function', function: { name: 'sales_between', description: 'x', parameters: { type: 'object', properties: { from: { type: 'string' } } } } };
+const ct = cleanTools([goodTool, { function: { name: 'Bad Name!' } }, { function: { name: 'ok_tool', parameters: { type: 'object', properties: { big: { description: 'x'.repeat(3000) } } } } }]);
+ok(ct && ct.length === 2 && ct[0].function.name === 'sales_between', 'cleanTools keeps valid names, drops invalid ones');
+ok(ct[1].function.parameters && JSON.stringify(ct[1].function.parameters) === '{"type":"object","properties":{}}', 'cleanTools replaces an oversized schema with an empty one');
+ok(cleanTools(Array.from({ length: 30 }, (_, i) => ({ function: { name: 'tool_' + String.fromCharCode(97 + (i % 26)) } }))).length === 12, 'cleanTools caps at 12 tools');
+ok(cleanTools('nope') === null && cleanTools([]) === null, 'cleanTools: non-array / empty → null');
+const calls = cleanToolCalls([{ id: 'a', function: { name: 'sales_between', arguments: '{"from":"2026-08-01"}' } }, { id: 'b', function: { name: 'zz!', arguments: '{}' } }, { id: 'c', function: { name: 'x_y_z', arguments: { a: 1 } } }, { id: 'd', function: { name: 'four' } }, { id: 'e', function: { name: 'five' } }, { id: 'f', function: { name: 'six_' } }]);
+ok(calls.length === 3 && calls[1].function.arguments === '{"a":1}', 'cleanToolCalls: max 4 considered, invalid names dropped, object args stringified');
+const allowed = allowedToolCalls({ tool_calls: [{ id: '1', function: { name: 'sales_between', arguments: '{}' } }, { id: '2', function: { name: 'delete_all', arguments: '{}' } }] }, ct);
+ok(allowed.length === 1 && allowed[0].name === 'sales_between', 'allowedToolCalls drops any call whose name the client did not declare');
+ok(allowedToolCalls({ response: 'x', tool_calls: [{ name: 'sales_between', arguments: '{}' }] }, ct).length === 1, 'allowedToolCalls accepts the Qwen top-level {name, arguments} shape');
+const msgs = cleanMsgs([{ role: 'system', content: 's' }, { role: 'assistant', content: '', tool_calls: [{ id: 'q', function: { name: 'sales_between', arguments: '{}' } }] }, { role: 'tool', tool_call_id: 'q', name: 'sales_between', content: 'x'.repeat(5000) }, { role: 'tool', name: 'bad name', content: 'y' }]);
+ok(msgs && msgs.length === 3 && msgs[1].tool_calls.length === 1 && msgs[2].role === 'tool' && msgs[2].content.length === 2000, 'cleanMessages keeps assistant tool_calls and tool results (truncated to 2000), drops a tool message with an invalid name');
+ok(/payload\.tool_choice = round === 'tools' \? 'auto' : 'none';/.test(askSrc), "answer round sets tool_choice 'none' — two rounds at most");
+ok(/stream: round === 'answer'/.test(askSrc), 'tools round is non-streamed JSON, answer round streams');
+ok(/return json\(\{ ok: true, tool_calls: calls, text \}, 200, \{ 'x-kiwi-ai': 'cloud', 'x-kiwi-ai-model': usedModel \}\);/.test(askSrc), 'tools round answers {ok, tool_calls, text} with the model header');
+ok(/const MAX_TOOL_CALLS = 4;/.test(askSrc) && /const MAX_TOOL_RESULT = 2000;/.test(askSrc) && /const MAX_TOOLS = 12;/.test(askSrc), 'tool bounds pinned: 12 tools, 4 calls, 2000-char results');
+
 // ── 6. Hard Count Pinning ───────────────────────────────────────────────────
-const EXPECTED_COUNT = 40;
+const EXPECTED_COUNT = 52;
 ok(passed + 1 === EXPECTED_COUNT, `exact control count verified (${passed + 1}/${EXPECTED_COUNT})`);
 
 if (failures.length) {

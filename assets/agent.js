@@ -3816,9 +3816,121 @@
     return String(s)
       .replace(/<think>[\s\S]*?<\/think>/gi, '')
       .replace(/<think>[\s\S]*$/i, '')
+      /* gpt-oss met les chiffres en **gras** et titre en ### : une bulle de
+       * chat n'est pas une page markdown. On retire la syntaxe, pas le texte. */
+      .replace(/\*\*/g, '')
+      .replace(/^#{1,4}\s+/gm, '')
       .replace(/^\s+/, '');
   }
   const llmHistory = [];
+
+  /* ── Les faits du tour : ce que le moteur déterministe et les outils ont
+   * établi pour CETTE question. Le redacteur les ajoute à son corpus de
+   * corroboration (knownFigures/knownPercents/knownCounts) : un chiffre que
+   * le modèle tient d'un outil ou du brouillon déterministe est un chiffre
+   * que Kiwi tient — le retirer, c'est « [chiffre retiré] » devant un montant
+   * qu'on vient de calculer. Un chiffre qui n'est NI dans le corpus de base
+   * NI ici, lui, reste retiré. Vidé à chaque question. */
+  const TURN_FACTS = { money: new Set(), pct: new Set(), counts: new Set() };
+  function clearTurnFacts() { TURN_FACTS.money.clear(); TURN_FACTS.pct.clear(); TURN_FACTS.counts.clear(); }
+  /* Tout nombre d'un résultat d'outil ou d'un brouillon déterministe est
+   * corroboré dans les trois espaces : une source autoritaire n'a pas de
+   * dimension cachée. 1 234,5 · 1234.5 · 1 234 sont le même nombre. */
+  function noteTurnFacts(anything) {
+    let str = '';
+    try { str = typeof anything === 'string' ? anything : JSON.stringify(anything || ''); } catch (_) { str = String(anything || ''); }
+    str = str.replace(/<[^>]+>/g, ' ');
+    const seen = str.match(/\d[\d  . ]*(?:[.,]\d+)?/g) || [];
+    seen.forEach((raw) => {
+      const a = parseFloat(String(raw).replace(/[\s  . ]/g, '').replace(',', '.'));
+      const b = parseFloat(String(raw).replace(/[\s  ]/g, '').replace(/,/g, ''));
+      [a, b].forEach((v) => {
+        if (!isFinite(v)) return;
+        TURN_FACTS.money.add(Math.round(v));
+        TURN_FACTS.counts.add(Math.round(v));
+        TURN_FACTS.pct.add(Math.round(v * 10) / 10);
+      });
+    });
+  }
+
+  /* ── Les outils que le modèle peut appeler. Chacun est une LECTURE sur ce
+   * que le tableau de bord tient déjà : les chiffres viennent de notre code,
+   * le modèle ne fait que les demander et les rédiger. Aucune écriture ici —
+   * requestAction/confirmAction existent pour ça et gardent leur sas. Les
+   * dates suivent la journée d'affaires (seuil 5 h) via KiwiDayReport. */
+  const LLM_TOOLS = [
+    { type: 'function', function: { name: 'sales_between', description: "Total des ventes TTC (MAD), nombre de tickets et panier moyen entre deux journées d'affaires incluses (seuil 5 h). Dates au format YYYY-MM-DD.", parameters: { type: 'object', properties: { from: { type: 'string', description: 'YYYY-MM-DD' }, to: { type: 'string', description: 'YYYY-MM-DD' } }, required: ['from', 'to'] } } },
+    { type: 'function', function: { name: 'top_products', description: "Les articles les plus vendus (quantité et CA) entre deux journées d'affaires incluses.", parameters: { type: 'object', properties: { from: { type: 'string' }, to: { type: 'string' }, n: { type: 'integer', description: '1-10' } }, required: ['from', 'to'] } } },
+    { type: 'function', function: { name: 'stock_level', description: "Le niveau de stock d'un article par son nom (recherche approchée).", parameters: { type: 'object', properties: { query: { type: 'string' } }, required: ['query'] } } },
+    { type: 'function', function: { name: 'stock_summary', description: 'Résumé du stock : positions, ruptures, sous seuil, noms concernés.', parameters: { type: 'object', properties: {} } } },
+    { type: 'function', function: { name: 'tables_now', description: 'État des tables maintenant (libres, occupées, réservées, addition).', parameters: { type: 'object', properties: {} } } },
+    { type: 'function', function: { name: 'reservations_today', description: "Réservations du jour d'après le plan de salle.", parameters: { type: 'object', properties: {} } } },
+  ];
+  const TOOL_RESULT_MAX = 2000;
+  const FACTS_LEAD = "FAITS — calculés par Kiwi pour cette question, à partir des données réelles du commerce. Ils font autorité : reformule-les clairement dans la langue de la question, garde le fil de la conversation, ne modifie AUCUN chiffre et n'en invente aucun. Si la question demande une donnée absente des faits, appelle un outil. Pas de markdown.\n";
+  const TOOL_DATE_RX = /^\d{4}-\d{2}-\d{2}$/;
+  function toolDayBounds(day) {
+    const R = window.KiwiDayReport;
+    if (R && R.dayBounds) { try { const b = R.dayBounds(day); if (b && isFinite(b.from)) return b; } catch (_) {} }
+    const p = String(day).split('-'); const d = new Date(+p[0], (+p[1] || 1) - 1, +p[2] || 1, 0, 0, 0, 0);
+    return { from: d.getTime(), to: d.getTime() + 24 * 3600000 };
+  }
+  function toolNorm(x) { return String(x || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9؀-ۿ]+/g, ' ').trim(); }
+  function runTool(name, args) {
+    const a = args && typeof args === 'object' ? args : {};
+    const S = window.KiwiSales, T = window.KiwiAgentTruth;
+    const vid = (window.KiwiVenue && window.KiwiVenue.getCurrentVenueId) ? window.KiwiVenue.getCurrentVenueId() : undefined;
+    try {
+      if (name === 'sales_between' || name === 'top_products') {
+        if (!TOOL_DATE_RX.test(a.from || '') || !TOOL_DATE_RX.test(a.to || '')) return { error: 'dates YYYY-MM-DD requises' };
+        const lo = toolDayBounds(a.from).from, hi = toolDayBounds(a.to).to;
+        if (!S || !S.totals) return { error: 'ventes indisponibles' };
+        if (name === 'sales_between') {
+          const t = S.totals(vid, lo, hi);
+          return { from: a.from, to: a.to, total_mad: Math.round(t.revenue * 100) / 100, tickets: t.count, basket_mad: Math.round(t.basket * 100) / 100, source: 'KiwiSales.totals', day_cutoff: '5h' };
+        }
+        const by = Object.create(null);
+        (S.list ? S.list(vid) : []).forEach((x) => {
+          const ts = +(x && x.ts) || 0; if (ts < lo || ts >= hi || !Array.isArray(x.lines)) return;
+          x.lines.forEach((l) => { const k = String(l.name || 'Article'); const o = by[k] || (by[k] = { name: k, qty: 0, total_mad: 0 }); o.qty += +l.qty || 0; o.total_mad += +l.total || 0; });
+        });
+        const n = Math.max(1, Math.min(10, parseInt(a.n, 10) || 5));
+        const rows = Object.values(by).sort((x, y) => y.qty - x.qty).slice(0, n).map((o) => ({ name: o.name, qty: Math.round(o.qty * 1000) / 1000, total_mad: Math.round(o.total_mad * 100) / 100 }));
+        return { from: a.from, to: a.to, items: rows, source: 'KiwiSales.list', note: rows.length ? undefined : 'aucune ligne détaillée sur la période' };
+      }
+      if (name === 'stock_summary') { const r = T && T.read ? T.read('inventory') : null; return r && r.available ? { source: r.source, data: r.data } : { available: false }; }
+      if (name === 'tables_now') { const r = T && T.read ? T.read('tables') : null; return r && r.available ? { source: r.source, data: r.data } : { available: false }; }
+      if (name === 'reservations_today') { const r = T && T.read ? T.read('reservations') : null; return r && r.available ? { source: r.source, data: r.data, limited: !!r.limited } : { available: false }; }
+      if (name === 'stock_level') {
+        const q = toolNorm(a.query); if (!q) return { error: 'query requise' };
+        const pools = [];
+        try { if (window.KiwiRestaurantStock && window.KiwiRestaurantStock.items) pools.push(window.KiwiRestaurantStock.items() || []); } catch (_) {}
+        try { if (window.KiwiBoutiqueCatalog && window.KiwiBoutiqueCatalog.listProducts) pools.push(window.KiwiBoutiqueCatalog.listProducts() || []); } catch (_) {}
+        const hits = [];
+        pools.forEach((rows) => (Array.isArray(rows) ? rows : []).forEach((it) => {
+          const nm = String((it && (it.name || it.label || it.title)) || ''); const nn = toolNorm(nm); if (!nn) return;
+          const score = nn === q ? 3 : nn.indexOf(q) >= 0 ? 2 : q.split(' ').every((w) => nn.indexOf(w) >= 0) ? 1 : 0;
+          if (!score) return;
+          const stock = [it.stock, it.qty, it.quantity, it.onHand].find((v) => typeof v === 'number');
+          hits.push({ name: nm, stock: stock == null ? null : stock, unit: it.unit || it.stockUnit || '', threshold: it.threshold == null ? undefined : it.threshold, score });
+        }));
+        hits.sort((x, y) => y.score - x.score);
+        return { query: a.query, found: hits.length > 0, items: hits.slice(0, 5).map((h) => { delete h.score; return h; }) };
+      }
+    } catch (e) { return { error: 'lecture impossible' }; }
+    return { error: 'outil inconnu' };
+  }
+  function toolResultText(v) { let s = ''; try { s = JSON.stringify(v); } catch (_) { s = String(v); } return s.length > TOOL_RESULT_MAX ? s.slice(0, TOOL_RESULT_MAX) : s; }
+  /* Le brouillon déterministe, en texte nu, pour le bloc FAITS du modèle. */
+  function draftFacts(reply) {
+    if (!reply) return '';
+    const strip = (h) => String(h || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    let out = strip(reply.text);
+    if (reply.stats && reply.stats.length) out += '\n' + reply.stats.map((x) => strip(x.l) + ': ' + strip(x.v) + (x.h ? ' (' + strip(x.h) + ')' : '')).join('\n');
+    if (reply.verdict && reply.verdict.text) out += '\n' + strip(reply.verdict.text);
+    return out.slice(0, 3000);
+  }
+  window.KiwiAgentTools = { list: LLM_TOOLS, run: runTool, noteFacts: noteTurnFacts, clearFacts: clearTurnFacts, facts: TURN_FACTS, draftFacts: draftFacts };
 
   const SP_DIR = {
     fr: 'IMPÉRATIF : rédige ta réponse entièrement en FRANÇAIS.',
@@ -4105,13 +4217,13 @@
     const mark = REDACTED[L2];
     let n = 0, rateSeen = false;
     try {
-      const knownM = Array.from(knownFigures());
-      const knownP = Array.from(knownPercents());
+      const knownM = Array.from(knownFigures()).concat(Array.from(TURN_FACTS.money));
+      const knownP = Array.from(knownPercents()).concat(Array.from(TURN_FACTS.pct));
       const citedM = (v) => knownM.some((k) => Math.abs(k - v) <= Math.max(50, v * 0.01));
       const citedP = (v) => knownP.some((k) => Math.abs(k - v) <= 0.6);
       /* Per namespace: a dish sold 312 times does not make 312 CLIENTS a
        * figure we hold. */
-      const citedC = (v, kind) => Array.from(knownCounts(kind)).some((k) => Math.abs(k - v) <= Math.max(1, v * 0.01));
+      const citedC = (v, kind) => Array.from(knownCounts(kind)).concat(Array.from(TURN_FACTS.counts)).some((k) => Math.abs(k - v) <= Math.max(1, v * 0.01));
       const num = (raw) => parseFloat(String(raw).replace(/[\s  . ]/g, '').replace(',', '.'));
 
       /* Sentence by sentence — "is this a hypothesis?" is only answerable
@@ -4855,6 +4967,23 @@
         qLength: t.length,
       });
       if (reply) {
+        /* Le moteur de décision et le modèle travaillent ENSEMBLE, pas l'un
+         * après l'autre. Quand le nuage est accepté, le brouillon déterministe
+         * s'affiche tout de suite — chiffres instantanés, calculés par notre
+         * code — puis le modèle le reformule dans la même bulle, dans la
+         * langue de la question, en tenant le fil de la conversation, et va
+         * chercher par un outil ce que le brouillon n'a pas. Ses chiffres sont
+         * vérifiés contre les faits du tour : ce qu'il ne tient ni du moteur
+         * ni d'un outil est retiré. S'il échoue, le brouillon reste. Sans
+         * consentement nuage : le brouillon, comme avant. Un refus ou une
+         * réponse sur les livres d'un autre n'ont rien à gagner à une
+         * reformulation : ils restent déterministes. */
+        const collaborate = !reply.refused && !reply.run && cloudAccepted() && window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal();
+        if (collaborate) {
+          const bubble = pushAgent(replyHtml(reply));
+          runLlm(t, { reply, bubble });
+          return;
+        }
         const typing = pushTyping();
         setTimeout(() => { typing.remove(); pushAgent(replyHtml(reply)); }, 460 + Math.random() * 300);
         return;
@@ -4923,12 +5052,31 @@
     /* Le serveur rend du SSE sur HTTP ; on le ramène à un flux de bouts de
      * texte pour que découpage par phrase, redactUnsupported(), note de garde,
      * télémétrie, boutons d'avis et historique expurgé soient écrits UNE fois. */
+    /* Premier tour : le modèle voit la question, les faits et la liste des
+     * outils, et répond soit par des appels d'outils, soit directement (texte
+     * entier, non streamé). Une réponse JSON, pas un flux. */
+    async function cloudToolRound(messages) {
+      const res = await fetch('/api/ai/ask', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ messages, tools: LLM_TOOLS, round: 'tools' }),
+      });
+      let j = null;
+      try { j = await res.json(); } catch (_) { j = null; }
+      if (!res.ok || !j || !j.ok) {
+        const err = new Error('cloud:' + ((j && j.error) || res.status));
+        err.kiwiCode = (j && j.error) || '';
+        throw err;
+      }
+      return j;
+    }
     async function cloudDeltas(messages) {
       const res = await fetch('/api/ai/ask', {
         method: 'POST',
         credentials: 'same-origin',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ messages }),
+        body: JSON.stringify({ messages, tools: LLM_TOOLS, round: 'answer' }),
       });
       if (!res.ok || !res.body) {
         /* L'endpoint nomme sa panne — binding absent, quota du jour, session
@@ -4979,21 +5127,63 @@
       })();
     }
 
-    async function runLlm(question) {
+    /* Deux tours au plus. Tour 1 (JSON) : faits + outils, le modèle demande
+     * des lectures ou répond. Tour 2 (flux) : les résultats d'outils sont
+     * renvoyés, tool_choice 'none', le modèle rédige. Les résultats passent
+     * par noteTurnFacts AVANT le rendu : le redacteur les connaît. */
+    async function llmAnswerStream(messages) {
+      const r1 = await cloudToolRound(messages);
+      const calls = Array.isArray(r1.tool_calls) ? r1.tool_calls.slice(0, 4) : [];
+      if (!calls.length) {
+        const text = typeof r1.text === 'string' ? r1.text : '';
+        return { deltas: (async function* () { if (text) yield text; })(), tools: 0 };
+      }
+      const results = calls.map((c) => {
+        let args = {};
+        try { args = typeof c.arguments === 'string' ? JSON.parse(c.arguments) : (c.arguments || {}); } catch (_) { args = {}; }
+        const out = runTool(String(c.name || ''), args);
+        noteTurnFacts(out);
+        return { id: String(c.id || ''), name: String(c.name || ''), content: toolResultText(out) };
+      });
+      const toolMsgs = [
+        { role: 'assistant', content: '', tool_calls: calls.map((c) => ({ id: String(c.id || ''), type: 'function', function: { name: String(c.name || ''), arguments: typeof c.arguments === 'string' ? c.arguments : JSON.stringify(c.arguments || {}) } })) },
+        ...results.map((r) => ({ role: 'tool', tool_call_id: r.id, name: r.name, content: r.content })),
+      ];
+      return { deltas: await cloudDeltas([...messages, ...toolMsgs]), tools: calls.length };
+    }
+
+    async function runLlm(question, draft) {
       const tLlm = Date.now();
-      const typing = pushTyping();
+      const hasDraft = !!(draft && draft.bubble);
+      const typing = hasDraft ? null : pushTyping();
+      clearTurnFacts();
       llmHistory.push({ role: 'user', content: question });
       /* No `/no_think` suffix: that was Qwen3's switch and Qwen3.5 removed it
        * (its template is non-thinking unless enable_thinking:true is passed).
        * Appending it now would only pollute the system prompt. */
       const sys = buildSystemPrompt(detectQLang(question));
-      const messages = [{ role: 'system', content: sys }, ...llmHistory.slice(-8)];
+      const facts = hasDraft ? draftFacts(draft.reply) : '';
+      if (facts) noteTurnFacts(facts);
+      const messages = [{ role: 'system', content: sys }]
+        .concat(facts ? [{ role: 'system', content: FACTS_LEAD + facts }] : [])
+        .concat(llmHistory.slice(-8));
       try {
-        const deltas = await cloudDeltas(messages);
-        typing.remove();
+        const run = await llmAnswerStream(messages);
+        const deltas = run.deltas;
+        if (typing) typing.remove();
         LLM.cancelled = false;
-        const bubble = pushAgent('<span data-fa-stream></span><div class="fa-follow" data-fa-stopwrap><button type="button" class="fa-llm-btn" data-fa-stop-llm>' + tr().llm.stop + '</button></div>');
-        const target = bubble.querySelector('[data-fa-stream]');
+        let bubble, target, draftText = '';
+        if (hasDraft) {
+          /* Même bulle : le texte du brouillon est remplacé phrase par phrase,
+           * les statistiques, boutons et pistes restent. Si rien n'arrive, le
+           * brouillon est encore là. */
+          bubble = draft.bubble;
+          target = bubble.querySelector(':scope > div') || bubble;
+          draftText = target.textContent;
+        } else {
+          bubble = pushAgent('<span data-fa-stream></span><div class="fa-follow" data-fa-stopwrap><button type="button" class="fa-llm-btn" data-fa-stop-llm>' + tr().llm.stop + '</button></div>');
+          target = bubble.querySelector('[data-fa-stream]');
+        }
         let acc = '';
         /* Stream by SETTLED SENTENCE, not by token. The redactor works on whole
          * clauses — it has to, since "is this a hypothesis or a claim?" is only
@@ -5021,7 +5211,10 @@
          * redactUnsupported). redacted === -1 means the detector itself threw:
          * an answer we could not check is an answer we do not show. */
         const red = redactUnsupported(clean, L);
-        if (target) target.textContent = red.redacted === -1 ? tr().llm.runErr : red.text;
+        if (target) {
+          if (hasDraft && (red.redacted === -1 || !red.text.trim())) target.textContent = draftText;
+          else target.textContent = red.redacted === -1 ? tr().llm.runErr : red.text;
+        }
         if (bubble && red.redacted > 0) {
           const note = document.createElement('div');
           note.className = 'fa-note';
@@ -5036,7 +5229,7 @@
           cav.textContent = red.caveat;
           bubble.appendChild(cav);
         }
-        logAi({ route: 'cloud', provenance: red.redacted === -1 ? 'error' : 'model', ms: Date.now() - tLlm, qLength: question.length, redacted: Math.max(0, red.redacted) });
+        logAi({ route: hasDraft ? 'cloud+deterministic' : 'cloud', provenance: red.redacted === -1 ? 'error' : 'model', ms: Date.now() - tLlm, qLength: question.length, redacted: Math.max(0, red.redacted), tools: run.tools });
         /* The merchant's own verdict — the only signal that says whether the
          * answer was any good. Two buttons, no free text, nothing transmitted. */
         if (bubble && red.redacted !== -1) {
@@ -5053,7 +5246,10 @@
          * guidance is to keep prior thinking content out of history anyway. */
         llmHistory.push({ role: 'assistant', content: red.redacted === -1 ? '' : red.text });
       } catch (e) {
-        typing.remove();
+        if (typing) typing.remove();
+        /* Avec un brouillon déterministe à l'écran, une panne du modèle ne
+         * vaut pas un message : le commerçant a déjà sa réponse. */
+        if (hasDraft) { llmHistory.push({ role: 'assistant', content: draftFacts(draft.reply).slice(0, 600) }); return; }
         /* La route serveur nomme sa panne. Binding absent, session expirée,
          * modèle en échec : le commerçant n'a pas à lire ça — il retrouve
          * simplement la réponse déterministe qu'il avait avant que cette route
