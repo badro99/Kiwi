@@ -171,6 +171,35 @@
       mCountProg: (done, total) => `${done} / ${total} articles comptés`,
       mCountSave: 'Sauvegarder le brouillon', mCountValidate: "Valider l'inventaire",
       mCountToast: (totalCost) => `Inventaire validé · Écart total : ${totalCost} · Stock mis à jour`,
+      mCountBlind: "Comptage à l'aveugle",
+      mCountBlindTip: 'le stock théorique reste masqué pendant la saisie pour ne pas influencer le comptage',
+      mCountLast: (d, v) => `Dernier inventaire : ${d} · écart ${v}`,
+      btnSheet: "Feuille d'inventaire",
+      mSheetTitle: "Feuille d'inventaire",
+      mSheetSub: 'Imprimez la feuille, comptez rayon par rayon, puis saisissez les quantités dans « Inventaire physique ».',
+      mSheetTheo: 'Afficher le stock théorique sur la feuille',
+      mSheetTheoTip: "recommandé : sans le théorique, on note ce qu'on voit vraiment",
+      mSheetCount: (n) => `${n} articles seront listés, regroupés par catégorie.`,
+      mSheetPrint: 'Imprimer la feuille',
+      sheetCounter: 'Compté par', sheetSign: 'Signature',
+      sheetColItem: 'Article', sheetColUnit: 'Unité', sheetColNotes: 'Remarques',
+      sheetFoot: "Comptez chaque article une seule fois, réserve comprise. En cas de doute sur l'unité (kg / pièce / carton), notez-le en remarque.",
+      mRevTitle: "Écarts d'inventaire",
+      mRevSub: (n) => `${n} articles comptés. Vérifiez chaque écart et sa cause probable avant d'ajuster le stock.`,
+      mRevColReason: 'CAUSE PROBABLE',
+      mRevNoneT: 'Aucun écart',
+      mRevNone: 'Le comptage correspond au stock théorique. Confirmez pour enregistrer cet inventaire.',
+      mRevTotal: (n, v) => `${n} écart(s) · valeur totale ${v}`,
+      mRevBack: 'Annuler',
+      mRevApply: 'Confirmer et ajuster le stock',
+      reasonZero: 'Article introuvable au comptage — vérifier la réserve, le rangement ou un vol.',
+      reasonUnit: "Écart démesuré — probable erreur d'unité (grammes saisis au lieu de kg, ou pièces / carton).",
+      reasonWaste: 'Des pertes ont été signalées récemment — probable casse ou périmé supplémentaire non enregistré.',
+      reasonRecipes: 'Proche de la consommation recettes de la semaine — portions servies non décomptées du stock.',
+      reasonPerish: 'Produit périssable — pertes, parage ou portions généreuses probables.',
+      reasonLoss: 'Sortie non enregistrée — casse, offert, usage interne ou coulage.',
+      reasonDeliv: 'Livraison enregistrée il y a moins de 48 h — risque de double saisie du même carton.',
+      reasonExtra: 'Réception non saisie ou retour non enregistré — vérifier les bons de livraison.',
       mQoTitle: 'Commande rapide',
       mQoArticle: 'Article', mQoQty: 'Quantité à commander', mQoSup: 'Fournisseur',
       mQoMode: 'Mode de livraison', mQoModeStd: 'Standard · 24-48h', mQoModeExp: 'Express · 6h · +120 MAD',
@@ -368,6 +397,35 @@
       mCountProg: (done, total) => `${done} / ${total} items counted`,
       mCountSave: 'Save draft', mCountValidate: 'Validate inventory',
       mCountToast: (totalCost) => `Inventory validated · Total variance: ${totalCost} · Stock updated`,
+      mCountBlind: 'Blind count',
+      mCountBlindTip: 'the theoretical stock stays hidden while counting so it does not influence the figures',
+      mCountLast: (d, v) => `Last inventory: ${d} · variance ${v}`,
+      btnSheet: 'Count sheet',
+      mSheetTitle: 'Inventory count sheet',
+      mSheetSub: 'Print the sheet, count aisle by aisle, then enter the quantities in "Physical count".',
+      mSheetTheo: 'Show theoretical stock on the sheet',
+      mSheetTheoTip: 'recommended: without the theoretical figure, you write down what you actually see',
+      mSheetCount: (n) => `${n} items will be listed, grouped by category.`,
+      mSheetPrint: 'Print the sheet',
+      sheetCounter: 'Counted by', sheetSign: 'Signature',
+      sheetColItem: 'Item', sheetColUnit: 'Unit', sheetColNotes: 'Notes',
+      sheetFoot: 'Count each item once, back room included. If unsure about the unit (kg / piece / box), write it in the notes.',
+      mRevTitle: 'Inventory variances',
+      mRevSub: (n) => `${n} items counted. Review each variance and its probable cause before adjusting stock.`,
+      mRevColReason: 'PROBABLE CAUSE',
+      mRevNoneT: 'No variance',
+      mRevNone: 'The count matches theoretical stock. Confirm to record this inventory.',
+      mRevTotal: (n, v) => `${n} variance(s) · total value ${v}`,
+      mRevBack: 'Cancel',
+      mRevApply: 'Confirm and adjust stock',
+      reasonZero: 'Item not found during the count — check the back room, shelving, or possible theft.',
+      reasonUnit: 'Outsized variance — likely a unit error (grams entered instead of kg, or pieces / box).',
+      reasonWaste: 'Waste was reported recently — likely additional breakage or expiry not recorded.',
+      reasonRecipes: "Close to this week's recipe consumption — served portions not deducted from stock.",
+      reasonPerish: 'Perishable product — losses, trimming, or generous portions are likely.',
+      reasonLoss: 'Unrecorded outflow — breakage, freebies, internal use, or shrinkage.',
+      reasonDeliv: 'A delivery was recorded less than 48h ago — risk of the same box being entered twice.',
+      reasonExtra: 'Unrecorded delivery or return — check the delivery notes.',
       mQoTitle: 'Quick order',
       mQoArticle: 'Item', mQoQty: 'Quantity to order', mQoSup: 'Supplier',
       mQoMode: 'Delivery mode', mQoModeStd: 'Standard · 24-48h', mQoModeExp: 'Express · 6h · +120 MAD',
@@ -550,6 +608,35 @@
       mCountProg: (done, total) => `${done} / ${total} منتجًا معدودًا`,
       mCountSave: 'حفظ المسودة', mCountValidate: 'تأكيد الجرد',
       mCountToast: (totalCost) => `تم تأكيد الجرد · الفرق الكلي: ${totalCost} · المخزون محدث`,
+      mCountBlind: 'جرد أعمى',
+      mCountBlindTip: 'يبقى المخزون النظري مخفيًا أثناء الإدخال حتى لا يؤثر على العدّ',
+      mCountLast: (d, v) => `آخر جرد: ${d} · فرق ${v}`,
+      btnSheet: 'ورقة الجرد',
+      mSheetTitle: 'ورقة الجرد',
+      mSheetSub: 'اطبع الورقة، عُدّ رفًا برف، ثم أدخل الكميات في « جرد فعلي ».',
+      mSheetTheo: 'إظهار المخزون النظري على الورقة',
+      mSheetTheoTip: 'يُنصح بدونه: من غير الرقم النظري يكتب العدّاد ما يراه فعلًا',
+      mSheetCount: (n) => `سيتم إدراج ${n} منتجًا، مجمعة حسب الفئة.`,
+      mSheetPrint: 'طباعة الورقة',
+      sheetCounter: 'عُدّ بواسطة', sheetSign: 'التوقيع',
+      sheetColItem: 'المنتج', sheetColUnit: 'الوحدة', sheetColNotes: 'ملاحظات',
+      sheetFoot: 'عُدّ كل منتج مرة واحدة بما في ذلك المخزن. عند الشك في الوحدة (كغ / قطعة / صندوق) اكتب ذلك في الملاحظات.',
+      mRevTitle: 'فروقات الجرد',
+      mRevSub: (n) => `${n} منتجًا معدودًا. راجع كل فرق وسببه المحتمل قبل تعديل المخزون.`,
+      mRevColReason: 'السبب المحتمل',
+      mRevNoneT: 'لا فرق',
+      mRevNone: 'العدّ مطابق للمخزون النظري. أكّد لتسجيل هذا الجرد.',
+      mRevTotal: (n, v) => `${n} فرق (فروقات) · القيمة الإجمالية ${v}`,
+      mRevBack: 'إلغاء',
+      mRevApply: 'تأكيد وتعديل المخزون',
+      reasonZero: 'المنتج غير موجود عند العدّ — تحقق من المخزن أو الترتيب أو احتمال سرقة.',
+      reasonUnit: 'فرق ضخم — على الأرجح خطأ في الوحدة (غرامات بدل كغ، أو قطع / صندوق).',
+      reasonWaste: 'تم التبليغ عن خسائر مؤخرًا — على الأرجح كسر أو انتهاء صلاحية إضافي غير مسجل.',
+      reasonRecipes: 'قريب من استهلاك الوصفات هذا الأسبوع — حصص مقدمة لم تُخصم من المخزون.',
+      reasonPerish: 'منتج سريع التلف — خسائر أو تشذيب أو حصص سخية محتملة.',
+      reasonLoss: 'خروج غير مسجل — كسر، مجاني، استعمال داخلي أو تسرب.',
+      reasonDeliv: 'سُجلت تسليمة قبل أقل من 48 ساعة — خطر إدخال نفس الصندوق مرتين.',
+      reasonExtra: 'استلام غير مسجل أو إرجاع غير مسجل — تحقق من سندات التسليم.',
       mQoTitle: 'طلبية سريعة',
       mQoArticle: 'المنتج', mQoQty: 'الكمية للطلب', mQoSup: 'المورد',
       mQoMode: 'وضع التسليم', mQoModeStd: 'عادي · 24-48س', mQoModeExp: 'سريع · 6س · +120 درهم',
@@ -1338,6 +1425,7 @@
         </div>
         <div class="st-head-acts">
           <button class="st-btn" type="button" data-action="stock-scan-invoice">${svg('camera', 13)}<span>${esc(t('btnScan'))}</span></button>
+          <button class="st-btn" type="button" data-action="stock-count-sheet">${svg('download', 13)}<span>${esc(t('btnSheet'))}</span></button>
           <button class="st-btn" type="button" data-action="stock-physical-count">${svg('clipboardList', 13)}<span>${esc(t('btnCount'))}</span></button>
           <button class="st-btn primary" type="button" data-action="stock-add-item">${svg('plus', 13)}<span>${esc(t('btnAdd'))}</span></button>
         </div>
@@ -3169,14 +3257,241 @@
   /* ═══════════════════════════════════════════════════════════════════════
    * MODAL · Physical count
    * ═══════════════════════════════════════════════════════════════════════ */
+  /* ═══════════════════════════════════════════════════════════════════════
+   * Guide d'inventaire — cause probable, historique, feuille imprimable
+   * ═══════════════════════════════════════════════════════════════════════ */
+  /* Cause probable d'un écart de comptage. Fonction pure : l'ordre des règles
+   * est un choix métier — un signal enregistré (pertes déclarées, livraison
+   * récente) explique mieux qu'une heuristique de catégorie, donc il passe
+   * avant. `moves` vient du registre (7 derniers jours, hors 'count'). */
+  function stCountReason(ctx) {
+    const diff = +ctx.diff || 0;
+    if (!diff) return '';
+    const expected = +ctx.expected || 0;
+    const counted = +ctx.counted || 0;
+    const theoUsage = +ctx.theoUsage || 0;
+    const moves = Array.isArray(ctx.moves) ? ctx.moves : [];
+    const now = +ctx.now || Date.now();
+    if (counted === 0 && expected > 0) return 'reasonZero';
+    if (diff > 0 && expected > 0 && counted >= expected * 20) return 'reasonUnit';
+    if (diff < 0) {
+      if (moves.some((m) => m && m.reason === 'waste')) return 'reasonWaste';
+      if (theoUsage > 0 && Math.abs(diff) <= theoUsage * 1.25) return 'reasonRecipes';
+      if (['viandes', 'poissons', 'legumes', 'laitiers'].indexOf(String(ctx.cat)) !== -1) return 'reasonPerish';
+      return 'reasonLoss';
+    }
+    if (moves.some((m) => m && +m.qty > 0 && /receipt|procurement|delivery|invoice/.test(String(m.refType || '')) && now - (+m.occurredTs || 0) < 48 * 3600 * 1000)) return 'reasonDeliv';
+    return 'reasonExtra';
+  }
+  /* Mouvements récents d'un article, pour nourrir stCountReason. Registre réel
+   * uniquement : les fixtures démo n'ont pas d'historique de mouvements. */
+  function stRecentMoves(itemId) {
+    try {
+      const L = window.KiwiInventory;
+      if (!L || !L.isReal || !L.isReal()) return [];
+      const since = Date.now() - 7 * 24 * 3600 * 1000;
+      return (L.history(itemId) || []).filter((m) => (+m.occurredTs || 0) >= since && m.reason !== 'count');
+    } catch (_) { return []; }
+  }
+  /* Historique des inventaires validés — même portée tenant que l'overlay
+   * stock (compte réel = slug cloud, sinon venue id). Plafonné : c'est un
+   * journal de tendance, pas une base ; le registre reste la vérité. */
+  const stCountHistKey = () => 'kiwi:inventoryCounts:v1:' + stOverlayScope();
+  function stCountHistory() {
+    try {
+      const a = JSON.parse(localStorage.getItem(stCountHistKey()) || '[]');
+      return Array.isArray(a) ? a : [];
+    } catch (_) { return []; }
+  }
+  function stSaveCountHistory(ref, lines) {
+    const gaps = lines.filter((l) => l.diff);
+    const entry = {
+      ref: String(ref), ts: Date.now(), counted: lines.length,
+      varMad: Math.round(gaps.reduce((s, l) => s + (+l.costDiff || 0), 0)),
+      gaps: gaps.slice(0, 200).map((l) => ({
+        id: l.it.id, name: l.it.name, unit: l.it.unit,
+        theo: l.theo, counted: l.counted, diff: l.diff,
+        mad: Math.round(+l.costDiff || 0), reason: l.reasonKey || '',
+      })),
+    };
+    try { localStorage.setItem(stCountHistKey(), JSON.stringify([entry, ...stCountHistory()].slice(0, 24))); } catch (_) {}
+    return entry;
+  }
+  const stCountDate = (ts) => {
+    try {
+      const loc = lang() === 'ar' ? 'ar-MA' : lang() === 'en' ? 'en-GB' : 'fr-FR';
+      return new Date(ts).toLocaleDateString(loc, { day: 'numeric', month: 'long', year: 'numeric' });
+    } catch (_) { return new Date(ts).toLocaleDateString(); }
+  };
+
+  /* Feuille d'inventaire papier. À l'aveugle par défaut : sans la colonne
+   * théorique, le compteur note ce qu'il voit au lieu de confirmer le chiffre
+   * attendu. Impression via iframe caché (même motif qu'operational-print). */
+  function stSheetHtml(showTheo) {
+    const items = getInv();
+    const cats = allCategories();
+    const catName = (id) => { const c = cats.find((x) => x.id === id); return c ? c.label : id; };
+    const groups = new Map();
+    items.forEach((it) => {
+      const id = String(it.category || it.cat || 'epicerie');
+      if (!groups.has(id)) groups.set(id, []);
+      groups.get(id).push(it);
+    });
+    let venueName = '';
+    try { venueName = window.KiwiVenue?.getCurrentVenueData?.()?.name || ''; } catch (_) {}
+    const last = stCountHistory()[0];
+    const rtl = lang() === 'ar';
+    const sections = Array.from(groups.entries()).map(([id, rows]) => `
+      <section>
+        <h2>${esc(catName(id))}</h2>
+        <table>
+          <thead><tr><th class="w-name">${esc(t('sheetColItem'))}</th><th>${esc(t('sheetColUnit'))}</th>${showTheo ? `<th>${esc(t('mCountColTheo'))}</th>` : ''}<th class="w-count">${esc(t('mCountColReal'))}</th><th class="w-note">${esc(t('sheetColNotes'))}</th></tr></thead>
+          <tbody>${rows.map((it) => `<tr><td class="w-name">${esc(it.name)}</td><td>${esc(it.unit)}</td>${showTheo ? `<td class="mono">${esc(fmtUnit(currentStockFor(it), it.unit))}</td>` : ''}<td class="w-count"></td><td class="w-note"></td></tr>`).join('')}</tbody>
+        </table>
+      </section>`).join('');
+    return `<!doctype html><html dir="${rtl ? 'rtl' : 'ltr'}"><head><meta charset="utf-8"><title>${esc(t('mSheetTitle'))}</title><style>
+      @page { margin: 12mm; }
+      html, body { background: #fff; color: #0A0F0D; color-scheme: light; }
+      body { margin: 0; font: 12px/1.5 Arial, sans-serif; }
+      header { border-bottom: 2px solid #0B6E4F; padding-bottom: 10px; }
+      header h1 { margin: 0; font-size: 20px; }
+      header p { margin: 3px 0 0; color: #555; }
+      .meta { display: flex; gap: 26px; margin: 12px 0 4px; font-size: 12px; }
+      .meta span { display: inline-block; border-bottom: 1px solid #999; min-width: 150px; padding: 0 4px 2px; }
+      section { break-inside: avoid-page; }
+      h2 { font-size: 13px; margin: 16px 0 6px; color: #0B6E4F; text-transform: uppercase; letter-spacing: 0.06em; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border: 1px solid #bbb; padding: 6px 8px; text-align: ${rtl ? 'right' : 'left'}; font-size: 11.5px; }
+      th { background: #F7F5F0; text-transform: uppercase; font-size: 9.5px; letter-spacing: 0.05em; color: #444; }
+      td { height: 18px; }
+      .w-count { width: 110px; } .w-note { width: 170px; } .mono { font-family: monospace; }
+      footer { margin-top: 18px; font-size: 10.5px; color: #666; }
+    </style></head><body>
+      <header>
+        <h1>${esc(t('mSheetTitle'))}${venueName ? ' — ' + esc(venueName) : ''}</h1>
+        <p>${esc(stCountDate(Date.now()))}${last ? ' · ' + esc(t('mCountLast', stCountDate(last.ts), fmtMad(last.varMad))) : ''}</p>
+      </header>
+      <div class="meta">
+        <div>${esc(t('sheetCounter'))} : <span>&nbsp;</span></div>
+        <div>${esc(t('sheetSign'))} : <span>&nbsp;</span></div>
+      </div>
+      ${sections}
+      <footer>${esc(t('sheetFoot'))}</footer>
+    </body></html>`;
+  }
+  function printCountSheet(showTheo) {
+    const frame = document.createElement('iframe');
+    frame.setAttribute('title', t('mSheetTitle'));
+    frame.style.cssText = 'position:fixed;width:1px;height:1px;right:0;bottom:0;opacity:0;';
+    document.body.appendChild(frame);
+    const doc = frame.contentDocument;
+    doc.open(); doc.write(stSheetHtml(showTheo)); doc.close();
+    setTimeout(() => {
+      try { frame.contentWindow.focus(); frame.contentWindow.print(); } catch (_) {}
+      setTimeout(() => frame.remove(), 1500);
+    }, 120);
+  }
+  function openCountSheet() {
+    const n = getInv().length;
+    const m = window.Kiwi.modal({
+      title: t('mSheetTitle'),
+      desc: t('mSheetSub'),
+      width: 520,
+      body: `
+        <label class="st-pc-blindrow">
+          <input type="checkbox" data-sheet-theo />
+          <span><b>${esc(t('mSheetTheo'))}</b> · ${esc(t('mSheetTheoTip'))}</span>
+        </label>
+        <p style="font-size:12px;color:var(--n-600);margin:10px 2px 0;">${esc(t('mSheetCount', n))}</p>
+      `,
+      foot: `<button class="st-btn" data-dismiss-modal>${esc(t('mRevBack'))}</button><button class="st-btn primary" data-stock-sheet-print>${esc(t('mSheetPrint'))}</button>`,
+    });
+    requestAnimationFrame(() => {
+      const scope = m?.el || topBackdrop();
+      wireDismiss(scope);
+      scope?.querySelector('[data-stock-sheet-print]')?.addEventListener('click', () => {
+        printCountSheet(!!scope.querySelector('[data-sheet-theo]')?.checked);
+        closeTopModal();
+      }, { once: true });
+    });
+  }
+  /* Revue des écarts avant application. Seul chemin d'écriture : countStock →
+   * moveStock → registre. Rien ne bouge tant que le propriétaire n'a pas vu
+   * chaque écart, sa valeur en MAD et sa cause probable. */
+  function openCountReview(lines) {
+    const countRef = 'count-' + Date.now().toString(36);
+    const gaps = lines.filter((l) => l.diff);
+    gaps.forEach((l) => {
+      l.reasonKey = stCountReason({
+        diff: l.diff, expected: l.theo, counted: l.counted,
+        cat: String(l.it.category || l.it.cat || ''),
+        theoUsage: theoreticalUsageFor(l.it),
+        moves: stRecentMoves(l.it.id),
+      });
+    });
+    const totalVar = gaps.reduce((s, l) => s + l.costDiff, 0);
+    const m = window.Kiwi.modal({
+      title: t('mRevTitle'),
+      desc: t('mRevSub', lines.length),
+      width: 860,
+      body: gaps.length ? `
+        <div class="st-pc-wrap">
+          <table class="st-pc-tbl">
+            <thead><tr>
+              <th>${esc(t('colArticle'))}</th>
+              <th class="r">${esc(t('mCountColTheo'))}</th>
+              <th class="r">${esc(t('mCountColReal'))}</th>
+              <th class="r">${esc(t('mCountColVar'))}</th>
+              <th class="r">${esc(t('mCountColCost'))}</th>
+              <th>${esc(t('mRevColReason'))}</th>
+            </tr></thead>
+            <tbody>
+              ${gaps.map((l) => {
+                const pct = l.theo > 0 ? Math.abs(l.diff / l.theo) * 100 : 100;
+                const cls = pct < 2 ? 'ok' : pct < 10 ? 'warn' : 'bad';
+                return `<tr>
+                  <td><b>${esc(l.it.name)}</b> <span style="color:var(--n-500); font-size:11px;">· ${esc(l.it.unit)}</span></td>
+                  <td class="r mono">${esc(fmtUnit(l.theo, l.it.unit))}</td>
+                  <td class="r mono">${esc(fmtUnit(l.counted, l.it.unit))}</td>
+                  <td class="r"><span class="st-pc-var ${cls}">${l.diff > 0 ? '+' : ''}${fmtNum(l.diff, Math.abs(l.diff) < 10 ? 1 : 0)} ${esc(l.it.unit)}</span></td>
+                  <td class="r"><span class="st-pc-var ${cls}">${l.costDiff > 0 ? '+' : ''}${esc(fmtMad(l.costDiff))}</span></td>
+                  <td class="st-rev-reason">${esc(t(l.reasonKey))}</td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+        <div class="st-pc-prog"><span class="st-pc-prog-l">${esc(t('mRevTotal', gaps.length, fmtMad(totalVar)))}</span></div>
+      ` : `<div class="st-notice"><b>${esc(t('mRevNoneT'))}</b>${esc(t('mRevNone'))}</div>`,
+      foot: `<button class="st-btn" data-dismiss-modal>${esc(t('mRevBack'))}</button><button class="st-btn primary" data-stock-rev-apply>${esc(t('mRevApply'))}</button>`,
+    });
+    requestAnimationFrame(() => {
+      const scope = m?.el || topBackdrop();
+      wireDismiss(scope);
+      scope?.querySelector('[data-stock-rev-apply]')?.addEventListener('click', () => {
+        lines.forEach((l) => countStock(l.it, l.counted, countRef));
+        stSaveOverlay();
+        stSaveCountHistory(countRef, lines);
+        closeTopModal();
+        window.Kiwi.toast(t('mCountToast', fmtMad(totalVar)), { type: 'success', duration: 4200 });
+        if (stPageActive) render();
+      }, { once: true });
+    });
+  }
+
   function openPhysicalCount() {
     const items = getInv();
+    const last = stCountHistory()[0];
     const m = window.Kiwi.modal({
       title: t('mCountTitle'),
-      desc: t('mCountSub'),
+      desc: (last ? t('mCountLast', stCountDate(last.ts), fmtMad(last.varMad)) + ' — ' : '') + t('mCountSub'),
       width: 760,
       body: `
-        <div class="st-pc-wrap">
+        <label class="st-pc-blindrow">
+          <input type="checkbox" data-pc-blind checked />
+          <span><b>${esc(t('mCountBlind'))}</b> · ${esc(t('mCountBlindTip'))}</span>
+        </label>
+        <div class="st-pc-wrap st-pc-blind">
           <table class="st-pc-tbl">
             <thead>
               <tr>
@@ -3214,11 +3529,9 @@
   }
 
   function wirePhysicalCount(items) {
-    let totalCostVar = 0;
     const recomputeProgress = () => {
       const inputs = document.querySelectorAll('[data-pc-real]');
       let counted = 0;
-      totalCostVar = 0;
       inputs.forEach(inp => {
         const val = parseFloat(inp.value);
         if (!isNaN(val) && inp.value !== '') {
@@ -3228,7 +3541,6 @@
           const unit = inp.dataset.pcUnit;
           const diff = val - theo;
           const costDiff = diff * cost;
-          totalCostVar += costDiff;
           const varCell = inp.closest('tr').querySelector('[data-pc-var]');
           const costCell = inp.closest('tr').querySelector('[data-pc-cost-out]');
           const absDiff = Math.abs(diff);
@@ -3257,17 +3569,26 @@
       }
     };
     document.querySelectorAll('[data-pc-real]').forEach(inp => inp.addEventListener('input', recomputeProgress));
+    /* À l'aveugle par défaut : les colonnes théorique / écart / valeur restent
+     * masquées pendant la saisie (CSS), le propriétaire peut les révéler. */
+    const blindBox = document.querySelector('[data-pc-blind]');
+    blindBox?.addEventListener('change', () => {
+      document.querySelector('.st-pc-wrap')?.classList.toggle('st-pc-blind', blindBox.checked);
+    });
+    /* Valider n'écrit plus directement : on passe par la revue des écarts
+     * (cause probable + valeur MAD), qui seule applique via countStock. */
     document.querySelector('[data-stock-pc-validate]')?.addEventListener('click', () => {
-      const countRef = 'count-' + Date.now().toString(36);
+      const lines = [];
       document.querySelectorAll('[data-pc-real]').forEach(inp => {
         const v = parseFloat(inp.value);
         const it = items.find((x) => x.id === inp.dataset.pcReal);
-        if (!isNaN(v) && it) countStock(it, v, countRef);
+        if (isNaN(v) || inp.value === '' || !it) return;
+        const theo = parseFloat(inp.dataset.pcTheoVal) || 0;
+        const diff = Math.round((v - theo) * 1000) / 1000;
+        lines.push({ it, theo, counted: v, diff, costDiff: diff * (+it.costPerUnit || 0) });
       });
-      stSaveOverlay();
       closeTopModal();
-      window.Kiwi.toast(t('mCountToast', fmtMad(totalCostVar)), { type: 'success', duration: 4200 });
-      if (stPageActive) render();
+      openCountReview(lines);
     });
   }
 
@@ -4074,6 +4395,7 @@
     // Header actions
     H['stock-scan-invoice'] = () => openInvoiceScan();
     H['stock-physical-count'] = () => openPhysicalCount();
+    H['stock-count-sheet'] = () => openCountSheet();
     H['stock-add-item'] = () => openAddItem();
 
     // Item actions

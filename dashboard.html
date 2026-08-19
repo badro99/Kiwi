@@ -4796,6 +4796,11 @@
   .st-pc-prog-bar { flex: 1; height: 6px; background: var(--n-200); border-radius: 3px; overflow: hidden; }
   .st-pc-prog-fill { height: 100%; background: linear-gradient(90deg, var(--atlas), var(--mint)); border-radius: 3px; width: 0; transition: width 300ms ease-out; }
   .st-pc-prog-l { font-size: 12px; color: var(--n-600); font-family: var(--mono); }
+  .st-pc-blindrow { display: flex; align-items: flex-start; gap: 9px; margin: 0 0 12px; padding: 10px 12px; background: var(--paper-soft); border: 1px solid var(--n-200); border-radius: 10px; font-size: 12px; color: var(--n-600); cursor: pointer; }
+  .st-pc-blindrow input { margin-top: 2px; accent-color: var(--atlas); }
+  .st-pc-blindrow b { color: var(--ink); font-weight: 600; }
+  .st-pc-wrap.st-pc-blind [data-pc-theo], .st-pc-wrap.st-pc-blind [data-pc-var], .st-pc-wrap.st-pc-blind [data-pc-cost-out] { visibility: hidden; }
+  .st-rev-reason { font-size: 11.5px; color: var(--n-600); line-height: 1.45; max-width: 280px; }
 
   /* Quick order modal */
   .st-qo-qty { display: flex; align-items: center; gap: 8px; }
@@ -6175,7 +6180,7 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
 <script src="assets/day-report.js?v=5" defer fetchpriority="low"></script>
 <script src="assets/day-report-export.js?v=4" defer fetchpriority="low"></script>
 <script src="assets/day-report-dash.js?v=2" defer fetchpriority="low"></script>
-<script src="assets/stock.js?v=11" defer fetchpriority="low"></script>
+<script src="assets/stock.js?v=12" defer fetchpriority="low"></script>
 <script src="assets/planning-core.js?v=8" defer fetchpriority="low"></script>
 <link rel="stylesheet" href="assets/planning-ui.css?v=10">
 <script src="assets/team.js?v=277" defer fetchpriority="low"></script>

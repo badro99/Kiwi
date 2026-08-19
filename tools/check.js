@@ -915,6 +915,7 @@ section('Whole-project regressions');
     'invoice-receipt-test.mjs',
     'sale-invoice-test.mjs',
     'ai-routes-test.mjs',
+    'inventory-count-test.mjs',
   ];
   suites.forEach((name) => {
     const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', name)], { encoding: 'utf8' });
