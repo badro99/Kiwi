@@ -1423,6 +1423,37 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       color: var(--warn-ink);
     }
     .td-lock-banner svg { width: 16px; height: 16px; flex-shrink: 0; color: var(--warn-ink); }
+    /* Une commande qui attend une décision : même famille que la bannière de
+       verrou, mais elle porte un geste, donc elle mérite son bouton. */
+    .td-pending-banner {
+      background: var(--warn-bg);
+      border: 1px solid var(--warn-edge);
+      border-radius: var(--r-md);
+      padding: 11px 12px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .td-pending-copy { flex: 1 1 180px; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+    .td-pending-copy strong { font-size: 13px; font-weight: 650; color: var(--warn-ink); }
+    .td-pending-copy span { font-size: 12px; color: var(--ink-soft); }
+    .td-pending-go {
+      flex: 0 0 auto;
+      min-height: 44px;
+      padding: 0 16px;
+      border: 0;
+      border-radius: var(--r-sm);
+      background: var(--emerald);
+      color: var(--on-emerald);
+      font: inherit;
+      font-size: 13px;
+      font-weight: 650;
+      cursor: pointer;
+    }
+    .td-pending-go:active { transform: scale(0.97); }
+    .td-pending-go:disabled { opacity: .6; cursor: default; }
     .tc-lock-indicator {
       position: absolute; top: 6px; right: 6px;
       width: 22px; height: 22px; border-radius: 50%;
@@ -5030,6 +5061,37 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     const SLIDERS_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>';
 
     let menuItems = SV_DEMO ? [
+      {
+        id: 'm-fml-brunch',
+        cat: 'entrees',
+        name: 'Formule Brunch',
+        price: 89,
+        formula: {
+          slots: [
+            {
+              id: 'sl_pain',
+              label: 'Le pain',
+              min: 1,
+              max: 1,
+              choices: [
+                { itemId: 'm-018', extra: 0 },
+                { itemId: 'm-019', extra: 10 },
+              ]
+            },
+            {
+              id: 'sl_boisson',
+              label: 'La boisson',
+              min: 1,
+              max: 1,
+              choices: [
+                { itemId: 'm-023', extra: 0 },
+                { itemId: 'm-024', extra: 0 },
+                { itemId: 'm-027', extra: 5 },
+              ]
+            }
+          ]
+        }
+      },
       { id: 'm-001', cat: 'entrees',    name: 'Salade marocaine',     price: 45  },
       { id: 'm-002', cat: 'entrees',    name: 'Briouates au fromage', price: 60  },
       { id: 'm-003', cat: 'entrees',    name: 'Harira',               price: 35  },
@@ -6907,6 +6969,22 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         </div>
       ` : '';
 
+      /* ── UNE COMMANDE QUI ATTEND, ET LE SERVEUR QUI PEUT DIRE OUI ─────────
+       * L'app prévenait déjà (« nouvelle commande »), affichait déjà les
+       * lignes — et n'offrait aucun geste : il fallait traverser la salle
+       * pour qu'une autre paire de mains appuie au comptoir. Le bouton est
+       * ici, sur la table concernée. Refuser reste au comptoir. */
+      const pendingOrder = svPendingOrderFor(id);
+      const pendingBannerHtml = pendingOrder ? `
+        <div class="td-pending-banner">
+          <div class="td-pending-copy">
+            <strong>Commande ${esc(serviceOrderRef(pendingOrder))} en attente</strong>
+            <span>Arrivée par le menu en ligne — elle n'est pas encore partie en cuisine.</span>
+          </div>
+          <button class="td-pending-go" data-accept-order="${esc(pendingOrder.id)}">Accepter · envoyer en cuisine</button>
+        </div>
+      ` : '';
+
       $('#td-table-name').textContent = `${id} · ${employeeCoverCount(t.covers)}`;
       $('#td-table-meta').textContent = (t.status === 'khawya' || t.status === 'khlass')
         ? employeeTranslation(statusLabel[t.status])
@@ -6918,7 +6996,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       // Body
       const body = $('#td-body');
       if (order.length === 0) {
-        body.innerHTML = lockBannerHtml + `
+        body.innerHTML = pendingBannerHtml + lockBannerHtml + `
           <div class="td-empty">
             <i data-lucide="utensils"></i>
             <p>Aucun article, appuyez sur <strong>Prendre la commande</strong> pour ouvrir le menu.</p>
@@ -6974,7 +7052,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
           }
         }).join('');
 
-        body.innerHTML = `
+        body.innerHTML = pendingBannerHtml + `
           <div class="td-order-list">${itemsHTML}</div>
           <div class="td-summary">
             <div class="td-row"><span>Sous-total</span><span class="mono">${fmtMAD(total)}</span></div>
@@ -7263,6 +7341,63 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       } else if (action === 'merge-table') {
         openMergeTableModal(activeTableId);
       }
+    });
+
+    /* ── LA COMMANDE EN ATTENTE DE CETTE TABLE ────────────────────────────
+     * `serviceCanonicalOrders` porte déjà tout ce qui vit sur le plancher,
+     * statut compris. On ne garde que ce qui attend vraiment une décision. */
+    function svPendingOrderFor(tableId) {
+      let found = null;
+      serviceCanonicalOrders.forEach((order) => {
+        if (found) return;
+        if (String(order.table) !== String(tableId)) return;
+        if (order.status !== 'pending') return;
+        found = order;
+      });
+      return found;
+    }
+
+    /* ── ACCEPTER DEPUIS LA SALLE ─────────────────────────────────────────
+     * Le serveur engage la cuisine et signe de son nom : `server` voyage avec
+     * la transition, exactement comme quand le comptoir accepte. En cas
+     * d'échec, la commande RESTE en attente et le bouton revient — jamais de
+     * confirmation écrite d'un envoi qui n'a pas eu lieu. */
+    $('#td-body').addEventListener('click', (e) => {
+      const accBtn = e.target.closest('[data-accept-order]');
+      if (!accBtn || accBtn.disabled) return;
+      const orderId = accBtn.dataset.acceptOrder;
+      const slug = svMerchant();
+      if (!orderId || !slug) { toast('Commande introuvable'); return; }
+      accBtn.disabled = true;
+      accBtn.textContent = 'Envoi…';
+      fetch('/api/order/queue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        cache: 'no-store',
+        body: JSON.stringify({
+          merchant: slug,
+          id: orderId,
+          status: 'accepted',
+          server: (activeRole && (activeRole.fullName || activeRole.name)) || '',
+        }),
+      })
+        .then((r) => r.json().catch(() => null).then((j) => ({ ok: r.ok, j })))
+        .then(({ ok, j }) => {
+          if (!ok || !j || j.ok !== true) throw new Error((j && j.error) || 'refus');
+          const cached = serviceCanonicalOrders.get(orderId);
+          if (cached) cached.status = 'accepted';
+          serviceOrderStatus.set(orderId, 'accepted');
+          toast('Commande envoyée en cuisine');
+          renderTableDetail();
+        })
+        .catch((err) => {
+          accBtn.disabled = false;
+          accBtn.textContent = 'Accepter · envoyer en cuisine';
+          toast(String(err && err.message) === 'floor-table-required'
+            ? 'Cette table n\u2019est pas dans votre coupure'
+            : 'Envoi impossible — la commande reste en attente');
+        });
     });
 
     /* ---- qty buttons in table detail ---- */

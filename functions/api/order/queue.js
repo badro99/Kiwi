@@ -60,6 +60,25 @@ const FROM = {
   served:   ['ready', 'accepted'],
 };
 const ORDER_ID = /^ord-[a-z0-9-]{6,48}$/;
+
+/* ── QUI PEUT AUTORISER UNE COMMANDE ORDERPRO ──────────────────────────────
+ * Sortie en fonction pure pour qu'un test puisse l'exécuter telle quelle, et
+ * pour qu'une seule expression décide. Trois verrous, dans cet ordre :
+ *   • seul `accepted` passe — REFUSER un client engage la maison, ça reste au
+ *     comptoir, et aucun autre état ne se faufile ici ;
+ *   • la commande doit exister ET vivre sur une table — un « à emporter » n'a
+ *     aucune table par quoi le rattacher à une coupure, il reste à la caisse ;
+ *   • la table doit être dans la coupure de l'employé, la même condition que
+ *     pour prendre, annuler ou modifier une ligne. Rien de nouveau. */
+function floorMayAcceptOrder(b, orderRow, scope) {
+  if (!b || b.create === true) return false;
+  if (String((b && b.status) || '') !== 'accepted') return false;
+  const id = typeof b.id === 'string' ? b.id.trim() : '';
+  if (!ORDER_ID.test(id)) return false;
+  if (!orderRow || String(orderRow.mode || '') !== 'table') return false;
+  const table = normTable(orderRow.table_no);
+  return !!(table && scope && scope.allTables && scope.allTables.has(table));
+}
 const MAX_ROWS = 100;
 const PENDING_TTL_MS = 30 * 60 * 1000;
 const KITCHEN_TTL_MS = 6 * 60 * 60 * 1000;
@@ -505,10 +524,32 @@ export async function onRequestPost(context) {
     }
     const validAck = b && b.ackVoid && b.ackVoid.orderId && employeeAckTable && scope && scope.allTables.has(employeeAckTable);
 
-    if (!validCreate && !validOpen && !validClose && !validTransfer && !validMerge && !validVoid && !validAck && !validEdit) {
+    /* ── AUTORISER UNE COMMANDE ORDERPRO DEPUIS LA SALLE ───────────────────
+     * Une commande arrivée par QR ou par le web attendait la caisse, et le
+     * serveur ne pouvait rien en faire : l'app le PRÉVENAIT (« nouvelle
+     * commande »), lui affichait déjà les lignes dans l'addition de la table,
+     * puis le laissait traverser la salle pour qu'un autre appuie sur un
+     * bouton. Il peut désormais l'accepter lui-même.
+     *
+     * La condition est celle de toutes les autres actions de salle, pas une
+     * nouvelle : la table est dans sa coupure. Deux limites tenues exprès —
+     * seul `accepted` passe par ici (REFUSER un client engage la maison, ça
+     * reste au comptoir), et une commande à emporter n'a pas de table donc
+     * pas de rattachement possible à une coupure : elle reste à la caisse. */
+    let employeeStatusOrder = null;
+    if (b && b.create !== true && b.status === 'accepted' && typeof b.id === 'string' && ORDER_ID.test(b.id.trim()) && env.DB) {
+      try {
+        employeeStatusOrder = await env.DB.prepare(
+          'SELECT table_no, mode FROM orders WHERE id = ? AND merchant = ?'
+        ).bind(b.id.trim(), merchant).first();
+      } catch (_) {}
+    }
+    const validStatus = floorMayAcceptOrder(b, employeeStatusOrder, scope);
+
+    if (!validCreate && !validOpen && !validClose && !validTransfer && !validMerge && !validVoid && !validAck && !validEdit && !validStatus) {
       return json({ error: 'floor-table-required' }, 403);
     }
-    if (validCreate || validTransfer || validMerge || validVoid || validEdit) {
+    if (validCreate || validTransfer || validMerge || validVoid || validEdit || validStatus) {
       if (!b.server && employee.member) b.server = employeeName(employee.member);
     }
   }

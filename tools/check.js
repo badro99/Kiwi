@@ -888,6 +888,7 @@ section('Whole-project regressions');
        pas, et rien ne le disait — voir l'en-tête de la suite. */
     'entitlements-test.mjs',
     'formula-protocol-test.mjs',
+    'floor-accept-test.mjs',
     'api-boundaries-test.mjs',
     'security-regression-test.js',
     'sold-insights-test.js',
