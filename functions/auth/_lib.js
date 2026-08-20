@@ -776,6 +776,19 @@ export function employeeRoleOpensTill(value) {
   ]).has(role);
 }
 
+/* Le TABLEAU DE BORD est la surface du patron — l'argent, les marges, la paie.
+ * Un code de caissier ouvre la caisse, jamais le dashboard. Cette frontière se
+ * tient ICI, côté serveur : verifyAccountPin ne reconnaît que ces rôles, donc
+ * aucun navigateur ne peut « oublier » de filtrer. Les managers passent parce
+ * qu'ils ont leur propre vue restreinte (assets/roleGate.js). */
+export function employeeRoleOpensDashboard(value) {
+  const role = normEmployeeRole(value);
+  return new Set([
+    'proprietaire', 'owner', 'patron', 'direction',
+    'manager', 'management', 'gerant', 'gerante', 'admin',
+  ]).has(role);
+}
+
 /* Only an employee who works service AND currently has an open attendance
  * entry may use the operational order/event channels. Kitchen, dishwasher and
  * off-shift accounts remain confined to /api/employee (schedule, hours and
@@ -995,25 +1008,33 @@ export async function verifyAccountPin(request, env, pin) {
   const blocked = await limitCheck(request, env, 'pin:account', identity);
   if (blocked) return { ok: false, response: blocked };
 
-  let staff = null;
+  /* Plusieurs personnes peuvent partager quatre chiffres (le patron d'une
+   * boutique, la caissière d'une autre). On lit donc les CANDIDATS, puis on ne
+   * retient que le premier rôle habilité au dashboard : un code de caissier ne
+   * l'ouvre JAMAIS, même s'il est le seul enregistré. Avant ce filtre, le code
+   * de n'importe quel employé déverrouillait la surface du patron. */
+  let rows = [];
   try {
-    staff = await env.DB.prepare(
+    const r = await env.DB.prepare(
       `SELECT p.id, p.name, p.role, p.merchant
          FROM staff_pins p
          LEFT JOIN merchant_config c ON c.merchant = p.merchant
         WHERE p.pin = ? AND (c.account_id = ? OR p.merchant = ?)
         ORDER BY p.created_ts
-        LIMIT 1`
-    ).bind(pin, sess.aid, accSlug).first();
+        LIMIT 10`
+    ).bind(pin, sess.aid, accSlug).all();
+    rows = r.results || [];
   } catch (_) {
     /* Base pré-registre : on retombe sur la boutique d'origine du compte, ce qui
      * préserve le comportement d'avant les multi-établissements. */
     try {
-      staff = await env.DB.prepare(
-        'SELECT id, name, role, merchant FROM staff_pins WHERE merchant = ? AND pin = ? LIMIT 1'
-      ).bind(accSlug, pin).first();
+      const r = await env.DB.prepare(
+        'SELECT id, name, role, merchant FROM staff_pins WHERE merchant = ? AND pin = ? LIMIT 10'
+      ).bind(accSlug, pin).all();
+      rows = r.results || [];
     } catch (__) { return { ok: false, error: 'staff-unavailable', status: 503 }; }
   }
+  const staff = rows.find((row) => employeeRoleOpensDashboard(row.role)) || null;
 
   if (!staff) {
     await limitFail(request, env, 'pin:account', identity);

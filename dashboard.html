@@ -6374,9 +6374,15 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
     }).then((r) => {
       if (r.status === 401 || r.status === 403) return 'no';
       if (!r.ok) return null;
-      return r.json().then((d) => (d && d.ok && d.staff)
-        ? { name: String(d.staff.name || ''), access: accessTier(d.staff.role) }
-        : 'no');
+      return r.json().then((d) => {
+        if (!(d && d.ok && d.staff)) return 'no';
+        const access = accessTier(d.staff.role);
+        /* Ceinture et bretelles : verifyAccountPin ne renvoie plus que des rôles
+         * habilités au dashboard, mais un déploiement décalé ne doit jamais
+         * rouvrir la porte — le code d'une caissière ouvre la caisse, pas ici. */
+        if (access === 'staff') return 'no';
+        return { name: String(d.staff.name || ''), access };
+      });
     }).catch(() => null);
   }
 
@@ -6442,6 +6448,35 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
     }
     try { pinInput.focus(); } catch (_) {}
   }
+
+  /* « Il n'y a rien à taper. » Quand le compte est configuré (du personnel
+   * existe) mais qu'AUCUN code propriétaire ou manager n'existe nulle part —
+   * le cas du bug où la synchronisation d'équipe effaçait le code du patron —
+   * la porte le dit clairement au lieu de laisser deviner, et indique le
+   * chemin : passer par Kiwi pour (re)configurer le code d'accès. */
+  function hasDashboardCode() {
+    try {
+      if (allPins().some((p) => p.access !== 'staff')) return true;
+      const kc = window.KiwiConfig || {};
+      return [].concat(kc.seenPins || [], kc.pins || []).some((p) => accessTier(p && p.role) !== 'staff');
+    } catch (_) { return false; }
+  }
+  function maybeShowNoOwnerHelp() {
+    if (demosOn() || !helpEl || pinInput.value) return;
+    if (serverRosterSize() > 0 && !hasDashboardCode()) {
+      let lang = 'fr';
+      try { lang = localStorage.getItem('kiwiLang') || 'fr'; } catch (_) {}
+      const msg = {
+        fr: 'Aucun code propriétaire n\'est configuré pour ce compte. Connectez-vous avec Kiwi pour configurer votre code d\'accès.',
+        en: 'No owner code is set up for this account. Connect with Kiwi to set up your access code.',
+        ar: 'لا يوجد رمز مالك مضبوط لهذا الحساب. تواصلوا مع كيوي لضبط رمز الدخول.',
+      };
+      helpEl.textContent = msg[lang] || msg.fr;
+      helpEl.classList.add('is-error');
+    }
+  }
+  document.addEventListener('kiwi-account-pins-ready', maybeShowNoOwnerHelp);
+  setTimeout(maybeShowNoOwnerHelp, 1500);
 
   /* ── Personalization + a small control surface for the onboarding wizard
    *    (assets/onboarding.js). Once a client has completed setup we know

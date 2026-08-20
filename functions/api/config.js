@@ -511,13 +511,48 @@ export async function onRequestPost(context) {
     // Atomic replace. created_ts is offset per index so the GET's ORDER BY
     // created_ts preserves the submitted order.
     const base = Date.now();
-    const stmts = [env.DB.prepare('DELETE FROM staff_pins WHERE merchant = ?').bind(merchant)];
-    const tillPins = clean.filter((p) => employeeRoleOpensTill(p.role));
+    let tillPins = clean.filter((p) => employeeRoleOpensTill(p.role));
+    /* LE PATRON NE FIGURE PAS DANS LE ROSTER D'ÉQUIPE. La page Équipe
+     * (assets/team.js › publishPins) republie ses EMPLOYÉS à chaque
+     * modification — et un remplacement intégral effaçait alors le code
+     * propriétaire posé à l'onboarding ou depuis la console God mode : après
+     * chaque rafraîchissement, le patron disparaissait de staff_pins et seule
+     * sa caissière restait. Règle : une liste SANS propriétaire ne touche pas
+     * aux lignes propriétaire existantes ; une liste AVEC propriétaire (le
+     * wizard d'onboarding, la console) les remplace comme avant. */
+    const incomingHasOwner = tillPins.some((p) => accountOwnerRole(p.role));
+    const keepIds = [];
+    if (!incomingHasOwner) {
+      try {
+        const existing = await env.DB.prepare(
+          'SELECT id, role FROM staff_pins WHERE merchant = ?'
+        ).bind(merchant).all();
+        (existing.results || []).forEach((row) => {
+          if (accountOwnerRole(row.role)) keepIds.push(String(row.id));
+        });
+      } catch (_) {}
+    }
+    const keepMarks = keepIds.map(() => '?').join(',');
+    const stmts = [keepIds.length
+      ? env.DB.prepare(
+          'DELETE FROM staff_pins WHERE merchant = ? AND id NOT IN (' + keepMarks + ')'
+        ).bind(merchant, ...keepIds)
+      : env.DB.prepare('DELETE FROM staff_pins WHERE merchant = ?').bind(merchant)];
     tillPins.forEach((p, i) => {
       stmts.push(env.DB.prepare(
         'INSERT INTO staff_pins (id, merchant, pin, name, role, created_ts) VALUES (?,?,?,?,?,?)'
       ).bind('pin-' + crypto.randomUUID(), merchant, p.code, p.name, p.role, base + i));
     });
+    /* Le code conservé du patron gagne : une ligne d'équipe qui porterait les
+     * mêmes quatre chiffres créerait un doublon dont le rôle dépendrait de
+     * l'ordre de lecture. La comparaison reste ENTIÈREMENT dans SQL — aucun
+     * code ne remonte en JavaScript (voir config-pin-projection-test.mjs). */
+    if (keepIds.length) {
+      stmts.push(env.DB.prepare(
+        'DELETE FROM staff_pins WHERE merchant = ? AND id NOT IN (' + keepMarks + ') '
+        + 'AND EXISTS (SELECT 1 FROM staff_pins k WHERE k.id IN (' + keepMarks + ') AND k.pin = staff_pins.pin)'
+      ).bind(merchant, ...keepIds, ...keepIds));
+    }
     // Keep a private, exact employee-login roster beside the cashier PINs.
     // Replacing it in the same D1 batch means a deleted employee loses access
     // immediately and an employee can log in even when the larger Team document
@@ -543,7 +578,7 @@ export async function onRequestPost(context) {
     ).bind(merchant, JSON.stringify(access), base));
     try { await env.DB.batch(stmts); }
     catch (_) { return json({ error: 'write-failed' }, 500); }
-    result.pins = tillPins.length;
+    result.pins = tillPins.length + keepIds.length;
     result.employees = access.members.length;
   }
 
