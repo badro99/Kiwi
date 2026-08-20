@@ -4704,6 +4704,7 @@
   let miVenueFilter = 'cafeAtlas';
   let miSearch = '';
   let miCatFilter = 'all';
+  let miSubFilter = null; // sous-catégorie active DANS la sous-section ouverte ('__none' = non classés)
   let miView = 'grid';
   let miPeriod = 'midi';
   let miModsCollapsed = false;
@@ -4754,10 +4755,12 @@
       const cat = (d.cats || []).find((c) => c.id === it.catId);
       const stationId = (cat && cat.station) || kitchenId;
       const station = stations.find((s) => s.id === stationId);
+      const sub = cat && it.subId ? (cat.sub || []).find((s) => s.id === it.subId) : null;
       let cost = null;
       try { cost = window.KiwiCost?.itemCost?.(it.id); } catch (_) {}
       return {
         id: it.id, name: it.name, desc: it.desc || '', category: it.catId,
+        subId: sub ? sub.id : null, subLabel: sub ? sub.name : null,
         price: +it.price || 0, cost: cost == null ? null : +cost,
         unitsThisMonth: null, station: stationId,
         stationLabel: (station && station.name) || 'Cuisine',
@@ -4974,8 +4977,11 @@
       }
       miTab = t; renderMenu();
     };
-    H['mi-venue-filter'] = (el) => { miVenueFilter = el.dataset.venue || 'cafeAtlas'; miCatFilter = 'all'; miSearch = ''; renderMenu(); };
-    H['mi-cat-filter']   = (el) => { miCatFilter = el.dataset.cat || 'all'; miRenderTab1Body(); };
+    H['mi-venue-filter'] = (el) => { miVenueFilter = el.dataset.venue || 'cafeAtlas'; miCatFilter = 'all'; miSubFilter = null; miSearch = ''; renderMenu(); };
+    H['mi-cat-filter']   = (el) => { miCatFilter = el.dataset.cat || 'all'; miSubFilter = null; miRenderTab1Body(); };
+    H['mi-sub-filter']   = (el) => { miSubFilter = el.dataset.sub || null; miRenderTab1Body(); };
+    H['mi-add-subcat']   = (_el, cat) => miOpenAddSubcatModal(cat || miCatFilter);
+    H['mi-classify-subs'] = (_el, cat) => miOpenClassifyModal(cat || miCatFilter);
     H['mi-view']         = (el) => { miView = el.dataset.view || 'grid'; miRenderTab1Body(); };
     H['mi-period']       = (el) => { miPeriod = el.dataset.period || 'midi'; renderMenu(); };
     H['mi-add-item']     = () => miLiveStore()?.openItem ? miLiveStore().openItem() : miOpenItemModal(null);
@@ -5147,7 +5153,7 @@
     return `
       <div class="mi-card" data-mi-card="${it.id}" data-action="mi-edit-item" data-arg="${it.id}">
         <div class="mi-card-top">
-          <span class="mi-card-cat">${(MI_CATS[it.category]||{}).emoji||''} ${miCatLabel(it.category)}</span>
+          <span class="mi-card-cat">${(MI_CATS[it.category]||{}).emoji||''} ${miCatLabel(it.category)}${it.subLabel ? ` · ${eqEsc(it.subLabel)}` : ''}</span>
           <span class="mi-tags">${miTagPills(it.tags)}</span>
         </div>
         <div class="mi-card-name"><span class="mi-card-emoji" aria-hidden="true">${miItemEmoji(it)}</span>${eqEsc(it.name)}</div>
@@ -5169,9 +5175,19 @@
   function miFilteredItems() {
     let list = miItems();
     if (miCatFilter !== 'all') list = list.filter(i => i.category === miCatFilter);
+    if (miCatFilter !== 'all' && miSubFilter) {
+      list = miSubFilter === '__none' ? list.filter(i => !i.subId) : list.filter(i => i.subId === miSubFilter);
+    }
     const q = miSearch.trim().toLowerCase();
     if (q) list = list.filter(i => i.name.toLowerCase().includes(q));
     return list;
+  }
+  /* Sous-catégories déclarées sur une sous-section du magasin live (Cookies,
+   * Gâteaux… dans Sweets). Vide pour les menus de démo, qui n'en portent pas. */
+  function miSubsFor(catId) {
+    const d = miLiveData();
+    const cat = d && (d.cats || []).find(c => c.id === catId);
+    return cat ? (cat.sub || []) : [];
   }
   /* Subsection action bar — shown when one subsection is selected, hosts the
    * "reroute the whole subsection" control. */
@@ -5188,6 +5204,99 @@
         <div class="mi-subbar-info">Sous-section <b>${eqEsc(miCatLabel(miCatFilter))}</b> · ${inSub.length} article${inSub.length > 1 ? 's' : ''} · ${routing}</div>
         <button class="btn-slim" data-action="mi-reroute-sub" data-arg="${miCatFilter}">${miSvg('compare', 13)}<span>Rerouter la sous-section</span></button>
       </div>`;
+  }
+  /* Rangée des sous-catégories de la sous-section ouverte — 36 sweets en
+   * une grille plate ne se lisent pas ; Cookies / Gâteaux / Cheesecakes si. */
+  function miSubChipsHtml() {
+    if (miCatFilter === 'all' || !miLiveStore()) return '';
+    const subs = miSubsFor(miCatFilter);
+    const all = miItems().filter(i => i.category === miCatFilter);
+    if (!subs.length && all.length < 2) return '';
+    const none = all.filter(i => !i.subId).length;
+    const chips = [
+      `<button class="mi-subchip${!miSubFilter ? ' on' : ''}" data-action="mi-sub-filter" data-sub="">Tout · ${all.length}</button>`,
+      ...subs.map(s => {
+        const n = all.filter(i => i.subId === s.id).length;
+        return `<button class="mi-subchip${miSubFilter === s.id ? ' on' : ''}" data-action="mi-sub-filter" data-sub="${s.id}">${eqEsc(s.name)} · ${n}</button>`;
+      }),
+    ];
+    if (subs.length && none) chips.push(`<button class="mi-subchip${miSubFilter === '__none' ? ' on' : ''}" data-action="mi-sub-filter" data-sub="__none">À classer · ${none}</button>`);
+    chips.push(`<button class="mi-subchip add" data-action="mi-add-subcat" data-arg="${miCatFilter}">+ Sous-catégorie</button>`);
+    if (subs.length && none) chips.push(`<button class="mi-subchip add" data-action="mi-classify-subs" data-arg="${miCatFilter}">${miSvg('edit', 12)} Classer ${none} article${none > 1 ? 's' : ''}</button>`);
+    return `<div class="mi-subchips">${chips.join('')}</div>`;
+  }
+  /* Grille groupée par sous-catégorie — un bandeau par groupe, les non
+   * classés en fin de page. Grille plate quand il n'y a rien à grouper. */
+  function miGridHtml(list) {
+    const flat = () => `<div class="mi-grid">${list.map(miItemCard).join('')}</div>`;
+    if (miCatFilter === 'all' || miSubFilter || miSearch.trim()) return flat();
+    const subs = miSubsFor(miCatFilter);
+    if (!subs.length) return flat();
+    const groups = subs
+      .map(s => ({ id: s.id, label: s.name, items: list.filter(i => i.subId === s.id) }))
+      .filter(g => g.items.length);
+    const rest = list.filter(i => !i.subId || !subs.some(s => s.id === i.subId));
+    if (rest.length) groups.push({ id: '__none', label: 'Sans sous-catégorie', items: rest, muted: true });
+    if (groups.length < 2) return flat();
+    return groups.map(g => `
+      <div class="mi-sub-head${g.muted ? ' muted' : ''}" data-action="mi-sub-filter" data-sub="${g.id}" role="button" tabindex="0">
+        <span>${eqEsc(g.label)}</span><small>${g.items.length} article${g.items.length > 1 ? 's' : ''}</small>
+      </div>
+      <div class="mi-grid">${g.items.map(miItemCard).join('')}</div>`).join('');
+  }
+  /* Créer une sous-catégorie dans la sous-section ouverte (magasin live). */
+  function miOpenAddSubcatModal(catId) {
+    const S = miLiveStore();
+    if (!S || !catId || catId === 'all') return;
+    const m = Kiwi.modal({
+      tag: 'SOUS-CATÉGORIE', title: `Nouvelle sous-catégorie · ${eqEsc(miCatLabel(catId))}`, width: 440,
+      body: `
+        <div class="kf-group"><label class="kf-label">Nom de la sous-catégorie</label><input class="kf-input" data-msc="name" placeholder="Ex. Cookies · Gâteaux · Classics"/></div>
+        <div class="kf-help">Les articles se rangent ensuite via « Classer » ou depuis la fiche de chaque article.</div>`,
+      foot: '<button class="kb ghost" data-mi-cancel>Annuler</button><button class="eq-cta-gradient" data-mi-save>Créer</button>',
+    });
+    m.el.querySelector('[data-mi-cancel]').onclick = m.close;
+    m.el.querySelector('[data-msc="name"]').focus();
+    m.el.querySelector('[data-mi-save]').onclick = () => {
+      const f = m.el.querySelector('[data-msc="name"]');
+      const name = f.value.trim();
+      if (!name) { f.classList.add('eq-invalid'); return; }
+      S.addSubcategory(catId, name);
+      m.close();
+      miSubFilter = null;
+      miRenderTab1Body();
+      Kiwi.toast(`Sous-catégorie « ${name} » créée`, { type: 'success', desc: 'Classez-y vos articles avec « Classer ».' });
+    };
+  }
+  /* Classement en masse — tous les articles non classés de la sous-section
+   * sur un seul écran, un select par article, une écriture par changement. */
+  function miOpenClassifyModal(catId) {
+    const S = miLiveStore();
+    if (!S || !catId || catId === 'all') return;
+    const subs = miSubsFor(catId);
+    if (!subs.length) { miOpenAddSubcatModal(catId); return; }
+    const pending = miItems().filter(i => i.category === catId && !i.subId);
+    if (!pending.length) { Kiwi.toast('Tout est classé', { type: 'success', desc: 'Aucun article sans sous-catégorie.' }); return; }
+    const opts = subs.map(s => `<option value="${s.id}">${eqEsc(s.name)}</option>`).join('');
+    const m = Kiwi.modal({
+      tag: 'CLASSEMENT', title: `Classer les articles · ${eqEsc(miCatLabel(catId))}`, width: 560,
+      body: `
+        <div class="kf-help" style="margin-bottom:10px;">${pending.length} article${pending.length > 1 ? 's' : ''} sans sous-catégorie. Chaque choix est enregistré immédiatement.</div>
+        <div class="mi-classify-list">${pending.map(it => `
+          <div class="mi-classify-row" data-mcr="${it.id}">
+            <span class="mi-classify-name">${eqEsc(it.name)}</span>
+            <select class="kf-input" data-mc-sub="${it.id}"><option value="">— Choisir —</option>${opts}</select>
+          </div>`).join('')}</div>`,
+      foot: '<button class="eq-cta-gradient" data-mi-done>Terminé</button>',
+    });
+    m.el.addEventListener('change', (e) => {
+      const sel = e.target.closest('[data-mc-sub]');
+      if (!sel || !sel.value) return;
+      S.updateItem(sel.dataset.mcSub, { subId: sel.value });
+      const row = sel.closest('[data-mcr]');
+      if (row) { row.classList.add('done'); }
+    });
+    m.el.querySelector('[data-mi-done]').onclick = () => { m.close(); miRenderTab1Body(); };
   }
   function miTab1Html() {
     const venue = miMenuVenue();
@@ -5225,9 +5334,7 @@
       ? 'Sous-section vide, ajoutez un article avec « Nouvel article ».'
       : 'Aucun article pour cette recherche.';
     const body = list.length
-      ? (miView === 'grid'
-        ? `<div class="mi-grid">${list.map(miItemCard).join('')}</div>`
-        : miListHtml(list))
+      ? (miView === 'grid' ? miGridHtml(list) : miListHtml(list))
       : `<div style="text-align:center;color:var(--n-500);padding:36px;font-size:13px;">${emptyMsg}</div>`;
 
     /* Modifier option groups — polished cards instead of a flat table.
@@ -5283,6 +5390,7 @@
         </div>
         ${catBar}
         ${miSubbarHtml()}
+        ${miSubChipsHtml()}
         ${body}
       </div>
 
@@ -5391,7 +5499,7 @@
       return `
         <tr data-mi-card="${it.id}" data-action="mi-edit-item" data-arg="${it.id}">
           <td><b style="font-weight:600;"><span class="mi-card-emoji" aria-hidden="true">${miItemEmoji(it)}</span>${eqEsc(it.name)}</b></td>
-          <td>${(MI_CATS[it.category]||{}).emoji||''} ${miCatLabel(it.category)}</td>
+          <td>${(MI_CATS[it.category]||{}).emoji||''} ${miCatLabel(it.category)}${it.subLabel ? ` <span class="mi-list-sub">· ${eqEsc(it.subLabel)}</span>` : ''}</td>
           <td class="mono">${eqFrInt(it.price)} MAD</td>
           <td class="mono">${it.cost == null ? '—' : eqFrInt(it.cost) + ' MAD'}</td>
           <td>${pct == null ? '—' : `<span class="mi-card-margin ${miMarginClass(pct)}">${Math.round(pct)} %</span>`}</td>

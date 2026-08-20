@@ -38,11 +38,16 @@ const TRUTH = path.join(ROOT, 'assets', 'agent-truth.js');
 function makeCtx(opts) {
   opts = opts || {};
   const noop = () => {};
-  const el = () => ({
-    dataset: {}, style: {}, classList: { add: noop, remove: noop, toggle: noop, contains: () => false },
-    addEventListener: noop, removeEventListener: noop, appendChild: noop, querySelector: () => null,
-    querySelectorAll: () => [], setAttribute: noop, getAttribute: () => null, textContent: '', innerHTML: '',
-  });
+  const el = () => {
+    const e = {
+      dataset: {}, style: {}, classList: { add: noop, remove: noop, toggle: noop, contains: () => false },
+      addEventListener: noop, removeEventListener: noop, appendChild: noop, insertAdjacentHTML: noop,
+      querySelectorAll: () => [], setAttribute: noop, getAttribute: () => null, textContent: '', innerHTML: '',
+      focus: noop, scrollTop: 0, scrollHeight: 0,
+    };
+    e.querySelector = () => e;
+    return e;
+  };
   const document = {
     readyState: 'complete', documentElement: el(), head: el(), body: el(),
     createElement: () => el(), querySelector: () => null, querySelectorAll: () => [],
@@ -929,6 +934,38 @@ section('Collaboration · draft + tools + corroboration');
   T.noteFacts(T.draftFacts({ text: '<b>Marge</b> de 33 %', stats: [{ l: 'CA', v: '12 400 MAD', h: '' }] }));
   const dr = w.KiwiAgentRedact('Votre CA atteint 12 400 MAD avec une marge de 33 %.', 'fr');
   t('figures from the deterministic draft are corroborated (money and percent)', dr.redacted === 0, dr.text);
+
+  /* open-assistant handler: drawer opens without ReferenceError */
+  let drawerCalled = null;
+  const wUi = load({
+    globals: {
+      Kiwi: {
+        handlers: {},
+        drawer: (cfg) => {
+          drawerCalled = cfg;
+          const mockEl = () => {
+            const m = {
+              dataset: {}, style: {}, classList: { add: () => {}, remove: () => {} },
+              addEventListener: () => {}, insertAdjacentHTML: () => {},
+              querySelectorAll: () => [], querySelector: () => mockEl(),
+              focus: () => {}, scrollTop: 0, scrollHeight: 0,
+            };
+            return m;
+          };
+          return { el: mockEl(), close: () => {} };
+        }
+      }
+    }
+  });
+  t('open-assistant registered into Kiwi.handlers', typeof wUi.Kiwi.handlers['open-assistant'] === 'function');
+  let openErr = null;
+  try {
+    wUi.Kiwi.handlers['open-assistant']();
+  } catch (e) {
+    openErr = e;
+  }
+  t('open-assistant executes cleanly without error', openErr === null, openErr ? openErr.stack : '');
+  t('drawer received a valid non-empty title', drawerCalled && typeof drawerCalled.title === 'string' && drawerCalled.title.length > 0, JSON.stringify(drawerCalled && drawerCalled.title));
 }
 
 /* ── summary ──────────────────────────────────────────────────────────────── */

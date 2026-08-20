@@ -1283,6 +1283,7 @@
     try { c = window.KiwiFeatureTruth && window.KiwiFeatureTruth.context ? window.KiwiFeatureTruth.context({ role: accessTier() }) : null; } catch (_) {}
     const label = (B.tradeLabel || B.trade || (L === 'en' ? 'business' : L === 'ar' ? 'النشاط' : 'activité'));
     const mode = c && c.aiMode || 'ask';
+    const title = L === 'en' ? `Kiwi copilot · ${label}` : L === 'ar' ? `مساعد Kiwi · ${label}` : `Copilote Kiwi · ${label}`;
     const privacy = mode === 'cloud'
       ? (L === 'en' ? 'Server AI on: a free-text question and only the business context it needs are sent securely to Kiwi. Your figures are computed here. The assistant remains read-only.' : L === 'ar' ? 'الذكاء الاصطناعي عبر الخادم مفعّل: يُرسل السؤال الحر والسياق الضروري فقط بأمان إلى Kiwi. أرقامك تُحسب هنا. يبقى المساعد للقراءة فقط.' : 'IA serveur activée : une question libre et le seul contexte nécessaire sont envoyés de façon sécurisée à Kiwi. Vos chiffres sont calculés ici. Le copilote reste en lecture seule.')
       : mode === 'deterministic'

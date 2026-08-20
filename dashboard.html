@@ -3589,6 +3589,25 @@
   .mi-subbar-info { font-size: 12.5px; color: var(--n-600); }
   .mi-subbar-info b { color: var(--ink); font-weight: 600; }
 
+  /* ── Tab 1 · sous-catégories dans la sous-section ouverte ─────────────── */
+  .mi-subchips { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 13px; }
+  .mi-subchip { border: 1px solid var(--n-200); background: var(--surface); color: var(--n-600); border-radius: 999px; padding: 5px 12px; font-family: var(--sans); font-size: 12px; font-weight: 500; cursor: pointer; transition: border-color 140ms, background-color 140ms, color 140ms; }
+  .mi-subchip:hover { border-color: var(--atlas); color: var(--atlas); }
+  .mi-subchip.on { background: var(--atlas); border-color: var(--atlas); color: #fff; }
+  .mi-subchip.add { border-style: dashed; display: inline-flex; align-items: center; gap: 5px; }
+  .mi-sub-head { display: flex; align-items: baseline; gap: 9px; margin: 16px 0 9px; cursor: pointer; }
+  .mi-sub-head:first-child { margin-top: 0; }
+  .mi-sub-head span { font-size: 13.5px; font-weight: 650; color: var(--ink); }
+  .mi-sub-head small { font-size: 11.5px; color: var(--n-500); }
+  .mi-sub-head::after { content: ''; flex: 1; height: 1px; background: var(--n-200); align-self: center; }
+  .mi-sub-head.muted span { color: var(--n-500); font-weight: 550; }
+  .mi-list-sub { color: var(--n-500); font-size: 12px; }
+  .mi-classify-list { display: flex; flex-direction: column; gap: 8px; max-height: 46vh; overflow-y: auto; }
+  .mi-classify-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 7px 10px; border: 1px solid var(--n-200); border-radius: 10px; transition: opacity 200ms, border-color 200ms; }
+  .mi-classify-row select { width: 190px; flex: none; }
+  .mi-classify-row.done { opacity: 0.45; border-color: var(--atlas); }
+  .mi-classify-name { font-size: 13px; font-weight: 550; color: var(--ink); }
+
   /* ── Tab 1 · item cards (grid) ────────────────────────────────────────── */
   .mi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(236px, 1fr)); gap: 12px; }
   .mi-card { background: var(--surface); border: 1px solid var(--n-200); border-radius: 12px; padding: 14px 15px; cursor: pointer; transition: border-color 140ms, transform 140ms, box-shadow 140ms, opacity 280ms; display: flex; flex-direction: column; }
@@ -6035,7 +6054,7 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
      Une URL neuve rate le cache et part au réseau tout de suite. À incrémenter
      à CHAQUE modification de ces deux fichiers, et à recopier à l'identique
      dans la liste de pré-cache de kiwi-sw.js. -->
-<script src="assets/venues.js?v=17" defer></script>
+<script src="assets/venues.js?v=18" defer></script>
 <!-- The pressing till and dashboard share a tenant-scoped operational snapshot. -->
 <script src="assets/pressing-ops.js?v=7" defer></script>
 <script src="assets/pressing-garment-icons.js?v=2" defer></script>
@@ -6089,7 +6108,7 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
      loaded before the assistant router; the probed modules may load later and
      are resolved lazily at question time. -->
 <script src="assets/agent-truth.js?v=3" defer fetchpriority="low"></script>
-<script src="assets/agent.js?v=9" defer fetchpriority="low"></script>
+<script src="assets/agent.js?v=10" defer fetchpriority="low"></script>
 <script src="assets/agent-skin.js?v=4" defer fetchpriority="low"></script>
 <script src="assets/accounting.js" defer fetchpriority="low"></script>
 <script src="assets/pages.js" defer fetchpriority="low"></script>
