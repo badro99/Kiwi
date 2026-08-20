@@ -1139,7 +1139,9 @@
       };
     }
     function close() { ov.remove(); }
-    function toast(msg) { try { if (window.Kiwi && Kiwi.toast) Kiwi.toast(msg); } catch (_) {} }
+    /* La caisse n'a pas window.Kiwi.toast : sans repli, chaque « Tester » du
+       modal serait muet au comptoir — la surface qui s'en sert vraiment. */
+    function toast(msg) { try { if (window.Kiwi && Kiwi.toast) Kiwi.toast(msg); else fallbackNotice(msg); } catch (_) {} }
 
     function validIp(s) {
       if (!s) return true;
@@ -1231,7 +1233,7 @@
         '<td><span class="kpr-st-badge receipt">Reçus clients</span></td>' +
         '<td><select class="kpr-st-sel" data-station-id="caisse">' + caisseOpts + '</select></td>' +
         '<td><button type="button" class="kpr-btn kpr-test kpr-st-test" data-test-station="caisse" data-station-title="Caisse">Tester</button> ' +
-        '<button type="button" class="kpr-btn kpr-test" id="kpr-drawer-test">Tester le tiroir</button></td>' +
+        '<button type="button" class="kpr-btn kpr-test" id="kpr-drawer-test" style="white-space:nowrap">Tester le tiroir</button></td>' +
         '</tr>');
 
       prepStations.forEach(function (st) {
