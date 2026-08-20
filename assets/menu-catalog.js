@@ -2156,7 +2156,14 @@
           expectedUpdatedTs: empty && c.explicitEmpty ? c.updatedTs : undefined,
         }),
       }).then(function (r) {
-        return r && r.ok ? r.json() : null;
+        if (r && r.ok) return r.json();
+        return (r && r.json ? r.json().catch(function () { return null; }) : Promise.resolve(null))
+          .then(function (err) {
+            if (window.Kiwi?.toast) window.Kiwi.toast('Échec de synchronisation de la carte', {
+              type: 'warn', force: true, desc: (err && err.error) || 'Publication refusée',
+            });
+            return null;
+          });
       }).then(function (j) {
         if (!j || !j.ok) return;
         c.updatedTs = +j.updatedTs || c.updatedTs;

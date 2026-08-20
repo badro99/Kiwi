@@ -26,7 +26,7 @@
 //     /api/config POST). No session / no DB ⇒ neutral no-op (503) so static hosts
 //     (GitHub Pages, local) are unaffected.
 
-import { json, readSession, readCookie, SESS_COOKIE, slugMerchant } from '../auth/_lib.js';
+import { json, readSession, readCookie, SESS_COOKIE, slugMerchant, isOperator } from '../auth/_lib.js';
 import { storeSuspended, storeSubscriptionPending } from './_private.js';
 
 const str = (v, n) => String(v == null ? '' : v).slice(0, n);
@@ -291,6 +291,26 @@ async function resolveMerchant(env, aid, accSlug, wanted, strict) {
   return strict ? '' : accSlug;
 }
 
+/* God Mode may edit a menu only from the scoped client dashboard the console
+ * opened. A named operator cookie alone is not enough: the same-origin Referer
+ * must name the identical merchant and that merchant must already exist in the
+ * store registry. This keeps an ordinary operator tab, a typo and a hand-built
+ * cross-tenant POST from creating or overwriting an unrelated menu row. */
+async function scopedOperatorMerchant(request, env, wanted) {
+  const merchant = str(wanted, 80).trim();
+  if (!merchant || !(await isOperator(request, env))) return '';
+  let ref;
+  try {
+    ref = new URL(request.headers.get('Referer') || '');
+    const here = new URL(request.url);
+    if (ref.origin !== here.origin || ref.searchParams.get('merchant') !== merchant || ref.searchParams.get('op') !== '1') return '';
+  } catch (_) { return ''; }
+  try {
+    const row = await env.DB.prepare('SELECT merchant FROM merchant_config WHERE merchant = ?').bind(merchant).first();
+    return row ? merchant : '';
+  } catch (_) { return ''; }
+}
+
 // Is the Order Pro add-on switched on for this merchant?
 //
 // NOTE this inverts the usual merchant_config rule. Everywhere else a MISSING
@@ -321,12 +341,17 @@ export async function onRequestGet(context) {
   const mine = url.searchParams.get('mine') === '1';
   if (mine) {
     if (!env.DB || !env.AUTH_SECRET) return json({ merchant: '', menu: null, shop: null, unreachable: true });
+    const operatorMerchant = await scopedOperatorMerchant(request, env, merchant);
     let sess = null;
-    try { sess = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET); } catch (_) {}
-    if (!sess || !sess.aid) return json({ error: 'unauthorized' }, 401);
-    const acc = await env.DB.prepare('SELECT business FROM accounts WHERE id = ?').bind(sess.aid).first();
-    if (!acc) return json({ error: 'unauthorized' }, 401);
-    merchant = await resolveMerchant(env, sess.aid, slugMerchant(acc.business), merchant);
+    if (operatorMerchant) {
+      merchant = operatorMerchant;
+    } else {
+      try { sess = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET); } catch (_) {}
+      if (!sess || !sess.aid) return json({ error: 'unauthorized' }, 401);
+      const acc = await env.DB.prepare('SELECT business FROM accounts WHERE id = ?').bind(sess.aid).first();
+      if (!acc) return json({ error: 'unauthorized' }, 401);
+      merchant = await resolveMerchant(env, sess.aid, slugMerchant(acc.business), merchant);
+    }
 
     let row = null;
     try {
@@ -400,19 +425,22 @@ export async function onRequestPost(context) {
   const { request, env } = context;
   if (!env.DB || !env.AUTH_SECRET) return json({ error: 'not-configured' }, 503);
 
-  const sess = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET);
-  if (!sess || !sess.aid) return json({ error: 'unauthorized' }, 401);
-
-  const acc = await env.DB.prepare('SELECT business FROM accounts WHERE id = ?').bind(sess.aid).first();
-  if (!acc) return json({ error: 'unauthorized' }, 401);
-  const accSlug = slugMerchant(acc.business);
-
   let body;
   try { body = await request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
 
-  // Le corps peut nommer LEQUEL des établissements de ce compte publie — refusé
-  // et rabattu sur le slug du compte si la base ne confirme pas la propriété.
-  const merchant = await resolveMerchant(env, sess.aid, accSlug, body && body.merchant, true);
+  const operatorMerchant = await scopedOperatorMerchant(request, env, body && body.merchant);
+  let acc = null;
+  let merchant = operatorMerchant;
+  if (!merchant) {
+    const sess = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET);
+    if (!sess || !sess.aid) return json({ error: 'unauthorized' }, 401);
+    acc = await env.DB.prepare('SELECT business FROM accounts WHERE id = ?').bind(sess.aid).first();
+    if (!acc) return json({ error: 'unauthorized' }, 401);
+    const accSlug = slugMerchant(acc.business);
+    // Le corps peut nommer LEQUEL des établissements de ce compte publie — refusé
+    // si la base ne confirme pas la propriété.
+    merchant = await resolveMerchant(env, sess.aid, accSlug, body && body.merchant, true);
+  }
   if (!merchant) return json({ error: 'merchant-unknown' }, 404);
   if (await storeSubscriptionPending(env, merchant)) {
     return json({ error: 'subscription-required', merchant }, 402);
@@ -420,7 +448,8 @@ export async function onRequestPost(context) {
 
   // The display name defaults to the account's own business; a client may send a
   // trimmed override but never another merchant's identity (slug is session-bound).
-  const name = String((body && body.name) || acc.business || '').trim().slice(0, 80) || (acc.business || '');
+  const accountBusiness = (acc && acc.business) || '';
+  const name = String((body && body.name) || accountBusiness).trim().slice(0, 80) || accountBusiness;
   const type = String((body && body.type) || '').trim().slice(0, 24);
 
   // One row, two payload shapes — a restaurant publishes its carte, a boutique

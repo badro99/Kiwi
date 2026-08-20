@@ -85,6 +85,7 @@ const R = {
      drapeaux de modules et les PIN de caisse à un tableau de bord ou à une
      caisse appairée. C'est par là que la fuite inter-locataires est sortie. */
   appConfig: await import(path.join(ROOT, 'functions/api/config.js')),
+  menu: await import(path.join(ROOT, 'functions/api/menu.js')),
 };
 
 /* ── amorce ───────────────────────────────────────────────────────────────── */
@@ -189,12 +190,12 @@ const AS = {
   none: '',
 };
 
-async function call(mod, method, url, { as = 'operator', body } = {}) {
+async function call(mod, method, url, { as = 'operator', body, referer } = {}) {
   const fn = mod['onRequest' + method[0] + method.slice(1).toLowerCase()];
   if (!fn) throw new Error('no handler ' + method);
   const req = new Request('https://kiwi.test' + url, {
     method,
-    headers: { 'Content-Type': 'application/json', Cookie: AS[as] },
+    headers: Object.assign({ 'Content-Type': 'application/json', Cookie: AS[as] }, referer ? { Referer: referer } : {}),
     body: (method === 'GET' || method === 'HEAD') ? null : JSON.stringify(body || {}),
   });
   const res = await fn({ env, request: req });
@@ -279,6 +280,42 @@ G('1 · Droits — un client, un caissier, un gérant n’entrent jamais');
   ok(legacy.status === 403, 'ancien cookie opérateur sans identité : révoqué');
   const deleted = await call(R.sales, 'GET', '/api/admin/sales?merchant=amira-boutique', { as:'deletedOperator' });
   ok(deleted.status === 403, 'cookie d’un opérateur absent de la base : révoqué');
+}
+
+/* Menu setup is a real God Mode write, but only inside the exact scoped client
+ * dashboard opened by the console. This is the Browse pre-launch setup path. */
+G('1b · Carte client — God Mode sauvegarde uniquement sa portée confirmée');
+{
+  const ref = 'https://kiwi.test/dashboard?op=1&merchant=amira-cafe';
+  const data = {
+    cats: [{ id:'cat_1', name:'Sweets', sub:[{ id:'sub_1', name:'Cookies' }] }],
+    items: [{ id:'it_1', name:'Brookie', price:30, catId:'cat_1', subId:'sub_1', avail:true }],
+    stations: [], opts: [], kitchenId:'',
+  };
+  const saved = await call(R.menu, 'POST', '/api/menu', {
+    referer: ref, body: { merchant:'amira-cafe', name:'Amira Café', type:'cafe', data },
+  });
+  ok(saved.status === 200 && saved.json.ok && saved.json.items === 1,
+    'le dashboard God Mode ciblé publie la carte du client', JSON.stringify(saved.json));
+
+  const read = await call(R.menu, 'GET', '/api/menu?mine=1&merchant=amira-cafe', { referer: ref });
+  ok(read.status === 200 && read.json.menu.items[0].name === 'Brookie' && read.json.menu.cats[0].sub[0].name === 'Cookies',
+    'un autre navigateur relit articles et sous-catégories depuis le serveur');
+
+  const unscoped = await call(R.menu, 'POST', '/api/menu', {
+    body: { merchant:'amira-cafe', name:'Amira Café', type:'cafe', data },
+  });
+  ok(unscoped.status === 401, 'le cookie opérateur seul ne peut pas écrire une carte hors dashboard ciblé');
+
+  const wrongTarget = await call(R.menu, 'POST', '/api/menu', {
+    referer: ref, body: { merchant:'snack-rif', name:'Snack Rif', type:'fastfood', data },
+  });
+  ok(wrongTarget.status === 401, 'la portée Amira Café ne peut pas être réutilisée pour écrire chez un autre client');
+
+  const sharedGate = await call(R.menu, 'POST', '/api/menu', {
+    as:'staff', referer:ref, body:{ merchant:'amira-cafe', name:'Amira Café', type:'cafe', data },
+  });
+  ok(sharedGate.status === 401, 'le simple accès équipe ne peut jamais publier la carte d’un client');
 }
 
 /* ═══ 2 · RECHERCHE ════════════════════════════════════════════════════════ */

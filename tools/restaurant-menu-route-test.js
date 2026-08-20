@@ -7,6 +7,10 @@ const vm = require('vm');
 
 const source = fs.readFileSync('assets/restaurant-menu-workspace.js', 'utf8');
 
+assert.ok(source.includes('data-action="rmw-sub-add"'), 'the restaurant workspace exposes subsection creation');
+assert.ok(!source.includes("if(!subs.length&&all.length<2)return ''"),
+  'subsection creation must stay visible even in an empty or partially restored section');
+
 /* Builds an isolated DOM/window stand-in and evaluates the workspace inside it.
  * `venueType` drives isRestaurant(); the returned handle exposes the body class
  * set, the pending timer queue and a counter of pageShell('menu') calls, which
