@@ -42,6 +42,11 @@ shell.forEach((url) => ok(`${url} exists`, onDisk(url.split('?')[0].slice(1))));
    d'un commerçant alors que le code déployé, lui, était bon. */
 const docs = ['dashboard.html', 'kiwi-caisse.html', 'kiwi-serveur.html', 'kiwi-cuisine.html']
   .map(read).join('\n');
+const workerVersion = (sw.match(/var CACHE = 'kiwi-app-v(\d+)'/) || [])[1];
+['assets/dashboard-pwa.js', 'assets/caisse-pwa.js', 'assets/employee-live.js'].forEach((file) => {
+  ok(`${file} registers the current worker version`, !!workerVersion && read(file).includes(`/kiwi-sw.js?v=${workerVersion}`));
+  ok(`${file} explicitly checks for an update`, read(file).includes('reg.update()'));
+});
 shell.filter((url) => url.includes('?v=')).forEach((url) => {
   const m = url.match(/^\/assets\/([^?]+)\?v=([^&]+)$/);
   const dynamic = m && entries.some((e) => (`${e.base}.js` === m[1] || `${e.base}.css` === m[1]) && e.rev === m[2]);
