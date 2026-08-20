@@ -79,6 +79,14 @@ const accessTier = new Function(tierSrc + '; return accessTier;')();
 ok(accessTier('Propriétaire') === 'owner' && accessTier('manager') === 'manager', 'accessTier : propriétaire → owner, manager → manager (sans KiwiRoles chargé)');
 ok(accessTier('Caissier') === 'staff' && accessTier('Barista') === 'staff' && accessTier('') === 'staff', 'accessTier : tout rôle inconnu ou d\'équipe retombe sur staff');
 
+const cfgPinsSrc = extract(gate, /function configuredPins\(\) \{[\s\S]*?\n  \}/, 'configuredPins');
+const testConfiguredPins = new Function('allPins', cfgPinsSrc + '; return configuredPins;')(() => [
+  { code: '5678', name: 'Sara', access: 'staff' },
+]);
+const testResult = testConfiguredPins();
+ok(Array.isArray(testResult) && testResult.length === 0, 'configuredPins exclut STRICTEMENT le personnel : une liste contenant seulement un caissier renvoie []');
+ok(!cfgPinsSrc.includes(': all'), 'configuredPins ne possède aucun repli « : all » pouvant rouvrir la porte à un caissier');
+
 // ── 5. L'état vide — « connectez-vous avec Kiwi » ────────────────────────────
 ok(/function maybeShowNoOwnerHelp\(\)/.test(gate) && /kiwi-account-pins-ready', maybeShowNoOwnerHelp/.test(gate), 'la porte réévalue l\'état vide quand la liste des codes du compte arrive');
 ok(/serverRosterSize\(\) > 0 && !hasDashboardCode\(\)/.test(gate), 'le message ne sort que si le compte est configuré SANS aucun code habilité');
@@ -86,7 +94,7 @@ ok(gate.includes("Connectez-vous avec Kiwi pour configurer votre code d\\'acc"),
 ok(/if \(demosOn\(\) \|\| !helpEl \|\| pinInput\.value\) return;/.test(gate), 'jamais en démo, jamais par-dessus une saisie en cours');
 
 // ── 6. Verrou du nombre de contrôles ─────────────────────────────────────────
-const EXPECTED_COUNT = 24;
+const EXPECTED_COUNT = 26;
 ok(passed + 1 === EXPECTED_COUNT, `exact control count verified (${passed + 1}/${EXPECTED_COUNT})`);
 
 if (failures.length) {

@@ -6408,18 +6408,10 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
   /* THE CODES THAT MAY OPEN THIS DASHBOARD.
    *
    * The dashboard is the owner's surface — the money, the margins, the payroll —
-   * and it spans every shop on the account. A staff code is for the till, not
-   * for this. Managers keep it because they already have their own deliberately
-   * restricted view (assets/roleGate.js hides the financial sections).
-   *
-   * The escape hatch matters as much as the rule: if we can find no owner or
-   * manager code ANYWHERE, we do not know enough to enforce it, and refusing
-   * everything would lock a merchant out of their own business. In that case the
-   * full set stands, exactly as before. */
+   * and it spans every shop on the account. A staff/cashier code is for the till,
+   * never for this dashboard. Only owner/manager-tier roles are returned. */
   function configuredPins() {
-    const all = allPins();
-    const privileged = all.filter((p) => p.access !== 'staff');
-    return privileged.length ? privileged : all;
+    return allPins().filter((p) => p && p.access !== 'staff');
   }
   /* Un code de démonstration n'est pas un code de commerçant.
    *
