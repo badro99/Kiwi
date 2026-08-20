@@ -273,9 +273,21 @@
       deleteSupToast: (name) => `${name} supprimé`,
       supName: 'Nom', supCat: 'Catégorie', supPhone: 'Téléphone', supLoc: 'Ville · localisation',
       supPay: 'Conditions de paiement', supDeliv: 'Fréquence de livraison',
-      supRating: 'Note (1-5)', supSpend: 'Dépense mensuelle estimée (MAD)',
-      // Tooltip on row icon buttons
-      titleEdit: 'Modifier', titleDelete: 'Supprimer',
+      // Backup suppliers
+      mItSuppliersT: 'Fournisseurs',
+      mItNoSuppliers: 'Aucun fournisseur enregistré.',
+      mItAddBackupSup: 'Ajouter un fournisseur de secours',
+      supRankPrincipal: 'Principal',
+      supRankBackup: 'Secours',
+      addBackupSupTitle: 'Ajouter un fournisseur de secours',
+      addBackupSupLabel: 'Fournisseur',
+      addBackupSupPrice: 'Prix unitaire d’achat',
+      addBackupSupOptNew: '+ Nouveau fournisseur…',
+      addBackupSupNewName: 'Nom du nouveau fournisseur',
+      addBackupSupHelp: 'Ce fournisseur sera proposé lors des réceptions et commandes pour cet article.',
+      addBackupSupConfirm: 'Enregistrer',
+      backupSupAddedToast: (name) => `${name} ajouté comme fournisseur de secours`,
+      backupSupUpdatedToast: (name, price) => `Prix de ${name} mis à jour (${price} MAD)`,
       // Fusion-mode toggle
       venueAll: 'Tous', venueAtlas: 'Café Atlas', venueMaison: 'Maison Mansour', venueSpa: 'Spa Bahia',
     },
@@ -474,6 +486,21 @@
       ordPauseToast: (id) => `Recurring order #${id} paused`,
       poNewToast: 'New order · select the items',
       mItDelete: 'Delete item',
+      // Backup suppliers
+      mItSuppliersT: 'Suppliers',
+      mItNoSuppliers: 'No supplier recorded.',
+      mItAddBackupSup: 'Add backup supplier',
+      supRankPrincipal: 'Primary',
+      supRankBackup: 'Backup',
+      addBackupSupTitle: 'Add backup supplier',
+      addBackupSupLabel: 'Supplier',
+      addBackupSupPrice: 'Unit purchase price',
+      addBackupSupOptNew: '+ New supplier…',
+      addBackupSupNewName: 'New supplier name',
+      addBackupSupHelp: 'This supplier will be proposed during deliveries and orders for this item.',
+      addBackupSupConfirm: 'Save',
+      backupSupAddedToast: (name) => `${name} added as backup supplier`,
+      backupSupUpdatedToast: (name, price) => `Price for ${name} updated (${price} MAD)`,
       addCatOpt: '+ New category…',
       addCatTitle: 'New category',
       addCatName: 'Category name',
@@ -706,6 +733,21 @@
       supPay: 'شروط الدفع', supDeliv: 'وتيرة التسليم',
       supRating: 'التقييم (1-5)', supSpend: 'الإنفاق الشهري المقدر (درهم)',
       titleEdit: 'تعديل', titleDelete: 'حذف',
+            // Backup suppliers
+      mItSuppliersT: 'الموردون',
+      mItNoSuppliers: 'لا يوجد مورد مسجل.',
+      mItAddBackupSup: 'إضافة مورد احتياطي',
+      supRankPrincipal: 'رئيسي',
+      supRankBackup: 'احتياطي',
+      addBackupSupTitle: 'إضافة مورد احتياطي',
+      addBackupSupLabel: 'المورد',
+      addBackupSupPrice: 'سعر الشراء للوحدة',
+      addBackupSupOptNew: '+ مورد جديد…',
+      addBackupSupNewName: 'اسم المورد الجديد',
+      addBackupSupHelp: 'سيتوفر هذا المورد أثناء الاستلام والطلبات لهذا المنتج.',
+      addBackupSupConfirm: 'حفظ',
+      backupSupAddedToast: (name) => `تمت إضافة ${name} كمورد احتياطي`,
+      backupSupUpdatedToast: (name, price) => `تم تحديث سعر ${name} (${price} درهم)`,
       venueAll: 'الكل', venueAtlas: 'مقهى أطلس', venueMaison: 'ميزون منصور', venueSpa: 'سبا باهية',
     },
   };
@@ -3745,6 +3787,24 @@
     return `
       ${advisoryHtml}
       <div class="st-md-section">
+        <div class="st-md-section-t">${esc(t('mItSuppliersT'))}</div>
+        <div class="st-md-list">
+          ${cards.length ? cards.map(c => `
+            <div class="st-md-list-row">
+              <div>
+                <span class="n">${esc(c.supplierName)}</span>
+                <span class="${c.rank === 1 ? 'status-ok' : 'status-warn'}" style="margin-left:8px; font-size:11px; padding:2px 6px; border-radius:4px;">
+                  ${c.rank === 1 ? esc(t('supRankPrincipal')) : `${esc(t('supRankBackup'))} ${c.rank - 1}`}
+                </span>
+              </div>
+              <div class="v">${c.defaultPrice != null ? `${esc(fmtMad(c.defaultPrice))} / ${esc(sub?.unit || it.unit || 'unité')}` : '—'}</div>
+            </div>`).join('') : `<div style="padding:9px 4px; font-size:12.5px; color:var(--n-500);">${esc(t('mItNoSuppliers'))}</div>`}
+        </div>
+        <button class="st-btn small" type="button" data-stock-add-backup-supplier data-item-id="${esc(it.id)}" style="margin-top:8px;">
+          ${svg('plus', 12)}<span>${esc(t('mItAddBackupSup'))}</span>
+        </button>
+      </div>
+      <div class="st-md-section">
         <div class="st-md-section-t">Historique des mouvements</div>
         <div class="st-md-list">
           ${rows.length ? rows.map(r => `
@@ -3756,6 +3816,148 @@
         </div>
       </div>`;
   }
+  function openAddBackupSupplier(itemId) {
+    const it = getInv().find(x => x.id === itemId);
+    if (!it) return;
+    const raw = stOverlayRaw();
+    const sub = (raw.subcategories || []).find(s => s.id === itemId);
+    const unit = (sub && sub.unit) || it.unit || 'unité';
+
+    const m = window.Kiwi.modal({
+      title: t('addBackupSupTitle'),
+      desc: `${it.name} · ${catLabel(it.category)}`,
+      width: 520,
+      body: `
+        <div class="st-mb-field" style="margin-bottom:12px;">
+          <label class="st-mb-label">${esc(t('addBackupSupLabel'))}</label>
+          <select class="st-mb-input" data-stock-backup-sup>
+            ${renderSupOptions()}
+            <option value="__new__">${esc(t('addBackupSupOptNew'))}</option>
+          </select>
+          <div data-stock-newsup-wrap style="display:none; margin-top:8px;">
+            <input class="st-mb-input" type="text" placeholder="${esc(t('addBackupSupNewName'))}" data-stock-newsup-name />
+          </div>
+        </div>
+        <div class="st-mb-field">
+          <label class="st-mb-label">${esc(t('addBackupSupPrice'))} (MAD / ${esc(unit)})</label>
+          <input class="st-mb-input mono" type="number" min="0" step="0.01" placeholder="0.00" data-stock-backup-price />
+        </div>
+        <div class="st-notice ok" style="margin-top:12px;">
+          ${svg('checkCircle', 14)}
+          <div>${esc(t('addBackupSupHelp'))}</div>
+        </div>
+      `,
+      foot: `<button class="st-btn" data-dismiss-modal>${esc(STR[lang()]?.btnCancel || 'Annuler')}</button><button class="st-btn primary" data-stock-backup-save>${esc(t('addBackupSupConfirm'))}</button>`,
+    });
+
+    const scope = m?.el || topBackdrop();
+    wireDismiss(scope);
+
+    const supSel = scope?.querySelector('[data-stock-backup-sup]');
+    const newsupWrap = scope?.querySelector('[data-stock-newsup-wrap]');
+    const newsupInput = scope?.querySelector('[data-stock-newsup-name]');
+
+    supSel?.addEventListener('change', () => {
+      if (supSel.value === '__new__') {
+        if (newsupWrap) newsupWrap.style.display = '';
+        newsupInput?.focus();
+      } else {
+        if (newsupWrap) newsupWrap.style.display = 'none';
+      }
+    });
+
+    scope?.querySelector('[data-stock-backup-save]')?.addEventListener('click', () => {
+      let rawSup = '';
+      if (supSel?.value === '__new__') {
+        rawSup = (newsupInput?.value || '').trim();
+        if (!rawSup) { newsupInput?.focus(); return; }
+      } else {
+        rawSup = (supSel?.value || '').trim();
+      }
+      if (!rawSup) return;
+
+      const foundSup = getSup().find(s => s.name === rawSup || `${s.name} · ${s.location || ''}`.trim().replace(/ ·\s*$/, '') === rawSup);
+      const supplierName = foundSup ? foundSup.name : rawSup;
+
+      if (window.KiwiProcurement?.addSupplier) {
+        const known = window.KiwiProcurement.doc?.()?.suppliers?.find(s => String(s.name || '').trim().toLowerCase() === supplierName.toLowerCase());
+        if (!known) {
+          try { window.KiwiProcurement.addSupplier({ name: supplierName }); } catch (_) {}
+        }
+      }
+
+      const priceVal = parseFloat(scope.querySelector('[data-stock-backup-price]')?.value);
+      const defaultPrice = (Number.isFinite(priceVal) && priceVal >= 0) ? Math.round(priceVal * 100) / 100 : (+it.costPerUnit || 0);
+
+      const rawDoc = stOverlayRaw();
+      let subcat = (rawDoc.subcategories || []).find(s => s.id === itemId);
+      if (!subcat) {
+        subcat = {
+          id: itemId,
+          categoryId: it.category || 'legumes',
+          name: it.name,
+          unit: unit,
+          defaultCost: +it.costPerUnit || 0,
+          suppliers: [],
+          currentStock: currentStockFor(it),
+          parLevel: it.parLevel,
+          reorderLevel: it.reorderLevel,
+          usageThisWeek: it.usageThisWeek || 0,
+          theoreticalUsage: it.theoreticalUsage || 0,
+          updatedAt: Date.now(),
+        };
+        if (!Array.isArray(rawDoc.subcategories)) rawDoc.subcategories = [];
+        rawDoc.subcategories.push(subcat);
+      }
+
+      const cards = Array.isArray(subcat.suppliers) ? subcat.suppliers.slice() : [];
+      if (!cards.length && it.supplier) {
+        cards.push({
+          id: 'sup-' + Date.now().toString(36) + '-main',
+          supplierName: it.supplier,
+          defaultPrice: +it.costPerUnit || 0,
+          purchaseUnit: unit,
+          factor: 1,
+          rank: 1,
+        });
+      }
+
+      const normName = supplierName.trim().toLowerCase();
+      const existingCard = cards.find(s => String(s.supplierName || '').trim().toLowerCase() === normName);
+
+      let toastMsg = '';
+      if (existingCard) {
+        existingCard.defaultPrice = defaultPrice;
+        toastMsg = t('backupSupUpdatedToast', existingCard.supplierName, defaultPrice);
+      } else {
+        const rank = cards.length + 1;
+        const newCard = {
+          id: 'sup-' + Date.now().toString(36),
+          supplierName: supplierName,
+          defaultPrice: defaultPrice,
+          purchaseUnit: unit,
+          factor: 1,
+          rank: rank,
+        };
+        cards.push(newCard);
+        toastMsg = t('backupSupAddedToast', supplierName);
+      }
+
+      subcat.suppliers = cards;
+      subcat.updatedAt = Date.now();
+
+      stItemOverrides[itemId] = Object.assign({}, stItemOverrides[itemId] || {}, {
+        suppliers: cards,
+        updatedAt: Date.now(),
+      });
+
+      stSaveOverlay();
+      closeTopModal();
+      window.Kiwi?.toast?.(toastMsg, { type: 'success' });
+      if (stPageActive) render();
+    });
+  }
+
   function openItemMovement(itemId) {
     const it = getInv().find(x => x.id === itemId); if (!it) return;
     const m = window.Kiwi.modal({
@@ -3897,6 +4099,11 @@
     });
     scope?.querySelector('[data-stock-swap-ranks]')?.addEventListener('click', (e) => {
       swapSupplierRanks(e.currentTarget.dataset.itemId);
+    });
+    scope?.querySelector('[data-stock-add-backup-supplier]')?.addEventListener('click', (e) => {
+      const id = e.currentTarget.dataset.itemId;
+      closeTopModal();
+      openAddBackupSupplier(id);
     });
     scope?.querySelector('[data-stock-detail-delete]')?.addEventListener('click', (e) => {
       const id = e.currentTarget.dataset.itemId;

@@ -148,6 +148,16 @@ check('Reception modal attaches defaultPrice on item options', poModalBody.inclu
 check('4.5 default rating removed from supplier creation', !stockSource.includes('const rating = isNaN(ratingRaw) ? 4.5 :'));
 check('Supplier row renders dash when rating is null', stockSource.includes('st-sup-rate') && stockSource.includes('—'));
 
+// 5. Backup supplier pre-declaration checks
+check('renderRealItemHistory contains Fournisseurs section', stockSource.includes("mItSuppliersT"));
+check('renderRealItemHistory contains data-stock-add-backup-supplier button', stockSource.includes("data-stock-add-backup-supplier"));
+check('openAddBackupSupplier handles supplier selection and new supplier wrap', stockSource.includes("data-stock-backup-sup") && stockSource.includes("data-stock-newsup-wrap"));
+check('openAddBackupSupplier dedupes by supplierName and updates defaultPrice', stockSource.includes("existingCard.defaultPrice = defaultPrice") && stockSource.includes("backupSupAddedToast"));
+check('All three language dictionaries contain backup supplier keys',
+  stockSource.includes("mItSuppliersT: 'Fournisseurs'") &&
+  stockSource.includes("mItSuppliersT: 'Suppliers'") &&
+  stockSource.includes("mItSuppliersT: 'الموردون'"));
+
 if (failures > 0) {
   console.error(`\n✗ ${failures} failure(s) in supplier actions test.`);
   process.exit(1);

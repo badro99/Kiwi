@@ -208,8 +208,8 @@
     "sha": "e2ef9f5ade7b41d3"
   },
   "assets/invoice.js": {
-    "v": "3",
-    "sha": "2bf98cc1961be636"
+    "v": "4",
+    "sha": "9bf58357a5ce893a"
   },
   "assets/invoicing.css": {
     "v": "5",
@@ -552,8 +552,8 @@
     "sha": "a4c3a6b89b6ee0d0"
   },
   "assets/stock.js": {
-    "v": "13",
-    "sha": "89bc86a9f69e16ec"
+    "v": "16",
+    "sha": "fe480b6d2f287423"
   },
   "assets/store-templates.js": {
     "v": "1",

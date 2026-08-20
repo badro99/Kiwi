@@ -171,7 +171,7 @@ var SHELL = [
      et un client qui repart sans reçu ne revient pas le chercher. */
   '/assets/receipt.js',
   '/assets/receipt-ui.js',
-  '/assets/invoice.js?v=3',
+  '/assets/invoice.js?v=4',
   '/assets/merchant-config.js?v=264',
   '/assets/entitlements.css?v=4',
   '/assets/entitlements.js?v=5',
@@ -209,7 +209,7 @@ var SHELL = [
      document; quantities are append-only movements, both usable offline. */
   '/assets/inventory-ledger.js?v=4',
   '/assets/caisse-stock-sync.js?v=8',
-  '/assets/stock.js?v=13',
+  '/assets/stock.js?v=16',
   /* Le coût de revient. Dans la coquille parce que les tuiles Marge brute,
      Bénéfice brut et Coût matière du tableau de bord passent toutes par lui :
      sans lui hors ligne, elles retomberaient sur un tiret alors que le
