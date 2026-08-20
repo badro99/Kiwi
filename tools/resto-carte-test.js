@@ -497,7 +497,9 @@ ok(/missing\.length \? 'disabled' : ''/.test(caisseSrc),
   'tant qu\'un groupe obligatoire est sans réponse, « Ajouter » ne répond pas');
 ok(/c\.optSig \|\| ''\) === sig/.test(caisseSrc),
   'deux cafés aux laits différents font deux lignes — les empiler en enverrait un seul en cuisine');
-ok(/paperNote: kitchenNote\(l\), visuals: optVisuals\(l\.opts\)/.test(caisseSrc),
+ok(/function kitchenItemsFromLines\(lines\)/.test(caisseSrc)
+  && /paperNote: parent \? \[formulaTag, kitchenNote\(parent\), kitchenNote\(l\)\]/.test(caisseSrc)
+  && /visuals: parentVisuals\.concat\(ownVisuals\)/.test(caisseSrc),
   'les choix partent en texte sur le papier et en repères visuels structurés sur le KDS');
 ok(/note: i\.paperNote \|\| i\.note \|\| '', visuals: i\.visuals \|\| \[\]/.test(caisseSrc),
   'le relais vers une tablette cuisine distante conserve aussi le texte des options');

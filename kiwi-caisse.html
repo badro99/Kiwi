@@ -4709,7 +4709,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=358" defer></script>
-  <script src="assets/caisse-pwa.js?v=388" defer></script>
+  <script src="assets/caisse-pwa.js?v=389" defer></script>
   <script src="assets/live-link.js?v=12" defer></script>
   <!-- The staff-role catalogue — says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -10130,20 +10130,58 @@
      * mesa pour ajouter deux cafés doit envoyer deux cafés, pas relancer tout
      * le repas. Le drapeau vit sur la ligne, donc il survit au rechargement
      * avec le reste du service (persistShift). */
+    function kitchenItemsFromLines(lines) {
+      const source = Array.isArray(lines) ? lines : [];
+      return source.filter(l => l && l.kind !== 'formula').map((l) => {
+        const parent = l.kind === 'formula-part' && l.formulaUid
+          ? source.find(p => p && p.kind === 'formula' && p.formulaUid === l.formulaUid)
+          : null;
+        const m = menuItems.find(x => x.id === l.id);
+        const formulaTag = parent
+          ? `[${parent.formulaName || parent.name || 'Formule'}${l.slotLabel ? ' · ' + l.slotLabel : ''}]`
+          : '';
+        const parentVisuals = parent ? optVisuals(parent.opts) : [];
+        const ownVisuals = optVisuals(l.opts);
+        return {
+          q: l.qty, n: l.name, p: l.price,
+          note: [formulaTag, parent && (parent.note || '').trim(), (l.note || '').trim()].filter(Boolean).join(' · '),
+          paperNote: parent ? [formulaTag, kitchenNote(parent), kitchenNote(l)].filter(Boolean).join(' · ') : kitchenNote(l),
+          visuals: parentVisuals.concat(ownVisuals), kind: l.kind || '',
+          formulaUid: l.formulaUid || '', formulaName: l.formulaName || '', slotLabel: l.slotLabel || '',
+          stations: [(l.station && kdsStations().some(s => s.id === l.station)) ? l.station : kdsStationFor(m)],
+        };
+      });
+    }
+
+    function relayLinesFromCaisse(lines) {
+      return (Array.isArray(lines) ? lines : []).filter(Boolean).map((l) => {
+        const optionChoices = (Array.isArray(l.opts) ? l.opts : []).map(o => ({
+          group: o.g || o.group || '', label: o.cn || o.label || o.name || '',
+        })).filter(o => o.group && o.label);
+        const line = {
+          id: l.id || '', name: l.name || '', qty: l.qty || 1,
+          unitPrice: Math.max(0, +l.price || +l.unitPrice || 0),
+          options: optionChoices.map(o => o.label).join(' · '), optionChoices,
+          visuals: optVisuals(l.opts), note: (l.note || '').trim(),
+          station: l.station || kdsStationFor(menuItems.find(x => x.id === l.id)),
+        };
+        ['kind', 'formulaUid', 'formulaName', 'slotLabel', 'formulaSlotId', 'lineId'].forEach(key => {
+          if (l[key]) line[key] = l[key];
+        });
+        return line;
+      });
+    }
+
     function sendTableToKitchen(tableId) {
       const lines = (tableOrders[tableId] || []).filter(l => l && l.qty > 0 && !l.sent);
       if (!lines.length) return null;
-      const items = lines.map((l) => {
-        const m = menuItems.find(x => x.id === l.id);
-        return { q: l.qty, n: l.name, p: l.price, note: ((l.note || '').trim()), paperNote: kitchenNote(l), visuals: optVisuals(l.opts),
-          stations: [kdsStationFor(m)] };
-      });
+      const items = kitchenItemsFromLines(lines);
       const order = {
         num: ++kdsOrderSeq, type: 'dineIn', table: tableId, code: null, status: 'new',
         // Qui suit cette table. Le bon sortait avec le numéro et rien d'autre,
         // ce qui obligeait à demander « c'est pour qui, la 7 ? » à voix haute.
         server: serverNameFor(tableId),
-        readyAt: null, items: items, sentAt: new Date(),
+        readyAt: null, items: items, relayLines: relayLinesFromCaisse(lines), sentAt: new Date(),
         paid: false, pickedUp: false, pickedUpAt: null,
         total: lines.reduce((s, l) => s + l.price * l.qty, 0),
       };
@@ -10191,13 +10229,13 @@
           mode: order.type === 'dineIn' ? 'table' : 'takeout',
           table: order.table || '',
           server: order.server || '',
-          lines: (order.items || []).map(i => ({
+          lines: (order.relayLines || (order.items || []).map(i => ({
             /* Le relais doit porter la phrase d'options, pas seulement les
                emojis. Une tablette KDS distante doit encore lire « Tomates ·
                Oignons » si le patron n'a pas associé de repère à ces choix. */
             name: i.n, qty: i.q, unitPrice: i.p || 0, note: i.paperNote || i.note || '', visuals: i.visuals || [],
             station: (i.stations && i.stations[0]) || '',
-          })),
+          }))),
         }).then((r) => {
           /* Le numéro du serveur devient le numéro affiché. C'est le SEUL que
              les deux écrans puissent connaître : la cuisine ne voit pas le
@@ -15583,7 +15621,7 @@
             const visualNote = (Array.isArray(it.visuals) ? it.visuals : [])
               .map(v => v && (v.name || v.label || v.cn)).filter(Boolean).join(' · ');
             byStation.get(sid).push({ qty: it.q, name: it.n,
-              note: [visualNote, it.paperNote || it.note].filter(Boolean).join(' · ') });
+              note: [visualNote, visualNote ? it.note : (it.paperNote || it.note)].filter(Boolean).join(' · ') });
           });
         });
         const list = kdsStations();
@@ -15618,14 +15656,10 @@
     function sendToKitchen() {
       if (mode !== 'vrap' || cart.length === 0) { toast('Ajoute des articles d\'abord'); return; }
       const total  = cart.reduce((s, l) => s + l.price * l.qty, 0);
-      const items  = cart.map(l => {
-        const m = menuItems.find(x => x.id === l.id);
-        return { q: l.qty, n: l.name, p: l.price, note: ((l.note || '').trim()), paperNote: kitchenNote(l), visuals: optVisuals(l.opts),
-          stations: [kdsStationFor(m)] };
-      });
+      const items = kitchenItemsFromLines(cart);
       const order = {
         num: ++kdsOrderSeq, type: 'takeaway', status: 'new',
-        readyAt: null, items: items, sentAt: new Date(),
+        readyAt: null, items: items, relayLines: relayLinesFromCaisse(cart), sentAt: new Date(),
         paid: false, pickedUp: false, pickedUpAt: null, total: total,
       };
       kdsOrders.push(order);

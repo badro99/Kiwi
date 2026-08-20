@@ -122,6 +122,10 @@ check('kiwi-cuisine.html merges formula parent options into its component lines'
 const serveurHtml = fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8');
 check('kiwi-serveur.html attaches visuals in svSendOrder delta payload',
   serveurHtml.includes('visuals: visuals') || serveurHtml.includes('visuals,'));
+check('kiwi-serveur.html relays formula identity and slot metadata',
+  serveurHtml.includes('if (l.kind) linePayload.kind = l.kind')
+    && serveurHtml.includes('if (l.formulaUid) linePayload.formulaUid = l.formulaUid')
+    && serveurHtml.includes('if (l.formulaSlotId) linePayload.formulaSlotId = l.formulaSlotId'));
 
 // 5. Inspect kiwi-caisse.html for tableSplits migration & unassigned waitlist seating
 const caisseHtml = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
@@ -129,6 +133,15 @@ check('caisse KDS and kitchen paper keep formula parent options with the compone
   caisseHtml.includes('const formulaParent =')
     && caisseHtml.includes('visuals: parentVisuals.concat(ownVisuals)')
     && caisseHtml.includes(".map(v => v && (v.name || v.label || v.cn)).filter(Boolean).join(' · ')"));
+check('caisse local tickets omit the non-preparation formula parent and print its choices on components',
+  caisseHtml.includes('function kitchenItemsFromLines(lines)')
+    && caisseHtml.includes("source.filter(l => l && l.kind !== 'formula')")
+    && caisseHtml.includes('visuals: parentVisuals.concat(ownVisuals)'));
+check('caisse relay preserves formula and canonical option metadata',
+  caisseHtml.includes('function relayLinesFromCaisse(lines)')
+    && caisseHtml.includes("['kind', 'formulaUid', 'formulaName', 'slotLabel', 'formulaSlotId', 'lineId']")
+    && caisseHtml.includes('relayLines: relayLinesFromCaisse(lines)')
+    && caisseHtml.includes('relayLines: relayLinesFromCaisse(cart)'));
 check('kiwi-caisse.html migrates tableSplits on confirmCaisseTransfer',
   caisseHtml.includes('tableSplits.set(to, tableSplits.get(from))'));
 check('kiwi-caisse.html clears tableSplits on confirmCaisseMerge',
