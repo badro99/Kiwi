@@ -1874,11 +1874,19 @@
   const DAY_ABBR = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
   /* One day, bucketed by hour and accumulated — 24 running totals. Shared by
    * the plotted day and the day it is compared against so both curves are
-   * built by the same code and are readable point-for-point. */
+   * built by the same code and are readable point-for-point.
+   * Bucketing is relative to `base` (the business day start, e.g. 5:00 AM)
+   * so late-night sales after midnight are attributed to their service. */
   function hourlyCumul(list, base) {
     const end = base + 864e5;
     const per = new Array(24).fill(0);
-    list.forEach(e => { const ts = +e.ts || 0; if (ts >= base && ts < end) per[new Date(ts).getHours()] += Math.max(0, +e.amount || 0); });
+    list.forEach(e => {
+      const ts = +e.ts || 0;
+      if (ts >= base && ts < end) {
+        const idx = Math.floor((ts - base) / 3600000);
+        if (idx >= 0 && idx < 24) per[idx] += Math.max(0, +e.amount || 0);
+      }
+    });
     const out = [];
     let acc = 0;
     for (let h = 0; h < 24; h++) { acc += per[h]; out.push(acc); }
@@ -1916,15 +1924,15 @@
       prev = hourlyCumul(list, base - 864e5);
       total = rev[23];
       prevTotal = prev[23];
-      for (let h = 0; h < 24; h++) xLabels.push((h < 10 ? '0' : '') + h + 'h');
+      for (let h = 0; h < 24; h++) {
+        const hr = new Date(base + h * 3600000).getHours();
+        xLabels.push((hr < 10 ? '0' : '') + hr + 'h');
+      }
       visibleXIdx = [0, 3, 6, 9, 12, 15, 18, 21];
-      // Today is unfinished. Carrying the running total flat to midnight draws
-      // a shop that stopped selling at the current hour, and lays a part-day
-      // over a whole one. null ends the line where the day actually is —
-      // smoothPath skips null points.
+      // Today is unfinished. Truncate at current hour elapsed in this business window.
       if (range === 'aujourdhui') {
-        const nowH = new Date().getHours();
-        for (let i = nowH + 1; i < 24; i++) rev[i] = null;
+        const nowIdx = Math.min(23, Math.max(0, Math.floor((Date.now() - base) / 3600000)));
+        for (let i = nowIdx + 1; i < 24; i++) rev[i] = null;
       }
       rangeBadge = (range === 'hier') ? 'HIER' : "AUJOURD'HUI";
       sub = (range === 'hier') ? 'Cumul horaire · hier' : 'Cumul horaire · aujourd\'hui';

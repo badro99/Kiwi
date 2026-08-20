@@ -917,6 +917,7 @@ section('Whole-project regressions');
     'ai-routes-test.mjs',
     'inventory-count-test.mjs',
     'menu-scan-test.mjs',
+    'salle-scan-test.mjs',
     'pin-dashboard-test.mjs',
   ];
   suites.forEach((name) => {

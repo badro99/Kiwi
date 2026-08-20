@@ -123,7 +123,7 @@ var SHELL = [
   '/assets/pressing-products/baskets.png',
   '/assets/pressing-products/babouches.png',
   '/assets/demoClock.js',
-  '/assets/dateRange.js?v=9',
+  '/assets/dateRange.js?v=10',
   '/assets/mobile-nav.js?v=2',
   '/assets/liquid-lens.js',
   '/assets/pages.js',
@@ -233,6 +233,7 @@ var SHELL = [
   '/assets/catalog-import.js?v=2',
   // Scanner un menu — photo / PDF / lien → Kiwi AI → revue d'import.
   '/assets/menu-scan.js?v=1',
+  '/assets/salle-scan.js?v=1',
   // OrderPro — publisher + NFC panel (dashboard), inbox (caisse).
   '/assets/orderpro-publish.js?v=3',
   '/assets/orderpro-panel.js',

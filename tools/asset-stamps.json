@@ -104,8 +104,8 @@
     "sha": "8dee86a0807d7524"
   },
   "assets/dateRange.js": {
-    "v": "9",
-    "sha": "27e1b69c6b205abc"
+    "v": "10",
+    "sha": "6fcae6e36abed039"
   },
   "assets/day-report-dash.js": {
     "v": "2",
@@ -288,8 +288,8 @@
     "sha": "34ba1e6354ccc770"
   },
   "assets/pages-pro.js": {
-    "v": "2071",
-    "sha": "143eb9b3c34b2ec0"
+    "v": "2072",
+    "sha": "4a140c4c7c0073bc"
   },
   "assets/pairing-commit.js": {
     "v": "1",
@@ -534,6 +534,10 @@
   "assets/retail-scan.js": {
     "v": "6",
     "sha": "18d82faaebb5bb78"
+  },
+  "assets/salle-scan.js": {
+    "v": "1",
+    "sha": "b92cd2c05a2c47eb"
   },
   "assets/simple.js": {
     "v": "2",

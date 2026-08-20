@@ -4034,6 +4034,7 @@ Object.assign(PDS_STR.fr, {
   noRoom: 'Pas de place libre ici',
   ambianceLabel: 'Ambiance', customColor: 'Couleur libre',
   wizTitle: 'Composons votre salle', wizDesc: 'Huit questions, puis trois plans meublés à comparer.',
+  scanSalle: 'Scanner ma salle', scanUnavailable: 'Scan indisponible',
   wizVenue: 'Type d’établissement', wizFloors: 'Combien d’étages ?',
   wizExtras: 'Vous avez aussi…', wizDims: 'Dimensions de la salle',
   wizW: 'Largeur', wizH: 'Profondeur', wizTables: 'Combien de tables ?',
@@ -4087,6 +4088,7 @@ Object.assign(PDS_STR.en, {
   noRoom: 'No free space here',
   ambianceLabel: 'Ambiance', customColor: 'Custom colour',
   wizTitle: 'Let’s lay out your room', wizDesc: 'Eight questions, then three furnished plans to compare.',
+  scanSalle: 'Scan my room', scanUnavailable: 'Scan unavailable',
   wizVenue: 'Type of venue', wizFloors: 'How many floors?',
   wizExtras: 'You also have…', wizDims: 'Room dimensions',
   wizW: 'Width', wizH: 'Depth', wizTables: 'How many tables?',
@@ -4140,6 +4142,7 @@ Object.assign(PDS_STR.ar, {
   noRoom: 'لا توجد مساحة فارغة هنا',
   ambianceLabel: 'الأجواء', customColor: 'لون حر',
   wizTitle: 'لنرتّب قاعتك', wizDesc: 'ثمانية أسئلة، ثم ثلاثة مخططات مؤثّثة للمقارنة.',
+  scanSalle: 'مسح قاعتي بالصورة', scanUnavailable: 'المسح غير متاح',
   wizVenue: 'نوع المحل', wizFloors: 'كم طابقًا؟',
   wizExtras: 'لديك أيضًا…', wizDims: 'أبعاد القاعة',
   wizW: 'العرض', wizH: 'العمق', wizTables: 'كم طاولة؟',
@@ -5250,7 +5253,8 @@ function pdsRenderEmpty(state, T) {
     <div class="pds-empty">
       <h4>${T.emptyTitle}</h4>
       <p>${T.emptyDesc}</p>
-      <div style="display:flex; gap:8px; justify-content:center;">
+      <div style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
+        <button class="kb atlas" data-pds-action="scan-salle">${T.scanSalle}</button>
         <button class="kb atlas" data-pds-action="open-wizard">${T.wizGenerate}</button>
         <button class="kb ghost" data-pds-action="add-table-default">${T.emptyBlank}</button>
       </div>
@@ -5298,6 +5302,7 @@ function pdsRenderLayoutRail(state, T) {
     ${pdsRenderRoomCard(state, T)}
     <div class="pds-rail-card">
       <button class="kb atlas pds-rail-cta" data-pds-action="open-wizard">${T.wizTitle}</button>
+      <button class="kb ghost pds-rail-cta" data-pds-action="scan-salle">${T.scanSalle}</button>
       <button class="kb ghost pds-rail-cta" data-pds-action="rename-zone">${T.renameZone}</button>
       <button class="kb ghost pds-rail-cta pds-rail-danger" data-pds-action="delete-zone">${T.deleteZone}</button>
     </div>
@@ -7086,6 +7091,31 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
        furnished candidates built from the answers — each labelled with the
        numbers it actually produced, so the count on the card and the count
        on the floor cannot drift apart the way the templates' could. */
+    /* « Scanner ma salle » — la photo remplace le questionnaire, pas le
+     * générateur. Le modèle vision extrait les FAITS (combien de tables,
+     * quelles formes, terrasse, type d'établissement), on pré-remplit les
+     * réponses du magicien avec, et c'est pdsGeneratePlan qui dessine — allées
+     * garanties, zéro coordonnée inventée. Le commerçant relit les réponses,
+     * ajuste, puis compare les trois plans comme d'habitude. */
+    case 'scan-salle': {
+      const scan = window.KiwiSalleScan;
+      if (!scan || !scan.open) { toast(T.scanUnavailable, { type: 'warn' }); break; }
+      scan.open({
+        onFacts: (facts) => {
+          const A = state._wizAnswers || (state._wizAnswers = {
+            venue: 'restaurant', floors: ['RDC'], extras: [],
+            dims_default: { w: 1200, h: 800 }, tables: 18,
+            kitchenWall: 'n', entranceWall: 's', wc: true,
+          });
+          if (facts.venue) A.venue = facts.venue;
+          if (facts.tables) A.tables = Math.min(60, Math.max(2, facts.tables));
+          if (facts.mix && facts.mix.length) A.mix = facts.mix;
+          if (facts.terrasse && !A.extras.includes('terrasse')) A.extras = A.extras.concat('terrasse');
+          pdsHandleAction('open-wizard', btn, state, T, root, dr, refresh, selection);
+        },
+      });
+      break;
+    }
     case 'open-templates':
     case 'open-wizard': {
       const A = state._wizAnswers || (state._wizAnswers = {
@@ -7174,8 +7204,10 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
 
       const build = () => {
         /* Vary the mix rotation per regeneration so "Régénérer" gives a
-           genuinely different arrangement rather than the same one twice. */
-        const mix = (PDS_VENUE_MIX[A.venue] || PDS_VENUE_MIX.restaurant).slice();
+           genuinely different arrangement rather than the same one twice.
+           A scanned mix (Scanner ma salle) wins over the venue default: it
+           reflects the tables actually photographed in this room. */
+        const mix = ((A.mix && A.mix.length) ? A.mix : (PDS_VENUE_MIX[A.venue] || PDS_VENUE_MIX.restaurant)).slice();
         for (let i = 0; i < (spin % Math.max(1, mix.length)); i++) mix.push(mix.shift());
         const ans = Object.assign({}, A, {
           mix,
