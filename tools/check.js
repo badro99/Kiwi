@@ -911,6 +911,7 @@ section('Whole-project regressions');
     'error-redaction-test.mjs',
     'supplier-actions-test.mjs',
     'print-paper-test.mjs',
+    'station-printer-routing-test.mjs',
     'err-reporter-silence-test.mjs',
     'depenses-demo-gate-test.mjs',
     'invoice-receipt-test.mjs',

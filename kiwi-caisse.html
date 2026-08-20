@@ -4778,8 +4778,8 @@
        kiwi-cuisine.html l'affiche. Après caisse-pairing.js : il lit le magasin
        appairé. -->
   <script src="assets/kitchen-relay.js?v=4" defer></script>
-  <script src="assets/kitchen-print-queue.js?v=2" defer></script>
-  <script src="assets/food-production-print.js?v=1" defer></script>
+  <script src="assets/kitchen-print-queue.js?v=3" defer></script>
+  <script src="assets/food-production-print.js?v=2" defer></script>
   <!-- OrderPro · orders placed on a customer's phone arrive here over WiFi;
        staff accept one and it becomes a kitchen ticket. Paired terminals only. -->
   <script src="assets/orderpro-inbox.js?v=4" defer></script>
@@ -14547,6 +14547,7 @@
       if (IS_DEMO) return KDS_STATIONS_DEMO;
       return carteState.stations.length ? carteState.stations : [KDS_STATION_SOLO];
     }
+    try { window.kdsStations = kdsStations; window.KiwiCaisseStations = kdsStations; } catch (_) {}
     /* caisse menu category -> kitchen station — la table de la DÉMO, qui ne
        connaît que les catégories de Café Atlas. */
     const KDS_CAT_STATION = { entrees: 'salade', tajines: 'cuisson', couscous: 'cuisson',
@@ -15633,8 +15634,10 @@
         const plan = Array.from(byStation.keys()).sort((a, b) => rank(a) - rank(b)).map((sid) => ({
           id: `${sourceId}:${sid}`,
           createdAt: jobAt.getTime(),
+          station: sid,
           payload: {
             title: String(names[sid] || 'Cuisine').toUpperCase(),
+            station: sid,
             order: '#' + (order.opNum != null ? order.opNum : order.num), time: time,
             items: byStation.get(sid),
           },
@@ -15646,7 +15649,7 @@
           return KiwiKitchenPrint.enqueue(plan, { remote: !!(options && options.remote) });
         }
         if (!KP || !KP.printKitchen || (KP.isConnected && !KP.isConnected())) return;
-        return plan.reduce((chain, job) => chain.then(() => Promise.resolve(KP.printKitchen(job.payload)).then((result) => {
+        return plan.reduce((chain, job) => chain.then(() => Promise.resolve(KP.printKitchen(job.payload, { station: job.station || sid })).then((result) => {
           if (!result || !result.ok) toast('Ticket cuisine non imprimé', 5200, 'warn', 'Vérifiez l’imprimante puis réimprimez le bon.');
         })), Promise.resolve());
       } catch (_) {}

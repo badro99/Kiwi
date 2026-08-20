@@ -151,6 +151,105 @@
   function set(k, v) { try { localStorage.setItem(k, v); } catch (_) {} }
   function esc(x) { return String(x == null ? '' : x).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
 
+  /* ── Station-based printer routing (per-tenant) ────────────────────────────
+   * Enables the cashier app to bind physical printers to specific stations
+   * (Caisse for client receipts, Cuisine, Bar, etc. for production tickets). */
+  var STATION_PRINTERS_PREFIX = 'kiwiStationPrinters:';
+
+  function currentMerchantKey() {
+    var m = '';
+    try {
+      if (window.KiwiKitchenRelay && typeof KiwiKitchenRelay.merchant === 'function') {
+        m = KiwiKitchenRelay.merchant() || '';
+      }
+      if (!m) {
+        var pv = JSON.parse(ls('kiwiPairedVenue') || 'null');
+        if (pv && (pv.merchant || pv.venueId)) m = pv.merchant || pv.venueId;
+      }
+      if (!m && ls('kiwiPaired') === '1') {
+        m = ls('kiwiLiveMerchant') || '';
+      }
+    } catch (_) {}
+    return m || 'unpaired';
+  }
+
+  function stationStorageKey(merchant) {
+    return STATION_PRINTERS_PREFIX + (merchant || currentMerchantKey());
+  }
+
+  function getStationConfig(merchant) {
+    var d = { profiles: [], bindings: {} };
+    try {
+      var raw = ls(stationStorageKey(merchant));
+      if (!raw && (!merchant || merchant === currentMerchantKey())) {
+        raw = ls('kiwiStationPrinters');
+      }
+      var o = JSON.parse(raw || '{}');
+      if (o && typeof o === 'object') {
+        d.profiles = Array.isArray(o.profiles) ? o.profiles : [];
+        d.bindings = (o.bindings && typeof o.bindings === 'object') ? o.bindings : {};
+      }
+      return d;
+    } catch (_) {
+      return d;
+    }
+  }
+
+  function setStationConfig(cfg, merchant) {
+    cfg = cfg || {};
+    var profiles = Array.isArray(cfg.profiles) ? cfg.profiles : [];
+    var bindings = (cfg.bindings && typeof cfg.bindings === 'object') ? cfg.bindings : {};
+    var data = { profiles: profiles, bindings: bindings, updatedAt: Date.now() };
+    set(stationStorageKey(merchant), JSON.stringify(data));
+    try { window.dispatchEvent(new CustomEvent('kiwi:station-printers-config', { detail: data })); } catch (_) {}
+    return data;
+  }
+
+  function getPrepStations() {
+    try {
+      if (typeof window.KiwiCaisseStations === 'function') {
+        var cs = window.KiwiCaisseStations();
+        if (Array.isArray(cs) && cs.length) return cs;
+      }
+      if (typeof window.kdsStations === 'function') {
+        var ks = window.kdsStations();
+        if (Array.isArray(ks) && ks.length) return ks;
+      }
+      if (window.KiwiMenuStore && typeof window.KiwiMenuStore.stations === 'function') {
+        var ms = window.KiwiMenuStore.stations();
+        if (Array.isArray(ms) && ms.length) return ms;
+      }
+      var m = currentMerchantKey();
+      if (m && m !== 'unpaired') {
+        var raw = ls('kiwi:menuMirror:v1:' + m);
+        if (raw) {
+          var doc = JSON.parse(raw);
+          if (doc && Array.isArray(doc.stations) && doc.stations.length) return doc.stations;
+        }
+      }
+    } catch (_) {}
+    return [
+      { id: 'cuisson', name: 'Cuisine' },
+      { id: 'bar', name: 'Bar cocktails' },
+    ];
+  }
+
+  function resolveStationTarget(stationId, merchant) {
+    var sc = getStationConfig(merchant);
+    var profId = (sc.bindings && sc.bindings[stationId]) || '';
+    if (!profId && stationId !== 'caisse') {
+      profId = (sc.bindings && sc.bindings.caisse) || '';
+    }
+    if (!profId) return null;
+    var prof = (sc.profiles || []).find(function (p) { return p && p.id === profId; });
+    return prof || null;
+  }
+
+  function hasStationBindings(merchant) {
+    var sc = getStationConfig(merchant);
+    return !!((sc.profiles && sc.profiles.length) || Object.keys(sc.bindings || {}).length);
+  }
+
   /* `osPrinter` is the name of a printer the till ALREADY has installed, printed
    * to through the bridge's spooler route. It is the answer for the commonest
    * shop setup — a USB thermal printer on a Windows caisse — where Bluetooth,
@@ -164,7 +263,7 @@
     set(CFG_KEY, JSON.stringify(Object.assign(getConfig(), cfg || {})));
     try { window.dispatchEvent(new CustomEvent('kiwi:printer-config')); } catch (_) {}
   }
-  function isConfigured() { var c = getConfig(); return !!(c.ip || c.osPrinter); }
+  function isConfigured() { var c = getConfig(); return !!(c.ip || c.osPrinter || hasStationBindings()); }
 
   // ── bridge transport ───────────────────────────────────────────────────────
   function withTimeout(promise, ms) {
@@ -395,7 +494,7 @@
    * partait vers l'imprimante système et validait une IP jamais essayée. */
   function bridgePrintBytes(bytes, target) {
     var cfg = getConfig();
-    if (!(target && target.ip) && !cfg.ip && !cfg.osPrinter) return Promise.resolve({ ok: false, reason: 'not-configured' });
+    if (!(target && (target.ip || target.osPrinter)) && !cfg.ip && !cfg.osPrinter) return Promise.resolve({ ok: false, reason: 'not-configured' });
     // Locate the bridge before the first job if we haven't yet (or if it moved
     // ports since — a restart on a busy 9110 lands somewhere else).
     if (!bridgePort) {
@@ -412,6 +511,8 @@
       method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: to.signal,
       body: JSON.stringify((target && target.ip)
         ? { printerIp: target.ip, port: Number(target.port) || 9100, dataB64: window.KiwiEscPos.toB64(bytes) }
+        : (target && target.osPrinter)
+        ? { printerName: target.osPrinter, dataB64: window.KiwiEscPos.toB64(bytes) }
         : cfg.osPrinter
         ? { printerName: cfg.osPrinter, dataB64: window.KiwiEscPos.toB64(bytes) }
         : { printerIp: cfg.ip, port: Number(cfg.port) || 9100, dataB64: window.KiwiEscPos.toB64(bytes) }),
@@ -422,10 +523,42 @@
     }).catch(function () { to.done(); return { ok: false, reason: 'bridge-unreachable' }; });
   }
 
+  /* Imprime directement sur un profil ou une cible donnée ({ type, ip, port, osPrinter }). */
+  function printBytesToTarget(bytes, target) {
+    if (!target) return printBytes(bytes);
+    var type = target.type || (target.ip ? 'ip' : target.osPrinter ? 'os' : '');
+    if (type === 'bt') {
+      if (!btConnected()) return Promise.resolve({ ok: false, reason: 'bt-not-connected' });
+      return btWrite(bytes).then(function () { return { ok: true, via: 'bluetooth', bytes: bytes.length }; });
+    }
+    if (type === 'usb') {
+      if (!usbConnected()) return Promise.resolve({ ok: false, reason: 'usb-not-connected' });
+      return usbWrite(bytes).then(function () { return { ok: true, via: 'usb', bytes: bytes.length }; });
+    }
+    if (type === 'os' || target.osPrinter) {
+      return bridgePrintBytes(bytes, { osPrinter: target.osPrinter || target.name });
+    }
+    if (type === 'ip' || target.ip) {
+      return bridgePrintBytes(bytes, { ip: target.ip, port: Number(target.port) || 9100 });
+    }
+    return printBytes(bytes);
+  }
+
   // Route ESC/POS bytes to whichever printer is live: Bluetooth, then USB, then
   // the network bridge. Callers fail soft when this resolves { ok:false }.
-  function printBytes(bytes) {
+  function printBytes(bytes, targetOrStation) {
     if (!window.KiwiEscPos) return Promise.resolve({ ok: false, reason: 'no-encoder' });
+    if (typeof targetOrStation === 'string') {
+      var t = resolveStationTarget(targetOrStation);
+      if (t) return printBytesToTarget(bytes, t);
+    } else if (targetOrStation && typeof targetOrStation === 'object') {
+      if (targetOrStation.station) {
+        var t2 = resolveStationTarget(targetOrStation.station, targetOrStation.merchant);
+        if (t2) return printBytesToTarget(bytes, t2);
+      } else if (targetOrStation.ip || targetOrStation.osPrinter || targetOrStation.type) {
+        return printBytesToTarget(bytes, targetOrStation);
+      }
+    }
     function viaBridge() { return bridgePrintBytes(bytes); }
     function viaUsb() {
       if (!usbConnected()) return viaBridge();
@@ -443,11 +576,63 @@
       viaUsb);
   }
 
-  // A printer is "connected" if Bluetooth or USB is live, OR the bridge is set up.
-  function isConnected() { return btConnected() || usbConnected() || isConfigured(); }
+  // A printer is "connected" if Bluetooth or USB is live, OR the bridge is set up, OR a station is bound.
+  function isConnected() { return btConnected() || usbConnected() || isConfigured() || hasStationBindings(); }
 
-  function printReceipt(o) { return window.KiwiEscPos ? printBytes(window.KiwiEscPos.receipt(withPaper(o))) : Promise.resolve({ ok: false, reason: 'no-encoder' }); }
-  function printKitchen(o) { return window.KiwiEscPos ? printBytes(window.KiwiEscPos.kitchenTicket(withPaper(o))) : Promise.resolve({ ok: false, reason: 'no-encoder' }); }
+  function printReceipt(o, options) {
+    if (!window.KiwiEscPos) return Promise.resolve({ ok: false, reason: 'no-encoder' });
+    var target = resolveStationTarget('caisse', options && options.merchant);
+    var paper = (target && target.paper) || withPaper(o).paper;
+    var bytes = window.KiwiEscPos.receipt(Object.assign({}, o, { paper: paper }));
+    if (target) {
+      return printBytesToTarget(bytes, target).then(function (res) {
+        if (res && res.ok) return res;
+        return printBytes(bytes);
+      }, function () {
+        return printBytes(bytes);
+      });
+    }
+    return printBytes(bytes);
+  }
+
+  function printKitchen(o, options) {
+    if (!window.KiwiEscPos) return Promise.resolve({ ok: false, reason: 'no-encoder' });
+    var stationId = (options && options.station) || (o && o.station) || '';
+    var target = stationId ? resolveStationTarget(stationId, options && options.merchant) : resolveStationTarget('cuisson', options && options.merchant);
+    var paper = (target && target.paper) || withPaper(o).paper;
+    var bytes = window.KiwiEscPos.kitchenTicket(Object.assign({}, o, { paper: paper }));
+    if (target) {
+      return printBytesToTarget(bytes, target).then(function (res) {
+        if (res && res.ok) return res;
+        // Fail-soft fallback: attempt printing to caisse target or default printer
+        var caisseTarget = resolveStationTarget('caisse', options && options.merchant);
+        var stName = (o && o.title) || stationId || 'cuisine';
+        try {
+          if (window.Kiwi && Kiwi.toast) Kiwi.toast('Imprimante ' + stName + ' indisponible · ticket imprimé à la caisse');
+        } catch (_) {}
+        return printBytesToTarget(bytes, caisseTarget || null).then(function (cRes) {
+          if (cRes && cRes.ok) return Object.assign({}, cRes, { fallback: true, originalReason: res && res.reason });
+          return printBytes(bytes);
+        }, function () {
+          return printBytes(bytes);
+        });
+      }, function (err) {
+        var caisseTarget = resolveStationTarget('caisse', options && options.merchant);
+        var stName = (o && o.title) || stationId || 'cuisine';
+        try {
+          if (window.Kiwi && Kiwi.toast) Kiwi.toast('Imprimante ' + stName + ' indisponible · ticket imprimé à la caisse');
+        } catch (_) {}
+        return printBytesToTarget(bytes, caisseTarget || null).then(function (cRes) {
+          if (cRes && cRes.ok) return Object.assign({}, cRes, { fallback: true, originalReason: err && err.message });
+          return printBytes(bytes);
+        }, function () {
+          return printBytes(bytes);
+        });
+      });
+    }
+    return printBytes(bytes);
+  }
+
   function printLabels(labels) {
     if (!window.KiwiEscPos) return Promise.resolve({ ok: false, reason: 'no-encoder' });
     var list = (Array.isArray(labels) ? labels : [labels]).filter(Boolean);
@@ -459,7 +644,7 @@
     var total = chunks.reduce(function (n, c) { return n + c.length; }, 0);
     var all = new Uint8Array(total); var off = 0;
     chunks.forEach(function (c) { all.set(c, off); off += c.length; });
-    return printBytes(all);
+    return printBytes(all, 'caisse');
   }
   function withPaper(o) { o = o || {}; if (!o.paper) o.paper = getConfig().paper; return o; }
 
@@ -774,11 +959,6 @@
       '.kpr-quick{display:flex;gap:10px;margin:0 0 16px;}' +
       '.kpr-quick .kpr-btn{flex:1;width:auto;margin:0;}' +
       '.kpr-quick .kpr-browser{background:var(--atlas,#0B6E4F);color:#fff;border:0;opacity:1;}' +
-      '.kpr-quick .kpr-browser:hover{filter:brightness(1.06);border:0;}' +
-      '.kpr-quick .kpr-pdf{background:var(--surface);border:1.5px solid var(--atlas,#0B6E4F);color:var(--atlas,#0B6E4F);}' +
-      '.kpr-bt{border:1.5px solid rgba(11,110,79,.25);border-radius:14px;padding:15px 16px;margin:0 0 14px;background:rgba(11,110,79,.045);}' +
-      '.kpr-bt h3{margin:0 0 3px;font-size:1rem;}' +
-      '.kpr-bt>p{margin:0 0 12px;font-size:.82rem;opacity:.7;line-height:1.45;}' +
       '.kpr-hub{display:flex;align-items:flex-start;gap:12px;padding:13px 14px;border:1px solid rgba(11,110,79,.22);border-radius:12px;background:var(--surface,#fff);cursor:pointer;}' +
       '.kpr-hub input{width:19px;height:19px;margin:1px 0 0;accent-color:var(--atlas,#0B6E4F);flex:none;}' +
       '.kpr-hub span{display:grid;gap:3px;line-height:1.35;}.kpr-hub b{font-size:.88rem;}.kpr-hub small{font-size:.76rem;opacity:.68;}' +
@@ -789,16 +969,31 @@
       '.kpr-adv[open]>summary{margin-bottom:14px;}' +
       '.kpr-x{float:right;background:none;border:0;font-size:1.3rem;line-height:1;cursor:pointer;color:var(--ink,#0A0F0D);opacity:.5;}' +
       '.kpr-note{margin:14px 0 0;font-size:.78rem;opacity:.6;line-height:1.5;}' +
-      /* Sans ça les liens d'une note (« Télécharger le pont », la page de pilote)
-       * sortent du même gris que le texte autour et ne se lisent pas comme des
-       * liens — le commerçant ne clique pas ce qu'il ne voit pas. */
-      '.kpr-note a{color:var(--atlas,#0B6E4F);font-weight:600;text-decoration:underline;}';
+      '.kpr-note a{color:var(--atlas,#0B6E4F);font-weight:600;text-decoration:underline;}' +
+      '.kpr-st-hdr{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px;}' +
+      '.kpr-st-sub{font-size:.84rem;color:var(--ink,#0A0F0D);opacity:.68;margin:2px 0 0;line-height:1.4;}' +
+      '.kpr-st-add-btn{background:var(--atlas,#0B6E4F);color:#fff;padding:8px 14px;border-radius:10px;font-size:.82rem;font-weight:600;white-space:nowrap;border:0;cursor:pointer;flex:none;}' +
+      '.kpr-st-add-btn:hover{filter:brightness(1.06);}' +
+      '.kpr-profile-card{background:rgba(11,110,79,.06);border:1.5px solid rgba(11,110,79,.22);border-radius:14px;padding:16px;margin:12px 0 16px;}' +
+      '.kpr-profile-card h4{margin:0 0 12px;font-size:.95rem;font-weight:700;color:var(--ink,#0A0F0D);}' +
+      '.kpr-profiles-chip-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}' +
+      '.kpr-prof-chip{display:inline-flex;align-items:center;gap:7px;background:var(--surface,#fff);border:1px solid rgba(0,0,0,.15);padding:5px 10px;border-radius:9px;font-size:.82rem;color:var(--ink,#0A0F0D);}' +
+      '.kpr-prof-chip b{font-weight:600;}' +
+      '.kpr-prof-del{background:none;border:none;color:#9ca3af;cursor:pointer;font-size:15px;line-height:1;padding:0 2px;margin-left:2px;}' +
+      '.kpr-prof-del:hover{color:#dc2626;}' +
+      '.kpr-station-table-wrap{width:100%;overflow-x:auto;margin-top:10px;border:1px solid rgba(0,0,0,.12);border-radius:12px;background:var(--surface,#fff);}' +
+      '.kpr-station-table{width:100%;border-collapse:collapse;text-align:left;font-size:.85rem;}' +
+      '.kpr-station-table th{background:rgba(0,0,0,.03);padding:9px 12px;font-weight:600;color:var(--ink,#0A0F0D);opacity:.8;border-bottom:1px solid rgba(0,0,0,.09);}' +
+      '.kpr-station-table td{padding:9px 12px;border-bottom:1px solid rgba(0,0,0,.06);vertical-align:middle;}' +
+      '.kpr-station-table tr:last-child td{border-bottom:none;}' +
+      '.kpr-st-badge{display:inline-block;padding:2px 7px;border-radius:6px;font-size:.75rem;font-weight:600;background:rgba(0,0,0,.06);color:var(--ink,#0A0F0D);}' +
+      '.kpr-st-badge.receipt{background:#e0f2fe;color:#0369a1;}' +
+      '.kpr-st-badge.production{background:#fef3c7;color:#92400e;}' +
+      '.kpr-st-sel{width:100%;min-width:130px;padding:6px 8px;border:1.5px solid rgba(0,0,0,.12);border-radius:8px;background:var(--surface,#fff);color:var(--ink,#0A0F0D);font-size:.82rem;}' +
+      '.kpr-st-test{padding:6px 11px;font-size:.78rem;border-radius:8px;}';
     document.head.appendChild(s);
   }
 
-  // context (optional): { onBrowserPrint } — when the modal is opened from a print
-  // attempt on a machine with no bridge, we surface a "print via browser/PDF"
-  // escape so a label still comes out without the Kiwi Printer Bridge.
   function openSetup(context) {
     context = context || {};
     injectCss();
@@ -809,10 +1004,6 @@
     var btLive = btConnected();
     var usbLive = usbConnected();
     var fromPrint = !!(context.onBrowserPrint || context.onSavePdf);
-    /* Le modal servait les étiquettes uniquement, donc le titre les nommait en
-     * dur. Le reçu emprunte le même chemin depuis que l'impression système est
-     * un repli : `kind` évite de proposer « Imprimer l'étiquette » à une
-     * caissière qui encaisse une vente. */
     var isLabel = (context.kind || 'label') === 'label';
     ov.innerHTML =
       '<div id="kpr-card">' +
@@ -822,10 +1013,6 @@
           ? (isLabel
             ? 'Imprimez tout de suite, ou connectez une imprimante (Bluetooth ou réseau) pour imprimer directement la prochaine fois.'
             : 'Aucune imprimante n’est connectée à Kiwi. Si l’imprimante est déjà installée sur cette caisse, imprimez par le système — ou connectez-la en Bluetooth ou en USB pour imprimer sans boîte de dialogue la prochaine fois.')
-          /* Cette phrase renvoyait vers un bouton « Imprimer » qui n'existe que
-           * lorsqu'on ouvre le modal DEPUIS une impression (fromPrint). Ouvert
-           * par « connecter une imprimante », elle envoyait le commerçant
-           * chercher un bouton absent de l'écran. */
           : 'Connectez l’imprimante en Bluetooth ou en USB pour imprimer sans boîte de dialogue. Si elle est déjà installée sur cette caisse, Kiwi peut aussi l’utiliser via la boîte d’impression du système.') + '</p>' +
         (fromPrint ? '<div class="kpr-quick">' +
           (context.onBrowserPrint ? '<button class="kpr-btn kpr-browser" type="button" id="kpr-browser">Imprimer</button>' : '') +
@@ -851,9 +1038,6 @@
           '<label class="kpr-hub"><input type="checkbox" id="kpr-hub"' + (KiwiKitchenPrint.isHub() ? ' checked' : '') + '>' +
             '<span><b>Faire de ce poste le hub d’impression</b><small id="kpr-hub-status"></small></span></label>' +
         '</div>' : '') +
-        /* Printers the till already has. Hidden until the bridge answers with a
-         * non-empty list — on a tablet, or with no bridge, an empty box that
-         * never fills is worse than no box. Populated in the ping handler. */
         '<div class="kpr-bt" id="kpr-os" style="display:none;">' +
           '<h3>Imprimante déjà installée</h3>' +
           '<p>Celle que cet ordinateur utilise déjà. Kiwi lui envoie le ticket directement, sans boîte de dialogue.</p>' +
@@ -864,8 +1048,52 @@
             '<button class="kpr-btn kpr-save" type="button" id="kpr-os-save">Utiliser cette imprimante</button>' +
           '</div>' +
         '</div>' +
+        '<div class="kpr-bt" id="kpr-stations-box">' +
+          '<div class="kpr-st-hdr">' +
+            '<div>' +
+              '<h3>Imprimantes par poste</h3>' +
+              '<p class="kpr-st-sub">Associez chaque poste (caisse, cuisine, bar…) à son imprimante physique.</p>' +
+            '</div>' +
+            '<button type="button" class="kpr-st-add-btn" id="kpr-add-prof-btn">+ Nouvelle imprimante</button>' +
+          '</div>' +
+          '<div id="kpr-profile-form" class="kpr-profile-card" style="display:none;">' +
+            '<h4 id="kpr-prof-form-title">Ajouter une imprimante</h4>' +
+            '<div class="kpr-field"><label for="kpr-prof-name">Nom de l’imprimante</label><input id="kpr-prof-name" type="text" placeholder="ex. Cuisine, Bar, Fournil…"></div>' +
+            '<div class="kpr-two">' +
+              '<div class="kpr-field"><label for="kpr-prof-type">Type</label><select id="kpr-prof-type">' +
+                '<option value="ip">Réseau (IP · Wi-Fi / Ethernet)</option>' +
+                '<option value="os">Imprimante système (installée)</option>' +
+                '<option value="usb">USB direct</option>' +
+                '<option value="bt">Bluetooth</option>' +
+              '</select></div>' +
+              '<div class="kpr-field"><label for="kpr-prof-paper">Papier</label><select id="kpr-prof-paper"><option value="80">80 mm (standard)</option><option value="58">58 mm</option></select></div>' +
+            '</div>' +
+            '<div id="kpr-prof-ip-box" class="kpr-two">' +
+              '<div class="kpr-field"><label for="kpr-prof-ip">Adresse IP</label><input id="kpr-prof-ip" type="text" placeholder="192.168.1.50" inputmode="decimal"></div>' +
+              '<div class="kpr-field"><label for="kpr-prof-port">Port</label><input id="kpr-prof-port" type="text" value="9100" inputmode="numeric"></div>' +
+            '</div>' +
+            '<div id="kpr-prof-os-box" class="kpr-field" style="display:none;">' +
+              '<label for="kpr-prof-os-sel">Imprimante du système</label><select id="kpr-prof-os-sel"></select>' +
+            '</div>' +
+            '<div class="kpr-actions" style="margin-top:12px;">' +
+              '<button class="kpr-btn kpr-test" type="button" id="kpr-prof-test-btn">Tester</button>' +
+              '<button class="kpr-btn kpr-save" type="button" id="kpr-prof-save-btn">Enregistrer</button>' +
+              '<button class="kpr-btn" type="button" id="kpr-prof-cancel-btn" style="background:#e5e7eb;color:#1f2937;">Annuler</button>' +
+            '</div>' +
+          '</div>' +
+          '<div id="kpr-profiles-list" class="kpr-profiles-chip-row"></div>' +
+          '<div class="kpr-station-table-wrap">' +
+            '<table class="kpr-station-table">' +
+              '<thead><tr><th>Poste</th><th>Document</th><th>Imprimante</th><th>Action</th></tr></thead>' +
+              '<tbody id="kpr-station-tbody"></tbody>' +
+            '</table>' +
+          '</div>' +
+          '<div class="kpr-actions" style="margin-top:12px;">' +
+            '<button class="kpr-btn kpr-save" type="button" id="kpr-save-stations-btn">Enregistrer le routage par poste</button>' +
+          '</div>' +
+        '</div>' +
         '<details class="kpr-adv"' + (cfg.ip ? ' open' : '') + '>' +
-          '<summary>Option avancée · imprimante réseau (Wi-Fi / Ethernet)</summary>' +
+          '<summary>Option avancée · imprimante réseau globale (Wi-Fi / Ethernet)</summary>' +
           '<div class="kpr-status off" id="kpr-status"><span class="kpr-d"></span><span id="kpr-status-t">Vérification du pont…</span></div>' +
           '<p class="kpr-note" id="kpr-target"></p>' +
           '<div class="kpr-field"><label for="kpr-ip">Adresse IP de l’imprimante</label><input id="kpr-ip" type="text" inputmode="decimal" placeholder="192.168.1.50" value="' + esc(cfg.ip) + '"></div>' +
@@ -878,10 +1106,6 @@
           '</div>' +
           '<div class="kpr-field"><label for="kpr-model">Modèle</label><select id="kpr-model">' + opts + '</select>' +
             '<p class="kpr-note" id="kpr-model-note" style="margin-top:8px;' + (modelNote(cfg.model) ? '' : 'display:none;') + '">' + esc(modelNote(cfg.model)) + '</p>' +
-            /* Le pilote ne sert PAS aux trois transports de Kiwi (Bluetooth, USB,
-             * pont) : il sert à imprimer les étiquettes via le pilote Windows, et
-             * à débloquer un refus de claim WebUSB. Le libellé le dit, pour ne pas
-             * envoyer le commerçant installer un pilote dont il n'a pas besoin. */
             '<p class="kpr-note" id="kpr-model-driver" style="margin-top:6px;' + (modelDriver(cfg.model) ? '' : 'display:none;') + '">' +
               'Pilote Windows (utile seulement pour les étiquettes ou si l\'USB est refusé) : ' +
               '<a id="kpr-model-driver-a" href="' + esc(modelDriver(cfg.model)) + '" target="_blank" rel="noopener noreferrer">page de téléchargement</a>' +
@@ -907,10 +1131,6 @@
     function close() { ov.remove(); }
     function toast(msg) { try { if (window.Kiwi && Kiwi.toast) Kiwi.toast(msg); } catch (_) {} }
 
-    /* Une adresse valide est une IPv4 (chaque octet ≤ 255) ou un nom d'hôte
-     * (EPSON-TM.local). Vide est permis : c'est l'effacement de la cible réseau.
-     * Sans ce garde, une faute de frappe dormait dans la config et ne se
-     * révélait qu'en erreur de socket brute au moment d'un ticket. */
     function validIp(s) {
       if (!s) return true;
       var m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(s);
@@ -919,7 +1139,6 @@
     }
     function validPort(s) { var n = Number(s); return Number.isInteger(n) && n >= 1 && n <= 65535; }
 
-    /* Les codes d'échec du pont, dits en français utile plutôt qu'en errno. */
     function frReason(reason) {
       var r = String(reason || '');
       if (r === 'bridge-unreachable') return 'Pont introuvable — lancez Kiwi Printer Bridge sur cet ordinateur';
@@ -930,9 +1149,6 @@
       return r || 'inconnu';
     }
 
-    /* La cible que le pont utilisera réellement — dite en clair dans la section
-     * réseau, parce que le nom OS prime sur l'IP et que ce silence a déjà rendu
-     * une IP fraîchement saisie inopérante sans un mot. */
     function paintTarget() {
       var el = $('#kpr-target'); if (!el) return;
       var c = getConfig();
@@ -956,12 +1172,207 @@
     });
     paintHubStatus();
 
-    /* Fill the "already installed" picker from the bridge. Older bridges (< 1.2)
-     * have no /kiwi/printers and 404 — the section simply stays hidden, so an
-     * un-updated till degrades to exactly today's behaviour instead of showing a
-     * control that can never work. */
+    // ── Station Routing UI Logic ──
+    var stConfig = getStationConfig();
+    var prepStations = (context.stations && Array.isArray(context.stations)) ? context.stations : getPrepStations();
+
+    function renderProfilesChips() {
+      var chipRow = $('#kpr-profiles-list');
+      if (!chipRow) return;
+      if (!stConfig.profiles.length) {
+        chipRow.innerHTML = '<span class="kpr-note" style="margin:0 0 6px;display:block;">Aucune imprimante additionnelle enregistrée. Ajoutez-en une pour router par poste.</span>';
+        return;
+      }
+      chipRow.innerHTML = stConfig.profiles.map(function (p) {
+        var desc = p.type === 'ip' ? (p.ip + ':' + (p.port || 9100)) : p.type === 'os' ? p.osPrinter : p.type.toUpperCase();
+        return '<span class="kpr-prof-chip" data-prof-id="' + esc(p.id) + '">' +
+          '<b>' + esc(p.name) + '</b> <small>(' + esc(desc) + ')</small>' +
+          '<button type="button" class="kpr-prof-del" data-del-prof="' + esc(p.id) + '" aria-label="Supprimer">×</button>' +
+          '</span>';
+      }).join('');
+
+      chipRow.querySelectorAll('[data-del-prof]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var pid = this.getAttribute('data-del-prof');
+          stConfig.profiles = stConfig.profiles.filter(function (p) { return p.id !== pid; });
+          Object.keys(stConfig.bindings).forEach(function (k) {
+            if (stConfig.bindings[k] === pid) delete stConfig.bindings[k];
+          });
+          setStationConfig(stConfig);
+          renderProfilesChips();
+          renderStationRows();
+          toast('Imprimante retirée');
+        });
+      });
+    }
+
+    function renderStationRows() {
+      var tbody = $('#kpr-station-tbody');
+      if (!tbody) return;
+      var rows = [];
+
+      var caisseCur = stConfig.bindings.caisse || '';
+      var caisseOpts = '<option value="">— Imprimante par défaut (actuelle) —</option>' +
+        stConfig.profiles.map(function (p) {
+          return '<option value="' + esc(p.id) + '"' + (p.id === caisseCur ? ' selected' : '') + '>' + esc(p.name) + ' (' + esc(p.type === 'ip' ? p.ip : p.type) + ')</option>';
+        }).join('');
+      rows.push('<tr>' +
+        '<td><b>Caisse (comptoir)</b></td>' +
+        '<td><span class="kpr-st-badge receipt">Reçus clients</span></td>' +
+        '<td><select class="kpr-st-sel" data-station-id="caisse">' + caisseOpts + '</select></td>' +
+        '<td><button type="button" class="kpr-btn kpr-test kpr-st-test" data-test-station="caisse" data-station-title="Caisse">Tester</button></td>' +
+        '</tr>');
+
+      prepStations.forEach(function (st) {
+        var cur = stConfig.bindings[st.id] || '';
+        var opts = '<option value="">— Même imprimante que la caisse —</option>' +
+          stConfig.profiles.map(function (p) {
+            return '<option value="' + esc(p.id) + '"' + (p.id === cur ? ' selected' : '') + '>' + esc(p.name) + ' (' + esc(p.type === 'ip' ? p.ip : p.type) + ')</option>';
+          }).join('');
+        rows.push('<tr>' +
+          '<td><b>' + esc(st.name || st.id) + '</b></td>' +
+          '<td><span class="kpr-st-badge production">Production</span></td>' +
+          '<td><select class="kpr-st-sel" data-station-id="' + esc(st.id) + '">' + opts + '</select></td>' +
+          '<td><button type="button" class="kpr-btn kpr-test kpr-st-test" data-test-station="' + esc(st.id) + '" data-station-title="' + esc(st.name || st.id) + '">Tester</button></td>' +
+          '</tr>');
+      });
+
+      tbody.innerHTML = rows.join('');
+
+      tbody.querySelectorAll('.kpr-st-test').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var sid = this.getAttribute('data-test-station');
+          var stTitle = this.getAttribute('data-station-title') || 'Poste';
+          var rowSel = tbody.querySelector('.kpr-st-sel[data-station-id="' + sid + '"]');
+          var profId = rowSel ? rowSel.value : '';
+          var prof = profId ? stConfig.profiles.find(function (p) { return p.id === profId; }) : null;
+          var paper = (prof && prof.paper) || getConfig().paper || '80';
+          var bTest = this;
+          bTest.disabled = true; var origText = bTest.textContent; bTest.textContent = 'Impression…';
+          var slipBytes = (sid === 'caisse')
+            ? window.KiwiEscPos.receipt({ shop: 'TEST CAISSE', lines: [{ name: 'Test reçu client', price: '0.00' }], total: '0.00', paper: paper })
+            : window.KiwiEscPos.kitchenTicket({ title: 'TEST ' + stTitle.toUpperCase(), order: '#TEST', time: '12:00', items: [{ name: 'Article test ' + stTitle, qty: 1 }], paper: paper });
+          (prof ? printBytesToTarget(slipBytes, prof) : printBytes(slipBytes)).then(function (res) {
+            bTest.textContent = origText; bTest.disabled = false;
+            toast(res.ok ? ('Ticket test envoyé (' + stTitle + ')') : ('Échec : ' + frReason(res.reason)));
+          }, function () {
+            bTest.textContent = origText; bTest.disabled = false;
+            toast('Échec d’impression');
+          });
+        });
+      });
+    }
+
+    var addProfBtn = $('#kpr-add-prof-btn');
+    var profForm = $('#kpr-profile-form');
+    var profTypeSel = $('#kpr-prof-type');
+    var profIpBox = $('#kpr-prof-ip-box');
+    var profOsBox = $('#kpr-prof-os-box');
+
+    if (addProfBtn && profForm) {
+      addProfBtn.addEventListener('click', function () {
+        profForm.style.display = profForm.style.display === 'none' ? 'block' : 'none';
+        if (profForm.style.display === 'block') {
+          $('#kpr-prof-name').value = '';
+          $('#kpr-prof-ip').value = '';
+          $('#kpr-prof-name').focus();
+        }
+      });
+    }
+    if ($('#kpr-prof-cancel-btn')) {
+      $('#kpr-prof-cancel-btn').addEventListener('click', function () {
+        if (profForm) profForm.style.display = 'none';
+      });
+    }
+    if (profTypeSel) {
+      profTypeSel.addEventListener('change', function () {
+        if (profIpBox) profIpBox.style.display = this.value === 'ip' ? 'flex' : 'none';
+        if (profOsBox) profOsBox.style.display = this.value === 'os' ? 'block' : 'none';
+      });
+    }
+
+    if ($('#kpr-prof-test-btn')) {
+      $('#kpr-prof-test-btn').addEventListener('click', function () {
+        var type = $('#kpr-prof-type').value;
+        var name = ($('#kpr-prof-name').value || 'Test').trim();
+        var ip = ($('#kpr-prof-ip').value || '').trim();
+        var port = Number($('#kpr-prof-port').value) || 9100;
+        var osPrinter = $('#kpr-prof-os-sel') ? $('#kpr-prof-os-sel').value : '';
+        var paper = $('#kpr-prof-paper').value || '80';
+        if (type === 'ip') {
+          if (!ip) { toast('Saisissez une adresse IP'); return; }
+          if (!validIp(ip)) { toast('Adresse IP invalide'); return; }
+          if (!validPort(port)) { toast('Port invalide'); return; }
+        }
+        var target = { type: type, name: name, ip: ip, port: port, osPrinter: osPrinter, paper: paper };
+        var btn = this; btn.disabled = true; var origText = btn.textContent; btn.textContent = 'Impression…';
+        var slipBytes = window.KiwiEscPos.testSlip({ title: 'TEST ' + name.toUpperCase(), ip: ip, paper: paper });
+        printBytesToTarget(slipBytes, target).then(function (res) {
+          btn.textContent = origText; btn.disabled = false;
+          toast(res.ok ? ('Ticket test envoyé à ' + name) : ('Échec : ' + frReason(res.reason)));
+        }, function () {
+          btn.textContent = origText; btn.disabled = false;
+          toast('Échec d’impression');
+        });
+      });
+    }
+
+    if ($('#kpr-prof-save-btn')) {
+      $('#kpr-prof-save-btn').addEventListener('click', function () {
+        var name = ($('#kpr-prof-name').value || '').trim();
+        var type = $('#kpr-prof-type').value;
+        var ip = ($('#kpr-prof-ip').value || '').trim();
+        var port = Number($('#kpr-prof-port').value) || 9100;
+        var osPrinter = $('#kpr-prof-os-sel') ? $('#kpr-prof-os-sel').value : '';
+        var paper = $('#kpr-prof-paper').value || '80';
+
+        if (!name) { toast('Donnez un nom à cette imprimante (ex. Cuisine, Bar)'); $('#kpr-prof-name').focus(); return; }
+        if (type === 'ip') {
+          if (!ip) { toast('Saisissez une adresse IP'); $('#kpr-prof-ip').focus(); return; }
+          if (!validIp(ip)) { toast('Adresse IP invalide'); $('#kpr-prof-ip').focus(); return; }
+          if (!validPort(port)) { toast('Port invalide'); $('#kpr-prof-port').focus(); return; }
+        }
+        if (type === 'os' && !osPrinter) {
+          toast('Sélectionnez une imprimante système'); return;
+        }
+
+        var newProf = {
+          id: 'prof_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+          name: name,
+          type: type,
+          ip: ip,
+          port: port,
+          osPrinter: osPrinter,
+          paper: paper
+        };
+        stConfig.profiles.push(newProf);
+        setStationConfig(stConfig);
+        renderProfilesChips();
+        renderStationRows();
+        if (profForm) profForm.style.display = 'none';
+        toast('Imprimante « ' + name + ' » enregistrée');
+      });
+    }
+
+    if ($('#kpr-save-stations-btn')) {
+      $('#kpr-save-stations-btn').addEventListener('click', function () {
+        var selects = ov.querySelectorAll('.kpr-st-sel');
+        var newBindings = {};
+        selects.forEach(function (sel) {
+          var sid = sel.getAttribute('data-station-id');
+          if (sid && sel.value) newBindings[sid] = sel.value;
+        });
+        stConfig.bindings = newBindings;
+        setStationConfig(stConfig);
+        toast('Routage des imprimantes par poste enregistré');
+      });
+    }
+
+    renderProfilesChips();
+    renderStationRows();
+
     function loadOsPrinters() {
-      var box = $('#kpr-os'), sel = $('#kpr-os-sel');
+      var box = $('#kpr-os'), sel = $('#kpr-os-sel'), profSel = $('#kpr-prof-os-sel');
       if (!box || !sel) return Promise.resolve();
       var to = withTimeout(null, 6000);
       return fetch(bridgeBase() + '/kiwi/printers', { signal: to.signal })
@@ -971,9 +1382,11 @@
           var list = (j && j.ok && Array.isArray(j.printers)) ? j.printers : [];
           if (!list.length) { box.style.display = 'none'; return; }
           var cur = getConfig().osPrinter || j.default || '';
-          sel.innerHTML = list.map(function (n) {
+          var optionsHtml = list.map(function (n) {
             return '<option value="' + esc(n) + '"' + (n === cur ? ' selected' : '') + '>' + esc(n) + '</option>';
           }).join('');
+          sel.innerHTML = optionsHtml;
+          if (profSel) profSel.innerHTML = optionsHtml;
           box.style.display = '';
         });
     }
@@ -993,7 +1406,6 @@
         } else {
           var box = $('#kpr-os'); if (box) box.style.display = 'none';
           st.className = 'kpr-status off';
-          // Rebuild with download + re-check affordances.
           t.innerHTML = 'Kiwi Printer Bridge non détecté. <a href="' + esc(BRIDGE_DOWNLOAD) + '" target="_blank" rel="noopener">Télécharger le pont</a> · <button type="button" class="kpr-recheck" id="kpr-recheck">Revérifier</button>';
           var rc = $('#kpr-recheck'); if (rc) rc.addEventListener('click', refreshStatus);
           test.disabled = true;
@@ -1003,9 +1415,6 @@
 
     $('#kpr-close').addEventListener('click', close);
     ov.addEventListener('click', function (e) { if (e.target === ov) close(); });
-    /* Symétrique du choix d'imprimante installée ci-dessous : enregistrer une
-     * IP efface le nom d'imprimante OS retenu, sinon le pont — qui préfère le
-     * nom — ignorerait pour toujours l'IP qu'on vient de saisir. */
     $('#kpr-save').addEventListener('click', function () {
       var f = readForm();
       if (!validIp(f.ip)) { toast('Adresse invalide — attendu : 192.168.1.50 (ou un nom comme EPSON.local)'); $('#kpr-ip').focus(); return; }
@@ -1016,8 +1425,6 @@
       close();
     });
 
-    /* Choosing an installed printer clears any saved IP. Leaving both set would
-     * be ambiguous to read back later, even though the bridge prefers the name. */
     $('#kpr-os-save').addEventListener('click', function () {
       var sel = $('#kpr-os-sel'); if (!sel || !sel.value) return;
       setConfig({ osPrinter: sel.value, ip: '' });
@@ -1028,9 +1435,6 @@
       close();
     });
 
-    /* Test prints to the printer highlighted right now, not to the saved one —
-     * the owner is trying candidates, and a test that ignores the picker would
-     * report success for a printer they didn't select. */
     $('#kpr-os-test').addEventListener('click', function () {
       var sel = $('#kpr-os-sel'); if (!sel || !sel.value) return;
       var btn = this, orig = btn.textContent;
@@ -1060,7 +1464,6 @@
       if (sp) sp.addEventListener('click', function () { close(); try { context.onSavePdf(); } catch (_) {} });
     }
 
-    // ── Bluetooth: connect + test ──
     $('#kpr-bt-connect').addEventListener('click', function () {
       var st = $('#kpr-bt-status'), t = $('#kpr-bt-status-t'), btn = this;
       if (!navigator.bluetooth) { st.className = 'kpr-status off'; t.textContent = 'Bluetooth indisponible sur ce navigateur. Utilisez Chrome (ordinateur ou Android).'; return; }
@@ -1087,7 +1490,6 @@
       });
     });
 
-    // ── USB (WebUSB): same shape as Bluetooth, different transport ──
     if ($('#kpr-usb-connect')) {
       $('#kpr-usb-connect').addEventListener('click', function () {
         var st = $('#kpr-usb-status'), t = $('#kpr-usb-status-t'), btn = this;
@@ -1100,9 +1502,6 @@
         }, function (e) {
           btn.disabled = false; btn.textContent = orig; st.className = 'kpr-status off';
           var m = (e && e.message) || '';
-          /* The honest failure here is "the operating system already owns this
-             printer" — macOS/Linux hand printer-class devices to CUPS and Windows
-             wants a WinUSB driver. Say that instead of a raw DOMException. */
           if (/no-webusb/.test(m)) t.textContent = 'USB indisponible sur ce navigateur. Utilisez Chrome (ordinateur ou Android).';
           else if (/cancel|NotFound|chooser|No device selected/i.test(m)) t.textContent = 'Aucune imprimante sélectionnée.';
           else if (/no-bulk-out/.test(m)) t.textContent = 'Appareil trouvé mais ce n’est pas une imprimante USB standard.';
@@ -1120,8 +1519,6 @@
       });
     }
 
-    // Model caveats (Star emulation, WD8210 language, Zebra = ZPL) and the make's
-    // driver page surface as they're picked.
     $('#kpr-model').addEventListener('change', function () {
       var el = $('#kpr-model-note');
       if (el) {
@@ -1132,18 +1529,11 @@
       var dp = $('#kpr-model-driver'), da = $('#kpr-model-driver-a');
       if (dp && da) {
         var d = modelDriver(this.value);
-        // href, jamais innerHTML : l'URL vient de MODELS, mais on garde le même
-        // réflexe que partout ailleurs dans ce fichier.
         if (d) da.setAttribute('href', d);
         dp.style.display = d ? '' : 'none';
       }
     });
 
-    // ── Network bridge (advanced): test targets the bridge explicitly ──
-    /* La cible est passée EXPLICITEMENT ({ip, port}) : sans cela, un nom
-     * d'imprimante OS enregistré primait et le « test réseau » validait une IP
-     * jamais essayée. Le test n'écrit pas la config — c'est le rôle
-     * d'Enregistrer. */
     $('#kpr-test').addEventListener('click', function () {
       var f = readForm();
       if (!f.ip) { toast('Saisissez d’abord l’adresse IP de l’imprimante'); $('#kpr-ip').focus(); return; }
@@ -1156,11 +1546,6 @@
       });
     });
 
-    /* ── Détection des imprimantes du réseau (pont v1.3+) ──────────────────
-     * Le pont balaie le sous-réseau local à la recherche du port 9100 et rend
-     * les adresses qui répondent — le commerçant clique au lieu de chercher
-     * l'IP sur un ticket de configuration. Un pont plus ancien répond 404 :
-     * on le dit, on ne casse rien. */
     var scanBtn = $('#kpr-scan');
     if (scanBtn) scanBtn.addEventListener('click', function () {
       var out = $('#kpr-scan-out');
@@ -1193,9 +1578,6 @@
     refreshStatus();
     paintTarget();
 
-    /* A printer granted on an earlier visit is re-attached silently; reflect it
-     * here so the panel never claims "aucune imprimante" for one that is in fact
-     * connected and ready to print. */
     reconnectUsb().then(function (r) {
       if (!r || !ov.isConnected) return;
       var st = $('#kpr-usb-status'), t = $('#kpr-usb-status-t'), btn = $('#kpr-usb-connect');
@@ -1212,18 +1594,18 @@
     if (t) { e.preventDefault(); openSetup(); }
   });
 
-  /* Re-attach an already-granted USB printer as soon as the till loads, so the
-   * first receipt of the day prints without anyone opening this panel. */
   try { reconnectUsb(); } catch (_) {}
 
   window.KiwiPrinter = {
     getConfig: getConfig, setConfig: setConfig, isConfigured: isConfigured, isConnected: isConnected,
-    ping: ping, printBytes: printBytes,
+    ping: ping, printBytes: printBytes, printBytesToTarget: printBytesToTarget,
+    getStationConfig: getStationConfig, setStationConfig: setStationConfig,
+    hasStationBindings: hasStationBindings, resolveStationTarget: resolveStationTarget,
+    getPrepStations: getPrepStations,
     connectBluetooth: connectBluetooth, disconnectBluetooth: disconnectBluetooth, btConnected: btConnected,
     connectUsb: connectUsb, disconnectUsb: disconnectUsb, usbConnected: usbConnected, usbSupported: usbSupported,
     reconnectUsb: reconnectUsb,
     printReceipt: printReceipt, printKitchen: printKitchen, printLabels: printLabels,
-    // Le rapport de clôture. Contrairement aux trois au-dessus, celui-ci porte
     // son propre repli : une journée doit pouvoir se clôturer sans thermique.
     printDayReport: printDayReport, dayReportHTML: dayReportHTML,
     // Le repli « pilote du système » — même objet reçu que printReceipt.

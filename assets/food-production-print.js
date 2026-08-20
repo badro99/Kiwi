@@ -57,12 +57,14 @@
       return {
         id: ['food', trade, idPart(ref), idPart(station)].join(':'),
         createdAt: createdAt,
+        station: station,
         payload: {
           title: clean(input.title || (spec.title + ' · ' + station)).toUpperCase(),
           table: clean(input.destination),
           order: '#' + ref,
           time: timeOf(createdAt),
           items: groups[station],
+          station: station,
         },
       };
     });

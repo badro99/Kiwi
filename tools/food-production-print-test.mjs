@@ -47,7 +47,10 @@ for (const [file, trade] of Object.entries(integrations)) {
   ok(text.includes('KiwiFoodProductionPrint.enqueue'), `${trade} uses the shared production queue`);
   ok(text.includes(`trade: '${trade}'`), `${trade} identifies its workflow explicitly`);
 }
-ok(source('kiwi-caisse.html').includes('assets/food-production-print.js?v=1'), 'caisse loads the adapter before specialist modules');
+const caisseContent = source('kiwi-caisse.html');
+const swContent = source('kiwi-sw.js');
+const foodStampMatch = caisseContent.match(/assets\/food-production-print\.js\?v=(\d+)/);
+ok(!!foodStampMatch, 'caisse loads the adapter before specialist modules');
 ok(source('assets/pos-dispatch.js').includes('KiwiFoodProductionPrint.install(root, id)'), 'dispatcher mounts printer setup for eligible specialist tills');
-ok(source('kiwi-sw.js').includes("'/assets/food-production-print.js?v=1'"), 'adapter is available offline');
+ok(!!(foodStampMatch && swContent.includes(`'/assets/food-production-print.js?v=${foodStampMatch[1]}'`)), 'adapter is available offline');
 console.log(`✓ Food production printing — ${controls} controls`);

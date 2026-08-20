@@ -1147,7 +1147,7 @@
     var KP = window.KiwiPrinter;
     var bytes = escpos(doc, o);
     if (KP && bytes && (KP.isConnected ? KP.isConnected() : KP.isConfigured && KP.isConfigured())) {
-      return KP.printBytes(bytes).then(function (r) {
+      return KP.printBytes(bytes, 'caisse').then(function (r) {
         if (r && r.ok) return r;
         return browser(doc, o);
       }, function () { return browser(doc, o); });

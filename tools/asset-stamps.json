@@ -168,8 +168,8 @@
     "sha": "fb8091b5ddf2a84f"
   },
   "assets/food-production-print.js": {
-    "v": "1",
-    "sha": "935b8133aefba053"
+    "v": "2",
+    "sha": "882eee0288f15d96"
   },
   "assets/genpage.css": {
     "v": "1",
@@ -220,8 +220,8 @@
     "sha": "5418dcb8ad8d1d76"
   },
   "assets/kitchen-print-queue.js": {
-    "v": "2",
-    "sha": "4a31113d2bbb065e"
+    "v": "3",
+    "sha": "bec036a76eac2c1f"
   },
   "assets/kitchen-relay.js": {
     "v": "4",

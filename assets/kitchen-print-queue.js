@@ -80,7 +80,9 @@
   function printerReady() {
     try {
       var p = window.KiwiPrinter;
-      return !!(p && p.printKitchen && (p.isConnected ? p.isConnected() : (p.isConfigured && p.isConfigured())));
+      if (!p || !p.printKitchen) return false;
+      if (p.hasStationBindings && p.hasStationBindings()) return true;
+      return !!(p.isConnected ? p.isConnected() : (p.isConfigured && p.isConfigured()));
     } catch (_) { return false; }
   }
   function status() {
@@ -155,7 +157,8 @@
     var job = q.find(function (x) { return !x.nextAt || Number(x.nextAt) <= now; });
     if (!job) { schedule(); return Promise.resolve(status()); }
     running = true; emit();
-    return Promise.resolve(window.KiwiPrinter.printKitchen(job.payload)).then(function (result) {
+    var station = job.station || (job.payload && job.payload.station) || '';
+    return Promise.resolve(window.KiwiPrinter.printKitchen(job.payload, { station: station })).then(function (result) {
       running = false;
       if (result && result.ok) complete(job, result);
       else retry(job, result && result.reason || 'print-failed');
@@ -174,7 +177,7 @@
     return flush();
   }
 
-  /* plan = [{id, payload}]. Remote jobs are accepted only by the selected hub;
+  /* plan = [{id, payload, station}]. Remote jobs are accepted only by the selected hub;
      local jobs always retain the pre-existing "this till prints its own order"
      behaviour. Both paths use the same durable, idempotent queue. */
   function enqueue(plan, options) {
@@ -195,7 +198,16 @@
       if (activatedAt && createdAt < activatedAt - 5000) return;
       var id = cleanId(raw.id);
       if (!id || doneIds[id] || queuedIds[id]) return;
-      q.push({ id: id, payload: raw.payload, createdAt: createdAt, remote: options.remote === true, attempts: 0, nextAt: 0, lastError: '' });
+      q.push({
+        id: id,
+        payload: raw.payload,
+        station: raw.station || (raw.payload && raw.payload.station) || '',
+        createdAt: createdAt,
+        remote: options.remote === true,
+        attempts: 0,
+        nextAt: 0,
+        lastError: ''
+      });
       queuedIds[id] = 1; accepted++;
     });
     writeQueue(q); emit();
@@ -205,6 +217,7 @@
 
   window.addEventListener('online', retryNow);
   window.addEventListener('kiwi:printer-config', retryNow);
+  window.addEventListener('kiwi:station-printers-config', retryNow);
   window.addEventListener('storage', function (e) {
     if (e.key === HUB_KEY || (e.key && e.key.indexOf(QUEUE_PREFIX) === 0)) { emit(); flush(); }
   });
