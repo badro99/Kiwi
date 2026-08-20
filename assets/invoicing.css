@@ -257,6 +257,9 @@
 .inv-summary-brand { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid var(--inv-line); }
 .inv-summary-logo { display: inline-flex; align-items: center; min-height: 24px; }
 .inv-summary-logo img { display: block; width: auto; height: 24px; }
+.inv-preview-logo { display: inline-flex; align-items: center; min-height: 24px; margin-bottom: 6px; }
+.inv-preview-logo img { display: block; max-height: 42px; max-width: 160px; object-fit: contain; border-radius: 4px; }
+.inv-preview-initials { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 8px; background: #f0fdf4; color: #087653; font-weight: 800; font-size: 13.5px; border: 1.5px solid #bbf7d0; margin-bottom: 6px; }
 .inv-summary-no { color: var(--inv-muted); font-size: 11px; }
 .inv-summary-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 0; color: var(--inv-muted); font-size: 12px; }
 .inv-summary-row strong { color: var(--ink, #0d1512); font-variant-numeric: tabular-nums; }

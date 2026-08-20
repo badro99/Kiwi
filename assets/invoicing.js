@@ -261,14 +261,34 @@
     return `<div class="inv-line-row"><input data-line-desc value="${esc(item.description)}" placeholder="Service ou produit"><input data-line-qty inputmode="decimal" value="${esc(item.qty)}" aria-label="Quantité"><input data-line-price inputmode="decimal" value="${esc(item.price)}" aria-label="Prix unitaire"><span class="inv-line-total">0,00</span><button class="inv-line-remove" type="button" data-line-remove aria-label="Supprimer">×</button></div>`;
   }
 
+  function getSeller() {
+    return (window.KiwiInvoice && typeof window.KiwiInvoice.getSellerBusiness === 'function')
+      ? window.KiwiInvoice.getSellerBusiness()
+      : { name: businessName(), city: 'Maroc' };
+  }
+
+  function renderSellerLogo(seller, size = 42) {
+    const biz = seller.name || businessName();
+    const logo = seller.logo || '';
+    if (logo) {
+      return `<img src="${esc(logo)}" alt="${esc(biz)}" style="max-height:${size}px;max-width:140px;object-fit:contain;border-radius:4px;display:block;">`;
+    }
+    const initials = (String(biz).replace(/\s*·.*$/, '').trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('') || 'K').toUpperCase();
+    const s = Math.max(28, Math.round(size * 0.85));
+    const f = Math.max(11, Math.round(size * 0.38));
+    return `<span class="inv-preview-initials" style="display:inline-flex;align-items:center;justify-content:center;width:${s}px;height:${s}px;border-radius:8px;background:#f0fdf4;color:#087653;font-weight:800;font-size:${f}px;border:1.5px solid #bbf7d0;">${esc(initials)}</span>`;
+  }
+
   function renderComposer() {
     const t = T(), id = nextId(invoices);
+    const seller = getSeller();
+    const sellerLogoHtml = renderSellerLogo(seller, 28);
     overlay.querySelector('[data-inv-compose]').innerHTML = `<div class="inv-composer-head"><div><button class="inv-btn small" type="button" data-inv-back>${ICON.back}${esc(t.back)}</button></div><div class="inv-step">#${id} · ${esc(t.step)}</div></div>
       <div class="inv-form-grid"><div>
         <section class="inv-form-card"><h4 class="inv-section-title">${esc(t.clientInfo)}</h4><div class="inv-fields"><div class="inv-field"><label>${esc(t.clientName)}</label><input data-inv-customer autocomplete="organization" placeholder="Ex. Maison Noor"></div><div class="inv-field"><label>${esc(t.contact)}</label><input data-inv-contact placeholder="+212… / client@exemple.ma"></div><div class="inv-field"><label>${esc(t.issueDate)}</label><input type="date" data-inv-issue value="${today()}"></div><div class="inv-field"><label>${esc(t.terms)}</label><select data-inv-terms><option value="0">${esc(t.now)}</option><option value="7">${esc(t.days7)}</option><option value="15">${esc(t.days15)}</option><option value="30" selected>${esc(t.days30)}</option></select></div></div></section>
         <section class="inv-form-card"><h4 class="inv-section-title">${esc(t.lines)}</h4><div class="inv-line-head"><span>${esc(t.description)}</span><span>${esc(t.qty)}</span><span>${esc(t.unit)}</span><span>${esc(t.lineTotal)}</span><span></span></div><div data-inv-lines>${lineRow()}</div><button class="inv-add-line" type="button" data-line-add>${esc(t.addLine)}</button></section>
         <section class="inv-form-card"><h4 class="inv-section-title">${esc(t.details)}</h4><div class="inv-fields"><div class="inv-field"><label>${esc(t.tax)}</label><select data-inv-tax><option value="0">0 %</option><option value="10">10 %</option><option value="20" selected>20 %</option></select></div><div class="inv-field wide"><label>${esc(t.note)}</label><textarea data-inv-note placeholder="${esc(t.notePh)}"></textarea></div></div></section>
-      </div><aside class="inv-summary-card"><div class="inv-summary-brand"><div class="inv-summary-logo">${BRAND_LOGO}</div><span class="inv-summary-no">#${id}</span></div><div style="padding:16px 0 8px"><div class="inv-summary-row"><span>${esc(t.subtotal)}</span><strong data-inv-subtotal>0,00 MAD</strong></div><div class="inv-summary-row"><span>${esc(t.vat)}</span><strong data-inv-vat>0,00 MAD</strong></div><div class="inv-summary-row total"><span>${esc(t.total)}</span><strong data-inv-total>0,00 MAD</strong></div></div><div class="inv-assurance"><span>${ICON.check}${esc(t.assurance1)}</span><span>${ICON.check}${esc(t.assurance2)}</span><span>${ICON.check}${esc(t.assurance3)}</span></div></aside></div>
+      </div><aside class="inv-summary-card"><div class="inv-summary-brand"><div class="inv-summary-logo">${sellerLogoHtml}</div><span class="inv-summary-no">#${id}</span></div><div style="padding:16px 0 8px"><div class="inv-summary-row"><span>${esc(t.subtotal)}</span><strong data-inv-subtotal>0,00 MAD</strong></div><div class="inv-summary-row"><span>${esc(t.vat)}</span><strong data-inv-vat>0,00 MAD</strong></div><div class="inv-summary-row total"><span>${esc(t.total)}</span><strong data-inv-total>0,00 MAD</strong></div></div><div class="inv-assurance"><span>${ICON.check}${esc(t.assurance1)}</span><span>${ICON.check}${esc(t.assurance2)}</span><span>${ICON.check}${esc(t.assurance3)}</span></div></aside></div>
       <div class="inv-form-actions"><button class="inv-btn" type="button" data-inv-save="draft">${esc(t.saveDraft)}</button><button class="inv-btn primary" type="button" data-inv-save="open">${ICON.check}${esc(t.saveOpen)}</button></div>`;
     show('compose'); updateComposer();
     requestAnimationFrame(() => overlay.querySelector('[data-inv-customer]')?.focus());
@@ -301,11 +321,39 @@
     const t = T(), inv = invoices.find(x => Number(x.id) === Number(id));
     if (!inv) return renderList();
     currentId = inv.id;
-    const sums = invoiceTotal(inv), status = effectiveStatus(inv), biz = businessName();
+    const sums = invoiceTotal(inv), status = effectiveStatus(inv);
+    const seller = getSeller();
+    const biz = seller.name || businessName();
+    const sellerLogoHtml = renderSellerLogo(seller, 40);
+    const sellerAddress = [seller.address, seller.city].filter(Boolean).map(esc).join(', ');
+    const sellerMeta = [
+      sellerAddress,
+      seller.phone ? `Tél : ${esc(seller.phone)}` : '',
+      seller.email ? esc(seller.email) : '',
+    ].filter(Boolean).join('<br>');
+
+    const sellerLegal = [
+      `<strong>${esc(seller.legalName || biz)}</strong>`,
+      sellerAddress ? sellerAddress : '',
+      seller.phone ? `Tél : ${esc(seller.phone)}` : '',
+      seller.ice ? `<strong>ICE :</strong> ${esc(seller.ice)}` : '',
+      seller.fiscal ? `<strong>IF :</strong> ${esc(seller.fiscal)}` : '',
+      seller.rc ? `<strong>RC :</strong> ${esc(seller.rc)}` : '',
+      seller.patente ? `<strong>Patente :</strong> ${esc(seller.patente)}` : '',
+    ].filter(Boolean).join('<br>');
+
+    const customerLegal = [
+      `<strong>${esc(inv.customer || t.customer)}</strong>`,
+      inv.contact ? esc(inv.contact) : '',
+      inv.ice ? `<strong>ICE :</strong> ${esc(inv.ice)}` : '',
+      inv.if ? `<strong>IF :</strong> ${esc(inv.if)}` : '',
+    ].filter(Boolean).join('<br>');
+
     const items = inv.items.map(item => `<tr><td>${esc(item.description)}</td><td>${money(item.qty)}</td><td>${money(item.price)} MAD</td><td>${money(num(item.qty)*num(item.price))} MAD</td></tr>`).join('');
     const actions = `<button class="inv-btn primary" type="button" data-inv-print>${ICON.print}${esc(t.print)}</button>${status !== 'paid' ? `<button class="inv-btn" type="button" data-inv-whatsapp>${esc(t.whatsapp)}</button><button class="inv-btn" type="button" data-inv-email>${esc(t.email)}</button>` : ''}${status === 'draft' ? `<button class="inv-btn" type="button" data-inv-status="sent">${esc(t.markSent)}</button>` : ''}${status !== 'paid' ? `<button class="inv-btn" type="button" data-inv-status="paid">${ICON.check}${esc(t.markPaid)}</button>` : ''}${status === 'draft' ? `<button class="inv-btn danger" type="button" data-inv-delete>${esc(t.delete)}</button>` : ''}`;
     const timeline = `<div class="inv-time"><strong>${esc(t.createdOn)}</strong>${esc(fmtDate(inv.issueDate))}</div>${inv.sentAt ? `<div class="inv-time"><strong>${esc(t.sentOn)}</strong>${esc(fmtDate(String(inv.sentAt).slice(0,10)))}</div>`:''}${inv.paidAt ? `<div class="inv-time"><strong>${esc(t.paidOn)}</strong>${esc(fmtDate(String(inv.paidAt).slice(0,10)))}</div>`:''}`;
-    overlay.querySelector('[data-inv-detail]').innerHTML = `<div class="inv-composer-head"><button class="inv-btn small" type="button" data-inv-back>${ICON.back}${esc(t.back)}</button><div>${statusHtml(status)}</div></div><div class="inv-detail-grid"><article class="inv-preview"><div class="inv-preview-top"><div><div class="inv-summary-logo">${BRAND_LOGO}</div><div class="inv-preview-meta">${esc(biz)}<br>Maroc</div></div><div style="text-align:right"><h3 class="inv-preview-title">${esc(t.no)} #${inv.id}</h3><div class="inv-preview-meta">${esc(t.issued)} · ${esc(fmtDate(inv.issueDate))}<br>${esc(t.due)} · ${esc(fmtDate(inv.dueDate))}</div></div></div><div class="inv-preview-parties"><div><div class="inv-preview-label">${esc(t.from)}</div><div class="inv-preview-party"><strong>${esc(biz)}</strong>Document commercial Kiwi</div></div><div><div class="inv-preview-label">${esc(t.invoiceTo)}</div><div class="inv-preview-party"><strong>${esc(inv.customer)}</strong>${esc(inv.contact || '')}</div></div></div><table class="inv-preview-table"><thead><tr><th>${esc(t.item)}</th><th>${esc(t.qty)}</th><th>${esc(t.unit)}</th><th>${esc(t.lineTotal)}</th></tr></thead><tbody>${items}</tbody></table><div class="inv-preview-totals"><div class="inv-summary-row"><span>${esc(t.subtotal)}</span><strong>${money(sums.subtotal)} MAD</strong></div><div class="inv-summary-row"><span>${esc(t.vat)} (${num(inv.taxRate)} %)</span><strong>${money(sums.tax)} MAD</strong></div><div class="inv-summary-row total"><span>${esc(t.total)}</span><strong>${money(sums.total)} MAD</strong></div></div>${inv.note ? `<div class="inv-preview-note"><strong>${esc(t.message)}</strong><br>${esc(inv.note)}</div>`:''}</article><aside class="inv-detail-side"><section class="inv-detail-card"><h4 class="inv-section-title">${esc(t.detail)}</h4><div class="inv-detail-actions">${actions}</div></section><section class="inv-detail-card"><h4 class="inv-section-title">${esc(t.timeline)}</h4><div class="inv-timeline">${timeline}</div></section><div class="inv-note">${esc(t.localNote)}</div></aside></div>`;
+
+    overlay.querySelector('[data-inv-detail]').innerHTML = `<div class="inv-composer-head"><button class="inv-btn small" type="button" data-inv-back>${ICON.back}${esc(t.back)}</button><div>${statusHtml(status)}</div></div><div class="inv-detail-grid"><article class="inv-preview"><div class="inv-preview-top"><div><div class="inv-preview-logo" style="margin-bottom:6px;">${sellerLogoHtml}</div><div class="inv-preview-meta"><strong>${esc(biz)}</strong>${sellerMeta ? '<br>' + sellerMeta : ''}</div></div><div style="text-align:right"><h3 class="inv-preview-title">${esc(t.no)} #${inv.id}</h3><div class="inv-preview-meta">${esc(t.issued)} · ${esc(fmtDate(inv.issueDate))}<br>${esc(t.due)} · ${esc(fmtDate(inv.dueDate))}</div></div></div><div class="inv-preview-parties"><div><div class="inv-preview-label">${esc(t.from)}</div><div class="inv-preview-party">${sellerLegal}</div></div><div><div class="inv-preview-label">${esc(t.invoiceTo)}</div><div class="inv-preview-party">${customerLegal}</div></div></div><table class="inv-preview-table"><thead><tr><th>${esc(t.item)}</th><th>${esc(t.qty)}</th><th>${esc(t.unit)}</th><th>${esc(t.lineTotal)}</th></tr></thead><tbody>${items}</tbody></table><div class="inv-preview-totals"><div class="inv-summary-row"><span>${esc(t.subtotal)}</span><strong>${money(sums.subtotal)} MAD</strong></div><div class="inv-summary-row"><span>${esc(t.vat)} (${num(inv.taxRate)} %)</span><strong>${money(sums.tax)} MAD</strong></div><div class="inv-summary-row total"><span>${esc(t.total)}</span><strong>${money(sums.total)} MAD</strong></div></div>${inv.note ? `<div class="inv-preview-note"><strong>${esc(t.message)}</strong><br>${esc(inv.note)}</div>`:''}</article><aside class="inv-detail-side"><section class="inv-detail-card"><h4 class="inv-section-title">${esc(t.detail)}</h4><div class="inv-detail-actions">${actions}</div></section><section class="inv-detail-card"><h4 class="inv-section-title">${esc(t.timeline)}</h4><div class="inv-timeline">${timeline}</div></section><div class="inv-note">${esc(t.localNote)}</div></aside></div>`;
     show('detail');
   }
 
@@ -363,8 +411,20 @@
       };
       return window.KiwiInvoice.html(doc);
     }
-    const t = T(), sums = invoiceTotal(inv), biz = businessName();
-    return `<!doctype html><html lang="${esc(lang())}"><head><meta charset="utf-8"><base href="${esc(document.baseURI)}"><title>${esc(t.no)} #${inv.id}</title><style>@page{size:A4;margin:18mm}*{box-sizing:border-box}body{font:13px Arial,sans-serif;color:#102019;margin:0}.top{display:flex;justify-content:space-between;border-bottom:3px solid #087653;padding-bottom:24px}.logo img{display:block;width:auto;height:32px}.meta{color:#69746e;line-height:1.6;margin-top:7px}.parties{display:grid;grid-template-columns:1fr 1fr;gap:40px;padding:28px 0}.label{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#777;margin-bottom:8px}.party strong{display:block;font-size:15px;margin-bottom:4px}table{width:100%;border-collapse:collapse}th{background:#f1f6f3;text-align:left;color:#65716b;padding:11px}td{padding:12px 11px;border-bottom:1px solid #e2e8e4}th:not(:first-child),td:not(:first-child){text-align:right}.totals{width:280px;margin:20px 0 0 auto}.row{display:flex;justify-content:space-between;padding:7px 0}.total{border-top:2px solid #087653;margin-top:8px;padding-top:12px;font-size:18px;font-weight:bold;color:#087653}.note{margin-top:38px;background:#f3f7f5;border-left:3px solid #087653;padding:14px;color:#58645e;line-height:1.5}.foot{position:fixed;bottom:0;color:#849089;font-size:10px}</style></head><body><div class="top"><div><div class="logo">${BRAND_LOGO}</div><div class="meta">${esc(biz)}<br>Maroc</div></div><div style="text-align:right"><h1>${esc(t.no)} #${inv.id}</h1><div class="meta">${esc(t.issued)} · ${esc(fmtDate(inv.issueDate))}<br>${esc(t.due)} · ${esc(fmtDate(inv.dueDate))}</div></div></div><div class="parties"><div><div class="label">${esc(t.from)}</div><div class="party"><strong>${esc(biz)}</strong>Document commercial Kiwi</div></div><div><div class="label">${esc(t.invoiceTo)}</div><div class="party"><strong>${esc(inv.customer)}</strong>${esc(inv.contact)}</div></div></div><table><thead><tr><th>${esc(t.item)}</th><th>${esc(t.qty)}</th><th>${esc(t.unit)}</th><th>${esc(t.lineTotal)}</th></tr></thead><tbody>${inv.items.map(x=>`<tr><td>${esc(x.description)}</td><td>${money(x.qty)}</td><td>${money(x.price)} MAD</td><td>${money(num(x.qty)*num(x.price))} MAD</td></tr>`).join('')}</tbody></table><div class="totals"><div class="row"><span>${esc(t.subtotal)}</span><b>${money(sums.subtotal)} MAD</b></div><div class="row"><span>${esc(t.vat)} (${num(inv.taxRate)} %)</span><b>${money(sums.tax)} MAD</b></div><div class="row total"><span>${esc(t.total)}</span><span>${money(sums.total)} MAD</span></div></div>${inv.note?`<div class="note">${esc(inv.note)}</div>`:''}<div class="foot">${esc(biz)} · ${esc(t.no)} #${inv.id}</div><script>addEventListener('load',()=>setTimeout(()=>print(),150))<\/script></body></html>`;
+    const t = T(), sums = invoiceTotal(inv), seller = getSeller(), biz = seller.name || businessName();
+    const sellerLogoHtml = renderSellerLogo(seller, 32);
+    const sellerAddress = [seller.address, seller.city].filter(Boolean).map(esc).join(', ');
+    const sellerMeta = [sellerAddress, seller.phone ? `Tél : ${esc(seller.phone)}` : '', seller.email ? esc(seller.email) : ''].filter(Boolean).join('<br>');
+    const sellerLegal = [
+      `<strong>${esc(seller.legalName || biz)}</strong>`,
+      sellerAddress ? sellerAddress : '',
+      seller.phone ? `Tél : ${esc(seller.phone)}` : '',
+      seller.ice ? `<strong>ICE :</strong> ${esc(seller.ice)}` : '',
+      seller.fiscal ? `<strong>IF :</strong> ${esc(seller.fiscal)}` : '',
+      seller.rc ? `<strong>RC :</strong> ${esc(seller.rc)}` : '',
+      seller.patente ? `<strong>Patente :</strong> ${esc(seller.patente)}` : '',
+    ].filter(Boolean).join('<br>');
+    return `<!doctype html><html lang="${esc(lang())}"><head><meta charset="utf-8"><base href="${esc(document.baseURI)}"><title>${esc(t.no)} #${inv.id}</title><style>@page{size:A4;margin:18mm}*{box-sizing:border-box}body{font:13px Arial,sans-serif;color:#102019;margin:0}.top{display:flex;justify-content:space-between;border-bottom:3px solid #087653;padding-bottom:24px}.logo img{display:block;width:auto;height:32px}.meta{color:#69746e;line-height:1.6;margin-top:7px}.parties{display:grid;grid-template-columns:1fr 1fr;gap:40px;padding:28px 0}.label{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#777;margin-bottom:8px}.party strong{display:block;font-size:15px;margin-bottom:4px}table{width:100%;border-collapse:collapse}th{background:#f1f6f3;text-align:left;color:#65716b;padding:11px}td{padding:12px 11px;border-bottom:1px solid #e2e8e4}th:not(:first-child),td:not(:first-child){text-align:right}.totals{width:280px;margin:20px 0 0 auto}.row{display:flex;justify-content:space-between;padding:7px 0}.total{border-top:2px solid #087653;margin-top:8px;padding-top:12px;font-size:18px;font-weight:bold;color:#087653}.note{margin-top:38px;background:#f3f7f5;border-left:3px solid #087653;padding:14px;color:#58645e;line-height:1.5}.foot{position:fixed;bottom:0;color:#849089;font-size:10px}</style></head><body><div class="top"><div><div class="logo">${sellerLogoHtml}</div><div class="meta"><strong>${esc(biz)}</strong>${sellerMeta ? '<br>' + sellerMeta : ''}</div></div><div style="text-align:right"><h1>${esc(t.no)} #${inv.id}</h1><div class="meta">${esc(t.issued)} · ${esc(fmtDate(inv.issueDate))}<br>${esc(t.due)} · ${esc(fmtDate(inv.dueDate))}</div></div></div><div class="parties"><div><div class="label">${esc(t.from)}</div><div class="party">${sellerLegal}</div></div><div><div class="label">${esc(t.invoiceTo)}</div><div class="party"><strong>${esc(inv.customer)}</strong>${esc(inv.contact)}</div></div></div><table><thead><tr><th>${esc(t.item)}</th><th>${esc(t.qty)}</th><th>${esc(t.unit)}</th><th>${esc(t.lineTotal)}</th></tr></thead><tbody>${inv.items.map(x=>`<tr><td>${esc(x.description)}</td><td>${money(x.qty)}</td><td>${money(x.price)} MAD</td><td>${money(num(x.qty)*num(x.price))} MAD</td></tr>`).join('')}</tbody></table><div class="totals"><div class="row"><span>${esc(t.subtotal)}</span><b>${money(sums.subtotal)} MAD</b></div><div class="row"><span>${esc(t.vat)} (${num(inv.taxRate)} %)</span><b>${money(sums.tax)} MAD</b></div><div class="row total"><span>${esc(t.total)}</span><span>${money(sums.total)} MAD</span></div></div>${inv.note?`<div class="note">${esc(inv.note)}</div>`:''}<div class="foot">${esc(biz)} · ${esc(t.no)} #${inv.id}</div><script>addEventListener('load',()=>setTimeout(()=>print(),150))<\/script></body></html>`;
   }
   function printInvoice() {
     const inv = invoices.find(x => Number(x.id) === Number(currentId)); if (!inv) return;
