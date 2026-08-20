@@ -595,6 +595,20 @@
     return printBytes(bytes);
   }
 
+  /* La caisse n'a PAS window.Kiwi.toast (vérifié sur prod) : l'avis de repli
+   * doit se suffire à lui-même, sinon il est muet sur la seule surface où il
+   * compte — le comptoir qui doit savoir qu'un bon cuisine est sorti chez lui. */
+  function fallbackNotice(msg) {
+    try {
+      if (window.Kiwi && window.Kiwi.toast) { window.Kiwi.toast(msg); return; }
+      var el = document.createElement('div');
+      el.textContent = msg;
+      el.style.cssText = 'position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#0A0F0D;color:#F7F5F0;padding:10px 18px;border-radius:10px;z-index:99999;font-size:14px;box-shadow:0 6px 24px rgba(0,0,0,.35);';
+      document.body.appendChild(el);
+      setTimeout(function () { try { el.remove(); } catch (_) {} }, 4500);
+    } catch (_) {}
+  }
+
   function printKitchen(o, options) {
     if (!window.KiwiEscPos) return Promise.resolve({ ok: false, reason: 'no-encoder' });
     var stationId = (options && options.station) || (o && o.station) || '';
@@ -607,9 +621,7 @@
         // Fail-soft fallback: attempt printing to caisse target or default printer
         var caisseTarget = resolveStationTarget('caisse', options && options.merchant);
         var stName = (o && o.title) || stationId || 'cuisine';
-        try {
-          if (window.Kiwi && Kiwi.toast) Kiwi.toast('Imprimante ' + stName + ' indisponible · ticket imprimé à la caisse');
-        } catch (_) {}
+        fallbackNotice('Imprimante ' + stName + ' indisponible · ticket imprimé à la caisse');
         return printBytesToTarget(bytes, caisseTarget || null).then(function (cRes) {
           if (cRes && cRes.ok) return Object.assign({}, cRes, { fallback: true, originalReason: res && res.reason });
           return printBytes(bytes);
@@ -619,9 +631,7 @@
       }, function (err) {
         var caisseTarget = resolveStationTarget('caisse', options && options.merchant);
         var stName = (o && o.title) || stationId || 'cuisine';
-        try {
-          if (window.Kiwi && Kiwi.toast) Kiwi.toast('Imprimante ' + stName + ' indisponible · ticket imprimé à la caisse');
-        } catch (_) {}
+        fallbackNotice('Imprimante ' + stName + ' indisponible · ticket imprimé à la caisse');
         return printBytesToTarget(bytes, caisseTarget || null).then(function (cRes) {
           if (cRes && cRes.ok) return Object.assign({}, cRes, { fallback: true, originalReason: err && err.message });
           return printBytes(bytes);

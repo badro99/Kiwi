@@ -54,6 +54,9 @@ const controls = [
   ['README states the real bridge version', bridgeVersion !== '' && bridgeDoc.includes('v' + bridgeVersion)],
   ['client and server agree on the port scan range', printer.includes('[9110, 9111, 9112, 9113, 9114]') && bridgeSrv.includes('[9110, 9111, 9112, 9113, 9114]') && bridgeDoc.includes('9110–9114')],
   ['the console port hint stays inside the scanned range', /KIWI_BRIDGE_PORT=911[0-4]/.test(bridgeSrv) && !/KIWI_BRIDGE_PORT=9115/.test(bridgeSrv)],
+  // La caisse n'a pas window.Kiwi.toast : l'avis de repli doit savoir se
+  // fabriquer tout seul, sinon il est muet sur le comptoir.
+  ['the fallback notice does not depend on window.Kiwi.toast', printer.includes('function fallbackNotice(') && /fallbackNotice\('Imprimante '/.test(printer) && !/Kiwi\.toast\('Imprimante /.test(printer)],
 ];
 
 for (const [name, ok] of controls) assert.equal(ok, true, name);
