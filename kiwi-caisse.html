@@ -5093,6 +5093,10 @@
           <i data-lucide="arrow-left-right"></i>
           <span>Passation caisse</span>
         </button>
+        <button class="act-pill" data-action="open-drawer">
+          <i data-lucide="archive"></i>
+          <span>Ouvrir le tiroir</span>
+        </button>
       </div>
 
       <div class="stats-section" aria-label="Stats du shift">
@@ -8906,6 +8910,7 @@
       btn.addEventListener('click', () => {
         const a = btn.dataset.action;
         if (a === 'remboursement')   openRefund();
+        else if (a === 'open-drawer') openDrawerNoSale();
         else if (a === 'cash-move')  openCashMove();
         else if (a === 'passation')  openHandover();
         else if (a === 'fin-service') openCloture();
@@ -12985,6 +12990,27 @@
       });
       toast(`${cmType === 'in' ? 'Entrée' : 'Sortie'} de caisse · ${fmtMAD(amount)}`);
       closeCashMove();
+    }
+
+    /* ── Ouverture sans vente ─────────────────────────────────────────────
+     * Le tiroir ne s'ouvre hors vente que sous code manager — vérifié côté
+     * serveur (assets/caisse-pairing.js), jamais dans le navigateur — et
+     * chaque ouverture laisse une trace dans les mouvements de caisse :
+     * montant nul, le fond attendu ne bouge pas, mais la passation et le
+     * rapport journalier montrent qui a fait sonner le tiroir et quand. */
+    function openDrawerNoSale() {
+      requireManager('Ouvrir le tiroir sans vente', () => {
+        cashMovements.push({
+          id: 'cm-' + Date.now(), time: new Date(),
+          type: 'out', amount: 0, reason: 'Ouverture sans vente',
+        });
+        const H = window.KiwiHardware;
+        const p = (H && H.openDrawer) ? Promise.resolve(H.openDrawer()) : Promise.resolve({ ok: false });
+        p.then((res) => {
+          if (res && res.ok) toast(res.mock ? 'Tiroir ouvert (démo)' : 'Tiroir ouvert');
+          else toast('Tiroir injoignable — vérifiez l\'imprimante du comptoir');
+        }, () => toast('Tiroir injoignable — vérifiez l\'imprimante du comptoir'));
+      });
     }
 
     $('#cash-move-modal').addEventListener('click', (e) => {
