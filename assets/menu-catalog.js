@@ -522,6 +522,26 @@
       return d;
     });
   }
+  function renameSubcategory(catId, subId, name) {
+    return store.update((d) => {
+      const c = catById(d, catId); if (!c) return d;
+      const s = (c.sub || []).find((x) => x && x.id === subId); if (!s) return d;
+      s.name = String(name || s.name).trim() || s.name;
+      return d;
+    });
+  }
+  /* Removing a subsection must not remove products. They remain in their section
+   * as unclassified items so the merchant can move them or create a new grouping. */
+  function deleteSubcategory(catId, subId) {
+    return store.update((d) => {
+      const c = catById(d, catId); if (!c) return d;
+      c.sub = (c.sub || []).filter((s) => s && s.id !== subId);
+      (d.items || []).forEach((it) => {
+        if (it && it.catId === catId && it.subId === subId) it.subId = null;
+      });
+      return d;
+    });
+  }
   function addItem(data) {
     return store.update((d) => {
       const formula = cleanFormula(data && data.formula, d.items);
@@ -2264,7 +2284,8 @@
     isEmpty: (vid) => store.isEmpty(vid),
     subscribe: (fn) => store.subscribe(fn),
     loadExample: (vid) => store.loadExample(vid),
-    addCategory, addSubcategory, addItem, updateItem, deleteItem, renameCategory, deleteCategory,
+    addCategory, addSubcategory, renameSubcategory, deleteSubcategory,
+    addItem, updateItem, deleteItem, renameCategory, deleteCategory,
     /* Les postes de préparation. `stations()` rend la liste DANS L'ORDRE, qui
      * est l'ordre des onglets de l'écran cuisine — plus le réglage de routage.
      * Le routage se lit sur la catégorie (`cat.station`, vide = la cuisine) et

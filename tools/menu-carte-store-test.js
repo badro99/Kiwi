@@ -354,6 +354,25 @@ const suite = [
     API.render();
     eq('hors ligne : la carte locale est intacte', itemsOf(w, 'v-cf'), 1);
   })(),
+
+  /* 10 — Renommer et retirer une sous-catégorie ne doit jamais jeter ses plats.
+   *      Ils reviennent dans « À classer » au sein de la même section. */
+  (async () => {
+    const w = makeWorld([CAFE], { serverMenus: {} });
+    w.fetch = function () { return Promise.reject(new Error('hors ligne')); };
+    const API = load(w);
+    API.addCategory('Sweets');
+    const cid = API.data('v-cf').cats[0].id;
+    API.addSubcategory(cid, 'Cookies');
+    const sid = API.data('v-cf').cats[0].sub[0].id;
+    API.addItem({ name:'Brookie', price:30, catId:cid, subId:sid });
+    API.renameSubcategory(cid, sid, 'Cookies & Brownies');
+    eq('une sous-catégorie se renomme dans le document partagé', API.data('v-cf').cats[0].sub[0].name, 'Cookies & Brownies');
+    API.deleteSubcategory(cid, sid);
+    eq('supprimer la sous-catégorie retire seulement le groupe', API.data('v-cf').cats[0].sub.length, 0);
+    eq('le plat reste dans sa section', API.data('v-cf').items[0].catId, cid);
+    eq('le plat devient non classé au lieu d’être supprimé', API.data('v-cf').items[0].subId, null);
+  })(),
 ];
 
 Promise.all(suite).then(() => {
