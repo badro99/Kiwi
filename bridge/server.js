@@ -36,7 +36,7 @@ const path = require('path');
 const { execFile, spawn } = require('child_process');
 
 const NAME = 'kiwi-printer-bridge';
-const VERSION = '1.2.0';
+const VERSION = '1.3.0';
 const HOST = '127.0.0.1';
 const PORT = Number(process.env.KIWI_BRIDGE_PORT) || 9110; // bridge's own port
 const DEFAULT_PRINTER_PORT = 9100;                          // RAW/JetDirect
@@ -92,6 +92,70 @@ function sendToPrinter(printerIp, port, buf) {
       });
     });
   });
+}
+
+/* ── LAN printer discovery ────────────────────────────────────────────────────
+ * The owner should not have to find their printer's IP on a config slip. On
+ * demand (never on its own), the bridge sweeps the till's OWN private /24
+ * subnet(s) for hosts answering on the RAW port 9100 — the same probe every
+ * printer driver's "search for network printers" performs. Private (RFC1918)
+ * ranges only, one sweep at a time, short per-host timeout. */
+const SCAN_PROBE_MS = 450;
+const SCAN_CONCURRENCY = 48;
+const SCAN_MAX_HOSTS = 1024;
+let scanBusy = false;
+
+function probe9100(ip) {
+  return new Promise((resolve) => {
+    const s = new net.Socket();
+    let settled = false;
+    const done = (open) => { if (settled) return; settled = true; try { s.destroy(); } catch (_) {} resolve(open); };
+    s.setTimeout(SCAN_PROBE_MS);
+    s.on('timeout', () => done(false));
+    s.on('error', () => done(false));
+    s.connect(DEFAULT_PRINTER_PORT, ip, () => done(true));
+  });
+}
+
+function isPrivateV4(ip) {
+  const p = ip.split('.').map(Number);
+  return p[0] === 10 || (p[0] === 172 && p[1] >= 16 && p[1] <= 31) || (p[0] === 192 && p[1] === 168);
+}
+
+function scanHosts() {
+  const self = new Set();
+  const bases = new Set();
+  const ifs = os.networkInterfaces();
+  Object.keys(ifs).forEach((name) => {
+    (ifs[name] || []).forEach((a) => {
+      if (a.family !== 'IPv4' || a.internal || !isPrivateV4(a.address)) return;
+      self.add(a.address);
+      bases.add(a.address.split('.').slice(0, 3).join('.'));
+    });
+  });
+  const hosts = [];
+  for (const base of bases) {
+    for (let h = 1; h <= 254 && hosts.length < SCAN_MAX_HOSTS; h++) {
+      const ip = base + '.' + h;
+      if (!self.has(ip)) hosts.push(ip);
+    }
+  }
+  return hosts;
+}
+
+async function scanForPrinters() {
+  const hosts = scanHosts();
+  const found = [];
+  let i = 0;
+  async function worker() {
+    while (i < hosts.length) {
+      const ip = hosts[i++];
+      if (await probe9100(ip)) found.push({ ip, port: DEFAULT_PRINTER_PORT });
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(SCAN_CONCURRENCY, hosts.length) }, worker));
+  found.sort((a, b) => a.ip.localeCompare(b.ip, undefined, { numeric: true }));
+  return { printers: found, scanned: hosts.length };
 }
 
 /* ── printing through the OS spooler (the printer Windows already owns) ───────
@@ -335,6 +399,21 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  if (req.method === 'GET' && url === '/kiwi/scan') {
+    if (scanBusy) return sendJson(res, 429, { ok: false, error: 'scan-busy' }, origin);
+    scanBusy = true;
+    const t0 = Date.now();
+    try {
+      const r = await scanForPrinters();
+      sendJson(res, 200, { ok: true, printers: r.printers, scanned: r.scanned, ms: Date.now() - t0 }, origin);
+    } catch (e) {
+      sendJson(res, 200, { ok: false, error: String((e && e.message) || e) }, origin);
+    } finally {
+      scanBusy = false;
+    }
+    return;
+  }
+
   if (req.method === 'POST' && url === '/kiwi/print') {
     let body;
     try { body = JSON.parse((await readBody(req)).toString('utf8') || '{}'); }
@@ -417,8 +496,10 @@ function tryListen() {
     console.error('Le pont n\'a pas pu démarrer :', (e && e.message) || e);
     if (e && e.code === 'EADDRINUSE') {
       console.error(`Le port ${port} est déjà utilisé — le pont tourne peut-être déjà dans une autre fenêtre.`);
-      console.error('Fermez l\'autre fenêtre, ou lancez celle-ci avec un autre port :');
-      console.error('    set KIWI_BRIDGE_PORT=9115 && kiwi-printer-bridge-win.exe');
+      /* L'app web ne cherche le pont que sur 9110–9114 : conseiller un port hors
+       * de cette plage ferait tourner un pont que Kiwi ne trouvera jamais. */
+      console.error('Fermez l\'autre fenêtre, ou lancez celle-ci sur un port libre ENTRE 9110 et 9114 :');
+      console.error('    set KIWI_BRIDGE_PORT=9114 && kiwi-printer-bridge-win.exe');
     }
     holdOpen(1);
   };

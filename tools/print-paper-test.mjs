@@ -14,6 +14,9 @@ const report = read('assets/report.js');
 const caisse = read('kiwi-caisse.html');
 const dashboard = read('dashboard.html');
 const sw = read('kiwi-sw.js');
+const bridgeSrv = read('bridge/server.js');
+const bridgeDoc = read('bridge/README.md');
+const bridgeVersion = (bridgeSrv.match(/const VERSION = '([\d.]+)'/) || [])[1] || '';
 
 const controls = [
   ['pressing ticket preview', paper.includes('.px-receipt')],
@@ -35,8 +38,22 @@ const controls = [
   ['both apps and offline shell load contract', caisse.includes('assets/print-paper.css?v=1') && dashboard.includes('assets/print-paper.css?v=1') && sw.includes("'/assets/print-paper.css?v=1'")],
   // Le pont préfère le nom d'imprimante OS à l'IP : chaque enregistrement doit
   // effacer l'autre cible, sinon l'une des deux reste morte en silence.
-  ['saving a network IP clears the saved OS printer', printer.includes("setConfig(Object.assign(readForm(), { osPrinter: '' }))")],
+  ['saving a network IP clears the saved OS printer', printer.includes("setConfig(Object.assign(f, { osPrinter: '' }))")],
   ['choosing an OS printer clears the saved IP', printer.includes("setConfig({ osPrinter: sel.value, ip: '' })")],
+  // Garde-fous du chemin réseau : validation avant écriture, test qui vise
+  // vraiment l'IP saisie, et messages d'échec en français utile.
+  ['saving validates the IP and the port first', /validIp\(f\.ip\)/.test(printer) && /validPort\(f\.port\)/.test(printer)],
+  ['the network test targets the typed IP explicitly', printer.includes('bridgePrintBytes(window.KiwiEscPos.testSlip({ ip: f.ip, paper: f.paper }), { ip: f.ip, port: f.port })')],
+  ['bridge failures are worded for humans', printer.includes('function frReason(') && printer.includes('Pont introuvable')],
+  ['the active print target is spelled out in the panel', printer.includes("$('#kpr-target')") && printer.includes('Cible actuelle')],
+  // Découverte réseau : le pont balaie son propre sous-réseau privé, jamais plus.
+  ['bridge exposes /kiwi/scan', bridgeSrv.includes("url === '/kiwi/scan'") && printer.includes("'/kiwi/scan'")],
+  ['the sweep is fenced to RFC1918 subnets', bridgeSrv.includes('function isPrivateV4') && /a\.internal \|\| !isPrivateV4\(a\.address\)/.test(bridgeSrv)],
+  // Anti-dérive : le README dit la version RÉELLE du pont et la plage de ports
+  // que le client scanne vraiment ; l'aide console reste dans cette plage.
+  ['README states the real bridge version', bridgeVersion !== '' && bridgeDoc.includes('v' + bridgeVersion)],
+  ['client and server agree on the port scan range', printer.includes('[9110, 9111, 9112, 9113, 9114]') && bridgeSrv.includes('[9110, 9111, 9112, 9113, 9114]') && bridgeDoc.includes('9110–9114')],
+  ['the console port hint stays inside the scanned range', /KIWI_BRIDGE_PORT=911[0-4]/.test(bridgeSrv) && !/KIWI_BRIDGE_PORT=9115/.test(bridgeSrv)],
 ];
 
 for (const [name, ok] of controls) assert.equal(ok, true, name);

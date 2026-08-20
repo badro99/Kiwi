@@ -19,6 +19,10 @@ Why it exists: a browser cannot open a raw network socket to a printer at
   - `GET /kiwi/ping` → `{ ok, name, version }` — how the app detects it.
   - `GET /kiwi/printers` → `{ ok, platform, printers[], default }` — the printers
     this computer already has installed.
+  - `GET /kiwi/scan` → `{ ok, printers: [{ ip, port }], scanned, ms }` — sweeps this
+    computer's own private subnet(s) for hosts answering on port 9100, so the app
+    can offer the printer's IP instead of asking the owner to type it. On demand
+    only, RFC1918 ranges only, one sweep at a time (`429 scan-busy` otherwise).
   - `POST /kiwi/print` → `{ ok, bytes, via }` or `502`. Two ways to name the target:
     - `{ printerIp, port?, dataB64 }` — relays to `printerIp:port` over TCP
       (port defaults to `9100`). `via: "tcp"`.
@@ -57,11 +61,14 @@ cd bridge
 node server.js
 ```
 
-You should see `kiwi-printer-bridge v1.0.0 listening on http://127.0.0.1:9110`.
+You should see `kiwi-printer-bridge v1.3.0 listening on http://127.0.0.1:9110`.
 In the Kiwi app, open **Connecter une imprimante** → the status flips to
 **Bridge connecté**.
 
-Override the port if 9110 is taken: `KIWI_BRIDGE_PORT=9130 node server.js`.
+If 9110 is taken the bridge walks up to the next free port on its own, and the
+web app only scans **9110–9114** — so a manual override must stay in that range:
+`KIWI_BRIDGE_PORT=9112 node server.js`. A bridge on 9130 would run fine and
+never be found.
 
 ---
 
@@ -98,5 +105,6 @@ Then publish `dist/*` as a GitHub Release and point the app's download links at 
   cert — do it before wide distribution.
 - **Auto-update / auto-launch** packaging (e.g. a proper installer) so non-technical
   owners never touch a terminal.
-- **Printer discovery** (mDNS/Bonjour) so the app can suggest the printer IP
-  instead of asking the owner to type it.
+- ~~**Printer discovery** so the app can suggest the printer IP instead of asking
+  the owner to type it.~~ Shipped in v1.3.0 (`GET /kiwi/scan`, port-9100 sweep of
+  the local subnet). mDNS/Bonjour name resolution would still be a nice upgrade.

@@ -390,24 +390,29 @@
    * Same helper, two targets. `osPrinter` wins when both are set: it is the
    * deliberate choice made in the panel, while an `ip` can survive in saved
    * config from an earlier setup and would otherwise silently outrank it. */
-  function bridgePrintBytes(bytes) {
+  /* `target` (optionnel) force la cible : { ip, port } imprime en TCP même si
+   * un nom d'imprimante OS est enregistré. Sans lui, un « ticket test réseau »
+   * partait vers l'imprimante système et validait une IP jamais essayée. */
+  function bridgePrintBytes(bytes, target) {
     var cfg = getConfig();
-    if (!cfg.ip && !cfg.osPrinter) return Promise.resolve({ ok: false, reason: 'not-configured' });
+    if (!(target && target.ip) && !cfg.ip && !cfg.osPrinter) return Promise.resolve({ ok: false, reason: 'not-configured' });
     // Locate the bridge before the first job if we haven't yet (or if it moved
     // ports since — a restart on a busy 9110 lands somewhere else).
     if (!bridgePort) {
       return ping().then(function (j) {
-        return j ? bridgePrintNow(bytes) : { ok: false, reason: 'bridge-unreachable' };
+        return j ? bridgePrintNow(bytes, target) : { ok: false, reason: 'bridge-unreachable' };
       });
     }
-    return bridgePrintNow(bytes);
+    return bridgePrintNow(bytes, target);
   }
-  function bridgePrintNow(bytes) {
+  function bridgePrintNow(bytes, target) {
     var cfg = getConfig();
     var to = withTimeout(null, 9000);
     return fetch(bridgeBase() + '/kiwi/print', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: to.signal,
-      body: JSON.stringify(cfg.osPrinter
+      body: JSON.stringify((target && target.ip)
+        ? { printerIp: target.ip, port: Number(target.port) || 9100, dataB64: window.KiwiEscPos.toB64(bytes) }
+        : cfg.osPrinter
         ? { printerName: cfg.osPrinter, dataB64: window.KiwiEscPos.toB64(bytes) }
         : { printerIp: cfg.ip, port: Number(cfg.port) || 9100, dataB64: window.KiwiEscPos.toB64(bytes) }),
     }).then(function (r) {
@@ -862,7 +867,10 @@
         '<details class="kpr-adv"' + (cfg.ip ? ' open' : '') + '>' +
           '<summary>Option avancée · imprimante réseau (Wi-Fi / Ethernet)</summary>' +
           '<div class="kpr-status off" id="kpr-status"><span class="kpr-d"></span><span id="kpr-status-t">Vérification du pont…</span></div>' +
+          '<p class="kpr-note" id="kpr-target"></p>' +
           '<div class="kpr-field"><label for="kpr-ip">Adresse IP de l’imprimante</label><input id="kpr-ip" type="text" inputmode="decimal" placeholder="192.168.1.50" value="' + esc(cfg.ip) + '"></div>' +
+          '<button class="kpr-btc" type="button" id="kpr-scan" disabled>Détecter les imprimantes du réseau</button>' +
+          '<div id="kpr-scan-out" class="kpr-note" style="display:none;"></div>' +
           '<div class="kpr-two">' +
             '<div class="kpr-field"><label for="kpr-port">Port</label><input id="kpr-port" type="text" inputmode="numeric" value="' + esc(cfg.port) + '"></div>' +
             '<div class="kpr-field"><label for="kpr-paper">Largeur papier</label><select id="kpr-paper">' + paperOptions(cfg.paper) + '</select></div>' +
@@ -898,6 +906,40 @@
     }
     function close() { ov.remove(); }
     function toast(msg) { try { if (window.Kiwi && Kiwi.toast) Kiwi.toast(msg); } catch (_) {} }
+
+    /* Une adresse valide est une IPv4 (chaque octet ≤ 255) ou un nom d'hôte
+     * (EPSON-TM.local). Vide est permis : c'est l'effacement de la cible réseau.
+     * Sans ce garde, une faute de frappe dormait dans la config et ne se
+     * révélait qu'en erreur de socket brute au moment d'un ticket. */
+    function validIp(s) {
+      if (!s) return true;
+      var m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(s);
+      if (m) return [m[1], m[2], m[3], m[4]].every(function (o) { return Number(o) <= 255; });
+      return /^[a-z0-9]([a-z0-9-]{0,62}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,62}[a-z0-9])?)+$/i.test(s);
+    }
+    function validPort(s) { var n = Number(s); return Number.isInteger(n) && n >= 1 && n <= 65535; }
+
+    /* Les codes d'échec du pont, dits en français utile plutôt qu'en errno. */
+    function frReason(reason) {
+      var r = String(reason || '');
+      if (r === 'bridge-unreachable') return 'Pont introuvable — lancez Kiwi Printer Bridge sur cet ordinateur';
+      if (r === 'not-configured') return 'Aucune imprimante configurée';
+      if (/timeout/i.test(r)) return 'Imprimante injoignable — vérifiez l’adresse IP et qu’elle est allumée';
+      if (/ECONNREFUSED/i.test(r)) return 'Connexion refusée à cette adresse — ce n’est pas le port d’une imprimante réseau';
+      if (/ENOTFOUND|EHOSTUNREACH|ENETUNREACH|EINVAL|EHOSTDOWN/i.test(r)) return 'Adresse introuvable sur le réseau — vérifiez l’IP';
+      return r || 'inconnu';
+    }
+
+    /* La cible que le pont utilisera réellement — dite en clair dans la section
+     * réseau, parce que le nom OS prime sur l'IP et que ce silence a déjà rendu
+     * une IP fraîchement saisie inopérante sans un mot. */
+    function paintTarget() {
+      var el = $('#kpr-target'); if (!el) return;
+      var c = getConfig();
+      el.textContent = c.osPrinter
+        ? 'Cible actuelle : imprimante système « ' + c.osPrinter + ' ». Enregistrer une IP ici la remplacera.'
+        : (c.ip ? 'Cible actuelle : réseau · ' + c.ip + ':' + (c.port || 9100) : 'Aucune cible réseau enregistrée.');
+    }
     function paintHubStatus() {
       var el = $('#kpr-hub-status');
       if (!el || !window.KiwiKitchenPrint) return;
@@ -938,10 +980,11 @@
 
     var bridgeUp = false;
     function refreshStatus() {
-      var st = $('#kpr-status'), t = $('#kpr-status-t'), test = $('#kpr-test');
+      var st = $('#kpr-status'), t = $('#kpr-status-t'), test = $('#kpr-test'), scan = $('#kpr-scan');
       t.textContent = 'Vérification du pont…'; st.className = 'kpr-status off';
       return ping().then(function (j) {
         bridgeUp = !!j;
+        if (scan) scan.disabled = !j;
         if (j) {
           st.className = 'kpr-status on';
           t.textContent = 'Pont connecté · v' + (j.version || '?');
@@ -963,7 +1006,15 @@
     /* Symétrique du choix d'imprimante installée ci-dessous : enregistrer une
      * IP efface le nom d'imprimante OS retenu, sinon le pont — qui préfère le
      * nom — ignorerait pour toujours l'IP qu'on vient de saisir. */
-    $('#kpr-save').addEventListener('click', function () { setConfig(Object.assign(readForm(), { osPrinter: '' })); toast('Imprimante enregistrée'); close(); });
+    $('#kpr-save').addEventListener('click', function () {
+      var f = readForm();
+      if (!validIp(f.ip)) { toast('Adresse invalide — attendu : 192.168.1.50 (ou un nom comme EPSON.local)'); $('#kpr-ip').focus(); return; }
+      if (!validPort(f.port)) { toast('Port invalide — un nombre entre 1 et 65535 (9100 en général)'); $('#kpr-port').focus(); return; }
+      setConfig(Object.assign(f, { osPrinter: '' }));
+      paintTarget();
+      toast('Imprimante enregistrée');
+      close();
+    });
 
     /* Choosing an installed printer clears any saved IP. Leaving both set would
      * be ambiguous to read back later, even though the bridge prefers the name. */
@@ -1089,17 +1140,58 @@
     });
 
     // ── Network bridge (advanced): test targets the bridge explicitly ──
+    /* La cible est passée EXPLICITEMENT ({ip, port}) : sans cela, un nom
+     * d'imprimante OS enregistré primait et le « test réseau » validait une IP
+     * jamais essayée. Le test n'écrit pas la config — c'est le rôle
+     * d'Enregistrer. */
     $('#kpr-test').addEventListener('click', function () {
-      setConfig(readForm());
-      var cfg2 = getConfig();
+      var f = readForm();
+      if (!f.ip) { toast('Saisissez d’abord l’adresse IP de l’imprimante'); $('#kpr-ip').focus(); return; }
+      if (!validIp(f.ip)) { toast('Adresse invalide — attendu : 192.168.1.50 (ou un nom comme EPSON.local)'); $('#kpr-ip').focus(); return; }
+      if (!validPort(f.port)) { toast('Port invalide — un nombre entre 1 et 65535 (9100 en général)'); $('#kpr-port').focus(); return; }
       var btn = this; btn.disabled = true; var orig = btn.textContent; btn.textContent = 'Impression…';
-      bridgePrintBytes(window.KiwiEscPos.testSlip({ ip: cfg2.ip, paper: cfg2.paper })).then(function (res) {
+      bridgePrintBytes(window.KiwiEscPos.testSlip({ ip: f.ip, paper: f.paper }), { ip: f.ip, port: f.port }).then(function (res) {
         btn.textContent = orig; btn.disabled = !bridgeUp;
-        toast(res.ok ? 'Ticket test envoyé' : ('Échec : ' + (res.reason || 'inconnu')));
+        toast(res.ok ? 'Ticket test envoyé' : ('Échec : ' + frReason(res.reason)));
       });
     });
 
+    /* ── Détection des imprimantes du réseau (pont v1.3+) ──────────────────
+     * Le pont balaie le sous-réseau local à la recherche du port 9100 et rend
+     * les adresses qui répondent — le commerçant clique au lieu de chercher
+     * l'IP sur un ticket de configuration. Un pont plus ancien répond 404 :
+     * on le dit, on ne casse rien. */
+    var scanBtn = $('#kpr-scan');
+    if (scanBtn) scanBtn.addEventListener('click', function () {
+      var out = $('#kpr-scan-out');
+      scanBtn.disabled = true; var orig = scanBtn.textContent; scanBtn.textContent = 'Recherche sur le réseau… (~10 s)';
+      if (out) { out.style.display = ''; out.textContent = ''; }
+      var to = withTimeout(null, 30000);
+      fetch(bridgeBase() + '/kiwi/scan', { signal: to.signal })
+        .then(function (r) { to.done(); return r.status === 404 ? { legacy: true } : r.json(); })
+        .catch(function () { to.done(); return null; })
+        .then(function (j) {
+          scanBtn.textContent = orig; scanBtn.disabled = !bridgeUp;
+          if (!out) return;
+          if (!j) { out.textContent = 'Pont injoignable — relancez Kiwi Printer Bridge puis réessayez.'; return; }
+          if (j.legacy) { out.textContent = 'Détection indisponible sur ce pont — installez la version 1.3 ou plus récente.'; return; }
+          if (!j.ok) { out.textContent = 'Recherche impossible : ' + frReason(j.error); return; }
+          if (!j.printers.length) { out.textContent = 'Aucune imprimante réseau trouvée. Vérifiez qu’elle est allumée et sur le même réseau que cet ordinateur.'; return; }
+          out.innerHTML = 'Trouvée' + (j.printers.length > 1 ? 's' : '') + ' : ' + j.printers.map(function (p) {
+            return '<button type="button" class="kpr-btc kpr-scan-pick" data-ip="' + esc(p.ip) + '">' + esc(p.ip) + '</button>';
+          }).join(' ');
+          out.querySelectorAll('.kpr-scan-pick').forEach(function (b) {
+            b.addEventListener('click', function () {
+              $('#kpr-ip').value = this.getAttribute('data-ip');
+              $('#kpr-port').value = '9100';
+              toast('Adresse remplie — imprimez un ticket test puis enregistrez');
+            });
+          });
+        });
+    });
+
     refreshStatus();
+    paintTarget();
 
     /* A printer granted on an earlier visit is re-attached silently; reflect it
      * here so the panel never claims "aucune imprimante" for one that is in fact
