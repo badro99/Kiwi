@@ -4497,11 +4497,29 @@ function pdsRawState() {
 /* Union par identifiant, cet appareil prioritaire (le défaut de cloud-doc.js),
  * SAUF que le plan porte aussi des réglages scalaires (mode, snap, zone
  * courante) : ceux-là restent les nôtres, changer la zone affichée sur l'iPad
- * n'a pas à déplacer la vue du portable. */
+ * n'a pas à déplacer la vue du portable.
+ *
+ * `epoch` : l'union ne sait pas supprimer — une table effacée sur le serveur
+ * ressuscite dès qu'un appareil qui la garde en local refusionne (vécu : le
+ * plan empoisonné à 33 tables se réinstallait après réparation). Un plan qui
+ * porte une époque STRICTEMENT supérieure remplace donc l'autre copie en bloc,
+ * au lieu de s'y unir. L'époque ne bouge jamais sur une sauvegarde ordinaire ;
+ * elle n'est incrémentée que par une réparation délibérée qui doit s'imposer à
+ * tous les appareils. À époque égale (le quotidien), l'union protège comme
+ * avant les saisies concurrentes. */
 function pdsMerge(mine, theirs) {
   var M = window.KiwiCloudDoc && window.KiwiCloudDoc.mergeDefault;
   if (!M || !theirs) return mine;
-  var out = M(mine, theirs);
+  var mEp = (mine && isFinite(+mine.epoch)) ? +mine.epoch : 0;
+  var tEp = (theirs && isFinite(+theirs.epoch)) ? +theirs.epoch : 0;
+  var out;
+  if (tEp !== mEp) {
+    var win = tEp > mEp ? theirs : mine;
+    out = {};
+    Object.keys(win).forEach(function (k) { out[k] = win[k]; });
+  } else {
+    out = M(mine, theirs);
+  }
   ['mode', 'snap', 'zone', 'zoneId'].forEach(function (k) {
     if (mine && Object.prototype.hasOwnProperty.call(mine, k)) out[k] = mine[k];
   });

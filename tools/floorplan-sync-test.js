@@ -432,6 +432,55 @@ function run(opts) {
   ok('ancien seau kiwiPlanDeSalle:scoped purgé', !('kiwiPlanDeSalle:scoped' in store));
 }
 
+/* ── 7. Époque de réparation : une suppression qui doit s'imposer partout ───
+ * L'union par identifiant ne sait pas supprimer : un appareil qui garde le plan
+ * empoisonné en local le refusionne et le repousse. Un plan d'époque supérieure
+ * remplace l'autre copie EN BLOC — c'est le mécanisme de réparation. On exécute
+ * le VRAI pdsMerge de pages-pro.js contre le VRAI mergeDefault de cloud-doc.js. */
+{
+  const CLOUD = fs.readFileSync(path.join(ROOT, 'assets', 'cloud-doc.js'), 'utf8');
+  function extractFn(src, name) {
+    const at = src.indexOf('function ' + name + '(');
+    if (at < 0) throw new Error('introuvable : ' + name);
+    let i = src.indexOf('{', at), depth = 0;
+    for (let j = i; j < src.length; j++) {
+      if (src[j] === '{') depth++;
+      else if (src[j] === '}' && --depth === 0) return src.slice(at, j + 1);
+    }
+    throw new Error('accolades déséquilibrées : ' + name);
+  }
+  const mergeDefault = new Function(
+    extractFn(CLOUD, 'idOf') + '\n' + extractFn(CLOUD, 'mergeDefault') + '\nreturn mergeDefault;'
+  )();
+  const pdsMerge2 = new Function('window', extractFn(PAGES, 'pdsMerge') + '\nreturn pdsMerge;')(
+    { KiwiCloudDoc: { mergeDefault } }
+  );
+
+  const clean = { zones: [{ id: 'z1' }], tables: [{ id: 't1' }, { id: 't2' }], staff: [], mode: 'layout' };
+  const poisoned = { zones: [{ id: 'z1' }, { id: 'zRDC' }], tables: [{ id: 't1' }, { id: 't2' }, { id: 'tX' }], staff: [], mode: 'assign' };
+
+  // Époques égales (le quotidien) : l'union protège les saisies concurrentes —
+  // et, connu, une suppression ressuscite. C'est pour cela que l'époque existe.
+  const u = pdsMerge2(poisoned, clean);
+  eq('à époque égale, l’union ressuscite la table supprimée (comportement documenté)', u.tables.length, 3);
+
+  // Le serveur porte la réparation (époque 1) : l'appareil empoisonné ADOPTE en bloc…
+  const repaired = Object.assign({}, clean, { epoch: 1 });
+  const a = pdsMerge2(poisoned, repaired);
+  eq('époque serveur supérieure : adoption en bloc, la table étrangère disparaît', a.tables.length, 2);
+  eq('époque serveur supérieure : la zone étrangère disparaît aussi', a.zones.length, 1);
+  eq('époque adoptée avec le plan', a.epoch, 1);
+  // …mais garde ses préférences d'affichage locales (mode/snap/zone).
+  eq('les réglages scalaires locaux survivent à l’adoption', a.mode, 'assign');
+
+  // L'appareil réparateur (époque 1 locale) ne se fait pas réinfecter par un
+  // serveur encore à l'époque 0 : sa copie gagne en bloc.
+  const mineRepaired = Object.assign({}, clean, { epoch: 1 });
+  const b = pdsMerge2(mineRepaired, poisoned);
+  eq('époque locale supérieure : la copie réparée gagne en bloc', b.tables.length, 2);
+  eq('époque locale supérieure : l’époque est conservée', b.epoch, 1);
+}
+
 /* ── Verdict ──────────────────────────────────────────────────────────────── */
 const line = '─'.repeat(64);
 console.log('\n' + line);
