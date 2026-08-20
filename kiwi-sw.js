@@ -171,7 +171,7 @@ var SHELL = [
      et un client qui repart sans reçu ne revient pas le chercher. */
   '/assets/receipt.js',
   '/assets/receipt-ui.js',
-  '/assets/invoice.js',
+  '/assets/invoice.js?v=3',
   '/assets/merchant-config.js?v=264',
   '/assets/entitlements.css?v=4',
   '/assets/entitlements.js?v=5',

@@ -112,6 +112,7 @@
       } catch (_) {}
       return explicit;
     }
+    try { var kv = window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue(); if (kv) return kv; } catch (_) {}
     try { var v = window.KiwiStore && window.KiwiStore.currentVenue && window.KiwiStore.currentVenue(); if (v) return v; } catch (_) {}
     try { var s = window.KiwiCloudDoc && window.KiwiCloudDoc.currentSlug && window.KiwiCloudDoc.currentSlug(); if (s) return s; } catch (_) {}
     try { var dr = window.KiwiDayReport && window.KiwiDayReport.storeSlug && window.KiwiDayReport.storeSlug(); if (dr) return dr; } catch (_) {}

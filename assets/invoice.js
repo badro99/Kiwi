@@ -46,10 +46,26 @@
   }
 
   function getSellerBusiness(venue) {
+    function getLocal(k) {
+      try {
+        if (typeof localStorage !== 'undefined' && localStorage && typeof localStorage.getItem === 'function') {
+          return localStorage.getItem(k);
+        }
+      } catch (_) {}
+      return null;
+    }
+
+    const activeVid = venue
+      || (window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue())
+      || (window.KiwiStore && window.KiwiStore.currentVenue && window.KiwiStore.currentVenue())
+      || (window.KiwiLive && window.KiwiLive.merchant && window.KiwiLive.merchant())
+      || getLocal('kiwiLiveMerchant')
+      || '';
+
     let raw = {};
     try {
       if (window.KiwiReceipt && typeof window.KiwiReceipt.business === 'function') {
-        const b = window.KiwiReceipt.business(venue);
+        const b = window.KiwiReceipt.business(activeVid);
         if (b && typeof b === 'object') raw = JSON.parse(JSON.stringify(b));
       }
     } catch (_) {}
@@ -62,38 +78,54 @@
     let cfg = {};
     try {
       if (window.KiwiReceipt && typeof window.KiwiReceipt.config === 'function') {
-        cfg = window.KiwiReceipt.config(venue) || {};
+        cfg = window.KiwiReceipt.config(activeVid) || {};
       }
     } catch (_) {}
 
     const rawLegal = (raw.legal && typeof raw.legal === 'object') ? raw.legal : {};
     const vdLegal = (vd.legal && typeof vd.legal === 'object') ? vd.legal : {};
     const legal = Object.assign({}, vdLegal, rawLegal);
-    const activeVid = venue || (window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue()) || '';
 
-    // Legacy localStorage fallback if legal fields were saved in old slot
-    if (!legal.ice && activeVid) {
+    // Thorough fallback across localStorage keys if legal fields were saved in legacy slots
+    const vidsToCheck = [activeVid, 'primary', 'own', 'default', 'cafeAtlas', 'maisonMansour', 'spaBahia'].filter(Boolean);
+    if (!legal.ice) {
       try {
-        ['ice', 'fiscal', 'rc', 'patente', 'address', 'city', 'phone', 'cnss', 'email', 'legalName'].forEach((k) => {
-          const v = localStorage.getItem('kiwiSet:biz:' + activeVid + ':' + k);
-          if (v && !legal[k]) legal[k] = v;
-        });
+        for (const vid of vidsToCheck) {
+          ['ice', 'fiscal', 'rc', 'patente', 'address', 'city', 'phone', 'cnss', 'email', 'legalName'].forEach((k) => {
+            const v = getLocal('kiwiSet:biz:' + vid + ':' + k);
+            if (v && !legal[k]) legal[k] = v;
+          });
+          if (legal.ice) break;
+        }
       } catch (_) {}
     }
 
-    const name = raw.name || raw.tradeName || vd.fullDisplay || vd.name || window.KiwiMe?.business || 'Kiwi Commerce';
-    const legalName = legal.legalName || raw.legalName || vd.legalName || name;
+    if (!legal.ice) {
+      try {
+        const directIce = getLocal('kiwiBizICE') || getLocal('kiwiICE') || getLocal('kiwiMerchantICE');
+        if (directIce) legal.ice = directIce;
+      } catch (_) {}
+    }
+
+    let meData = {};
+    try {
+      const meRaw = getLocal('kiwiMe') || getLocal('kiwi_account_profile');
+      if (meRaw) meData = JSON.parse(meRaw);
+    } catch (_) {}
+
+    const name = raw.name || raw.tradeName || vd.fullDisplay || vd.name || meData.business || window.KiwiMe?.business || 'Kiwi Commerce';
+    const legalName = legal.legalName || raw.legalName || vd.legalName || meData.legalName || name;
     const tradeName = raw.tradeName || vd.tradeName || '';
-    const address = legal.address || raw.address || vd.address || '';
-    const city = legal.city || raw.city || vd.city || 'Maroc';
-    const phone = legal.phone || raw.phone || vd.phone || '';
-    const ice = legal.ice || raw.ice || vd.ice || '';
-    const fiscal = legal.fiscal || legal.if || raw.fiscal || raw.if || vd.fiscal || vd.if || '';
-    const rc = legal.rc || raw.rc || vd.rc || '';
-    const patente = legal.patente || raw.patente || vd.patente || '';
-    const cnss = legal.cnss || raw.cnss || vd.cnss || '';
-    const email = legal.email || raw.email || vd.email || '';
-    const logo = raw.logo || cfg?.look?.logo || vd.logo || vd.profileInfo?.logo || '';
+    const address = legal.address || raw.address || vd.address || meData.address || '';
+    const city = legal.city || raw.city || vd.city || meData.city || 'Maroc';
+    const phone = legal.phone || raw.phone || vd.phone || meData.phone || '';
+    const ice = legal.ice || raw.ice || vd.ice || meData.ice || '';
+    const fiscal = legal.fiscal || legal.if || raw.fiscal || raw.if || vd.fiscal || vd.if || meData.fiscal || meData.if || '';
+    const rc = legal.rc || raw.rc || vd.rc || meData.rc || '';
+    const patente = legal.patente || raw.patente || vd.patente || meData.patente || '';
+    const cnss = legal.cnss || raw.cnss || vd.cnss || meData.cnss || '';
+    const email = legal.email || raw.email || vd.email || meData.email || '';
+    const logo = raw.logo || cfg?.look?.logo || vd.logo || vd.profileInfo?.logo || meData.logo || '';
 
     return {
       name,
@@ -170,7 +202,7 @@
       : Number(sale?.amount || sale?.total || 0);
     const totalTTC = round2(rawTotal);
 
-    const venue = opts.venue || null;
+    const venue = opts.venue || sale?.venue || sale?.venueId || sale?.store || null;
     const seller = opts.seller ? JSON.parse(JSON.stringify(opts.seller)) : getSellerBusiness(venue);
     if (seller.legal && typeof seller.legal === 'object') {
       ['ice', 'fiscal', 'rc', 'patente', 'cnss', 'address', 'city', 'phone', 'email', 'legalName'].forEach((k) => {
@@ -254,34 +286,47 @@
   function html(doc) {
     if (!doc) return '';
     const num = doc.number || 'Facture';
-    const biz = doc.seller?.name || 'Kiwi Commerce';
-    const legalName = doc.seller?.legalName || biz;
-    const tradeName = doc.seller?.tradeName || '';
+    const liveSeller = getSellerBusiness();
+
+    // Rehydrate seller identity from live store profile if missing in snapshot
+    let seller = doc.seller ? JSON.parse(JSON.stringify(doc.seller)) : {};
+    if (seller.legal && typeof seller.legal === 'object') {
+      ['ice', 'fiscal', 'rc', 'patente', 'cnss', 'address', 'city', 'phone', 'email', 'legalName'].forEach((k) => {
+        if (!seller[k] && seller.legal[k]) seller[k] = seller.legal[k];
+      });
+    }
+    ['ice', 'fiscal', 'rc', 'patente', 'cnss', 'address', 'city', 'phone', 'email', 'logo', 'legalName', 'name'].forEach((k) => {
+      if (seller[k] === undefined && liveSeller[k]) seller[k] = liveSeller[k];
+    });
+
+    const biz = seller.name || 'Kiwi Commerce';
+    const legalName = seller.legalName || biz;
+    const tradeName = seller.tradeName || '';
     const lines = doc.lines || [];
     const cust = doc.customer || null;
     const totals = doc.totals || { ht: 0, tva: 0, ttc: 0 };
     const tvaRate = doc.tvaRate || 0;
 
-    const sellerLogo = doc.seller?.logo || '';
+    const sellerLogo = seller.logo || '';
     const initials = (String(biz).replace(/\s*·.*$/, '').trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('') || 'K').toUpperCase();
 
-    const sellerAddress = [doc.seller?.address, doc.seller?.city].filter(Boolean).map(esc).join(', ');
+    const sellerAddress = [seller.address, seller.city].filter(Boolean).map(esc).join(', ');
     const sellerMeta = [
       sellerAddress,
-      doc.seller?.phone ? `Tél : ${esc(doc.seller.phone)}` : '',
-      doc.seller?.email ? `Email : ${esc(doc.seller.email)}` : '',
+      seller.phone ? `Tél : ${esc(seller.phone)}` : '',
+      seller.email ? `Email : ${esc(seller.email)}` : '',
     ].filter(Boolean).join(' · ');
 
     const sellerLegalBlock = [
       `<strong>${esc(legalName)}</strong>`,
       tradeName && tradeName !== legalName ? `<em>Enseigne : ${esc(tradeName)}</em>` : '',
       sellerAddress ? `${sellerAddress}` : '',
-      doc.seller?.phone ? `Tél : ${esc(doc.seller.phone)}` : '',
-      doc.seller?.email ? `Email : ${esc(doc.seller.email)}` : '',
-      doc.seller?.ice ? `<strong>ICE :</strong> ${esc(doc.seller.ice)}` : '',
-      doc.seller?.fiscal ? `<strong>IF :</strong> ${esc(doc.seller.fiscal)}` : '',
-      doc.seller?.rc ? `<strong>RC :</strong> ${esc(doc.seller.rc)}` : '',
-      doc.seller?.patente ? `<strong>Patente :</strong> ${esc(doc.seller.patente)}` : '',
+      seller.phone ? `Tél : ${esc(seller.phone)}` : '',
+      seller.email ? `Email : ${esc(seller.email)}` : '',
+      seller.ice ? `<strong>ICE :</strong> ${esc(seller.ice)}` : '',
+      seller.fiscal ? `<strong>IF :</strong> ${esc(seller.fiscal)}` : '',
+      seller.rc ? `<strong>RC :</strong> ${esc(seller.rc)}` : '',
+      seller.patente ? `<strong>Patente :</strong> ${esc(seller.patente)}` : '',
     ].filter(Boolean).join('<br>');
 
     const customerLegal = cust ? [
@@ -290,7 +335,10 @@
       cust.if ? `<strong>IF :</strong> ${esc(cust.if)}` : '',
     ].filter(Boolean).join('<br>') : '<strong>Client de passage</strong><br>Vente au comptoir';
 
-    const iceBanner = doc.missingICE ? `
+    const sellerIceStr = String(seller.ice || seller.legal?.ice || '').trim().replace(/\D/g, '');
+    const isMissingICE = (!sellerIceStr || sellerIceStr.length < 9);
+
+    const iceBanner = isMissingICE ? `
       <div class="ice-alert">
         <strong>Attention :</strong> Mention obligatoire manquante — L’ICE de votre établissement n’est pas renseigné.
         Veuillez le compléter dans <em>Paramètres → Mes établissements</em> pour une stricte conformité fiscale.
@@ -364,7 +412,7 @@
     <div>
       <div class="label">Émetteur</div>
       <div class="party-body">
-        ${sellerLegalBlock || `<strong>${esc(biz)}</strong><br>${doc.seller?.city || 'Maroc'}`}
+        ${sellerLegalBlock || `<strong>${esc(biz)}</strong><br>${seller.city || 'Maroc'}`}
       </div>
     </div>
     <div>
@@ -409,7 +457,7 @@
 
   <div class="footer">
     <div class="footer-legal">
-      ${esc(biz)}${doc.seller?.ice ? ` · ICE : ${esc(doc.seller.ice)}` : ''} · Facture ${esc(num)} · Document généré le ${esc(fmtDate(Date.now()))}
+      ${esc(biz)}${seller.ice ? ` · ICE : ${esc(seller.ice)}` : ''} · Facture ${esc(num)} · Document généré le ${esc(fmtDate(Date.now()))}
     </div>
     <div class="footer-powered">
       <span class="pw-txt">Propulsé par</span>
@@ -548,6 +596,15 @@
     // 1. Vérifier si la facture est déjà connue localement
     const cached = getCachedInvoices()[saleId];
     if (cached && cached.number) {
+      // Re-hydrate seller info from current store profile
+      const liveSeller = getSellerBusiness();
+      cached.seller = Object.assign({}, liveSeller, cached.seller || {});
+      ['ice', 'fiscal', 'rc', 'patente', 'cnss', 'address', 'city', 'phone', 'email', 'logo', 'legalName'].forEach((k) => {
+        if (!cached.seller[k] && liveSeller[k]) cached.seller[k] = liveSeller[k];
+      });
+      const sellerIce = String(cached.seller.ice || cached.seller.legal?.ice || '').trim().replace(/\D/g, '');
+      cached.missingICE = !sellerIce || sellerIce.length < 9;
+      setCachedInvoice(saleId, cached);
       open(cached, mode);
       return cached;
     }
@@ -596,6 +653,14 @@
       finalDoc.number = invRecord?.number || finalDoc.number;
       finalDoc.seq = invRecord?.seq || finalDoc.seq;
       if (invRecord?.customer) finalDoc.customer = invRecord.customer;
+      
+      const liveSeller = getSellerBusiness();
+      finalDoc.seller = Object.assign({}, liveSeller, finalDoc.seller || {});
+      ['ice', 'fiscal', 'rc', 'patente', 'cnss', 'address', 'city', 'phone', 'email', 'logo', 'legalName'].forEach((k) => {
+        if (!finalDoc.seller[k] && liveSeller[k]) finalDoc.seller[k] = liveSeller[k];
+      });
+      const sellerIce = String(finalDoc.seller.ice || finalDoc.seller.legal?.ice || '').trim().replace(/\D/g, '');
+      finalDoc.missingICE = !sellerIce || sellerIce.length < 9;
 
       setCachedInvoice(saleId, finalDoc);
       open(finalDoc, mode);
