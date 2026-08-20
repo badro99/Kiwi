@@ -86,8 +86,39 @@
     const vdLegal = (vd.legal && typeof vd.legal === 'object') ? vd.legal : {};
     const legal = Object.assign({}, vdLegal, rawLegal);
 
-    // Thorough fallback across localStorage keys if legal fields were saved in legacy slots
-    const vidsToCheck = [activeVid, 'primary', 'own', 'default', 'cafeAtlas', 'maisonMansour', 'spaBahia'].filter(Boolean);
+    // Thorough scan across all KiwiStore business documents in localStorage
+    try {
+      if (typeof localStorage !== 'undefined' && localStorage) {
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && k.indexOf('kiwi:business:v1:') === 0) {
+            const rawBiz = getLocal(k);
+            if (rawBiz) {
+              try {
+                const parsed = JSON.parse(rawBiz);
+                if (parsed && typeof parsed === 'object') {
+                  const pLegal = parsed.legal || {};
+                  const candidateIce = String(pLegal.ice || parsed.ice || '').trim();
+                  if (candidateIce && candidateIce.length >= 5) {
+                    if (!legal.ice) legal.ice = candidateIce;
+                    ['fiscal', 'rc', 'patente', 'address', 'city', 'phone', 'cnss', 'email', 'legalName'].forEach((fk) => {
+                      if (!legal[fk] && (pLegal[fk] || parsed[fk])) legal[fk] = pLegal[fk] || parsed[fk];
+                    });
+                    if (!raw.logo && parsed.logo) raw.logo = parsed.logo;
+                    if (!raw.name && parsed.name) raw.name = parsed.name;
+                  }
+                }
+              } catch (_) {}
+            }
+          }
+        }
+      }
+    } catch (_) {}
+
+    // Fallback across specific localStorage keys if legal fields were saved in legacy slots
+    const demoVids = ['cafeAtlas', 'maisonMansour', 'spaBahia'];
+    const vidsToCheck = [activeVid, 'primary', 'own', 'scoped', 'default'].filter(Boolean);
+    if (demoVids.includes(activeVid)) vidsToCheck.push(activeVid);
     if (!legal.ice) {
       try {
         for (const vid of vidsToCheck) {
@@ -100,17 +131,52 @@
       } catch (_) {}
     }
 
+    // Scan all custom establishment keys in localStorage matching kiwiSet:biz:*:ice
+    try {
+      if (typeof localStorage !== 'undefined' && localStorage) {
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && /:ice$/.test(k)) {
+            const val = String(getLocal(k) || '').trim();
+            if (val && val.length >= 5) {
+              if (!legal.ice) legal.ice = val;
+              const prefix = k.replace(/:ice$/, ':');
+              ['fiscal', 'rc', 'patente', 'address', 'city', 'phone', 'cnss', 'email', 'legalName', 'logo', 'name'].forEach((fk) => {
+                const sibVal = getLocal(prefix + fk);
+                if (sibVal && !legal[fk]) legal[fk] = sibVal;
+              });
+            }
+          }
+        }
+      }
+    } catch (_) {}
+
     if (!legal.ice) {
       try {
-        const directIce = getLocal('kiwiBizICE') || getLocal('kiwiICE') || getLocal('kiwiMerchantICE');
+        const directIce = getLocal('kiwiBizICE') || getLocal('kiwiICE') || getLocal('kiwiMerchantICE') || getLocal('kiwiLiveICE');
         if (directIce) legal.ice = directIce;
       } catch (_) {}
     }
 
     let meData = {};
     try {
-      const meRaw = getLocal('kiwiMe') || getLocal('kiwi_account_profile');
-      if (meRaw) meData = JSON.parse(meRaw);
+      ['kiwiMe', 'kiwi_account_profile', 'kiwiAccount', 'kiwiProfile', 'kiwiUser'].forEach((key) => {
+        const meRaw = getLocal(key);
+        if (meRaw) {
+          try {
+            const p = JSON.parse(meRaw);
+            if (p && typeof p === 'object') {
+              meData = Object.assign({}, p, meData);
+              const candIce = String(p.ice || p.legal?.ice || '').trim();
+              if (candIce && !legal.ice) legal.ice = candIce;
+              ['fiscal', 'rc', 'patente', 'address', 'city', 'phone', 'cnss', 'email', 'legalName'].forEach((fk) => {
+                if (!legal[fk] && (p[fk] || p.legal?.[fk])) legal[fk] = p[fk] || p.legal[fk];
+              });
+              if (!raw.logo && p.logo) raw.logo = p.logo;
+            }
+          } catch (_) {}
+        }
+      });
     } catch (_) {}
 
     const name = raw.name || raw.tradeName || vd.fullDisplay || vd.name || meData.business || window.KiwiMe?.business || 'Kiwi Commerce';
@@ -288,7 +354,7 @@
     const num = doc.number || 'Facture';
     const liveSeller = getSellerBusiness();
 
-    // Rehydrate seller identity from live store profile if missing in snapshot
+    // Rehydrate seller identity from live store profile whenever fields are missing or empty in snapshot
     let seller = doc.seller ? JSON.parse(JSON.stringify(doc.seller)) : {};
     if (seller.legal && typeof seller.legal === 'object') {
       ['ice', 'fiscal', 'rc', 'patente', 'cnss', 'address', 'city', 'phone', 'email', 'legalName'].forEach((k) => {
@@ -296,7 +362,9 @@
       });
     }
     ['ice', 'fiscal', 'rc', 'patente', 'cnss', 'address', 'city', 'phone', 'email', 'logo', 'legalName', 'name'].forEach((k) => {
-      if (seller[k] === undefined && liveSeller[k]) seller[k] = liveSeller[k];
+      if ((seller[k] == null || String(seller[k]).trim() === '') && liveSeller[k]) {
+        seller[k] = liveSeller[k];
+      }
     });
 
     const biz = seller.name || 'Kiwi Commerce';
@@ -336,7 +404,9 @@
     ].filter(Boolean).join('<br>') : '<strong>Client de passage</strong><br>Vente au comptoir';
 
     const sellerIceStr = String(seller.ice || seller.legal?.ice || '').trim().replace(/\D/g, '');
-    const isMissingICE = (!sellerIceStr || sellerIceStr.length < 9);
+    const isMissingICE = (doc.missingICE !== undefined)
+      ? Boolean(doc.missingICE)
+      : (!sellerIceStr || sellerIceStr.length < 5);
 
     const iceBanner = isMissingICE ? `
       <div class="ice-alert">
@@ -378,10 +448,10 @@
     .tot-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 12px; color: #475569; }
     .tot-row.grand { border-top: 2px solid #087653; margin-top: 6px; padding-top: 10px; font-size: 16px; font-weight: 800; color: #087653; }
     .footer { position: fixed; bottom: 0; left: 0; right: 0; display: flex; justify-content: space-between; align-items: center; color: #94a3b8; font-size: 9.5px; border-top: 1px solid #e2e8f0; padding-top: 8px; background: #fff; }
-    .footer-legal { max-width: 72%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .footer-powered { display: inline-flex; align-items: center; gap: 5px; color: #64748b; font-size: 9.5px; font-weight: 500; }
-    .footer-powered .pw-txt { color: #94a3b8; font-size: 9px; letter-spacing: 0.03em; text-transform: uppercase; }
-    .footer-powered .pw-logo { height: 12.5px; width: auto; display: inline-block; vertical-align: middle; }
+    .footer-legal { max-width: 68%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .footer-powered { display: inline-flex; align-items: center; gap: 5px; color: #64748b; font-size: 9.5px; }
+    .footer-powered .pw-txt { color: #94a3b8; font-size: 8px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; line-height: 1; display: inline-block; margin-top: 1px; }
+    .footer-powered .pw-logo { height: 11px; width: auto; display: inline-block; vertical-align: middle; }
   </style>
 </head>
 <body>
