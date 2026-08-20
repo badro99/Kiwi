@@ -33,6 +33,10 @@ const controls = [
   ['QR print sheet', qr.includes('html, body { color-scheme: light; background: #fff; color: #0A0F0D; }')],
   ['A4 report', report.includes('color-scheme:light!important;background:#fff!important')],
   ['both apps and offline shell load contract', caisse.includes('assets/print-paper.css?v=1') && dashboard.includes('assets/print-paper.css?v=1') && sw.includes("'/assets/print-paper.css?v=1'")],
+  // Le pont préfère le nom d'imprimante OS à l'IP : chaque enregistrement doit
+  // effacer l'autre cible, sinon l'une des deux reste morte en silence.
+  ['saving a network IP clears the saved OS printer', printer.includes("setConfig(Object.assign(readForm(), { osPrinter: '' }))")],
+  ['choosing an OS printer clears the saved IP', printer.includes("setConfig({ osPrinter: sel.value, ip: '' })")],
 ];
 
 for (const [name, ok] of controls) assert.equal(ok, true, name);

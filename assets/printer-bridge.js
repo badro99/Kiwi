@@ -960,7 +960,10 @@
 
     $('#kpr-close').addEventListener('click', close);
     ov.addEventListener('click', function (e) { if (e.target === ov) close(); });
-    $('#kpr-save').addEventListener('click', function () { setConfig(readForm()); toast('Imprimante enregistrée'); close(); });
+    /* Symétrique du choix d'imprimante installée ci-dessous : enregistrer une
+     * IP efface le nom d'imprimante OS retenu, sinon le pont — qui préfère le
+     * nom — ignorerait pour toujours l'IP qu'on vient de saisir. */
+    $('#kpr-save').addEventListener('click', function () { setConfig(Object.assign(readForm(), { osPrinter: '' })); toast('Imprimante enregistrée'); close(); });
 
     /* Choosing an installed printer clears any saved IP. Leaving both set would
      * be ambiguous to read back later, even though the bridge prefers the name. */
