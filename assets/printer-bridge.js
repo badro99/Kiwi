@@ -1230,7 +1230,8 @@
         '<td><b>Caisse (comptoir)</b></td>' +
         '<td><span class="kpr-st-badge receipt">Reçus clients</span></td>' +
         '<td><select class="kpr-st-sel" data-station-id="caisse">' + caisseOpts + '</select></td>' +
-        '<td><button type="button" class="kpr-btn kpr-test kpr-st-test" data-test-station="caisse" data-station-title="Caisse">Tester</button></td>' +
+        '<td><button type="button" class="kpr-btn kpr-test kpr-st-test" data-test-station="caisse" data-station-title="Caisse">Tester</button> ' +
+        '<button type="button" class="kpr-btn kpr-test" id="kpr-drawer-test">Tester le tiroir</button></td>' +
         '</tr>');
 
       prepStations.forEach(function (st) {
@@ -1269,6 +1270,27 @@
             bTest.textContent = origText; bTest.disabled = false;
             toast('Échec d’impression');
           });
+        });
+      });
+
+      /* Le test du tiroir : une impulsion ESC/POS (sans papier) vers l'imprimante
+         du comptoir. L'électronique ne sait pas confirmer l'ouverture physique,
+         donc le toast dit quoi vérifier si le tiroir reste fermé. */
+      var drawerBtn = tbody.querySelector('#kpr-drawer-test');
+      if (drawerBtn) drawerBtn.addEventListener('click', function () {
+        var rowSel = tbody.querySelector('.kpr-st-sel[data-station-id="caisse"]');
+        var profId = rowSel ? rowSel.value : '';
+        var prof = profId ? stConfig.profiles.find(function (p) { return p.id === profId; }) : null;
+        var bd = this; bd.disabled = true; var orig = bd.textContent; bd.textContent = 'Envoi…';
+        var kick = window.KiwiEscPos.builder().init().drawer().bytes();
+        (prof ? printBytesToTarget(kick, prof) : printBytes(kick)).then(function (res) {
+          bd.textContent = orig; bd.disabled = false;
+          toast(res.ok
+            ? 'Impulsion envoyée · tiroir fermé ? Vérifiez le câble RJ11 sur le port DK de l\'imprimante et la clé en position verticale'
+            : ('Échec : ' + frReason(res.reason)));
+        }, function () {
+          bd.textContent = orig; bd.disabled = false;
+          toast('Échec de l\'impulsion tiroir');
         });
       });
     }

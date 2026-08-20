@@ -59,6 +59,10 @@
     "v": "2",
     "sha": "907c1ea564c48012"
   },
+  "assets/caisse-hardware.js": {
+    "v": "1",
+    "sha": "c5a59ef57daea8a2"
+  },
   "assets/caisse-link.js": {
     "v": "8",
     "sha": "5dd5229188e8ff8e"
@@ -514,6 +518,10 @@
   "assets/print-paper.css": {
     "v": "1",
     "sha": "a855894281afedca"
+  },
+  "assets/printer-bridge.js": {
+    "v": "1",
+    "sha": "2bcf405177b18ab1"
   },
   "assets/pwa-update.js": {
     "v": "358",

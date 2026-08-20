@@ -107,10 +107,12 @@
       return realTill() ? failed('printer-not-configured') : mockPrint(ticket);
     },
     // Open the cash drawer (ESC/POS kick). Real via the bridge when configured; the
-    // mock resolves immediately otherwise.
+    // mock resolves immediately otherwise. Le tiroir est branché en RJ11 sur
+    // l'imprimante du COMPTOIR : le coup part vers le profil « caisse », jamais
+    // vers une imprimante de production (cuisine/bar) du poste multi-imprimantes.
     openDrawer: function () {
       if (window.KiwiPrinter && (KiwiPrinter.isConnected ? KiwiPrinter.isConnected() : KiwiPrinter.isConfigured()) && window.KiwiEscPos) {
-        return KiwiPrinter.printBytes(window.KiwiEscPos.builder().init().drawer().bytes())
+        return KiwiPrinter.printBytes(window.KiwiEscPos.builder().init().drawer().bytes(), 'caisse')
           .then(function (res) {
             if (res && res.ok) return { ok: true, opened: true, via: res.via || '' };
             return realTill() ? { ok: false, reason: (res && res.reason) || 'drawer-failed' } : { ok: true, mock: true };
