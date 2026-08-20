@@ -12,6 +12,10 @@ assert.ok(!source.includes("if(!subs.length&&all.length<2)return ''"),
   'subsection creation must stay visible even in an empty or partially restored section');
 assert.ok(source.includes('data-action="rmw-formula-duplicate"') && source.includes("handlers['rmw-formula-duplicate']"),
   'saved composed menus expose a wired reuse action');
+assert.ok(source.includes('data-formula-template') && source.includes('data-apply-formula-template'),
+  'the item editor exposes saved composed menus as reusable formula templates');
+assert.ok(source.includes('template.formula.slots') && source.includes('JSON.parse(JSON.stringify'),
+  'reusing a saved formula copies its stages instead of sharing mutable state');
 ['rmw-cat-move','rmw-cat-edit','rmw-cat-delete','rmw-sub-rename','rmw-sub-delete'].forEach((action) => {
   assert.ok(source.includes(`data-action="${action}"`) && source.includes(`H['${action}']`),
     `${action} must have a visible control and a wired handler`);

@@ -228,7 +228,7 @@ var SHELL = [
   '/assets/planning-core.js?v=8',
   '/assets/planning-ui.css?v=10',
   '/assets/team.js?v=277',
-  '/assets/restaurant-menu-workspace.js?v=13',
+  '/assets/restaurant-menu-workspace.js?v=14',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).
   '/assets/catalog-import.js?v=2',
   // Scanner un menu — photo / PDF / lien → Kiwi AI → revue d'import.
