@@ -32,6 +32,7 @@ const vm = require('vm');
 const ROOT = path.join(__dirname, '..');
 const CAISSE = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
 const PAGES = fs.readFileSync(path.join(ROOT, 'assets', 'pages-pro.js'), 'utf8');
+const VENUES = fs.readFileSync(path.join(ROOT, 'assets', 'venues.js'), 'utf8');
 const STORE = fs.readFileSync(path.join(ROOT, 'functions', 'api', 'store.js'), 'utf8');
 
 let pass = 0;
@@ -240,6 +241,195 @@ function run(opts) {
   ok('la caisse préfère la copie serveur au miroir local',
     CAISSE.indexOf('window.KiwiFloorPlan && Array.isArray(window.KiwiFloorPlan.tables)')
     < CAISSE.indexOf("localStorage.getItem('kiwiPlanDeSalle:slug:' + slug)"));
+
+  // Règles de sécurité et nommage multi-locataires
+  ok('pdsKey nomme les identifiants transitoires par slug',
+    /PDS_LS_KEY \+ ':' \+ vid \+ '@' \+ slug/.test(PAGES));
+  ok('pdsKey retourne chaîne vide si aucun slug n’est résolu (fail-closed)',
+    /return slug \? PDS_LS_KEY \+ ':' \+ vid \+ '@' \+ slug : ''/.test(PAGES));
+  ok('pdsWriteLocal ne tente pas d’écrire si la clé est vide',
+    /const key = pdsKey\(\);[\s\S]{0,60}if \(key\) \{\s*try \{\s*localStorage\.setItem\(key/.test(PAGES));
+  ok('pdsRawState retourne un état vide sans clé',
+    /const key = pdsKey\(\);[\s\S]{0,60}if \(!key\) return \{ zones: \[\], tables: \[\], staff: \[\] \};/.test(PAGES));
+  ok('pdsCarryForward n’opère pas sur les identifiants transitoires',
+    /var transients =[\s\S]{0,100}if \(transients\.indexOf\(vid\) >= 0\) return;/.test(PAGES));
+  ok('venues.js nettoie les anciens seaux kiwiPlanDeSalle dans resetScopedRecords',
+    /SCOPED_PDS = \/\^kiwiPlanDeSalle:scoped@\(\.\+\)\$\//.test(VENUES)
+    && /SCOPED_REC\.test\(k\) \|\| k === 'kiwiPlanDeSalle:scoped' \|\| k === 'kiwiPlanDeSalle:own'/.test(VENUES));
+  ok('venues.js exporte tenantOf et TRANSIENT_IDS',
+    /tenantOf:\s*salesTenant/.test(VENUES) && /TRANSIENT_IDS/.test(VENUES));
+}
+
+/* ── 6. Isolation multi-locataires & Fail-closed (vue opérateur / God mode) ── */
+{
+  const store = Object.create(null);
+  const sandbox = {
+    window: {},
+    localStorage: {
+      getItem: (k) => (k in store ? store[k] : null),
+      setItem: (k, v) => { store[k] = String(v); },
+      removeItem: (k) => { delete store[k]; },
+      key: (i) => Object.keys(store)[i] || null,
+      get length() { return Object.keys(store).length; },
+    },
+    document: {
+      addEventListener: () => {},
+    },
+    JSON,
+  };
+  sandbox.globalThis = sandbox;
+  sandbox.window = sandbox;
+
+  let currentVenue = 'cafeAtlas';
+  let venueData = { id: 'cafeAtlas', name: 'Café Atlas', custom: false };
+  const venues = {
+    cafeAtlas: { id: 'cafeAtlas', name: 'Café Atlas', custom: false },
+    scoped: { id: 'scoped', name: 'Client A', custom: true, slug: 'client-a' },
+    own: { id: 'own', name: 'Mon commerce', custom: true, slug: '' },
+  };
+
+  const KiwiVenue = {
+    TRANSIENT_IDS: ['scoped', 'own'],
+    getVenue: () => currentVenue,
+    getCurrentVenueData: () => venueData,
+    slugOf: (vid) => {
+      const v = venues[vid || currentVenue];
+      return (v && v.slug) || '';
+    },
+    tenantOf: (vid) => {
+      const v = venues[vid || currentVenue];
+      if (v && v.slug) return v.slug;
+      if (vid === 'scoped') return '';
+      return sandbox.localStorage.getItem('kiwiLiveMerchant') || '';
+    },
+    isCustom: (vid) => {
+      const v = venues[vid || currentVenue];
+      return !!(v && v.custom);
+    },
+  };
+  sandbox.window.KiwiVenue = KiwiVenue;
+
+  const pdsCode = `
+    const PDS_LS_KEY = 'kiwiPlanDeSalle';
+    const PDS_TRANSIENT_IDS = ['scoped', 'own'];
+    function pdsTenant(vid) {
+      if (window.KiwiVenue && typeof window.KiwiVenue.tenantOf === 'function') {
+        return window.KiwiVenue.tenantOf(vid) || '';
+      }
+      if (window.KiwiVenue && typeof window.KiwiVenue.slugOf === 'function') {
+        const s = window.KiwiVenue.slugOf(vid);
+        if (s) return s;
+      }
+      if (vid === 'scoped') return '';
+      try { return String(localStorage.getItem('kiwiLiveMerchant') || '').trim(); } catch (_) { return ''; }
+    }
+    function pdsKey(id) {
+      const vid = id || (window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue()) || 'default';
+      const transients = (window.KiwiVenue && window.KiwiVenue.TRANSIENT_IDS) || PDS_TRANSIENT_IDS;
+      if (transients.indexOf(vid) < 0) return PDS_LS_KEY + ':' + vid;
+      const slug = pdsTenant(vid);
+      return slug ? PDS_LS_KEY + ':' + vid + '@' + slug : '';
+    }
+    function pdsNormalize(s) { return s; }
+    function pdsDefaultState() { return { zones: [{ id: 'z1' }], tables: [], staff: [] }; }
+    function pdsLoad() {
+      const key = pdsKey();
+      if (key) {
+        try {
+          const raw = localStorage.getItem(key);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed && parsed.zones && parsed.tables && parsed.staff) return pdsNormalize(parsed);
+          }
+        } catch (e) {}
+      }
+      return pdsNormalize(pdsDefaultState());
+    }
+    function pdsWriteLocal(state) {
+      const key = pdsKey();
+      if (key) {
+        try { localStorage.setItem(key, JSON.stringify(state)); } catch (e) {}
+      }
+      try {
+        var vd = window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && window.KiwiVenue.getCurrentVenueData();
+        if (vd && vd.custom && vd.name) {
+          var vid = (window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue()) || '';
+          var transients = (window.KiwiVenue && window.KiwiVenue.TRANSIENT_IDS) || PDS_TRANSIENT_IDS;
+          if (transients.indexOf(vid) >= 0 && !key) return;
+          var slug = vd.slug || (window.KiwiVenue && window.KiwiVenue.slugOf && window.KiwiVenue.slugOf(vid)) || '';
+          if (slug) localStorage.setItem(PDS_LS_KEY + ':slug:' + slug, JSON.stringify(state));
+        }
+      } catch (e) {}
+    }
+    function pdsRawState() {
+      const key = pdsKey();
+      if (!key) return { zones: [], tables: [], staff: [] };
+      try {
+        var raw = localStorage.getItem(key);
+        var p = raw ? JSON.parse(raw) : null;
+        if (p && p.zones && p.tables) return p;
+      } catch (e) {}
+      return { zones: [], tables: [], staff: [] };
+    }
+    function pdsCarryForward() {
+      if (!window.KiwiCloudDoc) return;
+      var vid = (window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue()) || '';
+      var slug = window.KiwiCloudDoc.currentSlug();
+      if (!vid || !slug) return;
+      var transients = (window.KiwiVenue && window.KiwiVenue.TRANSIENT_IDS) || PDS_TRANSIENT_IDS;
+      if (transients.indexOf(vid) >= 0) return;
+      window.KiwiCloudDoc.carryForward('floorplan', vid, slug, function (raw) {
+        try { var d = JSON.parse(raw || 'null'); return !!(d && d.tables && d.tables.length); }
+        catch (e) { return false; }
+      }, PDS_LS_KEY + ':');
+    }
+  `;
+  vm.createContext(sandbox);
+  vm.runInContext(pdsCode, sandbox);
+
+  // 1. Établissement normal
+  currentVenue = 'cafeAtlas';
+  eq('pdsKey pour un établissement normal', sandbox.pdsKey(), 'kiwiPlanDeSalle:cafeAtlas');
+
+  // 2. Vue portée (God Mode / opérateur) avec slug résolu
+  currentVenue = 'scoped';
+  venueData = venues.scoped;
+  eq('pdsKey pour scoped avec slug résolu', sandbox.pdsKey(), 'kiwiPlanDeSalle:scoped@client-a');
+
+  // 3. Vue portée (scoped) SANS slug résolu -> Fail-closed
+  venues.scoped.slug = '';
+  eq('pdsKey pour scoped sans slug (fail-closed)', sandbox.pdsKey(), '');
+
+  // 4. Fail-closed n'écrit jamais sur clé vide
+  sandbox.pdsWriteLocal({ zones: [{ id: 'z1' }], tables: [{ id: 't1' }], staff: [] });
+  ok("pdsWriteLocal n'écrit rien si la clé est vide (fail-closed)", !('' in store));
+  ok("pdsWriteLocal n'écrit pas non plus sous kiwiPlanDeSalle:scoped", !('kiwiPlanDeSalle:scoped' in store));
+  ok("pdsWriteLocal n'écrit pas de miroir sans slug", !('kiwiPlanDeSalle:slug:' in store));
+
+  // 5. pdsRawState sur fail-closed retourne un état vide
+  const rawEmpty = sandbox.pdsRawState();
+  ok('pdsRawState sur clé vide retourne un état sans tables', rawEmpty && Array.isArray(rawEmpty.tables) && rawEmpty.tables.length === 0);
+
+  // 6. Bascule entre locataire A et locataire B : aucune contamination
+  venues.scoped.slug = 'client-a';
+  const planA = { zones: [{ id: 'z1', name: 'Salle' }], tables: [{ id: 't1', num: '1' }, { id: 't2', num: '2' }], staff: [] };
+  sandbox.pdsWriteLocal(planA);
+  eq('plan de client-a écrit sous son propre seau nommé', store['kiwiPlanDeSalle:scoped@client-a'], JSON.stringify(planA));
+  eq('plan de client-a écrit sous son miroir', store['kiwiPlanDeSalle:slug:client-a'], JSON.stringify(planA));
+
+  // Maintenant l'opérateur navigue vers client-b
+  venues.scoped.slug = 'client-b';
+  venueData = { id: 'scoped', name: 'Client B', custom: true, slug: 'client-b' };
+  eq('pdsKey pour client-b pointe vers son propre seau', sandbox.pdsKey(), 'kiwiPlanDeSalle:scoped@client-b');
+  const rawB = sandbox.pdsRawState();
+  eq('pdsRawState pour client-b est vide (pas de fuite de client-a)', rawB.tables.length, 0);
+
+  // 7. Nettoyage de l'ancien seau non nommé kiwiPlanDeSalle:scoped
+  store['kiwiPlanDeSalle:scoped'] = JSON.stringify({ tables: [{ id: 'legacy' }] });
+  ['scoped', 'own'].forEach((tid) => {
+    delete store['kiwiPlanDeSalle:' + tid];
+  });
+  ok('ancien seau kiwiPlanDeSalle:scoped purgé', !('kiwiPlanDeSalle:scoped' in store));
 }
 
 /* ── Verdict ──────────────────────────────────────────────────────────────── */
@@ -252,5 +442,5 @@ if (fails.length) {
   process.exit(1);
 }
 console.log(`  \x1b[32m✓\x1b[0m plan de salle → caisse (${pass} contrôles : armement différé, `
-  + 'relance bornée, un seul écouteur, miroir par slug, forme serveur)');
+  + 'relance bornée, un seul écouteur, miroir par slug, isolation multi-locataires, fail-closed)');
 console.log(line);

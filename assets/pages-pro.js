@@ -3019,10 +3019,36 @@ function wireDismiss(m) {
  *   Resetting wipes back to the venue's default template.
  * ═══════════════════════════════════════════════════════════════════════════ */
 const PDS_LS_KEY = 'kiwiPlanDeSalle';
-/* Per-store floor plan: every store keeps its own layout under its own key. */
-function pdsKey() {
-  const v = (window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue()) || 'default';
-  return PDS_LS_KEY + ':' + v;
+const PDS_TRANSIENT_IDS = ['scoped', 'own'];
+/* Nettoyage au chargement des anciens seaux non nommés écrits par les versions
+ * antérieures : 'kiwiPlanDeSalle:scoped' et 'kiwiPlanDeSalle:own' ne doivent plus
+ * jamais être lus comme source de plan. */
+PDS_TRANSIENT_IDS.forEach(function (tid) {
+  try { localStorage.removeItem(PDS_LS_KEY + ':' + tid); } catch (_) {}
+});
+
+function pdsTenant(vid) {
+  if (window.KiwiVenue && typeof window.KiwiVenue.tenantOf === 'function') {
+    return window.KiwiVenue.tenantOf(vid) || '';
+  }
+  if (window.KiwiVenue && typeof window.KiwiVenue.slugOf === 'function') {
+    const s = window.KiwiVenue.slugOf(vid);
+    if (s) return s;
+  }
+  if (vid === 'scoped') return '';
+  try { return String(localStorage.getItem('kiwiLiveMerchant') || '').trim(); } catch (_) { return ''; }
+}
+
+/* Per-store floor plan: every store keeps its own layout under its own key.
+ * Pour les identifiants transitoires ('scoped', 'own'), le seau est nommé par
+ * le slug du locataire résolu ('kiwiPlanDeSalle:scoped@<slug>'). Sans slug
+ * résolu, la clé retourne '' (fail-closed) : aucun cache partagé ni écriture. */
+function pdsKey(id) {
+  const vid = id || (window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue()) || 'default';
+  const transients = (window.KiwiVenue && window.KiwiVenue.TRANSIENT_IDS) || PDS_TRANSIENT_IDS;
+  if (transients.indexOf(vid) < 0) return PDS_LS_KEY + ':' + vid;
+  const slug = pdsTenant(vid);
+  return slug ? PDS_LS_KEY + ':' + vid + '@' + slug : '';
 }
 const PDS_GRID = 16;         /* snap-to-grid unit (px) */
 const PDS_CANVAS_W = 880;
@@ -4381,17 +4407,23 @@ function pdsNormalize(state) {
 }
 
 function pdsLoad() {
-  try {
-    const raw = localStorage.getItem(pdsKey());
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed && parsed.zones && parsed.tables && parsed.staff) return pdsNormalize(parsed);
-    }
-  } catch (e) { /* fall through to default */ }
+  const key = pdsKey();
+  if (key) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.zones && parsed.tables && parsed.staff) return pdsNormalize(parsed);
+      }
+    } catch (e) { /* fall through to default */ }
+  }
   return pdsNormalize(pdsDefaultState());
 }
 function pdsWriteLocal(state) {
-  try { localStorage.setItem(pdsKey(), JSON.stringify(state)); } catch (e) {}
+  const key = pdsKey();
+  if (key) {
+    try { localStorage.setItem(key, JSON.stringify(state)); } catch (e) {}
+  }
   /* Mirror the layout under the merchant SLUG. The caisse has no KiwiVenue to
    * resolve pdsKey(), so it reads the plan by slug (storePaired().merchant) —
    * the same identity spine the boutique/menu already share, so a design made
@@ -4400,9 +4432,10 @@ function pdsWriteLocal(state) {
   try {
     var vd = window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && window.KiwiVenue.getCurrentVenueData();
     if (vd && vd.custom && vd.name) {
-      // Slug gravé d'abord (venues.js › slugOf) : la caisse lit le plan sous le
-      // slug de son appairage, qui ne change pas quand l'enseigne se corrige.
-      var slug = vd.slug || _bqxSlug(vd.name);
+      var vid = (window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue()) || '';
+      var transients = (window.KiwiVenue && window.KiwiVenue.TRANSIENT_IDS) || PDS_TRANSIENT_IDS;
+      if (transients.indexOf(vid) >= 0 && !key) return;
+      var slug = vd.slug || (window.KiwiVenue && window.KiwiVenue.slugOf && window.KiwiVenue.slugOf(vid)) || _bqxSlug(vd.name);
       if (slug) localStorage.setItem(PDS_LS_KEY + ':slug:' + slug, JSON.stringify(state));
     }
   } catch (e) {}
@@ -4451,8 +4484,10 @@ window.addEventListener('kiwi-team-ready', pdsRefreshLiveStaff);
 window.addEventListener('kiwi-team-changed', pdsRefreshLiveStaff);
 
 function pdsRawState() {
+  const key = pdsKey();
+  if (!key) return { zones: [], tables: [], staff: [] };
   try {
-    var raw = localStorage.getItem(pdsKey());
+    var raw = localStorage.getItem(key);
     var p = raw ? JSON.parse(raw) : null;
     if (p && p.zones && p.tables) return p;
   } catch (e) {}
@@ -4483,6 +4518,8 @@ function pdsCarryForward() {
   var vid = (window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue()) || '';
   var slug = window.KiwiCloudDoc.currentSlug();
   if (!vid || !slug) return;
+  var transients = (window.KiwiVenue && window.KiwiVenue.TRANSIENT_IDS) || PDS_TRANSIENT_IDS;
+  if (transients.indexOf(vid) >= 0) return;
   window.KiwiCloudDoc.carryForward('floorplan', vid, slug, function (raw) {
     try { var d = JSON.parse(raw || 'null'); return !!(d && d.tables && d.tables.length); }
     catch (e) { return false; }

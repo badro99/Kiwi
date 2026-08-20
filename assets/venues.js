@@ -1603,6 +1603,7 @@
    * les autres. Sans ce ménage, un opérateur qui visite vingt magasins traîne
    * vingt historiques et finit par saturer le quota du navigateur. */
   const SCOPED_SALES = /^kiwiSales:scoped@(.+)$/;
+  const SCOPED_PDS = /^kiwiPlanDeSalle:scoped@(.+)$/;
   function resetScopedRecords(slug) {
     try {
       const mark = slug || '-';                       // '-' : magasin inconnu
@@ -1610,9 +1611,11 @@
       const doomed = [];
       for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
-        if (k && SCOPED_REC.test(k)) { doomed.push(k); continue; }
+        if (k && (SCOPED_REC.test(k) || k === 'kiwiPlanDeSalle:scoped' || k === 'kiwiPlanDeSalle:own')) { doomed.push(k); continue; }
         const m = k && SCOPED_SALES.exec(k);
-        if (m && m[1] !== mark) doomed.push(k);
+        if (m && m[1] !== mark) { doomed.push(k); continue; }
+        const mp = k && SCOPED_PDS.exec(k);
+        if (mp && mp[1] !== mark) doomed.push(k);
       }
       doomed.forEach(k => { try { localStorage.removeItem(k); } catch (_) {} });
       localStorage.setItem(SCOPE_MARK, mark);
@@ -8017,6 +8020,7 @@
    * the unsafe shape this file used to delete on every load; heal them once. */
   TRANSIENT_IDS.forEach((tid) => {
     try { localStorage.removeItem('kiwiSales:' + tid); } catch (_) {}
+    try { localStorage.removeItem('kiwiPlanDeSalle:' + tid); } catch (_) {}
   });
   function salesAdd(id, sale) {
     id = id || currentVenue;
@@ -9018,6 +9022,9 @@
      * cinq modules le faisaient, donc cinq occasions de changer d'identité au
      * prochain renommage. */
     slugOf,
+    tenantOf: salesTenant,
+    salesTenant,
+    TRANSIENT_IDS,
     enterFusion,
     exitFusion,
     REAL_VENUES,
