@@ -99,7 +99,7 @@
                 if (parsed && typeof parsed === 'object') {
                   const pLegal = parsed.legal || {};
                   const candidateIce = String(pLegal.ice || parsed.ice || '').trim();
-                  if (candidateIce && candidateIce.length >= 5) {
+                  if (candidateIce.length > 0) {
                     if (!legal.ice) legal.ice = candidateIce;
                     ['fiscal', 'rc', 'patente', 'address', 'city', 'phone', 'cnss', 'email', 'legalName'].forEach((fk) => {
                       if (!legal[fk] && (pLegal[fk] || parsed[fk])) legal[fk] = pLegal[fk] || parsed[fk];
@@ -138,7 +138,7 @@
           const k = localStorage.key(i);
           if (k && /:ice$/.test(k)) {
             const val = String(getLocal(k) || '').trim();
-            if (val && val.length >= 5) {
+            if (val.length > 0) {
               if (!legal.ice) legal.ice = val;
               const prefix = k.replace(/:ice$/, ':');
               ['fiscal', 'rc', 'patente', 'address', 'city', 'phone', 'cnss', 'email', 'legalName', 'logo', 'name'].forEach((fk) => {
@@ -318,8 +318,8 @@
       }];
     }
 
-    const sellerIceStr = String(seller.ice || seller.legal?.ice || '').trim().replace(/\D/g, '');
-    const missingICE = !sellerIceStr || sellerIceStr.length < 9;
+    const sellerIceStr = String(seller.ice || seller.legal?.ice || '').trim();
+    const missingICE = !sellerIceStr;
 
     return {
       number: opts.number || null,
@@ -403,10 +403,10 @@
       cust.if ? `<strong>IF :</strong> ${esc(cust.if)}` : '',
     ].filter(Boolean).join('<br>') : '<strong>Client de passage</strong><br>Vente au comptoir';
 
-    const sellerIceStr = String(seller.ice || seller.legal?.ice || '').trim().replace(/\D/g, '');
+    const sellerIceStr = String(seller.ice || seller.legal?.ice || '').trim();
     const isMissingICE = (doc.missingICE !== undefined)
       ? Boolean(doc.missingICE)
-      : (!sellerIceStr || sellerIceStr.length < 5);
+      : !sellerIceStr;
 
     const iceBanner = isMissingICE ? `
       <div class="ice-alert">
@@ -447,11 +447,11 @@
     .totals { width: 260px; }
     .tot-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 12px; color: #475569; }
     .tot-row.grand { border-top: 2px solid #087653; margin-top: 6px; padding-top: 10px; font-size: 16px; font-weight: 800; color: #087653; }
-    .footer { position: fixed; bottom: 0; left: 0; right: 0; display: flex; justify-content: space-between; align-items: center; color: #94a3b8; font-size: 9.5px; border-top: 1px solid #e2e8f0; padding-top: 8px; background: #fff; }
-    .footer-legal { max-width: 68%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .footer-powered { display: inline-flex; align-items: center; gap: 5px; color: #64748b; font-size: 9.5px; }
-    .footer-powered .pw-txt { color: #94a3b8; font-size: 8px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; line-height: 1; display: inline-block; margin-top: 1px; }
-    .footer-powered .pw-logo { height: 11px; width: auto; display: inline-block; vertical-align: middle; }
+    .footer { position: fixed; bottom: 0; left: 0; right: 0; display: flex; justify-content: space-between; align-items: flex-end; color: #94a3b8; font-size: 9.5px; border-top: 1px solid #e2e8f0; padding-top: 8px; background: #fff; }
+    .footer-legal { max-width: 68%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1; padding-bottom: 2px; }
+    .footer-powered { display: inline-flex; align-items: flex-end; gap: 5px; color: #64748b; font-size: 9.5px; }
+    .footer-powered .pw-txt { color: #94a3b8; font-size: 8px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; line-height: 1; display: inline-block; padding-bottom: 1.5px; }
+    .footer-powered .pw-logo { height: 13.5px; width: auto; display: block; }
   </style>
 </head>
 <body>
@@ -672,8 +672,8 @@
       ['ice', 'fiscal', 'rc', 'patente', 'cnss', 'address', 'city', 'phone', 'email', 'logo', 'legalName'].forEach((k) => {
         if (!cached.seller[k] && liveSeller[k]) cached.seller[k] = liveSeller[k];
       });
-      const sellerIce = String(cached.seller.ice || cached.seller.legal?.ice || '').trim().replace(/\D/g, '');
-      cached.missingICE = !sellerIce || sellerIce.length < 9;
+      const sellerIce = String(cached.seller.ice || cached.seller.legal?.ice || '').trim();
+      cached.missingICE = !sellerIce;
       setCachedInvoice(saleId, cached);
       open(cached, mode);
       return cached;
@@ -729,8 +729,8 @@
       ['ice', 'fiscal', 'rc', 'patente', 'cnss', 'address', 'city', 'phone', 'email', 'logo', 'legalName'].forEach((k) => {
         if (!finalDoc.seller[k] && liveSeller[k]) finalDoc.seller[k] = liveSeller[k];
       });
-      const sellerIce = String(finalDoc.seller.ice || finalDoc.seller.legal?.ice || '').trim().replace(/\D/g, '');
-      finalDoc.missingICE = !sellerIce || sellerIce.length < 9;
+      const sellerIce = String(finalDoc.seller.ice || finalDoc.seller.legal?.ice || '').trim();
+      finalDoc.missingICE = !sellerIce;
 
       setCachedInvoice(saleId, finalDoc);
       open(finalDoc, mode);
