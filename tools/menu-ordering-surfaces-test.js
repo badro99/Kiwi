@@ -18,7 +18,11 @@ ok('caisse combines formula stages and regular options', /const groups = itemOpt
 ok('employee app preserves and renders subcategories', /subId: it\.subId \|\| null/.test(serveur) && /id='subcat-pills'/.test(serveur));
 ok('employee app keeps its composed formula flow', /function openFormulaSheet/.test(serveur) && /itemHasFormula\(id\)/.test(serveur));
 ok('employee app combines formula stages and regular options', /optSel: \{\}/.test(serveur) && /data-fml-opt-group/.test(serveur) && /opts: opts\.map/.test(serveur));
-ok('OrderPro publishes nested filters', /menu-subtab/.test(orderpro) && /m\.subId === subFilter/.test(orderpro));
+ok('OrderPro publishes nested filters on a separate row',
+  /class="menu-subtabs"/.test(orderpro)
+    && /function renderMenuSubtabs\(categoryId\)/.test(orderpro)
+    && /MENU_SUBTABS\.set\(String\(c\.id\), subtabs\)/.test(orderpro)
+    && /m\.subId === subFilter/.test(orderpro));
 ok('OrderPro maps composed formula slots into customer choices', /const formulaOptions =/.test(orderpro) && /OPT\[g\.key\] = g/.test(orderpro));
 ok('OrderPro combines regular options with formula stages', /filter\(Boolean\)\.concat\(formulaOptions\)/.test(orderpro));
 

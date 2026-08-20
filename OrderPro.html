@@ -452,6 +452,16 @@ em, i, cite, dfn, var { font-style: normal; }
       -webkit-overflow-scrolling: touch;
     }
     .menu-tabs::-webkit-scrollbar { display: none; }
+    .menu-subtabs {
+      display: none;
+      gap: 8px;
+      padding: 0 22px 14px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+    }
+    .menu-subtabs.is-visible { display: flex; }
+    .menu-subtabs::-webkit-scrollbar { display: none; }
     .menu-tab {
       flex: 0 0 auto;
       padding: 9px 14px;
@@ -3062,6 +3072,7 @@ em, i, cite, dfn, var { font-style: normal; }
       <div class="menu-tabs" role="tablist">
         <button class="menu-tab is-active" data-tab="all" data-i18n="tab_all">Tout</button>
       </div>
+      <div class="menu-subtabs" role="tablist" aria-label="Sous-catégories"></div>
 
       <div class="menu-list is-feed" id="menu-list"></div>
 
@@ -4141,8 +4152,7 @@ em, i, cite, dfn, var { font-style: normal; }
       applyStaticI18n();
       // Dynamic
       if (typeof renderMenu === 'function') {
-        const activeTab = document.querySelector('.menu-tab.is-active')?.dataset.tab || 'all';
-        renderMenu(activeTab);
+        renderMenu(activeMenuFilter());
       }
       if (typeof applyMenuMode === 'function' && orderMode) applyMenuMode();
       if (typeof renderBoutique === 'function' && STORE.type === 'boutique') renderBoutique();
@@ -4175,6 +4185,7 @@ em, i, cite, dfn, var { font-style: normal; }
        - cat must match a menu-tab data-tab; icon maps to a style via ICON_CLASS below.
        - options, video and tag are optional. */
     const MENU = [];
+    const MENU_SUBTABS = new Map();
     const ICON_CLASS = {
       coffee: 'coffee',
       croissant: 'pastry',
@@ -4432,6 +4443,20 @@ em, i, cite, dfn, var { font-style: normal; }
       `;}).join('');
       if (window.lucide) window.lucide.createIcons();
       feedMedia.bind();
+    }
+
+    function renderMenuSubtabs(categoryId) {
+      const row = $('.menu-subtabs');
+      if (!row) return;
+      const subtabs = MENU_SUBTABS.get(String(categoryId)) || [];
+      row.innerHTML = subtabs.map(s => `<button class="menu-tab menu-subtab" data-tab="${escapeHtml(String(categoryId) + '::' + String(s.id))}">${escapeHtml(String(s.name || ''))}</button>`).join('');
+      row.classList.toggle('is-visible', subtabs.length > 0);
+    }
+
+    function activeMenuFilter() {
+      return document.querySelector('.menu-subtab.is-active')?.dataset.tab
+        || document.querySelector('.menu-tabs .menu-tab.is-active')?.dataset.tab
+        || 'all';
     }
 
     /* ============ cart logic — line keys support variants ============ */
@@ -5321,8 +5346,7 @@ em, i, cite, dfn, var { font-style: normal; }
       }
       if (!hit) return;
       refreshCartUI();
-      const active = $('.menu-tab.is-active');
-      renderMenu((active && active.dataset.tab) || 'all');
+      renderMenu(activeMenuFilter());
     }
 
     /* ============ restart (back to menu after order sent) ============ */
@@ -5330,6 +5354,7 @@ em, i, cite, dfn, var { font-style: normal; }
       cart.clear();
       refreshCartUI();
       $$('.menu-tab').forEach(t => t.classList.toggle('is-active', t.dataset.tab === 'all'));
+      renderMenuSubtabs('all');
       renderMenu('all');
       gotoScreen('screen-menu');
     }
@@ -5682,15 +5707,17 @@ em, i, cite, dfn, var { font-style: normal; }
       const used = new Set(MENU.map(m => m.cat));
       const tabs = $('.menu-tabs');
       const parts = [];
+      MENU_SUBTABS.clear();
       parts.push(`<button class="menu-tab is-active" data-tab="all" data-i18n="tab_all">${escapeHtml(t('tab_all'))}</button>`);
       for (const c of cats) {
         if (!used.has(String(c.id))) continue;        // empty category → no tab
         parts.push(`<button class="menu-tab" data-tab="${escapeHtml(String(c.id))}">${escapeHtml(String(c.name || ''))}</button>`);
-        (Array.isArray(c.sub) ? c.sub : []).forEach(s => {
-          if (MENU.some(m => m.cat === String(c.id) && m.subId === String(s.id))) parts.push(`<button class="menu-tab menu-subtab" data-tab="${escapeHtml(String(c.id)+'::'+String(s.id))}">↳ ${escapeHtml(String(s.name||''))}</button>`);
-        });
+        const subtabs = (Array.isArray(c.sub) ? c.sub : []).filter(s =>
+          MENU.some(m => m.cat === String(c.id) && m.subId === String(s.id)));
+        if (subtabs.length) MENU_SUBTABS.set(String(c.id), subtabs);
       }
       tabs.innerHTML = parts.join('');
+      renderMenuSubtabs('all');
       renderMenu('all');
       return true;
     }
@@ -6035,8 +6062,14 @@ em, i, cite, dfn, var { font-style: normal; }
         // Tabs
         const tab = e.target.closest('.menu-tab');
         if (tab) {
-          $$('.menu-tab').forEach(t => t.classList.remove('is-active'));
-          tab.classList.add('is-active');
+          if (tab.classList.contains('menu-subtab')) {
+            $$('.menu-subtab').forEach(t => t.classList.remove('is-active'));
+            tab.classList.add('is-active');
+          } else {
+            $$('.menu-tabs .menu-tab').forEach(t => t.classList.remove('is-active'));
+            tab.classList.add('is-active');
+            renderMenuSubtabs(tab.dataset.tab);
+          }
           renderMenu(tab.dataset.tab);
           return;
         }
