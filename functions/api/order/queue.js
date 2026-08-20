@@ -1615,6 +1615,7 @@ function cleanLines(raw) {
     if (l.formulaUid) line.formulaUid = String(l.formulaUid).slice(0, 40);
     if (l.formulaName) line.formulaName = String(l.formulaName).slice(0, 80);
     if (l.slotLabel) line.slotLabel = String(l.slotLabel).slice(0, 80);
+    if (l.formulaSlotId) line.formulaSlotId = String(l.formulaSlotId).slice(0, 40);
     if (l.lineId) line.lineId = String(l.lineId).slice(0, 60);
     if (l.uid) line.uid = String(l.uid).slice(0, 60);
     if (l.id) line.id = String(l.id).slice(0, 60);

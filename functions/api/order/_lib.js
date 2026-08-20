@@ -246,6 +246,17 @@ export async function priceOrder(env, merchant, rawLines) {
             price: Math.max(0, Math.round(Number(it.price) || 0)),
             avail: it.avail !== false,
             opts: new Set((Array.isArray(it.opts) ? it.opts : []).map(String)),
+            formula: it.formula && Array.isArray(it.formula.slots) ? {
+              slots: it.formula.slots.map((slot) => ({
+                id: String((slot && slot.id) || ''),
+                label: String((slot && slot.label) || '').trim(),
+                min: Math.max(0, Math.round(Number(slot && slot.min) || 0)),
+                max: Math.max(1, Math.round(Number(slot && slot.max) || 1)),
+                choices: new Map((Array.isArray(slot && slot.choices) ? slot.choices : [])
+                  .filter((choice) => choice && choice.itemId)
+                  .map((choice) => [String(choice.itemId), Math.max(0, Math.round(Number(choice.extra) || 0))])),
+              })).filter((slot) => slot.id && slot.choices.size),
+            } : null,
             station: categoryStations.get(String(it.catId || '')) || fallbackStation,
           });
         }
@@ -300,6 +311,47 @@ export async function priceOrder(env, merchant, rawLines) {
              unknown: [], unavailable: [] };
   }
 
+  /* A composed menu is one billable parent plus non-billable preparation
+   * children. Validate that relationship against the published formula before
+   * pricing anything: the device cannot invent a zero-price child, and the
+   * canonical repricer must not turn an included drink back into a full-price
+   * standalone article. Only each choice's configured `extra` is added to the
+   * parent. */
+  const formulaContexts = new Map();
+  for (const parent of rawLines) {
+    const uid = String((parent && parent.formulaUid) || '').slice(0, 40);
+    if (!uid || String((parent && parent.kind) || '') !== 'formula') continue;
+    const parentRef = index.get(String((parent && parent.id) || ''));
+    const slots = parentRef && parentRef.formula && parentRef.formula.slots;
+    const children = rawLines.filter((line) => String((line && line.kind) || '') === 'formula-part'
+      && String((line && line.formulaUid) || '').slice(0, 40) === uid);
+    let valid = !!(slots && slots.length);
+    let extra = 0;
+    const assigned = new Set();
+    if (valid) {
+      for (const slot of slots) {
+        const selected = children.filter((child, childIndex) => {
+          if (assigned.has(childIndex)) return false;
+          const explicitSlot = String((child && child.formulaSlotId) || '');
+          const lineId = String((child && child.lineId) || '');
+          const label = String((child && child.slotLabel) || '').trim();
+          return explicitSlot === slot.id || lineId === `${uid}-${slot.id}` || (!!slot.label && label === slot.label);
+        });
+        if (selected.length < slot.min || selected.length > slot.max) { valid = false; break; }
+        for (const child of selected) {
+          const childIndex = children.indexOf(child);
+          const childId = String((child && child.id) || '');
+          if (!slot.choices.has(childId)) { valid = false; break; }
+          assigned.add(childIndex);
+          extra += slot.choices.get(childId) || 0;
+        }
+        if (!valid) break;
+      }
+      if (assigned.size !== children.length) valid = false;
+    }
+    formulaContexts.set(uid, { valid, extra, parentId: String((parent && parent.id) || '') });
+  }
+
   for (const l of rawLines) {
     const id = String((l && l.id) || '').slice(0, 40);
     const qty = Math.min(MAX_LINE_QTY, Math.max(1, Math.round(Number(l && l.qty) || 1)));
@@ -315,6 +367,13 @@ export async function priceOrder(env, merchant, rawLines) {
     const ref = id && index.get(id);
     if (!ref) { unknown.push(id || '?'); continue; }
     if (!ref.avail) { unavailable.push(ref.name || id); continue; }
+    const kind = String((l && l.kind) || '').slice(0, 20);
+    const formulaUid = String((l && l.formulaUid) || '').slice(0, 40);
+    const formulaContext = formulaUid ? formulaContexts.get(formulaUid) : null;
+    if ((kind === 'formula' || kind === 'formula-part') && (!formulaContext || !formulaContext.valid)) {
+      invalidOptions.push(ref.name || id);
+      continue;
+    }
     let optionExtra = 0;
     let canonicalVisuals = visuals;
     const selected = Array.isArray(l && l.optionChoices) ? l.optionChoices.slice(0, 40) : null;
@@ -341,9 +400,17 @@ export async function priceOrder(env, merchant, rawLines) {
       if (!valid) { invalidOptions.push(ref.name || id); continue; }
       options = labels.join(' · ').slice(0, 200);
     }
-    const unitPrice = ref.price + optionExtra;
-    lines.push({ id, name: ref.name, qty, unitPrice, options, note, visuals: canonicalVisuals,
-                 station: ref.station || '' });
+    const formulaExtra = kind === 'formula' && formulaContext ? formulaContext.extra : 0;
+    const unitPrice = kind === 'formula-part' ? 0 : ref.price + optionExtra + formulaExtra;
+    const line = { id, name: ref.name, qty, unitPrice, options, note, visuals: canonicalVisuals,
+                   station: ref.station || '' };
+    if (kind) line.kind = kind;
+    if (formulaUid) line.formulaUid = formulaUid;
+    if (l && l.formulaName) line.formulaName = String(l.formulaName).slice(0, 80);
+    if (l && l.slotLabel) line.slotLabel = String(l.slotLabel).slice(0, 80);
+    if (l && l.formulaSlotId) line.formulaSlotId = String(l.formulaSlotId).slice(0, 40);
+    if (l && l.lineId) line.lineId = String(l.lineId).slice(0, 60);
+    lines.push(line);
     total += unitPrice * qty;
   }
 

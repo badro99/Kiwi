@@ -4443,7 +4443,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
   <script src="assets/staff-roles.js" defer></script>
   <!-- Real employee identity, planning, floor and attendance bridge. -->
   <script src="assets/pwa-update.js?v=358" defer></script>
-  <script src="assets/employee-live.js?v=385" defer></script>
+  <script src="assets/employee-live.js?v=386" defer></script>
   <script src="assets/employee-planning.js?v=6" defer></script>
   <link rel="stylesheet" href="assets/employee-trade-shell.css?v=2">
   <script src="assets/employee-trade-shell.js?v=2" defer></script>
@@ -5365,6 +5365,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         if (l.formulaUid) linePayload.formulaUid = l.formulaUid;
         if (l.formulaName) linePayload.formulaName = l.formulaName;
         if (l.slotLabel) linePayload.slotLabel = l.slotLabel;
+        if (l.formulaSlotId) linePayload.formulaSlotId = l.formulaSlotId;
         if (l.lineId) linePayload.lineId = l.lineId;
         delta.push(linePayload);
       });
@@ -6085,6 +6086,12 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
           qty: Math.max(1, Number(line.qty) || 1),
           sentQty: Math.max(1, Number(line.qty) || 1),
           note: line.note || '',
+          kind: line.kind || '',
+          formulaUid: line.formulaUid || '',
+          formulaName: line.formulaName || '',
+          slotLabel: line.slotLabel || '',
+          formulaSlotId: line.formulaSlotId || '',
+          lineId: line.lineId || '',
           opts: Array.isArray(line.visuals) ? line.visuals.map((visual) => ({
             group: visual.group || '', label: visual.label || '',
             p: Math.max(0, Number(visual.price) || 0), emoji: visual.emoji || '',
@@ -8445,6 +8452,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
               formulaUid,
               formulaName: item.name,
               slotLabel: s.label || '',
+              formulaSlotId: s.id,
               lineId: `${formulaUid}-${s.id}`,
               note: '',
               sourceLocal: true,

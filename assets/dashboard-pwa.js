@@ -18,7 +18,7 @@
   // Register the shared root service worker.
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function () {
-      navigator.serviceWorker.register('/kiwi-sw.js?v=443').then(function (reg) {
+      navigator.serviceWorker.register('/kiwi-sw.js?v=444').then(function (reg) {
         try { reg.update(); } catch (_) {}
         if (window.KiwiPWAUpdate) window.KiwiPWAUpdate.watch(reg);
       }).catch(function () {});

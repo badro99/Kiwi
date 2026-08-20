@@ -78,6 +78,12 @@ const CARTE = {
     { id: 'i1', name: 'Tajine poulet', price: 90, catId: 'c1', avail: true },
     { id: 'i2', name: 'Thé à la menthe', price: 15, catId: 'c1', avail: true },
     { id: 'i3', name: 'Pastilla', price: 120, catId: 'c1', avail: false },
+    { id: 'i4', name: 'Continental', price: 68, catId: 'c1', avail: true,
+      formula: { slots: [{ id: 'drink', label: 'Boisson', min: 1, max: 1, choices: [
+        { itemId: 'i5', extra: 0 }, { itemId: 'i6', extra: 20 },
+      ] }] } },
+    { id: 'i5', name: 'Carrot Juice', price: 28, catId: 'c1', avail: true },
+    { id: 'i6', name: 'Coconut Matcha', price: 63, catId: 'c1', avail: true },
   ],
 };
 function seed() {
@@ -646,6 +652,29 @@ async function get(fn, qs, headers = {}) {
     JSON.parse(salleRow.lines)[0].note === 'sans olives', salleRow.lines);
   ok('le repère visuel de la cuisine aussi',
     JSON.parse(salleRow.lines)[0].visuals[0].emoji === '🚫🫒', salleRow.lines);
+
+  r = await post(queuePost, {
+    merchant: SALLE, create: true, mode: 'table', table: 'T7F',
+    lines: [
+      { id: 'i4', qty: 1, kind: 'formula', formulaUid: 'fml-included' },
+      { id: 'i5', qty: 1, kind: 'formula-part', formulaUid: 'fml-included', formulaSlotId: 'drink', lineId: 'fml-included-drink' },
+      { id: 'i4', qty: 1, kind: 'formula', formulaUid: 'fml-premium' },
+      { id: 'i6', qty: 1, kind: 'formula-part', formulaUid: 'fml-premium', formulaSlotId: 'drink', lineId: 'fml-premium-drink' },
+    ],
+  }, asSalle);
+  ok('les composants inclus restent gratuits après la tarification serveur',
+    r.status === 200 && r.body.total === 68 + 88, JSON.stringify(r.body));
+  const formulaRow = DB._db.prepare("SELECT lines FROM orders WHERE merchant=? AND table_no='T7F'").get(SALLE);
+  const formulaLines = formulaRow ? JSON.parse(formulaRow.lines) : [];
+  ok('les lignes enfants persistent à zéro et gardent leur type formule',
+    formulaLines.length === 4
+      && formulaLines[1].kind === 'formula-part' && formulaLines[1].unitPrice === 0
+      && formulaLines[3].kind === 'formula-part' && formulaLines[3].unitPrice === 0,
+    formulaRow && formulaRow.lines);
+  ok('seul le supplément configuré est ajouté au parent',
+    formulaLines[0] && formulaLines[0].unitPrice === 68
+      && formulaLines[2] && formulaLines[2].unitPrice === 88,
+    formulaRow && formulaRow.lines);
 
   // La caisse la voit. C'est tout l'objet : un ticket que la cuisine reçoit.
   r = await get(queueGet, 'merchant=' + SALLE + '&since=0', asSalle);

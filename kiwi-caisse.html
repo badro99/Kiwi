@@ -4709,7 +4709,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=358" defer></script>
-  <script src="assets/caisse-pwa.js?v=386" defer></script>
+  <script src="assets/caisse-pwa.js?v=387" defer></script>
   <script src="assets/live-link.js?v=12" defer></script>
   <!-- The staff-role catalogue — says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -8523,7 +8523,7 @@
         const ob=e.target.closest('[data-oc]');
         if(ob){const g=groups.find(x=>String(x.id)===ob.dataset.og);if(!g)return;const a=optPicked[g.id],id=ob.dataset.oc,at=a.indexOf(id);if(g.kind==='many'){if(at>=0)a.splice(at,1);else a.push(id);}else optPicked[g.id]=at>=0?[]:[id];paint();return;}
         if(e.target===optVeil||e.target.closest('[data-opt-cancel]')){closeOptSheet();return;}
-        if(e.target.closest('[data-formula-ok]')) { const uid=newLineUid(), parts=[],opts=[]; let formulaExtra=0,optExtra=0; slots.forEach(s=>picked[s.id].forEach(i=>{const c=s.choices[i], target=choiceItem(c); if(!target)return; formulaExtra+=+c.extra||0; parts.push({uid:newLineUid(),id:target.id,name:target.name,price:+c.extra||0,qty:1,note:'',kind:'formula-part',formulaUid:uid,formulaName:item.name,slotLabel:s.label||''});}));groups.forEach(g=>optPicked[g.id].forEach(id=>{const c=g.choices.find(x=>x.id===id);if(c){optExtra+=+c.price||0;opts.push({g:g.id,gn:g.name,c:c.id,cn:c.name,e:c.emoji||'',p:+c.price||0});}})); closeOptSheet(); onChosen({uid,id:item.id,name:item.name,price:item.price+formulaExtra+optExtra,basePrice:item.price,qty:1,note:'',kind:'formula',formulaUid:uid,formulaName:item.name,opts,optSig:optSig(opts)},parts); }
+        if(e.target.closest('[data-formula-ok]')) { const uid=newLineUid(), parts=[],opts=[]; let formulaExtra=0,optExtra=0; slots.forEach(s=>picked[s.id].forEach(i=>{const c=s.choices[i], target=choiceItem(c); if(!target)return; formulaExtra+=+c.extra||0; parts.push({uid:newLineUid(),id:target.id,name:target.name,price:0,qty:1,note:'',kind:'formula-part',formulaUid:uid,formulaName:item.name,slotLabel:s.label||'',formulaSlotId:s.id,lineId:`${uid}-${s.id}`});}));groups.forEach(g=>optPicked[g.id].forEach(id=>{const c=g.choices.find(x=>x.id===id);if(c){optExtra+=+c.price||0;opts.push({g:g.id,gn:g.name,c:c.id,cn:c.name,e:c.emoji||'',p:+c.price||0});}})); closeOptSheet(); onChosen({uid,id:item.id,name:item.name,price:item.price+formulaExtra+optExtra,basePrice:item.price,qty:1,note:'',kind:'formula',formulaUid:uid,formulaName:item.name,opts,optSig:optSig(opts)},parts); }
       };
       paint(); optVeil.classList.add('is-open');
     }
@@ -16020,6 +16020,8 @@
           uid: newLineUid(), id: (menuHit && menuHit.id) || l.id || ('op-' + marker),
           name: l.name || (menuHit && menuHit.name) || '', price: +l.unitPrice || 0,
           qty: Math.max(1, +l.qty || 1), note: l.note || '', opts: [], optSig: '',
+          kind: l.kind || '', formulaUid: l.formulaUid || '', formulaName: l.formulaName || '',
+          slotLabel: l.slotLabel || '', formulaSlotId: l.formulaSlotId || '', lineId: l.lineId || '',
           sent: true, orderProLine: marker, orderSession: String(o.session || ''),
           orderProPending: o.status === 'pending',
         });
