@@ -75,6 +75,10 @@
     "v": "8",
     "sha": "89545c5e4556f0c1"
   },
+  "assets/catalog-import.js": {
+    "v": "2",
+    "sha": "b2f9b6b0a1fe31be"
+  },
   "assets/channel-sales.js": {
     "v": "3",
     "sha": "ec5fa6bd71818a12"
@@ -234,6 +238,10 @@
   "assets/menu-catalog.js": {
     "v": "9",
     "sha": "375736ecf2219449"
+  },
+  "assets/menu-scan.js": {
+    "v": "1",
+    "sha": "3acdb25e9d604818"
   },
   "assets/merchant-config.js": {
     "v": "264",
@@ -512,8 +520,8 @@
     "sha": "af12a1b45e03e1d9"
   },
   "assets/restaurant-menu-workspace.js": {
-    "v": "7",
-    "sha": "260b187795ffd556"
+    "v": "8",
+    "sha": "2c942758d86b85a9"
   },
   "assets/restaurant-recipes.js": {
     "v": "3",

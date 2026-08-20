@@ -228,9 +228,11 @@ var SHELL = [
   '/assets/planning-core.js?v=8',
   '/assets/planning-ui.css?v=10',
   '/assets/team.js?v=277',
-  '/assets/restaurant-menu-workspace.js?v=7',
+  '/assets/restaurant-menu-workspace.js?v=8',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).
-  '/assets/catalog-import.js',
+  '/assets/catalog-import.js?v=2',
+  // Scanner un menu — photo / PDF / lien → Kiwi AI → revue d'import.
+  '/assets/menu-scan.js?v=1',
   // OrderPro — publisher + NFC panel (dashboard), inbox (caisse).
   '/assets/orderpro-publish.js?v=3',
   '/assets/orderpro-panel.js',

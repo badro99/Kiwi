@@ -747,6 +747,26 @@
       'carte-absente': 'Le module carte n\'est pas chargé.',
     };
 
+    /* CSV (fichier ou texte déjà en mémoire) → analyse → plan à l'écran.
+     * Partagé entre le dépôt de fichier et l'entrée directe openMenuWithCsv
+     * (scan AI d'un menu) : même analyse, même revue, même chemin d'écriture. */
+    function usePlan(csvText) {
+      const parsed = parse(csvText);
+      if (!parsed.ok) { plan = null; renderPick(ERRORS[parsed.error] || 'Fichier illisible.'); return; }
+      const p = kind === 'boutique' ? analyseBoutique(parsed) : analyseMenu(parsed);
+      if (!p.ok) {
+        plan = null;
+        renderPick((ERRORS[p.error] || 'Fichier illisible.')
+          + (p.headerRaw ? ' Colonnes lues : ' + p.headerRaw.join(' · ') : ''));
+        return;
+      }
+      if (!(kind === 'boutique' ? p.products.length : p.rows.length)) {
+        plan = null; renderPick('Aucun article exploitable dans ce fichier.'); return;
+      }
+      plan = p;
+      renderPlan(p);
+    }
+
     function handleFile(file) {
       if (!file) return;
       if (/\.(xlsx|xls|numbers|ods)$/i.test(file.name)) {
@@ -755,22 +775,7 @@
       }
       const fr = new FileReader();
       fr.onerror = () => renderPick('Ce fichier n\'a pas pu être lu.');
-      fr.onload = () => {
-        const parsed = parse(decodeBytes(fr.result));
-        if (!parsed.ok) { plan = null; renderPick(ERRORS[parsed.error] || 'Fichier illisible.'); return; }
-        const p = kind === 'boutique' ? analyseBoutique(parsed) : analyseMenu(parsed);
-        if (!p.ok) {
-          plan = null;
-          renderPick((ERRORS[p.error] || 'Fichier illisible.')
-            + (p.headerRaw ? ' Colonnes lues : ' + p.headerRaw.join(' · ') : ''));
-          return;
-        }
-        if (!(kind === 'boutique' ? p.products.length : p.rows.length)) {
-          plan = null; renderPick('Aucun article exploitable dans ce fichier.'); return;
-        }
-        plan = p;
-        renderPlan(p);
-      };
+      fr.onload = () => usePlan(decodeBytes(fr.result));
       fr.readAsArrayBuffer(file);
     }
 
@@ -821,6 +826,7 @@
     });
 
     renderPick('');
+    if (opts.csvText) usePlan(String(opts.csvText));
     return m;
   }
 
@@ -830,6 +836,9 @@
     parse, analyseBoutique, analyseMenu, applyBoutique, applyMenu,
     // UI
     open, openBoutique: (o) => open('boutique', o), openMenu: (o) => open('menu', o),
+    /* Entrée directe pour un CSV déjà construit (scan AI d'un menu) : ouvre la
+     * même revue « rien n'est écrit avant confirmation » que le dépôt de fichier. */
+    openMenuWithCsv: (csvText, o) => open('menu', Object.assign({}, o, { csvText })),
     downloadTemplate, templates: () => Object.assign({}, TEMPLATES),
     // exposed for tests
     _num: num, _normKey: normKey, _bool: bool, _decode: decodeBytes,
