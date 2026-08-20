@@ -6,6 +6,7 @@ export const DAILY_CAPS = {
   ask: 200,
   invoice: 200,
   menuimport: 60,
+  salleimport: 20,
   index: 20,
   resolve: 300,
   transcribe: 100,

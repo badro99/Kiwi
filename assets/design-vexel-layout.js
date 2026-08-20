@@ -964,7 +964,7 @@
         var valueNode = block.querySelector('[data-hero-delta-val]');
         if (!labelNode || !valueNode) return;
         var pair = { l: labelNode.textContent.trim(), v: valueNode.textContent.trim() };
-        if (!pair.l && !pair.v) return;
+        if (!pair.l || !pair.v || pair.l === 'undefined') return;
         pairs.push(pair);
       });
       var sig = pairs.map(function (p) { return p.l + '|' + p.v; }).join('~');

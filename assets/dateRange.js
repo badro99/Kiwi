@@ -1952,7 +1952,8 @@
     const yTicks = [0, top * 0.25, top * 0.5, top * 0.75, top].map(Math.round);
     const legendPrimary = (hourly ? 'Cumul' : ('Total ' + (RANGE_DAYS[range] || rev.length) + ' jours')) + ' · ' + frInt(total) + ' MAD';
     return {
-      rev, revPrev: hasPrev ? prev : null, yTicks, xLabels, visibleXIdx, sub, rangeBadge, legendPrimary,
+      rev, revPrev: hasPrev ? prev : null, total, prevTotal: hasPrev ? prevTotal : null,
+      yTicks, xLabels, visibleXIdx, sub, rangeBadge, legendPrimary,
       legendCompare: hasPrev ? (cmpPrefix + ' · ' + frInt(prevTotal) + ' MAD') : '',
     };
   }
@@ -2024,9 +2025,9 @@
         if (v) existing[k] = parsePctFromEl(v);
       });
       const items = [];
-      if (data.deltaHier    != null) items.push({ key: 'hier',    value: data.deltaHier,    label: labels.hier });
-      if (data.deltaSemaine != null) items.push({ key: 'semaine', value: data.deltaSemaine, label: labels.semaine });
-      if (data.deltaMois    != null) items.push({ key: 'mois',    value: data.deltaMois,    label: labels.mois });
+      if (data.deltaHier    != null && labels && labels.hier)    items.push({ key: 'hier',    value: data.deltaHier,    label: labels.hier });
+      if (data.deltaSemaine != null && labels && labels.semaine) items.push({ key: 'semaine', value: data.deltaSemaine, label: labels.semaine });
+      if (data.deltaMois    != null && labels && labels.mois)    items.push({ key: 'mois',    value: data.deltaMois,    label: labels.mois });
 
       // "Net après Kiwi" removed by product decision — the dashboard is the
       // merchant's own takings; a "what's left after Kiwi's cut" line is an
@@ -3105,10 +3106,35 @@
     // and for positioning the live pulse on the live-truncated curve.
     let lastIdx = -1;
     for (let i = 0; i < N; i++) { if (data.rev[i] != null) lastIdx = i; }
-    // Resting hero readout = the latest cumulative point vs the same point
-    // on the comparison curve.
-    const restingVal  = lastIdx >= 0 ? data.rev[lastIdx] : 0;
-    const restingPrev = (data.revPrev && lastIdx >= 0) ? data.revPrev[lastIdx] : null;
+    // True if the x-axis labels are hourly (e.g. "11h"). Hourly ranges
+    // get per-minute interpolation; daily ranges (7j / 30j) get per-hour
+    // interpolation so the hover feels equally fluid.
+    const isHourly = !!data.xLabels?.[0]?.endsWith('h');
+
+    // Resting hero readout:
+    // - On hourly ranges (aujourdhui / hier), points are cumulative so the last
+    //   non-null point is the day's total.
+    // - On daily/multi-day ranges (7j, 30j, personnalisé...), points are discrete
+    //   daily buckets. The hero number must show the full period's total revenue,
+    //   not just the revenue of the last single day.
+    let restingVal, restingPrev;
+    if (isHourly) {
+      restingVal = lastIdx >= 0 ? (data.rev[lastIdx] || 0) : 0;
+      restingPrev = (data.revPrev && lastIdx >= 0) ? (data.revPrev[lastIdx] || 0) : null;
+    } else {
+      if (data.total != null) {
+        restingVal = data.total;
+      } else {
+        restingVal = data.rev.reduce((s, x) => s + (x || 0), 0);
+      }
+      if (data.prevTotal != null) {
+        restingPrev = data.prevTotal;
+      } else if (data.revPrev) {
+        restingPrev = data.revPrev.reduce((s, x) => s + (x || 0), 0);
+      } else {
+        restingPrev = null;
+      }
+    }
     const linePath = smoothPath(data.rev);
     const cmpPath  = smoothPath(data.revPrev);
     // Area's right edge follows the line's actual tip — sim x in live mode.
@@ -3227,11 +3253,6 @@
         }
       }
     }
-
-    // True if the x-axis labels are hourly (e.g. "11h"). Hourly ranges
-    // get per-minute interpolation; daily ranges (7j / 30j) get per-hour
-    // interpolation so the hover feels equally fluid.
-    const isHourly = !!data.xLabels?.[0]?.endsWith('h');
 
     function move(evt) {
       const rect = svg.getBoundingClientRect();

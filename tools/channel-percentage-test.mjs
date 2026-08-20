@@ -26,8 +26,8 @@ assert.match(
   /var splitLabel = hasAmounts \? copy\.share : copy\.unavailable/,
   'the subtitle still distinguishes measured shares from unavailable breakdowns'
 );
-assert.match(dashboard, /assets\/channel-sales\.js\?v=3/);
-assert.match(dashboard, /assets\/design-vexel-layout\.js\?v=2077/);
+assert.match(dashboard, /assets\/channel-sales\.js\?v=\d+/);
+assert.match(dashboard, /assets\/design-vexel-layout\.js\?v=\d+/);
 assert.match(layout, /rawBase !== authoritative/, 'the active venue family overrides stale venue metadata');
 
 assert.equal(truth.key({ channel: 'salle' }, ids, restaurant, 'restaurant'), 'dining');

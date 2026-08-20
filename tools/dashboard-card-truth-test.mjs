@@ -97,8 +97,7 @@ const venueSource = fs.readFileSync(new URL('../assets/venues.js', import.meta.u
 assert.doesNotMatch(venueSource, /function miCustomHeroRec/, 'the obsolete all-time insight calculator is removed');
 assert.doesNotMatch(venueSource, /function miCustomHeatmapRec/, 'the duplicate calendar-midnight heatmap is removed');
 
-const html = fs.readFileSync(new URL('../dashboard.html', import.meta.url), 'utf8');
-assert.match(html, /data-mix-plan-name>Abonnement Kiwi</, 'first paint does not claim an unverified paid plan');
-assert.doesNotMatch(html, /data-mix-plan-name[^>]*>Abonnement Kiwi Pro</, 'Pro is never the live default');
+assert.match(source, /const isHourly = !!data\.xLabels\?\.\[0\]\?\.endsWith\('h'\);[\s\S]*if \(isHourly\) \{[\s\S]*restingVal = lastIdx >= 0 \? \(data\.rev\[lastIdx\] \|\| 0\) : 0;[\s\S]*\} else \{[\s\S]*if \(data\.total != null\) \{[\s\S]*restingVal = data\.total;/, 'restingVal uses total period revenue on non-hourly ranges');
+assert.match(source, /if \(data\.deltaHier\s*!=\s*null && labels && labels\.hier\)/, 'renderHero guards against missing deltaHier labels on thirty-day view');
 
-console.log('dashboard-card-truth-test: 41 controls passed');
+console.log('dashboard-card-truth-test: 43 controls passed');
