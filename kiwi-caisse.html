@@ -4709,7 +4709,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=358" defer></script>
-  <script src="assets/caisse-pwa.js?v=387" defer></script>
+  <script src="assets/caisse-pwa.js?v=388" defer></script>
   <script src="assets/live-link.js?v=12" defer></script>
   <!-- The staff-role catalogue — says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -15580,7 +15580,10 @@
           const sids = (it.stations && it.stations.length) ? it.stations : [fallback];
           sids.forEach((sid) => {
             if (!byStation.has(sid)) byStation.set(sid, []);
-            byStation.get(sid).push({ qty: it.q, name: it.n, note: it.paperNote || it.note });
+            const visualNote = (Array.isArray(it.visuals) ? it.visuals : [])
+              .map(v => v && (v.name || v.label || v.cn)).filter(Boolean).join(' · ');
+            byStation.get(sid).push({ qty: it.q, name: it.n,
+              note: [visualNote, it.paperNote || it.note].filter(Boolean).join(' · ') });
           });
         });
         const list = kdsStations();
@@ -16103,16 +16106,22 @@
                 : (o.status === 'ready' ? 'ready' : 'new'),
           readyAt: o.status === 'ready' ? kdsNowHM() : null,
           items: (o.lines || []).filter(l => l.kind !== 'formula').map(l => {
+            const formulaParent = l.kind === 'formula-part' && l.formulaUid
+              ? (o.lines || []).find(parent => parent.kind === 'formula' && parent.formulaUid === l.formulaUid)
+              : null;
             const formulaTag = l.kind === 'formula-part' ? (l.formulaName ? `${l.formulaName}${l.slotLabel ? ' · ' + l.slotLabel : ''}` : (l.slotLabel || 'Formule')) : '';
             const formulaNote = formulaTag ? `[${formulaTag}]` : '';
+            const ownVisuals = Array.isArray(l.visuals) ? l.visuals : [];
+            const parentVisuals = formulaParent && Array.isArray(formulaParent.visuals) ? formulaParent.visuals : [];
+            const optionNote = parentVisuals.length ? '' : (formulaParent && formulaParent.options);
             return {
               q: l.qty || 1, n: l.name || '', p: l.unitPrice || 0,
               kind: l.kind || '',
               formulaUid: l.formulaUid || '',
               slotLabel: l.slotLabel || '',
               formulaName: l.formulaName || '',
-              note: [formulaNote, (Array.isArray(l.visuals) && l.visuals.length) ? '' : l.options, l.note].filter(Boolean).join(' · '),
-              visuals: Array.isArray(l.visuals) ? l.visuals.slice() : [],
+              note: [formulaNote, optionNote, formulaParent && formulaParent.note, ownVisuals.length ? '' : l.options, l.note].filter(Boolean).join(' · '),
+              visuals: parentVisuals.concat(ownVisuals),
               /* Le poste porté PAR LA LIGNE gagne. Un bon posé par une caisse le
                  transporte (kitchen-relay.js), figé à l'instant de l'envoi : le
                  retrouver par le nom du plat serait le recalculer contre une

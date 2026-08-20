@@ -115,6 +115,8 @@ const cuisineHtml = fs.readFileSync(path.join(ROOT, 'kiwi-cuisine.html'), 'utf8'
 check('kiwi-cuisine.html renders visuals without requiring emoji',
   !cuisineHtml.includes('filter(function (v) { return v && v.emoji && v.name; })') &&
   cuisineHtml.includes('tk-visual'));
+check('kiwi-cuisine.html merges formula parent options into its component lines',
+  cuisineHtml.includes('var formulaParent =') && cuisineHtml.includes('parentVisuals.concat'));
 
 // 4. Inspect kiwi-serveur.html svSendOrder
 const serveurHtml = fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8');
@@ -123,6 +125,10 @@ check('kiwi-serveur.html attaches visuals in svSendOrder delta payload',
 
 // 5. Inspect kiwi-caisse.html for tableSplits migration & unassigned waitlist seating
 const caisseHtml = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
+check('caisse KDS and kitchen paper keep formula parent options with the components',
+  caisseHtml.includes('const formulaParent =')
+    && caisseHtml.includes('visuals: parentVisuals.concat(ownVisuals)')
+    && caisseHtml.includes(".map(v => v && (v.name || v.label || v.cn)).filter(Boolean).join(' · ')"));
 check('kiwi-caisse.html migrates tableSplits on confirmCaisseTransfer',
   caisseHtml.includes('tableSplits.set(to, tableSplits.get(from))'));
 check('kiwi-caisse.html clears tableSplits on confirmCaisseMerge',

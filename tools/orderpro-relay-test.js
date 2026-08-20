@@ -78,13 +78,16 @@ const CARTE = {
     { id: 'i1', name: 'Tajine poulet', price: 90, catId: 'c1', avail: true },
     { id: 'i2', name: 'Thé à la menthe', price: 15, catId: 'c1', avail: true },
     { id: 'i3', name: 'Pastilla', price: 120, catId: 'c1', avail: false },
-    { id: 'i4', name: 'Continental', price: 68, catId: 'c1', avail: true,
+    { id: 'i4', name: 'Continental', price: 68, catId: 'c1', avail: true, opts: ['egg-style'],
       formula: { slots: [{ id: 'drink', label: 'Boisson', min: 1, max: 1, choices: [
         { itemId: 'i5', extra: 0 }, { itemId: 'i6', extra: 20 },
       ] }] } },
     { id: 'i5', name: 'Carrot Juice', price: 28, catId: 'c1', avail: true },
     { id: 'i6', name: 'Coconut Matcha', price: 63, catId: 'c1', avail: true },
   ],
+  opts: [{ id: 'egg-style', name: 'Œufs', kind: 'one', required: true, choices: [
+    { id: 'fried', name: 'Œufs au plat', price: 0, emoji: '🍳' },
+  ] }],
 };
 function seed() {
   const now = Date.now();
@@ -190,8 +193,15 @@ async function get(fn, qs, headers = {}) {
     /function handleAddClick\(itemId\)[\s\S]{0,220}item\.options && item\.options\.length > 0[\s\S]{0,80}openCustomizer\(item\)/.test(orderProPage)
       && !/function handleAddClick\(itemId\)[\s\S]{0,220}orderMode\s*===/.test(orderProPage));
   ok('OrderPro envoie le texte et les repères visuels choisis',
-    /options: describeOptions\(l\)/.test(orderProPage)
-      && /visuals: describeOptionVisuals\(l\)/.test(orderProPage));
+    /options: describeOptionChoices\(l\)\.map/.test(orderProPage)
+      && /visuals: describeOptionVisuals\(l, true\)/.test(orderProPage));
+  ok('OrderPro envoie les formules comme parent et composants liés',
+    /kind: 'formula', formulaUid, formulaName: nameOf\(l\.id\)/.test(orderProPage)
+      && /kind: 'formula-part', formulaUid/.test(orderProPage)
+      && /formulaSlotId: slot\.formulaSlotId/.test(orderProPage));
+  ok('OrderPro envoie les identifiants canoniques des options ordinaires',
+    /optionChoices: describeOptionChoices\(l\)/.test(orderProPage)
+      && /if \(opt\.formulaSlotId\) continue/.test(orderProPage));
   const priced = DB._db.prepare('SELECT total, priced_ts, menu_rev FROM orders WHERE id=?').get(r.body.id);
   ok('c\'est le prix recalculé qui est écrit', priced.total === 90);
   ok('la révision de carte est horodatée', !!priced.priced_ts && !!priced.menu_rev);
@@ -675,6 +685,23 @@ async function get(fn, qs, headers = {}) {
     formulaLines[0] && formulaLines[0].unitPrice === 68
       && formulaLines[2] && formulaLines[2].unitPrice === 88,
     formulaRow && formulaRow.lines);
+
+  r = await post(queuePost, {
+    merchant: SALLE, create: true, mode: 'table', table: 'T7OP',
+    lines: [
+      { id: 'i4', qty: 1, kind: 'formula', formulaUid: 'orderpro-formula', formulaName: 'Continental',
+        optionChoices: [{ group: 'egg-style', label: 'Œufs au plat' }] },
+      { id: 'i5', qty: 1, kind: 'formula-part', formulaUid: 'orderpro-formula', formulaName: 'Continental',
+        formulaSlotId: 'drink', slotLabel: 'Boisson', lineId: 'orderpro-formula-drink-0' },
+    ],
+  }, asSalle);
+  const orderProFormula = r.body && r.body.lines;
+  ok('la formule OrderPro conserve son composant pour la cuisine',
+    r.status === 200 && orderProFormula.length === 2
+      && orderProFormula[1].kind === 'formula-part' && orderProFormula[1].name === 'Carrot Juice',
+    JSON.stringify(r.body));
+  ok('les options OrderPro restent sur le parent canonique pour le KDS',
+    orderProFormula[0].visuals.some(v => v.name === 'Œufs au plat'), JSON.stringify(orderProFormula[0]));
 
   // La caisse la voit. C'est tout l'objet : un ticket que la cuisine reçoit.
   r = await get(queueGet, 'merchant=' + SALLE + '&since=0', asSalle);

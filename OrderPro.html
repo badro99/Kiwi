@@ -4514,11 +4514,24 @@ em, i, cite, dfn, var { font-style: normal; }
       }
       return parts.join(' · ');
     }
-    function describeOptionVisuals(line) {
+    function describeOptionChoices(line) {
       const item = itemOf(line.id);
       if (!item || !item.options) return [];
       const out = [];
       for (const opt of item.options) {
+        if (opt.formulaSlotId) continue;
+        const sel = line.options?.[opt.key];
+        const ids = opt.type === 'multi' ? (Array.isArray(sel) ? sel : []) : (sel == null ? [] : [sel]);
+        ids.forEach(id => out.push({ group: opt.key, label: choiceLabel(opt.key, id) }));
+      }
+      return out;
+    }
+    function describeOptionVisuals(line, regularOnly = false) {
+      const item = itemOf(line.id);
+      if (!item || !item.options) return [];
+      const out = [];
+      for (const opt of item.options) {
+        if (regularOnly && opt.formulaSlotId) continue;
         const sel = line.options?.[opt.key];
         const ids = opt.type === 'multi' ? (Array.isArray(sel) ? sel : []) : (sel == null ? [] : [sel]);
         ids.forEach(id => {
@@ -5056,13 +5069,33 @@ em, i, cite, dfn, var { font-style: normal; }
         table: orderMode === 'table' ? tableNumber : '',
         session: SESSION.id || '',
         ref: pendingRef,
-        lines: linesCopy.map(l => ({
-          id: l.id,
-          qty: l.qty,
-          options: describeOptions(l),
-          visuals: describeOptionVisuals(l),
-          note: l.note || '',
-        })),
+        lines: linesCopy.flatMap((l, lineIndex) => {
+          const item = itemOf(l.id);
+          const formulaSlots = (item && item.options || []).filter(opt => opt.formulaSlotId);
+          const formulaUid = formulaSlots.length ? `${pendingRef}-${lineIndex}`.slice(0, 40) : '';
+          const parent = {
+            id: l.id, qty: l.qty,
+            options: describeOptionChoices(l).map(p => `${groupLabel(p.group)}: ${p.label}`).join(' · '),
+            optionChoices: describeOptionChoices(l),
+            visuals: describeOptionVisuals(l, true),
+            note: l.note || '',
+          };
+          if (!formulaUid) return [parent];
+          Object.assign(parent, { kind: 'formula', formulaUid, formulaName: nameOf(l.id) });
+          const children = [];
+          formulaSlots.forEach(slot => {
+            const selected = l.options?.[slot.key];
+            const ids = slot.type === 'multi' ? (Array.isArray(selected) ? selected : [])
+              : (selected == null ? [] : [selected]);
+            ids.forEach((id, choiceIndex) => children.push({
+              id, qty: l.qty, kind: 'formula-part', formulaUid,
+              formulaName: nameOf(l.id), slotLabel: slot.label || '',
+              formulaSlotId: slot.formulaSlotId,
+              lineId: `${formulaUid}-${slot.formulaSlotId}-${choiceIndex}`.slice(0, 60),
+            }));
+          });
+          return [parent].concat(children);
+        }),
       });
 
       btn.classList.remove('is-loading');
@@ -5674,7 +5707,7 @@ em, i, cite, dfn, var { font-style: normal; }
       const names = {};
       for (const it of items) {
         const formulaOptions = it.formula && Array.isArray(it.formula.slots) ? it.formula.slots.map(s => {
-          const g = { key: 'formula_' + String(s.id), label: String(s.label || ''), type: (+s.max || 1) > 1 ? 'multi' : 'single', default: '', required: (+s.min || 0) > 0,
+          const g = { key: 'formula_' + String(s.id), formulaSlotId: String(s.id), label: String(s.label || ''), type: (+s.max || 1) > 1 ? 'multi' : 'single', default: '', required: (+s.min || 0) > 0,
             choices: (Array.isArray(s.choices) ? s.choices : []).map(c => { const target=items.find(x=>String(x.id)===String(c.itemId)); return target ? {id:String(c.itemId),label:String(target.name),emoji:'',delta:Math.max(0,Number(c.extra)||0)} : null; }).filter(Boolean) };
           OPT[g.key] = g; return g;
         }).filter(g=>g.choices.length) : [];

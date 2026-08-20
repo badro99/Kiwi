@@ -1180,8 +1180,13 @@
     var el = elapsed(o), u = urgency(el);
     var items = (o.lines || []).filter(function (l) { return l.kind !== 'formula'; }).map(function (l) {
       var off = S.station !== 'all' && l.station !== S.station;
-      var note = String(l.note || '').trim();
-      var visuals = (Array.isArray(l.visuals) ? l.visuals : []).filter(function (v) {
+      var formulaParent = l.kind === 'formula-part' && l.formulaUid
+        ? (o.lines || []).find(function (parent) { return parent.kind === 'formula' && parent.formulaUid === l.formulaUid; })
+        : null;
+      var parentVisuals = formulaParent && Array.isArray(formulaParent.visuals) ? formulaParent.visuals : [];
+      var note = [parentVisuals.length ? '' : (formulaParent && formulaParent.options), formulaParent && formulaParent.note, l.note]
+        .filter(Boolean).join(' · ').trim();
+      var visuals = parentVisuals.concat(Array.isArray(l.visuals) ? l.visuals : []).filter(function (v) {
         return v && (v.name || v.label || v.cn);
       }).map(function (v) {
         return { emoji: v.emoji || v.e || '', name: v.name || v.label || v.cn };
