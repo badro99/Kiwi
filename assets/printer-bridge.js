@@ -991,16 +991,17 @@
       '.kpr-prof-chip b{font-weight:600;}' +
       '.kpr-prof-del{background:none;border:none;color:#9ca3af;cursor:pointer;font-size:15px;line-height:1;padding:0 2px;margin-left:2px;}' +
       '.kpr-prof-del:hover{color:#dc2626;}' +
-      '.kpr-station-table-wrap{width:100%;overflow-x:auto;margin-top:10px;border:1px solid rgba(0,0,0,.12);border-radius:12px;background:var(--surface,#fff);}' +
-      '.kpr-station-table{width:100%;border-collapse:collapse;text-align:left;font-size:.85rem;}' +
-      '.kpr-station-table th{background:rgba(0,0,0,.03);padding:9px 12px;font-weight:600;color:var(--ink,#0A0F0D);opacity:.8;border-bottom:1px solid rgba(0,0,0,.09);}' +
-      '.kpr-station-table td{padding:9px 12px;border-bottom:1px solid rgba(0,0,0,.06);vertical-align:middle;}' +
-      '.kpr-station-table tr:last-child td{border-bottom:none;}' +
+      '.kpr-st-cards{display:grid;gap:10px;margin-top:10px;}' +
+      '.kpr-st-card{background:var(--surface,#fff);border:1px solid rgba(0,0,0,.1);border-radius:12px;padding:14px;display:grid;gap:10px;}' +
+      '.kpr-st-top{display:flex;align-items:center;justify-content:space-between;gap:10px;}' +
+      '.kpr-st-top b{font-size:.9rem;letter-spacing:-.01em;}' +
+      '.kpr-st-actions{display:flex;gap:8px;}' +
+      '.kpr-st-actions .kpr-btn{flex:1;padding:9px 10px;font-size:.8rem;border-radius:9px;white-space:nowrap;}' +
       '.kpr-st-badge{display:inline-block;padding:2px 7px;border-radius:6px;font-size:.75rem;font-weight:600;background:rgba(0,0,0,.06);color:var(--ink,#0A0F0D);}' +
       '.kpr-st-badge.receipt{background:#e0f2fe;color:#0369a1;}' +
       '.kpr-st-badge.production{background:#fef3c7;color:#92400e;}' +
-      '.kpr-st-sel{width:100%;min-width:130px;padding:6px 8px;border:1.5px solid rgba(0,0,0,.12);border-radius:8px;background:var(--surface,#fff);color:var(--ink,#0A0F0D);font-size:.82rem;}' +
-      '.kpr-st-test{padding:6px 11px;font-size:.78rem;border-radius:8px;}';
+      '.kpr-st-sel{width:100%;padding:10px 12px;border:1.5px solid rgba(0,0,0,.12);border-radius:10px;background:var(--surface,#fff);color:var(--ink,#0A0F0D);font-size:.85rem;}' +
+      '.kpr-st-sel:focus{outline:none;border-color:var(--atlas,#0B6E4F);box-shadow:0 0 0 4px rgba(11,110,79,.13);}';
     document.head.appendChild(s);
   }
 
@@ -1092,12 +1093,7 @@
             '</div>' +
           '</div>' +
           '<div id="kpr-profiles-list" class="kpr-profiles-chip-row"></div>' +
-          '<div class="kpr-station-table-wrap">' +
-            '<table class="kpr-station-table">' +
-              '<thead><tr><th>Poste</th><th>Document</th><th>Imprimante</th><th>Action</th></tr></thead>' +
-              '<tbody id="kpr-station-tbody"></tbody>' +
-            '</table>' +
-          '</div>' +
+          '<div id="kpr-station-tbody" class="kpr-st-cards"></div>' +
           '<div class="kpr-actions" style="margin-top:12px;">' +
             '<button class="kpr-btn kpr-save" type="button" id="kpr-save-stations-btn">Enregistrer le routage par poste</button>' +
           '</div>' +
@@ -1228,13 +1224,14 @@
         stConfig.profiles.map(function (p) {
           return '<option value="' + esc(p.id) + '"' + (p.id === caisseCur ? ' selected' : '') + '>' + esc(p.name) + ' (' + esc(p.type === 'ip' ? p.ip : p.type) + ')</option>';
         }).join('');
-      rows.push('<tr>' +
-        '<td><b>Caisse (comptoir)</b></td>' +
-        '<td><span class="kpr-st-badge receipt">Reçus clients</span></td>' +
-        '<td><select class="kpr-st-sel" data-station-id="caisse">' + caisseOpts + '</select></td>' +
-        '<td><button type="button" class="kpr-btn kpr-test kpr-st-test" data-test-station="caisse" data-station-title="Caisse">Tester</button> ' +
-        '<button type="button" class="kpr-btn kpr-test" id="kpr-drawer-test" style="white-space:nowrap">Tester le tiroir</button></td>' +
-        '</tr>');
+      rows.push('<div class="kpr-st-card">' +
+        '<div class="kpr-st-top"><b>Caisse (comptoir)</b><span class="kpr-st-badge receipt">Reçus clients</span></div>' +
+        '<select class="kpr-st-sel" data-station-id="caisse" aria-label="Imprimante de la caisse">' + caisseOpts + '</select>' +
+        '<div class="kpr-st-actions">' +
+          '<button type="button" class="kpr-btn kpr-test kpr-st-test" data-test-station="caisse" data-station-title="Caisse">Ticket test</button>' +
+          '<button type="button" class="kpr-btn kpr-test" id="kpr-drawer-test">Tester le tiroir</button>' +
+        '</div>' +
+        '</div>');
 
       prepStations.forEach(function (st) {
         var cur = stConfig.bindings[st.id] || '';
@@ -1242,12 +1239,13 @@
           stConfig.profiles.map(function (p) {
             return '<option value="' + esc(p.id) + '"' + (p.id === cur ? ' selected' : '') + '>' + esc(p.name) + ' (' + esc(p.type === 'ip' ? p.ip : p.type) + ')</option>';
           }).join('');
-        rows.push('<tr>' +
-          '<td><b>' + esc(st.name || st.id) + '</b></td>' +
-          '<td><span class="kpr-st-badge production">Production</span></td>' +
-          '<td><select class="kpr-st-sel" data-station-id="' + esc(st.id) + '">' + opts + '</select></td>' +
-          '<td><button type="button" class="kpr-btn kpr-test kpr-st-test" data-test-station="' + esc(st.id) + '" data-station-title="' + esc(st.name || st.id) + '">Tester</button></td>' +
-          '</tr>');
+        rows.push('<div class="kpr-st-card">' +
+          '<div class="kpr-st-top"><b>' + esc(st.name || st.id) + '</b><span class="kpr-st-badge production">Production</span></div>' +
+          '<select class="kpr-st-sel" data-station-id="' + esc(st.id) + '" aria-label="Imprimante du poste ' + esc(st.name || st.id) + '">' + opts + '</select>' +
+          '<div class="kpr-st-actions">' +
+            '<button type="button" class="kpr-btn kpr-test kpr-st-test" data-test-station="' + esc(st.id) + '" data-station-title="' + esc(st.name || st.id) + '">Ticket test</button>' +
+          '</div>' +
+          '</div>');
       });
 
       tbody.innerHTML = rows.join('');

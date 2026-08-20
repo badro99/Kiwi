@@ -192,7 +192,7 @@ var SHELL = [
   '/assets/caisse-hardware.js?v=1',
   '/assets/live-socket.js?v=2',
   '/assets/escpos.js?v=3',
-  '/assets/printer-bridge.js?v=2',
+  '/assets/printer-bridge.js?v=3',
   '/assets/barcode.js',
   '/assets/color-palette.js',
   '/assets/boutique-catalog.js',
