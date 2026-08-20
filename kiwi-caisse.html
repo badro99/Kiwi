@@ -4709,7 +4709,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=358" defer></script>
-  <script src="assets/caisse-pwa.js?v=390" defer></script>
+  <script src="assets/caisse-pwa.js?v=391" defer></script>
   <script src="assets/live-link.js?v=12" defer></script>
   <!-- The staff-role catalogue — says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -14801,10 +14801,38 @@
     function kdsUrgency(s) { return s < 480 ? 'ok' : s < 900 ? 'warn' : 'over'; }
     function kdsFmt(s) { return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`; }
     function kdsNowHM() { const d = new Date(); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; }
-    function kdsMatches(o, sid) { return sid === 'all' || o.items.some(i => i.stations.includes(sid)); }
+    function kdsEnsureFormulaParents(o) {
+      if (!o || !Array.isArray(o.items)) return [];
+      const missing = new Map();
+      o.items.forEach((item) => {
+        if (!item || item.kind !== 'formula-part' || !item.formulaUid) return;
+        if (o.items.some(parent => parent && parent.kind === 'formula' && parent.formulaUid === item.formulaUid)) return;
+        if (!missing.has(item.formulaUid)) missing.set(item.formulaUid, item);
+      });
+      missing.forEach((child, formulaUid) => {
+        const name = child.formulaName || '';
+        const menuItem = menuItems.find(item => String(item.name || '') === String(name));
+        if (!name) return;
+        const inheritedVisuals = Array.isArray(child.visuals) ? child.visuals.slice() : [];
+        o.items.unshift({
+          q: child.q || 1, n: name, p: menuItem ? menuItem.price : 0,
+          note: '', paperNote: '', visuals: inheritedVisuals,
+          kind: 'formula', formulaUid, formulaName: name,
+          stations: [kdsStationFor(menuItem)],
+        });
+        if (inheritedVisuals.length) {
+          o.items.forEach((part) => {
+            if (part && part.kind === 'formula-part' && part.formulaUid === formulaUid) part.visuals = [];
+          });
+        }
+      });
+      return o.items;
+    }
+    function kdsMatches(o, sid) { return sid === 'all' || kdsEnsureFormulaParents(o).some(i => i.stations.includes(sid)); }
     function kdsViewStatus(o, sid) {
       if (o.status === 'ready') return 'ready';
-      const lines = sid === 'all' ? o.items : o.items.filter(i => i.stations.includes(sid));
+      const allItems = kdsEnsureFormulaParents(o);
+      const lines = sid === 'all' ? allItems : allItems.filter(i => i.stations.includes(sid));
       if (!lines.length) return o.status;
       if (sid !== 'all' && lines.every(i => i.stationReady === true)) return 'ready';
       if (lines.every(i => i.stationAccepted === true)) return 'cooking';
@@ -14839,6 +14867,7 @@
     }
 
     function kdsOrderInner(o, withEye) {
+      kdsEnsureFormulaParents(o);
       const el = kdsElapsed(o), u = kdsUrgency(el);
       const viewStatus = kdsViewStatus(o, kdsActiveStation);
       const isNew = viewStatus === 'new', isReady = viewStatus === 'ready';
@@ -16015,6 +16044,60 @@
       }) || '';
     }
 
+    /* Versions OrderPro restées ouvertes avant le protocole parent+composants
+       ont pu déposer uniquement les composants d'une formule. Le serveur ne
+       doit plus accepter ce cas (voir /api/order), mais les tickets déjà en
+       file doivent rester encaissables et atteindre le bon poste. La carte
+       publiée est l'unique autorité : on ne reconstruit que si le nom de la
+       formule correspond exactement à un article composé connu. */
+    function opRepairFormulaParents(o) {
+      if (!o || !Array.isArray(o.lines)) return false;
+      let repaired = false;
+      const groups = new Map();
+      o.lines.forEach((line) => {
+        if (!line || line.kind !== 'formula-part' || !line.formulaUid) return;
+        if (!groups.has(line.formulaUid)) groups.set(line.formulaUid, []);
+        groups.get(line.formulaUid).push(line);
+      });
+      groups.forEach((children, formulaUid) => {
+        if (o.lines.some(line => line && line.kind === 'formula' && line.formulaUid === formulaUid)) return;
+        const formulaName = String((children[0] && children[0].formulaName) || '');
+        const item = menuItems.find(candidate => candidate && candidate.formula
+          && String(candidate.name || '') === formulaName);
+        if (!item) return;
+        let formulaExtra = 0;
+        const slots = Array.isArray(item.formula.slots) ? item.formula.slots : [];
+        children.forEach((child) => {
+          const slot = slots.find(candidate => String(candidate.id || '') === String(child.formulaSlotId || ''));
+          const choice = slot && Array.isArray(slot.choices)
+            ? slot.choices.find(candidate => String(candidate.itemId || '') === String(child.id || '')) : null;
+          formulaExtra += Math.max(0, +(choice && choice.extra) || 0);
+        });
+        const inheritedVisuals = children.flatMap(child => Array.isArray(child.visuals) ? child.visuals : []);
+        let optionExtra = 0;
+        (item.opts || []).forEach((groupId) => {
+          const group = (carteState.opts || []).find(candidate => candidate.id === groupId);
+          (group && group.choices || []).forEach((choice) => {
+            if (inheritedVisuals.some(visual => String((visual && visual.name) || '') === choice.name)) {
+              optionExtra += Math.max(0, +choice.price || 0);
+            }
+          });
+        });
+        const qty = Math.max(1, +(children[0] && children[0].qty) || 1);
+        o.lines.unshift({
+          id: item.id, name: item.name, qty,
+          unitPrice: Math.max(0, +item.price || 0) + formulaExtra + optionExtra,
+          options: inheritedVisuals.map(visual => visual && visual.name).filter(Boolean).join(' · '),
+          visuals: inheritedVisuals, note: '', station: kdsStationFor(item),
+          kind: 'formula', formulaUid, formulaName: item.name,
+        });
+        children.forEach(child => { child.visuals = []; });
+        repaired = true;
+      });
+      if (repaired) o.total = o.lines.reduce((sum, line) => sum + ((+line.unitPrice || 0) * (+line.qty || 1)), 0);
+      return repaired;
+    }
+
     /* Une commande OrderPro en salle appartient aussi à l'addition de la
        table. Jusqu'ici elle devenait un bon KDS et une pastille, mais jamais
        une table occupée : taper la table relançait donc le choix des couverts
@@ -16097,6 +16180,7 @@
        naître un deuxième ticket. */
     function opIngest(o) {
       if (!o || !o.id) return;
+      opRepairFormulaParents(o);
       /* La carte des tickets vit en mémoire ; le SERVICE, lui, survit au
          rechargement (persistShift). Après un F5 en plein service, `opTickets`
          repart vide alors que `kdsOrders` contient encore les bons de la caisse

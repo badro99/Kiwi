@@ -118,6 +118,9 @@ check('kiwi-cuisine.html renders visuals without requiring emoji',
 check('kiwi-cuisine.html renders formula parents and their component lines',
   cuisineHtml.includes("var items = (o.lines || []).map(function (l)")
     && cuisineHtml.includes("l.kind === 'formula-part'"));
+check('standalone KDS keeps formula parents in station routing and status',
+  !cuisineHtml.includes("filter(function (l) { return l.kind !== 'formula'; })")
+    && !cuisineHtml.includes("l.kind !== 'formula' && l.station === S.station"));
 
 // 4. Inspect kiwi-serveur.html svSendOrder
 const serveurHtml = fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8');
@@ -134,6 +137,15 @@ check('caisse KDS and kitchen paper keep formula parents, options, and component
   caisseHtml.includes("items: (o.lines || []).map(l =>")
     && caisseHtml.includes('visuals: ownVisuals.slice()')
     && caisseHtml.includes(".map(v => v && (v.name || v.label || v.cn)).filter(Boolean).join(' · ')"));
+check('caisse KDS restores a missing formula parent from persisted component lines',
+  caisseHtml.includes('function kdsEnsureFormulaParents(o)')
+    && caisseHtml.includes("kind: 'formula', formulaUid, formulaName: name")
+    && caisseHtml.includes('kdsEnsureFormulaParents(o).some')
+    && caisseHtml.includes('const allItems = kdsEnsureFormulaParents(o)'));
+check('caisse repairs legacy OrderPro component-only payloads before billing and KDS ingestion',
+  caisseHtml.includes('function opRepairFormulaParents(o)')
+    && caisseHtml.includes('opRepairFormulaParents(o);')
+    && caisseHtml.includes("kind: 'formula', formulaUid, formulaName: item.name"));
 check('caisse local tickets print the composed-menu parent and its components',
     caisseHtml.includes('function kitchenItemsFromLines(lines)')
     && caisseHtml.includes('source.filter(Boolean).map((l) =>')

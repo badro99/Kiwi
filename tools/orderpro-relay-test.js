@@ -206,6 +206,15 @@ async function get(fn, qs, headers = {}) {
   ok('c\'est le prix recalculé qui est écrit', priced.total === 90);
   ok('la révision de carte est horodatée', !!priced.priced_ts && !!priced.menu_rev);
 
+  r = await post(placeOrder, {
+    merchant: SLUG, mode: 'table', table: '7', session: priceSession,
+    lines: [{ id: 'i1', qty: 1, optionChoices: [{ group: 'absent', label: 'Option fantôme' }] }],
+  });
+  ok('OrderPro refuse une option invalide au lieu de supprimer silencieusement le plat parent',
+    r.status === 409 && r.body.error === 'menu-changed'
+      && r.body.invalidOptions && r.body.invalidOptions.length === 1,
+    JSON.stringify(r.body));
+
   r = await post(placeOrder, { merchant: SLUG, mode: 'table', table: '7', session: priceSession, lines: [line('i1', 2), line('i2', 3)] });
   ok('les quantités multiplient bien', r.body.total === 90 * 2 + 15 * 3, 'total=' + r.body.total);
 

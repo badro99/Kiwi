@@ -106,11 +106,12 @@ export async function onRequestPost(context) {
    * prix du téléphone — transformait une erreur de configuration réparable en
    * trente secondes en une commande où l'inconnu fixait le prix. */
   if (priced.noCatalogue) return json({ error: 'menu-not-published' }, 409);
-  if (priced.unknown.length || priced.unavailable.length) {
+  if (priced.unknown.length || priced.unavailable.length || priced.invalidOptions.length) {
     return json({
       error: 'menu-changed',
       unknown: priced.unknown,
       unavailable: priced.unavailable,
+      invalidOptions: priced.invalidOptions,
     }, 409);
   }
   if (!priced.lines.length) return json({ error: 'empty-order' }, 400);

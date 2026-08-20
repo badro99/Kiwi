@@ -1129,17 +1129,17 @@
 
   function matches(o) {
     if (S.station === 'all') return true;
-    return (o.lines || []).filter(function (l) { return l.kind !== 'formula'; }).some(function (l) { return l.station === S.station; });
+    return (o.lines || []).some(function (l) { return l.station === S.station; });
   }
   function stationIsReady(o) {
     if (S.station === 'all') return o.status === 'ready';
-    var lines = (o.lines || []).filter(function (l) { return l.kind !== 'formula' && l.station === S.station; });
+    var lines = (o.lines || []).filter(function (l) { return l.station === S.station; });
     return lines.length > 0 && lines.every(function (l) { return l.stationReady === true; });
   }
   function stationIsAccepted(o) {
     var lines = S.station === 'all'
-      ? (o.lines || []).filter(function (l) { return l.kind !== 'formula'; })
-      : (o.lines || []).filter(function (l) { return l.kind !== 'formula' && l.station === S.station; });
+      ? (o.lines || [])
+      : (o.lines || []).filter(function (l) { return l.station === S.station; });
     return lines.length > 0 && lines.every(function (l) { return l.stationAccepted === true; });
   }
   function bucket(o) {
