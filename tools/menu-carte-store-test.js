@@ -391,6 +391,24 @@ const suite = [
     eq('le plat reste dans sa section', API.data('v-cf').items[0].catId, cid);
     eq('le plat devient non classé au lieu d’être supprimé', API.data('v-cf').items[0].subId, null);
   })(),
+
+  /* 11 — L'ordre des sections est le tableau publié lui-même. Le déplacer ne
+   *       recrée rien et ne détache aucun article de sa section. */
+  (async () => {
+    const w = makeWorld([CAFE], { serverMenus: {} });
+    w.fetch = function () { return Promise.reject(new Error('hors ligne')); };
+    const API = load(w);
+    API.addCategory('Entrées'); API.addCategory('Plats'); API.addCategory('Desserts');
+    const ids = API.data('v-cf').cats.map((c) => c.id);
+    API.addItem({ name:'Tarte', price:30, catId:ids[2] });
+    API.moveCategory(ids[2], -1);
+    API.moveCategory(ids[2], -1);
+    eq('une section peut être déplacée jusqu’en première position', API.data('v-cf').cats[0].id, ids[2]);
+    eq('les autres sections gardent leur ordre relatif', API.data('v-cf').cats.map((c) => c.id).join(','), [ids[2],ids[0],ids[1]].join(','));
+    eq('l’article reste lié à sa section déplacée', API.data('v-cf').items[0].catId, ids[2]);
+    API.moveCategory(ids[2], -1);
+    eq('déplacer au-delà du début ne change rien', API.data('v-cf').cats[0].id, ids[2]);
+  })(),
 ];
 
 Promise.all(suite).then(() => {

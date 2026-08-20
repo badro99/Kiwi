@@ -505,6 +505,17 @@
   function renameCategory(id, name) {
     return store.update((d) => { const c = catById(d, id); if (c) c.name = String(name || c.name).trim() || c.name; return d; });
   }
+  function moveCategory(id, delta) {
+    return store.update((d) => {
+      d.cats = Array.isArray(d.cats) ? d.cats : [];
+      const i = d.cats.findIndex((c) => c && c.id === id);
+      const j = i + (+delta || 0);
+      if (i < 0 || j < 0 || j >= d.cats.length) return d;
+      const [category] = d.cats.splice(i, 1);
+      d.cats.splice(j, 0, category);
+      return d;
+    });
+  }
   function deleteCategory(id) {
     const next = store.update((d) => {
       d.cats = (d.cats || []).filter((c) => c.id !== id);
@@ -2312,7 +2323,7 @@
     subscribe: (fn) => store.subscribe(fn),
     loadExample: (vid) => store.loadExample(vid),
     addCategory, addSubcategory, renameSubcategory, deleteSubcategory,
-    addItem, updateItem, deleteItem, renameCategory, deleteCategory,
+    addItem, updateItem, deleteItem, renameCategory, moveCategory, deleteCategory,
     /* Les postes de préparation. `stations()` rend la liste DANS L'ORDRE, qui
      * est l'ordre des onglets de l'écran cuisine — plus le réglage de routage.
      * Le routage se lit sur la catégorie (`cat.station`, vide = la cuisine) et
