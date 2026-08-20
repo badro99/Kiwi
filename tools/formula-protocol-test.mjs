@@ -519,15 +519,15 @@ if (!cardMatch) {
   };
 
   const renderedCard = cardFn(mockKdsOrder, 'new');
-  ok(!renderedCard.includes('Formule Brunch</span>'), 'kiwi-cuisine card() excludes kind: formula parent line');
+  ok(renderedCard.includes('<span class="tk-n">Formule Brunch'), 'kiwi-cuisine card() keeps the composed-menu parent for preparation');
   ok(renderedCard.includes('<span class="tk-formula-tag">Formule Brunch · Le pain</span>'), 'kiwi-cuisine card() renders slot formula tag on child part 1');
   ok(renderedCard.includes('<span class="tk-formula-tag">Formule Brunch · La boisson</span>'), 'kiwi-cuisine card() renders slot formula tag on child part 2');
   ok(renderedCard.includes('Tajine agneau</span>') && !renderedCard.includes('<span class="tk-formula-tag">Tajine agneau'), 'normal dish rendered without formula tag');
 }
 
 // B. kiwi-caisse.html printKitchenTickets & kdsOrders ingestion extraction
-ok(/items\s*\|\|\s*\[\]\)\.filter\(it\s*=>\s*it\.kind\s*!==\s*'formula'\)/.test(caisseSource), 'caisse printKitchenTickets filters out kind: formula lines');
-ok(/o\.lines\s*\|\|\s*\[\]\)\.filter\(l\s*=>\s*l\.kind\s*!==\s*'formula'\)/.test(caisseSource), 'caisse kdsOrders ingestion filters out kind: formula lines');
+ok(/items\s*\|\|\s*\[\]\)\.filter\(Boolean\)/.test(caisseSource), 'caisse printKitchenTickets keeps kind: formula parent lines');
+ok(/items:\s*\(o\.lines\s*\|\|\s*\[\]\)\.map\(l\s*=>/.test(caisseSource), 'caisse kdsOrders ingestion keeps kind: formula parent lines');
 ok(/const formulaTag = l\.kind === 'formula-part'/.test(caisseSource), 'caisse kdsOrders ingestion formats formulaTag for child parts');
 
 // ── 6. Caisse Sales Ledger & recordSale Extraction ──────────────────────────
@@ -1031,5 +1031,4 @@ console.log(`\n✓ ${passed} controls green (${failures.length} failure(s))`);
 if (failures.length) {
   process.exit(1);
 }
-
 

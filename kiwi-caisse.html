@@ -4709,7 +4709,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=358" defer></script>
-  <script src="assets/caisse-pwa.js?v=389" defer></script>
+  <script src="assets/caisse-pwa.js?v=390" defer></script>
   <script src="assets/live-link.js?v=12" defer></script>
   <!-- The staff-role catalogue — says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -10132,7 +10132,7 @@
      * avec le reste du service (persistShift). */
     function kitchenItemsFromLines(lines) {
       const source = Array.isArray(lines) ? lines : [];
-      return source.filter(l => l && l.kind !== 'formula').map((l) => {
+      return source.filter(Boolean).map((l) => {
         const parent = l.kind === 'formula-part' && l.formulaUid
           ? source.find(p => p && p.kind === 'formula' && p.formulaUid === l.formulaUid)
           : null;
@@ -10140,13 +10140,12 @@
         const formulaTag = parent
           ? `[${parent.formulaName || parent.name || 'Formule'}${l.slotLabel ? ' · ' + l.slotLabel : ''}]`
           : '';
-        const parentVisuals = parent ? optVisuals(parent.opts) : [];
         const ownVisuals = optVisuals(l.opts);
         return {
           q: l.qty, n: l.name, p: l.price,
-          note: [formulaTag, parent && (parent.note || '').trim(), (l.note || '').trim()].filter(Boolean).join(' · '),
-          paperNote: parent ? [formulaTag, kitchenNote(parent), kitchenNote(l)].filter(Boolean).join(' · ') : kitchenNote(l),
-          visuals: parentVisuals.concat(ownVisuals), kind: l.kind || '',
+          note: [formulaTag, (l.note || '').trim()].filter(Boolean).join(' · '),
+          paperNote: parent ? [formulaTag, kitchenNote(l)].filter(Boolean).join(' · ') : kitchenNote(l),
+          visuals: ownVisuals, kind: l.kind || '',
           formulaUid: l.formulaUid || '', formulaName: l.formulaName || '', slotLabel: l.slotLabel || '',
           stations: [(l.station && kdsStations().some(s => s.id === l.station)) ? l.station : kdsStationFor(m)],
         };
@@ -15615,7 +15614,7 @@
         const time = pad2HO(sentAt.getHours()) + ':' + pad2HO(sentAt.getMinutes());
         const fallback = kdsStationFor(null);
         const byStation = new Map();
-        (items || []).filter(it => it.kind !== 'formula').forEach((it) => {
+        (items || []).filter(Boolean).forEach((it) => {
           const sids = (it.stations && it.stations.length) ? it.stations : [fallback];
           sids.forEach((sid) => {
             if (!byStation.has(sid)) byStation.set(sid, []);
@@ -15719,6 +15718,10 @@
       return o.items.map(i => `${i.q}× ${kdsEsc(i.n)}`).join(', ');
     }
 
+    function vrapFinancialItems(o) {
+      return o && Array.isArray(o.billItems) && o.billItems.length ? o.billItems : ((o && o.items) || []);
+    }
+
     function vrapOrderCard(o) {
       const ready = o.status === 'ready';
       let action = '';
@@ -15796,13 +15799,26 @@
     /* cart lines → order item objects, preserving each line's kitchen station + note */
     function vrapCartItems(o) {
       return cart.map(c => {
-        const orig = o && o.items.find(it => it.n === c.name);
+        const orig = o && vrapFinancialItems(o).find(it => it.n === c.name);
         const m = menuItems.find(x => x.id === c.id);
         /* Cette branche ignorait m.station : rouvrir une commande à emporter pour
            y ajouter un plat renvoyait TOUTE la commande en cuisson, y compris le
            café qui devait aller au bar. Même résolution que partout ailleurs. */
         return { q: c.qty, n: c.name, p: c.price, note: (c.note || '').trim(),
+          kind: (orig && orig.kind) || c.kind || '', formulaUid: (orig && orig.formulaUid) || c.formulaUid || '',
           stations: orig ? orig.stations : [kdsStationFor(m)] };
+      });
+    }
+
+    function saveVrapBillItems(o, items) {
+      if (!o) return;
+      if (!Array.isArray(o.billItems)) { o.items = items; return; }
+      o.billItems = items;
+      o.items.forEach((kitchenItem) => {
+        const billed = kitchenItem.formulaUid
+          ? items.find(item => item.formulaUid === kitchenItem.formulaUid)
+          : items.find(item => item.n === kitchenItem.n);
+        if (billed) kitchenItem.q = billed.q;
       });
     }
 
@@ -15811,7 +15827,7 @@
       if (vrapEditingNum == null) return;
       const o = kdsOrders.find(x => x.num === vrapEditingNum);
       if (!o || o.paid || cart.length === 0) return;
-      o.items = vrapCartItems(o);
+      saveVrapBillItems(o, vrapCartItems(o));
       o.total = cart.reduce((s, c) => s + c.price * c.qty, 0);  // gross — réduction is checkout-only
     }
 
@@ -15823,7 +15839,7 @@
         if (o) {
           o.paid  = true;
           o.total = currentTotal();         // net of any réduction
-          if (cart.length) o.items = vrapCartItems(o);
+          if (cart.length) saveVrapBillItems(o, vrapCartItems(o));
           /* Une commande client à emporter attendait le paiement (`held`) : le
              client vient d'annoncer son numéro et de payer, donc elle part en
              cuisine MAINTENANT, et pas avant. C'est ce que le paiement protège
@@ -15851,7 +15867,7 @@
       if (!o || o.paid) return;
       vrapEditingNum = num;
       vrapDiscount   = null;
-      cart = o.items.map(i => {
+      cart = vrapFinancialItems(o).map(i => {
         const m = menuItems.find(x => x.name === i.n);
         return {
           uid:   newLineUid(),
@@ -15860,6 +15876,7 @@
           price: i.p != null ? i.p : (m ? m.price : 0),
           qty:   i.q,
           note:  i.note || '',
+          kind: i.kind || '', formulaUid: i.formulaUid || '',
         };
       });
       setVrapView('builder');
@@ -16142,23 +16159,18 @@
           status: (isTakeaway && o.status === 'pending') ? 'held'
                 : (o.status === 'ready' ? 'ready' : 'new'),
           readyAt: o.status === 'ready' ? kdsNowHM() : null,
-          items: (o.lines || []).filter(l => l.kind !== 'formula').map(l => {
-            const formulaParent = l.kind === 'formula-part' && l.formulaUid
-              ? (o.lines || []).find(parent => parent.kind === 'formula' && parent.formulaUid === l.formulaUid)
-              : null;
+          items: (o.lines || []).map(l => {
             const formulaTag = l.kind === 'formula-part' ? (l.formulaName ? `${l.formulaName}${l.slotLabel ? ' · ' + l.slotLabel : ''}` : (l.slotLabel || 'Formule')) : '';
             const formulaNote = formulaTag ? `[${formulaTag}]` : '';
             const ownVisuals = Array.isArray(l.visuals) ? l.visuals : [];
-            const parentVisuals = formulaParent && Array.isArray(formulaParent.visuals) ? formulaParent.visuals : [];
-            const optionNote = parentVisuals.length ? '' : (formulaParent && formulaParent.options);
             return {
               q: l.qty || 1, n: l.name || '', p: l.unitPrice || 0,
               kind: l.kind || '',
               formulaUid: l.formulaUid || '',
               slotLabel: l.slotLabel || '',
               formulaName: l.formulaName || '',
-              note: [formulaNote, optionNote, formulaParent && formulaParent.note, ownVisuals.length ? '' : l.options, l.note].filter(Boolean).join(' · '),
-              visuals: parentVisuals.concat(ownVisuals),
+              note: [formulaNote, ownVisuals.length ? '' : l.options, l.note].filter(Boolean).join(' · '),
+              visuals: ownVisuals.slice(),
               /* Le poste porté PAR LA LIGNE gagne. Un bon posé par une caisse le
                  transporte (kitchen-relay.js), figé à l'instant de l'envoi : le
                  retrouver par le nom du plat serait le recalculer contre une
@@ -16170,6 +16182,13 @@
               stationAccepted: l.stationAccepted === true,
             };
           }),
+          billItems: (o.lines || []).filter(l => l.kind !== 'formula-part').map(l => ({
+            q: l.qty || 1, n: l.name || '', p: l.unitPrice || 0, note: l.note || '',
+            visuals: Array.isArray(l.visuals) ? l.visuals.slice() : [],
+            kind: l.kind || '', formulaUid: l.formulaUid || '', formulaName: l.formulaName || '',
+            stations: [(l.station && kdsStations().some(s => s.id === l.station))
+              ? l.station : kdsStationForName(l.name)],
+          })),
           sentAt: new Date(o.created_ts || Date.now()),
           paid: !!o.paid, pickedUp: o.status === 'served',
           pickedUpAt: o.status === 'served' ? kdsNowHM() : null,
