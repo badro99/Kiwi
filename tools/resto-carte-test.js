@@ -498,8 +498,8 @@ ok(/missing\.length \? 'disabled' : ''/.test(caisseSrc),
 ok(/c\.optSig \|\| ''\) === sig/.test(caisseSrc),
   'deux cafés aux laits différents font deux lignes — les empiler en enverrait un seul en cuisine');
 ok(/function kitchenItemsFromLines\(lines\)/.test(caisseSrc)
-  && /paperNote: parent \? \[formulaTag, kitchenNote\(parent\), kitchenNote\(l\)\]/.test(caisseSrc)
-  && /visuals: parentVisuals\.concat\(ownVisuals\)/.test(caisseSrc),
+  && /paperNote: parent \? \[formulaTag, kitchenNote\(l\)\]/.test(caisseSrc)
+  && /visuals: ownVisuals/.test(caisseSrc),
   'les choix partent en texte sur le papier et en repères visuels structurés sur le KDS');
 ok(/note: i\.paperNote \|\| i\.note \|\| '', visuals: i\.visuals \|\| \[\]/.test(caisseSrc),
   'le relais vers une tablette cuisine distante conserve aussi le texte des options');

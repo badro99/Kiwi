@@ -115,8 +115,9 @@ const cuisineHtml = fs.readFileSync(path.join(ROOT, 'kiwi-cuisine.html'), 'utf8'
 check('kiwi-cuisine.html renders visuals without requiring emoji',
   !cuisineHtml.includes('filter(function (v) { return v && v.emoji && v.name; })') &&
   cuisineHtml.includes('tk-visual'));
-check('kiwi-cuisine.html merges formula parent options into its component lines',
-  cuisineHtml.includes('var formulaParent =') && cuisineHtml.includes('parentVisuals.concat'));
+check('kiwi-cuisine.html renders formula parents and their component lines',
+  cuisineHtml.includes("var items = (o.lines || []).map(function (l)")
+    && cuisineHtml.includes("l.kind === 'formula-part'"));
 
 // 4. Inspect kiwi-serveur.html svSendOrder
 const serveurHtml = fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8');
@@ -129,14 +130,19 @@ check('kiwi-serveur.html relays formula identity and slot metadata',
 
 // 5. Inspect kiwi-caisse.html for tableSplits migration & unassigned waitlist seating
 const caisseHtml = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
-check('caisse KDS and kitchen paper keep formula parent options with the components',
-  caisseHtml.includes('const formulaParent =')
-    && caisseHtml.includes('visuals: parentVisuals.concat(ownVisuals)')
+check('caisse KDS and kitchen paper keep formula parents, options, and components',
+  caisseHtml.includes("items: (o.lines || []).map(l =>")
+    && caisseHtml.includes('visuals: ownVisuals.slice()')
     && caisseHtml.includes(".map(v => v && (v.name || v.label || v.cn)).filter(Boolean).join(' · ')"));
-check('caisse local tickets omit the non-preparation formula parent and print its choices on components',
-  caisseHtml.includes('function kitchenItemsFromLines(lines)')
-    && caisseHtml.includes("source.filter(l => l && l.kind !== 'formula')")
-    && caisseHtml.includes('visuals: parentVisuals.concat(ownVisuals)'));
+check('caisse local tickets print the composed-menu parent and its components',
+    caisseHtml.includes('function kitchenItemsFromLines(lines)')
+    && caisseHtml.includes('source.filter(Boolean).map((l) =>')
+    && caisseHtml.includes('visuals: ownVisuals'));
+check('caisse takeout billing uses priced formula parents, never zero-price kitchen components',
+  caisseHtml.includes('function vrapFinancialItems(o)')
+    && caisseHtml.includes("filter(l => l.kind !== 'formula-part')")
+    && caisseHtml.includes('cart = vrapFinancialItems(o).map(i =>')
+    && caisseHtml.includes('saveVrapBillItems(o, vrapCartItems(o))'));
 check('caisse relay preserves formula and canonical option metadata',
   caisseHtml.includes('function relayLinesFromCaisse(lines)')
     && caisseHtml.includes("['kind', 'formulaUid', 'formulaName', 'slotLabel', 'formulaSlotId', 'lineId']")
