@@ -14,6 +14,10 @@ assert.ok(source.includes('data-action="rmw-formula-duplicate"') && source.inclu
   'saved composed menus expose a wired reuse action');
 assert.ok(source.includes('data-formula-template') && source.includes('data-apply-formula-template'),
   'the item editor exposes saved composed menus as reusable formula templates');
+assert.ok(source.includes('data-save-formula-template') && source.includes('saveFormulaTemplate(name,clean)'),
+  'empty and existing composed menus expose an explicit save-as-template action');
+assert.ok(source.includes("Aucune formule enregistrée") && source.includes('Copier dans cet article'),
+  'the reuse controls stay visible even before the first formula template exists');
 assert.ok(source.includes('template.formula.slots') && source.includes('JSON.parse(JSON.stringify'),
   'reusing a saved formula copies its stages instead of sharing mutable state');
 ['rmw-cat-move','rmw-cat-edit','rmw-cat-delete','rmw-sub-rename','rmw-sub-delete'].forEach((action) => {

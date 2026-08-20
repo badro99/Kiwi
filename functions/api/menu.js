@@ -126,7 +126,7 @@ function sanitizeFormula(raw) {
 // Keep the stored menu small and well-shaped. We trust the merchant (it's their
 // own carte) but still bound sizes so a runaway client can't bloat the row.
 function sanitizeMenu(raw) {
-  const out = { cats: [], items: [], stations: [], kitchenId: '', opts: [] };
+  const out = { cats: [], items: [], stations: [], kitchenId: '', opts: [], formulaTemplates: [] };
   if (!raw || typeof raw !== 'object') return out;
   // La cuisine — le poste qui reçoit tout ce qu'aucune catégorie n'envoie
   // ailleurs. Le nommer est LE réglage de routage du restaurant ; le laisser
@@ -208,6 +208,10 @@ function sanitizeMenu(raw) {
     if (formula) item.formula = formula;
     return item;
   }).filter((it) => it.id && it.name);
+  out.formulaTemplates = (Array.isArray(raw.formulaTemplates) ? raw.formulaTemplates.slice(0, 40) : []).map((t) => {
+    const formula = sanitizeFormula(t && t.formula);
+    return formula ? { id: str(t && t.id, 40), name: str(t && t.name, 80), formula } : null;
+  }).filter((t) => t && t.id && t.name);
   if (raw.hours) { const h = sanitizeHours(raw.hours); if (h) out.hours = h; }
   return out;
 }

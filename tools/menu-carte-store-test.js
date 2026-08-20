@@ -429,6 +429,21 @@ const suite = [
     API.updateItem(copy.id,{formula:{slots:[{id:'sl_1',label:'Boisson',min:1,max:1,choices:[{itemId:juice,extra:5}]}]}});
     eq('modifier la copie ne change pas le modèle enregistré', original.formula.slots[0].choices[0].extra, 0);
   })(),
+
+  /* 13 — Les modèles de formule sont des données partagées, indépendantes des
+   *       articles qui les utilisent, comme les groupes d'options. */
+  (async () => {
+    const w = makeWorld([CAFE], { serverMenus: {} });
+    w.fetch = function () { return Promise.reject(new Error('hors ligne')); };
+    const API = load(w);
+    API.addCategory('Formules');
+    const cid = API.data('v-cf').cats[0].id;
+    API.addItem({ name:'Jus', price:12, catId:cid });
+    const juice = API.data('v-cf').items[0].id;
+    API.saveFormulaTemplate('Boisson petit déjeuner', {slots:[{id:'sl_1',label:'Boisson',min:1,max:1,choices:[{itemId:juice,extra:0}]}]});
+    eq('un modèle de formule est persisté séparément', API.data('v-cf').formulaTemplates.length, 1);
+    eq('le modèle garde ses articles sélectionnables', API.data('v-cf').formulaTemplates[0].formula.slots[0].choices[0].itemId, juice);
+  })(),
 ];
 
 Promise.all(suite).then(() => {

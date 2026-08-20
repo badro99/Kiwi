@@ -226,7 +226,7 @@
   }
 
   const store = window.KiwiStore.define('menu', {
-    blank: () => ({ seq: 0, cats: [], items: [], stations: [], kitchenId: '', opts: [] }),
+    blank: () => ({ seq: 0, cats: [], items: [], stations: [], kitchenId: '', opts: [], formulaTemplates: [] }),
     example: example,
     /* Des postes seuls ne font pas une carte : un établissement qui n'a saisi
      * que « Bar » et « Cuisson » n'a toujours rien à vendre, et l'écran d'accueil
@@ -264,6 +264,22 @@
       return { id, label, min, max, choices };
     }).filter((s) => s && s.id && s.choices && s.choices.length > 0);
     return slots.length ? { slots } : null;
+  }
+
+  function saveFormulaTemplate(name, formula) {
+    return store.update((d) => {
+      const clean = cleanFormula(formula, d.items);
+      const label = String(name || '').trim().slice(0, 80);
+      if (!clean || !label) return d;
+      d.formulaTemplates = Array.isArray(d.formulaTemplates) ? d.formulaTemplates : [];
+      const existing = d.formulaTemplates.find((t) => t && t.name.toLowerCase() === label.toLowerCase());
+      if (existing) { existing.name = label; existing.formula = clean; }
+      else d.formulaTemplates.push({ id: nid(d, 'ft'), name: label, formula: clean });
+      return d;
+    });
+  }
+  function deleteFormulaTemplate(id) {
+    return store.update((d) => { d.formulaTemplates = (d.formulaTemplates || []).filter((t) => t && t.id !== id); return d; });
   }
 
   /* ─── postes de préparation ───
@@ -2022,6 +2038,7 @@
     // balayage, un navigateur neuf recréerait og_1 par-dessus un groupe existant
     // et les produits du serveur pointeraient le mauvais.
     (d.opts || []).forEach((g) => { scan(g.id); (g.choices || []).forEach((c) => scan(c.id)); });
+    (d.formulaTemplates || []).forEach((t) => scan(t.id));
     d.seq = max;
     return d;
   }
@@ -2037,7 +2054,7 @@
     const out = {
       seq: Math.max(+(mine && mine.seq) || 0, +(theirs && theirs.seq) || 0),
       kitchenId: (mine && mine.kitchenId) || (theirs && theirs.kitchenId) || '',
-      cats: [], items: [], stations: [], opts: [],
+      cats: [], items: [], stations: [], opts: [], formulaTemplates: [],
     };
     /* La bibliothèque de groupes d'options, union par id, cet appareil d'abord —
      * comme les postes. Un groupe perdu ici, et le produit qui le porte
@@ -2045,6 +2062,10 @@
     const ogSeen = Object.create(null);
     [((mine && mine.opts) || []), ((theirs && theirs.opts) || [])].forEach((list) => {
       list.forEach((g) => { if (g && g.id && !ogSeen[g.id]) { ogSeen[g.id] = 1; out.opts.push(g); } });
+    });
+    const ftSeen = Object.create(null);
+    [((mine && mine.formulaTemplates) || []), ((theirs && theirs.formulaTemplates) || [])].forEach((list) => {
+      list.forEach((t) => { if (t && t.id && !ftSeen[t.id]) { ftSeen[t.id] = 1; out.formulaTemplates.push(t); } });
     });
     /* Les postes fusionnent AVANT le reste et dans l'ordre de cet appareil :
      * cet ordre est celui des onglets de l'écran cuisine, donc celui qu'on a
@@ -2318,7 +2339,7 @@
       });
     },
     availableItems: (vid) => (window.KiwiMenuStore.items(vid) || []).filter((i) => i.avail !== false),
-    cleanFormula,
+    cleanFormula, saveFormulaTemplate, deleteFormulaTemplate,
     isEmpty: (vid) => store.isEmpty(vid),
     subscribe: (fn) => store.subscribe(fn),
     loadExample: (vid) => store.loadExample(vid),
