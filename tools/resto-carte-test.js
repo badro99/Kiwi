@@ -486,7 +486,7 @@ ok(/return ids\.map\(id => lib\.find\(g => g && g\.id === id\)\)\.filter\(Boolea
   'itemOptGroups écarte un groupe disparu plutôt que de bloquer la vente');
 ok(/const groups = itemOptGroups\(item\);\s*\n\s*if \(groups\.length\) \{ openOptSheet/.test(caisseSrc),
   'un produit à options ouvre la feuille AVANT d\'entrer dans la note');
-ok(/function addToTableOrder\(tableId, itemId\)[\s\S]{0,260}itemOptGroups\(item\)[\s\S]{0,220}openOptSheet\(item, groups,[\s\S]{0,100}pushTableOrderLine/.test(caisseSrc),
+ok(/function addToTableOrder\(tableId, itemId\)[\s\S]{0,260}itemOptGroups\(item\)[\s\S]{0,600}openOptSheet\(item, groups,[\s\S]{0,100}pushTableOrderLine/.test(caisseSrc),
   'la prise de commande à table ouvre la même feuille d\'options que la vente à emporter');
 ok(/const line = tableOrders\[tableId\]\.find\(l => l\.id === item\.id[\s\S]{0,180}\(l\.optSig \|\| ''\) === sig/.test(caisseSrc)
   && /price: item\.price \+ extra, qty: 1, note: '', opts: \(opts \|\| \[\]\)\.slice\(\), optSig: sig/.test(caisseSrc),

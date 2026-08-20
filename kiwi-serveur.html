@@ -5138,7 +5138,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     /* Les postes de préparation du patron, dans SON ordre — le premier est celui
        qui reçoit un plat qu'il n'a affecté à rien. Vide tant que la carte n'est
        pas arrivée, et vide en démo (où le tri se fait par catégorie). */
-    let svStations = [];
+    let svStations = [], svCats = [], activeSub = null;
     function svSlug() {
       try { const p = svPaired(); if (p && p.merchant) return p.merchant; } catch (_) {}
       /* The employee portal is not paired like a till. Its authenticated
@@ -5156,6 +5156,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     function svApplyCarte(d) {
       if (!d || !Array.isArray(d.items)) return false;
       const cats = Array.isArray(d.cats) ? d.cats.filter(c => c && c.id) : [];
+      svCats = cats;
       const labels = { all: 'Tout' };
       const order = ['all'];
       /* Le routage vit sur la categorie (voir assets/menu-catalog.js). Le
@@ -5167,6 +5168,8 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       const items = (d.items || []).filter(it => it && it.id && it.name).map((it) => ({
         id: it.id,
         cat: (it.catId && labels[it.catId]) ? it.catId : (loose = true, '_autres'),
+        subId: it.subId || null,
+        subLabel: (() => { const c=cats.find(c=>c.id===it.catId), s=c&&it.subId?(c.sub||[]).find(s=>s.id===it.subId):null; return s?s.name:''; })(),
         name: it.name,
         price: +it.price || 0,
         // Le poste de préparation, hérité de sa catégorie, pour annoncer au
@@ -7999,6 +8002,11 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
           ${esc(catLabels[c] || c)}<span class="count">${counts[c] || 0}</span>
         </button>
       `).join('');
+      let row=$('#subcat-pills');
+      if(!row){row=document.createElement('div');row.id='subcat-pills';row.className='cat-pills';row.addEventListener('click',e=>{const b=e.target.closest('[data-subcat]');if(!b)return;activeSub=b.dataset.subcat||null;renderCatPills();renderMenu();});$('#cat-pills').insertAdjacentElement('afterend',row);}
+      const parent=svCats.find(c=>c.id===activeCat), subs=parent?(parent.sub||[]):[];
+      row.hidden=activeCat==='all'||!subs.length;
+      row.innerHTML=row.hidden?'':`<button class="cat-pill ${!activeSub?'is-active':''}" data-subcat="">Tout</button>`+subs.map(s=>`<button class="cat-pill ${activeSub===s.id?'is-active':''}" data-subcat="${esc(s.id)}">${esc(s.name)}<span class="count">${menuItems.filter(m=>m.cat===activeCat&&m.subId===s.id).length}</span></button>`).join('');
     }
 
     function renderMenu() {
@@ -8008,7 +8016,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
           'Ajoutez vos catégories et vos plats depuis le tableau de bord — <b>Menu</b>.</div></div>';
         return;
       }
-      const items = activeCat === 'all' ? menuItems : menuItems.filter(m => m.cat === activeCat);
+      const items = activeCat === 'all' ? menuItems : menuItems.filter(m => m.cat === activeCat && (!activeSub || m.subId === activeSub));
       const activeOrder = menuContextId ? (tableOrders[menuContextId] || []) : [];
       $('#menu-grid').innerHTML = items.map(m => {
         // qty badge = total across every line of this dish (noted + plain)
@@ -8027,6 +8035,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
           <div class="menu-item ${qty > 0 ? 'is-in-cart' : ''}" data-menu-id="${esc(m.id)}" role="button" tabindex="0">
             ${tag}
             <span class="menu-item-cat">${esc(catLabels[m.cat] || '')}</span>
+            ${m.subLabel ? `<span class="menu-item-cat">${esc(m.subLabel)}</span>` : ''}
             <span class="menu-item-name">${esc(m.name)}</span>
             <span class="menu-item-foot">
               <span class="menu-item-price">${m.price} MAD</span>
@@ -8541,6 +8550,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       const c = e.target.closest('[data-cat]');
       if (!c) return;
       activeCat = c.dataset.cat;
+      activeSub = null;
       renderCatPills();
       renderMenu();
     });

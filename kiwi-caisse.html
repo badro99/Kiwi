@@ -7933,7 +7933,7 @@
      * depuis toujours : un poste doit avoir la même couleur au bureau et au
      * comptoir, sinon la pastille ne sert plus de repère. */
     const STATION_PALETTE = ['#1F5D3C', '#3FB67A', '#D99A2B', '#3677A6', '#164A2F', '#C24A2E', '#C97A4A'];
-    const carteState = { stations: [], kitchenId: '', opts: [], kdsReady: false };
+    const carteState = { stations: [], kitchenId: '', opts: [], cats: [], kdsReady: false };
 
     function carteSlug() {
       try { const p = storePaired(); return (p && p.merchant) || ''; } catch (_) { return ''; }
@@ -7977,10 +7977,12 @@
       let loose = false;
       const items = (d.items || []).filter(it => it && it.id && it.name && it.avail !== false).map((it) => {
         const cat = (it.catId && labels[it.catId]) ? it.catId : (loose = true, '_autres');
-        return { id: it.id, cat, name: it.name, price: +it.price || 0, station: catStation[cat] || '',
+        const parent = cats.find(c => c.id === cat);
+        const sub = parent && it.subId ? (parent.sub || []).find(s => s.id === it.subId) : null;
+        return { id: it.id, cat, subId: sub ? sub.id : null, subLabel: sub ? sub.name : '', name: it.name, price: +it.price || 0, station: catStation[cat] || '',
           /* Les groupes d'options que ce produit demande. Des identifiants : le
              libellé vit une seule fois, dans carteState.opts. */
-          opts: Array.isArray(it.opts) ? it.opts.slice() : [] };
+          opts: Array.isArray(it.opts) ? it.opts.slice() : [], formula: it.formula || null };
       });
       if (loose) {
         labels._autres = 'Autres';
@@ -7991,6 +7993,7 @@
          l'écran cuisine, rien de plus. Une couleur qui n'est pas un #RRGGBB
          retombe sur la palette : cette valeur part directement dans un
          attribut style. */
+      carteState.cats = cats;
       carteState.stations = (Array.isArray(d.stations) ? d.stations : [])
         .filter(s => s && s.id && s.name)
         .map((s, i) => ({
@@ -8061,6 +8064,7 @@
        carte ne se chargerait jamais sans que rien ne le dise. */
 
     let activeCat = 'all';
+    let activeSub = null;
     let cart = []; // line: { uid, id, name, price, qty, note }
     /* Stable per-line id so the same dish can sit on two lines with
        different kitchen notes (id stays = menu id for menu/station lookups). */
@@ -8155,6 +8159,24 @@
           ${escTeam(catLabels[c] || c)}<span class="count mono">${counts[c] || 0}</span>
         </button>
       `).join('');
+      let subPills = $('#subcat-pills');
+      if (!subPills) {
+        subPills = document.createElement('div');
+        subPills.id = 'subcat-pills';
+        subPills.className = 'cat-pills';
+        subPills.addEventListener('click', (e) => {
+          const b = e.target.closest('[data-subcat]'); if (!b) return;
+          activeSub = b.dataset.subcat || null; renderCatPills(); renderMenu();
+        });
+        $('#cat-pills').insertAdjacentElement('afterend', subPills);
+      }
+      const parent = carteState.cats.find(c => c.id === activeCat);
+      const subs = parent ? (parent.sub || []).filter(s => s && s.id) : [];
+      subPills.hidden = activeCat === 'all' || !subs.length;
+      subPills.innerHTML = subPills.hidden ? '' : [
+        `<button class="cat-pill ${!activeSub ? 'is-active' : ''}" data-subcat="">Tout</button>`,
+        ...subs.map(s => `<button class="cat-pill ${activeSub === s.id ? 'is-active' : ''}" data-subcat="${escTeam(s.id)}">${escTeam(s.name)}<span class="count mono">${menuItems.filter(m => m.cat === activeCat && m.subId === s.id).length}</span></button>`)
+      ].join('');
       window.CaisseFx && window.CaisseFx.lens();
 
       $('#vrap-item-count').textContent = `${menuItems.length} articles`;
@@ -8296,7 +8318,7 @@
       }
       const items = activeCat === 'all'
         ? menuItems
-        : menuItems.filter(m => m.cat === activeCat);
+        : menuItems.filter(m => m.cat === activeCat && (!activeSub || m.subId === activeSub));
       // In order mode, qty comes from the table's live order; otherwise from cart
       const activeSource = (mode === 'order' && selectedId)
         ? (tableOrders[selectedId] || []) : cart;
@@ -8314,9 +8336,10 @@
           : `<span class="menu-item-add" aria-hidden="true">+</span>`;
         return `
           <div class="menu-item ${qty > 0 ? 'is-in-cart' : ''}" data-menu-id="${m.id}" data-cat="${m.cat}" style="--cat:${catColor[m.cat] || 'var(--forest)'}" role="button" tabindex="0">
+            ${m.formula ? '<span class="menu-item-optflag">Formule</span>' : ''}
             ${qty > 0 ? `<span class="menu-item-badge mono">${qty}</span>` : ''}
             <span class="menu-item-art">${menuArt(m.id, m.cat, m.name)}</span>
-            <span class="menu-item-cat">${escTeam(catLabels[m.cat] || '')}</span>
+            <span class="menu-item-cat">${escTeam(m.subLabel || catLabels[m.cat] || '')}</span>
             <span class="menu-item-name">${escTeam(m.name)}</span>
             <span class="menu-item-foot">
               <span class="menu-item-price mono">${m.price} MAD</span>
@@ -8468,9 +8491,33 @@
     function addToCart(itemId) {
       const item = menuItems.find(m => m.id === itemId);
       if (!item) return;
+      if (item.formula && Array.isArray(item.formula.slots) && item.formula.slots.length) {
+        openCaisseFormula(item, (parent, parts) => { cart.push(parent, ...parts); renderMenu(); renderCart(); });
+        return;
+      }
       const groups = itemOptGroups(item);
       if (groups.length) { openOptSheet(item, groups); return; }
       pushCartLine(item, []);
+    }
+
+    function openCaisseFormula(item, onChosen) {
+      const slots = item.formula.slots.filter(s => s && Array.isArray(s.choices) && s.choices.length);
+      if (!slots.length) return;
+      if (!optVeil) { optVeil = document.createElement('div'); optVeil.className = 'cloture-veil opt-veil'; document.body.appendChild(optVeil); }
+      const picked = Object.fromEntries(slots.map(s => [s.id, []]));
+      const choiceItem = c => menuItems.find(m => String(m.id) === String(c.itemId));
+      function paint() {
+        const missing = slots.filter(s => picked[s.id].length < Math.max(0, +s.min || 0));
+        const extra = slots.reduce((n, s) => n + picked[s.id].reduce((x, i) => x + (+s.choices[i].extra || 0), 0), 0);
+        optVeil.innerHTML = `<div class="cloture-card opt-card"><div class="clo-eyebrow">${kdsEsc(item.name)}</div><div class="clo-title">Formule / menu composé</div><div class="opt-groups">${slots.map(s => `<div class="opt-g"><div class="opt-g-h">${kdsEsc(s.label || 'Choix')}<i class="req">${+s.min || 0}–${Math.max(+s.min || 0, +s.max || 1)}</i></div><div class="opt-g-c">${s.choices.map((c,i) => { const target=choiceItem(c); return target ? `<button type="button" class="opt-c${picked[s.id].includes(i)?' on':''}" data-fslot="${kdsEsc(s.id)}" data-fchoice="${i}"><span>${kdsEsc(target.name)}</span>${+c.extra?`<b class="mono">+${fmtMAD(+c.extra)}</b>`:''}</button>`:''; }).join('')}</div></div>`).join('')}</div>${missing.length?`<div class="opt-miss">À choisir : ${missing.map(s=>kdsEsc(s.label||'Choix')).join(', ')}</div>`:''}<div class="clo-actions"><button class="clo-btn primary" data-formula-ok ${missing.length?'disabled':''}>Ajouter · ${fmtMAD(item.price+extra)}</button></div><div class="clo-foot"><button data-opt-cancel>Annuler</button></div></div>`;
+      }
+      optVeil.onclick = e => {
+        const b=e.target.closest('[data-fchoice]');
+        if (b) { const s=slots.find(x=>String(x.id)===b.dataset.fslot), a=picked[s.id], i=+b.dataset.fchoice, at=a.indexOf(i), max=Math.max(+s.min||0,+s.max||1); if(at>=0)a.splice(at,1); else if(max===1){a.splice(0,a.length,i);} else if(a.length<max)a.push(i); paint(); return; }
+        if(e.target===optVeil||e.target.closest('[data-opt-cancel]')){closeOptSheet();return;}
+        if(e.target.closest('[data-formula-ok]')) { const uid=newLineUid(), parts=[]; let extra=0; slots.forEach(s=>picked[s.id].forEach(i=>{const c=s.choices[i], target=choiceItem(c); if(!target)return; extra+=+c.extra||0; parts.push({uid:newLineUid(),id:target.id,name:target.name,price:+c.extra||0,qty:1,note:'',kind:'formula-part',formulaUid:uid,formulaName:item.name,slotLabel:s.label||''});})); closeOptSheet(); onChosen({uid,id:item.id,name:item.name,price:item.price,qty:1,note:'',kind:'formula',formulaUid:uid,formulaName:item.name},parts); }
+      };
+      paint(); optVeil.classList.add('is-open');
     }
 
     /* Slice B — « Montant libre » : une ligne à prix ouvert ringée dans
@@ -8650,9 +8697,10 @@
       }
 
       // Cat pills
-      const catBtn = e.target.closest('.cat-pill');
+      const catBtn = e.target.closest('.cat-pill[data-cat]');
       if (catBtn) {
         activeCat = catBtn.dataset.cat;
+        activeSub = null;
         renderCatPills();
         renderMenu();
         return;
@@ -9910,6 +9958,10 @@
       const item = menuItems.find(m => m.id === itemId);
       if (!item) return;
       const groups = itemOptGroups(item);
+      if (item.formula && Array.isArray(item.formula.slots) && item.formula.slots.length) {
+        openCaisseFormula(item, (parent, parts) => { (tableOrders[tableId] = tableOrders[tableId] || []).push(parent, ...parts); renderMenu(); renderOrderPanel(tableId); });
+        return;
+      }
       if (groups.length) {
         openOptSheet(item, groups, (_item, chosen) => pushTableOrderLine(tableId, item, chosen));
         return;

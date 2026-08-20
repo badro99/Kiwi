@@ -4412,7 +4412,8 @@ em, i, cite, dfn, var { font-style: normal; }
     function renderMenu(filter = 'all') {
       const list = $('#menu-list');
       list.classList.add('is-feed');
-      const items = MENU.filter(m => filter === 'all' || m.cat === filter);
+      const bits = String(filter).split('::'), catFilter = bits[0], subFilter = bits[1] || '';
+      const items = MENU.filter(m => catFilter === 'all' || (m.cat === catFilter && (!subFilter || m.subId === subFilter)));
       list.innerHTML = items.map(m => {
         const i = itemI18n(m.id);
         const out = m.avail === false;
@@ -4420,6 +4421,7 @@ em, i, cite, dfn, var { font-style: normal; }
         <article class="dish-card${out ? ' is-out' : ''}"${out ? '' : ` data-add="${escapeHtml(m.id)}"`}>
           ${dishMedia(m)}${out ? `<div class="dish-out">${escapeHtml(t('dish_out'))}</div>` : ''}
           <div class="dish-meta">
+            ${m.formula ? '<div class="dish-tag">FORMULE</div>' : ''}
             <div class="dish-name">${escapeHtml(i.name)}</div>
             <div class="dish-foot">
               <span class="dish-price">${m.price} ${cur()}</span>
@@ -4461,7 +4463,8 @@ em, i, cite, dfn, var { font-style: normal; }
           || choiceId;
     }
     function groupLabel(optKey) {
-      return t(`opt_label_${optKey}`) || OPT[optKey]?.label || optKey;
+      const key = `opt_label_${optKey}`;
+      return I18N[currentLang]?.[key] || I18N.fr[key] || OPT[optKey]?.label || optKey;
     }
     function choiceEmoji(optKey, choiceId) {
       return OPT[optKey]?.choices.find(c => c.id === choiceId)?.emoji || '';
@@ -5645,9 +5648,15 @@ em, i, cite, dfn, var { font-style: normal; }
       MENU.length = 0;
       const names = {};
       for (const it of items) {
+        const formulaOptions = it.formula && Array.isArray(it.formula.slots) ? it.formula.slots.map(s => {
+          const g = { key: 'formula_' + String(s.id), label: String(s.label || ''), type: (+s.max || 1) > 1 ? 'multi' : 'single', default: '', required: (+s.min || 0) > 0,
+            choices: (Array.isArray(s.choices) ? s.choices : []).map(c => { const target=items.find(x=>String(x.id)===String(c.itemId)); return target ? {id:String(c.itemId),label:String(target.name),emoji:'',delta:Math.max(0,Number(c.extra)||0)} : null; }).filter(Boolean) };
+          OPT[g.key] = g; return g;
+        }).filter(g=>g.choices.length) : [];
         MENU.push({
           id: String(it.id),
           cat: String(it.catId || ''),
+          subId: String(it.subId || ''),
           name: String(it.name || ''),
           desc: String(it.desc || ''),
           price: Math.max(0, Math.round(Number(it.price) || 0)),
@@ -5656,7 +5665,8 @@ em, i, cite, dfn, var { font-style: normal; }
           video: it.video || '',
           tag: it.tag || '',
           avail: it.avail !== false,
-          options: (Array.isArray(it.opts) ? it.opts : []).map(id => groups.get(String(id))).filter(Boolean),
+          options: formulaOptions.length ? formulaOptions : (Array.isArray(it.opts) ? it.opts : []).map(id => groups.get(String(id))).filter(Boolean),
+          formula: formulaOptions.length > 0,
         });
         names[String(it.id)] = { name: String(it.name || ''), desc: String(it.desc || '') };
       }
@@ -5676,6 +5686,9 @@ em, i, cite, dfn, var { font-style: normal; }
       for (const c of cats) {
         if (!used.has(String(c.id))) continue;        // empty category → no tab
         parts.push(`<button class="menu-tab" data-tab="${escapeHtml(String(c.id))}">${escapeHtml(String(c.name || ''))}</button>`);
+        (Array.isArray(c.sub) ? c.sub : []).forEach(s => {
+          if (MENU.some(m => m.cat === String(c.id) && m.subId === String(s.id))) parts.push(`<button class="menu-tab menu-subtab" data-tab="${escapeHtml(String(c.id)+'::'+String(s.id))}">↳ ${escapeHtml(String(s.name||''))}</button>`);
+        });
       }
       tabs.innerHTML = parts.join('');
       renderMenu('all');
