@@ -85,10 +85,29 @@ Règles :
 - Compte TOUTES les tables visibles, même partiellement ou en arrière-plan.
 - Si l'image ne montre ni un espace de restauration ni un croquis de salle, réponds {"error":"not-a-room"}.`;
 
+/* Les modèles Meta sont sous licence : le premier appel du COMPTE doit être
+ * le prompt littéral « agree » (erreur 5016 sinon). Une fois accepté, c'est
+ * acquis pour toujours — mais un compte neuf (staging, migration) retombe
+ * dessus, donc l'acceptation se rejoue d'elle-même au lieu d'exiger une
+ * manipulation console. */
+async function agreeIfGated(env, err) {
+  if (!/5016|submit the prompt 'agree'/i.test(String((err && err.message) || err || ''))) return false;
+  try { await runAiWithGateway(env, VISION_MODEL, { prompt: 'agree' }); return true; }
+  catch (_) { return false; }
+}
+
 /* Le schéma d'entrée des modèles vision varie d'un modèle Workers AI à
  * l'autre : forme OpenAI, puis repli sur la forme native — même stratégie
  * multi-formes que menu-import.js. */
 async function runVision(env, dataUrl) {
+  try { return await runVisionOnce(env, dataUrl); }
+  catch (e) {
+    if (await agreeIfGated(env, e)) return await runVisionOnce(env, dataUrl);
+    throw e;
+  }
+}
+
+async function runVisionOnce(env, dataUrl) {
   const openaiShape = {
     messages: [
       { role: 'system', content: SYSTEM_PROMPT },

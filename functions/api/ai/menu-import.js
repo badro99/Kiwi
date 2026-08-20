@@ -152,11 +152,30 @@ function textPayload(text) {
   };
 }
 
+/* Les modèles Meta sont sous licence : le premier appel du COMPTE doit être
+ * le prompt littéral « agree » (erreur 5016 sinon). Une fois accepté, c'est
+ * acquis pour toujours — mais un compte neuf (staging, migration) retombe
+ * dessus, donc l'acceptation se rejoue d'elle-même au lieu d'exiger une
+ * manipulation console. */
+async function agreeIfGated(env, err) {
+  if (!/5016|submit the prompt 'agree'/i.test(String((err && err.message) || err || ''))) return false;
+  try { await runAiWithGateway(env, VISION_MODEL, { prompt: 'agree' }); return true; }
+  catch (_) { return false; }
+}
+
 /* Le schéma d'entrée des modèles vision varie d'un modèle Workers AI à
  * l'autre : forme OpenAI (content en tableau de blocs image_url/text) ou forme
  * native (prompt + image en tableau d'octets). On tente la première, on se
  * replie sur la seconde — même philosophie multi-formes que parseModelResponse. */
 async function runVision(env, dataUrl) {
+  try { return await runVisionOnce(env, dataUrl); }
+  catch (e) {
+    if (await agreeIfGated(env, e)) return await runVisionOnce(env, dataUrl);
+    throw e;
+  }
+}
+
+async function runVisionOnce(env, dataUrl) {
   const openaiShape = {
     messages: [
       { role: 'system', content: SYSTEM_PROMPT },
