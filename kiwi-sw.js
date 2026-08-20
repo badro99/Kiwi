@@ -138,7 +138,7 @@ var SHELL = [
   '/assets/oppo-cards.js',
   '/assets/dashboard-pwa.js?v=391',
   '/assets/dashboard-native.js',
-  '/assets/pwa-update.js?v=358',
+  '/assets/pwa-update.js?v=359',
   '/assets/caisse-skin.css?v=3',
   '/assets/pos-mobile.css?v=3',
   '/assets/caisse-motion.js',
