@@ -10,6 +10,8 @@ const source = fs.readFileSync('assets/restaurant-menu-workspace.js', 'utf8');
 assert.ok(source.includes('data-action="rmw-sub-add"'), 'the restaurant workspace exposes subsection creation');
 assert.ok(!source.includes("if(!subs.length&&all.length<2)return ''"),
   'subsection creation must stay visible even in an empty or partially restored section');
+assert.ok(source.includes('data-action="rmw-formula-duplicate"') && source.includes("handlers['rmw-formula-duplicate']"),
+  'saved composed menus expose a wired reuse action');
 ['rmw-cat-move','rmw-cat-edit','rmw-cat-delete','rmw-sub-rename','rmw-sub-delete'].forEach((action) => {
   assert.ok(source.includes(`data-action="${action}"`) && source.includes(`H['${action}']`),
     `${action} must have a visible control and a wired handler`);

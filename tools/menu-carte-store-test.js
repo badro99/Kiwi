@@ -409,6 +409,26 @@ const suite = [
     API.moveCategory(ids[2], -1);
     eq('déplacer au-delà du début ne change rien', API.data('v-cf').cats[0].id, ids[2]);
   })(),
+
+  /* 12 — Une formule déjà enregistrée sert de modèle réutilisable. La copie
+   *       garde toutes les étapes mais reste indépendante de l’originale. */
+  (async () => {
+    const w = makeWorld([CAFE], { serverMenus: {} });
+    w.fetch = function () { return Promise.reject(new Error('hors ligne')); };
+    const API = load(w);
+    API.addCategory('Formules');
+    const cid = API.data('v-cf').cats[0].id;
+    API.addItem({ name:'Jus', price:12, catId:cid });
+    const juice = API.data('v-cf').items[0].id;
+    API.addItem({ name:'Petit déjeuner', price:60, catId:cid, formula:{slots:[{id:'sl_1',label:'Boisson',min:1,max:1,choices:[{itemId:juice,extra:0}]}]} });
+    const original = API.data('v-cf').items[1];
+    API.duplicateItem(original.id);
+    const copy = API.data('v-cf').items[2];
+    eq('réutiliser crée un nouvel article formule', !!copy.formula, true);
+    eq('la copie reprend les étapes et leurs choix', copy.formula.slots[0].choices[0].itemId, juice);
+    API.updateItem(copy.id,{formula:{slots:[{id:'sl_1',label:'Boisson',min:1,max:1,choices:[{itemId:juice,extra:5}]}]}});
+    eq('modifier la copie ne change pas le modèle enregistré', original.formula.slots[0].choices[0].extra, 0);
+  })(),
 ];
 
 Promise.all(suite).then(() => {
