@@ -46,27 +46,82 @@
   }
 
   function getSellerBusiness(venue) {
+    let raw = {};
     try {
       if (window.KiwiReceipt && typeof window.KiwiReceipt.business === 'function') {
         const b = window.KiwiReceipt.business(venue);
-        if (b && typeof b === 'object') return JSON.parse(JSON.stringify(b));
+        if (b && typeof b === 'object') raw = JSON.parse(JSON.stringify(b));
       }
     } catch (_) {}
+
+    let vd = {};
     try {
-      const vd = window.KiwiVenue?.getCurrentVenueData?.() || {};
-      return {
-        name: vd.name || window.KiwiMe?.business || 'Kiwi Commerce',
-        address: vd.address || '',
-        city: vd.city || 'Maroc',
-        phone: vd.phone || '',
-        ice: vd.ice || '',
-        fiscal: vd.if || '',
-        rc: vd.rc || '',
-        patente: vd.patente || '',
-      };
-    } catch (_) {
-      return { name: 'Kiwi Commerce', city: 'Maroc' };
+      vd = window.KiwiVenue?.getCurrentVenueData?.() || {};
+    } catch (_) {}
+
+    let cfg = {};
+    try {
+      if (window.KiwiReceipt && typeof window.KiwiReceipt.config === 'function') {
+        cfg = window.KiwiReceipt.config(venue) || {};
+      }
+    } catch (_) {}
+
+    const rawLegal = (raw.legal && typeof raw.legal === 'object') ? raw.legal : {};
+    const vdLegal = (vd.legal && typeof vd.legal === 'object') ? vd.legal : {};
+    const legal = Object.assign({}, vdLegal, rawLegal);
+    const activeVid = venue || (window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue()) || '';
+
+    // Legacy localStorage fallback if legal fields were saved in old slot
+    if (!legal.ice && activeVid) {
+      try {
+        ['ice', 'fiscal', 'rc', 'patente', 'address', 'city', 'phone', 'cnss', 'email', 'legalName'].forEach((k) => {
+          const v = localStorage.getItem('kiwiSet:biz:' + activeVid + ':' + k);
+          if (v && !legal[k]) legal[k] = v;
+        });
+      } catch (_) {}
     }
+
+    const name = raw.name || raw.tradeName || vd.fullDisplay || vd.name || window.KiwiMe?.business || 'Kiwi Commerce';
+    const legalName = legal.legalName || raw.legalName || vd.legalName || name;
+    const tradeName = raw.tradeName || vd.tradeName || '';
+    const address = legal.address || raw.address || vd.address || '';
+    const city = legal.city || raw.city || vd.city || 'Maroc';
+    const phone = legal.phone || raw.phone || vd.phone || '';
+    const ice = legal.ice || raw.ice || vd.ice || '';
+    const fiscal = legal.fiscal || legal.if || raw.fiscal || raw.if || vd.fiscal || vd.if || '';
+    const rc = legal.rc || raw.rc || vd.rc || '';
+    const patente = legal.patente || raw.patente || vd.patente || '';
+    const cnss = legal.cnss || raw.cnss || vd.cnss || '';
+    const email = legal.email || raw.email || vd.email || '';
+    const logo = raw.logo || cfg?.look?.logo || vd.logo || vd.profileInfo?.logo || '';
+
+    return {
+      name,
+      legalName,
+      tradeName,
+      address,
+      city,
+      phone,
+      ice,
+      fiscal,
+      rc,
+      patente,
+      cnss,
+      email,
+      logo,
+      legal: {
+        legalName,
+        address,
+        city,
+        phone,
+        ice,
+        fiscal,
+        rc,
+        patente,
+        cnss,
+        email,
+      },
+    };
   }
 
   function getTvaRate(venue) {
@@ -117,6 +172,12 @@
 
     const venue = opts.venue || null;
     const seller = opts.seller ? JSON.parse(JSON.stringify(opts.seller)) : getSellerBusiness(venue);
+    if (seller.legal && typeof seller.legal === 'object') {
+      ['ice', 'fiscal', 'rc', 'patente', 'cnss', 'address', 'city', 'phone', 'email', 'legalName'].forEach((k) => {
+        if (!seller[k] && seller.legal[k]) seller[k] = seller.legal[k];
+      });
+    }
+
     const rate = opts.tvaRate != null ? Number(opts.tvaRate) : getTvaRate(venue);
     const tvaRate = Number.isFinite(rate) && rate >= 0 ? rate : 0;
 
@@ -159,7 +220,8 @@
       }];
     }
 
-    const missingICE = !seller.ice || String(seller.ice).trim().replace(/\D/g, '').length < 9;
+    const sellerIceStr = String(seller.ice || seller.legal?.ice || '').trim().replace(/\D/g, '');
+    const missingICE = !sellerIceStr || sellerIceStr.length < 9;
 
     return {
       number: opts.number || null,
@@ -193,25 +255,39 @@
     if (!doc) return '';
     const num = doc.number || 'Facture';
     const biz = doc.seller?.name || 'Kiwi Commerce';
+    const legalName = doc.seller?.legalName || biz;
+    const tradeName = doc.seller?.tradeName || '';
     const lines = doc.lines || [];
     const cust = doc.customer || null;
     const totals = doc.totals || { ht: 0, tva: 0, ttc: 0 };
     const tvaRate = doc.tvaRate || 0;
 
-    const sellerLegal = [
-      doc.seller?.address,
-      doc.seller?.city,
-      doc.seller?.phone ? `Tél : ${doc.seller.phone}` : '',
-      doc.seller?.ice ? `ICE : ${doc.seller.ice}` : '',
-      doc.seller?.fiscal ? `IF : ${doc.seller.fiscal}` : '',
-      doc.seller?.rc ? `RC : ${doc.seller.rc}` : '',
-      doc.seller?.patente ? `Patente : ${doc.seller.patente}` : '',
-    ].filter(Boolean).map(esc).join('<br>');
+    const sellerLogo = doc.seller?.logo || '';
+    const initials = (String(biz).replace(/\s*·.*$/, '').trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('') || 'K').toUpperCase();
+
+    const sellerAddress = [doc.seller?.address, doc.seller?.city].filter(Boolean).map(esc).join(', ');
+    const sellerMeta = [
+      sellerAddress,
+      doc.seller?.phone ? `Tél : ${esc(doc.seller.phone)}` : '',
+      doc.seller?.email ? `Email : ${esc(doc.seller.email)}` : '',
+    ].filter(Boolean).join(' · ');
+
+    const sellerLegalBlock = [
+      `<strong>${esc(legalName)}</strong>`,
+      tradeName && tradeName !== legalName ? `<em>Enseigne : ${esc(tradeName)}</em>` : '',
+      sellerAddress ? `${sellerAddress}` : '',
+      doc.seller?.phone ? `Tél : ${esc(doc.seller.phone)}` : '',
+      doc.seller?.email ? `Email : ${esc(doc.seller.email)}` : '',
+      doc.seller?.ice ? `<strong>ICE :</strong> ${esc(doc.seller.ice)}` : '',
+      doc.seller?.fiscal ? `<strong>IF :</strong> ${esc(doc.seller.fiscal)}` : '',
+      doc.seller?.rc ? `<strong>RC :</strong> ${esc(doc.seller.rc)}` : '',
+      doc.seller?.patente ? `<strong>Patente :</strong> ${esc(doc.seller.patente)}` : '',
+    ].filter(Boolean).join('<br>');
 
     const customerLegal = cust ? [
       `<strong>${esc(cust.name || 'Client')}</strong>`,
-      cust.ice ? `ICE : ${esc(cust.ice)}` : '',
-      cust.if ? `IF : ${esc(cust.if)}` : '',
+      cust.ice ? `<strong>ICE :</strong> ${esc(cust.ice)}` : '',
+      cust.if ? `<strong>IF :</strong> ${esc(cust.if)}` : '',
     ].filter(Boolean).join('<br>') : '<strong>Client de passage</strong><br>Vente au comptoir';
 
     const iceBanner = doc.missingICE ? `
@@ -230,10 +306,13 @@
     @page { size: A4; margin: 16mm 18mm; }
     * { box-sizing: border-box; }
     body { font: 12.5px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #1e293b; margin: 0; padding: 0; background: #fff; line-height: 1.45; }
-    .top { display: flex; justify-content: space-between; border-bottom: 2.5px solid #087653; padding-bottom: 18px; }
-    .logo img { display: block; height: 32px; width: auto; }
-    .biz-name { font-size: 16px; font-weight: 700; color: #0f172a; margin-top: 6px; }
-    .meta { color: #64748b; font-size: 11.5px; line-height: 1.5; margin-top: 4px; }
+    .top { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2.5px solid #087653; padding-bottom: 18px; }
+    .brand-wrap { max-width: 58%; }
+    .seller-logo { display: block; max-height: 48px; max-width: 190px; object-fit: contain; border-radius: 4px; margin-bottom: 5px; }
+    .logo-fallback { display: inline-flex; align-items: center; margin-bottom: 5px; }
+    .brand-initials { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 8px; background: #f0fdf4; color: #087653; font-weight: 800; font-size: 13.5px; border: 1.5px solid #bbf7d0; }
+    .biz-name { font-size: 17px; font-weight: 700; color: #0f172a; margin-top: 4px; letter-spacing: -0.01em; }
+    .meta { color: #64748b; font-size: 11px; line-height: 1.45; margin-top: 3px; }
     .doc-head { text-align: right; }
     .doc-title { font-size: 24px; font-weight: 800; color: #087653; margin: 0 0 4px; letter-spacing: -0.02em; }
     .doc-meta { color: #475569; font-size: 12px; line-height: 1.5; }
@@ -250,15 +329,23 @@
     .totals { width: 260px; }
     .tot-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 12px; color: #475569; }
     .tot-row.grand { border-top: 2px solid #087653; margin-top: 6px; padding-top: 10px; font-size: 16px; font-weight: 800; color: #087653; }
-    .footer { position: fixed; bottom: 0; left: 0; right: 0; text-align: center; color: #94a3b8; font-size: 10px; border-top: 1px solid #f1f5f9; padding-top: 8px; }
+    .footer { position: fixed; bottom: 0; left: 0; right: 0; display: flex; justify-content: space-between; align-items: center; color: #94a3b8; font-size: 9.5px; border-top: 1px solid #e2e8f0; padding-top: 8px; background: #fff; }
+    .footer-legal { max-width: 72%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .footer-powered { display: inline-flex; align-items: center; gap: 5px; color: #64748b; font-size: 9.5px; font-weight: 500; }
+    .footer-powered .pw-txt { color: #94a3b8; font-size: 9px; letter-spacing: 0.03em; text-transform: uppercase; }
+    .footer-powered .pw-logo { height: 12.5px; width: auto; display: inline-block; vertical-align: middle; }
   </style>
 </head>
 <body>
   <div class="top">
-    <div>
-      <div class="logo">${BRAND_LOGO}</div>
+    <div class="brand-wrap">
+      ${sellerLogo ? `
+        <div class="logo"><img src="${esc(sellerLogo)}" alt="${esc(biz)}" class="seller-logo"></div>
+      ` : `
+        <div class="logo-fallback"><span class="brand-initials">${esc(initials)}</span></div>
+      `}
       <div class="biz-name">${esc(biz)}</div>
-      <div class="meta">${sellerLegal}</div>
+      ${sellerMeta ? `<div class="meta">${sellerMeta}</div>` : ''}
     </div>
     <div class="doc-head">
       <h1 class="doc-title">${esc(num)}</h1>
@@ -277,8 +364,7 @@
     <div>
       <div class="label">Émetteur</div>
       <div class="party-body">
-        <strong>${esc(biz)}</strong><br>
-        ${doc.seller?.city || 'Maroc'}
+        ${sellerLegalBlock || `<strong>${esc(biz)}</strong><br>${doc.seller?.city || 'Maroc'}`}
       </div>
     </div>
     <div>
@@ -322,7 +408,13 @@
   </div>
 
   <div class="footer">
-    ${esc(biz)} · Facture ${esc(num)} · Document généré le ${esc(fmtDate(Date.now()))}
+    <div class="footer-legal">
+      ${esc(biz)}${doc.seller?.ice ? ` · ICE : ${esc(doc.seller.ice)}` : ''} · Facture ${esc(num)} · Document généré le ${esc(fmtDate(Date.now()))}
+    </div>
+    <div class="footer-powered">
+      <span class="pw-txt">Propulsé par</span>
+      <img src="assets/kiwi-newlogo.svg" alt="Kiwi POS" class="pw-logo">
+    </div>
   </div>
 
   <script>
@@ -527,5 +619,6 @@
     generate,
     getCachedInvoices,
     promptCustomer,
+    getSellerBusiness,
   };
 })();

@@ -343,7 +343,9 @@
       const doc = {
         number: String(inv.number || (inv.id ? ('#' + inv.id) : 'Facture')),
         issuedTs: inv.issueDate ? new Date(inv.issueDate + 'T12:00:00').getTime() : Date.now(),
-        seller: { name: businessName(), city: 'Maroc' },
+        seller: (window.KiwiInvoice && typeof window.KiwiInvoice.getSellerBusiness === 'function')
+          ? window.KiwiInvoice.getSellerBusiness()
+          : { name: businessName(), city: 'Maroc' },
         customer: { name: inv.customer || '', ice: inv.ice || '', if: inv.if || '' },
         lines: (inv.items || []).map(x => ({
           name: x.description || 'Article',

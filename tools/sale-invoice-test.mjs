@@ -111,10 +111,35 @@ ok(docNoIce.missingICE === true, 'missingICE flag set when seller has no ICE');
 const htmlNoIce = KiwiInvoice.html(docNoIce);
 ok(htmlNoIce.includes('Mention obligatoire manquante') && htmlNoIce.includes('ICE'), 'HTML contains visible ICE alert banner');
 
-const docWithIce = KiwiInvoice.build(mockSale1, { seller: { name: 'Boutique Conforme', ice: '001234567000089' } });
+const docWithIce = KiwiInvoice.build(mockSale1, { seller: { name: 'Boutique Conforme', ice: '001234567000089', logo: 'data:image/png;base64,mocklogo' } });
 ok(docWithIce.missingICE === false, 'missingICE is false when seller has valid ICE');
 const htmlWithIce = KiwiInvoice.html(docWithIce);
 ok(!htmlWithIce.includes('<div class="ice-alert">'), 'HTML omits ICE alert div when ICE is valid');
+ok(htmlWithIce.includes('class="seller-logo"'), 'HTML renders store custom logo when provided');
+ok(htmlWithIce.includes('class="footer-powered"'), 'HTML includes pretty powered by kiwi badge in footer');
+ok(htmlWithIce.includes('Propulsé par'), 'HTML includes Propulsé par text');
+
+// Test 5b: Nested legal object in seller (from KiwiReceipt.business) resolves ice properly
+const docWithNestedLegal = KiwiInvoice.build(mockSale1, {
+  seller: {
+    name: 'Amira Cafe',
+    logo: 'data:image/png;base64,amiralogo',
+    legal: {
+      ice: '530013021033445',
+      fiscal: '1234567',
+      rc: 'Casablanca 12345',
+      patente: '987654',
+      address: '10 Rue Hassan II',
+      city: 'Casablanca',
+    }
+  }
+});
+ok(docWithNestedLegal.missingICE === false, 'missingICE is false when seller has nested legal.ice');
+ok(docWithNestedLegal.seller.ice === '530013021033445', 'seller.ice is populated from legal.ice');
+const htmlNested = KiwiInvoice.html(docWithNestedLegal);
+ok(!htmlNested.includes('<div class="ice-alert">'), 'HTML omits alert banner when legal.ice is provided');
+ok(htmlNested.includes('ICE :</strong> 530013021033445') || htmlNested.includes('ICE : 530013021033445'), 'HTML displays the 15-digit ICE');
+ok(htmlNested.includes('IF :</strong> 1234567') || htmlNested.includes('IF : 1234567'), 'HTML displays the IF');
 
 // Test 6: open('pdf') pose document.title = number
 let lastWin = null;
@@ -368,7 +393,7 @@ ok(posReprintSource.includes('data-kx-rp-invoice'), 'pos-reprint.js contains dat
 ok(posReprintSource.includes('KiwiInvoice.generate'), 'pos-reprint.js invokes KiwiInvoice.generate on invoice button click');
 
 // ── 7. Hard Count Pinning ───────────────────────────────────────────────────
-const EXPECTED_COUNT = 64;
+const EXPECTED_COUNT = 72;
 ok(passed + 1 === EXPECTED_COUNT, `exact control count verified (${passed + 1}/${EXPECTED_COUNT})`);
 
 console.log(`\n✓ ${passed} controls green (${failures.length} failure(s))`);
