@@ -23,7 +23,7 @@ import { parseModelResponse } from './invoice.js';
 /* Le même modèle vision que le scan de cartes — vérifié sur photos réelles. */
 export const VISION_MODEL = '@cf/meta/llama-3.2-11b-vision-instruct';
 
-const MAX_TOKENS = 1200;
+const MAX_TOKENS = 2200;
 const TEMPERATURE = 0.1;
 const DAILY_CAP = 20;
 const MAX_IMAGE_DATAURL = 2_600_000; // ~1,9 Mo binaire — le client réduit avant envoi
@@ -170,7 +170,12 @@ export async function onRequestPost(context) {
   const parsed = parseModelResponse(aiRes);
   const validated = parsed ? validateSalle(parsed) : null;
   if (!validated) {
-    return json({ ok: false, reason: 'unparsed' }, 200, { 'x-kiwi-ai-model': VISION_MODEL });
+    /* Le début brut de la réponse du modèle, borné, rendu au commerçant
+     * authentifié qui vient de l'engendrer — c'est SA photo et SA réponse.
+     * Sans lui, « illisible » est indiagnosticable depuis le navigateur. */
+    let raw = '';
+    try { raw = (typeof aiRes === 'string' ? aiRes : JSON.stringify(aiRes)).slice(0, 240); } catch (_) {}
+    return json({ ok: false, reason: 'unparsed', detail: raw }, 200, { 'x-kiwi-ai-model': VISION_MODEL });
   }
   if (validated.error) {
     return json({ ok: false, reason: 'not-a-room' }, 200, { 'x-kiwi-ai-model': VISION_MODEL });
