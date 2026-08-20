@@ -472,6 +472,26 @@ export async function onRequestPost(context) {
 
   const data = shop ? sanitizeShop(raw) : sanitizeMenu(raw);
 
+  /* Restaurant menus use optimistic concurrency. A dashboard must publish the
+   * exact revision it read; otherwise a stale God Mode tab could re-save its
+   * old localStorage copy and resurrect sections deleted elsewhere. Boutique
+   * stock has a separate publisher and keeps its existing contract. */
+  let currentMenu = null;
+  let currentUpdatedTs = 0;
+  if (!shop) {
+    try {
+      const row = await env.DB.prepare('SELECT type, data, updated_ts FROM menus WHERE merchant = ?').bind(merchant).first();
+      if (row) {
+        currentUpdatedTs = +row.updated_ts || 0;
+        if (row.data && !isShop(row.type)) currentMenu = sanitizeMenu(JSON.parse(row.data));
+      }
+    } catch (_) { return json({ error: 'read-before-write-failed' }, 500); }
+    const expected = +(body && body.expectedUpdatedTs) || 0;
+    if (currentUpdatedTs && expected !== currentUpdatedTs) {
+      return json({ error: 'stale-menu', merchant, data: currentMenu, updatedTs: currentUpdatedTs }, 409);
+    }
+  }
+
   /* ═══ NE JAMAIS EFFACER UNE CARTE PUBLIÉE PAR DU VIDE ═══════════════════════
    * Le tableau de bord republie sa carte au démarrage. Tant que cette carte ne
    * vivait que dans le localStorage, ouvrir le tableau de bord dans un
@@ -488,11 +508,10 @@ export async function onRequestPost(context) {
    * et seul un client qui a d'abord RELU la carte du serveur l'affirme. */
   const wasEmpty = shop ? shopEmpty(data) : menuEmpty(data);
   if (wasEmpty) {
-    let cur = null;
-    let currentUpdatedTs = 0;
+    let cur = !shop ? currentMenu : null;
     try {
-      const row = await env.DB.prepare('SELECT type, data, updated_ts FROM menus WHERE merchant = ?').bind(merchant).first();
-      if (row && row.data) {
+      const row = shop ? await env.DB.prepare('SELECT type, data, updated_ts FROM menus WHERE merchant = ?').bind(merchant).first() : null;
+      if (row && row.data && shop) {
         currentUpdatedTs = +row.updated_ts || 0;
         const parsed = JSON.parse(row.data);
         cur = isShop(row.type) ? sanitizeShop(parsed) : sanitizeMenu(parsed);

@@ -88,6 +88,7 @@ function stubDom() {
  * repli qui décide où atterrit une carte lue sur le réseau. */
 function stubStore(world) {
   const mem = Object.create(null);
+  Object.keys(world.initialMem || {}).forEach((k) => { mem[k] = world.initialMem[k]; });
   const blank = () => ({ seq: 0, cats: [], items: [], stations: [], kitchenId: '' });
   const resolve = (vid) => vid || world.currentVid;
   const empty = (d) => !((d.cats || []).length || (d.items || []).length);
@@ -125,6 +126,7 @@ function makeWorld(venues, opts) {
     calls: [],            // toutes les requêtes réseau
     pages: [],            // tout ce que le module a rendu
     serverMenus: opts.serverMenus || {},
+    initialMem: opts.localMenus || {},
     orderProOn: opts.orderProOn !== false,
     configLagMs: opts.configLagMs == null ? 250 : opts.configLagMs,
     mem: null,
@@ -242,6 +244,22 @@ const suite = [
     ok('passer au café va lire SA carte', gets.some((c) => c.url.indexOf('merchant=amira-cafe') !== -1));
     eq('la carte atterrit chez le café', itemsOf(w, 'v-cf'), 1);
     eq('la boutique n’a pas été touchée', itemsOf(w, 'v-bq'), 0);
+  })(),
+
+  /* A section absent from the server is deleted, not "missing". A stale local
+   * copy must therefore be replaced, never unioned back into the carte. */
+  (async () => {
+    const server = CARTE('canonique');
+    const stale = CARTE('ancien');
+    stale.cats.push({ id:'cat_old', name:'Section supprimée', sub:[] });
+    stale.items.push({ id:'it_old', name:'Ancien plat', price:20, catId:'cat_old', avail:true });
+    const w = makeWorld([CAFE], {
+      serverMenus: { 'amira-cafe': server }, localMenus: { 'v-cf': stale },
+    });
+    load(w);
+    await sleep(1600);
+    eq('la lecture serveur retire une section supprimée restée dans ce navigateur', w.mem['v-cf'].cats.length, 1);
+    eq('les anciens plats de cette section ne sont pas ressuscités', w.mem['v-cf'].items.length, 1);
   })(),
 
   /* 2 — Le court-circuit de la boutique ne doit pas verrouiller les autres.

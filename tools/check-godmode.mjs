@@ -298,6 +298,16 @@ G('1b · Carte client — God Mode sauvegarde uniquement sa portée confirmée')
   ok(saved.status === 200 && saved.json.ok && saved.json.items === 1,
     'le dashboard God Mode ciblé publie la carte du client', JSON.stringify(saved.json));
 
+  const staleData = {
+    cats: data.cats.concat([{ id:'cat_old', name:'Section supprimée', sub:[] }]),
+    items: data.items, stations:[], opts:[], kitchenId:'',
+  };
+  const stale = await call(R.menu, 'POST', '/api/menu', {
+    referer: ref, body: { merchant:'amira-cafe', name:'Amira Café', type:'cafe', data:staleData },
+  });
+  ok(stale.status === 409 && stale.json.error === 'stale-menu' && stale.json.data.cats.length === 1,
+    'un ancien onglet God Mode ne peut pas ressusciter une section supprimée');
+
   const read = await call(R.menu, 'GET', '/api/menu?mine=1&merchant=amira-cafe', { referer: ref });
   ok(read.status === 200 && read.json.menu.items[0].name === 'Brookie' && read.json.menu.cats[0].sub[0].name === 'Cookies',
     'un autre navigateur relit articles et sous-catégories depuis le serveur');

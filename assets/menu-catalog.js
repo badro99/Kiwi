@@ -1921,9 +1921,12 @@
    *  2. NE RIEN PERDRE. Panne, hors ligne, 503, session expirée : on avale, la
    *     copie locale reste la vérité de travail, on retente à la modification
    *     suivante. Le tableau de bord ne bloque jamais sur le réseau.
-   *  3. FUSIONNER, PAS ÉCRASER. Union par id : ce que CET appareil affiche
-   *     l'emporte sur un id connu des deux côtés, et tout ce que l'autre a
-   *     ajouté vient s'ajouter. Rien ne disparaît.
+   *  3. LE SERVEUR FAIT FOI APRÈS LA PREMIÈRE PUBLICATION. Une union par id ne
+   *     sait pas distinguer « absent car supprimé » de « absent car pas encore
+   *     téléchargé ». Elle ressuscitait donc les sections supprimées dès qu'un
+   *     ancien onglet God Mode se réveillait. Une carte déjà publiée est adoptée
+   *     telle quelle ; une copie locale n'est conservée que si le serveur n'a
+   *     encore aucune carte.
    *
    * Rien ici ne connaît un magasin en particulier : l'identité est
    * slugMerchant(nom de l'établissement) côté serveur, résolue depuis la
@@ -2066,8 +2069,17 @@
     return healSeq(out);
   }
 
-  /* Relire la carte du compte. Adoption pure si ce navigateur est vierge (le cas
-   * qui compte : téléphone, iPad, fenêtre privée), fusion sinon. */
+  const applyingServer = Object.create(null);
+  function adoptServerMenu(raw, vid) {
+    const data = healSeq({ seq: 0, cats: raw.cats || [], items: raw.items || [], stations: raw.stations || [], kitchenId: raw.kitchenId || '', opts: raw.opts || [] });
+    applyingServer[vid || '·'] = true;
+    try { store.set(data, vid); }
+    finally { delete applyingServer[vid || '·']; }
+    return data;
+  }
+
+  /* Relire la carte du compte. Une carte publiée est adoptée telle quelle ; si
+   * le serveur est vide ou indisponible, la copie locale reste intacte. */
   /* Pour DÉCIDER D'ALLER LIRE, c'est le métier de l'établissement affiché qui
    * tranche, pas celui que le serveur a renvoyé pour le magasin précédent : au
    * moment d'un changement d'établissement la config du nouveau n'est pas
@@ -2109,10 +2121,11 @@
         c.read = true;                                       // à partir d'ici, publier est sûr
         const theirs = j.menu;
         if (!theirs || !((theirs.items && theirs.items.length) || (theirs.cats && theirs.cats.length))) return false;
-        const mine = store.get(vid);
-        const empty = !((mine.cats && mine.cats.length) || (mine.items && mine.items.length));
-        store.set(empty ? healSeq({ seq: 0, cats: theirs.cats || [], items: theirs.items || [], stations: theirs.stations || [], kitchenId: theirs.kitchenId || '', opts: theirs.opts || [] })
-                        : mergeMenus(mine, theirs), vid);
+        /* A published carte is the canonical document. Do not union it with an
+         * older browser copy: an id present only locally may be a section that
+         * another manager deliberately deleted. The server-empty case returned
+         * above is the only recovery path where local work remains untouched. */
+        adoptServerMenu(theirs, vid);
         /* Ne repeindre que si on est TOUJOURS sur ce magasin, sinon la carte du
          * café s'afficherait par-dessus la page de la boutique — ET seulement si
          * le patron regarde DÉJÀ la page Menu. render() passe par
@@ -2138,13 +2151,14 @@
     const KV = window.KiwiVenue;
     const vd = (KV && KV.getVenueData && KV.getVenueData(vid)) ||
                (KV && KV.getCurrentVenueData && KV.getCurrentVenueData()) || {};
+    const targetVid = vid || vd.id;
     if (isBoutiqueVenue(vd)) return;              // stock is published by orderpro-publish.js
     // RÈGLE 1 — rien ne part tant qu'on n'a pas lu. Sans ce verrou, un navigateur
     // neuf publiait sa carte vide par-dessus la vraie, quinze cents millisecondes
     // après l'ouverture du tableau de bord.
     const c = cloudFor(storeSlug());
     if (!c.read) { if (c.tried++ < 3) pull().then(() => { if (c.read) publish(vid); }); return; }
-    const data = store.get(vid);
+    const data = store.get(targetVid);
     const slug = c.merchant || storeSlug();
     const empty = !((data.cats && data.cats.length) || (data.items && data.items.length));
     /* Le simple fait d'avoir relu le serveur n'autorise jamais un effacement.
@@ -2173,12 +2187,20 @@
           // On a relu le serveur : une carte vide ici est une carte vidée exprès,
           // pas un navigateur qui n'a rien trouvé. Le serveur refuse l'inverse.
           allowEmpty: empty && c.explicitEmpty,
-          expectedUpdatedTs: empty && c.explicitEmpty ? c.updatedTs : undefined,
+          // Every restaurant write is compare-and-swap. An old God Mode tab
+          // cannot put back sections after another browser deleted them.
+          expectedUpdatedTs: c.updatedTs || 0,
         }),
       }).then(function (r) {
         if (r && r.ok) return r.json();
         return (r && r.json ? r.json().catch(function () { return null; }) : Promise.resolve(null))
           .then(function (err) {
+            /* A newer revision won. Replace this stale browser copy instead of
+             * merging it and immediately attempting to resurrect old ids. */
+            if (r && r.status === 409 && err && err.error === 'stale-menu' && err.data) {
+              c.updatedTs = +err.updatedTs || c.updatedTs;
+              adoptServerMenu(err.data, targetVid);
+            }
             if (window.Kiwi?.toast) window.Kiwi.toast('Échec de synchronisation de la carte', {
               type: 'warn', force: true, desc: (err && err.error) || 'Publication refusée',
             });
@@ -2211,7 +2233,7 @@
       if (document.body.classList.contains('page-menu')) {
         try { window.KiwiVenue?.refreshMenu?.(); } catch (_) {}
       }
-      schedulePublish(vid);
+      if (!applyingServer[vid || '·']) schedulePublish(vid);
     });
     /* Un changement d'horaires doit repartir vers la page client tout de suite :
      * un commerçant qui déclare sa fermeture de l'Aïd le matin ne doit pas voir
@@ -2227,7 +2249,12 @@
     // qui autorise la publication (voir la règle 1 dans publish()).
     if (isRealSession()) {
       setTimeout(function () {
-        pull().then(function () { try { publish(); } catch (_) {} });
+        pull().then(function (serverAdopted) {
+          /* A published server menu was only hydrated, so writing it straight
+           * back creates a needless new revision. If the server had no menu,
+           * publish the local recovery copy as before. */
+          if (!serverAdopted) { try { publish(); } catch (_) {} }
+        });
       }, 1200);
       // Revenir sur l'onglet après avoir modifié la carte sur un autre appareil
       // doit suffire à la voir arriver — sans marteler le réseau.
