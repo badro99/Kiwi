@@ -139,8 +139,13 @@ export async function onRequestPost(context) {
   try {
     const r = await runVision(env, dataUrl);
     aiRes = r.result;
-  } catch (_) {
-    return json({ ok: false, error: 'model' }, 502);
+  } catch (e) {
+    /* Jamais un statut 5xx ici : l'edge Cloudflare REMPLACE un 502 rendu par
+     * la Function par sa propre page HTML, et le navigateur ne voit jamais
+     * notre JSON. Un 200 { ok:false } passe intact. Le détail est le message
+     * d'erreur du binding AI (jamais le contenu de la photo). */
+    const detail = String((e && e.message) || e || '').slice(0, 200);
+    return json({ ok: false, reason: 'model', detail }, 200, { 'x-kiwi-ai-model': VISION_MODEL });
   }
 
   const parsed = parseModelResponse(aiRes);
