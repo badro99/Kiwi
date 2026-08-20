@@ -4443,7 +4443,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
   <script src="assets/staff-roles.js" defer></script>
   <!-- Real employee identity, planning, floor and attendance bridge. -->
   <script src="assets/pwa-update.js?v=358" defer></script>
-  <script src="assets/employee-live.js?v=384" defer></script>
+  <script src="assets/employee-live.js?v=385" defer></script>
   <script src="assets/employee-planning.js?v=6" defer></script>
   <link rel="stylesheet" href="assets/employee-trade-shell.css?v=2">
   <script src="assets/employee-trade-shell.js?v=2" defer></script>
@@ -5030,7 +5030,8 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     /* Build the chosen-options array (and €) from a draft selection. */
     function optsFromSel(itemId, sel) {
       const opts = [];
-      (itemOptions[itemId] || []).forEach(g => {
+      const formulaOptionIds = typeof itemOptions !== 'undefined' ? (itemOptions[itemId] || []) : [];
+      formulaOptionIds.forEach(g => {
         const def = optionGroups[g], s = sel[g];
         if (def.kind === 'radio' && s) {
           const v = def.vals.find(v => v.n === s);
@@ -8247,7 +8248,14 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         activeSlotId: firstIncomplete ? firstIncomplete.id : (slots[0] && slots[0].id),
         collapsedSlots: {},
         units,
+        optSel: {},
       };
+
+      const formulaOptionIds = typeof itemOptions !== 'undefined' ? (itemOptions[itemId] || []) : [];
+      formulaOptionIds.forEach(g => {
+        const kind = optionGroups[g].kind;
+        fmlDraft.optSel[g] = kind === 'multi' ? new Set() : (kind === 'toggle' ? false : null);
+      });
 
       slots.forEach(s => {
         if (s.choices && s.choices.length === 1) {
@@ -8343,15 +8351,29 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       });
 
       const allSatisfied = isFmlDraftSatisfied();
+      const optionIds = typeof itemOptions !== 'undefined' ? (itemOptions[fmlDraft.itemId] || []) : [];
+      const optionsSatisfied = optionIds.every(g => {
+        if (!isReq(optionGroups[g])) return true;
+        const sel = fmlDraft.optSel[g];
+        return sel instanceof Set ? sel.size > 0 : sel != null && sel !== false;
+      });
+      const optionsHTML = optionIds.map(g => {
+        const def=optionGroups[g], sel=fmlDraft.optSel[g], required=isReq(def);
+        const pills=def.vals.map(v=>{const on=def.kind==='multi'?sel.has(v.n):def.kind==='toggle'?sel===true:sel===v.n;return `<button class="opt-pill ${on?'on':''}" data-fml-opt-group="${g}" data-fml-opt-val="${esc(v.n)}">${v.emoji?`${esc(v.emoji)} `:''}${esc(v.n)}${v.p?`<span class="opt-pr">+${v.p}</span>`:''}</button>`;}).join('');
+        return `<div class="opt-group ${showMissing&&required&&!optionsSatisfied?'missing':''}"><div class="opt-group-head"><span class="opt-group-name">${esc(def.name)}</span><span class="opt-group-tag ${required?'req':'opt'}">${required?'Obligatoire':'Optionnel'}</span></div><div class="opt-vals">${pills}</div></div>`;
+      }).join('');
+      const selectedOpts = optsFromSel(fmlDraft.itemId, fmlDraft.optSel);
+      grandTotal += optsExtra(selectedOpts) * fmlDraft.totalUnits;
 
       $('#formula-modal-body').innerHTML = `
         <h3 class="modal-title">${esc(item.name)}</h3>
-        <p class="modal-subtle">${item.price} MAD · Choisissez les composants de la formule</p>
+        <p class="modal-subtle">${item.price} MAD · Choisissez la formule et ses options</p>
         ${unitsBarHTML}
         ${slotsHTML}
+        ${optionsHTML}
         <div class="fml-foot">
           <button type="button" class="td-btn ghost" id="fml-cancel">Annuler</button>
-          <button type="button" class="td-btn primary" id="fml-confirm" ${allSatisfied ? '' : 'disabled'}>
+          <button type="button" class="td-btn primary" id="fml-confirm" ${allSatisfied && optionsSatisfied ? '' : 'disabled'}>
             Ajouter · ${fmtMAD(grandTotal)}
           </button>
         </div>`;
@@ -8368,6 +8390,11 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       if (!item || !item.formula) return;
       const slots = item.formula.slots;
       const tableId = menuContextId;
+      const opts = typeof optsFromSel === 'function' ? optsFromSel(fmlDraft.itemId, fmlDraft.optSel) : [];
+      const formulaOptionIds = typeof itemOptions !== 'undefined' ? (itemOptions[fmlDraft.itemId] || []) : [];
+      if (formulaOptionIds.some(g => isReq(optionGroups[g]) && (fmlDraft.optSel[g] instanceof Set ? !fmlDraft.optSel[g].size : fmlDraft.optSel[g] == null || fmlDraft.optSel[g] === false))) {
+        renderFormulaSheet(true); toast('Choisissez les options obligatoires'); return;
+      }
 
       if (!tableOrders[tableId]) tableOrders[tableId] = [];
 
@@ -8382,14 +8409,16 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
           id: item.id,
           name: item.name,
           kind: 'formula',
-          price: item.price + unitExtra,
+          price: item.price + unitExtra + (typeof optsExtra === 'function' ? optsExtra(opts) : 0),
           basePrice: item.price,
-          unitPrice: item.price + unitExtra,
+          unitPrice: item.price + unitExtra + (typeof optsExtra === 'function' ? optsExtra(opts) : 0),
           qty: 1,
           sentQty: 0,
           formulaUid,
           formulaName: item.name,
           note: '',
+          opts: opts.map(o => ({ ...o })),
+          optsSig: typeof optsSig === 'function' ? optsSig(opts) : '',
           sourceLocal: true,
         };
         tableOrders[tableId].push(parentLine);
@@ -8440,6 +8469,14 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       if (e.target.closest('#fml-confirm')) {
         confirmFormula();
         return;
+      }
+      const optPill = e.target.closest('[data-fml-opt-group]');
+      if (optPill && fmlDraft) {
+        const g=optPill.dataset.fmlOptGroup, val=optPill.dataset.fmlOptVal, def=optionGroups[g];
+        if(def.kind==='multi'){const s=fmlDraft.optSel[g];s.has(val)?s.delete(val):s.add(val);}
+        else if(def.kind==='toggle') fmlDraft.optSel[g]=!fmlDraft.optSel[g];
+        else fmlDraft.optSel[g]=fmlDraft.optSel[g]===val?null:val;
+        renderFormulaSheet(false); return;
       }
       const unitBtn = e.target.closest('[data-fml-unit]');
       if (unitBtn && fmlDraft) {

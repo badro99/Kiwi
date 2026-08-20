@@ -4709,7 +4709,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=358" defer></script>
-  <script src="assets/caisse-pwa.js?v=385" defer></script>
+  <script src="assets/caisse-pwa.js?v=386" defer></script>
   <script src="assets/live-link.js?v=12" defer></script>
   <!-- The staff-role catalogue — says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -8503,19 +8503,27 @@
     function openCaisseFormula(item, onChosen) {
       const slots = item.formula.slots.filter(s => s && Array.isArray(s.choices) && s.choices.length);
       if (!slots.length) return;
+      const groups = itemOptGroups(item);
       if (!optVeil) { optVeil = document.createElement('div'); optVeil.className = 'cloture-veil opt-veil'; document.body.appendChild(optVeil); }
       const picked = Object.fromEntries(slots.map(s => [s.id, []]));
+      const optPicked = Object.fromEntries(groups.map(g => [g.id, []]));
       const choiceItem = c => menuItems.find(m => String(m.id) === String(c.itemId));
       function paint() {
-        const missing = slots.filter(s => picked[s.id].length < Math.max(0, +s.min || 0));
-        const extra = slots.reduce((n, s) => n + picked[s.id].reduce((x, i) => x + (+s.choices[i].extra || 0), 0), 0);
-        optVeil.innerHTML = `<div class="cloture-card opt-card"><div class="clo-eyebrow">${kdsEsc(item.name)}</div><div class="clo-title">Formule / menu composé</div><div class="opt-groups">${slots.map(s => `<div class="opt-g"><div class="opt-g-h">${kdsEsc(s.label || 'Choix')}<i class="req">${+s.min || 0}–${Math.max(+s.min || 0, +s.max || 1)}</i></div><div class="opt-g-c">${s.choices.map((c,i) => { const target=choiceItem(c); return target ? `<button type="button" class="opt-c${picked[s.id].includes(i)?' on':''}" data-fslot="${kdsEsc(s.id)}" data-fchoice="${i}"><span>${kdsEsc(target.name)}</span>${+c.extra?`<b class="mono">+${fmtMAD(+c.extra)}</b>`:''}</button>`:''; }).join('')}</div></div>`).join('')}</div>${missing.length?`<div class="opt-miss">À choisir : ${missing.map(s=>kdsEsc(s.label||'Choix')).join(', ')}</div>`:''}<div class="clo-actions"><button class="clo-btn primary" data-formula-ok ${missing.length?'disabled':''}>Ajouter · ${fmtMAD(item.price+extra)}</button></div><div class="clo-foot"><button data-opt-cancel>Annuler</button></div></div>`;
+        const missingSlots = slots.filter(s => picked[s.id].length < Math.max(0, +s.min || 0));
+        const missingGroups = groups.filter(g => g.required && !optPicked[g.id].length);
+        const extra = slots.reduce((n, s) => n + picked[s.id].reduce((x, i) => x + (+s.choices[i].extra || 0), 0), 0)
+          + groups.reduce((n, g) => n + optPicked[g.id].reduce((x, id) => { const c=g.choices.find(v=>v.id===id); return x+(c ? +c.price||0 : 0); }, 0), 0);
+        const regularHTML = groups.map(g => `<div class="opt-g"><div class="opt-g-h">${kdsEsc(g.name)}${g.required?'<i class="req">obligatoire</i>':''}</div><div class="opt-g-c">${g.choices.map(c=>`<button type="button" class="opt-c${optPicked[g.id].includes(c.id)?' on':''}" data-og="${kdsEsc(g.id)}" data-oc="${kdsEsc(c.id)}"><span>${c.emoji?`${kdsEsc(c.emoji)} `:''}${kdsEsc(c.name)}</span>${c.price?`<b class="mono">+${fmtMAD(c.price)}</b>`:''}</button>`).join('')}</div></div>`).join('');
+        const missing = missingSlots.map(s=>s.label||'Choix').concat(missingGroups.map(g=>g.name));
+        optVeil.innerHTML = `<div class="cloture-card opt-card"><div class="clo-eyebrow">${kdsEsc(item.name)}</div><div class="clo-title">Formule & options</div><div class="opt-groups">${slots.map(s => `<div class="opt-g"><div class="opt-g-h">${kdsEsc(s.label || 'Choix')}<i class="req">${+s.min || 0}–${Math.max(+s.min || 0, +s.max || 1)}</i></div><div class="opt-g-c">${s.choices.map((c,i) => { const target=choiceItem(c); return target ? `<button type="button" class="opt-c${picked[s.id].includes(i)?' on':''}" data-fslot="${kdsEsc(s.id)}" data-fchoice="${i}"><span>${kdsEsc(target.name)}</span>${+c.extra?`<b class="mono">+${fmtMAD(+c.extra)}</b>`:''}</button>`:''; }).join('')}</div></div>`).join('')}${regularHTML}</div>${missing.length?`<div class="opt-miss">À choisir : ${missing.map(kdsEsc).join(', ')}</div>`:''}<div class="clo-actions"><button class="clo-btn primary" data-formula-ok ${missing.length?'disabled':''}>Ajouter · ${fmtMAD(item.price+extra)}</button></div><div class="clo-foot"><button data-opt-cancel>Annuler</button></div></div>`;
       }
       optVeil.onclick = e => {
         const b=e.target.closest('[data-fchoice]');
         if (b) { const s=slots.find(x=>String(x.id)===b.dataset.fslot), a=picked[s.id], i=+b.dataset.fchoice, at=a.indexOf(i), max=Math.max(+s.min||0,+s.max||1); if(at>=0)a.splice(at,1); else if(max===1){a.splice(0,a.length,i);} else if(a.length<max)a.push(i); paint(); return; }
+        const ob=e.target.closest('[data-oc]');
+        if(ob){const g=groups.find(x=>String(x.id)===ob.dataset.og);if(!g)return;const a=optPicked[g.id],id=ob.dataset.oc,at=a.indexOf(id);if(g.kind==='many'){if(at>=0)a.splice(at,1);else a.push(id);}else optPicked[g.id]=at>=0?[]:[id];paint();return;}
         if(e.target===optVeil||e.target.closest('[data-opt-cancel]')){closeOptSheet();return;}
-        if(e.target.closest('[data-formula-ok]')) { const uid=newLineUid(), parts=[]; let extra=0; slots.forEach(s=>picked[s.id].forEach(i=>{const c=s.choices[i], target=choiceItem(c); if(!target)return; extra+=+c.extra||0; parts.push({uid:newLineUid(),id:target.id,name:target.name,price:+c.extra||0,qty:1,note:'',kind:'formula-part',formulaUid:uid,formulaName:item.name,slotLabel:s.label||''});})); closeOptSheet(); onChosen({uid,id:item.id,name:item.name,price:item.price,qty:1,note:'',kind:'formula',formulaUid:uid,formulaName:item.name},parts); }
+        if(e.target.closest('[data-formula-ok]')) { const uid=newLineUid(), parts=[],opts=[]; let formulaExtra=0,optExtra=0; slots.forEach(s=>picked[s.id].forEach(i=>{const c=s.choices[i], target=choiceItem(c); if(!target)return; formulaExtra+=+c.extra||0; parts.push({uid:newLineUid(),id:target.id,name:target.name,price:+c.extra||0,qty:1,note:'',kind:'formula-part',formulaUid:uid,formulaName:item.name,slotLabel:s.label||''});}));groups.forEach(g=>optPicked[g.id].forEach(id=>{const c=g.choices.find(x=>x.id===id);if(c){optExtra+=+c.price||0;opts.push({g:g.id,gn:g.name,c:c.id,cn:c.name,e:c.emoji||'',p:+c.price||0});}})); closeOptSheet(); onChosen({uid,id:item.id,name:item.name,price:item.price+formulaExtra+optExtra,basePrice:item.price,qty:1,note:'',kind:'formula',formulaUid:uid,formulaName:item.name,opts,optSig:optSig(opts)},parts); }
       };
       paint(); optVeil.classList.add('is-open');
     }

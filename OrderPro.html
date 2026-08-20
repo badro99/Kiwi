@@ -5665,7 +5665,7 @@ em, i, cite, dfn, var { font-style: normal; }
           video: it.video || '',
           tag: it.tag || '',
           avail: it.avail !== false,
-          options: formulaOptions.length ? formulaOptions : (Array.isArray(it.opts) ? it.opts : []).map(id => groups.get(String(id))).filter(Boolean),
+          options: (Array.isArray(it.opts) ? it.opts : []).map(id => groups.get(String(id))).filter(Boolean).concat(formulaOptions),
           formula: formulaOptions.length > 0,
         });
         names[String(it.id)] = { name: String(it.name || ''), desc: String(it.desc || '') };
