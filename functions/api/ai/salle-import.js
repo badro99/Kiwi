@@ -17,11 +17,18 @@
 import { json } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
 import { quotaOk } from './_quota.js';
-import { runAiWithGateway } from './_run.js';
+import { runAiWithGateway, runWithFallback } from './_run.js';
 import { parseModelResponse } from './invoice.js';
 
 /* Le même modèle vision que le scan de cartes — vérifié sur photos réelles. */
 export const VISION_MODEL = '@cf/meta/llama-3.2-11b-vision-instruct';
+/* Le duo texte du repêchage : le modèle vision décrit parfois la salle en
+ * prose française au lieu du JSON demandé (vérifié sur croquis réel : « 8
+ * tables rondes de 4 places et 4 tables carrées de 2 places » — la bonne
+ * réponse, dans le mauvais format). Le modèle texte structure alors cette
+ * prose ; sa discipline JSON est prouvée par menu-import. */
+export const TEXT_MODEL = '@cf/qwen/qwen3-30b-a3b-fp8';
+export const TEXT_FALLBACK_MODEL = '@cf/zai-org/glm-4.7-flash';
 
 const MAX_TOKENS = 2200;
 const TEMPERATURE = 0.1;
@@ -65,6 +72,16 @@ export function validateSalle(raw) {
     tables,
     tableCount: total,
   };
+}
+
+/* Le texte brut d'une réponse Workers AI, quelle que soit sa forme — pour le
+ * repêchage prose→JSON, là où parseModelResponse ne cherche que du JSON. */
+function rawText(aiRes) {
+  if (typeof aiRes === 'string') return aiRes;
+  if (aiRes && typeof aiRes.response === 'string') return aiRes.response;
+  const c = aiRes && aiRes.choices && aiRes.choices[0];
+  if (c && c.message && typeof c.message.content === 'string') return c.message.content;
+  return '';
 }
 
 const SYSTEM_PROMPT = `Tu analyses la photo d'un espace de restauration (salle, terrasse, café, snack…) ou le croquis d'un plan de salle, pour préparer un plan de salle numérique.
@@ -167,8 +184,30 @@ export async function onRequestPost(context) {
     return json({ ok: false, reason: 'model', detail }, 200, { 'x-kiwi-ai-model': VISION_MODEL });
   }
 
-  const parsed = parseModelResponse(aiRes);
-  const validated = parsed ? validateSalle(parsed) : null;
+  let parsed = parseModelResponse(aiRes);
+  let validated = parsed ? validateSalle(parsed) : null;
+
+  /* Repêchage : la réponse vision est de la prose, pas du JSON. Le modèle
+   * texte la structure avec le même schéma — un appel de plus, seulement
+   * quand le premier format a échoué. */
+  if (!validated) {
+    const prose = rawText(aiRes);
+    if (prose && prose.length > 20) {
+      try {
+        const r2 = await runWithFallback(env, TEXT_MODEL, TEXT_FALLBACK_MODEL, {
+          messages: [
+            { role: 'system', content: SYSTEM_PROMPT },
+            { role: 'user', content: 'Voici la description de la salle :\n\n' + prose.slice(0, 4000) },
+          ],
+          max_tokens: 900,
+          temperature: TEMPERATURE,
+        });
+        parsed = parseModelResponse(r2.result);
+        validated = parsed ? validateSalle(parsed) : null;
+      } catch (_) { /* le « illisible » ci-dessous reste le repli */ }
+    }
+  }
+
   if (!validated) {
     /* Le début brut de la réponse du modèle, borné, rendu au commerçant
      * authentifié qui vient de l'engendrer — c'est SA photo et SA réponse.
