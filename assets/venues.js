@@ -4932,7 +4932,18 @@
   }
 
   /* ═══════════ NAVIGATION ═══════════ */
+  /* L'atelier restaurant (restaurant-menu-workspace.js) détient la page Menu
+   * pour les restaurants — il a pris nav-menu, mais les RAFRAÎCHISSEMENTS
+   * arrivent encore ici par KiwiVenue.showMenu/refreshMenu : le pull() du
+   * catalogue repart à CHAQUE retour d'onglet et repeignait l'écran hérité
+   * (emojis, sans les nouveautés) par-dessus l'atelier. Renvoi systématique. */
+  function miWorkspaceOwnsMenu() {
+    const W = window.KiwiRestaurantMenuWorkspace;
+    return W && typeof W.isRestaurant === 'function' && W.isRestaurant() ? W : null;
+  }
   function miShowPage() {
+    const W = miWorkspaceOwnsMenu();
+    if (W) { W.show(true); return; }
     miTab = 'menu';
     /* Clear any sibling full-page view so two page-* classes never coexist;
      * also reset the Équipe module's page flag so its clock/venue
@@ -5061,6 +5072,8 @@
 
   /* ═══════════ RENDER ═══════════ */
   function renderMenu() {
+    const W = miWorkspaceOwnsMenu();
+    if (W) { W.render(); return; }
     const root = document.querySelector('[data-menu-root]');
     if (!root) return;
     root.innerHTML = miHeaderHtml() + miFiltersHtml() + `<div class="mi-panel" data-mi-panel>${miTabHtml()}</div>`;
