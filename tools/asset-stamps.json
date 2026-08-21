@@ -348,12 +348,12 @@
     "sha": "9c6fcb0017f2d043"
   },
   "assets/pos-boulangerie.css": {
-    "v": "2",
+    "v": "3",
     "sha": "49f3510a3b0ed423"
   },
   "assets/pos-boulangerie.js": {
-    "v": "2",
-    "sha": "ac78c0749459ae37"
+    "v": "3",
+    "sha": "bb8d52c82259c3e6"
   },
   "assets/pos-boutique.css": {
     "v": "3",
@@ -373,7 +373,7 @@
   },
   "assets/pos-dispatch.js": {
     "v": "30",
-    "sha": "dca06033e15276d9"
+    "sha": "b76544ee0d7ae399"
   },
   "assets/pos-epicerie.css": {
     "v": "2",

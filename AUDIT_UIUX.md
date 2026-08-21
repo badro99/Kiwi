@@ -155,3 +155,12 @@ Ce document consigne l'ensemble des audits visuels, ergonomiques, d'accessibilit
   1. Harmonisation visuelle des états vides de commande et d'appel de numéros KDS avec médaillons Material Symbol (`inventory_2`) et hiérarchie soignée.
   2. Bumping de la révision `pos-fastfood.js?v=3` dans le dispatcher.
 - **État** : ✅ Déployé
+
+### 7.6 Vertical Boulangerie (`assets/pos-boulangerie.js`)
+- **Fichiers** : `assets/pos-boulangerie.js:469`, `assets/pos-dispatch.js:62`
+- **Problèmes identifiés** :
+  1. Ticket d'encaissement rapide boulangerie sans médaillon Material Symbols.
+- **Améliorations apportées** :
+  1. Enrichissement du ticket vide de boulangerie avec médaillon Material Symbol (`inventory_2`) et hiérarchie visuelle rapide.
+  2. Bumping de la révision `pos-boulangerie.js?v=3` dans le dispatcher.
+- **État** : ✅ Déployé

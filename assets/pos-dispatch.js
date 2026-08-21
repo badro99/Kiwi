@@ -59,7 +59,7 @@
     '0003': { id: 'spa',         file: 'pos-spa',         rev: '3', label: 'Spa · Spa Bahia' },
     '0004': { id: 'hotel',       file: 'pos-hotel',       rev: '3', label: 'Hôtel / Riad · Riad Yasmina' },
     '0005': { id: 'fastfood',    file: 'pos-fastfood',    rev: '3', label: 'Fast-food · Snack Chamal' },
-    '0006': { id: 'boulangerie', file: 'pos-boulangerie', rev: '2', label: 'Boulangerie · Bab Kasbah' },
+    '0006': { id: 'boulangerie', file: 'pos-boulangerie', rev: '3', label: 'Boulangerie · Bab Kasbah' },
     '0007': { id: 'pizzeria',    file: 'pos-pizzeria',    rev: '2', label: 'Pizzeria · La Marsa' },
     '0008': { id: 'traiteur',    file: 'pos-traiteur',    rev: '2', label: 'Traiteur · Dar Zellij' },
     '0009': { id: 'foodtruck',   file: 'pos-foodtruck',   rev: '2', label: 'Food truck · Karavan' },
