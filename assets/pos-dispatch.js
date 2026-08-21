@@ -68,7 +68,7 @@
     '0012': { id: 'librairie',   file: 'pos-librairie',   rev: '3', label: 'Librairie · Al Boughaz' },
     '0013': { id: 'fleuriste',   file: 'pos-fleuriste',   rev: '3', label: 'Fleuriste · Fleurs du Détroit' },
     '0014': { id: 'coiffure',    file: 'pos-coiffure',    rev: '3', label: 'Coiffure · Salon Yasmine' },
-    '0015': { id: 'gym',         file: 'pos-gym',         rev: '2', label: 'Salle de sport · Atlas Fitness' },
+    '0015': { id: 'gym',         file: 'pos-gym',         rev: '3', label: 'Salle de sport · Atlas Fitness' },
     '0016': { id: 'autre',       file: 'pos-autre',       rev: '2', label: 'Autre activité · caisse polyvalente' },
     '0017': { id: 'maison',      file: 'pos-maison',      rev: '16', label: 'Maison · Vogue Home' },
   };

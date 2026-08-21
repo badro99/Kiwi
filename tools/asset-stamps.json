@@ -377,7 +377,7 @@
   },
   "assets/pos-dispatch.js": {
     "v": "30",
-    "sha": "7cbf966f742cb991"
+    "sha": "0588682d335ed6c3"
   },
   "assets/pos-epicerie.css": {
     "v": "3",
@@ -412,11 +412,11 @@
     "sha": "a92df750410730da"
   },
   "assets/pos-gym.css": {
-    "v": "2",
+    "v": "3",
     "sha": "afcedd82cdc715c3"
   },
   "assets/pos-gym.js": {
-    "v": "2",
+    "v": "3",
     "sha": "cde22673204e2afe"
   },
   "assets/pos-hotel.css": {
