@@ -713,10 +713,11 @@
     }
     .main-head {
       display: flex; align-items: center; justify-content: space-between;
+      gap: 14px; flex-wrap: wrap; row-gap: 10px;
       padding: 18px 24px 14px;
     }
     .main-head[hidden] { display: none; }
-    .main-title { font-size: 16px; font-weight: 600; color: var(--ink); }
+    .main-title { font-size: 16px; font-weight: 600; color: var(--ink); white-space: nowrap; }
     .main-title em { font-family: var(--serif); color: var(--ink-3); font-weight: 400; margin-left: 6px; font-size: 14px; }
 
     /* La légende vit sur sa propre barre noir console — le canvas de la salle
@@ -730,7 +731,7 @@
       border-radius: 999px;
       padding: 7px 14px;
     }
-    .legend-item { display: flex; align-items: center; gap: 6px; }
+    .legend-item { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
     .legend-swatch {
       width: 17px; height: 13px; border-radius: 4px; display: inline-block;
       background: rgba(255,255,255,0.012);
@@ -741,6 +742,28 @@
     .legend-swatch.st-yaklo  { border: 1.25px solid #00FFAE; background: rgba(0,255,174,0.14); }
     .legend-swatch.st-bill   { border: 1.25px solid #FF7DA9; background: rgba(255,125,169,0.10); }
     .legend-swatch.st-khlass { border: 1.25px dotted rgba(255,255,255,0.40); }
+
+    /* ===========================================================
+       TACTILE · iPad (pointeur grossier, ≤ 1194 px) — l'en-tête « Plan de
+       salle ». Le titre se cassait en trois lignes et « À commander » en
+       deux : le sélecteur d'étage et la barre d'états écrasaient le titre
+       au lieu de passer à la ligne. Ici le titre tient sur une ligne (voir
+       white-space plus haut), la légende descend d'une rangée quand la
+       place manque, et son texte remonte de 11 à 12,5 px — blanc 50 % → 74 %
+       — pour rester lisible à bout de bras sur le noir console.
+       Les laptops (hover) ne sont pas concernés.
+       =========================================================== */
+    @media only screen and (hover: none) and (pointer: coarse) and (max-width: 1194px) {
+      .main-head { padding: 12px 18px 10px; row-gap: 8px; }
+      .main-title { font-size: 17px; }
+      .main-title em { font-size: 13.5px; margin-left: 7px; }
+      .legend {
+        gap: 13px; padding: 8px 14px;
+        font-size: 12.5px;
+        color: rgba(255,255,255,0.74);
+      }
+      .legend-swatch { width: 18px; height: 14px; }
+    }
 
     .view {
       flex: 1;
