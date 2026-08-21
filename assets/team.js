@@ -3638,6 +3638,32 @@
       });
     } catch (_) { return []; }
   }
+  /* Read-only planning evidence for the morning briefing. A draft is not a
+   * promise to the team: only the frozen published grid may prove that an open
+   * service is staffed. Names are reduced to first names at this boundary so
+   * the briefing never receives contracts, pay, codes or full identities. */
+  function planningDay(dayKey) {
+    try {
+      dayKey = /^\d{4}-\d{2}-\d{2}$/.test(String(dayKey || '')) ? String(dayKey) : toISO(new Date());
+      const venue = window.KiwiVenue?.getCurrentVenueData?.() || {};
+      const key = teamKey(venue), members = getMembers(key) || [];
+      const planning = window.__kiwiTeamV2.planningByVenue[key] || {};
+      const published = planning.publishingEnabled === true && planning.publishedShifts && typeof planning.publishedShifts === 'object';
+      const shifts = published ? planning.publishedShifts : {};
+      const configured = published && members.some((m) => Object.prototype.hasOwnProperty.call(shifts[m.id] || {}, dayKey));
+      return {
+        day: dayKey, configured: !!configured, published: !!published,
+        members: members.map((m) => {
+          const shift = normShift((shifts[m.id] || {})[dayKey]);
+          return {
+            id: String(m.id || ''),
+            firstName: String(m.firstName || memberFullName(m) || '').trim().split(/\s+/)[0].slice(0, 40),
+            start: shift && !shift.off ? shift.start : '', end: shift && !shift.off ? shift.end : '', off: !!(shift && shift.off)
+          };
+        }).filter((m) => m.id)
+      };
+    } catch (_) { return { day: String(dayKey || ''), configured: false, published: false, members: [] }; }
+  }
   /* Reservations consume the SAME planning grid as Paie, never a second staff
    * calendar.  A slot is covered only when a floor-capable team member's
    * planned shift spans the whole booking.  `configured` stays false when the
@@ -3664,7 +3690,7 @@
       return { configured: currentConfigured || covered.length > 0, members: covered };
     } catch (_) { return { configured: false, members: [] }; }
   }
-  window.KiwiTeam = Object.assign(window.KiwiTeam || {}, { importMembers, roster, daySnapshot, bookingCoverage });
+  window.KiwiTeam = Object.assign(window.KiwiTeam || {}, { importMembers, roster, daySnapshot, planningDay, bookingCoverage });
   try { window.dispatchEvent(new Event('kiwi-team-ready')); } catch (_) {}
 
   /* ═══════════════ HYDRATATION AU DÉMARRAGE ═══════════════════════════════

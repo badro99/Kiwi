@@ -10,7 +10,7 @@
   var FEATURE = 'briefing';
   var PREFIX = 'kiwi:briefing:v1:';
   var MAX_DAYS = 45;
-  var RULES = [salesDropRule, lowStockRule, marginErosionRule];
+  var RULES = [salesDropRule, lowStockRule, marginErosionRule, planningGapRule];
   var doc = { days: [] };
   var cloud = null;
 
@@ -294,6 +294,59 @@
       evidence: { count: tracked.length, window: 'stock actuel · ' + businessDay(Date.now()), source: 'KiwiInventory.balance' }
     };
   }
+  function minute(value) {
+    var match = /^(\d{2}):(\d{2})$/.exec(String(value || ''));
+    if (!match) return null;
+    var out = (+match[1] * 60) + +match[2];
+    return out >= 0 && out < 1440 ? out : null;
+  }
+  function spans(from, to) {
+    var a = minute(from), b = minute(to);
+    if (a == null || b == null || a === b) return [];
+    return b > a ? [[a, b]] : [[a, 1440], [0, b]];
+  }
+  function planningGapRule(input) {
+    input = input || {};
+    var day = input.day, plan = input.plan, periods = input.periods;
+    if (!plan || !Array.isArray(periods)) {
+      var D = window.KiwiDayReport, T = window.KiwiTeam, H = window.KiwiHours;
+      if (!D || typeof D.today !== 'function' || !T || typeof T.planningDay !== 'function'
+        || !H || typeof H.isConfigured !== 'function' || typeof H.periodsOn !== 'function') return null;
+      try {
+        day = D.today();
+        var vid = venueId();
+        if (!H.isConfigured(vid)) return null;
+        plan = T.planningDay(day);
+        periods = H.periodsOn(day, vid);
+      } catch (_) { return null; }
+    }
+    if (!plan || plan.configured !== true || plan.published !== true || !Array.isArray(periods) || !periods.length) return null;
+    var openings = [];
+    periods.forEach(function (p) { openings = openings.concat(spans(p && p.from, p && p.to)); });
+    if (!openings.length) return null;
+    var shifts = [];
+    (Array.isArray(plan.members) ? plan.members : []).forEach(function (m) {
+      if (!m || m.off) return;
+      spans(m.start, m.end).forEach(function (range) { shifts.push({ from: range[0], to: range[1], firstName: String(m.firstName || '').slice(0, 40) }); });
+    });
+    var gap = openings.some(function (opening) {
+      for (var at = opening[0]; at < opening[1]; at += 15) {
+        if (!shifts.some(function (shift) { return shift.from <= at && shift.to >= Math.min(at + 15, opening[1]); })) return true;
+      }
+      return false;
+    });
+    if (!gap) return null;
+    return {
+      id: 'planning-gap:' + String(day || 'day'), kind: 'planning-gap', tone: 'warn', roles: ['owner', 'manager'],
+      copy: {
+        fr: 'Le planning publié laisse une partie des horaires d’ouverture sans couverture.',
+        en: 'The published schedule leaves part of an opening period uncovered.',
+        ar: 'يترك الجدول المنشور جزءًا من فترة الافتتاح دون تغطية.'
+      },
+      evidence: { count: openings.length, window: String(day || '') + ' · ' + periods.map(function (p) { return p.from + '-' + p.to; }).join(', '), source: 'planning publié + KiwiHours.periodsOn' },
+      action: { name: 'open-planning', args: {}, summary: 'Ouvrir le planning' }
+    };
+  }
   function visibleLines(lines, role) {
     role = role || tier();
     return (Array.isArray(lines) ? lines : []).filter(function (line) {
@@ -340,9 +393,17 @@
     if (!row) return [];
     return visibleLines(row.lines, role).filter(function (x) { return !(row.dismissed && row.dismissed[x.id]) && !(row.handled && row.handled[x.id]); });
   }
+  function openPlanning() {
+    var open = window.Kiwi && window.Kiwi.handlers && window.Kiwi.handlers['nav-payroll'];
+    if (typeof open !== 'function') return { ok: false, reason: 'unavailable' };
+    open();
+    return { ok: true, opened: 'planning' };
+  }
   function proposeLine(id) {
     var line = activeLines(tier()).find(function (x) { return x.id === id; });
-    if (!line || !line.action || !window.KiwiAgentActions || typeof window.KiwiAgentActions.request !== 'function') return { ok: false, reason: 'unavailable' };
+    if (!line || !line.action) return { ok: false, reason: 'unavailable' };
+    if (line.action.name === 'open-planning') return openPlanning();
+    if (!window.KiwiAgentActions || typeof window.KiwiAgentActions.request !== 'function') return { ok: false, reason: 'unavailable' };
     var args = clone(line.action.args) || {};
     args.commandId = ('briefing-' + line.id).replace(/[^A-Za-z0-9_-]/g, '-').slice(0, 60);
     args.said = lineText(line, 'fr');
@@ -437,7 +498,7 @@
   window.KiwiBriefing = {
     canHandle: canHandle, reply: reply, compute: function () { return compute(); }, lines: activeLines,
     dismiss: function (id) { return setState(id, 'dismissed'); }, handled: function (id) { return setState(id, 'handled'); },
-    _test: { businessDay: businessDay, scopeKey: scopeKey, normalizeLine: normalizeLine, visibleLines: visibleLines, salesDropRule: salesDropRule, lowStockRule: lowStockRule, marginErosionRule: marginErosionRule, stockItems: stockItems, proposeLine: proposeLine, salesRows: salesRows, dayBoundsAt: dayBoundsAt, compute: compute, read: function () { return clone(doc); }, write: writeLocal }
+    _test: { businessDay: businessDay, scopeKey: scopeKey, normalizeLine: normalizeLine, visibleLines: visibleLines, salesDropRule: salesDropRule, lowStockRule: lowStockRule, marginErosionRule: marginErosionRule, planningGapRule: planningGapRule, stockItems: stockItems, proposeLine: proposeLine, openPlanning: openPlanning, salesRows: salesRows, dayBoundsAt: dayBoundsAt, compute: compute, read: function () { return clone(doc); }, write: writeLocal }
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true }); else boot();
 }());
