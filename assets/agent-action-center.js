@@ -210,12 +210,31 @@
     });
     return rows.length ? rows.map(itemHtml).join('') : '<div class="kac-empty">' + icon('task_alt') + '<p>' + tr().empty + '</p></div>';
   }
+  /* refresh() est appelé depuis un MutationObserver posé sur tout le document :
+     il ne doit JAMAIS produire une mutation quand rien n’a changé. Avant, il
+     réécrivait textContent (donc un nouveau nœud texte, donc une mutation)
+     sur chaque badge à chaque passage → l’observateur se rappelait lui-même
+     en boucle infinie dès que la barre de l’assistant existait : ouvrir Kiwi
+     AI gelait l’onglet sur toutes les machines (2026-08-21). */
+  var refreshing = false;
   function refresh() {
-    openRoots = openRoots.filter(function (root) { return root && root.isConnected; });
-    openRoots.forEach(function (root) { var list = root.querySelector('[data-kac-list]'); if (list) list.innerHTML = listHtml(); });
-    var n = state.items.filter(function (x) { return x.status === 'pending'; }).length;
-    document.querySelectorAll('[data-kac-count]').forEach(function (b) { b.textContent = String(n); b.hidden = !n; });
-    try { if (window.lucide && window.lucide.createIcons) window.lucide.createIcons(); } catch (_) {}
+    if (refreshing) return;
+    refreshing = true;
+    try {
+      openRoots = openRoots.filter(function (root) { return root && root.isConnected; });
+      var html = openRoots.length ? listHtml() : '';
+      openRoots.forEach(function (root) {
+        var list = root.querySelector('[data-kac-list]');
+        if (list && list.innerHTML !== html) list.innerHTML = html;
+      });
+      var n = state.items.filter(function (x) { return x.status === 'pending'; }).length;
+      var txt = String(n), hide = !n;
+      document.querySelectorAll('[data-kac-count]').forEach(function (b) {
+        if (b.textContent !== txt) b.textContent = txt;
+        if (b.hidden !== hide) b.hidden = hide;
+      });
+      try { if (openRoots.length && window.lucide && window.lucide.createIcons) window.lucide.createIcons(); } catch (_) {}
+    } finally { refreshing = false; }
   }
   function open() {
     if (!allowed() || !window.Kiwi || !window.Kiwi.drawer) return;
@@ -234,6 +253,9 @@
   }
   function injectButton(node) {
     if (!allowed()) return;
+    if (!node || (node.nodeType !== 1 && node.nodeType !== 9)) return;           // nœud texte, commentaire…
+    if (node.nodeType === 1 && node.closest && node.closest('[data-kac-open], .kac-drawer')) return; // nos propres nœuds
+    var inserted = false;
     var roots = [];
     if (node && node.nodeType === 1 && node.matches('.fa-toolbar')) roots.push(node);
     if (node && node.querySelectorAll) roots = roots.concat(Array.from(node.querySelectorAll('.fa-toolbar')));
@@ -243,8 +265,9 @@
       btn.type = 'button'; btn.className = 'fa-tool kac-trigger'; btn.setAttribute('data-kac-open', ''); btn.title = tr().open;
       btn.innerHTML = icon('pending_actions') + '<span>' + tr().button + '</span><b data-kac-count hidden>0</b>';
       var hint = bar.querySelector('.fa-hint'); bar.insertBefore(btn, hint || null);
+      inserted = true;
     });
-    refresh();
+    if (inserted) refresh();
   }
   function injectCss() {
     if (document.getElementById('kiwi-action-center-css')) return;
@@ -263,7 +286,12 @@
   installActionBridge();
   initCloud();
   injectButton(document);
-  new MutationObserver(function (muts) { muts.forEach(function (m) { m.addedNodes.forEach(injectButton); }); }).observe(document.documentElement, { childList: true, subtree: true });
+  new MutationObserver(function (muts) {
+    muts.forEach(function (m) {
+      if (m.target && m.target.nodeType === 1 && m.target.closest && m.target.closest('[data-kac-open], .kac-drawer')) return;
+      m.addedNodes.forEach(function (n) { if (n && n.nodeType === 1) injectButton(n); });
+    });
+  }).observe(document.documentElement, { childList: true, subtree: true });
   document.addEventListener('click', function (e) { if (e.target.closest('[data-kac-open]')) { e.preventDefault(); open(); } });
   window.addEventListener('kiwi:langchange', function () { document.querySelectorAll('[data-kac-open]').forEach(function (b) { b.remove(); }); injectButton(document); refresh(); });
   window.KiwiActionCenter = { open: open, list: function () { return clone(state.items) || []; }, undo: function (id) { return undo(findById(id)); } };
