@@ -9572,7 +9572,7 @@
       });
     });
 
-    $('.qa-btn, .act-pill').forEach(btn => {
+    $$('.qa-btn, .act-pill').forEach(btn => {
       btn.addEventListener('click', () => {
         const a = btn.dataset.action;
         if (a === 'remboursement')   openRefund();
