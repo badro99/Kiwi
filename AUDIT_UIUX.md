@@ -110,3 +110,12 @@ Ce document consigne l'ensemble des audits visuels, ergonomiques, d'accessibilit
   1. Intégration d'un état vide centré avec médaillon Material Symbol (`inventory_2`) et typographie romaine.
   2. Bumping du timbre de cache `assets/pages-pro.js?v=2077`.
 - **État** : ✅ Déployé
+
+### 7.1 Vertical Pressing (`assets/pressing-caisse.js`)
+- **Fichiers** : `assets/pressing-caisse.js:2568`, `assets/pos-dispatch.js:57`
+- **Problèmes identifiés** :
+  1. Vue de retrait du pressing avec états vides en texte brut sans médaillon Material Symbols.
+- **Améliorations apportées** :
+  1. Refonte visuelle des états vides de recherche et de commandes prêtes avec médaillon Material Symbol (`inventory_2`) et hiérarchie typographique.
+  2. Bumping de la révision `pressing-caisse.js?v=34` dans le dispatcher.
+- **État** : ✅ Déployé

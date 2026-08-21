@@ -302,8 +302,8 @@ var SHELL = [
      qu'il faut pouvoir ressortir le ticket. Un bouton de secours qui a besoin du
      réseau n'est pas un secours. */
   '/assets/pos-reprint.js',
-  '/assets/pressing-caisse.js?v=33',
-  '/assets/pressing-caisse.css?v=33',
+  '/assets/pressing-caisse.js?v=35',
+  '/assets/pressing-caisse.css?v=35',
   '/assets/lucide.min.js?v=2',
   '/assets/kiwi-favicon-new.svg',
   '/assets/kiwi-newlogo.svg',
