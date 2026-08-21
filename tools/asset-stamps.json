@@ -28,16 +28,16 @@
     "sha": "61806f5b7ab810d5"
   },
   "assets/agent-truth.js": {
-    "v": "4",
-    "sha": "12a6abdd783d076d"
+    "v": "5",
+    "sha": "6542c6b8d779e4ce"
   },
   "assets/agent-voice.js": {
     "v": "4",
     "sha": "48c56a5be7a6655b"
   },
   "assets/agent.js": {
-    "v": "18",
-    "sha": "06683f944d74883a"
+    "v": "19",
+    "sha": "85cd04d26bafc940"
   },
   "assets/booking.css": {
     "v": "7",
@@ -52,8 +52,8 @@
     "sha": "7332c4414f0ffae1"
   },
   "assets/briefing.js": {
-    "v": "3",
-    "sha": "be4236ba316d0475"
+    "v": "4",
+    "sha": "395023f4d2e29a54"
   },
   "assets/caisse-attendance-code.js": {
     "v": "2",
@@ -580,8 +580,8 @@
     "sha": "a4c3a6b89b6ee0d0"
   },
   "assets/stock.js": {
-    "v": "18",
-    "sha": "9251ef15ede727ed"
+    "v": "19",
+    "sha": "2c9b26db60d0bc2a"
   },
   "assets/store-templates.js": {
     "v": "1",

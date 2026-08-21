@@ -3902,7 +3902,7 @@
   function autoActKey() { const v = (window.KiwiVenue && window.KiwiVenue.getCurrentVenueId) ? window.KiwiVenue.getCurrentVenueId() : 'default'; return 'kiwiAiAutoAct:' + String(v || 'default'); }
   function autoActOn() { if (accessTier() !== 'owner') return false; try { return localStorage.getItem(autoActKey()) === 'on'; } catch (_) { return false; } }
   function setAutoAct(on) { if (accessTier() !== 'owner' && on) return; try { localStorage.setItem(autoActKey(), on ? 'on' : 'off'); } catch (_) {} }
-  const ACTION_NAME_RX = /^(stock-adjust|order-status|reprint|customer-message-draft)$/;
+  const ACTION_NAME_RX = /^(stock-adjust|order-status|reprint|customer-message-draft|create-po)$/;
   const TOOL_RESULT_MAX = 2000;
   const ACTION_COPY = {
     fr: { confirm: 'Confirmer', cancel: 'Annuler', done: 'Fait.', refused: 'Action refusée', expired: 'Proposition expirée — redemandez.', cancelled: 'Annulé, rien n’a été modifié.', autoOn: 'Exécution directe : activée — l’assistant modifie stock, commandes et réimpressions sans confirmation.', autoOff: 'Exécution directe : désactivée — chaque action attend votre confirmation.', autoToggleOn: 'Désactiver l’exécution directe', autoToggleOff: 'Activer l’exécution directe' },

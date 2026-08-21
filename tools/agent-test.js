@@ -863,7 +863,7 @@ section('Collaboration · draft + tools + corroboration');
   const runToolSrc = code.slice(code.indexOf('function runTool'), code.indexOf('function toolResultText'));
   t('the only write path is propose_action → KiwiAgentActions.request (+ confirm only under autoActOn); no direct salesAdd / KiwiInventory / setStatus',
     /A\.request\(act, args\)/.test(runToolSrc) && /if \(autoActOn\(\)\) \{[\s\S]*?A\.confirm\(req\.token\)/.test(runToolSrc) && !/salesAdd|KiwiInventory\.add|setStatus\(|KiwiPosReprint\.reprint/.test(runToolSrc));
-  t('propose_action only accepts the four existing action names', /const ACTION_NAME_RX = \/\^\(stock-adjust\|order-status\|reprint\|customer-message-draft\)\$\//.test(code));
+  t('propose_action only accepts the five existing action names', /const ACTION_NAME_RX = \/\^\(stock-adjust\|order-status\|reprint\|customer-message-draft\|create-po\)\$\//.test(code));
   t('the prompt carries the tools rule: resolve ids first, never guess, announce executed vs awaiting', /const TOOLS_RULE = "OUTILS/.test(src) && /stock_level ou orders_open/.test(src) && /Ne devine jamais un id/.test(src) && /\{ role: 'system', content: TOOLS_RULE \}/.test(code));
   t('pending proposals render a Confirm + Cancel button per action, then are cleared', /data-fa-confirm="' \+ escAttr\(pr\.token\)/.test(code) && /data-fa-confirm-no="/.test(code) && /LLM\.proposals = \[\];\s*\}\s*\n/.test(code));
   t('the Confirm handler calls KiwiAgentActions.confirm(token) and disables the row first', /data-fa-confirm\]'\);\s*if \(confirmBtn\) \{[\s\S]*?row\.querySelectorAll\('button'\)\.forEach\(\(b\) => \{ b\.disabled = true; \}\);[\s\S]*?A\.confirm\(token\)/.test(code));

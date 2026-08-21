@@ -281,6 +281,14 @@
     if (name === 'stock-adjust') {
       if (!window.KiwiInventory || (r !== 'owner' && r !== 'manager')) return { ok: false, reason: 'read-only' };
       if (!args.itemId || !isFinite(+args.qty) || +args.qty === 0 || Math.abs(+args.qty) > 100000) return { ok: false, reason: 'invalid' };
+    } else if (name === 'create-po') {
+      if (!window.KiwiProcurement || (r !== 'owner' && r !== 'manager')) return { ok: false, reason: 'read-only' };
+      var poLines = (Array.isArray(args.lines) ? args.lines : []).slice(0, 40).map(function (line) {
+        return { itemId: String(line && line.itemId || '').slice(0, 80), name: String(line && line.name || '').slice(0, 120), qty: Math.max(0, Math.min(100000, +line.qty || 0)), unit: String(line && line.unit || '').slice(0, 24) };
+      }).filter(function (line) { return line.itemId && line.qty > 0; });
+      var supplierId = String(args.supplierId || '').slice(0, 80), supplierName = String(args.supplierName || '').trim().slice(0, 120);
+      if (!poLines.length || (!supplierId && !supplierName)) return { ok: false, reason: 'invalid' };
+      args = { supplierId: supplierId, supplierName: supplierName, lines: poLines, note: String(args.note || '').slice(0, 500) };
     } else if (name === 'order-status') {
       if (!window.KiwiOrderInbox || typeof window.KiwiOrderInbox.setStatus !== 'function' || (r !== 'owner' && r !== 'manager')) return { ok: false, reason: 'read-only' };
       if (!/^ord-[a-z0-9-]{6,48}$/i.test(String(args.orderId || '')) || !/^(accepted|rejected|ready|served)$/.test(String(args.status || ''))) return { ok: false, reason: 'invalid' };
@@ -373,6 +381,27 @@
         } catch (_) { return { ok: false, reason: 'network' }; }
       }
 
+      if (c.name === 'create-po') {
+        var procurement = window.KiwiProcurement;
+        if (!procurement || typeof procurement.createOrder !== 'function') return { ok: false, reason: 'unavailable' };
+        var startedPo;
+        try { startedPo = await O.agentRun('create-po', c.args, c.said); }
+        catch (_) { return { ok: false, reason: 'network' }; }
+        var poCommand = startedPo && startedPo.command;
+        if (!poCommand || poCommand.status !== 'processing') return { ok: false, reason: poCommand && (poCommand.lastError || poCommand.status) || 'audit-refused' };
+        var supplier = null, procurementDoc = procurement.doc && procurement.doc();
+        var suppliers = procurementDoc && Array.isArray(procurementDoc.suppliers) ? procurementDoc.suppliers : [];
+        if (c.args.supplierId) supplier = suppliers.find(function (x) { return x && String(x.id) === c.args.supplierId; });
+        if (!supplier && c.args.supplierName) supplier = suppliers.find(function (x) { return x && String(x.name || '').trim().toLowerCase() === c.args.supplierName.toLowerCase(); });
+        if (!supplier && c.args.supplierName && typeof procurement.addSupplier === 'function') supplier = procurement.addSupplier({ name: c.args.supplierName });
+        var po = supplier && procurement.createOrder({ supplierId: supplier.id, lines: c.args.lines, note: c.args.note });
+        var poOk = !!(po && po.id && !po.error);
+        try { await O.transition(poCommand.id, poOk ? 'completed' : 'failed', { confirmed: true, reason: poOk ? '' : String(po && po.error || 'write-refused') }); } catch (_) {
+          if (poOk) return rememberAction(c.commandId, { ok: true, id: po.id, commandId: poCommand.id, auditPending: true });
+        }
+        return poOk ? rememberAction(c.commandId, { ok: true, id: po.id, commandId: poCommand.id, audited: true }) : { ok: false, reason: String(po && po.error || 'write-refused') };
+      }
+
       if (c.name === 'stock-adjust') {
         var movementId = 'ai-stock-' + venueId().replace(/[^a-zA-Z0-9_-]/g, '-') + '-' + c.commandId;
         var started;
@@ -424,5 +453,6 @@
     orderStatus: { available: !!(window.KiwiOrderInbox && typeof window.KiwiOrderInbox.setStatus === 'function') && (role() === 'owner' || role() === 'manager'), confirmation: true, idempotent: true },
     reprint: { available: !!(window.KiwiPosReprint && window.KiwiReceipt) && (role() === 'owner' || role() === 'manager'), confirmation: true, idempotent: true, physicalResultRequired: true },
     customerMessage: { available: typeof window.open === 'function' && (role() === 'owner' || role() === 'manager'), confirmation: true, idempotent: true, outcome: 'draft-only', deliveryVerified: false },
+    purchaseOrder: { available: !!window.KiwiProcurement && (role() === 'owner' || role() === 'manager'), confirmation: true, idempotent: true },
   }; } };
 }());

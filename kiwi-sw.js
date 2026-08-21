@@ -64,11 +64,11 @@ var SHELL = [
   '/assets/dashboard-native.css',
   '/assets/cloud-doc.js',
   '/assets/agent-action-center.js?v=1',
-  '/assets/briefing.js?v=3',
+  '/assets/briefing.js?v=4',
   '/assets/ai-telemetry.js',
   '/assets/agent-data.js',
   '/assets/agent-features.js?v=3',
-  '/assets/agent-truth.js?v=4',
+  '/assets/agent-truth.js?v=5',
   '/assets/agent-voice.js?v=4',
   '/assets/i18n.js?v=4',
   /* Les milliers en arabe. Dans la coquille avec i18n : hors ligne, un
@@ -212,7 +212,7 @@ var SHELL = [
      document; quantities are append-only movements, both usable offline. */
   '/assets/inventory-ledger.js?v=4',
   '/assets/caisse-stock-sync.js?v=8',
-  '/assets/stock.js?v=18',
+  '/assets/stock.js?v=19',
   /* Le coût de revient. Dans la coquille parce que les tuiles Marge brute,
      Bénéfice brut et Coût matière du tableau de bord passent toutes par lui :
      sans lui hors ligne, elles retomberaient sur un tiret alors que le

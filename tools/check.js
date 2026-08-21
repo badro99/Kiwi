@@ -915,6 +915,7 @@ section('Whole-project regressions');
     'agent-voice-test.mjs',
     'briefing-test.mjs',
     'briefing-sales-drop-test.mjs',
+    'briefing-low-stock-test.mjs',
     'err-reporter-silence-test.mjs',
     'depenses-demo-gate-test.mjs',
     'invoice-receipt-test.mjs',

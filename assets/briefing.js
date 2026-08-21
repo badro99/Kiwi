@@ -10,7 +10,7 @@
   var FEATURE = 'briefing';
   var PREFIX = 'kiwi:briefing:v1:';
   var MAX_DAYS = 45;
-  var RULES = [salesDropRule];
+  var RULES = [salesDropRule, lowStockRule];
   var doc = { days: [] };
   var cloud = null;
 
@@ -22,7 +22,7 @@
       coveredLabel: 'Couverture active', covered: 'Ventes · stock · marge · planning',
       waitingLabel: 'En attente de données durables', waiting: 'Remises · annulations · caisse · délais de service',
       demo: 'Le point du matin s’active sur un établissement réel connecté. La démonstration ne fabrique aucune alerte.',
-      handled: 'Traité', dismiss: 'Masquer'
+      handled: 'Traité', dismiss: 'Masquer', propose: 'Proposer'
     },
     en: {
       eyebrow: 'KIWI AI', title: 'Morning briefing', empty: 'Nothing urgent to flag.',
@@ -31,7 +31,7 @@
       coveredLabel: 'Active coverage', covered: 'Sales · stock · margin · staffing',
       waitingLabel: 'Waiting for durable data', waiting: 'Discounts · cancellations · cash · service timing',
       demo: 'Morning briefing activates for a connected real venue. The demo never fabricates alerts.',
-      handled: 'Handled', dismiss: 'Dismiss'
+      handled: 'Handled', dismiss: 'Dismiss', propose: 'Propose'
     },
     ar: {
       eyebrow: 'KIWI AI', title: 'ملخص الصباح', empty: 'لا توجد أمور عاجلة الآن.',
@@ -40,7 +40,7 @@
       coveredLabel: 'التغطية الحالية', covered: 'المبيعات · المخزون · الهامش · جدول العمل',
       waitingLabel: 'في انتظار بيانات دائمة', waiting: 'التخفيضات · الإلغاءات · الصندوق · مدة الخدمة',
       demo: 'يتفعل ملخص الصباح في محل حقيقي متصل. العرض التجريبي لا يصنع تنبيهات.',
-      handled: 'تمت المعالجة', dismiss: 'إخفاء'
+      handled: 'تمت المعالجة', dismiss: 'إخفاء', propose: 'اقتراح'
     }
   };
 
@@ -208,6 +208,44 @@
       evidence: { count: current.count, window: day + ' · 05:00-' + time, source: 'KiwiSales.list · backfill complet' }
     };
   }
+  function stockItems() {
+    try {
+      var rows = window.KiwiStockBriefing && window.KiwiStockBriefing.items ? window.KiwiStockBriefing.items() : null;
+      return Array.isArray(rows) ? rows : [];
+    } catch (_) { return []; }
+  }
+  function lowStockRule(input) {
+    input = input || {};
+    var items = Array.isArray(input.items) ? input.items : stockItems();
+    if (!items.length) return null;
+    var tracked = items.filter(function (item) {
+      return item && item.tracked === true && Number.isFinite(+item.balance) && Number.isFinite(+item.threshold) && +item.threshold > 0;
+    });
+    var low = tracked.filter(function (item) { return +item.balance < +item.threshold; }).sort(function (a, b) {
+      return (+a.balance / +a.threshold) - (+b.balance / +b.threshold);
+    });
+    if (!low.length) return null;
+    var names = low.slice(0, 3).map(function (item) { return String(item.name || item.id); }).join(', ');
+    var extra = low.length > 3 ? ' +' + (low.length - 3) : '';
+    var coverageFr = tracked.length + ' articles suivis sur ' + items.length;
+    var coverageEn = tracked.length + ' tracked items out of ' + items.length;
+    var coverageAr = tracked.length + ' صنفاً متابعاً من أصل ' + items.length;
+    var first = low.find(function (item) { return String(item.supplier || '').trim(); });
+    var action = null;
+    if (first) {
+      var qty = Math.max(1, Math.ceil((Number(first.par) > Number(first.balance) ? Number(first.par) : Number(first.threshold)) - Number(first.balance)));
+      action = { name: 'create-po', args: { supplierName: String(first.supplier), lines: [{ itemId: String(first.id), name: String(first.name || first.id), qty: qty, unit: String(first.unit || '') }], note: 'Proposition du point du matin · stock sous seuil' } };
+    }
+    return {
+      id: 'low-stock:' + businessDay(Date.now()), kind: 'low-stock', tone: 'warn', roles: ['owner', 'manager'], action: action,
+      copy: {
+        fr: low.length + ' article' + (low.length > 1 ? 's sont' : ' est') + ' sous le seuil : ' + names + extra + '. Couverture : ' + coverageFr + '.',
+        en: low.length + ' item' + (low.length > 1 ? 's are' : ' is') + ' below reorder level: ' + names + extra + '. Coverage: ' + coverageEn + '.',
+        ar: low.length + ' من الأصناف تحت عتبة إعادة الطلب: ' + names + extra + '. التغطية: ' + coverageAr + '.'
+      },
+      evidence: { count: tracked.length, window: 'stock actuel · ' + businessDay(Date.now()), source: 'KiwiInventory.balance' }
+    };
+  }
   function visibleLines(lines, role) {
     role = role || tier();
     return (Array.isArray(lines) ? lines : []).filter(function (line) {
@@ -254,6 +292,18 @@
     if (!row) return [];
     return visibleLines(row.lines, role).filter(function (x) { return !(row.dismissed && row.dismissed[x.id]) && !(row.handled && row.handled[x.id]); });
   }
+  function proposeLine(id) {
+    var line = activeLines(tier()).find(function (x) { return x.id === id; });
+    if (!line || !line.action || !window.KiwiAgentActions || typeof window.KiwiAgentActions.request !== 'function') return { ok: false, reason: 'unavailable' };
+    var args = clone(line.action.args) || {};
+    args.commandId = ('briefing-' + line.id).replace(/[^A-Za-z0-9_-]/g, '-').slice(0, 60);
+    args.said = lineText(line, 'fr');
+    var result = window.KiwiAgentActions.request(line.action.name, args);
+    if (result && result.confirmationRequired) {
+      try { if (window.KiwiActionCenter && window.KiwiActionCenter.open) window.KiwiActionCenter.open(); } catch (_) {}
+    }
+    return result || { ok: false, reason: 'refused' };
+  }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[c]; }); }
   function lineText(line, wanted) {
     var c = line && line.copy || {};
@@ -280,7 +330,7 @@
     var t = tr(), lines = activeLines(tier());
     var body = lines.length ? lines.map(function (line) {
       return '<article class="briefing-line"><strong>' + esc(lineText(line)) + '</strong><div class="briefing-evidence">' +
-        esc(line.evidence.count + ' · ' + line.evidence.window + ' · ' + line.evidence.source) + '</div><div class="briefing-actions"><button data-briefing-handled="' + esc(line.id) + '">' + esc(t.handled) + '</button><button data-briefing-dismiss="' + esc(line.id) + '">' + esc(t.dismiss) + '</button></div></article>';
+        esc(line.evidence.count + ' · ' + line.evidence.window + ' · ' + line.evidence.source) + '</div><div class="briefing-actions">' + (line.action ? '<button data-briefing-propose="' + esc(line.id) + '">' + esc(t.propose) + '</button>' : '') + '<button data-briefing-handled="' + esc(line.id) + '">' + esc(t.handled) + '</button><button data-briefing-dismiss="' + esc(line.id) + '">' + esc(t.dismiss) + '</button></div></article>';
     }).join('') : '<div class="briefing-empty"><strong>' + esc(t.empty) + '</strong>' + esc(t.emptyNote) + '</div>';
     el.innerHTML = '<div class="briefing-head"><div><div class="briefing-kicker">' + esc(t.eyebrow) + '</div><div class="briefing-title">' + esc(t.title) + '</div></div></div>' + body;
   }
@@ -330,6 +380,8 @@
   document.addEventListener('click', function (event) {
     var handled = event.target.closest && event.target.closest('[data-briefing-handled]');
     var dismissed = event.target.closest && event.target.closest('[data-briefing-dismiss]');
+    var proposed = event.target.closest && event.target.closest('[data-briefing-propose]');
+    if (proposed) proposeLine(proposed.getAttribute('data-briefing-propose'));
     if (handled) setState(handled.getAttribute('data-briefing-handled'), 'handled');
     if (dismissed) setState(dismissed.getAttribute('data-briefing-dismiss'), 'dismissed');
   });
@@ -337,7 +389,7 @@
   window.KiwiBriefing = {
     canHandle: canHandle, reply: reply, compute: function () { return compute(); }, lines: activeLines,
     dismiss: function (id) { return setState(id, 'dismissed'); }, handled: function (id) { return setState(id, 'handled'); },
-    _test: { businessDay: businessDay, scopeKey: scopeKey, normalizeLine: normalizeLine, visibleLines: visibleLines, salesDropRule: salesDropRule, salesRows: salesRows, dayBoundsAt: dayBoundsAt, compute: compute, read: function () { return clone(doc); }, write: writeLocal }
+    _test: { businessDay: businessDay, scopeKey: scopeKey, normalizeLine: normalizeLine, visibleLines: visibleLines, salesDropRule: salesDropRule, lowStockRule: lowStockRule, stockItems: stockItems, proposeLine: proposeLine, salesRows: salesRows, dayBoundsAt: dayBoundsAt, compute: compute, read: function () { return clone(doc); }, write: writeLocal }
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true }); else boot();
 }());

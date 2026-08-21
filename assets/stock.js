@@ -1290,6 +1290,29 @@
     return legacy;
   }
   const currentStockFor = (it) => ledgerOpeningFor(it);
+  /* Read-only projection for the morning briefing. "Tracked" means both an
+   * explicit positive reorder threshold and durable ledger history; an absent
+   * snapshot is never interpreted as zero stock. */
+  function briefingStockItems() {
+    return getInv().map((it) => {
+      const threshold = Number(it && it.reorderLevel);
+      let history = [], balance = null;
+      try {
+        if (window.KiwiInventory?.history && window.KiwiInventory?.balance) {
+          history = window.KiwiInventory.history(it.id) || [];
+          if (history.length) balance = window.KiwiInventory.balance(it.id);
+        }
+      } catch (_) { history = []; balance = null; }
+      return {
+        id: String(it.id || ''), name: String(it.name || ''), unit: String(it.unit || ''),
+        balance: Number.isFinite(+balance) ? +balance : null,
+        threshold: Number.isFinite(threshold) && threshold > 0 ? threshold : null,
+        par: Number.isFinite(+it.parLevel) && +it.parLevel > 0 ? +it.parLevel : null,
+        supplier: String(it.supplier || ''), tracked: history.length > 0 && Number.isFinite(threshold) && threshold > 0
+      };
+    });
+  }
+  window.KiwiStockBriefing = { items: briefingStockItems };
 
   function moveStock(it, qty, reason, refType, refId, note, unitCost, meta) {
     if (!it || !qty) return null;
