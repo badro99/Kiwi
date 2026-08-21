@@ -76,9 +76,9 @@
 html:root[data-kiwi-ai="releve"] .fa-drawer {
   /* Replis — la valeur quand Vexel n'est pas là. Le bloc §12 les redéclare
      pour le climat sombre ; les noms sans `-fb` n'ont pas à être touchés. */
-  --ai-page-fb: var(--paper);
-  --ai-sheet-fb: color-mix(in srgb, var(--surface) 72%, transparent);
-  --ai-glass-fb: color-mix(in srgb, var(--surface) 80%, transparent);
+  --ai-page-fb: var(--paper, #FAF9F6);
+  --ai-sheet-fb: var(--paper-soft, #F3F1EC);
+  --ai-glass-fb: var(--surface, #FFFFFF);
   --ai-line-fb: color-mix(in srgb, var(--ink) 10%, transparent);
   --ai-line-soft-fb: color-mix(in srgb, var(--ink) 6%, transparent);
   --ai-line-lit-fb: color-mix(in srgb, var(--ink) 20%, transparent);
@@ -90,10 +90,10 @@ html:root[data-kiwi-ai="releve"] .fa-drawer {
   --ai-cite-fb: color-mix(in srgb, var(--mint) 40%, transparent);
   --ai-lit-bg-fb: color-mix(in srgb, var(--mint) 22%, transparent);
 
-  /* Surfaces et filets — Vexel pilote quand il est présent. */
-  --ai-page: var(--vx-overlay-bg, var(--ai-page-fb));
-  --ai-sheet: var(--vx-ai-bg, var(--ai-sheet-fb));
-  --ai-glass: var(--ai-glass-fb);
+  /* Surfaces et filets — fond opaque/protecteur pour éviter toute transparence parasite */
+  --ai-page: var(--paper, #FAF9F6);
+  --ai-sheet: var(--paper-soft, #F3F1EC);
+  --ai-glass: var(--surface, #FFFFFF);
   --ai-line: var(--vx-track, var(--ai-line-fb));
   --ai-line-soft: var(--ai-line-soft-fb);
   --ai-line-lit: var(--vx-card-hover-border, var(--ai-line-lit-fb));
@@ -113,17 +113,22 @@ html:root[data-kiwi-ai="releve"] .fa-drawer {
   --ai-dur: .15s;
 }
 
-/* ─── §0 · le verre ───────────────────────────────────────────────────────
-   `agent.js` peint `.fa`, `.fa-thread`, `.fa-dock`, `.fa-context` et l'en-tête
-   en `--paper` opaque : une feuille pleine posée DANS une coquille que Vexel
-   floute déjà. On rend l'intérieur transparent et on ne peint la coquille
-   qu'une fois. `--ai-page` reprend la valeur exacte que Vexel poserait, donc
-   rien ne change hors Vexel non plus.                                        */
-html:root[data-kiwi-ai="releve"] .fa-drawer .kiwi-drawer { background: var(--ai-page); }
-html:root[data-kiwi-ai="releve"] .fa,
+/* ─── §0 · le verre et l'opacité protectrice ─────────────────────────────── */
+html:root[data-kiwi-ai="releve"] .fa-drawer .kiwi-drawer {
+  background: var(--paper, #FAF9F6) !important;
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
+}
+html:root[data-kiwi-ai="releve"] .fa {
+  background: var(--paper, #FAF9F6);
+}
 html:root[data-kiwi-ai="releve"] .fa-thread,
-html:root[data-kiwi-ai="releve"] .fa-dock,
-html:root[data-kiwi-ai="releve"] .fa-drawer .kiwi-drawer-head { background: none; }
+html:root[data-kiwi-ai="releve"] .fa-dock {
+  background: transparent;
+}
+html:root[data-kiwi-ai="releve"] .fa-drawer .kiwi-drawer-head {
+  background: var(--paper, #FAF9F6);
+}
 
 /* ─── §0bis · la voix unique ──────────────────────────────────────────────
    Les cinq seules `font-family` du fichier. Elles n'ajoutent pas de voix,
@@ -138,7 +143,7 @@ html:root[data-kiwi-ai="releve"] .fa-hero-h,
 html:root[data-kiwi-ai="releve"] .fa-kpdisplay,
 html:root[data-kiwi-ai="releve"] .fa-kpgrid button,
 html:root[data-kiwi-ai="releve"] .fa-keypad-card {
-  font-family: var(--sans);
+  font-family: var(--sans) !important;
 }
 html:root[data-kiwi-ai="releve"] .fa-kpdisplay,
 html:root[data-kiwi-ai="releve"] .fa-kpgrid button {
@@ -149,34 +154,46 @@ html:root[data-kiwi-ai="releve"] .fa-kpgrid button {
 /* ─── §1 · le bandeau ─────────────────────────────────────────────────── */
 html:root[data-kiwi-ai="releve"] .fa-drawer .kiwi-drawer-head {
   border-bottom: 1px solid var(--ai-line);
-  padding-bottom: 16px;
+  padding: 20px max(48px, calc((100vw - 1480px) / 2 + 48px));
+  position: relative;
 }
 html:root[data-kiwi-ai="releve"] .fa-drawer .kiwi-drawer-head h3 {
-  font-size: 20px;
-  font-weight: 500;
-  letter-spacing: -0.02em;
-  line-height: 24px;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 22px;
+  color: var(--ink);
 }
 html:root[data-kiwi-ai="releve"] .fa-drawer .kiwi-drawer-head p {
-  font-size: 14px;
-  line-height: 20px;
+  font-size: 13px;
+  line-height: 18px;
   letter-spacing: 0;
   text-transform: none;
   color: var(--n-500);
-  margin-top: 4px;
+  margin-top: 3px;
 }
 /* Dégagé du bouton de fermeture, qui occupe le coin avec sa zone de clic. */
 html:root[data-kiwi-ai="releve"] .rlv-status {
-  position: absolute; inset-inline-end: 122px; top: 50%; transform: translateY(-50%);
-  display: flex; align-items: center; gap: 8px;
-  font-size: 12px; line-height: 16px; letter-spacing: 0;
-  text-transform: none; color: var(--n-500); pointer-events: none;
+  position: absolute;
+  inset-inline-end: 96px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(11, 110, 79, 0.08);
+  border: 1px solid rgba(11, 110, 79, 0.22);
+  color: var(--atlas, #0B6E4F);
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 550;
+  line-height: 1;
+  pointer-events: none;
 }
-/* Point d'état, pas balise clignotante : il dit « en direct » une fois pour
-   toutes. L'ancienne pulsation de 3,4 s était du décor qui bougeait tout
-   seul dans le coin de l'œil du commerçant. */
 html:root[data-kiwi-ai="releve"] .rlv-status i {
-  width: 6px; height: 6px; border-radius: 50%; background: var(--ai-accent); flex: none;
+  width: 6px; height: 6px; border-radius: 50%; background: var(--atlas, #0B6E4F);
+  box-shadow: 0 0 0 2px rgba(11, 110, 79, 0.2); flex: none;
 }
 @media (max-width: 900px) {
   html:root[data-kiwi-ai="releve"] .rlv-status { display: none; }
@@ -378,79 +395,77 @@ html:root[data-kiwi-ai="releve"] .fa-ctx-item.is-cited::after {
 html:root[data-kiwi-ai="releve"] .fa-ctx-kpi.is-lit,
 html:root[data-kiwi-ai="releve"] .fa-ctx-item.is-lit { background: var(--ai-lit-bg); }
 
-/* ─── §10 · le volet ──────────────────────────────────────────────────────
-   `--vx-ai-bg` existe dans les deux climats Vexel et n'avait aucun
-   consommateur : c'était un crochet réservé à cette surface, jamais branché.  */
+/* ─── §10 · le volet ────────────────────────────────────────────────────── */
 html:root[data-kiwi-ai="releve"] .fa-context {
-  background: var(--ai-sheet);
+  width: 320px;
+  min-width: 320px;
+  background: var(--ai-sheet, var(--paper-soft));
   border-inline-start: 1px solid var(--ai-line);
+  padding: 28px 24px;
 }
 html:root[data-kiwi-ai="releve"] .fa-ctx-eyebrow {
-  font-size: 12px; line-height: 16px; letter-spacing: 0;
-  text-transform: none; color: var(--n-500);
+  font-size: 11px; line-height: 16px; letter-spacing: 0.08em;
+  text-transform: uppercase; font-weight: 600; color: var(--n-500);
 }
 html:root[data-kiwi-ai="releve"] .fa-ctx-biz {
-  font-size: 20px; line-height: 26px; font-weight: 500;
+  font-size: 19px; line-height: 24px; font-weight: 650;
   letter-spacing: -0.02em; margin-top: 4px; color: var(--ink);
 }
 html:root[data-kiwi-ai="releve"] .fa-ctx-sub {
   font-size: 12px; line-height: 16px; letter-spacing: 0;
-  text-transform: none; color: var(--n-500); margin-top: 4px;
+  color: var(--n-500); margin-top: 3px;
 }
 html:root[data-kiwi-ai="releve"] .fa-ctx-kpis {
-  margin-top: 24px; padding-top: 8px; border-top: 1px solid var(--ai-line-soft);
+  margin-top: 20px; padding-top: 6px; border-top: 1px solid var(--ai-line-soft);
 }
 html:root[data-kiwi-ai="releve"] .fa-ctx-kpi {
   display: grid; grid-template-columns: 1fr auto; align-items: baseline; gap: 16px;
-  padding: 12px 8px; border: none; border-radius: 8px; background: none;
+  padding: 10px 8px; border: none; border-radius: 8px; background: none;
+  cursor: pointer;
   transition: background var(--ai-dur) var(--ai-ease);
 }
 html:root[data-kiwi-ai="releve"] .fa-ctx-kpi .k {
-  font-size: 14px; line-height: 20px; color: var(--n-600);
+  font-size: 13px; line-height: 18px; color: var(--n-600);
 }
 html:root[data-kiwi-ai="releve"] .fa-ctx-kpi .v {
-  font-size: 14px; line-height: 20px; font-weight: 500; color: var(--ink);
+  font-size: 13.5px; line-height: 18px; font-weight: 650; color: var(--ink);
   font-variant-numeric: tabular-nums lining-nums; white-space: nowrap;
 }
 html:root[data-kiwi-ai="releve"] .fa-ctx-kpi.hl .v { color: var(--ai-accent); }
-/* Le survol lève par la lumière, pas par un aplat : c'est la doctrine Vexel. */
 html:root[data-kiwi-ai="releve"] .fa-ctx-kpi:hover,
 html:root[data-kiwi-ai="releve"] .fa-ctx-item:hover { background: var(--ai-wash); }
+html:root[data-kiwi-ai="releve"] .fa-ctx-note {
+  font-size: 11.5px; line-height: 1.5; color: var(--n-500); margin-top: 12px;
+}
 html:root[data-kiwi-ai="releve"] .fa-ctx-viz-h,
 html:root[data-kiwi-ai="releve"] .fa-ctx-gh {
-  font-size: 12px; line-height: 16px; letter-spacing: 0;
-  text-transform: none; color: var(--n-500);
+  font-size: 11px; line-height: 16px; letter-spacing: 0.08em;
+  text-transform: uppercase; font-weight: 600; color: var(--n-500);
 }
 html:root[data-kiwi-ai="releve"] .fa-ctx-bar { border-radius: 2px; overflow: hidden; height: 4px; }
-/* Le bouton « trésorerie nette » était un dégradé atlas→riad : sous Vexel
-   sombre il fond vers rgba(0,0,0,.42), donc il s'éteint par le bas. C'est le
-   chiffre le plus important du volet — il devient la seule carte de verre du
-   rail, et le chiffre porte seul l'emphase. */
 html:root[data-kiwi-ai="releve"] .fa-ctx-net {
-  background: var(--ai-glass);
-  -webkit-backdrop-filter: blur(10px) saturate(1.4);
-  backdrop-filter: blur(10px) saturate(1.4);
+  background: var(--surface);
   color: var(--ink);
   border: 1px solid var(--ai-line);
   border-radius: var(--ai-r);
-  box-shadow: none;
-  margin-top: 24px; padding: 16px;
+  box-shadow: 0 1px 3px rgba(10,15,13,0.03);
+  margin-top: 20px; padding: 16px;
   transition: border-color var(--ai-dur) var(--ai-ease);
 }
 html:root[data-kiwi-ai="releve"] .fa-ctx-net:hover {
   transform: none; border-color: var(--ai-line-lit);
 }
 html:root[data-kiwi-ai="releve"] .fa-ctx-net .k {
-  font-size: 12px; line-height: 16px; letter-spacing: 0;
-  text-transform: none; color: var(--n-500); opacity: 1;
+  font-size: 11px; line-height: 16px; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--n-500); opacity: 1; font-weight: 600;
 }
 html:root[data-kiwi-ai="releve"] .fa-ctx-net .v {
-  font-size: 32px; line-height: 32px; font-weight: 500;
-  letter-spacing: -0.04em; color: var(--ai-figure); margin-top: 8px;
+  font-size: 28px; line-height: 32px; font-weight: 650;
+  letter-spacing: -0.03em; color: var(--ai-figure); margin-top: 6px;
   font-variant-numeric: tabular-nums lining-nums;
 }
 html:root[data-kiwi-ai="releve"] .fa-ctx-net .s {
-  font-size: 12px; line-height: 16px; color: var(--n-500); opacity: 1; margin-top: 8px;
+  font-size: 12px; line-height: 16px; color: var(--n-500); opacity: 1; margin-top: 6px;
 }
 html:root[data-kiwi-ai="releve"] .fa-ctx-more {
   border: 1px solid var(--ai-line); background: none; border-radius: 999px;
@@ -463,32 +478,113 @@ html:root[data-kiwi-ai="releve"] .fa-ctx-more:hover {
   border-color: var(--ai-line-lit); color: var(--ink); background: var(--ai-wash);
 }
 html:root[data-kiwi-ai="releve"] .fa-ctx-trust {
-  border-top: 1px solid var(--ai-line-soft); padding-top: 16px; margin-top: 24px;
-  font-size: 12px; line-height: 16px;
+  display: flex; gap: 8px; align-items: flex-start;
+  font-size: 11.5px; line-height: 1.5; color: var(--n-600);
+  background: var(--ai-wash); border: 1px solid var(--ai-line-soft);
+  border-radius: var(--ai-r); padding: 12px 14px; margin-top: 16px;
 }
-html:root[data-kiwi-ai="releve"] .fa-ctx-trust svg { color: var(--ai-accent); }
+html:root[data-kiwi-ai="releve"] .fa-ctx-trust svg {
+  color: var(--ai-accent); width: 14px; height: 14px; flex-shrink: 0; margin-top: 2px;
+}
+html:root[data-kiwi-ai="releve"] .fa-ctx-mode {
+  display: inline-flex; align-items: center; justify-content: center; width: 100%;
+  padding: 7px 12px; margin-top: 8px; border-radius: 8px;
+  border: 1px solid var(--ai-line); background: var(--surface);
+  color: var(--ai-accent); font-size: 11.5px; font-weight: 550; cursor: pointer;
+  transition: all var(--ai-dur) var(--ai-ease);
+}
+html:root[data-kiwi-ai="releve"] .fa-ctx-mode:hover {
+  border-color: var(--ai-accent); background: var(--ai-wash); transform: translateY(-1px);
+}
 
 /* ─── §11 · la saisie ─────────────────────────────────────────────────── */
 html:root[data-kiwi-ai="releve"] .fa-dock { border-top: none; padding-bottom: 24px; }
 html:root[data-kiwi-ai="releve"] .fa-dock-in { max-width: 720px; }
 html:root[data-kiwi-ai="releve"] .fa-inputwrap {
-  border: 1px solid var(--ai-line);
-  background: var(--ai-glass);
-  -webkit-backdrop-filter: blur(14px) saturate(1.7);
-  backdrop-filter: blur(14px) saturate(1.7);
-  border-radius: var(--ai-r); padding: 6px 6px 6px 16px;
-  box-shadow: var(--ai-drop);
-  transition: border-color var(--ai-dur) var(--ai-ease);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1.5px solid var(--ai-line, rgba(0, 0, 0, 0.12));
+  background: var(--surface, #ffffff);
+  border-radius: 999px;
+  padding: 6px 6px 6px 18px;
+  min-height: 52px;
+  box-shadow: 0 4px 20px -2px rgba(10, 15, 13, 0.06), 0 1px 3px rgba(10, 15, 13, 0.04);
+  transition: border-color var(--ai-dur, 180ms) var(--ai-ease, ease),
+              box-shadow var(--ai-dur, 180ms) var(--ai-ease, ease),
+              background var(--ai-dur, 180ms) var(--ai-ease, ease);
 }
 html:root[data-kiwi-ai="releve"] .fa-inputwrap:focus-within {
   transform: none;
-  border-color: var(--ai-accent);
-  box-shadow: var(--ai-drop);
+  border-color: var(--ai-accent, var(--atlas, #0B6E4F));
+  box-shadow: 0 6px 24px -4px rgba(11, 110, 79, 0.18), 0 0 0 3px rgba(11, 110, 79, 0.12);
+  background: #ffffff;
 }
-html:root[data-kiwi-ai="releve"] .fa-input { font-size: 16px; line-height: 26px; }
-html:root[data-kiwi-ai="releve"] .fa-input::placeholder { color: var(--n-500); font-size: 16px; }
+html:root[data-kiwi-ai="releve"] .fa-input {
+  flex: 1;
+  min-width: 0;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  -webkit-appearance: none;
+  appearance: none;
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 24px;
+  padding: 6px 0;
+  margin: 0 !important;
+  height: 24px;
+  min-height: 24px;
+  max-height: 140px;
+  color: var(--ink, #0A0F0D);
+  resize: none;
+}
+html:root[data-kiwi-ai="releve"] .fa-input::placeholder {
+  color: var(--n-500, #8A948F);
+  font-size: 14.5px;
+  letter-spacing: -0.01em;
+  opacity: 0.8;
+}
 html:root[data-kiwi-ai="releve"] .fa-send {
-  background: var(--ai-accent); color: var(--ai-on-accent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  min-height: 38px;
+  border-radius: 50%;
+  border: none;
+  background: var(--ai-accent, var(--atlas, #0B6E4F));
+  color: var(--ai-on-accent, #ffffff);
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+  box-shadow: 0 2px 8px rgba(11, 110, 79, 0.28);
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.15s ease, box-shadow 0.15s ease;
+}
+html:root[data-kiwi-ai="releve"] .fa-send:hover {
+  transform: scale(1.06);
+  box-shadow: 0 4px 14px rgba(11, 110, 79, 0.38);
+}
+html:root[data-kiwi-ai="releve"] .fa-send:active {
+  transform: scale(0.92);
+  box-shadow: 0 1px 4px rgba(11, 110, 79, 0.2);
+}
+html:root[data-kiwi-ai="releve"] .fa-send svg {
+  width: 17px;
+  height: 17px;
+  display: block;
+  margin-inline-start: 1px;
+}
+[dir="rtl"] html:root[data-kiwi-ai="releve"] .fa-send svg {
+  transform: scaleX(-1);
+  margin-inline-start: -1px;
+}
+[dir="rtl"] html:root[data-kiwi-ai="releve"] .fa-inputwrap {
+  padding: 6px 18px 6px 6px;
 }
 html:root[data-kiwi-ai="releve"] .fa-toolbar { margin-top: 12px; }
 html:root[data-kiwi-ai="releve"] .fa-tool,
@@ -511,65 +607,69 @@ html:root[data-kiwi-ai="releve"] .fa-keypad-card {
   box-shadow: var(--ai-drop);
 }
 
-/* ─── §12 · l'écran vide ──────────────────────────────────────────────────
-   Titre 32 px, phrase 16 px, trois cartes de suggestion. Le « Bonjour. » en
-   serif de 62 px était un titre de magazine posé sur un outil de travail.    */
+/* ─── §12 · l'écran vide ────────────────────────────────────────────────── */
 html:root[data-kiwi-ai="releve"] .fa-hero { padding-top: 8px; }
 html:root[data-kiwi-ai="releve"] .fa-hero-mark {
   width: 0; height: 0; overflow: hidden; margin: 0; box-shadow: none; background: none;
 }
 html:root[data-kiwi-ai="releve"] .fa-hero-h {
-  font-size: 32px; line-height: 32px; font-weight: 500; letter-spacing: -0.04em;
+  font-family: var(--sans) !important;
+  font-size: 32px; line-height: 1.15; font-weight: 650; letter-spacing: -0.03em;
   margin-top: 0; color: var(--ink); max-width: 18ch;
 }
 html:root[data-kiwi-ai="releve"] .fa-hero-p {
-  font-size: 16px; line-height: 26px; margin-top: 16px; max-width: 56ch; color: var(--n-600);
+  font-size: 15px; line-height: 1.55; margin-top: 10px; max-width: 56ch; color: var(--n-600);
 }
 html:root[data-kiwi-ai="releve"] .fa-hero-cards {
-  margin-top: 32px; gap: 8px; grid-template-columns: 1fr; border-top: none;
+  margin-top: 24px; gap: 9px; grid-template-columns: 1fr; border-top: none; display: flex; flex-direction: column;
 }
 html:root[data-kiwi-ai="releve"] .fa-hero-card {
-  flex-direction: row; align-items: center; gap: 12px;
-  background: var(--ai-glass);
-  -webkit-backdrop-filter: blur(10px) saturate(1.4);
-  backdrop-filter: blur(10px) saturate(1.4);
-  border: 1px solid var(--ai-line); border-radius: var(--ai-r);
-  padding: 16px; box-shadow: none;
-  transition: border-color var(--ai-dur) var(--ai-ease),
-              background var(--ai-dur) var(--ai-ease);
+  display: flex; flex-direction: row; align-items: center; gap: 14px;
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--ai-line, rgba(0,0,0,0.08));
+  border-radius: 14px;
+  padding: 13px 18px;
+  box-shadow: 0 1px 3px rgba(10,15,13,0.03), 0 6px 16px -8px rgba(10,15,13,0.05);
+  cursor: pointer; text-align: start;
+  transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.16s ease,
+              box-shadow 0.16s ease,
+              background-color 0.16s ease;
 }
-/* Le survol allume l'arête, il ne remplit pas la ligne, et il ne déplace pas
-   la carte : un aplat mint plein virait au néon sous Vexel sombre. */
 html:root[data-kiwi-ai="releve"] .fa-hero-card:hover {
-  transform: none;
-  background: var(--ai-wash);
-  border-color: var(--ai-line-lit);
-  box-shadow: none;
-  padding-inline-start: 16px;
+  transform: translateY(-2px);
+  background: #ffffff;
+  border-color: rgba(11,110,79,0.35);
+  box-shadow: 0 8px 24px -6px rgba(11,110,79,0.14), 0 2px 6px rgba(11,110,79,0.06);
+}
+html:root[data-kiwi-ai="releve"] .fa-hero-card:active {
+  transform: scale(0.99);
 }
 html:root[data-kiwi-ai="releve"] .fa-hero-card .ic {
-  width: 24px; height: 24px; border-radius: 8px; flex: none;
-  background: none; color: var(--ai-accent);
+  width: 34px; height: 34px; min-width: 34px; border-radius: 10px; flex: none;
+  background: rgba(11, 110, 79, 0.08); color: var(--atlas, #0B6E4F);
   display: flex; align-items: center; justify-content: center; margin: 0;
 }
+html:root[data-kiwi-ai="releve"] .fa-hero-card .ic svg { width: 18px; height: 18px; }
 html:root[data-kiwi-ai="releve"] .fa-hero-card .t {
-  font-size: 14px; line-height: 20px; font-weight: 500;
-  letter-spacing: 0; flex: 1; margin: 0; color: var(--ink);
+  font-size: 14px; line-height: 20px; font-weight: 600;
+  letter-spacing: -0.01em; flex: 1; margin: 0; color: var(--ink);
 }
 html:root[data-kiwi-ai="releve"] .fa-hero-card .s {
   font-size: 12px; line-height: 16px; letter-spacing: 0;
-  text-transform: none; color: var(--n-500); margin: 0; text-align: end;
+  color: var(--n-500); margin: 0; text-align: end; font-weight: 450;
 }
 html:root[data-kiwi-ai="releve"] .fa-hero-insight {
-  margin-top: 24px; background: none; border: none; border-radius: 0;
-  padding: 0 0 0 12px; border-inline-start: 2px solid var(--ai-accent);
-  font-size: 14px; line-height: 20px; color: var(--n-600);
+  margin-top: 18px;
+  background: rgba(11, 110, 79, 0.05);
+  border: 1px solid rgba(11, 110, 79, 0.16);
+  border-radius: 12px;
+  padding: 12px 16px;
+  display: flex; gap: 12px; align-items: center;
+  font-size: 13px; line-height: 1.5; color: var(--n-600);
 }
-html:root[data-kiwi-ai="releve"] .fa-hero-insight svg { color: var(--ai-accent); }
-/* « État du jour · » vit dans ce <b>. Il était figé sur `--riad`, qui sous
-   Vexel sombre vaut rgba(0,0,0,.42) : l'intitulé disparaissait purement et
-   simplement du bandeau, alors qu'il se lisait en clair. */
-html:root[data-kiwi-ai="releve"] .fa-hero-insight b { color: var(--ai-figure); font-weight: 600; }
+html:root[data-kiwi-ai="releve"] .fa-hero-insight svg { color: var(--atlas, #0B6E4F); width: 18px; height: 18px; flex-shrink: 0; }
+html:root[data-kiwi-ai="releve"] .fa-hero-insight b { color: var(--atlas, #0B6E4F); font-weight: 600; }
 
 /* ─── §13 · mode sombre ───────────────────────────────────────────────────
    Le thème sombre est gratuit pour tous les commerçants depuis le 08/08/2026.
@@ -579,8 +679,9 @@ html:root[data-kiwi-ai="releve"] .fa-hero-insight b { color: var(--ai-figure); f
    Le blanc pur n'entre pas dans l'encre — seulement dans les filets, où il
    n'est qu'une transparence.                                                 */
 html:root[data-theme="dark"][data-kiwi-ai="releve"] .fa-drawer {
-  --ai-sheet-fb: color-mix(in srgb, #fff 4%, transparent);
-  --ai-glass-fb: color-mix(in srgb, #fff 6%, transparent);
+  --ai-page-fb: var(--paper, #0E1210);
+  --ai-sheet-fb: var(--paper-soft, #151A17);
+  --ai-glass-fb: var(--surface, #1C231F);
   --ai-line-fb: color-mix(in srgb, #fff 12%, transparent);
   --ai-line-soft-fb: color-mix(in srgb, #fff 7%, transparent);
   --ai-line-lit-fb: color-mix(in srgb, #fff 22%, transparent);
@@ -589,12 +690,38 @@ html:root[data-theme="dark"][data-kiwi-ai="releve"] .fa-drawer {
   --ai-shadow-fb: rgba(0, 0, 0, .85);
   --ai-on-accent-fb: var(--ink);
 
-  /* L'encre bascule : `--riad` (#053B2C) tient 1,4:1 sur du noir. Et hors
-     Vexel, `--atlas` reste le vert de plein jour — le mint prend le relais. */
+  --ai-page: var(--paper, #0E1210);
+  --ai-sheet: var(--paper-soft, #151A17);
+  --ai-glass: var(--surface, #1C231F);
   --ai-accent: var(--vx-accent, var(--mint));
   --ai-figure: var(--mint);
   --ai-cite: color-mix(in srgb, var(--ai-accent) 20%, transparent);
   --ai-lit-bg: color-mix(in srgb, var(--ai-accent) 13%, transparent);
+}
+html:root[data-theme="dark"][data-kiwi-ai="releve"] .fa-drawer .kiwi-drawer {
+  background: var(--paper, #0E1210) !important;
+}
+html:root[data-theme="dark"][data-kiwi-ai="releve"] .fa {
+  background: var(--paper, #0E1210);
+}
+html:root[data-theme="dark"][data-kiwi-ai="releve"] .fa-drawer .kiwi-drawer-head {
+  background: var(--paper, #0E1210);
+}
+html:root[data-theme="dark"][data-kiwi-ai="releve"] .fa-hero-card {
+  background: var(--surface, #1C231F);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+html:root[data-theme="dark"][data-kiwi-ai="releve"] .fa-hero-card:hover {
+  background: #232C27;
+  border-color: rgba(63, 182, 122, 0.4);
+}
+html:root[data-theme="dark"][data-kiwi-ai="releve"] .fa-hero-card .ic {
+  background: rgba(63, 182, 122, 0.12);
+  color: var(--mint, #3FB67A);
+}
+html:root[data-theme="dark"][data-kiwi-ai="releve"] .fa-hero-insight {
+  background: rgba(63, 182, 122, 0.08);
+  border-color: rgba(63, 182, 122, 0.2);
 }
 
 /* ─── §14 · le téléphone ──────────────────────────────────────────────── */
@@ -604,10 +731,10 @@ html:root[data-theme="dark"][data-kiwi-ai="releve"] .fa-drawer {
      les montrer. Un textarea rows="1" les coupait, et le commerçant lisait
      « posez une question, embauche, prix, » sans la fin de sa propre invite. */
   html:root[data-kiwi-ai="releve"] .fa-inputwrap {
-    align-items: center; padding: 8px 8px 8px 16px;
+    align-items: center; padding: 6px 6px 6px 16px; min-height: 48px;
   }
-  html:root[data-kiwi-ai="releve"] .fa-input { min-height: 56px; font-size: 16px; line-height: 20px; }
-  html:root[data-kiwi-ai="releve"] .fa-input::placeholder { font-size: 14px; }
+  html:root[data-kiwi-ai="releve"] .fa-input { font-size: 15px; line-height: 22px; }
+  html:root[data-kiwi-ai="releve"] .fa-input::placeholder { font-size: 13.5px; }
   html:root[data-kiwi-ai="releve"] .fa-msg.agent .fa-bubble { padding: 16px; }
   html:root[data-kiwi-ai="releve"] .fa-stat.rlv-lead .v { font-size: 32px; line-height: 32px; }
   html:root[data-kiwi-ai="releve"] .fa-stat { grid-template-columns: 1fr; }

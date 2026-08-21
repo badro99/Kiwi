@@ -20,9 +20,8 @@ const controls = [
   ['whisper turbo first, legacy whisper as fallback', fn.includes("'@cf/openai/whisper-large-v3-turbo'") && fn.includes("'@cf/openai/whisper'")],
   ['a language hint is whitelisted, never relayed raw', fn.includes('LANGS.has(body.lang)')],
   ['the model call rides the shared AI gateway', fn.includes('runAiWithGateway')],
-  // ── le client : deux compositeurs, un secours, jamais d'erreur brute ──
   ['the mic reaches both the hero box and the assistant drawer', voice.includes(".querySelectorAll('.fa-inputwrap')") && voice.includes(".querySelectorAll('.hai-input')")],
-  ['the transcript is delivered and sent, not just typed', voice.includes('ctx.send.click()')],
+  ['the transcript is delivered to the input for client review', voice.includes('ctx.input.value =') && voice.includes('ctx.input.focus()') && !voice.includes('ctx.send.click()')],
   ['browser speech recognition is the fallback path', voice.includes('webkitSpeechRecognition') && voice.includes('browserDictate')],
   ['a dead endpoint flips later dictations to the browser', voice.includes('preferBrowser = true')],
   ['recording is capped so a stuck mic cannot upload forever', voice.includes('MAX_RECORD_MS')],

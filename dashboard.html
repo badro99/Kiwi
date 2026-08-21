@@ -518,11 +518,13 @@
   .hai-rec-title { font-size: 14px; font-weight: 600; color: #fff; line-height: 1.4; letter-spacing: -0.005em; }
   .hai-rec-obs { font-size: 13px; color: rgba(247,245,240,0.8); line-height: 1.55; margin-top: 5px; }
   .hai-rec-act { font-size: 13px; font-weight: 600; color: var(--mint); line-height: 1.5; margin-top: 7px; }
-  .hai-input { display: flex; gap: 6px; align-items: center; background: rgba(0,0,0,0.28); border: 1px solid rgba(125,242,176,0.18); border-radius: 999px; padding: 4px 4px 4px 18px; position: relative; }
-  .hai-input input { flex: 1; min-width: 0; background: transparent; border: 0; outline: 0; color: #fff; font-family: var(--sans); font-size: 13px; padding: 9px 0; letter-spacing: -0.005em; }
-  .hai-input input::placeholder { color: rgba(247,245,240,0.5); }
-  .hai-send { width: 36px; height: 36px; border-radius: 50%; background: rgba(125,242,176,0.12); color: var(--mint); display: flex; align-items: center; justify-content: center; transition: background 150ms, transform 150ms; flex-shrink: 0; cursor: pointer; }
-  .hai-send:hover { background: rgba(125,242,176,0.22); transform: translateX(1px); }
+  .hai-input { display: flex; gap: 8px; align-items: center; background: rgba(0,0,0,0.32); border: 1.5px solid rgba(125,242,176,0.24); border-radius: 999px; padding: 4px 6px 4px 18px; min-height: 48px; position: relative; box-shadow: 0 4px 20px -2px rgba(0,0,0,0.28); transition: border-color 180ms ease, box-shadow 180ms ease, background 180ms ease; }
+  .hai-input:focus-within { border-color: var(--mint); background: rgba(0,0,0,0.45); box-shadow: 0 6px 24px -4px rgba(0,0,0,0.4), 0 0 0 3px rgba(125,242,176,0.18); }
+  .hai-input input { flex: 1; min-width: 0; background: transparent !important; background-color: transparent !important; border: 0 !important; outline: 0 !important; box-shadow: none !important; color: #fff; font-family: var(--sans); font-size: 14px; padding: 8px 0; letter-spacing: -0.005em; margin: 0 !important; -webkit-appearance: none; appearance: none; }
+  .hai-input input::placeholder { color: rgba(247,245,240,0.55); font-size: 13.5px; }
+  .hai-send { width: 36px; height: 36px; min-width: 36px; border-radius: 50%; background: var(--mint); color: #040605; display: inline-flex; align-items: center; justify-content: center; transition: background 150ms ease, transform 150ms cubic-bezier(.34,1.56,.64,1), box-shadow 150ms ease; flex-shrink: 0; cursor: pointer; border: none; box-shadow: 0 2px 8px rgba(0,255,174,0.3); }
+  .hai-send:hover { background: #5ccfa0; transform: scale(1.06); box-shadow: 0 4px 12px rgba(0,255,174,0.45); }
+  .hai-send:active { transform: scale(0.92); }
   .hai-tooltip { position: absolute; right: 0; bottom: calc(100% + 10px); background: var(--ink); color: var(--paper); font-size: 11.5px; padding: 6px 10px; border-radius: 6px; opacity: 0; pointer-events: none; transition: opacity 150ms; white-space: nowrap; font-family: var(--mono); letter-spacing: 0.04em; }
   .hai-tooltip::after { content: ""; position: absolute; top: 100%; right: 16px; border: 5px solid transparent; border-top-color: var(--ink); }
   .hai-input:focus-within .hai-tooltip { opacity: 1; }
@@ -5065,7 +5067,7 @@
 <!-- Assistant · « Le relevé ». Refonte visuelle complète de l'assistant, posée en
      COUCHE au-dessus de assets/agent.js — aucune logique touchée. Pilotée par
      <html data-kiwi-ai="releve"> ; KiwiAiSkin.disable() rend l'écran d'origine. -->
-<link rel="stylesheet" href="assets/agent-skin.css?v=8" />
+<link rel="stylesheet" href="assets/agent-skin.css?v=11" />
 <!-- Physical documents never inherit the dashboard's dark palette. -->
 <link rel="stylesheet" href="assets/print-paper.css?v=1" />
 </head>
@@ -6108,8 +6110,8 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
      loaded before the assistant router; the probed modules may load later and
      are resolved lazily at question time. -->
 <script src="assets/agent-truth.js?v=3" defer fetchpriority="low"></script>
-<script src="assets/agent.js?v=10" defer fetchpriority="low"></script>
-<script src="assets/agent-voice.js?v=1" defer fetchpriority="low"></script>
+<script src="assets/agent.js?v=13" defer fetchpriority="low"></script>
+<script src="assets/agent-voice.js?v=4" defer fetchpriority="low"></script>
 <script src="assets/agent-skin.js?v=4" defer fetchpriority="low"></script>
 <script src="assets/accounting.js" defer fetchpriority="low"></script>
 <script src="assets/pages.js" defer fetchpriority="low"></script>
@@ -6201,7 +6203,7 @@ window.KiwiDesignVitrine && window.KiwiDesignVitrine.prime();</script>
      Après pages-pro.js, dont il emprunte la coquille Kiwi.appPage. -->
 <script src="assets/day-report.js?v=5" defer fetchpriority="low"></script>
 <script src="assets/day-report-export.js?v=4" defer fetchpriority="low"></script>
-<script src="assets/day-report-dash.js?v=2" defer fetchpriority="low"></script>
+<script src="assets/day-report-dash.js?v=4" defer fetchpriority="low"></script>
 <script src="assets/stock.js?v=16" defer fetchpriority="low"></script>
 <script src="assets/planning-core.js?v=8" defer fetchpriority="low"></script>
 <link rel="stylesheet" href="assets/planning-ui.css?v=10">

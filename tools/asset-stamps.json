@@ -16,8 +16,8 @@
     "sha": "6605bfb259d33dfa"
   },
   "assets/agent-skin.css": {
-    "v": "8",
-    "sha": "86c16df44b26eb93"
+    "v": "11",
+    "sha": "552fcbc4e6324889"
   },
   "assets/agent-skin.js": {
     "v": "4",
@@ -28,12 +28,12 @@
     "sha": "3dce6dc2fff1447e"
   },
   "assets/agent-voice.js": {
-    "v": "1",
-    "sha": "1e8d84b295885e8d"
+    "v": "4",
+    "sha": "48c56a5be7a6655b"
   },
   "assets/agent.js": {
-    "v": "10",
-    "sha": "bf93db0155cd20cc"
+    "v": "13",
+    "sha": "27c9d03fd681bc1e"
   },
   "assets/booking.css": {
     "v": "7",
@@ -116,8 +116,8 @@
     "sha": "6fcae6e36abed039"
   },
   "assets/day-report-dash.js": {
-    "v": "2",
-    "sha": "00fc84b95a3bf010"
+    "v": "4",
+    "sha": "12cbeb2798c2103a"
   },
   "assets/day-report-export.js": {
     "v": "4",

@@ -258,13 +258,15 @@
       '.kdr-r.is-sub .kdr-r-l{color:var(--n-500);font-size:13px;padding-inline-start:14px}',
       '.kdr-r.is-sub .kdr-r-v{color:var(--n-500);font-size:13px}',
       /* ── la courbe horaire ── */
-      '.kdr-hrs{display:flex;align-items:stretch;gap:3px;height:96px;padding-top:4px}',
-      '.kdr-hr{flex:1;min-width:0;display:flex;align-items:flex-end}',
-      '.kdr-hr-b{width:100%;min-height:2px;border-radius:3px 3px 0 0;background:color-mix(in srgb,var(--atlas) 30%,transparent);transition:background 140ms}',
-      '.kdr-hr:hover .kdr-hr-b{background:color-mix(in srgb,var(--atlas) 60%,transparent)}',
-      '.kdr-hr.is-peak .kdr-hr-b{background:var(--atlas)}',
-      '.kdr-hrx{display:flex;gap:3px;margin-top:7px}',
-      '.kdr-hrx span{flex:1;min-width:0;text-align:center;font-family:var(--mono);font-size:10px;color:var(--n-500);white-space:nowrap;overflow:hidden}',
+      '.kdr-hrs{display:flex;align-items:stretch;gap:4px;height:96px;padding-top:6px}',
+      '.kdr-hr{flex:1;min-width:0;display:flex;align-items:flex-end;position:relative;cursor:default}',
+      '.kdr-hr-b{width:100%;min-height:2px;border-radius:3px 3px 0 0;background:color-mix(in srgb,var(--atlas) 35%,transparent);transition:background 140ms,transform 140ms}',
+      '.kdr-hr.is-void .kdr-hr-b{background:var(--n-200);min-height:2px;opacity:0.6}',
+      '.kdr-hr:hover:not(.is-void) .kdr-hr-b{background:color-mix(in srgb,var(--atlas) 70%,transparent);transform:scaleY(1.02);transform-origin:bottom}',
+      '.kdr-hr.is-peak .kdr-hr-b{background:var(--riad)}',
+      '.kdr-hr.is-peak:hover .kdr-hr-b{background:var(--riad)}',
+      '.kdr-hrx{display:flex;gap:4px;margin-top:8px}',
+      '.kdr-hrx span{flex:1;min-width:0;text-align:center;font-family:var(--mono);font-size:10.5px;color:var(--n-500);white-space:nowrap;overflow:hidden}',
       /* ── ce qui a fait la journée ── */
       '.kdr-top{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px}',
       '.kdr-top-c{border:1px solid var(--n-200);border-radius:12px;padding:12px 14px;display:flex;align-items:baseline;gap:10px}',
@@ -533,25 +535,63 @@
   }
 
   function hourlyHtml(r) {
-    var hrs = (r.hours || []).filter(function (h) { return h && (h.net > 0 || h.txns > 0); });
-    if (!hrs.length) {
+    var rawHours = (r.hours || []).filter(function (h) { return h && (h.net > 0 || h.txns > 0); });
+    if (!rawHours.length) {
       return '<div class="kdr-sec"><div class="kdr-h"><span>' + esc(T(L.hourly)) + '</span></div>'
         + '<div class="kdr-note">' + esc(T(L.noHours)) + '</div></div>';
     }
-    var max = hrs.reduce(function (m, h) { return Math.max(m, h.net); }, 0);
-    var peak = hrs.reduce(function (m, h) { return (!m || h.net > m.net) ? h : m; }, null);
-    /* Une étiquette sous chaque colonne devient illisible dès dix heures
-       d'ouverture : on n'en garde qu'une sur deux au-delà de huit colonnes. */
-    var every = hrs.length > 8 ? 2 : 1;
-    var cols = hrs.map(function (h) {
-      var pct = max > 0 ? Math.max(3, Math.round(h.net / max * 100)) : 3;
-      var tip = hourLabel(h.h) + ' · ' + money(h.net) + ' MAD · ' + h.txns + ' ' + T(L.tx);
-      return '<div class="kdr-hr' + (peak && h.h === peak.h ? ' is-peak' : '') + '" title="' + esc(tip) + '">'
-        + '<span class="kdr-hr-b" style="height:' + pct + '%"></span></div>';
+    var cut = typeof r.cutoff === 'number' ? r.cutoff : 5;
+    var byHour = Object.create(null);
+    var max = 0;
+    var peak = null;
+    rawHours.forEach(function (h) {
+      byHour[h.h] = h;
+      if (h.net > max) { max = h.net; peak = h; }
+    });
+
+    /* Calcul des offsets par rapport au début de journée commerciale (cut) */
+    var activeOffsets = [];
+    rawHours.forEach(function (h) {
+      var off = (h.h - cut + 24) % 24;
+      activeOffsets.push(off);
+    });
+    var minOff = Math.min.apply(null, activeOffsets);
+    var maxOff = Math.max.apply(null, activeOffsets);
+
+    /* Définir une plage continue et équilibrée (au moins 8h-22h pour le jour, ou englobant) */
+    var dayStartOff = (8 - cut + 24) % 24;   /* 8h */
+    var dayEndOff   = (22 - cut + 24) % 24;  /* 22h */
+
+    var startOff = Math.min(dayStartOff, Math.max(0, minOff - 1));
+    var endOff   = Math.max(dayEndOff, Math.min(23, maxOff + 1));
+
+    /* Construire la liste des heures continues de la plage */
+    var timeline = [];
+    for (var off = startOff; off <= endOff; off++) {
+      var hNum = (cut + off) % 24;
+      var data = byHour[hNum] || { h: hNum, net: 0, txns: 0 };
+      timeline.push(data);
+    }
+
+    /* Fréquence des étiquettes X : toutes les 2h si > 8 barres, sinon chaque heure */
+    var every = timeline.length > 8 ? 2 : 1;
+
+    var cols = timeline.map(function (h) {
+      var isVoid = h.net <= 0 && h.txns <= 0;
+      var isPeak = peak && h.h === peak.h && !isVoid;
+      var pct = isVoid ? 0 : (max > 0 ? Math.max(4, Math.round(h.net / max * 100)) : 4);
+      var tip = isVoid
+        ? hourLabel(h.h) + ' · ' + T(L.noSale)
+        : hourLabel(h.h) + ' · ' + money(h.net) + ' MAD · ' + h.txns + ' ' + T(L.tx);
+      var cls = 'kdr-hr' + (isPeak ? ' is-peak' : '') + (isVoid ? ' is-void' : '');
+      return '<div class="' + cls + '" title="' + esc(tip) + '">'
+        + '<span class="kdr-hr-b" style="height:' + (isVoid ? '2px' : (pct + '%')) + '"></span></div>';
     }).join('');
-    var labels = hrs.map(function (h, i) {
+
+    var labels = timeline.map(function (h, i) {
       return '<span>' + (i % every === 0 ? esc(hourLabel(h.h)) : '') + '</span>';
     }).join('');
+
     var head = peak
       ? '<em>' + esc(T(L.peak).replace('{h}', hourLabel(peak.h))) + ' · ' + esc(money(peak.net)) + ' MAD</em>'
       : '';

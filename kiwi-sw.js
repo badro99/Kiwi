@@ -59,7 +59,7 @@ var SHELL = [
   '/assets/design-vitrine.js',
   '/assets/liquid-glass.css',
   '/assets/liquid-glass.js',
-  '/assets/agent-skin.css?v=8',
+  '/assets/agent-skin.css?v=11',
   '/assets/agent-skin.js?v=4',
   '/assets/dashboard-native.css',
   '/assets/cloud-doc.js',
@@ -67,7 +67,7 @@ var SHELL = [
   '/assets/agent-data.js',
   '/assets/agent-features.js?v=3',
   '/assets/agent-truth.js?v=3',
-  '/assets/agent-voice.js?v=1',
+  '/assets/agent-voice.js?v=4',
   '/assets/i18n.js?v=4',
   /* Les milliers en arabe. Dans la coquille avec i18n : hors ligne, un
      commerçant arabophone lirait sinon son objectif du jour à l'envers. */
@@ -157,7 +157,7 @@ var SHELL = [
      dans un sous-sol sans wifi, et c'est précisément le moment où le Z doit
      s'écrire et s'imprimer. La remontée serveur, elle, retentera plus tard. */
   '/assets/day-report.js?v=5',
-  '/assets/day-report-dash.js?v=2',
+  '/assets/day-report-dash.js?v=4',
   '/assets/day-report-export.js?v=4',
   /* Les horaires d'ouverture. Dans la coquille hors-ligne parce que la caisse
      s'en sert au moment le plus hors-ligne qui soit : l'ouverture du service.

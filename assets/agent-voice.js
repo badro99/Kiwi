@@ -68,15 +68,24 @@
     else { btn.innerHTML = SVG_MIC; btn.title = 'Dicter votre question'; }
   }
 
-  /* Le texte transcrit tombe dans le champ et part tout seul : la promesse
-   * « à la voix » s'arrête net si l'utilisateur doit encore cliquer. */
+  /* Le texte transcrit tombe dans le champ pour relecture par le commerçant :
+   * il peut ainsi vérifier, ajuster un mot et appuyer sur Entrée pour envoyer. */
   function deliver(ctx, text) {
     var t = String(text || '').trim();
     if (!t) { toast('Rien entendu — réessayez plus près du micro'); return; }
     var cur = (ctx.input.value || '').trim();
     ctx.input.value = cur ? cur + ' ' + t : t;
-    try { ctx.input.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) {}
-    if (ctx.send) ctx.send.click();
+    try {
+      ctx.input.dispatchEvent(new Event('input', { bubbles: true }));
+      ctx.input.dispatchEvent(new Event('change', { bubbles: true }));
+    } catch (_) {}
+    try {
+      ctx.input.focus();
+      if (ctx.input.setSelectionRange && typeof ctx.input.value === 'string') {
+        var len = ctx.input.value.length;
+        ctx.input.setSelectionRange(len, len);
+      }
+    } catch (_) {}
   }
 
   /* ── Secours : la reconnaissance du navigateur ─────────────────────── */
@@ -205,12 +214,17 @@
 
   function injectStyle() {
     var css =
-      '.kv-mic{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;flex:0 0 auto;' +
-      'border:0;border-radius:999px;background:transparent;color:inherit;opacity:.62;cursor:pointer;padding:0;}' +
-      '.kv-mic:hover{opacity:1;}' +
-      '.kv-mic.rec{opacity:1;color:#e5484d;animation:kv-mic-pulse 1.1s ease-in-out infinite;}' +
-      '.kv-mic.busy{opacity:.5;animation:kv-mic-spin 1s linear infinite;cursor:progress;}' +
-      '@keyframes kv-mic-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.18)}}' +
+      '.kv-mic{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;min-width:38px;min-height:38px;flex:0 0 auto;' +
+      'border:0;border-radius:50%;background:transparent;color:var(--n-600,#5C6761);opacity:.75;cursor:pointer;padding:0;margin:0;' +
+      'transition:background .18s ease,color .18s ease,transform .15s cubic-bezier(.34,1.56,.64,1),opacity .18s ease;}' +
+      '.kv-mic:hover{opacity:1;background:rgba(11,110,79,.08);color:var(--atlas,#0B6E4F);transform:scale(1.06);}' +
+      '.kv-mic:active{transform:scale(.92);}' +
+      '.kv-mic svg{width:20px;height:20px;display:block;}' +
+      '.kv-mic.rec{opacity:1;color:#e5484d;background:rgba(229,72,77,.12);animation:kv-mic-pulse 1.1s ease-in-out infinite;}' +
+      '.kv-mic.busy{opacity:.7;color:var(--atlas,#0B6E4F);animation:kv-mic-spin 1s linear infinite;cursor:progress;}' +
+      'html[data-theme="dark"] .kv-mic{color:rgba(247,245,240,.65);}' +
+      'html[data-theme="dark"] .kv-mic:hover{background:rgba(63,182,122,.15);color:var(--mint,#3FB67A);}' +
+      '@keyframes kv-mic-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.14)}}' +
       '@keyframes kv-mic-spin{to{transform:rotate(360deg)}}';
     var st = document.createElement('style');
     st.textContent = css;
