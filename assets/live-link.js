@@ -738,7 +738,7 @@
        vente est revenue. */
     try {
       document.dispatchEvent(new CustomEvent('kiwi-sales-voided', {
-        detail: { refs: refs.slice(), merchant: tenant || '' },
+        detail: { refs: refs.slice(), merchant: tenant || '', source: 'live-link' },
       }));
     } catch (_) {}
     if (!list.length) return;

@@ -15772,6 +15772,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       try { if (H && H['nav-transactions']) H['nav-transactions'](); } catch (_) {}
     });
     document.addEventListener('kiwi-sales-voided', (e) => {
+      const isSync = e && e.detail && e.detail.source === 'live-link';
       const sig = JSON.stringify((e && e.detail && e.detail.refs) || []);
       if (sig === cancelAuditVoidSig) return;
       cancelAuditVoidSig = sig;
@@ -15784,7 +15785,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
             reversed = window.KiwiInventoryConsumption.reverse(ref, 'Annulation tableau de bord');
           }
         } catch (_) {}
-        if (!reversed) {
+        if (!reversed && !isSync) {
           try {
             const msg = 'Vente annulée · stock non recrédité (référence introuvable)';
             if (typeof toast === 'function') toast(msg, { type: 'warning' });
@@ -15795,3 +15796,4 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     });
   });
 })();
+

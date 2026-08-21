@@ -3239,6 +3239,28 @@ ar: {
       });
     },
 
+    'open-assistant': (el, arg) => {
+      const q = typeof arg === 'string' ? arg : (el && el.dataset ? el.dataset.prefill : null);
+      if (window.KiwiAgent && typeof window.KiwiAgent.open === 'function') {
+        window.KiwiAgent.open(q);
+        return;
+      }
+      if (window.__kiwiAgentOpen && typeof window.__kiwiAgentOpen === 'function') {
+        window.__kiwiAgentOpen(q);
+        return;
+      }
+      const checkAgent = (tries) => {
+        if (window.KiwiAgent && typeof window.KiwiAgent.open === 'function') {
+          window.KiwiAgent.open(q);
+        } else if (window.__kiwiAgentOpen && typeof window.__kiwiAgentOpen === 'function') {
+          window.__kiwiAgentOpen(q);
+        } else if (tries > 0) {
+          setTimeout(() => checkAgent(tries - 1), 50);
+        }
+      };
+      checkAgent(20);
+    },
+
     'filter-tx': () => drawer({
       title: 'Filtrer les transactions',
       subtitle: 'Affinez la liste',
@@ -4204,8 +4226,12 @@ ar: {
     // 14. Search bar
     if (e.target.closest('.search-big, .search')) { handlers.search(); return; }
 
-    // 15. AI button in topbar — opens command palette (Kiwi AI panel is now in the green hero block)
-    if (e.target.closest('.ai-btn')) { commandPalette(); return; }
+    // 15. AI button in topbar — opens Kiwi AI Agent
+    if (e.target.closest('.ai-btn')) {
+      if (typeof handlers['open-assistant'] === 'function') { handlers['open-assistant'](); return; }
+      if (window.KiwiAgent && typeof window.KiwiAgent.open === 'function') { window.KiwiAgent.open(); return; }
+      return;
+    }
 
     // 16. Team stack
     if (e.target.closest('.team-stack')) { handlers.notifications(); return; } // reuse drawer-style

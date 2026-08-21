@@ -5551,12 +5551,18 @@
   }
 
   /* ─────────────── REGISTER ─────────────── */
+  window.KiwiAgent = { open, resetConversation, syncProfile, ask: (q) => { open(q); } };
+  window.__kiwiAgentOpen = open;
   function register() {
-    if (!window.Kiwi || !window.Kiwi.handlers) { setTimeout(register, 80); return; }
+    if (!window.Kiwi) window.Kiwi = {};
+    if (!window.Kiwi.handlers) window.Kiwi.handlers = {};
     window.Kiwi.handlers['nav-assistant'] = open;
     window.Kiwi.handlers['open-assistant'] = open;
   }
   register();
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', register);
+  }
 
   /* Keep the active profile in lockstep with the venue switcher — AND drop
    * everything the previous establishment said.

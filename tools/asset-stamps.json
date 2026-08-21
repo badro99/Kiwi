@@ -36,8 +36,8 @@
     "sha": "48c56a5be7a6655b"
   },
   "assets/agent.js": {
-    "v": "19",
-    "sha": "85cd04d26bafc940"
+    "v": "20",
+    "sha": "57bed5804ca22b54"
   },
   "assets/booking.css": {
     "v": "7",
@@ -140,7 +140,7 @@
     "sha": "4653bd4327ca681e"
   },
   "assets/design-vexel.css": {
-    "v": "2096",
+    "v": "2097",
     "sha": "3eb5f1a13033feba"
   },
   "assets/design-vexel.js": {
@@ -212,8 +212,8 @@
     "sha": "5f0a4000cc13db93"
   },
   "assets/interactive.js": {
-    "v": "18",
-    "sha": "f117541d7e9f420c"
+    "v": "20",
+    "sha": "1fe182b8ff2d837a"
   },
   "assets/inventory-consumption.js": {
     "v": "9",
@@ -248,8 +248,8 @@
     "sha": "5829242ec789b552"
   },
   "assets/live-link.js": {
-    "v": "13",
-    "sha": "56b828a3e648ee2a"
+    "v": "14",
+    "sha": "4dbf753ece4e711c"
   },
   "assets/live-socket.js": {
     "v": "2",
@@ -312,8 +312,8 @@
     "sha": "34ba1e6354ccc770"
   },
   "assets/pages-pro.js": {
-    "v": "2077",
-    "sha": "a68fe6e4a8e45445"
+    "v": "2078",
+    "sha": "de7f990d56513fab"
   },
   "assets/pages.js": {
     "v": "2",
