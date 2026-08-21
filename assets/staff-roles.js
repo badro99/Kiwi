@@ -80,7 +80,9 @@
    * today. */
   var ALIASES = {
     owner:'proprietaire', admin:'manager', direction:'proprietaire', management:'manager',
-    caissier:'caisse', caissiere:'caisse',
+    gerant:'manager', gerante:'manager', patron:'proprietaire', patronne:'proprietaire',
+    responsable:'manager', 'responsable rayon':'manager', directeur:'proprietaire', directrice:'proprietaire',
+    caissier:'caisse', caissiere:'caisse', cashier:'caisse',
     'sous-chef':'chef', 'sous chef':'chef', cuisine:'cuisinier', plonge:'plongeur',
     salle:'serveur', bar:'barman', comptoir:'barista', sommelier:'serveur',
     patisserie:'patissier', 'aide-patissier':'patissier', fournil:'boulanger',
@@ -163,7 +165,7 @@
 
   function opensTill(raw) {
     var token = norm(raw);
-    if (token === 'staff' || token === 'owner' || token === 'admin') return true;
+    if (token === 'staff' || token === 'owner' || token === 'admin' || token === 'direction' || token === 'proprietaire' || token === 'manager' || token === 'gerant' || token === 'patron') return true;
     var id = idOf(raw);
     return !!(id && TILL_SET[id]);
   }

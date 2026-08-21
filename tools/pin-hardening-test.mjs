@@ -244,6 +244,22 @@ console.log('\n1 · Server-Side PIN Verification (/api/pin/verify)');
   check('authenticated owner session can verify PIN', res.status === 200 && data.staff && data.staff.name === 'Samira L.');
 }
 
+{
+  // Owner and manager PINs from any store of the account can unlock the caisse
+  const req = new Request('https://kiwi.test/api/pin/verify', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Cookie: `kiwi_till=${tillCookieVal}`,
+      'CF-Connecting-IP': '10.0.0.6',
+    },
+    body: JSON.stringify({ merchant: 'cafe-atlas', pin: '4321' }), // 4321 is Owner Rachid O. filed on atlas-medina
+  });
+  const res = await verifyPinPost({ request: req, env });
+  const data = await res.json();
+  check('owner PIN from another account store opens the caisse', res.status === 200 && data.ok === true && data.staff && data.staff.name === 'Rachid O.');
+}
+
 console.log('\n1b · Account-wide verification (the dashboard lock)');
 
 /* Le tableau de bord embrasse tous les établissements du compte, alors que les

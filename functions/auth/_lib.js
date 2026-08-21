@@ -765,13 +765,15 @@ function normEmployeeRole(value) {
 /* A personal PIN identifies every employee in the employee app, but opening a
  * cash register is a separate permission. Keep this server-side too: filtering
  * only in caisse JavaScript would let a crafted request reuse a server's PIN on
- * privileged till actions. `staff` is the single legacy onboarding role kept
- * for stores created before explicit job assignments existed. */
+ * privileged till actions. Owners, managers and cashiers are all authorized.
+ * `staff` is the single legacy onboarding role kept for stores created before
+ * explicit job assignments existed. */
 export function employeeRoleOpensTill(value) {
   const role = normEmployeeRole(value);
   return new Set([
     'caisse', 'caissier', 'caissiere', 'cashier',
-    'manager', 'management', 'proprietaire', 'owner', 'admin', 'direction',
+    'manager', 'management', 'gerant', 'gerante', 'responsable', 'responsable rayon',
+    'proprietaire', 'owner', 'patron', 'patronne', 'direction', 'directeur', 'directrice', 'admin',
     'staff',
   ]).has(role);
 }
@@ -953,9 +955,45 @@ export async function verifyStaffPin(request, env, merchant, pin, { requireTill 
 
   let staff;
   try {
+    // 1. First look up directly in this merchant's staff_pins
     staff = await env.DB.prepare(
       'SELECT id, name, role FROM staff_pins WHERE merchant = ? AND pin = ? LIMIT 1'
     ).bind(merchant, pin).first();
+
+    // 2. If not found in this specific store, check if this PIN belongs to an OWNER or MANAGER across the merchant's account
+    if (!staff) {
+      let accountId = null;
+      try {
+        const cfg = await env.DB.prepare(
+          'SELECT account_id FROM merchant_config WHERE merchant = ? LIMIT 1'
+        ).bind(merchant).first();
+        if (cfg && cfg.account_id) accountId = cfg.account_id;
+      } catch (_) {}
+
+      if (!accountId) {
+        try {
+          const sess = await readSession(readCookie(request, SESS_COOKIE), env && env.AUTH_SECRET);
+          if (sess && sess.aid) accountId = sess.aid;
+        } catch (_) {}
+      }
+
+      if (accountId) {
+        try {
+          const r = await env.DB.prepare(
+            `SELECT p.id, p.name, p.role
+               FROM staff_pins p
+               JOIN merchant_config c ON c.merchant = p.merchant
+              WHERE c.account_id = ? AND p.pin = ?
+              ORDER BY p.created_ts
+              LIMIT 10`
+          ).bind(accountId, pin).all();
+
+          const candidates = r.results || [];
+          const leader = candidates.find((c) => employeeRoleOpensDashboard(c.role) || employeeRoleOpensTill(c.role));
+          if (leader) staff = leader;
+        } catch (_) {}
+      }
+    }
   } catch (_) {
     return { ok: false, error: 'staff-unavailable', status: 503 };
   }

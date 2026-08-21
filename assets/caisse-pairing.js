@@ -437,7 +437,7 @@
         '</button>' +
       '</div>' +
       '<div class="pin-foot">' + (noCashier
-        ? 'Aucun caissier autorisé. Assignez un rôle Caisse, Manager ou Propriétaire depuis Équipe.'
+        ? 'Aucun caissier configuré. Utilisez votre code Propriétaire ou Manager pour ouvrir la caisse.'
         : 'Code personnel géré depuis votre tableau de bord Kiwi') + '</div>';
     renderPinDots();
   }
