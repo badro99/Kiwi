@@ -469,6 +469,32 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     button { font-family: inherit; cursor: pointer; border: 0; background: none; color: inherit; padding: 0; }
     input { font-family: inherit; }
 
+    
+    /* Universal high-contrast accessible focus-visible styling (A11y) */
+    button:focus-visible,
+    input:focus-visible,
+    [tabindex]:focus-visible,
+    .table-card:focus-visible,
+    .menu-item:focus-visible,
+    .filter-chip:focus-visible,
+    .cat-pill:focus-visible,
+    .bt-btn:focus-visible,
+    .td-btn:focus-visible {
+      outline: 2px solid var(--forest-edge) !important;
+      outline-offset: 2px !important;
+    }
+    :root[data-theme="dark"] button:focus-visible,
+    :root[data-theme="dark"] input:focus-visible,
+    :root[data-theme="dark"] [tabindex]:focus-visible,
+    :root[data-theme="dark"] .table-card:focus-visible,
+    :root[data-theme="dark"] .menu-item:focus-visible,
+    :root[data-theme="dark"] .filter-chip:focus-visible,
+    :root[data-theme="dark"] .cat-pill:focus-visible,
+    :root[data-theme="dark"] .bt-btn:focus-visible,
+    :root[data-theme="dark"] .td-btn:focus-visible {
+      outline-color: var(--mint) !important;
+    }
+
     /* ---------- Phone frame (desktop preview) ---------- */
     .phone-frame {
       width: 100%;
@@ -1228,6 +1254,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     html[dir="rtl"] .tc-right { align-items: flex-start; }
     html[dir="rtl"] .td-back svg,
     html[dir="rtl"] .tc-arrow svg,
+    html[dir="rtl"] .menu-cart-arrow svg,
     html[dir="rtl"] .colleague-alert-chev { transform: rotate(180deg); }
 
     .zone-block { margin-bottom: 16px; }

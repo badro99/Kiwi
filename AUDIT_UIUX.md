@@ -305,6 +305,8 @@ Extraction brute des règles existantes avant harmonisation :
 | **6. Onglet Notifications & Flux de Service** | `kiwi-serveur.html` | Hiérarchie des cartes non lues avec bordure menthe, horodatages en monospace tabulaire, état vide apaisé avec médaillon de service | ✅ Déployé |
 | **7. Onglet Profil & Carte du Soir** | `kiwi-serveur.html` | Pastilles de semaine tactiles, tuiles d'heures travaillées en monospace tabulaire, bouton de départ contrasté et accent Instrument Serif sur la Carte du soir | ✅ Déployé |
 | **8. Bannière d'Accueil & Système de Toasts** | `kiwi-serveur.html` | Chorégraphie d'entrée de la bannière d'accueil à ressort `--spring`, capsules de toast avec flou d'arrière-plan et repli strict `prefers-reduced-motion` | ✅ Déployé |
+| **9. Orbite Finale d'Harmonisation & A11y** | `kiwi-serveur.html` | Focus-visible universel haute accessibilité AA, vérification RTL arabe (rotation flèches et miroir bidi), nettoyage des rayons et conformité 60fps GPU | ✅ Déployé |
+
 
 
 
