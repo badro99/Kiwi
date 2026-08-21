@@ -60,7 +60,7 @@
     '0004': { id: 'hotel',       file: 'pos-hotel',       rev: '3', label: 'Hôtel / Riad · Riad Yasmina' },
     '0005': { id: 'fastfood',    file: 'pos-fastfood',    rev: '3', label: 'Fast-food · Snack Chamal' },
     '0006': { id: 'boulangerie', file: 'pos-boulangerie', rev: '3', label: 'Boulangerie · Bab Kasbah' },
-    '0007': { id: 'pizzeria',    file: 'pos-pizzeria',    rev: '2', label: 'Pizzeria · La Marsa' },
+    '0007': { id: 'pizzeria',    file: 'pos-pizzeria',    rev: '3', label: 'Pizzeria · La Marsa' },
     '0008': { id: 'traiteur',    file: 'pos-traiteur',    rev: '2', label: 'Traiteur · Dar Zellij' },
     '0009': { id: 'foodtruck',   file: 'pos-foodtruck',   rev: '2', label: 'Food truck · Karavan' },
     '0010': { id: 'epicerie',    file: 'pos-epicerie',    rev: '2', label: 'Épicerie · Si Brahim' },

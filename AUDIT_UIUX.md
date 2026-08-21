@@ -164,3 +164,12 @@ Ce document consigne l'ensemble des audits visuels, ergonomiques, d'accessibilit
   1. Enrichissement du ticket vide de boulangerie avec médaillon Material Symbol (`inventory_2`) et hiérarchie visuelle rapide.
   2. Bumping de la révision `pos-boulangerie.js?v=3` dans le dispatcher.
 - **État** : ✅ Déployé
+
+### 7.7 Vertical Pizzeria (`assets/pos-pizzeria.js`)
+- **Fichiers** : `assets/pos-pizzeria.js:662`, `assets/pos-dispatch.js:63`
+- **Problèmes identifiés** :
+  1. Ticket d'envoi en cuisine pizzeria sans médaillon Material Symbols.
+- **Améliorations apportées** :
+  1. Refonte du ticket de commande pizza avec médaillon Material Symbol (`inventory_2`) et hiérarchie soignée.
+  2. Bumping de la révision `pos-pizzeria.js?v=3` dans le dispatcher.
+- **État** : ✅ Déployé
