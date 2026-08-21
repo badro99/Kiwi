@@ -302,6 +302,8 @@ Extraction brute des règles existantes avant harmonisation :
 | **3. Onglet Menu & Barre de Panier Flottante** | `kiwi-serveur.html` | Grille d'articles avec rythme nom/prix mono bold, lentille fluide sur `.cat-pill`, animation de pop à ressort `--spring` et chorégraphie d'entrée de la barre de commande | ✅ Déployé |
 | **4. Détail de Table & Grand Livre de Commande** | `kiwi-serveur.html` | Alignement du grand livre (qté × nom … prix), transition d'entrée d'écran directionnelle `--expo`, bouton primaire unique avec retour tactile et hiérarchie des actions secondaires | ✅ Déployé |
 | **5. Famille de Feuilles Modales & Encaissement** | `kiwi-serveur.html` | Langage unifié de bottom-sheet (rayons 32px, flou d'arrière-plan, poignée tactile 44px), fermeture universelle Escape et clic sur voile, split d'addition haute lisibilité | ✅ Déployé |
+| **6. Onglet Notifications & Flux de Service** | `kiwi-serveur.html` | Hiérarchie des cartes non lues avec bordure menthe, horodatages en monospace tabulaire, état vide apaisé avec médaillon de service | ✅ Déployé |
+
 
 
 
