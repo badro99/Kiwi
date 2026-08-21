@@ -461,11 +461,11 @@
       <div class="ht-recep">
         <div class="ht-col">
           <div class="ht-col-head">Arrivées du jour <span class="ct">${ARRIVALS.length}</span></div>
-          ${ARRIVALS.map(arrivalRow).join('') || '<div class="ht-empty">Aucune arrivée aujourd’hui.</div>'}
+          ${ARRIVALS.map(arrivalRow).join('') || '<div class="ht-empty" style="display:flex; flex-direction:column; align-items:center; padding:36px 16px;"><div style="width:40px; height:40px; border-radius:12px; background:rgba(11,110,79,0.10); color:var(--atlas); display:grid; place-items:center; margin-bottom:10px;"><svg width="20" height="20" viewBox="0 -960 960 960" fill="currentColor"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg></div><div style="font-weight:600; color:var(--ink);">Aucune arrivée aujourd’hui.</div></div>'}
         </div>
         <div class="ht-col">
           <div class="ht-col-head">Départs du jour <span class="ct">${DEPARTURES.length}</span></div>
-          ${DEPARTURES.map(departureRow).join('') || '<div class="ht-empty">Aucun départ aujourd’hui.</div>'}
+          ${DEPARTURES.map(departureRow).join('') || '<div class="ht-empty" style="display:flex; flex-direction:column; align-items:center; padding:36px 16px;"><div style="width:40px; height:40px; border-radius:12px; background:rgba(11,110,79,0.10); color:var(--atlas); display:grid; place-items:center; margin-bottom:10px;"><svg width="20" height="20" viewBox="0 -960 960 960" fill="currentColor"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg></div><div style="font-weight:600; color:var(--ink);">Aucun départ aujourd’hui.</div></div>'}
         </div>
       </div>`;
     panel.onclick = (e) => {
@@ -814,7 +814,7 @@
               ${t.due > 0 ? `<span class="ht-pill due">solde ${fmtMAD(t.due)}</span>` : '<span class="ht-pill ok">soldé</span>'}
             </div>
           </button>`;
-        }).join('') || '<div class="ht-empty">Aucun folio ouvert, la maison est vide ce soir.</div>'}
+        }).join('') || '<div class="ht-empty" style="display:flex; flex-direction:column; align-items:center; padding:40px 16px;"><div style="width:44px; height:44px; border-radius:12px; background:rgba(11,110,79,0.10); color:var(--atlas); display:grid; place-items:center; margin-bottom:10px;"><svg width="22" height="22" viewBox="0 -960 960 960" fill="currentColor"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg></div><div style="font-weight:600; font-size:14.5px; color:var(--ink); margin-bottom:4px;">Aucun folio ouvert</div><div style="font-size:12.5px; color:var(--n-500);">La maison est vide ce soir.</div></div>'}
       </div>`;
     panel.onclick = (e) => {
       const b = e.target.closest('[data-ht-fo]');

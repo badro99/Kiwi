@@ -137,3 +137,12 @@ Ce document consigne l'ensemble des audits visuels, ergonomiques, d'accessibilit
   1. Refonte du conteneur vide de caisse avec médaillon Material Symbol (`inventory_2`), hiérarchie claire et indication pour charger une séance depuis le planning.
   2. Bumping de la révision `pos-spa.js?v=3` dans le dispatcher.
 - **État** : ✅ Déployé
+
+### 7.4 Vertical Hôtel & Riad (`assets/pos-hotel.js`)
+- **Fichiers** : `assets/pos-hotel.js:464`, `assets/pos-hotel.js:817`, `assets/pos-dispatch.js:60`
+- **Problèmes identifiés** :
+  1. États vides des arrivées, départs et folios ouverts en texte brut sans médaillon Material Symbols.
+- **Améliorations apportées** :
+  1. Harmonisation visuelle des arrivées, départs et liste des folios avec médaillons Material Symbol (`inventory_2`) et hiérarchie typographique adaptée au front-desk.
+  2. Bumping de la révision `pos-hotel.js?v=3` dans le dispatcher.
+- **État** : ✅ Déployé

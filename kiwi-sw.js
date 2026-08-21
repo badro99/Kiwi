@@ -268,8 +268,8 @@ var SHELL = [
      particular métier has ever been opened cannot unlock that métier at all. */
   '/assets/pos-spa.css?v=3',
   '/assets/pos-spa.js?v=3',
-  '/assets/pos-hotel.css?v=2',
-  '/assets/pos-hotel.js?v=2',
+  '/assets/pos-hotel.css?v=3',
+  '/assets/pos-hotel.js?v=3',
   '/assets/pos-fastfood.css?v=2',
   '/assets/pos-fastfood.js?v=2',
   '/assets/pos-boulangerie.css?v=2',
