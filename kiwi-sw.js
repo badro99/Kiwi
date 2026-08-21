@@ -220,7 +220,7 @@ var SHELL = [
      commerçant a bel et bien saisi ses coûts. */
   '/assets/cost.js?v=3',
   '/assets/clients-store.js?v=2',
-  '/assets/clients-book.js?v=7',
+  '/assets/clients-book.js?v=8',
   '/assets/clients-directory.js',
   '/assets/menu-catalog.js?v=14',
   '/assets/restaurant-recipes.js?v=3',
@@ -241,7 +241,7 @@ var SHELL = [
   // OrderPro — publisher + NFC panel (dashboard), inbox (caisse).
   '/assets/orderpro-publish.js?v=3',
   '/assets/orderpro-panel.js',
-  '/assets/orderpro-inbox.js?v=4',
+  '/assets/orderpro-inbox.js?v=5',
   /* Le relais cuisine — la caisse pose ses bons, la tablette du passe les lit.
      Dans la coquille pour les deux pages : c'est lui qui porte la file de
      secours hors ligne, donc il doit exister QUAND le réseau n'existe pas. */

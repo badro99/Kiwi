@@ -108,8 +108,8 @@
     "sha": "ec5fa6bd71818a12"
   },
   "assets/clients-book.js": {
-    "v": "7",
-    "sha": "d417ae70865d36a3"
+    "v": "8",
+    "sha": "f6d428171918379b"
   },
   "assets/clients-store.js": {
     "v": "2",
@@ -320,8 +320,8 @@
     "sha": "5a6bc6f909c5889e"
   },
   "assets/orderpro-inbox.js": {
-    "v": "4",
-    "sha": "e4e5bdae9b1ddb56"
+    "v": "5",
+    "sha": "0acaa7e32406975d"
   },
   "assets/orderpro-publish.js": {
     "v": "3",

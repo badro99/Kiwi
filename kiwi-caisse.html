@@ -1449,9 +1449,11 @@
       margin-top: 3px;
     }
     .or-close {
-      width: 32px;
-      height: 32px;
-      border-radius: 10px;
+      width: 44px;
+      height: 44px;
+      min-width: 44px;
+      min-height: 44px;
+      border-radius: 12px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -1460,12 +1462,17 @@
       border: none;
       cursor: pointer;
       transition: all 150ms ease;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
     }
     .or-close:hover {
       background: var(--line);
       color: var(--ink);
     }
-    .or-close svg { width: 18px; height: 18px; }
+    .or-close:active {
+      transform: scale(0.94);
+    }
+    .or-close svg { width: 22px; height: 22px; }
 
     .or-body {
       flex: 1;
@@ -1719,14 +1726,20 @@
     .rp-substatus[data-flag="a-commander"]  { color: #8a6411; }
     .rp-substatus[data-flag="ka-yaklo"]     { color: var(--ink-3); }
     .rp-close {
-      width: 28px; height: 28px;
+      width: 44px; height: 44px;
+      min-width: 44px; min-height: 44px;
       display: inline-flex; align-items: center; justify-content: center;
-      border-radius: 8px;
+      border-radius: 12px;
       color: var(--ink-3);
-      transition: background 150ms ease;
+      background: var(--paper-mute);
+      transition: background 150ms ease, transform 150ms ease;
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
     }
-    .rp-close:hover { background: var(--paper-mute); color: var(--ink); }
-    .rp-close svg { width: 16px; height: 16px; }
+    .rp-close:hover { background: var(--line); color: var(--ink); }
+    .rp-close:active { transform: scale(0.94); }
+    .rp-close svg { width: 20px; height: 20px; }
 
     .rp-items {
       flex: 1; overflow-y: auto;
@@ -2108,16 +2121,73 @@
     .ma-btn:active:not(:disabled) { transform: scale(0.97); transition: transform 70ms var(--spring, cubic-bezier(0.34, 1.45, 0.5, 1)); }
     .ma-btn:focus-visible { outline: 2px solid var(--forest); outline-offset: 2px; }
 
+    .modal-close {
+      width: 44px;
+      height: 44px;
+      min-width: 44px;
+      min-height: 44px;
+      border-radius: 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--ink-3);
+      background: var(--paper-mute);
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      cursor: pointer;
+      transition: all 150ms ease;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      padding: 0;
+      flex-shrink: 0;
+    }
+    .modal-close:hover {
+      background: var(--line);
+      color: var(--ink);
+    }
+    .modal-close:active {
+      transform: scale(0.94);
+      background: var(--line);
+    }
+    .modal-close svg { width: 22px; height: 22px; }
+
     .modal-foot {
       text-align: center;
-      margin-top: 14px;
-      font-size: 12px; color: var(--ink-4);
-      opacity: 0;
+      margin-top: 16px;
+      font-size: 14px;
+      color: var(--ink-3);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      opacity: 1;
       transition: opacity 240ms ease;
     }
     .modal-foot.is-visible { opacity: 1; }
-    .modal-foot a { color: inherit; cursor: pointer; }
-    .modal-foot a:hover { color: var(--ink-2); }
+    .modal-foot a, .modal-foot button, .modal-foot-btn {
+      min-height: 46px;
+      min-width: 140px;
+      padding: 12px 28px;
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: var(--r-lg, 14px);
+      background: var(--paper-mute);
+      color: var(--ink);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      cursor: pointer;
+      transition: transform 120ms ease, background 120ms ease;
+      text-decoration: none;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .modal-foot a:hover, .modal-foot button:hover, .modal-foot-btn:hover {
+      background: var(--line);
+      color: var(--ink);
+    }
+    .modal-foot a:active, .modal-foot button:active, .modal-foot-btn:active {
+      transform: scale(0.96);
+    }
 
     /* cash modal */
     .cash-grid { display: flex; flex-direction: column; gap: 12px; }
@@ -5294,7 +5364,7 @@
        server-confirmed or explicitly blocked, never presentation-only. -->
   <script src="assets/operations.js?v=10" defer></script>
   <script src="assets/clients-store.js?v=2" defer></script>
-  <script src="assets/clients-book.js?v=7" defer></script>
+  <script src="assets/clients-book.js?v=8" defer></script>
   <!-- Le relais cuisine · « Envoyer en cuisine » posait son bon dans un tableau
        de CETTE page et l'imprimait : une tablette en cuisine ne recevait rien,
        et sans imprimante thermique il n'y avait aucun chemin du tout. Ce module
@@ -5306,7 +5376,7 @@
   <script src="assets/food-production-print.js?v=2" defer></script>
   <!-- OrderPro · orders placed on a customer's phone arrive here over WiFi;
        staff accept one and it becomes a kitchen ticket. Paired terminals only. -->
-  <script src="assets/orderpro-inbox.js?v=4" defer></script>
+  <script src="assets/orderpro-inbox.js?v=5" defer></script>
   <!-- Operator feature flags + managed PINs. Fail-safe: no backend ⇒ no change. -->
   <script src="assets/merchant-config.js" defer></script>
   <!-- « Rafraîchir » — un bouton commun à toutes les caisses (restaurant,
@@ -6302,8 +6372,15 @@
   <!-- ============ CARD MODAL ============ -->
   <div class="modal-veil" id="card-modal" role="dialog" aria-modal="true" aria-labelledby="card-modal-title">
     <div class="modal">
-      <h3 class="modal-title" id="card-modal-title">Payer par carte</h3>
-      <p class="modal-subtle" id="card-modal-sub">Table <span data-bind="table">T2</span> · <span data-bind="covers">2</span> couverts</p>
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:6px;">
+        <div>
+          <h3 class="modal-title" id="card-modal-title">Payer par carte</h3>
+          <p class="modal-subtle" id="card-modal-sub" style="margin:0;">Table <span data-bind="table">T2</span> · <span data-bind="covers">2</span> couverts</p>
+        </div>
+        <button class="modal-close" id="card-modal-close" data-modal-action="close" aria-label="Fermer" type="button">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
       <div class="modal-amount" id="card-amount">530,00 MAD</div>
       <div class="pay-tip" id="card-tip">
         <div class="pay-tip-label">Pourboire</div>
@@ -6329,8 +6406,8 @@
           <i data-lucide="message-square"></i><span>SMS / WhatsApp</span>
         </button>
       </div>
-      <div class="modal-foot" id="card-foot">
-        <a data-modal-action="close">Fermer</a>
+      <div class="modal-foot is-visible" id="card-foot">
+        <button class="ma-btn secondary modal-foot-btn" data-modal-action="close" type="button">Fermer</button>
       </div>
     </div>
   </div>
@@ -6338,8 +6415,15 @@
   <!-- ============ CASH MODAL ============ -->
   <div class="modal-veil" id="cash-modal" role="dialog" aria-modal="true" aria-labelledby="cash-modal-title">
     <div class="modal">
-      <h3 class="modal-title" id="cash-modal-title">Payer en espèces</h3>
-      <p class="modal-subtle">Table <span data-bind="table">T2</span> · <span data-bind="covers">2</span> couverts</p>
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:6px;">
+        <div>
+          <h3 class="modal-title" id="cash-modal-title">Payer en espèces</h3>
+          <p class="modal-subtle" style="margin:0;">Table <span data-bind="table">T2</span> · <span data-bind="covers">2</span> couverts</p>
+        </div>
+        <button class="modal-close" id="cash-modal-close" data-modal-action="close" aria-label="Fermer" type="button">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
       <div class="modal-amount size-md" id="cash-amount">530,00 MAD</div>
 
       <div class="pay-tip" id="cash-tip">
@@ -6370,7 +6454,10 @@
           <span class="lbl">Rendu</span>
           <span class="val mono" id="cash-rendu-val">0,00 MAD</span>
         </div>
-        <button class="cash-confirm" id="cash-confirm" disabled>Confirmer</button>
+        <div style="display:flex;gap:10px;margin-top:4px;">
+          <button class="ma-btn secondary" id="cash-cancel" data-modal-action="close" type="button" style="flex:1;">Annuler</button>
+          <button class="cash-confirm" id="cash-confirm" disabled style="flex:2;">Confirmer</button>
+        </div>
       </div>
 
       <div class="cash-grid" id="cash-step-success" hidden>
@@ -6391,7 +6478,7 @@
           </button>
         </div>
         <div class="modal-foot is-visible">
-          <a data-modal-action="close">Fermer</a>
+          <button class="ma-btn secondary modal-foot-btn" data-modal-action="close" type="button">Fermer</button>
         </div>
       </div>
     </div>
@@ -6619,7 +6706,7 @@
         </button>
       </div>
       <div class="modal-foot is-visible">
-        <a id="manager-cancel">Annuler</a>
+        <button class="ma-btn secondary modal-foot-btn" id="manager-cancel" type="button">Annuler</button>
       </div>
       <div class="mgr-hint">Démo · n'importe quel code manager</div>
     </div>
@@ -10130,10 +10217,50 @@
       if (action === 'print') { closeCashModal(); openCashDrawer(); printSaleTicket(lastSaleEntry()); }
       if (action === 'send')  { closeCashModal(); sendSaleTicket(lastSaleEntry()); }
     });
+    function dismissModalVeil(veil) {
+      if (!veil) return;
+      const id = veil.id;
+      if (id === 'card-modal') { closeCardModal(); return; }
+      if (id === 'cash-modal') { closeCashModal(); return; }
+      if (id === 'order-review-modal') { closeOrderReviewModal(); return; }
+      if (id === 'client-modal') { closeClientModal(); return; }
+      if (id === 'split-modal') { closeSplitModal(); return; }
+      if (id === 'receipt-modal') { closeReceipt(); return; }
+      if (id === 'cash-move-modal') { closeCashMove(); return; }
+      if (id === 'manager-modal') { closeManagerModal(); return; }
+      if (id === 'attendance-code-modal') { closeAttendanceCode(); return; }
+      if (id === 'msg-modal') { closeMsgModal(); return; }
+      if (id === 'reassign-modal') { closeReassignModal(); return; }
+      if (id === 'remise-modal') { closeRemiseModal(); return; }
+      if (id === 'refund-modal') { closeRefund(); return; }
+      if (id === 'handover-modal') { closeHandover(); return; }
+      if (id === 'sk-modal') { closeSkModal(); return; }
+      if (id === 'team-drawer') { closeTeamDrawer(); return; }
+      if (id === 'journal-drawer') { closeJournal(); return; }
+      const closeBtn = veil.querySelector('[data-modal-action="close"], #cl-cancel, #nt-cancel, #wl-cancel, #ctrf-cancel, #cmrg-cancel, #split-done-close, #attendance-code-close, #receipt-close, .modal-close, .drawer-close');
+      if (closeBtn) {
+        closeBtn.click();
+      } else {
+        veil.classList.remove('is-open');
+      }
+    }
+
+    /* Dismiss modal on backdrop tap (click outside the modal window) */
+    document.addEventListener('click', (e) => {
+      if (!e.target || !e.target.classList) return;
+      if (e.target.classList.contains('modal-veil') && e.target.classList.contains('is-open')) {
+        dismissModalVeil(e.target);
+      } else if (e.target.classList.contains('cloture-veil') && e.target.classList.contains('is-open')) {
+        e.target.classList.remove('is-open');
+      } else if (e.target.classList.contains('drawer-veil') && e.target.classList.contains('is-open')) {
+        dismissModalVeil(e.target);
+      }
+    });
+
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
-        if (cardModal.classList.contains('is-open')) closeCardModal();
-        if (cashModal.classList.contains('is-open')) closeCashModal();
+        const openModal = document.querySelector('.modal-veil.is-open, .drawer-veil.is-open, .cloture-veil.is-open');
+        if (openModal) dismissModalVeil(openModal);
       }
       if (e.key === 'Enter' && cashModal.classList.contains('is-open') && !cashStepInput.hidden) {
         if (!cashConfirm.disabled) { e.preventDefault(); cashConfirm.click(); }

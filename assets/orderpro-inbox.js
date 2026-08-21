@@ -57,9 +57,8 @@
       'font-family:"Inter Tight",Inter,system-ui,sans-serif;color:var(--ink,#0A0F0D);animation:kop-fade .2s ease;}',
       '@keyframes kop-fade{from{opacity:0}to{opacity:1}}',
       '#kop-root .kop-head{display:flex;align-items:center;gap:14px;padding:18px 22px;border-bottom:1px solid rgba(10,15,13,.08);background:var(--surface);}',
-      '#kop-root .kop-head h2{margin:0;font-size:1.15rem;font-weight:700;letter-spacing:-.01em;}',
-      '#kop-root .kop-x{margin-left:auto;width:38px;height:38px;border-radius:11px;border:1px solid rgba(10,15,13,.1);background:var(--surface);cursor:pointer;display:grid;place-items:center;color:var(--ink,#0A0F0D);}',
-      '#kop-root .kop-x svg{width:18px;height:18px;}',
+      '#kop-root .kop-x{margin-left:auto;width:44px;height:44px;min-width:44px;min-height:44px;border-radius:12px;border:1px solid rgba(10,15,13,.1);background:var(--surface);cursor:pointer;display:grid;place-items:center;color:var(--ink,#0A0F0D);touch-action:manipulation;-webkit-tap-highlight-color:transparent;}',
+      '#kop-root .kop-x svg{width:22px;height:22px;}',
       '#kop-root .kop-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:18px 22px 40px;}',
       '#kop-root .kop-sec{font-size:.72rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--atlas,#0B6E4F);margin:22px 0 10px;}',
       '#kop-root .kop-sec:first-child{margin-top:0;}',
@@ -400,6 +399,7 @@
       root.setAttribute('role', 'dialog'); root.setAttribute('aria-label', 'Commandes OrderPro');
       document.body.appendChild(root);
       root.addEventListener('click', function (e) {
+        if (e.target === root) { close(); return; }
         var t = e.target.closest('[data-kop-acc],[data-kop-rej],[data-kop-ready],[data-kop-served],#kop-close');
         if (!t) return;
         if (t.id === 'kop-close') { close(); return; }
@@ -418,6 +418,9 @@
         } else if (t.dataset.kopRej) setStatus(t.dataset.kopRej, 'rejected');
         else if (t.dataset.kopReady) setStatus(t.dataset.kopReady, 'ready');
         else if (t.dataset.kopServed) setStatus(t.dataset.kopServed, 'served');
+      });
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && state.open) close();
       });
     }
     root.style.display = 'flex';
