@@ -106,10 +106,14 @@ still placeholder data, that's tech debt to replace, not the intended end state.
   native **Kiwi Printer Bridge** (`bridge/`) on desktop, **and** directly from the
   browser over **Web Bluetooth** and **WebUSB** (`assets/printer-bridge.js` —
   `navigator.bluetooth.requestDevice`, `navigator.usb.requestDevice`, with
-  `navigator.usb.getDevices()` re-acquiring a once-granted device). Don't propose
-  building browser printing; it exists. Hardware I/O lives behind
-  `window.KiwiHardware` / `window.KiwiPrinter` (`assets/caisse-hardware.js`,
-  `assets/escpos.js`).
+  `navigator.usb.getDevices()` re-acquiring a once-granted device). **Plus a
+  fourth, outbound-only transport for iPads/tablets:** the caisse deposits the
+  ESC/POS job on `/api/print/jobs` and the counter's bridge (paired once by a
+  6-digit code, `functions/api/print/`, bridge ≥ 1.4.0) polls and prints it —
+  the CloudPRNT model. Don't propose building browser printing or "bridge on
+  the LAN with a self-signed cert"; both questions are settled. Hardware I/O
+  lives behind `window.KiwiHardware` / `window.KiwiPrinter`
+  (`assets/caisse-hardware.js`, `assets/escpos.js`).
 - **Persistence:** `localStorage` for client state (`kiwiLang`, `kiwiTheme`,
   `kiwiMode`, `kiwiDateRange`, `kiwiRevCompare`, `kiwiPrinterCfg`, …); D1 for
   server-authoritative data.
