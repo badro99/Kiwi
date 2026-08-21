@@ -366,6 +366,7 @@
     crm: ['clients-directory', 'growth-crm'],
     loyalty: ['loyalty'],
     reservations: ['new-reservation'],
+    kds: ['nav-kds', 'open-kds'],
   };
   function gateOne(H, name, key) {
     var fn = H[name];

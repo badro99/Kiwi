@@ -5372,7 +5372,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=401" defer></script>
+  <script src="assets/caisse-pwa.js?v=402" defer></script>
   <script src="assets/live-link.js?v=15" defer></script>
   <!-- The staff-role catalogue — says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -5796,7 +5796,7 @@
           <span class="count" id="team-count">3</span>
         </button>
 
-        <button class="team-trigger" id="open-kds" aria-label="Écran cuisine">
+        <button class="team-trigger" id="open-kds" data-feature="kds" aria-label="Écran cuisine">
           <i data-lucide="chef-hat"></i>
           <span>Écran cuisine</span>
           <span class="count" id="kds-count">0</span>
@@ -16255,6 +16255,10 @@
     }
 
     function openKds() {
+      if (window.KiwiConfig && window.KiwiConfig.off && window.KiwiConfig.off('kds')) {
+        toast('Écran cuisine désactivé dans la console God Mode');
+        return;
+      }
       kdsPaint();
       kdsEl.classList.add('is-open');
       if (window.lucide) lucide.createIcons();

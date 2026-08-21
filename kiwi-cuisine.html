@@ -572,6 +572,58 @@
        on that measures 1.27:1, i.e. an accessibility rule that is itself
        invisible. */
 
+    .kds-disabled-overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      z-index: 99999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .kds-disabled-card {
+      background: var(--surface, #121815);
+      border: 1px solid var(--border, rgba(255,255,255,0.08));
+      border-radius: 20px;
+      padding: 36px 28px;
+      max-width: 460px;
+      width: 100%;
+      text-align: center;
+      color: var(--ink, #fff);
+      box-shadow: 0 20px 48px rgba(0,0,0,0.4);
+    }
+    .kds-disabled-icon {
+      width: 56px;
+      height: 56px;
+      margin: 0 auto 18px auto;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: rgba(229,169,60,0.12);
+      color: var(--gold, #E5A93C);
+    }
+    .kds-disabled-card h2 {
+      font-size: 22px;
+      font-weight: 700;
+      margin: 0 0 12px 0;
+    }
+    .kds-disabled-card p {
+      font-size: 15px;
+      line-height: 1.5;
+      color: var(--ink-2, rgba(255,255,255,0.7));
+      margin: 0 0 16px 0;
+    }
+    .kds-disabled-card .kds-disabled-sub {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--forest, #10B981);
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      padding: 10px 14px;
+      border-radius: 10px;
+      margin: 0;
+    }
     /* ── Reduced motion ───────────────────────────────────────────────────
        Five animated rules on this page, none of them load-bearing: they mark
        arrivals and state changes that the colour and position already state.
@@ -587,6 +639,17 @@
   </style>
 </head>
 <body>
+
+<div id="kds-disabled-overlay" class="kds-disabled-overlay" style="display:none;">
+  <div class="kds-disabled-card">
+    <div class="kds-disabled-icon">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21a1 1 0 0 0 1-1v-5.35c0-.457.316-.844.727-1.041a4 4 0 0 0-2.134-7.589 5 5 0 0 0-9.186 0 4 4 0 0 0-2.134 7.588c.411.198.727.585.727 1.041V20a1 1 0 0 0 1 1Z"/><path d="M6 17h12"/></svg>
+    </div>
+    <h2>Écran cuisine désactivé</h2>
+    <p>Le module KDS est actuellement désactivé pour cet établissement dans la console d'administration (God Mode).</p>
+    <p class="kds-disabled-sub">✓ Les commandes continuent de s’imprimer normalement sur les imprimantes thermiques de cuisine.</p>
+  </div>
+</div>
 
 <!-- ══ L'appareil n'est lié à aucun commerce ══════════════════════════════════
      Même code à six chiffres que la caisse : le patron en édite un depuis son
@@ -1415,6 +1478,22 @@
     if (document.visibilityState === 'visible') { keepAwake(); pull(); }
   });
 
+  function checkKdsFeature() {
+    try {
+      var v = venue();
+      var slug = (v && (v.merchant || v.slug || v.venueId)) || '';
+      if (!slug) return;
+      fetch('/api/config?merchant=' + encodeURIComponent(slug), { headers: { Accept: 'application/json' } })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (cfg) {
+          if (!cfg || !cfg.features) return;
+          var off = cfg.features.kds === false;
+          var ov = $('kds-disabled-overlay');
+          if (ov) ov.style.display = off ? 'flex' : 'none';
+        }).catch(function () {});
+    } catch (_) {}
+  }
+
   /* ── Démarrage ───────────────────────────────────────────────────────────── */
   var timer = null;
   function start() {
@@ -1428,9 +1507,10 @@
     paint();
     tickTimers();
     keepAwake();
+    checkKdsFeature();
     pull();
     if (timer) clearInterval(timer);
-    timer = setInterval(pull, POLL_MS);
+    timer = setInterval(function () { pull(); checkKdsFeature(); }, POLL_MS);
   }
 
   function boot() {
