@@ -1,7 +1,7 @@
 {
   "assets/account.js": {
-    "v": "6",
-    "sha": "caf243a157ed70c4"
+    "v": "7",
+    "sha": "2749afb62b97e419"
   },
   "assets/admin-support.css": {
     "v": "2",
@@ -184,8 +184,8 @@
     "sha": "025c0d9956885926"
   },
   "assets/help-centre.css": {
-    "v": "3",
-    "sha": "aea5686fcd134267"
+    "v": "4",
+    "sha": "a137abe50eebab42"
   },
   "assets/help-centre.js": {
     "v": "4",

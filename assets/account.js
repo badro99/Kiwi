@@ -132,7 +132,20 @@
       .acc-logo-actions { display:flex; gap:8px; flex-wrap:wrap; }
       .acc-plan-btns { display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
       .acc-danger { color:var(--danger); cursor:pointer; font-weight:600; font-size:12.5px; background:transparent; border:1px solid color-mix(in srgb,var(--danger) 38%,transparent); border-radius:9px; padding:9px 16px; font-family:var(--sans); transition:background 140ms; }
-      .acc-danger:hover { background:color-mix(in srgb,var(--danger) 10%,transparent); }`;
+      .acc-danger:hover { background:color-mix(in srgb,var(--danger) 10%,transparent); }
+      /* Dark mode explicit harmony */
+      html[data-theme="dark"] .acc-card,
+      html[data-theme="dark"] .acc-biz,
+      html[data-theme="dark"] .acc-contact-card,
+      html[data-theme="dark"] .acc-topic { background:rgba(255,255,255,0.04); border-color:rgba(255,255,255,0.08); }
+      html[data-theme="dark"] .acc-stat { background:rgba(255,255,255,0.04); }
+      html[data-theme="dark"] .acc-act { background:rgba(255,255,255,0.04); border-color:rgba(255,255,255,0.08); color:var(--ink); }
+      html[data-theme="dark"] .acc-act:hover { background:rgba(255,255,255,0.08); border-color:var(--mint); }
+      html[data-theme="dark"] .acc-cta.ghost { border-color:rgba(255,255,255,0.18); color:var(--ink); }
+      html[data-theme="dark"] .acc-cta.light { background:rgba(255,255,255,0.14); color:#fff; }
+      html[data-theme="dark"] .acc-f,
+      html[data-theme="dark"] .acc-sel,
+      html[data-theme="dark"] .acc-search { background:rgba(255,255,255,0.05); border-color:rgba(255,255,255,0.12); color:#fff; }`;
     const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
   })();
 
@@ -550,7 +563,7 @@
        * ne s'imprime pas du tout — un tiret imprimé à la place d'un ICE
        * ressemble à un ICE illisible.) */
       const todo = pick({ fr: 'à compléter', en: 'to complete', ar: 'ينقص' });
-      const lg = (k, v, required) => `<div><div class="k">${esc(k)}</div><div class="v"${v || !required ? '' : ' style="color:var(--danger);"'}>${esc(v || (required ? todo : '—'))}</div></div>`;
+      const lg = (k, v, required) => `<div><div class="k">${esc(k)}</div><div class="v">${v ? esc(v) : (required ? `<span style="font-size:11.5px; color:var(--n-500); font-style:italic;">${esc(todo)}</span>` : '—')}</div></div>`;
       return `
         <div class="acc-biz">
           <div class="acc-biz-head">
@@ -611,7 +624,7 @@
             <div class="acc-eyebrow" style="display:flex; justify-content:space-between; align-items:center;">${esc(T.personal)}<a data-action="account-edit-profile" style="color:var(--atlas); cursor:pointer; letter-spacing:0;">${esc(T.edit)}</a></div>
             ${row(T.name, esc(ownerName()))}
             ${row(T.email, esc(ownerEmail()))}
-            ${row(T.phone, esc(ownerPhone()))}
+            ${row(T.phone, esc(ownerPhone() || '—'))}
             ${row(T.language, esc(ownerLang()))}
           </div>
           <div class="acc-card">

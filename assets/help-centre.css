@@ -16,4 +16,13 @@
 .kh-reader{max-width:760px}.kh-back{margin-bottom:18px}.kh-reader h2{font-size:30px;line-height:1.08;letter-spacing:-.04em;margin:0 0 10px}.kh-prose{font-size:15px;line-height:1.75;white-space:pre-line}.kh-prose strong{font-weight:700}.kh-feedback{margin-top:28px;padding-top:18px;border-top:1px solid var(--kh-line);display:flex;align-items:center;gap:10px;flex-wrap:wrap}.kh-feedback span{margin-inline-end:auto;font-size:13px;color:var(--kh-muted)}
 .kh-modal-grid{display:grid;gap:14px}.kh-label{font-size:11px;font-weight:650;color:var(--kh-muted);margin-bottom:6px}.kh-area{min-height:124px;resize:vertical}.kh-channel{display:grid;grid-template-columns:1fr 1fr;gap:8px}.kh-channel label{border:1px solid var(--kh-line);border-radius:12px;padding:12px;cursor:pointer}.kh-channel label:has(input:checked){border-color:var(--atlas);background:var(--mint-soft)}.kh-channel input{margin-inline-end:7px}.kh-files{font-size:12px;color:var(--kh-muted)}.kh-suggest{display:grid;gap:6px}.kh-suggest button{padding:10px 12px;border:1px solid var(--kh-line);border-radius:10px;background:var(--paper-soft);text-align:start;color:var(--ink);cursor:pointer}.kh-diag{border:1px solid var(--kh-line);border-radius:12px;background:var(--paper-soft);padding:12px;font-size:12px;color:var(--kh-muted)}.kh-confirm{text-align:center;padding:10px 0}.kh-ref{font:700 18px var(--mono);letter-spacing:.06em;color:var(--atlas);margin:12px 0}
 [dir=rtl] .kh-article,[dir=rtl] .kh-reader{text-align:right}
+html[data-theme="dark"] .kh-path:not(.primary),
+html[data-theme="dark"] .kh-article,
+html[data-theme="dark"] .kh-chip:not(.active),
+html[data-theme="dark"] .kh-btn:not(.atlas):not(.mint),
+html[data-theme="dark"] .kh-suggest button,
+html[data-theme="dark"] .kh-diag {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+}
 @media(max-width:760px){.kh-hero{grid-template-columns:1fr}.kh-path{min-height:140px}.kh-results{grid-template-columns:1fr}.kh-search{flex-direction:column}.kh-path h2{font-size:22px}.kh-reader h2{font-size:25px}}
