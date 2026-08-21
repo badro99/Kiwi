@@ -209,3 +209,12 @@ Ce document consigne l'ensemble des audits visuels, ergonomiques, d'accessibilit
   1. Refonte du ticket vide avec médaillon Material Symbol (`inventory_2`), hiérarchie claire et indication de sélection de vignette.
   2. Bumping de la révision `pos-pharmacie.js?v=3` dans le dispatcher.
 - **État** : ✅ Déployé
+
+### 7.12 Vertical Librairie & Papeterie (`assets/pos-librairie.js`)
+- **Fichiers** : `assets/pos-librairie.js:609`, `assets/pos-dispatch.js:68`
+- **Problèmes identifiés** :
+  1. Panier librairie vide sans médaillon Material Symbols.
+- **Améliorations apportées** :
+  1. Refonte du panier vide avec médaillon Material Symbol (`inventory_2`) et hiérarchie visuelle dédiée au scan ISBN.
+  2. Bumping de la révision `pos-librairie.js?v=3` dans le dispatcher.
+- **État** : ✅ Déployé
