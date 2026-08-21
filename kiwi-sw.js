@@ -228,7 +228,7 @@ var SHELL = [
   '/assets/employee-trade-shell.js?v=2',
   '/assets/planning-core.js?v=8',
   '/assets/planning-ui.css?v=10',
-  '/assets/team.js?v=278',
+  '/assets/team.js?v=279',
   '/assets/restaurant-menu-workspace.js?v=16',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).
   '/assets/catalog-import.js?v=2',

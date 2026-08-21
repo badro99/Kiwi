@@ -1525,7 +1525,13 @@
 
         <div data-kt-grid-host style="margin-top:14px;">
           ${visible.length === 0
-            ? `<div style="padding:36px 14px;text-align:center;color:var(--n-500);font-size:13px;background:var(--paper-soft);border:1px dashed var(--n-300);border-radius:12px;">${esc(T.noMatch)}</div>`
+            ? `<div style="padding:44px 20px;text-align:center;color:var(--n-500);font-size:13px;background:var(--paper-soft);border:1px dashed var(--n-300);border-radius:14px;display:flex;flex-direction:column;align-items:center;">
+                <div style="width:44px;height:44px;border-radius:12px;background:rgba(11,110,79,0.10);border:1px solid rgba(11,110,79,0.18);color:var(--atlas);display:grid;place-items:center;margin-bottom:12px;">
+                  <svg width="22" height="22" viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg>
+                </div>
+                <div style="font-weight:600;font-size:14.5px;color:var(--ink);margin-bottom:4px;">${esc(T.noMatch)}</div>
+                <button class="kb atlas" type="button" data-action="nav-equipe" style="margin-top:10px;">${svgIcon(IC.plus, 13)}${esc(T.addMember)}</button>
+              </div>`
             : renderMembersTable(T, visible)}
         </div>
       </div>
@@ -3174,9 +3180,12 @@
     if (!members.length) {
       return `
         <div class="dash-equipe">
-          <div class="eq-section" style="text-align:center; padding:44px 18px;">
-            <h3 style="margin:0 0 8px;">${esc(T.payEmptyH)}</h3>
-            <p style="margin:0 auto 18px; max-width:44ch; color:var(--n-500); line-height:1.55;">${esc(T.payEmptyP)}</p>
+          <div class="eq-section" style="text-align:center; padding:44px 18px; display:flex; flex-direction:column; align-items:center;">
+            <div style="width:48px;height:48px;border-radius:14px;background:rgba(11,110,79,0.10);border:1px solid rgba(11,110,79,0.18);color:var(--atlas);display:grid;place-items:center;margin-bottom:16px;">
+              <svg width="24" height="24" viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg>
+            </div>
+            <h3 style="margin:0 0 6px; font-family:var(--sans); font-size:18px; font-weight:600; letter-spacing:-0.015em; color:var(--ink);">${esc(T.payEmptyH)}</h3>
+            <p style="margin:0 auto 18px; max-width:44ch; color:var(--n-500); line-height:1.55; font-size:13px;">${esc(T.payEmptyP)}</p>
             <button class="kb atlas" type="button" data-action="nav-equipe">${svgIcon(IC.plus, 13)}${esc(T.addMember)}</button>
           </div>
         </div>`;

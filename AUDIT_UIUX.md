@@ -79,3 +79,13 @@ Ce document consigne l'ensemble des audits visuels, ergonomiques, d'accessibilit
   2. Ajout des micro-interactions tactiles `.kdr-btn:active { transform: scale(0.97); }` et des focus rings de sélection.
   3. Bumping du timbre de cache `assets/day-report-dash.js?v=7`.
 - **État** : ✅ Déployé
+
+### 4. Équipe & Planning (`assets/team.js`)
+- **Fichiers** : `assets/team.js:1528`, `assets/team.js:3175`
+- **Problèmes identifiés** :
+  1. États vides de la liste de filtrage d'équipe et de la section paie/planning sans médaillon Material Symbols.
+  2. Absence de bouton CTA visible pour ajouter un membre en cas de filtre sans résultat.
+- **Améliorations apportées** :
+  1. Intégration de médaillons Material Symbol (`inventory_2`), structuration éditoriale et bouton d'action direct `data-action="nav-equipe"` dans les états vides.
+  2. Bumping du timbre de cache `assets/team.js?v=279`.
+- **État** : ✅ Déployé
