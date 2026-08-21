@@ -134,7 +134,7 @@ start "" /min "%USERPROFILE%\Downloads\kiwi-printer-bridge-win.exe"</code>
             Tapez ce code quand Termux vous le demande.</li>
           <li><b>Si vous avez raté la question dans Termux :</b> redemandez un code sur l'iPad, puis dans Termux lancez :<br>
             <code>curl -X POST -H 'Content-Type: application/json' -d '{"code":"123456"}' http://127.0.0.1:9110/kiwi/relay/pair</code><br>
-            *(ou ouvrez <code>http://127.0.0.1:9110/</code> dans Chrome sur le téléphone pour le saisir).*</li>
+            (ou ouvrez <code>http://127.0.0.1:9110/</code> dans Chrome sur le téléphone pour le saisir).</li>
           <li><b>Paramètres Android indispensables :</b> <i>Paramètres → Applications → Termux → Batterie</i> → sélectionnez <b>« Sans restriction »</b>. Laissez Termux tourner en arrière-plan (ne faites jamais « Exit » dans sa notification).</li>
           <li><b>Tester l'impression sur l'iPad :</b> dans les réglages imprimante de la caisse → <i>Option avancée · imprimante réseau globale</i> → IP <code>192.168.11.199</code>, port <code>9100</code>, 80 mm, ESC/POS générique → <b>« Imprimer un ticket test »</b> → <b>Enregistrer</b>.</li>
         </ol>
