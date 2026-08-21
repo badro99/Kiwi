@@ -4860,7 +4860,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
   <script src="assets/staff-roles.js" defer></script>
   <!-- Real employee identity, planning, floor and attendance bridge. -->
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/employee-live.js?v=395" defer></script>
+  <script src="assets/employee-live.js?v=396" defer></script>
   <script src="assets/employee-planning.js?v=6" defer></script>
   <link rel="stylesheet" href="assets/employee-trade-shell.css?v=2">
   <script src="assets/employee-trade-shell.js?v=2" defer></script>
@@ -7161,15 +7161,20 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       const total = (t.status === 'khawya' || t.status === 'khlass') ? 0 : getTableTotal(id);
       const statusTxt = employeeTranslation(statusLabel[t.status]);
       const split = tableSplits.get(id);
+      const pendingOrder = svPendingOrderFor(id);
       let line2 = '';
-      if (split) {
+      if (pendingOrder) {
+        line2 = `Commande OrderPro à valider · ${fmtMAD(pendingOrder.total)}`;
+      } else if (split) {
         line2 = `Split en cours · ${split.paidCount}/${split.parts.length} réglées`;
       } else if (t.status === 'khawya')      line2 = employeeTranslation('Disponible');
       else if (t.status === 'khlass')        line2 = employeeTranslation('Réglée');
       else                                    line2 = `${statusTxt} · ${employeeMinuteCount(t.elapsed)}`;
 
-      const showAmount = total > 0;
-      const urgentDot = t.status === 'bgha-ykhlass' ? '<span class="tc-pulse-dot"></span>' : '';
+      const displayTotal = total > 0 ? total : (pendingOrder ? pendingOrder.total : 0);
+      const showAmount = displayTotal > 0;
+      const urgentDot = (t.status === 'bgha-ykhlass' || pendingOrder) ? `<span class="tc-pulse-dot"${pendingOrder ? ' style="background:var(--mint);box-shadow:0 0 0 4px rgba(125,242,176,0.35);"' : ''}></span>` : '';
+      const orderProBadge = pendingOrder ? `<span class="tc-orderpro-badge" style="font-size:9.5px;font-weight:700;letter-spacing:0.04em;color:var(--forest-deep);background:var(--mint);padding:2px 7px;border-radius:6px;margin-left:6px;display:inline-flex;align-items:center;gap:3px;"><i data-lucide="smartphone" style="width:11px;height:11px;"></i>OrderPro</span>` : '';
       const serverInfo = t.server && servers[t.server];
       const serverChip = (opts.showServer && t.server !== currentUser && serverInfo)
         ? `<span class="tc-server-chip">${esc(serverInfo.initials)}</span>`
@@ -7181,15 +7186,15 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       const lockChip = isLockedByOther ? `<span class="tc-lock-indicator" title="Prise en cours par ${esc(activeLock.actor)}"><i data-lucide="lock"></i></span>` : '';
 
       return `
-        <button type="button" class="table-card" data-status="${esc(t.status)}" data-table="${esc(id)}">
+        <button type="button" class="table-card${pendingOrder ? ' has-orderpro' : ''}" data-status="${esc(t.status)}" data-table="${esc(id)}">
           ${lockChip}
           <div class="tc-num">${esc(id)}</div>
           <div class="tc-info">
-            <div class="tc-line1">${esc(id)} · ${employeeCoverCount(t.covers)} ${serverChip} ${urgentDot}</div>
+            <div class="tc-line1">${esc(id)} · ${employeeCoverCount(t.covers)} ${orderProBadge} ${serverChip} ${urgentDot}</div>
             <div class="tc-line2">${line2}</div>
           </div>
           <div class="tc-right">
-            ${showAmount ? `<div class="tc-amount">${fmtMAD(total)}</div>` : ''}
+            ${showAmount ? `<div class="tc-amount">${fmtMAD(displayTotal)}</div>` : ''}
           </div>
           <div class="tc-arrow"><i data-lucide="chevron-right"></i></div>
         </button>
@@ -7388,6 +7393,18 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       const t = tables[id];
       if (!t) return;
       if (isEmployeePaused()) { toast('Reprenez le service pour prendre une commande'); return; }
+
+      // Commande OrderPro en attente : ouvre directement le détail pour valider l'envoi en cuisine
+      const pending = svPendingOrderFor(id);
+      if (pending) {
+        activeTableId = id;
+        setTableLock(id, 'acquire');
+        ensureTableOrder(id);
+        renderTableDetail();
+        showScreen('screen-table');
+        lucide.createIcons();
+        return;
+      }
 
       // Khawya tables → covers picker first
       if (t.status === 'khawya') {
@@ -9151,7 +9168,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
           button.addEventListener('click', () => {
             const id = serviceTableId(button.dataset.notificationTable);
             setTab('tables');
-            if (id && tables[id]) { activeTableId = id; showScreen('screen-table'); renderTableDetail(); }
+            if (id && tables[id]) { openTableDetail(id); }
           });
         });
       }

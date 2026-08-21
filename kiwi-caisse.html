@@ -552,7 +552,8 @@
        Optimized for iPad 10.2"/10.9" in landscape (810px height).
        Everything fits smoothly without cutoff or microscopic fonts.
        =========================================================== */
-    @media (max-width: 1199px), (max-height: 849px) {
+    @media only screen and (max-width: 1080px),
+           only screen and (hover: none) and (pointer: coarse) and (max-width: 1194px) {
       .sidebar {
         width: 250px;
         flex: 0 0 250px;
@@ -5231,7 +5232,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=396" defer></script>
+  <script src="assets/caisse-pwa.js?v=397" defer></script>
   <script src="assets/live-link.js?v=15" defer></script>
   <!-- The staff-role catalogue — says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
