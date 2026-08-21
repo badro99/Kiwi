@@ -191,3 +191,12 @@ Ce document consigne l'ensemble des audits visuels, ergonomiques, d'accessibilit
   1. Refonte du ticket vide avec médaillon Material Symbol (`inventory_2`) et hiérarchie ultra-lisible.
   2. Bumping de la révision `pos-foodtruck.js?v=3` dans le dispatcher.
 - **État** : ✅ Déployé
+
+### 7.10 Vertical Épicerie (`assets/pos-epicerie.js`)
+- **Fichiers** : `assets/pos-epicerie.js:638`, `assets/pos-dispatch.js:66`
+- **Problèmes identifiés** :
+  1. Ticket d'épicerie de quartier vide sans médaillon Material Symbols.
+- **Améliorations apportées** :
+  1. Refonte du ticket vide avec médaillon Material Symbol (`inventory_2`) et repère de geste pour scan douchette / balance.
+  2. Bumping de la révision `pos-epicerie.js?v=3` dans le dispatcher.
+- **État** : ✅ Déployé

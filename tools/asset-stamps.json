@@ -373,15 +373,15 @@
   },
   "assets/pos-dispatch.js": {
     "v": "30",
-    "sha": "787ac7ca46d12758"
+    "sha": "509f206b3ff6eff8"
   },
   "assets/pos-epicerie.css": {
-    "v": "2",
+    "v": "3",
     "sha": "2ef8ca4ef7968710"
   },
   "assets/pos-epicerie.js": {
-    "v": "2",
-    "sha": "8e1cd627c452de88"
+    "v": "3",
+    "sha": "7607b3c7f837f668"
   },
   "assets/pos-fastfood.css": {
     "v": "3",
