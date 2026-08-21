@@ -891,10 +891,10 @@
     });
   }
 
-  /* ════════════════════════════ FACTURATION ════════════════════════════ */
+  /* ════════════════════════════ FACTURATION / MY KIWI ════════════════════════════ */
   function openBilling() {
     const T = {
-      title: pick({ fr: 'Facturation', en: 'Billing', ar: 'الفواتير' }),
+      title: pick({ fr: 'My Kiwi', en: 'My Kiwi', ar: 'My Kiwi' }),
       sub: pick({ fr: 'Abonnement & factures · Café Atlas', en: 'Subscription & invoices · Café Atlas', ar: 'الاشتراك والفواتير · مقهى أطلس' }),
       current: pick({ fr: 'VOTRE FORMULE', en: 'YOUR PLAN', ar: 'باقتك' }),
       nextDue: pick({ fr: 'Prochaine échéance : 1 juillet 2026', en: 'Next charge: 1 July 2026', ar: 'الاستحقاق القادم: 1 يوليو 2026' }),

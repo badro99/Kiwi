@@ -1,7 +1,7 @@
 {
   "assets/account.js": {
-    "v": "8",
-    "sha": "3c23e1c8b82ed2b7"
+    "v": "9",
+    "sha": "2ef4f0f0576d0684"
   },
   "assets/admin-support.css": {
     "v": "2",
@@ -204,8 +204,8 @@
     "sha": "5f0a4000cc13db93"
   },
   "assets/interactive.js": {
-    "v": "10",
-    "sha": "be57d248fa241507"
+    "v": "11",
+    "sha": "a75946413ffa89bd"
   },
   "assets/inventory-consumption.js": {
     "v": "9",
