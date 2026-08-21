@@ -1713,6 +1713,9 @@ body.design-vexel .kiwi-lock-help,
 body.design-vexel .kiwi-lock-help b { color: var(--n-600); }
 body.design-vexel .kiwi-lock-help b { font-weight: 600; }
 body.design-vexel .kiwi-lock-help.is-error { color: var(--danger); }
+body.design-vexel .kiwi-lock-skip { display: none; }
+html.kiwi-local-demo body.design-vexel .kiwi-lock-skip { display: inline-block; }
+html.kiwi-hosted body.design-vexel .kiwi-lock-skip { display: none !important; }
 body.design-vexel :is(.kiwi-lock-skip, .kiwi-lock-switch) { color: var(--n-500); }
 body.design-vexel :is(.kiwi-lock-skip, .kiwi-lock-switch):hover {
   background: var(--vx-hover-bg);

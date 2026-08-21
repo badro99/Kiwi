@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Kiwi · Tableau de bord commerçant</title>
 <script>
-  /* Prime language, dark theme, and skin synchronously before any stylesheet or markup parses.
-     This guarantees 0ms Flash of Light Theme (FOLT) when refreshing in dark mode. */
+  /* Prime language, dark theme, skin, and environment synchronously before any stylesheet or markup parses.
+     This guarantees 0ms Flash of Light Theme (FOLT) and 0ms Flash of Demo Affordances (FODA). */
   (function () {
     try {
       var picked = new URLSearchParams(location.search).get('lang');
@@ -36,6 +36,17 @@
       var skinStored = localStorage.getItem('kiwiDesignVexel');
       if (skinParam !== 'off' && skinParam !== 'none' && skinStored !== '0') {
         document.documentElement.classList.add('design-vexel');
+      }
+
+      var h = (location.hostname || '').toLowerCase();
+      var isLocal = location.protocol === 'file:' || h === 'localhost' || h === '127.0.0.1' || h === '0.0.0.0' || h === '' || /\.local$/.test(h);
+      var forced = null;
+      try { var f = localStorage.getItem('kiwiDemos'); if (f === '1') forced = true; else if (f === '0') forced = false; } catch(_) {}
+      var demosAllowed = isLocal && (forced !== false);
+      if (!demosAllowed) {
+        document.documentElement.classList.add('kiwi-hosted');
+      } else {
+        document.documentElement.classList.add('kiwi-local-demo');
       }
     } catch (_) {}
   })();
@@ -1532,14 +1543,17 @@
     box-shadow: 0 0 0 4px rgba(255,107,107,0.14);
   }
   .kiwi-lock-help.is-error { color: #ff9d9d; }
-  /* Skip control — collapses the lock + greeting intro for repeat viewers */
+  /* Skip control — collapses the lock + greeting intro for repeat viewers (local demo only) */
   .kiwi-lock-skip {
+    display: none;
     margin-top: 20px; background: none; border: 0; cursor: pointer;
     font-family: var(--sans); font-size: 12px; letter-spacing: 0.01em;
     color: rgba(198,234,212,0.55); padding: 7px 12px; border-radius: 9px;
     min-height: 44px;
     transition: color 140ms ease, background 140ms ease;
   }
+  html.kiwi-local-demo .kiwi-lock-skip { display: inline-block; }
+  html.kiwi-hosted .kiwi-lock-skip { display: none !important; }
   .kiwi-lock-skip:hover { color: #c6ead4; background: rgba(255,255,255,0.06); }
   .kiwi-lock-skip:focus-visible { outline: 2px solid var(--mint); outline-offset: 2px; color: #c6ead4; }
   /* Switch-account escape hatch — a merchant on this PIN screen who wants to
@@ -5078,7 +5092,7 @@
      Inert unless body.design-vexel. ON by default for every merchant since the
      v2 design migration — ?skin=off or KiwiDesignVexel.disable() opts out.
      Loads LAST of the three skins so it wins where they overlap. -->
-<link rel="stylesheet" href="assets/design-vexel.css?v=2092" />
+<link rel="stylesheet" href="assets/design-vexel.css?v=2093" />
 <!-- Pressing owner workspace — exact-trade layer, inert for every other venue. -->
 <link rel="stylesheet" href="assets/pressing-catalog.css?v=4" />
 <link rel="stylesheet" href="assets/pressing-dashboard.css?v=10" />
