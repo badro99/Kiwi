@@ -365,3 +365,33 @@ html[data-theme="dark"] .kx-kpi.warn { background: color-mix(in srgb, #D99A2B 13
 html[data-theme="dark"] .kx-kpi.warn .v { color: #E8B85C; }
 html[data-theme="dark"] .kx-empty { background: var(--paper-muted); }
 html[data-theme="dark"] .kx-empty .ico { background: var(--paper-soft); }
+
+/* ───────────────────────────────────────────────────────────────────────────
+ * 7 · BUTTONS & INTERACTIVE FEEDBACK (GENPAGE)
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+.dash-genpage button:focus-visible,
+.dash-genpage a:focus-visible {
+  outline: 2px solid var(--atlas);
+  outline-offset: 2px;
+}
+
+.dash-genpage .kb,
+.dash-genpage .btn-slim,
+.dash-genpage [role="button"] {
+  transition: transform 120ms var(--spring), background-color 140ms ease, border-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
+}
+
+.dash-genpage .kb:active,
+.dash-genpage .btn-slim:active,
+.dash-genpage [role="button"]:active {
+  transform: scale(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dash-genpage .kb:active,
+  .dash-genpage .btn-slim:active,
+  .dash-genpage [role="button"]:active {
+    transform: none;
+  }
+}

@@ -42,10 +42,16 @@
       .acc-venue { display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-bottom:1px solid var(--n-100); font-size:13.5px; }
       .acc-venue:last-child { border-bottom:0; }
       .acc-venue b { font-weight:600; } .acc-venue span { color:var(--n-500); font-size:12px; }
-      .acc-cta { background:var(--atlas); color:#fff; border:0; border-radius:9px; padding:9px 16px; font-size:12.5px; font-weight:600; font-family:var(--sans); cursor:pointer; }
+      .acc-cta { background:var(--atlas); color:#fff; border:0; border-radius:9px; padding:9px 16px; font-size:12.5px; font-weight:600; font-family:var(--sans); cursor:pointer; transition:transform 120ms var(--spring), filter 140ms ease, background 140ms ease, border-color 140ms ease; }
       .acc-cta.ghost { background:transparent; color:var(--ink); border:1px solid var(--n-300); }
       .acc-cta.light { background:var(--surface); color:#08311f; }
       .acc-cta:hover { filter:brightness(1.06); }
+      .acc-cta:active { transform:scale(0.97); }
+      .acc-cta:focus-visible { outline:2px solid var(--atlas); outline-offset:2px; }
+      .acc-add-biz:active { transform:scale(0.98); }
+      .acc-add-biz:focus-visible { outline:2px solid var(--atlas); outline-offset:2px; }
+      .acc-contact-card:active, .acc-topic:active { transform:scale(0.98); }
+      .acc-contact-card:focus-visible, .acc-topic:focus-visible { outline:2px solid var(--atlas); outline-offset:2px; }
       .acc-plan { display:flex; align-items:center; gap:18px; padding:22px; border-radius:16px; background:linear-gradient(150deg,#0c4a35,#08311f); color:#fff; margin-bottom:16px; flex-wrap:wrap; }
       .acc-plan-price { font-size:30px; font-weight:600; letter-spacing:-0.02em; }
       .acc-plan-price small { font-size:14px; font-weight:400; opacity:0.7; }

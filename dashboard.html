@@ -74,7 +74,7 @@
      Loaded LAST on purpose: it wins equal-specificity ties against the
      per-vertical component CSS above, which is how it replaces four different
      stat-card implementations without editing four stylesheets. -->
-<link rel="stylesheet" href="assets/genpage.css?v=1" />
+<link rel="stylesheet" href="assets/genpage.css?v=2" />
 <style>
   /* ─────────────── SHELL ─────────────── */
   /* Ambient blobs — four soft radial gradients pinned to the viewport
@@ -1291,22 +1291,39 @@
   .page-head h1.greeting em {
     font-family: var(--serif);
     font-weight: 400;
+    font-style: normal;
     letter-spacing: -0.005em;
     color: var(--atlas);
   }
   .quick-acts { display: flex; gap: 8px; align-items: center; }
-  .btn-slim { display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px; border-radius: 9px; font-size: 13px; font-weight: 500; border: 1px solid var(--n-200); background: var(--surface); color: var(--ink); transition: border-color 150ms, background 150ms, color 150ms; }
-  .btn-slim:hover { border-color: var(--n-400); }
+  .btn-slim {
+    display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px;
+    border-radius: 9px; font-size: 13px; font-weight: 500;
+    border: 1px solid var(--n-200); background: var(--surface); color: var(--ink);
+    transition: transform 120ms var(--spring), border-color 150ms ease, background 150ms ease, color 150ms ease, box-shadow 150ms ease;
+    cursor: pointer; user-select: none;
+  }
+  .btn-slim:hover { border-color: var(--n-400); background: var(--paper-soft); }
+  .btn-slim:active { transform: scale(0.97); }
+  .btn-slim:focus-visible { outline: 2px solid var(--atlas); outline-offset: 2px; }
   .btn-slim.primary { background: var(--ink); color: var(--paper); border-color: var(--ink); }
   .btn-slim.primary:hover { background: var(--atlas); border-color: var(--atlas); }
+  .btn-slim.primary:active { transform: scale(0.97); }
 
   /* ─────────────── DATE RANGE SELECTOR ─────────────── */
   .dash-date-range { display: flex; justify-content: space-between; align-items: center; gap: 24px; margin: 22px 0 26px; flex-wrap: wrap; }
   .dash-date-range .dr-label { font-size: 34px; font-weight: 600; letter-spacing: -0.028em; color: var(--ink); line-height: 1.1; }
   .dash-date-range .dr-sub { font-size: 13.5px; color: var(--n-500); margin-top: 6px; font-family: var(--mono); letter-spacing: 0.01em; }
   .dr-pills { display: inline-flex; gap: 8px; background: var(--paper-soft); padding: 4px; border-radius: 999px; border: 1px solid var(--n-200); flex-wrap: wrap; }
-  .dr-pill { padding: 9px 16px; border-radius: 999px; font-size: 13px; font-weight: 500; color: var(--n-500); background: transparent; letter-spacing: -0.005em; transition: background 150ms, color 150ms, box-shadow 150ms; cursor: pointer; white-space: nowrap; }
+  .dr-pill {
+    padding: 9px 16px; border-radius: 999px; font-size: 13px; font-weight: 500;
+    color: var(--n-500); background: transparent; letter-spacing: -0.005em;
+    transition: transform 120ms var(--spring), background 150ms ease, color 150ms ease, box-shadow 150ms ease;
+    cursor: pointer; white-space: nowrap; border: none;
+  }
   .dr-pill:hover:not(.on) { background: var(--n-100); color: var(--ink); }
+  .dr-pill:active { transform: scale(0.97); }
+  .dr-pill:focus-visible { outline: 2px solid var(--atlas); outline-offset: 2px; }
   .dr-pill.on { background: linear-gradient(135deg, var(--atlas) 0%, var(--riad) 100%); color: var(--paper); box-shadow: 0 4px 14px -4px rgba(11,110,79,0.45), 0 1px 2px rgba(0,0,0,0.04); }
   .dr-pills.compact { padding: 3px; gap: 3px; }
   .dr-pills.compact .dr-pill { padding: 6px 12px; font-size: 12px; }
@@ -6280,7 +6297,7 @@
 <script src="assets/staff-roles.js" defer></script>
 <link rel="stylesheet" href="assets/help-centre.css?v=4">
 <script src="assets/help-centre.js?v=4" defer fetchpriority="low"></script>
-<script src="assets/account.js?v=13" defer fetchpriority="low"></script>
+<script src="assets/account.js?v=14" defer fetchpriority="low"></script>
 <script src="assets/design-2026.js" defer fetchpriority="low"></script>
 <script src="assets/design-ios27.js" defer fetchpriority="low"></script>
 <script src="assets/design-vexel-layout.js?v=2078" defer fetchpriority="low"></script>
