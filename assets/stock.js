@@ -1596,7 +1596,12 @@
           ${totalAlertCount > 0 ? `<span class="st-count-badge warn">${totalAlertCount}</span>` : ''}
         </div>
         <div class="st-alerts">
-          ${alerts.length === 0 ? `<div style="color:var(--n-500); font-size:13px; padding:6px 2px;">${esc(t('alertsEmpty'))}</div>` :
+          ${alerts.length === 0 ? `<div style="padding:28px 16px; text-align:center; color:var(--n-500); font-size:13px; background:var(--paper-soft); border-radius:12px; border:1px solid var(--n-200); display:flex; align-items:center; justify-content:center; gap:10px;">
+            <div style="width:28px; height:28px; border-radius:8px; background:rgba(11,110,79,0.10); color:var(--atlas); display:grid; place-items:center;">
+              <svg width="16" height="16" viewBox="0 -960 960 960" fill="currentColor"><path d="M382-240 154-468l57-57 171 171 367-367 57 57-424 424Z"/></svg>
+            </div>
+            <span style="font-weight:500; color:var(--ink);">${esc(t('alertsEmpty'))}</span>
+          </div>` :
             alerts.map(renderAlertCard).join('')}
         </div>
       </div>
@@ -1913,7 +1918,7 @@
             </tr>
           </thead>
           <tbody>
-            ${items.map(renderItemRow).join('')}
+            ${items.length === 0 ? '<tr><td colspan="10" style="padding:44px 20px;text-align:center;"><div style="display:flex;flex-direction:column;align-items:center;"><div style="width:44px;height:44px;border-radius:12px;background:rgba(11,110,79,0.10);border:1px solid rgba(11,110,79,0.18);color:var(--atlas);display:grid;place-items:center;margin-bottom:12px;"><svg width="22" height="22" viewBox="0 -960 960 960" fill="currentColor"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg></div><div style="font-weight:600;font-size:14.5px;color:var(--ink);margin-bottom:4px;">' + esc(t('noMatch') || 'Aucun article ne correspond aux filtres.') + '</div></div></td></tr>' : items.map(renderItemRow).join('')}
           </tbody>
         </table>
       </div>

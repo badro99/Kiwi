@@ -89,3 +89,14 @@ Ce document consigne l'ensemble des audits visuels, ergonomiques, d'accessibilit
   1. Intégration de médaillons Material Symbol (`inventory_2`), structuration éditoriale et bouton d'action direct `data-action="nav-equipe"` dans les états vides.
   2. Bumping du timbre de cache `assets/team.js?v=279`.
 - **État** : ✅ Déployé
+
+### 5. Stock & Menu / Carte (`assets/stock.js`, `assets/restaurant-menu-workspace.js`)
+- **Fichiers** : `assets/stock.js:1599`, `assets/stock.js:1915`, `assets/restaurant-menu-workspace.js:58`
+- **Problèmes identifiés** :
+  1. États vides du tableau d'articles de stock et de la section alertes sans médaillon Material Symbols.
+  2. État vide du menu sans structuration visuelle Material Symbols.
+- **Améliorations apportées** :
+  1. Refonte des états vides de filtrage de stock avec médaillons Material Symbol (`inventory_2`) et badge de validation d'absence d'alerte.
+  2. Enrichissement de l'état vide de création de menu avec médaillon et bouton d'action direct `rmw-cat-add`.
+  3. Bumping des timbres de cache `assets/stock.js?v=18` et `assets/restaurant-menu-workspace.js?v=17`.
+- **État** : ✅ Déployé

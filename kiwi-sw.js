@@ -210,7 +210,7 @@ var SHELL = [
      document; quantities are append-only movements, both usable offline. */
   '/assets/inventory-ledger.js?v=4',
   '/assets/caisse-stock-sync.js?v=8',
-  '/assets/stock.js?v=17',
+  '/assets/stock.js?v=18',
   /* Le coût de revient. Dans la coquille parce que les tuiles Marge brute,
      Bénéfice brut et Coût matière du tableau de bord passent toutes par lui :
      sans lui hors ligne, elles retomberaient sur un tiret alors que le
@@ -229,7 +229,7 @@ var SHELL = [
   '/assets/planning-core.js?v=8',
   '/assets/planning-ui.css?v=10',
   '/assets/team.js?v=279',
-  '/assets/restaurant-menu-workspace.js?v=16',
+  '/assets/restaurant-menu-workspace.js?v=17',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).
   '/assets/catalog-import.js?v=2',
   // Scanner un menu — photo / PDF / lien → Kiwi AI → revue d'import.
