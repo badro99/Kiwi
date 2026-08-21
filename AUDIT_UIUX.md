@@ -300,4 +300,6 @@ Extraction brute des règles existantes avant harmonisation :
 | **1. Échelle Typographique & Mouvement** | `kiwi-serveur.html` | Définition des jetons `--t-*` et des constantes de mouvement, migration de l'ensemble des règles de style | ✅ Déployé |
 | **2. Grille de Salle & Cartes de Table** | `kiwi-serveur.html` | Hiérarchie visuelle dominante sur `.tc-num` (17px mono bold), élévation glassmorphism, transitions d'état fluides, état vide conçu avec médaillon et CTA de réinitialisation | ✅ Déployé |
 | **3. Onglet Menu & Barre de Panier Flottante** | `kiwi-serveur.html` | Grille d'articles avec rythme nom/prix mono bold, lentille fluide sur `.cat-pill`, animation de pop à ressort `--spring` et chorégraphie d'entrée de la barre de commande | ✅ Déployé |
+| **4. Détail de Table & Grand Livre de Commande** | `kiwi-serveur.html` | Alignement du grand livre (qté × nom … prix), transition d'entrée d'écran directionnelle `--expo`, bouton primaire unique avec retour tactile et hiérarchie des actions secondaires | ✅ Déployé |
+
 
