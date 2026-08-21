@@ -46,7 +46,7 @@ var SHELL = [
   '/assets/help-centre.css?v=4',
   '/assets/polish-dashboard.css',
   '/assets/pressing-catalog.css?v=4',
-  '/assets/pressing-dashboard.css?v=9',
+  '/assets/pressing-dashboard.css?v=10',
   '/assets/trade-workspaces.css?v=3',
   '/assets/reservations.css?v=4',
   '/assets/hotel.css',
@@ -201,7 +201,7 @@ var SHELL = [
      qui a perdu ses promotions vend au prix plein pendant que la vitrine
      annonce −30 % — et c'est la caissière qui doit s'en expliquer. */
   '/assets/promos.js',
-  '/assets/boutique-promos-dashboard.js?v=2',
+  '/assets/boutique-promos-dashboard.js?v=3',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
   '/assets/caisse-lang.js',
@@ -250,7 +250,7 @@ var SHELL = [
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=4',
   '/assets/pos-dispatch.js?v=29',
-  '/assets/retail-scan.css?v=6',
+  '/assets/retail-scan.css?v=7',
   '/assets/vendor/zxing-browser.min.js?v=1',
   '/assets/retail-scan.js?v=6',
   '/assets/caisse-dna.css?v=3',

@@ -131,6 +131,19 @@
   .pxd-link { white-space: normal; text-align: right; }
 }
 
+html[data-theme="dark"] .pxd-kpi,
+html[data-theme="dark"] .pxd-card,
+html[data-theme="dark"] .pxd-page-card,
+html[data-theme="dark"] .pxd-btn:not(.primary) {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+html[data-theme="dark"] .pxd-stage,
+html[data-theme="dark"] .pxd-action,
+html[data-theme="dark"] .pxd-check {
+  background: rgba(255, 255, 255, 0.035);
+  border-color: rgba(255, 255, 255, 0.08);
+}
 @media (prefers-reduced-motion: reduce) {
   .pxd-btn, .pxd-action { transition: none; }
 }

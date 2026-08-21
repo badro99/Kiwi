@@ -44,8 +44,8 @@
     "sha": "23678abd5cd37676"
   },
   "assets/boutique-promos-dashboard.js": {
-    "v": "2",
-    "sha": "e73ec26dea9a5353"
+    "v": "3",
+    "sha": "7332c4414f0ffae1"
   },
   "assets/caisse-attendance-code.js": {
     "v": "2",
@@ -500,8 +500,8 @@
     "sha": "31844335f4c3ea47"
   },
   "assets/pressing-dashboard.css": {
-    "v": "9",
-    "sha": "5f653d4376c2c3b4"
+    "v": "10",
+    "sha": "7cbe21b6dc1cff7f"
   },
   "assets/pressing-dashboard.js": {
     "v": "12",
@@ -544,8 +544,8 @@
     "sha": "c42490df8bd217a2"
   },
   "assets/retail-scan.css": {
-    "v": "6",
-    "sha": "963f846e0bec8e94"
+    "v": "7",
+    "sha": "60c57d3b95133a41"
   },
   "assets/retail-scan.js": {
     "v": "6",

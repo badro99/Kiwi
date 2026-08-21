@@ -287,6 +287,57 @@
   .krs-method { min-height: 56px; }
 }
 
+html[data-theme="dark"] .krs-shell,
+html[data-theme="dark"] .krs-head,
+html[data-theme="dark"] .krs-result,
+html[data-theme="dark"] .krs-cart,
+html[data-theme="dark"] .krs-cart-foot,
+html[data-theme="dark"] .krs-card,
+html[data-theme="dark"] .krs-pay-card {
+  background: #141C18;
+  color: #F7F5F0;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+html[data-theme="dark"] .krs-head-copy span,
+html[data-theme="dark"] .krs-product-meta,
+html[data-theme="dark"] .krs-stock,
+html[data-theme="dark"] .krs-create p,
+html[data-theme="dark"] .krs-cart-head span,
+html[data-theme="dark"] .krs-line-meta,
+html[data-theme="dark"] .krs-pay-sub,
+html[data-theme="dark"] .krs-due span {
+  color: rgba(247, 245, 240, 0.6);
+}
+html[data-theme="dark"] .krs-stock b,
+html[data-theme="dark"] .krs-cart-head b,
+html[data-theme="dark"] .krs-due b,
+html[data-theme="dark"] .krs-total b {
+  color: #F7F5F0;
+}
+html[data-theme="dark"] .krs-field input,
+html[data-theme="dark"] .krs-field select,
+html[data-theme="dark"] .krs-btn:not(.primary),
+html[data-theme="dark"] .krs-close,
+html[data-theme="dark"] .krs-method:not(.is-on),
+html[data-theme="dark"] .krs-customer select,
+html[data-theme="dark"] .krs-customer input,
+html[data-theme="dark"] .krs-part input,
+html[data-theme="dark"] .krs-pay-actions button {
+  background: rgba(255, 255, 255, 0.05);
+  color: #F7F5F0;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+html[data-theme="dark"] .krs-due,
+html[data-theme="dark"] .krs-part-row {
+  background: rgba(255, 255, 255, 0.04);
+}
+html[data-theme="dark"] .krs-stepper {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+html[data-theme="dark"] .krs-stepper button {
+  background: rgba(255, 255, 255, 0.06);
+  color: #F7F5F0;
+}
 @media (prefers-reduced-motion: reduce) {
   .krs-frame::after { animation: none; }
   .krs-launch { transition: none; }
