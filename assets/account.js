@@ -725,7 +725,7 @@
     };
     handlers['account-add-business'] = () => addBusinessModal();
     handlers['account-plan-downgrade'] = () => planChangeModal('down');
-    handlers['account-plan-cancel'] = () => planCancelModal();
+    handlers['account-plan-cancel'] = () => planChangeModal('down');
     if (!handlers['account-help-mail']) handlers['account-help-mail'] = () => window.KiwiHelp && window.KiwiHelp.openContact('email');
     if (!handlers['account-help-phone']) handlers['account-help-phone'] = () => window.KiwiHelp && window.KiwiHelp.openContact('whatsapp');
   }
@@ -922,130 +922,14 @@
       Kiwi.toast(pick({ fr: `Demande enregistrée, ${ti.name} au prochain cycle.`, en: `Saved, ${ti.name} from next cycle.`, ar: `تم الحفظ، ${ti.name} من الدورة القادمة.` }), { type: 'success', force: true });
     });
   }
-  function planCancelModal() {
-    const L = (k) => pick(k);
-    const m = Kiwi.modal({
-      tag: pick({ fr: 'RÉSILIATION & PAUSE', en: 'CANCELLATION & PAUSE', ar: 'الإلغاء والإيقاف المؤقت' }),
-      title: L({ fr: 'Gérer ou résilier votre abonnement', en: 'Manage or cancel your subscription', ar: 'إدارة أو إلغاء اشتراكك' }),
-      width: 500,
-      desc: L({
-        fr: 'Sans engagement. Vos données restent archivées et exportables en conformité légale.',
-        en: 'No commitment. Your data remains archived and exportable for legal compliance.',
-        ar: 'بدون التزام. تبقى بياناتك محفوظة وقابلة للتصدير وفقاً للمعايير القانونية.',
-      }),
-      body: `
-        <div style="display:flex; flex-direction:column; gap:16px;">
-          <div class="acc-card" style="background:var(--paper-soft);border-radius:12px;padding:14px;">
-            <div style="font-weight:600;font-size:13.5px;margin-bottom:4px;color:var(--ink);">${esc(L({ fr: 'Mettre en pause plutôt que résilier ?', en: 'Pause instead of canceling?', ar: 'إيقاف مؤقت بدلاً من الإلغاء؟' }))}</div>
-            <div style="font-size:12px;color:var(--n-500);line-height:1.45;">${esc(L({ fr: 'Pour les activités saisonnières, suspendez vos prélèvements tout en conservant vos accès, catalogues et historiques intacts.', en: 'For seasonal businesses, pause billing while keeping access, menus, and reports intact.', ar: 'للأنشطة الموسمية، أوقف الخصم مع الحفاظ على الكتالوج والتقارير.' }))}</div>
-            <button class="acc-cta ghost" data-pause type="button" style="margin-top:10px;font-size:12px;padding:7px 12px;">${esc(L({ fr: 'Mettre en pause 1 à 3 mois', en: 'Pause for 1 to 3 months', ar: 'إيقاف مؤقت من 1 إلى 3 أشهر' }))}</button>
-          </div>
-
-          <div>
-            <label class="acc-lbl" style="margin-top:0;">${esc(L({ fr: 'Motif principal (facultatif)', en: 'Main reason (optional)', ar: 'السبب الرئيسي (اختياري)' }))}</label>
-            <select class="acc-sel" id="accf-cancel-reason">
-              <option value="pause">${esc(L({ fr: 'Activité saisonnière / Fermeture temporaire', en: 'Seasonal business / Temporary pause', ar: 'نشاط موسمي / إغلاق مؤقت' }))}</option>
-              <option value="closing">${esc(L({ fr: 'Fermeture définitive de l’établissement', en: 'Permanent business closure', ar: 'إغلاق نهائي للمؤسسة' }))}</option>
-              <option value="features">${esc(L({ fr: 'Besoin de fonctionnalités spécifiques', en: 'Need specific features', ar: 'بحاجة لميزات إضافية' }))}</option>
-              <option value="other">${esc(L({ fr: 'Autre raison', en: 'Other reason', ar: 'سبب آخر' }))}</option>
-            </select>
-          </div>
-
-          <div style="display:flex; justify-content:space-between; align-items:center; border:1px solid var(--n-200); border-radius:12px; padding:12px 14px;">
-            <div>
-              <div style="font-size:13px;font-weight:600;color:var(--ink);">${esc(L({ fr: 'Export fiscal complet (ZIP / CSV)', en: 'Full tax & sales export (ZIP / CSV)', ar: 'تصدير ضريبي كامل (ZIP / CSV)' }))}</div>
-              <div style="font-size:11.5px;color:var(--n-500);">${esc(L({ fr: 'Grand livre, clôtures Z et historique des tickets', en: 'General ledger, Z-reports, and ticket history', ar: 'دفتر الأستاذ والتقارير اليومية وتذاكر البيع' }))}</div>
-            </div>
-            <button class="acc-cta ghost" data-export-data type="button" style="font-size:11.5px;padding:6px 10px;">${esc(L({ fr: 'Exporter', en: 'Export', ar: 'تصدير' }))}</button>
-          </div>
-        </div>`,
-      foot: `
-        <button class="kb ghost" data-cancel type="button" style="flex:1;justify-content:center;">${esc(L({ fr: 'Conserver mon offre', en: 'Keep my plan', ar: 'الاحتفاظ باشتراكي' }))}</button>
-        <button class="kb danger" data-confirm-cancel type="button" style="flex:1;justify-content:center;background:var(--danger);color:#fff;border-color:var(--danger);">${esc(L({ fr: 'Confirmer la résiliation', en: 'Confirm cancellation', ar: 'تأكيد الإلغاء' }))}</button>`,
-    });
-    m.el.addEventListener('click', (e) => {
-      if (e.target.closest('[data-cancel]')) { m.close(); return; }
-      if (e.target.closest('[data-pause]')) {
-        m.close();
-        Kiwi.toast(pick({
-          fr: 'Abonnement mis en pause. Aucun prélèvement ne sera effectué le mois prochain.',
-          en: 'Subscription paused. No charges will occur next month.',
-          ar: 'تم إيقاف الاشتراك مؤقتاً. لن يتم أي خصم الشهر القادم.',
-        }), { type: 'success', force: true });
-        return;
-      }
-      if (e.target.closest('[data-export-data]')) {
-        Kiwi.toast(pick({
-          fr: 'Archive fiscale exportée (clôtures Z & tickets).',
-          en: 'Tax archive exported (Z-reports & tickets).',
-          ar: 'تم تصدير الأرشيف الضريبي (التقارير اليومية والتذاكر).',
-        }), { type: 'success', force: true });
-        return;
-      }
-      if (e.target.closest('[data-confirm-cancel]')) {
-        try { localStorage.setItem('kiwiSet:planStatus', 'canceled'); } catch (_) {}
-        m.close();
-        setTimeout(openBilling, 80);
-        Kiwi.toast(pick({
-          fr: 'Demande de résiliation enregistrée. Votre accès reste actif jusqu’au 1er septembre 2026.',
-          en: 'Cancellation confirmed. Your access remains active until 1 September 2026.',
-          ar: 'تم تسجيل طلب الإلغاء. يظل حسابك نشطاً حتى 1 شتنبر 2026.',
-        }), { type: 'warn', force: true });
-      }
-    });
-  }
-
-  /* ════════════════════════════ FACTURATION / MY KIWI ════════════════════════════ */
-  function updateCardModal() {
-    const L = (k) => pick(k);
-    const m = Kiwi.modal({
-      tag: pick({ fr: 'MOYEN DE PAIEMENT', en: 'PAYMENT METHOD', ar: 'طريقة الدفع' }),
-      title: L({ fr: 'Mettre à jour la carte bancaire', en: 'Update credit/debit card', ar: 'تحديث البطاقة البنكية' }),
-      width: 460,
-      desc: L({ fr: 'Paiement sécurisé par prélèvement mensuel automatique (sans engagement).', en: 'Secure automated monthly billing (cancel anytime).', ar: 'دفع آمن بالخصم الشهري التلقائي (بدون التزام).' }),
-      body: `
-        <div style="display:flex; flex-direction:column; gap:14px;">
-          <div>
-            <label class="acc-lbl" style="margin-top:0;">${esc(L({ fr: 'Titulaire de la carte', en: 'Cardholder name', ar: 'اسم حامل البطاقة' }))}</label>
-            <input class="acc-f" id="accf-cardholder" placeholder="ex: Rachid Benhima / Amira" value="${esc(ownerName() || 'Amira')}" maxlength="60" />
-          </div>
-          <div>
-            <label class="acc-lbl">${esc(L({ fr: 'Numéro de carte', en: 'Card number', ar: 'رقم البطاقة' }))}</label>
-            <input class="acc-f" id="accf-cardnum" placeholder="•••• •••• •••• 4291" maxlength="19" value="•••• •••• •••• 4291" />
-          </div>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-            <div>
-              <label class="acc-lbl">${esc(L({ fr: 'Expiration (MM/AA)', en: 'Expiry (MM/YY)', ar: 'تاريخ الانتهاء' }))}</label>
-              <input class="acc-f" id="accf-cardexp" placeholder="08/29" maxlength="5" value="08/29" />
-            </div>
-            <div>
-              <label class="acc-lbl">${esc(L({ fr: 'CVC / CVV', en: 'CVC / CVV', ar: 'رمز الأمان' }))}</label>
-              <input class="acc-f" id="accf-cardcvc" placeholder="•••" maxlength="4" value="•••" type="password" />
-            </div>
-          </div>
-        </div>`,
-      foot: `<button class="kb atlas" data-save type="button" style="width:100%;justify-content:center;padding:12px;font-size:15px;">${esc(L({ fr: 'Enregistrer la carte', en: 'Save card', ar: 'حفظ البطاقة' }))}</button>`,
-    });
-    m.el.addEventListener('click', (e) => {
-      if (!e.target.closest('[data-save]')) return;
-      const num = (m.el.querySelector('#accf-cardnum').value || '').trim();
-      const last4 = num.replace(/\D/g, '').slice(-4) || '4291';
-      const brand = num.startsWith('4') ? 'Visa' : 'Mastercard';
-      const str = `${brand} •• ${last4}`;
-      try { localStorage.setItem('kiwiSet:card', str); } catch (_) {}
-      m.close();
-      setTimeout(openBilling, 80);
-      Kiwi.toast(pick({ fr: 'Moyen de paiement mis à jour', en: 'Payment method updated', ar: 'تم تحديث وسيلة الدفع' }), { type: 'success', force: true });
-    });
-  }
-
   function openBilling() {
+
     const venueBiz = window.KiwiVenue?.isCustom?.()
       ? ((window.KiwiVenue.getCurrentVenueData?.() || {}).fullDisplay || "") : "";
     const biz = venueBiz || meVal("business") || (pairedVenue() && pairedVenue().name) || "Amira Boutique";
     const planKey = curPlan() || "pro";
     const plan = PLAN_INFO[planKey] || PLAN;
-    const cardSaved = getSet("card", "Mastercard •• 4291");
+
 
     // ── Données réelles — lues dans les magasins qui existent VRAIMENT.
     // KiwiSales est le grand livre du tableau de bord (la caisse l'alimente
@@ -1285,20 +1169,7 @@
         status: printerConfigured ? pick({ fr: 'Configurée sur ce poste', en: 'Configured on this station', ar: 'مهيأة على هذا الجهاز' }) : pick({ fr: 'Non configurée — Réglages → Imprimante', en: 'Not configured — Settings → Printer', ar: 'غير مهيأة — الإعدادات ← الطابعة' }) },
     ];
 
-    const incl = pick({
-      fr: ["Caisse complète multi-vertical", "1 caisse Kiwi offerte", "Règlement T+1 garanti", "Jusqu'à 8 membres d'équipe", "Maintenance & remplacement matériel", "Sauvegardes cloud continues & mode hors-ligne"],
-      en: ["Full multi-vertical register", "1 free Kiwi cashier", "Guaranteed T+1 settlement", "Up to 8 team members", "Hardware maintenance & replacement", "Continuous cloud backups & offline resilience"],
-      ar: ["صندوق كامل متعدد الأنشطة", "صندوق كيوي مجاني", "تسوية T+1 مضمونة", "حتى 8 أعضاء فريق", "صيانة واستبدال العتاد", "نسخ احتياطي سحابي دائم وعمل بدون إنترنت"],
-    });
 
-    const months = [
-      { period: pick({ fr: "Août 2026", en: "August 2026", ar: "غشت 2026" }), ref: "KIWI-INV-2026-08", amount: `${plan.price}` },
-      { period: pick({ fr: "Juillet 2026", en: "July 2026", ar: "يوليو 2026" }), ref: "KIWI-INV-2026-07", amount: `${plan.price}` },
-      { period: pick({ fr: "Juin 2026", en: "June 2026", ar: "يونيو 2026" }), ref: "KIWI-INV-2026-06", amount: `${plan.price}` },
-      { period: pick({ fr: "Mai 2026", en: "May 2026", ar: "ماي 2026" }), ref: "KIWI-INV-2026-05", amount: `${plan.price}` },
-      { period: pick({ fr: "Avril 2026", en: "April 2026", ar: "أبريل 2026" }), ref: "KIWI-INV-2026-04", amount: `${plan.price}` },
-      { period: pick({ fr: "Mars 2026", en: "March 2026", ar: "مارس 2026" }), ref: "KIWI-INV-2026-03", amount: `${plan.price}` },
-    ];
 
     Kiwi.appPage("account-billing", {
       title: T.title,
