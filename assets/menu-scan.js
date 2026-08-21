@@ -100,10 +100,11 @@
 
   async function callApi(payload) {
     const venue = (window.Kiwi && Kiwi.venue && Kiwi.venue()) || '';
+    const lang = (window.Kiwi && Kiwi.lang && Kiwi.lang()) || localStorage.getItem('kiwiLang') || document.documentElement.lang || 'fr';
     const res = await fetch('/api/ai/menu-import', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(Object.assign({ merchant: venue }, payload)),
+      body: JSON.stringify(Object.assign({ merchant: venue, targetLang: lang }, payload)),
     });
     let data = null;
     try { data = await res.json(); } catch (_) {}

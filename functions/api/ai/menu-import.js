@@ -124,8 +124,18 @@ export function validateMenuItems(raw) {
   return { currency, items };
 }
 
-const SYSTEM_PROMPT = `Tu es un extracteur de cartes (menus) pour restaurants et cafés au Maroc.
-Analyse la carte fournie et extrais chaque article au format JSON strict avec cette structure exacte :
+export function buildSystemPrompt(targetLang = 'fr') {
+  const langNames = {
+    fr: 'français',
+    ar: 'arabe (darija/marocain ou arabe standard)',
+    en: 'anglais',
+  };
+  const targetLabel = langNames[targetLang] || 'français';
+
+  return `Tu es un extracteur et traducteur intelligent de cartes (menus) pour restaurants et cafés au Maroc.
+Analyse la carte fournie, détecte sa langue d'origine, et traduis NATURELLEMENT tous les libellés (sections "cat", sous-sections "sub", noms d'articles "name" et descriptions "desc") vers la langue de l'application : ${targetLabel}.
+
+Structure JSON stricte à retourner :
 {
   "currency": "MAD",
   "items": [
@@ -135,15 +145,23 @@ Analyse la carte fournie et extrais chaque article au format JSON strict avec ce
 Règles :
 - Réponds UNIQUEMENT avec un objet JSON valide, sans texte d'introduction ni commentaire.
 - "price" est un nombre (pas une chaîne). Si le prix est absent ou illisible, mets 0.
-- "cat" reprend la section du menu telle qu'écrite (ex. "Boissons chaudes", "Desserts"). "sub" seulement si le menu a des sous-sections, sinon chaîne vide.
-- "desc" uniquement si une description est écrite sur la carte — n'invente JAMAIS de description.
+- Détecte la langue de la carte d'origine (anglais, espagnol, italien, arabe, etc.). Si elle est différente de ${targetLabel}, traduis naturellement et élégamment :
+  * Les sections "cat" et sous-sections "sub" (ex: "Hot Drinks" -> "Boissons chaudes", "Cold Drinks" -> "Boissons fraîches", "Brunch & Breakfast" -> "Brunch & Petit-déjeuner", "Sweets" -> "Desserts & Douceurs", "Lunch & Snack" -> "Déjeuner & En-cas").
+  * Les noms d'articles "name" et descriptions "desc" (ex: "Salted Caramel Latte" -> "Latte Caramel Beurre Salé", "Coconut Matcha" -> "Matcha Coco", "Matcha Mango" -> "Matcha Mangue", "Scrambled eggs" -> "Œufs brouillés", "Fresh Orange Juice" -> "Jus d'orange frais").
+  * Conserve les termes culinaires universels ou signatures de café qui ne se traduisent pas (ex: "Espresso", "Matcha", "Latte", "Cappuccino", "Smoothie", "Mocha", "Americano", "Tiramisu", "Burger", "Tacos").
+- "sub" seulement si le menu a des sous-sections (ex. "Matcha", "Classics", "All Day Brunch"), sinon chaîne vide. Traduis aussi le nom de la sous-section si pertinent (ex: "Hot" -> "Chaud", "Iced" -> "Glacé").
+- "desc" uniquement si une description est écrite sur la carte — traduis-la dans la langue cible sans rien inventer.
 - Ignore les adresses, téléphones, horaires, slogans, réseaux sociaux et mentions légales.
 - N'omets aucun article : chaque plat ou boisson avec ou sans prix devient une entrée.`;
+}
 
-function textPayload(text) {
+export const SYSTEM_PROMPT = buildSystemPrompt('fr');
+
+function textPayload(text, targetLang = 'fr') {
+  const prompt = buildSystemPrompt(targetLang);
   return {
     messages: [
-      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'system', content: prompt },
       { role: 'user', content: `Voici la carte :\n\n${text.slice(0, MAX_TEXT_CHARS)}` },
     ],
     max_tokens: MAX_TOKENS,
@@ -167,22 +185,23 @@ async function agreeIfGated(env, err) {
  * l'autre : forme OpenAI (content en tableau de blocs image_url/text) ou forme
  * native (prompt + image en tableau d'octets). On tente la première, on se
  * replie sur la seconde — même philosophie multi-formes que parseModelResponse. */
-async function runVision(env, dataUrl) {
-  try { return await runVisionOnce(env, dataUrl); }
+async function runVision(env, dataUrl, targetLang = 'fr') {
+  try { return await runVisionOnce(env, dataUrl, targetLang); }
   catch (e) {
-    if (await agreeIfGated(env, e)) return await runVisionOnce(env, dataUrl);
+    if (await agreeIfGated(env, e)) return await runVisionOnce(env, dataUrl, targetLang);
     throw e;
   }
 }
 
-async function runVisionOnce(env, dataUrl) {
+async function runVisionOnce(env, dataUrl, targetLang = 'fr') {
+  const prompt = buildSystemPrompt(targetLang);
   const openaiShape = {
     messages: [
-      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'system', content: prompt },
       {
         role: 'user',
         content: [
-          { type: 'text', text: 'Voici la photo de la carte. Extrais tous les articles.' },
+          { type: 'text', text: 'Voici la photo de la carte. Extrais tous les articles et traduis-les si besoin.' },
           { type: 'image_url', image_url: { url: dataUrl } },
         ],
       },
@@ -197,7 +216,7 @@ async function runVisionOnce(env, dataUrl) {
     const bin = atob(b64);
     const bytes = new Array(bin.length);
     for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    const nativeShape = { prompt: SYSTEM_PROMPT + '\n\nVoici la photo de la carte. Extrais tous les articles.', image: bytes, max_tokens: MAX_TOKENS };
+    const nativeShape = { prompt: prompt + '\n\nVoici la photo de la carte. Extrais tous les articles.', image: bytes, max_tokens: MAX_TOKENS };
     return { result: await runAiWithGateway(env, VISION_MODEL, nativeShape), model: VISION_MODEL };
   }
 }
@@ -221,6 +240,8 @@ export async function onRequestPost(context) {
 
   if (!(await quotaOk(env, who, 'menuimport', DAILY_CAP))) return json({ ok: false, error: 'quota' }, 429);
 
+  const targetLang = String(body.targetLang || body.lang || 'fr').toLowerCase();
+
   let aiRes;
   let usedModel = MODEL;
 
@@ -229,7 +250,7 @@ export async function onRequestPost(context) {
     if (!/^data:image\/(jpeg|png|webp);base64,/.test(dataUrl)) return json({ ok: false, error: 'bad-image' }, 400);
     if (dataUrl.length > MAX_IMAGE_DATAURL) return json({ ok: false, error: 'image-too-big' }, 413);
     try {
-      const r = await runVision(env, dataUrl);
+      const r = await runVision(env, dataUrl, targetLang);
       aiRes = r.result;
       usedModel = r.model;
     } catch (e) {
@@ -252,7 +273,7 @@ export async function onRequestPost(context) {
       if (!text) return json({ ok: false, error: 'empty-text' }, 400);
     }
     try {
-      const r = await runWithFallback(env, MODEL, FALLBACK_MODEL, textPayload(text));
+      const r = await runWithFallback(env, MODEL, FALLBACK_MODEL, textPayload(text, targetLang));
       aiRes = r.result;
       usedModel = r.model;
     } catch (_) {
