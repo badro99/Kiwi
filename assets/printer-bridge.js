@@ -8,6 +8,10 @@
  * { ok:false, reason:'bridge-*' } so callers fail soft (KiwiHardware falls back
  * to its on-screen preview) — the exact pattern the caisse pairing uses.
  *
+ * Transports, dans l'ordre : Web Bluetooth · WebUSB · pont local 127.0.0.1 ·
+ * RELAIS CLOUD (/api/print — l'iPad et les tablettes : la caisse dépose le
+ * ticket, le pont du comptoir le récupère). Voir « transport D » plus bas.
+ *
  * Config (localStorage `kiwiPrinterCfg`): { ip, port, model, paper }.
  * Bridge URL: http://127.0.0.1:9110 (loopback; a secure context, so an HTTPS page
  * may call it). Vanilla, no deps, no innerHTML for dynamic values.
@@ -499,10 +503,20 @@
     // ports since — a restart on a busy 9110 lands somewhere else).
     if (!bridgePort) {
       return ping().then(function (j) {
-        return j ? bridgePrintNow(bytes, target) : { ok: false, reason: 'bridge-unreachable' };
+        return j ? bridgePrintNow(bytes, target) : viaRelayOrFail(bytes, target);
       });
     }
-    return bridgePrintNow(bytes, target);
+    return bridgePrintNow(bytes, target).then(function (res) {
+      // Le pont local a disparu entre deux tickets : on oublie son port et on
+      // tente le relais — la prochaine impression re-sondera 127.0.0.1 d'abord.
+      if (res && res.reason === 'bridge-unreachable') { bridgePort = 0; return viaRelayOrFail(bytes, target); }
+      return res;
+    });
+  }
+  function viaRelayOrFail(bytes, target) {
+    return relayProbe().then(function (st) {
+      return st.online ? relayEnqueue(bytes, target, relayKind(bytes)) : { ok: false, reason: 'bridge-unreachable' };
+    });
   }
   function bridgePrintNow(bytes, target) {
     var cfg = getConfig();
@@ -521,6 +535,102 @@
       return r.json().then(function (j) { return (r.ok && j && j.ok) ? { ok: true, via: 'bridge', bytes: j.bytes } : { ok: false, reason: (j && j.error) || 'print-failed' }; },
         function () { return { ok: false, reason: 'bad-response' }; });
     }).catch(function () { to.done(); return { ok: false, reason: 'bridge-unreachable' }; });
+  }
+
+  // ── transport D: le relais cloud (l'iPad, la tablette, tout appareil sans pont) ──
+  // Un iPad n'a ni pont local (127.0.0.1), ni Web Bluetooth, ni WebUSB. La caisse
+  // DÉPOSE donc le ticket ESC/POS sur kiwi-os.com (/api/print/jobs) et le Kiwi
+  // Printer Bridge du comptoir, appairé une fois avec un code, vient le chercher
+  // et le pousse à l'imprimante réseau — sortant uniquement, rien à ouvrir, pas
+  // d'IP de PC à taper, pas de certificat. Même cible (ip:port / imprimante
+  // système) que le pont local ; seul le chemin change. Fail-soft partout :
+  // { ok:false, reason } et l'appelant retombe sur l'aperçu à l'écran.
+  var RELAY_API = '/api/print';
+  var RELAY_PROBE_TTL = 20000;
+  var relayState = { at: 0, online: false, bridges: [], provisioned: true, pending: null };
+  function relayMerchantQS() {
+    var m = '';
+    try { m = currentMerchantKey() || ''; } catch (_) {}
+    return (m && m !== 'unpaired') ? ('?merchant=' + encodeURIComponent(m)) : '';
+  }
+  function relayFetch(path, opts, ms) {
+    var to = withTimeout(null, ms || 8000);
+    var o = Object.assign({ credentials: 'same-origin', cache: 'no-store', signal: to.signal }, opts || {});
+    return fetch(RELAY_API + path, o).then(function (r) {
+      to.done();
+      return r.json().then(function (j) { return { status: r.status, j: j }; }, function () { return { status: r.status, j: null }; });
+    }).catch(function () { to.done(); return { status: 0, j: null }; });
+  }
+  /* Y a-t-il un pont appairé EN LIGNE pour ce commerce ? Mis en cache 20 s :
+   * chaque impression ne doit pas coûter un aller-retour de plus. */
+  function relayProbe(force) {
+    var now = Date.now();
+    if (!force && relayState.at && (now - relayState.at) < RELAY_PROBE_TTL) return Promise.resolve(relayState);
+    if (relayState.pending) return relayState.pending;
+    relayState.pending = relayFetch('/bridges' + relayMerchantQS(), { method: 'GET' }, 6000).then(function (r) {
+      relayState.pending = null;
+      relayState.at = Date.now();
+      relayState.provisioned = !(r.j && r.j.error === 'relay-not-provisioned');
+      relayState.online = !!(r.j && r.j.ok && r.j.online);
+      relayState.bridges = (r.j && Array.isArray(r.j.bridges)) ? r.j.bridges : [];
+      relayState.authed = r.status !== 401;
+      return relayState;
+    });
+    return relayState.pending;
+  }
+  function relayTargetOf(target) {
+    var cfg = getConfig();
+    if (target && target.ip) return { ip: target.ip, port: Number(target.port) || 9100 };
+    if (target && target.osPrinter) return { osPrinter: target.osPrinter };
+    if (cfg.osPrinter) return { osPrinter: cfg.osPrinter };
+    if (cfg.ip) return { ip: cfg.ip, port: Number(cfg.port) || 9100 };
+    return null;
+  }
+  /* Dépose le ticket puis attend (≤ 12 s) que le pont l'acquitte, pour que le
+   * comptoir voie « imprimé » ou la vraie raison de l'échec. Passé ce délai le
+   * ticket est toujours vivant côté serveur (10 min) : on répond ok·queued. */
+  function relayEnqueue(bytes, target, kind) {
+    var t = relayTargetOf(target);
+    if (!t) return Promise.resolve({ ok: false, reason: 'not-configured' });
+    var qs = relayMerchantQS();
+    return relayFetch('/jobs' + qs, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ target: t, dataB64: window.KiwiEscPos.toB64(bytes), kind: kind || 'other' }),
+    }, 10000).then(function (r) {
+      if (!r.j || !r.j.ok) {
+        var why = (r.j && r.j.error) || (r.status === 401 ? 'unauthorized' : 'relay-unreachable');
+        if (why === 'relay-offline') { relayState.online = false; relayState.at = Date.now(); }
+        return { ok: false, reason: why };
+      }
+      var id = r.j.id, started = Date.now();
+      return new Promise(function (resolve) {
+        (function tick() {
+          relayFetch('/jobs' + (qs ? qs + '&' : '?') + 'id=' + encodeURIComponent(id), { method: 'GET' }, 5000).then(function (st) {
+            var job = st.j && st.j.ok && st.j.job;
+            if (job && job.status === 'done') return resolve({ ok: true, via: 'relay', bytes: job.bytes || bytes.length, id: id });
+            if (job && (job.status === 'failed' || job.status === 'expired')) return resolve({ ok: false, reason: job.error || job.status, via: 'relay', id: id });
+            if (Date.now() - started > 12000) return resolve({ ok: true, via: 'relay', queued: true, id: id });
+            setTimeout(tick, 700);
+          });
+        })();
+      });
+    });
+  }
+  /* Génère le code à taper sur le pont (ou à lui passer directement quand il
+   * tourne sur CETTE machine). { ok, code, expires_ts } */
+  function relayPairCode() {
+    return relayFetch('/bridges' + relayMerchantQS(), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'pair-code' }),
+    }).then(function (r) { return (r.j && r.j.ok) ? r.j : { ok: false, reason: (r.j && r.j.error) || (r.status === 401 ? 'unauthorized' : 'relay-unreachable') }; });
+  }
+  function relayRevoke(id) {
+    return relayFetch('/bridges' + relayMerchantQS(), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'revoke', id: id }),
+    }).then(function (r) { relayState.at = 0; return !!(r.j && r.j.ok); });
+  }
+  function relayKind(bytes) {
+    // Le relais range les tickets par genre pour le journal du pont ; rien de plus.
+    return 'other';
   }
 
   /* Imprime directement sur un profil ou une cible donnée ({ type, ip, port, osPrinter }). */
@@ -942,6 +1052,10 @@
     var s = document.createElement('style'); s.id = 'kpr-style';
     s.textContent =
       '#kpr-ov{position:fixed;inset:0;z-index:9998;display:grid;place-items:center;background:rgba(10,15,13,.5);padding:20px;}' +
+      '.kpr-code{margin:10px 0 4px;padding:14px 16px;border:1px dashed #0B6E4F;border-radius:12px;background:rgba(11,110,79,.06);}' +
+      '.kpr-code-num{font:600 34px/1.1 "JetBrains Mono",ui-monospace,Menlo,monospace;letter-spacing:.18em;color:#0B6E4F;text-align:center;}' +
+      '.kpr-relay-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid rgba(10,15,13,.08);}' +
+      '.kpr-relay-row:first-child{border-top:0;} .kpr-relay-row small{color:#5b6660;flex:1;} .kpr-relay-row .kpr-d.on{background:#0B6E4F;}' +
       '#kpr-card{background:var(--paper,#F7F5F0);color:var(--ink,#0A0F0D);width:460px;max-width:94vw;max-height:92vh;overflow:auto;border-radius:18px;padding:24px;box-shadow:0 30px 70px -24px rgba(5,59,44,.5);}' +
       '#kpr-card h2{font-size:1.16rem;letter-spacing:-.01em;margin:0 0 4px;display:flex;align-items:center;gap:8px;}' +
       '.kpr-sub{margin:0 0 16px;color:var(--ink,#0A0F0D);opacity:.65;font-size:.9rem;line-height:1.5;}' +
@@ -1098,6 +1212,17 @@
             '<button class="kpr-btn kpr-save" type="button" id="kpr-save-stations-btn">Enregistrer le routage par poste</button>' +
           '</div>' +
         '</div>' +
+        '<div class="kpr-bt" id="kpr-relay">' +
+          '<h3>Imprimer depuis un iPad ou une tablette · relais Kiwi</h3>' +
+          '<p>Sans pont sur cet appareil, Kiwi envoie les tickets au pont de l’ordinateur du comptoir, qui les imprime sur votre imprimante réseau. Une association suffit, puis tout est automatique.</p>' +
+          '<div class="kpr-status off" id="kpr-relay-status"><span class="kpr-d"></span><span id="kpr-relay-status-t">Vérification du relais…</span></div>' +
+          '<div id="kpr-relay-list" class="kpr-note"></div>' +
+          '<div id="kpr-relay-code" class="kpr-code" style="display:none;"></div>' +
+          '<div class="kpr-actions">' +
+            '<button class="kpr-btc" type="button" id="kpr-relay-pair">Associer un pont</button>' +
+            '<button class="kpr-btc" type="button" id="kpr-relay-pair-local" style="display:none;">Associer ce pont maintenant</button>' +
+          '</div>' +
+        '</div>' +
         '<details class="kpr-adv"' + (cfg.ip ? ' open' : '') + '>' +
           '<summary>Option avancée · imprimante réseau globale (Wi-Fi / Ethernet)</summary>' +
           '<div class="kpr-status off" id="kpr-status"><span class="kpr-d"></span><span id="kpr-status-t">Vérification du pont…</span></div>' +
@@ -1149,7 +1274,11 @@
 
     function frReason(reason) {
       var r = String(reason || '');
-      if (r === 'bridge-unreachable') return 'Pont introuvable — lancez Kiwi Printer Bridge sur cet ordinateur';
+      if (r === 'bridge-unreachable') return 'Pont introuvable — lancez Kiwi Printer Bridge sur cet ordinateur, ou associez un pont au relais Kiwi pour imprimer depuis une tablette';
+      if (r === 'relay-offline') return 'Aucun pont en ligne pour le relais Kiwi — vérifiez que Kiwi Printer Bridge tourne sur l’ordinateur du comptoir';
+      if (r === 'relay-not-provisioned') return 'Relais d’impression pas encore activé côté serveur';
+      if (r === 'unauthorized') return 'Caisse non reconnue — appairez-la ou reconnectez-vous';
+      if (r === 'expired') return 'Le pont n’a pas récupéré le ticket à temps';
       if (r === 'not-configured') return 'Aucune imprimante configurée';
       if (/timeout/i.test(r)) return 'Imprimante injoignable — vérifiez l’adresse IP et qu’elle est allumée';
       if (/ECONNREFUSED/i.test(r)) return 'Connexion refusée à cette adresse — ce n’est pas le port d’une imprimante réseau';
@@ -1424,10 +1553,12 @@
     }
 
     var bridgeUp = false;
+    var localPing = null;   // la réponse du pont local (pour savoir s'il est déjà relais)
     function refreshStatus() {
       var st = $('#kpr-status'), t = $('#kpr-status-t'), test = $('#kpr-test'), scan = $('#kpr-scan');
       t.textContent = 'Vérification du pont…'; st.className = 'kpr-status off';
       return ping().then(function (j) {
+        localPing = j;
         bridgeUp = !!j;
         if (scan) scan.disabled = !j;
         if (j) {
@@ -1435,15 +1566,88 @@
           t.textContent = 'Pont connecté · v' + (j.version || '?');
           test.disabled = false;
           loadOsPrinters();
-        } else {
-          var box = $('#kpr-os'); if (box) box.style.display = 'none';
-          st.className = 'kpr-status off';
-          t.innerHTML = 'Kiwi Printer Bridge non détecté. <a href="' + esc(BRIDGE_DOWNLOAD) + '" target="_blank" rel="noopener">Télécharger le pont</a> · <button type="button" class="kpr-recheck" id="kpr-recheck">Revérifier</button>';
-          var rc = $('#kpr-recheck'); if (rc) rc.addEventListener('click', refreshStatus);
-          test.disabled = true;
+          paintRelay();
+          return;
         }
+        var box = $('#kpr-os'); if (box) box.style.display = 'none';
+        st.className = 'kpr-status off';
+        t.innerHTML = 'Kiwi Printer Bridge non détecté sur cet appareil. <a href="' + esc(BRIDGE_DOWNLOAD) + '" target="_blank" rel="noopener">Télécharger le pont</a> · <button type="button" class="kpr-recheck" id="kpr-recheck">Revérifier</button>';
+        var rc = $('#kpr-recheck'); if (rc) rc.addEventListener('click', refreshStatus);
+        test.disabled = true;
+        /* Pas de pont ici (iPad, tablette, PC sans pont) : un pont EN LIGNE via
+         * le relais suffit — l'imprimante réseau ci-dessous passe par lui. */
+        return paintRelay().then(function (rs) {
+          if (!ov.isConnected || !rs || !rs.online) return;
+          var names = rs.bridges.filter(function (b) { return b.online; }).map(function (b) { return b.name || 'pont'; });
+          st.className = 'kpr-status on';
+          t.textContent = 'Relais Kiwi · ' + (names.length > 1 ? names.length + ' ponts en ligne' : 'pont « ' + names[0] + ' » en ligne') + ' — l’imprimante réseau s’imprime via ce pont';
+          test.disabled = false; bridgeUp = true;
+        });
       });
     }
+    /* ── Le panneau du relais ─────────────────────────────────────────────── */
+    function fmtAgo(ts) {
+      if (!ts) return 'jamais vu';
+      var sec = Math.round((Date.now() - ts) / 1000);
+      return sec < 60 ? 'vu à l’instant' : sec < 3600 ? 'vu il y a ' + Math.round(sec / 60) + ' min' : 'vu il y a ' + Math.round(sec / 3600) + ' h';
+    }
+    function paintRelay() {
+      var st = $('#kpr-relay-status'), t = $('#kpr-relay-status-t'), list = $('#kpr-relay-list'), local = $('#kpr-relay-pair-local');
+      if (!st) return Promise.resolve(null);
+      return relayProbe(true).then(function (rs) {
+        if (!ov.isConnected) return rs;
+        if (!rs.provisioned) { st.className = 'kpr-status off'; t.textContent = 'Relais pas encore activé côté serveur.'; return rs; }
+        if (rs.authed === false) { st.className = 'kpr-status off'; t.textContent = 'Cet appareil n’est pas reconnu comme la caisse d’un commerce — appairez-le d’abord.'; return rs; }
+        var on = rs.bridges.filter(function (b) { return b.online; }).length;
+        st.className = 'kpr-status ' + (on ? 'on' : 'off');
+        t.textContent = !rs.bridges.length ? 'Aucun pont associé à ce commerce.'
+          : on ? (on + ' pont' + (on > 1 ? 's' : '') + ' en ligne') : 'Pont associé mais hors ligne — lancez Kiwi Printer Bridge sur l’ordinateur du comptoir.';
+        list.innerHTML = rs.bridges.map(function (b) {
+          return '<div class="kpr-relay-row"><span class="kpr-d ' + (b.online ? 'on' : '') + '"></span><b>' + esc(b.name || 'Pont') + '</b> <small>' + esc((b.platform ? b.platform + ' · ' : '') + (b.online ? 'en ligne' : fmtAgo(b.last_seen_ts))) + '</small>' +
+            '<button type="button" class="kpr-prof-del" data-relay-revoke="' + esc(b.id) + '" aria-label="Dissocier">×</button></div>';
+        }).join('');
+        list.querySelectorAll('[data-relay-revoke]').forEach(function (b) {
+          b.addEventListener('click', function () {
+            if (!confirm('Dissocier ce pont ? Il ne recevra plus les tickets de vos tablettes.')) return;
+            relayRevoke(this.getAttribute('data-relay-revoke')).then(function (ok) { toast(ok ? 'Pont dissocié' : 'Échec'); paintRelay(); refreshStatus(); });
+          });
+        });
+        // Le pont local n'est pas encore relais : on peut l'associer d'un clic, sans code à taper.
+        if (local) local.style.display = (localPing && localPing.relay && !localPing.relay.paired) ? '' : 'none';
+        return rs;
+      });
+    }
+    function showPairCode(j) {
+      var box = $('#kpr-relay-code'); if (!box) return;
+      box.style.display = '';
+      var mins = Math.max(1, Math.round((j.expires_ts - Date.now()) / 60000));
+      box.innerHTML = '<div class="kpr-code-num">' + esc(String(j.code)) + '</div>' +
+        '<p class="kpr-note">Sur l’ordinateur du comptoir, lancez Kiwi Printer Bridge puis ouvrez <b>http://127.0.0.1:9110</b> et tapez ce code. Valable ' + mins + ' min — une seule fois.</p>';
+    }
+    var pairBtn = $('#kpr-relay-pair');
+    if (pairBtn) pairBtn.addEventListener('click', function () {
+      var b = this; b.disabled = true;
+      relayPairCode().then(function (j) {
+        b.disabled = false;
+        if (!j.ok) { toast('Impossible de générer le code : ' + frReason(j.reason)); return; }
+        showPairCode(j);
+      });
+    });
+    var pairLocal = $('#kpr-relay-pair-local');
+    if (pairLocal) pairLocal.addEventListener('click', function () {
+      var b = this; b.disabled = true; var orig = b.textContent; b.textContent = 'Association…';
+      relayPairCode().then(function (j) {
+        if (!j.ok) { b.disabled = false; b.textContent = orig; toast('Impossible de générer le code : ' + frReason(j.reason)); return null; }
+        var to = withTimeout(null, 15000);
+        return fetch(bridgeBase() + '/kiwi/relay/pair', { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: to.signal, body: JSON.stringify({ code: j.code }) })
+          .then(function (r) { to.done(); return r.json(); }).catch(function () { to.done(); return null; });
+      }).then(function (r) {
+        b.disabled = false; b.textContent = orig;
+        if (r === null) return;
+        toast(r && r.ok ? 'Ce pont imprime désormais les tickets de vos tablettes' : ('Échec : ' + ((r && r.error) || 'pont injoignable')));
+        setTimeout(function () { ping().then(function (j) { localPing = j; paintRelay(); }); }, 800);
+      });
+    });
 
     $('#kpr-close').addEventListener('click', close);
     ov.addEventListener('click', function (e) { if (e.target === ov) close(); });
@@ -1649,5 +1853,7 @@
     browserPrintHTML: browserPrintHTML,
     // A function, not a snapshot: the port is only known after discovery.
     openSetup: openSetup, bridgeUrl: function () { return bridgeBase(); }, bridgePorts: BRIDGE_PORTS,
+    // Le relais cloud — ce que l'iPad utilise à la place du pont local.
+    relayProbe: relayProbe, relayEnqueue: relayEnqueue, relayPairCode: relayPairCode, relayRevoke: relayRevoke,
   };
 })();

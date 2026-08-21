@@ -32,6 +32,33 @@ Why it exists: a browser cannot open a raw network socket to a printer at
 The Kiwi app builds the ESC/POS bytes (`assets/escpos.js`), base64-encodes them,
 and POSTs them here.
 
+### Relais cloud — imprimer depuis un iPad ou une tablette (v1.4)
+
+A browser on an iPad cannot reach this bridge (it is on another machine), and
+iOS has no Web Bluetooth / WebUSB either. So the caisse on the iPad **deposits**
+the ESC/POS job on kiwi-os.com (`POST /api/print/jobs`) and this bridge, once
+paired, **polls** for jobs every second (`GET /api/print/jobs` with its bearer
+token) and pushes each one to the printer exactly like a local job — outbound
+only, nothing listens on the shop network, no certificate, no PC IP to type.
+
+Pairing, once per bridge:
+
+1. In Kiwi (caisse or dashboard) → Imprimantes → **Relais Kiwi → Associer un pont**
+   → a 6-digit code appears (valid 15 min, single use).
+2. On the counter computer open **http://127.0.0.1:9110/** and type the code
+   (or, if the caisse is open on that same computer, click **Associer ce pont
+   maintenant** — no typing). Headless: `kiwi-printer-bridge --pair 123456`
+   or `KIWI_RELAY_CODE=123456`.
+
+The token is stored in `~/.kiwi-printer-bridge.json` (mode 0600), never printed.
+`POST /kiwi/relay/unpair` (or the **Dissocier** button) forgets it; revoking the
+bridge from Kiwi makes the bridge forget it by itself after three refusals.
+
+Extra endpoints: `GET /kiwi/relay` (status), `POST /kiwi/relay/pair {code}`,
+`POST /kiwi/relay/unpair`, `GET /` (the local status page). `/kiwi/ping` now
+carries `relay:{paired, online, merchant, name}`. Env: `KIWI_RELAY_URL`
+(default `https://kiwi-os.com`), `KIWI_BRIDGE_CONFIG` (config file path).
+
 ### Why the second route exists
 
 The app's own transports (Bluetooth, WebUSB, and this bridge over TCP) all need
@@ -61,7 +88,7 @@ cd bridge
 node server.js
 ```
 
-You should see `kiwi-printer-bridge v1.3.0 listening on http://127.0.0.1:9110`.
+You should see `kiwi-printer-bridge v1.4.0 listening on http://127.0.0.1:9110`.
 In the Kiwi app, open **Connecter une imprimante** → the status flips to
 **Bridge connecté**.
 

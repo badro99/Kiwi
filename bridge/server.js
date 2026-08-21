@@ -20,6 +20,17 @@
  *   POST /kiwi/print           { printerIp, port?, dataB64 }        (raw ESC/POS over TCP)
  *                              { printerName, dataB64 }             (raw ESC/POS via the OS spooler)
  *                              → { ok, bytes, via } | 502 { ok:false, error }
+ *   GET  /kiwi/relay           → { ok, paired, merchant, name, online, lastPollTs, lastError }
+ *   POST /kiwi/relay/pair      { code }  → échange le code d'appairage contre un jeton (relais cloud)
+ *   POST /kiwi/relay/unpair    → oublie le jeton
+ *   GET  /                     → la petite page locale du pont (état + appairage du relais)
+ *
+ * Relais cloud (v1.4) : un iPad n'a ni pont local, ni Web Bluetooth, ni WebUSB.
+ * Sa caisse dépose donc ses tickets sur kiwi-os.com (/api/print/jobs) et CE pont,
+ * une fois appairé, vient les chercher toutes les secondes (sortant uniquement —
+ * rien n'écoute sur le réseau de la boutique) et les pousse à l'imprimante
+ * réseau ou système exactement comme un job local. Le jeton est gardé dans
+ * ~/.kiwi-printer-bridge.json, jamais affiché.
  *
  * Security: binds to loopback (127.0.0.1) so nothing on the LAN can reach it; it
  * only ever *sends* to the printer IP the app hands it. Browsers treat
@@ -36,11 +47,254 @@ const path = require('path');
 const { execFile, spawn } = require('child_process');
 
 const NAME = 'kiwi-printer-bridge';
-const VERSION = '1.3.0';
+const VERSION = '1.4.0';
 const HOST = '127.0.0.1';
 const PORT = Number(process.env.KIWI_BRIDGE_PORT) || 9110; // bridge's own port
 const DEFAULT_PRINTER_PORT = 9100;                          // RAW/JetDirect
 const PRINT_TIMEOUT_MS = 8000;
+
+/* ── Relais cloud ─────────────────────────────────────────────────────────────
+ * Le pont ne reçoit rien de l'extérieur : il INTERROGE kiwi-os.com avec son
+ * jeton porteur et imprime ce qu'on lui rend. Zéro dépendance : http/https
+ * natifs (pas de fetch — Node 18 l'annonce encore comme expérimental dans la
+ * console du commerçant). */
+const https = require('https');
+const RELAY_URL = (process.env.KIWI_RELAY_URL || 'https://kiwi-os.com').replace(/\/+$/, '');
+const RELAY_POLL_MS = 1000;
+const RELAY_BACKOFF_MAX_MS = 15000;
+const RELAY_HTTP_TIMEOUT_MS = 12000;
+const CONFIG_PATH = process.env.KIWI_BRIDGE_CONFIG
+  || path.join(os.homedir && os.homedir() ? os.homedir() : process.cwd(), '.kiwi-printer-bridge.json');
+
+function readConfig() {
+  try { return JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8')) || {}; } catch (_) { return {}; }
+}
+function writeConfig(cfg) {
+  try { fs.writeFileSync(CONFIG_PATH, JSON.stringify(cfg, null, 2), { mode: 0o600 }); return true; }
+  catch (e) { console.error('Impossible d\'écrire la configuration du pont :', (e && e.message) || e); return false; }
+}
+
+/* Une requête JSON minimale, http ou https selon l'URL (les tests pointent
+ * KIWI_RELAY_URL sur un serveur local). Résout toujours { status, json }. */
+function httpJson(method, url, headers, body) {
+  return new Promise((resolve) => {
+    let u;
+    try { u = new URL(url); } catch (_) { return resolve({ status: 0, json: null, error: 'bad-url' }); }
+    const mod = u.protocol === 'https:' ? https : http;
+    const payload = body == null ? null : Buffer.from(JSON.stringify(body), 'utf8');
+    const req = mod.request({
+      method, hostname: u.hostname, port: u.port || (u.protocol === 'https:' ? 443 : 80),
+      path: u.pathname + u.search,
+      headers: Object.assign({ 'Accept': 'application/json', 'User-Agent': NAME + '/' + VERSION },
+        payload ? { 'Content-Type': 'application/json', 'Content-Length': payload.length } : {}, headers || {}),
+    }, (res) => {
+      const chunks = [];
+      res.on('data', (c) => chunks.push(c));
+      res.on('end', () => {
+        const text = Buffer.concat(chunks).toString('utf8');
+        let j = null; try { j = JSON.parse(text); } catch (_) {}
+        resolve({ status: res.statusCode || 0, json: j });
+      });
+    });
+    req.setTimeout(RELAY_HTTP_TIMEOUT_MS, () => { try { req.destroy(new Error('timeout')); } catch (_) {} });
+    req.on('error', (e) => resolve({ status: 0, json: null, error: (e && e.message) || String(e) }));
+    if (payload) req.write(payload);
+    req.end();
+  });
+}
+
+const relay = {
+  cfg: readConfig(),
+  timer: null,
+  running: false,
+  online: false,        // le dernier poll a répondu 200
+  lastPollTs: 0,
+  lastJobTs: 0,
+  lastError: '',
+  printed: 0,
+  failed: 0,
+};
+function relayPaired() { return !!(relay.cfg && relay.cfg.relay && relay.cfg.relay.token); }
+function relayStatus() {
+  const r = (relay.cfg && relay.cfg.relay) || {};
+  return {
+    ok: true, paired: relayPaired(), merchant: r.merchant || '', name: r.name || '', bridgeId: r.bridgeId || '',
+    url: RELAY_URL, online: relay.online, lastPollTs: relay.lastPollTs, lastJobTs: relay.lastJobTs,
+    lastError: relay.lastError, printed: relay.printed, failed: relay.failed, version: VERSION,
+  };
+}
+function relayLog(msg) { console.log('[relais] ' + msg); }
+
+/* Échange un code à 6 chiffres (émis dans Kiwi → Imprimantes → Relais) contre
+ * le jeton de CE pont. Le nom affiché côté Kiwi est celui de la machine. */
+async function relayPair(code, name) {
+  code = String(code || '').replace(/\D/g, '').slice(0, 6);
+  if (code.length !== 6) return { ok: false, error: 'code-invalide' };
+  const r = await httpJson('POST', RELAY_URL + '/api/print/bridges', null, {
+    action: 'redeem', code, name: name || os.hostname() || 'Pont d\'impression',
+    platform: process.platform, version: VERSION,
+  });
+  if (!r.json || !r.json.ok || !r.json.token) {
+    const why = (r.json && r.json.error) || r.error || ('http-' + r.status);
+    return { ok: false, error: why, status: r.status };
+  }
+  relay.cfg = Object.assign({}, relay.cfg, {
+    relay: { token: r.json.token, merchant: r.json.merchant || '', name: r.json.name || '', bridgeId: r.json.bridgeId || '', pairedTs: Date.now() },
+  });
+  writeConfig(relay.cfg);
+  relay.lastError = '';
+  relayLog('appairé au commerce « ' + relay.cfg.relay.merchant + ' » — les tickets déposés depuis un iPad ou une tablette s\'imprimeront ici.');
+  relayStart();
+  return { ok: true, merchant: relay.cfg.relay.merchant, name: relay.cfg.relay.name };
+}
+function relayUnpair() {
+  relay.cfg = Object.assign({}, relay.cfg); delete relay.cfg.relay;
+  writeConfig(relay.cfg);
+  relay.online = false; relay.lastError = '';
+  if (relay.timer) { clearTimeout(relay.timer); relay.timer = null; }
+  relayLog('désappairé.');
+}
+
+async function relayPrintJob(job) {
+  const t = job.target || {};
+  const buf = Buffer.from(String(job.dataB64 || ''), 'base64');
+  if (!buf.length) throw new Error('ticket vide');
+  if (t.osPrinter) return sendToOsPrinter(String(t.osPrinter), buf);
+  if (t.ip) return sendToPrinter(String(t.ip), Number(t.port) || DEFAULT_PRINTER_PORT, buf);
+  throw new Error('cible inconnue');
+}
+
+let relayBackoff = RELAY_POLL_MS;
+async function relayTick() {
+  relay.timer = null;
+  if (!relayPaired() || relay.running) return;
+  relay.running = true;
+  let next = RELAY_POLL_MS;
+  try {
+    const auth = { Authorization: 'Bearer ' + relay.cfg.relay.token };
+    const r = await httpJson('GET', RELAY_URL + '/api/print/jobs', auth, null);
+    relay.lastPollTs = Date.now();
+    if (r.status === 401) {
+      /* Révoqué depuis Kiwi. Trois refus de suite avant d'oublier le jeton :
+       * un seul 401 peut être un déploiement en cours, et un pont qui se
+       * désappaire tout seul au fond du comptoir est une panne silencieuse. */
+      relay.unauthorized = (relay.unauthorized || 0) + 1;
+      relay.online = false; relay.lastError = 'jeton refusé par kiwi-os.com';
+      if (relay.unauthorized >= 3) {
+        relay.lastError = 'jeton révoqué — ré-appairez ce pont depuis Kiwi';
+        relayLog(relay.lastError);
+        relayUnpair();
+        relay.running = false;
+        return;
+      }
+      relay.running = false;
+      relay.timer = setTimeout(relayTick, 2000);
+      return;
+    }
+    relay.unauthorized = 0;
+    if (r.status !== 200 || !r.json || !r.json.ok) {
+      relay.online = false;
+      relay.lastError = (r.json && r.json.error) || r.error || ('http-' + r.status);
+      relayBackoff = Math.min(RELAY_BACKOFF_MAX_MS, Math.round(relayBackoff * 1.8));
+      next = relayBackoff;
+    } else {
+      if (!relay.online) relayLog('connecté à ' + RELAY_URL + (relay.lastError ? ' (rétabli)' : ''));
+      relay.online = true; relay.lastError = ''; relayBackoff = RELAY_POLL_MS;
+      const jobs = Array.isArray(r.json.jobs) ? r.json.jobs : [];
+      for (const job of jobs) {
+        let ack;
+        try {
+          const bytes = await relayPrintJob(job);
+          relay.printed++; relay.lastJobTs = Date.now();
+          ack = { action: 'ack', id: job.id, ok: true, bytes };
+          relayLog('imprimé ' + (job.kind || 'ticket') + ' (' + bytes + ' o) → ' + (job.target && (job.target.ip || job.target.osPrinter)));
+        } catch (e) {
+          relay.failed++;
+          ack = { action: 'ack', id: job.id, ok: false, error: String((e && e.message) || e).slice(0, 300) };
+          relayLog('échec ' + (job.kind || 'ticket') + ' : ' + ack.error);
+        }
+        await httpJson('POST', RELAY_URL + '/api/print/jobs', auth, ack);
+      }
+      next = Number(r.json.poll) > 0 ? Math.max(200, Math.min(5000, Number(r.json.poll))) : RELAY_POLL_MS;
+    }
+  } catch (e) {
+    relay.online = false; relay.lastError = String((e && e.message) || e);
+  }
+  relay.running = false;
+  if (relayPaired()) relay.timer = setTimeout(relayTick, next);
+}
+function relayStart() {
+  if (!relayPaired() || relay.timer || relay.running) return;
+  relay.timer = setTimeout(relayTick, 10);
+}
+
+/* La page locale du pont (http://127.0.0.1:9110/). Pas de framework, pas de
+ * valeur dynamique injectée dans le HTML : la page lit /kiwi/relay en JSON. */
+const LOCAL_PAGE = `<!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kiwi Printer Bridge</title>
+<style>
+body{margin:0;font:15px/1.5 -apple-system,"Segoe UI",Inter,system-ui,sans-serif;background:#F7F5F0;color:#0A0F0D}
+main{max-width:560px;margin:40px auto;padding:0 20px}
+h1{font-size:22px;font-weight:600;letter-spacing:-.02em;margin:0 0 4px}
+.sub{color:#5b6660;margin:0 0 22px}
+.card{background:#fff;border:1px solid #e4e1da;border-radius:14px;padding:18px 20px;margin-bottom:14px}
+.row{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px solid #f0ede6}.row:last-child{border-bottom:0}
+.k{color:#5b6660}.v{font-weight:600;text-align:right}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#c9c4ba;margin-right:7px;vertical-align:middle}.on .dot{background:#0B6E4F;box-shadow:0 0 0 4px rgba(11,110,79,.15)}
+input{font:inherit;font-size:22px;letter-spacing:.25em;width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #d6d2c9;border-radius:10px;text-align:center}
+button{font:inherit;font-weight:600;border:0;border-radius:10px;padding:11px 16px;cursor:pointer}
+.p{background:#0B6E4F;color:#F7F5F0}.g{background:#e9e6df;color:#0A0F0D;margin-left:8px}
+.note{font-size:13px;color:#5b6660;margin:10px 0 0}.err{color:#9b2c2c}.ok{color:#0B6E4F}
+code{background:#efece5;padding:1px 6px;border-radius:6px}
+</style>
+<main>
+<h1>Kiwi Printer Bridge</h1>
+<p class="sub">Ce pont relaie les impressions Kiwi vers votre imprimante. Laissez-le tourner.</p>
+<div class="card" id="st">
+ <div class="row"><span class="k">Pont local</span><span class="v"><span class="dot"></span><span id="v-local">actif</span></span></div>
+ <div class="row"><span class="k">Relais cloud</span><span class="v" id="v-relay-wrap"><span class="dot"></span><span id="v-relay">—</span></span></div>
+ <div class="row"><span class="k">Commerce</span><span class="v" id="v-merchant">—</span></div>
+ <div class="row"><span class="k">Tickets imprimés</span><span class="v" id="v-printed">0</span></div>
+ <div class="row"><span class="k">Dernier contact</span><span class="v" id="v-last">—</span></div>
+ <p class="note err" id="v-err" hidden></p>
+</div>
+<div class="card" id="pairbox">
+ <b>Imprimer depuis un iPad ou une tablette</b>
+ <p class="note">Dans Kiwi, ouvrez <b>Imprimantes → Relais Kiwi → Associer un pont</b> : un code à 6 chiffres s’affiche. Tapez-le ici.</p>
+ <form id="f"><input id="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="000000" autocomplete="off" aria-label="Code d’appairage">
+ <p style="margin:12px 0 0"><button class="p" type="submit">Associer ce pont</button><button class="g" type="button" id="unpair" hidden>Dissocier</button></p></form>
+ <p class="note" id="msg"></p>
+</div>
+<p class="note">Imprimantes réseau ou déjà installées sur cet ordinateur. Version <span id="v-ver"></span> · <code id="v-url"></code></p>
+</main>
+<script>
+(function(){
+ var $=function(id){return document.getElementById(id)};
+ function ago(ts){if(!ts)return'—';var s=Math.round((Date.now()-ts)/1000);return s<2?'à l’instant':s<60?'il y a '+s+' s':'il y a '+Math.round(s/60)+' min'}
+ function paint(j){
+  $('v-ver').textContent=j.version||'';$('v-url').textContent=j.url||'';
+  $('v-merchant').textContent=j.merchant||'—';$('v-printed').textContent=String(j.printed||0);
+  $('v-last').textContent=ago(j.lastPollTs);
+  var w=$('v-relay-wrap');w.className='v'+(j.paired&&j.online?' on':'');
+  $('v-relay').textContent=!j.paired?'non appairé':(j.online?'connecté':'en attente de kiwi-os.com…');
+  $('v-err').hidden=!j.lastError;$('v-err').textContent=j.lastError||'';
+  $('unpair').hidden=!j.paired;$('code').disabled=!!j.paired;
+  $('f').querySelector('button.p').hidden=!!j.paired;
+  $('st').className='card'+(j.paired&&j.online?' on':'');
+ }
+ function refresh(){fetch('/kiwi/relay',{cache:'no-store'}).then(function(r){return r.json()}).then(paint).catch(function(){})}
+ $('f').addEventListener('submit',function(e){e.preventDefault();var c=$('code').value.replace(/\\D/g,'');if(c.length!==6){$('msg').textContent='Le code fait 6 chiffres.';return}
+  $('msg').className='note';$('msg').textContent='Vérification…';
+  fetch('/kiwi/relay/pair',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:c})}).then(function(r){return r.json()}).then(function(j){
+   if(j.ok){$('msg').className='note ok';$('msg').textContent='Pont associé au commerce « '+(j.merchant||'')+' ». Les tickets de l’iPad sortiront ici.';$('code').value=''}
+   else{$('msg').className='note err';$('msg').textContent=j.error==='invalid_or_expired'?'Code invalide ou expiré — regénérez-le dans Kiwi.':j.error==='too_many_attempts'?'Trop d’essais — patientez quelques minutes.':j.error==='relay-not-provisioned'?'Le relais n’est pas encore activé côté Kiwi.':'Échec : '+(j.error||'inconnu')}
+   refresh();
+  }).catch(function(){$('msg').className='note err';$('msg').textContent='Le pont ne répond pas.'});
+ });
+ $('unpair').addEventListener('click',function(){if(!confirm('Dissocier ce pont du relais Kiwi ?'))return;fetch('/kiwi/relay/unpair',{method:'POST'}).then(refresh)});
+ refresh();setInterval(refresh,2000);
+})();
+</script></html>`;
 
 // Origins allowed to drive the bridge. '*' would also work for a loopback-only
 // service, but echoing the specific Kiwi origins is tighter.
@@ -380,7 +634,33 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.method === 'GET' && url === '/kiwi/ping') {
-    sendJson(res, 200, { ok: true, name: NAME, version: VERSION }, origin);
+    const rs = relayStatus();
+    sendJson(res, 200, { ok: true, name: NAME, version: VERSION,
+      relay: { paired: rs.paired, online: rs.online, merchant: rs.merchant, name: rs.name, bridgeId: rs.bridgeId } }, origin);
+    return;
+  }
+
+  // La page locale du pont et son état — même origine, aucun CORS en jeu.
+  if (req.method === 'GET' && (url === '/' || url === '/index.html')) {
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+    res.end(LOCAL_PAGE);
+    return;
+  }
+  if (req.method === 'GET' && url === '/kiwi/relay') {
+    sendJson(res, 200, relayStatus(), origin);
+    return;
+  }
+  if (req.method === 'POST' && url === '/kiwi/relay/pair') {
+    let body;
+    try { body = JSON.parse((await readBody(req)).toString('utf8') || '{}'); }
+    catch (_) { return sendJson(res, 400, { ok: false, error: 'bad-json' }, origin); }
+    const r = await relayPair(body.code, body.name);
+    sendJson(res, r.ok ? 200 : 422, r, origin);
+    return;
+  }
+  if (req.method === 'POST' && url === '/kiwi/relay/unpair') {
+    relayUnpair();
+    sendJson(res, 200, { ok: true }, origin);
     return;
   }
 
@@ -507,6 +787,13 @@ function tryListen() {
     server.removeListener('error', onError);
     console.log(`${NAME} v${VERSION} listening on http://${HOST}:${port}`);
     console.log('Laissez cette fenêtre ouverte. Elle relaie les impressions Kiwi vers votre imprimante.');
+    console.log(`Page du pont : http://${HOST}:${port}/`);
+    if (relayPaired()) {
+      relayLog('appairé au commerce « ' + relay.cfg.relay.merchant + ' » — connexion à ' + RELAY_URL + '…');
+      relayStart();
+    } else {
+      relayLog('non appairé. Pour imprimer depuis un iPad/tablette : Kiwi → Imprimantes → Relais Kiwi → Associer un pont, puis tapez le code sur http://' + HOST + ':' + port + '/');
+    }
     if (port !== PORT_CANDIDATES[0]) {
       console.log(`(Port ${PORT_CANDIDATES[0]} occupé — Kiwi cherche automatiquement jusqu'à ${PORT_CANDIDATES[PORT_CANDIDATES.length - 1]}.)`);
     }
@@ -516,6 +803,18 @@ function tryListen() {
   server.once('listening', onListening);
   server.listen(port, HOST);
 }
+/* Appairage sans interface : `kiwi-printer-bridge --pair 123456` ou la variable
+ * KIWI_RELAY_CODE (installation par un technicien, service Windows, Raspberry
+ * au fond du comptoir). Le pont démarre ensuite normalement. */
+(function cliPair() {
+  const i = process.argv.indexOf('--pair');
+  const code = (i !== -1 && process.argv[i + 1]) || process.env.KIWI_RELAY_CODE || '';
+  if (process.argv.indexOf('--unpair') !== -1) { relayUnpair(); }
+  if (!code) return;
+  relayPair(code).then((r) => {
+    if (!r.ok) console.error('[relais] appairage refusé : ' + (r.error || 'inconnu'));
+  });
+})();
 tryListen();
 
 // A crash must not vanish the window either.

@@ -279,6 +279,17 @@ async function routeRequest(context) {
    * signature HMAC que le handler vérifie lui-même, et il refuse tout tant que
    * le commerçant n'a pas enregistré la clé de signature de sa boutique. */
   if (method === 'POST' && /^\/api\/channel\/shopify\/[A-Za-z0-9-]{6,64}$/.test(path)) return next();
+  /* Le relais d'impression (functions/api/print/*). Le Kiwi Printer Bridge du
+   * comptoir n'est pas un navigateur : pas de cookie de porte, jamais. Il
+   * échange son code d'appairage (POST /api/print/bridges — le handler exige un
+   * code vivant, ou une session pour les autres actions, et ne rend rien
+   * sinon), puis présente un jeton porteur `kpb_…` que le handler vérifie
+   * lui-même contre print_bridges. Chemins EXACTS, et la porte ne s'ouvre au
+   * GET/POST des jobs QUE si ce jeton est présenté : sans lui, la caisse passe
+   * par la porte normale comme pour n'importe quelle API. */
+  if (method === 'POST' && path === '/api/print/bridges') return next();
+  if ((path === '/api/print/jobs' || path === '/api/print/bridges')
+      && /^Bearer\s+kpb_[0-9a-f]{64}$/i.test(request.headers.get('Authorization') || '')) return next();
 
   // /order is the short link written onto NFC tags — every byte counts on an
   // NTAG213, and it is what a guest glimpses as their phone buzzes. Rewrite
