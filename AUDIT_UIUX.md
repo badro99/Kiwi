@@ -258,4 +258,5 @@ Extraction brute des règles existantes avant harmonisation :
 | Surface | Fichier(s) | Améliorations apportées | État |
 | :--- | :--- | :--- | :--- |
 | **1. Échelle Typographique & Mouvement** | `kiwi-serveur.html` | Définition des jetons `--t-*` et des constantes de mouvement, migration de l'ensemble des règles de style | ✅ Déployé |
+| **2. Grille de Salle & Cartes de Table** | `kiwi-serveur.html` | Hiérarchie visuelle dominante sur `.tc-num` (17px mono bold), élévation glassmorphism, transitions d'état fluides, état vide conçu avec médaillon et CTA de réinitialisation | ✅ Déployé |
 

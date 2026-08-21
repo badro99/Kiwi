@@ -1150,18 +1150,71 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     .filter-chip.is-active .count { opacity: .7; }
 
     .tables-empty {
-      display: grid;
-      place-items: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
       gap: 8px;
-      min-height: 180px;
-      padding: 28px;
+      min-height: 190px;
+      padding: 28px 20px;
       border: 1px dashed var(--line);
       border-radius: var(--r-lg);
       color: var(--ink-3);
       text-align: center;
-      background: var(--paper-mute);
+      background: var(--surface);
+      box-shadow: var(--shadow-1), var(--rim);
+      margin: 12px 0;
     }
-    .tables-empty strong { color: var(--ink); font-size: 15px; }
+    .tables-empty-icon {
+      width: 44px; height: 44px;
+      border-radius: 12px;
+      background: rgba(11, 110, 79, 0.10);
+      color: var(--forest);
+      display: grid;
+      place-items: center;
+      margin-bottom: 4px;
+    }
+    :root[data-theme="dark"] .tables-empty-icon {
+      background: rgba(0, 255, 174, 0.12);
+      color: var(--mint);
+    }
+    .tables-empty strong {
+      color: var(--ink);
+      font-size: var(--t-body-lg-size, 15px);
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+    :root[data-theme="dark"] .tables-empty strong {
+      color: #F5FAF7;
+    }
+    .tables-empty p {
+      margin: 0;
+      font-size: var(--t-body-sm-size, 12.5px);
+      color: var(--ink-3);
+      max-width: 260px;
+      line-height: 1.4;
+    }
+    .tables-empty .empty-cta {
+      margin-top: 8px;
+      padding: 8px 16px;
+      border-radius: 999px;
+      background: var(--surface-2);
+      border: 1px solid var(--line);
+      color: var(--ink);
+      font-size: var(--t-body-sm-size, 12.5px);
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--dur-fast) var(--spring);
+    }
+    .tables-empty .empty-cta:hover {
+      background: var(--forest);
+      color: var(--on-accent);
+      border-color: var(--forest);
+      transform: translateY(-1px);
+    }
+    .tables-empty .empty-cta:active {
+      transform: scale(0.96);
+    }
 
     /* The update notice is useful during a shift, but it must never cover the
        four primary actions. Move it above the floating navigation only while
@@ -1196,11 +1249,22 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       background: var(--surface);
       border: 1px solid var(--line);
       box-shadow: var(--shadow-1), var(--rim);
-      transition: background 150ms ease, transform 100ms ease, border-color 150ms ease;
+      transition: background var(--dur-base) var(--expo),
+                  border-color var(--dur-base) var(--expo),
+                  box-shadow var(--dur-base) var(--expo),
+                  transform var(--dur-fast) var(--spring);
       cursor: pointer;
       position: relative;
     }
-    .table-card:active { transform: scale(0.98); }
+    .table-card:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-2), var(--rim);
+      border-color: rgba(12, 107, 78, 0.22);
+    }
+    :root[data-theme="dark"] .table-card:hover {
+      border-color: rgba(0, 255, 174, 0.28);
+    }
+    .table-card:active { transform: scale(0.97); }
     .table-card[data-status="khawya"] {
       background: var(--surface);
       border-color: var(--line);
@@ -1228,13 +1292,17 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     }
 
     .tc-num {
-      flex: 0 0 44px;
-      width: 44px; height: 44px;
+      flex: 0 0 46px;
+      width: 46px; height: 46px;
       background: var(--surface-3);
       border-radius: var(--r-md);
       display: flex; align-items: center; justify-content: center;
-      font-size: 16px; font-weight: 700;
-      letter-spacing: -0.01em;
+      font-family: var(--mono);
+      font-size: var(--t-headline-size, 17px);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      font-feature-settings: "tnum" 1;
+      transition: all var(--dur-base) var(--expo);
     }
     /* Le voile et l-encre se DÉDUISENT de l-encre de la carte : une valeur
        blanche en dur ne survit ni au passage en menthe la nuit, ni a un
@@ -4673,6 +4741,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         "Langue de l'application": 'App language',
         'Mes tables': 'My tables',
         'Toutes les tables': 'All tables',
+        'Afficher toutes les tables': 'Show all tables',
         'Vos tables ce matin': 'Your tables this morning',
         'Vos tables ce midi': 'Your tables at lunch',
         'Vos tables cet après-midi': 'Your tables this afternoon',
@@ -4782,6 +4851,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         "Langue de l'application": 'لغة التطبيق',
         'Mes tables': 'طاولاتي',
         'Toutes les tables': 'جميع الطاولات',
+        'Afficher toutes les tables': 'عرض جميع الطاولات',
         'Vos tables ce matin': 'طاولاتك هذا الصباح',
         'Vos tables ce midi': 'طاولاتك وقت الظهيرة',
         'Vos tables cet après-midi': 'طاولاتك بعد الظهر',
@@ -6965,7 +7035,12 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
           </div>`;
       }).join('');
 
-      const empty = myIds.length ? '' : '<div class="tables-empty"><strong>Aucune table ici</strong><span>Modifiez le filtre pour retrouver vos tables.</span></div>';
+      const empty = myIds.length ? '' : `<div class="tables-empty">
+        <div class="tables-empty-icon"><i data-lucide="utensils-crossed"></i></div>
+        <strong>${employeeTranslation('Aucune table ici')}</strong>
+        <p>${employeeTranslation('Modifiez le filtre pour retrouver vos tables.')}</p>
+        <button type="button" class="empty-cta" data-reset-filter>${employeeTranslation('Afficher toutes les tables')}</button>
+      </div>`;
       return alertHTML + titleHTML + zonesHTML + empty;
     }
 
@@ -7012,7 +7087,12 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
           </div>`;
       }).join('');
 
-      const empty = sectionsHTML ? '' : '<div class="tables-empty"><strong>Aucune table ici</strong><span>Modifiez le filtre pour retrouver vos tables.</span></div>';
+      const empty = sectionsHTML ? '' : `<div class="tables-empty">
+        <div class="tables-empty-icon"><i data-lucide="layout-grid"></i></div>
+        <strong>${employeeTranslation('Aucune table ici')}</strong>
+        <p>${employeeTranslation('Modifiez le filtre pour retrouver vos tables.')}</p>
+        <button type="button" class="empty-cta" data-reset-filter>${employeeTranslation('Afficher toutes les tables')}</button>
+      </div>`;
       return titleHTML + sectionsHTML + empty;
     }
 
@@ -7028,6 +7108,13 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       if (!btn) return;
       activeFilter = btn.dataset.filter;
       renderTables();
+    });
+
+    document.addEventListener('click', (e) => {
+      if (e.target.closest('[data-reset-filter]')) {
+        activeFilter = 'all';
+        renderTables();
+      }
     });
 
     // Colleague-pause alert → switch to "Toutes" view
