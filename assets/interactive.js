@@ -1660,19 +1660,19 @@ ar: {
         return `
           <div style="display:flex; flex-direction:column; gap:10px;">
             <div class="wiz-choice ${business==='resto'?'selected':''}" data-biz="resto">
-              <div class="wc-ic">🍽️</div>
+              <div class="wc-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2M7 2v20M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3v7"/></svg></div>
               <div><div class="wc-t">${s.business_resto}</div><div class="wc-d">${s.business_resto_desc}</div></div>
             </div>
             <div class="wiz-choice ${business==='retail'?'selected':''}" data-biz="retail">
-              <div class="wc-ic">🛒</div>
+              <div class="wc-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></div>
               <div><div class="wc-t">${s.business_retail}</div><div class="wc-d">${s.business_retail_desc}</div></div>
             </div>
             <div class="wiz-choice ${business==='services'?'selected':''}" data-biz="services">
-              <div class="wc-ic">✂️</div>
+              <div class="wc-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg></div>
               <div><div class="wc-t">${s.business_services}</div><div class="wc-d">${s.business_services_desc}</div></div>
             </div>
             <div class="wiz-choice ${business==='other'?'selected':''}" data-biz="other">
-              <div class="wc-ic">💼</div>
+              <div class="wc-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg></div>
               <div><div class="wc-t">${s.business_other}</div><div class="wc-d">${s.business_other_desc}</div></div>
             </div>
           </div>
@@ -2077,13 +2077,13 @@ ar: {
               </div>
               <div>
                 ${cv ? `
-                ${settingsRow('🏪', venueTitle, tradeLabel, { action: 'settings-edit-venue' })}
+                ${settingsRow('store', venueTitle, tradeLabel, { action: 'settings-edit-venue' })}
                 ${settingsRow('⏰', tr({ fr: 'Heures d\'ouverture', en: 'Opening hours', ar: 'ساعات العمل' }), escape(hoursRowValue(vd)), { action: 'settings-hours' })}
-                ${settingsRow('🎯', tr({ fr: 'Objectif journalier', en: 'Daily goal', ar: 'الهدف اليومي' }), vd.goal ? fmtN(vd.goal) + ' MAD' : tr({ fr: 'À définir', en: 'To set', ar: 'غير محدد' }), { action: 'settings-edit-venue' })}
+                ${settingsRow('goal', tr({ fr: 'Objectif journalier', en: 'Daily goal', ar: 'الهدف اليومي' }), vd.goal ? fmtN(vd.goal) + ' MAD' : tr({ fr: 'À définir', en: 'To set', ar: 'غير محدد' }), { action: 'settings-edit-venue' })}
                 ` : `
-                ${settingsRow('🏪', venueTitle, escape(getSet('venueLoc', tr({ fr: 'Emplacement principal', en: 'Main location', ar: 'الموقع الرئيسي' }))), { action: 'settings-edit-store', arg: 'venue' })}
+                ${settingsRow('store', venueTitle, escape(getSet('venueLoc', tr({ fr: 'Emplacement principal', en: 'Main location', ar: 'الموقع الرئيسي' }))), { action: 'settings-edit-store', arg: 'venue' })}
                 ${settingsRow('⏰', tr({ fr: 'Heures d\'ouverture', en: 'Opening hours', ar: 'ساعات العمل' }), escape(hoursRowValue(null)), { action: 'settings-hours' })}
-                ${settingsRow('🎯', tr({ fr: 'Objectif journalier', en: 'Daily goal', ar: 'الهدف اليومي' }), escape(getSet('goal', '28 000')) + ' MAD', { action: 'settings-edit-store', arg: 'goal' })}
+                ${settingsRow('goal', tr({ fr: 'Objectif journalier', en: 'Daily goal', ar: 'الهدف اليومي' }), escape(getSet('goal', '28 000')) + ' MAD', { action: 'settings-edit-store', arg: 'goal' })}
                 `}
               </div>
             </div>
@@ -2098,9 +2098,9 @@ ar: {
                 <span class="gp-set-tag">${tr({ fr: 'Encaissement', en: 'Checkout', ar: 'الدفع' })}</span>
               </div>
               <div>
-                ${settingsRow('🧾', tr({ fr: 'Reçu de caisse & Mentions légales', en: 'Receipt & Legal details', ar: 'وصل الصندوق والبيانات القانونية' }), escape(receiptRowValue()), { action: 'settings-receipt' })}
-                ${settingsRow('💳', tr({ fr: 'Méthodes de paiement acceptées', en: 'Accepted payment methods', ar: 'وسائل الدفع المقبولة' }), escape(vd.methods || getSet('methods', 'Visa · Mastercard · Kiwi Tap · QR')), { action: cv ? 'settings-edit-venue' : 'settings-methods' })}
-                ${settingsRow('💰', tr({ fr: 'Devise d\'affichage', en: 'Display currency', ar: 'عملة العرض' }), escape(getSet('currency', 'MAD · Dirham marocain')), { action: 'settings-currency' })}
+                ${settingsRow('receipt', tr({ fr: 'Reçu de caisse & Mentions légales', en: 'Receipt & Legal details', ar: 'وصل الصندوق والبيانات القانونية' }), escape(receiptRowValue()), { action: 'settings-receipt' })}
+                ${settingsRow('payment', tr({ fr: 'Méthodes de paiement acceptées', en: 'Accepted payment methods', ar: 'وسائل الدفع المقبولة' }), escape(vd.methods || getSet('methods', 'Visa · Mastercard · Kiwi Tap · QR')), { action: cv ? 'settings-edit-venue' : 'settings-methods' })}
+                ${settingsRow('currency', tr({ fr: 'Devise d\'affichage', en: 'Display currency', ar: 'عملة العرض' }), escape(getSet('currency', 'MAD · Dirham marocain')), { action: 'settings-currency' })}
               </div>
             </div>
 
@@ -2114,12 +2114,12 @@ ar: {
                 <span class="gp-set-tag">${tr({ fr: 'Personnalisation', en: 'Design', ar: 'التخصيص' })}</span>
               </div>
               <div>
-                ${settingsRow('🌍', tr({ fr: 'Langue de l\'application', en: 'App language', ar: 'لغة التطبيق' }), LANGNAME[lang] || 'Français', { action: 'settings-lang' })}
-                ${(window.KiwiDesignIOS27 && window.KiwiDesignIOS27.isOn()) ? settingsRow('🧊', 'Liquid Glass', ({ clear: tr({ fr: 'Clair', en: 'Clear', ar: 'شفاف' }), standard: tr({ fr: 'Standard', en: 'Standard', ar: 'قياسي' }), frosted: tr({ fr: 'Givré', en: 'Frosted', ar: 'مصنفر' }), opaque: tr({ fr: 'Opaque', en: 'Opaque', ar: 'معتم' }) })[window.KiwiDesignIOS27.getGlass()] || 'Standard', { action: 'glass-level' }) : ''}
+                ${settingsRow('lang', tr({ fr: 'Langue de l\'application', en: 'App language', ar: 'لغة التطبيق' }), LANGNAME[lang] || 'Français', { action: 'settings-lang' })}
+                ${(window.KiwiDesignIOS27 && window.KiwiDesignIOS27.isOn()) ? settingsRow('glass', 'Liquid Glass', ({ clear: tr({ fr: 'Clair', en: 'Clear', ar: 'شفاف' }), standard: tr({ fr: 'Standard', en: 'Standard', ar: 'قياسي' }), frosted: tr({ fr: 'Givré', en: 'Frosted', ar: 'مصنفر' }), opaque: tr({ fr: 'Opaque', en: 'Opaque', ar: 'معتم' }) })[window.KiwiDesignIOS27.getGlass()] || 'Standard', { action: 'glass-level' }) : ''}
                 ${(document.documentElement.getAttribute('data-theme') === 'dark')
-                  ? settingsRow('🌙', tr({ fr: 'Mode sombre', en: 'Dark mode', ar: 'الوضع الداكن' }), tr({ fr: 'Activé · Kiwi Ultra', en: 'On · Kiwi Ultra', ar: 'مفعّل · Kiwi Ultra' }), { badge: '✓' })
-                  : settingsRow('🌙', tr({ fr: 'Mode sombre', en: 'Dark mode', ar: 'الوضع الداكن' }), tr({ fr: 'Interface nuit · confort du soir', en: 'Night interface · easy on the eyes', ar: 'واجهة ليلية · مريحة للعين' }), { action: 'settings-dark-ultra', badge: 'ULTRA' })}
-                ${settingsRow('🔔', tr({ fr: 'Notifications WhatsApp', en: 'WhatsApp notifications', ar: 'إشعارات واتساب' }), tr({ fr: 'Résumé quotidien 19h', en: 'Daily summary 7pm', ar: 'ملخص يومي 19:00' }), { toggle: true, on: setOn('waNotif'), action: 'settings-toggle', arg: 'waNotif' })}
+                  ? settingsRow('theme', tr({ fr: 'Mode sombre', en: 'Dark mode', ar: 'الوضع الداكن' }), tr({ fr: 'Activé · Kiwi Ultra', en: 'On · Kiwi Ultra', ar: 'مفعّل · Kiwi Ultra' }), { badge: '✓' })
+                  : settingsRow('theme', tr({ fr: 'Mode sombre', en: 'Dark mode', ar: 'الوضع الداكن' }), tr({ fr: 'Interface nuit · confort du soir', en: 'Night interface · easy on the eyes', ar: 'واجهة ليلية · مريحة للعين' }), { action: 'settings-dark-ultra', badge: 'ULTRA' })}
+                ${settingsRow('notifications', tr({ fr: 'Notifications WhatsApp', en: 'WhatsApp notifications', ar: 'إشعارات واتساب' }), tr({ fr: 'Résumé quotidien 19h', en: 'Daily summary 7pm', ar: 'ملخص يومي 19:00' }), { toggle: true, on: setOn('waNotif'), action: 'settings-toggle', arg: 'waNotif' })}
               </div>
             </div>
 
@@ -2133,13 +2133,13 @@ ar: {
                 <span class="gp-set-tag">${tr({ fr: 'Protection', en: 'Protection', ar: 'الحماية' })}</span>
               </div>
               <div>
-                ${settingsRow('🔑', tr({ fr: 'Codes PIN de l\'équipe', en: 'Team PIN codes', ar: 'رموز الفريق' }), tr({ fr: 'Gérer les accès et rôles caisse', en: 'Manage till roles and access', ar: 'إدارة أدوار ووصول الصندوق' }), { action: 'nav-equipe' })}
-                ${settingsRow('🛡️', tr({ fr: 'Chiffrement des données', en: 'Data encryption', ar: 'تشفير البيانات' }), tr({ fr: 'En transit (TLS 1.3) et au repos', en: 'In transit (TLS 1.3) and at rest', ar: 'أثناء النقل وفي التخزين' }), { badge: tr({ fr: 'Certifié', en: 'Certified', ar: 'معتمد' }) })}
-                ${settingsRow('📤', tr({ fr: 'Exporter mes données', en: 'Export my data', ar: 'تصدير بياناتي' }), tr({ fr: 'Ventes, produits, équipe · Fichier CSV', en: 'Sales, products, team · CSV file', ar: 'المبيعات والمنتجات والفريق · CSV' }), { action: 'export-csv' })}
-                ${cv ? settingsRow('🔌', tr({ fr: 'Canaux de livraison', en: 'Delivery channels', ar: 'قنوات التوصيل' }), tr({ fr: 'Connectez Glovo, Yassir et votre compta', en: 'Connect Glovo, Yassir and accounting', ar: 'اربط Glovo وYassir ومحاسبتك' }), { action: 'add-integration' }) : `
-                ${settingsRow('🟠', 'Glovo Delivery', tr({ fr: 'Connecté · Commandes en direct', en: 'Connected · Live orders', ar: 'متصل · طلبات مباشرة' }), { toggle: true, on: setOn('glovo'), action: 'settings-toggle', arg: 'glovo' })}
-                ${settingsRow('🔵', 'Yassir Express', tr({ fr: 'Connecté · 24 commandes', en: 'Connected · 24 orders', ar: 'متصل · 24 طلبًا' }), { toggle: true, on: setOn('yassir'), action: 'settings-toggle', arg: 'yassir' })}
-                ${settingsRow('📊', tr({ fr: 'Comptabilité OCP', en: 'Accounting export', ar: 'المحاسبة' }), tr({ fr: 'Export automatique quotidien', en: 'Daily automatic export', ar: 'تصدير تلقائي يومي' }), { toggle: true, on: setOn('compta'), action: 'settings-toggle', arg: 'compta' })}
+                ${settingsRow('pin', tr({ fr: 'Codes PIN de l\'équipe', en: 'Team PIN codes', ar: 'رموز الفريق' }), tr({ fr: 'Gérer les accès et rôles caisse', en: 'Manage till roles and access', ar: 'إدارة أدوار ووصول الصندوق' }), { action: 'nav-equipe' })}
+                ${settingsRow('encryption', tr({ fr: 'Chiffrement des données', en: 'Data encryption', ar: 'تشفير البيانات' }), tr({ fr: 'En transit (TLS 1.3) et au repos', en: 'In transit (TLS 1.3) and at rest', ar: 'أثناء النقل وفي التخزين' }), { badge: tr({ fr: 'Certifié', en: 'Certified', ar: 'معتمد' }) })}
+                ${settingsRow('export', tr({ fr: 'Exporter mes données', en: 'Export my data', ar: 'تصدير بياناتي' }), tr({ fr: 'Ventes, produits, équipe · Fichier CSV', en: 'Sales, products, team · CSV file', ar: 'المبيعات والمنتجات والفريق · CSV' }), { action: 'export-csv' })}
+                ${cv ? settingsRow('delivery', tr({ fr: 'Canaux de livraison', en: 'Delivery channels', ar: 'قنوات التوصيل' }), tr({ fr: 'Connectez Glovo, Yassir et votre compta', en: 'Connect Glovo, Yassir and accounting', ar: 'اربط Glovo وYassir ومحاسبتك' }), { action: 'add-integration' }) : `
+                ${settingsRow('glovo', 'Glovo Delivery', tr({ fr: 'Connecté · Commandes en direct', en: 'Connected · Live orders', ar: 'متصل · طلبات مباشرة' }), { toggle: true, on: setOn('glovo'), action: 'settings-toggle', arg: 'glovo' })}
+                ${settingsRow('yassir', 'Yassir Express', tr({ fr: 'Connecté · 24 commandes', en: 'Connected · 24 orders', ar: 'متصل · 24 طلبًا' }), { toggle: true, on: setOn('yassir'), action: 'settings-toggle', arg: 'yassir' })}
+                ${settingsRow('accounting', tr({ fr: 'Comptabilité OCP', en: 'Accounting export', ar: 'المحاسبة' }), tr({ fr: 'Export automatique quotidien', en: 'Daily automatic export', ar: 'تصدير تلقائي يومي' }), { toggle: true, on: setOn('compta'), action: 'settings-toggle', arg: 'compta' })}
                 `}
               </div>
             </div>
@@ -3042,7 +3042,7 @@ ar: {
           </style>
           <div class="kup-grid">${PLANS.map(card).join('')}</div>
           <div class="kup-tip">
-            <div>💡</div>
+            <div style="color:var(--atlas); flex-shrink:0; margin-top:1px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 0-7 7c0 2.38 1.19 4.47 3 5.74V17a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-2.26c1.81-1.27 3-3.36 3-5.74a7 7 0 0 0-7-7zM9 21h6"/></svg></div>
             <div style="flex:1;">${(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal())
               ? `<b>Votre recommandation :</b> <b>Ultra</b> ouvre les établissements illimités, le multi-pays et l'account manager dédié, au-delà du mono-site de Basic et Pro. Le palier exact se précise lors d'un court échange sur vos besoins.`
               : `<b>Votre recommandation :</b> ce compte gère 3 établissements (Café Atlas · Maison Mansour · Spa Bahia), au-delà du mono-site de Basic et Pro. <b>Ultra</b> ouvre les établissements illimités, le multi-pays et l'account manager dédié. Le palier exact se précise lors d'un court échange sur vos besoins.`}</div>
@@ -3278,31 +3278,45 @@ ar: {
   // On-brand line-art icons for the settings rows, keyed by the legacy emoji so
   // call sites don't change. Unmapped keys fall back to the emoji in the chip.
   const KSET_ICONS = {
-    '🌍': '<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.6 2.7 2.6 15.3 0 18M12 3c-2.6 2.7-2.6 15.3 0 18"/>',
-    '🔔': '<path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>',
-    '💰': '<circle cx="12" cy="12" r="9"/><path d="M12 7v10"/><path d="M14.5 9.3c-.4-.9-1.4-1.4-2.5-1.4-1.4 0-2.4.8-2.4 1.9 0 2.5 4.9 1.3 4.9 3.9 0 1.1-1 1.9-2.5 1.9-1.1 0-2.1-.5-2.5-1.4"/>',
-    '🧊': '<path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/>',
-    '🏪': '<path d="M4 4h16l1 5H3l1-5z"/><path d="M5 9v11h14V9"/><path d="M9 20v-6h6v6"/>',
+    'store': '<path d="M3 21h18M3 7v14M21 7v14M4 7l8-4 8 4M9 21v-6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v6"/>',
+    'hours': '<circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 2"/>',
+    'goal': '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/>',
+    'receipt': '<path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1zM8 7h8M8 11h8M8 15h5"/>',
+    'payment': '<rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/>',
+    'currency': '<circle cx="12" cy="12" r="9"/><path d="M12 7v10M14.5 9.5c-.4-.9-1.4-1.5-2.5-1.5-1.4 0-2.5.9-2.5 2 0 2.6 5 1.4 5 4 0 1.1-1.1 2-2.5 2-1.1 0-2.1-.6-2.5-1.5"/>',
+    'lang': '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.7 2.6 15.3 0 18M12 3c-2.6 2.7-2.6 15.3 0 18"/>',
+    'glass': '<path d="M12 3l9 5-9 5-9-5 9-5zM3 13l9 5 9-5M3 18l9 5 9-5"/>',
+    'theme': '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>',
+    'notifications': '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/>',
+    'pin': '<circle cx="7.5" cy="15.5" r="4.5"/><path d="M11 12l9-9m0 0h4m-4 0v4m-3-1l2 2"/>',
+    'encryption': '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+    'export': '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>',
+    'delivery': '<path d="M18 13V6a3 3 0 0 0-3-3H9a3 3 0 0 0-3 3v7M6 9h12M10 21v-4M14 21v-4"/>',
+    'glovo': '<path d="M6 8h12l-1 12H7L6 8zM9 8V6a3 3 0 0 1 6 0v2"/>',
+    'yassir': '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
+    'accounting': '<path d="M18 20V10M12 20V4M6 20v-6M3 20h18"/>',
+    '🏪': '<path d="M3 21h18M3 7v14M21 7v14M4 7l8-4 8 4M9 21v-6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v6"/>',
     '⏰': '<circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 2"/>',
     '🎯': '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/>',
-    '💳': '<rect x="2.5" y="5" width="19" height="14" rx="2.5"/><path d="M2.5 10h19"/>',
-    '🛡️': '<path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3z"/>',
-    '🛡': '<path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6l7-3z"/>',
-    '🔐': '<rect x="4.5" y="10.5" width="15" height="9.5" rx="2"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/>',
-    '📋': '<rect x="5" y="4.5" width="14" height="16" rx="2"/><path d="M9 4.5h6v3H9z"/><path d="M9 13l2 2 4-4"/>',
-    '🏛️': '<path d="M3 10l9-6 9 6"/><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8"/><path d="M3 21h18"/>',
-    '🏛': '<path d="M3 10l9-6 9 6"/><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8"/><path d="M3 21h18"/>',
-    '📊': '<path d="M4 20V11M9.3 20V5M14.6 20v-6M20 20H3.5"/>',
-    '🏦': '<path d="M3 10l9-6 9 6"/><path d="M4 10v9M20 10v9M8 10v9M16 10v9M12 10v9"/><path d="M3 21h18"/>',
-    '🟠': '<path d="M6.5 8h11l-1 11.5H7.5L6.5 8z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/>',
-    '🔴': '<path d="M6.5 8h11l-1 11.5H7.5L6.5 8z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/>',
-    '🌙': '<path d="M20.5 13.4A8.5 8.5 0 0 1 10.6 3.5 8.5 8.5 0 1 0 20.5 13.4z"/>'
+    '🧾': '<path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1zM8 7h8M8 11h8M8 15h5"/>',
+    '💳': '<rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/>',
+    '💰': '<circle cx="12" cy="12" r="9"/><path d="M12 7v10M14.5 9.5c-.4-.9-1.4-1.5-2.5-1.5-1.4 0-2.5.9-2.5 2 0 2.6 5 1.4 5 4 0 1.1-1.1 2-2.5 2-1.1 0-2.1-.6-2.5-1.5"/>',
+    '🌍': '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.6 2.7 2.6 15.3 0 18M12 3c-2.6 2.7-2.6 15.3 0 18"/>',
+    '🧊': '<path d="M12 3l9 5-9 5-9-5 9-5zM3 13l9 5 9-5M3 18l9 5 9-5"/>',
+    '🌙': '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>',
+    '🔔': '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/>',
+    '🔑': '<circle cx="7.5" cy="15.5" r="4.5"/><path d="M11 12l9-9m0 0h4m-4 0v4m-3-1l2 2"/>',
+    '🛡️': '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+    '🛡': '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+    '📤': '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>',
+    '🔌': '<path d="M18 13V6a3 3 0 0 0-3-3H9a3 3 0 0 0-3 3v7M6 9h12M10 21v-4M14 21v-4"/>',
+    '🟠': '<path d="M6 8h12l-1 12H7L6 8zM9 8V6a3 3 0 0 1 6 0v2"/>',
+    '🔵': '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
+    '📊': '<path d="M18 20V10M12 20V4M6 20v-6M3 20h18"/>'
   };
   function ksetIco(key) {
-    const p = KSET_ICONS[key];
-    return p
-      ? '<span class="kset-ico"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">' + p + '</svg></span>'
-      : '<span class="kset-ico kset-ico-txt">' + key + '</span>';
+    const p = KSET_ICONS[key] || '<circle cx="12" cy="12" r="5"/>';
+    return '<span class="kset-ico"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + p + '</svg></span>';
   }
   function settingsRow(icon, label, value, opts) {
     if (opts === true) opts = { toggle: true, on: true };
