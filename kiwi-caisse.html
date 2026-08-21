@@ -359,7 +359,11 @@
       color: #b5b9b6;
       display: flex;
       flex-direction: column;
-      padding: 22px 18px 18px;
+      /* Zones sûres d'iPadOS : en PWA plein écran (viewport-fit=cover,
+         barre d'état translucide) l'heure du système se dessine PAR-DESSUS
+         le haut de la page et la barre d'accueil par-dessus le bas. env()
+         vaut 0 partout ailleurs. */
+      padding: calc(22px + env(safe-area-inset-top, 0px)) 18px calc(18px + env(safe-area-inset-bottom, 0px));
       gap: 16px;
       overflow-y: auto;
       overscroll-behavior: contain;
@@ -653,6 +657,53 @@
       .view {
         padding: 6px 18px 16px;
       }
+    }
+
+    /* ===========================================================
+       TACTILE · iPad (pointeur grossier, ≤ 1194 px) — le panneau GAUCHE.
+       Le bloc ci-dessus fait TENIR la barre en la densifiant ; sur un écran
+       tactile la cible compte plus que la densité. Ici : rien sous 40 px de
+       haut, rien sous 11 px de corps, les cinq liens du bas deviennent une
+       grille de vraies touches, et la barre s'arrête aux zones sûres
+       d'iPadOS. Les laptops (hover) ne sont pas concernés. Vérifié à
+       1180 × 820 (iPad 10) : tout tient sans défiler en PWA plein écran.
+       =========================================================== */
+    @media only screen and (hover: none) and (pointer: coarse) and (max-width: 1194px) {
+      .sidebar {
+        width: 256px; flex: 0 0 256px;
+        padding: calc(10px + env(safe-area-inset-top, 0px)) 10px calc(10px + env(safe-area-inset-bottom, 0px));
+        gap: 5px;
+      }
+      .brand-mark img { height: 26px; }
+      .duty-row { font-size: 10px; }
+      .cashier-card { padding: 5px 11px; }
+      .cashier-name { font-size: 13.5px; }
+      .cashier-role, .clock-date { font-size: 10.5px; }
+      .clock-time { font-size: 19px; }
+      .mode-pill { min-height: 54px; padding: 6px 2px; font-size: 12px; }
+      .mode-pill svg { width: 21px; height: 21px; flex-basis: 21px; }
+      .act-selector { gap: 5px; }
+      .act-pill { min-height: 44px; font-size: 11px; line-height: 1.15; padding: 5px 4px; }
+      .act-pill svg { width: 18px; height: 18px; flex-basis: 18px; }
+      .stat-card { padding: 5px 10px; }
+      .stats-section, .stat-row { gap: 4px; }
+      .stat-label { font-size: 9px; }
+      .stat-value { font-size: 15px; }
+      .stat-card.compact .stat-value { font-size: 13px; }
+      .stat-delta { font-size: 10px; }
+      .rail-links { gap: 3px; }
+      .team-trigger { min-height: 40px; padding: 7px 11px; font-size: 12.5px; }
+      .team-trigger svg { width: 16px; height: 16px; flex-basis: 16px; }
+      .team-trigger .count { font-size: 10px; padding: 2px 7px; }
+      /* Cinq lignes de 27 px → une grille de touches de 40 px. « Fin de
+         service » prend toute la largeur : c'est l'action qu'on cherche en
+         fermant, elle ne doit pas se confondre avec « Sortir ». */
+      .quick-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding-top: 2px; }
+      .qa-btn { min-height: 40px; padding: 6px 10px; font-size: 11.5px; gap: 7px; border-radius: 10px; }
+      .qa-btn svg { width: 14px; height: 14px; flex-basis: 14px; }
+      .quick-actions > .qa-btn[data-action="fin-service"] { grid-column: 1 / -1; order: 1; }
+      /* Le voyant réseau porte son style en ligne : on le resserre d'autorité. */
+      .quick-actions > #kiwi-net { grid-column: 1 / -1; order: 2; padding: 6px 10px !important; }
     }
 
 
