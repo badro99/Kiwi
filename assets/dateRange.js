@@ -4456,9 +4456,12 @@
       el['inner' + 'HTML'] =
         `<div class="block-head" style="margin-bottom:14px;"><div>` +
         `<div class="t">${t.title}</div></div></div>` +
-        `<div style="padding:20px 4px 8px;text-align:center;">` +
-        `<div style="font-size:13.5px;font-weight:600;color:var(--ink);">${t.head}</div>` +
-        `<div style="font-size:12px;color:var(--n-500);margin-top:6px;line-height:1.5;">${low && !low.configured ? (STOCK_NO_THRESHOLDS[lang] || STOCK_NO_THRESHOLDS.fr)(low.tracked) : low ? (STOCK_OK_STR[lang] || STOCK_OK_STR.fr)(low.tracked) : t.msg}</div>` +
+        `<div style="padding:16px 8px 12px;text-align:center;">` +
+        `<div style="width:36px;height:36px;border-radius:10px;background:rgba(63,182,122,0.12);color:var(--mint);display:inline-flex;align-items:center;justify-content:center;margin-bottom:10px;">` +
+        `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>` +
+        `</div>` +
+        `<div style="font-size:14px;font-weight:600;color:var(--ink);">${t.head}</div>` +
+        `<div style="font-size:12px;color:var(--n-500);margin-top:6px;line-height:1.5;max-width:280px;margin-inline:auto;">${low && !low.configured ? (STOCK_NO_THRESHOLDS[lang] || STOCK_NO_THRESHOLDS.fr)(low.tracked) : low ? (STOCK_OK_STR[lang] || STOCK_OK_STR.fr)(low.tracked) : t.msg}</div>` +
         `</div>`;
     } else if (el['inner' + 'HTML'] !== _stockOrig) {
       el['inner' + 'HTML'] = _stockOrig;

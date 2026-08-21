@@ -64,7 +64,6 @@ body.design-vexel .kpi-c,
 body.design-vexel .kp,
 body.design-vexel .integ-card,
 body.design-vexel .tx-big,
-body.design-vexel .feed-row,
 body.design-vexel .testi-card,
 body.design-vexel .settle,
 body.design-vexel .timeline-day,
@@ -81,10 +80,48 @@ body.design-vexel .prod.paper {
  * mint bloom comes up under the card. */
 body.design-vexel .card:hover,
 body.design-vexel .kpi-m:hover,
-body.design-vexel .integ-card:hover,
-body.design-vexel .feed-row:hover {
+body.design-vexel .integ-card:hover {
   border-color: var(--vx-card-hover-border);
   box-shadow: 0 0 40px -14px var(--vx-accent-22);
+}
+
+/* Clean, modern transaction row inside the live feed */
+body.design-vexel .feed-row {
+  border-radius: 12px;
+  border: 1px solid transparent;
+  background: transparent;
+  padding: 10px 14px;
+  margin-bottom: 2px;
+  transition: background 140ms ease, border-color 140ms ease;
+}
+body.design-vexel .feed-row:hover {
+  background: var(--vx-hover-bg, rgba(255, 255, 255, 0.05));
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: none;
+}
+
+/* Heatmap AI Insight pill — elegant subtle card */
+body.design-vexel .hh-ai {
+  background: rgba(63, 182, 122, 0.06);
+  border: 1px solid rgba(63, 182, 122, 0.18);
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  margin-top: 18px;
+}
+body.design-vexel .hh-ai-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: rgba(63, 182, 122, 0.14);
+  color: var(--mint, #3FB67A);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: none;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
