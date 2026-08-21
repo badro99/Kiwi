@@ -133,19 +133,25 @@
       .acc-plan-btns { display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
       .acc-danger { color:var(--danger); cursor:pointer; font-weight:600; font-size:12.5px; background:transparent; border:1px solid color-mix(in srgb,var(--danger) 38%,transparent); border-radius:9px; padding:9px 16px; font-family:var(--sans); transition:background 140ms; }
       .acc-danger:hover { background:color-mix(in srgb,var(--danger) 10%,transparent); }
-      /* Dark mode explicit harmony */
+      /* Dark mode explicit harmony with crisp borders */
       html[data-theme="dark"] .acc-card,
       html[data-theme="dark"] .acc-biz,
       html[data-theme="dark"] .acc-contact-card,
-      html[data-theme="dark"] .acc-topic { background:rgba(255,255,255,0.04); border-color:rgba(255,255,255,0.08); }
-      html[data-theme="dark"] .acc-stat { background:rgba(255,255,255,0.04); }
-      html[data-theme="dark"] .acc-act { background:rgba(255,255,255,0.04); border-color:rgba(255,255,255,0.08); color:var(--ink); }
-      html[data-theme="dark"] .acc-act:hover { background:rgba(255,255,255,0.08); border-color:var(--mint); }
-      html[data-theme="dark"] .acc-cta.ghost { border-color:rgba(255,255,255,0.18); color:var(--ink); }
-      html[data-theme="dark"] .acc-cta.light { background:rgba(255,255,255,0.14); color:#fff; }
+      html[data-theme="dark"] .acc-topic {
+        background: rgba(255, 255, 255, 0.045);
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.03), 0 8px 30px -12px rgba(0, 0, 0, 0.7);
+      }
+      html[data-theme="dark"] .acc-row { border-bottom-color: rgba(255, 255, 255, 0.07); }
+      html[data-theme="dark"] .acc-stat { background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); }
+      html[data-theme="dark"] .acc-act { background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.12); color: var(--ink); }
+      html[data-theme="dark"] .acc-act:hover { background: rgba(255, 255, 255, 0.07); border-color: rgba(0, 255, 174, 0.4); box-shadow: 0 8px 24px -14px rgba(0, 255, 174, 0.3); }
+      html[data-theme="dark"] .acc-cta.ghost { border: 1px solid rgba(255, 255, 255, 0.22); color: var(--ink); }
+      html[data-theme="dark"] .acc-cta.ghost:hover { border-color: rgba(255, 255, 255, 0.4); background: rgba(255, 255, 255, 0.06); }
+      html[data-theme="dark"] .acc-cta.light { background: rgba(255, 255, 255, 0.14); color: #fff; border: 1px solid rgba(255, 255, 255, 0.18); }
       html[data-theme="dark"] .acc-f,
       html[data-theme="dark"] .acc-sel,
-      html[data-theme="dark"] .acc-search { background:rgba(255,255,255,0.05); border-color:rgba(255,255,255,0.12); color:#fff; }`;
+      html[data-theme="dark"] .acc-search { background: rgba(255, 255, 255, 0.05); border-color: rgba(255, 255, 255, 0.16); color: #fff; }`;
     const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
   })();
 

@@ -2169,17 +2169,17 @@ body.design-vexel[data-vexel-mode] .dash-more .integ-card {
    * elevation language as the surface that was signed off. --paper-elev keeps
    * one step above it for genuinely raised things (menus, popovers). */
   --surface: rgba(255, 255, 255, 0.055);
-  --paper-elev: rgba(255, 255, 255, 0.08);
-  --n-100: rgba(255, 255, 255, 0.045);
-  --n-200: rgba(255, 255, 255, 0.07);
-  --n-300: rgba(255, 255, 255, 0.12);
-  --n-400: rgba(255, 255, 255, 0.34);
-  --n-500: rgba(255, 255, 255, 0.58);
-  --n-600: rgba(255, 255, 255, 0.72);
-  --n-700: rgba(255, 255, 255, 0.86);
+  --paper-elev: rgba(255, 255, 255, 0.09);
+  --n-100: rgba(255, 255, 255, 0.065);
+  --n-200: rgba(255, 255, 255, 0.125);
+  --n-300: rgba(255, 255, 255, 0.19);
+  --n-400: rgba(255, 255, 255, 0.38);
+  --n-500: rgba(255, 255, 255, 0.62);
+  --n-600: rgba(255, 255, 255, 0.76);
+  --n-700: rgba(255, 255, 255, 0.88);
   --n-800: #ffffff;
   --ink: #ffffff;
-  --ink-soft: rgba(255, 255, 255, 0.85);
+  --ink-soft: rgba(255, 255, 255, 0.88);
   --mint: #00ffae;
   --mint-soft: rgba(0, 255, 174, 0.12);
   --atlas: #17b98a;
@@ -2195,7 +2195,7 @@ body.design-vexel[data-vexel-mode] .dash-more .integ-card {
    * KDS column head into a grey box competing with the cards around it. */
   --inverse-surface: rgba(255, 255, 255, 0.08);
   --inverse-ink: #ffffff;
-  --inverse-line: rgba(255, 255, 255, 0.12);
+  --inverse-line: rgba(255, 255, 255, 0.14);
 
   /* --riad is a scrim here, so identity fills that wanted the GREEN take this
    * instead. Lifted off the brand #053B2C, which sits at 1.4:1 on black and
@@ -2207,9 +2207,9 @@ body.design-vexel[data-vexel-mode] .dash-more .integ-card {
   --info: #62b8f3;
   --warn-soft: rgba(255, 179, 71, 0.12);
   --warn-ink: #ffb347;
-  --line: rgba(255, 255, 255, 0.07);
-  --elev-1: 0 0 0 1px rgba(255, 255, 255, 0.02);
-  --elev-2: 0 0 0 1px rgba(255, 255, 255, 0.04), 0 0 40px -12px rgba(0, 255, 174, 0.18);
+  --line: rgba(255, 255, 255, 0.12);
+  --elev-1: 0 0 0 1px rgba(255, 255, 255, 0.08);
+  --elev-2: 0 0 0 1px rgba(255, 255, 255, 0.12), 0 0 40px -12px rgba(0, 255, 174, 0.18);
 
   --vx-page: #000000;
   --vx-transparent: transparent;
@@ -2217,10 +2217,10 @@ body.design-vexel[data-vexel-mode] .dash-more .integ-card {
   --vx-white-045: rgba(255, 255, 255, 0.045);
   --vx-text-ghost: rgba(255, 255, 255, 0.58);
   --vx-track: rgba(255, 255, 255, 0.09);
-  --vx-border-strong: rgba(255, 255, 255, 0.10);
-  --vx-card-hover-border: rgba(255, 255, 255, 0.14);
-  --vx-control-border-hover: rgba(255, 255, 255, 0.16);
-  --vx-peer: rgba(255, 255, 255, 0.20);
+  --vx-border-strong: rgba(255, 255, 255, 0.18);
+  --vx-card-hover-border: rgba(255, 255, 255, 0.25);
+  --vx-control-border-hover: rgba(255, 255, 255, 0.22);
+  --vx-peer: rgba(255, 255, 255, 0.24);
   --vx-hover-bg: rgba(255, 255, 255, 0.05);
   --vx-hero-bg: rgba(0, 0, 0, 0.34);
   --vx-shell-bg: rgba(0, 0, 0, 0.42);

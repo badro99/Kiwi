@@ -23,15 +23,15 @@ html[data-theme="dark"] {
   --ink: #F2F0EA;
   --ink-soft: #DDE1DE;
 
-  /* Neutrals invert */
+  /* Neutrals invert with clear contrast */
   --n-50: #0F1412;
-  --n-100: #1A1F1C;
-  --n-200: #252A27;
-  --n-300: #3A403C;
-  --n-400: #6B706D;
-  --n-500: #9EA3A0;
-  --n-600: #C6CBC8;
-  --n-700: #DDE2DF;
+  --n-100: #1E2522;
+  --n-200: #303733;
+  --n-300: #48514C;
+  --n-400: #747C78;
+  --n-500: #A2A9A5;
+  --n-600: #C9CECB;
+  --n-700: #DFE3E1;
   --n-800: #EEF2EF;
 
   /* Atlas green stays on brand but slightly brightened for contrast */
