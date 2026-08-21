@@ -474,70 +474,80 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     .screen-table.is-active { transform: translateX(0); }
 
     /* ===========================================================
-       PIN LOGIN SCREEN
+       PIN LOGIN SCREEN (Ultra-Refined Luxury Surface)
        =========================================================== */
-    /* L'écran d'accueil est le premier Kiwi que voit un serveur, et il était en
-       #FFFFFF pur — ce que la charte interdit explicitement pour un fond. Le
-       papier chaud remplace le blanc clinique ; le reste de l'app garde
-       --surface tant que ses écrans n'ont pas été revus un par un. */
     .screen-pin {
-      background: var(--paper);
+      background-color: var(--surface, #FAFAF7);
+      background-image:
+        radial-gradient(75% 55% at 50% 10%, rgba(12, 107, 78, 0.09), transparent 65%),
+        radial-gradient(60% 50% at 10% 90%, rgba(0, 255, 174, 0.08), transparent 60%),
+        radial-gradient(55% 50% at 90% 90%, rgba(12, 107, 78, 0.07), transparent 60%),
+        linear-gradient(180deg, #FAFBF8 0%, #EFF2EC 100%);
       color: var(--ink);
       align-items: center;
-      justify-content: space-between;
-      padding: 48px 28px 36px;
+      justify-content: center;
+      padding: 24px;
+      gap: 20px;
     }
+    :root[data-theme="dark"] .screen-pin,
+    body.theme-dark .screen-pin {
+      background-color: #04120D;
+      background-image:
+        radial-gradient(65% 50% at 50% 8%, rgba(0, 255, 174, 0.14), transparent 60%),
+        radial-gradient(70% 60% at 85% 92%, rgba(12, 107, 78, 0.32), transparent 60%),
+        radial-gradient(60% 55% at 12% 88%, rgba(4, 36, 26, 0.88), transparent 60%),
+        linear-gradient(165deg, #051811 0%, #020C08 100%);
+      color: #F5FAF7;
+    }
+
     .pin-top {
-      display: flex; flex-direction: column; align-items: center; gap: 14px;
+      display: flex; flex-direction: column; align-items: center; gap: 10px;
     }
     .pin-brand {
-      display: inline-flex; align-items: baseline; gap: 5px;
-      width: 116px;
+      display: inline-flex; align-items: center;
+      width: 110px;
       line-height: 0;
     }
     .pin-brand img { display: block; width: 100%; height: auto; }
-    /* Le mot-de-marque est en encre foncée : sur fond nuit il disparaît. La
-       variante inverse existe déjà (mot #F7F5F0, feuille #AAF0C1) et est déjà
-       dans la coquille hors-ligne — on ÉCHANGE les deux fichiers plutôt que de
-       filtrer : un `invert(1)` retournerait aussi le vert de la feuille.
-       Classes sans le mot « brand » : operator-access.js cible
-       `[class*="brand"]` avec closest(), qui remonte donc au conteneur —
-       l'appui long qui ouvre la console opérateur est préservé. */
-    /* Le basculement jour/nuit ne peut PAS vivre à (0,1,0). Les deux coques qui
-       portent le logo peignent leurs images via `.pin-brand img` et
-       `.ci-brand img` — (0,1,1) — qui l'emportent sur `.logo-night`. En plein
-       jour, le logo de nuit ne se cachait donc jamais : les deux marques se
-       chevauchaient sur le tout premier écran de l'app, et sur le pointage.
-       Rien ne le signalait — une image qui s'affiche n'est une faute pour
-       personne. `:root` porte la paire à (0,2,0)/(0,3,0), au-dessus de toute
-       règle `.conteneur img` à venir, sans recourir à !important. */
+
     :root .logo-night { display: none; }
     :root[data-theme="dark"] .logo-day { display: none; }
     :root[data-theme="dark"] .logo-night { display: block; }
     .pin-tagline {
-      font-family: var(--serif);
-      font-size: 14px;
-      color: var(--ink-3);
+      font-family: var(--mono, monospace);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--atlas, #0C6B4E);
+    }
+    :root[data-theme="dark"] .pin-tagline {
+      color: #00FFAE;
     }
     .pin-mid {
-      display: flex; flex-direction: column; align-items: center; gap: 16px;
+      display: flex; flex-direction: column; align-items: center; gap: 12px;
     }
     .pin-greeting {
-      font-size: 22px; font-weight: 600;
-      letter-spacing: -0.015em;
+      font-family: var(--sans);
+      font-size: 24px; font-weight: 700;
+      letter-spacing: -0.03em;
       text-align: center;
+      color: var(--ink);
     }
-    /* « ENTREZ VOTRE CODE » en capitales espacées, c'était du bruit visuel :
-       à 12px l'interlettrage casse la forme des mots et rien dans la hiérarchie
-       ne justifiait de crier. Une seule voix, casse normale. */
+    :root[data-theme="dark"] .pin-greeting {
+      color: #F5FAF7;
+    }
     .pin-hint {
       font-size: 13px;
-      color: var(--ink-3);
+      color: var(--ink-3, #777);
       letter-spacing: -0.005em;
+    }
+    :root[data-theme="dark"] .pin-hint {
+      color: rgba(255, 255, 255, 0.65);
     }
     .pin-dots {
       display: flex;
-      gap: 18px;
+      gap: 16px;
       margin-top: 4px;
     }
     .pin-dots.shake { animation: pin-shake 420ms cubic-bezier(0.36, 0.07, 0.19, 0.97); }
@@ -547,60 +557,82 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       40%, 80% { transform: translateX(8px); }
     }
     .pin-dot {
-      width: 16px;
-      height: 16px;
+      width: 18px;
+      height: 18px;
       border-radius: 50%;
-      border: 1.5px solid var(--line);
-      background: transparent;
-      transition: background 200ms ease, border-color 200ms ease, transform 200ms ease;
+      border: 2px solid var(--line, rgba(0,0,0,0.12));
+      background: rgba(0, 0, 0, 0.03);
+      transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    :root[data-theme="dark"] .pin-dot {
+      border-color: rgba(255, 255, 255, 0.18);
+      background: rgba(255, 255, 255, 0.04);
     }
     .pin-dot.is-filled {
-      background: var(--mint);
-      border-color: var(--mint);
-      transform: scale(1.05);
+      background: #0C6B4E;
+      border-color: #0C6B4E;
+      box-shadow: 0 0 0 4px rgba(12, 107, 78, 0.16), 0 4px 12px rgba(12, 107, 78, 0.25);
+      transform: scale(1.15);
     }
-    /* Success pop — fires left → right when the 4th digit lands.
-     * Mirrors the dashboard's PIN-success choreography on a smaller dot. */
+    :root[data-theme="dark"] .pin-dot.is-filled {
+      background: #00FFAE;
+      border-color: #00FFAE;
+      box-shadow: 0 0 0 4px rgba(0, 255, 174, 0.22), 0 0 16px rgba(0, 255, 174, 0.55);
+    }
     .pin-dot.is-success { animation: pin-success-pop 360ms cubic-bezier(0.32, 0.72, 0, 1) both; }
     @keyframes pin-success-pop {
-      0%   { transform: scale(1.05); background: var(--mint); border-color: var(--mint);
-             box-shadow: 0 0 0 0 rgba(125,242,176, 0.55); }
-      45%  { transform: scale(1.55); background: var(--mint); border-color: var(--mint);
-             box-shadow: 0 0 0 10px rgba(125,242,176, 0.35); }
-      100% { transform: scale(1.18); background: var(--mint); border-color: var(--mint);
-             box-shadow: 0 0 0 0 rgba(125,242,176, 0); }
+      0%   { transform: scale(1.15); }
+      45%  { transform: scale(1.6); }
+      100% { transform: scale(1.2); }
     }
     .pin-keypad {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: repeat(3, 72px);
       gap: 14px;
-      width: 100%;
-      max-width: 280px;
+      width: auto;
     }
-    /* Les touches étaient des disques #F4F4F2 sur fond blanc : gris sur blanc,
-       aucune matière, le clavier de verrouillage générique. Sur le papier chaud
-       elles deviennent des pastilles claires posées dessus — filet + ombre
-       courte — et l'appui prend enfin la couleur de la marque. */
     .pin-key {
-      aspect-ratio: 1;
+      width: 72px; height: 72px;
       border-radius: 50%;
-      background: var(--surface);
-      border: 1px solid var(--line-soft);
-      box-shadow: 0 1px 2px rgba(10, 15, 13, 0.05);
+      background: rgba(0, 0, 0, 0.035);
+      border: 1.5px solid rgba(0, 0, 0, 0.08);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
       color: var(--ink);
-      font-size: 24px; font-weight: 500;
+      font-size: 26px; font-weight: 600;
       font-variant-numeric: tabular-nums lining-nums;
       display: flex; align-items: center; justify-content: center;
-      transition: background 120ms ease, border-color 120ms ease,
-                  color 120ms ease, transform 80ms ease;
+      transition: all 160ms cubic-bezier(0.16, 1, 0.3, 1);
       letter-spacing: -0.01em;
+      cursor: pointer;
+    }
+    :root[data-theme="dark"] .pin-key {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1.5px solid rgba(255, 255, 255, 0.12);
+      color: #F5FAF7;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    }
+    .pin-key:hover {
+      background: rgba(0, 0, 0, 0.07);
+      border-color: #0C6B4E;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+    }
+    :root[data-theme="dark"] .pin-key:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(0, 255, 174, 0.35);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
     }
     .pin-key:active {
-      background: var(--forest);
-      border-color: var(--forest-edge);
-      color: var(--mint-tint);
-      box-shadow: none;
-      transform: scale(0.95);
+      transform: scale(0.92);
+      background: #E8F8F0;
+      border-color: #0C6B4E;
+      color: #0C6B4E;
+    }
+    :root[data-theme="dark"] .pin-key:active {
+      background: rgba(0, 255, 174, 0.22);
+      border-color: #00FFAE;
+      color: #00FFAE;
+      box-shadow: 0 0 20px rgba(0, 255, 174, 0.45);
     }
     .pin-key.pin-key-empty {
       background: transparent;
@@ -614,24 +646,30 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       box-shadow: none;
       color: var(--ink-3);
     }
-    .pin-key.pin-key-back svg {
-      width: 22px; height: 22px;
+    :root[data-theme="dark"] .pin-key.pin-key-back {
+      color: rgba(255, 255, 255, 0.65);
     }
-    .pin-key.pin-key-back:active {
-      background: var(--paper-mute);
-      border-color: var(--line-soft);
-      color: var(--ink);
+    .pin-key.pin-key-back:hover {
+      color: #0C6B4E;
+      background: rgba(12, 107, 78, 0.08);
     }
-    /* Le pied de page était en JetBrains Mono 10px capitales à 0.14em : une
-       phrase en français, pas une chaîne machine. Elle se lit en Inter Tight. */
+    :root[data-theme="dark"] .pin-key.pin-key-back:hover {
+      color: #00FFAE;
+      background: rgba(0, 255, 174, 0.10);
+    }
     .pin-foot {
-      font-size: 12px;
+      font-family: var(--mono, monospace);
+      font-size: 10.5px;
       line-height: 1.45;
-      letter-spacing: -0.005em;
-      color: var(--ink-4);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ink-4, #999);
       text-align: center;
-      margin-top: 14px;
-      max-width: 30ch;
+      margin-top: 10px;
+      max-width: 32ch;
+    }
+    :root[data-theme="dark"] .pin-foot {
+      color: rgba(255, 255, 255, 0.45);
     }
     .employee-login {
       display: none;

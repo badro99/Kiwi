@@ -2159,105 +2159,155 @@
     .split-close-btn:hover { background: var(--wash); }
 
     /* ===========================================================
-       PIN LOGIN SCREEN
+       PIN LOGIN SCREEN & PAIRING PAD (Ultra-Luxury Glassmorphic)
        =========================================================== */
     .pin-screen {
       position: fixed; inset: 0;
-      background: linear-gradient(180deg, var(--ink-bg) 0%, #102018 60%, #1F5D3C 100%);
+      background-color: #04120D;
+      background-image:
+        radial-gradient(65% 50% at 50% 8%, rgba(0, 255, 174, 0.14), transparent 60%),
+        radial-gradient(70% 60% at 85% 92%, rgba(12, 107, 78, 0.32), transparent 60%),
+        radial-gradient(60% 55% at 12% 88%, rgba(4, 36, 26, 0.88), transparent 60%),
+        linear-gradient(165deg, #051811 0%, #020C08 100%);
       z-index: 500;
       display: flex; align-items: center; justify-content: center;
-      flex-direction: column;
-      padding: 32px;
+      padding: 24px;
       color: #fff;
-      animation: pin-fade-in 400ms ease-out;
+      animation: pin-fade-in 400ms cubic-bezier(0.16, 1, 0.3, 1);
     }
     .pin-screen.is-leaving {
-      animation: pin-fade-out 480ms cubic-bezier(0.32, 0.72, 0, 1) forwards;
+      animation: pin-fade-out 480ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
     @keyframes pin-fade-in {
-      from { opacity: 0; transform: scale(1.02); }
-      to   { opacity: 1; transform: scale(1); }
+      from { opacity: 0; transform: scale(1.02); filter: blur(4px); }
+      to   { opacity: 1; transform: scale(1); filter: blur(0); }
     }
     @keyframes pin-fade-out {
       0%   { opacity: 1; transform: scale(1); filter: blur(0); }
-      100% { opacity: 0; transform: scale(0.98); filter: blur(6px); }
+      100% { opacity: 0; transform: scale(0.98); filter: blur(8px); }
     }
+
+    .pin-card {
+      display: flex; flex-direction: column; align-items: center;
+      width: 100%; max-width: 440px;
+      padding: 38px 36px 32px;
+      background: rgba(14, 30, 23, 0.82);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 28px;
+      box-shadow:
+        0 0 0 1px rgba(0, 255, 174, 0.08),
+        0 28px 72px -16px rgba(0, 0, 0, 0.75),
+        0 0 90px -25px rgba(0, 255, 174, 0.16);
+      backdrop-filter: blur(32px) saturate(1.4);
+      -webkit-backdrop-filter: blur(32px) saturate(1.4);
+      box-sizing: border-box;
+      transition: transform 300ms ease, box-shadow 300ms ease;
+    }
+
     .pin-brand {
       display: inline-flex; align-items: center;
-      margin-bottom: 36px;
+      margin-bottom: 20px;
     }
-    .pin-brand img { height: 56px; }
+    .pin-brand img { height: 36px; width: auto; }
     .pin-greet {
-      font-family: var(--serif);
-      font-size: 22px; color: rgba(255,255,255,.78);
+      font-family: var(--sans);
+      font-size: 24px; font-weight: 700;
+      letter-spacing: -0.03em;
+      color: #F5FAF7;
       margin-bottom: 6px;
       text-align: center;
     }
-    .pin-greet b { font-style: normal; font-family: var(--sans); font-weight: 600; color: #fff; }
+    .pin-greet b { font-style: normal; font-family: inherit; font-weight: 700; color: #F5FAF7; }
     .pin-prompt {
-      font-size: 13px; color: rgba(255,255,255,.55);
-      letter-spacing: 0.04em;
-      margin-bottom: 26px;
+      font-family: var(--mono);
+      font-size: 11px; font-weight: 600;
+      letter-spacing: 0.14em; text-transform: uppercase;
+      color: #00FFAE;
+      margin-bottom: 22px;
+      text-align: center;
     }
     .pin-dots {
-      display: flex; gap: 16px; margin-bottom: 32px;
+      display: flex; gap: 16px; margin-bottom: 26px;
     }
     .pin-dot {
-      width: 16px; height: 16px; border-radius: 50%;
-      border: 1.5px solid rgba(255,255,255,.35);
-      background: transparent;
-      transition: background 180ms, transform 200ms, border-color 180ms;
+      width: 18px; height: 18px; border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.18);
+      background: rgba(255, 255, 255, 0.04);
+      transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
     }
     .pin-dot.is-filled {
-      background: var(--mint);
-      border-color: var(--mint);
-      transform: scale(1.08);
+      background: #00FFAE;
+      border-color: #00FFAE;
+      box-shadow: 0 0 0 4px rgba(0, 255, 174, 0.22), 0 0 16px rgba(0, 255, 174, 0.55);
+      transform: scale(1.15);
     }
-    /* Success pop — fires left → right when the 4th digit lands.
-     * Adapted from the dashboard's kw-pin-success: scale-up + mint flash
-     * + outward glow ring that dissipates. */
     .pin-dot.is-success { animation: pin-success-pop 360ms cubic-bezier(0.32, 0.72, 0, 1) both; }
     @keyframes pin-success-pop {
-      0%   { transform: scale(1.08); background: var(--mint); border-color: var(--mint);
-             box-shadow: 0 0 0 0 rgba(125,242,176, 0.55); }
-      45%  { transform: scale(1.55); background: var(--mint); border-color: var(--mint);
-             box-shadow: 0 0 0 10px rgba(125,242,176, 0.35); }
-      100% { transform: scale(1.18); background: var(--mint); border-color: var(--mint);
-             box-shadow: 0 0 0 0 rgba(125,242,176, 0); }
+      0%   { transform: scale(1.15); background: #00FFAE; border-color: #00FFAE;
+             box-shadow: 0 0 0 0 rgba(0, 255, 174, 0.6); }
+      45%  { transform: scale(1.6); background: #00FFAE; border-color: #00FFAE;
+             box-shadow: 0 0 0 12px rgba(0, 255, 174, 0.4); }
+      100% { transform: scale(1.2); background: #00FFAE; border-color: #00FFAE;
+             box-shadow: 0 0 0 0 rgba(0, 255, 174, 0); }
     }
+    .pin-screen.is-error .pin-card { animation: pin-shake 400ms cubic-bezier(0.36, 0.07, 0.19, 0.97); }
     .pin-screen.is-error .pin-dots { animation: pin-shake 380ms cubic-bezier(0.36, 0.07, 0.19, 0.97); }
     @keyframes pin-shake {
       0%, 100% { transform: translateX(0); }
-      20%, 60% { transform: translateX(-7px); }
-      40%, 80% { transform: translateX(7px); }
+      20%, 60% { transform: translateX(-8px); }
+      40%, 80% { transform: translateX(8px); }
     }
     .pin-pad {
-      display: grid; grid-template-columns: repeat(3, 76px);
+      display: grid; grid-template-columns: repeat(3, 72px);
       gap: 14px;
     }
     .pin-key {
-      width: 76px; height: 76px; border-radius: 50%;
-      background: rgba(255,255,255,.07);
-      color: #fff;
-      font-size: 28px; font-weight: 500;
+      width: 72px; height: 72px; border-radius: 50%;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1.5px solid rgba(255, 255, 255, 0.12);
+      color: #F5FAF7;
+      font-family: var(--sans);
+      font-size: 26px; font-weight: 600;
       display: inline-flex; align-items: center; justify-content: center;
-      transition: background 140ms, transform 100ms;
+      transition: all 160ms cubic-bezier(0.16, 1, 0.3, 1);
       font-feature-settings: "tnum" 1;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
     }
-    .pin-key:hover { background: rgba(255,255,255,.13); }
-    .pin-key:active { transform: scale(0.94); background: rgba(125,242,176,.22); }
+    .pin-key:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(0, 255, 174, 0.35);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+    }
+    .pin-key:active {
+      transform: scale(0.92);
+      background: rgba(0, 255, 174, 0.22);
+      border-color: #00FFAE;
+      box-shadow: 0 0 20px rgba(0, 255, 174, 0.45);
+    }
     .pin-key.is-action {
       background: transparent;
-      font-size: 13px;
+      border-color: transparent;
+      box-shadow: none;
+      font-size: 15px; font-weight: 600;
       letter-spacing: 0.02em;
-      color: rgba(255,255,255,.55);
+      color: rgba(255, 255, 255, 0.65);
     }
     .pin-key.is-action svg { width: 22px; height: 22px; }
-    .pin-key.is-action:hover { color: #fff; background: rgba(255,255,255,.05); }
+    .pin-key.is-action:hover {
+      color: #00FFAE;
+      background: rgba(0, 255, 174, 0.10);
+      border-color: rgba(0, 255, 174, 0.25);
+    }
     .pin-foot {
-      margin-top: 28px;
-      font-size: 11px; color: rgba(255,255,255,.4);
-      letter-spacing: 0.06em; text-transform: uppercase;
+      margin-top: 22px;
+      font-family: var(--mono);
+      font-size: 10.5px;
+      color: rgba(255, 255, 255, 0.45);
+      letter-spacing: 0.10em; text-transform: uppercase;
+      text-align: center;
+      line-height: 1.5;
+    }
     }
 
     /* ===========================================================
@@ -4722,7 +4772,7 @@
        avec kiwi-cuisine.html, qui s'appaire sur la même route. -->
   <script src="assets/pairing-commit.js?v=1" defer></script>
   <!-- Hosted: 6-digit pairing pad binds this caisse to its store (no demo PINs). -->
-  <script src="assets/caisse-pairing.js?v=9" defer></script>
+  <script src="assets/caisse-pairing.js?v=10" defer></script>
   <!-- La copie serveur des données d'établissement (fidélité, carnet) : une
        caisse neuve doit retrouver le magasin, pas repartir vide. AVANT
        venue-store.js, qui s'y branche. -->
@@ -4808,37 +4858,39 @@
 <body>
   <!-- ============ PIN LOGIN SCREEN ============ -->
   <div class="pin-screen" id="pin-screen" role="dialog" aria-modal="true" aria-label="Code d'accès">
-    <div class="pin-brand" aria-label="Kiwi"><img src="assets/kiwi-newlogo-dark.svg" alt="" draggable="false"></div>
-    <div class="pin-greet">Bonjour, <b>Othmane</b></div>
-    <div class="pin-prompt">CODE D'ACCÈS · 4 CHIFFRES</div>
-    <div class="pin-dots" id="pin-dots" aria-hidden="true">
-      <span class="pin-dot"></span><span class="pin-dot"></span>
-      <span class="pin-dot"></span><span class="pin-dot"></span>
+    <div class="pin-card">
+      <div class="pin-brand" aria-label="Kiwi"><img src="assets/kiwi-newlogo-dark.svg" alt="" draggable="false"></div>
+      <div class="pin-greet">Bonjour, <b>Othmane</b></div>
+      <div class="pin-prompt">CODE D'ACCÈS · 4 CHIFFRES</div>
+      <div class="pin-dots" id="pin-dots" aria-hidden="true">
+        <span class="pin-dot"></span><span class="pin-dot"></span>
+        <span class="pin-dot"></span><span class="pin-dot"></span>
+      </div>
+      <div class="pin-pad" id="pin-pad">
+        <button class="pin-key" data-pin="1">1</button>
+        <button class="pin-key" data-pin="2">2</button>
+        <button class="pin-key" data-pin="3">3</button>
+        <button class="pin-key" data-pin="4">4</button>
+        <button class="pin-key" data-pin="5">5</button>
+        <button class="pin-key" data-pin="6">6</button>
+        <button class="pin-key" data-pin="7">7</button>
+        <button class="pin-key" data-pin="8">8</button>
+        <button class="pin-key" data-pin="9">9</button>
+        <button class="pin-key is-action" data-pin="forgot">SOS</button>
+        <button class="pin-key" data-pin="0">0</button>
+        <button class="pin-key is-action" data-pin="back" aria-label="Effacer">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 5H7l-5 7 5 7h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2z"/><line x1="18" y1="9" x2="12" y2="15"/><line x1="12" y1="9" x2="18" y2="15"/></svg>
+        </button>
+      </div>
+      <div class="pin-foot">Démo · 0001 cuisine · 0000–0016 métiers, toucher ici pour la liste · autre = caissier</div>
+      <!-- Escape hatch: merchant / operator on this PIN screen who wants to sign
+           in with a different account. /auth/logout clears kiwi_sess server-side
+           and lands on the login page. Plain <a> so it works even if JS is dead. -->
+      <a class="pin-switch" href="/auth/logout" aria-label="Se déconnecter et changer de compte" style="margin-top:14px;display:inline-flex;align-items:center;gap:5px;color:rgba(255,255,255,.42);font:11.5px/1 var(--sans);letter-spacing:.02em;padding:7px 12px;border-radius:8px;text-decoration:none;transition:color 140ms,background 140ms" onmouseover="this.style.color='rgba(255,255,255,.85)';this.style.background='rgba(255,255,255,.06)'" onmouseout="this.style.color='rgba(255,255,255,.42)';this.style.background='transparent'">
+        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Changer de compte
+      </a>
     </div>
-    <div class="pin-pad" id="pin-pad">
-      <button class="pin-key" data-pin="1">1</button>
-      <button class="pin-key" data-pin="2">2</button>
-      <button class="pin-key" data-pin="3">3</button>
-      <button class="pin-key" data-pin="4">4</button>
-      <button class="pin-key" data-pin="5">5</button>
-      <button class="pin-key" data-pin="6">6</button>
-      <button class="pin-key" data-pin="7">7</button>
-      <button class="pin-key" data-pin="8">8</button>
-      <button class="pin-key" data-pin="9">9</button>
-      <button class="pin-key is-action" data-pin="forgot">SOS</button>
-      <button class="pin-key" data-pin="0">0</button>
-      <button class="pin-key is-action" data-pin="back" aria-label="Effacer">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 5H7l-5 7 5 7h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2z"/><line x1="18" y1="9" x2="12" y2="15"/><line x1="12" y1="9" x2="18" y2="15"/></svg>
-      </button>
-    </div>
-    <div class="pin-foot">Démo · 0001 cuisine · 0000–0016 métiers, toucher ici pour la liste · autre = caissier</div>
-    <!-- Escape hatch: merchant / operator on this PIN screen who wants to sign
-         in with a different account. /auth/logout clears kiwi_sess server-side
-         and lands on the login page. Plain <a> so it works even if JS is dead. -->
-    <a class="pin-switch" href="/auth/logout" aria-label="Se déconnecter et changer de compte" style="margin-top:14px;display:inline-flex;align-items:center;gap:5px;color:rgba(255,255,255,.42);font:11.5px/1 var(--sans);letter-spacing:.02em;padding:7px 12px;border-radius:8px;text-decoration:none;transition:color 140ms,background 140ms" onmouseover="this.style.color='rgba(255,255,255,.85)';this.style.background='rgba(255,255,255,.06)'" onmouseout="this.style.color='rgba(255,255,255,.42)';this.style.background='transparent'">
-      <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-      Changer de compte
-    </a>
   </div>
 
   <!-- ============ CLOCK-IN SCREEN (post-PIN — ouverture de caisse) ============ -->
