@@ -118,10 +118,29 @@ Then publish `dist/*` as a GitHub Release and point the app's download links at 
   "Windows protected your PC" screen, click **More info → Run anyway** (the app is
   not yet code-signed). To auto-start at login: `Win+R` → `shell:startup` → drop a
   shortcut to the `.exe` there.
-- **macOS:** move it to Applications, then right-click → **Open** the first time
-  (Gatekeeper blocks unsigned apps on double-click). Add it to **Login Items** to
-  auto-start.
-- **Linux:** `chmod +x kiwi-printer-bridge-linux && ./kiwi-printer-bridge-linux`.
+- **macOS (Mac au comptoir) :**
+  1. Glissez `Kiwi Printer.app` dans `/Applications`.
+  2. Premier lancement : clic droit sur l'application → **Ouvrir**, ou dans **Réglages Système → Confidentialité et sécurité**, cliquez **Ouvrir quand même**.
+  3. **Empêcher la mise en veille :**
+     - Le pont doit rester éveillé pour relayer les impressions de l'iPad.
+     - Dans un terminal : `caffeinate -s &` (ou dans Réglages Système → Batterie / Écran : activer « Empêcher la suspension d'activité automatique lorsque l'écran s'éteint »).
+     - *Attention :* sur un MacBook sans écran externe branché, fermer le capot met l'ordinateur en veille. Laissez le capot ouvert.
+  4. **Démarrage automatique en service d'arrière-plan (LaunchAgent) :**
+     - Copiez le template LaunchAgent dans votre dossier utilisateur :
+       ```bash
+       cp bridge/com.kiwi.printer-bridge.plist ~/Library/LaunchAgents/
+       launchctl load -w ~/Library/LaunchAgents/com.kiwi.printer-bridge.plist
+       ```
+       *(ou lancez `bash bridge/install-macos.sh`)*
+     - Le pont démarre automatiquement à la connexion et se relance immédiatement (`KeepAlive`) en cas de coupure.
+- **Linux & Raspberry Pi (Box permanente ~500 MAD) :**
+  - Installez en une commande en service systemd persistant (`Restart=always`) :
+    ```bash
+    sudo bash bridge/install-linux.sh
+    # ou directement avec le code d'appairage à 6 chiffres :
+    sudo bash bridge/install-linux.sh --pair 123456
+    ```
+  - Le script installe le binaire dans `/usr/local/bin/kiwi-printer-bridge`, active le service systemd `kiwi-printer-bridge.service` et vérifie l'état sur `http://127.0.0.1:9110/`.
 
 ---
 

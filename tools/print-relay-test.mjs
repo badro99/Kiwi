@@ -317,6 +317,13 @@ if (DatabaseSync) {
   const srv = read('bridge/server.js');
   ok(/const VERSION = '1\.4\.0'/.test(srv) && /"version": "1\.4\.0"/.test(read('bridge/package.json')), 'C5 · bridge 1.4.0 (server.js et package.json d’accord)');
   ok(/const HOST = '127\.0\.0\.1'/.test(srv) && !/0\.0\.0\.0/.test(srv), 'C5 · le pont écoute toujours sur loopback uniquement — le relais est sortant');
+
+  const lin = read('bridge/install-linux.sh');
+  ok(/Restart=always/.test(lin) && /kiwi-printer-bridge\.service/.test(lin) && /--pair/.test(lin), 'C6 · install-linux.sh configure le service systemd avec Restart=always et --pair');
+  const macPlist = read('bridge/com.kiwi.printer-bridge.plist');
+  ok(/<key>KeepAlive<\/key>\s*<true\/>/.test(macPlist) && /<key>RunAtLoad<\/key>\s*<true\/>/.test(macPlist), 'C6 · com.kiwi.printer-bridge.plist active KeepAlive et RunAtLoad');
+  const macInstall = read('bridge/install-macos.sh');
+  ok(/LaunchAgents/.test(macInstall) && /launchctl/.test(macInstall), 'C6 · install-macos.sh installe et charge le LaunchAgent');
 }
 
 console.log('print-relay-test: ' + pass + ' contrôles' + (process.exitCode ? ' · ÉCHEC' : ' ✓'));
