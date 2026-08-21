@@ -1242,6 +1242,334 @@
       to   { transform: translateX(0);   opacity: 1; }
     }
 
+    .rp-head-actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .rp-expand-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 10px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--forest);
+      background: var(--mint-tint, rgba(11, 110, 79, 0.08));
+      border: 1px solid var(--mint-edge, rgba(11, 110, 79, 0.18));
+      cursor: pointer;
+      transition: all 150ms ease;
+    }
+    .rp-expand-btn:hover {
+      background: var(--forest);
+      color: #FFFFFF;
+      border-color: var(--forest);
+      transform: translateY(-1px);
+    }
+    .rp-expand-btn:active { transform: scale(0.96); }
+    .rp-expand-btn svg { width: 14px; height: 14px; }
+    html[data-caisse-theme="dark"] .rp-expand-btn {
+      color: var(--mint, #7DF2B0);
+      background: rgba(125, 242, 176, 0.12);
+      border-color: rgba(125, 242, 176, 0.25);
+    }
+    html[data-caisse-theme="dark"] .rp-expand-btn:hover {
+      background: var(--forest, #0B6E4F);
+      color: #FFFFFF;
+      border-color: var(--forest, #0B6E4F);
+    }
+
+    /* ---------- Full Order Review Modal ---------- */
+    .modal-order-review {
+      width: 720px;
+      max-width: calc(100vw - 32px);
+      max-height: calc(100vh - 48px);
+      display: flex;
+      flex-direction: column;
+      padding: 24px 26px 20px;
+      border-radius: 22px;
+      overflow: hidden;
+    }
+    html[data-caisse-theme="dark"] .modal-order-review {
+      background: #121915;
+      border-color: rgba(255, 255, 255, 0.12);
+    }
+    .or-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 14px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--line-soft);
+      flex-shrink: 0;
+    }
+    .or-head-info { flex: 1; min-width: 0; }
+    .or-modal-sub {
+      font-size: 13px;
+      color: var(--ink-3);
+      font-weight: 500;
+      margin-top: 3px;
+    }
+    .or-close {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--ink-3);
+      background: var(--paper-mute);
+      border: none;
+      cursor: pointer;
+      transition: all 150ms ease;
+    }
+    .or-close:hover {
+      background: var(--line);
+      color: var(--ink);
+    }
+    .or-close svg { width: 18px; height: 18px; }
+
+    .or-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px 2px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .or-body::-webkit-scrollbar { width: 5px; }
+    .or-body::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+
+    .or-items-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .or-item-card {
+      display: grid;
+      grid-template-columns: auto 1fr auto auto;
+      grid-gap: 12px 14px;
+      align-items: center;
+      padding: 14px 16px;
+      background: var(--paper-soft, rgba(0,0,0,0.02));
+      border: 1px solid var(--line-soft);
+      border-radius: 14px;
+      transition: background 150ms ease, border-color 150ms ease;
+    }
+    html[data-caisse-theme="dark"] .or-item-card {
+      background: rgba(255, 255, 255, 0.03);
+      border-color: rgba(255, 255, 255, 0.08);
+    }
+    .or-item-card:hover {
+      background: var(--surface-2, rgba(0,0,0,0.04));
+      border-color: rgba(11, 110, 79, 0.2);
+    }
+    .or-item-stepper {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface, #FFFFFF);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 3px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    html[data-caisse-theme="dark"] .or-item-stepper {
+      background: #1B2420;
+      border-color: rgba(255,255,255,0.14);
+    }
+    .or-stepper-btn {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      background: var(--paper-mute);
+      color: var(--ink);
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 120ms ease, transform 100ms ease;
+    }
+    .or-stepper-btn:hover { background: var(--mint-tint); color: var(--forest); }
+    .or-stepper-btn:active { transform: scale(0.92); }
+    .or-stepper-num {
+      min-width: 22px;
+      text-align: center;
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--ink);
+    }
+
+    .or-item-sent-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--forest);
+      background: var(--mint-tint);
+      padding: 4px 8px;
+      border-radius: 999px;
+    }
+    .or-item-sent-badge svg { width: 12px; height: 12px; }
+
+    .or-item-content {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 0;
+    }
+    .or-item-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--ink);
+      line-height: 1.25;
+    }
+    .or-item-opts-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-top: 2px;
+    }
+    .or-opt-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: var(--surface, #FFFFFF);
+      border: 1px solid var(--line-soft);
+      border-radius: 6px;
+      padding: 2px 7px;
+      font-size: 11.5px;
+      font-weight: 500;
+      color: var(--ink-2);
+    }
+    html[data-caisse-theme="dark"] .or-opt-pill {
+      background: rgba(255,255,255,0.06);
+      border-color: rgba(255,255,255,0.1);
+      color: rgba(255,255,255,0.8);
+    }
+    .or-item-note-box {
+      margin-top: 6px;
+      width: 100%;
+    }
+    .or-note-input {
+      width: 100%;
+      padding: 6px 10px;
+      border-radius: 8px;
+      border: 1px dashed var(--line);
+      background: transparent;
+      font-size: 12px;
+      color: var(--ink);
+      outline: none;
+      transition: border-color 150ms ease, background 150ms ease;
+    }
+    .or-note-input:focus {
+      border-style: solid;
+      border-color: var(--forest);
+      background: var(--surface, #FFFFFF);
+    }
+    html[data-caisse-theme="dark"] .or-note-input:focus {
+      background: #1B2420;
+    }
+
+    .or-item-price {
+      font-size: 15.5px;
+      font-weight: 700;
+      color: var(--ink);
+      font-feature-settings: "tnum" 1;
+      white-space: nowrap;
+      text-align: right;
+    }
+    .or-item-del-btn {
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      background: transparent;
+      color: var(--ink-4);
+      cursor: pointer;
+      transition: all 150ms ease;
+    }
+    .or-item-del-btn:hover {
+      background: rgba(205, 50, 50, 0.1);
+      color: #E03131;
+    }
+    .or-item-del-btn svg { width: 15px; height: 15px; }
+
+    .or-summary-box {
+      background: var(--paper-soft, rgba(0,0,0,0.025));
+      border: 1px solid var(--line-soft);
+      border-radius: 14px;
+      padding: 14px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      flex-shrink: 0;
+    }
+    html[data-caisse-theme="dark"] .or-summary-box {
+      background: rgba(255,255,255,0.02);
+      border-color: rgba(255,255,255,0.07);
+    }
+    .or-summary-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13.5px;
+      color: var(--ink-2);
+    }
+    .or-summary-row strong {
+      color: var(--ink);
+      font-weight: 600;
+    }
+    .or-tva-note {
+      font-size: 11px;
+      color: var(--ink-4);
+      margin: 2px 0;
+    }
+    .or-total-row {
+      padding-top: 8px;
+      border-top: 1px solid var(--line-soft);
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--ink);
+    }
+    .or-total-row strong {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--forest);
+      letter-spacing: -0.02em;
+    }
+    html[data-caisse-theme="dark"] .or-total-row strong {
+      color: var(--mint, #7DF2B0);
+    }
+
+    .or-foot {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding-top: 16px;
+      border-top: 1px solid var(--line-soft);
+      flex-shrink: 0;
+    }
+    .or-foot .ma-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      height: 46px;
+      border-radius: 12px;
+      font-size: 14.5px;
+      font-weight: 700;
+    }
+    .or-btn-pay { flex: 2; }
+
     .rp-head {
       padding: 18px 20px 14px;
       display: flex; align-items: flex-start; gap: 10px;
@@ -5405,13 +5733,19 @@
       <!-- active state -->
       <div class="rp-active" id="rp-active" hidden>
         <div class="rp-head">
-          <div class="rp-head-info">
+          <div class="rp-head-info" id="rp-head-info" role="button" tabindex="0" title="Cliquer pour voir le détail complet de la commande">
             <div class="rp-table" id="rp-table">T2 · 2 couverts</div>
             <div class="rp-substatus" id="rp-substatus" data-flag="bgha-ykhlass">Addition · 12 mn</div>
           </div>
-          <button class="rp-close" id="rp-close" aria-label="Fermer">
-            <i data-lucide="x"></i>
-          </button>
+          <div class="rp-head-actions">
+            <button class="rp-expand-btn" id="rp-expand-btn" type="button" title="Vérifier la commande complète avec détails" aria-label="Agrandir et voir le détail">
+              <i data-lucide="maximize-2"></i>
+              <span>Détails</span>
+            </button>
+            <button class="rp-close" id="rp-close" aria-label="Fermer">
+              <i data-lucide="x"></i>
+            </button>
+          </div>
         </div>
 
         <!-- Server assignment row -->
@@ -5541,6 +5875,58 @@
         </div>
       </div>
     </aside>
+  </div>
+
+  <!-- ============ FULL ORDER REVIEW MODAL ============ -->
+  <div class="modal-veil" id="order-review-modal" role="dialog" aria-modal="true" aria-labelledby="or-modal-title">
+    <div class="modal modal-order-review">
+      <div class="or-head">
+        <div class="or-head-info">
+          <div class="split-badge" id="or-modal-badge">Récapitulatif de commande</div>
+          <h3 class="modal-title" id="or-modal-title" style="margin: 4px 0 0 0;">À emporter</h3>
+          <div class="or-modal-sub" id="or-modal-sub">4 articles · 199 MAD</div>
+        </div>
+        <button class="modal-close or-close" id="or-modal-close" aria-label="Fermer">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <div class="or-body">
+        <div class="or-items-list" id="or-items-list"></div>
+
+        <div class="or-summary-box">
+          <div class="or-summary-row">
+            <span>Sous-total</span>
+            <strong class="mono" id="or-subtotal">0 MAD</strong>
+          </div>
+          <div class="or-summary-row" id="or-discount-row" hidden>
+            <span id="or-discount-lbl">Remise</span>
+            <strong class="mono" id="or-discount-val" style="color:var(--forest);">−0 MAD</strong>
+          </div>
+          <div class="or-summary-row">
+            <span>Service (0%)</span>
+            <strong class="mono">0 MAD</strong>
+          </div>
+          <div class="or-tva-note">TVA comprise dans les prix</div>
+          <div class="or-summary-row or-total-row">
+            <span>Total à payer</span>
+            <strong class="mono" id="or-total">0 MAD</strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="or-foot">
+        <button class="ma-btn secondary" id="or-btn-back" type="button">
+          <i data-lucide="arrow-left"></i> Retour
+        </button>
+        <button class="ma-btn primary or-btn-kitchen" id="or-btn-kitchen" type="button" hidden>
+          <i data-lucide="send"></i> Envoyer en cuisine
+        </button>
+        <button class="ma-btn primary or-btn-pay" id="or-btn-pay" type="button">
+          <i data-lucide="banknote"></i> <span id="or-pay-label">Encaisser 199 MAD</span>
+        </button>
+      </div>
+    </div>
   </div>
 
   <!-- ============ CLIENT / FIDÉLITÉ MODAL ============ -->
@@ -8834,6 +9220,210 @@
       if ((e.key === 'Enter' || e.key === ' ') && (a?.matches?.(TBL_SEL) || a?.matches?.('.menu-item'))) {
         e.preventDefault();
         a.click();
+      }
+    });
+
+    /* ---------- Full Order Review Modal ---------- */
+    function openOrderReviewModal() {
+      const modal = $('#order-review-modal');
+      if (!modal) return;
+      renderOrderReviewContent();
+      modal.classList.add('is-open');
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function closeOrderReviewModal() {
+      const modal = $('#order-review-modal');
+      if (modal) modal.classList.remove('is-open');
+    }
+
+    function renderOrderReviewContent() {
+      const isVrap = mode === 'vrap';
+      const order = isVrap ? cart : (tableOrders[selectedId] || []);
+      const t = (!isVrap && selectedId) ? tables[selectedId] : null;
+      const gross = order.reduce((s, l) => s + l.price * l.qty, 0);
+      const itemCount = order.reduce((s, l) => s + l.qty, 0);
+      const discAmt = isVrap ? vrapDiscountAmount(gross) : 0;
+      const net = Math.max(0, gross - discAmt);
+      const editing = isVrap && vrapEditingNum != null;
+
+      // Badges & Titles
+      const badge = $('#or-modal-badge');
+      if (badge) badge.textContent = isVrap ? (editing ? `Vente #${vrapEditingNum}` : 'À emporter') : `Table ${selectedId}`;
+      const title = $('#or-modal-title');
+      if (title) title.textContent = isVrap ? (editing ? `Commande #${vrapEditingNum}` : 'Vente à emporter') : (t ? `Table ${selectedId} · ${t.covers} couvert${t.covers > 1 ? 's' : ''}` : 'Commande');
+      const sub = $('#or-modal-sub');
+      if (sub) sub.textContent = `${itemCount} article${itemCount > 1 ? 's' : ''} · ${fmtMAD(net)}`;
+
+      const list = $('#or-items-list');
+      if (!list) return;
+
+      if (!order.length) {
+        list.innerHTML = `
+          <div style="text-align:center; padding:36px 16px; color:var(--ink-3);">
+            <i data-lucide="shopping-cart" style="width:36px;height:36px;margin:0 auto 10px;display:block;opacity:0.6;"></i>
+            <p style="margin:0; font-size:14px; font-weight:600;">Aucun article dans cette commande</p>
+          </div>`;
+      } else {
+        list.innerHTML = order.map((l) => {
+          const optList = (l.opts && l.opts.length) ? l.opts : [];
+          const optPills = optList.map(o => {
+            const extra = Number(o.price || o.extra || 0);
+            return `<span class="or-opt-pill">${kdsEsc(o.name || o.label || o)}${extra > 0 ? ` (+${fmtMAD(extra)})` : ''}</span>`;
+          }).join('');
+
+          return `
+            <div class="or-item-card" data-review-uid="${l.uid}">
+              <div class="or-item-stepper-col">
+                ${l.sent ? `
+                  <span class="or-item-sent-badge">
+                    ${KDS_SVG.check} En cuisine
+                  </span>
+                ` : `
+                  <div class="or-item-stepper">
+                    <button class="or-stepper-btn" data-review-action="dec" aria-label="Moins">−</button>
+                    <span class="or-stepper-num mono">${l.qty}</span>
+                    <button class="or-stepper-btn" data-review-action="inc" aria-label="Plus">+</button>
+                  </div>
+                `}
+              </div>
+              <div class="or-item-content">
+                <div class="or-item-title">${kdsEsc(l.name)}</div>
+                ${optPills ? `<div class="or-item-opts-row">${optPills}</div>` : ''}
+                <div class="or-item-note-box">
+                  <input class="or-note-input" data-review-note-uid="${l.uid}"
+                    value="${kdsEsc(l.note || '')}" placeholder="Note cuisine, ex. bien chaud, sans oignon…"
+                    aria-label="Note cuisine, ${kdsEsc(l.name)}" />
+                </div>
+              </div>
+              <div class="or-item-price mono">${fmtMAD(l.price * l.qty)}</div>
+              <div>
+                ${l.sent ? '' : `
+                  <button class="or-item-del-btn" data-review-action="del" title="Supprimer la ligne" aria-label="Supprimer">
+                    <i data-lucide="trash-2"></i>
+                  </button>
+                `}
+              </div>
+            </div>`;
+        }).join('');
+      }
+
+      // Summary lines
+      const subtotalEl = $('#or-subtotal');
+      if (subtotalEl) subtotalEl.textContent = fmtMAD(gross);
+      const discRow = $('#or-discount-row');
+      if (discRow) {
+        discRow.hidden = discAmt <= 0;
+        if (discAmt > 0) {
+          const discValEl = $('#or-discount-val');
+          if (discValEl) discValEl.textContent = `−${fmtMAD(discAmt)}`;
+          const discLblEl = $('#or-discount-lbl');
+          if (discLblEl) discLblEl.textContent = vrapDiscount && vrapDiscount.kind === 'pct' ? `Remise ${vrapDiscount.value} %` : 'Remise';
+        }
+      }
+      const totalEl = $('#or-total');
+      if (totalEl) totalEl.textContent = fmtMAD(net);
+
+      // Foot buttons
+      const btnKitchen = $('#or-btn-kitchen');
+      if (btnKitchen) {
+        const hasUnsent = isVrap ? !editing : order.some(l => !l.sent);
+        btnKitchen.hidden = !hasUnsent || order.length === 0;
+      }
+      const payLabel = $('#or-pay-label');
+      if (payLabel) payLabel.textContent = `Encaisser ${fmtMAD(net)}`;
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    /* Event delegation inside Order Review Modal */
+    document.addEventListener('click', (e) => {
+      // Open modal triggers
+      if (e.target.closest('#rp-expand-btn') || e.target.closest('#rp-head-info')) {
+        openOrderReviewModal();
+        return;
+      }
+      // Close modal triggers
+      if (e.target.closest('#or-modal-close') || e.target.closest('#or-btn-back')) {
+        closeOrderReviewModal();
+        return;
+      }
+
+      // Action inside review modal: stepper dec / inc
+      const stepBtn = e.target.closest('.or-stepper-btn');
+      if (stepBtn) {
+        const row = stepBtn.closest('[data-review-uid]');
+        if (!row) return;
+        const uid = row.dataset.reviewUid;
+        const d = stepBtn.dataset.reviewAction === 'inc' ? 1 : -1;
+        if (mode === 'vrap') {
+          changeCartLineQty(uid, d);
+        } else if (selectedId) {
+          changeTableOrderLineQty(selectedId, uid, d);
+        }
+        renderOrderReviewContent();
+        return;
+      }
+
+      // Action inside review modal: delete item line
+      const delBtn = e.target.closest('.or-item-del-btn');
+      if (delBtn) {
+        const row = delBtn.closest('[data-review-uid]');
+        if (!row) return;
+        const uid = row.dataset.reviewUid;
+        if (mode === 'vrap') {
+          cart = cart.filter(c => c.uid !== uid);
+          renderMenu();
+          renderCart();
+        } else if (selectedId && tableOrders[selectedId]) {
+          tableOrders[selectedId] = tableOrders[selectedId].filter(l => l.uid !== uid);
+          renderMenu();
+          renderOrderPanel(selectedId);
+        }
+        renderOrderReviewContent();
+        return;
+      }
+
+      // Kitchen dispatch from review modal
+      if (e.target.closest('#or-btn-kitchen')) {
+        closeOrderReviewModal();
+        if (mode === 'vrap') {
+          const btn = $('#rp-send-kitchen');
+          if (btn) btn.click();
+        } else if (selectedId) {
+          validateOrder(selectedId);
+        }
+        return;
+      }
+
+      // Pay button from review modal
+      if (e.target.closest('#or-btn-pay')) {
+        closeOrderReviewModal();
+        if (mode === 'vrap') {
+          const btn = $('#pay-charge');
+          if (btn) btn.click();
+        } else if (selectedId) {
+          const btn = mode === 'order' ? $('#pay-charge-order') : $('#pay-charge');
+          if (btn) btn.click();
+        }
+        return;
+      }
+    });
+
+    // Kitchen note inputs inside review modal
+    document.addEventListener('input', (e) => {
+      const inp = e.target.closest('.or-note-input');
+      if (!inp) return;
+      const uid = inp.dataset.reviewNoteUid;
+      const list = (mode === 'order' && selectedId) ? (tableOrders[selectedId] || []) : cart;
+      const line = list.find(l => l.uid === uid);
+      if (line) {
+        line.note = inp.value;
+        const sideInp = document.querySelector(`.rp-item-note[data-note-uid="${uid}"]`);
+        if (sideInp) {
+          sideInp.value = inp.value;
+          sideInp.classList.toggle('has-note', !!inp.value.trim());
+        }
       }
     });
 
