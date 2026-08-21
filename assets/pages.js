@@ -62,11 +62,14 @@
     const c = L[kind] || L.transactions;
     return drawer({
       title,
-      subtitle: '',
+      subtitle: "",
       width,
-      body: `<div data-real-empty="${pageEsc(kind)}" style="padding:48px 18px;text-align:center;">
-        <div style="font-size:15px;font-weight:600;color:var(--ink);">${pageEsc(c[0])}</div>
-        <div style="font-size:12.5px;color:var(--n-500);line-height:1.55;max-width:430px;margin:7px auto 0;">${pageEsc(c[1])}</div>
+      body: `<div data-real-empty="${pageEsc(kind)}" style="padding:48px 24px;text-align:center;display:flex;flex-direction:column;align-items:center;">
+        <div style="width:48px;height:48px;border-radius:14px;background:rgba(11,110,79,0.10);border:1px solid rgba(11,110,79,0.18);color:var(--atlas);display:grid;place-items:center;margin-bottom:16px;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </div>
+        <div style="font-size:16px;font-weight:600;color:var(--ink);letter-spacing:-0.015em;">${pageEsc(c[0])}</div>
+        <div style="font-size:13px;color:var(--n-500);line-height:1.55;max-width:420px;margin:8px auto 0;">${pageEsc(c[1])}</div>
       </div>`,
     });
   }
@@ -873,7 +876,9 @@
   .p-table .right { text-align: right; }
 
   /* Card row */
-  .p-card { background: var(--paper-soft); border: 1px solid var(--n-200); border-radius: 14px; padding: 18px; margin-bottom: 10px; }
+  .p-card { background: var(--paper-soft); border: 1px solid var(--n-200); border-radius: 14px; padding: 18px; margin-bottom: 10px; transition: transform 120ms var(--spring), border-color 140ms ease, box-shadow 140ms ease; }
+  .p-card:hover { border-color: var(--n-300); box-shadow: var(--elev-1); }
+  .p-card:focus-visible { outline: 2px solid var(--atlas); outline-offset: 2px; }
   .p-card .head { display: flex; justify-content: space-between; align-items: center; gap: 14px; margin-bottom: 10px; }
   .p-card .head h4 { margin: 0; font-size: 16px; font-weight: 600; letter-spacing: -0.015em; }
   .p-card .meta { font-family: var(--mono); font-size: 11px; color: var(--n-500); letter-spacing: 0.06em; }
