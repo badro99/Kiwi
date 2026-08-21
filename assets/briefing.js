@@ -596,14 +596,34 @@
     var c = line && line.copy || {};
     return String(c[lang(wanted)] || c.fr || c.en || '');
   }
-  function card() {
-    var el = document.querySelector('[data-briefing-card]');
-    if (el || !isReal()) return el;
+  /* Point d'ancrage de la carte. La peau Vexel (active par défaut) déplace
+   * .hero-today dans .vexel-revenue-row, une rangée flex à hauteur fixe
+   * (372 px) : y insérer la carte en troisième enfant comprimait le graphe et
+   * faisait déborder la colonne objectif/clients sur les cartes du dessous
+   * (tout le tableau de bord se chevauchait). Sous Vexel la carte prend donc
+   * sa propre rangée juste après la rangée revenus ; sinon elle suit le héros
+   * dans le flux normal de .dash-standard. Recalculé à chaque rendu : si la
+   * peau compose après nous, la carte est re-logée au prochain rendu. */
+  function anchor() {
     var hero = document.querySelector('.hero-today');
     if (!hero || !hero.parentNode) return null;
-    el = document.createElement('section');
-    el.className = 'briefing-card block'; el.setAttribute('data-briefing-card', '');
-    hero.parentNode.insertBefore(el, hero.nextSibling);
+    var row = hero.closest('.vexel-revenue-row');
+    if (row && row.parentNode) return { parent: row.parentNode, before: row.nextSibling };
+    return { parent: hero.parentNode, before: hero.nextSibling };
+  }
+  function place(el) {
+    var at = anchor(); if (!at) return false;
+    if (el.parentNode !== at.parent || el.nextSibling !== at.before) at.parent.insertBefore(el, at.before);
+    return true;
+  }
+  function card() {
+    var el = document.querySelector('[data-briefing-card]');
+    if (!el && !isReal()) return null;
+    if (!el) {
+      el = document.createElement('section');
+      el.className = 'briefing-card block'; el.setAttribute('data-briefing-card', '');
+    }
+    if (!place(el)) return el.parentNode ? el : null;
     return el;
   }
   function installStyle() {
@@ -679,7 +699,7 @@
   window.KiwiBriefing = {
     canHandle: canHandle, reply: reply, compute: function () { return compute(); }, lines: activeLines,
     dismiss: function (id) { return setState(id, 'dismissed'); }, handled: function (id) { return setState(id, 'handled'); },
-    _test: { businessDay: businessDay, scopeKey: scopeKey, normalizeLine: normalizeLine, visibleLines: visibleLines, salesDropRule: salesDropRule, lowStockRule: lowStockRule, marginErosionRule: marginErosionRule, planningGapRule: planningGapRule, cancellationRateRule: cancellationRateRule, discountShareRule: discountShareRule, cashGapRule: cashGapRule, lateOrdersRule: lateOrdersRule, stockItems: stockItems, proposeLine: proposeLine, openPlanning: openPlanning, salesRows: salesRows, dayBoundsAt: dayBoundsAt, compute: compute, read: function () { return clone(doc); }, write: writeLocal }
+    _test: { businessDay: businessDay, scopeKey: scopeKey, normalizeLine: normalizeLine, visibleLines: visibleLines, salesDropRule: salesDropRule, lowStockRule: lowStockRule, marginErosionRule: marginErosionRule, planningGapRule: planningGapRule, cancellationRateRule: cancellationRateRule, discountShareRule: discountShareRule, cashGapRule: cashGapRule, lateOrdersRule: lateOrdersRule, stockItems: stockItems, proposeLine: proposeLine, openPlanning: openPlanning, salesRows: salesRows, dayBoundsAt: dayBoundsAt, compute: compute, anchor: anchor, place: place, card: card, read: function () { return clone(doc); }, write: writeLocal }
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true }); else boot();
 }());

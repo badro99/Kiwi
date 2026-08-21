@@ -922,6 +922,7 @@ section('Whole-project regressions');
     'briefing-discounts-test.mjs',
     'briefing-cash-sessions-test.mjs',
     'briefing-late-orders-test.mjs',
+    'briefing-card-placement-test.mjs',
     'action-center-loop-test.mjs',
     'err-reporter-silence-test.mjs',
     'depenses-demo-gate-test.mjs',
