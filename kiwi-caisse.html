@@ -482,9 +482,10 @@
       color: #9aa09b;
       text-align: center; line-height: 1.25;
       min-height: 76px;
+      cursor: pointer;
       transition: background 200ms ease, color 200ms ease, transform 150ms ease, border-color 200ms ease;
     }
-    .act-pill svg { width: 22px; height: 22px; flex: 0 0 22px; fill: currentColor; }
+    .act-pill svg { width: 22px; height: 22px; flex: 0 0 22px; }
     .act-pill:hover {
       background: rgba(255,255,255,0.06);
       border-color: rgba(255,255,255,0.16);
@@ -492,14 +493,6 @@
       transform: translateY(-1px);
     }
     .act-pill:active { transform: scale(0.97); }
-    /* Une 4e tuile injectée (Clients & fidélité, pont growth-crm) resterait
-       orpheline dans la grille 3 colonnes — on l'étire en rangée pleine largeur. */
-    .act-selector .act-pill:nth-child(4) {
-      grid-column: 1 / -1;
-      flex-direction: row; justify-content: flex-start; gap: 10px;
-      min-height: 0; padding: 11px 12px;
-      font-size: 12px; text-align: left;
-    }
 
     .rail-links { display: flex; flex-direction: column; gap: 6px; }
 
@@ -5471,20 +5464,28 @@
 
       <div class="act-selector" aria-label="Actions caisse">
         <button class="act-pill" data-action="remboursement">
-          <svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M320-200q-17 0-28.5-11.5T280-240q0-17 11.5-28.5T320-280h244q63 0 109.5-40T720-420q0-60-46.5-100T564-560H312l76 76q11 11 11 28t-11 28q-11 11-28 11t-28-11L188-572q-6-6-8.5-13t-2.5-15q0-8 2.5-15t8.5-13l144-144q11-11 28-11t28 11q11 11 11 28t-11 28l-76 76h252q97 0 166.5 63T800-420q0 94-69.5 157T564-200H320Z"/></svg>
+          <svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M320-200q-17 0-28.5-11.5T280-240q0-17 11.5-28.5T320-280h244q63 0 109.5-40T720-420q0-60-46.5-100T564-560H312l76 76q11 11 11 28t-11 28q-11 11-28 11t-28-11L188-572q-6-6-8.5-13t-2.5-15q0-8 2.5-15t8.5-13l144-144q11-11 28-11t28 11q11 11 11 28t-11 28l-76 76h252q97 0 166.5 63T800-420q0 94-69.5 157T564-200H320Z"/></svg>
           <span>Remboursement</span>
         </button>
         <button class="act-pill" data-action="cash-move">
-          <svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M331.5-451.5Q320-463 320-480v-247l-75 75q-11 11-27.5 11T189-652q-12-12-12-28.5t12-28.5l143-143q6-6 13-8.5t15-2.5q8 0 15 2.5t13 8.5l144 144q12 12 11.5 28T531-652q-12 11-28 11.5T475-652l-75-75v247q0 17-11.5 28.5T360-440q-17 0-28.5-11.5ZM585-99.5q-7-2.5-13-8.5L428-252q-12-12-11.5-28t12.5-28q12-11 28-11.5t28 11.5l75 75v-247q0-17 11.5-28.5T600-520q17 0 28.5 11.5T640-480v247l75-75q11-11 27.5-11t28.5 11q12 12 12 28.5T771-251L628-108q-6 6-13 8.5T600-97q-8 0-15-2.5Z"/></svg>
+          <svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M331.5-451.5Q320-463 320-480v-247l-75 75q-11 11-27.5 11T189-652q-12-12-12-28.5t12-28.5l143-143q6-6 13-8.5t15-2.5q8 0 15 2.5t13 8.5l144 144q12 12 11.5 28T531-652q-12 11-28 11.5T475-652l-75-75v247q0 17-11.5 28.5T360-440q-17 0-28.5-11.5ZM585-99.5q-7-2.5-13-8.5L428-252q-12-12-11.5-28t12.5-28q12-11 28-11.5t28 11.5l75 75v-247q0-17 11.5-28.5T600-520q17 0 28.5 11.5T640-480v247l75-75q11-11 27.5-11t28.5 11q12 12 12 28.5T771-251L628-108q-6 6-13 8.5T600-97q-8 0-15-2.5Z"/></svg>
           <span>Mouvement caisse</span>
         </button>
         <button class="act-pill" data-action="passation">
-          <svg viewBox="0 -960 960 960" aria-hidden="true"><path d="m233-280 76 76q12 12 11.5 28T308-148q-12 11-28 11.5T252-148L108-292q-6-6-8.5-13T97-320q0-8 2.5-15t8.5-13l144-144q11-11 27.5-11t28.5 11q12 12 12 28.5T308-435l-75 75h567q17 0 28.5 11.5T840-320q0 17-11.5 28.5T800-280H233Zm494-320H160q-17 0-28.5-11.5T120-640q0-17 11.5-28.5T160-680h567l-76-76q-12-12-11.5-28t12.5-28q12-11 28-11.5t28 11.5l144 144q6 6 8.5 13t2.5 15q0 8-2.5 15t-8.5 13L708-468q-11 11-27.5 11T652-468q-12-12-12-28.5t12-28.5l75-75Z"/></svg>
+          <svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="m233-280 76 76q12 12 11.5 28T308-148q-12 11-28 11.5T252-148L108-292q-6-6-8.5-13T97-320q0-8 2.5-15t8.5-13l144-144q11-11 27.5-11t28.5 11q12 12 12 28.5T308-435l-75 75h567q17 0 28.5 11.5T840-320q0 17-11.5 28.5T800-280H233Zm494-320H160q-17 0-28.5-11.5T120-640q0-17 11.5-28.5T160-680h567l-76-76q-12-12-11.5-28t12.5-28q12-11 28-11.5t28 11.5l144 144q6 6 8.5 13t2.5 15q0 8-2.5 15t-8.5 13L708-468q-11 11-27.5 11T652-468q-12-12-12-28.5t12-28.5l75-75Z"/></svg>
           <span>Passation caisse</span>
         </button>
-        <button class="act-pill" data-action="open-drawer">
-          <svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M280-640q-33 0-56.5-23.5T200-720v-80q0-33 23.5-56.5T280-880h400q33 0 56.5 23.5T760-800v80q0 33-23.5 56.5T680-640H280Zm40-80h320q16 0 22.5-14.5T680-760q0-17-11.5-28.5T640-800H320q-17 0-28.5 11.5T280-760q11 11 17.5 25.5T320-720ZM160-80q-33 0-56.5-23.5T80-160v-40h800v40q0 33-23.5 56.5T800-80H160ZM80-240l139-313q10-22 30-34.5t43-12.5h376q23 0 43 12.5t30 34.5l139 313H80Zm260-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm120 160h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm120 160h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Z"/></svg>
-          <span>Ouvrir le tiroir</span>
+        <button class="act-pill" data-action="clients" data-kcb-navitem="1">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/><path d="M14.5 9.5 12 12l-1.5-1.5"/></svg>
+          <span>Clients &amp; fidélité</span>
+        </button>
+        <button class="act-pill" data-action="attendance-code">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m12 11 8-8m-4 0h4v4m-3 1 2 2"/></svg>
+          <span>Code pointage</span>
+        </button>
+        <button class="act-pill" data-action="stock">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+          <span>Stock</span>
         </button>
       </div>
 
@@ -5539,6 +5540,10 @@
       </div>
 
       <div class="quick-actions" aria-label="Fin de service">
+        <button class="qa-btn ghost" data-action="open-drawer" title="Ouvrir le tiroir caisse" aria-label="Ouvrir le tiroir caisse">
+          <svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true" style="width:15px;height:15px;"><path d="M280-640q-33 0-56.5-23.5T200-720v-80q0-33 23.5-56.5T280-880h400q33 0 56.5 23.5T760-800v80q0 33-23.5 56.5T680-640H280Zm40-80h320q16 0 22.5-14.5T680-760q0-17-11.5-28.5T640-800H320q-17 0-28.5 11.5T280-760q11 11 17.5 25.5T320-720ZM160-80q-33 0-56.5-23.5T80-160v-40h800v40q0 33-23.5 56.5T800-80H160ZM80-240l139-313q10-22 30-34.5t43-12.5h376q23 0 43 12.5t30 34.5l139 313H80Zm260-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm120 160h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm120 160h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Z"/></svg>
+          <span>Ouvrir le tiroir</span>
+        </button>
         <!-- Mode nuit — même stage charbon que le dashboard 2026. Icône et
              libellé repeints par le script de thème dans <head>. -->
         <button id="theme-toggle" type="button" class="qa-btn ghost" title="Basculer le mode nuit" aria-label="Basculer le mode nuit" aria-pressed="false">
@@ -9567,7 +9572,7 @@
       });
     });
 
-    $$('.qa-btn, .act-pill').forEach(btn => {
+    $('.qa-btn, .act-pill').forEach(btn => {
       btn.addEventListener('click', () => {
         const a = btn.dataset.action;
         if (a === 'remboursement')   openRefund();
@@ -9575,6 +9580,13 @@
         else if (a === 'cash-move')  openCashMove();
         else if (a === 'passation')  openHandover();
         else if (a === 'fin-service') openCloture();
+        else if (a === 'attendance-code') openAttendanceCode();
+        else if (a === 'stock') openStock();
+        else if (a === 'clients') {
+          if (window.KiwiClientsBook && typeof window.KiwiClientsBook.open === 'function') {
+            window.KiwiClientsBook.open(btn);
+          }
+        }
       });
     });
 
