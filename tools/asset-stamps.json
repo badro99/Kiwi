@@ -52,8 +52,8 @@
     "sha": "7332c4414f0ffae1"
   },
   "assets/briefing.js": {
-    "v": "8",
-    "sha": "06009a4acf37c73a"
+    "v": "9",
+    "sha": "89f6d39c1e101a94"
   },
   "assets/caisse-attendance-code.js": {
     "v": "2",
@@ -90,6 +90,10 @@
   "assets/caisse-stock-sync.js": {
     "v": "8",
     "sha": "89545c5e4556f0c1"
+  },
+  "assets/cancellation-history.js": {
+    "v": "2",
+    "sha": "66f56a67823580af"
   },
   "assets/catalog-import.js": {
     "v": "2",

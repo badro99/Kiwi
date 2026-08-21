@@ -10,7 +10,7 @@
   var FEATURE = 'briefing';
   var PREFIX = 'kiwi:briefing:v1:';
   var MAX_DAYS = 45;
-  var RULES = [salesDropRule, lowStockRule, marginErosionRule, planningGapRule];
+  var RULES = [salesDropRule, lowStockRule, marginErosionRule, planningGapRule, cancellationRateRule];
   var doc = { days: [] };
   var cloud = null;
 
@@ -347,6 +347,47 @@
       action: { name: 'open-planning', args: {}, summary: 'Ouvrir le planning' }
     };
   }
+  function cancellationRateRule(input) {
+    input = input || {};
+    var current = input.current, baselineRates = input.baselineRates, day = input.day;
+    if (!current || !Array.isArray(baselineRates)) {
+      var H = window.KiwiCancellationHistory, D = window.KiwiDayReport;
+      if (!H || typeof H.ready !== 'function' || !H.ready() || typeof H.list !== 'function'
+        || !D || typeof D.lastClosedDay !== 'function' || typeof D.dayBounds !== 'function' || typeof D.shiftDay !== 'function') return null;
+      var events, rows;
+      try { events = H.list(); rows = salesRows(); day = D.lastClosedDay(); } catch (_) { return null; }
+      if (!Array.isArray(events) || !Array.isArray(rows)) return null;
+      var stats = function (targetDay) {
+        var bounds = D.dayBounds(targetDay);
+        var cancelled = events.filter(function (event) { return +event.voidedAt >= bounds.from && +event.voidedAt < bounds.to; });
+        var active = rows.filter(function (sale) { return +sale.ts >= bounds.from && +sale.ts < bounds.to; }).length;
+        var reasons = Object.create(null);
+        cancelled.forEach(function (event) { var key = String(event.reason || 'non-renseigne'); reasons[key] = (reasons[key] || 0) + 1; });
+        return { cancellations: cancelled.length, total: active + cancelled.length, reasons: reasons };
+      };
+      current = stats(day); baselineRates = [];
+      for (var i = 1; i <= 4; i += 1) {
+        var comparable = stats(D.shiftDay(day, -7 * i));
+        if (comparable.total > 0) baselineRates.push((comparable.cancellations / comparable.total) * 100);
+      }
+    }
+    if (!current || baselineRates.length < 3 || !(current.total > 0) || current.cancellations < 2) return null;
+    var currentRate = (current.cancellations / current.total) * 100;
+    var baseline = median(baselineRates);
+    if (!Number.isFinite(baseline) || currentRate < 5 || currentRate < Math.max(5, baseline * 2)) return null;
+    var reasonRows = Object.keys(current.reasons || {}).map(function (key) { return { key: key, count: +current.reasons[key] || 0 }; }).sort(function (a, b) { return b.count - a.count; });
+    var top = reasonRows[0] || { key: 'non-renseigne', count: current.cancellations };
+    var rate = Math.round(currentRate * 10) / 10, base = Math.round(baseline * 10) / 10;
+    return {
+      id: 'cancellation-rate:' + String(day || 'day'), kind: 'cancellation-rate', tone: 'warn', roles: ['owner', 'manager'],
+      copy: {
+        fr: 'Annulations à ' + rate + ' % contre ' + base + ' % habituellement. Motif principal : ' + top.key + ' (' + top.count + '). Seuil : au moins 5 % et 2× la référence.',
+        en: 'Cancellations are ' + rate + '% versus a usual ' + base + '%. Main reason: ' + top.key + ' (' + top.count + '). Threshold: at least 5% and 2× baseline.',
+        ar: 'بلغت الإلغاءات ' + rate + '٪ مقابل ' + base + '٪ عادةً. السبب الرئيسي: ' + top.key + ' (' + top.count + '). العتبة: 5٪ على الأقل وضعف المرجع.'
+      },
+      evidence: { count: current.cancellations, window: String(day || '') + ' · 4 mêmes jours de semaine', source: 'sale_void_history + KiwiSales.list' }
+    };
+  }
   function visibleLines(lines, role) {
     role = role || tier();
     return (Array.isArray(lines) ? lines : []).filter(function (line) {
@@ -482,6 +523,7 @@
     Promise.resolve(cloud && cloud.bind ? cloud.bind() : false).catch(function () {}).then(function () { compute(); injectAssistantEntry(); });
     try { if (window.KiwiVenue && window.KiwiVenue.subscribe) window.KiwiVenue.subscribe(function () { doc = readLocal(); attachCloud(); compute(); }); } catch (_) {}
     window.addEventListener('kiwi:langchange', function () { render(); injectAssistantEntry(); });
+    window.addEventListener('kiwi:cancellation-history', function () { compute(); });
     document.addEventListener('kiwi:live-backfill-complete', function (event) {
       if (!event.detail || event.detail.merchant === slug()) compute();
     });
@@ -498,7 +540,7 @@
   window.KiwiBriefing = {
     canHandle: canHandle, reply: reply, compute: function () { return compute(); }, lines: activeLines,
     dismiss: function (id) { return setState(id, 'dismissed'); }, handled: function (id) { return setState(id, 'handled'); },
-    _test: { businessDay: businessDay, scopeKey: scopeKey, normalizeLine: normalizeLine, visibleLines: visibleLines, salesDropRule: salesDropRule, lowStockRule: lowStockRule, marginErosionRule: marginErosionRule, planningGapRule: planningGapRule, stockItems: stockItems, proposeLine: proposeLine, openPlanning: openPlanning, salesRows: salesRows, dayBoundsAt: dayBoundsAt, compute: compute, read: function () { return clone(doc); }, write: writeLocal }
+    _test: { businessDay: businessDay, scopeKey: scopeKey, normalizeLine: normalizeLine, visibleLines: visibleLines, salesDropRule: salesDropRule, lowStockRule: lowStockRule, marginErosionRule: marginErosionRule, planningGapRule: planningGapRule, cancellationRateRule: cancellationRateRule, stockItems: stockItems, proposeLine: proposeLine, openPlanning: openPlanning, salesRows: salesRows, dayBoundsAt: dayBoundsAt, compute: compute, read: function () { return clone(doc); }, write: writeLocal }
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true }); else boot();
 }());

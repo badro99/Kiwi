@@ -49,3 +49,35 @@ faits minimaux soient durables et atteignent le dashboard.
 - Les regles sont deterministes et testables; le modele explique, il ne fabrique pas le signal.
 - Les couts, l'equipe, les actions AI et les futurs registres de caisse restent soumis aux redactions et refus d'ecriture des surfaces non autorisees.
 - Aucun detector ne declenche une operation. Toute mutation passe par l'Action Center, la confirmation, les permissions serveur et la piste d'audit existantes.
+## Phase 1d-a · historique durable des annulations
+
+- Surface émettrice : `POST /api/sale/cancel`, appelée par la caisse depuis la
+  réimpression et par le dashboard propriétaire. La caisse envoie uniquement
+  `{merchant,id,source,pin,reason}` ; le PIN sert à l'autorisation existante et
+  n'entre jamais dans l'historique. `actorId` vient de l'identité vérifiée côté
+  serveur. `ref` et `amountCents` viennent de la vente D1, jamais du client.
+- Fait durable : `{id,merchant,saleId,ref,voidedAt,reason,actorId,amountCents}`
+  dans `sale_void_history`. Toutes les lectures filtrent `merchant`; aucune API
+  de modification ou suppression n'est exposée.
+- Panne backend / migration : l'état `sales.void_*` et le flux `{c,r}` restent
+  la réconciliation canonique. L'écriture analytique est fail-soft après le
+  marquage de la vente : son échec n'annule pas la décision et ne bloque jamais
+  un encaissement. Le dashboard omet simplement le signal sans faits durables.
+- Migration D1 additive appliquée à `kiwi-sales` après inspection de
+  `sqlite_master` (aucune ligne commerçant lue) :
+
+```sql
+CREATE TABLE IF NOT EXISTS sale_void_history (
+  id TEXT PRIMARY KEY,
+  merchant TEXT NOT NULL,
+  sale_id TEXT NOT NULL,
+  ref TEXT NOT NULL DEFAULT '',
+  voided_ts INTEGER NOT NULL,
+  reason TEXT NOT NULL,
+  actor_id TEXT NOT NULL,
+  amount_cents INTEGER NOT NULL CHECK (amount_cents >= 0),
+  UNIQUE (merchant, sale_id)
+);
+CREATE INDEX IF NOT EXISTS idx_sale_void_history_merchant_ts
+  ON sale_void_history (merchant, voided_ts);
+```

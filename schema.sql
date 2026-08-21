@@ -1037,3 +1037,19 @@ CREATE TABLE IF NOT EXISTS sale_invoices (
   UNIQUE (merchant, seq)
 );
 CREATE INDEX IF NOT EXISTS idx_sale_invoices_merchant_seq ON sale_invoices (merchant, seq);
+-- Phase AI 1d-a: durable, append-only sale cancellation facts. The actor is an
+-- account/team id, never a PIN or operator code. `sales.void_*` remains the
+-- mutable reconciliation state consumed by /api/feed.
+CREATE TABLE IF NOT EXISTS sale_void_history (
+  id TEXT PRIMARY KEY,
+  merchant TEXT NOT NULL,
+  sale_id TEXT NOT NULL,
+  ref TEXT NOT NULL DEFAULT '',
+  voided_ts INTEGER NOT NULL,
+  reason TEXT NOT NULL,
+  actor_id TEXT NOT NULL,
+  amount_cents INTEGER NOT NULL CHECK (amount_cents >= 0),
+  UNIQUE (merchant, sale_id)
+);
+CREATE INDEX IF NOT EXISTS idx_sale_void_history_merchant_ts
+  ON sale_void_history (merchant, voided_ts);

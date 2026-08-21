@@ -5,7 +5,7 @@
 // revenue surface drops it, while sale_audit keeps the complete trail.
 // GET  — the signed-in owner reads those cancellations for the Ventes page.
 
-import { entitledMerchant, isTillFor, json, operatorActor, verifyStaffPin } from '../../auth/_lib.js';
+import { entitledMerchant, isTillFor, json, operatorActor, readCookie, readSession, SESS_COOKIE, verifyStaffPin } from '../../auth/_lib.js';
 
 const MANAGER_ROLES = new Set([
   'manager', 'owner', 'proprietaire', 'proprietary', 'admin', 'administrateur',
@@ -15,6 +15,20 @@ const MANAGER_ROLES = new Set([
 function normalizedRole(role) {
   return String(role || '').toLowerCase().normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
+function boundedReason(value, fallback) {
+  const reason = String(value || '').toLowerCase().trim().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
+  return reason || fallback;
+}
+
+async function dashboardActorId(request, env) {
+  const op = await operatorActor(request, env);
+  if (op && op.id) return `operator:${String(op.id).slice(0, 80)}`;
+  try {
+    const session = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET);
+    return session && session.aid ? `account:${String(session.aid).slice(0, 80)}` : '';
+  } catch (_) { return ''; }
 }
 
 function isManagerRole(role) {
@@ -48,6 +62,20 @@ export async function onRequestGet({ request, env }) {
   const merchant = await entitledMerchant(request, env, asked);
   if (!merchant) return json({ error: 'forbidden-merchant' }, 403);
   const from = Math.max(0, Number(url.searchParams.get('from')) || 0);
+  if (url.searchParams.get('history') === '1') {
+    try {
+      const rs = await env.DB.prepare(
+        `SELECT id, sale_id AS saleId, ref, voided_ts AS voidedAt, reason,
+                actor_id AS actorId, amount_cents AS amountCents
+           FROM sale_void_history
+          WHERE merchant = ? AND voided_ts >= ?
+          ORDER BY voided_ts DESC LIMIT 500`
+      ).bind(merchant, from).all();
+      return json({ merchant, events: (rs && rs.results) || [] });
+    } catch (_) {
+      return json({ merchant, events: [], unavailable: true });
+    }
+  }
   try {
     const rs = await env.DB.prepare(
       `SELECT a.sale_id AS id, a.actor, a.actor_id, a.amount, a.amount_cents, a.method, a.ref,
@@ -116,7 +144,7 @@ export async function onRequestPost({ request, env }) {
     }
     const op = await operatorActor(request, env);
     actor = String((op && op.label) || 'propriétaire').slice(0, 80);
-    actorId = String((op && op.id) || '').slice(0, 80);
+    actorId = await dashboardActorId(request, env);
     actorRole = 'dashboard-owner';
     reason = 'dashboard-cancel';
   } else {
@@ -128,7 +156,7 @@ export async function onRequestPost({ request, env }) {
     const staff = verified.staff;
     if (!isManagerRole(staff.role)) return json({ error: 'manager-required' }, 403);
     actor = String(staff.name || staff.role || 'Manager').slice(0, 80);
-    actorId = String(staff.id || '').slice(0, 80);
+    actorId = staff.id ? `staff:${String(staff.id).slice(0, 80)}` : '';
     actorRole = String(staff.role || '').slice(0, 80);
   }
 
@@ -159,6 +187,7 @@ export async function onRequestPost({ request, env }) {
     return json({ error: 'sale-too-old' }, 409);
   }
 
+  reason = boundedReason(body && body.reason, reason);
   const saleAmountCents = sale.amount_cents != null
     ? Number(sale.amount_cents)
     : Math.round(Number(sale.amount || 0) * 100);
@@ -198,6 +227,20 @@ export async function onRequestPost({ request, env }) {
     }
   } catch (e) {
     return json({ error: 'cancel-failed', detail: String((e && e.message) || e) }, 500);
+  }
+
+  /* Analytics is deliberately fail-soft. `sales.void_*` above is the canonical
+     reconciliation state; a missing migration or temporary D1 error must not
+     undo a manager's accepted cancellation or interfere with later sales. */
+  if (actorId) {
+    try {
+      await env.DB.prepare(
+        `INSERT OR IGNORE INTO sale_void_history
+           (id, merchant, sale_id, ref, voided_ts, reason, actor_id, amount_cents)
+         VALUES (?,?,?,?,?,?,?,?)`
+      ).bind(`${merchant}:${id}`, merchant, id, String(sale.ref || '').slice(0, 80), ts,
+             reason, actorId, Math.max(0, Math.round(saleAmountCents))).run();
+    } catch (_) { /* history unavailable: keep the successful void response */ }
   }
 
   return json({ ok: true, id, ref: sale.ref || '', amount: saleAmount, amountCents: saleAmountCents,
