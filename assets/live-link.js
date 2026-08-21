@@ -579,7 +579,13 @@
             if (data.sales.length) since = data.cursor || since;
             /* /api/feed pages at 50. A shorter page proves the complete
                entitled history has arrived, so local reconciliation is safe. */
-            if (data.sales.length < 50) feedComplete[tenant] = true;
+            if (data.sales.length < 50) {
+              var firstComplete = !feedComplete[tenant];
+              feedComplete[tenant] = true;
+              if (firstComplete) {
+                try { document.dispatchEvent(new CustomEvent('kiwi:live-backfill-complete', { detail: { merchant: tenant } })); } catch (_) {}
+              }
+            }
             try { onSales(data.sales, backfill, tenant); } catch (_) {}
             /* The feed is paginated at 50 rows. A full first page does NOT end
                startup history: every following page is still old ledger data
@@ -1011,7 +1017,7 @@
     status: function () {
       return {
         on: on(), merchant: merchant(), lastSync: lastSync,
-        bridged: feedSales.length, queued: queueStatus().total,
+        bridged: feedSales.length, backfillComplete: !!feedComplete[merchant()], queued: queueStatus().total,
         queue: queueStatus(),
       };
     },

@@ -10,7 +10,7 @@
   var FEATURE = 'briefing';
   var PREFIX = 'kiwi:briefing:v1:';
   var MAX_DAYS = 45;
-  var RULES = [];
+  var RULES = [salesDropRule];
   var doc = { days: [] };
   var cloud = null;
 
@@ -122,6 +122,90 @@
       id: id, kind: String(value.kind || '').slice(0, 40), tone: String(value.tone || 'neutral').slice(0, 20),
       copy: clone(value.copy) || {}, evidence: evidence, roles: roles.length ? roles : ['owner'],
       action: value.action ? clone(value.action) : null
+    };
+  }
+  function salesRows() {
+    try {
+      var id = window.KiwiVenue && window.KiwiVenue.getVenue ? window.KiwiVenue.getVenue() : null;
+      var rows = window.KiwiSales && window.KiwiSales.list ? window.KiwiSales.list(id) : null;
+      return Array.isArray(rows) ? rows : [];
+    } catch (_) { return []; }
+  }
+  function dayBoundsAt(ts) {
+    try {
+      var R = window.KiwiDayReport;
+      if (R && R.businessDay && R.dayBounds) {
+        var b = R.dayBounds(R.businessDay(ts));
+        if (b && isFinite(b.from) && isFinite(b.to)) return { from: +b.from, to: +b.to };
+      }
+    } catch (_) {}
+    var cut = 5;
+    try { cut = Number(window.KiwiDayReport && window.KiwiDayReport.cutoff ? window.KiwiDayReport.cutoff() : 5); } catch (_) {}
+    if (!isFinite(cut)) cut = 5;
+    var d = new Date(ts - cut * 3600000); d.setHours(0, 0, 0, 0);
+    var from = d.getTime() + cut * 3600000;
+    return { from: from, to: from + 86400000 };
+  }
+  function windowStats(rows, from, to) {
+    var revenue = 0, count = 0;
+    rows.forEach(function (row) {
+      var ts = Number(row && row.ts) || 0;
+      if (ts < from || ts >= to) return;
+      revenue += Math.max(0, Number(row.amount) || 0); count++;
+    });
+    return { revenue: Math.round(revenue * 100) / 100, count: count };
+  }
+  function median(values) {
+    var a = values.slice().sort(function (x, y) { return x - y; });
+    if (!a.length) return null;
+    var mid = Math.floor(a.length / 2);
+    return a.length % 2 ? a[mid] : (a[mid - 1] + a[mid]) / 2;
+  }
+  function salesDropRule(input) {
+    input = input || {};
+    var ready = input.backfillComplete;
+    if (ready == null) {
+      try {
+        var status = window.KiwiLive && window.KiwiLive.status ? window.KiwiLive.status() : null;
+        ready = !!(status && status.on && status.backfillComplete && status.merchant === slug());
+      } catch (_) { ready = false; }
+    }
+    if (!ready) return null;
+    var now = Number(input.now) || Date.now();
+    var rows = Array.isArray(input.rows) ? input.rows : salesRows();
+    var currentBounds = dayBoundsAt(now);
+    var elapsed = Math.max(0, Math.min(now - currentBounds.from, currentBounds.to - currentBounds.from));
+    if (!(elapsed > 0)) return null;
+    var current = windowStats(rows, currentBounds.from, currentBounds.from + elapsed);
+    function sample(daysBack) {
+      var b = dayBoundsAt(currentBounds.from - daysBack * 86400000 + 1000);
+      return windowStats(rows, b.from, Math.min(b.to, b.from + elapsed));
+    }
+    var sameWeekday = [7, 14, 21, 28].map(sample).filter(function (x) { return x.count > 0; });
+    var trailing = [1, 2, 3, 4, 5, 6, 7].map(sample).filter(function (x) { return x.count > 0; });
+    if (sameWeekday.length < 3 || trailing.length < 3) return null;
+    var weekdayMedian = median(sameWeekday.map(function (x) { return x.revenue; }));
+    var trailingMedian = median(trailing.map(function (x) { return x.revenue; }));
+    var threshold = 0.20;
+    if (!(weekdayMedian > 0) || !(trailingMedian > 0)) return null;
+    if (current.revenue > weekdayMedian * (1 - threshold) || current.revenue > trailingMedian * (1 - threshold)) return null;
+    var weekdayDrop = 100 * (1 - current.revenue / weekdayMedian);
+    var trailingDrop = 100 * (1 - current.revenue / trailingMedian);
+    var drop = Math.max(0, Math.round(Math.min(weekdayDrop, trailingDrop)));
+    var day = businessDay(now);
+    var end = new Date(currentBounds.from + elapsed);
+    var time = String(end.getHours()).padStart(2, '0') + ':' + String(end.getMinutes()).padStart(2, '0');
+    var cur = Math.round(current.revenue).toLocaleString('fr-FR');
+    var wd = Math.round(weekdayMedian).toLocaleString('fr-FR');
+    var tr7 = Math.round(trailingMedian).toLocaleString('fr-FR');
+    return {
+      id: 'sales-drop:' + day, kind: 'sales-drop', tone: 'warn', roles: ['owner', 'manager', 'staff'],
+      copy: {
+        fr: 'Ventes en baisse de ' + drop + ' % : ' + cur + ' MAD à ' + time + ', contre ' + wd + ' MAD les mêmes jours et ' + tr7 + ' MAD sur les 7 derniers jours. Seuil : -20 %.',
+        en: 'Sales are down ' + drop + '%: ' + cur + ' MAD by ' + time + ', versus ' + wd + ' MAD on matching weekdays and ' + tr7 + ' MAD over the last 7 days. Threshold: -20%.',
+        ar: 'انخفضت المبيعات بنسبة ' + drop + '٪: ' + cur + ' درهم حتى ' + time + '، مقابل ' + wd + ' درهم في الأيام المماثلة و' + tr7 + ' درهم خلال آخر 7 أيام. العتبة: -20٪.'
+      },
+      evidence: { count: current.count, window: day + ' · 05:00-' + time, source: 'KiwiSales.list · backfill complet' }
     };
   }
   function visibleLines(lines, role) {
@@ -239,6 +323,9 @@
     Promise.resolve(cloud && cloud.bind ? cloud.bind() : false).catch(function () {}).then(function () { compute(); injectAssistantEntry(); });
     try { if (window.KiwiVenue && window.KiwiVenue.subscribe) window.KiwiVenue.subscribe(function () { doc = readLocal(); attachCloud(); compute(); }); } catch (_) {}
     window.addEventListener('kiwi:langchange', function () { render(); injectAssistantEntry(); });
+    document.addEventListener('kiwi:live-backfill-complete', function (event) {
+      if (!event.detail || event.detail.merchant === slug()) compute();
+    });
   }
   document.addEventListener('click', function (event) {
     var handled = event.target.closest && event.target.closest('[data-briefing-handled]');
@@ -250,7 +337,7 @@
   window.KiwiBriefing = {
     canHandle: canHandle, reply: reply, compute: function () { return compute(); }, lines: activeLines,
     dismiss: function (id) { return setState(id, 'dismissed'); }, handled: function (id) { return setState(id, 'handled'); },
-    _test: { businessDay: businessDay, scopeKey: scopeKey, normalizeLine: normalizeLine, visibleLines: visibleLines, compute: compute, read: function () { return clone(doc); }, write: writeLocal }
+    _test: { businessDay: businessDay, scopeKey: scopeKey, normalizeLine: normalizeLine, visibleLines: visibleLines, salesDropRule: salesDropRule, salesRows: salesRows, dayBoundsAt: dayBoundsAt, compute: compute, read: function () { return clone(doc); }, write: writeLocal }
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true }); else boot();
 }());

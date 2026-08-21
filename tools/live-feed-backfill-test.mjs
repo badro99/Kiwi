@@ -63,16 +63,18 @@ const runNextTimer = async () => {
 await settle();
 assert.equal(seen.length, 1);
 assert.equal(seen[0].backfill, true, 'the first full history page stays silent');
+assert.equal(window.KiwiLive.status().backfillComplete, false, 'a full page does not claim history is complete');
 assert.equal(timers[0]?.ms, 0, 'a full history page drains immediately');
 
 await runNextTimer();
 assert.equal(seen.length, 2);
 assert.equal(seen[1].backfill, true, 'the final partial history page also stays silent');
 assert.equal(seen[1].cursors[0], 51);
+assert.equal(window.KiwiLive.status().backfillComplete, true, 'the final partial page publishes authoritative completion');
 
 await runNextTimer();
 assert.equal(seen.length, 3);
 assert.equal(seen[2].backfill, false, 'only sales arriving after history become notifications');
 assert.equal(seen[2].cursors[0], 52);
 
-console.log('live-feed-backfill-test: 7 controls passed');
+console.log('live-feed-backfill-test: 9 controls passed');

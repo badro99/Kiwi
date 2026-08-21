@@ -52,8 +52,8 @@
     "sha": "7332c4414f0ffae1"
   },
   "assets/briefing.js": {
-    "v": "2",
-    "sha": "a069d90cc48ec05d"
+    "v": "3",
+    "sha": "be4236ba316d0475"
   },
   "assets/caisse-attendance-code.js": {
     "v": "2",
@@ -248,8 +248,8 @@
     "sha": "5829242ec789b552"
   },
   "assets/live-link.js": {
-    "v": "12",
-    "sha": "02f89b712cf5b1f9"
+    "v": "13",
+    "sha": "56b828a3e648ee2a"
   },
   "assets/live-socket.js": {
     "v": "2",
