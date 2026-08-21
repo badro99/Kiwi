@@ -189,6 +189,10 @@
   function applyTheme(theme, persist) {
     var dark = theme === 'dark';
     var html = document.documentElement;
+    if (persist !== false) {
+      html.classList.add('theme-transitioning');
+      setTimeout(function () { html.classList.remove('theme-transitioning'); }, 300);
+    }
     if (dark) html.setAttribute('data-theme', 'dark');
     else html.setAttribute('data-theme', 'light');
     /* After the paint, never before — syncMode() reads the attribute we just

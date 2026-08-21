@@ -1459,7 +1459,7 @@ body.design-vexel .pr-calc-out .br span { color: var(--vx-inverse-muted); }
  * as the dashboard content, so the climate must not change at the hand-off.
  * Their legacy rules remain untouched underneath this opt-in layer.
  * ───────────────────────────────────────────────────────────────────────── */
-body.design-vexel :is(.kiwi-lock, .kiwi-greet, .kob-root) {
+:is(html.design-vexel, body.design-vexel) :is(.kiwi-lock, .kiwi-greet, .kob-root) {
   background-color: var(--vx-page);
   background-image:
     radial-gradient(85% 55% at 50% 108%, var(--vx-dome-main), var(--vx-transparent) 70%),
@@ -1471,7 +1471,7 @@ body.design-vexel :is(.kiwi-lock, .kiwi-greet, .kob-root) {
   color: var(--ink);
 }
 
-body.design-vexel :is(.kiwi-lock-inner, .kob-card, .vx-auth-card) {
+:is(html.design-vexel, body.design-vexel) :is(.kiwi-lock-inner, .kob-card, .vx-auth-card) {
   background: var(--surface);
   border: 1px solid var(--n-200);
   border-radius: 22px;
@@ -1481,7 +1481,7 @@ body.design-vexel :is(.kiwi-lock-inner, .kob-card, .vx-auth-card) {
   -webkit-backdrop-filter: blur(18px) saturate(1.08);
 }
 
-body.design-vexel .kiwi-lock-inner {
+:is(html.design-vexel, body.design-vexel) .kiwi-lock-inner {
   box-sizing: border-box;
   width: calc(100% - 48px);
   padding: 44px 38px 38px;

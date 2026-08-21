@@ -52,16 +52,16 @@ html[data-theme="dark"] {
 }
 
 /* Smooth transitions on theme flip */
-html { transition: background-color 240ms ease, color 240ms ease; }
-html body,
-html .card, html .block, html .kpi-m, html .kpi-c,
-html .btn-ghost, html .pill, html .prod, html .testi-card,
-html .integ-card, html .search-big, html .search,
-html .topbar, html .status-bar, html .kiwi-menu, html .ai-drawer,
-html .kiwi-modal, html .kiwi-toast, html .kiwi-drawer,
-html .kp, html .tx-big, html .feed-row,
-html .settle, html .timeline-day,
-html .hero-today, html .kf-input, html .kb.ghost { transition: background-color 240ms ease, border-color 240ms ease, color 240ms ease; }
+html.theme-transitioning { transition: background-color 240ms ease, color 240ms ease; }
+html.theme-transitioning body,
+html.theme-transitioning .card, html.theme-transitioning .block, html.theme-transitioning .kpi-m, html.theme-transitioning .kpi-c,
+html.theme-transitioning .btn-ghost, html.theme-transitioning .pill, html.theme-transitioning .prod, html.theme-transitioning .testi-card,
+html.theme-transitioning .integ-card, html.theme-transitioning .search-big, html.theme-transitioning .search,
+html.theme-transitioning .topbar, html.theme-transitioning .status-bar, html.theme-transitioning .kiwi-menu, html.theme-transitioning .ai-drawer,
+html.theme-transitioning .kiwi-modal, html.theme-transitioning .kiwi-toast, html.theme-transitioning .kiwi-drawer,
+html.theme-transitioning .kp, html.theme-transitioning .tx-big, html.theme-transitioning .feed-row,
+html.theme-transitioning .settle, html.theme-transitioning .timeline-day,
+html.theme-transitioning .hero-today, html.theme-transitioning .kf-input, html.theme-transitioning .kb.ghost { transition: background-color 240ms ease, border-color 240ms ease, color 240ms ease; }
 
 /* ─── Light things in the dark ───
  * Explicit overrides for elements that hardcoded light colors.
