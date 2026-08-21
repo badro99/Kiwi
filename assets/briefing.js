@@ -245,18 +245,20 @@
       || !isFinite(currentMargin) || !isFinite(baselineMargin)) return null;
     var erosion = baselineMargin - currentMargin;
     if (erosion < 5) return null;
-    var locale = (window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang()) || 'fr';
     var pct = function (n) { return Math.round(n * 10) / 10; };
-    var line = locale === 'en'
-      ? 'Gross margin fell by ' + pct(erosion) + ' points (alert from 5 points). Cost coverage: ' + pct(currentCoverage) + '% vs ' + pct(baselineCoverage) + '%.'
-      : locale === 'ar'
-        ? 'انخفض الهامش الإجمالي بمقدار ' + pct(erosion) + ' نقاط (التنبيه من 5 نقاط). تغطية التكلفة: ' + pct(currentCoverage) + '% مقابل ' + pct(baselineCoverage) + '٪.'
-        : 'La marge brute baisse de ' + pct(erosion) + ' points (alerte dès 5 points). Couverture des coûts : ' + pct(currentCoverage) + ' % contre ' + pct(baselineCoverage) + ' %.';
     return {
       id: 'margin-erosion:' + String(currentDay || 'period'),
-      kind: 'margin-erosion', roles: ['owner'], text: line,
-      evidence: String(currentDay || 'période') + ' vs ' + String(baselineDay || 'référence') + ' · KiwiCost.coverage · ' + pct(currentCoverage) + '% / ' + pct(baselineCoverage) + '% chiffré',
-      source: 'KiwiCost.coverage', threshold: '5 points'
+      kind: 'margin-erosion', roles: ['owner'],
+      copy: {
+        fr: 'La marge brute baisse de ' + pct(erosion) + ' points (alerte dès 5 points). Couverture des coûts : ' + pct(currentCoverage) + ' % contre ' + pct(baselineCoverage) + ' %.',
+        en: 'Gross margin fell by ' + pct(erosion) + ' points (alert from 5 points). Cost coverage: ' + pct(currentCoverage) + '% vs ' + pct(baselineCoverage) + '%.',
+        ar: 'انخفض الهامش الإجمالي بمقدار ' + pct(erosion) + ' نقاط (التنبيه من 5 نقاط). تغطية التكلفة: ' + pct(currentCoverage) + '% مقابل ' + pct(baselineCoverage) + '٪.'
+      },
+      evidence: {
+        count: 2,
+        window: String(currentDay || 'période') + ' vs ' + String(baselineDay || 'référence'),
+        source: 'KiwiCost.coverage · ' + pct(currentCoverage) + '% / ' + pct(baselineCoverage) + '% chiffré'
+      }
     };
   }
 

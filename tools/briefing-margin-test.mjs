@@ -20,7 +20,9 @@ function boot(lang = 'fr') {
   };
   window.window = window;
   vm.runInContext(source, vm.createContext({ window, document, console, setTimeout, clearTimeout, Date, Math, JSON, isFinite }), { filename: 'briefing.js' });
-  return window.KiwiBriefing._test.marginErosionRule;
+  const rule = window.KiwiBriefing._test.marginErosionRule;
+  rule.normalize = window.KiwiBriefing._test.normalizeLine;
+  return rule;
 }
 
 const full = { revenueCosted: 1000, pctCosted: 100, marginPct: 52 };
@@ -29,12 +31,15 @@ let rule = boot()(input({ revenueCosted: 900, pctCosted: 96, marginPct: 44 }));
 ok(!!rule, 'an 8-point erosion with comparable coverage must emit');
 ok(rule.roles.length === 1 && rule.roles[0] === 'owner', 'margin is owner-only');
 ok(!rule.action, 'margin erosion must never propose a price change');
-ok(/5 points/.test(rule.text), 'visible line must state the threshold');
-ok(/96/.test(rule.text) && /100/.test(rule.text), 'visible line must state both pctCosted values');
-ok(/KiwiCost\.coverage/.test(rule.evidence), 'evidence must name the canonical source');
-ok(/2026-08-20/.test(rule.evidence) && /2026-08-13/.test(rule.evidence), 'evidence must name both periods');
-ok(boot('en')(input({ revenueCosted: 900, pctCosted: 96, marginPct: 44 })).text.startsWith('Gross margin'), 'English copy is routed');
-ok(/الهامش/.test(boot('ar')(input({ revenueCosted: 900, pctCosted: 96, marginPct: 44 })).text), 'Arabic copy is routed');
+ok(/5 points/.test(rule.copy.fr), 'visible line must state the threshold');
+ok(/96/.test(rule.copy.fr) && /100/.test(rule.copy.fr), 'visible line must state both pctCosted values');
+ok(/KiwiCost\.coverage/.test(rule.evidence.source), 'evidence must name the canonical source');
+ok(/2026-08-20/.test(rule.evidence.window) && /2026-08-13/.test(rule.evidence.window), 'evidence must name both periods');
+ok(rule.copy.en.startsWith('Gross margin'), 'English copy is routed');
+ok(/الهامش/.test(rule.copy.ar), 'Arabic copy is routed');
+const normalizedHarness = boot();
+const normalized = normalizedHarness.normalize(normalizedHarness(input({ revenueCosted: 900, pctCosted: 96, marginPct: 44 })));
+ok(!!normalized && normalized.copy.fr && normalized.evidence.source, 'rule survives the card normalization contract');
 ok(boot()(input({ revenueCosted: 900, pctCosted: 79, marginPct: 40 })) === null, 'partial current coverage must suppress');
 ok(boot()(input({ revenueCosted: 900, pctCosted: 95, marginPct: 40 }, { revenueCosted: 1000, pctCosted: 79, marginPct: 52 })) === null, 'partial baseline coverage must suppress');
 ok(boot()(input({ revenueCosted: 900, pctCosted: 80, marginPct: 40 }, { revenueCosted: 1000, pctCosted: 100, marginPct: 52 })) === null, 'non-comparable coverage must suppress');
@@ -43,5 +48,7 @@ ok(boot()(input({ revenueCosted: 0, pctCosted: 100, marginPct: null })) === null
 ok(/D\.lastClosedDay\(\)/.test(source) && /D\.shiftDay\(currentDay, -7\)/.test(source), 'production compares closed same-weekday periods');
 ok(/C\.coverage\(rows, currentBounds\.from, currentBounds\.to\)/.test(source) && /C\.coverage\(rows, baselineBounds\.from, baselineBounds\.to\)/.test(source), 'both periods use KiwiCost.coverage');
 ok(!/margin-erosion[\s\S]{0,700}?price-change/.test(source), 'rule has no price-change action');
+ok(/evidence:\s*\{[\s\S]{0,180}?count:\s*2[\s\S]{0,180}?KiwiCost\.coverage/.test(source), 'normalization receives structured evidence');
+ok(/copy:\s*\{[\s\S]{0,500}?fr:[\s\S]{0,500}?en:[\s\S]{0,500}?ar:/.test(source), 'normalization receives all visible copy variants');
 
 console.log(`briefing-margin-test: ${checks} controls passed`);
