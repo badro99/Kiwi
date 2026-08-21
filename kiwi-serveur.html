@@ -2181,15 +2181,16 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
 
     .profil-clockout {
       width: 100%;
-      height: 56px;
-      background: rgba(184,82,69,0.1);
+      height: 52px;
+      background: rgba(184,82,69,0.10);
       color: var(--danger-mute);
-      border-radius: var(--r-xl);
-      font-size: 15px; font-weight: 600;
+      border-radius: var(--r-lg);
+      font-size: var(--t-body-lg-size, 15px);
+      font-weight: 600;
       display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-      transition: background 150ms ease;
+      transition: all var(--dur-fast) var(--spring);
     }
-    .profil-clockout:active { background: rgba(184,82,69,0.18); }
+    .profil-clockout:active { transform: scale(0.98); background: rgba(184,82,69,0.18); }
     .profil-clockout svg { width: 18px; height: 18px; }
     .profil-pause {
       width: 100%; height: 52px; margin-bottom: 10px;
@@ -2343,13 +2344,15 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       gap: 3px;
       padding: 9px 4px 8px;
       background: var(--surface);
-      border: 1px solid var(--line-soft);
-      border-radius: 11px;
+      border: 1px solid var(--line);
+      border-radius: var(--r-md);
+      box-shadow: var(--shadow-1), var(--rim);
       text-align: center;
+      transition: transform var(--dur-fast) var(--spring);
     }
     .kg-day.is-today {
-      background: var(--mint-edge);
-      border-color: var(--mint);
+      background: var(--mint-tint);
+      border-color: var(--mint-edge);
     }
     .kg-day.is-rest {
       background: transparent;
@@ -2441,13 +2444,15 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     .kg-hours-tile {
       padding: 12px 8px 11px;
       background: var(--surface);
-      border: 1px solid var(--line-soft);
+      border: 1px solid var(--line);
       border-radius: var(--r-md);
+      box-shadow: var(--shadow-1), var(--rim);
       text-align: center;
+      transition: transform var(--dur-fast) var(--spring);
     }
     .kg-hours-tile.is-today {
-      background: var(--mint-edge);
-      border-color: var(--mint);
+      background: var(--mint-tint);
+      border-color: var(--mint-edge);
     }
     .kg-hours-num {
       font-family: var(--mono);
