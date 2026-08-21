@@ -157,7 +157,7 @@ var SHELL = [
      dans un sous-sol sans wifi, et c'est précisément le moment où le Z doit
      s'écrire et s'imprimer. La remontée serveur, elle, retentera plus tard. */
   '/assets/day-report.js?v=5',
-  '/assets/day-report-dash.js?v=4',
+  '/assets/day-report-dash.js?v=5',
   '/assets/day-report-export.js?v=4',
   /* Les horaires d'ouverture. Dans la coquille hors-ligne parce que la caisse
      s'en sert au moment le plus hors-ligne qui soit : l'ouverture du service.
