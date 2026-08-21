@@ -837,7 +837,13 @@
         ${draft.menu.length ? `
           ${byCourse.map((x) => x.items.map((id) => `<div class="tr-q-line"><span class="nm">${esc(DISH[id].label)}</span><span class="vl">${DISH[id].price} MAD</span></div>`).join('')).join('')}
           <div class="tr-q-line is-pp"><span class="nm">Menu / personne</span><span class="vl">${pp} MAD</span></div>`
-        : `<div class="tr-q-empty">Le menu est vide.<br>Touchez les plats à gauche, le prix par personne se construit tout seul.</div>`}
+        : `<div class="tr-q-empty" style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:32px 14px; gap:8px;">
+            <div style="width:40px; height:40px; border-radius:12px; background:rgba(11,110,79,0.10); color:var(--atlas); display:grid; place-items:center; margin-bottom:4px;">
+              <svg width="20" height="20" viewBox="0 -960 960 960" fill="currentColor"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg>
+            </div>
+            <div style="font-weight:600; font-size:14px; color:var(--ink);">Le menu est vide.</div>
+            <div style="font-size:12.5px; color:var(--n-500); line-height:1.45;">Touchez les plats à gauche, le prix par personne se calcule automatiquement.</div>
+          </div>`}
         ${draft.extras.map((id) => `<div class="tr-q-line"><span class="nm">${esc(EXTRA[id].label)}</span><span class="vl">${fmtMAD(extraCost(id, draft.guests))}</span></div>`).join('')}
       </div>
       ${total > 0 ? `

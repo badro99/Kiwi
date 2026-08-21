@@ -173,3 +173,12 @@ Ce document consigne l'ensemble des audits visuels, ergonomiques, d'accessibilit
   1. Refonte du ticket de commande pizza avec médaillon Material Symbol (`inventory_2`) et hiérarchie soignée.
   2. Bumping de la révision `pos-pizzeria.js?v=3` dans le dispatcher.
 - **État** : ✅ Déployé
+
+### 7.8 Vertical Traiteur (`assets/pos-traiteur.js`)
+- **Fichiers** : `assets/pos-traiteur.js:840`, `assets/pos-dispatch.js:64`
+- **Problèmes identifiés** :
+  1. Constructeur de menu de devis traiteur vide sans médaillon Material Symbols.
+- **Améliorations apportées** :
+  1. Enrichissement du devis traiteur vide avec médaillon Material Symbol (`inventory_2`), hiérarchie visuelle et guidage pas-à-pas.
+  2. Bumping de la révision `pos-traiteur.js?v=3` dans le dispatcher.
+- **État** : ✅ Déployé
