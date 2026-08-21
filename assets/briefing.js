@@ -10,7 +10,7 @@
   var FEATURE = 'briefing';
   var PREFIX = 'kiwi:briefing:v1:';
   var MAX_DAYS = 45;
-  var RULES = [salesDropRule, lowStockRule];
+  var RULES = [salesDropRule, lowStockRule, marginErosionRule];
   var doc = { days: [] };
   var cloud = null;
 
@@ -214,6 +214,52 @@
       return Array.isArray(rows) ? rows : [];
     } catch (_) { return []; }
   }
+  function marginErosionRule(input) {
+    input = input || {};
+    var D = window.KiwiDayReport, C = window.KiwiCost;
+    var currentDay = input.currentDay, baselineDay = input.baselineDay;
+    var current = input.current, baseline = input.baseline;
+    if (!current || !baseline) {
+      if (!D || typeof D.lastClosedDay !== 'function' || typeof D.shiftDay !== 'function'
+        || typeof D.dayBounds !== 'function' || !C || typeof C.coverage !== 'function') return null;
+      var currentBounds, baselineBounds, rows;
+      try {
+        currentDay = D.lastClosedDay();
+        baselineDay = D.shiftDay(currentDay, -7);
+        currentBounds = D.dayBounds(currentDay);
+        baselineBounds = D.dayBounds(baselineDay);
+        rows = window.KiwiSales && window.KiwiSales.list ? window.KiwiSales.list(venueId()) : [];
+        if (!Array.isArray(rows)) return null;
+        current = C.coverage(rows, currentBounds.from, currentBounds.to);
+        baseline = C.coverage(rows, baselineBounds.from, baselineBounds.to);
+      } catch (_) { return null; }
+    }
+    var currentCoverage = +(current && current.pctCosted);
+    var baselineCoverage = +(baseline && baseline.pctCosted);
+    var currentMargin = +(current && current.marginPct);
+    var baselineMargin = +(baseline && baseline.marginPct);
+    if (!(current && baseline) || !(current.revenueCosted > 0) || !(baseline.revenueCosted > 0)
+      || !isFinite(currentCoverage) || !isFinite(baselineCoverage)
+      || currentCoverage < 80 || baselineCoverage < 80
+      || Math.abs(currentCoverage - baselineCoverage) > 10
+      || !isFinite(currentMargin) || !isFinite(baselineMargin)) return null;
+    var erosion = baselineMargin - currentMargin;
+    if (erosion < 5) return null;
+    var locale = (window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang()) || 'fr';
+    var pct = function (n) { return Math.round(n * 10) / 10; };
+    var line = locale === 'en'
+      ? 'Gross margin fell by ' + pct(erosion) + ' points (alert from 5 points). Cost coverage: ' + pct(currentCoverage) + '% vs ' + pct(baselineCoverage) + '%.'
+      : locale === 'ar'
+        ? 'انخفض الهامش الإجمالي بمقدار ' + pct(erosion) + ' نقاط (التنبيه من 5 نقاط). تغطية التكلفة: ' + pct(currentCoverage) + '% مقابل ' + pct(baselineCoverage) + '٪.'
+        : 'La marge brute baisse de ' + pct(erosion) + ' points (alerte dès 5 points). Couverture des coûts : ' + pct(currentCoverage) + ' % contre ' + pct(baselineCoverage) + ' %.';
+    return {
+      id: 'margin-erosion:' + String(currentDay || 'period'),
+      kind: 'margin-erosion', roles: ['owner'], text: line,
+      evidence: String(currentDay || 'période') + ' vs ' + String(baselineDay || 'référence') + ' · KiwiCost.coverage · ' + pct(currentCoverage) + '% / ' + pct(baselineCoverage) + '% chiffré',
+      source: 'KiwiCost.coverage', threshold: '5 points'
+    };
+  }
+
   function lowStockRule(input) {
     input = input || {};
     var items = Array.isArray(input.items) ? input.items : stockItems();
@@ -389,7 +435,7 @@
   window.KiwiBriefing = {
     canHandle: canHandle, reply: reply, compute: function () { return compute(); }, lines: activeLines,
     dismiss: function (id) { return setState(id, 'dismissed'); }, handled: function (id) { return setState(id, 'handled'); },
-    _test: { businessDay: businessDay, scopeKey: scopeKey, normalizeLine: normalizeLine, visibleLines: visibleLines, salesDropRule: salesDropRule, lowStockRule: lowStockRule, stockItems: stockItems, proposeLine: proposeLine, salesRows: salesRows, dayBoundsAt: dayBoundsAt, compute: compute, read: function () { return clone(doc); }, write: writeLocal }
+    _test: { businessDay: businessDay, scopeKey: scopeKey, normalizeLine: normalizeLine, visibleLines: visibleLines, salesDropRule: salesDropRule, lowStockRule: lowStockRule, marginErosionRule: marginErosionRule, stockItems: stockItems, proposeLine: proposeLine, salesRows: salesRows, dayBoundsAt: dayBoundsAt, compute: compute, read: function () { return clone(doc); }, write: writeLocal }
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true }); else boot();
 }());
