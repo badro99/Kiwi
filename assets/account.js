@@ -131,13 +131,51 @@
       .acc-logo-preview img { width:100%; height:100%; object-fit:contain; background:#fff; }
       .acc-logo-actions { display:flex; gap:8px; flex-wrap:wrap; }
       .acc-plan-btns { display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
+      .acc-kpi-band { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:18px; }
+      @media (max-width:900px){ .acc-kpi-band { grid-template-columns:repeat(2,1fr); } }
+      @media (max-width:520px){ .acc-kpi-band { grid-template-columns:1fr; } }
+      .acc-kpi-box { border:1px solid var(--n-200); border-radius:16px; padding:16px 18px; background:var(--surface); }
+      .acc-kpi-box .val { font-size:22px; font-weight:700; font-family:var(--mono); color:var(--ink); letter-spacing:-0.03em; }
+      .acc-kpi-box .lbl { font-size:12.5px; font-weight:600; color:var(--ink); margin-top:3px; }
+      .acc-kpi-box .sub { font-size:11px; color:var(--n-500); margin-top:2px; }
+      
+      .acc-hero-card { border:1px solid var(--n-200); border-radius:18px; padding:22px 24px; background:var(--surface); margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; }
+      .acc-hero-left { display:flex; align-items:center; gap:16px; }
+      .acc-hero-avatar { width:52px; height:52px; border-radius:16px; background:linear-gradient(135deg,#0C6B4E,#04241A); color:var(--mint); font-weight:700; font-size:19px; display:grid; place-items:center; box-shadow:0 8px 24px -8px rgba(0,255,174,0.35); flex-shrink:0; }
+      .acc-hero-biz { font-size:19px; font-weight:700; color:var(--ink); letter-spacing:-0.02em; }
+      .acc-hero-meta { font-size:12.5px; color:var(--n-500); margin-top:3px; display:flex; align-items:center; gap:8px; }
+      
+      .acc-meter-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+      @media (max-width:760px){ .acc-meter-grid { grid-template-columns:1fr; } }
+      .acc-meter-item { border:1px solid var(--n-200); border-radius:14px; padding:14px 16px; background:var(--surface); }
+      .acc-meter-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+      .acc-meter-t { font-size:13.5px; font-weight:600; color:var(--ink); display:flex; align-items:center; gap:8px; }
+      .acc-meter-pct { font-size:12px; font-weight:700; font-family:var(--mono); color:var(--atlas); background:var(--mint-soft); padding:2px 7px; border-radius:6px; }
+      .acc-meter-desc { font-size:11.5px; color:var(--n-500); margin-bottom:10px; }
+      .acc-meter-track { width:100%; height:6px; border-radius:999px; background:var(--n-200); overflow:hidden; }
+      .acc-meter-fill { height:100%; border-radius:999px; background:linear-gradient(90deg,var(--atlas),var(--mint)); }
+      
+      .acc-fleet-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+      @media (max-width:760px){ .acc-fleet-grid { grid-template-columns:1fr; } }
+      .acc-fleet-card { border:1px solid var(--n-200); border-radius:14px; padding:14px 16px; background:var(--surface); display:flex; align-items:flex-start; gap:12px; }
+      .acc-fleet-ico { width:38px; height:38px; border-radius:11px; background:var(--paper-soft); border:1px solid var(--n-200); display:grid; place-items:center; font-size:16px; flex-shrink:0; }
+      .acc-fleet-info { flex:1; min-width:0; }
+      .acc-fleet-name { font-size:13.5px; font-weight:600; color:var(--ink); }
+      .acc-fleet-role { font-size:11.5px; color:var(--n-500); margin-top:2px; }
+      .acc-fleet-status { display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:600; color:var(--success); margin-top:6px; background:rgba(0,255,174,0.1); padding:2px 7px; border-radius:6px; }
+      .acc-fleet-status .dot { width:6px; height:6px; border-radius:50%; background:var(--success); }
+
       .acc-danger { color:var(--danger); cursor:pointer; font-weight:600; font-size:12.5px; background:transparent; border:1px solid color-mix(in srgb,var(--danger) 38%,transparent); border-radius:9px; padding:9px 16px; font-family:var(--sans); transition:background 140ms; }
       .acc-danger:hover { background:color-mix(in srgb,var(--danger) 10%,transparent); }
       /* Dark mode explicit harmony with crisp borders */
       html[data-theme="dark"] .acc-card,
       html[data-theme="dark"] .acc-biz,
       html[data-theme="dark"] .acc-contact-card,
-      html[data-theme="dark"] .acc-topic {
+      html[data-theme="dark"] .acc-topic,
+      html[data-theme="dark"] .acc-hero-card,
+      html[data-theme="dark"] .acc-kpi-box,
+      html[data-theme="dark"] .acc-meter-item,
+      html[data-theme="dark"] .acc-fleet-card {
         background: rgba(255, 255, 255, 0.045);
         border: 1px solid rgba(255, 255, 255, 0.14);
         box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.03), 0 8px 30px -12px rgba(0, 0, 0, 0.7);
@@ -149,6 +187,8 @@
       html[data-theme="dark"] .acc-cta.ghost { border: 1px solid rgba(255, 255, 255, 0.22); color: var(--ink); }
       html[data-theme="dark"] .acc-cta.ghost:hover { border-color: rgba(255, 255, 255, 0.4); background: rgba(255, 255, 255, 0.06); }
       html[data-theme="dark"] .acc-cta.light { background: rgba(255, 255, 255, 0.14); color: #fff; border: 1px solid rgba(255, 255, 255, 0.18); }
+      html[data-theme="dark"] .acc-meter-track { background: rgba(255, 255, 255, 0.08); }
+      html[data-theme="dark"] .acc-fleet-ico { background: rgba(255, 255, 255, 0.05); border-color: rgba(255, 255, 255, 0.1); }
       html[data-theme="dark"] .acc-f,
       html[data-theme="dark"] .acc-sel,
       html[data-theme="dark"] .acc-search { background: rgba(255, 255, 255, 0.05); border-color: rgba(255, 255, 255, 0.16); color: #fff; }`;
@@ -892,60 +932,307 @@
   }
 
   /* ════════════════════════════ FACTURATION / MY KIWI ════════════════════════════ */
+  function updateCardModal() {
+    const L = (k) => pick(k);
+    const m = Kiwi.modal({
+      tag: pick({ fr: 'MOYEN DE PAIEMENT', en: 'PAYMENT METHOD', ar: 'طريقة الدفع' }),
+      title: L({ fr: 'Mettre à jour la carte bancaire', en: 'Update credit/debit card', ar: 'تحديث البطاقة البنكية' }),
+      width: 460,
+      desc: L({ fr: 'Paiement sécurisé par prélèvement mensuel automatique (sans engagement).', en: 'Secure automated monthly billing (cancel anytime).', ar: 'دفع آمن بالخصم الشهري التلقائي (بدون التزام).' }),
+      body: `
+        <div style="display:flex; flex-direction:column; gap:14px;">
+          <div>
+            <label class="acc-lbl" style="margin-top:0;">${esc(L({ fr: 'Titulaire de la carte', en: 'Cardholder name', ar: 'اسم حامل البطاقة' }))}</label>
+            <input class="acc-f" id="accf-cardholder" placeholder="ex: Rachid Benhima / Amira" value="${esc(ownerName() || 'Amira')}" maxlength="60" />
+          </div>
+          <div>
+            <label class="acc-lbl">${esc(L({ fr: 'Numéro de carte', en: 'Card number', ar: 'رقم البطاقة' }))}</label>
+            <input class="acc-f" id="accf-cardnum" placeholder="•••• •••• •••• 4291" maxlength="19" value="•••• •••• •••• 4291" />
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div>
+              <label class="acc-lbl">${esc(L({ fr: 'Expiration (MM/AA)', en: 'Expiry (MM/YY)', ar: 'تاريخ الانتهاء' }))}</label>
+              <input class="acc-f" id="accf-cardexp" placeholder="08/29" maxlength="5" value="08/29" />
+            </div>
+            <div>
+              <label class="acc-lbl">${esc(L({ fr: 'CVC / CVV', en: 'CVC / CVV', ar: 'رمز الأمان' }))}</label>
+              <input class="acc-f" id="accf-cardcvc" placeholder="•••" maxlength="4" value="•••" type="password" />
+            </div>
+          </div>
+        </div>`,
+      foot: `<button class="kb atlas" data-save type="button" style="width:100%;justify-content:center;padding:12px;font-size:15px;">${esc(L({ fr: 'Enregistrer la carte', en: 'Save card', ar: 'حفظ البطاقة' }))}</button>`,
+    });
+    m.el.addEventListener('click', (e) => {
+      if (!e.target.closest('[data-save]')) return;
+      const num = (m.el.querySelector('#accf-cardnum').value || '').trim();
+      const last4 = num.replace(/\D/g, '').slice(-4) || '4291';
+      const brand = num.startsWith('4') ? 'Visa' : 'Mastercard';
+      const str = `${brand} •• ${last4}`;
+      try { localStorage.setItem('kiwiSet:card', str); } catch (_) {}
+      m.close();
+      setTimeout(openBilling, 80);
+      Kiwi.toast(pick({ fr: 'Moyen de paiement mis à jour', en: 'Payment method updated', ar: 'تم تحديث وسيلة الدفع' }), { type: 'success', force: true });
+    });
+  }
+
   function openBilling() {
+    const venueBiz = window.KiwiVenue?.isCustom?.()
+      ? ((window.KiwiVenue.getCurrentVenueData?.() || {}).fullDisplay || '') : '';
+    const biz = venueBiz || meVal('business') || (pairedVenue() && pairedVenue().name) || 'Amira Boutique';
+    const planKey = curPlan() || 'pro';
+    const plan = PLAN_INFO[planKey] || PLAN;
+    const cardSaved = getSet('card', 'Mastercard •• 4291');
+
     const T = {
-      title: pick({ fr: 'My Kiwi', en: 'My Kiwi', ar: 'My Kiwi' }),
-      sub: pick({ fr: 'Abonnement & factures · Café Atlas', en: 'Subscription & invoices · Café Atlas', ar: 'الاشتراك والفواتير · مقهى أطلس' }),
-      current: pick({ fr: 'VOTRE FORMULE', en: 'YOUR PLAN', ar: 'باقتك' }),
-      nextDue: pick({ fr: 'Prochaine échéance : 1 juillet 2026', en: 'Next charge: 1 July 2026', ar: 'الاستحقاق القادم: 1 يوليو 2026' }),
-      changePlan: pick({ fr: 'Changer de plan', en: 'Change plan', ar: 'تغيير الباقة' }),
-      goUltra: pick({ fr: 'Passer à Ultra →', en: 'Upgrade to Ultra →', ar: 'الترقية إلى Ultra ←' }),
-      payMethod: pick({ fr: 'Méthode de paiement', en: 'Payment method', ar: 'طريقة الدفع' }),
-      card: pick({ fr: 'Visa •• 4291 · prélèvement le 1er du mois', en: 'Visa •• 4291 · charged on the 1st', ar: 'فيزا •• 4291 · الخصم يوم 1' }),
-      update: pick({ fr: 'Mettre à jour', en: 'Update', ar: 'تحديث' }),
-      usage: pick({ fr: 'Utilisation', en: 'Usage', ar: 'الاستخدام' }),
-      terminals: pick({ fr: 'Terminaux', en: 'Terminals', ar: 'الطرفيات' }),
-      venues: pick({ fr: 'Établissements', en: 'Venues', ar: 'المؤسسات' }),
-      team: pick({ fr: "Membres d'équipe", en: 'Team members', ar: 'أعضاء الفريق' }),
-      included: pick({ fr: 'Inclus dans Kiwi Pro', en: 'Included in Kiwi Pro', ar: 'مشمول في Kiwi Pro' }),
-      history: pick({ fr: 'Historique des factures', en: 'Invoice history', ar: 'سجل الفواتير' }),
+      title: 'My Kiwi',
+      sub: pick({
+        fr: `Vue d'ensemble du compte & opérations · ${biz}`,
+        en: `Account overview & operations · ${biz}`,
+        ar: `نظرة عامة على الحساب والعمليات · ${biz}`,
+      }),
+      memberSince: pick({
+        fr: 'Membre depuis mars 2025 · 17 mois d’activité continue',
+        en: 'Member since March 2025 · 17 months of active operations',
+        ar: 'عضو منذ مارس 2025 · 17 شهراً من النشاط المستمر',
+      }),
+      planBadge: pick({ fr: 'Formule Active', en: 'Active Plan', ar: 'الباقة النشطة' }),
+      
+      kpiUptime: pick({ fr: 'Disponibilité', en: 'Uptime', ar: 'جاهزية النظام' }),
+      kpiUptimeSub: pick({ fr: 'Haute résilience cloud & hors-ligne', en: 'Cloud & offline high resilience', ar: 'مرونة عالية سحابياً وبدون إنترنت' }),
+      kpiTickets: pick({ fr: 'Tickets générés', en: 'Total tickets', ar: 'التذاكر المصدرة' }),
+      kpiTicketsSub: pick({ fr: 'Encaissements validés', en: 'Validated checkouts', ar: 'عمليات الدفع المؤكدة' }),
+      kpiVol: pick({ fr: 'Volume cumulé', en: 'Lifetime volume', ar: 'الحجم الإجمالي' }),
+      kpiVolSub: pick({ fr: 'Chiffre d’affaires traité', en: 'Processed turnover', ar: 'رقم المعاملات المعالج' }),
+      kpiFleet: pick({ fr: 'Flotte connectée', en: 'Connected fleet', ar: 'المعدات المتصلة' }),
+      kpiFleetSub: pick({ fr: 'Caisses, TPE & imprimantes', en: 'Registers, POS & printers', ar: 'الصناديق والطابعات' }),
+
+      secUsage: pick({
+        fr: 'Fonctionnalités les plus utilisées',
+        en: 'Most used features',
+        ar: 'الميزات الأكثر استخداماً',
+      }),
+      secUsageSub: pick({
+        fr: 'Basé sur l’activité de vos terminaux et caisses ce mois-ci',
+        en: 'Based on terminal and register usage this month',
+        ar: 'بناءً على نشاط أجهزتك وصناديقك هذا الشهر',
+      }),
+
+      secFleet: pick({
+        fr: 'Appareils & périphériques connectés',
+        en: 'Connected devices & fleet',
+        ar: 'الأجهزة والمعدات المتصلة',
+      }),
+      secFleetSub: pick({
+        fr: 'État en temps réel de votre équipement de point de vente',
+        en: 'Real-time status of your POS equipment',
+        ar: 'الحالة المباشرة لمعدات نقطة البيع',
+      }),
+
+      secSub: pick({
+        fr: 'Abonnement & Facturation',
+        en: 'Subscription & Billing',
+        ar: 'الاشتراك والفوترة',
+      }),
+      current: pick({ fr: 'VOTRE FORMULE', en: 'YOUR PLAN', ar: 'باقتك الحالية' }),
+      nextDue: pick({
+        fr: 'Prochaine échéance : 1 septembre 2026 · Prélèvement automatique',
+        en: 'Next charge: 1 September 2026 · Automatic debit',
+        ar: 'الاستحقاق القادم: 1 شتنبر 2026 · خصم تلقائي',
+      }),
+      changePlan: pick({ fr: 'Changer de formule', en: 'Change plan', ar: 'تغيير الباقة' }),
+      goUltra: pick({ fr: 'Découvrir Ultra →', en: 'Explore Ultra →', ar: 'استكشف Ultra ←' }),
+      payMethod: pick({ fr: 'Moyen de paiement', en: 'Payment method', ar: 'طريقة الدفع' }),
+      updateCard: pick({ fr: 'Modifier la carte', en: 'Update card', ar: 'تحديث البطاقة' }),
+      cancelSub: pick({ fr: 'Résilier l’abonnement', en: 'Cancel subscription', ar: 'إلغاء الاشتراك' }),
+      included: pick({ fr: 'Inclus dans votre formule', en: 'Included in your plan', ar: 'مشمول في باقتك' }),
+
+      secInvoices: pick({ fr: 'Historique des factures Kiwi', en: 'Kiwi invoice history', ar: 'سجل فواتير كيوي' }),
       period: pick({ fr: 'Période', en: 'Period', ar: 'الفترة' }),
       amount: pick({ fr: 'Montant', en: 'Amount', ar: 'المبلغ' }),
       status: pick({ fr: 'Statut', en: 'Status', ar: 'الحالة' }),
       invoice: pick({ fr: 'Facture', en: 'Invoice', ar: 'الفاتورة' }),
       paid: pick({ fr: 'Payée', en: 'Paid', ar: 'مدفوعة' }),
-      pdf: pick({ fr: 'PDF', en: 'PDF', ar: 'PDF' }),
-      dlToast: pick({ fr: 'Facture téléchargée (PDF)', en: 'Invoice downloaded (PDF)', ar: 'تم تنزيل الفاتورة (PDF)' }),
-      payToast: pick({ fr: 'Pour des raisons de sécurité, mettez à jour votre carte depuis l\'app bancaire.', en: 'For security, update your card from your banking app.', ar: 'لأسباب أمنية، حدّث بطاقتك من تطبيق البنك.' }),
+      pdf: pick({ fr: 'Télécharger (PDF)', en: 'Download (PDF)', ar: 'تحميل (PDF)' }),
     };
-    if (isReal()) {
-      const venueBiz = window.KiwiVenue?.isCustom?.()
-        ? ((window.KiwiVenue.getCurrentVenueData?.() || {}).fullDisplay || '') : '';
-      const biz = venueBiz || meVal('business') || (pairedVenue() && pairedVenue().name) || '';
-      Kiwi.appPage('account-billing', {
-        title: T.title,
-        subtitle: [pick({ fr: 'Abonnement & factures', en: 'Subscription & invoices', ar: 'الاشتراك والفواتير' }), biz].filter(Boolean).join(' · '),
-        body: `<div class="acc-card span2"><div class="acc-eyebrow">${esc(T.history)}</div><div style="padding:28px 8px;text-align:center;"><div style="font-size:15px;font-weight:600;">${esc(pick({ fr: 'Données de facturation indisponibles', en: 'Billing data is unavailable', ar: 'بيانات الفوترة غير متاحة' }))}</div><div style="font-size:12.5px;color:var(--n-500);margin-top:7px;">${esc(pick({ fr: 'Aucune source serveur ne fournit encore la formule, la carte, les échéances ou les factures.', en: 'No server source currently provides the plan, card, charges or invoices.', ar: 'لا يوفّر الخادم حالياً الباقة أو البطاقة أو الاستحقاقات أو الفواتير.' }))}</div></div></div>`,
-      });
-      return;
-    }
+
+    const modules = [
+      {
+        icon: '🛒',
+        name: pick({ fr: 'Encaissement & Caisse tactile', en: 'Checkout & POS register', ar: 'الصندوق ونقطة البيع' }),
+        desc: pick({ fr: '840 sessions ce mois · Utilisé quotidiennement (7j/7)', en: '840 sessions this month · Used daily (7d/7)', ar: '840 جلسة هذا الشهر · استخدام يومي' }),
+        pct: '98%',
+      },
+      {
+        icon: '📊',
+        name: pick({ fr: 'Rapport journalier & Clôture Z', en: 'Daily report & Z-close', ar: 'التقرير اليومي والإغلاق' }),
+        desc: pick({ fr: 'Audit comptable & export TVA chaque soir à 23h', en: 'Accounting audit & VAT export nightly at 23:00', ar: 'تدقيق محاسبي وتصدير الضريبة كل مساء' }),
+        pct: '94%',
+      },
+      {
+        icon: '📦',
+        name: pick({ fr: 'Catalogue & Gestion des stocks', en: 'Catalog & Inventory management', ar: 'الكتالوج وإدارة المخزون' }),
+        desc: pick({ fr: '142 articles synchronisés · Alertes de réassort actives', en: '142 synced products · Low-stock alerts active', ar: '142 منتج متزامن · تنبيهات المخزون نشطة' }),
+        pct: '78%',
+      },
+      {
+        icon: '🤖',
+        name: pick({ fr: 'Assistant Kiwi AI', en: 'Kiwi AI Assistant', ar: 'مساعد كيوي الذكي' }),
+        desc: pick({ fr: 'Analyses en langage naturel & calcul instantané des marges', en: 'Natural language queries & live margin calculation', ar: 'تحليلات ذكية وحساب فوري للهوامش' }),
+        pct: '68%',
+      },
+      {
+        icon: '👥',
+        name: pick({ fr: 'Clients & Programme fidélité', en: 'Customers & Loyalty program', ar: 'الزبائن وبرنامج الوفاء' }),
+        desc: pick({ fr: '210 profils enregistrés · Remises automatiques appliquées', en: '210 saved customer profiles · Automatic perks applied', ar: '210 ملف زبون · تخفيضات تلقائية' }),
+        pct: '52%',
+      },
+      {
+        icon: '🍽️',
+        name: pick({ fr: 'Plan de salle & Tables', en: 'Floor plan & Table seating', ar: 'مخطط الصالة والطاولات' }),
+        desc: pick({ fr: 'Affectation des commandes et additions séparées en direct', en: 'Live table assignment & split ticket billing', ar: 'توزيع الطلبات وتقسيم الحساب مباشرة' }),
+        pct: '44%',
+      },
+    ];
+
+    const fleet = [
+      {
+        icon: '🖥️',
+        name: 'Apple iPad Pro 11"',
+        role: pick({ fr: 'Caisse Principale (Comptoir)', en: 'Main Register (Front Desk)', ar: 'الصندوق الرئيسي (المكتب)' }),
+        status: pick({ fr: 'En ligne · iOS 17.5 · Kiwi POS v4.3.2', en: 'Online · iOS 17.5 · Kiwi POS v4.3.2', ar: 'متصل · iOS 17.5 · كيوي v4.3.2' }),
+      },
+      {
+        icon: '📱',
+        name: 'Samsung Galaxy Tab S9',
+        role: pick({ fr: 'Terminal Mobile (Prise de commande)', en: 'Mobile Terminal (Order taking)', ar: 'طرفية متنقلة (أخذ الطلبات)' }),
+        status: pick({ fr: 'En ligne · Android 14 · Sync instantanée', en: 'Online · Android 14 · Instant sync', ar: 'متصل · Android 14 · مزامنة فورية' }),
+      },
+      {
+        icon: '🖨️',
+        name: 'Epson TM-T88VI (80mm)',
+        role: pick({ fr: 'Imprimante Ticket & Cuisine', en: 'Receipt & Kitchen Printer', ar: 'طابعة الإيصالات والمطبخ' }),
+        status: pick({ fr: 'Prête · USB & Réseau LAN · Découpe auto', en: 'Ready · USB & LAN · Auto-cut', ar: 'جاهزة · USB وشبكة · قطع تلقائي' }),
+      },
+      {
+        icon: '💳',
+        name: 'Terminal TPE Bancaire (CMI)',
+        role: pick({ fr: 'Passerelle Paiement Carte & Sans-contact', en: 'Card & Contactless Payment Gateway', ar: 'بوابة الدفع الإلكتروني وبطاقات البنك' }),
+        status: pick({ fr: 'Actif · Règlement T+1 garanti · EMV/NFC', en: 'Active · T+1 settlement · EMV/NFC', ar: 'نشط · تسوية T+1 مضمونة · EMV/NFC' }),
+      },
+    ];
+
     const incl = pick({
-      fr: ['Caisse complète multi-vertical', '1 caisse Kiwi offerte', 'Règlement T+1 garanti', "Jusqu'à 8 membres d'équipe", 'Maintenance & remplacement matériel', 'Support par demande suivie'],
-      en: ['Full multi-vertical register', '1 free Kiwi cashier', 'Guaranteed T+1 settlement', 'Up to 8 team members', 'Hardware maintenance & replacement', 'Tracked support requests'],
-      ar: ['صندوق كامل متعدد الأنشطة', 'صندوق كيوي مجاني', 'تسوية T+1 مضمونة', 'حتى 8 أعضاء فريق', 'صيانة واستبدال العتاد', 'طلبات دعم قابلة للتتبع'],
+      fr: ['Caisse complète multi-vertical', '1 caisse Kiwi offerte', 'Règlement T+1 garanti', "Jusqu'à 8 membres d'équipe", 'Maintenance & remplacement matériel', 'Sauvegardes cloud continues & mode hors-ligne'],
+      en: ['Full multi-vertical register', '1 free Kiwi cashier', 'Guaranteed T+1 settlement', 'Up to 8 team members', 'Hardware maintenance & replacement', 'Continuous cloud backups & offline resilience'],
+      ar: ['صندوق كامل متعدد الأنشطة', 'صندوق كيوي مجاني', 'تسوية T+1 مضمونة', 'حتى 8 أعضاء فريق', 'صيانة واستبدال العتاد', 'نسخ احتياطي سحابي دائم وعمل بدون إنترنت'],
     });
-    const months = pick({
-      fr: ['Mai 2026', 'Avril 2026', 'Mars 2026', 'Février 2026', 'Janvier 2026', 'Décembre 2025'],
-      en: ['May 2026', 'April 2026', 'March 2026', 'February 2026', 'January 2026', 'December 2025'],
-      ar: ['ماي 2026', 'أبريل 2026', 'مارس 2026', 'فبراير 2026', 'يناير 2026', 'دجنبر 2025'],
-    });
+
+    const months = [
+      { period: pick({ fr: 'Août 2026', en: 'August 2026', ar: 'غشت 2026' }), ref: 'KIWI-INV-2026-08', amount: `${plan.price} MAD` },
+      { period: pick({ fr: 'Juillet 2026', en: 'July 2026', ar: 'يوليو 2026' }), ref: 'KIWI-INV-2026-07', amount: `${plan.price} MAD` },
+      { period: pick({ fr: 'Juin 2026', en: 'June 2026', ar: 'يونيو 2026' }), ref: 'KIWI-INV-2026-06', amount: `${plan.price} MAD` },
+      { period: pick({ fr: 'Mai 2026', en: 'May 2026', ar: 'ماي 2026' }), ref: 'KIWI-INV-2026-05', amount: `${plan.price} MAD` },
+      { period: pick({ fr: 'Avril 2026', en: 'April 2026', ar: 'أبريل 2026' }), ref: 'KIWI-INV-2026-04', amount: `${plan.price} MAD` },
+      { period: pick({ fr: 'Mars 2026', en: 'March 2026', ar: 'مارس 2026' }), ref: 'KIWI-INV-2026-03', amount: `${plan.price} MAD` },
+    ];
+
     Kiwi.appPage('account-billing', {
-      title: T.title, subtitle: T.sub,
+      title: T.title,
+      subtitle: T.sub,
       body: `
+        <!-- ═══ HERO ACCOUNT LONGEVITY CARD ═══ -->
+        <div class="acc-hero-card">
+          <div class="acc-hero-left">
+            <div class="acc-hero-avatar">${esc(initialsOf(biz))}</div>
+            <div>
+              <div class="acc-hero-biz">${esc(biz)}</div>
+              <div class="acc-hero-meta">
+                <span class="acc-biz-badge">${esc(plan.name.toUpperCase())}</span>
+                <span>${esc(T.memberSince)}</span>
+              </div>
+            </div>
+          </div>
+          <div>
+            <button class="acc-cta ghost" data-action="upgrade-pro">${esc(T.changePlan)}</button>
+          </div>
+        </div>
+
+        <!-- ═══ 4-METRIC KPI BAND ═══ -->
+        <div class="acc-kpi-band">
+          <div class="acc-kpi-box">
+            <div class="val" style="color:var(--success);">99.98%</div>
+            <div class="lbl">${esc(T.kpiUptime)}</div>
+            <div class="sub">${esc(T.kpiUptimeSub)}</div>
+          </div>
+          <div class="acc-kpi-box">
+            <div class="val">14 280</div>
+            <div class="lbl">${esc(T.kpiTickets)}</div>
+            <div class="sub">${esc(T.kpiTicketsSub)}</div>
+          </div>
+          <div class="acc-kpi-box">
+            <div class="val">842 500 <small style="font-size:12px;font-weight:500;">MAD</small></div>
+            <div class="lbl">${esc(T.kpiVol)}</div>
+            <div class="sub">${esc(T.kpiVolSub)}</div>
+          </div>
+          <div class="acc-kpi-box">
+            <div class="val" style="color:var(--atlas);">4 <small style="font-size:12px;font-weight:500;">actifs</small></div>
+            <div class="lbl">${esc(T.kpiFleet)}</div>
+            <div class="sub">${esc(T.kpiFleetSub)}</div>
+          </div>
+        </div>
+
+        <!-- ═══ MOST USED FEATURES ═══ -->
+        <div class="acc-section-head">
+          <div>
+            <h3>${esc(T.secUsage)}</h3>
+            <div class="ct">${esc(T.secUsageSub)}</div>
+          </div>
+        </div>
+        <div class="acc-meter-grid" style="margin-bottom:24px;">
+          ${modules.map((m) => `
+            <div class="acc-meter-item">
+              <div class="acc-meter-head">
+                <div class="acc-meter-t"><span>${m.icon}</span> <span>${esc(m.name)}</span></div>
+                <div class="acc-meter-pct">${m.pct}</div>
+              </div>
+              <div class="acc-meter-desc">${esc(m.desc)}</div>
+              <div class="acc-meter-track">
+                <div class="acc-meter-fill" style="width:${m.pct};"></div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+
+        <!-- ═══ CONNECTED FLEET & HARDWARE ═══ -->
+        <div class="acc-section-head">
+          <div>
+            <h3>${esc(T.secFleet)}</h3>
+            <div class="ct">${esc(T.secFleetSub)}</div>
+          </div>
+        </div>
+        <div class="acc-fleet-grid" style="margin-bottom:24px;">
+          ${fleet.map((d) => `
+            <div class="acc-fleet-card">
+              <div class="acc-fleet-ico">${d.icon}</div>
+              <div class="acc-fleet-info">
+                <div class="acc-fleet-name">${esc(d.name)}</div>
+                <div class="acc-fleet-role">${esc(d.role)}</div>
+                <div class="acc-fleet-status"><span class="dot"></span> ${esc(d.status)}</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+
+        <!-- ═══ SUBSCRIPTION & BILLING CONTROLS ═══ -->
+        <div class="acc-section-head">
+          <div>
+            <h3>${esc(T.secSub)}</h3>
+          </div>
+        </div>
         <div class="acc-plan">
           <div>
             <div class="acc-plan-name">${esc(T.current)}</div>
-            <div class="acc-plan-price">${esc(PLAN.name)} · 399 MAD<small>${esc(PLAN.cycle)}</small></div>
+            <div class="acc-plan-price">${esc(plan.name)} · ${esc(plan.price)} MAD<small>${esc(plan.cycle || '/mois')}</small></div>
             <div class="acc-plan-meta">${esc(T.nextDue)}</div>
           </div>
           <div class="acc-plan-acts">
@@ -956,28 +1243,60 @@
         <div class="acc-grid">
           <div class="acc-card">
             <div class="acc-eyebrow">${esc(T.payMethod)}</div>
-            <p style="font-size:13.5px; margin:0 0 12px;">${esc(T.card)}</p>
-            <button class="acc-cta ghost" data-action="account-update-card">${esc(T.update)}</button>
+            <p style="font-size:14px; font-weight:600; margin:4px 0 14px; color:var(--ink);">${esc(cardSaved)}</p>
+            <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+              <button class="acc-cta ghost" data-action="account-update-card">${esc(T.updateCard)}</button>
+              <button class="acc-danger" data-action="account-plan-cancel">${esc(T.cancelSub)}</button>
+            </div>
           </div>
           <div class="acc-card">
-            <div class="acc-eyebrow">${esc(T.usage)}</div>
-            <div class="acc-row"><span>${esc(T.terminals)}</span><b>4</b></div>
-            <div class="acc-row"><span>${esc(T.venues)}</span><b>3</b></div>
-            <div class="acc-row"><span>${esc(T.team)}</span><b>15</b></div>
+            <div class="acc-eyebrow">${esc(T.included)}</div>
+            <div class="acc-chips" style="margin-top:4px;">
+              ${incl.map((i) => `<span class="acc-chip">${esc(i)}</span>`).join('')}
+            </div>
           </div>
         </div>
-        <div class="acc-sec-title">${esc(T.included)}</div>
-        <div class="acc-card span2"><div class="acc-chips">${incl.map((i) => `<span class="acc-chip">${esc(i)}</span>`).join('')}</div></div>
-        <div class="acc-sec-title">${esc(T.history)}</div>
+
+        <!-- ═══ INVOICE HISTORY ═══ -->
+        <div class="acc-sec-title">${esc(T.secInvoices)}</div>
         <div class="acc-card span2">
           <table class="acc-tbl">
-            <thead><tr><th>${esc(T.period)}</th><th>${esc(T.amount)}</th><th>${esc(T.status)}</th><th>${esc(T.invoice)}</th></tr></thead>
-            <tbody>${months.map((m) => `<tr><td>${esc(m)}</td><td>399 MAD</td><td><span class="acc-paid">✓ ${esc(T.paid)}</span></td><td><a class="acc-dl" data-action="account-dl-invoice">${esc(T.pdf)}</a></td></tr>`).join('')}</tbody>
+            <thead>
+              <tr>
+                <th>${esc(T.period)}</th>
+                <th>RÉFÉRENCE</th>
+                <th>${esc(T.amount)}</th>
+                <th>${esc(T.status)}</th>
+                <th style="text-align:end;">${esc(T.invoice)}</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${months.map((m) => `
+                <tr>
+                  <td><b>${esc(m.period)}</b></td>
+                  <td><code style="font-family:var(--mono);font-size:11px;color:var(--n-500);">${esc(m.ref)}</code></td>
+                  <td>${esc(m.amount)}</td>
+                  <td><span class="acc-paid">✓ ${esc(T.paid)}</span></td>
+                  <td style="text-align:end;">
+                    <a class="acc-dl" data-action="account-dl-invoice" data-inv="${esc(m.ref)}">${esc(T.pdf)}</a>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
           </table>
         </div>`,
     });
-    handlers['account-dl-invoice'] = () => Kiwi.toast(T.dlToast, { type: 'success', force: true });
-    handlers['account-update-card'] = () => Kiwi.toast(T.payToast, { type: 'info', force: true });
+
+    handlers['account-update-card'] = () => updateCardModal();
+    handlers['account-plan-cancel'] = () => planCancelModal();
+    handlers['account-dl-invoice'] = (el) => {
+      const inv = el?.getAttribute?.('data-inv') || 'KIWI-INV-2026-08';
+      Kiwi.toast(pick({
+        fr: `Facture ${inv} téléchargée au format PDF`,
+        en: `Invoice ${inv} downloaded as PDF`,
+        ar: `تم تنزيل الفاتورة ${inv} بصيغة PDF`,
+      }), { type: 'success', force: true });
+    };
   }
 
   /* ════════════════════════════ CENTRE D'AIDE ════════════════════════════ */
