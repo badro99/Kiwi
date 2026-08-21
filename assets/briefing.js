@@ -10,7 +10,7 @@
   var FEATURE = 'briefing';
   var PREFIX = 'kiwi:briefing:v1:';
   var MAX_DAYS = 45;
-  var RULES = [salesDropRule, lowStockRule, marginErosionRule, planningGapRule, cancellationRateRule, discountShareRule, cashGapRule];
+  var RULES = [salesDropRule, lowStockRule, marginErosionRule, planningGapRule, cancellationRateRule, discountShareRule, cashGapRule, lateOrdersRule];
   var doc = { days: [] };
   var cloud = null;
 
@@ -19,8 +19,8 @@
       eyebrow: 'KIWI AI', title: 'Le point du matin', empty: 'Rien d’urgent à signaler.',
       emptyNote: 'Kiwi surveille uniquement les données mesurées de cet établissement.', ask: 'Voir le point du matin',
       coverage: 'Je surveille les signaux déjà mesurables, sans inventer les données manquantes.',
-      coveredLabel: 'Couverture active', covered: 'Ventes · stock · marge · planning · remises · annulations · caisse',
-      waitingLabel: 'En attente de données durables', waiting: 'Délais de service',
+      coveredLabel: 'Couverture active', covered: 'Ventes · stock · marge · planning · remises · annulations · caisse · délais de service',
+      waitingLabel: 'Signaux bloqués', waiting: 'Aucun',
       demo: 'Le point du matin s’active sur un établissement réel connecté. La démonstration ne fabrique aucune alerte.',
       handled: 'Traité', dismiss: 'Masquer', propose: 'Proposer'
     },
@@ -28,8 +28,8 @@
       eyebrow: 'KIWI AI', title: 'Morning briefing', empty: 'Nothing urgent to flag.',
       emptyNote: 'Kiwi monitors only measured data from this venue.', ask: 'Open morning briefing',
       coverage: 'I monitor the signals that are already measurable, without inventing missing data.',
-      coveredLabel: 'Active coverage', covered: 'Sales · stock · margin · staffing · discounts · cancellations · cash',
-      waitingLabel: 'Waiting for durable data', waiting: 'Service timing',
+      coveredLabel: 'Active coverage', covered: 'Sales · stock · margin · staffing · discounts · cancellations · cash · service timing',
+      waitingLabel: 'Blocked signals', waiting: 'None',
       demo: 'Morning briefing activates for a connected real venue. The demo never fabricates alerts.',
       handled: 'Handled', dismiss: 'Dismiss', propose: 'Propose'
     },
@@ -37,8 +37,8 @@
       eyebrow: 'KIWI AI', title: 'ملخص الصباح', empty: 'لا توجد أمور عاجلة الآن.',
       emptyNote: 'يراقب Kiwi فقط البيانات المقاسة لهذا المحل.', ask: 'عرض ملخص الصباح',
       coverage: 'أراقب الإشارات القابلة للقياس حاليا، من دون اختراع البيانات الناقصة.',
-      coveredLabel: 'التغطية الحالية', covered: 'المبيعات · المخزون · الهامش · جدول العمل · التخفيضات · الإلغاءات · الصندوق',
-      waitingLabel: 'في انتظار بيانات دائمة', waiting: 'مدة الخدمة',
+      coveredLabel: 'التغطية الحالية', covered: 'المبيعات · المخزون · الهامش · جدول العمل · التخفيضات · الإلغاءات · الصندوق · مدة الخدمة',
+      waitingLabel: 'إشارات محجوبة', waiting: 'لا شيء',
       demo: 'يتفعل ملخص الصباح في محل حقيقي متصل. العرض التجريبي لا يصنع تنبيهات.',
       handled: 'تمت المعالجة', dismiss: 'إخفاء', propose: 'اقتراح'
     }
@@ -476,6 +476,55 @@
       evidence: { count: reconciliations.length, window: day, source: 'cash_session_events · seuil ' + thresholdLabel + ' MAD' }
     };
   }
+
+  function lateOrdersRule(input) {
+    input = input || {};
+    var O = window.KiwiOrderCourse;
+    var sourceReady = input.ready;
+    if (sourceReady == null) sourceReady = !!(O && O.ready && O.ready());
+    if (!sourceReady) return null;
+    var rows = Array.isArray(input.orders) ? input.orders : (O && O.list ? O.list() : []);
+    var wantedMerchant = String(input.merchant == null ? slug() : input.merchant);
+    var day = String(input.day || businessDay(Date.now() - 86400000));
+    var dayOf = typeof input.businessDay === 'function' ? input.businessDay : businessDay;
+    var dayMs = Number(input.dayMs) || 86400000;
+    var end = Number(input.endAt) || Date.now();
+    function ts(row, snake, camel) { return Number(row[snake] == null ? row[camel] : row[snake]); }
+    function durations(row) {
+      var sent = ts(row, 'sent_ts', 'sentAt'), readyAt = ts(row, 'ready_ts', 'readyAt'), served = ts(row, 'served_ts', 'servedAt');
+      return {
+        kitchen: sent > 0 && readyAt > sent && readyAt - sent <= 4 * 3600000 ? readyAt - sent : null,
+        service: readyAt > 0 && served > readyAt && served - readyAt <= 4 * 3600000 ? served - readyAt : null,
+        sent: sent
+      };
+    }
+    var scoped = rows.filter(function (row) { return row && (!wantedMerchant || String(row.merchant || '') === wantedMerchant); });
+    var current = scoped.filter(function (row) { var d = durations(row); return d.sent > 0 && dayOf(d.sent) === day; }).map(durations);
+    var baseline = scoped.filter(function (row) {
+      var d = durations(row); return d.sent > 0 && dayOf(d.sent) !== day && d.sent >= end - 28 * dayMs && d.sent < end;
+    }).map(durations);
+    function stage(key, labelFr, labelEn, labelAr) {
+      var nowRows = current.map(function (d) { return d[key]; }).filter(Number.isFinite);
+      var baseRows = baseline.map(function (d) { return d[key]; }).filter(Number.isFinite);
+      if (nowRows.length < 3 || baseRows.length < 5) return null;
+      var nowMedian = median(nowRows), baseMedian = median(baseRows);
+      if (!(baseMedian > 0) || nowMedian < baseMedian * 1.5 || nowMedian - baseMedian < 300000) return null;
+      var nowMin = Math.round(nowMedian / 60000), baseMin = Math.round(baseMedian / 60000);
+      return {
+        id: 'late-orders:' + key + ':' + day, kind: 'late-orders-' + key, tone: 'warn', roles: ['owner', 'manager'],
+        copy: {
+          fr: labelFr + ' médian ' + nowMin + ' min contre ' + baseMin + ' min, alerte à 1,5× et +5 min.',
+          en: labelEn + ' median ' + nowMin + ' min versus ' + baseMin + ' min, alert at 1.5x and +5 min.',
+          ar: labelAr + ' ' + nowMin + ' دقيقة مقابل ' + baseMin + ' دقيقة، التنبيه عند 1.5x و+5 دقائق.'
+        },
+        evidence: { count: nowRows.length, window: day + ' · baseline 28 jours (' + baseRows.length + ')', source: 'order_course.' + key }
+      };
+    }
+    return [
+      stage('kitchen', 'Préparation', 'Preparation', 'مدة التحضير'),
+      stage('service', 'Service après préparation', 'Service after ready', 'مدة التقديم بعد الجاهزية')
+    ].filter(Boolean);
+  }
   function visibleLines(lines, role) {
     role = role || tier();
     return (Array.isArray(lines) ? lines : []).filter(function (line) {
@@ -613,6 +662,7 @@
     window.addEventListener('kiwi:langchange', function () { render(); injectAssistantEntry(); });
     window.addEventListener('kiwi:cancellation-history', function () { compute(); });
     window.addEventListener('kiwi:cash-sessions', function () { compute(); });
+    window.addEventListener('kiwi:order-course', function () { compute(); });
     document.addEventListener('kiwi:live-backfill-complete', function (event) {
       if (!event.detail || event.detail.merchant === slug()) compute();
     });
@@ -629,7 +679,7 @@
   window.KiwiBriefing = {
     canHandle: canHandle, reply: reply, compute: function () { return compute(); }, lines: activeLines,
     dismiss: function (id) { return setState(id, 'dismissed'); }, handled: function (id) { return setState(id, 'handled'); },
-    _test: { businessDay: businessDay, scopeKey: scopeKey, normalizeLine: normalizeLine, visibleLines: visibleLines, salesDropRule: salesDropRule, lowStockRule: lowStockRule, marginErosionRule: marginErosionRule, planningGapRule: planningGapRule, cancellationRateRule: cancellationRateRule, discountShareRule: discountShareRule, cashGapRule: cashGapRule, stockItems: stockItems, proposeLine: proposeLine, openPlanning: openPlanning, salesRows: salesRows, dayBoundsAt: dayBoundsAt, compute: compute, read: function () { return clone(doc); }, write: writeLocal }
+    _test: { businessDay: businessDay, scopeKey: scopeKey, normalizeLine: normalizeLine, visibleLines: visibleLines, salesDropRule: salesDropRule, lowStockRule: lowStockRule, marginErosionRule: marginErosionRule, planningGapRule: planningGapRule, cancellationRateRule: cancellationRateRule, discountShareRule: discountShareRule, cashGapRule: cashGapRule, lateOrdersRule: lateOrdersRule, stockItems: stockItems, proposeLine: proposeLine, openPlanning: openPlanning, salesRows: salesRows, dayBoundsAt: dayBoundsAt, compute: compute, read: function () { return clone(doc); }, write: writeLocal }
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true }); else boot();
 }());

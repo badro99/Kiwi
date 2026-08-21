@@ -157,3 +157,48 @@ CREATE INDEX IF NOT EXISTS idx_cash_session_events_merchant_ts
 CREATE INDEX IF NOT EXISTS idx_cash_session_events_terminal_session
   ON cash_session_events (merchant, terminal_id, session_id, occurred_ts);
 ```
+
+## Phase 1d-d · jalons durables du parcours commande
+
+- Surface émettrice : `kiwi-serveur.html` conserve son payload canonique vers
+  `/api/order/queue` : création
+  `{merchant,create:true,mode,table,lines,ref,server}`, transition
+  `{merchant,id,status,server,paid}` et fermeture
+  `{merchant,closeSession|closeTable,closedBy}`. Le premier envoi accepté est
+  aujourd'hui aussi l'envoi cuisine : `acceptedAt` et `sentAt` reçoivent donc le
+  même instant serveur, sans inventer une étape intermédiaire. KDS écrit
+  `readyAt`, le serveur écrit `servedAt`, la session canonique écrit `closedAt`.
+- Fait durable : une ligne par `{merchant,orderId}` dans `order_course`, avec
+  `acceptedAt`, `sentAt`, `readyAt`, `servedAt`, `closedAt`. Chaque jalon est
+  posé une seule fois avec `COALESCE`; aucun nom client, contenu de commande,
+  montant ou compteur `elapsed` n'entre dans ce registre.
+- Panne backend / migration : la copie analytique est appelée sous `try/catch`
+  seulement APRÈS la création ou transition canonique réussie. Une table absente
+  omet donc le signal mais ne peut ni refuser une commande, ni retarder la
+  cuisine, ni bloquer la caisse ou une vente. Aucun appel de télémétrie
+  supplémentaire n'est attendu par le serveur ou le terminal.
+- Lecture et règle : `/api/order-course` est tenant-scope et lecture seule pour
+  le dashboard autorisé. La règle compare séparément les médianes `sent→ready`
+  et `ready→served` de la dernière journée fermée à la baseline propre au lieu
+  sur 28 jours; manager et propriétaire seulement, jamais de signal sans au
+  moins 3 commandes courantes et 5 comparables.
+- Migration D1 additive à appliquer à `kiwi-sales` après inspection de
+  `sqlite_master` (aucune ligne commerçant lue) :
+
+```sql
+CREATE TABLE IF NOT EXISTS order_course (
+  merchant TEXT NOT NULL,
+  order_id TEXT NOT NULL,
+  order_number INTEGER,
+  accepted_ts INTEGER,
+  sent_ts INTEGER,
+  ready_ts INTEGER,
+  served_ts INTEGER,
+  closed_ts INTEGER,
+  created_ts INTEGER NOT NULL,
+  updated_ts INTEGER NOT NULL,
+  PRIMARY KEY (merchant, order_id)
+);
+CREATE INDEX IF NOT EXISTS idx_order_course_merchant_sent
+  ON order_course (merchant, sent_ts);
+```

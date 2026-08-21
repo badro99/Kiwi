@@ -1080,3 +1080,20 @@ CREATE INDEX IF NOT EXISTS idx_cash_session_events_merchant_ts
   ON cash_session_events (merchant, occurred_ts);
 CREATE INDEX IF NOT EXISTS idx_cash_session_events_terminal_session
   ON cash_session_events (merchant, terminal_id, session_id, occurred_ts);
+
+-- Phase AI 1d-d: one immutable timestamp per canonical order-course milestone.
+CREATE TABLE IF NOT EXISTS order_course (
+  merchant TEXT NOT NULL,
+  order_id TEXT NOT NULL,
+  order_number INTEGER,
+  accepted_ts INTEGER,
+  sent_ts INTEGER,
+  ready_ts INTEGER,
+  served_ts INTEGER,
+  closed_ts INTEGER,
+  created_ts INTEGER NOT NULL,
+  updated_ts INTEGER NOT NULL,
+  PRIMARY KEY (merchant, order_id)
+);
+CREATE INDEX IF NOT EXISTS idx_order_course_merchant_sent
+  ON order_course (merchant, sent_ts);

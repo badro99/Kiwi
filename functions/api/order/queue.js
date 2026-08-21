@@ -43,6 +43,12 @@
 
 import { json, entitledMerchant, activeServiceEmployee } from '../../auth/_lib.js';
 import { startOfDay, startOfWeek, deskTouch, normTable, priceOrder, newSessionId, SESSION_ID, pollCursor } from './_lib.js';
+import { recordOrderCourse, closeOrderCourses } from './_course.js';
+
+function deferCourse(context, promise) {
+  const safe = Promise.resolve(promise).catch(() => false);
+  if (context && typeof context.waitUntil === 'function') context.waitUntil(safe);
+}
 
 /* Les transitions LÉGALES, par état d'arrivée. Avant, l'UPDATE ne regardait pas
  * l'état de départ : on pouvait faire passer une commande de `pending`
@@ -714,6 +720,10 @@ export async function onRequestPost(context) {
       }
     }
 
+    deferCourse(context, recordOrderCourse(env, {
+      merchant, orderId: id, orderNumber: (row && row.number) || 1,
+      acceptedAt: now, sentAt: now,
+    }));
     return json({
       ok: true, id, number: (row && row.number) || 1,
       status: 'accepted', total, lines: priced.lines, session: serviceSession && serviceSession.id,
@@ -1350,6 +1360,9 @@ export async function onRequestPost(context) {
         ).bind(now, now, merchant, closeSession).run();
       }
     } catch (_) {}
+    deferCourse(context, closeOrderCourses(env, {
+      merchant, sessionId: closeSession, table: closeTable, closedAt: now,
+    }));
     return json({ ok: true, closed, unpaid: unpaid || undefined });
   }
 
@@ -1373,7 +1386,7 @@ export async function onRequestPost(context) {
    *    rejoue le même en cas de réseau tombé ; sans ça, un tunnel de trente
    *    secondes dans un sous-sol aurait fait sortir le même plat deux fois. */
   if (b && b.create && typeof b.create === 'object') {
-    return createTicket(env, merchant, b.create, now);
+    return createTicket(context, env, merchant, b.create, now);
   }
 
   /* ── Faire avancer une commande ───────────────────────────────────────── */
@@ -1422,6 +1435,11 @@ export async function onRequestPost(context) {
         return json({ error: 'write-failed', detail: String((e && e.message) || e) }, 500);
       }
       if (changed) {
+        if (changed.status === 'ready') {
+          deferCourse(context, recordOrderCourse(env, {
+            merchant, orderId: changed.id, orderNumber: changed.number, readyAt: nextTs,
+          }));
+        }
         return json({ ok: true, id: changed.id, status: changed.status,
                       number: changed.number, station: acceptedStation, lines });
       }
@@ -1542,6 +1560,15 @@ export async function onRequestPost(context) {
     return json({ error: 'bad-transition', status: cur.status, number: cur.number }, 409);
   }
 
+  const milestone = status === 'accepted'
+    ? { acceptedAt: now, sentAt: now }
+    : (status === 'ready' ? { readyAt: now } : (status === 'served' ? { servedAt: now } : null));
+  if (milestone) {
+    deferCourse(context, recordOrderCourse(env, Object.assign({
+      merchant, orderId: row.id, orderNumber: row.number,
+    }, milestone)));
+  }
+
   /* ── La remise en main propre CLÔT la session du comptoir ─────────────────
    * Un retrait au comptoir n'a pas d'addition à encaisser plus tard : si rien
    * ne fermait sa session ici, le client repartait avec son sac ET un lien
@@ -1624,7 +1651,7 @@ function cleanLines(raw) {
   return out;
 }
 
-async function createTicket(env, merchant, c, now) {
+async function createTicket(context, env, merchant, c, now) {
   const id = String(c.id || '').trim();
   if (!ORDER_ID.test(id)) return json({ error: 'bad-id' }, 400);
 
@@ -1718,5 +1745,9 @@ async function createTicket(env, merchant, c, now) {
     return json({ error: 'write-failed', detail: String((lastErr && lastErr.message) || lastErr) }, 500);
   }
 
+  deferCourse(context, recordOrderCourse(env, {
+    merchant, orderId: id, orderNumber: (row && row.number) || 1,
+    acceptedAt: now, sentAt: now,
+  }));
   return json({ ok: true, id, number: (row && row.number) || 1, status: 'accepted', total });
 }
