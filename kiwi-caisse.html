@@ -329,17 +329,17 @@
 
     /* ---------- Left sidebar (dark, dashboard-matching) ---------- */
     .sidebar {
-      width: 280px;
-      flex: 0 0 280px;
+      width: 260px;
+      flex: 0 0 260px;
       background: var(--ink-bg);
       border-right: 1px solid rgba(255,255,255,0.06);
       color: #b5b9b6;
       display: flex;
       flex-direction: column;
-      padding: 22px 18px 18px;
-      gap: 18px;
+      padding: 16px 14px 14px;
+      gap: 12px;
       min-height: 0;
-      /* When the viewport is short (laptop / windowed Chrome) the sidebar
+      /* When the viewport is short (laptop / windowed Chrome / iPad) the sidebar
          content overflows. Chrome doesn't let flex children scroll without an
          explicit overflow declaration — Safari is more forgiving. Without
          this the "Fin de service" button at the bottom is unreachable. */
@@ -358,7 +358,7 @@
     }
     .sidebar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.22); background-clip: padding-box; }
 
-    .brand-row { display: flex; flex-direction: column; gap: 10px; }
+    .brand-row { display: flex; flex-direction: column; gap: 8px; }
     /* SVG wordmark. The sidebar is dark in both themes, so it always shows
        the dark-surface variant; the long-press operator-console listener sits
        on the container, so the img must never intercept or drag. */
@@ -374,7 +374,7 @@
       width: auto; display: block;
       pointer-events: none; -webkit-user-drag: none; user-select: none;
     }
-    .brand-mark img { height: 30px; }
+    .brand-mark img { height: 26px; }
     /* Ticket empty state sits on a light panel — theme picks the variant.
        The empty state greys and fades whichever one shows (.rp-empty .wordmark). */
     .wordmark { display: inline-flex; align-items: center; }
@@ -385,7 +385,7 @@
 
     .duty-row {
       display: flex; align-items: center; gap: 8px;
-      font-size: 10px; color: #8f9591;
+      font-size: 9.5px; color: #8f9591;
       letter-spacing: 0.08em; text-transform: uppercase;
       margin: 0 4px;
     }
@@ -397,60 +397,60 @@
 
     .cashier-card {
       display: flex; flex-direction: column;
-      padding: 14px 15px;
+      padding: 10px 12px;
       background: rgba(255,255,255,0.03);
       border: 1px solid rgba(255,255,255,0.08);
       border-radius: var(--r-lg);
       box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
     }
-    .cashier-name { font-size: 14px; font-weight: 600; color: var(--paper-cream); }
-    .cashier-role { font-size: 11px; color: #8f9591; margin-top: 2px; }
-    .cashier-divider { height: 1px; background: rgba(255,255,255,0.08); margin: 10px 0; }
+    .cashier-name { font-size: 13px; font-weight: 600; color: var(--paper-cream); }
+    .cashier-role { font-size: 10.5px; color: #8f9591; margin-top: 1px; }
+    .cashier-divider { height: 1px; background: rgba(255,255,255,0.08); margin: 7px 0; }
     .clock-time {
       font-family: var(--sans);
       font-feature-settings: "tnum" 1;
-      font-size: 28px; font-weight: 700; color: var(--paper-cream);
+      font-size: 22px; font-weight: 700; color: var(--paper-cream);
       line-height: 1;
       letter-spacing: -0.02em;
     }
-    .clock-date { font-size: 11px; color: #8f9591; margin-top: 4px; text-transform: capitalize; }
+    .clock-date { font-size: 10.5px; color: #8f9591; margin-top: 3px; text-transform: capitalize; }
 
-    .stats-section { display: flex; flex-direction: column; gap: 8px; }
+    .stats-section { display: flex; flex-direction: column; gap: 6px; }
     .stat-card {
       background: rgba(255,255,255,0.03);
       border: 1px solid rgba(255,255,255,0.08);
       border-radius: var(--r-lg);
-      padding: 12px;
-      display: flex; flex-direction: column; gap: 4px;
+      padding: 9px 11px;
+      display: flex; flex-direction: column; gap: 3px;
       box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
     }
-    .stat-label { font-size: 9.5px; font-weight: 600; color: #7f847f; letter-spacing: 0.07em; text-transform: uppercase; }
-    .stat-value { font-size: 17px; font-weight: 700; color: var(--paper-cream); font-feature-settings: "tnum" 1; }
-    .stat-delta { font-size: 11px; color: var(--mint); font-weight: 500; margin-top: 2px; }
+    .stat-label { font-size: 8.5px; font-weight: 600; color: #7f847f; letter-spacing: 0.07em; text-transform: uppercase; }
+    .stat-value { font-size: 15px; font-weight: 700; color: var(--paper-cream); font-feature-settings: "tnum" 1; }
+    .stat-delta { font-size: 10px; color: var(--mint); font-weight: 500; margin-top: 1px; }
     .stat-row {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
     }
-    .stat-card.compact .stat-value { font-size: 14px; }
+    .stat-card.compact .stat-value { font-size: 13px; }
 
-    .mode-selector { display: flex; gap: 8px; }
+    .mode-selector { display: flex; gap: 6px; }
     .mode-pill {
       flex: 1;
       display: inline-flex; flex-direction: column;
-      align-items: center; justify-content: center; gap: 10px;
-      padding: 16px 7px;
-      border-radius: 14px;
-      font-size: 13px; font-weight: 600;
+      align-items: center; justify-content: center; gap: 6px;
+      padding: 10px 4px;
+      border-radius: 12px;
+      font-size: 12px; font-weight: 600;
       background: rgba(255,255,255,0.03);
       border: 1px solid rgba(255,255,255,0.08);
       box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
       color: #8f9591;
       transition: background 200ms ease, color 200ms ease, transform 150ms ease, box-shadow 200ms ease, border-color 200ms ease;
       letter-spacing: -0.01em;
-      min-height: 88px;
+      min-height: 64px;
     }
     .mode-pill svg {
-      width: 28px; height: 28px;
-      flex: 0 0 28px;
+      width: 22px; height: 22px;
+      flex: 0 0 22px;
       fill: currentColor;
     }
     .mode-pill span { line-height: 1.15; }
@@ -467,25 +467,24 @@
       box-shadow: var(--shadow-1);
     }
 
-    /* Action pills — caisse operations, styled as a compact sibling row
-       of the mode selector (smaller card, smaller icon). */
-    .act-selector { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    /* Action pills — caisse operations, styled as a compact 2x2 grid */
+    .act-selector { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
     .act-pill {
       display: inline-flex; flex-direction: column;
-      align-items: center; justify-content: center; gap: 8px;
-      padding: 12px 3px;
-      border-radius: 14px;
-      font-size: 10px; font-weight: 600;
+      align-items: center; justify-content: center; gap: 5px;
+      padding: 8px 3px;
+      border-radius: 12px;
+      font-size: 9.5px; font-weight: 600;
       background: rgba(255,255,255,0.03);
       border: 1px solid rgba(255,255,255,0.08);
       box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
       color: #9aa09b;
-      text-align: center; line-height: 1.25;
-      min-height: 76px;
+      text-align: center; line-height: 1.2;
+      min-height: 54px;
       cursor: pointer;
       transition: background 200ms ease, color 200ms ease, transform 150ms ease, border-color 200ms ease;
     }
-    .act-pill svg { width: 22px; height: 22px; flex: 0 0 22px; }
+    .act-pill svg { width: 18px; height: 18px; flex: 0 0 18px; }
     .act-pill:hover {
       background: rgba(255,255,255,0.06);
       border-color: rgba(255,255,255,0.16);
@@ -494,24 +493,106 @@
     }
     .act-pill:active { transform: scale(0.97); }
 
-    .rail-links { display: flex; flex-direction: column; gap: 6px; }
+    .rail-links { display: flex; flex-direction: column; gap: 5px; }
 
-    .quick-actions { display: flex; flex-direction: column; gap: 6px; margin-top: auto; }
+    .quick-actions { display: flex; flex-direction: column; gap: 5px; margin-top: auto; }
     .qa-btn {
-      display: flex; align-items: center; gap: 10px;
-      padding: 11px 12px;
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 10px;
       background: rgba(255,255,255,0.03);
       border: 1px solid rgba(255,255,255,0.08);
       color: #b5b9b6;
-      border-radius: var(--r-lg);
-      font-size: 13px; font-weight: 500;
+      border-radius: 10px;
+      font-size: 12px; font-weight: 500;
       text-align: left;
       transition: background 150ms ease, color 150ms ease, border-color 150ms ease;
     }
     .qa-btn:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.16); color: var(--paper-cream); }
     .qa-btn.ghost { background: transparent; border-color: transparent; color: #6a6e6c; }
     .qa-btn.ghost:hover { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.08); color: #b5b9b6; }
-    .qa-btn svg { width: 15px; height: 15px; flex: 0 0 15px; }
+    .qa-btn svg { width: 14px; height: 14px; flex: 0 0 14px; }
+
+    /* ---------- iPad & Tablet responsive optimization ---------- */
+    @media (max-width: 1280px), (max-height: 900px) {
+      .sidebar {
+        width: 230px;
+        flex: 0 0 230px;
+        padding: 12px 10px;
+        gap: 8px;
+      }
+      .brand-row { gap: 4px; }
+      .brand-mark img { height: 22px; }
+      .duty-row { font-size: 8.5px; margin: 0 2px; }
+      .cashier-card {
+        padding: 8px 10px;
+        border-radius: 10px;
+      }
+      .cashier-name { font-size: 12px; }
+      .cashier-role { font-size: 9.5px; }
+      .cashier-divider { margin: 4px 0; }
+      .clock-time { font-size: 17px; }
+      .clock-date { font-size: 9.5px; }
+      .mode-selector { gap: 4px; }
+      .mode-pill {
+        min-height: 50px;
+        padding: 6px 2px;
+        gap: 4px;
+        font-size: 11px;
+        border-radius: 10px;
+      }
+      .mode-pill svg { width: 18px; height: 18px; flex: 0 0 18px; }
+      .act-selector {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 4px;
+      }
+      .act-pill {
+        min-height: 44px;
+        padding: 5px 2px;
+        gap: 3px;
+        font-size: 8.5px;
+        border-radius: 10px;
+      }
+      .act-pill svg { width: 15px; height: 15px; flex: 0 0 15px; }
+      .stats-section { gap: 4px; }
+      .stat-card {
+        padding: 6px 8px;
+        gap: 1px;
+        border-radius: 10px;
+      }
+      .stat-label { font-size: 8px; }
+      .stat-value { font-size: 13px; }
+      .stat-delta { font-size: 9px; }
+      .stat-row { gap: 4px; }
+      .stat-card.compact .stat-value { font-size: 11.5px; }
+      .rail-links { gap: 3px; }
+      .team-trigger {
+        padding: 5px 8px;
+        font-size: 11px;
+        border-radius: 8px;
+        gap: 6px;
+      }
+      .team-trigger svg { width: 13px; height: 13px; flex: 0 0 13px; }
+      .team-trigger .count { font-size: 9px; padding: 1px 5px; }
+      .quick-actions { gap: 3px; }
+      .qa-btn {
+        padding: 5px 8px;
+        font-size: 11px;
+        border-radius: 8px;
+        gap: 6px;
+      }
+      .qa-btn svg { width: 13px; height: 13px; flex: 0 0 13px; }
+
+      .rightpanel {
+        width: 280px;
+        flex: 0 0 280px;
+      }
+      .main-head {
+        padding: 10px 14px 6px;
+      }
+      .view {
+        padding: 4px 14px 12px;
+      }
+    }
 
     /* ---------- Main floor area ---------- */
     .main {
@@ -4813,7 +4894,7 @@
   /* Console noir permanent — même cadre charbon que le plan démo. */
   .cplan-room {
     position: relative;
-    width: 100%; max-width: 880px; margin: 8px auto 0;
+    width: 100%; max-width: 100%; margin: 6px auto 0;
     container-type: inline-size;
     border: 1.5px solid rgba(255,255,255,0.13); border-radius: 18px;
     overflow: hidden; background: #040504;
@@ -5088,7 +5169,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=392" defer></script>
+  <script src="assets/caisse-pwa.js?v=393" defer></script>
   <script src="assets/live-link.js?v=15" defer></script>
   <!-- The staff-role catalogue — says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
