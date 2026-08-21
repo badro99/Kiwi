@@ -142,13 +142,23 @@ Then publish `dist/*` as a GitHub Release and point the app's download links at 
     ```
   - Le script installe le binaire dans `/usr/local/bin/kiwi-printer-bridge`, active le service systemd `kiwi-printer-bridge.service` et vérifie l'état sur `http://127.0.0.1:9110/`.
 - **Android / Termux (Box gratuite avec un vieux smartphone) :**
-  - Installez **Termux** sur le téléphone (depuis F-Droid ou GitHub).
-  - Ouvrez Termux et lancez l'installateur en une ligne :
+  - **Préparation :** connectez le téléphone au Wi-Fi du café, coupez les données mobiles (4G), et laissez-le branché sur chargeur permanent.
+  - **Installation :** installez **Termux** depuis [F-Droid](https://f-droid.org/packages/com.termux/) (ne pas utiliser la version Play Store, obsolète). Recommandé : installer aussi **Termux:Boot** sur F-Droid et l'ouvrir une fois.
+  - **Lancement du script :** ouvrez Termux et lancez :
     ```bash
     curl -fsSL https://raw.githubusercontent.com/badro99/Kiwi/main/bridge/install-termux.sh | bash
     ```
-  - Le script active l'anti-veille (`termux-wake-lock`), installe Node.js, configure le démarrage automatique via `Termux:Boot` et demande le code à 6 chiffres.
-  - *Recommandations :* brancher sur secteur permanent, désactiver l'optimisation de batterie pour Termux, et couper la 4G pour forcer le Wi-Fi.
+  - Le script active l'anti-veille (`termux-wake-lock`), installe Node.js, démarre le pont en tâche de fond (`nohup`, logs dans `~/kiwi-bridge/bridge.log`), configure le démarrage automatique au boot, et demande le code à 6 chiffres via `/dev/tty`.
+  - **Repli si vous avez manqué la question :** générez un code sur l'iPad (Kiwi → Imprimantes → Relais Kiwi → Associer un pont), puis dans Termux :
+    ```bash
+    curl -X POST -H 'Content-Type: application/json' -d '{"code":"123456"}' http://127.0.0.1:9110/kiwi/relay/pair
+    ```
+    *(ou ouvrez `http://127.0.0.1:9110/` dans Chrome sur le téléphone pour saisir le code).*
+  - **Réglage système Android :** dans *Paramètres → Applications → Termux → Batterie*, choisissez **« Sans restriction »**. Ne fermez jamais Termux via le bouton « Exit » de la barre de notifications.
+  - **Diagnostic :**
+    - Statut local : `http://127.0.0.1:9110/` sur le téléphone (`paired`, `online`, `lastError`).
+    - Journal en direct : `cat ~/kiwi-bridge/bridge.log` ou `tail -f ~/kiwi-bridge/bridge.log`.
+    - Message sur l'iPad : `relay-offline` (pont éteint ou tué), `timeout` / `ECONNREFUSED` (imprimante hors ligne / mauvaise IP). Les jobs expirent après 10 minutes.
 
 ---
 

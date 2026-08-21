@@ -125,12 +125,18 @@ start "" /min "%USERPROFILE%\Downloads\kiwi-printer-bridge-win.exe"</code>
       </div>
       <div class="os-body" data-os="android">
         <ol class="run">
-          <li><b>Transformer un vieux téléphone Android en box d'impression gratuite :</b></li>
-          <li>Installez l'application gratuite <b>Termux</b> (sur F-Droid ou GitHub).</li>
-          <li>Ouvrez Termux et collez cette commande unique :<br>
+          <li><b>Préparer le téléphone :</b> connectez-le au Wi-Fi du café, coupez les données mobiles (4G), et laissez-le branché sur secteur au comptoir.</li>
+          <li><b>Installer Termux depuis F-Droid :</b> installez l'application <b>Termux</b> via <a href="https://f-droid.org/packages/com.termux/" target="_blank" rel="noopener" style="color:var(--mint);text-decoration:underline">F-Droid</a> (ne pas utiliser la version Google Play Store, obsolète). Recommandé : installer aussi <b>Termux:Boot</b> sur F-Droid et l'ouvrir une fois.</li>
+          <li><b>Lancer l'installateur :</b> ouvrez Termux et collez :<br>
             <code>curl -fsSL https://raw.githubusercontent.com/badro99/Kiwi/main/bridge/install-termux.sh | bash</code></li>
-          <li>Entrez le code d'appairage à 6 chiffres affiché sur l'iPad quand le script vous le demande.</li>
-          <li><b>Règles d'or pour le téléphone :</b> laissez-le branché sur secteur au comptoir, désactivez l'optimisation de batterie pour Termux dans les paramètres Android, et coupez la 4G pour rester sur le Wi-Fi du café.</li>
+          <li><b>Appairer avec la caisse iPad :</b><br>
+            Sur l'iPad dans Kiwi → icône imprimante (haut) → section <i>« Imprimer depuis un iPad ou une tablette · relais Kiwi »</i> → cliquez sur <b>« Associer un pont »</b>. Un code à 6 chiffres apparaît (15 min).<br>
+            Tapez ce code quand Termux vous le demande.</li>
+          <li><b>Si vous avez raté la question dans Termux :</b> redemandez un code sur l'iPad, puis dans Termux lancez :<br>
+            <code>curl -X POST -H 'Content-Type: application/json' -d '{"code":"123456"}' http://127.0.0.1:9110/kiwi/relay/pair</code><br>
+            *(ou ouvrez <code>http://127.0.0.1:9110/</code> dans Chrome sur le téléphone pour le saisir).*</li>
+          <li><b>Paramètres Android indispensables :</b> <i>Paramètres → Applications → Termux → Batterie</i> → sélectionnez <b>« Sans restriction »</b>. Laissez Termux tourner en arrière-plan (ne faites jamais « Exit » dans sa notification).</li>
+          <li><b>Tester l'impression sur l'iPad :</b> dans les réglages imprimante de la caisse → <i>Option avancée · imprimante réseau globale</i> → IP <code>192.168.11.199</code>, port <code>9100</code>, 80 mm, ESC/POS générique → <b>« Imprimer un ticket test »</b> → <b>Enregistrer</b>.</li>
         </ol>
       </div>
     </div>
@@ -142,7 +148,7 @@ start "" /min "%USERPROFILE%\Downloads\kiwi-printer-bridge-win.exe"</code>
   (function(){
     var BASE = 'https://github.com/badro99/Kiwi/releases/latest/download/';
     var FILES = { win: 'kiwi-printer-bridge-win.exe', mac: 'kiwi-printer-bridge-macos.zip', linux: 'kiwi-printer-bridge-linux' };
-    var LABEL = { win: 'Windows', mac: 'macOS', linux: 'Linux' };
+    var LABEL = { win: 'Windows', mac: 'macOS', linux: 'Linux', android: 'Android' };
     function $(s){ return document.querySelector(s); }
 
     document.getElementById('dl-win').href   = BASE + FILES.win;
@@ -152,15 +158,22 @@ start "" /min "%USERPROFILE%\Downloads\kiwi-printer-bridge-win.exe"</code>
     function detectOS(){
       var p = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '';
       var ua = navigator.userAgent || '';
+      if (/Android/i.test(ua) || /Android/i.test(p)) return 'android';
       if (/Mac/i.test(p) || /Mac OS X/i.test(ua)) return 'mac';
-      if (/Linux/i.test(p) && !/Android/i.test(ua)) return 'linux';
+      if (/Linux/i.test(p)) return 'linux';
       return 'win';
     }
     var os = detectOS();
     var prim = document.getElementById('dl-primary');
-    prim.href = BASE + FILES[os];
-    prim.setAttribute('download', '');
-    prim.textContent = 'Télécharger pour ' + LABEL[os];
+    if (os === 'android') {
+      prim.href = 'https://f-droid.org/packages/com.termux/';
+      prim.removeAttribute('download');
+      prim.textContent = 'Télécharger Termux sur F-Droid';
+    } else {
+      prim.href = BASE + FILES[os];
+      prim.setAttribute('download', '');
+      prim.textContent = 'Télécharger pour ' + LABEL[os];
+    }
 
     // OS tabs for the "Lancer" instructions
     function selectOs(o){
