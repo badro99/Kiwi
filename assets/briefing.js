@@ -16,7 +16,7 @@
 
   var COPY = {
     fr: {
-      eyebrow: 'KIWI AI', title: 'Le point du matin', empty: 'Rien d’urgent à signaler.',
+      eyebrow: 'KIWI AI', title: 'Le point du matin', empty: 'Rien d’urgent à signaler.', calm: 'Rien d’urgent', signalOne: '1 signal', signalMany: '{n} signaux',
       emptyNote: 'Kiwi surveille uniquement les données mesurées de cet établissement.', ask: 'Voir le point du matin',
       coverage: 'Je surveille les signaux déjà mesurables, sans inventer les données manquantes.',
       coveredLabel: 'Couverture active', covered: 'Ventes · stock · marge · planning · remises · annulations · caisse · délais de service',
@@ -25,7 +25,7 @@
       handled: 'Traité', dismiss: 'Masquer', propose: 'Proposer'
     },
     en: {
-      eyebrow: 'KIWI AI', title: 'Morning briefing', empty: 'Nothing urgent to flag.',
+      eyebrow: 'KIWI AI', title: 'Morning briefing', empty: 'Nothing urgent to flag.', calm: 'Nothing urgent', signalOne: '1 signal', signalMany: '{n} signals',
       emptyNote: 'Kiwi monitors only measured data from this venue.', ask: 'Open morning briefing',
       coverage: 'I monitor the signals that are already measurable, without inventing missing data.',
       coveredLabel: 'Active coverage', covered: 'Sales · stock · margin · staffing · discounts · cancellations · cash · service timing',
@@ -34,7 +34,7 @@
       handled: 'Handled', dismiss: 'Dismiss', propose: 'Propose'
     },
     ar: {
-      eyebrow: 'KIWI AI', title: 'ملخص الصباح', empty: 'لا توجد أمور عاجلة الآن.',
+      eyebrow: 'KIWI AI', title: 'ملخص الصباح', empty: 'لا توجد أمور عاجلة الآن.', calm: 'لا شيء عاجل', signalOne: 'إشارة واحدة', signalMany: '{n} إشارات',
       emptyNote: 'يراقب Kiwi فقط البيانات المقاسة لهذا المحل.', ask: 'عرض ملخص الصباح',
       coverage: 'أراقب الإشارات القابلة للقياس حاليا، من دون اختراع البيانات الناقصة.',
       coveredLabel: 'التغطية الحالية', covered: 'المبيعات · المخزون · الهامش · جدول العمل · التخفيضات · الإلغاءات · الصندوق · مدة الخدمة',
@@ -630,17 +630,61 @@
   function installStyle() {
     if (document.querySelector('[data-briefing-style]')) return;
     var s = document.createElement('style'); s.setAttribute('data-briefing-style', '');
-    s.textContent = '.briefing-inline{display:flex;flex-direction:column;gap:14px;margin:2px 0 0}.briefing-inline .hai-rec{margin:0}.briefing-kicker{font:600 10.5px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--atlas)}.briefing-line{margin:0}.briefing-evidence{font:500 10.5px/1.4 var(--mono);color:var(--n-500);margin-top:6px}.briefing-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:9px}.briefing-actions button{border:1px solid var(--n-300);background:transparent;color:inherit;border-radius:999px;padding:5px 10px;font:600 11px/1 var(--sans);cursor:pointer}.briefing-actions button:hover{border-color:var(--atlas);color:var(--atlas)}';
+    s.textContent = [
+      /* Section « point du matin » dans la carte Kiwi Insights : filet, kicker mono, liste de signaux. */
+      '.briefing-inline{display:flex;flex-direction:column;gap:10px;margin:4px 0 2px;padding-top:16px;border-top:1px solid var(--n-200)}',
+      '.briefing-kicker{display:flex;align-items:center;gap:10px;font:600 10.5px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--atlas)}',
+      '.briefing-kicker small{font:500 10.5px/1 var(--mono);letter-spacing:.06em;text-transform:none;color:var(--n-500)}',
+      /* Une ligne = un signal : marqueur, titre, preuve, actions. Grille 1fr/auto sur large, empilée sur étroit. */
+      '.briefing-line{display:grid;grid-template-columns:1fr auto;gap:6px 18px;align-items:center;padding:12px 14px 12px 16px;border:1px solid var(--n-200);border-radius:14px;background:color-mix(in srgb,var(--atlas) 5%,transparent);position:relative;animation:briefing-in .32s cubic-bezier(.2,.7,.2,1) both}',
+      '.briefing-line:nth-child(3){animation-delay:.05s}.briefing-line:nth-child(4){animation-delay:.1s}.briefing-line:nth-child(5){animation-delay:.15s}',
+      '.briefing-line::before{content:"";position:absolute;inset-inline-start:-1px;top:14px;bottom:14px;width:3px;border-radius:3px;background:var(--atlas)}',
+      '.briefing-line .hai-rec-title{font-size:14px;font-weight:600;line-height:1.35;letter-spacing:-.005em}',
+      '.briefing-evidence{grid-column:1;font:500 10.5px/1.4 var(--mono);letter-spacing:.02em;color:var(--n-500)}',
+      '.briefing-actions{grid-column:2;grid-row:1/span 2;display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}',
+      '.briefing-actions button{border:1px solid var(--n-300);background:transparent;color:var(--n-600);border-radius:999px;padding:7px 12px;font:600 11.5px/1 var(--sans);letter-spacing:-.005em;cursor:pointer;transition:border-color .14s ease,color .14s ease,background .14s ease,transform .09s ease}',
+      '.briefing-actions button:hover{border-color:var(--atlas);color:var(--atlas)}.briefing-actions button:active{transform:translateY(1px)}',
+      '.briefing-actions button[data-briefing-propose]{background:var(--atlas);border-color:var(--atlas);color:var(--paper)}',
+      '.briefing-actions button[data-briefing-propose]:hover{background:var(--riad);border-color:var(--riad);color:var(--paper)}',
+      /* État calme : une seule rangée feutrée, sans bordure ni marqueur plein. */
+      '.briefing-empty{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 10px;padding:2px 0 0}',
+      '.briefing-empty::before{content:"";width:8px;height:8px;border-radius:50%;border:1.5px solid var(--mint);align-self:center;flex:none}',
+      '.briefing-empty .hai-rec-title{font-size:14px;font-weight:600}.briefing-empty .hai-rec-obs{margin:0;font-size:13px;color:var(--n-500)}',
+      /* Badge d’état en tête de carte, aligné sur l’œil-de-bœuf KIWI INSIGHTS. */
+      '.briefing-status{position:absolute;top:0;inset-inline-end:0;display:inline-flex;align-items:center;gap:7px;padding:6px 11px;border-radius:999px;border:1px solid var(--n-200);font:600 11px/1 var(--sans);letter-spacing:-.005em;color:var(--n-600);background:transparent;white-space:nowrap}',
+      '.briefing-status::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--mint);box-shadow:0 0 0 3px color-mix(in srgb,var(--mint) 22%,transparent)}',
+      '.briefing-status.is-alert{color:var(--atlas);border-color:color-mix(in srgb,var(--atlas) 40%,transparent);background:color-mix(in srgb,var(--atlas) 7%,transparent)}',
+      '.briefing-status.is-alert::before{background:var(--atlas);box-shadow:0 0 0 3px color-mix(in srgb,var(--atlas) 18%,transparent)}',
+      '@keyframes briefing-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}',
+      '@media (max-width:720px){.briefing-line{grid-template-columns:1fr}.briefing-actions{grid-column:1;grid-row:auto;justify-content:flex-start;margin-top:4px}.briefing-status{position:static;align-self:flex-start;margin-top:-6px}}',
+      '@media (prefers-reduced-motion:reduce){.briefing-line{animation:none}}'
+    ].join('');
     document.head.appendChild(s);
+  }
+  function statusBadge(el, t, n) {
+    var host = el.closest && el.closest('.hero-right'); if (!host) return;
+    var b = host.querySelector('[data-briefing-status]');
+    if (!b) { b = document.createElement('span'); b.className = 'briefing-status'; b.setAttribute('data-briefing-status', ''); host.appendChild(b); }
+    var label = n ? (n === 1 ? t.signalOne : t.signalMany.replace('{n}', String(n))) : t.calm;
+    if (b.textContent !== label) b.textContent = label;
+    b.classList.toggle('is-alert', n > 0);
+  }
+  function dayLabel() {
+    try {
+      var d = businessDay(), L = lang(), loc = L === 'ar' ? 'ar-MA' : (L === 'en' ? 'en-GB' : 'fr-FR');
+      return new Date(d + 'T12:00:00').toLocaleDateString(loc, { weekday: 'short', day: 'numeric', month: 'short' });
+    } catch (_) { return ''; }
   }
   function render() {
     var el = card(); if (!el) return;
     var t = tr(), lines = activeLines(tier());
     var body = lines.length ? lines.map(function (line) {
-      return '<article class="hai-rec briefing-line"><div class="hai-rec-title">' + esc(lineText(line)) + '</div><div class="briefing-evidence">' +
+      return '<article class="briefing-line"><div class="hai-rec-title">' + esc(lineText(line)) + '</div><div class="briefing-evidence">' +
         esc(line.evidence.count + ' · ' + line.evidence.window + ' · ' + line.evidence.source) + '</div><div class="briefing-actions">' + (line.action ? '<button data-briefing-propose="' + esc(line.id) + '">' + esc(t.propose) + '</button>' : '') + '<button data-briefing-handled="' + esc(line.id) + '">' + esc(t.handled) + '</button><button data-briefing-dismiss="' + esc(line.id) + '">' + esc(t.dismiss) + '</button></div></article>';
-    }).join('') : '<div class="hai-rec briefing-line briefing-empty"><div class="hai-rec-title">' + esc(t.empty) + '</div><div class="hai-rec-obs">' + esc(t.emptyNote) + '</div></div>';
-    el.innerHTML = '<div class="briefing-kicker">' + esc(t.title) + '</div>' + body;
+    }).join('') : '<div class="briefing-empty"><div class="hai-rec-title">' + esc(t.empty) + '</div><div class="hai-rec-obs">' + esc(t.emptyNote) + '</div></div>';
+    var day = dayLabel();
+    el.innerHTML = '<div class="briefing-kicker">' + esc(t.title) + (day ? '<small>' + esc(day) + '</small>' : '') + '</div>' + body;
+    statusBadge(el, t, lines.length);
   }
   function mode(raw) {
     var q = String(raw || '').toLowerCase();
@@ -693,7 +737,7 @@
   window.KiwiBriefing = {
     canHandle: canHandle, reply: reply, compute: function () { return compute(); }, lines: activeLines,
     dismiss: function (id) { return setState(id, 'dismissed'); }, handled: function (id) { return setState(id, 'handled'); },
-    _test: { businessDay: businessDay, scopeKey: scopeKey, normalizeLine: normalizeLine, visibleLines: visibleLines, salesDropRule: salesDropRule, lowStockRule: lowStockRule, marginErosionRule: marginErosionRule, planningGapRule: planningGapRule, cancellationRateRule: cancellationRateRule, discountShareRule: discountShareRule, cashGapRule: cashGapRule, lateOrdersRule: lateOrdersRule, stockItems: stockItems, proposeLine: proposeLine, openPlanning: openPlanning, salesRows: salesRows, dayBoundsAt: dayBoundsAt, compute: compute, anchor: anchor, place: place, card: card, read: function () { return clone(doc); }, write: writeLocal }
+    _test: { businessDay: businessDay, scopeKey: scopeKey, normalizeLine: normalizeLine, visibleLines: visibleLines, salesDropRule: salesDropRule, lowStockRule: lowStockRule, marginErosionRule: marginErosionRule, planningGapRule: planningGapRule, cancellationRateRule: cancellationRateRule, discountShareRule: discountShareRule, cashGapRule: cashGapRule, lateOrdersRule: lateOrdersRule, stockItems: stockItems, proposeLine: proposeLine, openPlanning: openPlanning, salesRows: salesRows, dayBoundsAt: dayBoundsAt, compute: compute, anchor: anchor, place: place, card: card, render: render, read: function () { return clone(doc); }, write: writeLocal }
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true }); else boot();
 }());

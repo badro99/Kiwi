@@ -17,7 +17,9 @@ const source = readFileSync(path.join(ROOT, 'assets/briefing.js'), 'utf8');
 /* Mini-DOM : juste assez pour parentNode / nextSibling / insertBefore / closest. */
 function node(cls) {
   const n = { className: cls || '', children: [], parentNode: null, attrs: {},
-    setAttribute(k, v) { this.attrs[k] = v; }, addEventListener() {},
+    setAttribute(k, v) { this.attrs[k] = v; }, addEventListener() {}, textContent: '', innerHTML: '',
+    classList: { toggle(c, on) { const n = this.owner; const has = n.has(c); if (on && !has) n.className = (n.className + ' ' + c).trim(); if (!on && has) n.className = n.className.split(' ').filter((x) => x !== c).join(' '); }, contains(c) { return this.owner.has(c); } },
+    querySelector(sel) { const attr = (sel.match(/^\[([\w-]+)\]$/) || [])[1]; const walk = (x) => { for (const c of x.children) { if (attr && c.attrs[attr] !== undefined) return c; const d = walk(c); if (d) return d; } return null; }; return walk(this); },
     get nextSibling() { const p = this.parentNode; if (!p) return null; const i = p.children.indexOf(this); return p.children[i + 1] || null; },
     get previousSibling() { const p = this.parentNode; if (!p) return null; const i = p.children.indexOf(this); return p.children[i - 1] || null; },
     has(c) { return (' ' + this.className + ' ').indexOf(' ' + c + ' ') >= 0; },
@@ -25,6 +27,7 @@ function node(cls) {
     insertBefore(el, before) { if (el.parentNode) el.parentNode.children.splice(el.parentNode.children.indexOf(el), 1); const i = before ? this.children.indexOf(before) : this.children.length; this.children.splice(i < 0 ? this.children.length : i, 0, el); el.parentNode = this; return el; },
     appendChild(el) { return this.insertBefore(el, null); }
   };
+  n.classList.owner = n;
   return n;
 }
 function all(root, out = []) { out.push(root); root.children.forEach((c) => all(c, out)); return out; }
@@ -87,6 +90,12 @@ assert.equal(card.parentNode, right, 'Insights : le bloc est dans .hero-right');
 assert.equal(card.previousSibling, recs, 'Insights : après les recommandations');
 assert.equal(card.nextSibling, chips, 'Insights : avant les puces');
 assert.equal(card.className, 'briefing-inline', 'Insights : bloc en ligne, pas une carte .block autonome');
+T.render();
+const badge = right.querySelector('[data-briefing-status]');
+assert.ok(badge, 'Insights : un badge d’état est posé dans .hero-right');
+assert.equal(badge.textContent, 'Rien d’urgent', 'Insights : badge calme sans signal');
+assert.equal(badge.has('is-alert'), false, 'Insights : pas de teinte alerte sans signal');
+assert.equal(right.children.filter((n) => n.attrs['data-briefing-status'] !== undefined).length, 1, 'Insights : un seul badge (re-rendu idempotent)');
 /* La peau Vexel déplace .hero-right entière dans .vexel-insights-row : le bloc suit. */
 const insightsRow = node('vexel-insights-row'); tree.appendChild(insightsRow); insightsRow.appendChild(right);
 assert.equal(T.card(), card, 'Insights (Vexel) : même élément, pas de doublon');
@@ -100,4 +109,4 @@ assert.ok(/querySelector\('\.hero-right \.hai-chips'\)/.test(source), 'l’ancra
 assert.ok(!/hero\.parentNode\.insertBefore\(el,\s*hero\.nextSibling\)/.test(source), 'plus d’insertion aveugle après .hero-today');
 assert.ok(/closest\('\.vexel-revenue-row'\)/.test(source), 'l’ancrage tient compte de .vexel-revenue-row');
 
-console.log('briefing-card-placement-test: 26 contrôles OK');
+console.log('briefing-card-placement-test: 30 contrôles OK');
