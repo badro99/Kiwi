@@ -263,7 +263,12 @@
 
     *, *::before, *::after { box-sizing: border-box; }
     html, body {
-      margin: 0; padding: 0; height: 100%;
+      margin: 0; padding: 0;
+      height: 100%;
+      height: 100dvh;
+      min-height: 100%;
+      min-height: 100dvh;
+      min-height: -webkit-fill-available;
       font-family: var(--sans);
       color: var(--ink);
       background: var(--surface);
@@ -271,7 +276,16 @@
       text-rendering: optimizeLegibility;
       letter-spacing: -0.005em;
     }
-    body { overflow: hidden; }
+    body {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      height: 100dvh;
+      min-height: 100%;
+      min-height: 100dvh;
+      min-height: -webkit-fill-available;
+      overflow: hidden;
+    }
 
     button { font-family: inherit; cursor: pointer; border: 0; background: none; color: inherit; }
     input { font-family: inherit; }
@@ -320,17 +334,26 @@
 
     /* ---------- App shell ---------- */
     .shell {
-      flex: 1;
+      flex: 1 1 100%;
       display: flex;
-      height: 100vh;   /* le bandeau haut est masqué → le shell prend tout l'écran */
-      min-height: 0;
+      align-items: stretch;
+      height: 100%;
+      height: 100dvh;
+      min-height: 100%;
+      min-height: 100dvh;
+      width: 100%;
+      min-width: 0;
+      overflow: hidden;
     }
-    body { display: flex; flex-direction: column; }
 
     /* ---------- Left sidebar (dark, dashboard-matching) ---------- */
     .sidebar {
       width: 260px;
       flex: 0 0 260px;
+      height: 100%;
+      min-height: 100%;
+      align-self: stretch;
+      box-sizing: border-box;
       background: var(--ink-bg);
       border-right: 1px solid rgba(255,255,255,0.06);
       color: #b5b9b6;
@@ -338,7 +361,6 @@
       flex-direction: column;
       padding: 16px 14px 14px;
       gap: 12px;
-      min-height: 0;
       /* When the viewport is short (laptop / windowed Chrome / iPad) the sidebar
          content overflows. Chrome doesn't let flex children scroll without an
          explicit overflow declaration — Safari is more forgiving. Without
@@ -517,6 +539,10 @@
       .sidebar {
         width: 230px;
         flex: 0 0 230px;
+        height: 100%;
+        min-height: 100%;
+        align-self: stretch;
+        box-sizing: border-box;
         padding: 12px 10px;
         gap: 8px;
       }
