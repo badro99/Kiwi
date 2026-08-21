@@ -68,3 +68,14 @@ Ce document consigne l'ensemble des audits visuels, ergonomiques, d'accessibilit
   1. Refonte de l'état vide `realTransactions` avec médaillon Material Symbol (`inventory_2`), sous-titre explicatif et bouton CTA `data-action="new-sale"` relié à la caisse.
   2. Ajout du retour tactile `.p-table tbody tr:active { transform: scale(0.995); }` et harmonisation du fond d'en-tête de tableau en mode sombre.
 - **État** : ✅ Déployé
+
+### 3. Rapport Journalier (`assets/day-report-dash.js`)
+- **Fichiers** : `assets/day-report-dash.js:208`, `assets/day-report-dash.js:698`
+- **Problèmes identifiés** :
+  1. Écran vide sans identité visuelle Material Symbols ni hiérarchie éditoriale.
+  2. Absence de retour tactile sur les boutons de navigation et sélecteurs de date (`.kdr-btn`).
+- **Améliorations apportées** :
+  1. Refonte complète du bloc vide `kdr-empty` avec médaillon Material Symbol (`inventory_2`), titrage typographique romain et mise en valeur du bouton d'action de retour au dernier jour d'activité.
+  2. Ajout des micro-interactions tactiles `.kdr-btn:active { transform: scale(0.97); }` et des focus rings de sélection.
+  3. Bumping du timbre de cache `assets/day-report-dash.js?v=7`.
+- **État** : ✅ Déployé

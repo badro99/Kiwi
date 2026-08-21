@@ -205,7 +205,9 @@
       '.kdr-chip.is-closed{background:color-mix(in srgb,var(--atlas) 13%,transparent);color:var(--atlas)}',
       '.kdr-chip.is-live{background:color-mix(in srgb,var(--mint) 30%,transparent);color:var(--riad)}',
       '.kdr-chip.is-open{background:var(--n-100);color:var(--n-500)}',
-      '.kdr-btn{border:1px solid var(--n-200);border-radius:10px;padding:8px 14px;background:transparent;color:var(--ink);font:inherit;font-size:13px;cursor:pointer;transition:background 140ms,border-color 140ms}',
+      '.kdr-btn{border:1px solid var(--n-200);border-radius:10px;padding:8px 14px;background:transparent;color:var(--ink);font:inherit;font-size:13px;cursor:pointer;transition:background 140ms,border-color 140ms,transform 80ms var(--spring)}',
+      '.kdr-btn:active{transform:scale(0.97)}',
+      '.kdr-btn:focus-visible{outline:2px solid var(--atlas);outline-offset:2px}',
       '.kdr-btn:hover{background:color-mix(in srgb,var(--atlas) 8%,transparent);border-color:var(--atlas)}',
       /* ── la frise des quatorze jours ── */
       '.kdr-strip{border:1px solid var(--n-200);border-radius:14px;padding:13px 15px 10px;margin-bottom:16px}',
@@ -695,8 +697,13 @@
       var pageE = window.Kiwi.appPage(NAV, {
         title: T(L.title),
         subtitle: (st.name || '') + (st.name ? ' · ' : '') + dayLabel(current),
-        body: nav + strip + '<div class="kdr-empty"><h3>' + esc(T(L.empty)) + '</h3><p>'
-          + esc(T(L.emptyHint)) + '</p>' + cta + '</div>',
+        body: nav + strip + '<div class="kdr-empty" style="display:flex; flex-direction:column; align-items:center; padding:52px 20px 60px;">'
+          + '<div style="width:48px;height:48px;border-radius:14px;background:rgba(11,110,79,0.10);border:1px solid rgba(11,110,79,0.18);color:var(--atlas);display:grid;place-items:center;margin-bottom:16px;">'
+          + '<svg width="24" height="24" viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg>'
+          + '</div>'
+          + '<h3 style="font-family:var(--sans);font-weight:600;font-size:18px;color:var(--ink);margin:0 0 6px;letter-spacing:-0.015em;">' + esc(T(L.empty)) + '</h3>'
+          + '<p style="font-size:13px;color:var(--n-500);margin:0 0 20px;line-height:1.55;max-width:380px;">' + esc(T(L.emptyHint)) + '</p>'
+          + cta + '</div>',
       });
       bind(pageE, r);
       return pageE;
