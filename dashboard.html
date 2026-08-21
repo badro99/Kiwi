@@ -1336,10 +1336,10 @@
   .dr-pills.compact .dr-pill-custom svg { width: 12px; height: 12px; }
 
   .dr-popover {
-    position: absolute; top: calc(100% + 10px); inset-inline-end: 0; z-index: 600;
+    position: absolute; top: calc(100% + 10px); inset-inline-end: 0; z-index: 10000;
     width: 716px; max-width: calc(100vw - 48px);
-    background: var(--surface); border: 1px solid var(--n-200); border-radius: 18px;
-    box-shadow: 0 2px 6px rgba(10,15,13,0.04), 0 28px 64px -22px rgba(10,15,13,0.30);
+    background: #FFFFFF; border: 1px solid var(--n-200); border-radius: 18px;
+    box-shadow: 0 4px 16px rgba(10,15,13,0.06), 0 28px 64px -22px rgba(10,15,13,0.30);
     overflow: hidden; transform-origin: top right;
     opacity: 0; transform: translateY(-8px) scale(0.985);
     transition: opacity 160ms ease, transform 200ms cubic-bezier(0.32,0.72,0,1);
@@ -5109,7 +5109,7 @@
      Inert unless body.design-vexel. ON by default for every merchant since the
      v2 design migration — ?skin=off or KiwiDesignVexel.disable() opts out.
      Loads LAST of the three skins so it wins where they overlap. -->
-<link rel="stylesheet" href="assets/design-vexel.css?v=2094" />
+<link rel="stylesheet" href="assets/design-vexel.css?v=2095" />
 <!-- Pressing owner workspace — exact-trade layer, inert for every other venue. -->
 <link rel="stylesheet" href="assets/pressing-catalog.css?v=4" />
 <link rel="stylesheet" href="assets/pressing-dashboard.css?v=10" />

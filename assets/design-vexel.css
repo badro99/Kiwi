@@ -3260,22 +3260,81 @@ body.design-vexel[data-vexel-mode] .vexel-compose > .dash-date-range {
 /* ─── Custom Date Picker Popover · Dark & Vexel Parity ─── */
 body.design-vexel .dr-popover,
 :root[data-theme="dark"] .dr-popover {
-  background: var(--surface, #151B18);
-  border: 1px solid var(--n-200, rgba(255, 255, 255, 0.12));
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), 0 32px 72px -20px rgba(0, 0, 0, 0.9);
-  z-index: 1000;
+  background: #111714 !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.75), 0 32px 80px rgba(0, 0, 0, 0.95) !important;
+  backdrop-filter: blur(28px) saturate(1.5);
+  -webkit-backdrop-filter: blur(28px) saturate(1.5);
+  z-index: 10000;
+}
+
+body.design-vexel .drp-head,
+:root[data-theme="dark"] .drp-head {
+  background: #111714 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+body.design-vexel .drp-eyebrow,
+:root[data-theme="dark"] .drp-eyebrow {
+  color: #8E9893 !important;
+}
+
+body.design-vexel .drp-readout,
+:root[data-theme="dark"] .drp-readout {
+  color: #8E9893 !important;
+}
+
+body.design-vexel .drp-readout.is-set,
+:root[data-theme="dark"] .drp-readout.is-set {
+  color: #F5FAF7 !important;
+}
+
+body.design-vexel .drp-x,
+:root[data-theme="dark"] .drp-x {
+  color: #8E9893 !important;
+}
+
+body.design-vexel .drp-x:hover,
+:root[data-theme="dark"] .drp-x:hover {
+  background: #1E2723 !important;
+  color: #F5FAF7 !important;
+}
+
+body.design-vexel .drp-body,
+:root[data-theme="dark"] .drp-body {
+  border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
 }
 
 body.design-vexel .drp-presets,
 :root[data-theme="dark"] .drp-presets {
-  background: var(--n-50, #0F1412);
-  border-inline-end: 1px solid var(--n-200, rgba(255, 255, 255, 0.1));
+  background: #0B100E !important;
+  border-inline-end: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+body.design-vexel .drp-presets-lbl,
+:root[data-theme="dark"] .drp-presets-lbl {
+  color: #6C7771 !important;
+}
+
+body.design-vexel .drp-cal,
+:root[data-theme="dark"] .drp-cal {
+  background: #111714 !important;
 }
 
 body.design-vexel .drp-foot,
 :root[data-theme="dark"] .drp-foot {
-  background: var(--n-50, #0F1412);
-  border-top: 1px solid var(--n-200, rgba(255, 255, 255, 0.1));
+  background: #0B100E !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+body.design-vexel .drp-hint,
+:root[data-theme="dark"] .drp-hint {
+  color: #8E9893 !important;
+}
+
+body.design-vexel .drp-hint b,
+:root[data-theme="dark"] .drp-hint b {
+  color: #F5FAF7 !important;
 }
 
 body.design-vexel .drp-preset,
@@ -3301,16 +3360,21 @@ body.design-vexel .drp-mname,
   color: var(--ink, #F2F0EA);
 }
 
+body.design-vexel .drp-wd,
+:root[data-theme="dark"] .drp-wd {
+  color: #8E9893 !important;
+}
+
 body.design-vexel .drp-nav,
 :root[data-theme="dark"] .drp-nav {
-  background: var(--surface, #151B18);
+  background: #151B18 !important;
   border-color: var(--n-200, rgba(255, 255, 255, 0.12));
   color: var(--n-600, #C9CECB);
 }
 
 body.design-vexel .drp-nav:hover,
 :root[data-theme="dark"] .drp-nav:hover {
-  background: var(--n-100, #1E2522);
+  background: var(--n-100, #1E2522) !important;
   border-color: var(--n-400, #747C78);
   color: var(--ink, #F2F0EA);
 }
@@ -3347,7 +3411,7 @@ body.design-vexel .drp-day.is-end:not(.is-solo)::before,
 
 body.design-vexel .drp-btn-ghost,
 :root[data-theme="dark"] .drp-btn-ghost {
-  background: var(--surface, #151B18);
+  background: #151B18 !important;
   border-color: var(--n-200, rgba(255, 255, 255, 0.12));
   color: var(--n-600, #C9CECB);
 }
