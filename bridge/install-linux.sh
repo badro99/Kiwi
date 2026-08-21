@@ -97,47 +97,76 @@ systemctl daemon-reload
 systemctl enable --now kiwi-printer-bridge.service
 echo "✓ Service activé et démarré (Restart=always)"
 
-# 4. Appairage si code fourni en argument (--pair 123456)
+# 4. Appairage (code passé en argument, ou demandé au clavier)
 PAIR_CODE=""
 while [ $# -gt 0 ]; do
   case "$1" in
-    --pair|-p)
-      PAIR_CODE="$2"
-      shift 2
-      ;;
-    *)
-      if [[ "$1" =~ ^[0-9]{6}$ ]]; then
-        PAIR_CODE="$1"
-      fi
-      shift
-      ;;
+    --pair|-p) PAIR_CODE="$2"; shift 2 ;;
+    *) if [[ "$1" =~ ^[0-9]{6}$ ]]; then PAIR_CODE="$1"; fi; shift ;;
   esac
 done
 
-sleep 1
-
-if [ -n "$PAIR_CODE" ]; then
-  echo "→ Appairage du pont avec le code $PAIR_CODE…"
-  "$BIN_TARGET" --pair "$PAIR_CODE" || true
-else
-  # Si terminal interactif, proposer la saisie
-  if [ -t 0 ]; then
-    echo ""
-    read -r -p "Entrez le code d'appairage à 6 chiffres affiché sur l'iPad (ou appuyez sur Entrée pour configurer plus tard) : " USER_CODE
-    if [ -n "$USER_CODE" ]; then
-      "$BIN_TARGET" --pair "$USER_CODE" || true
+# ── Appairage : par l'API LOCALE du pont qui tourne déjà ──────────────────────
+# Pourquoi pas `kiwi-printer-bridge --pair` ici : cela lancerait un DEUXIÈME
+# pont (qui s'appaire puis reste à écouter, donc le script ne rend jamais la
+# main), et le service déjà démarré ne relirait pas la configuration. On parle
+# donc au service en place, qui écrit lui-même son jeton.
+bridge_port() {
+  for p in 9110 9111 9112 9113 9114; do
+    if curl -fsS --max-time 2 "http://127.0.0.1:$p/kiwi/ping" 2>/dev/null | grep -q '"name":"kiwi-printer-bridge"'; then
+      echo "$p"; return 0
     fi
+  done
+  return 1
+}
+wait_bridge() {
+  for _ in $(seq 1 40); do
+    if P="$(bridge_port)"; then echo "$P"; return 0; fi
+    sleep 0.5
+  done
+  return 1
+}
+pair_via_api() {
+  local port="$1" code="$2" out
+  out="$(curl -sS --max-time 20 -X POST -H 'Content-Type: application/json' \
+        -d "{\"code\":\"$code\"}" "http://127.0.0.1:$port/kiwi/relay/pair" 2>/dev/null || true)"
+  if printf '%s' "$out" | grep -q '"ok":true'; then
+    echo "✓ Pont associé au commerce $(printf '%s' "$out" | sed -n 's/.*"merchant":"\([^"]*\)".*/\1/p')."
+    return 0
   fi
+  echo "✗ Appairage refusé : $(printf '%s' "$out" | sed -n 's/.*"error":"\([^"]*\)".*/\1/p')" >&2
+  echo "  (code invalide ou expiré ? regénérez-le dans Kiwi → Imprimantes → Relais Kiwi, puis :"
+  echo "   curl -X POST -H 'Content-Type: application/json' -d '{\"code\":\"123456\"}' http://127.0.0.1:$port/kiwi/relay/pair )"
+  return 1
+}
+# `curl … | bash` : l'entrée standard est le tube, pas le clavier — on lit le
+# code sur /dev/tty, sinon la question ne serait jamais posée.
+ask_code() {
+  local c=""
+  if [ -r /dev/tty ]; then
+    printf '%s' "Entrez le code d'appairage à 6 chiffres affiché dans Kiwi (Entrée pour le faire plus tard) : " > /dev/tty
+    IFS= read -r c < /dev/tty || true
+  fi
+  printf '%s' "$c" | tr -dc '0-9' | cut -c1-6
+}
+
+if PORT="$(wait_bridge)"; then
+  echo "✓ Le service répond sur http://127.0.0.1:$PORT/"
+  [ -z "$PAIR_CODE" ] && PAIR_CODE="$(ask_code)"
+  if [ -n "$PAIR_CODE" ]; then pair_via_api "$PORT" "$PAIR_CODE" || true; fi
+else
+  PORT=9110
+  echo "✗ Le service ne répond pas encore — voir : journalctl -u kiwi-printer-bridge -n 30" >&2
 fi
 
 # 5. État et instructions
-IP_ADDR="$(hostname -I 2>/dev/null | awk '{print $1}' || echo "127.0.0.1")"
 echo ""
 echo "────────────────────────────────────────────────────────────"
 echo "  ✓ Kiwi Printer Bridge est prêt et tourne en arrière-plan !"
 echo "────────────────────────────────────────────────────────────"
-echo "  • Page locale : http://127.0.0.1:9110/ (ou http://$IP_ADDR:9110/)"
+echo "  • Page locale : http://127.0.0.1:$PORT/ (sur cette machine uniquement — le pont n'écoute pas sur le réseau)"
 echo "  • Statut service : systemctl status kiwi-printer-bridge"
 echo "  • Logs en direct : journalctl -u kiwi-printer-bridge -f"
-echo "  • Appairage : Kiwi → Imprimantes → Relais Kiwi → Associer un pont"
+echo "  • (Ré)appairage : Kiwi → Imprimantes → Relais Kiwi → Associer un pont, puis"
+echo "    curl -X POST -H 'Content-Type: application/json' -d '{\"code\":\"123456\"}' http://127.0.0.1:$PORT/kiwi/relay/pair"
 echo "────────────────────────────────────────────────────────────"

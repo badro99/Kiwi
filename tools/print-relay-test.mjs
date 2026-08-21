@@ -320,12 +320,15 @@ if (DatabaseSync) {
 
   const lin = read('bridge/install-linux.sh');
   ok(/Restart=always/.test(lin) && /kiwi-printer-bridge\.service/.test(lin) && /--pair/.test(lin), 'C6 · install-linux.sh configure le service systemd avec Restart=always et --pair');
+  ok(/\/kiwi\/relay\/pair/.test(lin) && /read -r c < \/dev\/tty/.test(lin) && !/"\$BIN_TARGET" --pair/.test(lin), 'C6 · install-linux.sh appaire via l’API locale du service (jamais un second pont) et lit le code sur /dev/tty (curl | bash)');
+  ok(!/\$IP_ADDR:9110/.test(lin), 'C6 · install-linux.sh ne promet pas une page du pont sur le LAN (loopback seulement)');
   const macPlist = read('bridge/com.kiwi.printer-bridge.plist');
   ok(/<key>KeepAlive<\/key>\s*<true\/>/.test(macPlist) && /<key>RunAtLoad<\/key>\s*<true\/>/.test(macPlist), 'C6 · com.kiwi.printer-bridge.plist active KeepAlive et RunAtLoad');
   const macInstall = read('bridge/install-macos.sh');
   ok(/LaunchAgents/.test(macInstall) && /launchctl/.test(macInstall), 'C6 · install-macos.sh installe et charge le LaunchAgent');
   const termuxInstall = read('bridge/install-termux.sh');
   ok(/termux-wake-lock/.test(termuxInstall) && /server\.js/.test(termuxInstall) && /--pair/.test(termuxInstall), 'C6 · install-termux.sh configure l’anti-veille et l’appairage');
+  ok(/nohup node "\$SERVER_JS"/.test(termuxInstall) && /\/kiwi\/relay\/pair/.test(termuxInstall) && /read -r c < \/dev\/tty/.test(termuxInstall) && !/exec node "\$SERVER_JS"$/m.test(termuxInstall), 'C6 · install-termux.sh lance le pont en arrière-plan puis appaire via l’API locale, code lu sur /dev/tty');
 }
 
 console.log('print-relay-test: ' + pass + ' contrôles' + (process.exitCode ? ' · ÉCHEC' : ' ✓'));
