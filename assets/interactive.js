@@ -2070,20 +2070,20 @@ ar: {
             <div class="gp-set-card">
               <div class="gp-set-card-head">
                 <div class="gp-set-title">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M3 7v14M21 7v14M4 7l8-4 8 4M9 21v-6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v6"/></svg>
+                  ${materialSymbol('storefront')}
                   <span>${tr({ fr: 'Établissement & Boutique', en: 'Store & Business', ar: 'المنشأة والمتجر' })}</span>
                 </div>
                 <span class="gp-set-tag">${tr({ fr: 'Identité', en: 'Identity', ar: 'الهوية' })}</span>
               </div>
               <div>
                 ${cv ? `
-                ${settingsRow('store', venueTitle, tradeLabel, { action: 'settings-edit-venue' })}
-                ${settingsRow('⏰', tr({ fr: 'Heures d\'ouverture', en: 'Opening hours', ar: 'ساعات العمل' }), escape(hoursRowValue(vd)), { action: 'settings-hours' })}
-                ${settingsRow('goal', tr({ fr: 'Objectif journalier', en: 'Daily goal', ar: 'الهدف اليومي' }), vd.goal ? fmtN(vd.goal) + ' MAD' : tr({ fr: 'À définir', en: 'To set', ar: 'غير محدد' }), { action: 'settings-edit-venue' })}
+                ${settingsRow('storefront', venueTitle, tradeLabel, { action: 'settings-edit-venue' })}
+                ${settingsRow('schedule', tr({ fr: 'Heures d\'ouverture', en: 'Opening hours', ar: 'ساعات العمل' }), escape(hoursRowValue(vd)), { action: 'settings-hours' })}
+                ${settingsRow('track_changes', tr({ fr: 'Objectif journalier', en: 'Daily goal', ar: 'الهدف اليومي' }), vd.goal ? fmtN(vd.goal) + ' MAD' : tr({ fr: 'À définir', en: 'To set', ar: 'غير محدد' }), { action: 'settings-edit-venue' })}
                 ` : `
-                ${settingsRow('store', venueTitle, escape(getSet('venueLoc', tr({ fr: 'Emplacement principal', en: 'Main location', ar: 'الموقع الرئيسي' }))), { action: 'settings-edit-store', arg: 'venue' })}
-                ${settingsRow('⏰', tr({ fr: 'Heures d\'ouverture', en: 'Opening hours', ar: 'ساعات العمل' }), escape(hoursRowValue(null)), { action: 'settings-hours' })}
-                ${settingsRow('goal', tr({ fr: 'Objectif journalier', en: 'Daily goal', ar: 'الهدف اليومي' }), escape(getSet('goal', '28 000')) + ' MAD', { action: 'settings-edit-store', arg: 'goal' })}
+                ${settingsRow('storefront', venueTitle, escape(getSet('venueLoc', tr({ fr: 'Emplacement principal', en: 'Main location', ar: 'الموقع الرئيسي' }))), { action: 'settings-edit-store', arg: 'venue' })}
+                ${settingsRow('schedule', tr({ fr: 'Heures d\'ouverture', en: 'Opening hours', ar: 'ساعات العمل' }), escape(hoursRowValue(null)), { action: 'settings-hours' })}
+                ${settingsRow('track_changes', tr({ fr: 'Objectif journalier', en: 'Daily goal', ar: 'الهدف اليومي' }), escape(getSet('goal', '28 000')) + ' MAD', { action: 'settings-edit-store', arg: 'goal' })}
                 `}
               </div>
             </div>
@@ -2092,15 +2092,15 @@ ar: {
             <div class="gp-set-card">
               <div class="gp-set-card-head">
                 <div class="gp-set-title">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1zM8 7h8M8 11h8M8 15h5"/></svg>
+                  ${materialSymbol('receipt_long')}
                   <span>${tr({ fr: 'Caisse & Reçu', en: 'POS & Receipt', ar: 'الصندوق والوصل' })}</span>
                 </div>
                 <span class="gp-set-tag">${tr({ fr: 'Encaissement', en: 'Checkout', ar: 'الدفع' })}</span>
               </div>
               <div>
-                ${settingsRow('receipt', tr({ fr: 'Reçu de caisse & Mentions légales', en: 'Receipt & Legal details', ar: 'وصل الصندوق والبيانات القانونية' }), escape(receiptRowValue()), { action: 'settings-receipt' })}
-                ${settingsRow('payment', tr({ fr: 'Méthodes de paiement acceptées', en: 'Accepted payment methods', ar: 'وسائل الدفع المقبولة' }), escape(vd.methods || getSet('methods', 'Visa · Mastercard · Kiwi Tap · QR')), { action: cv ? 'settings-edit-venue' : 'settings-methods' })}
-                ${settingsRow('currency', tr({ fr: 'Devise d\'affichage', en: 'Display currency', ar: 'عملة العرض' }), escape(getSet('currency', 'MAD · Dirham marocain')), { action: 'settings-currency' })}
+                ${settingsRow('receipt_long', tr({ fr: 'Reçu de caisse & Mentions légales', en: 'Receipt & Legal details', ar: 'وصل الصندوق والبيانات القانونية' }), escape(receiptRowValue()), { action: 'settings-receipt' })}
+                ${settingsRow('credit_card', tr({ fr: 'Méthodes de paiement acceptées', en: 'Accepted payment methods', ar: 'وسائل الدفع المقبولة' }), escape(vd.methods || getSet('methods', 'Visa · Mastercard · Kiwi Tap · QR')), { action: cv ? 'settings-edit-venue' : 'settings-methods' })}
+                ${settingsRow('paid', tr({ fr: 'Devise d\'affichage', en: 'Display currency', ar: 'عملة العرض' }), escape(getSet('currency', 'MAD · Dirham marocain')), { action: 'settings-currency' })}
               </div>
             </div>
 
@@ -2108,17 +2108,17 @@ ar: {
             <div class="gp-set-card">
               <div class="gp-set-card-head">
                 <div class="gp-set-title">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                  ${materialSymbol('language')}
                   <span>${tr({ fr: 'Affichage & Interface', en: 'Display & Preferences', ar: 'العرض والتفضيلات' })}</span>
                 </div>
                 <span class="gp-set-tag">${tr({ fr: 'Personnalisation', en: 'Design', ar: 'التخصيص' })}</span>
               </div>
               <div>
-                ${settingsRow('lang', tr({ fr: 'Langue de l\'application', en: 'App language', ar: 'لغة التطبيق' }), LANGNAME[lang] || 'Français', { action: 'settings-lang' })}
-                ${(window.KiwiDesignIOS27 && window.KiwiDesignIOS27.isOn()) ? settingsRow('glass', 'Liquid Glass', ({ clear: tr({ fr: 'Clair', en: 'Clear', ar: 'شفاف' }), standard: tr({ fr: 'Standard', en: 'Standard', ar: 'قياسي' }), frosted: tr({ fr: 'Givré', en: 'Frosted', ar: 'مصنفر' }), opaque: tr({ fr: 'Opaque', en: 'Opaque', ar: 'معتم' }) })[window.KiwiDesignIOS27.getGlass()] || 'Standard', { action: 'glass-level' }) : ''}
+                ${settingsRow('language', tr({ fr: 'Langue de l\'application', en: 'App language', ar: 'لغة التطبيق' }), LANGNAME[lang] || 'Français', { action: 'settings-lang' })}
+                ${(window.KiwiDesignIOS27 && window.KiwiDesignIOS27.isOn()) ? settingsRow('layers', 'Liquid Glass', ({ clear: tr({ fr: 'Clair', en: 'Clear', ar: 'شفاف' }), standard: tr({ fr: 'Standard', en: 'Standard', ar: 'قياسي' }), frosted: tr({ fr: 'Givré', en: 'Frosted', ar: 'مصنفر' }), opaque: tr({ fr: 'Opaque', en: 'Opaque', ar: 'معتم' }) })[window.KiwiDesignIOS27.getGlass()] || 'Standard', { action: 'glass-level' }) : ''}
                 ${(document.documentElement.getAttribute('data-theme') === 'dark')
-                  ? settingsRow('theme', tr({ fr: 'Mode sombre', en: 'Dark mode', ar: 'الوضع الداكن' }), tr({ fr: 'Activé · Kiwi Ultra', en: 'On · Kiwi Ultra', ar: 'مفعّل · Kiwi Ultra' }), { badge: '✓' })
-                  : settingsRow('theme', tr({ fr: 'Mode sombre', en: 'Dark mode', ar: 'الوضع الداكن' }), tr({ fr: 'Interface nuit · confort du soir', en: 'Night interface · easy on the eyes', ar: 'واجهة ليلية · مريحة للعين' }), { action: 'settings-dark-ultra', badge: 'ULTRA' })}
+                  ? settingsRow('dark_mode', tr({ fr: 'Mode sombre', en: 'Dark mode', ar: 'الوضع الداكن' }), tr({ fr: 'Activé · Kiwi Ultra', en: 'On · Kiwi Ultra', ar: 'مفعّل · Kiwi Ultra' }), { badge: '✓' })
+                  : settingsRow('dark_mode', tr({ fr: 'Mode sombre', en: 'Dark mode', ar: 'الوضع الداكن' }), tr({ fr: 'Interface nuit · confort du soir', en: 'Night interface · easy on the eyes', ar: 'واجهة ليلية · مريحة للعين' }), { action: 'settings-dark-ultra', badge: 'ULTRA' })}
                 ${settingsRow('notifications', tr({ fr: 'Notifications WhatsApp', en: 'WhatsApp notifications', ar: 'إشعارات واتساب' }), tr({ fr: 'Résumé quotidien 19h', en: 'Daily summary 7pm', ar: 'ملخص يومي 19:00' }), { toggle: true, on: setOn('waNotif'), action: 'settings-toggle', arg: 'waNotif' })}
               </div>
             </div>
@@ -2127,16 +2127,16 @@ ar: {
             <div class="gp-set-card">
               <div class="gp-set-card-head">
                 <div class="gp-set-title">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                  ${materialSymbol('shield_lock')}
                   <span>${tr({ fr: 'Sécurité & Intégrations', en: 'Security & Integrations', ar: 'الأمان والتكاملات' })}</span>
                 </div>
                 <span class="gp-set-tag">${tr({ fr: 'Protection', en: 'Protection', ar: 'الحماية' })}</span>
               </div>
               <div>
-                ${settingsRow('pin', tr({ fr: 'Codes PIN de l\'équipe', en: 'Team PIN codes', ar: 'رموز الفريق' }), tr({ fr: 'Gérer les accès et rôles caisse', en: 'Manage till roles and access', ar: 'إدارة أدوار ووصول الصندوق' }), { action: 'nav-equipe' })}
-                ${settingsRow('encryption', tr({ fr: 'Chiffrement des données', en: 'Data encryption', ar: 'تشفير البيانات' }), tr({ fr: 'En transit (TLS 1.3) et au repos', en: 'In transit (TLS 1.3) and at rest', ar: 'أثناء النقل وفي التخزين' }), { badge: tr({ fr: 'Certifié', en: 'Certified', ar: 'معتمد' }) })}
-                ${settingsRow('export', tr({ fr: 'Exporter mes données', en: 'Export my data', ar: 'تصدير بياناتي' }), tr({ fr: 'Ventes, produits, équipe · Fichier CSV', en: 'Sales, products, team · CSV file', ar: 'المبيعات والمنتجات والفريق · CSV' }), { action: 'export-csv' })}
-                ${cv ? settingsRow('delivery', tr({ fr: 'Canaux de livraison', en: 'Delivery channels', ar: 'قنوات التوصيل' }), tr({ fr: 'Connectez Glovo, Yassir et votre compta', en: 'Connect Glovo, Yassir and accounting', ar: 'اربط Glovo وYassir ومحاسبتك' }), { action: 'add-integration' }) : `
+                ${settingsRow('key', tr({ fr: 'Codes PIN de l\'équipe', en: 'Team PIN codes', ar: 'رموز الفريق' }), tr({ fr: 'Gérer les accès et rôles caisse', en: 'Manage till roles and access', ar: 'إدارة أدوار ووصول الصندوق' }), { action: 'nav-equipe' })}
+                ${settingsRow('shield_lock', tr({ fr: 'Chiffrement des données', en: 'Data encryption', ar: 'تشفير البيانات' }), tr({ fr: 'En transit (TLS 1.3) et au repos', en: 'In transit (TLS 1.3) and at rest', ar: 'أثناء النقل وفي التخزين' }), { badge: tr({ fr: 'Certifié', en: 'Certified', ar: 'معتمد' }) })}
+                ${settingsRow('file_upload', tr({ fr: 'Exporter mes données', en: 'Export my data', ar: 'تصدير بياناتي' }), tr({ fr: 'Ventes, produits, équipe · Fichier CSV', en: 'Sales, products, team · CSV file', ar: 'المبيعات والمنتجات والفريق · CSV' }), { action: 'export-csv' })}
+                ${cv ? settingsRow('local_shipping', tr({ fr: 'Canaux de livraison', en: 'Delivery channels', ar: 'قنوات التوصيل' }), tr({ fr: 'Connectez Glovo, Yassir et votre compta', en: 'Connect Glovo, Yassir and accounting', ar: 'اربط Glovo وYassir ومحاسبتك' }), { action: 'add-integration' }) : `
                 ${settingsRow('glovo', 'Glovo Delivery', tr({ fr: 'Connecté · Commandes en direct', en: 'Connected · Live orders', ar: 'متصل · طلبات مباشرة' }), { toggle: true, on: setOn('glovo'), action: 'settings-toggle', arg: 'glovo' })}
                 ${settingsRow('yassir', 'Yassir Express', tr({ fr: 'Connecté · 24 commandes', en: 'Connected · 24 orders', ar: 'متصل · 24 طلبًا' }), { toggle: true, on: setOn('yassir'), action: 'settings-toggle', arg: 'yassir' })}
                 ${settingsRow('accounting', tr({ fr: 'Comptabilité OCP', en: 'Accounting export', ar: 'المحاسبة' }), tr({ fr: 'Export automatique quotidien', en: 'Daily automatic export', ar: 'تصدير تلقائي يومي' }), { toggle: true, on: setOn('compta'), action: 'settings-toggle', arg: 'compta' })}
@@ -3314,9 +3314,30 @@ ar: {
     '🔵': '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
     '📊': '<path d="M18 20V10M12 20V4M6 20v-6M3 20h18"/>'
   };
+  /* Google Material Symbols · Outlined 400. Official paths from Google's
+     open-source Material Symbols set, kept inline so settings work offline. */
+  const MATERIAL_SETTINGS_ICONS = Object.freeze({
+    storefront: 'M841-518v318q0 33-23.5 56.5T761-120H201q-33 0-56.5-23.5T121-200v-318q-23-21-35.5-54t-.5-72l42-136q8-26 28.5-43t47.5-17h556q27 0 47 16.5t29 43.5l42 136q12 39-.5 71T841-518Zm-272-42q27 0 41-18.5t11-41.5l-22-140h-78v148q0 21 14 36.5t34 15.5Zm-180 0q23 0 37.5-15.5T441-612v-148h-78l-22 140q-4 24 10.5 42t37.5 18Zm-178 0q18 0 31.5-13t16.5-33l22-154h-78l-40 134q-6 20 6.5 43t41.5 23Zm540 0q29 0 42-23t6-43l-42-134h-76l22 154q3 20 16.5 33t31.5 13ZM201-200h560v-282q-5 2-6.5 2H751q-27 0-47.5-9T663-518q-18 18-41 28t-49 10q-27 0-50.5-10T481-518q-17 18-39.5 28T393-480q-29 0-52.5-10T299-518q-21 21-41.5 29.5T211-480h-4.5q-2.5 0-5.5-2v282Zm560 0H201h560Z',
+    schedule: 'm612-292 56-56-148-148v-184h-80v216l172 172ZM480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-400Zm0 320q133 0 226.5-93.5T800-480q0-133-93.5-226.5T480-800q-133 0-226.5 93.5T160-480q0 133 93.5 226.5T480-160Z',
+    track_changes: 'M324-111.5Q251-143 197-197t-85.5-127Q80-397 80-480t31.5-156Q143-709 197-763t127-85.5Q397-880 480-880h40v331q18 11 29 28.5t11 40.5q0 33-23.5 56.5T480-400q-33 0-56.5-23.5T400-480q0-23 11-41t29-28v-86q-52 14-86 56.5T320-480q0 66 47 113t113 47q66 0 113-47t47-113q0-36-14.5-66.5T586-600l57-57q35 33 56 78.5t21 98.5q0 100-70 170t-170 70q-100 0-170-70t-70-170q0-90 57-156.5T440-717v-81q-119 15-199.5 105T160-480q0 134 93 227t227 93q134 0 227-93t93-227q0-69-27-129t-74-104l57-57q57 55 90.5 129.5T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80q-83 0-156-31.5Z',
+    receipt_long: 'M240-80q-50 0-85-35t-35-85v-120h120v-560l60 60 60-60 60 60 60-60 60 60 60-60 60 60 60-60v680q0 50-35 85t-85 35H240Zm480-80q17 0 28.5-11.5T760-200v-560H320v440h360v120q0 17 11.5 28.5T720-160ZM360-600v-80h240v80H360Zm0 120v-80h240v80H360Zm320-120q-17 0-28.5-11.5T640-640q0-17 11.5-28.5T680-680q17 0 28.5 11.5T720-640q0 17-11.5 28.5T680-600Zm0 120q-17 0-28.5-11.5T640-520q0-17 11.5-28.5T680-560q17 0 28.5 11.5T720-520q0 17-11.5 28.5T680-480ZM240-160h360v-80H200v40q0 17 11.5 28.5T240-160Zm-40 0v-80 80Z',
+    credit_card: 'M880-720v480q0 33-23.5 56.5T800-160H160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h640q33 0 56.5 23.5T880-720Zm-720 80h640v-80H160v80Zm0 160v240h640v-240H160Zm0 240v-480 480Z',
+    paid: 'M444-200h70v-50q50-9 86-39t36-89q0-42-24-77t-96-61q-60-20-83-35t-23-41q0-26 18.5-41t53.5-15q32 0 50 15.5t26 38.5l64-26q-11-35-40.5-61T516-710v-50h-70v50q-50 11-78 44t-28 74q0 47 27.5 76t86.5 50q63 23 87.5 41t24.5 47q0 33-23.5 48.5T486-314q-33 0-58.5-20.5T390-396l-66 26q14 48 43.5 77.5T444-252v52Zm36 120q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z',
+    language: 'M325-111.5q-73-31.5-127.5-86t-86-127.5Q80-398 80-480.5t31.5-155q31.5-72.5 86-127t127.5-86Q398-880 480.5-880t155 31.5q72.5 31.5 127 86t86 127Q880-563 880-480.5T848.5-325q-31.5 73-86 127.5t-127 86Q563-80 480.5-80T325-111.5ZM480-162q26-36 45-75t31-83H404q12 44 31 83t45 75Zm-104-16q-18-33-31.5-68.5T322-320H204q29 50 72.5 87t99.5 55Zm208 0q56-18 99.5-55t72.5-87H638q-9 38-22.5 73.5T584-178ZM170-400h136q-3-20-4.5-39.5T300-480q0-21 1.5-40.5T306-560H170q-5 20-7.5 39.5T160-480q0 21 2.5 40.5T170-400Zm216 0h188q3-20 4.5-39.5T580-480q0-21-1.5-40.5T574-560H386q-3 20-4.5 39.5T380-480q0 21 1.5 40.5T386-400Zm268 0h136q5-20 7.5-39.5T800-480q0-21-2.5-40.5T790-560H654q3 20 4.5 39.5T660-480q0 21-1.5 40.5T654-400Zm-16-240h118q-29-50-72.5-87T584-782q18 33 31.5 68.5T638-640Zm-234 0h152q-12-44-31-83t-45-75q-26 36-45 75t-31 83Zm-200 0h118q9-38 22.5-73.5T376-782q-56 18-99.5 55T204-640Z',
+    layers: 'M480-118 120-398l66-50 294 228 294-228 66 50-360 280Zm0-202L120-600l360-280 360 280-360 280Zm0-280Zm0 178 230-178-230-178-230 178 230 178Z',
+    dark_mode: 'M480-120q-150 0-255-105T120-480q0-150 105-255t255-105q14 0 27.5 1t26.5 3q-41 29-65.5 75.5T444-660q0 90 63 153t153 63q55 0 101-24.5t75-65.5q2 13 3 26.5t1 27.5q0 150-105 255T480-120Zm0-80q88 0 158-48.5T740-375q-20 5-40 8t-40 3q-123 0-209.5-86.5T364-660q0-20 3-40t8-40q-78 32-126.5 102T200-480q0 116 82 198t198 82Zm-10-270Z',
+    notifications: 'M160-200v-80h80v-280q0-83 50-147.5T420-792v-28q0-25 17.5-42.5T480-880q25 0 42.5 17.5T540-820v28q80 20 130 84.5T720-560v280h80v80H160Zm320-300Zm0 420q-33 0-56.5-23.5T400-160h160q0 33-23.5 56.5T480-80ZM320-280h320v-280q0-66-47-113t-113-47q-66 0-113 47t-47 113v280Z',
+    key: 'M223.5-423.5Q200-447 200-480t23.5-56.5Q247-560 280-560t56.5 23.5Q360-513 360-480t-23.5 56.5Q313-400 280-400t-56.5-23.5ZM280-240q-100 0-170-70T40-480q0-100 70-170t170-70q67 0 121.5 33t86.5 87h352l120 120-180 180-80-60-80 60-85-60h-47q-32 54-86.5 87T280-240Zm0-80q56 0 98.5-34t56.5-86h125l58 41 82-61 71 55 75-75-40-40H435q-14-52-56.5-86T280-640q-66 0-113 47t-47 113q0 66 47 113t113 47Z',
+    shield_lock: 'M480-80q-139-35-229.5-159.5T160-516v-244l320-120 320 120v244q0 152-90.5 276.5T480-80Zm0-84q104-33 172-132t68-220v-189l-240-90-240 90v189q0 121 68 220t172 132Zm0-316Zm-80 160h160q17 0 28.5-11.5T600-360v-120q0-17-11.5-28.5T560-520v-40q0-33-23.5-56.5T480-640q-33 0-56.5 23.5T400-560v40q-17 0-28.5 11.5T360-480v120q0 17 11.5 28.5T400-320Zm40-200v-40q0-17 11.5-28.5T480-600q17 0 28.5 11.5T520-560v40h-80Z',
+    file_upload: 'M440-320v-326L336-542l-56-58 200-200 200 200-56 58-104-104v326h-80ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z',
+    local_shipping: 'M155-195q-35-35-35-85H40v-440q0-33 23.5-56.5T120-800h560v160h120l120 160v200h-80q0 50-35 85t-85 35q-50 0-85-35t-35-85H360q0 50-35 85t-85 35q-50 0-85-35Zm113.5-56.5Q280-263 280-280t-11.5-28.5Q257-320 240-320t-28.5 11.5Q200-297 200-280t11.5 28.5Q223-240 240-240t28.5-11.5ZM120-360h32q17-18 39-29t49-11q27 0 49 11t39 29h272v-360H120v360Zm628.5 108.5Q760-263 760-280t-11.5-28.5Q737-320 720-320t-28.5 11.5Q680-297 680-280t11.5 28.5Q703-240 720-240t28.5-11.5ZM680-440h170l-90-120h-80v120ZM360-540Z'
+  });
+  function materialSymbol(name, className) {
+    const path = MATERIAL_SETTINGS_ICONS[name] || MATERIAL_SETTINGS_ICONS.storefront;
+    return `<svg${className ? ` class="${className}"` : ''} viewBox="0 -960 960 960" width="16" height="16" fill="currentColor" aria-hidden="true" focusable="false"><path d="${path}"></path></svg>`;
+  }
   function ksetIco(key) {
-    const p = KSET_ICONS[key] || '<circle cx="12" cy="12" r="5"/>';
-    return '<span class="kset-ico"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + p + '</svg></span>';
+    return `<span class="kset-ico">${materialSymbol(key)}</span>`;
   }
   function settingsRow(icon, label, value, opts) {
     if (opts === true) opts = { toggle: true, on: true };
