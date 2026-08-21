@@ -373,7 +373,7 @@
   },
   "assets/pos-dispatch.js": {
     "v": "30",
-    "sha": "ee86815db44c74f7"
+    "sha": "787ac7ca46d12758"
   },
   "assets/pos-epicerie.css": {
     "v": "2",
@@ -400,12 +400,12 @@
     "sha": "0f46f52706cec560"
   },
   "assets/pos-foodtruck.css": {
-    "v": "2",
+    "v": "3",
     "sha": "30250c7a8e40a516"
   },
   "assets/pos-foodtruck.js": {
-    "v": "2",
-    "sha": "fcdbbd02ed324021"
+    "v": "3",
+    "sha": "a92df750410730da"
   },
   "assets/pos-gym.css": {
     "v": "2",

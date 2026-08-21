@@ -62,7 +62,7 @@
     '0006': { id: 'boulangerie', file: 'pos-boulangerie', rev: '3', label: 'Boulangerie · Bab Kasbah' },
     '0007': { id: 'pizzeria',    file: 'pos-pizzeria',    rev: '3', label: 'Pizzeria · La Marsa' },
     '0008': { id: 'traiteur',    file: 'pos-traiteur',    rev: '3', label: 'Traiteur · Dar Zellij' },
-    '0009': { id: 'foodtruck',   file: 'pos-foodtruck',   rev: '2', label: 'Food truck · Karavan' },
+    '0009': { id: 'foodtruck',   file: 'pos-foodtruck',   rev: '3', label: 'Food truck · Karavan' },
     '0010': { id: 'epicerie',    file: 'pos-epicerie',    rev: '2', label: 'Épicerie · Si Brahim' },
     '0011': { id: 'pharmacie',   file: 'pos-pharmacie',   rev: '2', label: 'Pharmacie · Ibn Batouta' },
     '0012': { id: 'librairie',   file: 'pos-librairie',   rev: '2', label: 'Librairie · Al Boughaz' },

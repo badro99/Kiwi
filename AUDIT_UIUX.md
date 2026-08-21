@@ -182,3 +182,12 @@ Ce document consigne l'ensemble des audits visuels, ergonomiques, d'accessibilit
   1. Enrichissement du devis traiteur vide avec médaillon Material Symbol (`inventory_2`), hiérarchie visuelle et guidage pas-à-pas.
   2. Bumping de la révision `pos-traiteur.js?v=3` dans le dispatcher.
 - **État** : ✅ Déployé
+
+### 7.9 Vertical Food Truck (`assets/pos-foodtruck.js`)
+- **Fichiers** : `assets/pos-foodtruck.js:534`, `assets/pos-dispatch.js:65`
+- **Problèmes identifiés** :
+  1. Ticket de vente éclair food truck vide sans médaillon Material Symbols.
+- **Améliorations apportées** :
+  1. Refonte du ticket vide avec médaillon Material Symbol (`inventory_2`) et hiérarchie ultra-lisible.
+  2. Bumping de la révision `pos-foodtruck.js?v=3` dans le dispatcher.
+- **État** : ✅ Déployé
