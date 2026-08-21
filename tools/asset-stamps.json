@@ -119,6 +119,10 @@
     "v": "3",
     "sha": "5c0938ec006b2275"
   },
+  "assets/dark-fixes.js": {
+    "v": "2",
+    "sha": "d9d9ffc0deaae7a7"
+  },
   "assets/dashboard-extra.js": {
     "v": "3",
     "sha": "94d688b1b5cdb89a"

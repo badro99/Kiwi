@@ -30,7 +30,28 @@
   // Any dark text that has ended up on a dark background is invisible regardless of hue —
   // so this also covers deep brand colours (e.g. --riad green) gone dark-on-dark, not just greys.
   const isDarkText = (p) => p[3] > 0.5 && lum(p) < 0.25 && sat(p) <= 120;
-  function effBg(el) { let n = el; while (n && n.nodeType === 1) { const p = parse(getComputedStyle(n).backgroundColor); if (p[3] >= 0.6) return p; n = n.parentElement; } return [11, 18, 16, 1]; }
+  /* Couleur de fond effective : on remonte jusqu'au premier ancêtre peint.
+   * Un dégradé est un fond peint : `background-color` reste transparent sur un
+   * bouton rempli par `linear-gradient(...)`, et la remontée filait jusqu'à la
+   * barre noire — le libellé encre du bouton Kiwi AI (menthe) passait pour du
+   * sombre-sur-sombre et était forcé en blanc. Le premier arrêt opaque du
+   * dégradé sert de teinte de référence. */
+  function gradStop(img) {
+    if (!img || img === 'none' || img.indexOf('gradient(') < 0) return null;
+    const m = img.match(/rgba?\([^)]*\)/g) || [];
+    for (const c of m) { const p = parse(c); if (p[3] >= 0.6) return p; }
+    return null;
+  }
+  function effBg(el) {
+    let n = el;
+    while (n && n.nodeType === 1) {
+      const cs = getComputedStyle(n);
+      const p = parse(cs.backgroundColor); if (p[3] >= 0.6) return p;
+      const g = gradStop(cs.backgroundImage); if (g) return g;
+      n = n.parentElement;
+    }
+    return [11, 18, 16, 1];
+  }
   function hasDirectText(el) { for (const n of el.childNodes) if (n.nodeType === 3 && n.textContent.trim()) return true; return false; }
 
   // Surfaces the CSS dark system already themes intentionally — never re-touch them.
@@ -43,7 +64,9 @@
   /* `mark` porte le morceau que la personne vient de taper dans la recherche.
    * Sa couleur EST son intérêt : repeint en couleur de texte ordinaire, le
    * surlignage disparaît et la ligne redevient un pavé illisible. */
-  const SKIP = '.gk-qr, .btn-slim, .kc-sw, mark';
+  /* `.ai-btn` : le bouton Kiwi AI de la barre — la peau Vexel le remplit en
+   * menthe avec un libellé encre, volontairement ; rien à corriger dessus. */
+  const SKIP = '.gk-qr, .btn-slim, .kc-sw, mark, .ai-btn';
 
   function fix(root) {
     if (!root || document.documentElement.getAttribute('data-theme') !== 'dark') return;
