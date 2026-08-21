@@ -784,17 +784,19 @@
     var E = window.KiwiEscPos;
     if (!E || !E.builder) return null;
     var paper = doc.paper || '80';
-    var cols = E.paperCols ? E.paperCols(paper) : 48;
+    var rawCols = E.paperCols ? E.paperCols(paper) : 48;
+    var cols = (paper === '80' || !paper) ? 44 : rawCols;
     var b = E.builder().init();
     var T = doc.T || dict(doc.lang);
     var refund = doc.kind === 'refund';
-    var rule = function () { b.line(new Array(cols + 1).join('-')); };
+    var rule = function () { b.line(' ' + new Array(cols - 1).join('-')); };
     var row = function (l, r, bold) {
       l = String(l == null ? '' : l); r = String(r == null ? '' : r);
-      if (l.length + r.length + 1 > cols) l = l.slice(0, Math.max(0, cols - r.length - 1));
-      var gap = Math.max(1, cols - l.length - r.length);
+      var usable = cols - 2;
+      if (l.length + r.length + 1 > usable) l = l.slice(0, Math.max(0, usable - r.length - 1));
+      var gap = Math.max(1, usable - l.length - r.length);
       if (bold) b.bold(true);
-      b.line(l + new Array(gap + 1).join(' ') + r);
+      b.line(' ' + l + new Array(gap + 1).join(' ') + r);
       if (bold) b.bold(false);
     };
 
@@ -893,7 +895,7 @@
     if (doc.foot.whatsapp) b.line('WhatsApp ' + doc.foot.whatsapp);
     if (doc.second) secondLanguage(b, doc, cols);
     b.feed(1).line('Kiwi');
-    b.cut();
+    b.feed(2).cut();
     if (o.openDrawer) b.drawer();
     return b.bytes();
   }

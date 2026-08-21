@@ -80,8 +80,8 @@
     "sha": "112638dbbb35294e"
   },
   "assets/caisse-pwa.js": {
-    "v": "400",
-    "sha": "99900df8e406e7a0"
+    "v": "401",
+    "sha": "7dd9221eca00cb37"
   },
   "assets/caisse-skin.css": {
     "v": "3",
@@ -128,8 +128,8 @@
     "sha": "94d688b1b5cdb89a"
   },
   "assets/dashboard-pwa.js": {
-    "v": "400",
-    "sha": "436b43369c74ce61"
+    "v": "401",
+    "sha": "8efd70bf6a605740"
   },
   "assets/dateRange.js": {
     "v": "13",
@@ -160,8 +160,8 @@
     "sha": "aa550a22766dac1a"
   },
   "assets/employee-live.js": {
-    "v": "399",
-    "sha": "b9f666af33eec116"
+    "v": "400",
+    "sha": "8195403e9e6b513c"
   },
   "assets/employee-planning.js": {
     "v": "6",
@@ -184,8 +184,8 @@
     "sha": "c0e4af8248386f6c"
   },
   "assets/escpos.js": {
-    "v": "3",
-    "sha": "338273c601e89f59"
+    "v": "4",
+    "sha": "aeef43868efcb2f8"
   },
   "assets/features.js": {
     "v": "3",

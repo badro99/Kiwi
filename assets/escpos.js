@@ -61,7 +61,7 @@
     return this.raw([GS, 0x21, (wm << 4) | hm]);
   };
   Builder.prototype.drawer = function () { return this.raw([ESC, 0x70, 0x00, 0x19, 0xFA]); };    // kick pin 2
-  Builder.prototype.cut = function () { return this.feed(3).raw([GS, 0x56, 0x00]); };            // feed + full cut
+  Builder.prototype.cut = function () { return this.feed(5).raw([GS, 0x56, 0x00]); };            // feed + full cut
   Builder.prototype.cutNow = function () { return this.raw([GS, 0x56, 0x00]); };                  // full cut, no receipt feed
 
   // Barcode via GS k format 2 (length-prefixed). HRI text below.
@@ -162,14 +162,14 @@
     o = o || {}; var paper = o.paper || '80';
     var b = new Builder().init();
     b.align('center').bold(true).size(2, 2).line(fit(o.title || 'CUISINE', paper, 2)).size(1, 1).bold(false);
-    if (o.table || o.order) b.line(fit([o.table, o.order].filter(Boolean).join('  ·  '), paper));
+    if (o.table || o.order) b.bold(true).size(2, 2).line(fit([o.table, o.order].filter(Boolean).join('  ·  '), paper, 2)).size(1, 1).bold(false);
     if (o.time) b.line(fit(o.time, paper));
     b.align('left').line(rule(paper));
     (o.items || []).forEach(function (it) {
-      b.bold(true).size(1, 2).line(fit((it.qty ? it.qty + '× ' : '') + (it.name || ''), paper)).size(1, 1).bold(false);
-      if (it.note) b.line(fit('   > ' + it.note, paper));
+      b.bold(true).size(2, 2).line(fit((it.qty ? it.qty + '× ' : '') + (it.name || ''), paper, 2)).size(1, 1).bold(false);
+      if (it.note) b.bold(true).size(1, 2).line(fit('   > ' + it.note, paper)).size(1, 1).bold(false);
     });
-    b.line(rule(paper)).cut();
+    b.line(rule(paper)).feed(3).cut();
     return b.bytes();
   }
 
