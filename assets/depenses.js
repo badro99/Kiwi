@@ -315,6 +315,23 @@
     .dep-site-foot { display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--n-500); margin-top: 8px; }
     .dep-site-open { color: var(--atlas); font-weight: 600; }
     .dep-site-tag { font-family: var(--mono); font-size: 9px; letter-spacing: 0.04em; background: color-mix(in srgb, var(--atlas) 12%, var(--surface)); color: var(--atlas); border-radius: 999px; padding: 2px 7px; white-space: nowrap; }
+    /* dark mode */
+    html[data-theme="dark"] .dep-led.out { background: rgba(255, 138, 128, 0.08); }
+    html[data-theme="dark"] .dep-led.out .v { color: #FF8A80; }
+    html[data-theme="dark"] .dep-led.net .v { color: var(--mint); }
+    html[data-theme="dark"] .dep-row-amt { color: #FF8A80; }
+    html[data-theme="dark"] .dep-site-net { color: var(--mint); }
+    html[data-theme="dark"] .dep-site-io b { color: #FF8A80; }
+    html[data-theme="dark"] .dep-site-open { color: var(--mint); }
+    html[data-theme="dark"] .dep-site-tag { background: rgba(63, 182, 122, 0.15); color: var(--mint); }
+    html[data-theme="dark"] .dep-phase { background: rgba(63, 182, 122, 0.1); border-color: rgba(63, 182, 122, 0.25); color: #F7F5F0; }
+    html[data-theme="dark"] .dep-phase b { color: var(--mint); }
+    html[data-theme="dark"] .dep-ultra { background: rgba(63, 182, 122, 0.1); border-color: rgba(63, 182, 122, 0.25); color: #F7F5F0; }
+    html[data-theme="dark"] .dep-ultra b { color: var(--mint); }
+    html[data-theme="dark"] .dep-starter-list { background: rgba(255, 255, 255, 0.04); border-color: rgba(255, 255, 255, 0.08); }
+    html[data-theme="dark"] .dep-starter-row { color: rgba(247, 245, 240, 0.85); }
+    html[data-theme="dark"] .dep-starter-row svg { color: var(--mint); }
+    html[data-theme="dark"] .dep-starter-ic { background: rgba(63, 182, 122, 0.15); color: var(--mint); }
     @media (prefers-reduced-motion: reduce) {
       .dep-card { animation: none; }
       .dep-budget .br > i, .dep-kc-bar > i, .dep-bud .br > i, .dep-site-bar > i { transition: none; }

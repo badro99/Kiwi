@@ -305,8 +305,10 @@
       '.kdr-note{font-size:12.5px;line-height:1.55;color:var(--n-500);margin-top:10px}',
       /* ── le vide ── */
       '.kdr-empty{text-align:center;padding:40px 20px}',
-      '.kdr-empty h3{font-family:var(--serif);font-weight:400;font-size:24px;color:var(--ink);margin:0 0 8px}',
+      '.kdr-empty h3{font-family:var(--sans);font-weight:600;font-size:22px;color:var(--ink);margin:0 0 8px;letter-spacing:-0.02em}',
       '.kdr-empty p{font-size:13.5px;color:var(--n-500);margin:0 0 18px;line-height:1.6}',
+      'html[data-theme="dark"] .kdr-id,html[data-theme="dark"] .kdr-strip,html[data-theme="dark"] .kdr-cat,html[data-theme="dark"] .kdr-top-c{background:rgba(255,255,255,0.03);border-color:rgba(255,255,255,0.08)}',
+      'html[data-theme="dark"] .kdr-kpi:not(.is-lead){background:rgba(255,255,255,0.03);border-color:rgba(255,255,255,0.08)}',
       '@media (max-width:820px){.kdr-two{grid-template-columns:1fr;gap:0}}',
       '@media (max-width:640px){.kdr-day{font-size:13.5px}.kdr-kpi-v{font-size:21px}.kdr-sd-t{height:40px}.kdr-hrs{height:76px}}',
     ].join('');
