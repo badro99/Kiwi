@@ -154,9 +154,14 @@ export async function staffToken(sitePassword) {
 // not verify. Unforgeable without AUTH_SECRET; carries no expiry because a
 // pairing is meant to last until the merchant unpairs.
 export const TILL_COOKIE = 'kiwi_till';
+export const TERMINAL_COOKIE = 'kiwi_terminal';
 
 export async function tillToken(authSecret, merchant) {
   return hmacHex(authSecret, 'kiwi-till-v1:' + String(merchant || ''));
+}
+
+export async function terminalToken(authSecret, merchant, terminalId) {
+  return hmacHex(authSecret, 'kiwi-terminal-v1:' + String(merchant || '') + ':' + String(terminalId || ''));
 }
 
 // Stable, store-scoped proof written to the physical attendance NFC tag. The
@@ -172,6 +177,9 @@ export async function isAttendanceTagFor(token, env, merchant) {
 export function tillCookie(value) {
   return `${TILL_COOKIE}=${value}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${365 * 86400}`;
 }
+export function terminalCookie(value) {
+  return `${TERMINAL_COOKIE}=${value}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${365 * 86400}`;
+}
 // True when the request proves it is the till of `merchant`.
 export async function isTillFor(request, env, merchant) {
   const secret = env && env.AUTH_SECRET;
@@ -179,6 +187,13 @@ export async function isTillFor(request, env, merchant) {
   const got = readCookie(request, TILL_COOKIE);
   if (!got) return false;
   return timingSafeEqualHex(got, await tillToken(secret, merchant));
+}
+export async function isTerminalFor(request, env, merchant, terminalId) {
+  const secret = env && env.AUTH_SECRET;
+  if (!secret || !merchant || !terminalId) return false;
+  const got = readCookie(request, TERMINAL_COOKIE);
+  if (!got) return false;
+  return timingSafeEqualHex(got, await terminalToken(secret, merchant, terminalId));
 }
 
 // ── Employee app session ─────────────────────────────────────────────────────
@@ -1090,4 +1105,3 @@ export async function verifyAccountPin(request, env, pin) {
     },
   };
 }
-

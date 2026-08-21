@@ -1057,3 +1057,26 @@ CREATE TABLE IF NOT EXISTS sale_void_history (
 );
 CREATE INDEX IF NOT EXISTS idx_sale_void_history_merchant_ts
   ON sale_void_history (merchant, voided_ts);
+
+-- Phase AI 1d-c: terminal-bound, append-only financial reconciliation events.
+CREATE TABLE IF NOT EXISTS cash_session_events (
+  id TEXT PRIMARY KEY,
+  merchant TEXT NOT NULL,
+  session_id TEXT NOT NULL,
+  terminal_id TEXT NOT NULL,
+  event_type TEXT NOT NULL CHECK (event_type IN ('open','movement','handover','close')),
+  expected_cents INTEGER,
+  counted_cents INTEGER,
+  gap_cents INTEGER,
+  movement_kind TEXT,
+  movement_amount_cents INTEGER,
+  movement_reason TEXT,
+  actor_id TEXT NOT NULL,
+  counterparty_actor_id TEXT,
+  opened_ts INTEGER NOT NULL,
+  occurred_ts INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_cash_session_events_merchant_ts
+  ON cash_session_events (merchant, occurred_ts);
+CREATE INDEX IF NOT EXISTS idx_cash_session_events_terminal_session
+  ON cash_session_events (merchant, terminal_id, session_id, occurred_ts);

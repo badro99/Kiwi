@@ -10,7 +10,7 @@
   var FEATURE = 'briefing';
   var PREFIX = 'kiwi:briefing:v1:';
   var MAX_DAYS = 45;
-  var RULES = [salesDropRule, lowStockRule, marginErosionRule, planningGapRule, cancellationRateRule, discountShareRule];
+  var RULES = [salesDropRule, lowStockRule, marginErosionRule, planningGapRule, cancellationRateRule, discountShareRule, cashGapRule];
   var doc = { days: [] };
   var cloud = null;
 
@@ -18,27 +18,27 @@
     fr: {
       eyebrow: 'KIWI AI', title: 'Le point du matin', empty: 'Rien d’urgent à signaler.',
       emptyNote: 'Kiwi surveille uniquement les données mesurées de cet établissement.', ask: 'Voir le point du matin',
-      coverage: 'Je surveille quatre familles déjà mesurables, sans inventer les données manquantes.',
-      coveredLabel: 'Couverture active', covered: 'Ventes · stock · marge · planning',
-      waitingLabel: 'En attente de données durables', waiting: 'Remises · annulations · caisse · délais de service',
+      coverage: 'Je surveille les signaux déjà mesurables, sans inventer les données manquantes.',
+      coveredLabel: 'Couverture active', covered: 'Ventes · stock · marge · planning · remises · annulations · caisse',
+      waitingLabel: 'En attente de données durables', waiting: 'Délais de service',
       demo: 'Le point du matin s’active sur un établissement réel connecté. La démonstration ne fabrique aucune alerte.',
       handled: 'Traité', dismiss: 'Masquer', propose: 'Proposer'
     },
     en: {
       eyebrow: 'KIWI AI', title: 'Morning briefing', empty: 'Nothing urgent to flag.',
       emptyNote: 'Kiwi monitors only measured data from this venue.', ask: 'Open morning briefing',
-      coverage: 'I monitor four areas that are already measurable, without inventing missing data.',
-      coveredLabel: 'Active coverage', covered: 'Sales · stock · margin · staffing',
-      waitingLabel: 'Waiting for durable data', waiting: 'Discounts · cancellations · cash · service timing',
+      coverage: 'I monitor the signals that are already measurable, without inventing missing data.',
+      coveredLabel: 'Active coverage', covered: 'Sales · stock · margin · staffing · discounts · cancellations · cash',
+      waitingLabel: 'Waiting for durable data', waiting: 'Service timing',
       demo: 'Morning briefing activates for a connected real venue. The demo never fabricates alerts.',
       handled: 'Handled', dismiss: 'Dismiss', propose: 'Propose'
     },
     ar: {
       eyebrow: 'KIWI AI', title: 'ملخص الصباح', empty: 'لا توجد أمور عاجلة الآن.',
       emptyNote: 'يراقب Kiwi فقط البيانات المقاسة لهذا المحل.', ask: 'عرض ملخص الصباح',
-      coverage: 'أراقب أربع فئات قابلة للقياس حاليا، من دون اختراع البيانات الناقصة.',
-      coveredLabel: 'التغطية الحالية', covered: 'المبيعات · المخزون · الهامش · جدول العمل',
-      waitingLabel: 'في انتظار بيانات دائمة', waiting: 'التخفيضات · الإلغاءات · الصندوق · مدة الخدمة',
+      coverage: 'أراقب الإشارات القابلة للقياس حاليا، من دون اختراع البيانات الناقصة.',
+      coveredLabel: 'التغطية الحالية', covered: 'المبيعات · المخزون · الهامش · جدول العمل · التخفيضات · الإلغاءات · الصندوق',
+      waitingLabel: 'في انتظار بيانات دائمة', waiting: 'مدة الخدمة',
       demo: 'يتفعل ملخص الصباح في محل حقيقي متصل. العرض التجريبي لا يصنع تنبيهات.',
       handled: 'تمت المعالجة', dismiss: 'إخفاء', propose: 'اقتراح'
     }
@@ -438,6 +438,44 @@
       evidence: { count: current.discountedCount, window: String(day || '') + ' · 4 mêmes jours de semaine', source: 'sales.discount_amount_cents / gross_amount_cents' }
     };
   }
+
+  function cashGapRule(input) {
+    input = input || {};
+    var C = window.KiwiCashSessions;
+    var sourceReady = input.ready;
+    if (sourceReady == null) sourceReady = !!(C && C.ready && C.ready());
+    if (!sourceReady) return null;
+    var rows = Array.isArray(input.events) ? input.events : (C && C.list ? C.list() : []);
+    var wantedMerchant = String(input.merchant == null ? slug() : input.merchant);
+    var day = String(input.day || businessDay(Date.now() - 86400000));
+    var threshold = Number(input.thresholdCents == null ? 10000 : input.thresholdCents);
+    var dayOf = typeof input.businessDay === 'function' ? input.businessDay : businessDay;
+    var reconciliations = rows.filter(function (row) {
+      if (!row || (wantedMerchant && String(row.merchant || '') !== wantedMerchant)) return false;
+      if (row.event_type !== 'close' && row.eventType !== 'close' && row.event_type !== 'handover' && row.eventType !== 'handover') return false;
+      var opened = Number(row.opened_ts == null ? row.openedAt : row.opened_ts);
+      var gap = Number(row.gap_cents == null ? row.gapCents : row.gap_cents);
+      return opened > 0 && dayOf(opened) === day && Number.isFinite(gap);
+    });
+    if (!Number.isFinite(threshold) || threshold < 0 || !reconciliations.length) return null;
+    var worst = reconciliations.slice().sort(function (a, b) {
+      var ga = Number(a.gap_cents == null ? a.gapCents : a.gap_cents);
+      var gb = Number(b.gap_cents == null ? b.gapCents : b.gap_cents);
+      return Math.abs(gb) - Math.abs(ga);
+    })[0];
+    var gapCents = Number(worst.gap_cents == null ? worst.gapCents : worst.gap_cents);
+    if (Math.abs(gapCents) < threshold) return null;
+    var gapLabel = (gapCents / 100).toFixed(2), thresholdLabel = (threshold / 100).toFixed(2);
+    return {
+      id: 'cash-gap:' + day, kind: 'cash-gap', tone: 'warn', roles: ['owner'],
+      copy: {
+        fr: 'Écart de caisse de ' + gapLabel + ' MAD, seuil visible ' + thresholdLabel + ' MAD.',
+        en: 'Cash gap of ' + gapLabel + ' MAD, visible threshold ' + thresholdLabel + ' MAD.',
+        ar: 'فرق الصندوق ' + gapLabel + ' MAD، والحد الظاهر ' + thresholdLabel + ' MAD.'
+      },
+      evidence: { count: reconciliations.length, window: day, source: 'cash_session_events · seuil ' + thresholdLabel + ' MAD' }
+    };
+  }
   function visibleLines(lines, role) {
     role = role || tier();
     return (Array.isArray(lines) ? lines : []).filter(function (line) {
@@ -574,6 +612,7 @@
     try { if (window.KiwiVenue && window.KiwiVenue.subscribe) window.KiwiVenue.subscribe(function () { doc = readLocal(); attachCloud(); compute(); }); } catch (_) {}
     window.addEventListener('kiwi:langchange', function () { render(); injectAssistantEntry(); });
     window.addEventListener('kiwi:cancellation-history', function () { compute(); });
+    window.addEventListener('kiwi:cash-sessions', function () { compute(); });
     document.addEventListener('kiwi:live-backfill-complete', function (event) {
       if (!event.detail || event.detail.merchant === slug()) compute();
     });
@@ -590,7 +629,7 @@
   window.KiwiBriefing = {
     canHandle: canHandle, reply: reply, compute: function () { return compute(); }, lines: activeLines,
     dismiss: function (id) { return setState(id, 'dismissed'); }, handled: function (id) { return setState(id, 'handled'); },
-    _test: { businessDay: businessDay, scopeKey: scopeKey, normalizeLine: normalizeLine, visibleLines: visibleLines, salesDropRule: salesDropRule, lowStockRule: lowStockRule, marginErosionRule: marginErosionRule, planningGapRule: planningGapRule, cancellationRateRule: cancellationRateRule, discountShareRule: discountShareRule, stockItems: stockItems, proposeLine: proposeLine, openPlanning: openPlanning, salesRows: salesRows, dayBoundsAt: dayBoundsAt, compute: compute, read: function () { return clone(doc); }, write: writeLocal }
+    _test: { businessDay: businessDay, scopeKey: scopeKey, normalizeLine: normalizeLine, visibleLines: visibleLines, salesDropRule: salesDropRule, lowStockRule: lowStockRule, marginErosionRule: marginErosionRule, planningGapRule: planningGapRule, cancellationRateRule: cancellationRateRule, discountShareRule: discountShareRule, cashGapRule: cashGapRule, stockItems: stockItems, proposeLine: proposeLine, openPlanning: openPlanning, salesRows: salesRows, dayBoundsAt: dayBoundsAt, compute: compute, read: function () { return clone(doc); }, write: writeLocal }
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true }); else boot();
 }());

@@ -52,8 +52,8 @@
     "sha": "7332c4414f0ffae1"
   },
   "assets/briefing.js": {
-    "v": "10",
-    "sha": "caaa18b0551c9835"
+    "v": "12",
+    "sha": "4f897a97c765b904"
   },
   "assets/caisse-attendance-code.js": {
     "v": "2",
@@ -76,8 +76,8 @@
     "sha": "5dd5229188e8ff8e"
   },
   "assets/caisse-pairing.js": {
-    "v": "11",
-    "sha": "801f68c0c67a19b0"
+    "v": "13",
+    "sha": "f85d127013caa255"
   },
   "assets/caisse-pwa.js": {
     "v": "391",
@@ -94,6 +94,10 @@
   "assets/cancellation-history.js": {
     "v": "2",
     "sha": "66f56a67823580af"
+  },
+  "assets/cash-sessions.js": {
+    "v": "2",
+    "sha": "a967d6a5f692f0fa"
   },
   "assets/catalog-import.js": {
     "v": "2",

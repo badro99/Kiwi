@@ -28,6 +28,17 @@
 (function () {
   'use strict';
 
+  var TERMINAL_KEY = 'kiwi:caisse:terminal-id:v1';
+  function terminalId() {
+    var current = '';
+    try { current = localStorage.getItem(TERMINAL_KEY) || ''; } catch (_) {}
+    if (/^[A-Za-z0-9_-]{12,80}$/.test(current)) return current;
+    try { current = 'term_' + crypto.randomUUID().replace(/-/g, ''); }
+    catch (_) { current = 'term_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 18); }
+    try { localStorage.setItem(TERMINAL_KEY, current); } catch (_) {}
+    return current;
+  }
+
   function env() { return window.KiwiEnv || { demosAllowed: true }; }
   function hosted() { return env().demosAllowed === false; }
   function ls(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }
@@ -157,7 +168,7 @@
     code = String(code || '').replace(/\D/g, '').slice(0, 6);
     if (code.length !== 6) return Promise.resolve({ ok: false, error: 'bad-code' });
     return fetch('/api/pair/redeem', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: code }),
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: code, terminalId: terminalId() }),
     }).then(function (r) {
       if (r.status === 404 || r.status === 405) return localRedeem(code); // backend absent → same-browser
       return r.json().then(function (j) {

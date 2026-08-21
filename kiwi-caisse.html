@@ -5108,7 +5108,8 @@
        avec kiwi-cuisine.html, qui s'appaire sur la même route. -->
   <script src="assets/pairing-commit.js?v=1" defer></script>
   <!-- Hosted: 6-digit pairing pad binds this caisse to its store (no demo PINs). -->
-  <script src="assets/caisse-pairing.js?v=11" defer></script>
+  <script src="assets/caisse-pairing.js?v=13" defer></script>
+  <script src="assets/cash-sessions.js?v=2" defer></script>
   <!-- La copie serveur des données d'établissement (fidélité, carnet) : une
        caisse neuve doit retrouver le magasin, pas repartir vide. AVANT
        venue-store.js, qui s'y branche. -->
@@ -11798,6 +11799,22 @@
     const shift = { discounts: 95, discountsCount: 2, cancels: 0, refunds: 0, tablesPaid: 0 };
     let shiftOpenedAt = null;
     let shiftOpenedBy = '';        // qui a ouvert la caisse — figé à l'ouverture
+    let cashSessionKey = '';
+    function cashSessionId() {
+      if (!cashSessionKey) cashSessionKey = 'shift-' + String((shiftOpenedAt && shiftOpenedAt.getTime()) || Date.now());
+      return cashSessionKey;
+    }
+    function cashActorId(fallback) {
+      try { return String((window.KiwiStaff && window.KiwiStaff.id) || fallback || (currentCashier && currentCashier.id) || 'till').replace(/[^A-Za-z0-9._:-]/g, '').slice(0, 96) || 'till'; }
+      catch (_) { return 'till'; }
+    }
+    function cashActorRef(value) {
+      return String(value || 'till').replace(/[^A-Za-z0-9._:-]/g, '').slice(0, 96) || 'till';
+    }
+    function emitCashSession(event) {
+      if (window.KiwiCashSessions && window.KiwiCashSessions.emit) window.KiwiCashSessions.emit(event);
+      else (window.__kiwiCashSessionPending || (window.__kiwiCashSessionPending = [])).push(event);
+    }
 
     /* ---- Cashier handover ("passation de caisse") ----
        A business day is split into "postes" — one per cashier. The journal
@@ -12857,6 +12874,11 @@
       shiftOpenedBy = (currentCashier && currentCashier.name) || '';
       posteOpenedAt = shiftOpenedAt;        // first cashier's poste = whole shift
       posteOpeningFloat = openingFloat;
+      emitCashSession({
+        sessionId: cashSessionId(), eventType: 'open', expectedCents: Math.round(openingFloat * 100),
+        countedCents: null, gapCents: null, actorId: cashActorId(),
+        openedAt: shiftOpenedAt.getTime(), occurredAt: shiftOpenedAt.getTime()
+      });
       if (!_realStore) seedJournal();
       renderShiftStats();
       try { saveProvisional(true); } catch (_) {}
@@ -13204,6 +13226,15 @@
           window.KiwiDayReport.flush();
         }
       } catch (_) {}
+
+      const closedAt = Date.now();
+      emitCashSession({
+        sessionId: cashSessionId(), eventType: 'close',
+        expectedCents: Math.round(clotureExpected * 100),
+        countedCents: counted == null ? null : Math.round(counted * 100),
+        gapCents: counted == null ? null : Math.round((counted - clotureExpected) * 100),
+        actorId: cashActorId(), openedAt: shiftOpenedAt.getTime(), occurredAt: closedAt
+      });
 
       clearPersistedShift();
       if (report) showPostClose(report); else finishClose();
@@ -13659,6 +13690,12 @@
         id: 'cm-' + Date.now(), time: new Date(),
         type: cmType, amount: amount, reason: cmReason || 'Autre',
       });
+      emitCashSession({
+        sessionId: cashSessionId(), eventType: 'movement', expectedCents: Math.round(drawerExpected() * 100),
+        countedCents: null, gapCents: null, movementKind: cmType,
+        movementAmountCents: Math.round(amount * 100), movementReason: cmReason || 'Autre',
+        actorId: cashActorId(), openedAt: shiftOpenedAt.getTime(), occurredAt: Date.now()
+      });
       toast(`${cmType === 'in' ? 'Entrée' : 'Sortie'} de caisse · ${fmtMAD(amount)}`);
       closeCashMove();
     }
@@ -13674,6 +13711,12 @@
         cashMovements.push({
           id: 'cm-' + Date.now(), time: new Date(),
           type: 'out', amount: 0, reason: 'Ouverture sans vente',
+        });
+        emitCashSession({
+          sessionId: cashSessionId(), eventType: 'movement', expectedCents: Math.round(drawerExpected() * 100),
+          countedCents: null, gapCents: null, movementKind: 'no-sale', movementAmountCents: 0,
+          movementReason: 'Ouverture sans vente', actorId: cashActorId(),
+          openedAt: shiftOpenedAt.getTime(), occurredAt: Date.now()
         });
         const H = window.KiwiHardware;
         const p = (H && H.openDrawer) ? Promise.resolve(H.openDrawer()) : Promise.resolve({ ok: false });
@@ -15073,6 +15116,12 @@
         ecart: handoverState.counted - handoverState.expected,
       };
       handovers.push(rec);
+      emitCashSession({
+        sessionId: cashSessionId(), eventType: 'handover',
+        expectedCents: Math.round(rec.expected * 100), countedCents: Math.round(rec.counted * 100),
+        gapCents: Math.round(rec.ecart * 100), actorId: cashActorId(currentCashier.id),
+        counterpartyActorId: cashActorRef(inc.id), openedAt: shiftOpenedAt.getTime(), occurredAt: now.getTime()
+      });
       // The incoming cashier takes the counted drawer over as their float.
       currentCashier    = { id: inc.id, name: inc.name, role: inc.role };
       posteOpenedAt     = now;

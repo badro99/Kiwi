@@ -65,7 +65,7 @@ var SHELL = [
   '/assets/cloud-doc.js',
   '/assets/agent-action-center.js?v=1',
   '/assets/cancellation-history.js?v=2',
-  '/assets/briefing.js?v=10',
+  '/assets/briefing.js?v=12',
   '/assets/ai-telemetry.js',
   '/assets/agent-data.js',
   '/assets/agent-features.js?v=3',
@@ -299,7 +299,7 @@ var SHELL = [
   '/assets/pos-autre.js?v=2',
   '/assets/pos-maison.css?v=16',
   '/assets/pos-maison.js?v=16',
-  '/assets/caisse-pairing.js?v=11',
+  '/assets/caisse-pairing.js?v=13',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là
      qu'il faut pouvoir ressortir le ticket. Un bouton de secours qui a besoin du

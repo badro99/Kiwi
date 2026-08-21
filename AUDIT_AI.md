@@ -105,3 +105,55 @@ ALTER TABLE sales ADD COLUMN discount_amount_cents INTEGER;
 ALTER TABLE sales ADD COLUMN discount_reason TEXT;
 ALTER TABLE sales ADD COLUMN discount_actor_id TEXT;
 ```
+
+## Phase 1d-c · registre append-only des sessions de caisse
+
+- Surface émettrice : `kiwi-caisse.html`, aux quatre points de vérité déjà
+  transactionnels dans l'interface : ouverture du service, mouvement motivé,
+  passation confirmée et clôture après comptage. Le payload est
+  `{id,merchant,sessionId,terminalId,eventType,expectedCents,countedCents,gapCents,
+  movementKind,movementAmountCents,movementReason,actorId,counterpartyActorId,
+  openedAt,occurredAt}`. Les acteurs sont des ids de l'équipe, jamais un code.
+- Liaison terminal : `/api/pair/redeem` reçoit l'id opaque et stable du terminal
+  et pose un second cookie HttpOnly signé. Une caisse appairée ne peut lire et
+  écrire que les événements dont `merchant`, `terminal_id` ET `session_id`
+  correspondent à sa preuve et à sa requête. Le cookie marchand historique
+  reste inchangé pour toutes les routes de vente existantes. Une caisse déjà
+  appairée amorce cette seconde preuve à sa première écriture uniquement si son
+  cookie marchand est valide et qu'aucun cookie terminal n'existe déjà; une
+  preuve terminal existante mais différente est refusée.
+- Protection financière : propriétaire et opérateur nommé lisent le registre
+  tenant-scope. Toute lecture moins privilégiée renvoie une vue vide marquée
+  `redacted`; toute écriture correspondante est refusée. Le registre n'expose
+  aucune route de modification ou suppression.
+- Panne backend : chaque événement entre d'abord dans une outbox locale bornée,
+  puis part sans `await`; ouverture, mouvement, passation, clôture et vente ne
+  dépendent jamais du réseau. Les retries gardent le même `id` et l'INSERT
+  idempotent ignore le doublon. Le dashboard omet le signal tant que la lecture
+  durable n'est pas prête.
+- Migration D1 additive à appliquer à `kiwi-sales` après inspection de
+  `sqlite_master` (aucune ligne commerçant lue) :
+
+```sql
+CREATE TABLE IF NOT EXISTS cash_session_events (
+  id TEXT PRIMARY KEY,
+  merchant TEXT NOT NULL,
+  session_id TEXT NOT NULL,
+  terminal_id TEXT NOT NULL,
+  event_type TEXT NOT NULL CHECK (event_type IN ('open','movement','handover','close')),
+  expected_cents INTEGER,
+  counted_cents INTEGER,
+  gap_cents INTEGER,
+  movement_kind TEXT,
+  movement_amount_cents INTEGER,
+  movement_reason TEXT,
+  actor_id TEXT NOT NULL,
+  counterparty_actor_id TEXT,
+  opened_ts INTEGER NOT NULL,
+  occurred_ts INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_cash_session_events_merchant_ts
+  ON cash_session_events (merchant, occurred_ts);
+CREATE INDEX IF NOT EXISTS idx_cash_session_events_terminal_session
+  ON cash_session_events (merchant, terminal_id, session_id, occurred_ts);
+```
