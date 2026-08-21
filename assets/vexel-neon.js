@@ -27,6 +27,7 @@
     '.vexel-bottom-row .block',
     '.vexel-rail-card',
     '.vexel-goals-card',
+    '.vexel-insights-row',
     '.dash-more-clip [data-integ-card]'
   ].join(',');
 

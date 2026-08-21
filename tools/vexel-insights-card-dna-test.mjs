@@ -31,4 +31,15 @@ for (const mode of ['light', 'dark']) {
   const m = css.match(new RegExp('body\\.design-vexel\\[data-vexel-mode="' + mode + '"\\] \\{([\\s\\S]*?)\\}'));
   assert.ok(m && /--vx-card-bg:/.test(m[1]) && /--vx-card-shadow:/.test(m[1]) && /--vx-card-pad:/.test(m[1]), 'jetons de carte définis en mode ' + mode);
 }
-console.log('vexel-insights-card-dna-test: ' + (7 + shells.length + hovers.length) + ' contrôles OK');
+/* Lumière de bord (Tier 1) : les trois règles du halo suivi par le curseur
+ * (position/isolation, sprite ::after, :hover::after) et la liste CARDS de
+ * vexel-neon.js qui écrit --vx-x/--vx-y doivent toutes nommer la carte — les
+ * voisines s'allument en vert au survol, Insights doit faire pareil. */
+const glowLists = [...css.matchAll(/body\.design-vexel\[data-vexel-mode\] \.dash-standard :is\(([\s\S]*?)\)(::after|:hover::after)?\s*\{/g)]
+  .filter((m) => /\.vexel-goals-card/.test(m[1]) && /\.vexel-rail-card/.test(m[1]) && /\.vexel-bottom-row \.block/.test(m[1]));
+assert.equal(glowLists.length, 3, 'les trois listes Tier 1 du halo sont trouvées (' + glowLists.length + ')');
+glowLists.forEach((m) => assert.ok(/\.vexel-insights-row/.test(m[1]), 'Insights est dans la liste Tier 1 « ' + (m[2] || 'base') + ' »'));
+const neon = readFileSync(path.join(ROOT, 'assets/vexel-neon.js'), 'utf8');
+const cards = (neon.match(/var CARDS = \[([\s\S]*?)\]\.join/) || [])[1] || '';
+assert.ok(/'\.vexel-insights-row'/.test(cards), 'vexel-neon.js suit le curseur sur la carte Insights');
+console.log('vexel-insights-card-dna-test: ' + (12 + shells.length + hovers.length) + ' contrôles OK');

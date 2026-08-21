@@ -5096,6 +5096,7 @@ body.design-vexel[data-vexel-mode] .dash-standard :is(
   .vexel-bottom-row .block,
   .vexel-rail-card,
   .vexel-goals-card,
+  .vexel-insights-row,
   .dash-more-clip [data-integ-card]
 ) {
   position: relative;
@@ -5110,6 +5111,7 @@ body.design-vexel[data-vexel-mode] .dash-standard :is(
   .vexel-bottom-row .block,
   .vexel-rail-card,
   .vexel-goals-card,
+  .vexel-insights-row,
   .dash-more-clip [data-integ-card]
 )::after {
   content: "";
@@ -5158,6 +5160,7 @@ body.design-vexel[data-vexel-mode] .dash-standard :is(
   .vexel-bottom-row .block,
   .vexel-rail-card,
   .vexel-goals-card,
+  .vexel-insights-row,
   .dash-more-clip [data-integ-card]
 ):hover::after {
   opacity: 1;
