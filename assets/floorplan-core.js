@@ -1001,6 +1001,78 @@ function pdsGeneratePlan(a, variant) {
   };
 }
 
+/* ─── Fusion multi-appareils du plan ──────────────────────────────────────
+ * UNE seule fusion pour les deux surfaces qui portent le plan : le tableau de
+ * bord (pages-pro.js › pdsMerge) ET la caisse (kiwi-caisse.html › attach
+ * floorplan). La caisse fusionnait jusqu'ici avec l'union nue de cloud-doc.js,
+ * sans époque ni suppression : une caisse gardant une vieille copie
+ * réinjectait les tables étrangères dans un plan pourtant réparé.
+ *
+ * Règles, dans l'ordre :
+ *   1. ÉPOQUE — un plan d'époque STRICTEMENT supérieure remplace l'autre en
+ *      bloc. L'époque ne bouge jamais sur une sauvegarde ordinaire ; seule une
+ *      réparation délibérée l'incrémente, pour s'imposer à tous les appareils.
+ *   2. À époque égale (le quotidien) — union par identifiant, cet appareil
+ *      prioritaire, PUIS les pierres tombales : `gone[id] = horodatage` est
+ *      posé quand une table ou un élément est supprimé ici (pdsBury) ; l'union
+ *      des deux registres retire ces identifiants partout. Sans ça, toute
+ *      suppression ressuscitait dès qu'un autre appareil refusionnait sa copie
+ *      (vécu : la terrasse d'Amira revenue trois fois chez Browse). Les zones
+ *      ne sont PAS tombées : le gabarit vierge réutilise l'identifiant `z1`, et
+ *      un `z1` enterré avalerait un plan tout neuf — une zone supprimée peut
+ *      au pire revenir vide.
+ *   3. Les réglages d'affichage scalaires (mode, aimant, zone courante) restent
+ *      ceux de cet appareil : changer d'onglet sur l'iPad ne déplace pas la vue
+ *      du portable.
+ * `union` = KiwiCloudDoc.mergeDefault, passé par l'appelant pour que ce fichier
+ * reste sans dépendance. Les tombales expirent après 30 jours. */
+const PDS_GONE_TTL = 30 * 24 * 3600 * 1000;
+function pdsBury(state, ids) {
+  if (!state) return;
+  if (!state.gone || typeof state.gone !== 'object' || Array.isArray(state.gone)) state.gone = {};
+  const now = Date.now();
+  (Array.isArray(ids) ? ids : [ids]).forEach(id => { if (id != null && id !== '') state.gone[String(id)] = now; });
+}
+function pdsUnbury(state, ids) {
+  if (!state || !state.gone || typeof state.gone !== 'object') return;
+  (Array.isArray(ids) ? ids : [ids]).forEach(id => { delete state.gone[String(id)]; });
+}
+function pdsGoneOf(a, b) {
+  const out = {};
+  const now = Date.now();
+  [a && a.gone, b && b.gone].forEach(g => {
+    if (!g || typeof g !== 'object' || Array.isArray(g)) return;
+    Object.keys(g).forEach(id => {
+      const ts = +g[id] || 0;
+      if (ts > 0 && now - ts < PDS_GONE_TTL) out[id] = Math.max(out[id] || 0, ts);
+    });
+  });
+  return out;
+}
+function pdsMergePlans(mine, theirs, union) {
+  if (!theirs) return mine;
+  if (!mine) return theirs;
+  const mEp = isFinite(+mine.epoch) ? +mine.epoch : 0;
+  const tEp = isFinite(+theirs.epoch) ? +theirs.epoch : 0;
+  let out;
+  if (tEp !== mEp) {
+    const win = tEp > mEp ? theirs : mine;
+    out = {};
+    Object.keys(win).forEach(k => { out[k] = win[k]; });
+  } else {
+    out = typeof union === 'function' ? union(mine, theirs) : mine;
+    const gone = pdsGoneOf(mine, theirs);
+    const keep = x => !(x && x.id != null && gone[String(x.id)]);
+    if (Array.isArray(out.tables)) out.tables = out.tables.filter(keep);
+    if (Array.isArray(out.elements)) out.elements = out.elements.filter(keep);
+    out.gone = gone;
+  }
+  ['mode', 'snap', 'zone', 'zoneId'].forEach(k => {
+    if (mine && Object.prototype.hasOwnProperty.call(mine, k)) out[k] = mine[k];
+  });
+  return out;
+}
+
 /* ─── Exposure ────────────────────────────────────────────────────────────
  *   pages-pro.js is an IIFE in the same global scope and picks these up by
  *   name. kiwi-caisse.html is not, so it goes through this namespace. */
@@ -1021,4 +1093,5 @@ window.KiwiFloorCore = {
   corners: pdsCorners, obbOverlap: pdsObbOverlap,
   conflict: pdsConflict, blockers: pdsBlockers,
   neighbours: pdsNeighbours, nearestFree: pdsNearestFree,
+  mergePlans: pdsMergePlans, bury: pdsBury, unbury: pdsUnbury,
 };

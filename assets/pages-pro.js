@@ -4350,6 +4350,7 @@ const PDS_EL_RENAME = { wall: 'mur', door: 'porte', window: 'fenetre', column: '
 
 function pdsNormalize(state) {
   if (!state || !Array.isArray(state.zones)) return state;
+  if (!state.gone || typeof state.gone !== 'object' || Array.isArray(state.gone)) state.gone = {};
   const fresh = state.v !== 2;
   let nextEl = 1;
   const elId = () => 'em' + (nextEl++) + '_' + Math.random().toString(36).slice(2, 6);
@@ -4510,6 +4511,10 @@ function pdsRawState() {
 function pdsMerge(mine, theirs) {
   var M = window.KiwiCloudDoc && window.KiwiCloudDoc.mergeDefault;
   if (!M || !theirs) return mine;
+  /* La fusion vit désormais dans floorplan-core.js (pdsMergePlans : époque +
+     pierres tombales), partagée avec la caisse. Le code ci-dessous n'est plus
+     qu'un repli sans tombales pour un chargement sans floorplan-core. */
+  if (typeof pdsMergePlans === 'function') return pdsMergePlans(mine, theirs, M);
   var mEp = (mine && isFinite(+mine.epoch)) ? +mine.epoch : 0;
   var tEp = (theirs && isFinite(+theirs.epoch)) ? +theirs.epoch : 0;
   var out;
@@ -4878,7 +4883,7 @@ function pdsPlaneOf(state) {
  *   pdsPush is called BEFORE a mutation, by the action that performs it. */
 const PDS_UNDO = { stack: [], redo: [] };
 function pdsSnap(state) {
-  return JSON.stringify({ zones: state.zones, tables: state.tables, elements: state.elements, staff: state.staff });
+  return JSON.stringify({ zones: state.zones, tables: state.tables, elements: state.elements, staff: state.staff, gone: state.gone || {} });
 }
 function pdsApplySnap(state, s) {
   const d = JSON.parse(s);
@@ -4886,6 +4891,7 @@ function pdsApplySnap(state, s) {
   /* Le roster fait partie de l'instantané : sans lui, annuler le retrait d'un
      serveur rendrait ses tables à un identifiant qui n'existe plus. */
   if (d.staff) state.staff = d.staff;
+  state.gone = (d.gone && typeof d.gone === 'object') ? d.gone : {};
   if (!state.zones.some(z => z.id === state.activeZone)) state.activeZone = state.zones[0]?.id;
 }
 function pdsPush(state) {
@@ -5869,6 +5875,7 @@ function pdsRestoreTableSnapshot(state, snapshot) {
     const at = state.tables.findIndex(t => t.id === value.id);
     if (at >= 0) state.tables[at] = value;
     else state.tables.splice(Math.max(0, Math.min(s.index, state.tables.length)), 0, value);
+    if (typeof pdsUnbury === 'function') pdsUnbury(state, value.id);
   });
 }
 
@@ -7131,6 +7138,10 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
       if (!m || !m.el) break;
       const confirm = m.el.querySelector('[data-pds-zone-del-confirm]');
       confirm?.addEventListener('click', () => {
+        if (typeof pdsBury === 'function') {
+          pdsBury(state, state.tables.filter(t => t.zone === z.id).map(t => t.id)
+            .concat(state.elements.filter(e => e.zone === z.id).map(e => e.id)));
+        }
         state.tables = state.tables.filter(t => t.zone !== z.id);
         state.elements = state.elements.filter(e => e.zone !== z.id);
         state.zones = state.zones.filter(zz => zz.id !== z.id);
@@ -7631,6 +7642,7 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
         const snapshot = pdsTableSnapshot(state, affected);
         const title = `Table ${f.o.num} · ${T.deletedSuffix}`;
         state.tables.splice(state.tables.findIndex(o => o.id === id), 1);
+        if (typeof pdsBury === 'function') pdsBury(state, id);
         pdsSweepGroups(state);
         selection.delete(id);
         refresh();
@@ -7638,6 +7650,7 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
         break;
       } else {
         state.elements.splice(state.elements.findIndex(o => o.id === id), 1);
+        if (typeof pdsBury === 'function') pdsBury(state, id);
         toast(`${T['fix'+f.o.type] || f.o.type} · ${T.deletedSuffix}`, { type: 'warn', duration: 1400 });
       }
       selection.delete(id);
@@ -7765,6 +7778,7 @@ function pdsHandleAction(action, btn, state, T, root, dr, refresh, selection) {
       const snapshot = pdsTableSnapshot(state, affected);
       const firstId = [...selection][0] || null;
       pdsPush(state);
+      if (typeof pdsBury === 'function') pdsBury(state, state.tables.filter(t => selection.has(t.id)).map(t => t.id));
       state.tables = state.tables.filter(t => !selection.has(t.id));
       pdsSweepGroups(state);
       selection.clear();

@@ -137,7 +137,7 @@ var SHELL = [
   // Shared floor-plan vocabulary — the dashboard designer AND the caisse both
   // read it, so leaving it out of the shell meant the till could come up
   // offline with no table geometry at all.
-  '/assets/floorplan-core.js',
+  '/assets/floorplan-core.js?v=2050',
   '/assets/oppo-cards.js',
   '/assets/dashboard-pwa.js?v=391',
   '/assets/dashboard-native.js',

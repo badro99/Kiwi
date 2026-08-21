@@ -479,6 +479,62 @@ function run(opts) {
   const b = pdsMerge2(mineRepaired, poisoned);
   eq('époque locale supérieure : la copie réparée gagne en bloc', b.tables.length, 2);
   eq('époque locale supérieure : l’époque est conservée', b.epoch, 1);
+
+  /* ── Pierres tombales (floorplan-core.js › pdsMergePlans) ─────────────────
+   * La fusion partagée : à époque égale, un identifiant enterré d'un côté
+   * disparaît des deux ; l'époque continue de gagner en bloc ; une tombale
+   * expirée ne retire plus rien ; et les deux surfaces passent bien par elle. */
+  const CORE = fs.readFileSync(path.join(ROOT, 'assets', 'floorplan-core.js'), 'utf8');
+  const Core = new Function(
+    'const PDS_GONE_TTL = 30 * 24 * 3600 * 1000;\n'
+    + extractFn(CORE, 'pdsBury') + '\n' + extractFn(CORE, 'pdsUnbury') + '\n'
+    + extractFn(CORE, 'pdsGoneOf') + '\n' + extractFn(CORE, 'pdsMergePlans')
+    + '\nreturn { pdsBury, pdsUnbury, pdsGoneOf, pdsMergePlans };'
+  )();
+  const mk = (ids, extra) => Object.assign({ zones: [{ id: 'z1' }], tables: ids.map(id => ({ id })), elements: [], staff: [] }, extra || {});
+
+  // Cet appareil a supprimé t2 : l'union ne la ressuscite plus depuis le serveur.
+  const local = mk(['t1']); Core.pdsBury(local, 't2');
+  const m1 = Core.pdsMergePlans(local, mk(['t1', 't2']), mergeDefault);
+  eq('tombale locale : la table supprimée ne revient pas du serveur', m1.tables.map(x => x.id).join(','), 't1');
+  ok('le registre voyage avec le plan fusionné', !!(m1.gone && m1.gone.t2));
+
+  // Le serveur porte la tombale : la copie locale périmée lâche la table.
+  const srv = mk(['t1']); Core.pdsBury(srv, 'tX');
+  const m2 = Core.pdsMergePlans(mk(['t1', 'tX']), srv, mergeDefault);
+  eq('tombale serveur : l’appareil périmé abandonne la table étrangère', m2.tables.map(x => x.id).join(','), 't1');
+
+  // Les éléments aussi ; les zones jamais (z1 du gabarit vierge).
+  const withEl = Object.assign(mk(['t1']), { elements: [{ id: 'e1' }, { id: 'e2' }], zones: [{ id: 'z1' }, { id: 'zT' }] });
+  const loc2 = mk(['t1']); Core.pdsBury(loc2, ['e2', 'zT']);
+  const m3 = Core.pdsMergePlans(loc2, withEl, mergeDefault);
+  eq('tombale : l’élément supprimé disparaît', (m3.elements || []).map(x => x.id).join(','), 'e1');
+  eq('les zones ne sont pas tombées (z1 du gabarit)', (m3.zones || []).map(z => z.id).join(','), 'z1,zT');
+
+  // Annuler une suppression retire la tombale.
+  const und = mk(['t1']); Core.pdsBury(und, 't2'); Core.pdsUnbury(und, 't2');
+  eq('pdsUnbury efface la tombale', Object.keys(und.gone).length, 0);
+
+  // Une tombale expirée ne retire plus rien et disparaît du registre.
+  const old = mk(['t1'], { gone: { t2: Date.now() - 31 * 24 * 3600 * 1000 } });
+  const m4 = Core.pdsMergePlans(old, mk(['t1', 't2']), mergeDefault);
+  eq('tombale expirée : la table revient, le registre est purgé', m4.tables.length + '/' + Object.keys(m4.gone).length, '2/0');
+
+  // L'époque gagne toujours en bloc, tombales ou non.
+  const m5 = Core.pdsMergePlans(mk(['t1', 'tX']), mk(['t1'], { epoch: 1 }), mergeDefault);
+  eq('époque supérieure : adoption en bloc (fusion partagée)', m5.tables.length + '@' + m5.epoch, '1@1');
+
+  // Les deux surfaces passent par la fusion partagée.
+  ok('pages-pro.js › pdsMerge délègue à pdsMergePlans', /function pdsMerge\(mine, theirs\) \{[\s\S]{0,900}pdsMergePlans\(mine, theirs, M\)/.test(PAGES));
+  ok('kiwi-caisse.html › l’attache floorplan passe par KiwiFloorCore.mergePlans', /feature: 'floorplan',[\s\S]{0,2500}mergePlans\(mine, theirs, M\)/.test(CAISSE));
+  ok('floorplan-core.js expose mergePlans / bury / unbury', /mergePlans: pdsMergePlans, bury: pdsBury, unbury: pdsUnbury/.test(CORE));
+  // Chaque chemin de suppression enterre ce qu'il retire.
+  ok('suppression unitaire : pdsBury', /state\.tables\.splice\(state\.tables\.findIndex\(o => o\.id === id\), 1\);\s*if \(typeof pdsBury === 'function'\) pdsBury\(state, id\);/.test(PAGES));
+  ok('suppression d’élément : pdsBury', /state\.elements\.splice\(state\.elements\.findIndex\(o => o\.id === id\), 1\);\s*if \(typeof pdsBury === 'function'\) pdsBury\(state, id\);/.test(PAGES));
+  ok('suppression groupée : pdsBury des retirés', /pdsBury\(state, state\.tables\.filter\(t => selection\.has\(t\.id\)\)\.map\(t => t\.id\)\)/.test(PAGES));
+  ok('suppression de zone : pdsBury de son contenu', /pdsBury\(state, state\.tables\.filter\(t => t\.zone === z\.id\)\.map\(t => t\.id\)/.test(PAGES));
+  ok('annuler : pdsUnbury', /pdsUnbury\(state, value\.id\)/.test(PAGES));
+  ok('Ctrl+Z : le registre fait partie de l’instantané', /gone: state\.gone \|\| \{\}/.test(PAGES) && /state\.gone = \(d\.gone && typeof d\.gone === 'object'\) \? d\.gone : \{\};/.test(PAGES));
 }
 
 /* ── Verdict ──────────────────────────────────────────────────────────────── */
