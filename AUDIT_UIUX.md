@@ -217,22 +217,45 @@ Ce document consigne l'ensemble des audits visuels, ergonomiques, d'accessibilit
 - **Améliorations apportées** :
   1. Refonte du panier vide avec médaillon Material Symbol (`inventory_2`) et hiérarchie visuelle dédiée au scan ISBN.
   2. Bumping de la révision `pos-librairie.js?v=3` dans le dispatcher.
+### 7.15 Vertical Salle de Sport & Fitness (`assets/pos-gym.js`)
+- **Fichiers** : `assets/pos-gym.js:1190`, `assets/pos-dispatch.js:71`
+- **Problèmes identifiés** :
+  1. Panier de vente comptoir fitness vide sans médaillon Material Symbols.
+- **Améliorations apportées** :
+  1. Refonte du panier comptoir avec médaillon Material Symbol (`inventory_2`) et hiérarchie visuelle pour les ventes rapides d'eau/shakers/serviettes.
+  2. Bumping de la révision `pos-gym.js?v=3` dans le dispatcher.
 - **État** : ✅ Déployé
 
-### 7.13 Vertical Fleuriste (`assets/pos-fleuriste.js`)
-- **Fichiers** : `assets/pos-fleuriste.js:680`, `assets/pos-dispatch.js:69`
-- **Problèmes identifiés** :
-  1. Panier compositeur de bouquet vide sans médaillon Material Symbols.
-- **Améliorations apportées** :
-  1. Refonte du compositeur de bouquet avec médaillon Material Symbol (`inventory_2`) et guidage visuel tiges / presets.
-  2. Bumping de la révision `pos-fleuriste.js?v=3` dans le dispatcher.
-- **État** : ✅ Déployé
+---
 
-### 7.14 Vertical Salon de Coiffure (`assets/pos-coiffure.js`)
-- **Fichiers** : `assets/pos-coiffure.js:695`, `assets/pos-dispatch.js:70`
-- **Problèmes identifiés** :
-  1. Ticket de passage coiffure vide sans médaillon Material Symbols.
-- **Améliorations apportées** :
-  1. Refonte du ticket de passage avec médaillon Material Symbol (`inventory_2`) et hiérarchie soignée pour l'attribution par coiffeur·se.
-  2. Bumping de la révision `pos-coiffure.js?v=3` dans le dispatcher.
-- **État** : ✅ Déployé
+## 🍷 Passe Serveur · Refonte Design de l'App Serveur (`kiwi-serveur.html`)
+
+### 1. Audit Typographique Initial (Zoo de 27 tailles)
+Extraction brute des règles existantes avant harmonisation :
+- **Tailles identifiées** : `8px` (2), `9px` (5), `9.5px` (8), `10px` (5), `10.5px` (10), `11px` (31), `11.5px` (13), `12px` (22), `12.5px` (16), `13px` (44), `13.5px` (11), `14px` (18), `15px` (14), `16px` (10), `17px` (8), `18px` (2), `19px` (1), `20px` (4), `22px` (6), `24px` (1), `26px` (2), `27px` (1), `32px` (1), `38px` (1), `40px` (1), `42px` (1), `64px` (1).
+- **Problèmes constatés** : Absence de système d'échelle, micro-tailles inopérantes (<11px) en salle sombre, hauteurs de lignes disparates, interlettrages incohérents.
+
+### 2. Échelle Typographique Système Définie (`:root`)
+| Jeton | Taille | Line-Height | Letter-Spacing | Poids | Usage |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `--t-hero` | `clamp(36px, 10vw, 44px)` | `1.05` | `-0.035em` | `700` | Montants géants, accueil |
+| `--t-display` | `26px` | `1.15` | `-0.025em` | `700` | Titres majeurs, accent éditorial |
+| `--t-title` | `20px` | `1.2` | `-0.02em` | `700` | Titres de modales & sections |
+| `--t-headline` | `17px` | `1.25` | `-0.015em` | `600` | Noms de table, totaux |
+| `--t-body-lg` | `15px` | `1.35` | `-0.01em` | `600` | Boutons CTA, numéros de table |
+| `--t-body` | `13.5px` | `1.45` | `-0.005em` | `500` | Corps principal, articles, items |
+| `--t-body-sm` | `12.5px` | `1.4` | `-0.005em` | `400` | Descriptions, sous-titres |
+| `--t-label` | `11px` | `1.3` | `0.08em` | `600` | Badges de statut, métadonnées uppercase |
+| `--t-micro` | `10px` | `1.25` | `0.10em` | `600` | Horodatages, pastilles de notification |
+
+### 3. Système de Mouvement Déployé
+- `--spring: cubic-bezier(0.34, 1.45, 0.5, 1)` : Lentille liquide & sélection active.
+- `--glide: cubic-bezier(0.32, 0.72, 0, 1)` : Tiroirs, feuilles modales, sorties.
+- `--expo: cubic-bezier(0.16, 1, 0.3, 1)` : Révélations & apparitions vives.
+- `--dur-fast: 120ms` · `--dur-base: 200ms` · `--dur-slow: 280ms`.
+
+### 4. Registre des Surfaces Déployées
+| Surface | Fichier(s) | Améliorations apportées | État |
+| :--- | :--- | :--- | :--- |
+| **1. Échelle Typographique & Mouvement** | `kiwi-serveur.html` | Définition des jetons `--t-*` et des constantes de mouvement, migration de l'ensemble des règles de style | ✅ Déployé |
+
