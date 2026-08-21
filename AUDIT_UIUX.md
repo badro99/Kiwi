@@ -100,3 +100,13 @@ Ce document consigne l'ensemble des audits visuels, ergonomiques, d'accessibilit
   2. Enrichissement de l'état vide de création de menu avec médaillon et bouton d'action direct `rmw-cat-add`.
   3. Bumping des timbres de cache `assets/stock.js?v=18` et `assets/restaurant-menu-workspace.js?v=17`.
 - **État** : ✅ Déployé
+
+### 6. Réservations & Tables (`assets/pages-pro.js`)
+- **Fichiers** : `assets/pages-pro.js:2844`, `assets/pages-pro.js:4815`
+- **Problèmes identifiés** :
+  1. Tableau des réservations sans état vide structuré en cas de journée sans réservation.
+  2. Lisibilité du plan de salle et harmonisation des jetons de statut de table.
+- **Améliorations apportées** :
+  1. Intégration d'un état vide centré avec médaillon Material Symbol (`inventory_2`) et typographie romaine.
+  2. Bumping du timbre de cache `assets/pages-pro.js?v=2077`.
+- **État** : ✅ Déployé
