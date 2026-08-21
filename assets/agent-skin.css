@@ -76,9 +76,9 @@
 html:root[data-kiwi-ai="releve"] .fa-drawer {
   /* Replis — la valeur quand Vexel n'est pas là. Le bloc §12 les redéclare
      pour le climat sombre ; les noms sans `-fb` n'ont pas à être touchés. */
-  --ai-page-fb: var(--paper, #FAF9F6);
-  --ai-sheet-fb: var(--paper-soft, #F3F1EC);
-  --ai-glass-fb: var(--surface, #FFFFFF);
+  --ai-page-fb: rgba(247, 245, 240, 0.72);
+  --ai-sheet-fb: color-mix(in srgb, var(--surface) 68%, transparent);
+  --ai-glass-fb: color-mix(in srgb, var(--surface) 80%, transparent);
   --ai-line-fb: color-mix(in srgb, var(--ink) 10%, transparent);
   --ai-line-soft-fb: color-mix(in srgb, var(--ink) 6%, transparent);
   --ai-line-lit-fb: color-mix(in srgb, var(--ink) 20%, transparent);
@@ -90,10 +90,10 @@ html:root[data-kiwi-ai="releve"] .fa-drawer {
   --ai-cite-fb: color-mix(in srgb, var(--mint) 40%, transparent);
   --ai-lit-bg-fb: color-mix(in srgb, var(--mint) 22%, transparent);
 
-  /* Surfaces et filets — fond opaque/protecteur pour éviter toute transparence parasite */
-  --ai-page: var(--paper, #FAF9F6);
-  --ai-sheet: var(--paper-soft, #F3F1EC);
-  --ai-glass: var(--surface, #FFFFFF);
+  /* Surfaces et filets — verre semi-transparent avec flou natif profond */
+  --ai-page: var(--vx-overlay-bg, var(--ai-page-fb));
+  --ai-sheet: var(--vx-ai-bg, var(--ai-sheet-fb));
+  --ai-glass: var(--ai-glass-fb);
   --ai-line: var(--vx-track, var(--ai-line-fb));
   --ai-line-soft: var(--ai-line-soft-fb);
   --ai-line-lit: var(--vx-card-hover-border, var(--ai-line-lit-fb));
@@ -113,21 +113,17 @@ html:root[data-kiwi-ai="releve"] .fa-drawer {
   --ai-dur: .15s;
 }
 
-/* ─── §0 · le verre et l'opacité protectrice ─────────────────────────────── */
+/* ─── §0 · le verre semi-transparent ──────────────────────────────────────── */
 html:root[data-kiwi-ai="releve"] .fa-drawer .kiwi-drawer {
-  background: var(--paper, #FAF9F6) !important;
-  -webkit-backdrop-filter: blur(24px);
-  backdrop-filter: blur(24px);
+  background: var(--ai-page) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(1.6);
+  backdrop-filter: blur(28px) saturate(1.6);
 }
-html:root[data-kiwi-ai="releve"] .fa {
-  background: var(--paper, #FAF9F6);
-}
+html:root[data-kiwi-ai="releve"] .fa,
 html:root[data-kiwi-ai="releve"] .fa-thread,
-html:root[data-kiwi-ai="releve"] .fa-dock {
-  background: transparent;
-}
+html:root[data-kiwi-ai="releve"] .fa-dock,
 html:root[data-kiwi-ai="releve"] .fa-drawer .kiwi-drawer-head {
-  background: var(--paper, #FAF9F6);
+  background: transparent;
 }
 
 /* ─── §0bis · la voix unique ──────────────────────────────────────────────
@@ -679,9 +675,9 @@ html:root[data-kiwi-ai="releve"] .fa-hero-insight b { color: var(--atlas, #0B6E4
    Le blanc pur n'entre pas dans l'encre — seulement dans les filets, où il
    n'est qu'une transparence.                                                 */
 html:root[data-theme="dark"][data-kiwi-ai="releve"] .fa-drawer {
-  --ai-page-fb: var(--paper, #0E1210);
-  --ai-sheet-fb: var(--paper-soft, #151A17);
-  --ai-glass-fb: var(--surface, #1C231F);
+  --ai-page-fb: rgba(14, 18, 16, 0.78);
+  --ai-sheet-fb: color-mix(in srgb, #fff 4%, transparent);
+  --ai-glass-fb: color-mix(in srgb, #fff 7%, transparent);
   --ai-line-fb: color-mix(in srgb, #fff 12%, transparent);
   --ai-line-soft-fb: color-mix(in srgb, #fff 7%, transparent);
   --ai-line-lit-fb: color-mix(in srgb, #fff 22%, transparent);
@@ -690,29 +686,31 @@ html:root[data-theme="dark"][data-kiwi-ai="releve"] .fa-drawer {
   --ai-shadow-fb: rgba(0, 0, 0, .85);
   --ai-on-accent-fb: var(--ink);
 
-  --ai-page: var(--paper, #0E1210);
-  --ai-sheet: var(--paper-soft, #151A17);
-  --ai-glass: var(--surface, #1C231F);
+  --ai-page: var(--vx-overlay-bg, var(--ai-page-fb));
+  --ai-sheet: var(--vx-ai-bg, var(--ai-sheet-fb));
+  --ai-glass: var(--ai-glass-fb);
   --ai-accent: var(--vx-accent, var(--mint));
   --ai-figure: var(--mint);
   --ai-cite: color-mix(in srgb, var(--ai-accent) 20%, transparent);
   --ai-lit-bg: color-mix(in srgb, var(--ai-accent) 13%, transparent);
 }
 html:root[data-theme="dark"][data-kiwi-ai="releve"] .fa-drawer .kiwi-drawer {
-  background: var(--paper, #0E1210) !important;
+  background: var(--ai-page) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(1.6);
+  backdrop-filter: blur(28px) saturate(1.6);
 }
-html:root[data-theme="dark"][data-kiwi-ai="releve"] .fa {
-  background: var(--paper, #0E1210);
-}
+html:root[data-theme="dark"][data-kiwi-ai="releve"] .fa,
 html:root[data-theme="dark"][data-kiwi-ai="releve"] .fa-drawer .kiwi-drawer-head {
-  background: var(--paper, #0E1210);
+  background: transparent;
 }
 html:root[data-theme="dark"][data-kiwi-ai="releve"] .fa-hero-card {
-  background: var(--surface, #1C231F);
+  background: var(--ai-glass);
   border-color: rgba(255, 255, 255, 0.1);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
 }
 html:root[data-theme="dark"][data-kiwi-ai="releve"] .fa-hero-card:hover {
-  background: #232C27;
+  background: rgba(255, 255, 255, 0.08);
   border-color: rgba(63, 182, 122, 0.4);
 }
 html:root[data-theme="dark"][data-kiwi-ai="releve"] .fa-hero-card .ic {
