@@ -5417,7 +5417,9 @@ body.design-vexel .vexel-insights-row :is(.hai-title, .hai-rec-title) {
  * l'accueil qui ne se comportait pas comme les autres, en clair comme en
  * sombre. */
 body.design-vexel[data-vexel-mode] .vexel-insights-row {
-  padding: var(--vx-card-pad);
+  /* Même marge que la paire compacte juste au-dessus (Ventes par canal, Mix
+   * de paiement) : les bords de texte s'alignent d'une carte à l'autre. */
+  padding: 18px 20px;
 }
 body.design-vexel[data-vexel-mode] .vexel-insights-row > .hero-right {
   gap: 18px;

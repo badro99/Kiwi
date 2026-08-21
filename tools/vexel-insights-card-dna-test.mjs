@@ -22,7 +22,8 @@ assert.ok(shells.length >= 2, 'les recettes de coquille de carte sont trouvées 
 assert.ok(hovers.length >= 1, 'la liste de survol est trouvée');
 shells.forEach((b, i) => assert.ok(/\.vexel-insights-row/.test(b.list), 'Insights est dans la coquille n°' + (i + 1) + ' (surface, bord, rayon, ombre)'));
 hovers.forEach((b, i) => assert.ok(/\.vexel-insights-row/.test(b.list), 'Insights est dans la liste de survol n°' + (i + 1)));
-assert.ok(/body\.design-vexel\[data-vexel-mode\] \.vexel-insights-row \{\s*padding: var\(--vx-card-pad\);/.test(css), 'Insights prend la marge de carte commune');
+assert.ok(/body\.design-vexel\[data-vexel-mode\] \.vexel-insights-row \{[^}]*padding: 18px 20px;/.test(css), 'Insights prend la marge de la paire compacte (18px 20px)');
+assert.ok(/\[data-vexel-mode\] \.vexel-bottom-row > \[data-mix-block\] \{[^}]*padding: 18px 20px;/.test(css), 'la paire compacte est bien à 18px 20px (sinon réaligner Insights)');
 assert.ok(/\[data-vexel-mode\] \.vexel-insights-row \.hai-title \{[^}]*font-size: 17px;[^}]*font-weight: 600;/.test(css), 'titre Insights au gabarit des titres de carte (17/600)');
 assert.ok(/\[data-vexel-mode\] \.vexel-insights-row \.hai-eyebrow \{[^}]*color: var\(--n-500\);[^}]*text-transform: uppercase;/.test(css), 'étiquette Insights en petites capitales neutres comme les cartes du rail');
 /* Les deux moitiés de l'ADN (clair ET sombre) doivent définir les jetons que la coquille consomme. */
