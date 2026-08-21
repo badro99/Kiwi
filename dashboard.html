@@ -1498,62 +1498,7 @@
   }
   .kiwi-lock-pin {
     display: flex; gap: 12px; margin-bottom: 22px;
-    position: relative; /* l'orbite de vérification se dessine dans ce repère */
   }
-  /* ── L'orbite de vérification ─────────────────────────────────────────
-   * Au quatrième chiffre, les quatre cases quittent le rang et se posent
-   * sur une orbite pointillée autour d'un moyeu menthe : l'anneau EST le
-   * spinner pendant que le serveur juge le code. Bonne réponse → le tour
-   * freine (wind-up) et les cases s'effondrent dans le moyeu ; mauvaise →
-   * l'anneau vire au rouge et les cases regagnent le rang avant la secousse.
-   * Le rayon (74px) vit ici ET dans le contrôleur JS (ORBIT_R) — les deux
-   * doivent bouger ensemble. Rotation via la propriété `rotate` autonome,
-   * jamais `transform`, pour ne pas écraser les transforms existants. */
-  .kiwi-pin-orbit {
-    position: absolute; left: 50%; top: 50%;
-    width: 152px; height: 152px; margin: -76px 0 0 -76px;
-    opacity: 0; scale: 0.55; pointer-events: none;
-    transition: opacity 420ms ease, scale 560ms cubic-bezier(0.34, 1.45, 0.5, 1);
-  }
-  .kiwi-pin-orbit circle {
-    fill: none; stroke: rgba(125,242,176,0.38); stroke-width: 1.5;
-    stroke-dasharray: 2 6; stroke-linecap: round;
-    transition: stroke 300ms ease;
-  }
-  .kiwi-pin-hub {
-    position: absolute; left: 50%; top: 50%;
-    width: 10px; height: 10px; margin: -5px 0 0 -5px;
-    border-radius: 50%; background: var(--mint);
-    opacity: 0; scale: 0.4; pointer-events: none;
-    transition: opacity 380ms ease, scale 520ms cubic-bezier(0.34, 1.45, 0.5, 1), background 300ms ease;
-  }
-  .kiwi-lock-pin.is-orbiting .kiwi-pin-orbit { opacity: 1; scale: 1; }
-  .kiwi-lock-pin.is-orbiting .kiwi-pin-hub {
-    opacity: 1; scale: 1;
-    animation: kw-lock-pulse 2.4s ease-in-out infinite;
-  }
-  .kiwi-lock-pin.is-orbiting .kiwi-pin-cell {
-    transition: left 620ms cubic-bezier(0.34, 1.45, 0.5, 1),
-                top 620ms cubic-bezier(0.34, 1.45, 0.5, 1),
-                scale 560ms cubic-bezier(0.34, 1.45, 0.5, 1),
-                opacity 340ms ease,
-                border-color 300ms ease, background 300ms ease;
-  }
-  .kiwi-lock-pin.is-orbit-bad .kiwi-pin-orbit circle { stroke: rgba(255,107,107,0.55); }
-  .kiwi-lock-pin.is-orbit-bad .kiwi-pin-hub { background: #ff6b6b; animation: none; }
-  .kiwi-lock-pin.is-orbit-bad .kiwi-pin-cell { border-color: rgba(255,107,107,0.7); background: rgba(255,107,107,0.08); }
-  .kiwi-pin-hub.is-burst { animation: kw-hub-burst 720ms cubic-bezier(0.16, 1, 0.3, 1) both !important; }
-  @keyframes kw-hub-burst {
-    0%   { scale: 1;   box-shadow: 0 0 0 0 rgba(125,242,176,0.55); }
-    45%  { scale: 2.2; }
-    100% { scale: 1.4; box-shadow: 0 0 0 52px rgba(125,242,176,0); }
-  }
-  /* Pendant la vérification, la scène se vide autour de l'orbite. */
-  .kiwi-lock .kiwi-lock-sub, .kiwi-lock .kiwi-lock-help { transition: opacity 320ms ease; }
-  .kiwi-lock.is-verifying .kiwi-lock-sub,
-  .kiwi-lock.is-verifying .kiwi-lock-help,
-  .kiwi-lock.is-verifying .kiwi-lock-skip,
-  .kiwi-lock.is-verifying .kiwi-lock-switch { opacity: 0 !important; pointer-events: none; transition: opacity 320ms ease; }
   .kiwi-pin-cell {
     width: 58px; height: 72px;
     border-radius: 16px;
@@ -5242,12 +5187,6 @@
     <div class="kiwi-lock-title" data-i18n="dash.lock.welcome">Bienvenue</div>
     <div class="kiwi-lock-sub" data-i18n="dash.lock.sub">Tableau de bord commerçant</div>
     <div class="kiwi-lock-pin" data-kiwi-pin>
-      <!-- Anneau pointillé + moyeu : invisibles au repos, ils portent l'orbite
-           de vérification (voir le contrôleur du verrou plus bas). -->
-      <svg class="kiwi-pin-orbit" data-kiwi-orbit viewBox="0 0 152 152" aria-hidden="true">
-        <circle cx="76" cy="76" r="74"/>
-      </svg>
-      <span class="kiwi-pin-hub" data-kiwi-hub aria-hidden="true"></span>
       <div class="kiwi-pin-cell" data-cell="0"></div>
       <div class="kiwi-pin-cell" data-cell="1"></div>
       <div class="kiwi-pin-cell" data-cell="2"></div>
@@ -6587,161 +6526,6 @@
     try { pinInput.focus(); } catch (_) {}
   }
 
-  /* ── L'orbite de vérification ────────────────────────────────────────
-   * Le quatrième chiffre part en jugement (local ou POST /api/pin/verify) ;
-   * pendant ce temps mort les quatre cases s'enroulent sur l'anneau pointillé
-   * et tournent — l'orbite est le spinner. Verdict :
-   *   succeed(then) → le tour freine avec un léger dépassement, les cases
-   *                   s'effondrent dans le moyeu, éclat menthe, puis `then`
-   *                   (la chorégraphie d'ouverture existante) ;
-   *   fail(then)    → l'anneau vire au rouge, le tour se termine à plat,
-   *                   les cases regagnent le rang, puis `then` (la secousse) ;
-   *   abort()       → la saisie a changé en plein vol : retour au rang, rien
-   *                   d'autre.
-   * Tout passe par les propriétés autonomes `rotate`/`scale` pour composer
-   * avec les transforms existants (is-filled, is-wrong). Sans WAAPI ou avec
-   * prefers-reduced-motion, start() ne fait rien et chaque verdict retombe
-   * exactement sur le comportement d'avant. ORBIT_R = le rayon du SVG (74). */
-  const orbit = (function () {
-    const ring = document.querySelector('[data-kiwi-orbit]');
-    const hub  = document.querySelector('[data-kiwi-hub]');
-    const ORBIT_R = 74, SPIN_MS = 2200;
-    const SPRING = 'cubic-bezier(0.34, 1.45, 0.5, 1)';
-    let on = false, spin = null, counters = [], startedAt = 0, home = null, boxW = 0, boxH = 0;
-    function reduced() {
-      try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (_) { return false; }
-    }
-    function angleNow() {
-      try { return ((Number(spin.currentTime) % SPIN_MS) / SPIN_MS) * 360; } catch (_) { return 0; }
-    }
-    function stopSpin() {
-      try { if (spin) spin.cancel(); } catch (_) {}
-      counters.forEach((a) => { try { a.cancel(); } catch (_) {} });
-      spin = null; counters = [];
-    }
-    function start() {
-      if (on || reduced() || !pinRow || !ring || !hub || !pinRow.animate) return;
-      on = true; startedAt = Date.now();
-      const rowR = pinRow.getBoundingClientRect();
-      boxW = rowR.width; boxH = rowR.height;
-      home = [];
-      cells.forEach((c) => {
-        const r = c.getBoundingClientRect();
-        home.push({ x: r.left - rowR.left, y: r.top - rowR.top, w: r.width, h: r.height });
-      });
-      /* Fige le rang, passe chaque case en absolu SUR sa position actuelle
-         (avant la classe, donc sans transition), puis vole vers l'orbite. */
-      pinRow.style.width = boxW + 'px';
-      pinRow.style.height = boxH + 'px';
-      cells.forEach((c, i) => {
-        c.style.position = 'absolute'; c.style.margin = '0';
-        c.style.left = home[i].x + 'px'; c.style.top = home[i].y + 'px';
-      });
-      void pinRow.offsetWidth;
-      pinRow.classList.add('is-orbiting');
-      lock.classList.add('is-verifying');
-      cells.forEach((c, i) => {
-        const a = (i * 90 - 90) * Math.PI / 180; /* haut, droite, bas, gauche */
-        const x = boxW / 2 + ORBIT_R * Math.cos(a) - home[i].w / 2;
-        const y = boxH / 2 + ORBIT_R * Math.sin(a) - home[i].h / 2;
-        setTimeout(() => { if (!on) return; c.style.left = x + 'px'; c.style.top = y + 'px'; c.style.scale = '0.82'; }, i * 55);
-      });
-      /* L'enroulement posé, le tour commence — les cases contre-tournent
-         pour rester droites, comme les chiffres d'une horloge. */
-      setTimeout(() => {
-        if (!on) return;
-        try {
-          spin = pinRow.animate([{ rotate: '0deg' }, { rotate: '360deg' }], { duration: SPIN_MS, iterations: Infinity, easing: 'linear' });
-          cells.forEach((c) => {
-            counters.push(c.animate([{ rotate: '0deg' }, { rotate: '-360deg' }], { duration: SPIN_MS, iterations: Infinity, easing: 'linear' }));
-          });
-        } catch (_) {}
-      }, 520);
-    }
-    /* Ramène la rotation à zéro proprement : on termine le tour en cours
-       (360°) au lieu de sauter — un multiple plein est visuellement zéro. */
-    function settleFlat(ms, easing) {
-      const from = angleNow();
-      stopSpin();
-      if (!from || !pinRow.animate) return [];
-      const opts = { duration: ms, easing, fill: 'forwards' };
-      const done = [pinRow.animate([{ rotate: from + 'deg' }, { rotate: '360deg' }], opts)];
-      cells.forEach((c) => done.push(c.animate([{ rotate: (-from) + 'deg' }, { rotate: '-360deg' }], opts)));
-      return done;
-    }
-    function cleanup() {
-      on = false;
-      stopSpin();
-      pinRow.classList.remove('is-orbiting', 'is-orbit-bad');
-      lock.classList.remove('is-verifying');
-      pinRow.style.width = ''; pinRow.style.height = '';
-      cells.forEach((c) => {
-        c.style.position = ''; c.style.margin = ''; c.style.left = ''; c.style.top = '';
-        c.style.scale = ''; c.style.opacity = '';
-        try { c.getAnimations().forEach((a) => a.cancel()); } catch (_) {}
-      });
-      try { pinRow.getAnimations().forEach((a) => a.cancel()); } catch (_) {}
-      if (hub) hub.classList.remove('is-burst');
-    }
-    function flyHome(then) {
-      cells.forEach((c, i) => { c.style.left = home[i].x + 'px'; c.style.top = home[i].y + 'px'; c.style.scale = '1'; });
-      setTimeout(() => { cleanup(); then(); }, 660);
-    }
-    function succeed(then) {
-      if (!on) { setTimeout(then, 140); return; }
-      /* Laisse l'orbite exister au moins un instant — le chemin local répond
-         en 0 ms et le moment mérite d'être vu. */
-      const wait = Math.max(0, 760 - (Date.now() - startedAt));
-      setTimeout(() => {
-        if (!on) { then(); return; }
-        /* Frein avec dépassement (wind-up brake) : +120° qui débordent puis
-           reviennent — jamais un simple stop. */
-        const from = angleNow();
-        stopSpin();
-        try {
-          const brake = { duration: 780, easing: 'cubic-bezier(0.22, 1.4, 0.36, 1)', fill: 'forwards' };
-          pinRow.animate([{ rotate: from + 'deg' }, { rotate: (from + 120) + 'deg' }], brake);
-          cells.forEach((c) => c.animate([{ rotate: (-from) + 'deg' }, { rotate: (-from - 120) + 'deg' }], brake));
-        } catch (_) {}
-        /* En plein freinage, les cases plongent dans le moyeu. */
-        setTimeout(() => {
-          cells.forEach((c, i) => {
-            setTimeout(() => {
-              c.style.left = (boxW / 2 - home[i].w / 2) + 'px';
-              c.style.top = (boxH / 2 - home[i].h / 2) + 'px';
-              c.style.scale = '0.16'; c.style.opacity = '0';
-            }, i * 40);
-          });
-        }, 300);
-        setTimeout(() => { if (hub) hub.classList.add('is-burst'); }, 560);
-        setTimeout(then, 1000);
-      }, wait);
-    }
-    function fail(then) {
-      if (!on) { then(); return; }
-      const wait = Math.max(0, 700 - (Date.now() - startedAt));
-      setTimeout(() => {
-        if (!on) { then(); return; }
-        pinRow.classList.add('is-orbit-bad');
-        settleFlat(440, 'cubic-bezier(0.4, 0, 0.2, 1)');
-        setTimeout(() => {
-          try { pinRow.getAnimations().forEach((a) => a.cancel()); cells.forEach((c) => c.getAnimations().forEach((a) => a.cancel())); } catch (_) {}
-          flyHome(then);
-        }, 460);
-      }, wait);
-    }
-    function abort() {
-      if (!on) return;
-      settleFlat(320, 'ease-out');
-      setTimeout(() => {
-        if (!on) return;
-        try { pinRow.getAnimations().forEach((a) => a.cancel()); cells.forEach((c) => c.getAnimations().forEach((a) => a.cancel())); } catch (_) {}
-        flyHome(() => {});
-      }, 330);
-    }
-    return { start, succeed, fail, abort, get active() { return on; } };
-  })();
-
   /* « Il n'y a rien à taper. » Quand le compte est configuré (du personnel
    * existe) mais qu'AUCUN code propriétaire ou manager n'existe nulle part —
    * le cas du bug où la synchronisation d'équipe effaçait le code du patron —
@@ -6848,17 +6632,13 @@
   function paintCells() {
     const val = pinInput.value.replace(/\D/g, '').slice(0, 4);
     if (val !== pinInput.value) pinInput.value = val;
-    if (val.length < 4) { clearPinError(); orbit.abort(); }
+    if (val.length < 4) clearPinError();
     cells.forEach((c, i) => {
       const filled = i < val.length;
       c.classList.toggle('is-filled', filled);
       c.textContent = filled ? '•' : '';
     });
     if (val.length === 4) {
-      /* Le jugement commence : les cases partent en orbite tout de suite,
-         quel que soit le juge (local, serveur, ou l'attente de la liste des
-         codes du compte) — le verdict la résoudra. Idempotent. */
-      orbit.start();
       /* The owner's PIN may live under a different establishment. Do not judge
        * four digits against the active store while that account-wide owner list
        * is still loading; retry this same entry when the list is complete. */
@@ -6892,7 +6672,7 @@
         if (answer && answer !== 'no') { finishUnlock(val, answer, true); return; }
         const configured = knownHere || serverRosterSize();
         // 'no' = le serveur a tranché. null = on ne sait pas → règle d'avant.
-        if (!demosOn() && configured && (answer === 'no' || knownHere)) { orbit.fail(rejectPin); return; }
+        if (!demosOn() && configured && (answer === 'no' || knownHere)) { rejectPin(); return; }
         finishUnlock(val, null, false);
       });
     }
@@ -6965,10 +6745,8 @@
      * (no on-screen toggle — KiwiDesign2026.disable() reverts; persists). */
     if (window.KiwiDesign2026) window.KiwiDesign2026.enable();
     else { try { localStorage.setItem('kiwiDesign2026', '1'); } catch (e) {} }
-    /* L'orbite freine, s'effondre dans le moyeu, puis la chorégraphie
-       d'ouverture existante prend le relais. Sans orbite (reduced motion,
-       vieux navigateur), on retombe sur l'ancien délai de 140 ms. */
-    orbit.succeed(unlock);
+    /* Slight delay so the user sees the 4th cell fill before the celebration. */
+    setTimeout(unlock, 140);
   }
 
   /* Pre-hide the dashboard underneath so it can "dive in" after the
