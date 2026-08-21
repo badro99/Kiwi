@@ -114,7 +114,14 @@
             const method = L.methods[String(s.method || '')] || L.sale;
             return `<tr><td class="mono">${pageEsc(time)}</td><td><b>${pageEsc(method)}</b></td><td style="color:var(--n-600);">${pageEsc(s.label || L.sale)}</td><td class="mono right">${pageEsc(fmt(s.amount, 2))}</td><td><span class="chip ok">${pageEsc(L.status)}</span></td></tr>`;
           }).join('')}</tbody>
-        </table>` : `<div data-real-empty="transactions" style="padding:48px 18px;text-align:center;font-size:14px;font-weight:600;color:var(--ink);">${pageEsc(empty)}</div>`,
+        </table>` : `<div data-real-empty="transactions" style="padding:48px 24px;text-align:center;display:flex;flex-direction:column;align-items:center;">
+        <div style="width:48px;height:48px;border-radius:14px;background:rgba(11,110,79,0.10);border:1px solid rgba(11,110,79,0.18);color:var(--atlas);display:grid;place-items:center;margin-bottom:16px;">
+          <svg width="24" height="24" viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg>
+        </div>
+        <div style="font-size:16px;font-weight:600;color:var(--ink);letter-spacing:-0.015em;">${pageEsc(empty)}</div>
+        <div style="font-size:13px;color:var(--n-500);line-height:1.55;max-width:420px;margin:8px auto 18px;">${pageEsc(T.transactionsSubtitle(0, "0"))}</div>
+        <button class="kb primary" data-action="new-sale"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>${pageEsc(T.transactionsNewSale)}</button>
+      </div>`,
     });
     r.el.querySelector('.kiwi-drawer').classList.add('page-xl');
     return r;
@@ -868,7 +875,9 @@
   .p-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
   .p-table thead th { text-align: left; padding: 9px 12px; font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em; color: var(--n-500); text-transform: uppercase; background: var(--paper-soft); border-bottom: 1px solid var(--n-300); font-weight: 500; }
   .p-table tbody td { padding: 11px 12px; border-bottom: 1px solid var(--n-300); }
-  .p-table tbody tr { transition: background 160ms cubic-bezier(0.32, 0.72, 0, 1); }
+  .p-table tbody tr { transition: background 160ms cubic-bezier(0.32, 0.72, 0, 1), transform 80ms var(--spring); }
+  .p-table tbody tr:active { transform: scale(0.995); }
+  html[data-theme="dark"] .p-table thead th { background: var(--paper-muted); }
   .p-table tbody tr:hover { background: color-mix(in srgb, var(--atlas) 5%, var(--surface)); cursor: pointer; }
   .p-table tbody td:first-child { border-start-start-radius: 10px; border-end-start-radius: 10px; }
   .p-table tbody td:last-child { border-start-end-radius: 10px; border-end-end-radius: 10px; }

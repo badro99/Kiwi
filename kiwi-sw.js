@@ -76,7 +76,7 @@ var SHELL = [
      d'inscription la lisent à l'évaluation : sans elle hors ligne, un
      établissement retombe sur la famille par défaut. */
   '/assets/trades.js?v=6',
-  '/assets/interactive.js?v=16',
+  '/assets/interactive.js?v=18',
   '/assets/features.js?v=3',
   '/assets/invoicing.css?v=6',
   '/assets/invoicing.js?v=7',
@@ -217,7 +217,7 @@ var SHELL = [
      commerçant a bel et bien saisi ses coûts. */
   '/assets/cost.js?v=3',
   '/assets/clients-store.js?v=2',
-  '/assets/clients-book.js?v=3',
+  '/assets/clients-book.js?v=5',
   '/assets/clients-directory.js',
   '/assets/menu-catalog.js?v=14',
   '/assets/restaurant-recipes.js?v=3',

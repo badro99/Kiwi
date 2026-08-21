@@ -58,3 +58,13 @@ Ce document consigne l'ensemble des audits visuels, ergonomiques, d'accessibilit
   2. Refonte complète de l'état vide `renderFeed()` avec médaillon Material Symbol (`inventory_2`), badge de service live et typographie soignée.
   3. Bumping du timbre de cache `assets/dateRange.js?v=12`.
 - **État** : ✅ Déployé
+
+### 2. Commandes / Transactions Drawer (`assets/pages.js`)
+- **Fichiers** : `assets/pages.js:105`, `assets/pages.js:870`
+- **Problèmes identifiés** :
+  1. État vide de `realTransactions` sans médaillon visuel Material Symbols ni bouton d'action clair.
+  2. Absence de retour tactile `:active` sur les lignes de tableau `.p-table` et contraste de l'en-tête en thème sombre.
+- **Améliorations apportées** :
+  1. Refonte de l'état vide `realTransactions` avec médaillon Material Symbol (`inventory_2`), sous-titre explicatif et bouton CTA `data-action="new-sale"` relié à la caisse.
+  2. Ajout du retour tactile `.p-table tbody tr:active { transform: scale(0.995); }` et harmonisation du fond d'en-tête de tableau en mode sombre.
+- **État** : ✅ Déployé
