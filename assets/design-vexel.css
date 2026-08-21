@@ -2071,6 +2071,7 @@ body.design-vexel[data-vexel-mode] :is(
   .vexel-rail-card,
   .vexel-goals-card,
   .vexel-bottom-row > [data-mix-block],
+  .vexel-insights-row,
   .dash-standard > .oppo-band .oppo-card,
   .dash-standard .dash-cols .block,
   .dash-standard .dash-cols .settle,
@@ -3275,6 +3276,7 @@ body.design-vexel[data-vexel-mode] :is(
   .vexel-rail-card,
   .vexel-goals-card,
   .vexel-bottom-row > [data-mix-block],
+  .vexel-insights-row,
   .dash-standard > .oppo-band .oppo-card,
   .dash-standard .dash-cols .block,
   .dash-standard .dash-cols .settle,
@@ -3483,6 +3485,7 @@ body.design-vexel[data-vexel-mode] :is(
   .vexel-rail-card,
   .vexel-goals-card,
   .vexel-bottom-row > [data-mix-block],
+  .vexel-insights-row,
   .dash-standard > .oppo-band .oppo-card,
   .dash-standard .dash-cols .block,
   .dash-standard .dash-cols .settle,
@@ -5403,6 +5406,40 @@ body.design-vexel[data-vexel-mode] .vexel-bottom-row [data-mix-block] > :last-ch
  * ───────────────────────────────────────────────────────────────────────── */
 body.design-vexel .vexel-insights-row :is(.hai-title, .hai-rec-title) {
   color: var(--ink);
+}
+
+/* La carte Kiwi Insights suit le même ADN que ses voisines (Layer G : même
+ * surface, bord, rayon, ombre, survol — elle est dans la liste ci-dessus) et
+ * le même rythme intérieur : 24 px de marge, étiquette en petites capitales
+ * neutres comme « OBJECTIF · 30 JOURS », titre 17/600 comme « Mix de
+ * paiement ». Avant, elle gardait un rayon de 22, une surface plate sans
+ * ombre, une étiquette mono vert vif et un titre 19/500 : la seule carte de
+ * l'accueil qui ne se comportait pas comme les autres, en clair comme en
+ * sombre. */
+body.design-vexel[data-vexel-mode] .vexel-insights-row {
+  padding: var(--vx-card-pad);
+}
+body.design-vexel[data-vexel-mode] .vexel-insights-row > .hero-right {
+  gap: 18px;
+}
+body.design-vexel[data-vexel-mode] .vexel-insights-row .hai-eyebrow {
+  color: var(--n-500);
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+body.design-vexel[data-vexel-mode] .vexel-insights-row .hai-title {
+  color: var(--ink);
+  font-size: 17px;
+  line-height: 1.15;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  margin-top: 7px;
+}
+body.design-vexel[data-vexel-mode] .vexel-insights-row .hai-rec::before {
+  background: var(--atlas);
 }
 
 body.design-vexel .vexel-insights-row .hai-rec-obs {
