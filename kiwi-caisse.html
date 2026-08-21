@@ -359,35 +359,34 @@
       color: #b5b9b6;
       display: flex;
       flex-direction: column;
-      padding: 16px 14px 14px;
-      gap: 12px;
-      /* When the viewport is short (laptop / windowed Chrome / iPad) the sidebar
-         content overflows. Chrome doesn't let flex children scroll without an
-         explicit overflow declaration — Safari is more forgiving. Without
-         this the "Fin de service" button at the bottom is unreachable. */
+      padding: 14px 12px;
+      gap: 9px;
       overflow-y: auto;
       overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
     }
     /* Dark-theme scrollbar for the sidebar (WebKit + Firefox) */
     .sidebar { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.18) transparent; }
-    .sidebar::-webkit-scrollbar { width: 8px; }
+    .sidebar::-webkit-scrollbar { width: 6px; }
     .sidebar::-webkit-scrollbar-track { background: transparent; }
     .sidebar::-webkit-scrollbar-thumb {
       background: rgba(255,255,255,0.14);
       border-radius: 4px;
-      border: 2px solid transparent;
+      border: 1px solid transparent;
       background-clip: padding-box;
     }
     .sidebar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.22); background-clip: padding-box; }
 
-    .brand-row { display: flex; flex-direction: column; gap: 8px; }
-    /* SVG wordmark. The sidebar is dark in both themes, so it always shows
-       the dark-surface variant; the long-press operator-console listener sits
-       on the container, so the img must never intercept or drag. */
+    .brand-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 0 2px;
+    }
     .brand-mark {
       display: inline-flex;
       align-items: center;
-      margin: 0 4px;
     }
     .brand-mark img,
     .pin-brand img,
@@ -397,19 +396,12 @@
       pointer-events: none; -webkit-user-drag: none; user-select: none;
     }
     .brand-mark img { height: 26px; }
-    /* Ticket empty state sits on a light panel — theme picks the variant.
-       The empty state greys and fades whichever one shows (.rp-empty .wordmark). */
-    .wordmark { display: inline-flex; align-items: center; }
-    .wordmark img { height: 34px; }
-    .wordmark .logo-dark { display: none; }
-    html[data-caisse-theme="dark"] .wordmark .logo-light { display: none; }
-    html[data-caisse-theme="dark"] .wordmark .logo-dark { display: block; }
 
     .duty-row {
-      display: flex; align-items: center; gap: 8px;
+      display: flex; align-items: center; gap: 6px;
       font-size: 9.5px; color: #8f9591;
       letter-spacing: 0.08em; text-transform: uppercase;
-      margin: 0 4px;
+      margin: 0;
     }
     .duty-dot {
       width: 7px; height: 7px; border-radius: 50%;
@@ -418,48 +410,54 @@
     }
 
     .cashier-card {
-      display: flex; flex-direction: column;
-      padding: 10px 12px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      grid-template-rows: auto auto;
+      align-items: center;
+      padding: 9px 11px;
       background: rgba(255,255,255,0.03);
       border: 1px solid rgba(255,255,255,0.08);
       border-radius: var(--r-lg);
       box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+      gap: 2px 8px;
     }
-    .cashier-name { font-size: 13px; font-weight: 600; color: var(--paper-cream); }
-    .cashier-role { font-size: 10.5px; color: #8f9591; margin-top: 1px; }
-    .cashier-divider { height: 1px; background: rgba(255,255,255,0.08); margin: 7px 0; }
+    .cashier-name { font-size: 13px; font-weight: 600; color: var(--paper-cream); grid-column: 1; grid-row: 1; }
+    .cashier-role { font-size: 10px; color: #8f9591; grid-column: 1; grid-row: 2; }
+    .cashier-divider { display: none; }
     .clock-time {
       font-family: var(--sans);
       font-feature-settings: "tnum" 1;
-      font-size: 22px; font-weight: 700; color: var(--paper-cream);
+      font-size: 18px; font-weight: 700; color: var(--paper-cream);
       line-height: 1;
       letter-spacing: -0.02em;
+      grid-column: 2; grid-row: 1;
+      text-align: right;
     }
-    .clock-date { font-size: 10.5px; color: #8f9591; margin-top: 3px; text-transform: capitalize; }
+    .clock-date { font-size: 10px; color: #8f9591; grid-column: 2; grid-row: 2; text-align: right; text-transform: capitalize; }
 
-    .stats-section { display: flex; flex-direction: column; gap: 6px; }
+    .stats-section { display: flex; flex-direction: column; gap: 5px; }
     .stat-card {
       background: rgba(255,255,255,0.03);
       border: 1px solid rgba(255,255,255,0.08);
       border-radius: var(--r-lg);
-      padding: 9px 11px;
-      display: flex; flex-direction: column; gap: 3px;
+      padding: 8px 10px;
+      display: flex; flex-direction: column; gap: 2px;
       box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
     }
     .stat-label { font-size: 8.5px; font-weight: 600; color: #7f847f; letter-spacing: 0.07em; text-transform: uppercase; }
     .stat-value { font-size: 15px; font-weight: 700; color: var(--paper-cream); font-feature-settings: "tnum" 1; }
-    .stat-delta { font-size: 10px; color: var(--mint); font-weight: 500; margin-top: 1px; }
+    .stat-delta { font-size: 10px; color: var(--mint); font-weight: 500; }
     .stat-row {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 5px;
     }
     .stat-card.compact .stat-value { font-size: 13px; }
 
-    .mode-selector { display: flex; gap: 6px; }
+    .mode-selector { display: flex; gap: 5px; }
     .mode-pill {
       flex: 1;
       display: inline-flex; flex-direction: column;
-      align-items: center; justify-content: center; gap: 6px;
-      padding: 10px 4px;
+      align-items: center; justify-content: center; gap: 5px;
+      padding: 9px 4px;
       border-radius: 12px;
       font-size: 12px; font-weight: 600;
       background: rgba(255,255,255,0.03);
@@ -468,7 +466,7 @@
       color: #8f9591;
       transition: background 200ms ease, color 200ms ease, transform 150ms ease, box-shadow 200ms ease, border-color 200ms ease;
       letter-spacing: -0.01em;
-      min-height: 64px;
+      min-height: 58px;
     }
     .mode-pill svg {
       width: 22px; height: 22px;
@@ -489,20 +487,20 @@
       box-shadow: var(--shadow-1);
     }
 
-    /* Action pills — caisse operations, styled as a compact 2x2 grid */
-    .act-selector { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+    /* Action pills — caisse operations in a clean 2x2 grid */
+    .act-selector { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; }
     .act-pill {
       display: inline-flex; flex-direction: column;
-      align-items: center; justify-content: center; gap: 5px;
+      align-items: center; justify-content: center; gap: 4px;
       padding: 8px 3px;
       border-radius: 12px;
-      font-size: 9.5px; font-weight: 600;
+      font-size: 10px; font-weight: 600;
       background: rgba(255,255,255,0.03);
       border: 1px solid rgba(255,255,255,0.08);
       box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
       color: #9aa09b;
       text-align: center; line-height: 1.2;
-      min-height: 54px;
+      min-height: 52px;
       cursor: pointer;
       transition: background 200ms ease, color 200ms ease, transform 150ms ease, border-color 200ms ease;
     }
@@ -515,110 +513,59 @@
     }
     .act-pill:active { transform: scale(0.97); }
 
-    .rail-links { display: flex; flex-direction: column; gap: 5px; }
-
-    .quick-actions { display: flex; flex-direction: column; gap: 5px; margin-top: auto; }
-    .qa-btn {
-      display: flex; align-items: center; gap: 8px;
-      padding: 8px 10px;
+    .rail-links { display: flex; flex-direction: column; gap: 4px; }
+    .team-trigger {
+      display: flex; align-items: center; gap: 9px;
+      padding: 8px 11px;
       background: rgba(255,255,255,0.03);
       border: 1px solid rgba(255,255,255,0.08);
       color: #b5b9b6;
       border-radius: 10px;
       font-size: 12px; font-weight: 500;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+      transition: background 150ms, color 150ms, border-color 150ms, transform 150ms;
+      text-align: left;
+    }
+    .team-trigger svg { width: 15px; height: 15px; flex: 0 0 15px; }
+    .team-trigger .count {
+      margin-left: auto;
+      background: var(--mint); color: var(--ink-bg);
+      font-size: 10.5px; font-weight: 800;
+      padding: 1px 7px; border-radius: 999px;
+      font-feature-settings: "tnum" 1;
+    }
+
+    .quick-actions { display: flex; flex-direction: column; gap: 4px; margin-top: auto; padding-top: 4px; }
+    .qa-btn {
+      display: flex; align-items: center; gap: 9px;
+      padding: 7px 11px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: #b5b9b6;
+      border-radius: 10px;
+      font-size: 11.5px; font-weight: 500;
       text-align: left;
       transition: background 150ms ease, color 150ms ease, border-color 150ms ease;
     }
     .qa-btn:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.16); color: var(--paper-cream); }
-    .qa-btn.ghost { background: transparent; border-color: transparent; color: #6a6e6c; }
-    .qa-btn.ghost:hover { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.08); color: #b5b9b6; }
+    .qa-btn.ghost { background: transparent; border-color: transparent; color: #8f9591; }
+    .qa-btn.ghost:hover { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.08); color: var(--paper-cream); }
     .qa-btn svg { width: 14px; height: 14px; flex: 0 0 14px; }
 
-    /* ---------- iPad & Tablet responsive optimization ---------- */
-    @media (max-width: 1280px), (max-height: 900px) {
-      .sidebar {
-        width: 230px;
-        flex: 0 0 230px;
-        height: 100%;
-        min-height: 100%;
-        align-self: stretch;
-        box-sizing: border-box;
-        padding: 12px 10px;
-        gap: 8px;
-      }
-      .brand-row { gap: 4px; }
-      .brand-mark img { height: 22px; }
-      .duty-row { font-size: 8.5px; margin: 0 2px; }
-      .cashier-card {
-        padding: 8px 10px;
-        border-radius: 10px;
-      }
-      .cashier-name { font-size: 12px; }
-      .cashier-role { font-size: 9.5px; }
-      .cashier-divider { margin: 4px 0; }
-      .clock-time { font-size: 17px; }
-      .clock-date { font-size: 9.5px; }
-      .mode-selector { gap: 4px; }
-      .mode-pill {
-        min-height: 50px;
-        padding: 6px 2px;
-        gap: 4px;
-        font-size: 11px;
-        border-radius: 10px;
-      }
-      .mode-pill svg { width: 18px; height: 18px; flex: 0 0 18px; }
-      .act-selector {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 4px;
-      }
-      .act-pill {
-        min-height: 44px;
-        padding: 5px 2px;
-        gap: 3px;
-        font-size: 8.5px;
-        border-radius: 10px;
-      }
-      .act-pill svg { width: 15px; height: 15px; flex: 0 0 15px; }
-      .stats-section { gap: 4px; }
-      .stat-card {
-        padding: 6px 8px;
-        gap: 1px;
-        border-radius: 10px;
-      }
-      .stat-label { font-size: 8px; }
-      .stat-value { font-size: 13px; }
-      .stat-delta { font-size: 9px; }
-      .stat-row { gap: 4px; }
-      .stat-card.compact .stat-value { font-size: 11.5px; }
-      .rail-links { gap: 3px; }
-      .team-trigger {
-        padding: 5px 8px;
-        font-size: 11px;
-        border-radius: 8px;
-        gap: 6px;
-      }
-      .team-trigger svg { width: 13px; height: 13px; flex: 0 0 13px; }
-      .team-trigger .count { font-size: 9px; padding: 1px 5px; }
-      .quick-actions { gap: 3px; }
-      .qa-btn {
-        padding: 5px 8px;
-        font-size: 11px;
-        border-radius: 8px;
-        gap: 6px;
-      }
-      .qa-btn svg { width: 13px; height: 13px; flex: 0 0 13px; }
-
+    @media (max-width: 1200px) {
       .rightpanel {
-        width: 280px;
-        flex: 0 0 280px;
+        width: 300px;
+        flex: 0 0 300px;
       }
       .main-head {
-        padding: 10px 14px 6px;
+        padding: 14px 20px 10px;
       }
       .view {
-        padding: 4px 14px 12px;
+        padding: 6px 20px 18px;
       }
     }
+
+
 
     /* ---------- Main floor area ---------- */
     .main {
@@ -5195,7 +5142,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=394" defer></script>
+  <script src="assets/caisse-pwa.js?v=395" defer></script>
   <script src="assets/live-link.js?v=15" defer></script>
   <!-- The staff-role catalogue — says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
