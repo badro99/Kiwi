@@ -66,6 +66,8 @@ const ACCESS = { members: TEAM.members.map((m) => ({ ...m, venueSlug: SHOP })) }
 db.prepare(`INSERT INTO store_docs VALUES (?,'team',?,1,?)`).run(SHOP, JSON.stringify(TEAM), now);
 db.prepare(`INSERT INTO store_docs VALUES (?,'employee-access',?,1,?)`).run(SHOP, JSON.stringify(ACCESS), now);
 db.prepare(`INSERT INTO store_docs VALUES (?,'attendance',?,1,?)`).run(SHOP, JSON.stringify({ entries: [] }), now);
+const AGENT_ACTIONS = { items: [{ id: 'a1', action: 'customer-message-draft', args: { phone: '+212600000000' }, status: 'pending' }], versions: [{ id: 'v1', itemId: 'a1', status: 'pending', at: now }] };
+db.prepare(`INSERT INTO store_docs VALUES (?,'agentactions',?,1,?)`).run(SHOP, JSON.stringify(AGENT_ACTIONS), now);
 
 const env = { AUTH_SECRET, DB: { prepare(q) { const st = db.prepare(q); return { bind(...p) { return {
   async first() { return st.get(...p); },
@@ -124,7 +126,21 @@ ok('le magasin du banc n’est pas un slug de démo (sinon tout passe)', !DEMO_M
   ok('le patron écrit son équipe comme avant', res.status === 200);
 }
 
-/* ── 3. Le miroir dérivé, et les deux surfaces qui le lisent ─────────────── */
+/* ── 3. Les actions IA restent hors de la caisse appairée ────────────────── */
+{
+  const res = await get(storeGet, `https://k/api/store?feature=agentactions&merchant=${SHOP}`, till);
+  const body = await res.json();
+  ok('une caisse appairée lit un Centre d’actions vide', res.status === 200 && Array.isArray(body.data.items) && body.data.items.length === 0 && body.data.versions.length === 0);
+}
+{
+  const res = await storePost({ request: new Request('https://k/api/store', { method: 'POST',
+    headers: { 'Content-Type': 'application/json', Cookie: till },
+    body: JSON.stringify({ feature: 'agentactions', merchant: SHOP, data: { items: [], versions: [] }, baseRev: 1 }) }), env });
+  const row = db.prepare(`SELECT data FROM store_docs WHERE merchant = ? AND feature = 'agentactions'`).get(SHOP);
+  ok('une caisse appairée ne peut pas réécrire le Centre d’actions (403)', res.status === 403 && /212600000000/.test(row.data));
+}
+
+/* ── 4. Le miroir dérivé, et les deux surfaces qui le lisent ─────────────── */
 {
   const res = await get(storeGet, `https://k/api/store?feature=employee-access&merchant=${SHOP}`, owner);
   ok('`employee-access` n’est servi à personne par le coffre générique', res.status === 400);

@@ -108,7 +108,7 @@ async function main() {
 
     /* ── 1. Une base neuve, construite depuis schema.sql, est à jour ──────── */
     console.log('\nBase neuve construite depuis schema.sql');
-    await execFile('sqlite3', [fresh, `.read ${SCHEMA_PATH}`]);
+    await execFile('sqlite3', [fresh, `.read '${SCHEMA_PATH.replace(/'/g, "''")}'`]);
     const freshCheck = await runTool(['--sqlite', fresh]);
     check('l\'outil la déclare à jour (code 0)', freshCheck.code === 0,
       freshCheck.stdout.split('\n').filter((l) => l.includes('✗')).join('\n      '));

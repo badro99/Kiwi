@@ -5088,6 +5088,17 @@
     if (currentRange === 'personnalise' && !customRange) currentRange = DEFAULT_RANGE;
     try { showComparison = localStorage.getItem(CMP_KEY) === '1'; } catch (_) {}
 
+    // Own the custom-picker trigger at capture phase. The shared action router is
+    // intentionally extensible and can be registered or wrapped by later bundles;
+    // this control must still open even if that registry is temporarily unavailable.
+    document.addEventListener('click', (event) => {
+      const trigger = event.target.closest?.('.dr-pill-custom[data-action="open-date-picker"]');
+      if (!trigger) return;
+      event.preventDefault();
+      event.stopPropagation();
+      openCustomPicker();
+    }, true);
+
     registerHandler();
     hookI18n();
 

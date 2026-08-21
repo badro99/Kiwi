@@ -11,6 +11,10 @@
     "v": "2",
     "sha": "07d83fcb7c4ceb3a"
   },
+  "assets/agent-action-center.js": {
+    "v": "1",
+    "sha": "fa9c673c8ed8843a"
+  },
   "assets/agent-features.js": {
     "v": "3",
     "sha": "6605bfb259d33dfa"
@@ -25,15 +29,15 @@
   },
   "assets/agent-truth.js": {
     "v": "4",
-    "sha": "fe5cf447d195cb09"
+    "sha": "12a6abdd783d076d"
   },
   "assets/agent-voice.js": {
     "v": "4",
     "sha": "48c56a5be7a6655b"
   },
   "assets/agent.js": {
-    "v": "15",
-    "sha": "140d6273bf5a410f"
+    "v": "17",
+    "sha": "de3bdaab87aac327"
   },
   "assets/booking.css": {
     "v": "7",
@@ -112,8 +116,8 @@
     "sha": "c343e8d4e4cee89d"
   },
   "assets/dateRange.js": {
-    "v": "12",
-    "sha": "2962ce673a4ef39a"
+    "v": "13",
+    "sha": "1dfbd5fece70b55f"
   },
   "assets/day-report-dash.js": {
     "v": "7",
@@ -248,8 +252,8 @@
     "sha": "898481bdffccf542"
   },
   "assets/lucide.min.js": {
-    "v": "2",
-    "sha": "adfae5e6dd059a7b"
+    "v": "4",
+    "sha": "c4b051564898f5a5"
   },
   "assets/menu-catalog.js": {
     "v": "14",

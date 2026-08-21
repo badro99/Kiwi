@@ -3,8 +3,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
+import { fileURLToPath } from 'node:url';
 
-const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const R = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
 let pass = 0; const fails = [];
 const ok = (name, cond, detail = '') => cond ? pass++ : fails.push(name + (detail ? ` — ${detail}` : ''));

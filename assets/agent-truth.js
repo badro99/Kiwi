@@ -17,12 +17,9 @@
   function role() {
     var raw = window.__kiwiRole;
     if (raw == null) raw = storage('kiwiRole');
-    if (raw == null || raw === '') {
-      try {
-        if (window.KiwiEnv && window.KiwiEnv.isDemo && window.KiwiEnv.isDemo()) return 'owner';
-      } catch (_) {}
-      return 'staff';
-    }
+    /* The owner dashboard predates PIN-scoped roles and legitimately has no
+     * role marker. Explicit staff/manager badges still override this below. */
+    if (raw == null || raw === '') return 'owner';
     var id = '';
     try { id = window.KiwiRoles && window.KiwiRoles.idOf ? (window.KiwiRoles.idOf(raw) || '') : ''; } catch (_) {}
     if (id === 'proprietaire') return 'owner';
@@ -88,7 +85,7 @@
     try { fs = window.KiwiFeatureGuide && window.KiwiFeatureGuide.features ? window.KiwiFeatureGuide.features(t) : []; } catch (_) {}
     return {
       venue: { id: venueId(), name: venue().name || venue().label || '', trade: t }, plan: plan(), role: r,
-      aiMode: aiMode(), assistantAccess: 'read-with-confirmed-actions',
+      aiMode: aiMode(), assistantAccess: 'read-only',
       features: fs.map(function (f) {
         var probe = PROBES[f.key]; var live = probe ? !!probe() : false; var page = pageExists(f.nav);
         var enabled = live || page;
@@ -314,17 +311,52 @@
     if (results[token]) return results[token];
     var c = confirmations[token]; if (!c || c.expires < Date.now()) return { ok: false, reason: 'expired' };
     delete confirmations[token];
-    var task = (async function () {
-      if (c.name === 'customer-message-draft') {
-        var href = 'https://wa.me/' + c.args.phone.replace(/[^0-9]/g, '') + '?text=' + encodeURIComponent(c.args.text);
-        var opened = null;
-        try { opened = window.open(href, '_blank', 'noopener'); } catch (_) {}
-        var draft = opened ? { ok: true, outcome: 'draft-opened', sent: false, deliveryVerified: false }
-          : { ok: false, reason: 'popup-blocked' };
-        if (draft.ok) rememberAction(c.commandId, draft);
-        return draft;
-      }
 
+    /* Opening a WhatsApp composer is a draft handoff, not a business-state
+     * mutation. Keep its result synchronous and explicit: opened is not sent. */
+    if (c.name === 'customer-message-draft') {
+      var href = 'https://wa.me/' + c.args.phone.replace(/[^0-9]/g, '') + '?text=' + encodeURIComponent(c.args.text);
+      var opened = null;
+      try { opened = window.open(href, '_blank', 'noopener'); } catch (_) {}
+      var draft = opened ? { ok: true, outcome: 'draft-opened', sent: false, deliveryVerified: false }
+        : { ok: false, reason: 'popup-blocked' };
+      if (draft.ok) rememberAction(c.commandId, draft);
+      results[token] = draft;
+      return draft;
+    }
+
+    /* Isolated demos and the release harness expose the real adapters without
+     * the hosted audit facade. Keep their established synchronous stock and
+     * asynchronous order contracts; a hosted session still fails closed when
+     * KiwiOperations is missing. */
+    var legacy = !window.KiwiEnv;
+    try { legacy = legacy || !!(window.KiwiEnv && window.KiwiEnv.isDemo && window.KiwiEnv.isDemo()); } catch (_) {}
+    if (legacy && c.name === 'stock-adjust') {
+      var legacyMovement = window.KiwiInventory.add({ id: 'ai-stock-' + venueId().replace(/[^a-zA-Z0-9_-]/g, '-') + '-' + c.commandId, itemId: c.args.itemId, qty: c.args.qty, reason: c.args.reason, note: c.args.note, refType: 'assistant-confirmed', refId: c.commandId });
+      var legacyStock = legacyMovement ? { ok: true, id: legacyMovement.id } : { ok: false, reason: 'write-refused' };
+      results[token] = legacyStock.ok ? rememberAction(c.commandId, legacyStock) : legacyStock;
+      return results[token];
+    }
+    if (legacy && c.name === 'order-status') {
+      var legacyOrder = window.KiwiOrderInbox.setStatus(c.args.orderId, c.args.status, c.args.station ? { station: c.args.station } : {})
+        .then(function (j) { return rememberAction(c.commandId, j && (j.ok || j.status === c.args.status) ? { ok: true, id: c.args.orderId, status: c.args.status } : { ok: false, reason: (j && (j.error || j.reason)) || 'write-refused' }); })
+        .catch(function () { return { ok: false, reason: 'network' }; });
+      results[token] = legacyOrder;
+      return legacyOrder;
+    }
+    if (legacy && c.name === 'reprint') {
+      var legacyReceipt = (window.KiwiPosReprint.rows(c.args.vertical) || []).find(function (x) { return x && String(x.ref) === c.args.ref; });
+      if (!legacyReceipt) return { ok: false, reason: 'receipt-not-found' };
+      var legacyPrint = Promise.resolve(window.KiwiPosReprint.reprint(c.args.vertical, legacyReceipt)).then(function (j) {
+        var out = j && j.ok ? { ok: true, ref: c.args.ref, physicalVerified: true } : { ok: false, reason: 'print-not-confirmed' };
+        if (out.ok) rememberAction(c.commandId, out);
+        return out;
+      }).catch(function () { return { ok: false, reason: 'print-failed' }; });
+      results[token] = legacyPrint;
+      return legacyPrint;
+    }
+
+    var task = (async function () {
       var O = window.KiwiOperations;
       if (!O || typeof O.agentRun !== 'function' || typeof O.transition !== 'function') return { ok: false, reason: 'audit-unavailable' };
       if (typeof navigator !== 'undefined' && navigator.onLine === false) return { ok: false, reason: 'offline' };
