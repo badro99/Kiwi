@@ -1314,19 +1314,68 @@
   .dash-date-range { display: flex; justify-content: space-between; align-items: center; gap: 24px; margin: 22px 0 26px; flex-wrap: wrap; }
   .dash-date-range .dr-label { font-size: 34px; font-weight: 600; letter-spacing: -0.028em; color: var(--ink); line-height: 1.1; }
   .dash-date-range .dr-sub { font-size: 13.5px; color: var(--n-500); margin-top: 6px; font-family: var(--mono); letter-spacing: 0.01em; }
-  .dr-pills { display: inline-flex; gap: 8px; background: var(--paper-soft); padding: 4px; border-radius: 999px; border: 1px solid var(--n-200); flex-wrap: wrap; }
-  .dr-pill {
-    padding: 9px 16px; border-radius: 999px; font-size: 13px; font-weight: 500;
-    color: var(--n-500); background: transparent; letter-spacing: -0.005em;
-    transition: transform 120ms var(--spring), background 150ms ease, color 150ms ease, box-shadow 150ms ease;
-    cursor: pointer; white-space: nowrap; border: none;
+  .dr-pills {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    background: rgba(18, 24, 21, 0.75);
+    padding: 4px;
+    border-radius: 999px;
+    border: 1px solid var(--n-200);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3), 0 2px 8px -2px rgba(0, 0, 0, 0.25);
+    flex-wrap: wrap;
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
   }
-  .dr-pill:hover:not(.on) { background: var(--n-100); color: var(--ink); }
+  :root[data-theme="light"] .dr-pills {
+    background: rgba(0, 0, 0, 0.04);
+    border-color: rgba(0, 0, 0, 0.08);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.03);
+  }
+  .dr-pill {
+    padding: 7px 15px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--n-500);
+    background: transparent;
+    letter-spacing: -0.01em;
+    transition: transform 120ms var(--spring), background 160ms cubic-bezier(0.16, 1, 0.3, 1), color 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+    cursor: pointer;
+    white-space: nowrap;
+    border: 1px solid transparent;
+  }
+  .dr-pill:hover:not(.on) {
+    background: rgba(255, 255, 255, 0.07);
+    color: var(--ink);
+  }
+  :root[data-theme="light"] .dr-pill:hover:not(.on) {
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--ink);
+  }
   .dr-pill:active { transform: scale(0.97); }
-  .dr-pill:focus-visible { outline: 2px solid var(--atlas); outline-offset: 2px; }
-  .dr-pill.on { background: linear-gradient(135deg, var(--atlas) 0%, var(--riad) 100%); color: var(--paper); box-shadow: 0 4px 14px -4px rgba(11,110,79,0.45), 0 1px 2px rgba(0,0,0,0.04); }
-  .dr-pills.compact { padding: 3px; gap: 3px; }
-  .dr-pills.compact .dr-pill { padding: 6px 12px; font-size: 12px; }
+  .dr-pill:focus-visible { outline: 2px solid var(--mint); outline-offset: 2px; }
+  .dr-pill.on {
+    background: linear-gradient(180deg, rgba(31, 144, 105, 0.34) 0%, rgba(19, 133, 95, 0.22) 100%);
+    color: #FFFFFF !important;
+    font-weight: 600;
+    border-color: rgba(0, 255, 174, 0.42);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.22),
+      0 2px 10px -1px rgba(0, 255, 174, 0.25),
+      0 1px 3px rgba(0, 0, 0, 0.5);
+  }
+  :root[data-theme="light"] .dr-pill.on {
+    background: #FFFFFF;
+    color: #0B1210 !important;
+    font-weight: 600;
+    border-color: rgba(0, 0, 0, 0.08);
+    box-shadow:
+      0 1px 3px rgba(0, 0, 0, 0.08),
+      0 4px 12px -3px rgba(0, 0, 0, 0.07);
+  }
+  .dr-pills.compact { padding: 3px; gap: 2px; }
+  .dr-pills.compact .dr-pill { padding: 5px 11px; font-size: 12px; }
   @media (max-width: 720px) { .dash-date-range .dr-label { font-size: 26px; } }
 
   /* ─────────────── DATE RANGE · custom-range picker ─────────────── */
@@ -5109,7 +5158,7 @@
      Inert unless body.design-vexel. ON by default for every merchant since the
      v2 design migration — ?skin=off or KiwiDesignVexel.disable() opts out.
      Loads LAST of the three skins so it wins where they overlap. -->
-<link rel="stylesheet" href="assets/design-vexel.css?v=2095" />
+<link rel="stylesheet" href="assets/design-vexel.css?v=2096" />
 <!-- Pressing owner workspace — exact-trade layer, inert for every other venue. -->
 <link rel="stylesheet" href="assets/pressing-catalog.css?v=4" />
 <link rel="stylesheet" href="assets/pressing-dashboard.css?v=10" />
