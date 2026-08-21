@@ -129,8 +129,6 @@
       .acc-logo-picker { display:flex; align-items:center; gap:12px; padding:10px; border:1px solid var(--n-200); border-radius:11px; }
       .acc-logo-preview { width:54px; height:54px; border-radius:12px; display:grid; place-items:center; overflow:hidden; background:var(--mint-soft); color:var(--atlas); font-weight:700; flex-shrink:0; }
       .acc-logo-preview img { width:100%; height:100%; object-fit:contain; background:#fff; }
-      .acc-logo-actions { display:flex; gap:8px; flex-wrap:wrap; }
-      .acc-plan-btns { display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
       .acc-kpi-band { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:18px; }
       @media (max-width:900px){ .acc-kpi-band { grid-template-columns:repeat(2,1fr); } }
       @media (max-width:520px){ .acc-kpi-band { grid-template-columns:1fr; } }
@@ -164,6 +162,13 @@
       .acc-fleet-role { font-size:11.5px; color:var(--n-500); margin-top:2px; }
       .acc-fleet-status { display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:600; color:var(--success); margin-top:6px; background:rgba(0,255,174,0.1); padding:2px 7px; border-radius:6px; }
       .acc-fleet-status .dot { width:6px; height:6px; border-radius:50%; background:var(--success); }
+
+      /* RTL alignment polish */
+      [dir="rtl"] .acc-kpi-box,
+      [dir="rtl"] .acc-hero-left,
+      [dir="rtl"] .acc-fleet-card { text-align: start; }
+      [dir="rtl"] .acc-hero-avatar { margin-left: 0; margin-right: 0; }
+      [dir="rtl"] .acc-meter-track { direction: ltr; }
 
       .acc-danger { color:var(--danger); cursor:pointer; font-weight:600; font-size:12.5px; background:transparent; border:1px solid color-mix(in srgb,var(--danger) 38%,transparent); border-radius:9px; padding:9px 16px; font-family:var(--sans); transition:background 140ms; }
       .acc-danger:hover { background:color-mix(in srgb,var(--danger) 10%,transparent); }
@@ -912,22 +917,75 @@
     });
   }
   function planCancelModal() {
+    const L = (k) => pick(k);
     const m = Kiwi.modal({
-      tag: pick({ fr: 'RÉSILIATION', en: 'CANCELLATION', ar: 'إلغاء' }),
-      title: pick({ fr: 'Résilier votre abonnement', en: 'Cancel your subscription', ar: 'إلغاء اشتراكك' }), width: 470,
-      body: `<p style="font-size:14px; color:var(--n-600); line-height:1.6; margin:0 0 16px;">${esc(pick({
-        fr: "La résiliation se fait avec votre account manager Kiwi, pour exporter vos données, planifier la transition et éviter toute interruption de service. Contactez-nous :",
-        en: 'Cancellation goes through your Kiwi account manager, to export your data, plan the transition and avoid any service interruption. Reach us:',
-        ar: 'يتم الإلغاء عبر مدير حسابك في كيوي, لتصدير بياناتك وتخطيط الانتقال وتجنّب أي انقطاع. تواصل معنا:' }))}</p>
-        <div class="acc-contact" style="margin-bottom:0;">
-          <div class="acc-contact-card" data-action="help-whatsapp"><div class="t">Kiwi Support</div><div class="d">${esc(pick({ fr: 'Créer une demande suivie', en: 'Create a tracked request', ar: 'إنشاء طلب متابع' }))}</div></div>
+      tag: pick({ fr: 'RÉSILIATION & PAUSE', en: 'CANCELLATION & PAUSE', ar: 'الإلغاء والإيقاف المؤقت' }),
+      title: L({ fr: 'Gérer ou résilier votre abonnement', en: 'Manage or cancel your subscription', ar: 'إدارة أو إلغاء اشتراكك' }),
+      width: 500,
+      desc: L({
+        fr: 'Sans engagement. Vos données restent archivées et exportables en conformité légale.',
+        en: 'No commitment. Your data remains archived and exportable for legal compliance.',
+        ar: 'بدون التزام. تبقى بياناتك محفوظة وقابلة للتصدير وفقاً للمعايير القانونية.',
+      }),
+      body: `
+        <div style="display:flex; flex-direction:column; gap:16px;">
+          <div class="acc-card" style="background:var(--paper-soft);border-radius:12px;padding:14px;">
+            <div style="font-weight:600;font-size:13.5px;margin-bottom:4px;color:var(--ink);">${esc(L({ fr: 'Mettre en pause plutôt que résilier ?', en: 'Pause instead of canceling?', ar: 'إيقاف مؤقت بدلاً من الإلغاء؟' }))}</div>
+            <div style="font-size:12px;color:var(--n-500);line-height:1.45;">${esc(L({ fr: 'Pour les activités saisonnières, suspendez vos prélèvements tout en conservant vos accès, catalogues et historiques intacts.', en: 'For seasonal businesses, pause billing while keeping access, menus, and reports intact.', ar: 'للأنشطة الموسمية، أوقف الخصم مع الحفاظ على الكتالوج والتقارير.' }))}</div>
+            <button class="acc-cta ghost" data-pause type="button" style="margin-top:10px;font-size:12px;padding:7px 12px;">${esc(L({ fr: 'Mettre en pause 1 à 3 mois', en: 'Pause for 1 to 3 months', ar: 'إيقاف مؤقت من 1 إلى 3 أشهر' }))}</button>
+          </div>
+
+          <div>
+            <label class="acc-lbl" style="margin-top:0;">${esc(L({ fr: 'Motif principal (facultatif)', en: 'Main reason (optional)', ar: 'السبب الرئيسي (اختياري)' }))}</label>
+            <select class="acc-sel" id="accf-cancel-reason">
+              <option value="pause">${esc(L({ fr: 'Activité saisonnière / Fermeture temporaire', en: 'Seasonal business / Temporary pause', ar: 'نشاط موسمي / إغلاق مؤقت' }))}</option>
+              <option value="closing">${esc(L({ fr: 'Fermeture définitive de l’établissement', en: 'Permanent business closure', ar: 'إغلاق نهائي للمؤسسة' }))}</option>
+              <option value="features">${esc(L({ fr: 'Besoin de fonctionnalités spécifiques', en: 'Need specific features', ar: 'بحاجة لميزات إضافية' }))}</option>
+              <option value="other">${esc(L({ fr: 'Autre raison', en: 'Other reason', ar: 'سبب آخر' }))}</option>
+            </select>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; border:1px solid var(--n-200); border-radius:12px; padding:12px 14px;">
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--ink);">${esc(L({ fr: 'Export fiscal complet (ZIP / CSV)', en: 'Full tax & sales export (ZIP / CSV)', ar: 'تصدير ضريبي كامل (ZIP / CSV)' }))}</div>
+              <div style="font-size:11.5px;color:var(--n-500);">${esc(L({ fr: 'Grand livre, clôtures Z et historique des tickets', en: 'General ledger, Z-reports, and ticket history', ar: 'دفتر الأستاذ والتقارير اليومية وتذاكر البيع' }))}</div>
+            </div>
+            <button class="acc-cta ghost" data-export-data type="button" style="font-size:11.5px;padding:6px 10px;">${esc(L({ fr: 'Exporter', en: 'Export', ar: 'تصدير' }))}</button>
+          </div>
         </div>`,
-      foot: `<button class="kb atlas" data-callback type="button" style="width:100%;justify-content:center;padding:12px;">${esc(pick({ fr: 'Demander un rappel pour résilier', en: 'Request a call-back to cancel', ar: 'طلب اتصال للإلغاء' }))}</button>`,
+      foot: `
+        <button class="kb ghost" data-cancel type="button" style="flex:1;justify-content:center;">${esc(L({ fr: 'Conserver mon offre', en: 'Keep my plan', ar: 'الاحتفاظ باشتراكي' }))}</button>
+        <button class="kb danger" data-confirm-cancel type="button" style="flex:1;justify-content:center;background:var(--danger);color:#fff;border-color:var(--danger);">${esc(L({ fr: 'Confirmer la résiliation', en: 'Confirm cancellation', ar: 'تأكيد الإلغاء' }))}</button>`,
     });
     m.el.addEventListener('click', (e) => {
-      if (!e.target.closest('[data-callback]')) return;
-      m.close();
-      if (window.KiwiHelp) window.KiwiHelp.openContact();
+      if (e.target.closest('[data-cancel]')) { m.close(); return; }
+      if (e.target.closest('[data-pause]')) {
+        m.close();
+        Kiwi.toast(pick({
+          fr: 'Abonnement mis en pause. Aucun prélèvement ne sera effectué le mois prochain.',
+          en: 'Subscription paused. No charges will occur next month.',
+          ar: 'تم إيقاف الاشتراك مؤقتاً. لن يتم أي خصم الشهر القادم.',
+        }), { type: 'success', force: true });
+        return;
+      }
+      if (e.target.closest('[data-export-data]')) {
+        Kiwi.toast(pick({
+          fr: 'Archive fiscale exportée (clôtures Z & tickets).',
+          en: 'Tax archive exported (Z-reports & tickets).',
+          ar: 'تم تصدير الأرشيف الضريبي (التقارير اليومية والتذاكر).',
+        }), { type: 'success', force: true });
+        return;
+      }
+      if (e.target.closest('[data-confirm-cancel]')) {
+        try { localStorage.setItem('kiwiSet:planStatus', 'canceled'); } catch (_) {}
+        m.close();
+        setTimeout(openBilling, 80);
+        Kiwi.toast(pick({
+          fr: 'Demande de résiliation enregistrée. Votre accès reste actif jusqu’au 1er septembre 2026.',
+          en: 'Cancellation confirmed. Your access remains active until 1 September 2026.',
+          ar: 'تم تسجيل طلب الإلغاء. يظل حسابك نشطاً حتى 1 شتنبر 2026.',
+        }), { type: 'warn', force: true });
+      }
     });
   }
 
@@ -1291,11 +1349,66 @@
     handlers['account-plan-cancel'] = () => planCancelModal();
     handlers['account-dl-invoice'] = (el) => {
       const inv = el?.getAttribute?.('data-inv') || 'KIWI-INV-2026-08';
-      Kiwi.toast(pick({
-        fr: `Facture ${inv} téléchargée au format PDF`,
-        en: `Invoice ${inv} downloaded as PDF`,
-        ar: `تم تنزيل الفاتورة ${inv} بصيغة PDF`,
-      }), { type: 'success', force: true });
+      const p = el?.closest('tr')?.querySelector('b')?.textContent || 'Août 2026';
+      const L = (k) => pick(k);
+      
+      const html = `
+        <div style="font-family:system-ui,-apple-system,sans-serif;padding:20px;color:var(--ink);background:var(--surface);border:1px solid var(--n-200);border-radius:14px;max-width:440px;margin:auto;">
+          <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid var(--atlas);padding-bottom:12px;margin-bottom:16px;">
+            <div>
+              <div style="font-size:20px;font-weight:800;color:var(--atlas);letter-spacing:-0.03em;">KIWI POS</div>
+              <div style="font-size:11px;color:var(--n-500);">Kiwi Technologies SARL</div>
+            </div>
+            <div style="text-align:end;">
+              <div style="font-size:12.5px;font-weight:700;color:var(--success);">✓ ${esc(L({ fr: 'FACTURE ACQUITTÉE', en: 'PAID INVOICE', ar: 'فاتورة مدفوعة' }))}</div>
+              <div style="font-family:var(--mono);font-size:11px;color:var(--n-500);">${esc(inv)}</div>
+            </div>
+          </div>
+          <div style="font-size:12.5px;margin-bottom:14px;line-height:1.6;">
+            <div><b>${esc(L({ fr: 'Client :', en: 'Merchant:', ar: 'الزبون:' }))}</b> ${esc(biz)}</div>
+            <div><b>${esc(L({ fr: 'Période :', en: 'Period:', ar: 'الفترة:' }))}</b> ${esc(p)}</div>
+            <div><b>${esc(L({ fr: 'Paiement :', en: 'Payment:', ar: 'طريقة الدفع:' }))}</b> ${esc(cardSaved)}</div>
+          </div>
+          <table style="width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:16px;">
+            <thead>
+              <tr style="border-bottom:1px solid var(--n-200);text-align:start;">
+                <th style="padding:6px 0;font-weight:600;">Description</th>
+                <th style="text-align:end;padding:6px 0;font-weight:600;">Total HT</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="padding:8px 0;">Abonnement ${esc(plan.name)} · 1 mois</td>
+                <td style="text-align:end;padding:8px 0;font-family:var(--mono);">332,50 MAD</td>
+              </tr>
+              <tr style="border-top:1px solid var(--n-100);">
+                <td style="padding:6px 0;color:var(--n-500);">TVA légale (20%)</td>
+                <td style="text-align:end;padding:6px 0;font-family:var(--mono);color:var(--n-500);">66,50 MAD</td>
+              </tr>
+              <tr style="border-top:2px solid var(--n-300);font-weight:700;font-size:14px;">
+                <td style="padding:8px 0;">Total TTC</td>
+                <td style="text-align:end;padding:8px 0;font-family:var(--mono);color:var(--atlas);">${esc(plan.price)} MAD</td>
+              </tr>
+            </tbody>
+          </table>
+          <div style="text-align:center;font-size:11px;color:var(--n-500);border-top:1px dashed var(--n-200);padding-top:12px;">
+            Facture électronique certifiée conforme · ICE: 003291823000045 · RC Casablanca
+          </div>
+        </div>`;
+
+      const m = Kiwi.modal({
+        tag: pick({ fr: 'JUSTIFICATIF COMPTABLE', en: 'TAX RECEIPT', ar: 'إيصال ضريبي' }),
+        title: `${esc(inv)} · ${esc(p)}`,
+        width: 490,
+        body: html,
+        foot: `<button class="kb ghost" data-close type="button" style="flex:1;justify-content:center;">${esc(L({ fr: 'Fermer', en: 'Close', ar: 'إغلاق' }))}</button><button class="kb atlas" data-print type="button" style="flex:1;justify-content:center;">${esc(L({ fr: 'Imprimer / Enregistrer PDF', en: 'Print / Save PDF', ar: 'طباعة / حفظ PDF' }))}</button>`,
+      });
+      m.el.addEventListener('click', (e) => {
+        if (e.target.closest('[data-close]')) m.close();
+        if (e.target.closest('[data-print]')) {
+          window.print();
+        }
+      });
     };
   }
 

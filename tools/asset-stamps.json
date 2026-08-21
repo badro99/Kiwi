@@ -1,7 +1,7 @@
 {
   "assets/account.js": {
-    "v": "10",
-    "sha": "14060457cdd96302"
+    "v": "11",
+    "sha": "2b239417ecbd9a80"
   },
   "assets/admin-support.css": {
     "v": "2",
@@ -132,7 +132,7 @@
     "sha": "4653bd4327ca681e"
   },
   "assets/design-vexel.css": {
-    "v": "2090",
+    "v": "2091",
     "sha": "5538c71aada02843"
   },
   "assets/design-vexel.js": {
@@ -204,7 +204,7 @@
     "sha": "5f0a4000cc13db93"
   },
   "assets/interactive.js": {
-    "v": "11",
+    "v": "12",
     "sha": "a75946413ffa89bd"
   },
   "assets/inventory-consumption.js": {

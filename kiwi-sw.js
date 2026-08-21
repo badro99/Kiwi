@@ -76,7 +76,7 @@ var SHELL = [
      d'inscription la lisent à l'évaluation : sans elle hors ligne, un
      établissement retombe sur la famille par défaut. */
   '/assets/trades.js?v=6',
-  '/assets/interactive.js?v=11',
+  '/assets/interactive.js?v=12',
   '/assets/features.js?v=3',
   '/assets/invoicing.css?v=6',
   '/assets/invoicing.js?v=6',
@@ -129,7 +129,7 @@ var SHELL = [
   '/assets/liquid-lens.js',
   '/assets/pages.js',
   '/assets/help-centre.js?v=4',
-  '/assets/account.js?v=10',
+  '/assets/account.js?v=11',
   '/assets/production-action-guard.js',
   // Shared floor-plan vocabulary — the dashboard designer AND the caisse both
   // read it, so leaving it out of the shell meant the till could come up
