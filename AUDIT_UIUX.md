@@ -119,3 +119,12 @@ Ce document consigne l'ensemble des audits visuels, ergonomiques, d'accessibilit
   1. Refonte visuelle des états vides de recherche et de commandes prêtes avec médaillon Material Symbol (`inventory_2`) et hiérarchie typographique.
   2. Bumping de la révision `pressing-caisse.js?v=34` dans le dispatcher.
 - **État** : ✅ Déployé
+
+### 7.2 Vertical Boutique (`assets/pos-boutique.js`)
+- **Fichiers** : `assets/pos-boutique.js:1684`, `assets/pos-boutique.js:2707`, `assets/pos-dispatch.js:58`
+- **Problèmes identifiés** :
+  1. Panier/ticket vide et onglet échanges & avoirs sans médaillon Material Symbols.
+- **Améliorations apportées** :
+  1. Harmonisation des états vides avec médaillon Material Symbol (`inventory_2`), titrage structuré et indication claire du geste de scan douchette.
+  2. Bumping de la révision `pos-boutique.js?v=3` dans le dispatcher.
+- **État** : ✅ Déployé

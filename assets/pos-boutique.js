@@ -1681,9 +1681,12 @@
       <div class="bq-tk-meta">${clientRow(t)}${rewardRow(t)}</div>
       <div class="bq-tk-lines" id="bq-tk-lines">
         ${t.lines.length ? t.lines.map((ln, i) => lineRow(ln, i)).join('') : `
-          <div class="bq-tk-empty">
-            <i data-lucide="shopping-bag"></i>
-            <div>Le ticket est vide.<br>Touchez un article dans la grille, ou scannez son code-barres.</div>
+          <div class="bq-tk-empty" style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:32px 14px; gap:8px;">
+            <div style="width:40px; height:40px; border-radius:12px; background:rgba(11,110,79,0.10); color:var(--atlas); display:grid; place-items:center; margin-bottom:4px;">
+              <svg width="20" height="20" viewBox="0 -960 960 960" fill="currentColor"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg>
+            </div>
+            <div style="font-weight:600; font-size:14px; color:var(--ink);">Le ticket est vide.</div>
+            <div style="font-size:12.5px; color:var(--n-500); line-height:1.45;">Touchez un article dans la grille, ou scannez son code-barres.</div>
           </div>`}
       </div>
       <div class="bq-tk-foot">
@@ -2704,10 +2707,10 @@
                 </button>`).join('')}
             </div>` : ''}
           ${hits.map((s) => saleCard(s, ret)).join('') || (String(q).trim()
-            ? `<div class="bq-empty">Rien pour « ${esc(q)} », vérifiez le n° de ticket ou le téléphone.</div>`
+            ? `<div class="bq-empty" style="display:flex; flex-direction:column; align-items:center; padding:36px 16px;"><div style="width:40px; height:40px; border-radius:12px; background:rgba(11,110,79,0.10); color:var(--atlas); display:grid; place-items:center; margin-bottom:10px;"><svg width="20" height="20" viewBox="0 -960 960 960" fill="currentColor"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg></div><div style="font-weight:600; color:var(--ink);">Rien pour « ${esc(q)} »</div><div style="font-size:12.5px; color:var(--n-500); margin-top:4px;">Vérifiez le n° de ticket ou le téléphone.</div></div>`
             /* Rien tapé encore : une boutique sans vente du jour ouvrait cette page
                sur « Rien pour «  » », un échec de recherche que personne n'a lancée. */
-            : `<div class="bq-empty">Scannez le ticket de la cliente, ou tapez son numéro de téléphone.</div>`)}
+            : `<div class="bq-empty" style="display:flex; flex-direction:column; align-items:center; padding:36px 16px;"><div style="width:40px; height:40px; border-radius:12px; background:rgba(11,110,79,0.10); color:var(--atlas); display:grid; place-items:center; margin-bottom:10px;"><svg width="20" height="20" viewBox="0 -960 960 960" fill="currentColor"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg></div><div style="font-weight:600; color:var(--ink);">Retrouver une vente</div><div style="font-size:12.5px; color:var(--n-500); margin-top:4px;">Scannez le ticket de la cliente, ou tapez son numéro de téléphone.</div></div>`)}
         </div></div>
       </div>`;
     $('#bq-ret-q', panel).oninput = (e) => {

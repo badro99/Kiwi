@@ -356,12 +356,12 @@
     "sha": "ac78c0749459ae37"
   },
   "assets/pos-boutique.css": {
-    "v": "2",
+    "v": "3",
     "sha": "42a2a9683aad20a9"
   },
   "assets/pos-boutique.js": {
-    "v": "2",
-    "sha": "bdb51da38d1a9efb"
+    "v": "3",
+    "sha": "5dd0c6a66ac9f698"
   },
   "assets/pos-coiffure.css": {
     "v": "2",
@@ -373,7 +373,7 @@
   },
   "assets/pos-dispatch.js": {
     "v": "30",
-    "sha": "6c15d06586a4c47c"
+    "sha": "2c457feb2dbbfcf1"
   },
   "assets/pos-epicerie.css": {
     "v": "2",
