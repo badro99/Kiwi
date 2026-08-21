@@ -4566,17 +4566,18 @@
     .fa-dock { border-top:1px solid var(--n-200); background:var(--paper);
       padding:15px clamp(20px,8%,120px) 19px; }
     .fa-dock-in { max-width:730px; margin:0 auto; }
-    .fa-inputwrap { display:flex; align-items:center; gap:8px; background:var(--surface,#fff);
-      border:1.5px solid var(--n-300,#E0DFDB); border-radius:999px; padding:6px 6px 6px 18px; min-height:52px;
+    .fa-inputwrap { display:flex; align-items:center; gap:10px; background:var(--surface,#fff);
+      border:1.5px solid var(--n-300,#E0DFDB); border-radius:999px; padding:6px 8px 6px 20px; min-height:52px; box-sizing:border-box;
       box-shadow:0 4px 20px -2px rgba(10,15,13,.06), 0 1px 3px rgba(10,15,13,.04);
       transition:border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease; }
     .fa-inputwrap:focus-within { border-color:var(--atlas,#0B6E4F); background:#fff;
       box-shadow:0 6px 24px -4px rgba(11,110,79,.18), 0 0 0 3px rgba(11,110,79,.12); }
     .fa-input { flex:1; min-width:0; resize:none; border:none !important; outline:none !important;
       box-shadow:none !important; background:transparent !important; background-color:transparent !important;
-      -webkit-appearance:none; appearance:none; font:inherit; font-size:15px; line-height:24px;
-      padding:6px 0; margin:0 !important; height:24px; min-height:24px; max-height:140px; color:var(--ink,#0A0F0D); }
-    .fa-input::placeholder { color:var(--n-500,#8A948F); font-size:14.5px; opacity:.8; letter-spacing:-.01em; }
+      -webkit-appearance:none; appearance:none; font:inherit; font-size:15px; line-height:22px;
+      padding:0; margin:0 !important; height:22px; min-height:22px; max-height:140px; color:var(--ink,#0A0F0D);
+      box-sizing:border-box; display:block; align-self:center; }
+    .fa-input::placeholder { color:var(--n-500,#8A948F); font-size:14.5px; opacity:.85; letter-spacing:-.01em; line-height:22px; }
     .fa-send { width:38px; height:38px; min-width:38px; min-height:38px; border-radius:50%; border:none; flex-shrink:0; cursor:pointer;
       background:var(--atlas,#0B6E4F); color:#fff; display:inline-flex; align-items:center; justify-content:center;
       padding:0; margin:0; box-shadow:0 2px 8px rgba(11,110,79,.28);
@@ -5378,8 +5379,10 @@
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
     });
     input.addEventListener('input', () => {
-      input.style.height = 'auto';
-      input.style.height = Math.min(input.scrollHeight, 130) + 'px';
+      input.style.height = '22px';
+      if (input.scrollHeight > 24) {
+        input.style.height = Math.min(input.scrollHeight, 130) + 'px';
+      }
     });
 
     // ─── chips + follow-ups + facts (delegated) ───
