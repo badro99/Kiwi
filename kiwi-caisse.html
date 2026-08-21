@@ -5349,7 +5349,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=399" defer></script>
+  <script src="assets/caisse-pwa.js?v=400" defer></script>
   <script src="assets/live-link.js?v=15" defer></script>
   <!-- The staff-role catalogue — says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -8372,8 +8372,9 @@
         serverRow.hidden = true;
       }
 
-      // Split-in-progress card
+      // Split-in-progress card and table tools
       renderRpSplitCard(id);
+      const tt = $('#rp-table-tools'); if (tt) tt.hidden = false;
 
       // Remise — recompute the discount amount against the current gross
       const discAmt = discountAmountFor(id, total);
@@ -9380,9 +9381,10 @@
       active.hidden = false;
       active.style.display = 'flex';
 
-      // Hide server row and split card in vrap mode
+      // Hide server row, split card, and table tools in vrap mode
       const sr = $('#rp-server-row'); if (sr) sr.hidden = true;
       const sc = $('#rp-split-card'); if (sc) sc.hidden = true;
+      const tt = $('#rp-table-tools'); if (tt) tt.hidden = true;
 
       // Header
       $('#rp-table').textContent = editing ? `À emporter · #${vrapEditingNum}` : 'À emporter';
@@ -11044,6 +11046,7 @@
         sr.hidden = true;
       }
       const sc = $('#rp-split-card'); if (sc) sc.hidden = true;
+      const tt = $('#rp-table-tools'); if (tt) tt.hidden = true;
 
       $('#rp-table').textContent = `${tableId} · ${t.covers} couvert${t.covers > 1 ? 's' : ''}`;
       /* Ce qui est DÉJÀ parti, et ce qui reste à envoyer. La distinction est le
@@ -16788,9 +16791,32 @@
       } catch (_) {}
     }
 
-    /* À emporter — push the current cart to the kitchen screen as a new order */
+    /* À emporter / Table — push current items to the kitchen */
     function sendToKitchen() {
-      if (mode !== 'vrap' || cart.length === 0) { toast('Ajoute des articles d\'abord'); return; }
+      if (mode === 'order' && selectedId) {
+        validateOrder(selectedId);
+        return;
+      }
+      const list = (cart && cart.length) ? cart : (selectedId && tableOrders[selectedId] && tableOrders[selectedId].length ? tableOrders[selectedId] : []);
+      if (!list.length) { toast('Ajoute des articles d\'abord'); return; }
+
+      if (vrapEditingNum != null) {
+        const o = kdsOrders.find(x => x.num === vrapEditingNum);
+        if (o) {
+          saveVrapEdits();
+          const items = kitchenItemsFromLines(cart);
+          printKitchenTickets(o, items);
+          try { persistShift(); } catch (_) {}
+          updateKdsCount();
+          if (kdsEl.classList.contains('is-open')) kdsPaint();
+          clearCart();
+          setVrapView('board');
+          toast(`Commande #${o.num} mise à jour en cuisine`);
+          return;
+        }
+      }
+
+      if (!cart.length && list.length) cart = list.slice();
       const total  = cart.reduce((s, l) => s + l.price * l.qty, 0);
       const items = kitchenItemsFromLines(cart);
       const order = {
@@ -16805,7 +16831,7 @@
          après l'envoi, le board À emporter et la clé d'impression restent. */
       try { persistShift(); } catch (_) {}
       // …et sur la tablette de la cuisine, qui n'a pas d'imprimante.
-      const count = cart.reduce((s, l) => s + l.qty, 0);
+      const count = list.reduce((s, l) => s + l.qty, 0);
       updateKdsCount();
       if (kdsEl.classList.contains('is-open')) kdsPaint();
       clearCart();
@@ -16999,6 +17025,7 @@
     function openVrapOrder(num) {
       const o = kdsOrders.find(x => x.num === num);
       if (!o || o.paid) return;
+      if (mode !== 'vrap') setMode('vrap');
       vrapEditingNum = num;
       vrapDiscount   = null;
       cart = vrapFinancialItems(o).map(i => {
@@ -17014,6 +17041,11 @@
         };
       });
       setVrapView('builder');
+      const vrapTitle = $('.main-head[data-mode-section="vrap"] .main-title');
+      if (vrapTitle) {
+        vrapTitle.innerHTML = `Commande <strong style="color:var(--forest)">#${num}</strong>
+          <span class="order-mode-badge"><i data-lucide="package"></i> à emporter</span>`;
+      }
       renderMenu();
       renderCart();
       // Re-trigger the panel slide-in so the order visibly lands.
@@ -17023,15 +17055,20 @@
 
     /* Réduction on the À emporter cart — same modal as the Salle remise. */
     function openVrapRemise() {
-      if (mode !== 'vrap' || cart.length === 0) { toast('Ajoute des articles d\'abord'); return; }
-      const gross = cart.reduce((s, l) => s + l.price * l.qty, 0);
-      remiseState.target  = 'vrap';
-      remiseState.tableId = null;
+      if (mode === 'order' && selectedId) {
+        openSalleRemise(selectedId);
+        return;
+      }
+      const list = (cart && cart.length) ? cart : (selectedId && tableOrders[selectedId] && tableOrders[selectedId].length ? tableOrders[selectedId] : []);
+      if (!list.length) { toast('Ajoute des articles d\'abord'); return; }
+      const gross = list.reduce((s, l) => s + l.price * l.qty, 0);
+      remiseState.target  = (mode === 'order' && selectedId) ? 'table' : 'vrap';
+      remiseState.tableId = (mode === 'order' && selectedId) ? selectedId : null;
       remiseState.gross   = gross;
       remiseState.kind    = 'pct';
       remiseState.value   = 0;
       remiseState.reason  = 'Geste commercial';
-      $('#rm-subtle').innerHTML = `À emporter · addition <span class="mono">${fmtMAD(gross)}</span>`;
+      $('#rm-subtle').innerHTML = `${remiseState.target === 'table' ? 'Table ' + selectedId : 'À emporter'} · addition <span class="mono">${fmtMAD(gross)}</span>`;
       $('#rm-amount').value = '';
       $$('#rm-pct-chips .rm-pct-chip').forEach(c => c.classList.remove('is-active'));
       $$('#rm-reasons .rm-reason').forEach(b =>
