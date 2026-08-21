@@ -129,7 +129,7 @@ var SHELL = [
   '/assets/liquid-lens.js',
   '/assets/pages.js',
   '/assets/help-centre.js?v=4',
-  '/assets/account.js?v=12',
+  '/assets/account.js?v=13',
   '/assets/production-action-guard.js',
   // Shared floor-plan vocabulary — the dashboard designer AND the caisse both
   // read it, so leaving it out of the shell meant the till could come up

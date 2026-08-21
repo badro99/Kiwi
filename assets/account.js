@@ -1041,49 +1041,62 @@
     const plan = PLAN_INFO[planKey] || PLAN;
     const cardSaved = getSet("card", "Mastercard •• 4291");
 
-    // ── 100% REAL DYNAMIC DATA FROM SESSION & STORAGE (NO FABRICATIONS) ──
+    // ── Données réelles — lues dans les magasins qui existent VRAIMENT.
+    // KiwiSales est le grand livre du tableau de bord (la caisse l'alimente
+    // par Live Link) ; KiwiMenu expose la carte du commerce actif ; le plan de
+    // salle persiste sous kiwiPlanDeSalle:<tenant>. Rien n'est inventé : une
+    // fonctionnalité sans trace mesurable affiche zéro — et passe alors dans
+    // les « Recommandées », c'est exactement son rôle.
     const venuesList = allBiz();
     const venuesCount = venuesList.length;
 
-    let realProductsCount = 0;
-    try {
-      const bq = JSON.parse(localStorage.getItem("kiwi_boutique_items") || "[]");
-      if (Array.isArray(bq)) realProductsCount += bq.length;
-      const v2 = JSON.parse(localStorage.getItem("kiwi_products_v2") || "[]");
-      if (Array.isArray(v2)) realProductsCount = Math.max(realProductsCount, v2.length);
-      const crt = JSON.parse(localStorage.getItem("kiwi_resto_carte") || "{}");
-      if (crt && Array.isArray(crt.items)) realProductsCount = Math.max(realProductsCount, crt.items.length);
-    } catch (_) {}
+    const lsJson = (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch (_) { return null; } };
+    /* Balaye les clés kiwi* dont le nom contient `frag` et rend le plus grand
+       magasin trouvé (tableau nu, .items/.list nommé, ou valeurs d'objet) —
+       robuste aux clés par tenant sans avoir à les recopier ici. */
+    function scanCount(frag, path) {
+      let best = 0;
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i) || '';
+          if (!/^kiwi/i.test(k) || k.toLowerCase().indexOf(frag) < 0) continue;
+          const v = lsJson(k);
+          let n = 0;
+          if (Array.isArray(v)) n = v.length;
+          else if (v && Array.isArray(v[path])) n = v[path].length;
+          else if (v && typeof v === 'object') n = Object.values(v).filter(Boolean).length;
+          if (n > best) best = n;
+        }
+      } catch (_) {}
+      return best;
+    }
 
-    let realSalesCount = 0;
-    let realSalesVolume = 0;
-    try {
-      const sales = JSON.parse(localStorage.getItem("kiwi_sales") || "[]");
-      if (Array.isArray(sales)) {
-        realSalesCount = sales.length;
-        realSalesVolume = sales.reduce((acc, s) => acc + (Number(s.total || s.amount) || 0), 0);
-      }
-      if (window.KiwiLedger && typeof window.KiwiLedger.getTotalSales === "function") {
-        const s = window.KiwiLedger.getTotalSales();
-        if (s > 0) realSalesVolume = Math.max(realSalesVolume, s);
-      }
-      if (window.KiwiLedger && typeof window.KiwiLedger.getTicketCount === "function") {
-        const c = window.KiwiLedger.getTicketCount();
-        if (c > 0) realSalesCount = Math.max(realSalesCount, c);
-      }
-    } catch (_) {}
+    const salesT = (window.KiwiSales && window.KiwiSales.totals) ? (window.KiwiSales.totals() || {}) : {};
+    const realSalesCount = salesT.count || 0;
+    const realSalesVolume = salesT.revenue || 0;
+    let lastSaleTs = 0;
+    try { (window.KiwiSales.list() || []).forEach((x) => { const t = +(x && x.ts) || 0; if (t > lastSaleTs) lastSaleTs = t; }); } catch (_) {}
+    const daysSinceSale = lastSaleTs ? Math.floor((Date.now() - lastSaleTs) / 86400000) : null;
 
-    let realClientsCount = 0;
-    try {
-      const cl = JSON.parse(localStorage.getItem("kiwi_clients") || "[]");
-      if (Array.isArray(cl)) realClientsCount = cl.length;
-    } catch (_) {}
-
-    let realTeamCount = 1;
-    try {
-      const tm = JSON.parse(localStorage.getItem("kiwi_team") || "[]");
-      if (Array.isArray(tm) && tm.length) realTeamCount = Math.max(1, tm.length);
-    } catch (_) {}
+    const menuCount = (() => { try { return (window.KiwiMenu?.items?.() || []).length; } catch (_) { return 0; } })();
+    const invCount = (() => {
+      try {
+        const cur = window.KiwiVenue?.getCurrentVenueData?.() || {};
+        return (window.KiwiVenue?.getInventory?.(cur.id || cur.slug || cur.key) || []).length;
+      } catch (_) { return 0; }
+    })();
+    const tableCount = scanCount('plandesalle', 'tables');
+    const clientsCount = scanCount('client', 'clients');
+    const resaCount = scanCount('reserv', 'reservations') || scanCount('resa', 'list');
+    const teamCount = (() => {
+      try {
+        const by = window.__kiwiTeamV2 && window.__kiwiTeamV2.byVenue;
+        let n = 0;
+        if (by) Object.values(by).forEach((l) => { if (Array.isArray(l) && l.length > n) n = l.length; });
+        return n;
+      } catch (_) { return 0; }
+    })();
+    const aiCount = scanCount('agent', 'messages') || scanCount('copilot', 'messages');
 
     // Real device / browser detection
     const ua = navigator.userAgent || "";
@@ -1100,14 +1113,32 @@
     else if (ua.includes("Firefox")) browserName = "Mozilla Firefox";
     else if (ua.includes("Edg")) browserName = "Microsoft Edge";
 
+    /* L'imprimante : l'état vient de KiwiPrinter (la vraie couche matérielle)
+       avec kiwiPrinterCfg — sa clé réelle — en secours. */
     let printerConfigured = false;
-    let printerName = "";
     try {
-      const prt = localStorage.getItem("kiwiPrinterConfig") || localStorage.getItem("kiwiStationPrinter");
-      if (prt) { printerConfigured = true; printerName = prt; }
+      if (window.KiwiPrinter) printerConfigured = window.KiwiPrinter.isConnected ? window.KiwiPrinter.isConnected() : window.KiwiPrinter.isConfigured();
+      if (!printerConfigured) printerConfigured = !!localStorage.getItem('kiwiPrinterCfg');
     } catch (_) {}
 
     const pv = pairedVenue();
+
+    /* Icônes Material Symbols recopiées d'assets/icons/material/ (voir le
+       README du dossier) — forme pleine, currentColor, jamais d'emoji. */
+    const mi = (d) => `<svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true" style="width:18px;height:18px;flex:none;"><path d="${d}"/></svg>`;
+    const MI = {
+      receipt_long: mi('M240-80q-50 0-85-35t-35-85v-120h120v-560l60 60 60-60 60 60 60-60 60 60 60-60 60 60 60-60 60 60 60-60v680q0 50-35 85t-85 35H240Zm480-80q17 0 28.5-11.5T760-200v-560H320v440h360v120q0 17 11.5 28.5T720-160ZM360-600v-80h240v80H360Zm0 120v-80h240v80H360Zm320-120q-17 0-28.5-11.5T640-640q0-17 11.5-28.5T680-680q17 0 28.5 11.5T720-640q0 17-11.5 28.5T680-600Zm0 120q-17 0-28.5-11.5T640-520q0-17 11.5-28.5T680-560q17 0 28.5 11.5T720-520q0 17-11.5 28.5T680-480ZM240-160h360v-80H200v40q0 17 11.5 28.5T240-160Zm-40 0v-80 80Z'),
+      menu_book: mi('M560-564v-68q33-14 67.5-21t72.5-7q26 0 51 4t49 10v64q-24-9-48.5-13.5T700-600q-38 0-73 9.5T560-564Zm0 220v-68q33-14 67.5-21t72.5-7q26 0 51 4t49 10v64q-24-9-48.5-13.5T700-380q-38 0-73 9t-67 27Zm0-110v-68q33-14 67.5-21t72.5-7q26 0 51 4t49 10v64q-24-9-48.5-13.5T700-490q-38 0-73 9.5T560-454ZM260-320q47 0 91.5 10.5T440-278v-394q-41-24-87-36t-93-12q-36 0-71.5 7T120-692v396q35-12 69.5-18t70.5-6Zm260 42q44-21 88.5-31.5T700-320q36 0 70.5 6t69.5 18v-396q-33-14-68.5-21t-71.5-7q-47 0-93 12t-87 36v394Zm-40 118q-48-38-104-59t-116-21q-42 0-82.5 11T100-198q-21 11-40.5-1T40-234v-482q0-11 5.5-21T62-752q46-24 96-36t102-12q58 0 113.5 15T480-740q51-30 106.5-45T700-800q52 0 102 12t96 36q11 5 16.5 15t5.5 21v482q0 23-19.5 35t-40.5 1q-37-20-77.5-31T700-240q-60 0-116 21t-104 59ZM280-494Z'),
+      inventory_2: mi('M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z'),
+      table_restaurant: mi('M173-600h614l-34-120H208l-35 120Zm307-60Zm192 140H289l-11 80h404l-10-80ZM160-160l49-360h-89q-20 0-31.5-16T82-571l57-200q4-13 14-21t24-8h606q14 0 24 8t14 21l57 200q5 19-6.5 35T840-520h-88l48 360h-80l-27-200H267l-27 200h-80Z'),
+      favorite: mi('m480-120-58-52q-101-91-167-157T150-447.5Q111-500 95.5-544T80-634q0-94 63-157t157-63q52 0 99 22t81 62q34-40 81-62t99-22q94 0 157 63t63 157q0 46-15.5 90T810-447.5Q771-395 705-329T538-172l-58 52Zm0-108q96-86 158-147.5t98-107q36-45.5 50-81t14-70.5q0-60-40-100t-100-40q-47 0-87 26.5T518-680h-76q-15-41-55-67.5T300-774q-60 0-100 40t-40 100q0 35 14 70.5t50 81q36 45.5 98 107T480-228Zm0-273Z'),
+      today: mi('M289-329q-29-29-29-71t29-71q29-29 71-29t71 29q29 29 29 71t-29 71q-29 29-71 29t-71-29ZM200-80q-33 0-56.5-23.5T120-160v-560q0-33 23.5-56.5T200-800h40v-80h80v80h320v-80h80v80h40q33 0 56.5 23.5T840-720v560q0 33-23.5 56.5T760-80H200Zm0-80h560v-400H200v400Zm0-480h560v-80H200v80Zm0 0v-80 80Z'),
+      trending_up: mi('m136-240-56-56 296-298 160 160 208-206H640v-80h240v240h-80v-104L536-320 376-480 136-240Z'),
+      storefront: mi('M841-518v318q0 33-23.5 56.5T761-120H201q-33 0-56.5-23.5T121-200v-318q-23-21-35.5-54t-.5-72l42-136q8-26 28.5-43t47.5-17h556q27 0 47 16.5t29 43.5l42 136q12 39-.5 71T841-518Zm-272-42q27 0 41-18.5t11-41.5l-22-140h-78v148q0 21 14 36.5t34 15.5Zm-180 0q23 0 37.5-15.5T441-612v-148h-78l-22 140q-4 24 10.5 42t37.5 18Zm-178 0q18 0 31.5-13t16.5-33l22-154h-78l-40 134q-6 20 6.5 43t41.5 23Zm540 0q29 0 42-23t6-43l-42-134h-76l22 154q3 20 16.5 33t31.5 13ZM201-200h560v-282q-5 2-6.5 2H751q-27 0-47.5-9T663-518q-18 18-41 28t-49 10q-27 0-50.5-10T481-518q-17 18-39.5 28T393-480q-29 0-52.5-10T299-518q-21 21-41.5 29.5T211-480h-4.5q-2.5 0-5.5-2v282Zm560 0H201h560Z'),
+      print: mi('M640-640v-120H320v120h-80v-200h480v200h-80Zm-480 80h640-640Zm560 100q17 0 28.5-11.5T760-500q0-17-11.5-28.5T720-540q-17 0-28.5 11.5T680-500q0 17 11.5 28.5T720-460Zm-80 260v-160H320v160h320Zm80 80H240v-160H80v-240q0-51 35-85.5t85-34.5h560q51 0 85.5 34.5T880-520v240H720v160Zm80-240v-160q0-17-11.5-28.5T760-560H200q-17 0-28.5 11.5T160-520v160h80v-80h480v80h80Z'),
+      phonelink: mi('M480-540ZM80-160v-80h400v80H80Zm120-120q-33 0-56.5-23.5T120-360v-360q0-33 23.5-56.5T200-800h560q33 0 56.5 23.5T840-720H200v360h280v80H200Zm600 40v-320H640v320h160Zm-180 80q-25 0-42.5-17.5T560-220v-360q0-25 17.5-42.5T620-640h200q25 0 42.5 17.5T880-580v360q0 25-17.5 42.5T820-160H620Zm100-300q13 0 21.5-9t8.5-21q0-13-8.5-21.5T720-520q-12 0-21 8.5t-9 21.5q0 12 9 21t21 9Zm0 60Z'),
+      shield: mi('M480-80q-139-35-229.5-159.5T160-516v-244l320-120 320 120v244q0 152-90.5 276.5T480-80Zm0-84q104-33 172-132t68-220v-189l-240-90-240 90v189q0 121 68 220t172 132Zm0-316Z'),
+    };
 
     const T = {
       title: "My Kiwi",
@@ -1125,23 +1156,39 @@
       
       kpiVenues: pick({ fr: "Établissements", en: "Venues", ar: "المؤسسات" }),
       kpiVenuesSub: pick({ fr: "Magasins & points de vente", en: "Shops & retail outlets", ar: "المتاجر ونقاط البيع" }),
-      kpiProducts: pick({ fr: "Articles au catalogue", en: "Catalog products", ar: "المنتجات في الكتالوج" }),
-      kpiProductsSub: pick({ fr: "Références synchronisées", en: "Synced references", ar: "المرجعيات المتزامنة" }),
+      kpiProducts: pick({ fr: "Articles à la carte", en: "Menu items", ar: "عناصر القائمة" }),
+      kpiProductsSub: pick({ fr: "Carte du commerce actif", en: "Active venue's menu", ar: "قائمة المتجر النشط" }),
       kpiTickets: pick({ fr: "Ventes enregistrées", en: "Recorded sales", ar: "المبيعات المسجلة" }),
-      kpiTicketsSub: pick({ fr: "Tickets de caisse validés", en: "Validated checkouts", ar: "التذاكر المصدرة" }),
-      kpiClients: pick({ fr: "Fiches clients", en: "Customer profiles", ar: "ملفات الزبائن" }),
-      kpiClientsSub: pick({ fr: "Répertoire & fidélité", en: "Directory & loyalty", ar: "الدليل وبرنامج الوفاء" }),
+      kpiTicketsSub: pick({ fr: "Grand livre · depuis l'ouverture", en: "Ledger · since day one", ar: "دفتر الأستاذ · منذ البداية" }),
+      kpiVolume: pick({ fr: "Volume encaissé", en: "Processed volume", ar: "الحجم المحصّل" }),
+      kpiVolumeSub: pick({ fr: "Total du grand livre · MAD", en: "Ledger total · MAD", ar: "إجمالي الدفتر · درهم" }),
 
       secUsage: pick({
-        fr: "Modules & Fonctionnalités actives",
-        en: "Active Modules & Features",
-        ar: "الوحدات والميزات النشطة",
+        fr: "Fonctionnalités les plus utilisées",
+        en: "Most-used features",
+        ar: "الميزات الأكثر استخداماً",
       }),
       secUsageSub: pick({
-        fr: "Données réelles issues de votre espace et de votre caisse",
-        en: "Real data from your workspace and POS register",
-        ar: "بيانات حقيقية من مساحة عملك وصندوقك",
+        fr: "Mesuré sur les données réelles de ce compte — ventes, carte, stock, salle, équipe",
+        en: "Measured on this account's real data — sales, menu, stock, floor, team",
+        ar: "مقاس على بيانات هذا الحساب الحقيقية",
       }),
+      usageEmpty: pick({
+        fr: "Encore aucune activité mesurée sur cet appareil — encaissez votre première vente et ce panorama s'allume.",
+        en: "No activity measured on this device yet — ring up your first sale and this panorama lights up.",
+        ar: "لا نشاط مقاساً بعد على هذا الجهاز — سجّل أول بيع وستضيء هذه اللوحة.",
+      }),
+      secReco: pick({
+        fr: "À exploiter davantage",
+        en: "Worth using more",
+        ar: "تستحق استخداماً أكثر",
+      }),
+      secRecoSub: pick({
+        fr: "Incluses dans votre formule et encore muettes sur ce compte — chacune se lance en un clic",
+        en: "Included in your plan and still silent on this account — each one starts in a click",
+        ar: "مشمولة في باقتك وما تزال صامتة — تبدأ بنقرة واحدة",
+      }),
+      recoBadge: pick({ fr: "Recommandée", en: "Recommended", ar: "موصى بها" }),
 
       secFleet: pick({
         fr: "Appareils & Périphériques détectés",
@@ -1181,70 +1228,55 @@
       pdf: pick({ fr: "Télécharger (PDF)", en: "Download (PDF)", ar: "تحميل (PDF)" }),
     };
 
-    const modules = [
-      {
-        icon: "🛒",
-        name: pick({ fr: "Caisse & Encaissement", en: "Register & Checkout", ar: "الصندوق ونقطة البيع" }),
-        desc: `${realSalesCount} ${pick({ fr: "vente(s) enregistrée(s) au grand livre", en: "sale(s) recorded in ledger", ar: "مبيعات مسجلة في دفتر الأستاذ" })}`,
-        badge: pick({ fr: "Actif", en: "Active", ar: "نشط" }),
-      },
-      {
-        icon: "📦",
-        name: pick({ fr: "Catalogue & Gestion des stocks", en: "Catalog & Inventory", ar: "الكتالوج وإدارة المخزون" }),
-        desc: `${realProductsCount} ${pick({ fr: "article(s) au catalogue", en: "product(s) in catalog", ar: "منتجات في الكتالوج" })}`,
-        badge: pick({ fr: "Synchronisé", en: "Synced", ar: "متزامن" }),
-      },
-      {
-        icon: "👥",
-        name: pick({ fr: "Clients & Fidélité", en: "Customers & Loyalty", ar: "الزبائن وبرنامج الوفاء" }),
-        desc: `${realClientsCount} ${pick({ fr: "fiche(s) client(s) enregistrée(s)", en: "saved customer profile(s)", ar: "ملفات زبائن مسجلة" })}`,
-        badge: pick({ fr: "Actif", en: "Active", ar: "نشط" }),
-      },
-      {
-        icon: "🏬",
-        name: pick({ fr: "Multi-établissements", en: "Multi-venue management", ar: "إدارة الفروع" }),
-        desc: `${venuesCount} ${pick({ fr: "établissement(s) configuré(s)", en: "business venue(s) configured", ar: "مؤسسات مهيأة" })}`,
-        badge: pick({ fr: "Actif", en: "Active", ar: "نشط" }),
-      },
-      {
-        icon: "👥",
-        name: pick({ fr: "Équipe & Utilisateurs", en: "Team & Permissions", ar: "الفريق والصلاحيات" }),
-        desc: `${realTeamCount} ${pick({ fr: "membre(s) d’équipe", en: "team member(s)", ar: "أعضاء فريق" })}`,
-        badge: pick({ fr: "Actif", en: "Active", ar: "نشط" }),
-      },
-      {
-        icon: "🤖",
-        name: pick({ fr: "Assistant Kiwi AI", en: "Kiwi AI Assistant", ar: "مساعد كيوي الذكي" }),
-        desc: pick({ fr: "Moteur de relevé & analyses en langage naturel", en: "Natural language analysis engine", ar: "محرك التحليل الذكي باللغة الطبيعية" }),
-        badge: pick({ fr: "Opérationnel", en: "Operational", ar: "جاهز" }),
-      },
+    /* Chaque fonctionnalité porte un SIGNAL mesuré sur de vraies données.
+       Signal > 0 → classée par usage réel ; signal nul → recommandée, avec son
+       bénéfice et un bouton vers une destination dont le data-action est déjà
+       tenu par le tableau de bord (le garde-fou de check.js les connaît). */
+    const FEATURES = [
+      { icon: MI.receipt_long, name: pick({ fr: 'Caisse & Encaissement', en: 'Register & Checkout', ar: 'الصندوق ونقطة البيع' }),
+        n: realSalesCount, unit: pick({ fr: 'ventes au grand livre', en: 'sales in the ledger', ar: 'مبيعات في الدفتر' }),
+        extra: daysSinceSale == null ? '' : (daysSinceSale === 0 ? pick({ fr: '· dernière vente aujourd\u2019hui', en: '· last sale today', ar: '· آخر بيع اليوم' }) : '· ' + daysSinceSale + ' ' + pick({ fr: 'j depuis la dernière vente', en: 'd since the last sale', ar: 'يوم منذ آخر بيع' })),
+        pitch: pick({ fr: 'Encaissez et chaque vente nourrit vos chiffres en direct.', en: 'Ring up sales and your numbers update live.', ar: 'سجّل مبيعاتك وتتحدّث أرقامك مباشرة.' }), cta: null },
+      { icon: MI.menu_book, name: pick({ fr: 'Carte & Catalogue', en: 'Menu & Catalog', ar: 'القائمة والكتالوج' }),
+        n: menuCount, unit: pick({ fr: 'articles à la carte', en: 'items in the catalog', ar: 'عناصر في القائمة' }), extra: '',
+        pitch: pick({ fr: 'Une carte à jour, ce sont des tickets plus rapides et zéro erreur de prix.', en: 'An up-to-date menu means faster tickets and zero price errors.', ar: 'قائمة محدّثة تعني تذاكر أسرع وبلا أخطاء أسعار.' }), cta: 'menu-edit', ctaLbl: pick({ fr: 'Compléter la carte', en: 'Build the menu', ar: 'أكمل القائمة' }) },
+      { icon: MI.inventory_2, name: pick({ fr: 'Stock & Approvisionnement', en: 'Inventory & Supply', ar: 'المخزون والتموين' }),
+        n: invCount, unit: pick({ fr: 'références suivies', en: 'tracked references', ar: 'مرجعيات متتبعة' }), extra: '',
+        pitch: pick({ fr: 'Suivez vos coûts matière et soyez alerté des ruptures avant le service.', en: 'Track ingredient costs and get stock-out alerts before service.', ar: 'تتبّع تكاليف المواد مع تنبيهات النفاد قبل الخدمة.' }), cta: 'stock-reorder', ctaLbl: pick({ fr: 'Activer le stock', en: 'Start tracking', ar: 'فعّل المخزون' }) },
+      { icon: MI.table_restaurant, name: pick({ fr: 'Plan de salle & Tables', en: 'Floor plan & Tables', ar: 'مخطط الصالة والطاولات' }),
+        n: tableCount, unit: pick({ fr: 'tables sur le plan', en: 'tables on the plan', ar: 'طاولات على المخطط' }), extra: '',
+        pitch: pick({ fr: 'Additions par table, transferts et vue service en un coup d\u2019œil.', en: 'Per-table checks, transfers and a one-glance service view.', ar: 'حسابات لكل طاولة ونظرة واحدة على الخدمة.' }), cta: null },
+      { icon: MI.favorite, name: pick({ fr: 'Clients & Fidélité', en: 'Customers & Loyalty', ar: 'الزبائن والوفاء' }),
+        n: clientsCount, unit: pick({ fr: 'fiches clients', en: 'customer profiles', ar: 'ملفات زبائن' }), extra: '',
+        pitch: pick({ fr: 'Reconnaissez vos habitués — un client fidèle revient plus souvent et dépense plus.', en: 'Know your regulars — loyal customers come back more and spend more.', ar: 'تعرّف على زبائنك — الوفي يعود أكثر وينفق أكثر.' }), cta: 'clients-directory', ctaLbl: pick({ fr: 'Créer une fiche', en: 'Add a profile', ar: 'أنشئ ملفاً' }) },
+      { icon: MI.today, name: pick({ fr: 'Réservations & RDV', en: 'Reservations & Bookings', ar: 'الحجوزات والمواعيد' }),
+        n: resaCount, unit: pick({ fr: 'réservations enregistrées', en: 'recorded bookings', ar: 'حجوزات مسجلة' }), extra: '',
+        pitch: pick({ fr: 'Remplissez la salle avant l\u2019ouverture et réduisez les no-shows.', en: 'Fill the room before you open and cut the no-shows.', ar: 'املأ الصالة قبل الفتح وقلّل الغيابات.' }), cta: 'nav-reservations', ctaLbl: pick({ fr: 'Ouvrir l\u2019agenda', en: 'Open the book', ar: 'افتح المفكرة' }) },
+      { icon: MI.shield, name: pick({ fr: 'Équipe & Codes d\u2019accès', en: 'Team & Access codes', ar: 'الفريق ورموز الدخول' }),
+        n: teamCount, unit: pick({ fr: 'membres d\u2019équipe', en: 'team members', ar: 'أعضاء فريق' }), extra: '',
+        pitch: pick({ fr: 'Un code par employé : pointage, rôles et historique nominatif.', en: 'One code per employee: clock-ins, roles and a named history.', ar: 'رمز لكل موظف: حضور وأدوار وسجل بالأسماء.' }), cta: 'team-settings', ctaLbl: pick({ fr: 'Inviter l\u2019équipe', en: 'Invite the team', ar: 'ادعُ الفريق' }) },
+      { icon: MI.trending_up, name: pick({ fr: 'Assistant Kiwi AI', en: 'Kiwi AI Assistant', ar: 'مساعد كيوي الذكي' }),
+        n: aiCount, unit: pick({ fr: 'échanges avec l\u2019assistant', en: 'assistant conversations', ar: 'محادثات مع المساعد' }), extra: '',
+        pitch: pick({ fr: 'Posez vos questions à la voix ou au clavier — marges, comparaisons, tendances.', en: 'Ask by voice or keyboard — margins, comparisons, trends.', ar: 'اسأل صوتياً أو كتابياً — الهوامش والمقارنات والاتجاهات.' }), cta: 'open-assistant', ctaLbl: pick({ fr: 'Essayer l\u2019assistant', en: 'Try the assistant', ar: 'جرّب المساعد' }) },
     ];
+    const used = FEATURES.filter((f) => f.n > 0).sort((a, b) => b.n - a.n);
+    const reco = FEATURES.filter((f) => !f.n);
+    const maxN = used.length ? used[0].n : 1;
 
+    /* Trois cartes, trois états MESURÉS — plus de statut décoratif. */
     const fleet = [
-      {
-        icon: "💻",
-        name: `${osName} (${browserName})`,
-        role: pick({ fr: "Ce terminal · Session active en cours", en: "This terminal · Current active session", ar: "هذا الجهاز · الجلسة الحالية" }),
-        status: `🟢 ${pick({ fr: "En ligne · Synchronisation active", en: "Online · Live sync active", ar: "متصل · مزامنة نشطة" })}`,
-      },
-      {
-        icon: "📱",
-        name: pv ? `Caisse appairée (${pv.name})` : pick({ fr: "Caisse locale (Mode autonome)", en: "Local till (Standalone mode)", ar: "صندوق محلي (وضع مستقل)" }),
-        role: pick({ fr: "Point d’encaissement comptoir", en: "Front desk checkout station", ar: "نقطة البيع الرئيسية" }),
-        status: `🟢 ${pick({ fr: "Prêt pour l’encaissement", en: "Ready for checkouts", ar: "جاهز للاستخدام" })}`,
-      },
-      {
-        icon: "🖨️",
-        name: printerConfigured ? `${printerName}` : pick({ fr: "Imprimante de reçus & tickets", en: "Receipt & ticket printer", ar: "طابعة الإيصالات" }),
-        role: pick({ fr: "Impression thermique 80mm", en: "80mm thermal receipt printing", ar: "طباعة حرارية 80 مم" }),
-        status: printerConfigured ? `🟢 ${pick({ fr: "Configurée", en: "Configured", ar: "مهيأة" })}` : `⚪ ${pick({ fr: "Non assignée (Optionnelle)", en: "Not assigned (Optional)", ar: "غير معينة (اختيارية)" })}`,
-      },
-      {
-        icon: "💳",
-        name: pick({ fr: "Passerelle Paiements & Cartes", en: "Card & Payments Gateway", ar: "بوابة الدفع والبطاقات" }),
-        role: pick({ fr: "Encaissements Cartes & Sans-contact", en: "Card & Contactless checkouts", ar: "الدفع الإلكتروني وبطاقات البنك" }),
-        status: `🟢 ${pick({ fr: "Règlement T+1 garanti", en: "Guaranteed T+1 settlement", ar: "تسوية T+1 مضمونة" })}`,
-      },
+      { icon: MI.phonelink, name: osName + ' · ' + browserName,
+        role: pick({ fr: 'Ce terminal · session en cours', en: 'This terminal · current session', ar: 'هذا الجهاز · الجلسة الحالية' }),
+        ok: navigator.onLine !== false,
+        status: navigator.onLine !== false ? pick({ fr: 'En ligne · synchronisation active', en: 'Online · live sync', ar: 'متصل · مزامنة نشطة' }) : pick({ fr: 'Hors-ligne · vos données restent locales', en: 'Offline · your data stays local', ar: 'غير متصل · بياناتك محلية' }) },
+      { icon: MI.storefront, name: pv ? pick({ fr: 'Caisse appairée · ', en: 'Paired till · ', ar: 'صندوق مقترن · ' }) + (pv.name || pv.merchant || '') : pick({ fr: 'Caisse', en: 'Till', ar: 'الصندوق' }),
+        role: pick({ fr: 'Point d\u2019encaissement comptoir', en: 'Front-desk checkout station', ar: 'نقطة البيع الرئيسية' }),
+        ok: !!pv,
+        status: pv ? pick({ fr: 'Reliée à ce compte', en: 'Linked to this account', ar: 'مرتبط بهذا الحساب' }) : pick({ fr: 'Aucune caisse appairée — reliez-la depuis la caisse, menu Appairage', en: 'No till paired yet — pair it from the till', ar: 'لا صندوق مقترناً بعد' }) },
+      { icon: MI.print, name: pick({ fr: 'Imprimante de tickets', en: 'Receipt printer', ar: 'طابعة التذاكر' }),
+        role: pick({ fr: 'Thermique 80 mm · tiroir-caisse via port DK', en: '80 mm thermal · cash drawer via DK port', ar: 'حرارية 80 مم · درج النقود عبر منفذ DK' }),
+        ok: printerConfigured,
+        status: printerConfigured ? pick({ fr: 'Configurée sur ce poste', en: 'Configured on this station', ar: 'مهيأة على هذا الجهاز' }) : pick({ fr: 'Non configurée — Réglages → Imprimante', en: 'Not configured — Settings → Printer', ar: 'غير مهيأة — الإعدادات ← الطابعة' }) },
     ];
 
     const incl = pick({
@@ -1291,19 +1323,19 @@
             <div class="sub">${esc(T.kpiVenuesSub)}</div>
           </div>
           <div class="acc-kpi-box">
-            <div class="val">${realProductsCount}</div>
+            <div class="val">${fmtMAD(menuCount)}</div>
             <div class="lbl">${esc(T.kpiProducts)}</div>
             <div class="sub">${esc(T.kpiProductsSub)}</div>
           </div>
           <div class="acc-kpi-box">
-            <div class="val">${realSalesCount}</div>
+            <div class="val">${fmtMAD(realSalesCount)}</div>
             <div class="lbl">${esc(T.kpiTickets)}</div>
             <div class="sub">${esc(T.kpiTicketsSub)}</div>
           </div>
           <div class="acc-kpi-box">
-            <div class="val" style="color:var(--success);">${realClientsCount}</div>
-            <div class="lbl">${esc(T.kpiClients)}</div>
-            <div class="sub">${esc(T.kpiClientsSub)}</div>
+            <div class="val" style="color:var(--success);">${fmtMAD(realSalesVolume)} <span style="font-size:12px;opacity:.6;">MAD</span></div>
+            <div class="lbl">${esc(T.kpiVolume)}</div>
+            <div class="sub">${esc(T.kpiVolumeSub)}</div>
           </div>
         </div>
 
@@ -1315,16 +1347,40 @@
           </div>
         </div>
         <div class="acc-meter-grid" style="margin-bottom:24px;">
-          ${modules.map((m) => `
+          ${used.length ? used.map((f) => `
             <div class="acc-meter-item">
               <div class="acc-meter-head">
-                <div class="acc-meter-t"><span>${m.icon}</span> <span>${esc(m.name)}</span></div>
-                <div class="acc-meter-pct">${esc(m.badge)}</div>
+                <div class="acc-meter-t">${f.icon} <span>${esc(f.name)}</span></div>
+                <div class="acc-meter-pct">${fmtMAD(f.n)}</div>
               </div>
-              <div class="acc-meter-desc" style="margin-bottom:0;">${esc(m.desc)}</div>
+              <div class="acc-meter-desc" style="margin-bottom:8px;">${esc(f.n + ' ' + f.unit + (f.extra ? ' ' + f.extra : ''))}</div>
+              <div style="height:4px;border-radius:2px;background:var(--n-200,rgba(0,0,0,.08));overflow:hidden;" aria-hidden="true">
+                <i style="display:block;height:100%;width:${Math.max(6, Math.round(100 * f.n / maxN))}%;background:var(--atlas);border-radius:2px;"></i>
+              </div>
+            </div>
+          `).join("") : `<div class="acc-meter-item"><div class="acc-meter-desc" style="margin:0;">${esc(T.usageEmpty)}</div></div>`}
+        </div>
+
+        <!-- ═══ RECOMMANDATIONS — fonctionnalités muettes sur ce compte ═══ -->
+        ${reco.length ? `
+        <div class="acc-section-head">
+          <div>
+            <h3>${esc(T.secReco)}</h3>
+            <div class="ct">${esc(T.secRecoSub)}</div>
+          </div>
+        </div>
+        <div class="acc-meter-grid" style="margin-bottom:24px;">
+          ${reco.map((f) => `
+            <div class="acc-meter-item" style="border-inline-start:3px solid var(--mint);">
+              <div class="acc-meter-head">
+                <div class="acc-meter-t">${f.icon} <span>${esc(f.name)}</span></div>
+                <div class="acc-meter-pct" style="color:var(--atlas);">${esc(T.recoBadge)}</div>
+              </div>
+              <div class="acc-meter-desc" style="margin-bottom:${f.cta ? '10px' : '0'};">${esc(f.pitch)}</div>
+              ${f.cta ? `<button class="acc-cta ghost" type="button" data-action="${f.cta}">${esc(f.ctaLbl || '')}</button>` : ''}
             </div>
           `).join("")}
-        </div>
+        </div>` : ''}
 
         <!-- ═══ REAL DETECTED FLEET & HARDWARE ═══ -->
         <div class="acc-section-head">
@@ -1336,11 +1392,11 @@
         <div class="acc-fleet-grid" style="margin-bottom:24px;">
           ${fleet.map((d) => `
             <div class="acc-fleet-card">
-              <div class="acc-fleet-ico">${d.icon}</div>
+              <div class="acc-fleet-ico" style="color:var(--atlas);">${d.icon}</div>
               <div class="acc-fleet-info">
                 <div class="acc-fleet-name">${esc(d.name)}</div>
                 <div class="acc-fleet-role">${esc(d.role)}</div>
-                <div class="acc-fleet-status">${esc(d.status)}</div>
+                <div class="acc-fleet-status"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${d.ok ? 'var(--atlas)' : 'var(--n-400, #9aa4a0)'};margin-inline-end:6px;" aria-hidden="true"></span>${esc(d.status)}</div>
               </div>
             </div>
           `).join("")}
