@@ -3212,7 +3212,7 @@
       </g>
       <g class="rev-tip">
         <rect class="rev-tip-rect" rx="14" ry="14" fill="url(#rev-tip-gradient)" stroke="rgba(125,242,176,0.18)" stroke-width="1" filter="url(#rev-tip-shadow)"/>
-        <text class="rev-tip-label" x="0" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="#7DF2B0" letter-spacing="1.6" opacity="0.88"></text>
+        <text class="rev-tip-label" x="0" text-anchor="middle" font-family="Inter Tight" font-weight="600" font-size="10" fill="#7DF2B0" letter-spacing="0.1em" opacity="0.92"></text>
         <text class="rev-tip-value" x="0" text-anchor="middle" font-family="Inter Tight" font-weight="600" font-size="17" fill="#FFFFFF" letter-spacing="-0.01em"></text>
         <text class="rev-tip-cmp"   x="0" text-anchor="middle" font-family="Inter Tight" font-weight="500" font-size="11" letter-spacing="0"></text>
       </g>
@@ -3986,12 +3986,15 @@
         /* Empty state — start of hour, no orders yet. */
         const fe = tradeStr('feedEmpty', FEED_EMPTY[lang] || FEED_EMPTY.fr);
         wrap['inner' + 'HTML'] = `
-          <div style="padding: 36px 14px; text-align: center; color: var(--n-500); font-size: 13px;">
-            <div style="display:inline-flex; align-items:center; gap:8px; padding:6px 14px; background:var(--paper-soft); border-radius:999px; font-family:var(--mono); font-size:11px; letter-spacing:0.06em; color:var(--n-600); margin-bottom:10px;">
-              <span class="pulse-dot" style="width:6px; height:6px; background:var(--atlas);"></span>${fe.badge}
+          <div style="padding: 38px 18px 42px; text-align: center; display: flex; flex-direction: column; align-items: center;">
+            <div style="width: 44px; height: 44px; border-radius: 13px; background: rgba(11,110,79,0.10); border: 1px solid rgba(11,110,79,0.18); color: var(--atlas); display: grid; place-items: center; margin-bottom: 14px;">
+              <svg width="22" height="22" viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg>
             </div>
-            <div style="font-weight: 500; color: var(--ink); font-size: 14px;">${fe.title}</div>
-            <div style="margin-top: 4px; font-size: 12px;">${fe.sub}</div>
+            <div style="display:inline-flex; align-items:center; gap:8px; padding:4px 12px; background:var(--paper-soft); border-radius:999px; font-family:var(--mono); font-size:10.5px; letter-spacing:0.06em; color:var(--n-600); margin-bottom:8px; border:1px solid var(--n-200);">
+              <span class="pulse-dot" style="width:6px; height:6px; background:var(--atlas);"></span>${escTxt(fe.badge)}
+            </div>
+            <div style="font-weight: 600; color: var(--ink); font-size: 14.5px; letter-spacing: -0.01em;">${escTxt(fe.title)}</div>
+            <div style="margin-top: 4px; font-size: 12.5px; color: var(--n-500); max-width: 36ch; line-height: 1.45;">${escTxt(fe.sub)}</div>
           </div>
         `;
       } else {

@@ -43,3 +43,18 @@ Ce document consigne l'ensemble des audits visuels, ergonomiques, d'accessibilit
 | :--- | :--- | :--- | :--- | :--- |
 | **Barre de Navigation Flottante** | `kiwi-serveur.html` | Boutons de navigation (`.bt-btn`) sans impulsion tactile | Ressort `scale(0.92)` à l'enfoncement, focus ring discret | ✅ Déployé |
 | **Cartes de Table & Actions** | `kiwi-serveur.html` | Clarté de sélection et retour tactile | Animation tactile fluide et contraste élevé en vue sombre | ✅ Déployé |
+
+---
+
+## 🚀 Passe 2 · Approfondissement par Surface
+
+### 1. Dashboard Accueil (`dashboard.html`, `assets/dateRange.js`)
+- **Fichiers** : `assets/dateRange.js:3217`, `assets/dateRange.js:3985`, `dashboard.html:1290`
+- **Problèmes identifiés** :
+  1. Utilisation de la police non standard `JetBrains Mono` dans l'étiquette de tooltip graphique au lieu de `Inter Tight` / tabular-nums.
+  2. État vide du flux de commandes en direct sans médaillon visuel Material Symbols ni hiérarchie de titrage.
+- **Améliorations apportées** :
+  1. Normalisation typographique de l'infobulle graphique sur `Inter Tight` (600, tracking 0.1em).
+  2. Refonte complète de l'état vide `renderFeed()` avec médaillon Material Symbol (`inventory_2`), badge de service live et typographie soignée.
+  3. Bumping du timbre de cache `assets/dateRange.js?v=12`.
+- **État** : ✅ Déployé
