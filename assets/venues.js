@@ -2470,6 +2470,25 @@
     }, 3800);
   }
 
+  /* Le sombre est un CHOIX du commerçant (kiwiDashTheme, amorcé dans <head>
+   * avant la première peinture). L'attribut data-theme ne survit jamais à un
+   * rechargement, donc le retirer « défensivement » au boot ne nettoyait
+   * aucune fusion périmée — il peignait l'écran de verrouillage en blanc une
+   * seconde à chaque chargement, le temps que le choix soit ré-appliqué.
+   * Partout où la fusion rend l'antenne, on RESTAURE le choix au lieu de
+   * l'effacer : même chaîne de repli que le script de <head>. */
+  function themeChoiceIsDark() {
+    try {
+      const t = localStorage.getItem('kiwiDashTheme') || localStorage.getItem('kiwiTheme');
+      if (t) return t === 'dark';
+      return !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    } catch (_) { return false; }
+  }
+  function restoreThemeChoice() {
+    if (themeChoiceIsDark()) document.documentElement.setAttribute('data-theme', 'dark');
+    else document.documentElement.removeAttribute('data-theme');
+  }
+
   function exitFusion(opts = {}) {
     if (fusionAnimating) return;
     if (currentVenue !== 'fusion') return;
@@ -2481,7 +2500,7 @@
     // Graceful fallback — no overlay element → soft swap.
     if (!overlay) {
       document.body.classList.remove('fusion-mode');
-      document.documentElement.removeAttribute('data-theme');
+      restoreThemeChoice();
       currentVenue = nextVenue;
       try { localStorage.setItem(STORAGE_KEY, currentVenue); } catch (_) {}
       renderAll();
@@ -2516,7 +2535,7 @@
 
     setTimeout(() => {
       document.body.classList.remove('fusion-mode');
-      document.documentElement.removeAttribute('data-theme');
+      restoreThemeChoice();
       currentVenue = nextVenue;
       try { localStorage.setItem(STORAGE_KEY, currentVenue); } catch (_) {}
       renderAll();
@@ -3431,7 +3450,7 @@
       if (qs.has('op') || qs.has('merchant')) {
         currentVenue = ensureOwnEmptyVenue();
         document.body.classList.remove('fusion-mode', 'fusion-glass-melt', 'fusion-reconstruct');
-        document.documentElement.removeAttribute('data-theme');
+        restoreThemeChoice();
         registerHandlers();
         setupDropdownClosers();
         hookI18n();
@@ -3483,7 +3502,7 @@
     }
     // Defensive: strip any stale fusion classes + dark theme attribute.
     document.body.classList.remove('fusion-mode', 'fusion-glass-melt', 'fusion-reconstruct');
-    document.documentElement.removeAttribute('data-theme');
+    restoreThemeChoice();
 
     /* Une seule fois : cancelScope() rejoue ce bloc alors que le chemin porté a
        déjà branché les écouteurs, et les rebrancher les doublerait. */
