@@ -35,6 +35,8 @@
 .bk-context button:hover{border-color:var(--atlas)}
 .bk-context+.bk-party{margin-top:12px;margin-inline-start:10px}
 .bk-slot-groups{display:flex;flex-direction:column;gap:18px;margin-top:20px}
+/* Jamais <section> ici : tokens.css pose section{padding:96px} et creusait un trou au-dessus de chaque groupe. */
+.bk-slot-group{padding:0;margin:0}
 .bk-slot-groups[data-stale]{opacity:.4;pointer-events:none;transition:opacity 160ms}
 .bk-period{font:600 10.5px/1.2 var(--sans);letter-spacing:.1em;text-transform:uppercase;color:var(--n-500);margin-bottom:8px}
 .bk-slot-groups .bk-slots{margin-top:0}
