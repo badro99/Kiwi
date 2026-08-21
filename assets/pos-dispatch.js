@@ -66,7 +66,7 @@
     '0010': { id: 'epicerie',    file: 'pos-epicerie',    rev: '3', label: 'Épicerie · Si Brahim' },
     '0011': { id: 'pharmacie',   file: 'pos-pharmacie',   rev: '3', label: 'Pharmacie · Ibn Batouta' },
     '0012': { id: 'librairie',   file: 'pos-librairie',   rev: '3', label: 'Librairie · Al Boughaz' },
-    '0013': { id: 'fleuriste',   file: 'pos-fleuriste',   rev: '2', label: 'Fleuriste · Fleurs du Détroit' },
+    '0013': { id: 'fleuriste',   file: 'pos-fleuriste',   rev: '3', label: 'Fleuriste · Fleurs du Détroit' },
     '0014': { id: 'coiffure',    file: 'pos-coiffure',    rev: '2', label: 'Coiffure · Salon Yasmine' },
     '0015': { id: 'gym',         file: 'pos-gym',         rev: '2', label: 'Salle de sport · Atlas Fitness' },
     '0016': { id: 'autre',       file: 'pos-autre',       rev: '2', label: 'Autre activité · caisse polyvalente' },

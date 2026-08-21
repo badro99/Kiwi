@@ -218,3 +218,12 @@ Ce document consigne l'ensemble des audits visuels, ergonomiques, d'accessibilit
   1. Refonte du panier vide avec médaillon Material Symbol (`inventory_2`) et hiérarchie visuelle dédiée au scan ISBN.
   2. Bumping de la révision `pos-librairie.js?v=3` dans le dispatcher.
 - **État** : ✅ Déployé
+
+### 7.13 Vertical Fleuriste (`assets/pos-fleuriste.js`)
+- **Fichiers** : `assets/pos-fleuriste.js:680`, `assets/pos-dispatch.js:69`
+- **Problèmes identifiés** :
+  1. Panier compositeur de bouquet vide sans médaillon Material Symbols.
+- **Améliorations apportées** :
+  1. Refonte du compositeur de bouquet avec médaillon Material Symbol (`inventory_2`) et guidage visuel tiges / presets.
+  2. Bumping de la révision `pos-fleuriste.js?v=3` dans le dispatcher.
+- **État** : ✅ Déployé

@@ -677,9 +677,12 @@
 
       <div class="fl-bq-lines" id="fl-bq-lines">
         ${empty ? `
-          <div class="fl-bq-empty">
-            <i data-lucide="flower"></i>
-            <div>Le bouquet est vide.<br>Touchez une tige dans la grille, ou partez d'un bouquet signature.</div>
+          <div class="fl-bq-empty" style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:32px 14px; gap:8px;">
+            <div style="width:40px; height:40px; border-radius:12px; background:rgba(11,110,79,0.10); color:var(--atlas); display:grid; place-items:center; margin-bottom:4px;">
+              <svg width="20" height="20" viewBox="0 -960 960 960" fill="currentColor"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg>
+            </div>
+            <div style="font-weight:600; font-size:14px; color:var(--ink);">Le bouquet est vide.</div>
+            <div style="font-size:12.5px; color:var(--n-500); line-height:1.45;">Touchez une tige dans la grille, ou partez d'un bouquet signature.</div>
           </div>` : `
           ${b.presets.map((p, i) => presetLine(p, i)).join('')}
           ${Object.keys(b.stems).map((id) => stemLine(id)).join('')}`}
