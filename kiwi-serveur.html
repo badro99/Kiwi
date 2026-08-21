@@ -9072,29 +9072,27 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     function notificationRelativeTime(ts) {
       const now = Date.now();
       const time = Number(ts) || now;
+      const d = new Date(time);
       const diffSec = Math.max(0, Math.floor((now - time) / 1000));
       const diffMin = Math.floor(diffSec / 60);
-      const diffHour = Math.floor(diffMin / 60);
-      const diffDay = Math.floor(diffHour / 24);
       const lang = (window.employeeLang && employeeLang()) || 'fr';
 
-      if (lang === 'ar') {
-        if (diffMin < 1) return 'الآن';
-        if (diffMin < 60) return `منذ ${diffMin} د`;
-        if (diffHour < 24) return `منذ ${diffHour} س`;
-        return `منذ ${diffDay} ي`;
+      if (diffMin <= 59) {
+        if (lang === 'ar') {
+          if (diffMin < 1) return 'الآن';
+          return `منذ ${diffMin} د`;
+        }
+        if (lang === 'en') {
+          if (diffMin < 1) return 'now';
+          return `${diffMin}m ago`;
+        }
+        // Default French
+        if (diffMin < 1) return "À l'instant";
+        return `Il y a ${diffMin} min`;
       }
-      if (lang === 'en') {
-        if (diffMin < 1) return 'now';
-        if (diffMin < 60) return `${diffMin}m ago`;
-        if (diffHour < 24) return `${diffHour}h ago`;
-        return `${diffDay}d ago`;
-      }
-      // Default French
-      if (diffMin < 1) return "À l'instant";
-      if (diffMin < 60) return `Il y a ${diffMin} min`;
-      if (diffHour < 24) return `Il y a ${diffHour} h`;
-      return `Il y a ${diffDay} j`;
+
+      // More than 59 min ago: show exact time (e.g. 14:32)
+      return d.toLocaleTimeString(employeeLocale(), { hour: '2-digit', minute: '2-digit' });
     }
 
     function notificationOrigin(type) {
