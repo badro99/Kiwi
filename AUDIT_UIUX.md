@@ -227,3 +227,12 @@ Ce document consigne l'ensemble des audits visuels, ergonomiques, d'accessibilit
   1. Refonte du compositeur de bouquet avec médaillon Material Symbol (`inventory_2`) et guidage visuel tiges / presets.
   2. Bumping de la révision `pos-fleuriste.js?v=3` dans le dispatcher.
 - **État** : ✅ Déployé
+
+### 7.14 Vertical Salon de Coiffure (`assets/pos-coiffure.js`)
+- **Fichiers** : `assets/pos-coiffure.js:695`, `assets/pos-dispatch.js:70`
+- **Problèmes identifiés** :
+  1. Ticket de passage coiffure vide sans médaillon Material Symbols.
+- **Améliorations apportées** :
+  1. Refonte du ticket de passage avec médaillon Material Symbol (`inventory_2`) et hiérarchie soignée pour l'attribution par coiffeur·se.
+  2. Bumping de la révision `pos-coiffure.js?v=3` dans le dispatcher.
+- **État** : ✅ Déployé

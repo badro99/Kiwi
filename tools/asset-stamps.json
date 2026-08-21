@@ -364,16 +364,16 @@
     "sha": "5dd0c6a66ac9f698"
   },
   "assets/pos-coiffure.css": {
-    "v": "2",
+    "v": "3",
     "sha": "8e3713916dc1f3ab"
   },
   "assets/pos-coiffure.js": {
-    "v": "2",
-    "sha": "7e8c999fe50a7b06"
+    "v": "3",
+    "sha": "3fc1bae8e34e50cf"
   },
   "assets/pos-dispatch.js": {
     "v": "30",
-    "sha": "5f89f8a3fe37e775"
+    "sha": "7cbf966f742cb991"
   },
   "assets/pos-epicerie.css": {
     "v": "3",
