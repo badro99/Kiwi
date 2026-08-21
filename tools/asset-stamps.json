@@ -364,7 +364,7 @@
     "sha": "7e8c999fe50a7b06"
   },
   "assets/pos-dispatch.js": {
-    "v": "29",
+    "v": "30",
     "sha": "fde1af85770dc9c2"
   },
   "assets/pos-epicerie.css": {
@@ -476,8 +476,8 @@
     "sha": "bd883deb09555f74"
   },
   "assets/pos-workspaces.css": {
-    "v": "3",
-    "sha": "988babd341d2f1fd"
+    "v": "4",
+    "sha": "c667db1491956d82"
   },
   "assets/pos-workspaces.js": {
     "v": "4",

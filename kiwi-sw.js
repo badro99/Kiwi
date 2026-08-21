@@ -249,14 +249,14 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=3',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=4',
-  '/assets/pos-dispatch.js?v=29',
+  '/assets/pos-dispatch.js?v=30',
   '/assets/retail-scan.css?v=7',
   '/assets/vendor/zxing-browser.min.js?v=1',
   '/assets/retail-scan.js?v=6',
   '/assets/caisse-dna.css?v=3',
   '/assets/caisse-dna.js?v=2',
   '/assets/pos-mobile.js?v=3',
-  '/assets/pos-workspaces.css?v=3',
+  '/assets/pos-workspaces.css?v=4',
   '/assets/pos-workspaces.js?v=4',
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après

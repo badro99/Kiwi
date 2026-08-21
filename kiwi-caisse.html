@@ -129,7 +129,7 @@
        each (assets/pos-<id>.{js,css}, assets/pressing-caisse.{js,css} pour le
        pressing). Tap the pin-foot note for the code legend.
        Any unlisted code still opens the restaurant caisse below. -->
-  <script src="assets/pos-dispatch.js?v=29" defer></script>
+  <script src="assets/pos-dispatch.js?v=30" defer></script>
   <link rel="stylesheet" href="assets/caisse-dna.css?v=3" />
   <link rel="stylesheet" href="assets/print-paper.css?v=1" />
   <script src="assets/caisse-dna.js?v=2" defer></script>
@@ -1079,7 +1079,7 @@
       user-select: none;
     }
     .menu-item:hover { background: var(--wash); transform: translateY(-1px); }
-    .menu-item:active { transform: translateY(0); }
+    .menu-item:active { transform: scale(0.97); transition: transform 70ms var(--spring, cubic-bezier(0.34, 1.45, 0.5, 1)); }
     .menu-item:focus-visible { outline: 2px solid var(--forest); outline-offset: 2px; }
     .menu-item-art {
       width: 40px; height: 40px;
@@ -1415,7 +1415,8 @@
     }
     .pay-btn svg { width: 18px; height: 18px; }
     .pay-btn:hover { transform: translateY(-1px); }
-    .pay-btn:active { transform: translateY(0); }
+    .pay-btn:active { transform: scale(0.97); transition: transform 70ms var(--spring, cubic-bezier(0.34, 1.45, 0.5, 1)); }
+    .pay-btn:focus-visible { outline: 2px solid var(--emerald); outline-offset: 2px; }
     /* card + cash share one row as compact icon-only buttons */
     .pay-row { display: flex; gap: 8px; }
     .pay-row .pay-btn { flex: 1; }
@@ -1639,6 +1640,8 @@
     .ma-btn.primary { background: var(--gradient); color: #fff; }
     .ma-btn.secondary { background: var(--paper-mute); color: var(--ink); }
     .ma-btn:hover { transform: translateY(-1px); }
+    .ma-btn:active:not(:disabled) { transform: scale(0.97); transition: transform 70ms var(--spring, cubic-bezier(0.34, 1.45, 0.5, 1)); }
+    .ma-btn:focus-visible { outline: 2px solid var(--forest); outline-offset: 2px; }
 
     .modal-foot {
       text-align: center;
@@ -4756,7 +4759,7 @@
 </style>
   <link rel="stylesheet" href="assets/caisse-skin.css?v=3" />
   <link rel="stylesheet" href="assets/pos-mobile.css?v=3" />
-  <link rel="stylesheet" href="assets/pos-workspaces.css?v=3" />
+  <link rel="stylesheet" href="assets/pos-workspaces.css?v=4" />
   <link rel="manifest" href="manifest.webmanifest" />
   <meta name="theme-color" content="#053B2C" />
   <meta name="apple-mobile-web-app-capable" content="yes" />

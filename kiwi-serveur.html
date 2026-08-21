@@ -1001,9 +1001,12 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       width: 58px; height: 46px;
       display: flex; align-items: center; justify-content: center;
       color: var(--ink-3);
-      transition: color 175ms ease;
+      transition: color 175ms ease, transform 120ms var(--spring, cubic-bezier(0.34, 1.45, 0.5, 1));
       -webkit-tap-highlight-color: transparent;
+      cursor: pointer;
     }
+    .bt-btn:active { transform: scale(0.92); }
+    .bt-btn:focus-visible { outline: 2px solid var(--forest); outline-offset: 2px; }
 
     /* Compact phones and landscape screens keep the navigation fully inside
        the visual viewport without stealing space from the table list. */

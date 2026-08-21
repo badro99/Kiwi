@@ -1,6 +1,6 @@
 # Kiwi POS · Grand Audit UI/UX & Sweep d'Amélioration Premium
 
-Ce document trace l'ensemble des audits visuels, ergonomiques, d'accessibilité et de mouvement menés sur l'écosystème Kiwi POS, ainsi que chaque amélioration déployée.
+Ce document consigne l'ensemble des audits visuels, ergonomiques, d'accessibilité et de mouvement menés sur l'ensemble des surfaces du produit Kiwi POS, ainsi que chaque amélioration déployée en production.
 
 ---
 
@@ -13,33 +13,34 @@ Ce document trace l'ensemble des audits visuels, ergonomiques, d'accessibilité 
 
 ---
 
-## 📋 Registre des Passes & Surfaces
+## 📋 Registre des Passes & Surfaces Déployées
 
-### Passe 1 · Dashboard (`dashboard.html`)
+### Tier 1 · Le Tableau de Bord (`dashboard.html`)
 | Surface / Écran | Fichier(s) | Problèmes identifiés | Améliorations apportées | État |
 | :--- | :--- | :--- | :--- | :--- |
-| **Accueil & Topbar** | `dashboard.html`, `assets/interactive.js` | Focus states hétérogènes, feedback boutons sans ressort, micro-sauts de mise en page | Amélioration des focus-visible, échelle de transition 0.98 sur bouton cliqué, polissage des barres de progression et des badges de statut | En cours |
-| **KPI Strip & Objectif Journalier** | `dashboard.html`, `assets/tokens.css` | Alignement des décimales, contraste des badges en mode sombre | Tabular-nums normalisé, isolation bidi des montants MAD, contrastes vérifiés | À auditer |
-| **Flux en direct & Ventes** | `dashboard.html`, `assets/pages.js` | États vides sans incitation à l'action claire | Squelettes de chargement fluides, message vide avec bouton d'action directe | À auditer |
-| **Paramètres Dédiés** | `assets/interactive.js`, `assets/genpage.css` | Remplacement du tiroir étroit par la page complète | Page `appPage('settings')` déployée avec 4 cartes thématiques et contrôles en direct | ✅ Complété |
-| **My Kiwi & Profil Marchand** | `assets/account.js` | Hiérarchie visuelle des fiches d'abonnements | Alignement des métriques, uniformisation des boutons d'actions secondaires | À auditer |
+| **Accueil & Topbar** | `dashboard.html` | Absence de feedback tactile à l'enfoncement, focus outlines par défaut | Échelle 0.97 sur bouton cliqué (`:active`), focus-visible `2px solid var(--atlas)`, suppression de tout résidu italique | ✅ Déployé |
+| **Pills de Période** | `dashboard.html` | Transition raide des pilules de date | Ressort `var(--spring)` sur transition active, focus visible net | ✅ Déployé |
+| **Page Paramètres Dédiée** | `assets/interactive.js` | Ancien tiroir latéral trop étroit | Déploiement de la page plein écran `appPage('settings')` avec 4 fiches de gestion haut de gamme | ✅ Déployé |
+| **Sous-pages & GenPage** | `assets/genpage.css` | Manque d'harmonisation des micro-interactions sur les 13 destinations | Règle globale `.dash-genpage` avec retour tactile et focus AA | ✅ Déployé |
+| **Profil Marchand (My Kiwi)** | `assets/account.js` | Boutons d'action sans retour d'impulsion | Affordance `:active` sur `.acc-cta`, `.acc-add-biz`, `.acc-topic` | ✅ Déployé |
+| **Tiroirs & Tiroir Vide** | `assets/pages.js` | Écrans vides en simple texte brut | Ajout d'un médaillon icône, d'un titre et d'un message soigné | ✅ Déployé |
+| **Cartes & KDS (Pages Pro)** | `assets/pages-pro.css` | Retours haptiques visuels manquants | Feedback tactile sur `.p-tab`, `.stock-card`, `.menu-pill-cat` | ✅ Déployé |
 
-### Passe 2 · Verticaux Métiers (`assets/pos-dispatch.js` & 14 modules)
-| Module | Fichier(s) | Problèmes identifiés | Améliorations apportées | État |
-| :--- | :--- | :--- | :--- | :--- |
-| **Restaurant / Café** | `assets/pos-restaurant.js` | Découpe des tables et sélections de convives | Touch targets >= 44px, retour haptique visuel | Planifié |
-| **Pressing & Blanchisserie** | `assets/pos-pressing.js`, `assets/pressing-dashboard.js` | Enchaînement de sélection date de retrait | Clarté du statut ticket et touches de date rapides | Planifié |
-| **Boutique & Retail** | `assets/pos-boutique.js` | Vitesse de scan et saisie de quantité | Clavier tactile optimisé | Planifié |
-| **Coiffeur / Beauté** | `assets/pos-coiffeur.js` | Sélecteur de praticienne et de créneaux | Cohérence de grille avec les autres modules | Planifié |
-| **Autres verticaux (10)** | `assets/pos-*.js` | Variantes de boutons et micro-labels | Normalisation de la grille partagée | Planifié |
-
-### Passe 3 · La Caisse Tactile (`kiwi-caisse.html`)
+### Tier 2 · Les 14 Verticaux Métiers (`assets/pos-dispatch.js` & `pos-workspaces.css`)
 | Surface / Écran | Fichier(s) | Problèmes identifiés | Améliorations apportées | État |
 | :--- | :--- | :--- | :--- | :--- |
-| **Grille Catalogue & Panier** | `kiwi-caisse.html`, `assets/caisse.css` | Tailles cibles tactiles en bord d'écran, contraste encaissement | Sécurisation tactile des touches destructives (suppression ligne), retour visuel | Planifié |
-| **Écran de Verrouillage & PIN** | `kiwi-caisse.html` | Fluidité de la frappe numérique et réinitialisation | Retour visuel discret par impulsion | Planifié |
+| **Espaces Métiers Partagés** | `assets/pos-workspaces.css` | Onglets et touches d'ajout sans rebond | Micro-interactions `:active` à échelle 0.97 et focus-visible sur tous les formulaires | ✅ Déployé |
+| **PIN Dispatcher & Légende** | `assets/pos-dispatch.js` | Fluidité d'affichage de la légende des codes PIN | Transition adoucie et gestion de l'état ouvert/fermé | ✅ Déployé |
 
-### Passe 4 · Le Service en Salle (`kiwi-serveur.html`)
+### Tier 3 · La Caisse Tactile (`kiwi-caisse.html`)
 | Surface / Écran | Fichier(s) | Problèmes identifiés | Améliorations apportées | État |
 | :--- | :--- | :--- | :--- | :--- |
-| **Console de Service (Vue Nuit)** | `kiwi-serveur.html` | Contrastes des badges d'articles envoyés/servis | Amélioration du contraste de lecture en ambiance sombre | Planifié |
+| **Articles du Catalogue** | `kiwi-caisse.html` | Absence d'impulsion à l'ajout panier | Animation active `transform: scale(0.97)` à ressort 70ms | ✅ Déployé |
+| **Touches d'Encaissement** | `kiwi-caisse.html` | Retour tactile statique sur `.pay-btn` | Effet ressort `scale(0.97)` sur les boutons d'encaissement (Carte, Espèces, QR) | ✅ Déployé |
+| **Modales de Caisse** | `kiwi-caisse.html` | Touches d'actions des modales sans ressort | Feedback `.ma-btn:active` et focus-visible emerald | ✅ Déployé |
+
+### Tier 4 · Le Service en Salle (`kiwi-serveur.html`)
+| Surface / Écran | Fichier(s) | Problèmes identifiés | Améliorations apportées | État |
+| :--- | :--- | :--- | :--- | :--- |
+| **Barre de Navigation Flottante** | `kiwi-serveur.html` | Boutons de navigation (`.bt-btn`) sans impulsion tactile | Ressort `scale(0.92)` à l'enfoncement, focus ring discret | ✅ Déployé |
+| **Cartes de Table & Actions** | `kiwi-serveur.html` | Clarté de sélection et retour tactile | Animation tactile fluide et contraste élevé en vue sombre | ✅ Déployé |
