@@ -81,3 +81,27 @@ CREATE TABLE IF NOT EXISTS sale_void_history (
 CREATE INDEX IF NOT EXISTS idx_sale_void_history_merchant_ts
   ON sale_void_history (merchant, voided_ts);
 ```
+## Phase 1d-b · remises durables sur la vente
+
+- Surface émettrice : `kiwi-caisse.html` au point de vérité `recordSale()`, puis
+  la file durable de `assets/live-link.js`. Le payload optionnel est
+  `{grossAmountCents,discountAmountCents,discountReason,actorId}`. Le brut vient
+  des lignes figées, la remise vaut `brut-net`, le motif est l'enum
+  `commercial|loyal-customer|kitchen-error|other`, et l'acteur est l'id du
+  responsable vérifié, jamais son code ni son nom.
+- Validation serveur : entiers bornés, `discountAmountCents <=
+  grossAmountCents`, motif dans l'enum, identifiant borné et non assimilable à
+  quatre chiffres. `/api/feed` renvoie ces quatre faits avec la vente tenantée.
+- Panne backend / schéma en retard : la caisse persiste d'abord le ticket et son
+  outbox. `/api/sale` retombe sur l'INSERT historique sans les colonnes
+  optionnelles si la migration manque; l'encaissement n'attend jamais la
+  télémétrie. Le signal reste absent tant que ces faits ne sont pas relus.
+- Migration D1 additive appliquée à `kiwi-sales` après `PRAGMA
+  table_info(sales)` (aucune ligne commerçant lue) :
+
+```sql
+ALTER TABLE sales ADD COLUMN gross_amount_cents INTEGER;
+ALTER TABLE sales ADD COLUMN discount_amount_cents INTEGER;
+ALTER TABLE sales ADD COLUMN discount_reason TEXT;
+ALTER TABLE sales ADD COLUMN discount_actor_id TEXT;
+```

@@ -687,7 +687,7 @@
          * on la relit : le code prouve une personne, on garde donc son nom
          * (jamais le code) pour que la surface qui a demandé l'accord puisse
          * l'écrire dans sa vente. */
-        lastManager = { name: String(who.name || '').trim() || 'Responsable', role: String(who.role || '').trim() };
+        lastManager = { id: String(who.id || '').slice(0, 80), name: String(who.name || '').trim() || 'Responsable', role: String(who.role || '').trim() };
         return true;
       });
     },

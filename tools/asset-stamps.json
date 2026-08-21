@@ -52,8 +52,8 @@
     "sha": "7332c4414f0ffae1"
   },
   "assets/briefing.js": {
-    "v": "9",
-    "sha": "89f6d39c1e101a94"
+    "v": "10",
+    "sha": "caaa18b0551c9835"
   },
   "assets/caisse-attendance-code.js": {
     "v": "2",
@@ -76,8 +76,8 @@
     "sha": "5dd5229188e8ff8e"
   },
   "assets/caisse-pairing.js": {
-    "v": "10",
-    "sha": "4caa9039670b5086"
+    "v": "11",
+    "sha": "801f68c0c67a19b0"
   },
   "assets/caisse-pwa.js": {
     "v": "391",
@@ -252,8 +252,8 @@
     "sha": "5829242ec789b552"
   },
   "assets/live-link.js": {
-    "v": "14",
-    "sha": "4dbf753ece4e711c"
+    "v": "15",
+    "sha": "d3bbe4228783b4fc"
   },
   "assets/live-socket.js": {
     "v": "2",
@@ -628,8 +628,8 @@
     "sha": "dfa3b4d5ebb25d51"
   },
   "assets/venues.js": {
-    "v": "22",
-    "sha": "c6321afdbba6013c"
+    "v": "23",
+    "sha": "201fda721e4ce8ec"
   },
   "assets/vexel-neon.js": {
     "v": "2046",

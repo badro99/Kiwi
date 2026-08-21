@@ -160,12 +160,12 @@ export async function onRequestGet({ request, env }) {
     if (!voidsOnly) {
       const rs = byDay
         ? await env.DB.prepare(
-          'SELECT rowid AS cursor, id, amount, amount_cents, method, label, ref, ts, lines, channel ' +
+          'SELECT rowid AS cursor, id, amount, amount_cents, gross_amount_cents, discount_amount_cents, discount_reason, discount_actor_id, method, label, ref, ts, lines, channel ' +
           'FROM sales WHERE merchant IN (?, ?) AND ts >= ? AND void_ts IS NULL ' +
           `ORDER BY ts DESC LIMIT ${DAY_LIMIT}`
         ).bind(merchant, legacy || merchant, from).all()
         : await env.DB.prepare(
-          'SELECT rowid AS cursor, id, amount, amount_cents, method, label, ref, ts, lines, channel ' +
+          'SELECT rowid AS cursor, id, amount, amount_cents, gross_amount_cents, discount_amount_cents, discount_reason, discount_actor_id, method, label, ref, ts, lines, channel ' +
           'FROM sales WHERE merchant IN (?, ?) AND rowid > ? AND void_ts IS NULL ORDER BY rowid ASC LIMIT 50'
         ).bind(merchant, legacy || merchant, since).all();
       rows = (rs && rs.results) || [];
@@ -181,12 +181,14 @@ export async function onRequestGet({ request, env }) {
     const noLines = msg.includes('lines');
     const noChannel = msg.includes('channel');
     const noAmountCents = msg.includes('amount_cents');
-    if (!noVoid && !noLines && !noChannel && !noAmountCents) {
+    const noDiscount = /gross_amount_cents|discount_amount_cents|discount_reason|discount_actor_id/.test(msg);
+    if (!noVoid && !noLines && !noChannel && !noAmountCents && !noDiscount) {
       return json({ sales: [], cursor: since, error: 'db', detail: msg }, 500);
     }
     if (voidsOnly) return json({ sales: [], cursor: since, merchant, voided: [] });
     const cols = 'rowid AS cursor, id, amount'
       + (noAmountCents ? '' : ', amount_cents')
+      + (noDiscount ? '' : ', gross_amount_cents, discount_amount_cents, discount_reason, discount_actor_id')
       + ', method, label, ref, ts'
       + (noLines ? '' : ', lines') + (noChannel ? '' : ', channel');
     const where = byDay ? 'ts >= ?' : 'rowid > ?';
@@ -269,6 +271,10 @@ export async function onRequestGet({ request, env }) {
       : Math.round(Number(sale.amount || 0) * 100);
     sale.amountCents = cents;
     sale.amount = cents / 100;
+    sale.grossAmountCents = sale.gross_amount_cents == null ? null : Number(sale.gross_amount_cents);
+    sale.discountAmountCents = sale.discount_amount_cents == null ? null : Number(sale.discount_amount_cents);
+    sale.discountReason = String(sale.discount_reason || '');
+    sale.actorId = String(sale.discount_actor_id || '');
     const id = String(sale.id || '');
     const visit = id.startsWith('visit-') && id.endsWith('-emp') ? id.slice(6, -4) : '';
     const order = visit ? orderByVisit.get(visit) : null;

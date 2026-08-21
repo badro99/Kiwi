@@ -492,6 +492,12 @@
     };
     if (entry.channel) body.channel = String(entry.channel).slice(0, 24);
     if (entry.session) body.session = String(entry.session).slice(0, 64);
+    if (entry.discountAmountCents != null) {
+      body.grossAmountCents = Math.round(Number(entry.grossAmountCents));
+      body.discountAmountCents = Math.round(Number(entry.discountAmountCents));
+      body.discountReason = String(entry.discountReason || '').slice(0, 32);
+      body.actorId = String(entry.actorId || '').slice(0, 96);
+    }
     /* The same completed receipt can be observed by two local persistence
        paths. Stable IDs plus this local check prevent it entering the queue
        twice; INSERT OR IGNORE remains the server-side second lock. */
@@ -816,7 +822,8 @@
         amount: amt, amountCents: amtCents, method: s.method || 'cash', cursor: cur, ts: s.ts,
         label: s.label, ref: s.orderRef || s.ref || '', receiptRef: s.receiptRef || s.ref || '', origin: s.origin || '',
         server: s.server || '', channel: s.channel || '', lines: s.lines,
-        saleId: s.id || s.saleId || '',
+        saleId: s.id || s.saleId || '', grossAmountCents: s.grossAmountCents,
+        discountAmountCents: s.discountAmountCents, discountReason: s.discountReason || '', actorId: s.actorId || '',
       }); have[cur] = 1; } catch (_) {}
     });
     /* Fail closed once the full entitled history is known. Any server-backed

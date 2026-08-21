@@ -4768,7 +4768,7 @@
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
   <script src="assets/caisse-pwa.js?v=391" defer></script>
-  <script src="assets/live-link.js?v=14" defer></script>
+  <script src="assets/live-link.js?v=15" defer></script>
   <!-- The staff-role catalogue — says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
   <script src="assets/staff-roles.js" defer></script>
@@ -4780,7 +4780,7 @@
        avec kiwi-cuisine.html, qui s'appaire sur la même route. -->
   <script src="assets/pairing-commit.js?v=1" defer></script>
   <!-- Hosted: 6-digit pairing pad binds this caisse to its store (no demo PINs). -->
-  <script src="assets/caisse-pairing.js?v=10" defer></script>
+  <script src="assets/caisse-pairing.js?v=11" defer></script>
   <!-- La copie serveur des données d'établissement (fidélité, carnet) : une
        caisse neuve doit retrouver le magasin, pas repartir vide. AVANT
        venue-store.js, qui s'y branche. -->
@@ -11398,9 +11398,29 @@
       shift.discounts = money(shift.discounts + cut);
       shift.discountsCount++;
     }
+    function discountReasonCode(value) {
+      const key = String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      if (/client/.test(key)) return 'loyal-customer';
+      if (/cuisine/.test(key)) return 'kitchen-error';
+      if (/commercial/.test(key)) return 'commercial';
+      return 'other';
+    }
+    function activeSaleDiscount(amount, lines) {
+      const d = mode === 'vrap' ? vrapDiscount : (selectedId && tables[selectedId] && tables[selectedId].discount);
+      if (!d || !Array.isArray(lines) || !lines.length) return null;
+      const gross = money(lines.reduce((sum, line) => sum + (Number(line && (line.total != null ? line.total : ((line.price || 0) * (line.qty || 0)))) || 0), 0));
+      const discount = money(Math.max(0, gross - money(amount)));
+      if (!(gross > 0) || !(discount > 0) || discount > gross) return null;
+      return {
+        grossAmountCents: minor(gross), discountAmountCents: minor(discount),
+        discountReason: discountReasonCode(d.reason),
+        actorId: String(d.actorId || (currentCashier && currentCashier.id) || '').slice(0, 96)
+      };
+    }
     function recordSale(amount, method, label, tip, lines, settlementTable) {
       amount = money(amount);
       if (amount <= 0) return;
+      const discount = activeSaleDiscount(amount, lines);
       accountActiveDiscount();
       const entry = {
         id: 'sale-' + Date.now() + '-' + journal.length,
@@ -11410,6 +11430,7 @@
         tip: money(tip),
         cashier: currentCashier.name,
       };
+      if (discount) Object.assign(entry, discount);
       if (settlementTable) {
         const visit = phoneSessionOf(settlementTable);
         if (visit) {
@@ -11946,7 +11967,7 @@
       const me = window.KiwiStaff || null;
       const cashName = (me && me.name) || (staff && staff[0] && staff[0].name) || 'Caissier';
       const cashRole = (me && me.role) || (staff && staff[0] && staff[0].role) || 'Caissier';
-      currentCashier = { id: 'me', name: cashName, role: cashRole };
+      currentCashier = { id: String((me && me.id) || 'me'), name: cashName, role: cashRole };
       if (Array.isArray(CASHIER_ROSTER)) {
         CASHIER_ROSTER.length = 0;
         (staff || []).forEach((s, i) => CASHIER_ROSTER.push({ id: 'staff' + i, name: s.name || 'Caissier', role: s.role || 'Caissier' }));
@@ -13951,6 +13972,7 @@
             value:  remiseState.value,
             amount: amount,
             reason: remiseState.reason,
+            actorId: String(window.KiwiCaissePairing?.lastManager?.()?.id || currentCashier?.id || '').slice(0, 96),
             accounted: false,
           };
           closeRemiseModal();
@@ -13979,6 +14001,7 @@
           value:  remiseState.value,
           amount: amount,
           reason: remiseState.reason,
+          actorId: String(window.KiwiCaissePairing?.lastManager?.()?.id || currentCashier?.id || '').slice(0, 96),
           accounted: false,
         };
         closeRemiseModal();

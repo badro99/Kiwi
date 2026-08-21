@@ -8077,6 +8077,21 @@
     if (server) entry.server = server;
     if (channel) entry.channel = channel;
     if (saleId) entry.saleId = saleId;
+    /* Optional discount facts are server-validated and stay attached to the
+       immutable sale. Reject partial/code-shaped metadata at this second
+       boundary rather than teaching analytics to guess. */
+    if (sale && sale.discountAmountCents != null) {
+      const gross = Math.round(Number(sale.grossAmountCents));
+      const discount = Math.round(Number(sale.discountAmountCents));
+      const reason = String(sale.discountReason || '');
+      const actorId = String(sale.actorId || '').slice(0, 96);
+      if (Number.isFinite(gross) && gross > 0 && Number.isFinite(discount) && discount > 0 && discount <= gross
+        && /^(commercial|loyal-customer|kitchen-error|other)$/.test(reason)
+        && /^[A-Za-z0-9:_-]{1,96}$/.test(actorId) && !/^\d{4}$/.test(actorId)) {
+        entry.grossAmountCents = gross; entry.discountAmountCents = discount;
+        entry.discountReason = reason; entry.actorId = actorId;
+      }
+    }
     // Live-Link sales carry the feed rowid as `cursor` — persisted so the bridge
     // dedups against the store itself and can never double-count or drift below it.
     if (sale && sale.cursor) entry.cursor = sale.cursor;

@@ -10,7 +10,7 @@
   var FEATURE = 'briefing';
   var PREFIX = 'kiwi:briefing:v1:';
   var MAX_DAYS = 45;
-  var RULES = [salesDropRule, lowStockRule, marginErosionRule, planningGapRule, cancellationRateRule];
+  var RULES = [salesDropRule, lowStockRule, marginErosionRule, planningGapRule, cancellationRateRule, discountShareRule];
   var doc = { days: [] };
   var cloud = null;
 
@@ -388,6 +388,56 @@
       evidence: { count: current.cancellations, window: String(day || '') + ' · 4 mêmes jours de semaine', source: 'sale_void_history + KiwiSales.list' }
     };
   }
+  function discountShareRule(input) {
+    input = input || {};
+    var current = input.current, baselineShares = input.baselineShares, day = input.day;
+    if (!current || !Array.isArray(baselineShares)) {
+      var ready = input.backfillComplete;
+      if (ready == null) {
+        try { var live = window.KiwiLive && window.KiwiLive.status ? window.KiwiLive.status() : null; ready = !!(live && live.on && live.backfillComplete && live.merchant === slug()); }
+        catch (_) { ready = false; }
+      }
+      var D = window.KiwiDayReport;
+      if (!ready || !D || typeof D.lastClosedDay !== 'function' || typeof D.dayBounds !== 'function' || typeof D.shiftDay !== 'function') return null;
+      var rows = salesRows(); day = D.lastClosedDay();
+      var stats = function (targetDay) {
+        var bounds = D.dayBounds(targetDay), gross = 0, discount = 0, discountedCount = 0, actors = Object.create(null);
+        rows.forEach(function (sale) {
+          if (!(+sale.ts >= bounds.from && +sale.ts < bounds.to)) return;
+          var net = sale.amountCents != null ? +sale.amountCents : Math.round((+sale.amount || 0) * 100);
+          var saleGross = sale.grossAmountCents != null ? +sale.grossAmountCents : net;
+          if (!(saleGross > 0)) return;
+          gross += saleGross;
+          var cut = +sale.discountAmountCents || 0;
+          if (cut > 0 && cut <= saleGross && sale.actorId) {
+            discount += cut; discountedCount += 1;
+            actors[sale.actorId] = (actors[sale.actorId] || 0) + cut;
+          }
+        });
+        return { gross: gross, discount: discount, discountedCount: discountedCount, actors: actors };
+      };
+      current = stats(day); baselineShares = [];
+      for (var i = 1; i <= 4; i += 1) {
+        var comparable = stats(D.shiftDay(day, -7 * i));
+        if (comparable.gross > 0) baselineShares.push((comparable.discount / comparable.gross) * 100);
+      }
+    }
+    if (!current || baselineShares.length < 3 || !(current.gross > 0) || current.discountedCount < 2 || !(current.discount > 0)) return null;
+    var share = (current.discount / current.gross) * 100, baseline = median(baselineShares);
+    if (!Number.isFinite(baseline) || share < 5 || share < Math.max(5, baseline * 2)) return null;
+    var actorRows = Object.keys(current.actors || {}).map(function (id) { return { id: id, amount: +current.actors[id] || 0 }; }).sort(function (a, b) { return b.amount - a.amount; });
+    var actor = actorRows[0] ? actorRows[0].id : 'id-inconnu';
+    var pct = Math.round(share * 10) / 10, base = Math.round(baseline * 10) / 10;
+    return {
+      id: 'discount-share:' + String(day || 'day'), kind: 'discount-share', tone: 'warn', roles: ['owner'],
+      copy: {
+        fr: 'Les remises représentent ' + pct + ' % du brut contre ' + base + ' % habituellement. Acteur principal : ' + actor + '. Seuil : au moins 5 % et 2× la référence.',
+        en: 'Discounts represent ' + pct + '% of gross versus a usual ' + base + '%. Leading actor: ' + actor + '. Threshold: at least 5% and 2× baseline.',
+        ar: 'تمثل الخصومات ' + pct + '٪ من الإجمالي مقابل ' + base + '٪ عادةً. المعرّف الرئيسي: ' + actor + '. العتبة: 5٪ على الأقل وضعف المرجع.'
+      },
+      evidence: { count: current.discountedCount, window: String(day || '') + ' · 4 mêmes jours de semaine', source: 'sales.discount_amount_cents / gross_amount_cents' }
+    };
+  }
   function visibleLines(lines, role) {
     role = role || tier();
     return (Array.isArray(lines) ? lines : []).filter(function (line) {
@@ -540,7 +590,7 @@
   window.KiwiBriefing = {
     canHandle: canHandle, reply: reply, compute: function () { return compute(); }, lines: activeLines,
     dismiss: function (id) { return setState(id, 'dismissed'); }, handled: function (id) { return setState(id, 'handled'); },
-    _test: { businessDay: businessDay, scopeKey: scopeKey, normalizeLine: normalizeLine, visibleLines: visibleLines, salesDropRule: salesDropRule, lowStockRule: lowStockRule, marginErosionRule: marginErosionRule, planningGapRule: planningGapRule, cancellationRateRule: cancellationRateRule, stockItems: stockItems, proposeLine: proposeLine, openPlanning: openPlanning, salesRows: salesRows, dayBoundsAt: dayBoundsAt, compute: compute, read: function () { return clone(doc); }, write: writeLocal }
+    _test: { businessDay: businessDay, scopeKey: scopeKey, normalizeLine: normalizeLine, visibleLines: visibleLines, salesDropRule: salesDropRule, lowStockRule: lowStockRule, marginErosionRule: marginErosionRule, planningGapRule: planningGapRule, cancellationRateRule: cancellationRateRule, discountShareRule: discountShareRule, stockItems: stockItems, proposeLine: proposeLine, openPlanning: openPlanning, salesRows: salesRows, dayBoundsAt: dayBoundsAt, compute: compute, read: function () { return clone(doc); }, write: writeLocal }
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true }); else boot();
 }());

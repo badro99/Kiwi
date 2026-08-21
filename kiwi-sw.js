@@ -65,7 +65,7 @@ var SHELL = [
   '/assets/cloud-doc.js',
   '/assets/agent-action-center.js?v=1',
   '/assets/cancellation-history.js?v=2',
-  '/assets/briefing.js?v=9',
+  '/assets/briefing.js?v=10',
   '/assets/ai-telemetry.js',
   '/assets/agent-data.js',
   '/assets/agent-features.js?v=3',
@@ -89,7 +89,7 @@ var SHELL = [
      entrée pré-cachée sans estampille ne répondrait jamais à la requête de la
      page (donc pas de hors-ligne), tandis qu'une estampille périmée ici
      re-servirait l'ancien fichier. Voir le commentaire dans dashboard.html. */
-  '/assets/venues.js?v=22',
+  '/assets/venues.js?v=23',
   '/assets/phone.js?v=1',
   '/assets/trade-workspace-schema.js?v=4',
   '/assets/trade-workspaces.js?v=3',
@@ -153,7 +153,7 @@ var SHELL = [
   '/assets/platform-ops.css?v=1',
   '/assets/operations.js?v=10',
   '/assets/operations-ui.js?v=11',
-  '/assets/live-link.js?v=14',
+  '/assets/live-link.js?v=15',
   '/assets/channel-sales.js?v=3',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
@@ -299,7 +299,7 @@ var SHELL = [
   '/assets/pos-autre.js?v=2',
   '/assets/pos-maison.css?v=16',
   '/assets/pos-maison.js?v=16',
-  '/assets/caisse-pairing.js?v=10',
+  '/assets/caisse-pairing.js?v=11',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là
      qu'il faut pouvoir ressortir le ticket. Un bouton de secours qui a besoin du

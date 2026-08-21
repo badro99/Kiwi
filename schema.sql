@@ -8,6 +8,10 @@ CREATE TABLE IF NOT EXISTS sales (
   merchant     TEXT NOT NULL,      -- tenant key (one value for the pilot)
   amount       INTEGER NOT NULL,   -- legacy whole MAD; retained for backward compatibility with pre-migration rows and unmigrated readers
   amount_cents INTEGER,            -- centimes; authoritative when present. Legacy rows use amount (whole MAD).
+  gross_amount_cents INTEGER,      -- nullable: gross before an approved discount
+  discount_amount_cents INTEGER,   -- nullable: bounded, never greater than gross
+  discount_reason TEXT,            -- nullable enum: commercial|loyal-customer|kitchen-error|other
+  discount_actor_id TEXT,          -- nullable staff/account id, never a PIN or code
   method       TEXT NOT NULL,      -- cash | card | tap | qr | wallet
   label    TEXT,               -- "À emporter #12", "Table 4", …
   ref      TEXT,               -- caisse receipt ref

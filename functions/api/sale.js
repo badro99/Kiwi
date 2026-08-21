@@ -15,6 +15,7 @@ import { poke } from './_live.js';
 
 const MAX_AMOUNT_CENTS = 20000000; // 200,000 MAD in centimes
 const MAX_AMOUNT_DIRHAMS = 200000; // legacy ceiling
+const DISCOUNT_REASONS = new Set(['commercial', 'loyal-customer', 'kitchen-error', 'other']);
 
 function json(obj, status) {
   return new Response(JSON.stringify(obj), {
@@ -62,6 +63,21 @@ export async function onRequestPost({ request, env }) {
   // Validate floor (> 0) and ceiling (<= 20,000,000 cents) on centime level
   if (amountCents <= 0 || amountCents > MAX_AMOUNT_CENTS) {
     return json({ error: 'bad-amount' }, 400);
+  }
+
+  const hasDiscount = b && (b.grossAmountCents != null || b.discountAmountCents != null || b.discountReason != null || b.actorId != null);
+  let grossAmountCents = null, discountAmountCents = null, discountReason = null, discountActorId = null;
+  if (hasDiscount) {
+    grossAmountCents = Math.round(Number(b.grossAmountCents));
+    discountAmountCents = Math.round(Number(b.discountAmountCents));
+    discountReason = String(b.discountReason || '');
+    discountActorId = String(b.actorId || '').slice(0, 96);
+    if (!Number.isFinite(grossAmountCents) || !Number.isFinite(discountAmountCents)
+      || grossAmountCents <= 0 || grossAmountCents > MAX_AMOUNT_CENTS
+      || discountAmountCents <= 0 || discountAmountCents > grossAmountCents
+      || Math.abs((grossAmountCents - discountAmountCents) - amountCents) > 1) return json({ error: 'bad-discount-amount' }, 400);
+    if (!DISCOUNT_REASONS.has(discountReason)) return json({ error: 'bad-discount-reason' }, 400);
+    if (!/^[A-Za-z0-9:_-]{1,96}$/.test(discountActorId) || /^\d{4}$/.test(discountActorId)) return json({ error: 'bad-discount-actor' }, 400);
   }
 
   // A sale MUST name its store. The old fallback to a literal 'default' bucket
@@ -245,7 +261,22 @@ export async function onRequestPost({ request, env }) {
   } catch (_) { lines = null; }
 
   let linesMode = 'stored';
-  try {
+  let stored = false;
+  if (hasDiscount) {
+    try {
+      await env.DB.prepare(
+        'INSERT OR IGNORE INTO sales (id, merchant, amount, method, label, ref, ts, lines, channel, amount_cents, gross_amount_cents, discount_amount_cents, discount_reason, discount_actor_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+      ).bind(id, merchant, amount, method, label, ref, ts, lines, channel || null, amountCents,
+             grossAmountCents, discountAmountCents, discountReason, discountActorId).run();
+      stored = true;
+    } catch (discountError) {
+      const message = String((discountError && discountError.message) || discountError);
+      if (!/gross_amount_cents|discount_amount_cents|discount_reason|discount_actor_id/.test(message)) {
+        return json({ error: 'db', detail: message }, 500);
+      }
+    }
+  }
+  if (!stored) try {
     await env.DB.prepare(
       'INSERT OR IGNORE INTO sales (id, merchant, amount, method, label, ref, ts, lines, channel, amount_cents) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
     ).bind(id, merchant, amount, method, label, ref, ts, lines, channel || null, amountCents).run();
