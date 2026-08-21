@@ -704,35 +704,22 @@
   }
 
   /* ── tiny DOM builders ── */
-  const SVGNS = 'http://www.w3.org/2000/svg';
   function el(tag, cls, txt) {
     const e = document.createElement(tag);
     if (cls) e.className = cls;
     if (txt != null) e.textContent = txt;
     return e;
   }
-  function svg(size, sw, shapes) {
-    const s = document.createElementNS(SVGNS, 'svg');
-    s.setAttribute('width', size); s.setAttribute('height', size);
-    s.setAttribute('viewBox', '0 0 24 24'); s.setAttribute('fill', 'none');
-    s.setAttribute('stroke', 'currentColor'); s.setAttribute('stroke-width', sw);
-    s.setAttribute('stroke-linecap', 'round'); s.setAttribute('stroke-linejoin', 'round');
-    shapes.forEach((sh) => {
-      const node = document.createElementNS(SVGNS, sh.t);
-      Object.keys(sh).forEach((k) => { if (k !== 't') node.setAttribute(k, sh[k]); });
-      s.appendChild(node);
-    });
-    return s;
+  function icon(name, size, cls) {
+    const node = document.createElement('i');
+    node.setAttribute('data-lucide', name);
+    node.setAttribute('width', size);
+    node.setAttribute('height', size);
+    if (cls) node.setAttribute('class', cls);
+    return node;
   }
-  const calIcon = () => svg(15, 2, [
-    { t: 'rect', x: 3, y: 4, width: 18, height: 18, rx: 2 },
-    { t: 'path', d: 'M16 2v4M8 2v4M3 10h18' },
-  ]);
-  const checkIcon = () => {
-    const s = svg(16, 2.4, [{ t: 'path', d: 'M20 6L9 17l-5-5' }]);
-    s.setAttribute('class', 'ck');
-    return s;
-  };
+  const calIcon = () => icon('calendar', 15);
+  const checkIcon = () => icon('check', 16, 'ck');
 
   /* ── date helpers ── */
   const pad = (n) => String(n).padStart(2, '0');

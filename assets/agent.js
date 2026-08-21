@@ -4474,9 +4474,9 @@
 
   const ICON = {
     avatar: '<img class="fa-avatar-ico" src="assets/landing/icons/merchant.png" alt="" width="17" height="17" decoding="async"/>',
-    keypad: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="3"/><path d="M8 6h8M8 11h.01M12 11h.01M16 11h.01M8 15h.01M12 15h.01M16 15h.01M8 19h4"/></svg>',
-    send: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>',
-    lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>',
+    keypad: '<i data-lucide="dialpad" aria-hidden="true"></i>',
+    send: '<i data-lucide="send" aria-hidden="true"></i>',
+    lock: '<i data-lucide="lock" aria-hidden="true"></i>',
   };
 
   /* one-time CSS */

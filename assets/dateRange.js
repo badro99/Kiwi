@@ -2338,7 +2338,7 @@
 
   /* ═══════════════ RENDER: KPI BAND ═══════════════ */
 
-  const arrowSvg = up => `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="${up ? 'M6 15l6-6 6 6' : 'M6 9l6 6 6-6'}"/></svg>`;
+  const arrowSvg = up => `<i data-lucide="${up ? 'arrow-up' : 'arrow-down'}" style="width:11px;height:11px" aria-hidden="true"></i>`;
 
   function fmtKpiVal(spec, v) {
     const unit = spec.unit ? `<span class="u">${spec.unit}</span>` : '';
@@ -2373,6 +2373,15 @@
     arrdep:       '<path d="M7 4v12"/><path d="M3 12l4 4 4-4"/><path d="M17 20V8"/><path d="M13 12l4-4 4 4"/>',
     menage:       '<path d="M11 4l1.2 3.4 3.4 1.2-3.4 1.2L11 13.2 9.8 9.8 6.4 8.6l3.4-1.2z"/><path d="M18 13l.8 2.2L21 16l-2.2.8L18 19l-.8-2.2L15 16l2.2-.8z"/>',
     mixRev:       '<path d="M21.21 15.89A10 10 0 118 2.83"/><path d="M22 12A10 10 0 0012 2v10z"/>',
+  };
+  const KPI_MATERIAL_ICONS = {
+    tx: 'credit-card', panier: 'shopping-bag', tips: 'hand-coins', marge: 'percent',
+    success: 'check-circle-2', ratio: 'pie-chart', regulars: 'users',
+    tauxRetour: 'rotate-ccw', revenue: 'banknote', profit: 'trending-up',
+    cogs: 'package', retention: 'heart', newClients: 'user-plus',
+    revPerDay: 'calendar', txPerDay: 'list', tempsTable: 'clock',
+    occupation: 'bed', adr: 'tag', revpar: 'trending-up',
+    arrdep: 'swap-vert', menage: 'sparkles', mixRev: 'pie-chart'
   };
   // One sparkline path per key. Colour stays atlas; deltas drive the up/down chip.
   const KPI_SPARKS = {
@@ -2761,14 +2770,14 @@
       const sparkPath = ownData()
         ? 'M0 18 L120 18'
         : (KPI_SPARKS[s.key] || KPI_SPARKS.tx);
-      const iconPath = KPI_ICONS[s.key] || KPI_ICONS.tx;
+      const iconName = KPI_MATERIAL_ICONS[s.key] || 'credit-card';
       const i18nAttr = s.i18n ? ` data-i18n="${s.i18n}"` : '';
       // If a translation exists in T, use it as initial label; otherwise the FR label.
       const T = window.KiwiI18n?.T?.[lang] || {};
       const label = T[s.i18n] || s.label;
       return `
         <div class="kpi-m" data-kpi="${s.key}" tabindex="0" role="button">
-          <div class="l"><span${i18nAttr}>${label}</span><div class="ico"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${iconPath}</svg></div></div>
+          <div class="l"><span${i18nAttr}>${label}</span><div class="ico"><i data-lucide="${iconName}" style="width:13px;height:13px" aria-hidden="true"></i></div></div>
           <div class="v" data-kpi-val></div>
           <div class="d" data-kpi-delta></div>
           <svg class="sp" viewBox="0 0 120 22" preserveAspectRatio="none">
@@ -2842,7 +2851,7 @@
     // label + icon, the period value, its delta and a sparkline.
     const cardHtml = (k) => {
       const c = KPI_CATALOG[k];
-      const icon = KPI_ICONS[k] || KPI_ICONS.tx;
+      const iconName = KPI_MATERIAL_ICONS[k] || 'credit-card';
       const sparkPath = KPI_SPARKS[k] || KPI_SPARKS.tx;
       let tile = null;
       try { tile = c.derive(data, ctx); } catch (_) { tile = null; }
@@ -2853,7 +2862,7 @@
       return `
         <button class="kpi-pick" data-kc="${k}" type="button" aria-pressed="false">
           <span class="kc-badge"></span>
-          <span class="l"><span>${kpiLabel(k, venueType, lang)}</span><span class="ico"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${icon}</svg></span></span>
+          <span class="l"><span>${kpiLabel(k, venueType, lang)}</span><span class="ico"><i data-lucide="${iconName}" style="width:13px;height:13px" aria-hidden="true"></i></span></span>
           <span class="v">${valHtml}</span>
           <span class="d${dCls}">${arrowSvg(dv >= 0)}${fmtPct(dv)} ${deltaSuffix}</span>
           <svg class="sp" viewBox="0 0 120 22" preserveAspectRatio="none"><path d="${sparkPath}" stroke="#0B6E4F" stroke-width="4" stroke-opacity="0.16" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="${sparkPath}" stroke="#0B6E4F" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -4017,11 +4026,11 @@
             visa: `<img src="assets/icons/visa.svg" alt="Visa">`,
             mc:   `<img src="assets/icons/mastercard.png" alt="Mastercard">`,
             cash: `<img src="assets/icons/cash.webp" alt="Espèces">`,
-            tap:  `<svg viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M8.5 8a5 5 0 0 1 0 8M12 5a8 8 0 0 1 0 14M15.5 2a11 11 0 0 1 0 20"/></svg>`,
+            tap:  `<i data-lucide="contactless" aria-hidden="true"></i>`,
             qr:   `<img src="assets/icons/qr-code.png" alt="QR">`,
             /* Neutral card chip — used when we know a card was tapped/inserted
              * but not which network. Never substitute a Visa/MC mark here. */
-            cmi:  `<svg viewBox="0 0 24 24" preserveAspectRatio="xMidYMid meet" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/></svg>`,
+            cmi:  `<i data-lucide="credit-card" aria-hidden="true"></i>`,
           };
           const chipInner = ICONS[r.method] || '';
 
@@ -4044,7 +4053,7 @@
             </div>
             <div class="ctx">${tableChip}<span class="who">${who}</span></div>
             <div class="amt"${r.neg ? ' style="color: var(--danger);"' : ''}>${r.amt}<span class="cur">MAD</span></div>
-            <div class="more" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></div>
+            <div class="more" aria-hidden="true"><i data-lucide="chevron-right" width="14" height="14"></i></div>
           </div>
         `;
         }).join('');

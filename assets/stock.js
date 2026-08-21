@@ -1163,7 +1163,18 @@
     upload: '<path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>',
     info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>',
   };
-  const svg = (k, sz = 14) => `<svg width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[k] || ''}</svg>`;
+  const STOCK_MATERIAL_ICONS = {
+    layoutDashboard: 'layout-dashboard', package: 'package', truck: 'truck',
+    clipboardList: 'clipboard-list', sparkles: 'sparkles', wallet: 'wallet',
+    alertTriangle: 'alert-triangle', alertCircle: 'alert-circle', receipt: 'receipt',
+    trendingUp: 'trending-up', trendingDown: 'trending-down', minus: 'minus',
+    swap: 'arrow-left-right', eye: 'eye', plus: 'plus', edit: 'pencil',
+    moreH: 'more-horizontal', phone: 'phone', messageCircle: 'message-circle',
+    search: 'search', x: 'x', checkCircle: 'check-circle-2', zap: 'zap',
+    camera: 'camera', calendar: 'calendar', star: 'star',
+    download: 'arrow-down-to-line', upload: 'arrow-up-from-line', info: 'info'
+  };
+  const svg = (k, sz = 14) => `<i data-lucide="${STOCK_MATERIAL_ICONS[k] || 'help'}" style="width:${sz}px;height:${sz}px" aria-hidden="true"></i>`;
 
   /* ═══════════════════════════════════════════════════════════════════════
    * Formatting helpers

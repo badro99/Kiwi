@@ -254,49 +254,44 @@
 
   /* ═══════════════ VERTICAL → SIDEBAR SECTION ═══════════════ */
 
-  // Inline SVGs match the existing sidebar's rendering style (24x24 viewBox, stroke 2)
+  // Semantic names are rendered by the shared Google Material Symbols Rounded
+  // runtime. Keep navigation iconography consistent across every vertical.
   const ICONS = {
     // restaurant
-    tables: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
-    // Lucide clipboard-list — a menu is an itemised list, not a hamburger bar.
-    menu: '<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><path d="M12 11h4M12 16h4M8 11h.01M8 16h.01"/>',
-    // Lucide monitor — the KDS is a kitchen *screen* (was a bare "+" placeholder).
-    kds: '<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>',
-    // Lucide package — stock is a box on a shelf (was funnel-like shrinking lines).
-    stock: '<path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><path d="M3.3 7L12 12l8.7-5"/><path d="M12 22V12"/>',
-    finance: '<path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/>',
+    tables: 'layout-grid',
+    menu: 'clipboard-list',
+    kds: 'monitor',
+    stock: 'package',
+    finance: 'trending-up',
     // boutique
-    // Lucide archive — a labelled stock bin (was a padlock, which read as "locked").
-    inventory: '<rect x="2" y="3" width="20" height="5" rx="1"/><path d="M4 8v11a2 2 0 002 2h12a2 2 0 002-2V8"/><path d="M10 12h4"/>',
-    categories: '<path d="M3 6h7l2 2h9v10a2 2 0 01-2 2H5a2 2 0 01-2-2V6z"/>',
-    promos: '<path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L3 13V3h10l7.59 7.59a2 2 0 010 2.82z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
-    returns: '<path d="M3 12a9 9 0 119 9 9 9 0 01-6.36-2.64L3 21l.36-2.64"/><path d="M3 12h6M3 21v-6"/>',
-    sold: '<path d="M4 19V9M10 19V5M16 19v-7M22 19V2"/><path d="M2 19h22"/>',
+    inventory: 'archive',
+    categories: 'folder',
+    promos: 'tag',
+    returns: 'rotate-ccw',
+    sold: 'bar-chart-3',
     // spa
-    appointments: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/>',
-    // Lucide gift — "forfaits" = packages (was a star, which read as "favourite").
-    services: '<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M19 12v7a2 2 0 01-2 2H7a2 2 0 01-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 010-5C11 3 12 8 12 8M16.5 8a2.5 2.5 0 000-5C13 3 12 8 12 8"/>',
-    practitioners: '<circle cx="12" cy="7" r="4"/><path d="M4 21v-2a4 4 0 014-4h8a4 4 0 014 4v2"/><path d="M16 11l2 2 4-4"/>',
-    clients: '<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M9 14h6M9 18h6M9 10h2"/>',
-    operations: '<path d="M9 3h6l1 3h3a2 2 0 012 2v11a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h3z"/><path d="M8 12h8M8 16h5"/>',
-    route: '<circle cx="6" cy="18" r="2"/><circle cx="18" cy="6" r="2"/><path d="M8 18h3a3 3 0 003-3V9a3 3 0 013-3"/>',
-    book: '<path d="M4 19.5A2.5 2.5 0 016.5 17H20V3H6.5A2.5 2.5 0 004 5.5z"/><path d="M4 5.5v14"/>',
-    card: '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/>',
-    alert: '<path d="M10.3 3.6L1.9 18a2 2 0 001.7 3h16.8a2 2 0 001.7-3L13.7 3.6a2 2 0 00-3.4 0z"/><path d="M12 9v4M12 17h.01"/>',
-    truck: '<path d="M3 6h11v10H3zM14 10h4l3 3v3h-7z"/><circle cx="7" cy="18" r="2"/><circle cx="18" cy="18" r="2"/>',
-    usercheck: '<path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M16 11l2 2 4-4"/>',
+    appointments: 'calendar',
+    services: 'gift',
+    practitioners: 'user-check',
+    clients: 'contact',
+    operations: 'clipboard-list',
+    route: 'git-branch',
+    book: 'book-open',
+    card: 'credit-card',
+    alert: 'alert-triangle',
+    truck: 'truck',
+    usercheck: 'user-check',
     // hotel — onboarding vertical, reached only through the 0000 wizard
     // (no demo hotel venue ships)
-    reception: '<path d="M4 19h16"/><path d="M5 19v-4a7 7 0 0114 0v4"/><path d="M12 8V6"/><path d="M10 6h4"/>',
-    chambres: '<path d="M3 18v-7"/><path d="M3 16h18v-3a2 2 0 00-2-2h-9v5"/><circle cx="6.5" cy="11.5" r="1.5"/><path d="M21 18v-2"/>',
-    sejours: '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 9h18"/><path d="M7 13h4M13 16h4"/>',
-    menage: '<path d="M11 4l1.2 3.4L15.6 8.6 12.2 9.8 11 13.2 9.8 9.8 6.4 8.6 9.8 7.4z"/><path d="M18 13l.8 2.2L21 16l-2.2.8L18 19l-.8-2.2L15 16l2.2-.8z"/><path d="M5 16l.6 1.7L7.4 18.3 5.6 19 5 20.7 4.4 19 2.6 18.3 4.4 17.7z"/>',
-    tarifs: '<path d="M20.6 13.4L11 3.8A2 2 0 009.6 3H5a2 2 0 00-2 2v4.6c0 .5.2 1 .6 1.4l9.6 9.6a2 2 0 002.8 0l4.6-4.6a2 2 0 000-2.6z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
-    hotes: '<circle cx="12" cy="7" r="4"/><path d="M4 21v-2a4 4 0 014-4h8a4 4 0 014 4v2"/><path d="M17.5 10.5l1.5 1.5 3-3"/>',
-    folios: '<path d="M5 3h14v18l-2.3-1.5L14.4 21l-2.4-1.5L9.6 21l-2.3-1.5L5 21z"/><path d="M9 8h6M9 12h6M9 16h3"/>',
-    canaux: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a13.5 13.5 0 010 18M12 3a13.5 13.5 0 000 18"/>',
-    // Lucide sparkles — the "IA" row now reads as intelligence (was a sun/rays).
-    intel: '<path d="M9.9 15.5A2 2 0 008.5 14.1l-6.1-1.6a.5.5 0 010-1L8.5 9.9A2 2 0 009.9 8.5l1.6-6.1a.5.5 0 011 0L14.1 8.5A2 2 0 0015.5 9.9l6.1 1.6a.5.5 0 010 1L15.5 14.1a2 2 0 00-1.4 1.4l-1.6 6.1a.5.5 0 01-1 0z"/><path d="M20 3v4M22 5h-4M4 17v2M5 18H3"/>',
+    reception: 'bell',
+    chambres: 'bed-double',
+    sejours: 'calendar-days',
+    menage: 'sparkles',
+    tarifs: 'tag',
+    hotes: 'user-check',
+    folios: 'receipt-text',
+    canaux: 'globe',
+    intel: 'sparkles',
   };
 
   /* Pressing navigation uses Google's current Material Symbols, not the old
@@ -2141,7 +2136,9 @@
         const lbl = (it.i18n && T[it.i18n]) || it.label;
         return `
           <a href="#" data-nav="${it.nav}" data-feature="${it.nav}"${it.i18n ? ` data-i18n-attr="aria-label:${it.i18n}"` : ` aria-label="${lbl}"`}>
-            <svg viewBox="${it.material ? '0 -960 960 960' : '0 0 24 24'}" fill="${it.material ? 'currentColor' : 'none'}"${it.material ? '' : ' stroke="currentColor" stroke-width="2"'} aria-hidden="true">${it.icon}</svg>
+            ${it.material
+              ? `<svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true">${it.icon}</svg>`
+              : `<i data-lucide="${it.icon}" aria-hidden="true"></i>`}
             <span${it.i18n ? ` data-i18n="${it.i18n}"` : ''}>${lbl}</span>
             ${it.tag ? `<span class="tag">${it.tag}</span>` : ''}
           </a>
@@ -2829,7 +2826,8 @@
     link:      '<path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/>',
     alert:     '<path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><path d="M12 9v4M12 17h.01"/>',
   };
-  const fusionIcon = (key) => `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${FUSION_INTEL_ICONS[key] || ''}</svg>`;
+  const FUSION_MATERIAL_ICONS = { users: 'users', pie: 'pie-chart', link: 'link', alert: 'alert-triangle' };
+  const fusionIcon = (key) => `<i data-lucide="${FUSION_MATERIAL_ICONS[key] || 'help'}" style="width:14px;height:14px" aria-hidden="true"></i>`;
   /* Portfolio rows use the same Material trade truth as the switcher. */
   const fusionTypeIcon = (type) => typeIconOf({ type });
 
@@ -3634,7 +3632,14 @@
     file:      '<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8"/>',
     ban:       '<circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/>',
   };
-  const eqSvg = (k, sz = 14) => `<svg width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${EQ_IC[k] || ''}</svg>`;
+  const EQ_MATERIAL_ICONS = {
+    userCheck: 'user-check', clock: 'clock', coffee: 'coffee', timer: 'timer',
+    eye: 'eye', edit: 'pencil', more: 'more-vertical', plus: 'plus',
+    download: 'arrow-down-to-line', calendar: 'calendar', logout: 'log-out',
+    alert: 'alert-triangle', chevL: 'chevron-left', chevR: 'chevron-right',
+    file: 'file-text', ban: 'ban'
+  };
+  const eqSvg = (k, sz = 14) => `<i data-lucide="${EQ_MATERIAL_ICONS[k] || 'help'}" style="width:${sz}px;height:${sz}px" aria-hidden="true"></i>`;
 
   /* ── Helpers ──────────────────────────────────────────────────────────── */
   function eqEsc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
@@ -4719,7 +4724,16 @@
     eye:      '<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>',
     sparkle:  '<path d="M12 3l1.5 5.5L19 10l-5.5 1.5L12 17l-1.5-5.5L5 10l5.5-1.5z"/><path d="M19 17l.7 2.3L22 20l-2.3.7L19 23l-.7-2.3L16 20l2.3-.7z"/>',
   };
-  const miSvg = (k, sz = 14) => `<svg width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${MI_IC[k] || ''}</svg>`;
+  const MI_MATERIAL_ICONS = {
+    menu: 'menu', trending: 'trending-up', clock: 'clock', alert: 'alert-circle',
+    compare: 'swap-vert', search: 'search', grid: 'layout-grid', list: 'list',
+    plus: 'plus', edit: 'pencil', copy: 'copy', trash: 'trash-2',
+    download: 'arrow-down-to-line', upload: 'arrow-up-from-line',
+    chev: 'chevron-right', info: 'info', sort: 'sort', station: 'cooking-pot',
+    printer: 'printer', kds: 'monitor', book: 'book-open', eye: 'eye',
+    sparkle: 'sparkles', x: 'x'
+  };
+  const miSvg = (k, sz = 14) => `<i data-lucide="${MI_MATERIAL_ICONS[k] || 'help'}" style="width:${sz}px;height:${sz}px" aria-hidden="true"></i>`;
 
   /* ── State (in-memory; resets on reload) ──────────────────────────────── */
   let miTab = 'menu';            // menu | stations | recettes | perf | hours | alerts | compare

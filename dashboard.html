@@ -6107,10 +6107,11 @@
      sa table métier→famille à l'évaluation, et les trois assistants
      d'inscription construisent leur grille pareil. Aucun DOM, ~7 Ko. -->
 <script src="assets/trades.js?v=6" defer></script>
+<script src="assets/lucide.min.js?v=2" defer></script>
 <script src="assets/interactive.js?v=17" defer></script>
 <script src="assets/features.js?v=3" defer></script>
 <script src="assets/invoice.js?v=5" defer></script>
-<script src="assets/invoicing.js?v=6" defer></script>
+<script src="assets/invoicing.js?v=7" defer></script>
 <script src="assets/depenses.js" defer></script>
 <script src="assets/oppo-cards.js" defer></script>
 <script src="assets/insights.js" defer></script>
@@ -6124,7 +6125,7 @@
 <script src="assets/dark-fixes.js" defer></script>
 <script src="assets/polish.js" defer></script>
 <script src="assets/channel-link.js" defer></script>
-<script src="assets/dashboard-extra.js?v=2" defer></script>
+<script src="assets/dashboard-extra.js?v=3" defer></script>
 <script src="assets/simple.js?v=2" defer></script>
 <script src="assets/ux.js" defer></script>
 <!-- venues.js et dateRange.js portent un ?v= depuis la migration v2. Sans lui,
@@ -6135,12 +6136,12 @@
      Une URL neuve rate le cache et part au réseau tout de suite. À incrémenter
      à CHAQUE modification de ces deux fichiers, et à recopier à l'identique
      dans la liste de pré-cache de kiwi-sw.js. -->
-<script src="assets/venues.js?v=21" defer></script>
+<script src="assets/venues.js?v=22" defer></script>
 <!-- The pressing till and dashboard share a tenant-scoped operational snapshot. -->
 <script src="assets/pressing-ops.js?v=7" defer></script>
 <script src="assets/pressing-garment-icons.js?v=2" defer></script>
 <script src="assets/pressing-catalog.js?v=5" defer></script>
-<script src="assets/pressing-dashboard.js?v=12" defer></script>
+<script src="assets/pressing-dashboard.js?v=13" defer></script>
 <script src="assets/demoClock.js" defer></script>
 <script src="assets/dateRange.js?v=12" defer></script>
 <script src="assets/mobile-nav.js?v=2" defer></script>
@@ -6189,11 +6190,11 @@
      loaded before the assistant router; the probed modules may load later and
      are resolved lazily at question time. -->
 <script src="assets/agent-truth.js?v=3" defer fetchpriority="low"></script>
-<script src="assets/agent.js?v=14" defer fetchpriority="low"></script>
+<script src="assets/agent.js?v=15" defer fetchpriority="low"></script>
 <script src="assets/agent-voice.js?v=4" defer fetchpriority="low"></script>
 <script src="assets/agent-skin.js?v=4" defer fetchpriority="low"></script>
 <script src="assets/accounting.js" defer fetchpriority="low"></script>
-<script src="assets/pages.js" defer fetchpriority="low"></script>
+<script src="assets/pages.js?v=2" defer fetchpriority="low"></script>
 <!-- Boutique shared product database + real barcode engine (EAN-13 / Code 128).
      Same modules the caisse loads, so inventory stays in sync between the two. -->
 <script src="assets/barcode.js" defer fetchpriority="low"></script>
@@ -6270,12 +6271,12 @@
 <!-- Floor-plan vocabulary shared with the caisse. MUST load before pages-pro.js,
      which reads its top-level declarations as globals. -->
 <script src="assets/floorplan-core.js?v=2049" defer fetchpriority="low"></script>
-<script src="assets/pages-pro.js?v=2075" defer fetchpriority="low"></script>
+<script src="assets/pages-pro.js?v=2076" defer fetchpriority="low"></script>
 <!-- Restaurant-only menu redesign. Recipes stay in a private document; the
      workspace is loaded last so it can present the new shell over MenuStore. -->
 <script src="assets/restaurant-units.js" defer fetchpriority="low"></script>
 <script src="assets/restaurant-recipes.js?v=3" defer fetchpriority="low"></script>
-<script src="assets/restaurant-menu-workspace.js?v=15" defer fetchpriority="low"></script>
+<script src="assets/restaurant-menu-workspace.js?v=16" defer fetchpriority="low"></script>
 <script src="assets/sold-insights.js?v=2" defer fetchpriority="low"></script>
 <script src="assets/boutique-promos-dashboard.js?v=3" defer fetchpriority="low"></script>
 <!-- Rapport journalier : le calcul (partagé avec la caisse) puis la page.
@@ -6283,10 +6284,10 @@
 <script src="assets/day-report.js?v=5" defer fetchpriority="low"></script>
 <script src="assets/day-report-export.js?v=4" defer fetchpriority="low"></script>
 <script src="assets/day-report-dash.js?v=6" defer fetchpriority="low"></script>
-<script src="assets/stock.js?v=16" defer fetchpriority="low"></script>
+<script src="assets/stock.js?v=17" defer fetchpriority="low"></script>
 <script src="assets/planning-core.js?v=8" defer fetchpriority="low"></script>
 <link rel="stylesheet" href="assets/planning-ui.css?v=10">
-<script src="assets/team.js?v=277" defer fetchpriority="low"></script>
+<script src="assets/team.js?v=278" defer fetchpriority="low"></script>
 <script src="assets/finance.js" defer fetchpriority="low"></script>
 <script src="assets/conformite.js" defer fetchpriority="low"></script>
 <!-- Final production boundary for presentation-only actions. -->

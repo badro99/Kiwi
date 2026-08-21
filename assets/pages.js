@@ -1292,7 +1292,7 @@
             <div class="sn">IMEI 356894 ••• 2912 · Fatima Khalki</div>
             <div class="row">
               <span><i></i>${T.terminalStatusOnline} · 4G</span>
-              <span>🔋 63 %</span>
+              <span><i data-lucide="battery-medium" width="15" height="15" aria-hidden="true"></i> 63 %</span>
               <span>Dernière tx : 14:32</span>
               <span>28 tx aujourd'hui</span>
             </div>
@@ -1309,7 +1309,7 @@
             <div class="sn">S/N A920PRO-KW-2832 · firmware 4.2.1</div>
             <div class="row">
               <span><i class="err"></i>${T.terminalStatusOffline} 09:18</span>
-              <span>🔋 64 % (dernier rapport)</span>
+              <span><i data-lucide="battery-medium" width="15" height="15" aria-hidden="true"></i> 64 % (dernier rapport)</span>
               <span>Wi-Fi terrasse down</span>
             </div>
           </div>
@@ -1319,7 +1319,7 @@
         </div>
 
         <div style="padding:20px; margin-top: 20px; background: var(--paper-soft); border-radius: 14px; border: 1px dashed var(--n-300); text-align:center;">
-          <div style="font-size: 32px; margin-bottom: 10px;">🖥️</div>
+          <div style="margin-bottom:10px;"><i data-lucide="monitor" width="32" height="32" aria-hidden="true"></i></div>
           <div style="font-weight: 600; margin-bottom: 6px;">${T.terminalOrderTitle}</div>
           <div style="font-size: 13px; color: var(--n-500); margin-bottom: 14px;">${T.terminalOrderDesc}</div>
           <button class="kb atlas">${T.terminalOrderCta}</button>
@@ -1427,25 +1427,25 @@
         </div>
 
         ${[
-          ['🏛️', T.complianceBAM, T.complianceBAMDesc, T.complianceItemStatusActive, 'ok'],
-          ['🔐', T.compliancePCIDSS, T.compliancePCIDSSDesc('12 mars 2027'), T.complianceItemStatusValid(2027), 'ok'],
-          ['🛡️', T.complianceTokenization, T.complianceTokenizationDesc, T.complianceItemStatusActive, 'ok'],
-          ['🧾', T.complianceKYC, T.complianceKYCDesc, T.complianceItemStatusVerified, 'ok'],
-          ['📋', T.complianceAML, T.complianceAMLDesc, T.complianceItemStatusActive, 'ok'],
-          ['🔑', T.compliance3DS, T.compliance3DSDesc, T.complianceItemStatusActive, 'ok'],
-          ['🇲🇦', T.complianceLaw, T.complianceLawDesc, T.complianceItemStatusCompliant, 'ok'],
-          ['📡', T.complianceMonitoring, T.complianceMonitoringDesc, T.complianceItemStatusActive, 'ok'],
-          ['📅', T.complianceAudit, T.complianceAuditDesc('12 mars 2027'), T.complianceItemStatusPlanned, 'warn'],
+          ['account-balance', T.complianceBAM, T.complianceBAMDesc, T.complianceItemStatusActive, 'ok'],
+          ['lock', T.compliancePCIDSS, T.compliancePCIDSSDesc('12 mars 2027'), T.complianceItemStatusValid(2027), 'ok'],
+          ['shield-check', T.complianceTokenization, T.complianceTokenizationDesc, T.complianceItemStatusActive, 'ok'],
+          ['badge-check', T.complianceKYC, T.complianceKYCDesc, T.complianceItemStatusVerified, 'ok'],
+          ['clipboard-list', T.complianceAML, T.complianceAMLDesc, T.complianceItemStatusActive, 'ok'],
+          ['key-round', T.compliance3DS, T.compliance3DSDesc, T.complianceItemStatusActive, 'ok'],
+          ['gavel', T.complianceLaw, T.complianceLawDesc, T.complianceItemStatusCompliant, 'ok'],
+          ['monitoring', T.complianceMonitoring, T.complianceMonitoringDesc, T.complianceItemStatusActive, 'ok'],
+          ['calendar-check', T.complianceAudit, T.complianceAuditDesc('12 mars 2027'), T.complianceItemStatusPlanned, 'warn'],
         ].map(([icn, n, d, st, s]) => `
           <div class="comp-item">
-            <div class="icn" style="font-size: 18px;">${icn}</div>
+            <div class="icn"><i data-lucide="${icn}" width="18" height="18" aria-hidden="true"></i></div>
             <div class="body"><div class="n">${n}</div><div class="d">${d}</div></div>
             <div class="status ${s}">${st}</div>
           </div>
         `).join('')}
 
         <div style="margin-top: 24px; padding: 18px; background: var(--paper-soft); border-radius: 12px; display: flex; gap: 14px; align-items: flex-start;">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--atlas)" stroke-width="2" style="flex-shrink: 0; margin-top: 2px;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+          <i data-lucide="file-text" width="20" height="20" aria-hidden="true" style="flex-shrink:0;margin-top:2px;color:var(--atlas);"></i>
           <div style="flex: 1;"><div style="font-weight: 600; margin-bottom: 4px;">${T.complianceReportButton}</div><div style="font-size: 12.5px; color: var(--n-500); line-height: 1.4;">${T.complianceReportDesc}</div></div>
           <button class="kb atlas" data-action="download-kit">${T.complianceDownload}</button>
         </div>

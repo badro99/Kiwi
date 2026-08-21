@@ -11,9 +11,8 @@
   const D=()=>S()?.data(venue())||{cats:[],items:[],stations:[],opts:[]};
   const find=(key,id)=>(D()[key]||[]).find(x=>x.id===id);
   const cat=(id)=>find('cats',id), item=(id)=>find('items',id), station=(id)=>find('stations',id), group=(id)=>find('opts',id);
-  const svg=(d)=>`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
-  const icons={menu:'<path d="M4 6h16M4 12h16M4 18h16"/>',station:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 10h10"/>',book:'<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V4H6.5A2.5 2.5 0 0 0 4 6.5z"/>',chart:'<path d="M4 20V10m6 10V4m6 16v-7m4 7H2"/>',clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',alert:'<path d="M10.3 3.6 2.7 17a2 2 0 0 0 1.7 3h15.2a2 2 0 0 0 1.7-3L13.7 3.6a2 2 0 0 0-3.4 0z"/>',tag:'<path d="M20 13 13 20l-9-9V4h7z"/><circle cx="8.5" cy="8.5" r="1.5"/>',plus:'<path d="M12 5v14M5 12h14"/>',edit:'<path d="m4 20 4-1 11-11-3-3L5 16z"/>',trash:'<path d="M4 7h16M9 7V4h6v3m-9 0 1 13h10l1-13"/>'};
-  const ic=(n)=>svg(icons[n]||icons.menu);
+  const icons={menu:'menu',station:'cooking-pot',book:'book-open',chart:'bar-chart-3',clock:'clock',alert:'alert-triangle',tag:'tag',plus:'plus',edit:'pencil',trash:'trash-2'};
+  const ic=(n)=>`<i data-lucide="${icons[n]||icons.menu}" style="width:14px;height:14px" aria-hidden="true"></i>`;
   const toast=(t,d,type='success')=>window.Kiwi?.toast?.(t,{desc:d||'',type});
   function tabs(){const n=D().items.filter(x=>x.avail===false).length;return [['menu','Menu & modificateurs','menu'],['stations','Postes de préparation','station'],['recipes','Recettes','book'],['performance','Performance','chart'],['hours','Heures de pointe','clock'],['alerts','Alertes 86','alert'],['nfc','Tags NFC','tag']].map(([id,l,i])=>`<button class="mi-pill${tab===id?' on':''}" data-action="rmw-tab" data-tab="${id}">${ic(i)}<span>${l}</span>${id==='alerts'&&n?`<span class="mi-tab-badge">${n}</span>`:''}</button>`).join('');}
   let readyTimer=0,readyTries=0;

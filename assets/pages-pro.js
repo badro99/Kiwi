@@ -11769,17 +11769,11 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
 
   /* ─── Helpers ─── */
   const fmt = (n) => Math.round(n).toLocaleString('fr-FR').replace(/,/g, ' ');
-  const SVG = (p, sz = 14) => `<svg width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+  const SVG = (name, sz = 14) => `<i data-lucide="${name}" style="width:${sz}px;height:${sz}px" aria-hidden="true"></i>`;
   const ICN = {
-    plus:    SVG('<path d="M12 5v14M5 12h14"/>'),
-    cal:     SVG('<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>'),
-    user:    SVG('<circle cx="12" cy="8" r="4"/><path d="M4 22v-2a4 4 0 014-4h8a4 4 0 014 4v2"/>'),
-    clock:   SVG('<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>'),
-    sparkle: SVG('<path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3zM18 14l1 3 3 1-3 1-1 3-1-3-3-1 3-1 1-3z"/>'),
-    pkg:     SVG('<path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><path d="M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12"/>'),
-    edit:    SVG('<path d="M12 20h9M16.5 3.5a2.121 2.121 0 113 3L7 19l-4 1 1-4 12.5-12.5z"/>'),
-    trash:   SVG('<path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>'),
-    bell:    SVG('<path d="M18 8a6 6 0 00-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/>'),
+    plus: SVG('plus'), cal: SVG('calendar'), user: SVG('user'),
+    clock: SVG('clock'), sparkle: SVG('sparkles'), pkg: SVG('package'),
+    edit: SVG('pencil'), trash: SVG('trash-2'), bell: SVG('bell')
   };
   const chip = (txt, cls = 'ok') => `<span class="chip ${cls}">${txt}</span>`;
   const riskChip = (r) => r === 'low' ? chip('Faible', 'ok') : r === 'mid' ? chip('Modéré', 'pend') : chip('Élevé', 'ref');
@@ -11908,9 +11902,9 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
 
         <!-- Toolbar -->
         <div class="p-toolbar" style="margin: 4px 0 14px;">
-          <div class="p-search">${SVG('<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/>')}Rechercher cliente ou téléphone…</div>
-          <button class="kb ghost" data-action="appt-filter">${SVG('<path d="M4 6h16M7 12h10M10 18h4"/>',13)}Filtrer</button>
-          <button class="kb ghost" data-action="appt-export">${SVG('<path d="M12 3v12M5 10l7 7 7-7M5 21h14"/>',13)}Exporter</button>
+          <div class="p-search">${SVG('search')}Rechercher cliente ou téléphone…</div>
+          <button class="kb ghost" data-action="appt-filter">${SVG('list-filter',13)}Filtrer</button>
+          <button class="kb ghost" data-action="appt-export">${SVG('arrow-down-to-line',13)}Exporter</button>
           <button class="kb atlas" data-action="appt-new">${ICN.plus}Nouveau RDV</button>
         </div>
 
@@ -12319,9 +12313,9 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
 
         <!-- Toolbar -->
         <div class="p-toolbar" style="margin: 4px 0 14px;">
-          <div class="p-search">${SVG('<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/>')}Rechercher un service…</div>
+          <div class="p-search">${SVG('search')}Rechercher un service…</div>
           <button class="kb ghost" data-action="svc-season">${ICN.cal}Programmation saisonnière</button>
-          <button class="kb ghost" data-action="svc-export">${SVG('<path d="M12 3v12M5 10l7 7 7-7M5 21h14"/>',13)}Exporter</button>
+          <button class="kb ghost" data-action="svc-export">${SVG('arrow-down-to-line',13)}Exporter</button>
           <button class="kb atlas" data-action="svc-new">${ICN.plus}Nouveau service</button>
         </div>
 
@@ -14785,7 +14779,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
               : `<span class="kit-fire kit-fire-now">⏱ en cours</span>`;
           }
         }
-        return `<li class="kit-item${off ? ' kit-item-off' : ''}${hasRecipe ? ' has-recipe' : ''}"${hasRecipe ? ` data-kit-recipe="${esc(i.n)}"` : ''}><span class="kit-q">${i.q}</span><span class="kit-nm">${esc(i.n)}${fireBadge}</span>${hasRecipe ? `<svg class="kit-recipe-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>` : ''}</li>`;
+        return `<li class="kit-item${off ? ' kit-item-off' : ''}${hasRecipe ? ' has-recipe' : ''}"${hasRecipe ? ` data-kit-recipe="${esc(i.n)}"` : ''}><span class="kit-q">${i.q}</span><span class="kit-nm">${esc(i.n)}${fireBadge}</span>${hasRecipe ? `<i class="kit-recipe-ico" data-lucide="book-open" aria-hidden="true"></i>` : ''}</li>`;
       }).join('');
       const act = isReady
         ? ''
@@ -14827,7 +14821,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
         <svg class="kit-hrow-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
       </button>`;
 
-    const emptyHtml = (msg) => `<div class="kit-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span>${esc(msg)}</span></div>`;
+    const emptyHtml = (msg) => `<div class="kit-empty"><i data-lucide="check-circle-2" aria-hidden="true"></i><span>${esc(msg)}</span></div>`;
 
     const stationBar = () => {
       const btn = (id, dot, label) => {
@@ -14837,7 +14831,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       return btn('all', 'var(--ink)', T.allStations) + STATIONS.map((s) => btn(s.id, s.raw, s.name)).join('');
     };
 
-    const historyToggleHtml = () => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 2.5-6.2"/><path d="M3 4v4h4"/><path d="M12 8v4.5l3 1.8"/></svg><span>${esc(T.history)}</span><span class="kit-htg-ct">${groupOrders('ready').length}</span>`;
+    const historyToggleHtml = () => `<i data-lucide="history" aria-hidden="true"></i><span>${esc(T.history)}</span><span class="kit-htg-ct">${groupOrders('ready').length}</span>`;
 
     const colHeadHtml = (label, count) => `<div class="kit-col-head"><span>${esc(label)}</span><span class="kit-col-ct">${count}</span></div>`;
 
@@ -14853,7 +14847,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     };
     const historyHtml = () => {
       const list = groupOrders('ready');
-      return `<div class="kit-col-head kit-history-head"><span>${esc(T.historyTitle)}</span><span class="kit-col-ct">${list.length}</span><button class="kit-history-x" data-kit-history-toggle aria-label="${esc(T.close)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`
+      return `<div class="kit-col-head kit-history-head"><span>${esc(T.historyTitle)}</span><span class="kit-col-ct">${list.length}</span><button class="kit-history-x" data-kit-history-toggle aria-label="${esc(T.close)}"><i data-lucide="x" aria-hidden="true"></i></button></div>`
         + `<div class="kit-history-rows">${list.length ? list.map(historyRow).join('') : emptyHtml(T.emptyHistory)}</div>`;
     };
 

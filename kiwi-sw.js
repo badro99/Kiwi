@@ -79,14 +79,14 @@ var SHELL = [
   '/assets/interactive.js?v=16',
   '/assets/features.js?v=3',
   '/assets/invoicing.css?v=6',
-  '/assets/invoicing.js?v=6',
+  '/assets/invoicing.js?v=7',
   '/assets/order-qr.js?v=2',
   /* Ces deux-là sont estampillées ?v= dans dashboard.html. La chaîne doit être
      RIGOUREUSEMENT identique : c'est l'URL qui sert de clé de cache, et une
      entrée pré-cachée sans estampille ne répondrait jamais à la requête de la
      page (donc pas de hors-ligne), tandis qu'une estampille périmée ici
      re-servirait l'ancien fichier. Voir le commentaire dans dashboard.html. */
-  '/assets/venues.js?v=21',
+  '/assets/venues.js?v=22',
   '/assets/phone.js?v=1',
   '/assets/trade-workspace-schema.js?v=4',
   '/assets/trade-workspaces.js?v=3',
@@ -94,7 +94,7 @@ var SHELL = [
   '/assets/pressing-ops.js?v=7',
   '/assets/pressing-garment-icons.js?v=2',
   '/assets/pressing-catalog.js?v=5',
-  '/assets/pressing-dashboard.js?v=12',
+  '/assets/pressing-dashboard.js?v=13',
   '/assets/pressing-products/chemise.png',
   '/assets/pressing-products/tshirt.png',
   '/assets/pressing-products/pull.png',
@@ -127,7 +127,7 @@ var SHELL = [
   '/assets/dateRange.js?v=12',
   '/assets/mobile-nav.js?v=2',
   '/assets/liquid-lens.js',
-  '/assets/pages.js',
+  '/assets/pages.js?v=2',
   '/assets/help-centre.js?v=4',
   '/assets/account.js?v=14',
   '/assets/production-action-guard.js',
@@ -210,7 +210,7 @@ var SHELL = [
      document; quantities are append-only movements, both usable offline. */
   '/assets/inventory-ledger.js?v=4',
   '/assets/caisse-stock-sync.js?v=8',
-  '/assets/stock.js?v=16',
+  '/assets/stock.js?v=17',
   /* Le coût de revient. Dans la coquille parce que les tuiles Marge brute,
      Bénéfice brut et Coût matière du tableau de bord passent toutes par lui :
      sans lui hors ligne, elles retomberaient sur un tiret alors que le
@@ -228,8 +228,8 @@ var SHELL = [
   '/assets/employee-trade-shell.js?v=2',
   '/assets/planning-core.js?v=8',
   '/assets/planning-ui.css?v=10',
-  '/assets/team.js?v=277',
-  '/assets/restaurant-menu-workspace.js?v=15',
+  '/assets/team.js?v=278',
+  '/assets/restaurant-menu-workspace.js?v=16',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).
   '/assets/catalog-import.js?v=2',
   // Scanner un menu — photo / PDF / lien → Kiwi AI → revue d'import.
@@ -304,7 +304,7 @@ var SHELL = [
   '/assets/pos-reprint.js',
   '/assets/pressing-caisse.js?v=33',
   '/assets/pressing-caisse.css?v=33',
-  '/assets/lucide.min.js',
+  '/assets/lucide.min.js?v=2',
   '/assets/kiwi-favicon-new.svg',
   '/assets/kiwi-newlogo.svg',
   '/assets/kiwi-newlogo.svg?v=2',

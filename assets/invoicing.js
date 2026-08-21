@@ -6,12 +6,12 @@
   'use strict';
 
   const ICON = {
-    invoice: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h9l3 3v15H6z"/><path d="M15 3v4h4M9 11h6M9 15h6"/></svg>',
-    plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>',
-    export: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>',
-    print: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V3h12v6M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v7H6z"/></svg>',
-    check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12l4 4L19 6"/></svg>',
-    back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>',
+    invoice: '<i data-lucide="file-text" aria-hidden="true"></i>',
+    plus: '<i data-lucide="plus" aria-hidden="true"></i>',
+    export: '<i data-lucide="arrow-down-to-line" aria-hidden="true"></i>',
+    print: '<i data-lucide="printer" aria-hidden="true"></i>',
+    check: '<i data-lucide="check" aria-hidden="true"></i>',
+    back: '<i data-lucide="chevron-left" aria-hidden="true"></i>',
   };
   const BRAND_LOGO = '<img src="assets/kiwi-newlogo.svg" width="886" height="486" alt="Kiwi">';
 
