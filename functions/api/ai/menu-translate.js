@@ -53,35 +53,77 @@ Structure JSON exacte à retourner :
 }`;
 }
 
+function extractJson(aiRes) {
+  if (!aiRes) return null;
+  if (typeof aiRes === 'object') {
+    if (aiRes.cats || aiRes.items || aiRes.opts) return aiRes;
+    if (aiRes.response != null && typeof aiRes.response === 'object') return aiRes.response;
+    if (aiRes.response != null && typeof aiRes.response === 'string') {
+      const p = extractJson(aiRes.response);
+      if (p) return p;
+    }
+    if (Array.isArray(aiRes.choices) && aiRes.choices[0]) {
+      const c = aiRes.choices[0];
+      const p = extractJson((c.message && c.message.content) || c.text || '');
+      if (p) return p;
+    }
+  }
+  let str = String(aiRes || '').trim();
+  if (!str) return null;
+  str = str.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
+  const a = str.indexOf('{'), b = str.lastIndexOf('}');
+  if (a >= 0 && b > a) str = str.slice(a, b + 1);
+  try { return JSON.parse(str); } catch (_) {
+    try {
+      const cleaned = str.replace(/,\s*([\]}])/g, '$1');
+      return JSON.parse(cleaned);
+    } catch (_) { return null; }
+  }
+}
+
 export function validateTranslation(raw, original) {
   if (!raw || typeof raw !== 'object') return null;
   const outCats = [];
   const origCats = (original && Array.isArray(original.cats)) ? original.cats : [];
   const catMap = new Map();
-  (Array.isArray(raw.cats) ? raw.cats : []).forEach(c => { if (c && c.id) catMap.set(String(c.id), c); });
+  const catNameMap = new Map();
+  (Array.isArray(raw.cats) ? raw.cats : []).forEach(c => {
+    if (c && c.id) catMap.set(String(c.id), c);
+    if (c && c.name) catNameMap.set(String(c.name).trim().toLowerCase(), c);
+  });
 
   origCats.forEach(c => {
-    const t = catMap.get(String(c.id));
+    const t = catMap.get(String(c.id)) || catNameMap.get(String(c.name).trim().toLowerCase());
     const subMap = new Map();
-    if (t && Array.isArray(t.sub)) t.sub.forEach(s => { if (s && s.id) subMap.set(String(s.id), s); });
+    const subNameMap = new Map();
+    if (t && Array.isArray(t.sub)) {
+      t.sub.forEach(s => {
+        if (s && s.id) subMap.set(String(s.id), s);
+        if (s && s.name) subNameMap.set(String(s.name).trim().toLowerCase(), s);
+      });
+    }
     outCats.push({
       id: c.id,
       name: (t && t.name ? String(t.name).slice(0, 60).trim() : c.name),
       station: c.station || '',
       sub: (c.sub || []).map(s => {
-        const ts = subMap.get(String(s.id));
+        const ts = subMap.get(String(s.id)) || subNameMap.get(String(s.name).trim().toLowerCase());
         return { id: s.id, name: (ts && ts.name ? String(ts.name).slice(0, 60).trim() : s.name) };
       }),
     });
   });
 
   const itemMap = new Map();
-  (Array.isArray(raw.items) ? raw.items : []).forEach(it => { if (it && it.id) itemMap.set(String(it.id), it); });
+  const itemNameMap = new Map();
+  (Array.isArray(raw.items) ? raw.items : []).forEach(it => {
+    if (it && it.id) itemMap.set(String(it.id), it);
+    if (it && it.name) itemNameMap.set(String(it.name).trim().toLowerCase(), it);
+  });
   const outItems = [];
   const origItems = (original && Array.isArray(original.items)) ? original.items : [];
 
   origItems.forEach(it => {
-    const t = itemMap.get(String(it.id));
+    const t = itemMap.get(String(it.id)) || itemNameMap.get(String(it.name).trim().toLowerCase());
     outItems.push(Object.assign({}, it, {
       name: (t && t.name ? String(t.name).slice(0, 120).trim() : it.name),
       desc: (t && t.desc != null ? String(t.desc).slice(0, 400).trim() : (it.desc || '')),
@@ -89,18 +131,28 @@ export function validateTranslation(raw, original) {
   });
 
   const optMap = new Map();
-  (Array.isArray(raw.opts) ? raw.opts : []).forEach(g => { if (g && g.id) optMap.set(String(g.id), g); });
+  const optNameMap = new Map();
+  (Array.isArray(raw.opts) ? raw.opts : []).forEach(g => {
+    if (g && g.id) optMap.set(String(g.id), g);
+    if (g && g.name) optNameMap.set(String(g.name).trim().toLowerCase(), g);
+  });
   const outOpts = [];
   const origOpts = (original && Array.isArray(original.opts)) ? original.opts : [];
 
   origOpts.forEach(g => {
-    const tg = optMap.get(String(g.id));
+    const tg = optMap.get(String(g.id)) || optNameMap.get(String(g.name).trim().toLowerCase());
     const chMap = new Map();
-    if (tg && Array.isArray(tg.choices)) tg.choices.forEach(ch => { if (ch && ch.id) chMap.set(String(ch.id), ch); });
+    const chNameMap = new Map();
+    if (tg && Array.isArray(tg.choices)) {
+      tg.choices.forEach(ch => {
+        if (ch && ch.id) chMap.set(String(ch.id), ch);
+        if (ch && ch.name) chNameMap.set(String(ch.name).trim().toLowerCase(), ch);
+      });
+    }
     outOpts.push(Object.assign({}, g, {
       name: (tg && tg.name ? String(tg.name).slice(0, 80).trim() : g.name),
       choices: (g.choices || []).map(ch => {
-        const tch = chMap.get(String(ch.id));
+        const tch = chMap.get(String(ch.id)) || chNameMap.get(String(ch.name).trim().toLowerCase());
         return Object.assign({}, ch, {
           name: (tch && tch.name ? String(tch.name).slice(0, 80).trim() : ch.name),
         });
@@ -154,7 +206,7 @@ export async function onRequestPost(context) {
     return json({ ok: false, reason: 'model' }, 200);
   }
 
-  const parsed = parseModelResponse(aiRes);
+  const parsed = extractJson(aiRes) || parseModelResponse(aiRes);
   const validated = parsed ? validateTranslation(parsed, body) : null;
   if (!validated) {
     return json({ ok: false, reason: 'unparsed' }, 200, { 'x-kiwi-ai-model': usedModel });

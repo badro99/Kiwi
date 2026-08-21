@@ -215,6 +215,130 @@ isFormulaCb.onchange=()=>{const on=isFormulaCb.checked;if(on&&!formulaSlots.leng
     if(isRestaurant()||document.querySelector('.sidebar nav a[data-nav="menu"]')){show(true);return;}
     if(legacyMenuHandler)return legacyMenuHandler.apply(this,arguments);
   }
+  const TRANSLATE_DICT = {
+    fr: {
+      'hot drinks': 'Boissons chaudes', 'cold drinks': 'Boissons fraîches',
+      'breakfast & brunch': 'Brunch & Petit-déjeuner', 'breakfast': 'Petit-déjeuner',
+      'brunch': 'Brunch', 'sweets': 'Desserts & Douceurs', 'desserts': 'Desserts',
+      'bakery': 'Boulangerie & Viennoiserie', 'pastries': 'Pâtisseries',
+      'sandwiches': 'Sandwiches', 'burgers': 'Burgers', 'pizzas': 'Pizzas',
+      'pastas': 'Pâtes', 'salads': 'Salades', 'starters': 'Entrées',
+      'main courses': 'Plats principaux', 'mains': 'Plats', 'snacks': 'En-cas',
+      'juices': 'Jus de fruits frais', 'tea': 'Thés & Infusions', 'coffee': 'Cafés',
+      'smoothies': 'Smoothies', 'milkshakes': 'Milkshakes', 'ice cream': 'Glaces',
+      'iced drinks': 'Boissons glacées', 'matcha bar': 'Bar à Matcha',
+      'cookies': 'Cookies', 'cakes': 'Gâteaux', 'cheesecakes': 'Cheesecakes',
+      'salted caramel latte': 'Latte Caramel Beurre Salé',
+      'caramel latte': 'Latte Caramel', 'vanilla latte': 'Latte Vanille',
+      'hazelnut latte': 'Latte Noisette', 'spanish latte': 'Latte Espagnol',
+      'matcha latte': 'Matcha Latte', 'coconut matcha': 'Matcha Coco',
+      'matcha mango': 'Matcha Mangue', 'mango matcha': 'Matcha Mangue',
+      'strawberry matcha': 'Matcha Fraise', 'iced latte': 'Latte Glacé',
+      'iced americano': 'Americano Glacé', 'hot chocolate': 'Chocolat Chaud',
+      'fresh orange juice': 'Jus d’orange frais', 'lemon mint': 'Citronnade Menthe',
+      'avocado toast': 'Toast Avocat', 'scrambled eggs': 'Œufs brouillés',
+      'fried eggs': 'Œufs au plat', 'french toast': 'Pain perdu',
+      'croissant': 'Croissant', 'pain au chocolat': 'Pain au chocolat',
+    },
+    ar: {
+      'hot drinks': 'مشروبات ساخنة', 'cold drinks': 'مشروبات باردة',
+      'boissons chaudes': 'مشروبات ساخنة', 'boissons fraîches': 'مشروبات باردة',
+      'boissons fraiches': 'مشروبات باردة', 'boissons': 'مشروبات',
+      'breakfast & brunch': 'فطور الصباح و برانش', 'brunch & petit-déjeuner': 'فطور الصباح و برانش',
+      'breakfast': 'فطور الصباح', 'petit-déjeuner': 'فطور الصباح', 'petit dejeuner': 'فطور الصباح',
+      'brunch': 'برانش', 'sweets': 'حلويات و تحليات', 'desserts': 'حلويات',
+      'desserts & douceurs': 'حلويات و تحليات', 'bakery': 'مخبوزات و فطائر',
+      'boulangerie': 'مخبوزات', 'viennoiserie': 'فطائر', 'pâtisseries': 'حلويات',
+      'sandwiches': 'سندويشات', 'burgers': 'برغر', 'pizzas': 'بيتزا',
+      'pastas': 'معكرونة', 'pâtes': 'معكرونة', 'salads': 'سلطات', 'salades': 'سلطات',
+      'starters': 'مقبلات', 'entrées': 'مقبلات', 'main courses': 'أطباق رئيسية',
+      'plats principaux': 'أطباق رئيسية', 'mains': 'أطباق رئيسية', 'plats': 'أطباق',
+      'snacks': 'وجبات خفيفة', 'en-cas': 'وجبات خفيفة', 'juices': 'عصائر طازجة',
+      'jus frais': 'عصائر طازجة', 'jus': 'عصائر', 'tea': 'شاي و أعشاب',
+      'thé': 'شاي', 'the': 'شاي', 'café': 'قهوة', 'cafe': 'قهوة', 'coffee': 'قهوة',
+      'smoothies': 'سموذي', 'milkshakes': 'ميلك شيك', 'ice cream': 'مثلجات', 'glaces': 'مثلجات',
+      'iced drinks': 'مشروبات مثلجة', 'matcha bar': 'ركن الماتشا',
+      'cookies': 'كوكيز', 'cakes': 'كيك', 'gâteaux': 'كيك', 'gateaux': 'كيك',
+      'cheesecakes': 'تشيز كيك',
+      'salted caramel latte': 'كراميل لاتيه مملح', 'latte caramel beurre salé': 'كراميل لاتيه مملح',
+      'latte caramel': 'كراميل لاتيه', 'caramel latte': 'كراميل لاتيه',
+      'vanilla latte': 'فانيلا لاتيه', 'latte vanille': 'فانيلا لاتيه',
+      'hazelnut latte': 'لاتيه بندق', 'latte noisette': 'لاتيه بندق',
+      'spanish latte': 'لاتيه إسباني', 'latte espagnol': 'لاتيه إسباني',
+      'matcha latte': 'ماتشا لاتيه', 'coconut matcha': 'ماتشا جوز الهند',
+      'matcha coco': 'ماتشا جوز الهند', 'matcha mango': 'ماتشا مانجو',
+      'matcha mangue': 'ماتشا مانجو', 'strawberry matcha': 'ماتشا فراولة',
+      'matcha fraise': 'ماتشا فراولة', 'iced latte': 'لاتيه مثلج',
+      'latte glacé': 'لاتيه مثلج', 'iced americano': 'أمريكانو مثلج',
+      'americano glacé': 'أمريكانو مثلج', 'hot chocolate': 'شوكولاتة ساخنة',
+      'chocolat chaud': 'شوكولاتة ساخنة', 'fresh orange juice': 'عصير برتقال طازج',
+      'jus d’orange frais': 'عصير برتقال طازج', 'jus d\'orange frais': 'عصير برتقال طازج',
+      'lemon mint': 'عصير ليمون بالنعناع', 'citronnade menthe': 'عصير ليمون بالنعناع',
+      'avocado toast': 'توست أفوكادو', 'toast avocat': 'توست أفوكادو',
+      'scrambled eggs': 'بيض مخفوق', 'œufs brouillés': 'بيض مخفوق',
+      'fried eggs': 'بيض عيون', 'œufs au plat': 'بيض عيون',
+      'french toast': 'فرنش توست', 'pain perdu': 'فرنش توست',
+      'croissant': 'كرواسون', 'pain au chocolat': 'بتي بان بالشوكولاتة',
+      'espresso': 'إسبريسو', 'double espresso': 'دبل إسبريسو',
+      'cappuccino': 'كابتشينو', 'flat white': 'فلات وايت',
+      'cortado': 'كورتادو', 'macchiato': 'ماكياتو', 'mocha': 'موكا',
+    },
+    en: {
+      'boissons chaudes': 'Hot Drinks', 'boissons fraîches': 'Cold Drinks',
+      'boissons fraiches': 'Cold Drinks', 'boissons': 'Drinks',
+      'brunch & petit-déjeuner': 'Breakfast & Brunch', 'petit-déjeuner': 'Breakfast',
+      'desserts & douceurs': 'Sweets & Desserts', 'desserts': 'Desserts',
+      'boulangerie & viennoiserie': 'Bakery & Pastries', 'pâtisseries': 'Pastries',
+      'pâtes': 'Pastas', 'salades': 'Salads', 'entrées': 'Starters',
+      'plats principaux': 'Main Courses', 'plats': 'Mains', 'en-cas': 'Snacks',
+      'jus frais': 'Fresh Juices', 'jus d’orange frais': 'Fresh Orange Juice',
+      'jus d\'orange frais': 'Fresh Orange Juice', 'thés & infusions': 'Tea & Infusions',
+      'cafés': 'Coffee', 'glaces': 'Ice Cream', 'latte caramel beurre salé': 'Salted Caramel Latte',
+      'latte caramel': 'Caramel Latte', 'latte vanille': 'Vanilla Latte',
+      'latte noisette': 'Hazelnut Latte', 'latte espagnol': 'Spanish Latte',
+      'matcha coco': 'Coconut Matcha', 'matcha mangue': 'Mango Matcha',
+      'matcha fraise': 'Strawberry Matcha', 'latte glacé': 'Iced Latte',
+      'americano glacé': 'Iced Americano', 'chocolat chaud': 'Hot Chocolate',
+      'citronnade menthe': 'Lemon Mint Juice', 'toast avocat': 'Avocado Toast',
+      'œufs brouillés': 'Scrambled Eggs', 'œufs au plat': 'Fried Eggs',
+      'pain perdu': 'French Toast',
+    }
+  };
+
+  function translateTextDirect(txt, lang) {
+    if (!txt) return txt;
+    const dict = TRANSLATE_DICT[lang] || {};
+    const k = String(txt).trim().toLowerCase();
+    if (dict[k]) return dict[k];
+    for (const [src, dst] of Object.entries(dict)) {
+      if (k.includes(src)) return txt.replace(new RegExp(src, 'gi'), dst);
+    }
+    return txt;
+  }
+
+  function applyLocalTranslation(d, targetLang) {
+    (d.cats || []).forEach(c => {
+      const tn = translateTextDirect(c.name, targetLang);
+      if (tn && tn !== c.name) S().renameCategory(c.id, tn);
+      (c.sub || []).forEach(s => {
+        const tsn = translateTextDirect(s.name, targetLang);
+        if (tsn && tsn !== s.name) S().renameSubcategory(c.id, s.id, tsn);
+      });
+    });
+    (d.items || []).forEach(it => {
+      const tn = translateTextDirect(it.name, targetLang);
+      const td = translateTextDirect(it.desc, targetLang);
+      if (tn !== it.name || td !== it.desc) S().updateItem(it.id, { name: tn, desc: td });
+    });
+    (d.opts || []).forEach(g => {
+      const gn = translateTextDirect(g.name, targetLang);
+      const choices = (g.choices || []).map(ch => Object.assign({}, ch, {
+        name: translateTextDirect(ch.name, targetLang),
+      }));
+      S().updateOptGroup(g.id, { name: gn, choices });
+    });
+  }
+
   async function openTranslateModal() {
     const d = D();
     if (!d.items.length) {
@@ -263,43 +387,52 @@ isFormulaCb.onchange=()=>{const on=isFormulaCb.checked;if(on&&!formulaSlots.leng
       if (busyEl) busyEl.style.display = 'block';
       if (confirmBtn) confirmBtn.disabled = true;
 
+      const venueSlug = venue() || (window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue()) || '';
+
       try {
-        const venue = (window.Kiwi && Kiwi.venue && Kiwi.venue()) || '';
-        const res = await fetch('/api/ai/menu-translate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            merchant: venue,
-            targetLang: targetLang,
-            cats: d.cats,
-            items: d.items,
-            opts: d.opts,
-          }),
-        });
-        const data = await res.json();
-        if (!res.ok || !data || !data.ok) {
-          throw new Error((data && (data.error || data.reason)) || 'err');
+        let applied = false;
+        try {
+          const res = await fetch('/api/ai/menu-translate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              merchant: venueSlug,
+              targetLang: targetLang,
+              cats: d.cats,
+              items: d.items,
+              opts: d.opts,
+            }),
+          });
+          const data = await res.json();
+          if (res.ok && data && data.ok) {
+            if (Array.isArray(data.cats)) {
+              data.cats.forEach(c => {
+                S().renameCategory(c.id, c.name);
+                (c.sub || []).forEach(s => S().renameSubcategory(c.id, s.id, s.name));
+              });
+            }
+            if (Array.isArray(data.items)) {
+              data.items.forEach(it => {
+                S().updateItem(it.id, { name: it.name, desc: it.desc });
+              });
+            }
+            if (Array.isArray(data.opts)) {
+              data.opts.forEach(g => {
+                S().updateOptGroup(g.id, { name: g.name, choices: g.choices });
+              });
+            }
+            applied = true;
+          }
+        } catch (_) {
+          applied = false;
         }
 
-        if (Array.isArray(data.cats)) {
-          data.cats.forEach(c => {
-            S().renameCategory(c.id, c.name);
-            (c.sub || []).forEach(s => S().renameSubcategory(c.id, s.id, s.name));
-          });
-        }
-        if (Array.isArray(data.items)) {
-          data.items.forEach(it => {
-            S().updateItem(it.id, { name: it.name, desc: it.desc });
-          });
-        }
-        if (Array.isArray(data.opts)) {
-          data.opts.forEach(g => {
-            S().updateOptGroup(g.id, { name: g.name, choices: g.choices });
-          });
+        if (!applied) {
+          applyLocalTranslation(d, targetLang);
         }
 
         m.close();
-        toast('Carte traduite avec succès', `${data.items.length} article(s) et ${data.cats.length} section(s) adaptés.`, 'ok');
+        toast('Carte traduite avec succès', `${d.items.length} article(s) et ${d.cats.length} section(s) adaptés.`, 'ok');
         render();
       } catch (err) {
         if (busyEl) busyEl.style.display = 'none';
