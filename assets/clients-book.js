@@ -559,11 +559,11 @@
         nav.appendChild(makeItem(sample.tagName.toLowerCase(), cls, 'Clients'));
       }
     });
-    // 2) the main café/resto caisse — .act-selector pill.
-    Array.prototype.forEach.call(document.querySelectorAll('.act-selector'), function (sel) {
-      if (sel.querySelector('[data-kcb-navitem]')) return;
-      var sample = sel.querySelector('.act-pill, button'); if (!sample) return;
-      sel.appendChild(makeItem('button', sample.className.replace(/\s+/g, ' ').trim(), 'Clients & fidélité'));
+    // 2) the main café/resto caisse — .rail-links.
+    Array.prototype.forEach.call(document.querySelectorAll('.rail-links'), function (rail) {
+      if (rail.querySelector('[data-kcb-navitem]')) return;
+      var sample = rail.querySelector('.team-trigger, button'); if (!sample) return;
+      rail.appendChild(makeItem('button', sample.className.replace(/\s+/g, ' ').trim(), 'Clients & fidélité'));
     });
   }
 

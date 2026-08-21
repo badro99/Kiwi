@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted — fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v452';
+var CACHE = 'kiwi-app-v453';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -139,13 +139,13 @@ var SHELL = [
   // offline with no table geometry at all.
   '/assets/floorplan-core.js?v=2050',
   '/assets/oppo-cards.js',
-  '/assets/dashboard-pwa.js?v=395',
+  '/assets/dashboard-pwa.js?v=396',
   '/assets/dashboard-native.js',
   '/assets/pwa-update.js?v=359',
   '/assets/caisse-skin.css?v=3',
   '/assets/pos-mobile.css?v=3',
   '/assets/caisse-motion.js',
-  '/assets/caisse-pwa.js?v=395',
+  '/assets/caisse-pwa.js?v=396',
   '/assets/vendor/dexie.min.js',
   '/assets/offline-db.js?v=3',
   '/assets/platform-kernel.js?v=5',
@@ -220,12 +220,12 @@ var SHELL = [
      commerçant a bel et bien saisi ses coûts. */
   '/assets/cost.js?v=3',
   '/assets/clients-store.js?v=2',
-  '/assets/clients-book.js?v=6',
+  '/assets/clients-book.js?v=7',
   '/assets/clients-directory.js',
   '/assets/menu-catalog.js?v=14',
   '/assets/restaurant-recipes.js?v=3',
   '/assets/restaurant-units.js',
-  '/assets/employee-live.js?v=394',
+  '/assets/employee-live.js?v=395',
   '/assets/employee-planning.js?v=6',
   '/assets/employee-trade-shell.css?v=2',
   '/assets/employee-trade-shell.js?v=2',

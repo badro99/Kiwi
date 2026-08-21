@@ -348,8 +348,8 @@
 
     /* ---------- Left sidebar (dark, dashboard-matching) ---------- */
     .sidebar {
-      width: 260px;
-      flex: 0 0 260px;
+      width: 280px;
+      flex: 0 0 280px;
       height: 100%;
       min-height: 100%;
       align-self: stretch;
@@ -359,8 +359,8 @@
       color: #b5b9b6;
       display: flex;
       flex-direction: column;
-      padding: 14px 12px;
-      gap: 9px;
+      padding: 22px 18px 18px;
+      gap: 16px;
       overflow-y: auto;
       overscroll-behavior: contain;
       -webkit-overflow-scrolling: touch;
@@ -377,16 +377,11 @@
     }
     .sidebar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.22); background-clip: padding-box; }
 
-    .brand-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      padding: 0 2px;
-    }
+    .brand-row { display: flex; flex-direction: column; gap: 10px; }
     .brand-mark {
       display: inline-flex;
       align-items: center;
+      margin: 0 4px;
     }
     .brand-mark img,
     .pin-brand img,
@@ -395,13 +390,18 @@
       width: auto; display: block;
       pointer-events: none; -webkit-user-drag: none; user-select: none;
     }
-    .brand-mark img { height: 26px; }
+    .brand-mark img { height: 30px; }
+    .wordmark { display: inline-flex; align-items: center; }
+    .wordmark img { height: 34px; }
+    .wordmark .logo-dark { display: none; }
+    html[data-caisse-theme="dark"] .wordmark .logo-light { display: none; }
+    html[data-caisse-theme="dark"] .wordmark .logo-dark { display: block; }
 
     .duty-row {
-      display: flex; align-items: center; gap: 6px;
-      font-size: 9.5px; color: #8f9591;
+      display: flex; align-items: center; gap: 8px;
+      font-size: 10px; color: #8f9591;
       letter-spacing: 0.08em; text-transform: uppercase;
-      margin: 0;
+      margin: 0 4px;
     }
     .duty-dot {
       width: 7px; height: 7px; border-radius: 50%;
@@ -410,67 +410,61 @@
     }
 
     .cashier-card {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      grid-template-rows: auto auto;
-      align-items: center;
-      padding: 9px 11px;
+      display: flex; flex-direction: column;
+      padding: 14px 15px;
       background: rgba(255,255,255,0.03);
       border: 1px solid rgba(255,255,255,0.08);
       border-radius: var(--r-lg);
       box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
-      gap: 2px 8px;
     }
-    .cashier-name { font-size: 13px; font-weight: 600; color: var(--paper-cream); grid-column: 1; grid-row: 1; }
-    .cashier-role { font-size: 10px; color: #8f9591; grid-column: 1; grid-row: 2; }
-    .cashier-divider { display: none; }
+    .cashier-name { font-size: 14px; font-weight: 600; color: var(--paper-cream); }
+    .cashier-role { font-size: 11px; color: #8f9591; margin-top: 2px; }
+    .cashier-divider { height: 1px; background: rgba(255,255,255,0.08); margin: 10px 0; }
     .clock-time {
       font-family: var(--sans);
       font-feature-settings: "tnum" 1;
-      font-size: 18px; font-weight: 700; color: var(--paper-cream);
+      font-size: 28px; font-weight: 700; color: var(--paper-cream);
       line-height: 1;
       letter-spacing: -0.02em;
-      grid-column: 2; grid-row: 1;
-      text-align: right;
     }
-    .clock-date { font-size: 10px; color: #8f9591; grid-column: 2; grid-row: 2; text-align: right; text-transform: capitalize; }
+    .clock-date { font-size: 11px; color: #8f9591; margin-top: 4px; text-transform: capitalize; }
 
-    .stats-section { display: flex; flex-direction: column; gap: 5px; }
+    .stats-section { display: flex; flex-direction: column; gap: 8px; }
     .stat-card {
       background: rgba(255,255,255,0.03);
       border: 1px solid rgba(255,255,255,0.08);
       border-radius: var(--r-lg);
-      padding: 8px 10px;
-      display: flex; flex-direction: column; gap: 2px;
+      padding: 12px;
+      display: flex; flex-direction: column; gap: 4px;
       box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
     }
-    .stat-label { font-size: 8.5px; font-weight: 600; color: #7f847f; letter-spacing: 0.07em; text-transform: uppercase; }
-    .stat-value { font-size: 15px; font-weight: 700; color: var(--paper-cream); font-feature-settings: "tnum" 1; }
-    .stat-delta { font-size: 10px; color: var(--mint); font-weight: 500; }
+    .stat-label { font-size: 9.5px; font-weight: 600; color: #7f847f; letter-spacing: 0.07em; text-transform: uppercase; }
+    .stat-value { font-size: 17px; font-weight: 700; color: var(--paper-cream); font-feature-settings: "tnum" 1; }
+    .stat-delta { font-size: 11px; color: var(--mint); font-weight: 500; margin-top: 2px; }
     .stat-row {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 5px;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
     }
-    .stat-card.compact .stat-value { font-size: 13px; }
+    .stat-card.compact .stat-value { font-size: 14px; }
 
-    .mode-selector { display: flex; gap: 5px; }
+    .mode-selector { display: flex; gap: 8px; }
     .mode-pill {
       flex: 1;
       display: inline-flex; flex-direction: column;
-      align-items: center; justify-content: center; gap: 5px;
-      padding: 9px 4px;
-      border-radius: 12px;
-      font-size: 12px; font-weight: 600;
+      align-items: center; justify-content: center; gap: 10px;
+      padding: 16px 7px;
+      border-radius: 14px;
+      font-size: 13px; font-weight: 600;
       background: rgba(255,255,255,0.03);
       border: 1px solid rgba(255,255,255,0.08);
       box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
       color: #8f9591;
       transition: background 200ms ease, color 200ms ease, transform 150ms ease, box-shadow 200ms ease, border-color 200ms ease;
       letter-spacing: -0.01em;
-      min-height: 58px;
+      min-height: 88px;
     }
     .mode-pill svg {
-      width: 22px; height: 22px;
-      flex: 0 0 22px;
+      width: 28px; height: 28px;
+      flex: 0 0 28px;
       fill: currentColor;
     }
     .mode-pill span { line-height: 1.15; }
@@ -488,23 +482,23 @@
     }
 
     /* Action pills — caisse operations in a clean 2x2 grid */
-    .act-selector { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; }
+    .act-selector { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
     .act-pill {
       display: inline-flex; flex-direction: column;
-      align-items: center; justify-content: center; gap: 4px;
-      padding: 8px 3px;
-      border-radius: 12px;
+      align-items: center; justify-content: center; gap: 8px;
+      padding: 12px 3px;
+      border-radius: 14px;
       font-size: 10px; font-weight: 600;
       background: rgba(255,255,255,0.03);
       border: 1px solid rgba(255,255,255,0.08);
       box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
       color: #9aa09b;
-      text-align: center; line-height: 1.2;
-      min-height: 52px;
+      text-align: center; line-height: 1.25;
+      min-height: 72px;
       cursor: pointer;
       transition: background 200ms ease, color 200ms ease, transform 150ms ease, border-color 200ms ease;
     }
-    .act-pill svg { width: 18px; height: 18px; flex: 0 0 18px; }
+    .act-pill svg { width: 22px; height: 22px; flex: 0 0 22px; }
     .act-pill:hover {
       background: rgba(255,255,255,0.06);
       border-color: rgba(255,255,255,0.16);
@@ -513,55 +507,150 @@
     }
     .act-pill:active { transform: scale(0.97); }
 
-    .rail-links { display: flex; flex-direction: column; gap: 4px; }
+    .rail-links { display: flex; flex-direction: column; gap: 6px; }
     .team-trigger {
-      display: flex; align-items: center; gap: 9px;
-      padding: 8px 11px;
+      display: flex; align-items: center; gap: 10px;
+      padding: 11px 12px;
       background: rgba(255,255,255,0.03);
       border: 1px solid rgba(255,255,255,0.08);
       color: #b5b9b6;
-      border-radius: 10px;
-      font-size: 12px; font-weight: 500;
+      border-radius: var(--r-lg);
+      font-size: 13px; font-weight: 500;
       box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
       transition: background 150ms, color 150ms, border-color 150ms, transform 150ms;
       text-align: left;
     }
-    .team-trigger svg { width: 15px; height: 15px; flex: 0 0 15px; }
+    .team-trigger svg { width: 16px; height: 16px; flex: 0 0 16px; color: #8f9591; transition: color 150ms; }
+    .team-trigger:hover svg { color: var(--mint); }
     .team-trigger .count {
       margin-left: auto;
       background: var(--mint); color: var(--ink-bg);
-      font-size: 10.5px; font-weight: 800;
-      padding: 1px 7px; border-radius: 999px;
+      font-size: 11px; font-weight: 800;
+      padding: 2px 8px; border-radius: 999px;
       font-feature-settings: "tnum" 1;
     }
 
-    .quick-actions { display: flex; flex-direction: column; gap: 4px; margin-top: auto; padding-top: 4px; }
+    .quick-actions { display: flex; flex-direction: column; gap: 6px; margin-top: auto; padding-top: 6px; }
     .qa-btn {
-      display: flex; align-items: center; gap: 9px;
-      padding: 7px 11px;
+      display: flex; align-items: center; gap: 10px;
+      padding: 11px 12px;
       background: rgba(255,255,255,0.03);
       border: 1px solid rgba(255,255,255,0.08);
       color: #b5b9b6;
-      border-radius: 10px;
-      font-size: 11.5px; font-weight: 500;
+      border-radius: var(--r-lg);
+      font-size: 13px; font-weight: 500;
       text-align: left;
       transition: background 150ms ease, color 150ms ease, border-color 150ms ease;
     }
     .qa-btn:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.16); color: var(--paper-cream); }
     .qa-btn.ghost { background: transparent; border-color: transparent; color: #8f9591; }
     .qa-btn.ghost:hover { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.08); color: var(--paper-cream); }
-    .qa-btn svg { width: 14px; height: 14px; flex: 0 0 14px; }
+    .qa-btn svg { width: 15px; height: 15px; flex: 0 0 15px; }
 
-    @media (max-width: 1200px) {
+    /* ===========================================================
+       DEDICATED IPAD 10" & TABLET RESPONSIVE LAYOUT
+       Optimized for iPad 10.2"/10.9" in landscape (810px height).
+       Everything fits smoothly without cutoff or microscopic fonts.
+       =========================================================== */
+    @media (max-width: 1199px), (max-height: 849px) {
+      .sidebar {
+        width: 250px;
+        flex: 0 0 250px;
+        padding: 12px 10px;
+        gap: 8px;
+      }
+      .brand-row {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        gap: 6px;
+        padding: 0 2px;
+      }
+      .brand-mark { margin: 0; }
+      .brand-mark img { height: 24px; }
+      .duty-row { font-size: 9px; margin: 0; gap: 5px; }
+      .cashier-card {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        grid-template-rows: auto auto;
+        align-items: center;
+        padding: 8px 10px;
+        border-radius: 10px;
+        gap: 2px 6px;
+      }
+      .cashier-name { font-size: 12.5px; grid-column: 1; grid-row: 1; }
+      .cashier-role { font-size: 9.5px; grid-column: 1; grid-row: 2; margin-top: 0; }
+      .cashier-divider { display: none; }
+      .clock-time {
+        font-size: 17px;
+        grid-column: 2; grid-row: 1;
+        text-align: right;
+      }
+      .clock-date {
+        font-size: 9.5px;
+        grid-column: 2; grid-row: 2;
+        text-align: right;
+        margin-top: 0;
+      }
+      .mode-selector { gap: 5px; }
+      .mode-pill {
+        min-height: 56px;
+        padding: 8px 2px;
+        gap: 4px;
+        font-size: 11.5px;
+        border-radius: 10px;
+      }
+      .mode-pill svg { width: 20px; height: 20px; flex: 0 0 20px; }
+      .act-selector {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 5px;
+      }
+      .act-pill {
+        min-height: 48px;
+        padding: 6px 2px;
+        gap: 3px;
+        font-size: 9.5px;
+        border-radius: 10px;
+      }
+      .act-pill svg { width: 17px; height: 17px; flex: 0 0 17px; }
+      .stats-section { gap: 4px; }
+      .stat-card {
+        padding: 7px 9px;
+        gap: 2px;
+        border-radius: 10px;
+      }
+      .stat-label { font-size: 8px; }
+      .stat-value { font-size: 14px; }
+      .stat-delta { font-size: 9.5px; }
+      .stat-row { gap: 4px; }
+      .stat-card.compact .stat-value { font-size: 12px; }
+      .rail-links { gap: 3px; }
+      .team-trigger {
+        padding: 6px 9px;
+        font-size: 11.5px;
+        border-radius: 8px;
+        gap: 7px;
+      }
+      .team-trigger svg { width: 14px; height: 14px; flex: 0 0 14px; }
+      .team-trigger .count { font-size: 9.5px; padding: 1px 6px; }
+      .quick-actions { gap: 3px; margin-top: auto; padding-top: 3px; }
+      .qa-btn {
+        padding: 6px 9px;
+        font-size: 11px;
+        border-radius: 8px;
+        gap: 7px;
+      }
+      .qa-btn svg { width: 13px; height: 13px; flex: 0 0 13px; }
+
       .rightpanel {
         width: 300px;
         flex: 0 0 300px;
       }
       .main-head {
-        padding: 14px 20px 10px;
+        padding: 12px 18px 8px;
       }
       .view {
-        padding: 6px 20px 18px;
+        padding: 6px 18px 16px;
       }
     }
 
@@ -5142,7 +5231,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=395" defer></script>
+  <script src="assets/caisse-pwa.js?v=396" defer></script>
   <script src="assets/live-link.js?v=15" defer></script>
   <!-- The staff-role catalogue — says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -5204,7 +5293,7 @@
        server-confirmed or explicitly blocked, never presentation-only. -->
   <script src="assets/operations.js?v=10" defer></script>
   <script src="assets/clients-store.js?v=2" defer></script>
-  <script src="assets/clients-book.js?v=6" defer></script>
+  <script src="assets/clients-book.js?v=7" defer></script>
   <!-- Le relais cuisine · « Envoyer en cuisine » posait son bon dans un tableau
        de CETTE page et l'imprimait : une tablette en cuisine ne recevait rien,
        et sans imprimante thermique il n'y avait aucun chemin du tout. Ce module
