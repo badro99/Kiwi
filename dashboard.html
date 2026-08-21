@@ -6190,7 +6190,7 @@
      loaded before the assistant router; the probed modules may load later and
      are resolved lazily at question time. -->
 <script src="assets/agent-truth.js?v=4" defer fetchpriority="low"></script>
-<script src="assets/agent.js?v=17" defer fetchpriority="low"></script>
+<script src="assets/agent.js?v=18" defer fetchpriority="low"></script>
 <script src="assets/agent-voice.js?v=4" defer fetchpriority="low"></script>
 <script src="assets/agent-skin.js?v=4" defer fetchpriority="low"></script>
 <script src="assets/accounting.js" defer fetchpriority="low"></script>
@@ -6290,6 +6290,9 @@
 <script src="assets/planning-core.js?v=8" defer fetchpriority="low"></script>
 <link rel="stylesheet" href="assets/planning-ui.css?v=10">
 <script src="assets/team.js?v=279" defer fetchpriority="low"></script>
+<!-- Deterministic, tenant-scoped morning briefing. Loaded after the ledgers it
+     will inspect; Phase 1b deliberately ships with no active signal rules. -->
+<script src="assets/briefing.js?v=2" defer fetchpriority="low"></script>
 <script src="assets/finance.js" defer fetchpriority="low"></script>
 <script src="assets/conformite.js" defer fetchpriority="low"></script>
 <!-- Final production boundary for presentation-only actions. -->

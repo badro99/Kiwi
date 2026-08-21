@@ -36,8 +36,8 @@
     "sha": "48c56a5be7a6655b"
   },
   "assets/agent.js": {
-    "v": "17",
-    "sha": "de3bdaab87aac327"
+    "v": "18",
+    "sha": "06683f944d74883a"
   },
   "assets/booking.css": {
     "v": "7",
@@ -50,6 +50,10 @@
   "assets/boutique-promos-dashboard.js": {
     "v": "3",
     "sha": "7332c4414f0ffae1"
+  },
+  "assets/briefing.js": {
+    "v": "2",
+    "sha": "a069d90cc48ec05d"
   },
   "assets/caisse-attendance-code.js": {
     "v": "2",

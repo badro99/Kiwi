@@ -95,6 +95,10 @@ const FEATURES = {
   /* Assistant approvals and their version trail. Protected from paired tills
    * below because summaries can contain customer and operational identifiers. */
   agentactions:  { keys: ['items', 'versions'],                      max: 250000 },
+  /* Morning briefings eventually carry measured revenue, margin and stock
+   * figures. Treat the cache as books from day one: non-editing surfaces see
+   * an empty projection and, critically, cannot write that projection back. */
+  briefing:      { keys: ['days'],                                   max: 250000 },
   /* Les trois destinations « starter » qui n'avaient pas encore de case ici.
    * Le starter (pages-pro.js) range une simple LISTE de lignes saisies à la
    * main, d'où la forme `{ list: [...] }` — la même que `suppliers` ou
@@ -310,9 +314,10 @@ function stripTeamCodes(doc) {
 }
 
 function stripAgentActions() { return { items: [], versions: [] }; }
+function stripBriefing() { return { days: [] }; }
 
 /* Quelles fonctionnalités cachent un secret à qui ne l'écrit pas. */
-const REDACT = { team: stripTeamCodes, agentactions: stripAgentActions };
+const REDACT = { team: stripTeamCodes, agentactions: stripAgentActions, briefing: stripBriefing };
 
 /* Celui-ci tient-il la fiche, ou ne fait-il que la consulter ?
  * `entitledMerchant` SANS `allowTill` répond exactement à ça : la session du

@@ -156,7 +156,10 @@
     if (raw == null) { try { raw = localStorage.getItem('kiwiRole'); } catch (_) {} }
     /* An explicit badge is authoritative. No marker is the legacy owner
      * dashboard, not an anonymous till surface. */
-    if (raw == null || raw === '') return 'owner';
+    if (raw == null || raw === '') {
+      try { return window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal() ? 'staff' : 'owner'; }
+      catch (_) { return 'staff'; }
+    }
     let id = '';
     try { if (window.KiwiRoles && window.KiwiRoles.idOf) id = window.KiwiRoles.idOf(raw) || ''; } catch (_) {}
     if (id === 'proprietaire') return 'owner';
@@ -3401,6 +3404,13 @@
   }
   function respond(rawIn) {
     syncProfile();  // reason off whatever venue is active right now
+    try {
+      const briefing = window.KiwiBriefing;
+      if (briefing && briefing.canHandle && briefing.canHandle(rawIn)) {
+        lastRouteKind = 'briefing';
+        return briefing.reply(rawIn, { lang: detectQLang(rawIn), role: accessTier() });
+      }
+    } catch (_) {}
     const d = decideRoute(rawIn);
     /* Operational state has its own deterministic lane. It runs before the
      * feature explainer and the finance model, but never before integrity or a
@@ -3684,6 +3694,8 @@
     ['où sont mes règlements', 'nodata'],
   ];
   function routeLabel(s) {
+    try { if (window.KiwiBriefing && window.KiwiBriefing.canHandle && window.KiwiBriefing.canHandle(s)) return 'briefing'; }
+    catch (_) {}
     const d = decideRoute(s);
     if (featureCanTake(s, d)) return 'feature';
     return d.kind === null ? 'llm' : d.kind;
