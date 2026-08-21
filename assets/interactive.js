@@ -1868,16 +1868,10 @@ ar: {
       const lang = (I18 && I18.getLang && I18.getLang()) || 'fr';
       const LANGNAME = { fr: 'Français', en: 'English', ar: 'العربية' };
       const setOn = (k) => { try { return localStorage.getItem('kiwiSet:' + k) !== '0'; } catch (_) { return true; } };
-      const sec = (t) => `<div style="font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:var(--n-500); font-weight:500; font-family:var(--mono); margin-bottom:10px;">${t}</div>`;
       const KV = window.KiwiVenue;
       const cv = !!(KV && KV.isCustom && KV.isCustom());
       const vd = (KV && KV.getCurrentVenueData && KV.getCurrentVenueData()) || {};
       const getSet = (k, def) => { try { return localStorage.getItem('kiwiSet:' + k) || def; } catch (_) { return def; } };
-      /* Ce que la ligne « Heures d'ouverture » affiche. Elle lit KiwiHours et
-       * RIEN d'autre : l'ancien texte libre (vd.hours, kiwiSet:hours) n'est
-       * plus une source, seulement un vestige à remplacer. Tant que la semaine
-       * n'est pas saisie on le dit — un horaire manquant qui se présente comme
-       * un horaire est ce qui a fait inventer des heures à tout le produit. */
       const hoursRowValue = (venueData) => {
         const KH = window.KiwiHours;
         const legacy = (venueData && venueData.hours) || getSet('hours', '');
@@ -1888,11 +1882,6 @@ ar: {
         }
         return KH.summary(Date.now()).text;
       };
-      /* Ce que la ligne « Reçu de caisse » affiche. Comme les horaires, elle
-       * LIT la fiche unique (KiwiReceipt) et ouvre l'unique écran de réglage —
-       * la caisse n'a pas le sien. Ce qu'un propriétaire vient vérifier, c'est
-       * si son ticket est en règle : on annonce donc les mentions légales
-       * manquantes, pas un « configuré / non configuré » qui ne dit rien. */
       const receiptRowValue = () => {
         const K = window.KiwiReceipt;
         if (!K) return tr({ fr: 'Ticket standard', en: 'Standard ticket', ar: 'وصل قياسي' });
@@ -1909,81 +1898,256 @@ ar: {
           : tr({ fr: 'Modèle par défaut', en: 'Default template', ar: 'نموذج افتراضي' });
       };
       const fmtN = (n) => (+n || 0).toLocaleString('fr-FR').replace(/[ , ]/g, ' ');
-      return drawer({
-      title: tr({ fr: 'Paramètres', en: 'Settings', ar: 'الإعدادات' }),
-      subtitle: tr({ fr: 'Compte · boutique · conformité', en: 'Account · store · compliance', ar: 'الحساب · المتجر · الامتثال' }),
-      width: 460,
-      body: `
-        <style>
-          .kset-card { background:var(--paper-elev, #FBFAF6); border-radius:14px; box-shadow:var(--elev-1); padding:2px 10px; }
-          .kset-row { display:flex; align-items:center; gap:12px; padding:12px 4px; cursor:pointer; transition:background 120ms; border-radius:10px; }
-          .kset-row + .kset-row { border-top:1px solid rgba(10,15,13,0.06); }
-          .kset-row:hover { background:var(--paper-soft); }
-          .kset-row:focus-visible { outline:2px solid var(--atlas); outline-offset:-2px; }
-          .kset-ico { width:30px; height:30px; flex-shrink:0; display:grid; place-items:center; border-radius:9px; color:var(--atlas); background:rgba(11,110,79,0.10); }
-          .kset-ico-txt { font-size:15px; }
-          .kset-chev { opacity:0.8; flex-shrink:0; }
-          .kset-toggle { width:36px; height:21px; background:var(--n-300); border-radius:999px; position:relative; transition:background 160ms; flex-shrink:0; }
-          .kset-toggle.on { background:var(--atlas); }
-          .kset-knob { position:absolute; top:2px; inset-inline-start:2px; width:17px; height:17px; background:var(--surface); border-radius:50%; transition:inset-inline-start 160ms; box-shadow:0 1px 3px rgba(10,15,13,0.28); }
-          .kset-toggle.on .kset-knob { inset-inline-start:17px; }
-          .kset-badge { font-family:var(--mono); font-size:9px; font-weight:600; letter-spacing:0.1em; color:var(--atlas); background:rgba(11,110,79,0.10); border:1px solid rgba(11,110,79,0.22); padding:4px 8px; border-radius:999px; flex-shrink:0; }
-        </style>
-        <div style="margin-bottom:20px;">
-          ${sec(tr({ fr: 'PRÉFÉRENCES', en: 'PREFERENCES', ar: 'التفضيلات' }))}
-          <div class="kset-card">
-            ${settingsRow('🌍', tr({ fr: 'Langue', en: 'Language', ar: 'اللغة' }), LANGNAME[lang] || 'Français', { action: 'settings-lang' })}
-            ${settingsRow('🔔', tr({ fr: 'Notifications WhatsApp', en: 'WhatsApp notifications', ar: 'إشعارات واتساب' }), tr({ fr: 'Résumé quotidien 19h', en: 'Daily summary 7pm', ar: 'ملخص يومي 19:00' }), { toggle: true, on: setOn('waNotif'), action: 'settings-toggle', arg: 'waNotif' })}
-            ${settingsRow('💰', tr({ fr: 'Devise d\'affichage', en: 'Display currency', ar: 'عملة العرض' }), escape(getSet('currency', 'MAD · Dirham marocain')), { action: 'settings-currency' })}
-            ${(window.KiwiDesignIOS27 && window.KiwiDesignIOS27.isOn()) ? settingsRow('🧊', 'Liquid Glass', ({ clear: tr({ fr: 'Clair', en: 'Clear', ar: 'شفاف' }), standard: tr({ fr: 'Standard', en: 'Standard', ar: 'قياسي' }), frosted: tr({ fr: 'Givré', en: 'Frosted', ar: 'مصنفر' }), opaque: tr({ fr: 'Opaque', en: 'Opaque', ar: 'معتم' }) })[window.KiwiDesignIOS27.getGlass()] || 'Standard', { action: 'glass-level' }) : ''}
-            ${(document.documentElement.getAttribute('data-theme') === 'dark')
-              ? settingsRow('🌙', tr({ fr: 'Mode sombre', en: 'Dark mode', ar: 'الوضع الداكن' }), tr({ fr: 'Activé · Kiwi Ultra', en: 'On · Kiwi Ultra', ar: 'مفعّل · Kiwi Ultra' }), { badge: '✓' })
-              : settingsRow('🌙', tr({ fr: 'Mode sombre', en: 'Dark mode', ar: 'الوضع الداكن' }), tr({ fr: 'Interface nuit · confort du soir', en: 'Night interface · easy on the eyes', ar: 'واجهة ليلية · مريحة للعين' }), { action: 'settings-dark-ultra', badge: 'ULTRA' })}
+
+      const venueTitle = escape((vd && (vd.fullDisplay || vd.name)) || (window.KiwiMe && window.KiwiMe.business) || (window.KiwiEnv?.isReal?.() ? 'Mon établissement' : 'Café Atlas · Maarif'));
+      const tradeLabel = escape((window.KiwiVenue?.getTypeLabel?.() || '') || tr({ fr: 'Restauration & Boissons', en: 'Food & Beverage', ar: 'المطاعم والمشروبات' }));
+
+      return appPage('settings', {
+        title: tr({ fr: 'Paramètres', en: 'Settings', ar: 'الإعدادات' }),
+        subtitle: tr({
+          fr: `${venueTitle} · Configuration · Matériel & Caisse · Sécurité · Intégrations`,
+          en: `${venueTitle} · Configuration · Hardware & POS · Security · Integrations`,
+          ar: `${venueTitle} · الإعدادات · الأجهزة والصندوق · الأمان · الربط`,
+        }),
+        body: `
+          <style>
+            .gp-settings-grid {
+              display: grid;
+              grid-template-columns: repeat(2, minmax(0, 1fr));
+              gap: 20px;
+              margin-top: 10px;
+            }
+            @media (max-width: 920px) {
+              .gp-settings-grid { grid-template-columns: minmax(0, 1fr); }
+            }
+            .gp-set-card {
+              background: var(--surface, #FFFFFF);
+              border: 1px solid var(--n-200, #E5E7EB);
+              border-radius: 20px;
+              box-shadow: 0 1px 3px rgba(10, 15, 13, 0.04), 0 12px 32px -16px rgba(10, 15, 13, 0.08);
+              padding: 22px 24px;
+              display: flex;
+              flex-direction: column;
+              gap: 12px;
+            }
+            :root[data-theme="dark"] .gp-set-card {
+              background: rgba(14, 30, 23, 0.88);
+              border-color: rgba(255, 255, 255, 0.10);
+              box-shadow: 0 0 0 1px rgba(0, 255, 174, 0.05), 0 16px 40px -12px rgba(0, 0, 0, 0.5);
+            }
+            .gp-set-card-head {
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              padding-bottom: 12px;
+              border-bottom: 1px solid var(--n-150, rgba(0,0,0,0.06));
+            }
+            :root[data-theme="dark"] .gp-set-card-head {
+              border-bottom-color: rgba(255, 255, 255, 0.08);
+            }
+            .gp-set-title {
+              font-size: 15px;
+              font-weight: 700;
+              letter-spacing: -0.015em;
+              color: var(--ink);
+              display: flex;
+              align-items: center;
+              gap: 8px;
+            }
+            :root[data-theme="dark"] .gp-set-title { color: #F5FAF7; }
+            .gp-set-tag {
+              font-family: var(--mono);
+              font-size: 10px;
+              font-weight: 600;
+              letter-spacing: 0.08em;
+              text-transform: uppercase;
+              color: var(--atlas, #0C6B4E);
+              background: rgba(12, 107, 78, 0.10);
+              padding: 3px 8px;
+              border-radius: 999px;
+            }
+            :root[data-theme="dark"] .gp-set-tag {
+              color: #00FFAE;
+              background: rgba(0, 255, 174, 0.12);
+            }
+            .kset-row {
+              display: flex;
+              align-items: center;
+              gap: 14px;
+              padding: 10px 12px;
+              cursor: pointer;
+              transition: all 140ms ease;
+              border-radius: 12px;
+              border: 1px solid transparent;
+            }
+            .kset-row:hover {
+              background: var(--paper-soft, rgba(0,0,0,0.03));
+              border-color: var(--n-200, rgba(0,0,0,0.05));
+              transform: translateX(2px);
+            }
+            :root[data-theme="dark"] .kset-row:hover {
+              background: rgba(255, 255, 255, 0.05);
+              border-color: rgba(255, 255, 255, 0.08);
+            }
+            .kset-ico {
+              width: 34px; height: 34px;
+              flex-shrink: 0;
+              display: grid;
+              place-items: center;
+              border-radius: 10px;
+              color: var(--atlas, #0C6B4E);
+              background: rgba(12, 107, 78, 0.10);
+              border: 1px solid rgba(12, 107, 78, 0.14);
+            }
+            :root[data-theme="dark"] .kset-ico {
+              color: #00FFAE;
+              background: rgba(0, 255, 174, 0.12);
+              border-color: rgba(0, 255, 174, 0.20);
+            }
+            .kset-toggle {
+              width: 38px; height: 22px;
+              background: var(--n-300, #CBD5E1);
+              border-radius: 999px;
+              position: relative;
+              transition: background 160ms;
+              flex-shrink: 0;
+              cursor: pointer;
+            }
+            .kset-toggle.on { background: var(--atlas, #0C6B4E); }
+            :root[data-theme="dark"] .kset-toggle.on { background: #00FFAE; }
+            .kset-knob {
+              position: absolute;
+              top: 2px;
+              inset-inline-start: 2px;
+              width: 18px; height: 18px;
+              background: #FFFFFF;
+              border-radius: 50%;
+              transition: inset-inline-start 160ms;
+              box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+            }
+            .kset-toggle.on .kset-knob { inset-inline-start: 18px; }
+            :root[data-theme="dark"] .kset-toggle.on .kset-knob { background: #04140E; }
+            .kset-badge {
+              font-family: var(--mono);
+              font-size: 10px;
+              font-weight: 600;
+              letter-spacing: 0.08em;
+              color: var(--atlas, #0C6B4E);
+              background: rgba(12, 107, 78, 0.10);
+              border: 1px solid rgba(12, 107, 78, 0.20);
+              padding: 3px 9px;
+              border-radius: 999px;
+              flex-shrink: 0;
+            }
+            :root[data-theme="dark"] .kset-badge {
+              color: #00FFAE;
+              background: rgba(0, 255, 174, 0.14);
+              border-color: rgba(0, 255, 174, 0.28);
+            }
+          </style>
+
+          <div class="kx-kpi-strip">
+            <div class="kx-kpi">
+              <div class="l">${tr({ fr: 'Établissement', en: 'Location', ar: 'المنشأة' })}</div>
+              <div class="v" style="font-size:22px;">${venueTitle}</div>
+            </div>
+            <div class="kx-kpi">
+              <div class="l">${tr({ fr: 'Activité', en: 'Business type', ar: 'نوع النشاط' })}</div>
+              <div class="v" style="font-size:22px;">${tradeLabel}</div>
+            </div>
+            <div class="kx-kpi">
+              <div class="l">${tr({ fr: 'Reçu de caisse', en: 'Receipt state', ar: 'حالة الوصل' })}</div>
+              <div class="v" style="font-size:18px; color:var(--atlas);">${escape(receiptRowValue())}</div>
+            </div>
+            <div class="kx-kpi">
+              <div class="l">${tr({ fr: 'Sécurité & Données', en: 'Security & Data', ar: 'الأمان والبيانات' })}</div>
+              <div class="v" style="font-size:22px; color:var(--success, #0C6B4E);">${tr({ fr: 'Chiffrement actif', en: 'Encrypted', ar: 'مشفر' })}</div>
+            </div>
           </div>
-        </div>
-        <div style="margin-bottom:20px;">
-          ${sec(tr({ fr: 'BOUTIQUE', en: 'STORE', ar: 'المتجر' }))}
-          <div class="kset-card">
-            ${cv ? `
-            ${settingsRow('🏪', escape(vd.fullDisplay || vd.name || tr({ fr: 'Ma boutique', en: 'My store', ar: 'متجري' })), escape((window.KiwiVenue?.getTypeLabel?.() || '') || tr({ fr: 'Activité', en: 'Business', ar: 'النشاط' })), { action: 'settings-edit-venue' })}
-            ${settingsRow('⏰', tr({ fr: 'Heures d\'ouverture', en: 'Opening hours', ar: 'ساعات العمل' }), escape(hoursRowValue(vd)), { action: 'settings-hours' })}
-            ${settingsRow('🧾', tr({ fr: 'Reçu de caisse', en: 'Sales receipt', ar: 'وصل الصندوق' }), escape(receiptRowValue()), { action: 'settings-receipt' })}
-            ${settingsRow('🎯', tr({ fr: 'Objectif journalier', en: 'Daily goal', ar: 'الهدف اليومي' }), vd.goal ? fmtN(vd.goal) + ' MAD' : tr({ fr: 'À définir', en: 'To set', ar: 'غير محدد' }), { action: 'settings-edit-venue' })}
-            ${settingsRow('💳', tr({ fr: 'Méthodes acceptées', en: 'Accepted methods', ar: 'وسائل الدفع المقبولة' }), escape(vd.methods || tr({ fr: 'Toutes acceptées', en: 'All accepted', ar: 'الكل مقبول' })), { action: 'settings-edit-venue' })}
-            ` : `
-            ${settingsRow('🏪', escape(getSet('venueName', ((window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && (window.KiwiVenue.getCurrentVenueData() || {}).fullDisplay) || (window.KiwiMe && window.KiwiMe.business) || (window.KiwiEnv?.isReal?.() ? '' : 'Café Atlas · Maarif')))), escape(getSet('venueLoc', tr({ fr: 'Emplacement principal', en: 'Main location', ar: 'الموقع الرئيسي' }))), { action: 'settings-edit-store', arg: 'venue' })}
-            ${settingsRow('⏰', tr({ fr: 'Heures d\'ouverture', en: 'Opening hours', ar: 'ساعات العمل' }), escape(hoursRowValue(null)), { action: 'settings-hours' })}
-            ${settingsRow('🧾', tr({ fr: 'Reçu de caisse', en: 'Sales receipt', ar: 'وصل الصندوق' }), escape(receiptRowValue()), { action: 'settings-receipt' })}
-            ${settingsRow('💳', tr({ fr: 'Méthodes acceptées', en: 'Accepted methods', ar: 'وسائل الدفع المقبولة' }), escape(getSet('methods', 'Visa · MC · Kiwi Tap · QR')), { action: 'settings-methods' })}
-            ${settingsRow('🎯', tr({ fr: 'Objectif journalier', en: 'Daily goal', ar: 'الهدف اليومي' }), escape(getSet('goal', '28 000')) + ' MAD', { action: 'settings-edit-store', arg: 'goal' })}
-            `}
+
+          <div class="gp-settings-grid">
+            <!-- Card 1: Établissement -->
+            <div class="gp-set-card">
+              <div class="gp-set-card-head">
+                <div class="gp-set-title">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M3 7v14M21 7v14M4 7l8-4 8 4M9 21v-6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v6"/></svg>
+                  <span>${tr({ fr: 'Établissement & Boutique', en: 'Store & Business', ar: 'المنشأة والمتجر' })}</span>
+                </div>
+                <span class="gp-set-tag">${tr({ fr: 'Identité', en: 'Identity', ar: 'الهوية' })}</span>
+              </div>
+              <div>
+                ${cv ? `
+                ${settingsRow('🏪', venueTitle, tradeLabel, { action: 'settings-edit-venue' })}
+                ${settingsRow('⏰', tr({ fr: 'Heures d\'ouverture', en: 'Opening hours', ar: 'ساعات العمل' }), escape(hoursRowValue(vd)), { action: 'settings-hours' })}
+                ${settingsRow('🎯', tr({ fr: 'Objectif journalier', en: 'Daily goal', ar: 'الهدف اليومي' }), vd.goal ? fmtN(vd.goal) + ' MAD' : tr({ fr: 'À définir', en: 'To set', ar: 'غير محدد' }), { action: 'settings-edit-venue' })}
+                ` : `
+                ${settingsRow('🏪', venueTitle, escape(getSet('venueLoc', tr({ fr: 'Emplacement principal', en: 'Main location', ar: 'الموقع الرئيسي' }))), { action: 'settings-edit-store', arg: 'venue' })}
+                ${settingsRow('⏰', tr({ fr: 'Heures d\'ouverture', en: 'Opening hours', ar: 'ساعات العمل' }), escape(hoursRowValue(null)), { action: 'settings-hours' })}
+                ${settingsRow('🎯', tr({ fr: 'Objectif journalier', en: 'Daily goal', ar: 'الهدف اليومي' }), escape(getSet('goal', '28 000')) + ' MAD', { action: 'settings-edit-store', arg: 'goal' })}
+                `}
+              </div>
+            </div>
+
+            <!-- Card 2: Caisse & Paiements -->
+            <div class="gp-set-card">
+              <div class="gp-set-card-head">
+                <div class="gp-set-title">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1zM8 7h8M8 11h8M8 15h5"/></svg>
+                  <span>${tr({ fr: 'Caisse & Reçu', en: 'POS & Receipt', ar: 'الصندوق والوصل' })}</span>
+                </div>
+                <span class="gp-set-tag">${tr({ fr: 'Encaissement', en: 'Checkout', ar: 'الدفع' })}</span>
+              </div>
+              <div>
+                ${settingsRow('🧾', tr({ fr: 'Reçu de caisse & Mentions légales', en: 'Receipt & Legal details', ar: 'وصل الصندوق والبيانات القانونية' }), escape(receiptRowValue()), { action: 'settings-receipt' })}
+                ${settingsRow('💳', tr({ fr: 'Méthodes de paiement acceptées', en: 'Accepted payment methods', ar: 'وسائل الدفع المقبولة' }), escape(vd.methods || getSet('methods', 'Visa · Mastercard · Kiwi Tap · QR')), { action: cv ? 'settings-edit-venue' : 'settings-methods' })}
+                ${settingsRow('💰', tr({ fr: 'Devise d\'affichage', en: 'Display currency', ar: 'عملة العرض' }), escape(getSet('currency', 'MAD · Dirham marocain')), { action: 'settings-currency' })}
+              </div>
+            </div>
+
+            <!-- Card 3: Préférences d'affichage -->
+            <div class="gp-set-card">
+              <div class="gp-set-card-head">
+                <div class="gp-set-title">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                  <span>${tr({ fr: 'Affichage & Interface', en: 'Display & Preferences', ar: 'العرض والتفضيلات' })}</span>
+                </div>
+                <span class="gp-set-tag">${tr({ fr: 'Personnalisation', en: 'Design', ar: 'التخصيص' })}</span>
+              </div>
+              <div>
+                ${settingsRow('🌍', tr({ fr: 'Langue de l\'application', en: 'App language', ar: 'لغة التطبيق' }), LANGNAME[lang] || 'Français', { action: 'settings-lang' })}
+                ${(window.KiwiDesignIOS27 && window.KiwiDesignIOS27.isOn()) ? settingsRow('🧊', 'Liquid Glass', ({ clear: tr({ fr: 'Clair', en: 'Clear', ar: 'شفاف' }), standard: tr({ fr: 'Standard', en: 'Standard', ar: 'قياسي' }), frosted: tr({ fr: 'Givré', en: 'Frosted', ar: 'مصنفر' }), opaque: tr({ fr: 'Opaque', en: 'Opaque', ar: 'معتم' }) })[window.KiwiDesignIOS27.getGlass()] || 'Standard', { action: 'glass-level' }) : ''}
+                ${(document.documentElement.getAttribute('data-theme') === 'dark')
+                  ? settingsRow('🌙', tr({ fr: 'Mode sombre', en: 'Dark mode', ar: 'الوضع الداكن' }), tr({ fr: 'Activé · Kiwi Ultra', en: 'On · Kiwi Ultra', ar: 'مفعّل · Kiwi Ultra' }), { badge: '✓' })
+                  : settingsRow('🌙', tr({ fr: 'Mode sombre', en: 'Dark mode', ar: 'الوضع الداكن' }), tr({ fr: 'Interface nuit · confort du soir', en: 'Night interface · easy on the eyes', ar: 'واجهة ليلية · مريحة للعين' }), { action: 'settings-dark-ultra', badge: 'ULTRA' })}
+                ${settingsRow('🔔', tr({ fr: 'Notifications WhatsApp', en: 'WhatsApp notifications', ar: 'إشعارات واتساب' }), tr({ fr: 'Résumé quotidien 19h', en: 'Daily summary 7pm', ar: 'ملخص يومي 19:00' }), { toggle: true, on: setOn('waNotif'), action: 'settings-toggle', arg: 'waNotif' })}
+              </div>
+            </div>
+
+            <!-- Card 4: Sécurité & Intégrations -->
+            <div class="gp-set-card">
+              <div class="gp-set-card-head">
+                <div class="gp-set-title">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                  <span>${tr({ fr: 'Sécurité & Intégrations', en: 'Security & Integrations', ar: 'الأمان والتكاملات' })}</span>
+                </div>
+                <span class="gp-set-tag">${tr({ fr: 'Protection', en: 'Protection', ar: 'الحماية' })}</span>
+              </div>
+              <div>
+                ${settingsRow('🔑', tr({ fr: 'Codes PIN de l\'équipe', en: 'Team PIN codes', ar: 'رموز الفريق' }), tr({ fr: 'Gérer les accès et rôles caisse', en: 'Manage till roles and access', ar: 'إدارة أدوار ووصول الصندوق' }), { action: 'nav-equipe' })}
+                ${settingsRow('🛡️', tr({ fr: 'Chiffrement des données', en: 'Data encryption', ar: 'تشفير البيانات' }), tr({ fr: 'En transit (TLS 1.3) et au repos', en: 'In transit (TLS 1.3) and at rest', ar: 'أثناء النقل وفي التخزين' }), { badge: tr({ fr: 'Certifié', en: 'Certified', ar: 'معتمد' }) })}
+                ${settingsRow('📤', tr({ fr: 'Exporter mes données', en: 'Export my data', ar: 'تصدير بياناتي' }), tr({ fr: 'Ventes, produits, équipe · Fichier CSV', en: 'Sales, products, team · CSV file', ar: 'المبيعات والمنتجات والفريق · CSV' }), { action: 'export-csv' })}
+                ${cv ? settingsRow('🔌', tr({ fr: 'Canaux de livraison', en: 'Delivery channels', ar: 'قنوات التوصيل' }), tr({ fr: 'Connectez Glovo, Yassir et votre compta', en: 'Connect Glovo, Yassir and accounting', ar: 'اربط Glovo وYassir ومحاسبتك' }), { action: 'add-integration' }) : `
+                ${settingsRow('🟠', 'Glovo Delivery', tr({ fr: 'Connecté · Commandes en direct', en: 'Connected · Live orders', ar: 'متصل · طلبات مباشرة' }), { toggle: true, on: setOn('glovo'), action: 'settings-toggle', arg: 'glovo' })}
+                ${settingsRow('🔵', 'Yassir Express', tr({ fr: 'Connecté · 24 commandes', en: 'Connected · 24 orders', ar: 'متصل · 24 طلبًا' }), { toggle: true, on: setOn('yassir'), action: 'settings-toggle', arg: 'yassir' })}
+                ${settingsRow('📊', tr({ fr: 'Comptabilité OCP', en: 'Accounting export', ar: 'المحاسبة' }), tr({ fr: 'Export automatique quotidien', en: 'Daily automatic export', ar: 'تصدير تلقائي يومي' }), { toggle: true, on: setOn('compta'), action: 'settings-toggle', arg: 'compta' })}
+                `}
+              </div>
+            </div>
           </div>
-        </div>
-        <div style="margin-bottom:20px;">
-          ${sec(tr({ fr: 'SÉCURITÉ & DONNÉES', en: 'SECURITY & DATA', ar: 'الأمان والبيانات' }))}
-          <div class="kset-card">
-            ${settingsRow('🔑', tr({ fr: 'Codes PIN de l\'équipe', en: 'Team PIN codes', ar: 'رموز الفريق' }), tr({ fr: 'Gérer les accès à la caisse', en: 'Manage till access', ar: 'إدارة الوصول إلى الصندوق' }), { action: 'nav-equipe' })}
-            ${settingsRow('🛡️', tr({ fr: 'Chiffrement', en: 'Encryption', ar: 'التشفير' }), tr({ fr: 'En transit et au repos', en: 'In transit and at rest', ar: 'أثناء النقل وفي التخزين' }), { badge: tr({ fr: 'Actif', en: 'On', ar: 'مفعّل' }) })}
-            ${settingsRow('📤', tr({ fr: 'Exporter mes données', en: 'Export my data', ar: 'تصدير بياناتي' }), tr({ fr: 'Ventes, produits, équipe · CSV', en: 'Sales, products, team · CSV', ar: 'المبيعات والمنتجات والفريق · CSV' }), { action: 'export-csv' })}
-          </div>
-        </div>
-        <div>
-          ${sec(tr({ fr: 'INTÉGRATIONS', en: 'INTEGRATIONS', ar: 'التكاملات' }))}
-          <div class="kset-card">
-            ${cv ? settingsRow('🔌', tr({ fr: 'Aucun canal connecté', en: 'No channel connected', ar: 'لا قناة متصلة' }), tr({ fr: 'Connectez Glovo, votre banque et votre compta', en: 'Connect Glovo, your bank and accounting', ar: 'اربط Glovo وبنكك ومحاسبتك' }), { action: 'add-integration' }) : `
-            ${settingsRow('🟠', 'Glovo', tr({ fr: 'Connecté · 1 420 MAD aujourd\'hui', en: 'Connected · 1,420 MAD today', ar: 'متصل · 1 420 درهم اليوم' }), { toggle: true, on: setOn('glovo'), action: 'settings-toggle', arg: 'glovo' })}
-            ${settingsRow('🔵', 'Yassir Express', tr({ fr: 'Connecté · 24 commandes', en: 'Connected · 24 orders', ar: 'متصل · 24 طلبًا' }), { toggle: true, on: setOn('yassir'), action: 'settings-toggle', arg: 'yassir' })}
-            ${settingsRow('📊', tr({ fr: 'Comptabilité', en: 'Accounting', ar: 'المحاسبة' }), tr({ fr: 'Export quotidien OCP', en: 'Daily OCP export', ar: 'تصدير يومي OCP' }), { toggle: true, on: setOn('compta'), action: 'settings-toggle', arg: 'compta' })}
-            ${settingsRow('🏦', 'Bank of Africa', tr({ fr: 'IBAN vérifié ••3291', en: 'IBAN verified ••3291', ar: 'IBAN موثق ••3291' }), { toggle: true, on: setOn('bmce'), action: 'settings-toggle', arg: 'bmce' })}
-            `}
-          </div>
-        </div>
-      `,
-    });
+        `,
+      });
     },
 
-    /* iOS-27 tier · Apple's transparency control, Kiwi edition. Four presets,
-     * persisted; the drawer is itself glass so the change reads instantly. */
     'glass-level': (el) => {
       const D = window.KiwiDesignIOS27;
       if (!D) return;
