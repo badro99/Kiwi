@@ -5509,11 +5509,6 @@
       </div>
 
       <div class="rail-links" aria-label="Espaces de travail">
-        <button class="team-trigger" id="open-attendance-code" aria-label="Code de pointage">
-          <i data-lucide="key-round"></i>
-          <span>Code de pointage</span>
-        </button>
-
         <button class="team-trigger" id="open-team" aria-label="Équipe">
           <i data-lucide="users"></i>
           <span>Équipe</span>
@@ -5532,11 +5527,6 @@
           <span class="count" id="kitchen-print-count" aria-label="État de l’impression">—</span>
         </button>
 
-        <button class="team-trigger" id="open-stock" aria-label="Stock et approvisionnement">
-          <i data-lucide="boxes"></i>
-          <span>Stock</span>
-          <span class="count" id="stock-alert-count">0</span>
-        </button>
       </div>
 
       <div class="quick-actions" aria-label="Fin de service">
@@ -14121,7 +14111,8 @@
       if (attendanceCodeTimer) clearInterval(attendanceCodeTimer);
       attendanceCodeTimer = null;
     }
-    $('#open-attendance-code').addEventListener('click', openAttendanceCode);
+    const attendanceCodeRailTrigger = $('#open-attendance-code');
+    if (attendanceCodeRailTrigger) attendanceCodeRailTrigger.addEventListener('click', openAttendanceCode);
     $('#attendance-code-new').addEventListener('click', generateAttendanceCode);
     $('#attendance-code-close').addEventListener('click', closeAttendanceCode);
     $('#attendance-code-modal').addEventListener('click', (event) => {
@@ -16351,7 +16342,8 @@
       }
     }
     function closeStock(){ $('#stock-screen').classList.remove('is-open'); }
-    $('#open-stock').addEventListener('click', openStock);
+    const stockRailTrigger = $('#open-stock');
+    if (stockRailTrigger) stockRailTrigger.addEventListener('click', openStock);
     $('#stock-close-btn').addEventListener('click', closeStock);
     $('#stock-screen').addEventListener('click', (e)=>{
       const tab = e.target.closest('[data-sk-tab]');    if (tab){ stockTab = tab.dataset.skTab; renderStock(); return; }
