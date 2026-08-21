@@ -2053,36 +2053,82 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     .notification-list { display: flex; flex-direction: column; gap: 8px; }
     .notification-card {
       width: 100%; display: flex; align-items: flex-start; gap: 12px; text-align: left;
-      padding: 13px 14px; border: 1px solid var(--line); border-radius: var(--r-xl);
-      background: var(--surface); box-shadow: var(--shadow-1);
+      padding: 14px 15px; border: 1px solid var(--line); border-radius: var(--r-lg);
+      background: var(--surface); box-shadow: var(--shadow-1), var(--rim);
+      transition: transform var(--dur-fast) var(--spring),
+                  background var(--dur-base) var(--expo),
+                  border-color var(--dur-base) var(--expo);
     }
-    .notification-card.is-unread { border-color: var(--mint-edge); background: var(--mint-tint); }
+    .notification-card:hover {
+      border-color: rgba(12, 107, 78, 0.22);
+      transform: translateY(-1px);
+    }
+    .notification-card:active { transform: scale(0.98); }
+    .notification-card.is-unread {
+      border-color: var(--mint-edge);
+      background: var(--mint-tint);
+    }
     .notification-icon {
-      width: 38px; height: 38px; flex: 0 0 38px; border-radius: 50%;
+      width: 38px; height: 38px; flex: 0 0 38px; border-radius: 12px;
       display: flex; align-items: center; justify-content: center; color: var(--forest-ink);
-      background: var(--paper-mute);
+      background: var(--surface-2);
     }
-    .notification-card.is-unread .notification-icon { background: var(--surface); }
+    .notification-card.is-unread .notification-icon { background: var(--surface); box-shadow: var(--shadow-1); }
     .notification-icon svg { width: 18px; height: 18px; }
     .notification-copy { flex: 1; min-width: 0; }
-    .notification-title { font-size: 14px; font-weight: 700; color: var(--ink); }
-    .notification-body { margin-top: 2px; font-size: 12.5px; line-height: 1.4; color: var(--ink-3); }
-    .notification-time { margin-top: 5px; font-family: var(--mono); font-size: 9.5px; color: var(--ink-4); }
+    .notification-title {
+      font-size: var(--t-body-lg-size, 15px);
+      font-weight: 700;
+      color: var(--ink);
+      letter-spacing: -0.01em;
+    }
+    .notification-body {
+      margin-top: 3px;
+      font-size: var(--t-body-size, 13.5px);
+      line-height: var(--t-body-lh, 1.45);
+      color: var(--ink-2);
+    }
+    .notification-time {
+      margin-top: 6px;
+      font-family: var(--mono);
+      font-size: var(--t-label-size, 11px);
+      color: var(--ink-4);
+      font-feature-settings: "tnum" 1;
+    }
 
     .empty-state {
-      padding: 50px 24px;
+      padding: 54px 24px;
       text-align: center;
       display: flex; flex-direction: column; align-items: center; gap: 12px;
     }
     .empty-state-icon {
-      width: 64px; height: 64px;
-      border-radius: 50%;
-      background: var(--paper-mute);
-      display: flex; align-items: center; justify-content: center;
+      width: 52px; height: 52px;
+      border-radius: 16px;
+      background: rgba(11, 110, 79, 0.10);
+      color: var(--forest);
+      display: grid; place-items: center;
+      margin-bottom: 4px;
     }
-    .empty-state-icon svg { width: 28px; height: 28px; color: var(--ink-4); }
-    .empty-state h3 { margin: 0; font-size: 15px; font-weight: 600; color: var(--ink); }
-    .empty-state p { margin: 0; font-size: 13px; color: var(--ink-4); line-height: 1.5; max-width: 240px; }
+    :root[data-theme="dark"] .empty-state-icon {
+      background: rgba(0, 255, 174, 0.12);
+      color: var(--mint);
+    }
+    .empty-state-icon svg { width: 26px; height: 26px; }
+    .empty-state h3 {
+      margin: 0;
+      font-size: var(--t-headline-size, 17px);
+      font-weight: 700;
+      color: var(--ink);
+      letter-spacing: -0.015em;
+    }
+    :root[data-theme="dark"] .empty-state h3 { color: #F5FAF7; }
+    .empty-state p {
+      margin: 0;
+      font-size: var(--t-body-size, 13.5px);
+      color: var(--ink-3);
+      line-height: 1.5;
+      max-width: 260px;
+    }
 
     /* ===========================================================
        PROFIL TAB
