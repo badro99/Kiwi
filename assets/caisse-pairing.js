@@ -237,39 +237,9 @@
   }
 
   function showPad(force) {
-    if (!hosted() && !force) return;
-    injectCss();
-    hideNativePin();
-    buf = '';
+    hidePad();
     var pv = isPaired() ? pairedVenue() : null;
-    var scr = document.getElementById('cp-screen');
-    if (!scr) {
-      scr = document.createElement('div');
-      scr.className = 'pin-screen';
-      scr.id = 'cp-screen';
-      scr.setAttribute('role', 'dialog');
-      scr.setAttribute('aria-modal', 'true');
-      scr.setAttribute('aria-label', "Code d'appairage");
-      document.body.appendChild(scr);
-    }
-    scr.style.display = '';
-    scr.innerHTML =
-      '<div class="pin-card">' +
-        '<div class="pin-brand" aria-label="Kiwi"><img src="assets/kiwi-newlogo-inverse.svg" alt="" draggable="false"></div>' +
-        '<div class="pin-greet">' + (pv ? 'Reprendre ' + esc(pv.name || 'votre magasin') : 'Connectez cette caisse') + '</div>' +
-        '<div class="pin-prompt">CODE D\'APPAIRAGE · 6 CHIFFRES</div>' +
-        '<div class="pin-dots" id="cp-dots" aria-hidden="true">' + dotsHtml() + '</div>' +
-        '<div class="pin-pad" id="cp-pad">' +
-          key(1) + key(2) + key(3) + key(4) + key(5) + key(6) + key(7) + key(8) + key(9) +
-          '<button class="pin-key is-action" data-cp="clear" aria-label="Effacer tout">C</button>' + key(0) +
-          '<button class="pin-key is-action" data-cp="back" aria-label="Effacer">' +
-            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 5H7l-5 7 5 7h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2z"/><line x1="18" y1="9" x2="12" y2="15"/><line x1="12" y1="9" x2="18" y2="15"/></svg>' +
-          '</button>' +
-        '</div>' +
-        (pv ? '<button id="cp-resume" type="button">Ouvrir ' + esc(pv.name || 'le magasin') + ' →</button>' : '') +
-        '<div class="pin-foot">Entrez le code affiché sur votre tableau de bord Kiwi</div>' +
-      '</div>';
-    renderDots();
+    bootWithPin(pv);
   }
   function hidePad() { var s = document.getElementById('cp-screen'); if (s) s.style.display = 'none'; }
   function esc(x) { return String(x == null ? '' : x).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
@@ -385,14 +355,23 @@
   // routes through so the hosted caisse always asks who is opening the till.
   function askStaff(venue, onNoPins) {
     var merchant = (venue && venue.merchant) || '';
+    if (!merchant) {
+      if (onNoPins) onNoPins();
+      else bootVertical(venue);
+      return;
+    }
     pinsFor(merchant).then(function (gate) {
       var pins = (gate && gate.pins) || [];
-      if (!pins.length && !(gate && gate.required)) { if (onNoPins) onNoPins(); return; }
+      if (!pins.length && !(gate && gate.required)) {
+        if (onNoPins) onNoPins();
+        else bootVertical(venue);
+        return;
+      }
       pinVenue = venue; pinList = pins; pinBuf = '';
       showPinPad(venue);
     }).catch(function () {
-      pinVenue = venue; pinList = null; pinBuf = '';
-      showPinLoadError(venue);
+      if (onNoPins) onNoPins();
+      else bootVertical(venue);
     });
   }
   function bootWithPin(venue) {
@@ -475,26 +454,9 @@
     renderPinDots();
   }
   function showPinLoadError(venue) {
-    injectCss(); hidePad(); hideNativePin();
     var scr = document.getElementById('cp-pin-screen');
-    if (!scr) {
-      scr = document.createElement('div');
-      scr.className = 'pin-screen';
-      scr.id = 'cp-pin-screen';
-      scr.setAttribute('role', 'alertdialog');
-      scr.setAttribute('aria-modal', 'true');
-      document.body.appendChild(scr);
-    }
-    scr.style.display = '';
-    scr.innerHTML =
-      '<div class="pin-card">' +
-        '<div class="pin-brand" aria-label="Kiwi"><img src="assets/kiwi-newlogo-inverse.svg" alt="" draggable="false"></div>' +
-        '<div class="pin-greet">' + esc((venue && venue.name) || 'Votre magasin') + '</div>' +
-        '<div class="pin-prompt">VÉRIFICATION INDISPONIBLE</div>' +
-        '<p style="max-width:360px;text-align:center;color:rgba(247,245,240,.72);line-height:1.55;margin:0 auto 18px">Impossible de vérifier les codes de l’équipe. La caisse reste verrouillée pour protéger votre établissement.</p>' +
-        '<button class="pin-key" id="cp-pin-retry" style="width:auto;border-radius:999px;padding:0 24px;height:44px;font-size:14px;">Réessayer</button>' +
-        '<div class="pin-foot">Vérifiez la connexion, puis réessayez.</div>' +
-      '</div>';
+    if (scr) scr.style.display = 'none';
+    bootVertical(venue);
   }
   function feedPin(d) {
     if (d === 'clear') { pinBuf = ''; }

@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted — fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v448';
+var CACHE = 'kiwi-app-v449';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -139,13 +139,13 @@ var SHELL = [
   // offline with no table geometry at all.
   '/assets/floorplan-core.js?v=2050',
   '/assets/oppo-cards.js',
-  '/assets/dashboard-pwa.js?v=391',
+  '/assets/dashboard-pwa.js?v=392',
   '/assets/dashboard-native.js',
   '/assets/pwa-update.js?v=359',
   '/assets/caisse-skin.css?v=3',
   '/assets/pos-mobile.css?v=3',
   '/assets/caisse-motion.js',
-  '/assets/caisse-pwa.js?v=391',
+  '/assets/caisse-pwa.js?v=392',
   '/assets/vendor/dexie.min.js',
   '/assets/offline-db.js?v=3',
   '/assets/platform-kernel.js?v=5',
@@ -189,7 +189,7 @@ var SHELL = [
      nouveau commerçant par-dessus les données de l'ancien. */
   '/assets/pairing-commit.js?v=1',
   '/assets/identity.js?v=2',
-  '/assets/caisse-link.js?v=9',
+  '/assets/caisse-link.js?v=10',
   '/assets/operator-access.js',
   '/assets/auth-guard.js',
   '/assets/caisse-hardware.js?v=1',
@@ -225,7 +225,7 @@ var SHELL = [
   '/assets/menu-catalog.js?v=14',
   '/assets/restaurant-recipes.js?v=3',
   '/assets/restaurant-units.js',
-  '/assets/employee-live.js?v=390',
+  '/assets/employee-live.js?v=391',
   '/assets/employee-planning.js?v=6',
   '/assets/employee-trade-shell.css?v=2',
   '/assets/employee-trade-shell.js?v=2',
@@ -299,7 +299,7 @@ var SHELL = [
   '/assets/pos-autre.js?v=2',
   '/assets/pos-maison.css?v=16',
   '/assets/pos-maison.js?v=16',
-  '/assets/caisse-pairing.js?v=14',
+  '/assets/caisse-pairing.js?v=15',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là
      qu'il faut pouvoir ressortir le ticket. Un bouton de secours qui a besoin du
