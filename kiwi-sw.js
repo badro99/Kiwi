@@ -65,7 +65,7 @@ var SHELL = [
   '/assets/cloud-doc.js',
   '/assets/agent-action-center.js?v=2',
   '/assets/cancellation-history.js?v=2',
-  '/assets/briefing.js?v=15',
+  '/assets/briefing.js?v=16',
   '/assets/ai-telemetry.js',
   '/assets/agent-data.js',
   '/assets/agent-features.js?v=3',

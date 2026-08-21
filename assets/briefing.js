@@ -596,15 +596,16 @@
     var c = line && line.copy || {};
     return String(c[lang(wanted)] || c.fr || c.en || '');
   }
-  /* Point d'ancrage de la carte. La peau Vexel (active par défaut) déplace
-   * .hero-today dans .vexel-revenue-row, une rangée flex à hauteur fixe
-   * (372 px) : y insérer la carte en troisième enfant comprimait le graphe et
-   * faisait déborder la colonne objectif/clients sur les cartes du dessous
-   * (tout le tableau de bord se chevauchait). Sous Vexel la carte prend donc
-   * sa propre rangée juste après la rangée revenus ; sinon elle suit le héros
-   * dans le flux normal de .dash-standard. Recalculé à chaque rendu : si la
-   * peau compose après nous, la carte est re-logée au prochain rendu. */
+  /* Point d'ancrage du point du matin. Il vit DANS la carte Kiwi Insights
+   * (.hero-right : « Recommandations du jour »), juste avant les puces de
+   * questions — les deux servaient le même propos et occupaient deux cartes.
+   * La peau Vexel déplace .hero-right entière dans .vexel-insights-row : le
+   * bloc la suit. Repli (sans .hero-right) : après .hero-today, jamais dans
+   * .vexel-revenue-row — rangée flex à hauteur fixe qui faisait déborder tout
+   * l'accueil (2026-08-21). Recalculé à chaque rendu. */
   function anchor() {
+    var chips = document.querySelector('.hero-right .hai-chips');
+    if (chips && chips.parentNode) return { parent: chips.parentNode, before: chips };
     var hero = document.querySelector('.hero-today');
     if (!hero || !hero.parentNode) return null;
     var row = hero.closest('.vexel-revenue-row');
@@ -620,8 +621,8 @@
     var el = document.querySelector('[data-briefing-card]');
     if (!el && !isReal()) return null;
     if (!el) {
-      el = document.createElement('section');
-      el.className = 'briefing-card block'; el.setAttribute('data-briefing-card', '');
+      el = document.createElement('div');
+      el.className = 'briefing-inline'; el.setAttribute('data-briefing-card', '');
     }
     if (!place(el)) return el.parentNode ? el : null;
     return el;
@@ -629,17 +630,17 @@
   function installStyle() {
     if (document.querySelector('[data-briefing-style]')) return;
     var s = document.createElement('style'); s.setAttribute('data-briefing-style', '');
-    s.textContent = '.briefing-card{margin:0 0 16px;padding:20px 22px}.briefing-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}.briefing-kicker{font:600 10.5px/1 var(--mono);letter-spacing:.12em;color:var(--atlas)}.briefing-title{font-size:19px;font-weight:650;letter-spacing:-.02em;margin-top:6px}.briefing-empty{margin-top:15px;padding-top:15px;border-top:1px solid var(--n-200);color:var(--n-600);font-size:13px;line-height:1.5}.briefing-empty strong{display:block;color:var(--ink);font-size:14px;margin-bottom:3px}.briefing-line{padding:14px 0;border-top:1px solid var(--n-200)}.briefing-evidence{font:500 10.5px/1.4 var(--mono);color:var(--n-500);margin-top:7px}.briefing-actions{display:flex;gap:8px;margin-top:10px}.briefing-actions button{border:1px solid var(--n-200);background:var(--paper-soft);color:var(--ink);border-radius:999px;padding:6px 10px;font:600 11px/1 var(--sans);cursor:pointer}';
+    s.textContent = '.briefing-inline{display:flex;flex-direction:column;gap:14px;margin:2px 0 0}.briefing-inline .hai-rec{margin:0}.briefing-kicker{font:600 10.5px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--atlas)}.briefing-line{margin:0}.briefing-evidence{font:500 10.5px/1.4 var(--mono);color:var(--n-500);margin-top:6px}.briefing-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:9px}.briefing-actions button{border:1px solid var(--n-300);background:transparent;color:inherit;border-radius:999px;padding:5px 10px;font:600 11px/1 var(--sans);cursor:pointer}.briefing-actions button:hover{border-color:var(--atlas);color:var(--atlas)}';
     document.head.appendChild(s);
   }
   function render() {
     var el = card(); if (!el) return;
     var t = tr(), lines = activeLines(tier());
     var body = lines.length ? lines.map(function (line) {
-      return '<article class="briefing-line"><strong>' + esc(lineText(line)) + '</strong><div class="briefing-evidence">' +
+      return '<article class="hai-rec briefing-line"><div class="hai-rec-title">' + esc(lineText(line)) + '</div><div class="briefing-evidence">' +
         esc(line.evidence.count + ' · ' + line.evidence.window + ' · ' + line.evidence.source) + '</div><div class="briefing-actions">' + (line.action ? '<button data-briefing-propose="' + esc(line.id) + '">' + esc(t.propose) + '</button>' : '') + '<button data-briefing-handled="' + esc(line.id) + '">' + esc(t.handled) + '</button><button data-briefing-dismiss="' + esc(line.id) + '">' + esc(t.dismiss) + '</button></div></article>';
-    }).join('') : '<div class="briefing-empty"><strong>' + esc(t.empty) + '</strong>' + esc(t.emptyNote) + '</div>';
-    el.innerHTML = '<div class="briefing-head"><div><div class="briefing-kicker">' + esc(t.eyebrow) + '</div><div class="briefing-title">' + esc(t.title) + '</div></div></div>' + body;
+    }).join('') : '<div class="hai-rec briefing-line briefing-empty"><div class="hai-rec-title">' + esc(t.empty) + '</div><div class="hai-rec-obs">' + esc(t.emptyNote) + '</div></div>';
+    el.innerHTML = '<div class="briefing-kicker">' + esc(t.title) + '</div>' + body;
   }
   function mode(raw) {
     var q = String(raw || '').toLowerCase();
@@ -657,13 +658,6 @@
     if (!lines.length) return { text: '<b>' + t.empty + '</b> ' + t.emptyNote };
     return { text: '<b>' + t.title + '</b>', stats: lines.map(function (line) { return { l: line.kind || t.title, v: lineText(line, opts && opts.lang), h: line.evidence.count + ' · ' + line.evidence.window + ' · ' + line.evidence.source }; }) };
   }
-  function injectAssistantEntry() {
-    if (!isReal() || document.querySelector('[data-briefing-entry]')) return;
-    var chips = document.querySelector('.hai-chips'); if (!chips) return;
-    var b = document.createElement('button'); b.type = 'button'; b.className = 'hai-chip'; b.setAttribute('data-briefing-entry', ''); b.textContent = tr().ask;
-    b.addEventListener('click', function () { var i = document.querySelector('[data-hai-input]'); if (i) { i.value = tr().title; i.focus(); } });
-    chips.insertBefore(b, chips.firstChild);
-  }
   function attachCloud() {
     if (cloud || !isReal() || !slug() || !window.KiwiCloudDoc || !window.KiwiCloudDoc.attach) return;
     cloud = window.KiwiCloudDoc.attach({
@@ -677,9 +671,9 @@
     installStyle();
     if (!isReal()) return;
     doc = readLocal(); attachCloud();
-    Promise.resolve(cloud && cloud.bind ? cloud.bind() : false).catch(function () {}).then(function () { compute(); injectAssistantEntry(); });
+    Promise.resolve(cloud && cloud.bind ? cloud.bind() : false).catch(function () {}).then(function () { compute(); });
     try { if (window.KiwiVenue && window.KiwiVenue.subscribe) window.KiwiVenue.subscribe(function () { doc = readLocal(); attachCloud(); compute(); }); } catch (_) {}
-    window.addEventListener('kiwi:langchange', function () { render(); injectAssistantEntry(); });
+    window.addEventListener('kiwi:langchange', function () { render(); });
     window.addEventListener('kiwi:cancellation-history', function () { compute(); });
     window.addEventListener('kiwi:cash-sessions', function () { compute(); });
     window.addEventListener('kiwi:order-course', function () { compute(); });

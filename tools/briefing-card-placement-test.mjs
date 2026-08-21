@@ -37,6 +37,7 @@ const document = {
   querySelector(sel) {
     if (sel === '[data-briefing-card]') return find(tree, (n) => n.attrs['data-briefing-card'] !== undefined);
     if (sel === '.hero-today') return find(tree, (n) => n.has('hero-today'));
+    if (sel === '.hero-right .hai-chips') { const hr = find(tree, (n) => n.has('hero-right')); return hr ? find(hr, (n) => n.has('hai-chips')) : null; }
     return null;
   }
 };
@@ -77,8 +78,26 @@ card = T.card();
 assert.equal(card.parentNode, compose2, 'Vexel (déjà composée) : carte dans .vexel-compose');
 assert.equal(row2.nextSibling, card, 'Vexel (déjà composée) : carte après la rangée revenus');
 
-/* 4 · Le code source ne doit plus ancrer la carte sur hero.nextSibling à l’aveugle. */
+/* 4 · Carte Kiwi Insights présente (.hero-right) : le point du matin vit DEDANS,
+ *     juste avant les puces de questions — une seule carte pour les deux. */
+tree = node('dash-standard'); const hero4 = node('hero-today'); const right = node('hero-right'); const recs = node('hai-recs'); const chips = node('hai-chips'); const form = node('hai-input');
+tree.appendChild(hero4); hero4.appendChild(right); right.appendChild(node('hai-title')); right.appendChild(recs); right.appendChild(chips); right.appendChild(form);
+card = T.card();
+assert.equal(card.parentNode, right, 'Insights : le bloc est dans .hero-right');
+assert.equal(card.previousSibling, recs, 'Insights : après les recommandations');
+assert.equal(card.nextSibling, chips, 'Insights : avant les puces');
+assert.equal(card.className, 'briefing-inline', 'Insights : bloc en ligne, pas une carte .block autonome');
+/* La peau Vexel déplace .hero-right entière dans .vexel-insights-row : le bloc suit. */
+const insightsRow = node('vexel-insights-row'); tree.appendChild(insightsRow); insightsRow.appendChild(right);
+assert.equal(T.card(), card, 'Insights (Vexel) : même élément, pas de doublon');
+assert.equal(card.parentNode, right, 'Insights (Vexel) : toujours dans .hero-right');
+assert.equal(card.nextSibling, chips, 'Insights (Vexel) : toujours avant les puces');
+
+/* 5 · Le code source ne doit plus ancrer la carte sur hero.nextSibling à l’aveugle,
+ *     et n’injecte plus la puce redondante « Voir le point du matin ». */
+assert.ok(!/data-briefing-entry/.test(source), 'plus de puce redondante dans .hai-chips');
+assert.ok(/querySelector\('\.hero-right \.hai-chips'\)/.test(source), 'l’ancrage vise la carte Kiwi Insights');
 assert.ok(!/hero\.parentNode\.insertBefore\(el,\s*hero\.nextSibling\)/.test(source), 'plus d’insertion aveugle après .hero-today');
 assert.ok(/closest\('\.vexel-revenue-row'\)/.test(source), 'l’ancrage tient compte de .vexel-revenue-row');
 
-console.log('briefing-card-placement-test: 16 contrôles OK');
+console.log('briefing-card-placement-test: 26 contrôles OK');
