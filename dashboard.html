@@ -5078,7 +5078,7 @@
      Inert unless body.design-vexel. ON by default for every merchant since the
      v2 design migration — ?skin=off or KiwiDesignVexel.disable() opts out.
      Loads LAST of the three skins so it wins where they overlap. -->
-<link rel="stylesheet" href="assets/design-vexel.css?v=2091" />
+<link rel="stylesheet" href="assets/design-vexel.css?v=2092" />
 <!-- Pressing owner workspace — exact-trade layer, inert for every other venue. -->
 <link rel="stylesheet" href="assets/pressing-catalog.css?v=4" />
 <link rel="stylesheet" href="assets/pressing-dashboard.css?v=10" />
@@ -5192,7 +5192,7 @@
 <div class="kiwi-greet" data-kiwi-greet aria-hidden="true">
   <div class="kiwi-greet-inner">
     <h1><span data-i18n="dash.hello">Bonjour Rachid,</span> <em data-i18n="dash.day">bonne journée.</em></h1>
-    <div class="kiwi-greet-sub" data-kiwi-greet-sub>Café Atlas · service ouvert</div>
+    <div class="kiwi-greet-sub" data-kiwi-greet-sub><span class="greet-live-dot" style="width:7px;height:7px;border-radius:50%;background:currentColor;display:inline-block;box-shadow:0 0 8px currentColor;"></span> Café Atlas · service ouvert</div>
   </div>
 </div>
 
@@ -6552,12 +6552,12 @@
     if (s) { s.textContent = 'Bonjour ' + name + ','; s.removeAttribute('data-i18n'); }
   }
   (function personalize() {
-    const owner = store('kiwiOwnerName');
-    const biz = store('kiwiBizName');
+    const owner = store('kiwiOwnerName') || store('kiwiSet:ownerName') || (window.KiwiMe && window.KiwiMe.name) || '';
+    const biz = store('kiwiBizName') || store('kiwiSet:bizName') || (window.KiwiMe && window.KiwiMe.business) || '';
     if (owner) setGreetName(owner);
     if (biz) {
       const sub = greet.querySelector('[data-kiwi-greet-sub]');
-      if (sub) sub.textContent = biz + ' · service ouvert';
+      if (sub) sub.innerHTML = '<span class="greet-live-dot" style="width:7px;height:7px;border-radius:50%;background:currentColor;display:inline-block;box-shadow:0 0 8px currentColor;"></span> ' + String(biz).replace(/[&<>"]/g, '') + ' · service ouvert';
     }
     /* A staff-tier team code gets its own restricted-view badge label. */
     if ((store('kiwiRole') || '') === 'staff') {
@@ -6809,83 +6809,59 @@
     } catch (_) {}
     /* Stagger the success pop on each cell (left -> right). */
     cells.forEach((c, i) => {
-      setTimeout(() => c.classList.add('is-success'), i * 70);
+      setTimeout(() => c.classList.add('is-success'), i * 60);
     });
 
-    /* 460 ms: cells settled. Fade out the lock and reveal the greeting
-     *         flash (its inner card slides up + fades in over 800 ms). */
+    /* 360 ms: cells settled. Fade out the lock and reveal the greeting
+     *         flash (its inner card slides up + fades in smoothly). */
     setTimeout(() => {
       lock.classList.add('is-unlocking');
       greet.classList.add('is-visible');
       greet.setAttribute('aria-hidden', 'false');
-    }, 460);
+    }, 360);
 
-    /* 1100 ms: lock fade done, remove from DOM. */
+    /* 850 ms: lock fade done, remove from DOM. */
     setTimeout(() => {
       if (lock.parentNode) lock.remove();
       document.documentElement.style.overflow = '';
-    }, 1100);
+    }, 850);
 
-    /* 1400 ms: "Bonjour Rachid," has been alone-centered for ~600 ms,
-     *          letting the eye land on it. Trigger the em's max-width
-     *          reveal — a single 960 ms CSS transition handles both the
-     *          shift-left of "Bonjour Rachid," (the h1 line stays
-     *          centered while the em widens) AND the typewriter-style
-     *          left-to-right reveal of the green accent. A caret rides
-     *          the right edge via the .is-typing ::after pseudo. */
+    /* 1050 ms: trigger the em's max-width typewriter reveal. */
     setTimeout(() => {
       if (emClip) {
-        /* Re-measure now that fonts are guaranteed loaded. getBoundingClientRect
-         * returns the advance-width-based layout box; serif glyphs can paint
-         * well past that ("?" terminal swash, "é" accent). We add a buffer
-         * proportional to font-size (~0.5em) so it scales across breakpoints. */
         const innerEm = emClip.querySelector('em');
         if (innerEm) {
           const fontPx = parseFloat(getComputedStyle(innerEm).fontSize) || 64;
-          /* 1.5em buffer: at 64px h1 that's ~96px, at 40px mobile ~60px.
-           * The h1 is text-align:center so trailing whitespace is invisible —
-           * erring extreme-high here costs nothing visually. */
           const liveW = Math.ceil(innerEm.getBoundingClientRect().width) + Math.ceil(fontPx * 1.5);
           emClip.style.setProperty('--em-w', liveW + 'px');
         }
         emClip.classList.add('is-revealed', 'is-typing');
       }
-    }, 1400);
+    }, 1050);
 
-    /* 2400 ms: reveal complete — drop the caret so the final sentence
-     *          reads cleanly without a blinking bar. */
+    /* 1950 ms: reveal complete — drop the caret. */
     setTimeout(() => {
       if (emClip) emClip.classList.remove('is-typing');
-    }, 2400);
+    }, 1950);
 
-    /* 3200 ms: full sentence has been visible for ~800 ms. Fade out the
-     *          greeting AND simultaneously "dive in" the dashboard. */
+    /* 2600 ms: sentence revealed. Fade out the greeting AND dive in the dashboard. */
     setTimeout(() => {
       greet.classList.remove('is-visible');
       greet.setAttribute('aria-hidden', 'true');
       if (app)     app.classList.remove('kw-app-hidden');
       if (demoBar) demoBar.classList.remove('kw-bar-hidden');
-      /* Entrance choreography fires NOW — while the user is watching.
-       * (Cards' load-time animations used to play hidden behind the lock.)
-       * The class stays on for the session: card animations are gated on it
-       * and re-run only when their DOM is rebuilt. */
       document.body.classList.add('cards-enter');
-      /* PIN 0505 was entered → after the greeting's fade settles, fire
-       * the keynote-style "Introducing Marketing Suite" tease. The 900 ms
-       * extra delay (= 4100 ms after unlock) lets the greeting fully
-       * disappear and gives the dashboard one beat of stillness before
-       * the overlay slides in. */
       if (window.__kiwiMarketingTease && window.KiwiMarketingTease) {
         setTimeout(() => {
           try { window.KiwiMarketingTease.play(); } catch (_) {}
-        }, 900);
+        }, 700);
       }
-    }, 3200);
+    }, 2600);
 
-    /* 4000 ms: greeting fully faded — remove from DOM. */
+    /* 3200 ms: greeting fully faded — remove from DOM. */
     setTimeout(() => {
       if (greet.parentNode) greet.remove();
-    }, 4000);
+    }, 3200);
   }
 
   /* ── Skip control ──────────────────────────────────────────────────

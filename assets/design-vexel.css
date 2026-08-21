@@ -1459,51 +1459,159 @@ body.design-vexel .pr-calc-out .br span { color: var(--vx-inverse-muted); }
  * as the dashboard content, so the climate must not change at the hand-off.
  * Their legacy rules remain untouched underneath this opt-in layer.
  * ───────────────────────────────────────────────────────────────────────── */
+/* ─────────────────────────────────────────────────────────────────────────
+ * 13 · ENTRY SURFACES (LOCK SCREEN & GREETING)
+ * Ultra-refined glassmorphism, luminous atmospheric mesh gradients,
+ * high-contrast typography, and fluid cinematic transitions.
+ * ───────────────────────────────────────────────────────────────────────── */
 :is(html.design-vexel, body.design-vexel) :is(.kiwi-lock, .kiwi-greet, .kob-root) {
-  background-color: var(--vx-page);
+  background-color: #F8FAF7;
   background-image:
-    radial-gradient(85% 55% at 50% 108%, var(--vx-dome-main), var(--vx-transparent) 70%),
-    radial-gradient(60% 45% at 8% 100%, var(--vx-dome-side), var(--vx-transparent) 72%),
-    radial-gradient(55% 40% at 96% 92%, var(--vx-active-bg), var(--vx-transparent) 70%),
-    radial-gradient(70% 50% at 50% -10%, var(--vx-dome-top), var(--vx-transparent) 68%);
+    radial-gradient(75% 55% at 50% 10%, rgba(12, 107, 78, 0.09), transparent 65%),
+    radial-gradient(60% 50% at 10% 90%, rgba(0, 255, 174, 0.08), transparent 60%),
+    radial-gradient(55% 50% at 90% 90%, rgba(12, 107, 78, 0.07), transparent 60%),
+    linear-gradient(180deg, #FAFBF8 0%, #EFF2EC 100%);
   background-repeat: no-repeat;
   background-size: 100% 100%;
   color: var(--ink);
 }
 
+:is(html.design-vexel, body.design-vexel)[data-vexel-mode="dark"] :is(.kiwi-lock, .kiwi-greet, .kob-root),
+html[data-theme="dark"] :is(.kiwi-lock, .kiwi-greet, .kob-root) {
+  background-color: #061711;
+  background-image:
+    radial-gradient(65% 50% at 50% 8%, rgba(0, 255, 174, 0.14), transparent 60%),
+    radial-gradient(70% 60% at 85% 92%, rgba(12, 107, 78, 0.28), transparent 60%),
+    radial-gradient(60% 55% at 12% 88%, rgba(4, 36, 26, 0.85), transparent 60%),
+    linear-gradient(160deg, #051811 0%, #020C08 100%);
+  color: #F5FAF7;
+}
+
 :is(html.design-vexel, body.design-vexel) :is(.kiwi-lock-inner, .kob-card, .vx-auth-card) {
-  background: var(--surface);
-  border: 1px solid var(--n-200);
-  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  border-radius: 26px;
   color: var(--ink);
-  box-shadow: var(--elev-2);
-  backdrop-filter: blur(18px) saturate(1.08);
-  -webkit-backdrop-filter: blur(18px) saturate(1.08);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.04),
+    0 24px 64px -14px rgba(12, 74, 53, 0.14),
+    0 48px 96px -28px rgba(0, 0, 0, 0.09);
+  backdrop-filter: blur(32px) saturate(1.4);
+  -webkit-backdrop-filter: blur(32px) saturate(1.4);
+  transition: transform 600ms cubic-bezier(0.16, 1, 0.3, 1), opacity 500ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 300ms ease;
+}
+
+:is(html.design-vexel, body.design-vexel)[data-vexel-mode="dark"] :is(.kiwi-lock-inner, .kob-card, .vx-auth-card),
+html[data-theme="dark"] :is(.kiwi-lock-inner, .kob-card, .vx-auth-card) {
+  background: rgba(14, 30, 23, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow:
+    0 0 0 1px rgba(0, 255, 174, 0.08),
+    0 28px 72px -16px rgba(0, 0, 0, 0.75),
+    0 0 90px -25px rgba(0, 255, 174, 0.16);
+  color: #F5FAF7;
 }
 
 :is(html.design-vexel, body.design-vexel) .kiwi-lock-inner {
   box-sizing: border-box;
   width: calc(100% - 48px);
+  max-width: 440px;
   padding: 44px 38px 38px;
 }
 
-/* This overlay is the three-second bridge between a valid PIN and the app.
- * Leaving its legacy cream canvas in place would be a full-screen light flash
- * in dark mode, so it shares the entry dome as well. */
-body.design-vexel .kiwi-greet::before { background: var(--vx-transparent); }
+/* Greeting Screen & Typography */
+body.design-vexel .kiwi-greet {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 650ms cubic-bezier(0.16, 1, 0.3, 1), filter 650ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+body.design-vexel .kiwi-greet::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(55% 45% at 50% 50%, rgba(0, 255, 174, 0.12), transparent 70%);
+  pointer-events: none;
+}
+body.design-vexel .kiwi-greet.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+body.design-vexel .kiwi-greet-inner {
+  position: relative;
+  z-index: 1;
+  padding: 0 32px;
+  text-align: center;
+  transform: translateY(22px) scale(0.96);
+  opacity: 0;
+  transition: transform 700ms cubic-bezier(0.16, 1, 0.3, 1), opacity 600ms ease;
+}
+body.design-vexel .kiwi-greet.is-visible .kiwi-greet-inner {
+  transform: translateY(0) scale(1);
+  opacity: 1;
+}
+
 body.design-vexel .kiwi-greet h1 {
-  color: var(--ink);
+  font-size: clamp(34px, 5.5vw, 62px);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.15;
+  color: #08241A;
+  text-shadow: 0 2px 18px rgba(12, 107, 78, 0.08);
+  white-space: nowrap;
+}
+body.design-vexel[data-vexel-mode="dark"] .kiwi-greet h1,
+html[data-theme="dark"] .kiwi-greet h1 {
+  color: #F5FAF7;
+  text-shadow: 0 4px 28px rgba(0, 255, 174, 0.25);
+}
+
+body.design-vexel .kiwi-greet h1 em {
   font-family: var(--sans);
   font-style: normal;
-  font-weight: 500;
-  text-shadow: none;
+  font-weight: 700;
+  color: #0C6B4E;
 }
-body.design-vexel .kiwi-greet h1 em {
-  color: var(--vx-accent);
-  font-style: normal;
+body.design-vexel[data-vexel-mode="dark"] .kiwi-greet h1 em,
+html[data-theme="dark"] .kiwi-greet h1 em {
+  color: #00FFAE;
 }
-body.design-vexel .kiwi-greet h1 .em-clip.is-typing::after { background: var(--vx-accent); }
-body.design-vexel .kiwi-greet-sub { color: var(--n-500); }
+
+body.design-vexel .kiwi-greet h1 .em-clip.is-typing::after {
+  background: #0C6B4E;
+  box-shadow: 0 0 10px rgba(12, 107, 78, 0.6);
+}
+body.design-vexel[data-vexel-mode="dark"] .kiwi-greet h1 .em-clip.is-typing::after,
+html[data-theme="dark"] .kiwi-greet h1 .em-clip.is-typing::after {
+  background: #00FFAE;
+  box-shadow: 0 0 14px #00FFAE;
+}
+
+body.design-vexel .kiwi-greet-sub {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+  padding: 8px 20px;
+  border-radius: 999px;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  background: #E8F8F0;
+  color: #0C6B4E;
+  border: 1px solid rgba(12, 107, 78, 0.20);
+  box-shadow: 0 4px 20px -4px rgba(12, 107, 78, 0.16);
+}
+body.design-vexel[data-vexel-mode="dark"] .kiwi-greet-sub,
+html[data-theme="dark"] .kiwi-greet-sub {
+  background: rgba(0, 255, 174, 0.12);
+  color: #00FFAE;
+  border: 1px solid rgba(0, 255, 174, 0.30);
+  box-shadow: 0 4px 24px -4px rgba(0, 255, 174, 0.25);
+}
 
 body.design-vexel :is(.kiwi-lock-brand-legacy, .kob-brand-legacy, .auth-brand-legacy, .reset-brand-legacy) {
   display: none;
@@ -1512,13 +1620,13 @@ body.design-vexel :is(.kiwi-lock-brand-legacy, .kob-brand-legacy, .auth-brand-le
 body.design-vexel .vx-entry-logo {
   display: inline-flex;
   align-items: center;
-  height: 28px;
+  height: 32px;
 }
 
 body.design-vexel .vx-entry-logo img {
   display: none;
   width: auto;
-  height: 28px;
+  height: 32px;
   max-width: none;
 }
 
@@ -1530,41 +1638,72 @@ body.design-vexel[data-vexel-mode="light"] .vx-entry-logo .brand-logo-light {
 body.design-vexel .kiwi-lock-brand {
   display: inline-flex;
   align-items: center;
-  margin-bottom: 30px;
+  margin-bottom: 26px;
   color: var(--ink);
 }
 
 body.design-vexel .kiwi-lock-title {
-  margin-bottom: 7px;
+  margin-bottom: 6px;
   color: var(--ink);
   font-family: var(--sans);
   font-size: 30px;
   font-style: normal;
-  font-weight: 500;
-  letter-spacing: -0.025em;
+  font-weight: 700;
+  letter-spacing: -0.03em;
 }
 
 body.design-vexel .kiwi-lock-sub {
-  margin-bottom: 36px;
-  color: var(--vx-accent);
+  margin-bottom: 32px;
+  color: #0C6B4E;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+body.design-vexel[data-vexel-mode="dark"] .kiwi-lock-sub,
+html[data-theme="dark"] .kiwi-lock-sub {
+  color: #00FFAE;
 }
 
-body.design-vexel .kiwi-lock-pin { gap: 10px; margin-bottom: 22px; }
+body.design-vexel .kiwi-lock-pin { gap: 12px; margin-bottom: 24px; }
 body.design-vexel .kiwi-pin-cell {
-  width: 62px;
-  height: 76px;
-  background: var(--paper-muted);
-  border: 1px solid var(--n-300);
+  width: 64px;
+  height: 78px;
+  background: rgba(0, 0, 0, 0.035);
+  border: 1.5px solid rgba(0, 0, 0, 0.10);
   border-radius: 20px;
   color: var(--ink);
-  font-weight: 500;
+  font-size: 32px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   transition: all 260ms cubic-bezier(0.16, 1, 0.3, 1);
 }
+body.design-vexel[data-vexel-mode="dark"] .kiwi-pin-cell,
+html[data-theme="dark"] .kiwi-pin-cell {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1.5px solid rgba(255, 255, 255, 0.14);
+  color: #F5FAF7;
+}
 body.design-vexel .kiwi-pin-cell.is-filled {
-  background: var(--mint-soft);
-  border-color: var(--vx-accent);
-  box-shadow: 0 0 0 4px var(--vx-accent-18), 0 8px 24px -6px rgba(0, 255, 174, 0.28);
-  transform: translateY(-2px) scale(1.04);
+  background: #E8F8F0;
+  border-color: #0C6B4E;
+  box-shadow: 0 0 0 4px rgba(12, 107, 78, 0.14), 0 8px 22px -4px rgba(12, 107, 78, 0.22);
+  transform: translateY(-3px) scale(1.05);
+  color: #0C6B4E;
+}
+body.design-vexel[data-vexel-mode="dark"] .kiwi-pin-cell.is-filled,
+html[data-theme="dark"] .kiwi-pin-cell.is-filled {
+  background: rgba(0, 255, 174, 0.14);
+  border-color: #00FFAE;
+  box-shadow: 0 0 0 4px rgba(0, 255, 174, 0.20), 0 8px 26px -4px rgba(0, 255, 174, 0.40);
+  transform: translateY(-3px) scale(1.05);
+  color: #00FFAE;
+}
+body.design-vexel .kiwi-pin-cell.is-success {
+  animation: kw-pin-success 400ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 body.design-vexel .kiwi-lock-pin.is-wrong .kiwi-pin-cell {
   border-color: var(--danger);
@@ -1572,7 +1711,7 @@ body.design-vexel .kiwi-lock-pin.is-wrong .kiwi-pin-cell {
 }
 body.design-vexel .kiwi-lock-help,
 body.design-vexel .kiwi-lock-help b { color: var(--n-600); }
-body.design-vexel .kiwi-lock-help b { font-weight: 500; }
+body.design-vexel .kiwi-lock-help b { font-weight: 600; }
 body.design-vexel .kiwi-lock-help.is-error { color: var(--danger); }
 body.design-vexel :is(.kiwi-lock-skip, .kiwi-lock-switch) { color: var(--n-500); }
 body.design-vexel :is(.kiwi-lock-skip, .kiwi-lock-switch):hover {
