@@ -80,8 +80,8 @@
     "sha": "112638dbbb35294e"
   },
   "assets/caisse-pwa.js": {
-    "v": "406",
-    "sha": "d458cab822e9d08e"
+    "v": "407",
+    "sha": "3dadcf189e12904f"
   },
   "assets/caisse-skin.css": {
     "v": "3",
@@ -128,8 +128,8 @@
     "sha": "94d688b1b5cdb89a"
   },
   "assets/dashboard-pwa.js": {
-    "v": "406",
-    "sha": "505a26bc1845a1bf"
+    "v": "407",
+    "sha": "c785cb97b4dd6518"
   },
   "assets/dateRange.js": {
     "v": "13",
@@ -160,8 +160,8 @@
     "sha": "aa550a22766dac1a"
   },
   "assets/employee-live.js": {
-    "v": "405",
-    "sha": "11a65dc517bdfb33"
+    "v": "406",
+    "sha": "36642e637c15c17d"
   },
   "assets/employee-planning.js": {
     "v": "6",
@@ -274,6 +274,10 @@
   "assets/menu-catalog.js": {
     "v": "14",
     "sha": "b5e7420b2076345c"
+  },
+  "assets/menu-i18n.js": {
+    "v": "1",
+    "sha": "e0348415e6e98060"
   },
   "assets/menu-scan.js": {
     "v": "2",
@@ -568,8 +572,8 @@
     "sha": "e4b2be14e93ce034"
   },
   "assets/restaurant-menu-workspace.js": {
-    "v": "19",
-    "sha": "eed093cb4cb4af29"
+    "v": "21",
+    "sha": "896aa4e714379467"
   },
   "assets/restaurant-recipes.js": {
     "v": "3",

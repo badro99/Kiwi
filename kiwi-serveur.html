@@ -4860,7 +4860,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
   <script src="assets/staff-roles.js" defer></script>
   <!-- Real employee identity, planning, floor and attendance bridge. -->
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/employee-live.js?v=405" defer></script>
+  <script src="assets/employee-live.js?v=406" defer></script>
   <script src="assets/employee-planning.js?v=6" defer></script>
   <link rel="stylesheet" href="assets/employee-trade-shell.css?v=2">
   <script src="assets/employee-trade-shell.js?v=2" defer></script>
@@ -4870,6 +4870,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
   <script src="assets/live-socket.js?v=2" defer></script>
   <!-- Global operator access — long-press any Kiwi logo to open the console. -->
   <script src="assets/operator-access.js" defer></script>
+  <script src="assets/menu-i18n.js?v=1" defer></script>
   <!-- Auth guard: redirects to the auth page the moment the server signals
        the account has been deleted / suspended (see assets/auth-guard.js). -->
   <script src="assets/auth-guard.js" defer></script>
@@ -8474,14 +8475,14 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       const cats = catOrder;
       $('#cat-pills').innerHTML = cats.map(c => `
         <button class="cat-pill ${c === activeCat ? 'is-active' : ''}" data-cat="${esc(c)}">
-          ${esc(catLabels[c] || c)}<span class="count">${counts[c] || 0}</span>
+          ${esc(window.KiwiMenuI18n ? window.KiwiMenuI18n.t(catLabels[c] || c, employeeLanguage) : (catLabels[c] || c))}<span class="count">${counts[c] || 0}</span>
         </button>
       `).join('');
       let row=$('#subcat-pills');
       if(!row){row=document.createElement('div');row.id='subcat-pills';row.className='cat-pills';row.addEventListener('click',e=>{const b=e.target.closest('[data-subcat]');if(!b)return;activeSub=b.dataset.subcat||null;renderCatPills();renderMenu();});$('#cat-pills').insertAdjacentElement('afterend',row);}
       const parent=svCats.find(c=>c.id===activeCat), subs=parent?(parent.sub||[]):[];
       row.hidden=activeCat==='all'||!subs.length;
-      row.innerHTML=row.hidden?'':`<button class="cat-pill ${!activeSub?'is-active':''}" data-subcat="">Tout</button>`+subs.map(s=>`<button class="cat-pill ${activeSub===s.id?'is-active':''}" data-subcat="${esc(s.id)}">${esc(s.name)}<span class="count">${menuItems.filter(m=>m.cat===activeCat&&m.subId===s.id).length}</span></button>`).join('');
+      row.innerHTML=row.hidden?'':`<button class="cat-pill ${!activeSub?'is-active':''}" data-subcat="">Tout</button>`+subs.map(s=>`<button class="cat-pill ${activeSub===s.id?'is-active':''}" data-subcat="${esc(s.id)}">${esc(window.KiwiMenuI18n ? window.KiwiMenuI18n.t(s.name, employeeLanguage) : s.name)}<span class="count">${menuItems.filter(m=>m.cat===activeCat&&m.subId===s.id).length}</span></button>`).join('');
     }
 
     function renderMenu() {
@@ -8491,9 +8492,18 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
           'Ajoutez vos catégories et vos plats depuis le tableau de bord — <b>Menu</b>.</div></div>';
         return;
       }
-      const items = activeCat === 'all' ? menuItems : menuItems.filter(m => m.cat === activeCat && (!activeSub || m.subId === activeSub));
+      const rawItems = activeCat === 'all' ? menuItems : menuItems.filter(m => m.cat === activeCat && (!activeSub || m.subId === activeSub));
+      const items = rawItems.map(it => Object.assign({}, it, {
+        name: window.KiwiMenuI18n ? window.KiwiMenuI18n.t(it.name, employeeLanguage) : it.name,
+        subLabel: it.subLabel && window.KiwiMenuI18n ? window.KiwiMenuI18n.t(it.subLabel, employeeLanguage) : it.subLabel,
+      }));
+      const localizedCats = {};
+      Object.keys(catLabels).forEach(k => {
+        localizedCats[k] = window.KiwiMenuI18n ? window.KiwiMenuI18n.t(catLabels[k], employeeLanguage) : catLabels[k];
+      });
       const activeOrder = menuContextId ? (tableOrders[menuContextId] || []) : [];
       $('#menu-grid').innerHTML = items.map(m => {
+        const catLabels = localizedCats;
         // qty badge = total across every line of this dish (noted + plain)
         const qty = activeOrder.filter(c => c.id === m.id).reduce((s, c) => s + c.qty, 0);
         const control = qty > 0
@@ -8588,26 +8598,29 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
           const on = def.kind === 'multi' ? sel.has(v.n)
                    : def.kind === 'toggle' ? sel === true
                    : sel === v.n;
-          return `<button class="opt-pill ${on ? 'on' : ''}" data-opt-group="${g}" data-opt-val="${esc(v.n)}">${v.emoji ? `${esc(v.emoji)} ` : ''}${esc(v.n)}${v.p ? `<span class="opt-pr">+${v.p}</span>` : ''}</button>`;
+          const valLabel = window.KiwiMenuI18n ? window.KiwiMenuI18n.t(v.n, employeeLanguage) : v.n;
+          return `<button class="opt-pill ${on ? 'on' : ''}" data-opt-group="${g}" data-opt-val="${esc(v.n)}">${v.emoji ? `${esc(v.emoji)} ` : ''}${esc(valLabel)}${v.p ? `<span class="opt-pr">+${v.p}</span>` : ''}</button>`;
         }).join('');
+        const grpLabel = window.KiwiMenuI18n ? window.KiwiMenuI18n.t(def.name, employeeLanguage) : def.name;
         return `
           <div class="opt-group ${unmet ? 'missing' : ''}">
             <div class="opt-group-head">
-              <span class="opt-group-name">${esc(def.name)}</span>
-              <span class="opt-group-tag ${required ? 'req' : 'opt'}">${required ? 'Obligatoire' : 'Optionnel'}</span>
+              <span class="opt-group-name">${esc(grpLabel)}</span>
+              <span class="opt-group-tag ${required ? 'req' : 'opt'}">${required ? (employeeLanguage === 'ar' ? 'إجباري' : (employeeLanguage === 'en' ? 'Required' : 'Obligatoire')) : (employeeLanguage === 'ar' ? 'اختياري' : (employeeLanguage === 'en' ? 'Optional' : 'Optionnel'))}</span>
             </div>
             <div class="opt-vals">${pills}</div>
           </div>`;
       }).join('');
       const extra = optsExtra(optsFromSel(optDraft.itemId, optDraft.sel));
       const total = item.price + extra;
+      const itemLabel = window.KiwiMenuI18n ? window.KiwiMenuI18n.t(item.name, employeeLanguage) : item.name;
       $('#opt-modal-body').innerHTML = `
-        <h3 class="modal-title">${esc(item.name)}</h3>
+        <h3 class="modal-title">${esc(itemLabel)}</h3>
         <p class="modal-subtle">${item.price} MAD${extra ? ` · +${extra} MAD d'options` : ''} · personnalisez avant d'ajouter à la commande</p>
         ${groupsHTML}
         <div class="opt-foot">
-          <button class="td-btn ghost" id="opt-cancel">Annuler</button>
-          <button class="td-btn primary" id="opt-confirm">Ajouter · ${fmtMAD(total)}</button>
+          <button class="td-btn ghost" id="opt-cancel">${employeeLanguage === 'ar' ? 'إلغاء' : (employeeLanguage === 'en' ? 'Cancel' : 'Annuler')}</button>
+          <button class="td-btn primary" id="opt-confirm">${employeeLanguage === 'ar' ? 'إضافة' : (employeeLanguage === 'en' ? 'Add' : 'Ajouter')} · ${fmtMAD(total)}</button>
         </div>`;
     }
 
