@@ -141,6 +141,14 @@ Then publish `dist/*` as a GitHub Release and point the app's download links at 
     sudo bash bridge/install-linux.sh --pair 123456
     ```
   - Le script installe le binaire dans `/usr/local/bin/kiwi-printer-bridge`, active le service systemd `kiwi-printer-bridge.service` et vérifie l'état sur `http://127.0.0.1:9110/`.
+- **Android / Termux (Box gratuite avec un vieux smartphone) :**
+  - Installez **Termux** sur le téléphone (depuis F-Droid ou GitHub).
+  - Ouvrez Termux et lancez l'installateur en une ligne :
+    ```bash
+    curl -fsSL https://raw.githubusercontent.com/badro99/Kiwi/main/bridge/install-termux.sh | bash
+    ```
+  - Le script active l'anti-veille (`termux-wake-lock`), installe Node.js, configure le démarrage automatique via `Termux:Boot` et demande le code à 6 chiffres.
+  - *Recommandations :* brancher sur secteur permanent, désactiver l'optimisation de batterie pour Termux, et couper la 4G pour forcer le Wi-Fi.
 
 ---
 

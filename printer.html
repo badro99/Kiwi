@@ -87,6 +87,7 @@ em, i, cite, dfn, var { font-style: normal; }
         <button class="os-tab" data-os="win">Windows</button>
         <button class="os-tab" data-os="mac">macOS</button>
         <button class="os-tab" data-os="linux">Linux</button>
+        <button class="os-tab" data-os="android">Android (Termux)</button>
       </div>
       <div class="os-body" data-os="win">
         <ol class="run">
@@ -120,6 +121,16 @@ start "" /min "%USERPROFILE%\Downloads\kiwi-printer-bridge-win.exe"</code>
             <code>curl -fsSL https://raw.githubusercontent.com/badro99/Kiwi/main/bridge/install-linux.sh | sudo bash</code><br>
             Le pont tourne en service d'arrière-plan permanent (systemd <code>Restart=always</code>).</li>
           <li><b>Lancement manuel :</b><br><code>chmod +x ~/Downloads/kiwi-printer-bridge-linux && ~/Downloads/kiwi-printer-bridge-linux</code></li>
+        </ol>
+      </div>
+      <div class="os-body" data-os="android">
+        <ol class="run">
+          <li><b>Transformer un vieux téléphone Android en box d'impression gratuite :</b></li>
+          <li>Installez l'application gratuite <b>Termux</b> (sur F-Droid ou GitHub).</li>
+          <li>Ouvrez Termux et collez cette commande unique :<br>
+            <code>curl -fsSL https://raw.githubusercontent.com/badro99/Kiwi/main/bridge/install-termux.sh | bash</code></li>
+          <li>Entrez le code d'appairage à 6 chiffres affiché sur l'iPad quand le script vous le demande.</li>
+          <li><b>Règles d'or pour le téléphone :</b> laissez-le branché sur secteur au comptoir, désactivez l'optimisation de batterie pour Termux dans les paramètres Android, et coupez la 4G pour rester sur le Wi-Fi du café.</li>
         </ol>
       </div>
     </div>

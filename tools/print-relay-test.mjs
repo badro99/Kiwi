@@ -324,6 +324,8 @@ if (DatabaseSync) {
   ok(/<key>KeepAlive<\/key>\s*<true\/>/.test(macPlist) && /<key>RunAtLoad<\/key>\s*<true\/>/.test(macPlist), 'C6 · com.kiwi.printer-bridge.plist active KeepAlive et RunAtLoad');
   const macInstall = read('bridge/install-macos.sh');
   ok(/LaunchAgents/.test(macInstall) && /launchctl/.test(macInstall), 'C6 · install-macos.sh installe et charge le LaunchAgent');
+  const termuxInstall = read('bridge/install-termux.sh');
+  ok(/termux-wake-lock/.test(termuxInstall) && /server\.js/.test(termuxInstall) && /--pair/.test(termuxInstall), 'C6 · install-termux.sh configure l’anti-veille et l’appairage');
 }
 
 console.log('print-relay-test: ' + pass + ' contrôles' + (process.exitCode ? ' · ÉCHEC' : ' ✓'));
