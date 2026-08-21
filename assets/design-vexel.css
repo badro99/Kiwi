@@ -2944,7 +2944,8 @@ body.design-vexel[data-vexel-mode] .vexel-compose > .dash-date-range {
   min-height: 0;
   margin-bottom: 18px !important;
   padding: 27px 28px 25px;
-  overflow: hidden;
+  overflow: visible !important;
+  z-index: 700;
   border: 1px solid var(--n-200);
   border-radius: 28px;
   background: var(--vx-hero-bg);
@@ -3226,7 +3227,6 @@ body.design-vexel[data-vexel-mode="dark"] {
 /* Shared shell: opaque enough to read as a product surface, without the
  * green haze and mismatched glass treatments that separated card families. */
 body.design-vexel[data-vexel-mode] :is(
-  .vexel-compose > .dash-date-range,
   .vexel-compose [data-kpi-band] > .kpi-m,
   .vexel-revenue-row > .hero-today,
   .vexel-rail-card,
@@ -3249,6 +3249,124 @@ body.design-vexel[data-vexel-mode] :is(
     transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
     border-color 180ms ease,
     box-shadow 180ms ease;
+}
+
+body.design-vexel .vexel-compose > .dash-date-range,
+body.design-vexel[data-vexel-mode] .vexel-compose > .dash-date-range {
+  overflow: visible !important;
+  z-index: 700;
+}
+
+/* ─── Custom Date Picker Popover · Dark & Vexel Parity ─── */
+body.design-vexel .dr-popover,
+:root[data-theme="dark"] .dr-popover {
+  background: var(--surface, #151B18);
+  border: 1px solid var(--n-200, rgba(255, 255, 255, 0.12));
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), 0 32px 72px -20px rgba(0, 0, 0, 0.9);
+  z-index: 1000;
+}
+
+body.design-vexel .drp-presets,
+:root[data-theme="dark"] .drp-presets {
+  background: var(--n-50, #0F1412);
+  border-inline-end: 1px solid var(--n-200, rgba(255, 255, 255, 0.1));
+}
+
+body.design-vexel .drp-foot,
+:root[data-theme="dark"] .drp-foot {
+  background: var(--n-50, #0F1412);
+  border-top: 1px solid var(--n-200, rgba(255, 255, 255, 0.1));
+}
+
+body.design-vexel .drp-preset,
+:root[data-theme="dark"] .drp-preset {
+  color: var(--n-600, #C9CECB);
+}
+
+body.design-vexel .drp-preset:hover,
+:root[data-theme="dark"] .drp-preset:hover {
+  background: var(--n-100, #1E2522);
+  color: var(--ink, #F2F0EA);
+}
+
+body.design-vexel .drp-preset.is-active,
+:root[data-theme="dark"] .drp-preset.is-active {
+  background: rgba(11, 110, 79, 0.22);
+  color: var(--mint, #7DF2B0);
+  font-weight: 600;
+}
+
+body.design-vexel .drp-mname,
+:root[data-theme="dark"] .drp-mname {
+  color: var(--ink, #F2F0EA);
+}
+
+body.design-vexel .drp-nav,
+:root[data-theme="dark"] .drp-nav {
+  background: var(--surface, #151B18);
+  border-color: var(--n-200, rgba(255, 255, 255, 0.12));
+  color: var(--n-600, #C9CECB);
+}
+
+body.design-vexel .drp-nav:hover,
+:root[data-theme="dark"] .drp-nav:hover {
+  background: var(--n-100, #1E2522);
+  border-color: var(--n-400, #747C78);
+  color: var(--ink, #F2F0EA);
+}
+
+body.design-vexel .drp-day,
+:root[data-theme="dark"] .drp-day {
+  color: var(--n-700, #DFE3E1);
+}
+
+body.design-vexel .drp-day:not(.is-disabled):not(.drp-empty):hover .drp-dn,
+:root[data-theme="dark"] .drp-day:not(.is-disabled):not(.drp-empty):hover .drp-dn {
+  background: var(--n-100, #1E2522);
+}
+
+body.design-vexel .drp-day.is-today .drp-dn,
+:root[data-theme="dark"] .drp-day.is-today .drp-dn {
+  box-shadow: inset 0 0 0 1.5px var(--n-400, #747C78);
+}
+
+body.design-vexel .drp-day.in-range .drp-dn,
+:root[data-theme="dark"] .drp-day.in-range .drp-dn {
+  color: var(--mint, #7DF2B0);
+  font-weight: 600;
+}
+
+body.design-vexel .drp-day.in-range::before,
+body.design-vexel .drp-day.is-start:not(.is-solo)::before,
+body.design-vexel .drp-day.is-end:not(.is-solo)::before,
+:root[data-theme="dark"] .drp-day.in-range::before,
+:root[data-theme="dark"] .drp-day.is-start:not(.is-solo)::before,
+:root[data-theme="dark"] .drp-day.is-end:not(.is-solo)::before {
+  background: rgba(19, 133, 95, 0.25);
+}
+
+body.design-vexel .drp-btn-ghost,
+:root[data-theme="dark"] .drp-btn-ghost {
+  background: var(--surface, #151B18);
+  border-color: var(--n-200, rgba(255, 255, 255, 0.12));
+  color: var(--n-600, #C9CECB);
+}
+
+body.design-vexel .drp-btn-ghost:hover,
+:root[data-theme="dark"] .drp-btn-ghost:hover {
+  border-color: var(--n-400, #747C78);
+  color: var(--ink, #F2F0EA);
+}
+
+body.design-vexel .drp-btn-go,
+:root[data-theme="dark"] .drp-btn-go {
+  background: var(--atlas, #13855F);
+  color: #ffffff;
+}
+
+body.design-vexel .drp-btn-go:hover,
+:root[data-theme="dark"] .drp-btn-go:hover {
+  background: var(--atlas-600, #16A574);
 }
 
 body.design-vexel[data-vexel-mode] :is(
