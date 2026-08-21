@@ -2760,28 +2760,28 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     .modal-veil {
       position: absolute;
       inset: 0;
-      background: rgba(4, 14, 10, 0.60);
-      backdrop-filter: blur(14px) saturate(1.2);
-      -webkit-backdrop-filter: blur(14px) saturate(1.2);
+      background: rgba(4, 14, 10, 0.62);
+      backdrop-filter: blur(16px) saturate(1.25);
+      -webkit-backdrop-filter: blur(16px) saturate(1.25);
       display: none;
       align-items: flex-end;
       justify-content: center;
       z-index: 100;
-      animation: fade-in 200ms cubic-bezier(0.16, 1, 0.3, 1);
+      animation: fade-in var(--dur-base) var(--expo);
     }
     .modal-veil.is-open { display: flex; }
     @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 
     .modal {
       width: 100%;
-      max-height: 88%;
-      background: var(--surface, #FFFFFF);
-      border-radius: 24px 24px 0 0;
-      border-top: 1px solid rgba(0, 0, 0, 0.08);
-      box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.18);
-      padding: 22px 22px 24px;
+      max-height: 90%;
+      background: var(--surface);
+      border-radius: var(--r-2xl, 32px) var(--r-2xl, 32px) 0 0;
+      border-top: 1px solid var(--line);
+      box-shadow: var(--shadow-3), var(--rim);
+      padding: 20px 20px 24px;
       overflow-y: auto;
-      animation: slide-up 280ms cubic-bezier(0.16, 1, 0.3, 1);
+      animation: slide-up var(--dur-slow) var(--spring);
     }
     :root[data-theme="dark"] .modal {
       background: rgba(14, 30, 23, 0.96);
@@ -2795,10 +2795,10 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       to   { transform: translateY(0); }
     }
     .modal-handle {
-      width: 40px; height: 4px;
-      background: var(--line, rgba(0,0,0,0.15));
+      width: 44px; height: 5px;
+      background: var(--line);
       border-radius: 999px;
-      margin: 0 auto 14px;
+      margin: 0 auto 16px;
     }
     .modal-title { font-size: 18px; font-weight: 700; color: var(--ink); margin: 0 0 4px; letter-spacing: -0.01em; }
     :root[data-theme="dark"] .modal-title { color: #F5FAF7; }
@@ -5087,6 +5087,20 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       /* Les icônes Lucide sont des <svg> déjà peints : ils héritent de
          currentColor, donc rien à re-créer ici. */
     }
+
+    
+    /* Global modal dismissal on Escape key and backdrop tap */
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const openModal = document.querySelector('.modal-veil.is-open');
+        if (openModal) openModal.classList.remove('is-open');
+      }
+    });
+    document.addEventListener('click', (e) => {
+      if (e.target.classList.contains('modal-veil') && e.target.classList.contains('is-open')) {
+        e.target.classList.remove('is-open');
+      }
+    });
 
     document.addEventListener('DOMContentLoaded', () => {
       $$('.profil-theme-option').forEach((button) => button.addEventListener('click', () => setThemeChoice(button.dataset.themeChoice)));
