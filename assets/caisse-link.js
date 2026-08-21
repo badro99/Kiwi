@@ -453,15 +453,10 @@
   function maybePrompt() {
     if (!realMerchant()) return;
     ensureChip();
-    if (!dashReady()) return;
-    if (isPaired() || dismissed()) return;
-    openPanel();
   }
   /* Brand-new business straight out of onboarding — always surface it. */
   function promptNewMerchant() {
     ensureChip();
-    if (isPaired()) return;
-    openPanel();
   }
 
   window.KiwiCaisseLink = {

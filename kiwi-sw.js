@@ -189,7 +189,7 @@ var SHELL = [
      nouveau commerçant par-dessus les données de l'ancien. */
   '/assets/pairing-commit.js?v=1',
   '/assets/identity.js?v=2',
-  '/assets/caisse-link.js?v=8',
+  '/assets/caisse-link.js?v=9',
   '/assets/operator-access.js',
   '/assets/auth-guard.js',
   '/assets/caisse-hardware.js?v=1',
@@ -299,7 +299,7 @@ var SHELL = [
   '/assets/pos-autre.js?v=2',
   '/assets/pos-maison.css?v=16',
   '/assets/pos-maison.js?v=16',
-  '/assets/caisse-pairing.js?v=13',
+  '/assets/caisse-pairing.js?v=14',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là
      qu'il faut pouvoir ressortir le ticket. Un bouton de secours qui a besoin du
