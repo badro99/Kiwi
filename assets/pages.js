@@ -66,7 +66,7 @@
       width,
       body: `<div data-real-empty="${pageEsc(kind)}" style="padding:48px 24px;text-align:center;display:flex;flex-direction:column;align-items:center;">
         <div style="width:48px;height:48px;border-radius:14px;background:rgba(11,110,79,0.10);border:1px solid rgba(11,110,79,0.18);color:var(--atlas);display:grid;place-items:center;margin-bottom:16px;">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <svg width="24" height="24" viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg>
         </div>
         <div style="font-size:16px;font-weight:600;color:var(--ink);letter-spacing:-0.015em;">${pageEsc(c[0])}</div>
         <div style="font-size:13px;color:var(--n-500);line-height:1.55;max-width:420px;margin:8px auto 0;">${pageEsc(c[1])}</div>

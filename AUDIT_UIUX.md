@@ -30,7 +30,6 @@ Ce document consigne l'ensemble des audits visuels, ergonomiques, d'accessibilit
 | Surface / Écran | Fichier(s) | Problèmes identifiés | Améliorations apportées | État |
 | :--- | :--- | :--- | :--- | :--- |
 | **Espaces Métiers Partagés** | `assets/pos-workspaces.css` | Onglets et touches d'ajout sans rebond | Micro-interactions `:active` à échelle 0.97 et focus-visible sur tous les formulaires | ✅ Déployé |
-| **PIN Dispatcher & Légende** | `assets/pos-dispatch.js` | Fluidité d'affichage de la légende des codes PIN | Transition adoucie et gestion de l'état ouvert/fermé | ✅ Déployé |
 
 ### Tier 3 · La Caisse Tactile (`kiwi-caisse.html`)
 | Surface / Écran | Fichier(s) | Problèmes identifiés | Améliorations apportées | État |
