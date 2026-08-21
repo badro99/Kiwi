@@ -17,7 +17,12 @@
   function role() {
     var raw = window.__kiwiRole;
     if (raw == null) raw = storage('kiwiRole');
-    if (raw == null || raw === '') return 'owner';
+    if (raw == null || raw === '') {
+      try {
+        if (window.KiwiEnv && window.KiwiEnv.isDemo && window.KiwiEnv.isDemo()) return 'owner';
+      } catch (_) {}
+      return 'staff';
+    }
     var id = '';
     try { id = window.KiwiRoles && window.KiwiRoles.idOf ? (window.KiwiRoles.idOf(raw) || '') : ''; } catch (_) {}
     if (id === 'proprietaire') return 'owner';
@@ -83,7 +88,7 @@
     try { fs = window.KiwiFeatureGuide && window.KiwiFeatureGuide.features ? window.KiwiFeatureGuide.features(t) : []; } catch (_) {}
     return {
       venue: { id: venueId(), name: venue().name || venue().label || '', trade: t }, plan: plan(), role: r,
-      aiMode: aiMode(), assistantAccess: 'read-only',
+      aiMode: aiMode(), assistantAccess: 'read-with-confirmed-actions',
       features: fs.map(function (f) {
         var probe = PROBES[f.key]; var live = probe ? !!probe() : false; var page = pageExists(f.nav);
         var enabled = live || page;
@@ -272,6 +277,7 @@
   function rememberAction(commandId, result) { try { localStorage.setItem(actionStorageKey(commandId), JSON.stringify(result)); } catch (_) {} return result; }
   function requestAction(name, args) {
     args = args || {}; var r = role();
+    var said = String(args.said || name || '').trim().slice(0, 240);
     var commandId = String(args.commandId || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 60);
     if (!commandId) return { ok: false, reason: 'command-id-required' };
     var prior = priorAction(commandId); if (prior) return { ok: true, replayed: true, result: prior };
@@ -298,7 +304,7 @@
       args = { phone: digits, text: String(args.text).trim().slice(0, 1500) };
     } else return { ok: false, reason: 'read-only' };
     var token = 'confirm-' + Math.random().toString(36).slice(2, 12);
-    confirmations[token] = { name: name, commandId: commandId, args: name === 'stock-adjust'
+    confirmations[token] = { name: name, commandId: commandId, said: said, args: name === 'stock-adjust'
       ? { itemId: String(args.itemId).slice(0, 80), qty: +args.qty, reason: String(args.reason || 'manual').slice(0, 32), note: String(args.note || '').slice(0, 300) }
       : name === 'order-status' ? { orderId: String(args.orderId), status: String(args.status), station: String(args.station || '').slice(0, 40) }
       : args, expires: Date.now() + 120000 };
@@ -308,33 +314,75 @@
     if (results[token]) return results[token];
     var c = confirmations[token]; if (!c || c.expires < Date.now()) return { ok: false, reason: 'expired' };
     delete confirmations[token];
-    if (c.name === 'stock-adjust') {
-      var m = window.KiwiInventory.add({ id: 'ai-stock-' + venueId().replace(/[^a-zA-Z0-9_-]/g, '-') + '-' + c.commandId, itemId: c.args.itemId, qty: c.args.qty, reason: c.args.reason, note: c.args.note, refType: 'assistant-confirmed', refId: c.commandId });
-      return (results[token] = rememberAction(c.commandId, m ? { ok: true, id: m.id } : { ok: false, reason: 'write-refused' }));
-    }
-    if (c.name === 'reprint') {
+    var task = (async function () {
+      if (c.name === 'customer-message-draft') {
+        var href = 'https://wa.me/' + c.args.phone.replace(/[^0-9]/g, '') + '?text=' + encodeURIComponent(c.args.text);
+        var opened = null;
+        try { opened = window.open(href, '_blank', 'noopener'); } catch (_) {}
+        var draft = opened ? { ok: true, outcome: 'draft-opened', sent: false, deliveryVerified: false }
+          : { ok: false, reason: 'popup-blocked' };
+        if (draft.ok) rememberAction(c.commandId, draft);
+        return draft;
+      }
+
+      var O = window.KiwiOperations;
+      if (!O || typeof O.agentRun !== 'function' || typeof O.transition !== 'function') return { ok: false, reason: 'audit-unavailable' };
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) return { ok: false, reason: 'offline' };
+
+      if (c.name === 'order-status') {
+        try {
+          var changed = await O.agentRun('update-order-status', {
+            orderId: c.args.orderId, status: c.args.status, station: c.args.station || ''
+          }, c.said);
+          var command = changed && changed.command;
+          return command && command.status === 'completed'
+            ? rememberAction(c.commandId, { ok: true, id: c.args.orderId, status: c.args.status, commandId: command.id, audited: true })
+            : { ok: false, reason: command && (command.lastError || command.status) || 'write-refused' };
+        } catch (_) { return { ok: false, reason: 'network' }; }
+      }
+
+      if (c.name === 'stock-adjust') {
+        var movementId = 'ai-stock-' + venueId().replace(/[^a-zA-Z0-9_-]/g, '-') + '-' + c.commandId;
+        var started;
+        try {
+          started = await O.agentRun('stock-adjust', {
+            itemId: c.args.itemId, qty: c.args.qty, reason: c.args.reason,
+            note: c.args.note, movementId: movementId
+          }, c.said);
+        } catch (_) { return { ok: false, reason: 'network' }; }
+        var stockCommand = started && started.command;
+        if (!stockCommand || stockCommand.status !== 'processing') return { ok: false, reason: stockCommand && (stockCommand.lastError || stockCommand.status) || 'audit-refused' };
+        var movement = null;
+        try {
+          movement = window.KiwiInventory.add({ id: movementId, itemId: c.args.itemId, qty: c.args.qty, reason: c.args.reason, note: c.args.note, refType: 'assistant-confirmed', refId: stockCommand.id });
+        } catch (_) {}
+        try { await O.transition(stockCommand.id, movement ? 'completed' : 'failed', { confirmed: true, reason: movement ? '' : 'write-refused' }); } catch (_) {
+          if (movement) return rememberAction(c.commandId, { ok: true, id: movement.id, commandId: stockCommand.id, auditPending: true });
+        }
+        return movement
+          ? rememberAction(c.commandId, { ok: true, id: movement.id, commandId: stockCommand.id, audited: true })
+          : { ok: false, reason: 'write-refused' };
+      }
+
       var receipt = (window.KiwiPosReprint.rows(c.args.vertical) || []).find(function (x) { return x && String(x.ref) === c.args.ref; });
       if (!receipt) return { ok: false, reason: 'receipt-not-found' };
-      var printPromise = Promise.resolve(window.KiwiPosReprint.reprint(c.args.vertical, receipt)).then(function (j) {
-        var out = j && j.ok ? { ok: true, ref: c.args.ref, physicalVerified: true } : { ok: false, reason: 'print-not-confirmed' };
-        if (out.ok) rememberAction(c.commandId, out);
-        return out;
-      }).catch(function () { return { ok: false, reason: 'print-failed' }; });
-      results[token] = printPromise; return printPromise;
-    }
-    if (c.name === 'customer-message-draft') {
-      var href = 'https://wa.me/' + c.args.phone.replace(/[^0-9]/g, '') + '?text=' + encodeURIComponent(c.args.text);
-      var opened = null;
-      try { opened = window.open(href, '_blank', 'noopener'); } catch (_) {}
-      var draft = opened ? { ok: true, outcome: 'draft-opened', sent: false, deliveryVerified: false }
-        : { ok: false, reason: 'popup-blocked' };
-      if (draft.ok) rememberAction(c.commandId, draft);
-      return (results[token] = draft);
-    }
-    var promise = window.KiwiOrderInbox.setStatus(c.args.orderId, c.args.status, c.args.station ? { station: c.args.station } : {})
-      .then(function (j) { return rememberAction(c.commandId, j && (j.ok || j.status === c.args.status) ? { ok: true, id: c.args.orderId, status: c.args.status } : { ok: false, reason: (j && (j.error || j.reason)) || 'write-refused' }); })
-      .catch(function () { return { ok: false, reason: 'network' }; });
-    results[token] = promise; return promise;
+      var openedCommand;
+      try {
+        openedCommand = await O.agentRun('reprint', { deviceId: O.deviceId(), ref: c.args.ref }, c.said);
+      } catch (_) { return { ok: false, reason: 'network' }; }
+      var printCommand = openedCommand && openedCommand.command;
+      if (!printCommand || printCommand.status !== 'processing') return { ok: false, reason: printCommand && (printCommand.lastError || printCommand.status) || 'audit-refused' };
+      var printed;
+      try { printed = await window.KiwiPosReprint.reprint(c.args.vertical, receipt); } catch (_) { printed = null; }
+      var printOk = !!(printed && printed.ok);
+      try { await O.transition(printCommand.id, printOk ? 'completed' : 'failed', { confirmed: true, reason: printOk ? '' : 'print-not-confirmed' }); } catch (_) {}
+      var out = printOk ? { ok: true, ref: c.args.ref, physicalVerified: true, commandId: printCommand.id, audited: true }
+        : { ok: false, reason: 'print-not-confirmed' };
+      if (out.ok) rememberAction(c.commandId, out);
+      return out;
+    }());
+    results[token] = task;
+    return task;
   }
 
   window.KiwiFeatureTruth = { context: context, role: role, plan: plan, aiMode: aiMode, read: read, intent: intent, readiness: readiness };

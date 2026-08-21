@@ -66,7 +66,7 @@ var SHELL = [
   '/assets/ai-telemetry.js',
   '/assets/agent-data.js',
   '/assets/agent-features.js?v=3',
-  '/assets/agent-truth.js?v=3',
+  '/assets/agent-truth.js?v=4',
   '/assets/agent-voice.js?v=4',
   '/assets/i18n.js?v=4',
   /* Les milliers en arabe. Dans la coquille avec i18n : hors ligne, un

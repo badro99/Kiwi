@@ -154,7 +154,12 @@
   function accessTier() {
     let raw = window.__kiwiRole;
     if (raw == null) { try { raw = localStorage.getItem('kiwiRole'); } catch (_) {} }
-    if (raw == null || raw === '') return 'owner';
+    if (raw == null || raw === '') {
+      try {
+        if (window.KiwiEnv && window.KiwiEnv.isDemo && window.KiwiEnv.isDemo()) return 'owner';
+      } catch (_) {}
+      return 'staff';
+    }
     let id = '';
     try { if (window.KiwiRoles && window.KiwiRoles.idOf) id = window.KiwiRoles.idOf(raw) || ''; } catch (_) {}
     if (id === 'proprietaire') return 'owner';
@@ -1285,10 +1290,10 @@
     const mode = c && c.aiMode || 'ask';
     const title = L === 'en' ? `Kiwi copilot · ${label}` : L === 'ar' ? `مساعد Kiwi · ${label}` : `Copilote Kiwi · ${label}`;
     const privacy = mode === 'cloud'
-      ? (L === 'en' ? 'Server AI on: a free-text question and only the business context it needs are sent securely to Kiwi. Your figures are computed here. The assistant remains read-only.' : L === 'ar' ? 'الذكاء الاصطناعي عبر الخادم مفعّل: يُرسل السؤال الحر والسياق الضروري فقط بأمان إلى Kiwi. أرقامك تُحسب هنا. يبقى المساعد للقراءة فقط.' : 'IA serveur activée : une question libre et le seul contexte nécessaire sont envoyés de façon sécurisée à Kiwi. Vos chiffres sont calculés ici. Le copilote reste en lecture seule.')
+      ? (L === 'en' ? 'Server AI on: a free-text question and only the business context it needs are sent securely to Kiwi. Questions are read-only; Kiwi changes data only after you review and confirm a proposed action.' : L === 'ar' ? 'الذكاء الاصطناعي عبر الخادم مفعّل: يُرسل السؤال الحر والسياق الضروري فقط بأمان إلى Kiwi. الأسئلة للقراءة فقط، ولا يغيّر Kiwi البيانات إلا بعد مراجعتك وتأكيدك للإجراء المقترح.' : 'IA serveur activée : une question libre et le seul contexte nécessaire sont envoyés de façon sécurisée à Kiwi. Les questions restent en lecture seule ; Kiwi ne modifie les données qu’après votre vérification et confirmation d’une action proposée.')
       : mode === 'deterministic'
-        ? (L === 'en' ? 'Private mode: calculations only, nothing leaves this device. Read-only.' : L === 'ar' ? 'الوضع الخاص: حسابات فقط، لا يغادر أي شيء هذا الجهاز. قراءة فقط.' : 'Mode privé : calculs seuls, rien ne quitte cet appareil. Lecture seule.')
-        : (L === 'en' ? 'Your figures are computed on this device. A free-text question goes to Kiwi’s server only after you agree, once. Read-only.' : L === 'ar' ? 'أرقامك تُحسب على هذا الجهاز. السؤال الحر يُرسل إلى خادم Kiwi فقط بعد موافقتك، مرة واحدة. قراءة فقط.' : 'Vos chiffres sont calculés sur cet appareil. Une question libre part vers le serveur Kiwi seulement après votre accord, une fois. Lecture seule.');
+        ? (L === 'en' ? 'Private mode: calculations only, nothing leaves this device and nothing changes automatically.' : L === 'ar' ? 'الوضع الخاص: حسابات فقط، لا يغادر أي شيء هذا الجهاز ولا يتغيّر شيء تلقائياً.' : 'Mode privé : calculs seuls, rien ne quitte cet appareil et rien n’est modifié automatiquement.')
+        : (L === 'en' ? 'Your figures are computed on this device. A free-text question goes to Kiwi’s server only after you agree. Nothing changes automatically.' : L === 'ar' ? 'أرقامك تُحسب على هذا الجهاز. السؤال الحر يُرسل إلى خادم Kiwi فقط بعد موافقتك. لا يتغيّر شيء تلقائياً.' : 'Vos chiffres sont calculés sur cet appareil. Une question libre part vers le serveur Kiwi seulement après votre accord. Rien n’est modifié automatiquement.');
     const modeToggle = mode === 'cloud'
       ? (L === 'en' ? 'Switch to private mode' : L === 'ar' ? 'الانتقال إلى الوضع الخاص' : 'Passer en mode privé')
       : (L === 'en' ? 'Enable server AI' : L === 'ar' ? 'تفعيل الذكاء الاصطناعي عبر الخادم' : 'Activer l’IA serveur');
@@ -3869,21 +3874,15 @@
     { type: 'function', function: { name: 'orders_open', description: 'Les commandes ouvertes (id, numéro, statut, total) — à appeler AVANT de proposer un changement de statut.', parameters: { type: 'object', properties: {} } } },
     { type: 'function', function: { name: 'propose_action', description: "Modifier quelque chose. Actions : stock-adjust {itemId, qty (négatif pour retirer), reason, note} · order-status {orderId, status: accepted|rejected|ready|served} · reprint {ref} · customer-message-draft {phone, text}. Résous d'abord l'id exact (stock_level → items[].id ; orders_open → orders[].id) ; ne devine jamais un id. Le résultat dit si l'action est exécutée (executed) ou attend la confirmation du commerçant (awaiting_confirmation).", parameters: { type: 'object', properties: { name: { type: 'string', enum: ['stock-adjust', 'order-status', 'reprint', 'customer-message-draft'] }, args: { type: 'object' }, summary: { type: 'string', description: 'Une ligne lisible décrivant l\'action, dans la langue du commerçant.' } }, required: ['name', 'args', 'summary'] } } },
   ];
-  /* ── Exécution directe. Par défaut le modèle PROPOSE : la bulle porte un
-   * bouton, le commerçant confirme, le code existant (KiwiAgentActions)
-   * exécute avec son sas — rôles, validation, idempotence, jeton 120 s. Le
-   * propriétaire peut lever la confirmation pour son établissement : l'action
-   * part alors tout de suite et la réponse dit ce qui a été fait. Réglage par
-   * établissement, jamais global. */
-  function autoActKey() { const v = (window.KiwiVenue && window.KiwiVenue.getCurrentVenueId) ? window.KiwiVenue.getCurrentVenueId() : 'default'; return 'kiwiAiAutoAct:' + String(v || 'default'); }
-  function autoActOn() { try { return localStorage.getItem(autoActKey()) === 'on'; } catch (_) { return false; } }
-  function setAutoAct(on) { try { localStorage.setItem(autoActKey(), on ? 'on' : 'off'); } catch (_) {} }
+  /* Every mutation remains an explicit proposal. Confirmation-free execution
+   * was removed: shared merchant devices and model/tool output are not an
+   * acceptable authorization boundary. */
   const ACTION_NAME_RX = /^(stock-adjust|order-status|reprint|customer-message-draft)$/;
   const TOOL_RESULT_MAX = 2000;
   const ACTION_COPY = {
-    fr: { confirm: 'Confirmer', cancel: 'Annuler', done: 'Fait.', refused: 'Action refusée', expired: 'Proposition expirée — redemandez.', cancelled: 'Annulé, rien n’a été modifié.', autoOn: 'Exécution directe : activée — l’assistant modifie stock, commandes et réimpressions sans confirmation.', autoOff: 'Exécution directe : désactivée — chaque action attend votre confirmation.', autoToggleOn: 'Désactiver l’exécution directe', autoToggleOff: 'Activer l’exécution directe' },
-    en: { confirm: 'Confirm', cancel: 'Cancel', done: 'Done.', refused: 'Action refused', expired: 'Proposal expired — ask again.', cancelled: 'Cancelled, nothing changed.', autoOn: 'Direct execution: on — the assistant changes stock, orders and reprints without confirmation.', autoOff: 'Direct execution: off — every action waits for your confirmation.', autoToggleOn: 'Turn off direct execution', autoToggleOff: 'Turn on direct execution' },
-    ar: { confirm: 'تأكيد', cancel: 'إلغاء', done: 'تم.', refused: 'رُفض الإجراء', expired: 'انتهت صلاحية الاقتراح — أعد الطلب.', cancelled: 'أُلغي، لم يتغيّر شيء.', autoOn: 'التنفيذ المباشر: مفعّل — يغيّر المساعد المخزون والطلبات وإعادة الطباعة دون تأكيد.', autoOff: 'التنفيذ المباشر: معطّل — كل إجراء ينتظر تأكيدك.', autoToggleOn: 'إيقاف التنفيذ المباشر', autoToggleOff: 'تفعيل التنفيذ المباشر' },
+    fr: { confirm: 'Confirmer', cancel: 'Annuler', done: 'Fait.', refused: 'Action refusée', expired: 'Proposition expirée — redemandez.', cancelled: 'Annulé, rien n’a été modifié.' },
+    en: { confirm: 'Confirm', cancel: 'Cancel', done: 'Done.', refused: 'Action refused', expired: 'Proposal expired — ask again.', cancelled: 'Cancelled, nothing changed.' },
+    ar: { confirm: 'تأكيد', cancel: 'إلغاء', done: 'تم.', refused: 'رُفض الإجراء', expired: 'انتهت صلاحية الاقتراح — أعد الطلب.', cancelled: 'أُلغي، لم يتغيّر شيء.' },
   };
   const TOOLS_RULE = "OUTILS — les chiffres viennent des outils ou du bloc FAITS, jamais de toi. Pour agir (retirer ou ajouter du stock, changer le statut d'une commande, réimprimer, rédiger un message client) appelle propose_action après avoir résolu l'identifiant exact par stock_level ou orders_open ; quantité négative = retrait. Ne devine jamais un id : si tu ne trouves pas l'article ou la commande, dis-le. Le résultat de propose_action dit si c'est fait (executed) ou en attente de confirmation (awaiting_confirmation) : annonce exactement cela, en une phrase.";
   const FACTS_LEAD = "FAITS — calculés par Kiwi pour cette question, à partir des données réelles du commerce. Ils font autorité : reformule-les clairement dans la langue de la question, garde le fil de la conversation, ne modifie AUCUN chiffre et n'en invente aucun. Si la question demande une donnée absente des faits, appelle un outil. Pas de markdown.\n";
@@ -3949,23 +3948,14 @@
         const act = String(a.name || '');
         if (!ACTION_NAME_RX.test(act)) return { error: 'action inconnue' };
         const args = Object.assign({}, a.args && typeof a.args === 'object' ? a.args : {});
+        const summary = String(a.summary || '').slice(0, 200);
+        args.said = summary || act;
         /* Un id de commande par proposition : le sas d'idempotence de
          * KiwiAgentActions est à lui — on ne le contourne pas, on le nourrit. */
         args.commandId = 'llm-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
         const req = A.request(act, args);
         if (!req || !req.ok) return { proposed: false, action: act, reason: (req && req.reason) || 'refused' };
         if (req.replayed) return { executed: true, replayed: true, action: act, result: req.result };
-        const summary = String(a.summary || '').slice(0, 200);
-        if (autoActOn()) {
-          /* Exécution directe : le même confirm que le bouton, sans le bouton.
-           * Synchrone quand confirm l'est (stock), promesse quand il ne l'est
-           * pas (commande, réimpression) — l'appelant attend dans les deux cas. */
-          let res;
-          try { res = A.confirm(req.token); } catch (_) { return { executed: false, action: act, summary, reason: 'failed' }; }
-          const shape = (r) => ({ executed: !!(r && r.ok), action: act, summary, result: r });
-          if (res && typeof res.then === 'function') return res.then(shape, () => ({ executed: false, action: act, summary, reason: 'failed' }));
-          return shape(res);
-        }
         LLM.proposals.push({ token: req.token, action: act, summary, args: req.summary });
         return { proposed: true, action: act, summary, awaiting_confirmation: true, note: 'Le commerçant doit confirmer par le bouton affiché sous la réponse.' };
       }
@@ -3982,7 +3972,7 @@
     if (reply.verdict && reply.verdict.text) out += '\n' + strip(reply.verdict.text);
     return out.slice(0, 3000);
   }
-  window.KiwiAgentTools = { list: LLM_TOOLS, run: runTool, noteFacts: noteTurnFacts, clearFacts: clearTurnFacts, facts: TURN_FACTS, draftFacts: draftFacts, autoActOn: autoActOn, setAutoAct: setAutoAct, pending: function () { return LLM.proposals.slice(); }, resetPending: function () { LLM.proposals = []; } };
+  window.KiwiAgentTools = { list: LLM_TOOLS, run: runTool, noteFacts: noteTurnFacts, clearFacts: clearTurnFacts, facts: TURN_FACTS, draftFacts: draftFacts, pending: function () { return LLM.proposals.slice(); }, resetPending: function () { LLM.proposals = []; } };
 
   const SP_DIR = {
     fr: 'IMPÉRATIF : rédige ta réponse entièrement en FRANÇAIS.',
@@ -5063,17 +5053,11 @@
       const u = assistantUiCopy();
       root.querySelectorAll('[data-fa-trust-text]').forEach((el) => { el.textContent = u.privacy; });
       root.querySelectorAll('[data-fa-mode-toggle]').forEach((el) => { el.textContent = u.modeToggle; });
-      const ac = ACTION_COPY[L] || ACTION_COPY.fr;
-      root.querySelectorAll('[data-fa-auto-text]').forEach((el) => { el.textContent = autoActOn() ? ac.autoOn : ac.autoOff; });
-      root.querySelectorAll('[data-fa-auto-toggle]').forEach((el) => { el.textContent = autoActOn() ? ac.autoToggleOn : ac.autoToggleOff; });
     }
-    /* Le réglage n'est montré qu'au propriétaire, et seulement quand le modèle
-     * serveur est accepté : sans modèle, personne ne propose rien. */
+    /* Kept as a no-op so older drawer composition remains stable. Direct
+     * execution is intentionally unavailable; every action needs a click. */
     function autoActMarkup() {
-      if (accessTier() !== 'owner' || !cloudAccepted()) return '';
-      const ac = ACTION_COPY[L] || ACTION_COPY.fr;
-      return `<div class="fa-ctx-trust" data-fa-auto>${ICON.lock}<span data-fa-auto-text>${autoActOn() ? ac.autoOn : ac.autoOff}</span></div>` +
-        `<button type="button" class="fa-ctx-mode" data-fa-auto-toggle>${autoActOn() ? ac.autoToggleOn : ac.autoToggleOff}</button>`;
+      return '';
     }
 
     /* Hors calculs et sans modèle : on le dit, avec la liste de ce qui
@@ -5321,8 +5305,8 @@
         if (bubble && red.redacted !== -1) {
           const rate = document.createElement('div');
           rate.className = 'fa-follow';
-          rate.innerHTML = '<button type="button" class="fa-rate" data-fa-rate="up" aria-label="Utile">👍</button>'
-            + '<button type="button" class="fa-rate" data-fa-rate="down" aria-label="Pas utile">👎</button>';
+          rate.innerHTML = '<button type="button" class="fa-rate" data-fa-rate="up" aria-label="Utile"><i data-lucide="thumbs-up" width="17" height="17" aria-hidden="true"></i></button>'
+            + '<button type="button" class="fa-rate" data-fa-rate="down" aria-label="Pas utile"><i data-lucide="thumbs-down" width="17" height="17" aria-hidden="true"></i></button>';
           bubble.appendChild(rate);
         }
         scrollDown();
@@ -5420,7 +5404,6 @@
       if (e.target.closest('[data-fa-cloud]')) { acceptCloud(); return; }
       if (e.target.closest('[data-fa-cloud-no]')) { declineCloud(); return; }
       if (e.target.closest('[data-fa-mode-toggle]')) { setCloud(!cloudAccepted()); refreshTrustLine(); return; }
-      if (e.target.closest('[data-fa-auto-toggle]')) { setAutoAct(!autoActOn()); refreshTrustLine(); return; }
       const confirmBtn = e.target.closest('[data-fa-confirm]');
       if (confirmBtn) {
         if (confirmBtn.disabled) return;

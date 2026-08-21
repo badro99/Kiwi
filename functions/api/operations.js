@@ -19,12 +19,12 @@ const ACTIONS = {
   accounting: new Set(['export-journal', 'create-invoice', 'credit-note', 'lock-period']),
   payment: new Set(['create-link', 'cancel-link', 'refund-link', 'settle-link']),
   device: new Set(['heartbeat', 'test-print', 'ack-alert']),
-  ai: new Set(['reprint', 'update-order-status', 'message-customer', 'create-po']),
+  ai: new Set(['stock-adjust', 'reprint', 'update-order-status', 'message-customer', 'create-po']),
 };
 const CONFIRM = new Set([
   'procurement:submit-po', 'procurement:supplier-return', 'payroll:submit-cnss',
   'accounting:credit-note', 'accounting:lock-period', 'payment:cancel-link',
-  'payment:refund-link', 'ai:reprint', 'ai:update-order-status',
+  'payment:refund-link', 'ai:stock-adjust', 'ai:reprint', 'ai:update-order-status',
   'ai:message-customer', 'ai:create-po',
 ]);
 const TRANSITIONS = {
@@ -234,6 +234,7 @@ function needed(domain, action) {
      aucun rôle — le laisser en défaut faisait de ces trois actions un privilège
      réservé au propriétaire par accident et non par décision. */
   if (domain === 'ai' && action === 'reprint') return ['action', 'reprint'];
+  if (domain === 'ai' && action === 'stock-adjust') return ['write', 'inventory'];
   if (domain === 'ai' && action === 'message-customer') return ['action', 'message'];
   if (domain === 'ai' && action === 'create-po') return ['write', 'inventory'];
   if (domain === 'ai' && action === 'update-order-status') return ['write', 'orders'];
@@ -1761,6 +1762,19 @@ async function aiActions(env, row, payload) {
      aiguillent sur row.action seul, jamais sur row.domain. */
   if (row.action === 'message-customer') return notifications(env, row, payload);
   if (row.action === 'create-po') return procurement(env, row, payload);
+
+  if (row.action === 'stock-adjust') {
+    const itemId = clean(payload && payload.itemId, 80);
+    const movementId = clean(payload && payload.movementId, 128);
+    const qty = Number(payload && payload.qty);
+    if (!itemId || !idOk(movementId)) return fail('stock-reference-required');
+    if (!Number.isFinite(qty) || qty === 0 || Math.abs(qty) > 100000) return fail('invalid-quantity');
+    return update(env, row, 'processing', 'client-inventory-ledger', {
+      itemId, movementId, qty, reason: clean(payload && payload.reason, 32),
+      note: clean(payload && payload.note, 300), said,
+      instruction: 'execute-on-requesting-client',
+    }, '');
+  }
 
   if (row.action === 'reprint') {
     await ensureDevices(env);
