@@ -373,7 +373,7 @@
   },
   "assets/pos-dispatch.js": {
     "v": "30",
-    "sha": "509f206b3ff6eff8"
+    "sha": "747b91c31353d975"
   },
   "assets/pos-epicerie.css": {
     "v": "3",
@@ -448,12 +448,12 @@
     "sha": "64722349ffceb013"
   },
   "assets/pos-pharmacie.css": {
-    "v": "2",
+    "v": "3",
     "sha": "48f9f2f85cf97f7d"
   },
   "assets/pos-pharmacie.js": {
-    "v": "2",
-    "sha": "e8ba90552f5f6fbd"
+    "v": "3",
+    "sha": "a35856ec09a84ba2"
   },
   "assets/pos-pizzeria.css": {
     "v": "3",

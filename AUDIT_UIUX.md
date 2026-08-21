@@ -200,3 +200,12 @@ Ce document consigne l'ensemble des audits visuels, ergonomiques, d'accessibilit
   1. Refonte du ticket vide avec médaillon Material Symbol (`inventory_2`) et repère de geste pour scan douchette / balance.
   2. Bumping de la révision `pos-epicerie.js?v=3` dans le dispatcher.
 - **État** : ✅ Déployé
+
+### 7.11 Vertical Pharmacie (`assets/pos-pharmacie.js`)
+- **Fichiers** : `assets/pos-pharmacie.js:669`, `assets/pos-dispatch.js:67`
+- **Problèmes identifiés** :
+  1. Ticket d'ordonnance / délivrance pharmacie vide sans médaillon Material Symbols.
+- **Améliorations apportées** :
+  1. Refonte du ticket vide avec médaillon Material Symbol (`inventory_2`), hiérarchie claire et indication de sélection de vignette.
+  2. Bumping de la révision `pos-pharmacie.js?v=3` dans le dispatcher.
+- **État** : ✅ Déployé
