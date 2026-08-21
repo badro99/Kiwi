@@ -1514,30 +1514,36 @@
     /* ---------- Modals ---------- */
     .modal-veil {
       position: fixed; inset: 0;
-      background: rgba(10, 15, 13, 0.42);
+      background: rgba(4, 14, 10, 0.62);
+      backdrop-filter: blur(16px) saturate(1.2);
+      -webkit-backdrop-filter: blur(16px) saturate(1.2);
       display: none; align-items: center; justify-content: center;
       z-index: 100;
-      animation: fade-in 200ms ease-out;
+      animation: fade-in 200ms cubic-bezier(0.16, 1, 0.3, 1);
     }
     .modal-veil.is-open { display: flex; }
     @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 
     .modal {
       width: 480px; max-width: calc(100vw - 48px);
-      background: var(--surface);
-      border-radius: var(--r-2xl);
-      box-shadow: var(--shadow-2);
+      background: var(--surface, #FFFFFF);
+      border-radius: 24px;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      box-shadow:
+        0 0 0 1px rgba(0, 0, 0, 0.04),
+        0 24px 64px -12px rgba(0, 0, 0, 0.28),
+        0 4px 16px rgba(0, 0, 0, 0.06);
       padding: 28px 28px 24px;
-      animation: pop-in 200ms ease-out;
+      animation: pop-in 220ms cubic-bezier(0.16, 1, 0.3, 1);
     }
     @keyframes pop-in {
-      from { transform: scale(0.95); opacity: 0; }
+      from { transform: scale(0.96); opacity: 0; }
       to   { transform: scale(1);   opacity: 1; }
     }
 
     .modal-title {
       font-size: 20px; font-weight: 700; color: var(--ink);
-      margin: 0 0 4px;
+      margin: 0 0 4px; letter-spacing: -0.02em;
     }
     .modal-subtle { font-size: 12px; color: var(--ink-3); margin: 0 0 16px; }
     .modal-amount {
@@ -2308,7 +2314,6 @@
       text-align: center;
       line-height: 1.5;
     }
-    }
 
     /* ===========================================================
        WELCOME BANNER (gamification)
@@ -2387,39 +2392,39 @@
     body.is-unlocked .view-salle .plan-canvas.is-active {
       animation: rise-fade 600ms 260ms cubic-bezier(0.32, 0.72, 0, 1) both;
     }
-    /* NOTE: per-cell stagger animation removed. Earlier versions used
-       `animation: rise-fade ... both` on every .tbl-cell, but Chrome pauses
-       the animation timer while .plan-canvas is display:none, leaving the
-       étage cells stuck at opacity 0 when you switched floors. Tables now
-       appear with the canvas itself. */
 
     /* ===========================================================
        === Shift lifecycle ===  (clock-in screen · Clôture de caisse)
        =========================================================== */
     .clockin-screen {
       position: fixed; inset: 0;
-      background: linear-gradient(180deg, var(--ink-bg) 0%, #102018 60%, #1F5D3C 100%);
+      background-color: #04120D;
+      background-image:
+        radial-gradient(65% 50% at 50% 8%, rgba(0, 255, 174, 0.14), transparent 60%),
+        radial-gradient(70% 60% at 85% 92%, rgba(12, 107, 78, 0.32), transparent 60%),
+        radial-gradient(60% 55% at 12% 88%, rgba(4, 36, 26, 0.88), transparent 60%),
+        linear-gradient(165deg, #051811 0%, #020C08 100%);
       z-index: 480;
       display: flex; flex-direction: column;
-      align-items: center; justify-content: center; gap: 44px;
-      padding: 56px 32px;
+      align-items: center; justify-content: center; gap: 36px;
+      padding: 48px 24px;
       color: #fff;
       opacity: 0; pointer-events: none;
     }
     .clockin-screen.is-visible {
       opacity: 1; pointer-events: auto;
-      animation: clockin-in 460ms cubic-bezier(0.32, 0.72, 0, 1);
+      animation: clockin-in 460ms cubic-bezier(0.16, 1, 0.3, 1);
     }
     @keyframes clockin-in {
-      from { opacity: 0; transform: scale(1.02); }
-      to   { opacity: 1; transform: scale(1); }
+      from { opacity: 0; transform: scale(1.02); filter: blur(4px); }
+      to   { opacity: 1; transform: scale(1); filter: blur(0); }
     }
     .clockin-screen.is-leaving {
-      animation: clockin-out 480ms cubic-bezier(0.32, 0.72, 0, 1) forwards;
+      animation: clockin-out 480ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
     @keyframes clockin-out {
       0%   { opacity: 1; transform: scale(1);   filter: blur(0); }
-      100% { opacity: 0; transform: scale(0.98); filter: blur(6px); }
+      100% { opacity: 0; transform: scale(0.98); filter: blur(8px); }
     }
     .clockin-top { display: flex; flex-direction: column; align-items: center; gap: 6px; }
     .clockin-brand { display: inline-flex; align-items: center; }

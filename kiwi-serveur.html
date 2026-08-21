@@ -2586,12 +2586,14 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     .modal-veil {
       position: absolute;
       inset: 0;
-      background: rgba(10, 15, 13, 0.55);
+      background: rgba(4, 14, 10, 0.60);
+      backdrop-filter: blur(14px) saturate(1.2);
+      -webkit-backdrop-filter: blur(14px) saturate(1.2);
       display: none;
       align-items: flex-end;
       justify-content: center;
       z-index: 100;
-      animation: fade-in 200ms ease-out;
+      animation: fade-in 200ms cubic-bezier(0.16, 1, 0.3, 1);
     }
     .modal-veil.is-open { display: flex; }
     @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
@@ -2599,11 +2601,20 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     .modal {
       width: 100%;
       max-height: 88%;
-      background: var(--surface);
-      border-radius: 20px 20px 0 0;
+      background: var(--surface, #FFFFFF);
+      border-radius: 24px 24px 0 0;
+      border-top: 1px solid rgba(0, 0, 0, 0.08);
+      box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.18);
       padding: 22px 22px 24px;
       overflow-y: auto;
-      animation: slide-up 280ms cubic-bezier(0.32, 0.72, 0, 1);
+      animation: slide-up 280ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    :root[data-theme="dark"] .modal {
+      background: rgba(14, 30, 23, 0.96);
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(28px);
+      -webkit-backdrop-filter: blur(28px);
+      color: #F5FAF7;
     }
     @keyframes slide-up {
       from { transform: translateY(100%); }
@@ -2611,12 +2622,14 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     }
     .modal-handle {
       width: 40px; height: 4px;
-      background: var(--line);
+      background: var(--line, rgba(0,0,0,0.15));
       border-radius: 999px;
       margin: 0 auto 14px;
     }
     .modal-title { font-size: 18px; font-weight: 700; color: var(--ink); margin: 0 0 4px; letter-spacing: -0.01em; }
+    :root[data-theme="dark"] .modal-title { color: #F5FAF7; }
     .modal-subtle { font-size: 12px; color: var(--ink-3); margin: 0 0 16px; }
+    :root[data-theme="dark"] .modal-subtle { color: rgba(255, 255, 255, 0.65); }
 
     /* New table modal */
     .nt-chips {
@@ -2629,13 +2642,16 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       aspect-ratio: 1;
       border-radius: var(--r-lg);
       background: var(--paper-mute);
+      border: 1px solid var(--line-soft);
       color: var(--ink);
       font-size: 20px; font-weight: 700;
       display: flex; align-items: center; justify-content: center;
-      transition: background 120ms, color 120ms, transform 80ms;
+      transition: all 140ms cubic-bezier(0.16, 1, 0.3, 1);
+      cursor: pointer;
     }
-    .nt-chip:active { transform: scale(0.95); }
-    .nt-chip.is-active { background: var(--forest); color: var(--on-accent); }
+    .nt-chip:hover { transform: translateY(-1px); border-color: #0C6B4E; }
+    .nt-chip:active { transform: scale(0.94); }
+    .nt-chip.is-active { background: var(--forest); border-color: var(--forest); color: var(--on-accent); box-shadow: 0 4px 14px rgba(12, 107, 78, 0.35); }
     .nt-actions { display: flex; gap: 8px; margin-top: 4px; }
     .nt-actions .td-btn { flex: 1; }
 
