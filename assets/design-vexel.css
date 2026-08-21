@@ -1555,14 +1555,16 @@ body.design-vexel .kiwi-pin-cell {
   height: 76px;
   background: var(--paper-muted);
   border: 1px solid var(--n-300);
-  border-radius: 22px;
+  border-radius: 20px;
   color: var(--ink);
   font-weight: 500;
+  transition: all 260ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 body.design-vexel .kiwi-pin-cell.is-filled {
   background: var(--mint-soft);
   border-color: var(--vx-accent);
-  box-shadow: 0 0 0 4px var(--vx-accent-18);
+  box-shadow: 0 0 0 4px var(--vx-accent-18), 0 8px 24px -6px rgba(0, 255, 174, 0.28);
+  transform: translateY(-2px) scale(1.04);
 }
 body.design-vexel .kiwi-lock-pin.is-wrong .kiwi-pin-cell {
   border-color: var(--danger);
@@ -2148,7 +2150,7 @@ body.design-vexel[data-vexel-mode] .dash-more .integ-card {
 }
 
 /* ── LAYER B · DARK TOKENS ──────────────────────────────────────────────── */
-body.design-vexel[data-vexel-mode="dark"] {
+:is(html[data-theme="dark"], html[data-vexel-mode="dark"], body[data-vexel-mode="dark"], body[data-theme="dark"]) {
   --paper: #000000;
   --paper-soft: rgba(0, 0, 0, 0.30);
   --paper-muted: rgba(255, 255, 255, 0.04);
@@ -2276,7 +2278,7 @@ body.design-vexel[data-vexel-mode="dark"] {
 }
 
 /* ── LAYER C · LIGHT TOKENS ─────────────────────────────────────────────── */
-body.design-vexel[data-vexel-mode="light"] {
+:is(html[data-theme="light"][data-vexel-mode="light"], body[data-vexel-mode="light"]:not([data-vexel-mode="dark"])) {
   --paper: #F7F5F0;
   --paper-soft: rgba(255, 255, 255, 0.62);
   --paper-muted: rgba(10, 15, 13, 0.04);
