@@ -257,6 +257,47 @@ Extraction brute des règles existantes avant harmonisation :
 ### 4. Registre des Surfaces Déployées
 | Surface | Fichier(s) | Améliorations apportées | État |
 | :--- | :--- | :--- | :--- |
+### 7.16 Vertical Autre Activité Polyvalente (`assets/pos-autre.js`)
+- **Fichiers** : `assets/pos-autre.js:39`, `assets/pos-dispatch.js:72`
+- **Problèmes identifiés** :
+  1. Catalogue et ticket de vente libre sans médaillon Material Symbols.
+- **Améliorations apportées** :
+  1. Refonte des états vides de catalogue et ticket avec médaillons Material Symbol (`inventory_2`) et hiérarchie soignée.
+  2. Bumping de la révision `pos-autre.js?v=3` dans le dispatcher.
+- **État** : ✅ Déployé
+
+---
+
+## 🍷 Passe Serveur · Refonte Design de l'App Serveur (`kiwi-serveur.html`)
+
+### 1. Audit Typographique Initial (Zoo de 27 tailles)
+Extraction brute des règles existantes avant harmonisation :
+- **Tailles identifiées** : `8px` (2), `9px` (5), `9.5px` (8), `10px` (5), `10.5px` (10), `11px` (31), `11.5px` (13), `12px` (22), `12.5px` (16), `13px` (44), `13.5px` (11), `14px` (18), `15px` (14), `16px` (10), `17px` (8), `18px` (2), `19px` (1), `20px` (4), `22px` (6), `24px` (1), `26px` (2), `27px` (1), `32px` (1), `38px` (1), `40px` (1), `42px` (1), `64px` (1).
+- **Problèmes constatés** : Absence de système d'échelle, micro-tailles inopérantes (<11px) en salle sombre, hauteurs de lignes disparates, interlettrages incohérents.
+
+### 2. Échelle Typographique Système Définie (`:root`)
+| Jeton | Taille | Line-Height | Letter-Spacing | Poids | Usage |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `--t-hero` | `clamp(36px, 10vw, 44px)` | `1.05` | `-0.035em` | `700` | Montants géants, accueil |
+| `--t-display` | `26px` | `1.15` | `-0.025em` | `700` | Titres majeurs, accent éditorial |
+| `--t-title` | `20px` | `1.2` | `-0.02em` | `700` | Titres de modales & sections |
+| `--t-headline` | `17px` | `1.25` | `-0.015em` | `600` | Noms de table, totaux |
+| `--t-body-lg` | `15px` | `1.35` | `-0.01em` | `600` | Boutons CTA, numéros de table |
+| `--t-body` | `13.5px` | `1.45` | `-0.005em` | `500` | Corps principal, articles, items |
+| `--t-body-sm` | `12.5px` | `1.4` | `-0.005em` | `400` | Descriptions, sous-titres |
+| `--t-label` | `11px` | `1.3` | `0.08em` | `600` | Badges de statut, métadonnées uppercase |
+| `--t-micro` | `10px` | `1.25` | `0.10em` | `600` | Horodatages, pastilles de notification |
+
+### 3. Système de Mouvement Déployé
+- `--spring: cubic-bezier(0.34, 1.45, 0.5, 1)` : Lentille liquide & sélection active.
+- `--glide: cubic-bezier(0.32, 0.72, 0, 1)` : Tiroirs, feuilles modales, sorties.
+- `--expo: cubic-bezier(0.16, 1, 0.3, 1)` : Révélations & apparitions vives.
+- `--dur-fast: 120ms` · `--dur-base: 200ms` · `--dur-slow: 280ms`.
+
+### 4. Registre des Surfaces Déployées
+| Surface | Fichier(s) | Améliorations apportées | État |
+| :--- | :--- | :--- | :--- |
 | **1. Échelle Typographique & Mouvement** | `kiwi-serveur.html` | Définition des jetons `--t-*` et des constantes de mouvement, migration de l'ensemble des règles de style | ✅ Déployé |
 | **2. Grille de Salle & Cartes de Table** | `kiwi-serveur.html` | Hiérarchie visuelle dominante sur `.tc-num` (17px mono bold), élévation glassmorphism, transitions d'état fluides, état vide conçu avec médaillon et CTA de réinitialisation | ✅ Déployé |
+| **3. Onglet Menu & Barre de Panier Flottante** | `kiwi-serveur.html` | Grille d'articles avec rythme nom/prix mono bold, lentille fluide sur `.cat-pill`, animation de pop à ressort `--spring` et chorégraphie d'entrée de la barre de commande | ✅ Déployé |
 
