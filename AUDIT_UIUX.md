@@ -128,3 +128,12 @@ Ce document consigne l'ensemble des audits visuels, ergonomiques, d'accessibilit
   1. Harmonisation des états vides avec médaillon Material Symbol (`inventory_2`), titrage structuré et indication claire du geste de scan douchette.
   2. Bumping de la révision `pos-boutique.js?v=3` dans le dispatcher.
 - **État** : ✅ Déployé
+
+### 7.3 Vertical Spa & Bien-être (`assets/pos-spa.js`)
+- **Fichiers** : `assets/pos-spa.js:971`, `assets/pos-dispatch.js:59`
+- **Problèmes identifiés** :
+  1. Ticket d'encaissement vide sans médaillon Material Symbols.
+- **Améliorations apportées** :
+  1. Refonte du conteneur vide de caisse avec médaillon Material Symbol (`inventory_2`), hiérarchie claire et indication pour charger une séance depuis le planning.
+  2. Bumping de la révision `pos-spa.js?v=3` dans le dispatcher.
+- **État** : ✅ Déployé

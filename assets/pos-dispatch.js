@@ -56,7 +56,7 @@
      * dur dans kiwi-caisse.html. */
     '0000': { id: 'pressing',    file: 'pressing-caisse', rev: '35', label: 'Pressing · Pressing Marshan' },
     '0002': { id: 'boutique',    file: 'pos-boutique',    rev: '3', label: 'Boutique · Maison Mansour' },
-    '0003': { id: 'spa',         file: 'pos-spa',         rev: '2', label: 'Spa · Spa Bahia' },
+    '0003': { id: 'spa',         file: 'pos-spa',         rev: '3', label: 'Spa · Spa Bahia' },
     '0004': { id: 'hotel',       file: 'pos-hotel',       rev: '2', label: 'Hôtel / Riad · Riad Yasmina' },
     '0005': { id: 'fastfood',    file: 'pos-fastfood',    rev: '2', label: 'Fast-food · Snack Chamal' },
     '0006': { id: 'boulangerie', file: 'pos-boulangerie', rev: '2', label: 'Boulangerie · Bab Kasbah' },

@@ -266,8 +266,8 @@ var SHELL = [
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */
-  '/assets/pos-spa.css?v=2',
-  '/assets/pos-spa.js?v=2',
+  '/assets/pos-spa.css?v=3',
+  '/assets/pos-spa.js?v=3',
   '/assets/pos-hotel.css?v=2',
   '/assets/pos-hotel.js?v=2',
   '/assets/pos-fastfood.css?v=2',
