@@ -373,7 +373,7 @@
   },
   "assets/pos-dispatch.js": {
     "v": "30",
-    "sha": "75ed2fb5b0a5ba3e"
+    "sha": "dca06033e15276d9"
   },
   "assets/pos-epicerie.css": {
     "v": "2",
@@ -384,12 +384,12 @@
     "sha": "8e1cd627c452de88"
   },
   "assets/pos-fastfood.css": {
-    "v": "2",
+    "v": "3",
     "sha": "339dff04cdb82825"
   },
   "assets/pos-fastfood.js": {
-    "v": "2",
-    "sha": "38b087470c5a225a"
+    "v": "3",
+    "sha": "067b4970af09d229"
   },
   "assets/pos-fleuriste.css": {
     "v": "2",

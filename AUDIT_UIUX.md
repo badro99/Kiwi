@@ -146,3 +146,12 @@ Ce document consigne l'ensemble des audits visuels, ergonomiques, d'accessibilit
   1. Harmonisation visuelle des arrivées, départs et liste des folios avec médaillons Material Symbol (`inventory_2`) et hiérarchie typographique adaptée au front-desk.
   2. Bumping de la révision `pos-hotel.js?v=3` dans le dispatcher.
 - **État** : ✅ Déployé
+
+### 7.5 Vertical Fast-Food & Snack (`assets/pos-fastfood.js`)
+- **Fichiers** : `assets/pos-fastfood.js:581`, `assets/pos-fastfood.js:1189`, `assets/pos-dispatch.js:61`
+- **Problèmes identifiés** :
+  1. Ticket vide et tableau de préparation KDS snack sans médaillon Material Symbols.
+- **Améliorations apportées** :
+  1. Harmonisation visuelle des états vides de commande et d'appel de numéros KDS avec médaillons Material Symbol (`inventory_2`) et hiérarchie soignée.
+  2. Bumping de la révision `pos-fastfood.js?v=3` dans le dispatcher.
+- **État** : ✅ Déployé

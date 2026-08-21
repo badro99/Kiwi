@@ -578,9 +578,12 @@
       </div>
       <div class="ff-tk-lines" id="ff-tk-lines">
         ${t.lines.length ? t.lines.map((l, i) => lineRow(l, i)).join('') : `
-          <div class="ff-tk-empty">
-            <i data-lucide="utensils"></i>
-            <div>La commande est vide.<br>Touchez la carte, le menu se propose tout seul.</div>
+          <div class="ff-tk-empty" style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:32px 14px; gap:8px;">
+            <div style="width:40px; height:40px; border-radius:12px; background:rgba(11,110,79,0.10); color:var(--atlas); display:grid; place-items:center; margin-bottom:4px;">
+              <svg width="20" height="20" viewBox="0 -960 960 960" fill="currentColor"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg>
+            </div>
+            <div style="font-weight:600; font-size:14px; color:var(--ink);">La commande est vide.</div>
+            <div style="font-size:12.5px; color:var(--n-500); line-height:1.45;">Touchez la carte, le menu se propose tout seul.</div>
           </div>`}
       </div>
       <div class="ff-tk-foot">
@@ -1186,7 +1189,7 @@
           ${cols.map(({ f, list }) => `
             <div class="ff-col">
               <div class="ff-col-head"><i style="background:${f.dot}"></i>${f.label} <span class="ct">${list.length}</span></div>
-              ${list.map(orderCard).join('') || `<div class="ff-bempty">${f.id === 'prep' ? 'Rien en cuisine, la grille n’attend que vous.' : f.id === 'pret' ? 'Rien de prêt pour l’instant.' : 'Les remises du service s’affichent ici.'}</div>`}
+              ${list.map(orderCard).join('') || `<div class="ff-bempty" style="display:flex; flex-direction:column; align-items:center; padding:36px 16px;"><div style="width:40px; height:40px; border-radius:12px; background:rgba(11,110,79,0.10); color:var(--atlas); display:grid; place-items:center; margin-bottom:10px;"><svg width="20" height="20" viewBox="0 -960 960 960" fill="currentColor"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg></div><div style="font-weight:600; color:var(--ink);">${f.id === 'prep' ? 'Rien en cuisine' : f.id === 'pret' ? 'Rien de prêt pour l’instant' : 'Aucune commande remise'}</div><div style="font-size:12.5px; color:var(--n-500); margin-top:4px;">${f.id === 'prep' ? 'La grille n’attend que vous.' : f.id === 'pret' ? 'Les plateaux terminés apparaîtront ici.' : 'Les remises du service s’affichent ici.'}</div></div>`}
             </div>`).join('')}
         </div>
       </div>`;
