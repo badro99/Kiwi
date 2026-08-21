@@ -50,7 +50,9 @@
 @media(min-width:900px){
   .bk-form{grid-template-columns:minmax(0,1fr) 300px;gap:24px;align-items:start}
   .bk-form>.bk-summary{margin-top:0;position:sticky;top:24px}
-  .bk-form>.bk-error,.bk-form>.bk-actions{grid-column:1/-1}
+  .bk-form>.bk-error,.bk-form>.bk-actions{grid-column:1/-1;margin-top:0}
+  .bk-form>.bk-error{min-height:0}
+  .bk-form>.bk-error:empty{display:none}
 }
 @media(max-width:760px){
   .bk-choice{padding:16px}
