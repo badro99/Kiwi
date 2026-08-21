@@ -89,7 +89,7 @@
   <!-- Real thermal printing: ESC/POS encoder + the Kiwi Printer Bridge client.
        KiwiHardware.print routes receipts through them when a printer is paired. -->
   <script src="assets/escpos.js?v=4" defer></script>
-  <script src="assets/printer-bridge.js?v=4" defer></script>
+  <script src="assets/printer-bridge.js?v=5" defer></script>
   <script src="assets/caisse-hardware.js?v=1" defer></script>
   <!-- Canal de poussée facultatif : quand le concentrateur temps réel est
        déployé, la caisse relit l'état des tables à l'instant où un serveur le
@@ -5372,7 +5372,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=402" defer></script>
+  <script src="assets/caisse-pwa.js?v=403" defer></script>
   <script src="assets/live-link.js?v=15" defer></script>
   <!-- The staff-role catalogue — says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -5446,7 +5446,7 @@
   <script src="assets/food-production-print.js?v=2" defer></script>
   <!-- OrderPro · orders placed on a customer's phone arrive here over WiFi;
        staff accept one and it becomes a kitchen ticket. Paired terminals only. -->
-  <script src="assets/orderpro-inbox.js?v=5" defer></script>
+  <script src="assets/orderpro-inbox.js?v=6" defer></script>
   <!-- Operator feature flags + managed PINs. Fail-safe: no backend ⇒ no change. -->
   <script src="assets/merchant-config.js" defer></script>
   <!-- « Rafraîchir » — un bouton commun à toutes les caisses (restaurant,
@@ -15710,7 +15710,17 @@
     function kdsStationFor(m) {
       const list = kdsStations();
       const want = m && m.station;
-      if (want && list.some(s => s.id === want)) return want;
+      if (want && list.some(s => s.id === want || String(s.name).toLowerCase().trim() === String(want).toLowerCase().trim())) {
+        const found = list.find(s => s.id === want || String(s.name).toLowerCase().trim() === String(want).toLowerCase().trim());
+        return found ? found.id : want;
+      }
+      if (m && m.cat && carteState.cats) {
+        const catObj = carteState.cats.find(c => c.id === m.cat || String(c.name).toLowerCase().trim() === String(m.cat).toLowerCase().trim());
+        if (catObj && catObj.station) {
+          const found = list.find(s => s.id === catObj.station || String(s.name).toLowerCase().trim() === String(catObj.station).toLowerCase().trim());
+          if (found) return found.id;
+        }
+      }
       if (IS_DEMO && m && KDS_CAT_STATION[m.cat]) return KDS_CAT_STATION[m.cat];
       return kdsKitchenId();
     }
@@ -17527,9 +17537,10 @@
        existe toujours. Un ticket au mauvais poste reste un ticket ; un ticket
        nulle part, non. */
     function kdsStationForName(name) {
-      const n = String(name || '').toLowerCase();
+      const n = String(name || '').toLowerCase().trim();
       try {
-        const hit = (menu || []).find(m => String(m.name || '').toLowerCase() === n);
+        const pool = (Array.isArray(menuItems) && menuItems.length) ? menuItems : (Array.isArray(menu) ? menu : []);
+        const hit = pool.find(m => String(m.name || '').toLowerCase().trim() === n);
         if (hit) return kdsStationFor(hit);
       } catch (_) {}
       return kdsKitchenId();

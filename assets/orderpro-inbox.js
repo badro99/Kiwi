@@ -189,7 +189,7 @@
         if (j && j.ok) {
           if (prev && j.status) prev.status = j.status;
           if (prev && Array.isArray(j.lines)) prev.lines = j.lines;
-          bridge([]);
+          bridge(prev ? [prev] : []);
           return j;
         }
         /* Refus du serveur. Un 409 « bad-transition » n'est PAS une panne :

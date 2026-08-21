@@ -80,8 +80,8 @@
     "sha": "112638dbbb35294e"
   },
   "assets/caisse-pwa.js": {
-    "v": "402",
-    "sha": "4cd6cf2eaf8d362b"
+    "v": "403",
+    "sha": "8cdab1c5121f626c"
   },
   "assets/caisse-skin.css": {
     "v": "3",
@@ -128,8 +128,8 @@
     "sha": "94d688b1b5cdb89a"
   },
   "assets/dashboard-pwa.js": {
-    "v": "402",
-    "sha": "7903a350cdc3f37b"
+    "v": "403",
+    "sha": "a729ab2e3d6de83e"
   },
   "assets/dateRange.js": {
     "v": "13",
@@ -160,8 +160,8 @@
     "sha": "aa550a22766dac1a"
   },
   "assets/employee-live.js": {
-    "v": "401",
-    "sha": "6dde0eb163d07e56"
+    "v": "402",
+    "sha": "f57bb7cdf1d3deda"
   },
   "assets/employee-planning.js": {
     "v": "6",
@@ -320,8 +320,8 @@
     "sha": "5a6bc6f909c5889e"
   },
   "assets/orderpro-inbox.js": {
-    "v": "5",
-    "sha": "0acaa7e32406975d"
+    "v": "6",
+    "sha": "dedc10e03f86a324"
   },
   "assets/orderpro-publish.js": {
     "v": "3",
@@ -552,8 +552,8 @@
     "sha": "a855894281afedca"
   },
   "assets/printer-bridge.js": {
-    "v": "4",
-    "sha": "a419faeecbf058b7"
+    "v": "5",
+    "sha": "819958d296e4b867"
   },
   "assets/pwa-update.js": {
     "v": "359",

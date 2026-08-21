@@ -41,7 +41,7 @@
   };
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     window.addEventListener('load', function () {
-      navigator.serviceWorker.register('/kiwi-sw.js?v=459').then(function (reg) {
+      navigator.serviceWorker.register('/kiwi-sw.js?v=460').then(function (reg) {
         try { reg.update(); } catch (_) {}
         if (window.KiwiPWAUpdate) window.KiwiPWAUpdate.watch(reg);
       }).catch(function () {});

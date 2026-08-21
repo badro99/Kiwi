@@ -241,6 +241,28 @@
   function resolveStationTarget(stationId, merchant) {
     var sc = getStationConfig(merchant);
     var profId = (sc.bindings && sc.bindings[stationId]) || '';
+    if (!profId && stationId) {
+      var norm = String(stationId).toLowerCase().trim();
+      var normClean = norm.replace(/[^a-z0-9]/g, '');
+      var bKeys = Object.keys(sc.bindings || {});
+      for (var i = 0; i < bKeys.length; i++) {
+        var k = bKeys[i];
+        var kNorm = k.toLowerCase().trim();
+        if (kNorm === norm || kNorm.replace(/[^a-z0-9]/g, '') === normClean) {
+          profId = sc.bindings[k];
+          break;
+        }
+      }
+      if (!profId && Array.isArray(sc.profiles)) {
+        var pMatch = sc.profiles.find(function (p) {
+          if (!p || !p.name) return false;
+          var pNorm = p.name.toLowerCase().trim();
+          var pClean = pNorm.replace(/[^a-z0-9]/g, '');
+          return pNorm === norm || pClean === normClean || normClean.indexOf(pClean) >= 0 || pClean.indexOf(normClean) >= 0;
+        });
+        if (pMatch) return pMatch;
+      }
+    }
     if (!profId && stationId !== 'caisse') {
       profId = (sc.bindings && sc.bindings.caisse) || '';
     }
