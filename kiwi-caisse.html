@@ -8728,7 +8728,7 @@
      * depuis toujours : un poste doit avoir la même couleur au bureau et au
      * comptoir, sinon la pastille ne sert plus de repère. */
     const STATION_PALETTE = ['#1F5D3C', '#3FB67A', '#D99A2B', '#3677A6', '#164A2F', '#C24A2E', '#C97A4A'];
-    const carteState = { stations: [], kitchenId: '', opts: [], cats: [], kdsReady: false };
+    const carteState = { stations: [], kitchenId: '', opts: [], cats: [], formulaItems: [], kdsReady: false };
 
     function carteSlug() {
       try { const p = storePaired(); return (p && p.merchant) || ''; } catch (_) { return ''; }
@@ -8770,15 +8770,19 @@
       /* Un plat sans catégorie ne doit pas disparaître de la caisse : le patron
          l'a créé, il se vend. On lui ouvre une rubrique « Autres ». */
       let loose = false;
-      const items = (d.items || []).filter(it => it && it.id && it.name && it.avail !== false).map((it) => {
+      const allRawItems = (d.items || []).concat(Array.isArray(d.formulaItems) ? d.formulaItems : []);
+      const allItems = allRawItems.filter(it => it && it.id && it.name && !it.archived).map((it) => {
         const cat = (it.catId && labels[it.catId]) ? it.catId : (loose = true, '_autres');
         const parent = cats.find(c => c.id === cat);
         const sub = parent && it.subId ? (parent.sub || []).find(s => s.id === it.subId) : null;
         return { id: it.id, cat, subId: sub ? sub.id : null, subLabel: sub ? sub.name : '', name: it.name, price: +it.price || 0, station: catStation[cat] || '',
           /* Les groupes d'options que ce produit demande. Des identifiants : le
              libellé vit une seule fois, dans carteState.opts. */
-          opts: Array.isArray(it.opts) ? it.opts.slice() : [], formula: it.formula || null };
+          opts: Array.isArray(it.opts) ? it.opts.slice() : [], formula: it.formula || null,
+          avail: it.avail !== false, formulaOnly: it.formulaOnly === true, archived: it.archived === true };
       });
+      const items = allItems.filter((it) => it.avail !== false && !it.formulaOnly && !it.archived);
+      carteState.formulaItems = allItems;
       if (loose) {
         labels._autres = 'Autres';
         colors._autres = CAT_PALETTE[cats.length % CAT_PALETTE.length];
@@ -9283,8 +9287,14 @@
       optVeil.classList.add('is-open');
     }
 
+    function standaloneMenuItem(itemId) {
+      const source = (carteState.formulaItems || []).find(m => String(m.id) === String(itemId)) || menuItems.find(m => String(m.id) === String(itemId));
+      if (source && (source.archived || source.formulaOnly || source.avail === false)) { toast('Article non vendable individuellement'); return null; }
+      return menuItems.find(m => m.id === itemId) || null;
+    }
+
     function addToCart(itemId) {
-      const item = menuItems.find(m => m.id === itemId);
+      const item = standaloneMenuItem(itemId);
       if (!item) return;
       if (item.formula && Array.isArray(item.formula.slots) && item.formula.slots.length) {
         openCaisseFormula(item, (parent, parts) => { cart.push(parent, ...parts); renderMenu(); renderCart(); });
@@ -9302,7 +9312,7 @@
       if (!optVeil) { optVeil = document.createElement('div'); optVeil.className = 'cloture-veil opt-veil'; document.body.appendChild(optVeil); }
       const picked = Object.fromEntries(slots.map(s => [s.id, []]));
       const optPicked = Object.fromEntries(groups.map(g => [g.id, []]));
-      const choiceItem = c => menuItems.find(m => String(m.id) === String(c.itemId));
+      const choiceItem = c => (carteState.formulaItems || menuItems).find(m => String(m.id) === String(c.itemId) && !m.archived && m.avail !== false);
       function paint() {
         const missingSlots = slots.filter(s => picked[s.id].length < Math.max(0, +s.min || 0));
         const missingGroups = groups.filter(g => g.required && !optPicked[g.id].length);
@@ -11011,7 +11021,7 @@
     }
 
     function addToTableOrder(tableId, itemId) {
-      const item = menuItems.find(m => m.id === itemId);
+      const item = standaloneMenuItem(itemId);
       if (!item) return;
       const groups = itemOptGroups(item);
       if (item.formula && Array.isArray(item.formula.slots) && item.formula.slots.length) {

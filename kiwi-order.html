@@ -3694,6 +3694,7 @@ em, i, cite, dfn, var { font-style: normal; }
       { id: 'avocado',      cat: 'drink',  name: 'Smoothie avocat-banane', desc: 'Lait d\'amande, miel, cardamome',            price: 26, icon: 'glass-water', options: [OPT.sucre, OPT.glace] },
       { id: 'sparkling',    cat: 'drink',  name: 'Eau pétillante Oulmès', desc: '33cl · servie fraîche',                       price:  8, icon: 'glass-water' },
     ];
+    const ORDER_ITEM_FLAGS = new Map();
     const ICON_CLASS = {
       coffee: 'coffee',
       croissant: 'pastry',
@@ -4004,6 +4005,8 @@ em, i, cite, dfn, var { font-style: normal; }
 
     /* ============ + button on a menu item ============ */
     function handleAddClick(itemId) {
+      const source = ORDER_ITEM_FLAGS.get(String(itemId));
+      if (source && (source.archived || source.formulaOnly || source.avail === false)) { showToast(t('closed_order')); return; }
       const item = itemOf(itemId);
       if (!item) return;
       if (item.options && item.options.length > 0) {
@@ -4849,7 +4852,10 @@ em, i, cite, dfn, var { font-style: normal; }
     // Lucide icons) simply aren't present for a real merchant — items degrade to
     // name · desc · price with a direct add-to-cart.
     function adaptServerMenu(menu) {
-      const items = (menu.items || []).filter((it) => it.avail !== false);
+      const allItems = (menu.items || []).concat(Array.isArray(menu.formulaItems) ? menu.formulaItems : []);
+      ORDER_ITEM_FLAGS.clear();
+      allItems.forEach((it) => { if (it && it.id) ORDER_ITEM_FLAGS.set(String(it.id), it); });
+      const items = (menu.items || []).filter((it) => it.avail !== false && !it.formulaOnly && !it.archived);
       const groups = new Map();
       (Array.isArray(menu.opts) ? menu.opts : []).forEach((g) => {
         if (!g || !g.id || !Array.isArray(g.choices) || !g.choices.length) return;

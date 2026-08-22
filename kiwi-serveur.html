@@ -5573,7 +5573,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     /* Les postes de préparation du patron, dans SON ordre — le premier est celui
        qui reçoit un plat qu'il n'a affecté à rien. Vide tant que la carte n'est
        pas arrivée, et vide en démo (où le tri se fait par catégorie). */
-    let svStations = [], svCats = [], activeSub = null;
+    let svStations = [], svCats = [], svFormulaItems = [], activeSub = null;
     function svSlug() {
       try { const p = svPaired(); if (p && p.merchant) return p.merchant; } catch (_) {}
       /* The employee portal is not paired like a till. Its authenticated
@@ -5600,7 +5600,8 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       const catStation = {};
       cats.forEach((c) => { labels[c.id] = c.name || 'Sans nom'; catStation[c.id] = String(c.station || ''); order.push(c.id); });
       let loose = false;
-      const items = (d.items || []).filter(it => it && it.id && it.name).map((it) => ({
+      const allRawItems = (d.items || []).concat(Array.isArray(d.formulaItems) ? d.formulaItems : []);
+      const allItems = allRawItems.filter(it => it && it.id && it.name && !it.archived).map((it) => ({
         id: it.id,
         cat: (it.catId && labels[it.catId]) ? it.catId : (loose = true, '_autres'),
         subId: it.subId || null,
@@ -5613,7 +5614,11 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         opts: Array.isArray(it.opts) ? it.opts.slice() : [],
         formula: it.formula || null,
         avail: it.avail !== false,
+        formulaOnly: it.formulaOnly === true,
+        archived: it.archived === true,
       }));
+      const items = allItems.filter((it) => it.avail !== false && !it.formulaOnly && !it.archived);
+      svFormulaItems = allItems;
       if (loose) { labels._autres = 'Autres'; order.push('_autres'); }
       svStations = (Array.isArray(d.stations) ? d.stations : [])
         .filter(s => s && s.id && s.name)
@@ -8551,6 +8556,8 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
 
     function addToTableOrder(tableId, itemId) {
       if (!tableOrders[tableId]) tableOrders[tableId] = [];
+      const source = svFormulaItems.find(m => String(m.id) === String(itemId)) || menuItems.find(m => String(m.id) === String(itemId));
+      if (source && (source.archived || source.formulaOnly || source.avail === false)) { toast('Article non vendable individuellement'); return; }
       const item = menuItems.find(m => m.id === itemId);
       if (!item) return;
       // Stack onto the un-noted line; a noted line splits off so it keeps its note.
@@ -8715,7 +8722,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
           const sel = new Set();
           if (s.choices && s.choices.length === 1) {
             const ch = s.choices[0];
-            const chItem = menuItems.find(x => x.id === ch.itemId);
+            const chItem = (typeof svFormulaItems !== 'undefined' ? svFormulaItems : menuItems).find(x => x.id === ch.itemId);
             if (chItem && chItem.avail !== false) {
               sel.add(ch.itemId);
             }
@@ -8790,7 +8797,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
 
         if (isCollapsed) {
           const ch = s.choices[0];
-          const chItem = menuItems.find(x => x.id === ch.itemId);
+          const chItem = (typeof svFormulaItems !== 'undefined' ? svFormulaItems : menuItems).find(x => x.id === ch.itemId);
           const chName = chItem ? chItem.name : ch.itemId;
           const extraTxt = ch.extra ? `+${ch.extra} MAD` : 'inclus';
           return `
@@ -8807,7 +8814,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         }
 
         const chips = (s.choices || []).map(ch => {
-          const chItem = menuItems.find(x => x.id === ch.itemId);
+          const chItem = (typeof svFormulaItems !== 'undefined' ? svFormulaItems : menuItems).find(x => x.id === ch.itemId);
           const chName = chItem ? chItem.name : ch.itemId;
           const avail = chItem ? (chItem.avail !== false) : true;
           const on = sel.has(ch.itemId);
@@ -8915,7 +8922,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
           const sel = uSlots[s.id];
           if (!sel) return;
           sel.forEach(chosenId => {
-            const chItem = menuItems.find(x => x.id === chosenId);
+            const chItem = (typeof svFormulaItems !== 'undefined' ? svFormulaItems : menuItems).find(x => x.id === chosenId);
             const chName = chItem ? chItem.name : chosenId;
             const chStation = (chItem && chItem.station) || '';
             const childLine = {

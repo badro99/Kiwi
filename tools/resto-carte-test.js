@@ -129,6 +129,11 @@ const PAYLOAD = {
     { id: 'a-04', name: 'Épuisé',      price: 30, catId: 'c-froid', avail: false },
     { id: 'a-05', name: 'Bouteille',   price: 8,  catId: null,      avail: true },
     { id: 'a-06', name: 'Fantôme',     price: 9,  catId: 'c-inexistante', avail: true },
+    { id: 'a-07', name: 'Ancien plat', price: 19, catId: 'c-chaud', avail: true, archived: true },
+  ],
+  formulaItems: [
+    { id: 'f-01', name: 'Dessert secret', price: 18, catId: 'c-froid', avail: true, formulaOnly: true },
+    { id: 'f-02', name: 'Dessert épuisé', price: 18, catId: 'c-froid', avail: false, formulaOnly: true },
   ],
 };
 
@@ -159,7 +164,7 @@ function runRebuild(payload) {
     function kdsRepaintStations() { throw new Error('kdsRepaintStations appelé alors que l\\'écran cuisine n\\'est pas monté'); }
     ${body}
     const changed = rebuildCarte();
-    return { changed, catLabels, catColor, catOrder, menuItems, activeCat, stations: carteState.stations, kitchenId: carteState.kitchenId, opts: carteState.opts };
+    return { changed, catLabels, catColor, catOrder, menuItems, formulaItems: carteState.formulaItems, activeCat, stations: carteState.stations, kitchenId: carteState.kitchenId, opts: carteState.opts };
   `);
   return fn(scope);
 }
@@ -167,6 +172,9 @@ function runRebuild(payload) {
 const r = runRebuild(PAYLOAD);
 ok(r.changed === true, 'rebuildCarte() signale qu\'elle a reconstruit');
 eq(r.menuItems.length, 5, 'un plat marqué indisponible ne descend pas au comptoir');
+ok(!r.menuItems.some((m) => m.id === 'f-01'), 'un article réservé aux formules ne descend pas dans la grille');
+ok(r.formulaItems.some((m) => m.id === 'f-01'), 'il reste disponible dans le registre du sélecteur de formule');
+ok(!r.formulaItems.some((m) => m.id === 'a-07'), 'un article archivé est absent de tous les registres de vente');
 ok(!r.menuItems.some((m) => m.name === 'Épuisé'), 'le plat indisponible est bien celui qui manque');
 
 const noCat = r.menuItems.find((m) => m.id === 'a-05');
@@ -230,6 +238,8 @@ ok(/const CARTE_MIRROR = 'kiwi:menuMirror:v1:';/.test(caisse),
   'le miroir de la carte est préfixé kiwi: (donc balayé au changement de compte)');
 ok(/CARTE_MIRROR \+ slug/.test(caisse),
   'et rangé par slug — deux commerces sur un appareil ne se mélangent pas');
+ok(/source && \(source\.archived \|\| source\.formulaOnly \|\| source\.avail === false\)/.test(caisse),
+  'le point d’ajout caisse refuse aussi un identifiant périmé ou injecté directement');
 ok(/kiwi:openingFloat:v1:/.test(caisse),
   'le fond d\'ouverture mémorisé est lui aussi par établissement et sous kiwi:');
 
@@ -345,6 +355,8 @@ ok(/opts\.copy === true \? d\.T\.copy : str\(opts\.copy, 40\)/.test(receiptSrc),
 /* ── 9. les postes de préparation, du bureau jusqu'au bon papier ───────────── */
 
 const menuApi = fs.readFileSync(path.join(ROOT, 'functions/api/menu.js'), 'utf8');
+ok(/formulaItems/.test(menuApi) && /!it\.archived && !it\.formulaOnly/.test(menuApi),
+  'la projection publique garde les anciens clients sûrs et réserve formulaItems aux nouveaux sélecteurs');
 ok(/station: str\(c && c\.station, 40\)/.test(menuApi),
   'sanitizeMenu garde le poste de la CATÉGORIE — c\'est là que vit le routage');
 ok(/out\.kitchenId = str\(raw\.kitchenId, 40\)/.test(menuApi),

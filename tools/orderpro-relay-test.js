@@ -82,8 +82,9 @@ const CARTE = {
       formula: { slots: [{ id: 'drink', label: 'Boisson', min: 1, max: 1, choices: [
         { itemId: 'i5', extra: 0 }, { itemId: 'i6', extra: 20 },
       ] }] } },
-    { id: 'i5', name: 'Carrot Juice', price: 28, catId: 'c1', avail: true },
-    { id: 'i6', name: 'Coconut Matcha', price: 63, catId: 'c1', avail: true },
+    { id: 'i5', name: 'Carrot Juice', price: 28, catId: 'c1', avail: true, formulaOnly: true },
+    { id: 'i6', name: 'Coconut Matcha', price: 63, catId: 'c1', avail: true, formulaOnly: true },
+    { id: 'i7', name: 'Ancien dessert', price: 40, catId: 'c1', avail: true, archived: true },
   ],
   opts: [{ id: 'egg-style', name: 'Œufs', kind: 'one', required: true, choices: [
     { id: 'fried', name: 'Œufs au plat', price: 0, emoji: '🍳' },
@@ -199,6 +200,13 @@ async function get(fn, qs, headers = {}) {
     /kind: 'formula', formulaUid, formulaName: nameOf\(l\.id\)/.test(orderProPage)
       && /kind: 'formula-part', formulaUid/.test(orderProPage)
       && /formulaSlotId: slot\.formulaSlotId/.test(orderProPage));
+  ok('OrderPro garde un registre séparé pour refuser les ajouts directs périmés',
+    /const MENU_ALL = new Map\(\)/.test(orderProPage)
+      && /function standaloneMenuItem\(itemId\)[\s\S]{0,260}source\.archived \|\| source\.formulaOnly \|\| source\.avail === false/.test(orderProPage));
+  ok('OrderPro applique les bornes min/max des étapes et retire une formule devenue impossible',
+    /count < Math\.max\(0, Number\(opt\.min\)/.test(orderProPage)
+      && /arr\.length < Math\.max\(1, Number\(def\.max\)/.test(orderProPage)
+      && /if \(formulaBroken\) continue;/.test(orderProPage));
   ok('OrderPro envoie les identifiants canoniques des options ordinaires',
     /optionChoices: describeOptionChoices\(l\)/.test(orderProPage)
       && /if \(opt\.formulaSlotId\) continue/.test(orderProPage));
@@ -217,6 +225,13 @@ async function get(fn, qs, headers = {}) {
 
   r = await post(placeOrder, { merchant: SLUG, mode: 'table', table: '7', session: priceSession, lines: [line('i1', 2), line('i2', 3)] });
   ok('les quantités multiplient bien', r.body.total === 90 * 2 + 15 * 3, 'total=' + r.body.total);
+
+  r = await post(placeOrder, { merchant: SLUG, mode: 'table', table: '7', session: priceSession, lines: [line('i5')] });
+  ok('un article réservé aux formules est refusé seul avec un motif distinct',
+    r.status === 409 && r.body.error === 'formula_only', JSON.stringify(r.body));
+  r = await post(placeOrder, { merchant: SLUG, mode: 'table', table: '7', session: priceSession, lines: [line('i7')] });
+  ok('un article archivé est refusé partout avec un motif distinct',
+    r.status === 409 && r.body.error === 'archived', JSON.stringify(r.body));
 
   r = await post(placeOrder, { merchant: SLUG, mode: 'table', table: '7', session: priceSession, lines: [line('inconnu')] });
   ok('un plat qui n\'est pas à la carte est refusé', r.status === 409 && r.body.error === 'menu-changed');

@@ -4185,6 +4185,7 @@ em, i, cite, dfn, var { font-style: normal; }
        - cat must match a menu-tab data-tab; icon maps to a style via ICON_CLASS below.
        - options, video and tag are optional. */
     const MENU = [];
+    const MENU_ALL = new Map();
     const MENU_SUBTABS = new Map();
     const ICON_CLASS = {
       coffee: 'coffee',
@@ -4614,8 +4615,14 @@ em, i, cite, dfn, var { font-style: normal; }
     }
 
     /* ============ + button on a menu item ============ */
+    function standaloneMenuItem(itemId) {
+      const source = MENU_ALL.get(String(itemId));
+      if (source && (source.archived || source.formulaOnly || source.avail === false)) { showToast(t('dish_out')); return null; }
+      return itemOf(itemId);
+    }
+
     function handleAddClick(itemId) {
-      const item = itemOf(itemId);
+      const item = standaloneMenuItem(itemId);
       if (!item) return;
       if (item.options && item.options.length > 0) {
         openCustomizer(item);
@@ -4694,7 +4701,9 @@ em, i, cite, dfn, var { font-style: normal; }
       } else {
         const arr = customizerSelections[optKey] || [];
         const i = arr.indexOf(choiceId);
-        if (i >= 0) arr.splice(i, 1); else arr.push(choiceId);
+        const def = (customizerItem.options || []).find(opt => opt.key === optKey);
+        if (i >= 0) arr.splice(i, 1);
+        else if (!def || !def.formulaSlotId || arr.length < Math.max(1, Number(def.max) || 1)) arr.push(choiceId);
         customizerSelections[optKey] = arr;
       }
       // Update chip visuals
@@ -4733,6 +4742,13 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     function confirmCustomizer() {
       if (!customizerItem) return;
+      const invalidFormulaSlot = (customizerItem.options || []).find((opt) => {
+        if (!opt.formulaSlotId) return false;
+        const selected = customizerSelections[opt.key];
+        const count = Array.isArray(selected) ? selected.length : (selected ? 1 : 0);
+        return count < Math.max(0, Number(opt.min) || 0) || count > Math.max(1, Number(opt.max) || 1);
+      });
+      if (invalidFormulaSlot) { showToast(t('order_send_failed')); return; }
       customizerNote = $('#custom-note-input').value.trim();
       addLineToCart({
         id: customizerItem.id,
@@ -5682,8 +5698,11 @@ em, i, cite, dfn, var { font-style: normal; }
        ═══════════════════════════════════════════════════════════════════════ */
     function bootRestaurant(data) {
       const cats = Array.isArray(data.cats) ? data.cats : [];
-      const items = (Array.isArray(data.items) ? data.items : []).filter(i => i && i.avail !== false);
+      const allItems = (Array.isArray(data.items) ? data.items : []).concat(Array.isArray(data.formulaItems) ? data.formulaItems : []);
+      const items = allItems.filter(i => i && i.avail !== false && !i.formulaOnly && !i.archived);
       if (!items.length) return false;
+      MENU_ALL.clear();
+      allItems.forEach((it) => { if (it && it.id) MENU_ALL.set(String(it.id), it); });
 
       const groups = new Map();
       (Array.isArray(data.opts) ? data.opts : []).forEach(g => {
@@ -5707,10 +5726,16 @@ em, i, cite, dfn, var { font-style: normal; }
       const names = {};
       for (const it of items) {
         const formulaOptions = it.formula && Array.isArray(it.formula.slots) ? it.formula.slots.map(s => {
-          const g = { key: 'formula_' + String(s.id), formulaSlotId: String(s.id), label: String(s.label || ''), type: (+s.max || 1) > 1 ? 'multi' : 'single', default: '', required: (+s.min || 0) > 0,
-            choices: (Array.isArray(s.choices) ? s.choices : []).map(c => { const target=items.find(x=>String(x.id)===String(c.itemId)); return target ? {id:String(c.itemId),label:String(target.name),emoji:'',delta:Math.max(0,Number(c.extra)||0)} : null; }).filter(Boolean) };
+          const g = { key: 'formula_' + String(s.id), formulaSlotId: String(s.id), label: String(s.label || ''), type: (+s.max || 1) > 1 ? 'multi' : 'single', default: '', required: (+s.min || 0) > 0, min: Math.max(0, +s.min || 0), max: Math.max(1, +s.max || 1),
+            choices: (Array.isArray(s.choices) ? s.choices : []).map(c => { const target=allItems.find(x=>String(x.id)===String(c.itemId) && !x.archived && x.avail !== false); return target ? {id:String(c.itemId),label:String(target.name),emoji:'',delta:Math.max(0,Number(c.extra)||0)} : null; }).filter(Boolean) };
           OPT[g.key] = g; return g;
         }).filter(g=>g.choices.length) : [];
+        const formulaBroken = it.formula && Array.isArray(it.formula.slots)
+          && it.formula.slots.some((slot) => {
+            const mapped = formulaOptions.find((opt) => opt.formulaSlotId === String(slot.id));
+            return !mapped || mapped.choices.length < Math.max(0, Number(slot.min) || 0);
+          });
+        if (formulaBroken) continue;
         MENU.push({
           id: String(it.id),
           cat: String(it.catId || ''),

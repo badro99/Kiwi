@@ -106,6 +106,8 @@ export async function onRequestPost(context) {
    * prix du téléphone — transformait une erreur de configuration réparable en
    * trente secondes en une commande où l'inconnu fixait le prix. */
   if (priced.noCatalogue) return json({ error: 'menu-not-published' }, 409);
+  if (priced.archived.length) return json({ error: 'archived', archived: priced.archived }, 409);
+  if (priced.formulaOnly.length) return json({ error: 'formula_only', formulaOnly: priced.formulaOnly }, 409);
   if (priced.unknown.length || priced.unavailable.length || priced.invalidOptions.length) {
     return json({
       error: 'menu-changed',

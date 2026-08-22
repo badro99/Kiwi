@@ -72,6 +72,9 @@
     noItems:    { fr: 'Aucun produit dans cette catégorie pour le moment.', en: 'No products in this category yet.', ar: 'لا منتجات في هذه الفئة بعد.' },
     avail:      { fr: 'Disponible', en: 'Available', ar: 'متاح' },
     unavail:    { fr: 'Indisponible', en: 'Unavailable', ar: 'غير متاح' },
+    standalone: { fr: 'Vendable individuellement', en: 'Sellable individually', ar: 'كيتباع بوحدو' },
+    formulaOnly:{ fr: 'Réservé aux formules', en: 'Formula only', ar: 'غير فالفورمولات' },
+    archived:   { fr: 'Archivé', en: 'Archived', ar: 'مؤرشف' },
     saved:      { fr: 'Menu mis à jour', en: 'Menu updated', ar: 'تم تحديث القائمة' },
     firstCat:   { fr: 'Commencez par créer une catégorie (ex. Entrées, Plats, Boissons).', en: 'Start by creating a category (e.g. Starters, Mains, Drinks).', ar: 'ابدأ بإنشاء فئة (مثل مقبلات، أطباق، مشروبات).' },
     mediaL:     { fr: 'Photo / vidéo (option)', en: 'Photo / video (optional)', ar: 'صورة / فيديو (اختياري)' },
@@ -247,7 +250,7 @@
    * la lecture (pas de fantôme sélectionnable pour le serveur). */
   function cleanFormula(formula, items) {
     if (!formula || typeof formula !== 'object' || !Array.isArray(formula.slots)) return null;
-    const itemMap = new Set((items || []).map((i) => i && i.id).filter(Boolean));
+    const itemMap = new Set((items || []).filter((i) => i && !i.archived).map((i) => i.id).filter(Boolean));
     const rawSlots = Array.isArray(formula.slots) ? formula.slots.slice(0, 10) : [];
     const slots = rawSlots.map((s, idx) => {
       if (!s || typeof s !== 'object') return null;
@@ -580,6 +583,8 @@
         subId: data.subId || null,
         desc: String(data.desc || '').trim(),
         avail: data.avail !== false,
+        formulaOnly: data.formulaOnly === true,
+        archived: data.archived === true,
         // Pas de poste sur le plat : il suit sa catégorie. Les valeurs écrites
         // par la version précédente restent dans le document et ne sont plus
         // lues — ensureKitchen() les a remontées à la catégorie une fois pour
@@ -607,6 +612,8 @@
       if ('subId' in patch) it.subId = patch.subId || null;
       if (patch.desc != null) it.desc = String(patch.desc).trim();
       if (patch.avail != null) it.avail = !!patch.avail;
+      if (patch.formulaOnly != null) it.formulaOnly = !!patch.formulaOnly;
+      if (patch.archived != null) it.archived = !!patch.archived;
       if ('opts' in patch) it.opts = Array.isArray(patch.opts) ? patch.opts.slice() : [];
       if ('photo' in patch) it.photo = String(patch.photo || '');
       if ('video' in patch) it.video = String(patch.video || '');
@@ -614,6 +621,20 @@
         const formula = cleanFormula(patch.formula, d.items);
         if (formula) it.formula = formula;
         else delete it.formula;
+      }
+      if ('archived' in patch) {
+        (d.items || []).forEach((candidate) => {
+          if (!candidate || !candidate.formula) return;
+          const cleaned = cleanFormula(candidate.formula, d.items);
+          if (cleaned) candidate.formula = cleaned;
+          else delete candidate.formula;
+        });
+        (d.formulaTemplates || []).forEach((template) => {
+          if (!template || !template.formula) return;
+          const cleaned = cleanFormula(template.formula, d.items);
+          if (cleaned) template.formula = cleaned;
+          else template.formula = { slots: [] };
+        });
       }
       return d;
     });
@@ -1431,7 +1452,7 @@
     const cats = d.cats || [];
     if (!cats.length) { promptText({ title: tr(T.addCat), desc: tr(T.firstCat), placeholder: tr(T.catName), ok: tr(T.addCat) }, (v) => { if (v) { addCategory(v); render(); } }); return; }
     const selectedCat = catById(d, activeCat) ? activeCat : cats[0].id;
-    const it = existing || { name: '', price: '', catId: selectedCat, subId: activeSub || null, desc: '', avail: true, photo: '', video: '', opts: [] };
+    const it = existing || { name: '', price: '', catId: selectedCat, subId: activeSub || null, desc: '', avail: true, formulaOnly: false, archived: false, photo: '', video: '', opts: [] };
     /* Le coût ne vient pas de l'article : il se lit dans le carnet des coûts,
        par identifiant. Un article neuf n'en a pas encore — il sera écrit après
        addItem(), quand l'identifiant existe. */
@@ -1495,6 +1516,10 @@
           </div>
         </div>
         <div class="mx-field"><label>${esc(tr(T.descL))}</label><textarea data-f-desc placeholder="${esc(tr(T.descL))}">${esc(it.desc || '')}</textarea></div>
+        <div class="mx-field two">
+          <label class="mx-formula-toggle-label"><input type="checkbox" data-f-standalone ${it.formulaOnly ? '' : 'checked'} /><span>${esc(tr(T.standalone))}</span></label>
+          <label class="mx-formula-toggle-label"><input type="checkbox" data-f-archived ${it.archived ? 'checked' : ''} /><span>${esc(tr(T.archived))}</span></label>
+        </div>
         <div class="mx-field">
           <label>${esc(tr(T.mediaL))}</label>
           <div class="mx-media" data-f-media></div>
@@ -1509,7 +1534,7 @@
     q('[data-f-cat]').addEventListener('change', (e) => { q('[data-f-sub]').innerHTML = subOptsHtml(e.target.value, null); });
 
     /* ── formule / menu composé ─────────────────────────────────────────── */
-    const availableItems = (d.items || []).filter((x) => x && x.id && (!existing || x.id !== existing.id));
+    const availableItems = (d.items || []).filter((x) => x && x.id && !x.archived && (!existing || x.id !== existing.id));
     const isFormulaCb = q('[data-f-is-formula]');
     const formulaWrap = q('[data-f-formula-wrap]');
     const slotsContainer = q('[data-f-slots-container]');
@@ -1809,6 +1834,8 @@
         catId: q('[data-f-cat]').value, subId: q('[data-f-sub]').value || null, desc: q('[data-f-desc]').value,
         photo: media.photo, video: media.video,
         formula: formulaData,
+        formulaOnly: !q('[data-f-standalone]').checked,
+        archived: q('[data-f-archived]').checked,
         // Aucun poste ici : un plat part au poste de SA catégorie. Changer de
         // catégorie dans ce formulaire change donc son poste — c'est la même
         // phrase dite une fois, et c'est tout l'intérêt.
@@ -2338,7 +2365,8 @@
         return it;
       });
     },
-    availableItems: (vid) => (window.KiwiMenuStore.items(vid) || []).filter((i) => i.avail !== false),
+    availableItems: (vid) => (window.KiwiMenuStore.items(vid) || []).filter((i) => i.avail !== false && !i.formulaOnly && !i.archived),
+    formulaItems: (vid) => (window.KiwiMenuStore.items(vid) || []).filter((i) => !i.archived),
     cleanFormula, saveFormulaTemplate, deleteFormulaTemplate,
     isEmpty: (vid) => store.isEmpty(vid),
     subscribe: (fn) => store.subscribe(fn),
