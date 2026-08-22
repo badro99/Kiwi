@@ -12048,11 +12048,43 @@
       });
     }
 
+    /* Ouverture directe — le bouton « Caisse directe » de la console opérateur.
+     * Deux portes séparent l'opérateur du registre : le code personnel, que
+     * caisse-pairing lève déjà sous ?op=1 après avoir fait prouver la session
+     * nommée par /api/me, et l'écran « fond d'ouverture », qui n'est pas une
+     * sécurité mais une saisie — et le support n'a rien à saisir.
+     *
+     * Le drapeau ne suffit jamais seul : il exige ?op=1, donc la preuve
+     * serveur qui a déjà eu lieu en amont. Ajouter &direct=1 à la main sur une
+     * caisse de commerçant ne donne rien de plus que l'écran de code habituel.
+     *
+     * Le fond est mis à ZÉRO, pas à 500. Ouvrir un service au nom d'un
+     * commerçant réel écrit un évènement de caisse chez lui ; un fond inventé
+     * fausserait son Z sans que rien ne le signale, tandis qu'un fond nul est
+     * visiblement faux et se corrige d'un mouvement de caisse. */
+    function wantsDirectOpen() {
+      try {
+        const q = location.search || '';
+        return /[?&]op=1\b/.test(q) && /[?&]direct=1\b/.test(q);
+      } catch (_) { return false; }
+    }
+
     function unlockApp() {
       /* PIN accepted — cross-fade the PIN into the clock-in screen
        * (ouverture de caisse). The greeting flash + shell dive-in now
        * run from openService(), once the cashier opens the register. */
       const clockinEl = document.getElementById('clockin-screen');
+
+      if (wantsDirectOpen()) {
+        openingFloat = 0;
+        if (pinScreen) pinScreen.style.display = 'none';
+        /* doOpenService() et non openService() : le contrôle des horaires pose
+           une question, et une ouverture directe est faite pour n'en poser
+           aucune. */
+        doOpenService();
+        setTimeout(() => toast('Caisse ouverte en direct · fond d’ouverture 0 MAD'), 900);
+        return;
+      }
 
       // t=0..210: success pop on the 4 dots, staggered left → right.
       $$('#pin-dots .pin-dot').forEach((d, i) => {

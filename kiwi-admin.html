@@ -1708,7 +1708,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
   /* God-mode till access is a one-shot, store-scoped hand-off. The caisse still
      verifies the live named-operator cookie with /api/me before skipping the
      employee PIN; copying this localStorage record alone grants nothing. */
-  function openCaisse(c){
+  function openCaisse(c, opts){
     var venue = {
       merchant: c.merchant || '',
       venueId: c.venue_id || c.venueId || '',
@@ -1716,7 +1716,14 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
       name: c.business || c.merchant || '', location: c.city || ''
     };
     try { localStorage.setItem('kiwiPairHandoff', JSON.stringify(Object.assign({ ts:Date.now(), operator:true }, venue))); } catch(_){ }
-    window.open('/kiwi-caisse.html?pair=1&op=1&merchant=' + encodeURIComponent(venue.merchant), '_blank');
+    /* `direct` saute AUSSI l'écran « fond d'ouverture ». Il n'ouvre aucune
+       porte de plus : la caisse n'y répond que si ?op=1 a été prouvé par
+       /api/me. Ce qu'il change est le nombre de gestes — deux écrans à zéro —
+       et il ouvre le service avec un fond NUL, jamais avec un montant inventé
+       chez un commerçant réel. Voir unlockApp() › wantsDirectOpen(). */
+    var direct = !!(opts && opts.direct);
+    window.open('/kiwi-caisse.html?pair=1&op=1' + (direct ? '&direct=1' : '')
+      + '&merchant=' + encodeURIComponent(venue.merchant), '_blank');
   }
 
   // A client is a demo unless it came from a real signup. The server tags rows
@@ -1900,7 +1907,10 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
     var open = !!(selected && selected.merchant === c.merchant);
     var secondary = [
       h('button', { class:'mini', title:'Chiffres masqués, aucune écriture', onClick:function(e){ e.stopPropagation(); openPrivateDashboard(c.merchant); } }, 'Vue confidentielle'),
-      h('button', { class:'mini', onClick:function(e){ e.stopPropagation(); openCaisse(c); } }, 'Accéder à la caisse')
+      h('button', { class:'mini', onClick:function(e){ e.stopPropagation(); openCaisse(c); } }, 'Accéder à la caisse'),
+      h('button', { class:'mini',
+        title:'Ouvre le service immédiatement : ni code personnel, ni fond d’ouverture. Le fond est mis à 0 MAD.',
+        onClick:function(e){ e.stopPropagation(); openCaisse(c, { direct:true }); } }, 'Caisse directe')
     ];
     /* Le bouton de la LIGNE ferme la boutique de la ligne. Celui du compte est
        remonté sur la bande du propriétaire, où il désigne ce qu'il fait. */
