@@ -3,6 +3,9 @@
  * FR-only injected UI (matches caisse-pwa.js); no data-action / data-i18n. */
 (function () {
   'use strict';
+  // App native (Capacitor) : pas de service worker ni de bouton « Installer » —
+  // le bundle embarqué est versionné par la release (docs/roadmaps/KIWI_APP_PLAN.md §1.4).
+  if (window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform()) return;
 
   // Standalone (installed) detection → body.standalone gates the native layer.
   function isStandalone() {

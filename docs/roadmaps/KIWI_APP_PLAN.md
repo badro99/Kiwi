@@ -155,7 +155,7 @@ tools/
   app-bundle-test.mjs        ← suite wired dans check.js : chaque page du bundle parse,
                                 aucune URL absolue vers kiwi-os.com en dur hors api-base,
                                 aucun fetch('/api/…') non enveloppé, manifest absent
-docs/ops/APP.md              ← runbook : build, signer, TestFlight, release, rollback
+docs/ops/APP.md              ← runbook : build, signer, TestFlight, release, rollback (créé, §7 à compléter en semaine 4)
 ```
 
 Règles CLAUDE.md qui s'appliquent telles quelles : on n'édite pas les surfaces web pour
@@ -170,15 +170,15 @@ Le déploiement Cloudflare/GitHub Pages doit **ignorer `app/`** (rien à y servi
 
 ### Semaine 1 — Fondations (résultat : la caisse tourne dans l'app sur l'iPad du bureau, connectée au vrai backend)
 - [ ] P1, P2, P7 lancés (le jour 1 — ce sont les délais les plus longs).
-- [ ] `app/` scaffoldé (`npm create @capacitor/app`), iOS + Android ajoutés, projets commités.
-- [ ] `tools/build-app-www.mjs` + `tools/app-bundle-test.mjs` wired dans `check.js`.
-- [ ] `assets/api-base.js` (fetch + EventSource) ; `_middleware.js` accepte les origines app.
-- [ ] `CapacitorHttp` + `CapacitorCookies` activés ; **preuve** : connexion marchand, appairage
-  till, `GET /api/me`, vente Live Link → visibles sur le dashboard web.
-- [ ] SW désactivé en natif ; bootstraps PWA gardés.
+- [x] `app/` scaffoldé (Capacitor **8.5**, pas 6 — version courante, iOS en SPM donc sans CocoaPods), iOS + Android ajoutés, projets commités (2026-08-22).
+- [x] `tools/build-app-www.mjs` + `tools/app-bundle-test.mjs` wired dans `check.js` (2026-08-22).
+- [x] `assets/api-base.js` (fetch, XHR, EventSource, WebSocket, sendBeacon, liens /auth/) ; `_middleware.js` accepte les origines app sur /api + /auth (2026-08-22).
+- [ ] `CapacitorHttp` + `CapacitorCookies` activés (fait, `capacitor.config.ts`) ; **preuve** : connexion marchand, appairage
+  till, `GET /api/me`, vente Live Link → visibles sur le dashboard web — à faire sur l'iPad du bureau.
+- [x] SW désactivé en natif ; bootstraps PWA gardés (2026-08-22).
 - [ ] Mesure du flux live (`live-socket.js`) : cookie transmis ou pas → décision jeton d'URL.
-- [ ] Écran d'accueil natif minimal (3 tuiles : Caisse / Équipe / Cuisine) qui charge la
-  page correspondante dans la même WebView ; mémorise le dernier rôle.
+- [x] Écran d'accueil natif minimal (tuiles Caisse / Équipe / Cuisine / Tableau de bord + connexion marchande) qui charge la
+  page correspondante dans la même WebView ; mémorise le dernier rôle (2026-08-22, `app/src/`).
 
 ### Semaine 2 — Impression native (résultat : un ticket sort du POS-8370 depuis l'iPad, sans pont ni relais)
 - [ ] Plugin `kiwi-printer-socket` : `send`, `probe`, `scan` ; iOS via `NWConnection`

@@ -39,7 +39,9 @@
     logout: function () { return call('POST', { action: 'logout' }); },
     data: function () { return lastData; },
   };
-  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+  // App native (Capacitor) : pas de service worker — le bundle embarqué est versionné par la release.
+  var nativeApp = !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform());
+  if (!nativeApp && 'serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     window.addEventListener('load', function () {
       navigator.serviceWorker.register('/kiwi-sw.js?v=464').then(function (reg) {
         try { reg.update(); } catch (_) {}
