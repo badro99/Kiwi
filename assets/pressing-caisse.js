@@ -295,12 +295,10 @@
      Per garment × service — same garment, different service = different price.
      A missing key = service not offered for that garment. MAD, Tanger 2026. */
   /* Services are COMBINABLE on one garment (lavage + repassage is the
-     classic ask) — prices add up. Two real-world exclusions: le nettoyage
-     à sec est un procédé complet (il inclut le repassage) et ne se cumule
-     jamais avec le lavage à l'eau. Détachage / retouche stack with anything. */
+     classic ask) — prices add up. */
   let SERVICES = [];
   let SVC = {};
-  const SVC_CONFLICTS = { sec: ['lavage', 'repassage'], lavage: ['sec'], repassage: ['sec'] };
+  const HIDDEN_SERVICE_IDS = new Set(['sec']);
   const svcCodes  = (svcs) => svcs.map((s) => SVC[s] ? SVC[s].code : s).join('+');
   const svcShorts = (svcs) => svcs.map((s) => SVC[s] ? SVC[s].short : s).join(' + ');
 
@@ -309,8 +307,9 @@
   function loadCatalog() {
     const api = window.KiwiPressingCatalog;
     const doc = api && api.read ? api.read() : { services: [], categories: [], items: [] };
-    SERVICES = (doc.services || []).slice();
-    SVC = Object.fromEntries(SERVICES.map((s) => [s.id, s]));
+    const allServices = (doc.services || []).slice();
+    SERVICES = allServices.filter((s) => !HIDDEN_SERVICE_IDS.has(s.id));
+    SVC = Object.fromEntries(allServices.map((s) => [s.id, s]));
     ITEMS = {};
     (doc.items || []).forEach((it) => { ITEMS[it.id] = it; });
     CATALOG = (doc.categories || []).map((c) => ({ ...c, items: (doc.items || []).filter((it) => it.cat === c.id) }));
@@ -326,7 +325,8 @@
   }
   function minPrice(item) {
     const tables = item.variants ? item.variants.map((v) => v.prices) : [item.prices];
-    const values = tables.flatMap((t) => Object.values(t || {})).filter((n) => Number(n) > 0);
+    const visibleIds = new Set(SERVICES.map((s) => s.id));
+    const values = tables.flatMap((t) => Object.entries(t || {}).filter(([id]) => visibleIds.has(id)).map(([, price]) => price)).filter((n) => Number(n) > 0);
     return values.length ? Math.min(...values) : 0;
   }
   function availServices(item, variantId) {
@@ -1049,7 +1049,11 @@
 
   /* ═══════════════════════ COMPTOIR — the visual intake grid ═══════════════════════ */
   function counterCatalog() {
-    return CATALOG.map((c) => ({ ...c, items: c.items.filter((it) => it.active !== false) })).filter((c) => c.items.length);
+    return CATALOG.map((c) => ({ ...c, items: c.items.filter((it) => {
+      if (it.active === false) return false;
+      if (it.variants && it.variants.length) return it.variants.some((v) => availServices(it, v.id).length);
+      return availServices(it, null).length > 0;
+    }) })).filter((c) => c.items.length);
   }
   function renderCats() {
     const visible = counterCatalog();
@@ -1295,14 +1299,6 @@
         <input class="px-note-free" id="px-note-free" placeholder="Note libre (ex. « ourlet 2 cm »)…" value="${esc(sheet.freeNote)}" />
       </div>
 
-      <div class="px-f">
-        <div class="px-f-lbl">État à la dépose <span class="opt">· la photo protège le client et vous</span></div>
-        <div class="px-photos" id="px-photos">
-          ${(sheet.photoData || []).map((photo, k) => `<span class="px-photo-thumb"><img src="${photo.dataUrl}" alt="État ${k + 1}"><b>${k + 1}</b></span>`).join('')}
-          <button class="px-photo-add" id="px-photo-add"><i data-lucide="camera"></i>Photo état</button>
-        </div>
-      </div>
-
       <div class="px-sheet-foot">
         <button class="px-btn secondary" data-px-close>Annuler</button>
         <button class="px-btn primary" id="px-sheet-add"><i data-lucide="plus"></i>Ajouter au ticket · <span id="px-sheet-cta-price">${fmtMAD(unit * sheet.qty)}</span></button>
@@ -1325,11 +1321,6 @@
         if (sheet.services.length === 1) return;          /* toujours ≥ 1 service */
         sheet.services.splice(i, 1);
       } else {
-        /* déposer les services incompatibles (sec ⟷ lavage/repassage) */
-        (SVC_CONFLICTS[id] || []).forEach((c) => {
-          const j = sheet.services.indexOf(c);
-          if (j >= 0) sheet.services.splice(j, 1);
-        });
         sheet.services.push(id);
       }
       $$('[data-px-svc]', el).forEach((x) => {
@@ -1372,7 +1363,6 @@
       b.setAttribute('aria-pressed', i < 0);
     };
     $('#px-note-free', el).oninput = (e) => { sheet.freeNote = e.target.value; };
-    $('#px-photo-add', el).onclick = openPhoto;
     $('#px-sheet-add', el).onclick = addSheetToTicket;
     $$('[data-px-close]', el).forEach((b) => { b.onclick = () => closeVeil('#px-sheet-veil'); });
   }

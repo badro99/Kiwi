@@ -405,7 +405,7 @@
   },
   "assets/pos-dispatch.js": {
     "v": "30",
-    "sha": "2ca8d2aec6db92a5"
+    "sha": "364ed653b66f3e24"
   },
   "assets/pos-epicerie.css": {
     "v": "3",
@@ -528,28 +528,28 @@
     "sha": "6873661f23bb3c5d"
   },
   "assets/pressing-caisse.css": {
-    "v": "35",
+    "v": "37",
     "sha": "8ce1d04a07359a11"
   },
   "assets/pressing-caisse.js": {
-    "v": "35",
-    "sha": "fad473fdd3aa0767"
+    "v": "37",
+    "sha": "6869f6aeec59f66f"
   },
   "assets/pressing-catalog.css": {
     "v": "4",
     "sha": "3f8e50d3e85278bf"
   },
   "assets/pressing-catalog.js": {
-    "v": "5",
-    "sha": "31844335f4c3ea47"
+    "v": "6",
+    "sha": "e4b2ae77d0a2f454"
   },
   "assets/pressing-dashboard.css": {
     "v": "10",
     "sha": "7cbe21b6dc1cff7f"
   },
   "assets/pressing-dashboard.js": {
-    "v": "13",
-    "sha": "1d154abf0f1d1f8c"
+    "v": "14",
+    "sha": "41ec705e481497b3"
   },
   "assets/pressing-garment-icons.js": {
     "v": "2",

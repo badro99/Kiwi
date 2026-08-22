@@ -12,6 +12,9 @@
   var listeners = new Set();
   var cloud = null;
   var editorStates = new WeakMap();
+  /* Kept in stored catalogues so historical tickets remain readable, but no
+   * longer offered or editable for new pressing deposits. */
+  var HIDDEN_SERVICE_IDS = { sec: true };
 
   /* Official Material Symbols · Outlined 400, copied byte-for-byte from
    * google/material-design-icons. The catalogue stays self-contained/offline. */
@@ -217,15 +220,15 @@
   }
   function itemMin(item) {
     var values = [];
-    if (item.variants) item.variants.forEach(function (v) { Object.keys(v.prices || {}).forEach(function (k) { values.push(+v.prices[k]); }); });
-    else Object.keys(item.prices || {}).forEach(function (k) { values.push(+item.prices[k]); });
+    if (item.variants) item.variants.forEach(function (v) { Object.keys(v.prices || {}).forEach(function (k) { if (!HIDDEN_SERVICE_IDS[k]) values.push(+v.prices[k]); }); });
+    else Object.keys(item.prices || {}).forEach(function (k) { if (!HIDDEN_SERVICE_IDS[k]) values.push(+item.prices[k]); });
     values = values.filter(function (v) { return Number.isFinite(v) && v > 0; });
     return values.length ? Math.min.apply(Math, values) : 0;
   }
   function itemServiceCount(item) {
     var ids = new Set();
-    if (item.variants) item.variants.forEach(function (v) { Object.keys(v.prices || {}).forEach(function (k) { ids.add(k); }); });
-    else Object.keys(item.prices || {}).forEach(function (k) { ids.add(k); });
+    if (item.variants) item.variants.forEach(function (v) { Object.keys(v.prices || {}).forEach(function (k) { if (!HIDDEN_SERVICE_IDS[k]) ids.add(k); }); });
+    else Object.keys(item.prices || {}).forEach(function (k) { if (!HIDDEN_SERVICE_IDS[k]) ids.add(k); });
     return ids.size;
   }
   function itemRow(item, doc, state) {
@@ -250,6 +253,7 @@
     if (!host) return;
     opts = opts || {};
     var doc = read();
+    var editorDoc = Object.assign({}, doc, { services: doc.services.filter(function (s) { return !HIDDEN_SERVICE_IDS[s.id]; }) });
     var state = editorStates.get(host);
     if (!state) { state = { q:'', cat:'all', page:0, expanded:null, newOpen:false }; editorStates.set(host,state); }
     var q = cleanText(state.q,100).toLocaleLowerCase('fr');
@@ -264,9 +268,9 @@
       '<div class="pce-toolbar"><div><h3>Catalogue du comptoir</h3><p>Les changements s’appliquent aux prochains dépôts sur toutes les caisses de cet établissement.</p></div><button type="button" class="pxd-btn primary" data-pce-new>+ Nouvel article</button></div>' +
       '<div class="pce-navigator"><label class="pce-search">' + mi('search') + '<input type="search" value="' + esc(state.q) + '" placeholder="Rechercher un article…" aria-label="Rechercher un article" data-pce-search></label><div class="pce-filters" role="group" aria-label="Filtrer par catégorie"><button type="button" class="pce-filter' + (state.cat === 'all' ? ' on' : '') + '" data-pce-filter="all">Tous <b>' + countFor('all') + '</b></button>' + doc.categories.map(function(c){return '<button type="button" class="pce-filter' + (state.cat === c.id ? ' on' : '') + '" data-pce-filter="' + esc(c.id) + '">' + esc(c.label) + ' <b>' + countFor(c.id) + '</b></button>';}).join('') + '</div></div>' +
       '<div class="pce-new" data-pce-new-form' + (state.newOpen ? '' : ' hidden') + '><label><span>Nom</span><input maxlength="100" data-pce-new-name placeholder="Ex. Gilet"></label><label><span>Catégorie</span><select data-pce-new-cat>' + doc.categories.map(function(c){return '<option value="'+esc(c.id)+'">'+esc(c.label)+'</option>';}).join('') + '</select></label>' +
-      '<div class="pce-prices">' + doc.services.map(function(s){return '<label class="pce-price"><span>'+esc(s.short)+'</span><span class="pce-money"><input type="number" min="0" max="100000" step="1" inputmode="decimal" data-pce-new-price="'+esc(s.id)+'" placeholder="—"><b>MAD</b></span></label>';}).join('') + '</div><div class="pce-new-actions"><span data-pce-note>Renseignez au moins un prix.</span><button type="button" class="pxd-btn" data-pce-cancel>Annuler</button><button type="button" class="pxd-btn primary" data-pce-create>Ajouter</button></div></div>' +
+      '<div class="pce-prices">' + editorDoc.services.map(function(s){return '<label class="pce-price"><span>'+esc(s.short)+'</span><span class="pce-money"><input type="number" min="0" max="100000" step="1" inputmode="decimal" data-pce-new-price="'+esc(s.id)+'" placeholder="—"><b>MAD</b></span></label>';}).join('') + '</div><div class="pce-new-actions"><span data-pce-note>Renseignez au moins un prix.</span><button type="button" class="pxd-btn" data-pce-cancel>Annuler</button><button type="button" class="pxd-btn primary" data-pce-create>Ajouter</button></div></div>' +
       '<div class="pce-resultbar"><span>' + (filtered.length ? (first+1) + '–' + Math.min(first+pageSize,filtered.length) + ' sur ' + filtered.length : 'Aucun article') + '</span><div class="pce-pages"><button type="button" data-pce-prev aria-label="Page précédente"' + (state.page ? '' : ' disabled') + '>' + mi('left') + '</button><b>Page ' + (state.page+1) + ' / ' + pageCount + '</b><button type="button" data-pce-next aria-label="Page suivante"' + (state.page < pageCount-1 ? '' : ' disabled') + '>' + mi('right') + '</button></div></div>' +
-      '<div class="pce-list">' + (visible.length ? visible.map(function(item){return itemRow(item,doc,state);}).join('') : '<div class="pce-empty">Aucun article ne correspond à cette recherche.</div>') + '</div></div>';
+      '<div class="pce-list">' + (visible.length ? visible.map(function(item){return itemRow(item,editorDoc,state);}).join('') : '<div class="pce-empty">Aucun article ne correspond à cette recherche.</div>') + '</div></div>';
 
     var newButton = host.querySelector('[data-pce-new]');
     var newForm = host.querySelector('[data-pce-new-form]');

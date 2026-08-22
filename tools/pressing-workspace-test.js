@@ -72,6 +72,9 @@ ok(storeApi.includes("'pressing-orders': { keys: ['customers', 'orders', 'seq']"
 ok(storeApi.includes("'pressing-catalog': { keys: ['categories', 'services', 'items']"), 'the store API accepts the bounded pressing catalogue document');
 ok(pressingJs.includes('data-pce-host') && !caisseJs.includes('data-px-view="tarifs"'), 'names and prices are managed from the dashboard, caisse catalog is locked');
 ok(catalogJs.includes('data-pce-search') && catalogJs.includes('data-pce-filter') && catalogJs.includes('var pageSize = 8') && catalogJs.includes('class="pce-summary"'), 'the catalogue is searchable, filterable, paged and collapsed by default');
+ok(catalogJs.includes('HIDDEN_SERVICE_IDS = { sec: true }') && catalogJs.includes('services: doc.services.filter(function (s) { return !HIDDEN_SERVICE_IDS[s.id]; })'), 'dashboard keeps dry-cleaning history but removes it from editable treatments');
+ok(caisseJs.includes("HIDDEN_SERVICE_IDS = new Set(['sec'])") && caisseJs.includes('SERVICES = allServices.filter((s) => !HIDDEN_SERVICE_IDS.has(s.id))'), 'the pressing till does not offer dry-cleaning for new deposits');
+ok(!caisseJs.includes('id="px-photo-add"') && !caisseJs.includes("$('#px-photo-add', el).onclick"), 'the pressing till no longer offers condition-photo capture');
 ok(catalogCss.includes('grid-template-columns: repeat(2,minmax(0,1fr))') && catalogCss.includes('.pce-item.is-open { grid-column: 1/-1;'), 'compact rows use the available width and expand only on demand');
 ok(venues.includes('MATERIAL_PRESSING') && dashboard.includes('viewBox="0 -960 960 960"') && caisseJs.includes('const garmentIcon ='), 'pressing navigation uses official Material Symbols');
 ok(garmentIcons.includes('KiwiPressingGarmentIcons') && garmentIcons.includes("['caftan', /caftan|takchita/") && garmentIcons.includes("['jupe', /jupe|skirt/"), 'the shared artwork resolves product-specific photography');
