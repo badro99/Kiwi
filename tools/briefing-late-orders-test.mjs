@@ -70,7 +70,7 @@ ok(transport.includes(".catch(function () { isReady = false; return []; })"), 'r
 const schema = src('schema.sql');
 ok(schema.includes('CREATE TABLE IF NOT EXISTS order_course'), 'additive schema mirrored');
 ok(schema.includes('PRIMARY KEY (merchant, order_id)'), 'tenant composite key');
-const audit = src('AUDIT_AI.md');
+const audit = src('docs/audits/AUDIT_AI.md');
 ok(audit.includes('Phase 1d-d · jalons durables'), 'audit contract recorded first');
 ok(audit.includes('Aucun appel de télémétrie'), 'fail-soft contract documented');
 

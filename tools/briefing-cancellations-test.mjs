@@ -7,7 +7,7 @@ const reader = fs.readFileSync(new URL('../assets/cancellation-history.js', impo
 const endpoint = fs.readFileSync(new URL('../functions/api/sale/cancel.js', import.meta.url), 'utf8');
 const feed = fs.readFileSync(new URL('../functions/api/feed.js', import.meta.url), 'utf8');
 const schema = fs.readFileSync(new URL('../schema.sql', import.meta.url), 'utf8');
-const audit = fs.readFileSync(new URL('../AUDIT_AI.md', import.meta.url), 'utf8');
+const audit = fs.readFileSync(new URL('../docs/audits/AUDIT_AI.md', import.meta.url), 'utf8');
 let checks = 0;
 function ok(condition, message) { if (!condition) throw new Error(message); checks += 1; }
 

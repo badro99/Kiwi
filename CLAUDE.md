@@ -3,9 +3,12 @@
 This file is read on first contact by any Claude session opened against this repo.
 It captures rules and conventions that aren't obvious from the code alone — mostly
 things that already cost someone a session.
-For full project context (history, architecture, brand system, roadmap), read **`HANDOFF.md`**.
-**New session resuming work? Read `AI_HANDOFF.md` first** — it's the current-state brief
-(what's true right now, recent work, gotchas, the two dev tracks, the Design 2026 skin).
+**New session resuming work? Read `docs/handoffs/HANDOFF.md` first.** Part 1 is the
+current-state brief (what's true right now, recent work, gotchas, the two dev tracks, the
+Design 2026 skin); Part 2 is the full project context (history, architecture, brand system,
+roadmap). All other documents live under `docs/` — `audits/`, `roadmaps/`, `specs/`, `ops/`
+(runbooks: deploy, auth, admin, Live Link, kiosk) — see `docs/README.md`. Only `README.md`,
+`AGENTS.md` and this file stay at the repo root.
 
 ---
 
@@ -101,7 +104,7 @@ still placeholder data, that's tech debt to replace, not the intended end state.
   built in CI). Both mirrors in §1 must keep working.
 - **Real backend (live):** Cloudflare Pages Functions + D1 (`functions/`,
   `schema.sql`) — accounts/auth, Live Link sales, operator console, caisse↔dashboard
-  pairing. See `LIVE_LINK.md` / `ADMIN.md`.
+  pairing. See `docs/ops/LIVE_LINK.md` / `docs/ops/ADMIN.md`.
 - **Real hardware, three transports.** ESC/POS jobs reach a thermal printer via the
   native **Kiwi Printer Bridge** (`bridge/`) on desktop, **and** directly from the
   browser over **Web Bluetooth** and **WebUSB** (`assets/printer-bridge.js` —

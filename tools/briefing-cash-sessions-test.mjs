@@ -85,7 +85,7 @@ ok(caisse.includes('counterpartyActorId: cashActorRef(inc.id)'), 'incoming hando
 const schema = source('schema.sql');
 ok(schema.includes('CREATE TABLE IF NOT EXISTS cash_session_events'), 'additive schema mirrored');
 ok(schema.includes('idx_cash_session_events_terminal_session'), 'terminal session index');
-const audit = source('AUDIT_AI.md');
+const audit = source('docs/audits/AUDIT_AI.md');
 ok(audit.includes('Phase 1d-c · registre append-only'), 'audit contract recorded');
 ok(audit.includes('Une caisse appairée ne peut lire et'), 'terminal assertion documented');
 

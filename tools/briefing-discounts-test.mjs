@@ -10,7 +10,7 @@ const venues = fs.readFileSync(new URL('../assets/venues.js', import.meta.url), 
 const caisse = fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8');
 const pairing = fs.readFileSync(new URL('../assets/caisse-pairing.js', import.meta.url), 'utf8');
 const schema = fs.readFileSync(new URL('../schema.sql', import.meta.url), 'utf8');
-const audit = fs.readFileSync(new URL('../AUDIT_AI.md', import.meta.url), 'utf8');
+const audit = fs.readFileSync(new URL('../docs/audits/AUDIT_AI.md', import.meta.url), 'utf8');
 let checks = 0;
 function ok(condition, message) { if (!condition) throw new Error(message); checks += 1; }
 function boot() {

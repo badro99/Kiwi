@@ -4,7 +4,7 @@
 // same-origin fetch carries the kiwi_gate cookie, so unlocked devices reach it
 // and outsiders don't. Free on the Cloudflare Pages + D1 tiers.
 //
-// Requires a D1 binding named DB (see wrangler.toml / LIVE_LINK.md). If the
+// Requires a D1 binding named DB (see wrangler.toml / docs/ops/LIVE_LINK.md). If the
 // binding is missing the endpoint fails soft (503) so the app never breaks.
 
 import { entitledMerchant, activeServiceEmployee } from '../auth/_lib.js';

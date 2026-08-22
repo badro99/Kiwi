@@ -9,7 +9,7 @@
 // session, never the body). Reading them back is public — see [[key]].js — since
 // a customer's phone has no session and must be able to see the photos.
 //
-// Requires an R2 bucket bound as MEDIA (see ORDERPRO_SPEC.md). If the binding is
+// Requires an R2 bucket bound as MEDIA (see docs/specs/ORDERPRO_SPEC.md). If the binding is
 // missing this fails soft with 503 {error:'no-media'} and the dashboard tells the
 // merchant plainly that media storage isn't switched on yet — the button stays
 // live rather than silently doing nothing.

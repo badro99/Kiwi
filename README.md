@@ -51,13 +51,14 @@ demonstrations; real paired stores never see that seed data.
 
 ## Key documents
 
-- **`AI_HANDOFF.md`** — the current-state brief: what's true right now, recent
-  work, gotchas. Read this first when resuming work.
-- **`LIVE_LINK.md`** — the caisse → dashboard live sales spine (D1).
-- **`ADMIN.md`** / **`AUTH.md`** — operator console and accounts/auth.
-- **`DEPLOY.md`** — hosting and the edge passcode gate on Cloudflare Pages.
+- **`docs/handoffs/HANDOFF.md`** — Part 1: the current-state brief (what's true right
+  now, recent work, gotchas) — read this first when resuming work. Part 2: full
+  project history (brand system, roadmap context).
+- **`docs/ops/LIVE_LINK.md`** — the caisse → dashboard live sales spine (D1).
+- **`docs/ops/ADMIN.md`** / **`docs/ops/AUTH.md`** — operator console and accounts/auth.
+- **`docs/ops/DEPLOY.md`** — hosting and the edge passcode gate on Cloudflare Pages.
 - **`CLAUDE.md`** — operating rules for AI agents working on this repo.
-- **`HANDOFF.md`** — full project history (brand system, roadmap context).
+- **`docs/`** — `audits/`, `roadmaps/`, `specs/`, `ops/`, `handoffs/` (index in `docs/README.md`).
 
 ## Status at a glance
 
@@ -67,4 +68,4 @@ demonstrations; real paired stores never see that seed data.
 - ✅ Multi-vertical caisse + owner dashboard (Simple/Pro), hotels included
 - ✅ FR / EN / AR with RTL
 - ⬜ Payment processing — license-gated (Bank Al-Maghrib); scoped in
-  `KIWI_2.0_ROADMAP.md`
+  `docs/roadmaps/KIWI_2.0_ROADMAP.md`

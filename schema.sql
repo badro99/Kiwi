@@ -1,5 +1,5 @@
 -- Kiwi Live Link — Cloudflare D1 schema.
--- Apply once after creating the D1 database (see LIVE_LINK.md):
+-- Apply once after creating the D1 database (see docs/ops/LIVE_LINK.md):
 --   wrangler d1 execute kiwi-sales --file=schema.sql --remote
 -- or paste it into the D1 console in the Cloudflare dashboard.
 
@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS sales (
 -- Existing databases: add the column in place. SQLite has no
 -- ADD COLUMN IF NOT EXISTS, so this errors harmlessly ("duplicate column name")
 -- when re-run on a schema that already has it — the rest of the file still
--- applies. See LIVE_LINK.md.
+-- applies. See docs/ops/LIVE_LINK.md.
 -- `node tools/d1-schema.mjs` les nomme, `--apply --yes` les pose.
 -- Tant que ces colonnes manquent, tout continue de fonctionner : /api/feed
 -- retombe sur sa requête d'origine et la console refuse l'annulation en le
@@ -124,7 +124,7 @@ CREATE TABLE IF NOT EXISTS accounts (
 -- Operator access codes for kiwi-admin.html. Hashed exactly like account
 -- passwords (PBKDF2-SHA256, per-code salt); plaintext is never stored. Add/delete
 -- from the console's "Opérateurs" panel. Bootstrap the first code via the staff
--- bypass (owner/partner). See ADMIN.md.
+-- bypass (owner/partner). See docs/ops/ADMIN.md.
 CREATE TABLE IF NOT EXISTS operators (
   id         TEXT PRIMARY KEY,       -- "op-<uuid>"
   label      TEXT,                   -- human name for the code ("Badr", "Partner")
