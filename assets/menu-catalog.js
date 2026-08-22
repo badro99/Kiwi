@@ -155,6 +155,9 @@
     formulaChoices: { fr: 'Choix proposés', en: 'Choices offered', ar: 'الخيارات المقترحة' },
     formulaAddCh:   { fr: 'Ajouter un produit', en: 'Add an item', ar: 'إضافة منتج' },
     formulaPickIt:  { fr: 'Choisir un produit de la carte', en: 'Pick a menu item', ar: 'اختر منتجاً من القائمة' },
+    formulaBrowse:  { fr: 'Rechercher ou parcourir les sections', en: 'Search or browse sections', ar: 'ابحث أو تصفح الأقسام' },
+    formulaSearch:  { fr: 'Rechercher un article…', en: 'Search menu items…', ar: 'ابح عن منتج…' },
+    formulaNoMatch: { fr: 'Aucun article ne correspond à cette recherche.', en: 'No menu item matches this search.', ar: 'لا يوجد منتج مطابق للبحث.' },
     formulaExtra:   { fr: 'Supplément (+ MAD)', en: 'Extra (+ MAD)', ar: 'زيادة (+ درهم)' },
     formulaDelSlot: { fr: 'Supprimer l\'étape', en: 'Delete slot', ar: 'حذف المرحلة' },
     formulaNoSlots: { fr: 'Aucune étape définie. Cliquez sur « Ajouter une étape » pour commencer.', en: 'No slots defined yet. Click "Add a slot" to start.', ar: 'لم يتم تحديد مراحل بعد. انقر على "إضافة مرحلة" للبدء.' },
@@ -927,9 +930,35 @@
       .mx-slot-choice-name { font-size: 12.5px; font-weight: 500; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       .mx-slot-choice-extra { display: flex; align-items: center; gap: 4px; font-size: 11.5px; font-family: var(--mono); color: var(--n-600); }
       .mx-slot-choice-extra input { width: 54px; padding: 4px 6px; border: 1px solid var(--n-200); border-radius: 6px; text-align: right; font-size: 11.5px; font-family: var(--mono); }
-      .mx-slot-add-ch-bar { display: flex; gap: 8px; margin-top: 6px; }
-      .mx-slot-add-ch-bar select { flex: 1; font-size: 12.5px; padding: 6px 8px; border: 1px solid var(--n-200); border-radius: 8px; background: var(--surface); }
-      .mx-slot-add-ch-btn { padding: 6px 12px; font-size: 12px; border-radius: 8px; border: 1px solid var(--atlas); background: var(--mint-soft); color: var(--riad); font-weight: 500; cursor: pointer; white-space: nowrap; }
+      .mx-slot-add-ch-bar { position: relative; margin-top: 10px; }
+      .mx-formula-picker-trigger { width: 100%; min-height: 48px; padding: 8px 11px; display: grid; grid-template-columns: 32px minmax(0,1fr) 22px; align-items: center; gap: 10px; border: 1px solid var(--n-200); border-radius: 13px; background: var(--surface); color: var(--ink); text-align: left; cursor: pointer; transition: border-color .16s ease, box-shadow .16s ease, background .16s ease; }
+      .mx-formula-picker-trigger:hover, .mx-formula-picker-trigger[aria-expanded="true"] { border-color: color-mix(in srgb,var(--atlas) 55%,var(--n-200)); background: color-mix(in srgb,var(--atlas) 4%,var(--surface)); box-shadow: 0 0 0 3px color-mix(in srgb,var(--atlas) 10%,transparent); }
+      .mx-formula-picker-icon { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 10px; background: color-mix(in srgb,var(--atlas) 11%,transparent); color: var(--atlas); }
+      .mx-formula-picker-trigger svg { width: 18px; height: 18px; fill: currentColor; }
+      .mx-formula-picker-copy { min-width: 0; display: grid; gap: 2px; }
+      .mx-formula-picker-copy strong { font-size: 13px; font-weight: 650; }
+      .mx-formula-picker-copy small { overflow: hidden; color: var(--n-500); font-size: 10.5px; text-overflow: ellipsis; white-space: nowrap; }
+      .mx-formula-picker-chevron { color: var(--n-500); transition: transform .16s ease; }
+      .mx-formula-picker-trigger[aria-expanded="true"] .mx-formula-picker-chevron { transform: rotate(180deg); }
+      .mx-formula-picker { margin-top: 8px; overflow: hidden; border: 1px solid var(--n-200); border-radius: 15px; background: var(--surface); box-shadow: 0 18px 44px -30px rgba(0,0,0,.48); }
+      .mx-formula-picker[hidden] { display: none; }
+      .mx-formula-picker-search { position: sticky; top: 0; z-index: 2; padding: 10px; border-bottom: 1px solid var(--n-200); background: color-mix(in srgb,var(--surface) 94%,transparent); backdrop-filter: blur(14px); }
+      .mx-formula-picker-search label { height: 38px; padding: 0 11px; display: flex; align-items: center; gap: 8px; border: 1px solid var(--n-200); border-radius: 11px; background: var(--paper-soft); color: var(--n-500); }
+      .mx-formula-picker-search svg { width: 17px; height: 17px; fill: currentColor; flex: 0 0 auto; }
+      .mx-formula-picker-search input { width: 100%; height: 100%; padding: 0; border: 0; outline: 0; background: transparent; color: var(--ink); font: 500 12.5px var(--sans); }
+      .mx-formula-picker-results { max-height: 292px; overflow: auto; padding: 5px 7px 8px; scrollbar-width: thin; scrollbar-color: var(--n-300) transparent; }
+      .mx-formula-picker-group { padding-top: 5px; }
+      .mx-formula-picker-group[hidden], .mx-formula-picker-option[hidden] { display: none; }
+      .mx-formula-picker-group-title { padding: 7px 9px 5px; color: var(--n-500); font: 700 9px var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+      .mx-formula-picker-option { width: 100%; min-height: 45px; padding: 7px 9px; display: grid; grid-template-columns: minmax(0,1fr) auto 24px; align-items: center; gap: 10px; border: 0; border-radius: 10px; background: transparent; color: var(--ink); text-align: left; cursor: pointer; }
+      .mx-formula-picker-option:hover, .mx-formula-picker-option:focus-visible { outline: 0; background: color-mix(in srgb,var(--atlas) 10%,transparent); }
+      .mx-formula-picker-option-copy { min-width: 0; display: grid; gap: 2px; }
+      .mx-formula-picker-option-copy strong { overflow: hidden; font-size: 12.5px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+      .mx-formula-picker-option-copy small { overflow: hidden; color: var(--n-500); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+      .mx-formula-picker-price { color: var(--n-600); font: 600 10.5px var(--mono); white-space: nowrap; }
+      .mx-formula-picker-add { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 7px; background: color-mix(in srgb,var(--atlas) 12%,transparent); color: var(--atlas); }
+      .mx-formula-picker-add svg { width: 13px; height: 13px; }
+      .mx-formula-picker-empty { padding: 22px 14px; color: var(--n-500); font-size: 11.5px; text-align: center; }
       .mx-formula-add-slot-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 12px; border: 1.5px dashed var(--atlas); border-radius: 10px; background: var(--mint-soft); color: var(--riad); font-size: 13px; font-weight: 600; cursor: pointer; width: 100%; box-sizing: border-box; }
       @media (max-width: 1280px) { .mx-card-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
       @media (max-width: 980px) { .mx-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .mx-catalog-tools { align-items: flex-start; flex-direction: column; } }
@@ -940,6 +969,8 @@
 
   /* ───────────────── small SVGs ───────────────── */
   const PLUS = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>';
+  const PICKER_SEARCH = '<svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z"/></svg>';
+  const PICKER_CHEVRON = '<svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M480-360 280-560l56-56 144 144 144-144 56 56-200 200Z"/></svg>';
   const EDIT = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4z"/></svg>';
   const DOWNLOAD = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg>';
   const TRASH = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m2 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6"/></svg>';
@@ -1606,7 +1637,18 @@
         }).join('');
 
         const availableToAdd = availableItems.filter((it) => !(slot.choices || []).some((c) => c.itemId === it.id));
-        const selectOptions = availableToAdd.map((it) => `<option value="${it.id}">${esc(it.name)} (${fmt(it.price)} MAD)</option>`).join('');
+        const pickerOption = (it, category) => {
+          const sub = category && (category.sub || []).find((entry) => entry.id === it.subId);
+          const context = sub ? sub.name : (category ? category.name : tr(T.uncategorized || { fr: 'Sans section', en: 'Uncategorised', ar: 'بلا قسم' }));
+          const search = `${it.name || ''} ${category ? category.name : ''} ${sub ? sub.name : ''}`.toLocaleLowerCase();
+          return `<button type="button" class="mx-formula-picker-option" role="option" data-f-picker-item="${esc(it.id)}" data-f-picker-si="${si}" data-picker-search="${esc(search)}"><span class="mx-formula-picker-option-copy"><strong>${esc(it.name)}</strong><small>${esc(context)}</small></span><span class="mx-formula-picker-price">${fmt(it.price)} MAD</span><span class="mx-formula-picker-add">${PLUS}</span></button>`;
+        };
+        const pickerGroups = (d.cats || []).map((category) => {
+          const items = availableToAdd.filter((it) => it.catId === category.id);
+          return items.length ? `<section class="mx-formula-picker-group" data-picker-group><div class="mx-formula-picker-group-title">${esc(category.name)}</div>${items.map((it) => pickerOption(it, category)).join('')}</section>` : '';
+        }).join('');
+        const uncategorized = availableToAdd.filter((it) => !(d.cats || []).some((category) => category.id === it.catId));
+        const pickerGroupsHtml = pickerGroups + (uncategorized.length ? `<section class="mx-formula-picker-group" data-picker-group><div class="mx-formula-picker-group-title">Sans section</div>${uncategorized.map((it) => pickerOption(it, null)).join('')}</section>` : '');
 
         let addChBarHtml = '';
         if (availableItems.length === 0) {
@@ -1623,8 +1665,11 @@
         } else {
           addChBarHtml = `
             <div class="mx-slot-add-ch-bar">
-              <select data-f-slot-pick="${si}"><option value="">-- ${esc(tr(T.formulaPickIt))} --</option>${selectOptions}</select>
-              <button type="button" class="mx-slot-add-ch-btn" data-f-slot-add-ch="${si}">${esc(tr(T.formulaAddCh))}</button>
+              <button type="button" class="mx-formula-picker-trigger" data-f-picker-toggle="${si}" aria-haspopup="listbox" aria-expanded="false"><span class="mx-formula-picker-icon">${PICKER_SEARCH}</span><span class="mx-formula-picker-copy"><strong>${esc(tr(T.formulaAddCh))}</strong><small>${esc(tr(T.formulaBrowse))}</small></span><span class="mx-formula-picker-chevron">${PICKER_CHEVRON}</span></button>
+              <div class="mx-formula-picker" data-f-picker-panel="${si}" role="listbox" aria-label="${esc(tr(T.formulaPickIt))}" hidden>
+                <div class="mx-formula-picker-search"><label>${PICKER_SEARCH}<input type="search" data-f-picker-search="${si}" placeholder="${esc(tr(T.formulaSearch))}" autocomplete="off" /></label></div>
+                <div class="mx-formula-picker-results">${pickerGroupsHtml}<div class="mx-formula-picker-empty" data-picker-empty hidden>${esc(tr(T.formulaNoMatch))}</div></div>
+              </div>
             </div>`;
         }
 
@@ -1669,6 +1714,21 @@
     }
 
     slotsContainer && slotsContainer.addEventListener('input', (e) => {
+      const pickerSearch = e.target.closest('[data-f-picker-search]');
+      if (pickerSearch) {
+        const panel = pickerSearch.closest('[data-f-picker-panel]');
+        const term = pickerSearch.value.trim().toLocaleLowerCase();
+        let visible = 0;
+        panel.querySelectorAll('[data-picker-search]').forEach((option) => {
+          const match = !term || (option.dataset.pickerSearch || '').includes(term);
+          option.hidden = !match;
+          if (match) visible += 1;
+        });
+        panel.querySelectorAll('[data-picker-group]').forEach((group) => { group.hidden = !group.querySelector('[data-picker-search]:not([hidden])'); });
+        const empty = panel.querySelector('[data-picker-empty]');
+        if (empty) empty.hidden = visible !== 0;
+        return;
+      }
       const lblInp = e.target.closest('[data-f-slot-label]');
       if (lblInp) {
         const si = Number(lblInp.dataset.fSlotLabel);
@@ -1697,6 +1757,32 @@
     });
 
     slotsContainer && slotsContainer.addEventListener('click', (e) => {
+      const pickerToggle = e.target.closest('[data-f-picker-toggle]');
+      if (pickerToggle) {
+        const panel = slotsContainer.querySelector(`[data-f-picker-panel="${pickerToggle.dataset.fPickerToggle}"]`);
+        const willOpen = panel && panel.hidden;
+        slotsContainer.querySelectorAll('[data-f-picker-panel]').forEach((entry) => { entry.hidden = true; });
+        slotsContainer.querySelectorAll('[data-f-picker-toggle]').forEach((entry) => { entry.setAttribute('aria-expanded', 'false'); });
+        if (panel && willOpen) {
+          panel.hidden = false;
+          pickerToggle.setAttribute('aria-expanded', 'true');
+          requestAnimationFrame(() => panel.querySelector('[data-f-picker-search]')?.focus());
+        }
+        return;
+      }
+      const pickerItem = e.target.closest('[data-f-picker-item]');
+      if (pickerItem) {
+        const si = Number(pickerItem.dataset.fPickerSi);
+        const pickedId = pickerItem.dataset.fPickerItem;
+        if (pickedId && formulaSlots[si]) {
+          formulaSlots[si].choices = formulaSlots[si].choices || [];
+          if (formulaSlots[si].choices.length < 20 && !formulaSlots[si].choices.some((choice) => choice.itemId === pickedId)) {
+            formulaSlots[si].choices.push({ itemId: pickedId, extra: 0 });
+            renderFormulaSlots();
+          }
+        }
+        return;
+      }
       const saveAndCreateBtn = e.target.closest('[data-f-save-and-create]');
       if (saveAndCreateBtn) {
         saveCurrent(() => { itemModal(null); });
@@ -1729,19 +1815,22 @@
         }
         return;
       }
-      const addChBtn = e.target.closest('[data-f-slot-add-ch]');
-      if (addChBtn) {
-        const si = Number(addChBtn.dataset.fSlotAddCh);
-        const sel = slotsContainer.querySelector(`[data-f-slot-pick="${si}"]`);
-        const pickedId = sel ? sel.value : '';
-        if (pickedId && formulaSlots[si]) {
-          formulaSlots[si].choices = formulaSlots[si].choices || [];
-          if (formulaSlots[si].choices.length < 20 && !formulaSlots[si].choices.some((c) => c.itemId === pickedId)) {
-            formulaSlots[si].choices.push({ itemId: pickedId, extra: 0 });
-            renderFormulaSlots();
-          }
-        }
-      }
+    });
+
+    slotsContainer && slotsContainer.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      const panel = e.target.closest('[data-f-picker-panel]');
+      if (!panel) return;
+      const si = panel.dataset.fPickerPanel;
+      panel.hidden = true;
+      const trigger = slotsContainer.querySelector(`[data-f-picker-toggle="${si}"]`);
+      trigger?.setAttribute('aria-expanded', 'false');
+      trigger?.focus();
+    });
+    m.el.addEventListener('click', (e) => {
+      if (e.target.closest('.mx-slot-add-ch-bar')) return;
+      slotsContainer?.querySelectorAll('[data-f-picker-panel]').forEach((panel) => { panel.hidden = true; });
+      slotsContainer?.querySelectorAll('[data-f-picker-toggle]').forEach((trigger) => { trigger.setAttribute('aria-expanded', 'false'); });
     });
 
     renderFormulaSlots();

@@ -968,6 +968,9 @@ if (!renderSlotsMatch) {
         const tr = (k) => (k && k.fr) || '';
         const fmt = (n) => String(n);
         const TRASH = '<trash>';
+        const PLUS = '<plus>';
+        const PICKER_SEARCH = '<search>';
+        const PICKER_CHEVRON = '<chevron>';
         const catById = (d, id) => (d.cats || []).find(c => c.id === id);
         const T = {
           formulaNoSlots: { fr: 'Aucune étape définie.' },
@@ -980,6 +983,9 @@ if (!renderSlotsMatch) {
           formulaSaveAndCreate: { fr: 'Enregistrer et créer un produit' },
           formulaAllChosen: { fr: 'Tous les produits de la carte sont déjà proposés dans cette étape.' },
           formulaPickIt: { fr: 'Choisir un produit de la carte' },
+          formulaBrowse: { fr: 'Rechercher ou parcourir les sections' },
+          formulaSearch: { fr: 'Rechercher un article…' },
+          formulaNoMatch: { fr: 'Aucun article ne correspond à cette recherche.' },
           formulaAddCh: { fr: 'Ajouter un produit' },
           del: { fr: 'Supprimer' }
         };
@@ -990,7 +996,7 @@ if (!renderSlotsMatch) {
     `;
     const renderFn = new Function(harnessCode)();
 
-    // Control 1: carte vide -> le bloc d'explication est rendu et aucun <select data-f-slot-pick>
+    // Control 1: carte vide -> le bloc d'explication est rendu et aucun picker
     const emptyHtml = renderFn(
       [{ id: 'sl_1', label: '', min: 1, max: 1, choices: [] }],
       { items: [], cats: [] },
@@ -999,21 +1005,25 @@ if (!renderSlotsMatch) {
     ok(
       emptyHtml.includes('Aucun produit sur la carte') &&
       emptyHtml.includes('data-f-save-and-create') &&
-      !emptyHtml.includes('data-f-slot-pick'),
-      'composer: carte vide → bloc d\'explication rendu et aucun <select data-f-slot-pick>'
+      !emptyHtml.includes('data-f-picker-toggle'),
+      'composer: carte vide → bloc d\'explication rendu et aucun picker'
     );
 
-    // Control 2: carte non vide -> le select est rendu
+    // Control 2: carte non vide -> le picker organisé est rendu, jamais un select natif
     const nonEmptyHtml = renderFn(
       [{ id: 'sl_1', label: '', min: 1, max: 1, choices: [] }],
-      { items: [{ id: 'it_cafe', name: 'Café noir', price: 15 }], cats: [] },
+      { items: [{ id: 'it_cafe', name: 'Café noir', price: 15, catId: 'cat_boissons', subId: 'sub_cafe' }], cats: [{ id: 'cat_boissons', name: 'Boissons', sub: [{ id: 'sub_cafe', name: 'Cafés' }] }] },
       null
     );
     ok(
-      nonEmptyHtml.includes('data-f-slot-pick="0"') &&
+      nonEmptyHtml.includes('data-f-picker-toggle="0"') &&
+      nonEmptyHtml.includes('role="listbox"') &&
+      nonEmptyHtml.includes('Boissons') &&
+      nonEmptyHtml.includes('Cafés') &&
       nonEmptyHtml.includes('Café noir') &&
+      !nonEmptyHtml.includes('<select') &&
       !nonEmptyHtml.includes('Aucun produit sur la carte'),
-      'composer: carte non vide → select data-f-slot-pick rendu avec options'
+      'composer: carte non vide → picker recherchable, groupé et sans select natif'
     );
 
     // Control 3: tous déjà choisis -> message « déjà proposés »
@@ -1024,8 +1034,8 @@ if (!renderSlotsMatch) {
     );
     ok(
       allChosenHtml.includes('Tous les produits de la carte sont déjà proposés dans cette étape') &&
-      !allChosenHtml.includes('data-f-slot-pick'),
-      'composer: tous déjà choisis → message « déjà proposés » rendu sans select'
+      !allChosenHtml.includes('data-f-picker-toggle'),
+      'composer: tous déjà choisis → message « déjà proposés » rendu sans picker'
     );
   } catch (e) {
     ok(false, 'harness failed to test composer slot rendering: ' + e.message);
