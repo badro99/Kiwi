@@ -1,0 +1,23 @@
+{
+  "name": "kiwi-printer-socket",
+  "version": "1.0.0",
+  "description": "Plugin Capacitor local pour l'impression ESC/POS directe par socket TCP.",
+  "type": "module",
+  "main": "dist/esm/index.js",
+  "module": "dist/esm/index.js",
+  "types": "dist/esm/index.d.ts",
+  "files": [
+    "android",
+    "dist",
+    "ios",
+    "src",
+    "Package.swift"
+  ],
+  "peerDependencies": {
+    "@capacitor/core": ">=8.0.0"
+  },
+  "capacitor": {
+    "ios": { "src": "ios" },
+    "android": { "src": "android" }
+  }
+}

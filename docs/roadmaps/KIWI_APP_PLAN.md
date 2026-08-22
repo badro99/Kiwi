@@ -181,12 +181,12 @@ Le déploiement Cloudflare/GitHub Pages doit **ignorer `app/`** (rien à y servi
   page correspondante dans la même WebView ; mémorise le dernier rôle (2026-08-22, `app/src/`).
 
 ### Semaine 2 — Impression native (résultat : un ticket sort du POS-8370 depuis l'iPad, sans pont ni relais)
-- [ ] Plugin `kiwi-printer-socket` : `send`, `probe`, `scan` ; iOS via `NWConnection`
+- [x] Plugin `kiwi-printer-socket` : `send`, `probe`, `scan` ; iOS via `NWConnection`
   (TCP, timeout 4 s, gestion `waiting` sur réseau local non autorisé), Android via socket.
-- [ ] `Info.plist` : `NSLocalNetworkUsageDescription`, `NSBonjourServices`,
+- [x] `Info.plist` : `NSLocalNetworkUsageDescription`, `NSBonjourServices`,
   `NSBluetoothAlwaysUsageDescription` — textes en français, précis (Apple rejette les
   textes vagues).
-- [ ] Transport E dans `assets/printer-bridge.js` : si natif → socket TCP (IP/port déjà dans
+- [x] Transport E dans `assets/printer-bridge.js` : si natif → socket TCP (IP/port déjà dans
   `kiwiPrinterCfg`), sinon chaîne existante. Le modal imprimante propose « Rechercher sur
   le réseau » (scan) et « Tester » (probe) en natif.
 - [ ] BLE via `bluetooth-le` : appairage, écriture par chunks de 180 octets, reconnexion.

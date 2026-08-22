@@ -8,8 +8,8 @@
  * { ok:false, reason:'bridge-*' } so callers fail soft (KiwiHardware falls back
  * to its on-screen preview) — the exact pattern the caisse pairing uses.
  *
- * Transports, dans l'ordre : Web Bluetooth · WebUSB · pont local 127.0.0.1 ·
- * RELAIS CLOUD (/api/print — l'iPad et les tablettes : la caisse dépose le
+ * Transports, dans l'ordre : socket TCP natif · Web Bluetooth · WebUSB · pont
+ * local 127.0.0.1 · RELAIS CLOUD (/api/print — l'iPad et les tablettes : la caisse dépose le
  * ticket, le pont du comptoir le récupère). Voir « transport D » plus bas.
  *
  * Config (localStorage `kiwiPrinterCfg`): { ip, port, model, paper }.
@@ -511,6 +511,43 @@
     return step();
   }
 
+  /* ── transport E: socket TCP natif Capacitor ─────────────────────────────
+   * Dans l'app, l'iPad et Android ouvrent directement le port ESC/POS de
+   * l'imprimante. L'absence du plugin ou tout échec rend immédiatement la main
+   * à la chaîne web existante, sans modifier son comportement. */
+  function nativeSocket() {
+    try {
+      var cap = window.Capacitor;
+      if (!cap || typeof cap.isNativePlatform !== 'function' || !cap.isNativePlatform()) return null;
+      if (typeof cap.isPluginAvailable === 'function' && !cap.isPluginAvailable('KiwiPrinterSocket')) return null;
+      var plugin = cap.Plugins && cap.Plugins.KiwiPrinterSocket;
+      return plugin && typeof plugin.send === 'function' ? plugin : null;
+    } catch (_) { return null; }
+  }
+  function nativeSocketTarget(target) {
+    var cfg = getConfig();
+    var t = target && target.ip ? target : (!target && cfg.ip ? cfg : null);
+    return t ? { host: t.ip, port: Number(t.port) || 9100 } : null;
+  }
+  function nativeSocketSend(bytes, target) {
+    var plugin = nativeSocket();
+    var t = nativeSocketTarget(target);
+    if (!plugin || !t) return Promise.resolve({ ok: false, reason: 'socket-unavailable' });
+    return plugin.send({
+      host: t.host, port: t.port, data: window.KiwiEscPos.toB64(bytes), timeoutMs: 4000,
+    }).then(function (r) {
+      return r && r.ok
+        ? { ok: true, via: 'socket', bytes: Number(r.bytes) || bytes.length }
+        : { ok: false, reason: (r && r.code) || 'socket-unreachable' };
+    }, function (e) {
+      return { ok: false, reason: (e && (e.code || e.message)) || 'socket-unreachable' };
+    });
+  }
+  function nativeSocketFirst(bytes, target, next) {
+    if (!nativeSocket() || !nativeSocketTarget(target)) return next();
+    return nativeSocketSend(bytes, target).then(function (r) { return r.ok ? r : next(); }, next);
+  }
+
   /* ── transport C: the bridge — to a TCP printer, or to one the OS already has ──
    * Same helper, two targets. `osPrinter` wins when both are set: it is the
    * deliberate choice made in the panel, while an `ip` can survive in saved
@@ -671,7 +708,8 @@
       return bridgePrintBytes(bytes, { osPrinter: target.osPrinter || target.name });
     }
     if (type === 'ip' || target.ip) {
-      return bridgePrintBytes(bytes, { ip: target.ip, port: Number(target.port) || 9100 });
+      var networkTarget = { ip: target.ip, port: Number(target.port) || 9100 };
+      return nativeSocketFirst(bytes, networkTarget, function () { return bridgePrintBytes(bytes, networkTarget); });
     }
     return printBytes(bytes);
   }
@@ -700,12 +738,15 @@
            printer from receiving the same job. */
         viaBridge);
     }
-    if (!btConnected()) return viaUsb();
-    return btWrite(bytes).then(
-      function () { return { ok: true, via: 'bluetooth', bytes: bytes.length }; },
-      /* Bluetooth can disconnect between isConnected() and the first chunk.
-         Continue down the declared transport order instead of failing early. */
-      viaUsb);
+    function viaWebTransports() {
+      if (!btConnected()) return viaUsb();
+      return btWrite(bytes).then(
+        function () { return { ok: true, via: 'bluetooth', bytes: bytes.length }; },
+        /* Bluetooth can disconnect between isConnected() and the first chunk.
+           Continue down the declared transport order instead of failing early. */
+        viaUsb);
+    }
+    return nativeSocketFirst(bytes, null, viaWebTransports);
   }
 
   // A printer is "connected" if Bluetooth or USB is live, OR the bridge is set up, OR a station is bound.
@@ -1150,6 +1191,7 @@
     var opts = MODELS.map(function (m) { return '<option value="' + m.id + '"' + (m.id === cfg.model ? ' selected' : '') + '>' + esc(m.label) + '</option>'; }).join('');
     var btLive = btConnected();
     var usbLive = usbConnected();
+    var socket = nativeSocket();
     var fromPrint = !!(context.onBrowserPrint || context.onSavePdf);
     var isLabel = (context.kind || 'label') === 'label';
     ov.innerHTML =
@@ -1247,10 +1289,10 @@
         '</div>' +
         '<details class="kpr-adv"' + (cfg.ip ? ' open' : '') + '>' +
           '<summary>Option avancée · imprimante réseau globale (Wi-Fi / Ethernet)</summary>' +
-          '<div class="kpr-status off" id="kpr-status"><span class="kpr-d"></span><span id="kpr-status-t">Vérification du pont…</span></div>' +
+          '<div class="kpr-status off" id="kpr-status"><span class="kpr-d"></span><span id="kpr-status-t">' + (socket ? 'Impression directe disponible dans l’app Kiwi.' : 'Vérification du pont…') + '</span></div>' +
           '<p class="kpr-note" id="kpr-target"></p>' +
           '<div class="kpr-field"><label for="kpr-ip">Adresse IP de l’imprimante</label><input id="kpr-ip" type="text" inputmode="decimal" placeholder="192.168.1.50" value="' + esc(cfg.ip) + '"></div>' +
-          '<button class="kpr-btc" type="button" id="kpr-scan" disabled>Détecter les imprimantes du réseau</button>' +
+          '<button class="kpr-btc" type="button" id="kpr-scan"' + (socket ? '' : ' disabled') + '>' + (socket ? 'Rechercher sur le réseau' : 'Détecter les imprimantes du réseau') + '</button>' +
           '<div id="kpr-scan-out" class="kpr-note" style="display:none;"></div>' +
           '<div class="kpr-two">' +
             '<div class="kpr-field"><label for="kpr-port">Port</label><input id="kpr-port" type="text" inputmode="numeric" value="' + esc(cfg.port) + '"></div>' +
@@ -1264,7 +1306,7 @@
               '<a id="kpr-model-driver-a" href="' + esc(modelDriver(cfg.model)) + '" target="_blank" rel="noopener noreferrer">page de téléchargement</a>' +
             '</p></div>' +
           '<div class="kpr-actions">' +
-            '<button class="kpr-btn kpr-test" type="button" id="kpr-test" disabled>Imprimer un ticket test</button>' +
+            '<button class="kpr-btn kpr-test" type="button" id="kpr-test"' + (socket ? '' : ' disabled') + '>' + (socket ? 'Tester' : 'Imprimer un ticket test') + '</button>' +
             '<button class="kpr-btn kpr-save" type="button" id="kpr-save">Enregistrer</button>' +
           '</div>' +
           '<p class="kpr-note">Le pont tourne sur l’ordinateur de la caisse et ne communique qu’avec votre imprimante locale. <a href="' + esc(BRIDGE_DOWNLOAD) + '" target="_blank" rel="noopener">Télécharger le pont</a></p>' +
@@ -1302,6 +1344,9 @@
       if (r === 'unauthorized') return 'Caisse non reconnue — appairez-la ou reconnectez-vous';
       if (r === 'expired') return 'Le pont n’a pas récupéré le ticket à temps';
       if (r === 'not-configured') return 'Aucune imprimante configurée';
+      if (r === 'local-network-denied') return 'Accès au réseau local refusé. Ouvrez Réglages > Kiwi Pro > Réseau local';
+      if (r === 'refused') return 'Connexion refusée. Vérifiez le port de l’imprimante';
+      if (r === 'unreachable') return 'Imprimante introuvable sur ce réseau';
       if (/timeout/i.test(r)) return 'Imprimante injoignable — vérifiez l’adresse IP et qu’elle est allumée';
       if (/ECONNREFUSED/i.test(r)) return 'Connexion refusée à cette adresse — ce n’est pas le port d’une imprimante réseau';
       if (/ENOTFOUND|EHOSTUNREACH|ENETUNREACH|EINVAL|EHOSTDOWN/i.test(r)) return 'Adresse introuvable sur le réseau — vérifiez l’IP';
@@ -1578,6 +1623,15 @@
     var localPing = null;   // la réponse du pont local (pour savoir s'il est déjà relais)
     function refreshStatus() {
       var st = $('#kpr-status'), t = $('#kpr-status-t'), test = $('#kpr-test'), scan = $('#kpr-scan');
+      if (socket) {
+        bridgeUp = true;
+        st.className = 'kpr-status on';
+        t.textContent = 'Connexion directe à l’imprimante depuis l’app Kiwi.';
+        test.disabled = false;
+        if (scan) scan.disabled = false;
+        paintRelay();
+        return Promise.resolve({ ok: true, via: 'socket' });
+      }
       t.textContent = 'Vérification du pont…'; st.className = 'kpr-status off';
       return ping().then(function (j) {
         localPing = j;
@@ -1798,8 +1852,15 @@
       if (!validIp(f.ip)) { toast('Adresse invalide — attendu : 192.168.1.50 (ou un nom comme EPSON.local)'); $('#kpr-ip').focus(); return; }
       if (!validPort(f.port)) { toast('Port invalide — un nombre entre 1 et 65535 (9100 en général)'); $('#kpr-port').focus(); return; }
       var btn = this; btn.disabled = true; var orig = btn.textContent; btn.textContent = 'Impression…';
-      bridgePrintBytes(window.KiwiEscPos.testSlip({ ip: f.ip, paper: f.paper }), { ip: f.ip, port: f.port }).then(function (res) {
-        btn.textContent = orig; btn.disabled = !bridgeUp;
+      var target = { ip: f.ip, port: Number(f.port) || 9100 };
+      var slip = window.KiwiEscPos.testSlip({ ip: f.ip, paper: f.paper });
+      var attempt = socket
+        ? socket.probe({ host: target.ip, port: target.port, timeoutMs: 4000 }).then(function (probe) {
+            return probe && probe.ok ? nativeSocketSend(slip, target) : { ok: false, reason: (probe && probe.code) || 'unreachable' };
+          }, function () { return { ok: false, reason: 'unreachable' }; })
+        : bridgePrintBytes(slip, target);
+      attempt.then(function (res) {
+        btn.textContent = orig; btn.disabled = !(socket || bridgeUp);
         toast(res.ok ? 'Ticket test envoyé' : ('Échec : ' + frReason(res.reason)));
       });
     });
@@ -1807,14 +1868,23 @@
     var scanBtn = $('#kpr-scan');
     if (scanBtn) scanBtn.addEventListener('click', function () {
       var out = $('#kpr-scan-out');
-      scanBtn.disabled = true; var orig = scanBtn.textContent; scanBtn.textContent = 'Recherche sur le réseau… (~10 s)';
+      scanBtn.disabled = true; var orig = scanBtn.textContent; scanBtn.textContent = 'Recherche en cours…';
       if (out) { out.style.display = ''; out.textContent = ''; }
-      var to = withTimeout(null, 30000);
-      fetch(bridgeBase() + '/kiwi/scan', { signal: to.signal })
-        .then(function (r) { to.done(); return r.status === 404 ? { legacy: true } : r.json(); })
-        .catch(function () { to.done(); return null; })
+      var scanAttempt;
+      if (socket) {
+        scanAttempt = socket.scan({ port: Number($('#kpr-port').value) || 9100, timeoutMs: 600 }).then(function (r) {
+          if (!r || !r.ok) return { ok: false, error: (r && r.code) || 'unreachable' };
+          return { ok: true, printers: (r.hosts || []).map(function (h) { return { ip: h.host, ms: h.ms }; }) };
+        }, function () { return null; });
+      } else {
+        var to = withTimeout(null, 30000);
+        scanAttempt = fetch(bridgeBase() + '/kiwi/scan', { signal: to.signal })
+          .then(function (r) { to.done(); return r.status === 404 ? { legacy: true } : r.json(); })
+          .catch(function () { to.done(); return null; });
+      }
+      scanAttempt
         .then(function (j) {
-          scanBtn.textContent = orig; scanBtn.disabled = !bridgeUp;
+          scanBtn.textContent = orig; scanBtn.disabled = !(socket || bridgeUp);
           if (!out) return;
           if (!j) { out.textContent = 'Pont injoignable — relancez Kiwi Printer Bridge puis réessayez.'; return; }
           if (j.legacy) { out.textContent = 'Détection indisponible sur ce pont — installez la version 1.3 ou plus récente.'; return; }
@@ -1863,6 +1933,7 @@
     connectBluetooth: connectBluetooth, disconnectBluetooth: disconnectBluetooth, btConnected: btConnected,
     connectUsb: connectUsb, disconnectUsb: disconnectUsb, usbConnected: usbConnected, usbSupported: usbSupported,
     reconnectUsb: reconnectUsb,
+    nativeSocket: nativeSocket, nativeSocketSend: nativeSocketSend,
     printReceipt: printReceipt, printKitchen: printKitchen, printLabels: printLabels,
     // son propre repli : une journée doit pouvoir se clôturer sans thermique.
     printDayReport: printDayReport, dayReportHTML: dayReportHTML,

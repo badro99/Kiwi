@@ -14,7 +14,8 @@
   "dependencies": {
     "@capacitor/android": "^8.5.0",
     "@capacitor/core": "^8.5.0",
-    "@capacitor/ios": "^8.5.0"
+    "@capacitor/ios": "^8.5.0",
+    "kiwi-printer-socket": "file:plugins/kiwi-printer-socket"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.5.0",

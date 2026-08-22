@@ -104,7 +104,26 @@ premier script de chaque page, pas de manifest, aucune origine d'API en dur dans
 `assets/`, gardes natives des bootstraps, comportement du shim dans une fausse fenêtre,
 CORS de la porte (origines app oui, tierce non, `/app/` 404).
 
-## 7. Signer, TestFlight, release, rollback
+## 7. Impression native
+
+Dans Kiwi Pro, `assets/printer-bridge.js` choisit le plugin local
+`KiwiPrinterSocket` avant les transports web dès que Capacitor confirme une plateforme
+native et que la cible possède une adresse IP. Le plugin ouvre directement un socket TCP
+vers le port configuré, `9100` par défaut, écrit les octets ESC/POS, puis ferme la
+connexion. Si l'envoi échoue, Kiwi reprend la chaîne existante : Bluetooth web, USB web,
+pont local, puis relais cloud. Le navigateur web ne charge pas ce plugin et conserve son
+comportement actuel.
+
+La première recherche, le premier test ou la première impression vers le réseau local
+peut afficher la demande système iOS. Le texte explique que Kiwi envoie les tickets à
+l'imprimante thermique du réseau local. Il faut choisir « Autoriser » pour imprimer
+directement depuis l'iPad.
+
+Si le marchand a refusé : ouvrir **Réglages > Kiwi Pro > Réseau local**, activer l'accès,
+revenir dans Kiwi Pro, puis utiliser **Imprimante > Tester**. **Rechercher sur le réseau**
+sonde le port choisi sur le sous-réseau Wi-Fi et remplit l'adresse IP d'un toucher.
+
+## 8. Signer, TestFlight, release, rollback
 
 *À écrire en semaine 4 (bêta interne), quand P1 (Apple Developer Program, organisation,
 D-U-N-S) et P2 (Play Console) sont acquis. D'ici là : builds de développement sur
@@ -113,7 +132,7 @@ d'abonnement dans l'app (règle 3.1.1) ; `ITSAppUsesNonExemptEncryption = NO` ; 
 / FCM et certificats **hors dépôt** (`app/.gitignore` couvre `*.p8`, `*.p12`,
 `*.mobileprovision`, `*.keystore`, `google-services.json`, `GoogleService-Info.plist`).
 
-## 8. État au 2026-08-22 (semaine 1)
+## 9. État au 2026-08-22 (semaine 1)
 
 Fait : scaffold `app/` (iOS SPM + Android générés et commités), `api-base.js`, CORS de
 la porte, bootstraps PWA gardés, build + suite wired, coquille native (4 tuiles + login

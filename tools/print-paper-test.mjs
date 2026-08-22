@@ -43,7 +43,7 @@ const controls = [
   // Garde-fous du chemin réseau : validation avant écriture, test qui vise
   // vraiment l'IP saisie, et messages d'échec en français utile.
   ['saving validates the IP and the port first', /validIp\(f\.ip\)/.test(printer) && /validPort\(f\.port\)/.test(printer)],
-  ['the network test targets the typed IP explicitly', printer.includes('bridgePrintBytes(window.KiwiEscPos.testSlip({ ip: f.ip, paper: f.paper }), { ip: f.ip, port: f.port })')],
+  ['the network test targets the typed IP explicitly', /var target = \{ ip: f\.ip, port: Number\(f\.port\) \|\| 9100 \}/.test(printer) && /bridgePrintBytes\(slip, target\)/.test(printer)],
   ['bridge failures are worded for humans', printer.includes('function frReason(') && printer.includes('Pont introuvable')],
   ['the active print target is spelled out in the panel', printer.includes("$('#kpr-target')") && printer.includes('Cible actuelle')],
   // Découverte réseau : le pont balaie son propre sous-réseau privé, jamais plus.
