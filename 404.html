@@ -53,49 +53,59 @@
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; overflow-x: clip; }
   html { background: #000; }
-  /* ── Le fond : un comptoir la nuit ─────────────────────────────────────
-     Pas un dégradé décoratif. Toute la lumière de la page est motivée : une
-     lueur verte en haut, c'est la machine ; une nappe plus claire en bas,
-     c'est le comptoir qui prend la lumière ; le vignettage referme la pièce
-     autour du ticket. L'ordre compte — en CSS le PREMIER calque est celui du
-     dessus, donc le vignettage est écrit en premier pour assombrir le reste.
-     Les pseudo-éléments sont en `fixed` À DESSEIN : body est un conteneur
-     flex, et un ::before en flux normal en deviendrait un élément et casserait
-     le centrage. */
   body {
     min-height: 100svh;
     display: flex; align-items: center; justify-content: center;
     padding: 26px 20px 24px;
-    background:
-      /* Le vignettage referme la pièce. Rayon vertical volontairement large :
-         resserré, il retombait en plein sur le bas de l'écran et effaçait le
-         comptoir que les calques du dessous venaient d'allumer. Il ne doit
-         manger que les angles. */
-      radial-gradient(118% 124% at 50% 44%, transparent 54%, rgba(0,0,0,0.82) 100%),
-      /* le halo de la machine : serré, sinon ce n'est plus une lampe mais une brume */
-      radial-gradient(34% 21% at 50% 0%, rgba(0,255,174,0.34), transparent 72%),
-      /* la flaque de lumière sur le comptoir, sous le ticket */
-      radial-gradient(52% 27% at 50% 87%, rgba(247,245,240,0.20), transparent 74%),
-      /* L'arête du comptoir qui prend la lumière de la machine. Une seule
-         ligne courbe, et le fond cesse d'être un vide pour devenir une pièce. */
-      radial-gradient(108% 34% at 50% 113%, rgba(125,242,176,0.13) 46%, transparent 74%),
-      /* le comptoir lui-même : un dôme très large qui monte du bas. Une nappe
-         linéaire donnait une bande horizontale visible ; une ellipse donne une
-         surface. */
-      radial-gradient(118% 64% at 50% 118%, #17452D 0%, rgba(23,69,45,0.55) 40%, transparent 74%),
-      #000;
-    background-attachment: fixed;
+    /* PAS de background ici. Le fond noir est porté par html, et un fond posé
+       sur body se peint APRÈS les descendants à z-index négatif : il recouvrait
+       .room, le semis et le grain, qui ne s'affichaient donc jamais. */
     color: var(--fg);
     font-family: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
     -webkit-font-smoothing: antialiased;
   }
   html[lang="ar"] body { font-family: "IBM Plex Sans Arabic", system-ui, sans-serif; }
 
+  /* ── Le fond : un comptoir la nuit ─────────────────────────────────────
+     Pas un dégradé décoratif : toute la lumière est motivée. Le halo vert en
+     haut, c'est la machine ; la nappe claire en bas, c'est le comptoir qui
+     prend cette lumière ; l'arête courbe en est le bord ; le vignettage
+     referme la pièce. En CSS le PREMIER calque est celui du dessus, d'où le
+     vignettage écrit en tête.
+
+     Peint sur un élément en `position: fixed` plutôt que sur body avec
+     `background-attachment: fixed` : sur iOS un fond attaché fixe est repeint
+     à chaque frame de défilement et fait saccader la page, alors qu'un calque
+     fixe est composité une fois. Cela garantit aussi que ces pourcentages et
+     ceux du semis se rapportent tous à la FENÊTRE — sur une page longue,
+     mélanger fenêtre et document ferait diverger le comptoir et sa texture. */
+  .room {
+    position: fixed; inset: 0; z-index: -3; pointer-events: none;
+    background:
+      /* Le vignettage referme la pièce. Rayon vertical volontairement large :
+         resserré, il retombait en plein sur le bas de l'écran et effaçait le
+         comptoir que les calques du dessous venaient d'allumer. Il ne doit
+         manger que les angles. */
+      radial-gradient(104% 104% at 50% 44%, transparent 47%, rgba(0,0,0,0.88) 100%),
+      /* le halo de la machine : serré, sinon ce n'est plus une lampe mais une brume */
+      radial-gradient(34% 21% at 50% 0%, rgba(0,255,174,0.34), transparent 72%),
+      /* la flaque de lumière sur le comptoir, sous le ticket */
+      radial-gradient(52% 27% at 50% 87%, rgba(247,245,240,0.20), transparent 74%),
+      /* L'arête du comptoir qui prend la lumière de la machine. Une seule
+         ligne courbe, et le fond cesse d'être un vide pour devenir une pièce. */
+      radial-gradient(104% 33% at 50% 113%, rgba(125,242,176,0.11) 46%, transparent 74%),
+      /* le comptoir lui-même : un dôme très large qui monte du bas. Une nappe
+         linéaire donnait une bande horizontale visible ; une ellipse donne une
+         surface. */
+      radial-gradient(112% 62% at 50% 118%, #143A25 0%, rgba(20,58,37,0.55) 40%, transparent 74%),
+      #000;
+  }
+
   /* Le semis de points reprend le globe pointillé de la page d'accueil : le
      404 doit appartenir au même monde. Masqué en ellipse, il ne texture que
      le comptoir, sous le ticket. */
   body::before {
-    content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+    content: ''; position: fixed; inset: 0; z-index: -2; pointer-events: none;
     background-image: radial-gradient(rgba(255,255,255,0.11) 0.9px, transparent 1px);
     background-size: 23px 23px;
     --dm: radial-gradient(62% 46% at 50% 78%, #000 0%, rgba(0,0,0,0.35) 55%, transparent 76%);
@@ -358,6 +368,7 @@
 </style>
 </head>
 <body>
+<div class="room" aria-hidden="true"></div>
 <main>
   <div class="scene">
     <div class="machine" aria-hidden="true"></div>
