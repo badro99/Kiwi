@@ -357,6 +357,21 @@ ok(/opts\.copy === true \? d\.T\.copy : str\(opts\.copy, 40\)/.test(receiptSrc),
 const menuApi = fs.readFileSync(path.join(ROOT, 'functions/api/menu.js'), 'utf8');
 ok(/formulaItems/.test(menuApi) && /!it\.archived && !it\.formulaOnly/.test(menuApi),
   'la projection publique garde les anciens clients sûrs et réserve formulaItems aux nouveaux sélecteurs');
+
+/* Un article réservé aux formules n'est plus dans menuItems ; une ligne de formule
+ * le porte pourtant en cuisine : son poste et sa catégorie se résolvent sur la
+ * carte entière (menuLineFind), sinon le dessert part au poste par défaut. */
+ok(/function menuLineFind\(pred\)/.test(caisse) && /kdsStationFor\(menuLineFind\(x => x\.id === l\.id\)\)/.test(caisse),
+  'caisse · le poste cuisine d’une ligne se résout sur la carte entière, formules comprises');
+ok(/const m = menuLineFind\(x => \(id && x\.id === id\) \|\| \(name && x\.name === name\)\);/.test(caisse),
+  'caisse · la catégorie d’une ligne se résout sur la carte entière');
+ok(/\(\(typeof svFormulaItems !== 'undefined' && svFormulaItems\.length\) \? svFormulaItems : menuItems\)\.find\(mm => mm\.id === l\.id\)/.test(serveur),
+  'serveur · le poste d’une commande se résout sur la carte entière');
+const rmwSrc = fs.readFileSync(path.join(ROOT, 'assets/restaurant-menu-workspace.js'), 'utf8');
+const rmwAsk = rmwSrc.slice(rmwSrc.indexOf('function ask('), rmwSrc.indexOf('function ask(') + 700);
+ok(!/data-archive/.test(rmwAsk), 'workspace · ask() ne référence plus x (ReferenceError sur chaque invite)');
+ok(/data-archive[^]{0,400}\}\);const isFormulaCb/.test(rmwSrc) && /\$\('\[data-archive\]',m\.el\)/.test(rmwSrc),
+  'workspace · le bouton Archiver/Restaurer vit dans le pied de la fiche article, là où il est câblé');
 ok(/station: str\(c && c\.station, 40\)/.test(menuApi),
   'sanitizeMenu garde le poste de la CATÉGORIE — c\'est là que vit le routage');
 ok(/out\.kitchenId = str\(raw\.kitchenId, 40\)/.test(menuApi),

@@ -5673,7 +5673,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       if (SV_DEMO || !svStations.length) return '';
       const seen = [];
       (order || []).forEach((l) => {
-        const m = menuItems.find(mm => mm.id === l.id);
+        const m = ((typeof svFormulaItems !== 'undefined' && svFormulaItems.length) ? svFormulaItems : menuItems).find(mm => mm.id === l.id) || menuItems.find(mm => mm.id === l.id);
         const want = m && m.station;
         const st = svStations.find(s => s.id === want) || svStations[0];
         if (st && seen.indexOf(st.name) === -1) seen.push(st.name);
@@ -9847,7 +9847,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       const paidAmount = getTableTotal(id);
       const paidClient = tableClients.get(id);
       const paidLines = (tableOrders[id] || []).map((line) => {
-        const item = menuItems.find((candidate) => String(candidate.id) === String(line.id));
+        const item = ((typeof svFormulaItems !== 'undefined' && svFormulaItems.length) ? svFormulaItems : menuItems).find((candidate) => String(candidate.id) === String(line.id)) || menuItems.find((candidate) => String(candidate.id) === String(line.id));
         return {
           name: String(line.name || 'Article'), qty: Math.max(1, Number(line.qty) || 1),
           total: Math.max(0, Number(line.price) || 0) * Math.max(1, Number(line.qty) || 1),

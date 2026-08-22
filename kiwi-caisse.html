@@ -8729,6 +8729,14 @@
      * comptoir, sinon la pastille ne sert plus de repère. */
     const STATION_PALETTE = ['#1F5D3C', '#3FB67A', '#D99A2B', '#3677A6', '#164A2F', '#C24A2E', '#C97A4A'];
     const carteState = { stations: [], kitchenId: '', opts: [], cats: [], formulaItems: [], kdsReady: false };
+    /* Un article « réservé aux formules » n'est pas dans menuItems (la grille ne
+       vend que l'individuel) mais une ligne de formule le porte quand même : son
+       poste cuisine, sa catégorie et sa réouverture se cherchent dans la carte
+       entière (carteState.formulaItems = tout sauf archivé), menuItems en repli. */
+    function menuLineFind(pred) {
+      const all = carteState.formulaItems && carteState.formulaItems.length ? carteState.formulaItems : null;
+      return (all && all.find(pred)) || menuItems.find(pred) || null;
+    }
 
     function carteSlug() {
       try { const p = storePaired(); return (p && p.merchant) || ''; } catch (_) { return ''; }
@@ -9972,7 +9980,7 @@
        le libellé). Vide si on ne sait pas : le rapport la repêchera dans la carte,
        et il vaut mieux un plat non classé qu'un plat mal classé. */
     function lineCat(id, name) {
-      const m = menuItems.find(x => (id && x.id === id) || (name && x.name === name));
+      const m = menuLineFind(x => (id && x.id === id) || (name && x.name === name));
       return (m && catLabels[m.cat]) || '';
     }
     /* L'identifiant du plat voyage avec la ligne. Sans lui, le moteur de
@@ -11195,7 +11203,7 @@
         const parent = l.kind === 'formula-part' && l.formulaUid
           ? source.find(p => p && p.kind === 'formula' && p.formulaUid === l.formulaUid)
           : null;
-        const m = menuItems.find(x => x.id === l.id);
+        const m = menuLineFind(x => x.id === l.id);
         const formulaTag = parent
           ? `[${parent.formulaName || parent.name || 'Formule'}${l.slotLabel ? ' · ' + l.slotLabel : ''}]`
           : '';
@@ -11221,7 +11229,7 @@
           unitPrice: Math.max(0, +l.price || +l.unitPrice || 0),
           options: optionChoices.map(o => o.label).join(' · '), optionChoices,
           visuals: optVisuals(l.opts), note: (l.note || '').trim(),
-          station: l.station || kdsStationFor(menuItems.find(x => x.id === l.id)),
+          station: l.station || kdsStationFor(menuLineFind(x => x.id === l.id)),
         };
         ['kind', 'formulaUid', 'formulaName', 'slotLabel', 'formulaSlotId', 'lineId'].forEach(key => {
           if (l[key]) line[key] = l[key];
@@ -16005,7 +16013,7 @@
       });
       missing.forEach((child, formulaUid) => {
         const name = child.formulaName || '';
-        const menuItem = menuItems.find(item => String(item.name || '') === String(name));
+        const menuItem = menuLineFind(item => String(item.name || '') === String(name));
         if (!name) return;
         const inheritedVisuals = Array.isArray(child.visuals) ? child.visuals.slice() : [];
         o.items.unshift({
@@ -17313,7 +17321,7 @@
     function vrapCartItems(o) {
       return cart.map(c => {
         const orig = o && vrapFinancialItems(o).find(it => it.n === c.name);
-        const m = menuItems.find(x => x.id === c.id);
+        const m = menuLineFind(x => x.id === c.id);
         /* Cette branche ignorait m.station : rouvrir une commande à emporter pour
            y ajouter un plat renvoyait TOUTE la commande en cuisson, y compris le
            café qui devait aller au bar. Même résolution que partout ailleurs. */
@@ -17382,7 +17390,7 @@
       vrapEditingNum = num;
       vrapDiscount   = null;
       cart = vrapFinancialItems(o).map(i => {
-        const m = menuItems.find(x => x.name === i.n);
+        const m = menuLineFind(x => x.name === i.n);
         return {
           uid:   newLineUid(),
           id:    m ? m.id : ('x-' + i.n),
@@ -17649,8 +17657,8 @@
           if (existing.orderProPending !== pending) { existing.orderProPending = pending; changed = true; }
           return;
         }
-        const menuHit = menuItems.find(x => String(x.id) === String(l.id))
-          || menuItems.find(x => String(x.name || '').toLowerCase() === String(l.name || '').toLowerCase());
+        const menuHit = menuLineFind(x => String(x.id) === String(l.id))
+          || menuLineFind(x => String(x.name || '').toLowerCase() === String(l.name || '').toLowerCase());
         lines.push({
           uid: newLineUid(), id: (menuHit && menuHit.id) || l.id || ('op-' + marker),
           name: l.name || (menuHit && menuHit.name) || '', price: +l.unitPrice || 0,
