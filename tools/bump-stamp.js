@@ -5,6 +5,9 @@
  *   node tools/bump-stamp.js assets/venues.js assets/tokens.css
  *   node tools/bump-stamp.js --sync      (re-scelle le manifeste sans rien bumper)
  *   node tools/bump-stamp.js --all       (bump tout asset dont le contenu a bougé)
+ *   node tools/bump-stamp.js --sw        (avance la génération du service worker :
+ *                                         CACHE de kiwi-sw.js + register() des trois
+ *                                         bootstraps, puis leurs propres estampilles)
  *
  * Pourquoi un outil pour ça. L'estampille vit dans jusqu'à trois fichiers (la
  * balise du shell, la liste SHELL de kiwi-sw.js, le champ rev de
@@ -23,10 +26,11 @@ const S = require('./stamps');
 const args = process.argv.slice(2);
 const SYNC_ONLY = args.includes('--sync');
 const ALL = args.includes('--all');
+const SW_GEN = args.includes('--sw');
 const targets = args.filter((a) => !a.startsWith('--')).map((a) => a.replace(/^\.\//, ''));
 
-if (!SYNC_ONLY && !ALL && !targets.length) {
-  console.error('usage: node tools/bump-stamp.js <assets/file.js …> | --sync | --all');
+if (!SYNC_ONLY && !ALL && !SW_GEN && !targets.length) {
+  console.error('usage: node tools/bump-stamp.js <assets/file.js …> | --sync | --all | --sw');
   process.exit(2);
 }
 
@@ -98,6 +102,34 @@ function bump(asset, scanned) {
   return true;
 }
 
+/* La génération du service worker vit dans QUATRE fichiers : `CACHE` dans
+   kiwi-sw.js et `register('/kiwi-sw.js?v=N')` dans les trois bootstraps PWA.
+   Les bootstraps changent donc de contenu, et leur propre estampille ?v= doit
+   suivre — c'est la cascade « une génération = ~10 fichiers » que l'on faisait
+   à la main, et que l'on oubliait à moitié. Renvoie la liste des bootstraps
+   touchés pour que le flux normal les bumpe ensuite. */
+const SW_BOOTSTRAPS = ['assets/dashboard-pwa.js', 'assets/caisse-pwa.js', 'assets/employee-live.js'];
+function bumpSwGeneration() {
+  if (!S.exists(S.SW)) { console.error(`  ✗ ${S.SW} introuvable`); process.exit(2); }
+  const sw = S.read(S.SW);
+  const m = sw.match(/CACHE = 'kiwi-app-v([0-9]+)'/);
+  if (!m) { console.error(`  ✗ ${S.SW} : génération introuvable (attendu CACHE = 'kiwi-app-vN')`); process.exit(2); }
+  const current = Number(m[1]);
+  const next = current + 1;
+  write(S.SW, sw.replace(/CACHE = 'kiwi-app-v[0-9]+'/, `CACHE = 'kiwi-app-v${next}'`));
+  touched.add(S.SW);
+  const moved = [];
+  for (const b of SW_BOOTSTRAPS) {
+    if (!S.exists(b)) continue;
+    const before = S.read(b);
+    const after = before.replace(/\/kiwi-sw\.js\?v=[0-9]+/g, `/kiwi-sw.js?v=${next}`);
+    if (after === before) { console.warn(`  · ${b} — aucun register('/kiwi-sw.js?v=N') trouvé`); continue; }
+    write(b, after); touched.add(b); moved.push(b);
+  }
+  console.log(`  ✓ génération du service worker  kiwi-app-v${current} → v${next}   (${S.SW} + ${moved.length} bootstrap(s))`);
+  return moved;
+}
+
 let scanned = S.scan();
 let bumped = 0;
 
@@ -106,6 +138,11 @@ if (SYNC_ONLY) {
 } else {
   const manifest = S.readManifest();
   let list = targets;
+  if (SW_GEN) {
+    /* Les bootstraps viennent d'être réécrits : leurs estampilles passent dans
+       le flux normal, après celles demandées explicitement, sans doublon. */
+    for (const b of bumpSwGeneration()) if (!list.includes(b)) list.push(b);
+  }
   if (ALL) {
     list = [...scanned.keys()].filter((a) => S.exists(a) && manifest[a] && manifest[a].sha !== S.sha(a));
     if (!list.length) console.log('Aucun asset estampillé n’a changé de contenu — rien à bumper.');

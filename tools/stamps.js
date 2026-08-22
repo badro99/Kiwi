@@ -22,7 +22,9 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-const ROOT = path.resolve(__dirname, '..');
+/* KIWI_STAMPS_ROOT : racine de remplacement pour les tests (un arbre jetable
+   avec ses propres shells, SW et manifeste). Jamais en usage normal. */
+const ROOT = process.env.KIWI_STAMPS_ROOT ? path.resolve(process.env.KIWI_STAMPS_ROOT) : path.resolve(__dirname, '..');
 const SW = 'kiwi-sw.js';
 const DISPATCH = 'assets/pos-dispatch.js';
 const MANIFEST = 'tools/asset-stamps.json';

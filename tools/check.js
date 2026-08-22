@@ -882,6 +882,9 @@ section('Whole-project regressions');
        celui-ci vérifie qu'elle a bougé quand le fichier a bougé. Sans lui, un
        asset édité sans bump est parfaitement cohérent — sur l'ancienne URL. */
     'stamp-drift-test.js',
+    /* --sw de bump-stamp (génération SW en quatre fichiers + estampilles des
+       bootstraps) et le garde-fou pre-commit, sur un arbre jetable. */
+    'bump-stamp-test.mjs',
     'pos-registry-sync-test.mjs',
     'pos-maison-test.mjs',
     /* Le panneau d'activation : il doit pouvoir se fermer. Il ne le pouvait

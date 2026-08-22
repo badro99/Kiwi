@@ -163,8 +163,21 @@ every asset whose content changed.
 bootstraps (`assets/dashboard-pwa.js`, `assets/caisse-pwa.js`,
 `assets/employee-live.js`). Editing those three changes their content, so each then
 needs its own `?v=` stamp moved — one generation bump cascades to ~10 file touches.
+**Don't do it by hand either:** `node tools/bump-stamp.js --sw` moves the generation in
+all four files and then bumps the three bootstraps' own stamps in the same run.
 `tools/platform-ops-test.mjs` asserts the generation as a **floor** (`>=`), never a
 pin; don't "fix" a red run by pinning it.
+
+**The pre-commit hook catches the rest.** Run `sh tools/install-hooks.sh` once per
+clone (hooks aren't versioned; the installer chains any existing hook such as
+graphify's post-commit). It exports the **index** to a scratch directory and runs
+`tools/stamp-drift-test.js` there — so it judges exactly what you are committing,
+and another session's unstaged edits can neither block you nor rescue you. It never
+modifies or stages anything: on a red it prints the `bump-stamp` command to run.
+One subtlety it names for you: `bump-stamp` seals `tools/asset-stamps.json` from the
+working tree, so an asset a *concurrent session* edited but did not stage enters the
+manifest you stage — the hook refuses and names that file; stage it if it's yours,
+else `KIWI_SKIP_STAMP_HOOK=1` for that one commit.
 
 **The gate is `node tools/check.js`.** It parses every `assets/*.js`, checks that
 every `data-action` in HTML is handled, that every `data-i18n` key exists in EN + AR,
