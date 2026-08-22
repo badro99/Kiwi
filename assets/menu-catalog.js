@@ -639,6 +639,47 @@
       return d;
     });
   }
+  /* ───────────────── traductions (assets/menu-i18n.js) ─────────────────
+   * Les traductions vivent SUR les entités (cat.i18n, item.i18n, …), jamais à
+   * la place du libellé canonique. Le store ne traduit rien lui-même : le
+   * workspace demande à Kiwi AI ce qui manque (KiwiMenuI18n.needs) et dépose
+   * la réponse ici (setI18n) ; une correction du patron passe par setI18nEntry
+   * et n'est plus jamais écrasée par la machine. Écrire dans le store suffit à
+   * republier la carte (boot() → schedulePublish). */
+  const MI = () => window.KiwiMenuI18n || null;
+  function setI18n(lang, res, opts) {
+    const m = MI(); if (!m) return 0;
+    let n = 0;
+    store.update((d) => { n = m.apply(d, lang, res, opts || {}); return d; });
+    return n;
+  }
+  function i18nTarget(d, kind, id, subId) {
+    if (kind === 'cat') return catById(d, id);
+    if (kind === 'sub') { const c = catById(d, id); return c ? (c.sub || []).find((s) => s.id === subId) || null : null; }
+    if (kind === 'item') return itemById(d, id);
+    if (kind === 'opt') return optById(d, id);
+    if (kind === 'choice') { const g = optById(d, id); return g ? (g.choices || []).find((c) => c.id === subId) || null : null; }
+    return null;
+  }
+  function setI18nEntry(kind, id, subId, lang, patch) {
+    const m = MI(); if (!m) return false;
+    let okFlag = false;
+    store.update((d) => {
+      const e = i18nTarget(d, kind, id, subId);
+      if (!e) return d;
+      const cur = (e.i18n && e.i18n[lang]) || {};
+      // Une description corrigée sans nom traduit garde le nom du patron : la correction n'est pas perdue.
+      const name = patch && patch.name != null ? patch.name : (cur.name || e.name);
+      const desc = patch && patch.desc != null ? patch.desc : (cur.desc != null ? cur.desc : null);
+      okFlag = m.setManual(e, lang, name, desc);
+      return d;
+    });
+    return okFlag;
+  }
+  function clearI18n(lang, keepManual) {
+    const m = MI(); if (!m) return;
+    store.update((d) => { m.clear(d, lang, keepManual); return d; });
+  }
   function deleteItem(id) {
     const next = store.update((d) => {
       d.items = (d.items || []).filter((i) => i.id !== id);
@@ -2373,6 +2414,8 @@
     loadExample: (vid) => store.loadExample(vid),
     addCategory, addSubcategory, renameSubcategory, deleteSubcategory,
     addItem, updateItem, deleteItem, renameCategory, moveCategory, deleteCategory,
+    /* Traductions de la carte — voir le bloc « traductions » plus haut. */
+    setI18n, setI18nEntry, clearI18n,
     /* Les postes de préparation. `stations()` rend la liste DANS L'ORDRE, qui
      * est l'ordre des onglets de l'écran cuisine — plus le réglage de routage.
      * Le routage se lit sur la catégorie (`cat.station`, vide = la cuisine) et

@@ -38,6 +38,9 @@ Règles de traduction :
   * Ex: "Salted Caramel Latte" -> "Latte Caramel Beurre Salé", "Coconut Matcha" -> "Matcha Coco", "Matcha Mango" -> "Matcha Mangue", "Scrambled eggs" -> "Œufs brouillés", "Fresh Orange Juice" -> "Jus d'orange frais".
 - Conserve les termes culinaires universels ou signatures de café qui ne se traduisent pas (ex: "Espresso", "Matcha", "Latte", "Cappuccino", "Smoothie", "Mocha", "Americano", "Tiramisu", "Burger", "Tacos", "Speculoos", "Croissant").
 - Traduis les noms et choix de groupes d'options (ex: "Choice of milk" -> "Choix du lait", "Oat milk" -> "Lait d'avoine", "Sugar level" -> "Niveau de sucre").
+- Un libellé DÉJÀ dans la langue cible est recopié tel quel (même casse, même orthographe) — ne le reformule pas.
+- Un nom propre, une marque ou un plat signature (ex: "Msemen Hajja Fatima", "Burger Atlas") garde son nom ; en arabe, translittère-le.
+- Traduis TOUTES les entrées reçues, aucune omission : la réponse contient exactement les mêmes identifiants que l'entrée.
 
 Structure JSON exacte à retourner :
 {

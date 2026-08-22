@@ -132,8 +132,13 @@ export function buildSystemPrompt(targetLang = 'fr') {
   };
   const targetLabel = langNames[targetLang] || 'français';
 
-  return `Tu es un extracteur et traducteur intelligent de cartes (menus) pour restaurants et cafés au Maroc.
-Analyse la carte fournie, détecte sa langue d'origine, et traduis NATURELLEMENT tous les libellés (sections "cat", sous-sections "sub", noms d'articles "name" et descriptions "desc") vers la langue de l'application : ${targetLabel}.
+  // La cible n'est plus une langue de traduction : on lit la carte telle
+  // qu'elle est écrite. La traduction se fait APRÈS, par entrée et par langue,
+  // avec une empreinte (assets/menu-i18n.js + /api/ai/menu-translate) — sinon
+  // la langue d'origine du patron est perdue à la première lecture.
+  void targetLabel;
+  return `Tu es un extracteur fidèle de cartes (menus) pour restaurants et cafés au Maroc.
+Lis la carte fournie et recopie ses libellés EXACTEMENT tels qu'ils sont écrits, dans leur langue d'origine (français, anglais, arabe, espagnol…) : ne traduis rien, ne reformule rien, ne corrige que les coquilles évidentes de lecture.
 
 Structure JSON stricte à retourner :
 {
@@ -145,12 +150,9 @@ Structure JSON stricte à retourner :
 Règles :
 - Réponds UNIQUEMENT avec un objet JSON valide, sans texte d'introduction ni commentaire.
 - "price" est un nombre (pas une chaîne). Si le prix est absent ou illisible, mets 0.
-- Détecte la langue de la carte d'origine (anglais, espagnol, italien, arabe, etc.). Si elle est différente de ${targetLabel}, traduis naturellement et élégamment :
-  * Les sections "cat" et sous-sections "sub" (ex: "Hot Drinks" -> "Boissons chaudes", "Cold Drinks" -> "Boissons fraîches", "Brunch & Breakfast" -> "Brunch & Petit-déjeuner", "Sweets" -> "Desserts & Douceurs", "Lunch & Snack" -> "Déjeuner & En-cas").
-  * Les noms d'articles "name" et descriptions "desc" (ex: "Salted Caramel Latte" -> "Latte Caramel Beurre Salé", "Coconut Matcha" -> "Matcha Coco", "Matcha Mango" -> "Matcha Mangue", "Scrambled eggs" -> "Œufs brouillés", "Fresh Orange Juice" -> "Jus d'orange frais").
-  * Conserve les termes culinaires universels ou signatures de café qui ne se traduisent pas (ex: "Espresso", "Matcha", "Latte", "Cappuccino", "Smoothie", "Mocha", "Americano", "Tiramisu", "Burger", "Tacos").
-- "sub" seulement si le menu a des sous-sections (ex. "Matcha", "Classics", "All Day Brunch"), sinon chaîne vide. Traduis aussi le nom de la sous-section si pertinent (ex: "Hot" -> "Chaud", "Iced" -> "Glacé").
-- "desc" uniquement si une description est écrite sur la carte — traduis-la dans la langue cible sans rien inventer.
+- Les sections "cat", sous-sections "sub", noms "name" et descriptions "desc" sont recopiés dans la langue où ils sont écrits sur la carte — même si la carte mélange deux langues. La traduction est faite ensuite, ailleurs.
+- "sub" seulement si le menu a des sous-sections (ex. "Matcha", "Classics", "All Day Brunch"), sinon chaîne vide.
+- "desc" uniquement si une description est écrite sur la carte — sans rien inventer.
 - Ignore les adresses, téléphones, horaires, slogans, réseaux sociaux et mentions légales.
 - N'omets aucun article : chaque plat ou boisson avec ou sans prix devient une entrée.`;
 }

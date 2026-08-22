@@ -125,7 +125,34 @@ function sanitizeFormula(raw, blockedIds) {
 
 // Keep the stored menu small and well-shaped. We trust the merchant (it's their
 // own carte) but still bound sizes so a runaway client can't bloat the row.
-function sanitizeMenu(raw) {
+/* Les traductions d'une entité (assets/menu-i18n.js) : { fr|ar|en: {name,
+ * desc?, h, m?} }. Additif — une carte publiée avant n'en a pas et chaque
+ * surface retombe sur le libellé canonique. Bornes serrées : c'est du texte
+ * qui part dans le DOM de la page client. */
+const I18N_LANGS = ['fr', 'ar', 'en'];
+function sanitizeI18n(raw, nameMax, descMax) {
+  if (!raw || typeof raw !== 'object') return null;
+  const out = {};
+  for (const lang of I18N_LANGS) {
+    const x = raw[lang];
+    if (!x || typeof x !== 'object') continue;
+    const name = str(x.name, nameMax).trim();
+    if (!name) continue;
+    const e = { name, h: str(x.h, 16) };
+    if (descMax && x.desc != null) e.desc = str(x.desc, descMax);
+    if (x.m) e.m = 1;
+    out[lang] = e;
+  }
+  return Object.keys(out).length ? out : null;
+}
+/* Pose `i18n` sur une entité assainie quand la source en porte une. */
+function withI18n(target, source, nameMax, descMax) {
+  const i18n = sanitizeI18n(source && source.i18n, nameMax, descMax);
+  if (i18n) target.i18n = i18n;
+  return target;
+}
+
+export function sanitizeMenu(raw) {
   const out = { cats: [], items: [], stations: [], kitchenId: '', opts: [], formulaTemplates: [] };
   if (!raw || typeof raw !== 'object') return out;
   // La cuisine — le poste qui reçoit tout ce qu'aucune catégorie n'envoie
@@ -149,34 +176,34 @@ function sanitizeMenu(raw) {
   // verrait pas au tableau de bord — seulement au comptoir, où le produit
   // entrerait dans la note sans qu'on ait demandé quoi que ce soit.
   const opts = Array.isArray(raw.opts) ? raw.opts.slice(0, 40) : [];
-  out.opts = opts.map((g) => ({
+  out.opts = opts.map((g) => withI18n({
     id: str(g && g.id, 40),
     name: str(g && g.name, 60),
     // Deux règles seulement, et rien d'autre : un choix, ou plusieurs.
     kind: (g && g.kind) === 'many' ? 'many' : 'one',
     required: !!(g && g.required),
-    choices: (Array.isArray(g && g.choices) ? g.choices.slice(0, 40) : []).map((c) => ({
+    choices: (Array.isArray(g && g.choices) ? g.choices.slice(0, 40) : []).map((c) => withI18n({
       id: str(c && c.id, 40),
       name: str(c && c.name, 60),
       // Repère visuel facultatif pour le KDS. Additif : toutes les cartes
       // publiées avant cette clé continuent avec une chaîne vide.
       emoji: optionEmoji(c && c.emoji),
       price: Math.max(0, Math.min(1e6, Number(c && c.price) || 0)),
-    })).filter((c) => c.id && c.name),
-  })).filter((g) => g.id && g.name);
+    }, c, 60, 0)).filter((c) => c.id && c.name),
+  }, g, 60, 0)).filter((g) => g.id && g.name);
   const cats = Array.isArray(raw.cats) ? raw.cats.slice(0, 60) : [];
-  out.cats = cats.map((c) => ({
+  out.cats = cats.map((c) => withI18n({
     id: str(c && c.id, 40),
     name: str(c && c.name, 80),
     // Le poste de la catégorie : c'est ICI que vit le routage de la cuisine.
     // Vide = la cuisine. Le perdre au passage renverrait toute la carte au
     // même écran dès la prochaine relecture depuis un autre appareil.
     station: str(c && c.station, 40),
-    sub: Array.isArray(c && c.sub) ? c.sub.slice(0, 40).map((s) => ({
+    sub: Array.isArray(c && c.sub) ? c.sub.slice(0, 40).map((s) => withI18n({
       id: str(s && s.id, 40),
       name: str(s && s.name, 80),
-    })) : [],
-  })).filter((c) => c.id);
+    }, s, 80, 0)) : [],
+  }, c, 80, 0)).filter((c) => c.id);
   const items = Array.isArray(raw.items) ? raw.items.slice(0, 1000) : [];
   out.items = items.map((it) => {
     const item = {
@@ -206,6 +233,8 @@ function sanitizeMenu(raw) {
       photo: mediaUrl(it && it.photo),
       video: mediaUrl(it && it.video),
     };
+    // Les traductions du plat (nom + description), voir sanitizeI18n.
+    withI18n(item, it, 120, 400);
     return item;
   }).filter((it) => it.id && it.name);
   const rawItemsById = new Map(items.filter((it) => it && it.id).map((it) => [str(it.id, 40), it]));

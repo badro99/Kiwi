@@ -39,6 +39,10 @@ const serveurSource = fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf
 // ── 1. functions/api/menu.js: sanitizeMenu & sanitizeFormula ─────────────────
 const sanitizeFormulaMatch = menuApiSource.match(/function sanitizeFormula\([\s\S]*?\n\}/);
 const sanitizeMenuMatch = menuApiSource.match(/function sanitizeMenu\([\s\S]*?\n\}/);
+/* Les traductions (i18n) voyagent sur chaque entité depuis 2026-08-22 :
+   sanitizeMenu s'appuie sur sanitizeI18n/withI18n, qu'on embarque tels quels. */
+const sanitizeI18nMatch = menuApiSource.match(/function sanitizeI18n\([\s\S]*?\n\}/);
+const withI18nMatch = menuApiSource.match(/function withI18n\([\s\S]*?\n\}/);
 
 let sanitizeMenuFn = null;
 if (!sanitizeFormulaMatch || !sanitizeMenuMatch) {
@@ -51,6 +55,9 @@ if (!sanitizeFormulaMatch || !sanitizeMenuMatch) {
       const mediaUrl = (v) => '';
       const sanitizePeriods = () => [];
       const sanitizeHours = () => null;
+      const I18N_LANGS = ['fr', 'ar', 'en'];
+      ${sanitizeI18nMatch ? sanitizeI18nMatch[0] : 'function sanitizeI18n() { return null; }'}
+      ${withI18nMatch ? withI18nMatch[0] : 'function withI18n(t) { return t; }'}
       ${sanitizeFormulaMatch[0]}
       ${sanitizeMenuMatch[0]}
       return sanitizeMenu;

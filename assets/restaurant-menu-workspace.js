@@ -29,7 +29,30 @@
       tabNfc: 'NFC Tags',
       scanMenu: 'Scan a menu',
       importExcel: 'Import Excel',
-      translateMenu: '🌐 Translate menu',
+      translateMenu: 'Translations',
+      tabI18n: 'Translations',
+      i18nTitle: 'The menu in everyone’s language',
+      i18nHint: 'Kiwi AI translates new or changed entries into French, Arabic and English on its own; the original text is never modified. Edit a cell to correct it: a correction is never overwritten.',
+      i18nFill: 'Translate what’s missing',
+      i18nRedo: 'Retranslate everything',
+      i18nRedoConfirm: 'Retranslate the whole menu?',
+      i18nRedoDesc: 'Your manual corrections are kept.',
+      i18nOriginal: 'Original',
+      i18nSections: 'Sections',
+      i18nItems: 'Items',
+      i18nOptions: 'Options',
+      i18nDesc: 'description',
+      i18nStatusOk: 'translated',
+      i18nStatusStale: 'outdated',
+      i18nStatusMissing: 'missing',
+      i18nStatusManual: 'corrected by hand',
+      i18nUpToDate: 'All translations are up to date.',
+      i18nDone: '{n} translation(s) added.',
+      i18nQuota: 'Translation quota reached for today. It will resume later.',
+      i18nError: 'Translation unavailable right now. It will retry in a few minutes.',
+      i18nDemo: 'Automatic translation is for signed-in merchant accounts.',
+      i18nBusy: 'Translating · {n} entries',
+      i18nEmpty: 'Add items to translate them.',
       all: 'All',
       allWithCount: 'All · {n}',
       uncategorizedWithCount: 'Uncategorized · {n}',
@@ -269,7 +292,30 @@
       tabNfc: 'رموز NFC',
       scanMenu: 'مسح القائمة',
       importExcel: 'استيراد Excel',
-      translateMenu: '🌐 ترجمة القائمة',
+      translateMenu: 'الترجمات',
+      tabI18n: 'الترجمات',
+      i18nTitle: 'القائمة بلغة كل واحد',
+      i18nHint: 'يترجم Kiwi AI المدخلات الجديدة أو المعدلة إلى الفرنسية والعربية والإنجليزية تلقائيا؛ النص الأصلي لا يتغير أبدا. عدّل خانة لتصحيحها: التصحيح لا يُستبدل أبدا.',
+      i18nFill: 'ترجمة ما ينقص',
+      i18nRedo: 'إعادة ترجمة الكل',
+      i18nRedoConfirm: 'إعادة ترجمة القائمة كاملة؟',
+      i18nRedoDesc: 'تُحفظ تصحيحاتك اليدوية.',
+      i18nOriginal: 'النص الأصلي',
+      i18nSections: 'الأقسام',
+      i18nItems: 'الأصناف',
+      i18nOptions: 'الخيارات',
+      i18nDesc: 'الوصف',
+      i18nStatusOk: 'مترجم',
+      i18nStatusStale: 'للمراجعة',
+      i18nStatusMissing: 'ناقص',
+      i18nStatusManual: 'مصحح يدويا',
+      i18nUpToDate: 'كل الترجمات محدثة.',
+      i18nDone: 'تمت إضافة {n} ترجمة.',
+      i18nQuota: 'تم بلوغ حصة الترجمة اليوم، ستستأنف لاحقا.',
+      i18nError: 'تعذرت الترجمة حاليا، ستتم إعادة المحاولة بعد دقائق.',
+      i18nDemo: 'الترجمة التلقائية متاحة لحسابات التجار المتصلة.',
+      i18nBusy: 'جارٍ الترجمة · {n} مدخل',
+      i18nEmpty: 'أضف أصنافا لترجمتها.',
       all: 'الكل',
       allWithCount: 'الكل · {n}',
       uncategorizedWithCount: 'غير مصنف · {n}',
@@ -509,7 +555,30 @@
       tabNfc: 'Tags NFC',
       scanMenu: 'Scanner un menu',
       importExcel: 'Importer Excel',
-      translateMenu: '🌐 Traduire la carte',
+      translateMenu: 'Traductions',
+      tabI18n: 'Traductions',
+      i18nTitle: 'La carte dans la langue de chacun',
+      i18nHint: 'Kiwi AI traduit de lui-même les nouveautés et les modifications en français, arabe et anglais ; le texte d’origine n’est jamais modifié. Corrigez une cellule pour la reprendre : une correction n’est plus jamais écrasée.',
+      i18nFill: 'Traduire ce qui manque',
+      i18nRedo: 'Tout retraduire',
+      i18nRedoConfirm: 'Retraduire toute la carte ?',
+      i18nRedoDesc: 'Vos corrections manuelles sont conservées.',
+      i18nOriginal: 'Texte d’origine',
+      i18nSections: 'Sections',
+      i18nItems: 'Articles',
+      i18nOptions: 'Options',
+      i18nDesc: 'description',
+      i18nStatusOk: 'traduits',
+      i18nStatusStale: 'à revoir',
+      i18nStatusMissing: 'manquants',
+      i18nStatusManual: 'corrigé à la main',
+      i18nUpToDate: 'Toutes les traductions sont à jour.',
+      i18nDone: '{n} traduction(s) ajoutée(s).',
+      i18nQuota: 'Quota de traduction atteint pour aujourd’hui. Reprise automatique plus tard.',
+      i18nError: 'Traduction impossible pour le moment. Nouvel essai automatique dans quelques minutes.',
+      i18nDemo: 'Les traductions automatiques sont réservées aux comptes commerçants connectés.',
+      i18nBusy: 'Traduction en cours · {n} entrée(s)',
+      i18nEmpty: 'Ajoutez des articles pour les traduire.',
       all: 'Tous',
       allWithCount: 'Tout · {n}',
       uncategorizedWithCount: 'À classer · {n}',
@@ -750,13 +819,14 @@
     return text;
   }
   const t=(str)=>window.KiwiMenuI18n?window.KiwiMenuI18n.t(str,lang()):str;
-  const icons={menu:'menu',station:'cooking-pot',book:'book-open',chart:'bar-chart-3',clock:'clock',alert:'alert-triangle',tag:'tag',plus:'plus',edit:'pencil',trash:'trash-2',archive:'archive',restore:'archive-restore',more:'more-vertical'};
+  const icons={menu:'menu',languages:'languages',station:'cooking-pot',book:'book-open',chart:'bar-chart-3',clock:'clock',alert:'alert-triangle',tag:'tag',plus:'plus',edit:'pencil',trash:'trash-2',archive:'archive',restore:'archive-restore',more:'more-vertical'};
   const ic=(n)=>`<i data-lucide="${icons[n]||icons.menu}" style="width:14px;height:14px" aria-hidden="true"></i>`;
   const toast=(t,d,type='success')=>window.Kiwi?.toast?.(t,{desc:d||'',type});
   function tabs(){
     const n=D().items.filter(x=>x.avail===false).length;
     return [
       ['menu', ui('tabMenu'), 'menu'],
+      ['i18n', ui('tabI18n'), 'languages'],
       ['stations', ui('tabStations'), 'station'],
       ['recipes', ui('tabRecipes'), 'book'],
       ['performance', ui('tabPerformance'), 'chart'],
@@ -786,10 +856,10 @@
     root.hidden=false;
     const itemCountStr = d.items.length === 1 ? `1 ${ui('article')}` : `${d.items.length} ${ui('articles')}`;
     const catCountStr = d.cats.length === 1 ? `1 ${ui('section')}` : `${d.cats.length} ${ui('sections')}`;
-    root.innerHTML=`<div class="mi-head"><div><div class="mi-title">${esc(ui('title'))}</div><div class="mi-sub">${itemCountStr} · ${catCountStr} · ${esc(v.name||'')}</div></div><div class="mi-head-acts"><button class="btn-slim" data-action="rmw-menu-translate" style="display:none;" title="${esc(ui('translateMenu'))}">${esc(ui('translateMenu'))}</button><button class="btn-slim" data-action="rmw-menu-scan">${esc(ui('scanMenu'))}</button><button class="btn-slim" data-action="mx-import">${esc(ui('importExcel'))}</button></div></div><div class="mi-filters"><div class="mi-pill-row">${tabs()}</div></div><div class="mi-panel" data-rmw-panel>${panel()}</div>`;
+    root.innerHTML=`<div class="mi-head"><div><div class="mi-title">${esc(ui('title'))}</div><div class="mi-sub">${itemCountStr} · ${catCountStr} · ${esc(v.name||'')}</div></div><div class="mi-head-acts"><button class="btn-slim" data-action="rmw-menu-scan">${esc(ui('scanMenu'))}</button><button class="btn-slim" data-action="mx-import">${esc(ui('importExcel'))}</button></div></div><div class="mi-filters"><div class="mi-pill-row">${tabs()}</div></div><div class="mi-panel" data-rmw-panel>${panel()}</div>`;
     if(tab==='nfc')window.KiwiOrderProPanel?.mount?.($('[data-rmw-nfc]',root));
   }
-  function panel(){return ({stations:stationsPanel,recipes:recipesPanel,performance:performancePanel,hours:hoursPanel,alerts:alertsPanel,nfc:nfcPanel}[tab]||menuPanel)();}
+  function panel(){return ({i18n:i18nPanel,stations:stationsPanel,recipes:recipesPanel,performance:performancePanel,hours:hoursPanel,alerts:alertsPanel,nfc:nfcPanel}[tab]||menuPanel)();}
   function shownItems(){const q=query.trim().toLowerCase();return D().items.filter(x=>(filter==='all'||x.catId===filter)&&(filter==='all'||!subFilter||(subFilter==='__none'?!x.subId:x.subId===subFilter))&&(!q||`${t(x.name)} ${x.name} ${x.desc||''}`.toLowerCase().includes(q)));}
   const subsOf=(cid)=>cat(cid)?.sub||[];
   function subChips(){
@@ -1065,235 +1135,124 @@
     if(isRestaurant()||document.querySelector('.sidebar nav a[data-nav="menu"]')){show(true);return;}
     if(legacyMenuHandler)return legacyMenuHandler.apply(this,arguments);
   }
-  const TRANSLATE_DICT = {
-    fr: {
-      'hot drinks': 'Boissons chaudes', 'cold drinks': 'Boissons fraîches',
-      'breakfast & brunch': 'Brunch & Petit-déjeuner', 'breakfast': 'Petit-déjeuner',
-      'brunch': 'Brunch', 'sweets': 'Desserts & Douceurs', 'desserts': 'Desserts',
-      'bakery': 'Boulangerie & Viennoiserie', 'pastries': 'Pâtisseries',
-      'sandwiches': 'Sandwiches', 'burgers': 'Burgers', 'pizzas': 'Pizzas',
-      'pastas': 'Pâtes', 'salads': 'Salades', 'starters': 'Entrées',
-      'main courses': 'Plats principaux', 'mains': 'Plats', 'snacks': 'En-cas',
-      'juices': 'Jus de fruits frais', 'tea': 'Thés & Infusions', 'coffee': 'Cafés',
-      'smoothies': 'Smoothies', 'milkshakes': 'Milkshakes', 'ice cream': 'Glaces',
-      'iced drinks': 'Boissons glacées', 'matcha bar': 'Bar à Matcha',
-      'cookies': 'Cookies', 'cakes': 'Gâteaux', 'cheesecakes': 'Cheesecakes',
-      'salted caramel latte': 'Latte Caramel Beurre Salé',
-      'caramel latte': 'Latte Caramel', 'vanilla latte': 'Latte Vanille',
-      'hazelnut latte': 'Latte Noisette', 'spanish latte': 'Latte Espagnol',
-      'matcha latte': 'Matcha Latte', 'coconut matcha': 'Matcha Coco',
-      'matcha mango': 'Matcha Mangue', 'mango matcha': 'Matcha Mangue',
-      'strawberry matcha': 'Matcha Fraise', 'iced latte': 'Latte Glacé',
-      'iced americano': 'Americano Glacé', 'hot chocolate': 'Chocolat Chaud',
-      'fresh orange juice': 'Jus d’orange frais', 'lemon mint': 'Citronnade Menthe',
-      'avocado toast': 'Toast Avocat', 'scrambled eggs': 'Œufs brouillés',
-      'fried eggs': 'Œufs au plat', 'french toast': 'Pain perdu',
-      'croissant': 'Croissant', 'pain au chocolat': 'Pain au chocolat',
-    },
-    ar: {
-      'hot drinks': 'مشروبات ساخنة', 'cold drinks': 'مشروبات باردة',
-      'boissons chaudes': 'مشروبات ساخنة', 'boissons fraîches': 'مشروبات باردة',
-      'boissons fraiches': 'مشروبات باردة', 'boissons': 'مشروبات',
-      'breakfast & brunch': 'فطور الصباح و برانش', 'brunch & petit-déjeuner': 'فطور الصباح و برانش',
-      'breakfast': 'فطور الصباح', 'petit-déjeuner': 'فطور الصباح', 'petit dejeuner': 'فطور الصباح',
-      'brunch': 'برانش', 'sweets': 'حلويات و تحليات', 'desserts': 'حلويات',
-      'desserts & douceurs': 'حلويات و تحليات', 'bakery': 'مخبوزات و فطائر',
-      'boulangerie': 'مخبوزات', 'viennoiserie': 'فطائر', 'pâtisseries': 'حلويات',
-      'sandwiches': 'سندويشات', 'burgers': 'برغر', 'pizzas': 'بيتزا',
-      'pastas': 'معكرونة', 'pâtes': 'معكرونة', 'salads': 'سلطات', 'salades': 'سلطات',
-      'starters': 'مقبلات', 'entrées': 'مقبلات', 'main courses': 'أطباق رئيسية',
-      'plats principaux': 'أطباق رئيسية', 'mains': 'أطباق رئيسية', 'plats': 'أطباق',
-      'snacks': 'وجبات خفيفة', 'en-cas': 'وجبات خفيفة', 'juices': 'عصائر طازجة',
-      'jus frais': 'عصائر طازجة', 'jus': 'عصائر', 'tea': 'شاي و أعشاب',
-      'thé': 'شاي', 'the': 'شاي', 'café': 'قهوة', 'cafe': 'قهوة', 'coffee': 'قهوة',
-      'smoothies': 'سموذي', 'milkshakes': 'ميلك شيك', 'ice cream': 'مثلجات', 'glaces': 'مثلجات',
-      'iced drinks': 'مشروبات مثلجة', 'matcha bar': 'ركن الماتشا',
-      'cookies': 'كوكيز', 'cakes': 'كيك', 'gâteaux': 'كيك', 'gateaux': 'كيك',
-      'cheesecakes': 'تشيز كيك',
-      'salted caramel latte': 'كراميل لاتيه مملح', 'latte caramel beurre salé': 'كراميل لاتيه مملح',
-      'latte caramel': 'كراميل لاتيه', 'caramel latte': 'كراميل لاتيه',
-      'vanilla latte': 'فانيلا لاتيه', 'latte vanille': 'فانيلا لاتيه',
-      'hazelnut latte': 'لاتيه بندق', 'latte noisette': 'لاتيه بندق',
-      'spanish latte': 'لاتيه إسباني', 'latte espagnol': 'لاتيه إسباني',
-      'matcha latte': 'ماتشا لاتيه', 'coconut matcha': 'ماتشا جوز الهند',
-      'matcha coco': 'ماتشا جوز الهند', 'matcha mango': 'ماتشا مانجو',
-      'matcha mangue': 'ماتشا مانجو', 'strawberry matcha': 'ماتشا فراولة',
-      'matcha fraise': 'ماتشا فراولة', 'iced latte': 'لاتيه مثلج',
-      'latte glacé': 'لاتيه مثلج', 'iced americano': 'أمريكانو مثلج',
-      'americano glacé': 'أمريكانو مثلج', 'hot chocolate': 'شوكولاتة ساخنة',
-      'chocolat chaud': 'شوكولاتة ساخنة', 'fresh orange juice': 'عصير برتقال طازج',
-      'jus d’orange frais': 'عصير برتقال طازج', 'jus d\'orange frais': 'عصير برتقال طازج',
-      'lemon mint': 'عصير ليمون بالنعناع', 'citronnade menthe': 'عصير ليمون بالنعناع',
-      'avocado toast': 'توست أفوكادو', 'toast avocat': 'توست أفوكادو',
-      'scrambled eggs': 'بيض مخفوق', 'œufs brouillés': 'بيض مخفوق',
-      'fried eggs': 'بيض عيون', 'œufs au plat': 'بيض عيون',
-      'french toast': 'فرنش توست', 'pain perdu': 'فرنش توست',
-      'croissant': 'كرواسون', 'pain au chocolat': 'بتي بان بالشوكولاتة',
-      'espresso': 'إسبريسو', 'double espresso': 'دبل إسبريسو',
-      'cappuccino': 'كابتشينو', 'flat white': 'فلات وايت',
-      'cortado': 'كورتادو', 'macchiato': 'ماكياتو', 'mocha': 'موكا',
-    },
-    en: {
-      'boissons chaudes': 'Hot Drinks', 'boissons fraîches': 'Cold Drinks',
-      'boissons fraiches': 'Cold Drinks', 'boissons': 'Drinks',
-      'brunch & petit-déjeuner': 'Breakfast & Brunch', 'petit-déjeuner': 'Breakfast',
-      'desserts & douceurs': 'Sweets & Desserts', 'desserts': 'Desserts',
-      'boulangerie & viennoiserie': 'Bakery & Pastries', 'pâtisseries': 'Pastries',
-      'pâtes': 'Pastas', 'salades': 'Salads', 'entrées': 'Starters',
-      'plats principaux': 'Main Courses', 'plats': 'Mains', 'en-cas': 'Snacks',
-      'jus frais': 'Fresh Juices', 'jus d’orange frais': 'Fresh Orange Juice',
-      'jus d\'orange frais': 'Fresh Orange Juice', 'thés & infusions': 'Tea & Infusions',
-      'cafés': 'Coffee', 'glaces': 'Ice Cream', 'latte caramel beurre salé': 'Salted Caramel Latte',
-      'latte caramel': 'Caramel Latte', 'latte vanille': 'Vanilla Latte',
-      'latte noisette': 'Hazelnut Latte', 'latte espagnol': 'Spanish Latte',
-      'matcha coco': 'Coconut Matcha', 'matcha mangue': 'Mango Matcha',
-      'matcha fraise': 'Strawberry Matcha', 'latte glacé': 'Iced Latte',
-      'americano glacé': 'Iced Americano', 'chocolat chaud': 'Hot Chocolate',
-      'citronnade menthe': 'Lemon Mint Juice', 'toast avocat': 'Avocado Toast',
-      'œufs brouillés': 'Scrambled Eggs', 'œufs au plat': 'Fried Eggs',
-      'pain perdu': 'French Toast',
-    }
-  };
-
-  function translateTextDirect(txt, lang) {
-    if (!txt) return txt;
-    const dict = TRANSLATE_DICT[lang] || {};
-    const k = String(txt).trim().toLowerCase();
-    if (dict[k]) return dict[k];
-    for (const [src, dst] of Object.entries(dict)) {
-      if (k.includes(src)) return txt.replace(new RegExp(src, 'gi'), dst);
-    }
-    return txt;
+  /* ═══════════════ Traductions de la carte (assets/menu-i18n.js) ═══════════════
+   * La carte est traduite UNE FOIS par Kiwi AI, entrée par entrée, langue par
+   * langue, et seulement pour ce qui manque ou a changé (KiwiMenuI18n.needs) ;
+   * le libellé du patron n'est JAMAIS remplacé — la traduction vit à côté
+   * (entity.i18n). Déclenchement : automatique 2,5 s après un changement de la
+   * carte (import, scan, saisie), et à la main depuis l'onglet « Traductions »
+   * où chaque cellule se corrige (une correction n'est plus jamais écrasée).
+   * Sans session réelle (démo) : rien ne part sur le réseau. */
+  let i18nBusy=false,i18nTimer=0,i18nCooldown=0,i18nProgress='';
+  const I18N_BATCH=40;
+  const I18N_LANG_NAMES={fr:'Français',ar:'العربية',en:'English'};
+  const realSession=()=>{try{return !!(window.KiwiEnv&&window.KiwiEnv.isReal&&window.KiwiEnv.isReal());}catch(_){return false;}};
+  function i18nChunks(need){
+    const out=[];let cur={cats:[],items:[],opts:[],n:0};
+    const push=(k,e,w)=>{if(cur.n&&cur.n+w>I18N_BATCH){out.push(cur);cur={cats:[],items:[],opts:[],n:0};}cur[k].push(e);cur.n+=w;};
+    (need.cats||[]).forEach(c=>push('cats',c,1+(c.sub||[]).length));
+    (need.opts||[]).forEach(g=>push('opts',g,1+(g.choices||[]).length));
+    (need.items||[]).forEach(it=>push('items',it,1));
+    if(cur.n)out.push(cur);
+    return out;
   }
-
-  function applyLocalTranslation(d, targetLang) {
-    (d.cats || []).forEach(c => {
-      const tn = translateTextDirect(c.name, targetLang);
-      if (tn && tn !== c.name) S().renameCategory(c.id, tn);
-      (c.sub || []).forEach(s => {
-        const tsn = translateTextDirect(s.name, targetLang);
-        if (tsn && tsn !== s.name) S().renameSubcategory(c.id, s.id, tsn);
-      });
-    });
-    (d.items || []).forEach(it => {
-      const tn = translateTextDirect(it.name, targetLang);
-      const td = translateTextDirect(it.desc, targetLang);
-      if (tn !== it.name || td !== it.desc) S().updateItem(it.id, { name: tn, desc: td });
-    });
-    (d.opts || []).forEach(g => {
-      const gn = translateTextDirect(g.name, targetLang);
-      const choices = (g.choices || []).map(ch => Object.assign({}, ch, {
-        name: translateTextDirect(ch.name, targetLang),
-      }));
-      S().updateOptGroup(g.id, { name: gn, choices });
-    });
-  }
-
-  async function openTranslateModal() {
-    const d = D();
-    if (!d.items.length) {
-      toast('Carte vide', 'Ajoutez d’abord des articles à traduire.', 'info');
-      return;
-    }
-    let currentLang = 'fr';
-    try {
-      currentLang = (window.Kiwi && Kiwi.lang && Kiwi.lang()) || (typeof localStorage !== 'undefined' ? localStorage.getItem('kiwiLang') : '') || document?.documentElement?.lang || 'fr';
-    } catch (_) {}
-    const m = modal({
-      tag: 'Kiwi AI', title: 'Traduire et adapter la carte', width: 520,
-      body: `
-        <div class="kf-help" style="margin-bottom:14px;line-height:1.5;">
-          Kiwi AI détecte la langue d’origine de vos articles et sections (ex. anglais, arabe, espagnol) et les adapte naturellement vers la langue choisie, tout en préservant les termes culinaires signatures (Espresso, Matcha, Latte...).
-        </div>
-        <div class="rmw-checks" style="grid-template-columns:1fr;margin-bottom:14px;">
-          <label style="display:flex;align-items:center;gap:10px;padding:12px;border:1px solid var(--n-200);border-radius:10px;cursor:pointer;">
-            <input type="radio" name="rmw-tlang" value="fr" ${currentLang !== 'ar' && currentLang !== 'en' ? 'checked' : ''} />
-            <div><b>Français</b><small style="display:block;color:var(--n-500);">Boissons chaudes, Brunch &amp; Petit-déjeuner, Latte Caramel...</small></div>
-          </label>
-          <label style="display:flex;align-items:center;gap:10px;padding:12px;border:1px solid var(--n-200);border-radius:10px;cursor:pointer;">
-            <input type="radio" name="rmw-tlang" value="ar" ${currentLang === 'ar' ? 'checked' : ''} />
-            <div><b>Arabe (العربية)</b><small style="display:block;color:var(--n-500);">مشروبات ساخنة، فطور الصباح، كراميل لاتيه...</small></div>
-          </label>
-          <label style="display:flex;align-items:center;gap:10px;padding:12px;border:1px solid var(--n-200);border-radius:10px;cursor:pointer;">
-            <input type="radio" name="rmw-tlang" value="en" ${currentLang === 'en' ? 'checked' : ''} />
-            <div><b>Anglais (English)</b><small style="display:block;color:var(--n-500);">Hot Drinks, Breakfast &amp; Brunch, Salted Caramel Latte...</small></div>
-          </label>
-        </div>
-        <div id="rmw-trans-busy" style="display:none;text-align:center;padding:18px 10px;">
-          <div style="width:28px;height:28px;margin:0 auto 10px;border:3px solid var(--n-200);border-top-color:var(--atlas);border-radius:50%;animation:rmw-spin .8s linear infinite;"></div>
-          <div style="font-weight:600;font-size:13px;color:var(--ink);">Traduction par Kiwi AI en cours…</div>
-          <div style="font-size:11.5px;color:var(--n-500);margin-top:2px;">Adaptation de ${d.items.length} article(s) et ${d.cats.length} section(s)</div>
-        </div>
-      `,
-      foot: `
-        <button class="btn-slim" data-cancel>Annuler</button>
-        <button class="eq-cta-gradient" data-confirm-trans style="margin-left:auto;">Traduire la carte</button>
-      `,
-    });
-
-    $('[data-cancel]', m.el).onclick = () => m.close();
-    $('[data-confirm-trans]', m.el).onclick = async () => {
-      const selectedRadio = m.el.querySelector('input[name="rmw-tlang"]:checked');
-      const targetLang = selectedRadio ? selectedRadio.value : 'fr';
-      const busyEl = m.el.querySelector('#rmw-trans-busy');
-      const confirmBtn = m.el.querySelector('[data-confirm-trans]');
-      if (busyEl) busyEl.style.display = 'block';
-      if (confirmBtn) confirmBtn.disabled = true;
-
-      const venueSlug = venue() || (window.KiwiVenue && window.KiwiVenue.getVenue && window.KiwiVenue.getVenue()) || '';
-
-      try {
-        let applied = false;
-        try {
-          const res = await fetch('/api/ai/menu-translate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              merchant: venueSlug,
-              targetLang: targetLang,
-              cats: d.cats,
-              items: d.items,
-              opts: d.opts,
-            }),
-          });
-          const data = await res.json();
-          if (res.ok && data && data.ok) {
-            if (Array.isArray(data.cats)) {
-              data.cats.forEach(c => {
-                S().renameCategory(c.id, c.name);
-                (c.sub || []).forEach(s => S().renameSubcategory(c.id, s.id, s.name));
-              });
-            }
-            if (Array.isArray(data.items)) {
-              data.items.forEach(it => {
-                S().updateItem(it.id, { name: it.name, desc: it.desc });
-              });
-            }
-            if (Array.isArray(data.opts)) {
-              data.opts.forEach(g => {
-                S().updateOptGroup(g.id, { name: g.name, choices: g.choices });
-              });
-            }
-            applied = true;
-          }
-        } catch (_) {
-          applied = false;
+  function i18nRefreshPanel(){if(tab==='i18n'){const p=$('[data-rmw-panel]');if(p)p.innerHTML=i18nPanel();}}
+  async function ensureTranslations(o){
+    o=o||{};
+    const M=window.KiwiMenuI18n;if(!M||i18nBusy)return;
+    if(!realSession()){if(!o.silent)toast(ui('i18nDemo'),'','info');return;}
+    if(o.silent&&Date.now()<i18nCooldown)return;
+    const d=D();
+    if(!d.items.length&&!d.cats.length){if(!o.silent)toast(ui('i18nEmpty'),'','info');return;}
+    const need=M.needs(d,M.LANGS,{force:o.force||false});
+    const total=M.LANGS.reduce((n,l)=>n+(need[l]?need[l].count:0),0);
+    if(!total){if(!o.silent)toast(ui('i18nUpToDate'),'','success');return;}
+    i18nBusy=true;let written=0,failed='';
+    const slug=venue()||'';
+    i18nProgress=ui('i18nBusy',{n:total});i18nRefreshPanel();
+    try{
+      for(const lang of M.LANGS){
+        if(!need[lang]||!need[lang].count)continue;
+        for(const chunk of i18nChunks(need[lang])){
+          let res=null;
+          try{
+            res=await fetch('/api/ai/menu-translate',{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json'},
+              body:JSON.stringify({merchant:slug,targetLang:lang,cats:chunk.cats,items:chunk.items,opts:chunk.opts})});
+          }catch(_){failed='network';break;}
+          if(res.status===429){failed='quota';break;}
+          let data=null;try{data=await res.json();}catch(_){}
+          if(!res.ok||!data||!data.ok){failed=(data&&(data.error||data.reason))||'error';break;}
+          // Le store écrit entity.i18n et republie la carte (menu-catalog.js → schedulePublish).
+          written+=S().setI18n(lang,data,{force:o.force||false})||0;
         }
-
-        if (!applied) {
-          applyLocalTranslation(d, targetLang);
-        }
-
-        m.close();
-        toast('Carte traduite avec succès', `${d.items.length} article(s) et ${d.cats.length} section(s) adaptés.`, 'ok');
-        render();
-      } catch (err) {
-        if (busyEl) busyEl.style.display = 'none';
-        if (confirmBtn) confirmBtn.disabled = false;
-        toast('Traduction impossible', 'Vérifiez votre connexion ou réessayez dans quelques instants.', 'warn');
+        if(failed)break;
       }
-    };
+    }finally{i18nBusy=false;i18nProgress='';}
+    if(failed){
+      i18nCooldown=Date.now()+(failed==='quota'?6*3600e3:10*60e3);
+      if(!o.silent)toast(failed==='quota'?ui('i18nQuota'):ui('i18nError'),'','warn');
+    }else if(!o.silent){toast(ui('i18nDone',{n:written}),'','success');}
+    if(document.body.classList.contains('page-menu'))render();
   }
+  function scheduleAutoTranslate(){
+    clearTimeout(i18nTimer);
+    i18nTimer=setTimeout(()=>{if(isRestaurant())ensureTranslations({silent:true});},2500);
+  }
+  function i18nPanel(){
+    i18nStyle();
+    const M=window.KiwiMenuI18n,d=D();
+    if(!M)return `<div class="rmw-empty"><p>${esc(ui('reloadPage'))}</p></div>`;
+    const L=M.LANGS,sum=M.summary(d);
+    const head=`<div class="rmw-i18n-head"><div><div class="rmw-i18n-title">${esc(ui('i18nTitle'))}</div><p class="rmw-i18n-hint">${esc(ui('i18nHint'))}</p></div><div class="rmw-i18n-acts"><button class="btn-slim" data-action="rmw-i18n-fill"${i18nBusy?' disabled':''}>${esc(ui('i18nFill'))}</button><button class="btn-slim" data-action="rmw-i18n-redo"${i18nBusy?' disabled':''}>${esc(ui('i18nRedo'))}</button></div></div>`;
+    const stats=`<div class="rmw-i18n-stats">${L.map(l=>{const s=sum[l];return `<div class="rmw-i18n-stat"><b>${esc(I18N_LANG_NAMES[l])}</b><span>${s.ok+s.manual}/${s.total} ${esc(ui('i18nStatusOk'))}</span>${s.stale?`<span class="is-stale">${s.stale} ${esc(ui('i18nStatusStale'))}</span>`:''}${s.missing?`<span class="is-missing">${s.missing} ${esc(ui('i18nStatusMissing'))}</span>`:''}</div>`;}).join('')}${i18nProgress?`<div class="rmw-i18n-busy"><span class="rmw-i18n-spin" aria-hidden="true"></span>${esc(i18nProgress)}</div>`:''}</div>`;
+    const stLabel=(st)=>ui('i18nStatus'+st.charAt(0).toUpperCase()+st.slice(1));
+    const cell=(kind,id,sub,e,l,field)=>{
+      const x=e.i18n&&e.i18n[l];const st=M.status(e,l);
+      const val=x?(field==='desc'?(x.desc||''):(x.name||'')):'';
+      return `<td class="st-${st}"><input type="text" data-rmw-i18n data-kind="${kind}" data-id="${esc(id)}" data-sub="${esc(sub||'')}" data-lang="${l}" data-field="${field}" value="${esc(val)}" placeholder="${st==='stale'?esc(stLabel('stale')):''}" title="${esc(stLabel(st))}" dir="${l==='ar'?'rtl':'ltr'}" /></td>`;
+    };
+    const row=(kind,id,sub,e,mark,field)=>`<tr><td class="rmw-i18n-src">${mark?`<span class="rmw-i18n-kind">${esc(mark)}</span>`:''}${esc(field==='desc'?(e.desc||''):e.name)}</td>${L.map(l=>cell(kind,id,sub,e,l,field||'name')).join('')}</tr>`;
+    const rows=[];
+    const section=(t)=>rows.push(`<tr class="rmw-i18n-section"><td colspan="${1+L.length}">${esc(t)}</td></tr>`);
+    if(d.cats.length){section(ui('i18nSections'));d.cats.forEach(c=>{rows.push(row('cat',c.id,'',c,''));(c.sub||[]).forEach(s=>rows.push(row('sub',c.id,s.id,s,'↳')));});}
+    const items=d.items.filter(x=>!x.archived);
+    if(items.length){section(ui('i18nItems'));items.forEach(it=>{rows.push(row('item',it.id,'',it,''));if(it.desc)rows.push(row('item',it.id,'',it,ui('i18nDesc'),'desc'));});}
+    if((d.opts||[]).length){section(ui('i18nOptions'));d.opts.forEach(g=>{rows.push(row('opt',g.id,'',g,''));(g.choices||[]).forEach(c=>rows.push(row('choice',g.id,c.id,c,'↳')));});}
+    if(!rows.length)return head+`<div class="rmw-empty"><p>${esc(ui('i18nEmpty'))}</p></div>`;
+    return head+stats+`<div class="rmw-i18n-wrap"><table class="rmw-i18n"><thead><tr><th>${esc(ui('i18nOriginal'))}</th>${L.map(l=>`<th>${esc(I18N_LANG_NAMES[l])}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>`;
+  }
+  function onI18nEdit(input){
+    const k=input.dataset;const v=input.value;
+    const patch=k.field==='desc'?{desc:v}:{name:v};
+    S().setI18nEntry(k.kind,k.id,k.sub||null,k.lang,patch);
+    i18nRefreshPanel();
+  }
+  function i18nStyle(){if($('#rmw-i18n-css'))return;const s=document.createElement('style');s.id='rmw-i18n-css';s.textContent=`
+.rmw-i18n-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:0 0 14px}
+.rmw-i18n-title{font:650 16px var(--sans);letter-spacing:-.01em;color:var(--ink)}
+.rmw-i18n-hint{max-width:70ch;margin:4px 0 0;font-size:12px;line-height:1.45;color:var(--n-500)}
+.rmw-i18n-acts{display:flex;gap:8px;flex-wrap:wrap}
+.rmw-i18n-stats{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:0 0 14px}
+.rmw-i18n-stat{display:flex;gap:10px;align-items:baseline;padding:9px 13px;border:1px solid var(--n-200);border-radius:11px;background:var(--surface);font-size:12px;color:var(--n-500)}
+.rmw-i18n-stat b{color:var(--ink);font-weight:650}
+.rmw-i18n-stat .is-stale{color:#a77617}.rmw-i18n-stat .is-missing{color:#b94b38}
+.rmw-i18n-busy{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--atlas)}
+.rmw-i18n-spin{width:14px;height:14px;border:2px solid var(--n-200);border-top-color:var(--atlas);border-radius:50%;animation:rmw-spin .8s linear infinite}
+.rmw-i18n-wrap{overflow:auto;border:1px solid var(--n-200);border-radius:13px;background:var(--surface)}
+table.rmw-i18n{width:100%;border-collapse:collapse;min-width:760px;font-size:12.5px}
+table.rmw-i18n th{position:sticky;top:0;z-index:1;padding:10px 12px;text-align:start;font:700 10px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--n-500);background:var(--paper-soft);border-bottom:1px solid var(--n-200)}
+table.rmw-i18n td{padding:4px 8px;border-bottom:1px solid var(--n-200);vertical-align:middle}
+table.rmw-i18n tr:last-child td{border-bottom:0}
+table.rmw-i18n .rmw-i18n-section td{padding:10px 12px 6px;font:700 10px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--atlas);background:color-mix(in srgb,var(--atlas) 5%,var(--surface))}
+table.rmw-i18n .rmw-i18n-src{min-width:180px;max-width:300px;padding-inline-start:12px;color:var(--ink);font-weight:550}
+.rmw-i18n-kind{display:inline-block;margin-inline-end:7px;color:var(--n-500);font-weight:500}
+table.rmw-i18n input{width:100%;min-width:170px;height:34px;padding:0 10px;border:1px solid transparent;border-radius:8px;background:transparent;color:var(--ink);font:500 12.5px var(--sans)}
+table.rmw-i18n input:hover{border-color:var(--n-200)}
+table.rmw-i18n input:focus{outline:0;border-color:var(--atlas);background:var(--paper-soft)}
+table.rmw-i18n td.st-missing input{background:color-mix(in srgb,#b94b38 6%,transparent)}
+table.rmw-i18n td.st-stale input{background:color-mix(in srgb,#a77617 8%,transparent)}
+table.rmw-i18n td.st-manual input{border-inline-start:3px solid var(--atlas)}
+`;document.head.appendChild(s);}
   function wire(){
     const H=window.Kiwi?.handlers;if(!H)return false;
     H['rmw-tab']=e=>{tab=e.dataset.tab;render();};
@@ -1323,13 +1282,15 @@
     H['rmw-recipe-edit']=(_e,id)=>{const x=item(id);if(x)openRecipe(x);};
     H['rmw-reactivate']=(_e,id)=>{S().updateItem(id,{avail:true});render();};
     H['rmw-menu-scan']=()=>{if(window.KiwiMenuScan?.open)window.KiwiMenuScan.open({onDone:()=>render()});else window.Kiwi?.toast?.(ui('scanUnavailable'),{type:'warn',desc:ui('reloadPage')});};
-    H['rmw-menu-translate']=()=>openTranslateModal();
+    H['rmw-menu-translate']=()=>{tab='i18n';render();};
+    H['rmw-i18n-fill']=()=>ensureTranslations({silent:false});
+    H['rmw-i18n-redo']=()=>confirm(ui('i18nRedoConfirm'),()=>{S().clearI18n(null,true);ensureTranslations({silent:false,force:true});},ui('i18nRedoDesc'));
     if(H['nav-menu']!==restaurantMenuHandler){legacyMenuHandler=H['nav-menu']||legacyMenuHandler;H['nav-menu']=restaurantMenuHandler;}
     return true;
   }
   document.addEventListener('click',e=>{if(openItemMenu&&!e.target.closest('[data-rmw-menu-root]')){openItemMenu=null;if(document.body.classList.contains('page-menu'))render();}});
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&openItemMenu){openItemMenu=null;if(document.body.classList.contains('page-menu'))render();}});
-  function bind(){document.addEventListener('input',e=>{if(e.target.matches('[data-rmw-search]')){query=e.target.value;const p=$('[data-rmw-panel]');if(p)p.innerHTML=menuPanel();}});document.addEventListener('change',e=>{if(e.target.matches('[data-rmw-route]')){S().setCategoryStation(e.target.dataset.rmwRoute,e.target.value);render();}});document.addEventListener('click',e=>{const a=e.target.closest?.('.sidebar nav a[data-nav="menu"]');if(a&&isRestaurant()){e.preventDefault();show();}},true);}
+  function bind(){document.addEventListener('input',e=>{if(e.target.matches('[data-rmw-search]')){query=e.target.value;const p=$('[data-rmw-panel]');if(p)p.innerHTML=menuPanel();}});document.addEventListener('change',e=>{if(e.target.matches('[data-rmw-route]')){S().setCategoryStation(e.target.dataset.rmwRoute,e.target.value);render();}else if(e.target.matches('[data-rmw-i18n]')){onI18nEdit(e.target);}});document.addEventListener('click',e=>{const a=e.target.closest?.('.sidebar nav a[data-nav="menu"]');if(a&&isRestaurant()){e.preventDefault();show();}},true);}
   function style(){if($('#rmw-css'))return;const s=document.createElement('style');s.id='rmw-css';s.textContent=`@keyframes rmw-spin{to{transform:rotate(360deg)}}.mi-card{position:relative;overflow:visible}.rmw-menu-open{z-index:30}.mi-card-top{padding-inline-end:34px}.rmw-card-menu{position:absolute;inset-block-start:12px;inset-inline-end:12px;z-index:5}.rmw-more-btn{width:31px;height:31px;padding:0;border:1px solid transparent;border-radius:9px;background:color-mix(in srgb,var(--surface) 82%,transparent);color:var(--n-500);display:grid;place-items:center;cursor:pointer;transition:background 140ms,border-color 140ms,color 140ms,transform 140ms}.rmw-more-btn:hover,.rmw-more-btn[aria-expanded="true"]{background:var(--paper-soft);border-color:var(--n-300);color:var(--ink)}.rmw-more-btn:active{transform:scale(.94)}.rmw-more-btn svg{width:17px;height:17px}.rmw-action-pop{position:absolute;inset-block-start:38px;inset-inline-end:0;width:174px;padding:6px;display:grid;gap:3px;background:color-mix(in srgb,var(--surface) 92%,transparent);border:1px solid var(--n-200);border-radius:13px;box-shadow:0 18px 48px -16px rgba(0,0,0,.48),0 4px 14px rgba(0,0,0,.14);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);animation:rmw-menu-in 150ms cubic-bezier(.2,.8,.2,1);transform-origin:top right}.rmw-action-pop button{width:100%;min-height:38px;padding:8px 10px;border:0;border-radius:9px;background:transparent;color:var(--ink);display:flex;align-items:center;gap:10px;font:600 12px var(--sans);text-align:start;cursor:pointer;transition:background 120ms,color 120ms}.rmw-action-pop button:hover{background:color-mix(in srgb,var(--atlas) 11%,transparent);color:var(--atlas)}.rmw-action-pop button.danger{color:var(--danger)}.rmw-action-pop button.danger:hover{background:color-mix(in srgb,var(--danger) 12%,transparent)}.rmw-action-pop svg{width:16px;height:16px;flex:0 0 auto}@keyframes rmw-menu-in{from{opacity:0;transform:translateY(-5px) scale(.96)}to{opacity:1;transform:none}}.rmw-slot-card{padding:12px;border:1px solid var(--n-200);border-radius:10px;background:var(--paper-soft);display:grid;gap:8px}.rmw-slot-head{display:flex;gap:8px;align-items:center}.rmw-slot-choice-row{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:var(--surface);border:1px solid var(--n-200);border-radius:8px;font-size:12.5px}.rmw-slot-choice-extra{display:flex;align-items:center;gap:4px;font-size:11.5px;color:var(--n-500)}.rmw-empty{text-align:center;color:var(--n-500);padding:34px 18px}.rmw-empty h3{color:var(--ink);margin:0 0 8px}.rmw-empty p{max-width:560px;margin:0 auto 18px;line-height:1.5}.rmw-nfc{margin-top:28px}.rmw-media{width:100%;height:120px;object-fit:cover;border-radius:10px;margin-bottom:10px}.rmw-off{opacity:.58}.rmw-archived{opacity:.68;border-style:dashed}.rmw-standalone{display:flex;align-items:center;gap:8px;font-weight:600}.rmw-standalone input{width:18px;height:18px;accent-color:var(--atlas)}.mi-state-toggle{min-height:30px;padding:5px 9px;border:1px solid var(--n-200);border-radius:999px;background:var(--surface);color:var(--atlas);font:600 10px var(--mono);cursor:pointer}.mi-state-toggle[aria-checked="false"]{color:var(--n-500)}.rmw-archived-group{padding:9px 11px;border:1px dashed var(--n-300);border-radius:10px}.rmw-archived-group summary{cursor:pointer;font-size:12px;color:var(--n-500)}.rmw-archived-group button{margin:7px 5px 0 0;padding:6px 9px;border:1px solid var(--n-200);border-radius:8px;background:var(--paper-soft);color:var(--n-500)}.rmw-routes{display:grid;gap:8px}.rmw-route{display:grid;grid-template-columns:minmax(180px,1fr) minmax(220px,360px);align-items:center;gap:18px;padding:13px;border-bottom:1px solid var(--n-200)}.rmw-route select{border:1px solid var(--n-200);border-radius:10px;padding:10px;background:var(--surface);color:var(--ink)}.rmw-checks{display:grid;grid-template-columns:1fr 1fr;gap:8px}.rmw-checks label{padding:10px;border:1px solid var(--n-200);border-radius:9px}.rmw-media-actions{display:flex;gap:8px;flex-wrap:wrap}.rmw-emoji-btn{width:46px;min-width:46px;border:1px solid var(--n-200);border-radius:10px;background:var(--paper-soft);font-size:22px;cursor:pointer}.rmw-emoji-pop{position:fixed;z-index:100000;width:370px;max-height:310px;overflow:auto;padding:10px;background:var(--surface);border:1px solid var(--n-200);border-radius:14px;box-shadow:0 20px 55px #0003;display:grid;grid-template-columns:repeat(8,1fr);gap:5px}.rmw-emoji-pop button{height:38px;border:0;border-radius:7px;background:transparent;font-size:21px;cursor:pointer}.rmw-emoji-pop .rmw-none{grid-column:1/-1;font:12px var(--sans);border:1px solid var(--n-200)}.rmw-emoji-pop button:hover{background:var(--mint-soft)}.rmw-textarea{min-height:120px}.rmw-hours{display:flex;align-items:flex-end;gap:8px;min-height:170px;overflow:auto;padding:25px 4px 0}.rmw-hour{min-width:34px;display:flex;flex-direction:column;align-items:center;gap:5px;font-size:10px;color:var(--n-500)}.rmw-hour i{width:22px;background:var(--atlas);border-radius:5px 5px 1px 1px}.rmw-hour b{font-size:10px;color:var(--ink)}.rmw-recipe-list{display:grid;gap:8px;margin-top:22px}.rmw-recipe-card{display:grid;grid-template-columns:minmax(180px,1fr) minmax(180px,auto) auto;align-items:center;gap:18px;padding:15px 16px;background:var(--surface);border:1px solid var(--n-200);border-radius:12px}.rmw-recipe-name{font-weight:650;color:var(--ink)}.rmw-recipe-meta,.rmw-recipe-result small{display:block;margin-top:4px;font-size:11.5px;color:var(--n-500)}.rmw-recipe-result{text-align:right}.rmw-recipe-editor{display:grid;gap:14px;color:var(--ink)}.rmw-recipe-state{display:flex;align-items:flex-start;gap:11px;padding:13px 15px;border:1px solid var(--n-200);border-radius:14px;background:var(--paper-soft)}.rmw-recipe-state>i{width:8px;height:8px;margin-top:5px;border-radius:50%;background:var(--n-500);flex:0 0 auto}.rmw-recipe-state>div{display:grid;gap:3px}.rmw-recipe-state b{font-size:13px}.rmw-recipe-state span{font-size:11.5px;line-height:1.45;color:var(--n-500)}.rmw-recipe-state.ok{border-color:color-mix(in srgb,var(--atlas) 30%,var(--n-200));background:color-mix(in srgb,var(--atlas) 6%,var(--surface))}.rmw-recipe-state.ok>i{background:var(--atlas)}.rmw-recipe-state.warn>i{background:#a77617}.rmw-recipe-state.danger>i{background:#b94b38}.rmw-recipe-costs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.rmw-recipe-costs>div{display:grid;align-content:start;gap:5px;min-height:78px;padding:13px 14px;border:1px solid var(--n-200);border-radius:13px;background:var(--surface)}.rmw-recipe-costs span,.rmw-recipe-costs small{color:var(--n-500);font-size:10px}.rmw-recipe-costs b{font-size:16px;line-height:1.2;letter-spacing:-.02em}.rmw-recipe-costs>div.total{border-color:color-mix(in srgb,var(--atlas) 35%,var(--n-200));background:color-mix(in srgb,var(--atlas) 7%,var(--surface));color:var(--atlas)}.rmw-recipe-section{padding:17px;border:1px solid var(--n-200);border-radius:15px;background:var(--surface)}.rmw-recipe-section h4{margin:0 0 12px;font-size:14px}.rmw-recipe-section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;margin-bottom:16px}.rmw-recipe-section-head>div:first-child>span,.rmw-recipe-kicker{display:block;margin-bottom:5px;color:var(--atlas);font:700 9px var(--mono);letter-spacing:.12em;text-transform:uppercase}.rmw-recipe-section-head h4{margin:0;font-size:16px}.rmw-recipe-section-head p{max-width:52ch;margin:5px 0 0;color:var(--n-500);font-size:11.5px;line-height:1.45}.rmw-recipe-top{display:flex;gap:8px;align-items:flex-start;flex:0 0 auto}.rmw-recipe-top label{display:grid;gap:5px;color:var(--n-500);font:700 9px var(--mono);letter-spacing:.06em;text-transform:uppercase}.rmw-recipe-top input{width:76px;min-height:38px}.rmw-recipe-suffix{display:flex;align-items:center}.rmw-recipe-suffix b{margin-left:-30px;color:var(--n-500);font:500 10px var(--mono);pointer-events:none}.rmw-recipe-ing-head,.rmw-recipe-ing{display:grid;grid-template-columns:minmax(180px,1fr) 150px 130px 38px;gap:8px;align-items:center}.rmw-recipe-ing-head{padding:0 4px 7px;font:10px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--n-500)}.rmw-recipe-ing{margin-bottom:7px}.rmw-recipe-add{width:100%;justify-content:center;margin-top:3px;border-style:dashed}.rmw-recipe-notes{display:grid;grid-template-columns:1fr 1fr;gap:12px}.rmw-recipe-notes .rmw-textarea{min-height:104px}.rmw-recipe-modal .kiwi-modal,.rmw-recipe-modal [role=dialog]{background:var(--paper)}.rmw-recipe-modal .kiwi-modal-body{padding-bottom:18px}.rmw-recipe-modal .kiwi-modal-foot{position:sticky;bottom:0;z-index:2;background:color-mix(in srgb,var(--paper) 94%,transparent);backdrop-filter:blur(10px)}.rmw-performance{display:grid;gap:18px}.rmw-perf-period{padding:8px 13px;border:1px solid var(--n-200);border-radius:999px;background:var(--paper-soft);font-size:12px;color:var(--n-600)}.rmw-perf-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.rmw-perf-kpis>div{display:grid;gap:7px;padding:17px 18px;background:var(--surface);border:1px solid var(--n-200);border-radius:13px}.rmw-perf-kpis span{font:10px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--n-500)}.rmw-perf-kpis b{font-size:24px;letter-spacing:-.03em}.rmw-perf-kpis small{color:var(--n-500)}.rmw-perf-matrix{position:relative;margin-top:26px;padding:0 0 25px 35px}.rmw-perf-plot{position:relative;height:390px;border-left:1px solid var(--n-300);border-bottom:1px solid var(--n-300);background:linear-gradient(90deg,transparent 49.85%,var(--n-200) 50%,transparent 50.15%),linear-gradient(0deg,transparent 49.85%,var(--n-200) 50%,transparent 50.15%),#fff;border-radius:4px 12px 4px 4px}.rmw-perf-y{position:absolute;left:-128px;top:190px;width:290px;transform:rotate(-90deg);text-align:center;font-size:11px;color:var(--n-500)}.rmw-perf-x{text-align:center;margin-top:9px;font-size:11px;color:var(--n-500)}.rmw-perf-caption{text-align:center;margin-top:7px;font-size:11px;color:var(--n-500)}.rmw-perf-v,.rmw-perf-h{position:absolute;z-index:0;background:var(--n-300);opacity:.7}.rmw-perf-v{top:0;bottom:0;width:1px}.rmw-perf-h{left:0;right:0;height:1px}.rmw-perf-label{position:absolute;z-index:0;font:700 12px var(--mono);letter-spacing:.04em;pointer-events:none}.rmw-perf-label small{display:block;margin-top:3px;font:10px var(--sans);letter-spacing:0;color:var(--n-500)}.rmw-perf-label.puzzle{left:18px;top:16px}.rmw-perf-label.star{right:18px;top:16px;text-align:right}.rmw-perf-label.dog{left:18px;bottom:16px}.rmw-perf-label.plow{right:18px;bottom:16px;text-align:right}.rmw-perf-dot{position:absolute;transform:translate(-50%,50%);border:2px solid #fff;border-radius:50%;box-shadow:0 2px 9px #0003;cursor:pointer}.rmw-perf-dot.star{background:#1d9c67}.rmw-perf-dot.plow{background:#d49a25}.rmw-perf-dot.puzzle{background:#357fad}.rmw-perf-dot.dog{background:#cb5238}.rmw-perf-dot>span{display:none;position:absolute;left:50%;bottom:calc(100% + 8px);width:max-content;max-width:240px;transform:translateX(-50%);padding:9px 11px;border-radius:8px;background:#101612;color:#fff;text-align:left;font:11px/1.5 var(--sans);box-shadow:0 8px 24px #0004}.rmw-perf-dot:hover>span,.rmw-perf-dot:focus>span{display:block}.rmw-perf-quads{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.rmw-perf-q{display:grid;gap:8px;padding:16px;background:var(--surface);border:1px solid var(--n-200);border-top:3px solid var(--n-300);border-radius:11px}.rmw-perf-q.star{border-top-color:#1d9c67}.rmw-perf-q.plow{border-top-color:#d49a25}.rmw-perf-q.puzzle{border-top-color:#357fad}.rmw-perf-q.dog{border-top-color:#cb5238}.rmw-perf-q h4{margin:0;font:700 11px var(--mono);letter-spacing:.06em}.rmw-perf-q strong{font-size:21px}.rmw-perf-q p,.rmw-perf-q div{margin:0;font-size:11px;color:var(--n-500);line-height:1.45}.rmw-perf-q div span{display:block;font:9px var(--mono);letter-spacing:.05em;text-transform:uppercase}.rmw-perf-q footer{display:grid;gap:3px;padding-top:9px;border-top:1px solid var(--n-200);font-size:11px}.rmw-perf-q footer b{font-size:14px}.rmw-perf-q footer small{color:var(--n-500)}.rmw-perf-table td small{display:block;margin-top:3px;color:var(--n-500);font-size:10px}.rmw-perf-margin{display:inline-block;padding:4px 7px;border-radius:999px;font-weight:700}.rmw-perf-margin.hi{background:#d9f4e6;color:#14734a}.rmw-perf-margin.mid{background:#fff0c9;color:#8c620a}.rmw-perf-margin.lo{background:#ffe0da;color:#a83b27}.rmw-perf-link{padding:0;border:0;background:none;color:var(--atlas);font:inherit;text-decoration:underline;cursor:pointer}.rmw-formula-builder{gap:16px!important}.rmw-slot-card{padding:0;border:1px solid var(--n-200);border-radius:18px;background:color-mix(in srgb,var(--surface) 96%,var(--paper-soft));overflow:hidden;box-shadow:0 1px 0 rgba(255,255,255,.04),0 12px 36px -30px rgba(0,0,0,.5)}.rmw-slot-head{display:grid;grid-template-columns:minmax(0,1fr) auto 36px;gap:14px;align-items:end;padding:16px 16px 14px;background:color-mix(in srgb,var(--paper-soft) 72%,transparent);border-bottom:1px solid var(--n-200)}.rmw-slot-title{min-width:0;display:grid;gap:5px}.rmw-slot-kicker{color:var(--atlas);font:700 9px var(--mono);letter-spacing:.12em;text-transform:uppercase}.rmw-slot-title>[data-slot-label]{width:100%;height:36px;padding:0;border:0;border-radius:0;background:transparent;color:var(--ink);font:650 16px var(--sans);box-shadow:none}.rmw-slot-title>[data-slot-label]:focus{outline:0;box-shadow:0 1px 0 var(--atlas)}.rmw-slot-bounds{display:flex;gap:4px;padding:4px;border:1px solid var(--n-200);border-radius:13px;background:var(--surface)}.rmw-slot-bounds label{display:grid;grid-template-columns:auto 42px;align-items:center;gap:5px;padding-inline-start:7px;color:var(--n-500);font:700 9px var(--mono);letter-spacing:.06em;text-transform:uppercase}.rmw-slot-bounds input{width:42px;height:32px;padding:0 4px;border:0;border-radius:9px;background:var(--paper-soft);color:var(--ink);font:650 14px var(--sans);text-align:center;box-shadow:none}.rmw-slot-delete{align-self:center;width:34px;height:34px;border-radius:10px}.rmw-slot-choices{display:grid;max-height:272px;overflow:auto;padding:0 16px;scrollbar-width:thin;scrollbar-color:var(--n-300) transparent}.rmw-slot-choice-row{display:grid;grid-template-columns:minmax(0,1fr) auto 34px;gap:12px;align-items:center;min-height:55px;padding:8px 0;border:0;border-bottom:1px solid var(--n-200);border-radius:0;background:transparent}.rmw-slot-choice-row:last-child{border-bottom:0}.rmw-slot-choice-main{min-width:0;display:flex;align-items:center;gap:10px}.rmw-choice-index{width:25px;height:25px;flex:0 0 auto;display:grid;place-items:center;border-radius:8px;background:color-mix(in srgb,var(--atlas) 11%,transparent);color:var(--atlas);font:700 10px var(--mono)}.rmw-choice-name{overflow:hidden;color:var(--ink);font:580 13px var(--sans);text-overflow:ellipsis;white-space:nowrap}.rmw-slot-choice-extra{display:grid;grid-template-columns:auto auto;align-items:center;gap:8px}.rmw-extra-label{color:var(--n-500);font:650 9px var(--mono);letter-spacing:.04em;text-transform:uppercase}.rmw-extra-control{height:34px;display:grid;grid-template-columns:auto 45px auto;align-items:center;gap:3px;padding:0 9px;border:1px solid var(--n-200);border-radius:11px;background:var(--paper-soft);color:var(--n-500);font:600 10px var(--mono)}.rmw-extra-control input{width:45px;height:30px;padding:0;border:0;background:transparent;color:var(--ink);font:650 14px var(--sans);text-align:center;box-shadow:none}.rmw-extra-control input::-webkit-inner-spin-button,.rmw-slot-bounds input::-webkit-inner-spin-button{display:none}.rmw-slot-choice-row>.mi-ic-btn{width:32px;height:32px;border-radius:10px;background:transparent}.rmw-slot-add-bar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;padding:12px 16px 16px;border-top:1px solid var(--n-200);background:color-mix(in srgb,var(--paper-soft) 55%,transparent)}.rmw-slot-add-bar select{width:100%;height:42px;padding:0 12px;border-radius:12px}.rmw-slot-add-bar .btn-slim{min-height:42px;padding-inline:16px;border-radius:12px}.rmw-slot-all-chosen,.rmw-slot-empty-notice{margin:0;padding:14px 16px!important;border-top:1px solid var(--n-200);background:color-mix(in srgb,var(--paper-soft) 55%,transparent)}@media(max-width:700px){.rmw-slot-head{grid-template-columns:minmax(0,1fr) 34px;align-items:start}.rmw-slot-bounds{grid-column:1/-1;grid-row:2;justify-self:start}.rmw-slot-delete{grid-column:2;grid-row:1}.rmw-slot-choice-row{grid-template-columns:minmax(0,1fr) 32px;gap:8px;padding:11px 0}.rmw-slot-choice-extra{grid-column:1;justify-self:start;margin-inline-start:35px}.rmw-slot-choice-row>.mi-ic-btn{grid-column:2;grid-row:1/3}.rmw-extra-label{display:none}.rmw-slot-add-bar{grid-template-columns:1fr}.rmw-slot-add-bar .btn-slim{width:100%;justify-content:center}}@media(max-width:900px){.rmw-perf-kpis{grid-template-columns:1fr}.rmw-perf-quads{grid-template-columns:1fr 1fr}.rmw-perf-plot{height:300px}}@media(max-width:800px){.rmw-route{grid-template-columns:1fr}.rmw-checks{grid-template-columns:1fr}.rmw-recipe-card{grid-template-columns:1fr}.rmw-recipe-result{text-align:left}.rmw-recipe-costs{grid-template-columns:1fr 1fr}.rmw-recipe-section-head{flex-direction:column}.rmw-recipe-ing-head{display:none}.rmw-recipe-ing{grid-template-columns:1fr 90px 90px 38px}.rmw-recipe-top{width:100%}.rmw-recipe-top label{flex:1}.rmw-recipe-notes{grid-template-columns:1fr}.rmw-perf-quads{grid-template-columns:1fr}}`;document.head.appendChild(s);}
   function performanceStyle(){if($('#rmw-performance-css'))return;const s=document.createElement('style');s.id='rmw-performance-css';s.textContent=`
 .rmw-perf-matrix{margin-top:24px;padding:0;border:1px solid #151a17;border-radius:18px;background:#080b09;color:#f7faf8;box-shadow:0 22px 50px rgba(4,9,6,.12)}
@@ -1371,7 +1332,7 @@
     window.Kiwi.handlers['rmw-formula-duplicate']=(_e,id)=>{const before=new Set(D().items.map(it=>it.id));S().duplicateItem(id);const copy=D().items.find(it=>!before.has(it.id));if(copy)openItem(copy);};
     window.KiwiRestaurantMenuWorkspace={show,render,isRestaurant};
     if(!S()){setTimeout(boot,50);return;}
-    if(!storeBound){storeBound=true;const refresh=()=>{if(document.body.classList.contains('page-menu')&&isRestaurant())render();};S().subscribe(refresh);window.KiwiSales?.subscribe?.(refresh);window.KiwiRestaurantRecipes?.subscribe?.(refresh);window.KiwiHours?.subscribe?.(refresh);window.KiwiVenue?.subscribe?.(()=>{hoursPeriod=null;if(document.body.classList.contains('page-menu')&&isRestaurant())show();});try{window.addEventListener('kiwi:langchange',()=>{if(document.body.classList.contains('page-menu')&&isRestaurant())render();});}catch(_){}}
+    if(!storeBound){storeBound=true;const refresh=()=>{if(document.body.classList.contains('page-menu')&&isRestaurant())render();};S().subscribe(refresh);S().subscribe(scheduleAutoTranslate);window.KiwiSales?.subscribe?.(refresh);window.KiwiRestaurantRecipes?.subscribe?.(refresh);window.KiwiHours?.subscribe?.(refresh);window.KiwiVenue?.subscribe?.(()=>{hoursPeriod=null;if(document.body.classList.contains('page-menu')&&isRestaurant())show();});try{window.addEventListener('kiwi:langchange',()=>{if(document.body.classList.contains('page-menu')&&isRestaurant())render();});}catch(_){}}
     if(document.body.classList.contains('page-menu')&&isRestaurant())show();
   }
   /* The legacy menu initializes at DOMContentLoaded. Waiting for window.load

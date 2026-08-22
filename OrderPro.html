@@ -4113,6 +4113,21 @@ em, i, cite, dfn, var { font-style: normal; }
        Empty in the white-label template — add one entry per menu item, e.g.:
          fr: { "mon-plat": { name: "Mon plat", desc: "Description…" } },
        Items with no entry fall back to the `name`/`desc` defined in MENU. */
+    /* Traductions portées par la carte publiée (assets/menu-i18n.js) — même
+       empreinte qu'au tableau de bord (djb2 → base36 sur « nom␟description ») ;
+       une traduction périmée (le patron a renommé) retombe sur son texte. */
+    function menuHash(name, desc) {
+      const str = String(name == null ? '' : name).trim() + '\u001f' + String(desc == null ? '' : desc).trim();
+      let h = 5381;
+      for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0;
+      return (h >>> 0).toString(36);
+    }
+    function menuTr(e, l) {
+      const x = e && e.i18n && e.i18n[l];
+      if (!x || !x.name) return null;
+      if (!x.m && x.h !== menuHash(e.name, e.desc)) return null;
+      return x;
+    }
     const MENU_I18N = {
       fr: {},
       en: {},
@@ -5723,7 +5738,7 @@ em, i, cite, dfn, var { font-style: normal; }
       });
 
       MENU.length = 0;
-      const names = {};
+      const names = {}, namesEn = {}, namesAr = {};
       for (const it of items) {
         const formulaOptions = it.formula && Array.isArray(it.formula.slots) ? it.formula.slots.map(s => {
           const g = { key: 'formula_' + String(s.id), formulaSlotId: String(s.id), label: String(s.label || ''), type: (+s.max || 1) > 1 ? 'multi' : 'single', default: '', required: (+s.min || 0) > 0, min: Math.max(0, +s.min || 0), max: Math.max(1, +s.max || 1),
@@ -5752,10 +5767,15 @@ em, i, cite, dfn, var { font-style: normal; }
           formula: formulaOptions.length > 0,
         });
         names[String(it.id)] = { name: String(it.name || ''), desc: String(it.desc || '') };
+        [['fr', names], ['en', namesEn], ['ar', namesAr]].forEach(([l, map]) => {
+          const x = menuTr(it, l);
+          if (x) map[String(it.id)] = { name: String(x.name), desc: x.desc != null ? String(x.desc) : String(it.desc || '') };
+        });
       }
-      // The merchant writes their carte once, in their own words — we don't
-      // machine-translate it. Every language falls back to what they typed.
-      MENU_I18N.fr = names; MENU_I18N.en = {}; MENU_I18N.ar = {};
+      // Le patron écrit sa carte une fois ; ses traductions (tableau de bord →
+      // Traductions) voyagent avec elle. Une langue non traduite retombe sur
+      // son texte (itemI18n → MENU_I18N.fr).
+      MENU_I18N.fr = names; MENU_I18N.en = namesEn; MENU_I18N.ar = namesAr;
 
       /* Les onglets sont ceux du patron, et rien d'autre. L'onglet « Top »
          a été retiré : il ne montrait que les plats filmés, ce qui coupait la
@@ -5769,7 +5789,7 @@ em, i, cite, dfn, var { font-style: normal; }
       parts.push(`<button class="menu-tab is-active" data-tab="all" data-i18n="tab_all">${escapeHtml(t('tab_all'))}</button>`);
       for (const c of cats) {
         if (!used.has(String(c.id))) continue;        // empty category → no tab
-        parts.push(`<button class="menu-tab" data-tab="${escapeHtml(String(c.id))}">${escapeHtml(String(c.name || ''))}</button>`);
+        parts.push(`<button class="menu-tab" data-tab="${escapeHtml(String(c.id))}">${escapeHtml(String((menuTr(c, currentLang) || c).name || ''))}</button>`);
         const subtabs = (Array.isArray(c.sub) ? c.sub : []).filter(s =>
           MENU.some(m => m.cat === String(c.id) && m.subId === String(s.id)));
         if (subtabs.length) MENU_SUBTABS.set(String(c.id), subtabs);

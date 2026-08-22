@@ -947,6 +947,10 @@ section('Whole-project regressions');
     'inventory-count-test.mjs',
     'menu-scan-test.mjs',
     'menu-translate-test.mjs',
+    /* La carte dans la langue de chacun : traductions portées par les
+       entités, jamais à la place du libellé du patron ; résolues par toutes
+       les surfaces, tickets canoniques. */
+    'menu-i18n-test.mjs',
     'salle-scan-test.mjs',
     'pin-dashboard-test.mjs',
     'idle-lock-test.mjs',

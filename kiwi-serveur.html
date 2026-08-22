@@ -4870,7 +4870,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
   <script src="assets/live-socket.js?v=2" defer></script>
   <!-- Global operator access — long-press any Kiwi logo to open the console. -->
   <script src="assets/operator-access.js" defer></script>
-  <script src="assets/menu-i18n.js?v=3" defer></script>
+  <script src="assets/menu-i18n.js?v=4" defer></script>
   <!-- Auth guard: redirects to the auth page the moment the server signals
        the account has been deleted / suspended (see assets/auth-guard.js). -->
   <script src="assets/auth-guard.js" defer></script>
@@ -5170,6 +5170,9 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         return saved === 'en' || saved === 'ar' ? saved : 'fr';
       } catch (_) { return 'fr'; }
     })();
+    /* Une ligne de commande garde le libellé du patron (c'est ce que la cuisine
+       lit) ; à l'écran du serveur on montre sa traduction. */
+    const svLineName = (l) => (window.KiwiMenuI18n && l) ? window.KiwiMenuI18n.t(String(l.name || ''), employeeLanguage) : ((l && l.name) || '');
     const employeeI18nOriginal = new WeakMap();
     const employeeI18nLast = new WeakMap();
     const employeeI18nAttrs = new WeakMap();
@@ -5607,6 +5610,8 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         subId: it.subId || null,
         subLabel: (() => { const c=cats.find(c=>c.id===it.catId), s=c&&it.subId?(c.sub||[]).find(s=>s.id===it.subId):null; return s?s.name:''; })(),
         name: it.name,
+        // Traductions du patron (assets/menu-i18n.js), lues à l'affichage seulement.
+        i18n: it.i18n || null,
         price: +it.price || 0,
         // Le poste de préparation, hérité de sa catégorie, pour annoncer au
         // serveur OÙ part sa commande (voir svStationNames).
@@ -5647,6 +5652,9 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       });
       itemOptions = attach;
       catLabels = labels; catOrder = order; menuItems = items;
+      /* L'index libellé → traductions : KiwiMenuI18n.t() retrouve une catégorie,
+         une sous-catégorie ou une option par son libellé canonique. */
+      try { if (window.KiwiMenuI18n) window.KiwiMenuI18n.index({ cats, items: allItems, opts: Array.isArray(d.opts) ? d.opts : [] }); } catch (_) {}
       if (!catLabels[activeCat]) activeCat = 'all';
       try { renderCatPills(); renderMenu(); } catch (_) {}
       return true;
@@ -7498,8 +7506,8 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
           const isPart = l.kind === 'formula-part';
           const isFormula = l.kind === 'formula';
           const displayName = isPart
-            ? `<span style="color:var(--forest-ink);font-size:11px;font-weight:600;margin-right:4px;">[${esc(l.slotLabel || 'Choix')}]</span> ${esc(l.name)}`
-            : (isFormula ? `${esc(l.name)} <span style="font-size:9.5px;font-weight:700;letter-spacing:0.05em;color:var(--forest-ink);background:var(--mint-tint);padding:1px 6px;border-radius:4px;margin-left:6px;">FORMULE</span>` : esc(l.name));
+            ? `<span style="color:var(--forest-ink);font-size:11px;font-weight:600;margin-right:4px;">[${esc(l.slotLabel || 'Choix')}]</span> ${esc(svLineName(l))}`
+            : (isFormula ? `${esc(svLineName(l))} <span style="font-size:9.5px;font-weight:700;letter-spacing:0.05em;color:var(--forest-ink);background:var(--mint-tint);padding:1px 6px;border-radius:4px;margin-left:6px;">FORMULE</span>` : esc(svLineName(l)));
           const displayPrice = isPart
             ? `<span class="td-item-price" style="font-size:12px;color:var(--ink-4);">inclus</span>`
             : `<span class="td-item-price">${fmtMAD(l.price * l.qty)}</span>`;
@@ -7647,7 +7655,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         return `
         <div class="td-item" style="opacity:0.55">
           <span style="font-weight:700;width:32px;text-align:center;font-feature-settings:'tnum' 1;">${l.qty}×</span>
-          <span class="td-item-name">${esc(l.name)}</span>
+          <span class="td-item-name">${esc(svLineName(l))}</span>
           <span class="td-item-price">${fmtMAD(l.price * l.qty)}</span>
           ${optTxt ? `<span class="td-item-optline">${SLIDERS_SVG}${esc(optTxt)}</span>` : ''}
         </div>`;
@@ -8499,7 +8507,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       }
       const rawItems = activeCat === 'all' ? menuItems : menuItems.filter(m => m.cat === activeCat && (!activeSub || m.subId === activeSub));
       const items = rawItems.map(it => Object.assign({}, it, {
-        name: window.KiwiMenuI18n ? window.KiwiMenuI18n.t(it.name, employeeLanguage) : it.name,
+        name: window.KiwiMenuI18n ? window.KiwiMenuI18n.name(it, employeeLanguage) : it.name,
         subLabel: it.subLabel && window.KiwiMenuI18n ? window.KiwiMenuI18n.t(it.subLabel, employeeLanguage) : it.subLabel,
       }));
       const localizedCats = {};

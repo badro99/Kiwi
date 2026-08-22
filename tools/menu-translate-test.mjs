@@ -80,7 +80,10 @@ ok(/menutranslate:\s*60/.test(quotaSrc), '_quota.js déclare le plafond menutran
 ok(/tenantFor\(request,\s*env,\s*body\.merchant\)/.test(transSrc), 'authentification tenant obligatoire');
 
 // ── 4. Intégration Workspace ────────────────────────────────────────────────
-ok(/data-action="rmw-menu-translate"/.test(wsSrc), 'bouton « Traduire la carte » présent dans le workspace');
+/* v2 : plus de bouton qui écrase la carte — l'onglet « Traductions » et la
+   traduction automatique des manquants (tools/menu-i18n-test.mjs). */
+ok(/data-action="rmw-i18n-fill"/.test(wsSrc), 'action « Traduire ce qui manque » présente dans le workspace');
+ok(!/data-action="rmw-menu-translate" style="display:none;"/.test(wsSrc), 'plus de bouton caché « Traduire la carte »');
 ok(/H\['rmw-menu-translate'\]/.test(wsSrc), 'handler rmw-menu-translate branché dans wire()');
 
 console.log(`\n✓ ${passed} controls green`);

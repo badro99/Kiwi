@@ -1,16 +1,43 @@
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · MENU I18N — window.KiwiMenuI18n
  * ---------------------------------------------------------------------------
- * Résolution multilingue automatique et dynamique de la carte restaurant :
- * articles, descriptions, sections, sous-catégories, groupes de modificateurs
- * et choix d'options vers Français (fr), Arabe (ar) et Anglais (en).
+ * La carte dans la langue de celui qui la lit — sans jamais perdre celle du
+ * patron.
  *
- * Dès qu'un utilisateur change de langue sur le dashboard, la caisse ou l'app
- * serveur, la carte s'adapte instantanément et directement.
+ * Modèle (v2, 2026-08-22) : chaque entité de la carte (catégorie, sous-catégorie,
+ * article, groupe d'options, choix) garde son libellé CANONIQUE dans `name` /
+ * `desc` — ce que le commerçant a écrit — et porte en plus :
+ *
+ *   i18n: { fr: {name, desc?, h, m?}, ar: {…}, en: {…} }
+ *
+ *   h = empreinte du texte source au moment de la traduction (hash()) ;
+ *       si le patron renomme l'article, h ne correspond plus → la traduction est
+ *       PÉRIMÉE et on affiche le canonique jusqu'à la prochaine traduction ;
+ *   m = 1 quand le patron a corrigé la traduction à la main → jamais écrasée
+ *       par la machine (seul « Tout retraduire » la remplace, sur demande).
+ *
+ * Les traductions sont produites UNE FOIS par Kiwi AI (/api/ai/menu-translate),
+ * pour les entrées manquantes ou périmées seulement (needs() → apply()), depuis
+ * le tableau de bord (assets/restaurant-menu-workspace.js), et voyagent dans la
+ * carte publiée (/api/menu — functions/api/menu.js les laisse passer). Chaque
+ * surface résout ensuite l'affichage avec name()/desc()/t() dans SA langue :
+ * dashboard, caisse, app serveur, écran cuisine, page QR, OrderPro. La cuisine
+ * affiche le canonique d'abord (c'est ce que le chef a écrit), la traduction
+ * dessous ; les lignes de commande et les tickets gardent le canonique.
+ *
+ * t(str, lang) — l'API « par chaîne » des surfaces qui ne tiennent qu'un
+ * libellé (une ligne de commande, une étiquette de catégorie) : elle retrouve
+ * l'entité par son libellé canonique dans l'index posé par index(dataset), puis
+ * retombe sur le mini-dictionnaire exact ci-dessous (cartes jamais traduites,
+ * démo). Il n'y a PLUS de substitution mot à mot : « Strawberry lait » n'existe
+ * plus.
  * ═══════════════════════════════════════════════════════════════════════════ */
 (function () {
   'use strict';
 
+  const LANGS = ['fr', 'ar', 'en'];
+
+  /* Mini-dictionnaire de repli — correspondance EXACTE uniquement. */
   const DICTIONARY = {
     // ─── Catégories & Sections ───
     'hot drinks': { fr: 'Boissons chaudes', ar: 'مشروبات ساخنة', en: 'Hot Drinks' },
@@ -229,135 +256,243 @@
     'brownie': { fr: 'Brownie', ar: 'براوني', en: 'Brownie' },
   };
 
-  const WORDS = {
-    fr: {
-      'hot': 'chaud', 'cold': 'frais', 'iced': 'glacé', 'ice': 'glacé',
-      'milk': 'lait', 'flavour': 'saveur', 'flavor': 'saveur',
-      'eggs': 'œufs', 'fried': 'au plat', 'scrambled': 'brouillés',
-      'sweet': 'douceur', 'fruits': 'fruits', 'red fruits': 'fruits rouges',
-      'chocolate': 'chocolat', 'vanilla': 'vanille', 'caramel': 'caramel',
-      'salted': 'salé', 'hazelnut': 'noisette', 'almond': 'amande',
-      'coconut': 'coco', 'sugar free': 'sans sucre', 'fresh': 'frais',
-      'juice': 'jus', 'water': 'eau', 'bread': 'pain', 'cheese': 'fromage',
-    },
-    ar: {
-      'hot': 'ساخن', 'cold': 'بارد', 'iced': 'مثلج', 'ice': 'مثلج',
-      'milk': 'حليب', 'flavour': 'نكهة', 'flavor': 'نكهة',
-      'eggs': 'بيض', 'fried': 'عيون', 'scrambled': 'مخفوق',
-      'sweet': 'حلوى', 'fruits': 'فواكه', 'red fruits': 'فواكه حمراء',
-      'chocolate': 'شوكولاتة', 'vanilla': 'فانيلا', 'caramel': 'كراميل',
-      'salted': 'مملح', 'hazelnut': 'بندق', 'almond': 'لوز',
-      'coconut': 'جوز الهند', 'sugar free': 'بدون سكر', 'fresh': 'طازج',
-      'juice': 'عصير', 'water': 'ماء', 'bread': 'خبز', 'cheese': 'جبن',
-    },
-    en: {
-      'chaud': 'Hot', 'glacé': 'Iced', 'frais': 'Fresh',
-      'lait': 'Milk', 'saveur': 'Flavour', 'œufs': 'Eggs',
-      'chocolat': 'Chocolate', 'vanille': 'Vanilla',
-      'noisette': 'Hazelnut', 'amande': 'Almond', 'coco': 'Coconut',
-      'sans sucre': 'Sugar Free', 'jus': 'Juice', 'pain': 'Bread', 'fromage': 'Cheese',
-    }
-  };
-
+  /* ───────────────── utilitaires ───────────────── */
+  function norm(s) { return String(s == null ? '' : s).trim().toLowerCase(); }
+  function asLang(l) { return LANGS.indexOf(l) >= 0 ? l : null; }
   function activeLang() {
     try {
       if (window.KiwiI18n && typeof window.KiwiI18n.getLang === 'function') {
-        const l = window.KiwiI18n.getLang();
-        if (l === 'ar' || l === 'en') return l;
+        const l = asLang(window.KiwiI18n.getLang()); if (l) return l;
       }
-      const ls = localStorage.getItem('kiwiLang') || localStorage.getItem('kiwiCaisseLang');
-      if (ls === 'ar' || ls === 'en') return ls;
-      const htmlLang = document.documentElement.lang;
-      if (htmlLang === 'ar' || htmlLang === 'en') return htmlLang;
+      if (window.KiwiCaisseLang && typeof window.KiwiCaisseLang.get === 'function') {
+        const l = asLang(window.KiwiCaisseLang.get()); if (l) return l;
+      }
+      const ls = asLang(localStorage.getItem('kiwiLang')) || asLang(localStorage.getItem('kiwiCaisseLang'));
+      if (ls) return ls;
+      const hl = asLang(document.documentElement.lang); if (hl) return hl;
     } catch (_) {}
     return 'fr';
   }
+  /* djb2 → base36. La même fonction est inlinée dans kiwi-order.html et
+     OrderPro.html : une empreinte qui diverge rendrait toute traduction
+     « périmée » sur la page client. */
+  function hash(name, desc) {
+    const s = String(name == null ? '' : name).trim() + '\u001f' + String(desc == null ? '' : desc).trim();
+    let h = 5381;
+    for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+    return (h >>> 0).toString(36);
+  }
+  const ARABIC = /[؀-ۿ]/;
+  function hasArabic(s) { return ARABIC.test(String(s || '')); }
 
-  function norm(str) {
-    return String(str || '').trim().toLowerCase();
+  /* ───────────────── résolution ───────────────── */
+  function entry(e, lang) {
+    if (!e || !e.i18n || typeof e.i18n !== 'object') return null;
+    const x = e.i18n[lang];
+    return (x && typeof x === 'object' && x.name) ? x : null;
+  }
+  /* Fraîche = corrigée à la main, ou produite pour le texte source actuel. */
+  function fresh(e, lang) {
+    const x = entry(e, lang);
+    if (!x) return false;
+    if (x.m) return true;
+    return x.h === hash(e.name, e.desc);
+  }
+  function status(e, lang) {
+    const x = entry(e, lang);
+    if (!x) return 'missing';
+    if (x.m) return 'manual';
+    return x.h === hash(e.name, e.desc) ? 'ok' : 'stale';
+  }
+
+  /* Index libellé canonique → entité, pour t(str). */
+  let INDEX = new Map();
+  function register(e) {
+    if (!e || !e.name) return;
+    const k = norm(e.name);
+    if (k && !INDEX.has(k)) INDEX.set(k, e);
+  }
+  function index(d) {
+    INDEX = new Map();
+    if (!d) return INDEX;
+    const cats = Array.isArray(d.cats) ? d.cats : [];
+    const items = Array.isArray(d) ? d : (Array.isArray(d.items) ? d.items : []);
+    const extra = Array.isArray(d.formulaItems) ? d.formulaItems : [];
+    const opts = Array.isArray(d.opts) ? d.opts : [];
+    cats.forEach((c) => { register(c); (c.sub || []).forEach(register); });
+    items.forEach(register); extra.forEach(register);
+    opts.forEach((g) => { register(g); (g.choices || []).forEach(register); });
+    return INDEX;
   }
 
   function translate(str, lang) {
     if (!str || typeof str !== 'string') return str;
-    const target = lang || activeLang();
+    const target = asLang(lang) || activeLang();
     const clean = str.trim();
     if (!clean) return str;
-
-    const key = norm(clean);
-    const entry = DICTIONARY[key];
-    if (entry && entry[target]) {
-      return entry[target];
-    }
-
-    // Lookup with punctuation/parentheses handling (e.g. "Dried Meat (Khlii)" -> "خليع مغربي")
-    const simplifiedKey = key.replace(/[()]/g, ' ').replace(/\s+/g, ' ').trim();
-    if (DICTIONARY[simplifiedKey] && DICTIONARY[simplifiedKey][target]) {
-      return DICTIONARY[simplifiedKey][target];
-    }
-
-    // Partial compound replacement if available
-    const wordDict = WORDS[target];
-    if (wordDict) {
-      let out = clean;
-      let changed = false;
-      for (const [w, repl] of Object.entries(wordDict)) {
-        const regex = new RegExp(`\\b${w}\\b`, 'gi');
-        if (regex.test(out)) {
-          out = out.replace(regex, repl);
-          changed = true;
-        }
-      }
-      if (changed) return out;
-    }
-
+    const e = INDEX.get(norm(clean));
+    if (e && fresh(e, target)) return e.i18n[target].name;
+    const k = norm(clean);
+    const dict = DICTIONARY[k] || DICTIONARY[k.replace(/[()]/g, ' ').replace(/\s+/g, ' ').trim()];
+    if (dict && dict[target]) return dict[target];
     return clean;
   }
-
-  function translateItem(it, lang) {
+  function name(e, lang) {
+    if (!e) return '';
+    const target = asLang(lang) || activeLang();
+    if (fresh(e, target)) return e.i18n[target].name;
+    return translate(String(e.name || ''), target);
+  }
+  function desc(e, lang) {
+    if (!e) return '';
+    const target = asLang(lang) || activeLang();
+    if (fresh(e, target) && e.i18n[target].desc != null) return String(e.i18n[target].desc);
+    return String(e.desc || '');
+  }
+  /* Copies localisées — le canonique reste lisible dans _src. */
+  function localizeItem(it, lang) {
     if (!it) return it;
-    const l = lang || activeLang();
-    return Object.assign({}, it, {
-      name: translate(it.name, l),
-      desc: it.desc ? translate(it.desc, l) : (it.desc || ''),
-    });
+    const l = asLang(lang) || activeLang();
+    return Object.assign({}, it, { name: name(it, l), desc: desc(it, l), _src: { name: it.name, desc: it.desc || '' } });
   }
-
-  function translateCategory(cat, lang) {
-    if (!cat) return cat;
-    const l = lang || activeLang();
-    return Object.assign({}, cat, {
-      name: translate(cat.name, l),
-      sub: (cat.sub || []).map(s => Object.assign({}, s, { name: translate(s.name, l) })),
-    });
+  function localizeCategory(c, lang) {
+    if (!c) return c;
+    const l = asLang(lang) || activeLang();
+    return Object.assign({}, c, { name: name(c, l), _src: { name: c.name },
+      sub: (c.sub || []).map((s) => Object.assign({}, s, { name: name(s, l), _src: { name: s.name } })) });
   }
-
-  function translateOptGroup(g, lang) {
+  function localizeOptGroup(g, lang) {
     if (!g) return g;
-    const l = lang || activeLang();
-    return Object.assign({}, g, {
-      name: translate(g.name, l),
-      choices: (g.choices || []).map(c => Object.assign({}, c, { name: translate(c.name, l) })),
+    const l = asLang(lang) || activeLang();
+    return Object.assign({}, g, { name: name(g, l), _src: { name: g.name },
+      choices: (g.choices || []).map((c) => Object.assign({}, c, { name: name(c, l), _src: { name: c.name } })) });
+  }
+  function localizeDataset(d, lang) {
+    if (!d || typeof d !== 'object') return d;
+    const l = asLang(lang) || activeLang();
+    return Object.assign({}, d, {
+      cats: (d.cats || []).map((c) => localizeCategory(c, l)),
+      items: (d.items || []).map((it) => localizeItem(it, l)),
+      opts: (d.opts || []).map((g) => localizeOptGroup(g, l)),
     });
   }
 
-  function translateDataset(d, lang) {
-    if (!d || typeof d !== 'object') return d;
-    const l = lang || activeLang();
-    return {
-      cats: (d.cats || []).map(c => translateCategory(c, l)),
-      items: (d.items || []).map(it => translateItem(it, l)),
-      opts: (d.opts || []).map(g => translateOptGroup(g, l)),
-      stations: d.stations || [],
+  /* ───────────────── ce qui reste à traduire ─────────────────
+     needs(d, langs, {force}) → { fr: {cats, items, opts, count}, ar: …, en: … }
+     au format exact qu'attend POST /api/ai/menu-translate (identifiants +
+     libellés), en n'envoyant QUE les entrées sans traduction fraîche. `force`
+     renvoie tout sauf les corrections manuelles ; `force:'all'` tout. */
+  function wants(e, lang, force) {
+    if (!e || !e.name) return false;
+    if (force === 'all') return true;
+    const x = entry(e, lang);
+    if (x && x.m) return false;
+    if (force) return true;
+    return !fresh(e, lang);
+  }
+  function needs(d, langs, opts) {
+    const o = opts || {};
+    const force = o.force || false;
+    const out = {};
+    (langs || LANGS).forEach((lang) => {
+      if (!asLang(lang)) return;
+      const cats = [];
+      ((d && d.cats) || []).forEach((c) => {
+        if (!c || !c.id) return;
+        const sub = (c.sub || []).filter((s) => s && s.id && wants(s, lang, force)).map((s) => ({ id: s.id, name: s.name }));
+        if (wants(c, lang, force) || sub.length) cats.push({ id: c.id, name: c.name, sub });
+      });
+      const items = ((d && d.items) || []).filter((it) => it && it.id && !it.archived && wants(it, lang, force))
+        .map((it) => ({ id: it.id, name: it.name, desc: it.desc || '' }));
+      const optsOut = [];
+      ((d && d.opts) || []).forEach((g) => {
+        if (!g || !g.id) return;
+        const choices = (g.choices || []).filter((c) => c && c.id && wants(c, lang, force)).map((c) => ({ id: c.id, name: c.name }));
+        if (wants(g, lang, force) || choices.length) optsOut.push({ id: g.id, name: g.name, choices });
+      });
+      const count = cats.reduce((n, c) => n + 1 + c.sub.length, 0) + items.length + optsOut.reduce((n, g) => n + 1 + g.choices.length, 0);
+      out[lang] = { cats, items, opts: optsOut, count };
+    });
+    return out;
+  }
+
+  /* apply(d, lang, res, {manual, force}) — écrit les traductions reçues dans
+     le dataset (muté, à appeler dans store.update) et renvoie le nombre écrit.
+     Une correction manuelle n'est jamais écrasée par la machine. Une « traduction »
+     vers l'arabe sans une seule lettre arabe est ignorée (le modèle a rendu le
+     texte inchangé : mieux vaut la laisser manquante, elle sera retentée). */
+  function write(e, lang, name_, desc_, o) {
+    if (!e || !name_) return false;
+    const cur = entry(e, lang);
+    if (cur && cur.m && !o.manual && o.force !== 'all') return false;
+    const n = String(name_).trim().slice(0, 120);
+    if (!n) return false;
+    if (!o.manual && lang === 'ar' && !hasArabic(n) && !hasArabic(e.name)) return false;
+    if (!e.i18n || typeof e.i18n !== 'object') e.i18n = {};
+    const x = { name: n, h: hash(e.name, e.desc) };
+    if (desc_ != null && e.desc !== undefined) x.desc = String(desc_).trim().slice(0, 400);
+    if (o.manual) x.m = 1;
+    e.i18n[lang] = x;
+    return true;
+  }
+  function apply(d, lang, res, opts) {
+    const o = opts || {};
+    if (!d || !asLang(lang) || !res) return 0;
+    let n = 0;
+    const byId = (arr) => new Map((arr || []).filter((x) => x && x.id).map((x) => [String(x.id), x]));
+    const rc = byId(res.cats);
+    (d.cats || []).forEach((c) => {
+      const t = rc.get(String(c.id)); if (!t) return;
+      if (write(c, lang, t.name, null, o)) n++;
+      const rs = byId(t.sub);
+      (c.sub || []).forEach((s) => { const ts = rs.get(String(s.id)); if (ts && write(s, lang, ts.name, null, o)) n++; });
+    });
+    const ri = byId(res.items);
+    (d.items || []).forEach((it) => { const t = ri.get(String(it.id)); if (t && write(it, lang, t.name, t.desc, o)) n++; });
+    const ro = byId(res.opts);
+    (d.opts || []).forEach((g) => {
+      const t = ro.get(String(g.id)); if (!t) return;
+      if (write(g, lang, t.name, null, o)) n++;
+      const rch = byId(t.choices);
+      (g.choices || []).forEach((c) => { const tc = rch.get(String(c.id)); if (tc && write(c, lang, tc.name, null, o)) n++; });
+    });
+    return n;
+  }
+  /* Une correction du patron sur UNE entité. Vide = retirer la traduction. */
+  function setManual(e, lang, name_, desc_) {
+    if (!e || !asLang(lang)) return false;
+    if (!String(name_ || '').trim()) { if (e.i18n) { delete e.i18n[lang]; if (!Object.keys(e.i18n).length) delete e.i18n; } return true; }
+    return write(e, lang, name_, desc_, { manual: true });
+  }
+  function clear(d, lang, keepManual) {
+    const langs = asLang(lang) ? [lang] : LANGS;
+    const each = (e) => {
+      if (!e || !e.i18n) return;
+      langs.forEach((l) => { const x = e.i18n[l]; if (x && !(keepManual && x.m)) delete e.i18n[l]; });
+      if (!Object.keys(e.i18n).length) delete e.i18n;
     };
+    ((d && d.cats) || []).forEach((c) => { each(c); (c.sub || []).forEach(each); });
+    ((d && d.items) || []).forEach(each);
+    ((d && d.opts) || []).forEach((g) => { each(g); (g.choices || []).forEach(each); });
+  }
+  /* Tableau de bord : combien d'entités par statut et par langue. */
+  function summary(d) {
+    const out = {};
+    LANGS.forEach((l) => { out[l] = { ok: 0, stale: 0, missing: 0, manual: 0, total: 0 }; });
+    const each = (e) => { if (!e || !e.name) return; LANGS.forEach((l) => { const s = status(e, l); out[l][s]++; out[l].total++; }); };
+    ((d && d.cats) || []).forEach((c) => { each(c); (c.sub || []).forEach(each); });
+    ((d && d.items) || []).filter((it) => it && !it.archived).forEach(each);
+    ((d && d.opts) || []).forEach((g) => { each(g); (g.choices || []).forEach(each); });
+    return out;
   }
 
   window.KiwiMenuI18n = {
-    t: translate,
+    LANGS: LANGS.slice(),
     lang: activeLang,
-    item: translateItem,
-    category: translateCategory,
-    optGroup: translateOptGroup,
-    dataset: translateDataset,
+    hash, fresh, status, hasArabic,
+    t: translate, name, desc,
+    item: localizeItem, category: localizeCategory, optGroup: localizeOptGroup, dataset: localizeDataset,
+    index, needs, apply, setManual, clear, summary,
     DICT: DICTIONARY,
   };
 })();

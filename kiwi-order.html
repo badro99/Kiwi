@@ -3504,6 +3504,22 @@ em, i, cite, dfn, var { font-style: normal; }
     };
 
     /* ============ menu item translations ============ */
+    /* Traductions portées par la carte publiée (assets/menu-i18n.js) :
+       it.i18n[l] = {name, desc, h, m}. Même empreinte qu'au tableau de bord
+       (djb2 → base36 sur « nom␟description ») : une traduction dont h ne
+       correspond plus au texte du patron est périmée, on montre son texte. */
+    function menuHash(name, desc) {
+      const str = String(name == null ? '' : name).trim() + '\u001f' + String(desc == null ? '' : desc).trim();
+      let h = 5381;
+      for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0;
+      return (h >>> 0).toString(36);
+    }
+    function menuTr(e, l) {
+      const x = e && e.i18n && e.i18n[l];
+      if (!x || !x.name) return null;
+      if (!x.m && x.h !== menuHash(e.name, e.desc)) return null;
+      return x;
+    }
     const MENU_I18N = {
       fr: {
         espresso:       { name: "Espresso",             desc: "Court, intense, torréfaction du jour" },
@@ -4875,10 +4891,14 @@ em, i, cite, dfn, var { font-style: normal; }
         name: it.name, desc: it.desc || '', price: Number(it.price) || 0,
         icon: 'utensils', options: (Array.isArray(it.opts) ? it.opts : []).map(id => groups.get(String(id))).filter(Boolean),
       }));
-      // The menu isn't translated server-side → the same text serves every lang.
+      // La carte voyage avec ses traductions ; ce qui n'est pas (encore)
+      // traduit, ou plus à jour, retombe sur le texte du patron.
       ['fr', 'en', 'ar'].forEach((l) => {
         MENU_I18N[l] = MENU_I18N[l] || {};
-        items.forEach((it) => { MENU_I18N[l][it.id] = { name: it.name, desc: it.desc || '' }; });
+        items.forEach((it) => {
+          const x = menuTr(it, l);
+          MENU_I18N[l][it.id] = x ? { name: x.name, desc: x.desc != null ? String(x.desc) : (it.desc || '') } : { name: it.name, desc: it.desc || '' };
+        });
       });
       const used = {}; MENU.forEach((m) => { used[m.cat] = true; });
       return (menu.cats || []).filter((c) => used[c.id]);
@@ -4888,7 +4908,7 @@ em, i, cite, dfn, var { font-style: normal; }
       const tabsEl = $('.menu-tabs'); if (!tabsEl) return;
       const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
       let html = `<button class="menu-tab is-active" data-tab="all">${esc(t('tab_all'))}</button>`;
-      cats.forEach((c) => { html += `<button class="menu-tab" data-tab="${esc(c.id)}">${esc(c.name)}</button>`; });
+      cats.forEach((c) => { html += `<button class="menu-tab" data-tab="${esc(c.id)}">${esc((menuTr(c, currentLang) || c).name)}</button>`; });
       tabsEl.style.display = '';
       tabsEl.innerHTML = html;
     }

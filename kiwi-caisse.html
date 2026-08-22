@@ -125,7 +125,7 @@
   <!-- La langue du comptoir. Après les modules de caisse : il greffe son
        sélecteur dans le rail du métier ouvert et rebalaye après chaque rendu. -->
   <script src="assets/caisse-lang.js" defer></script>
-  <script src="assets/menu-i18n.js?v=3" defer></script>
+  <script src="assets/menu-i18n.js?v=4" defer></script>
   <!-- Multi-métier PIN dispatcher: 0000 + 0002–0015 lazy-load one POS vertical
        each (assets/pos-<id>.{js,css}, assets/pressing-caisse.{js,css} pour le
        pressing). Tap the pin-foot note for the code legend.
@@ -8418,7 +8418,7 @@
       let itemsHTML = lines.map(l => `
         <div class="rp-item">
           <span class="rp-item-qty">${l.qty}×</span>
-          <span class="rp-item-name">${l.name}</span>
+          <span class="rp-item-name">${lineName(l)}</span>
           <span class="rp-item-price mono">${fmtMAD(l.total)}</span>
           ${l.note && l.note.trim() ? `<span class="rp-item-noteline">Note cuisine · ${kdsEsc(l.note)}</span>` : ''}
         </div>
@@ -8769,8 +8769,10 @@
          pour toutes. Un plat ajouté demain dans « Boissons » part au bar sans
          que personne n'ait à y penser. */
       const catStation = {};
+      const catI18n = {};
       cats.forEach((c, i) => {
         labels[c.id] = c.name || 'Sans nom';
+        catI18n[c.id] = c.i18n || null;
         colors[c.id] = CAT_PALETTE[i % CAT_PALETTE.length];
         catStation[c.id] = String(c.station || '');
         order.push(c.id);
@@ -8783,7 +8785,11 @@
         const cat = (it.catId && labels[it.catId]) ? it.catId : (loose = true, '_autres');
         const parent = cats.find(c => c.id === cat);
         const sub = parent && it.subId ? (parent.sub || []).find(s => s.id === it.subId) : null;
-        return { id: it.id, cat, subId: sub ? sub.id : null, subLabel: sub ? sub.name : '', name: it.name, price: +it.price || 0, station: catStation[cat] || '',
+        return { id: it.id, cat, subId: sub ? sub.id : null, subLabel: sub ? sub.name : '', subI18n: sub ? (sub.i18n || null) : null, name: it.name, price: +it.price || 0, station: catStation[cat] || '',
+          /* Les traductions du patron (assets/menu-i18n.js) : lues à l'AFFICHAGE
+             par menuName()/lineName() ; la ligne de la note et le ticket cuisine
+             gardent `name`, le libellé canonique. */
+          i18n: it.i18n || null,
           /* Les groupes d'options que ce produit demande. Des identifiants : le
              libellé vit une seule fois, dans carteState.opts. */
           opts: Array.isArray(it.opts) ? it.opts.slice() : [], formula: it.formula || null,
@@ -8791,6 +8797,8 @@
       });
       const items = allItems.filter((it) => it.avail !== false && !it.formulaOnly && !it.archived);
       carteState.formulaItems = allItems;
+      carteState.catI18n = catI18n;
+      try { if (window.KiwiMenuI18n) window.KiwiMenuI18n.index({ cats: cats, items: allItems, opts: Array.isArray(d.opts) ? d.opts : [] }); } catch (_) {}
       if (loose) {
         labels._autres = 'Autres';
         colors._autres = CAT_PALETTE[cats.length % CAT_PALETTE.length];
@@ -8963,7 +8971,7 @@
       const cats = catOrder;
       $('#cat-pills').innerHTML = cats.map(c => `
         <button class="cat-pill ${c === activeCat ? 'is-active' : ''}" data-lens-item data-cat="${c}">
-          ${escTeam(catLabels[c] || c)}<span class="count mono">${counts[c] || 0}</span>
+          ${escTeam(catLabelL(c))}<span class="count mono">${counts[c] || 0}</span>
         </button>
       `).join('');
       let subPills = $('#subcat-pills');
@@ -8982,7 +8990,7 @@
       subPills.hidden = activeCat === 'all' || !subs.length;
       subPills.innerHTML = subPills.hidden ? '' : [
         `<button class="cat-pill ${!activeSub ? 'is-active' : ''}" data-subcat="">Tout</button>`,
-        ...subs.map(s => `<button class="cat-pill ${activeSub === s.id ? 'is-active' : ''}" data-subcat="${escTeam(s.id)}">${escTeam(s.name)}<span class="count mono">${menuItems.filter(m => m.cat === activeCat && m.subId === s.id).length}</span></button>`)
+        ...subs.map(s => `<button class="cat-pill ${activeSub === s.id ? 'is-active' : ''}" data-subcat="${escTeam(s.id)}">${escTeam(window.KiwiMenuI18n ? window.KiwiMenuI18n.name(s, carteLang()) : s.name)}<span class="count mono">${menuItems.filter(m => m.cat === activeCat && m.subId === s.id).length}</span></button>`)
       ].join('');
       window.CaisseFx && window.CaisseFx.lens();
 
@@ -9117,6 +9125,22 @@
         '</div></div>';
     }
 
+    /* ─── La carte dans la langue de la caisse (assets/menu-i18n.js) ───
+       Le libellé du patron reste `name` ; on ne localise qu'à l'affichage :
+       tuiles, pastilles de catégorie, lignes de la note. Les tickets et le
+       bon de cuisine continuent d'écrire le libellé canonique. */
+    function carteLang() { try { return window.KiwiCaisseLang ? window.KiwiCaisseLang.get() : 'fr'; } catch (_) { return 'fr'; } }
+    function menuName(m) { const M = window.KiwiMenuI18n; return (M && m) ? M.name(m, carteLang()) : ((m && m.name) || ''); }
+    function catLabelL(id) {
+      const raw = catLabels[id] || id, M = window.KiwiMenuI18n;
+      if (!M) return raw;
+      const e = carteState.catI18n && carteState.catI18n[id];
+      return e ? M.name({ name: raw, i18n: e }, carteLang()) : M.t(raw, carteLang());
+    }
+    function subLabelL(m) { const M = window.KiwiMenuI18n; if (!m || !m.subLabel) return ''; return M ? M.name({ name: m.subLabel, i18n: m.subI18n || null }, carteLang()) : m.subLabel; }
+    function lineName(l) { const M = window.KiwiMenuI18n; return (M && l) ? M.t(String(l.name || ''), carteLang()) : ((l && l.name) || ''); }
+    try { if (window.KiwiCaisseLang && window.KiwiCaisseLang.subscribe) window.KiwiCaisseLang.subscribe(function () { try { renderCatPills(); renderMenu(); renderCart(); } catch (_) {} }); } catch (_) {}
+
     function renderMenu() {
       if (!menuItems.length) {
         $('#menu-grid').innerHTML = emptyMenuHTML();
@@ -9146,8 +9170,8 @@
             ${m.formula ? '<span class="menu-item-optflag">Formule</span>' : ''}
             ${qty > 0 ? `<span class="menu-item-badge mono">${qty}</span>` : ''}
             <span class="menu-item-art">${menuArt(m.id, m.cat, m.name)}</span>
-            <span class="menu-item-cat">${escTeam(m.subLabel || catLabels[m.cat] || '')}</span>
-            <span class="menu-item-name">${escTeam(m.name)}</span>
+            <span class="menu-item-cat">${escTeam(subLabelL(m) || catLabelL(m.cat) || '')}</span>
+            <span class="menu-item-name">${escTeam(menuName(m))}</span>
             <span class="menu-item-foot">
               <span class="menu-item-price mono">${m.price} MAD</span>
               ${control}
@@ -9455,7 +9479,7 @@
             <span class="qty-num mono">${l.qty}</span>
             <button class="qty-btn" data-cart-action="inc" aria-label="Plus">+</button>
           </div>
-          <span class="rp-item-name">${l.name}${(l.opts && l.opts.length) ? `<i class="rp-item-opts">${kdsEsc(optText(l.opts))}</i>` : ''}</span>
+          <span class="rp-item-name">${lineName(l)}${(l.opts && l.opts.length) ? `<i class="rp-item-opts">${kdsEsc(optText(l.opts))}</i>` : ''}</span>
           <span class="rp-item-price mono">${fmtMAD(l.price * l.qty)}</span>
           <input class="rp-item-note${(l.note || '').trim() ? ' has-note' : ''}" data-note-uid="${l.uid}"
             value="${kdsEsc(l.note || '')}" placeholder="Note cuisine, ex. bien chaud, sans oignon"
@@ -11129,7 +11153,7 @@
         $('#rp-items').innerHTML = order.map(l => l.sent ? `
           <div class="rp-item rp-item--cart rp-item--sent" data-order-uid="${l.uid}">
             <span class="rp-sent-qty">${l.qty}×</span>
-            <span class="rp-item-name">${l.name}${(l.opts && l.opts.length) ? `<i class="rp-item-opts">${kdsEsc(optText(l.opts))}</i>` : ''}</span>
+            <span class="rp-item-name">${lineName(l)}${(l.opts && l.opts.length) ? `<i class="rp-item-opts">${kdsEsc(optText(l.opts))}</i>` : ''}</span>
             <span class="rp-item-price mono">${fmtMAD(l.price * l.qty)}</span>
             <span class="rp-sent-mark">${KDS_SVG.check}${l.orderProPending ? 'OrderPro · à accepter' : 'En cuisine'}</span>
             ${(l.note || '').trim() ? `<span class="rp-item-noteline">Note cuisine · ${kdsEsc(l.note)}</span>` : ''}
@@ -11140,7 +11164,7 @@
               <span class="qty-num mono">${l.qty}</span>
               <button class="qty-btn" data-cart-action="inc" aria-label="Plus">+</button>
             </div>
-            <span class="rp-item-name">${l.name}${(l.opts && l.opts.length) ? `<i class="rp-item-opts">${kdsEsc(optText(l.opts))}</i>` : ''}</span>
+            <span class="rp-item-name">${lineName(l)}${(l.opts && l.opts.length) ? `<i class="rp-item-opts">${kdsEsc(optText(l.opts))}</i>` : ''}</span>
             <span class="rp-item-price mono">${fmtMAD(l.price * l.qty)}</span>
             <input class="rp-item-note${(l.note || '').trim() ? ' has-note' : ''}" data-note-uid="${l.uid}"
               value="${kdsEsc(l.note || '')}" placeholder="Note cuisine, ex. bien chaud, sans oignon"
