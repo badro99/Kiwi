@@ -390,7 +390,7 @@
   }
   function detailReply(f, l) {
     var c = COPY[l] || COPY.fr, r = readiness(f);
-    return { text: '<b>' + pick(f.label, l) + '</b> — ' + pick(f.summary, l), stats: [
+    return { text: '<b>' + pick(f.label, l) + '</b> · ' + pick(f.summary, l), stats: [
       { l: c.purpose, v: pick(f.summary, l), h: '' },
       { l: c.steps, v: pick(f.steps, l), h: '' },
       { l: c.availability, v: c.active, h: tradeLabel(trade(), l) },

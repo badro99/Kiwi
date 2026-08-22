@@ -30,16 +30,16 @@
   }
 
   function fmtDate(ts) {
-    if (!ts) return '—';
+    if (!ts) return '·';
     const d = new Date(ts);
-    if (isNaN(d.getTime())) return '—';
+    if (isNaN(d.getTime())) return '·';
     return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
   }
 
   function fmtDateTime(ts) {
-    if (!ts) return '—';
+    if (!ts) return '·';
     const d = new Date(ts);
-    if (isNaN(d.getTime())) return '—';
+    if (isNaN(d.getTime())) return '·';
     const dateStr = d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
     const timeStr = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
     return `${dateStr} à ${timeStr}`;
@@ -410,7 +410,7 @@
 
     const iceBanner = isMissingICE ? `
       <div class="ice-alert">
-        <strong>Attention :</strong> Mention obligatoire manquante — L’ICE de votre établissement n’est pas renseigné.
+        <strong>Attention :</strong> Mention obligatoire manquante · L’ICE de votre établissement n’est pas renseigné.
         Veuillez le compléter dans <em>Paramètres → Mes établissements</em> pour une stricte conformité fiscale.
       </div>` : '';
 

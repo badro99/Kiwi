@@ -168,7 +168,7 @@
     .kob-card{width:100%;max-width:560px;max-height:calc(100vh - 48px);display:flex;flex-direction:column;
       background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.09);border-radius:26px;
       padding:30px 32px 26px;box-shadow:0 40px 90px -30px rgba(0,0,0,.6);-webkit-backdrop-filter:blur(18px) saturate(1.1);backdrop-filter:blur(18px) saturate(1.1);}
-    /* Liquid Glass — real refraction when assets/liquid-glass.js is present and enabled.
+    /* Liquid Glass · real refraction when assets/liquid-glass.js is present and enabled.
        Same fill/blur (legibility preserved); only adds the #kiwi-lg displacement. Inert otherwise. */
     @supports ((-webkit-backdrop-filter:url("#k")) or (backdrop-filter:url("#k"))){
       html[data-kiwi-glass="on"] .kob-card{-webkit-backdrop-filter:url(#kiwi-lg) blur(18px) saturate(1.1);backdrop-filter:url(#kiwi-lg) blur(18px) saturate(1.1);}
@@ -502,7 +502,7 @@
           <h1 class="kob-h">${S.ownerName ? esc(S.ownerName) + ', ' : ''}<span class="k-sans">${tr({ fr: 'tout est prêt.', en: "you're all set.", ar: 'كل شيء جاهز.' })}</span></h1>
           <p class="kob-sub">${tr({ fr: 'Vérifiez, puis créez votre espace. Vous pourrez tout ajuster ensuite dans les Réglages.', en: 'Have a look, then create your space. You can adjust anything later in Settings.', ar: 'راجع ثم أنشئ مساحتك. يمكنك تعديل كل شيء لاحقاً.' })}</p>
           <div class="kob-recap">
-            ${row(tr({ fr: 'Établissement', en: 'Business', ar: 'النشاط' }), S.bizName || '—')}
+            ${row(tr({ fr: 'Établissement', en: 'Business', ar: 'النشاط' }), S.bizName || '·')}
             ${row(tr({ fr: 'Activité', en: 'Type', ar: 'النوع' }), tr(t.label))}
             ${row(tr({ fr: 'Points de vente', en: 'Locations', ar: 'نقاط البيع' }), String(S.venueCount) + (S.city ? ' · ' + S.city : ''))}
             ${row(tr({ fr: 'Équipe', en: 'Team', ar: 'الفريق' }), tr({ fr: String(S.teamSize) + ' personnes', en: String(S.teamSize) + ' people', ar: String(S.teamSize) + ' أشخاص' }))}

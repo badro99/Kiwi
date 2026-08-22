@@ -18,7 +18,7 @@
  * ═══════════════════════════════════════════════════════════════════════════ */
 (function () {
   'use strict';
-  if (!window.KiwiStore) { console.warn('[menu-catalog] KiwiStore missing — load venue-store.js first'); return; }
+  if (!window.KiwiStore) { console.warn('[menu-catalog] KiwiStore missing · load venue-store.js first'); return; }
 
   /* ───────────────── i18n mini ───────────────── */
   const LANG = () => (window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang()) || 'fr';
@@ -64,7 +64,7 @@
     catL:       { fr: 'Catégorie', en: 'Category', ar: 'الفئة' },
     subL:       { fr: 'Sous-catégorie (option)', en: 'Sub-category (optional)', ar: 'فئة فرعية (اختياري)' },
     descL:      { fr: 'Description (option)', en: 'Description (optional)', ar: 'وصف (اختياري)' },
-    none:       { fr: '—', en: '—', ar: '—' },
+    none:       { fr: '·', en: '·', ar: '·' },
     allItems:   { fr: 'Tous', en: 'All', ar: 'الكل' },
     products:   { fr: 'produits', en: 'products', ar: 'منتجات' },
     product:    { fr: 'produit', en: 'product', ar: 'منتج' },
@@ -88,7 +88,7 @@
        personne ne verra la fin — et un fil où chaque tuile tourne à son rythme
        cesse de ressembler à un fil. D'où un plafond dit clairement, avec la
        durée constatée, plutôt qu'un refus muet à l'envoi. */
-    mediaLong:  { fr: 'Clip trop long ({n} s). Filmez 3 à 5 secondes — maximum {max} s.', en: 'Clip too long ({n}s). Film 3 to 5 seconds — {max}s max.', ar: 'الفيديو طويل بزاف ({n} ثانية). صوّر من 3 ل 5 ثواني — الحد {max} ثانية.' },
+    mediaLong:  { fr: 'Clip trop long ({n} s). Filmez 3 à 5 secondes · maximum {max} s.', en: 'Clip too long ({n}s). Film 3 to 5 seconds · {max}s max.', ar: 'الفيديو طويل بزاف ({n} ثانية). صوّر من 3 ل 5 ثواني · الحد {max} ثانية.' },
     mediaWide:  { fr: 'Filmé à l\'horizontale : il sera recadré. Préférez la verticale.', en: 'Filmed landscape: it will be cropped. Prefer vertical.', ar: 'مصوّر بالعرض: غادي يتقصّ. حسن تصوّر بالطول.' },
     mediaOff:   { fr: 'Stockage média pas encore activé sur votre compte.', en: 'Media storage isn\'t enabled on your account yet.', ar: 'تخزين الميديا مازال ماتفعّلش فالحساب ديالك.' },
     mediaBig:   { fr: 'Fichier trop lourd.', en: 'File too large.', ar: 'الملف ثقيل بزاف.' },
@@ -101,7 +101,7 @@
        d'eux réécrit douze fois. Même principe que le poste sur la catégorie. */
     opts:       { fr: 'Options et suppléments', en: 'Options & extras', ar: 'الخيارات والزيادات' },
     optsHi:     { fr: 'Un groupe se définit ici, puis s\'attache aux produits qui le demandent. Dès qu\'un produit en porte un, le comptoir demande le choix avant de l\'ajouter à la note.', en: 'Define a group here, then attach it to the products that need it. As soon as a product carries one, the till asks for the choice before adding it to the bill.', ar: 'عرّف مجموعة هنا، ومن بعد ربطها بالمنتجات اللي كيحتاجوها. ملي منتج كيحمل وحدة، الصندوق كيسول على الاختيار قبل ما يزيدو للحساب.' },
-    optsEm:     { fr: 'Aucun groupe d\'options. Créez-en un si un produit se commande en plusieurs façons — un café avec ou sans lait, une viande à point ou bien cuite.', en: 'No option groups yet. Create one if a product is ordered in several ways — a coffee with or without milk, a steak medium or well done.', ar: 'مازال مامجموعات ديال الخيارات. سير واجد وحدة إلا كان منتج كيتطلب بأشكال مختلفة.' },
+    optsEm:     { fr: 'Aucun groupe d\'options. Créez-en un si un produit se commande en plusieurs façons · un café avec ou sans lait, une viande à point ou bien cuite.', en: 'No option groups yet. Create one if a product is ordered in several ways · a coffee with or without milk, a steak medium or well done.', ar: 'مازال مامجموعات ديال الخيارات. سير واجد وحدة إلا كان منتج كيتطلب بأشكال مختلفة.' },
     optAdd:     { fr: 'Ajouter un groupe', en: 'Add a group', ar: 'إضافة مجموعة' },
     optNm:      { fr: 'Nom du groupe', en: 'Group name', ar: 'اسم المجموعة' },
     optEx:      { fr: 'ex. Type de lait, Cuisson, Suppléments', en: 'e.g. Milk, Doneness, Extras', ar: 'مثل: نوع الحليب، الطهي، الزيادات' },
@@ -115,7 +115,7 @@
     optEmojiHi: { fr: 'Ajoutez un emoji facultatif à chaque choix pour le rendre immédiatement reconnaissable sur l’écran cuisine.', en: 'Add an optional emoji to each choice so it is immediately recognisable on the kitchen display.', ar: 'زيد إيموجي اختياري لكل اختيار باش يتعرف عليه العامل بسرعة فشاشة المطبخ.' },
     optEmojiNone:{ fr: 'Aucun repère', en: 'No marker', ar: 'بلا رمز' },
     optChPr:    { fr: 'Supplément', en: 'Extra', ar: 'زيادة' },
-    optChEm:    { fr: 'Ce groupe n\'a aucun choix — le comptoir n\'aurait rien à proposer.', en: 'This group has no choices — the till would have nothing to offer.', ar: 'هاد المجموعة بلا اختيارات — الصندوق ماغاديش يلقى شنو يقترح.' },
+    optChEm:    { fr: 'Ce groupe n\'a aucun choix · le comptoir n\'aurait rien à proposer.', en: 'This group has no choices · the till would have nothing to offer.', ar: 'هاد المجموعة بلا اختيارات · الصندوق ماغاديش يلقى شنو يقترح.' },
     optDelQ:    { fr: 'Supprimer ce groupe ? Il sera retiré des produits qui l\'utilisent.', en: 'Delete this group? It will be removed from the products using it.', ar: 'حذف هاد المجموعة؟ غادي تتحيد من المنتجات اللي كيستعملوها.' },
     optAttach:  { fr: 'Options de ce produit', en: 'Options for this product', ar: 'خيارات هاد المنتج' },
     optNoneYet: { fr: 'Créez d\'abord un groupe d\'options.', en: 'Create an option group first.', ar: 'واجد مجموعة ديال الخيارات لاول.' },
@@ -131,8 +131,8 @@
     stationDefB:{ fr: 'reçoit le reste', en: 'gets the rest', ar: 'كتوصلها الباقي' },
     stationDelQ:{ fr: 'Supprimer ce poste ? Les catégories qui y allaient repartiront vers la cuisine.', en: 'Delete this station? Categories routed there fall back to the kitchen.', ar: 'حذف هذه المحطة؟ الفئات ديالها غادي ترجع للمطبخ.' },
     stationNone:{ fr: 'Aucun poste défini', en: 'No station defined', ar: 'لا محطة محددة' },
-    stationsHi: { fr: 'Le routage se règle sur la catégorie, pas ici : ouvrez une catégorie et donnez-lui son poste. La cuisine reçoit tout ce que vous n\'avez pas envoyé ailleurs — elle ne se supprime pas. L\'ordre ci-dessous est celui des onglets de l\'écran cuisine.', en: 'Routing is set on the category, not here: open a category and give it its station. The kitchen gets everything you haven\'t sent elsewhere — it can\'t be deleted. The order below is the tab order on the kitchen screen.', ar: 'التوجيه كيتحدد فالفئة ماشي هنا: حل فئة وعطيها المحطة ديالها. المطبخ كيوصلو كلشي اللي ما صيفطيهش لمحطة أخرى — وما كيتحدفش. الترتيب تحت هو ترتيب الأبواب فشاشة المطبخ.' },
-    stationsEm: { fr: 'Vous n\'avez pas encore de postes. Sans poste, tout part sur un seul écran cuisine — ce qui suffit à beaucoup de cafés.', en: 'No stations yet. Without them everything lands on one kitchen screen — which is plenty for many cafés.', ar: 'مازال ماعندكش محطات. بلا محطات كلشي كيوصل لشاشة مطبخ وحدة — وهادشي كافي لبزاف ديال المقاهي.' },
+    stationsHi: { fr: 'Le routage se règle sur la catégorie, pas ici : ouvrez une catégorie et donnez-lui son poste. La cuisine reçoit tout ce que vous n\'avez pas envoyé ailleurs · elle ne se supprime pas. L\'ordre ci-dessous est celui des onglets de l\'écran cuisine.', en: 'Routing is set on the category, not here: open a category and give it its station. The kitchen gets everything you haven\'t sent elsewhere · it can\'t be deleted. The order below is the tab order on the kitchen screen.', ar: 'التوجيه كيتحدد فالفئة ماشي هنا: حل فئة وعطيها المحطة ديالها. المطبخ كيوصلو كلشي اللي ما صيفطيهش لمحطة أخرى · وما كيتحدفش. الترتيب تحت هو ترتيب الأبواب فشاشة المطبخ.' },
+    stationsEm: { fr: 'Vous n\'avez pas encore de postes. Sans poste, tout part sur un seul écran cuisine · ce qui suffit à beaucoup de cafés.', en: 'No stations yet. Without them everything lands on one kitchen screen · which is plenty for many cafés.', ar: 'مازال ماعندكش محطات. بلا محطات كلشي كيوصل لشاشة مطبخ وحدة · وهادشي كافي لبزاف ديال المقاهي.' },
     stationCol: { fr: 'Changer la couleur', en: 'Change the colour', ar: 'تغيير اللون' },
     moveUp:     { fr: 'Monter', en: 'Move up', ar: 'رفع' },
     moveDown:   { fr: 'Descendre', en: 'Move down', ar: 'خفض' },
@@ -765,7 +765,7 @@
       .mx-field input:focus, .mx-field select:focus, .mx-field textarea:focus { border-color: var(--atlas); }
       .mx-field.two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
       .mx-field textarea { resize: vertical; min-height: 60px; }
-      /* media picker — the file inputs stay hidden, these are the affordances */
+      /* media picker · the file inputs stay hidden, these are the affordances */
       .mx-media { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
       /* 4/5 et non un carré : c'est EXACTEMENT le cadre de la tuile côté
          client (--tile-ratio dans OrderPro.html). Un aperçu carré montrait au
@@ -775,12 +775,12 @@
       .mx-media-actions { display: flex; gap: 6px; flex-wrap: wrap; }
       .mx-media-btn { padding: 8px 12px; font-size: 12.5px; }
       .mx-media-msg { font-size: 11.5px; color: var(--n-500); margin-top: 7px; line-height: 1.45; }
-      /* item row thumbnail — only present once the merchant adds media */
+      /* item row thumbnail · only present once the merchant adds media */
       .mx-item .th { width: 38px; height: 38px; border-radius: 9px; object-fit: cover; background: var(--paper-soft); border: 1px solid var(--mx-line); }
-      /* postes de préparation — la pastille est le même repère que sur l'écran
+      /* postes de préparation · la pastille est le même repère que sur l'écran
          cuisine de la caisse, à la même couleur. */
       .mx-stdot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: 0 0 8px; }
-      /* Les groupes d'options — une carte par groupe : le nom, la règle, puis
+      /* Les groupes d'options · une carte par groupe : le nom, la règle, puis
          les choix. La règle se lit avant les choix parce qu'elle change ce que
          les choix veulent dire (un seul, ou autant qu'on veut). */
       .mx-og { border: 1px solid var(--line); border-radius: 12px; padding: 12px 13px 10px;
@@ -832,7 +832,7 @@
       .mx-og-ch .del:hover { color: var(--danger); background: var(--paper-soft); }
       .mx-og-empty { font-size: 12px; color: var(--n-500); padding: 4px 0 2px; }
       /* L'attachement, dans la fiche du produit : des cases, pas une liste
-         déroulante — un produit peut porter plusieurs groupes. */
+         déroulante · un produit peut porter plusieurs groupes. */
       .mx-opts-pick { display: flex; flex-wrap: wrap; gap: 7px; }
       .mx-opts-pick label { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line);
         border-radius: 999px; padding: 5px 11px 5px 9px; font-size: 12.5px; color: var(--n-600);

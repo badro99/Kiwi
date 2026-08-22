@@ -413,7 +413,7 @@
         /* Le prix barré d'une promotion. Volontairement PLUS PETIT que le prix
            courant : sur une étiquette de rayon, deux nombres de même taille se
            lisent comme une hésitation, et c'est le nouveau prix qu'on vient
-           chercher. Le barré n'est pas décoratif — c'est lui qui dit « celui-ci
+           chercher. Le barré n'est pas décoratif · c'est lui qui dit « celui-ci
            ne s'applique plus », sans quoi une cliente lit deux prix et demande
            lequel est le bon. */
         .kbl-m s { color: #6B7280; font-family: Arial, Helvetica, sans-serif;
@@ -509,7 +509,7 @@
     // WinAnsi-safe text: map common typographic chars to their WinAnsi byte, drop
     // anything else >255, escape PDF string metacharacters. (é/è/à… are ≤255 and
     // pass straight through since Latin-1 aligns with WinAnsi for them.)
-    const WA = { '—': '\x97', '–': '\x96', '‘': '\x91', '’': '\x92', '“': '\x93', '”': '\x94', '…': '\x85', '•': '\x95', '€': '\x80' };
+    const WA = { '·': '\x97', '–': '\x96', '‘': '\x91', '’': '\x92', '“': '\x93', '”': '\x94', '…': '\x85', '•': '\x95', '€': '\x80' };
     const tx = (s) => String(s == null ? '' : s).split('').map((c) => WA[c] || (c.charCodeAt(0) > 255 ? '?' : c)).join('').replace(/[\\()]/g, '\\$&');
     const clip = (s, n) => { s = String(s || ''); return s.length > n ? s.slice(0, n - 1) + '.' : s; };
     const wid = (s, sz, bold) => s.length * sz * (bold ? 0.56 : 0.52);   // rough Helvetica width

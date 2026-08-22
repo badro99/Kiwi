@@ -97,7 +97,7 @@
     const heroAmt = real ? Number(tot && tot.revenue || 0).toLocaleString('fr-FR').replace(/[  ]/g, ' ') : '24 380';
     const heroCount = real ? Number(tot && tot.count || 0) : 182;
     const payoutMeta = real ? 'Aucune source de règlement disponible' : '23 091 MAD sur Bank of Africa •• 3291';
-    const payoutWhen = real ? '—' : 'Demain matin, 9h';
+    const payoutWhen = real ? '·' : 'Demain matin, 9h';
     return `
     <div class="simple-screen">
       <div class="simple-top">
@@ -244,7 +244,7 @@
 
         <div class="compte-simple">
           <div class="compte-label">Solde de mon compte Kiwi</div>
-          <div class="compte-amt">${real ? '—' : '47 281,90'} <span>MAD</span></div>
+          <div class="compte-amt">${real ? '·' : '47 281,90'} <span>MAD</span></div>
           <div class="compte-actions">
             <button class="chip-btn" data-simple-action="compte">Voir détails</button>
             <button class="chip-btn" data-simple-action="transfer">Virer</button>

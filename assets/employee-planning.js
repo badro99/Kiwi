@@ -9,7 +9,7 @@
        ce qui suivait : le parseur lisait la fin du fichier comme un bloc imbriqué
        dans « .kep-count », et 34 des 50 règles n'existaient pas. Disparaissaient
        ainsi la modale entière (.kep-overlay/.kep-sheet/.kep-field), la grille de
-       disponibilités, TOUS les correctifs de nuit et la requête mobile — sur une
+       disponibilités, TOUS les correctifs de nuit et la requête mobile · sur une
        app de téléphone. Rien en console : une erreur CSS est silencieuse.
 
        C'est ce qui explique le commentaire d'une session précédente disant que
@@ -60,7 +60,7 @@
     .kep-day.on{background:var(--fill-strong);color:var(--on-strong);border-color:var(--fill-strong)}
     .kep-check{display:flex;align-items:center;gap:10px;margin-top:17px}
     .kep-sheet-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:22px}
-    /* Un message d'ERREUR était peint en vert de marque — la couleur du succès
+    /* Un message d'ERREUR était peint en vert de marque · la couleur du succès
        partout ailleurs dans le produit. */
     .kep-error{margin-top:12px;color:var(--danger-mute);font-size:13px}
     .kep-empty{font-size:12px;color:var(--ink-3);margin-top:10px}

@@ -1212,7 +1212,7 @@
             <span class="cf-day-metrics" style="grid-template-columns:repeat(3,1fr);">
               <span class="cf-day-metric"><span class="m-lbl">Visites</span><span class="m-val">${c.visits}</span></span>
               <span class="cf-day-metric"><span class="m-lbl">Dernière</span><span class="m-val" style="font-size:12px">${esc(fmtDay(c.last))}</span></span>
-              <span class="cf-day-metric com"><span class="m-lbl">Formule</span><span class="m-val" style="font-size:12px">${c.formula ? esc(c.formula.base + ' ' + c.formula.tone) : '—'}</span></span>
+              <span class="cf-day-metric com"><span class="m-lbl">Formule</span><span class="m-val" style="font-size:12px">${c.formula ? esc(c.formula.base + ' ' + c.formula.tone) : '·'}</span></span>
             </span>
           </button>`).join('')}
       </div>`;

@@ -114,7 +114,7 @@
   function message(orderId) {
     var d = store.get(); var o = d.orders.find(function (x) { return x.id === orderId; }); if (!o) return '';
     var s = d.suppliers.find(function (x) { return x.id === o.supplierId; });
-    return [`Bonjour ${s?.name || ''},`, `Commande ${o.number}`, ...o.lines.map(function (x) { return `• ${x.name || x.itemId} — ${x.qty} ${x.unit}`; }), o.expectedDate ? `Livraison souhaitée : ${o.expectedDate}` : '', 'Merci.'].filter(Boolean).join('\n');
+    return [`Bonjour ${s?.name || ''},`, `Commande ${o.number}`, ...o.lines.map(function (x) { return `• ${x.name || x.itemId} · ${x.qty} ${x.unit}`; }), o.expectedDate ? `Livraison souhaitée : ${o.expectedDate}` : '', 'Merci.'].filter(Boolean).join('\n');
   }
 
   window.KiwiProcurement = { store: store, isUltra: ultra, addSupplier: addSupplier, createOrder: createOrder, markSent: markSent, receiveDirect: receiveDirect, receiveOrder: receiveOrder, attachInvoice: attachInvoice, matchInvoice: matchInvoice, message: message, doc: function () { return store.get(); } };

@@ -162,8 +162,8 @@ if (dFrom > 0 && dTo > dFrom) {
  * « on ne sait pas » mais « aucun paiement n'aboutit », l'alarme la plus grave
  * qu'une caisse puisse afficher, sur une tuile qui ne mesure rien. */
 ['success', 'tauxRetour'].forEach((k) => {
-  ok(`« ${k} » affiche un tiret chez un vrai commerçant, pas un zéro`,
-    new RegExp(k + ":\\s*data\\." + k + "\\s*\\?[^\\n]*text: '—'").test(SRC),
+  ok(`« ${k} » affiche un point médian chez un vrai commerçant, pas un zéro`,
+    new RegExp(k + ":\\s*data\\." + k + "\\s*\\?[^\\n]*text: '·'").test(SRC),
     'la tuile retombe encore sur le zéro du clone de démonstration');
 });
 

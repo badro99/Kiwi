@@ -20,7 +20,7 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Inter+Tight:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Inter+Tight:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 
   <!-- Copie locale : ces pages tiraient lucide@latest depuis unpkg à chaque
        chargement. Non épinglé = ce qu'unpkg publie demain s'exécute sur le
@@ -61,7 +61,7 @@
       --line-soft:    #EEEEEE;
 
       --sans:  "Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-      --serif: "Instrument Serif", "Times New Roman", serif;
+      --serif: "Inter Tight", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
       --mono:  "JetBrains Mono", "SF Mono", ui-monospace, monospace;
       --arabic: "IBM Plex Sans Arabic", "Inter Tight", -apple-system, system-ui, sans-serif;
 
@@ -2539,7 +2539,7 @@ em, i, cite, dfn, var { font-style: normal; }
     <section class="screen screen-mode is-active" id="screen-mode">
       <div class="table-top">
         <div class="brand-mark">Café Atlas<i aria-hidden="true"></i></div>
-        <div class="brand-tag" data-i18n="brand_tag">— Médina, Tanger</div>
+        <div class="brand-tag" data-i18n="brand_tag">Médina, Tanger</div>
       </div>
 
       <div class="mode-mid">
@@ -2576,13 +2576,13 @@ em, i, cite, dfn, var { font-style: normal; }
       </button>
       <div class="table-top">
         <div class="brand-mark">Café Atlas<i aria-hidden="true"></i></div>
-        <div class="brand-tag" data-i18n="brand_tag">— Médina, Tanger</div>
+        <div class="brand-tag" data-i18n="brand_tag">Médina, Tanger</div>
       </div>
 
       <div class="table-mid">
         <p class="table-ask"><span data-i18n="table_ask_pre">Quel est votre</span> <em data-i18n="table_ask_em">numéro de table</em><span data-i18n="table_ask_post"> ?</span></p>
         <div class="table-num-display" id="table-display">
-          <span class="table-digit is-placeholder">—</span>
+          <span class="table-digit is-placeholder"></span>
         </div>
         <p class="table-hint" data-i18n="table_hint">Le numéro est gravé sur le bois de la table</p>
       </div>
@@ -2664,10 +2664,10 @@ em, i, cite, dfn, var { font-style: normal; }
           </svg>
         </div>
         <h1 class="success-title"><span data-i18n="success_title_a">Commande envoyée</span><br/><em data-i18n="success_title_em">en cuisine.</em></h1>
-        <div class="success-eta"><span data-i18n="success_eta_pre">Table</span> <span id="success-table">—</span> <span data-i18n="success_eta_mid">· prêt dans</span> <em data-i18n="success_eta_em">4–6 min</em></div>
+        <div class="success-eta"><span data-i18n="success_eta_pre">Table</span> <span id="success-table"></span> <span data-i18n="success_eta_mid">· prêt dans</span> <em data-i18n="success_eta_em">4–6 min</em></div>
         <div class="success-recap">
           <div class="recap-title" data-i18n="success_recap">Votre commande</div>
-          <div id="success-items">—</div>
+          <div id="success-items"></div>
         </div>
       </div>
       <div class="success-bottom">
@@ -2683,7 +2683,7 @@ em, i, cite, dfn, var { font-style: normal; }
     <section class="screen screen-cashier" id="screen-cashier">
       <div class="cashier-top">
         <div class="brand-mark">Café Atlas<i aria-hidden="true"></i></div>
-        <div class="cashier-eyebrow" data-i18n="cashier_eyebrow">— à emporter</div>
+        <div class="cashier-eyebrow" data-i18n="cashier_eyebrow">à emporter</div>
       </div>
 
       <div class="cashier-mid">
@@ -2692,7 +2692,7 @@ em, i, cite, dfn, var { font-style: normal; }
 
         <div class="cashier-recap">
           <div class="cashier-recap-title" data-i18n="cashier_recap">Votre commande</div>
-          <div class="cashier-recap-items" id="cashier-items">—</div>
+          <div class="cashier-recap-items" id="cashier-items"></div>
           <div class="cashier-recap-total">
             <span data-i18n="cashier_total">Total</span>
             <strong id="cashier-total">0 MAD</strong>
@@ -2713,7 +2713,7 @@ em, i, cite, dfn, var { font-style: normal; }
     <section class="screen screen-preparing" id="screen-preparing">
       <div class="prep-top">
         <div class="brand-mark">Café Atlas<i aria-hidden="true"></i></div>
-        <div class="cashier-eyebrow"><span data-i18n="prep_eyebrow_pre">— commande #</span><span id="prep-number">000</span></div>
+        <div class="cashier-eyebrow"><span data-i18n="prep_eyebrow_pre">commande #</span><span id="prep-number">000</span></div>
       </div>
 
       <div class="prep-mid">
@@ -2777,9 +2777,9 @@ em, i, cite, dfn, var { font-style: normal; }
             <i data-lucide="coffee"></i>
           </div>
           <div class="custom-info">
-            <div class="custom-name" id="custom-name">—</div>
-            <div class="custom-desc" id="custom-desc">—</div>
-            <div class="custom-base" id="custom-base">— MAD</div>
+            <div class="custom-name" id="custom-name"></div>
+            <div class="custom-desc" id="custom-desc"></div>
+            <div class="custom-base" id="custom-base">MAD</div>
           </div>
         </div>
 
@@ -2816,7 +2816,7 @@ em, i, cite, dfn, var { font-style: normal; }
       <div class="bill-sheet-panel">
         <div class="cart-handle" data-close-bill></div>
         <h2 class="bill-title" data-i18n="bill_title">Votre addition</h2>
-        <div class="bill-subtitle" id="bill-subtitle">Table <span id="bill-table">—</span> · Café Atlas</div>
+        <div class="bill-subtitle" id="bill-subtitle">Table <span id="bill-table"></span> · Café Atlas</div>
 
         <ul class="bill-items" id="bill-items">
           <li class="bill-empty" data-i18n="bill_empty">Aucune commande passée, ajoutez d'abord au menu.</li>
@@ -2829,7 +2829,7 @@ em, i, cite, dfn, var { font-style: normal; }
 
         <!-- Tip section — gamified -->
         <div class="tip-section">
-          <span class="tip-eyebrow" data-i18n="tip_eyebrow">— Pourboire pour l'équipe</span>
+          <span class="tip-eyebrow" data-i18n="tip_eyebrow">Pourboire pour l'équipe</span>
           <div class="tip-jar-wrap" id="tip-jar-wrap">
             <span class="tip-jar-sparkle sp-1" aria-hidden="true"></span>
             <span class="tip-jar-sparkle sp-2" aria-hidden="true"></span>
@@ -3102,7 +3102,7 @@ em, i, cite, dfn, var { font-style: normal; }
         send_takeout: "Passer commande",
         session_closed: "Cette visite est terminée. Rescannez le QR de la table pour commander.",
         session_unavailable: "Impossible de relier cette table à la caisse. Réessayez ou appelez un serveur.",
-        order_send_failed: "La commande n'a pas été envoyée. Votre panier est conservé — réessayez.",
+        order_send_failed: "La commande n'a pas été envoyée. Votre panier est conservé · réessayez.",
         success_title_a: "Commande envoyée",
         success_title_em: "en cuisine.",
         success_eta_pre: "Table",
@@ -3266,7 +3266,7 @@ em, i, cite, dfn, var { font-style: normal; }
         send_takeout: "Place order",
         session_closed: "This visit has ended. Scan the table QR again to order.",
         session_unavailable: "We couldn't connect this table to the till. Retry or call a waiter.",
-        order_send_failed: "The order was not sent. Your cart is safe — please retry.",
+        order_send_failed: "The order was not sent. Your cart is safe · please retry.",
         success_title_a: "Order sent to",
         success_title_em: "the kitchen.",
         success_eta_pre: "Table",
@@ -3805,7 +3805,7 @@ em, i, cite, dfn, var { font-style: normal; }
     function renderTableDisplay() {
       const disp = $('#table-display');
       if (!tableNumber) {
-        disp.innerHTML = `<span class="table-digit is-placeholder">—</span>`;
+        disp.innerHTML = `<span class="table-digit is-placeholder">·</span>`;
         return;
       }
       disp.innerHTML = tableNumber.split('').map(d => `<span class="table-digit">${d}</span>`).join('');
@@ -4570,7 +4570,7 @@ em, i, cite, dfn, var { font-style: normal; }
           $('#cashier-number-digits').textContent = orderNumber;
           $('#prep-number').textContent = orderNumber;
           $('#ready-number').textContent = orderNumber;
-          $('#cashier-items').textContent = summary || '—';
+          $('#cashier-items').textContent = summary || '·';
           $('#cashier-total').textContent = `${totalNow} ${cur()}`;
           gotoScreen('screen-cashier');
         } else {
@@ -4578,7 +4578,7 @@ em, i, cite, dfn, var { font-style: normal; }
           for (const l of linesCopy) sentLines.push(l);
           sessionTotal += totalNow;
           $('#success-table').textContent = tableNumber;
-          $('#success-items').textContent = summary || '—';
+          $('#success-items').textContent = summary || '·';
           gotoScreen('screen-success');
         }
         cart.clear();
@@ -4687,7 +4687,7 @@ em, i, cite, dfn, var { font-style: normal; }
       // Vraie commande partie à la caisse → on suit SON état, pas un minuteur.
       if (pollUntilReady()) {
         const eta0 = $('#prep-eta');
-        if (eta0) eta0.textContent = t('prep_now') === undefined ? '' : '—';
+        if (eta0) eta0.textContent = t('prep_now') === undefined ? '' : '·';
         return;
       }
       const totalMs = 10000; // 10s demo — real life: pull from KDS estimate

@@ -234,7 +234,7 @@ export async function onRequestPost(context) {
    * trop, et rien en aval ne le rattraperait. */
   const cur = str(o && (o.currency || o.presentment_currency), 8).toUpperCase();
   if (cur && cur !== 'MAD') {
-    await mark(env, link.id, false, 'devise ' + cur + ' — seul le dirham est géré');
+    await mark(env, link.id, false, 'devise ' + cur + ' · seul le dirham est géré');
     return json({ error: 'bad-currency', currency: cur }, 422);
   }
 

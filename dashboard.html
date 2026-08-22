@@ -61,7 +61,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="assets/tokens.css?v=2050" />
+<link rel="stylesheet" href="assets/tokens.css?v=2052" />
 <link rel="stylesheet" href="assets/platform-ops.css?v=1" />
 <link rel="stylesheet" href="assets/theme.css" />
 <link rel="stylesheet" href="assets/polish.css" />
@@ -77,9 +77,9 @@
 <link rel="stylesheet" href="assets/genpage.css?v=2" />
 <style>
   /* ─────────────── SHELL ─────────────── */
-  /* Ambient blobs — four soft radial gradients pinned to the viewport
+  /* Ambient blobs · four soft radial gradients pinned to the viewport
    * corners, sitting directly on the body so they always paint behind
-   * content. The neutral base (#F8F7F3) is between paper and n-50 —
+   * content. The neutral base (#F8F7F3) is between paper and n-50 ·
    * warm without being yellow. background-attachment:fixed keeps the
    * blobs glued to the viewport on scroll. */
   body {
@@ -106,7 +106,7 @@
   }
   /* Kill the global SVG-noise grain overlay (defined in polish.css as
    * body::after, z-index 1000, mix-blend-mode: multiply). That was the
-   * paper-grain look — replaced now by the ambient-blob system above. */
+   * paper-grain look · replaced now by the ambient-blob system above. */
   body::after { content: none !important; display: none !important; }
 
   /* Subtle 60 s breathing motion. The whole blob system gently drifts
@@ -126,7 +126,7 @@
     .rev-live-ring { animation: none !important; }
     .rev-line, .rev-area, .rev-line-halo { stroke-dashoffset: 0 !important; opacity: 1 !important; }
     .kiwi-confetti { display: none !important; }
-    /* Ambient "live" pulses and the goal-bar shimmer — decorative loops
+    /* Ambient "live" pulses and the goal-bar shimmer · decorative loops
      * sitting on elements that stay fully visible without them. */
     .demo-bar .live-dot, .venue-row-status i, .hero-left .live-badge .dot,
     .block-head .t .pulse-dot, .hero-goal .g-fill::after, .eq-live .dot,
@@ -171,7 +171,7 @@
   .loc-switch .name { color: var(--paper); font-weight: 500; font-size: 14px; margin-top: 6px; display: flex; justify-content: space-between; align-items: center; letter-spacing: -0.01em; }
   .loc-switch .meta { font-size: 11px; color: #8a9187; margin-top: 3px; }
 
-  /* Venue dropdown — floats inside the sidebar, just below the loc-switch */
+  /* Venue dropdown · floats inside the sidebar, just below the loc-switch */
   .venue-dropdown {
     position: absolute; top: calc(100% + 6px); left: 0; right: 0;
     background: var(--surface);
@@ -203,7 +203,7 @@
   .venue-row-type { font-size: 11px; color: var(--n-500); margin-top: 2px; }
   .venue-row-status i { width: 7px; height: 7px; background: var(--success); border-radius: 50%; display: inline-block; animation: pulse-dot 2s infinite; }
 
-  /* Sidebar vertical section — fade swap on venue switch */
+  /* Sidebar vertical section · fade swap on venue switch */
   [data-vertical-section] { transition: opacity 150ms ease-out; }
   [data-vertical-section].vert-fading { opacity: 0; }
 
@@ -228,7 +228,7 @@
     border: 1px solid var(--n-200);
   }
 
-  /* ULTRA card — rich dark green, animated mesh, mint shimmer */
+  /* ULTRA card · rich dark green, animated mesh, mint shimmer */
   .ultra-card {
     position: relative;
     padding: 24px 22px 26px;
@@ -244,7 +244,7 @@
     transform: translateY(-2px);
     box-shadow: 0 28px 64px -18px rgba(2,38,28,0.78), 0 6px 18px rgba(2,38,28,0.5);
   }
-  /* Slowly rotating conic mesh — premium "depth" feeling */
+  /* Slowly rotating conic mesh · premium "depth" feeling */
   .ultra-card::before {
     content: ""; position: absolute; inset: -50%;
     background: conic-gradient(from 0deg at 50% 50%,
@@ -269,14 +269,14 @@
   }
   .ultra-card > * { position: relative; z-index: 2; }
 
-  /* Eyebrow — refined, not neon. White at 70% opacity, Inter Tight. */
+  /* Eyebrow · refined, not neon. White at 70% opacity, Inter Tight. */
   .ultra-eyebrow {
     font-family: var(--sans);
     font-size: 11px; font-weight: 600;
     letter-spacing: 0.16em; text-transform: uppercase;
     color: rgba(255,255,255,0.72);
   }
-  /* RECOMMANDÉ pill — inside the card so the modal's overflow can't clip it.
+  /* RECOMMANDÉ pill · inside the card so the modal's overflow can't clip it.
    * Solid mint with riad ink, sans-serif, soft pulse ring. */
   .ultra-badge {
     position: absolute; top: 16px; right: 16px; z-index: 4;
@@ -318,7 +318,7 @@
   /* Footnote tip below the cards */
   .upgrade-tip { margin-top: 18px; padding: 16px; background: var(--mint-soft); border-radius: 12px; font-size: 13px; display: flex; gap: 10px; line-height: 1.5; }
 
-  /* ULTRA-flavored CTA button — replaces the default .kb.atlas inside the upsell modal */
+  /* ULTRA-flavored CTA button · replaces the default .kb.atlas inside the upsell modal */
   .kb.ultra {
     background: linear-gradient(135deg, var(--atlas) 0%, var(--riad) 100%);
     color: var(--paper);
@@ -340,7 +340,7 @@
   .sidebar nav a .tag { margin-left: auto; font-size: 10px; background: rgba(125,242,176,0.1); color: var(--mint); padding: 2px 6px; border-radius: 999px; font-family: var(--mono); }
   .sidebar nav a .count { margin-left: auto; font-size: 10.5px; color: #7e827f; font-family: var(--mono); }
   /* Right-side pills (live counts + LIVE / NOUV. / PHASE 2 / AAA / IA tags) hidden
-     across the whole sidebar — merchant found them noisy. Elements stay in the DOM
+     across the whole sidebar · merchant found them noisy. Elements stay in the DOM
      so renderSidebarCounts() and the vertical-section renderer keep working; delete
      this rule to bring them back. */
   .sidebar nav a .tag,
@@ -352,11 +352,11 @@
   .sidebar .upsell h4 { margin: 8px 0 4px; font-size: 14px; color: var(--paper); font-weight: 500; letter-spacing: -0.01em; }
   .sidebar .upsell p { margin: 0; font-size: 12px; color: #8a9187; line-height: 1.4; }
   .sidebar .upsell button { margin-top: 12px; width: 100%; background: var(--mint); color: var(--riad); padding: 8px; border-radius: 8px; font-size: 12px; font-weight: 600; }
-  /* Ultra plan-status variant of .upsell — same container dims, no CTA */
+  /* Ultra plan-status variant of .upsell · same container dims, no CTA */
   .sidebar .upsell-status .us-line { font-size: 12px; color: #8a9187; margin: 8px 0 0; line-height: 1.4; }
   .sidebar .upsell-status .us-manage { display: block; margin-top: 10px; font-size: 12px; color: #8a9187; text-decoration: none; transition: color 140ms; }
   .sidebar .upsell-status .us-manage:hover { color: var(--mint); }
-  /* Install card variant of .upsell — rendered by dashboard-pwa.js, which owns the
+  /* Install card variant of .upsell · rendered by dashboard-pwa.js, which owns the
      real browser install flow. Keeps the .upsell container so the fusion-mode
      overrides below still reach it. */
   .sidebar .kiwi-app-install-card { position: relative; overflow: hidden; flex: 0 0 auto; padding: 16px; }
@@ -374,7 +374,7 @@
   .sidebar .kiwi-app-install-card button svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .sidebar .kiwi-app-install-card button:disabled { cursor: default; opacity: .76; }
   .sidebar .kiwi-app-install-card.is-installed { border-color: rgba(49,225,160,.28); }
-  /* ✦ Kiwi Ultra line under the venue name — only rendered when
+  /* ✦ Kiwi Ultra line under the venue name · only rendered when
    * fusion-mode + ultra plan (visibility controlled by renderLocSwitch) */
   .sidebar .loc-ultra { font-size: 11px; color: var(--mint); font-weight: 500; margin-top: 4px; letter-spacing: 0.02em; }
 
@@ -387,7 +387,7 @@
   .sidebar .m-caret { color: #6a6e6c; }
 
   /* ─────────────── MAIN ─────────────── */
-  /* min-width:0 — a grid item defaults to min-width:auto, which refuses to
+  /* min-width:0 · a grid item defaults to min-width:auto, which refuses to
      shrink below its content. Without it the 4th KPI card is pushed off-screen
      at 1280px. */
   .main { padding: 0; max-width: 1320px; margin: 0 auto; width: 100%; min-width: 0; box-sizing: border-box; }
@@ -432,7 +432,7 @@
   body.role-manager .sidebar a[data-nav="finance"],
   body.role-manager .sidebar a[data-nav="depenses"],
   body.role-manager .sidebar a[data-nav="promos"] { display: none !important; }
-  /* Staff (an onboarding-created team code) — operational surfaces only:
+  /* Staff (an onboarding-created team code) · operational surfaces only:
    * caisse, commandes, salle, KDS, stock. No money, no admin, no compliance. */
   body.role-staff .role-badge { display: inline-flex; }
   body.role-staff .sidebar a[data-nav="finance"],
@@ -485,7 +485,7 @@
   .icon-btn:hover { background: rgba(255,255,255,0.85); color: var(--ink); transform: translateY(-1px); }
   /* Bascule de climat : la lune en clair (« passer au sombre »), le soleil en
      sombre. Le choix se lit sur <html data-theme>, donc l'icône est correcte
-     dès la première frame — aucun script n'intervient. */
+     dès la première frame · aucun script n'intervient. */
   .theme-toggle .tt-sun { display: none; }
   html[data-theme="dark"] .theme-toggle .tt-moon { display: none; }
   html[data-theme="dark"] .theme-toggle .tt-sun { display: block; }
@@ -589,7 +589,7 @@
   .kc-counter b { color: var(--n-600); font-variant-numeric: tabular-nums; }
   .kc-counter.full b { color: var(--atlas); }
   .kc-grid { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 10px; }
-  /* Picker tile — a faithful replica of the dashboard KPI card (.kpi-m):
+  /* Picker tile · a faithful replica of the dashboard KPI card (.kpi-m):
      two per row, neutral white when unselected, brand-green fill when picked. */
   .kpi-pick { position: relative; display: block; width: 100%; text-align: start;
     font-family: inherit; color: var(--ink); appearance: none; -webkit-appearance: none;
@@ -614,7 +614,7 @@
   .kpi-pick .d.dn { color: var(--danger); }
   .kpi-pick .d.neutral { color: var(--n-500); }
   .kpi-pick .sp { display: block; width: 100%; height: 22px; margin-top: 8px; }
-  /* Selected — brand-green fill */
+  /* Selected · brand-green fill */
   .kpi-pick.sel { background: linear-gradient(155deg, var(--atlas), var(--riad)); border-color: var(--riad); }
   .kpi-pick.sel:hover { border-color: var(--riad); }
   .kpi-pick.sel:focus-visible { outline-color: var(--mint); }
@@ -648,7 +648,7 @@
   .kpi-m:focus-visible, .kpi-c:focus-visible, .feed-row:focus-visible {
     outline: 2px solid var(--atlas); outline-offset: 2px;
   }
-  /* Adaptive focus — the Atlas-green ring (tokens.css) is near-invisible
+  /* Adaptive focus · the Atlas-green ring (tokens.css) is near-invisible
      against Kiwi's dark surfaces: the sidebar, the demo bar, the green
      hero and the lock screen. Keyboard focus there switches to bright
      mint so it always reads. Carbon's principle: a focus indicator must
@@ -664,7 +664,7 @@
   .kpi-m .v { font-size: 32px; font-weight: 600; letter-spacing: -0.035em; margin-top: 11px; font-feature-settings: "tnum" 1; line-height: 1; }
   .kpi-m .v .u { font-size: 12px; color: var(--n-500); margin-left: 4px; font-weight: 500; }
   .kpi-m .d { display: inline-flex; align-items: center; gap: 4px; margin-top: 8px; font-size: 11.5px; font-weight: 500; color: var(--success); }
-  /* Sans période de comparaison la ligne reste vide (dateRange.js) — on en
+  /* Sans période de comparaison la ligne reste vide (dateRange.js) · on en
      réserve la hauteur pour que les tuiles de la bande restent alignées. */
   .kpi-m .d:empty::after { content: "\00a0"; }
   .kpi-m .d.dn { color: var(--danger); }
@@ -673,7 +673,7 @@
 
   /* ─────────────── INTERACTION POLISH ───────────────
    * A unified hover-lift + press layer for clickable surfaces. Purely
-   * additive — complements the per-component states above. Every transform
+   * additive · complements the per-component states above. Every transform
    * is suppressed under prefers-reduced-motion (block at the end). */
   .kpi-m {
     transition: border-color 150ms ease,
@@ -682,10 +682,10 @@
   }
   .kpi-m:hover { transform: translateY(-2px); box-shadow: var(--elev-2); }
   .kpi-m:active { transform: translateY(0); transition-duration: 90ms; }
-  /* Clickable list rows + integration cards — a crisp, consistent press. */
+  /* Clickable list rows + integration cards · a crisp, consistent press. */
   .feed-row, .integ-card { transition: background 140ms ease, border-color 140ms ease, transform 150ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 180ms cubic-bezier(0.16, 1, 0.3, 1); }
   .feed-row:active, .integ-card:active { transform: scale(0.992); }
-  /* Buttons — one press feel across the dashboard. */
+  /* Buttons · one press feel across the dashboard. */
   .kb, .icon-btn { transition: transform 130ms cubic-bezier(0.16, 1, 0.3, 1), background 150ms ease, box-shadow 150ms ease, border-color 150ms ease; }
   .kb:active, .icon-btn:active, .range span:active { transform: scale(0.97); }
   @media (prefers-reduced-motion: reduce) {
@@ -704,7 +704,7 @@
    * column), lifts gently under the cursor, and its bars/rows draw in on
    * every data change (range, venue, language). The live 3s tick only
    * re-renders hero/KPI/chart/feed, so these never replay on their own. */
-  /* html body — outranks theme.css's `html .block` color-transition rule;
+  /* html body · outranks theme.css's `html .block` color-transition rule;
    * the color transitions are merged in so theme switching stays smooth. */
   html body .block, html body .settle { transition: background-color 240ms ease, border-color 240ms ease, color 240ms ease,
     transform 220ms cubic-bezier(0.32, 0.72, 0, 1), box-shadow 220ms ease; }
@@ -713,7 +713,7 @@
     box-shadow: var(--elev-2);
     border-color: color-mix(in srgb, var(--atlas) 26%, var(--n-200));
   }
-  /* Entrance choreography — gated on body.cards-enter, which unlock() adds
+  /* Entrance choreography · gated on body.cards-enter, which unlock() adds
    * the moment the dashboard becomes visible. Before that gate the cards
    * sit fully rendered (no animation wasted behind the lock screen). */
   @keyframes card-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
@@ -731,7 +731,7 @@
     animation-delay: calc(var(--i, 0) * 45ms + 60ms);
   }
   .mini-bar > div, .bench-bar .you { transition: width 720ms cubic-bezier(0.16, 1, 0.3, 1); }
-  /* Heatmap bars rise into place — .hh-anim is set per render, only when the
+  /* Heatmap bars rise into place · .hh-anim is set per render, only when the
    * rebuild is NOT a 3-second live tick (dateRange.js renderHeatmap). */
   @keyframes hh-rise { from { opacity: 0; transform: translateY(8px) scaleY(0.55); } to { opacity: 1; transform: none; } }
   .hh-anim .hh-col { transform-origin: bottom; animation: hh-rise 440ms cubic-bezier(0.32, 0.72, 0, 1) backwards;
@@ -781,7 +781,7 @@
   .chip.neutral { background: var(--n-100); color: var(--n-600); }
 
   /* ─────────────── ROW LAYOUT ─────────────── */
-  /* align-items:start — cards are content-aware: each one ends exactly where
+  /* align-items:start · cards are content-aware: each one ends exactly where
    * its data ends instead of stretching to the tallest sibling, and grows
    * naturally when new rows arrive (the live feed ticks orders in). */
   .row { display: grid; gap: 14px; margin-bottom: 16px; align-items: start; }
@@ -790,7 +790,7 @@
   .row.r-3 { grid-template-columns: repeat(3, 1fr); }
   .row.r-65-35 { grid-template-columns: 1.85fr 1fr; }
   @media (max-width: 1100px) { .row.r-2-1, .row.r-1-1, .row.r-3, .row.r-65-35 { grid-template-columns: 1fr; } }
-  /* Main column + side rail: two independent stacks — each card sits right
+  /* Main column + side rail: two independent stacks · each card sits right
    * under its column sibling, regardless of the other column's height. */
   .dash-cols { display: grid; grid-template-columns: 1.85fr 1fr; gap: 14px; align-items: start; margin-bottom: 16px; }
   .dash-cols--even { grid-template-columns: 1fr 1fr; }
@@ -798,7 +798,7 @@
   @media (max-width: 1100px) {
     /* Single column: dissolve the rails and interleave by priority
      * (orders are scoped per .dash-cols container, so the two instances
-     * — home and analyses — don't interfere). */
+     * · home and analyses · don't interfere). */
     .dash-cols { display: flex; flex-direction: column; gap: 16px; }
     .dash-col { display: contents; }
     .dash-cols .block:has([data-hh-row]) { order: 1; }
@@ -816,7 +816,7 @@
    * The default dashboard leads with the day's decisions; deeper
    * analysis (health, benchmark, products, staff, integrations) sits
    * behind this toggle so the first screen stays focused. */
-  /* The toggle is a floating glass capsule resting on a seam line — the
+  /* The toggle is a floating glass capsule resting on a seam line · the
    * dashboard visibly "folds open" along it. It knows what it guards: the
    * count chip is filled from the number of analysis cards at boot. */
   .dash-more-wrap { position: relative; display: flex; justify-content: center; margin: 10px 0 20px; }
@@ -868,7 +868,7 @@
   .dash-more-toggle .dmt-hide { display: none; }
   .dash-more-toggle[aria-expanded="true"] .dmt-show { display: none; }
   .dash-more-toggle[aria-expanded="true"] .dmt-hide { display: inline; }
-  /* The section unfolds for real — animated height via the grid-rows trick,
+  /* The section unfolds for real · animated height via the grid-rows trick,
    * not a hidden-attribute snap. */
   .dash-more-clip {
     display: grid; grid-template-rows: 0fr;
@@ -883,7 +883,7 @@
     .dash-more-clip.open > .dash-more { animation: none; }
   }
 
-  /* Restock CTA hover — moved out of inline onmouseover/onmouseout JS */
+  /* Restock CTA hover · moved out of inline onmouseover/onmouseout JS */
   .stock-reorder-cta { background: var(--atlas); }
   .stock-reorder-cta:hover { background: var(--riad); }
 
@@ -894,7 +894,7 @@
   .chart-legend .leg-line { display: inline-block; width: 14px; height: 2px; border-radius: 2px; flex-shrink: 0; }
   .chart-legend .leg-line-primary { background: var(--riad); }
   .chart-legend .leg-line-compare { background: var(--n-400); }
-  /* Chart entrance — pathLength=1 trick keeps duration path-length-independent */
+  /* Chart entrance · pathLength=1 trick keeps duration path-length-independent */
   .rev-line { stroke-dasharray: 1; stroke-dashoffset: 1; animation: rev-draw 1200ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
   @keyframes rev-draw { to { stroke-dashoffset: 0; } }
   .rev-area { opacity: 0; animation: rev-area 1000ms cubic-bezier(0.16, 1, 0.3, 1) 200ms forwards; }
@@ -905,7 +905,7 @@
     transition: opacity 400ms ease-out;
   }
   @keyframes rev-cmp-draw { to { stroke-dashoffset: 0; } }
-  /* Pointer-driven hover layer — Apple/Robinhood feel.
+  /* Pointer-driven hover layer · Apple/Robinhood feel.
    * No position transitions: dot, crosshair and tooltip track the cursor
    * 1:1 with no perceived lag. Only opacity fades on show/hide. */
   .rev-hit { cursor: crosshair; }
@@ -918,7 +918,7 @@
   /* On hover, the live pulse fades back so the cursor takes focus */
   .chart-wrap.is-hover .rev-live { opacity: 0.35; transition: opacity 200ms; }
 
-  /* "Live now" indicator — concentric mint rings expanding + core dot.
+  /* "Live now" indicator · concentric mint rings expanding + core dot.
    * Renders only on the aujourdhui range at the current-hour data point. */
   .rev-live-dot { fill: var(--atlas); stroke: #fff; stroke-width: 2; }
   .rev-live-ring {
@@ -931,7 +931,7 @@
     0%   { r: 4; opacity: 0.55; }
     100% { r: 16; opacity: 0;   }
   }
-  /* Halo behind the primary line — a wider, semi-transparent, blurred stroke
+  /* Halo behind the primary line · a wider, semi-transparent, blurred stroke
    * that creates an Apple Stocks-style soft glow under the line. */
   .rev-line-halo { pointer-events: none; }
 
@@ -939,7 +939,7 @@
   .chart-wrap.no-anim .rev-line,
   .chart-wrap.no-anim .rev-area,
   .chart-wrap.no-anim .rev-line-halo { animation: none !important; stroke-dashoffset: 0 !important; opacity: 1 !important; }
-  /* Cmp line: suppress the dasharray draw-in animation but DO NOT force opacity —
+  /* Cmp line: suppress the dasharray draw-in animation but DO NOT force opacity ·
    * inline style="opacity:0/1" toggles based on the Comparer button. */
   .chart-wrap.no-anim .rev-cmp { animation: none !important; stroke-dashoffset: 0 !important; }
   /* Compare-toggle re-render: keep the primary line still, only animate the cmp line */
@@ -950,7 +950,7 @@
     .rev-live-ring { animation: none !important; opacity: 0 !important; }
   }
 
-  /* Comparer toggle — sits in the rev-card header right-actions */
+  /* Comparer toggle · sits in the rev-card header right-actions */
   .cmp-btn {
     display: inline-flex; align-items: center; gap: 6px;
     padding: 8px 16px; border-radius: 999px;
@@ -989,17 +989,17 @@
   .hero-today.chart-view .hero-view-toggle .tg-to-chart { display: none; }
   .hero-today.chart-view .hero-view-toggle .tg-to-today { display: inline; }
 
-  /* Left column stacks both layers in one grid cell — they cross-fade in
+  /* Left column stacks both layers in one grid cell · they cross-fade in
    * place, the card height stays constant (no reflow jump). */
   /* isolation:isolate flattens the two stacked cross-fade layers into one
    * group BEFORE the design-2026 card sheen (.hero-today::after, mix-blend:
-   * screen) samples them. Without it, the hidden chart layer — kept alive with
-   * a transform (own GPU layer) at opacity:0 — screen-blends through as a faint
+   * screen) samples them. Without it, the hidden chart layer · kept alive with
+   * a transform (own GPU layer) at opacity:0 · screen-blends through as a faint
    * lighter rectangle ghosting behind the money number. Inert when no sheen. */
   .hero-left { position: relative; display: grid; min-width: 0; isolation: isolate; }
   .hero-left-layer {
     grid-area: 1 / 1; min-width: 0;
-    /* visibility rides along with a delay equal to the fade — the hidden
+    /* visibility rides along with a delay equal to the fade · the hidden
      * layer leaves the compositor entirely. An opacity-0 layer kept alive
      * under the design-2026 mix-blend sheen ghosts its GPU backing store
      * onto the card as a faint lighter rectangle (Chrome artifact). */
@@ -1012,7 +1012,7 @@
     visibility: hidden;
   }
   /* Chart fills all space left between its header and the legend */
-  /* flex-basis:0 — the SVG's intrinsic (width × viewBox-aspect) height must
+  /* flex-basis:0 · the SVG's intrinsic (width × viewBox-aspect) height must
    * NOT count toward the chart column's natural height, or it inflates the
    * whole card. The chart grows from a 150px floor to fill, nothing more. */
   .hero-left-chart .chart-wrap { height: auto; flex: 1 1 0; min-height: 150px; }
@@ -1085,7 +1085,7 @@
   .donut-legend .li .n i { width: 10px; height: 10px; border-radius: 3px; }
   .donut-legend .li .v { font-family: var(--mono); font-weight: 500; font-size: 12.5px; color: var(--ink); }
   .donut-legend .li .v .d { font-size: 10.5px; color: var(--success); margin-left: 6px; font-weight: 500; }
-  /* Ring composition — the vexel skin restyles these (assets/design-vexel.css);
+  /* Ring composition · the vexel skin restyles these (assets/design-vexel.css);
      these base rules only keep the markup laid out when the skin is off. */
   .kiwi-ring-stat { --kiwi-ring-size: 128px; display: grid; justify-items: center; flex: 0 0 var(--kiwi-ring-size); gap: 7px; }
   .kiwi-ring-visual { position: relative; width: var(--kiwi-ring-size); height: var(--kiwi-ring-size); }
@@ -1103,7 +1103,7 @@
   .hh-cell.future { opacity: 0.32; filter: saturate(0.5); }
   .hh-cell.now    { box-shadow: 0 0 0 2px var(--mint), 0 0 16px -2px rgba(125,242,176,0.6); }
   .hh-cell:hover { transform: scale(1.05); z-index: 2; }
-  /* Ramp derived from tokens — inverts cleanly in dark mode (fusion-mode
+  /* Ramp derived from tokens · inverts cleanly in dark mode (fusion-mode
    * keeps its own deliberate mint-topped ramp below). */
   .hh-cell.i0 { background: color-mix(in srgb, var(--atlas) 8%, var(--surface)); }
   .hh-cell.i1 { background: color-mix(in srgb, var(--atlas) 24%, var(--surface)); }
@@ -1157,7 +1157,7 @@
   }
   .feed-row .t { font-family: var(--mono); font-size: 11.5px; color: var(--n-500); }
   .feed-row .method { display: inline-flex; align-items: center; gap: 10px; min-width: 0; }
-  /* Chip — hosts either an official brand <img> or an inline SVG. Sizes
+  /* Chip · hosts either an official brand <img> or an inline SVG. Sizes
    * to a consistent 34×22 footprint so chips line up across methods. */
   .feed-row .method .ci { width: 34px; height: 22px; border-radius: 4px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
   .feed-row .method .ci svg { display: block; }
@@ -1282,7 +1282,7 @@
 
   /* Dashboard title area */
   .page-head { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 22px; flex-wrap: wrap; gap: 16px; }
-  /* Greeting headline — floating with a soft layered shadow; the accent stays solid atlas. */
+  /* Greeting headline · floating with a soft layered shadow; the accent stays solid atlas. */
   .page-head h1.greeting {
     font-size: 34px; font-weight: 600; letter-spacing: -0.032em; margin: 0; line-height: 1.12;
     text-shadow: 0 8px 28px rgba(11,110,79,0.10), 0 2px 6px rgba(10,15,13,0.06);
@@ -1424,7 +1424,7 @@
 
   .drp-cal { flex: 1; min-width: 0; padding: 15px 18px; }
   .drp-months { display: flex; gap: 20px; justify-content: center; }
-  /* Fixed width + no shrink — the month can never be squeezed narrower
+  /* Fixed width + no shrink · the month can never be squeezed narrower
      than its 7×36px grid, so the two panes can't bleed into each other. */
   .drp-month { width: 252px; flex-shrink: 0; }
   .drp-mhead { display: flex; align-items: center; justify-content: space-between;
@@ -1482,7 +1482,7 @@
   /* Below 768px the 716px two-month popover can't sit comfortably, so it
      drops to a viewport-anchored single column with the months stacked. */
   @media (max-width: 768px) {
-    /* Anchor to the viewport, not the pill row — at narrow widths the
+    /* Anchor to the viewport, not the pill row · at narrow widths the
        pills can sit far enough right that an absolute popover overflows. */
     .dr-popover {
       position: fixed; top: 60px; inset-inline: 12px;
@@ -1505,7 +1505,7 @@
   .status-bar a { color: var(--atlas); }
 
   /* ─────────────── LOCK SCREEN ─────────────── */
-  /* Inline greeting is hidden — the one-time greeting flash overlay handles it. */
+  /* Inline greeting is hidden · the one-time greeting flash overlay handles it. */
   .page-head h1.greeting { display: none; }
 
   .kiwi-lock {
@@ -1596,7 +1596,7 @@
     line-height: 1.5;
   }
   .kiwi-lock-help b { color: var(--mint); font-family: var(--mono); font-weight: 400; }
-  /* Wrong-code feedback — a real login rejects a bad PIN (hosted app). */
+  /* Wrong-code feedback · a real login rejects a bad PIN (hosted app). */
   .kiwi-lock-pin.is-wrong { animation: kw-pin-shake 440ms cubic-bezier(0.36,0.07,0.19,0.97) both; }
   @keyframes kw-pin-shake {
     10%,90% { transform: translateX(-1px); }
@@ -1609,7 +1609,7 @@
     box-shadow: 0 0 0 4px rgba(255,107,107,0.14);
   }
   .kiwi-lock-help.is-error { color: #ff9d9d; }
-  /* Skip control — collapses the lock + greeting intro for repeat viewers (local demo only) */
+  /* Skip control · collapses the lock + greeting intro for repeat viewers (local demo only) */
   .kiwi-lock-skip {
     display: none;
     margin-top: 20px; background: none; border: 0; cursor: pointer;
@@ -1622,7 +1622,7 @@
   html.kiwi-hosted .kiwi-lock-skip { display: none !important; }
   .kiwi-lock-skip:hover { color: #c6ead4; background: rgba(255,255,255,0.06); }
   .kiwi-lock-skip:focus-visible { outline: 2px solid var(--mint); outline-offset: 2px; color: #c6ead4; }
-  /* Switch-account escape hatch — a merchant on this PIN screen who wants to
+  /* Switch-account escape hatch · a merchant on this PIN screen who wants to
      sign in with a different account can hit this to land on /auth/logout
      (server clears kiwi_sess, redirects to the login page). Plain <a> so it
      works even if JS is dead. Discreet by default; more visible on hover so a
@@ -1637,7 +1637,7 @@
   .kiwi-lock-switch svg { width: 12px; height: 12px; opacity: .8; }
   .kiwi-lock-switch:hover { color: #c6ead4; background: rgba(255,255,255,0.06); text-decoration: underline; text-decoration-color: rgba(198,234,212,0.4); }
   .kiwi-lock-switch:focus-visible { outline: 2px solid var(--mint); outline-offset: 2px; color: #c6ead4; }
-  /* Hidden input — captures keystrokes */
+  /* Hidden input · captures keystrokes */
   .kiwi-pin-input {
     position: absolute; opacity: 0; left: -9999px;
     height: 0; width: 0; padding: 0; margin: 0; border: 0;
@@ -1676,7 +1676,7 @@
     margin: 0; line-height: 1.12;
     font-size: clamp(30px, 6.4vw, 64px); font-weight: 600; letter-spacing: -0.034em;
     color: var(--ink);
-    /* Light shadow only — heavy blur on text repaints every animation
+    /* Light shadow only · heavy blur on text repaints every animation
      * frame and tanks fluidity. */
     text-shadow: 0 2px 6px rgba(10,15,13,0.05);
     white-space: nowrap;
@@ -1689,7 +1689,7 @@
     color: var(--atlas);
     display: inline;
   }
-  /* The wrapper does the smooth max-width reveal — single CSS transition,
+  /* The wrapper does the smooth max-width reveal · single CSS transition,
    * GPU-friendly, no setTimeout drift. vertical-align:top aligns the
    * inline-block's top to the parent line box's top, so its inner text
    * baseline lines up with the surrounding text baseline. */
@@ -1700,7 +1700,7 @@
     max-width: 0;
     white-space: nowrap;
     vertical-align: top;
-    /* NO padding — padding has a fixed length that browsers won't shrink
+    /* NO padding · padding has a fixed length that browsers won't shrink
      * below, so even with max-width:0 the padding box would render and
      * leak the first glyph. The +24px buffer baked into naturalW (JS)
      * gives the accent ink all the trailing room it needs without padding. */
@@ -1748,32 +1748,32 @@
   }
 
   /* ══════════════════════════════════════════════════════════════════════════
-   * GO ULTRA — Atlas Dark palette overrides
+   * GO ULTRA · Atlas Dark palette overrides
    *
    * Triggered when the merchant clicks "Go Ultra" from the venue
    * dropdown. Shifts the brand tokens to a dark-green palette (Atlas Dark)
-   * and plays a quick theme fade — a dark wash carrying the GO ULTRA
-   * wordmark — while the dashboard re-renders underneath into the
+   * and plays a quick theme fade · a dark wash carrying the GO ULTRA
+   * wordmark · while the dashboard re-renders underneath into the
    * consolidated portfolio view.
    * ══════════════════════════════════════════════════════════════════════════ */
 
-  /* Theme override — only active while body.fusion-mode is set.
+  /* Theme override · only active while body.fusion-mode is set.
    * Black canvas + brand green palette (Atlas / Riad / Mint). No dark-green
    * tint anywhere on surfaces. Mint is the high-contrast accent (text, icons,
    * dots, sparklines); atlas + riad are reserved for filled green panels
    * (hero, settlement, gradients) that need brand identity. */
   body.fusion-mode {
-    --atlas:       #0E805C;  /* brand atlas-600 — lifted for dark surfaces */
+    --atlas:       #0E805C;  /* brand atlas-600 · lifted for dark surfaces */
     --atlas-600:   #0E805C;
     --atlas-700:   #0A5E43;
     --riad:        #053B2C;  /* brand riad */
     --riad-deep:   #02261C;
-    --mint:        #7DF2B0;  /* brand mint — primary accent on black */
+    --mint:        #7DF2B0;  /* brand mint · primary accent on black */
     --mint-soft:   #14201A;  /* very dark mint-tinted surface */
     --paper:       #000000;  /* pure black canvas */
-    --paper-soft:  #0F0F0F;  /* card surfaces — neutral near-black */
+    --paper-soft:  #0F0F0F;  /* card surfaces · neutral near-black */
     --paper-muted: #1A1A1A;  /* slightly raised surfaces */
-    --ink:         #F7F5F0;  /* primary text — brand paper */
+    --ink:         #F7F5F0;  /* primary text · brand paper */
     --ink-soft:    #D3D0C8;
     --n-50:        rgba(255,255,255,0.04);
     --n-100:       rgba(255,255,255,0.06);
@@ -1785,7 +1785,7 @@
     --n-700:       #D3D0C8;
     --n-800:       #F2F0EA;
 
-    /* Portfolio chart series — replace the warm-neutral light-mode palette
+    /* Portfolio chart series · replace the warm-neutral light-mode palette
      * (which goes muddy on pure black) with a brand-coherent green ramp.
      * Bottom (Spa) = bright mint accent · middle (Mansour) = soft cream ·
      * top (Atlas) = brand atlas-600 (no more brown). */
@@ -1799,7 +1799,7 @@
     transition: background 480ms cubic-bezier(0.32,0.72,0,1);
   }
   body.fusion-mode .main { color: var(--ink); }
-  /* Cross-fade brand transitions in fusion mode — every coloured element
+  /* Cross-fade brand transitions in fusion mode · every coloured element
    * inherits a 480ms ease so the palette swap doesn't snap. */
   body.fusion-mode .sidebar nav a,
   body.fusion-mode .sidebar nav a.active,
@@ -1838,14 +1838,14 @@
   body.fusion-mode .hero-left .meta,
   body.fusion-mode .hero-breakdown .b .l,
   body.fusion-mode .hero-goal .g-head { color: #BFE6CF !important; }
-  /* Sparkline strokes — brand mint for contrast on pure black */
+  /* Sparkline strokes · brand mint for contrast on pure black */
   body.fusion-mode .kpi-m .sp path { stroke: var(--fs-bahia) !important; }
   /* Sidebar active nav pill */
   body.fusion-mode .sidebar nav a.active {
     background: rgba(125,242,176,0.10) !important;
     color: var(--fs-bahia) !important;
   }
-  /* Venue dropdown row icon, hero AI eyebrow — brand mint for contrast */
+  /* Venue dropdown row icon, hero AI eyebrow · brand mint for contrast */
   body.fusion-mode .venue-row-icon { color: var(--fs-bahia) !important; }
   body.fusion-mode .hai-eyebrow,
   body.fusion-mode .ultra-tag { color: var(--fs-bahia) !important; }
@@ -1914,7 +1914,7 @@
   body.fusion-mode .range span.on { background: rgba(125,242,176,0.14) !important; color: var(--fs-bahia) !important; }
   body.fusion-mode .range span:hover:not(.on) { color: var(--ink) !important; }
 
-  /* Heatmap "Heures de pointe" — green ramp → Atlas Dark ramp */
+  /* Heatmap "Heures de pointe" · green ramp → Atlas Dark ramp */
   body.fusion-mode .hh-cell.i0 { background: #1A1A1A !important; }
   body.fusion-mode .hh-cell.i1 { background: var(--riad) !important; }
   body.fusion-mode .hh-cell.i2 { background: #0A5E43 !important; }
@@ -1924,7 +1924,7 @@
   body.fusion-mode .hh-col .lbl,
   body.fusion-mode .hh-foot { color: #7E938A !important; }
 
-  /* Revenue line chart — every green stroke/fill → Vif/Fleur */
+  /* Revenue line chart · every green stroke/fill → Vif/Fleur */
   body.fusion-mode .rev-line-halo,
   body.fusion-mode .rev-line { stroke: var(--fs-bahia) !important; }
   body.fusion-mode .rev-area { fill: rgba(125,242,176,0.18) !important; }
@@ -1934,7 +1934,7 @@
   body.fusion-mode .rev-axis-x text,
   body.fusion-mode .rev-axis-y text { fill: #7E938A !important; }
 
-  /* Mix donut — replace green slices via inline CSS overrides */
+  /* Mix donut · replace green slices via inline CSS overrides */
   body.fusion-mode .mix-legend .dot.card { background: var(--fs-bahia) !important; }
   body.fusion-mode .mix-legend .dot.cash { background: #0E805C !important; }
   body.fusion-mode .mix-legend .dot.transfer { background: var(--atlas) !important; }
@@ -2021,7 +2021,7 @@
     background: linear-gradient(90deg, var(--fs-bahia), #0E805C) !important;
   }
 
-  /* Sparklines — keep stroke Vif */
+  /* Sparklines · keep stroke Vif */
   body.fusion-mode .kpi-m .sp path { stroke: var(--fs-bahia) !important; }
 
   /* Sidebar tweaks */
@@ -2029,7 +2029,7 @@
     background: #000000 !important;
     color: #A6B6AC;
   }
-  /* "kiwi" wordmark — anchored to light bone (var(--paper) flips dark in fusion) */
+  /* "kiwi" wordmark · anchored to light bone (var(--paper) flips dark in fusion) */
   body.fusion-mode .sidebar .brand { color: #EAF3EE !important; }
   body.fusion-mode .sidebar .brand i { background: var(--fs-bahia) !important; box-shadow: 0 0 8px rgba(125,242,176,0.6); }
   body.fusion-mode .sidebar .merchant { border-color: rgba(255,255,255,0.06) !important; }
@@ -2058,7 +2058,7 @@
   body.fusion-mode .demo-bar b { color: var(--ink) !important; }
   body.fusion-mode .demo-bar a { color: var(--fs-bahia) !important; }
 
-  /* Venue dropdown when open in fusion mode — keep its surface readable */
+  /* Venue dropdown when open in fusion mode · keep its surface readable */
   body.fusion-mode .venue-dropdown {
     background: #0F0F0F !important;
     border-color: rgba(125,242,176,0.18) !important;
@@ -2125,7 +2125,7 @@
   body.fusion-mode svg text[fill="#0E805C"] { fill: #EAF3EE !important; }
   body.fusion-mode svg line[stroke="#A8A49A"] { stroke: rgba(125,242,176,0.30) !important; }
 
-  /* Inline style="background:var(--surface)" — used throughout the drawers for
+  /* Inline style="background:var(--surface)" · used throughout the drawers for
    * payslip tables, payment-link cards, agent-action rows, toggle thumbs.
    * Attribute selectors target the literal hex; we cover the common
    * whitespace variants. */
@@ -2145,7 +2145,7 @@
 
   /* Inline style="color:var(--ink)" → var(--ink) is light in fusion, ok.
    * style="color:var(--n-500)" / "color:var(--n-600)" inherit dark text
-   * on dark — wait, they're tokens that ALSO flip in fusion. ✓
+   * on dark · wait, they're tokens that ALSO flip in fusion. ✓
    *
    * Hardcoded var(--ink) (ink) / var(--atlas) (atlas) inline though stay dark. */
   body.fusion-mode [style*="color:var(--ink)"],
@@ -2154,7 +2154,7 @@
   body.fusion-mode [style*="color: var(--atlas)"] { color: var(--fs-bahia) !important; }
   body.fusion-mode [style*="color:#13855F"] { color: var(--fs-bahia) !important; }
 
-  /* Buttons rendered via the .kb (interactive.js) family — keep them
+  /* Buttons rendered via the .kb (interactive.js) family · keep them
    * legible. Default .kb.ghost has #fff bg + ink text; in fusion it
    * becomes ink-on-ink without overrides. */
   body.fusion-mode .kb.ghost {
@@ -2188,7 +2188,7 @@
   body.fusion-mode .sh-section-head .sub { color: #7E938A !important; }
   body.fusion-mode .sh-lvs-num { color: var(--ink) !important; }
 
-  /* Pricing comparison modal (Kiwi Pro vs Ultra) — checkmarks were green */
+  /* Pricing comparison modal (Kiwi Pro vs Ultra) · checkmarks were green */
   body.fusion-mode .kiwi-modal [style*="color:var(--atlas)"] { color: var(--fs-bahia) !important; }
   body.fusion-mode .upgrade-pro-eyebrow { color: var(--fs-bahia) !important; }
   body.fusion-mode .upgrade-pro-price { color: var(--ink) !important; }
@@ -2208,19 +2208,19 @@
   body.fusion-mode .kiwi-modal h3,
   body.fusion-mode .kiwi-modal h4 { color: var(--ink) !important; }
 
-  /* Staff progress bar (the green/orange thick line under each row) — these
+  /* Staff progress bar (the green/orange thick line under each row) · these
    * use a hardcoded gradient or hex. We can't catch every variant but a
    * filter shift gets us in the right family. */
   body.fusion-mode .av { background: linear-gradient(135deg, var(--fs-bahia), #0E805C) !important; color: var(--riad) !important; }
 
-  /* Sidebar "kiwi" upsell — was already dark in light mode (Nuit bg).
+  /* Sidebar "kiwi" upsell · was already dark in light mode (Nuit bg).
    * In fusion the inner heading h4 / p was using --paper which now flips dark. */
   body.fusion-mode .sidebar .upsell h4 { color: #EAF3EE !important; }
   body.fusion-mode .sidebar .upsell p { color: #A6B6AC !important; }
   body.fusion-mode .sidebar .merchant .n { color: #EAF3EE !important; }
   body.fusion-mode .sidebar .merchant .r { color: #7E938A !important; }
 
-  /* Équipe drawer member rows — .kw-eq-row.active is hardcoded background:var(--surface)
+  /* Équipe drawer member rows · .kw-eq-row.active is hardcoded background:var(--surface)
    * in pages-pro.js (a class selector, not inline style, so my generic
    * [style*="background:var(--surface)"] override doesn't catch it). */
   body.fusion-mode .kw-eq-row.active {
@@ -2240,18 +2240,18 @@
     color: #A6B6AC !important;
     border-color: rgba(125,242,176,0.12) !important;
   }
-  /* Timeline rail — the inline gradient bakes #ECEAE4 as the centre stop */
+  /* Timeline rail · the inline gradient bakes #ECEAE4 as the centre stop */
   body.fusion-mode [style*="#ECEAE4"] {
     background: linear-gradient(90deg, rgba(255,255,255,0.06), rgba(255,255,255,0.10) 50%, rgba(255,255,255,0.06)) !important;
   }
-  /* Live progress-dot uses background:var(--surface) hardcoded inline — invisible-ish
+  /* Live progress-dot uses background:var(--surface) hardcoded inline · invisible-ish
    * over the gradient. Keep white centre but tighten border to Fleur for the
    * cleanest read. (Selector deliberately narrow to not catch other dots.) */
   body.fusion-mode .kw-eq-row [style*="border-radius: 50%"][style*="background: var(--surface)"] {
     background: #C7E8D3 !important;
   }
 
-  /* Kiwi AI · pointages block — uses var(--ink) gradient + var(--paper)
+  /* Kiwi AI · pointages block · uses var(--ink) gradient + var(--paper)
    * body text. Both tokens flip in fusion mode → the gradient becomes
    * bone→near-black and the title becomes invisible. Force a dark Nuit
    * gradient and bone-coloured title; recolour the mint-rgba chip + button
@@ -2279,7 +2279,7 @@
   /* SVG strokes that reference --mint directly */
   body.fusion-mode [stroke="#7DF2B0"] { stroke: var(--fs-bahia) !important; }
 
-  /* Sidebar "first 7 only" — vertical-section is hidden, replaced by a
+  /* Sidebar "first 7 only" · vertical-section is hidden, replaced by a
    * compact aggregated-KPI card. Animated with the same fade pattern as
    * the regular vertical section swap. */
   .sidebar [data-vertical-section].vert-fading { opacity: 0; }
@@ -2306,7 +2306,7 @@
     background: var(--fs-bahia); box-shadow: 0 0 8px var(--fs-bahia);
     animation: fk-pulse 1.6s infinite;
   }
-  /* ✦ ULTRA pill — sits inline at the right edge of the VUE PORTFOLIO row */
+  /* ✦ ULTRA pill · sits inline at the right edge of the VUE PORTFOLIO row */
   .fusion-kpis .fk-head .fk-ultra {
     margin-left: auto;
     padding: 1px 8px;
@@ -2334,7 +2334,7 @@
   .fusion-kpis .fk-row:first-of-type { border-top: 0; }
   .fusion-kpis .fk-l { font-size: 11.5px; color: #7E938A; letter-spacing: 0.01em; }
   /* fk-v: always rendered on the dark fusion sidebar, so colour is anchored
-   * to a light bone (not var(--paper) — that token is dark in fusion-mode). */
+   * to a light bone (not var(--paper) · that token is dark in fusion-mode). */
   .fusion-kpis .fk-v { font-size: 14px; color: #EAF3EE; font-weight: 500; font-feature-settings: "tnum" 1; letter-spacing: -0.01em; }
 
   /* "Revenir à la vue simple" CTA inside the venue dropdown */
@@ -2391,10 +2391,10 @@
   .venue-action.return-cta .va-title { font-size: 13px; font-weight: 500; color: var(--ink); }
 
   /* When in fusion-mode, "Revenir" pill is shown in Atlas Green (deliberate
-   * exception to the palette flip — re-anchors the "return home" affordance). */
+   * exception to the palette flip · re-anchors the "return home" affordance). */
 
   /* ═════════════════════════════════════════════════════════════════════════
-   * FUSION-MODE · SIDEBAR-DRAWER CONTRAST FIXES — added 2026-05-14
+   * FUSION-MODE · SIDEBAR-DRAWER CONTRAST FIXES · added 2026-05-14
    *
    * pages.js / pages-pro.js declare many drawer classes with
    *   `color: var(--paper)` on `background: var(--atlas)` / gradients.
@@ -2430,7 +2430,7 @@
     color: var(--ink) !important;
   }
 
-  /* Hardcoded warning pills (#FFF4DD bg, #8A6210 text) — no dark theme override
+  /* Hardcoded warning pills (#FFF4DD bg, #8A6210 text) · no dark theme override
    * in pages-pro.js. Catch via class + inline-style selectors. */
   body.fusion-mode .pr-cert-stat.warn,
   body.fusion-mode .pr-badge.cf,
@@ -2461,7 +2461,7 @@
     color: var(--mint) !important;
   }
 
-  /* Drawer close button — pages.js / interactive.js have `background:var(--surface)`
+  /* Drawer close button · pages.js / interactive.js have `background:var(--surface)`
    * hardcoded without a dark-theme override. Renders as a near-white blob
    * on the dark Atlas Dark drawer. Repaint it on-brand. */
   body.fusion-mode .kiwi-drawer-close {
@@ -2474,7 +2474,7 @@
     color: var(--mint) !important;
   }
 
-  /* Active tab pills (.resv-tab.on, .sc-pill.on) — dark-theme rule
+  /* Active tab pills (.resv-tab.on, .sc-pill.on) · dark-theme rule
    * resolves to a near-bone pill which doesn't pop on the Nuit drawer.
    * Force Atlas Dark mint highlight so the active tab reads as on-brand. */
   body.fusion-mode .resv-tab.on,
@@ -2485,17 +2485,17 @@
   }
 
   /* ═════════════════════════════════════════════════════════════════════════
-   * FUSION CONTENT VISIBILITY GATE + DEDICATED LAYOUT — added 2026-05-14
+   * FUSION CONTENT VISIBILITY GATE + DEDICATED LAYOUT · added 2026-05-14
    *
    * Hides the standard dashboard markup and reveals the dedicated fusion
    * portfolio layout when body.fusion-mode is active. All colours via
    * tokens (Atlas Dark palette flips happen in the body.fusion-mode block
-   * above) — no hex values below.
+   * above) · no hex values below.
    * ═════════════════════════════════════════════════════════════════════════ */
   .dash-fusion { display: none; }
   body.fusion-mode .dash-standard { display: none !important; }
   body.fusion-mode .dash-fusion   { display: block; animation: fade-in 320ms ease-out; }
-  /* Tighten gap between the date-range row and the fusion hero — the
+  /* Tighten gap between the date-range row and the fusion hero · the
    * single-venue dashboard's hero-today eats the 26 px bottom margin
    * with its own padding, but the fusion hero card sits visually
    * separate from the page-head and the default spacing reads as a void. */
@@ -2933,7 +2933,7 @@
     border-color: rgba(125,242,176,0.10);
   }
 
-  /* ── Exclusif Ultra band — the 1 499 pillars, lived in-product.
+  /* ── Exclusif Ultra band · the 1 499 pillars, lived in-product.
    * Only ever visible inside fusion mode (dark palette). ── */
   .fs-ultra-mark { color: var(--mint); }
   .fs-ultra { display: grid; grid-template-columns: 1.25fr 1fr 1fr; gap: 12px; }
@@ -3065,13 +3065,13 @@
   body.fusion-mode .fs-alert-cta:hover { background: var(--mint); color: var(--riad); border-color: var(--mint); }
 
   /* ─────────────────────────────────────────────────────────────────────────
-   * GO ULTRA — GLASS MELT TRANSITION
+   * GO ULTRA · GLASS MELT TRANSITION
    * Reality liquefies into another operating mode. The dashboard becomes
    * glossy/glass-like, then distorts through an SVG turbulence + displacement
    * filter (liquid ripple). Components melt and stretch, a soft wave passes
    * outward from centre, and the dark Ultra interface emerges underneath.
    * Glow edges stabilise, then the kiwi+✦ lockup materialises with a
-   * prismatic refracted shine. Apple Vision Pro vibes — elegant, not aggressive.
+   * prismatic refracted shine. Apple Vision Pro vibes · elegant, not aggressive.
    * ───────────────────────────────────────────────────────────────────────── */
   .fusion-overlay {
     position: fixed; inset: 0;
@@ -3091,7 +3091,7 @@
   }
   .fusion-overlay.exiting { opacity: 0; transition: opacity 520ms ease; }
 
-  /* SVG filter defs container — zero-size, holds the turbulence/displacement
+  /* SVG filter defs container · zero-size, holds the turbulence/displacement
      filter referenced from .main via filter: url(#kiwi-melt-distort).
      Rebuilt on each activation so the SMIL <animate> elements replay. */
   .fo-svg-filters {
@@ -3101,7 +3101,7 @@
     overflow: hidden;
   }
 
-  /* The "glass coat" — applied to .main + .sidebar + .topbar while the melt
+  /* The "glass coat" · applied to .main + .sidebar + .topbar while the melt
      plays. References the SVG displacement filter inside the overlay, and
      lifts saturation/contrast briefly to read as glossy glass. */
   body.fusion-glass-melt .main,
@@ -3111,11 +3111,11 @@
     will-change: filter, transform;
     transform: translateZ(0);
   }
-  /* Safari fallback — feDisplacementMap rasterises on CPU in WebKit so it
+  /* Safari fallback · feDisplacementMap rasterises on CPU in WebKit so it
      drops the whole surface to ~10 fps during the melt. We swap the SVG
      filter for a cheap GPU-accelerated CSS blur. Every other Glass Melt
      effect (frost, gloss sheen, glow frame, lockup reveal, ✦ refraction)
-     still plays — only the per-pixel liquefaction is dropped. */
+     still plays · only the per-pixel liquefaction is dropped. */
   body.no-melt-filter.fusion-glass-melt .main,
   body.no-melt-filter.fusion-glass-melt .sidebar,
   body.no-melt-filter.fusion-glass-melt .topbar {
@@ -3124,7 +3124,7 @@
   }
 
   /* A wide diagonal gloss sheen sweeps across the screen as the surface
-     becomes "wet" — gives the surface a momentary liquid highlight pass. */
+     becomes "wet" · gives the surface a momentary liquid highlight pass. */
   .fo-gloss {
     position: absolute; inset: -20% -20%;
     pointer-events: none;
@@ -3148,7 +3148,7 @@
     100% { background-position: -10% 0; opacity: 0; }
   }
 
-  /* Heavy frosted-glass blur layer over the dashboard during the melt —
+  /* Heavy frosted-glass blur layer over the dashboard during the melt ·
      this is the "you're looking through glass" moment. backdrop-filter is
      animated up then back down so the UI never fully disappears, just goes
      liquid for ~600ms. */
@@ -3179,7 +3179,7 @@
     100% { opacity: 0;   backdrop-filter: blur(0px)  saturate(1.00); -webkit-backdrop-filter: blur(0px)  saturate(1.00); }
   }
 
-  /* Inner edge glow that stabilises after the melt resolves — a soft frame
+  /* Inner edge glow that stabilises after the melt resolves · a soft frame
      around the viewport, signals "we're locked into the new mode". */
   .fo-glow-frame {
     position: absolute; inset: 0;
@@ -3197,7 +3197,7 @@
 
   /* ── Kiwi + ✦ lockup with prismatic refracted shine ─────────────────────
    * The wordmark materialises out of the glass blur; the ✦ star then plays
-   * a brief refraction — R/G/B layers fan apart and snap back, with a hot
+   * a brief refraction · R/G/B layers fan apart and snap back, with a hot
    * white core flash, like a prism splitting a flash of light. */
   .fo-label {
     position: absolute; left: 50%; top: 50%;
@@ -3216,7 +3216,7 @@
     filter: drop-shadow(0 0 24px rgba(141,166,255,0.32));
   }
   .fo-mark img { display:block; width:auto; height:clamp(48px, 6.6vw, 72px); }
-  /* The ✦ star — three colored layers + a white core, animated to fan apart
+  /* The ✦ star · three colored layers + a white core, animated to fan apart
      briefly (prism dispersion) then converge into the brand mint glow. */
   .fo-ultra {
     position: relative;
@@ -3267,7 +3267,7 @@
     100% { opacity: 0; transform: scale(1); }
   }
 
-  /* ── Card reform — "liquid settle" rather than digital reconstruct ──────
+  /* ── Card reform · "liquid settle" rather than digital reconstruct ──────
    * Each card slides into place from a blurred, slightly oversaturated
    * starting state, like droplets settling into shape on a glass surface.
    * Triggered when body.fusion-reconstruct is added during the swap. */
@@ -3321,7 +3321,7 @@
   }
   body.fusion-mode .app,
   body.fusion-mode .topbar { position: relative; z-index: 1; }
-  /* Sidebar keeps its base position:sticky — forcing it to relative here
+  /* Sidebar keeps its base position:sticky · forcing it to relative here
      broke scroll-pinning in Ultra and made the panel drift off-screen as
      you scrolled. We only need to lift its stacking context above the
      ambient glow (z-index:0), which sticky elements support natively. */
@@ -3332,10 +3332,10 @@
   }
 
   /* ═══════════════════════════════════════════════════════════════════════
-   * ÉQUIPE — Staff & HR page
+   * ÉQUIPE · Staff & HR page
    * A full dashboard view shown when body.page-equipe is set. Built entirely
    * from CSS variable tokens so it adapts to the Atlas Dark palette when
-   * fusion mode is also active — only a small override block (#fff surfaces)
+   * fusion mode is also active · only a small override block (#fff surfaces)
    * is needed, mirroring how the dashboard already handles .block / .kpi-m.
    * ═══════════════════════════════════════════════════════════════════════ */
 
@@ -3352,7 +3352,7 @@
   body.page-equipe .dash-equipe { display: block; animation: fade-in 220ms ease-out; }
   /* The .app shell is a grid (260px 1fr). A plain 1fr track takes its
    * content's min-content as an automatic minimum, so a wide child can blow
-   * the track out past the viewport. minmax(0,1fr) lets the track shrink —
+   * the track out past the viewport. minmax(0,1fr) lets the track shrink ·
    * scoped to page-equipe + ≥1101px so the dashboard grid is untouched
    * (the ≤1100px breakpoint already collapses .app to a single column). */
   @media (min-width: 1101px) {
@@ -3362,13 +3362,13 @@
      marketing rule that .dash-equipe (a <section>) would otherwise inherit. */
   body.page-equipe .dash-equipe { min-width: 0; padding: 24px 0 0; }
   /* Paie & planning (assets/team.js → Kiwi.appPage) reuses this whole stylesheet
-     by wrapping its body in .dash-equipe — same roster, same tables, same tokens.
+     by wrapping its body in .dash-equipe · same roster, same tables, same tokens.
      But appPage mounts under body.page-genpage, and the gate above only un-hides
      .dash-equipe under body.page-equipe, so the page rendered its header and then
      nothing: the stat band and the planning grid were in the DOM at height 0.
      Scoped to a wrapper inside .dash-genpage, which only that page creates.
      The genpage gate (assets/interactive.js) lists .dash-equipe among the sibling
-     page sections it hides with `display: none !important` — correct for the
+     page sections it hides with `display: none !important` · correct for the
      <section> up in the shell, wrong for a wrapper nested INSIDE the genpage,
      which is the genpage's own content. Hence the extra specificity + !important:
      it says "this one is mine", it does not weaken the gate for the section. */
@@ -3640,7 +3640,7 @@
   body.fusion-mode .eq-cell-empty { color: var(--n-500); }
 
   /* ═══════════════════════════════════════════════════════════════════════
-   * MENU INTELLIGENCE — 5-tab menu page (body.page-menu)
+   * MENU INTELLIGENCE · 5-tab menu page (body.page-menu)
    * Token-based throughout; a small fusion-mode override block flips the
    * #fff surfaces, mirroring the .block / .eq-section pattern.
    * ═══════════════════════════════════════════════════════════════════════ */
@@ -3656,7 +3656,7 @@
   body.page-menu .dash-stock,
   body.page-menu .dash-payroll { display: none !important; }
   /* padding:24px 0 0 overrides the global `section { padding:96px 0 }`
-     marketing rule that .dash-menu (a <section>) would otherwise inherit —
+     marketing rule that .dash-menu (a <section>) would otherwise inherit ·
      keeps the title close to the topbar. */
   body.page-menu .dash-menu { display: block; min-width: 0; padding: 24px 0 0; animation: fade-in 220ms ease-out; }
   @media (min-width: 1101px) {
@@ -3744,7 +3744,7 @@
   .mi-tag.premium   { background: var(--riad); color: var(--paper); }
   .mi-tag.vegan     { background: var(--success); color: var(--paper); }
   .mi-tag.veg       { background: var(--paper-muted); color: var(--n-600); }
-  /* Dark mode: --riad/--paper text on these chips stays dark and goes invisible — relight it. */
+  /* Dark mode: --riad/--paper text on these chips stays dark and goes invisible · relight it. */
   html[data-theme="dark"] .mi-tag.signature { color: var(--mint); }
   html[data-theme="dark"] .mi-tag.premium   { color: #EAF3EE; }
   .mi-card-name { font-size: 14.5px; font-weight: 600; letter-spacing: -0.01em; color: var(--ink); margin-top: 10px; }
@@ -3789,7 +3789,7 @@
   .mi-mods-table .mq { font-family: var(--mono); color: var(--n-500); font-size: 11.5px; }
   .mi-mod-cat { font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; font-family: var(--mono); color: var(--n-500); }
 
-  /* MENU MODIFIERS — groups */
+  /* MENU MODIFIERS · groups */
   .mi-groups-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; margin-top: 4px; }
   .mi-group-card { background: var(--paper-soft); border: 1px solid var(--n-200); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; transition: border-color 140ms, transform 140ms; }
   .mi-group-card:hover { border-color: var(--n-400); }
@@ -3822,7 +3822,7 @@
   .mi-item-group-row .info .inherit { font-size: 9.5px; color: var(--info); font-weight: 600; margin-top: 4px; letter-spacing: 0.06em; text-transform: uppercase; font-family: var(--mono); }
   .mi-item-group-row .actions { display: flex; gap: 4px; flex-shrink: 0; }
 
-  /* Group editor — option rows and scope toggle */
+  /* Group editor · option rows and scope toggle */
   .mi-grp-opt-row { display: grid; grid-template-columns: 16px 1fr 130px 28px; gap: 8px; align-items: center; padding: 6px 0; }
   .mi-grp-opt-drag { color: var(--n-500); cursor: grab; user-select: none; text-align: center; font-size: 12px; line-height: 1; letter-spacing: -0.1em; }
   .mi-grp-opt-drag:active { cursor: grabbing; }
@@ -3843,7 +3843,7 @@
   .mi-st-dot.off     { background: var(--n-400); }
   .mi-station-name { font-size: 11.5px; font-weight: 600; font-family: var(--mono); color: var(--ink); }
   .mi-station-meta { font-size: 10px; color: var(--n-500); margin-top: 5px; }
-  /* Rich station card (Stations cuisine tab) — bigger, with routed sample
+  /* Rich station card (Stations cuisine tab) · bigger, with routed sample
      and "cliquer pour éditer" affordance. */
   .mi-stations { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
   .mi-station-card { padding: 14px 16px; min-height: 120px; }
@@ -3878,7 +3878,7 @@
   .mi-station-chip-sync { background: rgba(11,110,79,0.10); color: var(--atlas); }
   .mi-station-chip-fast { background: rgba(217,154,43,0.14); color: var(--warning); }
 
-  /* ── Tab 2 · profitability matrix — dimensional ───────────────────────── */
+  /* ── Tab 2 · profitability matrix · dimensional ───────────────────────── */
   .mi-matrix { position: relative; padding: 14px 0 0 8px; }
   .mi-matrix-plot {
     position: relative; height: 430px; margin-left: 52px; border-radius: 14px;
@@ -3937,7 +3937,7 @@
   .mi-qcard-btn.danger:hover { filter: brightness(1.08); transform: translateY(-1px); box-shadow: 0 8px 16px -4px rgba(155,47,34,0.6), inset 0 1px 0 rgba(255,255,255,0.22); }
   .mi-qcard-btn.danger:active { transform: translateY(0); box-shadow: inset 0 2px 6px rgba(0,0,0,0.32); }
 
-  /* ── Card ⇄ matrix spotlight — hover a quadrant card to isolate it ────── */
+  /* ── Card ⇄ matrix spotlight · hover a quadrant card to isolate it ────── */
   .mi-perf:has(.mi-qcard.star:hover)   .mi-dot:not(.star),
   .mi-perf:has(.mi-qcard.plow:hover)   .mi-dot:not(.plow),
   .mi-perf:has(.mi-qcard.puzzle:hover) .mi-dot:not(.puzzle),
@@ -3973,7 +3973,7 @@
   .mi-ai.crit { border-left-color: var(--danger); }
 
   /* ─────────────────────────────────────────────────────────────────────
-   * Tab · Recettes (Phase 1 — recipe cards + variance read-only display)
+   * Tab · Recettes (Phase 1 · recipe cards + variance read-only display)
    * Severity tokens: ok = --success/atlas · warn = --warning · crit = --danger
    * ───────────────────────────────────────────────────────────────────── */
   .mi-recettes-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; margin-bottom: 18px; flex-wrap: wrap; }
@@ -4234,9 +4234,9 @@
   body.fusion-mode .mi-qcard-btn.danger { background: linear-gradient(135deg, var(--danger), #9B2F22) !important; border-color: transparent !important; }
 
   /* ═══════════════════════════════════════════════════════════════════════
-   * STOCK & APPROVISIONNEMENT — 5-tab inventory + supply page (body.page-stock)
+   * STOCK & APPROVISIONNEMENT · 5-tab inventory + supply page (body.page-stock)
    * Element prefix: .st-* · Modals reuse .kiwi-modal infrastructure.
-   * Tokens only — no hard-coded hex. Fusion-mode override block at the bottom
+   * Tokens only · no hard-coded hex. Fusion-mode override block at the bottom
    * mirrors the .eq- / .mi- pattern.
    * ═══════════════════════════════════════════════════════════════════════ */
 
@@ -4256,7 +4256,7 @@
   }
 
   /* ═══════════════════════════════════════════════════════════════════════
-   * MARGES & BUDGET — full-page financial visibility (body.page-finance)
+   * MARGES & BUDGET · full-page financial visibility (body.page-finance)
    * Rendered by assets/finance.js · classes prefixed .fin-*.
    * Same visibility-gate pattern as page-stock above.
    * ═══════════════════════════════════════════════════════════════════════ */
@@ -4391,7 +4391,7 @@
 
 
   /* ═══════════════════════════════════════════════════════════════════════
-   * CONFORMITÉ & REGISTRES — full-page audit trail (body.page-conformite)
+   * CONFORMITÉ & REGISTRES · full-page audit trail (body.page-conformite)
    * Rendered by assets/conformite.js · classes prefixed .cf-*.
    * Same visibility-gate pattern as page-stock / page-finance.
    * ═══════════════════════════════════════════════════════════════════════ */
@@ -5057,7 +5057,7 @@
   body.fusion-mode .st-locked-b { color: rgba(247,245,240,0.7); }
 
   /* ═══════════════════════════════════════════════════════════════════════
-   * PAIE & PLANNING — full-page payroll + scheduling view (.dash-payroll)
+   * PAIE & PLANNING · full-page payroll + scheduling view (.dash-payroll)
    * Rendered by renderPayroll() in assets/venues.js; shown on body.page-payroll.
    * ═══════════════════════════════════════════════════════════════════════ */
   .dash-payroll { display: none; }
@@ -5142,7 +5142,7 @@
   .pay-modal-rest input { width: 16px; height: 16px; accent-color: var(--atlas); cursor: pointer; }
   .pay-modal-times { margin-top: 14px; }
 
-  /* Go Ultra / dark theme — html[data-theme="dark"] covers both */
+  /* Go Ultra / dark theme · html[data-theme="dark"] covers both */
   html[data-theme="dark"] .pay-stat,
   html[data-theme="dark"] .pay-section { background: var(--paper-soft); border-color: var(--n-200); }
   html[data-theme="dark"] .pay-table tbody tr:hover,
@@ -5150,16 +5150,16 @@
 </style>
 <link rel="stylesheet" href="assets/mobile.css?v=4" />
 <link rel="stylesheet" href="assets/dashboard-native.css" />
-<!-- Design 2026 · Liquid Glass preview — inert unless body.design-2026 (1111-gated, reversible) -->
+<!-- Design 2026 · Liquid Glass preview · inert unless body.design-2026 (1111-gated, reversible) -->
 <link rel="stylesheet" href="assets/design-2026.css" />
-<!-- iOS-27 tier · WWDC-2026 Liquid Glass refinements — inert unless body.design-ios27 (PIN 1111 only, reversible) -->
+<!-- iOS-27 tier · WWDC-2026 Liquid Glass refinements · inert unless body.design-ios27 (PIN 1111 only, reversible) -->
 <link rel="stylesheet" href="assets/design-ios27.css" />
 <!-- Vexel skin · the landing page's dashboard mockup, applied to the real one.
      Inert unless body.design-vexel. ON by default for every merchant since the
-     v2 design migration — ?skin=off or KiwiDesignVexel.disable() opts out.
+     v2 design migration · ?skin=off or KiwiDesignVexel.disable() opts out.
      Loads LAST of the three skins so it wins where they overlap. -->
 <link rel="stylesheet" href="assets/design-vexel.css?v=2102" />
-<!-- Pressing owner workspace — exact-trade layer, inert for every other venue. -->
+<!-- Pressing owner workspace · exact-trade layer, inert for every other venue. -->
 <link rel="stylesheet" href="assets/pressing-catalog.css?v=4" />
 <link rel="stylesheet" href="assets/pressing-dashboard.css?v=10" />
 <link rel="stylesheet" href="assets/trade-workspaces.css?v=3" />
@@ -5173,21 +5173,21 @@
 <!-- Read the persisted Vexel climate while the document is still in <head>.
      The first line after <body> applies it before any visible markup exists. -->
 <script src="assets/design-vexel.js?v=2077"></script>
-<!-- Vitrine skin · the marketing site's COMPOSITION on the product's paper —
+<!-- Vitrine skin · the marketing site's COMPOSITION on the product's paper ·
      solid-set type at -0.06em, the +0.16em micro-label, real glass over a still
      field, one page-wide reveal. Not its palette: the two tiers are a decision
-     (kiwi-dna § "Two tiers, on purpose"): this surface stays light, and Vexel —
-     now the default — carries the dark one. Inert unless body.design-vitrine.
-     OFF by default — KiwiDesignVitrine.enable() or ?skin=vitrine. -->
+     (kiwi-dna § "Two tiers, on purpose"): this surface stays light, and Vexel ·
+     now the default · carries the dark one. Inert unless body.design-vitrine.
+     OFF by default · KiwiDesignVitrine.enable() or ?skin=vitrine. -->
 <link rel="stylesheet" href="assets/design-vitrine.css" />
 <script src="assets/design-vitrine.js"></script>
 <!-- Liquid Glass · real SVG-displacement refraction. Provides #kiwi-lg; the iOS-27
      tier's frosted panels upgrade to genuine glass when active. KiwiGlass.disable() reverts. -->
 <link rel="stylesheet" href="assets/liquid-glass.css" />
 <!-- Assistant · « Le relevé ». Refonte visuelle complète de l'assistant, posée en
-     COUCHE au-dessus de assets/agent.js — aucune logique touchée. Pilotée par
+     COUCHE au-dessus de assets/agent.js · aucune logique touchée. Pilotée par
      <html data-kiwi-ai="releve"> ; KiwiAiSkin.disable() rend l'écran d'origine. -->
-<link rel="stylesheet" href="assets/agent-skin.css?v=14" />
+<link rel="stylesheet" href="assets/agent-skin.css?v=15" />
 <!-- Physical documents never inherit the dashboard's dark palette. -->
 <link rel="stylesheet" href="assets/print-paper.css?v=1" />
 </head>
@@ -5204,7 +5204,7 @@
 </script>
 <a class="skip-link" href="#kw-main" data-i18n="a11y.skip">Aller au contenu</a>
 <!-- ═══════════════════════════════════════════════════════════════════
- *  ROLE GATE — runs before the sidebar markup renders.
+ *  ROLE GATE · runs before the sidebar markup renders.
  *  Reads localStorage 'kiwiRole' and tags <body> with role-owner /
  *  role-manager so CSS + script logic can branch.
  *
@@ -5226,7 +5226,7 @@
   document.body.classList.add('role-' + role);
   window.__kiwiRole = role;
 })();
-/* Fusion animation perf gate — Safari rasterises feDisplacementMap on CPU
+/* Fusion animation perf gate · Safari rasterises feDisplacementMap on CPU
  * and the melt drops to ~10 fps. Detect WebKit-not-Chrome and skip the SVG
  * filter via body.no-melt-filter (the CSS rule falls back to a cheap blur
  * which the GPU handles smoothly). All other Glass Melt layers still play. */
@@ -5315,7 +5315,7 @@
       </a>
       <!-- Le « Z » de la veille. Juste sous Commandes parce que c'est la même
            matière lue autrement : Commandes est le fil des ventes, Rapport
-           journalier est la journée refermée — totaux, moyens de paiement,
+           journalier est la journée refermée · totaux, moyens de paiement,
            détail par catégorie et par produit, tiroir-caisse. C'est la première
            chose qu'un patron ouvre le matin. -->
       <a href="#" data-nav="rapport" data-feature="rapport">
@@ -5361,10 +5361,10 @@
         <span class="tag">PHASE 2</span>
       </a>
 
-      <!-- La bande « Croissance » — Commande en ligne, Commander à table,
-           Clients & Marketing, Cartes cadeaux — est retirée. growth-ordering,
+      <!-- La bande « Croissance » · Commande en ligne, Commander à table,
+           Clients & Marketing, Cartes cadeaux · est retirée. growth-ordering,
            growth-qr et growth-giftcards ont été supprimés du projet. Seul
-           growth-crm.js reste — c'est le compositeur de campagne qu'ouvre
+           growth-crm.js reste · c'est le compositeur de campagne qu'ouvre
            le bouton du VRAI Clients & Marketing (clients-directory.js), qui lui
            est vendu et reste en place plus haut dans cette même barre. -->
 
@@ -5377,7 +5377,7 @@
 
     <!-- Kiwi install card. Both renderUpsell() in venues.js and dashboard-pwa.js
          write this slot, and both write the SAME install card, so whichever lands
-         last is the same card — no race can bring back the retired Ultra promo.
+         last is the same card · no race can bring back the retired Ultra promo.
          dashboard-pwa.js owns the real browser install flow (deferred prompt,
          installed state); venues.js is the fallback that survives venue and
          language switches. -->
@@ -5411,10 +5411,10 @@
       </nav>
       <!-- Ouvert / fermé, d'après les horaires de l'établissement. Cliquable :
            un statut faux ou manquant se corrige là où on le lit. Rempli par
-           assets/hours-ui.js — vide tant que KiwiHours n'a pas répondu, jamais
+           assets/hours-ui.js · vide tant que KiwiHours n'a pas répondu, jamais
            une valeur d'attente qui ressemblerait à un vrai horaire. -->
       <button class="hours-pill" data-hours-pill hidden data-action="settings-hours" type="button"></button>
-      <!-- Role badge — shown only when the manager PIN (0909) is used,
+      <!-- Role badge · shown only when the manager PIN (0909) is used,
            so the demo viewer knows they're seeing the restricted view. -->
       <div class="role-badge" data-role-badge>
         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
@@ -5423,7 +5423,7 @@
       <!-- Un vrai bouton, pas un <div> décoratif : c'était le seul contrôle de la
            barre du haut qu'on ne pouvait ni tabuler ni annoncer à un lecteur
            d'écran. Le raccourci affiché est posé par assets/interactive.js selon
-           la plateforme — la caisse Kiwi tourne sous Windows, où « ⌘ » ne veut
+           la plateforme · la caisse Kiwi tourne sous Windows, où « ⌘ » ne veut
            rien dire (et n'existe même pas dans JetBrains Mono). -->
       <button type="button" class="search-big" data-action="search"
               aria-keyshortcuts="Control+K Meta+K"
@@ -5435,7 +5435,7 @@
       <!-- Bascule clair / sombre. Le tableau de bord s'ouvre en clair ; le
            commerçant passe au sombre s'il le veut, et son choix est mémorisé
            dans `kiwiDashTheme` puis reposé dès la première frame par
-           assets/design-vexel.js — voir l'en-tête de ce fichier. Les deux
+           assets/design-vexel.js · voir l'en-tête de ce fichier. Les deux
            icônes sont dans le HTML et c'est le CSS qui en cache une, pour que
            la bonne soit là avant tout script. -->
       <button type="button" class="icon-btn theme-toggle" data-action="toggle-theme"
@@ -5498,7 +5498,7 @@
       </div>
 
       <!-- ═══════════════════════════════════════════════════════════════════
-       *  STANDARD CONTENT — single-venue dashboard (also visible when fusion
+       *  STANDARD CONTENT · single-venue dashboard (also visible when fusion
        *  inherits the same markup with palette flipped). Wrapped in
        *  .dash-standard so we can swap to .dash-fusion in fusion mode via
        *  two CSS rules at the end of the fusion-mode block below.
@@ -5556,7 +5556,7 @@
                     <span data-i18n="dash.rev.title">Revenu & commandes</span>
                     <span class="chip neutral" data-rev-range-badge style="padding: 2px 8px; font-size: 10.5px;">AUJOURD'HUI · LIVE</span>
                   </div>
-                  <div class="rev-hero-val" data-rev-hero-val>—</div>
+                  <div class="rev-hero-val" data-rev-hero-val>·</div>
                   <div class="rev-hero-delta" data-rev-hero-delta></div>
                   <div class="s" data-rev-sub>Cumul horaire · service en cours</div>
                   <div class="cmp-caption" data-rev-compare-caption hidden>vs. Hier</div>
@@ -5565,7 +5565,7 @@
                   <button type="button" class="cmp-btn" data-action="rev-compare" data-rev-compare-btn aria-pressed="false" data-i18n="dash.compare">Comparer</button>
                 </div>
               </div>
-              <!-- Empty on purpose — renderRevChart() in dateRange.js owns
+              <!-- Empty on purpose · renderRevChart() in dateRange.js owns
                    the SVG contents (defs/gradients included). -->
               <svg class="chart-wrap" data-rev-svg width="100%" height="280"></svg>
               <div class="chart-legend" data-rev-legend></div>
@@ -5587,7 +5587,7 @@
                  déjeuner". Kiwi does not measure how long anyone sits down. The
                  dwell times were invented, and they rendered under a KIWI AI
                  badge on a real merchant's home screen until the script caught
-                 up — or permanently, if it didn't. A placeholder may say that it
+                 up · or permanently, if it didn't. A placeholder may say that it
                  is waiting. It may not make up a statistic. -->
             <div class="hai-recs">
               <div class="hai-rec">
@@ -5611,7 +5611,7 @@
         </div>
       </div>
 
-      <!-- ═══ KPI BAND · render target — populated by renderKpiBand() in dateRange.js ═══ -->
+      <!-- ═══ KPI BAND · render target · populated by renderKpiBand() in dateRange.js ═══ -->
       <div class="kpi-band-head">
         <button class="kpi-customize" data-action="customize-kpi" type="button">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h10M4 12h7M4 18h13M16 4v4M11 10v4M19 16v4"/></svg>
@@ -5628,7 +5628,7 @@
       <div class="oppo-band" data-oppo-band></div>
 
       <!-- ═══ HEATMAP (65) + PAYMENT MIX (35) ═══ -->
-      <!-- ═══ MAIN COLUMN + SIDE RAIL — two independent stacks, so every
+      <!-- ═══ MAIN COLUMN + SIDE RAIL · two independent stacks, so every
            card packs right under its column sibling (no row-height holes) ═══ -->
       <div class="dash-cols">
         <div class="dash-col">
@@ -5683,7 +5683,7 @@
               <a href="#" data-action="feed-view-all" style="font-size: 13px; color: var(--atlas); font-weight: 500;" data-i18n="dash.feed.viewAll">Tout voir →</a>
             </div>
           </div>
-          <!-- Live feed body is rendered by dateRange.js renderFeed() —
+          <!-- Live feed body is rendered by dateRange.js renderFeed() ·
                for aujourdhui it pulls from KiwiDemoClock.cumTx, so the
                feed starts empty at the top of each real hour and fills
                in as the simulated day progresses. -->
@@ -5692,7 +5692,7 @@
         </div><!-- /.dash-col · main -->
 
         <!-- Side rail · Mix + Service du soir + Stock à recommander
-             (settle replaces payment-processing — Kiwi 1.0 has no
+             (settle replaces payment-processing · Kiwi 1.0 has no
               processing license · see KIWI_2.0_ROADMAP.md) -->
         <div class="dash-col">
 
@@ -5723,7 +5723,7 @@
             </div>
           </div>
 
-          <!-- Service du soir — uses the .settle dark-atlas card -->
+          <!-- Service du soir · uses the .settle dark-atlas card -->
           <div class="settle" data-evening-card data-venue-types="restaurant">
             <div class="lbl" data-i18n="dash.evening.title">SERVICE DU SOIR · CE SOIR</div>
             <div class="big">47 <span style="font-size:0.42em; opacity: 0.7;" data-i18n="dash.evening.covers">couverts</span></div>
@@ -5763,7 +5763,7 @@
             </div>
           </div>
 
-          <!-- Stock à recommander — utility card -->
+          <!-- Stock à recommander · utility card -->
           <div class="block" data-stock-card data-venue-types="restaurant">
             <div class="block-head" style="margin-bottom: 14px;">
               <div>
@@ -5826,7 +5826,7 @@
         </div><!-- /.dash-col · side -->
       </div><!-- /.dash-cols -->
 
-      <!-- ═══ SECONDARY ANALYSIS — collapsed by default (Codex roast:
+      <!-- ═══ SECONDARY ANALYSIS · collapsed by default (Codex roast:
        *   keep the first screen on the day's decisions, deeper analysis
        *   one click away) ═══ -->
       <div class="dash-more-wrap">
@@ -5990,7 +5990,7 @@
       </div><!-- /.dash-standard -->
 
       <!-- ═══════════════════════════════════════════════════════════════════
-       *  FUSION CONTENT — dedicated portfolio layout (6 sections)
+       *  FUSION CONTENT · dedicated portfolio layout (6 sections)
        *  Hidden by default. Made visible when body.fusion-mode is set, via
        *  the two CSS rules at the end of the fusion-mode block. Populated by
        *  renderFusionView() / renderFusionLiveUpdate() in assets/venues.js.
@@ -6056,7 +6056,7 @@
           <div class="fs-intel" data-fs-intel></div>
         </div>
 
-        <!-- ── Section 5b · Exclusif Ultra — the pillars the 1 499 buys,
+        <!-- ── Section 5b · Exclusif Ultra · the pillars the 1 499 buys,
              lived in-product instead of bullet-pointed: actionable portfolio
              AI, the dedicated account manager, the enterprise API. Painted
              trilingually by renderFusionView(). ──────────────────────── -->
@@ -6074,45 +6074,45 @@
       </section><!-- /.dash-fusion -->
 
       <!-- ═══════════════════════════════════════════════════════════════════
-       *  ÉQUIPE — Staff & HR page. A full dashboard view reachable from the
+       *  ÉQUIPE · Staff & HR page. A full dashboard view reachable from the
        *  sidebar "Équipe" item. Hidden until navigated; shown when
        *  body.page-equipe is set. Single venue → that venue's staff;
        *  fusion mode → all 3 venues with a venue filter. Populated entirely
-       *  by renderEquipe() in assets/venues.js. State is in-memory only —
+       *  by renderEquipe() in assets/venues.js. State is in-memory only ·
        *  every interaction resets on page refresh.
        *  ═══════════════════════════════════════════════════════════════════ -->
       <section class="dash-equipe" data-equipe-root hidden></section>
 
       <!-- ═══════════════════════════════════════════════════════════════════
-       *  MENU INTELLIGENCE — 5-tab menu page reachable from the sidebar
+       *  MENU INTELLIGENCE · 5-tab menu page reachable from the sidebar
        *  "Menu & modificateurs" item. Shown when body.page-menu is set.
        *  Tabs: editor · performance (2×2 matrix) · peak hours · 86 alerts ·
        *  cross-site comparison. Populated by renderMenu() in venues.js.
-       *  In-memory state only — resets on refresh.
+       *  In-memory state only · resets on refresh.
        *  ═══════════════════════════════════════════════════════════════════ -->
       <section class="dash-menu" data-menu-root hidden></section>
       <section class="dash-payroll" data-payroll-root hidden></section>
 
       <!-- ═══════════════════════════════════════════════════════════════════
-       *  STOCK & APPROVISIONNEMENT — full-page inventory + supply page
+       *  STOCK & APPROVISIONNEMENT · full-page inventory + supply page
        *  Tabs: vue d'ensemble · articles & stock · fournisseurs · commandes ·
        *  prévisions IA. Variance reporting (actual vs theoretical usage),
        *  invoice scan, physical count, quick orders, supplier profiles.
        *  Rendered by assets/stock.js; shown on body.page-stock.
-       *  In-memory state only — resets on refresh.
+       *  In-memory state only · resets on refresh.
        *  ═══════════════════════════════════════════════════════════════════ -->
       <section class="dash-stock" data-stock-root hidden></section>
 
       <!-- ═══════════════════════════════════════════════════════════════════
-       *  MARGES & BUDGET — real-time P&L, monthly budget pacing, break-even
+       *  MARGES & BUDGET · real-time P&L, monthly budget pacing, break-even
        *  calculator, profit-per-service breakdown, AI pricing suggestions.
        *  Rendered by assets/finance.js; shown on body.page-finance.
-       *  In-memory state only — resets on refresh.
+       *  In-memory state only · resets on refresh.
        *  ═══════════════════════════════════════════════════════════════════ -->
       <section class="dash-finance" data-finance-root hidden></section>
 
       <!-- ═══════════════════════════════════════════════════════════════════
-       *  CONFORMITÉ & REGISTRES — 4-tab page (Z report, Hygiène/HACCP,
+       *  CONFORMITÉ & REGISTRES · 4-tab page (Z report, Hygiène/HACCP,
        *  Équipements, Documents). Rendered by assets/conformite.js.
        *  Shown when body.page-conformite is set.
        *  ═══════════════════════════════════════════════════════════════════ -->
@@ -6122,7 +6122,7 @@
 
     <!-- Status bar -->
     <div class="status-bar">
-      <!-- Pas de chiffre de disponibilité ici. « 99,99 % » était écrit en dur —
+      <!-- Pas de chiffre de disponibilité ici. « 99,99 % » était écrit en dur ·
            aucune sonde ne le mesurait, et status.html dit le contraire noir sur
            blanc : « Kiwi ne publie pas encore de mesure de disponibilité
            automatisée ». Un commerçant qui compare les deux pages y lit soit une
@@ -6140,16 +6140,16 @@
      must download before the dashboard paints its data. pages.js +
      pages-pro.js (the sidebar sub-page bundles, ~657 KB combined) export
      no globals and only register click-time handlers, so they are moved
-     past dateRange.js and marked fetchpriority="low" — the first screen
+     past dateRange.js and marked fetchpriority="low" · the first screen
      no longer waits on 657 KB it doesn't need yet. (Codex roast P1) -->
 <!-- Client error reporter & observability (fail-soft telemetry) -->
 <script src="assets/err-reporter.js" defer></script>
-<!-- Env gate (demos local-only) — must run before venues.js and the app. -->
+<!-- Env gate (demos local-only) · must run before venues.js and the app. -->
 <script src="assets/kiwi-env.js" defer></script>
 <script src="assets/i18n.js?v=4" defer></script>
 <!-- Les milliers en arabe (assets/rtl-numbers.js). Une espace ordinaire entre
      deux nombres prend la direction du paragraphe : « 31 500 » s'affichait
-     « 500 31 » en RTL. Ne s'exécute que sur dir="rtl" — le français et
+     « 500 31 » en RTL. Ne s'exécute que sur dir="rtl" · le français et
      l'anglais ne changent pas d'un pixel. -->
 <script src="assets/rtl-numbers.js" defer></script>
 <!-- Les métiers (assets/trades.js). AVANT tout le reste : venues.js construit
@@ -6157,25 +6157,25 @@
      d'inscription construisent leur grille pareil. Aucun DOM, ~7 Ko. -->
 <script src="assets/trades.js?v=6" defer></script>
 <script src="assets/lucide.min.js?v=4" defer></script>
-<script src="assets/interactive.js?v=21" defer></script>
-<script src="assets/features.js?v=3" defer></script>
-<script src="assets/invoice.js?v=5" defer></script>
-<script src="assets/invoicing.js?v=7" defer></script>
+<script src="assets/interactive.js?v=22" defer></script>
+<script src="assets/features.js?v=4" defer></script>
+<script src="assets/invoice.js?v=6" defer></script>
+<script src="assets/invoicing.js?v=8" defer></script>
 <script src="assets/depenses.js" defer></script>
 <script src="assets/oppo-cards.js" defer></script>
 <script src="assets/insights.js" defer></script>
 <script src="assets/qrcode.js" defer></script>
 <script src="assets/growth-kit.js" defer></script>
-<script src="assets/order-qr.js?v=2" defer></script>
+<script src="assets/order-qr.js?v=3" defer></script>
 <!-- growth-ordering / growth-qr / growth-giftcards ont été supprimés du dépôt :
-     morts depuis le chantier, aucun point d'entrée sur le tableau de bord. growth-crm reste — le
+     morts depuis le chantier, aucun point d'entrée sur le tableau de bord. growth-crm reste · le
      bouton « Campagne » du vrai Clients & Marketing l'ouvre. -->
 <script src="assets/growth-crm.js" defer></script>
 <script src="assets/dark-fixes.js?v=2" defer></script>
 <script src="assets/polish.js" defer></script>
 <script src="assets/channel-link.js" defer></script>
 <script src="assets/dashboard-extra.js?v=3" defer></script>
-<script src="assets/simple.js?v=2" defer></script>
+<script src="assets/simple.js?v=3" defer></script>
 <script src="assets/ux.js" defer></script>
 <!-- venues.js et dateRange.js portent un ?v= depuis la migration v2. Sans lui,
      l'URL ne change jamais d'un déploiement à l'autre : le service worker sert
@@ -6185,14 +6185,14 @@
      Une URL neuve rate le cache et part au réseau tout de suite. À incrémenter
      à CHAQUE modification de ces deux fichiers, et à recopier à l'identique
      dans la liste de pré-cache de kiwi-sw.js. -->
-<script src="assets/venues.js?v=23" defer></script>
+<script src="assets/venues.js?v=24" defer></script>
 <!-- The pressing till and dashboard share a tenant-scoped operational snapshot. -->
 <script src="assets/pressing-ops.js?v=7" defer></script>
 <script src="assets/pressing-garment-icons.js?v=2" defer></script>
-<script src="assets/pressing-catalog.js?v=6" defer></script>
+<script src="assets/pressing-catalog.js?v=7" defer></script>
 <script src="assets/pressing-dashboard.js?v=14" defer></script>
 <script src="assets/demoClock.js" defer></script>
-<script src="assets/dateRange.js?v=13" defer></script>
+<script src="assets/dateRange.js?v=14" defer></script>
 <script src="assets/mobile-nav.js?v=2" defer></script>
 <script defer src="assets/pwa-update.js?v=359"></script>
 <script defer src="assets/dashboard-pwa.js?v=408"></script>
@@ -6210,13 +6210,13 @@
 <script defer src="assets/identity.js?v=2"></script>
 <script defer src="assets/live-link.js?v=15"></script>
 <script defer src="assets/channel-sales.js?v=3"></script>
-<!-- Operator feature flags — hides modules the operator toggled off for this
+<!-- Operator feature flags · hides modules the operator toggled off for this
      merchant. Fail-safe: no backend ⇒ nothing changes. See ADMIN.md. -->
 <script defer src="assets/merchant-config.js?v=265"></script>
-<!-- Real logged-in identity — swaps the demo owner/business (Rachid · Café Atlas)
+<!-- Real logged-in identity · swaps the demo owner/business (Rachid · Café Atlas)
      for the account's own via /api/me. No-op for the local demo / staff / operator. -->
-  <link rel="stylesheet" href="assets/entitlements.css?v=4">
-  <script defer src="assets/entitlements.js?v=5"></script>
+  <link rel="stylesheet" href="assets/entitlements.css?v=5">
+  <script defer src="assets/entitlements.js?v=6"></script>
 <!-- Auth guard: redirects to the auth page the moment the server signals
      the account has been deleted / suspended, so a revoked merchant never
      gets stranded in a half-broken shell (see assets/auth-guard.js). -->
@@ -6226,29 +6226,29 @@
      code) après 10 min sans geste, ou 3 min d'onglet caché. Voir
      assets/idle-lock.js pour pourquoi ce n'est pas un simple minuteur. -->
 <script defer src="assets/idle-lock.js?v=2"></script>
-<!-- Global operator access — long-press any Kiwi logo to open the console. -->
+<!-- Global operator access · long-press any Kiwi logo to open the console. -->
 <script defer src="assets/operator-access.js"></script>
 <script src="assets/liquid-lens.js" defer></script>
-<script src="assets/onboarding.js?v=2080" defer></script>
+<script src="assets/onboarding.js?v=2081" defer></script>
 <!-- Connect-your-caisse: auto side-panel + 6-digit code that binds a till to this
      store (same-browser today, cross-device once /api/pair/* deploys). Real
      merchants only; the pitch demo never sees it. -->
 <script src="assets/caisse-link.js?v=10" defer></script>
-<!-- Below: user-triggered surfaces — not needed for first paint. -->
+<!-- Below: user-triggered surfaces · not needed for first paint. -->
 <script src="assets/ai-telemetry.js" defer fetchpriority="low"></script>
 <script src="assets/agent-data.js" defer fetchpriority="low"></script>
 <!-- Product truth for Kiwi AI: derives the active merchant's capabilities
      from the same trade/profile/workspace registries as the dashboard. -->
-<script src="assets/agent-features.js?v=3" defer fetchpriority="low"></script>
+<script src="assets/agent-features.js?v=4" defer fetchpriority="low"></script>
 <!-- Verified capability registry + live read-only operational adapters. It is
      loaded before the assistant router; the probed modules may load later and
      are resolved lazily at question time. -->
-<script src="assets/agent-truth.js?v=5" defer fetchpriority="low"></script>
-<script src="assets/agent.js?v=21" defer fetchpriority="low"></script>
-<script src="assets/agent-voice.js?v=4" defer fetchpriority="low"></script>
+<script src="assets/agent-truth.js?v=6" defer fetchpriority="low"></script>
+<script src="assets/agent.js?v=22" defer fetchpriority="low"></script>
+<script src="assets/agent-voice.js?v=5" defer fetchpriority="low"></script>
 <script src="assets/agent-skin.js?v=4" defer fetchpriority="low"></script>
 <script src="assets/accounting.js" defer fetchpriority="low"></script>
-<script src="assets/pages.js?v=2" defer fetchpriority="low"></script>
+<script src="assets/pages.js?v=3" defer fetchpriority="low"></script>
 <!-- Boutique shared product database + real barcode engine (EAN-13 / Code 128).
      Same modules the caisse loads, so inventory stays in sync between the two. -->
 <script src="assets/barcode.js" defer fetchpriority="low"></script>
@@ -6260,13 +6260,13 @@
 <script src="assets/color-palette.js" defer fetchpriority="low"></script>
 <!-- Real thermal printing (shared with the caisse): ESC/POS encoder + bridge
      client, so inventory can print barcode étiquettes to a thermal printer. -->
-<script src="assets/escpos.js?v=4" defer fetchpriority="low"></script>
-<script src="assets/printer-bridge.js?v=6" defer fetchpriority="low"></script>
+<script src="assets/escpos.js?v=5" defer fetchpriority="low"></script>
+<script src="assets/printer-bridge.js?v=7" defer fetchpriority="low"></script>
 <script src="assets/boutique-catalog.js" defer fetchpriority="low"></script>
 <!-- Les rayons tout prêts proposés à un magasin qui démarre (Maison / arts de
      la table). APRÈS boutique-catalog.js, dont il écrit les catégories et les
      articles ; il ne fait rien tant que personne ne l'ouvre. -->
-<script src="assets/store-templates.js?v=1" defer fetchpriority="low"></script>
+<script src="assets/store-templates.js?v=2" defer fetchpriority="low"></script>
 <!-- La copie serveur de tout ce qu'un commerçant configure (carte, équipe,
      fidélité…) : un deuxième appareil ne doit pas trouver un établissement
      vide. AVANT venue-store.js et team.js, qui s'y branchent. -->
@@ -6286,14 +6286,14 @@
 <!-- Heures d'ouverture · LA source unique des horaires d'un établissement, et
      l'écran qui les saisit. Tout ce qui a besoin de savoir si le commerce est
      ouvert (caisse, réservations, Order Pro, page client, rapport journalier,
-     assistant) interroge KiwiHours — aucun de ces modules n'a de réglage à lui.
+     assistant) interroge KiwiHours · aucun de ces modules n'a de réglage à lui.
      Après venue-store.js, dont il tient sa fiche par établissement. -->
 <script src="assets/hours.js" defer fetchpriority="low"></script>
 <script src="assets/morocco-holidays.js?v=1" defer fetchpriority="low"></script>
 <script src="assets/hours-ui.js" defer fetchpriority="low"></script>
 <!-- Le reçu de caisse. receipt.js n'a pas de DOM : il porte la fiche légale de
      l'établissement, la fiche d'apparence et le moteur de rendu (thermique,
-     écran, pilote système). receipt-ui.js est l'éditeur, chargé ici seulement —
+     écran, pilote système). receipt-ui.js est l'éditeur, chargé ici seulement ·
      la caisse LIT le reçu, elle ne le règle pas. -->
 <script src="assets/receipt.js" defer fetchpriority="low"></script>
 <script src="assets/receipt-ui.js" defer fetchpriority="low"></script>
@@ -6301,7 +6301,7 @@
      Le carnet des coûts vit dans son propre document par établissement, jamais
      sur l'article de la carte : GET /api/menu sans ?mine=1 est public (c'est ce
      que sert une puce NFC), donc un coût posé sur l'article partirait sur
-     l'internet ouvert — et la liste blanche de sanitizeMenu l'effacerait de
+     l'internet ouvert · et la liste blanche de sanitizeMenu l'effacerait de
      toute façon à la première synchro. Voir l'en-tête de assets/cost.js.
      APRÈS venue-store.js (il s'y déclare) et receipt.js (il y lit la base TVA
      de l'établissement) ; AVANT menu-catalog.js, qui saisit les coûts, et lu au
@@ -6310,41 +6310,41 @@
 <script src="assets/inventory-consumption.js?v=10" defer fetchpriority="low"></script>
 <script src="assets/procurement.js" defer fetchpriority="low"></script>
 <!-- Fidélité · client book read live into the Clients & Marketing surface (growth-crm.js). -->
-<script src="assets/clients-store.js?v=2" defer fetchpriority="low"></script>
-<!-- Clients · the owner's directory (contacts, fidélité, consent) — sidebar « Clients ». -->
+<script src="assets/clients-store.js?v=3" defer fetchpriority="low"></script>
+<!-- Clients · the owner's directory (contacts, fidélité, consent) · sidebar « Clients ». -->
 <script src="assets/clients-directory.js" defer fetchpriority="low"></script>
-<script src="assets/menu-catalog.js?v=19" defer fetchpriority="low"></script>
+<script src="assets/menu-catalog.js?v=20" defer fetchpriority="low"></script>
 <!-- La voie d'entrée : reprendre le fichier d'articles de l'ancienne caisse au
      lieu de le retaper. Sert l'inventaire boutique ET la carte restaurant, donc
      APRÈS boutique-catalog.js et menu-catalog.js dont il écrit les données. -->
-<script src="assets/catalog-import.js?v=2" defer fetchpriority="low"></script>
+<script src="assets/catalog-import.js?v=3" defer fetchpriority="low"></script>
 <script src="assets/menu-scan.js?v=2" defer fetchpriority="low"></script>
-<script src="assets/salle-scan.js?v=1" defer fetchpriority="low"></script>
+<script src="assets/salle-scan.js?v=2" defer fetchpriority="low"></script>
 <!-- OrderPro · publishes boutique stock + owns media upload (menu-catalog.js
      already publishes the carte), and the NFC-tag panel. AFTER both catalogues. -->
-<script src="assets/orderpro-publish.js?v=4" defer fetchpriority="low"></script>
+<script src="assets/orderpro-publish.js?v=5" defer fetchpriority="low"></script>
 <script src="assets/orderpro-panel.js" defer fetchpriority="low"></script>
 <!-- Floor-plan vocabulary shared with the caisse. MUST load before pages-pro.js,
      which reads its top-level declarations as globals. -->
 <script src="assets/floorplan-core.js?v=2050" defer fetchpriority="low"></script>
-<script src="assets/pages-pro.js?v=2080" defer fetchpriority="low"></script>
+<script src="assets/pages-pro.js?v=2081" defer fetchpriority="low"></script>
 <!-- Restaurant-only menu redesign. Recipes stay in a private document; the
      workspace is loaded last so it can present the new shell over MenuStore. -->
 <script src="assets/restaurant-units.js" defer fetchpriority="low"></script>
 <script src="assets/restaurant-recipes.js?v=5" defer fetchpriority="low"></script>
 <script src="assets/menu-i18n.js?v=4" defer fetchpriority="low"></script>
-<script src="assets/restaurant-menu-workspace.js?v=33" defer fetchpriority="low"></script>
+<script src="assets/restaurant-menu-workspace.js?v=34" defer fetchpriority="low"></script>
 <script src="assets/sold-insights.js?v=2" defer fetchpriority="low"></script>
-<script src="assets/boutique-promos-dashboard.js?v=3" defer fetchpriority="low"></script>
+<script src="assets/boutique-promos-dashboard.js?v=4" defer fetchpriority="low"></script>
 <!-- Rapport journalier : le calcul (partagé avec la caisse) puis la page.
      Après pages-pro.js, dont il emprunte la coquille Kiwi.appPage. -->
 <script src="assets/day-report.js?v=5" defer fetchpriority="low"></script>
-<script src="assets/day-report-export.js?v=4" defer fetchpriority="low"></script>
-<script src="assets/day-report-dash.js?v=7" defer fetchpriority="low"></script>
-<script src="assets/stock.js?v=27" defer fetchpriority="low"></script>
+<script src="assets/day-report-export.js?v=5" defer fetchpriority="low"></script>
+<script src="assets/day-report-dash.js?v=8" defer fetchpriority="low"></script>
+<script src="assets/stock.js?v=28" defer fetchpriority="low"></script>
 <script src="assets/planning-core.js?v=8" defer fetchpriority="low"></script>
 <link rel="stylesheet" href="assets/planning-ui.css?v=10">
-<script src="assets/team.js?v=280" defer fetchpriority="low"></script>
+<script src="assets/team.js?v=281" defer fetchpriority="low"></script>
 <!-- Deterministic, tenant-scoped morning briefing. Loaded after the ledgers it
      will inspect; Phase 1b deliberately ships with no active signal rules. -->
 <script src="assets/cancellation-history.js?v=2" defer fetchpriority="low"></script>
@@ -6356,35 +6356,35 @@
 <!-- Final production boundary for presentation-only actions. -->
 <script src="assets/production-action-guard.js" defer fetchpriority="low"></script>
 <!-- The shared staff-role catalogue: the login gate needs it to tell an owner
-     from a barista whatever wording the role was filed under. Fail-soft — the
+     from a barista whatever wording the role was filed under. Fail-soft · the
      gate falls back to its own small map for the access-critical values. -->
 <script src="assets/staff-roles.js" defer></script>
 <link rel="stylesheet" href="assets/help-centre.css?v=4">
 <script src="assets/help-centre.js?v=4" defer fetchpriority="low"></script>
-<script src="assets/account.js?v=16" defer fetchpriority="low"></script>
+<script src="assets/account.js?v=17" defer fetchpriority="low"></script>
 <script src="assets/design-2026.js" defer fetchpriority="low"></script>
 <script src="assets/design-ios27.js" defer fetchpriority="low"></script>
-<script src="assets/design-vexel-layout.js?v=2078" defer fetchpriority="low"></script>
+<script src="assets/design-vexel-layout.js?v=2079" defer fetchpriority="low"></script>
 <script src="assets/liquid-glass.js" defer fetchpriority="low"></script>
-<!-- Hotel vertical (assets/hotel.js) — powers 0000-onboarded hotels
+<!-- Hotel vertical (assets/hotel.js) · powers 0000-onboarded hotels
      (wizard « Hôtel / Riad », starter pages on the live rack/folio
      engine). No demo hotel venue ships: the Riad Yasmina fixture went
      with dashboard2.html when that fork was deleted. -->
-<script src="assets/hotel.js?v=6" defer fetchpriority="low"></script>
+<script src="assets/hotel.js?v=7" defer fetchpriority="low"></script>
 <!-- Exact-trade operational boards. Loaded after the specialist modules so it
      only replaces the generic placeholders; Accueil and Hotel stay untouched. -->
 <script src="assets/trade-workspace-schema.js?v=4" defer fetchpriority="low"></script>
-<script src="assets/trade-workspaces.js?v=3" defer fetchpriority="low"></script>
+<script src="assets/trade-workspaces.js?v=4" defer fetchpriority="low"></script>
 <!-- Unified reservation truth: real availability, conflict-safe bookings and
      the public booking link. Loaded last so it replaces legacy demo drawers. -->
-<script src="assets/reservations.js?v=9" defer fetchpriority="low"></script>
+<script src="assets/reservations.js?v=10" defer fetchpriority="low"></script>
 <!-- Durable operational workflows. Loaded after every feature module and the
      production honesty guard so its real handlers win over legacy demo toasts. -->
 <script src="assets/operations.js?v=10" defer fetchpriority="low"></script>
-<script src="assets/operations-ui.js?v=11" defer fetchpriority="low"></script>
+<script src="assets/operations-ui.js?v=12" defer fetchpriority="low"></script>
 
 <!-- ═══════════════════════════════════════════════════════════════════
- *  ROLE GUARD — salary figures remain owner-only, while a manager may open
+ *  ROLE GUARD · salary figures remain owner-only, while a manager may open
  *  the safe planning-only rendering of this workspace. nav-finance is
  *  wrapped inside finance.js itself. Defers until Kiwi.handlers is up.
  *  ═══════════════════════════════════════════════════════════════════ -->
@@ -6414,7 +6414,7 @@
   if ((window.__kiwiRole || 'owner') === 'staff') ['nav-equipe', 'nav-conformite'].forEach((key) => wrap(key, ['owner', 'manager']));
 })();
 </script>
-<!-- "Introducing Kiwi Marketing Suite" tease — fired by PIN 0505 after the
+<!-- "Introducing Kiwi Marketing Suite" tease · fired by PIN 0505 after the
      greeting fades. Self-contained overlay + animation, no first-paint cost. -->
 <script src="assets/marketing-suite-tease.js" defer fetchpriority="low"></script>
 
@@ -6432,11 +6432,11 @@
   /* ── Product gate ────────────────────────────────────────────────────
    * The hosted app is a real merchant login, not a demo reel. On any real
    * domain (window.KiwiEnv.demosAllowed === false) the dashboard opens ONLY
-   * for the client's own configured PINs — the legacy demo/magic codes
+   * for the client's own configured PINs · the legacy demo/magic codes
    * (0000 · 0505 · 0909 · 1111) and the no-code "Entrer dans la démo" bypass
    * are all dead, and a wrong code is simply wrong. Demos live on localhost.
    * KiwiEnv is a DEFERRED script, so it may not have run yet when this inline
-   * script initialises — always read it at call time, never capture it now. */
+   * script initialises · always read it at call time, never capture it now. */
   function demosOn() { return !(window.KiwiEnv && window.KiwiEnv.demosAllowed === false); }
   const pinRow   = document.querySelector('[data-kiwi-pin]');
   const helpEl   = document.querySelector('.kiwi-lock-help');
@@ -6449,9 +6449,9 @@
    *
    * assets/staff-roles.js already knows every spelling; the small map is the
    * fallback for the access-critical values if it hasn't loaded. Anything we do
-   * not recognise is STAFF — the safe end. It used to be the opposite: the gate
+   * not recognise is STAFF · the safe end. It used to be the opposite: the gate
    * read `role === 'manager' || role === 'staff' ? role : 'owner'`, so a job
-   * title it had never seen — "Barista" — became a full owner. */
+   * title it had never seen · "Barista" · became a full owner. */
   function accessTier(raw) {
     let id = '';
     try { if (window.KiwiRoles && KiwiRoles.idOf) id = KiwiRoles.idOf(raw) || ''; } catch (_) {}
@@ -6466,7 +6466,7 @@
     return 'staff';
   }
 
-  /* Une vue portée sur un client : ?op=1 / ?merchant= — la God mode de la
+  /* Une vue portée sur un client : ?op=1 / ?merchant= · la God mode de la
    * console. Même définition que merchant-config.js › isScoped() et venues.js.
    * L'URL seule n'autorise rien ; elle dit seulement « ce dashboard n'est pas
    * celui de ce navigateur ». */
@@ -6482,14 +6482,14 @@
    * elle-même : le code qui ouvre le tiroir-caisse était donc lisible dans la
    * mémoire de la page du patron. Le serveur ne les envoie plus (functions/api/
    * config.js), et « ce code est-il le bon ? » part maintenant à
-   * POST /api/pin/verify, qui répond par une identité — voir askServer().
+   * POST /api/pin/verify, qui répond par une identité · voir askServer().
    * `kiwiPins` reste, lui : c'est ce que l'assistant d'installation a écrit dans
    * CE navigateur, et c'est le seul chemin qui survit à une panne réseau.
    *
    * `kiwiPins` belongs to THIS BROWSER, so it must never be consulted on a
    * scoped view. It was: an operator who had set up a shop of their own carried
    * that shop's code into every client they opened, and it unlocked all of them
-   * — one browser's PIN was a passkey to the whole roster, while the client's
+   * · one browser's PIN was a passkey to the whole roster, while the client's
    * real code (filed on the server, under their slug) was refused. */
   function allPins() {
     const out = [], seen = Object.create(null);
@@ -6513,7 +6513,7 @@
     return out;
   }
 
-  /* « Ce compte a-t-il configuré quelqu'un ? » — la question que la porte pose
+  /* « Ce compte a-t-il configuré quelqu'un ? » · la question que la porte pose
    * avant de s'autoriser à refuser quoi que ce soit. Elle se répond en COMPTANT
    * le personnel, ce qui n'a jamais eu besoin des codes eux-mêmes : le serveur
    * envoie toujours la liste des noms et des rôles. Une boutique dont les seuls
@@ -6528,7 +6528,7 @@
   }
 
   /* Le serveur tranche : le code frappé contre le personnel de TOUT le compte
-   * (verifyAccountPin, dérivé de la session — un slug n'est jamais demandé).
+   * (verifyAccountPin, dérivé de la session · un slug n'est jamais demandé).
    *   { name, access }  le code appartient à cette personne
    *   'no'              le serveur a dit non
    *   null              on n'a pas pu savoir (hors ligne, backend absent) */
@@ -6545,7 +6545,7 @@
         const access = accessTier(d.staff.role);
         /* Ceinture et bretelles : verifyAccountPin ne renvoie plus que des rôles
          * habilités au dashboard, mais un déploiement décalé ne doit jamais
-         * rouvrir la porte — le code d'une caissière ouvre la caisse, pas ici. */
+         * rouvrir la porte · le code d'une caissière ouvre la caisse, pas ici. */
         if (access === 'staff') return 'no';
         return { name: String(d.staff.name || ''), access };
       });
@@ -6554,7 +6554,7 @@
 
   /* THE CODES THAT MAY OPEN THIS DASHBOARD.
    *
-   * The dashboard is the owner's surface — the money, the margins, the payroll —
+   * The dashboard is the owner's surface · the money, the margins, the payroll ·
    * and it spans every shop on the account. A staff/cashier code is for the till,
    * never for this dashboard. Only owner/manager-tier roles are returned. */
   function configuredPins() {
@@ -6562,23 +6562,23 @@
   }
   /* Un code de démonstration n'est pas un code de commerçant.
    *
-   * 0505 et 1111 ouvrent des aperçus — le tease « Marketing Suite », la bande
+   * 0505 et 1111 ouvrent des aperçus · le tease « Marketing Suite », la bande
    * Croissance (Commande en ligne, Commander à table, Clients & Marketing,
    * Cartes cadeaux). De la matière de pitch, jamais le produit vendu. Deux
    * chemins les faisaient pourtant surgir chez un vrai client :
    *
-   *   · un compte qui n'a encore aucun code — la porte plus bas ne peut alors
+   *   · un compte qui n'a encore aucun code · la porte plus bas ne peut alors
    *     rien refuser, et 1111 arrivait jusqu'au sésame ;
    *   · un patron qui CHOISIT 1111 comme code d'équipe, ce qui n'a rien
    *     d'exotique : c'est le deuxième code le plus tapé au monde après 0000.
    *     Sa caissière ouvrait une section que personne ne lui a vendue.
    *
    * D'où la règle : un code que le client a lui-même enregistré est une
-   * CONNEXION, jamais un passe-partout — il ne déverrouille plus rien. Et hors
+   * CONNEXION, jamais un passe-partout · il ne déverrouille plus rien. Et hors
    * démo, aucun aperçu ne s'ouvre, quel que soit le code. Même barrière que le
    * bouton « Entrer dans la démo » plus bas, qui passe déjà par demosOn().
    * 0000 n'est pas concerné : la mise en route d'un vrai compte, pas un aperçu. */
-  /* `matched` : quelqu'un — ici ou sur le serveur — a reconnu ce code comme
+  /* `matched` : quelqu'un · ici ou sur le serveur · a reconnu ce code comme
      étant le sien. Un code d'équipe n'est jamais un code d'aperçu, sans quoi la
      caissière qui a choisi 1111 se retrouve en vue patron. */
   function isPreviewCode(code, matched) {
@@ -6608,8 +6608,8 @@
   }
 
   /* « Il n'y a rien à taper. » Quand le compte est configuré (du personnel
-   * existe) mais qu'AUCUN code propriétaire ou manager n'existe nulle part —
-   * le cas du bug où la synchronisation d'équipe effaçait le code du patron —
+   * existe) mais qu'AUCUN code propriétaire ou manager n'existe nulle part ·
+   * le cas du bug où la synchronisation d'équipe effaçait le code du patron ·
    * la porte le dit clairement au lieu de laisser deviner, et indique le
    * chemin : passer par Kiwi pour (re)configurer le code d'accès. */
   function hasDashboardCode() {
@@ -6638,7 +6638,7 @@
 
   /* ── Personalization + a small control surface for the onboarding wizard
    *    (assets/onboarding.js). Once a client has completed setup we know
-   *    their name, business and team codes — so the entry stops being
+   *    their name, business and team codes · so the entry stops being
    *    "Bonjour Rachid · Café Atlas" and becomes theirs. ─────────────────── */
   const store = (k) => { try { return localStorage.getItem(k); } catch (_) { return null; } };
   function setGreetName(name) {
@@ -6683,11 +6683,11 @@
     setGreetName,
   };
 
-  /* No persistence — the lock + greeting flow ALWAYS replays on reload
+  /* No persistence · the lock + greeting flow ALWAYS replays on reload
    * so the demo entry sequence is fully repeatable. The Skip control
    * lets a repeat viewer collapse it without sitting through it again. */
   let unlocked = false; /* the PIN-success choreography has started */
-  let done = false;     /* the intro is resolved — normal end or Skip */
+  let done = false;     /* the intro is resolved · normal end or Skip */
 
   /* Prevent the page from scrolling while the lock is up. */
   document.documentElement.style.overflow = 'hidden';
@@ -6698,13 +6698,13 @@
   setTimeout(refocus, 180);
   lock.addEventListener('click', refocus);
   document.addEventListener('keydown', (e) => {
-    /* While the onboarding wizard is up, the lock is hidden — let it own the keyboard. */
+    /* While the onboarding wizard is up, the lock is hidden · let it own the keyboard. */
     if (lock.style.display === 'none') return;
     /* Escape collapses the intro from either the lock or the greeting. */
     if (e.key === 'Escape') { if (demosOn()) skipToApp(); return; }
     if (!lock.isConnected) return;
     /* Don't steal focus while the user Tabs to / rests on the Skip
-     * button — otherwise it is unreachable from the keyboard. */
+     * button · otherwise it is unreachable from the keyboard. */
     if (e.key === 'Tab' || document.activeElement === skipBtn) return;
     /* Keep keystrokes flowing into the input even if it loses focus. */
     if (document.activeElement !== pinInput) pinInput.focus();
@@ -6727,11 +6727,11 @@
         document.addEventListener('kiwi-account-pins-ready', paintCells, { once: true });
         return;
       }
-      /* Hosted product gate — reject any code that isn't one this account may
+      /* Hosted product gate · reject any code that isn't one this account may
        * open the dashboard with. A fresh, never-configured session (no codes at
        * all) is never rejected: it still has to reach setup. Only an already-
        * configured client typing a non-matching code (e.g. 0000) is turned
-       * away — no demo, no magic codes, no Café Atlas.
+       * away · no demo, no magic codes, no Café Atlas.
        *
        * "Has this account been configured" must be asked of ALL its codes, not
        * of the privileged ones: a shop whose only codes are its cashiers is very
@@ -6766,12 +6766,12 @@
     /* Résolu une fois : ce code ouvre-t-il un aperçu, ou est-ce quelqu'un qui
      * se connecte ? Les deux lectures de 0505 / 1111 doivent tomber d'accord,
      * sans quoi on refuserait l'aperçu tout en traitant le code comme réservé
-     * — et la caissière qui a choisi 1111 se retrouverait en vue patron. */
+     * · et la caissière qui a choisi 1111 se retrouverait en vue patron. */
     const previewCode = isPreviewCode(val, matched);
-    /* PIN 0000 is the doorway to "your own dashboard" — any other
+    /* PIN 0000 is the doorway to "your own dashboard" · any other
      * 4-digit PIN unlocks the Café Atlas demo. */
     if (val === '0000') window.__kiwiOnboard = true;
-    /* PIN 0505 is the "future updates preview" hook — after the
+    /* PIN 0505 is the "future updates preview" hook · after the
      * normal Café-Atlas unlock + Bonjour Rachid greeting finishes,
      * an Apple-keynote-style "Introducing Marketing Suite" reveal
      * plays. See assets/marketing-suite-tease.js. */
@@ -6789,7 +6789,7 @@
     }
     /* Role gate:
      *   0000 / 0505 → reserved (onboard / marketing tease)
-     *   0909        → manager view (restricted sidebar — no Marges,
+     *   0909        → manager view (restricted sidebar · no Marges,
      *                  no Paie; financial visibility hidden)
      *   anything else → owner view (full sidebar)
      * The flag is read by the role-filter script in assets/roleGate.js
@@ -6798,18 +6798,18 @@
     if (val === '0000' || val === '0505') role = 'owner';  /* config / tease both run as owner */
     else if (val === '0909') role = 'manager';
     /* Client-configured team codes (chosen during onboarding) win for any
-     * non-reserved PIN — each maps to the role + person the owner assigned.
+     * non-reserved PIN · each maps to the role + person the owner assigned.
      *
      * « Réservé » se juge désormais à l'usage, pas au chiffre : 0505 et 1111
      * ne le sont que lorsqu'ils viennent réellement d'ouvrir un aperçu. Hors
      * de là ils appartiennent à la personne qui les a enregistrés, et c'est
      * SON rôle qui s'applique. Auparavant un code d'équipe valant 1111 sautait
-     * cette recherche et retombait sur le rôle par défaut — vue patron, marges
+     * cette recherche et retombait sur le rôle par défaut · vue patron, marges
      * et paie comprises, pour une caissière. */
     const reserved = val === '0000' || val === '0909'
       || ((val === '0505' || val === '1111') && previewCode);
     try {
-      /* Celui que la porte vient de reconnaître — code local ou identité que le
+      /* Celui que la porte vient de reconnaître · code local ou identité que le
          serveur a prouvée. accessTier() a déjà ramené l'orthographe du rôle à
          un palier ; pas de seconde lecture ici. */
       if (!reserved && hit) {
@@ -6823,7 +6823,7 @@
     document.body.classList.add('role-' + role);
     if (role === 'staff') { const b = document.querySelector('[data-role-badge] span'); if (b) { b.textContent = 'Vue équipe'; b.removeAttribute('data-i18n'); } }
     /* Every passcode enables the stable Design 2026 "Liquid Glass" skin
-     * (no on-screen toggle — KiwiDesign2026.disable() reverts; persists). */
+     * (no on-screen toggle · KiwiDesign2026.disable() reverts; persists). */
     if (window.KiwiDesign2026) window.KiwiDesign2026.enable();
     else { try { localStorage.setItem('kiwiDesign2026', '1'); } catch (e) {} }
     /* Slight delay so the user sees the 4th cell fill before the celebration. */
@@ -6831,7 +6831,7 @@
   }
 
   /* Pre-hide the dashboard underneath so it can "dive in" after the
-   * greeting finishes — without this you'd see the dashboard already
+   * greeting finishes · without this you'd see the dashboard already
    * fully-formed behind the greeting during the crossfade. */
   const app     = document.querySelector('.app');
   const demoBar = document.querySelector('.demo-bar');
@@ -6840,7 +6840,7 @@
 
   /* Wrap the greeting's <em> in a clip-span and measure its natural
    * width up-front. The reveal becomes a single GPU-friendly max-width
-   * transition — no per-character textContent mutation, no setTimeout
+   * transition · no per-character textContent mutation, no setTimeout
    * drift, perfectly 60 fps fluid. Em stays plain display:inline so its
    * baseline aligns with the surrounding sans correctly. */
   const greetH1 = greet.querySelector('h1');
@@ -6851,10 +6851,10 @@
       /* Measure em's natural inline width. em is plain inline in our
        * CSS so getBoundingClientRect gives the real text width. */
       /* +72px: serif glyphs (esp. terminal "?" / "é") can paint past
-       * their advance-width — "ink overflow". Combined with the 2.5px
+       * their advance-width · "ink overflow". Combined with the 2.5px
        * caret pinned to the right edge, we need generous trailing room
        * so overflow:hidden doesn't shave the tail off. Erring high here
-       * is safe — the extra px is invisible whitespace at sentence end. */
+       * is safe · the extra px is invisible whitespace at sentence end. */
       const naturalW = Math.ceil(greetEm.getBoundingClientRect().width) + 72;
 
       /* Wrap em in the clip-span; the wrapper handles overflow + the
@@ -6891,7 +6891,7 @@
     unlocked = true;
     resetToDashboard();
     if (window.__kiwiOnboard) { unlockOnboard(); return; }
-    /* A REAL onboarded merchant keeps THEIR own venue — they must never be
+    /* A REAL onboarded merchant keeps THEIR own venue · they must never be
      * forced into the Café Atlas restaurant demo (that's the "my boutique shows
      * a restaurant" bug). Only a local demo session that never onboarded, with a
      * leftover custom venue from a previous 0000 poke, is bounced back to the
@@ -6934,7 +6934,7 @@
       }
     }, 1050);
 
-    /* 1950 ms: reveal complete — drop the caret. */
+    /* 1950 ms: reveal complete · drop the caret. */
     setTimeout(() => {
       if (emClip) emClip.classList.remove('is-typing');
     }, 1950);
@@ -6953,14 +6953,14 @@
       }
     }, 2600);
 
-    /* 3200 ms: greeting fully faded — remove from DOM. */
+    /* 3200 ms: greeting fully faded · remove from DOM. */
     setTimeout(() => {
       if (greet.parentNode) greet.remove();
     }, 3200);
   }
 
   /* ── Skip control ──────────────────────────────────────────────────
-   * Repeat viewers — and anyone reloading during a working session —
+   * Repeat viewers · and anyone reloading during a working session ·
    * can collapse the lock + greeting choreography instantly: via the
    * on-screen button, the Escape key, or a click on the greeting once
    * it is showing. The intro still replays on the next fresh load;
@@ -6983,11 +6983,11 @@
       setTimeout(() => { if (greet.parentNode) greet.remove(); }, 280);
     }
   }
-  /* The no-code "Entrer dans la démo" bypass is a demo affordance — kill it on
+  /* The no-code "Entrer dans la démo" bypass is a demo affordance · kill it on
    * the hosted app so the PIN can never be skipped. Gate the click at event
    * time (KiwiEnv is guaranteed ready by then) AND hide the button once the
    * deferred env has loaded. Note: skipToApp() itself stays reachable via the
-   * programmatic reveal() API — the authorised operator/God-mode flow uses it. */
+   * programmatic reveal() API · the authorised operator/God-mode flow uses it. */
   if (skipBtn) skipBtn.addEventListener('click', () => { if (demosOn()) skipToApp(); });
   function hideDemoBypass() { if (!demosOn() && skipBtn) skipBtn.style.display = 'none'; }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', hideDemoBypass);
@@ -7015,7 +7015,7 @@
   const clip = document.querySelector('[data-dash-more-clip]');
   const more = document.querySelector('[data-dash-more]');
   if (!btn || !clip || !more) return;
-  /* The button knows what it guards — fill the count chip from the number
+  /* The button knows what it guards · fill the count chip from the number
    * of analysis cards actually behind the fold. */
   const chip = btn.querySelector('[data-dmt-count]');
   const n = more.querySelectorAll('.block').length;
@@ -7029,7 +7029,7 @@
     if (open) {
       more.removeAttribute('inert');
       /* Layout-measured charts in the revealed blocks recompute AFTER the
-       * unfold settles — firing during it starves the transition (jank). */
+       * unfold settles · firing during it starves the transition (jank). */
       setTimeout(() => window.dispatchEvent(new Event('resize')), 560);
     } else {
       more.setAttribute('inert', '');

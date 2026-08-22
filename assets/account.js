@@ -101,7 +101,7 @@
       .acc-legal .v { font-size:13px; font-weight:500; margin-top:2px; font-variant-numeric:tabular-nums; }
       .acc-add-biz { width:100%; border:1.5px dashed var(--n-300); border-radius:14px; padding:14px; background:transparent; color:var(--atlas); font-weight:600; font-size:13.5px; font-family:var(--sans); cursor:pointer; transition:border-color 140ms, background 140ms; }
       .acc-add-biz:hover { border-color:var(--atlas); background:var(--mint-soft); }
-      /* Les RÉGLAGES d'un établissement — horaires, reçu. Ce sont des écrans à
+      /* Les RÉGLAGES d'un établissement · horaires, reçu. Ce sont des écrans à
          ouvrir, pas des mentions à lire : ils ne peuvent pas ressembler aux
          lignes légales juste au-dessus. Un bouton, une icône, un chevron. */
       .acc-acts { display:grid; gap:9px; margin-top:15px; padding-top:15px; border-top:1px solid var(--n-100); }
@@ -246,7 +246,7 @@
     basic: { name: 'Kiwi Basic', price: '199 MAD' },
     pro: { name: 'Kiwi Pro', price: '399 MAD' },
     ultra: { name: 'Kiwi Ultra', price: '1 499 MAD' },
-    ultimate: { name: 'Kiwi Ultimate', price: '—' },
+    ultimate: { name: 'Kiwi Ultimate', price: '·' },
   };
   const curPlan = () => getSet('plan', 'pro');
 
@@ -269,7 +269,7 @@
      * tout et n'applique rien fait croire au commerçant qu'il a configuré son
      * établissement. Il décide vraiment de quelque chose : les écrans. */
     { k: 'type', kind: 'trade', label: { fr: "Type d'activité", en: 'Activity type', ar: 'نوع النشاط' }, span: true,
-      hint: { fr: 'Détermine les écrans de ce commerce — carte et tables, catalogue et codes-barres, prestations, chambres.', en: 'Decides this business’s screens — menu and tables, catalogue and barcodes, treatments, rooms.', ar: 'يحدّد شاشات هذا النشاط.' } },
+      hint: { fr: 'Détermine les écrans de ce commerce · carte et tables, catalogue et codes-barres, prestations, chambres.', en: 'Decides this business’s screens · menu and tables, catalogue and barcodes, treatments, rooms.', ar: 'يحدّد شاشات هذا النشاط.' } },
     { k: 'address', label: { fr: 'Adresse', en: 'Address', ar: 'العنوان' }, span: true, max: 90 },
     { k: 'city', label: { fr: 'Ville', en: 'City', ar: 'المدينة' }, max: 30 },
     { k: 'phone', label: { fr: 'Téléphone', en: 'Phone', ar: 'الهاتف' }, max: 22, attr: 'type="tel" inputmode="tel" autocomplete="tel"' },
@@ -292,7 +292,7 @@
   const BIZ_SECTIONS = {
     id: { label: { fr: 'Identité', en: 'Identity', ar: 'الهوية' } },
     legal: { label: { fr: 'Mentions légales', en: 'Legal details', ar: 'البيانات القانونية' },
-      why: { fr: "S'impriment sur chaque reçu et chaque facture. Une mention laissée vide n'est pas imprimée du tout — un tiret à la place d'un ICE ressemble à un ICE illisible.", en: 'Printed on every receipt and invoice. A detail left blank is not printed at all — a dash in place of an ICE reads as an unreadable ICE.', ar: 'تُطبع على كل وصل وفاتورة. البيان الفارغ لا يُطبع إطلاقاً.' } },
+      why: { fr: "S'impriment sur chaque reçu et chaque facture. Une mention laissée vide n'est pas imprimée du tout · un tiret à la place d'un ICE ressemble à un ICE illisible.", en: 'Printed on every receipt and invoice. A detail left blank is not printed at all · a dash in place of an ICE reads as an unreadable ICE.', ar: 'تُطبع على كل وصل وفاتورة. البيان الفارغ لا يُطبع إطلاقاً.' } },
   };
   const BIZ_DEFAULTS = [
     { id: 'cafeAtlas', name: 'Café Atlas · Maarif', type: 'Café · Restaurant', city: 'Casablanca', address: '12 Rue Allal Ben Abdellah, Maarif', primary: true, ice: '002593840000047', fiscal: '40512893', rc: 'Casablanca 458921', patente: '31204567', cnss: '8842157', phone: '+212 5 22 39 11 84', hours: '07:00 – 23:00', revenue: 825000, orders: 3240, team: 15 },
@@ -620,7 +620,7 @@
        * ne s'imprime pas du tout — un tiret imprimé à la place d'un ICE
        * ressemble à un ICE illisible.) */
       const todo = pick({ fr: 'à compléter', en: 'to complete', ar: 'ينقص' });
-      const lg = (k, v, required) => `<div><div class="k">${esc(k)}</div><div class="v">${v ? esc(v) : (required ? `<span style="font-size:11.5px; color:var(--n-500); font-style:italic;">${esc(todo)}</span>` : '—')}</div></div>`;
+      const lg = (k, v, required) => `<div><div class="k">${esc(k)}</div><div class="v">${v ? esc(v) : (required ? `<span style="font-size:11.5px; color:var(--n-500); font-style:italic;">${esc(todo)}</span>` : '·')}</div></div>`;
       return `
         <div class="acc-biz">
           <div class="acc-biz-head">
@@ -652,7 +652,7 @@
     };
     const biz = allBiz();
     const subscriptionBlock = isReal()
-      ? `<div class="acc-card span2"><div class="acc-eyebrow">${esc(T.subscription)}</div><div class="acc-row"><span>${esc(T.curPlanLabel)}</span><b>—</b></div><div style="font-size:12.5px;color:var(--n-500);margin-top:8px;">${esc(pick({ fr: 'Données d’abonnement indisponibles.', en: 'Subscription data is unavailable.', ar: 'بيانات الاشتراك غير متاحة.' }))}</div></div>`
+      ? `<div class="acc-card span2"><div class="acc-eyebrow">${esc(T.subscription)}</div><div class="acc-row"><span>${esc(T.curPlanLabel)}</span><b>·</b></div><div style="font-size:12.5px;color:var(--n-500);margin-top:8px;">${esc(pick({ fr: 'Données d’abonnement indisponibles.', en: 'Subscription data is unavailable.', ar: 'بيانات الاشتراك غير متاحة.' }))}</div></div>`
       : `<div class="acc-plan">
           <div>
             <div class="acc-plan-name">${esc(T.curPlanLabel)}</div>
@@ -681,7 +681,7 @@
             <div class="acc-eyebrow" style="display:flex; justify-content:space-between; align-items:center;">${esc(T.personal)}<a data-action="account-edit-profile" style="color:var(--atlas); cursor:pointer; letter-spacing:0;">${esc(T.edit)}</a></div>
             ${row(T.name, esc(ownerName()))}
             ${row(T.email, esc(ownerEmail()))}
-            ${row(T.phone, esc(ownerPhone() || '—'))}
+            ${row(T.phone, esc(ownerPhone() || '·'))}
             ${row(T.language, esc(ownerLang()))}
           </div>
           <div class="acc-card">
@@ -1059,14 +1059,14 @@
         ar: "الميزات الأكثر استخداماً",
       }),
       secUsageSub: pick({
-        fr: "Mesuré sur les données réelles de ce compte — ventes, carte, stock, salle, équipe",
-        en: "Measured on this account's real data — sales, menu, stock, floor, team",
+        fr: "Mesuré sur les données réelles de ce compte · ventes, carte, stock, salle, équipe",
+        en: "Measured on this account's real data · sales, menu, stock, floor, team",
         ar: "مقاس على بيانات هذا الحساب الحقيقية",
       }),
       usageEmpty: pick({
-        fr: "Encore aucune activité mesurée sur cet appareil — encaissez votre première vente et ce panorama s'allume.",
-        en: "No activity measured on this device yet — ring up your first sale and this panorama lights up.",
-        ar: "لا نشاط مقاساً بعد على هذا الجهاز — سجّل أول بيع وستضيء هذه اللوحة.",
+        fr: "Encore aucune activité mesurée sur cet appareil · encaissez votre première vente et ce panorama s'allume.",
+        en: "No activity measured on this device yet · ring up your first sale and this panorama lights up.",
+        ar: "لا نشاط مقاساً بعد على هذا الجهاز · سجّل أول بيع وستضيء هذه اللوحة.",
       }),
       secReco: pick({
         fr: "À exploiter davantage",
@@ -1074,9 +1074,9 @@
         ar: "تستحق استخداماً أكثر",
       }),
       secRecoSub: pick({
-        fr: "Incluses dans votre formule et encore muettes sur ce compte — chacune se lance en un clic",
-        en: "Included in your plan and still silent on this account — each one starts in a click",
-        ar: "مشمولة في باقتك وما تزال صامتة — تبدأ بنقرة واحدة",
+        fr: "Incluses dans votre formule et encore muettes sur ce compte · chacune se lance en un clic",
+        en: "Included in your plan and still silent on this account · each one starts in a click",
+        ar: "مشمولة في باقتك وما تزال صامتة · تبدأ بنقرة واحدة",
       }),
       recoBadge: pick({ fr: "Recommandée", en: "Recommended", ar: "موصى بها" }),
 
@@ -1138,7 +1138,7 @@
         pitch: pick({ fr: 'Additions par table, transferts et vue service en un coup d\u2019œil.', en: 'Per-table checks, transfers and a one-glance service view.', ar: 'حسابات لكل طاولة ونظرة واحدة على الخدمة.' }), cta: null },
       { icon: MI.favorite, name: pick({ fr: 'Clients & Fidélité', en: 'Customers & Loyalty', ar: 'الزبائن والوفاء' }),
         n: clientsCount, unit: pick({ fr: 'fiches clients', en: 'customer profiles', ar: 'ملفات زبائن' }), extra: '',
-        pitch: pick({ fr: 'Reconnaissez vos habitués — un client fidèle revient plus souvent et dépense plus.', en: 'Know your regulars — loyal customers come back more and spend more.', ar: 'تعرّف على زبائنك — الوفي يعود أكثر وينفق أكثر.' }), cta: 'clients-directory', ctaLbl: pick({ fr: 'Créer une fiche', en: 'Add a profile', ar: 'أنشئ ملفاً' }) },
+        pitch: pick({ fr: 'Reconnaissez vos habitués · un client fidèle revient plus souvent et dépense plus.', en: 'Know your regulars · loyal customers come back more and spend more.', ar: 'تعرّف على زبائنك · الوفي يعود أكثر وينفق أكثر.' }), cta: 'clients-directory', ctaLbl: pick({ fr: 'Créer une fiche', en: 'Add a profile', ar: 'أنشئ ملفاً' }) },
       { icon: MI.today, name: pick({ fr: 'Réservations & RDV', en: 'Reservations & Bookings', ar: 'الحجوزات والمواعيد' }),
         n: resaCount, unit: pick({ fr: 'réservations enregistrées', en: 'recorded bookings', ar: 'حجوزات مسجلة' }), extra: '',
         pitch: pick({ fr: 'Remplissez la salle avant l\u2019ouverture et réduisez les no-shows.', en: 'Fill the room before you open and cut the no-shows.', ar: 'املأ الصالة قبل الفتح وقلّل الغيابات.' }), cta: 'nav-reservations', ctaLbl: pick({ fr: 'Ouvrir l\u2019agenda', en: 'Open the book', ar: 'افتح المفكرة' }) },
@@ -1147,7 +1147,7 @@
         pitch: pick({ fr: 'Un code par employé : pointage, rôles et historique nominatif.', en: 'One code per employee: clock-ins, roles and a named history.', ar: 'رمز لكل موظف: حضور وأدوار وسجل بالأسماء.' }), cta: 'team-settings', ctaLbl: pick({ fr: 'Inviter l\u2019équipe', en: 'Invite the team', ar: 'ادعُ الفريق' }) },
       { icon: MI.trending_up, name: pick({ fr: 'Assistant Kiwi AI', en: 'Kiwi AI Assistant', ar: 'مساعد كيوي الذكي' }),
         n: aiCount, unit: pick({ fr: 'échanges avec l\u2019assistant', en: 'assistant conversations', ar: 'محادثات مع المساعد' }), extra: '',
-        pitch: pick({ fr: 'Posez vos questions à la voix ou au clavier — marges, comparaisons, tendances.', en: 'Ask by voice or keyboard — margins, comparisons, trends.', ar: 'اسأل صوتياً أو كتابياً — الهوامش والمقارنات والاتجاهات.' }), cta: 'open-assistant', ctaLbl: pick({ fr: 'Essayer l\u2019assistant', en: 'Try the assistant', ar: 'جرّب المساعد' }) },
+        pitch: pick({ fr: 'Posez vos questions à la voix ou au clavier · marges, comparaisons, tendances.', en: 'Ask by voice or keyboard · margins, comparisons, trends.', ar: 'اسأل صوتياً أو كتابياً · الهوامش والمقارنات والاتجاهات.' }), cta: 'open-assistant', ctaLbl: pick({ fr: 'Essayer l\u2019assistant', en: 'Try the assistant', ar: 'جرّب المساعد' }) },
     ];
     const used = FEATURES.filter((f) => f.n > 0).sort((a, b) => b.n - a.n);
     const reco = FEATURES.filter((f) => !f.n);
@@ -1162,11 +1162,11 @@
       { icon: MI.storefront, name: pv ? pick({ fr: 'Caisse appairée · ', en: 'Paired till · ', ar: 'صندوق مقترن · ' }) + (pv.name || pv.merchant || '') : pick({ fr: 'Caisse', en: 'Till', ar: 'الصندوق' }),
         role: pick({ fr: 'Point d\u2019encaissement comptoir', en: 'Front-desk checkout station', ar: 'نقطة البيع الرئيسية' }),
         ok: !!pv,
-        status: pv ? pick({ fr: 'Reliée à ce compte', en: 'Linked to this account', ar: 'مرتبط بهذا الحساب' }) : pick({ fr: 'Aucune caisse appairée — reliez-la depuis la caisse, menu Appairage', en: 'No till paired yet — pair it from the till', ar: 'لا صندوق مقترناً بعد' }) },
+        status: pv ? pick({ fr: 'Reliée à ce compte', en: 'Linked to this account', ar: 'مرتبط بهذا الحساب' }) : pick({ fr: 'Aucune caisse appairée · reliez-la depuis la caisse, menu Appairage', en: 'No till paired yet · pair it from the till', ar: 'لا صندوق مقترناً بعد' }) },
       { icon: MI.print, name: pick({ fr: 'Imprimante de tickets', en: 'Receipt printer', ar: 'طابعة التذاكر' }),
         role: pick({ fr: 'Thermique 80 mm · tiroir-caisse via port DK', en: '80 mm thermal · cash drawer via DK port', ar: 'حرارية 80 مم · درج النقود عبر منفذ DK' }),
         ok: printerConfigured,
-        status: printerConfigured ? pick({ fr: 'Configurée sur ce poste', en: 'Configured on this station', ar: 'مهيأة على هذا الجهاز' }) : pick({ fr: 'Non configurée — Réglages → Imprimante', en: 'Not configured — Settings → Printer', ar: 'غير مهيأة — الإعدادات ← الطابعة' }) },
+        status: printerConfigured ? pick({ fr: 'Configurée sur ce poste', en: 'Configured on this station', ar: 'مهيأة على هذا الجهاز' }) : pick({ fr: 'Non configurée · Réglages → Imprimante', en: 'Not configured · Settings → Printer', ar: 'غير مهيأة · الإعدادات ← الطابعة' }) },
     ];
 
 
@@ -1238,7 +1238,7 @@
           `).join("") : `<div class="acc-meter-item"><div class="acc-meter-desc" style="margin:0;">${esc(T.usageEmpty)}</div></div>`}
         </div>
 
-        <!-- ═══ RECOMMANDATIONS — fonctionnalités muettes sur ce compte ═══ -->
+        <!-- ═══ RECOMMANDATIONS · fonctionnalités muettes sur ce compte ═══ -->
         ${reco.length ? `
         <div class="acc-section-head">
           <div>

@@ -1408,7 +1408,7 @@
        * displayed activity label, resolved per-language by typeLabelOf(). */
       subtype: cfg.subtype || '',
       profileInfo: cfg.profile || null,
-      siblings: '', status: 'En service', ice: '—',
+      siblings: '', status: 'En service', ice: '·',
       txCount: 0, staffCount: Math.max(0, +cfg.staffCount || 0), custom: true,
       hours: cfg.hours || '', methods: cfg.methods || '', goal: +cfg.goal || 0,
     };
@@ -1663,7 +1663,7 @@
       fullDisplay: location ? `${name} · ${location}` : name,
       type: base,
       subtype: subtypeOf(info.type), profileInfo: null,
-      siblings: '', status: 'En service', ice: '—',
+      siblings: '', status: 'En service', ice: '·',
       txCount: 0, staffCount: 0, custom: true,
       hours: '', methods: '', goal: 0,
     };
@@ -1704,7 +1704,7 @@
       fullDisplay: name,
       type: base,
       subtype: '', profileInfo: null,
-      siblings: '', status: 'En service', ice: '—',
+      siblings: '', status: 'En service', ice: '·',
       txCount: 0, staffCount: 0, custom: true,
       hours: '', methods: '', goal: 0,
     };
@@ -1755,7 +1755,7 @@
         slug,
         type: base,
         subtype: (s && s.type) || '', profileInfo: null,
-        siblings: '', status: 'En service', ice: '—',
+        siblings: '', status: 'En service', ice: '·',
         txCount: 0, staffCount: 0, custom: true,
         hours: '', methods: '', goal: 0,
       };
@@ -2258,7 +2258,7 @@
     const termEl = document.querySelector('a[data-nav="terminaux"] .count');
     if (termEl) termEl.textContent = cv ? '0' : '4';
     const confEl = document.querySelector('a[data-nav="conformite"] .tag');
-    if (confEl) confEl.textContent = cv ? '—' : 'AAA';
+    if (confEl) confEl.textContent = cv ? '·' : 'AAA';
     const staffCountEl = document.querySelector('a[data-nav="equipe"] .count');
     // Sidebar "Équipe" badge → number of staff currently clocked in (present),
     // scoped to the active venue (all 3 venues in fusion). See STAFF below.
@@ -3101,7 +3101,7 @@
               <div class="fs-venue-rev-v" data-fs-venue-revenue>${fusionFmtMad(liveRev)}</div>
               ${v.deltaVsHier != null
                 ? `<div class="fs-venue-rev-d ${isPositive ? 'up' : 'down'}">${fusionFmtPct(v.deltaVsHier)} <span>vs hier</span></div>`
-                : '<div class="fs-venue-rev-d muted">—</div>'}
+                : '<div class="fs-venue-rev-d muted">·</div>'}
             </div>
             <div class="fs-venue-spark-wrap" data-fs-venue-spark>${fusionSparkSvg(sparkTrend, isPositive)}</div>
             <div class="fs-venue-share">
@@ -3877,7 +3877,7 @@
   /* ── Section 2 · Staff table ──────────────────────────────────────────── */
   function eqStatusCell(s) {
     const map = {
-      present: ['s-present', 'En service · depuis ' + (s.clockedInAt || '—')],
+      present: ['s-present', 'En service · depuis ' + (s.clockedInAt || '·')],
       off:     ['s-off', 'Repos'],
       late:    ['s-late', 'En retard · shift à 11:00'],
       absent:  ['s-absent', 'Absent signalé'],
@@ -3907,12 +3907,12 @@
       const salary = eqSalary(s);
       const tipsCell = s.tipsThisMonth > 0
         ? `<div class="eq-tips-cell"><span class="eq-tips-v">${eqMad(s.tipsThisMonth)}</span>${eqSpark3(s.id)}</div>`
-        : '<div class="eq-cell-empty">—</div>';
+        : '<div class="eq-cell-empty">·</div>';
       const perfCell = s.rating != null
         ? `<div class="eq-perf-stars"><span class="st">★</span> ${s.rating.toFixed(1)}</div>
            <div class="eq-perf-sub">${eqMad(s.salesThisMonth)} CA</div>
            <div class="eq-perf-voids${s.voids > 2 ? ' bad' : ''}">${s.voids} annulation${s.voids === 1 ? '' : 's'}</div>`
-        : '<div class="eq-cell-empty">—</div>';
+        : '<div class="eq-cell-empty">·</div>';
       return `
         <tr class="eq-row-in">
           <td>
@@ -3944,7 +3944,7 @@
     const payroll = eqPayroll(all);
     const ratio = isRealMerchant() ? null : payroll / EQ_PORTFOLIO_REV_30D * 100;
     const ratioCls = ratio < 30 ? 'ok' : ratio <= 38 ? 'warn' : 'bad';
-    const ratioStr = ratio == null ? '—' : ratio.toFixed(1).replace('.', ',');
+    const ratioStr = ratio == null ? '·' : ratio.toFixed(1).replace('.', ',');
     const presentAll = all.filter(s => s.status === 'present').length;
 
     return `
@@ -4298,11 +4298,11 @@
       ['Shifts travaillés', s.shiftsThisMonth],
       ['Heures travaillées', eqHours(s.hoursThisMonth)],
       ['Salaire estimé', eqMad(eqSalary(s))],
-      ['Pourboires', s.tipsThisMonth > 0 ? eqMad(s.tipsThisMonth) : '—'],
+      ['Pourboires', s.tipsThisMonth > 0 ? eqMad(s.tipsThisMonth) : '·'],
     ];
     if (revenue) {
       tiles.push(['CA généré', eqMad(s.salesThisMonth)]);
-      tiles.push(['Note moyenne', s.rating != null ? '★ ' + s.rating.toFixed(1) : '—']);
+      tiles.push(['Note moyenne', s.rating != null ? '★ ' + s.rating.toFixed(1) : '·']);
       tiles.push(['Annulations', s.voids]);
     }
     const m = Kiwi.modal({
@@ -5334,7 +5334,7 @@
         <div class="mi-classify-list">${pending.map(it => `
           <div class="mi-classify-row" data-mcr="${it.id}">
             <span class="mi-classify-name">${eqEsc(it.name)}</span>
-            <select class="kf-input" data-mc-sub="${it.id}"><option value="">— Choisir —</option>${opts}</select>
+            <select class="kf-input" data-mc-sub="${it.id}"><option value="">·Choisir·</option>${opts}</select>
           </div>`).join('')}</div>`,
       foot: '<button class="eq-cta-gradient" data-mi-done>Terminé</button>',
     });
@@ -5550,11 +5550,11 @@
           <td><b style="font-weight:600;"><span class="mi-card-emoji" aria-hidden="true">${miItemEmoji(it)}</span>${eqEsc(it.name)}</b></td>
           <td>${(MI_CATS[it.category]||{}).emoji||''} ${miCatLabel(it.category)}${it.subLabel ? ` <span class="mi-list-sub">· ${eqEsc(it.subLabel)}</span>` : ''}</td>
           <td class="mono">${eqFrInt(it.price)} MAD</td>
-          <td class="mono">${it.cost == null ? '—' : eqFrInt(it.cost) + ' MAD'}</td>
-          <td>${pct == null ? '—' : `<span class="mi-card-margin ${miMarginClass(pct)}">${Math.round(pct)} %</span>`}</td>
-          <td class="mono">${it.unitsThisMonth == null ? '—' : eqFrInt(it.unitsThisMonth)}</td>
+          <td class="mono">${it.cost == null ? '·' : eqFrInt(it.cost) + ' MAD'}</td>
+          <td>${pct == null ? '·' : `<span class="mi-card-margin ${miMarginClass(pct)}">${Math.round(pct)} %</span>`}</td>
+          <td class="mono">${it.unitsThisMonth == null ? '·' : eqFrInt(it.unitsThisMonth)}</td>
           <td><button type="button" class="mi-card-station" data-action="mi-reroute-item" data-arg="${it.id}">→ ${eqEsc(it.stationLabel || it.station)}</button></td>
-          <td>${miTagPills(it.tags) || '<span style="color:var(--n-300);">—</span>'}</td>
+          <td>${miTagPills(it.tags) || '<span style="color:var(--n-300);">·</span>'}</td>
           <td>
             <span class="mi-card-acts">
               <button class="mi-ic-btn" data-action="mi-edit-item" data-arg="${it.id}" aria-label="Modifier">${miSvg('edit', 13)}</button>
@@ -5586,7 +5586,7 @@
 
     const qcard = (q, metricHtml, btnLabel, btnCls) => {
       const list = buckets[q].slice().sort((a, b) => miRevenue(b) - miRevenue(a));
-      const top3 = list.slice(0, 3).map(i => i.name).join(' · ') || '—';
+      const top3 = list.slice(0, 3).map(i => i.name).join(' · ') || '·';
       return `
         <div class="mi-qcard ${q}">
           <div class="mi-qcard-h">${MI_QUAD[q].label.toUpperCase()}</div>
@@ -5736,7 +5736,7 @@
         <div class="mi-stats" style="margin-top:14px;">
           <div class="mi-stat"><div class="mi-stat-l">Articles vendus</div><div class="mi-stat-v">${eqFrInt(periodUnits)}</div><div class="mi-stat-s">${MI_PERIODS[p]}</div></div>
           <div class="mi-stat"><div class="mi-stat-l">CA généré</div><div class="mi-stat-v">${eqMad(periodRev)}</div><div class="mi-stat-s">sur la période</div></div>
-          <div class="mi-stat"><div class="mi-stat-l">Top article</div><div class="mi-stat-v" style="font-size:18px;">${eqEsc(top ? top.name : '—')}</div><div class="mi-stat-s">${top ? eqFrInt(top.times[p] || 0) + ' unités' : ''}</div></div>
+          <div class="mi-stat"><div class="mi-stat-l">Top article</div><div class="mi-stat-v" style="font-size:18px;">${eqEsc(top ? top.name : '·')}</div><div class="mi-stat-s">${top ? eqFrInt(top.times[p] || 0) + ' unités' : ''}</div></div>
         </div>
         <div class="mi-section-sub" style="margin-top:18px;">Top 10 articles · ${MI_PERIODS[p]}</div>
         <div class="mi-bars">${barRows}</div>
@@ -5894,13 +5894,13 @@
       { label: 'Eau minérale', ca: find(ca, 'eau minérale'), mm: find(mm, 'eau minérale'),
         ins: 'Écart de 3 MAD. Volume Café Atlas presque 10×, la restauration tire la vente d\'eau.' },
     ];
-    const cell = it => it ? `${eqFrInt(it.price)} MAD · ${eqFrInt(it.unitsThisMonth)} u` : '<span style="color:var(--n-300);">—</span>';
+    const cell = it => it ? `${eqFrInt(it.price)} MAD · ${eqFrInt(it.unitsThisMonth)} u` : '<span style="color:var(--n-300);">·</span>';
     const cmpRows = common.map(c => `
       <tr>
         <td><b style="font-weight:600;">${eqEsc(c.label)}</b></td>
         <td class="mono">${cell(c.ca)}</td>
         <td class="mono">${cell(c.mm)}</td>
-        <td class="mono"><span style="color:var(--n-300);">—</span></td>
+        <td class="mono"><span style="color:var(--n-300);">·</span></td>
         <td class="mi-cmp-ins">${eqEsc(c.ins)}</td>
       </tr>`).join('');
 
@@ -6071,7 +6071,7 @@
     }
     const v = window.KiwiRecipes.varianceByRecipe(it.id);
     const portionCost = window.KiwiRecipes.portionCost(recipe);
-    const fcTh = it.price > 0 ? (portionCost / it.price * 100).toFixed(1) : '—';
+    const fcTh = it.price > 0 ? (portionCost / it.price * 100).toFixed(1) : '·';
     const rows = (v ? v.ingredients : []).map(ing => {
       const qDisp = ing.perPortion < 0.01 ? ing.perPortion.toFixed(4) : ing.perPortion.toFixed(3);
       const sev = miRecSevClass(ing.deltaPct);
@@ -6311,7 +6311,7 @@
     const haveActual    = m && m.fcAct !== null;
     const actualCost    = haveActual ? (m.fcAct / 100) * price : portionCostTh;
     const marginActual  = price - actualCost;
-    const fcShown       = price > 0 ? (actualCost / price * 100).toFixed(1) : '—';
+    const fcShown       = price > 0 ? (actualCost / price * 100).toFixed(1) : '·';
     return `
       <div class="mi-rec-drawer-section">
         <h4>Combien ce plat vous rapporte vraiment</h4>
@@ -7081,7 +7081,7 @@
           </div>
         </div>
         <div class="kf-group">
-          <div class="mi-margin-readout"><span class="l">Marge calculée</span><span class="v" data-mi-margin>—</span></div>
+          <div class="mi-margin-readout"><span class="l">Marge calculée</span><span class="v" data-mi-margin>·</span></div>
         </div>
         <div class="kf-group"><label class="kf-label">Tags</label><div class="mi-chips" data-mi-tags>${MI_TAGS.map(t => chip(t, editing && (item.tags || []).includes(t))).join('')}</div></div>
         <div class="kf-group"><label class="kf-label">Description (optionnel)</label><textarea class="kf-input" data-mif="desc" rows="2" placeholder="Description courte affichée sur le menu…"></textarea></div>
@@ -7104,7 +7104,7 @@
         const pct = (p - c) / p * 100;
         out.textContent = `${Math.round(pct)} % · ${eqFrInt(p - c)} MAD`;
         out.className = 'v ' + miMarginClass(pct);
-      } else { out.textContent = '—'; out.className = 'v'; }
+      } else { out.textContent = '·'; out.className = 'v'; }
     }
     m.el.querySelectorAll('[data-mif="price"],[data-mif="cost"]').forEach(i => i.addEventListener('input', refreshMargin));
     refreshMargin();
@@ -7810,7 +7810,7 @@
           <td class="r mono">${s.contractHours} h/sem</td>
           <td class="r mono">${s.hourlyRate} MAD/h</td>
           <td class="r mono">${payMad(gross)}</td>
-          <td class="r mono">${s.tipsThisMonth ? payMad(s.tipsThisMonth) : '—'}</td>
+          <td class="r mono">${s.tipsThisMonth ? payMad(s.tipsThisMonth) : '·'}</td>
           <td class="r mono pay-total">${payMad(tot)}</td>
         </tr>`;
     }).join('');

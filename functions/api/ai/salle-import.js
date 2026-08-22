@@ -93,7 +93,7 @@ Réponds UNIQUEMENT avec un objet JSON valide, sans texte d'introduction ni comm
   "tables": [ { "shape": "round", "seats": 4, "count": 3 } ]
 }
 Règles :
-- "venue" : "restaurant", "cafe", "snack", "patisserie" ou "rooftop" — le type d'établissement le plus probable.
+- "venue" : "restaurant", "cafe", "snack", "patisserie" ou "rooftop" · le type d'établissement le plus probable.
 - "outdoor" : true si l'espace est en extérieur (terrasse, patio, toit).
 - "counter" : true si un comptoir ou un bar de service est visible.
 - "tables" regroupe les tables par forme et nombre de places : "count" = combien de tables identiques.

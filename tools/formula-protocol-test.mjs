@@ -831,6 +831,8 @@ if (!rmwCardMatch) {
     const esc = (s) => String(s == null ? '' : s);
     const cash = (n) => n + ' MAD';
     const ic = () => '';
+    const stateUi = (_key, fallback) => fallback;
+    let openItemMenu = '';
     ${rmwCardMatch[0]}
     return card;
   `;
@@ -1038,4 +1040,3 @@ console.log(`\n✓ ${passed} controls green (${failures.length} failure(s))`);
 if (failures.length) {
   process.exit(1);
 }
-

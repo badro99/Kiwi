@@ -985,6 +985,20 @@ section('Text contrast (tools/text-contrast-test.js)');
 }
 
 /* ── summary ────────────────────────────────────────────────────────────── */
+section('Politique typographique (tools/type-policy-test.js)');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'type-policy-test.js')], { encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0) {
+    out.split('\n').filter((line) => line.startsWith('✓')).forEach((line) => ok(line.slice(2)));
+  } else {
+    const lines = out.split('\n').filter((line) => line.includes('✗') || /^  \S/.test(line));
+    if (lines.length) lines.slice(0, 80).forEach((line) => fail(line.trim()));
+    else fail(`type-policy-test.js exited ${r.status} — ${out.trim()}`);
+  }
+}
+
 console.log('\n' + '─'.repeat(60));
 if (failures) { console.log(`✗ ${failures} failure(s), ${warnings} warning(s)`); process.exit(1); }
 console.log(`✓ all checks passed (${warnings} warning(s))`);

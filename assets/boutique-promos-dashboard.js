@@ -118,7 +118,7 @@
     }
     if (sc.type === 'avant') return sc.before ? 'Entré en stock avant le ' + fmtDay(new Date(sc.before)) : 'Aucune date choisie';
     if (sc.type === 'stock') return 'Il en reste ' + (sc.max || 0) + ' ou moins';
-    return '—';
+    return '·';
   }
 
   function whenText(p, now) {

@@ -1685,7 +1685,7 @@
         const alg = $('#sp-pk-alg', el).value.trim();
         if (!name) { toast('Le nom est requis pour la fiche'); return; }
         const id = 'cx' + Date.now().toString(36);
-        const c = { id, name, phone: tel || '—', visits: 0, allergies: alg ? [alg] : [], prefs: [], lastDays: 0, lastWhat: '', hist: [], vip: false };
+        const c = { id, name, phone: tel || '·', visits: 0, allergies: alg ? [alg] : [], prefs: [], lastDays: 0, lastWhat: '', hist: [], vip: false };
         CLIENTES.unshift(c); CL[id] = c;
         closeVeil('#sp-client-veil');
         toast(`Fiche créée, ${name}${alg ? ` · allergie notée : ${alg}` : ''}`);

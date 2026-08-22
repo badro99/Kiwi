@@ -439,12 +439,12 @@ ar: {
   /* Scroll-lock the underlying page while any drawer/modal is open.
    * Counter-tracked (window.__kiwiScrollLocks) so nested layers don\'t
    * unlock prematurely. We also pause the body\'s ambient-blob drift
-   * animation — without this, the drawer\'s backdrop-filter:blur has
+   * animation · without this, the drawer\'s backdrop-filter:blur has
    * to re-sample a moving target every frame, which Safari hates.
    *
    * IMPORTANT: lock ONLY <html> (the document scroller). Putting
    * overflow:hidden on <body> turns <body> into a scroll container,
-   * which captures the position:sticky desktop sidebar — it then
+   * which captures the position:sticky desktop sidebar · it then
    * re-anchors to body\'s unscrolled scrollport and renders far up the
    * page (only its lower portion stays visible). Locking the html
    * scroller alone freezes the page without breaking sticky children. */
@@ -609,7 +609,7 @@ ar: {
   .tx-timeline-item .n { font-weight: 500; letter-spacing: -0.005em; }
   .tx-timeline-item .d { font-size: 12.5px; color: var(--n-500); margin-top: 2px; }
 
-  /* ─── Order detail drawer — opened from the live feed ─── */
+  /* ─── Order detail drawer · opened from the live feed ─── */
   .ord-hero { background: linear-gradient(135deg, var(--paper-soft) 0%, #EFEAE0 120%); border-radius: 14px; padding: 20px 22px; margin-bottom: 20px; position: relative; overflow: hidden; }
   .ord-hero::after { content: ""; position: absolute; right: -40px; top: -40px; width: 140px; height: 140px; background: radial-gradient(circle, rgba(11,110,79,0.10) 0%, transparent 65%); pointer-events: none; }
   .ord-hero .row1 { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
@@ -1841,7 +1841,7 @@ ar: {
           </div>
         </div>
         <div class="notif">
-          <!-- receipt_long.svg — un relevé de transactions, pas un rectangle vide -->
+          <!-- receipt_long.svg · un relevé de transactions, pas un rectangle vide -->
           <div class="n-ico"><svg width="16" height="16" viewBox="0 -960 960 960" fill="currentColor"><path d="M240-80q-50 0-85-35t-35-85v-120h120v-560l60 60 60-60 60 60 60-60 60 60 60-60 60 60 60-60 60 60 60-60v680q0 50-35 85t-85 35H240Zm480-80q17 0 28.5-11.5T760-200v-560H320v440h360v120q0 17 11.5 28.5T720-160ZM360-600v-80h240v80H360Zm0 120v-80h240v80H360Zm320-120q-17 0-28.5-11.5T640-640q0-17 11.5-28.5T680-680q17 0 28.5 11.5T720-640q0 17-11.5 28.5T680-600Zm0 120q-17 0-28.5-11.5T640-520q0-17 11.5-28.5T680-560q17 0 28.5 11.5T720-520q0 17-11.5 28.5T680-480ZM240-160h360v-80H200v40q0 17 11.5 28.5T240-160Zm-40 0v-80 80Z"/></svg></div>
           <div class="n-body">
             <div class="n-title">${s.yesterday_tx_title}</div>
@@ -2407,8 +2407,8 @@ ar: {
           <label style="${lbl}">${tr({ fr: "Type d'activité", en: 'Type of business', ar: 'نوع النشاط' })}</label>
           <select class="ev-field" data-ev-trade style="${fld}">${KT.options(curTrade)}</select>
           <p style="font-size:11.5px;color:var(--n-500);margin:6px 0 0;line-height:1.45;">${tr({
-            fr: 'Détermine les écrans de ce commerce — carte et tables, catalogue et codes-barres, prestations, chambres.',
-            en: 'Decides this business’s screens — menu and tables, catalogue and barcodes, treatments, rooms.',
+            fr: 'Détermine les écrans de ce commerce · carte et tables, catalogue et codes-barres, prestations, chambres.',
+            en: 'Decides this business’s screens · menu and tables, catalogue and barcodes, treatments, rooms.',
             ar: 'يحدّد شاشات هذا النشاط.' })}</p>` : ''}
           <label style="${lbl}">Ville</label>
           <input class="ev-field" data-ev-city style="${fld}" maxlength="30"/>
@@ -2875,7 +2875,7 @@ ar: {
           <div class="ord-stats">
             <div class="ord-stat">
               <div class="lbl">${L.table}</div>
-              <div class="val">T${o.table != null ? o.table : '—'}</div>
+              <div class="val">T${o.table != null ? o.table : '·'}</div>
             </div>
             <div class="ord-stat">
               <div class="lbl">${L.covers}</div>
@@ -2884,7 +2884,7 @@ ar: {
             </div>
             <div class="ord-stat">
               <div class="lbl">${L.server}</div>
-              <div class="val" style="font-size:13px;">${o.server || '—'}</div>
+              <div class="val" style="font-size:13px;">${o.server || '·'}</div>
             </div>
             <div class="ord-stat">
               <div class="lbl">${L.duration}</div>
@@ -2893,7 +2893,7 @@ ar: {
           </div>
 
           <div class="ord-section-lbl">${L.items}</div>
-          <div class="ord-items">${itemsHtml || `<div class="ord-item"><div class="qty">—</div><div><div class="nm">—</div></div><div class="ln">—</div></div>`}</div>
+          <div class="ord-items">${itemsHtml || `<div class="ord-item"><div class="qty">·</div><div><div class="nm">·</div></div><div class="ln">·</div></div>`}</div>
 
           <div class="ord-totals">
             <div class="k">${L.subtotal}</div><div class="v">${o.subtotal} MAD</div>
@@ -2913,9 +2913,9 @@ ar: {
 
           <div class="ord-section-lbl">${L.timeline}</div>
           <div class="tx-timeline">
-            <div class="tx-timeline-item"><div class="t">${tOpened}</div><div class="n">${L.opened}</div><div class="d">T${o.table != null ? o.table : '—'} · ${o.covers || 1} ${coversLbl} · ${o.server || '—'}</div></div>
-            <div class="tx-timeline-item"><div class="t">${tSent}</div><div class="n">${L.sent}</div><div class="d">${(o.items || []).map(i => `×${i.qty} ${i.name}`).join(' · ') || '—'}</div></div>
-            <div class="tx-timeline-item"><div class="t">${tReady}</div><div class="n">${L.ready}</div><div class="d">${L.server === 'Server' ? 'Picked up by' : (L.server === 'النادل' ? 'استلمه' : 'Récupéré par')} ${o.server || '—'}</div></div>
+            <div class="tx-timeline-item"><div class="t">${tOpened}</div><div class="n">${L.opened}</div><div class="d">T${o.table != null ? o.table : '·'} · ${o.covers || 1} ${coversLbl} · ${o.server || '·'}</div></div>
+            <div class="tx-timeline-item"><div class="t">${tSent}</div><div class="n">${L.sent}</div><div class="d">${(o.items || []).map(i => `×${i.qty} ${i.name}`).join(' · ') || '·'}</div></div>
+            <div class="tx-timeline-item"><div class="t">${tReady}</div><div class="n">${L.ready}</div><div class="d">${L.server === 'Server' ? 'Picked up by' : (L.server === 'النادل' ? 'استلمه' : 'Récupéré par')} ${o.server || '·'}</div></div>
             <div class="tx-timeline-item last"><div class="t">${tPaid}</div><div class="n">${L.paid} · ${L.closed}</div><div class="d">${o.primary} · ${o.sub || ''}</div></div>
           </div>
         `,
@@ -3222,7 +3222,7 @@ ar: {
       // Generic detail view for personalised / derived KPIs — reads the
       // clicked tile\'s live value + delta so it\'s never an empty drawer.
       const label = el?.querySelector('.l span, .l, .lbl')?.textContent?.trim() || 'Indicateur';
-      const value = el?.querySelector('.v')?.textContent?.trim() || '—';
+      const value = el?.querySelector('.v')?.textContent?.trim() || '·';
       const delta = el?.querySelector('.d')?.textContent?.trim() || '';
       const desc = KPI_DESC[arg] || (CP_STR[kiwiLang()] || CP_STR.fr).kpiDefaultDesc;
       const long = KPI_LONG[arg] || (CP_STR[kiwiLang()] || CP_STR.fr).kpiDefaultLong;
@@ -3383,7 +3383,7 @@ ar: {
   /* ─── Demo data ─── */
   const txData = {
     'tx1': { id: 'TXN-28410398281', method: 'Visa •• 4291', amount: '240,00 MAD', status: 'Réglé · en attente de règlement', date: '24 avril 2026 14:32', network: 'Visa', customer: 'Karim B. (régulier)', table: 'T4', cart: 'Tajine kefta · Thé menthe × 2', tip: '24,00 MAD (10%)', fee: 'Inclus · abonnement Kiwi', net: '240,00 MAD', card: 'Visa •• 4291', issuer: 'Attijariwafa Bank', country: '🇲🇦 Maroc', staff: 'Fatima Khalki' },
-    'default': { id: 'TXN-0000', method: 'Paiement carte', amount: '180,00 MAD', status: 'Réglé', date: '24 avril 2026', network: 'Carte', customer: 'Client', table: '—', cart: '—', tip: '—', fee: 'Inclus · abonnement Kiwi', net: '180,00 MAD', card: '••••', issuer: '—', country: '—', staff: '—' }
+    'default': { id: 'TXN-0000', method: 'Paiement carte', amount: '180,00 MAD', status: 'Réglé', date: '24 avril 2026', network: 'Carte', customer: 'Client', table: '·', cart: '·', tip: '·', fee: 'Inclus · abonnement Kiwi', net: '180,00 MAD', card: '••••', issuer: '·', country: '·', staff: '·' }
   };
 
   /* ─── KPI detail drawer content (one rich view per metric) ─── */
@@ -4056,7 +4056,7 @@ ar: {
         ${kpiSection((KPI_DATA_STR[kiwiLang()] || KPI_DATA_STR.fr).ratio_section_hidden_cost, [
           [(KPI_DATA_STR[kiwiLang()] || KPI_DATA_STR.fr).ratio_cost_bank, (KPI_DATA_STR[kiwiLang()] || KPI_DATA_STR.fr).ratio_cost_bank_sub, '180 MAD/sem'],
           [(KPI_DATA_STR[kiwiLang()] || KPI_DATA_STR.fr).ratio_cost_errors, (KPI_DATA_STR[kiwiLang()] || KPI_DATA_STR.fr).ratio_cost_errors_sub, '~ 31 MAD/jour'],
-          [(KPI_DATA_STR[kiwiLang()] || KPI_DATA_STR.fr).ratio_cost_risk, (KPI_DATA_STR[kiwiLang()] || KPI_DATA_STR.fr).ratio_cost_risk_sub, '—'],
+          [(KPI_DATA_STR[kiwiLang()] || KPI_DATA_STR.fr).ratio_cost_risk, (KPI_DATA_STR[kiwiLang()] || KPI_DATA_STR.fr).ratio_cost_risk_sub, '·'],
           [(KPI_DATA_STR[kiwiLang()] || KPI_DATA_STR.fr).ratio_cost_total, (KPI_DATA_STR[kiwiLang()] || KPI_DATA_STR.fr).ratio_cost_total_sub, '≈ 21 000 MAD'],
         ].map(([n, sub, v]) => kpiRow(n, v, sub)).join(''))}
         ${kpiInsight((KPI_DATA_STR[kiwiLang()] || KPI_DATA_STR.fr).ratio_insight)}

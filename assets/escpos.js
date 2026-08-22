@@ -29,7 +29,7 @@
     '€': 0x80, '‚': 0x82, 'ƒ': 0x83, '„': 0x84, '…': 0x85,
     '†': 0x86, '‡': 0x87, 'ˆ': 0x88, '‰': 0x89, 'Š': 0x8A,
     '‹': 0x8B, 'Œ': 0x8C, 'Ž': 0x8E, '‘': 0x91, '’': 0x92,
-    '“': 0x93, '”': 0x94, '•': 0x95, '–': 0x96, '—': 0x97,
+    '“': 0x93, '”': 0x94, '•': 0x95, '–': 0x96, '·': 0x97,
     '˜': 0x98, '™': 0x99, 'š': 0x9A, '›': 0x9B, 'œ': 0x9C,
     'ž': 0x9E, 'Ÿ': 0x9F,
   };
@@ -237,7 +237,7 @@
     if (o.dateLabel) b.line(fit(o.dateLabel, paper));
     /* Une réimpression doit se voir : deux exemplaires du même Z qui circulent
        sans le dire, c'est une pièce comptable qu'on ne peut plus rapprocher. */
-    if (o.copy) b.bold(true).line('— ' + o.copy + ' —').bold(false);
+    if (o.copy) b.bold(true).line('·' + o.copy + '·').bold(false);
     b.align('left').line(rule(paper));
 
     if (o.openedLabel) b.line(row('Ouverture', o.openedLabel, paper));

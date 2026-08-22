@@ -277,12 +277,12 @@
     filter: blur(0);
   }
   .kw-msu__title-word--accent {
-    font-family: 'Instrument Serif', 'Inter Tight', serif;
+    font-family:"Inter Tight", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
     color: #7DF2B0;
     text-shadow: 0 0 28px rgba(125,242,176,0.3);
     letter-spacing: -0.02em;
   }
-  /* Shrunken state — title slides up + scales down ahead of the verb showcase. */
+  /* Shrunken state · title slides up + scales down ahead of the verb showcase. */
   .kw-msu__title.is-shrunk {
     transform: translateY(-26vh) scale(0.6);
     opacity: 0.78;
@@ -318,7 +318,7 @@
     text-align: right;
     /* Same family as the tail so verb + tail read as one sentence,
        same baseline math, no visual disconnect. Weight 500 + mint
-       gives the emphasis without the Instrument Serif italic feel. */
+       gives the emphasis without the Inter Tight 600 feel. */
     font-family: 'Inter Tight', system-ui, sans-serif;
     font-weight: 500;
     font-style: normal;
@@ -328,7 +328,7 @@
     line-height: 1;
     vertical-align: baseline;
     /* Phantom glyph (::before, visibility:hidden) gives the container a real
-       text line-box and baseline — without it, absolute-positioned tokens
+       text line-box and baseline · without it, absolute-positioned tokens
        leave the container baseline-less and the verb drops below the tail. */
     transition: width 320ms cubic-bezier(0.32, 0.72, 0, 1);
     will-change: width;
@@ -392,13 +392,13 @@
     opacity: 1;
     transform: none;
   }
-  /* Off-screen measuring span — needs to compute true natural width. */
+  /* Off-screen measuring span · needs to compute true natural width. */
   .kw-msu__measure {
     position: absolute;
     visibility: hidden;
     pointer-events: none;
     white-space: nowrap;
-    font-family: 'Instrument Serif', 'Inter Tight', serif;
+    font-family:"Inter Tight", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
     letter-spacing: -0.02em;
     left: -9999px; top: -9999px;
   }

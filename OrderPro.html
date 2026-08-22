@@ -28,7 +28,7 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Inter+Tight:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Inter+Tight:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 
   <!-- Copie locale : ces pages tiraient lucide@latest depuis unpkg à chaque
        chargement. Non épinglé = ce qu'unpkg publie demain s'exécute sur le
@@ -62,7 +62,7 @@
       --line-soft:    #EEEEEE;
 
       --sans:  "Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-      --serif: "Instrument Serif", "Times New Roman", serif;
+      --serif: "Inter Tight", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
       --mono:  "JetBrains Mono", "SF Mono", ui-monospace, monospace;
       --arabic: "IBM Plex Sans Arabic", "Inter Tight", -apple-system, system-ui, sans-serif;
 
@@ -3014,7 +3014,7 @@ em, i, cite, dfn, var { font-style: normal; }
       <div class="table-mid">
         <p class="table-ask"><span data-i18n="table_ask_pre">Quel est votre</span> <em data-i18n="table_ask_em">numéro de table</em><span data-i18n="table_ask_post"> ?</span></p>
         <div class="table-num-display" id="table-display">
-          <span class="table-digit is-placeholder">—</span>
+          <span class="table-digit is-placeholder"></span>
         </div>
         <p class="table-hint" data-i18n="table_hint">Le numéro est gravé sur le bois de la table</p>
       </div>
@@ -3094,10 +3094,10 @@ em, i, cite, dfn, var { font-style: normal; }
           </svg>
         </div>
         <h1 class="success-title"><span data-i18n="success_title_a">Commande envoyée</span><br/><em data-i18n="success_title_em">en cuisine.</em></h1>
-        <div class="success-eta"><span data-i18n="success_eta_pre">Table</span> <span id="success-table">—</span> <span data-i18n="success_eta_mid">· prêt dans</span> <em data-i18n="success_eta_em">4–6 min</em></div>
+        <div class="success-eta"><span data-i18n="success_eta_pre">Table</span> <span id="success-table"></span> <span data-i18n="success_eta_mid">· prêt dans</span> <em data-i18n="success_eta_em">4–6 min</em></div>
         <div class="success-recap">
           <div class="recap-title" data-i18n="success_recap">Votre commande</div>
-          <div id="success-items">—</div>
+          <div id="success-items"></div>
         </div>
       </div>
       <div class="success-bottom">
@@ -3113,7 +3113,7 @@ em, i, cite, dfn, var { font-style: normal; }
     <section class="screen screen-cashier" id="screen-cashier">
       <div class="cashier-top">
         <div class="brand-mark">Établissement<i aria-hidden="true"></i></div>
-        <div class="cashier-eyebrow" data-i18n="cashier_eyebrow">— à emporter</div>
+        <div class="cashier-eyebrow" data-i18n="cashier_eyebrow">à emporter</div>
       </div>
 
       <div class="cashier-mid">
@@ -3122,7 +3122,7 @@ em, i, cite, dfn, var { font-style: normal; }
 
         <div class="cashier-recap">
           <div class="cashier-recap-title" data-i18n="cashier_recap">Votre commande</div>
-          <div class="cashier-recap-items" id="cashier-items">—</div>
+          <div class="cashier-recap-items" id="cashier-items"></div>
           <div class="cashier-recap-total">
             <span data-i18n="cashier_total">Total</span>
             <strong id="cashier-total">0 MAD</strong>
@@ -3143,7 +3143,7 @@ em, i, cite, dfn, var { font-style: normal; }
     <section class="screen screen-preparing" id="screen-preparing">
       <div class="prep-top">
         <div class="brand-mark">Établissement<i aria-hidden="true"></i></div>
-        <div class="cashier-eyebrow"><span data-i18n="prep_eyebrow_pre">— commande #</span><span id="prep-number">000</span></div>
+        <div class="cashier-eyebrow"><span data-i18n="prep_eyebrow_pre">commande #</span><span id="prep-number">000</span></div>
       </div>
 
       <div class="prep-mid">
@@ -3219,7 +3219,7 @@ em, i, cite, dfn, var { font-style: normal; }
          or for an employee on the floor. Buying still happens at the till. -->
     <section class="screen screen-boutique" id="screen-boutique">
       <div class="bq-top">
-        <div class="bq-store" id="bq-store">—</div>
+        <div class="bq-store" id="bq-store"></div>
         <div class="bq-sub" id="bq-sub" data-i18n="bq_title">Nos produits</div>
         <div class="bq-tools">
           <input class="bq-search" id="bq-search" type="search" autocomplete="off"
@@ -3240,8 +3240,8 @@ em, i, cite, dfn, var { font-style: normal; }
       <div class="bq-panel">
         <div class="bq-grip"></div>
         <div class="bq-d-hero" id="bq-d-hero" hidden></div>
-        <div class="bq-d-name" id="bq-d-name">—</div>
-        <div class="bq-d-price" id="bq-d-price">—</div>
+        <div class="bq-d-name" id="bq-d-name"></div>
+        <div class="bq-d-price" id="bq-d-price"></div>
         <div id="bq-d-body"></div>
         <button class="bq-close" type="button" data-close-bq data-i18n="bq_close">Fermer</button>
       </div>
@@ -3283,9 +3283,9 @@ em, i, cite, dfn, var { font-style: normal; }
             <i data-lucide="coffee"></i>
           </div>
           <div class="custom-info">
-            <div class="custom-name" id="custom-name">—</div>
-            <div class="custom-desc" id="custom-desc">—</div>
-            <div class="custom-base" id="custom-base">— MAD</div>
+            <div class="custom-name" id="custom-name"></div>
+            <div class="custom-desc" id="custom-desc"></div>
+            <div class="custom-base" id="custom-base">MAD</div>
           </div>
         </div>
 
@@ -3322,7 +3322,7 @@ em, i, cite, dfn, var { font-style: normal; }
       <div class="bill-sheet-panel">
         <div class="cart-handle" data-close-bill></div>
         <h2 class="bill-title" data-i18n="bill_title">Votre addition</h2>
-        <div class="bill-subtitle" id="bill-subtitle">Table <span id="bill-table">—</span></div>
+        <div class="bill-subtitle" id="bill-subtitle">Table <span id="bill-table"></span></div>
 
         <ul class="bill-items" id="bill-items">
           <li class="bill-empty" data-i18n="bill_empty">Aucune commande passée, ajoutez d'abord au menu.</li>
@@ -3335,7 +3335,7 @@ em, i, cite, dfn, var { font-style: normal; }
 
         <!-- Tip section — gamified -->
         <div class="tip-section">
-          <span class="tip-eyebrow" data-i18n="tip_eyebrow">— Pourboire pour l'équipe</span>
+          <span class="tip-eyebrow" data-i18n="tip_eyebrow">Pourboire pour l'équipe</span>
           <div class="tip-jar-wrap" id="tip-jar-wrap">
             <span class="tip-jar-sparkle sp-1" aria-hidden="true"></span>
             <span class="tip-jar-sparkle sp-2" aria-hidden="true"></span>
@@ -3728,11 +3728,11 @@ em, i, cite, dfn, var { font-style: normal; }
         boot_retry: "Réessayer",
         // ── order relay ──
         order_sending: "Envoi…",
-        order_failed: "Commande non envoyée — réessayez",
-        order_offline: "Pas de connexion — commande non envoyée",
+        order_failed: "Commande non envoyée · réessayez",
+        order_offline: "Pas de connexion · commande non envoyée",
         boot_closed_title: "Service fermé",
         boot_closed_body: "L'établissement ne prend pas de commandes en ce moment. Repassez pendant le service.",
-        order_closed: "Le service vient de fermer — commande non envoyée",
+        order_closed: "Le service vient de fermer · commande non envoyée",
         order_refused: "Le comptoir n'a pas pu prendre cette commande",
         order_served: "Servie · bon appétit",
         order_gone: "Plus disponible : {n}",
@@ -3760,8 +3760,8 @@ em, i, cite, dfn, var { font-style: normal; }
         bq_empty: "Aucun produit publié pour le moment.",
         bq_noresult: "Aucun produit ne correspond.",
         bq_close: "Fermer",
-        bq_camera_denied: "Caméra refusée — saisissez le code à la main.",
-        bq_camera_none: "Scan caméra indisponible sur cet appareil — saisissez le code.",
+        bq_camera_denied: "Caméra refusée · saisissez le code à la main.",
+        bq_camera_none: "Scan caméra indisponible sur cet appareil · saisissez le code.",
         bq_foot: "Consultation uniquement · passez en caisse pour acheter",
       },
       en: {
@@ -3900,11 +3900,11 @@ em, i, cite, dfn, var { font-style: normal; }
         boot_empty_body: "The venue hasn't published its menu yet. Please ask at the counter.",
         boot_retry: "Try again",
         order_sending: "Sending…",
-        order_failed: "Order not sent — try again",
-        order_offline: "No connection — order not sent",
+        order_failed: "Order not sent · try again",
+        order_offline: "No connection · order not sent",
         boot_closed_title: "Closed",
         boot_closed_body: "This venue isn't taking orders right now. Come back during service.",
-        order_closed: "Service just closed — order not sent",
+        order_closed: "Service just closed · order not sent",
         order_refused: "The counter couldn't take this order",
         order_served: "Served · enjoy",
         order_gone: "No longer available: {n}",
@@ -3931,8 +3931,8 @@ em, i, cite, dfn, var { font-style: normal; }
         bq_empty: "No products published yet.",
         bq_noresult: "No product matches.",
         bq_close: "Close",
-        bq_camera_denied: "Camera denied — type the code instead.",
-        bq_camera_none: "Camera scanning isn't available on this device — type the code.",
+        bq_camera_denied: "Camera denied · type the code instead.",
+        bq_camera_none: "Camera scanning isn't available on this device · type the code.",
         bq_foot: "Browsing only · pay at the till to buy",
       },
       ar: {
@@ -4071,11 +4071,11 @@ em, i, cite, dfn, var { font-style: normal; }
         boot_empty_body: "المحل مازال مانشرش القائمة ديالو. سول فالكونطوار.",
         boot_retry: "عاود جرّب",
         order_sending: "كنصيفطو…",
-        order_failed: "الطلب ماتصيفطش — عاود جرّب",
-        order_offline: "ماكاينش كونيكسيون — الطلب ماتصيفطش",
+        order_failed: "الطلب ماتصيفطش · عاود جرّب",
+        order_offline: "ماكاينش كونيكسيون · الطلب ماتصيفطش",
         boot_closed_title: "الخدمة محلولة ماشي دابا",
         boot_closed_body: "هاد المحل ماكيديش الطلبات دابا. رجع فوقت الخدمة.",
-        order_closed: "الخدمة تسدّات — الطلب ماتصيفطش",
+        order_closed: "الخدمة تسدّات · الطلب ماتصيفطش",
         order_refused: "الكونطوار ماقدرش ياخد هاد الطلب",
         order_served: "تقدّم · بالصحة",
         order_gone: "ماكاينش: {n}",
@@ -4102,8 +4102,8 @@ em, i, cite, dfn, var { font-style: normal; }
         bq_empty: "حتى منتوج مانشر دابا.",
         bq_noresult: "حتى منتوج ماتوافق.",
         bq_close: "سد",
-        bq_camera_denied: "الكاميرا مرفوضة — دخّل الكود بيدك.",
-        bq_camera_none: "السكان بالكاميرا ماكاينش فهاد الجهاز — دخّل الكود.",
+        bq_camera_denied: "الكاميرا مرفوضة · دخّل الكود بيدك.",
+        bq_camera_none: "السكان بالكاميرا ماكاينش فهاد الجهاز · دخّل الكود.",
         bq_foot: "غير للتصفح · خلّص فالكيس باش تشري",
       },
     };
@@ -4284,7 +4284,7 @@ em, i, cite, dfn, var { font-style: normal; }
     function renderTableDisplay() {
       const disp = $('#table-display');
       if (!tableNumber) {
-        disp.innerHTML = `<span class="table-digit is-placeholder">—</span>`;
+        disp.innerHTML = `<span class="table-digit is-placeholder">·</span>`;
         return;
       }
       disp.innerHTML = tableNumber.split('').map(d => `<span class="table-digit">${d}</span>`).join('');
@@ -5168,7 +5168,7 @@ em, i, cite, dfn, var { font-style: normal; }
         $('#cashier-number-digits').textContent = orderNumber;
         $('#prep-number').textContent = orderNumber;
         $('#ready-number').textContent = orderNumber;
-        $('#cashier-items').textContent = summary || '—';
+        $('#cashier-items').textContent = summary || '·';
         $('#cashier-total').textContent = `${shownTotal} ${cur()}`;
         gotoScreen('screen-cashier');
       } else {
@@ -5176,7 +5176,7 @@ em, i, cite, dfn, var { font-style: normal; }
         for (const l of linesCopy) sentLines.push(l);
         sessionTotal += shownTotal;
         $('#success-table').textContent = tableNumber;
-        $('#success-items').textContent = summary || '—';
+        $('#success-items').textContent = summary || '·';
         gotoScreen('screen-success');
         watchTableOrder();
       }

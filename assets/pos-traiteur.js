@@ -1166,20 +1166,20 @@
         + (ev.extras.length ? `\nExtras : ${ev.extras.map((id) => EXTRA[id].label.toLowerCase()).join(', ')}.` : '')
         + `\nTotal : ${fmtMAD(total)}, 30 % à la confirmation (${fmtMAD(t1)}), 50 % à J-7 (${fmtMAD(t2)}), solde le jour J.`
         + `\nRépondez OUI pour confirmer, la date reste bloquée 7 jours.`
-        + `\n— ${pvName('Traiteur Dar Zellij') || 'Traiteur'} · envoyé via Kiwi`;
+        + `\n·${pvName('Traiteur Dar Zellij') || 'Traiteur'} · envoyé via Kiwi`;
     }
     if (kind === 'relance') {
       return `Bonjour ${first}, petit rappel de ${pvName('Dar Zellij') || 'le traiteur'} : votre devis ${ev.devisRef}`
         + ` (${TYPES[ev.type].label.toLowerCase()} · ${ev.guests} invités · ${fmtDay(ev.date)}) est toujours réservé.`
         + `\nLa date du ${fmtDay(ev.date)} part vite en saison, répondez OUI pour la bloquer définitivement.`
-        + `\n— ${pvName('Traiteur Dar Zellij') || 'Traiteur'} · envoyé via Kiwi`;
+        + `\n·${pvName('Traiteur Dar Zellij') || 'Traiteur'} · envoyé via Kiwi`;
     }
     if (kind === 'route') {
       const arr = new Date(ev.date.getTime() - 45 * 60000);
       return `Bonjour ${first}, l’équipe ${pvName('Dar Zellij') || 'le traiteur'} est en route pour ${ev.lieu}.`
         + `\nArrivée prévue vers ${timeOf(arr)}, installation puis service à ${timeOf(ev.date)}.`
         + `\nTout est chargé et contrôlé. À tout de suite !`
-        + `\n— ${pvName('Traiteur Dar Zellij') || 'Traiteur'} · envoyé via Kiwi`;
+        + `\n·${pvName('Traiteur Dar Zellij') || 'Traiteur'} · envoyé via Kiwi`;
     }
     /* rappel d'échéance */
     const t = nextTranche(ev);
@@ -1187,7 +1187,7 @@
       + `\nla tranche « ${t ? t.label : 'solde'} » de ${t ? fmtMAD(t.amount) : ''} arrive à échéance.`
       + `\nVous pouvez régler en espèces au labo, par carte ou par virement.`
       + `\nChoukran, l’lah ikhellik.`
-      + `\n— ${pvName('Traiteur Dar Zellij') || 'Traiteur'} · envoyé via Kiwi`;
+      + `\n·${pvName('Traiteur Dar Zellij') || 'Traiteur'} · envoyé via Kiwi`;
   }
 
   function openWa(ev, kind) {
@@ -1313,7 +1313,7 @@
     return `<div class="tr-doc">${head}
       <div class="c b">DEVIS · ${esc(ev.devisRef)}</div>
       <hr>
-      <div class="row"><span>Client</span><span class="b">${esc(ev.client || '—')}</span></div>
+      <div class="row"><span>Client</span><span class="b">${esc(ev.client || '·')}</span></div>
       ${ev.phone ? `<div class="row"><span>Tél</span><span>${esc(ev.phone)}</span></div>` : ''}
       <div class="row"><span>Événement</span><span>${esc(TYPES[ev.type].label)} · ${ev.guests} invités</span></div>
       <div class="row"><span>Date</span><span>${esc(fmtDay(ev.date))}</span></div>

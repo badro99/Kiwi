@@ -7,6 +7,10 @@
 
 # Partie 1 · État courant (ex-AI_HANDOFF.md)
 
+> **Brand typography (2026-08-22):** Inter Tight is the single Latin face across product and public surfaces. Serif/editorial/display token names are compatibility aliases only; they resolve to upright Inter Tight.
+
+> **Typographie de marque (2026-08-22) :** Inter Tight est l'unique police latine des surfaces produit et publiques. Les noms de jetons serif/editorial/display restent des alias de compatibilité, tous redirigés vers Inter Tight droit.
+
 # AI_HANDOFF.md — current-state brief for the next agent
 
 > Read this after `CLAUDE.md` (operating rules) and `HANDOFF.md` (deep history/architecture).

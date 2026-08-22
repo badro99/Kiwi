@@ -397,9 +397,9 @@
     if (usesOwnData()) {
       const _T = PL_STR[trLang()] || PL_STR.fr;
       const c = ({
-        fr: { h: 'Les liens de paiement arrivent bientôt', p: 'Encaisser à distance par lien WhatsApp, email ou SMS sera disponible ici. Nous vous préviendrons dès l’ouverture — en attendant, encaissez sur la caisse.' },
-        en: { h: 'Payment links are coming soon', p: 'Getting paid remotely over WhatsApp, email or SMS will live here. We\'ll let you know the moment it opens — until then, take payment on the till.' },
-        ar: { h: 'روابط الدفع قريبًا', p: 'سيتوفّر هنا التحصيل عن بُعد عبر واتساب أو البريد أو الرسائل. سنخبرك فور فتحه — وحتى ذلك الحين، حصّل عبر الصندوق.' },
+        fr: { h: 'Les liens de paiement arrivent bientôt', p: 'Encaisser à distance par lien WhatsApp, email ou SMS sera disponible ici. Nous vous préviendrons dès l’ouverture · en attendant, encaissez sur la caisse.' },
+        en: { h: 'Payment links are coming soon', p: 'Getting paid remotely over WhatsApp, email or SMS will live here. We\'ll let you know the moment it opens · until then, take payment on the till.' },
+        ar: { h: 'روابط الدفع قريبًا', p: 'سيتوفّر هنا التحصيل عن بُعد عبر واتساب أو البريد أو الرسائل. سنخبرك فور فتحه · وحتى ذلك الحين، حصّل عبر الصندوق.' },
       })[trLang()] || { h: 'Payment links are coming soon', p: '' };
       modal({
         tag: _T.tag, title: _T.title, width: 480,
@@ -1607,7 +1607,7 @@
           </div>
         </div>
         <div class="agent-action">
-          <!-- account_balance.svg — la CNSS est une institution, pas un rectangle vide -->
+          <!-- account_balance.svg · la CNSS est une institution, pas un rectangle vide -->
           <div class="ic"><svg width="16" height="16" viewBox="0 -960 960 960" fill="currentColor"><path d="M200-280v-280h80v280h-80Zm240 0v-280h80v280h-80ZM80-120v-80h800v80H80Zm600-160v-280h80v280h-80ZM80-640v-80l400-200 400 200v80H80Zm178-80h444-444Zm0 0h444L480-830 258-720Z"/></svg></div>
           <div class="b">
             <div class="n">${T.cnssTitle}</div>

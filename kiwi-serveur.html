@@ -67,7 +67,7 @@
          d'affichage grasses et le tableau de bord s'arrête à 700 ;
        · JetBrains Mono ne sert plus (voir --mono), on ne la télécharge donc
          plus — une requête de police en moins sur une tablette de salle. -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet" />
 
   <!-- Lucide icons -->
   <!-- Copie locale : ces pages tiraient lucide@latest depuis unpkg à chaque
@@ -224,7 +224,7 @@
          mêmes noms y portaient des valeurs différentes : d'où deux produits qui
          ne se ressemblaient pas tout en se croyant accordés. */
       --sans:   "Inter Tight", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-      --serif:  "Instrument Serif", "Times New Roman", serif;
+      --serif:  "Inter Tight", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
       --arabic: "IBM Plex Sans Arabic", "Cairo", sans-serif;
       /* PAS JetBrains Mono, et c'est délibéré côté tableau de bord : « les
          relevés chiffrés utilisent le même zéro clair que les codes-barres
@@ -4058,7 +4058,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         </button>
         <div class="pin-top">
           <div class="pin-brand" data-kiwi-logo><img class="logo-day" src="assets/kiwi-newlogo.svg?v=2" alt="Kiwi" /><img class="logo-night" src="assets/kiwi-newlogo-inverse.svg" alt="" aria-hidden="true" /></div>
-          <div class="pin-tagline">— Équipe</div>
+          <div class="pin-tagline">Équipe</div>
         </div>
 
         <div class="pin-mid">
@@ -4105,7 +4105,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         </button>
         <div class="ci-top">
           <div class="ci-brand" data-kiwi-logo><img class="logo-day" src="assets/kiwi-newlogo.svg?v=2" alt="Kiwi" /><img class="logo-night" src="assets/kiwi-newlogo-inverse.svg" alt="" aria-hidden="true" /></div>
-          <div class="ci-tagline">— Équipe</div>
+          <div class="ci-tagline">Équipe</div>
         </div>
 
         <div class="nfc-zone" id="nfc-zone">
@@ -4758,15 +4758,15 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
               <div class="split-summary">
                 <div class="split-summary-row">
                   <span>Total à diviser</span>
-                  <span class="val mono" id="split-total-display">—</span>
+                  <span class="val mono" id="split-total-display"></span>
                 </div>
                 <div class="split-summary-row" id="split-tip-row" style="display:none">
                   <span id="split-tip-label">+ pourboire 10%</span>
-                  <span class="val mono" id="split-tip-display">—</span>
+                  <span class="val mono" id="split-tip-display"></span>
                 </div>
                 <div class="split-per-person">
                   <span class="lbl">Par convive</span>
-                  <span class="val mono" id="split-per-person">—</span>
+                  <span class="val mono" id="split-per-person"></span>
                 </div>
               </div>
             </div>
@@ -4861,7 +4861,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
   <!-- Real employee identity, planning, floor and attendance bridge. -->
   <script src="assets/pwa-update.js?v=359" defer></script>
   <script src="assets/employee-live.js?v=407" defer></script>
-  <script src="assets/employee-planning.js?v=6" defer></script>
+  <script src="assets/employee-planning.js?v=8" defer></script>
   <link rel="stylesheet" href="assets/employee-trade-shell.css?v=2">
   <script src="assets/employee-trade-shell.js?v=2" defer></script>
   <!-- Canal de poussée facultatif : quand le concentrateur temps réel est
@@ -5746,14 +5746,14 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     /* Dit au serveur ce qui s'est passé, dans ses mots, sans jamais laisser
        croire que c'est parti. */
     const SV_SEND_MSG = {
-      'menu-not-published': 'carte non publiée — à publier depuis le tableau de bord',
-      'menu-changed':       'carte modifiée — un plat n\'est plus disponible',
+      'menu-not-published': 'carte non publiée · à publier depuis le tableau de bord',
+      'menu-changed':       'carte modifiée · un plat n\'est plus disponible',
       'forbidden-merchant': 'tablette non appairée à ce commerce',
       'table-required':     'table introuvable',
       'empty-order':        'rien à envoyer',
-      'not-configured':     'service indisponible — commande NON envoyée',
-      'no-merchant':        'aucun commerce appairé — commande NON envoyée',
-      'offline':            'hors ligne — commande NON envoyée, réessayez',
+      'not-configured':     'service indisponible · commande NON envoyée',
+      'no-merchant':        'aucun commerce appairé · commande NON envoyée',
+      'offline':            'hors ligne · commande NON envoyée, réessayez',
     };
     function serviceOrderInitials(name) {
       const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
@@ -6231,7 +6231,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         const s = map[key];
         week.push(s && !s.off && s.start && s.end ? { in: s.start, out: s.end } : null);
       }
-      return { week, dates: map, monthHours: '—' };
+      return { week, dates: map, monthHours: '·' };
     }
     function applyEmployeeLive(data) {
       if (!data || !data.employee) return;
@@ -7471,7 +7471,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         <div class="td-pending-banner">
           <div class="td-pending-copy">
             <strong>Commande ${esc(serviceOrderRef(pendingOrder))} en attente</strong>
-            <span>Arrivée par le menu en ligne — elle n'est pas encore partie en cuisine.</span>
+            <span>Arrivée par le menu en ligne · elle n'est pas encore partie en cuisine.</span>
           </div>
           <button class="td-pending-go" data-accept-order="${esc(pendingOrder.id)}">Accepter · envoyer en cuisine</button>
         </div>
@@ -7888,7 +7888,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
           accBtn.textContent = 'Accepter · envoyer en cuisine';
           toast(String(err && err.message) === 'floor-table-required'
             ? 'Cette table n\u2019est pas dans votre coupure'
-            : 'Envoi impossible — la commande reste en attente');
+            : 'Envoi impossible · la commande reste en attente');
         });
     });
 
@@ -7936,7 +7936,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
           const data = await res.json().catch(() => null);
           if (!res.ok || (data && !data.ok)) {
             if (data && data.reason === 'accepted') {
-              toast('Plat déjà en cuisine — parlez au chef ou annulez');
+              toast('Plat déjà en cuisine · parlez au chef ou annulez');
             } else {
               toast(`Note : ${(data && data.error) || 'erreur de modification'}`);
             }
@@ -8502,7 +8502,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       if (!menuItems.length) {
         $('#menu-grid').innerHTML =
           '<div class="menu-banner"><div class="menu-banner-text">Carte pas encore composée. ' +
-          'Ajoutez vos catégories et vos plats depuis le tableau de bord — <b>Menu</b>.</div></div>';
+          'Ajoutez vos catégories et vos plats depuis le tableau de bord · <b>Menu</b>.</div></div>';
         return;
       }
       const rawItems = activeCat === 'all' ? menuItems : menuItems.filter(m => m.cat === activeCat && (!activeSub || m.subId === activeSub));
@@ -9382,7 +9382,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         const isToday = day === now.getDate() && month === now.getMonth() && year === now.getFullYear();
         html += `<div class="kg-month-day${isToday ? ' is-today' : ''}">
           <div class="kg-month-day-num">${day}</div>
-          ${shift ? `<div class="kg-month-day-shift">${esc(shift.in)}<br>${esc(shift.out)}</div>` : '<div class="kg-month-day-rest">—</div>'}
+          ${shift ? `<div class="kg-month-day-shift">${esc(shift.in)}<br>${esc(shift.out)}</div>` : '<div class="kg-month-day-rest">·</div>'}
         </div>`;
       }
       grid.innerHTML = html;
@@ -9465,7 +9465,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       // This month — sum the store's real closed shifts.
       const monthEl = $('#kg-h-month');
       if (monthEl) {
-        if (!real) monthEl.textContent = sched ? sched.monthHours : '—';
+        if (!real) monthEl.textContent = sched ? sched.monthHours : '·';
         else {
           const prefix = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-`;
           const mins = Object.keys((liveEmployeeState && liveEmployeeState.hours) || {})
@@ -10773,7 +10773,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
           ['Revenu encaissé',         kgNum(snap.revenue) + ' MAD',                   true ],
           ['Ticket moyen',            kgNum(snap.ticket) + ' MAD',                    true ],
           ['Durée du service',        kgFmtDur(snap.durMin),                          false],
-          ['Vitesse moyenne / table', (snap.speed != null ? snap.speed + ' mn' : '—'), false],
+          ['Vitesse moyenne / table', (snap.speed != null ? snap.speed + ' mn' : '·'), false],
         ];
         const rowsEl = document.getElementById('kg-sc-rows');
         if (rowsEl) rowsEl.innerHTML = rows.map(function (r, i) {

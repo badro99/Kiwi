@@ -2,7 +2,7 @@
   var launch=document.getElementById('support-console');if(!launch)return;
   var state={tab:'tickets',tickets:[],articles:[],selected:'',status:'all',versions:[]};
   function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
-  function dt(ts){return ts?new Date(Number(ts)).toLocaleString('fr-FR'):'—';}
+  function dt(ts){return ts?new Date(Number(ts)).toLocaleString('fr-FR'):'·';}
   async function req(url,opts){var r=await fetch(url,Object.assign({credentials:'same-origin',headers:{'Content-Type':'application/json'}},opts||{})),j=await r.json().catch(function(){return{};});if(!r.ok)throw new Error(j.error||'http-'+r.status);return j;}
   function tell(s){if(typeof window.notify==='function'){window.notify(s);return;}var old=document.querySelector('.ks-toast');if(old)old.remove();var n=document.createElement('div');n.className='ks-toast';n.setAttribute('role','status');n.textContent=s;document.body.appendChild(n);requestAnimationFrame(function(){n.classList.add('show');});setTimeout(function(){n.classList.remove('show');setTimeout(function(){n.remove();},220);},3600);}
   function shell(){var el=document.createElement('div');el.className='ks-shell';el.innerHTML='<header class="ks-head"><div><h2>Support Kiwi</h2><p>Demandes suivies et bibliothèque produit</p></div><span class="ks-space"></span><button data-ks-refresh>Rafraîchir</button><button data-ks-close>Fermer</button></header><main class="ks-body"><nav class="ks-tabs"><button class="ks-tab" data-ks-tab="tickets">Demandes</button><button class="ks-tab" data-ks-tab="articles">Articles</button></nav><div class="ks-work" data-ks-work></div></main>';document.body.appendChild(el);return el;}

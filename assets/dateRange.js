@@ -982,17 +982,17 @@
     cafeAtlas: {
     aujourdhui: [
       { t: '14:37', method: 'visa', primary: 'Visa •• 4291',   sub: 'Carte marocaine · Attijariwafa', flag: 'ma', ctx: 'Karim B. · T4',     amt: '240,00',  tip: '+24,00', neg: false, isNew: true },
-      { t: '14:32', method: 'tap',  primary: 'Kiwi Tap',        sub: 'Client #3412 · Kiwi Wallet',     flag: 'ma', ctx: 'Client #3412 · T7',amt: '180,00',  tip: '—',       neg: false },
+      { t: '14:32', method: 'tap',  primary: 'Kiwi Tap',        sub: 'Client #3412 · Kiwi Wallet',     flag: 'ma', ctx: 'Client #3412 · T7',amt: '180,00',  tip: '·',       neg: false },
       { t: '14:18', method: 'mc',   primary: 'Mastercard •• 7820', sub: 'Carte française · BNP Paribas', flag: 'fr', ctx: 'Sara L. · T2',  amt: '85,50',   tip: '+8,55',  neg: false },
-      { t: '14:03', method: 'qr',   primary: 'Kiwi Wallet QR',  sub: 'Nawal K. · abonnée',             flag: 'ma', ctx: 'Nawal K. · T6',    amt: '62,00',   tip: '—',       neg: false },
+      { t: '14:03', method: 'qr',   primary: 'Kiwi Wallet QR',  sub: 'Nawal K. · abonnée',             flag: 'ma', ctx: 'Nawal K. · T6',    amt: '62,00',   tip: '·',       neg: false },
       { t: '13:57', method: 'visa', primary: 'Visa •• 0043',   sub: 'Carte espagnole · CaixaBank',    flag: 'es', ctx: 'Youssef A. · T1',  amt: '312,00',  tip: '+30,00', neg: false },
-      { t: '13:41', method: 'mc',   primary: 'Mastercard •• 1209', sub: 'Remboursement · CMI',         flag: 'ma', ctx: 'Hassan J. · T3',   amt: '−155,00', tip: '—',       neg: true },
+      { t: '13:41', method: 'mc',   primary: 'Mastercard •• 1209', sub: 'Remboursement · CMI',         flag: 'ma', ctx: 'Hassan J. · T3',   amt: '−155,00', tip: '·',       neg: true },
     ],
     hier: [
       { t: '22:48', method: 'visa', primary: 'Visa •• 8841',   sub: 'Carte marocaine · BMCE',         flag: 'ma', ctx: 'Imane S. · T5',    amt: '276,00',  tip: '+27,60', neg: false },
-      { t: '22:14', method: 'tap',  primary: 'Kiwi Tap',        sub: 'Client #3287 · contactless',     flag: 'ma', ctx: 'Client #3287 · T8',amt: '142,00',  tip: '—',       neg: false },
+      { t: '22:14', method: 'tap',  primary: 'Kiwi Tap',        sub: 'Client #3287 · contactless',     flag: 'ma', ctx: 'Client #3287 · T8',amt: '142,00',  tip: '·',       neg: false },
       { t: '21:52', method: 'mc',   primary: 'Mastercard •• 4509', sub: 'Carte française · LCL',      flag: 'fr', ctx: 'Pierre D. · T2',   amt: '198,50',  tip: '+19,85', neg: false },
-      { t: '21:18', method: 'qr',   primary: 'Kiwi Wallet QR',  sub: 'Mehdi C. · régulier',            flag: 'ma', ctx: 'Mehdi C. · T6',    amt: '88,00',   tip: '—',       neg: false },
+      { t: '21:18', method: 'qr',   primary: 'Kiwi Wallet QR',  sub: 'Mehdi C. · régulier',            flag: 'ma', ctx: 'Mehdi C. · T6',    amt: '88,00',   tip: '·',       neg: false },
       { t: '20:42', method: 'visa', primary: 'Visa •• 6612',   sub: 'Carte américaine · Chase',       flag: 'us', ctx: 'Diana K. · T1',    amt: '384,00',  tip: '+38,40', neg: false },
       { t: '20:09', method: 'mc',   primary: 'Mastercard •• 8830', sub: 'Carte marocaine · CIH',      flag: 'ma', ctx: 'Anas L. · T3',     amt: '124,00',  tip: '+12,40', neg: false },
     ],
@@ -1000,51 +1000,51 @@
       { t: 'Ven 23', method: 'visa', primary: 'Visa •• 2914',  sub: 'Top transaction de la semaine', flag: 'fr', ctx: 'Nicolas R. · T4', amt: '1 240,00', tip: '+124,00', neg: false },
       { t: 'Jeu 22', method: 'qr',   primary: 'Kiwi Wallet QR', sub: 'Soirée d\'anniversaire',        flag: 'ma', ctx: 'Hicham B. · T8', amt: '684,00',   tip: '+50,00',  neg: false },
       { t: 'Mer 21', method: 'mc',   primary: 'Mastercard •• 1456', sub: 'Carte espagnole · Sabadell', flag: 'es', ctx: 'Lucia G. · T2', amt: '420,00',   tip: '+42,00',  neg: false },
-      { t: 'Mar 20', method: 'tap',  primary: 'Kiwi Tap',       sub: 'Service midi · Tap',            flag: 'ma', ctx: 'Client #2945 · T6', amt: '208,00', tip: '—',       neg: false },
+      { t: 'Mar 20', method: 'tap',  primary: 'Kiwi Tap',       sub: 'Service midi · Tap',            flag: 'ma', ctx: 'Client #2945 · T6', amt: '208,00', tip: '·',       neg: false },
       { t: 'Lun 19', method: 'visa', primary: 'Visa •• 7740',  sub: 'Carte marocaine · BMCE',        flag: 'ma', ctx: 'Salma F. · T1',  amt: '162,00',   tip: '+16,20',  neg: false },
-      { t: 'Dim 18', method: 'mc',   primary: 'Mastercard •• 3308', sub: 'Annulation client',         flag: 'ma', ctx: 'Khalid A. · T3', amt: '−240,00',  tip: '—',       neg: true },
+      { t: 'Dim 18', method: 'mc',   primary: 'Mastercard •• 3308', sub: 'Annulation client',         flag: 'ma', ctx: 'Khalid A. · T3', amt: '−240,00',  tip: '·',       neg: true },
     ],
     trenteJours: [
       { t: 'S22 J1', method: 'visa', primary: 'Visa •• 0921',  sub: 'Réservation groupe · 12 couverts', flag: 'ma', ctx: 'Mariage Bensouda · T1-T4', amt: '4 280,00', tip: '+428,00', neg: false },
       { t: 'S21 J3', method: 'qr',   primary: 'Kiwi Wallet QR', sub: 'Soirée privée',                   flag: 'ma', ctx: 'Wissam · T7', amt: '1 920,00', tip: '+150,00', neg: false },
       { t: 'S20 J5', method: 'mc',   primary: 'Mastercard •• 6612', sub: 'Carte française · BNP',     flag: 'fr', ctx: 'Sophie M. · T2', amt: '780,00', tip: '+78,00', neg: false },
       { t: 'S19 J6', method: 'visa', primary: 'Visa •• 5544',  sub: 'Carte espagnole · La Caixa',    flag: 'es', ctx: 'Manuel V. · T5', amt: '512,00', tip: '+50,00', neg: false },
-      { t: 'S18 J2', method: 'tap',  primary: 'Kiwi Tap',       sub: 'Pic samedi · service du soir',  flag: 'ma', ctx: 'Client #1882 · T8', amt: '342,00', tip: '—',     neg: false },
-      { t: 'S17 J4', method: 'mc',   primary: 'Mastercard •• 9982', sub: 'Reversement Glovo',         flag: 'ma', ctx: 'Réconciliation', amt: '−380,00', tip: '—', neg: true },
+      { t: 'S18 J2', method: 'tap',  primary: 'Kiwi Tap',       sub: 'Pic samedi · service du soir',  flag: 'ma', ctx: 'Client #1882 · T8', amt: '342,00', tip: '·',     neg: false },
+      { t: 'S17 J4', method: 'mc',   primary: 'Mastercard •• 9982', sub: 'Reversement Glovo',         flag: 'ma', ctx: 'Réconciliation', amt: '−380,00', tip: '·', neg: true },
     ],
     },
     maisonMansour: {
       aujourdhui: [
-        { t: '14:38', method: 'visa', primary: 'Visa •• 5821',     sub: 'Carte allemande · Sparkasse', flag: 'fr', ctx: 'Anna M. · Caftan brodé',   amt: '1 890,00', tip: '—', neg: false, isNew: true },
-        { t: '14:14', method: 'mc',   primary: 'Mastercard •• 7714', sub: 'Carte française · LCL',     flag: 'fr', ctx: 'Sophie L. · Babouches',    amt: '450,00',   tip: '—', neg: false },
-        { t: '13:42', method: 'tap',  primary: 'Kiwi Tap',          sub: 'Client #4521 · Kiwi Wallet', flag: 'ma', ctx: 'Client #4521 · Coussin',   amt: '240,00',   tip: '—', neg: false },
-        { t: '13:18', method: 'visa', primary: 'Visa •• 0987',     sub: 'Carte espagnole · BBVA',     flag: 'es', ctx: 'Carmen R. · Théière',      amt: '680,00',   tip: '—', neg: false },
-        { t: '12:54', method: 'mc',   primary: 'Mastercard •• 3344', sub: 'Carte américaine · Chase',  flag: 'us', ctx: 'Karen B. · Tapis berbère', amt: '3 200,00', tip: '—', neg: false },
-        { t: '12:21', method: 'mc',   primary: 'Mastercard •• 8830', sub: 'Retour boutique · CIH',    flag: 'ma', ctx: 'Hassan J. · Babouches',    amt: '−450,00',  tip: '—', neg: true },
+        { t: '14:38', method: 'visa', primary: 'Visa •• 5821',     sub: 'Carte allemande · Sparkasse', flag: 'fr', ctx: 'Anna M. · Caftan brodé',   amt: '1 890,00', tip: '·', neg: false, isNew: true },
+        { t: '14:14', method: 'mc',   primary: 'Mastercard •• 7714', sub: 'Carte française · LCL',     flag: 'fr', ctx: 'Sophie L. · Babouches',    amt: '450,00',   tip: '·', neg: false },
+        { t: '13:42', method: 'tap',  primary: 'Kiwi Tap',          sub: 'Client #4521 · Kiwi Wallet', flag: 'ma', ctx: 'Client #4521 · Coussin',   amt: '240,00',   tip: '·', neg: false },
+        { t: '13:18', method: 'visa', primary: 'Visa •• 0987',     sub: 'Carte espagnole · BBVA',     flag: 'es', ctx: 'Carmen R. · Théière',      amt: '680,00',   tip: '·', neg: false },
+        { t: '12:54', method: 'mc',   primary: 'Mastercard •• 3344', sub: 'Carte américaine · Chase',  flag: 'us', ctx: 'Karen B. · Tapis berbère', amt: '3 200,00', tip: '·', neg: false },
+        { t: '12:21', method: 'mc',   primary: 'Mastercard •• 8830', sub: 'Retour boutique · CIH',    flag: 'ma', ctx: 'Hassan J. · Babouches',    amt: '−450,00',  tip: '·', neg: true },
       ],
       hier: [
-        { t: '19:52', method: 'visa', primary: 'Visa •• 4421',     sub: 'Carte française · BNP',      flag: 'fr', ctx: 'Camille D. · Caftan',      amt: '1 890,00', tip: '—', neg: false },
-        { t: '19:18', method: 'tap',  primary: 'Kiwi Tap',          sub: 'Client #4488 · contactless', flag: 'ma', ctx: 'Client #4488 · Théière',   amt: '680,00',   tip: '—', neg: false },
-        { t: '18:46', method: 'mc',   primary: 'Mastercard •• 2298', sub: 'Carte espagnole · Sabadell',flag: 'es', ctx: 'Marta G. · Coussin',       amt: '240,00',   tip: '—', neg: false },
-        { t: '18:14', method: 'visa', primary: 'Visa •• 6643',     sub: 'Carte américaine · Citi',    flag: 'us', ctx: 'David W. · Tapis',          amt: '3 200,00', tip: '—', neg: false },
-        { t: '17:32', method: 'mc',   primary: 'Mastercard •• 5512', sub: 'Carte marocaine · BMCE',    flag: 'ma', ctx: 'Yasmine F. · Lampe',       amt: '920,00',   tip: '—', neg: false },
-        { t: '16:48', method: 'visa', primary: 'Visa •• 8801',     sub: 'Carte française · Crédit Agricole', flag: 'fr', ctx: 'Léa M. · Babouches', amt: '450,00',   tip: '—', neg: false },
+        { t: '19:52', method: 'visa', primary: 'Visa •• 4421',     sub: 'Carte française · BNP',      flag: 'fr', ctx: 'Camille D. · Caftan',      amt: '1 890,00', tip: '·', neg: false },
+        { t: '19:18', method: 'tap',  primary: 'Kiwi Tap',          sub: 'Client #4488 · contactless', flag: 'ma', ctx: 'Client #4488 · Théière',   amt: '680,00',   tip: '·', neg: false },
+        { t: '18:46', method: 'mc',   primary: 'Mastercard •• 2298', sub: 'Carte espagnole · Sabadell',flag: 'es', ctx: 'Marta G. · Coussin',       amt: '240,00',   tip: '·', neg: false },
+        { t: '18:14', method: 'visa', primary: 'Visa •• 6643',     sub: 'Carte américaine · Citi',    flag: 'us', ctx: 'David W. · Tapis',          amt: '3 200,00', tip: '·', neg: false },
+        { t: '17:32', method: 'mc',   primary: 'Mastercard •• 5512', sub: 'Carte marocaine · BMCE',    flag: 'ma', ctx: 'Yasmine F. · Lampe',       amt: '920,00',   tip: '·', neg: false },
+        { t: '16:48', method: 'visa', primary: 'Visa •• 8801',     sub: 'Carte française · Crédit Agricole', flag: 'fr', ctx: 'Léa M. · Babouches', amt: '450,00',   tip: '·', neg: false },
       ],
       septJours: [
-        { t: 'Ven 23', method: 'mc',   primary: 'Mastercard •• 1144', sub: 'Top transaction de la semaine', flag: 'us', ctx: 'Karen B. · Tapis berbère', amt: '3 200,00', tip: '—', neg: false },
-        { t: 'Jeu 22', method: 'visa', primary: 'Visa •• 5821',      sub: 'Tax-free · Allemagne',          flag: 'fr', ctx: 'Anna M. · Caftan brodé',   amt: '1 890,00', tip: '—', neg: false },
-        { t: 'Mer 21', method: 'visa', primary: 'Visa •• 0987',      sub: 'Carte espagnole · BBVA',        flag: 'es', ctx: 'Carmen R. · Théière',      amt: '680,00',   tip: '—', neg: false },
-        { t: 'Mar 20', method: 'mc',   primary: 'Mastercard •• 7714', sub: 'Carte française · LCL',         flag: 'fr', ctx: 'Sophie L. · Babouches',    amt: '450,00',   tip: '—', neg: false },
-        { t: 'Lun 19', method: 'tap',  primary: 'Kiwi Tap',           sub: 'Client #4521 · contactless',    flag: 'ma', ctx: 'Client #4521 · Coussin',   amt: '240,00',   tip: '—', neg: false },
-        { t: 'Dim 18', method: 'mc',   primary: 'Mastercard •• 8830', sub: 'Retour boutique · CIH',         flag: 'ma', ctx: 'Hassan J. · Babouches',    amt: '−450,00',  tip: '—', neg: true },
+        { t: 'Ven 23', method: 'mc',   primary: 'Mastercard •• 1144', sub: 'Top transaction de la semaine', flag: 'us', ctx: 'Karen B. · Tapis berbère', amt: '3 200,00', tip: '·', neg: false },
+        { t: 'Jeu 22', method: 'visa', primary: 'Visa •• 5821',      sub: 'Tax-free · Allemagne',          flag: 'fr', ctx: 'Anna M. · Caftan brodé',   amt: '1 890,00', tip: '·', neg: false },
+        { t: 'Mer 21', method: 'visa', primary: 'Visa •• 0987',      sub: 'Carte espagnole · BBVA',        flag: 'es', ctx: 'Carmen R. · Théière',      amt: '680,00',   tip: '·', neg: false },
+        { t: 'Mar 20', method: 'mc',   primary: 'Mastercard •• 7714', sub: 'Carte française · LCL',         flag: 'fr', ctx: 'Sophie L. · Babouches',    amt: '450,00',   tip: '·', neg: false },
+        { t: 'Lun 19', method: 'tap',  primary: 'Kiwi Tap',           sub: 'Client #4521 · contactless',    flag: 'ma', ctx: 'Client #4521 · Coussin',   amt: '240,00',   tip: '·', neg: false },
+        { t: 'Dim 18', method: 'mc',   primary: 'Mastercard •• 8830', sub: 'Retour boutique · CIH',         flag: 'ma', ctx: 'Hassan J. · Babouches',    amt: '−450,00',  tip: '·', neg: true },
       ],
       trenteJours: [
-        { t: 'S22 J3', method: 'visa', primary: 'Visa •• 9912',     sub: 'Caftans haut de gamme · paire',   flag: 'fr', ctx: 'Marion K. · 2 caftans',    amt: '3 780,00', tip: '—', neg: false },
-        { t: 'S20 J5', method: 'mc',   primary: 'Mastercard •• 1144', sub: 'Tapis premium · Berbère',       flag: 'us', ctx: 'Karen B. · Tapis',          amt: '3 200,00', tip: '—', neg: false },
-        { t: 'S19 J2', method: 'visa', primary: 'Visa •• 5821',     sub: 'Caftan brodé Tax-free',          flag: 'fr', ctx: 'Anna M.',                   amt: '1 890,00', tip: '—', neg: false },
-        { t: 'S18 J6', method: 'tap',  primary: 'Kiwi Tap',          sub: 'Lampe artisanale · cliente VIP', flag: 'ma', ctx: 'Salma O. · Lampe',          amt: '920,00',   tip: '—', neg: false },
-        { t: 'S17 J4', method: 'visa', primary: 'Visa •• 0987',     sub: 'Théière argentée',               flag: 'es', ctx: 'Carmen R.',                 amt: '680,00',   tip: '—', neg: false },
-        { t: 'S16 J1', method: 'mc',   primary: 'Mastercard •• 4477', sub: 'Échange · taille différente',   flag: 'ma', ctx: 'Hicham B. · Caftan',        amt: '−1 890,00',tip: '—', neg: true },
+        { t: 'S22 J3', method: 'visa', primary: 'Visa •• 9912',     sub: 'Caftans haut de gamme · paire',   flag: 'fr', ctx: 'Marion K. · 2 caftans',    amt: '3 780,00', tip: '·', neg: false },
+        { t: 'S20 J5', method: 'mc',   primary: 'Mastercard •• 1144', sub: 'Tapis premium · Berbère',       flag: 'us', ctx: 'Karen B. · Tapis',          amt: '3 200,00', tip: '·', neg: false },
+        { t: 'S19 J2', method: 'visa', primary: 'Visa •• 5821',     sub: 'Caftan brodé Tax-free',          flag: 'fr', ctx: 'Anna M.',                   amt: '1 890,00', tip: '·', neg: false },
+        { t: 'S18 J6', method: 'tap',  primary: 'Kiwi Tap',          sub: 'Lampe artisanale · cliente VIP', flag: 'ma', ctx: 'Salma O. · Lampe',          amt: '920,00',   tip: '·', neg: false },
+        { t: 'S17 J4', method: 'visa', primary: 'Visa •• 0987',     sub: 'Théière argentée',               flag: 'es', ctx: 'Carmen R.',                 amt: '680,00',   tip: '·', neg: false },
+        { t: 'S16 J1', method: 'mc',   primary: 'Mastercard •• 4477', sub: 'Échange · taille différente',   flag: 'ma', ctx: 'Hicham B. · Caftan',        amt: '−1 890,00',tip: '·', neg: true },
       ],
     },
     spaBahia: {
@@ -1078,7 +1078,7 @@
         { t: 'S20 J1', method: 'visa', primary: 'Visa •• 4408',     sub: 'Forfait Argan · cliente VIP',     flag: 'ma', ctx: 'Yasmine T.',                     amt: '850,00',   tip: '+100,00', neg: false },
         { t: 'S19 J5', method: 'mc',   primary: 'Mastercard •• 3329', sub: 'Massage couple',                 flag: 'fr', ctx: 'Camille & Pierre R.',           amt: '1 100,00', tip: '+110,00', neg: false },
         { t: 'S18 J2', method: 'visa', primary: 'Visa •• 8826',     sub: 'Soin visage premium',             flag: 'es', ctx: 'Imane S.',                       amt: '650,00',   tip: '+65,00',  neg: false },
-        { t: 'S17 J4', method: 'mc',   primary: 'Mastercard •• 8821', sub: 'Annulation rendez-vous',         flag: 'ma', ctx: 'Anonyme',                        amt: '−550,00',  tip: '—',       neg: true },
+        { t: 'S17 J4', method: 'mc',   primary: 'Mastercard •• 8821', sub: 'Annulation rendez-vous',         flag: 'ma', ctx: 'Anonyme',                        amt: '−550,00',  tip: '·',       neg: true },
       ],
     },
   };
@@ -1398,28 +1398,28 @@
         { av: 'HJ', cls: 'b',        name: 'Hamid Jelloul',  role: 'Serveur · terrasse',                   shift: '5h 10', amt: '4 680 MAD', tx: '38 tx' },
         { av: 'SB', cls: 'c',        name: 'Sofia Belkadi',  role: 'Barista · comptoir',                   shift: '4h 48', amt: '3 920 MAD', tx: '54 tx' },
         { av: 'YA', cls: 'd',        name: 'Youssef Amrani', role: 'Serveur · pause depuis 14:12',          shift: '3h 22', amt: '2 110 MAD', tx: '25 tx' },
-        { av: 'MM', cls: 'offline',  name: 'Mehdi Mansouri', role: 'Cuisine · fini son service 14:00',      shift: '—',     amt: '—',         tx: '' },
+        { av: 'MM', cls: 'offline',  name: 'Mehdi Mansouri', role: 'Cuisine · fini son service 14:00',      shift: '·',     amt: '·',         tx: '' },
       ],
       hier: [
         { av: 'FK', cls: 'offline', name: 'Fatima Khalki',  role: 'Serveuse senior · service de hier',   shift: '8h 12', amt: '7 420 MAD', tx: '58 tx' },
         { av: 'HJ', cls: 'offline', name: 'Hamid Jelloul',  role: 'Serveur · terrasse',                   shift: '7h 48', amt: '6 980 MAD', tx: '52 tx' },
         { av: 'SB', cls: 'offline', name: 'Sofia Belkadi',  role: 'Barista · comptoir',                   shift: '6h 30', amt: '5 240 MAD', tx: '64 tx' },
         { av: 'YA', cls: 'offline', name: 'Youssef Amrani', role: 'Serveur · service du soir',            shift: '5h 50', amt: '3 240 MAD', tx: '38 tx' },
-        { av: 'MM', cls: 'offline', name: 'Mehdi Mansouri', role: 'Cuisine · fini 23:00',                  shift: '7h 00', amt: '—',         tx: '' },
+        { av: 'MM', cls: 'offline', name: 'Mehdi Mansouri', role: 'Cuisine · fini 23:00',                  shift: '7h 00', amt: '·',         tx: '' },
       ],
       septJours: [
         { av: 'FK', cls: '', name: 'Fatima Khalki',  role: 'Serveuse senior · 6 jours de service',   shift: '48h 20', amt: '36 800 MAD', tx: '298 tx' },
         { av: 'HJ', cls: 'b',name: 'Hamid Jelloul',  role: 'Serveur · 6 jours',                       shift: '46h 10', amt: '32 400 MAD', tx: '256 tx' },
         { av: 'SB', cls: 'c',name: 'Sofia Belkadi',  role: 'Barista · 7 jours',                       shift: '42h 00', amt: '28 700 MAD', tx: '342 tx' },
         { av: 'YA', cls: 'd',name: 'Youssef Amrani', role: 'Serveur · 5 jours',                       shift: '34h 40', amt: '18 200 MAD', tx: '184 tx' },
-        { av: 'MM', cls: 'd',name: 'Mehdi Mansouri', role: 'Cuisine · 6 jours',                       shift: '44h 30', amt: '—',          tx: '' },
+        { av: 'MM', cls: 'd',name: 'Mehdi Mansouri', role: 'Cuisine · 6 jours',                       shift: '44h 30', amt: '·',          tx: '' },
       ],
       trenteJours: [
         { av: 'FK', cls: '', name: 'Fatima Khalki',  role: 'Serveuse senior · 26 jours',              shift: '208h 40', amt: '152 600 MAD', tx: '1 240 tx' },
         { av: 'HJ', cls: 'b',name: 'Hamid Jelloul',  role: 'Serveur · 25 jours',                      shift: '198h 20', amt: '138 800 MAD', tx: '1 086 tx' },
         { av: 'SB', cls: 'c',name: 'Sofia Belkadi',  role: 'Barista · 28 jours',                      shift: '174h 00', amt: '118 400 MAD', tx: '1 458 tx' },
         { av: 'YA', cls: 'd',name: 'Youssef Amrani', role: 'Serveur · 21 jours',                      shift: '146h 20', amt: '76 400 MAD',  tx: '784 tx' },
-        { av: 'MM', cls: 'd',name: 'Mehdi Mansouri', role: 'Cuisine · 24 jours',                      shift: '184h 00', amt: '—',           tx: '' },
+        { av: 'MM', cls: 'd',name: 'Mehdi Mansouri', role: 'Cuisine · 24 jours',                      shift: '184h 00', amt: '·',           tx: '' },
       ],
     },
     maisonMansour: {
@@ -1515,7 +1515,7 @@
     if (id === 'hier')        return fmtDate(offsetDays(-1));
     if (id === 'septJours')   return `${fmtShort(offsetDays(-6))}, ${fmtDate(today)}`;
     if (id === 'trenteJours') return `${fmtShort(offsetDays(-30))}, ${fmtDate(today)}`;
-    return '—';
+    return '·';
   }
 
   const frInt = n => Math.floor(n).toLocaleString('fr-FR').replace(/,/g, ' ').replace(/ /g, ' ');
@@ -2207,7 +2207,7 @@
     const pctEl = document.querySelector('[data-goal-pct]');
     if (pctEl) {
       if (unset) {
-        pctEl.textContent = '—';
+        pctEl.textContent = '·';
       } else {
         const from = parseInt((pctEl.textContent || '').replace(/\D/g, ''), 10) || 0;
         animateNumber(pctEl, from, pctRound, { duration: 700, format: v => `${Math.round(v)} %` });
@@ -2589,7 +2589,7 @@
          * ci-dessus et que le tableau de bord ne tombait jamais juste face au
          * rouleau de caisse (voir revOf). */
         revenue: { value: t.revenue, unit: 'MAD', fmt: 'int', delta: realDeltaPct(rng, (s) => s.revenue) },
-        ratio:    data.ratio    ? { ...data.ratio,    text: tender ? `${cardPct} / ${100 - cardPct}` : '—', unit: tender ? '%' : '', delta: realDeltaPct(rng, (s) => (s.card + s.cash ? (s.card / (s.card + s.cash)) * 100 : 0)) } : data.ratio,
+        ratio:    data.ratio    ? { ...data.ratio,    text: tender ? `${cardPct} / ${100 - cardPct}` : '·', unit: tender ? '%' : '', delta: realDeltaPct(rng, (s) => (s.card + s.cash ? (s.card / (s.card + s.cash)) * 100 : 0)) } : data.ratio,
         regulars: data.regulars ? { ...data.regulars, value: 0, unit: '', delta: null } : data.regulars,
         /* ── Un tiret, pas un zéro ──────────────────────────────────────────
          * Ces deux taux n'ont encore aucune source chez un vrai commerçant :
@@ -2605,8 +2605,8 @@
          * Le tiret est déjà le vocabulaire de la maison pour « rien à
          * montrer » — c'est ce qu'affiche le ratio carte/espèces sans
          * encaissement, deux lignes plus haut. */
-        success:    data.success    ? { ...data.success,    text: '—', unit: '', delta: null } : data.success,
-        tauxRetour: data.tauxRetour ? { ...data.tauxRetour, text: '—', unit: '', delta: null } : data.tauxRetour,
+        success:    data.success    ? { ...data.success,    text: '·', unit: '', delta: null } : data.success,
+        tauxRetour: data.tauxRetour ? { ...data.tauxRetour, text: '·', unit: '', delta: null } : data.tauxRetour,
       };
 
       /* Bénéfice brut, Coût matière et Marge brute dérivent TOUS de `marge` via
@@ -2631,7 +2631,7 @@
          * « vous ne gagnez rien », ce qui est une affirmation, et fausse. Le
          * tiret est déjà le mot de la maison pour « rien à montrer » — c'est ce
          * qu'affichent « Taux succès » et le ratio carte/espèces plus haut. */
-        const dash = { text: '—', unit: '', delta: null };
+        const dash = { text: '·', unit: '', delta: null };
         data.marge = { ...dash };
         data.profit = { ...dash };
         data.cogs = { ...dash };
@@ -2648,7 +2648,7 @@
           revpar:     { value: 0, unit: 'MAD', fmt: 'int',  delta: null },
           arrdep:     { text: '0 / 0', unit: '', delta: null },
           menage:     { value: 0, unit: rooms ? `/ ${rooms}` : '', fmt: 'int', delta: null },
-          mixRev:     { text: '—', unit: '', delta: null },
+          mixRev:     { text: '·', unit: '', delta: null },
         };
       }
 
@@ -2711,7 +2711,7 @@
      * une valeur, n'est plus morte, et reprend sa place. */
     const isDeadTile = (k) => {
       const t = data[k];
-      return !t || (t.text != null && String(t.text).replace(/\s/g, '') === '—');
+      return !t || (t.text != null && String(t.text).replace(/\s/g, '') === '·');
     };
     if (ownData() && !savedLayout && layout.some(isDeadTile)) {
       const pool = (ctx.nbDays > 1 ? ['revenue', 'revPerDay', 'txPerDay'] : ['revenue'])
@@ -3939,7 +3939,7 @@
         // Amount ONLY — the row template appends its own <span class="cur">MAD</span>,
         // so spelling the unit here too printed "450,00 MADMAD" on every real sale.
         amt: (s.amount || 0).toFixed(2).replace('.', ','),
-        tip: '—', neg: false, isNew: i === 0,
+        tip: '·', neg: false, isNew: i === 0,
         saleId: String(s.id || ''),
         ref: String(s.ref || s.receiptRef || s.id || '').trim(),
         receiptNo: String(s.ref || s.receiptRef || '').trim(),
@@ -4680,8 +4680,8 @@
             <div class="n">${escTxt(s.name)}</div>
             <div class="role">${escTxt(s.role)}</div>
           </div>
-          <div class="shift"${on ? '' : ' style="color: var(--n-500);"'}>${on ? fmtHeures(s.hoursToday) : '—'}</div>
-          <div class="tx-n" style="color: var(--n-500);">—</div>
+          <div class="shift"${on ? '' : ' style="color: var(--n-500);"'}>${on ? fmtHeures(s.hoursToday) : '·'}</div>
+          <div class="tx-n" style="color: var(--n-500);">·</div>
         </div>`;
       }).join('');
     } else if (list && isCustom) {
@@ -4694,8 +4694,8 @@
             <div class="n">${s.name}</div>
             <div class="role">${s.role}</div>
           </div>
-          <div class="shift"${s.shift === '—' ? ' style="color: var(--n-500);"' : ''}>${s.shift}</div>
-          <div class="tx-n"${s.amt === '—' ? ' style="color: var(--n-500);"' : ''}>${s.amt}${s.tx ? `<br/><span style="color: var(--success); font-size: 10.5px;">${s.tx}</span>` : ''}</div>
+          <div class="shift"${s.shift === '·' ? ' style="color: var(--n-500);"' : ''}>${s.shift}</div>
+          <div class="tx-n"${s.amt === '·' ? ' style="color: var(--n-500);"' : ''}>${s.amt}${s.tx ? `<br/><span style="color: var(--success); font-size: 10.5px;">${s.tx}</span>` : ''}</div>
         </div>
       `).join('');
     }
@@ -4930,7 +4930,7 @@
       if (ro) {
         if (lo && hi) ro.textContent = fmtHumanRange(lo, hi, lang);
         else if (selStart) ro.textContent = fmtHumanRange(selStart, selStart, lang);
-        else ro.textContent = '—';
+        else ro.textContent = '·';
         ro.classList.toggle('is-set', !!(lo || selStart));
       }
       const hint = pop.querySelector('[data-drp-hint]');
@@ -4954,7 +4954,7 @@
       const r = shiftMonth(view.y, view.m, 1);
       pop.innerHTML =
         `<div class="drp-head"><div><div class="drp-eyebrow">${dpEsc(S.title)}</div>`
-        + `<div class="drp-readout" data-drp-readout>—</div></div>`
+        + `<div class="drp-readout" data-drp-readout>·</div></div>`
         + `<button type="button" class="drp-x" data-drp-cancel aria-label="${dpEsc(S.cancel)}">`
         + `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" `
         + `stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`

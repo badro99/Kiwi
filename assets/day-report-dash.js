@@ -116,8 +116,8 @@
     nextDay:   { fr: 'Jour suivant', en: 'Next day', ar: 'اليوم التالي' },
     reopened:  { fr: 'Clôturée {n} fois', en: 'Closed {n} times', ar: 'أُقفل {n} مرات' },
     revision:  { fr: 'Historique des clôtures', en: 'Closing history', ar: 'سجل الإقفال' },
-    coverage:  { fr: 'Ce détail porte sur {p}% du chiffre encaissé — les ventes sans panier détaillé n’y figurent pas.', en: 'This breakdown covers {p}% of revenue — sales with no itemised basket are not in it.', ar: 'يغطي هذا التفصيل {p}٪ من المداخيل — المبيعات بدون سلة مفصّلة غير مدرجة.' },
-    noDetail:  { fr: 'Aucun détail produit pour cette journée — les ventes ont été encaissées sans panier détaillé.', en: 'No product detail for this day — sales were taken without an itemised basket.', ar: 'لا تفاصيل للمنتجات في هذا اليوم.' },
+    coverage:  { fr: 'Ce détail porte sur {p}% du chiffre encaissé · les ventes sans panier détaillé n’y figurent pas.', en: 'This breakdown covers {p}% of revenue · sales with no itemised basket are not in it.', ar: 'يغطي هذا التفصيل {p}٪ من المداخيل · المبيعات بدون سلة مفصّلة غير مدرجة.' },
+    noDetail:  { fr: 'Aucun détail produit pour cette journée · les ventes ont été encaissées sans panier détaillé.', en: 'No product detail for this day · sales were taken without an itemised basket.', ar: 'لا تفاصيل للمنتجات في هذا اليوم.' },
     divers:    { fr: 'Divers', en: 'Other', ar: 'متفرقات' },
     total:     { fr: 'Total', en: 'Total', ar: 'المجموع' },
     /* ── les blocs ajoutés ── */

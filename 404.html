@@ -16,7 +16,7 @@
    * 404 · le ticket de caisse
    * -----------------------------------------------------------------------
    * L'idée : Kiwi imprime des tickets toute la journée. Alors une page
-   * introuvable en imprime un aussi — un vrai reçu thermique qui sort d'une
+   * introuvable en imprime un aussi · un vrai reçu thermique qui sort d'une
    * imprimante, ligne par ligne, avec sa tête d'impression qui descend, son
    * papier bone, son code-barres et son bord déchiré. Le montant dû est
    * 0,00 MAD : il n'y a rien à payer, il n'y a juste rien ici.
@@ -52,7 +52,7 @@
       radial-gradient(80% 60% at 50% 108%, rgba(0,255,174,0.07), transparent 70%),
       #000;
     color: var(--fg);
-    font-family: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-family: "Inter Tight", system-ui, -apple-system, "Segoe UI", sans-serif;
     -webkit-font-smoothing: antialiased;
   }
   html[lang="ar"] body { font-family: "IBM Plex Sans Arabic", system-ui, sans-serif; }
@@ -143,7 +143,7 @@
   }
   /* #v-res est ici pour une raison peu évidente : JetBrains Mono ne porte pas
      l'arabe, mais il porte l'ESPACE. Les lettres retombaient sur Plex Arabic
-     et les espaces gardaient la chasse du monospace — d'où des mots séparés
+     et les espaces gardaient la chasse du monospace · d'où des mots séparés
      par un blanc deux fois trop large. */
   html[lang="ar"] .note, html[lang="ar"] .k, html[lang="ar"] .brand span,
   html[lang="ar"] .tno span, html[lang="ar"] .thanks, html[lang="ar"] #v-res {
@@ -253,8 +253,8 @@
 
         <div class="sep"></div>
 
-        <div class="row"><span class="k" id="t-date">Date</span><span class="v"><bdi id="v-date">—</bdi></span></div>
-        <div class="row"><span class="k" id="t-time">Heure</span><span class="v"><bdi id="v-time">—</bdi></span></div>
+        <div class="row"><span class="k" id="t-date">Date</span><span class="v"><bdi id="v-date">·</bdi></span></div>
+        <div class="row"><span class="k" id="t-time">Heure</span><span class="v"><bdi id="v-time">·</bdi></span></div>
 
         <div class="sep"></div>
 
@@ -301,7 +301,7 @@
 
 <script>
 /* La page est servie telle quelle pour toutes les URL inconnues, y compris
-   sous /en/ et /ar/ — le français seul laisserait un lecteur anglophone ou
+   sous /en/ et /ar/ · le français seul laisserait un lecteur anglophone ou
    arabophone devant une langue qu'il n'a pas choisie. On lit d'abord le
    préfixe de l'URL demandée (signal le plus fiable), puis la langue du
    navigateur. Sans JavaScript le français reste affiché : la page est déjà
@@ -371,7 +371,7 @@
   if (home) home.setAttribute('href', '/' + t.lang + '/');
 
   /* Le ticket porte le chemin réellement demandé : c'est souvent là que la
-     personne voit sa faute de frappe. textContent, jamais innerHTML — cette
+     personne voit sa faute de frappe. textContent, jamais innerHTML · cette
      valeur vient de l'URL, donc de n'importe qui. */
   var raw = location.pathname + (location.search || '');
   if (raw.length > 72) raw = raw.slice(0, 71) + '…';
@@ -404,7 +404,7 @@
 
   /* Une inclinaison très légère au passage de la souris : assez pour que le
      papier ait l'air posé là, pas assez pour devenir un jouet. Pointeur fin
-     seulement — au doigt, ça ne ferait que trembler. */
+     seulement · au doigt, ça ne ferait que trembler. */
   var paper = document.getElementById('paper');
   var fine = window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
   var calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;

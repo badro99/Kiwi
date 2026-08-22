@@ -683,7 +683,7 @@
         return `<div class="ty">${TYPES[ty].name}</div>` + r.base.map((b, i) => `
           <div class="rc${aiApplied && r.ai[i] ? ' edited' : ''}" data-action="hx-rate-cell" data-arg="${ty}|${i}">
             <div class="base">${fmt(b)}</div>
-            ${!aiApplied && r.ai[i] ? `<div class="ai up">IA ${fmt(r.ai[i])}</div>` : (aiApplied && r.ai[i] ? '<div class="ai">appliqué ✓</div>' : '<div class="ai" style="color:var(--n-300);">—</div>')}
+            ${!aiApplied && r.ai[i] ? `<div class="ai up">IA ${fmt(r.ai[i])}</div>` : (aiApplied && r.ai[i] ? '<div class="ai">appliqué ✓</div>' : '<div class="ai" style="color:var(--n-300);">·</div>')}
           </div>`).join('');
       }).join('')}
     </div>`;
@@ -739,7 +739,7 @@
           <div style="margin-top:4px;display:flex;gap:5px;flex-wrap:wrap;">${g.prefs.map((p) => `<span class="hx-pref${/allergie/i.test(p) ? ' allergy' : ''}">${p}</span>`).join('')}</div>
         </div>
         <span></span>
-        <div class="ltv">${g.ltv ? MAD(g.ltv) : '—'}<small>valeur vie client</small></div>
+        <div class="ltv">${g.ltv ? MAD(g.ltv) : '·'}<small>valeur vie client</small></div>
       </div>`).join('');
     return `<div class="hx-page">
       <div class="hx-strip">
@@ -774,7 +774,7 @@
       width: 520,
       body: `
         <div style="display:flex;flex-direction:column;gap:12px;font-size:13px;">
-          <div style="display:flex;justify-content:space-between;"><span style="color:var(--n-500);">Valeur vie client</span><b style="font-family:var(--mono);font-size:16px;">${g.ltv ? MAD(g.ltv) : '—'}</b></div>
+          <div style="display:flex;justify-content:space-between;"><span style="color:var(--n-500);">Valeur vie client</span><b style="font-family:var(--mono);font-size:16px;">${g.ltv ? MAD(g.ltv) : '·'}</b></div>
           ${g.ltv ? `<div>
             <div style="font-size:11px;font-family:var(--mono);color:var(--n-500);letter-spacing:.05em;margin-bottom:6px;">RÉPARTITION · CHAMBRES / RESTAURANT / HAMMAM</div>
             <div style="display:flex;height:10px;border-radius:999px;overflow:hidden;">
@@ -997,7 +997,7 @@
       <div class="hx-kpi"><div class="l">Occupation ce soir</div><div class="v">${c.occToNight} / ${total}</div><div class="d">${pct} % · se met à jour à chaque vente</div></div>
       <div class="hx-kpi"><div class="l">Libres · propres</div><div class="v">${free}</div><div class="d">prêtes à vendre</div></div>
       <div class="hx-kpi"><div class="l">À remettre à blanc</div><div class="v">${c.toClean}</div><div class="d">${c.toClean ? 'voir Ménage' : 'tout est propre ✓'}</div></div>
-      <div class="hx-kpi"><div class="l">Tarif de base</div><div class="v">${cuState().baseRate == null ? '—' : fmt(cuState().baseRate) + ' <small>MAD</small>'}</div><div class="d">réglable dans Tarifs</div></div>
+      <div class="hx-kpi"><div class="l">Tarif de base</div><div class="v">${cuState().baseRate == null ? '·' : fmt(cuState().baseRate) + ' <small>MAD</small>'}</div><div class="d">réglable dans Tarifs</div></div>
     </div>`;
   }
   function cuReceptionBody() {
@@ -1078,7 +1078,7 @@
       <div class="hx-h"><span class="t">Tarif de base</span><span class="s">appliqué aux walk-ins et nouvelles réservations · ajustez-le à votre marché</span></div>
       <div class="block" style="padding:22px 14px;display:flex;align-items:center;justify-content:center;gap:20px;">
         <button class="hx-btn ghost" data-action="hx-cb-rate-step" data-arg="-50">−50</button>
-        <div style="font-family:var(--mono);font-size:30px;font-weight:600;">${st.baseRate == null ? '—' : fmt(st.baseRate)} <span style="font-size:13px;color:var(--n-500);">MAD / nuit</span></div>
+        <div style="font-family:var(--mono);font-size:30px;font-weight:600;">${st.baseRate == null ? '·' : fmt(st.baseRate)} <span style="font-size:13px;color:var(--n-500);">MAD / nuit</span></div>
         <button class="hx-btn ghost" data-action="hx-cb-rate-step" data-arg="50">+50</button>
       </div>
       <div class="block" style="padding:8px 14px;margin-top:14px;">
@@ -1149,8 +1149,8 @@
       </div>`).join('');
     return `<div class="hx-page">
       <div class="hx-strip">
-        <div class="hx-kpi"><div class="l">Réservation directe</div><div class="v">—</div><div class="d">source de réservations non connectée</div></div>
-        <div class="hx-kpi"><div class="l">Canaux connectés</div><div class="v">—</div><div class="d">source de canaux non connectée</div></div>
+        <div class="hx-kpi"><div class="l">Réservation directe</div><div class="v">·</div><div class="d">source de réservations non connectée</div></div>
+        <div class="hx-kpi"><div class="l">Canaux connectés</div><div class="v">·</div><div class="d">source de canaux non connectée</div></div>
       </div>
       <div class="hx-h"><span class="t">Connecter un canal</span><span class="s">Kiwi affiche la commission de chaque canal, réservation par réservation</span></div>
       <div class="block" style="padding:8px 14px;"><div class="hx-list">${rows}</div></div>
@@ -1509,7 +1509,7 @@
       const i = HK_QUEUE.findIndex((x) => x.room === room);
       if (i >= 0) {
         const it = HK_QUEUE.splice(i, 1)[0];
-        HK_DONE.unshift({ room, at: nowLabel(), by: it.who || '—', inspected: false, note: 'En attente d\'inspection · Khadija notifiée' });
+        HK_DONE.unshift({ room, at: nowLabel(), by: it.who || '·', inspected: false, note: 'En attente d\'inspection · Khadija notifiée' });
         const r = ROOMS[room];
         const arrival = ARRIVALS.find((a) => a.room === room && !a.done);
         r.status = arrival ? 'arrivee' : 'libre';

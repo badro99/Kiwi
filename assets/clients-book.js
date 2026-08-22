@@ -314,7 +314,7 @@
     if (!rows.length) {
       host.innerHTML = '<div class="kcb-empty">' + ICON.users +
         (all.length ? '<b>Aucun résultat</b><div>Essayez un autre nom ou numéro.</div>'
-                    : '<b>Aucun client pour l’instant</b><div>Ajoutez votre premier client — il apparaîtra aussitôt sur le tableau de bord.</div>') + '</div>';
+                    : '<b>Aucun client pour l’instant</b><div>Ajoutez votre premier client · il apparaîtra aussitôt sur le tableau de bord.</div>') + '</div>';
       return;
     }
     var cfg = KC.config();
@@ -323,7 +323,7 @@
       var ptsTxt = cfg.model === 'amount' ? (fmt(c.points) + ' <small>pts</small>') : ((c.stamps || 0) + '<small>/' + (cfg.model === 'product' ? cfg.product.target : cfg.visit.target) + '</small>');
       return '<div class="kcb-row" data-id="' + esc(c.id) + '">' +
         '<div class="kcb-av">' + esc(initials(c.name)) + '</div>' +
-        '<div><div class="kcb-nm">' + esc(c.name || 'Sans nom') + '</div><div class="kcb-ph">' + esc(c.phone || '—') + '</div></div>' +
+        '<div><div class="kcb-nm">' + esc(c.name || 'Sans nom') + '</div><div class="kcb-ph">' + esc(c.phone || '·') + '</div></div>' +
         '<div class="kcb-meta"><div class="kcb-pts">' + ptsTxt + '</div><span class="kcb-seg ' + seg + '">' + SEG_LBL[seg] + '</span></div></div>';
     }).join('');
     Array.prototype.forEach.call(host.querySelectorAll('.kcb-row'), function (row) {
@@ -353,7 +353,7 @@
 
   function genderOpts(v) {
     return ['', 'Femme', 'Homme', 'Autre'].map(function (g) {
-      var lbl = g || '—';
+      var lbl = g || '·';
       return '<option value="' + esc(g) + '"' + (v === g ? ' selected' : '') + '>' + esc(lbl) + '</option>';
     }).join('');
   }
@@ -362,7 +362,7 @@
     var editing = !!client;
     sheet(
       '<h3>' + (editing ? 'Modifier le client' : 'Nouveau client') + '</h3>' +
-      '<div class="kcb-sub">' + (editing ? esc(c.name || '') : 'Renseignez un maximum d’informations — elles nourrissent la fidélité et le marketing.') + '</div>' +
+      '<div class="kcb-sub">' + (editing ? esc(c.name || '') : 'Renseignez un maximum d’informations · elles nourrissent la fidélité et le marketing.') + '</div>' +
       '<div class="kcb-field"><label>Nom complet</label><input id="kcb-f-name" value="' + esc(c.name || '') + '" placeholder="Prénom Nom" autocomplete="off"></div>' +
       '<div class="kcb-grid2">' +
         '<div class="kcb-field"><label>Téléphone</label><input id="kcb-f-phone" inputmode="tel" autocomplete="tel" value="' + esc(c.phone || '') + '" placeholder="06… / +33… / +49…"></div>' +
@@ -454,11 +454,11 @@
     sheet(
       '<div class="kcb-dhead"><div class="kcb-av">' + esc(initials(c.name)) + '</div>' +
         '<div style="flex:1"><h3 style="margin:0">' + esc(c.name || 'Sans nom') + '</h3>' +
-        '<div class="kcb-sub" style="margin:2px 0 0">' + esc(c.phone || '—') + ' · <span class="kcb-seg ' + seg + '">' + SEG_LBL[seg] + '</span></div></div>' +
+        '<div class="kcb-sub" style="margin:2px 0 0">' + esc(c.phone || '·') + ' · <span class="kcb-seg ' + seg + '">' + SEG_LBL[seg] + '</span></div></div>' +
         '<button class="kcb-x" id="kcb-d-close" aria-label="Fermer">' + ICON.close + '</button></div>' +
       /* La phrase fixe dans son propre nœud : la récompense qui suit est le texte
          du commerçant, elle doit traverser telle quelle. */
-      (rewardReady ? '<div class="kcb-reward">' + ICON.gift + '<span>Récompense prête</span> — ' + esc((cfg.model === 'amount' ? cfg.amount.reward : (cfg.model === 'product' ? cfg.product.reward : cfg.visit.reward)) || '1 offert') + '</div>' : '') +
+      (rewardReady ? '<div class="kcb-reward">' + ICON.gift + '<span>Récompense prête</span> · ' + esc((cfg.model === 'amount' ? cfg.amount.reward : (cfg.model === 'product' ? cfg.product.reward : cfg.visit.reward)) || '1 offert') + '</div>' : '') +
       '<div class="kcb-stat"><div class="kcb-progtxt">' + progTxt + '</div>' +
         '<div class="kcb-progwrap"><div class="kcb-progbar" style="width:' + Math.round(prog * 100) + '%"></div></div></div>' +
       '<div class="kcb-kpis">' +
@@ -466,7 +466,7 @@
         '<div class="kcb-kpi"><div class="v">' + fmt(c.spend) + '</div><div class="l">Dépensé (MAD)</div></div>' +
         // « 3 j » et non « 3j » : l'abréviation doit être un mot à part pour se
         // traduire — collée au nombre elle se relisait « j3 » en arabe.
-        '<div class="kcb-kpi"><div class="v">' + (KC.daysSince(c.lastSeen) === Infinity ? '—' : KC.daysSince(c.lastSeen) + ' j') + '</div><div class="l">Dernière visite</div></div></div>' +
+        '<div class="kcb-kpi"><div class="v">' + (KC.daysSince(c.lastSeen) === Infinity ? '·' : KC.daysSince(c.lastSeen) + ' j') + '</div><div class="l">Dernière visite</div></div></div>' +
       infoBlock +
       recordBlock +
       (rewardReady ? '<button class="kcb-btn primary" id="kcb-redeem" style="margin-top:8px">Offrir la récompense · réinitialiser</button>' : '') +

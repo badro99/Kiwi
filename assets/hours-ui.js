@@ -38,7 +38,7 @@
 
   var T = {
     fr: {
-      title: 'Horaires d’ouverture', sub: 'La référence pour tout Kiwi — caisse, réservations, commandes en ligne et assistant',
+      title: 'Horaires d’ouverture', sub: 'La référence pour tout Kiwi · caisse, réservations, commandes en ligne et assistant',
       week: 'Semaine type', open: 'Ouvert', closed: 'Fermé', to: 'à',
       addPeriod: '+ Second service', delPeriod: 'Retirer ce service',
       copy: 'Copier vers…', copyTo: 'Copier ce jour vers', apply: 'Appliquer',
@@ -59,7 +59,7 @@
       todayIs: 'Aujourd’hui',
     },
     en: {
-      title: 'Opening hours', sub: 'The reference for all of Kiwi — till, bookings, online orders and assistant',
+      title: 'Opening hours', sub: 'The reference for all of Kiwi · till, bookings, online orders and assistant',
       week: 'Weekly schedule', open: 'Open', closed: 'Closed', to: 'to',
       addPeriod: '+ Second service', delPeriod: 'Remove this service',
       copy: 'Copy to…', copyTo: 'Copy this day to', apply: 'Apply',
@@ -80,7 +80,7 @@
       todayIs: 'Today',
     },
     ar: {
-      title: 'ساعات العمل', sub: 'المرجع لكل كيوي — الصندوق، الحجوزات، الطلبات والمساعد',
+      title: 'ساعات العمل', sub: 'المرجع لكل كيوي · الصندوق، الحجوزات، الطلبات والمساعد',
       week: 'الأسبوع المعتاد', open: 'مفتوح', closed: 'مغلق', to: 'إلى',
       addPeriod: '+ فترة ثانية', delPeriod: 'حذف هذه الفترة',
       copy: 'نسخ إلى…', copyTo: 'نسخ هذا اليوم إلى', apply: 'تطبيق',
@@ -347,7 +347,7 @@
           esc(K.dayLabel(d, lang())) + '</label>';
       }).join('');
       var cm = Kw().modal({
-        title: L.copyTo + ' — ' + K.dayLabel(src, lang()), width: 380,
+        title: L.copyTo + ' · ' + K.dayLabel(src, lang()), width: 380,
         body: '<div>' + boxes + '</div>',
         foot: '<button class="kb ghost" id="kh-cp-x">' + esc(L.cancel) + '</button>' +
               '<button class="kb primary" id="kh-cp-ok">' + esc(L.apply) + '</button>',

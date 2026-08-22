@@ -1137,7 +1137,7 @@
     const waiting = minsSince(o.placedAt);
     const late = o.status === 'prep' && waiting >= 12;
     const when = o.status === 'remis'
-      ? `remis à ${o.remisAt ? fmtHM(o.remisAt) : '—'}`
+      ? `remis à ${o.remisAt ? fmtHM(o.remisAt) : '·'}`
       : agoLabel(o.placedAt);
     /* div, pas button — les actions rapides sont des boutons imbriqués */
     return `<div class="ff-ocard ${o.status}" data-ff-o="${o.num}" role="button" tabindex="0">
@@ -1178,7 +1178,7 @@
         <div class="ff-callbar">
           <div class="ff-mic">
             <i data-lucide="volume-2"></i>
-            <span class="l"><span class="lbl">Au micro</span><b id="ff-mic-num">${state.lastCalled ? `#${state.lastCalled}` : '—'}</b></span>
+            <span class="l"><span class="lbl">Au micro</span><b id="ff-mic-num">${state.lastCalled ? `#${state.lastCalled}` : '·'}</b></span>
           </div>
           <span class="ff-call-hint">le client entend son numéro, pas son nom</span>
           ${target

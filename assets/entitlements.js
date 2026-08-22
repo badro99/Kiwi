@@ -77,7 +77,7 @@
        donc parler d'un travail FAIT plutôt que d'un accès manquant. La première
        phrase reconnaît ce que le commerçant vient de monter ; le reste dit la
        suite sans jamais prononcer « payez ». */
-    head.append(kick,node('h2','',"Tout est en place."),node('p','',"Vos articles, votre équipe, vos réglages : votre établissement est prêt. On en parle cinq minutes, on choisit ensemble la formule qui correspond à votre maison, et vous travaillez dès aujourd'hui — avec tout ce que vous venez de préparer, tel quel."));
+    head.append(kick,node('h2','',"Tout est en place."),node('p','',"Vos articles, votre équipe, vos réglages : votre établissement est prêt. On en parle cinq minutes, on choisit ensemble la formule qui correspond à votre maison, et vous travaillez dès aujourd'hui · avec tout ce que vous venez de préparer, tel quel."));
     var benefits=node('div','kiwi-entitlement-benefits');
     /* « God Mode » est notre mot d'atelier, pas celui du commerçant : il lisait
        ici le nom d'une console qu'il ne verra jamais. */

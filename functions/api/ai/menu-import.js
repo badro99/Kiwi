@@ -1,10 +1,10 @@
-// /api/ai/menu-import — lecture et extraction structurée d'une carte de restaurant.
+// /api/ai/menu-import · lecture et extraction structurée d'une carte de restaurant.
 //
 // Le commerçant apporte sa carte sous la forme qu'il a : photo, PDF, lien vers
 // un menu en ligne, ou texte collé. Le serveur normalise tout en texte (ou en
 // image pour le modèle vision), appelle Workers AI pour structurer la carte en
 // JSON strict, valide et borne chaque champ, puis renvoie des lignes prêtes
-// pour la revue d'import côté navigateur (KiwiCatalogImport) — RIEN n'est
+// pour la revue d'import côté navigateur (KiwiCatalogImport) · RIEN n'est
 // écrit dans la carte avant que le commerçant confirme le plan.
 //
 // Même modèle de sécurité que /api/ai/invoice :
@@ -34,11 +34,11 @@ const TEMPERATURE = 0.1;
 const TOP_P = 0.9;
 const DAILY_CAP = 60;
 const MAX_TEXT_CHARS = 40000;
-const MAX_IMAGE_DATAURL = 2_600_000; // ~1,9 Mo binaire — le client réduit avant envoi
+const MAX_IMAGE_DATAURL = 2_600_000; // ~1,9 Mo binaire · le client réduit avant envoi
 const MAX_HTML_BYTES = 900_000;
 const URL_TIMEOUT_MS = 8000;
 /* Sous ce seuil de texte utile, la page est une coquille JavaScript (SPA) que
- * le serveur ne peut pas rendre — on répond 'js-only' et le navigateur propose
+ * le serveur ne peut pas rendre · on répond 'js-only' et le navigateur propose
  * la photo ou le PDF à la place. */
 const MIN_URL_TEXT = 180;
 
@@ -58,7 +58,7 @@ export function urlAllowed(raw) {
 
 /* HTML → texte lisible. Pas un parseur complet : on retire ce qui n'est pas du
  * contenu, on préserve les retours de ligne des blocs, on décode les entités
- * courantes. Suffisant pour un menu — le modèle fait le reste. */
+ * courantes. Suffisant pour un menu · le modèle fait le reste. */
 export function htmlToText(html) {
   let s = String(html || '');
   s = s.replace(/<!--[\s\S]*?-->/g, ' ');
@@ -134,7 +134,7 @@ export function buildSystemPrompt(targetLang = 'fr') {
 
   // La cible n'est plus une langue de traduction : on lit la carte telle
   // qu'elle est écrite. La traduction se fait APRÈS, par entrée et par langue,
-  // avec une empreinte (assets/menu-i18n.js + /api/ai/menu-translate) — sinon
+  // avec une empreinte (assets/menu-i18n.js + /api/ai/menu-translate) · sinon
   // la langue d'origine du patron est perdue à la première lecture.
   void targetLabel;
   return `Tu es un extracteur fidèle de cartes (menus) pour restaurants et cafés au Maroc.
@@ -150,9 +150,9 @@ Structure JSON stricte à retourner :
 Règles :
 - Réponds UNIQUEMENT avec un objet JSON valide, sans texte d'introduction ni commentaire.
 - "price" est un nombre (pas une chaîne). Si le prix est absent ou illisible, mets 0.
-- Les sections "cat", sous-sections "sub", noms "name" et descriptions "desc" sont recopiés dans la langue où ils sont écrits sur la carte — même si la carte mélange deux langues. La traduction est faite ensuite, ailleurs.
+- Les sections "cat", sous-sections "sub", noms "name" et descriptions "desc" sont recopiés dans la langue où ils sont écrits sur la carte · même si la carte mélange deux langues. La traduction est faite ensuite, ailleurs.
 - "sub" seulement si le menu a des sous-sections (ex. "Matcha", "Classics", "All Day Brunch"), sinon chaîne vide.
-- "desc" uniquement si une description est écrite sur la carte — sans rien inventer.
+- "desc" uniquement si une description est écrite sur la carte · sans rien inventer.
 - Ignore les adresses, téléphones, horaires, slogans, réseaux sociaux et mentions légales.
 - N'omets aucun article : chaque plat ou boisson avec ou sans prix devient une entrée.`;
 }
@@ -174,7 +174,7 @@ function textPayload(text, targetLang = 'fr') {
 
 /* Les modèles Meta sont sous licence : le premier appel du COMPTE doit être
  * le prompt littéral « agree » (erreur 5016 sinon). Une fois accepté, c'est
- * acquis pour toujours — mais un compte neuf (staging, migration) retombe
+ * acquis pour toujours · mais un compte neuf (staging, migration) retombe
  * dessus, donc l'acceptation se rejoue d'elle-même au lieu d'exiger une
  * manipulation console. */
 async function agreeIfGated(env, err) {
@@ -186,7 +186,7 @@ async function agreeIfGated(env, err) {
 /* Le schéma d'entrée des modèles vision varie d'un modèle Workers AI à
  * l'autre : forme OpenAI (content en tableau de blocs image_url/text) ou forme
  * native (prompt + image en tableau d'octets). On tente la première, on se
- * replie sur la seconde — même philosophie multi-formes que parseModelResponse. */
+ * replie sur la seconde · même philosophie multi-formes que parseModelResponse. */
 async function runVision(env, dataUrl, targetLang = 'fr') {
   try { return await runVisionOnce(env, dataUrl, targetLang); }
   catch (e) {

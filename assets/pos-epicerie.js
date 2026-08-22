@@ -1480,7 +1480,7 @@
       if (!n) return;
       const lines = selected.map(([id, qty]) => ({ itemId: id, name: ITEMS[id].label, qty, unit: ITEMS[id].unit || 'unité', unitCost: 0 }));
       const P = window.KiwiProcurement;
-      let message = ['Bonjour,', 'Liste de réassort', ...lines.map((line) => `• ${line.name} — ${line.qty} ${line.unit}`), 'Merci.'].join('\n');
+      let message = ['Bonjour,', 'Liste de réassort', ...lines.map((line) => `• ${line.name} · ${line.qty} ${line.unit}`), 'Merci.'].join('\n');
       let order = null;
       if (P) {
         let supplier = P.doc().suppliers.find((row) => row.name === 'Grossiste du Souk');

@@ -1300,8 +1300,8 @@
         <div class="ph-ptd-sec-lbl"><i data-lucide="shield-check"></i>Couverture</div>
         <div class="ph-ptd-grid">
           <div class="ph-ptd-field"><div class="k">Mutuelle</div><div class="v">${esc(m.label)}</div></div>
-          <div class="ph-ptd-field"><div class="k">N° d'affiliation</div><div class="v mono">${esc(p.aff || '—')}</div></div>
-          <div class="ph-ptd-field"><div class="k">Taux de prise en charge</div><div class="v">${p.mut === 'sans' ? '—' : Math.round(m.rate * 100) + ' %'}</div></div>
+          <div class="ph-ptd-field"><div class="k">N° d'affiliation</div><div class="v mono">${esc(p.aff || '·')}</div></div>
+          <div class="ph-ptd-field"><div class="k">Taux de prise en charge</div><div class="v">${p.mut === 'sans' ? '·' : Math.round(m.rate * 100) + ' %'}</div></div>
           <div class="ph-ptd-field"><div class="k">Solde en attente</div><div class="v" style="${p.due ? 'color:var(--danger-mute);' : ''}">${p.due ? fmtNum(p.due) + ' MAD' : 'à jour'}</div></div>
         </div>
       </div>
@@ -1408,7 +1408,7 @@
                 return `<div class="ph-degarde-row ${ph.me ? 'is-me' : ''}">
                 <span class="ic"><i data-lucide="cross"></i></span>
                 <span class="l"><b>${esc(nm)} ${ph.me ? '<span class="ph-me-chip">VOUS</span>' : ''}</b><span>${esc(zn)}</span></span>
-                <span class="zone">${ph.me ? 'nuit' : '—'}</span>
+                <span class="zone">${ph.me ? 'nuit' : '·'}</span>
               </div>`;
               }).join('')}
             </div>
@@ -1505,7 +1505,7 @@
       const units = refs.reduce((s, [, q]) => s + q, 0);
       const lines = refs.map(([id, qty]) => ({ itemId: id, name: ITEMS[id].label, qty, unit: ITEMS[id].unit || 'boîte', unitCost: 0 }));
       const P = window.KiwiProcurement;
-      let message = ['Bonjour,', 'Demande de disponibilité pharmacie', ...lines.map((line) => `• ${line.name} — ${line.qty} ${line.unit}`), 'Merci.'].join('\n');
+      let message = ['Bonjour,', 'Demande de disponibilité pharmacie', ...lines.map((line) => `• ${line.name} · ${line.qty} ${line.unit}`), 'Merci.'].join('\n');
       let order = null;
       if (P) {
         let supplier = P.doc().suppliers.find((row) => row.name === 'CoopharMa');

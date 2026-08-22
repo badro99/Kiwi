@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════════════
- * Kiwi · POS DISPATCH — one terminal, every métier.
+ * Kiwi · POS DISPATCH · one terminal, every métier.
  * ---------------------------------------------------------------------------
  * The kiwi-caisse PIN screen routes one 4-digit code per vertical:
  *
@@ -20,7 +20,7 @@
  *   0014  coiffure            Salon Yasmine
  *   0015  salle de sport      Atlas Fitness
  *   0016  autre activité      Caisse polyvalente
- *   autre → caisse restaurant (Café Atlas) — the main demo, untouched.
+ *   autre → caisse restaurant (Café Atlas) · the main demo, untouched.
  *
  * Each vertical lives in its own pair assets/pos-<id>.{js,css}, lazy-loaded
  * on first unlock (nothing weighs on the restaurant caisse). A vertical
@@ -31,17 +31,17 @@
  *     greet: { line1: 'Bonjour Salma,', em: 'bienvenue.',
  *              sub: 'Maison Mansour · ouverture boutique' },
  *     mount(rootEl) { ... },                // called ONCE, build the app here
- *     onShow() { ... },                     // optional — every re-unlock
+ *     onShow() { ... },                     // optional · every re-unlock
  *   });
  *
  * The dispatcher owns the PIN-screen choreography (dot success animation,
  * fade, greeting flash, body classes `is-pos is-pos-<id> is-unlocked`) and
  * the way back: verticals call KiwiPosDispatch.lock() from their own
- * « Verrouiller » button — it clears classes and resets the PIN screen via
+ * « Verrouiller » button · it clears classes and resets the PIN screen via
  * window.__kiwiPinReset() (exposed by kiwi-caisse.html).
  *
  * Roots are created per vertical as  <div class="vx-screen" id="pos-<id>">
- * (fixed, inset 0, z-index 90 — same layer recipe as the pressing). The
+ * (fixed, inset 0, z-index 90 · same layer recipe as the pressing). The
  * vertical styles its own interior with its OWN class prefix and reuses the
  * caisse modal kit (.modal-veil, .modal, .ma-btn, .cash-*, .reader-*) and
  * the shared #toast-stack.
@@ -50,27 +50,27 @@
   'use strict';
 
   const REGISTRY = {
-    /* '0000' n'est PAS un index de tableau canonique — la clé reste une chaîne
+    /* '0000' n'est PAS un index de tableau canonique · la clé reste une chaîne
      * et Object.entries() garde l'ordre d'insertion. Le pressing est donc un
      * vertical ordinaire, en tête de liste, et non plus une branche codée en
      * dur dans kiwi-caisse.html. */
-    '0000': { id: 'pressing',    file: 'pressing-caisse', rev: '37', label: 'Pressing · Pressing Marshan' },
-    '0002': { id: 'boutique',    file: 'pos-boutique',    rev: '4', label: 'Boutique · Maison Mansour' },
-    '0003': { id: 'spa',         file: 'pos-spa',         rev: '3', label: 'Spa · Spa Bahia' },
+    '0000': { id: 'pressing',    file: 'pressing-caisse', rev: '39', label: 'Pressing · Pressing Marshan' },
+    '0002': { id: 'boutique',    file: 'pos-boutique',    rev: '6', label: 'Boutique · Maison Mansour' },
+    '0003': { id: 'spa',         file: 'pos-spa',         rev: '5', label: 'Spa · Spa Bahia' },
     '0004': { id: 'hotel',       file: 'pos-hotel',       rev: '3', label: 'Hôtel / Riad · Riad Yasmina' },
-    '0005': { id: 'fastfood',    file: 'pos-fastfood',    rev: '3', label: 'Fast-food · Snack Chamal' },
-    '0006': { id: 'boulangerie', file: 'pos-boulangerie', rev: '3', label: 'Boulangerie · Bab Kasbah' },
+    '0005': { id: 'fastfood',    file: 'pos-fastfood',    rev: '5', label: 'Fast-food · Snack Chamal' },
+    '0006': { id: 'boulangerie', file: 'pos-boulangerie', rev: '7', label: 'Boulangerie · Bab Kasbah' },
     '0007': { id: 'pizzeria',    file: 'pos-pizzeria',    rev: '3', label: 'Pizzeria · La Marsa' },
-    '0008': { id: 'traiteur',    file: 'pos-traiteur',    rev: '3', label: 'Traiteur · Dar Zellij' },
-    '0009': { id: 'foodtruck',   file: 'pos-foodtruck',   rev: '3', label: 'Food truck · Karavan' },
-    '0010': { id: 'epicerie',    file: 'pos-epicerie',    rev: '3', label: 'Épicerie · Si Brahim' },
-    '0011': { id: 'pharmacie',   file: 'pos-pharmacie',   rev: '3', label: 'Pharmacie · Ibn Batouta' },
-    '0012': { id: 'librairie',   file: 'pos-librairie',   rev: '3', label: 'Librairie · Al Boughaz' },
-    '0013': { id: 'fleuriste',   file: 'pos-fleuriste',   rev: '3', label: 'Fleuriste · Fleurs du Détroit' },
-    '0014': { id: 'coiffure',    file: 'pos-coiffure',    rev: '3', label: 'Coiffure · Salon Yasmine' },
-    '0015': { id: 'gym',         file: 'pos-gym',         rev: '3', label: 'Salle de sport · Atlas Fitness' },
+    '0008': { id: 'traiteur',    file: 'pos-traiteur',    rev: '5', label: 'Traiteur · Dar Zellij' },
+    '0009': { id: 'foodtruck',   file: 'pos-foodtruck',   rev: '5', label: 'Food truck · Karavan' },
+    '0010': { id: 'epicerie',    file: 'pos-epicerie',    rev: '5', label: 'Épicerie · Si Brahim' },
+    '0011': { id: 'pharmacie',   file: 'pos-pharmacie',   rev: '5', label: 'Pharmacie · Ibn Batouta' },
+    '0012': { id: 'librairie',   file: 'pos-librairie',   rev: '5', label: 'Librairie · Al Boughaz' },
+    '0013': { id: 'fleuriste',   file: 'pos-fleuriste',   rev: '7', label: 'Fleuriste · Fleurs du Détroit' },
+    '0014': { id: 'coiffure',    file: 'pos-coiffure',    rev: '5', label: 'Coiffure · Salon Yasmine' },
+    '0015': { id: 'gym',         file: 'pos-gym',         rev: '5', label: 'Salle de sport · Atlas Fitness' },
     '0016': { id: 'autre',       file: 'pos-autre',       rev: '2', label: 'Autre activité · caisse polyvalente' },
-    '0017': { id: 'maison',      file: 'pos-maison',      rev: '17', label: 'Maison · Vogue Home' },
+    '0017': { id: 'maison',      file: 'pos-maison',      rev: '19', label: 'Maison · Vogue Home' },
   };
 
   const apps = {};       /* id → registered spec */
@@ -313,7 +313,7 @@
     try { if (window.KiwiCaisseAttendanceCode) window.KiwiCaisseAttendanceCode.mount(root); } catch (e) {}
     /* « Réimprimer » se pose au même endroit et pour la même raison : le rouleau
      * bourre sur les seize métiers, pas seulement au restaurant. Il connaît le
-     * métier ouvert — c'est ce qui lui dit quel journal lire
+     * métier ouvert · c'est ce qui lui dit quel journal lire
      * (assets/pos-reprint.js). Absent sur la démo, qui n'encaisse rien. */
     try { if (window.KiwiPosReprint) window.KiwiPosReprint.mount(root, id); } catch (e) {}
     /* The trade's planning/follow-up boards are the SAME tenant document as
@@ -360,7 +360,7 @@
 
   /* ---------- PIN-screen legend (tap the foot note for all codes) ---------- */
   function initLegend() {
-    // On the hosted app (demos off) never advertise the demo code list — a real
+    // On the hosted app (demos off) never advertise the demo code list · a real
     // merchant only ever pairs their own store. Local keeps the full legend.
     if (window.KiwiEnv && window.KiwiEnv.demosAllowed === false) return;
     const pinScreen = document.getElementById('pin-screen');
@@ -389,7 +389,7 @@
   else boot();
 
   // Boot a vertical by its id (e.g. 'boutique', 'spa', 'gym') rather than its demo
-  // PIN — used by the pairing module to open a paired store's matching register.
+  // PIN · used by the pairing module to open a paired store's matching register.
   function unlockById(id) {
     for (const pin in REGISTRY) { if (REGISTRY[pin].id === id) return unlock(pin); }
   }

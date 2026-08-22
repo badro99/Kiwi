@@ -3,7 +3,7 @@
    ---------------------------------------------------------------------------
    Le différenciateur : on ne vend pas des lignes, on COMPOSE. Une grille de
    tiges illustrées (line-art, même voix que le pressing), un bouquet qui se
-   construit en direct, la carte-message imprimée en Instrument Serif, les
+   construit en direct, la carte-message imprimée en Inter Tight, les
    livraisons du jour avec photo-preuve avant départ, et l'arrivage du matin
    à écouler. Réutilise les tokens caisse (--forest, --mint-tint, --paper-*,
    --ink-*, --line, --r-*, --shadow-*) et le kit modal (.modal-veil, .modal,
@@ -437,7 +437,7 @@
 .fl-pv-rotate { display: flex; align-items: center; gap: 7px; font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-4); margin-bottom: 10px; }
 .fl-pv-rotate::after { content: ""; flex: 1; height: 1px; background: var(--line-soft); }
 
-/* the printed card preview — Instrument Serif, small format */
+/* the printed card preview — Inter Tight, small format */
 .fl-card-preview {
   background: var(--paper-elev);
   border: 1px solid var(--line);

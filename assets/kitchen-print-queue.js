@@ -97,7 +97,7 @@
     try { window.dispatchEvent(new CustomEvent('kiwi:kitchen-print-status', { detail: s })); } catch (_) {}
     var badge = document.getElementById('kitchen-print-count');
     if (badge) {
-      badge.textContent = s.pending ? String(s.pending) : (s.hub && s.printerReady ? '✓' : '—');
+      badge.textContent = s.pending ? String(s.pending) : (s.hub && s.printerReady ? '✓' : '·');
       badge.setAttribute('aria-label', s.pending ? s.pending + ' ticket(s) en attente' : (s.hub ? 'Impression automatique prête' : 'Hub non activé'));
     }
   }

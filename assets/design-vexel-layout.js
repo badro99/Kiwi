@@ -104,9 +104,9 @@
     rail.innerHTML =
       '<section class="vexel-rail-card vexel-day-goal">' +
         '<div class="vexel-rail-label" data-vexel-goal-label></div>' +
-        '<div class="vexel-goal-values"><strong data-vexel-goal-current>—</strong><span data-vexel-goal-target></span></div>' +
+        '<div class="vexel-goal-values"><strong data-vexel-goal-current>·</strong><span data-vexel-goal-target></span></div>' +
         '<div class="vexel-goal-track"><i data-vexel-goal-fill></i></div>' +
-        '<div class="vexel-goal-foot"><span data-vexel-goal-pct>—</span><span data-vexel-goal-rest></span></div>' +
+        '<div class="vexel-goal-foot"><span data-vexel-goal-pct>·</span><span data-vexel-goal-rest></span></div>' +
         /* Les deux comparaisons (vs période précédente, vs mois) vivaient dans
          * le panneau que la peau masque. Elles n'ont aucun autre point de
          * sortie : sans ce miroir, deux chiffres réels disparaissent de
@@ -128,11 +128,11 @@
             '<title data-vexel-client-chart-title></title>' +
             '<circle class="track" cx="55" cy="55" r="' + CLIENT_RING_R + '"/>' +
             '<circle class="value" data-vexel-client-arc cx="55" cy="55" r="' + CLIENT_RING_R + '" stroke-dasharray="0 ' + CLIENT_RING_C.toFixed(2) + '" transform="rotate(-90 55 55)"/>' +
-            '<text x="55" y="57" data-vexel-client-pct>—</text>' +
+            '<text x="55" y="57" data-vexel-client-pct>·</text>' +
           '</svg>' +
           '<div class="vexel-client-foot">' +
             '<div>' +
-              '<strong data-vexel-client-value>—</strong>' +
+              '<strong data-vexel-client-value>·</strong>' +
               '<span data-vexel-client-caption></span>' +
               '<small data-vexel-client-period></small>' +
             '</div>' +
@@ -562,7 +562,7 @@
   }
 
   function serviceAmount(value) {
-    if (!(value >= 0)) return '—';
+    if (!(value >= 0)) return '·';
     var locale = lang() === 'en' ? 'en-GB' : 'fr-FR';
     /* Intl groupe en fr-FR avec une espace fine insécable (U+202F) ; le reste
      * du tableau de bord sépare ses milliers par une espace normale. Deux
@@ -576,7 +576,7 @@
     try {
       var raw = localStorage.getItem('kiwiCustomRange') || '';
       var dates = raw.split('|');
-      if (/^\d{4}-\d{2}-\d{2}$/.test(dates[0]) && /^\d{4}-\d{2}-\d{2}$/.test(dates[1])) return dates[0] + ' — ' + dates[1];
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dates[0]) && /^\d{4}-\d{2}-\d{2}$/.test(dates[1])) return dates[0] + ' · ' + dates[1];
     } catch (_) {}
     return fallback;
   }
@@ -892,7 +892,7 @@
     if (!read.known) {
       // Un anneau plein par defaut mentirait : sans carnet, rien n'est mesure.
       arc.setAttribute('stroke-dasharray', '0 ' + circumference.toFixed(2));
-      setText(pctNode, '—');
+      setText(pctNode, '·');
       setText(title, '');
       return;
     }
@@ -932,9 +932,9 @@
     var pctTarget = document.querySelector('[data-vexel-goal-pct]');
     var fillTarget = document.querySelector('[data-vexel-goal-fill]');
     var restTarget = document.querySelector('[data-vexel-goal-rest]');
-    var amountText = amountSource ? amountSource.textContent.replace(/MAD/i, '').trim() : '—';
+    var amountText = amountSource ? amountSource.textContent.replace(/MAD/i, '').trim() : '·';
     var targetText = goalLabel ? goalLabel.textContent.split('·').pop().trim() : '';
-    var pctText = goalPct ? goalPct.textContent.trim() : '—';
+    var pctText = goalPct ? goalPct.textContent.trim() : '·';
     /* Aucun objectif saisi : la source pose le drapeau et écrit « à définir »
      * au lieu d'un montant. Sans ce test la carte recopiait « à définir » dans
      * la cible, « — atteint » dans le pourcentage et un « Reste NaN MAD ». */
@@ -989,14 +989,14 @@
     var clientCard = document.querySelector('[data-kpi="regulars"], [data-kpi="clients"]');
     var clientValue = document.querySelector('[data-vexel-client-value]');
     var clientDelta = document.querySelector('[data-vexel-client-delta]');
-    var clientText = clientCard ? (clientCard.querySelector('.v') || {}).textContent || '—' : '—';
+    var clientText = clientCard ? (clientCard.querySelector('.v') || {}).textContent || '·' : '·';
     var clientDeltaText = clientCard ? (clientCard.querySelector('.vexel-kpi-delta, :scope > .d') || {}).textContent || '' : '';
     /* Le grand chiffre ne porte plus que les fideles ; le total part dans la
      * legende, ou il se lit comme une phrase (« sur 653 clients vus ») plutot
      * que comme la moitie d'une fraction. */
     var read = parseClients(clientText);
     var clientCopy = CLIENT_STR[lang()] || CLIENT_STR.fr;
-    setText(clientValue, read.known ? read.currentText : '—');
+    setText(clientValue, read.known ? read.currentText : '·');
     setText(document.querySelector('[data-vexel-client-caption]'),
       read.known ? clientCopy.of.replace('{n}', read.totalText) : '');
     setText(clientDelta, clientDeltaText);

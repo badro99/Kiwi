@@ -1071,7 +1071,7 @@
             const list = CMDS.filter((c) => c.status === s && matchCmd(c, q));
             return `<div class="lb-ccol">
               <div class="lb-ccol-head"><i class="dot" style="background:${CMD_STATUS[s].dot}"></i>${CMD_STATUS[s].label} <span class="ct">${list.length}</span></div>
-              ${list.map(cmdCard).join('') || '<div class="lb-cempty">—</div>'}
+              ${list.map(cmdCard).join('') || '<div class="lb-cempty">·</div>'}
             </div>`;
           }).join('')}
         </div>
@@ -1344,7 +1344,7 @@
     return `Bonjour ${first}, bonne nouvelle, votre commande « ${c.title} » est arrivée à ${pvName('la Librairie Al Boughaz') || 'la librairie'}.`
       + `\nJe vous la garde au comptoir. Passez quand vous voulez, du lundi au samedi jusqu'à 20h00.`
       + (due > 0 ? `\nSolde à régler au retrait : ${due} MAD.` : (c.acompte ? `\nDéjà réglée, il ne reste rien à payer.` : ''))
-      + `\n— envoyé via Kiwi`;
+      + `\n·envoyé via Kiwi`;
   }
 
   function openWa(c) {

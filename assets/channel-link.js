@@ -34,8 +34,8 @@
    * commerçant ne peut pas deviner et que personne d'autre ne lui dira. */
   var NOTES = {
     glovo: {
-      fr: 'Glovo (groupe Delivery Hero) ne laisse pas un logiciel de caisse se brancher tout seul : leur programme POS demande un accord signé, puis des identifiants remis par leur représentant au Maroc. Donnez-leur l\'adresse et la clé ci-dessous — c\'est exactement ce qu\'ils réclament. En attendant, la clé fonctionne déjà avec un relais (Make, Zapier, votre propre script).',
-      en: 'Glovo (Delivery Hero group) does not let a POS connect on its own: their POS programme requires a signed agreement, then credentials handed over by their representative in Morocco. Give them the address and key below — that is exactly what they ask for. Meanwhile the key already works with a relay (Make, Zapier, your own script).',
+      fr: 'Glovo (groupe Delivery Hero) ne laisse pas un logiciel de caisse se brancher tout seul : leur programme POS demande un accord signé, puis des identifiants remis par leur représentant au Maroc. Donnez-leur l\'adresse et la clé ci-dessous · c\'est exactement ce qu\'ils réclament. En attendant, la clé fonctionne déjà avec un relais (Make, Zapier, votre propre script).',
+      en: 'Glovo (Delivery Hero group) does not let a POS connect on its own: their POS programme requires a signed agreement, then credentials handed over by their representative in Morocco. Give them the address and key below · that is exactly what they ask for. Meanwhile the key already works with a relay (Make, Zapier, your own script).',
       ar: 'لا تسمح Glovo (مجموعة Delivery Hero) لبرنامج صندوق بالاتصال وحده: برنامجهم يتطلب اتفاقًا موقعًا ثم بيانات اعتماد يسلمها ممثلهم في المغرب. أعطهم العنوان والمفتاح أدناه.',
     },
     yassir: {
@@ -49,8 +49,8 @@
      * Le relais (Make, Zapier) n'est donc plus nécessaire — il reste possible
      * via une clé « générique » pour qui en a déjà un qui tourne. */
     shopify: {
-      fr: 'Shopify signe chaque commande qu\'il envoie. Kiwi vérifie cette signature : il faut donc lui confier la clé que Shopify affiche au moment où vous créez le webhook. Sans elle, l\'adresse ci-dessus refuse tout — y compris les vraies commandes.',
-      en: 'Shopify signs every order it sends. Kiwi verifies that signature, so it needs the key Shopify shows you when you create the webhook. Without it the address above refuses everything — including genuine orders.',
+      fr: 'Shopify signe chaque commande qu\'il envoie. Kiwi vérifie cette signature : il faut donc lui confier la clé que Shopify affiche au moment où vous créez le webhook. Sans elle, l\'adresse ci-dessus refuse tout · y compris les vraies commandes.',
+      en: 'Shopify signs every order it sends. Kiwi verifies that signature, so it needs the key Shopify shows you when you create the webhook. Without it the address above refuses everything · including genuine orders.',
       ar: 'يوقّع Shopify كل طلب يرسله. تتحقق Kiwi من هذا التوقيع، لذا تحتاج إلى المفتاح الذي يعرضه Shopify عند إنشاء الـ webhook. بدونه يرفض العنوان أعلاه كل شيء.',
     },
     generic: {

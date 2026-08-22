@@ -120,7 +120,7 @@ still placeholder data, that's tech debt to replace, not the intended end state.
 - **Persistence:** `localStorage` for client state (`kiwiLang`, `kiwiTheme`,
   `kiwiMode`, `kiwiDateRange`, `kiwiRevCompare`, `kiwiPrinterCfg`, …); D1 for
   server-authoritative data.
-- **Fonts:** Inter Tight, Instrument Serif, IBM Plex Sans Arabic, JetBrains Mono.
+- **Fonts:** Inter Tight (400–800) carries all Latin UI and editorial emphasis; IBM Plex Sans Arabic carries Arabic; JetBrains Mono is reserved for codes and tabular technical data. All emphasis is upright.
 
 When you add a capability, prefer a real implementation with a fail-soft path (works
 degraded when the backend/hardware isn't reachable) over a pure mock — the caisse
@@ -201,6 +201,8 @@ check the GitHub Pages mirror instead, or use a real browser session.
 ---
 
 ## 4. Brand system — locked
+
+- **2026-08-22 · Typography:** Instrument Serif is retired from every user-facing surface. Existing serif/editorial/display aliases remain for compatibility but resolve to Inter Tight; emphasis uses upright weight and colour, never italics. User-facing copy uses commas, full stops or middle dots instead of U+2014 em dashes.
 
 Colors (defined in `assets/tokens.css`):
 - `--atlas` `#0B6E4F` (primary) · `--riad` `#053B2C` (deep) · `--mint` `#7DF2B0` (accent ≤5%)

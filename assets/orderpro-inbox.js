@@ -313,7 +313,7 @@
     var lines = (o.lines || []).map(function (l) {
       return '<div class="kop-line"><span class="q">' + (l.qty || 1) + '×</span><span>' + esc(l.name || '') +
         (l.options ? ' <span class="o">' + esc(l.options) + '</span>' : '') +
-        (l.note ? ' <span class="o">— ' + esc(l.note) + '</span>' : '') + '</span></div>';
+        (l.note ? ' <span class="o">·' + esc(l.note) + '</span>' : '') + '</span></div>';
     }).join('');
     var acts = o.status === 'pending'
       ? '<div class="kop-acts">' +

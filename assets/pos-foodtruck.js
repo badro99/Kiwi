@@ -92,7 +92,7 @@
   const SPOT = Object.fromEntries(SPOTS.map((s) => [s.id, s]));
   /* rotation indicative de la semaine (dim → sam) */
   const ROTA = [
-    { day: 'dim', midi: 'Relâche', soir: '—' },
+    { day: 'dim', midi: 'Relâche', soir: '·' },
     { day: 'lun', midi: 'Marina Bay', soir: 'Plage Achakar' },
     { day: 'mar', midi: 'Gare routière', soir: 'Plage Achakar' },
     { day: 'mer', midi: 'Marina Bay', soir: 'Plage Achakar' },
@@ -987,7 +987,7 @@
           <div class="ft-split-row ${state.spot === 'achakar' ? '' : 'mut'}">
             <span class="who">${state.spot === 'achakar' ? '<i></i>' : ''}Plage Achakar <span>soir</span></span>
             <span class="ct">${recette.achakar.orders ? `${recette.achakar.orders} cmd` : 'dès 18:00'}</span>
-            <span class="amt">${recette.achakar.orders ? fmtMAD(recette.achakar.especes + recette.achakar.carte) : '—'}</span>
+            <span class="amt">${recette.achakar.orders ? fmtMAD(recette.achakar.especes + recette.achakar.carte) : '·'}</span>
           </div>
         </div>
 

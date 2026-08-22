@@ -947,7 +947,7 @@
           ${frozen.length ? `<div class="gy-freeze-list">${frozen.map((m) => `
             <button class="gy-freeze-row" data-gy-exp-fiche="${m.id}">
               <span class="gy-mem-ava frozen">${esc(initials(m.name))}</span>
-              <span class="gy-freeze-row-l"><b>${esc(m.name)}</b><span>reprise le ${esc(m.frozenUntil ? fmtLong(m.frozenUntil) : '—')}</span></span>
+              <span class="gy-freeze-row-l"><b>${esc(m.name)}</b><span>reprise le ${esc(m.frozenUntil ? fmtLong(m.frozenUntil) : '·')}</span></span>
               <span class="gy-pill snow"><i data-lucide="snowflake"></i> en pause</span>
             </button>`).join('')}</div>` : ''}
         </div>`;
@@ -1481,17 +1481,17 @@
       return `Salam ${first} ! On ne t'a pas vu à ${gymVenue} depuis un moment, ton abonnement a expiré il y a ${Math.abs(d)} jours.`
         + `\nReviens quand tu veux : on te garde le tarif ${PLAN[m.plan].label.toLowerCase()} (${planPrice(m.plan, m.student)} MAD) et ${m.coach !== 'Sans coach' ? m.coach + ' t\'attend' : 'un coach pour te relancer'}.`
         + `\nUne séance et on repart fort, nchallah.`
-        + `\n— ${gymVenue}, via Kiwi`;
+        + `\n·${gymVenue}, via Kiwi`;
     }
     if (s === 'expiring') {
       return `Salam ${first} ! Ton abonnement ${gymVenue} se termine ${d === 0 ? "aujourd'hui" : 'dans ' + d + ' jour' + (d > 1 ? 's' : '')}.`
         + `\nRenouvelle dès maintenant pour ne pas couper ton élan, ${PLAN[m.plan].label.toLowerCase()} à ${planPrice(m.plan, m.student)} MAD.`
         + `\nObjectif « ${m.goal} » : on y est presque, lâche rien !`
-        + `\n— ${gymVenue}, via Kiwi`;
+        + `\n·${gymVenue}, via Kiwi`;
     }
     return `Salam ${first} ! Petit message d'${gymVenue}, continue comme ça, ${m.visits} passages ce mois, c'est du sérieux.`
       + `\nBesoin d'un coup de main sur ton objectif « ${m.goal} » ? ${m.coach !== 'Sans coach' ? m.coach : 'Un coach'} est dispo cette semaine.`
-      + `\n— ${gymVenue}, via Kiwi`;
+      + `\n·${gymVenue}, via Kiwi`;
   }
 
   function openWa(m) {
@@ -1558,7 +1558,7 @@
     if (tone === 'offre') {
       return `Salam ${first} ! Offre fidélité ${gymVenue} : renouvelle cette semaine et on t'offre une séance coach + un shaker.`
         + `\n${PLAN[m.plan].label} à ${planPrice(m.plan, m.student)} MAD. On t'attend !`
-        + `\n— ${gymVenue}, via Kiwi`;
+        + `\n·${gymVenue}, via Kiwi`;
     }
     return waMessage(m);
   }

@@ -30,7 +30,7 @@
     var rows = (Array.isArray(entries) ? entries : []).slice(0, 5);
     host.innerHTML = rows.length ? '<div class="team-section-label">Derniers pointages</div>' + rows.map(function (entry) {
       return '<div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line);font-size:12px;"><b>'
-        + esc(entry.name || 'Employé') + '</b><span>' + esc(clock(entry.inTs, '—')) + ' → '
+        + esc(entry.name || 'Employé') + '</b><span>' + esc(clock(entry.inTs, '·')) + ' → '
         + esc(clock(entry.outTs, 'En service')) + '</span></div>';
     }).join('') : '<div class="team-meta">Aucun pointage enregistré.</div>';
   }
@@ -83,7 +83,7 @@
       veil = document.createElement('div'); veil.className = 'modal-veil'; veil.id = 'kx-attendance-code-modal';
       veil.innerHTML = '<div class="modal" role="dialog" aria-modal="true" aria-labelledby="kx-attendance-title" style="max-width:420px;text-align:center;">'
         + '<h3 class="modal-title" id="kx-attendance-title">Code de pointage</h3><p class="modal-subtle">À saisir dans Kiwi Équipe pour pointer l’arrivée ou le départ.</p>'
-        + '<div class="mono" data-kx-attendance-value style="font-size:54px;font-weight:760;letter-spacing:.16em;margin:28px 0 8px;">— — — — — —</div>'
+        + '<div class="mono" data-kx-attendance-value style="font-size:54px;font-weight:760;letter-spacing:.16em;margin:28px 0 8px;">······</div>'
         + '<p class="modal-subtle" data-kx-attendance-expiry>Génération du code…</p><div data-kx-attendance-history style="margin-top:22px;text-align:left;"></div>'
         + '<div class="modal-actions is-visible"><button class="ma-btn primary" data-kx-attendance-new type="button">Nouveau code</button>'
         + '<button class="ma-btn secondary" data-kx-attendance-close type="button">Fermer</button></div></div>';

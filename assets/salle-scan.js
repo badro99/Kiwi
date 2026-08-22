@@ -144,7 +144,7 @@
   function stage1Html() {
     return [
       '<div class="st-dropzone" data-kss-drop tabindex="0" role="button">',
-      '  <div class="st-dropzone-t">Photo de votre salle — ou d\'un croquis du plan</div>',
+      '  <div class="st-dropzone-t">Photo de votre salle · ou d\'un croquis du plan</div>',
       '  <div class="st-dropzone-s">Une photo par espace (salle, terrasse…), jusqu\'à ' + MAX_FILES + '</div>',
       '  <div style="display:flex;gap:10px;justify-content:center;margin-top:12px;">',
       '    <button class="st-btn" type="button" data-kss-pick>Choisir des photos</button>',
@@ -155,9 +155,9 @@
       '<input type="file" hidden accept="image/*" capture="environment" data-kss-camfile />',
       '<ul class="kss-tips">',
       '  <li>Placez-vous dans un angle de la salle, pour voir un maximum de tables.</li>',
-      '  <li>Kiwi AI compte les tables, les formes et les places — vous ajustez ensuite.</li>',
+      '  <li>Kiwi AI compte les tables, les formes et les places · vous ajustez ensuite.</li>',
       '</ul>',
-      '<div class="kss-note">Analyse par Kiwi AI (hébergée Cloudflare). Trois plans vous seront proposés — rien n\'est remplacé sans votre confirmation.</div>',
+      '<div class="kss-note">Analyse par Kiwi AI (hébergée Cloudflare). Trois plans vous seront proposés · rien n\'est remplacé sans votre confirmation.</div>',
     ].join('');
   }
 

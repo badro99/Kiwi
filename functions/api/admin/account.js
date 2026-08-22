@@ -268,7 +268,7 @@ export async function onRequestPut(context) {
       text: 'Bonjour,\n\nL’adresse de connexion de ' + who + ' vient d’être remplacée par ' +
             maskEmail(next) + ' à la demande de votre interlocuteur Kiwi.\n\n' +
             'Si vous n’êtes pas à l’origine de ce changement, répondez à ce message immédiatement : ' +
-            'nous rétablirons l’adresse précédente.\n\n— L’équipe Kiwi',
+            'nous rétablirons l’adresse précédente.\n\n·L’équipe Kiwi',
     });
     delivery.old = m.ok ? 'sent' : ('failed:' + m.reason);
   }
@@ -281,7 +281,7 @@ export async function onRequestPut(context) {
              field === 'contact' ? 'l’adresse de contact de ' + who : 'l’adresse de facturation de ' + who) +
             '.\n\n' + (field === 'login'
               ? 'Votre mot de passe n’a pas changé. Connectez-vous avec cette adresse et le mot de passe habituel.\n\n'
-              : '') + '— L’équipe Kiwi',
+              : '') + '·L’équipe Kiwi',
     });
     delivery.new = m.ok ? 'sent' : ('failed:' + m.reason);
   }

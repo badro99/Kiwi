@@ -13,7 +13,7 @@
  *              RESTANT per product that every sale decrements; when the
  *              restant runs low with nothing planned, « four à prévoir ».
  *   GÂTEAUX    the cake order book — occasion, inscription previewed in
- *              Instrument Serif on the cake, acompte, WhatsApp « prêt ».
+ *              Inter Tight on the cake, acompte, WhatsApp « prêt ».
  *   FIN DE JOURNÉE  recette, −50 % dernière heure, invendus → don du soir.
  *
  * Reuses the caisse modal kit (.modal-veil, .modal, .cash-*, .reader-*) and
@@ -962,7 +962,7 @@
       <div class="bl-dt-rows">
         <div class="bl-dt-row"><span>Client</span><b>${esc(c.name)} · <span style="font-family:var(--mono);font-size:11px;">${esc(c.phone)}</span></b></div>
         <div class="bl-dt-row"><span>Gâteau</span><b>${esc(PART[c.parts].label)} · ${esc(c.parfum)}</b></div>
-        <div class="bl-dt-row"><span>Inscription</span><b>${esc(c.inscription || '—')}</b></div>
+        <div class="bl-dt-row"><span>Inscription</span><b>${esc(c.inscription || '·')}</b></div>
         <div class="bl-dt-row"><span>Prix</span><b class="mono">${fmtMAD(c.price)}</b></div>
         <div class="bl-dt-row"><span>Acompte versé</span><b class="mono">${fmtMAD(c.paid)}</b></div>
         <div class="bl-dt-row"><span>Solde au retrait</span><b class="mono ${due > 0 ? 'due' : ''}">${due > 0 ? fmtMAD(due) : 'réglé'}</b></div>
@@ -985,7 +985,7 @@
         { label:'Client', value:`${c.name} · ${c.phone}` },
         { label:'Retrait', value:fmtWhen(c.retrait) },
         { label:'Gâteau', value:`${PART[c.parts].label} · ${c.parfum}` },
-        { label:'Inscription', value:c.inscription || '—' },
+        { label:'Inscription', value:c.inscription || '·' },
         { label:'Prix', value:fmtMAD(c.price) },
         { label:'Acompte', value:fmtMAD(c.paid) },
         { label:'Solde', value:fmtMAD(due) },
@@ -1228,7 +1228,7 @@
     return `Bonjour ${firstName(c.name)}, votre gâteau « ${c.inscription || OCC[c.occasion]} » est prêt chez ${pvName('Boulangerie Bab Kasbah') || 'la boulangerie'}.`
       + `\nRetrait ${fmtWhen(c.retrait)}, on vous le garde au frais.`
       + (due > 0 ? `\nSolde à régler au retrait : ${fmtN(due)} MAD.` : '')
-      + '\n— envoyé via Kiwi';
+      + '\n·envoyé via Kiwi';
   }
 
   function openWa(c) {

@@ -9,7 +9,7 @@
 <link rel="icon" href="assets/kiwi-favicon-new.svg" type="image/svg+xml" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 <!-- ✦ Kiwi Ultra · Majorelle variant — opt-in fintech palette per brand.html -->
 <style>
   :root {
@@ -44,7 +44,7 @@
     --ic-bg: rgba(255,255,255,0.07);
     --chip-on: #EBEEEC;
     --sans: 'Inter Tight', system-ui, sans-serif;
-    --serif: 'Instrument Serif', Georgia, serif;
+    --serif: "Inter Tight", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
     --mono: 'JetBrains Mono', ui-monospace, monospace;
     /* liquid glass */
     --glass: rgba(255,255,255,0.055);
@@ -1687,7 +1687,7 @@ em, i, cite, dfn, var { font-style: normal; }
     if (kind === 'balance') {
       state.balanceMAD += amt;
       state.transactions.unshift({ id: Date.now(), n:'Cashback versé', cat:'Revenu', when:'À l\'instant', v:+amt, c:'#5BD5FF', i:'✦', fg:'#0A1230', up:true });
-      // wipe the carry by zeroing eligible spend isn't trivial — for demo, just refresh
+      // wipe the carry by zeroing eligible spend isn't trivial · for demo, just refresh
       renderBalance(); renderTx(); renderAllTx();
       splash(`+${fmt(amt)} MAD versés`, 'Votre cashback est désormais sur votre compte.');
     } else if (kind === 'vault') {
@@ -1995,7 +1995,7 @@ em, i, cite, dfn, var { font-style: normal; }
   $('#newVaultConfirm').addEventListener('click', () => {
     const name = $('#newVaultName').value.trim() || 'Nouvel objectif';
     const target = parseAmt($('#newVaultTarget').value) || 10000;
-    state.vaults.push({ id: 'v'+Date.now(), emoji:'◆', n:name, v:0, t:target, apy:4.2, due:'—' });
+    state.vaults.push({ id: 'v'+Date.now(), emoji:'◆', n:name, v:0, t:target, apy:4.2, due:'·' });
     renderVaults();
     closeS();
     splash('Coffre créé', `${name} · objectif ${fmt(target,0)} MAD`);

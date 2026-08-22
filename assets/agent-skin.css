@@ -1,7 +1,7 @@
 /* ============================================================================
    ASSISTANT — la peau, refaite au standard de la page d'accueil
    ----------------------------------------------------------------------------
-   La version précédente (« le relevé ») empilait Instrument Serif pour les
+   La version précédente (« le relevé ») empilait Inter Tight pour les
    titres, JetBrains Mono en capitales pour chaque étiquette, et une troisième
    voix — Inter Tight, héritée par défaut — pour le corps des réponses. Trois
    familles, aucune parenté, un rythme improvisé (9,5 / 10 / 11,5 / 12 / 12,5 /
@@ -14,13 +14,13 @@
 
      1. UNE SEULE VOIX. La page d'accueil est en DM Sans, du 12 px au 48 px,
         titres compris. On ne peut pas l'importer : le tableau de bord ne charge
-        que quatre familles (Inter Tight, Instrument Serif, IBM Plex Sans
+        que quatre familles (Inter Tight, Inter Tight, IBM Plex Sans
         Arabic, JetBrains Mono) et la charte les verrouille. L'équivalent
         interne de « une seule voix » est donc Inter Tight — `var(--sans)`,
         déjà le corps de tout le tableau de bord. L'héritage ne suffit
         pourtant pas : `agent.js` injecte son propre `<style id="fa-css">`
         au moment de l'exécution, donc APRÈS ce `<link>`, et y déclare
-        'Instrument Serif' sur deux titres et `var(--mono)` sur le pavé
+        'Inter Tight' sur deux titres et `var(--mono)` sur le pavé
         numérique. Une feuille sans aucune `font-family` les laisse passer.
         Le §0bis ci-dessous les nomme un par un et les ramène à `--sans` :
         ce sont les SEULES déclarations de famille du fichier, et elles ne
@@ -128,7 +128,7 @@ html:root[data-kiwi-ai="releve"] .fa-drawer .kiwi-drawer-head {
 
 /* ─── §0bis · la voix unique ──────────────────────────────────────────────
    Les cinq seules `font-family` du fichier. Elles n'ajoutent pas de voix,
-   elles en retirent : `agent.js` déclare 'Instrument Serif' sur les deux
+   elles en retirent : `agent.js` déclare 'Inter Tight' sur les deux
    titres et `var(--mono)` sur les trois surfaces de la calculatrice, dans
    un `<style>` injecté après ce `<link>` — à égalité de spécificité c'est
    lui qui gagne. Il faut donc les nommer. `--sans` = Inter Tight, le corps

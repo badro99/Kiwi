@@ -144,14 +144,14 @@
       openBtn: function (x) { return 'Ouvrir ' + x; },
       pMenu: 'la carte', pClients: 'le carnet clients', pTeam: 'l’équipe', pStock: 'le stock',
       /* produits */
-      prodTop: function (n, u) { return 'Votre meilleure vente, c’est <b>' + n + '</b> — ' + u + '.'; },
-      prodBottom: function (n, u) { return 'Votre article le moins vendu, c’est <b>' + n + '</b> — ' + u + '.'; },
+      prodTop: function (n, u) { return 'Votre meilleure vente, c’est <b>' + n + '</b> · ' + u + '.'; },
+      prodBottom: function (n, u) { return 'Votre article le moins vendu, c’est <b>' + n + '</b> · ' + u + '.'; },
       /* La période nommée dans la phrase — seulement quand la source a su la lire. */
-      prodTopP: function (n, u, p) { return 'Votre meilleure vente ' + p + ', c’est <b>' + n + '</b> — ' + u + '.'; },
-      prodBottomP: function (n, u, p) { return 'Votre article le moins vendu ' + p + ', c’est <b>' + n + '</b> — ' + u + '.'; },
+      prodTopP: function (n, u, p) { return 'Votre meilleure vente ' + p + ', c’est <b>' + n + '</b> · ' + u + '.'; },
+      prodBottomP: function (n, u, p) { return 'Votre article le moins vendu ' + p + ', c’est <b>' + n + '</b> · ' + u + '.'; },
       prodNonePeriod: function (p) { return 'Aucune vente n’est enregistrée ' + p + ', je n’ai donc rien à classer sur cette période. Je ne vais pas vous donner le classement d’une autre journée en faisant comme si c’était celui-là.'; },
-      prodPerTill: function (p) { return 'Vous me demandez ' + p + ', et je ne peux pas répondre honnêtement. Le détail par article ne me vient aujourd’hui que du journal de ma caisse, qui ne garde que la journée en cours — il est remis à zéro à minuit. Je sais classer vos articles d’aujourd’hui ; pour une journée passée, il me faudrait le détail des tickets côté serveur.'; },
-      prodPerMenu: function (p) { return 'Une réserve : ce classement porte sur les unités du mois telles que votre carte les enregistre, pas sur ' + p + ' — la carte ne date pas ses ventes.'; },
+      prodPerTill: function (p) { return 'Vous me demandez ' + p + ', et je ne peux pas répondre honnêtement. Le détail par article ne me vient aujourd’hui que du journal de ma caisse, qui ne garde que la journée en cours · il est remis à zéro à minuit. Je sais classer vos articles d’aujourd’hui ; pour une journée passée, il me faudrait le détail des tickets côté serveur.'; },
+      prodPerMenu: function (p) { return 'Une réserve : ce classement porte sur les unités du mois telles que votre carte les enregistre, pas sur ' + p + ' · la carte ne date pas ses ventes.'; },
       prodUnits: function (u) { return fmt(u) + ' unité' + (u > 1 ? 's' : ''); },
       prodLines: function (u) { return fmt(u) + ' ligne' + (u > 1 ? 's' : '') + ' de ticket'; },
       colUnits: 'Vendu', colRev: 'Chiffre', colPrice: 'Prix', colMargin: 'Marge unitaire',
@@ -159,9 +159,9 @@
       srcMenu: 'unités du mois, telles que votre carte les porte',
       srcTill: 'lignes de ticket de la journée, lues sur votre caisse',
       srcLines: 'lignes de vos ventes enregistrées',
-      prodNoLines: 'Je ne peux pas classer vos articles, et je préfère vous dire exactement pourquoi : votre caisse m’envoie le montant du ticket et un libellé résumé, pas le détail ligne par ligne. Je vois donc ce que chaque vente a rapporté, jamais ce qu’elle contenait. Tant que la caisse et le tableau de bord tournent dans le même navigateur je lis le journal de la caisse — sinon, le détail par article reste dans la caisse elle-même.',
+      prodNoLines: 'Je ne peux pas classer vos articles, et je préfère vous dire exactement pourquoi : votre caisse m’envoie le montant du ticket et un libellé résumé, pas le détail ligne par ligne. Je vois donc ce que chaque vente a rapporté, jamais ce qu’elle contenait. Tant que la caisse et le tableau de bord tournent dans le même navigateur je lis le journal de la caisse · sinon, le détail par article reste dans la caisse elle-même.',
       prodNoCarte: 'Votre carte n’est pas encore saisie, je n’ai donc aucun article à classer. Ajoutez vos produits et leurs prix, et je vous dirai lequel travaille le mieux.',
-      prodCarteOnly: function (n) { return 'Votre carte compte <b>' + n + ' article' + (n > 1 ? 's' : '') + '</b>, mais aucune vente n’y est encore rattachée ligne par ligne — je peux vous donner vos prix et vos marges théoriques, pas encore un classement des ventes.'; },
+      prodCarteOnly: function (n) { return 'Votre carte compte <b>' + n + ' article' + (n > 1 ? 's' : '') + '</b>, mais aucune vente n’y est encore rattachée ligne par ligne · je peux vous donner vos prix et vos marges théoriques, pas encore un classement des ventes.'; },
       /* clients */
       cliTop: function (n) { return '<b>' + n + '</b> est votre meilleur client, au montant dépensé.'; },
       cliSpend: 'Dépensé', cliVisits: 'Visites', cliPoints: 'Points', cliLast: 'Dernière venue',
@@ -180,10 +180,10 @@
       cliDormantNote: 'Rappeler un client qui vous connaît coûte bien moins cher que d’en trouver un nouveau.',
       /* équipe */
       staffCount: function (n) { return 'Votre équipe compte <b>' + fmt(n) + ' personne' + (n > 1 ? 's' : '') + '</b>.'; },
-      staffToday: function (n) { return n ? '<b>' + fmt(n) + ' personne' + (n > 1 ? 's' : '') + '</b> sur le service aujourd’hui.' : 'Personne n’est planifié aujourd’hui — ou les horaires du jour ne sont pas encore saisis.'; },
+      staffToday: function (n) { return n ? '<b>' + fmt(n) + ' personne' + (n > 1 ? 's' : '') + '</b> sur le service aujourd’hui.' : 'Personne n’est planifié aujourd’hui · ou les horaires du jour ne sont pas encore saisis.'; },
       staffNone: 'Votre équipe n’est pas encore saisie. Ajoutez vos salariés dans Équipe et je vous donne les effectifs, les rôles et qui est de service.',
       colRole: 'Rôles', colToday: 'Aujourd’hui',
-      staffTop: 'Je ne peux pas désigner votre meilleur vendeur : aucune vente qui arrive sur cet écran ne porte qui l’a encaissée. Vous pouvez l’obtenir, en revanche — donnez à chaque salarié son propre code en caisse, et Transactions répartit alors le chiffre par personne. En attendant, voici votre équipe telle qu’elle est saisie.',
+      staffTop: 'Je ne peux pas désigner votre meilleur vendeur : aucune vente qui arrive sur cet écran ne porte qui l’a encaissée. Vous pouvez l’obtenir, en revanche · donnez à chaque salarié son propre code en caisse, et Transactions répartit alors le chiffre par personne. En attendant, voici votre équipe telle qu’elle est saisie.',
       /* stock */
       stkOut: function (n) { return '<b>' + fmt(n) + ' référence' + (n > 1 ? 's sont' : ' est') + ' en rupture</b>.'; },
       stkNone: 'Aucune rupture : tout ce que vous suivez est en stock.',
@@ -192,30 +192,30 @@
       andMore: function (n) { return '+ ' + n + ' autre' + (n > 1 ? 's' : ''); },
       pHours: 'les horaires',
       hrUnset: 'Vos horaires d’ouverture ne sont pas renseignés, et je ne vais pas les deviner : un horaire inventé, sur l’air de « un restaurant, ça ferme sûrement en soirée », se retrouverait dans vos réservations et vos commandes en ligne. Renseignez votre semaine dans Réglages → Heures d’ouverture, et je réponds ensuite sur l’ouverture, la fermeture et les créneaux réservables.',
-      hrOpen: function (h) { return 'Oui, vous êtes <b>ouvert</b> — jusqu’à <b>' + h + '</b>.'; },
-      hrOpen24: 'Oui, vous êtes <b>ouvert</b> — 24 h/24 aujourd’hui.',
+      hrOpen: function (h) { return 'Oui, vous êtes <b>ouvert</b> · jusqu’à <b>' + h + '</b>.'; },
+      hrOpen24: 'Oui, vous êtes <b>ouvert</b> · 24 h/24 aujourd’hui.',
       hrShut: function (s) { return 'Non, vous êtes <b>fermé</b> en ce moment. ' + s + '.'; },
       hrCloseAt: function (h) { return 'Vous fermez à <b>' + h + '</b>.'; },
       hrCloseNext: function (d, h) { return 'Vous êtes fermé en ce moment. La prochaine fermeture est ' + d + ' à <b>' + h + '</b>.'; },
       hrUntil: function (n) { return n >= 60 ? 'Il reste <b>' + Math.floor(n / 60) + ' h ' + (n % 60 ? String(n % 60).padStart(2, '0') : '') + '</b> avant la fermeture.' : 'Il reste <b>' + n + ' min</b> avant la fermeture.'; },
       hrUntilShut: 'Vous êtes déjà fermé, il n’y a pas de compte à rebours.',
-      hrAtOk: function (d, h) { return 'Oui — ' + d + ' à ' + h + ', vous êtes ouvert.'; },
-      hrAtNo: function (d, h, s) { return 'Non — ' + d + ' à ' + h + ', vous êtes fermé. ' + s + '.'; },
+      hrAtOk: function (d, h) { return 'Oui · ' + d + ' à ' + h + ', vous êtes ouvert.'; },
+      hrAtNo: function (d, h, s) { return 'Non · ' + d + ' à ' + h + ', vous êtes fermé. ' + s + '.'; },
       hrExc: function (l, r, p) { return '<b>' + l + '</b> : ' + r + (p ? ' · ' + p : ' · fermé'); },
-      hrExcNone: 'Aucune période exceptionnelle n’est enregistrée — ni Ramadan, ni Aïd, ni congés. Votre semaine type s’applique toute l’année. Vous en ajoutez une dans Réglages → Heures d’ouverture.',
+      hrExcNone: 'Aucune période exceptionnelle n’est enregistrée · ni Ramadan, ni Aïd, ni congés. Votre semaine type s’applique toute l’année. Vous en ajoutez une dans Réglages → Heures d’ouverture.',
       hrWeekCol: 'Semaine', hrTodayCol: 'Aujourd’hui', hrNextCol: 'Prochaine ouverture',
       hrSrc: 'horaires de l’établissement',
     },
     en: {
       openBtn: function (x) { return 'Open ' + x; },
       pMenu: 'the menu', pClients: 'the client book', pTeam: 'the team', pStock: 'stock',
-      prodTop: function (n, u) { return 'Your best seller is <b>' + n + '</b> — ' + u + '.'; },
-      prodBottom: function (n, u) { return 'Your slowest item is <b>' + n + '</b> — ' + u + '.'; },
-      prodTopP: function (n, u, p) { return 'Your best seller ' + p + ' is <b>' + n + '</b> — ' + u + '.'; },
-      prodBottomP: function (n, u, p) { return 'Your slowest item ' + p + ' is <b>' + n + '</b> — ' + u + '.'; },
+      prodTop: function (n, u) { return 'Your best seller is <b>' + n + '</b> · ' + u + '.'; },
+      prodBottom: function (n, u) { return 'Your slowest item is <b>' + n + '</b> · ' + u + '.'; },
+      prodTopP: function (n, u, p) { return 'Your best seller ' + p + ' is <b>' + n + '</b> · ' + u + '.'; },
+      prodBottomP: function (n, u, p) { return 'Your slowest item ' + p + ' is <b>' + n + '</b> · ' + u + '.'; },
       prodNonePeriod: function (p) { return 'No sale is recorded for ' + p + ', so there is nothing to rank over that period. I am not going to hand you another day’s ranking and let it pass for this one.'; },
       prodPerTill: function (p) { return 'You are asking about ' + p + ', and I cannot answer that honestly. Item-level detail reaches me only through my till journal, which keeps the current day and is cleared at midnight. I can rank today’s items; for a past day I would need the ticket lines from the server.'; },
-      prodPerMenu: function (p) { return 'One caveat: this ranking is the month’s units as your menu records them, not ' + p + ' — the menu does not date its sales.'; },
+      prodPerMenu: function (p) { return 'One caveat: this ranking is the month’s units as your menu records them, not ' + p + ' · the menu does not date its sales.'; },
       prodUnits: function (u) { return fmt(u) + ' unit' + (u > 1 ? 's' : ''); },
       prodLines: function (u) { return fmt(u) + ' ticket line' + (u > 1 ? 's' : ''); },
       colUnits: 'Sold', colRev: 'Revenue', colPrice: 'Price', colMargin: 'Unit margin',
@@ -223,9 +223,9 @@
       srcMenu: 'units this month, as your menu holds them',
       srcTill: 'today’s ticket lines, read from your till',
       srcLines: 'lines from your recorded sales',
-      prodNoLines: 'I can’t rank your items, and I’d rather tell you exactly why: your till sends me the ticket total and a summary label, not the line-by-line detail. So I see what each sale earned, never what it contained. While the till and the dashboard run in the same browser I read the till’s own journal — otherwise the per-item detail stays inside the till.',
+      prodNoLines: 'I can’t rank your items, and I’d rather tell you exactly why: your till sends me the ticket total and a summary label, not the line-by-line detail. So I see what each sale earned, never what it contained. While the till and the dashboard run in the same browser I read the till’s own journal · otherwise the per-item detail stays inside the till.',
       prodNoCarte: 'Your menu isn’t entered yet, so I have no items to rank. Add your products and their prices and I’ll tell you which one works hardest.',
-      prodCarteOnly: function (n) { return 'Your menu holds <b>' + n + ' item' + (n > 1 ? 's' : '') + '</b>, but no sale is attached to them line by line yet — I can give you prices and theoretical margins, not a sales ranking.'; },
+      prodCarteOnly: function (n) { return 'Your menu holds <b>' + n + ' item' + (n > 1 ? 's' : '') + '</b>, but no sale is attached to them line by line yet · I can give you prices and theoretical margins, not a sales ranking.'; },
       cliTop: function (n) { return '<b>' + n + '</b> is your best client, by amount spent.'; },
       cliSpend: 'Spent', cliVisits: 'Visits', cliPoints: 'Points', cliLast: 'Last seen',
       cliDaysAgo: function (d) { return d === 0 ? 'today' : d === 1 ? 'yesterday' : d + ' days ago'; },
@@ -242,10 +242,10 @@
       cliDormantNone: 'No dormant clients: everyone you’ve identified has been back within 30 days.',
       cliDormantNote: 'Waking a client who already knows you costs far less than finding a new one.',
       staffCount: function (n) { return 'Your team has <b>' + fmt(n) + ' member' + (n > 1 ? 's' : '') + '</b>.'; },
-      staffToday: function (n) { return n ? '<b>' + fmt(n) + ' ' + (n > 1 ? 'people' : 'person') + '</b> on shift today.' : 'Nobody is scheduled today — or today’s hours aren’t entered yet.'; },
+      staffToday: function (n) { return n ? '<b>' + fmt(n) + ' ' + (n > 1 ? 'people' : 'person') + '</b> on shift today.' : 'Nobody is scheduled today · or today’s hours aren’t entered yet.'; },
       staffNone: 'Your team isn’t entered yet. Add your staff under Team and I’ll give you headcount, roles and who is on shift.',
       colRole: 'Roles', colToday: 'Today',
-      staffTop: 'I can’t name your best seller: no sale reaching this screen carries who rang it up. You can get it though — give each employee their own till code, and Transactions then splits revenue by person. Meanwhile, here is your team as entered.',
+      staffTop: 'I can’t name your best seller: no sale reaching this screen carries who rang it up. You can get it though · give each employee their own till code, and Transactions then splits revenue by person. Meanwhile, here is your team as entered.',
       stkOut: function (n) { return '<b>' + fmt(n) + ' item' + (n > 1 ? 's are' : ' is') + ' out of stock</b>.'; },
       stkNone: 'No stock-outs: everything you track is in stock.',
       stkLow: 'Below reorder', stkOutCol: 'Out of stock',
@@ -253,30 +253,30 @@
       andMore: function (n) { return '+ ' + n + ' more'; },
       pHours: 'opening hours',
       hrUnset: 'Your opening hours aren’t set, and I’m not going to guess them: hours invented on the theory that “a restaurant probably closes in the evening” would end up in your bookings and your online orders. Fill in your week under Settings → Opening hours, and I’ll answer on opening, closing and bookable slots after that.',
-      hrOpen: function (h) { return 'Yes, you are <b>open</b> — until <b>' + h + '</b>.'; },
-      hrOpen24: 'Yes, you are <b>open</b> — 24 hours today.',
+      hrOpen: function (h) { return 'Yes, you are <b>open</b> · until <b>' + h + '</b>.'; },
+      hrOpen24: 'Yes, you are <b>open</b> · 24 hours today.',
       hrShut: function (s) { return 'No, you are <b>closed</b> right now. ' + s + '.'; },
       hrCloseAt: function (h) { return 'You close at <b>' + h + '</b>.'; },
       hrCloseNext: function (d, h) { return 'You are closed right now. The next closing is ' + d + ' at <b>' + h + '</b>.'; },
       hrUntil: function (n) { return n >= 60 ? '<b>' + Math.floor(n / 60) + 'h ' + (n % 60 ? String(n % 60).padStart(2, '0') : '') + '</b> left before closing.' : '<b>' + n + ' min</b> left before closing.'; },
-      hrUntilShut: 'You are already closed — there is no countdown.',
-      hrAtOk: function (d, h) { return 'Yes — ' + d + ' at ' + h + ', you are open.'; },
-      hrAtNo: function (d, h, s) { return 'No — ' + d + ' at ' + h + ', you are closed. ' + s + '.'; },
+      hrUntilShut: 'You are already closed · there is no countdown.',
+      hrAtOk: function (d, h) { return 'Yes · ' + d + ' at ' + h + ', you are open.'; },
+      hrAtNo: function (d, h, s) { return 'No · ' + d + ' at ' + h + ', you are closed. ' + s + '.'; },
       hrExc: function (l, r, p) { return '<b>' + l + '</b>: ' + r + (p ? ' · ' + p : ' · closed'); },
-      hrExcNone: 'No exceptional period is on file — no Ramadan, no Eid, no leave. Your weekly schedule applies all year. You add one under Settings → Opening hours.',
+      hrExcNone: 'No exceptional period is on file · no Ramadan, no Eid, no leave. Your weekly schedule applies all year. You add one under Settings → Opening hours.',
       hrWeekCol: 'Week', hrTodayCol: 'Today', hrNextCol: 'Next opening',
       hrSrc: 'business opening hours',
     },
     ar: {
       openBtn: function (x) { return 'افتح ' + x; },
       pMenu: 'القائمة', pClients: 'سجلّ الزبناء', pTeam: 'الفريق', pStock: 'المخزون',
-      prodTop: function (n, u) { return 'أكثر ما تبيعه هو <b>' + n + '</b> — ' + u + '.'; },
-      prodBottom: function (n, u) { return 'أقل ما تبيعه هو <b>' + n + '</b> — ' + u + '.'; },
-      prodTopP: function (n, u, p) { return 'أكثر ما تبيعه ' + p + ' هو <b>' + n + '</b> — ' + u + '.'; },
-      prodBottomP: function (n, u, p) { return 'أقل ما تبيعه ' + p + ' هو <b>' + n + '</b> — ' + u + '.'; },
+      prodTop: function (n, u) { return 'أكثر ما تبيعه هو <b>' + n + '</b> · ' + u + '.'; },
+      prodBottom: function (n, u) { return 'أقل ما تبيعه هو <b>' + n + '</b> · ' + u + '.'; },
+      prodTopP: function (n, u, p) { return 'أكثر ما تبيعه ' + p + ' هو <b>' + n + '</b> · ' + u + '.'; },
+      prodBottomP: function (n, u, p) { return 'أقل ما تبيعه ' + p + ' هو <b>' + n + '</b> · ' + u + '.'; },
       prodNonePeriod: function (p) { return 'لا توجد أي مبيعة مسجّلة ' + p + '، فلا شيء أرتّبه في هذه الفترة. ولن أعطيك ترتيب يوم آخر وكأنه ترتيب هذا اليوم.'; },
       prodPerTill: function (p) { return 'تسألني عن ' + p + '، ولا أستطيع الجواب بأمانة. تفصيل الأصناف لا يصلني اليوم إلا من سجلّ الصندوق، وهو لا يحتفظ إلا باليوم الجاري ويُمسح عند منتصف الليل. أستطيع ترتيب أصناف اليوم؛ أما يوم مضى فأحتاج تفاصيل التذاكر من الخادم.'; },
-      prodPerMenu: function (p) { return 'تحفّظ واحد: هذا الترتيب يخصّ وحدات الشهر كما تسجّلها لائحتك، لا ' + p + ' — اللائحة لا تؤرّخ مبيعاتها.'; },
+      prodPerMenu: function (p) { return 'تحفّظ واحد: هذا الترتيب يخصّ وحدات الشهر كما تسجّلها لائحتك، لا ' + p + ' · اللائحة لا تؤرّخ مبيعاتها.'; },
       prodUnits: function (u) { return fmt(u) + ' وحدة'; },
       prodLines: function (u) { return fmt(u) + ' سطر بيع'; },
       colUnits: 'المُباع', colRev: 'المداخيل', colPrice: 'الثمن', colMargin: 'هامش الوحدة',
@@ -284,9 +284,9 @@
       srcMenu: 'وحدات الشهر كما تحملها قائمتك',
       srcTill: 'أسطر تذاكر اليوم، مقروءة من صندوقك',
       srcLines: 'أسطر مبيعاتك المسجّلة',
-      prodNoLines: 'لا أستطيع ترتيب أصنافك، وأفضّل أن أقول لك السبب بدقّة: صندوقك يرسل لي مجموع التذكرة وعنواناً مختصراً، لا التفصيل سطراً سطراً. فأنا أرى ما جنته كل عملية بيع، لا ما احتوته. وما دام الصندوق ولوحة القيادة يشتغلان في نفس المتصفّح أقرأ سجلّ الصندوق — وإلا بقي التفصيل داخل الصندوق نفسه.',
+      prodNoLines: 'لا أستطيع ترتيب أصنافك، وأفضّل أن أقول لك السبب بدقّة: صندوقك يرسل لي مجموع التذكرة وعنواناً مختصراً، لا التفصيل سطراً سطراً. فأنا أرى ما جنته كل عملية بيع، لا ما احتوته. وما دام الصندوق ولوحة القيادة يشتغلان في نفس المتصفّح أقرأ سجلّ الصندوق · وإلا بقي التفصيل داخل الصندوق نفسه.',
       prodNoCarte: 'قائمتك غير مُدخلة بعد، فلا أصناف لأرتّبها. أضف منتجاتك وأثمانها وسأقول لك أيّها يشتغل أكثر.',
-      prodCarteOnly: function (n) { return 'قائمتك تضمّ <b>' + n + ' صنفاً</b>، لكن لا عملية بيع مرتبطة بها سطراً سطراً بعد — أعطيك الأثمان والهوامش النظرية، لا ترتيب المبيعات.'; },
+      prodCarteOnly: function (n) { return 'قائمتك تضمّ <b>' + n + ' صنفاً</b>، لكن لا عملية بيع مرتبطة بها سطراً سطراً بعد · أعطيك الأثمان والهوامش النظرية، لا ترتيب المبيعات.'; },
       cliTop: function (n) { return '<b>' + n + '</b> هو أفضل زبون لديك، من حيث ما أنفقه.'; },
       cliSpend: 'أنفق', cliVisits: 'الزيارات', cliPoints: 'النقاط', cliLast: 'آخر زيارة',
       cliDaysAgo: function (d) { return d === 0 ? 'اليوم' : d === 1 ? 'أمس' : 'قبل ' + d + ' يوماً'; },
@@ -303,10 +303,10 @@
       cliDormantNone: 'لا زبون نائم: كل من عرّفته عاد خلال 30 يوماً.',
       cliDormantNote: 'إيقاظ زبون يعرفك أرخص بكثير من إيجاد زبون جديد.',
       staffCount: function (n) { return 'فريقك يضمّ <b>' + fmt(n) + ' شخصاً</b>.'; },
-      staffToday: function (n) { return n ? '<b>' + fmt(n) + ' أشخاص</b> في الخدمة اليوم.' : 'لا أحد مبرمج اليوم — أو أن توقيت اليوم غير مُدخل بعد.'; },
+      staffToday: function (n) { return n ? '<b>' + fmt(n) + ' أشخاص</b> في الخدمة اليوم.' : 'لا أحد مبرمج اليوم · أو أن توقيت اليوم غير مُدخل بعد.'; },
       staffNone: 'فريقك غير مُدخل بعد. أضف مستخدميك في «الفريق» وأعطيك العدد والأدوار ومن هو في الخدمة.',
       colRole: 'الأدوار', colToday: 'اليوم',
-      staffTop: 'لا أستطيع تسمية أفضل بائع لديك: لا عملية بيع تصل هذه الشاشة تحمل من قام بها. لكن يمكنك الحصول على ذلك — امنح كل مستخدم رمزه الخاص في الصندوق، عندها توزّع صفحة «الطلبات» الرقم على الأشخاص. في انتظار ذلك، هذا فريقك كما هو مُدخل.',
+      staffTop: 'لا أستطيع تسمية أفضل بائع لديك: لا عملية بيع تصل هذه الشاشة تحمل من قام بها. لكن يمكنك الحصول على ذلك · امنح كل مستخدم رمزه الخاص في الصندوق، عندها توزّع صفحة «الطلبات» الرقم على الأشخاص. في انتظار ذلك، هذا فريقك كما هو مُدخل.',
       stkOut: function (n) { return '<b>' + fmt(n) + ' صنفاً في النفاد</b>.'; },
       stkNone: 'لا نفاد: كل ما تتابعه متوفّر.',
       stkLow: 'تحت العتبة', stkOutCol: 'نافد',
@@ -314,17 +314,17 @@
       andMore: function (n) { return '+ ' + n + ' آخر'; },
       pHours: 'ساعات العمل',
       hrUnset: 'ساعات عملك غير مُدخلة، ولن أخمّنها: توقيت مُختلق لمطعم «يغلق غالبًا نحو الحادية عشرة» سينتهي به الأمر في حجوزاتك وطلباتك على الإنترنت. أدخل أسبوعك في الإعدادات ← ساعات العمل، وبعدها أجيبك عن الفتح والإغلاق والمواعيد المتاحة.',
-      hrOpen: function (h) { return 'نعم، أنت <b>مفتوح</b> — حتى <b>' + h + '</b>.'; },
-      hrOpen24: 'نعم، أنت <b>مفتوح</b> — 24 ساعة اليوم.',
+      hrOpen: function (h) { return 'نعم، أنت <b>مفتوح</b> · حتى <b>' + h + '</b>.'; },
+      hrOpen24: 'نعم، أنت <b>مفتوح</b> · 24 ساعة اليوم.',
       hrShut: function (s) { return 'لا، أنت <b>مغلق</b> الآن. ' + s + '.'; },
       hrCloseAt: function (h) { return 'تغلق في <b>' + h + '</b>.'; },
       hrCloseNext: function (d, h) { return 'أنت مغلق الآن. الإغلاق القادم ' + d + ' في <b>' + h + '</b>.'; },
       hrUntil: function (n) { return n >= 60 ? 'بقيت <b>' + Math.floor(n / 60) + ' س ' + (n % 60 ? String(n % 60).padStart(2, '0') : '') + '</b> قبل الإغلاق.' : 'بقيت <b>' + n + ' د</b> قبل الإغلاق.'; },
       hrUntilShut: 'أنت مغلق أصلًا، فلا عدّ تنازلي.',
-      hrAtOk: function (d, h) { return 'نعم — ' + d + ' في ' + h + '، أنت مفتوح.'; },
-      hrAtNo: function (d, h, s) { return 'لا — ' + d + ' في ' + h + '، أنت مغلق. ' + s + '.'; },
+      hrAtOk: function (d, h) { return 'نعم · ' + d + ' في ' + h + '، أنت مفتوح.'; },
+      hrAtNo: function (d, h, s) { return 'لا · ' + d + ' في ' + h + '، أنت مغلق. ' + s + '.'; },
       hrExc: function (l, r, p) { return '<b>' + l + '</b>: ' + r + (p ? ' · ' + p : ' · مغلق'); },
-      hrExcNone: 'لا فترة استثنائية مسجّلة — لا رمضان ولا عيد ولا عطلة. أسبوعك المعتاد يسري طوال السنة. تضيف واحدة من الإعدادات ← ساعات العمل.',
+      hrExcNone: 'لا فترة استثنائية مسجّلة · لا رمضان ولا عيد ولا عطلة. أسبوعك المعتاد يسري طوال السنة. تضيف واحدة من الإعدادات ← ساعات العمل.',
       hrWeekCol: 'الأسبوع', hrTodayCol: 'اليوم', hrNextCol: 'الفتح القادم',
       hrSrc: 'ساعات عمل المؤسسة',
     },
@@ -520,7 +520,7 @@
       { l: t.cliSpend, v: fmtMad(+c.spend || 0), h: '' },
       { l: t.cliVisits, v: fmt(+c.visits || 0), h: '' },
       { l: t.cliPoints, v: fmt(+c.points || 0), h: '' },
-      { l: t.cliLast, v: d == null ? '—' : t.cliDaysAgo(d), h: '' },
+      { l: t.cliLast, v: d == null ? '·' : t.cliDaysAgo(d), h: '' },
     ];
     if (others.length) {
       stats.push({
@@ -559,7 +559,7 @@
         { l: t.cliPoints, v: fmt(pts), h: '' },
         { l: t.cliVisits, v: fmt(+c.visits || 0), h: '' },
         { l: t.cliSpend, v: fmtMad(+c.spend || 0), h: '' },
-        { l: t.cliLast, v: d == null ? '—' : t.cliDaysAgo(d), h: '' },
+        { l: t.cliLast, v: d == null ? '·' : t.cliDaysAgo(d), h: '' },
       ],
       prov: { mod: 'clients', count: f.book.length, unit: 'entries' },
       open: open1(L, 'pClients', 'nav-clients'),
@@ -585,7 +585,7 @@
       text: t.cliDormant(sleep.length),
       stats: top.map(function (c) {
         return { l: esc(c.name), v: fmtMad(+c.spend || 0), h: t.cliDaysAgo(daysSince(c.lastSeen)) };
-      }).concat(sleep.length > top.length ? [{ l: t.andMore(sleep.length - top.length), v: '—', h: '' }] : []),
+      }).concat(sleep.length > top.length ? [{ l: t.andMore(sleep.length - top.length), v: '·', h: '' }] : []),
       note: t.cliDormantNote,
       prov: { mod: 'clients', count: book.length, unit: 'entries' },
       open: open1(L, 'pClients', 'nav-clients'),
@@ -599,13 +599,13 @@
     if (!team.length) return { text: t.staffNone, open: open1(L, 'pTeam', 'nav-equipe') };
     var onToday = team.filter(function (m) { return m && (m.today || m.onShift || m.hoursToday > 0); });
     var roles = {};
-    team.forEach(function (m) { var r = (m && m.role) || '—'; roles[r] = (roles[r] || 0) + 1; });
+    team.forEach(function (m) { var r = (m && m.role) || '·'; roles[r] = (roles[r] || 0) + 1; });
     var roleTxt = Object.keys(roles).slice(0, 4).map(function (r) { return esc(r) + ' ×' + roles[r]; }).join(' · ');
     if (spec.agg === 'top') {
       return {
         text: t.staffTop,
         stats: [
-          { l: t.colRole, v: roleTxt || '—', h: '' },
+          { l: t.colRole, v: roleTxt || '·', h: '' },
           { l: t.colToday, v: fmt(onToday.length), h: '' },
         ],
         prov: { mod: 'team', count: team.length, unit: 'entries' },
@@ -615,7 +615,7 @@
     if (spec.agg === 'today') {
       return {
         text: t.staffToday(onToday.length),
-        stats: onToday.slice(0, 5).map(function (m) { return { l: esc(m.name), v: esc(m.role || '—'), h: '' }; }),
+        stats: onToday.slice(0, 5).map(function (m) { return { l: esc(m.name), v: esc(m.role || '·'), h: '' }; }),
         prov: { mod: 'team', count: team.length, unit: 'entries' },
         open: open1(L, 'pTeam', 'nav-equipe'),
       };
@@ -623,7 +623,7 @@
     return {
       text: t.staffCount(team.length),
       stats: [
-        { l: t.colRole, v: roleTxt || '—', h: '' },
+        { l: t.colRole, v: roleTxt || '·', h: '' },
         { l: t.colToday, v: fmt(onToday.length), h: '' },
       ],
       prov: { mod: 'team', count: team.length, unit: 'entries' },
@@ -647,7 +647,7 @@
     });
     if (!out.length && !low.length) return { text: t.stkNone, open: open1(L, 'pStock', 'nav-stock') };
     var stats = out.slice(0, 4).map(function (p) { return { l: esc(p.name), v: t.stkOutCol, h: '' }; });
-    if (out.length > 4) stats.push({ l: t.andMore(out.length - 4), v: '—', h: '' });
+    if (out.length > 4) stats.push({ l: t.andMore(out.length - 4), v: '·', h: '' });
     if (low.length) stats.push({ l: t.stkLow, v: fmt(low.length), h: low.slice(0, 3).map(function (p) { return esc(p.name); }).join(' · ') });
     return {
       text: out.length ? t.stkOut(out.length) : t.stkNone, stats: stats,
@@ -731,11 +731,11 @@
       var rows = xs.slice(0, 6).map(function (e) {
         var per = e.kind === 'hours'
           ? e.periods.map(function (p) { return p.from + '–' + p.to; }).join(', ') : '';
-        return { l: esc(e.label || '—'), v: e.from === e.to ? e.from : e.from + ' → ' + e.to, h: per };
+        return { l: esc(e.label || '·'), v: e.from === e.to ? e.from : e.from + ' → ' + e.to, h: per };
       });
       var first = xs[0];
       return {
-        text: t.hrExc(esc(first.label || '—'),
+        text: t.hrExc(esc(first.label || '·'),
                       first.from === first.to ? first.from : first.from + ' → ' + first.to,
                       first.kind === 'hours' ? first.periods.map(function (p) { return p.from + '–' + p.to; }).join(', ') : ''),
         stats: rows, prov: prov, open: openBtn,

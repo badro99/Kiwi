@@ -166,7 +166,7 @@
              : !isRealSession() ? 'not-a-real-session'
              : biz.type !== 'boutique' ? 'type-is-' + biz.type
              : !products.length ? 'catalogue-empty'
-             : 'none — should publish',
+             : 'none · should publish',
       merchant: biz && biz.merchant,
       name: biz && biz.name,
       resolvedType: biz && biz.type,
@@ -388,8 +388,8 @@
       ar: (got ? '\u0635\u064a\u063a\u0629 ' + got + ' \u0645\u0627\u062e\u062f\u0627\u0645\u0627\u0634.' : '\u0627\u0644\u0635\u064a\u063a\u0629 \u0645\u0627\u062e\u062f\u0627\u0645\u0627\u0634.') + ' \u0627\u0644\u0635\u064a\u063a \u0627\u0644\u0645\u0642\u0628\u0648\u0644\u0629: ' + okList + '.',
     });
     if (code === 'empty' || code === 'no-file') return pick({
-      fr: 'Ce fichier est vide — rien à envoyer.',
-      en: 'That file is empty — there is nothing to send.',
+      fr: 'Ce fichier est vide · rien à envoyer.',
+      en: 'That file is empty · there is nothing to send.',
       ar: '\u0647\u0627\u062f \u0627\u0644\u0645\u0644\u0641 \u062e\u0627\u0648\u064a.',
     });
     if (code === 'offline') return pick({

@@ -208,7 +208,7 @@
   }
   function fieldControl(sc,f,r){const v=r.values?.[f.id]??r[f.id]??f.default??'',id='tw-'+f.id,req=f.required?' required':'',full=f.full||f.type==='textarea'?' full':'',common=`id="${esc(id)}" name="${esc(f.id)}"${req}`;let control='';
     if(f.type==='textarea')control=`<textarea ${common} maxlength="${f.max||2400}">${esc(v)}</textarea>`;
-    else if(f.type==='select'||f.type==='relation'){const options=f.type==='relation'?window.KiwiTradeSchema.relationOptions(sc,allRecords(),f):(f.values||[]);control=`<select ${common}><option value="">—</option>${options.map((o)=>`<option value="${esc(o.value)}"${String(v)===String(o.value)?' selected':''}>${esc(pick(o.label)||o.label)}</option>`).join('')}</select>`;}
+    else if(f.type==='select'||f.type==='relation'){const options=f.type==='relation'?window.KiwiTradeSchema.relationOptions(sc,allRecords(),f):(f.values||[]);control=`<select ${common}><option value="">·</option>${options.map((o)=>`<option value="${esc(o.value)}"${String(v)===String(o.value)?' selected':''}>${esc(pick(o.label)||o.label)}</option>`).join('')}</select>`;}
     else if(f.type==='checkbox')control=`<input ${common} type="checkbox" value="1"${v===true||v==='true'||v==='yes'?' checked':''}>`;
     else control=`<input ${common} type="${f.type==='money'?'number':esc(f.type)}" value="${esc(v)}"${f.min!=null?` min="${f.min}"`:''}${f.max!=null?` max="${f.max}"`:''}${f.type==='money'||f.type==='number'?` step="${f.step||'0.01'}"`:''}${f.autocomplete?` autocomplete="${esc(f.autocomplete)}"`:''}>`;
     return `<div class="tw-field${full}"><label for="${esc(id)}">${esc(pick(f.label))}${f.required?' *':''}</label>${control}<small data-tw-error="${esc(f.id)}"></small></div>`;}

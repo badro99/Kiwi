@@ -27,7 +27,7 @@
   'use strict';
 
   if (!window.KiwiStore || !window.KiwiStore.define) {
-    console.warn('clients-store.js loaded before venue-store.js — KiwiClients disabled');
+    console.warn('clients-store.js loaded before venue-store.js · KiwiClients disabled');
     return;
   }
 

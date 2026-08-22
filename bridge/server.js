@@ -143,7 +143,7 @@ async function relayPair(code, name) {
   });
   writeConfig(relay.cfg);
   relay.lastError = '';
-  relayLog('appairé au commerce « ' + relay.cfg.relay.merchant + ' » — les tickets déposés depuis un iPad ou une tablette s\'imprimeront ici.');
+  relayLog('appairé au commerce « ' + relay.cfg.relay.merchant + ' » · les tickets déposés depuis un iPad ou une tablette s\'imprimeront ici.');
   relayStart();
   return { ok: true, merchant: relay.cfg.relay.merchant, name: relay.cfg.relay.name };
 }
@@ -181,7 +181,7 @@ async function relayTick() {
       relay.unauthorized = (relay.unauthorized || 0) + 1;
       relay.online = false; relay.lastError = 'jeton refusé par kiwi-os.com';
       if (relay.unauthorized >= 3) {
-        relay.lastError = 'jeton révoqué — ré-appairez ce pont depuis Kiwi';
+        relay.lastError = 'jeton révoqué · ré-appairez ce pont depuis Kiwi';
         relayLog(relay.lastError);
         relayUnpair();
         relay.running = false;
@@ -252,10 +252,10 @@ code{background:#efece5;padding:1px 6px;border-radius:6px}
 <p class="sub">Ce pont relaie les impressions Kiwi vers votre imprimante. Laissez-le tourner.</p>
 <div class="card" id="st">
  <div class="row"><span class="k">Pont local</span><span class="v"><span class="dot"></span><span id="v-local">actif</span></span></div>
- <div class="row"><span class="k">Relais cloud</span><span class="v" id="v-relay-wrap"><span class="dot"></span><span id="v-relay">—</span></span></div>
- <div class="row"><span class="k">Commerce</span><span class="v" id="v-merchant">—</span></div>
+ <div class="row"><span class="k">Relais cloud</span><span class="v" id="v-relay-wrap"><span class="dot"></span><span id="v-relay">·</span></span></div>
+ <div class="row"><span class="k">Commerce</span><span class="v" id="v-merchant">·</span></div>
  <div class="row"><span class="k">Tickets imprimés</span><span class="v" id="v-printed">0</span></div>
- <div class="row"><span class="k">Dernier contact</span><span class="v" id="v-last">—</span></div>
+ <div class="row"><span class="k">Dernier contact</span><span class="v" id="v-last">·</span></div>
  <p class="note err" id="v-err" hidden></p>
 </div>
 <div class="card" id="pairbox">
@@ -270,10 +270,10 @@ code{background:#efece5;padding:1px 6px;border-radius:6px}
 <script>
 (function(){
  var $=function(id){return document.getElementById(id)};
- function ago(ts){if(!ts)return'—';var s=Math.round((Date.now()-ts)/1000);return s<2?'à l’instant':s<60?'il y a '+s+' s':'il y a '+Math.round(s/60)+' min'}
+ function ago(ts){if(!ts)return'·';var s=Math.round((Date.now()-ts)/1000);return s<2?'à l’instant':s<60?'il y a '+s+' s':'il y a '+Math.round(s/60)+' min'}
  function paint(j){
   $('v-ver').textContent=j.version||'';$('v-url').textContent=j.url||'';
-  $('v-merchant').textContent=j.merchant||'—';$('v-printed').textContent=String(j.printed||0);
+  $('v-merchant').textContent=j.merchant||'·';$('v-printed').textContent=String(j.printed||0);
   $('v-last').textContent=ago(j.lastPollTs);
   var w=$('v-relay-wrap');w.className='v'+(j.paired&&j.online?' on':'');
   $('v-relay').textContent=!j.paired?'non appairé':(j.online?'connecté':'en attente de kiwi-os.com…');
@@ -287,7 +287,7 @@ code{background:#efece5;padding:1px 6px;border-radius:6px}
   $('msg').className='note';$('msg').textContent='Vérification…';
   fetch('/kiwi/relay/pair',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:c})}).then(function(r){return r.json()}).then(function(j){
    if(j.ok){$('msg').className='note ok';$('msg').textContent='Pont associé au commerce « '+(j.merchant||'')+' ». Les tickets de l’iPad sortiront ici.';$('code').value=''}
-   else{$('msg').className='note err';$('msg').textContent=j.error==='invalid_or_expired'?'Code invalide ou expiré — regénérez-le dans Kiwi.':j.error==='too_many_attempts'?'Trop d’essais — patientez quelques minutes.':j.error==='relay-not-provisioned'?'Le relais n’est pas encore activé côté Kiwi.':'Échec : '+(j.error||'inconnu')}
+   else{$('msg').className='note err';$('msg').textContent=j.error==='invalid_or_expired'?'Code invalide ou expiré · regénérez-le dans Kiwi.':j.error==='too_many_attempts'?'Trop d’essais · patientez quelques minutes.':j.error==='relay-not-provisioned'?'Le relais n’est pas encore activé côté Kiwi.':'Échec : '+(j.error||'inconnu')}
    refresh();
   }).catch(function(){$('msg').className='note err';$('msg').textContent='Le pont ne répond pas.'});
  });
@@ -578,7 +578,7 @@ async function sendToOsPrinter(printerName, buf) {
   const installed = await listPrinters();
   if (!installed.length) throw new Error('aucune imprimante installée sur cet ordinateur');
   if (installed.indexOf(printerName) === -1) {
-    throw new Error('imprimante « ' + printerName + ' » introuvable — installées : ' + installed.join(', '));
+    throw new Error('imprimante « ' + printerName + ' » introuvable · installées : ' + installed.join(', '));
   }
 
   /* The job goes via a file because that is what the spooler side reads. If the
@@ -775,7 +775,7 @@ function tryListen() {
     }
     console.error('Le pont n\'a pas pu démarrer :', (e && e.message) || e);
     if (e && e.code === 'EADDRINUSE') {
-      console.error(`Le port ${port} est déjà utilisé — le pont tourne peut-être déjà dans une autre fenêtre.`);
+      console.error(`Le port ${port} est déjà utilisé · le pont tourne peut-être déjà dans une autre fenêtre.`);
       /* L'app web ne cherche le pont que sur 9110–9114 : conseiller un port hors
        * de cette plage ferait tourner un pont que Kiwi ne trouvera jamais. */
       console.error('Fermez l\'autre fenêtre, ou lancez celle-ci sur un port libre ENTRE 9110 et 9114 :');
@@ -789,13 +789,13 @@ function tryListen() {
     console.log('Laissez cette fenêtre ouverte. Elle relaie les impressions Kiwi vers votre imprimante.');
     console.log(`Page du pont : http://${HOST}:${port}/`);
     if (relayPaired()) {
-      relayLog('appairé au commerce « ' + relay.cfg.relay.merchant + ' » — connexion à ' + RELAY_URL + '…');
+      relayLog('appairé au commerce « ' + relay.cfg.relay.merchant + ' » · connexion à ' + RELAY_URL + '…');
       relayStart();
     } else {
       relayLog('non appairé. Pour imprimer depuis un iPad/tablette : Kiwi → Imprimantes → Relais Kiwi → Associer un pont, puis tapez le code sur http://' + HOST + ':' + port + '/');
     }
     if (port !== PORT_CANDIDATES[0]) {
-      console.log(`(Port ${PORT_CANDIDATES[0]} occupé — Kiwi cherche automatiquement jusqu'à ${PORT_CANDIDATES[PORT_CANDIDATES.length - 1]}.)`);
+      console.log(`(Port ${PORT_CANDIDATES[0]} occupé · Kiwi cherche automatiquement jusqu'à ${PORT_CANDIDATES[PORT_CANDIDATES.length - 1]}.)`);
     }
   };
 

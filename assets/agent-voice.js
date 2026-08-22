@@ -72,7 +72,7 @@
    * il peut ainsi vérifier, ajuster un mot et appuyer sur Entrée pour envoyer. */
   function deliver(ctx, text) {
     var t = String(text || '').trim();
-    if (!t) { toast('Rien entendu — réessayez plus près du micro'); return; }
+    if (!t) { toast('Rien entendu · réessayez plus près du micro'); return; }
     var cur = (ctx.input.value || '').trim();
     ctx.input.value = cur ? cur + ' ' + t : t;
     try {
@@ -105,8 +105,8 @@
       deliver(ctx, t);
     };
     rec.onerror = function (e) {
-      if (e && e.error === 'not-allowed') toast('Micro refusé — autorisez-le dans le navigateur');
-      else toast('Dictée interrompue — réessayez');
+      if (e && e.error === 'not-allowed') toast('Micro refusé · autorisez-le dans le navigateur');
+      else toast('Dictée interrompue · réessayez');
     };
     rec.onend = function () { active = null; setState(btn, ''); };
     try { rec.start(); } catch (_) { active = null; setState(btn, ''); }
@@ -134,7 +134,7 @@
       setState(btn, 'rec');
       recorder.start();
     }).catch(function () {
-      toast('Micro refusé — autorisez-le dans le navigateur');
+      toast('Micro refusé · autorisez-le dans le navigateur');
     });
   }
 
@@ -143,7 +143,7 @@
     var reader = new FileReader();
     reader.onload = function () {
       var b64 = String(reader.result || '').split(',')[1] || '';
-      if (!b64) { setState(btn, ''); toast('Dictée interrompue — réessayez'); return; }
+      if (!b64) { setState(btn, ''); toast('Dictée interrompue · réessayez'); return; }
       fetch('/api/ai/voice', {
         method: 'POST',
         credentials: 'same-origin',
@@ -159,18 +159,18 @@
          * de cause plutôt que de réessayer un mur toute la journée. */
         if (code === 'unbound' || code === 'quota') {
           preferBrowser = true;
-          toast(speechCtor() ? 'Transcription Kiwi indisponible — le micro passe par le navigateur, réessayez' : 'Transcription indisponible pour le moment');
+          toast(speechCtor() ? 'Transcription Kiwi indisponible · le micro passe par le navigateur, réessayez' : 'Transcription indisponible pour le moment');
         } else if (code === 'auth') {
-          toast('Session expirée — reconnectez-vous');
+          toast('Session expirée · reconnectez-vous');
         } else {
-          toast('Transcription en échec — réessayez');
+          toast('Transcription en échec · réessayez');
         }
       }).catch(function () {
         setState(btn, '');
-        toast('Hors ligne — la dictée a besoin du réseau');
+        toast('Hors ligne · la dictée a besoin du réseau');
       });
     };
-    reader.onerror = function () { setState(btn, ''); toast('Dictée interrompue — réessayez'); };
+    reader.onerror = function () { setState(btn, ''); toast('Dictée interrompue · réessayez'); };
     reader.readAsDataURL(blob);
   }
 

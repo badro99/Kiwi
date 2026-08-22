@@ -430,7 +430,7 @@
         </div>
         <div class="dep-supp-amt">${mad(s.amount)} MAD</div>
         <button class="dep-mini ok" data-action="dep-pay" data-arg="${s.id}">${pick(T.pay)}</button>
-      </div>`).join('') : `<div class="dep-empty">—</div>`;
+      </div>`).join('') : `<div class="dep-empty">·</div>`;
 
     return `
       <div class="dep-wrap">

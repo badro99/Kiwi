@@ -148,7 +148,7 @@
     if (!KCl || !KCl.hasBook || !KCl.hasBook()) {
       if (!isRealTenant()) return null;
       return {
-        SEG: ['reg', 'vip', 'new', 'win'].map((id) => ({ id, n: 0, c: SEG_COLORS[id], reach: 0, lift: 0, sub: '—' })),
+        SEG: ['reg', 'vip', 'new', 'win'].map((id) => ({ id, n: 0, c: SEG_COLORS[id], reach: 0, lift: 0, sub: '·' })),
         GUESTS: [],
       };
     }
@@ -165,7 +165,7 @@
       const visits = arr.reduce((t, c) => t + (+c.visits || 0), 0);
       const spend = arr.reduce((t, c) => t + (+c.spend || 0), 0);
       const basket = visits ? Math.round(spend / visits) : null;
-      const sub = basket == null ? '—' : (lang() === 'en' ? `Avg basket ${fmt(basket)} MAD` : lang() === 'ar' ? `متوسط السلة ${fmt(basket)} درهم` : `Panier moy. ${fmt(basket)} MAD`);
+      const sub = basket == null ? '·' : (lang() === 'en' ? `Avg basket ${fmt(basket)} MAD` : lang() === 'ar' ? `متوسط السلة ${fmt(basket)} درهم` : `Panier moy. ${fmt(basket)} MAD`);
       return { id, n: arr.length, c: SEG_COLORS[id], reach: arr.length, lift, sub };
     });
     const GUESTSr = clients.slice().sort((a, b) => (b.spend || 0) - (a.spend || 0)).slice(0, 12).map((c) => ({
@@ -194,7 +194,7 @@
         <div>
           <div class="crm-colt">${T.clients}</div>
           <table class="crm-tbl"><thead><tr><th>${T.th.c}</th><th>${T.th.v}</th><th>${T.th.s}</th><th>${T.th.l}</th><th>${T.th.g}</th></tr></thead>
-          <tbody>${GUESTS_.length ? GUESTS_.map(g => `<tr><td style="font-weight:500">${g.nm}</td><td class="mono">${g.v}</td><td class="mono">${fmt(g.sp)} MAD</td><td style="color:var(--n-500)">${T.ago(g.last)}</td><td><span class="crm-tag ${g.seg}">${T.segTag[g.seg]}</span></td></tr>`).join('') : `<tr><td colspan="5" style="text-align:center;color:var(--n-500);padding:28px 14px">${lang() === 'en' ? 'No customers yet — add them from the till.' : lang() === 'ar' ? 'لا يوجد عملاء بعد — أضِفهم من الصندوق.' : 'Aucun client — ajoutez-en depuis la caisse.'}</td></tr>`}</tbody></table>
+          <tbody>${GUESTS_.length ? GUESTS_.map(g => `<tr><td style="font-weight:500">${g.nm}</td><td class="mono">${g.v}</td><td class="mono">${fmt(g.sp)} MAD</td><td style="color:var(--n-500)">${T.ago(g.last)}</td><td><span class="crm-tag ${g.seg}">${T.segTag[g.seg]}</span></td></tr>`).join('') : `<tr><td colspan="5" style="text-align:center;color:var(--n-500);padding:28px 14px">${lang() === 'en' ? 'No customers yet · add them from the till.' : lang() === 'ar' ? 'لا يوجد عملاء بعد · أضِفهم من الصندوق.' : 'Aucun client · ajoutez-en depuis la caisse.'}</td></tr>`}</tbody></table>
         </div>
 
         <div class="crm-comp">

@@ -1247,7 +1247,7 @@
                 <td><b>${r.n}</b> <span style="color:var(--n-500);">${r.mask}</span></td>
                 <td style="color:var(--n-600);">${r.c}</td>
                 <td class="mono right">${r.amt.toFixed(2).replace('.', ',')}</td>
-                <td class="mono right" style="color:${r.tip > 0 ? 'var(--success)' : 'var(--n-400)'};">${r.tip > 0 ? '+' + r.tip.toFixed(2).replace('.', ',') : '—'}</td>
+                <td class="mono right" style="color:${r.tip > 0 ? 'var(--success)' : 'var(--n-400)'};">${r.tip > 0 ? '+' + r.tip.toFixed(2).replace('.', ',') : '·'}</td>
                 <td><span class="chip ${r.status === 'ok' ? 'ok' : 'pend'}">${r.status === 'ok' ? T.transactionsStatusSettled : T.transactionsStatusPending}</span></td>
               </tr>
             `).join('')}
@@ -1480,14 +1480,14 @@
 
         <div class="team-grid">
           ${[
-            ['RB', '', 'Rachid Benhima', T.teamRoleOwner, T.teamStatusOnline, T.teamStatusToday, '—', '—'],
+            ['RB', '', 'Rachid Benhima', T.teamRoleOwner, T.teamStatusOnline, T.teamStatusToday, '·', '·'],
             ['FK', '', 'Fatima Khalki', T.teamRoleWaitress, '5h 32', '42 tx', '5 240 MAD', '420 tip'],
             ['HJ', 'b', 'Hamid Jelloul', T.teamRoleWaiter, '5h 10', '38 tx', '4 680 MAD', '380 tip'],
             ['SB', 'c', 'Sofia Belkadi', T.teamRoleBarista, '4h 48', '54 tx', '3 920 MAD', '180 tip'],
             ['YA', 'd', 'Youssef Amrani', T.teamStatusBreak, '3h 22', '25 tx', '2 110 MAD', '215 tip'],
-            ['MM', 'offline', 'Mehdi Mansouri', T.teamStatusDone, '6h 00', '—', '—', '—'],
+            ['MM', 'offline', 'Mehdi Mansouri', T.teamStatusDone, '6h 00', '·', '·', '·'],
             ['LN', 'offline', 'Laila Nouri', T.teamStatusCashier, '4h 30', '18 tx', '1 680 MAD', '52 tip'],
-            ['AT', 'offline', 'Amine Talhi', T.teamStatusRunner, '—', '—', '—', '—'],
+            ['AT', 'offline', 'Amine Talhi', T.teamStatusRunner, '·', '·', '·', '·'],
           ].map(([i, k, n, r, shift, tx, rev, tip]) => `
             <div class="team-mem">
               <div class="top">
@@ -2328,7 +2328,7 @@
   handlers['edit-tip-rule'] = () => toast(tr({fr:'Règle de partage des pourboires', en:'Tip sharing rule', ar:'قاعدة توزيع البقشيش'}), { type: 'info', desc: tr({fr:'Modifiez les pourcentages par poste ou la base de calcul.', en:'Edit the percentages per role or the calculation base.', ar:'عدّل النسب حسب المنصب أو أساس الحساب.'}) });
   handlers['distribute-tips'] = () => {
     if (usesOwnData()) return toast(tr({ fr: 'Aucun pourboire vérifié à distribuer', en: 'No verified tips to distribute', ar: 'لا توجد إكراميات مؤكدة للتوزيع' }), { type: 'info' });
-    return toast(tr({fr:'Pourboires distribués · 1 867 MAD', en:'Tips distributed · 1 867 MAD', ar:'تم توزيع البقشيش · 1 867 MAD'}), { type: 'success', desc: tr({fr:'Répartition enregistrée. Prévenez l’équipe : la notification automatique arrive bientôt.', en:'Split recorded. Tell the team — automatic notification coming soon.', ar:'تم تسجيل التوزيع. أخبر الفريق — الإشعار التلقائي قريبًا.'}) });
+    return toast(tr({fr:'Pourboires distribués · 1 867 MAD', en:'Tips distributed · 1 867 MAD', ar:'تم توزيع البقشيش · 1 867 MAD'}), { type: 'success', desc: tr({fr:'Répartition enregistrée. Prévenez l’équipe : la notification automatique arrive bientôt.', en:'Split recorded. Tell the team · automatic notification coming soon.', ar:'تم تسجيل التوزيع. أخبر الفريق · الإشعار التلقائي قريبًا.'}) });
   };
   handlers['export-payroll'] = () => {
     if (usesOwnData()) return toast(tr({ fr: 'Export de paie non généré', en: 'Payroll export not generated', ar: 'لم يتم إنشاء تصدير الأجور' }), { type: 'info', desc: tr({ fr: 'Aucune source de paie vérifiée n’est disponible.', en: 'No verified payroll source is available.', ar: 'لا يتوفر مصدر أجور مؤكد.' }) });

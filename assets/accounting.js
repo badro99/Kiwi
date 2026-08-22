@@ -447,7 +447,7 @@
     s.textContent = `
     .ac-drawer .kiwi-drawer { display:flex; flex-direction:column; }
     .ac-drawer .kiwi-drawer-body { flex:1; min-height:0; padding:0 !important; display:flex; flex-direction:column; }
-    .ac-drawer .kiwi-drawer-head h3 { font-family:'Instrument Serif',serif; font-weight:400; font-size:28px; }
+    .ac-drawer .kiwi-drawer-head h3 { font-family:"Inter Tight", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; font-weight:400; font-size:28px; }
     .ac-drawer .kiwi-drawer-head p { color:var(--n-500); font-size:12.5px; }
 
     .ac { display:flex; flex-direction:column; width:100%; height:100%; background:var(--paper);
@@ -470,7 +470,7 @@
 
     /* generic pieces */
     .ac-eyebrow { font-size:10.5px; font-weight:600; letter-spacing:.13em; text-transform:uppercase; color:var(--atlas); }
-    .ac-h { font-family:'Instrument Serif',serif; font-weight:400; font-size:24px; color:var(--ink); margin:3px 0 2px; }
+    .ac-h { font-family:"Inter Tight", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; font-weight:400; font-size:24px; color:var(--ink); margin:3px 0 2px; }
     .ac-sub { font-size:12.5px; color:var(--n-500); }
     .ac-card { background:var(--surface); border:1px solid var(--n-200); border-radius:18px; padding:18px 18px;
       box-shadow:0 1px 2px rgba(10,15,13,.04), 0 18px 34px -26px rgba(10,15,13,.2); }
@@ -740,7 +740,7 @@
         <span class="ac-cal-tag">${c.tag}</span>
         <span class="ac-cal-m"><span class="l">${tl(c.label)}</span><span class="d">${t('echeanceX', { d: tl(c.date) })}</span></span>
         <span class="ac-cal-r">
-          <span class="a">${c.montant != null ? fmtMad(c.montant) : '—'}</span>
+          <span class="a">${c.montant != null ? fmtMad(c.montant) : '·'}</span>
           <span class="st ${c.status === 'à faire' ? 'todo' : 'soon'}">${c.status === 'à faire' ? t('stTodo') : t('stSoon')}</span>
         </span>
       </div>`).join('');

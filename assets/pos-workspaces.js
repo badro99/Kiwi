@@ -52,7 +52,7 @@
 
   function fieldControl(sc,f,rec){const v=rec.values?.[f.id]??f.default??'',id='twpos-'+f.id,req=f.required?' required':'';let c='';const common=`id="${esc(id)}" name="${esc(f.id)}"${req}`;
     if(f.type==='textarea')c=`<textarea ${common} maxlength="${f.max||2400}">${esc(v)}</textarea>`;
-    else if(f.type==='select'||f.type==='relation'){const opts=f.type==='relation'?window.KiwiTradeSchema.relationOptions(sc,allRecords(),f):(f.values||[]);c=`<select ${common}><option value="">—</option>${opts.map(o=>`<option value="${esc(o.value)}"${String(v)===String(o.value)?' selected':''}>${esc(pick(o.label)||o.label)}</option>`).join('')}</select>`;}
+    else if(f.type==='select'||f.type==='relation'){const opts=f.type==='relation'?window.KiwiTradeSchema.relationOptions(sc,allRecords(),f):(f.values||[]);c=`<select ${common}><option value="">·</option>${opts.map(o=>`<option value="${esc(o.value)}"${String(v)===String(o.value)?' selected':''}>${esc(pick(o.label)||o.label)}</option>`).join('')}</select>`;}
     else if(f.type==='checkbox')c=`<input ${common} type="checkbox" value="1"${v===true||v==='true'||v==='yes'?' checked':''}>`;
     else c=`<input ${common} type="${f.type==='money'?'number':esc(f.type)}" value="${esc(v)}"${f.min!=null?` min="${f.min}"`:''}${f.max!=null?` max="${f.max}"`:''}${f.type==='number'||f.type==='money'?` step="${f.step||'0.01'}"`:''}>`;
     return `<label class="twpos-field${f.full||f.type==='textarea'?' full':''}"><span>${esc(pick(f.label))}${f.required?' *':''}</span>${c}<small data-twpos-error="${esc(f.id)}"></small></label>`;}

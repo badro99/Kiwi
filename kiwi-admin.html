@@ -810,7 +810,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
             <p class="sub">Fonctionnalités (autorité opérateur)</p>
             <div id="type-row"></div>
             <div id="feat-list"></div>
-            <p class="hint">Les modules affichés dépendent du type d’activité du client. Désactiver un module le masque partout dans son app — barre latérale, accueil, recherche, mobile, caisse et Kiwi AI — au prochain chargement. <b>Aucune donnée n’est effacée&nbsp;:</b> un module rallumé retrouve son contenu. Réservé à l’opérateur, lié à l’offre.</p>
+            <p class="hint">Les modules affichés dépendent du type d’activité du client. Désactiver un module le masque partout dans son app · barre latérale, accueil, recherche, mobile, caisse et Kiwi AI · au prochain chargement. <b>Aucune donnée n’est effacée&nbsp;:</b> un module rallumé retrouve son contenu. Réservé à l’opérateur, lié à l’offre.</p>
           </div>
         </div>
 
@@ -851,7 +851,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
                      aria-label="Ville de l’établissement" />
             </label>
             <label>Abonnement convenu
-              <input class="inp n" id="biz-mrr" type="number" min="0" step="1" placeholder="—"
+              <input class="inp n" id="biz-mrr" type="number" min="0" step="1" placeholder="·"
                      aria-label="Abonnement mensuel convenu en dirhams" />
             </label>
             <button class="mini" id="biz-save" type="button">Enregistrer</button>
@@ -896,7 +896,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
           <div class="ts-bar" id="ts-bar" hidden></div>
           <div id="ts-impact"></div>
           <p class="err" id="ts-err"></p>
-          <p class="hint">Sortir une vente des livres la retire du chiffre d’affaires, du nombre de ventes, du panier moyen, du classement produits, de la répartition des encaissements, des exports et des réponses de Kiwi AI — sur tous les appareils du client. <b>La vente n’est jamais supprimée&nbsp;:</b> montant, panier et horodatage restent en base, et « Remettre dans les livres » la rétablit à l’identique.</p>
+          <p class="hint">Sortir une vente des livres la retire du chiffre d’affaires, du nombre de ventes, du panier moyen, du classement produits, de la répartition des encaissements, des exports et des réponses de Kiwi AI · sur tous les appareils du client. <b>La vente n’est jamais supprimée&nbsp;:</b> montant, panier et horodatage restent en base, et « Remettre dans les livres » la rétablit à l’identique.</p>
         </div>
 
         <!-- ══ COMPTE & ADRESSES ═══════════════════════════════════════════ -->
@@ -980,7 +980,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
        does not load the pills still switch, just without the travelling lens. -->
   <script src="assets/liquid-lens.js"></script>
   <link rel="stylesheet" href="assets/admin-support.css?v=2" />
-  <script src="assets/admin-support.js?v=2" defer></script>
+  <script src="assets/admin-support.js?v=5" defer></script>
 
 <script>
 (function(){
@@ -1037,7 +1037,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
   }
   function fmt(n){ try { return (Math.round(n)||0).toLocaleString('fr-FR'); } catch(_) { return String(Math.round(n)||0); } }
   function ago(ts){
-    if (!ts) return '—';
+    if (!ts) return '·';
     var s = Math.max(0, Math.round((Date.now()-ts)/1000));
     if (s < 60) return 'à l’instant';
     var m = Math.round(s/60); if (m < 60) return 'il y a ' + m + ' min';
@@ -1297,7 +1297,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
       var listed = TIER_PRICE[plan] || null;
       var agreed = (c.mrr != null && +c.mrr > 0) ? +c.mrr : null;
       var amount = agreed != null ? agreed : listed;
-      var key = plan || '—';
+      var key = plan || '·';
       var t = tiers[key] || (tiers[key] = { plan:key, stores:0, amount:0, unit:listed, untariffed:0, suspended:0 });
       t.stores++;
       if (c.status === 'suspended' || c.store_status === 'suspended'){
@@ -1394,7 +1394,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
       amount += s.amount; methods[s.method] = (methods[s.method]||0) + s.amount;
       (s.lines||[]).forEach(function(l){ stock.push({ name:l.name, qty:l.qty, cat:l.cat||'', sale:s.id }); });
       if (s.returnish) warnings.push({ code:'return', sale:s.id,
-        label:'Le libellé de cette vente évoque un retour ou un avoir. Sortir un remboursement des livres REMONTE le chiffre d’affaires au lieu de le baisser — vérifiez le ticket avant.' });
+        label:'Le libellé de cette vente évoque un retour ou un avoir. Sortir un remboursement des livres REMONTE le chiffre d’affaires au lieu de le baisser · vérifiez le ticket avant.' });
       if (s.ts < dayOld) blockers.push({ code:'day-closed', sale:s.id,
         label:'Journée du ' + new Date(s.ts).toISOString().slice(0,10) + ' déjà clôturée. Le Z de cette journée est un instantané : il gardera ses chiffres tant qu’il n’est pas rouvert et re-clôturé.' });
     });
@@ -1868,7 +1868,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
     var c = g.head;
     var live = g.last && (Date.now() - g.last < 1000*60*15);
     var mail = c.owner || c.email || '';
-    var who = c.owner_name || c.name || mail || c.owner_business || '—';
+    var who = c.owner_name || c.name || mail || c.owner_business || '·';
     var tr = h('tr', { class:'owner-row' + (c.status === 'suspended' ? ' suspended' : '') },
       h('td', { colspan:'3' },
         h('div', { class:'who' }, who,
@@ -1916,7 +1916,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
        remonté sur la bande du propriétaire, où il désigne ce qu'il fait. */
     secondary.push(h('button', { class:'mini' + (storeOff ? ' warn' : ''),
       disabled: SENIOR === false || accountOff,
-      title: accountOff ? 'Le compte entier est suspendu — réactivez-le d’abord.' : '',
+      title: accountOff ? 'Le compte entier est suspendu · réactivez-le d’abord.' : '',
       onClick:function(e){ e.stopPropagation(); toggleStoreSuspend(c); } },
       storeOff ? 'Rouvrir' : 'Fermer'));
     if (subscriptionPending) secondary.unshift(h('button', { class:'mini', disabled:SENIOR === false,
@@ -1958,7 +1958,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
                     // that differs between them, which is the shop itself.
                     (!inGroup && c.name) ? h('div', { class:'nm', style:'color:var(--muted);font-size:.78rem' }, c.name + (c.email ? ' · ' + c.email : '')) : null),
       h('td', null, h('code', { style:'font-family:var(--mono);font-size:.82rem;color:var(--muted)' }, c.merchant)),
-      h('td', null, c.plan ? h('span', { class:'plan ' + c.plan }, c.plan) : h('span', { class:'plan' }, '—')),
+      h('td', null, c.plan ? h('span', { class:'plan ' + c.plan }, c.plan) : h('span', { class:'plan' }, '·')),
       h('td', { class:'num' }, fmt(c.today_amount) + ' MAD'),
       h('td', { class:'num' }, String(c.today_count || 0)),
       h('td', null, h('span', { class:'online' + (live?' live':'') }, h('span', { class:'d' }), ago(c.last_ts))),
@@ -2028,8 +2028,8 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
      disparaître et on fait recopier le slug — un clic seul ne suffit pas. */
   function askDeleteStore(c){
     var m = modal('Supprimer « ' + (c.business || c.merchant) + ' »',
-      'Cet établissement et TOUT ce qu’il contient — ventes, clôtures, catalogue, '
-      + 'carte, clients, codes équipe, appairages — seront effacés définitivement. '
+      'Cet établissement et TOUT ce qu’il contient · ventes, clôtures, catalogue, '
+      + 'carte, clients, codes équipe, appairages · seront effacés définitivement. '
       + 'Les journaux d’opérateur sont conservés. Recopiez son identifiant pour confirmer.');
     var input = h('input', { class:'inp', placeholder:c.merchant, style:'width:100%;margin:10px 0' });
     var go = h('button', { class:'mini danger', disabled:true }, 'Supprimer définitivement');
@@ -2041,7 +2041,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
         m.close();
         await renderClients();
         var n = Object.keys((r && r.removed) || {}).length;
-        notify('« ' + c.merchant + ' » supprimé — ' + n + ' table(s) purgée(s).');
+        notify('« ' + c.merchant + ' » supprimé · ' + n + ' table(s) purgée(s).');
       } catch(e){
         go.disabled = false; go.textContent = 'Supprimer définitivement';
         notify('Échec : ' + ((e && e.body && e.body.error) || (e && e.message) || 'erreur'));
@@ -2201,7 +2201,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
       if (o.untagged){
         left.appendChild(h('p', { class:'ov-note ov-todo', text:
           plural(o.untagged, 'établissement sans ville', 'établissements sans ville') +
-          ' — ce classement ne les compte pas.' }));
+          ' · ce classement ne les compte pas.' }));
       }
     }
     split.appendChild(left);
@@ -2232,7 +2232,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
       o.top.forEach(function(t){
         rows.appendChild(h('div', { class:'ov-row' },
           h('span', { class:'nm', text:t.name }),
-          h('span', { class:'city', text:t.city || '—' }),
+          h('span', { class:'city', text:t.city || '·' }),
           h('span', { class:'amt', text:big(t.gmv30) + ' MAD' })));
       });
       top.appendChild(rows);
@@ -2260,7 +2260,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
     catch(_) { return ''; }
   }
   function planName(p){
-    if (p === '—' || !p) return 'Sans palier';
+    if (p === '·' || !p) return 'Sans palier';
     return p.charAt(0).toUpperCase() + p.slice(1);
   }
 
@@ -2613,7 +2613,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
       hint.innerHTML = '<span style="color:var(--amber,#b45309);font-weight:600;">⚠️ Compte multi-établissements (' + vCount + ' établissements actifs) sans offre explicite.</span> Définir son offre (ex: Ultra) pour formaliser son statut multi-sites.';
     } else if (listed){
       hint.textContent = 'La ville alimente le classement de la vue d’ensemble ; sans elle l’établissement y est compté « non situé », jamais rangé ailleurs. ' +
-        'Le montant est facultatif — laissé vide, le tarif du palier ' + planName(plan) + ' (' + fmt(listed) + ' MAD/mois) s’applique. Renseigné, il l’emporte : c’est là qu’on inscrit une remise.';
+        'Le montant est facultatif · laissé vide, le tarif du palier ' + planName(plan) + ' (' + fmt(listed) + ' MAD/mois) s’applique. Renseigné, il l’emporte : c’est là qu’on inscrit une remise.';
     } else {
       hint.textContent = 'La ville alimente le classement de la vue d’ensemble ; sans elle l’établissement y est compté « non situé ». ' +
         (plan === 'ultimate'
@@ -2721,7 +2721,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
         tag: out ? 'Vente sortie' : 'Vente remise',
         what: fmt(r.amount) + ' MAD' + (r.ref ? ' · ' + r.ref : '') +
               (r.sale_ts ? ' du ' + new Date(r.sale_ts).toLocaleDateString('fr-FR') : ''),
-        why: (r.reason ? (MOCK_REASONS[r.reason] || r.reason) : '') + (r.note ? ' — ' + r.note : ''),
+        why: (r.reason ? (MOCK_REASONS[r.reason] || r.reason) : '') + (r.note ? ' · ' + r.note : ''),
       };
     }
     if (r.kind === 'account'){
@@ -2744,7 +2744,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
       return {
         cls:'ab acct',
         tag: lbl[r.action] || 'Adresse',
-        what: (r.prev || '—') + ' → ' + (r.next || '—'),
+        what: (r.prev || '·') + ' → ' + (r.next || '·'),
         why: (r.reason || '') + (bad.length ? ' · avis non délivré (' + bad.join(', ') + ')' : ''),
       };
     }
@@ -2806,7 +2806,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
     return isNaN(d) ? '' : d.getTime();
   }
   function stamp(ts){
-    if (!ts) return '—';
+    if (!ts) return '·';
     var d = new Date(ts);
     return d.toLocaleDateString('fr-FR', { day:'2-digit', month:'2-digit' }) + ' ' +
            String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
@@ -2895,8 +2895,8 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
       box,
       h('span', { class:'ts-when' }, stamp(s.ts)),
       h('span', { class:'ts-amt' }, fmt(s.amount) + ' MAD'),
-      h('span', { class:'ts-ref' }, METHOD_FR[s.method] || s.method || '—'),
-      h('span', { class:'ts-lbl' }, s.label || '—',
+      h('span', { class:'ts-ref' }, METHOD_FR[s.method] || s.method || '·'),
+      h('span', { class:'ts-lbl' }, s.label || '·',
         s.returnish ? h('span', { class:'vpill', style:'margin-left:8px' }, 'retour ?') : null),
       voided ? h('span', { class:'vpill' }, 'sortie') : h('span', { class:'ts-ref' }, s.ref || ''));
     /* Cliquer la LIGNE ouvre le ticket ; cliquer la case sélectionne. Deux
@@ -3015,7 +3015,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
     if (!restore && imp.stock && imp.stock.length){
       var st = h('div', { class:'box warn' },
         h('p', null, h('b', null, 'Stock : rendu par la caisse, à vérifier ici. '),
-          'Le serveur ne peut pas le rendre lui-même — la ligne de vente porte le nom du produit, pas la déclinaison exacte (couleur × taille) qui a été décrémentée. La CAISSE qui a encaissé, elle, la connaît : elle remet la marchandise en rayon toute seule dès qu’elle apprend le retrait (au plus tard 90 s après, ou au bouton « Rafraîchir »). Ça ne marche que si elle tient encore la vente dans son journal — sept jours — et qu’elle n’a pas été réinstallée depuis. Au-delà, à reprendre à la main :'));
+          'Le serveur ne peut pas le rendre lui-même · la ligne de vente porte le nom du produit, pas la déclinaison exacte (couleur × taille) qui a été décrémentée. La CAISSE qui a encaissé, elle, la connaît : elle remet la marchandise en rayon toute seule dès qu’elle apprend le retrait (au plus tard 90 s après, ou au bouton « Rafraîchir »). Ça ne marche que si elle tient encore la vente dans son journal · sept jours · et qu’elle n’a pas été réinstallée depuis. Au-delà, à reprendre à la main :'));
       imp.stock.forEach(function(l){
         st.appendChild(h('p', null, '· ' + l.name + ' × ' + l.qty + (l.cat ? ' (' + l.cat + ')' : '')));
       });
@@ -3108,7 +3108,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
     if (!acct){
       document.getElementById('acct-sub').textContent = '';
       host.appendChild(h('p', { class:'empty' },
-        'Cet établissement n’est rattaché à aucun compte de connexion — c’est une démo, ou une fiche qu’aucun client n’a encore réclamée.'));
+        'Cet établissement n’est rattaché à aucun compte de connexion · c’est une démo, ou une fiche qu’aucun client n’a encore réclamée.'));
       return;
     }
     document.getElementById('acct-sub').textContent =
@@ -3126,7 +3126,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
     ].forEach(function(r){
       var row = h('div', { class:'mailrow' },
         h('span', { class:'k' }, r.k),
-        h('span', { class:'v' + (r.v ? '' : ' none') }, r.v || '— même que la connexion'),
+        h('span', { class:'v' + (r.v ? '' : ' none') }, r.v || '·même que la connexion'),
         h('button', { class:'mini', disabled: SENIOR === false,
           onClick:function(){ openEmailEditor(r, row); } }, 'Corriger'));
       row.title = r.why;
@@ -3138,7 +3138,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
       tl.appendChild(h('p', { class:'sub', style:'margin:14px 0 4px' }, 'Adresses de l’équipe (lecture seule)'));
       data.team.forEach(function(t){
         tl.appendChild(h('div', { class:'tm' },
-          h('b', null, t.name || '—'), t.role ? h('span', null, t.role) : null,
+          h('b', null, t.name || '·'), t.role ? h('span', null, t.role) : null,
           h('span', { class:'em' }, t.email),
           h('span', null, t.merchant)));
       });
@@ -3180,7 +3180,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
       } catch(e){
         var code = (e && e.body && e.body.error) || '';
         err.textContent =
-          code === 'mail-unconfigured' ? 'Aucune sortie e-mail configurée (MAIL_WEBHOOK). Rien n’a été envoyé, et aucun lien n’a été créé — l’ancien reste valable.' :
+          code === 'mail-unconfigured' ? 'Aucune sortie e-mail configurée (MAIL_WEBHOOK). Rien n’a été envoyé, et aucun lien n’a été créé · l’ancien reste valable.' :
           code === 'send-failed' ? 'L’e-mail n’est pas parti. Vérifiez l’adresse du compte.' :
           code === 'too-soon' ? 'Un lien vient d’être envoyé. Attendez avant d’en renvoyer un : chaque envoi périme le précédent.' :
           code === 'operator-code-required' ? 'Il faut un code opérateur personnel pour ce geste.' :
@@ -3210,16 +3210,16 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
     var box = h('div', { class:'imp', id:'mail-editor' },
       h('h4', null, 'Corriger l’adresse · ' + r.k),
       h('p', { class:'lst' },
-        h('b', null, acct.business || selected.merchant), ' · ', acct.name || '—',
+        h('b', null, acct.business || selected.merchant), ' · ', acct.name || '·',
         ' · compte ', h('b', null, acct.login)));
 
     if (r.f === 'login'){
       box.appendChild(h('div', { class:'box warn' },
         h('p', null, h('b', null, 'La nouvelle adresse devient la connexion immédiatement. '),
-          'Kiwi n’a pas d’étape de vérification d’adresse : le client se connectera avec la nouvelle dès l’enregistrement, avec son mot de passe habituel. C’est volontaire — une vérification bloquante enfermerait dehors précisément le client qui a perdu l’accès à son ancienne boîte.'),
+          'Kiwi n’a pas d’étape de vérification d’adresse : le client se connectera avec la nouvelle dès l’enregistrement, avec son mot de passe habituel. C’est volontaire · une vérification bloquante enfermerait dehors précisément le client qui a perdu l’accès à son ancienne boîte.'),
         h('p', null, 'Un avis part à l’ancienne adresse, une confirmation à la nouvelle. Aucun mot de passe n’est transmis.'),
         h('p', null, h('b', null, 'Ne casse rien : '),
-          'la session, la propriété des établissements et les ventes sont rattachées à l’identifiant du compte, jamais à l’adresse. Pas de second compte, pas de réonboarding, pas de perte de droits — le client reste même connecté.')));
+          'la session, la propriété des établissements et les ventes sont rattachées à l’identifiant du compte, jamais à l’adresse. Pas de second compte, pas de réonboarding, pas de perte de droits · le client reste même connecté.')));
     }
     box.appendChild(h('div', { class:'reason' }, input, why));
     box.appendChild(h('div', { class:'acts' }, go,
@@ -3233,7 +3233,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
     box.appendChild(h('p', { class:'hint' },
       'Le client conteste un changement précédent ? ',
       h('a', { href:'#', onClick:function(e){ e.preventDefault(); commitEmail(r, '', why.value.trim(), true, go, msg, box); } },
-        'Rétablir l’adresse précédente'), ' — le motif reste obligatoire.'));
+        'Rétablir l’adresse précédente'), ' · le motif reste obligatoire.'));
 
     row.parentNode.insertBefore(box, row.nextSibling);
     setTimeout(function(){ try { input.focus(); } catch(_){} }, 50);

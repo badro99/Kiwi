@@ -278,7 +278,7 @@
     const m = Kw.modal({
       title: tr({ fr: 'Modèles de rayons', en: 'Starter aisles', ar: 'أقسام جاهزة' }),
       tag: tr({ fr: 'Démarrer le catalogue', en: 'Start the catalogue', ar: 'بدء الكتالوج' }),
-      desc: esc(tr({ fr: 'Un catalogue de départ pour votre magasin — à corriger librement ensuite.', en: 'A starting catalogue for your shop — free to edit afterwards.', ar: 'كتالوج انطلاق لمتجرك — يمكنك تعديله بحرية.' })),
+      desc: esc(tr({ fr: 'Un catalogue de départ pour votre magasin · à corriger librement ensuite.', en: 'A starting catalogue for your shop · free to edit afterwards.', ar: 'كتالوج انطلاق لمتجرك · يمكنك تعديله بحرية.' })),
       width: 640,
       body,
       foot: `<button class="kb ghost" data-kst-skip>${esc(tr({ fr: 'Plus tard', en: 'Later', ar: 'لاحقاً' }))}</button>`

@@ -209,7 +209,7 @@ export async function onRequestGet(context) {
       const listed = TIER_PRICE[plan] || null;
       const amount = agreed != null ? agreed : listed;
 
-      const key = plan || '—';
+      const key = plan || '·';
       let t = tiers.get(key);
       if (!t) { t = { plan: key, stores: 0, amount: 0, unit: listed, untariffed: 0, suspended: 0 }; tiers.set(key, t); }
       t.stores++;

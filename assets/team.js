@@ -112,7 +112,7 @@
       payTitle: 'Planning',
       paySub: 'planning, heures et paie de la période',
       payEmptyH: 'Ajoutez votre équipe pour commencer',
-      payEmptyP: "Le planning et la paie se construisent à partir de vos employés. Ajoutez-les dans Équipe, puis saisissez leurs heures ici — les totaux et le coût de la période se calculent tout seuls.",
+      payEmptyP: "Le planning et la paie se construisent à partir de vos employés. Ajoutez-les dans Équipe, puis saisissez leurs heures ici · les totaux et le coût de la période se calculent tout seuls.",
       payStatDue: 'À payer · période',
       payStatDueSub: (a, b) => `salaires de base + heures, ${a} au ${b}`,
       payStatHours: 'Heures de la période',
@@ -121,9 +121,9 @@
       payStatVarSub: 'heures × taux horaire',
       payStatBase: 'Salaires de base',
       payStatBaseSub: (n, tot) => `${n} sur ${tot} en service sur la période`,
-      codeKeep: 'Inchangé — 4 chiffres pour le modifier',
+      codeKeep: 'Inchangé · 4 chiffres pour le modifier',
       tabPlanning: 'Planning', tabRealised: 'Heures travaillées',
-      plNone: '—', plMember: 'Membre', plPlanned: 'Planifié', plCost: 'Coût prévu',
+      plNone: '·', plMember: 'Membre', plPlanned: 'Planifié', plCost: 'Coût prévu',
       plApply: 'Valider en heures réalisées', plClear: 'Effacer cette période',
       plFooter: 'Total planifié',
       plHint: 'Cliquez une case pour saisir les heures exactes du service, ou marquer un jour de repos.',
@@ -268,7 +268,7 @@
       payTitle: 'Planning',
       paySub: 'schedule, hours and pay for the period',
       payEmptyH: 'Add your team to get started',
-      payEmptyP: 'Scheduling and payroll are built from your employees. Add them under Team, then enter their hours here — period totals and cost work themselves out.',
+      payEmptyP: 'Scheduling and payroll are built from your employees. Add them under Team, then enter their hours here · period totals and cost work themselves out.',
       payStatDue: 'Due · period',
       payStatDueSub: (a, b) => `base salaries + hours, ${a} to ${b}`,
       payStatHours: 'Hours this period',
@@ -277,9 +277,9 @@
       payStatVarSub: 'hours × hourly rate',
       payStatBase: 'Base salaries',
       payStatBaseSub: (n, tot) => `${n} of ${tot} on duty this period`,
-      codeKeep: 'Unchanged — enter 4 digits to change it',
+      codeKeep: 'Unchanged · enter 4 digits to change it',
       tabPlanning: 'Schedule', tabRealised: 'Hours worked',
-      plNone: '—', plMember: 'Member', plPlanned: 'Scheduled', plCost: 'Projected cost',
+      plNone: '·', plMember: 'Member', plPlanned: 'Scheduled', plCost: 'Projected cost',
       plApply: 'Confirm as hours worked', plClear: 'Clear this period',
       plFooter: 'Total scheduled',
       plHint: 'Click a cell to set the exact shift hours, or mark the day as time off.',
@@ -423,7 +423,7 @@
       payTitle: 'التخطيط',
       paySub: 'التخطيط والساعات وأجور الفترة',
       payEmptyH: 'أضف فريقك للبدء',
-      payEmptyP: 'يُبنى التخطيط والأجور انطلاقاً من موظفيك. أضفهم في «الفريق»، ثم أدخل ساعاتهم هنا — تُحتسب المجاميع وتكلفة الفترة تلقائياً.',
+      payEmptyP: 'يُبنى التخطيط والأجور انطلاقاً من موظفيك. أضفهم في «الفريق»، ثم أدخل ساعاتهم هنا · تُحتسب المجاميع وتكلفة الفترة تلقائياً.',
       payStatDue: 'المستحق · الفترة',
       payStatDueSub: (a, b) => `الأجور الأساسية + الساعات، من ${a} إلى ${b}`,
       payStatHours: 'ساعات الفترة',
@@ -432,9 +432,9 @@
       payStatVarSub: 'الساعات × الأجر بالساعة',
       payStatBase: 'الأجور الأساسية',
       payStatBaseSub: (n, tot) => `${n} من ${tot} في الخدمة خلال الفترة`,
-      codeKeep: 'دون تغيير — أدخل 4 أرقام لتغييره',
+      codeKeep: 'دون تغيير · أدخل 4 أرقام لتغييره',
       tabPlanning: 'الجدول', tabRealised: 'ساعات العمل',
-      plNone: '—', plMember: 'العضو', plPlanned: 'مُجدول', plCost: 'التكلفة المتوقعة',
+      plNone: '·', plMember: 'العضو', plPlanned: 'مُجدول', plCost: 'التكلفة المتوقعة',
       plApply: 'اعتمادها كساعات منجزة', plClear: 'مسح هذه الفترة',
       plFooter: 'إجمالي المجدول',
       plHint: 'انقر على خانة لإدخال ساعات الوردية بالضبط، أو لتحديد يوم راحة.',
@@ -762,7 +762,7 @@
         cin: ['BK', 'AB', 'JC', 'TK', 'MR'][i % 5] + ' ' + (300000 + i * 4317),
         emergencyName: ['Karim Belkadi','Sofia Mansouri','Hassan Berrada','Nadia Tazi','Hicham Lhassani'][i % 5],
         emergencyPhone: '+212 6 22 ' + (30 + i * 2) + ' ' + (10 + i * 3) + ' ' + (40 + i),
-        notes: ['Disponible week-end','Demande horaires aménagés mardi','Allergies alimentaires connues','Permis B','—'][i % 5],
+        notes: ['Disponible week-end','Demande horaires aménagés mardi','Allergies alimentaires connues','Permis B','·'][i % 5],
         avatarTone: AVATAR_TONES[i % AVATAR_TONES.length],
         venueType,
         createdAt: Date.now() - i * 1000 * 60 * 60 * 24,
@@ -1297,7 +1297,7 @@
 
   /* ═══════════════ HELPERS ═══════════════ */
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const memberFullName = (m) => `${m.firstName || ''} ${m.lastName || ''}`.trim() || '—';
+  const memberFullName = (m) => `${m.firstName || ''} ${m.lastName || ''}`.trim() || '·';
   function isCustomVenue() { const KV = window.KiwiVenue; return !!(KV && KV.isCustom && KV.isCustom()); }
 
   function fmtMad(n) {
@@ -1559,14 +1559,14 @@
               <span class="eq-av md" style="background:${AVATAR_COLORS[tone] || AVATAR_COLORS.a}">${esc(ini)}</span>
               <div>
                 <div class="eq-member-name">${esc(memberFullName(m))}</div>
-                <div class="eq-member-role">${esc(m.email || '—')} · <span style="color:${liveColor};font-weight:600;">${liveText}</span></div>
+                <div class="eq-member-role">${esc(m.email || '·')} · <span style="color:${liveColor};font-weight:600;">${liveText}</span></div>
               </div>
             </div>
           </td>
           <td><div class="kt-cell-strong">${esc(m.function)}</div></td>
           <td><span class="eq-venue-badge">${esc(m.department)}</span></td>
-          <td><span class="${contractCls}">${esc(m.contract || '—')}</span></td>
-          <td><div class="kt-chips">${langChips || '<span class="eq-cell-empty">—</span>'}</div></td>
+          <td><span class="${contractCls}">${esc(m.contract || '·')}</span></td>
+          <td><div class="kt-chips">${langChips || '<span class="eq-cell-empty">·</span>'}</div></td>
           <td><div class="eq-salary-v">${fmtMad(m.baseSalary)}</div><div class="eq-salary-sub">${(m.hourlyRate || 0).toLocaleString('fr-FR')} MAD/h</div></td>
           <td>
             <div class="eq-actions">
@@ -1935,7 +1935,7 @@
     const byId = new Map(ctx.members.map((member) => [member.id, member]));
     const standard=pending.map((request) => {
       const member = byId.get(request.memberId);
-      const range = request.type === 'leave' ? `${request.startDate} → ${request.endDate}` : `${(request.weekdays || []).join(', ')} · ${request.start || '—'} → ${request.end || '—'}`;
+      const range = request.type === 'leave' ? `${request.startDate} → ${request.endDate}` : `${(request.weekdays || []).join(', ')} · ${request.start || '·'} → ${request.end || '·'}`;
       return `<article class="kt-plan-request"><div class="kt-plan-request-head"><div><strong>${esc(member ? memberFullName(member) : request.memberId)}</strong><div>${esc(request.type === 'leave' ? copy.leave : copy.availability)} · ${esc(range)}</div></div></div>${request.reason ? `<p>${esc(request.reason)}</p>` : ''}<div class="kt-plan-request-actions"><button class="kb atlas" data-action="kt-plan-request-decision" data-kind="request" data-rid="${esc(request.id)}" data-decision="approved">${esc(copy.approve)}</button><button class="kb ghost" data-action="kt-plan-request-decision" data-kind="request" data-rid="${esc(request.id)}" data-decision="rejected">${esc(copy.reject)}</button></div></article>`;
     });
     const opportunities=openClaims.map((shift)=>{const member=byId.get(shift.claimantId);return `<article class="kt-plan-request"><div class="kt-plan-request-head"><div><strong>${esc(copy.openClaim)} · ${esc(member?memberFullName(member):shift.claimantId)}</strong><div>${esc(shift.day)} · ${esc(shift.start)}–${esc(shift.end)} · ${esc(shift.role||copy.allRoles)}</div></div></div><div class="kt-plan-request-actions"><button class="kb atlas" data-action="kt-plan-request-decision" data-kind="open" data-rid="${esc(shift.id)}" data-decision="approved">${esc(copy.approve)}</button><button class="kb ghost" data-action="kt-plan-request-decision" data-kind="open" data-rid="${esc(shift.id)}" data-decision="rejected">${esc(copy.reject)}</button></div></article>`;})
@@ -2648,8 +2648,8 @@
 
           ${profileSection(T.secContract, [
             [T.contractType, m.contract],
-            [T.startDate, m.startDate || '—'],
-            ...(m.contract === 'CDD' || m.contract === 'Stage' ? [[T.endDate, m.endDate || '—']] : []),
+            [T.startDate, m.startDate || '·'],
+            ...(m.contract === 'CDD' || m.contract === 'Stage' ? [[T.endDate, m.endDate || '·']] : []),
           ])}
 
           ${profileSection(T.secComp, [
@@ -2657,11 +2657,11 @@
             [T.hourlyRate, `<span class="mono">${(m.hourlyRate || 0).toLocaleString('fr-FR')} MAD</span>`],
           ], true)}
 
-          ${profileSection(T.cin, [['', m.cin || '—']], true)}
+          ${profileSection(T.cin, [['', m.cin || '·']], true)}
 
           ${profileSection(T.secEmergency, [
-            [T.emergencyName, m.emergencyName || '—'],
-            [T.emergencyPhone, m.emergencyPhone || '—'],
+            [T.emergencyName, m.emergencyName || '·'],
+            [T.emergencyPhone, m.emergencyPhone || '·'],
           ])}
 
           ${m.notes ? profileSection(T.secNotes, [['', m.notes]]) : ''}
@@ -2678,7 +2678,7 @@
   function profileSection(title, rows, prehtml) {
     const inner = rows.map(([l, v]) => {
       const lbl = l ? `<div class="kt-pf-l">${esc(l)}</div>` : '';
-      const val = prehtml ? `<div class="kt-pf-v">${v}</div>` : `<div class="kt-pf-v">${esc(v || '—')}</div>`;
+      const val = prehtml ? `<div class="kt-pf-v">${v}</div>` : `<div class="kt-pf-v">${esc(v || '·')}</div>`;
       return `<div class="kt-pf-row">${lbl}${val}</div>`;
     }).join('');
     return `
@@ -2773,7 +2773,7 @@
     const venue = window.KiwiVenue?.getCurrentVenueData?.() || { type: 'restaurant' };
     const venueType = teamKey(venue);
     const members = getMembers(venueType);
-    if (!members.length) { Kiwi.toast('—', { type: 'info' }); return; }
+    if (!members.length) { Kiwi.toast('·', { type: 'info' }); return; }
     const today = toISO(new Date());
     const qe = modal({
       title: T.qeTitle,
@@ -2788,7 +2788,7 @@
             <label><span class="l">${esc(T.qeDate)}</span><input type="date" data-kt-qe-date value="${esc(today)}" /></label>
             <label><span class="l">${esc(T.qeHours)}</span><input type="number" data-kt-qe-hours min="0" max="24" step="0.25" value="8" /></label>
           </div>
-          <label><span class="l">${esc(T.qeNote)}</span><input type="text" data-kt-qe-note placeholder="—" /></label>
+          <label><span class="l">${esc(T.qeNote)}</span><input type="text" data-kt-qe-note placeholder="·" /></label>
         </div>
       `,
       foot: `
@@ -2808,7 +2808,7 @@
     const mid = qe.el.querySelector('[data-kt-qe-member]')?.value;
     const date = qe.el.querySelector('[data-kt-qe-date]')?.value;
     const hVal = parseFloat(qe.el.querySelector('[data-kt-qe-hours]')?.value) || 0;
-    if (!mid || !date) { Kiwi.toast('—', { type: 'pend' }); return; }
+    if (!mid || !date) { Kiwi.toast('·', { type: 'pend' }); return; }
     const hours = window.__kiwiTeamV2.hoursByVenue[vt] || (window.__kiwiTeamV2.hoursByVenue[vt] = {});
     if (!hours[mid]) hours[mid] = {};
     hours[mid][date] = hVal;
@@ -3305,7 +3305,7 @@
     .dash-equipe .kt-plan-table .kt-h-total, .dash-equipe .kt-plan-table .kt-h-pay { min-width: 0; padding-right: 10px; }
     .dash-equipe .kt-plan-table .kt-day-cell { padding: 5px 3px; }
 
-    /* Le pas à pas des semaines — visible seulement sur quinzaine / mois. */
+    /* Le pas à pas des semaines · visible seulement sur quinzaine / mois. */
     .dash-equipe .kt-plan-step { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
     .dash-equipe .kt-plan-arrow {
       width: 26px; height: 26px; border-radius: 8px; border: 1px solid var(--n-200);
@@ -3360,7 +3360,7 @@
       .dash-equipe .kt-sh .kt-sh-next { display: block; margin: 1px 0 0; }
     }
 
-    /* Éditeur de service — ancré sur la case, jamais dans le flux du tableau. */
+    /* Éditeur de service · ancré sur la case, jamais dans le flux du tableau. */
     .kt-shpop {
       position: fixed; z-index: 900; width: 268px; padding: 14px;
       background: var(--surface, #fff); border: 1px solid var(--n-200);
@@ -3370,7 +3370,7 @@
     .kt-shpop-head { margin-bottom: 11px; }
     .kt-shpop-head b { display: block; font-size: 13px; }
     /* « lundi 20 juillet » : en français seule la 1re lettre prend la majuscule
-       — capitalize aurait écrit « Lundi 20 Juillet ». */
+       capitalize aurait écrit « Lundi 20 Juillet ». */
     .kt-shpop-head span { display: block; font-size: 11px; color: var(--n-500); margin-top: 2px; }
     .kt-shpop-head span::first-letter { text-transform: uppercase; }
     .kt-shpop-times { display: flex; gap: 8px; }
@@ -3412,7 +3412,7 @@
     .dash-equipe .kt-chips { display: flex; flex-wrap: wrap; gap: 4px; }
     .dash-equipe .kt-cell-strong { font-weight: 500; color: var(--ink); }
 
-    /* Hours tab — table */
+    /* Hours tab · table */
     .dash-equipe .kt-hbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
     .dash-equipe .kt-hbar-right { display: inline-flex; gap: 6px; flex-wrap: wrap; }
     .dash-equipe .kt-h-tablewrap { border: 1px solid var(--n-200); border-radius: 12px; overflow-x: auto; background: var(--surface); }
@@ -3595,7 +3595,7 @@
       const todayKey = toISO(new Date());
       return members.map((m) => ({
         id: m.id,
-        name: [m.firstName, m.lastName].filter(Boolean).join(' ').trim() || '—',
+        name: [m.firstName, m.lastName].filter(Boolean).join(' ').trim() || '·',
         role: m.function || m.department || '',
         avatar: String(m.firstName || '?').trim().charAt(0).toUpperCase() || '?',
         status: (liveMember(m.id) || {}).status || 'off-duty',
@@ -3627,7 +3627,7 @@
         }
         return {
           id: m.id,
-          name: memberFullName(m) || '—',
+          name: memberFullName(m) || '·',
           role: m.function || m.department || m.role || '',
           plannedStart: shift && !shift.off ? shift.start : '',
           plannedEnd: shift && !shift.off ? shift.end : '',

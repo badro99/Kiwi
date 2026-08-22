@@ -258,7 +258,7 @@ handlers['nav-transactions'] = () => {
   const METHODS = {
     [T.cards]:    [{ n: 'Visa', mask: '4291' }, { n: 'Mastercard', mask: '7820' }, { n: 'Visa', mask: '0043' }, { n: 'Visa', mask: '8124' }, { n: 'Mastercard', mask: '1209' }, { n: 'Mastercard', mask: '6670' }],
     [T.mobile]:    [{ n: 'Kiwi Tap', mask: 'NFC' }, { n: 'Kiwi Wallet', mask: 'QR' }, { n: 'Apple Pay', mask: 'NFC' }, { n: 'Google Pay', mask: 'NFC' }],
-    [T.cash]: [{ n: T.cash, mask: '—' }],
+    [T.cash]: [{ n: T.cash, mask: '·' }],
   };
   const CUSTOMERS = ['Karim B.', 'Sara L.', 'Youssef A.', 'Nawal K.', 'Hassan J.', 'Imane M.', 'Mehdi R.', 'Fatima Z.', 'Rachid O.', 'Lina S.', 'Ahmed T.', 'Yasmine H.', 'Omar F.', 'Naima Z.', 'Tarik B.', 'Aïcha M.', 'Walid K.', 'Soukaina A.', 'Reda H.', 'Salma F.', 'Hicham D.', 'Mariam S.', 'Brahim K.', 'Latifa O.', 'Khalid R.'];
 
@@ -418,7 +418,7 @@ handlers['nav-transactions'] = () => {
                   <td><b>${r.n}</b> <span style="color:var(--n-500);">${r.mask}</span></td>
                   <td style="color:var(--n-600);">${r.c}</td>
                   <td class="mono right" style="${r.amt < 0 ? 'color:var(--danger);' : ''}">${r.amt < 0 ? '−' : ''}${fmt2(r.amt)}</td>
-                  <td class="mono right" style="color:${r.tip > 0 ? 'var(--success)' : 'var(--n-400)'};">${r.tip > 0 ? '+' + fmt2(r.tip) : '—'}</td>
+                  <td class="mono right" style="color:${r.tip > 0 ? 'var(--success)' : 'var(--n-400)'};">${r.tip > 0 ? '+' + fmt2(r.tip) : '·'}</td>
                   <td><span class="chip ${r.status === 'ok' ? 'ok' : 'pend'}">${r.status === 'ok' ? T.paid : r.status === 'ref' ? T.refunded : T.pending}</span></td>
                 </tr>
               `).join('')}
@@ -1654,7 +1654,7 @@ handlers['nav-conformite'] = () => {
     ['CIN gérant', 'Rachid Benhima · BK 384721', 'Expire dans 14 mois', 'ok', '14 mars 2027'],
     ['Registre de commerce', 'RC Tanger · 3847821', 'Renouvelé · valide 12 mois', 'ok', '20 janv. 2027'],
     ['Patente professionnelle', 'Article 21 · TPE Tanger', 'Expire dans 47 jours', 'pend', '15 juin 2026'],
-    ['ICE', '00284912000089 · DGI', 'Permanent · vérifié', 'ok', '—'],
+    ['ICE', '00284912000089 · DGI', 'Permanent · vérifié', 'ok', '·'],
     ['Attestation CNSS', 'Affiliation 9 281 037', 'À jour · payée le 12 avril', 'ok', 'Trim. suivant'],
     ['Quittance TVA · Q1 2026', 'Régime du réel · trimestriel', 'À déposer dans 6 jours', 'pend', '5 mai 2026'],
   ];
@@ -2322,7 +2322,7 @@ handlers['nav-equipe'] = () => {
           <!-- Téléphone (optionnel) -->
           <div>
             <div class="eq-section-label" style="margin-bottom: 9px;">
-              Téléphone <span style="color: var(--n-500); font-weight: 400; letter-spacing: 0.02em; text-transform: none; margin-left: 6px;">— optionnel, pour l'invitation SMS</span>
+              Téléphone <span style="color: var(--n-500); font-weight: 400; letter-spacing: 0.02em; text-transform: none; margin-left: 6px;">·optionnel, pour l'invitation SMS</span>
             </div>
             <div style="display: grid; grid-template-columns: 92px 1fr; gap: 8px;">
               <div style="display: flex; align-items: center; justify-content: center; padding: 11px 8px; border: 1px solid var(--n-300); border-radius: 9px; background: var(--paper-soft); font-family: var(--mono); font-size: 13px; color: var(--n-600); gap: 5px; box-sizing: border-box;">
@@ -2782,7 +2782,7 @@ handlers['nav-reservations'] = () => {
     { t: '19:00', n: 'Société Atlas Pharma', p: 12, note: { fr: 'Groupe · menu fixe', en: 'Group · set menu', ar: 'مجموعة · قائمة محددة' }, ns: 'med', st: 'pend', tag: { fr: 'Acompte attendu', en: 'Deposit pending', ar: 'عربون مرتقب' } },
     { t: '19:00', n: 'Famille Lahcen', p: 5, note: { fr: 'Terrasse · 2 enfants · chaise haute', en: 'Terrace · 2 kids · high chair', ar: 'تراس · طفلان · كرسي مرتفع' }, ns: 'high', st: 'ok', tag: { fr: 'Alerte pacing', en: 'Pacing alert', ar: 'تنبيه التدفق' } },
     { t: '19:15', n: 'Sophie & Yann', p: 2, note: { fr: 'Touristes · table fenêtre', en: 'Tourists · window table', ar: 'سياح · طاولة بجانب النافذة' }, ns: 'med', st: 'ok', tag: { fr: 'Anniversaire', en: 'Birthday', ar: 'عيد ميلاد' } },
-    { t: '20:00', n: 'Hassan & invités', p: 6, note: { fr: 'Salle · vin frais demandé', en: 'Indoors · chilled wine requested', ar: 'القاعة · طلب نبيذ بارد' }, ns: 'low', st: 'ok', tag: { fr: '—', en: '—', ar: '—' } },
+    { t: '20:00', n: 'Hassan & invités', p: 6, note: { fr: 'Salle · vin frais demandé', en: 'Indoors · chilled wine requested', ar: 'القاعة · طلب نبيذ بارد' }, ns: 'low', st: 'ok', tag: { fr: '·', en: '·', ar: '·' } },
     { t: '21:00', n: 'Reservation +212 6 41 ··', p: 4, note: { fr: 'Sans préférence', en: 'No preference', ar: 'بدون تفضيل' }, ns: 'high', st: 'pend', tag: { fr: '2 no-shows', en: '2 no-shows', ar: 'غيابان سابقان' } },
   ];
   const confirmed = bookings.filter((b) => b.st === 'ok').length;
@@ -3418,7 +3418,7 @@ const PDS_STR = {
     paletteHint: 'Cliquez pour ajouter, la table apparaît au centre de la zone.',
     /* Une table comme un comptoir s'ouvrent de la même façon ; rien ne le
        disait, et le comptoir passait pour un décor qu'on ne peut pas toucher. */
-    editHint: 'Cliquez un objet posé — table, comptoir, cuisine, plante — pour le redimensionner ou le supprimer.',
+    editHint: 'Cliquez un objet posé · table, comptoir, cuisine, plante · pour le redimensionner ou le supprimer.',
     structTitle: 'Éléments structurels',
     structHint: 'Murs, portes, fenêtres et plantes, purement visuels.',
     elWall: 'Mur',
@@ -3437,8 +3437,8 @@ const PDS_STR = {
     addedElementToast: 'Élément ajouté',
     addedElementDesc: 'Glissez-le pour positionner · cliquez pour pivoter.',
     /* Snap */
-    viewNuit: 'Vue nuit — console de service',
-    viewJour: 'Vue jour — matières & décor',
+    viewNuit: 'Vue nuit · console de service',
+    viewJour: 'Vue jour · matières & décor',
     snapOn: 'Aimanter',
     snapOff: 'Libre',
     snapHint: 'Aimanter aligne les tables sur la grille',
@@ -3520,7 +3520,7 @@ const PDS_STR = {
     rosterUnassigned: 'Non affecté',
     rosterTables: (n) => `${n} tables`,
     rosterCovers: (n) => `${n} couverts`,
-    rosterEmpty: 'Personne en service. Ajoutez un serveur ici, ou renseignez votre équipe depuis la page Équipe — elle apparaîtra automatiquement.',
+    rosterEmpty: 'Personne en service. Ajoutez un serveur ici, ou renseignez votre équipe depuis la page Équipe · elle apparaîtra automatiquement.',
     rosterAdd: '+ Ajouter un serveur',
     rosterAddTitle: 'Ajouter un serveur',
     rosterAddDesc: 'Il apparaîtra dans l\'équipe en service et pourra être glissé sur une table ou une zone.',
@@ -3645,7 +3645,7 @@ const PDS_STR = {
     zoneRenamedDesc: (n) => `Zone renamed to "${n}".`,
     paletteTitle: 'Add a table',
     paletteHint: 'Click to add, the table appears at the center of the zone.',
-    editHint: 'Click any placed object — table, counter, kitchen, plant — to resize or delete it.',
+    editHint: 'Click any placed object · table, counter, kitchen, plant · to resize or delete it.',
     structTitle: 'Structural elements',
     structHint: 'Walls, doors, windows and plants, visual only.',
     elWall: 'Wall',
@@ -3663,8 +3663,8 @@ const PDS_STR = {
     addedTableDesc: (s, z) => `${s} seats · ${z} · drag to position.`,
     addedElementToast: 'Element added',
     addedElementDesc: 'Drag to position · click to rotate.',
-    viewNuit: 'Night view — service console',
-    viewJour: 'Day view — materials & decor',
+    viewNuit: 'Night view · service console',
+    viewJour: 'Day view · materials & decor',
     snapOn: 'Snap',
     snapOff: 'Free',
     snapHint: 'Snap aligns tables to the grid',
@@ -3740,7 +3740,7 @@ const PDS_STR = {
     rosterUnassigned: 'Unassigned',
     rosterTables: (n) => `${n} tables`,
     rosterCovers: (n) => `${n} covers`,
-    rosterEmpty: 'Nobody on shift. Add a server here, or fill in your team on the Team page — it shows up automatically.',
+    rosterEmpty: 'Nobody on shift. Add a server here, or fill in your team on the Team page · it shows up automatically.',
     rosterAdd: '+ Add a server',
     rosterAddTitle: 'Add a server',
     rosterAddDesc: 'They join the team on shift and can be dragged onto a table or a zone.',
@@ -3859,7 +3859,7 @@ const PDS_STR = {
     zoneRenamedDesc: (n) => `تمت إعادة تسمية المنطقة إلى "${n}".`,
     paletteTitle: 'إضافة طاولة',
     paletteHint: 'انقر للإضافة، تظهر الطاولة في وسط المنطقة.',
-    editHint: 'انقر أي عنصر موضوع — طاولة، بار، مطبخ، نبتة — لتغيير حجمه أو حذفه.',
+    editHint: 'انقر أي عنصر موضوع · طاولة، بار، مطبخ، نبتة · لتغيير حجمه أو حذفه.',
     structTitle: 'العناصر الهيكلية',
     structHint: 'جدران، أبواب، نوافذ ونباتات، للعرض فقط.',
     elWall: 'جدار',
@@ -3877,8 +3877,8 @@ const PDS_STR = {
     addedTableDesc: (s, z) => `${s} مقاعد · ${z} · اسحبها للموقع.`,
     addedElementToast: 'تمت إضافة العنصر',
     addedElementDesc: 'اسحب للموقع · انقر للتدوير.',
-    viewNuit: 'عرض ليلي — وحدة الخدمة',
-    viewJour: 'عرض نهاري — الخامات والديكور',
+    viewNuit: 'عرض ليلي · وحدة الخدمة',
+    viewJour: 'عرض نهاري · الخامات والديكور',
     snapOn: 'محاذاة',
     snapOff: 'حر',
     snapHint: 'المحاذاة تصفّ الطاولات على الشبكة',
@@ -3954,7 +3954,7 @@ const PDS_STR = {
     rosterUnassigned: 'غير معيّن',
     rosterTables: (n) => `${n} طاولات`,
     rosterCovers: (n) => `${n} مقاعد`,
-    rosterEmpty: 'لا أحد في الخدمة. أضف نادلًا هنا، أو سجّل فريقك في صفحة الفريق — سيظهر تلقائيًا.',
+    rosterEmpty: 'لا أحد في الخدمة. أضف نادلًا هنا، أو سجّل فريقك في صفحة الفريق · سيظهر تلقائيًا.',
     rosterAdd: '+ إضافة نادل',
     rosterAddTitle: 'إضافة نادل',
     rosterAddDesc: 'سينضم إلى الفريق في الخدمة ويمكن سحبه فوق طاولة أو منطقة.',
@@ -4055,7 +4055,7 @@ Object.assign(PDS_STR.fr, {
   inspectorRotation: 'Orientation', inspectorMaterial: 'Matière', inspectorDepth: 'Profondeur',
   layerBack: 'Arrière', layerFront: 'Avant',
   lock: 'Verrouiller', unlock: 'Déverrouiller',
-  lockedHint: 'Verrouillé — déverrouillez pour modifier',
+  lockedHint: 'Verrouillé · déverrouillez pour modifier',
   rotateHint: 'Faire pivoter · Maj pour 15°',
   noRoom: 'Pas de place libre ici',
   ambianceLabel: 'Ambiance', customColor: 'Couleur libre',
@@ -4083,7 +4083,7 @@ Object.assign(PDS_STR.fr, {
   ambriad: 'Riad', ambmarine: 'Bord de mer', ambbistrot: 'Néo-bistrot', ambjardin: 'Jardin',
   ambianceApplied: (n) => `Ambiance ${n} appliquée`,
   ambianceDesc: 'Sol, murs, tables et fond repeints ensemble. Les pièces peintes à la main sont conservées.',
-  blockedHint: 'Chevauchement — relâchez pour poser à côté',
+  blockedHint: 'Chevauchement · relâchez pour poser à côté',
 });
 Object.assign(PDS_STR.en, {
   undo: 'Undo', redo: 'Redo',
@@ -4109,7 +4109,7 @@ Object.assign(PDS_STR.en, {
   inspectorRotation: 'Orientation', inspectorMaterial: 'Material', inspectorDepth: 'Depth',
   layerBack: 'Send back', layerFront: 'Bring front',
   lock: 'Lock', unlock: 'Unlock',
-  lockedHint: 'Locked — unlock to edit',
+  lockedHint: 'Locked · unlock to edit',
   rotateHint: 'Rotate · hold Shift for 15°',
   noRoom: 'No free space here',
   ambianceLabel: 'Ambiance', customColor: 'Custom colour',
@@ -4137,7 +4137,7 @@ Object.assign(PDS_STR.en, {
   ambriad: 'Riad', ambmarine: 'Seaside', ambbistrot: 'Neo-bistro', ambjardin: 'Garden',
   ambianceApplied: (n) => `${n} ambiance applied`,
   ambianceDesc: 'Floor, walls, tables and backdrop repainted together. Hand-picked pieces are kept.',
-  blockedHint: 'Overlapping — release to settle beside it',
+  blockedHint: 'Overlapping · release to settle beside it',
 });
 Object.assign(PDS_STR.ar, {
   undo: 'تراجع', redo: 'إعادة',
@@ -4163,7 +4163,7 @@ Object.assign(PDS_STR.ar, {
   inspectorRotation: 'الاتجاه', inspectorMaterial: 'المادة', inspectorDepth: 'العمق',
   layerBack: 'إلى الخلف', layerFront: 'إلى الأمام',
   lock: 'قفل', unlock: 'فتح',
-  lockedHint: 'مقفل — افتح القفل للتعديل',
+  lockedHint: 'مقفل · افتح القفل للتعديل',
   rotateHint: 'تدوير · اضغط Shift لـ 15°',
   noRoom: 'لا توجد مساحة فارغة هنا',
   ambianceLabel: 'الأجواء', customColor: 'لون حر',
@@ -4191,7 +4191,7 @@ Object.assign(PDS_STR.ar, {
   ambriad: 'رياض', ambmarine: 'شاطئ', ambbistrot: 'بيسترو', ambjardin: 'حديقة',
   ambianceApplied: (n) => `تم تطبيق أجواء ${n}`,
   ambianceDesc: 'الأرضية والجدران والطاولات والخلفية أُعيد طلاؤها معًا. القطع الملوّنة يدويًا تبقى كما هي.',
-  blockedHint: 'تداخل — أفلت ليستقر بجانبه',
+  blockedHint: 'تداخل · أفلت ليستقر بجانبه',
 });
 
 /* ─── Default roster — used when no team data is provided ────────────────── */
@@ -4246,7 +4246,7 @@ function pdsTeamStaff() {
     const roster = (window.KiwiTeam && window.KiwiTeam.roster) ? window.KiwiTeam.roster() : [];
     return (roster || []).filter(m => m && m.id && pdsIsFloorRole(m.role)).map(m => ({
       id: 'tm-' + m.id,
-      name: (m.name && m.name !== '—') ? m.name : String(m.role || '').trim() || '—',
+      name: (m.name && m.name !== '·') ? m.name : String(m.role || '').trim() || '·',
       color: pdsStaffColor(m.id),
       role: m.role || '',
       from: 'team',
@@ -5600,7 +5600,7 @@ function pdsRenderInspector(state, T, obj) {
         <div class="pds-form-row">
           <label>${T.inspectorLabel}</label>
           <input class="kf-input pds-input" data-pds-field="label"
-                 value="${pdsEsc(obj.label != null ? obj.label : (K.label || ''))}" placeholder="—"/>
+                 value="${pdsEsc(obj.label != null ? obj.label : (K.label || ''))}" placeholder="·"/>
         </div>
       `}
 
@@ -5659,14 +5659,14 @@ function pdsRenderInspector(state, T, obj) {
           ${[0,1,2].map(slot => {
             const assigned = pdsServerIds(obj);
             return `<select class="kf-input pds-input pds-server-slot" data-pds-server-slot="${slot}">
-              <option value="">${slot === 0 ? T.inspectorUnassigned : '—'}</option>
+              <option value="">${slot === 0 ? T.inspectorUnassigned : '·'}</option>
               ${state.staff.map(s => `<option value="${s.id}" ${s.id===assigned[slot]?'selected':''}>${pdsEsc(s.name)}</option>`).join('')}
             </select>`;
           }).join('')}
         </div>
         <div class="pds-form-row">
           <label>${T.inspectorNotes}</label>
-          <input class="kf-input pds-input" data-pds-field="notes" value="${pdsEsc(obj.notes || '')}" placeholder="—"/>
+          <input class="kf-input pds-input" data-pds-field="notes" value="${pdsEsc(obj.notes || '')}" placeholder="·"/>
         </div>
       ` : `
         <div class="pds-form-row">
@@ -6070,7 +6070,7 @@ function pdsRenderRotateStage(state, T) {
                   return `<div class="pds-rot-line" style="--chip:${s.color};">
                     <span class="pds-asum-dot"></span>
                     <b>${s.name.split(' ')[0]}</b>
-                    <em>${zone?.name || '—'}</em>
+                    <em>${zone?.name || '·'}</em>
                   </div>`;
                 }).join('')}
               </div>
@@ -6110,7 +6110,7 @@ function pdsRenderRotateStage(state, T) {
               <span class="pds-hist-name"><span class="pds-asum-dot"></span>${s.name.split(' ')[0]}</span>
               ${(state.history || []).map(d => {
                 const z = d.servers[s.id];
-                const zname = state.zones.find(zo => zo.id === z)?.name || '—';
+                const zname = state.zones.find(zo => zo.id === z)?.name || '·';
                 const tag = z === 'z1' ? 'a' : z === 'z2' ? 'b' : z === 'z3' ? 'c' : 'd';
                 return `<span class="pds-hist-cell pds-hist-${tag}" title="${zname}">${zname.slice(0,1)}</span>`;
               }).join('')}
@@ -7902,7 +7902,7 @@ const PDS_INLINE_CSS = `
   }
   /* Sous 1100px l'inspecteur devient une rangée pleine largeur sous le plan :
      le coller ou le plafonner n'a plus de sens, il suit le flux. La palette,
-     elle, garde son propre défilement — c'est elle qui fait deux mille pixels,
+     elle, garde son propre défilement · c'est elle qui fait deux mille pixels,
      à toutes les largeurs. */
   @media (max-width: 1100px) {
     .pds-rail { position:static; max-height:calc(100vh - 260px); }
@@ -7941,7 +7941,7 @@ const PDS_INLINE_CSS = `
   .pds-legend-title { font-size:10.5px; font-family:var(--mono); letter-spacing:0.1em; color:var(--n-500); text-transform:uppercase; margin-right:4px; }
   .pds-legend-item { display:inline-flex; align-items:center; gap:6px; color:rgba(10,15,13,0.55); font:400 11px/1.2 var(--font-ui, 'Inter Tight'), system-ui; letter-spacing:-0.01em; }
   /* Légende jour : les mêmes cases 17 × 13 rx 4 que la nuit, à l'encre sur
-     papier — l'atlas ne s'allume que pour l'occupée, comme dans la scène. */
+     papier · l'atlas ne s'allume que pour l'occupée, comme dans la scène. */
   .pds-legend-swatch { width:17px; height:13px; border-radius:4px; display:inline-block; border:1.25px solid transparent; }
   .pds-sw-free      { background:rgba(10,15,13,0.015); border-color:rgba(10,15,13,0.30); }
   .pds-sw-occupied  { background:rgba(11,110,79,0.10); border-color:#0B6E4F; }
@@ -7951,23 +7951,23 @@ const PDS_INLINE_CSS = `
   .pds-pill-free { background:rgba(10,15,13,0.06); color:var(--n-700); }
   .pds-pill-occupied { background:rgba(11,110,79,0.14); color:var(--atlas); }
   /* Les mêmes traits que le plan : tiret riad pour réservée, pointillé encre
-     pour à nettoyer — plus d'ambre ni de bleu que le plan ne peint jamais. */
+     pour à nettoyer · plus d'ambre ni de bleu que le plan ne peint jamais. */
   .pds-pill-reserved { background:rgba(232,200,138,0.18); color:#7D5A1A; border:1px dashed rgba(200,146,53,0.65); }
   .pds-pill-cleaning { background:rgba(10,15,13,0.02); color:var(--n-700); border:1px dotted rgba(10,15,13,0.45); }
   .pds-snap { display:inline-flex; align-items:center; gap:6px; font-size:11.5px; color:var(--n-700); cursor:pointer; user-select:none; padding:4px 8px; border-radius:7px; }
   .pds-snap input { accent-color:var(--atlas); }
 
-  /* ═════ ARCHITECTURAL ROOM — mirrors kiwi-caisse plan de salle ═════════════
+  /* ═════ ARCHITECTURAL ROOM · mirrors kiwi-caisse plan de salle ═════════════
      A cream "paper" floor framed by a 1.5px ink border with an inset highlight
      and a soft warm shadow. SVG backdrop draws the fixtures (comptoir,
      escalier, plantes, fenêtres). The inner .pds-canvas absorbs all the
-     pointer events for table dragging — it is positioned over the SVG. */
+     pointer events for table dragging · it is positioned over the SVG. */
   .pds-plan-canvas { position:relative; display:flex; flex-direction:column; gap:6px; min-width:0; min-height:0; }
   /* The room is a RESPONSIVE box; the stage inside it is a FIXED logical
      ${PDS_CANVAS_W}×${PDS_CANVAS_H} space scaled to fit (see .pds-plan-scale).
      It used to be a hard ${PDS_CANVAS_W}px wide with max-width:100%, so below
      ~1490px of viewport the room narrowed while the absolutely-positioned
-     tables kept their px coordinates — and overflow:hidden silently cropped
+     tables kept their px coordinates · and overflow:hidden silently cropped
      everything past the new edge. Scaling instead of cropping means one
      coordinate space at every width, which is also what lets the backdrop
      and the tables finally agree. 1 logical unit = 1 cm. */
@@ -7997,7 +7997,7 @@ const PDS_INLINE_CSS = `
     border-color:#A89770;
     background:#F7F2E8;
   }
-  /* Fixed logical stage — the backdrop and the tables live on ONE plane that is
+  /* Fixed logical stage · the backdrop and the tables live on ONE plane that is
      scaled as a whole, so they can never drift apart. 100cqw is the room's own
      width, so dividing it by the logical width yields the exact fit ratio with
      no JS involved. transform-origin is top-left so logical (0,0) stays pinned
@@ -8026,7 +8026,7 @@ const PDS_INLINE_CSS = `
     pointer-events:none;
   }
   .pds-plan-label em {
-    font-family:var(--serif, "Instrument Serif", serif);
+    font-family:"Inter Tight", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
      font-weight:400;
     text-transform:none;
     color:#5C5447;
@@ -8062,13 +8062,13 @@ const PDS_INLINE_CSS = `
   .pds-empty h4 { margin:0; font-size:18px; letter-spacing:-0.02em; color:var(--ink); }
   .pds-empty p { font-size:13px; color:var(--n-600); max-width:340px; margin:0; line-height:1.5; }
 
-  /* ═════ TABLES — architectural language mirrored from kiwi-caisse ═══════
+  /* ═════ TABLES · architectural language mirrored from kiwi-caisse ═══════
      Tables are absolute on the canvas. Each .pds-tbl-cell contains:
-       • .pds-tbl       — the tabletop (wood/marble vibe via shadows)
-       • .pds-tbl-num   — large bold number
-       • .pds-tbl-covers— seat count (instrument serif, roman)
-       • .pds-tbl-chairs / .pds-chair  — chair pills around the table
-       • .pds-tbl-server — corner badge with server initials + color        */
+       • .pds-tbl · the tabletop (wood/marble vibe via shadows)
+       • .pds-tbl-num · large bold number
+       • .pds-tbl-covers·seat count (instrument serif, roman)
+       • .pds-tbl-chairs / .pds-chair · chair pills around the table
+       • .pds-tbl-server · corner badge with server initials + color        */
   .pds-tbl-cell {
     position:absolute;
     cursor:pointer; user-select:none;
@@ -8158,9 +8158,9 @@ const PDS_INLINE_CSS = `
     font-feature-settings:"tnum" 1;
   }
   .pds-tbl-num    { font-weight:700; letter-spacing:0.01em; font-size:17px; line-height:1; color:inherit; }
-  .pds-tbl-covers { font-family:var(--serif, "Instrument Serif", serif); font-weight:400; font-size:12px; line-height:1; opacity:0.7; }
+  .pds-tbl-covers { font-family:"Inter Tight", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; font-weight:400; font-size:12px; line-height:1; opacity:0.7; }
 
-  /* Status color encodings — mirrors caisse khawya / ka-yaklo etc. */
+  /* Status color encodings · mirrors caisse khawya / ka-yaklo etc. */
   .pds-tbl[data-status="free"] {
     background:var(--surface);
     border:1.5px solid #C8C5BD;
@@ -8193,7 +8193,7 @@ const PDS_INLINE_CSS = `
   .pds-tbl[data-status="cleaning"] .pds-tbl-num    { color:#fff; }
   .pds-tbl[data-status="cleaning"] .pds-tbl-covers { color:rgba(255,255,255,0.78); }
 
-  /* Selection — green outline ring (does not touch the table shape) */
+  /* Selection · green outline ring (does not touch the table shape) */
   .pds-tbl-cell.is-selected .pds-tbl {
     box-shadow:
       0 0 0 3px rgba(11,110,79,0.28),
@@ -8203,10 +8203,10 @@ const PDS_INLINE_CSS = `
   .pds-tbl-cell.is-dragging { z-index:5; cursor:grabbing; }
   .pds-tbl-cell.is-dragging .pds-tbl { box-shadow: 0 14px 30px -10px rgba(10,15,13,0.32); }
 
-  /* Server color overlay (assign mode) — picks server color for tabletop border */
+  /* Server color overlay (assign mode) · picks server color for tabletop border */
   .pds-tbl-cell.pds-has-server .pds-tbl { border-color: var(--pds-server, currentColor); border-width:2px; }
 
-  /* Server badge — caisse style: circle pinned to corner, white ring */
+  /* Server badge · caisse style: circle pinned to corner, white ring */
   .pds-tbl-server {
     position:absolute;
     top:-10px; right:-10px;
@@ -8277,7 +8277,7 @@ const PDS_INLINE_CSS = `
   /* ═════ TABLES GROUPÉES · l'enveloppe « 06 + 07 » du mockup d'accueil ═════
      Un cadre rx 20 qui embrasse les tables liées, une lueur radiale douce,
      et le cachet des numéros combinés au-dessus. Sous les tables, jamais
-     cliquable — le groupe est un fait, pas une cible. */
+     cliquable · le groupe est un fait, pas une cible. */
   .pds-group-env { position:absolute; border-radius:20px; border:1.25px solid rgba(11,110,79,0.45); background:rgba(11,110,79,0.05); pointer-events:none; z-index:0; }
   .pds-group-env::before { content:''; position:absolute; inset:-30%; border-radius:50%; background:radial-gradient(closest-side, rgba(11,110,79,0.10), rgba(11,110,79,0)); z-index:-1; }
   .pds-group-chip { position:absolute; top:-26px; left:50%; transform:translateX(-50%); height:19px; padding:0 10px; border-radius:9.5px; background:var(--paper, #F7F5F0); border:1px solid rgba(11,110,79,0.45); color:#0B6E4F; font:500 10px/19px var(--mono, 'JetBrains Mono'); letter-spacing:0.02em; white-space:nowrap; }
@@ -8395,7 +8395,7 @@ const PDS_INLINE_CSS = `
      rules are left in place because a few of them (cell positioning, rail
      chrome, status pills) are still correct; the ones that are not are
      overridden here by source order. Anything keyed to a v1 fixture type
-     (.pds-el-wall, .pds-el-door, …) is inert — those kinds were renamed. */
+     (.pds-el-wall, .pds-el-door, …) is inert · those kinds were renamed. */
 
   /* Floor + walls, driven by zone.room rather than a baked scene. */
   /* Le creux de la pièce est posé en ligne par pdsRoomShell(), avec le mur :
@@ -8416,7 +8416,7 @@ const PDS_INLINE_CSS = `
     transition: filter 150ms ease;
   }
   /* Le survol soulève la table. La propriété transform est réservée à la
-     rotation et au glisser — la toucher ici décalerait la géométrie —, donc
+     rotation et au glisser · la toucher ici décalerait la géométrie·, donc
      l'élévation passe par une ombre portée, qui suit la silhouette SVG et
      non la boîte. */
   .pds-tbl-cell:hover { filter:brightness(1.035) drop-shadow(0 5px 10px rgba(20,15,10,0.20)); }
@@ -8439,7 +8439,7 @@ const PDS_INLINE_CSS = `
   .pds-tbl-covers { font:400 10px/1 var(--mono, monospace); opacity:0; transition:opacity 180ms ease; margin-top:3px; }
   .pds-tbl-cell:hover .pds-tbl-covers,
   .pds-tbl-cell.is-selected .pds-tbl-covers { opacity:.5; }
-  /* L'anneau d'appel pulse dans les deux vues — même géométrie, seule
+  /* L'anneau d'appel pulse dans les deux vues · même géométrie, seule
      l'encre change (menthe la nuit, atlas le jour). Les @keyframes vivent
      dans la couche nuit ; ils sont globaux au document. */
   .pds-noir-call {
@@ -8450,7 +8450,7 @@ const PDS_INLINE_CSS = `
     .pds-noir-call { animation:none; opacity:0; }
   }
   /* La pastille « N min » en jour : la même géométrie que la nuit, sur
-     papier — jamais de blanc pur. */
+     papier · jamais de blanc pur. */
   .pds-tbl-since {
     position:absolute; top:calc(var(--pad, 0px) - 24px); left:calc(var(--pad, 0px) - 6px);
     height:19px; padding:0 9px; border-radius:9.5px;
@@ -8475,7 +8475,7 @@ const PDS_INLINE_CSS = `
      child from the instance's own material, so the host must be cleared. */
   .pds-el { background:transparent; border-radius:0; transform-origin:50% 50%; }
   /* overflow:visible, pas hidden : le clip du bâti avalait les tabourets
-     du comptoir (cy negatif) dans les deux vues — le trait ne déborde
+     du comptoir (cy negatif) dans les deux vues · le trait ne déborde
      nulle part ailleurs, il n'y a plus de texture à contenir. */
   .pds-el-fill { position:absolute; inset:0; background-repeat:repeat; overflow:visible; }
   /* Les tabourets du comptoir se dessinent hors de la boîte du bâti,
@@ -8605,7 +8605,7 @@ const PDS_INLINE_CSS = `
 
   /* ═══ v3 · collision, fluid resize, free rotation ════════════════════════ */
 
-  /* Illegal placement is SHOWN, never enforced mid-drag — the object keeps
+  /* Illegal placement is SHOWN, never enforced mid-drag · the object keeps
      following the cursor and settles legally on release. Red is the one
      non-brand hue in the editor, and it only ever appears mid-gesture. */
   .pds-tbl-cell.is-blocked,
@@ -8726,24 +8726,24 @@ const PDS_INLINE_CSS = `
   .pds-wiz-note { margin:10px 0 0; font-size:11.5px; color:var(--n-500); }
   @media (max-width: 620px) { .pds-wiz-cards { grid-template-columns:1fr; } }
 
-  /* ═══ v4 · vue nuit — la console de service ═══════════════════════════════
+  /* ═══ v4 · vue nuit · la console de service ═══════════════════════════════
      Le look promis par la page d'accueil : salle charbon, tables au trait,
      le statut porté par la lumière. Tout vit sous .pds-noir (posée sur la
      racine du tiroir par pdsAttach) ; la vue jour au-dessus reste le rendu
-     matières, intact. Une seule teinte d'accent — la menthe — et son halo
+     matières, intact. Une seule teinte d'accent · la menthe · et son halo
      rgba(0,255,174,…), le même vert que l'accueil sombre. */
 
   .pds-noir { color-scheme: dark; }
 
   /* La classe est doublée dans chaque sélecteur à dessein : le skin Vexel
-     peint ce même chrome via « body.design-vexel :is(…) » — un élément plus
-     deux classes — et la vue nuit doit l'emporter par spécificité, pas par
+     peint ce même chrome via « body.design-vexel :is(…) » · un élément plus
+     deux classes · et la vue nuit doit l'emporter par spécificité, pas par
      ordre de source. */
 
-  /* — La coque du tiroir : le cockpit entier passe au noir — */
+  /* · La coque du tiroir : le cockpit entier passe au noir · */
   .pds-noir.pds-noir.pds-noir { background:rgba(5, 8, 6, 0.72); }
   /* !important : le skin 2026 (empilé par défaut) pose son verre blanc sur
-     .kiwi-drawer avec !important — la spécificité seule ne suffit pas ici. */
+     .kiwi-drawer avec !important · la spécificité seule ne suffit pas ici. */
   .pds-noir.pds-noir.pds-noir .kiwi-drawer { background:#090D0A !important; border-color:rgba(242,239,230,0.10) !important; }
   .pds-noir.pds-noir.pds-noir .kiwi-drawer-body { background:transparent; }
   .pds-noir.pds-noir.pds-noir .kiwi-drawer-head { background:#0B0F0C; border-color:rgba(242,239,230,0.08); }
@@ -8759,7 +8759,7 @@ const PDS_INLINE_CSS = `
     -webkit-backdrop-filter:none; backdrop-filter:none;
   }
 
-  /* — Chrome : panneaux, palette, inspecteur — */
+  /* · Chrome : panneaux, palette, inspecteur · */
   .pds-noir.pds-noir.pds-noir .pds-rail-card,
   .pds-noir.pds-noir.pds-noir .pds-tpl { background:#0F130F; border-color:rgba(242,239,230,0.08); }
   .pds-noir.pds-noir.pds-noir .pds-rail-title, .pds-noir.pds-noir.pds-noir .pds-legend-title,
@@ -8795,7 +8795,7 @@ const PDS_INLINE_CSS = `
   .pds-noir.pds-noir.pds-noir .pds-strat-card em { color:rgba(242,239,230,0.55); }
   .pds-noir.pds-noir.pds-noir .pds-fair-bar { background:rgba(242,239,230,0.10); }
 
-  /* Champs — color-scheme:dark règle les natifs, le reste suit. */
+  /* Champs · color-scheme:dark règle les natifs, le reste suit. */
   .pds-noir.pds-noir.pds-noir .pds-input, .pds-noir.pds-noir.pds-noir input[type="number"], .pds-noir.pds-noir.pds-noir input[type="text"],
   .pds-noir.pds-noir.pds-noir select, .pds-noir.pds-noir.pds-noir textarea {
     background:#141813; border-color:rgba(242,239,230,0.14); color:#EDEAE0;
@@ -8812,7 +8812,7 @@ const PDS_INLINE_CSS = `
   .pds-noir.pds-noir.pds-noir .p-kpi .v { color:#EDEAE0; }
   .pds-noir.pds-noir.pds-noir .p-kpi .d { color:rgba(242,239,230,0.62); }
 
-  /* Modes + zones : rail sombre, pilule active claire — le contraste inversé
+  /* Modes + zones : rail sombre, pilule active claire · le contraste inversé
      de la vue jour, même géométrie pour que la lentille liquide suive. */
   .pds-noir.pds-noir.pds-noir .pds-modes, .pds-noir.pds-noir.pds-noir .pds-zone-tabs {
     background:#0D110D; border-color:rgba(242,239,230,0.10);
@@ -8849,7 +8849,7 @@ const PDS_INLINE_CSS = `
   .pds-noir.pds-noir.pds-noir .pds-sw-reserved { border-style:dashed; border-color:#E8C067; background:rgba(232,192,103,0.08); }
   .pds-noir.pds-noir.pds-noir .pds-sw-cleaning { border-style:dotted; border-color:rgba(255,255,255,0.40); background:rgba(255,255,255,0.02); }
 
-  /* — La scène — */
+  /* · La scène · */
   .pds-noir.pds-noir.pds-noir .pds-plan-canvas {
     background:#020302;
     border:1px solid rgba(255,255,255,0.06);
@@ -8873,11 +8873,11 @@ const PDS_INLINE_CSS = `
   .pds-noir.pds-noir.pds-noir .pds-empty h4 { color:#EDEAE0; }
   .pds-noir.pds-noir.pds-noir .pds-empty p { color:rgba(242,239,230,0.55); }
 
-  /* — Tables : le statut est une lumière, le numéro se lit sans effort.
+  /* · Tables : le statut est une lumière, le numéro se lit sans effort.
      Typo du mockup : 500 · 0.04em ; l'échelle de blanc remontée à 0.40 / 0.55
      pour tenir sur le sol quasi noir, la menthe 0.90 pour l'occupée. Le
-     survol remonte encore l'encre — un plan d'édition doit rester
-     manipulable, l'accueil n'a pas ce souci. — */
+     survol remonte encore l'encre · un plan d'édition doit rester
+     manipulable, l'accueil n'a pas ce souci. · */
   .pds-noir.pds-noir.pds-noir .pds-tbl-num {
     font:500 11px/1 var(--font-ui, 'Inter Tight'), system-ui;
     letter-spacing:0.04em; color:rgba(255,255,255,0.62);
@@ -8888,7 +8888,7 @@ const PDS_INLINE_CSS = `
   .pds-noir.pds-noir.pds-noir .pds-tbl-cell.is-selected .pds-tbl-num { color:rgba(255,255,255,0.75); }
   .pds-noir.pds-noir.pds-noir .pds-tbl-cell[data-status="occupied"]:hover .pds-tbl-num,
   .pds-noir.pds-noir.pds-noir .pds-tbl-cell[data-status="occupied"].is-selected .pds-tbl-num { color:#00FFAE; }
-  /* Le nombre de couverts n'existe qu'à l'approche — le mockup n'affiche que
+  /* Le nombre de couverts n'existe qu'à l'approche · le mockup n'affiche que
      le numéro, et c'est ce silence qui le rend cher. */
   .pds-noir.pds-noir.pds-noir .pds-tbl-covers { opacity:0; transition:opacity 180ms ease; }
   .pds-noir.pds-noir.pds-noir .pds-tbl-cell:hover .pds-tbl-covers,
@@ -8897,7 +8897,7 @@ const PDS_INLINE_CSS = `
      comme sur l'accueil ; le survol garde juste un peu de lumière en plus. */
   .pds-noir.pds-noir.pds-noir .pds-tbl-cell:hover { filter:brightness(1.25); }
   .pds-noir.pds-noir.pds-noir .pds-tbl-cell[data-status="occupied"]:hover { filter:brightness(1.15); }
-  /* L'anneau d'appel — la copie de .kw-plan-call de l'accueil. */
+  /* L'anneau d'appel · la copie de .kw-plan-call de l'accueil. */
   .pds-noir.pds-noir.pds-noir .pds-noir-call {
     transform-box:fill-box; transform-origin:center;
     animation:pdsNoirCall 2.6s cubic-bezier(.22,.7,.3,1) infinite;
@@ -8935,7 +8935,7 @@ const PDS_INLINE_CSS = `
      elles ne font que du bruit que le mockup n'a pas. */
   .pds-noir.pds-noir.pds-noir .pds-stage-layout .pds-tbl-server { display:none; }
 
-  /* — Sélection : cadre menthe + tirets d'angle, le geste de l'accueil — */
+  /* · Sélection : cadre menthe + tirets d'angle, le geste de l'accueil · */
   .pds-noir.pds-noir.pds-noir .pds-hdl-layer::before {
     border-color:#7DF2B0; border-radius:9px;
     box-shadow:0 0 0 3px rgba(0,255,174,0.13), 0 0 26px rgba(0,255,174,0.20);
@@ -8951,13 +8951,13 @@ const PDS_INLINE_CSS = `
   .pds-noir.pds-noir.pds-noir .pds-el.is-resizing .pds-dim { background:#7DF2B0; }
   .pds-noir.pds-noir.pds-noir .pds-locked { background:rgba(242,239,230,0.14); color:#EDEAE0; }
 
-  /* — Bâti : les idéogrammes se dessinent en SVG (pdsNoirFixture), le CSS ne
-     rajoute rien sur le fond — un liseré ici doublerait le trait. — */
+  /* · Bâti : les idéogrammes se dessinent en SVG (pdsNoirFixture), le CSS ne
+     rajoute rien sur le fond · un liseré ici doublerait le trait. · */
   .pds-noir.pds-noir.pds-noir .pds-el:not(.is-locked):not(.is-dragging):hover {
     outline-color:rgba(125,242,176,0.65);
     filter:drop-shadow(0 0 12px rgba(0,255,174,0.14));
   }
-  /* Étiquettes du bâti : la typo du mockup — 500 · 0.14em · blanc 0.34 — et
+  /* Étiquettes du bâti : la typo du mockup · 500 · 0.14em · blanc 0.34 · et
      les pilules BAR / CAISSE portent leur nom à gauche, pas au centre. */
   .pds-noir.pds-noir.pds-noir .pds-el-label {
     font:500 9px/1.2 var(--font-ui, 'Inter Tight'), system-ui;
@@ -8973,13 +8973,13 @@ const PDS_INLINE_CSS = `
   .pds-noir.pds-noir.pds-noir .pds-el.is-blocked::after { border-color:#E4604E; background:rgba(228,96,78,0.14); }
   .pds-noir.pds-noir.pds-noir .pds-blocker::before { border-color:#E4604E; }
 
-  /* — Statuts (légende de l'inspecteur) — */
+  /* · Statuts (légende de l'inspecteur) · */
   .pds-noir.pds-noir.pds-noir .pds-pill-free { background:rgba(242,239,230,0.07); color:rgba(242,239,230,0.66); }
   .pds-noir.pds-noir.pds-noir .pds-pill-occupied { background:rgba(0,255,174,0.10); color:#7DF2B0; }
   .pds-noir.pds-noir.pds-noir .pds-pill-reserved { background:rgba(232,192,103,0.10); color:#E8C067; border:1px dashed rgba(232,192,103,0.55); }
   .pds-noir.pds-noir.pds-noir .pds-pill-cleaning { background:rgba(255,255,255,0.02); color:rgba(242,239,230,0.60); border:1px dotted rgba(255,255,255,0.40); }
 
-  /* — Groupes : l'enveloppe passe à la menthe sur la scène noire — */
+  /* · Groupes : l'enveloppe passe à la menthe sur la scène noire · */
   .pds-noir.pds-noir.pds-noir .pds-group-env { border-color:rgba(0,255,174,0.55); background:rgba(0,255,174,0.10); }
   .pds-noir.pds-noir.pds-noir .pds-group-env::before { background:radial-gradient(closest-side, rgba(0,255,174,0.16), rgba(0,255,174,0)); }
   .pds-noir.pds-noir.pds-noir .pds-group-chip { background:rgba(4,26,20,0.92); border-color:rgba(0,255,174,0.55); color:#00FFAE; }
@@ -9743,7 +9743,7 @@ function _bqxCss() {
     .bqx-vtable { width: 100%; border-collapse: collapse; font-size: 13px; }
     .bqx-vtable th { text-align: left; font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--n-500, #77807b); padding: 8px 10px; background: var(--paper-soft, #f3f1ea); }
     .bqx-vtable td { padding: 9px 10px; border-top: 1px solid var(--line, #eee); vertical-align: middle; }
-    /* Les pastilles elles-mêmes viennent de color-palette.js (.kc-sw) — un seul
+    /* Les pastilles elles-mêmes viennent de color-palette.js (.kc-sw) · un seul
        dessin pour le tableau de bord et la caisse. Ici : ce qui les entoure. */
     .bqx-cbtn { display: inline-flex; align-items: center; gap: 7px; background: none; border: 0; padding: 3px 5px; margin: -3px -5px; border-radius: 8px; font: inherit; color: inherit; cursor: pointer; }
     .bqx-cbtn:hover { background: var(--paper-soft, #f3f1ea); }
@@ -9783,7 +9783,7 @@ function _bqxCss() {
     .bqx-cat-sw button { width: 18px; height: 18px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; padding: 0; }
     .bqx-cat-sw button.on { border-color: var(--ink, #0A0F0D); }
     .bqx-price-tag { font-family: var(--mono, monospace); }
-    /* Catégorie A / B — la propriété de la marchandise, choisie à la création. */
+    /* Catégorie A / B · la propriété de la marchandise, choisie à la création. */
     .bqx-ab { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .bqx-ab label { display: flex; align-items: center; gap: 9px; padding: 12px 13px; border: 1px solid var(--line, #e7e3da);
       border-radius: 11px; cursor: pointer; background: var(--paper, #fff); }
@@ -9834,7 +9834,7 @@ function _bqxFam(v) {
    saisie par le commerçant, sinon la nuance d'origine. */
 function _bqxVarNote(v) { return (v && (v.note || v.colorSource)) || ''; }
 function _catOptions(sel, includeNone) {
-  const none = includeNone ? `<option value="">— Sans catégorie</option>` : '';
+  const none = includeNone ? `<option value="">·Sans catégorie</option>` : '';
   return none + CAT().listCategories().map((c) => `<option value="${c.id}" ${c.id === sel ? 'selected' : ''}>${_esc(c.name)}</option>`).join('');
 }
 /* Vocabulaire par métier : boutique garde le caftan/vêtement/taille, maison et les autres reçoivent des termes neutres. */
@@ -9876,7 +9876,7 @@ function _bqxCopy(trade) {
     varCreatedDesc: 'Ajoutez maintenant ses déclinaisons.',
     varEmpty: 'Aucune variante. Ajoutez une déclinaison ci-dessous.',
     gridHint: 'Cliquez un produit pour ouvrir ses déclinaisons : stock par variante, génération et impression d\'étiquettes EAN-13, ou enregistrement d\'un ancien code-barres.',
-    sizeColHeader: (kind) => (kind === 'taille' ? 'Format' : kind === 'pointure' ? 'Pointure' : ' — '),
+    sizeColHeader: (kind) => (kind === 'taille' ? 'Format' : kind === 'pointure' ? 'Pointure' : ' · '),
     sizeInputLabel: (kind) => (kind === 'pointure' ? 'Pointure' : kind === 'taille' ? 'Format' : 'Format'),
     kindList: (sel) => {
       const opts = [
@@ -9914,7 +9914,7 @@ function _bqxGridHtml() {
     if (virgin && _bqxTemplatesOn()) {
       return `<div class="kx-foot-hint" style="align-items:center;">
         <div class="lh">Catalogue vide</div>
-        <div class="rh">Partez d'un modèle de rayons — arts de la table, verrerie, bougies, décoration — puis ajustez les prix et saisissez vos quantités.
+        <div class="rh">Partez d'un modèle de rayons · arts de la table, verrerie, bougies, décoration · puis ajustez les prix et saisissez vos quantités.
           <div style="margin-top:10px;"><button class="kb atlas" data-action="bqx-templates">${window.KiwiStoreTemplates.mark(14)}Choisir mes rayons</button></div>
         </div>
       </div>`;
@@ -10907,7 +10907,7 @@ handlers['bqx-cat-del'] = (_el, arg) => {
     title: 'Supprimer cette catégorie ?', width: 480,
     desc: `« ${c.name} » contient ${count} produit${count > 1 ? 's' : ''}. Choisissez où les déplacer.`,
     body: `<div class="kf-group"><label class="kf-label">Déplacer les produits vers</label>
-      <select class="kf-input" data-bqx-reassign><option value="">— Sans catégorie</option>${others.map((o) => `<option value="${o.id}">${_esc(o.name)}</option>`).join('')}</select></div>
+      <select class="kf-input" data-bqx-reassign><option value="">·Sans catégorie</option>${others.map((o) => `<option value="${o.id}">${_esc(o.name)}</option>`).join('')}</select></div>
       <div class="kx-warn-box danger"><div class="hd">Suppression</div><ul><li>La catégorie disparaît de la caisse et du dashboard.</li><li>Les produits sont conservés et déplacés, jamais supprimés.</li></ul></div>`,
     foot: `<button class="kb ghost" data-dismiss>Annuler</button><button class="kb danger" data-action="bqx-cat-del-ok" data-arg="${arg}">${_ICN.trash}Supprimer</button>`,
   });
@@ -11006,7 +11006,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       { id: 'P-2812', name: 'Code MAROC10',                  type: 'code',     kind: 'Code',       value: '−10 %',         redem:  87, uplift: '+11,2 %', aov: '+4 %',  expiry: '21 j',   live: true },
       { id: 'P-2813', name: 'Lot 3-pour-2 babouches',        type: 'bundle',   kind: 'Lot',        value: '3 pour 2',      redem:  46, uplift: '+22,8 %', aov: '+31 %', expiry: '6 j',    live: true },
       { id: 'P-2814', name: 'Tax-free Touristes UE',         type: 'tax',      kind: 'Segment',    value: 'TVA −20 %',     redem: 184, uplift: '+34,1 %', aov: '+24 %', expiry: 'Permanent', live: true },
-      { id: 'P-2815', name: 'Black Friday avant-première',   type: 'discount', kind: '−25 %',     value: '−25 %',         redem:   0, uplift: '—', aov: '—',     expiry: 'J−18',   scheduled: true },
+      { id: 'P-2815', name: 'Black Friday avant-première',   type: 'discount', kind: '−25 %',     value: '−25 %',         redem:   0, uplift: '·', aov: '·',     expiry: 'J−18',   scheduled: true },
     ];
 
     const segments = [
@@ -11088,7 +11088,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
                 </td>
                 <td><span class="chip ${p.scheduled ? 'pend' : 'ok'}" style="font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.04em;">${p.kind.toUpperCase()}</span></td>
                 <td class="mono right">${p.value}</td>
-                <td class="mono right">${p.redem === 0 ? '—' : fmtInt(p.redem)}</td>
+                <td class="mono right">${p.redem === 0 ? '·' : fmtInt(p.redem)}</td>
                 <td class="mono right" style="color: ${p.uplift.startsWith('+') ? 'var(--atlas)' : 'var(--n-500)'}; font-weight: 600;">${p.uplift}</td>
                 <td class="mono right" style="color: var(--n-500);">${p.aov}</td>
                 <td><span class="chip ${p.expiry === 'Permanent' ? 'neutral' : p.scheduled ? 'pend' : 'ok'}" style="font-family: var(--mono); font-size: 10.5px;">${p.expiry}</span></td>
@@ -11231,8 +11231,8 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
           <div style="background: var(--paper-soft); border: 1px solid var(--n-200); border-radius: 14px; padding: 18px; margin-top: 10px;">
             <div style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; color: var(--n-500); text-transform: uppercase; margin-bottom: 8px;">APERÇU CAMPAGNE</div>
             <dl class="tx-detail-grid" style="margin: 0;">
-              <dt>Type</dt><dd>${typLabel || '—'}</dd>
-              <dt>Valeur</dt><dd>${state.value || '—'}</dd>
+              <dt>Type</dt><dd>${typLabel || '·'}</dd>
+              <dt>Valeur</dt><dd>${state.value || '·'}</dd>
               <dt>Audience</dt><dd>${audLabel}</dd>
               <dt>Période</dt><dd>${state.start} → ${state.end}</dd>
               <dt>Estim. uplift</dt><dd style="color: var(--atlas);">+12 à +28 % AOV</dd>
@@ -11275,7 +11275,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     modal({
       tag: 'CONFIRMATION',
       title: 'Mettre en pause cette promo ?',
-      desc: `Aucun client ne pourra plus l'utiliser tant qu'elle n'est pas réactivée. ID interne : ${id || '—'}.`,
+      desc: `Aucun client ne pourra plus l'utiliser tant qu'elle n'est pas réactivée. ID interne : ${id || '·'}.`,
       width: 460,
       foot: `<button class="kb ghost" data-cancel>Annuler</button><button class="kb danger" data-confirm>${SVG.pause} Pauser la promo</button>`,
     }).el.addEventListener('click', (e) => {
@@ -11528,7 +11528,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
   handlers['ret-detail'] = (id) => {
     const samplePhotos = ['mint-soft', 'rgba(217,154,43,0.16)', 'var(--paper-soft)', 'rgba(11,110,79,0.10)'];
     modal({
-      tag: 'DEMANDE DE RETOUR · ' + (id || '—'),
+      tag: 'DEMANDE DE RETOUR · ' + (id || '·'),
       title: 'Caftan brodé taille S',
       desc: 'Anna M. (DE) · achat le 17/04/2026 · ticket #T-21847',
       width: 640,
@@ -11580,7 +11580,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     modal({
       tag: 'CHOISIR LE CANAL',
       title: 'Comment rembourser ?',
-      desc: `Demande ${id || '—'} · 2 450 MAD · Anna M. (DE)`,
+      desc: `Demande ${id || '·'} · 2 450 MAD · Anna M. (DE)`,
       width: 540,
       body: `
         <div style="display: grid; gap: 10px;">
@@ -11647,7 +11647,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       ['Caftan brodé Riad · M',     '3 200 MAD', '+ 750 MAD'],
     ];
     modal({
-      tag: 'ÉCHANGE · ' + (id || '—'),
+      tag: 'ÉCHANGE · ' + (id || '·'),
       title: 'Choisir un article de remplacement',
       desc: 'Article retourné : Caftan brodé taille S · 2 450 MAD',
       width: 580,
@@ -12174,8 +12174,8 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
             <div class="s-rec-line"><span>Praticienne</span><b>${pr.name}</b></div>
             <div class="s-rec-line"><span>Date · heure</span><b>${dy} · ${tm}</b></div>
             <div class="s-rec-line"><span>Salle</span><b>${sv.room}</b></div>
-            <div class="s-rec-line"><span>Cliente</span><b>${picked.client?.n || '—'}</b></div>
-            <div class="s-rec-line"><span>Téléphone</span><b>${picked.client?.p || '—'}</b></div>
+            <div class="s-rec-line"><span>Cliente</span><b>${picked.client?.n || '·'}</b></div>
+            <div class="s-rec-line"><span>Téléphone</span><b>${picked.client?.p || '·'}</b></div>
             <div class="s-rec-total"><span>Total</span><b>${fmt(sv.price)} MAD</b></div>
           </div>
           <label class="s-rec-check"><input type="checkbox" id="wiz-deposit"><span>Demander un acompte de 30 %</span></label>
@@ -12295,7 +12295,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
                 <td class="mono right">${fmt(s.price)} MAD</td>
                 <td><span class="s-room-pill">${s.room}</span></td>
                 <td><span class="s-skill ${s.skill}">${s.skill}</span></td>
-                <td>${s.contras.length ? s.contras.map(c => `<span class="chip pend" style="margin-right:4px;">${c}</span>`).join('') : '<span style="color: var(--n-500);">—</span>'}</td>
+                <td>${s.contras.length ? s.contras.map(c => `<span class="chip pend" style="margin-right:4px;">${c}</span>`).join('') : '<span style="color: var(--n-500);">·</span>'}</td>
                 <td class="mono right"><b>#${s.sales + 1}</b></td>
                 <td><button class="kb ghost" style="padding:4px 8px; font-size:11px;" data-action="svc-edit" data-arg="${SERVICES.indexOf(s)}">${ICN.edit}</button></td>
               </tr>
@@ -12619,7 +12619,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       ],
       commission: 25, rdv: 84, revenue: 38600, nps: 92, retention: 78,
       week: ['busy', 'full', 'busy', 'full', 'full', 'off', 'off'],
-      hours: ['10', '8', '9', '8', '8', '—', '—'],
+      hours: ['10', '8', '9', '8', '8', '·', '·'],
     },
     {
       id: 'SB', cls: 'b', name: 'Salma Benkirane', role: 'Esthéticienne certifiée · 5 ans',
@@ -12633,7 +12633,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       ],
       commission: 22, rdv: 72, revenue: 28200, nps: 88, retention: 71,
       week: ['busy', 'busy', 'full', 'busy', 'busy', 'full', 'off'],
-      hours: ['7', '7', '9', '8', '7', '9', '—'],
+      hours: ['7', '7', '9', '8', '7', '9', '·'],
     },
     {
       id: 'YB', cls: 'c', name: 'Yasmine Bouchikhi', role: 'Praticienne junior · 2 ans',
@@ -12647,7 +12647,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       ],
       commission: 18, rdv: 56, revenue: 18400, nps: 84, retention: 62,
       week: ['off', 'busy', 'busy', 'full', 'busy', 'full', 'busy'],
-      hours: ['—', '7', '7', '8', '7', '8', '6'],
+      hours: ['·', '7', '7', '8', '7', '8', '6'],
     },
   ];
 
@@ -12681,7 +12681,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
 
         <div class="pr-week">
           ${p.week.map((s, i) => `
-            <div class="pr-day ${s}"><div class="d">${dows[i]}</div><div class="h">${p.hours[i] === '—' ? 'off' : p.hours[i] + 'h'}</div></div>
+            <div class="pr-day ${s}"><div class="d">${dows[i]}</div><div class="h">${p.hours[i] === '·' ? 'off' : p.hours[i] + 'h'}</div></div>
           `).join('')}
         </div>
 
@@ -12837,12 +12837,12 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
         </div>
         <div class="pr-calc-out" id="pr-calc-out">
           <div class="l">COMMISSION NETTE · APRÈS CNSS</div>
-          <div class="v" id="pr-calc-v">— MAD</div>
+          <div class="v" id="pr-calc-v">·MAD</div>
           <div class="br">
-            <div><span>CA brut généré</span><br><b id="pr-calc-gross">— MAD</b></div>
-            <div><span>Commission brute</span><br><b id="pr-calc-com">— MAD</b></div>
-            <div><span>CNSS (4,48%)</span><br><b id="pr-calc-cnss">— MAD</b></div>
-            <div><span>Taux appliqué</span><br><b id="pr-calc-rate">—%</b></div>
+            <div><span>CA brut généré</span><br><b id="pr-calc-gross">·MAD</b></div>
+            <div><span>Commission brute</span><br><b id="pr-calc-com">·MAD</b></div>
+            <div><span>CNSS (4,48%)</span><br><b id="pr-calc-cnss">·MAD</b></div>
+            <div><span>Taux appliqué</span><br><b id="pr-calc-rate">·%</b></div>
           </div>
         </div>
       `,
@@ -13080,7 +13080,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     .sc-gift .v { font-size: 28px; font-weight: 600; letter-spacing: -0.02em; margin-top: 4px; font-feature-settings: "tnum" 1; }
     .sc-gift .s { font-size: 12px; color: #c6ead4; margin-top: 4px; }
     .sc-gift .ac { display: flex; gap: 8px; margin-top: 12px; position: relative; z-index: 1; }
-    /* Climat sombre : la carte cadeau ne peut plus « descendre » vers le noir —
+    /* Climat sombre : la carte cadeau ne peut plus « descendre » vers le noir·
      * la page l'est déjà, et l'arrivée opaque #15201A pose un bloc mat au milieu
      * d'un panneau translucide. Elle monte à la place, comme tous les inverses
      * de ce climat. En clair la règle de base reste la bonne : vert profond vers
@@ -13783,7 +13783,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
         <div class="kw-items-pane">
           <div class="kw-items-head">
             <h3>
-              ${cat ? cat.label.toUpperCase() : '—'}
+              ${cat ? cat.label.toUpperCase() : '·'}
               <span class="edit-cat" data-action="menu-cat-edit" title="Renommer · supprimer">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 113 3L7 19l-4 1 1-4z"/></svg>
               </span>
@@ -14600,7 +14600,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       .kit-item.has-recipe:hover { background: var(--paper-soft); }
       .kit-recipe-ico { width: 14px; height: 14px; flex-shrink: 0; color: var(--n-500); margin-left: auto; opacity: 0; transition: opacity 140ms, color 140ms; align-self: center; }
       .kit-item.has-recipe:hover .kit-recipe-ico { opacity: 1; color: var(--atlas); }
-      /* Fire-schedule badge on each ticket item — shows when a sync-enabled
+      /* Fire-schedule badge on each ticket item · shows when a sync-enabled
          station is being delayed so the plate finishes with the slowest one,
          or signals "served first" for stations with sync OFF (drinks etc.). */
       .kit-fire { display: inline-block; margin-left: 8px; padding: 1px 7px; border-radius: 99px; font-size: 9.5px; font-weight: 700; font-family: var(--mono); letter-spacing: 0.02em; vertical-align: middle; }
@@ -14969,7 +14969,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
         const yld = recipe.yield || 1;
         const ingRows = (recipe.ingredients || []).map((ing) => {
           const ref = eng.resolveIngredient(ing.invId);
-          const name = (ref && ref.name) || ing.name || '—';
+          const name = (ref && ref.name) || ing.name || '·';
           const unit = ing.unit || (ref && ref.unit) || '';
           const qty  = Number(ing.qty || 0);
           const qDisp = qty < 0.01 ? qty.toFixed(4) : qty < 1 ? qty.toFixed(3) : qty.toString();

@@ -152,7 +152,7 @@
       mScanReadingT: 'Lecture de la facture…', mScanReadingS: 'Extraction OCR · reconnaissance des articles',
       mScanReadingFile: 'Extraction du texte PDF…',
       mScanServerNotice: 'La facture est analysée sur le serveur Kiwi pour pré-remplir les lignes.',
-      mScanFailFallback: 'Lecture automatique indisponible — passage en saisie manuelle.',
+      mScanFailFallback: 'Lecture automatique indisponible · passage en saisie manuelle.',
       mScanUpdateCost: 'Mettre à jour le prix d\'achat',
       mScanColCurrentCost: 'Prix réf.',
       mScanColInvoicedCost: 'Facturé',
@@ -192,14 +192,14 @@
       mRevTotal: (n, v) => `${n} écart(s) · valeur totale ${v}`,
       mRevBack: 'Annuler',
       mRevApply: 'Confirmer et ajuster le stock',
-      reasonZero: 'Article introuvable au comptage — vérifier la réserve, le rangement ou un vol.',
-      reasonUnit: "Écart démesuré — probable erreur d'unité (grammes saisis au lieu de kg, ou pièces / carton).",
-      reasonWaste: 'Des pertes ont été signalées récemment — probable casse ou périmé supplémentaire non enregistré.',
-      reasonRecipes: 'Proche de la consommation recettes de la semaine — portions servies non décomptées du stock.',
-      reasonPerish: 'Produit périssable — pertes, parage ou portions généreuses probables.',
-      reasonLoss: 'Sortie non enregistrée — casse, offert, usage interne ou coulage.',
-      reasonDeliv: 'Livraison enregistrée il y a moins de 48 h — risque de double saisie du même carton.',
-      reasonExtra: 'Réception non saisie ou retour non enregistré — vérifier les bons de livraison.',
+      reasonZero: 'Article introuvable au comptage · vérifier la réserve, le rangement ou un vol.',
+      reasonUnit: "Écart démesuré · probable erreur d'unité (grammes saisis au lieu de kg, ou pièces / carton).",
+      reasonWaste: 'Des pertes ont été signalées récemment · probable casse ou périmé supplémentaire non enregistré.',
+      reasonRecipes: 'Proche de la consommation recettes de la semaine · portions servies non décomptées du stock.',
+      reasonPerish: 'Produit périssable · pertes, parage ou portions généreuses probables.',
+      reasonLoss: 'Sortie non enregistrée · casse, offert, usage interne ou coulage.',
+      reasonDeliv: 'Livraison enregistrée il y a moins de 48 h · risque de double saisie du même carton.',
+      reasonExtra: 'Réception non saisie ou retour non enregistré · vérifier les bons de livraison.',
       mQoTitle: 'Commande rapide',
       mQoArticle: 'Article', mQoQty: 'Quantité à commander', mQoSup: 'Fournisseur',
       mQoMode: 'Mode de livraison', mQoModeStd: 'Standard · 24-48h', mQoModeExp: 'Express · 6h · +120 MAD',
@@ -398,7 +398,7 @@
       mScanReadingT: 'Reading invoice…', mScanReadingS: 'OCR extraction · item recognition',
       mScanReadingFile: 'Extracting PDF text…',
       mScanServerNotice: 'The invoice is analyzed on Kiwi\'s server to pre-fill lines.',
-      mScanFailFallback: 'Automatic reading unavailable — switched to manual entry.',
+      mScanFailFallback: 'Automatic reading unavailable · switched to manual entry.',
       mScanUpdateCost: 'Update purchase price',
       mScanColCurrentCost: 'Ref. price',
       mScanColInvoicedCost: 'Invoiced',
@@ -438,14 +438,14 @@
       mRevTotal: (n, v) => `${n} variance(s) · total value ${v}`,
       mRevBack: 'Cancel',
       mRevApply: 'Confirm and adjust stock',
-      reasonZero: 'Item not found during the count — check the back room, shelving, or possible theft.',
-      reasonUnit: 'Outsized variance — likely a unit error (grams entered instead of kg, or pieces / box).',
-      reasonWaste: 'Waste was reported recently — likely additional breakage or expiry not recorded.',
-      reasonRecipes: "Close to this week's recipe consumption — served portions not deducted from stock.",
-      reasonPerish: 'Perishable product — losses, trimming, or generous portions are likely.',
-      reasonLoss: 'Unrecorded outflow — breakage, freebies, internal use, or shrinkage.',
-      reasonDeliv: 'A delivery was recorded less than 48h ago — risk of the same box being entered twice.',
-      reasonExtra: 'Unrecorded delivery or return — check the delivery notes.',
+      reasonZero: 'Item not found during the count · check the back room, shelving, or possible theft.',
+      reasonUnit: 'Outsized variance · likely a unit error (grams entered instead of kg, or pieces / box).',
+      reasonWaste: 'Waste was reported recently · likely additional breakage or expiry not recorded.',
+      reasonRecipes: "Close to this week's recipe consumption · served portions not deducted from stock.",
+      reasonPerish: 'Perishable product · losses, trimming, or generous portions are likely.',
+      reasonLoss: 'Unrecorded outflow · breakage, freebies, internal use, or shrinkage.',
+      reasonDeliv: 'A delivery was recorded less than 48h ago · risk of the same box being entered twice.',
+      reasonExtra: 'Unrecorded delivery or return · check the delivery notes.',
       mQoTitle: 'Quick order',
       mQoArticle: 'Item', mQoQty: 'Quantity to order', mQoSup: 'Supplier',
       mQoMode: 'Delivery mode', mQoModeStd: 'Standard · 24-48h', mQoModeExp: 'Express · 6h · +120 MAD',
@@ -632,7 +632,7 @@
       mScanReadingT: 'قراءة الفاتورة…', mScanReadingS: 'استخراج OCR · تعرف على المنتجات',
       mScanReadingFile: 'استخراج نص PDF…',
       mScanServerNotice: 'تتم قراءة الفاتورة على خادم Kiwi لملء البنود مسبقاً.',
-      mScanFailFallback: 'القراءة التلقائية غير متوفرة — التحويل إلى الإدخال اليدوي.',
+      mScanFailFallback: 'القراءة التلقائية غير متوفرة · التحويل إلى الإدخال اليدوي.',
       mScanUpdateCost: 'تحديث سعر الشراء',
       mScanColCurrentCost: 'السعر المرجعي',
       mScanColInvoicedCost: 'المفوتر',
@@ -672,14 +672,14 @@
       mRevTotal: (n, v) => `${n} فرق (فروقات) · القيمة الإجمالية ${v}`,
       mRevBack: 'إلغاء',
       mRevApply: 'تأكيد وتعديل المخزون',
-      reasonZero: 'المنتج غير موجود عند العدّ — تحقق من المخزن أو الترتيب أو احتمال سرقة.',
-      reasonUnit: 'فرق ضخم — على الأرجح خطأ في الوحدة (غرامات بدل كغ، أو قطع / صندوق).',
-      reasonWaste: 'تم التبليغ عن خسائر مؤخرًا — على الأرجح كسر أو انتهاء صلاحية إضافي غير مسجل.',
-      reasonRecipes: 'قريب من استهلاك الوصفات هذا الأسبوع — حصص مقدمة لم تُخصم من المخزون.',
-      reasonPerish: 'منتج سريع التلف — خسائر أو تشذيب أو حصص سخية محتملة.',
-      reasonLoss: 'خروج غير مسجل — كسر، مجاني، استعمال داخلي أو تسرب.',
-      reasonDeliv: 'سُجلت تسليمة قبل أقل من 48 ساعة — خطر إدخال نفس الصندوق مرتين.',
-      reasonExtra: 'استلام غير مسجل أو إرجاع غير مسجل — تحقق من سندات التسليم.',
+      reasonZero: 'المنتج غير موجود عند العدّ · تحقق من المخزن أو الترتيب أو احتمال سرقة.',
+      reasonUnit: 'فرق ضخم · على الأرجح خطأ في الوحدة (غرامات بدل كغ، أو قطع / صندوق).',
+      reasonWaste: 'تم التبليغ عن خسائر مؤخرًا · على الأرجح كسر أو انتهاء صلاحية إضافي غير مسجل.',
+      reasonRecipes: 'قريب من استهلاك الوصفات هذا الأسبوع · حصص مقدمة لم تُخصم من المخزون.',
+      reasonPerish: 'منتج سريع التلف · خسائر أو تشذيب أو حصص سخية محتملة.',
+      reasonLoss: 'خروج غير مسجل · كسر، مجاني، استعمال داخلي أو تسرب.',
+      reasonDeliv: 'سُجلت تسليمة قبل أقل من 48 ساعة · خطر إدخال نفس الصندوق مرتين.',
+      reasonExtra: 'استلام غير مسجل أو إرجاع غير مسجل · تحقق من سندات التسليم.',
       mQoTitle: 'طلبية سريعة',
       mQoArticle: 'المنتج', mQoQty: 'الكمية للطلب', mQoSup: 'المورد',
       mQoMode: 'وضع التسليم', mQoModeStd: 'عادي · 24-48س', mQoModeExp: 'سريع · 6س · +120 درهم',
@@ -1900,7 +1900,7 @@
         };
       }
     }
-    return { when: '—', supplier: '—', cost: 0 };
+    return { when: '·', supplier: '·', cost: 0 };
   }
 
   function tickFoodCost() {
@@ -2059,14 +2059,14 @@
                     <td>${esc(it.unit)}</td>
                     <td><span class="st-badge warn" style="font-size:11px;">${esc(reasonLabel)}</span></td>
                     <td class="st-mono">${fmtMad(valMAD)}</td>
-                    <td style="font-size:12.5px;">${esc(r.actor || (r.meta && r.meta.actor) || '—')}</td>
-                    <td style="font-size:12px;color:var(--n-600);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(r.note || '')}">${esc(r.note || '—')}</td>
+                    <td style="font-size:12.5px;">${esc(r.actor || (r.meta && r.meta.actor) || '·')}</td>
+                    <td style="font-size:12px;color:var(--n-600);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(r.note || '')}">${esc(r.note || '·')}</td>
                     <td style="text-align:right;">
                       ${stShowReal() && !isReversal ? `
                         <button class="st-btn small" type="button" data-action="stock-cancel-waste" data-movement-id="${esc(r.id)}" title="Annuler cette perte" style="color:#b91c1c;border-color:rgba(185,28,28,0.25);">
                           Annuler
                         </button>
-                      ` : '—'}
+                      ` : '·'}
                     </td>
                   </tr>
                 `;
@@ -2423,7 +2423,7 @@
                       <td class="st-mono" style="font-size:12px;color:var(--n-600);white-space:nowrap;">${dateStr}</td>
                       <td><b>${esc(c.id)}</b></td>
                       <td>${esc(c.storeName || 'Magasin principal')}</td>
-                      <td>${esc(c.employeeName || '—')} <span style="font-size:11px;color:var(--n-500);">(${esc(c.employeeRole || '—')})</span></td>
+                      <td>${esc(c.employeeName || '·')} <span style="font-size:11px;color:var(--n-500);">(${esc(c.employeeRole || '·')})</span></td>
                       <td style="text-align:center;" class="st-mono">${c.totalLines || 0}</td>
                       <td style="text-align:right;font-weight:600;color:${mad < 0 ? '#b91c1c' : mad > 0 ? 'var(--atlas)' : 'inherit'};" class="st-mono">
                         ${mad > 0 ? '+' : ''}${fmtMad(mad)}
@@ -2628,7 +2628,7 @@
                     <td style="text-align:right;font-weight:600;color:${diffColor};" class="st-mono">${diff > 0 ? '+' : ''}${diff} ${esc(l.unit)}</td>
                     <td style="text-align:right;font-weight:600;color:${diffColor};" class="st-mono">${cost > 0 ? '+' : ''}${fmtMad(cost)}</td>
                     <td style="color:var(--n-600);font-size:11.5px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(l.explanation || l.note || '')}">
-                      ${esc(l.explanation || l.note || '—')}
+                      ${esc(l.explanation || l.note || '·')}
                     </td>
                   </tr>
                 `;
@@ -2735,15 +2735,15 @@
         csvSafe(c.id),
         d,
         csvSafe(c.storeName || 'Principal'),
-        csvSafe(c.employeeName || '—'),
-        csvSafe(c.employeeRole || '—'),
+        csvSafe(c.employeeName || '·'),
+        csvSafe(c.employeeRole || '·'),
         csvSafe(c.status),
         c.totalLines || 0,
         (c.totalVarianceCostMAD || 0).toFixed(2),
         (c.absVarianceCostMAD || 0).toFixed(2),
-        csvSafe(c.reviewerName || '—'),
-        csvSafe(c.reviewDecision || '—'),
-        csvSafe(c.reviewNote || '—')
+        csvSafe(c.reviewerName || '·'),
+        csvSafe(c.reviewDecision || '·'),
+        csvSafe(c.reviewNote || '·')
       ].join(';'));
     });
     const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
@@ -2904,7 +2904,7 @@
     const varCls = varAbs <= 5 ? 'ok' : varAbs <= 15 ? 'warn' : 'bad';
     const varIco = v > 1 ? 'trendingUp' : v < -1 ? 'trendingDown' : 'minus';
     const days = daysOfStock(it);
-    const daysShown = days >= 999 ? '—' : Math.round(days);
+    const daysShown = days >= 999 ? '·' : Math.round(days);
     const daysCls = days >= 7 ? 'ok' : days >= 3 ? 'warn' : days >= 1 ? 'bad' : 'crit';
     const st = statusOf(it);
     const stLabel = st === 'ok' ? t('stOk') : st === 'low' ? t('stLow') : t('stOut');
@@ -2936,7 +2936,7 @@
           <div class="st-cell-sup">${esc(it.supplier.split(' · ')[0])}</div>
           <div class="st-cell-sup-sub">${esc(fmtDateShort(it.lastDelivery))}</div>
         </td>
-        <td class="c"><span class="st-cell-days ${daysCls}">${esc(daysShown === '—' ? '—' : `${daysShown} j`)}</span></td>
+        <td class="c"><span class="st-cell-days ${daysCls}">${esc(daysShown === '·' ? '·' : `${daysShown} j`)}</span></td>
         <td><span class="st-cell-status ${st}"><span class="sd"></span>${esc(stLabel)}</span></td>
         <td class="r">
           <div class="st-actions">
@@ -3126,7 +3126,7 @@
     const rateVal = (s.rating != null && !isNaN(s.rating) && s.rating !== '') ? Number(s.rating) : null;
     const rateHtml = rateVal != null
       ? `<span class="st-sup-rate"><span class="st">${'★'.repeat(Math.round(rateVal))}</span>${esc(rateVal.toFixed(1))}</span>`
-      : `<span class="st-sup-rate muted" style="color:var(--n-500);">—</span>`;
+      : `<span class="st-sup-rate muted" style="color:var(--n-500);">·</span>`;
     return `
       <tr>
         <td>
@@ -3983,7 +3983,7 @@
           </td>
           <td class="r" style="width:132px;"><input class="st-mb-input mono" data-stock-receive-dlc type="date" title="DLC / DDM (optionnel)" style="font-size:12px;" /></td>
           <td class="r mono" data-stock-receive-ref-cost style="width:90px;font-size:12px;color:var(--n-600);">
-            ${comparison.currentCost > 0 ? fmtMad(comparison.currentCost) : '—'}
+            ${comparison.currentCost > 0 ? fmtMad(comparison.currentCost) : '·'}
           </td>
           <td style="min-width:170px;font-size:12px;">
             <div style="display:flex;align-items:center;">
@@ -4067,7 +4067,7 @@
         const comp = compareLineCost(item, cost, currentSup);
         const refCostEl = row.querySelector('[data-stock-receive-ref-cost]');
         if (refCostEl) {
-          refCostEl.textContent = comp.currentCost > 0 ? fmtMad(comp.currentCost) : '—';
+          refCostEl.textContent = comp.currentCost > 0 ? fmtMad(comp.currentCost) : '·';
         }
 
         const cb = row.querySelector('[data-stock-receive-update-cost]');
@@ -4143,7 +4143,7 @@
             <input class="st-mb-input mono" data-stock-receive-cost type="number" min="0" step="0.01" placeholder="0.00" style="font-size:12px;" />
           </td>
           <td class="r" style="width:132px;"><input class="st-mb-input mono" data-stock-receive-dlc type="date" title="DLC / DDM (optionnel)" style="font-size:12px;" /></td>
-          <td class="r mono" data-stock-receive-ref-cost style="width:90px;font-size:12px;color:var(--n-600);">—</td>
+          <td class="r mono" data-stock-receive-ref-cost style="width:90px;font-size:12px;color:var(--n-600);">·</td>
           <td style="min-width:170px;font-size:12px;">
             <div style="display:flex;align-items:center;">
               <span data-stock-receive-badge></span>
@@ -4402,7 +4402,7 @@
       footer { margin-top: 18px; font-size: 10.5px; color: #666; }
     </style></head><body>
       <header>
-        <h1>${esc(t('mSheetTitle'))}${venueName ? ' — ' + esc(venueName) : ''}</h1>
+        <h1>${esc(t('mSheetTitle'))}${venueName ? ' · ' + esc(venueName) : ''}</h1>
         <p>${esc(stCountDate(Date.now()))}${last ? ' · ' + esc(t('mCountLast', stCountDate(last.ts), fmtMad(last.varMad))) : ''}</p>
       </header>
       <div class="meta">
@@ -4519,7 +4519,7 @@
     const last = stCountHistory()[0];
     const m = window.Kiwi.modal({
       title: t('mCountTitle'),
-      desc: (last ? t('mCountLast', stCountDate(last.ts), fmtMad(last.varMad)) + ' — ' : '') + t('mCountSub'),
+      desc: (last ? t('mCountLast', stCountDate(last.ts), fmtMad(last.varMad)) + ' · ' : '') + t('mCountSub'),
       width: 760,
       body: `
         <label class="st-pc-blindrow">
@@ -4544,9 +4544,9 @@
                   <tr data-stock-pc-row="${esc(it.id)}">
                     <td><b>${esc(it.name)}</b> <span style="color:var(--n-500); font-size:11px;">· ${esc(it.unit)}</span></td>
                     <td class="r mono"><span data-pc-theo>${esc(fmtUnit(cur, it.unit))}</span></td>
-                    <td class="r"><input class="st-pc-input" type="number" step="0.1" min="0" placeholder="—" data-pc-real="${esc(it.id)}" data-pc-theo-val="${cur}" data-pc-cost="${it.costPerUnit}" data-pc-unit="${esc(it.unit)}" /></td>
-                    <td class="r"><span class="st-pc-var" data-pc-var>—</span></td>
-                    <td class="r"><span class="st-pc-var" data-pc-cost-out>—</span></td>
+                    <td class="r"><input class="st-pc-input" type="number" step="0.1" min="0" placeholder="·" data-pc-real="${esc(it.id)}" data-pc-theo-val="${cur}" data-pc-cost="${it.costPerUnit}" data-pc-unit="${esc(it.unit)}" /></td>
+                    <td class="r"><span class="st-pc-var" data-pc-var>·</span></td>
+                    <td class="r"><span class="st-pc-var" data-pc-cost-out>·</span></td>
                   </tr>
                 `;
               }).join('')}
@@ -4587,9 +4587,9 @@
           costCell.textContent = `${costDiff > 0 ? '+' : ''}${fmtMad(costDiff)}`;
         } else {
           const tr = inp.closest('tr');
-          tr.querySelector('[data-pc-var]').textContent = '—';
+          tr.querySelector('[data-pc-var]').textContent = '·';
           tr.querySelector('[data-pc-var]').className = 'st-pc-var';
-          tr.querySelector('[data-pc-cost-out]').textContent = '—';
+          tr.querySelector('[data-pc-cost-out]').textContent = '·';
           tr.querySelector('[data-pc-cost-out]').className = 'st-pc-var';
         }
       });
@@ -4789,7 +4789,7 @@
                   ${c.rank === 1 ? esc(t('supRankPrincipal')) : `${esc(t('supRankBackup'))} ${c.rank - 1}`}
                 </span>
               </div>
-              <div class="v">${c.defaultPrice != null ? `${esc(fmtMad(c.defaultPrice))} / ${esc(sub?.unit || it.unit || 'unité')}` : '—'}</div>
+              <div class="v">${c.defaultPrice != null ? `${esc(fmtMad(c.defaultPrice))} / ${esc(sub?.unit || it.unit || 'unité')}` : '·'}</div>
             </div>`).join('') : `<div style="padding:9px 4px; font-size:12.5px; color:var(--n-500);">${esc(t('mItNoSuppliers'))}</div>`}
         </div>
         <button class="st-btn small" type="button" data-stock-add-backup-supplier data-item-id="${esc(it.id)}" style="margin-top:8px;">
@@ -4834,7 +4834,7 @@
                   <div class="st-md-list-row" style="${isReversal ? 'opacity:0.5;' : ''}">
                     <div>
                       <span class="n" style="color:#b91c1c;">${esc(reasonLabel)}</span>
-                      <span class="d" style="margin-left:6px;">${esc(r.actor || '—')} ${r.note ? `· ${esc(r.note)}` : ''}</span>
+                      <span class="d" style="margin-left:6px;">${esc(r.actor || '·')} ${r.note ? `· ${esc(r.note)}` : ''}</span>
                     </div>
                     <div class="v" style="color:#b91c1c;font-weight:600;">−${Math.abs(+r.qty || 0)} ${esc(it.unit)}</div>
                     <div class="d" style="display:flex;align-items:center;gap:6px;">
@@ -5078,7 +5078,7 @@
             <div class="st-md-pair"><span class="l">${esc(t('mItValue'))}</span><span class="v">${esc(fmtMad(cur * it.costPerUnit))}</span></div>
             <div class="st-md-pair"><span class="l">${esc(t('mItCost'))}</span><span class="v">${esc(fmtMad(it.costPerUnit))} / ${esc(it.unit)}</span></div>
             <div class="st-md-pair"><span class="l">${esc(t('mItVarW'))}</span><span class="v" style="color:var(--${Math.abs(v) <= 5 ? 'n-600' : Math.abs(v) <= 15 ? 'warning' : 'danger'});">${esc(fmtPct(v))}</span></div>
-            <div class="st-md-pair"><span class="l">${esc(t('mItDaysL'))}</span><span class="v">${days >= 999 ? '—' : Math.round(days) + ' j'}</span></div>
+            <div class="st-md-pair"><span class="l">${esc(t('mItDaysL'))}</span><span class="v">${days >= 999 ? '·' : Math.round(days) + ' j'}</span></div>
           </div>
           <div>
             ${stShowReal() ? renderRealItemMovementSummary(it) : `
@@ -5368,7 +5368,7 @@
           currentStock,
           parLevel, reorderLevel, costPerUnit,
           lastDelivery: today,
-          deliveryFrequency: '—',
+          deliveryFrequency: '·',
           usageThisWeek: 0,
           theoreticalUsage: 0,
           status, updatedAt: Date.now(),
@@ -5469,7 +5469,7 @@
         <div class="st-mb-row">
           <div class="st-mb-field">
             <label class="st-mb-label">${esc(t('supRating'))}</label>
-            <input class="st-mb-input mono" type="number" min="1" max="5" step="0.1" placeholder="—" value="${esc(existing?.rating != null ? existing.rating : '')}" data-stock-sup-rating />
+            <input class="st-mb-input mono" type="number" min="1" max="5" step="0.1" placeholder="·" value="${esc(existing?.rating != null ? existing.rating : '')}" data-stock-sup-rating />
           </div>
           <div class="st-mb-field">
             <label class="st-mb-label">${esc(t('supSpend'))}</label>
@@ -5488,7 +5488,7 @@
       const contact = (scope.querySelector('[data-stock-sup-phone]')?.value || '').trim();
       const location = (scope.querySelector('[data-stock-sup-loc]')?.value || '').trim();
       const paymentTerms = scope.querySelector('[data-stock-sup-pay]')?.value || 'Net 30';
-      const deliverySchedule = (scope.querySelector('[data-stock-sup-deliv]')?.value || '—').trim();
+      const deliverySchedule = (scope.querySelector('[data-stock-sup-deliv]')?.value || '·').trim();
       const ratingVal = (scope.querySelector('[data-stock-sup-rating]')?.value || '').trim();
       const ratingRaw = ratingVal ? parseFloat(ratingVal) : NaN;
       const rating = isNaN(ratingRaw) ? null : Math.min(5, Math.max(1, ratingRaw));
@@ -5760,7 +5760,7 @@
       if (isPhone(contact)) {
         location.href = 'tel:' + phoneDigits(contact);
       } else {
-        window.Kiwi.toast('Pas de numéro — modifiez le fournisseur', { type: 'warn' });
+        window.Kiwi.toast('Pas de numéro · modifiez le fournisseur', { type: 'warn' });
         const sup = getSup().find(s => s.id === supId || s.name === name);
         if (sup) openEditSupplier(sup.id);
       }
@@ -5773,7 +5773,7 @@
         const text = `Bonjour ${name}, `;
         window.open(`https://wa.me/${waDigits(contact)}?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
       } else {
-        window.Kiwi.toast('Pas de numéro — modifiez le fournisseur', { type: 'warn' });
+        window.Kiwi.toast('Pas de numéro · modifiez le fournisseur', { type: 'warn' });
         const sup = getSup().find(s => s.id === supId || s.name === name);
         if (sup) openEditSupplier(sup.id);
       }

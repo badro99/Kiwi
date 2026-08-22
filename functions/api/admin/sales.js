@@ -299,10 +299,10 @@ async function impactFor(env, merchant, rows) {
       if (!l || !(l.qty > 0)) return;
       stock.push({ name: l.name, qty: l.qty, cat: l.cat || '', sale: r.id });
     });
-    if (r.void_ts) blockers.push({ code: 'already-void', sale: r.id, label: 'Vente déjà sortie des livres — utilisez « Remettre ».' });
+    if (r.void_ts) blockers.push({ code: 'already-void', sale: r.id, label: 'Vente déjà sortie des livres · utilisez « Remettre ».' });
     if (looksLikeReturn(r)) {
       warnings.push({ code: 'return', sale: r.id,
-        label: 'Le libellé de cette vente évoque un retour ou un avoir. Sortir un remboursement des livres REMONTE le chiffre d’affaires au lieu de le baisser — vérifiez le ticket avant.' });
+        label: 'Le libellé de cette vente évoque un retour ou un avoir. Sortir un remboursement des livres REMONTE le chiffre d’affaires au lieu de le baisser · vérifiez le ticket avant.' });
     }
   });
   totals.basket = totals.count ? Math.round(totals.amount / totals.count) : 0;

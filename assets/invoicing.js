@@ -65,7 +65,7 @@
     return [value.getFullYear(), String(value.getMonth() + 1).padStart(2, '0'), String(value.getDate()).padStart(2, '0')].join('-');
   };
   const shift = (days) => { const d = new Date(); d.setHours(12,0,0,0); d.setDate(d.getDate() + days); return iso(d); };
-  const fmtDate = (value) => value ? new Intl.DateTimeFormat(lang() === 'ar' ? 'ar-MA' : lang() + '-MA', {day:'2-digit', month:'short', year:'numeric'}).format(new Date(value + 'T12:00:00')) : '—';
+  const fmtDate = (value) => value ? new Intl.DateTimeFormat(lang() === 'ar' ? 'ar-MA' : lang() + '-MA', {day:'2-digit', month:'short', year:'numeric'}).format(new Date(value + 'T12:00:00')) : '·';
   const money = (value) => new Intl.NumberFormat(lang() === 'ar' ? 'ar-MA' : lang() + '-MA', {maximumFractionDigits: 2, minimumFractionDigits: 2}).format(num(value));
   const today = () => iso(new Date());
 
@@ -241,10 +241,10 @@
 
     const table = rows.length ? `<div class="inv-table-wrap"><table class="inv-table"><thead><tr><th>${esc(t.no)}</th><th>${esc(t.customer)}</th><th>${esc(t.issued)}</th><th>${esc(t.due)}</th><th>${esc(t.status)}</th><th>${esc(t.amount)}</th></tr></thead><tbody>${rows.map(inv => {
       if (inv.isSaleInvoice) {
-        return `<tr data-inv-sale-open="${esc(inv.id)}" tabindex="0"><td><span class="inv-no">${esc(inv.id)}</span></td><td><span class="inv-customer">${esc(inv.customer)}</span><span class="inv-customer-sub">${esc(inv.contact || '—')}</span></td><td>${esc(fmtDate(inv.issueDate))}</td><td>${esc(fmtDate(inv.dueDate))}</td><td>${statusHtml('paid')}</td><td class="inv-money">${money(inv.total)} MAD</td></tr>`;
+        return `<tr data-inv-sale-open="${esc(inv.id)}" tabindex="0"><td><span class="inv-no">${esc(inv.id)}</span></td><td><span class="inv-customer">${esc(inv.customer)}</span><span class="inv-customer-sub">${esc(inv.contact || '·')}</span></td><td>${esc(fmtDate(inv.issueDate))}</td><td>${esc(fmtDate(inv.dueDate))}</td><td>${statusHtml('paid')}</td><td class="inv-money">${money(inv.total)} MAD</td></tr>`;
       }
       const status = effectiveStatus(inv);
-      return `<tr data-inv-open="${inv.id}" tabindex="0"><td><span class="inv-no">#${inv.id}</span></td><td><span class="inv-customer">${esc(inv.customer)}</span><span class="inv-customer-sub">${esc(inv.contact || '—')}</span></td><td>${esc(fmtDate(inv.issueDate))}</td><td>${esc(fmtDate(inv.dueDate))}</td><td>${statusHtml(status)}</td><td class="inv-money">${money(invoiceTotal(inv).total)} MAD</td></tr>`;
+      return `<tr data-inv-open="${inv.id}" tabindex="0"><td><span class="inv-no">#${inv.id}</span></td><td><span class="inv-customer">${esc(inv.customer)}</span><span class="inv-customer-sub">${esc(inv.contact || '·')}</span></td><td>${esc(fmtDate(inv.issueDate))}</td><td>${esc(fmtDate(inv.dueDate))}</td><td>${statusHtml(status)}</td><td class="inv-money">${money(invoiceTotal(inv).total)} MAD</td></tr>`;
     }).join('')}</tbody></table></div>` : `<div class="inv-empty"><div class="inv-empty-mark">${ICON.invoice}</div><h4>${esc(filter === 'sales' ? (t.salesSub || t.empty) : t.empty)}</h4><p>${esc(filter === 'sales' ? '' : t.emptySub)}</p>${filter === 'sales' ? '' : `<button class="inv-btn primary" type="button" data-inv-new>${ICON.plus}${esc(t.create)}</button>`}</div>`;
     overlay.querySelector('[data-inv-list]').innerHTML = `<div class="inv-toolbar"><div class="inv-toolbar-copy"><h3>${esc(t.overview)}</h3><p>${esc(t.overviewSub)}</p></div><div class="inv-toolbar-actions"><button class="inv-btn" type="button" data-inv-export>${ICON.export}${esc(t.export)}</button><button class="inv-btn primary" type="button" data-inv-new>${ICON.plus}${esc(t.create)}</button></div></div>
       <div class="inv-stats">

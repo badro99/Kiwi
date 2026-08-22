@@ -1917,7 +1917,7 @@
         </div>`;
       icons();
       const refresh = (writeInput) => {
-        $('#px-ac-val', el).textContent = Number.isFinite(acompte) ? fmtMAD(acompte) : '—';
+        $('#px-ac-val', el).textContent = Number.isFinite(acompte) ? fmtMAD(acompte) : '·';
         if (writeInput) $('#px-ac-input', el).value = acompte;
         const good = validDeposit(acompte, total);
         $('#px-ac-ok', el).disabled = !good;
@@ -1926,7 +1926,7 @@
            tape — pas au moment où elle appuie. */
         $('#px-ac-why', el).textContent = good ? ''
           : !Number.isFinite(acompte) ? 'Entrez un montant.'
-            : acompte < 10 ? `Acompte minimum 10 MAD — il manque ${fmtMAD(10 - acompte)}.`
+            : acompte < 10 ? `Acompte minimum 10 MAD · il manque ${fmtMAD(10 - acompte)}.`
               : `Un acompte ne peut pas dépasser le total de ${fmtMAD(total)}.`;
       };
       $$('[data-px-close]', el).forEach((b) => { b.onclick = closePay; });
@@ -2304,7 +2304,7 @@
           <div class="px-dt-sub" style="margin-top:5px;">Déposé ${fmtDT(o.droppedAt)} · promis ${fmtDT(o.readyAt)}${o.collectedAt ? ` · retiré ${fmtDT(o.collectedAt)}` : ''}</div>
         </div>
       </div>
-      ${carePieces.length ? `<div class="px-dt-care-summary"><i data-lucide="triangle-alert"></i><div><b>${carePieces.length} pièce${carePieces.length > 1 ? 's' : ''} avec instruction${carePieces.length > 1 ? 's' : ''} à respecter</b><span>${carePieces.map((x) => `${esc(x.p.label)} : ${x.care.map(esc).join(' · ')}`).join(' — ')}</span></div></div>` : ''}
+      ${carePieces.length ? `<div class="px-dt-care-summary"><i data-lucide="triangle-alert"></i><div><b>${carePieces.length} pièce${carePieces.length > 1 ? 's' : ''} avec instruction${carePieces.length > 1 ? 's' : ''} à respecter</b><span>${carePieces.map((x) => `${esc(x.p.label)} : ${x.care.map(esc).join(' · ')}`).join(' · ')}</span></div></div>` : ''}
       ${st === 'recu' || st === 'trait' ? `<div class="px-next-step"><div><b>Action habituelle</b><span>Quand tout est fini, marquez directement la commande prête. « En cours » reste facultatif.</span></div><button class="px-btn primary" id="px-dt-ready"><i data-lucide="check-check"></i>Commande prête</button></div>` : ''}
       <details class="px-piece-exceptions" ${carePieces.length ? 'open' : ''}>
         <summary><span>Pièces et exceptions</span><span>${o.pieces.length} pièce${o.pieces.length > 1 ? 's' : ''} · suivi détaillé facultatif</span></summary>
@@ -2455,7 +2455,7 @@
     return `Bonjour ${first}, votre commande ${publicOrderNo(o)} (${o.pieces.length} pièce${o.pieces.length > 1 ? 's' : ''}) est prête chez ${pvName('Pressing Marshan')}.`
       + `\nRetrait dès maintenant.`
       + (due > 0 ? `\nSolde à régler au retrait : ${due} MAD.` : '')
-      + `\n— envoyé via Kiwi`;
+      + `\n·envoyé via Kiwi`;
   }
 
   function openWa(o) {
@@ -2599,7 +2599,7 @@
     return `<div class="px-rt-card">
       <div class="px-rt-top">
         <div class="px-rt-who"><b>${publicOrderNo(o)} · ${esc(c.name)}</b><span>${c.phone ? esc(c.phone) + ' · ' : ''}déposé ${fmtDay(o.droppedAt)}${o.notified ? ' · notifié' : ''}</span></div>
-        ${early ? `<span class="px-pill warn">Pas encore prêt, promis ${fmtDT(o.readyAt)}</span>` : `<div class="px-rt-slot ${o.rack ? '' : 'none'}">${o.rack ? `<b>${o.rack}</b><span>cintre</span>` : '<b>—</b><span>non rangé</span>'}</div>`}
+        ${early ? `<span class="px-pill warn">Pas encore prêt, promis ${fmtDT(o.readyAt)}</span>` : `<div class="px-rt-slot ${o.rack ? '' : 'none'}">${o.rack ? `<b>${o.rack}</b><span>cintre</span>` : '<b>·</b><span>non rangé</span>'}</div>`}
       </div>
       <div class="px-rt-pieces">
         ${o.pieces.map((p) => {

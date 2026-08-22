@@ -1,15 +1,15 @@
 /* ═══════════════════════════════════════════════════════════════════════════
- * Kiwi · PRINTER BRIDGE CLIENT — window.KiwiPrinter
+ * Kiwi · PRINTER BRIDGE CLIENT · window.KiwiPrinter
  * ---------------------------------------------------------------------------
  * The web half of real thermal printing. Detects the Kiwi Printer Bridge running
  * on the counter machine (bridge/server.js), lets the owner pair a printer
  * (IP · port · model · paper width · test slip), and relays ESC/POS jobs built by
  * assets/escpos.js to it. If the bridge isn't running, every print call returns
  * { ok:false, reason:'bridge-*' } so callers fail soft (KiwiHardware falls back
- * to its on-screen preview) — the exact pattern the caisse pairing uses.
+ * to its on-screen preview) · the exact pattern the caisse pairing uses.
  *
  * Transports, dans l'ordre : socket TCP natif · Web Bluetooth · WebUSB · pont
- * local 127.0.0.1 · RELAIS CLOUD (/api/print — l'iPad et les tablettes : la caisse dépose le
+ * local 127.0.0.1 · RELAIS CLOUD (/api/print · l'iPad et les tablettes : la caisse dépose le
  * ticket, le pont du comptoir le récupère). Voir « transport D » plus bas.
  *
  * Config (localStorage `kiwiPrinterCfg`): { ip, port, model, paper }.
@@ -29,7 +29,7 @@
   'use strict';
 
   /* The bridge's own port. 9110 is the default, but on a Windows till it is not
-   * guaranteed free — and the bridge exits when the port is taken, which on
+   * guaranteed free · and the bridge exits when the port is taken, which on
    * Windows means a console flash the owner never sees, then "pont non détecté"
    * with no way forward. So the shop can start it on another port
    * (KIWI_BRIDGE_PORT, see the .cmd on /printer) and we FIND it instead of
@@ -75,20 +75,20 @@
   }
 
   /* Makes sold into Moroccan / North-African POS. All of these speak ESC/POS,
-   * which is what KiwiEscPos emits — the field is a label for the owner, not a
+   * which is what KiwiEscPos emits · the field is a label for the owner, not a
    * driver, so an unlisted make that speaks ESC/POS works on "Générique".
    * `note` carries a real caveat shown under the picker when that make is
    * chosen.
    *
    * The model families in the labels are the ones actually on sale in Morocco,
    * taken from the catalogues of Moroccan POS vendors (fournipro.ma, iris.ma,
-   * lepc.ma, posmaroc.ma) rather than from a manufacturer's world range — a
+   * lepc.ma, posmaroc.ma) rather than from a manufacturer's world range · a
    * merchant recognises the box on their counter, not the global SKU list.
    *
    * `driver` is the make's own driver/support page, and it is a FALLBACK, not
    * the happy path: over Bluetooth, USB or the bridge, Kiwi pushes ESC/POS
    * bytes itself and no driver is involved at all. It matters in exactly two
-   * places — printing labels through the browser/Windows driver route (see
+   * places · printing labels through the browser/Windows driver route (see
    * LABEL_SIZES above), and Windows refusing a WebUSB claim until the printer
    * has a WinUSB-flavoured driver (see the usb transport below). Every URL here
    * was fetched and confirmed live; a make with no reachable official download
@@ -108,7 +108,7 @@
     { id: 'citizen', label: 'Citizen (CT-E351 / CT-S851)',
       driver: 'https://www.citizen-systems.com/en/support/drivers-and-tools/' },
     /* Vendu au Maroc surtout en portable Bluetooth (MTP-3F, PT-210). Pas de
-     * page de téléchargement officielle joignable — d'où l'absence de lien. */
+     * page de téléchargement officielle joignable · d'où l'absence de lien. */
     { id: 'goojprt', label: 'Goojprt (MTP-3F / PT-210)',
       note: 'Goojprt ne publie pas de page de téléchargement officielle joignable. Ces modèles sont de l\'ESC/POS générique : connectez-les en Bluetooth ou en USB, aucun pilote n\'est nécessaire.' },
     { id: 'munbyn', label: 'Munbyn',
@@ -122,7 +122,7 @@
     { id: 'posiflex', label: 'Posiflex (Aura)', driver: 'https://download.posiflex.com/' },
     { id: 'nexa', label: 'Nexa' },
     { id: 'milestone', label: 'Milestone' },
-    /* First Kiwi client's hardware — et pas un cas isolé : posmaroc.ma vend
+    /* First Kiwi client's hardware · et pas un cas isolé : posmaroc.ma vend
      * toute la gamme (WD8260, WD8210, WD9800, WD980, tiroir WD0408), donc
      * c'est le distributeur à indiquer plutôt qu'un site constructeur.
      * WD8260 (reçus, 80 mm, USB + LAN) déclare "Command Support: ESC/POS" sur
@@ -130,7 +130,7 @@
      * (étiquettes, 110 mm, USB + Bluetooth) ne déclare PAS son langage :
      * beaucoup d'imprimantes d'étiquettes parlent TSPL et non ESC/POS.
      * À vérifier par un ticket test avant de compter dessus. */
-    { id: 'wdlink', label: 'WDLink (WD8260 / WD8210)', note: 'WD8260 (reçus, 80 mm) : ESC/POS confirmé sur la plaque, rien à régler. WD8210 (étiquettes, 110 mm) : le langage n\'est pas indiqué — beaucoup d\'imprimantes d\'étiquettes parlent TSPL. Faites un ticket test avant la mise en service.',
+    { id: 'wdlink', label: 'WDLink (WD8260 / WD8210)', note: 'WD8260 (reçus, 80 mm) : ESC/POS confirmé sur la plaque, rien à régler. WD8210 (étiquettes, 110 mm) : le langage n\'est pas indiqué · beaucoup d\'imprimantes d\'étiquettes parlent TSPL. Faites un ticket test avant la mise en service.',
       driver: 'https://posmaroc.ma/' },
     { id: 'star', label: 'Star', note: 'Les Star impriment en mode Star Line, pas en ESC/POS. Activez l\'émulation ESC/POS sur l\'imprimante, sinon le ticket sortira illisible.',
       driver: 'https://starmicronics.com/support/downloads/' },
@@ -139,7 +139,7 @@
      * fournipro.ma, iris.ma) et elle parle ZPL, pas ESC/POS. Sans cette entrée
      * le commerçant choisit « Générique » et sort une étiquette illisible sans
      * comprendre pourquoi : l'avertissement vaut mieux que le silence. */
-    { id: 'zebra', label: 'Zebra (ZQ / ZD) — étiquettes', note: 'Les Zebra parlent ZPL, pas ESC/POS : Kiwi ne peut pas les piloter directement en Bluetooth ni en USB. Pour vos étiquettes, installez le pilote Zebra sur la caisse et utilisez le bouton « Imprimer » (impression navigateur).',
+    { id: 'zebra', label: 'Zebra (ZQ / ZD) · étiquettes', note: 'Les Zebra parlent ZPL, pas ESC/POS : Kiwi ne peut pas les piloter directement en Bluetooth ni en USB. Pour vos étiquettes, installez le pilote Zebra sur la caisse et utilisez le bouton « Imprimer » (impression navigateur).',
       driver: 'https://www.zebra.com/us/en/support-downloads/printers.html' },
   ];
   function modelNote(id) {
@@ -278,7 +278,7 @@
 
   /* `osPrinter` is the name of a printer the till ALREADY has installed, printed
    * to through the bridge's spooler route. It is the answer for the commonest
-   * shop setup — a USB thermal printer on a Windows caisse — where Bluetooth,
+   * shop setup · a USB thermal printer on a Windows caisse · where Bluetooth,
    * WebUSB and the network path all fail at once (Windows owns the USB device,
    * and a USB printer has no IP). */
   function getConfig() {
@@ -308,7 +308,7 @@
 
   /* Try the remembered port, then the rest of the range. Each miss is a refused
    * connection on loopback, which fails in about a millisecond, so a full scan
-   * is imperceptible — and it only ever happens once per browser. */
+   * is imperceptible · and it only ever happens once per browser. */
   function ping() {
     var remembered = 0;
     try { remembered = Number(ls(PORT_KEY)) || 0; } catch (_) {}
@@ -332,10 +332,10 @@
     return step();
   }
 
-  // ── transport A: Web Bluetooth (preferred — appless, no IP) ──────────────────
+  // ── transport A: Web Bluetooth (preferred · appless, no IP) ──────────────────
   // Cheap ESC/POS BLE printers expose varied GATT services, so we request broadly
   // and discover a writable characteristic after connecting. The browser shows its
-  // own device picker (needs a user gesture). Chrome / Android / desktop Chrome —
+  // own device picker (needs a user gesture). Chrome / Android / desktop Chrome ·
   // not iOS Safari (feature-detected via navigator.bluetooth).
   var bt = { device: null, chr: null, name: '' };
   function btConnected() { return !!(bt.chr && bt.device && bt.device.gatt && bt.device.gatt.connected); }
@@ -399,7 +399,7 @@
   // USB+Bluetooth), and a USB receipt printer is the most common setup in a
   // small shop: no IP to type, no bridge to install, no pairing.
   //
-  // USB printers expose interface class 7 (printer) with a bulk OUT endpoint —
+  // USB printers expose interface class 7 (printer) with a bulk OUT endpoint ·
   // ESC/POS bytes go straight down it. The browser shows its own device picker
   // (needs a user gesture) and remembers the grant per origin.
   //
@@ -462,7 +462,7 @@
   /* Silent re-attach. Chrome remembers a USB grant per origin, so after the
    * owner has picked the printer once, navigator.usb.getDevices() hands it back
    * on every later load with NO picker and no user gesture. Without this the
-   * cashier had to re-pick the printer every single morning — the permission was
+   * cashier had to re-pick the printer every single morning · the permission was
    * still there, Kiwi just wasn't asking for it. Best-effort: any failure simply
    * leaves the panel showing "aucune imprimante", exactly as before. */
   function reconnectUsb() {
@@ -548,7 +548,7 @@
     return nativeSocketSend(bytes, target).then(function (r) { return r.ok ? r : next(); }, next);
   }
 
-  /* ── transport C: the bridge — to a TCP printer, or to one the OS already has ──
+  /* ── transport C: the bridge · to a TCP printer, or to one the OS already has ──
    * Same helper, two targets. `osPrinter` wins when both are set: it is the
    * deliberate choice made in the panel, while an `ip` can survive in saved
    * config from an earlier setup and would otherwise silently outrank it. */
@@ -559,7 +559,7 @@
     var cfg = getConfig();
     if (!(target && (target.ip || target.osPrinter)) && !cfg.ip && !cfg.osPrinter) return Promise.resolve({ ok: false, reason: 'not-configured' });
     // Locate the bridge before the first job if we haven't yet (or if it moved
-    // ports since — a restart on a busy 9110 lands somewhere else).
+    // ports since · a restart on a busy 9110 lands somewhere else).
     if (!bridgePort) {
       return ping().then(function (j) {
         return j ? bridgePrintNow(bytes, target) : viaRelayOrFail(bytes, target);
@@ -567,7 +567,7 @@
     }
     return bridgePrintNow(bytes, target).then(function (res) {
       // Le pont local a disparu entre deux tickets : on oublie son port et on
-      // tente le relais — la prochaine impression re-sondera 127.0.0.1 d'abord.
+      // tente le relais · la prochaine impression re-sondera 127.0.0.1 d'abord.
       if (res && res.reason === 'bridge-unreachable') { bridgePort = 0; return viaRelayOrFail(bytes, target); }
       return res;
     });
@@ -600,7 +600,7 @@
   // Un iPad n'a ni pont local (127.0.0.1), ni Web Bluetooth, ni WebUSB. La caisse
   // DÉPOSE donc le ticket ESC/POS sur kiwi-os.com (/api/print/jobs) et le Kiwi
   // Printer Bridge du comptoir, appairé une fois avec un code, vient le chercher
-  // et le pousse à l'imprimante réseau — sortant uniquement, rien à ouvrir, pas
+  // et le pousse à l'imprimante réseau · sortant uniquement, rien à ouvrir, pas
   // d'IP de PC à taper, pas de certificat. Même cible (ip:port / imprimante
   // système) que le pont local ; seul le chemin change. Fail-soft partout :
   // { ok:false, reason } et l'appelant retombe sur l'aperçu à l'écran.
@@ -770,7 +770,7 @@
 
   /* La caisse n'a PAS window.Kiwi.toast (vérifié sur prod) : l'avis de repli
    * doit se suffire à lui-même, sinon il est muet sur la seule surface où il
-   * compte — le comptoir qui doit savoir qu'un bon cuisine est sorti chez lui. */
+   * compte · le comptoir qui doit savoir qu'un bon cuisine est sorti chez lui. */
   function fallbackNotice(msg) {
     try {
       if (window.Kiwi && window.Kiwi.toast) { window.Kiwi.toast(msg); return; }
@@ -837,7 +837,7 @@
    * l'imprimante est déjà installée, c'est justement impossible : Windows
    * possède le périphérique, WebUSB se voit refuser le claim (« Imprimante déjà
    * utilisée par le système ») et il n'y a ni Bluetooth ni pont. L'imprimante
-   * marche pourtant très bien — pour tout le reste de Windows.
+   * marche pourtant très bien · pour tout le reste de Windows.
    *
    * D'où cette quatrième voie : on peint le reçu en HTML et on laisse le pilote
    * du système l'imprimer. Ce n'est pas silencieux (il y a une boîte de
@@ -869,7 +869,7 @@
    * Le « Z » de fin de journée est une pièce comptable : le patron l'agrafe, le
    * comptable le relit. Il doit donc sortir IDENTIQUE que Kiwi parle à
    * l'imprimante en ESC/POS (KiwiEscPos.dayReport) ou que ce soit le pilote
-   * Windows qui l'imprime — sinon deux exemplaires du même jour n'ont pas la
+   * Windows qui l'imprime · sinon deux exemplaires du même jour n'ont pas la
    * même tête et plus personne ne sait lequel fait foi. L'ordre des blocs,
    * les libellés et les totaux suivent donc ligne pour ligne l'encodeur. */
   function dayReportHTML(o) {
@@ -888,7 +888,7 @@
     var addr = o.address || (r.store && r.store.location) || '';
     if (addr) out.push('<div class="kpr-c">' + esc(addr) + '</div>');
     if (o.dateLabel) out.push('<div class="kpr-c">' + esc(o.dateLabel) + '</div>');
-    if (o.copy) out.push('<div class="kpr-c kpr-copy">— ' + esc(o.copy) + ' —</div>');
+    if (o.copy) out.push('<div class="kpr-c kpr-copy">· ' + esc(o.copy) + ' ·</div>');
     rule();
 
     if (o.openedLabel) R('Ouverture', o.openedLabel);
@@ -899,19 +899,19 @@
 
     /* Le mode « ventes par article » suit l'encodeur ESC/POS coupe pour coupe
        (KiwiEscPos.dayReport, même drapeau) : sans ça, demander le détail article
-       sur une imprimante pilotée par le système sortait un Z complet — net et
-       tiroir compris — au lieu du petit ticket demandé. */
+       sur une imprimante pilotée par le système sortait un Z complet · net et
+       tiroir compris · au lieu du petit ticket demandé. */
     var itemsOnly = !!o.itemsOnly;
 
     if (!itemsOnly) {
     R('Transactions', String(r.txns || 0));
     /* Le titre suit ce que le chiffre contient. Dès qu'une créance pèse dedans
-       — une livraison partie en compte, un règlement à crédit —, « ENCAISSÉ »
+       · une livraison partie en compte, un règlement à crédit ·, « ENCAISSÉ »
        est faux : l'écran de clôture les exclut déjà de son propre total, et le
        Z imprimait un nombre plus grand sous le même intitulé. Deux documents du
        même service, deux totaux. On annonce donc FACTURÉ, on retranche la
        créance, on redonne l'encaissé réel. Sans créance, pas un octet ne change
-       — les autres métiers impriment à l'identique. */
+       · les autres métiers impriment à l'identique. */
     var recv = +r.receivable || 0;
     R(recv > 0 ? 'TOTAL FACTURÉ' : 'TOTAL ENCAISSÉ', money(r.gross), 'kpr-b');
     var M = o.methodLabels || {};
@@ -926,7 +926,7 @@
     if (r.basket) R('Ticket moyen', money(r.basket));
     if (r.tips) R('Pourboires', money(r.tips));
     if (r.discounts && r.discounts.amount) R('Remises accordées', '- ' + money(r.discounts.amount));
-    /* Ni l'un ni l'autre n'entre dans le total encaissé — ils sont imprimés
+    /* Ni l'un ni l'autre n'entre dans le total encaissé · ils sont imprimés
        parce qu'un avoir fait sortir de la marchandise sans faire sonner le
        tiroir, et qu'un Z muet là-dessus ne se relit pas. */
     if (r.avoirs && r.avoirs.used) R('Réglé en avoir (' + (r.avoirs.usedCount || 0) + ')', money(r.avoirs.used));
@@ -1043,7 +1043,7 @@
         '.kpr-r>span:last-child{white-space:nowrap;}' +
         '.kpr-tot{font-weight:700;font-size:12pt;margin:1mm 0;}' +
         '.kpr-foot{margin-top:3mm;}' +
-        /* Rapport journalier — le titre sous l'enseigne, la mention de copie,
+        /* Rapport journalier · le titre sous l'enseigne, la mention de copie,
          * les lignes en gras (catégories, totaux) et la note de couverture.
          * `white-space:pre` sur le libellé garde l'indentation de deux espaces
          * qui distingue un produit de sa catégorie ; sans elle le HTML les
@@ -1055,7 +1055,7 @@
         '.kpr-sub{opacity:.75;}' +
         '.kpr-note{font-size:7.5pt;opacity:.75;margin-top:1mm;}' +
         /* Une catégorie et ses produits ne doivent pas être coupés par un saut
-         * de page au milieu — sur une imprimante à feuilles, un rayon dont le
+         * de page au milieu · sur une imprimante à feuilles, un rayon dont le
          * total atterrit seul sur la page suivante est illisible. */
         '.kpr-r{break-inside:avoid;}' +
       '}';
@@ -1087,7 +1087,7 @@
     return browserPrintHTML(dayReportHTML(o), o.paper);
   }
 
-  /* printDayReport — la voie nominale, avec le repli qui compte.
+  /* printDayReport · la voie nominale, avec le repli qui compte.
    *
    * Les trois transports ESC/POS ne répondent que si une imprimante est
    * réellement appairée. Une clôture ne doit PAS échouer parce que le
@@ -1201,7 +1201,7 @@
         '<p class="kpr-sub">' + (fromPrint
           ? (isLabel
             ? 'Imprimez tout de suite, ou connectez une imprimante (Bluetooth ou réseau) pour imprimer directement la prochaine fois.'
-            : 'Aucune imprimante n’est connectée à Kiwi. Si l’imprimante est déjà installée sur cette caisse, imprimez par le système — ou connectez-la en Bluetooth ou en USB pour imprimer sans boîte de dialogue la prochaine fois.')
+            : 'Aucune imprimante n’est connectée à Kiwi. Si l’imprimante est déjà installée sur cette caisse, imprimez par le système · ou connectez-la en Bluetooth ou en USB pour imprimer sans boîte de dialogue la prochaine fois.')
           : 'Connectez l’imprimante en Bluetooth ou en USB pour imprimer sans boîte de dialogue. Si elle est déjà installée sur cette caisse, Kiwi peut aussi l’utiliser via la boîte d’impression du système.') + '</p>' +
         (fromPrint ? '<div class="kpr-quick">' +
           (context.onBrowserPrint ? '<button class="kpr-btn kpr-browser" type="button" id="kpr-browser">Imprimer</button>' : '') +
@@ -1325,7 +1325,7 @@
     }
     function close() { ov.remove(); }
     /* La caisse n'a pas window.Kiwi.toast : sans repli, chaque « Tester » du
-       modal serait muet au comptoir — la surface qui s'en sert vraiment. */
+       modal serait muet au comptoir · la surface qui s'en sert vraiment. */
     function toast(msg) { try { if (window.Kiwi && Kiwi.toast) Kiwi.toast(msg); else fallbackNotice(msg); } catch (_) {} }
 
     function validIp(s) {
@@ -1338,18 +1338,18 @@
 
     function frReason(reason) {
       var r = String(reason || '');
-      if (r === 'bridge-unreachable') return 'Pont introuvable — lancez Kiwi Printer Bridge sur cet ordinateur, ou associez un pont au relais Kiwi pour imprimer depuis une tablette';
-      if (r === 'relay-offline') return 'Aucun pont en ligne pour le relais Kiwi — vérifiez que Kiwi Printer Bridge tourne sur l’ordinateur du comptoir';
+      if (r === 'bridge-unreachable') return 'Pont introuvable · lancez Kiwi Printer Bridge sur cet ordinateur, ou associez un pont au relais Kiwi pour imprimer depuis une tablette';
+      if (r === 'relay-offline') return 'Aucun pont en ligne pour le relais Kiwi · vérifiez que Kiwi Printer Bridge tourne sur l’ordinateur du comptoir';
       if (r === 'relay-not-provisioned') return 'Relais d’impression pas encore activé côté serveur';
-      if (r === 'unauthorized') return 'Caisse non reconnue — appairez-la ou reconnectez-vous';
+      if (r === 'unauthorized') return 'Caisse non reconnue · appairez-la ou reconnectez-vous';
       if (r === 'expired') return 'Le pont n’a pas récupéré le ticket à temps';
       if (r === 'not-configured') return 'Aucune imprimante configurée';
       if (r === 'local-network-denied') return 'Accès au réseau local refusé. Ouvrez Réglages > Kiwi Pro > Réseau local';
       if (r === 'refused') return 'Connexion refusée. Vérifiez le port de l’imprimante';
       if (r === 'unreachable') return 'Imprimante introuvable sur ce réseau';
-      if (/timeout/i.test(r)) return 'Imprimante injoignable — vérifiez l’adresse IP et qu’elle est allumée';
-      if (/ECONNREFUSED/i.test(r)) return 'Connexion refusée à cette adresse — ce n’est pas le port d’une imprimante réseau';
-      if (/ENOTFOUND|EHOSTUNREACH|ENETUNREACH|EINVAL|EHOSTDOWN/i.test(r)) return 'Adresse introuvable sur le réseau — vérifiez l’IP';
+      if (/timeout/i.test(r)) return 'Imprimante injoignable · vérifiez l’adresse IP et qu’elle est allumée';
+      if (/ECONNREFUSED/i.test(r)) return 'Connexion refusée à cette adresse · ce n’est pas le port d’une imprimante réseau';
+      if (/ENOTFOUND|EHOSTUNREACH|ENETUNREACH|EINVAL|EHOSTDOWN/i.test(r)) return 'Adresse introuvable sur le réseau · vérifiez l’IP';
       return r || 'inconnu';
     }
 
@@ -1416,7 +1416,7 @@
       var rows = [];
 
       var caisseCur = stConfig.bindings.caisse || '';
-      var caisseOpts = '<option value="">— Imprimante par défaut (actuelle) —</option>' +
+      var caisseOpts = '<option value="">· Imprimante par défaut (actuelle) ·</option>' +
         stConfig.profiles.map(function (p) {
           return '<option value="' + esc(p.id) + '"' + (p.id === caisseCur ? ' selected' : '') + '>' + esc(p.name) + ' (' + esc(p.type === 'ip' ? p.ip : p.type) + ')</option>';
         }).join('');
@@ -1431,7 +1431,7 @@
 
       prepStations.forEach(function (st) {
         var cur = stConfig.bindings[st.id] || '';
-        var opts = '<option value="">— Même imprimante que la caisse —</option>' +
+        var opts = '<option value="">· Même imprimante que la caisse ·</option>' +
           stConfig.profiles.map(function (p) {
             return '<option value="' + esc(p.id) + '"' + (p.id === cur ? ' selected' : '') + '>' + esc(p.name) + ' (' + esc(p.type === 'ip' ? p.ip : p.type) + ')</option>';
           }).join('');
@@ -1651,12 +1651,12 @@
         var rc = $('#kpr-recheck'); if (rc) rc.addEventListener('click', refreshStatus);
         test.disabled = true;
         /* Pas de pont ici (iPad, tablette, PC sans pont) : un pont EN LIGNE via
-         * le relais suffit — l'imprimante réseau ci-dessous passe par lui. */
+         * le relais suffit · l'imprimante réseau ci-dessous passe par lui. */
         return paintRelay().then(function (rs) {
           if (!ov.isConnected || !rs || !rs.online) return;
           var names = rs.bridges.filter(function (b) { return b.online; }).map(function (b) { return b.name || 'pont'; });
           st.className = 'kpr-status on';
-          t.textContent = 'Relais Kiwi · ' + (names.length > 1 ? names.length + ' ponts en ligne' : 'pont « ' + names[0] + ' » en ligne') + ' — l’imprimante réseau s’imprime via ce pont';
+          t.textContent = 'Relais Kiwi · ' + (names.length > 1 ? names.length + ' ponts en ligne' : 'pont « ' + names[0] + ' » en ligne') + ' · l’imprimante réseau s’imprime via ce pont';
           test.disabled = false; bridgeUp = true;
         });
       });
@@ -1673,11 +1673,11 @@
       return relayProbe(true).then(function (rs) {
         if (!ov.isConnected) return rs;
         if (!rs.provisioned) { st.className = 'kpr-status off'; t.textContent = 'Relais pas encore activé côté serveur.'; return rs; }
-        if (rs.authed === false) { st.className = 'kpr-status off'; t.textContent = 'Cet appareil n’est pas reconnu comme la caisse d’un commerce — appairez-le d’abord.'; return rs; }
+        if (rs.authed === false) { st.className = 'kpr-status off'; t.textContent = 'Cet appareil n’est pas reconnu comme la caisse d’un commerce · appairez-le d’abord.'; return rs; }
         var on = rs.bridges.filter(function (b) { return b.online; }).length;
         st.className = 'kpr-status ' + (on ? 'on' : 'off');
         t.textContent = !rs.bridges.length ? 'Aucun pont associé à ce commerce.'
-          : on ? (on + ' pont' + (on > 1 ? 's' : '') + ' en ligne') : 'Pont associé mais hors ligne — lancez Kiwi Printer Bridge sur l’ordinateur du comptoir.';
+          : on ? (on + ' pont' + (on > 1 ? 's' : '') + ' en ligne') : 'Pont associé mais hors ligne · lancez Kiwi Printer Bridge sur l’ordinateur du comptoir.';
         list.innerHTML = rs.bridges.map(function (b) {
           return '<div class="kpr-relay-row"><span class="kpr-d ' + (b.online ? 'on' : '') + '"></span><b>' + esc(b.name || 'Pont') + '</b> <small>' + esc((b.platform ? b.platform + ' · ' : '') + (b.online ? 'en ligne' : fmtAgo(b.last_seen_ts))) + '</small>' +
             '<button type="button" class="kpr-prof-del" data-relay-revoke="' + esc(b.id) + '" aria-label="Dissocier">×</button></div>';
@@ -1698,7 +1698,7 @@
       box.style.display = '';
       var mins = Math.max(1, Math.round((j.expires_ts - Date.now()) / 60000));
       box.innerHTML = '<div class="kpr-code-num">' + esc(String(j.code)) + '</div>' +
-        '<p class="kpr-note">Sur l’ordinateur du comptoir, lancez Kiwi Printer Bridge puis ouvrez <b>http://127.0.0.1:9110</b> et tapez ce code. Valable ' + mins + ' min — une seule fois.</p>';
+        '<p class="kpr-note">Sur l’ordinateur du comptoir, lancez Kiwi Printer Bridge puis ouvrez <b>http://127.0.0.1:9110</b> et tapez ce code. Valable ' + mins + ' min · une seule fois.</p>';
     }
     var pairBtn = $('#kpr-relay-pair');
     if (pairBtn) pairBtn.addEventListener('click', function () {
@@ -1729,8 +1729,8 @@
     ov.addEventListener('click', function (e) { if (e.target === ov) close(); });
     $('#kpr-save').addEventListener('click', function () {
       var f = readForm();
-      if (!validIp(f.ip)) { toast('Adresse invalide — attendu : 192.168.1.50 (ou un nom comme EPSON.local)'); $('#kpr-ip').focus(); return; }
-      if (!validPort(f.port)) { toast('Port invalide — un nombre entre 1 et 65535 (9100 en général)'); $('#kpr-port').focus(); return; }
+      if (!validIp(f.ip)) { toast('Adresse invalide · attendu : 192.168.1.50 (ou un nom comme EPSON.local)'); $('#kpr-ip').focus(); return; }
+      if (!validPort(f.port)) { toast('Port invalide · un nombre entre 1 et 65535 (9100 en général)'); $('#kpr-port').focus(); return; }
       setConfig(Object.assign(f, { osPrinter: '' }));
       paintTarget();
       toast('Imprimante enregistrée');
@@ -1849,8 +1849,8 @@
     $('#kpr-test').addEventListener('click', function () {
       var f = readForm();
       if (!f.ip) { toast('Saisissez d’abord l’adresse IP de l’imprimante'); $('#kpr-ip').focus(); return; }
-      if (!validIp(f.ip)) { toast('Adresse invalide — attendu : 192.168.1.50 (ou un nom comme EPSON.local)'); $('#kpr-ip').focus(); return; }
-      if (!validPort(f.port)) { toast('Port invalide — un nombre entre 1 et 65535 (9100 en général)'); $('#kpr-port').focus(); return; }
+      if (!validIp(f.ip)) { toast('Adresse invalide · attendu : 192.168.1.50 (ou un nom comme EPSON.local)'); $('#kpr-ip').focus(); return; }
+      if (!validPort(f.port)) { toast('Port invalide · un nombre entre 1 et 65535 (9100 en général)'); $('#kpr-port').focus(); return; }
       var btn = this; btn.disabled = true; var orig = btn.textContent; btn.textContent = 'Impression…';
       var target = { ip: f.ip, port: Number(f.port) || 9100 };
       var slip = window.KiwiEscPos.testSlip({ ip: f.ip, paper: f.paper });
@@ -1886,8 +1886,8 @@
         .then(function (j) {
           scanBtn.textContent = orig; scanBtn.disabled = !(socket || bridgeUp);
           if (!out) return;
-          if (!j) { out.textContent = 'Pont injoignable — relancez Kiwi Printer Bridge puis réessayez.'; return; }
-          if (j.legacy) { out.textContent = 'Détection indisponible sur ce pont — installez la version 1.3 ou plus récente.'; return; }
+          if (!j) { out.textContent = 'Pont injoignable · relancez Kiwi Printer Bridge puis réessayez.'; return; }
+          if (j.legacy) { out.textContent = 'Détection indisponible sur ce pont · installez la version 1.3 ou plus récente.'; return; }
           if (!j.ok) { out.textContent = 'Recherche impossible : ' + frReason(j.error); return; }
           if (!j.printers.length) { out.textContent = 'Aucune imprimante réseau trouvée. Vérifiez qu’elle est allumée et sur le même réseau que cet ordinateur.'; return; }
           out.innerHTML = 'Trouvée' + (j.printers.length > 1 ? 's' : '') + ' : ' + j.printers.map(function (p) {
@@ -1897,7 +1897,7 @@
             b.addEventListener('click', function () {
               $('#kpr-ip').value = this.getAttribute('data-ip');
               $('#kpr-port').value = '9100';
-              toast('Adresse remplie — imprimez un ticket test puis enregistrez');
+              toast('Adresse remplie · imprimez un ticket test puis enregistrez');
             });
           });
         });
@@ -1937,16 +1937,16 @@
     printReceipt: printReceipt, printKitchen: printKitchen, printLabels: printLabels,
     // son propre repli : une journée doit pouvoir se clôturer sans thermique.
     printDayReport: printDayReport, dayReportHTML: dayReportHTML,
-    // Le repli « pilote du système » — même objet reçu que printReceipt.
+    // Le repli « pilote du système » · même objet reçu que printReceipt.
     browserReceipt: browserReceipt, browserDayReport: browserDayReport,
     /* Le repli brut, pour un module qui peint SON propre ticket : le reçu de
      * caisse (assets/receipt.js) a sa mise en page et n'a besoin d'ici que la
-     * mécanique — isoler le ticket dans la page, poser la largeur du rouleau,
+     * mécanique · isoler le ticket dans la page, poser la largeur du rouleau,
      * ouvrir la boîte d'impression, nettoyer derrière. */
     browserPrintHTML: browserPrintHTML,
     // A function, not a snapshot: the port is only known after discovery.
     openSetup: openSetup, bridgeUrl: function () { return bridgeBase(); }, bridgePorts: BRIDGE_PORTS,
-    // Le relais cloud — ce que l'iPad utilise à la place du pont local.
+    // Le relais cloud · ce que l'iPad utilise à la place du pont local.
     relayProbe: relayProbe, relayEnqueue: relayEnqueue, relayPairCode: relayPairCode, relayRevoke: relayRevoke,
   };
 })();

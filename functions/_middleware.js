@@ -553,7 +553,7 @@ function authPage(opts) {
       encrypted: 'Données chiffrées', private: 'Jamais revendues', flexible: 'Sans engagement',
       operatorBad: 'Code opérateur incorrect.', operatorCode: 'Code opérateur', enter: 'Entrer',
       strength: { label: 'Force', weak: 'faible', medium: 'moyen', strong: 'fort' },
-      errors: { email: 'Adresse e-mail invalide.', name: 'Indiquez votre nom.', weak: 'Mot de passe : 10 caractères minimum.', short: 'Au moins 10 caractères.', common: 'Ce mot de passe est trop courant.', personal: 'Évitez votre e-mail ou le nom de votre commerce.', long: 'Mot de passe trop long.', exists: 'Cet e-mail a déjà un compte — connectez-vous.', 'bad-creds': 'E-mail ou mot de passe incorrect.', 'bad-json': 'Requête invalide.', 'not-configured': 'Service momentanément indisponible.', fallback: 'Une erreur est survenue. Réessayez.', network: 'Erreur réseau. Réessayez.' }
+      errors: { email: 'Adresse e-mail invalide.', name: 'Indiquez votre nom.', weak: 'Mot de passe : 10 caractères minimum.', short: 'Au moins 10 caractères.', common: 'Ce mot de passe est trop courant.', personal: 'Évitez votre e-mail ou le nom de votre commerce.', long: 'Mot de passe trop long.', exists: 'Cet e-mail a déjà un compte · connectez-vous.', 'bad-creds': 'E-mail ou mot de passe incorrect.', 'bad-json': 'Requête invalide.', 'not-configured': 'Service momentanément indisponible.', fallback: 'Une erreur est survenue. Réessayez.', network: 'Erreur réseau. Réessayez.' }
     },
     en: {
       title: 'Kiwi · Your account', welcome: 'Welcome <em>to Kiwi</em>.',
@@ -565,7 +565,7 @@ function authPage(opts) {
       encrypted: 'Encrypted data', private: 'Never sold', flexible: 'No commitment',
       operatorBad: 'Incorrect operator code.', operatorCode: 'Operator code', enter: 'Enter',
       strength: { label: 'Strength', weak: 'weak', medium: 'medium', strong: 'strong' },
-      errors: { email: 'Enter a valid email address.', name: 'Enter your name.', weak: 'Password must contain at least 10 characters.', short: 'At least 10 characters.', common: 'This password is too common.', personal: 'Avoid your email or business name.', long: 'Password is too long.', exists: 'This email already has an account — sign in instead.', 'bad-creds': 'Incorrect email or password.', 'bad-json': 'Invalid request.', 'not-configured': 'Service temporarily unavailable.', fallback: 'Something went wrong. Please try again.', network: 'Network error. Please try again.' }
+      errors: { email: 'Enter a valid email address.', name: 'Enter your name.', weak: 'Password must contain at least 10 characters.', short: 'At least 10 characters.', common: 'This password is too common.', personal: 'Avoid your email or business name.', long: 'Password is too long.', exists: 'This email already has an account · sign in instead.', 'bad-creds': 'Incorrect email or password.', 'bad-json': 'Invalid request.', 'not-configured': 'Service temporarily unavailable.', fallback: 'Something went wrong. Please try again.', network: 'Network error. Please try again.' }
     },
     ar: {
       title: 'Kiwi · حسابك', welcome: 'مرحباً بك <em>في Kiwi</em>.',
@@ -577,7 +577,7 @@ function authPage(opts) {
       encrypted: 'بيانات مشفّرة', private: 'لا نبيع بياناتك', flexible: 'دون التزام',
       operatorBad: 'رمز المشغّل غير صحيح.', operatorCode: 'رمز المشغّل', enter: 'دخول',
       strength: { label: 'القوة', weak: 'ضعيفة', medium: 'متوسطة', strong: 'قوية' },
-      errors: { email: 'أدخل بريداً إلكترونياً صحيحاً.', name: 'أدخل اسمك.', weak: 'يجب أن تتكون كلمة المرور من 10 أحرف على الأقل.', short: '10 أحرف على الأقل.', common: 'كلمة المرور هذه شائعة جداً.', personal: 'تجنب بريدك الإلكتروني أو اسم نشاطك.', long: 'كلمة المرور طويلة جداً.', exists: 'يوجد حساب بهذا البريد — سجّل الدخول.', 'bad-creds': 'البريد الإلكتروني أو كلمة المرور غير صحيحة.', 'bad-json': 'الطلب غير صالح.', 'not-configured': 'الخدمة غير متاحة مؤقتاً.', fallback: 'حدث خطأ. حاول مرة أخرى.', network: 'تعذر الاتصال بالشبكة. حاول مرة أخرى.' }
+      errors: { email: 'أدخل بريداً إلكترونياً صحيحاً.', name: 'أدخل اسمك.', weak: 'يجب أن تتكون كلمة المرور من 10 أحرف على الأقل.', short: '10 أحرف على الأقل.', common: 'كلمة المرور هذه شائعة جداً.', personal: 'تجنب بريدك الإلكتروني أو اسم نشاطك.', long: 'كلمة المرور طويلة جداً.', exists: 'يوجد حساب بهذا البريد · سجّل الدخول.', 'bad-creds': 'البريد الإلكتروني أو كلمة المرور غير صحيحة.', 'bad-json': 'الطلب غير صالح.', 'not-configured': 'الخدمة غير متاحة مؤقتاً.', fallback: 'حدث خطأ. حاول مرة أخرى.', network: 'تعذر الاتصال بالشبكة. حاول مرة أخرى.' }
     }
   };
   const t = copy[lang];
@@ -616,7 +616,7 @@ function authPage(opts) {
        claire. Le sombre est repris plus bas, sur html[data-theme="dark"]. */
     color-scheme: light;
     --atlas:#0B6E4F; --riad:#053B2C; --mint:#7DF2B0;
-    /* --paper is the brand's cream — must stay CREAM in both themes so the
+    /* --paper is the brand's cream · must stay CREAM in both themes so the
        wordmark's "on-dark" variant (paper text on dark surface) still reads.
        --bg is the page background token, which is what actually flips. */
     --paper:#F7F5F0; --ink:#0A0F0D;
@@ -626,11 +626,11 @@ function authPage(opts) {
     --danger:#b0402f;
     --sans: "Inter Tight", -apple-system, BlinkMacSystemFont, "SF Pro Display",
             "Segoe UI Variable", "Segoe UI", Inter, Roboto, sans-serif;
-    --serif: "Instrument Serif", "New York", ui-serif, Georgia, Cambria, serif;
+    --serif: "Inter Tight", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   }
 
     /* Emphasis is roman. <em>/<i>/<cite> default to italic in every browser, and a
-       sheared sans at UI sizes reads as a rendering fault rather than as emphasis —
+       sheared sans at UI sizes reads as a rendering fault rather than as emphasis·
        the colour and face already set on each em rule carry the emphasis instead.
        Italics that DEPICT something (icing piped on a cake, an imitated masthead)
        set font-style on their own class, which outranks this. */
@@ -901,13 +901,13 @@ function authPage(opts) {
   /* Le sombre est un CHOIX du commerçant, pas une conséquence des réglages de son
      Mac. La porte suivait prefers-color-scheme, donc un poste en mode nuit
      ouvrait Kiwi sur un écran noir alors que le tableau de bord, lui, démarre en
-     clair — deux surfaces du même produit qui ne se ressemblaient pas. On s'aligne
+     clair · deux surfaces du même produit qui ne se ressemblaient pas. On s'aligne
      donc sur data-theme, écrit par design-vexel.js depuis la clé kiwiDashTheme
      avant le premier rendu : clair par défaut, sombre uniquement si le commerçant
      a basculé l'interrupteur. Si le script ne charge pas, on reste en clair. */
   html[data-theme="dark"] {
     color-scheme: dark;
-    /* Only --bg / --surface / structural tokens flip — --paper stays cream so
+    /* Only --bg / --surface / structural tokens flip · --paper stays cream so
        the wordmark's on-dark variant (paper text on dark card) still reads. */
     --bg:#0c1310;
     --ink:#e8efe9;
@@ -923,7 +923,7 @@ function authPage(opts) {
       radial-gradient(900px 560px at 92% 108%, rgba(11,110,79,.10), transparent 56%),
       var(--bg);
   }
-  /* Wordmark in dark = paper cream on dark surface — matches brand.html §01
+  /* Wordmark in dark = paper cream on dark surface · matches brand.html §01
      "Inverse" logo variant. */
   html[data-theme="dark"] .brand { color: var(--paper); }
   html[data-theme="dark"] .brand i { box-shadow: 0 0 0 4px rgba(125,242,176,.15); }
@@ -934,7 +934,7 @@ function authPage(opts) {
       0 40px 80px -34px rgba(0,0,0,.55),
       0 8px 24px -14px rgba(0,0,0,.40);
   }
-  /* Liquid Glass — DARK MODE ONLY. Here the card floats over the dark green-tinted
+  /* Liquid Glass · DARK MODE ONLY. Here the card floats over the dark green-tinted
      gradient, so real refraction reads beautifully. Light mode keeps its crisp
      white card (glass would wash out on cream). Fill stays high (70%) so the login
      form remains a legible reading/input surface. Falls back to the opaque dark
@@ -1079,7 +1079,7 @@ function authPage(opts) {
   // marketing landing page instead of the dashboard). Login → the dashboard
   // (their PIN lock). Signup → the dashboard with ?onboarding=1, which forces
   // the setup wizard to open (assets/onboarding.js) even over any stale demo
-  // state — a brand-new merchant has no PIN yet and must reach setup, not a
+  // state · a brand-new merchant has no PIN yet and must reach setup, not a
   // PIN prompt for a code they never chose.
   function post(u, data, errEl, btn, dest){
     errEl.textContent = '';
@@ -1128,7 +1128,7 @@ function authPage(opts) {
     });
   }
 
-  // Hidden operator entry — long-press (~1.4s) the wordmark to reveal the code
+  // Hidden operator entry · long-press (~1.4s) the wordmark to reveal the code
   // prompt. No visible affordance; clients never stumble onto it.
   var mark = document.getElementById('brand-mark');
   var opForm = document.getElementById('op-form');

@@ -7,7 +7,7 @@
    Ce cartouche annonçait « the single source of truth for color, typography,
    motion » pour tout le produit. C'était faux, et cher : il en existe trois.
      · assets/tokens.css        — dashboard, caisse, salle, cuisine, brand.
-                                  Inter Tight + Instrument Serif. FAIT AUTORITÉ.
+                                  Inter Tight + Inter Tight. FAIT AUTORITÉ.
      · ce fichier               — les cinq pages légales ci-dessus.
      · index.html (build Next)  — DM Sans + IBM Plex Sans Arabic, compilé hors
                                   de ce dépôt (voir kiwi-landing).
@@ -84,7 +84,7 @@
      produit vu depuis son pied de page. */
   --font-display:   "Inter Tight", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   --font-body:      "Inter Tight", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-  --font-editorial: "Instrument Serif", "Times New Roman", serif;
+  --font-editorial: "Inter Tight", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   /* PAS JetBrains Mono — même raison que dans assets/tokens.css : son zéro
      pointé sous Windows. Les deux usages ici sont des libellés, pas du code. */
   --font-mono:      Arial, Helvetica, sans-serif;

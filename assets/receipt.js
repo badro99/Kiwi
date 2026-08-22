@@ -639,7 +639,7 @@
       meta: {
         ref: '',
         date: pad2(to.getDate()) + '/' + pad2(to.getMonth() + 1) + '/' + to.getFullYear(),
-        time: pad2(from.getHours()) + ':' + pad2(from.getMinutes()) + ' — ' + pad2(to.getHours()) + ':' + pad2(to.getMinutes()),
+        time: pad2(from.getHours()) + ':' + pad2(from.getMinutes()) + ' · ' + pad2(to.getHours()) + ':' + pad2(to.getMinutes()),
         ts: to.getTime(),
         label: '',
       },
@@ -813,7 +813,7 @@
        celui du remboursement : ce papier ne doit pas pouvoir passer pour un
        ticket de vente. */
     if (doc.summary) b.feed(1).bold(true).size(1, 2).line(doc.summary.title).size(1, 1).bold(false);
-    if (doc.copy) b.bold(true).line('— ' + doc.copy + ' —').bold(false);
+    if (doc.copy) b.bold(true).line('·' + doc.copy + '·').bold(false);
 
     /* — quoi, quand, qui — */
     b.align('left'); rule();
@@ -961,7 +961,7 @@
     if (doc.welcome) P('kr-c kr-welcome', doc.welcome);
     if (refund) P('kr-banner', T.refund);
     if (doc.summary) P('kr-banner', doc.summary.title);
-    if (doc.copy) P('kr-c kr-copy', '— ' + doc.copy + ' —');
+    if (doc.copy) P('kr-c kr-copy', '·' + doc.copy + '·');
 
     out.push('<div class="kr-rule"></div>');
     if (doc.meta.ref) Rh(T.no, code(doc.meta.ref));
@@ -1102,7 +1102,7 @@
     doc.shop.legal.forEach(function (l) { out.push(l); });
     if (doc.kind === 'refund') out.push(T.refund);
     if (doc.summary) out.push(doc.summary.title);
-    if (doc.copy) out.push('— ' + doc.copy + ' —');
+    if (doc.copy) out.push('·' + doc.copy + '·');
     out.push(new Array(cols + 1).join('-'));
     if (doc.meta.ref) out.push(row(T.no, doc.meta.ref));
     out.push(row(doc.summary ? T.period : T.date, doc.meta.date + ' ' + doc.meta.time));

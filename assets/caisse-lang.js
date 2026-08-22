@@ -117,8 +117,8 @@
       'Montant en MAD': 'Amount in MAD',
       'Modifier le client': 'Edit customer', 'Nom complet': 'Full name', 'Téléphone': 'Phone',
       'Femme': 'Woman', 'Homme': 'Man', 'Autre': 'Other',
-      'Renseignez un maximum d’informations — elles nourrissent la fidélité et le marketing.':
-        'Fill in as much as you can — it feeds loyalty and marketing.',
+      'Renseignez un maximum d’informations · elles nourrissent la fidélité et le marketing.':
+        'Fill in as much as you can · it feeds loyalty and marketing.',
       'Accepte les messages': 'Accepts messages via', 'Accepte les': 'Accepts',
       'emails marketing': 'marketing emails',
       '(offres, fidélité). Consentement requis': '(offers, loyalty). Consent required',
@@ -194,15 +194,15 @@
       'sans numéro': 'no number',
       'Impression du reçu…': 'Printing the receipt…',
       'Duplicata imprimé': 'Duplicate printed',
-      'Impression échouée, le ticket n’est pas sorti': 'Printing failed — no receipt came out',
-      'Impression échouée, le ticket n\'est pas sorti': 'Printing failed — no receipt came out',
+      'Impression échouée, le ticket n’est pas sorti': 'Printing failed · no receipt came out',
+      'Impression échouée, le ticket n\'est pas sorti': 'Printing failed · no receipt came out',
       'Impression indisponible sur cet appareil': 'Printing is unavailable on this device',
       'Ticket introuvable': 'Receipt not found',
       'Imprimer la liste': 'Print the list',
       'Impression de la liste…': 'Printing the list…',
       'Liste imprimée': 'List printed',
-      'Impression échouée, la liste n’est pas sortie': 'Printing failed — no list came out',
-      'Impression échouée, la liste n\'est pas sortie': 'Printing failed — no list came out',
+      'Impression échouée, la liste n’est pas sortie': 'Printing failed · no list came out',
+      'Impression échouée, la liste n\'est pas sortie': 'Printing failed · no list came out',
       'Aucune vente à imprimer': 'No sale to print',
       'Récapitulatif indisponible': 'Summary unavailable',
 
@@ -210,10 +210,10 @@
       'Carnet clients': 'Customer book', 'Nouveau client': 'New customer',
       'Rechercher un nom ou 06…': 'Search a name or 06…', '06… ou nom': '06… or name',
       'Aucun client pour l’instant': 'No customer yet',
-      'Ajoutez votre premier client — il apparaîtra aussitôt sur le tableau de bord.':
-        'Add your first customer — they appear on the dashboard straight away.',
+      'Ajoutez votre premier client · il apparaîtra aussitôt sur le tableau de bord.':
+        'Add your first customer · they appear on the dashboard straight away.',
       'Le téléphone d’abord, la fiche suit la cliente, pas le ticket':
-        'Phone first — the record follows the customer, not the receipt',
+        'Phone first · the record follows the customer, not the receipt',
 
       /* ── échanges & inventaire ── */
       'Avoirs actifs': 'Active credit', 'Avoir': 'Credit note',
@@ -317,8 +317,8 @@
       'Montant en MAD': 'المبلغ بالدرهم',
       'Modifier le client': 'تعديل الزبون', 'Nom complet': 'الاسم الكامل', 'Téléphone': 'الهاتف',
       'Femme': 'أنثى', 'Homme': 'ذكر', 'Autre': 'آخر',
-      'Renseignez un maximum d’informations — elles nourrissent la fidélité et le marketing.':
-        'املأ أكبر قدر من المعلومات — منها يتغذّى الوفاء والتسويق.',
+      'Renseignez un maximum d’informations · elles nourrissent la fidélité et le marketing.':
+        'املأ أكبر قدر من المعلومات · منها يتغذّى الوفاء والتسويق.',
       'Accepte les messages': 'يقبل الرسائل عبر', 'Accepte les': 'يقبل',
       'emails marketing': 'الرسائل التسويقية',
       '(offres, fidélité). Consentement requis': '(عروض، وفاء). الموافقة إلزامية',
@@ -401,8 +401,8 @@
       'Carnet clients': 'دفتر الزبناء', 'Nouveau client': 'زبون جديد',
       'Rechercher un nom ou 06…': 'ابحث باسم أو 06…', '06… ou nom': '06… أو الاسم',
       'Aucun client pour l’instant': 'لا يوجد زبون بعد',
-      'Ajoutez votre premier client — il apparaîtra aussitôt sur le tableau de bord.':
-        'أضف أول زبون — سيظهر فوراً في لوحة القيادة.',
+      'Ajoutez votre premier client · il apparaîtra aussitôt sur le tableau de bord.':
+        'أضف أول زبون · سيظهر فوراً في لوحة القيادة.',
       'Le téléphone d’abord, la fiche suit la cliente, pas le ticket':
         'الهاتف أولاً، البطاقة تتبع الزبونة لا التذكرة',
 

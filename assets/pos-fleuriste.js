@@ -7,7 +7,7 @@
  *      pressing), un bouquet qui se construit en direct (total + taille S/M/L
  *      suggérée), plus deux bouquets signatures, et l'emballage kraft/satin.
  *   2. OCCASION & CARTE : l'occasion (la copie s'adapte avec pudeur pour le
- *      deuil) et la carte-message imprimée en Instrument Serif, petit format.
+ *      deuil) et la carte-message imprimée en Inter Tight, petit format.
  *   3. LIVRAISONS DU JOUR : un tableau par créneau (10–12 / 14–16 / 16–19),
  *      adresses de Tanger, statut préparé → en route → livré, destinataire ≠
  *      acheteur, et la confiance : photo du bouquet avant le départ.
@@ -669,7 +669,7 @@
       <div class="fl-bq-size">
         <div class="fl-bq-size-top">
           <span class="fl-bq-size-lbl"><i data-lucide="flower-2"></i>${count} tige${count > 1 ? 's' : ''}${b.presets.length ? ` · ${b.presets.length} signature${b.presets.length > 1 ? 's' : ''}` : ''}</span>
-          <span class="fl-bq-size-val">${size ? `${esc(size.label)} <b>(${size.id})</b>` : '—'}</span>
+          <span class="fl-bq-size-val">${size ? `${esc(size.label)} <b>(${size.id})</b>` : '·'}</span>
         </div>
         <div class="fl-bq-bar ${reduceMotion() ? 'reduce' : ''}"><i style="width:${pct}%"></i></div>
         <div class="fl-bq-ticks"><b class="${size && size.id === 'S' ? 'on' : ''}">S · &lt;10</b><b class="${size && size.id === 'M' ? 'on' : ''}">M · 10–20</b><b class="${size && size.id === 'L' ? 'on' : ''}">L · &gt;20</b></div>
@@ -836,7 +836,7 @@
         <span class="fl-cp-spray">${ART[occ.deuil ? 'lys' : 'rose_rouge'] || ''}</span>
         <div class="fl-cp-occ">${esc(occ.deuil ? 'Avec nos condoléances' : occ.label)}</div>
         <div class="fl-cp-body ${has ? '' : 'placeholder'}">${has ? esc(b.message) : (occ.deuil ? 'Le mot du client apparaîtra ici.' : 'Le message du client apparaîtra ici, dans cette police.')}</div>
-        ${signer ? `<div class="fl-cp-sign">— ${esc(signer)}</div>` : ''}
+        ${signer ? `<div class="fl-cp-sign">·${esc(signer)}</div>` : ''}
         <div class="fl-cp-foot">${pvReal() ? (esc(pvName('')) + (pvCity('') ? ' · ' + esc(pvCity('')) : '')) : 'Fleurs du Détroit · Tanger'}</div>
         <div class="fl-cp-actions">
           <button class="fl-btn secondary" id="fl-cp-print" style="flex:1;"><i data-lucide="printer"></i>Imprimer la carte</button>
@@ -846,7 +846,7 @@
       if (!has) { toast('Écrivez d\'abord le message de la carte'); return; }
       const P = window.KiwiOperationalPrint;
       if (!P) { toast('Impression indisponible'); return; }
-      P.printText({ title:occ.deuil ? 'Avec nos condoléances' : occ.label, paper:'A4', lines:[b.message, signer ? `— ${signer}` : '', pvName('Fleurs du Détroit')] })
+      P.printText({ title:occ.deuil ? 'Avec nos condoléances' : occ.label, paper:'A4', lines:[b.message, signer ? `·${signer}` : '', pvName('Fleurs du Détroit')] })
         .then((r) => { if (r && r.ok) queueIfOffline('Carte imprimée'); toast(r && r.ok ? 'Impression système ouverte' : 'Impression impossible'); });
     };
     icons();
@@ -1431,7 +1431,7 @@
     }
     return `Bonjour ${first}, un bouquet vous attend de la part de ${buyerLabel(d)}.`
       + `\nLivraison prévue aujourd'hui, créneau ${SLOT[d.slot].hours}.`
-      + `\n— ${shopNm}, via Kiwi`;
+      + `\n·${shopNm}, via Kiwi`;
   }
 
   function openWa(d) {

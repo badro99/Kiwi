@@ -45,13 +45,13 @@
 
   var T = {
     fr: {
-      title: 'Reçu de caisse', sub: 'Le ticket remis à vos clients — imprimé, réimprimé, remboursé et affiché',
+      title: 'Reçu de caisse', sub: 'Le ticket remis à vos clients · imprimé, réimprimé, remboursé et affiché',
       gIdentity: 'Identité & mentions légales', gLook: 'Apparence du reçu',
       gSale: 'Informations affichées par vente', gMsg: 'Messages & politiques',
       gPrint: "Format d'impression",
       editBiz: 'Modifier la fiche', sourceNote: 'Ces informations viennent de la fiche de l’établissement. Elles ne se saisissent qu’une fois, ici elles s’affichent.',
       missingHead: 'À compléter pour un reçu conforme',
-      missingBody: 'Ces mentions n’apparaîtront pas sur le ticket tant qu’elles sont vides — un reçu n’affiche jamais un tiret à la place d’une mention légale.',
+      missingBody: 'Ces mentions n’apparaîtront pas sur le ticket tant qu’elles sont vides · un reçu n’affiche jamais un tiret à la place d’une mention légale.',
       allSet: 'Toutes les mentions importantes sont renseignées.',
       lockedHead: 'Toujours imprimé', lockedBody: 'Enseigne · numéro de ticket · date et heure · articles · totaux · paiement. Ces éléments font du ticket une preuve d’achat : ils ne se retirent pas.',
       logo: 'Logo', logoAdd: 'Choisir une image', logoDel: 'Retirer', logoHint: 'PNG ou JPEG, ≤ 300 ko. Imprimé en noir et blanc.',
@@ -79,18 +79,18 @@
       preview: 'Aperçu', testPrint: 'Imprimer un ticket test',
       testNote: 'N’enregistre aucune vente et ne consomme aucun numéro.',
       save: 'Enregistrer', cancel: 'Annuler', saved: 'Reçu enregistré',
-      notSynced: 'Gardé sur cet appareil seulement — logo trop lourd pour partir vers la caisse. Choisissez une image plus légère.',
+      notSynced: 'Gardé sur cet appareil seulement · logo trop lourd pour partir vers la caisse. Choisissez une image plus légère.',
       printing: 'Envoi du ticket test…', printed: 'Ticket test imprimé', printFail: 'Impression impossible',
-      logoBig: 'Image trop lourde (max 300 ko).', logoBad: 'Format non reconnu — utilisez un PNG ou un JPEG.',
+      logoBig: 'Image trop lourde (max 300 ko).', logoBad: 'Format non reconnu · utilisez un PNG ou un JPEG.',
       noVenue: 'Sélectionnez un établissement pour régler son reçu.',
     },
     en: {
-      title: 'Sales receipt', sub: 'The ticket you hand your customers — printed, reprinted, refunded and displayed',
+      title: 'Sales receipt', sub: 'The ticket you hand your customers · printed, reprinted, refunded and displayed',
       gIdentity: 'Identity & legal details', gLook: 'Receipt appearance',
       gSale: 'Shown for each sale', gMsg: 'Messages & policies', gPrint: 'Printer format',
       editBiz: 'Edit business', sourceNote: 'This comes from the business profile. Entered once there, only shown here.',
       missingHead: 'To complete for a compliant receipt',
-      missingBody: 'These will not appear on the ticket while they are empty — a receipt never prints a dash in place of a legal detail.',
+      missingBody: 'These will not appear on the ticket while they are empty · a receipt never prints a dash in place of a legal detail.',
       allSet: 'All important details are filled in.',
       lockedHead: 'Always printed', lockedBody: 'Business name · receipt number · date and time · items · totals · payment. These make the ticket a proof of purchase: they cannot be removed.',
       logo: 'Logo', logoAdd: 'Choose an image', logoDel: 'Remove', logoHint: 'PNG or JPEG, ≤ 300 kB. Printed in black and white.',
@@ -118,18 +118,18 @@
       preview: 'Preview', testPrint: 'Print a test receipt',
       testNote: 'Records no sale and uses up no receipt number.',
       save: 'Save', cancel: 'Cancel', saved: 'Receipt saved',
-      notSynced: 'Kept on this device only — the logo is too heavy to reach the till. Choose a lighter image.',
+      notSynced: 'Kept on this device only · the logo is too heavy to reach the till. Choose a lighter image.',
       printing: 'Sending the test ticket…', printed: 'Test ticket printed', printFail: 'Could not print',
-      logoBig: 'Image too large (max 300 kB).', logoBad: 'Unrecognised format — use a PNG or a JPEG.',
+      logoBig: 'Image too large (max 300 kB).', logoBad: 'Unrecognised format · use a PNG or a JPEG.',
       noVenue: 'Select a business to set up its receipt.',
     },
     ar: {
-      title: 'وصل الصندوق', sub: 'الوصل الذي يتسلمه زبناؤكم — طبعاً وإعادة طبع واسترجاعاً وعرضاً',
+      title: 'وصل الصندوق', sub: 'الوصل الذي يتسلمه زبناؤكم · طبعاً وإعادة طبع واسترجاعاً وعرضاً',
       gIdentity: 'الهوية والبيانات القانونية', gLook: 'مظهر الوصل',
       gSale: 'ما يظهر في كل عملية', gMsg: 'الرسائل والسياسات', gPrint: 'صيغة الطباعة',
       editBiz: 'تعديل المؤسسة', sourceNote: 'هذه المعلومات من بطاقة المؤسسة. تُدخل مرة واحدة هناك، وتُعرض هنا فقط.',
       missingHead: 'ينقص لإتمام وصل مطابق',
-      missingBody: 'لن تظهر على الوصل ما دامت فارغة — الوصل لا يطبع شرطة مكان بيان قانوني.',
+      missingBody: 'لن تظهر على الوصل ما دامت فارغة · الوصل لا يطبع شرطة مكان بيان قانوني.',
       allSet: 'كل البيانات المهمة مملوءة.',
       lockedHead: 'يُطبع دائماً', lockedBody: 'اسم المؤسسة · رقم الوصل · التاريخ والساعة · المنتجات · المجاميع · الأداء. هذه ما يجعل الوصل إثبات شراء: لا يمكن حذفها.',
       logo: 'الشعار', logoAdd: 'اختيار صورة', logoDel: 'حذف', logoHint: 'PNG أو JPEG، ≤ 300 كب. يُطبع بالأبيض والأسود.',
@@ -157,9 +157,9 @@
       preview: 'معاينة', testPrint: 'طبع وصل تجريبي',
       testNote: 'لا يسجل أي عملية بيع ولا يستهلك أي رقم.',
       save: 'حفظ', cancel: 'إلغاء', saved: 'تم حفظ الوصل',
-      notSynced: 'محفوظ على هذا الجهاز فقط — الشعار ثقيل ولم يصل إلى الصندوق. اختاروا صورة أخف.',
+      notSynced: 'محفوظ على هذا الجهاز فقط · الشعار ثقيل ولم يصل إلى الصندوق. اختاروا صورة أخف.',
       printing: 'إرسال الوصل التجريبي…', printed: 'تم طبع الوصل التجريبي', printFail: 'تعذرت الطباعة',
-      logoBig: 'الصورة ثقيلة جداً (300 كب كحد أقصى).', logoBad: 'صيغة غير معروفة — استعملوا PNG أو JPEG.',
+      logoBig: 'الصورة ثقيلة جداً (300 كب كحد أقصى).', logoBad: 'صيغة غير معروفة · استعملوا PNG أو JPEG.',
       noVenue: 'اختاروا مؤسسة لضبط وصلها.',
     },
   };
@@ -293,7 +293,7 @@
         var v = b.legal[f.k];
         var lbl = f.label[lang()] || f.label.fr;
         return '<div><div class="k">' + esc(lbl) + '</div><div class="v' + (v ? '' : ' miss') + '">' +
-          esc(v || (missKeys.indexOf(f.k) >= 0 ? (lang() === 'ar' ? 'ينقص' : lang() === 'en' ? 'missing' : 'à compléter') : '—')) + '</div></div>';
+          esc(v || (missKeys.indexOf(f.k) >= 0 ? (lang() === 'ar' ? 'ينقص' : lang() === 'en' ? 'missing' : 'à compléter') : '·')) + '</div></div>';
       }).join('');
       var h = '<div class="kr-g"><div class="kr-g-h">' + esc(L.gIdentity) + '</div><div class="kr-card">' +
         '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:13px;">' +
@@ -319,7 +319,7 @@
       /* 2 · apparence */
       h += '<div class="kr-g"><div class="kr-g-h">' + esc(L.gLook) + '</div><div class="kr-card">' +
         '<div class="kr-f"><span class="kr-l">' + esc(L.logo) + '</span><div class="kr-logo-box">' +
-          '<div class="kr-logo-prev">' + (cfg.look.logo ? '<img alt="" src="' + esc(cfg.look.logo) + '"/>' : '<span style="font-size:10px;color:var(--n-500);">—</span>') + '</div>' +
+          '<div class="kr-logo-prev">' + (cfg.look.logo ? '<img alt="" src="' + esc(cfg.look.logo) + '"/>' : '<span style="font-size:10px;color:var(--n-500);">·</span>') + '</div>' +
           '<div><button class="kr-btn" id="kru-logo-add" type="button">' + esc(L.logoAdd) + '</button>' +
           (cfg.look.logo ? ' <button class="kr-btn" id="kru-logo-del" type="button">' + esc(L.logoDel) + '</button>' : '') +
           '<p class="kr-note">' + esc(L.logoHint) + '</p></div>' +

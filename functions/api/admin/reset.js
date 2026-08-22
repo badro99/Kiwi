@@ -139,7 +139,7 @@ export async function onRequestPost(context) {
           link + '\n\n' +
           'Ce lien est valable une heure et ne fonctionne qu’une fois.\n' +
           'Si vous n’avez rien demandé, ignorez ce message : votre mot de passe actuel reste valable.\n\n' +
-          '— L’équipe Kiwi',
+          '·L’équipe Kiwi',
   });
 
   /* L'envoi a échoué : le jeton qu'on vient de créer ne servira à personne, et

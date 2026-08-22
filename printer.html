@@ -68,7 +68,7 @@ em, i, cite, dfn, var { font-style: normal; }
       <div class="status off" id="status"><span class="dot"></span><span id="status-t">Recherche du pont sur cet ordinateur…</span></div>
 
       <div class="step">Qu'est-ce que c'est ?</div>
-      <p class="muted">Un petit programme à installer sur l'ordinateur de la caisse. Kiwi lui envoie les impressions et il les transmet à votre imprimante. Il tourne discrètement en arrière-plan et n'écoute que sur cet ordinateur — aucune donnée ne sort de votre machine.</p>
+      <p class="muted">Un petit programme à installer sur l'ordinateur de la caisse. Kiwi lui envoie les impressions et il les transmet à votre imprimante. Il tourne discrètement en arrière-plan et n'écoute que sur cet ordinateur · aucune donnée ne sort de votre machine.</p>
     </div>
 
     <div class="card">
@@ -92,7 +92,7 @@ em, i, cite, dfn, var { font-style: normal; }
       <div class="os-body" data-os="win">
         <ol class="run">
           <li>Double-cliquez le fichier téléchargé <code>kiwi-printer-bridge-win.exe</code>.</li>
-          <li>Si « <b>Windows a protégé votre PC</b> » apparaît : <b>Informations complémentaires</b> → <b>Exécuter quand même</b>. L'application est sûre — elle n'est simplement pas signée.</li>
+          <li>Si « <b>Windows a protégé votre PC</b> » apparaît : <b>Informations complémentaires</b> → <b>Exécuter quand même</b>. L'application est sûre · elle n'est simplement pas signée.</li>
           <li>Laissez la fenêtre ouverte. Si vous la fermez, l'impression s'arrête.</li>
           <li><b>Démarrage automatique (recommandé en boutique).</b> Sinon il faut relancer le pont à chaque redémarrage du PC.
             <span class="mono">Win + R</span> → <code>shell:startup</code> → dans le dossier qui s'ouvre, créez un fichier
@@ -101,15 +101,15 @@ em, i, cite, dfn, var { font-style: normal; }
 set KIWI_BRIDGE_PORT=9110
 start "" /min "%USERPROFILE%\Downloads\kiwi-printer-bridge-win.exe"</code>
             Adaptez le chemin si vous avez déplacé le <code>.exe</code>. Le pont démarrera seul, en fenêtre réduite.</li>
-          <li><b>Si le pont ne démarre pas</b> (la fenêtre s'ouvre puis se referme aussitôt) : le port 9110 est déjà pris par un autre logiciel. Dans le <code>.cmd</code> ci-dessus, remplacez <code>9110</code> par <code>9111</code> (ou 9112 / 9113 / 9114) — Kiwi cherche automatiquement sur cette plage.</li>
+          <li><b>Si le pont ne démarre pas</b> (la fenêtre s'ouvre puis se referme aussitôt) : le port 9110 est déjà pris par un autre logiciel. Dans le <code>.cmd</code> ci-dessus, remplacez <code>9110</code> par <code>9111</code> (ou 9112 / 9113 / 9114) · Kiwi cherche automatiquement sur cette plage.</li>
         </ol>
       </div>
       <div class="os-body" data-os="mac">
         <ol class="run">
-          <li>Double-cliquez le fichier téléchargé — il se décompresse en <b>Kiwi Printer</b>. Glissez-le dans votre dossier <b>Applications</b>.</li>
-          <li>Double-cliquez <b>Kiwi Printer</b>. macOS affiche « développeur non identifié » — c'est normal, l'app est sûre. Cliquez <b>OK</b>.</li>
+          <li>Double-cliquez le fichier téléchargé · il se décompresse en <b>Kiwi Printer</b>. Glissez-le dans votre dossier <b>Applications</b>.</li>
+          <li>Double-cliquez <b>Kiwi Printer</b>. macOS affiche « développeur non identifié » · c'est normal, l'app est sûre. Cliquez <b>OK</b>.</li>
           <li>Ouvrez <b>Réglages Système → Confidentialité et sécurité</b>. Descendez tout en bas : à côté de « <i>Kiwi Printer a été bloqué…</i> », cliquez <b>Ouvrir quand même</b>, puis <b>Ouvrir</b>. C'est nécessaire une seule fois.</li>
-          <li><b>Aucune fenêtre ne s'ouvre — c'est normal.</b> Kiwi Printer tourne discrètement en arrière-plan. (Sur un Mac Apple Silicon, macOS proposera d'<b>installer Rosetta</b> au premier lancement — cliquez <b>Installer</b>.)</li>
+          <li><b>Aucune fenêtre ne s'ouvre · c'est normal.</b> Kiwi Printer tourne discrètement en arrière-plan. (Sur un Mac Apple Silicon, macOS proposera d'<b>installer Rosetta</b> au premier lancement · cliquez <b>Installer</b>.)</li>
           <li><b>Empêcher la veille (pour relayer les iPad) :</b> dans un terminal, lancez <code>caffeinate -s &</code> ou dans <i>Réglages Système → Batterie / Écran</i>, empêchez la suspension automatique. Laissez le capot ouvert.</li>
           <li><b>Démarrage automatique persistant (LaunchAgent) :</b> pour que le pont survive aux redémarrages sans manipulation :<br>
             <code>curl -fsSL https://raw.githubusercontent.com/badro99/Kiwi/main/bridge/install-macos.sh | bash</code></li>
@@ -207,7 +207,7 @@ start "" /min "%USERPROFILE%\Downloads\kiwi-printer-bridge-win.exe"</code>
     var st = $('#status'), stt = $('#status-t');
     function render(j){
       if (j){ st.className = 'status on'; stt.innerHTML = 'Pont connecté sur cet ordinateur · v' + (j.version || '?') + '. Tout est prêt.'; }
-      else { st.className = 'status off'; stt.innerHTML = 'Pont non détecté sur cet ordinateur. Téléchargez-le et lancez-le ci-dessous — ce voyant passe au vert une fois lancé. <button type="button" class="recheck" id="recheck">Revérifier</button>';
+      else { st.className = 'status off'; stt.innerHTML = 'Pont non détecté sur cet ordinateur. Téléchargez-le et lancez-le ci-dessous · ce voyant passe au vert une fois lancé. <button type="button" class="recheck" id="recheck">Revérifier</button>';
         var rc = document.getElementById('recheck'); if (rc) rc.addEventListener('click', function(){ stt.textContent = 'Nouvelle vérification…'; check(); }); }
     }
     function check(){ return ping().then(render); }

@@ -1818,7 +1818,7 @@
     if (!c) return `<button class="mz-tk-row" id="mz-tk-client"><i data-lucide="user-plus"></i>
         <span class="l"><b>Attacher une cliente</b><span>Téléphone d'abord, points et taille suivent</span></span>
         <span class="edit">Chercher</span></button>`;
-    const sub = [esc(c.phone) || '—', c.points + ' pts', c.taille ? 'taille ' + esc(c.taille) : ''].filter(Boolean).join(' · ');
+    const sub = [esc(c.phone) || '·', c.points + ' pts', c.taille ? 'taille ' + esc(c.taille) : ''].filter(Boolean).join(' · ');
     return `<button class="mz-tk-row is-set" id="mz-tk-client"><i data-lucide="user-check"></i>
       <span class="l"><b>${esc(c.name)}</b><span>${sub}</span></span>
       ${c.vip ? '<span class="mz-vip-chip">VIP</span>' : ''}
@@ -2189,7 +2189,7 @@
              savoir qu'il reste des pièces d'un set déjà entamé. */
           const free = looseOf(p.id, sheet.size || sizesOf(p)[0]);
           return free
-            ? `<div class="mz-f-hint">${free} pièce${free > 1 ? 's' : ''} dépareillée${free > 1 ? 's' : ''} d’un set déjà ouvert — servies en premier.</div>`
+            ? `<div class="mz-f-hint">${free} pièce${free > 1 ? 's' : ''} dépareillée${free > 1 ? 's' : ''} d’un set déjà ouvert · servies en premier.</div>`
             : `<div class="mz-f-hint">Aucune pièce dépareillée : vendre à la pièce ouvrira un set.</div>`;
         })()}
       </div>` : ''}
@@ -2405,7 +2405,7 @@
                 <span class="mz-cl-ava">${esc(initials(c.name))}</span>
                 <span class="mz-cl-mid">
                   <span class="mz-cl-name">${esc(c.name)} ${c.vip ? '<span class="mz-vip-chip">VIP</span>' : ''}</span>
-                  <span class="mz-cl-sub">${esc(c.phone) || '—'}${c.taille ? ' · taille ' + esc(c.taille) : ''}</span>
+                  <span class="mz-cl-sub">${esc(c.phone) || '·'}${c.taille ? ' · taille ' + esc(c.taille) : ''}</span>
                 </span>
                 <span class="mz-cl-right"><b>${c.points} pts</b>${av ? `<span class="av">avoir ${fmtMAD(av.balance)}</span>` : `${c.achats} achats`}</span>
               </button>`;
@@ -3343,7 +3343,7 @@
         </div>
         <div style="background:rgba(217,154,43,0.18); border:1px solid #B25E00; border-radius:8px; padding:10px; margin-bottom:14px; text-align:center;">
           <b style="color:#B25E00; font-size:13px; text-transform:uppercase; display:block;">⚠️ ATTENTION TRÈS FRAGILE ⚠️</b>
-          <span style="font-size:11px; color:#8A6210;">Articles en céramique & verrerie fine — Maintenir à plat, ne pas superposer de charges lourdes.</span>
+          <span style="font-size:11px; color:#8A6210;">Articles en céramique & verrerie fine · Maintenir à plat, ne pas superposer de charges lourdes.</span>
         </div>
         <div style="margin-bottom:14px; font-size:12.5px; line-height:1.5;">
           <div><b>Destinataire :</b> ${esc(del.name)} (${esc(del.phone || 'Non renseigné')})</div>
@@ -4650,7 +4650,7 @@
           (pv && pv.name) || 'Vogue Home',
           opts.ref ? ('Reçu ' + opts.ref) : 'Reçu',
           '',
-          ...(opts.lines || []).map((l) => `${l.qty ? l.qty + '× ' : ''}${l.name} — ${fmtMAD(l.amount)}`),
+          ...(opts.lines || []).map((l) => `${l.qty ? l.qty + '× ' : ''}${l.name} · ${fmtMAD(l.amount)}`),
           '',
           `TOTAL ${fmtMAD(opts.amount)}`,
           (parts || []).map((x) => x.m === 'carte' ? 'Carte' : x.m === 'avoir' ? 'Avoir' : x.m === 'livraison' ? 'Livraison · à recevoir' : 'Espèces').join(' + '),
@@ -4809,7 +4809,7 @@
       .mzi-fg { margin-bottom: 14px; } .mzi-fg label { display: block; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: #77807b; margin-bottom: 6px; }
       .mzi-fg input, .mzi-fg select { width: 100%; padding: 11px 13px; border: 1px solid rgba(10,15,13,.16); border-radius: 10px; font: inherit; font-size: 14px; background: var(--paper); color: var(--ink); }
       .mzi-frow { display: flex; gap: 12px; } .mzi-frow .mzi-fg { flex: 1; }
-      /* Le sélecteur de couleur vient de color-palette.js (.kc-*) — rien à
+      /* Le sélecteur de couleur vient de color-palette.js (.kc-*) · rien à
          redéfinir ici, c'est tout l'intérêt. Restent la pastille cliquable de la
          ligne variante et le rappel discret de la nuance d'origine. */
       .mzi-cbtn { display: inline-flex; align-items: center; gap: 6px; background: none; border: 0; padding: 2px 4px; margin: -2px -4px; border-radius: 7px; font: inherit; color: inherit; cursor: pointer; }
@@ -4923,7 +4923,7 @@
       .bqx-pricediff b { font-family: var(--mono); font-size: 19px; }
       .bqx-pricediff .next b { color: var(--atlas); }
       .bqx-pricediff > svg { width: 18px; height: 18px; color: #99a; }
-      /* Le choix du code-barres à la création — trois options, la lentille liquide
+      /* Le choix du code-barres à la création · trois options, la lentille liquide
          s'y attache via data-lens-demo / data-lens-item (assets/liquid-lens.js). */
       .bqx-choice { position: relative; display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
       .bqx-opt { position: relative; z-index: 1; text-align: left; background: var(--paper); border: 1.5px solid rgba(10,15,13,.10); border-radius: 12px; padding: 11px 13px; cursor: pointer; font: inherit; color: var(--ink); display: flex; flex-direction: column; gap: 2px; transition: border-color .15s; }
@@ -4933,7 +4933,7 @@
       .bqx-opt b { font-size: 13px; }
       .bqx-opt span { font-size: 11.5px; color: #77807b; line-height: 1.38; }
       /* Quand la lentille liquide est attachée (assets/liquid-lens.js ajoute
-         data-kw-lens), c'est ELLE qui porte le fond — dégradé atlas → riad. La
+         data-kw-lens), c'est ELLE qui porte le fond · dégradé atlas → riad. La
          pastille passe donc en transparent et son texte en clair, sinon on lit
          de l'encre sombre sur du vert sombre. Le style .on ci-dessus reste le
          repli lisible si la lentille n'est pas chargée. */
@@ -5131,7 +5131,7 @@
       const perChar = b.n > 1 ? b.span / b.n : 0;
       if (!b.enter) return { tone: 'warn', t: `${b.n} caractères lus, mais aucune touche Entrée. Kiwi valide un scan sur Entrée : configurez le suffixe « CR / Entrée » de la douchette (code de configuration dans sa notice).` };
       if (b.n >= 4 && perChar >= 55) return { tone: 'warn', t: `Lecture correcte mais lente (${Math.round(perChar)} ms/caractère). À cette vitesse Kiwi la prend pour une saisie au clavier. Si c'est bien la douchette, dites-le-nous, on relèvera le seuil.` };
-      if (b.typed && b.typed !== b.raw) return { tone: 'good', t: `Douchette détectée. Elle est en clavier US sur un Windows français — Kiwi corrige toute seule (${esc(b.typed)} → ${esc(b.norm)}). Il n'y a rien à reconfigurer sur la douchette.` };
+      if (b.typed && b.typed !== b.raw) return { tone: 'good', t: `Douchette détectée. Elle est en clavier US sur un Windows français · Kiwi corrige toute seule (${esc(b.typed)} → ${esc(b.norm)}). Il n'y a rien à reconfigurer sur la douchette.` };
       return { tone: 'good', t: `Douchette détectée et lue correctement (${Math.round(perChar)} ms/caractère).` };
     }
 
@@ -5148,7 +5148,7 @@
       const b = burst, v = verdict(b);
       const sym = (b && b.norm && window.KiwiBarcode && window.KiwiBarcode.detect) ? window.KiwiBarcode.detect(b.norm) : '';
       const rows = b ? b.ev.filter((x) => x.key !== 'Enter').map((x) =>
-        `<tr><td>${esc(x.code || '—')}</td><td>${esc(x.key)}</td><td>${esc(x.ch || '—')}</td></tr>`).join('') : '';
+        `<tr><td>${esc(x.code || '·')}</td><td>${esc(x.key)}</td><td>${esc(x.ch || '·')}</td></tr>`).join('') : '';
       invSetModal(`
         <button class="mz-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button>
         <div class="mzi-modh"><div><h3>Test de la douchette</h3><span>Scannez n'importe quel article. Rien n'est vendu, rien n'est modifié.</span></div></div>
@@ -5156,12 +5156,12 @@
           ${!b ? `<div class="bqsd-wait"><i data-lucide="scan-line"></i>En attente d'un scan…</div>` : `
             <div class="bqsd-v ${v.tone}">${v.t}</div>
             <div class="bqsd-grid">
-              <div><span>Code lu</span><b>${esc(b.norm) || '—'}</b></div>
+              <div><span>Code lu</span><b>${esc(b.norm) || '·'}</b></div>
               <div><span>Caractères</span><b>${b.n}</b></div>
-              <div><span>Vitesse</span><b>${b.n > 1 ? Math.round(b.span / b.n) + ' ms/car.' : '—'}</b></div>
+              <div><span>Vitesse</span><b>${b.n > 1 ? Math.round(b.span / b.n) + ' ms/car.' : '·'}</b></div>
               <div><span>Touche Entrée</span><b>${b.enter ? 'oui' : 'non'}</b></div>
-              <div><span>Symbologie</span><b>${esc(sym || '—')}</b></div>
-              <div><span>Frappe clavier</span><b>${esc(b.typed) || '—'}</b></div>
+              <div><span>Symbologie</span><b>${esc(sym || '·')}</b></div>
+              <div><span>Frappe clavier</span><b>${esc(b.typed) || '·'}</b></div>
             </div>
             ${b.n ? match(b.norm) : ''}
             <details class="bqsd-det"><summary>Détail touche par touche</summary>
@@ -5257,7 +5257,7 @@
     }
     if (sc.type === 'avant') return sc.before ? `Entré en stock avant le ${fmtDay(new Date(sc.before))}` : 'Aucune date choisie';
     if (sc.type === 'stock') return `Il en reste ${sc.max || 0} ou moins`;
-    return '—';
+    return '·';
   }
 
   /* La période, en clair, avec ce qu'il reste à courir. « du 12 au 19 » ne dit
@@ -5530,7 +5530,7 @@
       <button class="mz-modal-x" data-mz-close aria-label="Fermer"><i data-lucide="x"></i></button>
       <h3 class="modal-title">Supprimer « ${esc(p.name)} » ?</h3>
       <p class="modal-subtle">Les articles concernés repassent immédiatement au prix plein.
-         Les ventes déjà encaissées gardent le prix payé — rien ne change dans le journal.</p>
+         Les ventes déjà encaissées gardent le prix payé · rien ne change dans le journal.</p>
       <div class="mzi-modfoot">
         <button class="mz-btn secondary" data-mz-close>Garder</button>
         <button class="mz-btn danger" id="mz-pr-delok"><i data-lucide="trash-2"></i>Supprimer</button>
@@ -5667,7 +5667,7 @@
             ${prev.under ? `
               <div class="mz-prc-warn"><i data-lucide="alert-triangle"></i>
                 <span><b>${prev.under} article${prev.under > 1 ? 's passeraient' : ' passerait'} sous son prix d'achat.</b>
-                Déstocker à perte est parfois le bon choix — mais autant le décider en le sachant.</span>
+                Déstocker à perte est parfois le bon choix · mais autant le décider en le sachant.</span>
               </div>` : ''}
             <div class="mz-prc-sample">
               ${prev.sample.map((x) => `
@@ -5978,7 +5978,7 @@
   /* ─── new product ─── */
   function catSelectOptions(sel) {
     const cats = catDB().listCategories();
-    return `<option value="">— Sans catégorie</option>` + cats.map((c) => `<option value="${c.id}" ${c.id === sel ? 'selected' : ''}>${esc(c.name)}</option>`).join('');
+    return `<option value="">·Sans catégorie</option>` + cats.map((c) => `<option value="${c.id}" ${c.id === sel ? 'selected' : ''}>${esc(c.name)}</option>`).join('');
   }
   function kindSelectOptions(sel) {
     const opts = [['tu', 'Pièce unique (sans taille)'], ['taille', 'Formats (S · M · L)']];
@@ -6079,7 +6079,7 @@
     ].join(' · ');
     const html = `
       <button class="mz-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button>
-      <div class="mzi-modh"><div><h3>Supprimer ${esc(colorLabel(v.colorFamily || v.colorId))} · ${esc(v.size)} ?</h3><span>${esc(d.product.name)} — ${perte}. La suppression est définitive.</span></div></div>
+      <div class="mzi-modh"><div><h3>Supprimer ${esc(colorLabel(v.colorFamily || v.colorId))} · ${esc(v.size)} ?</h3><span>${esc(d.product.name)} · ${perte}. La suppression est définitive.</span></div></div>
       <div class="mzi-modfoot"><button class="mz-btn secondary" data-inv-back>Annuler</button><button class="mz-btn danger" id="mzi-vdel-ok"><i data-lucide="trash-2"></i>Supprimer la variante</button></div>`;
     invSetModal(html, (el) => {
       $('[data-inv-back]', el).addEventListener('click', () => openInvProduct(pid));
@@ -6111,7 +6111,7 @@
       <div class="mzi-modh"><div><h3>Couleur de la variante</h3><span>${esc(d.product.name)} · taille ${esc(v.size)}${v.colorSource ? ` · saisie à l'origine « ${esc(v.colorSource)} »` : ''}</span></div></div>
       <div class="mzi-form">
         <div class="mzi-fg"><label>Couleur</label>${colorPicker(v.colorFamily || v.colorId)}</div>
-        <div class="mzi-fg"><label>Précision (facultatif)</label><input id="mzi-vc-note" maxlength="60" value="${esc(v.note || '')}" placeholder="Ex. rayé, délavé, motif — pour distinguer deux variantes de même couleur" /></div>
+        <div class="mzi-fg"><label>Précision (facultatif)</label><input id="mzi-vc-note" maxlength="60" value="${esc(v.note || '')}" placeholder="Ex. rayé, délavé, motif · pour distinguer deux variantes de même couleur" /></div>
       </div>
       <div class="mzi-modfoot"><button class="mz-btn secondary" data-inv-back>Retour</button><button class="mz-btn" id="mzi-vc-save">Enregistrer</button></div>`;
     invSetModal(html, (el) => {
@@ -6272,7 +6272,7 @@
 
   const INVALID_MSG = {
     vide: 'Rien n\'a été lu. Rapprochez la douchette de l\'étiquette, ou tapez le code.',
-    illisible: 'Lecture incomplète — la douchette a envoyé des caractères parasites. Rescannez, ou tapez le code à la main.',
+    illisible: 'Lecture incomplète · la douchette a envoyé des caractères parasites. Rescannez, ou tapez le code à la main.',
     'trop-court': 'Lecture partielle : trop peu de caractères pour être un code-barres. Rescannez plus lentement, ou tapez-le.',
     'trop-long': 'Ce code est anormalement long. Vérifiez qu\'un seul article est passé devant la douchette.',
   };
@@ -6281,7 +6281,7 @@
     if (!j || !j.sym) return '';
     const KB = window.KiwiBarcode;
     const label = KB && KB.symLabel ? KB.symLabel(j.sym) : j.sym;
-    if (j.check === 'bad') return `<span class="bqx-sym warn" title="La clé de contrôle ne correspond pas. C'est fréquent sur un code interne — Kiwi l'accepte tel quel.">${esc(label)} · clé inhabituelle</span>`;
+    if (j.check === 'bad') return `<span class="bqx-sym warn" title="La clé de contrôle ne correspond pas. C'est fréquent sur un code interne · Kiwi l'accepte tel quel.">${esc(label)} · clé inhabituelle</span>`;
     return `<span class="bqx-sym">${esc(label)}${j.check === 'ok' ? ' ✓' : ''}</span>`;
   }
 
@@ -6311,7 +6311,7 @@
       <div class="bqx-head">
         <div class="bqx-head-t">
           <h3>Reprise de stock</h3>
-          <span>Scannez le code déjà présent sur l'article. Kiwi le garde tel quel — aucune étiquette à réimprimer.</span>
+          <span>Scannez le code déjà présent sur l'article. Kiwi le garde tel quel · aucune étiquette à réimprimer.</span>
         </div>
         <div class="bqx-tally" aria-live="polite">
           <b>${intake.count}</b><span>article${intake.count > 1 ? 's' : ''}</span>
@@ -6323,7 +6323,7 @@
 
   function intakeLogHtml() {
     if (!intake.log.length) {
-      return `<div class="bqx-log-empty">Rien encore. La douchette écrit directement dans le champ ci-dessus — pas besoin de cliquer.</div>`;
+      return `<div class="bqx-log-empty">Rien encore. La douchette écrit directement dans le champ ci-dessus · pas besoin de cliquer.</div>`;
     }
     return `<div class="bqx-log">${intake.log.map((l) => `
       <div class="bqx-log-row is-${l.kind}">
@@ -6439,7 +6439,7 @@
       <div class="bqx-chain is-link">
         <div>
           <b>Cet article est déjà au catalogue, sans code-barres ?</b>
-          <span>${bare} déclinaison${bare > 1 ? 's' : ''} attend${bare > 1 ? 'ent' : ''} son code — celles qui viennent du fichier fournisseur. Rattachez ce code au lieu de tout ressaisir.</span>
+          <span>${bare} déclinaison${bare > 1 ? 's' : ''} attend${bare > 1 ? 'ent' : ''} son code · celles qui viennent du fichier fournisseur. Rattachez ce code au lieu de tout ressaisir.</span>
         </div>
         <button class="mz-btn" id="bqx-link">Chercher l'article</button>
       </div>` : ''}
@@ -6511,7 +6511,7 @@
         }
         intake.count++; intake.pieces += qty;
         intake.lastProduct = p.id;
-        intakeNote('cree', `${name} · ${size} — ${qty} pièce${qty > 1 ? 's' : ''}, code conservé`);
+        intakeNote('cree', `${name} · ${size} · ${qty} pièce${qty > 1 ? 's' : ''}, code conservé`);
         toast(`${name} enregistré · code ${j.code} conservé`);
         intakeHint(`${name} · ${size} enregistré. Scannez l'article suivant.`, 'good');
         paintIntake();
@@ -6591,7 +6591,7 @@
         }
         intake.count++; intake.pieces += qty;
         intake.lastProduct = pid;
-        intakeNote('variante', `${d.product.name} · ${size} — ${existed ? 'code ajouté' : 'déclinaison créée'}, ${qty} pièce${qty > 1 ? 's' : ''}`);
+        intakeNote('variante', `${d.product.name} · ${size} · ${existed ? 'code ajouté' : 'déclinaison créée'}, ${qty} pièce${qty > 1 ? 's' : ''}`);
         toast(`${d.product.name} · ${size} enregistré`);
         intakeHint(`${d.product.name} · ${size} enregistré. Scannez l'article suivant.`, 'good');
         paintIntake();
@@ -6661,7 +6661,7 @@
           const d = cat.getProduct(pid);
           intake.count++;
           intake.lastProduct = pid;
-          intakeNote('variante', `${d.product.name} — code rattaché à une fiche importée`);
+          intakeNote('variante', `${d.product.name} · code rattaché à une fiche importée`);
           toast(`Code ${j.code} rattaché à ${d.product.name}`);
           intakeHint(`${d.product.name} a maintenant son code. Scannez l'article suivant.`, 'good');
           paintIntake();
@@ -6705,7 +6705,7 @@
         <div>
           <b>${esc(d.product.name)}</b>
           <span>${esc(d.category ? d.category.name : 'Divers')} · ${fmtMAD(d.product.priceMAD)} · ${d.stock} en stock au total</span>
-          <span class="bqx-thisvar"><i style="background:${v.colorHex}"></i>Ce code désigne <b>${esc(v.colorLabel)} · ${esc(v.size)}</b> — ${v.stock} en stock</span>
+          <span class="bqx-thisvar"><i style="background:${v.colorHex}"></i>Ce code désigne <b>${esc(v.colorLabel)} · ${esc(v.size)}</b> · ${v.stock} en stock</span>
         </div>
       </div>
       <div class="bqx-existing">
@@ -6751,7 +6751,7 @@
            contredit lui-même et fait douter la vendeuse de tout l'écran. */
         intake.count++;
         intake.pieces += res.added;
-        intakeNote('recu', `${d.product.name} · ${v.size} — ${res.added} reçue${res.added > 1 ? 's' : ''} (${res.before} → ${res.stock})`);
+        intakeNote('recu', `${d.product.name} · ${v.size} · ${res.added} reçue${res.added > 1 ? 's' : ''} (${res.before} → ${res.stock})`);
         toast(`${d.product.name} · ${v.size} : ${res.before} → ${res.stock}`);
         intakeHint(`${res.added} pièce${res.added > 1 ? 's' : ''} ajoutée${res.added > 1 ? 's' : ''} · ${d.product.name} ${v.size} passe à ${res.stock}. Scannez le suivant.`, 'good');
         paintIntake();
@@ -6845,7 +6845,7 @@
         }
         intake.count++; intake.pieces += qty;
         intake.lastProduct = pid;
-        intakeNote('variante', `${d.product.name} · ${size} — ${ev.created ? 'déclinaison créée' : 'déjà présente'}, ${qty} pièce${qty > 1 ? 's' : ''}`);
+        intakeNote('variante', `${d.product.name} · ${size} · ${ev.created ? 'déclinaison créée' : 'déjà présente'}, ${qty} pièce${qty > 1 ? 's' : ''}`);
         toast(`${d.product.name} · ${size} ajouté`);
         intakeHint(`${d.product.name} · ${size} ajouté. Scannez l'article suivant.`, 'good');
         paintIntake();
@@ -6868,7 +6868,7 @@
       <button class="mz-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button>
       ${intakeHeader()}
       <div class="bqx-found is-fix"><i data-lucide="pencil"></i>
-        <div><b>Corriger « ${esc(p.name)} »</b><span>Le code-barres et le stock ne changent pas — seule la fiche est corrigée.</span></div>
+        <div><b>Corriger « ${esc(p.name)} »</b><span>Le code-barres et le stock ne changent pas · seule la fiche est corrigée.</span></div>
       </div>
       <div class="mzi-form bqx-form">
         <div class="mzi-fg"><label>Nom</label><input id="bqx-fname" value="${esc(p.name)}" /></div>
@@ -6895,7 +6895,7 @@
         };
         const apply = () => {
           cat.updateProduct(pid, patch);
-          intakeNote('recu', `${name} — fiche corrigée`);
+          intakeNote('recu', `${name} · fiche corrigée`);
           toast('Fiche corrigée');
           paintIntake();
         };
@@ -6927,7 +6927,7 @@
       </div>
       <div class="mzi-modfoot bqx-foot">
         <button class="mz-btn secondary" id="bqx-pno">Garder ${fmtMAD(p.priceMAD)}</button>
-        <button class="mz-btn" id="bqx-pyes"><i data-lucide="check"></i>Appliquer${who ? ' — ' + esc(who) : ''}</button>
+        <button class="mz-btn" id="bqx-pyes"><i data-lucide="check"></i>Appliquer${who ? ' · ' + esc(who) : ''}</button>
       </div>`, (el) => {
       $('#bqx-pno', el).onclick = () => intakeFix(p.id);
       $('#bqx-pyes', el).onclick = () => onOk();
@@ -7225,7 +7225,7 @@
     el.innerHTML = `
       <div class="clockin-top">
         <div class="clockin-brand" aria-label="Kiwi"><img src="assets/kiwi-newlogo-inverse.svg" alt="" draggable="false"></div>
-        <div class="clockin-tagline">— version commerçant</div>
+        <div class="clockin-tagline">·version commerçant</div>
       </div>
       <div class="clockin-mid">
         <div class="clockin-greet">Bonjour <em>${esc(who)}</em></div>
@@ -7336,7 +7336,7 @@
     if (!line || !out) return;
     line.classList.remove('is-ok', 'is-off');
     const raw = inp ? inp.value : '';
-    if (raw === '' || raw == null) { out.textContent = '—'; return; }
+    if (raw === '' || raw == null) { out.textContent = '·'; return; }
     const ecart = (parseFloat(raw) || 0) - bqCloExpected;
     out.textContent = (ecart > 0 ? '+ ' : (ecart < 0 ? '− ' : '')) + fmtMAD(Math.abs(ecart));
     line.classList.add(Math.abs(ecart) <= 5 ? 'is-ok' : 'is-off');
@@ -7422,10 +7422,10 @@
           ${dLines.map((l) => `<div class="clo-drawer-line ${l[2]}"><span>${l[0]}</span><span class="mono">${l[1]}</span></div>`).join('')}
           <div class="clo-count-row">
             <label for="bqclo-count">Espèces comptées</label>
-            <input class="clo-count-input" id="bqclo-count" type="number" inputmode="numeric" min="0" step="10" placeholder="—" />
+            <input class="clo-count-input" id="bqclo-count" type="number" inputmode="numeric" min="0" step="10" placeholder="·" />
           </div>
           <div class="clo-ecart-line" id="bqclo-ecart-line">
-            <span>Écart</span><span class="mono" id="bqclo-ecart">—</span>
+            <span>Écart</span><span class="mono" id="bqclo-ecart">·</span>
           </div>
         </div>
         <div class="clo-highlight">
@@ -7511,7 +7511,7 @@
           <button class="clo-btn secondary" id="bqzs-reprint" hidden><i data-lucide="copy"></i><span>Réimprimer</span></button>
         </div>
         <div class="clo-foot"><button id="bqzs-skip">Continuer sans imprimer</button></div>
-        <div class="zs-note">Le rapport reste disponible dans le tableau de bord, section Rapport journalier — même après un rechargement ou depuis un autre appareil.</div>
+        <div class="zs-note">Le rapport reste disponible dans le tableau de bord, section Rapport journalier · même après un rechargement ou depuis un autre appareil.</div>
       </div>`;
     document.body.appendChild(z);
     icons();

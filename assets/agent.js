@@ -791,7 +791,7 @@
         cloudLead: 'هذا السؤال خارج حساباتي المعدّة مسبقاً. يمكن لـ Kiwi الإجابة عنه من خوادمه.',
         cloudPrivacy: 'بصراحة: في هذا الوضع يُرسل سؤالك وأرقام محلّك اللازمة للإجابة إلى Kiwi لمعالجتها بشكل آمن. في الوضع الخاص لا يغادر أي شيء، وتبقى حساباتي كاملة. تختار مرة واحدة، ويمكن تغييره من اللوحة.',
         cloudActivate: 'الإجابة من خوادم Kiwi',
-        cloudDecline: 'لا، شكراً — الاكتفاء بحساباتي',
+        cloudDecline: 'لا، شكراً · الاكتفاء بحساباتي',
         cloudQuota: 'بلغ المساعد على الخادم حدّه اليومي لمحلّك. يُستأنف غداً، وحساباتي تبقى كاملة حتى ذلك الحين.',
       },
       acct: {
@@ -1463,7 +1463,7 @@
       openGain: 'Marge apportée', openGainH: (d) => `${d} journée${d > 1 ? 's' : ''} d’activité moyenne`,
       openRev: 'CA de la journée', openRevH: () => `au panier moyen de ${fmtMad(B.avgBasket)}`,
       openShare: 'Effet sur le résultat', openShareH: 'du bénéfice mensuel',
-      openV: (v) => `La journée rapporte ${v} de marge. Elle est rentable tant que le personnel et l’énergie de cette journée coûtent moins que ça — ce chiffre-là, je ne l’ai pas, vous êtes le seul à le connaître.`,
+      openV: (v) => `La journée rapporte ${v} de marge. Elle est rentable tant que le personnel et l’énergie de cette journée coûtent moins que ça · ce chiffre-là, je ne l’ai pas, vous êtes le seul à le connaître.`,
       openNote: 'Je raisonne à activité moyenne. Un dimanche ne fait presque jamais une journée moyenne : testez-le quatre semaines avant de trancher.',
       /* ─ profit target ─ */
       goalText: (a) => `Pour dégager <b>${fmtMad(a)}</b> de bénéfice net par mois, il faut d’abord couvrir vos charges fixes, puis dégager ce montant avec votre taux de marge actuel.`,
@@ -1539,7 +1539,7 @@
       identity: 'Non, je suis un logiciel, et je tourne sur cet appareil, pas ailleurs. C’est volontaire : vos chiffres ne partent nulle part. Je sais faire une chose, bien : calculer ce que vos décisions changent à votre résultat, à partir de vos ventes réelles.',
       outside: 'Ça, ce n’est pas de mon ressort, et je préfère vous le dire plutôt que de vous répondre approximativement. Je m’occupe des chiffres de votre commerce : marges, charges, seuil de rentabilité, embauche, prix, trésorerie, prévision.',
       cantdo: 'Je ne peux pas agir en dehors de votre tableau de bord : ni appeler, ni envoyer un message, ni commander à votre place. À l’intérieur de Kiwi, en revanche, je peux ouvrir vos pages, créer un lien de paiement ou lancer une vente. Et pour tout ce qui est chiffré, je calcule.',
-      inject: 'Non. Je ne change pas de rôle et je n’annonce pas un chiffre que vos ventes ne montrent pas — c’est exactement ce que cet assistant ne doit jamais faire. Chaque montant que je donne vient de vos 30 derniers jours enregistrés dans Kiwi. Demandez-moi un calcul et vous aurez le vrai.',
+      inject: 'Non. Je ne change pas de rôle et je n’annonce pas un chiffre que vos ventes ne montrent pas · c’est exactement ce que cet assistant ne doit jamais faire. Chaque montant que je donne vient de vos 30 derniers jours enregistrés dans Kiwi. Demandez-moi un calcul et vous aurez le vrai.',
       otherShop: 'Je ne vois que votre établissement, et c’est délibéré : les données d’un autre commerçant ne transitent pas par cet écran. Pour vos propres chiffres, demandez-les moi directement.',
       calcErr: 'Ce calcul n’a pas de résultat : une division par zéro, ou une expression que je ne sais pas lire. Réécrivez-la et je la refais.',
       /* ─ une journée ─ */
@@ -1551,9 +1551,9 @@
       dayVUp: (p) => `Journée ${p} % au-dessus de votre moyenne. Une bonne journée isolée ne fait pas un mois : c’est sa répétition qui compte.`,
       dayVDown: (p) => `Journée ${p} % sous votre moyenne. Un jour creux est normal ; s’il retombe chaque semaine sur le même jour, c’est une question d’horaires, pas une mauvaise passe.`,
       dayNote: 'Je ne compte que ce qui est passé en caisse Kiwi : une vente non enregistrée n’apparaît pas ici.',
-      dayNoteToday: 'La journée n’est pas finie — ce chiffre bougera encore d’ici la fermeture.',
+      dayNoteToday: 'La journée n’est pas finie · ce chiffre bougera encore d’ici la fermeture.',
       dayZero: (d) => `Aucune vente enregistrée le ${d}. Fermé, ou rien n’est passé en caisse ce jour-là : je ne peux pas trancher entre les deux, je ne vois que ce qui est saisi.`,
-      dayBeforeFirst: (d, f) => `Je n’ai rien pour le ${d} : votre première vente enregistrée dans Kiwi date du ${f}. Avant elle je n’ai pas d’historique — et un zéro affiché ici ressemblerait à une mauvaise journée, ce qui serait faux.`,
+      dayBeforeFirst: (d, f) => `Je n’ai rien pour le ${d} : votre première vente enregistrée dans Kiwi date du ${f}. Avant elle je n’ai pas d’historique · et un zéro affiché ici ressemblerait à une mauvaise journée, ce qui serait faux.`,
       dayNoSales: (n) => `${n} n’a pas encore de vente enregistrée, je n’ai donc aucune journée à vous montrer. Dès la première vente saisie en caisse, je vous donne le détail jour par jour.`,
       dayAggregate: 'Sur cette démonstration je raisonne sur un modèle de 30 jours agrégé, pas sur un journal de ventes horodaté : je ne peux donc pas isoler une journée. Sur un compte réel, chaque vente porte son heure et je vous donne la journée exacte, comparée à la veille et à votre moyenne.',
       noData: (x) => `Ce chiffre-là n’est pas dans mes calculs, mais il est bien dans Kiwi : il vit dans ${x}. Je vous y emmène, plutôt que de vous répondre à peu près.`,
@@ -1566,9 +1566,9 @@
       seasGeneric: 'I have no seasonal history for your venue and I won’t invent a forecast. What I can price exactly is what a swing in activity does to your result.',
       swingL: (p) => `Activity ${p > 0 ? '+' : '−'}${Math.abs(p)}%`,
       swingH: 'net profit /mo',
-      seasV: (v, d) => `Every point of activity is worth ${v} of monthly profit. Below −${d}% you drop under your break-even point — that is where the limit sits, not at the first quiet day.`,
+      seasV: (v, d) => `Every point of activity is worth ${v} of monthly profit. Below −${d}% you drop under your break-even point · that is where the limit sits, not at the first quiet day.`,
       seasNote: 'Fixed costs held constant: rent, payroll and subscriptions do not move with footfall. That is why a drop in activity hits the result far harder than it hits revenue.',
-      closeText: (d) => `Closing for <b>${d} day${d > 1 ? 's' : ''}</b> only costs you the margin of those days — your fixed costs keep running.`,
+      closeText: (d) => `Closing for <b>${d} day${d > 1 ? 's' : ''}</b> only costs you the margin of those days · your fixed costs keep running.`,
       closeLost: 'Margin lost', closeLostH: (d) => `${d} day${d > 1 ? 's' : ''} with no sales`,
       closeFixed: 'Costs that run anyway', closeFixedH: 'rent, payroll, subscriptions',
       closeNet: 'Net profit for the month after', closeNetH: () => `vs ${fmtMad(B.netProfit)} on a full month`,
@@ -1580,7 +1580,7 @@
       openGain: 'Margin added', openGainH: (d) => `${d} day${d > 1 ? 's' : ''} at average activity`,
       openRev: 'Revenue for the day', openRevH: () => `at the ${fmtMad(B.avgBasket)} average basket`,
       openShare: 'Effect on the result', openShareH: 'of monthly profit',
-      openV: (v) => `The day brings in ${v} of margin. It pays as long as the staffing and energy for that day cost less than that — and that figure I don’t have, you are the only one who does.`,
+      openV: (v) => `The day brings in ${v} of margin. It pays as long as the staffing and energy for that day cost less than that · and that figure I don’t have, you are the only one who does.`,
       openNote: 'I reason at average activity. A Sunday is almost never an average day: test it for four weeks before deciding.',
       goalText: (a) => `To clear <b>${fmtMad(a)}</b> of net profit a month you first have to cover your fixed costs, then earn that amount at your current margin rate.`,
       goalRev: 'Monthly revenue needed', goalRevH: () => `vs ${fmtMad(B.revenue)} today`,
@@ -1592,7 +1592,7 @@
       goalDone: (a) => `You are already there: your net profit is above ${fmtMad(a)} a month. The real question becomes holding it, not reaching it.`,
       goalNear: (p) => `Reachable: you are ${p}% of activity short. That is the order of magnitude a reworked menu and a measured price rise can go and get.`,
       goalFar: (p) => `Demanding target: you would need ${p}% more activity. On the same floor with the same team that is not a setting, it is a different format.`,
-      goalWild: (p) => `This target needs ${p}% more activity. No pricing or menu lever does that — it would take several venues. I’d rather tell you than simulate it.`,
+      goalWild: (p) => `This target needs ${p}% more activity. No pricing or menu lever does that · it would take several venues. I’d rather tell you than simulate it.`,
       goalNote: 'Computed with the cost structure unchanged. A rise of that size usually adds staff and costs, which this figure does not include.',
       stockText: (n) => `Your catalogue holds <b>${n} active item${n > 1 ? 's' : ''}</b>. Two bases, never to be confused: what the goods cost you, and what they would bring in sold.`,
       stockCost: 'Value at purchase cost', stockCostH: 'the basis for accounts or insurance',
@@ -1608,7 +1608,7 @@
       cliLoyal: 'Regulars · of which VIP', cliLoyalH: 'the base of your revenue',
       cliNew: 'New', cliNewH: 'last 30 days',
       cliLost: 'Dormant', cliLostH: 'over 30 days without a visit',
-      cliVGood: (p) => `${p}% of your identified clients come back: that is your most profitable asset — a returning client costs nothing to acquire.`,
+      cliVGood: (p) => `${p}% of your identified clients come back: that is your most profitable asset · a returning client costs nothing to acquire.`,
       cliVLow: (p) => `Only ${p}% come back. Waking the dormant ones costs far less than finding that many new clients.`,
       cliNote: 'I only count clients identified at the till. Anonymous walk-ins do not show here, so your real return rate is probably higher.',
       cliNone: 'Your client book is not active yet. Once clients are identified at the till (phone or loyalty card), I can give you the return rate, the regulars and the dormant ones.',
@@ -1627,9 +1627,9 @@
       finSafe: 'Margin of safety', finSafeH: 'above break-even',
       finCash: 'Cash', finCashH: 'contribution you can put in',
       finV: 'These figures are your argument, not your cash need. A Moroccan bank asks for financial statements, bank records and often a guarantee: lead with the result and the break-even point, not with the urgency.',
-      finNote: 'I am not your banker and I don’t know the criteria of the bank that refused. If it was a short-term cash refusal, an overdraft facility is negotiated differently from an investment loan — your accountant will tell you which to ask for.',
-      theft: 'I cannot know whether someone is stealing from you — I only see what gets recorded. But till theft nearly always leaves the same traces, and Kiwi keeps those: voids and discounts granted, reopened tickets, gaps between the counted float and the expected one, and how all of that splits by employee. Put every employee on their own code in Team, then look at Transactions over two weeks: if the pattern concentrates on one person or one shift, it will show. In the meantime, here is where your money actually goes.',
-      expText: 'A second venue has its own rent, its own team and its own ramp-up — I have none of those and I won’t invent them. What I can give you is your real funding capacity, from the business you already have:',
+      finNote: 'I am not your banker and I don’t know the criteria of the bank that refused. If it was a short-term cash refusal, an overdraft facility is negotiated differently from an investment loan · your accountant will tell you which to ask for.',
+      theft: 'I cannot know whether someone is stealing from you · I only see what gets recorded. But till theft nearly always leaves the same traces, and Kiwi keeps those: voids and discounts granted, reopened tickets, gaps between the counted float and the expected one, and how all of that splits by employee. Put every employee on their own code in Team, then look at Transactions over two weeks: if the pattern concentrates on one person or one shift, it will show. In the meantime, here is where your money actually goes.',
+      expText: 'A second venue has its own rent, its own team and its own ramp-up · I have none of those and I won’t invent them. What I can give you is your real funding capacity, from the business you already have:',
       expCash: 'Cash available', expCashH: 'mobilisable today',
       expMonth: 'Net profit /mo', expMonthH: 'what the business clears',
       expYear: 'Over 12 months', expYearH: 'at the current rate',
@@ -1643,25 +1643,25 @@
       valFixed: 'Fixed costs /mo', valFixedH: 'what the buyer takes on too',
       valV: 'A small business commonly changes hands at a multiple of its annual result, and that multiple varies enormously with the lease, the location and how transferable the customer base is. The result above is the base; the multiple is negotiated and signed off by an accountant, not by me.',
       valNote: 'For a partner exit, the split written into your articles of association overrides any estimate. Have the accounts drawn up at the exit date before anyone names a figure.',
-      thanks: 'Any time. I’m here for a hire, a price rise, an investment, your break-even point or this month’s forecast — tell me what you want to look at.',
-      identity: 'No, I’m software, and I run on this device, nowhere else. That is deliberate: your figures don’t travel. I do one thing well — work out what your decisions change in your result, from your real sales.',
+      thanks: 'Any time. I’m here for a hire, a price rise, an investment, your break-even point or this month’s forecast · tell me what you want to look at.',
+      identity: 'No, I’m software, and I run on this device, nowhere else. That is deliberate: your figures don’t travel. I do one thing well · work out what your decisions change in your result, from your real sales.',
       outside: 'That one is outside what I do, and I’d rather say so than answer you approximately. I handle the numbers of your business: margins, costs, break-even, hiring, pricing, cash, forecast.',
-      cantdo: 'I can’t act outside your dashboard — no calls, no messages, no ordering on your behalf. Inside Kiwi I can open your pages, create a payment link or start a sale. And anything with a number in it, I compute.',
-      inject: 'No. I don’t change role and I don’t announce a figure your sales don’t show — that is precisely what this assistant must never do. Every amount I give comes from your last 30 days recorded in Kiwi. Ask me for a calculation and you’ll get the real one.',
+      cantdo: 'I can’t act outside your dashboard · no calls, no messages, no ordering on your behalf. Inside Kiwi I can open your pages, create a payment link or start a sale. And anything with a number in it, I compute.',
+      inject: 'No. I don’t change role and I don’t announce a figure your sales don’t show · that is precisely what this assistant must never do. Every amount I give comes from your last 30 days recorded in Kiwi. Ask me for a calculation and you’ll get the real one.',
       otherShop: 'I only see your venue, and that is deliberate: another merchant’s data does not pass through this screen. For your own figures, just ask me directly.',
-      calcErr: 'That calculation has no result — a division by zero, or an expression I can’t read. Write it again and I’ll redo it.',
+      calcErr: 'That calculation has no result · a division by zero, or an expression I can’t read. Write it again and I’ll redo it.',
       /* ─ one day ─ */
       dayText: (d) => `Your day on <b>${d}</b>, as it was rung up:`,
       dayRev: 'Taken', dayRevH: (n) => `${n} recorded sale${n > 1 ? 's' : ''}`,
       dayBasket: 'Average basket', dayBasketH: 'on that day',
       dayPrev: 'Day before', dayNone: 'no sale',
       dayAvg: 'Daily average', dayAvgH: (n) => `over your ${n} recorded days`,
-      dayVUp: (p) => `${p} % above your daily average. One good day is not a month — what counts is whether it repeats.`,
+      dayVUp: (p) => `${p} % above your daily average. One good day is not a month · what counts is whether it repeats.`,
       dayVDown: (p) => `${p} % below your daily average. A quiet day is normal; if it lands on the same weekday every week, that is an opening-hours question, not a bad patch.`,
       dayNote: 'I only count what went through the Kiwi till: a sale that was never recorded does not show up here.',
-      dayNoteToday: 'The day is not over — this figure will still move before you close.',
+      dayNoteToday: 'The day is not over · this figure will still move before you close.',
       dayZero: (d) => `No sale recorded on ${d}. Closed, or nothing was rung up that day: I can’t tell those two apart, I only see what was entered.`,
-      dayBeforeFirst: (d, f) => `I have nothing for ${d}: your first sale recorded in Kiwi is from ${f}. Before that I have no history — and a zero here would read like a bad day, which would be false.`,
+      dayBeforeFirst: (d, f) => `I have nothing for ${d}: your first sale recorded in Kiwi is from ${f}. Before that I have no history · and a zero here would read like a bad day, which would be false.`,
       dayNoSales: (n) => `${n} has no recorded sale yet, so I have no day to show you. From the first sale rung up, I can give you the day-by-day detail.`,
       dayAggregate: 'In this demo I reason from an aggregated 30-day model, not a timestamped sales journal, so I can’t isolate a single day. On a real account every sale carries its time and I give you the exact day, against the day before and against your average.',
       noData: (x) => `That figure isn’t in my calculations, but it is in Kiwi: it lives in ${x}. I’ll take you there rather than answer you approximately.`,
@@ -1688,7 +1688,7 @@
       openGain: 'الهامش المضاف', openGainH: (d) => `${d} ${d > 1 ? 'أيام' : 'يوم'} بنشاط متوسط`,
       openRev: 'رقم معاملات اليوم', openRevH: () => `بمتوسط سلة ${fmtMad(B.avgBasket)}`,
       openShare: 'الأثر على النتيجة', openShareH: 'من الربح الشهري',
-      openV: (v) => `اليوم يجلب ${v} من الهامش. يبقى مربحًا ما دامت أجور ذلك اليوم وطاقته أقل من ذلك — وهذا الرقم ليس عندي، أنت وحدك تعرفه.`,
+      openV: (v) => `اليوم يجلب ${v} من الهامش. يبقى مربحًا ما دامت أجور ذلك اليوم وطاقته أقل من ذلك · وهذا الرقم ليس عندي، أنت وحدك تعرفه.`,
       openNote: 'أحسب على نشاط متوسط. والأحد نادرًا ما يكون يومًا متوسطًا: جرّبه أربعة أسابيع قبل الحسم.',
       goalText: (a) => `لتحقيق <b>${fmtMad(a)}</b> ربحًا صافيًا شهريًا عليك أولًا تغطية تكاليفك الثابتة، ثم تحقيق هذا المبلغ بمعدّل هامشك الحالي.`,
       goalRev: 'رقم المعاملات الشهري المطلوب', goalRevH: () => `مقابل ${fmtMad(B.revenue)} اليوم`,
@@ -1754,11 +1754,11 @@
       valFixed: 'التكاليف الثابتة/شهر', valFixedH: 'ما يتحمّله المشتري أيضًا',
       valV: 'الأصل التجاري يُتداول عادةً بمضاعف من النتيجة السنوية، ويتغيّر هذا المضاعف كثيرًا حسب عقد الكراء والموقع وقابلية انتقال الزبناء. النتيجة أعلاه هي الأساس؛ أما المضاعف فيُتفاوض عليه ويصادق عليه خبير محاسب، لا أنا.',
       valNote: 'في خروج شريك، ما ينصّ عليه النظام الأساسي يعلو على أي تقدير. اطلب إعداد الحسابات في تاريخ الخروج قبل ذكر أي رقم.',
-      thanks: 'بكل سرور. أبقى جاهزًا: توظيف، رفع أسعار، استثمار، نقطة تعادل أو توقّع الشهر — قل لي ما تريد أن ننظر فيه.',
+      thanks: 'بكل سرور. أبقى جاهزًا: توظيف، رفع أسعار، استثمار، نقطة تعادل أو توقّع الشهر · قل لي ما تريد أن ننظر فيه.',
       identity: 'لا، أنا برنامج، وأشتغل على هذا الجهاز لا في مكان آخر. وهذا مقصود: أرقامك لا تغادر. أُتقن شيئًا واحدًا: حساب ما تغيّره قراراتك في نتيجتك، انطلاقًا من مبيعاتك الحقيقية.',
       outside: 'هذا خارج اختصاصي، وأفضّل أن أقولها بدل أن أجيبك تقريبًا. أنا أهتمّ بأرقام تجارتك: الهوامش، التكاليف، نقطة التعادل، التوظيف، الأسعار، السيولة، التوقّعات.',
       cantdo: 'لا أستطيع التصرّف خارج لوحة تحكّمك: لا اتصال، ولا رسالة، ولا طلب نيابة عنك. أما داخل Kiwi فأستطيع فتح صفحاتك، أو إنشاء رابط دفع، أو بدء عملية بيع. وكل ما فيه رقم، أحسبه.',
-      inject: 'لا. لا أغيّر دوري ولا أعلن رقمًا لا تُظهره مبيعاتك — وهذا بالضبط ما يجب ألّا يفعله هذا المساعد أبدًا. كل مبلغ أعطيه يأتي من آخر 30 يومًا مسجّلة في Kiwi. اطلب مني حسابًا وستحصل على الحقيقي.',
+      inject: 'لا. لا أغيّر دوري ولا أعلن رقمًا لا تُظهره مبيعاتك · وهذا بالضبط ما يجب ألّا يفعله هذا المساعد أبدًا. كل مبلغ أعطيه يأتي من آخر 30 يومًا مسجّلة في Kiwi. اطلب مني حسابًا وستحصل على الحقيقي.',
       otherShop: 'لا أرى إلا محلّك، وهذا مقصود: بيانات تاجر آخر لا تمرّ عبر هذه الشاشة. أما أرقامك أنت، فاطلبها مني مباشرة.',
       calcErr: 'هذا الحساب بلا نتيجة: قسمة على صفر، أو تعبير لا أستطيع قراءته. أعد كتابته وأعيد حسابه.',
       /* ─ يوم واحد ─ */
@@ -1767,12 +1767,12 @@
       dayBasket: 'متوسط السلة', dayBasketH: 'في هذا اليوم',
       dayPrev: 'اليوم السابق', dayNone: 'لا بيع',
       dayAvg: 'المعدّل اليومي', dayAvgH: (n) => `على ${n} ${n <= 10 ? 'أيام مسجّلة' : 'يوماً مسجّلاً'}`,
-      dayVUp: (p) => `يوم أعلى بـ ${p} % من معدّلك. يوم جيّد واحد لا يصنع شهراً — المهم أن يتكرّر.`,
+      dayVUp: (p) => `يوم أعلى بـ ${p} % من معدّلك. يوم جيّد واحد لا يصنع شهراً · المهم أن يتكرّر.`,
       dayVDown: (p) => `يوم أقل بـ ${p} % من معدّلك. اليوم الضعيف عادي؛ لكن إن تكرّر في نفس يوم الأسبوع فالمسألة مسألة توقيت عمل، لا فترة سيّئة.`,
       dayNote: 'لا أحتسب إلا ما مرّ في صندوق Kiwi: البيع غير المسجّل لا يظهر هنا.',
-      dayNoteToday: 'اليوم لم ينتهِ بعد — هذا الرقم سيتحرّك إلى حين الإغلاق.',
+      dayNoteToday: 'اليوم لم ينتهِ بعد · هذا الرقم سيتحرّك إلى حين الإغلاق.',
       dayZero: (d) => `لا عملية بيع مسجّلة يوم ${d}. إمّا كنت مغلقاً، وإمّا لم يمرّ شيء في الصندوق ذلك اليوم: لا أستطيع الحسم بينهما، لا أرى إلا ما سُجّل.`,
-      dayBeforeFirst: (d, f) => `ليس لديّ شيء عن ${d}: أول عملية بيع مسجّلة في Kiwi تعود إلى ${f}. قبلها لا تاريخ لديّ — وصفر معروض هنا سيبدو كيوم سيّئ، وذلك غير صحيح.`,
+      dayBeforeFirst: (d, f) => `ليس لديّ شيء عن ${d}: أول عملية بيع مسجّلة في Kiwi تعود إلى ${f}. قبلها لا تاريخ لديّ · وصفر معروض هنا سيبدو كيوم سيّئ، وذلك غير صحيح.`,
       dayNoSales: (n) => `${n} ليس لديه بعد أي عملية بيع مسجّلة، فلا يوم لأعرضه عليك. من أول عملية بيع في الصندوق، أعطيك التفصيل يوماً بيوم.`,
       dayAggregate: 'في هذا العرض التوضيحي أعتمد نموذجاً مجمّعاً على 30 يوماً، لا سجلّ مبيعات موقّتاً، فلا أستطيع عزل يوم بعينه. في حساب حقيقي تحمل كل عملية بيع ساعتها، فأعطيك اليوم بالضبط، مقارناً باليوم السابق وبمعدّلك.',
       noData: (x) => `هذا الرقم ليس ضمن حساباتي، لكنه موجود في Kiwi: يوجد في ${x}. سآخذك إليه بدل أن أجيبك تقريبًا.`,
@@ -2447,7 +2447,7 @@
       working: 'One moment…',
       done: (n, s) => `Done: order no. ${n} is ${s}.`,
       unknown: (n) => `I can't find an open order no. ${n}. Nothing was touched.`,
-      ambiguous: (n) => `Two open orders carry no. ${n}. Do it from the Orders page — I won't risk the wrong one.`,
+      ambiguous: (n) => `Two open orders carry no. ${n}. Do it from the Orders page · I won't risk the wrong one.`,
       already: (n, s) => `Order no. ${n} is already ${s}. Nothing was touched.`,
       bad: (n, s) => `Order no. ${n} is ${s}: that move isn't allowed. Nothing was touched.`,
       off: 'Orders aren’t switched on here. Nothing was touched.',
@@ -2465,7 +2465,7 @@
       working: 'لحظة…',
       done: (n, s) => `تم: الطلب رقم ${n} ${s}.`,
       unknown: (n) => `لا أجد طلبًا مفتوحًا رقم ${n}. لم يُمسّ شيء.`,
-      ambiguous: (n) => `طلبان مفتوحان يحملان رقم ${n}. افعلها من صفحة الطلبات — لا أريد لمس الخطأ.`,
+      ambiguous: (n) => `طلبان مفتوحان يحملان رقم ${n}. افعلها من صفحة الطلبات · لا أريد لمس الخطأ.`,
       already: (n, s) => `الطلب رقم ${n} ${s} أصلًا. لم يُمسّ شيء.`,
       bad: (n, s) => `الطلب رقم ${n} ${s}: هذا الانتقال غير مسموح. لم يُمسّ شيء.`,
       off: 'الطلبات غير مفعّلة هنا. لم يُمسّ شيء.',
@@ -3893,7 +3893,7 @@
     { type: 'function', function: { name: 'stock_summary', description: 'Résumé du stock : positions, ruptures, sous seuil, noms concernés.', parameters: { type: 'object', properties: {} } } },
     { type: 'function', function: { name: 'tables_now', description: 'État des tables maintenant (libres, occupées, réservées, addition).', parameters: { type: 'object', properties: {} } } },
     { type: 'function', function: { name: 'reservations_today', description: "Réservations du jour d'après le plan de salle.", parameters: { type: 'object', properties: {} } } },
-    { type: 'function', function: { name: 'orders_open', description: 'Les commandes ouvertes (id, numéro, statut, total) — à appeler AVANT de proposer un changement de statut.', parameters: { type: 'object', properties: {} } } },
+    { type: 'function', function: { name: 'orders_open', description: 'Les commandes ouvertes (id, numéro, statut, total) · à appeler AVANT de proposer un changement de statut.', parameters: { type: 'object', properties: {} } } },
     { type: 'function', function: { name: 'propose_action', description: "Modifier quelque chose. Actions : stock-adjust {itemId, qty (négatif pour retirer), reason, note} · order-status {orderId, status: accepted|rejected|ready|served} · reprint {ref} · customer-message-draft {phone, text}. Résous d'abord l'id exact (stock_level → items[].id ; orders_open → orders[].id) ; ne devine jamais un id. Le résultat dit si l'action est exécutée (executed) ou attend la confirmation du commerçant (awaiting_confirmation).", parameters: { type: 'object', properties: { name: { type: 'string', enum: ['stock-adjust', 'order-status', 'reprint', 'customer-message-draft'] }, args: { type: 'object' }, summary: { type: 'string', description: 'Une ligne lisible décrivant l\'action, dans la langue du commerçant.' } }, required: ['name', 'args', 'summary'] } } },
   ];
   /* Direct execution is an explicit owner-only, per-venue preference. The
@@ -3905,12 +3905,12 @@
   const ACTION_NAME_RX = /^(stock-adjust|order-status|reprint|customer-message-draft|create-po)$/;
   const TOOL_RESULT_MAX = 2000;
   const ACTION_COPY = {
-    fr: { confirm: 'Confirmer', cancel: 'Annuler', done: 'Fait.', refused: 'Action refusée', expired: 'Proposition expirée — redemandez.', cancelled: 'Annulé, rien n’a été modifié.', autoOn: 'Exécution directe : activée — l’assistant modifie stock, commandes et réimpressions sans confirmation.', autoOff: 'Exécution directe : désactivée — chaque action attend votre confirmation.', autoToggleOn: 'Désactiver l’exécution directe', autoToggleOff: 'Activer l’exécution directe' },
-    en: { confirm: 'Confirm', cancel: 'Cancel', done: 'Done.', refused: 'Action refused', expired: 'Proposal expired — ask again.', cancelled: 'Cancelled, nothing changed.', autoOn: 'Direct execution: on — the assistant changes stock, orders and reprints without confirmation.', autoOff: 'Direct execution: off — every action waits for your confirmation.', autoToggleOn: 'Turn off direct execution', autoToggleOff: 'Turn on direct execution' },
-    ar: { confirm: 'تأكيد', cancel: 'إلغاء', done: 'تم.', refused: 'رُفض الإجراء', expired: 'انتهت صلاحية الاقتراح — أعد الطلب.', cancelled: 'أُلغي، لم يتغيّر شيء.', autoOn: 'التنفيذ المباشر: مفعّل — يغيّر المساعد المخزون والطلبات وإعادة الطباعة دون تأكيد.', autoOff: 'التنفيذ المباشر: معطّل — كل إجراء ينتظر تأكيدك.', autoToggleOn: 'إيقاف التنفيذ المباشر', autoToggleOff: 'تفعيل التنفيذ المباشر' },
+    fr: { confirm: 'Confirmer', cancel: 'Annuler', done: 'Fait.', refused: 'Action refusée', expired: 'Proposition expirée · redemandez.', cancelled: 'Annulé, rien n’a été modifié.', autoOn: 'Exécution directe : activée · l’assistant modifie stock, commandes et réimpressions sans confirmation.', autoOff: 'Exécution directe : désactivée · chaque action attend votre confirmation.', autoToggleOn: 'Désactiver l’exécution directe', autoToggleOff: 'Activer l’exécution directe' },
+    en: { confirm: 'Confirm', cancel: 'Cancel', done: 'Done.', refused: 'Action refused', expired: 'Proposal expired · ask again.', cancelled: 'Cancelled, nothing changed.', autoOn: 'Direct execution: on · the assistant changes stock, orders and reprints without confirmation.', autoOff: 'Direct execution: off · every action waits for your confirmation.', autoToggleOn: 'Turn off direct execution', autoToggleOff: 'Turn on direct execution' },
+    ar: { confirm: 'تأكيد', cancel: 'إلغاء', done: 'تم.', refused: 'رُفض الإجراء', expired: 'انتهت صلاحية الاقتراح · أعد الطلب.', cancelled: 'أُلغي، لم يتغيّر شيء.', autoOn: 'التنفيذ المباشر: مفعّل · يغيّر المساعد المخزون والطلبات وإعادة الطباعة دون تأكيد.', autoOff: 'التنفيذ المباشر: معطّل · كل إجراء ينتظر تأكيدك.', autoToggleOn: 'إيقاف التنفيذ المباشر', autoToggleOff: 'تفعيل التنفيذ المباشر' },
   };
-  const TOOLS_RULE = "OUTILS — les chiffres viennent des outils ou du bloc FAITS, jamais de toi. Pour agir (retirer ou ajouter du stock, changer le statut d'une commande, réimprimer, rédiger un message client) appelle propose_action après avoir résolu l'identifiant exact par stock_level ou orders_open ; quantité négative = retrait. Ne devine jamais un id : si tu ne trouves pas l'article ou la commande, dis-le. Le résultat de propose_action dit si c'est fait (executed) ou en attente de confirmation (awaiting_confirmation) : annonce exactement cela, en une phrase.";
-  const FACTS_LEAD = "FAITS — calculés par Kiwi pour cette question, à partir des données réelles du commerce. Ils font autorité : reformule-les clairement dans la langue de la question, garde le fil de la conversation, ne modifie AUCUN chiffre et n'en invente aucun. Si la question demande une donnée absente des faits, appelle un outil. Pas de markdown.\n";
+  const TOOLS_RULE = "OUTILS · les chiffres viennent des outils ou du bloc FAITS, jamais de toi. Pour agir (retirer ou ajouter du stock, changer le statut d'une commande, réimprimer, rédiger un message client) appelle propose_action après avoir résolu l'identifiant exact par stock_level ou orders_open ; quantité négative = retrait. Ne devine jamais un id : si tu ne trouves pas l'article ou la commande, dis-le. Le résultat de propose_action dit si c'est fait (executed) ou en attente de confirmation (awaiting_confirmation) : annonce exactement cela, en une phrase.";
+  const FACTS_LEAD = "FAITS · calculés par Kiwi pour cette question, à partir des données réelles du commerce. Ils font autorité : reformule-les clairement dans la langue de la question, garde le fil de la conversation, ne modifie AUCUN chiffre et n'en invente aucun. Si la question demande une donnée absente des faits, appelle un outil. Pas de markdown.\n";
   const TOOL_DATE_RX = /^\d{4}-\d{2}-\d{2}$/;
   function toolDayBounds(day) {
     const R = window.KiwiDayReport;
@@ -4038,7 +4038,7 @@
     /* Aggregates straight from the simulator — the merchant sees these at the
      * top of the dashboard, so the agent must match them exactly. */
     lines.push(
-      `  · Heure de service simulée : ~${sim.simHourLabel || '—'}`,
+      `  · Heure de service simulée : ~${sim.simHourLabel || '·'}`,
       `  · Commandes encaissées depuis ce matin : ${fmt(sim.cumTx || 0)}`,
       `  · CA réalisé depuis ce matin : ${fmt(sim.cumRevenue || 0)} MAD`,
       `  · Panier moyen aujourd'hui : ${fmt(sim.panierMoyen || 0)} MAD`,
@@ -4052,11 +4052,11 @@
       const recent = orders.slice(0, 8).map(o => {
         const items = (o.items || []).slice(0, 2).map(it => `×${it.qty} ${it.name}`).join(', ');
         const more = (o.items || []).length > 2 ? ` (+${o.items.length - 2})` : '';
-        const table = o.table != null ? `T${o.table}` : '—';
+        const table = o.table != null ? `T${o.table}` : '·';
         const covers = o.covers ? ` · ${o.covers} couvert${o.covers > 1 ? 's' : ''}` : '';
         const server = o.server ? ` · servi par ${o.server}` : '';
-        const total = (o.total || o.amt) ? `${o.total || o.amt} MAD` : '—';
-        return `  · ${o.t || '—'} · ${o.customer || '—'} · ${table}${covers}${server} · ${o.primary || '—'} · ${total}${items ? `, ${items}${more}` : ''}`;
+        const total = (o.total || o.amt) ? `${o.total || o.amt} MAD` : '·';
+        return `  · ${o.t || '·'} · ${o.customer || '·'} · ${table}${covers}${server} · ${o.primary || '·'} · ${total}${items ? `, ${items}${more}` : ''}`;
       });
       lines.push('', `  Les ${recent.length} dernières commandes encaissées (la plus récente d'abord) :`);
       lines.push(...recent);
@@ -4536,10 +4536,10 @@
       filter:brightness(0) saturate(100%) invert(85%) sepia(31%) saturate(469%)
         hue-rotate(70deg) brightness(102%) contrast(91%); }
 
-    /* agent message — text flows on paper, no box */
+    /* agent message · text flows on paper, no box */
     .fa-msg.agent .fa-bubble { flex:1; min-width:0; max-width:632px; padding-top:3px;
       font-size:14px; line-height:1.62; color:var(--ink); }
-    /* user message — soft white card */
+    /* user message · soft white card */
     .fa-msg.user .fa-bubble { max-width:78%; background:var(--surface); border:1px solid var(--n-200);
       border-radius:18px 18px 6px 18px; padding:11px 16px; font-size:13.5px; line-height:1.55;
       color:var(--ink); box-shadow:0 4px 16px -10px rgba(10,15,13,.22); }
@@ -4565,7 +4565,7 @@
     .fa-verdict.bad  { background:rgba(193,58,48,.10); color:#b3392f; }
     .fa-note { margin-top:11px; font-size:11.5px; color:var(--n-500); line-height:1.5; }
     /* La provenance : établissement · période · module · volume · fraîcheur.
-       Discrète par construction — elle ne s'adresse pas au commerçant tous les
+       Discrète par construction · elle ne s'adresse pas au commerçant tous les
        jours, elle sert le jour où deux surfaces annoncent deux chiffres. */
     .fa-meta { margin-top:9px; font-size:10.5px; color:var(--n-500); opacity:.8;
       letter-spacing:.015em; line-height:1.45; }
@@ -4624,7 +4624,7 @@
     .fa-tool svg { width:14px; height:14px; }
     .fa-hint { font-size:11px; color: var(--n-500); }
 
-    /* calculator — hidden until toggled */
+    /* calculator · hidden until toggled */
     .fa-keypad { display:none; }
     .fa-keypad.open { display:block; animation:fa-kp-in 300ms var(--ease-out,cubic-bezier(.32,.72,0,1)) both; }
     @keyframes fa-kp-in { from{ opacity:0; transform:translateY(18px); } to{ opacity:1; transform:none; } }
@@ -4688,7 +4688,7 @@
     .fa-ctx-mode:hover { border-color:var(--atlas); }
     @media (max-width:920px) { .fa-context { display:none; } }
 
-    /* ─── empty-state hero — the first screen, before any conversation ─── */
+    /* ─── empty-state hero · the first screen, before any conversation ─── */
     .fa-hero { display:flex; flex-direction:column; }
     .fa-hero-mark { width:46px; height:46px; border-radius:50%; display:flex; align-items:center;
       justify-content:center; background:linear-gradient(150deg,var(--atlas),var(--riad)); color:var(--mint);
@@ -4715,7 +4715,7 @@
     .fa-hero-insight b { color:var(--atlas); font-weight:600; }
     @media (max-width:560px) { .fa-hero-cards { grid-template-columns:1fr; } }
 
-    /* ─── curated context rail — 4 KPIs, a cost split, the rest folded away ─── */
+    /* ─── curated context rail · 4 KPIs, a cost split, the rest folded away ─── */
     .fa-ctx-kpis { margin-top:20px; }
     .fa-ctx-kpi { display:flex; justify-content:space-between; align-items:baseline; gap:12px; width:100%;
       border:0; background:transparent; padding:12px 8px; border-radius:11px; cursor:pointer;
@@ -4759,7 +4759,7 @@
 
     /* ─── Dark theme · flat, contour-free, off-white (ChatGPT-style) ──────
      * In dark mode the assistant drops every light card, border and bright
-     * accent — surfaces sit on the flat --paper tones, text is off-white,
+     * accent · surfaces sit on the flat --paper tones, text is off-white,
      * nothing is outlined. */
     html[data-theme="dark"] .fa-msg.user .fa-bubble {
       background:var(--paper-soft); border:none; box-shadow:none; }

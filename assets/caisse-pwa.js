@@ -127,7 +127,7 @@
       d.style.background = tone;
       d.textContent = label;
     }
-    d.title = label + ' — ' + detail;
+    d.title = label + ' · ' + detail;
     d.onclick = function () {
       try { if (window.KiwiLive && window.KiwiLive.flush) window.KiwiLive.flush(true); } catch (_) {}
       status();

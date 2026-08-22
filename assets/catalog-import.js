@@ -71,7 +71,7 @@
   /* Prices go BACK to the merchant in the format they typed them in: 340,50 —
      not the 340.5 a raw JS number stringifies to. Whole dirhams stay whole. */
   function mad(n) {
-    if (!isFinite(n)) return '—';
+    if (!isFinite(n)) return '·';
     const dec = Math.round(n * 100) % 100 === 0 ? 0 : 2;
     return n.toLocaleString('fr-FR', { minimumFractionDigits: dec, maximumFractionDigits: dec }) + ' MAD';
   }
@@ -263,13 +263,13 @@
       if (rawPrice && !isFinite(g.priceMAD)) {
         const p = num(rawPrice);
         if (isFinite(p)) g.priceMAD = p;
-        else issues.push({ line, level: 'warn', msg: 'prix illisible (« ' + rawPrice + ' ») — ignoré' });
+        else issues.push({ line, level: 'warn', msg: 'prix illisible (« ' + rawPrice + ' ») · ignoré' });
       }
       const rawCost = cell(row, idx.cout);
       if (rawCost && !isFinite(g.cost)) {
         const c = num(rawCost);
         if (isFinite(c)) g.cost = c;
-        else issues.push({ line, level: 'warn', msg: 'coût d\'achat illisible (« ' + rawCost + ' ») — ignoré' });
+        else issues.push({ line, level: 'warn', msg: 'coût d\'achat illisible (« ' + rawCost + ' ») · ignoré' });
       }
 
       /* Variant: couleur × taille. A shop with no colours or no sizes still
@@ -309,7 +309,7 @@
       const stockGiven = rawStock !== '';
       const stock = stockGiven ? intOr(rawStock, 0) : null;
       if (stockGiven && !isFinite(num(rawStock))) {
-        issues.push({ line, level: 'warn', msg: 'stock illisible (« ' + rawStock + ' ») — compté 0' });
+        issues.push({ line, level: 'warn', msg: 'stock illisible (« ' + rawStock + ' ») · compté 0' });
       }
 
       const vk = colorId + '\u0000' + keyName(size);
@@ -333,7 +333,7 @@
         const vkFull = gk + '|' + vk;
         const dupInFile = seenCodes.get(code);
         if (dupInFile && dupInFile.vk !== vkFull) {
-          issues.push({ line, level: 'warn', msg: 'code-barres ' + code + ' déjà utilisé ligne ' + dupInFile.line + ' — ignoré ici' });
+          issues.push({ line, level: 'warn', msg: 'code-barres ' + code + ' déjà utilisé ligne ' + dupInFile.line + ' · ignoré ici' });
         } else if (!dupInFile) {
           seenCodes.set(code, { line, vk: vkFull });
           const owner = CAT.findByBarcode(code);
@@ -341,7 +341,7 @@
             const sameArticle = keyName(owner.product && owner.product.name) === gk
               && owner.variant.colorId === colorId && keyName(owner.variant.size) === keyName(size);
             if (sameArticle) v.barcodes.push({ code, type: cell(row, idx.type), already: true });
-            else issues.push({ line, level: 'warn', msg: 'code-barres ' + code + ' appartient déjà à « ' + ((owner.product && owner.product.name) || '?') + ' » — ignoré' });
+            else issues.push({ line, level: 'warn', msg: 'code-barres ' + code + ' appartient déjà à « ' + ((owner.product && owner.product.name) || '?') + ' » · ignoré' });
           } else {
             v.barcodes.push({ code, type: cell(row, idx.type), already: false });
           }
@@ -483,7 +483,7 @@
       const rawPrice = cell(row, idx.prix_mad);
       const price = num(rawPrice);
       if (rawPrice && !isFinite(price)) {
-        issues.push({ line, level: 'warn', msg: 'prix illisible (« ' + rawPrice + ' ») — compté 0' });
+        issues.push({ line, level: 'warn', msg: 'prix illisible (« ' + rawPrice + ' ») · compté 0' });
       }
       if (catName && !catByName.has(keyName(catName)) && !newCategories.some((n) => keyName(n) === keyName(catName))) {
         newCategories.push(catName);
@@ -704,11 +704,11 @@
       const rowsHtml = kind === 'boutique'
         ? p.products.slice(0, 60).map((g) => '<tr><td>' + esc(g.name)
             + (g.existing ? '' : ' <span class="kci-tag new">nouveau</span>') + '</td><td>'
-            + esc(g.categoryName || '—') + '</td><td>' + esc(mad(g.priceMAD))
+            + esc(g.categoryName || '·') + '</td><td>' + esc(mad(g.priceMAD))
             + '</td><td>' + g.variants.length + '</td></tr>').join('')
         : p.rows.slice(0, 60).map((r) => '<tr><td>' + esc(r.name)
             + (r.existing ? '' : ' <span class="kci-tag new">nouveau</span>') + '</td><td>'
-            + esc(r.catName || '—') + (r.subName ? ' · ' + esc(r.subName) : '') + '</td><td>'
+            + esc(r.catName || '·') + (r.subName ? ' · ' + esc(r.subName) : '') + '</td><td>'
             + esc(mad(r.price)) + '</td><td>' + (r.avail ? 'oui' : 'non') + '</td></tr>').join('');
 
       const head = kind === 'boutique'
