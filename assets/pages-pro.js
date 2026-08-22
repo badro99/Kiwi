@@ -749,19 +749,19 @@ const TERMINAUX_STR = {
 let TERM_FLEET = null;
 function termFleetSeed() {
   return [
-    { id: 'KP-PRO-2831', model: 'KiwiPad pro',     loc: 'comptoir', net: 'wifi', img: 'Hardware_pictures/Hardware_gamefication4.png',    state: 'on',  batt: 87,  battStart: 96,  fw: '4.2.1', fwUpdate: false, txDay: 87,  life: 'loaned',      pulse: 0.70 },
-    { id: 'KP-CL-1208',  model: 'KiwiPad cashless', loc: 'salle',    net: '4g',   img: 'Hardware_pictures/Hardware_gamefication2.png',    state: 'on',  batt: 63,  battStart: 92,  fw: '2.0.4', fwUpdate: true,  txDay: 54,  life: 'purchased',   pulse: 0.55 },
-    { id: 'KP-PRO-2832', model: 'KiwiPad pro',     loc: 'terrasse', net: 'wifi', img: 'Hardware_pictures/Hardware_gamefication4.png',    state: 'off', batt: 64,  battStart: 88,  fw: '4.2.1', fwUpdate: false, txDay: 0,   life: 'replacement', pulse: 0.05 },
-    { id: 'KO-PRO-4501', model: 'KiwiOrders pro',  loc: 'cuisine',  net: 'wifi', img: 'Hardware_pictures/Hardware_KDSgamefication1.png', state: 'on',  batt: 100, battStart: 100, fw: '3.1.0', fwUpdate: false, txDay: 132, life: 'loaned',      pulse: 0.78 },
+    { id: 'KP-PRO-2831', model: 'KiwiPad pro',     loc: 'comptoir', net: 'wifi', img: 'assets/media/hardware/Hardware_gamefication4.png',    state: 'on',  batt: 87,  battStart: 96,  fw: '4.2.1', fwUpdate: false, txDay: 87,  life: 'loaned',      pulse: 0.70 },
+    { id: 'KP-CL-1208',  model: 'KiwiPad cashless', loc: 'salle',    net: '4g',   img: 'assets/media/hardware/Hardware_gamefication2.png',    state: 'on',  batt: 63,  battStart: 92,  fw: '2.0.4', fwUpdate: true,  txDay: 54,  life: 'purchased',   pulse: 0.55 },
+    { id: 'KP-PRO-2832', model: 'KiwiPad pro',     loc: 'terrasse', net: 'wifi', img: 'assets/media/hardware/Hardware_gamefication4.png',    state: 'off', batt: 64,  battStart: 88,  fw: '4.2.1', fwUpdate: false, txDay: 0,   life: 'replacement', pulse: 0.05 },
+    { id: 'KO-PRO-4501', model: 'KiwiOrders pro',  loc: 'cuisine',  net: 'wifi', img: 'assets/media/hardware/Hardware_KDSgamefication1.png', state: 'on',  batt: 100, battStart: 100, fw: '3.1.0', fwUpdate: false, txDay: 132, life: 'loaned',      pulse: 0.78 },
   ];
 }
 function termFleet() { if (!TERM_FLEET) TERM_FLEET = termFleetSeed(); return TERM_FLEET; }
 
 /* Hardware the "Add a terminal" form can register. */
 const TERM_MODELS = {
-  'KiwiPad pro':      { prefix: 'KP-PRO', fw: '4.2.1', img: 'Hardware_pictures/Hardware_gamefication4.png' },
-  'KiwiPad cashless': { prefix: 'KP-CL',  fw: '2.0.4', img: 'Hardware_pictures/Hardware_gamefication2.png' },
-  'KiwiOrders pro':   { prefix: 'KO-PRO', fw: '3.1.0', img: 'Hardware_pictures/Hardware_KDSgamefication1.png' },
+  'KiwiPad pro':      { prefix: 'KP-PRO', fw: '4.2.1', img: 'assets/media/hardware/Hardware_gamefication4.png' },
+  'KiwiPad cashless': { prefix: 'KP-CL',  fw: '2.0.4', img: 'assets/media/hardware/Hardware_gamefication2.png' },
+  'KiwiOrders pro':   { prefix: 'KO-PRO', fw: '3.1.0', img: 'assets/media/hardware/Hardware_KDSgamefication1.png' },
 };
 
 handlers['nav-terminaux'] = () => {
@@ -1142,20 +1142,20 @@ handlers['terminal-catalog'] = () => {
   const CATALOG = [
     {
       sku: 'kiwipad-pro', name: 'KiwiPad pro', price: '300 €',
-      img: 'Hardware_pictures/Hardware_4.png',
+      img: 'assets/media/hardware/Hardware_4.png',
       tag: T.kiwipadProTag,
       desc: T.kiwipadProDesc,
       featured: true,
     },
     {
       sku: 'kiwiorders-pro', name: 'KiwiOrders pro', price: '200 €',
-      img: 'Hardware_pictures/Hardware_KDS1.png',
+      img: 'assets/media/hardware/Hardware_KDS1.png',
       tag: T.kiwiordersProTag,
       desc: T.kiwiordersProDesc,
     },
     {
       sku: 'kiwipad-cashless', name: 'KiwiPad cashless', price: '100 €',
-      img: 'Hardware_pictures/Hardware_2.png',
+      img: 'assets/media/hardware/Hardware_2.png',
       tag: T.kiwipadCashlessTag,
       desc: T.kiwipadCashlessDesc,
     },

@@ -68,3 +68,6 @@ graphify-out/
 
 # Codex session hooks (machine-local agent config)
 .codex/
+
+# Photos de travail (jamais versionnées) et archive média hors dépôt
+/photos/
