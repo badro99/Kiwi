@@ -52,7 +52,7 @@
   function inventory(id) {
     try {
       const bridge = window.KiwiRestaurantStock;
-      const rows = bridge?.rows ? bridge.rows(venue(id)) : null;
+      const rows = bridge?.rows ? bridge.rows(venue(id)) : (typeof bridge?.items === 'function' ? bridge.items(venue(id)) : (Array.isArray(bridge?.items) ? bridge.items : null));
       return Array.isArray(rows) ? rows.map((row) => ({ ...row, unit: units()?.normalize?.(row.unit) || row.unit })) : [];
     } catch (_) { return []; }
   }

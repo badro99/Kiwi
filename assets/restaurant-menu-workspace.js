@@ -11,19 +11,767 @@
   const D=()=>S()?.data(venue())||{cats:[],items:[],stations:[],opts:[]};
   const find=(key,id)=>(D()[key]||[]).find(x=>x.id===id);
   const cat=(id)=>find('cats',id), item=(id)=>find('items',id), station=(id)=>find('stations',id), group=(id)=>find('opts',id);
-  const lang=()=>(window.KiwiMenuI18n?.lang?.())||(window.KiwiI18n?.getLang?.())||localStorage.getItem('kiwiLang')||'fr';
+  const UI_I18N = {
+    en: {
+      title: 'Menu & modifiers',
+      loading: 'Loading menu…',
+      home: 'Home',
+      articles: 'items',
+      article: 'item',
+      sections: 'sections',
+      section: 'section',
+      tabMenu: 'Menu & modifiers',
+      tabStations: 'Kitchen stations',
+      tabRecipes: 'Recipes',
+      tabPerformance: 'Performance',
+      tabHours: 'Peak hours',
+      tabAlerts: '86 Alerts',
+      tabNfc: 'NFC Tags',
+      scanMenu: 'Scan a menu',
+      importExcel: 'Import Excel',
+      translateMenu: '🌐 Translate menu',
+      all: 'All',
+      allWithCount: 'All · {n}',
+      uncategorizedWithCount: 'Uncategorized · {n}',
+      addSubCat: '+ Subcategory',
+      classifyCount: 'Classify {n} item{s}',
+      rename: 'Rename',
+      delete: 'Delete',
+      withoutSubcat: 'Uncategorized',
+      noSection: 'Uncategorized',
+      kitchen: 'Kitchen',
+      counter: 'Counter',
+      stepCount: '{n} course(s)',
+      optGroupCount: '{n} option group(s)',
+      reuse: 'Reuse',
+      formula: 'SET MENU',
+      searchPlaceholder: 'Search an item…',
+      moveLeft: '← Move left',
+      moveRight: 'Move right →',
+      renameSection: 'Rename section',
+      deleteSection: 'Delete section',
+      newSection: '+ New section',
+      newItem: '+ New item',
+      emptyMenuTitle: 'Your menu is empty',
+      emptyMenuDesc: 'Create a section, then add your first item. No demo content will be added.',
+      createSectionBtn: 'Create a section',
+      noItemMatch: 'No items match your search.',
+      modAndOpts: 'Modifiers & options',
+      newGroupBtn: '+ New option group',
+      noOptGroups: 'No option groups.',
+      required: 'Required',
+      optional: 'Optional',
+      manyChoices: 'Multiple choices',
+      oneChoice: 'Single choice',
+      usedByCount: 'Used by {n} item(s)',
+      noChoices: 'No choices',
+      stationsTitle: 'Preparation stations',
+      stationsSub: 'One section, one station. All tickets remain visible in the All tab of the KDS.',
+      addStation: 'Add station',
+      defaultStationFallback: 'Kitchen · receives remainder',
+      routingBySection: 'Routing by section',
+      defaultRoute: '{name} · default',
+      addFirstStation: 'Add your first station.',
+      createSectionsForRouting: 'Create sections to configure their routing.',
+      recipesTitle: 'Recipes & dish costs',
+      recipesSub: 'Define exact quantities to link each sale to stock and calculate margins.',
+      recipesCompletedCount: '{done} / {total} recipes completed',
+      ingredientCount: '{n} ingredient(s)',
+      viewAndEdit: 'View and edit',
+      complete: 'Complete',
+      costSummaryPortion: '{cost} MAD / portion',
+      missingCostOrQty: 'Quantities or costs to complete',
+      addItemsFirst: 'Add items first.',
+      statusToComplete: 'Incomplete',
+      statusCostIncomplete: 'Incomplete cost',
+      statusCosted: 'Costed recipe',
+      statusCheckStock: 'Check stock',
+      statusToMonitor: 'To monitor',
+      statusCostCompliant: 'Compliant cost',
+      perfTitle: 'Item performance',
+      perfSub: 'Popularity, revenue and gross profit · Last 30 days · Real POS data.',
+      daysCount: '{n} days',
+      noItemsToAnalyze: 'No items to analyze',
+      noItemsToAnalyzeDesc: 'Add your dishes in Menu & modifiers. Performance will appear after the first sales.',
+      noSalesYet: 'No item sales yet',
+      noSalesYetDesc: 'Once the till records detailed receipts, Kiwi will automatically classify dishes.',
+      completeRecipesForProfit: 'Complete recipes to view profitability',
+      completeRecipesForProfitDesc: 'Sales are received. Dish costs are needed to compare their real profit.',
+      analyzedRevenue: 'Analyzed revenue',
+      itemsSold: 'items sold',
+      grossProfitCalc: 'Calculated gross profit',
+      recipesSoldAndCosted: '{n} recipe(s) sold and costed',
+      costCoverage: 'Cost coverage',
+      costCoverageSub: 'share of revenue with complete recipe',
+      grossProfitPerItem: 'Gross profit per item',
+      popularityXDays: 'Popularity · sales over {n} days',
+      perfDotSizeHint: 'Dot size = revenue',
+      perfAxesHint: 'Axes = medians of your own menu',
+      perfClickHint: 'Click an item to open its recipe',
+      quadStar: 'Stars',
+      quadStarHint: 'Popular and profitable',
+      quadStarAction: 'Promote',
+      quadPlow: 'Plowhorses',
+      quadPlowHint: 'Popular, margin needs optimization',
+      quadPlowAction: 'Review cost or price',
+      quadPuzzle: 'Puzzles',
+      quadPuzzleHint: 'Profitable, low order volume',
+      quadPuzzleAction: 'Position better',
+      quadDog: 'Dogs',
+      quadDogHint: 'Low orders and low margin',
+      quadDogAction: 'Review',
+      matrixLabelStar: 'STARS',
+      matrixHintStar: 'Profitable · high volume',
+      matrixLabelPlow: 'TO OPTIMIZE',
+      matrixHintPlow: 'Popular · low margin',
+      matrixLabelPuzzle: 'TO DEVELOP',
+      matrixHintPuzzle: 'Profitable · low volume',
+      matrixLabelDog: 'TO REVIEW',
+      matrixHintDog: 'Low margin & volume',
+      legendStar: 'Stars',
+      legendPlow: 'To optimize',
+      legendPuzzle: 'To develop',
+      legendDog: 'To review',
+      colItem: 'Item',
+      colSold: 'Sold',
+      colRevenue: 'Revenue',
+      colRevenueDesc: 'revenue',
+      colUnitCost: 'Cost / item',
+      colProfit: 'Gross profit',
+      colProfitDesc: 'gross profit',
+      colMargin: 'Margin',
+      colMarginDesc: 'margin',
+      colReadout: 'Status',
+      completeRecipeLink: 'Complete recipe',
+      marginMissing: 'Missing margin',
+      noSaleRecorded: 'No sales',
+      hoursTitle: 'Performance by time of day',
+      hoursSub: 'Which items sell when · Last {n} days · Real POS data',
+      setHoursPrompt: 'Enter restaurant operating hours',
+      setHoursPromptDesc: 'Kiwi generates service moments from saved opening hours. No shifts are invented.',
+      noServiceToAnalyze: 'No service to analyze',
+      noServiceToAnalyzeDesc: 'Current opening hours do not overlap with morning, lunch, or evening. Check opening hours in Settings.',
+      generatedRevenue: 'Revenue generated',
+      inPeriod: 'in this time window',
+      topItem: 'Top item',
+      top10Items: 'Top 10 items · {label}',
+      noSalesInPeriod: 'No sales yet in this time window',
+      noSalesInPeriodDesc: 'Detailed sales will appear here automatically.',
+      itemsWithPeak: 'Items with a peak period',
+      peakInsightTag: 'KIWI INSIGHT · {label}',
+      peakInsightTitle: '{item} leads this service',
+      peakInsightBody: '{qty} unit(s), representing {share}% of items sold during this window. {peakShare}% of its analyzed sales occur during {period}.',
+      peakNotableBody: '{share}% of its {total} sales occur during {period} ({hours}).',
+      alerts86Title: '86 Alerts',
+      alerts86Sub: 'Unavailable items shared with POS and OrderPro.',
+      reactivate: 'Reactivate',
+      no86Alerts: 'No 86 alerts.',
+      unavailableBadge: '86 · unavailable',
+      nfcTitle: 'NFC Tags',
+      nfcSub: 'Manage the tags that open your OrderPro menu.',
+      nfcUnavailable: 'NFC Tags unavailable',
+      nfcUnavailableDesc: 'Enable OrderPro for this venue to manage its tags.',
+      editSectionTitle: 'Edit section',
+      newSectionTitle: 'New section',
+      sectionNameLabel: 'Section name',
+      sectionNamePlaceholder: 'e.g. Drinks',
+      stationLabel: 'Preparation station',
+      cancelBtn: 'Cancel',
+      saveBtn: 'Save',
+      doneBtn: 'Done',
+      editItemTitle: 'Edit · {name}',
+      newItemTitle: 'New item',
+      nameLabel: 'Name',
+      priceLabel: 'Price (MAD)',
+      sectionLabel: 'Section',
+      availabilityLabel: 'Availability',
+      availableOpt: 'Available',
+      unavailableOpt: '86 · unavailable',
+      descLabel: 'Description',
+      mediaLabel: 'Photo or video',
+      addPhotoBtn: 'Add photo',
+      addVideoBtn: 'Add video',
+      removeMediaBtn: 'Remove',
+      mediaStatusKept: 'Current media preserved.',
+      noMediaStatus: 'No media.',
+      itemOptionsLabel: 'Options for this item',
+      createOptGroupFirst: 'Create an option group first.',
+      isFormulaLabel: 'Formula / Set Menu (choice of courses)',
+      isFormulaHelp: 'Allows composing a menu with courses (starter, main, drink...) during order entry.',
+      formulaTemplatePlaceholder: 'Choose a saved formula…',
+      noFormulaTemplates: 'No saved formulas',
+      copyTemplateBtn: 'Copy to this item',
+      saveTemplateBtn: 'Save this formula as a reusable template',
+      addStepBtn: 'Add a course',
+      stepTitlePlaceholder: 'Course title (e.g. Drink)',
+      minLabel: 'Min',
+      maxLabel: 'Max',
+      noChoicesInStep: 'No choices in this course.',
+      chooseItemPlaceholder: 'Choose an item…',
+      addChoiceBtn: 'Add',
+      noItemsOnMenuFormulaNotice: 'No items on the menu yet. First create your items (e.g. Espresso, Croissant), then come back to build the formula: choices are selected from the list, never typed by hand.',
+      saveAndCreateItemBtn: 'Save and create an item',
+      allChosenNotice: 'All menu items are already offered in this course.',
+      editGroupTitle: 'Edit option group',
+      newGroupTitle: 'New option group',
+      groupNameLabel: 'Group name',
+      groupNamePlaceholder: 'e.g. Cooking, Side, Size',
+      groupTypeLabel: 'Type of choice',
+      groupRequiredLabel: 'Requirement',
+      groupRequiredOpt: 'Required (at least 1 choice)',
+      groupOptionalOpt: 'Optional (customer can skip)',
+      choicesLabel: 'Choices',
+      addChoicePlaceholder: 'e.g. Rare, Fries, Large',
+      addChoiceBtnLabel: 'Add choice',
+      extraPricePlaceholder: 'Extra (MAD)',
+      newSubcategoryTitle: 'New subcategory',
+      subNamePlaceholder: 'Name (e.g. Cookies, Cakes, Classics)',
+      renameSubcategoryTitle: 'Rename subcategory',
+      newNameLabel: 'New name',
+      deleteSubcategoryConfirm: 'Delete « {name} » ?',
+      deleteSubcategoryDesc: '{n} item(s) will remain in this section and move to "Uncategorized".',
+      deleteCategoryConfirm: 'Delete section « {name} » ?',
+      deleteCategoryDesc: 'This section and its {n} item(s) will be permanently deleted.',
+      deleteItemConfirm: 'Delete « {name} » ?',
+      deleteGroupConfirm: 'Delete « {name} » ?',
+      addStationTitle: 'Add a station',
+      renameStationTitle: 'Rename station',
+      stationNameLabel: 'Station name',
+      deleteStationConfirm: 'Delete « {name} » ?',
+      stationDefault: 'this station',
+      scanUnavailable: 'Scan unavailable',
+      reloadPage: 'Reload the page.',
+      createSubFirstToast: 'Create a subcategory first',
+      useAddSubHelp: 'Use "+ Subcategory".',
+      allClassifiedToast: 'All items classified',
+      noUnclassifiedItems: 'No items without subcategory.',
+      classifyTag: 'CLASSIFICATION',
+      classifyTitle: 'Classify items',
+      articlesWithoutSub: 'items without subcategory',
+      articleWithoutSub: 'item without subcategory',
+      classifyInstantSaveNotice: 'Each choice is saved immediately.',
+      chooseSelectPlaceholder: 'Choose',
+    },
+    ar: {
+      title: 'القائمة والإضافات',
+      loading: 'جارٍ تحميل القائمة…',
+      home: 'الرئيسية',
+      articles: 'منتجات',
+      article: 'منتج',
+      sections: 'أقسام',
+      section: 'قسم',
+      tabMenu: 'القائمة والإضافات',
+      tabStations: 'محطات التحضير',
+      tabRecipes: 'الوصفات',
+      tabPerformance: 'الأداء',
+      tabHours: 'ساعات الذروة',
+      tabAlerts: 'تنبيهات 86',
+      tabNfc: 'رموز NFC',
+      scanMenu: 'مسح القائمة',
+      importExcel: 'استيراد Excel',
+      translateMenu: '🌐 ترجمة القائمة',
+      all: 'الكل',
+      allWithCount: 'الكل · {n}',
+      uncategorizedWithCount: 'غير مصنف · {n}',
+      addSubCat: '+ تصنيف فرعي',
+      classifyCount: 'تصنيف {n} منتج',
+      rename: 'إعادة تسمية',
+      delete: 'حذف',
+      withoutSubcat: 'بدون تصنيف فرعي',
+      noSection: 'بدون قسم',
+      kitchen: 'المطبخ',
+      counter: 'المكتب',
+      stepCount: '{n} مرحلة',
+      optGroupCount: '{n} مجموعة خيارات',
+      reuse: 'إعادة استخدام',
+      formula: 'قائمة مجمعة',
+      searchPlaceholder: 'البحث عن منتج…',
+      moveLeft: '← للأمام',
+      moveRight: 'للخلف →',
+      renameSection: 'إعادة تسمية القسم',
+      deleteSection: 'حذف القسم',
+      newSection: '+ قسم جديد',
+      newItem: '+ منتج جديد',
+      emptyMenuTitle: 'قائمتك فارغة',
+      emptyMenuDesc: 'أنشئ قسماً ثم أضف أول منتج. لن يتم إضافة أي محتوى تجريبي.',
+      createSectionBtn: 'إنشاء قسم',
+      noItemMatch: 'لا توجد منتجات مطابقة.',
+      modAndOpts: 'المعدلات والخيارات',
+      newGroupBtn: '+ مجموعة خيارات جديدة',
+      noOptGroups: 'لا توجد مجموعات خيارات.',
+      required: 'إلزامي',
+      optional: 'اختياري',
+      manyChoices: 'خيارات متعددة',
+      oneChoice: 'خيار واحد',
+      usedByCount: 'مستخدم في {n} منتج',
+      noChoices: 'لا توجد خيارات',
+      stationsTitle: 'محطات التحضير',
+      stationsSub: 'قسم لكل محطة. تظل جميع التذاكر مرئية في تبويب الكل في شاشة المطبخ.',
+      addStation: 'إضافة محطة',
+      defaultStationFallback: 'المطبخ · يستقبل الباقي',
+      routingBySection: 'التوجيه حسب القسم',
+      defaultRoute: '{name} · افتراضي',
+      addFirstStation: 'أضف أول محطة تحضير.',
+      createSectionsForRouting: 'أنشئ أقساماً لتحديد توجيهها.',
+      recipesTitle: 'الوصفات والتكاليف لكل طبق',
+      recipesSub: 'حدد الكميات بدقة لربط المبيعات بالمخزون وحساب هوامش الربح.',
+      recipesCompletedCount: '{done} / {total} وصفة مكتملة',
+      ingredientCount: '{n} مكونات',
+      viewAndEdit: 'عرض وتعديل',
+      complete: 'استكمال',
+      costSummaryPortion: '{cost} MAD / حصة',
+      missingCostOrQty: 'بحاجة لتحديد الكميات أو التكاليف',
+      addItemsFirst: 'أضف منتجات أولاً.',
+      statusToComplete: 'بحاجة للاستكمال',
+      statusCostIncomplete: 'تكلفة غير مكتملة',
+      statusCosted: 'وصفة مسعرة',
+      statusCheckStock: 'فحص المخزون',
+      statusToMonitor: 'للمتابعة',
+      statusCostCompliant: 'تكلفة مطابقة',
+      perfTitle: 'أداء المنتجات',
+      perfSub: 'الشعبية، رقم المعاملات والربح الإجمالي · آخر 30 يوماً · بيانات حقيقية من الصندوق.',
+      daysCount: '{n} يوماً',
+      noItemsToAnalyze: 'لا توجد منتجات للتحليل',
+      noItemsToAnalyzeDesc: 'أضف أطباقك في القائمة والإضافات. سيظهر الأداء بعد أولى المبيعات.',
+      noSalesYet: 'لا توجد مبيعات بعد لكل منتج',
+      noSalesYetDesc: 'بمجرد تسجيل الصندوق للتذاكر المفصلة، يصنف Kiwi الأطباق تلقائياً.',
+      completeRecipesForProfit: 'أكمل الوصفات لمعرفة الربحية',
+      completeRecipesForProfitDesc: 'تم استلام المبيعات. تنقص تكلفة الأطباق لمقارنة ربحها الفعلي.',
+      analyzedRevenue: 'رقم المعاملات المحلل',
+      itemsSold: 'منتجات مباعة',
+      grossProfitCalc: 'الربح الإجمالي المحسوب',
+      recipesSoldAndCosted: '{n} وصفة مباعة ومسعرة',
+      costCoverage: 'تغطية التكاليف',
+      costCoverageSub: 'نسبة المبيعات ذات الوصفة المكتملة',
+      grossProfitPerItem: 'الربح الإجمالي لكل منتج',
+      popularityXDays: 'الشعبية · المبيعات خلال {n} يوماً',
+      perfDotSizeHint: 'حجم النقطة = رقم المعاملات',
+      perfAxesHint: 'المحاور = متوسطات قائمتك الخاصة',
+      perfClickHint: 'انقر على منتج لفتح وصفته',
+      quadStar: 'نجوم (Stars)',
+      quadStarHint: 'شعبية ومربحة',
+      quadStarAction: 'إبرازها',
+      quadPlow: 'أحصنة الجر (Plowhorses)',
+      quadPlowHint: 'شعبية بهامش ربح منخفض',
+      quadPlowAction: 'مراجعة السعر أو التكلفة',
+      quadPuzzle: 'ألغاز (Puzzles)',
+      quadPuzzleHint: 'مربحة قليلة الطلب',
+      quadPuzzleAction: 'تحسين الموضع',
+      quadDog: 'أعباء (Dogs)',
+      quadDogHint: 'طلب ضعيف وهامش منخفض',
+      quadDogAction: 'مراجعة',
+      matrixLabelStar: 'نجوم (STARS)',
+      matrixHintStar: 'مربح · حجم مبيعات قوي',
+      matrixLabelPlow: 'للتحسين',
+      matrixHintPlow: 'شعبي · هامش ضعيف',
+      matrixLabelPuzzle: 'للتطوير',
+      matrixHintPuzzle: 'مربح · حجم مبيعات ضعيف',
+      matrixLabelDog: 'للمراجعة',
+      matrixHintDog: 'هامش وحجم مبيعات ضعيفان',
+      legendStar: 'نجوم',
+      legendPlow: 'للتحسين',
+      legendPuzzle: 'للتطوير',
+      legendDog: 'للمراجعة',
+      colItem: 'المنتج',
+      colSold: 'المباع',
+      colRevenue: 'رقم المعاملات',
+      colRevenueDesc: 'رقم المعاملات',
+      colUnitCost: 'التكلفة / منتج',
+      colProfit: 'الربح الإجمالي',
+      colProfitDesc: 'ربح إجمالي',
+      colMargin: 'الهامش',
+      colMarginDesc: 'هامش الربح',
+      colReadout: 'الحالة',
+      completeRecipeLink: 'استكمال الوصفة',
+      marginMissing: 'الهامش غير متوفر',
+      noSaleRecorded: 'لا توجد مبيعات',
+      hoursTitle: 'الأداء حسب أوقات اليوم',
+      hoursSub: 'ما المنتجات التي تباع ومتى · آخر {n} يوماً · بيانات حقيقية من الصندوق',
+      setHoursPrompt: 'حدد أوقات عمل المطعم',
+      setHoursPromptDesc: 'ينشئ Kiwi فترات اليوم بناءً على الأوقات المسجلة دون اختلاق أي فترة.',
+      noServiceToAnalyze: 'لا توجد فترة للتحليل',
+      noServiceToAnalyzeDesc: 'أوقات العمل الحالية لا تتقاطع مع الصباح أو الظهيرة أو المساء. تحقق من أوقات العمل في الإعدادات.',
+      generatedRevenue: 'المدخول المحقق',
+      inPeriod: 'خلال هذه الفترة',
+      topItem: 'أفضل منتج',
+      top10Items: 'أفضل 10 منتجات · {label}',
+      noSalesInPeriod: 'لا توجد مبيعات بعد في هذه الفترة',
+      noSalesInPeriodDesc: 'ستظهر المبيعات المفصلة هنا تلقائياً.',
+      itemsWithPeak: 'منتجات ذات ذروة طلب',
+      peakInsightTag: 'تحليل KIWI · {label}',
+      peakInsightTitle: '{item} يقود هذه الفترة',
+      peakInsightBody: '{qty} وحدة، أي ما يمثل {share}% من المنتجات المباعة خلال هذه الفترة. {peakShare}% من مبيعاته تتم خلال {period}.',
+      peakNotableBody: '{share}% من مبيعاته البالغة {total} تتم خلال {period} ({hours}).',
+      alerts86Title: 'تنبيهات 86',
+      alerts86Sub: 'المنتجات غير المتاحة المشتركة مع الصندوق و OrderPro.',
+      reactivate: 'إعادة تفعيل',
+      no86Alerts: 'لا توجد تنبيهات 86.',
+      unavailableBadge: '86 · غير متاح',
+      nfcTitle: 'رموز NFC',
+      nfcSub: 'إدارة الرموز التي تفتح قائمة OrderPro.',
+      nfcUnavailable: 'رموز NFC غير متاحة',
+      nfcUnavailableDesc: 'قم بتفعيل OrderPro لهذا المتجر لإدارة رموزه.',
+      editSectionTitle: 'تعديل القسم',
+      newSectionTitle: 'قسم جديد',
+      sectionNameLabel: 'اسم القسم',
+      sectionNamePlaceholder: 'مثال: مشروبات',
+      stationLabel: 'محطة التحضير',
+      cancelBtn: 'إلغاء',
+      saveBtn: 'حفظ',
+      doneBtn: 'تم',
+      editItemTitle: 'تعديل · {name}',
+      newItemTitle: 'منتج جديد',
+      nameLabel: 'الاسم',
+      priceLabel: 'السعر (MAD)',
+      sectionLabel: 'القسم',
+      availabilityLabel: 'التوفر',
+      availableOpt: 'متاح',
+      unavailableOpt: '86 · غير متاح',
+      descLabel: 'الوصف',
+      mediaLabel: 'صورة أو فيديو',
+      addPhotoBtn: 'إضافة صورة',
+      addVideoBtn: 'إضافة فيديو',
+      removeMediaBtn: 'إزالة',
+      mediaStatusKept: 'تم الاحتفاظ بالوسائط الحالية.',
+      noMediaStatus: 'لا توجد وسائط.',
+      itemOptionsLabel: 'خيارات هذا المنتج',
+      createOptGroupFirst: 'أنشئ أولاً مجموعة خيارات.',
+      isFormulaLabel: 'قائمة مجمعة / وجبة مركبة (مراحل للاختيار)',
+      isFormulaHelp: 'تتيح تكوين قائمة ذات مراحل (مقبلات، طبق رئيسي، مشروب...) عند تسجيل الطلب.',
+      formulaTemplatePlaceholder: 'اختر نموذجاً مسجلاً…',
+      noFormulaTemplates: 'لا توجد نماذج مسجلة',
+      copyTemplateBtn: 'نسخ إلى هذا المنتج',
+      saveTemplateBtn: 'حفظ هذه القائمة كنموذج قابل لإعادة الاستخدام',
+      addStepBtn: 'إضافة مرحلة',
+      stepTitlePlaceholder: 'عنوان المرحلة (مثال: المشروب)',
+      minLabel: 'الحد الأدنى',
+      maxLabel: 'الحد الأقصى',
+      noChoicesInStep: 'لا توجد خيارات في هذه المرحلة.',
+      chooseItemPlaceholder: 'اختر منتجاً…',
+      addChoiceBtn: 'إضافة',
+      noItemsOnMenuFormulaNotice: 'لا توجد منتجات في القائمة بعد. أنشئ منتجاتك أولاً ثم عد لتركيب الوجبة المركبة.',
+      saveAndCreateItemBtn: 'حفظ وإنشاء منتج',
+      allChosenNotice: 'جميع منتجات القائمة معروضة بالفعل في هذه المرحلة.',
+      editGroupTitle: 'تعديل مجموعة الخيارات',
+      newGroupTitle: 'مجموعة خيارات جديدة',
+      groupNameLabel: 'اسم المجموعة',
+      groupNamePlaceholder: 'مثال: درجة الطهي، الإضافة، الحجم',
+      groupTypeLabel: 'نوع الاختيار',
+      groupRequiredLabel: 'الإلزامية',
+      groupRequiredOpt: 'إلزامي (خيار واحد على الأقل)',
+      groupOptionalOpt: 'اختياري (يمكن تجاوزه)',
+      choicesLabel: 'الخيارات',
+      addChoicePlaceholder: 'مثال: مطهو جيداً، بطاطس، كبير',
+      addChoiceBtnLabel: 'إضافة خيار',
+      extraPricePlaceholder: 'سعر إضافي (MAD)',
+      newSubcategoryTitle: 'تصنيف فرعي جديد',
+      subNamePlaceholder: 'الاسم (مثال: كوكيز، كيك، كلاسيكيات)',
+      renameSubcategoryTitle: 'إعادة تسمية التصنيف الفرعي',
+      newNameLabel: 'الاسم الجديد',
+      deleteSubcategoryConfirm: 'حذف « {name} » ؟',
+      deleteSubcategoryDesc: 'سيبقى {n} منتج في هذا القسم وسينتقل إلى "غير مصنف".',
+      deleteCategoryConfirm: 'حذف قسم « {name} » ؟',
+      deleteCategoryDesc: 'سيتم حذف هذا القسم ومنتجاته البالغ عددها {n} نهائياً.',
+      deleteItemConfirm: 'حذف « {name} » ؟',
+      deleteGroupConfirm: 'حذف « {name} » ؟',
+      addStationTitle: 'إضافة محطة تحضير',
+      renameStationTitle: 'إعادة تسمية المحطة',
+      stationNameLabel: 'اسم المحطة',
+      deleteStationConfirm: 'حذف « {name} » ؟',
+      stationDefault: 'هذه المحطة',
+      scanUnavailable: 'المسح غير متوفر',
+      reloadPage: 'أعد تحميل الصفحة.',
+      createSubFirstToast: 'أنشئ فئة فرعية أولاً',
+      useAddSubHelp: 'استخدم « + تصنيف فرعي ».',
+      allClassifiedToast: 'تم تصنيف كل المنتجات',
+      noUnclassifiedItems: 'لا توجد منتجات بدون تصنيف فرعي.',
+      classifyTag: 'تصنيف',
+      classifyTitle: 'تصنيف المنتجات',
+      articlesWithoutSub: 'منتجات بدون تصنيف فرعي',
+      articleWithoutSub: 'منتج بدون تصنيف فرعي',
+      classifyInstantSaveNotice: 'يتم حفظ كل اختيار فوراً.',
+      chooseSelectPlaceholder: 'اختيار',
+    },
+    fr: {
+      title: 'Menu & modificateurs',
+      loading: 'Chargement du menu…',
+      home: 'Accueil',
+      articles: 'articles',
+      article: 'article',
+      sections: 'sections',
+      section: 'section',
+      tabMenu: 'Menu & modificateurs',
+      tabStations: 'Postes de préparation',
+      tabRecipes: 'Recettes',
+      tabPerformance: 'Performance',
+      tabHours: 'Heures de pointe',
+      tabAlerts: 'Alertes 86',
+      tabNfc: 'Tags NFC',
+      scanMenu: 'Scanner un menu',
+      importExcel: 'Importer Excel',
+      translateMenu: '🌐 Traduire la carte',
+      all: 'Tous',
+      allWithCount: 'Tout · {n}',
+      uncategorizedWithCount: 'À classer · {n}',
+      addSubCat: '+ Sous-catégorie',
+      classifyCount: 'Classer {n} article{s}',
+      rename: 'Renommer',
+      delete: 'Supprimer',
+      withoutSubcat: 'Sans sous-catégorie',
+      noSection: 'Sans section',
+      kitchen: 'Cuisine',
+      counter: 'Comptoir',
+      stepCount: '{n} étape(s)',
+      optGroupCount: '{n} groupe(s) d’options',
+      reuse: 'Réutiliser',
+      formula: 'FORMULE',
+      searchPlaceholder: 'Rechercher un article…',
+      moveLeft: '← Avant',
+      moveRight: 'Après →',
+      renameSection: 'Renommer la section',
+      deleteSection: 'Supprimer la section',
+      newSection: '+ Nouvelle section',
+      newItem: '+ Nouvel article',
+      emptyMenuTitle: 'Votre menu est vide',
+      emptyMenuDesc: 'Créez une section, puis ajoutez votre premier article. Aucun contenu de démonstration ne sera ajouté.',
+      createSectionBtn: 'Créer une section',
+      noItemMatch: 'Aucun article ne correspond.',
+      modAndOpts: 'Modificateurs & options',
+      newGroupBtn: '+ Nouveau groupe d’options',
+      noOptGroups: 'Aucun groupe d’options.',
+      required: 'Obligatoire',
+      optional: 'Optionnel',
+      manyChoices: 'Plusieurs choix',
+      oneChoice: 'Un seul choix',
+      usedByCount: 'Utilisé par {n} article(s)',
+      noChoices: 'Aucun choix',
+      stationsTitle: 'Postes de préparation',
+      stationsSub: 'Une section, un poste. Tous les tickets restent visibles dans l’onglet Toutes du KDS.',
+      addStation: 'Ajouter un poste',
+      defaultStationFallback: 'Cuisine · reçoit le reste',
+      routingBySection: 'Routage par section',
+      defaultRoute: '{name} · par défaut',
+      addFirstStation: 'Ajoutez votre premier poste.',
+      createSectionsForRouting: 'Créez des sections pour définir leur routage.',
+      recipesTitle: 'Recettes & coûts par plat',
+      recipesSub: 'Définissez les quantités exactes pour relier chaque vente au stock et calculer vos marges.',
+      recipesCompletedCount: '{done} / {total} recettes complétées',
+      ingredientCount: '{n} ingrédient(s)',
+      viewAndEdit: 'Voir et modifier',
+      complete: 'Compléter',
+      costSummaryPortion: '{cost} MAD / portion',
+      missingCostOrQty: 'Quantités ou coûts à compléter',
+      addItemsFirst: 'Ajoutez d’abord des articles.',
+      statusToComplete: 'À compléter',
+      statusCostIncomplete: 'Coût incomplet',
+      statusCosted: 'Recette chiffrée',
+      statusCheckStock: 'Stock à vérifier',
+      statusToMonitor: 'À surveiller',
+      statusCostCompliant: 'Coût conforme',
+      perfTitle: 'Performance des articles',
+      perfSub: 'Popularité, chiffre d’affaires et profit brut · 30 derniers jours · données réelles de la caisse.',
+      daysCount: '{n} jours',
+      noItemsToAnalyze: 'Aucun article à analyser',
+      noItemsToAnalyzeDesc: 'Ajoutez vos plats dans Menu & modificateurs. Les performances apparaîtront après les premières ventes.',
+      noSalesYet: 'Pas encore de ventes par article',
+      noSalesYetDesc: 'Dès que la caisse enregistre des tickets détaillés, Kiwi classe automatiquement les plats.',
+      completeRecipesForProfit: 'Complétez les recettes pour voir la rentabilité',
+      completeRecipesForProfitDesc: 'Les ventes sont bien reçues. Il manque le coût de chaque plat pour comparer leur profit réel.',
+      analyzedRevenue: 'Chiffre d’affaires analysé',
+      itemsSold: 'articles vendus',
+      grossProfitCalc: 'Profit brut calculé',
+      recipesSoldAndCosted: '{n} recette(s) vendue(s) et chiffrée(s)',
+      costCoverage: 'Couverture des coûts',
+      costCoverageSub: 'part du CA avec recette complète',
+      grossProfitPerItem: 'Profit brut par article',
+      popularityXDays: 'Popularité · ventes sur {n} jours',
+      perfDotSizeHint: 'Taille du point = chiffre d’affaires',
+      perfAxesHint: 'Axes = médianes de votre propre carte',
+      perfClickHint: 'Cliquez sur un article pour ouvrir sa recette',
+      quadStar: 'Stars',
+      quadStarHint: 'Populaires et rentables',
+      quadStarAction: 'À mettre en avant',
+      quadPlow: 'Plowhorses',
+      quadPlowHint: 'Populaires, marge à optimiser',
+      quadPlowAction: 'Revoir coût ou prix',
+      quadPuzzle: 'Puzzles',
+      quadPuzzleHint: 'Rentables, peu commandés',
+      quadPuzzleAction: 'Mieux les positionner',
+      quadDog: 'Dogs',
+      quadDogHint: 'Peu commandés et faible marge',
+      quadDogAction: 'À revoir',
+      matrixLabelStar: 'STARS',
+      matrixHintStar: 'Rentable · volume fort',
+      matrixLabelPlow: 'À OPTIMISER',
+      matrixHintPlow: 'Populaire · marge faible',
+      matrixLabelPuzzle: 'À DÉVELOPPER',
+      matrixHintPuzzle: 'Rentable · volume faible',
+      matrixLabelDog: 'À REVOIR',
+      matrixHintDog: 'Marge et volume faibles',
+      legendStar: 'Stars',
+      legendPlow: 'À optimiser',
+      legendPuzzle: 'À développer',
+      legendDog: 'À revoir',
+      colItem: 'Article',
+      colSold: 'Vendus',
+      colRevenue: 'Chiffre d’affaires',
+      colRevenueDesc: 'de CA',
+      colUnitCost: 'Coût / article',
+      colProfit: 'Profit brut',
+      colProfitDesc: 'de profit brut',
+      colMargin: 'Marge',
+      colMarginDesc: 'de marge',
+      colReadout: 'Lecture',
+      completeRecipeLink: 'Compléter la recette',
+      marginMissing: 'Marge manquante',
+      noSaleRecorded: 'Aucune vente',
+      hoursTitle: 'Performance par moment de la journée',
+      hoursSub: 'Quels articles se vendent quand · {n} derniers jours · données réelles de la caisse',
+      setHoursPrompt: 'Renseignez les horaires du restaurant',
+      setHoursPromptDesc: 'Kiwi crée les moments de la journée à partir des horaires enregistrés. Aucun créneau n’est inventé.',
+      noServiceToAnalyze: 'Aucun service à analyser',
+      noServiceToAnalyzeDesc: 'Les horaires actuels ne croisent ni le matin, ni le midi, ni le soir. Vérifiez les horaires du restaurant dans Réglages.',
+      generatedRevenue: 'CA généré',
+      inPeriod: 'sur le créneau',
+      topItem: 'Top article',
+      top10Items: 'Top 10 articles · {label}',
+      noSalesInPeriod: 'Pas encore de ventes sur ce créneau',
+      noSalesInPeriodDesc: 'Les ventes détaillées apparaîtront ici automatiquement.',
+      itemsWithPeak: 'Articles avec un moment fort',
+      peakInsightTag: 'LECTURE KIWI · {label}',
+      peakInsightTitle: '{item} porte ce service',
+      peakInsightBody: '{qty} unité(s), soit {share} % des articles vendus sur ce créneau. {peakShare} % de ses ventes analysées ont lieu pendant {period}.',
+      peakNotableBody: '{share} % de ses {total} ventes ont lieu pendant {period} ({hours}).',
+      alerts86Title: 'Alertes 86',
+      alerts86Sub: 'Indisponibilités partagées avec la caisse et OrderPro.',
+      reactivate: 'Réactiver',
+      no86Alerts: 'Aucune alerte 86.',
+      unavailableBadge: '86 · indisponible',
+      nfcTitle: 'Tags NFC',
+      nfcSub: 'Gérez les tags qui ouvrent votre menu OrderPro.',
+      nfcUnavailable: 'Tags NFC indisponibles',
+      nfcUnavailableDesc: 'Activez OrderPro pour cet établissement afin de gérer ses tags.',
+      editSectionTitle: 'Modifier la section',
+      newSectionTitle: 'Nouvelle section',
+      sectionNameLabel: 'Nom de la section',
+      sectionNamePlaceholder: 'ex. Boissons',
+      stationLabel: 'Poste de préparation',
+      cancelBtn: 'Annuler',
+      saveBtn: 'Enregistrer',
+      doneBtn: 'Terminé',
+      editItemTitle: 'Modifier · {name}',
+      newItemTitle: 'Nouvel article',
+      nameLabel: 'Nom',
+      priceLabel: 'Prix (MAD)',
+      sectionLabel: 'Section',
+      availabilityLabel: 'Disponibilité',
+      availableOpt: 'Disponible',
+      unavailableOpt: '86 · indisponible',
+      descLabel: 'Description',
+      mediaLabel: 'Photo ou vidéo',
+      addPhotoBtn: 'Ajouter une photo',
+      addVideoBtn: 'Ajouter une vidéo',
+      removeMediaBtn: 'Retirer',
+      mediaStatusKept: 'Média actuel conservé.',
+      noMediaStatus: 'Aucun média.',
+      itemOptionsLabel: 'Options de cet article',
+      createOptGroupFirst: 'Créez d’abord un groupe d’options.',
+      isFormulaLabel: 'Formule / menu composé (étapes au choix)',
+      isFormulaHelp: 'Permet de composer un menu avec étapes (entrée, plat, boisson...) lors de la prise de commande.',
+      formulaTemplatePlaceholder: 'Choisir une formule déjà enregistrée…',
+      noFormulaTemplates: 'Aucune formule enregistrée',
+      copyTemplateBtn: 'Copier dans cet article',
+      saveTemplateBtn: 'Enregistrer cette formule comme modèle réutilisable',
+      addStepBtn: 'Ajouter une étape',
+      stepTitlePlaceholder: 'Titre de l\'étape (ex. La boisson)',
+      minLabel: 'Min',
+      maxLabel: 'Max',
+      noChoicesInStep: 'Aucun choix dans cette étape.',
+      chooseItemPlaceholder: 'Choisir un article…',
+      addChoiceBtn: 'Ajouter',
+      noItemsOnMenuFormulaNotice: 'Aucun produit sur la carte pour l\'instant. Créez d\'abord vos produits (ex. Café noir, Croissant), puis revenez composer la formule : les choix se sélectionnent dans la liste, jamais à la main.',
+      saveAndCreateItemBtn: 'Enregistrer et créer un produit',
+      allChosenNotice: 'Tous les produits de la carte sont déjà proposés dans cette étape.',
+      editGroupTitle: 'Modifier le groupe d’options',
+      newGroupTitle: 'Nouveau groupe d’options',
+      groupNameLabel: 'Nom du groupe',
+      groupNamePlaceholder: 'ex. Cuisson, Accompagnement, Taille',
+      groupTypeLabel: 'Type de choix',
+      groupRequiredLabel: 'Obligation',
+      groupRequiredOpt: 'Obligatoire (au moins 1 choix)',
+      groupOptionalOpt: 'Optionnel (le client peut ignorer)',
+      choicesLabel: 'Choix proposés',
+      addChoicePlaceholder: 'ex. Saignant, Frites, Grand',
+      addChoiceBtnLabel: 'Ajouter le choix',
+      extraPricePlaceholder: 'Supplément (MAD)',
+      newSubcategoryTitle: 'Nouvelle sous-catégorie',
+      subNamePlaceholder: 'Nom (ex. Cookies, Gâteaux, Classics)',
+      renameSubcategoryTitle: 'Renommer la sous-catégorie',
+      newNameLabel: 'Nouveau nom',
+      deleteSubcategoryConfirm: 'Supprimer « {name} » ?',
+      deleteSubcategoryDesc: '{n} article(s) resteront dans la section et passeront dans « À classer ».',
+      deleteCategoryConfirm: 'Supprimer la section « {name} » ?',
+      deleteCategoryDesc: 'Cette section et ses {n} article(s) seront supprimés définitivement.',
+      deleteItemConfirm: 'Supprimer « {name} » ?',
+      deleteGroupConfirm: 'Supprimer « {name} » ?',
+      addStationTitle: 'Ajouter un poste',
+      renameStationTitle: 'Renommer le poste',
+      stationNameLabel: 'Nom du poste',
+      deleteStationConfirm: 'Supprimer « {name} » ?',
+      stationDefault: 'ce poste',
+      scanUnavailable: 'Scan indisponible',
+      reloadPage: 'Rechargez la page.',
+      createSubFirstToast: 'Créez d’abord une sous-catégorie',
+      useAddSubHelp: 'Utilisez « + Sous-catégorie ».',
+      allClassifiedToast: 'Tout est classé',
+      noUnclassifiedItems: 'Aucun article sans sous-catégorie.',
+      classifyTag: 'CLASSEMENT',
+      classifyTitle: 'Classer les articles',
+      articlesWithoutSub: 'articles sans sous-catégorie',
+      articleWithoutSub: 'article sans sous-catégorie',
+      classifyInstantSaveNotice: 'Chaque choix est enregistré immédiatement.',
+      chooseSelectPlaceholder: 'Choisir',
+    }
+  };
+
+  const lang=()=>{
+    try{
+      return (window.KiwiI18n?.getLang?.())||(window.KiwiMenuI18n?.lang?.())||(typeof localStorage!=='undefined'?localStorage.getItem('kiwiLang'):'')||'fr';
+    }catch(_){return 'fr';}
+  };
+  function ui(key, params) {
+    const l = lang();
+    let text = (UI_I18N[l] && UI_I18N[l][key]) || (UI_I18N.fr && UI_I18N.fr[key]) || key;
+    if (params) {
+      for (const [k, v] of Object.entries(params)) {
+        text = text.replace(new RegExp(`\\{${k}\\}`, 'g'), v);
+      }
+    }
+    return text;
+  }
   const t=(str)=>window.KiwiMenuI18n?window.KiwiMenuI18n.t(str,lang()):str;
   const icons={menu:'menu',station:'cooking-pot',book:'book-open',chart:'bar-chart-3',clock:'clock',alert:'alert-triangle',tag:'tag',plus:'plus',edit:'pencil',trash:'trash-2'};
   const ic=(n)=>`<i data-lucide="${icons[n]||icons.menu}" style="width:14px;height:14px" aria-hidden="true"></i>`;
   const toast=(t,d,type='success')=>window.Kiwi?.toast?.(t,{desc:d||'',type});
-  function tabs(){const n=D().items.filter(x=>x.avail===false).length;return [['menu','Menu & modificateurs','menu'],['stations','Postes de préparation','station'],['recipes','Recettes','book'],['performance','Performance','chart'],['hours','Heures de pointe','clock'],['alerts','Alertes 86','alert'],['nfc','Tags NFC','tag']].map(([id,l,i])=>`<button class="mi-pill${tab===id?' on':''}" data-action="rmw-tab" data-tab="${id}">${ic(i)}<span>${l}</span>${id==='alerts'&&n?`<span class="mi-tab-badge">${n}</span>`:''}</button>`).join('');}
+  function tabs(){
+    const n=D().items.filter(x=>x.avail===false).length;
+    return [
+      ['menu', ui('tabMenu'), 'menu'],
+      ['stations', ui('tabStations'), 'station'],
+      ['recipes', ui('tabRecipes'), 'book'],
+      ['performance', ui('tabPerformance'), 'chart'],
+      ['hours', ui('tabHours'), 'clock'],
+      ['alerts', ui('tabAlerts'), 'alert'],
+      ['nfc', ui('tabNfc'), 'tag']
+    ].map(([id,l,i])=>`<button class="mi-pill${tab===id?' on':''}" data-action="rmw-tab" data-tab="${id}">${ic(i)}<span>${esc(l)}</span>${id==='alerts'&&n?`<span class="mi-tab-badge">${n}</span>`:''}</button>`).join('');
+  }
   let readyTimer=0,readyTries=0;
   function show(forceRestaurantRoute=false){
     if(!forceRestaurantRoute&&!isRestaurant())return false;
-    window.Kiwi?.pageShell?.('menu');document.body.classList.add('page-menu');$$('.sidebar nav a').forEach(a=>a.classList.toggle('active',a.dataset.nav==='menu'));const bc=$('.breadcrumb');if(bc)bc.innerHTML='Accueil <span class="sep">/</span> <b>Menu &amp; modificateurs</b>';
+    window.Kiwi?.pageShell?.('menu');document.body.classList.add('page-menu');$$('.sidebar nav a').forEach(a=>a.classList.toggle('active',a.dataset.nav==='menu'));const bc=$('.breadcrumb');if(bc)bc.innerHTML=`${esc(ui('home'))} <span class="sep">/</span> <b>${esc(ui('title'))}</b>`;
     const root=$('[data-menu-root]');if(root)root.hidden=false;
     if(!S()||!isRestaurant()){
-      if(root)root.innerHTML='<div class="mi-head"><div><div class="mi-title">Menu &amp; modificateurs</div><div class="mi-sub">Chargement du menu…</div></div></div>';
+      if(root)root.innerHTML=`<div class="mi-head"><div><div class="mi-title">${esc(ui('title'))}</div><div class="mi-sub">${esc(ui('loading'))}</div></div></div>`;
       clearTimeout(readyTimer);
       if(readyTries++>100){readyTries=0;if(!isRestaurant()&&legacyMenuHandler){legacyMenuHandler();}return true;}
       readyTimer=setTimeout(()=>{if(document.body.classList.contains('page-menu'))show(true);},50);
@@ -31,29 +779,103 @@
     }
     clearTimeout(readyTimer);readyTries=0;render();return true;
   }
-  function render(){if(!isRestaurant())return;const root=$('[data-menu-root]');if(!root)return;const d=D(),v=window.KiwiVenue?.getCurrentVenueData?.()||{};root.hidden=false;root.innerHTML=`<div class="mi-head"><div><div class="mi-title">Menu &amp; modificateurs</div><div class="mi-sub">${d.items.length} article${d.items.length!==1?'s':''} · ${d.cats.length} section${d.cats.length!==1?'s':''} · ${esc(v.name||'')}</div></div><div class="mi-head-acts"><button class="btn-slim" data-action="rmw-menu-translate" style="display:none;" title="Traduire la carte avec Kiwi AI">🌐 Traduire la carte</button><button class="btn-slim" data-action="rmw-menu-scan">Scanner un menu</button><button class="btn-slim" data-action="mx-import">Importer Excel</button></div></div><div class="mi-filters"><div class="mi-pill-row">${tabs()}</div></div><div class="mi-panel" data-rmw-panel>${panel()}</div>`;if(tab==='nfc')window.KiwiOrderProPanel?.mount?.($('[data-rmw-nfc]',root));}
+  function render(){
+    if(!isRestaurant())return;
+    const root=$('[data-menu-root]');if(!root)return;
+    const d=D(),v=window.KiwiVenue?.getCurrentVenueData?.()||{};
+    root.hidden=false;
+    const itemCountStr = d.items.length === 1 ? `1 ${ui('article')}` : `${d.items.length} ${ui('articles')}`;
+    const catCountStr = d.cats.length === 1 ? `1 ${ui('section')}` : `${d.cats.length} ${ui('sections')}`;
+    root.innerHTML=`<div class="mi-head"><div><div class="mi-title">${esc(ui('title'))}</div><div class="mi-sub">${itemCountStr} · ${catCountStr} · ${esc(v.name||'')}</div></div><div class="mi-head-acts"><button class="btn-slim" data-action="rmw-menu-translate" style="display:none;" title="${esc(ui('translateMenu'))}">${esc(ui('translateMenu'))}</button><button class="btn-slim" data-action="rmw-menu-scan">${esc(ui('scanMenu'))}</button><button class="btn-slim" data-action="mx-import">${esc(ui('importExcel'))}</button></div></div><div class="mi-filters"><div class="mi-pill-row">${tabs()}</div></div><div class="mi-panel" data-rmw-panel>${panel()}</div>`;
+    if(tab==='nfc')window.KiwiOrderProPanel?.mount?.($('[data-rmw-nfc]',root));
+  }
   function panel(){return ({stations:stationsPanel,recipes:recipesPanel,performance:performancePanel,hours:hoursPanel,alerts:alertsPanel,nfc:nfcPanel}[tab]||menuPanel)();}
   function shownItems(){const q=query.trim().toLowerCase();return D().items.filter(x=>(filter==='all'||x.catId===filter)&&(filter==='all'||!subFilter||(subFilter==='__none'?!x.subId:x.subId===subFilter))&&(!q||`${t(x.name)} ${x.name} ${x.desc||''}`.toLowerCase().includes(q)));}
   const subsOf=(cid)=>cat(cid)?.sub||[];
-  function subChips(){if(filter==='all')return '';const subs=subsOf(filter),all=D().items.filter(x=>x.catId===filter);const none=all.filter(x=>!x.subId).length;const chip=(id,l,on)=>`<button class="mi-subchip${on?' on':''}" data-action="rmw-sub-filter" data-sub="${id}">${l}</button>`;let h=chip('',`Tout · ${all.length}`,!subFilter)+subs.map(s=>chip(s.id,`${esc(t(s.name))} · ${all.filter(x=>x.subId===s.id).length}`,subFilter===s.id)).join('');if(subs.length&&none)h+=chip('__none',`À classer · ${none}`,subFilter==='__none');h+=`<button class="mi-subchip add" data-action="rmw-sub-add" data-arg="${filter}">+ Sous-catégorie</button>`;if(subs.length&&none)h+=`<button class="mi-subchip add" data-action="rmw-classify" data-arg="${filter}">${ic('edit')} Classer ${none} article${none>1?'s':''}</button>`;if(subFilter&&subFilter!=='__none'&&subs.some(s=>s.id===subFilter)){h+=`<button class="mi-subchip add" data-action="rmw-sub-rename" data-arg="${filter}::${subFilter}">${ic('edit')} Renommer</button><button class="mi-subchip add danger" data-action="rmw-sub-delete" data-arg="${filter}::${subFilter}">${ic('trash')} Supprimer</button>`;}return `<div class="mi-subchips">${h}</div>`;}
-  function gridHtml(list){const flat=()=>`<div class="mi-grid">${list.map(card).join('')}</div>`;if(filter==='all'||subFilter||query.trim())return flat();const subs=subsOf(filter);if(!subs.length)return flat();const groups=subs.map(s=>({id:s.id,label:t(s.name),items:list.filter(x=>x.subId===s.id)})).filter(g=>g.items.length);const rest=list.filter(x=>!x.subId||!subs.some(s=>s.id===x.subId));if(rest.length)groups.push({id:'__none',label:'Sans sous-catégorie',items:rest,muted:true});if(groups.length<2)return flat();return groups.map(g=>`<div class="mi-sub-head${g.muted?' muted':''}" data-action="rmw-sub-filter" data-sub="${g.id}" role="button" tabindex="0"><span>${esc(g.label)}</span><small>${g.items.length} article${g.items.length>1?'s':''}</small></div><div class="mi-grid">${g.items.map(card).join('')}</div>`).join('');}
-  function openClassify(cid){const subs=subsOf(cid);if(!subs.length){toast('Créez d’abord une sous-catégorie','Utilisez « + Sous-catégorie ».','info');return;}const pending=D().items.filter(x=>x.catId===cid&&!x.subId);if(!pending.length){toast('Tout est classé','Aucun article sans sous-catégorie.','info');return;}const opts=subs.map(s=>`<option value="${s.id}">${esc(t(s.name))}</option>`).join('');const m=modal({tag:'CLASSEMENT',title:`Classer les articles · ${esc(t(cat(cid)?.name)||'')}`,width:560,body:`<div class="kf-help" style="margin-bottom:10px;">${pending.length} article${pending.length>1?'s':''} sans sous-catégorie. Chaque choix est enregistré immédiatement.</div><div class="mi-classify-list">${pending.map(x=>`<div class="mi-classify-row" data-mcr="${x.id}"><span class="mi-classify-name">${esc(t(x.name))}</span><select class="kf-input" data-rmw-classify-sub="${x.id}"><option value="">— Choisir —</option>${opts}</select></div>`).join('')}</div>`,foot:'<button class="eq-cta-gradient" data-done>Terminé</button>'});m.el.addEventListener('change',e=>{const sel=e.target.closest('[data-rmw-classify-sub]');if(!sel||!sel.value)return;S().updateItem(sel.dataset.rmwClassifySub,{subId:sel.value});sel.closest('[data-mcr]')?.classList.add('done');});$('[data-done]',m.el).onclick=()=>{m.close();render();};}
+  function subChips(){
+    if(filter==='all')return '';
+    const subs=subsOf(filter),all=D().items.filter(x=>x.catId===filter);
+    const none=all.filter(x=>!x.subId).length;
+    const chip=(id,l,on)=>`<button class="mi-subchip${on?' on':''}" data-action="rmw-sub-filter" data-sub="${id}">${l}</button>`;
+    let h=chip('',ui('allWithCount', { n: all.length }),!subFilter)+subs.map(s=>chip(s.id,`${esc(t(s.name))} · ${all.filter(x=>x.subId===s.id).length}`,subFilter===s.id)).join('');
+    if(subs.length&&none)h+=chip('__none',ui('uncategorizedWithCount', { n: none }),subFilter==='__none');
+    h+=`<button class="mi-subchip add" data-action="rmw-sub-add" data-arg="${filter}">${esc(ui('addSubCat'))}</button>`;
+    if(subs.length&&none)h+=`<button class="mi-subchip add" data-action="rmw-classify" data-arg="${filter}">${ic('edit')} ${esc(ui('classifyCount', { n: none, s: none > 1 ? 's' : '' }))}</button>`;
+    if(subFilter&&subFilter!=='__none'&&subs.some(s=>s.id===subFilter)){
+      h+=`<button class="mi-subchip add" data-action="rmw-sub-rename" data-arg="${filter}::${subFilter}">${ic('edit')} ${esc(ui('rename'))}</button><button class="mi-subchip add danger" data-action="rmw-sub-delete" data-arg="${filter}::${subFilter}">${ic('trash')} ${esc(ui('delete'))}</button>`;
+    }
+    return `<div class="mi-subchips">${h}</div>`;
+  }
+  function gridHtml(list){
+    const flat=()=>`<div class="mi-grid">${list.map(card).join('')}</div>`;
+    if(filter==='all'||subFilter||query.trim())return flat();
+    const subs=subsOf(filter);
+    if(!subs.length)return flat();
+    const groups=subs.map(s=>({id:s.id,label:t(s.name),items:list.filter(x=>x.subId===s.id)})).filter(g=>g.items.length);
+    const rest=list.filter(x=>!x.subId||!subs.some(s=>s.id===x.subId));
+    if(rest.length)groups.push({id:'__none',label:ui('withoutSubcat'),items:rest,muted:true});
+    if(groups.length<2)return flat();
+    return groups.map(g=>`<div class="mi-sub-head${g.muted?' muted':''}" data-action="rmw-sub-filter" data-sub="${g.id}" role="button" tabindex="0"><span>${esc(g.label)}</span><small>${g.items.length} ${esc(g.items.length>1?ui('articles'):ui('article'))}</small></div><div class="mi-grid">${g.items.map(card).join('')}</div>`).join('');
+  }
+  function openClassify(cid){
+    const subs=subsOf(cid);
+    if(!subs.length){toast(ui('createSubFirstToast'),ui('useAddSubHelp'),'info');return;}
+    const pending=D().items.filter(x=>x.catId===cid&&!x.subId);
+    if(!pending.length){toast(ui('allClassifiedToast'),ui('noUnclassifiedItems'),'info');return;}
+    const opts=subs.map(s=>`<option value="${s.id}">${esc(t(s.name))}</option>`).join('');
+    const helpPending = pending.length > 1 ? `${pending.length} ${ui('articlesWithoutSub')}` : `1 ${ui('articleWithoutSub')}`;
+    const m=modal({tag:ui('classifyTag'),title:`${esc(ui('classifyTitle'))} · ${esc(t(cat(cid)?.name)||'')}`,width:560,body:`<div class="kf-help" style="margin-bottom:10px;">${helpPending}. ${esc(ui('classifyInstantSaveNotice'))}</div><div class="mi-classify-list">${pending.map(x=>`<div class="mi-classify-row" data-mcr="${x.id}"><span class="mi-classify-name">${esc(t(x.name))}</span><select class="kf-input" data-rmw-classify-sub="${x.id}"><option value="">— ${esc(ui('chooseSelectPlaceholder'))} —</option>${opts}</select></div>`).join('')}</div>`,foot:`<button class="eq-cta-gradient" data-done>${esc(ui('doneBtn'))}</button>`});
+    m.el.addEventListener('change',e=>{const sel=e.target.closest('[data-rmw-classify-sub]');if(!sel||!sel.value)return;S().updateItem(sel.dataset.rmwClassifySub,{subId:sel.value});sel.closest('[data-mcr]')?.classList.add('done');});
+    $('[data-done]',m.el).onclick=()=>{m.close();render();};
+  }
   function card(x){
     const tr=(typeof t==='function'?t:(s)=>s);
+    const u=(typeof ui==='function'?ui:(k,p)=>k==='formula'?'FORMULE':k==='stepCount'?`${p?.n||0} étape(s)`:k==='optGroupCount'?`${p?.n||0} groupe(s) d’options`:k==='noSection'?'Sans section':k==='reuse'?'Réutiliser':k);
     const c=cat(x.catId),sid=c?.station||S().kitchenId(venue()),s=station(sid),sub=c&&x.subId?(c.sub||[]).find(k=>k.id===x.subId):null;
     const media=x.video?`<video class="rmw-media" src="${esc(x.video)}" muted playsinline preload="metadata"></video>`:x.photo?`<img class="rmw-media" src="${esc(x.photo)}" alt=""/>`:'';
-    const formulaBadge=x.formula?`<span class="mi-tag" style="background:var(--mint-tint);color:var(--forest-ink);font-weight:700;margin-left:4px;">FORMULE</span>`:'';
-    const cName=tr(c?.name)||'Sans section';
+    const formulaBadge=x.formula?`<span class="mi-tag" style="background:var(--mint-tint);color:var(--forest-ink);font-weight:700;margin-left:4px;">${esc(u('formula'))}</span>`:'';
+    const cName=tr(c?.name)||u('noSection');
     const subName=sub?tr(sub.name):'';
     const xName=tr(x.name);
     const sName=tr(s?.name||'Cuisine');
-    return `<article class="mi-card${x.avail===false?' rmw-off':''}" data-action="rmw-item-edit" data-arg="${x.id}">${media}<div class="mi-card-top"><span class="mi-card-cat">${esc(cName)}${subName?` · ${esc(subName)}`:''}</span>${formulaBadge}${x.avail===false?'<span class="mi-tag">86</span>':''}</div><div class="mi-card-name">${esc(xName)}</div><div class="mi-card-price-row"><span class="mi-card-price">${cash(x.price)}</span><span class="mi-card-station">→ ${esc(sName)}</span></div><div class="mi-card-foot"><span>${x.formula?`${(x.formula.slots||[]).length} étape(s)`:`${(x.opts||[]).length} groupe(s) d’options`}</span><span class="mi-card-acts">${x.formula?`<button class="btn-slim" data-action="rmw-formula-duplicate" data-arg="${x.id}">${ic('plus')} Réutiliser</button>`:''}<button class="mi-ic-btn" data-action="rmw-item-edit" data-arg="${x.id}">${ic('edit')}</button><button class="mi-ic-btn danger" data-action="rmw-item-delete" data-arg="${x.id}">${ic('trash')}</button></span></div></article>`;
+    const stepOrOptText = x.formula
+      ? u('stepCount', { n: (x.formula.slots||[]).length })
+      : u('optGroupCount', { n: (x.opts||[]).length });
+    return `<article class="mi-card${x.avail===false?' rmw-off':''}" data-action="rmw-item-edit" data-arg="${x.id}">${media}<div class="mi-card-top"><span class="mi-card-cat">${esc(cName)}${subName?` · ${esc(subName)}`:''}</span>${formulaBadge}${x.avail===false?'<span class="mi-tag">86</span>':''}</div><div class="mi-card-name">${esc(xName)}</div><div class="mi-card-price-row"><span class="mi-card-price">${cash(x.price)}</span><span class="mi-card-station">→ ${esc(sName)}</span></div><div class="mi-card-foot"><span>${esc(stepOrOptText)}</span><span class="mi-card-acts">${x.formula?`<button class="btn-slim" data-action="rmw-formula-duplicate" data-arg="${x.id}">${ic('plus')} ${esc(u('reuse'))}</button>`:''}<button class="mi-ic-btn" data-action="rmw-item-edit" data-arg="${x.id}">${ic('edit')}</button><button class="mi-ic-btn danger" data-action="rmw-item-delete" data-arg="${x.id}">${ic('trash')}</button></span></div></article>`;
   }
-  function groupCard(g){const used=D().items.filter(x=>(x.opts||[]).includes(g.id)).length;const gName=t(g.name);const choicesHtml=(g.choices||[]).map(c=>`<span class="mi-group-opt-pill">${esc(c.emoji||'')} ${esc(t(c.name))}${c.price?` <span class="price">+${cash(c.price)}</span>`:''}</span>`).join('')||'Aucun choix';return `<div class="mi-group-card"><div class="mi-group-card-head"><span class="mi-group-card-name">${esc(gName)}</span><span class="mi-group-card-pill ${g.required?'req':'opt'}">${g.required?'Obligatoire':'Optionnel'}</span><span class="mi-group-card-pill mode">${g.kind==='many'?'Plusieurs choix':'Un seul choix'}</span></div><div class="mi-group-card-opts">${choicesHtml}</div><div class="mi-group-card-scope">Utilisé par ${used} article(s)</div><div class="mi-group-card-acts"><button class="btn-slim" data-action="rmw-group-edit" data-arg="${g.id}">${ic('edit')} Modifier</button><button class="btn-slim danger" data-action="rmw-group-delete" data-arg="${g.id}">${ic('trash')} Supprimer</button></div></div>`;}
-  function menuPanel(){const d=D(),list=shownItems(),selected=filter==='all'?null:cat(filter),selectedIndex=selected?d.cats.findIndex(c=>c.id===selected.id):-1;const cats=`<div class="mi-cat-bar"><div class="mi-pill-row mi-cat-pills"><button class="mi-pill${filter==='all'?' on':''}" data-action="rmw-cat-filter" data-cat="all">Tous</button>${d.cats.map(c=>`<button class="mi-pill${filter===c.id?' on':''}" data-action="rmw-cat-filter" data-cat="${c.id}">${esc(t(c.name))}</button>`).join('')}</div><div class="mi-cat-bar-acts">${selected?`<button class="btn-slim" data-action="rmw-cat-move" data-arg="${selected.id}::-1"${selectedIndex<=0?' disabled':''}>← Avant</button><button class="btn-slim" data-action="rmw-cat-move" data-arg="${selected.id}::1"${selectedIndex>=d.cats.length-1?' disabled':''}>Après →</button><button class="btn-slim" data-action="rmw-cat-edit" data-arg="${selected.id}">${ic('edit')} Renommer la section</button><button class="btn-slim danger" data-action="rmw-cat-delete" data-arg="${selected.id}">${ic('trash')} Supprimer la section</button>`:''}<button class="btn-slim" data-action="rmw-cat-add">${ic('plus')} Nouvelle section</button><button class="btn-slim primary" data-action="rmw-item-add"${d.cats.length?'':' disabled'}>${ic('plus')} Nouvel article</button></div></div>`;const body=d.items.length?(list.length?gridHtml(list):'<div class="rmw-empty" style="display:flex;flex-direction:column;align-items:center;padding:44px 20px;"><div style="width:44px;height:44px;border-radius:12px;background:rgba(11,110,79,0.10);border:1px solid rgba(11,110,79,0.18);color:var(--atlas);display:grid;place-items:center;margin-bottom:12px;"><svg width="22" height="22" viewBox="0 -960 960 960" fill="currentColor"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg></div><div style="font-weight:600;font-size:14.5px;color:var(--ink);margin-bottom:4px;">Aucun article ne correspond.</div></div>'):'<div class="rmw-empty" style="display:flex;flex-direction:column;align-items:center;padding:48px 20px;"><div style="width:48px;height:48px;border-radius:14px;background:rgba(11,110,79,0.10);border:1px solid rgba(11,110,79,0.18);color:var(--atlas);display:grid;place-items:center;margin-bottom:16px;"><svg width="24" height="24" viewBox="0 -960 960 960" fill="currentColor"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg></div><h3 style="font-family:var(--sans);font-weight:600;font-size:18px;color:var(--ink);margin:0 0 6px;letter-spacing:-0.015em;">Votre menu est vide</h3><p style="font-size:13px;color:var(--n-500);margin:0 0 18px;line-height:1.55;max-width:380px;text-align:center;">Créez une section, puis ajoutez votre premier article. Aucun contenu de démonstration ne sera ajouté.</p><button class="btn-slim primary" data-action="rmw-cat-add">Créer une section</button></div>';return `<section class="mi-section"><div class="mi-toolbar"><div class="mi-search"><input value="${esc(query)}" placeholder="Rechercher un article…" data-rmw-search/></div></div>${cats}${subChips()}${body}</section><section class="mi-section"><div class="mi-section-head"><h3>Modificateurs &amp; options</h3><button class="btn-slim primary" data-action="rmw-group-add">${ic('plus')} Nouveau groupe d’options</button></div><div class="mi-groups-grid">${d.opts.map(groupCard).join('')||'<div class="rmw-empty">Aucun groupe d’options.</div>'}</div></section>`;}
-  function stationsPanel(){const d=D(),kid=S().kitchenId(venue());const cards=d.stations.map(s=>{const cats=d.cats.filter(c=>(c.station||kid)===s.id);return `<div class="mi-station mi-station-card"><div class="mi-station-top"><span class="mi-st-dot on" style="background:${esc(s.color||'#1F5D3C')}"></span><span class="mi-station-name">${esc(t(s.name))}</span>${s.id===kid?'<span class="mi-group-card-pill req">Cuisine · reçoit le reste</span>':''}</div><div class="mi-station-routed">${cats.length} section(s) · ${cats.map(c=>esc(t(c.name))).join(', ')}</div><div class="mi-group-card-acts"><button class="btn-slim" data-action="rmw-station-edit" data-arg="${s.id}">Modifier</button>${s.id!==kid?`<button class="btn-slim danger" data-action="rmw-station-delete" data-arg="${s.id}">Supprimer</button>`:''}</div></div>`;}).join('');const routes=d.cats.map(c=>`<div class="rmw-route"><b>${esc(t(c.name))}</b><select data-rmw-route="${c.id}"><option value="">${esc(t(station(kid)?.name)||'Cuisine')} · par défaut</option>${d.stations.filter(s=>s.id!==kid).map(s=>`<option value="${s.id}"${c.station===s.id?' selected':''}>${esc(t(s.name))}</option>`).join('')}</select></div>`).join('');return `<section class="mi-section"><div class="mi-recettes-head"><div><div class="mi-title">Postes de préparation</div><div class="mi-sub">Une section, un poste. Tous les tickets restent visibles dans l’onglet Toutes du KDS.</div></div><button class="btn-slim primary" data-action="rmw-station-add">${ic('plus')} Ajouter un poste</button></div><div class="mi-stations">${cards||'<div class="rmw-empty">Ajoutez votre premier poste.</div>'}</div><div class="mi-section-head"><h3>Routage par section</h3></div><div class="rmw-routes">${routes||'<div class="rmw-empty">Créez des sections pour définir leur routage.</div>'}</div></section>`;}
-  function recipeStatus(m,r){if(!r?.ingredients?.length)return['opt','À compléter'];if(!m?.costComplete)return['opt','Coût incomplet'];if(m.actualCost==null)return['req','Recette chiffrée'];const gap=Math.abs(m.variancePct||0);return gap>15?['opt','Stock à vérifier']:gap>5?['opt','À surveiller']:['req','Coût conforme'];}
-  function recipesPanel(){const api=window.KiwiRestaurantRecipes,items=D().items,done=items.filter(x=>api?.get(x.id,x.name,venue())?.ingredients?.length).length;return `<section class="mi-section"><div class="mi-recettes-head"><div><div class="mi-title">Recettes &amp; coûts par plat</div><div class="mi-sub">Définissez les quantités exactes pour relier chaque vente au stock et calculer vos marges.</div></div><div class="mi-recettes-progress"><div class="mi-recettes-progress-l">${done} / ${items.length} recettes complétées</div><div class="mi-recettes-progress-bar"><i style="width:${items.length?done/items.length*100:0}%"></i></div></div></div><div class="rmw-recipe-list">${items.map(x=>{const r=api?.get(x.id,x.name,venue()),m=r?api?.metrics(x,r,venue()):null,[cls,label]=recipeStatus(m,r);return `<div class="rmw-recipe-card"><div><div class="rmw-recipe-name">${esc(t(x.name))}</div><div class="rmw-recipe-meta">${r?.ingredients?.length||0} ingrédient(s)${r?.prepMinutes?` · ${r.prepMinutes} min`:''}</div></div><div class="rmw-recipe-result"><span class="mi-group-card-pill ${cls}">${label}</span>${m?.costComplete?`<small>${m.theoreticalCost.toFixed(2)} MAD / portion</small>`:'<small>Quantités ou coûts à compléter</small>'}</div><button class="btn-slim${r?'':' primary'}" data-action="rmw-recipe-edit" data-arg="${x.id}">${r?'Voir et modifier':'Compléter'} →</button></div>`;}).join('')||'<div class="rmw-empty">Ajoutez d’abord des articles.</div>'}</div></section>`;}
+  function groupCard(g){
+    const used=D().items.filter(x=>(x.opts||[]).includes(g.id)).length;
+    const gName=t(g.name);
+    const choicesHtml=(g.choices||[]).map(c=>`<span class="mi-group-opt-pill">${esc(c.emoji||'')} ${esc(t(c.name))}${c.price?` <span class="price">+${cash(c.price)}</span>`:''}</span>`).join('')||esc(ui('noChoices'));
+    return `<div class="mi-group-card"><div class="mi-group-card-head"><span class="mi-group-card-name">${esc(gName)}</span><span class="mi-group-card-pill ${g.required?'req':'opt'}">${esc(g.required?ui('required'):ui('optional'))}</span><span class="mi-group-card-pill mode">${esc(g.kind==='many'?ui('manyChoices'):ui('oneChoice'))}</span></div><div class="mi-group-card-opts">${choicesHtml}</div><div class="mi-group-card-scope">${esc(ui('usedByCount', { n: used }))}</div><div class="mi-group-card-acts"><button class="btn-slim" data-action="rmw-group-edit" data-arg="${g.id}">${ic('edit')} ${esc(ui('rename'))}</button><button class="btn-slim danger" data-action="rmw-group-delete" data-arg="${g.id}">${ic('trash')} ${esc(ui('delete'))}</button></div></div>`;
+  }
+  function menuPanel(){
+    const d=D(),list=shownItems(),selected=filter==='all'?null:cat(filter),selectedIndex=selected?d.cats.findIndex(c=>c.id===selected.id):-1;
+    const cats=`<div class="mi-cat-bar"><div class="mi-pill-row mi-cat-pills"><button class="mi-pill${filter==='all'?' on':''}" data-action="rmw-cat-filter" data-cat="all">${esc(ui('all'))}</button>${d.cats.map(c=>`<button class="mi-pill${filter===c.id?' on':''}" data-action="rmw-cat-filter" data-cat="${c.id}">${esc(t(c.name))}</button>`).join('')}</div><div class="mi-cat-bar-acts">${selected?`<button class="btn-slim" data-action="rmw-cat-move" data-arg="${selected.id}::-1"${selectedIndex<=0?' disabled':''}>${esc(ui('moveLeft'))}</button><button class="btn-slim" data-action="rmw-cat-move" data-arg="${selected.id}::1"${selectedIndex>=d.cats.length-1?' disabled':''}>${esc(ui('moveRight'))}</button><button class="btn-slim" data-action="rmw-cat-edit" data-arg="${selected.id}">${ic('edit')} ${esc(ui('renameSection'))}</button><button class="btn-slim danger" data-action="rmw-cat-delete" data-arg="${selected.id}">${ic('trash')} ${esc(ui('deleteSection'))}</button>`:''}<button class="btn-slim" data-action="rmw-cat-add">${ic('plus')} ${esc(ui('newSection'))}</button><button class="btn-slim primary" data-action="rmw-item-add"${d.cats.length?'':' disabled'}>${ic('plus')} ${esc(ui('newItem'))}</button></div></div>`;
+    const body=d.items.length?(list.length?gridHtml(list):`<div class="rmw-empty" style="display:flex;flex-direction:column;align-items:center;padding:44px 20px;"><div style="width:44px;height:44px;border-radius:12px;background:rgba(11,110,79,0.10);border:1px solid rgba(11,110,79,0.18);color:var(--atlas);display:grid;place-items:center;margin-bottom:12px;"><svg width="22" height="22" viewBox="0 -960 960 960" fill="currentColor"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg></div><div style="font-weight:600;font-size:14.5px;color:var(--ink);margin-bottom:4px;">${esc(ui('noItemMatch'))}</div></div>`):`<div class="rmw-empty" style="display:flex;flex-direction:column;align-items:center;padding:48px 20px;"><div style="width:48px;height:48px;border-radius:14px;background:rgba(11,110,79,0.10);border:1px solid rgba(11,110,79,0.18);color:var(--atlas);display:grid;place-items:center;margin-bottom:16px;"><svg width="24" height="24" viewBox="0 -960 960 960" fill="currentColor"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg></div><h3 style="font-family:var(--sans);font-weight:600;font-size:18px;color:var(--ink);margin:0 0 6px;letter-spacing:-0.015em;">${esc(ui('emptyMenuTitle'))}</h3><p style="font-size:13px;color:var(--n-500);margin:0 0 18px;line-height:1.55;max-width:380px;text-align:center;">${esc(ui('emptyMenuDesc'))}</p><button class="btn-slim primary" data-action="rmw-cat-add">${esc(ui('createSectionBtn'))}</button></div>`;
+    return `<section class="mi-section"><div class="mi-toolbar"><div class="mi-search"><input value="${esc(query)}" placeholder="${esc(ui('searchPlaceholder'))}" data-rmw-search/></div></div>${cats}${subChips()}${body}</section><section class="mi-section"><div class="mi-section-head"><h3>${esc(ui('modAndOpts'))}</h3><button class="btn-slim primary" data-action="rmw-group-add">${ic('plus')} ${esc(ui('newGroupBtn'))}</button></div><div class="mi-groups-grid">${d.opts.map(groupCard).join('')||`<div class="rmw-empty">${esc(ui('noOptGroups'))}</div>`}</div></section>`;
+  }
+  function stationsPanel(){
+    const d=D(),kid=S().kitchenId(venue());
+    const cards=d.stations.map(s=>{
+      const cats=d.cats.filter(c=>(c.station||kid)===s.id);
+      const catCountStr = cats.length === 1 ? `1 ${ui('section')}` : `${cats.length} ${ui('sections')}`;
+      return `<div class="mi-station mi-station-card"><div class="mi-station-top"><span class="mi-st-dot on" style="background:${esc(s.color||'#1F5D3C')}"></span><span class="mi-station-name">${esc(t(s.name))}</span>${s.id===kid?`<span class="mi-group-card-pill req">${esc(ui('defaultStationFallback'))}</span>`:''}</div><div class="mi-station-routed">${catCountStr} · ${cats.map(c=>esc(t(c.name))).join(', ')}</div><div class="mi-group-card-acts"><button class="btn-slim" data-action="rmw-station-edit" data-arg="${s.id}">${ic('edit')} ${esc(ui('rename'))}</button>${s.id!==kid?`<button class="btn-slim danger" data-action="rmw-station-delete" data-arg="${s.id}">${ic('trash')} ${esc(ui('delete'))}</button>`:''}</div></div>`;
+    }).join('');
+    const routes=d.cats.map(c=>`<div class="rmw-route"><b>${esc(t(c.name))}</b><select data-rmw-route="${c.id}"><option value="">${esc(ui('defaultRoute', { name: t(station(kid)?.name)||ui('kitchen') }))}</option>${d.stations.filter(s=>s.id!==kid).map(s=>`<option value="${s.id}"${c.station===s.id?' selected':''}>${esc(t(s.name))}</option>`).join('')}</select></div>`).join('');
+    return `<section class="mi-section"><div class="mi-recettes-head"><div><div class="mi-title">${esc(ui('stationsTitle'))}</div><div class="mi-sub">${esc(ui('stationsSub'))}</div></div><button class="btn-slim primary" data-action="rmw-station-add">${ic('plus')} ${esc(ui('addStation'))}</button></div><div class="mi-stations">${cards||`<div class="rmw-empty">${esc(ui('addFirstStation'))}</div>`}</div><div class="mi-section-head"><h3>${esc(ui('routingBySection'))}</h3></div><div class="rmw-routes">${routes||`<div class="rmw-empty">${esc(ui('createSectionsForRouting'))}</div>`}</div></section>`;
+  }
+  function recipeStatus(m,r){
+    if(!r?.ingredients?.length)return['opt',ui('statusToComplete')];
+    if(!m?.costComplete)return['opt',ui('statusCostIncomplete')];
+    if(m.actualCost==null)return['req',ui('statusCosted')];
+    const gap=Math.abs(m.variancePct||0);
+    return gap>15?['opt',ui('statusCheckStock')]:gap>5?['opt',ui('statusToMonitor')]:['req',ui('statusCostCompliant')];
+  }
+  function recipesPanel(){
+    const api=window.KiwiRestaurantRecipes,items=D().items,done=items.filter(x=>api?.get(x.id,x.name,venue())?.ingredients?.length).length;
+    return `<section class="mi-section"><div class="mi-recettes-head"><div><div class="mi-title">${esc(ui('recipesTitle'))}</div><div class="mi-sub">${esc(ui('recipesSub'))}</div></div><div class="mi-recettes-progress"><div class="mi-recettes-progress-l">${esc(ui('recipesCompletedCount', { done, total: items.length }))}</div><div class="mi-recettes-progress-bar"><i style="width:${items.length?done/items.length*100:0}%"></i></div></div></div><div class="rmw-recipe-list">${items.map(x=>{const r=api?.get(x.id,x.name,venue()),m=r?api?.metrics(x,r,venue()):null,[cls,label]=recipeStatus(m,r);return `<div class="rmw-recipe-card"><div><div class="rmw-recipe-name">${esc(t(x.name))}</div><div class="rmw-recipe-meta">${esc(ui('ingredientCount', { n: r?.ingredients?.length||0 }))}${r?.prepMinutes?` · ${r.prepMinutes} min`:''}</div></div><div class="rmw-recipe-result"><span class="mi-group-card-pill ${cls}">${esc(label)}</span>${m?.costComplete?`<small>${esc(ui('costSummaryPortion', { cost: m.theoreticalCost.toFixed(2) }))}</small>`:`<small>${esc(ui('missingCostOrQty'))}</small>`}</div><button class="btn-slim${r?'':' primary'}" data-action="rmw-recipe-edit" data-arg="${x.id}">${esc(r?ui('viewAndEdit'):ui('complete'))} →</button></div>`;}).join('')||`<div class="rmw-empty">${esc(ui('addItemsFirst'))}</div>`}</div></section>`;
+  }
   function sales(){try{return window.KiwiSales?.list?.(venue())||[];}catch(_){return[];}}
   const norm=(v)=>String(v==null?'':v).trim().toLocaleLowerCase('fr').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
   function median(values){if(!values.length)return 0;const a=[...values].sort((x,y)=>x-y),m=Math.floor(a.length/2);return a.length%2?a[m]:(a[m-1]+a[m])/2;}
@@ -91,28 +913,31 @@
     const totalRevenue=items.reduce((n,x)=>n+x.revenue,0),costedRevenue=measured.reduce((n,x)=>n+x.revenue,0),grossProfit=measured.reduce((n,x)=>n+x.profit,0);
     return {items,measured,medQty,medProfit,totalRevenue,costedRevenue,grossProfit,coverage:totalRevenue?costedRevenue/totalRevenue*100:0,days};
   }
-  const PERF_QUADS={
-    star:{title:'Stars',hint:'Populaires et rentables',action:'À mettre en avant'},
-    plow:{title:'Plowhorses',hint:'Populaires, marge à optimiser',action:'Revoir coût ou prix'},
-    puzzle:{title:'Puzzles',hint:'Rentables, peu commandés',action:'Mieux les positionner'},
-    dog:{title:'Dogs',hint:'Peu commandés et faible marge',action:'À revoir'},
-  };
+  function perfQuads(){
+    return {
+      star:{title:ui('quadStar'),hint:ui('quadStarHint'),action:ui('quadStarAction')},
+      plow:{title:ui('quadPlow'),hint:ui('quadPlowHint'),action:ui('quadPlowAction')},
+      puzzle:{title:ui('quadPuzzle'),hint:ui('quadPuzzleHint'),action:ui('quadPuzzleAction')},
+      dog:{title:ui('quadDog'),hint:ui('quadDogHint'),action:ui('quadDogAction')},
+    };
+  }
   function performanceMatrix(p){
     const maxQty=Math.max(1,...p.measured.map(x=>x.qty)),maxProfit=Math.max(1,...p.measured.map(x=>Math.max(0,x.unitProfit))),maxRevenue=Math.max(1,...p.measured.map(x=>x.revenue));
     const x=v=>Math.sqrt(Math.max(0,v)/maxQty)*100,y=v=>Math.sqrt(Math.max(0,v)/maxProfit)*100;
     const counts={star:0,plow:0,puzzle:0,dog:0};p.measured.forEach(r=>counts[r.quadrant]++);
-    const legend=[['star','Stars'],['puzzle','À développer'],['plow','À optimiser'],['dog','À revoir']].map(([q,label])=>`<span class="${q}"><i></i>${label}<b>${counts[q]}</b></span>`).join('');
-    const dots=p.measured.map((r,i)=>{const size=11+Math.sqrt(r.revenue/maxRevenue)*19;return `<button class="rmw-perf-dot ${r.quadrant}" style="left:${x(r.qty).toFixed(2)}%;bottom:${y(r.unitProfit).toFixed(2)}%;width:${size.toFixed(1)}px;height:${size.toFixed(1)}px;z-index:${i+1}" data-action="rmw-recipe-edit" data-arg="${esc(r.item.id)}" aria-label="${esc(r.item.name)}"><span><em>${esc(cat(r.item.catId)?.name||'Article')}</em><b>${esc(r.item.name)}</b><small><i>${r.qty.toLocaleString('fr-FR')} vendus</i><i>${cash(r.revenue)} de CA</i><i>${cash(r.profit)} de profit brut</i></small><strong>${r.marginPct==null?'—':r.marginPct.toFixed(1)+' %'} de marge</strong></span></button>`;}).join('');
-    return `<div class="rmw-perf-matrix"><div class="rmw-perf-legend">${legend}</div><div class="rmw-perf-chart"><div class="rmw-perf-y">Profit brut par article</div><div class="rmw-perf-plot"><i class="rmw-perf-v" style="left:${x(p.medQty).toFixed(2)}%"></i><i class="rmw-perf-h" style="bottom:${y(p.medProfit).toFixed(2)}%"></i><div class="rmw-perf-label puzzle"><b>À DÉVELOPPER</b><small>Rentable · volume faible</small></div><div class="rmw-perf-label star"><b>STARS</b><small>Rentable · volume fort</small></div><div class="rmw-perf-label dog"><b>À REVOIR</b><small>Marge et volume faibles</small></div><div class="rmw-perf-label plow"><b>À OPTIMISER</b><small>Populaire · marge faible</small></div>${dots}</div><div class="rmw-perf-x">Popularité · ventes sur ${p.days} jours</div></div><div class="rmw-perf-caption"><span>Taille du point = chiffre d’affaires</span><span>Axes = médianes de votre propre carte</span><span>Cliquez sur un article pour ouvrir sa recette</span></div></div>`;
+    const legend=[['star',ui('legendStar')],['puzzle',ui('legendPuzzle')],['plow',ui('legendPlow')],['dog',ui('legendDog')]].map(([q,label])=>`<span class="${q}"><i></i>${esc(label)}<b>${counts[q]}</b></span>`).join('');
+    const dots=p.measured.map((r,i)=>{const size=11+Math.sqrt(r.revenue/maxRevenue)*19;const cName=cat(r.item.catId)?.name?t(cat(r.item.catId).name):ui('article');const itName=t(r.item.name);return `<button class="rmw-perf-dot ${r.quadrant}" style="left:${x(r.qty).toFixed(2)}%;bottom:${y(r.unitProfit).toFixed(2)}%;width:${size.toFixed(1)}px;height:${size.toFixed(1)}px;z-index:${i+1}" data-action="rmw-recipe-edit" data-arg="${esc(r.item.id)}" aria-label="${esc(itName)}"><span><em>${esc(cName)}</em><b>${esc(itName)}</b><small><i>${r.qty.toLocaleString('fr-FR')} ${esc(ui('colSold').toLowerCase())}</i><i>${cash(r.revenue)} ${esc(ui('colRevenueDesc'))}</i><i>${cash(r.profit)} ${esc(ui('colProfitDesc'))}</i></small><strong>${r.marginPct==null?'—':r.marginPct.toFixed(1)+' %'} ${esc(ui('colMarginDesc'))}</strong></span></button>`;}).join('');
+    return `<div class="rmw-perf-matrix"><div class="rmw-perf-legend">${legend}</div><div class="rmw-perf-chart"><div class="rmw-perf-y">${esc(ui('grossProfitPerItem'))}</div><div class="rmw-perf-plot"><i class="rmw-perf-v" style="left:${x(p.medQty).toFixed(2)}%"></i><i class="rmw-perf-h" style="bottom:${y(p.medProfit).toFixed(2)}%"></i><div class="rmw-perf-label puzzle"><b>${esc(ui('matrixLabelPuzzle'))}</b><small>${esc(ui('matrixHintPuzzle'))}</small></div><div class="rmw-perf-label star"><b>${esc(ui('matrixLabelStar'))}</b><small>${esc(ui('matrixHintStar'))}</small></div><div class="rmw-perf-label dog"><b>${esc(ui('matrixLabelDog'))}</b><small>${esc(ui('matrixHintDog'))}</small></div><div class="rmw-perf-label plow"><b>${esc(ui('matrixLabelPlow'))}</b><small>${esc(ui('matrixHintPlow'))}</small></div>${dots}</div><div class="rmw-perf-x">${esc(ui('popularityXDays', { n: p.days }))}</div></div><div class="rmw-perf-caption"><span>${esc(ui('perfDotSizeHint'))}</span><span>${esc(ui('perfAxesHint'))}</span><span>${esc(ui('perfClickHint'))}</span></div></div>`;
   }
   function performancePanel(){
     const p=performanceData(30),costed=p.measured.length,buckets={star:[],plow:[],puzzle:[],dog:[]};
     p.measured.forEach(x=>buckets[x.quadrant].push(x));
-    const cards=Object.entries(PERF_QUADS).map(([key,q])=>{const list=buckets[key].sort((a,b)=>b.profit-a.profit),names=list.slice(0,3).map(x=>esc(x.item.name)).join(' · ')||'—',profit=list.reduce((n,x)=>n+x.profit,0);return `<div class="rmw-perf-q ${key}"><h4>${q.title.toUpperCase()}</h4><strong>${list.length} article${list.length!==1?'s':''}</strong><p>${q.hint}</p><div><span>Top</span>${names}</div><footer><b>${cash(profit)}</b> de profit brut <small>${q.action}</small></footer></div>`;}).join('');
-    const rows=[...p.items].sort((a,b)=>b.profit-a.profit||b.revenue-a.revenue).map(r=>`<tr><td><b>${esc(r.item.name)}</b><small>${esc(cat(r.item.catId)?.name||'Sans section')}</small></td><td>${r.qty.toLocaleString('fr-FR')}</td><td>${cash(r.revenue)}</td><td>${r.unitCost==null?'<button class="rmw-perf-link" data-action="rmw-recipe-edit" data-arg="'+esc(r.item.id)+'">Compléter la recette</button>':`${cash(r.unitCost)}<small>${r.costSource}</small>`}</td><td>${r.profit==null?'—':cash(r.profit)}</td><td>${r.marginPct==null?'—':`<span class="rmw-perf-margin ${r.marginPct>=65?'hi':r.marginPct>=50?'mid':'lo'}">${r.marginPct.toFixed(1)} %</span>`}</td><td>${r.quadrant?PERF_QUADS[r.quadrant].title:(r.qty?'Marge manquante':'Aucune vente')}</td></tr>`).join('');
-    if(!p.items.length)return '<section class="mi-section"><div class="rmw-empty"><h3>Aucun article à analyser</h3><p>Ajoutez vos plats dans Menu &amp; modificateurs. Les performances apparaîtront après les premières ventes.</p></div></section>';
+    const quads = perfQuads();
+    const cards=Object.entries(quads).map(([key,q])=>{const list=buckets[key].sort((a,b)=>b.profit-a.profit),names=list.slice(0,3).map(x=>esc(t(x.item.name))).join(' · ')||'—',profit=list.reduce((n,x)=>n+x.profit,0);const countStr = list.length === 1 ? `1 ${ui('article')}` : `${list.length} ${ui('articles')}`;return `<div class="rmw-perf-q ${key}"><h4>${esc(q.title.toUpperCase())}</h4><strong>${countStr}</strong><p>${esc(q.hint)}</p><div><span>Top</span>${names}</div><footer><b>${cash(profit)}</b> ${esc(ui('colProfit').toLowerCase())} <small>${esc(q.action)}</small></footer></div>`;}).join('');
+    const rows=[...p.items].sort((a,b)=>b.profit-a.profit||b.revenue-a.revenue).map(r=>{const itName=t(r.item.name),catName=cat(r.item.catId)?.name?t(cat(r.item.catId).name):ui('noSection');return `<tr><td><b>${esc(itName)}</b><small>${esc(catName)}</small></td><td>${r.qty.toLocaleString('fr-FR')}</td><td>${cash(r.revenue)}</td><td>${r.unitCost==null?'<button class="rmw-perf-link" data-action="rmw-recipe-edit" data-arg="'+esc(r.item.id)+'">'+esc(ui('completeRecipeLink'))+'</button>':`${cash(r.unitCost)}<small>${r.costSource}</small>`}</td><td>${r.profit==null?'—':cash(r.profit)}</td><td>${r.marginPct==null?'—':`<span class="rmw-perf-margin ${r.marginPct>=65?'hi':r.marginPct>=50?'mid':'lo'}">${r.marginPct.toFixed(1)} %</span>`}</td><td>${r.quadrant?quads[r.quadrant].title:(r.qty?ui('marginMissing'):ui('noSaleRecorded'))}</td></tr>`;}).join('');
+    if(!p.items.length)return `<section class="mi-section"><div class="rmw-empty"><h3>${esc(ui('noItemsToAnalyze'))}</h3><p>${esc(ui('noItemsToAnalyzeDesc'))}</p></div></section>`;
     const emptySales=!p.items.some(x=>x.qty>0);
-    return `<div class="rmw-performance"><section class="mi-section"><div class="mi-recettes-head"><div><div class="mi-title">Performance des articles</div><div class="mi-sub">Popularité, chiffre d’affaires et profit brut · 30 derniers jours · données réelles de la caisse.</div></div><div class="rmw-perf-period">30 jours</div></div>${emptySales?'<div class="rmw-empty"><h3>Pas encore de ventes par article</h3><p>Dès que la caisse enregistre des tickets détaillés, Kiwi classe automatiquement les plats.</p></div>':costed?performanceMatrix(p):'<div class="rmw-empty"><h3>Complétez les recettes pour voir la rentabilité</h3><p>Les ventes sont bien reçues. Il manque le coût de chaque plat pour comparer leur profit réel.</p></div>'}</section><div class="rmw-perf-kpis"><div><span>Chiffre d’affaires analysé</span><b>${cash(p.totalRevenue)}</b><small>${p.items.reduce((n,x)=>n+x.qty,0).toLocaleString('fr-FR')} articles vendus</small></div><div><span>Profit brut calculé</span><b>${costed?cash(p.grossProfit):'—'}</b><small>${costed} recette${costed!==1?'s':''} vendue${costed!==1?'s':''} et chiffrée${costed!==1?'s':''}</small></div><div><span>Couverture des coûts</span><b>${p.totalRevenue?p.coverage.toFixed(0)+' %':'—'}</b><small>part du CA avec recette complète</small></div></div>${costed?`<div class="rmw-perf-quads">${cards}</div>`:''}<section class="mi-section"><div class="mi-section-head"><h3>Détail par article</h3></div><div class="mi-list-wrap"><table class="mi-list rmw-perf-table"><thead><tr><th>Article</th><th>Vendus</th><th>Chiffre d’affaires</th><th>Coût / article</th><th>Profit brut</th><th>Marge</th><th>Lecture</th></tr></thead><tbody>${rows}</tbody></table></div></section></div>`;
+    return `<div class="rmw-performance"><section class="mi-section"><div class="mi-recettes-head"><div><div class="mi-title">${esc(ui('perfTitle'))}</div><div class="mi-sub">${esc(ui('perfSub'))}</div></div><div class="rmw-perf-period">${esc(ui('daysCount', { n: 30 }))}</div></div>${emptySales?`<div class="rmw-empty"><h3>${esc(ui('noSalesYet'))}</h3><p>${esc(ui('noSalesYetDesc'))}</p></div>`:costed?performanceMatrix(p):`<div class="rmw-empty"><h3>${esc(ui('completeRecipesForProfit'))}</h3><p>${esc(ui('completeRecipesForProfitDesc'))}</p></div>`}</section><div class="rmw-perf-kpis"><div><span>${esc(ui('analyzedRevenue'))}</span><b>${cash(p.totalRevenue)}</b><small>${p.items.reduce((n,x)=>n+x.qty,0).toLocaleString('fr-FR')} ${esc(ui('itemsSold'))}</small></div><div><span>${esc(ui('grossProfitCalc'))}</span><b>${costed?cash(p.grossProfit):'—'}</b><small>${esc(ui('recipesSoldAndCosted', { n: costed }))}</small></div><div><span>${esc(ui('costCoverage'))}</span><b>${p.totalRevenue?p.coverage.toFixed(0)+' %':'—'}</b><small>${esc(ui('costCoverageSub'))}</small></div></div>${costed?`<div class="rmw-perf-quads">${cards}</div>`:''}<section class="mi-section"><div class="mi-section-head"><h3>${esc(ui('colItem'))}</h3></div><div class="mi-list-wrap"><table class="mi-list rmw-perf-table"><thead><tr><th>${esc(ui('colItem'))}</th><th>${esc(ui('colSold'))}</th><th>${esc(ui('colRevenue'))}</th><th>${esc(ui('colUnitCost'))}</th><th>${esc(ui('colProfit'))}</th><th>${esc(ui('colMargin'))}</th><th>${esc(ui('colReadout'))}</th></tr></thead><tbody>${rows}</tbody></table></div></section></div>`;
   }
   const SERVICE_WINDOWS=[
     {id:'matin',name:'Matin',from:5*60,to:11*60},
@@ -167,41 +992,71 @@
   }
   function hoursPanel(){
     const api=window.KiwiHours;
-    if(!api?.isConfigured?.(venue()))return '<section class="mi-section"><div class="rmw-empty"><h3>Renseignez les horaires du restaurant</h3><p>Kiwi crée les moments de la journée à partir des horaires enregistrés. Aucun créneau n’est inventé.</p></div></section>';
+    if(!api?.isConfigured?.(venue()))return `<section class="mi-section"><div class="rmw-empty"><h3>${esc(ui('setHoursPrompt'))}</h3><p>${esc(ui('setHoursPromptDesc'))}</p></div></section>`;
     const periods=servicePeriods();
-    if(!periods.length)return '<section class="mi-section"><div class="rmw-empty"><h3>Aucun service à analyser</h3><p>Les horaires actuels ne croisent ni le matin, ni le midi, ni le soir. Vérifiez les horaires du restaurant dans Réglages.</p></div></section>';
+    if(!periods.length)return `<section class="mi-section"><div class="rmw-empty"><h3>${esc(ui('noServiceToAnalyze'))}</h3><p>${esc(ui('noServiceToAnalyzeDesc'))}</p></div></section>`;
     if(!periods.some(x=>x.id===hoursPeriod))hoursPeriod=periods[0].id;
     const selected=periods.find(x=>x.id===hoursPeriod)||periods[0],data=hoursData(periods,selected),max=Math.max(1,...data.ranked.slice(0,10).map(x=>x.qty));
     const pills=periods.map(p=>`<button class="mi-pill${p.id===selected.id?' on':''}" data-action="rmw-hours-period" data-period="${p.id}">${esc(p.label)}</button>`).join('');
-    const bars=data.ranked.slice(0,10).map(row=>`<div class="rmw-hours-row"><div class="rmw-hours-name" title="${esc(row.item.name)}">${esc(row.item.name)}</div><div class="rmw-hours-track"><i style="width:${(row.qty/max*100).toFixed(1)}%"></i></div><b>${row.qty.toLocaleString('fr-FR')}</b></div>`).join('');
+    const bars=data.ranked.slice(0,10).map(row=>`<div class="rmw-hours-row"><div class="rmw-hours-name" title="${esc(t(row.item.name))}">${esc(t(row.item.name))}</div><div class="rmw-hours-track"><i style="width:${(row.qty/max*100).toFixed(1)}%"></i></div><b>${row.qty.toLocaleString('fr-FR')}</b></div>`).join('');
     const totalForTop=data.top?Object.values(data.top.byPeriod).reduce((n,x)=>n+x,0):0,topShare=data.top&&totalForTop?data.top.qty/totalForTop*100:0;
-    const insight=data.top?`<div class="rmw-hours-insight"><span>LECTURE KIWI · ${esc(selected.label)}</span><h3>${esc(data.top.item.name)} porte ce service</h3><p>${data.top.qty.toLocaleString('fr-FR')} unité${data.top.qty!==1?'s':''}, soit ${(data.top.qty/data.totalQty*100).toFixed(0)} % des articles vendus sur ce créneau. ${topShare.toFixed(0)} % de ses ventes analysées ont lieu pendant ${esc(selected.name.toLowerCase())}.</p></div>`:'';
-    const notable=data.notable.map(x=>`<div class="rmw-hours-notable"><i></i><div><b>${esc(x.row.item.name)}</b><span>${x.share.toFixed(0)} % de ses ${x.total.toLocaleString('fr-FR')} ventes ont lieu pendant ${esc(x.best.name.toLowerCase())} (${minuteLabel(x.best.from)}-${minuteLabel(x.best.to)}).</span></div></div>`).join('');
-    return `<div class="rmw-hours-page"><section class="mi-section"><div class="mi-section-head"><div><h3>Performance par moment de la journée</h3><div class="mi-section-sub">Quels articles se vendent quand · ${data.days} derniers jours · données réelles de la caisse</div></div></div><div class="mi-pill-row rmw-hours-pills">${pills}</div><div class="rmw-hours-kpis"><div><span>Articles vendus</span><b>${data.totalQty.toLocaleString('fr-FR')}</b><small>${esc(selected.label)}</small></div><div><span>CA généré</span><b>${cash(data.totalRevenue)}</b><small>sur le créneau</small></div><div><span>Top article</span><b>${data.top?esc(data.top.item.name):'—'}</b><small>${data.top?data.top.qty.toLocaleString('fr-FR')+' unité'+(data.top.qty!==1?'s':''):'Aucune vente'}</small></div></div><div class="rmw-hours-list-title">Top 10 articles · ${esc(selected.label)}</div>${bars?`<div class="rmw-hours-bars">${bars}</div>`:'<div class="rmw-empty"><h3>Pas encore de ventes sur ce créneau</h3><p>Les ventes détaillées apparaîtront ici automatiquement.</p></div>'}</section>${insight}${notable?`<section class="mi-section"><div class="mi-section-head"><h3>Articles avec un moment fort</h3></div><div class="rmw-hours-notables">${notable}</div></section>`:''}</div>`;
+    const insight=data.top?`<div class="rmw-hours-insight"><span>${esc(ui('peakInsightTag', { label: selected.label }))}</span><h3>${esc(ui('peakInsightTitle', { item: t(data.top.item.name) }))}</h3><p>${esc(ui('peakInsightBody', { qty: data.top.qty.toLocaleString('fr-FR'), share: (data.top.qty/data.totalQty*100).toFixed(0), peakShare: topShare.toFixed(0), period: selected.name.toLowerCase() }))}</p></div>`:'';
+    const notable=data.notable.map(x=>`<div class="rmw-hours-notable"><i></i><div><b>${esc(t(x.row.item.name))}</b><span>${esc(ui('peakNotableBody', { share: x.share.toFixed(0), total: x.total.toLocaleString('fr-FR'), period: x.best.name.toLowerCase(), hours: `${minuteLabel(x.best.from)}-${minuteLabel(x.best.to)}` }))}</span></div></div>`).join('');
+    const topQtyStr = data.top ? `${data.top.qty.toLocaleString('fr-FR')} ${data.top.qty !== 1 ? ui('articles') : ui('article')}` : ui('noSaleRecorded');
+    return `<div class="rmw-hours-page"><section class="mi-section"><div class="mi-section-head"><div><h3>${esc(ui('hoursTitle'))}</h3><div class="mi-section-sub">${esc(ui('hoursSub', { n: data.days }))}</div></div></div><div class="mi-pill-row rmw-hours-pills">${pills}</div><div class="rmw-hours-kpis"><div><span>${esc(ui('itemsSold'))}</span><b>${data.totalQty.toLocaleString('fr-FR')}</b><small>${esc(selected.label)}</small></div><div><span>${esc(ui('generatedRevenue'))}</span><b>${cash(data.totalRevenue)}</b><small>${esc(ui('inPeriod'))}</small></div><div><span>${esc(ui('topItem'))}</span><b>${data.top?esc(t(data.top.item.name)):'—'}</b><small>${esc(topQtyStr)}</small></div></div><div class="rmw-hours-list-title">${esc(ui('top10Items', { label: selected.label }))}</div>${bars?`<div class="rmw-hours-bars">${bars}</div>`:`<div class="rmw-empty"><h3>${esc(ui('noSalesInPeriod'))}</h3><p>${esc(ui('noSalesInPeriodDesc'))}</p></div>`}</section>${insight}${notable?`<section class="mi-section"><div class="mi-section-head"><h3>${esc(ui('itemsWithPeak'))}</h3></div><div class="rmw-hours-notables">${notable}</div></section>`:''}</div>`;
   }
-  function alertsPanel(){const rows=D().items.filter(x=>x.avail===false).map(x=>`<div class="mi-group-card"><div class="mi-group-card-head"><span class="mi-group-card-name">${esc(x.name)}</span><span class="mi-group-card-pill req">86 · indisponible</span></div><button class="btn-slim primary" data-action="rmw-reactivate" data-arg="${x.id}">Réactiver</button></div>`).join('');return `<section class="mi-section"><div class="mi-title">Alertes 86</div><div class="mi-sub">Indisponibilités partagées avec la caisse et OrderPro.</div><div class="mi-groups-grid">${rows||'<div class="rmw-empty">Aucune alerte 86.</div>'}</div></section>`;}
-  function nfcPanel(){const on=!!window.KiwiOrderProPanel?.enabled?.();return `<section class="mi-section"><div class="mi-title">Tags NFC</div><div class="mi-sub">Gérez les tags qui ouvrent votre menu OrderPro.</div>${on?'<div class="rmw-nfc" data-rmw-nfc></div>':'<div class="rmw-empty"><h3>Tags NFC indisponibles</h3><p>Activez OrderPro pour cet établissement afin de gérer ses tags.</p></div>'}</section>`;}
+  function alertsPanel(){
+    const rows=D().items.filter(x=>x.avail===false).map(x=>`<div class="mi-group-card"><div class="mi-group-card-head"><span class="mi-group-card-name">${esc(t(x.name))}</span><span class="mi-group-card-pill req">${esc(ui('unavailableBadge'))}</span></div><button class="btn-slim primary" data-action="rmw-reactivate" data-arg="${x.id}">${esc(ui('reactivate'))}</button></div>`).join('');
+    return `<section class="mi-section"><div class="mi-title">${esc(ui('alerts86Title'))}</div><div class="mi-sub">${esc(ui('alerts86Sub'))}</div><div class="mi-groups-grid">${rows||`<div class="rmw-empty">${esc(ui('no86Alerts'))}</div>`}</div></section>`;
+  }
+  function nfcPanel(){
+    const on=!!window.KiwiOrderProPanel?.enabled?.();
+    return `<section class="mi-section"><div class="mi-title">${esc(ui('nfcTitle'))}</div><div class="mi-sub">${esc(ui('nfcSub'))}</div>${on?'<div class="rmw-nfc" data-rmw-nfc></div>':`<div class="rmw-empty"><h3>${esc(ui('nfcUnavailable'))}</h3><p>${esc(ui('nfcUnavailableDesc'))}</p></div>`}</section>`;
+  }
   const modal=(o)=>window.Kiwi?.modal?.(o);
-  function ask(title,label,value,save){const m=modal({title,width:460,body:`<label class="kf-label">${label}</label><input class="kf-input" data-value value="${esc(value||'')}"/>`,foot:'<button class="kb ghost" data-cancel>Annuler</button><button class="eq-cta-gradient" data-save>Enregistrer</button>'});$('[data-cancel]',m.el).onclick=m.close;$('[data-save]',m.el).onclick=()=>{const v=$('[data-value]',m.el).value.trim();if(!v)return;save(v);m.close();render();};$('[data-value]',m.el).focus();}
-  function openCategory(x){const d=D(),kid=S().kitchenId(venue());const m=modal({title:x?'Modifier la section':'Nouvelle section',width:500,body:`<div class="kf-group"><label class="kf-label">Nom de la section</label><input class="kf-input" data-name value="${esc(x?.name||'')}" placeholder="ex. Boissons"/></div>${x?`<div class="kf-group"><label class="kf-label">Poste de préparation</label><select class="kf-input" data-station><option value="">${esc(station(kid)?.name||'Cuisine')} · par défaut</option>${d.stations.filter(s=>s.id!==kid).map(s=>`<option value="${s.id}"${x.station===s.id?' selected':''}>${esc(s.name)}</option>`).join('')}</select></div>`:''}`,foot:'<button class="kb ghost" data-cancel>Annuler</button><button class="eq-cta-gradient" data-save>Enregistrer</button>'});$('[data-cancel]',m.el).onclick=m.close;$('[data-save]',m.el).onclick=()=>{const n=$('[data-name]',m.el).value.trim();if(!n)return;if(x){S().renameCategory(x.id,n);S().setCategoryStation(x.id,$('[data-station]',m.el).value);}else S().addCategory(n);m.close();render();};}
+  function ask(title,label,value,save){const m=modal({title,width:460,body:`<label class="kf-label">${esc(label)}</label><input class="kf-input" data-value value="${esc(value||'')}"/>`,foot:`<button class="kb ghost" data-cancel>${esc(ui('cancelBtn'))}</button><button class="eq-cta-gradient" data-save>${esc(ui('saveBtn'))}</button>`});$('[data-cancel]',m.el).onclick=m.close;$('[data-save]',m.el).onclick=()=>{const v=$('[data-value]',m.el).value.trim();if(!v)return;save(v);m.close();render();};$('[data-value]',m.el).focus();}
+  function openCategory(x){
+    const d=D(),kid=S().kitchenId(venue());
+    const m=modal({title:x?ui('editSectionTitle'):ui('newSectionTitle'),width:500,body:`<div class="kf-group"><label class="kf-label">${esc(ui('sectionNameLabel'))}</label><input class="kf-input" data-name value="${esc(x?.name||'')}" placeholder="${esc(ui('sectionNamePlaceholder'))}"/></div>${x?`<div class="kf-group"><label class="kf-label">${esc(ui('stationLabel'))}</label><select class="kf-input" data-station><option value="">${esc(ui('defaultRoute', { name: t(station(kid)?.name)||ui('kitchen') }))}</option>${d.stations.filter(s=>s.id!==kid).map(s=>`<option value="${s.id}"${x.station===s.id?' selected':''}>${esc(t(s.name))}</option>`).join('')}</select></div>`:''}`,foot:`<button class="kb ghost" data-cancel>${esc(ui('cancelBtn'))}</button><button class="eq-cta-gradient" data-save>${esc(ui('saveBtn'))}</button>`});
+    $('[data-cancel]',m.el).onclick=m.close;$('[data-save]',m.el).onclick=()=>{const n=$('[data-name]',m.el).value.trim();if(!n)return;if(x){S().renameCategory(x.id,n);S().setCategoryStation(x.id,$('[data-station]',m.el).value);}else S().addCategory(n);m.close();render();};
+  }
   async function upload(file,kind,status){if(!file)return'';if(!window.KiwiOrderPro?.uploadMedia){status.textContent='Stockage média indisponible.';return'';}status.textContent='Envoi…';try{const r=await window.KiwiOrderPro.uploadMedia(file,{kind}),u=typeof r==='string'?r:r?.url||'';status.textContent=u?'Média prêt.':(window.KiwiOrderPro.uploadError?window.KiwiOrderPro.uploadError(r):'Envoi impossible.');return u;}catch(_){status.textContent='Envoi impossible.';return'';}}
-  function openItem(x){const d=D();if(!d.cats.length){openCategory(null);return;}let photo=x?.photo||'',video=x?.video||'';const availableItems=(d.items||[]).filter(it=>!x||it.id!==x.id);
-const formulaTemplates=[...(d.formulaTemplates||[]).filter(t=>t?.formula?.slots?.length).map(t=>({id:'template:'+t.id,name:t.name,formula:t.formula})),...(d.items||[]).filter(it=>it.formula?.slots?.length).map(it=>({id:'item:'+it.id,name:`${it.name} · article existant`,formula:it.formula}))];
-let formulaSlots=x?.formula?.slots?JSON.parse(JSON.stringify(x.formula.slots)):[];const slotRowHtml=(slot,si)=>{const choicesHtml=(slot.choices||[]).map((ch,ci)=>{const itemHit=d.items.find(it=>it.id===ch.itemId);const name=itemHit?itemHit.name:ch.itemId;return `<div class="rmw-slot-choice-row" data-si="${si}" data-ci="${ci}"><span>${esc(name)}</span><div class="rmw-slot-choice-extra"><span>+</span><input class="kf-input" type="number" min="0" data-ch-extra="${si}-${ci}" value="${+ch.extra||0}" style="width:70px;height:32px;padding:4px 6px;"/><span>MAD</span></div><button type="button" class="mi-ic-btn danger" data-del-choice="${si}-${ci}">${ic('trash')}</button></div>`;}).join('');const avToAdd=availableItems.filter(it=>!(slot.choices||[]).some(c=>c.itemId===it.id));const addSelect=avToAdd.map(it=>`<option value="${it.id}">${esc(it.name)} (${cash(it.price)})</option>`).join('');let addBarHtml='';if(availableItems.length===0){addBarHtml=`<div class="rmw-slot-empty-notice" style="background:var(--n-50,#f8f9fa);border:1px dashed var(--n-300,#d0d5dd);border-radius:6px;padding:10px 12px;margin-top:6px;font-size:12px;color:var(--n-700,#344054);"><div>Aucun produit sur la carte pour l'instant. Créez d'abord vos produits (ex. Café noir, Croissant), puis revenez composer la formule : les choix se sélectionnent dans la liste, jamais à la main.</div><button type="button" class="btn-slim" data-f-save-and-create style="margin-top:8px;font-weight:600;">Enregistrer et créer un produit</button></div>`;}else if(avToAdd.length===0){addBarHtml=`<div class="rmw-slot-all-chosen" style="font-size:11.5px;color:var(--n-500);padding:4px 0;">Tous les produits de la carte sont déjà proposés dans cette étape.</div>`;}else{addBarHtml=`<div class="rmw-slot-add-bar" style="display:flex;gap:8px;"><select class="kf-input" data-pick-item="${si}" data-f-slot-pick="${si}" style="flex:1;height:34px;padding:4px 8px;"><option value="">Choisir un article…</option>${addSelect}</select><button type="button" class="btn-slim" data-add-choice="${si}">${ic('plus')} Ajouter</button></div>`;}return `<div class="rmw-slot-card" data-slot-idx="${si}"><div class="rmw-slot-head"><input class="kf-input" data-slot-label="${si}" value="${esc(slot.label||'')}" placeholder="Titre de l'étape (ex. La boisson)" style="flex:1;"/><div class="rmw-slot-bounds" style="display:flex;align-items:center;gap:6px;font-size:12px;"><span>Min</span><input class="kf-input" type="number" min="0" max="10" data-slot-min="${si}" value="${slot.min!=null?slot.min:1}" style="width:50px;height:32px;padding:4px;"/><span>Max</span><input class="kf-input" type="number" min="1" max="10" data-slot-max="${si}" value="${slot.max!=null?slot.max:1}" style="width:50px;height:32px;padding:4px;"/></div><button type="button" class="mi-ic-btn danger" data-del-slot="${si}">${ic('trash')}</button></div><div class="rmw-slot-choices" style="display:grid;gap:6px;margin:8px 0;">${choicesHtml||'<span class="kf-help">Aucun choix dans cette étape.</span>'}</div>${addBarHtml}</div>`;};const m=modal({title:x?`Modifier · ${esc(x.name)}`:'Nouvel article',width:680,body:`<div class="kf-row"><div class="kf-group"><label class="kf-label">Nom</label><input class="kf-input" data-name value="${esc(x?.name||'')}"/></div><div class="kf-group"><label class="kf-label">Prix (MAD)</label><input class="kf-input" type="number" min="0" data-price value="${+x?.price||0}"/></div></div><div class="kf-row"><div class="kf-group"><label class="kf-label">Section</label><select class="kf-input" data-cat>${d.cats.map(c=>`<option value="${c.id}"${x?.catId===c.id?' selected':''}>${esc(c.name)}</option>`).join('')}</select></div><div class="kf-group"><label class="kf-label">Disponibilité</label><select class="kf-input" data-avail><option value="1"${x?.avail!==false?' selected':''}>Disponible</option><option value="0"${x?.avail===false?' selected':''}>86 · indisponible</option></select></div></div><div class="kf-group"><label class="kf-label">Description</label><textarea class="kf-input" data-desc>${esc(x?.desc||'')}</textarea></div><div class="kf-group"><label class="kf-label">Photo ou vidéo</label><div class="rmw-media-actions"><label class="btn-slim">Ajouter une photo<input hidden type="file" accept="image/*" data-photo/></label><label class="btn-slim">Ajouter une vidéo<input hidden type="file" accept="video/*" data-video/></label><button class="btn-slim" type="button" data-media-remove>Retirer</button></div><div class="kf-help" data-media-status>${photo||video?'Média actuel conservé.':'Aucun média.'}</div></div><div class="kf-group"><label class="kf-label">Options de cet article</label><div class="rmw-checks">${d.opts.map(g=>`<label><input type="checkbox" data-opt="${g.id}"${(x?.opts||[]).includes(g.id)?' checked':''}/> ${esc(g.name)}</label>`).join('')||'<span class="kf-help">Créez d’abord un groupe d’options.</span>'}</div></div>
-<div class="kf-group" style="margin-top:14px;padding-top:14px;border-top:1px solid var(--n-200);"><label style="display:flex;align-items:center;gap:8px;font-weight:600;cursor:pointer;"><input type="checkbox" data-is-formula ${formulaSlots.length?'checked':''}/><span>Formule / menu composé (étapes au choix)</span></label><div class="kf-help">Permet de composer un menu avec étapes (entrée, plat, boisson...) lors de la prise de commande.</div>
-<div class="rmw-formula-template" style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin-top:10px;"><select class="kf-input" data-formula-template><option value="">${formulaTemplates.length?'Choisir une formule déjà enregistrée…':'Aucune formule enregistrée'}</option>${formulaTemplates.map(it=>`<option value="${it.id}">${esc(it.name)}</option>`).join('')}</select><button type="button" class="btn-slim" data-apply-formula-template ${formulaTemplates.length?'':'disabled'}>Copier dans cet article</button><button type="button" class="btn-slim" data-save-formula-template style="grid-column:1/-1;justify-content:center;">Enregistrer cette formule comme modèle réutilisable</button></div>
-<div class="rmw-formula-builder" data-formula-wrap ${formulaSlots.length?'':'hidden'} style="margin-top:10px;display:grid;gap:10px;"><div data-slots-wrap style="display:grid;gap:10px;"></div><button type="button" class="btn-slim" data-add-slot style="justify-content:center;">${ic('plus')} Ajouter une étape</button></div></div>`,foot:'<button class="kb ghost" data-cancel>Annuler</button><button class="eq-cta-gradient" data-save>Enregistrer</button>'});const isFormulaCb=$('[data-is-formula]',m.el),formulaWrap=$('[data-formula-wrap]',m.el),slotsWrap=$('[data-slots-wrap]',m.el);const renderSlots=()=>{if(!slotsWrap)return;slotsWrap.innerHTML=formulaSlots.map(slotRowHtml).join('')||'<span class="kf-help">Aucune étape. Cliquez sur « Ajouter une étape ».</span>';};
-const formulaTemplateSelect=$("[data-formula-template]",m.el),applyFormulaTemplate=$("[data-apply-formula-template]",m.el);if(applyFormulaTemplate)applyFormulaTemplate.onclick=()=>{const template=formulaTemplates.find(it=>it.id===formulaTemplateSelect?.value);if(!template)return;formulaSlots=JSON.parse(JSON.stringify(template.formula.slots));isFormulaCb.checked=true;if(formulaWrap)formulaWrap.hidden=false;renderSlots();toast('Formule copiée',template.name);};const saveFormulaTemplateBtn=$("[data-save-formula-template]",m.el);if(saveFormulaTemplateBtn)saveFormulaTemplateBtn.onclick=()=>{const clean={slots:JSON.parse(JSON.stringify(formulaSlots))};if(!clean.slots.some(s=>s?.choices?.length)){toast('Formule vide','Ajoutez au moins un choix avant de l’enregistrer.','warn');return;}ask('Enregistrer la formule','Nom du modèle réutilisable',x?.name||'',name=>{S().saveFormulaTemplate(name,clean);toast('Formule enregistrée',name);});};
-isFormulaCb.onchange=()=>{const on=isFormulaCb.checked;if(on&&!formulaSlots.length)formulaSlots.push({id:'sl_1',label:'',min:1,max:1,choices:[]});if(formulaWrap)formulaWrap.hidden=!on;renderSlots();};$('[data-add-slot]',m.el).onclick=()=>{if(formulaSlots.length>=10)return;formulaSlots.push({id:'sl_'+(formulaSlots.length+1),label:'',min:1,max:1,choices:[]});renderSlots();};slotsWrap.addEventListener('input',e=>{const lbl=e.target.closest('[data-slot-label]');if(lbl){const si=+lbl.dataset.slotLabel;if(formulaSlots[si])formulaSlots[si].label=lbl.value;return;}const min=e.target.closest('[data-slot-min]');if(min){const si=+min.dataset.slotMin;if(formulaSlots[si])formulaSlots[si].min=Math.max(0,Math.min(10,+min.value||0));return;}const max=e.target.closest('[data-slot-max]');if(max){const si=+max.dataset.slotMax;if(formulaSlots[si])formulaSlots[si].max=Math.max(1,Math.min(10,+max.value||1));return;}const ext=e.target.closest('[data-ch-extra]');if(ext){const [si,ci]=ext.dataset.chExtra.split('-').map(Number);if(formulaSlots[si]?.choices?.[ci])formulaSlots[si].choices[ci].extra=Math.max(0,+ext.value||0);}});slotsWrap.addEventListener('click',e=>{const sc=e.target.closest('[data-f-save-and-create]');if(sc){saveItem(()=>{openItem(null);});return;}const ds=e.target.closest('[data-del-slot]');if(ds){const si=+ds.dataset.delSlot;formulaSlots.splice(si,1);renderSlots();return;}const dc=e.target.closest('[data-del-choice]');if(dc){const [si,ci]=dc.dataset.delChoice.split('-').map(Number);if(formulaSlots[si]?.choices){formulaSlots[si].choices.splice(ci,1);renderSlots();}return;}const ac=e.target.closest('[data-add-choice]');if(ac){const si=+ac.dataset.addChoice,sel=$(`[data-pick-item="${si}"]`,slotsWrap),pid=sel?sel.value:'';if(pid&&formulaSlots[si]){formulaSlots[si].choices=formulaSlots[si].choices||[];if(formulaSlots[si].choices.length<20&&!formulaSlots[si].choices.some(c=>c.itemId===pid)){formulaSlots[si].choices.push({itemId:pid,extra:0});renderSlots();}}}});renderSlots();const status=$('[data-media-status]',m.el);$('[data-photo]',m.el).onchange=async e=>{const u=await upload(e.target.files[0],'image',status);if(u){photo=u;video='';}};$('[data-video]',m.el).onchange=async e=>{const u=await upload(e.target.files[0],'video',status);if(u){video=u;photo='';}};$('[data-media-remove]',m.el).onclick=()=>{photo='';video='';status.textContent='Média retiré.';};$('[data-cancel]',m.el).onclick=m.close;const saveItem=(onSuccess)=>{const name=$('[data-name]',m.el).value.trim();if(!name)return;const validSlots=isFormulaCb.checked?formulaSlots.filter(s=>(s.label||'').trim()||(s.choices&&s.choices.length)).map(s=>({id:s.id||'sl_'+Math.random().toString(36).slice(2,6),label:s.label||'Choix',min:s.min!=null?s.min:1,max:s.max!=null?s.max:1,choices:(s.choices||[]).map(c=>({itemId:c.itemId,extra:Math.max(0,+c.extra||0)}))})):[];const p={name,price:+$('[data-price]',m.el).value||0,catId:$('[data-cat]',m.el).value,desc:$('[data-desc]',m.el).value,avail:$('[data-avail]',m.el).value==='1',photo,video,opts:$$('[data-opt]:checked',m.el).map(e=>e.dataset.opt),formula:validSlots.length?{slots:validSlots}:null};x?S().updateItem(x.id,p):S().addItem(p);m.close();render();toast('Menu mis à jour',name);if(typeof onSuccess==='function')onSuccess();};$('[data-save]',m.el).onclick=()=>saveItem();}
+  function openItem(x){
+    const d=D();if(!d.cats.length){openCategory(null);return;}let photo=x?.photo||'',video=x?.video||'';const availableItems=(d.items||[]).filter(it=>!x||it.id!==x.id);
+    const formulaTemplates=[...(d.formulaTemplates||[]).filter(t=>t?.formula?.slots?.length).map(t=>({id:'template:'+t.id,name:t.name,formula:t.formula})),...(d.items||[]).filter(it=>it.formula?.slots?.length).map(it=>({id:'item:'+it.id,name:`${t(it.name)}`,formula:it.formula}))];
+    let formulaSlots=x?.formula?.slots?JSON.parse(JSON.stringify(x.formula.slots)):[];
+    const slotRowHtml=(slot,si)=>{
+      const choicesHtml=(slot.choices||[]).map((ch,ci)=>{const itemHit=d.items.find(it=>it.id===ch.itemId);const name=itemHit?t(itemHit.name):ch.itemId;return `<div class="rmw-slot-choice-row" data-si="${si}" data-ci="${ci}"><span>${esc(name)}</span><div class="rmw-slot-choice-extra"><span>+</span><input class="kf-input" type="number" min="0" data-ch-extra="${si}-${ci}" value="${+ch.extra||0}" style="width:70px;height:32px;padding:4px 6px;"/><span>MAD</span></div><button type="button" class="mi-ic-btn danger" data-del-choice="${si}-${ci}">${ic('trash')}</button></div>`;}).join('');
+      const avToAdd=availableItems.filter(it=>!(slot.choices||[]).some(c=>c.itemId===it.id));
+      const addSelect=avToAdd.map(it=>`<option value="${it.id}">${esc(t(it.name))} (${cash(it.price)})</option>`).join('');
+      let addBarHtml='';
+      if(availableItems.length===0){
+        addBarHtml=`<div class="rmw-slot-empty-notice" style="background:var(--n-50,#f8f9fa);border:1px dashed var(--n-300,#d0d5dd);border-radius:6px;padding:10px 12px;margin-top:6px;font-size:12px;color:var(--n-700,#344054);"><div>${esc(ui('noItemsOnMenuFormulaNotice'))}</div><button type="button" class="btn-slim" data-f-save-and-create style="margin-top:8px;font-weight:600;">${esc(ui('saveAndCreateItemBtn'))}</button></div>`;
+      }else if(avToAdd.length===0){
+        addBarHtml=`<div class="rmw-slot-all-chosen" style="font-size:11.5px;color:var(--n-500);padding:4px 0;">${esc(ui('allChosenNotice'))}</div>`;
+      }else{
+        addBarHtml=`<div class="rmw-slot-add-bar" style="display:flex;gap:8px;"><select class="kf-input" data-pick-item="${si}" data-f-slot-pick="${si}" style="flex:1;height:34px;padding:4px 8px;"><option value="">${esc(ui('chooseItemPlaceholder'))}</option>${addSelect}</select><button type="button" class="btn-slim" data-add-choice="${si}">${ic('plus')} ${esc(ui('addChoiceBtn'))}</button></div>`;
+      }
+      return `<div class="rmw-slot-card" data-slot-idx="${si}"><div class="rmw-slot-head"><input class="kf-input" data-slot-label="${si}" value="${esc(slot.label||'')}" placeholder="${esc(ui('stepTitlePlaceholder'))}" style="flex:1;"/><div class="rmw-slot-bounds" style="display:flex;align-items:center;gap:6px;font-size:12px;"><span>${esc(ui('minLabel'))}</span><input class="kf-input" type="number" min="0" max="10" data-slot-min="${si}" value="${slot.min!=null?slot.min:1}" style="width:50px;height:32px;padding:4px;"/><span>${esc(ui('maxLabel'))}</span><input class="kf-input" type="number" min="1" max="10" data-slot-max="${si}" value="${slot.max!=null?slot.max:1}" style="width:50px;height:32px;padding:4px;"/></div><button type="button" class="mi-ic-btn danger" data-del-slot="${si}">${ic('trash')}</button></div><div class="rmw-slot-choices" style="display:grid;gap:6px;margin:8px 0;">${choicesHtml||`<span class="kf-help">${esc(ui('noChoicesInStep'))}</span>`}</div>${addBarHtml}</div>`;
+    };
+    const m=modal({title:x?ui('editItemTitle', { name: t(x.name) }):ui('newItemTitle'),width:680,body:`<div class="kf-row"><div class="kf-group"><label class="kf-label">${esc(ui('nameLabel'))}</label><input class="kf-input" data-name value="${esc(x?.name||'')}"/></div><div class="kf-group"><label class="kf-label">${esc(ui('priceLabel'))}</label><input class="kf-input" type="number" min="0" data-price value="${+x?.price||0}"/></div></div><div class="kf-row"><div class="kf-group"><label class="kf-label">${esc(ui('sectionLabel'))}</label><select class="kf-input" data-cat>${d.cats.map(c=>`<option value="${c.id}"${x?.catId===c.id?' selected':''}>${esc(t(c.name))}</option>`).join('')}</select></div><div class="kf-group"><label class="kf-label">${esc(ui('availabilityLabel'))}</label><select class="kf-input" data-avail><option value="1"${x?.avail!==false?' selected':''}>${esc(ui('availableOpt'))}</option><option value="0"${x?.avail===false?' selected':''}>${esc(ui('unavailableOpt'))}</option></select></div></div><div class="kf-group"><label class="kf-label">${esc(ui('descLabel'))}</label><textarea class="kf-input" data-desc>${esc(x?.desc||'')}</textarea></div><div class="kf-group"><label class="kf-label">${esc(ui('mediaLabel'))}</label><div class="rmw-media-actions"><label class="btn-slim">${esc(ui('addPhotoBtn'))}<input hidden type="file" accept="image/*" data-photo/></label><label class="btn-slim">${esc(ui('addVideoBtn'))}<input hidden type="file" accept="video/*" data-video/></label><button class="btn-slim" type="button" data-media-remove>${esc(ui('removeMediaBtn'))}</button></div><div class="kf-help" data-media-status>${photo||video?esc(ui('mediaStatusKept')):esc(ui('noMediaStatus'))}</div></div><div class="kf-group"><label class="kf-label">${esc(ui('itemOptionsLabel'))}</label><div class="rmw-checks">${d.opts.map(g=>`<label><input type="checkbox" data-opt="${g.id}"${(x?.opts||[]).includes(g.id)?' checked':''}/> ${esc(t(g.name))}</label>`).join('')||`<span class="kf-help">${esc(ui('createOptGroupFirst'))}</span>`}</div></div>
+<div class="kf-group" style="margin-top:14px;padding-top:14px;border-top:1px solid var(--n-200);"><label style="display:flex;align-items:center;gap:8px;font-weight:600;cursor:pointer;"><input type="checkbox" data-is-formula ${formulaSlots.length?'checked':''}/><span>${esc(ui('isFormulaLabel'))}</span></label><div class="kf-help">${esc(ui('isFormulaHelp'))}</div>
+<div class="rmw-formula-template" style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin-top:10px;"><select class="kf-input" data-formula-template><option value="">${formulaTemplates.length?esc(ui('formulaTemplatePlaceholder')):esc(ui('noFormulaTemplates'))}</option>${formulaTemplates.map(it=>`<option value="${it.id}">${esc(it.name)}</option>`).join('')}</select><button type="button" class="btn-slim" data-apply-formula-template ${formulaTemplates.length?'':'disabled'}>${esc(ui('copyTemplateBtn'))}</button><button type="button" class="btn-slim" data-save-formula-template style="grid-column:1/-1;justify-content:center;">${esc(ui('saveTemplateBtn'))}</button></div>
+<div class="rmw-formula-builder" data-formula-wrap ${formulaSlots.length?'':'hidden'} style="margin-top:10px;display:grid;gap:10px;"><div data-slots-wrap style="display:grid;gap:10px;"></div><button type="button" class="btn-slim" data-add-slot style="justify-content:center;">${ic('plus')} ${esc(ui('addStepBtn'))}</button></div></div>`,foot:`<button class="kb ghost" data-cancel>${esc(ui('cancelBtn'))}</button><button class="eq-cta-gradient" data-save>${esc(ui('saveBtn'))}</button>`});const isFormulaCb=$('[data-is-formula]',m.el),formulaWrap=$('[data-formula-wrap]',m.el),slotsWrap=$('[data-slots-wrap]',m.el);const renderSlots=()=>{if(!slotsWrap)return;slotsWrap.innerHTML=formulaSlots.map(slotRowHtml).join('')||'<span class="kf-help">Aucune étape.</span>';};
+    const formulaTemplateSelect=$("[data-formula-template]",m.el),applyFormulaTemplate=$("[data-apply-formula-template]",m.el);if(applyFormulaTemplate)applyFormulaTemplate.onclick=()=>{const template=formulaTemplates.find(it=>it.id===formulaTemplateSelect?.value);if(!template)return;formulaSlots=JSON.parse(JSON.stringify(template.formula.slots));isFormulaCb.checked=true;if(formulaWrap)formulaWrap.hidden=false;renderSlots();toast('Formule copiée',template.name);};const saveFormulaTemplateBtn=$("[data-save-formula-template]",m.el);if(saveFormulaTemplateBtn)saveFormulaTemplateBtn.onclick=()=>{const clean={slots:JSON.parse(JSON.stringify(formulaSlots))};if(!clean.slots.some(s=>s?.choices?.length)){toast('Formule vide','Ajoutez au moins un choix avant de l’enregistrer.','warn');return;}ask(ui('saveTemplateBtn'),'Nom du modèle',x?.name||'',name=>{S().saveFormulaTemplate(name,clean);toast('Formule enregistrée',name);});};
+    isFormulaCb.onchange=()=>{const on=isFormulaCb.checked;if(on&&!formulaSlots.length)formulaSlots.push({id:'sl_1',label:'',min:1,max:1,choices:[]});if(formulaWrap)formulaWrap.hidden=!on;renderSlots();};$('[data-add-slot]',m.el).onclick=()=>{if(formulaSlots.length>=10)return;formulaSlots.push({id:'sl_'+(formulaSlots.length+1),label:'',min:1,max:1,choices:[]});renderSlots();};slotsWrap.addEventListener('input',e=>{const lbl=e.target.closest('[data-slot-label]');if(lbl){const si=+lbl.dataset.slotLabel;if(formulaSlots[si])formulaSlots[si].label=lbl.value;return;}const min=e.target.closest('[data-slot-min]');if(min){const si=+min.dataset.slotMin;if(formulaSlots[si])formulaSlots[si].min=Math.max(0,Math.min(10,+min.value||0));return;}const max=e.target.closest('[data-slot-max]');if(max){const si=+max.dataset.slotMax;if(formulaSlots[si])formulaSlots[si].max=Math.max(1,Math.min(10,+max.value||1));return;}const ext=e.target.closest('[data-ch-extra]');if(ext){const [si,ci]=ext.dataset.chExtra.split('-').map(Number);if(formulaSlots[si]?.choices?.[ci])formulaSlots[si].choices[ci].extra=Math.max(0,+ext.value||0);}});slotsWrap.addEventListener('click',e=>{const sc=e.target.closest('[data-f-save-and-create]');if(sc){saveItem(()=>{openItem(null);});return;}const ds=e.target.closest('[data-del-slot]');if(ds){const si=+ds.dataset.delSlot;formulaSlots.splice(si,1);renderSlots();return;}const dc=e.target.closest('[data-del-choice]');if(dc){const [si,ci]=dc.dataset.delChoice.split('-').map(Number);if(formulaSlots[si]?.choices){formulaSlots[si].choices.splice(ci,1);renderSlots();}return;}const ac=e.target.closest('[data-add-choice]');if(ac){const si=+ac.dataset.addChoice,sel=$(`[data-pick-item="${si}"]`,slotsWrap),pid=sel?sel.value:'';if(pid&&formulaSlots[si]){formulaSlots[si].choices=formulaSlots[si].choices||[];if(formulaSlots[si].choices.length<20&&!formulaSlots[si].choices.some(c=>c.itemId===pid)){formulaSlots[si].choices.push({itemId:pid,extra:0});renderSlots();}}}});renderSlots();const status=$('[data-media-status]',m.el);$('[data-photo]',m.el).onchange=async e=>{const u=await upload(e.target.files[0],'image',status);if(u){photo=u;video='';}};$('[data-video]',m.el).onchange=async e=>{const u=await upload(e.target.files[0],'video',status);if(u){video=u;photo='';}};$('[data-media-remove]',m.el).onclick=()=>{photo='';video='';status.textContent='Média retiré.';};$('[data-cancel]',m.el).onclick=m.close;const saveItem=(onSuccess)=>{const name=$('[data-name]',m.el).value.trim();if(!name)return;const validSlots=isFormulaCb.checked?formulaSlots.filter(s=>(s.label||'').trim()||(s.choices&&s.choices.length)).map(s=>({id:s.id||'sl_'+Math.random().toString(36).slice(2,6),label:s.label||'Choix',min:s.min!=null?s.min:1,max:s.max!=null?s.max:1,choices:(s.choices||[]).map(c=>({itemId:c.itemId,extra:Math.max(0,+c.extra||0)}))})):[];const p={name,price:+$('[data-price]',m.el).value||0,catId:$('[data-cat]',m.el).value,desc:$('[data-desc]',m.el).value,avail:$('[data-avail]',m.el).value==='1',photo,video,opts:$$('[data-opt]:checked',m.el).map(e=>e.dataset.opt),formula:validSlots.length?{slots:validSlots}:null};x?S().updateItem(x.id,p):S().addItem(p);m.close();render();toast('Menu mis à jour',name);if(typeof onSuccess==='function')onSuccess();};$('[data-save]',m.el).onclick=()=>saveItem();
+  }
   function emojiPicker(button){$$('.rmw-emoji-pop').forEach(x=>x.remove());const all=S().optionEmojis?.()||[],p=document.createElement('div'),r=button.getBoundingClientRect();p.className='rmw-emoji-pop';p.innerHTML=`<button data-emoji="" class="rmw-none">Aucun repère</button>${all.map(e=>`<button data-emoji="${esc(e)}">${e}</button>`).join('')}`;p.style.left=Math.min(r.left,innerWidth-390)+'px';p.style.top=Math.min(r.bottom+6,innerHeight-330)+'px';p.onclick=e=>{const b=e.target.closest('[data-emoji]');if(!b)return;button.dataset.value=b.dataset.emoji;button.textContent=b.dataset.emoji||'＋';p.remove();};document.body.appendChild(p);}
-  function choiceRow(c){return `<div class="mi-grp-opt-row" data-choice data-id="${c?.id||''}"><button type="button" class="rmw-emoji-btn" data-emoji-btn data-value="${esc(c?.emoji||'')}">${c?.emoji||'＋'}</button><input class="kf-input" data-choice-name placeholder="Nom du choix" value="${esc(c?.name||'')}"/><div class="eq-m-suffix"><input class="kf-input" type="number" min="0" data-choice-price value="${+c?.price||0}"/><span class="sfx">MAD</span></div><button class="mi-ic-btn danger" type="button" data-choice-del>${ic('trash')}</button></div>`;}
-  function openGroup(g){const m=modal({title:g?'Modifier le groupe':'Nouveau groupe d’options',width:700,body:`<div class="kf-group"><label class="kf-label">Nom du groupe</label><input class="kf-input" data-name value="${esc(g?.name||'')}"/></div><div class="kf-row"><div class="kf-group"><label class="kf-label">Sélection</label><select class="kf-input" data-kind><option value="one"${g?.kind!=='many'?' selected':''}>Un seul choix</option><option value="many"${g?.kind==='many'?' selected':''}>Plusieurs choix</option></select></div><div class="kf-group"><label class="kf-label">Règle</label><select class="kf-input" data-required><option value="0"${!g?.required?' selected':''}>Optionnel</option><option value="1"${g?.required?' selected':''}>Obligatoire</option></select></div></div><div class="kf-group"><label class="kf-label">Choix proposés</label><div class="kf-help">Le repère visuel accepte uniquement les emojis Kiwi et apparaît sur le KDS.</div><div data-choices>${(g?.choices||[]).map(choiceRow).join('')||choiceRow(null)}</div><button class="btn-slim" type="button" data-choice-add>${ic('plus')} Ajouter un choix</button></div>`,foot:'<button class="kb ghost" data-cancel>Annuler</button><button class="eq-cta-gradient" data-save>Enregistrer</button>'});const wrap=$('[data-choices]',m.el);$('[data-choice-add]',m.el).onclick=()=>wrap.insertAdjacentHTML('beforeend',choiceRow(null));wrap.onclick=e=>{const del=e.target.closest('[data-choice-del]');if(del&&$$('[data-choice]',wrap).length>1)del.closest('[data-choice]').remove();const b=e.target.closest('[data-emoji-btn]');if(b)emojiPicker(b);};$('[data-cancel]',m.el).onclick=m.close;$('[data-save]',m.el).onclick=()=>{const name=$('[data-name]',m.el).value.trim(),rows=$$('[data-choice]',wrap).map(r=>({id:r.dataset.id,name:$('[data-choice-name]',r).value.trim(),price:+$('[data-choice-price]',r).value||0,emoji:$('[data-emoji-btn]',r).dataset.value||''})).filter(x=>x.name);if(!name||!rows.length)return;let id=g?.id;if(g){S().updateOptGroup(id,{name,kind:$('[data-kind]',m.el).value,required:$('[data-required]',m.el).value==='1'});(g.choices||[]).filter(c=>!rows.some(x=>x.id===c.id)).forEach(c=>S().deleteOptChoice(id,c.id));rows.forEach(x=>x.id?S().updateOptChoice(id,x.id,x):S().addOptChoice(id,x.name,x.price,x.emoji));}else{S().addOptGroup(name);id=D().opts.at(-1)?.id;S().updateOptGroup(id,{kind:$('[data-kind]',m.el).value,required:$('[data-required]',m.el).value==='1'});rows.forEach(x=>S().addOptChoice(id,x.name,x.price,x.emoji));}m.close();render();};}
+  function choiceRow(c){return `<div class="mi-grp-opt-row" data-choice data-id="${c?.id||''}"><button type="button" class="rmw-emoji-btn" data-emoji-btn data-value="${esc(c?.emoji||'')}">${c?.emoji||'＋'}</button><input class="kf-input" data-choice-name placeholder="${esc(ui('addChoicePlaceholder'))}" value="${esc(c?.name||'')}"/><div class="eq-m-suffix"><input class="kf-input" type="number" min="0" data-choice-price value="${+c?.price||0}"/><span class="sfx">MAD</span></div><button class="mi-ic-btn danger" type="button" data-choice-del>${ic('trash')}</button></div>`;}
+  function openGroup(g){
+    const m=modal({title:g?ui('editGroupTitle'):ui('newGroupTitle'),width:700,body:`<div class="kf-group"><label class="kf-label">${esc(ui('groupNameLabel'))}</label><input class="kf-input" data-name value="${esc(g?.name||'')}" placeholder="${esc(ui('groupNamePlaceholder'))}"/></div><div class="kf-row"><div class="kf-group"><label class="kf-label">${esc(ui('groupTypeLabel'))}</label><select class="kf-input" data-kind><option value="one"${g?.kind!=='many'?' selected':''}>${esc(ui('oneChoice'))}</option><option value="many"${g?.kind==='many'?' selected':''}>${esc(ui('manyChoices'))}</option></select></div><div class="kf-group"><label class="kf-label">${esc(ui('groupRequiredLabel'))}</label><select class="kf-input" data-required><option value="0"${!g?.required?' selected':''}>${esc(ui('groupOptionalOpt'))}</option><option value="1"${g?.required?' selected':''}>${esc(ui('groupRequiredOpt'))}</option></select></div></div><div class="kf-group"><label class="kf-label">${esc(ui('choicesLabel'))}</label><div class="kf-help">Le repère visuel accepte uniquement les emojis Kiwi et apparaît sur le KDS.</div><div data-choices>${(g?.choices||[]).map(choiceRow).join('')||choiceRow(null)}</div><button class="btn-slim" type="button" data-choice-add>${ic('plus')} ${esc(ui('addChoiceBtnLabel'))}</button></div>`,foot:`<button class="kb ghost" data-cancel>${esc(ui('cancelBtn'))}</button><button class="eq-cta-gradient" data-save>${esc(ui('saveBtn'))}</button>`});const wrap=$('[data-choices]',m.el);$('[data-choice-add]',m.el).onclick=()=>wrap.insertAdjacentHTML('beforeend',choiceRow(null));wrap.onclick=e=>{const del=e.target.closest('[data-choice-del]');if(del&&$$('[data-choice]',wrap).length>1)del.closest('[data-choice]').remove();const b=e.target.closest('[data-emoji-btn]');if(b)emojiPicker(b);};$('[data-cancel]',m.el).onclick=m.close;$('[data-save]',m.el).onclick=()=>{const name=$('[data-name]',m.el).value.trim(),rows=$$('[data-choice]',wrap).map(r=>({id:r.dataset.id,name:$('[data-choice-name]',r).value.trim(),price:+$('[data-choice-price]',r).value||0,emoji:$('[data-emoji-btn]',r).dataset.value||''})).filter(x=>x.name);if(!name||!rows.length)return;let id=g?.id;if(g){S().updateOptGroup(id,{name,kind:$('[data-kind]',m.el).value,required:$('[data-required]',m.el).value==='1'});(g.choices||[]).filter(c=>!rows.some(x=>x.id===c.id)).forEach(c=>S().deleteOptChoice(id,c.id));rows.forEach(x=>x.id?S().updateOptChoice(id,x.id,x):S().addOptChoice(id,x.name,x.price,x.emoji));}else{S().addOptGroup(name);id=D().opts.at(-1)?.id;S().updateOptGroup(id,{kind:$('[data-kind]',m.el).value,required:$('[data-required]',m.el).value==='1'});rows.forEach(x=>S().addOptChoice(id,x.name,x.price,x.emoji));}m.close();render();};
+  }
   function recipeUnitOptions(value){const api=window.KiwiRestaurantUnits,selected=api?.normalize?.(value,'')||'';return `<option value="">Choisir…</option>${(api?.list?.()||[]).map(unit=>`<option value="${esc(unit.id)}"${unit.id===selected?' selected':''}>${esc(unit.label)}</option>`).join('')}`;}
-  function recipeIngredientRow(line,idx){return `<div class="rmw-recipe-ing" data-recipe-ing data-stock-id="${esc(line?.stockId||'')}"><input class="kf-input" list="rmw-stock-ingredients" data-ing-name value="${esc(line?.name||'')}" placeholder="Ingrédient du stock"/><input class="kf-input" type="number" min="0" step="0.001" data-ing-qty value="${+line?.qty||0}" placeholder="0"/><select class="kf-input" data-ing-unit>${recipeUnitOptions(line?.unit)}</select><button class="mi-ic-btn danger" type="button" data-ing-delete aria-label="Supprimer">${ic('trash')}</button></div>`;}
+  function recipeIngredientRow(line,idx){return `<div class="rmw-recipe-ing" data-recipe-ing data-stock-id="${esc(line?.stockId||'')}"><input class="kf-input" list="rmw-stock-ingredients" data-ing-name value="${esc(line?.name||'')}" placeholder="Ingrédient du stock"/><input class="kf-input" type="number" min="0" step="0.001" data-ing-qty value="${+line?.qty||0}" placeholder="0"/><select class="kf-input" data-ing-unit>${recipeUnitOptions(line?.unit)}</select><button class="mi-ic-btn danger" type="button" data-ing-delete aria-label="${esc(ui('delete'))}">${ic('trash')}</button></div>`;}
   function recipeDraft(root,x,api){const inv=api.inventory(venue()),units=window.KiwiRestaurantUnits;return{itemName:x.name,portions:Math.max(1,+$('[data-portions]',root)?.value||1),prepMinutes:Math.max(0,+$('[data-minutes]',root)?.value||0),ingredients:$$('[data-recipe-ing]',root).map(row=>{const name=$('[data-ing-name]',row).value.trim(),hit=inv.find(s=>String(s.id)===row.dataset.stockId)||inv.find(s=>String(s.name).trim().toLowerCase()===name.toLowerCase());return{stockId:hit?.id||'',name,qty:Math.max(0,+$('[data-ing-qty]',row).value||0),unit:units?.normalize?.($('[data-ing-unit]',row).value||hit?.unit,'')||''};}).filter(line=>line.name||line.stockId),steps:$('[data-steps]',root)?.value.split('\n').map(v=>v.trim()).filter(Boolean)||[],note:$('[data-note]',root)?.value||''};}
   function recipeSummary(x,draft,api){const m=api.metrics(x,draft,venue()),price=+x.price||0,gain=m.profit==null?'—':`${m.profit.toFixed(2)} MAD`,actual=m.actualCost==null?'À mesurer':`${m.actualCost.toFixed(2)} MAD`;let cls='neutral',title='Recette à compléter',detail='Ajoutez les quantités et reliez les ingrédients au stock.';if(m.costComplete&&m.actualCost==null){cls='ok';title='Recette chiffrée';detail='Le coût réel se comparera à cette fiche après les premières consommations.';}if(m.actualCost!=null){const gap=Math.abs(m.variancePct||0),bad=gap>15;cls=bad?'danger':gap>5?'warn':'ok';title=bad?'Écart à vérifier':gap>5?'Coût à surveiller':'Coût conforme';detail=`${gap.toFixed(0)} % ${m.variancePct>0?'au-dessus':'sous'} du coût prévu · contrôlez les portions et sorties de stock.`;}return `<div class="rmw-recipe-state ${cls}"><i></i><div><b>${title}</b><span>${detail}</span></div></div><div class="rmw-recipe-costs"><div><span>Prix de vente</span><b>${price.toFixed(2)} MAD</b></div><div><span>Coût théorique</span><b>${m.costComplete?`${m.theoreticalCost.toFixed(2)} MAD`:'À compléter'}</b></div><div><span>Coût observé</span><b>${actual}</b><small>${m.actualCost==null?'Après ventes + suivi stock':`${price?((m.actualCost/price)*100).toFixed(1):0} % du prix`}</small></div><div class="total"><span>${m.actualCost==null?'Marge théorique':'Marge observée'}</span><b>${gain}</b><small>par portion</small></div></div>`;}
-  function openRecipe(x){const api=window.KiwiRestaurantRecipes,r=api?.get(x.id,x.name,venue())||{portions:1,prepMinutes:0,ingredients:[],steps:[],note:''},inv=api?.inventory(venue())||[];const rows=r.ingredients.length?r.ingredients:[{stockId:'',name:'',qty:0,unit:''}];const m=modal({title:`Recette · ${esc(x.name)}`,desc:`${esc(cat(x.catId)?.name||'')} · ${cash(x.price)} prix de vente`,width:940,body:`<div class="rmw-recipe-editor"><datalist id="rmw-stock-ingredients">${inv.map(s=>`<option value="${esc(s.name)}">${esc(s.unit||'')} · ${cash(s.costPerUnit)}</option>`).join('')}</datalist><div data-recipe-summary>${recipeSummary(x,r,api)}</div><section class="rmw-recipe-section rmw-recipe-composition"><div class="rmw-recipe-section-head"><div><span>Fiche technique</span><h4>Composition</h4><p>Les quantités ci-dessous pilotent le coût, la marge et la consommation du stock.</p></div><div class="rmw-recipe-top"><label><span>Portions</span><input class="kf-input" type="number" min="1" step="1" data-portions value="${r.portions||1}"/></label><label><span>Préparation</span><span class="rmw-recipe-suffix"><input class="kf-input" type="number" min="0" step="1" data-minutes value="${r.prepMinutes||0}"/><b>min</b></span></label></div></div><div class="rmw-recipe-ing-head"><span>Ingrédient</span><span>Quantité / recette</span><span>Unité</span><span></span></div><div data-recipe-ingredients>${rows.map(recipeIngredientRow).join('')}</div><button class="btn-slim rmw-recipe-add" type="button" data-ing-add>+ Ajouter un ingrédient</button>${inv.length?'':'<p class="kf-help">Ajoutez d’abord vos matières premières dans Stock &amp; approvisionnement pour calculer leur coût.</p>'}</section><div class="rmw-recipe-notes"><section class="rmw-recipe-section"><span class="rmw-recipe-kicker">Exécution</span><h4>Étapes de préparation</h4><textarea class="kf-input rmw-textarea" data-steps placeholder="Une étape par ligne">${esc((r.steps||[]).join('\n'))}</textarea></section><section class="rmw-recipe-section"><span class="rmw-recipe-kicker">Transmission</span><h4>Notes d’équipe</h4><textarea class="kf-input rmw-textarea" data-note placeholder="Allergènes, calibrage, dressage…">${esc(r.note||'')}</textarea></section></div></div>`,foot:'<button class="kb ghost" data-cancel>Annuler</button><button class="eq-cta-gradient" data-save>Enregistrer la recette</button>'});m.el.classList.add('rmw-recipe-modal');const wrap=$('[data-recipe-ingredients]',m.el),refresh=()=>{$('[data-recipe-summary]',m.el).innerHTML=recipeSummary(x,recipeDraft(m.el,x,api),api);};m.el.addEventListener('input',e=>{const row=e.target.closest('[data-recipe-ing]');if(row&&e.target.matches('[data-ing-name]')){const hit=inv.find(s=>String(s.name).trim().toLowerCase()===e.target.value.trim().toLowerCase());row.dataset.stockId=hit?.id||'';if(hit&&$('[data-ing-unit]',row))$('[data-ing-unit]',row).value=window.KiwiRestaurantUnits?.normalize?.(hit.unit)||hit.unit||'unité';}refresh();});wrap.onclick=e=>{const del=e.target.closest('[data-ing-delete]');if(!del)return;del.closest('[data-recipe-ing]').remove();if(!wrap.children.length)wrap.insertAdjacentHTML('beforeend',recipeIngredientRow({},0));refresh();};$('[data-ing-add]',m.el).onclick=()=>{wrap.insertAdjacentHTML('beforeend',recipeIngredientRow({},wrap.children.length));$('[data-ing-name]',wrap.lastElementChild).focus();};$('[data-cancel]',m.el).onclick=m.close;$('[data-save]',m.el).onclick=()=>{const draft=recipeDraft(m.el,x,api);if(!draft.ingredients.some(line=>line.qty>0)){toast('Quantités manquantes','Ajoutez au moins un ingrédient avec une quantité.','warn');return;}if(draft.ingredients.some(line=>!line.unit)){toast('Unités manquantes','Choisissez une unité pour chaque ingrédient.','warn');return;}api.save(x.id,draft,venue());m.close();render();toast('Recette enregistrée','Stock et marges mis à jour');};}
-  function confirm(title,run,detail='Cette action supprimera définitivement cet élément.'){const m=modal({title,width:440,body:`<p>${esc(detail)}</p>`,foot:'<button class="kb ghost" data-cancel>Annuler</button><button class="kb danger" data-confirm>Supprimer</button>'});$('[data-cancel]',m.el).onclick=m.close;$('[data-confirm]',m.el).onclick=()=>{run();m.close();render();};}
+  function openRecipe(x){const api=window.KiwiRestaurantRecipes,r=api?.get(x.id,x.name,venue())||{portions:1,prepMinutes:0,ingredients:[],steps:[],note:''},inv=api?.inventory(venue())||[];const rows=r.ingredients.length?r.ingredients:[{stockId:'',name:'',qty:0,unit:''}];const m=modal({title:`Recette · ${esc(t(x.name))}`,desc:`${esc(cat(x.catId)?.name?t(cat(x.catId).name):'')}`+` · ${cash(x.price)} prix de vente`,width:940,body:`<div class="rmw-recipe-editor"><datalist id="rmw-stock-ingredients">${inv.map(s=>`<option value="${esc(s.name)}">${esc(s.unit||'')} · ${cash(s.costPerUnit)}</option>`).join('')}</datalist><div data-recipe-summary>${recipeSummary(x,r,api)}</div><section class="rmw-recipe-section rmw-recipe-composition"><div class="rmw-recipe-section-head"><div><span>Fiche technique</span><h4>Composition</h4><p>Les quantités ci-dessous pilotent le coût, la marge et la consommation du stock.</p></div><div class="rmw-recipe-top"><label><span>Portions</span><input class="kf-input" type="number" min="1" step="1" data-portions value="${r.portions||1}"/></label><label><span>Préparation</span><span class="rmw-recipe-suffix"><input class="kf-input" type="number" min="0" step="1" data-minutes value="${r.prepMinutes||0}"/><b>min</b></span></label></div></div><div class="rmw-recipe-ing-head"><span>Ingrédient</span><span>Quantité / recette</span><span>Unité</span><span></span></div><div data-recipe-ingredients>${rows.map(recipeIngredientRow).join('')}</div><button class="btn-slim rmw-recipe-add" type="button" data-ing-add>+ Ajouter un ingrédient</button>${inv.length?'':'<p class="kf-help">Ajoutez d’abord vos matières premières dans Stock &amp; approvisionnement pour calculer leur coût.</p>'}</section><div class="rmw-recipe-notes"><section class="rmw-recipe-section"><span class="rmw-recipe-kicker">Exécution</span><h4>Étapes de préparation</h4><textarea class="kf-input rmw-textarea" data-steps placeholder="Une étape par ligne">${esc((r.steps||[]).join('\n'))}</textarea></section><section class="rmw-recipe-section"><span class="rmw-recipe-kicker">Transmission</span><h4>Notes d’équipe</h4><textarea class="kf-input rmw-textarea" data-note placeholder="Allergènes, calibrage, dressage…">${esc(r.note||'')}</textarea></section></div></div>`,foot:`<button class="kb ghost" data-cancel>${esc(ui('cancelBtn'))}</button><button class="eq-cta-gradient" data-save>${esc(ui('saveBtn'))}</button>`});m.el.classList.add('rmw-recipe-modal');const wrap=$('[data-recipe-ingredients]',m.el),refresh=()=>{$('[data-recipe-summary]',m.el).innerHTML=recipeSummary(x,recipeDraft(m.el,x,api),api);};m.el.addEventListener('input',e=>{const row=e.target.closest('[data-recipe-ing]');if(row&&e.target.matches('[data-ing-name]')){const hit=inv.find(s=>String(s.name).trim().toLowerCase()===e.target.value.trim().toLowerCase());row.dataset.stockId=hit?.id||'';if(hit&&$('[data-ing-unit]',row))$('[data-ing-unit]',row).value=window.KiwiRestaurantUnits?.normalize?.(hit.unit)||hit.unit||'unité';}refresh();});wrap.onclick=e=>{const del=e.target.closest('[data-ing-delete]');if(!del)return;del.closest('[data-recipe-ing]').remove();if(!wrap.children.length)wrap.insertAdjacentHTML('beforeend',recipeIngredientRow({},0));refresh();};$('[data-ing-add]',m.el).onclick=()=>{wrap.insertAdjacentHTML('beforeend',recipeIngredientRow({},wrap.children.length));$('[data-ing-name]',wrap.lastElementChild).focus();};$('[data-cancel]',m.el).onclick=m.close;$('[data-save]',m.el).onclick=()=>{const draft=recipeDraft(m.el,x,api);if(!draft.ingredients.some(line=>line.qty>0)){toast('Quantités manquantes','Ajoutez au moins un ingrédient avec une quantité.','warn');return;}if(draft.ingredients.some(line=>!line.unit)){toast('Unités manquantes','Choisissez une unité pour chaque ingrédient.','warn');return;}api.save(x.id,draft,venue());m.close();render();toast('Recette enregistrée','Stock et marges mis à jour');};}
+  function confirm(title,run,detail='Cette action supprimera définitivement cet élément.'){const m=modal({title,width:440,body:`<p>${esc(detail)}</p>`,foot:`<button class="kb ghost" data-cancel>${esc(ui('cancelBtn'))}</button><button class="kb danger" data-confirm>${esc(ui('delete'))}</button>`});$('[data-cancel]',m.el).onclick=m.close;$('[data-confirm]',m.el).onclick=()=>{run();m.close();render();};}
   let legacyMenuHandler=null;
   function restaurantMenuHandler(){
     /* The sidebar only exposes nav-menu for restaurant venues. Claim the route
@@ -340,7 +1195,10 @@ isFormulaCb.onchange=()=>{const on=isFormulaCb.checked;if(on&&!formulaSlots.leng
       toast('Carte vide', 'Ajoutez d’abord des articles à traduire.', 'info');
       return;
     }
-    const currentLang = (window.Kiwi && Kiwi.lang && Kiwi.lang()) || localStorage.getItem('kiwiLang') || document.documentElement.lang || 'fr';
+    let currentLang = 'fr';
+    try {
+      currentLang = (window.Kiwi && Kiwi.lang && Kiwi.lang()) || (typeof localStorage !== 'undefined' ? localStorage.getItem('kiwiLang') : '') || document?.documentElement?.lang || 'fr';
+    } catch (_) {}
     const m = modal({
       tag: 'Kiwi AI', title: 'Traduire et adapter la carte', width: 520,
       body: `
@@ -436,7 +1294,36 @@ isFormulaCb.onchange=()=>{const on=isFormulaCb.checked;if(on&&!formulaSlots.leng
       }
     };
   }
-  function wire(){const H=window.Kiwi?.handlers;if(!H)return false;H['rmw-tab']=e=>{tab=e.dataset.tab;render();};H['rmw-hours-period']=e=>{hoursPeriod=e.dataset.period;render();};H['rmw-cat-filter']=e=>{filter=e.dataset.cat;subFilter=null;render();};H['rmw-cat-move']=(_e,arg)=>{const[id,delta]=String(arg||'').split('::');S().moveCategory(id,+delta);};H['rmw-sub-filter']=e=>{subFilter=e.dataset.sub||null;render();};H['rmw-sub-add']=(_e,cid)=>ask('Nouvelle sous-catégorie','Nom (ex. Cookies, Gâteaux, Classics)','',v=>{S().addSubcategory(cid||filter,v);subFilter=null;});H['rmw-sub-rename']=(_e,arg)=>{const[cid,sid]=String(arg||'').split('::'),s=(cat(cid)?.sub||[]).find(x=>x.id===sid);if(s)ask('Renommer la sous-catégorie','Nouveau nom',s.name,v=>S().renameSubcategory(cid,sid,v));};H['rmw-sub-delete']=(_e,arg)=>{const[cid,sid]=String(arg||'').split('::'),s=(cat(cid)?.sub||[]).find(x=>x.id===sid),n=D().items.filter(x=>x.catId===cid&&x.subId===sid).length;if(s)confirm(`Supprimer « ${s.name} » ?`,()=>{S().deleteSubcategory(cid,sid);subFilter=null;},`${n} article${n!==1?'s':''} resteront dans la section et passeront dans « À classer ».`);};H['rmw-classify']=(_e,cid)=>openClassify(cid||filter);H['rmw-cat-add']=()=>openCategory(null);H['rmw-cat-edit']=(_e,id)=>{const c=cat(id);if(c)openCategory(c);};H['rmw-cat-delete']=(_e,id)=>{const c=cat(id),n=D().items.filter(x=>x.catId===id).length;if(c)confirm(`Supprimer la section « ${c.name} » ?`,()=>{S().deleteCategory(id);filter='all';subFilter=null;},`Cette section et ses ${n} article${n!==1?'s':''} seront supprimés définitivement.`);};H['rmw-item-add']=()=>openItem(null);H['rmw-item-edit']=(_e,id)=>openItem(item(id));H['rmw-item-delete']=(_e,id)=>{const x=item(id);if(x)confirm(`Supprimer « ${x.name} » ?`,()=>S().deleteItem(id));};H['rmw-group-add']=()=>openGroup(null);H['rmw-group-edit']=(_e,id)=>openGroup(group(id));H['rmw-group-delete']=(_e,id)=>{const g=group(id);if(g)confirm(`Supprimer « ${g.name} » ?`,()=>S().deleteOptGroup(id));};H['rmw-station-add']=()=>ask('Ajouter un poste','Nom du poste','',v=>S().addStation(v));H['rmw-station-edit']=(_e,id)=>ask('Renommer le poste','Nom du poste',station(id)?.name,v=>S().renameStation(id,v));H['rmw-station-delete']=(_e,id)=>confirm(`Supprimer « ${station(id)?.name||'ce poste'} » ?`,()=>S().deleteStation(id));H['rmw-recipe-edit']=(_e,id)=>{const x=item(id);if(x)openRecipe(x);};H['rmw-reactivate']=(_e,id)=>{S().updateItem(id,{avail:true});render();};H['rmw-menu-scan']=()=>{if(window.KiwiMenuScan?.open)window.KiwiMenuScan.open({onDone:()=>render()});else window.Kiwi?.toast?.('Scan indisponible',{type:'warn',desc:'Rechargez la page.'});};H['rmw-menu-translate']=()=>openTranslateModal();if(H['nav-menu']!==restaurantMenuHandler){legacyMenuHandler=H['nav-menu']||legacyMenuHandler;H['nav-menu']=restaurantMenuHandler;}return true;}
+  function wire(){
+    const H=window.Kiwi?.handlers;if(!H)return false;
+    H['rmw-tab']=e=>{tab=e.dataset.tab;render();};
+    H['rmw-hours-period']=e=>{hoursPeriod=e.dataset.period;render();};
+    H['rmw-cat-filter']=e=>{filter=e.dataset.cat;subFilter=null;render();};
+    H['rmw-cat-move']=(_e,arg)=>{const[id,delta]=String(arg||'').split('::');S().moveCategory(id,+delta);};
+    H['rmw-sub-filter']=e=>{subFilter=e.dataset.sub||null;render();};
+    H['rmw-sub-add']=(_e,cid)=>ask(ui('newSubcategoryTitle'),ui('subNamePlaceholder'),'',v=>{S().addSubcategory(cid||filter,v);subFilter=null;});
+    H['rmw-sub-rename']=(_e,arg)=>{const[cid,sid]=String(arg||'').split('::'),s=(cat(cid)?.sub||[]).find(x=>x.id===sid);if(s)ask(ui('renameSubcategoryTitle'),ui('newNameLabel'),s.name,v=>S().renameSubcategory(cid,sid,v));};
+    H['rmw-sub-delete']=(_e,arg)=>{const[cid,sid]=String(arg||'').split('::'),s=(cat(cid)?.sub||[]).find(x=>x.id===sid),n=D().items.filter(x=>x.catId===cid&&x.subId===sid).length;if(s)confirm(ui('deleteSubcategoryConfirm', { name: s.name }),()=>{S().deleteSubcategory(cid,sid);subFilter=null;},ui('deleteSubcategoryDesc', { n }));};
+    H['rmw-classify']=(_e,cid)=>openClassify(cid||filter);
+    H['rmw-cat-add']=()=>openCategory(null);
+    H['rmw-cat-edit']=(_e,id)=>{const c=cat(id);if(c)openCategory(c);};
+    H['rmw-cat-delete']=(_e,id)=>{const c=cat(id),n=D().items.filter(x=>x.catId===id).length;if(c)confirm(ui('deleteCategoryConfirm', { name: c.name }),()=>{S().deleteCategory(id);filter='all';subFilter=null;},ui('deleteCategoryDesc', { n }));};
+    H['rmw-item-add']=()=>openItem(null);
+    H['rmw-item-edit']=(_e,id)=>openItem(item(id));
+    H['rmw-item-delete']=(_e,id)=>{const x=item(id);if(x)confirm(ui('deleteItemConfirm', { name: x.name }),()=>S().deleteItem(id));};
+    H['rmw-group-add']=()=>openGroup(null);
+    H['rmw-group-edit']=(_e,id)=>openGroup(group(id));
+    H['rmw-group-delete']=(_e,id)=>{const g=group(id);if(g)confirm(ui('deleteGroupConfirm', { name: g.name }),()=>S().deleteOptGroup(id));};
+    H['rmw-station-add']=()=>ask(ui('addStationTitle'),ui('stationNameLabel'),'',v=>S().addStation(v));
+    H['rmw-station-edit']=(_e,id)=>ask(ui('renameStationTitle'),ui('stationNameLabel'),station(id)?.name,v=>S().renameStation(id,v));
+    H['rmw-station-delete']=(_e,id)=>confirm(ui('deleteStationConfirm', { name: station(id)?.name||ui('stationDefault') }),()=>S().deleteStation(id));
+    H['rmw-recipe-edit']=(_e,id)=>{const x=item(id);if(x)openRecipe(x);};
+    H['rmw-reactivate']=(_e,id)=>{S().updateItem(id,{avail:true});render();};
+    H['rmw-menu-scan']=()=>{if(window.KiwiMenuScan?.open)window.KiwiMenuScan.open({onDone:()=>render()});else window.Kiwi?.toast?.(ui('scanUnavailable'),{type:'warn',desc:ui('reloadPage')});};
+    H['rmw-menu-translate']=()=>openTranslateModal();
+    if(H['nav-menu']!==restaurantMenuHandler){legacyMenuHandler=H['nav-menu']||legacyMenuHandler;H['nav-menu']=restaurantMenuHandler;}
+    return true;
+  }
   function bind(){document.addEventListener('input',e=>{if(e.target.matches('[data-rmw-search]')){query=e.target.value;const p=$('[data-rmw-panel]');if(p)p.innerHTML=menuPanel();}});document.addEventListener('change',e=>{if(e.target.matches('[data-rmw-route]')){S().setCategoryStation(e.target.dataset.rmwRoute,e.target.value);render();}});document.addEventListener('click',e=>{const a=e.target.closest?.('.sidebar nav a[data-nav="menu"]');if(a&&isRestaurant()){e.preventDefault();show();}},true);}
   function style(){if($('#rmw-css'))return;const s=document.createElement('style');s.id='rmw-css';s.textContent=`@keyframes rmw-spin{to{transform:rotate(360deg)}}.rmw-slot-card{padding:12px;border:1px solid var(--n-200);border-radius:10px;background:var(--paper-soft);display:grid;gap:8px}.rmw-slot-head{display:flex;gap:8px;align-items:center}.rmw-slot-choice-row{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:var(--surface);border:1px solid var(--n-200);border-radius:8px;font-size:12.5px}.rmw-slot-choice-extra{display:flex;align-items:center;gap:4px;font-size:11.5px;color:var(--n-500)}.rmw-empty{text-align:center;color:var(--n-500);padding:34px 18px}.rmw-empty h3{color:var(--ink);margin:0 0 8px}.rmw-empty p{max-width:560px;margin:0 auto 18px;line-height:1.5}.rmw-nfc{margin-top:28px}.rmw-media{width:100%;height:120px;object-fit:cover;border-radius:10px;margin-bottom:10px}.rmw-off{opacity:.58}.rmw-routes{display:grid;gap:8px}.rmw-route{display:grid;grid-template-columns:minmax(180px,1fr) minmax(220px,360px);align-items:center;gap:18px;padding:13px;border-bottom:1px solid var(--n-200)}.rmw-route select{border:1px solid var(--n-200);border-radius:10px;padding:10px;background:var(--surface);color:var(--ink)}.rmw-checks{display:grid;grid-template-columns:1fr 1fr;gap:8px}.rmw-checks label{padding:10px;border:1px solid var(--n-200);border-radius:9px}.rmw-media-actions{display:flex;gap:8px;flex-wrap:wrap}.rmw-emoji-btn{width:46px;min-width:46px;border:1px solid var(--n-200);border-radius:10px;background:var(--paper-soft);font-size:22px;cursor:pointer}.rmw-emoji-pop{position:fixed;z-index:100000;width:370px;max-height:310px;overflow:auto;padding:10px;background:var(--surface);border:1px solid var(--n-200);border-radius:14px;box-shadow:0 20px 55px #0003;display:grid;grid-template-columns:repeat(8,1fr);gap:5px}.rmw-emoji-pop button{height:38px;border:0;border-radius:7px;background:transparent;font-size:21px;cursor:pointer}.rmw-emoji-pop .rmw-none{grid-column:1/-1;font:12px var(--sans);border:1px solid var(--n-200)}.rmw-emoji-pop button:hover{background:var(--mint-soft)}.rmw-textarea{min-height:120px}.rmw-hours{display:flex;align-items:flex-end;gap:8px;min-height:170px;overflow:auto;padding:25px 4px 0}.rmw-hour{min-width:34px;display:flex;flex-direction:column;align-items:center;gap:5px;font-size:10px;color:var(--n-500)}.rmw-hour i{width:22px;background:var(--atlas);border-radius:5px 5px 1px 1px}.rmw-hour b{font-size:10px;color:var(--ink)}.rmw-recipe-list{display:grid;gap:8px;margin-top:22px}.rmw-recipe-card{display:grid;grid-template-columns:minmax(180px,1fr) minmax(180px,auto) auto;align-items:center;gap:18px;padding:15px 16px;background:var(--surface);border:1px solid var(--n-200);border-radius:12px}.rmw-recipe-name{font-weight:650;color:var(--ink)}.rmw-recipe-meta,.rmw-recipe-result small{display:block;margin-top:4px;font-size:11.5px;color:var(--n-500)}.rmw-recipe-result{text-align:right}.rmw-recipe-editor{display:grid;gap:14px;color:var(--ink)}.rmw-recipe-state{display:flex;align-items:flex-start;gap:11px;padding:13px 15px;border:1px solid var(--n-200);border-radius:14px;background:var(--paper-soft)}.rmw-recipe-state>i{width:8px;height:8px;margin-top:5px;border-radius:50%;background:var(--n-500);flex:0 0 auto}.rmw-recipe-state>div{display:grid;gap:3px}.rmw-recipe-state b{font-size:13px}.rmw-recipe-state span{font-size:11.5px;line-height:1.45;color:var(--n-500)}.rmw-recipe-state.ok{border-color:color-mix(in srgb,var(--atlas) 30%,var(--n-200));background:color-mix(in srgb,var(--atlas) 6%,var(--surface))}.rmw-recipe-state.ok>i{background:var(--atlas)}.rmw-recipe-state.warn>i{background:#a77617}.rmw-recipe-state.danger>i{background:#b94b38}.rmw-recipe-costs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.rmw-recipe-costs>div{display:grid;align-content:start;gap:5px;min-height:78px;padding:13px 14px;border:1px solid var(--n-200);border-radius:13px;background:var(--surface)}.rmw-recipe-costs span,.rmw-recipe-costs small{color:var(--n-500);font-size:10px}.rmw-recipe-costs b{font-size:16px;line-height:1.2;letter-spacing:-.02em}.rmw-recipe-costs>div.total{border-color:color-mix(in srgb,var(--atlas) 35%,var(--n-200));background:color-mix(in srgb,var(--atlas) 7%,var(--surface));color:var(--atlas)}.rmw-recipe-section{padding:17px;border:1px solid var(--n-200);border-radius:15px;background:var(--surface)}.rmw-recipe-section h4{margin:0 0 12px;font-size:14px}.rmw-recipe-section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;margin-bottom:16px}.rmw-recipe-section-head>div:first-child>span,.rmw-recipe-kicker{display:block;margin-bottom:5px;color:var(--atlas);font:700 9px var(--mono);letter-spacing:.12em;text-transform:uppercase}.rmw-recipe-section-head h4{margin:0;font-size:16px}.rmw-recipe-section-head p{max-width:52ch;margin:5px 0 0;color:var(--n-500);font-size:11.5px;line-height:1.45}.rmw-recipe-top{display:flex;gap:8px;align-items:flex-start;flex:0 0 auto}.rmw-recipe-top label{display:grid;gap:5px;color:var(--n-500);font:700 9px var(--mono);letter-spacing:.06em;text-transform:uppercase}.rmw-recipe-top input{width:76px;min-height:38px}.rmw-recipe-suffix{display:flex;align-items:center}.rmw-recipe-suffix b{margin-left:-30px;color:var(--n-500);font:500 10px var(--mono);pointer-events:none}.rmw-recipe-ing-head,.rmw-recipe-ing{display:grid;grid-template-columns:minmax(180px,1fr) 150px 130px 38px;gap:8px;align-items:center}.rmw-recipe-ing-head{padding:0 4px 7px;font:10px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--n-500)}.rmw-recipe-ing{margin-bottom:7px}.rmw-recipe-add{width:100%;justify-content:center;margin-top:3px;border-style:dashed}.rmw-recipe-notes{display:grid;grid-template-columns:1fr 1fr;gap:12px}.rmw-recipe-notes .rmw-textarea{min-height:104px}.rmw-recipe-modal .kiwi-modal,.rmw-recipe-modal [role=dialog]{background:var(--paper)}.rmw-recipe-modal .kiwi-modal-body{padding-bottom:18px}.rmw-recipe-modal .kiwi-modal-foot{position:sticky;bottom:0;z-index:2;background:color-mix(in srgb,var(--paper) 94%,transparent);backdrop-filter:blur(10px)}.rmw-performance{display:grid;gap:18px}.rmw-perf-period{padding:8px 13px;border:1px solid var(--n-200);border-radius:999px;background:var(--paper-soft);font-size:12px;color:var(--n-600)}.rmw-perf-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.rmw-perf-kpis>div{display:grid;gap:7px;padding:17px 18px;background:var(--surface);border:1px solid var(--n-200);border-radius:13px}.rmw-perf-kpis span{font:10px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--n-500)}.rmw-perf-kpis b{font-size:24px;letter-spacing:-.03em}.rmw-perf-kpis small{color:var(--n-500)}.rmw-perf-matrix{position:relative;margin-top:26px;padding:0 0 25px 35px}.rmw-perf-plot{position:relative;height:390px;border-left:1px solid var(--n-300);border-bottom:1px solid var(--n-300);background:linear-gradient(90deg,transparent 49.85%,var(--n-200) 50%,transparent 50.15%),linear-gradient(0deg,transparent 49.85%,var(--n-200) 50%,transparent 50.15%),#fff;border-radius:4px 12px 4px 4px}.rmw-perf-y{position:absolute;left:-128px;top:190px;width:290px;transform:rotate(-90deg);text-align:center;font-size:11px;color:var(--n-500)}.rmw-perf-x{text-align:center;margin-top:9px;font-size:11px;color:var(--n-500)}.rmw-perf-caption{text-align:center;margin-top:7px;font-size:11px;color:var(--n-500)}.rmw-perf-v,.rmw-perf-h{position:absolute;z-index:0;background:var(--n-300);opacity:.7}.rmw-perf-v{top:0;bottom:0;width:1px}.rmw-perf-h{left:0;right:0;height:1px}.rmw-perf-label{position:absolute;z-index:0;font:700 12px var(--mono);letter-spacing:.04em;pointer-events:none}.rmw-perf-label small{display:block;margin-top:3px;font:10px var(--sans);letter-spacing:0;color:var(--n-500)}.rmw-perf-label.puzzle{left:18px;top:16px}.rmw-perf-label.star{right:18px;top:16px;text-align:right}.rmw-perf-label.dog{left:18px;bottom:16px}.rmw-perf-label.plow{right:18px;bottom:16px;text-align:right}.rmw-perf-dot{position:absolute;transform:translate(-50%,50%);border:2px solid #fff;border-radius:50%;box-shadow:0 2px 9px #0003;cursor:pointer}.rmw-perf-dot.star{background:#1d9c67}.rmw-perf-dot.plow{background:#d49a25}.rmw-perf-dot.puzzle{background:#357fad}.rmw-perf-dot.dog{background:#cb5238}.rmw-perf-dot>span{display:none;position:absolute;left:50%;bottom:calc(100% + 8px);width:max-content;max-width:240px;transform:translateX(-50%);padding:9px 11px;border-radius:8px;background:#101612;color:#fff;text-align:left;font:11px/1.5 var(--sans);box-shadow:0 8px 24px #0004}.rmw-perf-dot:hover>span,.rmw-perf-dot:focus>span{display:block}.rmw-perf-quads{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.rmw-perf-q{display:grid;gap:8px;padding:16px;background:var(--surface);border:1px solid var(--n-200);border-top:3px solid var(--n-300);border-radius:11px}.rmw-perf-q.star{border-top-color:#1d9c67}.rmw-perf-q.plow{border-top-color:#d49a25}.rmw-perf-q.puzzle{border-top-color:#357fad}.rmw-perf-q.dog{border-top-color:#cb5238}.rmw-perf-q h4{margin:0;font:700 11px var(--mono);letter-spacing:.06em}.rmw-perf-q strong{font-size:21px}.rmw-perf-q p,.rmw-perf-q div{margin:0;font-size:11px;color:var(--n-500);line-height:1.45}.rmw-perf-q div span{display:block;font:9px var(--mono);letter-spacing:.05em;text-transform:uppercase}.rmw-perf-q footer{display:grid;gap:3px;padding-top:9px;border-top:1px solid var(--n-200);font-size:11px}.rmw-perf-q footer b{font-size:14px}.rmw-perf-q footer small{color:var(--n-500)}.rmw-perf-table td small{display:block;margin-top:3px;color:var(--n-500);font-size:10px}.rmw-perf-margin{display:inline-block;padding:4px 7px;border-radius:999px;font-weight:700}.rmw-perf-margin.hi{background:#d9f4e6;color:#14734a}.rmw-perf-margin.mid{background:#fff0c9;color:#8c620a}.rmw-perf-margin.lo{background:#ffe0da;color:#a83b27}.rmw-perf-link{padding:0;border:0;background:none;color:var(--atlas);font:inherit;text-decoration:underline;cursor:pointer}@media(max-width:900px){.rmw-perf-kpis{grid-template-columns:1fr}.rmw-perf-quads{grid-template-columns:1fr 1fr}.rmw-perf-plot{height:300px}}@media(max-width:800px){.rmw-route{grid-template-columns:1fr}.rmw-checks{grid-template-columns:1fr}.rmw-recipe-card{grid-template-columns:1fr}.rmw-recipe-result{text-align:left}.rmw-recipe-costs{grid-template-columns:1fr 1fr}.rmw-recipe-section-head{flex-direction:column}.rmw-recipe-ing-head{display:none}.rmw-recipe-ing{grid-template-columns:1fr 90px 90px 38px}.rmw-recipe-top{width:100%}.rmw-recipe-top label{flex:1}.rmw-recipe-notes{grid-template-columns:1fr}.rmw-perf-quads{grid-template-columns:1fr}}`;document.head.appendChild(s);}
   function performanceStyle(){if($('#rmw-performance-css'))return;const s=document.createElement('style');s.id='rmw-performance-css';s.textContent=`

@@ -280,8 +280,8 @@
     "sha": "b5e7420b2076345c"
   },
   "assets/menu-i18n.js": {
-    "v": "1",
-    "sha": "e0348415e6e98060"
+    "v": "2",
+    "sha": "071924f4167d322e"
   },
   "assets/menu-scan.js": {
     "v": "2",
@@ -580,12 +580,12 @@
     "sha": "e4b2be14e93ce034"
   },
   "assets/restaurant-menu-workspace.js": {
-    "v": "21",
-    "sha": "896aa4e714379467"
+    "v": "23",
+    "sha": "594b2538ab63f55e"
   },
   "assets/restaurant-recipes.js": {
-    "v": "3",
-    "sha": "c42490df8bd217a2"
+    "v": "4",
+    "sha": "a89de0ada312f98a"
   },
   "assets/retail-scan.css": {
     "v": "7",

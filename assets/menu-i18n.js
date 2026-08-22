@@ -22,6 +22,10 @@
     'boissons fraiches': { fr: 'Boissons fraîches', ar: 'مشروبات باردة', en: 'Cold Drinks' },
     'مشروبات باردة': { fr: 'Boissons fraîches', ar: 'مشروبات باردة', en: 'Cold Drinks' },
 
+    'drinks': { fr: 'Boissons', ar: 'مشروبات', en: 'Drinks' },
+    'boissons': { fr: 'Boissons', ar: 'مشروبات', en: 'Drinks' },
+    'مشروبات': { fr: 'Boissons', ar: 'مشروبات', en: 'Drinks' },
+
     'breakfast & brunch': { fr: 'Brunch & Petit-déjeuner', ar: 'فطور الصباح و برانش', en: 'Breakfast & Brunch' },
     'brunch & breakfast': { fr: 'Brunch & Petit-déjeuner', ar: 'فطور الصباح و برانش', en: 'Breakfast & Brunch' },
     'brunch & petit-déjeuner': { fr: 'Brunch & Petit-déjeuner', ar: 'فطور الصباح و برانش', en: 'Breakfast & Brunch' },
@@ -65,6 +69,12 @@
     'milkshakes': { fr: 'Milkshakes', ar: 'ميلك شيك', en: 'Milkshakes' },
     'ice cream': { fr: 'Glaces', ar: 'مثلجات', en: 'Ice Cream' },
     'glaces': { fr: 'Glaces', ar: 'مثلجات', en: 'Ice Cream' },
+    'cuisine': { fr: 'Cuisine', ar: 'المطبخ', en: 'Kitchen' },
+    'comptoir': { fr: 'Comptoir', ar: 'المكتب', en: 'Counter' },
+    'bar': { fr: 'Bar', ar: 'بار', en: 'Bar' },
+    'four': { fr: 'Four', ar: 'فرن', en: 'Oven' },
+    'grill': { fr: 'Grill', ar: 'شواية', en: 'Grill' },
+    'sans section': { fr: 'Sans section', ar: 'بدون قسم', en: 'Uncategorized' },
 
     // ─── Groupes d'Options & Modificateurs ───
     'hot or ice': { fr: 'Chaud ou Glacé', ar: 'ساخن أو مثلج', en: 'Hot or Ice' },
@@ -171,6 +181,11 @@
     'acai bowl': { fr: 'Açaí Bowl', ar: 'وعاء أساي', en: 'Acai Bowl' },
 
     // ─── Articles Fréquents (Café & Cuisine) ───
+    'café au lait': { fr: 'Café au lait', ar: 'قهوة بالحليب', en: 'Coffee with Milk' },
+    'coffee with milk': { fr: 'Café au lait', ar: 'قهوة بالحليب', en: 'Coffee with Milk' },
+    'قهوة بالحليب': { fr: 'Café au lait', ar: 'قهوة بالحليب', en: 'Coffee with Milk' },
+    'café noir': { fr: 'Café noir', ar: 'قهوة سوداء', en: 'Black Coffee' },
+    'black coffee': { fr: 'Café noir', ar: 'قهوة سوداء', en: 'Black Coffee' },
     'espresso': { fr: 'Espresso', ar: 'إسبريسو', en: 'Espresso' },
     'double espresso': { fr: 'Double Espresso', ar: 'دبل إسبريسو', en: 'Double Espresso' },
     'americano': { fr: 'Americano', ar: 'أمريكانو', en: 'Americano' },
