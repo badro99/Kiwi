@@ -297,3 +297,79 @@ nouvel employé.
 *Documents liés : `docs/ops/KIOSK.md` (mode kiosque par OS), `docs/ops/LIVE_LINK.md`
 (backend des ventes et relais d'impression), `bridge/README.md` (pourquoi les transports
 web échouent sur iPad), `docs/specs/SYNC_MODEL.md` (local-first), `CLAUDE.md` §2–3.*
+
+---
+
+## 8. L'app « Kiwi » côté consommateur — fidélité, reçus, commande, puis paiement
+
+*Ajouté le 2026-08-22 (décision du propriétaire). Complète les sections 1–7 ; ne les remplace pas.*
+
+### 8.1 Deux apps, une base de code
+| | **Kiwi** (consommateur) | **Kiwi Pro** (marchand) |
+|---|---|---|
+| Bundle | `com.kiwios.app` | `com.kiwios.pro` |
+| Qui | le client final d'un commerce équipé Kiwi | marchand, caissier, serveur, cuisine |
+| Parcours type | ouvrir → scanner → voir ses points → fermer (8 secondes) | se connecter une fois, vivre dedans 10 h par jour |
+| Contenu v1 | fidélité (scan du QR de ticket, solde par commerce, récompenses), reçus dématérialisés, carte des commerces Kiwi, OrderPro à table (déjà `kiwi-order.html`) | sections 1–7 de ce plan |
+| Plus tard | portefeuille Kiwi Pay (Phase 2), Zakat/Sadaqa côté client, commande à emporter | — |
+
+Pourquoi deux fiches store et pas une : audiences opposées, notes d'utilisateurs qui se
+polluent mutuellement, écran de connexion marchand devant un client de café. Le même
+projet Capacitor produit les deux cibles ; le web embarqué et le backend sont communs.
+C'est le découpage Square / Cash App.
+
+### 8.2 La mécanique qui ne se fraude pas
+- **Jamais de QR statique au comptoir** (scannable à l'infini). La caisse imprime / affiche
+  un **QR par vente** : jeton signé côté serveur (`/api/loyalty/token`, HMAC, expire en
+  10 min, usage unique), lié au ticket, au marchand et au montant. Le client le scanne dans
+  Kiwi → points pour *ce* ticket. Le caissier peut aussi scanner le QR du client (l'iPad a
+  une caméra) pour lier avant l'encaissement.
+- **Identité = numéro de téléphone** (OTP WhatsApp), pas d'e-mail. Sans l'app, le client
+  donne son numéro au caissier et gagne quand même ses points — c'est le carnet clients
+  existant (`/api/clients`, `employee_loyalty_events`). L'app est la voie premium, pas un
+  prérequis : le programme a de la valeur dès le client n° 1.
+- **Un client, plusieurs soldes.** Les points d'Amira ne sont pas les points de Browse. Un
+  programme Kiwi inter-commerces est une décision de Phase 2 (c'est un passif).
+- Le marchand garde la main : règles (1 point / 10 MAD, tampon, palier), récompenses,
+  export de son carnet. Kiwi ne revend ni ne croise les données entre marchands.
+
+### 8.3 Ce que ça demande au backend (petit, parce que le gros existe)
+- `loyalty_tokens` (merchant, sale_id, token_hash, amount, expires_at, redeemed_by,
+  redeemed_at) ; `consumers` (phone_hash, created_at, consent_at, consent_version) ;
+  liaison consommateur ↔ ligne du carnet clients de chaque marchand.
+- Endpoints publics à débit limité : `POST /api/loyalty/otp`, `POST /api/loyalty/redeem`
+  (jeton + consommateur → points crédités **une fois**, même idempotence que
+  `employee_loyalty_events`), `GET /api/loyalty/me` (soldes, reçus), `GET /api/places`
+  (commerces Kiwi qui ont activé la fidélité publique — opt-in marchand).
+- Reçu dématérialisé = le ticket déjà généré, rendu en HTML ; rien à réinventer.
+
+### 8.4 Séquence (ne doit PAS retarder Kiwi Pro)
+1. **Semaines 1–6 :** Kiwi Pro (sections 4–5). En parallèle, à coût quasi nul : le QR par
+   vente sur le ticket + la page web `kiwi-os.com/c/<jeton>` (numéro → OTP → points).
+   Les points s'accumulent déjà avant toute app consommateur.
+2. **Semaines 7–12 :** l'app « Kiwi » emballe cette page (Capacitor, même projet, deuxième
+   cible), ajoute le scanner natif, la carte, les reçus, les notifications (« +12 points
+   chez Amira »). Soumission store, fiche **grand public** (catégorie *Food & Drink* ou
+   *Lifestyle*, captures côté client).
+3. **Phase 2 :** portefeuille / Kiwi Pay dans la même app — le client a déjà Kiwi sur son
+   téléphone avec des points dedans ; c'est précisément l'entrée du paiement.
+
+### 8.5 À ajouter au chemin critique (section 2)
+| # | Quoi | Pourquoi |
+|---|---|---|
+| P8 | **Déclaration CNDP (loi 09-08)** pour le traitement « programme de fidélité multi-commerces » : numéros de téléphone + historique d'achats ; écrans de consentement versionnés, droit d'accès/suppression dans l'app | obligatoire dès que Kiwi détient des données clients finals pour le compte de plusieurs marchands ; c'est du papier, pas un bloqueur — le lancer avec le D-U-N-S |
+| P9 | Fournisseur OTP WhatsApp (Meta Cloud API via le numéro business, ou SMS de repli) | l'identité consommateur en dépend |
+| P10 | Deuxième fiche store (nom « Kiwi », icône, captures client), deuxième bundle id | irréversible, à décider en même temps que P7 |
+
+### 8.6 Critères d'acceptation de Kiwi v1.0 (consommateur)
+1. Un client sans compte scanne le QR d'un ticket, entre son numéro, reçoit l'OTP, voit
+   ses points : **moins de 30 secondes**, aucune autre donnée demandée.
+2. Le même QR scanné deux fois ne crédite qu'une fois ; un QR de plus de 10 minutes est
+   refusé ; un QR d'un autre marchand ne touche que le solde de ce marchand.
+3. Le marchand voit le client et ses points dans son carnet sur la caisse **et** le
+   tableau de bord, sans doublon (le bug historique du carnet local, corrigé par
+   `/api/clients`, ne doit pas revenir par cette porte).
+4. Le client peut supprimer son compte dans l'app ; ses lignes sont anonymisées chez
+   chaque marchand dans l'heure.
+5. Aucune donnée d'un marchand n'est lisible par un autre via l'API publique
+   (`tools/loyalty-isolation-test.mjs`, wired dans `check.js`).
