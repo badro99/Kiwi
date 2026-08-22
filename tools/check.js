@@ -379,6 +379,7 @@ for (const test of [
   'team-doc-redaction-test.mjs',
   'pressing-workspace-test.js',
   'pressing-auto-ready-test.mjs',
+  'inventory-waste-test.mjs',
 ]) {
   const { spawnSync } = require('child_process');
   const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', test)], { encoding: 'utf8' });

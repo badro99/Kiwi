@@ -5411,7 +5411,7 @@
   <!-- Catalogue, seuils, coûts et quantités : exactement le même stock que le
        tableau de bord. Les quantités passent par le registre append-only ; ce
        pont ne maintient jamais un second snapshot propre à la caisse. -->
-  <script src="assets/caisse-stock-sync.js?v=8" defer></script>
+  <script src="assets/caisse-stock-sync.js?v=9" defer></script>
   <!-- Les horaires de l'établissement, réglés une seule fois côté tableau de
        bord. La caisse les LIT : ouvrir un service hors horaires demande une
        dérogation nommée, et la journée commerciale du Z suit l'heure de
@@ -7024,6 +7024,7 @@
         <div class="sub">Inventaire · commandes fournisseurs · inventaire physique</div>
       </div>
       <div class="sk-head-acts">
+        <button class="ma-btn secondary sk-head-recept" id="sk-new-waste-btn" data-sk-newwaste style="background:rgba(220,38,38,0.08);color:#b91c1c;border-color:rgba(220,38,38,0.25);"><i data-lucide="trash-2"></i>Déclarer une perte</button>
         <button class="ma-btn primary sk-head-recept" id="sk-recept-btn"><i data-lucide="scan-line"></i>Réception</button>
         <button class="kds-close" id="stock-close-btn"><i data-lucide="x"></i><span>Fermer</span></button>
       </div>
@@ -16351,16 +16352,87 @@
         <div class="sk-kpi"><div class="sk-kpi-l">Prochaine livraison<span class="sk-kpi-ico"><i data-lucide="truck"></i></span></div><div class="sk-kpi-v" style="font-size:19px">${next ? next.when : '—'}</div><div class="sk-kpi-sub">${next ? kdsEsc(next.supplier) : 'Aucune commande active'}</div></div>
         <div class="sk-kpi"><div class="sk-kpi-l">Fournisseurs<span class="sk-kpi-ico"><i data-lucide="contact"></i></span></div><div class="sk-kpi-v">${suppliers.length}</div><div class="sk-kpi-sub">actifs</div></div>
       </div>`;
+      const quickActs = `<div class="sk-quick-acts" style="display:flex;gap:10px;margin-bottom:18px;">
+        <button class="ma-btn primary" data-sk-newwaste style="background:#dc2626;border-color:#b91c1c;padding:12px 18px;font-size:14px;border-radius:12px;font-weight:600;"><i data-lucide="trash-2"></i>Déclarer une perte</button>
+        <button class="ma-btn secondary" id="sk-apercu-recept-btn" data-sk-recept-act style="padding:12px 18px;font-size:14px;border-radius:12px;font-weight:600;"><i data-lucide="scan-line"></i>Réceptionner du stock</button>
+      </div>`;
       const list = alerts.length
         ? `<div class="sk-section"><div class="sk-section-head"><h3>Alertes stock</h3><span class="sk-badge warn">${alerts.length}</span></div><div class="sk-alerts">${alerts.map(it=>{
             const st = skStatusOf(it);
             return `<div class="sk-alert ${st}"><div class="sk-alert-ico"><i data-lucide="${st==='out'?'x-octagon':'alert-triangle'}"></i></div>
               <div class="sk-alert-body"><div class="sk-alert-top"><span class="sk-alert-name">${kdsEsc(it.name)}</span><span class="sk-alert-cat">${SK_CATS[it.cat]||it.cat}</span><span class="sk-alert-status ${st}">${st==='out'?'Rupture':'Bas'}</span></div>
               <div class="sk-alert-meta">${it.stock} ${it.unit} en stock · par ${it.par} ${it.unit} · ${kdsEsc(it.supplier)}</div></div>
-              <button class="ma-btn primary sk-mini" data-sk-order="${it.id}"><i data-lucide="truck"></i>Commander</button></div>`;
+              <div style="display:flex;gap:6px;">
+                <button class="ma-btn secondary sk-mini" data-sk-waste="${it.id}" style="color:#b91c1c;"><i data-lucide="trash-2"></i>Perte</button>
+                <button class="ma-btn primary sk-mini" data-sk-order="${it.id}"><i data-lucide="truck"></i>Commander</button>
+              </div></div>`;
           }).join('')}</div></div>`
         : `<div class="sk-section"><div class="sk-empty"><i data-lucide="check-circle-2"></i>Tout est au niveau, aucune alerte.</div></div>`;
-      return kpis + list;
+
+      // Dernières pertes (20 plus récentes, journée commerciale d'abord)
+      const recentWaste = (function(){
+        const I = window.KiwiInventory;
+        if (!I || !I.history) return [];
+        const rows = (I.history() || []).filter(r => r && (r.refType === 'waste' || ['loss','expiry','gift','staff-meal'].includes(r.reason)));
+        const curDay = (window.KiwiDayReport && window.KiwiDayReport.businessDay) ? window.KiwiDayReport.businessDay(Date.now()) : '';
+        return rows.slice(0, 20).map(r => {
+          const it = stockItems.find(i => i.id === r.itemId) || { name: r.itemId, unit: 'unité', cost: r.unitCost || 0 };
+          const rDay = (window.KiwiDayReport && window.KiwiDayReport.businessDay) ? window.KiwiDayReport.businessDay(r.occurredTs) : '';
+          const isToday = curDay && rDay === curDay;
+          const cost = r.unitCost != null ? r.unitCost : (it.cost || 0);
+          const valMAD = Math.abs(r.qty) * cost;
+          const reasonLabel = (function(why){
+            if (why === 'perime' || r.reason === 'expiry') return 'Périmé';
+            if (why === 'casse') return 'Casse';
+            if (why === 'avarie') return 'Avarié / Abîmé';
+            if (why === 'offert' || r.reason === 'gift') return 'Offert';
+            if (why === 'repas-equipe' || r.reason === 'staff-meal') return 'Repas équipe';
+            return 'Autre perte';
+          })(r.meta && r.meta.wasteReason);
+          return {
+            id: r.id,
+            itemId: r.itemId,
+            name: it.name,
+            qty: Math.abs(r.qty),
+            unit: it.unit,
+            valMAD: valMAD,
+            actor: r.actor || (r.meta && r.meta.actor) || 'Caissier',
+            reason: reasonLabel,
+            note: r.note || '',
+            ts: r.occurredTs,
+            isToday: isToday
+          };
+        });
+      })();
+
+      const wasteSection = recentWaste.length ? `
+        <div class="sk-section" style="margin-top:20px;">
+          <div class="sk-section-head">
+            <h3>Dernières pertes</h3>
+            <span class="sk-badge" style="background:rgba(220,38,38,0.1);color:#991b1b;">${recentWaste.length}</span>
+          </div>
+          <div class="sk-tbl-wrap">
+            <table class="sk-tbl">
+              <thead><tr><th>Date &amp; heure</th><th>Article</th><th>Quantité</th><th>Motif</th><th>Valeur</th><th>Employé</th></tr></thead>
+              <tbody>
+                ${recentWaste.map(w => {
+                  const d = new Date(w.ts);
+                  const timeStr = (w.isToday ? "Aujourd'hui " : (d.toLocaleDateString('fr-FR') + ' ')) + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+                  return `<tr>
+                    <td class="sk-mono" style="font-size:12px;color:var(--n-600);">${timeStr}</td>
+                    <td><div class="sk-cell-name">${kdsEsc(w.name)}</div>${w.note ? `<div class="sk-cell-sub">${kdsEsc(w.note)}</div>` : ''}</td>
+                    <td class="sk-mono" style="color:#b91c1c;font-weight:600;">−${w.qty} ${kdsEsc(w.unit)}</td>
+                    <td><span class="sk-badge warn" style="font-size:11px;">${kdsEsc(w.reason)}</span></td>
+                    <td class="sk-mono">${fmtMAD(w.valMAD)}</td>
+                    <td style="font-size:12px;color:var(--n-600);">${kdsEsc(w.actor)}</td>
+                  </tr>`;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>` : '';
+
+      return kpis + quickActs + list + wasteSection;
     }
 
     function skFilteredItems(){
@@ -16387,7 +16459,7 @@
           <td class="sk-mono">${fmtMAD(it.stock * it.cost)}</td>
           <td class="sk-cell-sup">${kdsEsc(it.supplier)}</td>
           <td><span class="sk-status ${st}"><span class="sd"></span>${st==='out'?'Rupture':(st==='low'?'Bas':'OK')}</span></td>
-          <td class="r"><div class="sk-actions"><button class="sk-icon-btn" data-sk-order="${it.id}" title="Commander"><i data-lucide="truck"></i></button></div></td>
+          <td class="r"><div class="sk-actions"><button class="sk-icon-btn" data-sk-waste="${it.id}" title="Déclarer une perte" style="color:#b91c1c;"><i data-lucide="trash-2"></i></button><button class="sk-icon-btn" data-sk-order="${it.id}" title="Commander"><i data-lucide="truck"></i></button></div></td>
         </tr>`;
       }).join('');
     }
@@ -16722,6 +16794,165 @@
       toast(`Stock mis à jour · ${added} article${added>1?'s':''}`);
     }
 
+    /* ---- Pertes de stock (Waste Management) ---- */
+    function openWasteModal(prefillItemId, prefillLotId, prefillQty, prefillReason){
+      const items = stockItems.slice();
+      const selItem = prefillItemId ? items.find(i => i.id === prefillItemId) : items[0];
+      const selId = selItem ? selItem.id : (items[0] ? items[0].id : '');
+      const unit = selItem ? selItem.unit : 'unité';
+      const initialQty = prefillQty != null ? prefillQty : '';
+      const initialReason = prefillReason || 'casse';
+      const initialLot = prefillLotId || '';
+      
+      const itemOptions = items.map(it => `<option value="${it.id}" ${it.id === selId ? 'selected' : ''}>${kdsEsc(it.name)} (${it.stock} ${it.unit} en stock)</option>`).join('');
+      
+      const cashierName = (currentCashier && currentCashier.name) || 'Caissier';
+      const now = new Date();
+      const nowISO = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+
+      const html = `
+        <div class="split-badge" style="background:rgba(220,38,38,0.12);color:#991b1b;"><i data-lucide="trash-2"></i> Perte de stock</div>
+        <h3 class="modal-title" style="margin-bottom:6px;">Déclarer une perte</h3>
+        <p class="modal-subtle" style="margin:0 0 16px;">Enregistre les produits sortis pour casse, péremption, avarie ou repas équipe. Le stock sera déduit immédiatement.</p>
+        
+        <div class="sk-field" style="margin-bottom:12px;">
+          <label style="font-size:12px;font-weight:600;color:var(--n-600);display:block;margin-bottom:4px;">Article / Ingrédient</label>
+          <select class="sk-select" id="sk-w-item" style="width:100%;">${itemOptions}</select>
+        </div>
+
+        <div class="sk-field-row" style="display:flex;gap:10px;margin-bottom:12px;">
+          <div class="sk-field" style="flex:1;">
+            <label style="font-size:12px;font-weight:600;color:var(--n-600);display:block;margin-bottom:4px;">Quantité perdue</label>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <input class="sk-input" id="sk-w-qty" type="number" min="0.001" step="any" placeholder="0" value="${initialQty}" style="flex:1;">
+              <span id="sk-w-unit" style="font-size:13px;font-weight:600;color:var(--n-700);">${kdsEsc(unit)}</span>
+            </div>
+          </div>
+          <div class="sk-field" style="flex:1.2;">
+            <label style="font-size:12px;font-weight:600;color:var(--n-600);display:block;margin-bottom:4px;">Motif</label>
+            <select class="sk-select" id="sk-w-reason" style="width:100%;">
+              <option value="perime" ${initialReason==='perime'?'selected':''}>Périmé (DLC dépassée)</option>
+              <option value="casse" ${initialReason==='casse'?'selected':''}>Casse</option>
+              <option value="avarie" ${initialReason==='avarie'?'selected':''}>Avarié / Abîmé</option>
+              <option value="offert" ${initialReason==='offert'?'selected':''}>Offert / Geste commercial</option>
+              <option value="repas-equipe" ${initialReason==='repas-equipe'?'selected':''}>Repas équipe</option>
+              <option value="autre" ${initialReason==='autre'?'selected':''}>Autre perte</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="sk-field-row" style="display:flex;gap:10px;margin-bottom:12px;">
+          <div class="sk-field" style="flex:1;">
+            <label style="font-size:12px;font-weight:600;color:var(--n-600);display:block;margin-bottom:4px;">Lot / Réf. (optionnel)</label>
+            <input class="sk-input" id="sk-w-lot" placeholder="Ex: LOT-2026-08" value="${kdsEsc(initialLot)}" style="width:100%;">
+          </div>
+          <div class="sk-field" style="flex:1;">
+            <label style="font-size:12px;font-weight:600;color:var(--n-600);display:block;margin-bottom:4px;">Date &amp; Heure</label>
+            <input class="sk-input" id="sk-w-time" type="datetime-local" value="${nowISO}" style="width:100%;">
+          </div>
+        </div>
+
+        <div class="sk-field" style="margin-bottom:12px;">
+          <label style="font-size:12px;font-weight:600;color:var(--n-600);display:block;margin-bottom:4px;">Employé</label>
+          <input class="sk-input" value="${kdsEsc(cashierName)}" readonly style="width:100%;background:var(--n-100);cursor:not-allowed;">
+        </div>
+
+        <div class="sk-field" style="margin-bottom:16px;">
+          <label style="font-size:12px;font-weight:600;color:var(--n-600);display:block;margin-bottom:4px;">Note ou commentaire (optionnel)</label>
+          <input class="sk-input" id="sk-w-note" placeholder="Détails sur la perte…" maxlength="500" style="width:100%;">
+        </div>
+
+        <div class="nt-actions" style="display:flex;gap:8px;">
+          <button class="ma-btn secondary" data-sk-cancel style="flex:1;">Annuler</button>
+          <button class="ma-btn primary" id="sk-commit-waste-btn" data-sk-commit-waste style="flex:2;background:#dc2626;border-color:#b91c1c;"><i data-lucide="trash-2"></i>Confirmer la perte</button>
+        </div>
+      `;
+      openSkModal(html);
+      
+      const itemSel = $('#sk-w-item');
+      if (itemSel) {
+        itemSel.addEventListener('change', () => {
+          const chosen = stockItems.find(i => i.id === itemSel.value);
+          const uEl = $('#sk-w-unit');
+          if (chosen && uEl) uEl.textContent = chosen.unit;
+        });
+      }
+    }
+
+    function commitWaste(){
+      const itemSel = $('#sk-w-item');
+      const itId = itemSel ? itemSel.value : '';
+      const it = stockItems.find(i => i.id === itId);
+      if (!it) { toast('Sélectionne un article'); return; }
+      const qty = parseFloat($('#sk-w-qty').value) || 0;
+      if (qty <= 0) { toast('Indique une quantité valide'); return; }
+      if (qty > it.stock) {
+        if (!confirm(`La quantité saisie (${qty} ${it.unit}) est supérieure au stock disponible (${it.stock} ${it.unit}). Confirmer quand même ?`)) {
+          return;
+        }
+      }
+      const fineReason = $('#sk-w-reason').value || 'casse';
+      const ledgerReasonMap = {
+        'perime': 'expiry',
+        'casse': 'loss',
+        'avarie': 'loss',
+        'offert': 'gift',
+        'repas-equipe': 'staff-meal',
+        'autre': 'loss'
+      };
+      const ledgerReason = ledgerReasonMap[fineReason] || 'loss';
+      const lotId = ($('#sk-w-lot').value || '').trim();
+      const note = ($('#sk-w-note').value || '').trim();
+      const timeVal = $('#sk-w-time').value;
+      let occurredTs = Date.now();
+      if (timeVal) {
+        const parsed = new Date(timeVal).getTime();
+        if (!isNaN(parsed) && parsed > 0) occurredTs = parsed;
+      }
+      
+      let unitCost = it.cost || null;
+      if (window.KiwiInventoryConsumption && window.KiwiInventoryConsumption.allocateCost) {
+        const alloc = window.KiwiInventoryConsumption.allocateCost(it.id, qty, it.cost);
+        if (alloc != null) unitCost = alloc;
+      } else if (window.KiwiInventoryConsumption && window.KiwiInventoryConsumption.deriveLots) {
+        const lots = window.KiwiInventoryConsumption.deriveLots(it.id) || [];
+        if (lots.length && lots[0].unitCost != null) unitCost = lots[0].unitCost;
+      }
+
+      const wasteRef = 'waste-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
+      const meta = {
+        wasteReason: fineReason,
+        lotId: lotId || undefined,
+        actorId: (currentCashier && currentCashier.id) || '',
+        note: note || undefined,
+      };
+      
+      if (storeIsReal() && window.KiwiCaisseStock) {
+        window.KiwiCaisseStock.move(it.id, -qty, ledgerReason, wasteRef, unitCost, meta, currentCashier);
+      } else if (window.KiwiInventory && window.KiwiInventory.add) {
+        window.KiwiInventory.add({
+          itemId: it.id,
+          qty: -qty,
+          reason: ledgerReason,
+          refType: 'waste',
+          refId: wasteRef,
+          note: note || 'Déclaration de perte',
+          unitCost: unitCost,
+          actor: (currentCashier && currentCashier.name) || 'Caissier',
+          occurredTs: occurredTs,
+          meta: meta
+        });
+        it.stock = Math.max(0, it.stock - qty);
+      } else {
+        it.stock = Math.max(0, it.stock - qty);
+      }
+      
+      syncSharedStock(false);
+      closeSkModal();
+      renderStock();
+      toast(`Perte de ${qty} ${it.unit} enregistrée`);
+    }
+
     /* ---- open / close + delegation ---- */
     function openStock(){
       bindSharedStock(); syncSharedStock(false); renderStock();
@@ -16746,6 +16977,9 @@
       const ord = e.target.closest('[data-sk-order]');  if (ord){ const it = stockItems.find(i=>i.id===ord.dataset.skOrder); openNewOrder(it && it.supplier, it && it.id); return; }
       if (e.target.closest('[data-sk-additem]'))     { openAddItem(); return; }
       if (e.target.closest('[data-sk-neworder]'))    { openNewOrder(); return; }
+      if (e.target.closest('[data-sk-newwaste]') || e.target.id === 'sk-new-waste-btn'){ openWasteModal(); return; }
+      if (e.target.closest('[data-sk-waste]')){ openWasteModal(e.target.closest('[data-sk-waste]').dataset.skWaste); return; }
+      if (e.target.closest('[data-sk-recept-act]') || e.target.id === 'sk-apercu-recept-btn'){ openRecept(); return; }
       const cf = e.target.closest('[data-sk-confirm]'); if (cf){ confirmOrder(cf.dataset.skConfirm); return; }
       const rc = e.target.closest('[data-sk-receive]'); if (rc){ receiveOrder(rc.dataset.skReceive); return; }
       if (e.target.closest('[data-sk-validate-inv]')){ validateInventory(); return; }
@@ -16756,6 +16990,7 @@
       const si = e.target.closest('[data-sk-save-item]'); if (si){ saveEditItem(si.dataset.skSaveItem); return; }
       if (e.target.closest('[data-sk-add-save]'))   { saveNewItem(); return; }
       if (e.target.closest('[data-sk-create-order]')){ createOrder(); return; }
+      if (e.target.closest('[data-sk-commit-waste]')){ commitWaste(); return; }
       const rm = e.target.closest('[data-sk-rmode]'); if (rm){ skReceptMode = rm.dataset.skRmode; if (skReceptMode==='manual' && !skReceptLines.length) skReceptLines=[{name:'',qty:'',cost:''}]; refreshReceptModal(); return; }
       if (e.target.closest('[data-sk-scan]')){ skScan(); return; }
       if (e.target.closest('[data-sk-rline-add]')){ skReceptLines.push({name:'',qty:'',cost:''}); rerenderReceptBody(); return; }

@@ -349,23 +349,42 @@
     if (patch.stock != null) count(id, Math.max(0, +patch.stock || 0), 'caisse-edit');
     return true;
   }
-  function move(id, qty, reason, refId, unitCost, meta) {
+  function move(id, qty, reason, refId, unitCost, meta, actor) {
     qty = Math.round((+qty || 0) * 1000) / 1000;
     if (!id || !qty || !window.KiwiInventory) return null;
     var it = materialize().find(function (row) { return row.id === String(id); });
+    meta = (meta && typeof meta === 'object') ? Object.assign({}, meta) : {};
+    var resolvedActor = '';
+    if (typeof actor === 'string' && actor.trim()) {
+      resolvedActor = actor.trim();
+    } else if (actor && typeof actor === 'object' && actor.name) {
+      resolvedActor = String(actor.name).trim();
+      if (actor.id && !meta.actorId) meta.actorId = String(actor.id);
+    } else if (meta.actorName) {
+      resolvedActor = String(meta.actorName).trim();
+    } else if (meta.actor) {
+      resolvedActor = String(meta.actor).trim();
+    } else if (typeof window !== 'undefined' && window.currentCashier && window.currentCashier.name) {
+      resolvedActor = String(window.currentCashier.name).trim();
+      if (window.currentCashier.id && !meta.actorId) meta.actorId = String(window.currentCashier.id);
+    }
+    if (meta.actorId == null && typeof window !== 'undefined' && window.currentCashier && window.currentCashier.id) {
+      meta.actorId = String(window.currentCashier.id);
+    }
     return window.KiwiInventory.add({
       itemId: String(id), qty: qty, reason: reason || 'manual', refType: reason || 'manual',
       refId: String(refId || ('caisse-' + Date.now().toString(36))),
       note: 'Mouvement saisi depuis la caisse',
       unitCost: unitCost == null ? (it ? it.cost || null : null) : unitCost,
-      meta: meta || null,
+      meta: Object.keys(meta).length ? meta : null,
+      actor: resolvedActor,
     });
   }
-  function count(id, value, refId) {
+  function count(id, value, refId, actor) {
     var it = materialize().find(function (row) { return row.id === String(id); });
     if (!it) return 0;
     var diff = Math.round((Math.max(0, +value || 0) - it.stock) * 1000) / 1000;
-    if (diff) move(id, diff, 'count', refId || ('caisse-count-' + Date.now().toString(36)));
+    if (diff) move(id, diff, 'count', refId || ('caisse-count-' + Date.now().toString(36)), null, null, actor);
     return diff;
   }
 

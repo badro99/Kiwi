@@ -88,8 +88,8 @@
     "sha": "509b94e540471caf"
   },
   "assets/caisse-stock-sync.js": {
-    "v": "8",
-    "sha": "89545c5e4556f0c1"
+    "v": "9",
+    "sha": "30f9a9b0b13c9efc"
   },
   "assets/cancellation-history.js": {
     "v": "2",
@@ -600,8 +600,8 @@
     "sha": "a4c3a6b89b6ee0d0"
   },
   "assets/stock.js": {
-    "v": "19",
-    "sha": "2c9b26db60d0bc2a"
+    "v": "21",
+    "sha": "d1f175ba7c1bffa4"
   },
   "assets/store-templates.js": {
     "v": "1",

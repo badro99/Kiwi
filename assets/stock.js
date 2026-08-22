@@ -771,6 +771,10 @@
   let stSortBy = 'name';
   let stSortDir = 'asc';
   let stVenueFilter = 'all';
+  let stItemSubView = 'catalog'; // 'catalog' | 'waste' | 'counts'
+  let stWasteFilterReason = 'all';
+  let stWasteDateRange = '30j';
+  let stWasteSearch = '';
   const stStockOverrides = {};
   const stMarked86 = new Set();
   const stConfirmedOrders = new Set();
@@ -1466,6 +1470,8 @@
     // Wire up search input
     const sb = document.querySelector('[data-stock-search-input]');
     if (sb) sb.addEventListener('input', (e) => { stSearch = e.target.value.toLowerCase(); rerenderTabBody(); });
+    const wsb = document.querySelector('[data-stock-waste-search]');
+    if (wsb) wsb.addEventListener('input', (e) => { stWasteSearch = e.target.value; rerenderTabBody(); });
   }
 
   function rerenderTabBody() {
@@ -1825,9 +1831,246 @@
   }
 
   /* ═══════════════════════════════════════════════════════════════════════
-   * TAB 2 · Articles & stock
+   * TAB 2 · Articles & stock (Catalogue, Journal des pertes, Historique)
    * ═══════════════════════════════════════════════════════════════════════ */
+  function getWasteMovements() {
+    const I = window.KiwiInventory;
+    if (!I || !I.history) return [];
+    const all = I.history() || [];
+    let wasteRows = all.filter(r => r && (r.refType === 'waste' || ['loss', 'expiry', 'gift', 'staff-meal'].includes(r.reason)));
+    
+    // Apply date range filter
+    const now = Date.now();
+    const dayStart = (window.KiwiDayReport && window.KiwiDayReport.dayBounds)
+      ? window.KiwiDayReport.dayBounds(window.KiwiDayReport.businessDay(now)).from
+      : new Date().setHours(5, 0, 0, 0);
+    
+    if (stWasteDateRange === 'aujourdhui') {
+      wasteRows = wasteRows.filter(r => (+r.occurredTs || 0) >= dayStart);
+    } else if (stWasteDateRange === '7j') {
+      wasteRows = wasteRows.filter(r => (+r.occurredTs || 0) >= now - 7 * 864e5);
+    } else if (stWasteDateRange === '30j') {
+      wasteRows = wasteRows.filter(r => (+r.occurredTs || 0) >= now - 30 * 864e5);
+    }
+    
+    // Reason filter
+    if (stWasteFilterReason !== 'all') {
+      wasteRows = wasteRows.filter(r => {
+        const fine = r.meta && r.meta.wasteReason;
+        if (fine === stWasteFilterReason) return true;
+        if (stWasteFilterReason === 'expiry' && r.reason === 'expiry') return true;
+        if (stWasteFilterReason === 'gift' && r.reason === 'gift') return true;
+        if (stWasteFilterReason === 'staff-meal' && r.reason === 'staff-meal') return true;
+        if (stWasteFilterReason === 'loss' && r.reason === 'loss') return true;
+        return false;
+      });
+    }
+
+    // Search filter
+    if (stWasteSearch) {
+      const q = stWasteSearch.toLowerCase();
+      wasteRows = wasteRows.filter(r => {
+        const it = getInv().find(x => x.id === r.itemId);
+        const name = (it ? it.name : r.itemId).toLowerCase();
+        const actor = String(r.actor || '').toLowerCase();
+        const note = String(r.note || '').toLowerCase();
+        return name.includes(q) || actor.includes(q) || note.includes(q);
+      });
+    }
+
+    return wasteRows;
+  }
+
+  function renderWasteJournal() {
+    const rows = getWasteMovements();
+    const inv = getInv();
+    const totalQty = rows.reduce((acc, r) => acc + Math.abs(+r.qty || 0), 0);
+    const totalVal = rows.reduce((acc, r) => {
+      const it = inv.find(x => x.id === r.itemId);
+      const cost = r.unitCost != null ? r.unitCost : (it ? it.costPerUnit : 0);
+      return acc + Math.abs(+r.qty || 0) * cost;
+    }, 0);
+
+    const rangePill = (id, label) => `<button class="st-cat-pill${stWasteDateRange === id ? ' on' : ''}" type="button" data-action="stock-waste-range" data-range="${id}">${esc(label)}</button>`;
+    const reasonPill = (id, label) => `<button class="st-cat-pill${stWasteFilterReason === id ? ' on' : ''}" type="button" data-action="stock-waste-reason" data-reason="${id}">${esc(label)}</button>`;
+
+    const reasonLabelMap = {
+      'perime': 'Périmé',
+      'casse': 'Casse',
+      'avarie': 'Avarié / Abîmé',
+      'offert': 'Offert',
+      'repas-equipe': 'Repas équipe',
+      'autre': 'Autre perte',
+      'expiry': 'Périmé',
+      'gift': 'Offert',
+      'staff-meal': 'Repas équipe',
+      'loss': 'Perte'
+    };
+
+    return `
+      <div class="st-section">
+        <div class="st-toolbar" style="margin-bottom:16px;">
+          <div class="st-search-row">
+            <div class="st-search-wrap">
+              ${svg('search', 16)}
+              <input class="st-search" type="text" placeholder="Chercher un article, employé, note…" value="${esc(stWasteSearch)}" data-stock-waste-search aria-label="Recherche journal des pertes" />
+            </div>
+            <button class="st-btn secondary" type="button" data-action="stock-export-waste-csv" style="display:flex;align-items:center;gap:6px;">
+              ${svg('download', 14)}<span>Exporter CSV</span>
+            </button>
+          </div>
+          <div class="st-filter-row" style="display:flex; gap:5px; background:var(--paper-soft); padding:4px; border-radius:999px; border:1px solid var(--n-200); width:fit-content; max-width:100%; flex-wrap:wrap;">
+            ${rangePill('aujourdhui', "Aujourd'hui")}
+            ${rangePill('7j', '7 derniers jours')}
+            ${rangePill('30j', '30 derniers jours')}
+            ${rangePill('tout', 'Tout l’historique')}
+          </div>
+          <div class="st-filter-row" style="display:flex; gap:5px; background:var(--paper-soft); padding:4px; border-radius:999px; border:1px solid var(--n-200); width:fit-content; max-width:100%; flex-wrap:wrap;">
+            ${reasonPill('all', 'Tous motifs')}
+            ${reasonPill('perime', 'Périmé')}
+            ${reasonPill('casse', 'Casse')}
+            ${reasonPill('avarie', 'Avarié')}
+            ${reasonPill('offert', 'Offert')}
+            ${reasonPill('repas-equipe', 'Repas équipe')}
+          </div>
+        </div>
+
+        <div class="st-kpis" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:12px;margin-bottom:16px;">
+          <div class="st-kpi"><div class="st-kpi-l">TOTAL VALEUR PERDUE</div><div class="st-kpi-v" style="color:#b91c1c;">${fmtMad(totalVal)}</div><div class="st-kpi-sub">${rows.length} déclarations de pertes</div></div>
+          <div class="st-kpi"><div class="st-kpi-l">VOLUME D'ARTICLES PERDUS</div><div class="st-kpi-v">${Math.round(totalQty * 10) / 10}</div><div class="st-kpi-sub">unités / kg sorties</div></div>
+        </div>
+
+        <div class="st-tbl-wrap">
+          <table class="st-tbl">
+            <thead>
+              <tr>
+                <th>Date &amp; Heure</th>
+                <th>Article</th>
+                <th>Quantité</th>
+                <th>Unité</th>
+                <th>Motif</th>
+                <th>Valeur MAD</th>
+                <th>Employé</th>
+                <th>Note</th>
+                <th style="text-align:right;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows.length ? rows.map(r => {
+                const it = inv.find(x => x.id === r.itemId) || { name: r.itemId, unit: 'unité', costPerUnit: r.unitCost || 0 };
+                const cost = r.unitCost != null ? r.unitCost : (it.costPerUnit || 0);
+                const valMAD = Math.abs(+r.qty || 0) * cost;
+                const d = new Date(r.occurredTs);
+                const dateStr = d.toLocaleDateString('fr-FR') + ' ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+                const fine = (r.meta && r.meta.wasteReason) || r.reason;
+                const reasonLabel = reasonLabelMap[fine] || fine || 'Perte';
+                const isReversal = !!r.reversalOf;
+                return `
+                  <tr style="${isReversal ? 'opacity:0.6;font-style:italic;' : ''}">
+                    <td class="st-mono" style="font-size:12px;color:var(--n-600);white-space:nowrap;">${dateStr}</td>
+                    <td><b>${esc(it.name)}</b>${r.meta?.lotId ? `<div style="font-size:11px;color:var(--n-500);">Lot: ${esc(r.meta.lotId)}</div>` : ''}</td>
+                    <td class="st-mono" style="color:${+r.qty < 0 ? '#b91c1c' : 'var(--atlas)'};font-weight:600;">${+r.qty < 0 ? '−' : '+'}${Math.abs(+r.qty || 0)}</td>
+                    <td>${esc(it.unit)}</td>
+                    <td><span class="st-badge warn" style="font-size:11px;">${esc(reasonLabel)}</span></td>
+                    <td class="st-mono">${fmtMad(valMAD)}</td>
+                    <td style="font-size:12.5px;">${esc(r.actor || (r.meta && r.meta.actor) || '—')}</td>
+                    <td style="font-size:12px;color:var(--n-600);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(r.note || '')}">${esc(r.note || '—')}</td>
+                    <td style="text-align:right;">
+                      ${stShowReal() && !isReversal ? `
+                        <button class="st-btn small" type="button" data-action="stock-cancel-waste" data-movement-id="${esc(r.id)}" title="Annuler cette perte" style="color:#b91c1c;border-color:rgba(185,28,28,0.25);">
+                          Annuler
+                        </button>
+                      ` : '—'}
+                    </td>
+                  </tr>
+                `;
+              }).join('') : `<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--n-500);">Aucune perte enregistrée sur cette période.</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+        <div class="st-tbl-foot">
+          Total : ${rows.length} lignes de pertes · Valeur cumulée : <b>${fmtMad(totalVal)}</b>
+        </div>
+      </div>
+    `;
+  }
+
+  function exportWasteCsv() {
+    const rows = getWasteMovements();
+    const inv = getInv();
+    const reasonLabelMap = {
+      'perime': 'Périmé', 'casse': 'Casse', 'avarie': 'Avarié / Abîmé',
+      'offert': 'Offert', 'repas-equipe': 'Repas équipe', 'autre': 'Autre perte',
+      'expiry': 'Périmé', 'gift': 'Offert', 'staff-meal': 'Repas équipe', 'loss': 'Perte'
+    };
+    function csvSafe(v) {
+      let s = String(v == null ? '' : v);
+      if (/^[\t\r ]*[=+\-@]/.test(s)) s = "'" + s;
+      return '"' + s.replace(/"/g, '""') + '"';
+    }
+    const header = ['Date', 'Article', 'Quantite', 'Unite', 'Motif', 'Valeur_MAD', 'Employe', 'Note', 'ID_Mouvement'];
+    const lines = [header.join(';')];
+    rows.forEach(r => {
+      const it = inv.find(x => x.id === r.itemId) || { name: r.itemId, unit: 'unité', costPerUnit: r.unitCost || 0 };
+      const cost = r.unitCost != null ? r.unitCost : (it.costPerUnit || 0);
+      const valMAD = Math.abs(+r.qty || 0) * cost;
+      const d = new Date(r.occurredTs).toISOString().slice(0, 19).replace('T', ' ');
+      const fine = (r.meta && r.meta.wasteReason) || r.reason;
+      const reasonLabel = reasonLabelMap[fine] || fine || 'Perte';
+      lines.push([
+        d,
+        csvSafe(it.name),
+        Math.abs(+r.qty || 0),
+        csvSafe(it.unit),
+        csvSafe(reasonLabel),
+        valMAD.toFixed(2),
+        csvSafe(r.actor || ''),
+        csvSafe(r.note || ''),
+        r.id
+      ].join(';'));
+    });
+    const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `journal-pertes-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+  }
+
+  function cancelWasteMovement(movementId) {
+    if (!movementId || !window.KiwiInventory) return;
+    const history = window.KiwiInventory.history() || [];
+    const m = history.find(r => r.id === movementId);
+    if (!m) { window.Kiwi?.toast?.('Mouvement introuvable', { type: 'warn' }); return; }
+    if (!confirm(`Annuler la perte de ${Math.abs(m.qty)} pour cet article ? Un contre-mouvement sera écrit dans le registre.`)) {
+      return;
+    }
+    const rev = window.KiwiInventory.reverse(m, 'manual', `Annulation perte ${m.refId || m.id}`);
+    if (rev) {
+      window.KiwiInventory.sync();
+      window.Kiwi?.toast?.('Perte annulée · contre-mouvement enregistré', { type: 'success' });
+      if (stPageActive) render();
+    }
+  }
+
   function renderItems() {
+    const subNav = `
+      <div class="st-item-subtabs" style="display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid var(--n-200);padding-bottom:10px;">
+        <button class="st-cat-pill${stItemSubView === 'catalog' ? ' on' : ''}" type="button" data-action="stock-subview" data-subview="catalog" style="font-weight:600;">Catalogue des articles</button>
+        <button class="st-cat-pill${stItemSubView === 'waste' ? ' on' : ''}" type="button" data-action="stock-subview" data-subview="waste" style="font-weight:600;">Journal des pertes</button>
+        <button class="st-cat-pill${stItemSubView === 'counts' ? ' on' : ''}" type="button" data-action="stock-subview" data-subview="counts" style="font-weight:600;">Historique des inventaires</button>
+      </div>
+    `;
+
+    if (stItemSubView === 'waste') {
+      return `<div class="st-section">${subNav}${renderWasteJournal()}</div>`;
+    }
+    if (stItemSubView === 'counts') {
+      return `<div class="st-section">${subNav}${typeof renderCountsHistory === 'function' ? renderCountsHistory() : '<div style="padding:20px;">Chargement de l\'historique…</div>'}</div>`;
+    }
+
     const items = getInv();
     const filteredAll = filterItems(items);
     const sorted = sortItems(filteredAll);
@@ -1839,6 +2082,7 @@
     };
     return `
       <div class="st-section">
+        ${subNav}
         ${renderToolbar()}
         ${stItemView === 'list' ? renderItemTable(sorted) : renderItemCardGrid(sorted)}
         <div class="st-tbl-foot">
@@ -3853,7 +4097,52 @@
               <div class="d">${esc(new Date(r.occurredTs || Date.now()).toLocaleDateString(lang() === 'ar' ? 'ar-MA' : lang() === 'en' ? 'en-GB' : 'fr-MA'))}</div>
             </div>`).join('') : `<div style="padding:12px 4px; font-size:12.5px; color:var(--n-500);">Aucun mouvement enregistré.</div>`}
         </div>
-      </div>`;
+      </div>
+      ${(function(){
+        const wasteMoves = rows.filter(r => r && (r.refType === 'waste' || ['loss', 'expiry', 'gift', 'staff-meal'].includes(r.reason)));
+        if (!wasteMoves.length) return '';
+        return `
+          <div class="st-md-section" style="margin-top:16px;">
+            <div class="st-md-section-t" style="display:flex;justify-content:space-between;align-items:center;">
+              <span>Pertes &amp; sorties exceptionnelles</span>
+              <span style="font-size:11.5px;color:#b91c1c;font-weight:600;">${wasteMoves.length} déclaration${wasteMoves.length > 1 ? 's' : ''}</span>
+            </div>
+            <div class="st-md-list">
+              ${wasteMoves.map(r => {
+                const d = new Date(r.occurredTs || Date.now());
+                const dateStr = d.toLocaleDateString('fr-FR') + ' ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+                const fine = (r.meta && r.meta.wasteReason) || r.reason;
+                const reasonLabel = (function(why){
+                  if (why === 'perime' || r.reason === 'expiry') return 'Périmé';
+                  if (why === 'casse') return 'Casse';
+                  if (why === 'avarie') return 'Avarié';
+                  if (why === 'offert' || r.reason === 'gift') return 'Offert';
+                  if (why === 'repas-equipe' || r.reason === 'staff-meal') return 'Repas équipe';
+                  return 'Perte';
+                })(fine);
+                const isReversal = !!r.reversalOf;
+                return `
+                  <div class="st-md-list-row" style="${isReversal ? 'opacity:0.5;' : ''}">
+                    <div>
+                      <span class="n" style="color:#b91c1c;">${esc(reasonLabel)}</span>
+                      <span class="d" style="margin-left:6px;">${esc(r.actor || '—')} ${r.note ? `· ${esc(r.note)}` : ''}</span>
+                    </div>
+                    <div class="v" style="color:#b91c1c;font-weight:600;">−${Math.abs(+r.qty || 0)} ${esc(it.unit)}</div>
+                    <div class="d" style="display:flex;align-items:center;gap:6px;">
+                      <span>${dateStr}</span>
+                      ${stShowReal() && !isReversal ? `
+                        <button class="st-btn small" type="button" data-action="stock-cancel-waste" data-movement-id="${esc(r.id)}" title="Annuler cette perte" style="color:#b91c1c;padding:1px 6px;font-size:11px;">
+                          Annuler
+                        </button>
+                      ` : ''}
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `;
+      })()}`;
   }
   function openAddBackupSupplier(itemId) {
     const it = getInv().find(x => x.id === itemId);
@@ -4629,6 +4918,11 @@
 
     // Tabs / filters / view
     H['stock-tab'] = (el) => { stCurrentTab = el.dataset.tab; render(); };
+    H['stock-subview'] = (el) => { stItemSubView = el.dataset.subview; render(); };
+    H['stock-waste-range'] = (el) => { stWasteDateRange = el.dataset.range; rerenderTabBody(); };
+    H['stock-waste-reason'] = (el) => { stWasteFilterReason = el.dataset.reason; rerenderTabBody(); };
+    H['stock-export-waste-csv'] = () => exportWasteCsv();
+    H['stock-cancel-waste'] = (el) => cancelWasteMovement(el.dataset.movementId);
     H['stock-venue-filter'] = (el) => { stVenueFilter = el.dataset.venue; render(); };
     H['stock-cat-filter'] = (el) => { stCatFilter = el.dataset.cat; rerenderTabBody(); };
     H['stock-status-filter'] = (el) => { stStatusFilter = el.dataset.status; rerenderTabBody(); };
