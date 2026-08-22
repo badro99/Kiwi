@@ -451,6 +451,10 @@
     "v": "3",
     "sha": "99730a3c57253323"
   },
+  "assets/pos-inventory-count.js": {
+    "v": "2",
+    "sha": "250d335e036b09f2"
+  },
   "assets/pos-librairie.css": {
     "v": "3",
     "sha": "9e38290620c45b6c"
@@ -600,8 +604,8 @@
     "sha": "a4c3a6b89b6ee0d0"
   },
   "assets/stock.js": {
-    "v": "21",
-    "sha": "d1f175ba7c1bffa4"
+    "v": "23",
+    "sha": "a3897cb7c3071e0c"
   },
   "assets/store-templates.js": {
     "v": "1",

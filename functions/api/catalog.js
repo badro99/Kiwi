@@ -83,13 +83,18 @@ function sanitize(raw) {
    * dans le socle (compact()), donc perdre les plus anciens ne perd aucune
    * unité — perdre les plus récents, si. */
   out.moves = (Array.isArray(raw.moves) ? raw.moves : [])
-    .map((m) => ({
-      id: str(m && m.id, 64),
-      vid: str(m && m.vid, 40),
-      d: Math.max(-1e6, Math.min(1e6, Math.round(Number(m && m.d) || 0))),
-      at: ts(m && m.at),
-      why: str(m && m.why, 16),
-    }))
+    .map((m) => {
+      const row = {
+        id: str(m && m.id, 64),
+        vid: str(m && m.vid, 40),
+        d: Math.max(-1e6, Math.min(1e6, Math.round(Number(m && m.d) || 0))),
+        at: ts(m && m.at),
+        why: str(m && m.why, 16),
+      };
+      if (m && m.actor) row.actor = str(m.actor, 64);
+      if (m && m.ref) row.ref = str(m.ref, 64);
+      return row;
+    })
     .filter((m) => m.id && m.vid && m.d && m.at)
     .sort((a, b) => b.at - a.at)
     .slice(0, 12000);

@@ -5412,6 +5412,7 @@
        tableau de bord. Les quantités passent par le registre append-only ; ce
        pont ne maintient jamais un second snapshot propre à la caisse. -->
   <script src="assets/caisse-stock-sync.js?v=9" defer></script>
+  <script src="assets/pos-inventory-count.js?v=2" defer></script>
   <!-- Les horaires de l'établissement, réglés une seule fois côté tableau de
        bord. La caisse les LIT : ouvrir un service hors horaires demande une
        dérogation nommée, et la journée commerciale du Z suit l'heure de
@@ -16500,16 +16501,22 @@
     }
 
     function renderSkInventaire(){
-      const rows = stockItems.map(it=>`<tr>
-        <td><div class="sk-cell-name">${kdsEsc(it.name)}</div><div class="sk-cell-sub">${SK_CATS[it.cat]||it.cat}</div></td>
-        <td class="sk-mono">${it.stock} ${it.unit}</td>
-        <td><input class="sk-count-input" type="number" min="0" inputmode="numeric" data-sk-count="${it.id}" value="${it.stock}"><span class="sk-unit">${it.unit}</span></td>
-      </tr>`).join('');
-      return `<div class="sk-toolbar">
-          <div class="sk-section-head" style="margin:0"><h3>Inventaire physique</h3><span class="sk-section-sub">Compte les quantités réelles, puis valide.</span></div>
-          <button class="ma-btn primary sk-add" data-sk-validate-inv><i data-lucide="clipboard-check"></i>Valider l'inventaire</button>
+      return `
+        <div class="sk-section" style="padding:28px 16px;text-align:center;">
+          <div style="width:56px;height:56px;border-radius:16px;background:rgba(5,150,105,0.1);color:#059669;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:28px;">
+            <i data-lucide="clipboard-check"></i>
+          </div>
+          <h3 style="font-size:18px;margin-bottom:6px;">Inventaire physique à l'aveugle</h3>
+          <p style="font-size:13.5px;color:var(--n-600);max-width:500px;margin:0 auto 18px;">
+            Comptez les quantités réelles en rayon ou en réserve sans biais visuel. Votre saisie sera transmise au propriétaire pour revue et validation.
+          </p>
+          <div style="display:flex;gap:10px;justify-content:center;">
+            <button class="ma-btn primary" id="sk-start-blind-count" data-sk-blind-count style="background:#059669;border-color:#047857;padding:12px 24px;font-size:15px;border-radius:12px;font-weight:600;">
+              <i data-lucide="scan-barcode"></i>Démarrer le comptage aveugle
+            </button>
+          </div>
         </div>
-        <div class="sk-tbl-wrap"><table class="sk-tbl"><thead><tr><th>Article</th><th>Stock système</th><th>Quantité comptée</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+      `;
     }
 
     /* ---- stock modal (edit · add · new order) ---- */
@@ -16980,6 +16987,7 @@
       if (e.target.closest('[data-sk-newwaste]') || e.target.id === 'sk-new-waste-btn'){ openWasteModal(); return; }
       if (e.target.closest('[data-sk-waste]')){ openWasteModal(e.target.closest('[data-sk-waste]').dataset.skWaste); return; }
       if (e.target.closest('[data-sk-recept-act]') || e.target.id === 'sk-apercu-recept-btn'){ openRecept(); return; }
+      if (e.target.closest('[data-sk-blind-count]') || e.target.id === 'sk-start-blind-count'){ if (window.KiwiPosInventoryCount) window.KiwiPosInventoryCount.open({ engine: 'ledger' }); return; }
       const cf = e.target.closest('[data-sk-confirm]'); if (cf){ confirmOrder(cf.dataset.skConfirm); return; }
       const rc = e.target.closest('[data-sk-receive]'); if (rc){ receiveOrder(rc.dataset.skReceive); return; }
       if (e.target.closest('[data-sk-validate-inv]')){ validateInventory(); return; }

@@ -775,6 +775,12 @@
   let stWasteFilterReason = 'all';
   let stWasteDateRange = '30j';
   let stWasteSearch = '';
+  let stCountSubTab = 'list'; // 'list' | 'rollup'
+  let stCountStatusFilter = 'all'; // 'all' | 'submitted' | 'applied' | 'rejected'
+  let stCountDateFilter = '30j'; // 'aujourdhui' | '7j' | '30j' | 'tout'
+  let stCountSearch = '';
+  let stCountsCache = [];
+  let stCountsLastFetched = 0;
   const stStockOverrides = {};
   const stMarked86 = new Set();
   const stConfirmedOrders = new Set();
@@ -1472,6 +1478,8 @@
     if (sb) sb.addEventListener('input', (e) => { stSearch = e.target.value.toLowerCase(); rerenderTabBody(); });
     const wsb = document.querySelector('[data-stock-waste-search]');
     if (wsb) wsb.addEventListener('input', (e) => { stWasteSearch = e.target.value; rerenderTabBody(); });
+    const csb = document.querySelector('[data-stock-count-search]');
+    if (csb) csb.addEventListener('input', (e) => { stCountSearch = e.target.value; rerenderTabBody(); });
   }
 
   function rerenderTabBody() {
@@ -2053,6 +2061,523 @@
       window.Kiwi?.toast?.('Perte annulée · contre-mouvement enregistré', { type: 'success' });
       if (stPageActive) render();
     }
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════
+   * HISTORIQUE DES INVENTAIRES PHYSIQUES & REVUE PROPRIÉTAIRE
+   * ═══════════════════════════════════════════════════════════════════════ */
+  async function fetchServerCounts() {
+    try {
+      const resp = await fetch('/api/inventory/counts');
+      const data = await resp.json();
+      if (data && Array.isArray(data.counts)) {
+        stCountsCache = data.counts;
+        stCountsLastFetched = Date.now();
+      }
+    } catch (_) {}
+  }
+
+  function getAllCounts() {
+    const serverCounts = Array.isArray(stCountsCache) ? stCountsCache : [];
+    const localHist = stCountHistory() || [];
+    
+    const localMapped = localHist.map((h, i) => {
+      const gaps = Array.isArray(h.gaps) ? h.gaps : [];
+      return {
+        id: h.ref || `local_cnt_${h.ts || i}`,
+        engine: 'ledger',
+        status: 'applied',
+        storeId: '',
+        storeName: 'Magasin principal',
+        employeeId: '',
+        employeeName: 'Propriétaire',
+        employeeRole: 'Admin',
+        submittedAt: h.ts || Date.now(),
+        reviewedAt: h.ts || Date.now(),
+        reviewerName: 'Propriétaire',
+        reviewDecision: 'approved',
+        appliedAt: h.ts || Date.now(),
+        totalLines: h.counted || gaps.length,
+        totalDiff: gaps.reduce((acc, g) => acc + (g.diff || 0), 0),
+        totalVarianceCostMAD: h.varMad || gaps.reduce((acc, g) => acc + (g.mad || 0), 0),
+        absVarianceCostMAD: Math.abs(h.varMad || gaps.reduce((acc, g) => acc + Math.abs(g.mad || 0), 0)),
+        lines: gaps.map(g => ({
+          key: g.id,
+          itemId: g.id,
+          productName: g.name,
+          color: '',
+          size: '',
+          sku: g.id,
+          unit: g.unit || 'unité',
+          unitCost: 0,
+          systemQty: g.theo || 0,
+          countedQty: g.counted || 0,
+          diff: g.diff || 0,
+          varianceCost: g.mad || 0,
+          explanation: g.reason || '',
+          note: ''
+        }))
+      };
+    });
+
+    const byId = new Map();
+    serverCounts.forEach(c => byId.set(c.id, c));
+    localMapped.forEach(c => { if (!byId.has(c.id)) byId.set(c.id, c); });
+    
+    return Array.from(byId.values()).sort((a, b) => (b.submittedAt || 0) - (a.submittedAt || 0));
+  }
+
+  function filterCounts(counts) {
+    const now = Date.now();
+    let rows = counts.slice();
+
+    if (stCountDateFilter === 'aujourdhui') {
+      const dayStart = (window.KiwiDayReport && window.KiwiDayReport.dayBounds)
+        ? window.KiwiDayReport.dayBounds(window.KiwiDayReport.businessDay(now)).from
+        : new Date().setHours(5, 0, 0, 0);
+      rows = rows.filter(r => (r.submittedAt || 0) >= dayStart);
+    } else if (stCountDateFilter === '7j') {
+      rows = rows.filter(r => (r.submittedAt || 0) >= now - 7 * 864e5);
+    } else if (stCountDateFilter === '30j') {
+      rows = rows.filter(r => (r.submittedAt || 0) >= now - 30 * 864e5);
+    }
+
+    if (stCountStatusFilter !== 'all') {
+      rows = rows.filter(r => r.status === stCountStatusFilter);
+    }
+
+    if (stCountSearch) {
+      const q = stCountSearch.toLowerCase();
+      rows = rows.filter(r => {
+        const emp = (r.employeeName || '').toLowerCase();
+        const stn = (r.storeName || '').toLowerCase();
+        const cid = (r.id || '').toLowerCase();
+        return emp.includes(q) || stn.includes(q) || cid.includes(q);
+      });
+    }
+
+    return rows;
+  }
+
+  function renderCountsHistory() {
+    if (Date.now() - stCountsLastFetched > 30000) {
+      fetchServerCounts().then(() => {
+        if (stPageActive && stItemSubView === 'counts') rerenderTabBody();
+      });
+    }
+
+    const allCounts = getAllCounts();
+    const filtered = filterCounts(allCounts);
+
+    const rangePill = (id, label) => `<button class="st-cat-pill${stCountDateFilter === id ? ' on' : ''}" type="button" data-action="stock-count-range" data-range="${id}">${esc(label)}</button>`;
+    const statusPill = (id, label) => `<button class="st-cat-pill${stCountStatusFilter === id ? ' on' : ''}" type="button" data-action="stock-count-status" data-status="${id}">${esc(label)}</button>`;
+    const tabBtn = (id, label) => `<button class="st-cat-pill${stCountSubTab === id ? ' on' : ''}" type="button" data-action="stock-count-tab" data-tab="${id}" style="font-weight:600;">${esc(label)}</button>`;
+
+    const totalEcartsMad = filtered.reduce((acc, c) => acc + (c.totalVarianceCostMAD || 0), 0);
+    const totalAbsEcartsMad = filtered.reduce((acc, c) => acc + (c.absVarianceCostMAD || 0), 0);
+    const pendingCount = allCounts.filter(c => c.status === 'submitted').length;
+
+    return `
+      <div class="st-section">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
+          <div style="display:flex;gap:6px;">
+            ${tabBtn('list', 'Liste des inventaires')}
+            ${tabBtn('rollup', 'Écarts récurrents (Analyse)')}
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="st-btn secondary" type="button" data-action="stock-export-counts-csv" style="display:flex;align-items:center;gap:6px;">
+              ${svg('download', 14)}<span>Exporter CSV</span>
+            </button>
+            <button class="st-btn primary" type="button" data-action="stock-physical-count">
+              ${svg('plus', 14)}<span>Nouvel inventaire</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="st-toolbar" style="margin-bottom:16px;">
+          <div class="st-search-row">
+            <div class="st-search-wrap">
+              ${svg('search', 16)}
+              <input class="st-search" type="text" placeholder="Chercher un inventaire, employé, magasin…" value="${esc(stCountSearch)}" data-stock-count-search aria-label="Recherche inventaires" />
+            </div>
+          </div>
+          <div class="st-filter-row" style="display:flex; gap:5px; background:var(--paper-soft); padding:4px; border-radius:999px; border:1px solid var(--n-200); width:fit-content; max-width:100%; flex-wrap:wrap;">
+            ${rangePill('aujourdhui', "Aujourd'hui")}
+            ${rangePill('7j', '7 derniers jours')}
+            ${rangePill('30j', '30 derniers jours')}
+            ${rangePill('tout', 'Tout l’historique')}
+          </div>
+          <div class="st-filter-row" style="display:flex; gap:5px; background:var(--paper-soft); padding:4px; border-radius:999px; border:1px solid var(--n-200); width:fit-content; max-width:100%; flex-wrap:wrap;">
+            ${statusPill('all', 'Tous statuts')}
+            ${statusPill('submitted', `À valider (${pendingCount})`)}
+            ${statusPill('applied', 'Validés')}
+            ${statusPill('rejected', 'Refusés')}
+          </div>
+        </div>
+
+        <div class="st-kpis" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:12px;margin-bottom:16px;">
+          <div class="st-kpi"><div class="st-kpi-l">INVENTAIRES RÉALISÉS</div><div class="st-kpi-v">${filtered.length}</div><div class="st-kpi-sub">${pendingCount} en attente de revue</div></div>
+          <div class="st-kpi"><div class="st-kpi-l">ÉCART NET EN VALEUR</div><div class="st-kpi-v" style="color:${totalEcartsMad < 0 ? '#b91c1c' : 'var(--atlas)'};">${totalEcartsMad > 0 ? '+' : ''}${fmtMad(totalEcartsMad)}</div><div class="st-kpi-sub">Écart absolu : ${fmtMad(totalAbsEcartsMad)}</div></div>
+        </div>
+
+        ${stCountSubTab === 'rollup' ? renderCountsRollup(filtered) : `
+          <div class="st-tbl-wrap">
+            <table class="st-tbl">
+              <thead>
+                <tr>
+                  <th>Date &amp; Heure</th>
+                  <th>Réf.</th>
+                  <th>Magasin</th>
+                  <th>Employé</th>
+                  <th style="text-align:center;">Articles</th>
+                  <th style="text-align:right;">Écart net MAD</th>
+                  <th style="text-align:center;">Statut</th>
+                  <th style="text-align:right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${filtered.length ? filtered.map(c => {
+                  const d = new Date(c.submittedAt || Date.now());
+                  const dateStr = d.toLocaleDateString('fr-FR') + ' ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+                  const stLabel = c.status === 'submitted' ? 'À valider' : (c.status === 'applied' || c.status === 'approved' ? 'Validé' : 'Refusé');
+                  const stClass = c.status === 'submitted' ? 'warn' : (c.status === 'applied' || c.status === 'approved' ? 'ok' : 'bad');
+                  const mad = c.totalVarianceCostMAD || 0;
+                  return `
+                    <tr>
+                      <td class="st-mono" style="font-size:12px;color:var(--n-600);white-space:nowrap;">${dateStr}</td>
+                      <td><b>${esc(c.id)}</b></td>
+                      <td>${esc(c.storeName || 'Magasin principal')}</td>
+                      <td>${esc(c.employeeName || '—')} <span style="font-size:11px;color:var(--n-500);">(${esc(c.employeeRole || '—')})</span></td>
+                      <td style="text-align:center;" class="st-mono">${c.totalLines || 0}</td>
+                      <td style="text-align:right;font-weight:600;color:${mad < 0 ? '#b91c1c' : mad > 0 ? 'var(--atlas)' : 'inherit'};" class="st-mono">
+                        ${mad > 0 ? '+' : ''}${fmtMad(mad)}
+                      </td>
+                      <td style="text-align:center;">
+                        <span class="st-badge ${stClass}" style="font-size:11px;">${esc(stLabel)}</span>
+                      </td>
+                      <td style="text-align:right;">
+                        <button class="st-btn small" type="button" data-action="stock-count-detail" data-count-id="${esc(c.id)}" style="${c.status === 'submitted' ? 'background:#059669;color:#fff;border-color:#047857;' : ''}">
+                          ${c.status === 'submitted' ? 'Examiner' : 'Détails'}
+                        </button>
+                      </td>
+                    </tr>
+                  `;
+                }).join('') : `<tr><td colspan="8" style="text-align:center;padding:28px;color:var(--n-500);">Aucun inventaire correspondant aux filtres.</td></tr>`}
+              </tbody>
+            </table>
+          </div>
+          <div class="st-tbl-foot">
+            ${filtered.length} inventaire${filtered.length > 1 ? 's' : ''} affiché${filtered.length > 1 ? 's' : ''}
+          </div>
+        `}
+      </div>
+    `;
+  }
+
+  function renderCountsRollup(counts) {
+    const variantMap = new Map();
+    const employeeMap = new Map();
+    const storeMap = new Map();
+
+    counts.forEach(c => {
+      const lines = Array.isArray(c.lines) ? c.lines : [];
+      lines.forEach(l => {
+        const vKey = l.variantId || l.itemId || l.key;
+        const vLabel = l.productName ? `${l.productName}${l.color ? ' · ' + l.color : ''}${l.size ? ' · ' + l.size : ''}` : (l.name || vKey);
+        const curV = variantMap.get(vKey) || { key: vKey, label: vLabel, sku: l.sku || '', countTimes: 0, absDiffSum: 0, absCostSum: 0, netDiffSum: 0, unit: l.unit || 'unité' };
+        curV.countTimes++;
+        curV.absDiffSum += Math.abs(Number(l.diff) || 0);
+        curV.absCostSum += Math.abs(Number(l.varianceCost) || 0);
+        curV.netDiffSum += Number(l.diff) || 0;
+        variantMap.set(vKey, curV);
+      });
+
+      const empKey = c.employeeId || c.employeeName || 'Inconnu';
+      const curE = employeeMap.get(empKey) || { id: empKey, name: c.employeeName || empKey, countTimes: 0, absCostSum: 0, netCostSum: 0 };
+      curE.countTimes++;
+      curE.absCostSum += Number(c.absVarianceCostMAD) || Math.abs(Number(c.totalVarianceCostMAD) || 0);
+      curE.netCostSum += Number(c.totalVarianceCostMAD) || 0;
+      employeeMap.set(empKey, curE);
+
+      const stKey = c.storeId || c.storeName || 'Principal';
+      const curS = storeMap.get(stKey) || { id: stKey, name: c.storeName || stKey, countTimes: 0, absCostSum: 0, netCostSum: 0 };
+      curS.countTimes++;
+      curS.absCostSum += Number(c.absVarianceCostMAD) || Math.abs(Number(c.totalVarianceCostMAD) || 0);
+      curS.netCostSum += Number(c.totalVarianceCostMAD) || 0;
+      storeMap.set(stKey, curS);
+    });
+
+    const topVariants = Array.from(variantMap.values()).sort((a, b) => b.absCostSum - a.absCostSum).slice(0, 15);
+    const topEmployees = Array.from(employeeMap.values()).sort((a, b) => b.absCostSum - a.absCostSum).slice(0, 8);
+    const stores = Array.from(storeMap.values());
+
+    return `
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));gap:16px;">
+        <div style="background:var(--paper);border:1px solid var(--n-200);border-radius:14px;padding:16px;">
+          <h4 style="margin:0 0 12px;font-size:15px;">Articles &amp; déclinaisons aux plus forts écarts</h4>
+          <div class="st-tbl-wrap">
+            <table class="st-tbl" style="font-size:12.5px;">
+              <thead><tr><th>Article</th><th>Comptages</th><th style="text-align:right;">Écart cumulé</th><th style="text-align:right;">Impact MAD</th></tr></thead>
+              <tbody>
+                ${topVariants.length ? topVariants.map(v => `
+                  <tr>
+                    <td><b>${esc(v.label)}</b>${v.sku ? `<div style="font-size:11px;color:var(--n-500);">Réf: ${esc(v.sku)}</div>` : ''}</td>
+                    <td class="st-mono">${v.countTimes}</td>
+                    <td style="text-align:right;" class="st-mono">${v.netDiffSum > 0 ? '+' : ''}${Math.round(v.netDiffSum * 10) / 10} ${esc(v.unit)}</td>
+                    <td style="text-align:right;font-weight:600;color:#b91c1c;" class="st-mono">${fmtMad(v.absCostSum)}</td>
+                  </tr>
+                `).join('') : `<tr><td colspan="4" style="text-align:center;padding:16px;color:var(--n-500);">Aucun écart détecté.</td></tr>`}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div style="display:grid;gap:16px;">
+          <div style="background:var(--paper);border:1px solid var(--n-200);border-radius:14px;padding:16px;">
+            <h4 style="margin:0 0 12px;font-size:15px;">Écarts par employé</h4>
+            <div class="st-tbl-wrap">
+              <table class="st-tbl" style="font-size:12.5px;">
+                <thead><tr><th>Employé</th><th>Inventaires</th><th style="text-align:right;">Écart absolu cumulé</th></tr></thead>
+                <tbody>
+                  ${topEmployees.length ? topEmployees.map(e => `
+                    <tr>
+                      <td><b>${esc(e.name)}</b></td>
+                      <td class="st-mono">${e.countTimes}</td>
+                      <td style="text-align:right;font-weight:600;" class="st-mono">${fmtMad(e.absCostSum)}</td>
+                    </tr>
+                  `).join('') : `<tr><td colspan="3" style="text-align:center;padding:16px;color:var(--n-500);">Aucun comptage.</td></tr>`}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div style="background:var(--paper);border:1px solid var(--n-200);border-radius:14px;padding:16px;">
+            <h4 style="margin:0 0 12px;font-size:15px;">Synthèse par établissement</h4>
+            <div class="st-tbl-wrap">
+              <table class="st-tbl" style="font-size:12.5px;">
+                <thead><tr><th>Établissement</th><th>Inventaires</th><th style="text-align:right;">Écart net</th><th style="text-align:right;">Écart absolu</th></tr></thead>
+                <tbody>
+                  ${stores.length ? stores.map(s => `
+                    <tr>
+                      <td><b>${esc(s.name)}</b></td>
+                      <td class="st-mono">${s.countTimes}</td>
+                      <td style="text-align:right;" class="st-mono">${s.netCostSum > 0 ? '+' : ''}${fmtMad(s.netCostSum)}</td>
+                      <td style="text-align:right;font-weight:600;" class="st-mono">${fmtMad(s.absCostSum)}</td>
+                    </tr>
+                  `).join('') : `<tr><td colspan="4" style="text-align:center;padding:16px;color:var(--n-500);">Aucun comptage.</td></tr>`}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  async function openCountDetailModal(countId) {
+    if (!countId) return;
+    let count = getAllCounts().find(c => c.id === countId);
+    
+    // Fetch full frozen details from server if missing lines
+    if (!count || !count.lines || !count.lines.length) {
+      try {
+        const resp = await fetch(`/api/inventory/counts?id=${encodeURIComponent(countId)}`);
+        const data = await resp.json();
+        if (data && data.count) count = data.count;
+      } catch (_) {}
+    }
+
+    if (!count) {
+      window.Kiwi?.toast?.('Inventaire introuvable', { type: 'warn' });
+      return;
+    }
+
+    const lines = Array.isArray(count.lines) ? count.lines : [];
+    const submittedDate = new Date(count.submittedAt || Date.now());
+    const submittedStr = submittedDate.toLocaleDateString('fr-FR') + ' à ' + submittedDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    const isSubmitted = count.status === 'submitted';
+    const isApproved = count.status === 'applied' || count.status === 'approved';
+    const isRejected = count.status === 'rejected';
+
+    const modal = window.Kiwi.modal({
+      title: `Inventaire #${count.id}`,
+      desc: `${count.storeName || 'Magasin principal'} · Soumis par ${count.employeeName || 'Employé'} le ${submittedStr}`,
+      width: 820,
+      body: `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span class="st-badge ${isSubmitted ? 'warn' : isApproved ? 'ok' : 'bad'}" style="font-size:13px;padding:4px 10px;">
+              ${isSubmitted ? 'À valider par le propriétaire' : isApproved ? 'Validé & appliqué' : 'Refusé'}
+            </span>
+            <span style="font-size:13px;color:var(--n-600);">${lines.length} article${lines.length > 1 ? 's' : ''} compté${lines.length > 1 ? 's' : ''}</span>
+          </div>
+          <div style="font-size:14px;">
+            Écart total en valeur : <b style="color:${(count.totalVarianceCostMAD || 0) < 0 ? '#b91c1c' : (count.totalVarianceCostMAD || 0) > 0 ? 'var(--atlas)' : 'inherit'};">${(count.totalVarianceCostMAD || 0) > 0 ? '+' : ''}${fmtMad(count.totalVarianceCostMAD || 0)}</b>
+          </div>
+        </div>
+
+        ${count.reviewNote ? `
+          <div class="st-notice ${isApproved ? 'ok' : 'warn'}" style="margin-bottom:14px;">
+            ${svg(isApproved ? 'checkCircle' : 'alertTriangle', 14)}
+            <div><b>Note de revue :</b> ${esc(count.reviewNote)} ${count.reviewerName ? `<span style="font-size:11px;color:var(--n-500);">(par ${esc(count.reviewerName)})</span>` : ''}</div>
+          </div>
+        ` : ''}
+
+        <div class="st-tbl-wrap" style="max-height:360px;overflow-y:auto;border:1px solid var(--n-200);border-radius:12px;margin-bottom:16px;">
+          <table class="st-tbl" style="font-size:12.5px;">
+            <thead>
+              <tr>
+                <th>Article &amp; Déclinaison</th>
+                <th style="text-align:right;">Stock avant</th>
+                <th style="text-align:right;">Compté</th>
+                <th style="text-align:right;">Écart</th>
+                <th style="text-align:right;">Valeur MAD</th>
+                <th>Remarque</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${lines.length ? lines.map(l => {
+                const label = l.productName ? `${l.productName}${l.color ? ' · ' + l.color : ''}${l.size ? ' · ' + l.size : ''}` : (l.name || l.itemId);
+                const diff = Number(l.diff) || 0;
+                const cost = Number(l.varianceCost) || 0;
+                const diffColor = diff < 0 ? '#b91c1c' : diff > 0 ? 'var(--atlas)' : 'inherit';
+                return `
+                  <tr>
+                    <td>
+                      <b>${esc(label)}</b>
+                      ${l.sku ? `<div style="font-size:11px;color:var(--n-500);">Réf: ${esc(l.sku)}</div>` : ''}
+                    </td>
+                    <td style="text-align:right;" class="st-mono">${l.systemQty} ${esc(l.unit)}</td>
+                    <td style="text-align:right;font-weight:700;" class="st-mono">${l.countedQty} ${esc(l.unit)}</td>
+                    <td style="text-align:right;font-weight:600;color:${diffColor};" class="st-mono">${diff > 0 ? '+' : ''}${diff} ${esc(l.unit)}</td>
+                    <td style="text-align:right;font-weight:600;color:${diffColor};" class="st-mono">${cost > 0 ? '+' : ''}${fmtMad(cost)}</td>
+                    <td style="color:var(--n-600);font-size:11.5px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(l.explanation || l.note || '')}">
+                      ${esc(l.explanation || l.note || '—')}
+                    </td>
+                  </tr>
+                `;
+              }).join('') : `<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--n-500);">Aucune ligne enregistrée.</td></tr>`}
+            </tbody>
+          </table>
+        </div>
+
+        ${isSubmitted ? `
+          <div style="background:var(--paper-soft);border:1px solid var(--n-200);border-radius:12px;padding:12px;margin-bottom:12px;">
+            <label style="font-size:12px;font-weight:600;color:var(--n-600);display:block;margin-bottom:4px;">Note ou commentaire de décision (optionnel)</label>
+            <input class="st-search" id="st-cnt-review-note" placeholder="Justification de la décision…" style="width:100%;">
+          </div>
+        ` : ''}
+      `,
+      foot: `
+        <button class="st-btn" data-dismiss-modal>Fermer</button>
+        ${isSubmitted ? `
+          <button class="st-btn" id="st-cnt-reject-btn" style="color:#b91c1c;border-color:rgba(185,28,28,0.3);">Refuser l'inventaire</button>
+          <button class="st-btn primary" id="st-cnt-approve-btn" style="background:#059669;border-color:#047857;">Valider et appliquer le stock</button>
+        ` : ''}
+      `
+    });
+
+    const scope = modal?.el || topBackdrop();
+    wireDismiss(scope);
+
+    scope?.querySelector('#st-cnt-approve-btn')?.addEventListener('click', () => {
+      const note = scope?.querySelector('#st-cnt-review-note')?.value || '';
+      reviewCount(count.id, 'approved', note);
+    });
+
+    scope?.querySelector('#st-cnt-reject-btn')?.addEventListener('click', () => {
+      const note = scope?.querySelector('#st-cnt-review-note')?.value || '';
+      reviewCount(count.id, 'rejected', note);
+    });
+  }
+
+  async function reviewCount(countId, decision, note) {
+    if (!countId) return;
+    const count = getAllCounts().find(c => c.id === countId);
+    try {
+      const resp = await fetch('/api/inventory/counts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'review',
+          id: countId,
+          decision: decision,
+          reviewNote: note || '',
+          reviewerName: 'Propriétaire'
+        })
+      });
+      const data = await resp.json();
+      if (data && data.success) {
+        if (decision === 'approved') {
+          if (window.KiwiBoutiqueCatalog?.sync) {
+            window.KiwiBoutiqueCatalog.sync();
+          }
+          if (window.KiwiInventory?.sync) {
+            window.KiwiInventory.sync();
+          }
+        }
+      }
+    } catch (_) {}
+
+    // Local state update for immediate feedback
+    if (count) {
+      count.status = decision === 'approved' ? 'applied' : 'rejected';
+      count.reviewDecision = decision;
+      count.reviewedAt = Date.now();
+      count.reviewerName = 'Propriétaire';
+      count.reviewNote = note || '';
+      if (decision === 'approved') count.appliedAt = Date.now();
+    }
+
+    // Apply local ledger movements if demo or offline
+    if (decision === 'approved' && count && Array.isArray(count.lines)) {
+      count.lines.forEach(l => {
+        if (l.diff) {
+          moveStock({ id: l.itemId, costPerUnit: l.unitCost }, l.diff, 'count', 'count', countId, l.explanation || 'Inventaire physique validé');
+        }
+      });
+      stSaveOverlay();
+    }
+
+    closeTopModal();
+    window.Kiwi?.toast?.(decision === 'approved' ? 'Inventaire validé · stock mis à jour' : 'Inventaire refusé', { type: decision === 'approved' ? 'success' : 'info' });
+    if (stPageActive) render();
+  }
+
+  function exportCountsCsv() {
+    const counts = filterCounts(getAllCounts());
+    function csvSafe(v) {
+      let s = String(v == null ? '' : v);
+      if (/^[\t\r ]*[=+\-@]/.test(s)) s = "'" + s;
+      return '"' + s.replace(/"/g, '""') + '"';
+    }
+    const header = ['ID_Inventaire', 'Date', 'Magasin', 'Employe', 'Role', 'Statut', 'Nb_Lignes', 'Ecart_Net_MAD', 'Ecart_Abs_MAD', 'Validateur', 'Decision', 'Note_Revue'];
+    const lines = [header.join(';')];
+    counts.forEach(c => {
+      const d = new Date(c.submittedAt || Date.now()).toISOString().slice(0, 19).replace('T', ' ');
+      lines.push([
+        csvSafe(c.id),
+        d,
+        csvSafe(c.storeName || 'Principal'),
+        csvSafe(c.employeeName || '—'),
+        csvSafe(c.employeeRole || '—'),
+        csvSafe(c.status),
+        c.totalLines || 0,
+        (c.totalVarianceCostMAD || 0).toFixed(2),
+        (c.absVarianceCostMAD || 0).toFixed(2),
+        csvSafe(c.reviewerName || '—'),
+        csvSafe(c.reviewDecision || '—'),
+        csvSafe(c.reviewNote || '—')
+      ].join(';'));
+    });
+    const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `historique-inventaires-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
   }
 
   function renderItems() {
@@ -4923,6 +5448,11 @@
     H['stock-waste-reason'] = (el) => { stWasteFilterReason = el.dataset.reason; rerenderTabBody(); };
     H['stock-export-waste-csv'] = () => exportWasteCsv();
     H['stock-cancel-waste'] = (el) => cancelWasteMovement(el.dataset.movementId);
+    H['stock-count-range'] = (el) => { stCountDateFilter = el.dataset.range; rerenderTabBody(); };
+    H['stock-count-status'] = (el) => { stCountStatusFilter = el.dataset.status; rerenderTabBody(); };
+    H['stock-count-tab'] = (el) => { stCountSubTab = el.dataset.tab; rerenderTabBody(); };
+    H['stock-count-detail'] = (el) => openCountDetailModal(el.dataset.countId);
+    H['stock-export-counts-csv'] = () => exportCountsCsv();
     H['stock-venue-filter'] = (el) => { stVenueFilter = el.dataset.venue; render(); };
     H['stock-cat-filter'] = (el) => { stCatFilter = el.dataset.cat; rerenderTabBody(); };
     H['stock-status-filter'] = (el) => { stStatusFilter = el.dataset.status; rerenderTabBody(); };
