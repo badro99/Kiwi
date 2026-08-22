@@ -2798,18 +2798,23 @@ body.design-vexel[data-vexel-mode] .topbar .ai-btn {
   min-height: 40px;
   gap: 9px;
   padding: 0 17px 0 12px;
+  position: relative;
   border: 0 !important;
   border-radius: 999px;
-  background: linear-gradient(180deg, #8DF6BE 0%, #5FE9A4 100%) !important;
-  color: #04231A;
-  /* Two shadows doing different jobs: a tight one that seats the button on the
-   * bar, and a wide diffuse bloom so the mint reads as a light source in the
-   * black rather than a flat swatch pasted onto it. Deliberately NOT the 9px
-   * hard spread this replaced — that had a visible edge, which is what made it
-   * look like a stuck focus ring. */
+  /* Retour a la pastille sombre : l'agent se lit comme une source de lumiere
+   * posee dans le noir, pas comme une pastille de peinture. Le fond reste tres
+   * sombre et c'est l'aureole qui porte le mint. */
+  background: linear-gradient(180deg, #07301F 0%, #03170F 100%) !important;
+  color: var(--paper);
+  /* Quatre nappes qui montent en douceur : le lisere, la premiere assise, le
+   * bloom serre puis le bloom large. Aucune n'a de bord franc, donc l'ensemble
+   * lit comme une aura et non comme un anneau de focus reste coince. */
   box-shadow:
-    0 10px 24px -14px rgba(93, 233, 164, 0.7),
-    0 0 32px -6px rgba(125, 242, 176, 0.26);
+    0 0 0 1px rgba(125, 242, 176, 0.34),
+    0 0 0 7px rgba(125, 242, 176, 0.055),
+    0 0 26px -2px rgba(125, 242, 176, 0.30),
+    0 0 58px 2px rgba(125, 242, 176, 0.14),
+    0 12px 26px -18px rgba(0, 0, 0, 0.85);
   font-size: 13.5px;
   font-weight: 640;
   letter-spacing: 0.005em;
@@ -2821,25 +2826,31 @@ body.design-vexel[data-vexel-mode] .topbar .ai-btn-ico {
   height: 24px;
   padding: 0;
   border-radius: 0;
-  color: #04231A;
+  color: var(--mint);
   background: none;
   box-shadow: none;
 }
 
-/* The mark ships two paths: one on currentColor, one hardcoded fill="#8ff4cf".
- * That second path was mint on a dark button; on a mint button it vanishes.
- * Both are re-cut in ink so the two-tone reading survives the inversion. */
+/* La marque porte deux traces : l'un sur currentColor, l'autre en dur sur
+ * fill="#8ff4cf". Sur fond sombre les deux repassent en mint, le second plus
+ * clair, pour garder la lecture bicolore du logo. */
 body.design-vexel[data-vexel-mode] .topbar .ai-btn-ico path {
   fill: currentColor;
 }
 
 body.design-vexel[data-vexel-mode] .topbar .ai-btn-ico path + path {
-  fill: rgba(4, 35, 26, 0.5);
+  fill: rgba(143, 244, 207, 0.62);
 }
 
+/* Au survol l'aureole respire : elle s'ouvre, elle ne change pas de couleur. */
 body.design-vexel[data-vexel-mode] .topbar .ai-btn:hover {
-  background: linear-gradient(180deg, #9CF8C9 0%, #6EEFB0 100%) !important;
-  box-shadow: 0 14px 30px -14px rgba(93, 233, 164, 0.85);
+  background: linear-gradient(180deg, #0A4029 0%, #051E14 100%) !important;
+  box-shadow:
+    0 0 0 1px rgba(125, 242, 176, 0.48),
+    0 0 0 9px rgba(125, 242, 176, 0.075),
+    0 0 32px -2px rgba(125, 242, 176, 0.42),
+    0 0 72px 4px rgba(125, 242, 176, 0.20),
+    0 14px 30px -18px rgba(0, 0, 0, 0.9);
   transform: translateY(-1px);
 }
 
