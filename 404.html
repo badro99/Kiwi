@@ -6,30 +6,39 @@
 <title>Page introuvable · Kiwi</title>
 <meta name="description" content="Cette page n'existe pas ou a été déplacée. Revenez à l'accueil de Kiwi, le système d'exploitation du commerçant marocain.">
 <meta name="robots" content="noindex, follow">
+<meta name="theme-color" content="#000000">
 <link rel="icon" href="/icon.svg" type="image/svg+xml" sizes="any">
 <link rel="apple-touch-icon" href="/assets/landing/kiwi-mark-app-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@200;400;500;600&family=JetBrains+Mono:wght@400;500;700&family=IBM+Plex+Sans+Arabic:wght@300;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@200;400;500&family=JetBrains+Mono:wght@400;500;700&family=IBM+Plex+Sans+Arabic:wght@300;500;600&display=swap">
 <style>
   /* ═══════════════════════════════════════════════════════════════════════
    * 404 · le ticket de caisse
    * -----------------------------------------------------------------------
-   * L'idée : Kiwi imprime des tickets toute la journée. Alors une page
-   * introuvable en imprime un aussi · un vrai reçu thermique qui sort d'une
-   * imprimante, ligne par ligne, avec sa tête d'impression qui descend, son
-   * papier bone, son code-barres et son bord déchiré. Le montant dû est
-   * 0,00 MAD : il n'y a rien à payer, il n'y a juste rien ici.
+   * Kiwi imprime des tickets toute la journée. Une page introuvable en
+   * imprime un aussi : une imprimante thermique sort un reçu, il se déroule,
+   * puis on l'arrache.
    *
-   * Volontairement SANS dépendance au bundle Next : une page d'erreur qui
-   * dépend des chunks du site casse le jour où le déploiement casse. Tout
-   * est en ligne ici.
+   * La mise en page du reçu n'est pas inventée — elle reprend la grammaire
+   * de assets/escpos.js › receipt() , le code qui pilote les vraies
+   * imprimantes des commerçants : enseigne centrée en double taille, filets
+   * pleine largeur en tirets, lignes « qté× article … prix », TOTAL en gras,
+   * ligne « Paiement », pied « Merci · Kiwi ». Un client qui connaît ses
+   * propres tickets doit reconnaître celui-ci.
    *
-   * Le bord déchiré est UN SEUL calque de masque (conic-gradient), pas deux
-   * dégradés superposés : deux calques demanderaient mask-composite:intersect,
-   * qui est récent et se dégrade en carré plein là où il manque.
+   * Le mot DUPLICATA à la réimpression vient du même endroit : receipt()
+   * accepte un champ `copy` imprimé en gras double hauteur, exactement pour
+   * ça.
+   *
+   * VOLONTAIREMENT SANS DÉPENDANCE au bundle Next : une page d'erreur qui a
+   * besoin des chunks du site casse le jour où le déploiement casse. Tout est
+   * en ligne ici, et la page est complète en français sans JavaScript — le
+   * script ne fait que traduire, dater, dessiner le code-barres et déchirer
+   * le bord.
    * ═══════════════════════════════════════════════════════════════════════ */
   :root {
+    color-scheme: dark;
     --accent: #00ffae;
     --paper: #F7F5F0;
     --ink: #0A0F0D;
@@ -38,7 +47,8 @@
     --fg-dim: rgba(255,255,255,0.7);
     --fg-faint: rgba(255,255,255,0.42);
     --mono: "JetBrains Mono", "IBM Plex Sans Arabic", ui-monospace, SFMono-Regular, Menlo, monospace;
-    --tooth: 9px;
+    --w: 372px;          /* largeur du rouleau à l'écran */
+    --tooth: 10px;       /* hauteur des dents du bord déchiré */
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; overflow-x: clip; }
@@ -46,150 +56,214 @@
   body {
     min-height: 100svh;
     display: flex; align-items: center; justify-content: center;
-    padding: 40px 20px 36px;
-    background:
-      radial-gradient(62% 46% at 50% 34%, rgba(0,255,174,0.13), transparent 72%),
-      radial-gradient(80% 60% at 50% 108%, rgba(0,255,174,0.07), transparent 70%),
-      #000;
+    padding: 26px 20px 24px;
+    background: #000;
     color: var(--fg);
-    font-family: "Inter Tight", system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-family: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
     -webkit-font-smoothing: antialiased;
   }
   html[lang="ar"] body { font-family: "IBM Plex Sans Arabic", system-ui, sans-serif; }
-  main { width: 100%; max-width: 420px; text-align: center; }
+  main { width: 100%; max-width: 430px; text-align: center; }
+
+  /* ── La scène ──────────────────────────────────────────────────────────
+     Pas de halo d'ambiance décoratif : la seule lumière de la page vient de
+     la machine et du papier qu'elle éclaire. Un comptoir la nuit, une
+     imprimante qui tourne. */
+  .scene { position: relative; }
+  .scene::before {                       /* la lueur du papier sur le comptoir */
+    content: ''; position: absolute; inset: auto 0 -70px; height: 220px;
+    background: radial-gradient(58% 100% at 50% 0%, rgba(247,245,240,0.055), transparent 72%);
+    pointer-events: none;
+  }
+
+  /* ── La machine ────────────────────────────────────────────────────────── */
+  .machine {
+    position: relative; z-index: 3;
+    width: min(var(--w), 100%); height: 26px; margin: 0 auto;
+    border-radius: 7px 7px 4px 4px;
+    background: linear-gradient(#1b211e, #0c110f 58%, #060907);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.07),
+      inset 0 -7px 9px -7px #000,
+      0 2px 0 rgba(0,0,0,0.6),
+      0 16px 44px -20px rgba(0,255,174,0.28);
+  }
+  .machine::before {                     /* la fente */
+    content: ''; position: absolute; left: 13px; right: 13px; bottom: 4px; height: 3px;
+    border-radius: 3px; background: #000;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.9), 0 1px 0 rgba(255,255,255,0.045);
+  }
+  .machine::after {                      /* le témoin d'impression */
+    content: ''; position: absolute; left: 13px; right: 13px; bottom: 2px; height: 1px;
+    border-radius: 2px; background: var(--accent);
+    box-shadow: 0 0 13px 2px rgba(0,255,174,0.55);
+    opacity: 0.28;
+    animation: lamp 1520ms linear both;
+  }
+  /* Allumé pendant l'impression, en veille une fois le ticket arraché. */
+  @keyframes lamp {
+    0%, 88% { opacity: 0.85; }
+    100%    { opacity: 0.28; }
+  }
 
   /* ── Le papier ─────────────────────────────────────────────────────────── */
-  .paper-wrap {
-    position: relative;
-    width: min(384px, 100%);
-    margin: 0 auto;
-    perspective: 1400px;
+  .feed {
+    position: relative; z-index: 1;
+    width: min(var(--w), 100%); margin: -6px auto 0;
+    perspective: 1500px;
   }
+  /* L'inclinaison au pointeur vit sur SON PROPRE calque. Écrite en style en
+     ligne sur .paper, elle écrasait la transformation d'arrachage : il
+     suffisait de bouger la souris pendant l'impression pour que le ticket ne
+     se détache jamais. Deux transformations, deux éléments, aucun arbitrage à
+     faire. */
+  .tilt { transform-style: preserve-3d; }
   .paper {
     position: relative;
-    transform-style: preserve-3d;
-    transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
-    filter: drop-shadow(0 26px 42px rgba(0,0,0,0.62));
-    animation: feed 1500ms steps(30, end) both;
+    transform-origin: 50% 0;
+    animation: feed 1500ms linear both;
+    /* Une seule ombre pendant l'impression : le filtre est recalculé à chaque
+       palier du clip-path, et deux drop-shadow empilées le paient deux fois.
+       La seconde n'arrive qu'à l'arrachage — où elle est de toute façon plus
+       juste, le ticket ne pendant librement qu'une fois détaché. */
+    filter: drop-shadow(0 3px 3px rgba(0,0,0,0.55));
+    transition: transform 520ms cubic-bezier(0.22, 1.3, 0.36, 1);
   }
-  @keyframes feed { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(0 0 0 0); } }
+  /* Le rouleau avance par à-coups, pas en fondu régulier : une imprimante
+     thermique crépite, s'arrête entre les blocs, puis expulse la fin d'un
+     coup. Chaque palier porte sa propre fonction de temps — les paliers
+     `steps()` sont le crépitement, les paliers plats sont les silences. */
+  @keyframes feed {
+    0%   { clip-path: inset(0 0 100% 0); animation-timing-function: steps(4, end); }
+    13%  { clip-path: inset(0 0 76% 0);  animation-timing-function: step-end; }
+    20%  { clip-path: inset(0 0 76% 0);  animation-timing-function: steps(3, end); }
+    34%  { clip-path: inset(0 0 58% 0);  animation-timing-function: step-end; }
+    41%  { clip-path: inset(0 0 58% 0);  animation-timing-function: steps(5, end); }
+    64%  { clip-path: inset(0 0 30% 0);  animation-timing-function: step-end; }
+    72%  { clip-path: inset(0 0 30% 0);  animation-timing-function: steps(4, end); }
+    100% { clip-path: inset(0 0 0 0); }
+  }
+  /* L'arrachage : le ticket décroche, tombe de quelques pixels et se pose de
+     travers. C'est là seulement qu'un bord déchiré apparaît en haut — avant,
+     ce bord est encore dans la machine. */
+  .paper.torn {
+    transform: translateY(7px) rotate(0.45deg);
+    filter: drop-shadow(0 3px 3px rgba(0,0,0,0.55)) drop-shadow(0 26px 34px rgba(0,0,0,0.55));
+  }
+  .paper.torn .tear-t { opacity: 1; }
 
   .tear { height: var(--tooth); background: var(--paper); }
   .tear-b {
-    --m: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / 18px 100%;
+    --m: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / 17px 100%;
     -webkit-mask: var(--m); mask: var(--m);
   }
-  .tear-t { transform: scaleY(-1); }
+  .tear-t { transform: scaleY(-1); opacity: 0; transition: opacity 160ms linear; }
+  .tear svg { display: block; width: 100%; height: 100%; }
 
   .slip {
+    position: relative;
     background: var(--paper);
     color: var(--ink);
-    padding: 18px 24px 16px;
+    padding: 13px 22px 12px;
     font-family: var(--mono);
     font-size: 12.5px;
-    line-height: 1.55;
+    line-height: 1.45;
     text-align: left;
-    /* Grain thermique : de fines bandes, comme le papier qui a chauffé. */
+    /* Le grain du papier thermique : de fines bandes chauffées. */
     background-image: repeating-linear-gradient(
       to bottom, rgba(10,15,13,0.028) 0 1px, transparent 1px 4px);
   }
   html[dir="rtl"] .slip { text-align: right; }
+  /* Le papier thermique s'enroule vers l'impression : il s'assombrit un peu
+     dans les derniers centimètres, là où il pend. */
+  .slip::after {
+    content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 62px;
+    background: linear-gradient(to bottom, transparent, rgba(10,15,13,0.085));
+    pointer-events: none;
+  }
 
-  .brand { text-align: center; margin-bottom: 4px; }
-  .brand b {
-    font-size: 17px; font-weight: 700; letter-spacing: 0.34em;
-    text-indent: 0.34em; display: block;
+  .brand { text-align: center; }
+  .brand b { font-size: 19px; font-weight: 700; letter-spacing: 0.36em; text-indent: 0.36em; display: block; }
+  .brand span, .brand .dom {
+    display: block; font-style: normal;
+    font-size: 10px; letter-spacing: 0.06em;
+    color: rgba(10,15,13,0.56);
   }
-  .brand span {
-    display: block; margin-top: 5px;
-    font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase;
-    color: rgba(10,15,13,0.5);
+  .brand span { margin-top: 4px; }
+  .brand .dom { margin-top: 2px; letter-spacing: 0.14em; }
+
+  /* Le filet : une vraie ligne de tirets, comme sur le rouleau. */
+  .rule {
+    overflow: hidden; white-space: nowrap; user-select: none;
+    color: rgba(10,15,13,0.4); margin: 7px 0; height: 1em; line-height: 1;
   }
-  .sep { border-top: 1px dashed rgba(10,15,13,0.3); margin: 10px 0; }
-  .row { display: flex; justify-content: space-between; gap: 14px; align-items: baseline; }
-  .row + .row { margin-top: 3px; }
-  .k { color: rgba(10,15,13,0.56); font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; }
+  .rule::before { content: "------------------------------------------------------------------"; }
+
+  .row { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+  .row + .row { margin-top: 2px; }
+  .k { color: rgba(10,15,13,0.58); }
   .v { font-weight: 500; }
+  /* <bdi> seul ne suffit pas ici : son isolement prend la direction du
+     paragraphe quand le contenu commence par un chiffre, qui est un caractère
+     neutre. « 22/08/2026 21:18 » ressortait donc « 21:18 2026/08/22 » en
+     arabe. Un montant et une date se lisent toujours de gauche à droite. */
+  .v bdi { direction: ltr; unicode-bidi: isolate; }
+  .up { font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; }
 
-  .tno { text-align: center; margin: 6px 0 2px; }
-  .tno b {
-    font-size: 46px; font-weight: 700; line-height: 1;
-    letter-spacing: 0.06em; text-indent: 0.06em; display: block;
+  .tno { text-align: center; margin: 4px 0 2px; }
+  .tno span { display: block; font-size: 10px; letter-spacing: 0.2em; color: rgba(10,15,13,0.56); }
+  .tno h1 { display: block; margin: 0; font-size: 42px; font-weight: 700; line-height: 1.02; letter-spacing: 0.05em; text-indent: 0.05em; }
+  .stamp {
+    display: none; margin: 5px auto 0; width: max-content;
+    padding: 1px 9px; border: 1.5px solid rgba(10,15,13,0.72);
+    font-size: 11px; font-weight: 700; letter-spacing: 0.22em; text-indent: 0.22em;
   }
-  .tno span {
-    display: block; margin-top: 6px;
-    font-size: 9.5px; letter-spacing: 0.2em; text-transform: uppercase;
-    color: rgba(10,15,13,0.5);
-  }
+  .is-copy .stamp { display: block; }
 
-  .path {
-    margin-top: 3px;
-    font-size: 12px; font-weight: 500;
-    word-break: break-all;
-    color: var(--ink);
-    /* Une URL se lit toujours de gauche à droite. Sans cette isolation, le
+  .item { margin-top: 5px; }
+  .item .path {
+    /* Une URL se lit toujours de gauche à droite. Sans cette isolation le
        « / » initial est un caractère neutre : en arabe il migre en fin de
-       ligne et le chemin affiché devient faux. */
+       ligne et le chemin imprimé devient faux. */
     direction: ltr; unicode-bidi: isolate;
+    padding-left: 18px; word-break: break-all; color: rgba(10,15,13,0.78);
   }
-  html[dir="rtl"] .path { text-align: right; }
-  .total { font-size: 14px; font-weight: 700; }
-  .total .k { font-size: 12px; font-weight: 700; color: var(--ink); }
+  html[dir="rtl"] .item .path { text-align: right; padding-left: 0; padding-right: 18px; }
+  .total { font-size: 15px; font-weight: 700; margin-top: 2px; }
+  .total .k { color: var(--ink); font-size: 13px; letter-spacing: 0.04em; }
 
-  .note {
-    margin: 11px 0 0;
-    font-size: 11.5px; line-height: 1.62;
-    color: rgba(10,15,13,0.66);
-  }
-  /* #v-res est ici pour une raison peu évidente : JetBrains Mono ne porte pas
-     l'arabe, mais il porte l'ESPACE. Les lettres retombaient sur Plex Arabic
-     et les espaces gardaient la chasse du monospace · d'où des mots séparés
-     par un blanc deux fois trop large. */
-  html[lang="ar"] .note, html[lang="ar"] .k, html[lang="ar"] .brand span,
-  html[lang="ar"] .tno span, html[lang="ar"] .thanks, html[lang="ar"] #v-res {
+  .note { margin: 8px 0 0; font-size: 11px; line-height: 1.6; color: rgba(10,15,13,0.62); }
+  /* #v-res et les libellés arabes sortent du monospace pour une raison peu
+     évidente : JetBrains Mono ne porte pas l'arabe, mais il porte l'ESPACE.
+     Les lettres retombaient sur Plex Arabic pendant que les espaces gardaient
+     la chasse du monospace — d'où des mots séparés d'un blanc deux fois trop
+     large. L'interlettrage part aussi : l'arabe est cursif. */
+  html[lang="ar"] .note, html[lang="ar"] .k, html[lang="ar"] .up,
+  html[lang="ar"] .brand span, html[lang="ar"] .brand .dom,
+  html[lang="ar"] .tno span, html[lang="ar"] .thanks,
+  html[lang="ar"] .item .lbl, html[lang="ar"] .v.word {
     font-family: "IBM Plex Sans Arabic", sans-serif;
-    /* L'arabe est cursif : l'interlettrage écarte des lettres qui doivent
-       rester liées. Il ne sert qu'aux petites capitales latines. */
     letter-spacing: 0;
   }
 
-  .thanks {
-    margin-top: 12px; text-align: center;
-    font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase;
-    color: rgba(10,15,13,0.55);
-  }
-  .barcode {
-    margin: 9px auto 5px;
-    display: flex; align-items: flex-end; justify-content: center;
-    gap: 2px; height: 30px;
-  }
+  .thanks { margin-top: 9px; text-align: center; font-size: 11px; letter-spacing: 0.1em; color: rgba(10,15,13,0.7); }
+  .barcode { margin: 8px auto 4px; display: flex; align-items: flex-end; justify-content: center; gap: 2px; height: 26px; }
   .barcode i { display: block; background: var(--ink); height: 100%; border-radius: 0.5px; }
-  .code {
-    text-align: center;
-    font-size: 9.5px; letter-spacing: 0.24em; text-indent: 0.24em;
-    color: rgba(10,15,13,0.62);
+  /* :empty ne s'applique que tant que JavaScript n'a pas posé les barres —
+     sans lui le ticket montrerait un blanc de 26 px à la place du code. */
+  .barcode:empty {
+    width: 210px;
+    background: repeating-linear-gradient(to right,
+      var(--ink) 0 2px, transparent 2px 4px, var(--ink) 4px 5px, transparent 5px 9px,
+      var(--ink) 9px 12px, transparent 12px 14px);
   }
-
-  /* La tête d'impression qui descend avec le papier. */
-  .head {
-    position: absolute; left: -6px; right: -6px; top: 0; height: 2px;
-    background: var(--accent);
-    box-shadow: 0 0 18px 3px rgba(0,255,174,0.65);
-    border-radius: 2px;
-    pointer-events: none;
-    animation: travel 1500ms steps(30, end) both;
-  }
-  @keyframes travel {
-    0%   { top: 0; opacity: 1; }
-    92%  { opacity: 1; }
-    100% { top: 100%; opacity: 0; }
-  }
+  .code { text-align: center; font-size: 9.5px; letter-spacing: 0.22em; text-indent: 0.22em; color: rgba(10,15,13,0.6); }
 
   /* ── Sous le ticket ────────────────────────────────────────────────────── */
-  .below { animation: rise 620ms cubic-bezier(0.32, 0.72, 0, 1) 1180ms both; }
+  .below { animation: rise 600ms cubic-bezier(0.32, 0.72, 0, 1) 1780ms both; }
   @keyframes rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 
-  .actions { margin-top: 26px; display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+  .actions { margin-top: 24px; display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
   .btn {
     display: inline-flex; align-items: center; justify-content: center;
     min-height: 48px; padding: 0 24px; border-radius: 999px;
@@ -203,14 +277,20 @@
   .btn.ghost { border: 1px solid var(--line); color: var(--fg); }
   .btn.ghost:hover { background: rgba(255,255,255,0.06); }
 
-  .contact { margin-top: 18px; font-size: 14px; line-height: 1.6; color: var(--fg-faint); }
+  .reprint {
+    display: none; margin: 14px auto 0;
+    background: none; border: 0; cursor: pointer;
+    min-height: 40px; padding: 0 10px;
+    font: inherit; font-size: 13px; color: var(--fg-faint);
+    transition: color 180ms ease;
+  }
+  .reprint:hover { color: var(--fg-dim); }
+  .reprint.on { display: block; }
+
+  .contact { margin-top: 14px; font-size: 14px; line-height: 1.6; color: var(--fg-faint); }
   .contact a { color: var(--fg-dim); text-decoration: none; border-bottom: 1px solid var(--line); }
   .contact a:hover { color: var(--fg); }
-  .langs {
-    margin-top: 22px; padding-top: 16px;
-    border-top: 1px solid var(--line);
-    display: flex; gap: 6px; justify-content: center;
-  }
+  .langs { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); display: flex; gap: 6px; justify-content: center; }
   .langs a {
     display: inline-flex; align-items: center; justify-content: center;
     min-height: 44px; min-width: 52px; border-radius: 999px;
@@ -221,63 +301,82 @@
   .langs a:hover { color: var(--fg); background: rgba(255,255,255,0.06); }
 
   @media (max-width: 400px) {
-    .slip { padding: 20px 18px 18px; font-size: 12px; }
-    .tno b { font-size: 40px; }
+    :root { --w: 100%; }
+    .slip { padding: 15px 16px 13px; font-size: 12px; }
+    .tno h1 { font-size: 38px; }
   }
-  /* Le mouvement raconte l'impression ; sans lui la page reste complète. */
+  /* Le mouvement raconte l'impression ; sans lui le ticket est simplement
+     déjà imprimé et déjà arraché — la page reste complète et juste. */
   @media (prefers-reduced-motion: reduce) {
-    .paper, .head, .below { animation: none; }
-    .paper { clip-path: none; }
-    .head { display: none; }
-    .paper { transition: none; }
+    .paper, .below, .machine::after { animation: none; }
+    .paper { clip-path: none; transition: none; }
+    .machine::after { opacity: 0.28; }
+    .tear-t { opacity: 1; }
   }
 </style>
 </head>
 <body>
 <main>
-  <div class="paper-wrap">
-    <div class="paper" id="paper">
-      <div class="tear tear-t tear-b" aria-hidden="true"></div>
-      <div class="slip">
-        <div class="brand">
-          <b>KIWI</b>
-          <span id="t-sub">Système d'exploitation du commerçant</span>
+  <div class="scene">
+    <div class="machine" aria-hidden="true"></div>
+
+    <div class="feed">
+      <div class="tilt" id="tilt">
+      <div class="paper" id="paper">
+        <div class="tear tear-t tear-b" id="tear-t" aria-hidden="true"></div>
+
+        <!-- Le reçu est annoncé au lecteur d'écran comme un reçu, puis lu
+             ligne à ligne : une colonne de chiffres égrenée hors contexte
+             n'aurait aucun sens à l'oreille. -->
+        <div class="slip" id="slip" role="group" aria-label="Reçu · page introuvable">
+          <div class="brand">
+            <b>KIWI</b>
+            <span id="t-sub">Système d'exploitation du commerçant</span>
+            <span class="dom">kiwi-os.com</span>
+          </div>
+
+          <div class="rule" aria-hidden="true"></div>
+
+          <div class="tno">
+            <span id="t-ticket">Ticket n°</span>
+            <h1>404</h1>
+            <div class="stamp" id="t-stamp">Duplicata</div>
+          </div>
+          <div class="row"><span class="k up" id="t-date">Date</span><span class="v"><bdi id="v-when">----</bdi></span></div>
+
+          <div class="rule" aria-hidden="true"></div>
+
+          <div class="item">
+            <div class="row"><span class="lbl up" id="t-req">1× Page demandée</span><span class="v"><bdi>0,00</bdi></span></div>
+            <div class="path" id="v-path">----</div>
+          </div>
+          <div class="item">
+            <div class="row"><span class="lbl up" id="t-res">1× Article non référencé</span><span class="v"><bdi>0,00</bdi></span></div>
+          </div>
+
+          <div class="rule" aria-hidden="true"></div>
+
+          <div class="row"><span class="k up" id="t-tva">TVA (20 %)</span><span class="v"><bdi>0,00</bdi></span></div>
+          <div class="row total"><span class="k" id="t-total">TOTAL</span><span class="v"><bdi>0,00 MAD</bdi></span></div>
+
+          <div class="rule" aria-hidden="true"></div>
+
+          <div class="row"><span class="k up" id="t-pay">Paiement</span><span class="v word" id="v-pay">Néant</span></div>
+          <div class="row"><span class="k up" id="t-change">Monnaie rendue</span><span class="v"><bdi>0,00</bdi></span></div>
+
+          <div class="rule" aria-hidden="true"></div>
+
+          <p class="note" id="t-note">Le lien est peut-être ancien, ou l'adresse comporte une faute. Le reste du site fonctionne normalement.</p>
+
+          <div class="barcode" id="barcode" aria-hidden="true"></div>
+          <div class="code">KIWI-OS.COM</div>
+          <div class="thanks" id="t-thanks">Merci · Kiwi</div>
         </div>
 
-        <div class="sep"></div>
-
-        <div class="tno">
-          <b>404</b>
-          <span id="t-ticket">Ticket · page introuvable</span>
-        </div>
-
-        <div class="sep"></div>
-
-        <div class="row"><span class="k" id="t-date">Date</span><span class="v"><bdi id="v-date">·</bdi></span></div>
-        <div class="row"><span class="k" id="t-time">Heure</span><span class="v"><bdi id="v-time">·</bdi></span></div>
-
-        <div class="sep"></div>
-
-        <div class="k" id="t-req">Page demandée</div>
-        <div class="path" id="v-path">/</div>
-
-        <div class="row" style="margin-top:9px"><span class="k" id="t-res">Résultat</span><span class="v" id="v-res">Introuvable</span></div>
-
-        <div class="sep"></div>
-
-        <div class="row total"><span class="k" id="t-total">Total à payer</span><span class="v"><bdi>0,00 MAD</bdi></span></div>
-
-        <div class="sep"></div>
-
-        <p class="note" id="t-note">Le lien est peut-être ancien, ou l'adresse comporte une faute. Le reste du site fonctionne normalement.</p>
-
-        <div class="thanks" id="t-thanks">Merci de votre visite</div>
-        <div class="barcode" id="barcode" aria-hidden="true"></div>
-        <div class="code">KIWI-OS.COM</div>
+        <div class="tear tear-b" id="tear-b" aria-hidden="true"></div>
       </div>
-      <div class="tear tear-b" aria-hidden="true"></div>
+      </div>
     </div>
-    <div class="head" aria-hidden="true"></div>
   </div>
 
   <div class="below">
@@ -285,6 +384,8 @@
       <a class="btn primary" href="/" id="t-home">Retour à l'accueil</a>
       <a class="btn ghost" href="https://wa.me/212624495159" target="_blank" rel="noreferrer" id="t-help">Nous contacter</a>
     </div>
+
+    <button type="button" class="reprint" id="t-reprint">Réimprimer le ticket</button>
 
     <p class="contact">
       <a href="tel:+212624495159" dir="ltr">+212 624 495 159</a> ·
@@ -300,49 +401,52 @@
 </main>
 
 <script>
-/* La page est servie telle quelle pour toutes les URL inconnues, y compris
-   sous /en/ et /ar/ · le français seul laisserait un lecteur anglophone ou
-   arabophone devant une langue qu'il n'a pas choisie. On lit d'abord le
-   préfixe de l'URL demandée (signal le plus fiable), puis la langue du
-   navigateur. Sans JavaScript le français reste affiché : la page est déjà
-   complète, le script ne fait que la traduire et dater le ticket. */
 (function () {
+  'use strict';
+
+  /* Servie telle quelle pour toutes les URL inconnues, y compris sous /en/ et
+     /ar/ — le français seul laisserait un lecteur anglophone ou arabophone
+     devant une langue qu'il n'a pas choisie. On lit d'abord le préfixe de
+     l'URL demandée (signal le plus fiable), puis la langue du navigateur. */
   var T = {
     fr: {
-      lang: 'fr', dir: 'ltr', loc: 'fr-MA',
+      lang: 'fr', dir: 'ltr',
       docTitle: 'Page introuvable · Kiwi',
+      aria: 'Reçu · page introuvable',
       sub: "Système d'exploitation du commerçant",
-      ticket: 'Ticket · page introuvable',
-      date: 'Date', time: 'Heure',
-      req: 'Page demandée', res: 'Résultat', resv: 'Introuvable',
-      total: 'Total à payer',
+      ticket: 'Ticket n°', stamp: 'Duplicata', date: 'Date',
+      req: '1× Page demandée', res: '1× Article non référencé',
+      tva: 'TVA (20 %)', total: 'TOTAL',
+      pay: 'Paiement', payv: 'Néant', change: 'Monnaie rendue',
       note: "Le lien est peut-être ancien, ou l'adresse comporte une faute. Le reste du site fonctionne normalement.",
-      thanks: 'Merci de votre visite',
-      home: "Retour à l'accueil", help: 'Nous contacter'
+      thanks: 'Merci · Kiwi',
+      home: "Retour à l'accueil", help: 'Nous contacter', reprint: 'Réimprimer le ticket'
     },
     en: {
-      lang: 'en', dir: 'ltr', loc: 'en-GB',
+      lang: 'en', dir: 'ltr',
       docTitle: 'Page not found · Kiwi',
+      aria: 'Receipt · page not found',
       sub: "The Moroccan merchant's operating system",
-      ticket: 'Receipt · page not found',
-      date: 'Date', time: 'Time',
-      req: 'Page requested', res: 'Result', resv: 'Not found',
-      total: 'Amount due',
+      ticket: 'Receipt no.', stamp: 'Duplicate', date: 'Date',
+      req: '1× Page requested', res: '1× Item not on file',
+      tva: 'VAT (20%)', total: 'TOTAL',
+      pay: 'Payment', payv: 'None', change: 'Change due',
       note: 'The link may be old, or the address has a typo. Everything else on the site is working normally.',
-      thanks: 'Thank you for your visit',
-      home: 'Back to home', help: 'Contact us'
+      thanks: 'Thank you · Kiwi',
+      home: 'Back to home', help: 'Contact us', reprint: 'Print it again'
     },
     ar: {
-      lang: 'ar', dir: 'rtl', loc: 'ar-MA',
+      lang: 'ar', dir: 'rtl',
       docTitle: 'الصفحة غير موجودة · Kiwi',
+      aria: 'وصل · صفحة غير موجودة',
       sub: 'نظام تشغيل التاجر المغربي',
-      ticket: 'تذكرة · صفحة غير موجودة',
-      date: 'التاريخ', time: 'الساعة',
-      req: 'الصفحة المطلوبة', res: 'النتيجة', resv: 'غير موجودة',
-      total: 'المبلغ المستحق',
+      ticket: 'وصل رقم', stamp: 'نسخة', date: 'التاريخ',
+      req: '1× الصفحة المطلوبة', res: '1× صنف غير مسجّل',
+      tva: 'الضريبة (20٪)', total: 'المجموع',
+      pay: 'الأداء', payv: 'لا شيء', change: 'الباقي',
       note: 'قد يكون الرابط قديماً أو العنوان يحتوي على خطأ. باقي الموقع يعمل بشكل طبيعي.',
-      thanks: 'شكراً على زيارتكم',
-      home: 'العودة إلى الصفحة الرئيسية', help: 'اتصل بنا'
+      thanks: 'شكراً · Kiwi',
+      home: 'العودة إلى الصفحة الرئيسية', help: 'اتصل بنا', reprint: 'إعادة طباعة الوصل'
     }
   };
 
@@ -356,63 +460,179 @@
     key = nav.indexOf('ar') === 0 ? 'ar' : (nav.indexOf('en') === 0 ? 'en' : 'fr');
   }
   var t = T[key];
-
   function set(id, txt) { var el = document.getElementById(id); if (el) el.textContent = txt; }
 
   document.documentElement.lang = t.lang;
   document.documentElement.dir = t.dir;
   document.title = t.docTitle;
-  set('t-sub', t.sub); set('t-ticket', t.ticket);
-  set('t-date', t.date); set('t-time', t.time);
-  set('t-req', t.req); set('t-res', t.res); set('v-res', t.resv);
-  set('t-total', t.total); set('t-note', t.note); set('t-thanks', t.thanks);
-  set('t-home', t.home); set('t-help', t.help);
+  var slip = document.getElementById('slip');
+  if (slip) slip.setAttribute('aria-label', t.aria);
+  set('t-sub', t.sub); set('t-ticket', t.ticket); set('t-stamp', t.stamp);
+  set('t-date', t.date); set('t-req', t.req); set('t-res', t.res);
+  set('t-tva', t.tva); set('t-total', t.total);
+  set('t-pay', t.pay); set('v-pay', t.payv); set('t-change', t.change);
+  set('t-note', t.note); set('t-thanks', t.thanks);
+  set('t-home', t.home); set('t-help', t.help); set('t-reprint', t.reprint);
   var home = document.getElementById('t-home');
   if (home) home.setAttribute('href', '/' + t.lang + '/');
 
   /* Le ticket porte le chemin réellement demandé : c'est souvent là que la
-     personne voit sa faute de frappe. textContent, jamais innerHTML · cette
+     personne voit sa faute de frappe. textContent, jamais innerHTML — cette
      valeur vient de l'URL, donc de n'importe qui. */
   var raw = location.pathname + (location.search || '');
-  if (raw.length > 72) raw = raw.slice(0, 71) + '…';
+  if (raw.length > 68) raw = raw.slice(0, 67) + '…';
   set('v-path', raw);
 
-  var now = new Date();
-  try {
-    set('v-date', now.toLocaleDateString(t.loc, { day: '2-digit', month: '2-digit', year: 'numeric' }));
-    set('v-time', now.toLocaleTimeString(t.loc, { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }));
-  } catch (_) {
-    set('v-date', now.toISOString().slice(0, 10));
-    set('v-time', now.toISOString().slice(11, 19));
+  /* La date est composée à la main, sans toLocaleDateString. En arabe, le
+     formateur insère des marques de direction (U+200F) entre les groupes de
+     chiffres — invisibles dans le DOM, mais elles survivent à la boîte forcée
+     en LTR et « 22/08/2026 21:19 » s'affichait « 2221:19 2026/08/ ». Une
+     imprimante de caisse sort de toute façon le même format quelle que soit
+     la langue du ticket. */
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function stampTime() {
+    var d = new Date();
+    set('v-when', pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear()
+      + '  ' + pad(d.getHours()) + ':' + pad(d.getMinutes()));
+  }
+  stampTime();
+
+  /* Une graine tirée du chemin demandé. Elle sert au code-barres ET à la
+     découpe du bord : deux URL fausses différentes donnent deux tickets
+     physiquement différents, et le même ticket réimprimé reste le même. */
+  var seed0 = 7919;
+  for (var i = 0; i < raw.length; i++) seed0 = (seed0 * 31 + raw.charCodeAt(i)) >>> 0;
+  function rng(state) {
+    var s = state;
+    return function () { s = (s * 1103515245 + 12345) >>> 0; return s / 4294967296; };
   }
 
-  /* Code-barres dérivé du chemin demandé : deux URL différentes donnent deux
-     dessins différents. Décoratif, mais pas décoratif au hasard. */
   var bc = document.getElementById('barcode');
   if (bc) {
-    var seed = 7919;
-    for (var i = 0; i < raw.length; i++) seed = (seed * 31 + raw.charCodeAt(i)) >>> 0;
-    var out = '';
+    var r1 = rng(seed0), out = '';
     for (var b = 0; b < 46; b++) {
-      seed = (seed * 1103515245 + 12345) >>> 0;
-      var w = 1 + (seed >>> 16) % 3;
-      var h = 74 + (seed >>> 8) % 27;
-      out += '<i style="width:' + w + 'px;height:' + h + '%"></i>';
+      out += '<i style="width:' + (1 + Math.floor(r1() * 3)) + 'px;height:' + (74 + Math.floor(r1() * 27)) + '%"></i>';
     }
     bc.innerHTML = out;
   }
 
+  /* Un vrai bord arraché n'est pas une frise régulière : les dents sont
+     inégales et la ligne de déchirure n'est pas d'équerre. Le masque CSS en
+     conic-gradient reste le socle — il fonctionne sans JavaScript et sur les
+     moteurs sans masque SVG — et on ne le remplace que si le SVG a pu être
+     dessiné. */
+  function tear(el, state, flip) {
+    if (!el) return;
+    var w = Math.max(120, Math.round(el.getBoundingClientRect().width));
+    var h = 10, r = rng(state), d = 'M0,0 ', x = 0;
+    /* La ligne de déchirure part légèrement de travers : une main, pas une
+       lame. */
+    var lean = (r() - 0.5) * 2.4;
+    while (x < w) {
+      var step = 11 + r() * 9;
+      var mid = Math.min(w, x + step / 2);
+      var deep = (0.45 + r() * 0.55) * h + (mid / w) * lean;
+      x = Math.min(w, x + step);
+      d += 'L' + mid.toFixed(1) + ',' + Math.max(1, Math.min(h, deep)).toFixed(1) + ' L' + x.toFixed(1) + ',' + (0.5 + r() * 1.6).toFixed(1) + ' ';
+    }
+    d += 'L' + w + ',0 Z';
+    var svg = '<svg viewBox="0 0 ' + w + ' ' + h + '" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">'
+      + '<path d="' + d + '" fill="#F7F5F0"/></svg>';
+    el.innerHTML = svg;
+    el.style.background = 'none';
+    el.style.webkitMask = 'none';
+    el.style.mask = 'none';
+    if (flip) el.style.transform = 'scaleY(-1)';
+  }
+  var tearB = document.getElementById('tear-b'), tearT = document.getElementById('tear-t');
+  function drawTears() { tear(tearB, seed0 ^ 0x5f3a, false); tear(tearT, seed0 ^ 0x91c7, true); }
+  drawTears();
+  /* On ne redessine que si la LARGEUR a bougé. Sur mobile, la barre d'adresse
+     qui se replie déclenche un resize à chaque défilement : sans ce test on
+     redécoupait le ticket en boucle pour rien. */
+  var rz, lastW = innerWidth;
+  addEventListener('resize', function () {
+    if (innerWidth === lastW) return;
+    lastW = innerWidth;
+    clearTimeout(rz); rz = setTimeout(drawTears, 180);
+  }, { passive: true });
+
+  var paper = document.getElementById('paper');
+  var tilt = document.getElementById('tilt');
+  /* Lu à CHAQUE usage, jamais mis en cache : quelqu'un peut activer « réduire
+     les animations » pendant la visite, et une préférence d'accessibilité
+     échantillonnée une seule fois au chargement ne vaut rien. */
+  var calmMQ = window.matchMedia ? matchMedia('(prefers-reduced-motion: reduce)') : null;
+  function calm() { return !!(calmMQ && calmMQ.matches); }
+
+  /* L'arrachage. Il n'arrive qu'une fois l'impression finie — c'est le seul
+     moment où le haut du ticket sort de la machine, donc le seul moment où il
+     a le droit d'être déchiré.
+     Il est déclenché par la FIN DE L'ANIMATION, pas par une horloge posée à
+     côté : un délai en millisecondes se désynchronise dès qu'on réimprime, et
+     arrachait le ticket au milieu de l'impression suivante. */
+  function rip() { if (paper) paper.classList.add('torn'); }
+  var safety = 0;
+  function armSafety() { clearTimeout(safety); safety = setTimeout(rip, 4000); }
+  if (paper) {
+    paper.addEventListener('animationend', function (e) {
+      if (e.animationName === 'feed') { clearTimeout(safety); rip(); }
+    });
+  }
+  if (calm()) rip();                        /* déjà imprimé, déjà arraché */
+  else armSafety();                         /* filet, si l'animation n'a pas lieu */
+
+  /* Un onglet caché puis retrouvé ne doit jamais montrer une page à moitié
+     imprimée : on pose le ticket dans son état final plutôt que de rejouer
+     quoi que ce soit. */
+  addEventListener('pageshow', function (e) { if (e && e.persisted) rip(); });
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) return;
+    /* On coupe l'animation en plus d'arracher : sans ça, une personne qui
+       ouvre la page dans un onglet d'arrière-plan et y revient plus tard
+       retrouve un ticket figé à moitié imprimé — l'animation n'a pas tourné,
+       mais son image de départ, elle, est bien peinte. Retirer l'animation
+       rend au papier son état naturel : entièrement visible. */
+    clearTimeout(safety);
+    if (paper) paper.style.animation = 'none';
+    rip();
+  });
+
+  /* Réimpression. Un vrai ticket réimprimé porte la mention DUPLICATA — c'est
+     un champ de assets/escpos.js › receipt(), pas une invention. Le numéro,
+     le code-barres et la découpe ne bougent pas : c'est le même ticket. */
+  var btn = document.getElementById('t-reprint');
+  if (btn && paper) {
+    btn.classList.add('on');
+    btn.addEventListener('click', function () {
+      slip.classList.add('is-copy');
+      stampTime();
+      if (calm()) { rip(); return; }          /* pas d'animation : juste le duplicata */
+      paper.classList.remove('torn');
+      paper.style.animation = 'none';
+      void paper.offsetWidth;                 /* force le reflow : redémarre l'animation */
+      paper.style.animation = '';
+      armSafety();                            /* animationend fera le reste */
+    });
+  }
+
   /* Une inclinaison très légère au passage de la souris : assez pour que le
      papier ait l'air posé là, pas assez pour devenir un jouet. Pointeur fin
-     seulement · au doigt, ça ne ferait que trembler. */
-  var paper = document.getElementById('paper');
-  var fine = window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-  var calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (paper && fine && !calm) {
-    window.addEventListener('pointermove', function (e) {
-      var x = (e.clientX / window.innerWidth - 0.5) * 2;
-      var y = (e.clientY / window.innerHeight - 0.5) * 2;
-      paper.style.transform = 'rotateY(' + (x * 3.2).toFixed(2) + 'deg) rotateX(' + (-y * 2.2).toFixed(2) + 'deg)';
+     seulement — au doigt ça ne ferait que trembler. La rotation d'arrachage
+     est conservée dans la transformation, sinon le ticket se redresserait. */
+  var fine = window.matchMedia ? matchMedia('(hover: hover) and (pointer: fine)').matches : false;
+  if (tilt && fine) {
+    var raf = 0, tx = 0, ty = 0;
+    addEventListener('pointermove', function (e) {
+      if (calm()) { tilt.style.transform = ''; return; }
+      tx = (e.clientX / innerWidth - 0.5) * 2;
+      ty = (e.clientY / innerHeight - 0.5) * 2;
+      if (raf) return;
+      raf = requestAnimationFrame(function () {
+        raf = 0;
+        tilt.style.transform =
+          'rotateY(' + (tx * 3).toFixed(2) + 'deg) rotateX(' + (-ty * 2).toFixed(2) + 'deg)';
+      });
     }, { passive: true });
   }
 })();
