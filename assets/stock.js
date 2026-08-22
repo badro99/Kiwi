@@ -3944,6 +3944,7 @@
           <td class="r" style="width:100px;">
             <input class="st-mb-input mono" data-stock-receive-cost type="number" min="0" step="0.01" placeholder="0.00" value="${lineCost}" style="font-size:12px;" />
           </td>
+          <td class="r" style="width:132px;"><input class="st-mb-input mono" data-stock-receive-dlc type="date" title="DLC / DDM (optionnel)" style="font-size:12px;" /></td>
           <td class="r mono" data-stock-receive-ref-cost style="width:90px;font-size:12px;color:var(--n-600);">
             ${comparison.currentCost > 0 ? fmtMad(comparison.currentCost) : '—'}
           </td>
@@ -3988,6 +3989,7 @@
               <th>Article reçu</th>
               <th class="r">Quantité</th>
               <th class="r">${esc(t('mScanColInvoicedCost'))} MAD</th>
+              <th class="r">DLC</th>
               <th class="r">${esc(t('mScanColCurrentCost'))}</th>
               <th>Évolution & MAJ</th>
               <th></th>
@@ -4103,6 +4105,7 @@
           <td class="r" style="width:100px;">
             <input class="st-mb-input mono" data-stock-receive-cost type="number" min="0" step="0.01" placeholder="0.00" style="font-size:12px;" />
           </td>
+          <td class="r" style="width:132px;"><input class="st-mb-input mono" data-stock-receive-dlc type="date" title="DLC / DDM (optionnel)" style="font-size:12px;" /></td>
           <td class="r mono" data-stock-receive-ref-cost style="width:90px;font-size:12px;color:var(--n-600);">—</td>
           <td style="min-width:170px;font-size:12px;">
             <div style="display:flex;align-items:center;">
@@ -4135,6 +4138,8 @@
         qty: Math.max(0, +(row.querySelector('[data-stock-receive-qty]')?.value || 0)),
         cost: Math.max(0, +(row.querySelector('[data-stock-receive-cost]')?.value || 0)),
         updateCost: !!row.querySelector('[data-stock-receive-update-cost]')?.checked,
+        // DLC / DDM saisie à la réception — alimente le suivi de péremption (lots FIFO)
+        dlc: row.querySelector('[data-stock-receive-dlc]')?.value || '',
       })).filter((line) => line.itemId && line.qty > 0);
 
       if (!supplier || !lines.length) {
@@ -4231,6 +4236,7 @@
             receiptRef,
             receivedAt,
             rank: supRank,
+            expiresAt: line.dlc ? new Date(line.dlc + 'T23:59:59').getTime() : null,
           });
 
         if (line.updateCost && line.cost > 0 && window.KiwiCost?.setItemCost) {
@@ -4975,6 +4981,7 @@
           <div class="st-mb-field"><label class="st-mb-label" data-stock-move-qty-label>Quantité</label><input class="st-mb-input mono" data-stock-move-qty type="number" min="0" step="0.001" placeholder="0" /></div>
         </div>
         <div class="st-mb-field"><label class="st-mb-label">Référence / note</label><input class="st-mb-input" data-stock-move-note placeholder="Motif, document ou responsable" /></div>
+        <div class="st-mb-field" data-stock-move-dlc-wrap><label class="st-mb-label">DLC / DDM (optionnel)</label><input class="st-mb-input mono" data-stock-move-dlc type="date" /></div>
         <div class="st-notice ok" data-stock-move-help>${svg('checkCircle', 14)}<div>Une entrée augmente le stock. Le registre conserve la trace de l’opération.</div></div>`,
       foot: `<button class="st-btn" data-dismiss-modal>Annuler</button><button class="st-btn primary" data-stock-move-save>Enregistrer</button>`,
     });
@@ -4982,8 +4989,10 @@
     const reason = scope?.querySelector('[data-stock-move-reason]');
     const label = scope?.querySelector('[data-stock-move-qty-label]');
     const help = scope?.querySelector('[data-stock-move-help] div');
+    const dlcWrap = scope?.querySelector('[data-stock-move-dlc-wrap]');
     const updateHelp = () => {
       const isCount = reason?.value === 'count';
+      if (dlcWrap) dlcWrap.style.display = reason?.value === 'receipt' ? '' : 'none';
       if (label) label.textContent = isCount ? `Quantité réellement comptée (${it.unit})` : `Quantité (${it.unit})`;
       if (help) help.textContent = isCount
         ? 'Kiwi calcule et enregistre uniquement l’écart entre le stock théorique et le comptage.'
@@ -4999,7 +5008,11 @@
       }
       const ref = `manual-${Date.now().toString(36)}`;
       if (why === 'count') countStock(it, value, ref);
-      else moveStock(it, ['receipt', 'return'].includes(why) ? value : -value, why, 'manual', ref, note);
+      else {
+        const dlc = why === 'receipt' ? (scope.querySelector('[data-stock-move-dlc]')?.value || '') : '';
+        moveStock(it, ['receipt', 'return'].includes(why) ? value : -value, why, 'manual', ref, note, null,
+          dlc ? { expiresAt: new Date(dlc + 'T23:59:59').getTime() } : null);
+      }
       closeTopModal(); window.Kiwi.toast('Mouvement de stock enregistré.', { type: 'success' });
       if (stPageActive) render();
     });

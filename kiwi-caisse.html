@@ -16465,7 +16465,28 @@
           </div>
         </div>` : '';
 
-      return kpis + quickActs + list + wasteSection;
+      // Lots proches de la DLC (7 jours) — un geste pour déclarer la perte, motif pré-rempli « Périmé »
+      const dlcSection = (function(){
+        if (!storeIsReal()) return '';
+        let lots = [];
+        try { lots = (window.KiwiInventoryConsumption?.expiring && window.KiwiInventoryConsumption.expiring({ horizonDays: 7 })) || []; } catch (_) { lots = []; }
+        if (!lots.length) return '';
+        const expired = lots.filter(l => l.status === 'expired').length;
+        return `<div class="sk-section" style="margin-top:20px;">
+          <div class="sk-section-head"><h3>Dates limites</h3><span class="sk-badge warn">${lots.length}</span></div>
+          <div class="sk-alerts">${lots.slice(0, 12).map(l => {
+            const d = new Date(l.expiresAt).toLocaleDateString('fr-FR');
+            const tag = l.status === 'expired' ? 'Périmé' : (l.status === 'critical' ? `J-${Math.max(0, l.daysLeft)}` : `J-${l.daysLeft}`);
+            return `<div class="sk-alert ${l.status === 'expired' ? 'out' : 'low'}"><div class="sk-alert-ico"><i data-lucide="${l.status === 'expired' ? 'x-octagon' : 'clock'}"></i></div>
+              <div class="sk-alert-body"><div class="sk-alert-top"><span class="sk-alert-name">${kdsEsc(l.name)}</span><span class="sk-alert-status ${l.status === 'expired' ? 'out' : 'low'}">${tag}</span></div>
+              <div class="sk-alert-meta">${l.remainingQty} ${kdsEsc(l.unit)} · DLC ${d}${l.supplierName ? ' · ' + kdsEsc(l.supplierName) : ''}</div></div>
+              <button class="ma-btn secondary sk-mini" data-sk-dlc-waste="${kdsEsc(l.itemId)}" data-sk-dlc-lot="${kdsEsc(l.lotId || '')}" data-sk-dlc-qty="${l.remainingQty}" style="color:#b91c1c;"><i data-lucide="trash-2"></i>Déclarer en perte</button>
+            </div>`;
+          }).join('')}</div>
+          ${expired ? `<div class="sk-kpi-sub" style="margin-top:6px;">${expired} lot${expired > 1 ? 's' : ''} déjà périmé${expired > 1 ? 's' : ''} · à sortir du stock.</div>` : ''}
+        </div>`;
+      })();
+      return kpis + quickActs + list + dlcSection + wasteSection;
     }
 
     function skFilteredItems(){
@@ -16738,6 +16759,7 @@
             <input class="sk-rl-cost" data-sk-rl-cost="${idx}" type="number" min="0" step="any" placeholder="Prix unit." value="${costVal}" style="width:100%;">
             <span style="font-size:11px;color:var(--n-500);white-space:nowrap;">MAD</span>
           </div>
+          <input class="sk-rl-dlc" data-sk-rl-dlc="${idx}" type="date" title="DLC / DDM (optionnel)" value="${kdsEsc(l.dlc || '')}" style="flex:1.3;min-width:0;">
           <button class="sk-rl-del" data-sk-rl-del="${idx}" aria-label="Retirer"><i data-lucide="x"></i></button>
         </div>`;
       }).join('') + `<datalist id="sk-items-list">${stockItems.map(i=>`<option value="${kdsEsc(i.name)}">`).join('')}</datalist>`;
@@ -16773,10 +16795,12 @@
         const n = row.querySelector('[data-sk-rl-name]');
         const q = row.querySelector('[data-sk-rl-qty]');
         const c = row.querySelector('[data-sk-rl-cost]');
+        const dl = row.querySelector('[data-sk-rl-dlc]');
         if (skReceptLines[idx]){
           skReceptLines[idx].name = (n ? n.value : '').trim();
           skReceptLines[idx].qty = q ? q.value : '';
           skReceptLines[idx].cost = c && c.value !== '' ? parseFloat(c.value) : null;
+          skReceptLines[idx].dlc = dl ? dl.value : '';
         }
       });
       let added = 0, unknown = 0;
@@ -16806,6 +16830,8 @@
               purchaseQty: qty,
               purchaseUnit: card?.purchaseUnit || it.unit || 'unité',
               factor: factor,
+              // DLC / DDM du lot reçu — lue par KiwiInventoryConsumption.expiring()
+              expiresAt: l.dlc ? new Date(l.dlc + 'T23:59:59').getTime() : null,
             };
             window.KiwiCaisseStock.move(it.id, stockQty, 'receipt', receiptRef, unitCost, meta);
             if (unitCost != null && unitCost > 0 && window.KiwiCaisseStock.updateSupplierPrice) {
@@ -17012,6 +17038,7 @@
       if (e.target.closest('[data-sk-neworder]'))    { openNewOrder(); return; }
       if (e.target.closest('[data-sk-newwaste]') || e.target.id === 'sk-new-waste-btn'){ openWasteModal(); return; }
       if (e.target.closest('[data-sk-waste]')){ openWasteModal(e.target.closest('[data-sk-waste]').dataset.skWaste); return; }
+      if (e.target.closest('[data-sk-dlc-waste]')){ const b = e.target.closest('[data-sk-dlc-waste]'); openWasteModal(b.dataset.skDlcWaste, b.dataset.skDlcLot || '', parseFloat(b.dataset.skDlcQty) || null, 'perime'); return; }
       if (e.target.closest('[data-sk-recept-act]') || e.target.id === 'sk-apercu-recept-btn'){ openRecept(); return; }
       if (e.target.closest('[data-sk-blind-count]') || e.target.id === 'sk-start-blind-count'){ if (window.KiwiPosInventoryCount) window.KiwiPosInventoryCount.open({ engine: 'ledger' }); return; }
       const cf = e.target.closest('[data-sk-confirm]'); if (cf){ confirmOrder(cf.dataset.skConfirm); return; }
