@@ -6,7 +6,7 @@
   const esc=(s)=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const cash=(n)=>new Intl.NumberFormat('fr-FR',{maximumFractionDigits:2}).format(+n||0)+' MAD';
   const venue=()=>window.KiwiVenue?.getCurrentVenueData?.()?.id||window.KiwiVenue?.getVenue?.()||null;
-  const isRestaurant=()=>{const KV=window.KiwiVenue,v=KV?.getCurrentVenueData?.()||{},t=String(KV?.getVenueType?.()||v.type||v.subtype||'').toLowerCase();return ['restaurant','cafe','café','restauration'].includes(t);};
+  const isRestaurant=()=>{const KV=window.KiwiVenue,v=KV?.getCurrentVenueData?.()||{},t=String(KV?.getVenueType?.()||v.type||v.subtype||'').toLowerCase();return ['restaurant','cafe','café','restauration','fastfood','bakery','boulangerie','pizzeria','foodtruck','traiteur','snack','patisserie'].includes(t);};
   const S=()=>window.KiwiMenuStore;
   const D=()=>S()?.data(venue())||{cats:[],items:[],stations:[],opts:[]};
   const find=(key,id)=>(D()[key]||[]).find(x=>x.id===id);
@@ -27,6 +27,19 @@
       tabHours: 'Peak hours',
       tabAlerts: '86 Alerts',
       tabNfc: 'NFC Tags',
+      formulaOnly: 'Set menu only (hidden from direct ordering)',
+      standalone: 'Sold individually',
+      archived: 'Archived',
+      restore: 'Restore',
+      archive: 'Archive',
+      more: 'More actions',
+      available: 'Available',
+      step: 'Step',
+      selectionRule: 'Selection rule',
+      deleteStep: 'Delete step',
+      extra: 'Extra',
+      removeChoice: 'Remove choice',
+      archivedGroup: 'Archived products',
       scanMenu: 'Scan a menu',
       importExcel: 'Import Excel',
       translateMenu: '🌐 Translate menu',
@@ -267,6 +280,19 @@
       tabHours: 'ساعات الذروة',
       tabAlerts: 'تنبيهات 86',
       tabNfc: 'رموز NFC',
+      formulaOnly: 'خاص بالوجبات المركبة فقط (مخفي من البيع المباشر)',
+      standalone: 'يباع منفرداً',
+      archived: 'مؤرشف',
+      restore: 'استعادة',
+      archive: 'أرشفة',
+      more: 'المزيد من الإجراءات',
+      available: 'متوفر',
+      step: 'خطوة',
+      selectionRule: 'قاعدة الاختيار',
+      deleteStep: 'حذف الخطوة',
+      extra: 'إضافة',
+      removeChoice: 'إزالة الاختيار',
+      archivedGroup: 'المنتجات المؤرشفة',
       scanMenu: 'مسح القائمة',
       importExcel: 'استيراد Excel',
       translateMenu: '🌐 ترجمة القائمة',
@@ -507,6 +533,19 @@
       tabHours: 'Heures de pointe',
       tabAlerts: 'Alertes 86',
       tabNfc: 'Tags NFC',
+      formulaOnly: 'Réservé aux formules (masqué en vente directe)',
+      standalone: 'Vendu seul',
+      archived: 'Archivé',
+      restore: 'Restaurer',
+      archive: 'Archiver',
+      more: 'Plus d’actions',
+      available: 'Disponible',
+      step: 'Étape',
+      selectionRule: 'Règle de choix',
+      deleteStep: 'Supprimer l’étape',
+      extra: 'Supplément',
+      removeChoice: 'Retirer le choix',
+      archivedGroup: 'Produits archivés',
       scanMenu: 'Scanner un menu',
       importExcel: 'Importer Excel',
       translateMenu: '🌐 Traduire la carte',
@@ -830,7 +869,7 @@
   }
   function card(x){
     const tr=(typeof t==='function'?t:(s)=>s);
-    const u=(typeof ui==='function'?ui:(k,p)=>k==='formula'?'FORMULE':k==='stepCount'?`${p?.n||0} étape(s)`:k==='optGroupCount'?`${p?.n||0} groupe(s) d’options`:k==='noSection'?'Sans section':k==='reuse'?'Réutiliser':k);
+    const u=(typeof ui==='function'?ui:(k,p)=>k==='formula'?'FORMULE':k==='stepCount'?`${p?.n||0} étape(s)`:k==='optGroupCount'?`${p?.n||0} groupe(s) d’options`:k==='noSection'?'Sans section':k==='reuse'?'Réutiliser':k==='more'?'Plus d’actions':k==='restore'?'Restaurer':k==='archive'?'Archiver':k==='delete'?'Supprimer':k==='available'?'Disponible':k==='formulaOnly'?'Réservé aux formules':k==='archived'?'Archivé':k);
     const c=cat(x.catId),sid=c?.station||S().kitchenId(venue()),s=station(sid),sub=c&&x.subId?(c.sub||[]).find(k=>k.id===x.subId):null;
     const media=x.video?`<video class="rmw-media" src="${esc(x.video)}" muted playsinline preload="metadata"></video>`:x.photo?`<img class="rmw-media" src="${esc(x.photo)}" alt=""/>`:'';
     const formulaBadge=x.formula?`<span class="mi-tag" style="background:var(--mint-tint);color:var(--forest-ink);font-weight:700;margin-left:4px;">${esc(u('formula'))}</span>`:'';
@@ -838,10 +877,14 @@
     const subName=sub?tr(sub.name):'';
     const xName=tr(x.name);
     const sName=tr(s?.name||'Cuisine');
-    const stateUi=(key,fallback)=>(typeof ui==='function'?ui(key):fallback);const badges=[x.formulaOnly?stateUi('formulaOnly','Réservé aux formules'):'',x.archived?stateUi('archived','Archivé'):'',x.avail===false?'86':''].filter(Boolean).map(label=>`<span class="mi-tag">${esc(label)}</span>`).join('');
+    const badges=[x.formulaOnly?u('formulaOnly'):'',x.archived?u('archived'):'',x.avail===false?'86':''].filter(Boolean).map(label=>`<span class="mi-tag">${esc(label)}</span>`).join('');
+    const archiveLabel=x.archived?u('restore'):u('archive');
     const menuOpen = typeof openItemMenu !== 'undefined' && openItemMenu === x.id;
-    const actionMenu=`<span class="rmw-card-menu" data-rmw-menu-root><button class="rmw-more-btn" data-action="rmw-item-more" data-arg="${x.id}" aria-label="${esc(stateUi('more','Plus d’actions'))}" title="${esc(stateUi('more','Plus d’actions'))}" aria-haspopup="menu" aria-expanded="${menuOpen}">${ic('more')}</button>${menuOpen?`<span class="rmw-action-pop" role="menu"><button data-action="rmw-item-archive" data-arg="${x.id}" role="menuitem">${ic(x.archived?'restore':'archive')}<span>${esc(archiveLabel)}</span></button><button class="danger" data-action="rmw-item-delete" data-arg="${x.id}" role="menuitem">${ic('trash')}<span>${esc(stateUi('delete','Supprimer'))}</span></button></span>`:''}</span>`;
-    return `<article class="mi-card${x.avail===false?' rmw-off':''}${x.archived?' rmw-archived':''}${menuOpen?' rmw-menu-open':''}" data-action="rmw-item-edit" data-arg="${x.id}">${media}<div class="mi-card-top"><span class="mi-card-cat">${esc(cName)}${subName?` · ${esc(subName)}`:''}</span>${formulaBadge}${badges}${actionMenu}</div><div class="mi-card-name">${esc(xName)}</div><div class="mi-card-price-row"><span class="mi-card-price">${cash(x.price)}</span><span class="mi-card-station">→ ${esc(sName)}</span></div><div class="mi-card-foot"><span>${x.formula?`${(x.formula.slots||[]).length} étape(s)`:`${(x.opts||[]).length} groupe(s) d’options`}</span><span class="mi-card-acts"><button class="mi-state-toggle" data-action="rmw-item-avail" data-arg="${x.id}" role="switch" aria-checked="${x.avail!==false}"${x.archived?' disabled':''}>${x.avail===false?'86':'Disponible'}</button>${x.formula?`<button class="btn-slim" data-action="rmw-formula-duplicate" data-arg="${x.id}">${ic('plus')} Réutiliser</button>`:''}</span></div></article>`;
+    const actionMenu=`<span class="rmw-card-menu" data-rmw-menu-root><button class="rmw-more-btn" data-action="rmw-item-more" data-arg="${x.id}" aria-label="${esc(u('more'))}" title="${esc(u('more'))}" aria-haspopup="menu" aria-expanded="${menuOpen}">${ic('more')}</button>${menuOpen?`<span class="rmw-action-pop" role="menu"><button data-action="rmw-item-archive" data-arg="${x.id}" role="menuitem">${ic(x.archived?'restore':'archive')}<span>${esc(archiveLabel)}</span></button><button class="danger" data-action="rmw-item-delete" data-arg="${x.id}" role="menuitem">${ic('trash')}<span>${esc(u('delete'))}</span></button></span>`:''}</span>`;
+    const stepOrOptText = x.formula
+      ? u('stepCount', { n: (x.formula.slots||[]).length })
+      : u('optGroupCount', { n: (x.opts||[]).length });
+    return `<article class="mi-card${x.avail===false?' rmw-off':''}${x.archived?' rmw-archived':''}${menuOpen?' rmw-menu-open':''}" data-action="rmw-item-edit" data-arg="${x.id}">${media}<div class="mi-card-top"><span class="mi-card-cat">${esc(cName)}${subName?` · ${esc(subName)}`:''}</span>${formulaBadge}${badges}${actionMenu}</div><div class="mi-card-name">${esc(xName)}</div><div class="mi-card-price-row"><span class="mi-card-price">${cash(x.price)}</span><span class="mi-card-station">→ ${esc(sName)}</span></div><div class="mi-card-foot"><span>${esc(stepOrOptText)}</span><span class="mi-card-acts"><button class="mi-state-toggle" data-action="rmw-item-avail" data-arg="${x.id}" role="switch" aria-checked="${x.avail!==false}"${x.archived?' disabled':''}>${x.avail===false?'86':esc(u('available'))}</button>${x.formula?`<button class="btn-slim" data-action="rmw-formula-duplicate" data-arg="${x.id}">${ic('plus')} ${esc(u('reuse'))}</button>`:''}</span></div></article>`;
   }
   function groupCard(g){
     const used=D().items.filter(x=>(x.opts||[]).includes(g.id)).length;
