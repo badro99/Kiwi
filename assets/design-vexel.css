@@ -2805,7 +2805,10 @@ body.design-vexel[data-vexel-mode] .topbar .ai-btn {
    * posee dans le noir, pas comme une pastille de peinture. Le fond reste tres
    * sombre et c'est l'aureole qui porte le mint. */
   background: linear-gradient(180deg, #07301F 0%, #03170F 100%) !important;
-  color: var(--paper);
+  /* Valeur litterale et non var(--paper) : la couche B redefinit --paper a
+     #000000 en mode sombre, donc le token aurait ecrit le libelle en noir
+     sur la pastille noire. */
+  color: #F4FBF7;
   /* Quatre nappes qui montent en douceur : le lisere, la premiere assise, le
    * bloom serre puis le bloom large. Aucune n'a de bord franc, donc l'ensemble
    * lit comme une aura et non comme un anneau de focus reste coince. */
