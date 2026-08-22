@@ -17,10 +17,21 @@ const NOT_FOUND = () => new Response('Not found', {
 
 export async function onRequestGet(context) {
   const { params, env, request } = context;
-  if (!env.MEDIA) return NOT_FOUND();
 
   // [[key]] catches the rest of the path as an array of segments.
   const raw = Array.isArray(params.key) ? params.key.join('/') : String(params.key || '');
+
+  // Sans clé, c'est la sonde « le stockage média est-il actif ? » que le
+  // tableau de bord envoie sur GET /api/media (orderpro-publish.js mediaReady).
+  // Ce fourre-tout prend aussi le chemin nu et masquait le onRequestGet de
+  // index.js : la sonde recevait « Not found » et répondait « pas activé » même
+  // une fois le seau lié. On rend ici la même réponse que index.js.
+  if (!raw) {
+    return new Response(JSON.stringify({ ok: true, media: !!env.MEDIA }), {
+      status: 200, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' },
+    });
+  }
+  if (!env.MEDIA) return NOT_FOUND();
   let key;
   try { key = decodeURIComponent(raw); } catch (_) { return NOT_FOUND(); }
   // Defence in depth: no traversal, no absolute paths, nothing but the shape we
