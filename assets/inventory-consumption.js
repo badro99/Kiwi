@@ -87,8 +87,13 @@
 
   function deriveLots(itemId) {
     var I = window.KiwiInventory;
-    if (!I || !I.history) return [];
-    var rows = (I.history(itemId) || []).slice().reverse(); // Chronological order
+    if (!I || (!I.history && !I.listMovements)) return [];
+    var raw = I.history ? (I.history(itemId) || []) : (I.listMovements ? I.listMovements(itemId) : []);
+    var rows = raw.slice().sort(function (a, b) {
+      var ta = +a.occurredTs || +a.createdTs || 0;
+      var tb = +b.occurredTs || +b.createdTs || 0;
+      return ta - tb;
+    });
     var lots = [];
 
     for (var i = 0; i < rows.length; i++) {
@@ -99,6 +104,12 @@
 
       if (q > 0 && (m.reason === 'opening' || m.reason === 'receipt')) {
         var rank = m.meta && m.meta.rank != null ? +m.meta.rank : (m.reason === 'opening' ? 999 : 50);
+        var expiresAt = null;
+        if (m.meta && m.meta.expiresAt != null) {
+          expiresAt = typeof m.meta.expiresAt === 'number' ? m.meta.expiresAt : new Date(m.meta.expiresAt).getTime();
+        } else if (m.meta && m.meta.shelfLifeDays != null && Number(m.meta.shelfLifeDays) > 0) {
+          expiresAt = (+m.occurredTs || Date.now()) + (Number(m.meta.shelfLifeDays) * 86400000);
+        }
         lots.push({
           id: m.id,
           initialQty: q,
@@ -106,6 +117,9 @@
           unitCost: m.unitCost != null && Number.isFinite(+m.unitCost) ? +m.unitCost : null,
           rank: rank,
           ts: +m.occurredTs || 0,
+          expiresAt: expiresAt,
+          shelfLifeDays: m.meta && m.meta.shelfLifeDays ? Number(m.meta.shelfLifeDays) : null,
+          batchNum: (m.meta && (m.meta.batchNum || m.meta.lot)) || null,
           meta: m.meta || null,
           supplierName: (m.meta && m.meta.supplierName) || null,
         });
@@ -149,6 +163,51 @@
     });
 
     return lots.filter(function (l) { return l.remainingQty > 0; });
+  }
+
+  function expiring(opts) {
+    opts = opts || {};
+    var horizonDays = opts.horizonDays != null ? Number(opts.horizonDays) : 7;
+    var now = opts.now != null ? Number(opts.now) : Date.now();
+    var horizonMs = now + (horizonDays * 86400000);
+    var I = window.KiwiInventory;
+    if (!I) return [];
+    var items = opts.items || (I.listItems ? I.listItems() : []);
+    var results = [];
+    
+    items.forEach(function (it) {
+      if (!it || !it.id) return;
+      var lots = deriveLots(it.id) || [];
+      lots.forEach(function (lot) {
+        if (!(lot.remainingQty > 0)) return;
+        var exp = lot.expiresAt;
+        if (!exp && it.shelfLifeDays && Number(it.shelfLifeDays) > 0) {
+          exp = lot.ts + (Number(it.shelfLifeDays) * 86400000);
+        }
+        if (!exp) return;
+        if (exp <= horizonMs) {
+          var daysLeft = Math.round((exp - now) / 86400000);
+          var status = exp <= now ? 'expired' : (exp <= now + (3 * 86400000) ? 'critical' : 'warning');
+          results.push({
+            itemId: it.id,
+            name: it.name || it.label || it.id,
+            unit: it.unit || 'unité',
+            lotId: lot.id,
+            batchNum: lot.batchNum || '',
+            remainingQty: lot.remainingQty,
+            unitCost: lot.unitCost != null ? lot.unitCost : (it.cost || null),
+            totalCostMAD: lot.unitCost != null ? Math.round(lot.remainingQty * lot.unitCost * 100) / 100 : (it.cost ? Math.round(lot.remainingQty * it.cost * 100) / 100 : null),
+            expiresAt: exp,
+            daysLeft: daysLeft,
+            status: status,
+            supplierName: lot.supplierName || ''
+          });
+        }
+      });
+    });
+
+    results.sort(function (a, b) { return a.expiresAt - b.expiresAt; });
+    return results;
   }
 
   function allocateCost(itemId, reqQty, defaultUnitCost) {
@@ -417,5 +476,5 @@
     return written;
   }
 
-  window.KiwiInventoryConsumption = { record: record, reverse: reverse, reverseVoid: reverseVoid, recipeLines: recipeLines, deriveLots: deriveLots, allocateCost: allocateCost };
+  window.KiwiInventoryConsumption = { record: record, reverse: reverse, reverseVoid: reverseVoid, recipeLines: recipeLines, deriveLots: deriveLots, allocateCost: allocateCost, expiring: expiring };
 })();

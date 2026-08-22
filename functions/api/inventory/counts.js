@@ -5,17 +5,16 @@
 // le calcul de l'écart au moment du gel, la revue par le propriétaire et l'application append-only.
 //
 //   · GET  /api/inventory/counts                → Liste des inventaires du magasin
-//   · GET  /api/inventory/counts?id=cnt_...     → Détail d'un inventaire gelé
+//   · GET  /api/inventory/counts?id=cnt_...     → Détail d'un inventaire gelé + événements
 //   · GET  /api/inventory/counts?rollup=1       → Écarts récurrents (top articles / employés)
-//   · POST /api/inventory/counts                → Soumission d'un inventaire aveugle (caisse)
-//   · POST /api/inventory/counts (action=review) → Validation/rejet propriétaire et application
+//   · POST /api/inventory/counts (action=submit)→ Soumission / re-soumission d'un inventaire aveugle
+//   · POST /api/inventory/counts (action=review/approve/reject/request-correction) → Décision propriétaire
 
-import { json } from '../../auth/_lib.js';
+import { json, entitledMerchant } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
 
 const str = (v, n) => String(v == null ? '' : v).trim().slice(0, n);
 const num = (v) => Number.isFinite(Number(v)) ? Number(v) : 0;
-const ts = (v) => Math.max(0, Math.min(1e15, Math.round(Number(v) || 0)));
 
 async function ensureSchema(env) {
   if (!env || !env.DB) return;
@@ -55,6 +54,42 @@ async function ensureSchema(env) {
   await env.DB.prepare(
     'CREATE INDEX IF NOT EXISTS idx_inventory_counts_merchant_status ON inventory_counts (merchant, status)'
   ).run();
+  await env.DB.prepare(
+    `CREATE TABLE IF NOT EXISTS inventory_count_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      count_id TEXT NOT NULL,
+      merchant TEXT NOT NULL,
+      event TEXT NOT NULL,
+      actor_id TEXT,
+      actor_name TEXT,
+      via TEXT,
+      note TEXT,
+      ts INTEGER NOT NULL
+    )`
+  ).run();
+  await env.DB.prepare(
+    'CREATE INDEX IF NOT EXISTS idx_inventory_count_events_merchant_count ON inventory_count_events (merchant, count_id, ts)'
+  ).run();
+  await env.DB.prepare(
+    'CREATE TABLE IF NOT EXISTS inventory_sync_sequences (merchant TEXT PRIMARY KEY, last_ts INTEGER NOT NULL)'
+  ).run();
+}
+
+async function nextCursor(env, merchant) {
+  const now = Date.now();
+  try {
+    await env.DB.prepare(
+      'INSERT OR IGNORE INTO inventory_sync_sequences (merchant, last_ts) VALUES (?, 0)'
+    ).bind(merchant).run();
+    const row = await env.DB.prepare(
+      `UPDATE inventory_sync_sequences
+          SET last_ts = CASE WHEN last_ts >= ? THEN last_ts + 1 ELSE ? END
+        WHERE merchant = ? RETURNING last_ts AS value`
+    ).bind(now, now, merchant).first();
+    return Number(row && row.value) || now;
+  } catch (_) {
+    return now;
+  }
 }
 
 /* Calcul du système actuel pour le moteur ledger par (item_id, variant_id, location_id) */
@@ -96,6 +131,18 @@ export async function onRequestGet({ request, env }) {
       if (!row) return json({ error: 'not_found' }, 404);
       let lines = []; try { lines = JSON.parse(row.lines_json || '[]'); } catch (_) {}
       let meta = {}; try { meta = JSON.parse(row.meta_json || '{}'); } catch (_) {}
+
+      let events = [];
+      try {
+        const evRes = await env.DB.prepare(
+          `SELECT id, count_id, merchant, event, actor_id, actor_name, via, note, ts
+             FROM inventory_count_events
+            WHERE merchant = ? AND count_id = ?
+            ORDER BY ts ASC`
+        ).bind(merchant, countId).all();
+        events = (evRes && evRes.results) || [];
+      } catch (_) {}
+
       return json({
         count: {
           id: row.id,
@@ -121,7 +168,8 @@ export async function onRequestGet({ request, env }) {
           totalVarianceCostMAD: row.total_variance_cost_mad,
           absVarianceCostMAD: row.abs_variance_cost_mad,
           lines,
-          meta
+          meta,
+          events
         }
       });
     } catch (e) {
@@ -133,7 +181,7 @@ export async function onRequestGet({ request, env }) {
   if (url.searchParams.get('rollup') === '1') {
     try {
       const since = Math.max(0, num(url.searchParams.get('since')));
-      const until = num(url.searchParams.get('until')) || Date.now() + 864e5;
+      const until = num(url.searchParams.get('until')) || (Date.now() + 864e5);
       const res = await env.DB.prepare(
         `SELECT * FROM inventory_counts
           WHERE merchant = ? AND submitted_at >= ? AND submitted_at <= ?
@@ -196,7 +244,7 @@ export async function onRequestGet({ request, env }) {
     const statusFilter = str(url.searchParams.get('status'), 32);
     const employeeFilter = str(url.searchParams.get('employee'), 80);
     const since = Math.max(0, num(url.searchParams.get('since')));
-    const until = num(url.searchParams.get('until')) || Date.now() + 864e5;
+    const until = num(url.searchParams.get('until')) || (Date.now() + 864e5);
 
     let query = `SELECT id, merchant, engine, status, store_id, store_name,
                         employee_id, employee_name, employee_role, submitted_at,
@@ -264,8 +312,14 @@ export async function onRequestPost({ request, env }) {
 
   const action = str(body.action, 32) || 'submit';
 
-  // ── ACTION: REVIEW / APPROVE / REJECT (PROPRIÉTAIRE) ────────────────────────
-  if (action === 'review' || action === 'approve' || action === 'reject') {
+  // ── ACTIONS PROPRIÉTAIRE : REVIEW / APPROVE / REJECT / REQUEST-CORRECTION ───
+  if (action === 'review' || action === 'approve' || action === 'reject' || action === 'request-correction') {
+    // Vérification de droit strict propriétaire/opérateur (pas de caisse ni employé simple)
+    const entitled = await entitledMerchant(request, env, merchant);
+    if (entitled !== merchant) {
+      return json({ error: 'forbidden' }, 403);
+    }
+
     const countId = str(body.id || body.countId, 80);
     if (!countId) return json({ error: 'missing_count_id' }, 400);
 
@@ -278,88 +332,146 @@ export async function onRequestPost({ request, env }) {
       return json({ success: true, count: { id: countId, status: 'applied', alreadyApplied: true } });
     }
 
-    const decision = action === 'reject' ? 'rejected' : (str(body.decision, 32) || 'approved');
     const reviewerId = str(body.reviewerId || body.actorId, 80);
     const reviewerName = str(body.reviewerName || body.actor || 'Propriétaire', 100);
     const reviewNote = str(body.reviewNote || body.note, 500);
     const nowMs = Date.now();
 
-    if (decision === 'rejected') {
-      await env.DB.prepare(
-        `UPDATE inventory_counts
-            SET status = 'rejected', review_decision = 'rejected', review_note = ?,
-                reviewed_at = ?, reviewer_id = ?, reviewer_name = ?, updated_ts = ?
-          WHERE merchant = ? AND id = ?`
-      ).bind(reviewNote, nowMs, reviewerId, reviewerName, nowMs, merchant, countId).run();
+    // ── 1. Demande de correction (action: request-correction) ────────────────
+    if (action === 'request-correction') {
+      if (!reviewNote) {
+        return json({ error: 'note_required', message: 'Une note explicative est requise pour demander une correction.' }, 400);
+      }
 
-      return json({ success: true, count: { id: countId, status: 'rejected', decision: 'rejected' } });
+      const stmts = [
+        env.DB.prepare(
+          `UPDATE inventory_counts
+              SET status = 'correction_requested', review_decision = 'correction_requested', review_note = ?,
+                  reviewed_at = ?, reviewer_id = ?, reviewer_name = ?, updated_ts = ?
+            WHERE merchant = ? AND id = ?`
+        ).bind(reviewNote, nowMs, reviewerId, reviewerName, nowMs, merchant, countId),
+        env.DB.prepare(
+          `INSERT INTO inventory_count_events (count_id, merchant, event, actor_id, actor_name, via, note, ts)
+           VALUES (?, ?, 'correction_requested', ?, ?, 'dashboard', ?, ?)`
+        ).bind(countId, merchant, reviewerId, reviewerName, reviewNote, nowMs)
+      ];
+
+      await env.DB.batch(stmts);
+
+      return json({
+        success: true,
+        count: { id: countId, status: 'correction_requested', decision: 'correction_requested' }
+      });
     }
 
-    // Décision = APPROVED → Appliquer les mouvements de stock selon le moteur
+    // ── 2. Rejet pur et simple ───────────────────────────────────────────────
+    if (action === 'reject' || body.decision === 'rejected') {
+      const stmts = [
+        env.DB.prepare(
+          `UPDATE inventory_counts
+              SET status = 'rejected', review_decision = 'rejected', review_note = ?,
+                  reviewed_at = ?, reviewer_id = ?, reviewer_name = ?, updated_ts = ?
+            WHERE merchant = ? AND id = ?`
+        ).bind(reviewNote, nowMs, reviewerId, reviewerName, nowMs, merchant, countId),
+        env.DB.prepare(
+          `INSERT INTO inventory_count_events (count_id, merchant, event, actor_id, actor_name, via, note, ts)
+           VALUES (?, ?, 'rejected', ?, ?, 'dashboard', ?, ?)`
+        ).bind(countId, merchant, reviewerId, reviewerName, reviewNote, nowMs)
+      ];
+
+      await env.DB.batch(stmts);
+
+      return json({
+        success: true,
+        count: { id: countId, status: 'rejected', decision: 'rejected' }
+      });
+    }
+
+    // ── 3. Approbation & Application en lot atomique (ONE env.DB.batch) ──────
     let lines = [];
     try { lines = JSON.parse(row.lines_json || '[]'); } catch (_) {}
 
+    const batchStmts = [];
+
     if (row.engine === 'ledger') {
-      // Écriture des mouvements ledger groupés sur (item_id, variant_id, location_id)
-      for (const line of lines) {
+      const srvTs = await nextCursor(env, merchant);
+      lines.forEach((line) => {
         const diff = num(line.diff);
-        if (!diff) continue;
-        const movId = 'mov_cnt_' + countId + '_' + Math.random().toString(36).slice(2, 7);
+        if (!diff) return;
         const itemId = str(line.itemId, 80);
         const variantId = str(line.variantId, 80);
         const locationId = str(line.locationId, 80) || 'principal';
+        // Identifiant déterministe garantissant l'idempotence
+        const movId = `cnt-${countId}-${itemId}-${variantId}-${locationId}`;
         const qtyMilli = Math.round(diff * 1000);
         const unitCostCents = line.unitCost != null ? Math.round(num(line.unitCost) * 100) : null;
-        const note = str(line.explanation || line.note || `Ajustement inventaire ${countId}`, 500);
+        const lineNote = str(line.explanation || line.note || `Ajustement inventaire ${countId}`, 500);
 
-        await env.DB.prepare(
-          `INSERT OR IGNORE INTO inventory_movements (
-            id, merchant, item_id, variant_id, location_id, qty_milli, reason,
-            unit_cost_cents, currency, ref_type, ref_id, note, actor,
-            occurred_ts, srv_ts, reversal_of, meta, created_ts
-          ) VALUES (?, ?, ?, ?, ?, ?, 'count', ?, 'MAD', 'count', ?, ?, ?, ?, ?, '', ?, ?)`
-        ).bind(
-          movId, merchant, itemId, variantId, locationId, qtyMilli,
-          unitCostCents, countId, note, reviewerName,
-          nowMs, nowMs, JSON.stringify({ countId, lineKey: line.key || itemId }), nowMs
-        ).run();
-      }
-    } else if (row.engine === 'boutique') {
-      // Mise à jour du catalogue boutique privé via la table store_docs ou documents
+        batchStmts.push(
+          env.DB.prepare(
+            `INSERT OR IGNORE INTO inventory_movements (
+              id, merchant, item_id, variant_id, location_id, qty_milli, reason,
+              unit_cost_cents, currency, ref_type, ref_id, note, actor,
+              occurred_ts, srv_ts, reversal_of, meta, created_ts
+            ) VALUES (?, ?, ?, ?, ?, ?, 'count', ?, 'MAD', 'count', ?, ?, ?, ?, ?, '', ?, ?)`
+          ).bind(
+            movId, merchant, itemId, variantId, locationId, qtyMilli,
+            unitCostCents, countId, lineNote, reviewerName,
+            nowMs, srvTs, JSON.stringify({ countId, lineKey: line.key || itemId }), nowMs
+          )
+        );
+      });
+    } else if (row.engine === 'boutique' || row.engine === 'maison') {
+      // Pour Boutique / Maison : table `catalogs`
       try {
-        const docRow = await env.DB.prepare(
-          `SELECT data, rev FROM store_docs WHERE merchant = ? AND feature = 'catalog'`
+        const catRow = await env.DB.prepare(
+          `SELECT data, rev FROM catalogs WHERE merchant = ?`
         ).bind(merchant).first();
-        if (docRow && docRow.data) {
-          let catalog = JSON.parse(docRow.data);
+        if (catRow && catRow.data) {
+          let catalog = JSON.parse(catRow.data);
           if (!Array.isArray(catalog.moves)) catalog.moves = [];
           lines.forEach(line => {
             const diff = num(line.diff);
             if (!diff || !line.variantId) return;
             catalog.moves.push({
-              id: 'mov_cnt_' + countId + '_' + Math.random().toString(36).slice(2, 7),
+              id: `cnt-${countId}-${line.variantId}`,
               vid: line.variantId,
               d: Math.round(diff),
               at: nowMs,
-              why: 'count',
+              why: 'inventaire',
               actor: reviewerName,
               ref: countId
             });
           });
-          const nextRev = (num(docRow.rev) || 0) + 1;
-          await env.DB.prepare(
-            `UPDATE store_docs SET data = ?, rev = ?, updated_ts = ? WHERE merchant = ? AND feature = 'catalog'`
-          ).bind(JSON.stringify(catalog), nextRev, nowMs, merchant).run();
+          const nextRev = (num(catRow.rev) || 0) + 1;
+          batchStmts.push(
+            env.DB.prepare(
+              `UPDATE catalogs SET data = ?, rev = ?, updated_ts = ? WHERE merchant = ?`
+            ).bind(JSON.stringify(catalog), nextRev, nowMs, merchant)
+          );
         }
       } catch (_) {}
     }
 
-    await env.DB.prepare(
-      `UPDATE inventory_counts
-          SET status = 'applied', review_decision = 'approved', review_note = ?,
-              reviewed_at = ?, reviewer_id = ?, reviewer_name = ?, applied_at = ?, updated_ts = ?
-        WHERE merchant = ? AND id = ?`
-    ).bind(reviewNote, nowMs, reviewerId, reviewerName, nowMs, nowMs, merchant, countId).run();
+    // Mise à jour du statut inventaire
+    batchStmts.push(
+      env.DB.prepare(
+        `UPDATE inventory_counts
+            SET status = 'applied', review_decision = 'approved', review_note = ?,
+                reviewed_at = ?, reviewer_id = ?, reviewer_name = ?, applied_at = ?, updated_ts = ?
+          WHERE merchant = ? AND id = ?`
+      ).bind(reviewNote, nowMs, reviewerId, reviewerName, nowMs, nowMs, merchant, countId)
+    );
+
+    // Événement d'approbation
+    batchStmts.push(
+      env.DB.prepare(
+        `INSERT INTO inventory_count_events (count_id, merchant, event, actor_id, actor_name, via, note, ts)
+         VALUES (?, ?, 'approved', ?, ?, 'dashboard', ?, ?)`
+      ).bind(countId, merchant, reviewerId, reviewerName, reviewNote, nowMs)
+    );
+
+    await env.DB.batch(batchStmts);
 
     return json({
       success: true,
@@ -372,8 +484,9 @@ export async function onRequestPost({ request, env }) {
     });
   }
 
-  // ── ACTION: SUBMIT INVENTORY (CAISSE / OPÉRATEUR) ───────────────────────────
+  // ── ACTION: SUBMIT / RESUBMIT (CAISSE / OPÉRATEUR) ──────────────────────────
   const countId = str(body.id, 80) || ('cnt_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6));
+  const supersedesId = str(body.supersedes, 80);
   const engine = str(body.engine, 32) || 'ledger';
   const storeId = str(body.storeId, 80);
   const storeName = str(body.storeName, 100);
@@ -386,6 +499,19 @@ export async function onRequestPost({ request, env }) {
   let ledgerBalances = new Map();
   if (engine === 'ledger') {
     ledgerBalances = await fetchLedgerBalances(env, merchant);
+  }
+
+  let boutiqueStockMap = new Map();
+  if (engine === 'boutique' || engine === 'maison') {
+    try {
+      const catRow = await env.DB.prepare('SELECT data FROM catalogs WHERE merchant = ?').bind(merchant).first();
+      if (catRow && catRow.data) {
+        const cat = JSON.parse(catRow.data);
+        (cat.variants || []).forEach(v => {
+          if (v && v.id) boutiqueStockMap.set(v.id, num(v.stock != null ? v.stock : v.base));
+        });
+      }
+    } catch (_) {}
   }
 
   let totalLines = 0;
@@ -406,6 +532,8 @@ export async function onRequestPost({ request, env }) {
     let systemQty = num(l.systemQty);
     if (engine === 'ledger' && ledgerBalances.has(key)) {
       systemQty = ledgerBalances.get(key);
+    } else if ((engine === 'boutique' || engine === 'maison') && l.systemQty == null && variantId && boutiqueStockMap.has(variantId)) {
+      systemQty = boutiqueStockMap.get(variantId);
     }
     
     const countedQty = num(l.countedQty != null ? l.countedQty : l.counted);
@@ -442,29 +570,62 @@ export async function onRequestPost({ request, env }) {
   });
 
   const linesJson = JSON.stringify(processedLines);
-  const metaJson = JSON.stringify(body.meta && typeof body.meta === 'object' ? body.meta : {});
+  const metaObj = body.meta && typeof body.meta === 'object' ? body.meta : {};
+  if (supersedesId) metaObj.supersedes = supersedesId;
+  const metaJson = JSON.stringify(metaObj);
 
-  await env.DB.prepare(
-    `INSERT INTO inventory_counts (
-      id, merchant, engine, status, store_id, store_name,
-      employee_id, employee_name, employee_role, submitted_at,
-      total_lines, total_counted, total_system, total_diff,
-      total_variance_cost_mad, abs_variance_cost_mad, lines_json, meta_json,
-      created_ts, updated_ts
-    ) VALUES (?, ?, ?, 'submitted', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ON CONFLICT (id) DO UPDATE SET
-      status = 'submitted', total_lines = excluded.total_lines,
-      total_counted = excluded.total_counted, total_system = excluded.total_system,
-      total_diff = excluded.total_diff, total_variance_cost_mad = excluded.total_variance_cost_mad,
-      abs_variance_cost_mad = excluded.abs_variance_cost_mad, lines_json = excluded.lines_json,
-      meta_json = excluded.meta_json, updated_ts = excluded.updated_ts`
-  ).bind(
-    countId, merchant, engine, storeId, storeName,
-    employeeId, employeeName, employeeRole, nowMs,
-    totalLines, totalCounted, totalSystem, totalDiff,
-    totalVarianceCostMAD, absVarianceCostMAD, linesJson, metaJson,
-    nowMs, nowMs
-  ).run();
+  const submitBatch = [];
+
+  // Si resoumission avec supersedes : marquer l'ancien document 'superseded'
+  if (supersedesId) {
+    submitBatch.push(
+      env.DB.prepare(
+        `UPDATE inventory_counts SET status = 'superseded', updated_ts = ? WHERE merchant = ? AND id = ?`
+      ).bind(nowMs, merchant, supersedesId)
+    );
+    submitBatch.push(
+      env.DB.prepare(
+        `INSERT INTO inventory_count_events (count_id, merchant, event, actor_id, actor_name, via, note, ts)
+         VALUES (?, ?, 'superseded', ?, ?, 'till', ?, ?)`
+      ).bind(supersedesId, merchant, employeeId, employeeName, `Remplacé par ${countId}`, nowMs)
+    );
+  }
+
+  submitBatch.push(
+    env.DB.prepare(
+      `INSERT INTO inventory_counts (
+        id, merchant, engine, status, store_id, store_name,
+        employee_id, employee_name, employee_role, submitted_at,
+        total_lines, total_counted, total_system, total_diff,
+        total_variance_cost_mad, abs_variance_cost_mad, lines_json, meta_json,
+        created_ts, updated_ts
+      ) VALUES (?, ?, ?, 'submitted', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT (id) DO UPDATE SET
+        status = 'submitted', total_lines = excluded.total_lines,
+        total_counted = excluded.total_counted, total_system = excluded.total_system,
+        total_diff = excluded.total_diff, total_variance_cost_mad = excluded.total_variance_cost_mad,
+        abs_variance_cost_mad = excluded.abs_variance_cost_mad, lines_json = excluded.lines_json,
+        meta_json = excluded.meta_json, updated_ts = excluded.updated_ts`
+    ).bind(
+      countId, merchant, engine, storeId, storeName,
+      employeeId, employeeName, employeeRole, nowMs,
+      totalLines, totalCounted, totalSystem, totalDiff,
+      totalVarianceCostMAD, absVarianceCostMAD, linesJson, metaJson,
+      nowMs, nowMs
+    )
+  );
+
+  submitBatch.push(
+    env.DB.prepare(
+      `INSERT INTO inventory_count_events (count_id, merchant, event, actor_id, actor_name, via, note, ts)
+       VALUES (?, ?, ?, ?, ?, 'till', ?, ?)`
+    ).bind(
+      countId, merchant, supersedesId ? 'resubmitted' : 'submitted',
+      employeeId, employeeName, str(body.note, 500), nowMs
+    )
+  );
+
+  await env.DB.batch(submitBatch);
 
   return json({
     success: true,

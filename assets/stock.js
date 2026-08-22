@@ -1627,6 +1627,46 @@
     return `
       ${renderKpiCards({ totalVal, items, out, low, tierLow, costWeek, ratio, ratioClass, nextDelivery, trendBars })}
 
+      ${(function() {
+        const expiringLots = (window.KiwiInventoryConsumption?.expiring && window.KiwiInventoryConsumption.expiring({ horizonDays: 7 })) || [];
+        if (!expiringLots.length) return '';
+        return `
+          <div class="st-section" style="margin-bottom:20px;">
+            <div class="st-section-head">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <div style="width:24px;height:24px;border-radius:6px;background:rgba(239,68,68,0.12);color:#dc2626;display:grid;place-items:center;">
+                  ${svg('alertTriangle', 14)}
+                </div>
+                <h3 style="color:#b91c1c;">Alertes péremptions (DLC / DDM)</h3>
+              </div>
+              <span class="st-count-badge warn">${expiringLots.length}</span>
+            </div>
+            <div class="st-alerts" style="display:grid;gap:8px;">
+              ${expiringLots.map(l => {
+                const isExp = l.status === 'expired';
+                const badgeStyle = isExp ? 'background:#fef2f2;color:#b91c1c;border:1px solid rgba(185,28,28,0.25);' : 'background:#fffbeb;color:#b45309;border:1px solid rgba(180,83,9,0.25);';
+                const dateStr = new Date(l.expiresAt).toLocaleDateString('fr-FR');
+                const statusLabel = isExp ? `Périmé (${dateStr})` : (l.daysLeft === 0 ? `Périme aujourd'hui` : `Expire dans ${l.daysLeft} j (${dateStr})`);
+                return `
+                  <div class="st-alert-card" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--paper-soft);border:1px solid var(--n-200);border-radius:10px;">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                      <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;${badgeStyle}">${statusLabel}</span>
+                      <div>
+                        <b style="font-size:13.5px;color:var(--ink);">${esc(l.name)}</b>
+                        <div style="font-size:11.5px;color:var(--n-500);">${l.remainingQty} ${esc(l.unit)} restant${l.supplierName ? ` · Fournisseur : ${esc(l.supplierName)}` : ''}${l.totalCostMAD ? ` · Valeur : ${fmtMad(l.totalCostMAD)}` : ''}</div>
+                      </div>
+                    </div>
+                    <button class="st-btn small" type="button" data-action="stock-declare-waste-prefill" data-item-id="${esc(l.itemId)}" data-qty="${l.remainingQty}" data-reason="perime" style="color:#b91c1c;border-color:rgba(185,28,28,0.3);white-space:nowrap;">
+                      ${svg('trash2', 12)}<span style="margin-left:4px;">Déclarer en perte</span>
+                    </button>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `;
+      })()}
+
       <div class="st-section">
         <div class="st-section-head">
           <h3>${esc(t('alertsT'))}</h3>
@@ -1923,6 +1963,9 @@
               ${svg('search', 16)}
               <input class="st-search" type="text" placeholder="Chercher un article, employé, note…" value="${esc(stWasteSearch)}" data-stock-waste-search aria-label="Recherche journal des pertes" />
             </div>
+            <button class="st-btn primary" type="button" data-action="stock-open-declare-waste" style="background:#b91c1c;border-color:#991b1b;color:#fff;display:flex;align-items:center;gap:6px;">
+              ${svg('trash2', 14)}<span>Déclarer une perte</span>
+            </button>
             <button class="st-btn secondary" type="button" data-action="stock-export-waste-csv" style="display:flex;align-items:center;gap:6px;">
               ${svg('download', 14)}<span>Exporter CSV</span>
             </button>
@@ -2060,6 +2103,104 @@
       window.KiwiInventory.sync();
       window.Kiwi?.toast?.('Perte annulée · contre-mouvement enregistré', { type: 'success' });
       if (stPageActive) render();
+    }
+  }
+
+  function openDeclareWasteModal(prefill) {
+    prefill = prefill || {};
+    const items = getInv();
+    const prefillId = prefill.itemId || (items[0] && items[0].id) || '';
+    const prefillQty = prefill.qty != null ? prefill.qty : 1;
+    const prefillReason = prefill.reason || 'perime';
+
+    const itemOptions = items.map(it => `
+      <option value="${esc(it.id)}"${it.id === prefillId ? ' selected' : ''}>
+        ${esc(it.name)} (${it.currentStock} ${esc(it.unit || 'unité')})
+      </option>
+    `).join('');
+
+    const html = `
+      <div class="st-modal-head">
+        <div>
+          <h3>Déclarer une perte de stock</h3>
+          <p style="margin:2px 0 0;font-size:12.5px;color:var(--n-500);">Déduction immédiate du registre et traçabilité dans le journal des pertes.</p>
+        </div>
+        <button class="st-modal-x" type="button" data-action="stock-modal-close">${svg('x', 18)}</button>
+      </div>
+      <form class="st-form" id="st-waste-declare-form" style="padding:16px 20px;">
+        <div class="st-field" style="margin-bottom:12px;">
+          <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px;color:var(--ink);">Article concerné</label>
+          <select class="st-select" id="st-wf-item" required style="width:100%;">
+            ${itemOptions}
+          </select>
+        </div>
+        <div style="display:flex;gap:10px;margin-bottom:12px;">
+          <div class="st-field" style="flex:1;">
+            <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px;color:var(--ink);">Quantité perdue</label>
+            <input class="st-input" id="st-wf-qty" type="number" step="any" min="0.001" value="${prefillQty}" required style="width:100%;" />
+          </div>
+          <div class="st-field" style="flex:1.5;">
+            <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px;color:var(--ink);">Motif de la perte</label>
+            <select class="st-select" id="st-wf-reason" style="width:100%;">
+              <option value="perime"${prefillReason === 'perime' || prefillReason === 'Péremption' || prefillReason === 'expiry' ? ' selected' : ''}>Péremption / DLC dépassée</option>
+              <option value="casse"${prefillReason === 'casse' ? ' selected' : ''}>Casse / Détérioration</option>
+              <option value="avarie"${prefillReason === 'avarie' ? ' selected' : ''}>Avarie / Défaut</option>
+              <option value="offert"${prefillReason === 'offert' ? ' selected' : ''}>Geste commercial / Offert</option>
+              <option value="repas-equipe"${prefillReason === 'repas-equipe' ? ' selected' : ''}>Repas employé / équipe</option>
+              <option value="autre"${prefillReason === 'autre' ? ' selected' : ''}>Autre motif</option>
+            </select>
+          </div>
+        </div>
+        <div class="st-field" style="margin-bottom:16px;">
+          <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px;color:var(--ink);">Justification / Note (optionnelle)</label>
+          <input class="st-input" id="st-wf-note" type="text" placeholder="Ex: DLC au 21/08, bocal brisé à la mise en rayon…" style="width:100%;" />
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;">
+          <button class="st-btn secondary" type="button" data-action="stock-modal-close">Annuler</button>
+          <button class="st-btn primary" type="submit" style="background:#b91c1c;border-color:#991b1b;color:#fff;">
+            ${svg('trash2', 14)}<span style="margin-left:4px;">Enregistrer la perte</span>
+          </button>
+        </div>
+      </form>
+    `;
+
+    openModal(html);
+
+    const form = document.getElementById('st-waste-declare-form');
+    if (form) {
+      form.onsubmit = (e) => {
+        e.preventDefault();
+        const itemId = document.getElementById('st-wf-item')?.value;
+        const qty = parseFloat(document.getElementById('st-wf-qty')?.value) || 0;
+        const reason = document.getElementById('st-wf-reason')?.value || 'perime';
+        const note = (document.getElementById('st-wf-note')?.value || '').trim();
+        if (!itemId || !(qty > 0)) {
+          window.Kiwi?.toast?.('Précisez une quantité valide', { type: 'warn' });
+          return;
+        }
+        if (window.KiwiInventory) {
+          const it = items.find(x => x.id === itemId);
+          const unitCost = it ? (it.costPerUnit || it.cost || null) : null;
+          window.KiwiInventory.add({
+            itemId,
+            qty: -qty,
+            reason: 'waste',
+            refType: 'waste',
+            refId: 'waste-' + Date.now().toString(36),
+            unitCost,
+            note: note || `Déclaration perte · ${reason}`,
+            meta: {
+              wasteReason: reason,
+              actor: 'Propriétaire',
+              actorId: 'owner'
+            }
+          });
+          window.KiwiInventory.sync();
+          window.Kiwi?.toast?.('Perte enregistrée et déduite du stock', { type: 'success' });
+          closeModal();
+          if (stPageActive) render();
+        }
+      };
     }
   }
 
@@ -5446,6 +5587,9 @@
     H['stock-subview'] = (el) => { stItemSubView = el.dataset.subview; render(); };
     H['stock-waste-range'] = (el) => { stWasteDateRange = el.dataset.range; rerenderTabBody(); };
     H['stock-waste-reason'] = (el) => { stWasteFilterReason = el.dataset.reason; rerenderTabBody(); };
+    H['stock-open-declare-waste'] = () => openDeclareWasteModal();
+    H['stock-declare-waste-prefill'] = (el) => openDeclareWasteModal({ itemId: el.dataset.itemId, qty: parseFloat(el.dataset.qty) || 1, reason: el.dataset.reason });
+    H['stock-modal-close'] = () => closeTopModal();
     H['stock-export-waste-csv'] = () => exportWasteCsv();
     H['stock-cancel-waste'] = (el) => cancelWasteMovement(el.dataset.movementId);
     H['stock-count-range'] = (el) => { stCountDateFilter = el.dataset.range; rerenderTabBody(); };

@@ -381,6 +381,7 @@ for (const test of [
   'pressing-auto-ready-test.mjs',
   'inventory-waste-test.mjs',
   'inventory-universal-count-test.mjs',
+  'inventory-expiry-test.mjs',
 ]) {
   const { spawnSync } = require('child_process');
   const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', test)], { encoding: 'utf8' });

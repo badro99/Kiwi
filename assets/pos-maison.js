@@ -5859,6 +5859,7 @@
         </header>
         <div class="mzi-tools">
           <div class="mzi-scan"><i data-lucide="scan-line"></i><input id="mzi-scan" placeholder="Scannez un article, ou tapez un code…" autocomplete="off" /></div>
+          <button class="mz-btn primary" id="mzi-count" style="background:#059669;border-color:#047857;"><i data-lucide="clipboard-check"></i>Inventaire physique</button>
           <button class="mz-btn" id="mzi-intake"><i data-lucide="scan-barcode"></i>Reprendre le stock</button>
           <span class="mzi-dashboard-only">Articles et prix se gèrent dans le tableau de bord</span>
         </div>
@@ -5884,6 +5885,7 @@
       </div>`;
     const scan = $('#mzi-scan', panel);
     if (scan) scan.onkeydown = (e) => { if (e.key === 'Enter') { const v = scan.value.trim(); scan.value = ''; if (v) invScanHandle(v); } };
+    const cb = $('#mzi-count', panel); if (cb) cb.onclick = () => window.KiwiPosInventoryCount?.open?.({ engine: 'maison' });
     const ib = $('#mzi-intake', panel); if (ib) ib.onclick = () => openIntake();
     const pills = $('#mzi-pills', panel);
     if (pills) pills.addEventListener('click', (e) => { const b = e.target.closest('[data-f]'); if (b) { state.invFilter = b.dataset.f; renderInventaire(); } });
@@ -5951,9 +5953,6 @@
     invSetModal(html, (el) => {
       const cat2 = catDB();
       $('[data-inv-printall]', el).addEventListener('click', () => printProductLabels(pid));
-      el.querySelectorAll('[data-vinc]').forEach((b) => b.addEventListener('click', () => { cat2.adjustStock(b.dataset.vinc, 1); openInvProduct(pid); }));
-      el.querySelectorAll('[data-vdec]').forEach((b) => b.addEventListener('click', () => { cat2.adjustStock(b.dataset.vdec, -1); openInvProduct(pid); }));
-      el.querySelectorAll('[data-vstock]').forEach((inp) => inp.addEventListener('change', () => { cat2.setStock(inp.dataset.vstock, parseInt(inp.value, 10) || 0); openInvProduct(pid); }));
       el.querySelectorAll('[data-vgen]').forEach((b) => b.addEventListener('click', () => { const code = cat2.generateBarcode(b.dataset.vgen); if (code) toast(`EAN-13 ${code} généré`); openInvProduct(pid); }));
       el.querySelectorAll('[data-vprint]').forEach((b) => b.addEventListener('click', () => printVariantLabel(b.dataset.vprint)));
       el.querySelectorAll('[data-vreg]').forEach((b) => b.addEventListener('click', () => openRegisterOnVariant(b.dataset.vreg, pid)));
@@ -5970,7 +5969,7 @@
       : `<button class="mzi-mini" data-vgen="${v.id}" title="Générer un EAN-13"><i data-lucide="scan-line"></i></button>`;
     return `<tr>
       <td><span class="mzi-cbtn is-locked" aria-disabled="true" title="Modifier dans le tableau de bord">${colorDot(v.colorFamily || v.colorId)} ${esc(colorLabel(v.colorFamily || v.colorId))}</span>${v.colorSource ? `<em class="mzi-csrc">${esc(v.colorSource)}</em>` : ''} · <b>${esc(v.size)}</b></td>
-      <td><span class="mzi-stk"><button data-vdec="${v.id}" aria-label="−1">−</button><input data-vstock="${v.id}" type="number" min="0" value="${v.stock}"/><button data-vinc="${v.id}" aria-label="+1">+</button></span></td>
+      <td><span class="mzi-stk-val" style="font-weight:700;padding:4px 8px;border-radius:6px;background:var(--n-100);">${v.stock}</span></td>
       <td>${bc}</td>
       <td class="mzi-vact">${genOrPrint}<button class="mzi-mini" data-vreg="${v.id}" title="Enregistrer un code existant"><i data-lucide="link"></i></button><span class="mzi-mini is-locked danger" aria-disabled="true" title="Supprimer dans le tableau de bord"><i data-lucide="trash-2"></i></span></td>
     </tr>`;

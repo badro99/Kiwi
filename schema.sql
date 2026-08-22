@@ -1173,3 +1173,18 @@ CREATE TABLE IF NOT EXISTS inventory_counts (
 CREATE INDEX IF NOT EXISTS idx_inventory_counts_merchant_date ON inventory_counts (merchant, submitted_at);
 CREATE INDEX IF NOT EXISTS idx_inventory_counts_merchant_status ON inventory_counts (merchant, status);
 
+CREATE TABLE IF NOT EXISTS inventory_count_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  count_id TEXT NOT NULL,
+  merchant TEXT NOT NULL,
+  event TEXT NOT NULL,
+  actor_id TEXT,
+  actor_name TEXT,
+  via TEXT,
+  note TEXT,
+  ts INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_inventory_count_events_merchant_count ON inventory_count_events (merchant, count_id, ts);
+
+

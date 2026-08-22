@@ -308,10 +308,15 @@
   }
 
   /* Un geste qui RACONTE un événement : vente, retour, réception, ±1. */
-  function move(v, d, why) {
+  function move(v, d, why, extra) {
     if (!v || !(d = d | 0)) return v;
     if (!Array.isArray(db.moves)) db.moves = [];
-    db.moves.push({ id: moveId(), vid: v.id, d: d, at: now(), why: String(why || 'ajust').slice(0, 16) });
+    const entry = { id: moveId(), vid: v.id, d: d, at: now(), why: String(why || 'ajust').slice(0, 16) };
+    if (extra && typeof extra === 'object') {
+      if (extra.actor) entry.actor = String(extra.actor).slice(0, 64);
+      if (extra.ref) entry.ref = String(extra.ref).slice(0, 64);
+    }
+    db.moves.push(entry);
     materialize(db, v.id);
     return v;
   }
@@ -339,7 +344,21 @@
     moves.forEach(function (m, i) {
       var old = (+m.at || 0) <= cutoff || i < over;
       var v = byId[m.vid];
-      if (!old || !v) { if (!old) keep.push(m); return; }   // mouvement orphelin : il tombe
+      if (!old || !v) {
+        if (!old) {
+          var keepEntry = {
+            id: String(m.id || '').slice(0, 64),
+            vid: String(m.vid || '').slice(0, 40),
+            d: (+m.d || 0),
+            at: (+m.at || 0),
+            why: String(m.why || 'ajust').slice(0, 16),
+          };
+          if (m.actor) keepEntry.actor = String(m.actor).slice(0, 64);
+          if (m.ref) keepEntry.ref = String(m.ref).slice(0, 64);
+          keep.push(keepEntry);
+        }
+        return;
+      }
       if ((+m.at || 0) <= baseAtOf(v)) return;              // déjà replié
       v.base = Math.max(0, baseOf(v) + (+m.d || 0));
       v.baseAt = Math.max(baseAtOf(v), +m.at || 0);
@@ -1050,6 +1069,12 @@
       v.colorHex = n.family.hex;
       touched++;
     });
+    if (Array.isArray(db.moves)) {
+      db.moves.forEach((m) => {
+        if (m && m.actor && typeof m.actor !== 'string') { m.actor = String(m.actor).slice(0, 64); touched++; }
+        if (m && m.ref && typeof m.ref !== 'string') { m.ref = String(m.ref).slice(0, 64); touched++; }
+      });
+    }
     if (touched) db.v = 2;
     return touched > 0;
   }

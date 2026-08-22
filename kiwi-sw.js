@@ -214,8 +214,8 @@ var SHELL = [
      document; quantities are append-only movements, both usable offline. */
   '/assets/inventory-ledger.js?v=4',
   '/assets/caisse-stock-sync.js?v=9',
-  '/assets/pos-inventory-count.js?v=2',
-  '/assets/stock.js?v=23',
+  '/assets/pos-inventory-count.js?v=3',
+  '/assets/stock.js?v=25',
   /* Le coût de revient. Dans la coquille parce que les tuiles Marge brute,
      Bénéfice brut et Coût matière du tableau de bord passent toutes par lui :
      sans lui hors ligne, elles retomberaient sur un tiret alors que le
@@ -267,8 +267,8 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=3',
-  '/assets/pos-boutique.js?v=3',
+  '/assets/pos-boutique.css?v=4',
+  '/assets/pos-boutique.js?v=4',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */
@@ -300,8 +300,8 @@ var SHELL = [
   '/assets/pos-gym.js?v=3',
   '/assets/pos-autre.css?v=2',
   '/assets/pos-autre.js?v=2',
-  '/assets/pos-maison.css?v=16',
-  '/assets/pos-maison.js?v=16',
+  '/assets/pos-maison.css?v=17',
+  '/assets/pos-maison.js?v=17',
   '/assets/caisse-pairing.js?v=15',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là
