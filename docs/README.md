@@ -8,7 +8,7 @@ Tout ce qui n'est pas `README.md`, `AGENTS.md` ou `CLAUDE.md` vit ici.
 | `ops/` | Runbooks : `DEPLOY.md`, `AUTH.md`, `ADMIN.md` (console opérateur), `LIVE_LINK.md` (caisse → dashboard), `KIOSK.md`. |
 | `specs/` | Spécifications produit : OrderPro, modèle de synchronisation, plan de salle, staging Supabase, conformité fiscale 2026. |
 | `audits/` | Audits datés (IA, UI/UX, dashboard, lancement, interconnectivité boutique) et `LAUNCH_FIXES.md`. |
-| `roadmaps/` | Feuilles de route 2.0 / 10X / IA et priorités du pitch. |
+| `roadmaps/` | Feuilles de route 2.0 / 10X / IA, priorités du pitch, et `KIWI_APP_PLAN.md` (app native iOS/Android — plan complet App Store / Play). |
 | `superpowers/` | Plans et specs générés par les sessions (`plans/`, `specs/`). |
 
 Rappel : plusieurs de ces documents contiennent encore des codes marchands en clair —
