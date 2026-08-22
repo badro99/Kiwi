@@ -6221,6 +6221,11 @@
      the account has been deleted / suspended, so a revoked merchant never
      gets stranded in a half-broken shell (see assets/auth-guard.js). -->
 <script defer src="assets/auth-guard.js"></script>
+<!-- Verrouillage par inactivité : un tableau de bord laissé ouvert sur un iPad
+     ne reste pas ouvert pour toujours. Recharge la page (donc rejoue la porte à
+     code) après 10 min sans geste, ou 3 min d'onglet caché. Voir
+     assets/idle-lock.js pour pourquoi ce n'est pas un simple minuteur. -->
+<script defer src="assets/idle-lock.js?v=2"></script>
 <!-- Global operator access — long-press any Kiwi logo to open the console. -->
 <script defer src="assets/operator-access.js"></script>
 <script src="assets/liquid-lens.js" defer></script>

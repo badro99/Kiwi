@@ -192,6 +192,7 @@ var SHELL = [
   '/assets/caisse-link.js?v=10',
   '/assets/operator-access.js',
   '/assets/auth-guard.js',
+  '/assets/idle-lock.js?v=2',
   '/assets/caisse-hardware.js?v=1',
   '/assets/live-socket.js?v=2',
   '/assets/escpos.js?v=4',

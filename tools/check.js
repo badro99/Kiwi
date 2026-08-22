@@ -943,6 +943,7 @@ section('Whole-project regressions');
     'menu-translate-test.mjs',
     'salle-scan-test.mjs',
     'pin-dashboard-test.mjs',
+    'idle-lock-test.mjs',
   ];
   suites.forEach((name) => {
     const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', name)], { encoding: 'utf8' });

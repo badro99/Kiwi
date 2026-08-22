@@ -223,6 +223,10 @@
     "v": "2",
     "sha": "5f0a4000cc13db93"
   },
+  "assets/idle-lock.js": {
+    "v": "2",
+    "sha": "2bf00e5cd40cdf5c"
+  },
   "assets/interactive.js": {
     "v": "21",
     "sha": "1fe182b8ff2d837a"
