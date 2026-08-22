@@ -21,8 +21,13 @@
 
 import { json, readSession, readCookie, SESS_COOKIE, slugMerchant } from '../../auth/_lib.js';
 
-const MAX_IMAGE = 8 * 1024 * 1024;    // 8 MB — a phone photo, already plenty
-const MAX_VIDEO = 24 * 1024 * 1024;   // 24 MB — a short vertical menu clip
+// Le navigateur rétrécit la photo avant l'envoi (orderpro-publish.js shrinkPhoto :
+// ~300 Ko), donc ces plafonds sont un filet, pas la norme. 16 Mo couvre le JPEG
+// brut d'un capteur 50 Mpx si le recodage a échoué ; 48 Mo ≈ 20 s de 1080p.
+// Les trois copies doivent dire la même chose : ici, assets/platform-ops.js
+// (pré-contrôle local) et assets/orderpro-publish.js (message affiché).
+const MAX_IMAGE = 16 * 1024 * 1024;
+const MAX_VIDEO = 48 * 1024 * 1024;
 
 const EXT = {
   'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp',

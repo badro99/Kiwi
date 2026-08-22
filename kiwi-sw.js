@@ -149,7 +149,7 @@ var SHELL = [
   '/assets/vendor/dexie.min.js',
   '/assets/offline-db.js?v=3',
   '/assets/platform-kernel.js?v=5',
-  '/assets/platform-ops.js?v=2',
+  '/assets/platform-ops.js?v=3',
   '/assets/platform-ops.css?v=1',
   '/assets/operations.js?v=10',
   '/assets/operations-ui.js?v=11',
@@ -242,7 +242,7 @@ var SHELL = [
   '/assets/menu-scan.js?v=2',
   '/assets/salle-scan.js?v=1',
   // OrderPro — publisher + NFC panel (dashboard), inbox (caisse).
-  '/assets/orderpro-publish.js?v=3',
+  '/assets/orderpro-publish.js?v=4',
   '/assets/orderpro-panel.js',
   '/assets/orderpro-inbox.js?v=6',
   /* Le relais cuisine — la caisse pose ses bons, la tablette du passe les lit.

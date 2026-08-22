@@ -235,8 +235,71 @@
   /* ───────────────── media upload ─────────────────
    * Turns a chosen File into a URL. Everything about media in Kiwi hangs off
    * this: catalogues store what it returns, never the bytes. */
-  var MAX_PHOTO = 8 * 1024 * 1024;
-  var MAX_VIDEO = 24 * 1024 * 1024;
+  var MAX_PHOTO = 16 * 1024 * 1024;   // filet de sécurité : la photo est rétrécie AVANT (voir shrinkPhoto)
+  var MAX_VIDEO = 48 * 1024 * 1024;   // ≈ 20 s de vidéo 1080p de téléphone
+
+  /* ── Rétrécir la photo dans le navigateur, avant tout envoi ─────────────
+   * Un téléphone de 2026 sort des JPEG de 10 à 14 Mo pour une photo de
+   * croissant ; une carte en ligne n'affiche jamais plus de ~1600 px. On
+   * décode donc ici, on ramène le grand côté à PHOTO_EDGE, on ré-encode en
+   * JPEG : 12 Mo → ~300 Ko. Trois gains d'un coup — le plafond ne se voit
+   * plus, l'envoi passe en deux secondes sur la 4G du café, et la carte du
+   * client charge vite. createImageBitmap respecte l'orientation EXIF (une
+   * photo prise à la verticale reste verticale), et Safari décode le HEIC :
+   * une photo HEIC de l'iPad part donc en JPEG au lieu d'être refusée.
+   *
+   * Ce qu'on ne touche pas : les GIF (animation), les petits PNG (un logo
+   * avec transparence), et tout fichier qu'on n'arrive pas à décoder — dans
+   * ce cas il part tel quel et c'est le serveur qui dit précisément pourquoi
+   * (format, taille). Jamais de refus silencieux côté navigateur. */
+  var PHOTO_EDGE = 1600;
+  var PHOTO_QUALITY = 0.82;
+  var PHOTO_KEEP_BELOW = 700 * 1024;   // en dessous, le gain ne vaut pas le recodage
+
+  function decodeImage(file) {
+    if (typeof createImageBitmap === 'function') {
+      return createImageBitmap(file, { imageOrientation: 'from-image' })
+        .catch(function () { return createImageBitmap(file); })
+        .catch(function () { return decodeViaImg(file); });
+    }
+    return decodeViaImg(file);
+  }
+  function decodeViaImg(file) {
+    return new Promise(function (resolve, reject) {
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload = function () { URL.revokeObjectURL(url); resolve(img); };
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('decode')); };
+      img.src = url;
+    });
+  }
+  function shrinkPhoto(file) {
+    var type = (file && file.type) || '';
+    if (!/^image\//.test(type) || /gif/.test(type)) return Promise.resolve(file);
+    if (/png/.test(type) && file.size <= PHOTO_KEEP_BELOW * 2) return Promise.resolve(file);
+    if (file.size <= PHOTO_KEEP_BELOW) return Promise.resolve(file);
+    if (typeof document === 'undefined' || !document.createElement) return Promise.resolve(file);
+    return decodeImage(file).then(function (src) {
+      var w = src.width || src.naturalWidth || 0, h = src.height || src.naturalHeight || 0;
+      if (!w || !h) return file;
+      var scale = Math.min(1, PHOTO_EDGE / Math.max(w, h));
+      var tw = Math.max(1, Math.round(w * scale)), th = Math.max(1, Math.round(h * scale));
+      var canvas = document.createElement('canvas');
+      canvas.width = tw; canvas.height = th;
+      var ctx = canvas.getContext('2d');
+      if (!ctx) return file;
+      ctx.drawImage(src, 0, 0, tw, th);
+      if (src.close) { try { src.close(); } catch (_) {} }
+      return new Promise(function (resolve) {
+        canvas.toBlob(function (blob) {
+          if (!blob || blob.size >= file.size) { resolve(file); return; }
+          var name = String(file.name || 'photo').replace(/\.[A-Za-z0-9]{1,6}$/, '') + '.jpg';
+          try { resolve(new File([blob], name, { type: 'image/jpeg', lastModified: Date.now() })); }
+          catch (_) { blob.name = name; resolve(blob); }
+        }, 'image/jpeg', PHOTO_QUALITY);
+      });
+    }).catch(function () { return file; });
+  }
 
   /* Tout échec sort d'ici avec les MÊMES champs — code, taille réelle, plafond,
    * type, extension — pour qu'un appelant n'ait jamais à redeviner ce qui s'est
@@ -261,6 +324,9 @@
 
   function uploadMedia(file) {
     if (!file) return Promise.resolve(failure('no-file', file));
+    return shrinkPhoto(file).then(function (ready) { return sendMedia(ready || file); });
+  }
+  function sendMedia(file) {
     var resilient = window.KiwiPlatformOps && window.KiwiPlatformOps.uploads;
     if (resilient && typeof resilient.upload === 'function') {
       return resilient.upload(file).catch(function (error) {
@@ -413,6 +479,9 @@
     uploadMedia: uploadMedia,
     uploadError: uploadError,
     mediaReady: mediaReady,
+    shrinkPhoto: shrinkPhoto,
+    MAX_PHOTO: MAX_PHOTO,
+    MAX_VIDEO: MAX_VIDEO,
     merchant: function () { var b = currentBiz(); return b ? b.merchant : ''; },
     type: function () { var b = currentBiz(); return b ? b.type : ''; },
     state: function () { return { publishing: state.publishing, lastOk: state.lastOk, lastError: state.lastError }; },
