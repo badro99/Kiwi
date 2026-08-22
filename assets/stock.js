@@ -259,6 +259,14 @@
       addCatToast: (name) => `Catégorie « ${name} » créée`,
       addCatInline: 'Confirmer',
       addCatPillTitle: 'Ajouter une catégorie',
+      manageCatTitle: 'Gérer la catégorie',
+      renameCatLabel: 'Nouveau nom',
+      renameCatBtn: 'Renommer',
+      renameCatToast: (name) => `Catégorie renommée « ${name} »`,
+      deleteCatBtn: 'Supprimer la catégorie',
+      deleteCatMove: 'Déplacer les articles vers',
+      deleteCatBlocked: 'Créez une autre catégorie avant de supprimer celle-ci.',
+      deleteCatToast: (name) => `Catégorie « ${name} » supprimée`,
       // Suppliers
       addSupCta: 'Ajouter un fournisseur',
       addSupTitle: 'Nouveau fournisseur',
@@ -508,6 +516,14 @@
       addCatToast: (name) => `Category "${name}" created`,
       addCatInline: 'Confirm',
       addCatPillTitle: 'Add category',
+      manageCatTitle: 'Manage category',
+      renameCatLabel: 'New name',
+      renameCatBtn: 'Rename',
+      renameCatToast: (name) => `Category renamed “${name}”`,
+      deleteCatBtn: 'Delete category',
+      deleteCatMove: 'Move items to',
+      deleteCatBlocked: 'Create another category before deleting this one.',
+      deleteCatToast: (name) => `Category “${name}” deleted`,
       addSupCta: 'Add supplier',
       addSupTitle: 'New supplier',
       addSupBtn: 'Add supplier',
@@ -718,6 +734,14 @@
       addCatToast: (name) => `تم إنشاء الفئة «${name}»`,
       addCatInline: 'تأكيد',
       addCatPillTitle: 'إضافة فئة',
+      manageCatTitle: 'إدارة الفئة',
+      renameCatLabel: 'الاسم الجديد',
+      renameCatBtn: 'إعادة التسمية',
+      renameCatToast: (name) => `تم تغيير اسم الفئة إلى «${name}»`,
+      deleteCatBtn: 'حذف الفئة',
+      deleteCatMove: 'نقل المقالات إلى',
+      deleteCatBlocked: 'أنشئ فئة أخرى قبل حذف هذه الفئة.',
+      deleteCatToast: (name) => `تم حذف الفئة «${name}»`,
       addSupCta: 'إضافة مورد',
       addSupTitle: 'مورد جديد',
       addSupBtn: 'إضافة المورد',
@@ -798,6 +822,8 @@
   const stSupOverrides  = Object.create(null); // edits to existing suppliers, keyed by id
   const stDeletedSups   = new Set();          // soft-deleted supplier ids
   let stUserCategories  = [];                 // owner-added categories [{ id, label }]
+  const stCategoryOverrides = Object.create(null); // renamed built-ins/user categories, keyed by id
+  const stDeletedCategories = new Set();      // deleted category ids (items are reassigned first)
 
   /* ── Persistance de la surcouche — VRAI commerçant uniquement ──
    * Le contrat « ça repart à zéro au rechargement » ci-dessus vaut pour la
@@ -925,6 +951,8 @@
         delSups: [...stDeletedSups],
         cats: stUserCategories,
         categories: stUserCategories,
+        catOv: stCategoryOverrides,
+        delCats: [...stDeletedCategories],
         stockOv: stStockOverrides,
       });
       localStorage.setItem(stOverlayKey(), JSON.stringify(doc));
@@ -963,7 +991,7 @@
         return migrated;
       }
     } catch (_) {}
-    return { schemaVersion: 2, items: [], subcategories: [], sups: [], cats: [], categories: [], itemOv: {}, supOv: {}, stockOv: {}, delItems: [], delSups: [] };
+    return { schemaVersion: 2, items: [], subcategories: [], sups: [], cats: [], categories: [], itemOv: {}, supOv: {}, catOv: {}, stockOv: {}, delItems: [], delSups: [], delCats: [] };
   }
 
   /* Union par identifiant (le défaut de cloud-doc.js) — SAUF les suppressions.
@@ -978,7 +1006,7 @@
     if (!M || !theirs) return mine;
     const out = M(mine, theirs);
     out.schemaVersion = 2;
-    ['delItems', 'delSups'].forEach((k) => {
+    ['delItems', 'delSups', 'delCats'].forEach((k) => {
       const a = Array.isArray(mine && mine[k]) ? mine[k] : [];
       const b = Array.isArray(theirs && theirs[k]) ? theirs[k] : [];
       out[k] = [...new Set([...a, ...b])];
@@ -986,7 +1014,7 @@
     /* The caisse edits user-created items through itemOv so it never needs a
        second catalog. Resolve the rare same-item, two-device edit by its row
        timestamp instead of whichever browser happened to pull last. */
-    ['itemOv', 'supOv'].forEach((k) => {
+    ['itemOv', 'supOv', 'catOv'].forEach((k) => {
       out[k] = { ...((theirs && theirs[k]) || {}) };
       Object.entries((mine && mine[k]) || {}).forEach(([id, row]) => {
         const other = out[k][id];
@@ -1056,8 +1084,9 @@
         (d.items && d.items.length) || (d.subcategories && d.subcategories.length)
         || (d.sups && d.sups.length) || (d.cats && d.cats.length)
         || (d.itemOv && Object.keys(d.itemOv).length) || (d.supOv && Object.keys(d.supOv).length)
+        || (d.catOv && Object.keys(d.catOv).length)
         || (d.stockOv && Object.keys(d.stockOv).length)
-        || (d.delItems && d.delItems.length) || (d.delSups && d.delSups.length)
+        || (d.delItems && d.delItems.length) || (d.delSups && d.delSups.length) || (d.delCats && d.delCats.length)
       ),
     });
     return stDoc;
@@ -1071,8 +1100,10 @@
     stOverlayLoadedFor = venue;
     stUserItems = []; stUserSuppliers = []; stUserCategories = [];
     stDeletedItems.clear(); stDeletedSups.clear();
+    stDeletedCategories.clear();
     Object.keys(stItemOverrides).forEach((k) => delete stItemOverrides[k]);
     Object.keys(stSupOverrides).forEach((k) => delete stSupOverrides[k]);
+    Object.keys(stCategoryOverrides).forEach((k) => delete stCategoryOverrides[k]);
     Object.keys(stStockOverrides).forEach((k) => delete stStockOverrides[k]);
     if (!stShowReal()) return;                       // la démo repart de zéro, comme avant
     let s = null;
@@ -1084,11 +1115,13 @@
     if (Array.isArray(s.cats)) stUserCategories = s.cats;
     (s.delItems || []).forEach((id) => stDeletedItems.add(id));
     (s.delSups || []).forEach((id) => stDeletedSups.add(id));
+    (s.delCats || []).forEach((id) => stDeletedCategories.add(id));
     Object.assign(stItemOverrides, s.itemOv || {});
     Object.keys(stItemOverrides).forEach((id) => {
       if (stItemOverrides[id]?.unit) stItemOverrides[id].unit = stockUnit(stItemOverrides[id].unit);
     });
     Object.assign(stSupOverrides, s.supOv || {});
+    Object.assign(stCategoryOverrides, s.catOv || {});
     Object.assign(stStockOverrides, s.stockOv || {});
   }
 
@@ -1282,7 +1315,9 @@
       { id: 'boissons',     label: t('catBoissons') },
       { id: 'consommables', label: t('catConsommables') },
     ];
-    return [...builtin, ...stUserCategories];
+    return [...builtin, ...stUserCategories]
+      .filter(c => !stDeletedCategories.has(c.id))
+      .map(c => stCategoryOverrides[c.id] ? { ...c, ...stCategoryOverrides[c.id] } : c);
   }
 
   /* ═══════════════════════════════════════════════════════════════════════
@@ -2778,6 +2813,8 @@
         <div class="st-filter-row" style="display:flex; gap:5px; background:var(--paper-soft); padding:4px; border-radius:999px; border:1px solid var(--n-200); width:fit-content; max-width:100%; flex-wrap:wrap;">
           ${catPill('all', t('catAll'))}
           ${cats.map(c => catPill(c.id, c.label)).join('')}
+          ${stCatFilter !== 'all' && cats.some(c => c.id === stCatFilter)
+            ? `<button class="st-cat-pill" type="button" data-action="stock-manage-cat" data-cat="${esc(stCatFilter)}" title="${esc(t('manageCatTitle'))}" aria-label="${esc(t('manageCatTitle'))}">${svg('edit', 12)}<span>${esc(t('manageCatTitle'))}</span></button>` : ''}
           <button class="st-cat-pill" type="button" data-action="stock-add-cat" title="${esc(t('addCatPillTitle'))}" aria-label="${esc(t('addCatPillTitle'))}" style="font-weight:700;">+</button>
         </div>
         <div class="st-filter-row" style="display:flex; gap:5px; background:var(--paper-soft); padding:4px; border-radius:999px; border:1px solid var(--n-200); width:fit-content; max-width:100%;">
@@ -5547,6 +5584,68 @@
     input?.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); submit(); } });
   }
 
+  function openManageCategory(categoryId) {
+    const category = allCategories().find(c => c.id === categoryId);
+    if (!category) return;
+    const assigned = getInv().filter(item => item.category === categoryId);
+    const alternatives = allCategories().filter(c => c.id !== categoryId);
+    const replacement = alternatives[0]?.id || '';
+    const m = window.Kiwi.modal({
+      title: t('manageCatTitle'),
+      width: 480,
+      body: `
+        <div class="st-mb-field">
+          <label class="st-mb-label">${esc(t('renameCatLabel'))}</label>
+          <div style="display:flex;gap:8px;">
+            <input class="st-mb-input" type="text" maxlength="60" value="${esc(category.label)}" data-stock-cat-rename style="flex:1;" />
+            <button class="st-btn primary" type="button" data-stock-cat-rename-confirm>${esc(t('renameCatBtn'))}</button>
+          </div>
+        </div>
+        <div style="border-top:1px solid var(--n-200);margin:20px 0 14px;"></div>
+        ${assigned.length ? `<div class="st-mb-field">
+          <label class="st-mb-label">${esc(t('deleteCatMove'))} · ${assigned.length} article${assigned.length > 1 ? 's' : ''}</label>
+          ${alternatives.length
+            ? `<select class="st-mb-input" data-stock-cat-replacement>${alternatives.map(c => `<option value="${esc(c.id)}"${c.id === replacement ? ' selected' : ''}>${esc(c.label)}</option>`).join('')}</select>`
+            : `<div class="st-notice warn">${esc(t('deleteCatBlocked'))}</div>`}
+        </div>` : ''}
+        <button class="st-btn" type="button" data-stock-cat-delete-confirm ${assigned.length && !alternatives.length ? 'disabled' : ''} style="color:#9a1f1f;border-color:rgba(154,31,31,.35);width:100%;">${esc(t('deleteCatBtn'))}</button>
+      `,
+      foot: `<button class="st-btn" data-dismiss-modal>${esc(STR[lang()].btnCancel || 'Annuler')}</button>`,
+    });
+    const scope = m?.el || topBackdrop();
+    wireDismiss(scope);
+    const renameInput = scope?.querySelector('[data-stock-cat-rename]');
+    scope?.querySelector('[data-stock-cat-rename-confirm]')?.addEventListener('click', () => {
+      const name = (renameInput?.value || '').trim();
+      if (!name) { renameInput?.focus(); return; }
+      if (allCategories().some(c => c.id !== categoryId && c.label.trim().toLocaleLowerCase() === name.toLocaleLowerCase())) {
+        renameInput?.focus(); return;
+      }
+      stCategoryOverrides[categoryId] = { label: name, updatedAt: Date.now() };
+      stSaveOverlay();
+      closeTopModal();
+      window.Kiwi.toast(t('renameCatToast', name), { type: 'success' });
+      if (stPageActive) render();
+    });
+    scope?.querySelector('[data-stock-cat-delete-confirm]')?.addEventListener('click', () => {
+      const target = scope.querySelector('[data-stock-cat-replacement]')?.value || '';
+      if (assigned.length && !target) return;
+      assigned.forEach((item) => {
+        const userIndex = stUserItems.findIndex(candidate => candidate.id === item.id);
+        if (userIndex >= 0) stUserItems[userIndex] = { ...stUserItems[userIndex], category: target, updatedAt: Date.now() };
+        stItemOverrides[item.id] = { ...(stItemOverrides[item.id] || {}), category: target, updatedAt: Date.now() };
+      });
+      stUserCategories = stUserCategories.filter(c => c.id !== categoryId);
+      delete stCategoryOverrides[categoryId];
+      stDeletedCategories.add(categoryId);
+      if (stCatFilter === categoryId) stCatFilter = target || 'all';
+      stSaveOverlay();
+      closeTopModal();
+      window.Kiwi.toast(t('deleteCatToast', category.label), { type: 'info' });
+      if (stPageActive) render();
+    });
+  }
+
   /* ═══════════════════════════════════════════════════════════════════════
    * MODAL · Day deliveries detail
    * ═══════════════════════════════════════════════════════════════════════ */
@@ -5639,6 +5738,7 @@
     H['stock-ignore-24h'] = (el) => window.Kiwi.toast(`Alerte ${el.dataset.itemName} ignorée pour 24h`, { type: 'info' });
     // Category pill add
     H['stock-add-cat'] = () => openAddCategory();
+    H['stock-manage-cat'] = (el) => openManageCategory(el.dataset.cat);
 
     function isPhone(v) { return /^\+?[\d\s.-]{8,}$/.test(String(v || '').trim()); }
     function phoneDigits(v) {
