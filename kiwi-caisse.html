@@ -72,7 +72,7 @@
   <script src="assets/vendor/dexie.min.js" defer></script>
   <script src="assets/offline-db.js?v=3" defer></script>
   <script src="assets/platform-kernel.js?v=5" defer></script>
-  <script src="assets/platform-ops.js?v=2" defer></script>
+  <script src="assets/platform-ops.js?v=3" defer></script>
   <script src="assets/phone.js?v=1" defer></script>
   <!-- Floor-plan vocabulary, shared verbatim with the dashboard designer. Not
        deferred: the inline app script below calls KiwiFloorCore while painting
@@ -125,7 +125,7 @@
   <!-- La langue du comptoir. Après les modules de caisse : il greffe son
        sélecteur dans le rail du métier ouvert et rebalaye après chaque rendu. -->
   <script src="assets/caisse-lang.js" defer></script>
-  <script src="assets/menu-i18n.js?v=2" defer></script>
+  <script src="assets/menu-i18n.js?v=3" defer></script>
   <!-- Multi-métier PIN dispatcher: 0000 + 0002–0015 lazy-load one POS vertical
        each (assets/pos-<id>.{js,css}, assets/pressing-caisse.{js,css} pour le
        pressing). Tap the pin-foot note for the code legend.
@@ -5373,7 +5373,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=407" defer></script>
+  <script src="assets/caisse-pwa.js?v=408" defer></script>
   <script src="assets/live-link.js?v=15" defer></script>
   <!-- The staff-role catalogue — says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -8728,7 +8728,15 @@
      * depuis toujours : un poste doit avoir la même couleur au bureau et au
      * comptoir, sinon la pastille ne sert plus de repère. */
     const STATION_PALETTE = ['#1F5D3C', '#3FB67A', '#D99A2B', '#3677A6', '#164A2F', '#C24A2E', '#C97A4A'];
-    const carteState = { stations: [], kitchenId: '', opts: [], cats: [], kdsReady: false };
+    const carteState = { stations: [], kitchenId: '', opts: [], cats: [], formulaItems: [], kdsReady: false };
+    /* Un article « réservé aux formules » n'est pas dans menuItems (la grille ne
+       vend que l'individuel) mais une ligne de formule le porte quand même : son
+       poste cuisine, sa catégorie et sa réouverture se cherchent dans la carte
+       entière (carteState.formulaItems = tout sauf archivé), menuItems en repli. */
+    function menuLineFind(pred) {
+      const all = carteState.formulaItems && carteState.formulaItems.length ? carteState.formulaItems : null;
+      return (all && all.find(pred)) || menuItems.find(pred) || null;
+    }
 
     function carteSlug() {
       try { const p = storePaired(); return (p && p.merchant) || ''; } catch (_) { return ''; }
@@ -8770,15 +8778,19 @@
       /* Un plat sans catégorie ne doit pas disparaître de la caisse : le patron
          l'a créé, il se vend. On lui ouvre une rubrique « Autres ». */
       let loose = false;
-      const items = (d.items || []).filter(it => it && it.id && it.name && it.avail !== false).map((it) => {
+      const allRawItems = (d.items || []).concat(Array.isArray(d.formulaItems) ? d.formulaItems : []);
+      const allItems = allRawItems.filter(it => it && it.id && it.name && !it.archived).map((it) => {
         const cat = (it.catId && labels[it.catId]) ? it.catId : (loose = true, '_autres');
         const parent = cats.find(c => c.id === cat);
         const sub = parent && it.subId ? (parent.sub || []).find(s => s.id === it.subId) : null;
         return { id: it.id, cat, subId: sub ? sub.id : null, subLabel: sub ? sub.name : '', name: it.name, price: +it.price || 0, station: catStation[cat] || '',
           /* Les groupes d'options que ce produit demande. Des identifiants : le
              libellé vit une seule fois, dans carteState.opts. */
-          opts: Array.isArray(it.opts) ? it.opts.slice() : [], formula: it.formula || null };
+          opts: Array.isArray(it.opts) ? it.opts.slice() : [], formula: it.formula || null,
+          avail: it.avail !== false, formulaOnly: it.formulaOnly === true, archived: it.archived === true };
       });
+      const items = allItems.filter((it) => it.avail !== false && !it.formulaOnly && !it.archived);
+      carteState.formulaItems = allItems;
       if (loose) {
         labels._autres = 'Autres';
         colors._autres = CAT_PALETTE[cats.length % CAT_PALETTE.length];
@@ -9283,8 +9295,14 @@
       optVeil.classList.add('is-open');
     }
 
+    function standaloneMenuItem(itemId) {
+      const source = (carteState.formulaItems || []).find(m => String(m.id) === String(itemId)) || menuItems.find(m => String(m.id) === String(itemId));
+      if (source && (source.archived || source.formulaOnly || source.avail === false)) { toast('Article non vendable individuellement'); return null; }
+      return menuItems.find(m => m.id === itemId) || null;
+    }
+
     function addToCart(itemId) {
-      const item = menuItems.find(m => m.id === itemId);
+      const item = standaloneMenuItem(itemId);
       if (!item) return;
       if (item.formula && Array.isArray(item.formula.slots) && item.formula.slots.length) {
         openCaisseFormula(item, (parent, parts) => { cart.push(parent, ...parts); renderMenu(); renderCart(); });
@@ -9302,7 +9320,7 @@
       if (!optVeil) { optVeil = document.createElement('div'); optVeil.className = 'cloture-veil opt-veil'; document.body.appendChild(optVeil); }
       const picked = Object.fromEntries(slots.map(s => [s.id, []]));
       const optPicked = Object.fromEntries(groups.map(g => [g.id, []]));
-      const choiceItem = c => menuItems.find(m => String(m.id) === String(c.itemId));
+      const choiceItem = c => (carteState.formulaItems || menuItems).find(m => String(m.id) === String(c.itemId) && !m.archived && m.avail !== false);
       function paint() {
         const missingSlots = slots.filter(s => picked[s.id].length < Math.max(0, +s.min || 0));
         const missingGroups = groups.filter(g => g.required && !optPicked[g.id].length);
@@ -9962,7 +9980,7 @@
        le libellé). Vide si on ne sait pas : le rapport la repêchera dans la carte,
        et il vaut mieux un plat non classé qu'un plat mal classé. */
     function lineCat(id, name) {
-      const m = menuItems.find(x => (id && x.id === id) || (name && x.name === name));
+      const m = menuLineFind(x => (id && x.id === id) || (name && x.name === name));
       return (m && catLabels[m.cat]) || '';
     }
     /* L'identifiant du plat voyage avec la ligne. Sans lui, le moteur de
@@ -11011,7 +11029,7 @@
     }
 
     function addToTableOrder(tableId, itemId) {
-      const item = menuItems.find(m => m.id === itemId);
+      const item = standaloneMenuItem(itemId);
       if (!item) return;
       const groups = itemOptGroups(item);
       if (item.formula && Array.isArray(item.formula.slots) && item.formula.slots.length) {
@@ -11185,7 +11203,7 @@
         const parent = l.kind === 'formula-part' && l.formulaUid
           ? source.find(p => p && p.kind === 'formula' && p.formulaUid === l.formulaUid)
           : null;
-        const m = menuItems.find(x => x.id === l.id);
+        const m = menuLineFind(x => x.id === l.id);
         const formulaTag = parent
           ? `[${parent.formulaName || parent.name || 'Formule'}${l.slotLabel ? ' · ' + l.slotLabel : ''}]`
           : '';
@@ -11211,7 +11229,7 @@
           unitPrice: Math.max(0, +l.price || +l.unitPrice || 0),
           options: optionChoices.map(o => o.label).join(' · '), optionChoices,
           visuals: optVisuals(l.opts), note: (l.note || '').trim(),
-          station: l.station || kdsStationFor(menuItems.find(x => x.id === l.id)),
+          station: l.station || kdsStationFor(menuLineFind(x => x.id === l.id)),
         };
         ['kind', 'formulaUid', 'formulaName', 'slotLabel', 'formulaSlotId', 'lineId'].forEach(key => {
           if (l[key]) line[key] = l[key];
@@ -15995,7 +16013,7 @@
       });
       missing.forEach((child, formulaUid) => {
         const name = child.formulaName || '';
-        const menuItem = menuItems.find(item => String(item.name || '') === String(name));
+        const menuItem = menuLineFind(item => String(item.name || '') === String(name));
         if (!name) return;
         const inheritedVisuals = Array.isArray(child.visuals) ? child.visuals.slice() : [];
         o.items.unshift({
@@ -16465,7 +16483,28 @@
           </div>
         </div>` : '';
 
-      return kpis + quickActs + list + wasteSection;
+      // Lots proches de la DLC (7 jours) — un geste pour déclarer la perte, motif pré-rempli « Périmé »
+      const dlcSection = (function(){
+        if (!storeIsReal()) return '';
+        let lots = [];
+        try { lots = (window.KiwiInventoryConsumption?.expiring && window.KiwiInventoryConsumption.expiring({ horizonDays: 7 })) || []; } catch (_) { lots = []; }
+        if (!lots.length) return '';
+        const expired = lots.filter(l => l.status === 'expired').length;
+        return `<div class="sk-section" style="margin-top:20px;">
+          <div class="sk-section-head"><h3>Dates limites</h3><span class="sk-badge warn">${lots.length}</span></div>
+          <div class="sk-alerts">${lots.slice(0, 12).map(l => {
+            const d = new Date(l.expiresAt).toLocaleDateString('fr-FR');
+            const tag = l.status === 'expired' ? 'Périmé' : (l.status === 'critical' ? `J-${Math.max(0, l.daysLeft)}` : `J-${l.daysLeft}`);
+            return `<div class="sk-alert ${l.status === 'expired' ? 'out' : 'low'}"><div class="sk-alert-ico"><i data-lucide="${l.status === 'expired' ? 'x-octagon' : 'clock'}"></i></div>
+              <div class="sk-alert-body"><div class="sk-alert-top"><span class="sk-alert-name">${kdsEsc(l.name)}</span><span class="sk-alert-status ${l.status === 'expired' ? 'out' : 'low'}">${tag}</span></div>
+              <div class="sk-alert-meta">${l.remainingQty} ${kdsEsc(l.unit)} · DLC ${d}${l.supplierName ? ' · ' + kdsEsc(l.supplierName) : ''}</div></div>
+              <button class="ma-btn secondary sk-mini" data-sk-dlc-waste="${kdsEsc(l.itemId)}" data-sk-dlc-lot="${kdsEsc(l.lotId || '')}" data-sk-dlc-qty="${l.remainingQty}" style="color:#b91c1c;"><i data-lucide="trash-2"></i>Déclarer en perte</button>
+            </div>`;
+          }).join('')}</div>
+          ${expired ? `<div class="sk-kpi-sub" style="margin-top:6px;">${expired} lot${expired > 1 ? 's' : ''} déjà périmé${expired > 1 ? 's' : ''} · à sortir du stock.</div>` : ''}
+        </div>`;
+      })();
+      return kpis + quickActs + list + dlcSection + wasteSection;
     }
 
     function skFilteredItems(){
@@ -16738,6 +16777,7 @@
             <input class="sk-rl-cost" data-sk-rl-cost="${idx}" type="number" min="0" step="any" placeholder="Prix unit." value="${costVal}" style="width:100%;">
             <span style="font-size:11px;color:var(--n-500);white-space:nowrap;">MAD</span>
           </div>
+          <input class="sk-rl-dlc" data-sk-rl-dlc="${idx}" type="date" title="DLC / DDM (optionnel)" value="${kdsEsc(l.dlc || '')}" style="flex:1.3;min-width:0;">
           <button class="sk-rl-del" data-sk-rl-del="${idx}" aria-label="Retirer"><i data-lucide="x"></i></button>
         </div>`;
       }).join('') + `<datalist id="sk-items-list">${stockItems.map(i=>`<option value="${kdsEsc(i.name)}">`).join('')}</datalist>`;
@@ -16773,10 +16813,12 @@
         const n = row.querySelector('[data-sk-rl-name]');
         const q = row.querySelector('[data-sk-rl-qty]');
         const c = row.querySelector('[data-sk-rl-cost]');
+        const dl = row.querySelector('[data-sk-rl-dlc]');
         if (skReceptLines[idx]){
           skReceptLines[idx].name = (n ? n.value : '').trim();
           skReceptLines[idx].qty = q ? q.value : '';
           skReceptLines[idx].cost = c && c.value !== '' ? parseFloat(c.value) : null;
+          skReceptLines[idx].dlc = dl ? dl.value : '';
         }
       });
       let added = 0, unknown = 0;
@@ -16806,6 +16848,8 @@
               purchaseQty: qty,
               purchaseUnit: card?.purchaseUnit || it.unit || 'unité',
               factor: factor,
+              // DLC / DDM du lot reçu — lue par KiwiInventoryConsumption.expiring()
+              expiresAt: l.dlc ? new Date(l.dlc + 'T23:59:59').getTime() : null,
             };
             window.KiwiCaisseStock.move(it.id, stockQty, 'receipt', receiptRef, unitCost, meta);
             if (unitCost != null && unitCost > 0 && window.KiwiCaisseStock.updateSupplierPrice) {
@@ -17012,6 +17056,7 @@
       if (e.target.closest('[data-sk-neworder]'))    { openNewOrder(); return; }
       if (e.target.closest('[data-sk-newwaste]') || e.target.id === 'sk-new-waste-btn'){ openWasteModal(); return; }
       if (e.target.closest('[data-sk-waste]')){ openWasteModal(e.target.closest('[data-sk-waste]').dataset.skWaste); return; }
+      if (e.target.closest('[data-sk-dlc-waste]')){ const b = e.target.closest('[data-sk-dlc-waste]'); openWasteModal(b.dataset.skDlcWaste, b.dataset.skDlcLot || '', parseFloat(b.dataset.skDlcQty) || null, 'perime'); return; }
       if (e.target.closest('[data-sk-recept-act]') || e.target.id === 'sk-apercu-recept-btn'){ openRecept(); return; }
       if (e.target.closest('[data-sk-blind-count]') || e.target.id === 'sk-start-blind-count'){ if (window.KiwiPosInventoryCount) window.KiwiPosInventoryCount.open({ engine: 'ledger' }); return; }
       const cf = e.target.closest('[data-sk-confirm]'); if (cf){ confirmOrder(cf.dataset.skConfirm); return; }
@@ -17276,7 +17321,7 @@
     function vrapCartItems(o) {
       return cart.map(c => {
         const orig = o && vrapFinancialItems(o).find(it => it.n === c.name);
-        const m = menuItems.find(x => x.id === c.id);
+        const m = menuLineFind(x => x.id === c.id);
         /* Cette branche ignorait m.station : rouvrir une commande à emporter pour
            y ajouter un plat renvoyait TOUTE la commande en cuisson, y compris le
            café qui devait aller au bar. Même résolution que partout ailleurs. */
@@ -17345,7 +17390,7 @@
       vrapEditingNum = num;
       vrapDiscount   = null;
       cart = vrapFinancialItems(o).map(i => {
-        const m = menuItems.find(x => x.name === i.n);
+        const m = menuLineFind(x => x.name === i.n);
         return {
           uid:   newLineUid(),
           id:    m ? m.id : ('x-' + i.n),
@@ -17612,8 +17657,8 @@
           if (existing.orderProPending !== pending) { existing.orderProPending = pending; changed = true; }
           return;
         }
-        const menuHit = menuItems.find(x => String(x.id) === String(l.id))
-          || menuItems.find(x => String(x.name || '').toLowerCase() === String(l.name || '').toLowerCase());
+        const menuHit = menuLineFind(x => String(x.id) === String(l.id))
+          || menuLineFind(x => String(x.name || '').toLowerCase() === String(l.name || '').toLowerCase());
         lines.push({
           uid: newLineUid(), id: (menuHit && menuHit.id) || l.id || ('op-' + marker),
           name: l.name || (menuHit && menuHit.name) || '', price: +l.unitPrice || 0,

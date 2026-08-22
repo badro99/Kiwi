@@ -92,6 +92,10 @@ both additive and backward-compatible with every menu published before them:
 
 ## 2 · R2 bucket for photos and videos
 
+**Fait le 2026-08-22** — R2 activé sur le compte, seau `kiwi-media` créé (Western
+Europe, classe Standard), lié en production au projet Pages `kiwi-maroc` sous le
+nom `MEDIA`. Les étapes ci-dessous restent la référence si le projet est recréé.
+
 ```bash
 wrangler r2 bucket create kiwi-media
 ```

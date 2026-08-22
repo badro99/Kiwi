@@ -865,6 +865,7 @@ section('Whole-project regressions');
     'caisse-stock-test.mjs',
     'inventory-ledger-test.mjs',
     'stock-costing-migration-test.mjs',
+    'stock-category-management-test.mjs',
     'pairing-resolver-test.mjs',
     /* pairing-resolver vérifie qui LIT l'appairage ; celui-ci vérifie qu'il n'y
        a qu'un seul ÉCRIVAIN. La cuisine s'appaire sur la même route que la
@@ -902,6 +903,10 @@ section('Whole-project regressions');
     'floor-accept-test.mjs',
     'onboarding-gate-test.mjs',
     'api-boundaries-test.mjs',
+    /* L'app native (app/, Capacitor) embarque les surfaces du dépôt : le bundle
+       se construit, est déterministe, charge api-base.js en premier, et la
+       porte accepte les origines de l'app sur /api et /auth seulement. */
+    'app-bundle-test.mjs',
     'security-regression-test.js',
     'sold-insights-test.js',
     'table-refresh-test.js',

@@ -80,8 +80,8 @@
     "sha": "112638dbbb35294e"
   },
   "assets/caisse-pwa.js": {
-    "v": "407",
-    "sha": "3dadcf189e12904f"
+    "v": "408",
+    "sha": "3a83c9c50d674971"
   },
   "assets/caisse-skin.css": {
     "v": "3",
@@ -128,8 +128,8 @@
     "sha": "94d688b1b5cdb89a"
   },
   "assets/dashboard-pwa.js": {
-    "v": "407",
-    "sha": "c785cb97b4dd6518"
+    "v": "408",
+    "sha": "273dce927c3bcfd3"
   },
   "assets/dateRange.js": {
     "v": "13",
@@ -160,8 +160,8 @@
     "sha": "aa550a22766dac1a"
   },
   "assets/employee-live.js": {
-    "v": "406",
-    "sha": "36642e637c15c17d"
+    "v": "407",
+    "sha": "a6d7ebe54e62c965"
   },
   "assets/employee-planning.js": {
     "v": "6",
@@ -276,11 +276,11 @@
     "sha": "c4b051564898f5a5"
   },
   "assets/menu-catalog.js": {
-    "v": "14",
-    "sha": "b5e7420b2076345c"
+    "v": "17",
+    "sha": "cb58679624da6391"
   },
   "assets/menu-i18n.js": {
-    "v": "2",
+    "v": "3",
     "sha": "071924f4167d322e"
   },
   "assets/menu-scan.js": {
@@ -332,8 +332,8 @@
     "sha": "dedc10e03f86a324"
   },
   "assets/orderpro-publish.js": {
-    "v": "3",
-    "sha": "34ba1e6354ccc770"
+    "v": "4",
+    "sha": "3c83161a8eea4f96"
   },
   "assets/pages-pro.js": {
     "v": "2080",
@@ -368,8 +368,8 @@
     "sha": "5de0e6b683e8535a"
   },
   "assets/platform-ops.js": {
-    "v": "2",
-    "sha": "aaa30a4b7a734877"
+    "v": "3",
+    "sha": "d01638c16845443e"
   },
   "assets/pos-autre.css": {
     "v": "2",
@@ -580,11 +580,11 @@
     "sha": "e4b2be14e93ce034"
   },
   "assets/restaurant-menu-workspace.js": {
-    "v": "23",
-    "sha": "594b2538ab63f55e"
+    "v": "32",
+    "sha": "0df5dfddcc4681d0"
   },
   "assets/restaurant-recipes.js": {
-    "v": "4",
+    "v": "5",
     "sha": "a89de0ada312f98a"
   },
   "assets/retail-scan.css": {
@@ -608,8 +608,8 @@
     "sha": "a4c3a6b89b6ee0d0"
   },
   "assets/stock.js": {
-    "v": "25",
-    "sha": "40f3bd8fb541c329"
+    "v": "27",
+    "sha": "51cf70601c132e1e"
   },
   "assets/store-templates.js": {
     "v": "1",

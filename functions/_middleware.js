@@ -34,6 +34,40 @@ const OPERATOR_PATH = '/__operator';
 const LANGUAGE_COOKIE = 'kiwi_lang';
 const MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 
+/* ── App native (Capacitor) — docs/roadmaps/KIWI_APP_PLAN.md §1.4 ───────────
+ * Les surfaces embarquées dans l'app tournent sous capacitor://localhost (iOS)
+ * ou https://localhost (Android) et appellent cette API en absolu (le shim
+ * assets/api-base.js préfixe /api/ et /auth/). Avec CapacitorHttp la requête
+ * part du natif — pas d'en-tête Origin, pas de CORS. Mais EventSource, WebSocket
+ * et un bundle testé dans un navigateur de bureau passent par le moteur web,
+ * qui exige un CORS explicite avec identifiants. On ne reflète QUE ces origines
+ * locales, jamais `*`, et seulement sur /api/* et /auth/* : le gate de compte
+ * des pages HTML n'est pas touché. Le port optionnel couvre Android (https
+ * scheme sur localhost) et un serveur statique local ; un site tiers n'est
+ * jamais « localhost ». */
+const APP_ORIGIN = /^(?:capacitor|ionic):\/\/localhost$|^https?:\/\/localhost(?::\d{2,5})?$/;
+function appOrigin(request) {
+  const o = request.headers.get('Origin') || '';
+  return APP_ORIGIN.test(o) ? o : '';
+}
+function appCorsHeaders(origin, request) {
+  const h = new Headers();
+  h.set('Access-Control-Allow-Origin', origin);
+  h.set('Access-Control-Allow-Credentials', 'true');
+  h.set('Vary', 'Origin');
+  if (request && request.method === 'OPTIONS') {
+    h.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    h.set('Access-Control-Allow-Headers', request.headers.get('Access-Control-Request-Headers') || 'Content-Type, Authorization, Accept');
+    h.set('Access-Control-Max-Age', '86400');
+  } else {
+    h.set('Access-Control-Expose-Headers', 'Content-Disposition, Content-Type');
+  }
+  return h;
+}
+function isAppApiPath(path) {
+  return path.indexOf('/api/') === 0 || path.indexOf('/auth/') === 0;
+}
+
 const SUPPORTED_LANGUAGES = new Set(['fr', 'en', 'ar']);
 
 function landingDocumentLanguage(request) {
@@ -112,6 +146,18 @@ async function routeRequest(context) {
   const authSecret = env.AUTH_SECRET;
   const sitePassword = env.SITE_PASSWORD;
   const isApi = path.indexOf('/api/') === 0;
+
+  // Le projet Capacitor (app/) vit dans le dépôt, donc dans le déploiement
+  // Pages : il n'y a rien à y servir — ni le projet Xcode, ni le bundle.
+  if (path === '/app' || path.startsWith('/app/')) {
+    return new Response('Not found', { status: 404, headers: { 'Cache-Control': 'no-store' } });
+  }
+  // Préflight CORS de l'app native (voir APP_ORIGIN) : répondre avant le gate,
+  // un OPTIONS ne porte ni cookie ni données.
+  const nativeAppOrigin = appOrigin(request);
+  if (nativeAppOrigin && request.method === 'OPTIONS' && isAppApiPath(path)) {
+    return new Response(null, { status: 204, headers: appCorsHeaders(nativeAppOrigin, request) });
+  }
 
   // ── Public customer surface (unauthenticated by design) ────────────────────
   // A diner who scans a table QR has NO account and NO gate cookie, so the whole
@@ -461,9 +507,12 @@ function secureResponse(response) {
 export async function onRequest(context) {
   const response = secureResponse(await routeRequest(context));
   const lang = landingDocumentLanguage(context.request);
-  if (!lang || !response || response.status === 101 || response.webSocket) return response;
+  const nativeAppOrigin = appOrigin(context.request);
+  const corsPath = nativeAppOrigin && isAppApiPath(new URL(context.request.url).pathname);
+  if ((!lang && !corsPath) || !response || response.status === 101 || response.webSocket) return response;
   const headers = new Headers(response.headers);
-  headers.append('Set-Cookie', languageCookie(lang));
+  if (lang) headers.append('Set-Cookie', languageCookie(lang));
+  if (corsPath) appCorsHeaders(nativeAppOrigin).forEach((v, k) => (k === 'vary' ? headers.append(k, v) : headers.set(k, v)));
   return new Response(response.body, {
     status: response.status,
     statusText: response.statusText,

@@ -160,4 +160,14 @@ ok(saumonLotsAfter[0].status !== 'expired', 'seul le lot consommable subsiste');
 const expiringAfter = C.expiring({ horizonDays: 7, now: now });
 ok(!expiringAfter.some(l => l.status === 'expired'), 'plus aucun lot n\'est en statut "expired" après déclaration de perte');
 
+
+// Les écrans écrivent bien la DLC : un moteur qui lit meta.expiresAt que personne ne renseigne
+// est une alerte toujours vide. On vérifie les trois formulaires de réception + la bannière caisse.
+const stockSrc = fs.readFileSync(path.join(root, 'assets', 'stock.js'), 'utf8');
+const caisseSrc = fs.readFileSync(path.join(root, 'kiwi-caisse.html'), 'utf8');
+ok((stockSrc.match(/data-stock-receive-dlc/g) || []).length >= 3, 'tableau de bord · la réception fournisseur saisit une DLC par ligne (2 gabarits + lecture)');
+ok(/expiresAt:\s*line\.dlc/.test(stockSrc), 'tableau de bord · la DLC de réception est écrite dans meta.expiresAt du mouvement receipt');
+ok(/data-stock-move-dlc/.test(stockSrc) && /why === 'receipt' \? \(scope\.querySelector\('\[data-stock-move-dlc\]'\)/.test(stockSrc), 'tableau de bord · le mouvement manuel « Réception fournisseur » accepte une DLC');
+ok(/data-sk-rl-dlc/.test(caisseSrc) && /expiresAt:\s*l\.dlc/.test(caisseSrc), 'caisse · la réception de livraison saisit une DLC par ligne et l\'écrit dans meta.expiresAt');
+ok(/KiwiInventoryConsumption\.expiring\(\{ horizonDays: 7 \}\)/.test(caisseSrc) && /data-sk-dlc-waste/.test(caisseSrc), 'caisse · l\'aperçu stock affiche les lots proches de la DLC avec « Déclarer en perte »');
 console.log(`\n✓ ${pass} controls green\n`);

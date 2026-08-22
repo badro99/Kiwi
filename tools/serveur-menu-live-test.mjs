@@ -13,7 +13,11 @@ assert.ok(applyStart > 0 && applyEnd > applyStart && fetchStart > applyEnd && fe
 
 const menu = {
   cats: [{ id: 'cat_1', name: 'Entrées', station: 'st_1' }],
-  items: [{ id: 'it_1', name: 'Harira', price: 28, catId: 'cat_1', avail: true }],
+  items: [
+    { id: 'it_1', name: 'Harira', price: 28, catId: 'cat_1', avail: true },
+    { id: 'it_archived', name: 'Ancien dessert', price: 20, catId: 'cat_1', archived: true },
+  ],
+  formulaItems: [{ id: 'it_formula', name: 'Dessert formule', price: 18, catId: 'cat_1', avail: true, formulaOnly: true }],
   stations: [{ id: 'st_1', name: 'Cuisine' }],
   opts: [],
 };
@@ -24,7 +28,7 @@ const context = {
   svSlug: () => 'amira-cafe',
   localStorage: { setItem() { throw new Error('storage-blocked'); } },
   fetch: async () => ({ ok: true, json: async () => ({ menu }) }),
-  svStations: [], optionGroups: {}, itemOptions: {},
+  svStations: [], svFormulaItems: [], optionGroups: {}, itemOptions: {},
   catLabels: { all: 'Tout' }, catOrder: ['all'], menuItems: [], activeCat: 'all',
   renderCatPills() { paints++; }, renderMenu() { paints++; },
   console,
@@ -36,6 +40,10 @@ const shown = await context.svFetchCarte();
 assert.equal(shown, true, 'a valid network menu is applied');
 assert.equal(context.menuItems.length, 1, 'the live product reaches the server menu');
 assert.equal(context.menuItems[0].name, 'Harira');
+assert.equal(context.svFormulaItems.some((item) => item.id === 'it_formula'), true,
+  'formula-only products remain available to the formula picker');
+assert.equal(context.svFormulaItems.some((item) => item.id === 'it_archived'), false,
+  'archived products are absent even from formula lookup');
 assert.equal(context.catLabels.cat_1, 'Entrées');
 assert.equal(paints, 2, 'category pills and menu cards repaint immediately');
 

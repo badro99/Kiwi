@@ -1,6 +1,9 @@
 /* Kiwi Employee portal — install the hosted web app on a phone home screen. */
 (function () {
   'use strict';
+  // App native (Capacitor) : pas de service worker ni de bouton « Installer » —
+  // le bundle embarqué est versionné par la release (docs/roadmaps/KIWI_APP_PLAN.md §1.4).
+  if (window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform()) return;
   var deferred = null;
   var authenticated = false;
   function standalone() {

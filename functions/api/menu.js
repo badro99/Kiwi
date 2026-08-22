@@ -102,7 +102,7 @@ function sanitizeHours(raw) {
   return { v: 1, week, exceptions };
 }
 
-function sanitizeFormula(raw) {
+function sanitizeFormula(raw, blockedIds) {
   if (!raw || typeof raw !== 'object') return null;
   const rawSlots = Array.isArray(raw.slots) ? raw.slots.slice(0, 10) : [];
   const slots = rawSlots.map((s, idx) => {
@@ -116,7 +116,7 @@ function sanitizeFormula(raw) {
     const choices = rawChoices.map((c) => ({
       itemId: str(c && c.itemId, 40),
       extra: Math.max(0, Math.min(1e5, Number(c && c.extra) || 0)),
-    })).filter((c) => c.itemId);
+    })).filter((c) => c.itemId && (!blockedIds || !blockedIds.has(c.itemId)));
     return { id, label, min, max, choices };
   }).filter((s) => s && s.id && s.choices.length);
   if (!slots.length) return null;
@@ -179,7 +179,6 @@ function sanitizeMenu(raw) {
   })).filter((c) => c.id);
   const items = Array.isArray(raw.items) ? raw.items.slice(0, 1000) : [];
   out.items = items.map((it) => {
-    const formula = sanitizeFormula(it && it.formula);
     const item = {
       id: str(it && it.id, 40),
       name: str(it && it.name, 120),
@@ -188,6 +187,8 @@ function sanitizeMenu(raw) {
       subId: str(it && it.subId, 40) || null,
       desc: str(it && it.desc, 400),
       avail: !(it && it.avail === false),
+      formulaOnly: !!(it && it.formulaOnly),
+      archived: !!(it && it.archived),
       // Le poste de préparation (bar, cuisson, froid…). La caisse route le bon de
       // cuisine dessus ; sans ce champ dans la liste blanche il était retiré
       // silencieusement à la publication, et tous les plats d'un vrai restaurant
@@ -205,15 +206,33 @@ function sanitizeMenu(raw) {
       photo: mediaUrl(it && it.photo),
       video: mediaUrl(it && it.video),
     };
-    if (formula) item.formula = formula;
     return item;
   }).filter((it) => it.id && it.name);
+  const rawItemsById = new Map(items.filter((it) => it && it.id).map((it) => [str(it.id, 40), it]));
+  const archivedFormulaIds = new Set(out.items.filter((it) => it.archived).map((it) => it.id));
+  out.items.forEach((item) => {
+    const rawItem = rawItemsById.get(item.id);
+    const formula = sanitizeFormula(rawItem && rawItem.formula, archivedFormulaIds);
+    if (formula) item.formula = formula;
+  });
   out.formulaTemplates = (Array.isArray(raw.formulaTemplates) ? raw.formulaTemplates.slice(0, 40) : []).map((t) => {
-    const formula = sanitizeFormula(t && t.formula);
+    const formula = sanitizeFormula(t && t.formula, archivedFormulaIds);
     return formula ? { id: str(t && t.id, 40), name: str(t && t.name, 80), formula } : null;
   }).filter((t) => t && t.id && t.name);
   if (raw.hours) { const h = sanitizeHours(raw.hours); if (h) out.hours = h; }
   return out;
+}
+
+/* Public compatibility projection. Old clients only understand `items`, so
+ * formula-only products must not be placed there: otherwise an old grid could
+ * sell one standalone. Updated clients union `formulaItems` only while painting
+ * a formula picker. Archived products leave neither collection. */
+function publicMenu(menu) {
+  if (!menu) return null;
+  return Object.assign({}, menu, {
+    items: (menu.items || []).filter((it) => !it.archived && !it.formulaOnly),
+    formulaItems: (menu.items || []).filter((it) => !it.archived && it.formulaOnly),
+  });
 }
 
 // A boutique publishes stock, not a carte: products × colour × size, each with a
@@ -399,7 +418,7 @@ export async function onRequestGet(context) {
           // A boutique publishes stock instead of a carte. Both live in the same
           // row; `type` says which one to read back.
           if (isShop(type)) shop = sanitizeShop(parsed);
-          else menu = sanitizeMenu(parsed);
+          else menu = publicMenu(sanitizeMenu(parsed));
         } catch (_) { menu = null; shop = null; }
       }
     }

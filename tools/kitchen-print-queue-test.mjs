@@ -12,6 +12,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const source = fs.readFileSync(path.join(ROOT, 'assets/kitchen-print-queue.js'), 'utf8');
 const caisse = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
 const bridge = fs.readFileSync(path.join(ROOT, 'assets/printer-bridge.js'), 'utf8');
+const receipt = fs.readFileSync(path.join(ROOT, 'assets/receipt.js'), 'utf8');
 const sw = fs.readFileSync(path.join(ROOT, 'kiwi-sw.js'), 'utf8');
 let pass = 0; const fail = [];
 function ok(label, condition, detail = '') {
@@ -70,12 +71,19 @@ ok('activer le hub au milieu du service ne réimprime pas les anciens bons', res
 
 const now = Date.now() + 20;
 result = app.KiwiKitchenPrint.enqueue([
-  { id: 'ord-server-2:cuisson', createdAt: now, payload: { title: 'CUISSON', items: [{ name: 'Tajine' }] } },
+  { id: 'ord-server-2:cuisson', createdAt: now, payload: { title: 'CUISSON', items: [
+    { name: 'Tajine' },
+    { name: 'Dessert formule', kind: 'formula-part', formulaName: 'Brunch', price: 0 },
+  ] } },
   { id: 'ord-server-2:bar', createdAt: now, payload: { title: 'BAR', items: [{ name: 'Thé' }] } },
 ], { remote: true });
 ok('un bon accepté sur téléphone entre dans la file du hub', result.accepted === 2);
 await wait(190);
 ok('chaque poste reçoit son propre bon', printed.length === 2 && printed[0].title === 'CUISSON' && printed[1].title === 'BAR');
+ok('un article réservé aux formules imprime comme tout autre composant de formule',
+  printed[0].items.some((item) => item.name === 'Dessert formule' && item.kind === 'formula-part' && item.price === 0));
+ok('le reçu conserve son contrat parent-only sans règle spéciale formulaOnly',
+  /l\.kind !== 'formula-part'/.test(caisse) && !/formulaOnly/.test(receipt));
 ok('la file est vide seulement après les deux confirmations réelles', app.KiwiKitchenPrint.pending() === 0);
 
 app.KiwiKitchenPrint.enqueue([

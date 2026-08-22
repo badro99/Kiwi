@@ -245,6 +245,8 @@ export async function priceOrder(env, merchant, rawLines) {
             name: String(it.name || ''),
             price: Math.max(0, Math.round(Number(it.price) || 0)),
             avail: it.avail !== false,
+            formulaOnly: it.formulaOnly === true,
+            archived: it.archived === true,
             opts: new Set((Array.isArray(it.opts) ? it.opts : []).map(String)),
             formula: it.formula && Array.isArray(it.formula.slots) ? {
               slots: it.formula.slots.map((slot) => ({
@@ -299,6 +301,8 @@ export async function priceOrder(env, merchant, rawLines) {
   const lines = [];
   const unknown = [];
   const unavailable = [];
+  const formulaOnly = [];
+  const archived = [];
   const invalidOptions = [];
   let total = 0;
 
@@ -308,7 +312,7 @@ export async function priceOrder(env, merchant, rawLines) {
    * laisser un inconnu tarifer la marchandise d'un commerçant. */
   if (!index) {
     return { lines: [], total: 0, priced: false, noCatalogue: true, menuRev: null,
-             unknown: [], unavailable: [] };
+             unknown: [], unavailable: [], formulaOnly: [], archived: [] };
   }
 
   /* A composed menu is one billable parent plus non-billable preparation
@@ -366,7 +370,6 @@ export async function priceOrder(env, merchant, rawLines) {
 
     const ref = id && index.get(id);
     if (!ref) { unknown.push(id || '?'); continue; }
-    if (!ref.avail) { unavailable.push(ref.name || id); continue; }
     const kind = String((l && l.kind) || '').slice(0, 20);
     const formulaUid = String((l && l.formulaUid) || '').slice(0, 40);
     const formulaContext = formulaUid ? formulaContexts.get(formulaUid) : null;
@@ -374,6 +377,9 @@ export async function priceOrder(env, merchant, rawLines) {
       invalidOptions.push(ref.name || id);
       continue;
     }
+    if (ref.archived) { archived.push(ref.name || id); continue; }
+    if (ref.formulaOnly && kind !== 'formula-part') { formulaOnly.push(ref.name || id); continue; }
+    if (!ref.avail) { unavailable.push(ref.name || id); continue; }
     let optionExtra = 0;
     let canonicalVisuals = visuals;
     const selected = Array.isArray(l && l.optionChoices) ? l.optionChoices.slice(0, 40) : null;
@@ -419,6 +425,6 @@ export async function priceOrder(env, merchant, rawLines) {
     priced: true,             // on n'arrive ici qu'avec un catalogue en main
     noCatalogue: false,
     menuRev,
-    unknown, unavailable, invalidOptions,
+    unknown, unavailable, formulaOnly, archived, invalidOptions,
   };
 }

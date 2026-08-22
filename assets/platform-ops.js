@@ -47,7 +47,7 @@
          * fichier qui ne passera jamais. Le détail (taille réelle, plafond,
          * type, extension) voyage sur l'erreur elle-même, sinon le message
          * final ne peut pas dire de combien on dépasse. */
-        var isVideo=/^video\//.test((file&&file.type)||''),limit=isVideo?24*1024*1024:8*1024*1024;
+        var isVideo=/^video\//.test((file&&file.type)||''),limit=isVideo?48*1024*1024:16*1024*1024;
         function fail(code,extra){
           var e=new Error(code); e.code=code;
           e.detail={name:(file&&file.name)||'',type:(file&&file.type)||'',size:(file&&file.size)||0,max:limit,kind:isVideo?'video':'photo'};

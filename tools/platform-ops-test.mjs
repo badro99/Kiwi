@@ -25,6 +25,20 @@ ok(/uploadError:\s*uploadError/.test(publish),'uploadError is exported for every
 ok(/KIWI_OSRM_ENDPOINT/.test(ops),'routing endpoint is configurable for production hosting');
 ok(/enrichUnknown\(code\)/.test(scan)&&/KiwiPlatformOps/.test(scan),'unknown scans request product truth');
 ok(/KiwiPlatformOps\s*&&\s*window\.KiwiPlatformOps\.uploads/.test(publish),'catalog media uses the resilient upload adapter');
+/* Les plafonds vivent en trois copies (serveur, pré-contrôle local, message
+ * affiché) : on teste leur ACCORD, pas un chiffre. Et la photo est rétrécie
+ * dans le navigateur AVANT l'envoi — c'est ce qui rend le plafond invisible. */
+const mediaApi=fs.readFileSync(new URL('../functions/api/media/index.js',import.meta.url),'utf8');
+const capS=(re,src)=>{const m=src.match(re);return m?Number(m[1])*1024*1024:NaN;};
+const srvImg=capS(/const MAX_IMAGE = (\d+) \* 1024 \* 1024/,mediaApi), srvVid=capS(/const MAX_VIDEO = (\d+) \* 1024 \* 1024/,mediaApi);
+const pubImg=capS(/var MAX_PHOTO = (\d+) \* 1024 \* 1024/,publish), pubVid=capS(/var MAX_VIDEO = (\d+) \* 1024 \* 1024/,publish);
+const opsM=ops.match(/limit=isVideo\?(\d+)\*1024\*1024:(\d+)\*1024\*1024/);
+ok(srvImg>0&&srvImg===pubImg&&opsM&&Number(opsM[2])*1024*1024===srvImg,'photo cap agrees across server, local pre-check and displayed message');
+ok(srvVid>0&&srvVid===pubVid&&opsM&&Number(opsM[1])*1024*1024===srvVid,'video cap agrees across server, local pre-check and displayed message');
+ok(srvImg>=16*1024*1024,'photo cap covers a raw 50 Mpx phone JPEG when shrinking is impossible');
+ok(/function shrinkPhoto\(file\)/.test(publish)&&/return shrinkPhoto\(file\)\.then\(function \(ready\) \{ return sendMedia\(ready \|\| file\); \}\);/.test(publish),'every photo is shrunk in the browser before any upload path');
+ok(/imageOrientation: 'from-image'/.test(publish),'shrinking honours EXIF orientation (a portrait photo stays portrait)');
+ok(/\.catch\(function \(\) \{ return file; \}\);/.test(publish),'an undecodable file is sent as-is so the server names the real reason');
 /* Un plancher, pas une épingle. Épingler le numéro exact fait échouer le
  * prochain correctif légitime pour la seule raison qu'il a fait son travail —
  * bumper le cache. On garde la garantie qui compte : le cache existe et ne
