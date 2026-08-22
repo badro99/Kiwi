@@ -80,8 +80,8 @@
     "sha": "112638dbbb35294e"
   },
   "assets/caisse-pwa.js": {
-    "v": "409",
-    "sha": "09228638063eaa02"
+    "v": "410",
+    "sha": "156fe1d7efae035a"
   },
   "assets/caisse-skin.css": {
     "v": "3",
@@ -128,8 +128,8 @@
     "sha": "94d688b1b5cdb89a"
   },
   "assets/dashboard-pwa.js": {
-    "v": "408",
-    "sha": "273dce927c3bcfd3"
+    "v": "409",
+    "sha": "abfe29e6811375eb"
   },
   "assets/dateRange.js": {
     "v": "14",
@@ -160,8 +160,8 @@
     "sha": "aa550a22766dac1a"
   },
   "assets/employee-live.js": {
-    "v": "407",
-    "sha": "a6d7ebe54e62c965"
+    "v": "408",
+    "sha": "727dcc9f02130170"
   },
   "assets/employee-planning.js": {
     "v": "8",
@@ -258,6 +258,14 @@
   "assets/kitchen-relay.js": {
     "v": "4",
     "sha": "d66f67e7bc8d4e4b"
+  },
+  "assets/kiwi-select.css": {
+    "v": "2",
+    "sha": "35571c6a73eb331e"
+  },
+  "assets/kiwi-select.js": {
+    "v": "2",
+    "sha": "af05f19e306ca3d8"
   },
   "assets/landing/components.css": {
     "v": "2",
