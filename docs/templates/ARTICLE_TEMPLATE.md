@@ -49,4 +49,5 @@ Ne remplacez pas ce cadre par une skin de blog claire dans un article individuel
 
 Le style partagé vit dans `assets/articles/article.css` et le rehaussement progressif
 dans `assets/articles/article.js`. Les articles publiés ne doivent pas recopier ces
-deux fichiers.
+deux fichiers. Toute modification de l’un de ces assets doit incrémenter son `?v=`
+dans le patron et dans chaque article publié afin de casser le cache des deux hébergeurs.
