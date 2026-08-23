@@ -1,7 +1,8 @@
 # Kiwi Guides · mode d’emploi du template
 
-Le fichier `article.html` est le patron source des guides Kiwi. Il est volontairement
-`noindex` et montre tous les modules éditoriaux disponibles. Pour publier :
+Le fichier `article.html` est la galerie `noindex` des modules éditoriaux. Ce n’est
+plus un fichier à copier : les pages publiées sont produites depuis le manifeste et
+les fragments de contenu, puis vérifiées octet par octet avant livraison.
 
 Le cadre visuel réemploie directement le monde de la landing : mêmes posters paysage
 et portrait, navigation 104/64 px, surfaces de verre sombres et scènes produit
@@ -10,21 +11,27 @@ article. Le pied de page doit rester identique à celui de la
 landing : navigation, contact, badge Kiwi, crédit Tamminen et grand wordmark compris.
 Ne remplacez pas ce cadre par une skin de blog claire dans un article individuel.
 
-1. Copier `docs/templates/article.html` vers `/<lang>/guides/<slug>/index.html`.
-2. Remplacer le titre, la description, le canonical, les alternates, les dates, la
-   section, l’image et toutes les valeurs du JSON-LD.
-3. Réécrire le contenu visible. Supprimer les modules inutiles plutôt que de les
-   remplir artificiellement.
-4. Produire une couverture unique en 1200 × 630, idéalement PNG ou WebP. Le SVG
+1. Ajouter le sujet, ses trois routes et ses métadonnées FR/EN/AR dans
+   `content/guides/manifest.mjs`.
+2. Écrire uniquement le `<main id="article">…</main>` de chaque édition dans
+   `content/guides/pages/<id>/{fr,en,ar}.html`. Partir des modules visibles dans
+   `docs/templates/article.html` et supprimer les modules inutiles.
+3. Produire une couverture unique en 1200 × 630 pour chaque langue. Le SVG
    `guide-cover-template.svg` est un repère de composition, pas une image commune à
    tous les articles.
-5. Vérifier chaque chiffre et chaque affirmation réglementaire avec une source
+4. Vérifier chaque chiffre et chaque affirmation réglementaire avec une source
    primaire. Le texte doit distinguer clairement mesure, exemple et estimation.
-6. Remplacer les trois cartes liées par des pages réellement publiées et proches du
+5. Remplacer les trois cartes liées par des pages réellement publiées et proches du
    sujet. Aucun lien factice.
-7. Retirer `noindex, nofollow` seulement après relecture, puis ajouter la page et ses
-   alternates au sitemap.
-8. Valider au clavier, à 320 px, en RTL, sans JavaScript, avec mouvement réduit, dans
+6. Mettre à jour les trois fragments du hub et le rail de la landing avec le nouveau
+   guide. Ne jamais modifier à la main les `*/guides/**/index.html` générés ni les
+   lignes guides de `sitemap.xml`.
+7. Lancer `node tools/build-guides.mjs`, puis
+   `node tools/build-guides.mjs --check`. Le générateur écrit le head, le header, le
+   footer exact de chaque landing, le JSON-LD, les alternates réciproques et les
+   lignes sitemap à partir d’une seule définition.
+8. Lancer `node tools/article-template-test.mjs`, puis valider au clavier, à 320 px,
+   en RTL, sans JavaScript, avec mouvement réduit, dans
    Rich Results Test et dans l’inspection d’URL Search Console.
 
 ## Principes éditoriaux

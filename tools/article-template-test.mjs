@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import vm from 'node:vm';
+import { HUBS, PUBLISHED_LOCALES, TOPICS } from '../content/guides/manifest.mjs';
 
 const read = (path) => fs.readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 const html = read('docs/templates/article.html');
@@ -7,25 +8,29 @@ const css = read('assets/articles/article.css');
 const js = read('assets/articles/article.js');
 const landingByLocale = { fr: read('fr/index.html'), en: read('en/index.html'), ar: read('ar/index.html') };
 const sitemap = read('sitemap.xml');
+const SITE = 'https://kiwi-os.com';
+const guideClusters = [
+  Object.fromEntries(PUBLISHED_LOCALES.map((locale) => [locale, `/${locale}/guides/`])),
+  ...TOPICS.map((topic) => topic.routes),
+];
+const alternatesByUrl = new Map(guideClusters.flatMap((routes) => {
+  const expected = [
+    ...PUBLISHED_LOCALES.map((locale) => [locale, SITE + routes[locale]]),
+    ['x-default', SITE + routes.fr],
+  ];
+  return PUBLISHED_LOCALES.map((locale) => [SITE + routes[locale], expected]);
+}));
+const minimumWords = {
+  CollectionPage: { fr: 500, en: 400, ar: 330 },
+  Article: { fr: 1000, en: 900, ar: 800 },
+};
+const pageRecord = (route, metadata, locale, type) => ({
+  path: route.slice(1) + 'index.html', url: SITE + route, type,
+  minWords: minimumWords[type][locale], image: metadata.image, locale, alternates: 4,
+});
 const published = [
-  { path: 'fr/guides/index.html', url: 'https://kiwi-os.com/fr/guides/', type: 'CollectionPage', minWords: 500, image: 'assets/articles/guides-restaurant-maroc.png', locale: 'fr', alternates: 4 },
-  { path: 'en/guides/index.html', url: 'https://kiwi-os.com/en/guides/', type: 'CollectionPage', minWords: 400, image: 'assets/articles/guides-restaurant-morocco-en.png', locale: 'en', alternates: 4 },
-  { path: 'ar/guides/index.html', url: 'https://kiwi-os.com/ar/guides/', type: 'CollectionPage', minWords: 330, image: 'assets/articles/guides-restaurant-morocco-ar.png', locale: 'ar', alternates: 4 },
-  { path: 'fr/guides/logiciel-caisse-restaurant-maroc/index.html', url: 'https://kiwi-os.com/fr/guides/logiciel-caisse-restaurant-maroc/', type: 'Article', minWords: 1050, image: 'assets/articles/logiciel-caisse-restaurant-maroc.png', locale: 'fr', alternates: 4 },
-  { path: 'en/guides/restaurant-pos-software-morocco/index.html', url: 'https://kiwi-os.com/en/guides/restaurant-pos-software-morocco/', type: 'Article', minWords: 1100, image: 'assets/articles/restaurant-pos-software-morocco-en.png', locale: 'en', alternates: 4 },
-  { path: 'ar/guides/برنامج-كاشير-للمطعم-في-المغرب/index.html', url: 'https://kiwi-os.com/ar/guides/برنامج-كاشير-للمطعم-في-المغرب/', type: 'Article', minWords: 900, image: 'assets/articles/restaurant-pos-software-morocco-ar.png', locale: 'ar', alternates: 4 },
-  { path: 'fr/guides/calcul-food-cost-restaurant/index.html', url: 'https://kiwi-os.com/fr/guides/calcul-food-cost-restaurant/', type: 'Article', minWords: 1050, image: 'assets/articles/calcul-food-cost-restaurant.png', locale: 'fr', alternates: 4 },
-  { path: 'en/guides/restaurant-food-cost/index.html', url: 'https://kiwi-os.com/en/guides/restaurant-food-cost/', type: 'Article', minWords: 1150, image: 'assets/articles/restaurant-food-cost-en.png', locale: 'en', alternates: 4 },
-  { path: 'ar/guides/حساب-تكلفة-الطعام-للمطعم/index.html', url: 'https://kiwi-os.com/ar/guides/حساب-تكلفة-الطعام-للمطعم/', type: 'Article', minWords: 950, image: 'assets/articles/restaurant-food-cost-ar.png', locale: 'ar', alternates: 4 },
-  { path: 'fr/guides/gestion-stock-restaurant/index.html', url: 'https://kiwi-os.com/fr/guides/gestion-stock-restaurant/', type: 'Article', minWords: 1050, image: 'assets/articles/gestion-stock-restaurant.png', locale: 'fr', alternates: 4 },
-  { path: 'en/guides/restaurant-inventory-management/index.html', url: 'https://kiwi-os.com/en/guides/restaurant-inventory-management/', type: 'Article', minWords: 1050, image: 'assets/articles/restaurant-inventory-management-en.png', locale: 'en', alternates: 4 },
-  { path: 'ar/guides/إدارة-مخزون-المطعم/index.html', url: 'https://kiwi-os.com/ar/guides/إدارة-مخزون-المطعم/', type: 'Article', minWords: 900, image: 'assets/articles/restaurant-inventory-management-ar.png', locale: 'ar', alternates: 4 },
-  { path: 'fr/guides/menu-engineering-restaurant/index.html', url: 'https://kiwi-os.com/fr/guides/menu-engineering-restaurant/', type: 'Article', minWords: 1150, image: 'assets/articles/menu-engineering-restaurant-fr.png', locale: 'fr', alternates: 4 },
-  { path: 'en/guides/restaurant-menu-engineering/index.html', url: 'https://kiwi-os.com/en/guides/restaurant-menu-engineering/', type: 'Article', minWords: 1000, image: 'assets/articles/restaurant-menu-engineering-en.png', locale: 'en', alternates: 4 },
-  { path: 'ar/guides/هندسة-قائمة-الطعام-للمطعم/index.html', url: 'https://kiwi-os.com/ar/guides/هندسة-قائمة-الطعام-للمطعم/', type: 'Article', minWords: 900, image: 'assets/articles/restaurant-menu-engineering-ar.png', locale: 'ar', alternates: 4 },
-  { path: 'fr/guides/seuil-rentabilite-restaurant/index.html', url: 'https://kiwi-os.com/fr/guides/seuil-rentabilite-restaurant/', type: 'Article', minWords: 1100, image: 'assets/articles/seuil-rentabilite-restaurant-fr.png', locale: 'fr', alternates: 4 },
-  { path: 'en/guides/restaurant-break-even-point/index.html', url: 'https://kiwi-os.com/en/guides/restaurant-break-even-point/', type: 'Article', minWords: 900, image: 'assets/articles/restaurant-break-even-en.png', locale: 'en', alternates: 4 },
-  { path: 'ar/guides/نقطة-التعادل-للمطعم/index.html', url: 'https://kiwi-os.com/ar/guides/نقطة-التعادل-للمطعم/', type: 'Article', minWords: 850, image: 'assets/articles/restaurant-break-even-ar.png', locale: 'ar', alternates: 4 }
+  ...PUBLISHED_LOCALES.map((locale) => pageRecord(`/${locale}/guides/`, HUBS[locale], locale, 'CollectionPage')),
+  ...TOPICS.flatMap((topic) => PUBLISHED_LOCALES.map((locale) => pageRecord(topic.routes[locale], topic.pages[locale], locale, 'Article'))),
 ];
 const articleShellRule = css.match(/\.article-shell\s*\{([\s\S]*?)\}/)?.[1] || '';
 const footerFrom = (source) => source.match(/<footer\b[\s\S]*?<\/footer>/)?.[0] || '';
@@ -84,23 +89,9 @@ ok(/Sans JavaScript/.test(read('fr/guides/calcul-food-cost-restaurant/index.html
 ok(/data-break-even-calculator/.test(read('fr/guides/seuil-rentabilite-restaurant/index.html')) && /updateBreakEvenCalculator/.test(js), 'the break-even calculator is progressively enhanced');
 ok(/Without JavaScript/.test(read('en/guides/restaurant-break-even-point/index.html')) && /من دون JavaScript/.test(read('ar/guides/نقطة-التعادل-للمطعم/index.html')), 'break-even formulas remain available without JavaScript in every locale');
 
-const landingGuideRoutes = {
-  fr: [
-    '/fr/guides/logiciel-caisse-restaurant-maroc/', '/fr/guides/calcul-food-cost-restaurant/',
-    '/fr/guides/gestion-stock-restaurant/', '/fr/guides/menu-engineering-restaurant/',
-    '/fr/guides/seuil-rentabilite-restaurant/'
-  ],
-  en: [
-    '/en/guides/restaurant-pos-software-morocco/', '/en/guides/restaurant-food-cost/',
-    '/en/guides/restaurant-inventory-management/', '/en/guides/restaurant-menu-engineering/',
-    '/en/guides/restaurant-break-even-point/'
-  ],
-  ar: [
-    '/ar/guides/برنامج-كاشير-للمطعم-في-المغرب/', '/ar/guides/حساب-تكلفة-الطعام-للمطعم/',
-    '/ar/guides/إدارة-مخزون-المطعم/', '/ar/guides/هندسة-قائمة-الطعام-للمطعم/',
-    '/ar/guides/نقطة-التعادل-للمطعم/'
-  ]
-};
+const landingGuideRoutes = Object.fromEntries(PUBLISHED_LOCALES.map((locale) => [
+  locale, TOPICS.map((topic) => topic.routes[locale]),
+]));
 for (const [locale, source] of Object.entries(landingByLocale)) {
   const routes = landingGuideRoutes[locale];
   const guideStart = source.indexOf('id="guides"');
@@ -131,10 +122,18 @@ for (const page of published) {
     const rel = href.replace(/^\//, '').replace(/\/$/, '') + (href.endsWith('/') ? '/index.html' : '');
     return !fs.existsSync(new URL('../' + rel, import.meta.url));
   });
+  const expectedAlternates = alternatesByUrl.get(page.url) || [];
+  const htmlAlternates = [...source.matchAll(/<link rel="alternate" hreflang="([^"]+)" href="([^"]+)"/g)]
+    .map((match) => [match[1], match[2]]);
+  const sitemapRow = (sitemap.match(/<url>[\s\S]*?<\/url>/g) || [])
+    .find((row) => row.includes(`<loc>${page.url}</loc>`)) || '';
+  const sitemapAlternates = [...sitemapRow.matchAll(/<xhtml:link rel="alternate" hreflang="([^"]+)" href="([^"]+)"/g)]
+    .map((match) => [match[1], match[2]]);
 
   ok(canonical === page.url, `${page.path} has its own canonical URL`);
   ok(!/noindex|TEMPLATE|guide-cover-template/.test(source), `${page.path} contains no template or indexing residue`);
   ok((source.match(/rel="alternate" hreflang=/g) || []).length === page.alternates, `${page.path} declares the correct published locale alternates`);
+  ok(JSON.stringify(htmlAlternates) === JSON.stringify(expectedAlternates), `${page.path} targets its exact reciprocal FR/EN/AR/x-default cluster`);
   ok(description.length >= 120 && description.length <= 165, `${page.path} has a useful search description`);
   ok(new RegExp(`<html lang="${page.locale}" dir="${page.locale === 'ar' ? 'rtl' : 'ltr'}">`).test(source), `${page.path} declares its language and writing direction`);
   ok((source.match(/<h1\b/g) || []).length === 1, `${page.path} has exactly one H1`);
@@ -149,6 +148,7 @@ for (const page of published) {
   ok(page.locale !== 'ar' || /<bdi dir="ltr">/.test(source), `${page.path} isolates Arabic numeric runs`);
   ok(brokenGuideLinks.length === 0, `${page.path} has no broken internal guide links`);
   ok(sitemap.includes(`<loc>${page.url}</loc>`), `${page.path} is discoverable in sitemap.xml`);
+  ok(JSON.stringify(sitemapAlternates) === JSON.stringify(expectedAlternates), `${page.path} sitemap row matches its exact reciprocal locale cluster`);
 
   const cssVersion = source.match(/article\.css\?v=(\d+)/)?.[1];
   const jsVersion = source.match(/article\.js\?v=(\d+)/)?.[1];
@@ -156,6 +156,8 @@ for (const page of published) {
 }
 ok(publishedImages.size === published.length, 'every published locale page has its own social image path');
 ok(publishedVersions.size === 1 && publishedVersions.has('10:4'), 'all published guides use the current shared asset versions');
+const sitemapGuideRows = (sitemap.match(/<url>[\s\S]*?<\/url>/g) || []).filter((row) => /<loc>https:\/\/kiwi-os\.com\/(?:fr|en|ar)\/guides\//.test(row));
+ok(sitemapGuideRows.length === guideClusters.length * PUBLISHED_LOCALES.length, 'sitemap has exactly one row for every manifested localized guide page');
 
 try {
   new vm.Script(js, { filename: 'assets/articles/article.js' });
