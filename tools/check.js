@@ -857,6 +857,9 @@ section('Whole-project regressions');
     'menu-pull-route-test.js',
     'restaurant-menu-performance-test.js',
     'restaurant-menu-nutrition-tab-test.js',
+    /* Le patron éditorial public : SEO, article sémantique, RTL, mobile et
+       fonctionnement sans JS restent présents à chaque nouveau guide. */
+    'article-template-test.mjs',
     'restaurant-menu-peak-hours-test.js',
     'restaurant-units-test.js',
     'menu-nutrition-test.mjs',
