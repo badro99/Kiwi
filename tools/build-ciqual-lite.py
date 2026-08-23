@@ -49,6 +49,20 @@ MOROCCAN_ALIASES = {
     "djaj": "36016", "kefta": "6254",
 }
 
+PORTION_SUGGESTIONS = {
+    "egg": {"grams": 50, "labelFr": "œuf moyen", "labelEn": "medium egg", "labelAr": "بيضة متوسطة"},
+    "tomato": {"grams": 120, "labelFr": "tomate moyenne", "labelEn": "medium tomato", "labelAr": "طماطم متوسطة"},
+    "bread_slice": {"grams": 30, "labelFr": "tranche de pain", "labelEn": "slice of bread", "labelAr": "شريحة خبز"},
+    "onion": {"grams": 110, "labelFr": "oignon moyen", "labelEn": "medium onion", "labelAr": "بصلة متوسطة"},
+    "potato": {"grams": 170, "labelFr": "pomme de terre moyenne", "labelEn": "medium potato", "labelAr": "بطاطس متوسطة"},
+    "apple": {"grams": 150, "labelFr": "pomme moyenne", "labelEn": "medium apple", "labelAr": "تفاحة متوسطة"},
+    "zucchini": {"grams": 200, "labelFr": "courgette moyenne", "labelEn": "medium zucchini", "labelAr": "كوسة متوسطة"},
+}
+PORTION_CATEGORY_BY_ID = {
+    "22000": "egg", "20119": "tomato", "7200": "bread_slice",
+    "20034": "onion", "4023": "potato", "13039": "apple", "20020": "zucchini",
+}
+
 
 def download(url: str, target: Path) -> Path:
     request = urllib.request.Request(url, headers={"User-Agent": "Kiwi-Ciqual-Builder/1.0"})
@@ -170,22 +184,26 @@ def build(xlsx: Path, old_xml_zip: Path) -> list[dict]:
         if not code or not name_fr or not name_en or subgroup in EXCLUDED_SUBGROUPS or any(value is None for value in values):
             continue
         kcal, protein, carbs, fat, sugars, salt = values
-        groups[subgroup].append({
+        item = {
             "id": code, "nameFr": name_fr, "nameEn": name_en,
             "kcal": compact_number(kcal), "protein": compact_number(protein),
             "carbs": compact_number(carbs), "fat": compact_number(fat),
             "sugars": compact_number(sugars), "salt": compact_number(salt),
             "allergenHints": allergen_hints(name_fr, name_en, subgroup),
-        })
+        }
+        if code in PORTION_CATEGORY_BY_ID:
+            item["portionCategory"] = PORTION_CATEGORY_BY_ID[code]
+        groups[subgroup].append(item)
     for rows in groups.values():
         rows.sort(key=preference)
     selected, selected_ids = [], set()
     candidates = [row for rows in groups.values() for row in rows]
     by_id = {row["id"]: row for row in candidates}
-    missing_alias_targets = sorted(set(MOROCCAN_ALIASES.values()) - set(by_id))
-    if missing_alias_targets:
-        raise ValueError("Cibles Ciqual des alias absentes : " + ", ".join(missing_alias_targets))
-    for target_id in dict.fromkeys(MOROCCAN_ALIASES.values()):
+    forced_ids = set(MOROCCAN_ALIASES.values()) | set(PORTION_CATEGORY_BY_ID)
+    missing_targets = sorted(forced_ids - set(by_id))
+    if missing_targets:
+        raise ValueError("Cibles Ciqual locales absentes : " + ", ".join(missing_targets))
+    for target_id in dict.fromkeys([*MOROCCAN_ALIASES.values(), *PORTION_CATEGORY_BY_ID]):
         hit = by_id.get(target_id)
         if hit and hit["id"] not in selected_ids:
             selected.append(hit)
@@ -242,6 +260,7 @@ def main() -> None:
                 "englishNames": "Anses-Ciqual 2020, jointure par alim_code",
             },
             "aliases": MOROCCAN_ALIASES,
+            "portionSuggestions": PORTION_SUGGESTIONS,
             "foods": foods,
         }
         args.output.parent.mkdir(parents=True, exist_ok=True)

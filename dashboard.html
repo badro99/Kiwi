@@ -4910,7 +4910,7 @@
   .st-nutrition-body { padding: 0 14px 15px; border-top: 1px solid var(--n-200); }
   .st-ciqual-search { position: relative; padding-top: 14px; }
   .st-ciqual-search .st-mb-input { width: 100%; margin-top: 6px; }
-  .st-ciqual-results { position: absolute; z-index: 4; inset: calc(100% + 4px) 0 auto; max-height: 260px; overflow-y: auto; padding: 6px; border: 1px solid var(--n-300); border-radius: 10px; background: var(--surface); box-shadow: var(--shadow-md); color: var(--n-600); font-size: 12px; }
+  .st-ciqual-results { position: absolute; z-index: 4; isolation: isolate; inset: calc(100% + 4px) 0 auto; max-height: 260px; overflow-y: auto; padding: 6px; border: 1px solid var(--n-300); border-radius: 10px; background: var(--paper); box-shadow: var(--shadow-md); color: var(--n-600); font-size: 12px; }
   .st-ciqual-results > button { width: 100%; display: flex; flex-direction: column; gap: 2px; padding: 9px 10px; border: 0; border-radius: 7px; background: transparent; color: var(--ink); text-align: start; cursor: pointer; }
   .st-ciqual-results > button:hover { background: var(--mint-soft); }
   .st-ciqual-results > button b { font-size: 12.5px; font-weight: 600; }
@@ -4928,6 +4928,9 @@
   .st-allergen-help { margin: 8px 0; color: var(--n-500); font-size: 11px; line-height: 1.45; }
   .st-allergen-confirm { display: flex; align-items: center; gap: 8px; color: var(--ink); font-size: 12px; cursor: pointer; }
   .st-allergen-confirm input { accent-color: var(--atlas); }
+  .st-portion-prefill { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; color: var(--n-600); font-size: 11px; }
+  .st-portion-prefill[hidden] { display: none; }
+  .st-portion-prefill button { border: 1px solid var(--atlas); border-radius: 999px; padding: 5px 9px; background: transparent; color: var(--atlas); font: 600 11px var(--sans); cursor: pointer; }
   @media (max-width: 600px) {
     .st-nutrient-grid { grid-template-columns: repeat(2, 1fr); }
   }
@@ -6387,7 +6390,7 @@
 <script src="assets/day-report.js?v=5" defer fetchpriority="low"></script>
 <script src="assets/day-report-export.js?v=5" defer fetchpriority="low"></script>
 <script src="assets/day-report-dash.js?v=8" defer fetchpriority="low"></script>
-<script src="assets/stock.js?v=31" defer fetchpriority="low"></script>
+<script src="assets/stock.js?v=32" defer fetchpriority="low"></script>
 <script src="assets/planning-core.js?v=8" defer fetchpriority="low"></script>
 <link rel="stylesheet" href="assets/planning-ui.css?v=10">
 <script src="assets/team.js?v=281" defer fetchpriority="low"></script>

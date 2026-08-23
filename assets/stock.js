@@ -241,6 +241,8 @@
       nutriFat: 'Lipides (g)', nutriSugars: 'Sucres (g)', nutriSalt: 'Sel (g)',
       nutriPer100: 'Valeurs pour 100 g', nutriGramsPiece: 'Grammes par pièce', nutriGramsMl: 'Grammes par ml',
       nutriGramsHint: 'Nécessaire pour convertir cette unité en grammes.',
+      nutriPortionPrefill: (grams, label) => `Suggestion · ${grams} g pour ${label}`,
+      nutriPortionApply: 'Utiliser cette valeur',
       allergenTitle: 'Allergènes UE', allergenConfirm: "J'ai vérifié ces allergènes",
       allergenSuggested: 'Suggestions à confirmer, elles ne seront pas publiées sans vérification.',
       'allergen.gluten': 'Gluten', 'allergen.crustaces': 'Crustacés', 'allergen.oeufs': 'Œufs',
@@ -499,6 +501,8 @@
       nutriFat: 'Fat (g)', nutriSugars: 'Sugars (g)', nutriSalt: 'Salt (g)',
       nutriPer100: 'Values per 100 g', nutriGramsPiece: 'Grams per piece', nutriGramsMl: 'Grams per ml',
       nutriGramsHint: 'Required to convert this unit to grams.',
+      nutriPortionPrefill: (grams, label) => `Suggestion · ${grams} g for ${label}`,
+      nutriPortionApply: 'Use this value',
       allergenTitle: 'EU allergens', allergenConfirm: 'I have checked these allergens',
       allergenSuggested: 'Confirm the suggestions. They are never published before review.',
       'allergen.gluten': 'Gluten', 'allergen.crustaces': 'Crustaceans', 'allergen.oeufs': 'Eggs',
@@ -747,6 +751,8 @@
       nutriFat: 'الدهون (غ)', nutriSugars: 'السكريات (غ)', nutriSalt: 'الملح (غ)',
       nutriPer100: 'القيم لكل 100 غ', nutriGramsPiece: 'الغرامات لكل قطعة', nutriGramsMl: 'الغرامات لكل مل',
       nutriGramsHint: 'ضروري لتحويل هذه الوحدة إلى غرامات.',
+      nutriPortionPrefill: (grams, label) => `اقتراح · ${grams} غ لـ ${label}`,
+      nutriPortionApply: 'استخدام هذه القيمة',
       allergenTitle: 'مسببات الحساسية', allergenConfirm: 'تحققت من مسببات الحساسية',
       allergenSuggested: 'اقتراحات تحتاج إلى تأكيد، ولا تُنشر قبل التحقق.',
       'allergen.gluten': 'الغلوتين', 'allergen.crustaces': 'القشريات', 'allergen.oeufs': 'البيض',
@@ -5300,13 +5306,14 @@
   let ciqualPromise = null;
   function loadCiqual() {
     if (!ciqualPromise) {
-      ciqualPromise = fetch('assets/data/ciqual-lite.json?v=2', { credentials: 'same-origin' })
+      ciqualPromise = fetch('assets/data/ciqual-lite.json?v=3', { credentials: 'same-origin' })
         .then((response) => { if (!response.ok) throw new Error('ciqual ' + response.status); return response.json(); })
         .then((payload) => ({
           foods: Array.isArray(payload?.foods) ? payload.foods : [],
           aliases: payload?.aliases && typeof payload.aliases === 'object' ? payload.aliases : {},
+          portionSuggestions: payload?.portionSuggestions && typeof payload.portionSuggestions === 'object' ? payload.portionSuggestions : {},
         }))
-        .catch(() => ({ foods: [], aliases: {} }));
+        .catch(() => ({ foods: [], aliases: {}, portionSuggestions: {} }));
     }
     return ciqualPromise;
   }
@@ -5336,6 +5343,7 @@
           <label class="st-mb-label" data-grams-label>${esc(t('nutriGramsPiece'))}</label>
           <input class="st-mb-input mono" type="number" min="0.001" step="0.001" value="${esc(existing?.gramsPerUnit ?? '')}" data-stock-grams />
           <small>${esc(t('nutriGramsHint'))}</small>
+          <div class="st-portion-prefill" data-portion-prefill hidden><span data-portion-copy></span><button type="button" data-apply-grams>${esc(t('nutriPortionApply'))}</button></div>
         </div>
         <div class="st-mb-label st-nutrition-kicker">${esc(t('allergenTitle'))}</div>
         <div class="st-allergen-chips">${allergenKeys().map((key) => `<button type="button" data-allergen="${key}" aria-pressed="${selected.has(key) ? 'true' : 'false'}">${esc(t('allergen.' + key))}</button>`).join('')}</div>
@@ -5343,15 +5351,6 @@
         <label class="st-allergen-confirm"><input type="checkbox" data-allergen-confirm${Array.isArray(existing?.allergens) ? ' checked' : ''}/><span>${esc(t('allergenConfirm'))}</span></label>
       </div>
     </details>`;
-  }
-  function gramsSuggestion(name, unit) {
-    const value = searchKey(name);
-    if (unit === 'unité') {
-      if (/\b(oeuf|egg)\b/.test(value)) return 50;
-      if (/\b(citron|lemon)\b/.test(value)) return 120;
-      if (/\b(tomate|tomato)\b/.test(value)) return 120;
-    }
-    return ['ml', 'cl', 'L'].includes(unit) ? 1 : null;
   }
   function wireNutrition(scope, existing) {
     const section = scope?.querySelector('[data-stock-nutrition]');
@@ -5361,15 +5360,18 @@
     const gramsWrap = section.querySelector('[data-grams-wrap]');
     const gramsInput = section.querySelector('[data-stock-grams]');
     const gramsLabel = section.querySelector('[data-grams-label]');
+    const portionPrefill = section.querySelector('[data-portion-prefill]');
+    const portionCopy = section.querySelector('[data-portion-copy]');
     const nameInput = scope.querySelector('[data-stock-add-name]');
+    let portionSuggestions = {};
     const updateGrams = () => {
       const unit = stockUnit(unitSelect.value), visible = ['unité', 'ml', 'cl', 'L'].includes(unit);
       gramsWrap.hidden = !visible;
       gramsLabel.textContent = t(unit === 'unité' ? 'nutriGramsPiece' : 'nutriGramsMl');
-      if (visible && !gramsInput.value) {
-        const suggestion = gramsSuggestion(nameInput?.value || existing?.name, unit);
-        if (suggestion != null) gramsInput.placeholder = String(suggestion);
-      }
+      gramsInput.placeholder = ['ml', 'cl', 'L'].includes(unit) ? '1' : '';
+      const suggestion = unit === 'unité' ? portionSuggestions[section.dataset.portionCategory || ''] : null;
+      portionPrefill.hidden = !suggestion || !!gramsInput.value;
+      if (suggestion) portionCopy.textContent = t('nutriPortionPrefill', suggestion.grams, suggestion['label' + (lang() === 'en' ? 'En' : lang() === 'ar' ? 'Ar' : 'Fr')]);
     };
     updateGrams();
     unitSelect.addEventListener('change', updateGrams);
@@ -5379,7 +5381,12 @@
       section.dataset.loaded = '1';
       const results = section.querySelector('[data-ciqual-results]');
       results.hidden = false; results.textContent = t('nutriLoading');
-      loadCiqual().then(() => { results.hidden = true; results.textContent = ''; });
+      loadCiqual().then((ciqual) => {
+        portionSuggestions = ciqual.portionSuggestions;
+        const food = ciqual.foods.find((row) => String(row.id) === String(section.dataset.ref || ''));
+        section.dataset.portionCategory = food?.portionCategory || '';
+        updateGrams(); results.hidden = true; results.textContent = '';
+      });
     });
     const results = section.querySelector('[data-ciqual-results]');
     const search = section.querySelector('[data-ciqual-search]');
@@ -5408,6 +5415,8 @@
       const food = (await loadCiqual()).foods.find((row) => String(row.id) === button.dataset.ciqualId); if (!food) return;
       nutritionKeys.forEach((key) => { const input = section.querySelector(`[data-stock-nutrient="${key}"]`); if (input) input.value = food[key]; });
       section.dataset.source = 'ciqual'; section.dataset.ref = String(food.id); sourceLabel.textContent = t('nutriCiqual');
+      portionSuggestions = (await loadCiqual()).portionSuggestions;
+      section.dataset.portionCategory = food.portionCategory || '';
       search.value = lang() === 'en' ? food.nameEn : food.nameFr; results.hidden = true;
       const hints = new Set(food.allergenHints || []);
       section.querySelectorAll('[data-allergen]').forEach((chip) => chip.setAttribute('aria-pressed', hints.has(chip.dataset.allergen) ? 'true' : 'false'));
@@ -5415,6 +5424,13 @@
       const confirm = section.querySelector('[data-allergen-confirm]'); if (confirm) confirm.checked = false;
       updateGrams();
     });
+    section.querySelector('[data-apply-grams]')?.addEventListener('click', () => {
+      const suggestion = portionSuggestions[section.dataset.portionCategory || ''];
+      if (!suggestion || gramsInput.value) return;
+      gramsInput.value = String(suggestion.grams);
+      updateGrams();
+    });
+    gramsInput.addEventListener('input', updateGrams);
     section.querySelectorAll('[data-stock-nutrient]').forEach((input) => input.addEventListener('input', () => {
       section.dataset.source = 'manual'; sourceLabel.textContent = t('nutriManual');
     }));

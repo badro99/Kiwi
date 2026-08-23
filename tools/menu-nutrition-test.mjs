@@ -116,6 +116,10 @@ for (const alias of ['smen', 'khlii', 'louiza', 'harcha']) {
 }
 assert.ok(Object.values(ciqual.aliases).every((id) => ciqual.foods.some((food) => String(food.id) === String(id))),
   'chaque alias marocain cible une fiche réellement embarquée');
+for (const [category, grams] of [['egg', 50], ['tomato', 120], ['bread_slice', 30], ['zucchini', 200]]) {
+  assert.equal(ciqual.portionSuggestions?.[category]?.grams, grams, `préfill portion absent : ${category}`);
+  assert.ok(ciqual.foods.some((food) => food.portionCategory === category), `catégorie portion sans aliment : ${category}`);
+}
 assert.ok(ciqual.foods.length >= 800 && ciqual.foods.length <= 1500);
 assert.ok(ciqualSize < 250 * 1024, `ciqual-lite dépasse 250 Ko (${ciqualSize} octets)`);
 assert.ok(ciqual.foods.every((food) => ['id', 'nameFr', 'nameEn', 'kcal', 'protein', 'carbs', 'fat', 'sugars', 'salt', 'allergenHints'].every((key) => Object.hasOwn(food, key))));
@@ -126,6 +130,8 @@ const dashboardSource = fs.readFileSync(new URL('../dashboard.html', import.meta
 assert.match(stockSource, /fetch\('assets\/data\/ciqual-lite\.json\?v=\d+'/,
   'Ciqual reste chargé à la demande dans l’éditeur, avec une URL versionnée');
 assert.match(stockSource, /Object\.entries\(ciqual\.aliases\)/, 'la recherche inclut les noms marocains du fichier lazy');
+assert.match(stockSource, /data-apply-grams[\s\S]*addEventListener\('click'[\s\S]*gramsInput\.value = String\(suggestion\.grams\)/,
+  'la suggestion de portion exige une action explicite avant de remplir le champ');
 assert.match(stockSource, /data-allergen-confirm/, 'les suggestions allergènes exigent une confirmation explicite');
 assert.match(stockSource, /nutritionPatch = \{ nutrition: nutritionData\.nutrition, gramsPerUnit:/, 'la sauvegarde porte les champs optionnels');
 assert.match(stockSource, /KiwiRestaurantRecipes\?\.recomputeForStock/, 'la sauvegarde stock déclenche la cascade nutritionnelle');
