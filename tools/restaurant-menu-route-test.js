@@ -10,8 +10,15 @@ const source = fs.readFileSync('assets/restaurant-menu-workspace.js', 'utf8');
 assert.ok(source.includes('data-action="rmw-sub-add"'), 'the restaurant workspace exposes subsection creation');
 assert.ok(!source.includes("if(!subs.length&&all.length<2)return ''"),
   'subsection creation must stay visible even in an empty or partially restored section');
-assert.ok(source.includes('data-action="rmw-formula-duplicate"') && source.includes("handlers['rmw-formula-duplicate']"),
+/* Les actions de la fiche article ont quitté la délégation globale
+   `data-action="rmw-*"` pour un routeur local, `data-rmw-command` traité par
+   directCardAction(). On n'épingle donc plus le NOM de l'attribut d'hier : on
+   exige que le bouton visible et la branche qui l'exécute portent le même
+   commandement — c'est l'accord entre les deux qui garde quelque chose. */
+assert.ok(source.includes('data-rmw-command="duplicate"') && source.includes("command==='duplicate'"),
   'saved composed menus expose a wired reuse action');
+assert.ok(source.includes("handlers['rmw-formula-duplicate']"),
+  'the legacy delegated handler stays for surfaces that still emit data-action');
 assert.ok(source.includes('data-formula-template') && source.includes('data-apply-formula-template'),
   'the item editor exposes saved composed menus as reusable formula templates');
 assert.ok(source.includes('data-save-formula-template') && source.includes('saveFormulaTemplate(name,clean)'),

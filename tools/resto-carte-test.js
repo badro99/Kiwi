@@ -370,7 +370,11 @@ ok(/\(\(typeof svFormulaItems !== 'undefined' && svFormulaItems\.length\) \? svF
 const rmwSrc = fs.readFileSync(path.join(ROOT, 'assets/restaurant-menu-workspace.js'), 'utf8');
 const rmwAsk = rmwSrc.slice(rmwSrc.indexOf('function ask('), rmwSrc.indexOf('function ask(') + 700);
 ok(!/data-archive/.test(rmwAsk), 'workspace · ask() ne référence plus x (ReferenceError sur chaque invite)');
-ok(/data-archive[^]{0,400}\}\);const isFormulaCb/.test(rmwSrc) && /\$\('\[data-archive\]',m\.el\)/.test(rmwSrc),
+/* La forme d'hier exigeait que « });const isFormulaCb » suive immédiatement le
+   pied : une ligne insérée entre les deux cassait le contrôle sans que rien ne
+   bouge à l'écran. On vérifie ce que la phrase dit — le bouton est dans le pied,
+   avec Annuler et Enregistrer, et il est câblé sur CETTE fenêtre. */
+ok(/data-archive[^]{0,200}data-cancel[^]{0,200}data-save/.test(rmwSrc) && /\$\('\[data-archive\]',m\.el\)/.test(rmwSrc),
   'workspace · le bouton Archiver/Restaurer vit dans le pied de la fiche article, là où il est câblé');
 ok(/station: str\(c && c\.station, 40\)/.test(menuApi),
   'sanitizeMenu garde le poste de la CATÉGORIE — c\'est là que vit le routage');

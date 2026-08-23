@@ -37,37 +37,15 @@ const queueSource = fs.readFileSync(path.join(ROOT, 'functions/api/order/queue.j
 const serveurSource = fs.readFileSync(path.join(ROOT, 'kiwi-serveur.html'), 'utf8');
 
 // ── 1. functions/api/menu.js: sanitizeMenu & sanitizeFormula ─────────────────
-const sanitizeFormulaMatch = menuApiSource.match(/function sanitizeFormula\([\s\S]*?\n\}/);
-const sanitizeMenuMatch = menuApiSource.match(/function sanitizeMenu\([\s\S]*?\n\}/);
-/* Les traductions (i18n) voyagent sur chaque entité depuis 2026-08-22 :
-   sanitizeMenu s'appuie sur sanitizeI18n/withI18n, qu'on embarque tels quels. */
-const sanitizeI18nMatch = menuApiSource.match(/function sanitizeI18n\([\s\S]*?\n\}/);
-const withI18nMatch = menuApiSource.match(/function withI18n\([\s\S]*?\n\}/);
+/* Le banc reconstruisait sanitizeMenu à coups d'expressions régulières, en
+   rebouchant à la main chaque aide de module qu'elle appelait. Chaque nouvelle
+   dépendance — CORE, normalizeMenuLangs, withNutrition — cassait le banc sans
+   qu'une seule ligne de production ne soit fautive, et un bouchon trop gentil
+   aurait pu faire passer un contrôle que le vrai code échoue. La fonction est
+   exportée : on prend celle qui tourne. */
+import { sanitizeMenu as sanitizeMenuFn } from '../functions/api/menu.js';
 
-let sanitizeMenuFn = null;
-if (!sanitizeFormulaMatch || !sanitizeMenuMatch) {
-  ok(false, 'sanitizeFormula or sanitizeMenu function missing in menu.js');
-} else {
-  try {
-    const helperCode = `
-      const str = (v, n) => String(v == null ? '' : v).slice(0, n);
-      const optionEmoji = (v) => '';
-      const mediaUrl = (v) => '';
-      const sanitizePeriods = () => [];
-      const sanitizeHours = () => null;
-      const I18N_LANGS = ['fr', 'ar', 'en'];
-      ${sanitizeI18nMatch ? sanitizeI18nMatch[0] : 'function sanitizeI18n() { return null; }'}
-      ${withI18nMatch ? withI18nMatch[0] : 'function withI18n(t) { return t; }'}
-      ${sanitizeFormulaMatch[0]}
-      ${sanitizeMenuMatch[0]}
-      return sanitizeMenu;
-    `;
-    sanitizeMenuFn = new Function(helperCode)();
-    ok(typeof sanitizeMenuFn === 'function', 'sanitizeMenu harness constructed');
-  } catch (e) {
-    ok(false, 'harness failed to build sanitizeMenu: ' + e.message);
-  }
-}
+ok(typeof sanitizeMenuFn === 'function', 'sanitizeMenu importée depuis le module réel');
 
 if (!sanitizeMenuFn) {
   ok(false, 'sanitizeMenuFn is null, halting section 1');
@@ -832,6 +810,10 @@ if (!rmwCardMatch) {
     const cash = (n) => n + ' MAD';
     const ic = () => '';
     const stateUi = (_key, fallback) => fallback;
+    /* ui() reste volontairement absente : card() porte son propre repli de
+       libelles et c'est LUI qu'on veut voir tourner ici. La pastille nutrition
+       vit ailleurs, elle ne dit rien sur les formules. */
+    const nutritionCardPill = () => '';
     let openItemMenu = '';
     ${rmwCardMatch[0]}
     return card;
