@@ -10,7 +10,7 @@
 
 import {
   json, employeeToken, employeeCookie, clearEmployeeCookie, readEmployee, employeeNeedsRefresh,
-  findEmployeeCredential, limitCheck, limitFail, limitClear,
+  findEmployeeCredential, limitCheck, limitFail, limitClear, targetKey,
 } from '../auth/_lib.js';
 
 const ATTENDANCE_FEATURE = 'attendance';
@@ -296,21 +296,36 @@ export async function onRequestPost({ request, env }) {
   const action = String(body.action || 'login');
 
   if (action === 'login') {
+    /* C'était le seul contrôle d'identifiant du dépôt dont le compteur n'était
+     * rattaché à AUCUNE identité prouvée : `limitCheck(…, 'employee')` sans
+     * identité retombe sur l'adresse IP. Un code à quatre chiffres, confronté
+     * par `findEmployeeCredential` aux effectifs de TOUS les commerçants d'un
+     * coup, se trouvait donc en changeant d'adresse — et `limitClear` effaçait
+     * l'ardoise à chaque réussite. La cible garde maintenant son propre
+     * plafond, quelle que soit la source. */
     const limited = await limitCheck(request, env, 'employee');
     if (limited) return limited;
     const email = String(body.email || '').trim();
+    const target = await targetKey(env.AUTH_SECRET, 'employee', email);
+    const limitedTarget = target ? await limitCheck(request, env, 'employee', target) : null;
+    if (limitedTarget) return limitedTarget;
+    const failBoth = async () => {
+      await limitFail(request, env, 'employee');
+      if (target) await limitFail(request, env, 'employee', target);
+    };
     const pin = String(body.pin || '').replace(/\D/g, '').slice(0, 4);
-    if (!email || pin.length !== 4) { await limitFail(request, env, 'employee'); return json({ error: 'bad-employee-code' }, 401); }
+    if (!email || pin.length !== 4) { await failBoth(); return json({ error: 'bad-employee-code' }, 401); }
     const row = await findEmployeeCredential(env, email, pin);
     if (row && row.ambiguous) {
-      await limitFail(request, env, 'employee');
+      await failBoth();
       return json({ error: 'employee-access-ambiguous' }, 409);
     }
     if (!row || String(row.status || 'active') === 'suspended') {
-      await limitFail(request, env, 'employee');
+      await failBoth();
       return json({ error: row && row.status === 'suspended' ? 'store-suspended' : 'bad-employee-code' }, row && row.status === 'suspended' ? 403 : 401);
     }
-    await limitClear(request, env, 'employee');
+    // Seul le compteur de la CIBLE s'efface ; celui de la source garde sa mémoire.
+    if (target) await limitClear(request, env, 'employee', target);
     const merchant = row.merchant;
     const res = json({ ok: true, merchant, role: row.role || 'staff', name: row.name || 'Employé' });
     res.headers.append('Set-Cookie', employeeCookie(await employeeToken(env.AUTH_SECRET, { merchant, staffId: row.id })));

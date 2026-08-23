@@ -552,6 +552,23 @@ export async function onRequestPost(context) {
     }
     const validStatus = floorMayAcceptOrder(b, employeeStatusOrder, scope);
 
+    /* `closeSession` n'était validé NULLE PART dans ce bloc, alors que le
+     * gestionnaire le fait gagner sur `closeTable` à chaque branche — y compris
+     * celle qui estampille `paid_ts` sur toute la visite. Un serveur passait donc
+     * le contrôle avec `closeTable` sur une table qu'il sert légitimement, et
+     * l'effet tombait sur la visite d'une AUTRE table : celle-ci était soldée
+     * sans la moindre ligne dans `sales`. `closeTable` seul laisse au contraire
+     * les commandes impayées et renvoie leur compte pour que l'application
+     * alerte — c'est l'écart visible que ce chemin effaçait.
+     *
+     * Ce n'est pas un oubli de périmètre : `closeSession` est le signal de la
+     * CAISSE, émis par markPaid() via assets/orderpro-inbox.js. Aucune surface
+     * employé ne l'envoie — kiwi-serveur.html poste `closeTable`. Un appelant
+     * employé n'a donc rien à y faire. */
+    if (b && b.closeSession) {
+      return json({ error: 'settlement-is-till-only' }, 403);
+    }
+
     if (!validCreate && !validOpen && !validClose && !validTransfer && !validMerge && !validVoid && !validAck && !validEdit && !validStatus) {
       return json({ error: 'floor-table-required' }, 403);
     }

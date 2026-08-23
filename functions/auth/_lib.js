@@ -874,6 +874,17 @@ const LIMIT_WINDOW_MS = 15 * 60 * 1000;   // fenêtre d'observation
 const LIMIT_BLOCK_MS  = 15 * 60 * 1000;   // durée du blocage
 const LIMIT_MAX_FAILS = 8;                // essais ratés tolérés par fenêtre
 
+/* Un compteur rattaché à la CIBLE, pas seulement à la source. Sans lui, un
+ * attaquant change d'adresse IP et repart à zéro sur le même compte ; avec lui,
+ * la cible garde son propre plafond quoi qu'il arrive. On range une empreinte
+ * tronquée et non l'adresse elle-même : `pair_attempts` ne doit pas devenir un
+ * annuaire des e-mails des employés. Ce n'est pas un secret, seulement une clé. */
+export async function targetKey(authSecret, kind, value) {
+  const v = String(value || '').trim().toLowerCase();
+  if (!v || !authSecret) return '';
+  return kind + ':' + (await hmacHex(authSecret, 'kiwi-limiter-v1:' + kind + ':' + v)).slice(0, 16);
+}
+
 function limiterKey(request, scope, identity = '') {
   if (identity) return `${scope}|${identity}`;
   const ip = request.headers.get('CF-Connecting-IP')
@@ -987,6 +998,12 @@ export async function verifyStaffPin(request, env, merchant, pin, { requireTill 
     return { ok: false, error: 'forbidden-till', status: 403 };
   }
 
+  /* Le seau est commun à TOUS les codes de la boutique, et `limitClear`
+   * supprimait la ligne : un encaisseur qui connaît son propre code alternait
+   * sept essais faux et un vrai, et le compteur ne montait jamais — les 10 000
+   * combinaisons à quatre chiffres tombaient en une quarantaine de minutes.
+   * Un succès ne remet donc plus le compteur à zéro ici (voir plus bas) ;
+   * huit essais par quart d'heure restent larges pour un doigt qui glisse. */
   // Attempt rate-limiting by scope: 'pin:<merchant>' keyed on proven identity (or IP if unauthenticated)
   const blocked = await limitCheck(request, env, `pin:${merchant}`, identity);
   if (blocked) return { ok: false, response: blocked };
@@ -1008,12 +1025,17 @@ export async function verifyStaffPin(request, env, merchant, pin, { requireTill 
         if (cfg && cfg.account_id) accountId = cfg.account_id;
       } catch (_) {}
 
-      if (!accountId) {
-        try {
-          const sess = await readSession(readCookie(request, SESS_COOKIE), env && env.AUTH_SECRET);
-          if (sess && sess.aid) accountId = sess.aid;
-        } catch (_) {}
-      }
+      /* Ici vivait un repli sur la session de l'APPELANT : quand la boutique
+       * visée n'avait pas d'account_id au registre — le cas des boutiques
+       * préparées par l'opérateur et de celles créées par le chemin de semis —
+       * la recherche élargie se faisait sur le compte de celui qui demande.
+       * N'importe qui pouvait donc créer un compte Kiwi gratuit, s'y donner un
+       * code de rôle propriétaire, et l'utiliser depuis la caisse d'un AUTRE
+       * commerçant pour annuler ses ventes et déverrouiller son manager, sans
+       * connaître un seul de ses codes — l'audit portant le nom de l'attaquant.
+       *
+       * Sans propriétaire au registre, il n'y a pas de compte à élargir : on
+       * s'en tient au code de la boutique elle-même. */
 
       if (accountId) {
         try {
@@ -1041,7 +1063,6 @@ export async function verifyStaffPin(request, env, merchant, pin, { requireTill 
     return { ok: false, error: 'bad-pin', status: 401 };
   }
 
-  await limitClear(request, env, `pin:${merchant}`, identity);
   return {
     ok: true,
     staff: {

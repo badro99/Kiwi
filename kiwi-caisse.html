@@ -5374,7 +5374,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=426" defer></script>
+  <script src="assets/caisse-pwa.js?v=427" defer></script>
   <script src="assets/live-link.js?v=15" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -8438,12 +8438,30 @@
       const currentCashier = (typeof cashierName !== 'undefined' && cashierName) || 'Caisse';
       const activeLock = caisseTableLocks && caisseTableLocks[id];
       const isLockedByOther = activeLock && activeLock.actor && activeLock.actor !== currentCashier && (Date.now() - Number(activeLock.ts || 0) < 60000);
-      const lockBanner = isLockedByOther ? `
+      /* `esc` n'a jamais existé dans cette page — une seule occurrence, aucune
+         déclaration, et aucun des assets chargés n'en expose. Le littéral était
+         donc évalué dès qu'un collègue tenait la table (le verrou porte SON nom,
+         jamais celui de la caisse : le cas normal en service), il levait une
+         ReferenceError, et renderRightPanel s'arrêtait AVANT d'écrire le
+         sous-total, le total, le montant carte, le montant espèces et le rendu.
+         Le panneau gardait les montants de la table affichée juste avant : on
+         encaissait la table 5 en croyant encaisser la table 7.
+
+         Deux corrections, pas une. On échappe avec escTeam, qui existe et est
+         dans la portée ; et on met la bannière hors d'état de nuire, parce qu'un
+         libellé décoratif ne doit jamais pouvoir empêcher un montant de
+         s'afficher. */
+      let lockBanner = '';
+      if (isLockedByOther) {
+        try {
+          lockBanner = `
         <div class="td-lock-banner" style="margin-bottom:10px;background:#FEF3C7;border:1px solid #FCD34D;border-radius:10px;padding:8px 12px;display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:#92400E;">
           <i data-lucide="lock" style="width:16px;height:16px;color:#B45309;flex-shrink:0;"></i>
-          <span><b>${esc(activeLock.actor)}</b> prend la commande sur cette table</span>
+          <span><b>${escTeam(activeLock.actor)}</b> prend la commande sur cette table</span>
         </div>
-      ` : '';
+      `;
+        } catch (_) { lockBanner = ''; }
+      }
       $('#rp-items').innerHTML = lockBanner + itemsHTML;
 
       $('#rp-subtotal').textContent = fmtMAD(total);

@@ -332,6 +332,15 @@ export async function priceOrder(env, merchant, rawLines) {
     let valid = !!(slots && slots.length);
     let extra = 0;
     const assigned = new Set();
+    /* Le créneau se comptait en LIGNES. Une seule ligne satisfaisait donc
+       « min ≤ 1 ≤ max » tout en portant la quantité de l'appelant — jusqu'à 99 —
+       et l'enfant d'une formule est facturé zéro. Une commande passée depuis le
+       QR d'une table, sans le moindre identifiant, sortait ainsi 99 boissons
+       offertes par menu vendu, imprimées « inclus » sur l'addition.
+       On compte donc les quantités, et on les borne à ce que le parent commande :
+       deux menus donnent droit à deux boissons, pas à quatre-vingt-dix-neuf. */
+    const parentQty = Math.min(MAX_LINE_QTY, Math.max(1, Math.round(Number(parent && parent.qty) || 1)));
+    const childQty = (child) => Math.min(MAX_LINE_QTY, Math.max(1, Math.round(Number(child && child.qty) || 1)));
     if (valid) {
       for (const slot of slots) {
         const selected = children.filter((child, childIndex) => {
@@ -341,7 +350,8 @@ export async function priceOrder(env, merchant, rawLines) {
           const label = String((child && child.slotLabel) || '').trim();
           return explicitSlot === slot.id || lineId === `${uid}-${slot.id}` || (!!slot.label && label === slot.label);
         });
-        if (selected.length < slot.min || selected.length > slot.max) { valid = false; break; }
+        const takenQty = selected.reduce((n, child) => n + childQty(child), 0);
+        if (takenQty < slot.min * parentQty || takenQty > slot.max * parentQty) { valid = false; break; }
         for (const child of selected) {
           const childIndex = children.indexOf(child);
           const childId = String((child && child.id) || '');

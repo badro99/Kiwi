@@ -21,6 +21,9 @@ import { tenantFor } from '../functions/api/_private.js';
 import { getOrCreateSaleInvoice } from '../functions/api/invoice.js';
 import { onRequestPost as postCashEvent } from '../functions/api/cash-sessions.js';
 import { reserveTicketRange } from '../functions/api/ticket-sequence.js';
+import { priceOrder } from '../functions/api/order/_lib.js';
+import { verifyStaffPin, targetKey } from '../functions/auth/_lib.js';
+import fs from 'node:fs';
 
 const SECRET = 'tenant-guard-test-secret-32-bytes!!';
 let failures = 0;
@@ -273,6 +276,129 @@ function invoiceEnv(sale) {
   const after = await reserveTicketRange(env, 'amira-cafe', 10, 1000, 2026);
   ok('la caisse peut donc encore numéroter après la tentative',
     after.start === 1000 && after.end === 1009, JSON.stringify(after));
+}
+
+
+/* ── 6 · Formule : le créneau se compte en QUANTITÉS ──────────────────────── */
+{
+  const menu = {
+    stations: [{ id: 'cuisine' }], kitchenId: 'cuisine',
+    cats: [{ id: 'c1', name: 'Carte', station: 'cuisine' }],
+    items: [
+      { id: 'menu1', name: 'Menu du midi', price: 60, catId: 'c1', avail: true,
+        formula: { slots: [{ id: 's1', label: 'La boisson', min: 1, max: 1,
+          choices: [{ itemId: 'coca', extra: 0 }] }] } },
+      { id: 'coca', name: 'Coca', price: 20, catId: 'c1', avail: true },
+    ],
+  };
+  const env = { DB: { prepare() { return {
+    bind() { return this; },
+    async first() { return { data: JSON.stringify(menu), updated_ts: 1 }; },
+  }; } } };
+  const order = (childQty, parentQty = 1) => priceOrder(env, 'amira-cafe', [
+    { id: 'menu1', kind: 'formula', formulaUid: 'f1', qty: parentQty },
+    { id: 'coca', kind: 'formula-part', formulaUid: 'f1', formulaSlotId: 's1', qty: childQty },
+  ]);
+
+  const honest = await order(1);
+  ok('un menu et sa boisson passent, à 60 MAD', honest.total === 60, String(honest.total));
+
+  const greedy = await order(99);
+  const freeDrinks = greedy.lines.filter((l) => l.kind === 'formula-part' && l.unitPrice === 0)
+    .reduce((n, l) => n + l.qty, 0);
+  ok('99 boissons « incluses » sur un seul menu ne passent plus',
+    greedy.invalidOptions.length > 0 && freeDrinks === 0, `total ${greedy.total}, offertes ${freeDrinks}`);
+  ok('et le refus est EXPLICITE — order/index.js en fait un 409 menu-changed',
+    greedy.invalidOptions.includes('Menu du midi'), JSON.stringify(greedy.invalidOptions));
+
+  const twoMenus = await order(2, 2);
+  ok('deux menus donnent bien droit à deux boissons',
+    twoMenus.total === 120 && !twoMenus.formulaOnly.length, String(twoMenus.total));
+}
+
+/* ── 7 · verifyStaffPin ne retombe plus sur le compte de l'appelant ───────── */
+{
+  const asked = [];
+  const env = {
+    AUTH_SECRET: SECRET,
+    DB: {
+      prepare(sql) {
+        const q = String(sql).replace(/\s+/g, ' ').trim();
+        return {
+          args: [],
+          bind(...a) { this.args = a; return this; },
+          async first() {
+            asked.push(q);
+            if (q.startsWith('SELECT id, name, role FROM staff_pins')) return null;
+            if (q.startsWith('SELECT account_id FROM merchant_config')) return { account_id: null };
+            return null;
+          },
+          async all() { asked.push(q); return { results: [] }; },
+        };
+      },
+    },
+  };
+  const { tillToken } = await import('../functions/auth/_lib.js');
+  const token = await tillToken(SECRET, 'amira-cafe');
+  const sess = await makeSession('acc-attaquant', SECRET);
+  const request = new Request('https://kiwi.test/api/pin/verify', {
+    method: 'POST',
+    headers: { cookie: `kiwi_till=${token}; ${SESS_COOKIE}=${sess}` },
+  });
+  const res = await verifyStaffPin(request, env, 'amira-cafe', '0000', { requireTill: true });
+  ok('un code inconnu de la boutique est refusé', res.ok === false, JSON.stringify(res.error || ''));
+  ok('la recherche élargie n\'interroge JAMAIS le compte de l\'appelant',
+    !asked.some((q) => q.includes('JOIN merchant_config c ON c.merchant = p.merchant')),
+    asked.filter((q) => q.includes('JOIN')).join(' | '));
+  ok('et un succès ne remet plus le compteur partagé à zéro',
+    !/limitClear\(request, env, `pin:\$\{merchant\}`/.test(
+      fs.readFileSync(new URL('../functions/auth/_lib.js', import.meta.url), 'utf8')));
+}
+
+/* ── 8 · Les compteurs anti-force-brute sont rattachés à la CIBLE ─────────── */
+{
+  const a = await targetKey(SECRET, 'login', 'Victime@Example.com');
+  const b = await targetKey(SECRET, 'login', 'victime@example.com');
+  const c = await targetKey(SECRET, 'login', 'autre@example.com');
+  ok('la clé de cible est insensible à la casse', a === b && !!a);
+  ok('deux adresses différentes ont deux clés différentes', a !== c);
+  ok('la clé ne contient pas l\'adresse elle-même', !a.includes('victime') && !a.includes('@'), a);
+
+  const login = fs.readFileSync(new URL('../functions/auth/login.js', import.meta.url), 'utf8');
+  const employee = fs.readFileSync(new URL('../functions/api/employee.js', import.meta.url), 'utf8');
+  ok('login compte par cible et n\'efface que la cible',
+    login.includes("limitCheck(request, env, 'login', target)")
+    && login.includes("limitClear(request, env, 'login', target)")
+    && !/limitClear\(request, env, 'login'\)/.test(login));
+  ok('la connexion employé compte par cible et n\'efface que la cible',
+    employee.includes("limitCheck(request, env, 'employee', target)")
+    && employee.includes("limitClear(request, env, 'employee', target)")
+    && !/limitClear\(request, env, 'employee'\)/.test(employee));
+}
+
+/* ── 9 · `closeSession` est le signal de la caisse, pas d'un employé ──────── */
+{
+  const queue = fs.readFileSync(new URL('../functions/api/order/queue.js', import.meta.url), 'utf8');
+  const block = queue.slice(queue.indexOf('if (employee) {'), queue.indexOf("error: 'floor-table-required'"));
+  ok('le bloc employé refuse closeSession avant tout autre contrôle',
+    /if \(b && b\.closeSession\) \{[^]{0,120}403\)/.test(block), 'garde absente du bloc employé');
+  ok('et le règlement reste bien ce que closeSession déclenche',
+    /if \(closeSession\) \{[^]{0,300}UPDATE orders SET paid_ts/.test(queue));
+  const serveur = fs.readFileSync(new URL('../kiwi-serveur.html', import.meta.url), 'utf8');
+  ok('aucune surface employé n\'envoie closeSession (sinon la garde casserait le métier)',
+    !/body: JSON\.stringify\(\{[^}]*closeSession/.test(serveur));
+}
+
+/* ── 10 · La caisse échappe avec une fonction qui existe ──────────────────── */
+{
+  const caisse = fs.readFileSync(new URL('../kiwi-caisse.html', import.meta.url), 'utf8');
+  const calls = caisse.match(/(?<![A-Za-z0-9_$])esc\(/g) || [];
+  ok('plus aucun appel à une fonction d\'échappement inexistante', calls.length === 0,
+    `${calls.length} appel(s) restant(s)`);
+  ok('la bannière de verrou ne peut plus empêcher l\'écriture des montants',
+    /let lockBanner = '';[^]{0,900}catch \(_\) \{ lockBanner = ''; \}/.test(caisse));
+  ok('et les montants s\'écrivent bien après elle',
+    caisse.indexOf("$('#rp-total')") > caisse.indexOf('let lockBanner'));
 }
 
 console.log(failures
