@@ -184,7 +184,7 @@ for (const f of ['assets/kitchen-print-queue.js', 'assets/food-production-print.
     const missing = [...used].filter((k) => !new RegExp(`^\\s*${k}:`, 'm').test(block));
     assert(start > 0 && end > start && missing.length === 0, `UI_I18N.${lang} : clés ui() sans libellé → ${missing.join(', ') || 'aucune'}`);
   }
-  assert(/:has\(\.rmw-formula-builder:not\(\[hidden\]\)\)/.test(ws) && !/:has\(\.rmw-formula-builder\)/.test(ws), 'éditeur d’article : la largeur 1120 px ne vaut que si le constructeur de formule est visible, pas pour tout article');
+  assert(!/:has\(\.rmw-formula-builder/.test(ws) && !/1120px/.test(ws) && /\.rmw-item-workspace \.kiwi-modal[^{]*\{max-height:calc\(100vh - 24px\);display:grid/.test(ws), 'éditeur d’article : une seule largeur (680 px) pour tout article, formules comprises ; le corps défile dans une grille plafonnée à l’écran');
 }
 
 // Pied de carte : la pastille nutrition compacte (point + mot, kcal si complet),
