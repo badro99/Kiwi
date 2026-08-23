@@ -5300,10 +5300,13 @@
   let ciqualPromise = null;
   function loadCiqual() {
     if (!ciqualPromise) {
-      ciqualPromise = fetch('assets/data/ciqual-lite.json', { credentials: 'same-origin' })
+      ciqualPromise = fetch('assets/data/ciqual-lite.json?v=2', { credentials: 'same-origin' })
         .then((response) => { if (!response.ok) throw new Error('ciqual ' + response.status); return response.json(); })
-        .then((payload) => Array.isArray(payload?.foods) ? payload.foods : [])
-        .catch(() => []);
+        .then((payload) => ({
+          foods: Array.isArray(payload?.foods) ? payload.foods : [],
+          aliases: payload?.aliases && typeof payload.aliases === 'object' ? payload.aliases : {},
+        }))
+        .catch(() => ({ foods: [], aliases: {} }));
     }
     return ciqualPromise;
   }
@@ -5383,14 +5386,26 @@
     search.addEventListener('input', async () => {
       const query = searchKey(search.value);
       if (query.length < 2) { results.hidden = true; results.textContent = ''; return; }
-      const foods = await loadCiqual();
-      const hits = foods.filter((food) => searchKey(food.nameFr + ' ' + food.nameEn).includes(query)).slice(0, 8);
+      const ciqual = await loadCiqual();
+      const aliasHits = Object.entries(ciqual.aliases)
+        .filter(([alias]) => searchKey(alias).includes(query))
+        .map(([alias, id]) => ({ alias, food: ciqual.foods.find((row) => String(row.id) === String(id)) }))
+        .filter((entry) => entry.food);
+      const canonicalHits = ciqual.foods
+        .filter((food) => searchKey(food.nameFr + ' ' + food.nameEn).includes(query))
+        .map((food) => ({ alias: '', food }));
+      const seen = new Set();
+      const hits = [...aliasHits, ...canonicalHits].filter((entry) => {
+        const id = String(entry.food.id);
+        if (seen.has(id)) return false;
+        seen.add(id); return true;
+      }).slice(0, 8);
       results.hidden = false;
-      results.innerHTML = hits.length ? hits.map((food) => `<button type="button" data-ciqual-id="${esc(food.id)}"><b>${esc(lang() === 'en' ? food.nameEn : food.nameFr)}</b><span>${esc(lang() === 'en' ? food.nameFr : food.nameEn)} · ${esc(food.kcal)} kcal</span></button>`).join('') : `<span>${esc(t('nutriNoMatch'))}</span>`;
+      results.innerHTML = hits.length ? hits.map(({ food, alias }) => `<button type="button" data-ciqual-id="${esc(food.id)}"><b>${esc(lang() === 'en' ? food.nameEn : food.nameFr)}</b><span>${alias ? esc(alias) + ' · ' : ''}${esc(lang() === 'en' ? food.nameFr : food.nameEn)} · ${esc(food.kcal)} kcal</span></button>`).join('') : `<span>${esc(t('nutriNoMatch'))}</span>`;
     });
     results.addEventListener('click', async (event) => {
       const button = event.target.closest('[data-ciqual-id]'); if (!button) return;
-      const food = (await loadCiqual()).find((row) => String(row.id) === button.dataset.ciqualId); if (!food) return;
+      const food = (await loadCiqual()).foods.find((row) => String(row.id) === button.dataset.ciqualId); if (!food) return;
       nutritionKeys.forEach((key) => { const input = section.querySelector(`[data-stock-nutrient="${key}"]`); if (input) input.value = food[key]; });
       section.dataset.source = 'ciqual'; section.dataset.ref = String(food.id); sourceLabel.textContent = t('nutriCiqual');
       search.value = lang() === 'en' ? food.nameEn : food.nameFr; results.hidden = true;

@@ -101,6 +101,12 @@ const ciqualSize = fs.statSync(ciqualPath).size;
 const ciqual = JSON.parse(fs.readFileSync(ciqualPath, 'utf8'));
 assert.match(ciqual.source.citation, /Anses\. 2025/);
 assert.match(ciqual.source.licence, /Etalab 2\.0/);
+for (const alias of ['smen', 'khlii', 'louiza', 'harcha']) {
+  assert.ok(ciqual.aliases?.[alias], `alias marocain absent : ${alias}`);
+  assert.ok(ciqual.foods.some((food) => String(food.id) === String(ciqual.aliases[alias])), `cible Ciqual absente : ${alias}`);
+}
+assert.ok(Object.values(ciqual.aliases).every((id) => ciqual.foods.some((food) => String(food.id) === String(id))),
+  'chaque alias marocain cible une fiche réellement embarquée');
 assert.ok(ciqual.foods.length >= 800 && ciqual.foods.length <= 1500);
 assert.ok(ciqualSize < 250 * 1024, `ciqual-lite dépasse 250 Ko (${ciqualSize} octets)`);
 assert.ok(ciqual.foods.every((food) => ['id', 'nameFr', 'nameEn', 'kcal', 'protein', 'carbs', 'fat', 'sugars', 'salt', 'allergenHints'].every((key) => Object.hasOwn(food, key))));
@@ -108,7 +114,9 @@ assert.ok(ciqual.foods.every((food) => food.nameFr && food.nameEn && N.NUTRIENT_
 assert.ok(ciqual.foods.every((food) => food.allergenHints.every((key) => N.ALLERGEN_KEYS.includes(key))));
 const stockSource = fs.readFileSync(new URL('../assets/stock.js', import.meta.url), 'utf8');
 const dashboardSource = fs.readFileSync(new URL('../dashboard.html', import.meta.url), 'utf8');
-assert.match(stockSource, /fetch\('assets\/data\/ciqual-lite\.json'/, 'Ciqual reste chargé à la demande dans l’éditeur');
+assert.match(stockSource, /fetch\('assets\/data\/ciqual-lite\.json\?v=\d+'/,
+  'Ciqual reste chargé à la demande dans l’éditeur, avec une URL versionnée');
+assert.match(stockSource, /Object\.entries\(ciqual\.aliases\)/, 'la recherche inclut les noms marocains du fichier lazy');
 assert.match(stockSource, /data-allergen-confirm/, 'les suggestions allergènes exigent une confirmation explicite');
 assert.match(stockSource, /nutritionPatch = \{ nutrition: nutritionData\.nutrition, gramsPerUnit:/, 'la sauvegarde porte les champs optionnels');
 assert.match(stockSource, /KiwiRestaurantRecipes\?\.recomputeForStock/, 'la sauvegarde stock déclenche la cascade nutritionnelle');

@@ -31,6 +31,24 @@ TARGET_COUNT = 1000
 EXCLUDED_SUBGROUPS = {"0603", "1101", "1102", "1103", "1104"}
 ALLERGEN_ORDER = ["gluten", "crustaces", "oeufs", "poissons", "arachides", "soja", "lait", "fruits_a_coque", "celeri", "moutarde", "sesame", "sulfites", "lupin", "mollusques"]
 
+# Noms courants saisis au Maroc, en français ou en darija translittérée.
+# Une correspondance ouvre toujours la fiche Ciqual canonique : le commerçant
+# voit donc exactement quel aliment il choisit avant d'enregistrer ses valeurs.
+MOROCCAN_ALIASES = {
+    "smen": "16402", "smen beldi": "16402", "beurre beldi": "16402",
+    "khlii": "28860", "khlea": "28860", "khli3": "28860",
+    "louiza": "18022", "lwiza": "18022",
+    "harcha": "9610", "harsha": "9610",
+    "bsla": "20034", "btata": "4023",
+    "qzbor": "11094", "kosbor": "11094", "kasbour": "11094",
+    "maadnous": "11014", "ma3dnous": "11014",
+    "naanaa": "11027", "na3na3": "11027",
+    "homs": "20516",
+    "denjal": "20053", "badenjal": "20053",
+    "zitoun": "13184",
+    "djaj": "36016", "kefta": "6254",
+}
+
 
 def download(url: str, target: Path) -> Path:
     request = urllib.request.Request(url, headers={"User-Agent": "Kiwi-Ciqual-Builder/1.0"})
@@ -163,6 +181,15 @@ def build(xlsx: Path, old_xml_zip: Path) -> list[dict]:
         rows.sort(key=preference)
     selected, selected_ids = [], set()
     candidates = [row for rows in groups.values() for row in rows]
+    by_id = {row["id"]: row for row in candidates}
+    missing_alias_targets = sorted(set(MOROCCAN_ALIASES.values()) - set(by_id))
+    if missing_alias_targets:
+        raise ValueError("Cibles Ciqual des alias absentes : " + ", ".join(missing_alias_targets))
+    for target_id in dict.fromkeys(MOROCCAN_ALIASES.values()):
+        hit = by_id.get(target_id)
+        if hit and hit["id"] not in selected_ids:
+            selected.append(hit)
+            selected_ids.add(hit["id"])
     for pattern in PRIORITY_PATTERNS:
         matches = [row for row in candidates if re.search(pattern, re.sub(r"[^a-z0-9]+", " ", folded(row["nameFr"])).strip())]
         if matches:
@@ -214,6 +241,7 @@ def main() -> None:
                 "doi": "10.57745/RDMHWY", "licence": "Licence Ouverte / Etalab 2.0",
                 "englishNames": "Anses-Ciqual 2020, jointure par alim_code",
             },
+            "aliases": MOROCCAN_ALIASES,
             "foods": foods,
         }
         args.output.parent.mkdir(parents=True, exist_ok=True)
