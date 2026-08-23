@@ -703,6 +703,11 @@ figcaption { margin-block-start: 14px; color: var(--white-48); font-size: 13px; 
 @media (max-width: 620px) {
   :root { --page: calc(100vw - 32px); }
   body { font-size: 17px; }
+  .site-backdrop span {
+    background:
+      linear-gradient(180deg, rgba(0, 0, 0, .12) 0%, rgba(0, 0, 0, .18) 38%, rgba(0, 0, 0, .74) 64%, rgba(0, 0, 0, .96) 92%),
+      radial-gradient(circle at 50% 28%, transparent 0%, rgba(0, 0, 0, .08) 42%, rgba(0, 0, 0, .64) 100%);
+  }
   .brand,
   .brand img { width: 80px; }
   .button { min-height: 44px; padding-inline: 16px 8px; font-size: 14px; }
