@@ -211,8 +211,14 @@ version), suites `app-bundle-test` / `app-release-test` / `print-socket-test` da
 `check.js`. iOS compile et tourne sur simulateur ; Android compile (`assembleDebug`,
 JDK 21 + SDK 36 sur le Mac du bureau).
 
-Reste, et rien de ceci n'est du code : **P1** Apple Developer (Organisation, D-U-N-S)
-puis premier TestFlight ; **preuve sur un vrai iPad** (connexion, appairage, `/api/me`,
-vente Live Link, flux live) ; **POS-8370 au comptoir** (IP courante, ticket cuisine +
-reçu depuis la caisse, impression après redémarrage du routeur) ; APK sur la tablette
-Android de Browse ; P5 compte démo pour la revue Apple ; P7 identifiant définitif.
+Tout ce qui précède le paiement Apple/Google est fait et gardé (`docs/ops/APP_STORE.md`
+§0 : pages légales et support publiques, politique de confidentialité §2.4, Info.plist
+caméra/langues/arm64, ExportOptions + `tools/app-archive.sh`, signature Android hors
+dépôt, « Supprimer mon compte » dans les réglages, fiche et notes de revue rédigées).
+
+Reste, et rien de ceci n'est du code : **P1** Apple Developer (Organisation, D-U-N-S,
+mentions légales complétées) puis premier TestFlight (`APP_STORE.md` §1) ; **preuve
+sur un vrai iPad** (connexion, appairage, `/api/me`, vente Live Link, flux live) ;
+**POS-8370 au comptoir** (IP courante, ticket cuisine + reçu depuis la caisse,
+impression après redémarrage du routeur) ; APK sur la tablette Android de Browse ;
+P5 compte démo pour la revue (`APP_STORE.md` §2) ; captures d'écran (§3).
