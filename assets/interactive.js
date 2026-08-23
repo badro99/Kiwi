@@ -3008,11 +3008,12 @@ ar: {
           `S'intègre à votre caisse / TPE existant`,
           `Formation sur site + guides inclus`,
           `Demandes de support suivies` ] },
-        { id: 'pro', name: 'KIWI PRO', price: '399 MAD', unit: '/mois', tagline: `Tout Basic + matériel entretenu`, cta: 'Plan actuel', feats: [
+        { id: 'pro', name: 'KIWI PRO', price: '399 MAD', unit: '/mois', tagline: `Tout Basic + support prioritaire + Kiwi IQ avancé`, cta: 'Plan actuel', feats: [
           `Tout Kiwi Basic inclus`,
           `Règlement T+1 garanti`,
           `Jusqu'à 8 membres d'équipe`,
-          `Maintenance & remplacement matériel` ] },
+          `Support prioritaire · réponse plus rapide`,
+          `Kiwi IQ avancé` ] },
         { id: 'ultra', name: 'KIWI ULTRA', price: '1 499 MAD', unit: '/mois', tagline: `Sur-mesure · multi-pays · 24/7`, cta: 'Passer à Ultra →', feats: [
           `Tout Kiwi Pro inclus`,
           `Vue Portefeuille consolidée + IA cross-sites actionnable`,

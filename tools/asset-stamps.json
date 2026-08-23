@@ -216,8 +216,8 @@
     "sha": "de6c44b8c41a8bf6"
   },
   "assets/i18n.js": {
-    "v": "6",
-    "sha": "fadfd382ef37ea82"
+    "v": "7",
+    "sha": "4c15205549dae860"
   },
   "assets/identity.js": {
     "v": "2",
@@ -228,8 +228,8 @@
     "sha": "2bf00e5cd40cdf5c"
   },
   "assets/interactive.js": {
-    "v": "25",
-    "sha": "bf2ac61ef01c618b"
+    "v": "26",
+    "sha": "e17235bc030c227f"
   },
   "assets/inventory-consumption.js": {
     "v": "10",
@@ -292,8 +292,8 @@
     "sha": "47c6977184784d8a"
   },
   "assets/menu-nutrition.js": {
-    "v": "3",
-    "sha": "a17155300c97280b"
+    "v": "4",
+    "sha": "4bef6c0bce3d1800"
   },
   "assets/menu-scan.js": {
     "v": "2",

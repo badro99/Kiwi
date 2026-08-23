@@ -71,7 +71,7 @@ var SHELL = [
   '/assets/agent-features.js?v=4',
   '/assets/agent-truth.js?v=6',
   '/assets/agent-voice.js?v=5',
-  '/assets/i18n.js?v=6',
+  '/assets/i18n.js?v=7',
   /* Les milliers en arabe. Dans la coquille avec i18n : hors ligne, un
      commerçant arabophone lirait sinon son objectif du jour à l'envers. */
   '/assets/rtl-numbers.js',
@@ -79,7 +79,7 @@ var SHELL = [
      d'inscription la lisent à l'évaluation : sans elle hors ligne, un
      établissement retombe sur la famille par défaut. */
   '/assets/trades.js?v=6',
-  '/assets/interactive.js?v=25',
+  '/assets/interactive.js?v=26',
   '/assets/features.js?v=4',
   '/assets/invoicing.css?v=6',
   '/assets/invoicing.js?v=8',
