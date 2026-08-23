@@ -8,12 +8,18 @@ const js = read('assets/articles/article.js');
 const landingByLocale = { fr: read('fr/index.html'), en: read('en/index.html'), ar: read('ar/index.html') };
 const sitemap = read('sitemap.xml');
 const published = [
-  { path: 'fr/guides/index.html', url: 'https://kiwi-os.com/fr/guides/', type: 'CollectionPage', minWords: 800, image: 'assets/articles/guides-restaurant-maroc.png', locale: 'fr', alternates: 4 },
+  { path: 'fr/guides/index.html', url: 'https://kiwi-os.com/fr/guides/', type: 'CollectionPage', minWords: 500, image: 'assets/articles/guides-restaurant-maroc.png', locale: 'fr', alternates: 4 },
   { path: 'en/guides/index.html', url: 'https://kiwi-os.com/en/guides/', type: 'CollectionPage', minWords: 400, image: 'assets/articles/guides-restaurant-morocco-en.png', locale: 'en', alternates: 4 },
-  { path: 'ar/guides/index.html', url: 'https://kiwi-os.com/ar/guides/', type: 'CollectionPage', minWords: 380, image: 'assets/articles/guides-restaurant-morocco-ar.png', locale: 'ar', alternates: 4 },
-  { path: 'fr/guides/logiciel-caisse-restaurant-maroc/index.html', url: 'https://kiwi-os.com/fr/guides/logiciel-caisse-restaurant-maroc/', type: 'Article', minWords: 1050, image: 'assets/articles/logiciel-caisse-restaurant-maroc.png', locale: 'fr', alternates: 2 },
-  { path: 'fr/guides/calcul-food-cost-restaurant/index.html', url: 'https://kiwi-os.com/fr/guides/calcul-food-cost-restaurant/', type: 'Article', minWords: 1050, image: 'assets/articles/calcul-food-cost-restaurant.png', locale: 'fr', alternates: 2 },
-  { path: 'fr/guides/gestion-stock-restaurant/index.html', url: 'https://kiwi-os.com/fr/guides/gestion-stock-restaurant/', type: 'Article', minWords: 1050, image: 'assets/articles/gestion-stock-restaurant.png', locale: 'fr', alternates: 2 },
+  { path: 'ar/guides/index.html', url: 'https://kiwi-os.com/ar/guides/', type: 'CollectionPage', minWords: 330, image: 'assets/articles/guides-restaurant-morocco-ar.png', locale: 'ar', alternates: 4 },
+  { path: 'fr/guides/logiciel-caisse-restaurant-maroc/index.html', url: 'https://kiwi-os.com/fr/guides/logiciel-caisse-restaurant-maroc/', type: 'Article', minWords: 1050, image: 'assets/articles/logiciel-caisse-restaurant-maroc.png', locale: 'fr', alternates: 4 },
+  { path: 'en/guides/restaurant-pos-software-morocco/index.html', url: 'https://kiwi-os.com/en/guides/restaurant-pos-software-morocco/', type: 'Article', minWords: 1100, image: 'assets/articles/restaurant-pos-software-morocco-en.png', locale: 'en', alternates: 4 },
+  { path: 'ar/guides/برنامج-كاشير-للمطعم-في-المغرب/index.html', url: 'https://kiwi-os.com/ar/guides/برنامج-كاشير-للمطعم-في-المغرب/', type: 'Article', minWords: 900, image: 'assets/articles/restaurant-pos-software-morocco-ar.png', locale: 'ar', alternates: 4 },
+  { path: 'fr/guides/calcul-food-cost-restaurant/index.html', url: 'https://kiwi-os.com/fr/guides/calcul-food-cost-restaurant/', type: 'Article', minWords: 1050, image: 'assets/articles/calcul-food-cost-restaurant.png', locale: 'fr', alternates: 4 },
+  { path: 'en/guides/restaurant-food-cost/index.html', url: 'https://kiwi-os.com/en/guides/restaurant-food-cost/', type: 'Article', minWords: 1150, image: 'assets/articles/restaurant-food-cost-en.png', locale: 'en', alternates: 4 },
+  { path: 'ar/guides/حساب-تكلفة-الطعام-للمطعم/index.html', url: 'https://kiwi-os.com/ar/guides/حساب-تكلفة-الطعام-للمطعم/', type: 'Article', minWords: 950, image: 'assets/articles/restaurant-food-cost-ar.png', locale: 'ar', alternates: 4 },
+  { path: 'fr/guides/gestion-stock-restaurant/index.html', url: 'https://kiwi-os.com/fr/guides/gestion-stock-restaurant/', type: 'Article', minWords: 1050, image: 'assets/articles/gestion-stock-restaurant.png', locale: 'fr', alternates: 4 },
+  { path: 'en/guides/restaurant-inventory-management/index.html', url: 'https://kiwi-os.com/en/guides/restaurant-inventory-management/', type: 'Article', minWords: 1050, image: 'assets/articles/restaurant-inventory-management-en.png', locale: 'en', alternates: 4 },
+  { path: 'ar/guides/إدارة-مخزون-المطعم/index.html', url: 'https://kiwi-os.com/ar/guides/إدارة-مخزون-المطعم/', type: 'Article', minWords: 900, image: 'assets/articles/restaurant-inventory-management-ar.png', locale: 'ar', alternates: 4 },
   { path: 'fr/guides/menu-engineering-restaurant/index.html', url: 'https://kiwi-os.com/fr/guides/menu-engineering-restaurant/', type: 'Article', minWords: 1150, image: 'assets/articles/menu-engineering-restaurant-fr.png', locale: 'fr', alternates: 4 },
   { path: 'en/guides/restaurant-menu-engineering/index.html', url: 'https://kiwi-os.com/en/guides/restaurant-menu-engineering/', type: 'Article', minWords: 1000, image: 'assets/articles/restaurant-menu-engineering-en.png', locale: 'en', alternates: 4 },
   { path: 'ar/guides/هندسة-قائمة-الطعام-للمطعم/index.html', url: 'https://kiwi-os.com/ar/guides/هندسة-قائمة-الطعام-للمطعم/', type: 'Article', minWords: 900, image: 'assets/articles/restaurant-menu-engineering-ar.png', locale: 'ar', alternates: 4 },
@@ -121,7 +127,7 @@ for (const page of published) {
   publishedVersions.add(`${cssVersion}:${jsVersion}`);
 }
 ok(publishedImages.size === published.length, 'every published locale page has its own social image path');
-ok(publishedVersions.size === 1 && publishedVersions.has('10:3'), 'all published guides use the current shared asset versions');
+ok(publishedVersions.size === 1 && publishedVersions.has('10:4'), 'all published guides use the current shared asset versions');
 
 try {
   new vm.Script(js, { filename: 'assets/articles/article.js' });

@@ -44,6 +44,9 @@
     sections.forEach(function (section) { observer.observe(section); });
   }
 
+  var pageLanguage = (document.documentElement.lang || 'fr').split('-')[0];
+  var numberLocale = pageLanguage === 'ar' ? 'ar-MA' : pageLanguage === 'en' ? 'en-MA' : 'fr-MA';
+
   var calculator = document.querySelector('[data-food-cost-calculator]');
   if (calculator) {
     var costInput = calculator.querySelector('[data-cost-input]');
@@ -52,8 +55,8 @@
     var foodCostOutput = calculator.querySelector('[data-food-cost-output]');
     var marginOutput = calculator.querySelector('[data-margin-output]');
     var targetPriceOutput = calculator.querySelector('[data-target-price-output]');
-    var decimal = new Intl.NumberFormat('fr-MA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    var percent = new Intl.NumberFormat('fr-MA', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    var decimal = new Intl.NumberFormat(numberLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    var percent = new Intl.NumberFormat(numberLocale, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
     function finiteValue(input) {
       var value = Number(input && input.value);
@@ -84,8 +87,6 @@
     var salesOutput = breakEvenCalculator.querySelector('[data-break-even-sales-output]');
     var monthlyCoversOutput = breakEvenCalculator.querySelector('[data-monthly-covers-output]');
     var dailyCoversOutput = breakEvenCalculator.querySelector('[data-daily-covers-output]');
-    var pageLanguage = document.documentElement.lang || 'fr';
-    var numberLocale = pageLanguage === 'ar' ? 'ar-MA' : pageLanguage === 'en' ? 'en-MA' : 'fr-MA';
     var moneyFormat = new Intl.NumberFormat(numberLocale, { maximumFractionDigits: 0 });
     var countFormat = new Intl.NumberFormat(numberLocale, { maximumFractionDigits: 1 });
 
