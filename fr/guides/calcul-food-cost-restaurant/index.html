@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="fr" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Food cost restaurant : formule et exemple en MAD · Kiwi</title>
+  <meta name="description" content="Calculez le food cost d’un plat et du restaurant : formule, exemple détaillé en MAD, rendement, inventaire et écart entre coût théorique et réel.">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <link rel="canonical" href="https://kiwi-os.com/fr/guides/calcul-food-cost-restaurant/">
+  <link rel="alternate" hreflang="fr" href="https://kiwi-os.com/fr/guides/calcul-food-cost-restaurant/">
+  <link rel="alternate" hreflang="x-default" href="https://kiwi-os.com/fr/guides/calcul-food-cost-restaurant/">
+
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Kiwi">
+  <meta property="og:locale" content="fr_MA">
+  <meta property="og:title" content="Food cost restaurant : formule, exemple en MAD et coût réel">
+  <meta property="og:description" content="Du prix fournisseur à l’écart d’inventaire, calculez une marge que vous pouvez vraiment piloter.">
+  <meta property="og:url" content="https://kiwi-os.com/fr/guides/calcul-food-cost-restaurant/">
+  <meta property="og:image" content="https://kiwi-os.com/assets/articles/calcul-food-cost-restaurant.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:alt" content="Exemple de calcul d’un food cost de 27,3 pour cent à partir de 20,50 et 75 dirhams.">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="article:published_time" content="2026-08-23T18:00:00+01:00">
+  <meta property="article:modified_time" content="2026-08-23T18:00:00+01:00">
+  <meta property="article:section" content="Marge restaurant">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Food cost restaurant : formule et exemple en MAD">
+  <meta name="twitter:description" content="Calculez le coût matière par plat, le coût réel de la période et leur écart.">
+  <meta name="twitter:image" content="https://kiwi-os.com/assets/articles/calcul-food-cost-restaurant.png">
+  <meta name="twitter:image:alt" content="La formule du food cost restaurant expliquée avec un exemple en MAD.">
+
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="/assets/articles/article.css?v=9">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Article",
+        "@id": "https://kiwi-os.com/fr/guides/calcul-food-cost-restaurant/#article",
+        "headline": "Food cost restaurant : formule, exemple en MAD et coût réel",
+        "description": "Calculez le food cost d’un plat et du restaurant : formule, exemple détaillé en MAD, rendement, inventaire et écart entre coût théorique et réel.",
+        "image": ["https://kiwi-os.com/assets/articles/calcul-food-cost-restaurant.png"],
+        "datePublished": "2026-08-23T18:00:00+01:00",
+        "dateModified": "2026-08-23T18:00:00+01:00",
+        "inLanguage": "fr-MA",
+        "author": {
+          "@type": "Organization",
+          "name": "Équipe Kiwi",
+          "url": "https://kiwi-os.com/fr/"
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": "Kiwi",
+          "url": "https://kiwi-os.com/fr/",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://kiwi-os.com/images/kiwi-logo.svg"
+          }
+        },
+        "mainEntityOfPage": {
+          "@type": "WebPage",
+          "@id": "https://kiwi-os.com/fr/guides/calcul-food-cost-restaurant/"
+        }
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {"@type": "ListItem", "position": 1, "name": "Accueil", "item": "https://kiwi-os.com/fr/"},
+          {"@type": "ListItem", "position": 2, "name": "Guides", "item": "https://kiwi-os.com/fr/guides/"},
+          {"@type": "ListItem", "position": 3, "name": "Calculer le food cost"}
+        ]
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#article">Aller à l’article</a>
+  <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+  <div class="site-backdrop" aria-hidden="true">
+    <picture>
+      <source media="(orientation: portrait)" srcset="/model/poster-portrait.webp">
+      <img src="/model/poster-landscape.webp" alt="" width="1536" height="1024" fetchpriority="high">
+    </picture>
+    <span></span>
+  </div>
+
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="/fr/" aria-label="Kiwi · accueil">
+        <img src="/images/kiwi-logo.svg" width="855" height="455" alt="">
+      </a>
+
+      <nav class="nav-center" aria-label="Navigation principale">
+        <a href="/fr/#features">Fonctionnalités</a>
+        <a href="/fr/guides/" aria-current="page">Guides</a>
+        <a href="/fr/#pricing">Tarifs</a>
+        <a href="/dashboard.html">Se connecter</a>
+        <a class="button nav-demo" href="https://wa.me/212624495159" target="_blank" rel="noreferrer">
+          Demander une démo
+          <span class="arrow" aria-hidden="true">↗</span>
+        </a>
+      </nav>
+
+      <div class="language-picker" role="group" aria-label="Choisir la langue">
+        <a href="/fr/guides/" hreflang="fr" lang="fr" aria-current="true">FR</a>
+        <a href="/en/" hreflang="en" lang="en" aria-label="Read in English">EN</a>
+        <a href="/ar/" hreflang="ar" lang="ar" aria-label="اقرأ بالعربية">AR</a>
+      </div>
+      <a class="button mobile-demo" href="https://wa.me/212624495159" target="_blank" rel="noreferrer">Démo <span class="arrow" aria-hidden="true">↗</span></a>
+    </div>
+  </header>
+
+  <main id="article">
+    <article itemscope itemtype="https://schema.org/Article">
+      <header class="article-hero">
+        <div class="hero-inner">
+          <nav class="breadcrumbs" aria-label="Fil d’Ariane">
+            <ol>
+              <li><a href="/fr/">Accueil</a></li>
+              <li><a href="/fr/guides/">Guides</a></li>
+              <li aria-current="page">Calculer le food cost</li>
+            </ol>
+          </nav>
+
+          <div class="hero-copy">
+            <div class="eyebrow">Marge restaurant · Méthode complète</div>
+            <h1 class="article-title" itemprop="headline">Food cost restaurant&nbsp;: <span class="accent-text">formule, exemple en MAD et coût réel.</span></h1>
+            <p class="hero-deck" itemprop="description">Partez des prix fournisseur, ramenez chaque ingrédient à l’unité utilisée, puis comparez le coût prévu à ce que l’inventaire raconte vraiment.</p>
+
+            <div class="byline">
+              <span class="author-mark" aria-hidden="true">K</span>
+              <span>Par <strong itemprop="author">l’équipe Kiwi</strong></span>
+              <span class="byline-separator" aria-hidden="true"></span>
+              <time datetime="2026-08-23" itemprop="datePublished">23 août 2026</time>
+              <span class="byline-separator" aria-hidden="true"></span>
+              <span>10 min de lecture</span>
+            </div>
+          </div>
+
+          <div class="cover-stage" role="img" aria-label="Le calcul d’un tajine donne un coût matière de 20,50 dirhams pour un prix de vente de 75 dirhams, soit un food cost de 27,3 pour cent.">
+            <div class="cover-topline"><span class="live-dot">Fiche recette · Exemple</span><span>Tajine poulet · 4 portions</span></div>
+            <div class="decision-card">
+              <div class="decision-intro">
+                <span>La formule utile</span>
+                <h2>Le pourcentage n’a de valeur que si chaque quantité est juste.</h2>
+                <p>Prix d’achat, unité, rendement et portion doivent parler la même langue.</p>
+              </div>
+              <div class="score" aria-hidden="true">
+                <div class="score-item"><span>Coût par portion</span><strong>20,50</strong><small>MAD · exemple détaillé</small></div>
+                <div class="score-item"><span>Prix de vente</span><strong>75,00</strong><small>MAD · même base de calcul</small></div>
+                <div class="score-item"><span>Food cost</span><strong>27,3%</strong><small>20,50 ÷ 75 × 100</small></div>
+              </div>
+              <div class="stage-note"><span>Exemple pédagogique, pas une norme</span><span>Vos factures remplacent toujours ces prix</span></div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div class="article-shell">
+        <aside class="toc" aria-label="Sommaire">
+          <span class="toc-title">Dans ce guide</span>
+          <ol>
+            <li><a href="#definition">Ce que mesure le food cost</a></li>
+            <li><a href="#plat">Calcul par plat</a></li>
+            <li><a href="#rendement">Unités et rendement</a></li>
+            <li><a href="#reel">Coût réel de la période</a></li>
+            <li><a href="#ecart">Écart théorique-réel</a></li>
+            <li><a href="#actions">Agir sur la marge</a></li>
+            <li><a href="#faq">Questions fréquentes</a></li>
+          </ol>
+        </aside>
+
+        <div class="article-body" itemprop="articleBody">
+          <details class="mobile-toc">
+            <summary>Sommaire du guide</summary>
+            <ol>
+              <li><a href="#definition">Ce que mesure le food cost</a></li>
+              <li><a href="#plat">Calcul par plat</a></li>
+              <li><a href="#rendement">Unités et rendement</a></li>
+              <li><a href="#reel">Coût réel de la période</a></li>
+              <li><a href="#ecart">Écart théorique-réel</a></li>
+              <li><a href="#actions">Agir sur la marge</a></li>
+              <li><a href="#faq">Questions fréquentes</a></li>
+            </ol>
+          </details>
+
+          <p class="lead">Le food cost répond à deux questions différentes&nbsp;: combien votre fiche recette devrait coûter, puis combien les ingrédients consommés ont réellement coûté sur la période. Confondre les deux cache précisément les écarts qu’il faut piloter.</p>
+
+          <section class="key-takeaways" aria-labelledby="essentiel-title">
+            <h2 id="essentiel-title">L’essentiel en 30 secondes</h2>
+            <ul>
+              <li>Food cost par plat = coût matière de la portion ÷ prix de vente comparable × 100.</li>
+              <li>Consommation réelle = stock initial + achats − stock final, après correction des transferts.</li>
+              <li>Il n’existe pas de pourcentage idéal universel&nbsp;: loyer, équipe, concept et mix de ventes changent la cible.</li>
+            </ul>
+          </section>
+
+          <section id="definition" aria-labelledby="definition-title">
+            <h2 id="definition-title"><span class="section-number">01 · La définition</span>Le food cost mesure la part du prix absorbée par les matières.</h2>
+            <p>Pour un plat, le coût matière additionne les quantités réellement prévues par la recette&nbsp;: viande, légumes, huile, épices, garniture et emballage si la vente en emporte un. Le pourcentage rapporte ce total au prix de vente choisi sur une base cohérente.</p>
+            <p>Ce n’est ni la marge nette ni le bénéfice. Le reste du prix doit encore payer les salaires, le loyer, l’énergie, les commissions, l’entretien, les pertes non enregistrées et les autres charges. Un plat avec un faible food cost peut rester peu rentable s’il exige beaucoup de travail ou occupe longtemps une table.</p>
+
+            <figure class="editorial-figure">
+              <div class="figure-frame">
+                <div class="operation-panel" aria-hidden="true">
+                  <div class="operation-panel-header"><span>Deux mesures complémentaires</span><span>Même période · mêmes unités</span></div>
+                  <div class="operation-heading">
+                    <span>Ne pas confondre</span>
+                    <h3>La recette prévoit. L’inventaire vérifie.</h3>
+                  </div>
+                  <div class="operation-flow">
+                    <div class="operation-step"><span>01</span><div><strong>Coût théorique</strong><small>Quantités de la fiche × derniers coûts unitaires.</small></div><b>Recette</b></div>
+                    <div class="operation-step"><span>02</span><div><strong>Coût réel</strong><small>Stock initial + achats − stock final.</small></div><b>Inventaire</b></div>
+                    <div class="operation-step"><span>03</span><div><strong>Écart</strong><small>Réel − théorique, en MAD et en quantité.</small></div><b>Action</b></div>
+                  </div>
+                  <div class="operation-result"><span>Objectif</span><strong>Expliquer l’écart</strong><small>avant de modifier un prix ou d’accuser une équipe</small></div>
+                  </div>
+                </div>
+              <figcaption>Le coût théorique et le coût réel ne se remplacent pas&nbsp;: leur comparaison localise les erreurs de portion, pertes, achats mal saisis ou mouvements manquants.</figcaption>
+            </figure>
+          </section>
+
+          <section id="plat" aria-labelledby="plat-title">
+            <h2 id="plat-title"><span class="section-number">02 · La fiche recette</span>Calculez chaque ingrédient, puis ramenez le total à une portion.</h2>
+            <p>La formule de base est&nbsp;: <strong>food cost (%) = coût matière par portion ÷ prix de vente comparable × 100</strong>. Utilisez la même base de prix des deux côtés. Pour un pilotage rapide, beaucoup d’équipes travaillent sur une base opérationnelle cohérente&nbsp;; pour les comptes officiels, validez la base fiscale avec votre comptable.</p>
+            <p>Voici un exemple pédagogique de tajine poulet citron pour quatre portions. Les prix ne sont pas des moyennes du marché&nbsp;: remplacez-les par vos dernières factures et les quantités par votre fiche technique.</p>
+
+            <div class="data-table-wrap" tabindex="0" role="region" aria-label="Exemple de calcul du coût matière d’un tajine poulet pour quatre portions">
+              <table class="data-table">
+                <thead><tr><th>Ingrédient</th><th>Calcul</th><th>Coût</th></tr></thead>
+                <tbody>
+                  <tr><td>Poulet</td><td>1,20 kg × 42,00 MAD/kg</td><td>50,40 MAD</td></tr>
+                  <tr><td>Pommes de terre</td><td>0,80 kg × 8,00 MAD/kg</td><td>6,40 MAD</td></tr>
+                  <tr><td>Oignons</td><td>0,40 kg × 7,00 MAD/kg</td><td>2,80 MAD</td></tr>
+                  <tr><td>Citron et olives</td><td>Quantités de la fiche</td><td>14,00 MAD</td></tr>
+                  <tr><td>Huile et épices</td><td>Quantités pesées, pas un forfait</td><td>8,40 MAD</td></tr>
+                  <tr><td>Total</td><td>82,00 MAD ÷ 4 portions</td><td><span class="status-good">20,50 MAD</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <p>À un prix de vente de 75,00 MAD, le food cost de l’exemple est <strong>20,50 ÷ 75,00 × 100 = 27,3&nbsp;%</strong>. La marge brute matière est de 54,50 MAD par portion avant toutes les autres charges.</p>
+
+            <div class="pull-quote">
+              <blockquote>Le «&nbsp;bon&nbsp;» food cost n’est pas un nombre trouvé sur Internet. C’est celui qui laisse votre concept payer toutes ses autres charges et atteindre sa marge.</blockquote>
+              <cite>Principe de calcul · Kiwi Guides</cite>
+            </div>
+          </section>
+
+          <section id="rendement" aria-labelledby="rendement-title">
+            <h2 id="rendement-title"><span class="section-number">03 · Les unités</span>Corrigez les conversions et le rendement avant de croire le résultat.</h2>
+            <p>Une facture peut acheter un carton, le stock compter des kilogrammes et la recette consommer des grammes. Choisissez une unité de base par ingrédient, puis enregistrez la conversion du conditionnement&nbsp;: un bidon de 5 litres devient 5&nbsp;000 millilitres, un carton de 24 canettes devient 24 unités.</p>
+            <p>Le rendement intervient lorsque la quantité achetée n’est pas entièrement utilisable. Si 1 kg de poisson acheté donne 800 g nets après parage, le coût du kilogramme utilisable est supérieur au prix du kilogramme acheté. Ne rajoutez pas ensuite le même taux de perte dans la recette&nbsp;: ce serait compter la perte deux fois.</p>
+
+            <div class="data-table-wrap" tabindex="0" role="region" aria-label="Formules de conversion pour calculer le food cost">
+              <table class="data-table">
+                <thead>
+                  <tr><th>Cas</th><th>Formule</th><th>Contrôle</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>Prix au gramme</td><td>Prix du kg ÷ 1&nbsp;000</td><td>42 MAD/kg = 0,042 MAD/g</td></tr>
+                  <tr><td>Coût utilisable</td><td>Prix acheté ÷ rendement décimal</td><td>42 ÷ 0,80 = 52,50 MAD/kg net</td></tr>
+                  <tr><td>Coût portion</td><td>Coût unitaire × quantité recette</td><td>0,042 × 300 g = 12,60 MAD</td></tr>
+                  <tr><td>Prix cible</td><td>Coût portion ÷ taux cible décimal</td><td>20,50 ÷ 0,28 = 73,21 MAD</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section aria-labelledby="calculator-title">
+            <div class="calculator" data-food-cost-calculator>
+              <div class="calculator-heading">
+                <div>
+                  <span class="section-number">Calculateur rapide</span>
+                  <h2 id="calculator-title">Testez votre coût par portion.</h2>
+                </div>
+                <p>Le résultat est indicatif et reste entièrement calculé dans votre navigateur.</p>
+              </div>
+              <div class="calculator-fields">
+                <label>Coût matière par portion <span><input type="number" min="0" step="0.01" value="20.50" data-cost-input> MAD</span></label>
+                <label>Prix de vente comparable <span><input type="number" min="0.01" step="0.01" value="75" data-price-input> MAD</span></label>
+                <label>Taux cible <span><input type="number" min="0.1" max="100" step="0.1" value="28" data-target-input> %</span></label>
+              </div>
+              <div class="calculator-results" aria-live="polite">
+                <div><small>Food cost</small><strong data-food-cost-output>27,3&nbsp;%</strong></div>
+                <div><small>Marge brute matière</small><strong data-margin-output>54,50&nbsp;MAD</strong></div>
+                <div><small>Prix au taux cible</small><strong data-target-price-output>73,21&nbsp;MAD</strong></div>
+              </div>
+              <p class="calculator-fallback">Sans JavaScript&nbsp;: food cost = coût ÷ prix × 100 · marge matière = prix − coût · prix cible = coût ÷ taux cible.</p>
+            </div>
+          </section>
+
+          <aside class="article-cta" aria-labelledby="demo-title">
+            <div class="cta-top">
+              <div class="cta-copy">
+                <div class="eyebrow">Une recette suffit pour commencer</div>
+                <h2 id="demo-title">Apportez un plat. Repartons de vos vrais chiffres.</h2>
+                <p>Préparez la fiche recette, le dernier prix fournisseur et le prix de vente. Nous utiliserons ce cas pendant la démonstration Kiwi.</p>
+              </div>
+              <a class="button" href="https://wa.me/212624495159?text=Bonjour%20Kiwi%2C%20je%20veux%20calculer%20le%20food%20cost%20d%27un%20plat" target="_blank" rel="noreferrer">Préparer ma recette <span class="arrow" aria-hidden="true">↗</span></a>
+            </div>
+            <div class="cta-route" aria-hidden="true">
+              <div><span>01</span><strong>La quantité</strong><small>Dans l’unité utilisée.</small></div>
+              <div><span>02</span><strong>Le dernier achat</strong><small>Prix et conditionnement.</small></div>
+              <div><span>03</span><strong>Le prix de vente</strong><small>Sur une base comparable.</small></div>
+            </div>
+          </aside>
+
+          <section id="reel" aria-labelledby="reel-title">
+            <h2 id="reel-title"><span class="section-number">04 · La période</span>Mesurez le food cost réel avec deux inventaires.</h2>
+            <p>Le coût des fiches recettes ne voit pas tout. Pour mesurer la consommation réelle d’une semaine ou d’un mois, valorisez le stock au début, ajoutez les achats reçus et retirez le stock final&nbsp;: <strong>consommation réelle = stock initial + achats − stock final</strong>.</p>
+            <p>Ajoutez ou retirez séparément les transferts entre établissements et les retours fournisseur pour éviter de les confondre avec une consommation. Divisez ensuite la consommation réelle par les ventes alimentaires de la même période et sur la même base de prix.</p>
+
+            <div class="data-table-wrap" tabindex="0" role="region" aria-label="Exemple de calcul du food cost réel d’une semaine">
+              <table class="data-table">
+                <thead><tr><th>Élément</th><th>Montant</th><th>Traitement</th></tr></thead>
+                <tbody>
+                  <tr><td>Stock initial</td><td>18&nbsp;400 MAD</td><td>Ajouter</td></tr>
+                  <tr><td>Achats reçus</td><td>12&nbsp;700 MAD</td><td>Ajouter</td></tr>
+                  <tr><td>Stock final</td><td>19&nbsp;980 MAD</td><td>Retirer</td></tr>
+                  <tr><td>Consommation réelle</td><td>11&nbsp;120 MAD</td><td><span class="status-good">Résultat</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p>Avec 40&nbsp;000 MAD de ventes alimentaires comparables sur la semaine, le food cost réel est de 27,8&nbsp;%. Cet exemple illustre la méthode&nbsp;; il ne décrit pas une moyenne de restaurant.</p>
+          </section>
+
+          <section id="ecart" aria-labelledby="ecart-title">
+            <h2 id="ecart-title"><span class="section-number">05 · Le contrôle</span>Comparez le réel au théorique, puis cherchez en quantité.</h2>
+            <p>Supposons que les recettes associées aux ventes prévoyaient 10&nbsp;250 MAD de matières, alors que l’inventaire mesure 11&nbsp;120 MAD. L’écart est de <strong>870 MAD</strong>, soit 8,5&nbsp;% au-dessus du théorique. Ce chiffre signale un problème, mais n’en donne pas la cause.</p>
+            <p>Revenez aux ingrédients les plus contributeurs. Un écart de 1,5 kg de poulet est plus actionnable qu’un écart global en pourcentage. Vérifiez ensuite, dans cet ordre, l’unité d’achat, la fiche recette, les réceptions, les pertes saisies, les portions et les annulations. Ne transformez jamais un écart comptable en accusation sans avoir vérifié les données.</p>
+          </section>
+
+          <section id="actions" aria-labelledby="actions-title">
+            <h2 id="actions-title"><span class="section-number">06 · Les actions</span>Corrigez la cause avant d’augmenter le prix.</h2>
+            <ul class="checklist">
+              <li>Mettre à jour le prix fournisseur et le conditionnement après chaque changement significatif.</li>
+              <li>Peser trois portions préparées par des personnes différentes avant de modifier la fiche.</li>
+              <li>Enregistrer les pertes par motif au moment où elles se produisent.</li>
+              <li>Recompter les ingrédients à forte valeur quand un écart apparaît.</li>
+              <li>Regarder le mix de ventes&nbsp;: un plat populaire pèse plus qu’un plat rarement commandé.</li>
+              <li>Réduire une garniture, renégocier, reformuler ou repositionner avant de changer le prix.</li>
+            </ul>
+            <p>Recalculez après chaque modification. Une hausse de prix peut réduire la demande&nbsp;; une portion plus petite peut dégrader l’expérience. La meilleure décision protège simultanément la marge et la promesse faite au client.</p>
+          </section>
+
+          <section class="faq" id="faq" aria-labelledby="faq-title">
+            <h2 id="faq-title"><span class="section-number">07 · Questions fréquentes</span>Les points qui faussent le plus souvent le calcul.</h2>
+            <details>
+              <summary>Quelle est la formule du food cost en restauration&nbsp;?</summary>
+              <p>Pour un plat&nbsp;: coût matière par portion ÷ prix de vente comparable × 100. Pour une période&nbsp;: consommation réelle ÷ ventes alimentaires comparables × 100.</p>
+            </details>
+            <details>
+              <summary>Quel est le bon pourcentage de food cost&nbsp;?</summary>
+              <p>Il n’existe pas de cible universelle. Elle dépend du concept, des autres charges, du niveau de service et du mix de ventes. Calculez le seuil que votre propre modèle peut supporter.</p>
+            </details>
+            <details>
+              <summary>Faut-il inclure l’emballage et l’huile de cuisson&nbsp;?</summary>
+              <p>Oui lorsqu’ils sont consommés par la vente. Mesurez l’huile sur une période ou répartissez son coût avec une règle stable, puis évitez de la compter une deuxième fois dans les pertes.</p>
+            </details>
+            <details>
+              <summary>À quelle fréquence faut-il recalculer le coût d’un plat&nbsp;?</summary>
+              <p>Mettez-le à jour lorsque le prix fournisseur, le rendement, la portion ou la recette change. Pour les ingrédients volatils, un contrôle plus fréquent évite que la fiche reste plusieurs semaines en retard.</p>
+            </details>
+            <details>
+              <summary>Pourquoi le food cost réel dépasse-t-il le théorique&nbsp;?</summary>
+              <p>Les causes possibles incluent une conversion erronée, des achats ou pertes non saisis, une portion plus grande, un rendement différent, une annulation mal traitée ou une erreur de comptage. Cherchez d’abord l’écart par ingrédient.</p>
+            </details>
+          </section>
+        </div>
+
+        <aside class="article-aside" aria-label="Note éditoriale">
+          <div class="aside-note">
+            <strong>À propos des chiffres</strong>
+            Tous les montants sont des exemples pédagogiques en MAD. Ils ne sont ni des prix de marché ni une cible de marge. Remplacez-les par vos factures, vos rendements et vos ventes.
+          </div>
+        </aside>
+      </div>
+    </article>
+
+    <section class="related" aria-labelledby="related-title">
+      <div class="related-inner">
+        <div class="section-head">
+          <h2 id="related-title">Reliez la recette au terrain.</h2>
+          <a class="button" href="/fr/guides/">Tous les guides <span class="arrow" aria-hidden="true">↗</span></a>
+        </div>
+        <div class="related-grid">
+          <a class="related-card" href="/fr/guides/gestion-stock-restaurant/">
+            <div class="related-scene related-scene--stock" aria-hidden="true">
+              <div class="related-scene-head"><span>Stock live</span><strong>Synchronisé</strong></div>
+              <div class="stock-stack"><i></i><i></i><i></i></div>
+              <small>Vente → recette → inventaire</small>
+            </div>
+            <span>Stock · 12 min</span>
+            <h3>Transformer l’inventaire en explication.</h3>
+            <p>Suivez les unités, mouvements et écarts qui rendent le food cost réel.</p>
+          </a>
+          <a class="related-card" href="/fr/guides/logiciel-caisse-restaurant-maroc/">
+            <div class="related-scene related-scene--margin" aria-hidden="true">
+              <div class="related-scene-head"><span>Caisse restaurant</span><strong>7 tests</strong></div>
+              <div class="margin-readout"><div><strong>60′</strong><small>protocole</small></div><span>service · réseau · données</span></div>
+            </div>
+            <span>Caisse · 11 min</span>
+            <h3>Choisir une caisse sur des preuves.</h3>
+            <p>Le protocole complet à faire passer à chaque solution avant de signer.</p>
+          </a>
+          <a class="related-card" href="/fr/guides/">
+            <div class="related-scene related-scene--menu" aria-hidden="true">
+              <div class="related-scene-head"><span>Kiwi Guides</span><strong>3 méthodes</strong></div>
+              <div class="menu-preview"><i></i><i></i><i></i><span>Décider · mesurer · agir</span></div>
+            </div>
+            <span>Bibliothèque</span>
+            <h3>Tous les guides pour gérer un restaurant.</h3>
+            <p>Des méthodes courtes, des formules vérifiables et des exemples marocains.</p>
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Keep this footer structurally and visually identical to the public landing. -->
+  <footer class="site-footer">
+    <div class="footer-panel">
+      <div class="footer-glow" aria-hidden="true"></div>
+      <div class="footer-content">
+        <div class="footer-grid">
+          <div class="footer-brand">
+            <svg viewBox="88.6 75.1 902 1197" class="footer-mark" aria-hidden="true">
+              <path fill="#398063" d="M935.32,688.15c7.49,10.9,1.04,23.35-5.46,31.05l-18.53,21.95-32.55,33.68-11.99,12.06-25.55,24.66-72.05,70.94c-36.74,36.17-86.58,56.73-139.14,58.85l-159.05-.12-117.34-1.35c-26.98-.31-49.32-16.3-67.68-34.09l-37.86-36.7-41.1-41.08-11.8-12.48-64.54-65.74-12.13-14.02c-14.8-17.1-23.36-39.67-25.36-62.46l-1.95-22.13-2.21-32.47-.1-543.27c15.03,9.71,23.85,20.45,34.68,31.06l29.32,28.72,30.18,28.17,38.22,35.99,35.86,34.37,14.11,14.09,35.47,36.73c25.93,29.94,44,64.11,51.17,103.79l-.48,394.96c-.02,15.61-4.1,29.66.16,44.71l.3,59.29,3.94,5.99c1.09,1.66,6.66.3,8.42-.62l61.71-63.11,112.24-111.95c19.39-19.34,45.03-30.72,70.76-37.56l18.27-4.86,274.4-.07c9.66,0,22.46,5.41,27.67,12.99Z"></path>
+              <path fill="#aaf0c1" d="M736.88,1266.87l-47.59-2.35-23.23-4.44c-37.93-7.25-67.6-29.39-94.33-56.27l-144.88-145.68c-7.58-7.62-14.23-18.07-16.71-27.03-3.73-13.47,3.05-24.5,15.69-26.92l18.49-3.53,213.01.15c51.57,8.68,96.13,29.19,130.36,67.51l13.01,11,65.63,65.13,119.03,119.89-153.08,2.04-95.41.5Z"></path>
+            </svg>
+            <p class="footer-description">Le logiciel de gestion des cafés, restaurants et commerces marocains. Caisse, salle, cuisine et pilotage dans un seul outil, en français et en arabe.</p>
+            <p class="footer-origin">Conçu à Cologne.</p>
+          </div>
+
+          <nav class="footer-col" aria-label="Le produit">
+            <h2>Le produit</h2>
+            <ul class="footer-links">
+              <li><a href="/fr/#features">Fonctionnalités</a></li>
+              <li><a href="/fr/#security">Sécurité</a></li>
+              <li><a href="/fr/#pricing">Tarifs</a></li>
+            </ul>
+          </nav>
+
+          <nav class="footer-col" aria-label="La preuve">
+            <h2>La preuve</h2>
+            <ul class="footer-links">
+              <li><a href="/fr/#clients">Nos clients</a></li>
+              <li><a href="/fr/#testimonials">Témoignages</a></li>
+              <li><a href="/fr/#stats">La caisse en direct</a></li>
+            </ul>
+          </nav>
+
+          <nav class="footer-col" aria-label="Légal">
+            <h2>Légal</h2>
+            <ul class="footer-links">
+              <li><a href="/mentions-legales.html">Mentions légales</a></li>
+              <li><a href="/privacy.html">Confidentialité</a></li>
+              <li><a href="/terms.html">Conditions générales</a></li>
+              <li><a href="/cookies.html">Cookies</a></li>
+            </ul>
+          </nav>
+
+          <div class="footer-contact">
+            <h2>Parler à quelqu’un</h2>
+            <p>Une démo, sans engagement.</p>
+            <ul>
+              <li><a href="tel:+212624495159" dir="ltr">+212 624 495 159</a></li>
+              <li><a href="mailto:contact@kiwi-os.com" dir="ltr">contact@kiwi-os.com</a></li>
+            </ul>
+            <div class="footer-demo-wrap">
+              <a class="footer-demo" href="https://wa.me/212624495159" target="_blank" rel="noreferrer">
+                Demander une démo
+                <span class="footer-demo-arrow" aria-hidden="true">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.769230769230769" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M7 7h10v10"></path><path d="M7 17 17 7"></path>
+                  </svg>
+                </span>
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <div class="footer-bottom">
+          <p>© 2026 ·&nbsp;Kiwi. Tous droits réservés.</p>
+          <div class="footer-signature">
+            <span class="footer-powered">
+              <span class="footer-powered-mark">
+                <svg viewBox="88.6 75.1 902 1197" aria-hidden="true">
+                  <path fill="#398063" d="M935.32,688.15c7.49,10.9,1.04,23.35-5.46,31.05l-18.53,21.95-32.55,33.68-11.99,12.06-25.55,24.66-72.05,70.94c-36.74,36.17-86.58,56.73-139.14,58.85l-159.05-.12-117.34-1.35c-26.98-.31-49.32-16.3-67.68-34.09l-37.86-36.7-41.1-41.08-11.8-12.48-64.54-65.74-12.13-14.02c-14.8-17.1-23.36-39.67-25.36-62.46l-1.95-22.13-2.21-32.47-.1-543.27c15.03,9.71,23.85,20.45,34.68,31.06l29.32,28.72,30.18,28.17,38.22,35.99,35.86,34.37,14.11,14.09,35.47,36.73c25.93,29.94,44,64.11,51.17,103.79l-.48,394.96c-.02,15.61-4.1,29.66.16,44.71l.3,59.29,3.94,5.99c1.09,1.66,6.66.3,8.42-.62l61.71-63.11,112.24-111.95c19.39-19.34,45.03-30.72,70.76-37.56l18.27-4.86,274.4-.07c9.66,0,22.46,5.41,27.67,12.99Z"></path>
+                  <path fill="#aaf0c1" d="M736.88,1266.87l-47.59-2.35-23.23-4.44c-37.93-7.25-67.6-29.39-94.33-56.27l-144.88-145.68c-7.58-7.62-14.23-18.07-16.71-27.03-3.73-13.47,3.05-24.5,15.69-26.92l18.49-3.53,213.01.15c51.57,8.68,96.13,29.19,130.36,67.51l13.01,11,65.63,65.13,119.03,119.89-153.08,2.04-95.41.5Z"></path>
+                </svg>
+              </span>
+              <span>Propulsé par</span>
+              <strong>Kiwi</strong>
+            </span>
+            <p class="footer-credit">Modèle 3D <a href="https://sketchfab.com/tamminen" target="_blank" rel="noreferrer">Tamminen</a></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-wordmark" aria-hidden="true"><div></div></div>
+    </div>
+  </footer>
+
+  <script src="/assets/articles/article.js?v=2" defer></script>
+</body>
+</html>

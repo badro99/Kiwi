@@ -6,6 +6,13 @@ const html = read('docs/templates/article.html');
 const css = read('assets/articles/article.css');
 const js = read('assets/articles/article.js');
 const landingHtml = read('fr/index.html');
+const sitemap = read('sitemap.xml');
+const published = [
+  { path: 'fr/guides/index.html', url: 'https://kiwi-os.com/fr/guides/', type: 'CollectionPage', minWords: 650, image: 'assets/articles/guides-restaurant-maroc.png' },
+  { path: 'fr/guides/logiciel-caisse-restaurant-maroc/index.html', url: 'https://kiwi-os.com/fr/guides/logiciel-caisse-restaurant-maroc/', type: 'Article', minWords: 1050, image: 'assets/articles/logiciel-caisse-restaurant-maroc.png' },
+  { path: 'fr/guides/calcul-food-cost-restaurant/index.html', url: 'https://kiwi-os.com/fr/guides/calcul-food-cost-restaurant/', type: 'Article', minWords: 1050, image: 'assets/articles/calcul-food-cost-restaurant.png' },
+  { path: 'fr/guides/gestion-stock-restaurant/index.html', url: 'https://kiwi-os.com/fr/guides/gestion-stock-restaurant/', type: 'Article', minWords: 1050, image: 'assets/articles/gestion-stock-restaurant.png' }
+];
 const articleShellRule = css.match(/\.article-shell\s*\{([\s\S]*?)\}/)?.[1] || '';
 const footerFrom = (source) => source.match(/<footer\b[\s\S]*?<\/footer>/)?.[0] || '';
 const articleFooter = footerFrom(html);
@@ -57,6 +64,47 @@ ok(footerText(articleFooter) === footerText(landingFooter), 'article and exporte
 ok(JSON.stringify(footerHrefs(articleFooter)) === JSON.stringify(footerHrefs(landingFooter)), 'article and exported landing footers expose identical destinations');
 ok(/\.footer-panel\s*\{[^}]*max-width:\s*1440px[^}]*border-radius:\s*32px/.test(css) && /grid-template-columns:\s*1\.6fr repeat\(4, minmax\(0, 1fr\)\)/.test(css), 'article footer preserves the landing shell and five-column geometry');
 ok(/article\.css\?v=\d+/.test(html) && /article\.js\?v=\d+/.test(html), 'shared article assets carry explicit cache versions');
+ok(/data-food-cost-calculator/.test(read('fr/guides/calcul-food-cost-restaurant/index.html')) && /updateCalculator/.test(js), 'the food-cost calculator is progressively enhanced');
+ok(/Sans JavaScript/.test(read('fr/guides/calcul-food-cost-restaurant/index.html')), 'the calculator keeps its formulas without JavaScript');
+
+const publishedVersions = new Set();
+for (const page of published) {
+  const source = read(page.path);
+  const canonical = source.match(/<link rel="canonical" href="([^"]+)"/)?.[1];
+  const description = source.match(/<meta name="description" content="([^"]+)"/)?.[1] || '';
+  const jsonText = source.match(/<script type="application\/ld\+json">\s*([\s\S]*?)\s*<\/script>/)?.[1] || '';
+  const content = source.match(/<div class="article-body"[^>]*>([\s\S]*?)<\/div>\s*<aside class="article-aside"/)?.[1] || source.match(/<main[^>]*>([\s\S]*?)<\/main>/)?.[1] || '';
+  const words = content.replace(/<script[\s\S]*?<\/script>/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&[a-zA-Z0-9#]+;/g, ' ').trim().split(/\s+/).filter(Boolean).length;
+  let graph = [];
+  try { graph = JSON.parse(jsonText)['@graph'] || []; } catch (_) { graph = []; }
+  const image = fs.readFileSync(new URL('../' + page.image, import.meta.url));
+  const width = image.length >= 24 ? image.readUInt32BE(16) : 0;
+  const height = image.length >= 24 ? image.readUInt32BE(20) : 0;
+  const hrefs = [...source.matchAll(/href="(\/fr\/guides\/[^"]*)"/g)].map((match) => match[1].split('#')[0].split('?')[0]);
+  const brokenGuideLinks = hrefs.filter((href) => {
+    const rel = href.replace(/^\//, '').replace(/\/$/, '') + (href.endsWith('/') ? '/index.html' : '');
+    return !fs.existsSync(new URL('../' + rel, import.meta.url));
+  });
+
+  ok(canonical === page.url, `${page.path} has its own canonical URL`);
+  ok(!/noindex|TEMPLATE|guide-cover-template/.test(source), `${page.path} contains no template or indexing residue`);
+  ok((source.match(/rel="alternate" hreflang=/g) || []).length === 2, `${page.path} declares only its published FR and x-default alternates`);
+  ok(description.length >= 120 && description.length <= 165, `${page.path} has a useful search description`);
+  ok((source.match(/<h1\b/g) || []).length === 1, `${page.path} has exactly one H1`);
+  ok(words >= page.minWords, `${page.path} has substantive editorial content (${words} words)`);
+  ok(graph.some((item) => item['@type'] === page.type), `${page.path} structured data matches its page type`);
+  ok(width === 1200 && height === 630, `${page.path} has a unique 1200×630 PNG social image`);
+  ok(footerText(footerFrom(source)) === footerText(landingFooter) && JSON.stringify(footerHrefs(footerFrom(source))) === JSON.stringify(footerHrefs(landingFooter)), `${page.path} preserves the exact landing footer`);
+  ok(!/<script[^>]+src="https?:\/\//.test(source), `${page.path} needs no external JavaScript`);
+  ok(!source.includes('—'), `${page.path} follows the no-em-dash brand voice`);
+  ok(brokenGuideLinks.length === 0, `${page.path} has no broken internal guide links`);
+  ok(sitemap.includes(`<loc>${page.url}</loc>`), `${page.path} is discoverable in sitemap.xml`);
+
+  const cssVersion = source.match(/article\.css\?v=(\d+)/)?.[1];
+  const jsVersion = source.match(/article\.js\?v=(\d+)/)?.[1];
+  publishedVersions.add(`${cssVersion}:${jsVersion}`);
+}
+ok(publishedVersions.size === 1 && publishedVersions.has('9:2'), 'all published guides use the current shared asset versions');
 
 try {
   new vm.Script(js, { filename: 'assets/articles/article.js' });

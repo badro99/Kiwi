@@ -536,6 +536,29 @@ figcaption { margin-block-start: 14px; color: var(--white-48); font-size: 13px; 
 .status-good { display: inline-flex; align-items: center; gap: 7px; color: var(--white); }
 .status-good::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 4px var(--accent-10); }
 
+.calculator {
+  margin: 74px 0;
+  padding: 34px;
+  border: 1px solid var(--accent-35);
+  border-radius: var(--radius-card);
+  background: rgba(0, 28, 19, .78);
+  box-shadow: inset 0 1px 0 var(--accent-20);
+}
+
+.calculator-heading { display: grid; grid-template-columns: 1.2fr .8fr; gap: 28px; align-items: end; }
+.calculator-heading h2 { margin: 0; font-size: 42px; }
+.calculator-heading p { margin: 0; color: var(--white-68); font-size: 14px; }
+.calculator-fields { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-block-start: 32px; }
+.calculator-fields label { display: grid; gap: 10px; padding: 18px; border: 1px solid var(--white-10); border-radius: 16px; background: var(--black-56); color: var(--white-68); font-size: 12px; }
+.calculator-fields label > span { display: flex; align-items: baseline; gap: 7px; color: var(--white-48); }
+.calculator-fields input { width: 100%; min-width: 0; padding: 0; border: 0; border-block-end: 1px solid var(--white-18); border-radius: 0; outline: 0; background: transparent; color: var(--white); font: 400 24px/1.2 var(--font); }
+.calculator-fields input:focus { border-color: var(--accent); }
+.calculator-results { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-block-start: 10px; }
+.calculator-results div { min-height: 116px; display: flex; flex-direction: column; justify-content: space-between; padding: 18px; border: 1px solid var(--white-10); border-radius: 16px; background: var(--white-06); }
+.calculator-results small { color: var(--white-48); font-size: 12px; }
+.calculator-results strong { color: var(--accent); font-size: 27px; font-weight: 400; }
+.calculator-fallback { margin: 18px 0 0 !important; color: var(--white-48) !important; font-size: 12px; }
+
 .checklist { margin: 38px 0 58px !important; padding: 0 !important; list-style: none; }
 .checklist li { position: relative; padding: 20px 18px 20px 56px; border-block-start: 1px solid var(--white-10); color: var(--white-82); }
 [dir="rtl"] .checklist li { padding: 20px 56px 20px 18px; }
@@ -741,6 +764,11 @@ figcaption { margin-block-start: 14px; color: var(--white-48); font-size: 13px; 
   .key-takeaways h2 { margin-block-start: 0; font-size: 25px; }
   .pull-quote,
   .article-cta { padding: 26px; border-radius: 22px; }
+  .calculator { padding: 24px 18px; border-radius: 22px; }
+  .calculator-heading,
+  .calculator-fields,
+  .calculator-results { grid-template-columns: 1fr; }
+  .calculator-heading h2 { font-size: 34px; }
   .figure-frame { min-height: 350px; padding: 18px; border-radius: 22px; }
   .operation-panel { padding: 20px; }
   .operation-heading { grid-template-columns: 1fr; gap: 8px; }

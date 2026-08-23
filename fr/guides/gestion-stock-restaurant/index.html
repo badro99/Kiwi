@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="fr" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Gestion de stock restaurant : méthode et exemple · Kiwi</title>
+  <meta name="description" content="Une méthode concrète de gestion de stock restaurant : unités, recettes, inventaire, pertes, écart en MAD et seuil de réapprovisionnement.">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <link rel="canonical" href="https://kiwi-os.com/fr/guides/gestion-stock-restaurant/">
+  <link rel="alternate" hreflang="fr" href="https://kiwi-os.com/fr/guides/gestion-stock-restaurant/">
+  <link rel="alternate" hreflang="x-default" href="https://kiwi-os.com/fr/guides/gestion-stock-restaurant/">
+
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Kiwi">
+  <meta property="og:locale" content="fr_MA">
+  <meta property="og:title" content="Gestion de stock restaurant : la méthode qui explique les écarts">
+  <meta property="og:description" content="Du bon de livraison à l’inventaire, suivez chaque mouvement et traduisez l’écart en quantité puis en MAD.">
+  <meta property="og:url" content="https://kiwi-os.com/fr/guides/gestion-stock-restaurant/">
+  <meta property="og:image" content="https://kiwi-os.com/assets/articles/gestion-stock-restaurant.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:alt" content="Un écart de stock restaurant calculé entre quantité attendue et quantité comptée.">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="article:published_time" content="2026-08-23T18:00:00+01:00">
+  <meta property="article:modified_time" content="2026-08-23T18:00:00+01:00">
+  <meta property="article:section" content="Stock restaurant">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Gestion de stock restaurant : méthode et exemple en MAD">
+  <meta name="twitter:description" content="Unités, mouvements, comptage, écarts et seuil de réapprovisionnement expliqués pas à pas.">
+  <meta name="twitter:image" content="https://kiwi-os.com/assets/articles/gestion-stock-restaurant.png">
+  <meta name="twitter:image:alt" content="La méthode Kiwi pour expliquer un écart de stock restaurant.">
+
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="/assets/articles/article.css?v=9">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Article",
+        "@id": "https://kiwi-os.com/fr/guides/gestion-stock-restaurant/#article",
+        "headline": "Gestion de stock restaurant : la méthode qui explique les écarts",
+        "description": "Une méthode concrète de gestion de stock restaurant : unités, recettes, inventaire, pertes, écart en MAD et seuil de réapprovisionnement.",
+        "image": ["https://kiwi-os.com/assets/articles/gestion-stock-restaurant.png"],
+        "datePublished": "2026-08-23T18:00:00+01:00",
+        "dateModified": "2026-08-23T18:00:00+01:00",
+        "inLanguage": "fr-MA",
+        "author": {
+          "@type": "Organization",
+          "name": "Équipe Kiwi",
+          "url": "https://kiwi-os.com/fr/"
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": "Kiwi",
+          "url": "https://kiwi-os.com/fr/",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://kiwi-os.com/images/kiwi-logo.svg"
+          }
+        },
+        "mainEntityOfPage": {
+          "@type": "WebPage",
+          "@id": "https://kiwi-os.com/fr/guides/gestion-stock-restaurant/"
+        }
+      },
+      {
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          {"@type": "ListItem", "position": 1, "name": "Accueil", "item": "https://kiwi-os.com/fr/"},
+          {"@type": "ListItem", "position": 2, "name": "Guides", "item": "https://kiwi-os.com/fr/guides/"},
+          {"@type": "ListItem", "position": 3, "name": "Gérer le stock restaurant"}
+        ]
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#article">Aller à l’article</a>
+  <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+  <div class="site-backdrop" aria-hidden="true">
+    <picture>
+      <source media="(orientation: portrait)" srcset="/model/poster-portrait.webp">
+      <img src="/model/poster-landscape.webp" alt="" width="1536" height="1024" fetchpriority="high">
+    </picture>
+    <span></span>
+  </div>
+
+  <header class="site-header">
+    <div class="nav-shell">
+      <a class="brand" href="/fr/" aria-label="Kiwi · accueil">
+        <img src="/images/kiwi-logo.svg" width="855" height="455" alt="">
+      </a>
+
+      <nav class="nav-center" aria-label="Navigation principale">
+        <a href="/fr/#features">Fonctionnalités</a>
+        <a href="/fr/guides/" aria-current="page">Guides</a>
+        <a href="/fr/#pricing">Tarifs</a>
+        <a href="/dashboard.html">Se connecter</a>
+        <a class="button nav-demo" href="https://wa.me/212624495159" target="_blank" rel="noreferrer">
+          Demander une démo
+          <span class="arrow" aria-hidden="true">↗</span>
+        </a>
+      </nav>
+
+      <div class="language-picker" role="group" aria-label="Choisir la langue">
+        <a href="/fr/guides/" hreflang="fr" lang="fr" aria-current="true">FR</a>
+        <a href="/en/" hreflang="en" lang="en" aria-label="Read in English">EN</a>
+        <a href="/ar/" hreflang="ar" lang="ar" aria-label="اقرأ بالعربية">AR</a>
+      </div>
+      <a class="button mobile-demo" href="https://wa.me/212624495159" target="_blank" rel="noreferrer">Démo <span class="arrow" aria-hidden="true">↗</span></a>
+    </div>
+  </header>
+
+  <main id="article">
+    <article itemscope itemtype="https://schema.org/Article">
+      <header class="article-hero">
+        <div class="hero-inner">
+          <nav class="breadcrumbs" aria-label="Fil d’Ariane">
+            <ol>
+              <li><a href="/fr/">Accueil</a></li>
+              <li><a href="/fr/guides/">Guides</a></li>
+              <li aria-current="page">Gérer le stock restaurant</li>
+            </ol>
+          </nav>
+
+          <div class="hero-copy">
+            <div class="eyebrow">Stock restaurant · Méthode terrain</div>
+            <h1 class="article-title" itemprop="headline">Gestion de stock restaurant&nbsp;: <span class="accent-text">la méthode qui explique les écarts.</span></h1>
+            <p class="hero-deck" itemprop="description">Un bon inventaire ne donne pas seulement un total. Il relie les achats, les recettes, les pertes et le comptage pour montrer où la quantité a changé.</p>
+
+            <div class="byline">
+              <span class="author-mark" aria-hidden="true">K</span>
+              <span>Par <strong itemprop="author">l’équipe Kiwi</strong></span>
+              <span class="byline-separator" aria-hidden="true"></span>
+              <time datetime="2026-08-23" itemprop="datePublished">23 août 2026</time>
+              <span class="byline-separator" aria-hidden="true"></span>
+              <span>12 min de lecture</span>
+            </div>
+          </div>
+
+          <div class="cover-stage" role="img" aria-label="Un exemple de stock de poulet compare 23,4 kilogrammes attendus à 21,9 kilogrammes comptés et calcule un écart de moins 63 dirhams.">
+            <div class="cover-topline"><span class="live-dot">Inventaire · Exemple</span><span>Poulet · Stock cuisine</span></div>
+            <div class="decision-card">
+              <div class="decision-intro">
+                <span>De l’écart à la cause</span>
+                <h2>Compter est le début. Expliquer est le vrai travail.</h2>
+                <p>Une seule unité, chaque mouvement daté, puis un contrôle en quantité et en valeur.</p>
+              </div>
+              <div class="score" aria-hidden="true">
+                <div class="score-item"><span>Attendu</span><strong>23,4</strong><small>kg · après mouvements</small></div>
+                <div class="score-item"><span>Compté</span><strong>21,9</strong><small>kg · inventaire physique</small></div>
+                <div class="score-item"><span>Écart valorisé</span><strong>−63</strong><small>MAD · à investiguer</small></div>
+              </div>
+              <div class="stage-note"><span>Écart ≠ vol</span><span>Vérifiez d’abord unité, recette, réception et perte</span></div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div class="article-shell">
+        <aside class="toc" aria-label="Sommaire">
+          <span class="toc-title">Dans ce guide</span>
+          <ol>
+            <li><a href="#base">Construire une base propre</a></li>
+            <li><a href="#mouvements">Tracer les mouvements</a></li>
+            <li><a href="#compter">Organiser le comptage</a></li>
+            <li><a href="#ecart">Calculer l’écart</a></li>
+            <li><a href="#reassort">Prévoir le réassort</a></li>
+            <li><a href="#routine">Installer la routine</a></li>
+            <li><a href="#faq">Questions fréquentes</a></li>
+          </ol>
+        </aside>
+
+        <div class="article-body" itemprop="articleBody">
+          <details class="mobile-toc">
+            <summary>Sommaire du guide</summary>
+            <ol>
+              <li><a href="#base">Construire une base propre</a></li>
+              <li><a href="#mouvements">Tracer les mouvements</a></li>
+              <li><a href="#compter">Organiser le comptage</a></li>
+              <li><a href="#ecart">Calculer l’écart</a></li>
+              <li><a href="#reassort">Prévoir le réassort</a></li>
+              <li><a href="#routine">Installer la routine</a></li>
+              <li><a href="#faq">Questions fréquentes</a></li>
+            </ol>
+          </details>
+
+          <p class="lead">Une gestion de stock utile raconte chaque changement entre deux comptages. Si le stock final ne correspond pas, vous devez pouvoir revenir aux réceptions, ventes, recettes, pertes, transferts et corrections qui ont construit le résultat.</p>
+
+          <section class="key-takeaways" aria-labelledby="essentiel-title">
+            <h2 id="essentiel-title">L’essentiel en 30 secondes</h2>
+            <ul>
+              <li>Un article possède une identité, une unité de base et une conversion d’achat stables.</li>
+              <li>Stock attendu = ouverture + réceptions − consommation − pertes ± transferts et corrections.</li>
+              <li>Analysez d’abord les écarts en quantité, puis valorisez-les avec un coût documenté.</li>
+            </ul>
+          </section>
+
+          <section id="base" aria-labelledby="base-title">
+            <h2 id="base-title"><span class="section-number">01 · La base article</span>Une matière, une identité et une seule unité de référence.</h2>
+            <p>Commencez par les vingt ingrédients qui représentent le plus de valeur ou de risque de rupture. Pour chacun, créez une fiche stable&nbsp;: nom, unité de base, conditionnement fournisseur, conversion, coût, zone de stockage et fournisseur habituel.</p>
+            <p>Le poulet peut être acheté en cartons mais suivi en kilogrammes. L’huile peut être achetée en bidons mais consommée en millilitres. La canette reste une unité. Ne laissez jamais la même matière apparaître sous «&nbsp;tomate&nbsp;», «&nbsp;tomates cuisine&nbsp;» et «&nbsp;maticha&nbsp;» selon la personne qui la reçoit&nbsp;: les mouvements se disperseraient entre trois stocks.</p>
+
+            <figure class="editorial-figure">
+              <div class="figure-frame">
+                <div class="operation-panel" aria-hidden="true">
+                  <div class="operation-panel-header"><span>Fiche matière · Exemple</span><span>Dernière mise à jour · 23 août</span></div>
+                  <div class="operation-heading">
+                    <span>Identité stable</span>
+                    <h3>Poulet entier · suivi en kilogrammes.</h3>
+                  </div>
+                  <div class="operation-flow">
+                    <div class="operation-step"><span>01</span><div><strong>Unité de base</strong><small>Kilogramme · précision de comptage 0,1 kg.</small></div><b>kg</b></div>
+                    <div class="operation-step"><span>02</span><div><strong>Conditionnement</strong><small>Carton pesé à la réception.</small></div><b>Variable</b></div>
+                    <div class="operation-step"><span>03</span><div><strong>Coût documenté</strong><small>Dernier prix reçu, avec date et fournisseur.</small></div><b>42 MAD</b></div>
+                  </div>
+                  <div class="operation-result"><span>Règle</span><strong>1 fiche · 1 unité</strong><small>les alias servent à la recherche, jamais à créer un deuxième stock</small></div>
+                  </div>
+                </div>
+              <figcaption>Les conditionnements peuvent changer sans changer l’identité de la matière. La conversion transforme chaque réception vers l’unité de base.</figcaption>
+            </figure>
+          </section>
+
+          <section id="mouvements" aria-labelledby="mouvements-title">
+            <h2 id="mouvements-title"><span class="section-number">02 · Le journal</span>Chaque quantité entre ou sort avec un motif.</h2>
+            <p>Une réception ajoute du stock après contrôle de la quantité livrée, pas au moment de la commande. Une vente retire les ingrédients de sa recette. Une perte retire une quantité avec un motif. Un transfert sort d’une zone ou d’un établissement et entre dans l’autre. Une correction manuelle reste exceptionnelle et signée.</p>
+            <p>Le journal doit conserver la date, la quantité, l’unité, la personne, la pièce associée et le stock après mouvement. Sans cela, une quantité finale est un chiffre impossible à expliquer.</p>
+
+            <div class="pull-quote">
+              <blockquote>Une correction qui écrase le stock résout l’écran. Un mouvement qui explique l’écart résout la gestion.</blockquote>
+              <cite>Principe d’inventaire · Kiwi Guides</cite>
+            </div>
+
+            <h3>Reliez chaque vente à une fiche recette</h3>
+            <p>Une vente de tajine ne retire pas «&nbsp;un tajine&nbsp;» du stock matière. Elle consomme les quantités de poulet, oignon, huile, épices et garniture définies dans la recette. Les suppléments, demi-portions et annulations doivent appliquer ou inverser les bons mouvements, une seule fois.</p>
+          </section>
+
+          <section id="compter" aria-labelledby="compter-title">
+            <h2 id="compter-title"><span class="section-number">03 · Le comptage</span>Comptez à une cadence dictée par le risque, pas par habitude.</h2>
+            <p>Il n’est pas nécessaire de compter tout le stock chaque soir. Classez les matières selon leur valeur, leur vitesse de rotation, leur volatilité et leur risque de rupture. Comptez les plus sensibles chaque jour ou après un service critique, une famille chaque semaine et réalisez un inventaire complet à une cadence stable.</p>
+
+            <div class="data-table-wrap" tabindex="0" role="region" aria-label="Exemple de cadence de comptage du stock restaurant">
+              <table class="data-table">
+                <thead>
+                  <tr><th>Groupe</th><th>Exemples de risque</th><th>Cadence de départ</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>Critique</td><td>Viandes, huiles, produits chers ou souvent en rupture.</td><td><span class="status-good">Quotidienne ciblée</span></td></tr>
+                  <tr><td>Rapide</td><td>Boissons, emballages et ingrédients à forte rotation.</td><td>Deux à trois fois par semaine</td></tr>
+                  <tr><td>Stable</td><td>Épices sèches et références peu mouvementées.</td><td>Hebdomadaire ou cyclique</td></tr>
+                  <tr><td>Total</td><td>Toutes zones, mêmes heures, activité arrêtée.</td><td>Mensuelle à adapter</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p>Ce tableau est un point de départ, pas une règle universelle. Comptez toujours dans la même unité, au même moment du cycle et sans réception ou sortie pendant le relevé. Sinon vous mesurez le mouvement autant que le stock.</p>
+          </section>
+
+          <aside class="article-cta" aria-labelledby="demo-title">
+            <div class="cta-top">
+              <div class="cta-copy">
+                <div class="eyebrow">Commencez avec 20 matières</div>
+                <h2 id="demo-title">Testez Kiwi sur un vrai écart de stock.</h2>
+                <p>Apportez une fiche recette, une facture fournisseur et votre dernier comptage. Nous reconstruirons le mouvement pendant la démonstration.</p>
+              </div>
+              <a class="button" href="https://wa.me/212624495159?text=Bonjour%20Kiwi%2C%20je%20veux%20tester%20la%20gestion%20de%20stock" target="_blank" rel="noreferrer">Préparer mon test <span class="arrow" aria-hidden="true">↗</span></a>
+            </div>
+            <div class="cta-route" aria-hidden="true">
+              <div><span>01</span><strong>1 matière</strong><small>Unité et conditionnement.</small></div>
+              <div><span>02</span><strong>1 recette</strong><small>Quantité par portion.</small></div>
+              <div><span>03</span><strong>2 comptages</strong><small>Ouverture et fermeture.</small></div>
+            </div>
+          </aside>
+
+          <section id="ecart" aria-labelledby="ecart-title">
+            <h2 id="ecart-title"><span class="section-number">04 · La réconciliation</span>Calculez l’attendu, comparez le compté, valorisez ensuite.</h2>
+            <p>La formule opérationnelle est&nbsp;: <strong>stock attendu = stock d’ouverture + réceptions − consommation théorique − pertes ± transferts et corrections</strong>. L’écart en quantité est le stock compté moins le stock attendu.</p>
+            <p>Exemple sur le poulet&nbsp;: 18 kg à l’ouverture + 42 kg reçus − 35,4 kg consommés par les recettes − 1,2 kg de pertes enregistrées = 23,4 kg attendus. Le comptage trouve 21,9 kg. L’écart est donc de −1,5 kg. À un coût documenté de 42 MAD/kg, sa valeur indicative est de −63 MAD.</p>
+
+            <div class="data-table-wrap" tabindex="0" role="region" aria-label="Ordre de vérification d’un écart de stock restaurant">
+              <table class="data-table">
+                <thead><tr><th>Étape</th><th>Question</th><th>Preuve</th></tr></thead>
+                <tbody>
+                  <tr><td>Unité</td><td>Carton, pièce, litre et kilogramme ont-ils été convertis correctement&nbsp;?</td><td>Fiche article</td></tr>
+                  <tr><td>Réception</td><td>La quantité livrée, et non commandée, a-t-elle été saisie&nbsp;?</td><td>Bon signé</td></tr>
+                  <tr><td>Recette</td><td>La portion théorique correspond-elle aux pesées cuisine&nbsp;?</td><td>Trois pesées</td></tr>
+                  <tr><td>Pertes</td><td>Parage, casse, repas équipe et péremption ont-ils été tracés&nbsp;?</td><td>Journal des motifs</td></tr>
+                  <tr><td>Comptage</td><td>Les deux inventaires ont-ils été faits au même moment du cycle&nbsp;?</td><td>Heure et signataire</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p>Un écart n’est pas une preuve de vol. C’est une alerte de processus. Accuser avant d’avoir vérifié l’unité, la recette et les réceptions détruit la confiance sans réparer la donnée.</p>
+          </section>
+
+          <section id="reassort" aria-labelledby="reassort-title">
+            <h2 id="reassort-title"><span class="section-number">05 · Le réassort</span>Commandez selon l’usage et le délai fournisseur.</h2>
+            <p>Le point de commande peut partir d’une formule simple&nbsp;: <strong>usage moyen pendant le délai fournisseur + stock de sécurité</strong>. La quantité à commander complète ensuite le stock jusqu’au niveau cible, en tenant compte des réceptions déjà prévues.</p>
+            <p>Si votre cuisine utilise 8 kg de poulet par jour, que le fournisseur livre en deux jours et que vous gardez 4 kg de sécurité, le besoin de couverture est de 20 kg. Avec 6 kg réellement disponibles et aucune réception ouverte, la quantité proposée est de 14 kg. Adaptez la sécurité aux jours de fermeture, au vendredi, au Ramadan, aux événements et à la fiabilité réelle du fournisseur.</p>
+            <div class="pull-quote">
+              <blockquote>Le seuil n’est pas un nombre fixe. C’est une promesse de service construite avec l’usage, le délai et l’incertitude.</blockquote>
+              <cite>Principe de réapprovisionnement · Kiwi Guides</cite>
+            </div>
+          </section>
+
+          <section id="routine" aria-labelledby="routine-title">
+            <h2 id="routine-title"><span class="section-number">06 · La routine</span>Vingt minutes régulières valent mieux qu’un grand nettoyage mensuel.</h2>
+            <ul class="checklist">
+              <li>Avant le service&nbsp;: traiter les alertes de rupture et les réceptions attendues.</li>
+              <li>À la livraison&nbsp;: peser ou compter, comparer au bon, puis enregistrer la quantité reçue.</li>
+              <li>Pendant le service&nbsp;: saisir immédiatement casse, parage, repas équipe et transfert.</li>
+              <li>À la fermeture&nbsp;: compter les matières critiques à activité arrêtée.</li>
+              <li>Chaque semaine&nbsp;: classer les écarts par valeur et investiguer les trois premiers.</li>
+              <li>Chaque mois&nbsp;: revoir conversions, rendements, recettes et seuils de commande.</li>
+            </ul>
+            <p>Donnez un propriétaire à chaque étape. «&nbsp;La cuisine gère le stock&nbsp;» n’est pas un rôle. Nommez qui réceptionne, qui valide les corrections, qui compte et qui décide du réassort.</p>
+          </section>
+
+          <section class="faq" id="faq" aria-labelledby="faq-title">
+            <h2 id="faq-title"><span class="section-number">07 · Questions fréquentes</span>Les décisions qui rendent l’inventaire exploitable.</h2>
+            <details>
+              <summary>Quelle est la formule du stock attendu&nbsp;?</summary>
+              <p>Stock d’ouverture + réceptions − consommation théorique − pertes ± transferts et corrections. Comparez ensuite le résultat au comptage physique.</p>
+            </details>
+            <details>
+              <summary>À quelle fréquence faut-il faire l’inventaire d’un restaurant&nbsp;?</summary>
+              <p>La cadence dépend du risque. Comptez plus souvent les matières chères, rapides ou critiques, puis organisez un comptage cyclique et un inventaire complet régulier.</p>
+            </details>
+            <details>
+              <summary>Comment valoriser un écart de stock&nbsp;?</summary>
+              <p>Calculez d’abord l’écart dans l’unité de base, puis multipliez-le par une méthode de coût documentée et stable. Le montant sert à prioriser l’analyse, pas à remplacer l’enquête en quantité.</p>
+            </details>
+            <details>
+              <summary>Comment gérer les pertes et le repas du personnel&nbsp;?</summary>
+              <p>Enregistrez-les comme des mouvements distincts avec quantité, motif, auteur et heure. Les mélanger aux ventes rend le coût théorique faux et empêche de comprendre l’écart.</p>
+            </details>
+            <details>
+              <summary>Excel suffit-il pour gérer le stock&nbsp;?</summary>
+              <p>Il peut suffire pour démarrer si les unités, responsabilités et mouvements sont tenus avec discipline. Il atteint ses limites quand plusieurs personnes, postes ou établissements modifient le même stock et qu’il faut relier automatiquement les ventes aux recettes.</p>
+            </details>
+          </section>
+        </div>
+
+        <aside class="article-aside" aria-label="Note éditoriale">
+          <div class="aside-note">
+            <strong>À propos des exemples</strong>
+            Les quantités, prix et cadences illustrent la méthode. Votre carte, vos fournisseurs et votre rythme de service doivent remplacer chaque hypothèse avant une décision.
+          </div>
+        </aside>
+      </div>
+    </article>
+
+    <section class="related" aria-labelledby="related-title">
+      <div class="related-inner">
+        <div class="section-head">
+          <h2 id="related-title">Reliez le stock à la marge.</h2>
+          <a class="button" href="/fr/guides/">Tous les guides <span class="arrow" aria-hidden="true">↗</span></a>
+        </div>
+        <div class="related-grid">
+          <a class="related-card" href="/fr/guides/calcul-food-cost-restaurant/">
+            <div class="related-scene related-scene--stock" aria-hidden="true">
+              <div class="related-scene-head"><span>Stock live</span><strong>Synchronisé</strong></div>
+              <div class="stock-stack"><i></i><i></i><i></i></div>
+              <small>Vente → recette → inventaire</small>
+            </div>
+            <span>Marge · 10 min</span>
+            <h3>Calculer le food cost théorique et réel.</h3>
+            <p>Du prix fournisseur au coût de la période, avec un exemple complet en MAD.</p>
+          </a>
+          <a class="related-card" href="/fr/guides/logiciel-caisse-restaurant-maroc/">
+            <div class="related-scene related-scene--margin" aria-hidden="true">
+              <div class="related-scene-head"><span>Caisse restaurant</span><strong>7 tests</strong></div>
+              <div class="margin-readout"><div><strong>60′</strong><small>protocole</small></div><span>service · réseau · données</span></div>
+            </div>
+            <span>Caisse · 11 min</span>
+            <h3>Choisir une caisse qui suit le vrai stock.</h3>
+            <p>Les tests matériels, hors ligne et données à faire avant de signer.</p>
+          </a>
+          <a class="related-card" href="/fr/guides/">
+            <div class="related-scene related-scene--menu" aria-hidden="true">
+              <div class="related-scene-head"><span>Kiwi Guides</span><strong>3 méthodes</strong></div>
+              <div class="menu-preview"><i></i><i></i><i></i><span>Décider · mesurer · agir</span></div>
+            </div>
+            <span>Bibliothèque</span>
+            <h3>Tous les guides pour gérer un restaurant.</h3>
+            <p>Des méthodes courtes, des formules vérifiables et des exemples marocains.</p>
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Keep this footer structurally and visually identical to the public landing. -->
+  <footer class="site-footer">
+    <div class="footer-panel">
+      <div class="footer-glow" aria-hidden="true"></div>
+      <div class="footer-content">
+        <div class="footer-grid">
+          <div class="footer-brand">
+            <svg viewBox="88.6 75.1 902 1197" class="footer-mark" aria-hidden="true">
+              <path fill="#398063" d="M935.32,688.15c7.49,10.9,1.04,23.35-5.46,31.05l-18.53,21.95-32.55,33.68-11.99,12.06-25.55,24.66-72.05,70.94c-36.74,36.17-86.58,56.73-139.14,58.85l-159.05-.12-117.34-1.35c-26.98-.31-49.32-16.3-67.68-34.09l-37.86-36.7-41.1-41.08-11.8-12.48-64.54-65.74-12.13-14.02c-14.8-17.1-23.36-39.67-25.36-62.46l-1.95-22.13-2.21-32.47-.1-543.27c15.03,9.71,23.85,20.45,34.68,31.06l29.32,28.72,30.18,28.17,38.22,35.99,35.86,34.37,14.11,14.09,35.47,36.73c25.93,29.94,44,64.11,51.17,103.79l-.48,394.96c-.02,15.61-4.1,29.66.16,44.71l.3,59.29,3.94,5.99c1.09,1.66,6.66.3,8.42-.62l61.71-63.11,112.24-111.95c19.39-19.34,45.03-30.72,70.76-37.56l18.27-4.86,274.4-.07c9.66,0,22.46,5.41,27.67,12.99Z"></path>
+              <path fill="#aaf0c1" d="M736.88,1266.87l-47.59-2.35-23.23-4.44c-37.93-7.25-67.6-29.39-94.33-56.27l-144.88-145.68c-7.58-7.62-14.23-18.07-16.71-27.03-3.73-13.47,3.05-24.5,15.69-26.92l18.49-3.53,213.01.15c51.57,8.68,96.13,29.19,130.36,67.51l13.01,11,65.63,65.13,119.03,119.89-153.08,2.04-95.41.5Z"></path>
+            </svg>
+            <p class="footer-description">Le logiciel de gestion des cafés, restaurants et commerces marocains. Caisse, salle, cuisine et pilotage dans un seul outil, en français et en arabe.</p>
+            <p class="footer-origin">Conçu à Cologne.</p>
+          </div>
+
+          <nav class="footer-col" aria-label="Le produit">
+            <h2>Le produit</h2>
+            <ul class="footer-links">
+              <li><a href="/fr/#features">Fonctionnalités</a></li>
+              <li><a href="/fr/#security">Sécurité</a></li>
+              <li><a href="/fr/#pricing">Tarifs</a></li>
+            </ul>
+          </nav>
+
+          <nav class="footer-col" aria-label="La preuve">
+            <h2>La preuve</h2>
+            <ul class="footer-links">
+              <li><a href="/fr/#clients">Nos clients</a></li>
+              <li><a href="/fr/#testimonials">Témoignages</a></li>
+              <li><a href="/fr/#stats">La caisse en direct</a></li>
+            </ul>
+          </nav>
+
+          <nav class="footer-col" aria-label="Légal">
+            <h2>Légal</h2>
+            <ul class="footer-links">
+              <li><a href="/mentions-legales.html">Mentions légales</a></li>
+              <li><a href="/privacy.html">Confidentialité</a></li>
+              <li><a href="/terms.html">Conditions générales</a></li>
+              <li><a href="/cookies.html">Cookies</a></li>
+            </ul>
+          </nav>
+
+          <div class="footer-contact">
+            <h2>Parler à quelqu’un</h2>
+            <p>Une démo, sans engagement.</p>
+            <ul>
+              <li><a href="tel:+212624495159" dir="ltr">+212 624 495 159</a></li>
+              <li><a href="mailto:contact@kiwi-os.com" dir="ltr">contact@kiwi-os.com</a></li>
+            </ul>
+            <div class="footer-demo-wrap">
+              <a class="footer-demo" href="https://wa.me/212624495159" target="_blank" rel="noreferrer">
+                Demander une démo
+                <span class="footer-demo-arrow" aria-hidden="true">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.769230769230769" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M7 7h10v10"></path><path d="M7 17 17 7"></path>
+                  </svg>
+                </span>
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <div class="footer-bottom">
+          <p>© 2026 ·&nbsp;Kiwi. Tous droits réservés.</p>
+          <div class="footer-signature">
+            <span class="footer-powered">
+              <span class="footer-powered-mark">
+                <svg viewBox="88.6 75.1 902 1197" aria-hidden="true">
+                  <path fill="#398063" d="M935.32,688.15c7.49,10.9,1.04,23.35-5.46,31.05l-18.53,21.95-32.55,33.68-11.99,12.06-25.55,24.66-72.05,70.94c-36.74,36.17-86.58,56.73-139.14,58.85l-159.05-.12-117.34-1.35c-26.98-.31-49.32-16.3-67.68-34.09l-37.86-36.7-41.1-41.08-11.8-12.48-64.54-65.74-12.13-14.02c-14.8-17.1-23.36-39.67-25.36-62.46l-1.95-22.13-2.21-32.47-.1-543.27c15.03,9.71,23.85,20.45,34.68,31.06l29.32,28.72,30.18,28.17,38.22,35.99,35.86,34.37,14.11,14.09,35.47,36.73c25.93,29.94,44,64.11,51.17,103.79l-.48,394.96c-.02,15.61-4.1,29.66.16,44.71l.3,59.29,3.94,5.99c1.09,1.66,6.66.3,8.42-.62l61.71-63.11,112.24-111.95c19.39-19.34,45.03-30.72,70.76-37.56l18.27-4.86,274.4-.07c9.66,0,22.46,5.41,27.67,12.99Z"></path>
+                  <path fill="#aaf0c1" d="M736.88,1266.87l-47.59-2.35-23.23-4.44c-37.93-7.25-67.6-29.39-94.33-56.27l-144.88-145.68c-7.58-7.62-14.23-18.07-16.71-27.03-3.73-13.47,3.05-24.5,15.69-26.92l18.49-3.53,213.01.15c51.57,8.68,96.13,29.19,130.36,67.51l13.01,11,65.63,65.13,119.03,119.89-153.08,2.04-95.41.5Z"></path>
+                </svg>
+              </span>
+              <span>Propulsé par</span>
+              <strong>Kiwi</strong>
+            </span>
+            <p class="footer-credit">Modèle 3D <a href="https://sketchfab.com/tamminen" target="_blank" rel="noreferrer">Tamminen</a></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer-wordmark" aria-hidden="true"><div></div></div>
+    </div>
+  </footer>
+
+  <script src="/assets/articles/article.js?v=2" defer></script>
+</body>
+</html>
