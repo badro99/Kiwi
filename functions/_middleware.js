@@ -293,6 +293,19 @@ async function routeRequest(context) {
   // /auth/reset (déjà accessible, comme tout /auth/*) qui exige un jeton signé
   // et ne renvoie jamais d'adresse e-mail.
   if (isRead && (path === '/reset.html' || path === '/reset')) return next();
+  /* Les pages légales et la page d'assistance. Elles sont écrites pour être lues
+   * par quelqu'un qui n'a PAS de compte : un prospect qui veut savoir ce qu'on
+   * fait de ses données, et surtout les équipes de revue d'Apple et de Google,
+   * qui ouvrent l'URL de politique de confidentialité et l'URL d'assistance
+   * déclarées sur la fiche de l'app Kiwi Pro sans aucune session. Un 401 sur
+   * l'une ou l'autre, c'est un refus de publication. Les deux orthographes,
+   * comme au-dessus. Aucune donnée : ce sont des pages statiques identiques
+   * pour tous, déjà publiques sur les dépôts GitHub. */
+  if (isRead && (path === '/privacy.html' || path === '/privacy'
+    || path === '/terms.html' || path === '/terms'
+    || path === '/mentions-legales.html' || path === '/mentions-legales'
+    || path === '/cookies.html' || path === '/cookies'
+    || path === '/support.html' || path === '/support')) return next();
   if (isRead && (path === '/OrderPro.html' || path === '/OrderPro'
     || path === '/api/order' || path === '/api/order/session'
     || path.startsWith('/api/media/'))) return next();

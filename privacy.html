@@ -104,8 +104,8 @@
       établissement de paiement.
     </p>
     <div class="meta">
-      <span><b>Dernière mise à jour</b> : 26 avril 2026</span>
-      <span><b>Version</b> : 2.1</span>
+      <span><b>Dernière mise à jour</b> : 23 août 2026</span>
+      <span><b>Version</b> : 2.2</span>
       <span><b>Déclaration CNDP</b> : n° en cours d'attribution</span>
     </div>
 
@@ -152,6 +152,37 @@
       Une commande passée par QR contient les articles, la table et le montant.
       Elle n'est associée à aucune identité : Kiwi ne demande au client final ni
       nom, ni téléphone, ni e-mail, ni moyen de paiement.
+    </p>
+
+    <h3>2.4 Application Kiwi Pro (iPad, iPhone, Android)</h3>
+    <p>
+      Kiwi Pro est la même caisse, le même tableau de bord et la même cuisine,
+      installés sur l'appareil du commerçant. Elle ne collecte rien de plus que le
+      site, et ne contient aucun traceur publicitaire ni aucun SDK d'analyse
+      d'audience.
+    </p>
+    <ul>
+      <li><b>Réseau local</b> : l'app demande l'accès au réseau local uniquement pour
+        envoyer les tickets à l'imprimante thermique du comptoir et, à la demande du
+        commerçant, pour la retrouver sur le Wi-Fi. Rien de ce qui transite vers
+        l'imprimante n'est envoyé à Kiwi.</li>
+      <li><b>Identité de l'appareil</b> : l'appairage de la caisse et un identifiant
+        d'appareil généré par Kiwi (sans lien avec le numéro de série ni l'IDFA) sont
+        conservés dans le stockage sécurisé du système (Trousseau iOS, Keystore
+        Android) pour que la caisse reprenne son service après un redémarrage.</li>
+      <li><b>Diagnostic</b> : en cas d'erreur de l'app, un rapport technique
+        (type d'erreur, page, version de l'app, plateforme) est envoyé à Kiwi. Il est
+        expurgé avant envoi : aucun contenu de ticket, aucun code d'accès, aucune
+        adresse e-mail n'y figure.</li>
+      <li><b>Appareil photo</b> : demandée uniquement quand le commerçant lance
+        le scan d'un code-barres à la caisse ou photographie un bon de livraison
+        pour son stock. Le flux vidéo est traité sur l'appareil ; seule la photo
+        de bon choisie par le commerçant est conservée dans son espace, jamais
+        revendue ni partagée.</li>
+    </ul>
+    <p class="note">
+      Aucun achat intégré, aucun abonnement vendu dans l'app : la facturation se fait
+      entre Kiwi et le commerçant, hors des boutiques d'applications.
     </p>
 
     <h2>3. Finalités du traitement</h2>

@@ -2136,6 +2136,7 @@ ar: {
                 ${settingsRow('key', tr({ fr: 'Codes PIN de l\'équipe', en: 'Team PIN codes', ar: 'رموز الفريق' }), tr({ fr: 'Gérer les accès et rôles caisse', en: 'Manage till roles and access', ar: 'إدارة أدوار ووصول الصندوق' }), { action: 'nav-equipe' })}
                 ${settingsRow('shield_lock', tr({ fr: 'Chiffrement des données', en: 'Data encryption', ar: 'تشفير البيانات' }), tr({ fr: 'En transit (TLS 1.3) et au repos', en: 'In transit (TLS 1.3) and at rest', ar: 'أثناء النقل وفي التخزين' }), { badge: tr({ fr: 'Certifié', en: 'Certified', ar: 'معتمد' }) })}
                 ${settingsRow('file_upload', tr({ fr: 'Exporter mes données', en: 'Export my data', ar: 'تصدير بياناتي' }), tr({ fr: 'Ventes, produits, équipe · Fichier CSV', en: 'Sales, products, team · CSV file', ar: 'المبيعات والمنتجات والفريق · CSV' }), { action: 'export-csv' })}
+                ${settingsRow('person_remove', tr({ fr: 'Supprimer mon compte', en: 'Delete my account', ar: 'حذف حسابي' }), tr({ fr: 'Demande traitée sous 30 jours', en: 'Handled within 30 days', ar: 'تُعالج خلال 30 يوماً' }), { action: 'settings-delete-account' })}
                 ${cv ? settingsRow('local_shipping', tr({ fr: 'Canaux de livraison', en: 'Delivery channels', ar: 'قنوات التوصيل' }), tr({ fr: 'Connectez Glovo, Yassir et votre compta', en: 'Connect Glovo, Yassir and accounting', ar: 'اربط Glovo وYassir ومحاسبتك' }), { action: 'add-integration' }) : `
                 ${settingsRow('glovo', 'Glovo Delivery', tr({ fr: 'Connecté · Commandes en direct', en: 'Connected · Live orders', ar: 'متصل · طلبات مباشرة' }), { toggle: true, on: setOn('glovo'), action: 'settings-toggle', arg: 'glovo' })}
                 ${settingsRow('yassir', 'Yassir Express', tr({ fr: 'Connecté · 24 commandes', en: 'Connected · 24 orders', ar: 'متصل · 24 طلبًا' }), { toggle: true, on: setOn('yassir'), action: 'settings-toggle', arg: 'yassir' })}
@@ -2146,6 +2147,38 @@ ar: {
           </div>
         `,
       });
+    },
+
+    /* Suppression de compte. Exigée par Apple (5.1.1 v) et Google dès qu'un compte
+     * sert à se connecter, même créé hors de l'app : le chemin doit partir DE
+     * l'app. La suppression elle-même reste un geste humain côté opérateur
+     * (console, sous 30 jours) : un bouton qui effacerait un livre de ventes
+     * réel en un clic serait pire que le problème. Ici : on explique, puis on
+     * ouvre le mail au DPO pré-rempli avec l'adresse du compte si on la connaît. */
+    'settings-delete-account': () => {
+      let email = '';
+      try { email = String(localStorage.getItem('kiwiOwnerEmail') || '').trim(); } catch (_) {}
+      const subject = tr({ fr: 'Suppression de mon compte Kiwi', en: 'Delete my Kiwi account', ar: 'حذف حسابي في كيوي' });
+      const bodyTxt = tr({
+        fr: 'Bonjour,\n\nJe demande la suppression de mon compte Kiwi' + (email ? ' (' + email + ')' : '') + ' et des données associées.\n\nMerci de me confirmer la prise en compte.\n',
+        en: 'Hello,\n\nPlease delete my Kiwi account' + (email ? ' (' + email + ')' : '') + ' and the associated data.\n\nPlease confirm once it is done.\n',
+        ar: 'مرحباً،\n\nأطلب حذف حسابي في كيوي' + (email ? ' (' + email + ')' : '') + ' والبيانات المرتبطة به.\n\nشكراً لتأكيد استلام الطلب.\n',
+      });
+      const href = 'mailto:dpo@kiwi-os.com?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(bodyTxt);
+      const m = modal({
+        title: tr({ fr: 'Supprimer mon compte', en: 'Delete my account', ar: 'حذف حسابي' }),
+        tag: tr({ fr: 'Compte', en: 'Account', ar: 'الحساب' }),
+        desc: tr({
+          fr: 'La demande part à notre délégué à la protection des données. Le compte, l\'établissement, les ventes et l\'équipe sont supprimés sous 30 jours ; vous recevez une confirmation par e-mail. Exportez vos données avant si vous en avez besoin.',
+          en: 'The request goes to our data protection officer. The account, establishment, sales and team are deleted within 30 days; you get an e-mail confirmation. Export your data first if you need it.',
+          ar: 'يُرسل الطلب إلى مسؤول حماية البيانات لدينا. يُحذف الحساب والمنشأة والمبيعات والفريق خلال 30 يوماً، وتتلقى تأكيداً بالبريد. صدّر بياناتك أولاً إن كنت بحاجة إليها.',
+        }),
+        body: `<p style="font-size:13px;color:var(--n-600);margin:0">${tr({ fr: 'Adresse de contact :', en: 'Contact address:', ar: 'عنوان التواصل:' })} <b>dpo@kiwi-os.com</b>${email ? ' · ' + tr({ fr: 'compte', en: 'account', ar: 'الحساب' }) + ' <b>' + escape(email) + '</b>' : ''}</p>`,
+        foot: `<button class="kb ghost" type="button" data-close>${tr({ fr: 'Annuler', en: 'Cancel', ar: 'إلغاء' })}</button>
+               <a class="kb danger" href="${href}" data-close>${tr({ fr: 'Envoyer la demande', en: 'Send the request', ar: 'إرسال الطلب' })}</a>`,
+        width: 480,
+      });
+      m.el.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => setTimeout(m.close, 50)));
     },
 
     'glass-level': (el) => {
@@ -3352,6 +3385,7 @@ ar: {
     key: 'M223.5-423.5Q200-447 200-480t23.5-56.5Q247-560 280-560t56.5 23.5Q360-513 360-480t-23.5 56.5Q313-400 280-400t-56.5-23.5ZM280-240q-100 0-170-70T40-480q0-100 70-170t170-70q67 0 121.5 33t86.5 87h352l120 120-180 180-80-60-80 60-85-60h-47q-32 54-86.5 87T280-240Zm0-80q56 0 98.5-34t56.5-86h125l58 41 82-61 71 55 75-75-40-40H435q-14-52-56.5-86T280-640q-66 0-113 47t-47 113q0 66 47 113t113 47Z',
     shield_lock: 'M480-80q-139-35-229.5-159.5T160-516v-244l320-120 320 120v244q0 152-90.5 276.5T480-80Zm0-84q104-33 172-132t68-220v-189l-240-90-240 90v189q0 121 68 220t172 132Zm0-316Zm-80 160h160q17 0 28.5-11.5T600-360v-120q0-17-11.5-28.5T560-520v-40q0-33-23.5-56.5T480-640q-33 0-56.5 23.5T400-560v40q-17 0-28.5 11.5T360-480v120q0 17 11.5 28.5T400-320Zm40-200v-40q0-17 11.5-28.5T480-600q17 0 28.5 11.5T520-560v40h-80Z',
     file_upload: 'M440-320v-326L336-542l-56-58 200-200 200 200-56 58-104-104v326h-80ZM240-160q-33 0-56.5-23.5T160-240v-120h80v120h480v-120h80v120q0 33-23.5 56.5T720-160H240Z',
+    person_remove: 'M640-520v-80h240v80H640Zm-280 40q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 66-47 113t-113 47ZM40-160v-112q0-34 17.5-62.5T104-378q62-31 126-46.5T360-440q66 0 130 15.5T616-378q29 15 46.5 43.5T680-272v112H40Zm80-80h480v-32q0-11-5.5-20T580-306q-54-27-109-40.5T360-360q-56 0-111 13.5T140-306q-9 5-14.5 14t-5.5 20v32Zm240-320q33 0 56.5-23.5T440-640q0-33-23.5-56.5T360-720q-33 0-56.5 23.5T280-640q0 33 23.5 56.5T360-560Zm0-80Zm0 400Z',
     local_shipping: 'M155-195q-35-35-35-85H40v-440q0-33 23.5-56.5T120-800h560v160h120l120 160v200h-80q0 50-35 85t-85 35q-50 0-85-35t-35-85H360q0 50-35 85t-85 35q-50 0-85-35Zm113.5-56.5Q280-263 280-280t-11.5-28.5Q257-320 240-320t-28.5 11.5Q200-297 200-280t11.5 28.5Q223-240 240-240t28.5-11.5ZM120-360h32q17-18 39-29t49-11q27 0 49 11t39 29h272v-360H120v360Zm628.5 108.5Q760-263 760-280t-11.5-28.5Q737-320 720-320t-28.5 11.5Q680-297 680-280t11.5 28.5Q703-240 720-240t28.5-11.5ZM680-440h170l-90-120h-80v120ZM360-540Z'
   });
   function materialSymbol(name, className) {

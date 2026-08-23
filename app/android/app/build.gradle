@@ -1,5 +1,21 @@
 apply plugin: 'com.android.application'
 
+/* Signature release. La clé vit HORS du dépôt : `app/android/keystore.properties`
+ * (ignoré par Git, modèle dans keystore.properties.example) ou, en CI, quatre
+ * variables d'environnement. Sans l'un ni l'autre, `bundleRelease` produit un
+ * artefact non signé : ça compile partout, ça ne s'installe nulle part, et
+ * surtout aucun *.jks ni mot de passe ne peut finir dans un commit. */
+def keystorePropertiesFile = rootProject.file('keystore.properties')
+def keystoreProperties = new Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+def releaseStoreFile = keystoreProperties['storeFile'] ?: System.getenv('KIWI_ANDROID_KEYSTORE')
+def releaseStorePassword = keystoreProperties['storePassword'] ?: System.getenv('KIWI_ANDROID_KEYSTORE_PASSWORD')
+def releaseKeyAlias = keystoreProperties['keyAlias'] ?: System.getenv('KIWI_ANDROID_KEY_ALIAS')
+def releaseKeyPassword = keystoreProperties['keyPassword'] ?: System.getenv('KIWI_ANDROID_KEY_PASSWORD')
+def hasReleaseSigning = releaseStoreFile && releaseStorePassword && releaseKeyAlias && releaseKeyPassword
+
 android {
     namespace = "com.kiwios.pro"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -16,10 +32,23 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            if (hasReleaseSigning) {
+                storeFile rootProject.file(releaseStoreFile)
+                storePassword releaseStorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 }

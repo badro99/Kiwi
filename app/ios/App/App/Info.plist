@@ -34,6 +34,14 @@
 	</array>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Kiwi envoie vos tickets à l'imprimante thermique de votre réseau local.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Kiwi utilise l'appareil photo pour scanner un code-barres à la caisse ou photographier un bon de livraison.</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>fr</string>
+		<string>en</string>
+		<string>ar</string>
+	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
@@ -59,7 +67,7 @@
 	<string>Main</string>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
-		<string>armv7</string>
+		<string>arm64</string>
 	</array>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>

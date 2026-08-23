@@ -12,6 +12,8 @@ android/app/src/main/assets/capacitor.plugins.json
 
 # Produits de build natifs
 ios/App/build/
+# archives et exports de tools/app-archive.sh
+ios/build/
 ios/App/DerivedData/
 ios/App/Pods/
 ios/App/App.xcworkspace/xcuserdata/
@@ -35,3 +37,5 @@ google-services.json
 GoogleService-Info.plist
 .env
 .env.*
+# Signature release Android : jamais dans Git (voir app/android/keystore.properties.example)
+android/keystore.properties
