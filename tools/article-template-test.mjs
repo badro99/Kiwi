@@ -5,18 +5,27 @@ const read = (path) => fs.readFileSync(new URL('../' + path, import.meta.url), '
 const html = read('docs/templates/article.html');
 const css = read('assets/articles/article.css');
 const js = read('assets/articles/article.js');
-const landingHtml = read('fr/index.html');
+const landingByLocale = { fr: read('fr/index.html'), en: read('en/index.html'), ar: read('ar/index.html') };
 const sitemap = read('sitemap.xml');
 const published = [
-  { path: 'fr/guides/index.html', url: 'https://kiwi-os.com/fr/guides/', type: 'CollectionPage', minWords: 650, image: 'assets/articles/guides-restaurant-maroc.png' },
-  { path: 'fr/guides/logiciel-caisse-restaurant-maroc/index.html', url: 'https://kiwi-os.com/fr/guides/logiciel-caisse-restaurant-maroc/', type: 'Article', minWords: 1050, image: 'assets/articles/logiciel-caisse-restaurant-maroc.png' },
-  { path: 'fr/guides/calcul-food-cost-restaurant/index.html', url: 'https://kiwi-os.com/fr/guides/calcul-food-cost-restaurant/', type: 'Article', minWords: 1050, image: 'assets/articles/calcul-food-cost-restaurant.png' },
-  { path: 'fr/guides/gestion-stock-restaurant/index.html', url: 'https://kiwi-os.com/fr/guides/gestion-stock-restaurant/', type: 'Article', minWords: 1050, image: 'assets/articles/gestion-stock-restaurant.png' }
+  { path: 'fr/guides/index.html', url: 'https://kiwi-os.com/fr/guides/', type: 'CollectionPage', minWords: 800, image: 'assets/articles/guides-restaurant-maroc.png', locale: 'fr', alternates: 4 },
+  { path: 'en/guides/index.html', url: 'https://kiwi-os.com/en/guides/', type: 'CollectionPage', minWords: 400, image: 'assets/articles/guides-restaurant-morocco-en.png', locale: 'en', alternates: 4 },
+  { path: 'ar/guides/index.html', url: 'https://kiwi-os.com/ar/guides/', type: 'CollectionPage', minWords: 380, image: 'assets/articles/guides-restaurant-morocco-ar.png', locale: 'ar', alternates: 4 },
+  { path: 'fr/guides/logiciel-caisse-restaurant-maroc/index.html', url: 'https://kiwi-os.com/fr/guides/logiciel-caisse-restaurant-maroc/', type: 'Article', minWords: 1050, image: 'assets/articles/logiciel-caisse-restaurant-maroc.png', locale: 'fr', alternates: 2 },
+  { path: 'fr/guides/calcul-food-cost-restaurant/index.html', url: 'https://kiwi-os.com/fr/guides/calcul-food-cost-restaurant/', type: 'Article', minWords: 1050, image: 'assets/articles/calcul-food-cost-restaurant.png', locale: 'fr', alternates: 2 },
+  { path: 'fr/guides/gestion-stock-restaurant/index.html', url: 'https://kiwi-os.com/fr/guides/gestion-stock-restaurant/', type: 'Article', minWords: 1050, image: 'assets/articles/gestion-stock-restaurant.png', locale: 'fr', alternates: 2 },
+  { path: 'fr/guides/menu-engineering-restaurant/index.html', url: 'https://kiwi-os.com/fr/guides/menu-engineering-restaurant/', type: 'Article', minWords: 1150, image: 'assets/articles/menu-engineering-restaurant-fr.png', locale: 'fr', alternates: 4 },
+  { path: 'en/guides/restaurant-menu-engineering/index.html', url: 'https://kiwi-os.com/en/guides/restaurant-menu-engineering/', type: 'Article', minWords: 1000, image: 'assets/articles/restaurant-menu-engineering-en.png', locale: 'en', alternates: 4 },
+  { path: 'ar/guides/هندسة-قائمة-الطعام-للمطعم/index.html', url: 'https://kiwi-os.com/ar/guides/هندسة-قائمة-الطعام-للمطعم/', type: 'Article', minWords: 900, image: 'assets/articles/restaurant-menu-engineering-ar.png', locale: 'ar', alternates: 4 },
+  { path: 'fr/guides/seuil-rentabilite-restaurant/index.html', url: 'https://kiwi-os.com/fr/guides/seuil-rentabilite-restaurant/', type: 'Article', minWords: 1100, image: 'assets/articles/seuil-rentabilite-restaurant-fr.png', locale: 'fr', alternates: 4 },
+  { path: 'en/guides/restaurant-break-even-point/index.html', url: 'https://kiwi-os.com/en/guides/restaurant-break-even-point/', type: 'Article', minWords: 900, image: 'assets/articles/restaurant-break-even-en.png', locale: 'en', alternates: 4 },
+  { path: 'ar/guides/نقطة-التعادل-للمطعم/index.html', url: 'https://kiwi-os.com/ar/guides/نقطة-التعادل-للمطعم/', type: 'Article', minWords: 850, image: 'assets/articles/restaurant-break-even-ar.png', locale: 'ar', alternates: 4 }
 ];
 const articleShellRule = css.match(/\.article-shell\s*\{([\s\S]*?)\}/)?.[1] || '';
 const footerFrom = (source) => source.match(/<footer\b[\s\S]*?<\/footer>/)?.[0] || '';
 const articleFooter = footerFrom(html);
-const landingFooter = footerFrom(landingHtml);
+const landingFooterByLocale = Object.fromEntries(Object.entries(landingByLocale).map(([locale, source]) => [locale, footerFrom(source)]));
+const landingFooter = landingFooterByLocale.fr;
 const footerText = (source) => source
   .replace(/<!--[\s\S]*?-->/g, '')
   .replace(/<[^>]+>/g, ' ')
@@ -24,8 +33,8 @@ const footerText = (source) => source
   .replace(/&amp;/g, '&')
   .replace(/\s+/g, ' ')
   .trim();
-const footerHrefs = (source) => [...source.matchAll(/<a\b[^>]*href="([^"]+)"/g)]
-  .map((match) => match[1].replace(/^\/fr\/(?=#)/, ''));
+const footerHrefs = (source, locale = 'fr') => [...source.matchAll(/<a\b[^>]*href="([^"]+)"/g)]
+  .map((match) => match[1].replace(new RegExp(`^/${locale}/(?=#)`), ''));
 
 let failures = 0;
 let checks = 0;
@@ -66,8 +75,11 @@ ok(/\.footer-panel\s*\{[^}]*max-width:\s*1440px[^}]*border-radius:\s*32px/.test(
 ok(/article\.css\?v=\d+/.test(html) && /article\.js\?v=\d+/.test(html), 'shared article assets carry explicit cache versions');
 ok(/data-food-cost-calculator/.test(read('fr/guides/calcul-food-cost-restaurant/index.html')) && /updateCalculator/.test(js), 'the food-cost calculator is progressively enhanced');
 ok(/Sans JavaScript/.test(read('fr/guides/calcul-food-cost-restaurant/index.html')), 'the calculator keeps its formulas without JavaScript');
+ok(/data-break-even-calculator/.test(read('fr/guides/seuil-rentabilite-restaurant/index.html')) && /updateBreakEvenCalculator/.test(js), 'the break-even calculator is progressively enhanced');
+ok(/Without JavaScript/.test(read('en/guides/restaurant-break-even-point/index.html')) && /من دون JavaScript/.test(read('ar/guides/نقطة-التعادل-للمطعم/index.html')), 'break-even formulas remain available without JavaScript in every locale');
 
 const publishedVersions = new Set();
+const publishedImages = new Set();
 for (const page of published) {
   const source = read(page.path);
   const canonical = source.match(/<link rel="canonical" href="([^"]+)"/)?.[1];
@@ -80,7 +92,7 @@ for (const page of published) {
   const image = fs.readFileSync(new URL('../' + page.image, import.meta.url));
   const width = image.length >= 24 ? image.readUInt32BE(16) : 0;
   const height = image.length >= 24 ? image.readUInt32BE(20) : 0;
-  const hrefs = [...source.matchAll(/href="(\/fr\/guides\/[^"]*)"/g)].map((match) => match[1].split('#')[0].split('?')[0]);
+  const hrefs = [...source.matchAll(/href="(\/(?:fr|en|ar)\/guides\/[^"]*)"/g)].map((match) => match[1].split('#')[0].split('?')[0]);
   const brokenGuideLinks = hrefs.filter((href) => {
     const rel = href.replace(/^\//, '').replace(/\/$/, '') + (href.endsWith('/') ? '/index.html' : '');
     return !fs.existsSync(new URL('../' + rel, import.meta.url));
@@ -88,15 +100,19 @@ for (const page of published) {
 
   ok(canonical === page.url, `${page.path} has its own canonical URL`);
   ok(!/noindex|TEMPLATE|guide-cover-template/.test(source), `${page.path} contains no template or indexing residue`);
-  ok((source.match(/rel="alternate" hreflang=/g) || []).length === 2, `${page.path} declares only its published FR and x-default alternates`);
+  ok((source.match(/rel="alternate" hreflang=/g) || []).length === page.alternates, `${page.path} declares the correct published locale alternates`);
   ok(description.length >= 120 && description.length <= 165, `${page.path} has a useful search description`);
+  ok(new RegExp(`<html lang="${page.locale}" dir="${page.locale === 'ar' ? 'rtl' : 'ltr'}">`).test(source), `${page.path} declares its language and writing direction`);
   ok((source.match(/<h1\b/g) || []).length === 1, `${page.path} has exactly one H1`);
   ok(words >= page.minWords, `${page.path} has substantive editorial content (${words} words)`);
   ok(graph.some((item) => item['@type'] === page.type), `${page.path} structured data matches its page type`);
   ok(width === 1200 && height === 630, `${page.path} has a unique 1200×630 PNG social image`);
-  ok(footerText(footerFrom(source)) === footerText(landingFooter) && JSON.stringify(footerHrefs(footerFrom(source))) === JSON.stringify(footerHrefs(landingFooter)), `${page.path} preserves the exact landing footer`);
+  publishedImages.add(page.image);
+  const localeFooter = landingFooterByLocale[page.locale];
+  ok(footerText(footerFrom(source)) === footerText(localeFooter) && JSON.stringify(footerHrefs(footerFrom(source), page.locale)) === JSON.stringify(footerHrefs(localeFooter, page.locale)), `${page.path} preserves the exact ${page.locale.toUpperCase()} landing footer`);
   ok(!/<script[^>]+src="https?:\/\//.test(source), `${page.path} needs no external JavaScript`);
   ok(!source.includes('—'), `${page.path} follows the no-em-dash brand voice`);
+  ok(page.locale !== 'ar' || /<bdi dir="ltr">/.test(source), `${page.path} isolates Arabic numeric runs`);
   ok(brokenGuideLinks.length === 0, `${page.path} has no broken internal guide links`);
   ok(sitemap.includes(`<loc>${page.url}</loc>`), `${page.path} is discoverable in sitemap.xml`);
 
@@ -104,7 +120,8 @@ for (const page of published) {
   const jsVersion = source.match(/article\.js\?v=(\d+)/)?.[1];
   publishedVersions.add(`${cssVersion}:${jsVersion}`);
 }
-ok(publishedVersions.size === 1 && publishedVersions.has('9:2'), 'all published guides use the current shared asset versions');
+ok(publishedImages.size === published.length, 'every published locale page has its own social image path');
+ok(publishedVersions.size === 1 && publishedVersions.has('10:3'), 'all published guides use the current shared asset versions');
 
 try {
   new vm.Script(js, { filename: 'assets/articles/article.js' });

@@ -75,4 +75,45 @@
     updateCalculator();
   }
 
+  var breakEvenCalculator = document.querySelector('[data-break-even-calculator]');
+  if (breakEvenCalculator) {
+    var fixedInput = breakEvenCalculator.querySelector('[data-fixed-input]');
+    var variableInput = breakEvenCalculator.querySelector('[data-variable-input]');
+    var ticketInput = breakEvenCalculator.querySelector('[data-ticket-input]');
+    var daysInput = breakEvenCalculator.querySelector('[data-days-input]');
+    var salesOutput = breakEvenCalculator.querySelector('[data-break-even-sales-output]');
+    var monthlyCoversOutput = breakEvenCalculator.querySelector('[data-monthly-covers-output]');
+    var dailyCoversOutput = breakEvenCalculator.querySelector('[data-daily-covers-output]');
+    var pageLanguage = document.documentElement.lang || 'fr';
+    var numberLocale = pageLanguage === 'ar' ? 'ar-MA' : pageLanguage === 'en' ? 'en-MA' : 'fr-MA';
+    var moneyFormat = new Intl.NumberFormat(numberLocale, { maximumFractionDigits: 0 });
+    var countFormat = new Intl.NumberFormat(numberLocale, { maximumFractionDigits: 1 });
+
+    function safeValue(input) {
+      var value = Number(input && input.value);
+      return Number.isFinite(value) ? Math.max(0, value) : 0;
+    }
+
+    function updateBreakEvenCalculator() {
+      var fixedCosts = safeValue(fixedInput);
+      var variableRate = safeValue(variableInput);
+      var averageTicket = safeValue(ticketInput);
+      var operatingDays = safeValue(daysInput);
+      var contributionRate = 1 - (variableRate / 100);
+      var valid = fixedCosts > 0 && contributionRate > 0 && averageTicket > 0 && operatingDays > 0;
+      var breakEvenSales = valid ? fixedCosts / contributionRate : 0;
+      var monthlyCovers = valid ? breakEvenSales / averageTicket : 0;
+      var dailyCovers = valid ? monthlyCovers / operatingDays : 0;
+
+      salesOutput.textContent = valid ? moneyFormat.format(breakEvenSales) + ' MAD' : '…';
+      monthlyCoversOutput.textContent = valid ? countFormat.format(monthlyCovers) : '…';
+      dailyCoversOutput.textContent = valid ? countFormat.format(dailyCovers) : '…';
+    }
+
+    [fixedInput, variableInput, ticketInput, daysInput].forEach(function (input) {
+      if (input) input.addEventListener('input', updateBreakEvenCalculator);
+    });
+    updateBreakEvenCalculator();
+  }
+
 }());

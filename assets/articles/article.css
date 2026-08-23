@@ -549,6 +549,7 @@ figcaption { margin-block-start: 14px; color: var(--white-48); font-size: 13px; 
 .calculator-heading h2 { margin: 0; font-size: 42px; }
 .calculator-heading p { margin: 0; color: var(--white-68); font-size: 14px; }
 .calculator-fields { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-block-start: 32px; }
+.calculator-fields--four { grid-template-columns: repeat(4, 1fr); }
 .calculator-fields label { display: grid; gap: 10px; padding: 18px; border: 1px solid var(--white-10); border-radius: 16px; background: var(--black-56); color: var(--white-68); font-size: 12px; }
 .calculator-fields label > span { display: flex; align-items: baseline; gap: 7px; color: var(--white-48); }
 .calculator-fields input { width: 100%; min-width: 0; padding: 0; border: 0; border-block-end: 1px solid var(--white-18); border-radius: 0; outline: 0; background: transparent; color: var(--white); font: 400 24px/1.2 var(--font); }
