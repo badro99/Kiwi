@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
-<meta name="color-scheme" content="light" />
+<meta name="color-scheme" content="light dark" />
 <meta name="theme-color" content="#F7F5F0" />
 <title>Kiwi Pro</title>
 <!-- Écran d'accueil natif (docs/roadmaps/KIWI_APP_PLAN.md §4, semaine 1) : oriente vers
@@ -11,56 +11,52 @@
      WebView, mémorise le dernier rôle, et porte la connexion marchande (POST /auth/login)
      que le gate HTML de kiwi-os.com assurait sur le web. tools/build-app-www.mjs injecte
      assets/api-base.js en tête au moment du build ; ne pas le référencer ici. -->
-<!-- Mêmes polices que les surfaces (en ligne seulement ; hors ligne, la pile système prend le relais). -->
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="native-shell.css" />
 </head>
 <body>
 <main class="shell" id="shell" hidden>
   <header class="shell-head">
     <div class="wordmark" aria-label="Kiwi Pro"><span class="wm-kiwi">Kiwi</span><span class="wm-pro">Pro</span></div>
-    <p class="shell-sub">Choisissez le rôle de cet appareil. Il s'en souviendra.</p>
+    <p class="shell-sub" data-native-i18n="shellSub">Choisissez le rôle de cet appareil. Il s'en souviendra.</p>
   </header>
 
   <section class="account" id="account" aria-live="polite">
     <div class="acct-row" id="acct-state" hidden>
       <span class="dot ok" aria-hidden="true"></span>
       <span class="acct-text" id="acct-text">Connecté</span>
-      <button type="button" class="link" id="logout">Se déconnecter</button>
+      <button type="button" class="link" id="logout" data-native-i18n="logout">Se déconnecter</button>
     </div>
     <form class="login" id="login" autocomplete="on" hidden>
-      <p class="login-title">Compte marchand</p>
-      <label class="field"><span>E-mail</span><input name="email" type="email" inputmode="email" autocomplete="username" required /></label>
-      <label class="field"><span>Mot de passe</span><input name="password" type="password" autocomplete="current-password" required minlength="10" /></label>
+      <p class="login-title" data-native-i18n="merchantAccount">Compte marchand</p>
+      <label class="field"><span data-native-i18n="email">E-mail</span><input name="email" type="email" inputmode="email" autocomplete="username" required /></label>
+      <label class="field"><span data-native-i18n="password">Mot de passe</span><input name="password" type="password" autocomplete="current-password" required minlength="10" /></label>
       <p class="err" id="login-err" role="alert" hidden></p>
-      <button type="submit" class="cta" id="login-btn">Se connecter</button>
-      <p class="hint">Caisse appairée ou compte équipe ? Pas besoin de compte marchand : choisissez directement le rôle ci-dessous.</p>
+      <button type="submit" class="cta" id="login-btn" data-native-i18n="login">Se connecter</button>
+      <p class="hint" data-native-i18n="loginHint">Caisse appairée ou compte équipe ? Pas besoin de compte marchand : choisissez directement le rôle ci-dessous.</p>
     </form>
-    <p class="acct-row muted" id="acct-unknown" hidden><span class="dot" aria-hidden="true"></span>Serveur injoignable · la caisse démarre quand même hors ligne.</p>
+    <p class="acct-row muted" id="acct-unknown" hidden><span class="dot" aria-hidden="true"></span><span data-native-i18n="serverOffline">Serveur injoignable. La caisse démarre quand même hors ligne.</span></p>
   </section>
 
-  <nav class="tiles" aria-label="Rôle de l'appareil">
+  <nav class="tiles" aria-label="Rôle de l'appareil" data-native-i18n-aria="roles">
     <button type="button" class="tile" data-role="caisse">
       <span class="ico" style="--ico:url(assets/icons/material/storefront.svg)" aria-hidden="true"></span>
-      <span class="tile-name">Caisse</span>
-      <span class="tile-sub">Encaissement, tickets, imprimante</span>
+      <span class="tile-name" data-native-i18n="caisse">Caisse</span>
+      <span class="tile-sub" data-native-i18n="caisseSub">Encaissement, tickets, imprimante</span>
     </button>
     <button type="button" class="tile" data-role="equipe">
       <span class="ico" style="--ico:url(assets/icons/material/room_service.svg)" aria-hidden="true"></span>
-      <span class="tile-name">KiwiÉquipe</span>
-      <span class="tile-sub">Salle, planning, pointage</span>
+      <span class="tile-name" data-native-i18n="team">KiwiÉquipe</span>
+      <span class="tile-sub" data-native-i18n="teamSub">Salle, planning, pointage</span>
     </button>
     <button type="button" class="tile" data-role="cuisine">
       <span class="ico" style="--ico:url(assets/icons/material/restaurant.svg)" aria-hidden="true"></span>
-      <span class="tile-name">Cuisine</span>
-      <span class="tile-sub">Écran de production (KDS)</span>
+      <span class="tile-name" data-native-i18n="kitchen">Cuisine</span>
+      <span class="tile-sub" data-native-i18n="kitchenSub">Écran de production (KDS)</span>
     </button>
     <button type="button" class="tile tile-soft" data-role="dashboard">
       <span class="ico" style="--ico:url(assets/icons/material/bar_chart.svg)" aria-hidden="true"></span>
-      <span class="tile-name">Tableau de bord</span>
-      <span class="tile-sub">Propriétaire · lecture et actions rapides</span>
+      <span class="tile-name" data-native-i18n="dashboard">Tableau de bord</span>
+      <span class="tile-sub" data-native-i18n="dashboardSub">Propriétaire, lecture et actions rapides</span>
     </button>
   </nav>
 

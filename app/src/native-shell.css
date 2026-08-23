@@ -3,6 +3,10 @@
  * --ink #0A0F0D. Type roman, jamais italique. Volontairement autonome : pas de
  * tokens.css ici — ses sélecteurs nus (section{padding:96px}) débordent sur
  * les surfaces d'app. */
+@font-face { font-family: "Inter Tight"; src: url("native-fonts/inter-tight-latin.woff2") format("woff2"); font-style: normal; font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "IBM Plex Sans Arabic"; src: url("native-fonts/ibm-plex-sans-arabic-400.woff2") format("woff2"); font-style: normal; font-weight: 400; font-display: swap; }
+@font-face { font-family: "IBM Plex Sans Arabic"; src: url("native-fonts/ibm-plex-sans-arabic-500.woff2") format("woff2"); font-style: normal; font-weight: 500; font-display: swap; }
+@font-face { font-family: "IBM Plex Sans Arabic"; src: url("native-fonts/ibm-plex-sans-arabic-600.woff2") format("woff2"); font-style: normal; font-weight: 600; font-display: swap; }
 :root {
   --atlas: #0B6E4F; --riad: #053B2C; --mint: #7DF2B0; --paper: #F7F5F0; --ink: #0A0F0D;
   --n-100: #ECE8DF; --n-200: #E2DDD2; --n-500: #5D6B63; --n-700: #2C3733;
@@ -14,13 +18,15 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; min-height: 100%; background: var(--paper); color: var(--ink); font: 400 16px/1.45 var(--sans); -webkit-text-size-adjust: 100%; -webkit-tap-highlight-color: transparent; }
 body { overscroll-behavior: none; }
+html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", sans-serif; }
+button, nav, header, footer, .tile, .account { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 [hidden] { display: none !important; }
 em, i { font-style: normal; }
 
 .shell {
   min-height: 100dvh;
   display: flex; flex-direction: column; gap: 22px;
-  padding: calc(var(--sat) + 28px) calc(var(--sar) + 22px) calc(var(--sab) + 18px) calc(var(--sal) + 22px);
+  padding: calc(var(--sat) + 28px) calc(var(--sar) + 22px) calc(var(--sab) + var(--kiwi-keyboard, 0px) + 18px) calc(var(--sal) + 22px);
   max-width: 760px; margin: 0 auto;
 }
 .shell-head { display: flex; flex-direction: column; gap: 6px; }
@@ -51,7 +57,7 @@ em, i { font-style: normal; }
 
 .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
 .tile {
-  appearance: none; text-align: left; cursor: pointer;
+  appearance: none; text-align: start; cursor: pointer;
   display: flex; flex-direction: column; gap: 8px; align-items: flex-start;
   min-height: 150px; padding: 18px 18px 16px;
   border: 1px solid var(--n-200); border-radius: 18px;
@@ -76,4 +82,12 @@ em, i { font-style: normal; }
 @media (min-width: 900px) {
   .tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .tile { min-height: 170px; }
+}
+@media (prefers-color-scheme: dark) {
+  :root { --paper: #0A0F0D; --ink: #F7F5F0; --n-100: #17201C; --n-200: #2C3733; --n-500: #A7B2AC; --n-700: #DCE3DE; }
+  /* En sombre, --paper devient l'encre : le mot-symbole et les champs prennent les jetons clairs */
+  .wordmark .wm-kiwi { color: var(--ink); }
+  .account, .tile { background: #111815; }
+  .field input { background: var(--n-100); border-color: var(--n-200); }
+  .wm-pro, .cta { color: #F7F5F0; }
 }

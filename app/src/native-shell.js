@@ -24,36 +24,65 @@
     dashboard: 'dashboard.html'
   };
   var KEY = 'kiwiAppRole';
+  var lang = String((navigator.languages && navigator.languages[0]) || navigator.language || 'fr').toLowerCase().split('-')[0];
+  if (lang !== 'ar' && lang !== 'en') lang = 'fr';
+  var COPY = {
+    fr: { shellSub:"Choisissez le rôle de cet appareil. Il s'en souviendra.",logout:'Se déconnecter',merchantAccount:'Compte marchand',email:'E-mail',password:'Mot de passe',login:'Se connecter',loginHint:'Caisse appairée ou compte équipe ? Pas besoin de compte marchand : choisissez directement le rôle ci-dessous.',serverOffline:'Serveur injoignable. La caisse démarre quand même hors ligne.',roles:"Rôle de l'appareil",caisse:'Caisse',caisseSub:'Encaissement, tickets, imprimante',team:'KiwiÉquipe',teamSub:'Salle, planning, pointage',kitchen:'Cuisine',kitchenSub:'Écran de production (KDS)',dashboard:'Tableau de bord',dashboardSub:'Propriétaire, lecture et actions rapides',connected:'Connecté',merchant:'Compte marchand',badCreds:'E-mail ou mot de passe incorrect.',badJson:'Requête invalide.',notConfigured:'Service momentanément indisponible.',tooMany:'Trop de tentatives. Réessayez dans quelques minutes.',network:"Réseau injoignable. Vérifiez le Wi-Fi de l'appareil.",unknown:'Une erreur est survenue. Réessayez.'},
+    en: { shellSub:'Choose the role of this device. Kiwi will remember it.',logout:'Sign out',merchantAccount:'Merchant account',email:'Email',password:'Password',login:'Sign in',loginHint:'Paired till or team account? No merchant account is needed. Choose the role below.',serverOffline:'Server unavailable. The till can still start offline.',roles:'Device role',caisse:'Till',caisseSub:'Payments, receipts, printer',team:'Kiwi Team',teamSub:'Floor, schedule, attendance',kitchen:'Kitchen',kitchenSub:'Production screen (KDS)',dashboard:'Dashboard',dashboardSub:'Owner view and quick actions',connected:'Connected',merchant:'Merchant account',badCreds:'Incorrect email or password.',badJson:'Invalid request.',notConfigured:'Service temporarily unavailable.',tooMany:'Too many attempts. Try again in a few minutes.',network:"Network unavailable. Check the device's Wi-Fi.",unknown:'Something went wrong. Try again.'},
+    ar: { shellSub:'اختر دور هذا الجهاز. سيحفظ التطبيق اختيارك.',logout:'تسجيل الخروج',merchantAccount:'حساب التاجر',email:'البريد الإلكتروني',password:'كلمة المرور',login:'تسجيل الدخول',loginHint:'صندوق مقترن أو حساب فريق؟ لا تحتاج إلى حساب تاجر. اختر الدور أدناه.',serverOffline:'الخادم غير متاح. يمكن للصندوق العمل دون اتصال.',roles:'دور الجهاز',caisse:'الصندوق',caisseSub:'الدفع والإيصالات والطابعة',team:'فريق Kiwi',teamSub:'الصالة والتخطيط والحضور',kitchen:'المطبخ',kitchenSub:'شاشة الإنتاج',dashboard:'لوحة التحكم',dashboardSub:'عرض المالك والإجراءات السريعة',connected:'متصل',merchant:'حساب التاجر',badCreds:'البريد الإلكتروني أو كلمة المرور غير صحيحة.',badJson:'الطلب غير صالح.',notConfigured:'الخدمة غير متاحة مؤقتا.',tooMany:'محاولات كثيرة. أعد المحاولة بعد بضع دقائق.',network:'الشبكة غير متاحة. تحقق من اتصال الجهاز بالواي فاي.',unknown:'حدث خطأ. أعد المحاولة.'}
+  };
+  function tr(key) { return (COPY[lang] && COPY[lang][key]) || COPY.fr[key] || key; }
+  document.documentElement.lang = lang;
+  document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
   var params = new URLSearchParams(location.search);
   var wantChoice = params.has('choose') || params.has('home');
 
   function remembered() {
     try { var r = localStorage.getItem(KEY); return ROLES[r] ? r : ''; } catch (_) { return ''; }
   }
+  function securePlugin() {
+    try { return window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.KiwiPrinterSocket; } catch (_) { return null; }
+  }
+  function rememberedSecure() {
+    var local = remembered(), plugin = securePlugin();
+    if (!plugin || typeof plugin.secureGet !== 'function') return Promise.resolve(local);
+    return Promise.resolve(plugin.secureGet({ key: 'app-role' })).then(function (result) {
+      var role = result && ROLES[result.value] ? result.value : '';
+      if (role) {
+        try { localStorage.setItem(KEY, role); } catch (_) {}
+        return role;
+      }
+      if (local && typeof plugin.secureSet === 'function') plugin.secureSet({ key: 'app-role', value: local }).catch(function () {});
+      return local;
+    }).catch(function () { return local; });
+  }
   function remember(role) {
     try { if (ROLES[role]) localStorage.setItem(KEY, role); } catch (_) {}
+    var plugin = securePlugin();
+    if (ROLES[role] && plugin && typeof plugin.secureSet === 'function') plugin.secureSet({ key: 'app-role', value: role }).catch(function () {});
   }
   function go(role) {
     remember(role);
     location.href = ROLES[role];
   }
 
-  // Lancement : un appareil qui connaît son rôle y va tout de suite.
+  // Lancement : la Keychain gagne sur le stockage Web, qui peut être purgé par iOS.
   var last = remembered();
-  if (last && !wantChoice) { location.replace(ROLES[last]); return; }
 
   var $ = function (sel) { return document.querySelector(sel); };
   var shell = $('#shell');
   var acctState = $('#acct-state'), acctText = $('#acct-text'), acctUnknown = $('#acct-unknown');
   var login = $('#login'), loginErr = $('#login-err'), loginBtn = $('#login-btn');
+  Array.prototype.forEach.call(document.querySelectorAll('[data-native-i18n]'), function (node) { node.textContent = tr(node.getAttribute('data-native-i18n')); });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-native-i18n-aria]'), function (node) { node.setAttribute('aria-label', tr(node.getAttribute('data-native-i18n-aria'))); });
 
   function showLogin(err) {
     login.hidden = false; acctState.hidden = true; acctUnknown.hidden = true;
     if (err) { loginErr.textContent = err; loginErr.hidden = false; } else { loginErr.hidden = true; }
   }
   function showAccount(me) {
-    var label = (me && (me.business || me.name || me.email)) || 'Compte marchand';
-    acctText.textContent = 'Connecté · ' + label;
+    var label = (me && (me.business || me.name || me.email)) || tr('merchant');
+    acctText.textContent = tr('connected') + ' · ' + label;
     acctState.hidden = false; login.hidden = true; acctUnknown.hidden = true;
   }
   function showUnknown() {
@@ -72,11 +101,11 @@
   }
 
   var ERRORS = {
-    'bad-creds': 'E-mail ou mot de passe incorrect.',
-    'bad-json': 'Requête invalide.',
-    'not-configured': 'Service momentanément indisponible.',
-    'too-many': 'Trop de tentatives. Réessayez dans quelques minutes.',
-    network: 'Réseau injoignable. Vérifiez le Wi-Fi de l’appareil.'
+    'bad-creds': tr('badCreds'),
+    'bad-json': tr('badJson'),
+    'not-configured': tr('notConfigured'),
+    'too-many': tr('tooMany'),
+    network: tr('network')
   };
 
   login.addEventListener('submit', function (e) {
@@ -92,7 +121,7 @@
       return r.json().catch(function () { return {}; }).then(function (b) {
         if (r.ok && b && b.ok) { login.password.value = ''; return refreshAccount(); }
         var code = (b && b.error) || (r.status === 429 ? 'too-many' : '');
-        showLogin(ERRORS[code] || 'Une erreur est survenue. Réessayez.');
+        showLogin(ERRORS[code] || tr('unknown'));
       });
     }).catch(function () { showLogin(ERRORS.network); })
       .then(function () { loginBtn.disabled = false; });
@@ -119,6 +148,13 @@
     $('#bundle').textContent = meta && meta.content ? 'bundle ' + meta.content.slice(0, 12) : 'bundle local';
   } catch (_) {}
 
-  shell.hidden = false;
-  refreshAccount();
+  rememberedSecure().then(function (role) {
+    last = role;
+    if (last && !wantChoice) { location.replace(ROLES[last]); return; }
+    Array.prototype.forEach.call(tiles, function (t) {
+      t.classList.toggle('remembered', t.getAttribute('data-role') === last);
+    });
+    shell.hidden = false;
+    refreshAccount();
+  });
 })();

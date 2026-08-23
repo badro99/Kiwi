@@ -51,8 +51,17 @@ export interface ScanResult {
   hosts: ScanHost[];
 }
 
+export interface SecureKeyOptions { key: string; }
+export interface SecureValueOptions extends SecureKeyOptions { value: string; }
+export interface SecureGetResult { value: string | null; }
+export interface DeviceIdentityResult { id: string; }
+
 export interface KiwiPrinterSocketPlugin {
   send(options: SendOptions): Promise<SendResult | PrinterSocketError>;
   probe(options: ProbeOptions): Promise<ProbeResult | PrinterSocketError>;
   scan(options?: ScanOptions): Promise<ScanResult | PrinterSocketError>;
+  secureGet(options: SecureKeyOptions): Promise<SecureGetResult>;
+  secureSet(options: SecureValueOptions): Promise<void>;
+  secureRemove(options: SecureKeyOptions): Promise<void>;
+  deviceIdentity(): Promise<DeviceIdentityResult>;
 }

@@ -1,6 +1,7 @@
 import Capacitor
 import Foundation
 import Network
+import Security
 
 #if canImport(Darwin)
 import Darwin
@@ -85,7 +86,11 @@ public class KiwiPrinterSocketPlugin: CAPPlugin, CAPBridgedPlugin {
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "send", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "probe", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "scan", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "scan", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "secureGet", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "secureSet", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "secureRemove", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "deviceIdentity", returnType: CAPPluginReturnPromise)
     ]
 
     @objc func send(_ call: CAPPluginCall) {
@@ -120,6 +125,59 @@ public class KiwiPrinterSocketPlugin: CAPPlugin, CAPBridgedPlugin {
         scan(prefix: prefix, port: UInt16(portValue), timeoutMs: timeoutMs) { hosts in
             call.resolve(["ok": true, "hosts": hosts])
         }
+    }
+
+    @objc func secureGet(_ call: CAPPluginCall) {
+        guard let key = secureKey(call) else { resolveError(call, code: "bad-args", message: "Clé sécurisée invalide."); return }
+        call.resolve(["value": keychainRead(key) ?? NSNull()])
+    }
+
+    @objc func secureSet(_ call: CAPPluginCall) {
+        guard let key = secureKey(call), let value = call.getString("value") else { resolveError(call, code: "bad-args", message: "Valeur sécurisée invalide."); return }
+        guard keychainWrite(key, value: value) else { resolveError(call, code: "secure-store", message: "Stockage sécurisé indisponible."); return }
+        call.resolve()
+    }
+
+    @objc func secureRemove(_ call: CAPPluginCall) {
+        guard let key = secureKey(call) else { resolveError(call, code: "bad-args", message: "Clé sécurisée invalide."); return }
+        SecItemDelete(keychainQuery(key) as CFDictionary)
+        call.resolve()
+    }
+
+    @objc func deviceIdentity(_ call: CAPPluginCall) {
+        let key = "device-id"
+        if let current = keychainRead(key), current.hasPrefix("kid_") { call.resolve(["id": current]); return }
+        let value = "kid_" + UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased()
+        guard keychainWrite(key, value: value) else { resolveError(call, code: "secure-store", message: "Identité appareil indisponible."); return }
+        call.resolve(["id": value])
+    }
+
+    private func secureKey(_ call: CAPPluginCall) -> String? {
+        guard let key = call.getString("key"), key.range(of: "^[a-z0-9-]{1,64}$", options: .regularExpression) != nil else { return nil }
+        return key
+    }
+
+    private func keychainQuery(_ key: String) -> [String: Any] {
+        [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: "com.kiwios.pro.secure", kSecAttrAccount as String: key]
+    }
+
+    private func keychainRead(_ key: String) -> String? {
+        var query = keychainQuery(key)
+        query[kSecReturnData as String] = true
+        query[kSecMatchLimit as String] = kSecMatchLimitOne
+        var result: CFTypeRef?
+        guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess, let data = result as? Data else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+
+    private func keychainWrite(_ key: String, value: String) -> Bool {
+        guard let data = value.data(using: .utf8) else { return false }
+        let query = keychainQuery(key)
+        let attrs = [kSecValueData as String: data, kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly] as [String: Any]
+        let status = SecItemUpdate(query as CFDictionary, attrs as CFDictionary)
+        if status == errSecSuccess { return true }
+        if status != errSecItemNotFound { return false }
+        return SecItemAdd(query.merging(attrs) { _, new in new } as CFDictionary, nil) == errSecSuccess
     }
 
     private func endpointArgs(_ call: CAPPluginCall) -> (host: String, port: UInt16, timeoutMs: Int)? {

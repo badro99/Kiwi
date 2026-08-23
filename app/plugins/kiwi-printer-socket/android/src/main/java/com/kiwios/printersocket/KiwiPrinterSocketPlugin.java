@@ -1,8 +1,11 @@
 package com.kiwios.printersocket;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.net.wifi.WifiManager;
 import android.os.SystemClock;
+import android.security.keystore.KeyGenParameterSpec;
+import android.security.keystore.KeyProperties;
 import android.util.Base64;
 
 import com.getcapacitor.JSArray;
@@ -14,22 +17,33 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.NoRouteToHostException;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
+import java.security.KeyStore;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.UUID;
+
+import javax.crypto.Cipher;
+import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.GCMParameterSpec;
 
 @CapacitorPlugin(name = "KiwiPrinterSocket")
 public class KiwiPrinterSocketPlugin extends Plugin {
     private static final ExecutorService SOCKETS = Executors.newFixedThreadPool(32);
+    private static final String SECURE_PREFS = "kiwi_secure_v1";
+    private static final String KEY_ALIAS = "com.kiwios.pro.secure";
 
     @PluginMethod
     public void send(PluginCall call) {
@@ -120,6 +134,86 @@ public class KiwiPrinterSocketPlugin extends Plugin {
                 }
             });
         }
+    }
+
+    @PluginMethod
+    public void secureGet(PluginCall call) {
+        String key = secureKey(call);
+        if (key == null) { resolveError(call, "bad-args", "Clé sécurisée invalide."); return; }
+        JSObject result = new JSObject();
+        try { result.put("value", decrypt(securePrefs().getString(key, null))); call.resolve(result); }
+        catch (Exception error) { securePrefs().edit().remove(key).apply(); call.resolve(result); }
+    }
+
+    @PluginMethod
+    public void secureSet(PluginCall call) {
+        String key = secureKey(call), value = call.getString("value");
+        if (key == null || value == null) { resolveError(call, "bad-args", "Valeur sécurisée invalide."); return; }
+        try { securePrefs().edit().putString(key, encrypt(value)).apply(); call.resolve(); }
+        catch (Exception error) { resolveError(call, "secure-store", "Stockage sécurisé indisponible."); }
+    }
+
+    @PluginMethod
+    public void secureRemove(PluginCall call) {
+        String key = secureKey(call);
+        if (key == null) { resolveError(call, "bad-args", "Clé sécurisée invalide."); return; }
+        securePrefs().edit().remove(key).apply();
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void deviceIdentity(PluginCall call) {
+        try {
+            String value = decrypt(securePrefs().getString("device-id", null));
+            if (value == null || !value.startsWith("kid_")) {
+                value = "kid_" + UUID.randomUUID().toString().replace("-", "").toLowerCase();
+                securePrefs().edit().putString("device-id", encrypt(value)).commit();
+            }
+            JSObject result = new JSObject();
+            result.put("id", value);
+            call.resolve(result);
+        } catch (Exception error) { resolveError(call, "secure-store", "Identité appareil indisponible."); }
+    }
+
+    private String secureKey(PluginCall call) {
+        String key = call.getString("key");
+        return key != null && key.matches("^[a-z0-9-]{1,64}$") ? key : null;
+    }
+
+    private SharedPreferences securePrefs() {
+        return getContext().getSharedPreferences(SECURE_PREFS, Context.MODE_PRIVATE);
+    }
+
+    private SecretKey encryptionKey() throws Exception {
+        KeyStore store = KeyStore.getInstance("AndroidKeyStore");
+        store.load(null);
+        if (store.containsAlias(KEY_ALIAS)) return ((KeyStore.SecretKeyEntry) store.getEntry(KEY_ALIAS, null)).getSecretKey();
+        KeyGenerator generator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore");
+        generator.init(new KeyGenParameterSpec.Builder(KEY_ALIAS, KeyProperties.PURPOSE_ENCRYPT | KeyProperties.PURPOSE_DECRYPT)
+            .setBlockModes(KeyProperties.BLOCK_MODE_GCM).setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE).build());
+        return generator.generateKey();
+    }
+
+    private String encrypt(String value) throws Exception {
+        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+        cipher.init(Cipher.ENCRYPT_MODE, encryptionKey(), new SecureRandom());
+        byte[] iv = cipher.getIV(), encrypted = cipher.doFinal(value.getBytes(StandardCharsets.UTF_8));
+        byte[] joined = new byte[iv.length + encrypted.length];
+        System.arraycopy(iv, 0, joined, 0, iv.length);
+        System.arraycopy(encrypted, 0, joined, iv.length, encrypted.length);
+        return Base64.encodeToString(joined, Base64.NO_WRAP);
+    }
+
+    private String decrypt(String encoded) throws Exception {
+        if (encoded == null) return null;
+        byte[] joined = Base64.decode(encoded, Base64.NO_WRAP);
+        if (joined.length < 29) throw new IllegalArgumentException("ciphertext");
+        byte[] iv = new byte[12], encrypted = new byte[joined.length - 12];
+        System.arraycopy(joined, 0, iv, 0, 12);
+        System.arraycopy(joined, 12, encrypted, 0, encrypted.length);
+        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+        cipher.init(Cipher.DECRYPT_MODE, encryptionKey(), new GCMParameterSpec(128, iv));
+        return new String(cipher.doFinal(encrypted), StandardCharsets.UTF_8);
     }
 
     private Socket connect(Endpoint endpoint) throws IOException {

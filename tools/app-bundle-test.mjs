@@ -25,7 +25,7 @@ import os from 'node:os';
 import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
-import { build, PAGES, API_BASE_TAG, transformPage, localRefs, ROOT } from './build-app-www.mjs';
+import { build, PAGES, API_BASE_TAG, NATIVE_RUNTIME_TAGS, transformPage, localRefs, ROOT } from './build-app-www.mjs';
 
 let failures = 0;
 const ok = (m) => console.log(`  ✓ ${m}`);
@@ -50,6 +50,8 @@ if (first) {
   assert(second && second.manifest.bundle === first.manifest.bundle, 'deux builds → même empreinte (déterministe)');
   assert(first.manifest.files.some((f) => f.path === 'assets/api-base.js'), 'assets/api-base.js est dans le bundle');
   assert(first.manifest.files.some((f) => f.path === 'index.html'), 'la coquille native (index.html) est dans le bundle');
+  assert(first.manifest.files.some((f) => f.path === 'native-runtime.js'), 'le runtime natif partagé est dans le bundle');
+  assert(first.manifest.files.filter((f) => f.path.startsWith('native-fonts/')).length === 4, 'Inter Tight et IBM Plex Sans Arabic sont embarquées localement');
   assert(!first.manifest.files.some((f) => / \d+\.[a-z]+$/i.test(f.path)), 'aucune copie de conflit iCloud « fichier 2.js » dans le bundle');
   assert(!first.manifest.files.some((f) => f.path.startsWith('assets/media/')), 'assets/media/ (marketing) n’est pas embarqué');
 
@@ -57,7 +59,9 @@ if (first) {
     const html = fs.readFileSync(path.join(first.out, page), 'utf8');
     const firstScript = (html.match(/<script\b[^>]*>(?:<\/script>)?/i) || [''])[0];
     assert(firstScript === API_BASE_TAG, `${page} : api-base.js est le PREMIER <script>`);
+    assert(html.includes(NATIVE_RUNTIME_TAGS), `${page} : charge le runtime natif partagé`);
     assert(!/rel=["']manifest["']/i.test(html), `${page} : aucun <link rel="manifest">`);
+    assert(!/fonts\.(?:googleapis|gstatic)\.com/i.test(html), `${page} : aucune police réseau`);
   }
   const shell = fs.readFileSync(path.join(first.out, 'index.html'), 'utf8');
   assert(/<meta name="kiwi-bundle" content="[0-9a-f]{64}"/.test(shell), 'index.html porte l’empreinte du bundle');

@@ -43,6 +43,14 @@ export const PAGES = ['kiwi-caisse.html', 'kiwi-serveur.html', 'kiwi-cuisine.htm
 /* La page d'accueil native et ses deux fichiers (app/src/ → racine du bundle). */
 export const SHELL = ['index.html', 'native-shell.js', 'native-shell.css'];
 export const API_BASE_TAG = '<script src="assets/api-base.js"></script>';
+export const NATIVE_RUNTIME_TAGS = '<link rel="stylesheet" href="native-runtime.css" />\n<script src="native-runtime.js" defer></script>';
+const NATIVE_RUNTIME = ['native-runtime.js', 'native-runtime.css'];
+const NATIVE_FONTS = {
+  'native-fonts/inter-tight-latin.woff2': 'node_modules/@fontsource-variable/inter-tight/files/inter-tight-latin-wght-normal.woff2',
+  'native-fonts/ibm-plex-sans-arabic-400.woff2': 'node_modules/@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-arabic-400-normal.woff2',
+  'native-fonts/ibm-plex-sans-arabic-500.woff2': 'node_modules/@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-arabic-500-normal.woff2',
+  'native-fonts/ibm-plex-sans-arabic-600.woff2': 'node_modules/@fontsource/ibm-plex-sans-arabic/files/ibm-plex-sans-arabic-arabic-600-normal.woff2',
+};
 
 /* Ce qui ne part pas dans le bundle : le site vitrine (assets/landing/, sauf
  * l'icône d'app et les icônes de navigation qu'une surface référence), les
@@ -81,6 +89,7 @@ function safeOutDir(out) {
 /* ── transformation d'une page ──────────────────────────────────────────── */
 const HEAD_RE = /<head(\s[^>]*)?>/i;
 const MANIFEST_RE = /[ \t]*<link\b[^>]*\brel=["']manifest["'][^>]*>[ \t]*\r?\n?/gi;
+const NETWORK_FONT_RE = /[ \t]*<link\b[^>]*(?:fonts\.googleapis\.com|fonts\.gstatic\.com)[^>]*>[ \t]*\r?\n?/gi;
 const REF_RE = /<(script|link|img|source|video|audio|track|use)\b[^>]*?\s(?:src|href|poster)=["']([^"']+)["']/gi;
 
 function isLocalRef(u) {
@@ -90,12 +99,13 @@ function isLocalRef(u) {
 export function transformPage(html, opts) {
   const o = opts || {};
   if (!HEAD_RE.test(html)) throw new Error('page sans <head>');
-  let out = html.replace(MANIFEST_RE, '');
+  let out = html.replace(MANIFEST_RE, '').replace(NETWORK_FONT_RE, '');
   const inject = []
     .concat(o.apiBase ? [`<script>window.KIWI_API_BASE=${JSON.stringify(String(o.apiBase))};</script>`] : [])
     .concat(o.bundle ? [`<meta name="kiwi-bundle" content="${o.bundle}" />`] : [])
     .concat([API_BASE_TAG]);
   out = out.replace(HEAD_RE, (m) => `${m}\n${inject.join('\n')}`);
+  out = out.replace(/<\/head>/i, `${NATIVE_RUNTIME_TAGS}\n</head>`);
   return out;
 }
 
@@ -136,6 +146,21 @@ export function build(options) {
   }
   if (!assetFiles.includes('assets/api-base.js')) errors.push('assets/api-base.js manque — le bundle ne peut pas joindre l\'API');
 
+  // Runtime et fontes strictement natifs : aucune requête Google Fonts dans l'app.
+  const shellDir = path.join(ROOT, 'app', 'src');
+  for (const name of NATIVE_RUNTIME) {
+    const src = path.join(shellDir, name);
+    if (!fs.existsSync(src)) { errors.push(`app/src/${name} introuvable`); continue; }
+    fs.copyFileSync(src, path.join(out, name));
+  }
+  for (const [target, source] of Object.entries(NATIVE_FONTS)) {
+    const src = path.join(ROOT, 'app', source);
+    const dst = path.join(out, target);
+    if (!fs.existsSync(src)) { errors.push(`${source} introuvable ; lance npm install dans app/`); continue; }
+    fs.mkdirSync(path.dirname(dst), { recursive: true });
+    fs.copyFileSync(src, dst);
+  }
+
   // 2. les pages
   const written = [];
   for (const page of PAGES) {
@@ -163,7 +188,6 @@ export function build(options) {
   const coreHash = sha256(core.map((f) => `${f.path}\t${f.sha256}`).join('\n'));
 
   // 5. la coquille native (app/src/) à la racine du bundle
-  const shellDir = path.join(ROOT, 'app', 'src');
   for (const name of SHELL) {
     const src = path.join(shellDir, name);
     if (!fs.existsSync(src)) { errors.push(`app/src/${name} introuvable`); continue; }

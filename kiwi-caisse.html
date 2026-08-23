@@ -9222,7 +9222,12 @@
       return o ? (l.name + ' (' + o + ')') : l.name;
     }
 
+    function nativeHapticLight() {
+      try { window.dispatchEvent(new CustomEvent('kiwi:native-haptic', { detail: { kind: 'light' } })); } catch (_) {}
+    }
+
     function pushCartLine(item, opts) {
+      nativeHapticLight();
       const sig = optSig(opts);
       const extra = (opts || []).reduce((s, x) => s + (+x.p || 0), 0);
       /* Une ligne à options ne se confond qu'avec une ligne AUX MÊMES options :
@@ -9331,7 +9336,7 @@
       const item = standaloneMenuItem(itemId);
       if (!item) return;
       if (item.formula && Array.isArray(item.formula.slots) && item.formula.slots.length) {
-        openCaisseFormula(item, (parent, parts) => { cart.push(parent, ...parts); renderMenu(); renderCart(); });
+        openCaisseFormula(item, (parent, parts) => { cart.push(parent, ...parts); nativeHapticLight(); renderMenu(); renderCart(); });
         return;
       }
       const groups = itemOptGroups(item);
@@ -9372,6 +9377,7 @@
     function addOpenLine(amount) {
       const amt = money(amount);
       if (!(amt > 0)) return;
+      nativeHapticLight();
       if (mode === 'order' && selectedId) {
         (tableOrders[selectedId] = tableOrders[selectedId] || []).push({
           uid: newLineUid(), id: 'libre', name: 'Article libre', price: amt, qty: 1, note: ''
@@ -10258,6 +10264,7 @@
         ? (vrapEditingNum != null ? 'À emporter #' + vrapEditingNum : 'À emporter')
         : settledOrderLabel(selectedId);
       const lines = currentSaleLines();
+      nativeHapticLight();
       if (!splitPayCallback) recordSale(tenderBase, method, saleLabel, tenderTip, lines,
         mode !== 'vrap' ? selectedId : '');
       if (splitPayCallback) {
@@ -11026,6 +11033,7 @@
 
     /* ---- table order management ---- */
     function pushTableOrderLine(tableId, item, opts) {
+      nativeHapticLight();
       if (!tableOrders[tableId]) tableOrders[tableId] = [];
       // First item taken → order started, table is now being served (eating)
       if (tables[tableId] && tables[tableId].status === 'a-commander') {
@@ -11059,7 +11067,7 @@
       if (!item) return;
       const groups = itemOptGroups(item);
       if (item.formula && Array.isArray(item.formula.slots) && item.formula.slots.length) {
-        openCaisseFormula(item, (parent, parts) => { (tableOrders[tableId] = tableOrders[tableId] || []).push(parent, ...parts); renderMenu(); renderOrderPanel(tableId); });
+        openCaisseFormula(item, (parent, parts) => { (tableOrders[tableId] = tableOrders[tableId] || []).push(parent, ...parts); nativeHapticLight(); renderMenu(); renderOrderPanel(tableId); });
         return;
       }
       if (groups.length) {
