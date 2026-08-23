@@ -30,7 +30,9 @@ l'avance, pour que le jour où le compte Apple est payé il n'y ait plus qu'à c
 
 ## 1. Le jour du paiement · à faire par le propriétaire, dans l'ordre
 
-**Décision du 2026-08-23 : inscription *Individuel* d'abord.** Aucune société n'est
+**Décision du 2026-08-23 : inscription *Individuel* d'abord, au nom du partenaire** (Apple
+vérifie l'identité avec une pièce à photo ; brief en anglais pour lui :
+`docs/ops/APP_STORE_PARTNER_BRIEF.md`). Aucune société n'est
 encore immatriculée, donc ni D-U-N-S ni inscription *Organisation* possibles. Les deux
 comptes s'ouvrent au nom du propriétaire ; l'app sera **transférée** au compte de la
 société une fois celle-ci créée (App Store Connect → App → Transfer App ; Play Console →
