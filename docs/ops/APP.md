@@ -125,12 +125,78 @@ sonde le port choisi sur le sous-réseau Wi-Fi et remplit l'adresse IP d'un touc
 
 ## 8. Signer, TestFlight, release, rollback
 
-*À écrire en semaine 4 (bêta interne), quand P1 (Apple Developer Program, organisation,
-D-U-N-S) et P2 (Play Console) sont acquis. D'ici là : builds de développement sur
-l'iPad du bureau uniquement.* Rappels déjà tranchés : aucun achat in-app, pas de prix
-d'abonnement dans l'app (règle 3.1.1) ; `ITSAppUsesNonExemptEncryption = NO` ; clés APNs
-/ FCM et certificats **hors dépôt** (`app/.gitignore` couvre `*.p8`, `*.p12`,
-`*.mobileprovision`, `*.keystore`, `google-services.json`, `GoogleService-Info.plist`).
+### Préconditions et signature
+
+Avant le premier envoi, le propriétaire confirme l'organisation Apple, le D-U-N-S et
+l'identifiant irréversible `com.kiwios.pro`. Le Team ID ne doit apparaître ni dans le
+code ni à plusieurs endroits dans Xcode. Il est fourni comme un seul build setting :
+
+```bash
+export KIWI_DEVELOPMENT_TEAM=XXXXXXXXXX
+cd app
+npm ci
+npm run build
+npx cap sync ios
+xcodebuild -project ios/App/App.xcodeproj -scheme App \
+  -configuration Release -destination 'generic/platform=iOS' \
+  KIWI_DEVELOPMENT_TEAM="$KIWI_DEVELOPMENT_TEAM" archive
+```
+
+Dans Xcode, utiliser la cible **App**, la même équipe d'organisation et la signature
+automatique. Ne jamais commiter de certificat, profil, clé APNs/FCM ou keystore.
+`ITSAppUsesNonExemptEncryption = NO` est dans `Info.plist`; `PrivacyInfo.xcprivacy`
+déclare les diagnostics d'erreur, UserDefaults et les métadonnées du registre local.
+
+### TestFlight interne
+
+1. Incrémenter `MARKETING_VERSION` et `CURRENT_PROJECT_VERSION` avant l'archive.
+2. Product > Archive, puis Distribute App > App Store Connect > Upload.
+3. Dans App Store Connect, remplir App Privacy selon le manifest et confirmer l'absence
+   de tracking, d'achat in-app et de prix d'abonnement dans l'app.
+4. Affecter d'abord le build au groupe interne Kiwi. Ne pas ouvrir de groupe externe
+   avant validation réelle sur l'iPad du comptoir.
+5. Conserver le numéro de build, le hash Git et l'empreinte du bundle dans la fiche de
+   test. Une validation simulateur seule ne vaut jamais acceptation terrain.
+
+### Matrice d'acceptation terrain
+
+- Connexion propriétaire, appairage Caisse et Cuisine, changement d'employé par code.
+- Français, anglais et arabe, clair et sombre, iPhone et iPad, clavier ouvert et fermé.
+- Vente hors ligne, retour réseau, fermeture forcée et reprise sans perte du ticket.
+- POS-8370 : réponse sur l'IP actuelle, ticket cuisine et reçu depuis la caisse.
+- Redémarrage du routeur : probe de l'ancienne IP, recherche seulement file inactive,
+  mise à jour automatique uniquement si une seule imprimante répond.
+- Imprimante éteinte : backlog visible, reprise sans doublon, réimpression volontaire
+  numérotée, export de diagnostic sans contenu du reçu.
+- Deux iPad : un seul hub actif, expiration du lease et reprise visible par l'autre.
+- Refus Réseau local : explication Réglages, aucun scan silencieux.
+- Suppression du WebView : rôle, appairage et identité restaurés depuis le stockage natif.
+- Erreur JS et fin anormale en session active : événement redacted reçu dans `/api/error`.
+- Flux live WebSocket/EventSource mesuré avec le cookie natif. Ce point reste bloquant
+  tant qu'il n'a pas été prouvé sur appareil.
+
+### Android
+
+Android exige JDK 17 et `ANDROID_HOME`. Le manifest v1 demande réseau, caméra et
+notifications; il ne demande pas Bluetooth. Après `npx cap sync android` :
+
+```bash
+cd app/android
+./gradlew assembleDebug
+./gradlew bundleRelease
+```
+
+La signature release vient de variables CI ou d'un fichier local ignoré. Aucun
+`*.keystore` ni `google-services.json` ne doit entrer dans Git.
+
+### Rollback
+
+Un bundle natif ne suit pas un rollback Pages. En incident, retirer le build du groupe
+TestFlight, réactiver le dernier build accepté pour les testeurs et publier un nouveau
+numéro de build; ne jamais tenter de remplacer un binaire déjà distribué. Pour une panne
+d'impression, conserver les jobs, désactiver la découverte automatique et utiliser
+l'ancien transport configuré. Noter l'heure, le merchant, le device id, le hash Git et
+l'export diagnostic, puis prévenir le comptoir avant toute action distante.
 
 ## 9. État au 2026-08-22 (semaine 1)
 

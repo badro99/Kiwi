@@ -908,6 +908,7 @@ section('Whole-project regressions');
        se construit, est déterministe, charge api-base.js en premier, et la
        porte accepte les origines de l'app sur /api et /auth seulement. */
     'app-bundle-test.mjs',
+    'app-release-test.mjs',
     'security-regression-test.js',
     'sold-insights-test.js',
     'table-refresh-test.js',

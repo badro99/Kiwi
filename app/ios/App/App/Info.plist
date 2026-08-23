@@ -26,8 +26,6 @@
 	<true/>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
-	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>Kiwi se connecte à votre imprimante thermique Bluetooth pour imprimer vos tickets.</string>
 	<key>NSBonjourServices</key>
 	<array>
 		<string>_printer._tcp</string>

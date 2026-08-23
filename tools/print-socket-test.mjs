@@ -39,12 +39,13 @@ ok(/newFixedThreadPool\(32\)/.test(java) && /new Socket\(\)/.test(java), 'Androi
 const plist = read('app/ios/App/App/Info.plist');
 ok(/NSLocalNetworkUsageDescription[\s\S]*Kiwi envoie vos tickets à l'imprimante thermique de votre réseau local\./.test(plist), 'Info.plist explique précisément le réseau local en français');
 ok(/NSBonjourServices[\s\S]*_printer\._tcp[\s\S]*_pdl-datastream\._tcp[\s\S]*_ipp\._tcp/.test(plist), 'Info.plist déclare les trois services Bonjour');
-ok(/NSBluetoothAlwaysUsageDescription[\s\S]*imprimante thermique Bluetooth/.test(plist), 'Info.plist explique précisément le Bluetooth en français');
+ok(!plist.includes('NSBluetoothAlwaysUsageDescription'), 'iOS v1 ne demande pas Bluetooth');
 
 const manifest = read('app/android/app/src/main/AndroidManifest.xml');
-for (const permission of ['INTERNET', 'ACCESS_WIFI_STATE', 'ACCESS_NETWORK_STATE', 'BLUETOOTH_CONNECT', 'BLUETOOTH_SCAN']) {
+for (const permission of ['INTERNET', 'ACCESS_WIFI_STATE', 'ACCESS_NETWORK_STATE', 'CAMERA', 'POST_NOTIFICATIONS']) {
   ok(manifest.includes('android.permission.' + permission), 'Android déclare ' + permission);
 }
+ok(!manifest.includes('android.permission.BLUETOOTH'), 'Android v1 ne demande pas Bluetooth');
 
 const pkg = JSON.parse(read('app/package.json'));
 ok(pkg.dependencies['kiwi-printer-socket'] === 'file:plugins/kiwi-printer-socket', 'le plugin local est une dépendance de l’app');
