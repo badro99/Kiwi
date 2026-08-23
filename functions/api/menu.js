@@ -28,6 +28,7 @@
 
 import { json, readSession, readCookie, SESS_COOKIE, slugMerchant, isOperator } from '../auth/_lib.js';
 import { storeSuspended, storeSubscriptionPending } from './_private.js';
+import { CORE, MENU_LANGS, normalizeMenuLangs } from './_menu-langs.js';
 
 const str = (v, n) => String(v == null ? '' : v).slice(0, n);
 const OPTION_EMOJIS = new Set([
@@ -129,11 +130,10 @@ function sanitizeFormula(raw, blockedIds) {
  * desc?, h, m?} }. Additif — une carte publiée avant n'en a pas et chaque
  * surface retombe sur le libellé canonique. Bornes serrées : c'est du texte
  * qui part dans le DOM de la page client. */
-const I18N_LANGS = ['fr', 'ar', 'en'];
 function sanitizeI18n(raw, nameMax, descMax) {
   if (!raw || typeof raw !== 'object') return null;
   const out = {};
-  for (const lang of I18N_LANGS) {
+  for (const lang of MENU_LANGS) {
     const x = raw[lang];
     if (!x || typeof x !== 'object') continue;
     const name = str(x.name, nameMax).trim();
@@ -153,8 +153,9 @@ function withI18n(target, source, nameMax, descMax) {
 }
 
 export function sanitizeMenu(raw) {
-  const out = { cats: [], items: [], stations: [], kitchenId: '', opts: [], formulaTemplates: [] };
+  const out = { langs: CORE.slice(), cats: [], items: [], stations: [], kitchenId: '', opts: [], formulaTemplates: [] };
   if (!raw || typeof raw !== 'object') return out;
+  out.langs = normalizeMenuLangs(raw.langs);
   // La cuisine — le poste qui reçoit tout ce qu'aucune catégorie n'envoie
   // ailleurs. Le nommer est LE réglage de routage du restaurant ; le laisser
   // tomber ici ferait retomber la caisse sur « le premier de la liste », et
@@ -380,6 +381,16 @@ async function orderProEnabled(env, merchant) {
   } catch (_) { return false; }
 }
 
+async function menuLangsEnabled(env, merchant) {
+  try {
+    const row = await env.DB.prepare(
+      'SELECT features FROM merchant_config WHERE merchant = ?'
+    ).bind(merchant).first();
+    if (!row || !row.features) return false;
+    return (JSON.parse(row.features) || {}).menuLangs === true;
+  } catch (_) { return false; }
+}
+
 export async function onRequestGet(context) {
   const { request, env } = context;
   const url = new URL(request.url);
@@ -466,11 +477,13 @@ export async function onRequestGet(context) {
    * après qu'un compte a cessé de payer ; laisser la carte se servir toute seule
    * ferait prendre des commandes que personne n'ira préparer. */
   if (await storeSuspended(env, merchant)) {
-    return json({ name, type, menu: null, shop: null, orderpro: false, suspended: true });
+    return json({ name, type, menu: null, shop: null, orderpro: false, menuLangs: false, suspended: true });
   }
 
-  const orderpro = await orderProEnabled(env, merchant);
-  return json({ name, type, menu, shop, orderpro });
+  const [orderpro, menuLangs] = await Promise.all([
+    orderProEnabled(env, merchant), menuLangsEnabled(env, merchant),
+  ]);
+  return json({ name, type, menu, shop, orderpro, menuLangs });
 }
 
 export async function onRequestPost(context) {
