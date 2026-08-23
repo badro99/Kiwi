@@ -198,13 +198,21 @@ d'impression, conserver les jobs, désactiver la découverte automatique et util
 l'ancien transport configuré. Noter l'heure, le merchant, le device id, le hash Git et
 l'export diagnostic, puis prévenir le comptoir avant toute action distante.
 
-## 9. État au 2026-08-22 (semaine 1)
+## 9. État au 2026-08-23
 
-Fait : scaffold `app/` (iOS SPM + Android générés et commités), `api-base.js`, CORS de
-la porte, bootstraps PWA gardés, build + suite wired, coquille native (4 tuiles + login
-marchand).
-Reste de la semaine 1 : **preuve sur l'iPad du bureau** — connexion marchande,
-appairage till, `GET /api/me`, vente Live Link visible sur le dashboard web ; mesure du
-flux live (cookie transmis au WebSocket ou pas). Côté propriétaire : P1 (D-U-N-S +
-Apple Developer Organisation), P2, P7/P10 (identifiants `com.kiwios.pro` /
-`com.kiwios.app` — à confirmer avant le premier envoi, irréversible ensuite).
+Fait côté code (semaines 1 à 3 du plan, hors BLE volontairement) : scaffold iOS/Android,
+`api-base.js` + CORS, coquille native (polices embarquées, zones sûres, barre d'état,
+haptique, keep-awake), appairage et identité d'appareil dans le Trousseau (`secureGet`
+/`secureSet` du plugin), impression TCP directe + scan/probe, file d'impression
+(tickets cuisine et reçus, réimpressions numérotées par vente, bail du hub, journal de
+vol `exportDiagnostics`, registre natif `ledgerRead/Write` restauré au démarrage),
+`PrivacyInfo.xcprivacy`, rapports d'erreur natifs vers `POST /api/error` (plateforme +
+version), suites `app-bundle-test` / `app-release-test` / `print-socket-test` dans
+`check.js`. iOS compile et tourne sur simulateur ; Android compile (`assembleDebug`,
+JDK 21 + SDK 36 sur le Mac du bureau).
+
+Reste, et rien de ceci n'est du code : **P1** Apple Developer (Organisation, D-U-N-S)
+puis premier TestFlight ; **preuve sur un vrai iPad** (connexion, appairage, `/api/me`,
+vente Live Link, flux live) ; **POS-8370 au comptoir** (IP courante, ticket cuisine +
+reçu depuis la caisse, impression après redémarrage du routeur) ; APK sur la tablette
+Android de Browse ; P5 compte démo pour la revue Apple ; P7 identifiant définitif.
