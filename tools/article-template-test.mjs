@@ -14,6 +14,11 @@ const guideClusters = [
   ...TOPICS.map((topic) => topic.routes),
 ];
 const landingRoutes = Object.fromEntries(PUBLISHED_LOCALES.map((locale) => [locale, `/${locale}/`]));
+const articleRoutesByLocale = Object.fromEntries(PUBLISHED_LOCALES.map((locale) => [
+  locale, TOPICS.map((topic) => topic.routes[locale]),
+]));
+const articleRouteSets = Object.fromEntries(PUBLISHED_LOCALES.map((locale) => [locale, new Set(articleRoutesByLocale[locale])]));
+const articleGraph = new Map();
 const alternatesByUrl = new Map(guideClusters.flatMap((routes) => {
   const expected = [
     ...PUBLISHED_LOCALES.map((locale) => [locale, SITE + routes[locale]]),
@@ -90,18 +95,16 @@ ok(/Sans JavaScript/.test(read('fr/guides/calcul-food-cost-restaurant/index.html
 ok(/data-break-even-calculator/.test(read('fr/guides/seuil-rentabilite-restaurant/index.html')) && /updateBreakEvenCalculator/.test(js), 'the break-even calculator is progressively enhanced');
 ok(/Without JavaScript/.test(read('en/guides/restaurant-break-even-point/index.html')) && /من دون JavaScript/.test(read('ar/guides/نقطة-التعادل-للمطعم/index.html')), 'break-even formulas remain available without JavaScript in every locale');
 
-const landingGuideRoutes = Object.fromEntries(PUBLISHED_LOCALES.map((locale) => [
-  locale, TOPICS.map((topic) => topic.routes[locale]),
-]));
+const landingGuideRoutes = articleRoutesByLocale;
 for (const [locale, source] of Object.entries(landingByLocale)) {
   const routes = landingGuideRoutes[locale];
   const guideStart = source.indexOf('id="guides"');
   const pricingStart = source.indexOf('id="pricing"');
   ok(guideStart !== -1 && guideStart < pricingStart, `${locale.toUpperCase()} landing places the editorial library before pricing`);
   ok(source.includes(`href="/${locale}/guides/"`), `${locale.toUpperCase()} landing links to its localized guide hub`);
-  ok(routes.every((href) => source.includes(`href="${href}"`)), `${locale.toUpperCase()} landing exposes all five localized guide routes`);
+  ok(routes.every((href) => source.includes(`href="${href}"`)), `${locale.toUpperCase()} landing exposes all ${routes.length} localized guide routes`);
   ok(routes.every((href) => fs.existsSync(new URL('../' + href.slice(1) + 'index.html', import.meta.url))), `${locale.toUpperCase()} landing guide links resolve to committed static pages`);
-  ok((source.match(new RegExp(`href="\\/${locale}\\/guides\\/`, 'g')) || []).length === 6, `${locale.toUpperCase()} landing has one hub link and five article links without duplicates`);
+  ok((source.match(new RegExp(`href="\\/${locale}\\/guides\\/`, 'g')) || []).length === routes.length + 1, `${locale.toUpperCase()} landing has one hub link and ${routes.length} article links without duplicates`);
 }
 
 const publishedVersions = new Set();
@@ -123,6 +126,12 @@ for (const page of published) {
     const rel = href.replace(/^\//, '').replace(/\/$/, '') + (href.endsWith('/') ? '/index.html' : '');
     return !fs.existsSync(new URL('../' + rel, import.meta.url));
   });
+  if (page.type === 'Article') {
+    const ownRoute = decodeURI(new URL(page.url).pathname);
+    const linkedArticles = new Set(hrefs.filter((href) => articleRouteSets[page.locale].has(href) && href !== ownRoute));
+    articleGraph.set(ownRoute, linkedArticles);
+    ok(linkedArticles.size >= 2, `${page.path} links contextually to at least two localized articles`);
+  }
   const expectedAlternates = alternatesByUrl.get(page.url) || [];
   const htmlAlternates = [...source.matchAll(/<link rel="alternate" hreflang="([^"]+)" href="([^"]+)"/g)]
     .map((match) => [match[1], match[2]]);
@@ -155,11 +164,28 @@ for (const page of published) {
   const jsVersion = source.match(/article\.js\?v=(\d+)/)?.[1];
   publishedVersions.add(`${cssVersion}:${jsVersion}`);
 }
+for (const locale of PUBLISHED_LOCALES) {
+  const routes = articleRoutesByLocale[locale];
+  const stronglyConnected = routes.every((start) => {
+    const seen = new Set([start]);
+    const queue = [start];
+    while (queue.length) {
+      for (const next of articleGraph.get(queue.shift()) || []) {
+        if (!seen.has(next)) { seen.add(next); queue.push(next); }
+      }
+    }
+    return routes.every((route) => seen.has(route));
+  });
+  ok(stronglyConnected, `${locale.toUpperCase()} article graph is strongly connected`);
+}
 ok(publishedImages.size === published.length, 'every published locale page has its own social image path');
 ok(publishedVersions.size === 1 && publishedVersions.has('10:4'), 'all published guides use the current shared asset versions');
 const sitemapGuideRows = (sitemap.match(/<url>[\s\S]*?<\/url>/g) || []).filter((row) => /<loc>https:\/\/kiwi-os\.com\/(?:fr|en|ar)\/guides\//.test(row));
 ok(sitemapGuideRows.length === guideClusters.length * PUBLISHED_LOCALES.length, 'sitemap has exactly one row for every manifested localized guide page');
 const sitemapRows = sitemap.match(/<url>[\s\S]*?<\/url>/g) || [];
+const sitemapLocs = sitemapRows.map((row) => row.match(/<loc>([^<]+)<\/loc>/)?.[1]).filter(Boolean);
+ok(new Set(sitemapLocs).size === sitemapLocs.length, 'sitemap has no duplicate canonical URL');
+ok(sitemapLocs.every((url) => url.startsWith(`${SITE}/`) && !url.includes('://www.')), 'sitemap contains only apex-origin URLs');
 for (const locale of PUBLISHED_LOCALES) {
   const expected = [...PUBLISHED_LOCALES.map((code) => [code, SITE + landingRoutes[code]]), ['x-default', SITE + landingRoutes.fr]];
   const row = sitemapRows.find((entry) => entry.includes(`<loc>${SITE + landingRoutes[locale]}</loc>`)) || '';
