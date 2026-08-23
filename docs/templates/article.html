@@ -91,6 +91,13 @@
 <body>
   <a class="skip-link" href="#article">Aller à l’article</a>
   <div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+  <div class="site-backdrop" aria-hidden="true">
+    <picture>
+      <source media="(orientation: portrait)" srcset="/model/poster-portrait.webp">
+      <img src="/model/poster-landscape.webp" alt="" width="1536" height="1024" fetchpriority="high">
+    </picture>
+    <span></span>
+  </div>
 
   <header class="site-header">
     <div class="nav-shell">
@@ -99,19 +106,23 @@
       </a>
 
       <nav class="nav-center" aria-label="Navigation principale">
-        <a href="/fr/">Produit</a>
+        <a href="/fr/#features">Fonctionnalités</a>
         <a href="/fr/guides/" aria-current="page">Guides</a>
         <a href="/fr/#pricing">Tarifs</a>
-      </nav>
-
-      <div class="nav-actions">
-        <!-- TEMPLATE: link language variants to the translated article when they exist. -->
-        <a class="language-link" href="/en/" hreflang="en" lang="en" aria-label="Read in English">EN</a>
-        <a class="button" href="https://wa.me/212624495159" target="_blank" rel="noreferrer">
+        <a href="/dashboard.html">Se connecter</a>
+        <a class="button nav-demo" href="https://wa.me/212624495159" target="_blank" rel="noreferrer">
           Demander une démo
           <span class="arrow" aria-hidden="true">↗</span>
         </a>
+      </nav>
+
+      <div class="language-picker" role="group" aria-label="Choisir la langue">
+        <!-- TEMPLATE: link language variants to the translated article when they exist. -->
+        <a href="/fr/guides/" hreflang="fr" lang="fr" aria-current="true">FR</a>
+        <a href="/en/" hreflang="en" lang="en" aria-label="Read in English">EN</a>
+        <a href="/ar/" hreflang="ar" lang="ar" aria-label="اقرأ بالعربية">AR</a>
       </div>
+      <a class="button mobile-demo" href="https://wa.me/212624495159" target="_blank" rel="noreferrer">Démo <span class="arrow" aria-hidden="true">↗</span></a>
     </div>
   </header>
 
@@ -127,34 +138,36 @@
             </ol>
           </nav>
 
-          <div class="hero-grid">
-            <div>
-              <div class="eyebrow">Guide d’achat · 2026</div>
-              <h1 class="article-title" itemprop="headline">Comment choisir un logiciel de caisse <span class="accent-text">au Maroc.</span></h1>
-              <p class="hero-deck" itemprop="description">Une bonne caisse ne se juge pas pendant la démo. Elle se juge un samedi soir, quand la salle est pleine, qu’Internet coupe et que trois tickets doivent sortir en même temps.</p>
+          <div class="hero-copy">
+            <div class="eyebrow">Guide d’achat · 2026</div>
+            <h1 class="article-title" itemprop="headline">Comment choisir un logiciel de caisse <span class="accent-text">au Maroc.</span></h1>
+            <p class="hero-deck" itemprop="description">Une bonne caisse ne se juge pas pendant la démo. Elle se juge un samedi soir, quand la salle est pleine, qu’Internet coupe et que trois tickets doivent sortir en même temps.</p>
 
-              <div class="byline">
-                <span class="author-mark" aria-hidden="true">K</span>
-                <span>Par <strong itemprop="author">l’équipe Kiwi</strong></span>
-                <span class="byline-separator" aria-hidden="true"></span>
-                <time datetime="2026-08-23" itemprop="datePublished">23 août 2026</time>
-                <span class="byline-separator" aria-hidden="true"></span>
-                <span>8 min de lecture</span>
-              </div>
+            <div class="byline">
+              <span class="author-mark" aria-hidden="true">K</span>
+              <span>Par <strong itemprop="author">l’équipe Kiwi</strong></span>
+              <span class="byline-separator" aria-hidden="true"></span>
+              <time datetime="2026-08-23" itemprop="datePublished">23 août 2026</time>
+              <span class="byline-separator" aria-hidden="true"></span>
+              <span>8 min de lecture</span>
             </div>
+          </div>
 
-            <!-- TEMPLATE: replace this product-led cover with an article-specific image or diagram. -->
-            <div class="cover-stage" role="img" aria-label="Une grille d’évaluation compare la continuité hors ligne, la gestion du stock et l’accompagnement d’un logiciel de caisse.">
-              <div class="cover-topline"><span class="live-dot">Grille de décision</span><span>Kiwi Guides</span></div>
-              <div class="decision-card">
+          <!-- TEMPLATE: replace this scene with an article-specific proof, comparison or product workflow. -->
+          <div class="cover-stage" role="img" aria-label="Une grille d’évaluation compare la continuité hors ligne, la gestion du stock et l’accompagnement d’un logiciel de caisse.">
+            <div class="cover-topline"><span class="live-dot">Grille de décision</span><span>Kiwi Guides · Maroc</span></div>
+            <div class="decision-card">
+              <div class="decision-intro">
+                <span>Le test du samedi soir</span>
                 <h2>La caisse tient-elle quand le service accélère&nbsp;?</h2>
-                <div class="score" aria-hidden="true">
-                  <div class="score-item"><span>Hors ligne</span><strong>01</strong></div>
-                  <div class="score-item"><span>Stock réel</span><strong>02</strong></div>
-                  <div class="score-item"><span>Support local</span><strong>03</strong></div>
-                </div>
-                <div class="stage-note"><span>7 critères à vérifier</span><span>Maroc · MAD</span></div>
+                <p>Trois preuves à obtenir avant de comparer les listes de fonctionnalités.</p>
               </div>
+              <div class="score" aria-hidden="true">
+                <div class="score-item"><span>Hors ligne</span><strong>01</strong><small>Une vente complète, réseau coupé.</small></div>
+                <div class="score-item"><span>Stock réel</span><strong>02</strong><small>Chaque ligne laisse une trace.</small></div>
+                <div class="score-item"><span>Support local</span><strong>03</strong><small>Une personne répond pendant le service.</small></div>
+              </div>
+              <div class="stage-note"><span>7 critères à vérifier</span><span>Une décision · aucune promesse vague</span></div>
             </div>
           </div>
         </div>

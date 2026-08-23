@@ -3,6 +3,10 @@
 Le fichier `article.html` est le patron source des guides Kiwi. Il est volontairement
 `noindex` et montre tous les modules éditoriaux disponibles. Pour publier :
 
+Le cadre visuel réemploie directement le monde de la landing : posters paysage et
+portrait, navigation 104/64 px, surfaces de verre sombres et scènes produit bordées.
+Ne remplacez pas ce cadre par une skin de blog claire dans un article individuel.
+
 1. Copier `docs/templates/article.html` vers `/<lang>/guides/<slug>/index.html`.
 2. Remplacer le titre, la description, le canonical, les alternates, les dates, la
    section, l’image et toutes les valeurs du JSON-LD.
