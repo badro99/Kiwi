@@ -3,10 +3,10 @@
 Le fichier `article.html` est le patron source des guides Kiwi. Il est volontairement
 `noindex` et montre tous les modules éditoriaux disponibles. Pour publier :
 
-Le cadre visuel réemploie directement le monde de la landing : rendus éditoriaux
-paysage et portrait du modèle Cycle, navigation 104/64 px, surfaces de verre sombres
-et scènes produit bordées. Les rendus statiques gardent la page légère ; ne chargez
-pas le GLB dans un article. Le pied de page doit rester identique à celui de la
+Le cadre visuel réemploie directement le monde de la landing : mêmes posters paysage
+et portrait, navigation 104/64 px, surfaces de verre sombres et scènes produit
+bordées. Ne chargez pas le GLB et ne produisez pas de recadrage 3D propre à un
+article. Le pied de page doit rester identique à celui de la
 landing : navigation, contact, badge Kiwi, crédit Tamminen et grand wordmark compris.
 Ne remplacez pas ce cadre par une skin de blog claire dans un article individuel.
 

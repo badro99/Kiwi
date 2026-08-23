@@ -43,7 +43,7 @@ ok(/html\[lang="ar"\]/.test(css) && /\[dir="rtl"\]/.test(css), 'Arabic type and 
 ok(/@media \(max-width: 620px\)/.test(css), 'small-phone layout has a dedicated breakpoint');
 ok(!/<script[^>]+src="https?:\/\//.test(html), 'no external JavaScript is required');
 ok((html.match(/<h1\b/g) || []).length === 1, 'the article has exactly one H1');
-ok(/article-poster-landscape\.webp/.test(html) && /article-poster-portrait\.webp/.test(html), 'the article uses its own Cycle hero crop in both orientations');
+ok(/\/model\/poster-landscape\.webp/.test(html) && /\/model\/poster-portrait\.webp/.test(html), 'the article reuses the landing camera treatment in both orientations');
 ok(/sketchfab\.com\/tamminen/.test(html), 'the landing footer keeps its Tamminen model credit');
 ok(/\.site-backdrop\s*\{[\s\S]*?position:\s*fixed/.test(css), 'the landing atmosphere remains fixed behind the editorial scenes');
 ok(/\.site-header\s*\{[\s\S]*?height:\s*104px/.test(css) && /\.nav-center\s*\{[\s\S]*?height:\s*64px/.test(css), 'desktop header and glass navigation match landing geometry');
