@@ -18,7 +18,8 @@
 // No DB ⇒ 503 (a static host has no pairings table; the client's 404-style
 // fallback isn't reached here, but 503 still keeps it away from the 422 path).
 
-import { json, tillToken, tillCookie, terminalToken, terminalCookie } from '../../auth/_lib.js';
+import { json, tillToken, tillCookie, terminalToken, terminalCookie, tillEpoch,
+} from '../../auth/_lib.js';
 
 /* ── Brute-force cap ────────────────────────────────────────────────────────
  * This endpoint has no session to check — a till has no login — so a 6-digit
@@ -129,7 +130,12 @@ export async function onRequestPost(context) {
    * an httpOnly cookie: no page script can read it, and it rides along on the
    * same-origin config fetch automatically — the client needs no change. */
   if (env.AUTH_SECRET) {
-    try { res.headers.append('Set-Cookie', tillCookie(await tillToken(env.AUTH_SECRET, row.merchant))); } catch (_) {}
+    /* Émis au millésime COURANT du commerçant : un dépairage ultérieur le
+     * périmera, comme tous les autres. */
+    try {
+      const epoch = await tillEpoch(env, row.merchant);
+      res.headers.append('Set-Cookie', tillCookie(await tillToken(env.AUTH_SECRET, row.merchant, epoch)));
+    } catch (_) {}
     if (terminalId) {
       try { res.headers.append('Set-Cookie', terminalCookie(await terminalToken(env.AUTH_SECRET, row.merchant, terminalId))); } catch (_) {}
     }

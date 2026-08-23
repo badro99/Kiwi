@@ -190,6 +190,21 @@ CREATE TABLE IF NOT EXISTS merchant_config (
   -- NULL is read as active, so every row that predates the column is untouched.
   status     TEXT,
 
+  -- ── LE MILLÉSIME DES CAISSES ──────────────────────────────────────────────
+  -- Le jeton de caisse (`kiwi_till`) était HMAC(secret, 'kiwi-till-v1:' + slug) :
+  -- une fonction pure du nom de la boutique. La même valeur pour tous les
+  -- appareils, sans expiration, et RIEN dans le dépôt ne pouvait l'annuler —
+  -- alors que le code promettait « jusqu'à ce que le commerçant dépaire ». Un
+  -- téléphone d'employé parti gardait donc l'accès au carnet clients et au stock,
+  -- et la seule coupure possible, la rotation d'AUTH_SECRET, aurait déconnecté
+  -- tous les commerçants en même temps.
+  --
+  -- Le jeton porte maintenant ce nombre, et il entre dans la signature.
+  -- L'incrémenter (POST /api/pair/revoke) périme toutes les caisses de CETTE
+  -- boutique. Tant qu'il vaut 0, l'ancienne forme reste acceptée : aucun
+  -- comptoir en service ne tombe au déploiement.
+  till_epoch INTEGER NOT NULL DEFAULT 0,
+
   -- ── LA VILLE, ET CE QUE CET ÉTABLISSEMENT NOUS RAPPORTE ───────────────────
   -- Deux colonnes posées par l'OPÉRATEUR depuis la console, jamais par le
   -- client. Elles n'existaient nulle part : ni le compte ni la fiche magasin ne

@@ -401,6 +401,94 @@ function invoiceEnv(sale) {
     caisse.indexOf("$('#rp-total')") > caisse.indexOf('let lockBanner'));
 }
 
+/* ── 11 · Le jeton de caisse est révocable ────────────────────────────────── */
+{
+  const { tillToken, isTillFor, forgetTillEpoch, TILL_COOKIE } = await import('../functions/auth/_lib.js');
+  const { onRequestPost: revoke } = await import('../functions/api/pair/revoke.js');
+
+  const store = { 'amira-cafe': 0 };
+  const env = {
+    AUTH_SECRET: SECRET,
+    DB: {
+      prepare(sql) {
+        const q = String(sql).replace(/\s+/g, ' ').trim();
+        return {
+          args: [],
+          bind(...a) { this.args = a; return this; },
+          async run() {
+            if (q.startsWith('ALTER TABLE')) throw new Error('duplicate column');
+            return { success: true };
+          },
+          async first() {
+            if (q.startsWith('SELECT till_epoch FROM merchant_config')) {
+              const v = store[this.args[0]];
+              return v === undefined ? null : { till_epoch: v };
+            }
+            if (q.startsWith('UPDATE merchant_config SET till_epoch')) {
+              const m = this.args[1];
+              if (store[m] === undefined) return null;
+              store[m] += 1;
+              return { till_epoch: store[m] };
+            }
+            if (q.startsWith('SELECT business FROM accounts')) return { business: 'Café Amira' };
+            if (q.startsWith('SELECT account_id FROM merchant_config')) return { account_id: 'acc-1' };
+            return null;
+          },
+        };
+      },
+    },
+  };
+  const withCookie = (v) => new Request('https://kiwi.test/x', { headers: { cookie: `${TILL_COOKIE}=${v}` } });
+
+  const paired = await tillToken(SECRET, 'amira-cafe', 0);
+  ok('une caisse appairée est reconnue', await isTillFor(withCookie(paired), env, 'amira-cafe'));
+
+  /* La VRAIE forme d'avant le millésime — HMAC(secret, 'kiwi-till-v1:' + slug) —
+     doit continuer de passer tant que personne n'a dépairé, sinon toutes les
+     caisses en service tombent au déploiement. */
+  const legacyToken = async (merchant) => {
+    const key = await globalThis.crypto.subtle.importKey(
+      'raw', new TextEncoder().encode(SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    const sig = await globalThis.crypto.subtle.sign(
+      'HMAC', key, new TextEncoder().encode('kiwi-till-v1:' + merchant));
+    return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, '0')).join('');
+  };
+  const legacy = await legacyToken('amira-cafe');
+  ok('une caisse déjà appairée AVANT le correctif continue de fonctionner',
+    await isTillFor(withCookie(legacy), env, 'amira-cafe'));
+
+  // Le propriétaire dépaire.
+  const ownerSess = await makeSession('acc-1', SECRET);
+  const res = await revoke({
+    request: new Request('https://kiwi.test/api/pair/revoke', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', cookie: `${SESS_COOKIE}=${ownerSess}` },
+      body: JSON.stringify({ merchant: 'amira-cafe' }),
+    }),
+    env,
+  });
+  const body = await res.json();
+  ok('le propriétaire peut dépairer', res.status === 200 && body.epoch === 1, JSON.stringify(body));
+
+  forgetTillEpoch('amira-cafe');
+  ok('l\'ancienne caisse est coupée', !(await isTillFor(withCookie(paired), env, 'amira-cafe')));
+  ok('y compris celle d\'avant le correctif — sinon la révocation serait un décor',
+    !(await isTillFor(withCookie(legacy), env, 'amira-cafe')));
+  const rePaired = await tillToken(SECRET, 'amira-cafe', 1);
+  ok('et une caisse qui réappaire fonctionne', await isTillFor(withCookie(rePaired), env, 'amira-cafe'));
+
+  // Une caisse ne dépaire pas le magasin : elle n'a pas de session de compte.
+  const tillOnly = await revoke({
+    request: new Request('https://kiwi.test/api/pair/revoke', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', cookie: `${TILL_COOKIE}=${rePaired}` },
+      body: JSON.stringify({ merchant: 'amira-cafe' }),
+    }),
+    env,
+  });
+  ok('une caisse seule ne peut pas éjecter tout le magasin', tillOnly.status === 403);
+}
+
 console.log(failures
   ? `\n✗ ${failures} échec(s) sur ${checks} contrôles`
   : `\n✓ ${checks} contrôles de locataire et d'intégrité.`);

@@ -156,8 +156,63 @@ export async function staffToken(sitePassword) {
 export const TILL_COOKIE = 'kiwi_till';
 export const TERMINAL_COOKIE = 'kiwi_terminal';
 
-export async function tillToken(authSecret, merchant) {
+/* ── LE JETON DE CAISSE, ET COMMENT ON LE COUPE ────────────────────────────
+ * Il était `HMAC(secret, 'kiwi-till-v1:' + merchant)` : une FONCTION PURE du
+ * slug. Pas de nonce, pas d'identifiant d'appairage, pas d'horodatage, pas
+ * d'expiration, un cookie de 365 jours — et aucun chemin de révocation nulle
+ * part dans le dépôt, alors que le commentaire d'à côté promettait « until the
+ * merchant unpairs ». Tout appareil ayant appairé une fois gardait donc un
+ * accès permanent au carnet clients, au stock et aux documents : le téléphone
+ * d'un employé parti, une tablette revendue, un profil de navigateur oublié.
+ * La seule coupure possible était la rotation d'AUTH_SECRET, qui déconnecte
+ * TOUS les commerçants d'un coup.
+ *
+ * On ajoute donc un millésime par commerçant, `merchant_config.till_epoch`.
+ * Le jeton devient `<millésime>.<hmac>` et le millésime entre dans la
+ * signature. « Dépairer » = incrémenter le millésime : toutes les caisses de CE
+ * commerçant, et elles seules, doivent réappairer.
+ *
+ * Compatibilité : tant que le millésime vaut 0 — c'est-à-dire tant que personne
+ * n'a dépairé — l'ancienne forme reste acceptée, donc aucune caisse en service
+ * ne tombe au déploiement. Au premier dépairage, elle cesse de l'être : c'est
+ * exactement ce qu'on attend d'une révocation.
+ * ───────────────────────────────────────────────────────────────────────── */
+export async function tillToken(authSecret, merchant, epoch = 0) {
+  const n = Math.max(0, Math.round(Number(epoch) || 0));
+  const sig = await hmacHex(authSecret, 'kiwi-till-v2:' + String(merchant || '') + ':' + n);
+  return n + '.' + sig;
+}
+
+/* La forme d'avant le millésime. Conservée pour la reconnaître, jamais pour en
+ * émettre une nouvelle. */
+async function legacyTillToken(authSecret, merchant) {
   return hmacHex(authSecret, 'kiwi-till-v1:' + String(merchant || ''));
+}
+
+/* Le millésime coûte une lecture ; `isTillFor` est sur le chemin de presque
+ * chaque requête de caisse. On le garde donc en mémoire d'isolat une minute :
+ * une révocation met au pire soixante secondes à se propager, ce qui est le bon
+ * compromis pour un geste qui vise un appareil perdu, pas une intrusion en
+ * cours. Colonne absente (base non migrée) ⇒ 0, c'est-à-dire l'ancien monde. */
+const TILL_EPOCH_TTL_MS = 60 * 1000;
+const tillEpochCache = new Map();
+export async function tillEpoch(env, merchant) {
+  const key = String(merchant || '');
+  if (!key || !env || !env.DB) return 0;
+  const hit = tillEpochCache.get(key);
+  if (hit && hit.until > Date.now()) return hit.value;
+  let value = 0;
+  try {
+    const row = await env.DB.prepare(
+      'SELECT till_epoch FROM merchant_config WHERE merchant = ?'
+    ).bind(key).first();
+    value = Math.max(0, Math.round(Number(row && row.till_epoch) || 0));
+  } catch (_) { value = 0; }
+  tillEpochCache.set(key, { value, until: Date.now() + TILL_EPOCH_TTL_MS });
+  return value;
+}
+export function forgetTillEpoch(merchant) {
+  tillEpochCache.delete(String(merchant || ''));
 }
 
 export async function terminalToken(authSecret, merchant, terminalId) {
@@ -186,7 +241,11 @@ export async function isTillFor(request, env, merchant) {
   if (!secret || !merchant) return false;
   const got = readCookie(request, TILL_COOKIE);
   if (!got) return false;
-  return timingSafeEqualHex(got, await tillToken(secret, merchant));
+  const epoch = await tillEpoch(env, merchant);
+  if (timingSafeEqualHex(got, await tillToken(secret, merchant, epoch))) return true;
+  /* L'ancienne forme n'est reconnue que tant que personne n'a dépairé. */
+  if (epoch === 0) return timingSafeEqualHex(got, await legacyTillToken(secret, merchant));
+  return false;
 }
 export async function isTerminalFor(request, env, merchant, terminalId) {
   const secret = env && env.AUTH_SECRET;
