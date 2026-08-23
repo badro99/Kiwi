@@ -381,14 +381,17 @@ async function orderProEnabled(env, merchant) {
   } catch (_) { return false; }
 }
 
+// Langues supplémentaires de la carte : allumées par défaut, l'opérateur les
+// coupe pour le commerçant qui n'en veut pas (features.menuLangs === false).
+// L'inverse d'Order Pro, qui doit valoir explicitement true.
 async function menuLangsEnabled(env, merchant) {
   try {
     const row = await env.DB.prepare(
       'SELECT features FROM merchant_config WHERE merchant = ?'
     ).bind(merchant).first();
-    if (!row || !row.features) return false;
-    return (JSON.parse(row.features) || {}).menuLangs === true;
-  } catch (_) { return false; }
+    if (!row || !row.features) return true;
+    return (JSON.parse(row.features) || {}).menuLangs !== false;
+  } catch (_) { return true; }
 }
 
 export async function onRequestGet(context) {

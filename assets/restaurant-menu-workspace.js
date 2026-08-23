@@ -1169,7 +1169,8 @@
    * Sans session réelle (démo) : rien ne part sur le réseau. */
   let i18nBusy=false,i18nTimer=0,i18nCooldown=0,i18nProgress='';
   const I18N_BATCH=40;
-  const menuLangFeature=()=>window.KiwiConfig?.features?.menuLangs===true;
+  // Allumé par défaut ; l'opérateur le coupe dans kiwi-admin (features.menuLangs === false).
+  const menuLangFeature=()=>window.KiwiConfig?.features?.menuLangs!==false;
   const realSession=()=>{try{return !!(window.KiwiEnv&&window.KiwiEnv.isReal&&window.KiwiEnv.isReal());}catch(_){return false;}};
   function i18nChunks(need){
     const out=[];let cur={cats:[],items:[],opts:[],n:0};

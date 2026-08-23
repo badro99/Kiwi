@@ -1167,17 +1167,20 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
   // merchant, so it must never appear by accident: the key has to be explicitly
   // true. functions/api/menu.js and functions/api/order/index.js enforce the same
   // rule server-side — this switch is the UI for it, not the guard.
-  // Options POSÉES À LA DEMANDE, par métier. Même règle que les options payantes
-  // — la clé doit valoir explicitement true — mais ce n'est pas une vente : ce
-  // sont des façons de travailler que tout le monde n'a pas. Le dépôt-vente en
-  // est une : la boutique vend une partie de son rayon pour le compte de tiers,
-  // ses articles se marquent A (achetée ferme) ou B (au tiers), et les ventes B
-  // sortent de sa recette. Proposer ce choix à une boutique qui achète tout son
-  // stock, c'est une question de plus à chaque création d'article, pour rien.
+  // Options POSÉES À LA DEMANDE, par métier : des façons de travailler que tout
+  // le monde n'a pas. Deux régimes cohabitent ici. Celles marquées `off` suivent
+  // la règle des options payantes (la clé doit valoir explicitement true) : le
+  // dépôt-vente en est une : la boutique vend une partie de son rayon pour le
+  // compte de tiers, ses articles se marquent A (achetée ferme) ou B (au tiers),
+  // et les ventes B sortent de sa recette. Proposer ce choix à une boutique qui
+  // achète tout son stock, c'est une question de plus à chaque création
+  // d'article, pour rien. Les autres sont ALLUMÉES par défaut (clé absente ⇒
+  // on) et se coupent ici pour le commerçant qui n'en veut pas : les langues
+  // supplémentaires de la carte ne coûtent rien à qui ne s'en sert pas.
   var OPTIN_MODULES = {
     restaurant: [
-      { key:'menuLangs', label:'Menu en langues supplémentaires', off:true,
-        hint:'Permet au commerçant d’ajouter des traductions pour la carte QR publique. La caisse et les écrans équipe restent en français, arabe et anglais.' },
+      { key:'menuLangs', label:'Menu en langues supplémentaires',
+        hint:'Allumé par défaut. Le commerçant ajoute lui-même des traductions pour la carte QR publique ; à couper ici s’il n’en veut pas. La caisse et les écrans équipe restent en français, arabe et anglais.' },
     ],
     boutique: [
       { key:'depotvente', label:'Catégories A / B', off:true,
