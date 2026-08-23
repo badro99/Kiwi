@@ -71,3 +71,7 @@ graphify-out/
 
 # Photos de travail (jamais versionnées) et archive média hors dépôt
 /photos/
+
+# Sortie Gradle du plugin natif Android (app/plugins/*/android/build) — l'app
+# l'a déjà via app/android/.gitignore, le plugin compilé seul non.
+app/plugins/*/android/build/
