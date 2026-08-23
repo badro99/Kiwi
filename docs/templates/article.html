@@ -42,7 +42,7 @@
   <link rel="icon" href="/icon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="/assets/articles/article.css?v=2">
+  <link rel="stylesheet" href="/assets/articles/article.css?v=4">
 
   <script type="application/ld+json">
   {
@@ -215,17 +215,20 @@
 
             <figure class="editorial-figure">
               <div class="figure-frame">
-                <div class="metric-panel" aria-hidden="true">
-                  <div class="metric-panel-header"><span>Test en conditions réelles</span><span>18:42</span></div>
-                  <h3>Trois gestes. Pas douze.</h3>
-                  <p>Chaque ligne représente une action courante mesurée pendant le service.</p>
-                  <div class="metric-bars">
-                    <div class="metric-row"><span>Commande</span><div class="metric-track"><div class="metric-fill" style="width: 92%"></div></div><strong>8 s</strong></div>
-                    <div class="metric-row"><span>Ticket</span><div class="metric-track"><div class="metric-fill" style="width: 76%"></div></div><strong>3 s</strong></div>
-                    <div class="metric-row"><span>Clôture</span><div class="metric-track"><div class="metric-fill" style="width: 84%"></div></div><strong>5 s</strong></div>
+                <div class="operation-panel" aria-hidden="true">
+                  <div class="operation-panel-header"><span>Test en conditions réelles</span><span>18:42</span></div>
+                  <div class="operation-heading">
+                    <span>Scénario 01</span>
+                    <h3>Une vente, de la commande à la clôture.</h3>
+                  </div>
+                  <div class="operation-flow">
+                    <div class="operation-step"><span>01</span><div><strong>Prendre la commande</strong><small>Ajouter, modifier, envoyer.</small></div><b>8 s</b></div>
+                    <div class="operation-step"><span>02</span><div><strong>Sortir le ticket</strong><small>Impression sur le matériel réel.</small></div><b>3 s</b></div>
+                    <div class="operation-step"><span>03</span><div><strong>Clôturer la vente</strong><small>Paiement, trace et stock à jour.</small></div><b>5 s</b></div>
+                  </div>
+                  <div class="operation-result"><span>Test terminé</span><strong>16 secondes</strong><small>du premier toucher à la trace finale</small></div>
                   </div>
                 </div>
-              </div>
               <figcaption>TEMPLATE&nbsp;: les schémas doivent expliquer une décision. Remplacez toute donnée illustrative par une mesure sourcée avant publication.</figcaption>
             </figure>
           </section>
@@ -266,10 +269,19 @@
           </section>
 
           <aside class="article-cta" aria-labelledby="demo-title">
-            <div class="eyebrow">Voir plutôt que croire</div>
-            <h2 id="demo-title">Testez votre propre scénario sur Kiwi.</h2>
-            <p>Apportez votre menu, votre matériel et votre cas le plus compliqué. La démonstration doit répondre à votre commerce, pas l’inverse.</p>
-            <a class="button" href="https://wa.me/212624495159" target="_blank" rel="noreferrer">Préparer ma démo <span class="arrow" aria-hidden="true">↗</span></a>
+            <div class="cta-top">
+              <div class="cta-copy">
+                <div class="eyebrow">Voir plutôt que croire</div>
+                <h2 id="demo-title">Testez votre propre scénario sur Kiwi.</h2>
+                <p>Apportez votre menu, votre matériel et votre cas le plus compliqué. La démonstration doit répondre à votre commerce, pas l’inverse.</p>
+              </div>
+              <a class="button" href="https://wa.me/212624495159" target="_blank" rel="noreferrer">Préparer ma démo <span class="arrow" aria-hidden="true">↗</span></a>
+            </div>
+            <div class="cta-route" aria-hidden="true">
+              <div><span>01</span><strong>Votre menu</strong><small>Pas un jeu de données propre.</small></div>
+              <div><span>02</span><strong>Votre matériel</strong><small>Pas une maquette idéale.</small></div>
+              <div><span>03</span><strong>Votre service</strong><small>Pas une promesse abstraite.</small></div>
+            </div>
           </aside>
 
           <section id="questions" aria-labelledby="questions-title">
@@ -319,16 +331,29 @@
         <div class="related-grid">
           <!-- TEMPLATE: every related link must be live and contextually relevant. -->
           <a class="related-card" href="/fr/guides/">
+            <div class="related-scene related-scene--stock" aria-hidden="true">
+              <div class="related-scene-head"><span>Stock live</span><strong>Synchronisé</strong></div>
+              <div class="stock-stack"><i></i><i></i><i></i></div>
+              <small>Vente → recette → inventaire</small>
+            </div>
             <span>Stock · 7 min</span>
             <h3>Gérer le stock d’un restaurant sans feuille Excel.</h3>
             <p>Des achats à la recette, puis de la vente à l’écart d’inventaire.</p>
           </a>
           <a class="related-card" href="/fr/guides/">
+            <div class="related-scene related-scene--margin" aria-hidden="true">
+              <div class="related-scene-head"><span>Marge du plat</span><strong>À jour</strong></div>
+              <div class="margin-readout"><div><strong>31%</strong><small>food cost</small></div><span>69% de marge brute</span></div>
+            </div>
             <span>Marge · 6 min</span>
             <h3>Calculer le food cost réel de chaque plat.</h3>
             <p>Transformer les quantités, pertes et prix fournisseur en une marge utile.</p>
           </a>
           <a class="related-card" href="/fr/guides/">
+            <div class="related-scene related-scene--menu" aria-hidden="true">
+              <div class="related-scene-head"><span>Carte active</span><strong>FR · AR</strong></div>
+              <div class="menu-preview"><i></i><i></i><i></i><span>2 langues · 1 menu</span></div>
+            </div>
             <span>Menu QR · 5 min</span>
             <h3>Présenter sa carte en français et en arabe.</h3>
             <p>Une seule carte à maintenir, lisible dans la langue de chaque client.</p>
@@ -345,10 +370,17 @@
           <a href="/fr/" aria-label="Kiwi · accueil"><img src="/images/kiwi-logo.svg" width="855" height="455" alt=""></a>
           <p>Le logiciel de gestion des cafés, restaurants et commerces marocains. Caisse, salle, cuisine, stock et pilotage dans un seul outil.</p>
         </div>
+        <nav class="footer-col" aria-label="Produit">
+          <h2>Produit</h2>
+          <a href="/fr/#features">Caisse</a>
+          <a href="/fr/#features">Salle et cuisine</a>
+          <a href="/fr/#features">Stock et pilotage</a>
+        </nav>
         <nav class="footer-col" aria-label="Guides">
           <h2>Guides</h2>
           <a href="/fr/guides/">Tous les guides</a>
-          <a href="/fr/#features">Fonctionnalités</a>
+          <a href="/fr/guides/">Restaurant</a>
+          <a href="/fr/guides/">Commerce</a>
           <a href="/fr/#pricing">Tarifs</a>
         </nav>
         <nav class="footer-col" aria-label="Contact et informations légales">

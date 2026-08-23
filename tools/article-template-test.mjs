@@ -5,6 +5,7 @@ const read = (path) => fs.readFileSync(new URL('../' + path, import.meta.url), '
 const html = read('docs/templates/article.html');
 const css = read('assets/articles/article.css');
 const js = read('assets/articles/article.js');
+const articleShellRule = css.match(/\.article-shell\s*\{([\s\S]*?)\}/)?.[1] || '';
 
 let failures = 0;
 let checks = 0;
@@ -33,6 +34,10 @@ ok(/poster-landscape\.webp/.test(html) && /poster-portrait\.webp/.test(html), 't
 ok(/\.site-backdrop\s*\{[\s\S]*?position:\s*fixed/.test(css), 'the landing atmosphere remains fixed behind the editorial scenes');
 ok(/\.site-header\s*\{[\s\S]*?height:\s*104px/.test(css) && /\.nav-center\s*\{[\s\S]*?height:\s*64px/.test(css), 'desktop header and glass navigation match landing geometry');
 ok(/\.article-shell\s*\{[\s\S]*?backdrop-filter:\s*blur\(28px\)/.test(css), 'the reading surface keeps the landing glass depth');
+ok(/grid-template-columns:\s*170px minmax\(0, var\(--reading\)\) 150px/.test(articleShellRule) && /gap:\s*30px/.test(articleShellRule), 'the desktop grid preserves the 720px reading column');
+ok(/class="operation-panel"/.test(html) && /class="operation-flow"/.test(html), 'the proof figure uses an operational product scene');
+ok((html.match(/class="related-scene(?:\s|")/g) || []).length === 3, 'every related guide carries a visual scene');
+ok(/\.footer-brand img\s*\{[^}]*height:\s*auto/.test(css), 'the footer logo cannot inherit its oversized HTML height');
 ok(/article\.css\?v=\d+/.test(html) && /article\.js\?v=\d+/.test(html), 'shared article assets carry explicit cache versions');
 
 try {

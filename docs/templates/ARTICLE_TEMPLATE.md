@@ -39,13 +39,13 @@ Ne remplacez pas ce cadre par une skin de blog claire dans un article individuel
 ## Composants disponibles
 
 - Résumé « L’essentiel en 30 secondes »
-- Figure ou capture produit avec légende sourcée
+- Figure, flux opérationnel ou capture produit avec légende sourcée
 - Citation de principe ou citation attribuée
 - Tableau de comparaison défilant sur mobile
 - Checklist opérationnelle
 - CTA contextuel
 - FAQ native avec `details`
-- Trois guides liés
+- Trois guides liés, chacun avec une scène visuelle propre au sujet
 
 Le style partagé vit dans `assets/articles/article.css` et le rehaussement progressif
 dans `assets/articles/article.js`. Les articles publiés ne doivent pas recopier ces
