@@ -30,32 +30,47 @@ l'avance, pour que le jour où le compte Apple est payé il n'y ait plus qu'à c
 
 ## 1. Le jour du paiement · à faire par le propriétaire, dans l'ordre
 
-### Apple (99 USD / an)
-1. **Identité légale d'abord.** Compléter `mentions-legales.html` (RC, IF, TP, ICE,
-   directeur de la publication) : Apple vérifie que l'entité du compte développeur
-   est celle de la politique de confidentialité.
-2. **D-U-N-S** de l'entité (gratuit, dnb.com, 5 à 10 jours ouvrés si absent).
-   L'inscription *Organisation* l'exige ; *Individuel* publierait sous le nom d'une
-   personne, pas « Kiwi ».
-3. Apple ID de l'organisation avec **authentification à deux facteurs**, puis
-   developer.apple.com → Enroll → Organisation. Vérification Apple : 24 à 72 h.
-4. Dans le compte : noter le **Team ID** (10 caractères). Il vit en variable
+**Décision du 2026-08-23 : inscription *Individuel* d'abord.** Aucune société n'est
+encore immatriculée, donc ni D-U-N-S ni inscription *Organisation* possibles. Les deux
+comptes s'ouvrent au nom du propriétaire ; l'app sera **transférée** au compte de la
+société une fois celle-ci créée (App Store Connect → App → Transfer App ; Play Console →
+Transfert d'application). Rien dans Kiwi Pro ne bloque un transfert : pas d'achat
+intégré, pas d'iCloud, pas de Passkeys, pas d'App Group. Le vendeur affiché sur la
+fiche est le nom de la personne jusqu'au transfert.
+
+### Apple (99 USD / an, Individuel)
+1. `mentions-legales.html` nomme l'éditeur personne physique (nom, adresse, directeur
+   de la publication) : Apple compare l'identité du compte à celle de la politique de
+   confidentialité.
+2. Apple ID personnel avec **authentification à deux facteurs**, puis
+   developer.apple.com → Enroll → *Individual / Sole Proprietor*. Pièce d'identité
+   demandée (l'app Apple Developer sur iPhone accélère la vérification) ; paiement par
+   carte ; activation 24 à 48 h.
+3. Dans le compte : noter le **Team ID** (10 caractères). Il vit en variable
    d'environnement `KIWI_DEVELOPMENT_TEAM`, jamais dans le dépôt.
-5. Xcode › Settings › Accounts : ajouter le compte, sélectionner l'équipe.
-6. App Store Connect › Apps › + : nom **Kiwi Pro**, langue principale **Français**,
+4. Xcode › Settings › Accounts : ajouter le compte, sélectionner l'équipe.
+5. App Store Connect › Apps › + : nom **Kiwi Pro**, langue principale **Français**,
    bundle **com.kiwios.pro** (irréversible, P7 confirmé), SKU `kiwi-pro-ios`.
-7. Premier envoi : `KIWI_DEVELOPMENT_TEAM=… sh tools/app-archive.sh --upload`, puis
+6. Premier envoi : `KIWI_DEVELOPMENT_TEAM=… sh tools/app-archive.sh --upload`, puis
    §3 de ce document pour la fiche, §4 pour la confidentialité, §5 pour la revue.
 
-### Google (25 USD, une fois)
-1. Play Console → compte **Organisation** (exige le D-U-N-S depuis 2023 et une
-   vérification d'identité du titulaire, 1 à 3 jours).
+### Google (25 USD, une fois, compte personnel)
+1. Play Console → compte **Personnel** (vérification d'identité du titulaire, 1 à
+   3 jours ; Google exige depuis 2023 que les comptes personnels passent un test
+   fermé avec 12 testeurs pendant 14 jours avant la production : la piste interne
+   sert à Browse et à la revue, la production attend ce délai ou le compte
+   Organisation).
 2. Créer l'app « Kiwi Pro », catégorie Business, gratuite.
 3. Générer la clé d'upload **une seule fois** (commande dans
    `app/android/keystore.properties.example`), la sauvegarder hors machine, activer
    **Play App Signing**. `cd app/android && ./gradlew bundleRelease` → l'AAB dans
    `app/build/outputs/bundle/release/`.
 4. Piste **test interne** d'abord (tablette Android de Browse), production ensuite.
+
+### Plus tard, quand la société existe
+D-U-N-S (gratuit, dnb.com, 5 à 10 jours ouvrés) → compte Apple *Organisation* et
+Play Console *Organisation* → transfert des deux apps → `mentions-legales.html`
+complétée avec RC, IF, TP, ICE.
 
 ## 2. Compte démo pour la revue (P5)
 
