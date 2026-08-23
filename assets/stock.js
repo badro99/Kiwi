@@ -233,6 +233,21 @@
       addItemName: 'Nom', addItemCat: 'Catégorie', addItemUnit: 'Unité',
       addItemSupplier: 'Fournisseur principal', addItemPar: 'Par level', addItemReorder: 'Niveau de réappro',
       addItemCost: 'Coût unitaire (MAD)',
+      nutriTitle: 'Nutrition & allergènes', nutriSummary: 'Facultatif · utilisé uniquement quand la fiche est complète',
+      nutriSearch: 'Rechercher dans Ciqual', nutriSearchPh: 'Ex. tomate, poulet, farine',
+      nutriLoading: 'Chargement du référentiel…', nutriNoMatch: 'Aucun aliment correspondant.',
+      nutriSource: 'Source', nutriManual: 'Saisie manuelle', nutriCiqual: 'Anses · Ciqual 2025',
+      nutriKcal: 'Énergie (kcal)', nutriProtein: 'Protéines (g)', nutriCarbs: 'Glucides (g)',
+      nutriFat: 'Lipides (g)', nutriSugars: 'Sucres (g)', nutriSalt: 'Sel (g)',
+      nutriPer100: 'Valeurs pour 100 g', nutriGramsPiece: 'Grammes par pièce', nutriGramsMl: 'Grammes par ml',
+      nutriGramsHint: 'Nécessaire pour convertir cette unité en grammes.',
+      allergenTitle: 'Allergènes UE', allergenConfirm: "J'ai vérifié ces allergènes",
+      allergenSuggested: 'Suggestions à confirmer, elles ne seront pas publiées sans vérification.',
+      'allergen.gluten': 'Gluten', 'allergen.crustaces': 'Crustacés', 'allergen.oeufs': 'Œufs',
+      'allergen.poissons': 'Poissons', 'allergen.arachides': 'Arachides', 'allergen.soja': 'Soja',
+      'allergen.lait': 'Lait', 'allergen.fruits_a_coque': 'Fruits à coque', 'allergen.celeri': 'Céleri',
+      'allergen.moutarde': 'Moutarde', 'allergen.sesame': 'Sésame', 'allergen.sulfites': 'Sulfites',
+      'allergen.lupin': 'Lupin', 'allergen.mollusques': 'Mollusques',
       addItemBtn: "Ajouter au catalogue",
       addItemStock: 'Stock actuel',
       addItemToast: (name) => `${name} ajouté au catalogue`,
@@ -476,6 +491,21 @@
       addItemName: 'Name', addItemCat: 'Category', addItemUnit: 'Unit',
       addItemSupplier: 'Primary supplier', addItemPar: 'Par level', addItemReorder: 'Reorder level',
       addItemCost: 'Unit cost (MAD)',
+      nutriTitle: 'Nutrition & allergens', nutriSummary: 'Optional · used only when the record is complete',
+      nutriSearch: 'Search Ciqual', nutriSearchPh: 'E.g. tomato, chicken, flour',
+      nutriLoading: 'Loading reference data…', nutriNoMatch: 'No matching food.',
+      nutriSource: 'Source', nutriManual: 'Manual entry', nutriCiqual: 'Anses · Ciqual 2025',
+      nutriKcal: 'Energy (kcal)', nutriProtein: 'Protein (g)', nutriCarbs: 'Carbohydrate (g)',
+      nutriFat: 'Fat (g)', nutriSugars: 'Sugars (g)', nutriSalt: 'Salt (g)',
+      nutriPer100: 'Values per 100 g', nutriGramsPiece: 'Grams per piece', nutriGramsMl: 'Grams per ml',
+      nutriGramsHint: 'Required to convert this unit to grams.',
+      allergenTitle: 'EU allergens', allergenConfirm: 'I have checked these allergens',
+      allergenSuggested: 'Confirm the suggestions. They are never published before review.',
+      'allergen.gluten': 'Gluten', 'allergen.crustaces': 'Crustaceans', 'allergen.oeufs': 'Eggs',
+      'allergen.poissons': 'Fish', 'allergen.arachides': 'Peanuts', 'allergen.soja': 'Soy',
+      'allergen.lait': 'Milk', 'allergen.fruits_a_coque': 'Tree nuts', 'allergen.celeri': 'Celery',
+      'allergen.moutarde': 'Mustard', 'allergen.sesame': 'Sesame', 'allergen.sulfites': 'Sulphites',
+      'allergen.lupin': 'Lupin', 'allergen.mollusques': 'Molluscs',
       addItemBtn: 'Add to catalogue',
       addItemStock: 'Current stock',
       addItemToast: (name) => `${name} added to catalogue`,
@@ -709,6 +739,21 @@
       addItemName: 'الاسم', addItemCat: 'الفئة', addItemUnit: 'الوحدة',
       addItemSupplier: 'المورد الرئيسي', addItemPar: 'الحد', addItemReorder: 'حد إعادة التموين',
       addItemCost: 'تكلفة الوحدة (درهم)',
+      nutriTitle: 'القيم الغذائية ومسببات الحساسية', nutriSummary: 'اختياري · يُستخدم فقط عند اكتمال البطاقة',
+      nutriSearch: 'البحث في Ciqual', nutriSearchPh: 'مثال: طماطم، دجاج، دقيق',
+      nutriLoading: 'جار تحميل المرجع…', nutriNoMatch: 'لا توجد نتيجة مطابقة.',
+      nutriSource: 'المصدر', nutriManual: 'إدخال يدوي', nutriCiqual: 'Anses · Ciqual 2025',
+      nutriKcal: 'الطاقة (kcal)', nutriProtein: 'البروتينات (غ)', nutriCarbs: 'الكربوهيدرات (غ)',
+      nutriFat: 'الدهون (غ)', nutriSugars: 'السكريات (غ)', nutriSalt: 'الملح (غ)',
+      nutriPer100: 'القيم لكل 100 غ', nutriGramsPiece: 'الغرامات لكل قطعة', nutriGramsMl: 'الغرامات لكل مل',
+      nutriGramsHint: 'ضروري لتحويل هذه الوحدة إلى غرامات.',
+      allergenTitle: 'مسببات الحساسية', allergenConfirm: 'تحققت من مسببات الحساسية',
+      allergenSuggested: 'اقتراحات تحتاج إلى تأكيد، ولا تُنشر قبل التحقق.',
+      'allergen.gluten': 'الغلوتين', 'allergen.crustaces': 'القشريات', 'allergen.oeufs': 'البيض',
+      'allergen.poissons': 'الأسماك', 'allergen.arachides': 'الفول السوداني', 'allergen.soja': 'الصويا',
+      'allergen.lait': 'الحليب', 'allergen.fruits_a_coque': 'المكسرات', 'allergen.celeri': 'الكرفس',
+      'allergen.moutarde': 'الخردل', 'allergen.sesame': 'السمسم', 'allergen.sulfites': 'الكبريتيت',
+      'allergen.lupin': 'الترمس', 'allergen.mollusques': 'الرخويات',
       addItemBtn: 'إضافة للكتالوج',
       addItemStock: 'المخزون الحالي',
       addItemToast: (name) => `${name} تمت إضافته للكتالوج`,
@@ -5247,6 +5292,145 @@
       window.Kiwi.toast(t('addCatToast', raw), { type: 'success' });
     });
   }
+  const nutritionKeys = ['kcal', 'protein', 'carbs', 'fat', 'sugars', 'salt'];
+  const allergenKeys = () => window.KiwiMenuNutrition?.ALLERGEN_KEYS || [
+    'gluten', 'crustaces', 'oeufs', 'poissons', 'arachides', 'soja', 'lait',
+    'fruits_a_coque', 'celeri', 'moutarde', 'sesame', 'sulfites', 'lupin', 'mollusques',
+  ];
+  let ciqualPromise = null;
+  function loadCiqual() {
+    if (!ciqualPromise) {
+      ciqualPromise = fetch('assets/data/ciqual-lite.json', { credentials: 'same-origin' })
+        .then((response) => { if (!response.ok) throw new Error('ciqual ' + response.status); return response.json(); })
+        .then((payload) => Array.isArray(payload?.foods) ? payload.foods : [])
+        .catch(() => []);
+    }
+    return ciqualPromise;
+  }
+  function searchKey(value) {
+    return String(value || '').toLocaleLowerCase('fr').normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+  }
+  function nutrientLabel(key) {
+    return t({ kcal: 'nutriKcal', protein: 'nutriProtein', carbs: 'nutriCarbs', fat: 'nutriFat', sugars: 'nutriSugars', salt: 'nutriSalt' }[key]);
+  }
+  function nutrientSection(existing) {
+    const per100g = existing?.nutrition?.per100g || {};
+    const selected = new Set(Array.isArray(existing?.allergens) ? existing.allergens : []);
+    const source = ['ciqual', 'off', 'manual'].includes(existing?.nutrition?.source) ? existing.nutrition.source : 'manual';
+    return `<details class="st-nutrition" data-stock-nutrition data-source="${esc(source)}" data-ref="${esc(existing?.nutrition?.ref || '')}">
+      <summary><span><b>${esc(t('nutriTitle'))}</b><small>${esc(t('nutriSummary'))}</small></span></summary>
+      <div class="st-nutrition-body">
+        <div class="st-ciqual-search">
+          <label class="st-mb-label">${esc(t('nutriSearch'))}</label>
+          <input class="st-mb-input" type="search" autocomplete="off" placeholder="${esc(t('nutriSearchPh'))}" data-ciqual-search />
+          <div class="st-ciqual-results" data-ciqual-results hidden></div>
+        </div>
+        <div class="st-nutrition-meta"><span>${esc(t('nutriSource'))}</span><b data-nutri-source-label>${esc(source === 'ciqual' ? t('nutriCiqual') : t('nutriManual'))}</b></div>
+        <div class="st-mb-label st-nutrition-kicker">${esc(t('nutriPer100'))}</div>
+        <div class="st-nutrient-grid">${nutritionKeys.map((key) => `<label><span>${esc(nutrientLabel(key))}</span><input class="st-mb-input mono" type="number" min="0" step="${key === 'kcal' ? '1' : '0.01'}" value="${esc(per100g[key] ?? '')}" data-stock-nutrient="${key}" /></label>`).join('')}</div>
+        <div class="st-mb-field st-grams-field" data-grams-wrap hidden>
+          <label class="st-mb-label" data-grams-label>${esc(t('nutriGramsPiece'))}</label>
+          <input class="st-mb-input mono" type="number" min="0.001" step="0.001" value="${esc(existing?.gramsPerUnit ?? '')}" data-stock-grams />
+          <small>${esc(t('nutriGramsHint'))}</small>
+        </div>
+        <div class="st-mb-label st-nutrition-kicker">${esc(t('allergenTitle'))}</div>
+        <div class="st-allergen-chips">${allergenKeys().map((key) => `<button type="button" data-allergen="${key}" aria-pressed="${selected.has(key) ? 'true' : 'false'}">${esc(t('allergen.' + key))}</button>`).join('')}</div>
+        <p class="st-allergen-help">${esc(t('allergenSuggested'))}</p>
+        <label class="st-allergen-confirm"><input type="checkbox" data-allergen-confirm${Array.isArray(existing?.allergens) ? ' checked' : ''}/><span>${esc(t('allergenConfirm'))}</span></label>
+      </div>
+    </details>`;
+  }
+  function gramsSuggestion(name, unit) {
+    const value = searchKey(name);
+    if (unit === 'unité') {
+      if (/\b(oeuf|egg)\b/.test(value)) return 50;
+      if (/\b(citron|lemon)\b/.test(value)) return 120;
+      if (/\b(tomate|tomato)\b/.test(value)) return 120;
+    }
+    return ['ml', 'cl', 'L'].includes(unit) ? 1 : null;
+  }
+  function wireNutrition(scope, existing) {
+    const section = scope?.querySelector('[data-stock-nutrition]');
+    const unitSelect = scope?.querySelector('[data-stock-add-unit]');
+    if (!section || !unitSelect) return;
+    const sourceLabel = section.querySelector('[data-nutri-source-label]');
+    const gramsWrap = section.querySelector('[data-grams-wrap]');
+    const gramsInput = section.querySelector('[data-stock-grams]');
+    const gramsLabel = section.querySelector('[data-grams-label]');
+    const nameInput = scope.querySelector('[data-stock-add-name]');
+    const updateGrams = () => {
+      const unit = stockUnit(unitSelect.value), visible = ['unité', 'ml', 'cl', 'L'].includes(unit);
+      gramsWrap.hidden = !visible;
+      gramsLabel.textContent = t(unit === 'unité' ? 'nutriGramsPiece' : 'nutriGramsMl');
+      if (visible && !gramsInput.value) {
+        const suggestion = gramsSuggestion(nameInput?.value || existing?.name, unit);
+        if (suggestion != null) gramsInput.placeholder = String(suggestion);
+      }
+    };
+    updateGrams();
+    unitSelect.addEventListener('change', updateGrams);
+    nameInput?.addEventListener('input', updateGrams);
+    section.addEventListener('toggle', () => {
+      if (!section.open || section.dataset.loaded) return;
+      section.dataset.loaded = '1';
+      const results = section.querySelector('[data-ciqual-results]');
+      results.hidden = false; results.textContent = t('nutriLoading');
+      loadCiqual().then(() => { results.hidden = true; results.textContent = ''; });
+    });
+    const results = section.querySelector('[data-ciqual-results]');
+    const search = section.querySelector('[data-ciqual-search]');
+    search.addEventListener('input', async () => {
+      const query = searchKey(search.value);
+      if (query.length < 2) { results.hidden = true; results.textContent = ''; return; }
+      const foods = await loadCiqual();
+      const hits = foods.filter((food) => searchKey(food.nameFr + ' ' + food.nameEn).includes(query)).slice(0, 8);
+      results.hidden = false;
+      results.innerHTML = hits.length ? hits.map((food) => `<button type="button" data-ciqual-id="${esc(food.id)}"><b>${esc(lang() === 'en' ? food.nameEn : food.nameFr)}</b><span>${esc(lang() === 'en' ? food.nameFr : food.nameEn)} · ${esc(food.kcal)} kcal</span></button>`).join('') : `<span>${esc(t('nutriNoMatch'))}</span>`;
+    });
+    results.addEventListener('click', async (event) => {
+      const button = event.target.closest('[data-ciqual-id]'); if (!button) return;
+      const food = (await loadCiqual()).find((row) => String(row.id) === button.dataset.ciqualId); if (!food) return;
+      nutritionKeys.forEach((key) => { const input = section.querySelector(`[data-stock-nutrient="${key}"]`); if (input) input.value = food[key]; });
+      section.dataset.source = 'ciqual'; section.dataset.ref = String(food.id); sourceLabel.textContent = t('nutriCiqual');
+      search.value = lang() === 'en' ? food.nameEn : food.nameFr; results.hidden = true;
+      const hints = new Set(food.allergenHints || []);
+      section.querySelectorAll('[data-allergen]').forEach((chip) => chip.setAttribute('aria-pressed', hints.has(chip.dataset.allergen) ? 'true' : 'false'));
+      section.dataset.allergensTouched = '1';
+      const confirm = section.querySelector('[data-allergen-confirm]'); if (confirm) confirm.checked = false;
+      updateGrams();
+    });
+    section.querySelectorAll('[data-stock-nutrient]').forEach((input) => input.addEventListener('input', () => {
+      section.dataset.source = 'manual'; sourceLabel.textContent = t('nutriManual');
+    }));
+    section.querySelector('.st-allergen-chips')?.addEventListener('click', (event) => {
+      const chip = event.target.closest('[data-allergen]'); if (!chip) return;
+      chip.setAttribute('aria-pressed', chip.getAttribute('aria-pressed') === 'true' ? 'false' : 'true');
+      section.dataset.allergensTouched = '1';
+      const confirm = section.querySelector('[data-allergen-confirm]'); if (confirm) confirm.checked = true;
+    });
+    section.querySelector('[data-allergen-confirm]')?.addEventListener('change', () => { section.dataset.allergensTouched = '1'; });
+  }
+  function readNutrition(scope) {
+    const section = scope.querySelector('[data-stock-nutrition]'), per100g = {};
+    let hasNutrition = false;
+    nutritionKeys.forEach((key) => {
+      const raw = section.querySelector(`[data-stock-nutrient="${key}"]`)?.value.trim();
+      if (raw === '') return;
+      const value = Number(raw);
+      if (Number.isFinite(value) && value >= 0) { per100g[key] = value; hasNutrition = true; }
+    });
+    const grams = Number(section.querySelector('[data-stock-grams]')?.value);
+    const confirm = section.querySelector('[data-allergen-confirm]');
+    let allergens;
+    if (confirm?.checked) allergens = [...section.querySelectorAll('[data-allergen][aria-pressed="true"]')].map((chip) => chip.dataset.allergen);
+    else if (section.dataset.allergensTouched) allergens = null;
+    return {
+      nutrition: hasNutrition ? { per100g, source: section.dataset.source || 'manual', ref: section.dataset.ref || '' } : null,
+      gramsPerUnit: Number.isFinite(grams) && grams > 0 ? grams : null,
+      allergens,
+    };
+  }
   function openAddItem() { openItemForm(null); }
   function openEditItem(itemId) {
     const it = getInv().find(x => x.id === itemId);
@@ -5259,7 +5443,7 @@
     const unitOptions = stockUnitOptions(existing?.unit || 'unité');
     const m = window.Kiwi.modal({
       title,
-      width: 560,
+      width: 720,
       body: `
         <div class="st-mb-field" style="margin-bottom:12px;">
           <label class="st-mb-label">${esc(t('addItemName'))}</label>
@@ -5296,6 +5480,7 @@
           <label class="st-mb-label">${esc(t('addItemCost'))}</label>
           <input class="st-mb-input mono" type="number" min="0" step="0.5" placeholder="0" value="${esc(existing?.costPerUnit ?? '')}" data-stock-add-cost />
         </div>
+        ${nutrientSection(existing)}
       `,
       foot: `<button class="st-btn" data-dismiss-modal>${esc(STR[lang()].btnCancel || 'Annuler')}</button><button class="st-btn primary" data-stock-add-confirm>${esc(cta)}</button>`,
     });
@@ -5303,7 +5488,7 @@
     wireDismiss(scope);
     /* Attach listeners synchronously — the modal markup is already in DOM by now
      * (interactive.js's modal() appendChild is synchronous) so we don't need rAF. */
-    try { wireCatNewToggle(scope); } catch (err) { console.error('wireCatNewToggle failed', err); }
+    try { wireCatNewToggle(scope); wireNutrition(scope, existing); } catch (err) { console.error('wireItemForm failed', err); }
     scope?.querySelector('[data-stock-add-confirm]')?.addEventListener('click', () => {
         const name = (scope.querySelector('[data-stock-add-name]')?.value || '').trim();
         if (!name) { scope.querySelector('[data-stock-add-name]')?.focus(); return; }
@@ -5320,6 +5505,9 @@
         const reorderLevel = isNaN(reorder) ? Math.max(0, Math.round(parLevel * 0.4)) : reorder;
         const costPerUnit = isNaN(cost) ? 0 : cost;
         const currentStock = isNaN(cur) ? (existing ? currentStockFor(existing) : parLevel) : cur;
+        const nutritionData = readNutrition(scope);
+        const nutritionPatch = { nutrition: nutritionData.nutrition, gramsPerUnit: nutritionData.gramsPerUnit };
+        if (nutritionData.allergens !== undefined) nutritionPatch.allergens = nutritionData.allergens;
 
         if (isEdit) {
           const before = currentStockFor(existing);
@@ -5330,11 +5518,11 @@
               stUserItems[i] = {
                 ...stUserItems[i],
                 name, category, unit, supplier,
-                parLevel, reorderLevel, costPerUnit, currentStock, updatedAt: Date.now(),
+                parLevel, reorderLevel, costPerUnit, currentStock, ...nutritionPatch, updatedAt: Date.now(),
               };
               stItemOverrides[existing.id] = {
                 ...(stItemOverrides[existing.id] || {}),
-                name, category, unit, supplier, parLevel, reorderLevel, costPerUnit,
+                name, category, unit, supplier, parLevel, reorderLevel, costPerUnit, ...nutritionPatch,
                 updatedAt: Date.now(),
               };
               stSaveOverlay();   // article créé PAR le commerçant : sa correction compte autant
@@ -5343,7 +5531,7 @@
             stItemOverrides[existing.id] = {
               ...(stItemOverrides[existing.id] || {}),
               name, category, unit, supplier,
-              parLevel, reorderLevel, costPerUnit, currentStock, updatedAt: Date.now(),
+              parLevel, reorderLevel, costPerUnit, currentStock, ...nutritionPatch, updatedAt: Date.now(),
             };
             // Reflect current stock in stStockOverrides so statusOf/daysOfStock pick it up.
             stStockOverrides[existing.id] = currentStock;
@@ -5367,6 +5555,7 @@
           name, category, unit, supplier,
           currentStock,
           parLevel, reorderLevel, costPerUnit,
+          ...nutritionPatch,
           lastDelivery: today,
           deliveryFrequency: '·',
           usageThisWeek: 0,

@@ -281,6 +281,8 @@ const RICH = {
   supplier: 'Boucherie Errazi', lastDelivery: '2026-05-13',
   deliveryFrequency: 'mardi-vendredi', usageThisWeek: 28.6,
   theoreticalUsage: 29.2, status: 'low', sku: 'BF-001', notes: 'halal',
+  nutrition: { per100g: { kcal: 250, protein: 26, carbs: 0, fat: 17, sugars: 0, salt: 0.18 }, source: 'ciqual', ref: '6201' },
+  gramsPerUnit: 120, allergens: [],
 };
 for (const file of ['assets/stock.js', 'assets/caisse-stock-sync.js']) {
   const out = migrationOf(file)({ items: [JSON.parse(JSON.stringify(RICH))], cats: [] });
@@ -290,6 +292,8 @@ for (const file of ['assets/stock.js', 'assets/caisse-stock-sync.js']) {
     lost.length ? 'champs detruits : ' + lost.join(', ') : '');
   ok(`${file} · lastDelivery et status survivent a la migration`,
     kept.lastDelivery === '2026-05-13' && kept.status === 'low' && kept.sku === 'BF-001');
+  ok(`${file} · nutrition, conversion et allergenes survivent a la migration`,
+    kept.nutrition?.per100g?.protein === 26 && kept.gramsPerUnit === 120 && Array.isArray(kept.allergens));
 }
 
 /* ── 8. Retail Vertical Direct Deductions ───────────────────────────────────
@@ -659,7 +663,6 @@ const anonLot = anonLots.find((l) => l.id === unattributedMove?.id);
 }
 
 console.log(`✓ stock costing Phase 1, 2 & 3 (${pass} controls: v2 migration, subcategories, zero field loss, retail direct depletions, historical stability, v1 merge, multi-supplier ranked depletion, reversal restoration, partial coverage honesty, caisse reception path, card rank resolution, card defaultPrice isolation, unattributed supplier sentinel rank 999, two alerts isolation, real price change panel & dish impact, card swap rank immutability on existing lots)`);
-
 
 
 

@@ -67,4 +67,10 @@ assert.ok(ciqualSize < 250 * 1024, `ciqual-lite dépasse 250 Ko (${ciqualSize} o
 assert.ok(ciqual.foods.every((food) => ['id', 'nameFr', 'nameEn', 'kcal', 'protein', 'carbs', 'fat', 'sugars', 'salt', 'allergenHints'].every((key) => Object.hasOwn(food, key))));
 assert.ok(ciqual.foods.every((food) => food.nameFr && food.nameEn && N.NUTRIENT_KEYS.every((key) => Number.isFinite(food[key]) && food[key] >= 0)));
 assert.ok(ciqual.foods.every((food) => food.allergenHints.every((key) => N.ALLERGEN_KEYS.includes(key))));
+const stockSource = fs.readFileSync(new URL('../assets/stock.js', import.meta.url), 'utf8');
+const dashboardSource = fs.readFileSync(new URL('../dashboard.html', import.meta.url), 'utf8');
+assert.match(stockSource, /fetch\('assets\/data\/ciqual-lite\.json'/, 'Ciqual reste chargé à la demande dans l’éditeur');
+assert.match(stockSource, /data-allergen-confirm/, 'les suggestions allergènes exigent une confirmation explicite');
+assert.match(stockSource, /nutritionPatch = \{ nutrition: nutritionData\.nutrition, gramsPerUnit:/, 'la sauvegarde porte les champs optionnels');
+assert.ok(dashboardSource.indexOf('src="assets/menu-nutrition.js') < dashboardSource.indexOf('src="assets/stock.js'), 'le moteur nutrition charge avant le stock');
 console.log('✓ menu nutrition (unités, portions, arrondis, complétude et allergènes)');

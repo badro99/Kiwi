@@ -291,6 +291,10 @@
     "v": "5",
     "sha": "47c6977184784d8a"
   },
+  "assets/menu-nutrition.js": {
+    "v": "2",
+    "sha": "a61fe3d0aafa1b5d"
+  },
   "assets/menu-scan.js": {
     "v": "2",
     "sha": "741c0a2e08bf8694"
@@ -620,8 +624,8 @@
     "sha": "a4c3a6b89b6ee0d0"
   },
   "assets/stock.js": {
-    "v": "28",
-    "sha": "4617c9b097ebe1f9"
+    "v": "29",
+    "sha": "65ce3f8afb1530f6"
   },
   "assets/store-templates.js": {
     "v": "2",
