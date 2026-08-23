@@ -862,6 +862,10 @@ section('Whole-project regressions');
        fonctionnement sans JS restent présents à chaque nouveau guide. */
     'build-guides-check.mjs',
     'article-template-test.mjs',
+    /* Les articles juridiques portent une date de revue explicite. Le check
+       local valide le registre ; le workflow hebdomadaire applique la limite
+       stricte de 90 jours afin de ne pas transformer chaque build en minuteur. */
+    'content-freshness-test.mjs',
     'restaurant-menu-peak-hours-test.js',
     'restaurant-units-test.js',
     'menu-nutrition-test.mjs',

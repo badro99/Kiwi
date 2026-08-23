@@ -135,14 +135,17 @@ for (const page of published) {
     const articleNode = graph.find((item) => item['@type'] === 'Article');
     ok(articleNode?.dateModified === page.dateModified, `${page.path} structured data exposes its current modification date`);
     if (page.legalReviewDate) {
-      const visibleText = source.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
-      const reviewDate = {
-        fr: 'sources officielles vérifiées le 24 août 2026',
-        en: 'official sources checked on August 24, 2026',
-        ar: 'تم التحقق من المصادر الرسمية في 24 أغسطس 2026',
-      }[page.locale];
+      const sourceSection = source.match(/<section id="sources"[\s\S]*?<\/section>/)?.[0] || '';
+      const visibleText = sourceSection.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+      const locale = { fr: 'fr-FR', en: 'en-US', ar: 'ar-u-nu-latn' }[page.locale];
+      const reviewDate = new Intl.DateTimeFormat(locale, {
+        timeZone: 'UTC', day: 'numeric', month: 'long', year: 'numeric',
+      }).format(new Date(`${page.legalReviewDate}T00:00:00Z`));
+      const officialDomains = new Set([...sourceSection.matchAll(/href="https:\/\/([^/]+)\//g)]
+        .map((match) => match[1])
+        .filter((domain) => /^(?:www\.)?(?:finances\.gov\.ma|cndp\.ma|onssa\.gov\.ma|ompic\.ma|directentreprise\.ma|mcinet\.gov\.ma|rokhas\.ma|idarati\.ma)$/.test(domain)));
       ok((source.match(/href="#sources"/g) || []).length === 2 && source.includes('id="sources"'), `${page.path} exposes its official-source block from both contents menus`);
-      ok(source.includes('finances.gov.ma/') && /(?:cndp\.ma|onssa\.gov\.ma)\//.test(source), `${page.path} cites the relevant Moroccan primary sources`);
+      ok(officialDomains.size >= 2, `${page.path} cites at least two relevant Moroccan primary-source domains`);
       ok(visibleText.includes(reviewDate), `${page.path} displays its legal-source verification date`);
     }
   }
