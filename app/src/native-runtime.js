@@ -9,6 +9,19 @@
   var pairingKeys = ['kiwiPaired', 'kiwiPairedVenue', 'kiwiLiveMerchant', 'kiwiLive'];
   root.classList.add('kiwi-native');
 
+  /* Les rapports d'erreur (assets/err-reporter.js → POST /api/error) portent la
+     version de l'app et la plateforme, pas seulement l'empreinte du bundle web :
+     « pro/ios/1.0.0 (12) · b3c9e1 ». Lu au moment du rapport, donc l'écriture
+     asynchrone suffit ; avant la réponse de App.getInfo on a déjà la plateforme. */
+  var bundleMeta = document.querySelector('meta[name="kiwi-bundle"]');
+  var bundleTag = bundleMeta && bundleMeta.content ? ' · ' + String(bundleMeta.content).slice(0, 8) : '';
+  var platform = cap.getPlatform ? cap.getPlatform() : 'native';
+  window.__KIWI_APP_VERSION = 'pro/' + platform + bundleTag;
+  call(app, 'getInfo').then(function (info) {
+    if (!info || !info.version) return;
+    window.__KIWI_APP_VERSION = 'pro/' + platform + '/' + info.version + (info.build ? ' (' + info.build + ')' : '') + bundleTag;
+  });
+
   function call(plugin, method, args) {
     try {
       if (!plugin || typeof plugin[method] !== 'function') return Promise.resolve(null);

@@ -63,6 +63,15 @@ if (first) {
     assert(!/rel=["']manifest["']/i.test(html), `${page} : aucun <link rel="manifest">`);
     assert(!/fonts\.(?:googleapis|gstatic)\.com/i.test(html), `${page} : aucune police réseau`);
   }
+  // Chaque page embarquée rapporte ses plantages (POST /api/error via api-base) : la
+  // cuisine et la coquille native ne le faisaient pas, un écran qui plantait au passe
+  // ne laissait aucune trace.
+  for (const page of PAGES.concat(['index.html'])) {
+    const html = fs.readFileSync(path.join(first.out, page), 'utf8');
+    assert(/<script src="assets\/err-reporter\.js"/.test(html), `${page} : charge assets/err-reporter.js`);
+  }
+  const runtime = fs.readFileSync(path.join(first.out, 'native-runtime.js'), 'utf8');
+  assert(/window\.__KIWI_APP_VERSION = 'pro\/' \+ platform/.test(runtime) && /call\(app, 'getInfo'\)/.test(runtime), 'native-runtime : les rapports d’erreur portent plateforme et version de l’app (App.getInfo)');
   const shell = fs.readFileSync(path.join(first.out, 'index.html'), 'utf8');
   assert(/<meta name="kiwi-bundle" content="[0-9a-f]{64}"/.test(shell), 'index.html porte l’empreinte du bundle');
 
