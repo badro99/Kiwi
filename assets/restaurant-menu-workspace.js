@@ -37,7 +37,11 @@
       i18nRedo: 'Retranslate everything',
       i18nRedoConfirm: 'Retranslate the whole menu?',
       i18nRedoDesc: 'Your manual corrections are kept.',
-      i18nAddLang: 'Add a customer language',
+      i18nAddLang: 'Add a language to the menu',
+      i18nChooseLang: 'Choose the language your customers need',
+      i18nChooseHint: 'The language is translated once, then stays editable.',
+      i18nClosePicker: 'Close',
+      i18nAvailable: '{n} languages available',
       i18nRemoveLang: 'Remove',
       i18nRemoveConfirm: 'Remove this language?',
       i18nRemoveManual: '{n} manual correction(s) will be permanently deleted.',
@@ -304,7 +308,11 @@
       i18nRedo: 'إعادة ترجمة الكل',
       i18nRedoConfirm: 'إعادة ترجمة القائمة كاملة؟',
       i18nRedoDesc: 'تُحفظ تصحيحاتك اليدوية.',
-      i18nAddLang: 'إضافة لغة للزبائن',
+      i18nAddLang: 'إضافة لغة إلى القائمة',
+      i18nChooseLang: 'اختر اللغة التي يحتاجها زبناؤك',
+      i18nChooseHint: 'تُترجم اللغة مرة واحدة، ويمكنك تعديلها بعد ذلك.',
+      i18nClosePicker: 'إغلاق',
+      i18nAvailable: '{n} لغة متاحة',
       i18nRemoveLang: 'حذف',
       i18nRemoveConfirm: 'حذف هذه اللغة؟',
       i18nRemoveManual: 'سيتم حذف {n} تصحيح يدوي نهائيا.',
@@ -571,7 +579,11 @@
       i18nRedo: 'Tout retraduire',
       i18nRedoConfirm: 'Retraduire toute la carte ?',
       i18nRedoDesc: 'Vos corrections manuelles sont conservées.',
-      i18nAddLang: 'Ajouter une langue client',
+      i18nAddLang: 'Ajouter une langue au menu',
+      i18nChooseLang: 'Choisissez la langue dont vos clients ont besoin',
+      i18nChooseHint: 'La langue est traduite une fois, puis reste modifiable.',
+      i18nClosePicker: 'Fermer',
+      i18nAvailable: '{n} langues disponibles',
       i18nRemoveLang: 'Retirer',
       i18nRemoveConfirm: 'Retirer cette langue ?',
       i18nRemoveManual: '{n} correction(s) manuelle(s) seront supprimées définitivement.',
@@ -1167,10 +1179,16 @@
    * carte (import, scan, saisie), et à la main depuis l'onglet « Traductions »
    * où chaque cellule se corrige (une correction n'est plus jamais écrasée).
    * Sans session réelle (démo) : rien ne part sur le réseau. */
-  let i18nBusy=false,i18nTimer=0,i18nCooldown=0,i18nProgress='';
+  let i18nBusy=false,i18nTimer=0,i18nCooldown=0,i18nProgress='',i18nChooserOpen=false;
   const I18N_BATCH=40;
   // Allumé par défaut ; l'opérateur le coupe dans kiwi-admin (features.menuLangs === false).
   const menuLangFeature=()=>window.KiwiConfig?.features?.menuLangs!==false;
+  const I18N_LANG_LABELS={
+    fr:{es:'Espagnol',de:'Allemand',it:'Italien',pt:'Portugais',nl:'Néerlandais',ru:'Russe','zh-Hans':'Chinois simplifié','zh-Hant':'Chinois traditionnel',ja:'Japonais',ko:'Coréen',tr:'Turc',he:'Hébreu',pl:'Polonais',sv:'Suédois',no:'Norvégien',da:'Danois',hi:'Hindi',id:'Indonésien',el:'Grec',uk:'Ukrainien'},
+    en:{es:'Spanish',de:'German',it:'Italian',pt:'Portuguese',nl:'Dutch',ru:'Russian','zh-Hans':'Simplified Chinese','zh-Hant':'Traditional Chinese',ja:'Japanese',ko:'Korean',tr:'Turkish',he:'Hebrew',pl:'Polish',sv:'Swedish',no:'Norwegian',da:'Danish',hi:'Hindi',id:'Indonesian',el:'Greek',uk:'Ukrainian'},
+    ar:{es:'الإسبانية',de:'الألمانية',it:'الإيطالية',pt:'البرتغالية',nl:'الهولندية',ru:'الروسية','zh-Hans':'الصينية المبسطة','zh-Hant':'الصينية التقليدية',ja:'اليابانية',ko:'الكورية',tr:'التركية',he:'العبرية',pl:'البولندية',sv:'السويدية',no:'النرويجية',da:'الدنماركية',hi:'الهندية',id:'الإندونيسية',el:'اليونانية',uk:'الأوكرانية'},
+  };
+  function menuLangLabel(code){const l=String(document.documentElement.lang||'fr').toLowerCase().split('-')[0];return (I18N_LANG_LABELS[l]||I18N_LANG_LABELS.fr)[code]||code;}
   const realSession=()=>{try{return !!(window.KiwiEnv&&window.KiwiEnv.isReal&&window.KiwiEnv.isReal());}catch(_){return false;}};
   function i18nChunks(need){
     const out=[];let cur={cats:[],items:[],opts:[],n:0};
@@ -1230,9 +1248,9 @@
     if(!M)return `<div class="rmw-empty"><p>${esc(ui('reloadPage'))}</p></div>`;
     const L=menuLangFeature()?M.langs(d):M.LANGS,sum=M.summary(d,L);
     const available=M.EXTRA.filter(l=>!L.includes(l));
-    const picker=menuLangFeature()?`<div class="rmw-i18n-picker" data-lens-demo><span>${esc(ui('i18nAddLang'))}</span>${available.map(l=>`<button type="button" data-lens-item data-action="rmw-i18n-add" data-arg="${l}" dir="${M.rtl(l)?'rtl':'ltr'}">${esc(M.NAMES[l])}</button>`).join('')}${L.filter(l=>M.EXTRA.includes(l)).map(l=>`<button type="button" class="is-added" data-lens-item data-action="rmw-i18n-remove" data-arg="${l}" title="${esc(ui('i18nRemoveLang'))}" dir="${M.rtl(l)?'rtl':'ltr'}">${esc(M.NAMES[l])} ×</button>`).join('')}</div>`:'';
+    const picker=menuLangFeature()?`<div class="rmw-lang-select"><button type="button" class="rmw-lang-trigger" data-action="rmw-i18n-toggle" aria-expanded="${i18nChooserOpen?'true':'false'}"${available.length?'':' disabled'}><span class="rmw-lang-trigger-plus">+</span><span><b>${esc(ui('i18nAddLang'))}</b><small>${esc(ui('i18nAvailable',{n:available.length}))}</small></span></button>${i18nChooserOpen&&available.length?`<section class="rmw-lang-popover"><div class="rmw-lang-popover-head"><div><b>${esc(ui('i18nChooseLang'))}</b><span>${esc(ui('i18nChooseHint'))}</span></div><button type="button" data-action="rmw-i18n-toggle">${esc(ui('i18nClosePicker'))}</button></div><div class="rmw-lang-grid">${available.map(l=>`<button type="button" data-action="rmw-i18n-add" data-arg="${l}"><span class="rmw-lang-code">${esc(l)}</span><span class="rmw-lang-copy"><b>${esc(menuLangLabel(l))}</b><small dir="${M.rtl(l)?'rtl':'ltr'}">${esc(M.NAMES[l])}</small></span><span class="rmw-lang-add">+</span></button>`).join('')}</div></section>`:''}</div>`:'';
     const head=`<div class="rmw-i18n-head"><div><div class="rmw-i18n-title">${esc(ui('i18nTitle'))}</div><p class="rmw-i18n-hint">${esc(ui('i18nHint'))}</p></div><div class="rmw-i18n-acts"><button class="btn-slim" data-action="rmw-i18n-fill"${i18nBusy?' disabled':''}>${esc(ui('i18nFill'))}</button><button class="btn-slim" data-action="rmw-i18n-redo"${i18nBusy?' disabled':''}>${esc(ui('i18nRedo'))}</button></div></div>${picker}`;
-    const stats=`<div class="rmw-i18n-stats">${L.map(l=>{const s=sum[l];return `<div class="rmw-i18n-stat"><b>${esc(M.NAMES[l]||l)}</b><span>${s.ok+s.manual}/${s.total} ${esc(ui('i18nStatusOk'))}</span>${s.stale?`<span class="is-stale">${s.stale} ${esc(ui('i18nStatusStale'))}</span>`:''}${s.missing?`<span class="is-missing">${s.missing} ${esc(ui('i18nStatusMissing'))}</span>`:''}</div>`;}).join('')}${i18nProgress?`<div class="rmw-i18n-busy"><span class="rmw-i18n-spin" aria-hidden="true"></span>${esc(i18nProgress)}</div>`:''}</div>`;
+    const stats=`<div class="rmw-i18n-stats">${L.map(l=>{const s=sum[l],extra=M.EXTRA.includes(l),label=extra?menuLangLabel(l):(M.NAMES[l]||l),native=extra&&M.NAMES[l]!==label?M.NAMES[l]:'';return `<div class="rmw-i18n-stat"><span class="rmw-i18n-stat-name"><b>${esc(label)}</b>${native?`<small dir="${M.rtl(l)?'rtl':'ltr'}">${esc(native)}</small>`:''}</span><span>${s.ok+s.manual}/${s.total} ${esc(ui('i18nStatusOk'))}</span>${s.stale?`<span class="is-stale">${s.stale} ${esc(ui('i18nStatusStale'))}</span>`:''}${s.missing?`<span class="is-missing">${s.missing} ${esc(ui('i18nStatusMissing'))}</span>`:''}${extra?`<button type="button" data-action="rmw-i18n-remove" data-arg="${l}" title="${esc(ui('i18nRemoveLang'))}" aria-label="${esc(ui('i18nRemoveLang'))} ${esc(label)}">×</button>`:''}</div>`;}).join('')}${i18nProgress?`<div class="rmw-i18n-busy"><span class="rmw-i18n-spin" aria-hidden="true"></span>${esc(i18nProgress)}</div>`:''}</div>`;
     const stLabel=(st)=>ui('i18nStatus'+st.charAt(0).toUpperCase()+st.slice(1));
     const cell=(kind,id,sub,e,l,field)=>{
       const x=e.i18n&&e.i18n[l];const st=M.status(e,l);
@@ -1260,13 +1278,35 @@
 .rmw-i18n-title{font:650 16px var(--sans);letter-spacing:-.01em;color:var(--ink)}
 .rmw-i18n-hint{max-width:70ch;margin:4px 0 0;font-size:12px;line-height:1.45;color:var(--n-500)}
 .rmw-i18n-acts{display:flex;gap:8px;flex-wrap:wrap}
-.rmw-i18n-picker{display:flex;align-items:center;gap:6px;max-width:100%;margin:0 0 14px;padding:6px;overflow:auto;border:1px solid var(--n-200);border-radius:14px;background:var(--paper-soft);scrollbar-width:thin}
-.rmw-i18n-picker>span{position:sticky;left:0;padding:0 8px;color:var(--n-500);font:650 10px var(--mono);white-space:nowrap;background:var(--paper-soft)}
-.rmw-i18n-picker button{min-height:36px;padding:0 12px;border:0;border-radius:10px;background:var(--surface);color:var(--ink);font:600 12px var(--sans);white-space:nowrap;cursor:pointer}
-.rmw-i18n-picker button.is-added{color:var(--atlas);background:color-mix(in srgb,var(--atlas) 11%,var(--surface))}
+.rmw-lang-select{margin:0 0 16px}
+.rmw-lang-trigger{display:inline-flex;align-items:center;gap:10px;min-height:48px;padding:7px 14px 7px 8px;border:1px solid color-mix(in srgb,var(--atlas) 30%,var(--n-200));border-radius:13px;background:color-mix(in srgb,var(--atlas) 7%,var(--surface));color:var(--ink);text-align:start;cursor:pointer}
+.rmw-lang-trigger:hover{border-color:var(--atlas);background:color-mix(in srgb,var(--atlas) 11%,var(--surface))}
+.rmw-lang-trigger:disabled{opacity:.48;cursor:default}
+.rmw-lang-trigger-plus{display:grid;place-items:center;width:32px;height:32px;border-radius:9px;background:var(--atlas);color:var(--paper);font:500 22px/1 var(--sans)}
+.rmw-lang-trigger>span:last-child{display:grid;gap:2px}
+.rmw-lang-trigger b{font:650 12px var(--sans)}
+.rmw-lang-trigger small{color:var(--n-500);font:500 10px var(--sans)}
+.rmw-lang-popover{margin-top:9px;padding:14px;border:1px solid var(--n-200);border-radius:16px;background:var(--paper-soft);box-shadow:0 16px 40px rgba(0,0,0,.12)}
+.rmw-lang-popover-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:12px}
+.rmw-lang-popover-head>div{display:grid;gap:3px}
+.rmw-lang-popover-head b{font:650 13px var(--sans);color:var(--ink)}
+.rmw-lang-popover-head span{font-size:11px;color:var(--n-500)}
+.rmw-lang-popover-head button{border:0;background:transparent;color:var(--n-500);font:600 11px var(--sans);cursor:pointer}
+.rmw-lang-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:7px}
+.rmw-lang-grid>button{display:grid;grid-template-columns:34px 1fr 24px;align-items:center;gap:9px;min-height:56px;padding:7px 9px;border:1px solid var(--n-200);border-radius:11px;background:var(--surface);color:var(--ink);text-align:start;cursor:pointer}
+.rmw-lang-grid>button:hover{border-color:var(--atlas);background:color-mix(in srgb,var(--atlas) 7%,var(--surface));transform:translateY(-1px)}
+.rmw-lang-code{display:grid;place-items:center;min-height:30px;border-radius:8px;background:var(--paper-soft);color:var(--n-500);font:650 9px var(--mono);text-transform:uppercase}
+.rmw-lang-copy{display:grid;gap:2px;min-width:0}
+.rmw-lang-copy b{overflow:hidden;color:var(--ink);font:650 12px var(--sans);text-overflow:ellipsis;white-space:nowrap}
+.rmw-lang-copy small{overflow:hidden;color:var(--n-500);font:500 11px var(--sans);text-overflow:ellipsis;white-space:nowrap}
+.rmw-lang-add{display:grid;place-items:center;width:23px;height:23px;border-radius:7px;background:color-mix(in srgb,var(--atlas) 12%,var(--surface));color:var(--atlas);font:600 16px/1 var(--sans)}
 .rmw-i18n-stats{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:0 0 14px}
-.rmw-i18n-stat{display:flex;gap:10px;align-items:baseline;padding:9px 13px;border:1px solid var(--n-200);border-radius:11px;background:var(--surface);font-size:12px;color:var(--n-500)}
+.rmw-i18n-stat{display:flex;gap:10px;align-items:center;padding:8px 9px 8px 13px;border:1px solid var(--n-200);border-radius:11px;background:var(--surface);font-size:12px;color:var(--n-500)}
 .rmw-i18n-stat b{color:var(--ink);font-weight:650}
+.rmw-i18n-stat-name{display:grid;gap:1px}
+.rmw-i18n-stat-name small{color:var(--n-500);font:500 10px var(--sans)}
+.rmw-i18n-stat>button{display:grid;place-items:center;width:25px;height:25px;margin-inline-start:2px;border:0;border-radius:7px;background:var(--paper-soft);color:var(--n-500);font:500 15px/1 var(--sans);cursor:pointer}
+.rmw-i18n-stat>button:hover{background:color-mix(in srgb,#c94835 12%,var(--surface));color:#b94b38}
 .rmw-i18n-stat .is-stale{color:#a77617}.rmw-i18n-stat .is-missing{color:#b94b38}
 .rmw-i18n-busy{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--atlas)}
 .rmw-i18n-spin{width:14px;height:14px;border:2px solid var(--n-200);border-top-color:var(--atlas);border-radius:50%;animation:rmw-spin .8s linear infinite}
@@ -1284,6 +1324,8 @@ table.rmw-i18n input:focus{outline:0;border-color:var(--atlas);background:var(--
 table.rmw-i18n td.st-missing input{background:color-mix(in srgb,#b94b38 6%,transparent)}
 table.rmw-i18n td.st-stale input{background:color-mix(in srgb,#a77617 8%,transparent)}
 table.rmw-i18n td.st-manual input{border-inline-start:3px solid var(--atlas)}
+@media(max-width:700px){.rmw-lang-trigger{width:100%}.rmw-lang-popover{padding:10px}.rmw-lang-popover-head{align-items:center}.rmw-lang-popover-head span{display:none}.rmw-lang-grid{grid-template-columns:1fr 1fr}.rmw-lang-grid>button{grid-template-columns:30px 1fr 22px;min-height:52px;padding:6px}.rmw-lang-code{font-size:8px}}
+@media(max-width:430px){.rmw-lang-grid{grid-template-columns:1fr}}
 `;document.head.appendChild(s);}
   function wire(){
     const H=window.Kiwi?.handlers;if(!H)return false;
@@ -1317,7 +1359,8 @@ table.rmw-i18n td.st-manual input{border-inline-start:3px solid var(--atlas)}
     H['rmw-menu-translate']=()=>{tab='i18n';render();};
     H['rmw-i18n-fill']=()=>ensureTranslations({silent:false});
     H['rmw-i18n-redo']=()=>confirm(ui('i18nRedoConfirm'),()=>{S().clearI18n(null,true);ensureTranslations({silent:false,force:true});},ui('i18nRedoDesc'));
-    H['rmw-i18n-add']=(_e,lang)=>{const M=window.KiwiMenuI18n,l=M?.asLang(lang);if(!l||M.LANGS.includes(l))return;S().setLanguages(M.langs({langs:M.langs(D()).concat(l)}));render();ensureTranslations({silent:false,langs:[l]});};
+    H['rmw-i18n-toggle']=()=>{i18nChooserOpen=!i18nChooserOpen;i18nRefreshPanel();};
+    H['rmw-i18n-add']=(_e,lang)=>{const M=window.KiwiMenuI18n,l=M?.asLang(lang);if(!l||M.LANGS.includes(l))return;i18nChooserOpen=false;S().setLanguages(M.langs({langs:M.langs(D()).concat(l)}));render();ensureTranslations({silent:false,langs:[l]});};
     H['rmw-i18n-remove']=(_e,lang)=>{const M=window.KiwiMenuI18n,l=M?.asLang(lang);if(!l||M.LANGS.includes(l))return;const run=()=>{S().clearI18n(l,false);S().setLanguages(M.langs({langs:M.langs(D()).filter(x=>x!==l)}));render();};const s=M.summary(D(),[l])[l];if(s&&s.manual)confirm(ui('i18nRemoveConfirm'),run,ui('i18nRemoveManual',{n:s.manual}));else run();};
     if(H['nav-menu']!==restaurantMenuHandler){legacyMenuHandler=H['nav-menu']||legacyMenuHandler;H['nav-menu']=restaurantMenuHandler;}
     return true;
