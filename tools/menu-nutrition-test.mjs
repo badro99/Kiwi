@@ -120,6 +120,18 @@ for (const [category, grams] of [['egg', 50], ['tomato', 120], ['bread_slice', 3
   assert.equal(ciqual.portionSuggestions?.[category]?.grams, grams, `préfill portion absent : ${category}`);
   assert.ok(ciqual.foods.some((food) => food.portionCategory === category), `catégorie portion sans aliment : ${category}`);
 }
+/* Classement de la recherche : « oeuf » doit montrer l'œuf, pas sept « Boeuf ». */
+const top = (q, n) => N.searchFoods(ciqual, q, n || 5).map((hit) => hit.food.nameFr);
+assert.equal(top('oeuf')[0], 'Oeuf cru', 'oeuf → l’œuf cru d’abord, pas le boeuf');
+assert.equal(top('œuf')[0], 'Oeuf cru', 'la ligature œ est comprise');
+assert.equal(top('egg')[0], 'Oeuf cru', 'le nom anglais compte aussi');
+assert.ok(!top('oeuf', 8).some((name) => /^Boeuf/.test(name)), 'le boeuf ne prend plus les places de l’œuf');
+assert.equal(top('boeuf')[0].slice(0, 5), 'Boeuf', 'boeuf reste boeuf');
+assert.ok(top('lait').every((name) => /^Lait/.test(name)), 'lait → des laits, pas la laitue');
+assert.deepEqual(N.searchFoods(ciqual, 'smen', 3).map((hit) => [hit.alias, String(hit.food.id)]), [['smen', '16402']], 'alias exact en tête avec son libellé');
+assert.equal(top('lait entier')[0], 'Lait entier, UHT', 'requête à plusieurs mots');
+assert.equal(N.searchFoods(ciqual, 'x', 5).length, 0, 'moins de deux caractères : rien');
+assert.equal(N.searchFoods(ciqual, 'zzzz', 5).length, 0, 'aucune correspondance : liste vide');
 assert.ok(ciqual.foods.length >= 800 && ciqual.foods.length <= 1500);
 assert.ok(ciqualSize < 250 * 1024, `ciqual-lite dépasse 250 Ko (${ciqualSize} octets)`);
 assert.ok(ciqual.foods.every((food) => ['id', 'nameFr', 'nameEn', 'kcal', 'protein', 'carbs', 'fat', 'sugars', 'salt', 'allergenHints'].every((key) => Object.hasOwn(food, key))));
@@ -130,6 +142,7 @@ const dashboardSource = fs.readFileSync(new URL('../dashboard.html', import.meta
 assert.match(stockSource, /fetch\('assets\/data\/ciqual-lite\.json\?v=\d+'/,
   'Ciqual reste chargé à la demande dans l’éditeur, avec une URL versionnée');
 assert.match(stockSource, /Object\.entries\(ciqual\.aliases\)/, 'la recherche inclut les noms marocains du fichier lazy');
+assert.match(stockSource, /N\.searchFoods\(ciqual, search\.value, 8\)/, 'l’éditeur stock passe par le classement du moteur');
 assert.match(stockSource, /data-apply-grams[\s\S]*addEventListener\('click'[\s\S]*gramsInput\.value = String\(suggestion\.grams\)/,
   'la suggestion de portion exige une action explicite avant de remplir le champ');
 assert.match(stockSource, /data-allergen-confirm/, 'les suggestions allergènes exigent une confirmation explicite');

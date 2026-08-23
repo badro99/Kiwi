@@ -126,8 +126,77 @@
     };
   }
 
+  /* ── Recherche dans Ciqual ─────────────────────────────────────────────────
+   * Une simple sous-chaîne dans l'ordre du fichier, plafonnée à huit, rendait
+   * « oeuf » invisible : un biscuit puis sept « Boeuf » prenaient toutes les
+   * places, et « Oeuf cru » (23e) n'apparaissait jamais. On classe :
+   *   0  le nom (ou un alias) est exactement la saisie
+   *   1  le premier mot est la saisie          « Oeuf cru », « Lait entier »
+   *   2  le nom commence par la saisie         « Laitue, crue » pour « lait »
+   *   3  un mot entier est la saisie           « Caviar de tomates » non, « Pain de mie » pour « mie » oui
+   *   4  un mot commence par la saisie         « Boeuf » pour « boe »
+   *   5  sous-chaîne quelque part              « Boeuf » pour « oeuf »
+   * Le nom anglais compte aussi (« egg »), un cran en dessous du français.
+   * À rang égal, le nom le plus court d'abord : « Oeuf cru » avant
+   * « Oeuf, blanc (blanc d'oeuf), en poudre ». « œ » et « æ » sont éclatés en
+   * « oe » / « ae » avant la comparaison : la clé NFD ne décompose pas ces
+   * ligatures et « œuf » devenait « uf ». */
+  function searchKey(value) {
+    return clean(value).toLocaleLowerCase('fr').replace(/œ/g, 'oe').replace(/æ/g, 'ae')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+  }
+  function matchRank(text, query) {
+    if (!text) return -1;
+    if (text === query) return 0;
+    // Plusieurs mots (« huile olive ») : chacun doit se retrouver, le rang est
+    // celui du mot le moins bien placé. « Huile d'olive vierge » passe, « Huile
+    // de lin » non.
+    if (query.includes(' ')) {
+      const ranks = query.split(' ').map((part) => matchRank(text, part));
+      return ranks.some((rank) => rank < 0) ? -1 : Math.max(1, ...ranks);
+    }
+    const words = text.split(' ');
+    if (words[0] === query) return 1;
+    if (text.startsWith(query)) return 2;
+    if (words.includes(query)) return 3;
+    if (words.some((word) => word.startsWith(query))) return 4;
+    if (text.includes(query)) return 5;
+    return -1;
+  }
+  function searchFoods(ciqual, rawQuery, limit) {
+    const query = searchKey(rawQuery);
+    const foods = (ciqual && ciqual.foods) || [];
+    const aliases = (ciqual && ciqual.aliases) || {};
+    if (query.length < 2 || !foods.length) return [];
+    const byId = new Map(foods.map((food) => [String(food.id), food]));
+    const best = new Map();
+    function offer(food, rank, alias) {
+      if (!food || rank < 0) return;
+      const id = String(food.id);
+      const prev = best.get(id);
+      if (!prev || rank < prev.rank) best.set(id, { food, rank, alias: alias || '' });
+      else if (rank === prev.rank && alias && !prev.alias) prev.alias = alias;
+    }
+    Object.keys(aliases).forEach((alias) => {
+      offer(byId.get(String(aliases[alias])), matchRank(searchKey(alias), query), alias);
+    });
+    foods.forEach((food) => {
+      const fr = matchRank(searchKey(food.nameFr), query);
+      const en = matchRank(searchKey(food.nameEn), query);
+      const enRank = en < 0 ? -1 : en + 1;
+      const rank = fr < 0 ? enRank : (enRank < 0 ? fr : Math.min(fr, enRank));
+      offer(food, rank, '');
+    });
+    return Array.from(best.values())
+      .sort((a, b) => a.rank - b.rank
+        || searchKey(a.food.nameFr).length - searchKey(b.food.nameFr).length
+        || String(a.food.nameFr).localeCompare(String(b.food.nameFr), 'fr'))
+      .slice(0, limit || 8);
+  }
+
   return {
     ALLERGEN_KEYS: ALLERGEN_KEYS.slice(), NUTRIENT_KEYS: NUTRIENT_KEYS.slice(),
     normalizeUnit, normalizeAllergens, quantityToGrams, compute,
+    searchKey, searchFoods,
   };
 }));

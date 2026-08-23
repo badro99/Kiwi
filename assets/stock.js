@@ -5318,7 +5318,7 @@
     return ciqualPromise;
   }
   function searchKey(value) {
-    return String(value || '').toLocaleLowerCase('fr').normalize('NFD')
+    return String(value || '').toLocaleLowerCase('fr').replace(/œ/g, 'oe').replace(/æ/g, 'ae').normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
   }
   function nutrientLabel(key) {
@@ -5394,19 +5394,26 @@
       const query = searchKey(search.value);
       if (query.length < 2) { results.hidden = true; results.textContent = ''; return; }
       const ciqual = await loadCiqual();
-      const aliasHits = Object.entries(ciqual.aliases)
-        .filter(([alias]) => searchKey(alias).includes(query))
-        .map(([alias, id]) => ({ alias, food: ciqual.foods.find((row) => String(row.id) === String(id)) }))
-        .filter((entry) => entry.food);
-      const canonicalHits = ciqual.foods
-        .filter((food) => searchKey(food.nameFr + ' ' + food.nameEn).includes(query))
-        .map((food) => ({ alias: '', food }));
-      const seen = new Set();
-      const hits = [...aliasHits, ...canonicalHits].filter((entry) => {
-        const id = String(entry.food.id);
-        if (seen.has(id)) return false;
-        seen.add(id); return true;
-      }).slice(0, 8);
+      /* Classement (alias exact, premier mot, début de nom, mot entier, préfixe de
+       * mot, sous-chaîne ; FR avant EN ; le plus court d'abord) : dans
+       * assets/menu-nutrition.js · searchFoods. Sans lui, « oeuf » ne montrait
+       * jamais l'œuf : un biscuit et sept « Boeuf » remplissaient les huit places. */
+      const N = window.KiwiMenuNutrition;
+      const hits = N && N.searchFoods ? N.searchFoods(ciqual, search.value, 8) : (() => {
+        const aliasHits = Object.entries(ciqual.aliases)
+          .filter(([alias]) => searchKey(alias).includes(query))
+          .map(([alias, id]) => ({ alias, food: ciqual.foods.find((row) => String(row.id) === String(id)) }))
+          .filter((entry) => entry.food);
+        const canonicalHits = ciqual.foods
+          .filter((food) => searchKey(food.nameFr + ' ' + food.nameEn).includes(query))
+          .map((food) => ({ alias: '', food }));
+        const seen = new Set();
+        return [...aliasHits, ...canonicalHits].filter((entry) => {
+          const id = String(entry.food.id);
+          if (seen.has(id)) return false;
+          seen.add(id); return true;
+        }).slice(0, 8);
+      })();
       results.hidden = false;
       results.innerHTML = hits.length ? hits.map(({ food, alias }) => `<button type="button" data-ciqual-id="${esc(food.id)}"><b>${esc(lang() === 'en' ? food.nameEn : food.nameFr)}</b><span>${alias ? esc(alias) + ' · ' : ''}${esc(lang() === 'en' ? food.nameFr : food.nameEn)} · ${esc(food.kcal)} kcal</span></button>`).join('') : `<span>${esc(t('nutriNoMatch'))}</span>`;
     });
