@@ -84,6 +84,34 @@ ok(/Sans JavaScript/.test(read('fr/guides/calcul-food-cost-restaurant/index.html
 ok(/data-break-even-calculator/.test(read('fr/guides/seuil-rentabilite-restaurant/index.html')) && /updateBreakEvenCalculator/.test(js), 'the break-even calculator is progressively enhanced');
 ok(/Without JavaScript/.test(read('en/guides/restaurant-break-even-point/index.html')) && /من دون JavaScript/.test(read('ar/guides/نقطة-التعادل-للمطعم/index.html')), 'break-even formulas remain available without JavaScript in every locale');
 
+const landingGuideRoutes = {
+  fr: [
+    '/fr/guides/logiciel-caisse-restaurant-maroc/', '/fr/guides/calcul-food-cost-restaurant/',
+    '/fr/guides/gestion-stock-restaurant/', '/fr/guides/menu-engineering-restaurant/',
+    '/fr/guides/seuil-rentabilite-restaurant/'
+  ],
+  en: [
+    '/en/guides/restaurant-pos-software-morocco/', '/en/guides/restaurant-food-cost/',
+    '/en/guides/restaurant-inventory-management/', '/en/guides/restaurant-menu-engineering/',
+    '/en/guides/restaurant-break-even-point/'
+  ],
+  ar: [
+    '/ar/guides/برنامج-كاشير-للمطعم-في-المغرب/', '/ar/guides/حساب-تكلفة-الطعام-للمطعم/',
+    '/ar/guides/إدارة-مخزون-المطعم/', '/ar/guides/هندسة-قائمة-الطعام-للمطعم/',
+    '/ar/guides/نقطة-التعادل-للمطعم/'
+  ]
+};
+for (const [locale, source] of Object.entries(landingByLocale)) {
+  const routes = landingGuideRoutes[locale];
+  const guideStart = source.indexOf('id="guides"');
+  const pricingStart = source.indexOf('id="pricing"');
+  ok(guideStart !== -1 && guideStart < pricingStart, `${locale.toUpperCase()} landing places the editorial library before pricing`);
+  ok(source.includes(`href="/${locale}/guides/"`), `${locale.toUpperCase()} landing links to its localized guide hub`);
+  ok(routes.every((href) => source.includes(`href="${href}"`)), `${locale.toUpperCase()} landing exposes all five localized guide routes`);
+  ok(routes.every((href) => fs.existsSync(new URL('../' + href.slice(1) + 'index.html', import.meta.url))), `${locale.toUpperCase()} landing guide links resolve to committed static pages`);
+  ok((source.match(new RegExp(`href="\\/${locale}\\/guides\\/`, 'g')) || []).length === 6, `${locale.toUpperCase()} landing has one hub link and five article links without duplicates`);
+}
+
 const publishedVersions = new Set();
 const publishedImages = new Set();
 for (const page of published) {
