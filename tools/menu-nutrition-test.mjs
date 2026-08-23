@@ -160,4 +160,11 @@ assert.match(workspaceSource, /data-hide-nutrition/, 'le masquage par plat reste
 assert.match(workspaceSource, /features\?\.menuNutrition!==false/, 'le workspace copie la règle absent = actif');
 const adminSource = fs.readFileSync(new URL('../kiwi-admin.html', import.meta.url), 'utf8');
 assert.match(adminSource, /key:'menuNutrition'/, 'God Mode expose le flag restaurant');
+const orderSource = fs.readFileSync(new URL('../kiwi-order.html', import.meta.url), 'utf8');
+assert.match(orderSource, /function nutritionSummary\(item\)[\s\S]*if \(!n\) return ''/, 'la carte client ne rend aucun substitut quand la donnée manque');
+assert.match(orderSource, /function nutritionDetail\(item\)[\s\S]*nutrient_energy[\s\S]*nutrient_salt/, 'la fiche client rend les six valeurs');
+assert.match(orderSource, /<bdi dir="ltr">\$\{escapeHtml\(n\.kcal\)\}/, 'les nombres sont isolés dans le rendu RTL');
+assert.match(orderSource, /Valeurs indicatives par portion, hors options/);
+assert.match(orderSource, /Indicative values per portion, excluding options/);
+assert.match(orderSource, /قيم تقريبية لكل حصة، بدون الخيارات/);
 console.log('✓ menu nutrition (unités, portions, arrondis, complétude et allergènes)');

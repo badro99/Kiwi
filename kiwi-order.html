@@ -629,6 +629,19 @@ em, i, cite, dfn, var { font-style: normal; }
       margin-top: 4px;
       letter-spacing: -0.01em;
     }
+    .item-detail { min-width: 0; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: start; cursor: pointer; }
+    .item-detail:focus-visible { outline: 2px solid var(--forest); outline-offset: 3px; border-radius: 6px; }
+    .item-nutrition {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 2px 5px;
+      margin-top: 5px;
+      color: var(--ink-4);
+      font-family: var(--mono);
+      font-size: 9.5px;
+      line-height: 1.35;
+    }
+    .item-nutrition bdi { unicode-bidi: isolate; white-space: nowrap; }
     .item-add {
       width: 34px; height: 34px;
       border-radius: 999px;
@@ -1630,6 +1643,40 @@ em, i, cite, dfn, var { font-style: normal; }
       margin-top: 4px;
       letter-spacing: -0.005em;
     }
+    .custom-nutrition {
+      margin: 4px 0 14px;
+      padding: 14px;
+      border: 1px solid var(--line-soft);
+      border-radius: 14px;
+      background: var(--paper-mute);
+    }
+    .custom-nutrition-title {
+      margin-bottom: 10px;
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .custom-nutrition-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 7px;
+    }
+    .custom-nutrition-cell {
+      min-width: 0;
+      padding: 9px;
+      border: 1px solid var(--line-soft);
+      border-radius: 10px;
+      background: var(--surface);
+    }
+    .custom-nutrition-cell span { display: block; color: var(--ink-4); font-size: 9.5px; }
+    .custom-nutrition-cell bdi { display: block; margin-top: 3px; color: var(--ink); font: 600 11px var(--mono); unicode-bidi: isolate; }
+    .custom-allergens { margin-top: 12px; }
+    .custom-allergens-label { margin-bottom: 7px; color: var(--ink-3); font-size: 10.5px; font-weight: 600; }
+    .custom-allergen-list { display: flex; flex-wrap: wrap; gap: 6px; }
+    .custom-allergen-chip { display: inline-flex; align-items: center; gap: 5px; padding: 6px 8px; border: 1px solid var(--line-soft); border-radius: 999px; background: var(--surface); color: var(--ink-2); font-size: 10px; }
+    .custom-allergen-icon { width: 13px; height: 13px; flex: 0 0 auto; background: currentColor; -webkit-mask: url('assets/icons/material/bakery_dining.svg') center/contain no-repeat; mask: url('assets/icons/material/bakery_dining.svg') center/contain no-repeat; }
+    .custom-nutrition-note { margin: 10px 0 0; color: var(--ink-4); font-size: 10px; line-height: 1.4; }
+    @media (max-width: 360px) { .custom-nutrition-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
     .custom-scroll {
       flex: 1;
@@ -2784,6 +2831,7 @@ em, i, cite, dfn, var { font-style: normal; }
         </div>
 
         <div class="custom-scroll">
+          <div id="custom-nutrition" hidden></div>
           <div id="custom-options"></div>
 
           <div class="custom-note-section">
@@ -3053,6 +3101,17 @@ em, i, cite, dfn, var { font-style: normal; }
         custom_note_optional: "facultatif",
         custom_note_placeholder: "Ex : peu de glaçons, sans sel, allergie aux noix…",
         custom_price: "Prix",
+        nutrition_title: "Valeurs nutritionnelles",
+        nutrition_indicative: "Valeurs indicatives par portion, hors options",
+        nutrition_allergens: "Allergènes",
+        nutrition_none: "Aucun allergène déclaré",
+        nutrient_energy: "Énergie", nutrient_protein: "Protéines", nutrient_carbs: "Glucides",
+        nutrient_fat: "Lipides", nutrient_sugars: "Sucres", nutrient_salt: "Sel",
+        nutrient_short_protein: "P", nutrient_short_carbs: "G", nutrient_short_fat: "L",
+        allergen_gluten: "Gluten", allergen_crustaces: "Crustacés", allergen_oeufs: "Œufs", allergen_poissons: "Poissons",
+        allergen_arachides: "Arachides", allergen_soja: "Soja", allergen_lait: "Lait", allergen_fruits_a_coque: "Fruits à coque",
+        allergen_celeri: "Céleri", allergen_moutarde: "Moutarde", allergen_sesame: "Sésame", allergen_sulfites: "Sulfites",
+        allergen_lupin: "Lupin", allergen_mollusques: "Mollusques",
         btn_add: "Ajouter",
         opt_choose_one: "choisir 1",
         opt_choose_many: "plusieurs possibles",
@@ -3217,6 +3276,17 @@ em, i, cite, dfn, var { font-style: normal; }
         custom_note_optional: "optional",
         custom_note_placeholder: "Ex: less ice, no salt, nut allergy…",
         custom_price: "Price",
+        nutrition_title: "Nutrition facts",
+        nutrition_indicative: "Indicative values per portion, excluding options",
+        nutrition_allergens: "Allergens",
+        nutrition_none: "No declared allergens",
+        nutrient_energy: "Energy", nutrient_protein: "Protein", nutrient_carbs: "Carbohydrate",
+        nutrient_fat: "Fat", nutrient_sugars: "Sugars", nutrient_salt: "Salt",
+        nutrient_short_protein: "P", nutrient_short_carbs: "C", nutrient_short_fat: "F",
+        allergen_gluten: "Gluten", allergen_crustaces: "Crustaceans", allergen_oeufs: "Eggs", allergen_poissons: "Fish",
+        allergen_arachides: "Peanuts", allergen_soja: "Soy", allergen_lait: "Milk", allergen_fruits_a_coque: "Nuts",
+        allergen_celeri: "Celery", allergen_moutarde: "Mustard", allergen_sesame: "Sesame", allergen_sulfites: "Sulphites",
+        allergen_lupin: "Lupin", allergen_mollusques: "Molluscs",
         btn_add: "Add",
         opt_choose_one: "pick 1",
         opt_choose_many: "pick any",
@@ -3381,6 +3451,17 @@ em, i, cite, dfn, var { font-style: normal; }
         custom_note_optional: "اختياري",
         custom_note_placeholder: "مثلاً: شوية ديال الجليد، بلا ملح، حساسية…",
         custom_price: "الثمن",
+        nutrition_title: "القيم الغذائية",
+        nutrition_indicative: "قيم تقريبية لكل حصة، بدون الخيارات",
+        nutrition_allergens: "مسببات الحساسية",
+        nutrition_none: "لا توجد مسببات حساسية مصرح بها",
+        nutrient_energy: "الطاقة", nutrient_protein: "البروتين", nutrient_carbs: "الكربوهيدرات",
+        nutrient_fat: "الدهون", nutrient_sugars: "السكريات", nutrient_salt: "الملح",
+        nutrient_short_protein: "ب", nutrient_short_carbs: "ك", nutrient_short_fat: "د",
+        allergen_gluten: "الغلوتين", allergen_crustaces: "القشريات", allergen_oeufs: "البيض", allergen_poissons: "السمك",
+        allergen_arachides: "الفول السوداني", allergen_soja: "الصويا", allergen_lait: "الحليب", allergen_fruits_a_coque: "المكسرات",
+        allergen_celeri: "الكرفس", allergen_moutarde: "الخردل", allergen_sesame: "السمسم", allergen_sulfites: "الكبريتيت",
+        allergen_lupin: "الترمس", allergen_mollusques: "الرخويات",
         btn_add: "زيد",
         opt_choose_one: "اختار 1",
         opt_choose_many: "اختار اللي بغيتي",
@@ -3853,6 +3934,23 @@ em, i, cite, dfn, var { font-style: normal; }
     }
 
     /* ============ menu render ============ */
+    function nutritionSummary(item) {
+      const n = item && item.nutrition;
+      if (!n) return '';
+      return `<div class="item-nutrition"><bdi dir="ltr">${escapeHtml(n.kcal)} kcal</bdi><span>·</span><span>${escapeHtml(t('nutrient_short_protein'))} <bdi dir="ltr">${escapeHtml(n.protein)} g</bdi></span><span>·</span><span>${escapeHtml(t('nutrient_short_carbs'))} <bdi dir="ltr">${escapeHtml(n.carbs)} g</bdi></span><span>·</span><span>${escapeHtml(t('nutrient_short_fat'))} <bdi dir="ltr">${escapeHtml(n.fat)} g</bdi></span></div>`;
+    }
+    function nutritionDetail(item) {
+      const n = item && item.nutrition;
+      if (!n) return '';
+      const cells = [
+        ['nutrient_energy', 'kcal', 'kcal'], ['nutrient_protein', 'protein', 'g'],
+        ['nutrient_carbs', 'carbs', 'g'], ['nutrient_fat', 'fat', 'g'],
+        ['nutrient_sugars', 'sugars', 'g'], ['nutrient_salt', 'salt', 'g'],
+      ].map(([label, key, unit]) => `<div class="custom-nutrition-cell"><span>${escapeHtml(t(label))}</span><bdi dir="ltr">${escapeHtml(n[key])} ${unit}</bdi></div>`).join('');
+      const allergens = Array.isArray(item.allergens) ? item.allergens : [];
+      const chips = allergens.length ? allergens.map((key) => `<span class="custom-allergen-chip">${key === 'gluten' ? '<i class="custom-allergen-icon" aria-hidden="true"></i>' : ''}${escapeHtml(t(`allergen_${key}`))}</span>`).join('') : `<span class="custom-allergen-chip">${escapeHtml(t('nutrition_none'))}</span>`;
+      return `<section class="custom-nutrition" aria-label="${escapeHtml(t('nutrition_title'))}"><div class="custom-nutrition-title">${escapeHtml(t('nutrition_title'))}</div><div class="custom-nutrition-grid">${cells}</div><div class="custom-allergens"><div class="custom-allergens-label">${escapeHtml(t('nutrition_allergens'))}</div><div class="custom-allergen-list">${chips}</div></div><p class="custom-nutrition-note">${escapeHtml(t('nutrition_indicative'))}</p></section>`;
+    }
     function renderMenu(filter = 'all') {
       if (filter === 'top') { renderVideoGrid(); return; }
       const list = $('#menu-list');
@@ -3865,11 +3963,12 @@ em, i, cite, dfn, var { font-style: normal; }
           <div class="item-img ${ICON_CLASS[m.icon] || 'coffee'}">
             <i data-lucide="${escapeHtml(m.icon)}"></i>
           </div>
-          <div class="item-body">
+          <button class="item-body item-detail" type="button" data-detail="${escapeHtml(m.id)}" aria-label="${escapeHtml(i.name)}">
             <div class="item-name">${escapeHtml(i.name)}</div>
             <div class="item-desc">${escapeHtml(i.desc)}</div>
             <div class="item-price">${escapeHtml(m.price)} ${cur()}</div>
-          </div>
+            ${nutritionSummary(m)}
+          </button>
           <button class="item-add" type="button" data-add="${escapeHtml(m.id)}" aria-label="${t('btn_add')} ${escapeHtml(i.name)}">+</button>
         </article>
       `;}).join('');
@@ -4077,6 +4176,10 @@ em, i, cite, dfn, var { font-style: normal; }
       $('#custom-name').textContent = i.name;
       $('#custom-desc').textContent = i.desc;
       $('#custom-base').textContent = `${t('custom_from')} ${item.price} ${cur()}`;
+      const nutritionEl = $('#custom-nutrition');
+      const nutritionHtml = nutritionDetail(item);
+      nutritionEl.innerHTML = nutritionHtml;
+      nutritionEl.hidden = !nutritionHtml;
       const imgEl = $('#custom-img');
       imgEl.className = 'custom-img ' + (ICON_CLASS[item.icon] || 'coffee');
       imgEl.innerHTML = `<i data-lucide="${escapeHtml(item.icon)}"></i>`;
@@ -4915,6 +5018,8 @@ em, i, cite, dfn, var { font-style: normal; }
         id: it.id, cat: it.catId || 'uncat',
         name: it.name, desc: it.desc || '', price: Number(it.price) || 0,
         icon: 'utensils', options: (Array.isArray(it.opts) ? it.opts : []).map(id => groups.get(String(id))).filter(Boolean),
+        nutrition: it.nutritionComplete === true && it.nutrition ? { ...it.nutrition } : null,
+        allergens: it.nutritionComplete === true && Array.isArray(it.allergens) ? it.allergens.slice() : [],
       }));
       // La carte voyage avec ses traductions ; ce qui n'est pas (encore)
       // traduit, ou plus à jour, retombe sur le texte du patron.
@@ -5125,6 +5230,12 @@ em, i, cite, dfn, var { font-style: normal; }
           addBtn.classList.remove('is-popped');
           void addBtn.offsetWidth;
           addBtn.classList.add('is-popped');
+          return;
+        }
+        const detail = e.target.closest('[data-detail]');
+        if (detail) {
+          const selected = itemOf(detail.dataset.detail);
+          if (selected) openCustomizer(selected);
           return;
         }
         // Cart qty (uses encoded lineKey)

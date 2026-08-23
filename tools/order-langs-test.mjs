@@ -27,6 +27,16 @@ ok(Object.keys(dict).length === 20, 'dictionnaire statique présent pour les 20 
 ok(Object.keys(dict.es || {}).length === 40 && dict['zh-Hans'].cart_title === '您的订单', '40 libellés fixes par langue, dont espagnol et chinois simplifié');
 ok(/I18N\[currentLang\]\[key\][\s\S]*I18N\.en\[key\]/.test(html), 'toute clé absente retombe sur l’anglais');
 
+const coreI18n = html.slice(html.indexOf('const I18N ='), html.indexOf('/* ============ menu item translations'));
+for (const [lang, label] of [['fr', 'Valeurs nutritionnelles'], ['en', 'Nutrition facts'], ['ar', 'القيم الغذائية']]) {
+  ok(coreI18n.includes(`nutrition_title: "${label}"`), `titre nutrition présent en ${lang}`);
+}
+ok(/function nutritionSummary\(item\)[\s\S]*if \(!n\) return ''/.test(html), 'aucune ligne nutrition n’est rendue sans données');
+ok(/function nutritionSummary\(item\)[\s\S]*?<bdi dir="ltr">[\s\S]*?function nutritionDetail/.test(html), 'les nombres de la carte sont isolés du RTL');
+ok(/function nutritionDetail\(item\)[\s\S]*nutrient_energy[\s\S]*nutrient_salt[\s\S]*nutrition_indicative/.test(html), 'le détail porte les six valeurs et la mention hors options');
+ok(/it\.nutritionComplete === true && it\.nutrition/.test(html), 'seules les valeurs complètes entrent dans le modèle client');
+ok(/data-detail="\$\{escapeHtml\(m\.id\)\}"[\s\S]*openCustomizer\(selected\)/.test(html), 'un plat sans option ouvre aussi sa fiche détaillée');
+
 const middleware = read('functions/_middleware.js');
 ok(/path === '\/kiwi-order\.html'/.test(middleware) && /path === '\/api\/menu'/.test(middleware), 'page QR et lecture de carte restent publiques');
 ok(!/path === '\/api\/ai\/menu-translate'/.test(middleware), 'la traduction AI ne devient pas une route publique');
