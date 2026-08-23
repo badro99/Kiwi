@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
@@ -55,4 +56,15 @@ const ambiguous = N.compute({ portions: 1, ingredients: [{ name: 'Sucre', qty: 1
 assert.equal(ambiguous.complete, false, 'un nom ambigu échoue sans produire un chiffre possiblement faux');
 
 assert.deepEqual(N.normalizeAllergens(['lait', 'bogus', 'gluten', 'lait']), ['gluten', 'lait']);
+
+const ciqualPath = new URL('../assets/data/ciqual-lite.json', import.meta.url);
+const ciqualSize = fs.statSync(ciqualPath).size;
+const ciqual = JSON.parse(fs.readFileSync(ciqualPath, 'utf8'));
+assert.match(ciqual.source.citation, /Anses\. 2025/);
+assert.match(ciqual.source.licence, /Etalab 2\.0/);
+assert.ok(ciqual.foods.length >= 800 && ciqual.foods.length <= 1500);
+assert.ok(ciqualSize < 250 * 1024, `ciqual-lite dépasse 250 Ko (${ciqualSize} octets)`);
+assert.ok(ciqual.foods.every((food) => ['id', 'nameFr', 'nameEn', 'kcal', 'protein', 'carbs', 'fat', 'sugars', 'salt', 'allergenHints'].every((key) => Object.hasOwn(food, key))));
+assert.ok(ciqual.foods.every((food) => food.nameFr && food.nameEn && N.NUTRIENT_KEYS.every((key) => Number.isFinite(food[key]) && food[key] >= 0)));
+assert.ok(ciqual.foods.every((food) => food.allergenHints.every((key) => N.ALLERGEN_KEYS.includes(key))));
 console.log('✓ menu nutrition (unités, portions, arrondis, complétude et allergènes)');
