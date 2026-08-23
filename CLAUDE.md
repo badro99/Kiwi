@@ -347,7 +347,7 @@ model:
 - **Kiwi Basic · 199 MAD/month** — software only, on the merchant's own hardware,
   unlimited devices, one établissement, integrated into the existing till, on-site
   training + guides included.
-- **Kiwi Pro · 399 MAD/month** — everything in Basic + one free Kiwi cashier, T+1
+- **Kiwi Pro · 399 MAD/month** — everything in Basic + T+1
   settlement, hardware maintenance.
 - **Kiwi Ultra · 1 499 MAD/month** — unlimited établissements, multi-pays, API
   enterprise, dedicated 24/7 account manager.

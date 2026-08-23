@@ -146,7 +146,7 @@
           <div class="rv">${Math.round(commissionMonth).toLocaleString('fr-FR').replace(/,/g,' ')} MAD</div>
         </div>
         <div class="calc-row">
-          <div class="rk"><b>Avec Kiwi ${tier === 'base' ? 'Basic' : 'Pro'}</b>${tier === 'base' ? '199 MAD/mois · 0 % de commission' : '399 MAD/mois · caisse offerte · 0 % de commission'}</div>
+          <div class="rk"><b>Avec Kiwi ${tier === 'base' ? 'Basic' : 'Pro'}</b>${tier === 'base' ? '199 MAD/mois · 0 % de commission' : '399 MAD/mois · 0 % de commission'}</div>
           <div class="rv">${Math.round(chosenTotal).toLocaleString('fr-FR').replace(/,/g,' ')} MAD</div>
         </div>
         <div class="calc-row total ${savingsMonth > 0 ? 'savings-burst' : ''}">

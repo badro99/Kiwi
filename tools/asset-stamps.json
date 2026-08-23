@@ -216,8 +216,8 @@
     "sha": "de6c44b8c41a8bf6"
   },
   "assets/i18n.js": {
-    "v": "4",
-    "sha": "8ab22f03f82a8b04"
+    "v": "6",
+    "sha": "fadfd382ef37ea82"
   },
   "assets/identity.js": {
     "v": "2",
@@ -228,8 +228,8 @@
     "sha": "2bf00e5cd40cdf5c"
   },
   "assets/interactive.js": {
-    "v": "23",
-    "sha": "8695e0503d49eb01"
+    "v": "25",
+    "sha": "bf2ac61ef01c618b"
   },
   "assets/inventory-consumption.js": {
     "v": "10",
@@ -352,8 +352,8 @@
     "sha": "8a06283900f70dfb"
   },
   "assets/pages-pro.js": {
-    "v": "2081",
-    "sha": "20b0c26daaecd100"
+    "v": "2083",
+    "sha": "d135c178fc64ff84"
   },
   "assets/pages.js": {
     "v": "3",

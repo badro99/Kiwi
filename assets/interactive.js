@@ -3008,9 +3008,8 @@ ar: {
           `S'intègre à votre caisse / TPE existant`,
           `Formation sur site + guides inclus`,
           `Demandes de support suivies` ] },
-        { id: 'pro', name: 'KIWI PRO', price: '399 MAD', unit: '/mois', tagline: `Tout Basic + 1 caisse Kiwi offerte`, cta: 'Plan actuel', feats: [
+        { id: 'pro', name: 'KIWI PRO', price: '399 MAD', unit: '/mois', tagline: `Tout Basic + matériel entretenu`, cta: 'Plan actuel', feats: [
           `Tout Kiwi Basic inclus`,
-          `1 caisse Kiwi offerte · prêtée à vie`,
           `Règlement T+1 garanti`,
           `Jusqu'à 8 membres d'équipe`,
           `Maintenance & remplacement matériel` ] },
