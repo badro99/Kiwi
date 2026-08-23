@@ -190,6 +190,13 @@ async function routeRequest(context) {
   const method = request.method;
   const isRead = method === 'GET' || method === 'HEAD';
 
+  // Search engines reach these files without a merchant session. The landing
+  // was public already, but sitemap.xml still fell through to the account gate
+  // and returned 401, so no crawler could discover the public guide URLs named
+  // by robots.txt. Exact GET/HEAD paths only; both files are static and contain
+  // no merchant data.
+  if (isRead && (path === '/sitemap.xml' || path === '/robots.txt')) return next();
+
   // The marketing landing page is public. Keep the merchant application and
   // its APIs behind the account/staff gate below, but let visitors reach the
   // homepage (and the static Next assets it renders) before signing in.

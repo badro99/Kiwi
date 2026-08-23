@@ -93,6 +93,8 @@ prefixes.forEach((pre) => {
   ok(`préfixe public « ${pre} » assez étroit`, pre !== '/' && pre !== '/api/');
 });
 ok('/api/config reste privé', !publiclyReadable('/api/config'));
+ok('/sitemap.xml reste lisible par les moteurs sans session', publiclyReadable('/sitemap.xml'));
+ok('/robots.txt reste lisible par les moteurs sans session', publiclyReadable('/robots.txt'));
 ok('/api/order/queue reste privé', !publiclyReadable('/api/order/queue'));
 ok('/api/channel/keys reste privé', !publiclyReadable('/api/channel/keys'));
 ok('/dashboard.html reste privé', !publiclyReadable('/dashboard.html'));
