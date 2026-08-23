@@ -3,7 +3,7 @@
   Favicon. Kiwi's mark on its own (photos/Kiwi-NewFavIcon.svg in the main repo),
   re-boxed to a square so browsers do not letterbox it in the tab.
 
-  Measured content bounds are x 88.6, y 75.1, 902 x 1197 — taller than wide. The
+  Measured content bounds are x 88.6, y 75.1, 902 x 1197, taller than wide. The
   square below is that box centred, padded ~8%, so the mark sits in the middle of
   the tab icon at the same proportions it was drawn at.
 -->
