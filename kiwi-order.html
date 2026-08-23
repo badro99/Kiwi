@@ -2420,7 +2420,11 @@ em, i, cite, dfn, var { font-style: normal; }
       border-radius: 999px;
       padding: 3px;
       box-shadow: 0 1px 2px rgba(17,17,17,0.05);
+      max-width: calc(100% - 28px);
+      overflow-x: auto;
+      scrollbar-width: none;
     }
+    .lang-picker::-webkit-scrollbar { display: none; }
     [dir="rtl"] .lang-picker {
       right: auto;
       left: 14px;
@@ -2521,11 +2525,7 @@ em, i, cite, dfn, var { font-style: normal; }
   <div class="app" id="app">
 
     <!-- ============ LANGUAGE PICKER (floating top-right) ============ -->
-    <div class="lang-picker" id="lang-picker" role="group" aria-label="Langue">
-      <button class="lang-btn" type="button" data-lang="ar" aria-label="الدارجة">د</button>
-      <button class="lang-btn" type="button" data-lang="en">EN</button>
-      <button class="lang-btn is-active" type="button" data-lang="fr">FR</button>
-    </div>
+    <div class="lang-picker" id="lang-picker" role="group" aria-label="Langue" data-lens-demo></div>
 
     <!-- ============ GREETING FLASH (overlay) ============ -->
     <div class="kiwi-greet" data-kiwi-greet aria-hidden="true">
@@ -3002,6 +3002,8 @@ em, i, cite, dfn, var { font-style: normal; }
 
   </div>
 
+  <script src="assets/menu-i18n.js?v=5"></script>
+  <script src="assets/order-ui-langs.js?v=2"></script>
   <script>
     /* ============ helpers ============ */
     const $  = (s, c = document) => c.querySelector(s);
@@ -3514,7 +3516,13 @@ em, i, cite, dfn, var { font-style: normal; }
       for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0;
       return (h >>> 0).toString(36);
     }
+    Object.keys(window.KiwiOrderUiLangs || {}).forEach((lang) => {
+      I18N[lang] = Object.assign({}, I18N.en, window.KiwiOrderUiLangs[lang]);
+    });
+
     function menuTr(e, l) {
+      const M = window.KiwiMenuI18n;
+      if (M && e) return { name: M.name(e, l), desc: M.desc(e, l) };
       const x = e && e.i18n && e.i18n[l];
       if (!x || !x.name) return null;
       if (!x.m && x.h !== menuHash(e.name, e.desc)) return null;
@@ -3569,11 +3577,14 @@ em, i, cite, dfn, var { font-style: normal; }
     };
 
     /* ============ i18n state + helpers ============ */
-    let currentLang = (() => {
-      try { return localStorage.getItem('cafeAtlasLang') || 'fr'; } catch (_) { return 'fr'; }
+    const MENU_LANG = window.KiwiMenuI18n;
+    const savedOrderLang = (() => {
+      try { return localStorage.getItem('kiwiOrderLang') || localStorage.getItem('cafeAtlasLang') || ''; } catch (_) { return ''; }
     })();
+    let configuredLangs = MENU_LANG ? MENU_LANG.LANGS.slice() : ['fr', 'ar', 'en'];
+    let currentLang = (MENU_LANG && MENU_LANG.asLang(savedOrderLang)) || 'fr';
     function t(key) {
-      return (I18N[currentLang] && I18N[currentLang][key]) ?? I18N.fr[key] ?? key;
+      return (I18N[currentLang] && I18N[currentLang][key]) ?? I18N.en[key] ?? I18N.fr[key] ?? key;
     }
     function itemI18n(id) {
       return (MENU_I18N[currentLang] && MENU_I18N[currentLang][id]) || MENU_I18N.fr[id] || { name: id, desc: '' };
@@ -3589,16 +3600,29 @@ em, i, cite, dfn, var { font-style: normal; }
         el.setAttribute('placeholder', t(el.dataset.i18nPlaceholder));
       });
     }
-    function applyLang(lang) {
-      if (!I18N[lang]) lang = 'fr';
+    function buildLanguagePicker() {
+      const picker = $('#lang-picker'); if (!picker) return;
+      const names = (MENU_LANG && MENU_LANG.NAMES) || { fr:'Français', ar:'العربية', en:'English' };
+      picker.innerHTML = configuredLangs.map((lang) => `<button class="lang-btn${lang===currentLang?' is-active':''}" type="button" data-lens-item data-lang="${lang}" dir="${MENU_LANG&&MENU_LANG.rtl(lang)?'rtl':'ltr'}">${escapeHtml(names[lang]||lang)}</button>`).join('');
+    }
+    function applyLang(lang, remember = true) {
+      lang = MENU_LANG ? MENU_LANG.asLang(lang) : lang;
+      if (!lang || !configuredLangs.includes(lang) || !I18N[lang]) lang = 'fr';
       currentLang = lang;
-      try { localStorage.setItem('cafeAtlasLang', lang); } catch (_) {}
+      if (remember) try { localStorage.setItem('kiwiOrderLang', lang); localStorage.setItem('cafeAtlasLang', lang); } catch (_) {}
       document.documentElement.lang = lang;
-      document.documentElement.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
+      document.documentElement.setAttribute('dir', MENU_LANG && MENU_LANG.rtl(lang) ? 'rtl' : 'ltr');
       // Picker visual
       $$('.lang-btn').forEach(b => b.classList.toggle('is-active', b.dataset.lang === lang));
       // Static
       applyStaticI18n();
+      // Les options de la carte serveur gardent leur entité source afin de se
+      // relocaliser sans nouvel appel réseau quand le client change de langue.
+      if (MENU_LANG) Object.keys(OPT || {}).forEach((key) => {
+        const group = OPT[key]; if (!group || !group._src) return;
+        group.label = MENU_LANG.name(group._src, lang);
+        (group.choices || []).forEach((choice) => { if (choice._src) choice.label = MENU_LANG.name(choice._src, lang); });
+      });
       // Dynamic
       if (typeof renderMenu === 'function') {
         const activeTab = document.querySelector('.menu-tab.is-active')?.dataset.tab || 'all';
@@ -4840,7 +4864,7 @@ em, i, cite, dfn, var { font-style: normal; }
     function patchTenantIdentity(name) {
       VENUE_NAME = name || 'Kiwi Order';
       NOTIF_TAG = (KiwiTenant.slug || 'kiwi') + '-ready';
-      ['fr', 'en', 'ar'].forEach((l) => {
+      Object.keys(I18N).forEach((l) => {
         const src = I18N_ORIG[l], d = I18N[l];
         if (!src || !d) return;
         Object.keys(src).forEach((k) => {
@@ -4868,6 +4892,7 @@ em, i, cite, dfn, var { font-style: normal; }
     // Lucide icons) simply aren't present for a real merchant — items degrade to
     // name · desc · price with a direct add-to-cart.
     function adaptServerMenu(menu) {
+      if (MENU_LANG) MENU_LANG.index(menu);
       const allItems = (menu.items || []).concat(Array.isArray(menu.formulaItems) ? menu.formulaItems : []);
       ORDER_ITEM_FLAGS.clear();
       allItems.forEach((it) => { if (it && it.id) ORDER_ITEM_FLAGS.set(String(it.id), it); });
@@ -4878,9 +4903,9 @@ em, i, cite, dfn, var { font-style: normal; }
         const key = String(g.id);
         const mapped = {
           key, label: String(g.name || ''), type: g.kind === 'many' ? 'multi' : 'single',
-          default: '', required: !!g.required,
+          default: '', required: !!g.required, _src: g,
           choices: g.choices.filter(c => c && c.id && c.name).map(c => ({
-            id: String(c.id), label: String(c.name), emoji: String(c.emoji || ''), delta: Math.max(0, Number(c.price) || 0),
+            id: String(c.id), label: String(c.name), emoji: String(c.emoji || ''), delta: Math.max(0, Number(c.price) || 0), _src: c,
           })),
         };
         OPT[key] = mapped;
@@ -4893,7 +4918,7 @@ em, i, cite, dfn, var { font-style: normal; }
       }));
       // La carte voyage avec ses traductions ; ce qui n'est pas (encore)
       // traduit, ou plus à jour, retombe sur le texte du patron.
-      ['fr', 'en', 'ar'].forEach((l) => {
+      configuredLangs.forEach((l) => {
         MENU_I18N[l] = MENU_I18N[l] || {};
         items.forEach((it) => {
           const x = menuTr(it, l);
@@ -4988,11 +5013,19 @@ em, i, cite, dfn, var { font-style: normal; }
       TENANT_HOURS = (menu && menu.hours) || null;
       patchTenantIdentity((payload && payload.name) || prettySlug(KiwiTenant.slug));
       if (menu && menu.items && menu.items.length) {
+        configuredLangs = MENU_LANG && payload.menuLangs === true ? MENU_LANG.langs(menu) : (MENU_LANG ? MENU_LANG.LANGS.slice() : ['fr','ar','en']);
+        const preferred = savedOrderLang && configuredLangs.includes(MENU_LANG ? MENU_LANG.asLang(savedOrderLang) : savedOrderLang)
+          ? (MENU_LANG ? MENU_LANG.asLang(savedOrderLang) : savedOrderLang)
+          : (MENU_LANG ? MENU_LANG.autoPick(configuredLangs, navigator.languages || [navigator.language]) : 'fr');
         const cats = adaptServerMenu(menu);
+        currentLang = preferred;
+        buildLanguagePicker();
         buildTenantTabs(cats);
-        applyLang(currentLang);     // re-render static i18n + menu from patched data
+        applyLang(preferred);       // re-render static i18n + menu from patched data
         renderMenu('all');
       } else {
+        configuredLangs = MENU_LANG ? MENU_LANG.LANGS.slice() : ['fr','ar','en'];
+        buildLanguagePicker();
         applyLang(currentLang);
         showComingSoon();           // real venue, carte not published yet
       }
@@ -5006,7 +5039,8 @@ em, i, cite, dfn, var { font-style: normal; }
     function bootTenant() {
       MENU = [];
       patchTenantIdentity(prettySlug(KiwiTenant.slug));
-      applyLang(currentLang);
+      buildLanguagePicker();
+      applyLang(currentLang, false);
       if (window.lucide) window.lucide.createIcons();
       fetch('/api/menu?merchant=' + encodeURIComponent(KiwiTenant.slug), { headers: { Accept: 'application/json' } })
         .then((r) => (r && r.ok) ? r.json() : null)
@@ -5024,6 +5058,7 @@ em, i, cite, dfn, var { font-style: normal; }
 
     /* ============ wire it up ============ */
     document.addEventListener('DOMContentLoaded', () => {
+      buildLanguagePicker();
       if (KiwiTenant.hasTenant) {
         // Real merchant — resolve identity + carte from the server.
         bootTenant();
@@ -5035,6 +5070,11 @@ em, i, cite, dfn, var { font-style: normal; }
       } else {
         // Local pitch demo — original init, byte-for-byte unchanged.
         // Apply saved language FIRST so the greeting flash measures the right em width
+        configuredLangs = MENU_LANG ? MENU_LANG.LANGS.slice() : ['fr','ar','en'];
+        currentLang = savedOrderLang && configuredLangs.includes(MENU_LANG ? MENU_LANG.asLang(savedOrderLang) : savedOrderLang)
+          ? (MENU_LANG ? MENU_LANG.asLang(savedOrderLang) : savedOrderLang)
+          : (MENU_LANG ? MENU_LANG.autoPick(configuredLangs, navigator.languages || [navigator.language]) : 'fr');
+        buildLanguagePicker();
         applyLang(currentLang);
         renderMenu('all');
         refreshCartUI();

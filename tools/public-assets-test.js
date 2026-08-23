@@ -98,6 +98,7 @@ ok('/api/channel/keys reste privé', !publiclyReadable('/api/channel/keys'));
 ok('/dashboard.html reste privé', !publiclyReadable('/dashboard.html'));
 ok('/kiwi-admin.html reste privé', !publiclyReadable('/kiwi-admin.html'));
 ok('/kiwi-caisse.html reste privé', !publiclyReadable('/kiwi-caisse.html'));
+ok('/api/ai/menu-translate reste privé', !publiclyReadable('/api/ai/menu-translate'));
 
 /* ── données du commerçant sur les pages publiques ──────────────────────────
  * Une carte est saisie par un commerçant puis rendue sur le même origin que le

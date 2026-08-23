@@ -24,6 +24,8 @@ console.log('■ Menu translate test (tools/menu-translate-test.mjs)');
 const transSrc = fs.readFileSync(path.join(ROOT, 'functions/api/ai/menu-translate.js'), 'utf8');
 const wsSrc = fs.readFileSync(path.join(ROOT, 'assets/restaurant-menu-workspace.js'), 'utf8');
 const quotaSrc = fs.readFileSync(path.join(ROOT, 'functions/api/ai/_quota.js'), 'utf8');
+const langSrc = fs.readFileSync(path.join(ROOT, 'functions/api/_menu-langs.js'), 'utf8');
+const route = await import(new URL('../functions/api/ai/menu-translate.js', import.meta.url).href);
 
 /* Fonctions exportées au niveau module */
 function extractFn(src, name) {
@@ -76,8 +78,13 @@ ok(fallbackRes && fallbackRes.cats[0].name === 'Hot Drinks' && fallbackRes.items
 
 // ── 3. Quota et sécurité ────────────────────────────────────────────────────
 ok(/quotaOk\(env,\s*who,\s*'menutranslate',\s*DAILY_CAP\)/.test(transSrc), 'quota kind "menutranslate"');
-ok(/menutranslate:\s*60/.test(quotaSrc), '_quota.js déclare le plafond menutranslate');
+ok(/menutranslate:\s*120/.test(quotaSrc) && /const DAILY_CAP = 120/.test(transSrc), 'quota menutranslate relevé modestement à 120 appels par jour');
 ok(/tenantFor\(request,\s*env,\s*body\.merchant\)/.test(transSrc), 'authentification tenant obligatoire');
+ok(/canonicalMenuLang/.test(transSrc) && /error: 'target-lang'/.test(transSrc) && /export const EXTRA = \['es','de'/.test(langSrc), 'cible limitée à la liste de langues proposée');
+ok(/Garde les noms propres et plats signature sans translittération/.test(transSrc) && /Translittère les noms propres et plats signature/.test(transSrc), 'prompt : noms signature conservés en latin, translittérés dans les autres écritures');
+ok(route.GLOSSARY && route.GLOSSARY.glutenFree['zh-Hans'] === '无麸质' && route.GLOSSARY.spicy.he === 'חריף', 'glossaire déterministe disponible pour toutes les écritures');
+const glossary = route.applyGlossary({ cats:[], items:[{id:'g',name:'x',desc:'x'}], opts:[] }, { items:[{id:'g',name:'sans gluten',desc:'épicé'}] }, 'es');
+ok(glossary.items[0].name === 'sin gluten' && glossary.items[0].desc === 'picante', 'glossaire remplace le modèle pour les mentions alimentaires fixes');
 
 // ── 4. Intégration Workspace ────────────────────────────────────────────────
 /* v2 : plus de bouton qui écrase la carte — l'onglet « Traductions » et la

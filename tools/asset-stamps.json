@@ -284,12 +284,12 @@
     "sha": "c4b051564898f5a5"
   },
   "assets/menu-catalog.js": {
-    "v": "21",
-    "sha": "aea4aa358b4b7e0f"
+    "v": "22",
+    "sha": "87bb376a3f319957"
   },
   "assets/menu-i18n.js": {
-    "v": "4",
-    "sha": "1114e0bfa39c291c"
+    "v": "5",
+    "sha": "47c6977184784d8a"
   },
   "assets/menu-scan.js": {
     "v": "2",
@@ -334,6 +334,10 @@
   "assets/order-qr.js": {
     "v": "3",
     "sha": "597e5c2f96599152"
+  },
+  "assets/order-ui-langs.js": {
+    "v": "2",
+    "sha": "47b1d8a268c10551"
   },
   "assets/orderpro-inbox.js": {
     "v": "7",
@@ -588,8 +592,8 @@
     "sha": "a12f4d15384e16eb"
   },
   "assets/restaurant-menu-workspace.js": {
-    "v": "53",
-    "sha": "a8c2b224e00ea48f"
+    "v": "54",
+    "sha": "9b98d4e9f8201a06"
   },
   "assets/restaurant-recipes.js": {
     "v": "5",

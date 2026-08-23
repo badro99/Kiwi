@@ -683,6 +683,10 @@
     const m = MI(); if (!m) return;
     store.update((d) => { m.clear(d, lang, keepManual); return d; });
   }
+  function setLanguages(next) {
+    const m = MI();
+    store.update((d) => { d.langs = m ? m.langs({ langs: next }) : ['fr', 'ar', 'en']; return d; });
+  }
   function deleteItem(id) {
     const next = store.update((d) => {
       d.items = (d.items || []).filter((i) => i.id !== id);
@@ -2260,7 +2264,7 @@
 
   const applyingServer = Object.create(null);
   function adoptServerMenu(raw, vid) {
-    const data = healSeq({ seq: 0, cats: raw.cats || [], items: raw.items || [], stations: raw.stations || [], kitchenId: raw.kitchenId || '', opts: raw.opts || [] });
+    const data = healSeq({ seq: 0, langs: Array.isArray(raw.langs) ? raw.langs.slice() : ['fr', 'ar', 'en'], cats: raw.cats || [], items: raw.items || [], stations: raw.stations || [], kitchenId: raw.kitchenId || '', opts: raw.opts || [] });
     applyingServer[vid || '·'] = true;
     try { store.set(data, vid); }
     finally { delete applyingServer[vid || '·']; }
@@ -2504,7 +2508,8 @@
     addCategory, addSubcategory, renameSubcategory, deleteSubcategory,
     addItem, updateItem, deleteItem, renameCategory, moveCategory, deleteCategory,
     /* Traductions de la carte — voir le bloc « traductions » plus haut. */
-    setI18n, setI18nEntry, clearI18n,
+    setI18n, setI18nEntry, clearI18n, setLanguages,
+    languages: (vid) => { const m = MI(); return m ? m.langs(store.get(vid)) : ['fr', 'ar', 'en']; },
     /* Les postes de préparation. `stations()` rend la liste DANS L'ORDRE, qui
      * est l'ordre des onglets de l'écran cuisine — plus le réglage de routage.
      * Le routage se lit sur la catégorie (`cat.station`, vide = la cuisine) et

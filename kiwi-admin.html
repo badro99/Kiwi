@@ -1175,6 +1175,10 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
   // sortent de sa recette. Proposer ce choix à une boutique qui achète tout son
   // stock, c'est une question de plus à chaque création d'article, pour rien.
   var OPTIN_MODULES = {
+    restaurant: [
+      { key:'menuLangs', label:'Menu en langues supplémentaires', off:true,
+        hint:'Permet au commerçant d’ajouter des traductions pour la carte QR publique. La caisse et les écrans équipe restent en français, arabe et anglais.' },
+    ],
     boutique: [
       { key:'depotvente', label:'Catégories A / B', off:true,
         hint:'Fait choisir une catégorie à chaque article : A pour la marchandise du magasin, B pour le dépôt-vente. Le client ne voit que les lettres.' },

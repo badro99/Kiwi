@@ -41,6 +41,19 @@ function loadResolver() {
 }
 const M = loadResolver();
 assert(M && typeof M.name === 'function' && typeof M.needs === 'function' && typeof M.apply === 'function', 'KiwiMenuI18n expose name/desc/t/index/needs/apply/setManual/clear/summary');
+assert(M.LANGS.join(',') === 'fr,ar,en' && M.EXTRA.length === 20, 'langues : le noyau reste fr/ar/en et la liste client porte 20 langues');
+const venueLangs = M.langs({ langs: ['es', 'zh-CN', 'xx', 'es', 'he'] });
+assert(venueLangs.join(',') === 'fr,ar,en,es,zh-Hans,he', 'langs : noyau en tête, codes canoniques, dédoublonnage et inconnus écartés');
+assert(M.asLang('zh-TW') === 'zh-Hant' && M.asLang('es-MX') === 'es', 'asLang : BCP-47 régional résolu vers la langue proposée');
+assert(M.rtl('ar') && M.rtl('he') && !M.rtl('es'), 'RTL : arabe et hébreu seulement dans la sélection actuelle');
+assert(M.autoPick(venueLangs, ['zh-TW', 'es-ES']) === 'es' && M.autoPick(M.langs({ langs:['zh-Hant'] }), ['zh-HK']) === 'zh-Hant', 'autoPick : premier choix navigateur disponible, variantes chinoises comprises');
+const serverLangs = read('functions/api/_menu-langs.js');
+const clientLangs = read('assets/menu-i18n.js');
+for (const key of ['CORE', 'EXTRA', 'RTL']) {
+  const sm = serverLangs.match(new RegExp(`export const ${key} = (\\[[^;]+\\]);`));
+  const cm = clientLangs.match(new RegExp(`const ${key} = (\\[[^;]+\\]);`));
+  assert(sm && cm && sm[1] === cm[1], `${key} : listes serveur et client identiques octet pour octet`);
+}
 assert(!/const WORDS = \{/.test(read('assets/menu-i18n.js')), 'plus de table de substitution mot à mot (WORDS)');
 
 const it = { id: 'it1', name: 'Tajine poulet', desc: 'citron confit' };
@@ -100,12 +113,14 @@ assert(/menuTr\(c, currentLang\) \|\| c\)\.name/.test(read('kiwi-order.html')) &
 /* ── serveur : la liste blanche laisse passer i18n ─────────────────────── */
 const mw = await import(new URL('../functions/api/menu.js', import.meta.url).href);
 const san = mw.sanitizeMenu({
-  cats: [{ id: 'c', name: 'Plats', i18n: { ar: { name: 'أطباق', h: 'abc' }, xx: { name: 'no' } }, sub: [{ id: 's', name: 'T', i18n: { en: { name: 'Tajines', h: '1', m: 1 } } }] }],
+  langs: ['es', 'zh-CN', 'xx', 'es'],
+  cats: [{ id: 'c', name: 'Plats', i18n: { ar: { name: 'أطباق', h: 'abc' }, es: { name: 'Platos', h: 'def' }, xx: { name: 'no' } }, sub: [{ id: 's', name: 'T', i18n: { en: { name: 'Tajines', h: '1', m: 1 } } }] }],
   items: [{ id: 'i', name: 'Tajine', price: 50, catId: 'c', i18n: { en: { name: 'Chicken tajine', desc: 'd'.repeat(500), h: 'zz' }, ar: { name: '' } } }],
   opts: [{ id: 'g', name: 'Cuisson', i18n: { en: { name: 'Doneness', h: 'q' } }, choices: [{ id: 'x', name: 'Bien cuit', i18n: { en: { name: 'Well done', h: 'r' } }, emoji: '', price: 0 }] }],
 });
 assert(typeof mw.sanitizeMenu === 'function', 'functions/api/menu.js exporte sanitizeMenu');
-assert(san.cats[0].i18n && san.cats[0].i18n.ar.name === 'أطباق' && !san.cats[0].i18n.xx, 'cat.i18n passe, langue inconnue écartée');
+assert(san.langs.join(',') === 'fr,ar,en,es,zh-Hans', 'menu.langs passe, noyau en tête, doublons et langue inconnue écartés');
+assert(san.cats[0].i18n && san.cats[0].i18n.ar.name === 'أطباق' && san.cats[0].i18n.es.name === 'Platos' && !san.cats[0].i18n.xx, 'cat.i18n passe pour les langues proposées, inconnue écartée');
 assert(san.cats[0].sub[0].i18n.en.m === 1, 'sub.i18n passe, drapeau manuel conservé');
 assert(san.items[0].i18n.en.desc.length === 400 && !san.items[0].i18n.ar, 'item.i18n : description bornée à 400, entrée sans nom écartée');
 assert(san.opts[0].i18n.en.name === 'Doneness' && san.opts[0].choices[0].i18n.en.name === 'Well done', 'opts et choix : i18n passe');
@@ -127,7 +142,8 @@ const ws = read('assets/restaurant-menu-workspace.js');
 assert(!/TRANSLATE_DICT|applyLocalTranslation|openTranslateModal|translateTextDirect/.test(ws), 'workspace : le modal qui ÉCRASAIT les libellés a disparu');
 assert(!/S\(\)\.updateItem\(it\.id, \{ name: it\.name, desc: it\.desc \}\)/.test(ws), 'workspace : aucune traduction n’est écrite dans name/desc');
 assert(/async function ensureTranslations\(o\)/.test(ws) && /S\(\)\.setI18n\(lang,data,\{force:o\.force\|\|false\}\)/.test(ws), 'workspace : ensureTranslations dépose la réponse via setI18n');
-assert(/M\.needs\(d,M\.LANGS,\{force:o\.force\|\|false\}\)/.test(ws), 'workspace : seules les entrées manquantes/périmées partent (needs)');
+assert(/M\.needs\(d,targets,\{force:o\.force\|\|false\}\)/.test(ws), 'workspace : seules les entrées manquantes/périmées des langues configurées partent (needs)');
+assert(/H\['rmw-i18n-add'\]/.test(ws) && /H\['rmw-i18n-remove'\]/.test(ws) && /menuLangFeature\(\)/.test(ws), 'workspace : ajout/retrait unitaire derrière features.menuLangs');
 assert(/function scheduleAutoTranslate\(\)/.test(ws) && /S\(\)\.subscribe\(scheduleAutoTranslate\);/.test(ws), 'workspace : traduction automatique 2,5 s après un changement de carte');
 assert(/if\(!realSession\(\)\)\{/.test(ws), 'workspace : rien ne part sur le réseau hors session réelle');
 assert(/if\(res\.status===429\)\{failed='quota';break;\}/.test(ws) && /i18nCooldown=Date\.now\(\)\+/.test(ws), 'workspace : quota et erreurs → pause, pas de boucle');

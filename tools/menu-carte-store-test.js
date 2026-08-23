@@ -216,7 +216,7 @@ function load(world) {
 }
 
 const CARTE = (n) => ({
-  seq: 9, kitchenId: '', stations: [],
+  seq: 9, langs: ['fr','ar','en','es','zh-Hans'], kitchenId: '', stations: [],
   cats: [{ id: 'cat_1', name: 'Boissons', sub: [] }],
   items: [{ id: 'it_1', name: 'Café ' + n, price: 10, catId: 'cat_1', avail: true }],
 });
@@ -243,6 +243,7 @@ const suite = [
     const gets = menuGets(w);
     ok('passer au café va lire SA carte', gets.some((c) => c.url.indexOf('merchant=amira-cafe') !== -1));
     eq('la carte atterrit chez le café', itemsOf(w, 'v-cf'), 1);
+    eq('la liste de langues publiée est adoptée avec la carte', w.mem['v-cf'].langs.join(','), 'fr,ar,en,es,zh-Hans');
     eq('la boutique n’a pas été touchée', itemsOf(w, 'v-bq'), 0);
   })(),
 

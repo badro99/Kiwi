@@ -952,6 +952,7 @@ section('Whole-project regressions');
        entités, jamais à la place du libellé du patron ; résolues par toutes
        les surfaces, tickets canoniques. */
     'menu-i18n-test.mjs',
+    'order-langs-test.mjs',
     'salle-scan-test.mjs',
     'pin-dashboard-test.mjs',
     'idle-lock-test.mjs',

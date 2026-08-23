@@ -32,11 +32,15 @@
       translateMenu: 'Translations',
       tabI18n: 'Translations',
       i18nTitle: 'The menu in everyone’s language',
-      i18nHint: 'Kiwi AI translates new or changed entries into French, Arabic and English on its own; the original text is never modified. Edit a cell to correct it: a correction is never overwritten.',
+      i18nHint: 'Kiwi AI translates only new or changed entries in the languages selected for this menu; the original text is never modified. Edit a cell to correct it: a correction is never overwritten.',
       i18nFill: 'Translate what’s missing',
       i18nRedo: 'Retranslate everything',
       i18nRedoConfirm: 'Retranslate the whole menu?',
       i18nRedoDesc: 'Your manual corrections are kept.',
+      i18nAddLang: 'Add a customer language',
+      i18nRemoveLang: 'Remove',
+      i18nRemoveConfirm: 'Remove this language?',
+      i18nRemoveManual: '{n} manual correction(s) will be permanently deleted.',
       i18nOriginal: 'Original',
       i18nSections: 'Sections',
       i18nItems: 'Items',
@@ -295,11 +299,15 @@
       translateMenu: 'الترجمات',
       tabI18n: 'الترجمات',
       i18nTitle: 'القائمة بلغة كل واحد',
-      i18nHint: 'يترجم Kiwi AI المدخلات الجديدة أو المعدلة إلى الفرنسية والعربية والإنجليزية تلقائيا؛ النص الأصلي لا يتغير أبدا. عدّل خانة لتصحيحها: التصحيح لا يُستبدل أبدا.',
+      i18nHint: 'يترجم Kiwi AI فقط المدخلات الجديدة أو المعدلة باللغات المختارة لهذه القائمة؛ النص الأصلي لا يتغير أبدا. عدّل خانة لتصحيحها: التصحيح لا يُستبدل أبدا.',
       i18nFill: 'ترجمة ما ينقص',
       i18nRedo: 'إعادة ترجمة الكل',
       i18nRedoConfirm: 'إعادة ترجمة القائمة كاملة؟',
       i18nRedoDesc: 'تُحفظ تصحيحاتك اليدوية.',
+      i18nAddLang: 'إضافة لغة للزبائن',
+      i18nRemoveLang: 'حذف',
+      i18nRemoveConfirm: 'حذف هذه اللغة؟',
+      i18nRemoveManual: 'سيتم حذف {n} تصحيح يدوي نهائيا.',
       i18nOriginal: 'النص الأصلي',
       i18nSections: 'الأقسام',
       i18nItems: 'الأصناف',
@@ -558,11 +566,15 @@
       translateMenu: 'Traductions',
       tabI18n: 'Traductions',
       i18nTitle: 'La carte dans la langue de chacun',
-      i18nHint: 'Kiwi AI traduit de lui-même les nouveautés et les modifications en français, arabe et anglais ; le texte d’origine n’est jamais modifié. Corrigez une cellule pour la reprendre : une correction n’est plus jamais écrasée.',
+      i18nHint: 'Kiwi AI traduit uniquement les nouveautés et les modifications dans les langues choisies pour cette carte ; le texte d’origine n’est jamais modifié. Corrigez une cellule pour la reprendre : une correction n’est plus jamais écrasée.',
       i18nFill: 'Traduire ce qui manque',
       i18nRedo: 'Tout retraduire',
       i18nRedoConfirm: 'Retraduire toute la carte ?',
       i18nRedoDesc: 'Vos corrections manuelles sont conservées.',
+      i18nAddLang: 'Ajouter une langue client',
+      i18nRemoveLang: 'Retirer',
+      i18nRemoveConfirm: 'Retirer cette langue ?',
+      i18nRemoveManual: '{n} correction(s) manuelle(s) seront supprimées définitivement.',
       i18nOriginal: 'Texte d’origine',
       i18nSections: 'Sections',
       i18nItems: 'Articles',
@@ -1157,7 +1169,7 @@
    * Sans session réelle (démo) : rien ne part sur le réseau. */
   let i18nBusy=false,i18nTimer=0,i18nCooldown=0,i18nProgress='';
   const I18N_BATCH=40;
-  const I18N_LANG_NAMES={fr:'Français',ar:'العربية',en:'English'};
+  const menuLangFeature=()=>window.KiwiConfig?.features?.menuLangs===true;
   const realSession=()=>{try{return !!(window.KiwiEnv&&window.KiwiEnv.isReal&&window.KiwiEnv.isReal());}catch(_){return false;}};
   function i18nChunks(need){
     const out=[];let cur={cats:[],items:[],opts:[],n:0};
@@ -1176,14 +1188,15 @@
     if(o.silent&&Date.now()<i18nCooldown)return;
     const d=D();
     if(!d.items.length&&!d.cats.length){if(!o.silent)toast(ui('i18nEmpty'),'','info');return;}
-    const need=M.needs(d,M.LANGS,{force:o.force||false});
-    const total=M.LANGS.reduce((n,l)=>n+(need[l]?need[l].count:0),0);
+    const targets=(o.langs&&o.langs.length?o.langs:(menuLangFeature()?M.langs(d):M.LANGS)).map(M.asLang).filter(Boolean);
+    const need=M.needs(d,targets,{force:o.force||false});
+    const total=targets.reduce((n,l)=>n+(need[l]?need[l].count:0),0);
     if(!total){if(!o.silent)toast(ui('i18nUpToDate'),'','success');return;}
     i18nBusy=true;let written=0,failed='';
     const slug=venue()||'';
     i18nProgress=ui('i18nBusy',{n:total});i18nRefreshPanel();
     try{
-      for(const lang of M.LANGS){
+      for(const lang of targets){
         if(!need[lang]||!need[lang].count)continue;
         for(const chunk of i18nChunks(need[lang])){
           let res=null;
@@ -1214,14 +1227,16 @@
     i18nStyle();
     const M=window.KiwiMenuI18n,d=D();
     if(!M)return `<div class="rmw-empty"><p>${esc(ui('reloadPage'))}</p></div>`;
-    const L=M.LANGS,sum=M.summary(d);
-    const head=`<div class="rmw-i18n-head"><div><div class="rmw-i18n-title">${esc(ui('i18nTitle'))}</div><p class="rmw-i18n-hint">${esc(ui('i18nHint'))}</p></div><div class="rmw-i18n-acts"><button class="btn-slim" data-action="rmw-i18n-fill"${i18nBusy?' disabled':''}>${esc(ui('i18nFill'))}</button><button class="btn-slim" data-action="rmw-i18n-redo"${i18nBusy?' disabled':''}>${esc(ui('i18nRedo'))}</button></div></div>`;
-    const stats=`<div class="rmw-i18n-stats">${L.map(l=>{const s=sum[l];return `<div class="rmw-i18n-stat"><b>${esc(I18N_LANG_NAMES[l])}</b><span>${s.ok+s.manual}/${s.total} ${esc(ui('i18nStatusOk'))}</span>${s.stale?`<span class="is-stale">${s.stale} ${esc(ui('i18nStatusStale'))}</span>`:''}${s.missing?`<span class="is-missing">${s.missing} ${esc(ui('i18nStatusMissing'))}</span>`:''}</div>`;}).join('')}${i18nProgress?`<div class="rmw-i18n-busy"><span class="rmw-i18n-spin" aria-hidden="true"></span>${esc(i18nProgress)}</div>`:''}</div>`;
+    const L=menuLangFeature()?M.langs(d):M.LANGS,sum=M.summary(d,L);
+    const available=M.EXTRA.filter(l=>!L.includes(l));
+    const picker=menuLangFeature()?`<div class="rmw-i18n-picker" data-lens-demo><span>${esc(ui('i18nAddLang'))}</span>${available.map(l=>`<button type="button" data-lens-item data-action="rmw-i18n-add" data-arg="${l}" dir="${M.rtl(l)?'rtl':'ltr'}">${esc(M.NAMES[l])}</button>`).join('')}${L.filter(l=>M.EXTRA.includes(l)).map(l=>`<button type="button" class="is-added" data-lens-item data-action="rmw-i18n-remove" data-arg="${l}" title="${esc(ui('i18nRemoveLang'))}" dir="${M.rtl(l)?'rtl':'ltr'}">${esc(M.NAMES[l])} ×</button>`).join('')}</div>`:'';
+    const head=`<div class="rmw-i18n-head"><div><div class="rmw-i18n-title">${esc(ui('i18nTitle'))}</div><p class="rmw-i18n-hint">${esc(ui('i18nHint'))}</p></div><div class="rmw-i18n-acts"><button class="btn-slim" data-action="rmw-i18n-fill"${i18nBusy?' disabled':''}>${esc(ui('i18nFill'))}</button><button class="btn-slim" data-action="rmw-i18n-redo"${i18nBusy?' disabled':''}>${esc(ui('i18nRedo'))}</button></div></div>${picker}`;
+    const stats=`<div class="rmw-i18n-stats">${L.map(l=>{const s=sum[l];return `<div class="rmw-i18n-stat"><b>${esc(M.NAMES[l]||l)}</b><span>${s.ok+s.manual}/${s.total} ${esc(ui('i18nStatusOk'))}</span>${s.stale?`<span class="is-stale">${s.stale} ${esc(ui('i18nStatusStale'))}</span>`:''}${s.missing?`<span class="is-missing">${s.missing} ${esc(ui('i18nStatusMissing'))}</span>`:''}</div>`;}).join('')}${i18nProgress?`<div class="rmw-i18n-busy"><span class="rmw-i18n-spin" aria-hidden="true"></span>${esc(i18nProgress)}</div>`:''}</div>`;
     const stLabel=(st)=>ui('i18nStatus'+st.charAt(0).toUpperCase()+st.slice(1));
     const cell=(kind,id,sub,e,l,field)=>{
       const x=e.i18n&&e.i18n[l];const st=M.status(e,l);
       const val=x?(field==='desc'?(x.desc||''):(x.name||'')):'';
-      return `<td class="st-${st}"><input type="text" data-rmw-i18n data-kind="${kind}" data-id="${esc(id)}" data-sub="${esc(sub||'')}" data-lang="${l}" data-field="${field}" value="${esc(val)}" placeholder="${st==='stale'?esc(stLabel('stale')):''}" title="${esc(stLabel(st))}" dir="${l==='ar'?'rtl':'ltr'}" /></td>`;
+      return `<td class="st-${st}"><input type="text" data-rmw-i18n data-kind="${kind}" data-id="${esc(id)}" data-sub="${esc(sub||'')}" data-lang="${l}" data-field="${field}" value="${esc(val)}" placeholder="${st==='stale'?esc(stLabel('stale')):''}" title="${esc(stLabel(st))}" dir="${M.rtl(l)?'rtl':'ltr'}" /></td>`;
     };
     const row=(kind,id,sub,e,mark,field)=>`<tr><td class="rmw-i18n-src">${mark?`<span class="rmw-i18n-kind">${esc(mark)}</span>`:''}${esc(field==='desc'?(e.desc||''):e.name)}</td>${L.map(l=>cell(kind,id,sub,e,l,field||'name')).join('')}</tr>`;
     const rows=[];
@@ -1244,6 +1259,10 @@
 .rmw-i18n-title{font:650 16px var(--sans);letter-spacing:-.01em;color:var(--ink)}
 .rmw-i18n-hint{max-width:70ch;margin:4px 0 0;font-size:12px;line-height:1.45;color:var(--n-500)}
 .rmw-i18n-acts{display:flex;gap:8px;flex-wrap:wrap}
+.rmw-i18n-picker{display:flex;align-items:center;gap:6px;max-width:100%;margin:0 0 14px;padding:6px;overflow:auto;border:1px solid var(--n-200);border-radius:14px;background:var(--paper-soft);scrollbar-width:thin}
+.rmw-i18n-picker>span{position:sticky;left:0;padding:0 8px;color:var(--n-500);font:650 10px var(--mono);white-space:nowrap;background:var(--paper-soft)}
+.rmw-i18n-picker button{min-height:36px;padding:0 12px;border:0;border-radius:10px;background:var(--surface);color:var(--ink);font:600 12px var(--sans);white-space:nowrap;cursor:pointer}
+.rmw-i18n-picker button.is-added{color:var(--atlas);background:color-mix(in srgb,var(--atlas) 11%,var(--surface))}
 .rmw-i18n-stats{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:0 0 14px}
 .rmw-i18n-stat{display:flex;gap:10px;align-items:baseline;padding:9px 13px;border:1px solid var(--n-200);border-radius:11px;background:var(--surface);font-size:12px;color:var(--n-500)}
 .rmw-i18n-stat b{color:var(--ink);font-weight:650}
@@ -1297,6 +1316,8 @@ table.rmw-i18n td.st-manual input{border-inline-start:3px solid var(--atlas)}
     H['rmw-menu-translate']=()=>{tab='i18n';render();};
     H['rmw-i18n-fill']=()=>ensureTranslations({silent:false});
     H['rmw-i18n-redo']=()=>confirm(ui('i18nRedoConfirm'),()=>{S().clearI18n(null,true);ensureTranslations({silent:false,force:true});},ui('i18nRedoDesc'));
+    H['rmw-i18n-add']=(_e,lang)=>{const M=window.KiwiMenuI18n,l=M?.asLang(lang);if(!l||M.LANGS.includes(l))return;S().setLanguages(M.langs({langs:M.langs(D()).concat(l)}));render();ensureTranslations({silent:false,langs:[l]});};
+    H['rmw-i18n-remove']=(_e,lang)=>{const M=window.KiwiMenuI18n,l=M?.asLang(lang);if(!l||M.LANGS.includes(l))return;const run=()=>{S().clearI18n(l,false);S().setLanguages(M.langs({langs:M.langs(D()).filter(x=>x!==l)}));render();};const s=M.summary(D(),[l])[l];if(s&&s.manual)confirm(ui('i18nRemoveConfirm'),run,ui('i18nRemoveManual',{n:s.manual}));else run();};
     if(H['nav-menu']!==restaurantMenuHandler){legacyMenuHandler=H['nav-menu']||legacyMenuHandler;H['nav-menu']=restaurantMenuHandler;}
     return true;
   }

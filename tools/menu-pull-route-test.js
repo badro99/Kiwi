@@ -24,6 +24,7 @@ const CARTE = {
   merchant: 'amira-cafe',
   updatedTs: 1,
   menu: {
+    langs: ['fr', 'ar', 'en', 'es'],
     cats: [{ id: 'cat_1', name: 'Boissons' }],
     items: [{ id: 'it_1', name: 'Café', price: 12, catId: 'cat_1', avail: true }],
   },
@@ -116,6 +117,7 @@ const settle = () => new Promise((r) => setImmediate(() => setImmediate(() => se
     t.drain(4);                                     // la lecture à 1,2 s
     await settle();
     assert.equal(t.data().items.length, 1, 'la carte du serveur doit être adoptée localement');
+    assert.equal(t.data().langs.join(','), 'fr,ar,en,es', 'la liste de langues doit suivre la carte dans le store');
     assert.equal(t.paints.showMenu, 0, 'une lecture réseau ne doit jamais naviguer vers la page Menu');
     assert.equal(t.classes.has('page-menu'), false, 'page-menu ne doit pas apparaître derrière le patron');
   }

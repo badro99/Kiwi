@@ -35,7 +35,16 @@
 (function () {
   'use strict';
 
-  const LANGS = ['fr', 'ar', 'en'];
+  const CORE = ['fr','ar','en'];
+  const EXTRA = ['es','de','it','pt','nl','ru','zh-Hans','zh-Hant','ja','ko','tr','he','pl','sv','no','da','hi','id','el','uk'];
+  const RTL = ['ar','he'];
+  const LANGS = CORE;
+  const ALL_LANGS = CORE.concat(EXTRA);
+  const NAMES = Object.freeze({
+    fr:'Français',ar:'العربية',en:'English',es:'Español',de:'Deutsch',it:'Italiano',pt:'Português',nl:'Nederlands',ru:'Русский',
+    'zh-Hans':'简体中文','zh-Hant':'繁體中文',ja:'日本語',ko:'한국어',tr:'Türkçe',he:'עברית',pl:'Polski',sv:'Svenska',no:'Norsk',
+    da:'Dansk',hi:'हिन्दी',id:'Bahasa Indonesia',el:'Ελληνικά',uk:'Українська',
+  });
 
   /* Mini-dictionnaire de repli — correspondance EXACTE uniquement. */
   const DICTIONARY = {
@@ -258,7 +267,29 @@
 
   /* ───────────────── utilitaires ───────────────── */
   function norm(s) { return String(s == null ? '' : s).trim().toLowerCase(); }
-  function asLang(l) { return LANGS.indexOf(l) >= 0 ? l : null; }
+  function canonical(l) {
+    const raw = String(l || '').trim().toLowerCase().replace(/_/g, '-');
+    if (raw === 'zh-hans' || raw === 'zh-cn' || raw === 'zh-sg') return 'zh-Hans';
+    if (raw === 'zh-hant' || raw === 'zh-tw' || raw === 'zh-hk' || raw === 'zh-mo') return 'zh-Hant';
+    const base = raw.split('-')[0];
+    return ALL_LANGS.find((code) => code.toLowerCase() === raw) || ALL_LANGS.find((code) => code.toLowerCase() === base) || null;
+  }
+  function asLang(l) { return canonical(l); }
+  function langs(d) {
+    const out = CORE.slice();
+    const raw = d && Array.isArray(d.langs) ? d.langs : [];
+    raw.forEach((value) => { const code = canonical(value); if (code && !out.includes(code) && out.length < 24) out.push(code); });
+    return out;
+  }
+  function isRtl(l) { const code = canonical(l); return !!code && RTL.includes(code); }
+  function autoPick(available, browserLangs) {
+    const allowed = langs({ langs: available });
+    for (const value of (Array.isArray(browserLangs) ? browserLangs : [])) {
+      const code = canonical(value);
+      if (code && allowed.includes(code)) return code;
+    }
+    return allowed[0] || 'fr';
+  }
   function activeLang() {
     try {
       if (window.KiwiI18n && typeof window.KiwiI18n.getLang === 'function') {
@@ -465,10 +496,10 @@
     return write(e, lang, name_, desc_, { manual: true });
   }
   function clear(d, lang, keepManual) {
-    const langs = asLang(lang) ? [lang] : LANGS;
+    const targets = asLang(lang) ? [asLang(lang)] : langs(d);
     const each = (e) => {
       if (!e || !e.i18n) return;
-      langs.forEach((l) => { const x = e.i18n[l]; if (x && !(keepManual && x.m)) delete e.i18n[l]; });
+      targets.forEach((l) => { const x = e.i18n[l]; if (x && !(keepManual && x.m)) delete e.i18n[l]; });
       if (!Object.keys(e.i18n).length) delete e.i18n;
     };
     ((d && d.cats) || []).forEach((c) => { each(c); (c.sub || []).forEach(each); });
@@ -476,10 +507,11 @@
     ((d && d.opts) || []).forEach((g) => { each(g); (g.choices || []).forEach(each); });
   }
   /* Tableau de bord : combien d'entités par statut et par langue. */
-  function summary(d) {
+  function summary(d, requested) {
     const out = {};
-    LANGS.forEach((l) => { out[l] = { ok: 0, stale: 0, missing: 0, manual: 0, total: 0 }; });
-    const each = (e) => { if (!e || !e.name) return; LANGS.forEach((l) => { const s = status(e, l); out[l][s]++; out[l].total++; }); };
+    const targets = Array.isArray(requested) ? requested.map(asLang).filter(Boolean) : langs(d);
+    targets.forEach((l) => { out[l] = { ok: 0, stale: 0, missing: 0, manual: 0, total: 0 }; });
+    const each = (e) => { if (!e || !e.name) return; targets.forEach((l) => { const s = status(e, l); out[l][s]++; out[l].total++; }); };
     ((d && d.cats) || []).forEach((c) => { each(c); (c.sub || []).forEach(each); });
     ((d && d.items) || []).filter((it) => it && !it.archived).forEach(each);
     ((d && d.opts) || []).forEach((g) => { each(g); (g.choices || []).forEach(each); });
@@ -488,6 +520,8 @@
 
   window.KiwiMenuI18n = {
     LANGS: LANGS.slice(),
+    CORE: CORE.slice(), EXTRA: EXTRA.slice(), RTL: RTL.slice(), NAMES,
+    langs, asLang, rtl: isRtl, autoPick,
     lang: activeLang,
     hash, fresh, status, hasArabic,
     t: translate, name, desc,
