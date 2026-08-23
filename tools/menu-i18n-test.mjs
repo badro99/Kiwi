@@ -171,5 +171,21 @@ for (const f of ['assets/kitchen-print-queue.js', 'assets/food-production-print.
   assert(!/KiwiMenuI18n/.test(read(f)), `${f} : les tickets restent canoniques`);
 }
 
+// Chaque clé littérale ui('…') / stateUi('…') de l'atelier doit exister dans les
+// trois dictionnaires UI_I18N : ui() rend la clé brute quand elle manque, et
+// « standalone », « formulaOnly », « archive » sont restés affichés tels quels
+// pendant des semaines sans qu'aucun test ne rougisse.
+{
+  const used = new Set([...ws.matchAll(/\b(?:ui|stateUi)\('([A-Za-z0-9_]+)'/g)].map((m) => m[1]).filter((k) => k !== 'i18nStatus'));
+  for (const lang of ['en', 'ar', 'fr']) {
+    const start = ws.indexOf(`    ${lang}: {`);
+    const end = lang === 'fr' ? ws.indexOf('\n  };', start) : ws.indexOf('\n    },', start);
+    const block = ws.slice(start, end);
+    const missing = [...used].filter((k) => !new RegExp(`^\\s*${k}:`, 'm').test(block));
+    assert(start > 0 && end > start && missing.length === 0, `UI_I18N.${lang} : clés ui() sans libellé → ${missing.join(', ') || 'aucune'}`);
+  }
+  assert(/:has\(\.rmw-formula-builder:not\(\[hidden\]\)\)/.test(ws) && !/:has\(\.rmw-formula-builder\)/.test(ws), 'éditeur d’article : la largeur 1120 px ne vaut que si le constructeur de formule est visible, pas pour tout article');
+}
+
 console.log(failures ? `\nmenu-i18n-test : ${failures} échec(s)` : '\nmenu-i18n-test : tout passe');
 process.exit(failures ? 1 : 0);
