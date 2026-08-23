@@ -1,0 +1,21 @@
+article,categorie,sous_categorie,prix_mad,description,disponible
+Thé à la menthe,Boissons,Chaudes,12,Gunpowder et menthe fraîche du jour,oui
+Café noir,Boissons,Chaudes,12,Espresso serré,oui
+Nous-nous,Boissons,Chaudes,14,Moitié café moitié lait mousseux,oui
+Orange pressée,Boissons,Froides,18,Pressée minute,oui
+Jus d'avocat,Boissons,Froides,25,Avocat et lait entier,oui
+Eau minérale 50 cl,Boissons,Froides,8,Plate ou gazeuse,oui
+Msemen miel,Petit-déjeuner,,14,Crêpe feuilletée beurre et miel,oui
+Baghrir,Petit-déjeuner,,12,Crêpe mille trous et beurre fondu,oui
+Harcha,Petit-déjeuner,,10,Galette de semoule dorée,oui
+Oeufs au plat,Petit-déjeuner,,16,Deux oeufs et pain de campagne,oui
+Harira,Entrées,,18,Soupe de tomate et lentilles,oui
+Salade marocaine,Entrées,,22,Tomate concombre oignon et olives,oui
+Zaalouk,Entrées,,20,Caviar d'aubergine grillée,oui
+Tajine de poulet aux olives,Plats,,55,Citron confit et olives vertes,oui
+Tajine de kefta,Plats,,50,Boulettes de boeuf sauce tomate et oeuf,oui
+Couscous aux sept légumes,Plats,,60,Le vendredi,oui
+Brochettes de boeuf,Plats,,65,Servies avec frites et salade,oui
+Pastilla au poulet,Plats,,70,Feuilles de brick amandes et cannelle,oui
+Cornes de gazelle,Desserts,,8,Pâte d'amande et fleur d'oranger,oui
+Salade d'oranges à la cannelle,Desserts,,18,Orange fraîche et eau de fleur d'oranger,oui

@@ -66,7 +66,9 @@ opérateur (`kiwi-admin.html`), jamais à la main dans D1 :
   **« Kiwi Démo »**, activité restaurant, formule Pro, dépôt-vente et nutrition
   activés pour montrer la carte complète.
 - Publier une carte d'une vingtaine d'articles avec prix, une formule, deux
-  recettes complètes (la nutrition s'affiche), trois employés avec codes.
+  recettes complètes (la nutrition s'affiche), trois employés avec codes. Tout
+  est prêt dans `docs/ops/demo-review/` : le CSV de la carte (Menu → Importer)
+  et le détail de la formule, des recettes et des salariés à saisir.
 - **Ne rien appairer d'avance** : la revue doit pouvoir faire Tableau de bord →
   code d'appairage → Caisse dans le même appareil, c'est ce que décrivent les notes.
 - Le mot de passe va dans le champ *Sign-In Information* d'App Store Connect et
