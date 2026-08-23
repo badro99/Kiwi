@@ -19,21 +19,33 @@
   var HUB_KEY = 'kiwiKitchenPrintHubV1';
   var QUEUE_PREFIX = 'kiwiKitchenPrintQueueV1:';
   var DONE_PREFIX = 'kiwiKitchenPrintDoneV1:';
+  var REPRINT_PREFIX = 'kiwiReceiptReprintsV1:';
   var MAX_JOBS = 120;
   var MAX_DONE = 500;
   var MAX_AGE = 30 * 60 * 1000;
   var RETRY_MS = 10000;
+  var HUB_LEASE_MS = 45000;
+  var HUB_RENEW_MS = 15000;
+  var MAX_RECORDS = 120;
   var running = false;
   var timer = null;
   var lastSuccess = null;
   var lastError = '';
   var lastWarnAt = 0;
+  var records = [];
+  var nativeWriteTimer = null;
 
   function get(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }
   function put(k, v) { try { localStorage.setItem(k, v); return true; } catch (_) { return false; } }
   function json(k, fallback) {
     try { var value = JSON.parse(get(k) || 'null'); return value == null ? fallback : value; }
     catch (_) { return fallback; }
+  }
+  function safeReason(value) { return String(value || '').toLowerCase().replace(/[^a-z0-9:_-]/g, '-').slice(0, 80); }
+  function record(state, job, detail) {
+    records.push({ at: Date.now(), state: safeReason(state), id: cleanId(job && job.id), type: safeReason(job && job.type || 'kitchen'), error: safeReason(detail && detail.error), via: safeReason(detail && detail.via) });
+    records = records.slice(-MAX_RECORDS);
+    persistNative();
   }
   function merchant() {
     try {
@@ -43,17 +55,36 @@
   }
   function qKey() { return QUEUE_PREFIX + (merchant() || 'unpaired'); }
   function dKey() { return DONE_PREFIX + (merchant() || 'unpaired'); }
+  function rKey() { return REPRINT_PREFIX + (merchant() || 'unpaired'); }
   function hubConfig() { return json(HUB_KEY, {}) || {}; }
+  function deviceId() {
+    try {
+      if (window.KiwiNative && window.KiwiNative.deviceId) return String(window.KiwiNative.deviceId);
+      var key = 'kiwi:caisse:terminal-id:v1', value = get(key);
+      if (value) return value;
+      value = 'web_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+      put(key, value); return value;
+    } catch (_) { return 'unknown-device'; }
+  }
   function isHub() {
     var c = hubConfig(), m = merchant();
-    return !!(m && c.enabled === true && c.merchant === m);
+    return !!(m && c.enabled === true && c.merchant === m && c.deviceId === deviceId() && Number(c.expiresAt || 0) > Date.now());
   }
   function setHub(enabled) {
-    var m = merchant();
-    put(HUB_KEY, JSON.stringify({ enabled: !!enabled, merchant: m, updatedAt: Date.now() }));
+    var m = merchant(), now = Date.now(), current = hubConfig(), id = deviceId();
+    if (enabled && current.enabled && current.merchant === m && current.deviceId !== id && Number(current.expiresAt || 0) > now) return false;
+    var takeover = !!(enabled && current.deviceId && current.deviceId !== id && Number(current.expiresAt || 0) <= now);
+    put(HUB_KEY, JSON.stringify({ enabled: !!enabled, merchant: m, deviceId: id, updatedAt: now, expiresAt: enabled ? now + HUB_LEASE_MS : 0 }));
+    persistNative();
+    if (takeover) try { if (window.KiwiCaisseToast) window.KiwiCaisseToast('Cette caisse imprime maintenant', 4200, 'success'); } catch (_) {}
     emit();
     if (enabled) flush();
     return isHub();
+  }
+  function renewHub() {
+    if (!isHub()) return;
+    var c = hubConfig(); c.updatedAt = Date.now(); c.expiresAt = c.updatedAt + HUB_LEASE_MS;
+    put(HUB_KEY, JSON.stringify(c)); persistNative();
   }
   function readQueue() {
     var q = json(qKey(), []);
@@ -65,7 +96,7 @@
     if (fresh.length !== q.length) writeQueue(fresh);
     return fresh;
   }
-  function writeQueue(q) { put(qKey(), JSON.stringify((q || []).slice(-MAX_JOBS))); }
+  function writeQueue(q) { put(qKey(), JSON.stringify((q || []).slice(-MAX_JOBS))); persistNative(); }
   function readDone() {
     var d = json(dKey(), []);
     return Array.isArray(d) ? d : [];
@@ -74,6 +105,7 @@
     var d = readDone().filter(function (x) { return x && x.id !== id; });
     d.push({ id: id, at: Date.now() });
     put(dKey(), JSON.stringify(d.slice(-MAX_DONE)));
+    persistNative();
   }
   function alreadyDone(id) { return readDone().some(function (x) { return x && x.id === id; }); }
   function cleanId(value) { return String(value || '').replace(/[^a-zA-Z0-9:_-]/g, '-').slice(0, 140); }
@@ -89,6 +121,8 @@
     var q = readQueue();
     return {
       hub: isHub(), pending: q.length, printerReady: printerReady(), running: running,
+      pendingReceipts: q.filter(function (job) { return job.type === 'receipt'; }).length,
+      leaseExpiresAt: Number(hubConfig().expiresAt || 0),
       lastSuccess: lastSuccess, lastError: lastError || (q[0] && q[0].lastError) || '',
     };
   }
@@ -134,6 +168,7 @@
       writeQueue(q);
     }
     lastError = reason || 'print-failed';
+    record('retry-scheduled', job, { error: lastError });
     notifyWaiting(lastError);
     emit(); schedule();
   }
@@ -142,6 +177,7 @@
     markDone(job.id);
     lastSuccess = { id: job.id, at: Date.now(), via: result && result.via || '' };
     lastError = '';
+    record('completed', job, { via: result && result.via });
     emit();
   }
   function flush() {
@@ -157,8 +193,12 @@
     var job = q.find(function (x) { return !x.nextAt || Number(x.nextAt) <= now; });
     if (!job) { schedule(); return Promise.resolve(status()); }
     running = true; emit();
+    record('printing', job);
     var station = job.station || (job.payload && job.payload.station) || '';
-    return Promise.resolve(window.KiwiPrinter.printKitchen(job.payload, { station: station })).then(function (result) {
+    var print = job.type === 'receipt'
+      ? window.KiwiPrinter.printReceipt(job.payload, { station: 'caisse' })
+      : window.KiwiPrinter.printKitchen(job.payload, { station: station });
+    return Promise.resolve(print).then(function (result) {
       running = false;
       if (result && result.ok) complete(job, result);
       else retry(job, result && result.reason || 'print-failed');
@@ -200,6 +240,7 @@
       if (!id || doneIds[id] || queuedIds[id]) return;
       q.push({
         id: id,
+        type: raw.type === 'receipt' ? 'receipt' : 'kitchen',
         payload: raw.payload,
         station: raw.station || (raw.payload && raw.payload.station) || '',
         createdAt: createdAt,
@@ -209,10 +250,55 @@
         lastError: ''
       });
       queuedIds[id] = 1; accepted++;
+      record('queued', { id: id, type: raw.type });
     });
     writeQueue(q); emit();
     if (accepted) { schedule(); flush(); }
     return { accepted: accepted, pending: readQueue().length };
+  }
+
+  function enqueueReceipt(saleId, payload, intent) {
+    var sale = cleanId(saleId), kind = intent === 'manual-reprint' ? 'manual-reprint' : 'original';
+    if (!sale || !payload) return { accepted: 0, skipped: 'bad-receipt' };
+    var counters = json(rKey(), {}) || {}, id = sale + ':original';
+    if (kind === 'manual-reprint') {
+      counters[sale] = Math.max(0, Number(counters[sale] || 0)) + 1;
+      put(rKey(), JSON.stringify(counters)); persistNative();
+      id = sale + ':manual-reprint:' + counters[sale];
+    }
+    return enqueue([{ id: id, type: 'receipt', payload: payload, createdAt: Date.now() }]);
+  }
+
+  function nativePlugin() {
+    try { var c = window.Capacitor; return c && c.isNativePlatform && c.isNativePlatform() && c.Plugins && c.Plugins.KiwiPrinterSocket; } catch (_) { return null; }
+  }
+  function ledgerName() { return 'print-ledger-' + cleanId(merchant() || 'unpaired').toLowerCase().slice(0, 70); }
+  function nativeSnapshot() {
+    return JSON.stringify({ version: 1, merchant: merchant(), queue: json(qKey(), []), done: json(dKey(), []), reprints: json(rKey(), {}), hub: hubConfig(), records: records.slice(-MAX_RECORDS) });
+  }
+  function persistNative() {
+    var plugin = nativePlugin(); if (!plugin || typeof plugin.ledgerWrite !== 'function') return;
+    clearTimeout(nativeWriteTimer);
+    nativeWriteTimer = setTimeout(function () { plugin.ledgerWrite({ name: ledgerName(), value: nativeSnapshot() }).catch(function () {}); }, 40);
+  }
+  function restoreNative() {
+    var plugin = nativePlugin();
+    if (!plugin || typeof plugin.ledgerRead !== 'function') return Promise.resolve(false);
+    return plugin.ledgerRead({ name: ledgerName() }).then(function (result) {
+      if (!result || !result.value) { persistNative(); return false; }
+      var saved = JSON.parse(result.value);
+      if (!saved || saved.merchant !== merchant()) return false;
+      put(qKey(), JSON.stringify(Array.isArray(saved.queue) ? saved.queue : []));
+      put(dKey(), JSON.stringify(Array.isArray(saved.done) ? saved.done : []));
+      put(rKey(), JSON.stringify(saved.reprints && typeof saved.reprints === 'object' ? saved.reprints : {}));
+      if (saved.hub && saved.hub.deviceId === deviceId()) put(HUB_KEY, JSON.stringify(saved.hub));
+      records = Array.isArray(saved.records) ? saved.records.slice(-MAX_RECORDS) : [];
+      record('native-restored', null);
+      return true;
+    }).catch(function () { record('native-restore-failed', null, { error: 'ledger-read' }); return false; });
+  }
+  function exportDiagnostics() {
+    return JSON.stringify({ exportedAt: Date.now(), merchant: merchant(), status: status(), transitions: records.slice(-MAX_RECORDS) }, null, 2);
   }
 
   window.addEventListener('online', retryNow);
@@ -221,14 +307,17 @@
   window.addEventListener('storage', function (e) {
     if (e.key === HUB_KEY || (e.key && e.key.indexOf(QUEUE_PREFIX) === 0)) { emit(); flush(); }
   });
+  setInterval(renewHub, HUB_RENEW_MS);
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { emit(); if (readQueue().length) { schedule(); flush(); } });
   else { emit(); if (readQueue().length) { schedule(); flush(); } }
 
   window.KiwiKitchenPrint = {
     enqueue: enqueue, flush: flush, retryNow: retryNow, status: status,
+    enqueueReceipt: enqueueReceipt, exportDiagnostics: exportDiagnostics,
     isHub: isHub, setHub: setHub, pending: function () { return readQueue().length; },
     maxAge: MAX_AGE,
     /* Test seams: intentionally read-only outside the automated test harness. */
     _readQueue: readQueue, _alreadyDone: alreadyDone,
   };
+  window.KiwiKitchenPrint.ready = restoreNative().then(function () { emit(); if (readQueue().length) { schedule(); flush(); } });
 })();

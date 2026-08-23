@@ -252,8 +252,8 @@
     "sha": "a5fc283813e8f180"
   },
   "assets/kitchen-print-queue.js": {
-    "v": "4",
-    "sha": "e956b65f40dfa4b9"
+    "v": "5",
+    "sha": "d3090dc330f17805"
   },
   "assets/kitchen-relay.js": {
     "v": "4",
@@ -576,8 +576,8 @@
     "sha": "a855894281afedca"
   },
   "assets/printer-bridge.js": {
-    "v": "7",
-    "sha": "610e2fd28551c057"
+    "v": "8",
+    "sha": "8c1101b4ca58f8ee"
   },
   "assets/pwa-update.js": {
     "v": "359",

@@ -90,7 +90,9 @@ public class KiwiPrinterSocketPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "secureGet", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "secureSet", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "secureRemove", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "deviceIdentity", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "deviceIdentity", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "ledgerRead", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "ledgerWrite", returnType: CAPPluginReturnPromise)
     ]
 
     @objc func send(_ call: CAPPluginCall) {
@@ -150,6 +152,27 @@ public class KiwiPrinterSocketPlugin: CAPPlugin, CAPBridgedPlugin {
         let value = "kid_" + UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased()
         guard keychainWrite(key, value: value) else { resolveError(call, code: "secure-store", message: "Identité appareil indisponible."); return }
         call.resolve(["id": value])
+    }
+
+    @objc func ledgerRead(_ call: CAPPluginCall) {
+        guard let url = ledgerURL(call) else { resolveError(call, code: "bad-args", message: "Registre invalide."); return }
+        let value = (try? String(contentsOf: url, encoding: .utf8))
+        call.resolve(["value": value ?? NSNull()])
+    }
+
+    @objc func ledgerWrite(_ call: CAPPluginCall) {
+        guard let url = ledgerURL(call), let value = call.getString("value"), value.utf8.count <= 5_000_000 else { resolveError(call, code: "bad-args", message: "Registre invalide."); return }
+        do {
+            try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try value.write(to: url, atomically: true, encoding: .utf8)
+            call.resolve()
+        } catch { resolveError(call, code: "ledger-write", message: "Registre d’impression indisponible.") }
+    }
+
+    private func ledgerURL(_ call: CAPPluginCall) -> URL? {
+        guard let name = call.getString("name"), name.range(of: "^[a-z0-9-]{1,96}$", options: .regularExpression) != nil,
+              let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else { return nil }
+        return base.appendingPathComponent("KiwiPrint", isDirectory: true).appendingPathComponent(name + ".json")
     }
 
     private func secureKey(_ call: CAPPluginCall) -> String? {

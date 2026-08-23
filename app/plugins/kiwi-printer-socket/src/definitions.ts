@@ -55,6 +55,9 @@ export interface SecureKeyOptions { key: string; }
 export interface SecureValueOptions extends SecureKeyOptions { value: string; }
 export interface SecureGetResult { value: string | null; }
 export interface DeviceIdentityResult { id: string; }
+export interface LedgerOptions { name: string; }
+export interface LedgerWriteOptions extends LedgerOptions { value: string; }
+export interface LedgerReadResult { value: string | null; }
 
 export interface KiwiPrinterSocketPlugin {
   send(options: SendOptions): Promise<SendResult | PrinterSocketError>;
@@ -64,4 +67,6 @@ export interface KiwiPrinterSocketPlugin {
   secureSet(options: SecureValueOptions): Promise<void>;
   secureRemove(options: SecureKeyOptions): Promise<void>;
   deviceIdentity(): Promise<DeviceIdentityResult>;
+  ledgerRead(options: LedgerOptions): Promise<LedgerReadResult>;
+  ledgerWrite(options: LedgerWriteOptions): Promise<void>;
 }

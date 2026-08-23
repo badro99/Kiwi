@@ -42,6 +42,9 @@
   var BRIDGE_URL = bridgeBase();   // kept for compatibility; prefer bridgeBase()
   var BRIDGE_DOWNLOAD = '/printer';
   var CFG_KEY = 'kiwiPrinterCfg';
+  var nativeFailureCount = 0;
+  var nativeDiscoveryPending = false;
+  var nativeDiscoveryRunning = false;
 
   /* Roll widths come from the encoder (window.KiwiEscPos.paperWidths) so the list
    * the owner picks from and the list the encoder can actually lay out stay the
@@ -529,6 +532,51 @@
     var t = target && target.ip ? target : (!target && cfg.ip ? cfg : null);
     return t ? { host: t.ip, port: Number(t.port) || 9100 } : null;
   }
+  function printQueueIdle() {
+    try { var q = window.KiwiKitchenPrint; return !(q && q.status && q.status().running); } catch (_) { return true; }
+  }
+  function discoveryNotice(detail) {
+    try { window.dispatchEvent(new CustomEvent('kiwi:printer-discovery', { detail: detail || {} })); } catch (_) {}
+  }
+  function maybeDiscoverNativePrinter() {
+    var plugin = nativeSocket(), cfg = getConfig();
+    if (!nativeDiscoveryPending || nativeDiscoveryRunning || !printQueueIdle() || !plugin || !cfg.ip) return Promise.resolve(null);
+    nativeDiscoveryRunning = true;
+    return plugin.probe({ host: cfg.ip, port: Number(cfg.port) || 9100, timeoutMs: 1800 }).then(function (probe) {
+      if (probe && probe.ok) {
+        nativeFailureCount = 0; nativeDiscoveryPending = false;
+        discoveryNotice({ ok: true, unchanged: true, ip: cfg.ip });
+        return null;
+      }
+      if (probe && probe.code === 'local-network-denied') {
+        nativeDiscoveryPending = false;
+        discoveryNotice({ ok: false, reason: 'local-network-denied', probeOnly: true });
+        return null;
+      }
+      return plugin.scan({ port: Number(cfg.port) || 9100, timeoutMs: 600 }).then(function (scan) {
+        var hosts = scan && scan.ok && Array.isArray(scan.hosts) ? scan.hosts : [];
+        nativeDiscoveryPending = false;
+        if (hosts.length === 1) {
+          setConfig({ ip: hosts[0].host, port: Number(cfg.port) || 9100 });
+          nativeFailureCount = 0;
+          discoveryNotice({ ok: true, changed: hosts[0].host !== cfg.ip, ip: hosts[0].host });
+        } else if (hosts.length > 1) discoveryNotice({ ok: false, reason: 'multiple-printers', hosts: hosts });
+        else discoveryNotice({ ok: false, reason: (scan && scan.code) || 'not-found', hosts: [] });
+        return hosts;
+      });
+    }).catch(function () { nativeDiscoveryPending = false; discoveryNotice({ ok: false, reason: 'unreachable' }); return null; })
+      .then(function (value) { nativeDiscoveryRunning = false; return value; }, function () { nativeDiscoveryRunning = false; return null; });
+  }
+  function noteNativeFailure(reason) {
+    if (reason === 'local-network-denied') {
+      discoveryNotice({ ok: false, reason: reason, probeOnly: true });
+      return;
+    }
+    nativeFailureCount += 1;
+    if (nativeFailureCount < 3) return;
+    nativeDiscoveryPending = true;
+    setTimeout(maybeDiscoverNativePrinter, 0);
+  }
   function nativeSocketSend(bytes, target) {
     var plugin = nativeSocket();
     var t = nativeSocketTarget(target);
@@ -536,11 +584,12 @@
     return plugin.send({
       host: t.host, port: t.port, data: window.KiwiEscPos.toB64(bytes), timeoutMs: 4000,
     }).then(function (r) {
-      return r && r.ok
-        ? { ok: true, via: 'socket', bytes: Number(r.bytes) || bytes.length }
-        : { ok: false, reason: (r && r.code) || 'socket-unreachable' };
+      if (r && r.ok) { nativeFailureCount = 0; return { ok: true, via: 'socket', bytes: Number(r.bytes) || bytes.length }; }
+      var reason = (r && r.code) || 'socket-unreachable'; noteNativeFailure(reason);
+      return { ok: false, reason: reason };
     }, function (e) {
-      return { ok: false, reason: (e && (e.code || e.message)) || 'socket-unreachable' };
+      var reason = (e && (e.code || e.message)) || 'socket-unreachable'; noteNativeFailure(reason);
+      return { ok: false, reason: reason };
     });
   }
   function nativeSocketFirst(bytes, target, next) {
@@ -1294,6 +1343,7 @@
           '<div class="kpr-field"><label for="kpr-ip">Adresse IP de l’imprimante</label><input id="kpr-ip" type="text" inputmode="decimal" placeholder="192.168.1.50" value="' + esc(cfg.ip) + '"></div>' +
           '<button class="kpr-btc" type="button" id="kpr-scan"' + (socket ? '' : ' disabled') + '>' + (socket ? 'Rechercher sur le réseau' : 'Détecter les imprimantes du réseau') + '</button>' +
           '<div id="kpr-scan-out" class="kpr-note" style="display:none;"></div>' +
+          '<button class="kpr-btc" type="button" id="kpr-diagnostics">Exporter le diagnostic d’impression</button>' +
           '<div class="kpr-two">' +
             '<div class="kpr-field"><label for="kpr-port">Port</label><input id="kpr-port" type="text" inputmode="numeric" value="' + esc(cfg.port) + '"></div>' +
             '<div class="kpr-field"><label for="kpr-paper">Largeur papier</label><select id="kpr-paper">' + paperOptions(cfg.paper) + '</select></div>' +
@@ -1868,6 +1918,7 @@
     var scanBtn = $('#kpr-scan');
     if (scanBtn) scanBtn.addEventListener('click', function () {
       var out = $('#kpr-scan-out');
+      if (!printQueueIdle()) { if (out) { out.style.display = ''; out.textContent = 'Une impression est en cours. La recherche démarrera une fois la file au repos.'; } return; }
       scanBtn.disabled = true; var orig = scanBtn.textContent; scanBtn.textContent = 'Recherche en cours…';
       if (out) { out.style.display = ''; out.textContent = ''; }
       var scanAttempt;
@@ -1903,6 +1954,18 @@
         });
     });
 
+    var diagnosticsBtn = $('#kpr-diagnostics');
+    if (diagnosticsBtn) diagnosticsBtn.addEventListener('click', function () {
+      var queue = window.KiwiKitchenPrint;
+      if (!queue || typeof queue.exportDiagnostics !== 'function') { toast('Diagnostic indisponible'); return; }
+      try {
+        var blob = new Blob([queue.exportDiagnostics()], { type: 'application/json' });
+        var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'kiwi-print-diagnostic.json'; a.click();
+        setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+        toast('Diagnostic exporté');
+      } catch (_) { toast('Export impossible'); }
+    });
+
     refreshStatus();
     paintTarget();
 
@@ -1921,6 +1984,13 @@
     var t = e.target.closest && e.target.closest('[data-action="printer-connect"]');
     if (t) { e.preventDefault(); openSetup(); }
   });
+  window.addEventListener('kiwi:kitchen-print-status', maybeDiscoverNativePrinter);
+  window.addEventListener('kiwi:printer-discovery', function (event) {
+    var d = event.detail || {};
+    if (d.reason === 'local-network-denied') fallbackNotice('Réseau local refusé. Kiwi garde la dernière adresse. Ouvrez Réglages > Kiwi Pro > Réseau local.');
+    else if (d.reason === 'multiple-printers') fallbackNotice('Plusieurs imprimantes ont répondu. Ouvrez Imprimante et choisissez la bonne adresse.');
+    else if (d.changed) fallbackNotice('Imprimante retrouvée sur ' + d.ip + '. La file reprend automatiquement.');
+  });
 
   try { reconnectUsb(); } catch (_) {}
 
@@ -1934,6 +2004,7 @@
     connectUsb: connectUsb, disconnectUsb: disconnectUsb, usbConnected: usbConnected, usbSupported: usbSupported,
     reconnectUsb: reconnectUsb,
     nativeSocket: nativeSocket, nativeSocketSend: nativeSocketSend,
+    discoverNativePrinter: maybeDiscoverNativePrinter,
     printReceipt: printReceipt, printKitchen: printKitchen, printLabels: printLabels,
     // son propre repli : une journée doit pouvoir se clôturer sans thermique.
     printDayReport: printDayReport, dayReportHTML: dayReportHTML,

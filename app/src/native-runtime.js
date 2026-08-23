@@ -85,7 +85,11 @@
     deviceIdentity: function () { return call(socket, 'deviceIdentity').then(function (r) { return r && r.id || ''; }); }
   };
   restorePairing();
-  call(socket, 'deviceIdentity').then(function (r) { if (r && r.id) window.KiwiNative.deviceId = r.id; });
+  call(socket, 'deviceIdentity').then(function (r) {
+    if (!r || !r.id) return;
+    window.KiwiNative.deviceId = r.id;
+    try { localStorage.setItem('kiwi:caisse:terminal-id:v1', r.id); } catch (_) {}
+  });
   window.addEventListener('kiwi:native-haptic', function (event) { if (!event.detail || event.detail.kind === 'light') hapticLight(); });
   document.addEventListener('kiwi-paired', savePairing);
   document.addEventListener('focusin', revealFocused, true);

@@ -30,6 +30,7 @@ const localStorage = {
 const merchantState = { value: 'amira-cafe' };
 let printerMode = 'ok';
 const printed = [];
+const receipts = [];
 
 function boot() {
   const listeners = Object.create(null);
@@ -48,6 +49,11 @@ function boot() {
         printed.push(payload);
         if (printerMode === 'throw') return Promise.reject(new Error('bridge-offline'));
         return Promise.resolve(printerMode === 'ok' ? { ok: true, via: 'bridge' } : { ok: false, reason: 'paper-out' });
+      },
+      printReceipt(payload) {
+        receipts.push(payload);
+        if (printerMode === 'throw') return Promise.reject(new Error('bridge-offline'));
+        return Promise.resolve(printerMode === 'ok' ? { ok: true, via: 'socket' } : { ok: false, reason: 'paper-out' });
       },
     },
   };
@@ -118,6 +124,29 @@ merchantState.value = 'restaurant-rival';
 app = boot();
 ok('la file et les confirmations sont isolées par commerçant', app.KiwiKitchenPrint.pending() === 0 && !app.KiwiKitchenPrint._alreadyDone('ord-server-2:bar'));
 
+merchantState.value = 'amira-cafe';
+app = boot();
+const receiptDoc = { ref: 'R-1042', total: 84, customer: 'ne-doit-pas-sortir' };
+result = app.KiwiKitchenPrint.enqueueReceipt('sale-1042', receiptDoc, 'original');
+await wait();
+ok('le reçu original utilise la même file durable', result.accepted === 1 && app.KiwiKitchenPrint._alreadyDone('sale-1042:original'));
+result = app.KiwiKitchenPrint.enqueueReceipt('sale-1042', receiptDoc, 'original');
+await wait();
+ok('un retry du reçu original garde le même identifiant logique', result.accepted === 0 && app.KiwiKitchenPrint._alreadyDone('sale-1042:original'));
+app.KiwiKitchenPrint.enqueueReceipt('sale-1042', receiptDoc, 'manual-reprint');
+app.KiwiKitchenPrint.enqueueReceipt('sale-1042', receiptDoc, 'manual-reprint');
+await wait(190);
+ok('les réimpressions volontaires reçoivent une séquence monotone par vente',
+  app.KiwiKitchenPrint._alreadyDone('sale-1042:manual-reprint:1') && app.KiwiKitchenPrint._alreadyDone('sale-1042:manual-reprint:2'));
+const diagnostic = app.KiwiKitchenPrint.exportDiagnostics();
+ok('le recorder exporte les transitions sans contenu de reçu', /"state"/.test(diagnostic) && !diagnostic.includes('ne-doit-pas-sortir') && !diagnostic.includes('R-1042'));
+
+const ownDevice = memory.get('kiwi:caisse:terminal-id:v1');
+memory.set('kiwiKitchenPrintHubV1', JSON.stringify({ enabled: true, merchant: 'amira-cafe', deviceId: 'other-device', expiresAt: Date.now() + 30000 }));
+ok('un second appareil ne vole pas un bail vivant', app.KiwiKitchenPrint.setHub(true) === false);
+memory.set('kiwiKitchenPrintHubV1', JSON.stringify({ enabled: true, merchant: 'amira-cafe', deviceId: 'other-device', expiresAt: Date.now() - 1 }));
+ok('le même appareil reprend le hub seulement après expiration', app.KiwiKitchenPrint.setHub(true) === true && memory.get('kiwiKitchenPrintHubV1').includes(ownDevice));
+
 ok('la caisse charge la file durable après le relais canonique',
   /kitchen-relay\.js[^]*kitchen-print-queue\.js/.test(caisse));
 ok('les commandes distantes acceptées appellent bien le papier',
@@ -132,6 +161,10 @@ const stampMatch = caisse.match(/assets\/kitchen-print-queue\.js\?v=(\d+)/);
 ok('la caisse charge la file d’impression avec estampille', !!stampMatch);
 ok('la caisse et le service worker s’accordent sur l’estampille de la file d’impression',
   !!(stampMatch && sw.includes(`'/assets/kitchen-print-queue.js?v=${stampMatch[1]}'`)));
+ok('la persistance native écrit un registre app-support et importe le stockage web une fois',
+  /ledgerRead/.test(source) && /ledgerWrite/.test(source) && /native-restored/.test(source));
+ok('la caisse route désormais les reçus vers la file partagée',
+  /enqueueReceipt\(entry\.id, doc, opts && opts\.copy \? 'manual-reprint' : 'original'\)/.test(caisse));
 
 if (fail.length) {
   fail.forEach((line) => console.error('  ✗ ' + line));

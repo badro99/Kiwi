@@ -16,6 +16,10 @@ import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
 import java.io.IOException;
+import java.io.File;
+import java.io.ByteArrayOutputStream;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.net.ConnectException;
@@ -173,6 +177,42 @@ public class KiwiPrinterSocketPlugin extends Plugin {
             result.put("id", value);
             call.resolve(result);
         } catch (Exception error) { resolveError(call, "secure-store", "Identité appareil indisponible."); }
+    }
+
+    @PluginMethod
+    public void ledgerRead(PluginCall call) {
+        File file = ledgerFile(call);
+        if (file == null) { resolveError(call, "bad-args", "Registre invalide."); return; }
+        JSObject result = new JSObject();
+        try {
+            if (file.exists()) {
+                try (FileInputStream input = new FileInputStream(file); ByteArrayOutputStream output = new ByteArrayOutputStream()) {
+                    byte[] block = new byte[8192]; int read;
+                    while ((read = input.read(block)) != -1) output.write(block, 0, read);
+                    result.put("value", output.toString(StandardCharsets.UTF_8.name()));
+                }
+            }
+            call.resolve(result);
+        }
+        catch (Exception error) { resolveError(call, "ledger-read", "Registre d’impression indisponible."); }
+    }
+
+    @PluginMethod
+    public void ledgerWrite(PluginCall call) {
+        File file = ledgerFile(call); String value = call.getString("value");
+        if (file == null || value == null || value.getBytes(StandardCharsets.UTF_8).length > 5000000) { resolveError(call, "bad-args", "Registre invalide."); return; }
+        try {
+            file.getParentFile().mkdirs();
+            try (FileOutputStream output = new FileOutputStream(file, false)) { output.write(value.getBytes(StandardCharsets.UTF_8)); output.getFD().sync(); }
+            call.resolve();
+        }
+        catch (Exception error) { resolveError(call, "ledger-write", "Registre d’impression indisponible."); }
+    }
+
+    private File ledgerFile(PluginCall call) {
+        String name = call.getString("name");
+        if (name == null || !name.matches("^[a-z0-9-]{1,96}$")) return null;
+        return new File(new File(getContext().getFilesDir(), "kiwi-print"), name + ".json");
     }
 
     private String secureKey(PluginCall call) {

@@ -89,7 +89,7 @@
   <!-- Real thermal printing: ESC/POS encoder + the Kiwi Printer Bridge client.
        KiwiHardware.print routes receipts through them when a printer is paired. -->
   <script src="assets/escpos.js?v=5" defer></script>
-  <script src="assets/printer-bridge.js?v=7" defer></script>
+  <script src="assets/printer-bridge.js?v=8" defer></script>
   <script src="assets/caisse-hardware.js?v=1" defer></script>
   <!-- Canal de poussée facultatif : quand le concentrateur temps réel est
        déployé, la caisse relit l'état des tables à l'instant où un serveur le
@@ -5446,7 +5446,7 @@
        kiwi-cuisine.html l'affiche. Après caisse-pairing.js : il lit le magasin
        appairé. -->
   <script src="assets/kitchen-relay.js?v=4" defer></script>
-  <script src="assets/kitchen-print-queue.js?v=4" defer></script>
+  <script src="assets/kitchen-print-queue.js?v=5" defer></script>
   <script src="assets/food-production-print.js?v=2" defer></script>
   <!-- OrderPro · orders placed on a customer's phone arrive here over WiFi;
        staff accept one and it becomes a kitchen ticket. Paired terminals only. -->
@@ -12983,6 +12983,14 @@
       if (!entry) { toast('Aucun ticket à imprimer'); return; }
       const doc = receiptDocFor(entry, opts);
       if (!doc) { toast('Impression indisponible sur cet appareil'); return; }
+      const queue = window.KiwiKitchenPrint;
+      if (queue && typeof queue.enqueueReceipt === 'function') {
+        const queued = queue.enqueueReceipt(entry.id, doc, opts && opts.copy ? 'manual-reprint' : 'original');
+        if (queued && queued.accepted) toast('Ticket ajouté à la file d’impression');
+        else if (queued && queued.pending) toast('Ticket déjà en attente d’impression');
+        else toast('Ticket déjà imprimé');
+        return;
+      }
       toast('Impression du ticket…');
       Promise.resolve(window.KiwiReceipt.print(doc)).then(
         (r) => toast(r && r.ok ? ticketPrintedWord(r) : 'Impression échouée · vérifiez l\'imprimante'),

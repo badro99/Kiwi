@@ -196,7 +196,7 @@ var SHELL = [
   '/assets/caisse-hardware.js?v=1',
   '/assets/live-socket.js?v=2',
   '/assets/escpos.js?v=5',
-  '/assets/printer-bridge.js?v=7',
+  '/assets/printer-bridge.js?v=8',
   '/assets/barcode.js',
   '/assets/color-palette.js',
   '/assets/boutique-catalog.js',
@@ -252,7 +252,7 @@ var SHELL = [
   /* File locale durable et dédupliquée des bons cuisine. Sans ce module hors
      ligne, une commande prise pendant une coupure pourrait atteindre la
      cuisine à l'écran sans jamais sortir sur la thermique. */
-  '/assets/kitchen-print-queue.js?v=4',
+  '/assets/kitchen-print-queue.js?v=5',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=4',
   '/assets/pos-dispatch.js?v=31',
