@@ -1247,7 +1247,7 @@
     if(items.length){section(ui('i18nItems'));items.forEach(it=>{rows.push(row('item',it.id,'',it,''));if(it.desc)rows.push(row('item',it.id,'',it,ui('i18nDesc'),'desc'));});}
     if((d.opts||[]).length){section(ui('i18nOptions'));d.opts.forEach(g=>{rows.push(row('opt',g.id,'',g,''));(g.choices||[]).forEach(c=>rows.push(row('choice',g.id,c.id,c,'↳')));});}
     if(!rows.length)return head+`<div class="rmw-empty"><p>${esc(ui('i18nEmpty'))}</p></div>`;
-    return head+stats+`<div class="rmw-i18n-wrap"><table class="rmw-i18n"><thead><tr><th>${esc(ui('i18nOriginal'))}</th>${L.map(l=>`<th>${esc(I18N_LANG_NAMES[l])}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>`;
+    return head+stats+`<div class="rmw-i18n-wrap"><table class="rmw-i18n"><thead><tr><th>${esc(ui('i18nOriginal'))}</th>${L.map(l=>`<th>${esc(M.NAMES[l]||l)}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>`;
   }
   function onI18nEdit(input){
     const k=input.dataset;const v=input.value;

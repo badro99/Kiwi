@@ -143,6 +143,7 @@ assert(!/TRANSLATE_DICT|applyLocalTranslation|openTranslateModal|translateTextDi
 assert(!/S\(\)\.updateItem\(it\.id, \{ name: it\.name, desc: it\.desc \}\)/.test(ws), 'workspace : aucune traduction n’est écrite dans name/desc');
 assert(/async function ensureTranslations\(o\)/.test(ws) && /S\(\)\.setI18n\(lang,data,\{force:o\.force\|\|false\}\)/.test(ws), 'workspace : ensureTranslations dépose la réponse via setI18n');
 assert(/M\.needs\(d,targets,\{force:o\.force\|\|false\}\)/.test(ws), 'workspace : seules les entrées manquantes/périmées des langues configurées partent (needs)');
+assert(!/I18N_LANG_NAMES/.test(ws) && /M\.NAMES\[l\]\|\|l/.test(ws), 'workspace : l’en-tête du tableau lit les noms de langue dans KiwiMenuI18n.NAMES (un identifiant fantôme ne casse qu’au rendu, l’onglet paraît mort)');
 assert(/H\['rmw-i18n-add'\]/.test(ws) && /H\['rmw-i18n-remove'\]/.test(ws) && /menuLangFeature\(\)/.test(ws), 'workspace : ajout/retrait unitaire derrière features.menuLangs');
 assert(/function scheduleAutoTranslate\(\)/.test(ws) && /S\(\)\.subscribe\(scheduleAutoTranslate\);/.test(ws), 'workspace : traduction automatique 2,5 s après un changement de carte');
 assert(/if\(!realSession\(\)\)\{/.test(ws), 'workspace : rien ne part sur le réseau hors session réelle');
