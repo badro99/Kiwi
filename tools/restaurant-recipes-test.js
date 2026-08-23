@@ -29,6 +29,7 @@ const context = {
   console,
 };
 vm.createContext(context);
+new vm.Script(fs.readFileSync('assets/stock-identity.js', 'utf8')).runInContext(context);
 new vm.Script(fs.readFileSync('assets/restaurant-recipes.js', 'utf8')).runInContext(context);
 const R = context.window.KiwiRestaurantRecipes;
 const line = { stockId: 'tomato', name: 'Tomates', qty: 1, unit: 'kg' };
@@ -43,4 +44,18 @@ assert.equal(m.profit, 85, 'observed cost drives per-portion profit when availab
 assert.equal(docs.costs.recipes['dish-1'].status, 'complete', 'recipe is mirrored to the central cost engine');
 assert.equal(docs.costs.ingredients.find((x) => x.id === 'stock:tomato').useCost, 10, 'stock price is mirrored without demo values');
 assert.equal(Object.keys(docs.recipes.items).length, 2, 'no demo recipe data is seeded');
+
+docs.recipes.items.legacy = {
+  itemName: 'Ancien tajine', portions: 1,
+  ingredients: [{ name: 'Tomates', qty: 0.25, unit: 'kg' }],
+};
+const legacyBefore = JSON.stringify(docs.recipes.items.legacy);
+const legacy = R.get('legacy');
+assert.equal(R.metrics({ id: 'legacy', price: 30 }, legacy, 'restaurant-1').theoreticalCost, 2.5,
+  'un ancien document sans stockId résout encore son article par nom');
+assert.equal(JSON.stringify(docs.recipes.items.legacy), legacyBefore,
+  'la simple lecture ne migre ni ne réécrit l’ancien document');
+R.save('legacy', legacy, 'restaurant-1');
+assert.equal(docs.recipes.items.legacy.ingredients[0].stockId, 'tomato',
+  'le prochain enregistrement ajoute l’identifiant stable à la recette');
 console.log('✓ restaurant recipes (stock quantities, shared-ingredient allocation, costs and margins)');

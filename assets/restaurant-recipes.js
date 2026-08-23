@@ -53,12 +53,14 @@
     try {
       const bridge = window.KiwiRestaurantStock;
       const rows = bridge?.rows ? bridge.rows(venue(id)) : (typeof bridge?.items === 'function' ? bridge.items(venue(id)) : (Array.isArray(bridge?.items) ? bridge.items : null));
-      return Array.isArray(rows) ? rows.map((row) => ({ ...row, unit: units()?.normalize?.(row.unit) || row.unit })) : [];
+      const stableRows = window.KiwiStockIdentity?.ensureRows?.(rows) || (Array.isArray(rows) ? rows : []);
+      return stableRows.map((row) => ({ ...row, unit: units()?.normalize?.(row.unit) || row.unit }));
     } catch (_) { return []; }
   }
   function stockFor(ingredient, id) {
     const rows = inventory(id);
-    return rows.find((x) => ingredient.stockId && String(x.id) === ingredient.stockId)
+    return window.KiwiStockIdentity?.resolve?.(ingredient, rows)
+      || rows.find((x) => ingredient.stockId && String(x.id) === ingredient.stockId)
       || rows.find((x) => norm(x.name) === norm(ingredient.name)) || null;
   }
   function ingredientInfo(ingredient, id) {
@@ -210,7 +212,8 @@
   }
   function save(itemId, value, id) {
     if (!itemId) return;
-    const next = normalizeRecipe({ ...value, itemId, updatedAt: Date.now() }, itemId);
+    const normalized = normalizeRecipe({ ...value, itemId, updatedAt: Date.now() }, itemId);
+    const next = window.KiwiStockIdentity?.bindRecipe?.(normalized, inventory(id)) || normalized;
     const result = store.update((d) => {
       d.items = d.items || {};
       d.items[itemId] = next;
@@ -283,7 +286,7 @@
     const stock = inventory(id).find((row) => String(row.id) === String(stockId));
     return round(all(id).reduce((sum, recipe) => {
       const sold = salesFor(recipe.itemId, recipe.itemName, id, days || 7);
-      const perPortion = recipe.ingredients.filter((line) => line.stockId === String(stockId)).reduce((n, line) => {
+      const perPortion = recipe.ingredients.filter((line) => String(stockFor(line, id)?.id || '') === String(stockId)).reduce((n, line) => {
         const from = line.unit || stock?.unit, converted = units()?.convert
           ? units().convert(number(line.qty), from, stock?.unit)
           : (from === stock?.unit ? number(line.qty) : null);

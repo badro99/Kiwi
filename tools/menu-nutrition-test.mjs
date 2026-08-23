@@ -7,12 +7,21 @@ import { onRequestGet as getPublicMenu, sanitizeMenu } from '../functions/api/me
 
 const require = createRequire(import.meta.url);
 const N = require('../assets/menu-nutrition.js');
+const StockIdentity = require('../assets/stock-identity.js');
 
 const nutrition = (extra = {}) => ({
   nutrition: { per100g: { kcal: 100, protein: 10, carbs: 20, fat: 5, sugars: 2, salt: 0.4 } },
   allergens: [],
   ...extra,
 });
+
+const legacyStock = [{ name: 'Tomates', unit: 'kg', category: 'legumes' }];
+const stableLegacy = StockIdentity.ensureRows(legacyStock);
+assert.match(stableLegacy[0].id, /^legacy-stock-/);
+assert.equal(legacyStock[0].id, undefined, 'l’identité additive ne réécrit pas la ligne historique');
+assert.equal(StockIdentity.ensureRows(legacyStock)[0].id, stableLegacy[0].id, 'l’identité historique est déterministe');
+assert.equal(StockIdentity.bindRecipe({ ingredients: [{ name: 'Tomates' }] }, stableLegacy).ingredients[0].stockId,
+  stableLegacy[0].id, 'une recette enregistrée adopte l’identifiant stable');
 
 assert.equal(N.quantityToGrams(250, 'g', {}), 250);
 assert.equal(N.quantityToGrams(1.5, 'kg', {}), 1500);

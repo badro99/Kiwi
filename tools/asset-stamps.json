@@ -600,8 +600,8 @@
     "sha": "ddef5d43644589d7"
   },
   "assets/restaurant-recipes.js": {
-    "v": "6",
-    "sha": "fde0fe2463146d8e"
+    "v": "7",
+    "sha": "656e25f39494a749"
   },
   "assets/retail-scan.css": {
     "v": "7",
@@ -622,6 +622,10 @@
   "assets/sold-insights.js": {
     "v": "2",
     "sha": "a4c3a6b89b6ee0d0"
+  },
+  "assets/stock-identity.js": {
+    "v": "2",
+    "sha": "d49ee85d276e22d4"
   },
   "assets/stock.js": {
     "v": "31",
