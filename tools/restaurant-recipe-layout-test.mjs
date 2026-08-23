@@ -10,7 +10,8 @@ assert.match(js, /rmw-recipe-costs\{display:grid;grid-template-columns:repeat\(4
 assert.match(js, /\.rmw-recipe-modal[^}]*background:var\(--paper\)/, 'recipe modal follows the active theme surface');
 assert.match(js, /\.rmw-recipe-section\{[^}]*background:var\(--surface\)/, 'recipe sections use the shared surface token');
 assert.match(js, /@media\(max-width:800px\)[\s\S]*\.rmw-recipe-costs\{grid-template-columns:1fr 1fr\}/, 'recipe metrics collapse to a compact two-column phone grid');
-assert.match(dashboard, /assets\/restaurant-menu-workspace\.js\?v=2/);
-assert.match(sw, /assets\/restaurant-menu-workspace\.js\?v=2/);
+const workspaceStamp = dashboard.match(/assets\/restaurant-menu-workspace\.js\?v=(\d+)/)?.[1];
+assert.ok(workspaceStamp, 'dashboard loads the recipe workspace with a cache stamp');
+assert.match(sw, new RegExp(`assets/restaurant-menu-workspace\\.js\\?v=${workspaceStamp}`), 'service worker uses the dashboard stamp');
 
 console.log('restaurant-recipe-layout-test: 7 controls passed');

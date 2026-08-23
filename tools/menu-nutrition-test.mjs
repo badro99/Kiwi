@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
+import vm from 'node:vm';
 
 const require = createRequire(import.meta.url);
 const N = require('../assets/menu-nutrition.js');
@@ -72,5 +73,50 @@ const dashboardSource = fs.readFileSync(new URL('../dashboard.html', import.meta
 assert.match(stockSource, /fetch\('assets\/data\/ciqual-lite\.json'/, 'Ciqual reste chargé à la demande dans l’éditeur');
 assert.match(stockSource, /data-allergen-confirm/, 'les suggestions allergènes exigent une confirmation explicite');
 assert.match(stockSource, /nutritionPatch = \{ nutrition: nutritionData\.nutrition, gramsPerUnit:/, 'la sauvegarde porte les champs optionnels');
+assert.match(stockSource, /KiwiRestaurantRecipes\?\.recomputeForStock/, 'la sauvegarde stock déclenche la cascade nutritionnelle');
 assert.ok(dashboardSource.indexOf('src="assets/menu-nutrition.js') < dashboardSource.indexOf('src="assets/stock.js'), 'le moteur nutrition charge avant le stock');
+
+const docs = { recipes: { items: {} }, costs: { ingredients: [], recipes: {} } };
+let stockRows = [{
+  id: 'tomato', name: 'Tomate', unit: 'g', costPerUnit: 0.01, allergens: [],
+  nutrition: { per100g: { kcal: 20, protein: 1, carbs: 4, fat: 0.2, sugars: 3, salt: 0.01 } },
+}];
+const menuDoc = { items: [{ id: 'dish', name: 'Salade', price: 40 }] };
+const makeStore = (name) => ({
+  get: () => docs[name] || (docs[name] = { items: {} }),
+  update: (fn) => { const value = docs[name] || (docs[name] = { items: {} }); docs[name] = fn(value) || value; return docs[name]; },
+  subscribe: () => () => {},
+});
+const recipeContext = {
+  window: {
+    KiwiStore: { define: (name) => makeStore(name), subscribe: () => () => {} },
+    KiwiVenue: { getVenue: () => 'venue-1' },
+    KiwiRestaurantUnits: { normalize: (unit) => unit, convert: (qty, from, to) => from === to ? qty : null, unitCost: (cost, from, to) => from === to ? cost : null },
+    KiwiRestaurantStock: { rows: () => stockRows },
+    KiwiMenuNutrition: N,
+    KiwiMenuStore: {
+      data: () => menuDoc,
+      updateItem: (id, patch) => { const item = menuDoc.items.find((entry) => entry.id === id); Object.assign(item, patch); if (patch.nutrition == null) delete item.nutrition; },
+    },
+    KiwiCost: { store: makeStore('costs') }, KiwiSales: { list: () => [] },
+  },
+  console,
+};
+vm.createContext(recipeContext);
+new vm.Script(fs.readFileSync(new URL('../assets/restaurant-recipes.js', import.meta.url), 'utf8')).runInContext(recipeContext);
+const recipes = recipeContext.window.KiwiRestaurantRecipes;
+recipes.save('dish', { itemName: 'Salade', portions: 1, ingredients: [{ stockId: 'tomato', name: 'Tomate', qty: 100, unit: 'g' }] }, 'venue-1');
+assert.deepEqual(JSON.parse(JSON.stringify(menuDoc.items[0].nutrition)), { kcal: 20, protein: 1, carbs: 4, fat: 0.2, sugars: 3, salt: 0, perPortion: true });
+assert.equal(menuDoc.items[0].nutritionComplete, true, 'une recette complète est publiée dans le catalogue');
+stockRows = [{ ...stockRows[0], nutrition: { per100g: { ...stockRows[0].nutrition.per100g, kcal: 40 } } }];
+assert.equal(recipes.recomputeForStock('tomato', 'venue-1'), 1, 'la cascade cible la recette dépendante');
+assert.equal(menuDoc.items[0].nutrition.kcal, 40, 'une fiche stock modifiée recalcule le plat');
+stockRows = [{ ...stockRows[0], allergens: undefined }];
+recipes.recomputeForStock('tomato', 'venue-1');
+assert.equal(menuDoc.items[0].nutritionComplete, false);
+assert.equal(menuDoc.items[0].nutrition, undefined, 'une cascade incomplète efface un ancien chiffre publiable');
+
+const workspaceSource = fs.readFileSync(new URL('../assets/restaurant-menu-workspace.js', import.meta.url), 'utf8');
+assert.match(workspaceSource, /nutritionStatus\(x\)/, 'le workspace affiche un indicateur nutrition par plat');
+assert.match(workspaceSource, /data-hide-nutrition/, 'le masquage par plat reste disponible dans la recette');
 console.log('✓ menu nutrition (unités, portions, arrondis, complétude et allergènes)');

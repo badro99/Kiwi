@@ -161,6 +161,53 @@
       return d;
     }, vid);
   }
+  function nutritionResult(recipe, id) {
+    const engine = window.KiwiMenuNutrition;
+    if (!engine?.compute) return null;
+    return engine.compute(normalizeRecipe(recipe, recipe?.itemId), inventory(id));
+  }
+  function publishNutrition(itemId, recipe, id) {
+    const result = nutritionResult(recipe, id);
+    const menu = window.KiwiMenuStore;
+    if (!result || !menu?.updateItem) return result;
+    const patch = result.complete ? {
+      nutrition: { ...result.nutrition, perPortion: true },
+      allergens: result.allergens,
+      nutritionComplete: true,
+    } : {
+      nutrition: null,
+      allergens: [],
+      nutritionComplete: false,
+    };
+    const current = menu.data?.(venue(id))?.items?.find((item) => String(item.id) === String(itemId));
+    const unchanged = current && current.nutritionComplete === patch.nutritionComplete
+      && JSON.stringify(current.nutrition || null) === JSON.stringify(patch.nutrition || null)
+      && JSON.stringify(current.allergens || []) === JSON.stringify(patch.allergens || []);
+    if (!unchanged) menu.updateItem(itemId, patch);
+    return result;
+  }
+  function recompute(itemId, id) {
+    const recipe = get(itemId, '', id);
+    if (!recipe) return null;
+    return publishNutrition(itemId, recipe, id);
+  }
+  function recomputeForStock(stockId, id) {
+    const target = inventory(id).find((row) => String(row.id) === String(stockId));
+    let count = 0;
+    all(id).forEach((recipe) => {
+      const usesStock = recipe.ingredients.some((line) => String(line.stockId || '') === String(stockId)
+        || (!line.stockId && target && norm(line.name) === norm(target.name)));
+      if (!usesStock) return;
+      publishNutrition(recipe.itemId, recipe, id);
+      count += 1;
+    });
+    return count;
+  }
+  function recomputeAll(id) {
+    let count = 0;
+    all(id).forEach((recipe) => { publishNutrition(recipe.itemId, recipe, id); count += 1; });
+    return count;
+  }
   function save(itemId, value, id) {
     if (!itemId) return;
     const next = normalizeRecipe({ ...value, itemId, updatedAt: Date.now() }, itemId);
@@ -170,6 +217,7 @@
       return d;
     }, venue(id));
     mirrorCost(itemId, next, id);
+    publishNutrition(itemId, next, id);
     return result;
   }
   function remove(itemId, id) {
@@ -177,6 +225,7 @@
     const result = store.update((d) => { d.items = d.items || {}; delete d.items[itemId]; return d; }, vid);
     const costStore = window.KiwiCost?.store;
     costStore?.update?.((d) => { d.recipes = d.recipes || {}; delete d.recipes[itemId]; return d; }, vid);
+    window.KiwiMenuStore?.updateItem?.(itemId, { nutrition: null, allergens: [], nutritionComplete: false });
     return result;
   }
   /* ── LE RATTRAPAGE DES PRIX ────────────────────────────────────────────────
@@ -245,7 +294,8 @@
   }
 
   window.KiwiRestaurantRecipes = {
-    all, get, save, remove, inventory, stockFor, ingredientInfo, metrics, theoreticalUsage, heal,
+    all, get, save, remove, inventory, stockFor, ingredientInfo, metrics, nutrition: nutritionResult,
+    recompute, recomputeForStock, recomputeAll, theoreticalUsage, heal,
     subscribe: (fn) => store.subscribe(fn), _store: store,
   };
 
@@ -255,5 +305,14 @@
   store.subscribe(healSoon);
   window.KiwiStore.subscribe?.('costs', healSoon);
   window.KiwiStore.subscribe?.('stock', healSoon);
+  let nutritionPending = false;
+  function recomputeSoon() {
+    if (nutritionPending || typeof setTimeout !== 'function') return;
+    nutritionPending = true;
+    setTimeout(() => { nutritionPending = false; try { recomputeAll(); } catch (_) {} }, 0);
+  }
+  store.subscribe(recomputeSoon);
+  window.KiwiStore.subscribe?.('stock', recomputeSoon);
   healSoon();
+  recomputeSoon();
 })();

@@ -5540,6 +5540,7 @@
           if (Math.abs(currentStock - before) > 0.0005) {
             countStock(existing, currentStock, 'manual-count-' + Date.now().toString(36));
           }
+          window.KiwiRestaurantRecipes?.recomputeForStock?.(existing.id, stOverlayScope());
           closeTopModal();
           window.Kiwi.toast(t('editItemToast', name) + stDemoNote(), { type: 'success' });
           if (stPageActive) render();
@@ -5569,6 +5570,7 @@
           }
         } catch (_) {}
         stSaveOverlay();
+        window.KiwiRestaurantRecipes?.recomputeForStock?.(item.id, stOverlayScope());
         closeTopModal();
         window.Kiwi.toast(t('addItemToast', name) + stDemoNote(), { type: 'success' });
         if (stPageActive) render();

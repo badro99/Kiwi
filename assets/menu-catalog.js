@@ -620,6 +620,13 @@
       if ('opts' in patch) it.opts = Array.isArray(patch.opts) ? patch.opts.slice() : [];
       if ('photo' in patch) it.photo = String(patch.photo || '');
       if ('video' in patch) it.video = String(patch.video || '');
+      if ('nutrition' in patch) {
+        if (patch.nutrition && typeof patch.nutrition === 'object') it.nutrition = { ...patch.nutrition };
+        else delete it.nutrition;
+      }
+      if ('allergens' in patch) it.allergens = Array.isArray(patch.allergens) ? patch.allergens.slice() : [];
+      if ('nutritionComplete' in patch) it.nutritionComplete = patch.nutritionComplete === true;
+      if ('hideNutrition' in patch) it.hideNutrition = patch.hideNutrition === true;
       if ('formula' in patch) {
         const formula = cleanFormula(patch.formula, d.items);
         if (formula) it.formula = formula;
