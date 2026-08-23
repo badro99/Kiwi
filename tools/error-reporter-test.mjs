@@ -12,6 +12,7 @@
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 import {
+  tillToken,
   operatorToken,
   operatorIdToken,
   OP_COOKIE,
@@ -203,7 +204,7 @@ async function runIngestionTests() {
   const res1 = await postError({
     request: new Request('https://kiwi-os.com/api/error', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', cookie: `kiwi_till=${await tillToken(SECRET, 'cafe-atlas')}` },
       body: JSON.stringify({
         merchant: 'cafe-atlas',
         message: 'Cannot read properties of null (reading "render")',
@@ -224,7 +225,7 @@ async function runIngestionTests() {
   const res2 = await postError({
     request: new Request('https://kiwi-os.com/api/error', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', cookie: `kiwi_till=${await tillToken(SECRET, 'cafe-atlas')}` },
       body: JSON.stringify({
         merchant: 'cafe-atlas',
         message: 'Cannot read properties of null (reading "render")',
@@ -245,7 +246,7 @@ async function runIngestionTests() {
   await postError({
     request: new Request('https://kiwi-os.com/api/error', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', cookie: `kiwi_till=${await tillToken(SECRET, 'snack-medina')}` },
       body: JSON.stringify({
         merchant: 'snack-medina',
         message: 'Customer 0612345678 entered PIN 4321 failure',
@@ -257,6 +258,28 @@ async function runIngestionTests() {
   });
   const errRow = db._errors.find(e => e.merchant === 'snack-medina');
   assert('Server sanitizes message on ingestion', errRow && errRow.message.includes('[PHONE_REDACTED]') && errRow.message.includes('[PIN_REDACTED]'));
+
+  /* C bis. Le `merchant` du corps n'est plus cru sur parole. Sans preuve d'appartenance
+   * — ni session, ni caisse appairée — le rapport part dans le seau anonyme :
+   * un tiers ne peut plus remplir le quota de rétention d'un commerçant qu'il
+   * nomme, ni consommer son quota de limitation. */
+  const before = db._errors.filter(e => e.merchant === 'snack-medina').length;
+  await postError({
+    request: new Request('https://kiwi-os.com/api/error', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'CF-Connecting-IP': '203.0.113.9' },
+      body: JSON.stringify({
+        merchant: 'snack-medina',
+        message: 'Rapport forgé par un tiers',
+        file: 'assets/forge.js',
+        line: 1
+      })
+    }),
+    env
+  });
+  const forged = db._errors.find(e => e.file === 'assets/forge.js');
+  assert('Un tiers ne peut pas ranger un rapport sous le commerçant nommé',
+    !!forged && forged.merchant === '' && db._errors.filter(e => e.merchant === 'snack-medina').length === before);
 
   // D. Fail-soft tests
   const resEmpty = await postError({

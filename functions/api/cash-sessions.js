@@ -86,8 +86,21 @@ export async function onRequestPost({ request, env }) {
   let terminal = till && await isTerminalFor(request, env, merchant, terminalId);
   let bootstrapTerminal = false;
   if (till && !terminal && !readCookie(request, TERMINAL_COOKIE)) {
-    terminal = true;
-    bootstrapTerminal = true;
+    /* L'enrôlement sans cookie n'existe que pour un poste NEUF. Sans cette
+     * vérification, n'importe quelle caisse appairée pouvait écrire dans le
+     * tiroir d'un autre poste du même commerçant en effaçant son cookie et en
+     * annonçant son terminalId : les écarts de caisse d'un collègue devenaient
+     * modifiables. Un poste qui a déjà un historique garde le sien. */
+    let known = null;
+    try {
+      known = await env.DB.prepare(
+        'SELECT id FROM cash_session_events WHERE merchant = ? AND terminal_id = ? LIMIT 1'
+      ).bind(merchant, terminalId).first();
+    } catch (_) { known = null; }
+    if (!known) {
+      terminal = true;
+      bootstrapTerminal = true;
+    }
   }
   if (!merchant || !terminalId || !sessionId || !till || !terminal) {
     return json({ error: 'write-refused' }, 403);
@@ -125,12 +138,45 @@ export async function onRequestPost({ request, env }) {
       ).bind(merchant, terminalId, sessionId).first();
       if (!opened) return json({ error: 'session-not-open' }, 409);
     }
+    /* Le fond de caisse attendu était purement déclaratif : la caisse envoyait
+     * `expectedCents`, le serveur se contentait de vérifier que gap = compté −
+     * attendu. Annoncer un attendu bas rendait donc un manquant invisible.
+     * Le serveur ne peut pas reconstituer les ventes espèces d'un poste (la
+     * table `sales` ne porte ni terminal ni session), mais il détient toute la
+     * chaîne d'événements de la session : ouverture + entrées − sorties est un
+     * PLANCHER que l'attendu ne peut pas passer. On ne refuse jamais la
+     * fermeture — un comptoir bloqué est pire — on retient le plancher et on
+     * recalcule l'écart avec. */
+    let expectedFinal = expected;
+    let gapFinal = gap;
+    if (expected != null && eventType !== 'open') {
+      try {
+        const chain = await env.DB.prepare(
+          `SELECT event_type, expected_cents, movement_kind, movement_amount_cents
+             FROM cash_session_events
+            WHERE merchant = ? AND terminal_id = ? AND session_id = ?`
+        ).bind(merchant, terminalId, sessionId).all();
+        let floorCents = 0;
+        ((chain && chain.results) || []).forEach((row) => {
+          if (row.event_type === 'open') floorCents += Number(row.expected_cents) || 0;
+          else if (row.event_type === 'movement') {
+            const amount = Number(row.movement_amount_cents) || 0;
+            if (row.movement_kind === 'in') floorCents += amount;
+            else if (row.movement_kind === 'out') floorCents -= amount;
+          }
+        });
+        if (Number.isFinite(floorCents) && floorCents > expectedFinal) {
+          expectedFinal = Math.min(floorCents, MAX_CENTS);
+          if (counted != null) gapFinal = counted - expectedFinal;
+        }
+      } catch (_) { /* base muette : on garde la valeur annoncée */ }
+    }
     await env.DB.prepare(`INSERT OR IGNORE INTO cash_session_events
       (id, merchant, session_id, terminal_id, event_type, expected_cents,
        counted_cents, gap_cents, movement_kind, movement_amount_cents,
        movement_reason, actor_id, counterparty_actor_id, opened_ts, occurred_ts)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-      .bind(id, merchant, sessionId, terminalId, eventType, expected, counted, gap,
+      .bind(id, merchant, sessionId, terminalId, eventType, expectedFinal, counted, gapFinal,
         movementKind || null, movementAmount, movementReason || null, actorId,
         counterpartyActorId || null, openedAt, occurredAt).run();
     const response = json({ ok: true, id }, 201);

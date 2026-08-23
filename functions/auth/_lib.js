@@ -684,6 +684,25 @@ export async function storeOwner(env, slug) {
   } catch (_) { return null; }
 }
 
+/* Ce slug appartient-il NOMMÉMENT à quelqu'un d'autre ?
+ *
+ * Le slug d'un compte est dérivé de `accounts.business`, que l'utilisateur
+ * choisit lui-même et que rien n'oblige à être unique : deux comptes peuvent
+ * donc revendiquer le même. Le registre est le seul à savoir lequel le possède
+ * réellement, et jusqu'ici personne ne le lui demandait sur ce chemin.
+ *
+ * On ne refuse QUE sur une réponse positive : un autre compte nommé propriétaire.
+ * '' (boutique jamais revendiquée) et null (base non migrée, ou D1 en panne)
+ * rendent la main comme avant. C'est ce qui rend la garde sûre à déployer : un
+ * propriétaire légitime ne peut pas se retrouver enfermé dehors par elle, même
+ * pendant une panne de base — le seul cas refusé est celui où la base affirme
+ * que la boutique est à un autre. */
+export async function slugClaimedByOther(env, slug, aid) {
+  if (!slug || !aid) return false;
+  const owner = await storeOwner(env, slug);
+  return typeof owner === 'string' && owner !== '' && owner !== aid;
+}
+
 export async function entitledMerchant(request, env, asked, opts) {
   asked = String(asked || '').slice(0, 64);
   /* No auth configured at all (local static server, preview without secrets):
@@ -735,6 +754,10 @@ export async function entitledMerchant(request, env, asked, opts) {
        * behind. An unowned or unclaimed slug still snaps back to the account,
        * so nothing widens beyond the caller's own shops. */
       if (asked && asked !== accSlug && (await storeOwner(env, asked)) === sess.aid) return asked;
+      /* Le repli sur le slug du compte était le trou : il rendait `accSlug` sans
+       * jamais demander à qui appartient cette boutique. Quiconque s'inscrivait
+       * avec le nom d'un commerçant existant héritait de son tenant. */
+      if (await slugClaimedByOther(env, accSlug, sess.aid)) return '';
       return accSlug;
     }
   } catch (_) { /* fall through to operator / demo */ }

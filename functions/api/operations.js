@@ -8,7 +8,7 @@
 
 import {
   json, sendMail, readSession, readCookie, SESS_COOKIE, isOperator,
-  activeEmployee, isTillFor,
+  activeEmployee, isTillFor, storeOwner, slugMerchant,
 } from '../auth/_lib.js';
 import { tenantFor } from './_private.js';
 
@@ -255,10 +255,37 @@ function can(role, act, resource) {
    answers the next question: as whom.  Cheapest identity first — the employee
    branch costs two D1 reads because the role lives on the live roster, not in
    the cookie. */
+/* La session `aid` possède-t-elle ce marchand ? Le registre fait foi ; à défaut
+ * de registre (base non migrée, D1 muet) on retombe sur le slug dérivé du nom du
+ * compte, qui reste la clé historique. Voir slugClaimedByOther dans auth/_lib.js
+ * pour la même prudence : on ne refuse que sur une réponse positive contraire. */
+async function sessionOwnsMerchant(env, aid, merchant) {
+  if (!aid || !merchant) return false;
+  try {
+    const owner = await storeOwner(env, merchant);
+    if (typeof owner === 'string' && owner !== '') return owner === aid;
+    const acc = await env.DB.prepare('SELECT business FROM accounts WHERE id = ?').bind(aid).first();
+    return !!(acc && acc.business && slugMerchant(acc.business) === merchant);
+  } catch (_) { return false; }
+}
+
 async function actorFor(request, env, merchant) {
   try {
     const session = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET);
-    if (session && session.aid) return { kind: 'owner', role: 'owner', name: 'Propriétaire' };
+    /* Le commentaire ci-dessus disait vrai pour la session SEULE : tenantFor a
+     * bien prouvé que l'appelant peut agir sur ce marchand. Mais tenantFor
+     * accepte AUSSI le cookie de caisse, et dans ce cas il a résolu le marchand
+     * depuis la caisse, pas depuis la session. Rendre `owner` sans revérifier
+     * revenait à donner ROLE.owner = ['*'] à n'importe quelle session posée à
+     * côté d'un cookie de caisse : il suffisait à un caissier de s'ouvrir un
+     * compte gratuit pour sortir le grand livre du commerçant, geler sa
+     * comptabilité et forger ses bulletins. On exige donc que la session
+     * possède réellement CE marchand ; sinon elle ne vaut rien ici et on
+     * retombe sur l'opérateur, l'employé, puis la caisse — dont le rôle est
+     * volontairement réduit à ['read:device','action:reprint']. */
+    if (session && session.aid && await sessionOwnsMerchant(env, session.aid, merchant)) {
+      return { kind: 'owner', role: 'owner', name: 'Propriétaire' };
+    }
   } catch (_) {}
   try { if (await isOperator(request, env)) return { kind: 'operator', role: 'operator', name: 'Opérateur Kiwi' }; } catch (_) {}
   try {
@@ -398,6 +425,8 @@ async function ensureNotify(env) {
   ).run();
 }
 
+const NOTIFY_DAILY_CAP = 300;
+
 const looksEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 const looksPhone = (value) => /^\+?[0-9][0-9\s.-]{6,24}$/.test(value);
 
@@ -504,6 +533,24 @@ async function notifyPrefs(env, row, payload) {
 async function notifications(env, row, payload) {
   try { await ensureNotify(env); } catch (_) { return update(env, row, 'failed', 'kiwi-notify', {}, 'unmigrated'); }
   if (row.action === 'set-preferences') return notifyPrefs(env, row, payload);
+
+  /* Relais sortant : rien ne bornait le VOLUME. Le destinataire, le texte et
+   * l'URL viennent de l'appelant, aucun n'est rattaché au carnet du commerçant,
+   * et un compte tout neuf est « propriétaire ». Le carnet ne peut pas servir
+   * de filtre (une confirmation part souvent vers un client qui n'y est pas
+   * encore), donc on borne ce qui est bornable : un commerçant ne peut pas
+   * dépasser un quota d'envois par 24 h. Un relais mal configuré coûte alors au
+   * plus NOTIFY_DAILY_CAP messages, pas une campagne. */
+  try {
+    const since = now() - 86400000;
+    const used = await env.DB.prepare(
+      `SELECT COUNT(*) AS n FROM notification_deliveries
+        WHERE merchant = ? AND status = 'sent' AND created_ts >= ?`,
+    ).bind(row.merchant, since).first();
+    if (used && Number(used.n) >= NOTIFY_DAILY_CAP) {
+      return update(env, row, 'blocked', 'kiwi-notify', {}, 'daily-cap');
+    }
+  } catch (_) { /* table absente : ensureNotify a déjà tranché */ }
 
   const plan = await channelPlan(env, row, payload);
   if (!plan.enabled) {

@@ -2,7 +2,7 @@
 // lead. Body JSON: { email, name, business, password }.
 import {
   PASSWORD_MAX, hashPassword, makeSession, sessionCookie, json, normEmail, mirrorLead,
-  limitCheck, limitFail, limitClear, passwordProblem,
+  limitCheck, limitFail, passwordProblem, slugMerchant,
 } from './_lib.js';
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
@@ -46,6 +46,39 @@ export async function onRequestPost(context) {
     return json({ error: 'exists' }, 409);
   }
 
+  /* Le nom d'établissement N'EST PAS un simple libellé : tout le backend en
+   * dérive l'identité du locataire (slugMerchant → tenantFor → entitledMerchant).
+   * Le laisser libre revenait à laisser n'importe qui choisir de quel commerçant
+   * il fait partie : s'inscrire sous le nom d'une enseigne existante suffisait à
+   * hériter de son tenant. Les résolveurs refusent désormais un slug que le
+   * registre attribue à un autre compte ; on ferme ici l'autre moitié, le cas
+   * d'une boutique qui existe mais n'a jamais été enregistrée.
+   *
+   * On ne consulte que des comptes, jamais un secret, et on ne dit pas à qui
+   * appartient le nom — seulement qu'il est pris. */
+  const wantedSlug = slugMerchant(business);
+  if (business && wantedSlug && wantedSlug !== 'client') {
+    let taken = false;
+    try {
+      const claimed = await env.DB.prepare(
+        'SELECT account_id FROM merchant_config WHERE merchant = ? LIMIT 1'
+      ).bind(wantedSlug).first();
+      if (claimed && claimed.account_id) taken = true;
+    } catch (_) { /* registre absent (base non migrée) → on s'en remet au balayage */ }
+    if (!taken) {
+      try {
+        const rs = await env.DB.prepare(
+          "SELECT business FROM accounts WHERE business IS NOT NULL AND business <> ''"
+        ).all();
+        taken = (rs.results || []).some((r) => slugMerchant(r.business) === wantedSlug);
+      } catch (_) { /* illisible → ne bloque pas une inscription légitime */ }
+    }
+    if (taken) {
+      await limitFail(request, env, 'signup');
+      return json({ error: 'business-taken' }, 409);
+    }
+  }
+
   const { salt, hash } = await hashPassword(password);
   const id = 'acc-' + crypto.randomUUID();
   const ts = Date.now();
@@ -60,7 +93,10 @@ export async function onRequestPost(context) {
     return json({ error: 'exists' }, 409);
   }
 
-  await limitClear(request, env, 'signup');
+  /* Effacer le compteur à chaque succès rendait la création de comptes
+   * illimitée : un script alternait les inscriptions réussies et n'était jamais
+   * freiné. Un compte créé compte donc comme une tentative. */
+  await limitFail(request, env, 'signup');
 
   // Best-effort lead mirror to the Google Sheet — never blocks the response.
   context.waitUntil(mirrorLead(env, { email, name, business, ts }));

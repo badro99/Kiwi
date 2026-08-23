@@ -7,7 +7,7 @@
  * ensures robust redaction of any sensitive patterns, and records to D1.
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-import { limitCheck, limitFail } from '../auth/_lib.js';
+import { entitledMerchant, limitCheck, limitFail } from '../auth/_lib.js';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -62,8 +62,22 @@ export async function onRequestPost(context) {
   }
 
   const message = sanitize(rawMessage, 300);
-  const merchant = String(body.merchant || '').trim().slice(0, 64);
-  const identity = merchant || request.headers.get('CF-Connecting-IP') || 'anon';
+  /* Le `merchant` du corps était cru sur parole : il servait de clé de rangement
+   * ET d'identité pour le limiteur. Un tiers pouvait donc, en nommant la
+   * boutique de quelqu'un d'autre, consommer son quota puis remplir son quota de
+   * rétention — la victime perdait ses remontées de plantage. On ne range sous
+   * un commerçant que si l'appelant y a droit ; sinon le rapport part dans le
+   * seau anonyme, où il reste lisible sans écraser personne. */
+  let merchant = String(body.merchant || '').trim().slice(0, 64);
+  if (merchant) {
+    let owned = false;
+    try { owned = (await entitledMerchant(request, env, merchant, { allowTill: true })) === merchant; }
+    catch (_) { owned = false; }
+    if (!owned) merchant = '';
+  }
+  /* L'IP reste TOUJOURS dans la clé : sans elle, un tiers use le quota d'autrui. */
+  const ip = request.headers.get('CF-Connecting-IP') || 'anon';
+  const identity = merchant ? `${merchant}|${ip}` : ip;
 
   // Server-side rate limit check keyed per merchant/till/IP
   const blocked = await limitCheck(request, env, 'err', identity);
@@ -105,13 +119,12 @@ export async function onRequestPost(context) {
 
     // Retention: cap 500 rows per merchant and purge rows older than 90 days
     try {
-      if (merchant) {
-        await env.DB.prepare(
-          `DELETE FROM client_errors WHERE merchant = ? AND id NOT IN (
-            SELECT id FROM client_errors WHERE merchant = ? ORDER BY last_seen_ts DESC LIMIT 500
-          )`
-        ).bind(merchant, merchant).run();
-      }
+      // Le plafond vaut aussi pour le seau anonyme, sinon il grossit sans fin.
+      await env.DB.prepare(
+        `DELETE FROM client_errors WHERE merchant = ? AND id NOT IN (
+          SELECT id FROM client_errors WHERE merchant = ? ORDER BY last_seen_ts DESC LIMIT 500
+        )`
+      ).bind(merchant, merchant).run();
       const ninetyDaysAgo = now - 90 * 86400000;
       await env.DB.prepare(
         `DELETE FROM client_errors WHERE last_seen_ts < ?`

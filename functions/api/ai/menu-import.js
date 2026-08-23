@@ -60,9 +60,33 @@ export function urlAllowed(raw) {
  * contenu, on préserve les retours de ligne des blocs, on décode les entités
  * courantes. Suffisant pour un menu · le modèle fait le reste. */
 export function htmlToText(html) {
+  /* Le retrait des blocs se faisait par /<(script|svg|…)\b[\s\S]*?<\/\1>/gi.
+   * Quand la balise ne se referme jamais — « <svg  » répété — chaque position
+   * de départ balaie tout le reste du document : quadratique, mesuré à 35,8 s
+   * de CPU sur 160 Ko. Ici on avance une seule fois, avec indexOf. Défini DANS
+   * la fonction : tools/menu-scan-test.mjs en extrait la source et l'évalue
+   * seule, un helper de haut niveau y serait introuvable. */
+  const stripBlocks = (input) => {
+    const src = String(input || '');
+    const lower = src.toLowerCase();
+    const open = /<(script|style|noscript|svg|head|template)\b/gi;
+    let out = '';
+    let i = 0;
+    let m;
+    while ((m = open.exec(src))) {
+      if (m.index < i) { open.lastIndex = i; continue; }
+      out += src.slice(i, m.index) + ' ';
+      const close = lower.indexOf('</' + m[1].toLowerCase(), m.index);
+      if (close === -1) { i = src.length; break; }
+      const gt = src.indexOf('>', close);
+      i = gt === -1 ? src.length : gt + 1;
+      open.lastIndex = i;
+    }
+    return out + src.slice(i);
+  };
   let s = String(html || '');
   s = s.replace(/<!--[\s\S]*?-->/g, ' ');
-  s = s.replace(/<(script|style|noscript|svg|head|template)\b[\s\S]*?<\/\1>/gi, ' ');
+  s = stripBlocks(s);
   s = s.replace(/<(br|\/p|\/li|\/tr|\/h[1-6]|\/div|\/section|\/article)\b[^>]*>/gi, '\n');
   s = s.replace(/<[^>]+>/g, ' ');
   s = s.replace(/&nbsp;/gi, ' ').replace(/&amp;/gi, '&').replace(/&lt;/gi, '<')
@@ -71,6 +95,32 @@ export function htmlToText(html) {
     .replace(/&#x([0-9a-f]+);/gi, (_, n) => { const c = parseInt(n, 16); return c > 31 && c < 65536 ? String.fromCharCode(c) : ' '; });
   s = s.replace(/[ \t\r\f]+/g, ' ').replace(/ ?\n ?/g, '\n').replace(/\n{3,}/g, '\n\n');
   return s.trim();
+}
+
+async function readCapped(res, maxBytes) {
+  if (!res.body || !res.body.getReader) {
+    const whole = await res.arrayBuffer();
+    return new Uint8Array(whole).slice(0, maxBytes);
+  }
+  const reader = res.body.getReader();
+  const chunks = [];
+  let total = 0;
+  try {
+    while (total < maxBytes) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value || !value.length) continue;
+      const take = Math.min(value.length, maxBytes - total);
+      chunks.push(take === value.length ? value : value.subarray(0, take));
+      total += take;
+    }
+  } finally {
+    try { await reader.cancel(); } catch (_) {}
+  }
+  const outBuf = new Uint8Array(total);
+  let at = 0;
+  chunks.forEach((chunk) => { outBuf.set(chunk, at); at += chunk.length; });
+  return outBuf;
 }
 
 async function fetchUrlText(url) {
@@ -83,8 +133,12 @@ async function fetchUrlText(url) {
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; KiwiMenuImport/1.0)', 'Accept': 'text/html,*/*' },
     });
     if (!res.ok) return { error: 'url-status' };
-    const buf = await res.arrayBuffer();
-    const html = new TextDecoder('utf-8', { fatal: false }).decode(buf.slice(0, MAX_HTML_BYTES));
+    /* arrayBuffer() lisait la réponse EN ENTIER avant que MAX_HTML_BYTES ne la
+     * tronque : la borne ne bornait rien, seul le délai de 8 s limitait ce
+     * qu'un serveur hostile pouvait faire tenir en mémoire. On lit par blocs et
+     * on coupe la connexion dès la limite atteinte. */
+    const buf = await readCapped(res, MAX_HTML_BYTES);
+    const html = new TextDecoder('utf-8', { fatal: false }).decode(buf);
     const text = htmlToText(html);
     if (text.length < MIN_URL_TEXT) return { error: 'js-only' };
     return { text };

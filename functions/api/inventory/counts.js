@@ -422,35 +422,60 @@ export async function onRequestPost({ request, env }) {
         );
       });
     } else if (row.engine === 'boutique' || row.engine === 'maison') {
-      // Pour Boutique / Maison : table `catalogs`
+      /* Pour Boutique / Maison : table `catalogs`.
+       *
+       * Trois défauts tenaient ensemble ici. La lecture et l'écriture étaient
+       * deux allers-retours séparés et l'UPDATE n'avait aucun WHERE sur `rev` :
+       * deux approbations simultanées écrasaient l'une l'autre, la perdante
+       * voyant ses mouvements disparaître alors que son inventaire restait
+       * marqué « appliqué ». Et le try/catch muet faisait exactement la même
+       * chose quand la lecture échouait : stock inchangé, inventaire classé.
+       *
+       * L'écriture sort donc du lot, se fait en compare-and-swap sur `rev`, et
+       * un échec REFUSE l'approbation au lieu de la déclarer faite. Les
+       * mouvements portent un identifiant déterministe : on saute ceux déjà
+       * présents, une reprise après erreur ne double donc jamais le stock. */
+      let catRow = null;
       try {
-        const catRow = await env.DB.prepare(
+        catRow = await env.DB.prepare(
           `SELECT data, rev FROM catalogs WHERE merchant = ?`
         ).bind(merchant).first();
-        if (catRow && catRow.data) {
-          let catalog = JSON.parse(catRow.data);
-          if (!Array.isArray(catalog.moves)) catalog.moves = [];
-          lines.forEach(line => {
-            const diff = num(line.diff);
-            if (!diff || !line.variantId) return;
-            catalog.moves.push({
-              id: `cnt-${countId}-${line.variantId}`,
-              vid: line.variantId,
-              d: Math.round(diff),
-              at: nowMs,
-              why: 'inventaire',
-              actor: reviewerName,
-              ref: countId
-            });
+      } catch (_) {
+        return json({ error: 'catalog-unreadable' }, 503);
+      }
+      if (catRow && catRow.data) {
+        let catalog;
+        try { catalog = JSON.parse(catRow.data); }
+        catch (_) { return json({ error: 'catalog-unreadable' }, 503); }
+        if (!Array.isArray(catalog.moves)) catalog.moves = [];
+        const seen = new Set(catalog.moves.map(m => m && m.id).filter(Boolean));
+        lines.forEach(line => {
+          const diff = num(line.diff);
+          if (!diff || !line.variantId) return;
+          const movId = `cnt-${countId}-${line.variantId}`;
+          if (seen.has(movId)) return;
+          seen.add(movId);
+          catalog.moves.push({
+            id: movId,
+            vid: line.variantId,
+            d: Math.round(diff),
+            at: nowMs,
+            why: 'inventaire',
+            actor: reviewerName,
+            ref: countId
           });
-          const nextRev = (num(catRow.rev) || 0) + 1;
-          batchStmts.push(
-            env.DB.prepare(
-              `UPDATE catalogs SET data = ?, rev = ?, updated_ts = ? WHERE merchant = ?`
-            ).bind(JSON.stringify(catalog), nextRev, nowMs, merchant)
-          );
+        });
+        const prevRev = num(catRow.rev) || 0;
+        let applied = null;
+        try {
+          applied = await env.DB.prepare(
+            `UPDATE catalogs SET data = ?, rev = ?, updated_ts = ? WHERE merchant = ? AND rev = ?`
+          ).bind(JSON.stringify(catalog), prevRev + 1, nowMs, merchant, prevRev).run();
+        } catch (_) { applied = null; }
+        if (!applied || !applied.meta || !applied.meta.changes) {
+          return json({ error: 'catalog-conflict' }, 409);
         }
-      } catch (_) {}
+      }
     }
 
     // Mise à jour du statut inventaire
@@ -485,7 +510,15 @@ export async function onRequestPost({ request, env }) {
   }
 
   // ── ACTION: SUBMIT / RESUBMIT (CAISSE / OPÉRATEUR) ──────────────────────────
-  const countId = str(body.id, 80) || ('cnt_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6));
+  /* `inventory_counts.id` est une clé primaire GLOBALE, pas (merchant, id) : un
+   * identifiant deviné suffisait à écraser le comptage d'un autre commerçant,
+   * l'upsert ne portant aucun prédicat `merchant`. La garde est désormais dans
+   * la clause ON CONFLICT ci-dessous ; ce repli cesse en plus d'être devinable —
+   * il tenait dans un horodatage suivi de quatre caractères de Math.random(),
+   * soit environ un million de possibilités, et Math.random n'est pas
+   * cryptographique. NB : le client fournit normalement son propre id, celui
+   * d'assets/ reste à revoir. */
+  const countId = str(body.id, 80) || ('cnt_' + crypto.randomUUID());
   const supersedesId = str(body.supersedes, 80);
   const engine = str(body.engine, 32) || 'ledger';
   const storeId = str(body.storeId, 80);
@@ -605,7 +638,9 @@ export async function onRequestPost({ request, env }) {
         total_counted = excluded.total_counted, total_system = excluded.total_system,
         total_diff = excluded.total_diff, total_variance_cost_mad = excluded.total_variance_cost_mad,
         abs_variance_cost_mad = excluded.abs_variance_cost_mad, lines_json = excluded.lines_json,
-        meta_json = excluded.meta_json, updated_ts = excluded.updated_ts`
+        meta_json = excluded.meta_json, updated_ts = excluded.updated_ts
+      WHERE inventory_counts.merchant = excluded.merchant
+        AND inventory_counts.status IN ('submitted', 'superseded', 'rejected')`
     ).bind(
       countId, merchant, engine, storeId, storeName,
       employeeId, employeeName, employeeRole, nowMs,

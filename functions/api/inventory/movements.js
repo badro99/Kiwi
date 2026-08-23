@@ -4,7 +4,7 @@
 // GET  ?merchant=slug&summary=1       → solde courant par article/lieu
 // POST { merchant, movements:[...] }  → écriture idempotente, jamais d'UPDATE
 
-import { json } from '../../auth/_lib.js';
+import { json, entitledMerchant } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
 
 const PAGE = 500;
@@ -12,6 +12,21 @@ const REASONS = new Set([
   'opening', 'receipt', 'supplier-return', 'sale', 'sale-reversal',
   'production-input', 'production-output', 'transfer-out', 'transfer-in',
   'loss', 'expiry', 'gift', 'staff-meal', 'count', 'return', 'manual',
+]);
+
+/* Deux familles de motifs, deux autorités.
+ *
+ * `sale`, `sale-reversal` et la production sont AUTOMATIQUES : c'est la caisse
+ * qui les écrit en encaissant, elle doit continuer à le faire sans rien demander.
+ * Tous les autres sont DISCRÉTIONNAIRES — quelqu'un décide que de la marchandise
+ * a été perdue, offerte, transférée ou reçue — et c'est par là que passait la
+ * fraude : `tenantFor` accepte un simple cookie de caisse, donc un caissier
+ * pouvait sortir des bouteilles et poster la perte correspondante au nom d'un
+ * collègue. Le système interdit pourtant déjà ce geste ailleurs : operations.js
+ * refuse `write:inventory` au rôle caisse, et counts.js exige le propriétaire
+ * pour valider un écart. C'était un chemin parallèle vers un état interdit. */
+const AUTOMATIC_REASONS = new Set([
+  'sale', 'sale-reversal', 'production-input', 'production-output',
 ]);
 
 const str = (v, n) => String(v == null ? '' : v).trim().slice(0, n);
@@ -188,6 +203,16 @@ export async function onRequestPost({ request, env }) {
   const now = Date.now();
   const movements = raw.map((m) => sanitize(m, now));
   if (movements.some((m) => !valid(m))) return json({ error: 'bad-movement' }, 400);
+
+  /* `entitledMerchant` SANS allowTill : la session du propriétaire ou un
+   * opérateur nommé, comme pour l'approbation d'un écart dans counts.js. */
+  if (movements.some((m) => !AUTOMATIC_REASONS.has(m.reason))) {
+    let mayAdjust = false;
+    try { mayAdjust = (await entitledMerchant(request, env, merchant)) === merchant; }
+    catch (_) { mayAdjust = false; }
+    if (!mayAdjust) return json({ error: 'reason-forbidden' }, 403);
+  }
+
   try { await ensureSchema(env); } catch (_) { return json({ error: 'unmigrated' }, 503); }
 
   const accepted = [];

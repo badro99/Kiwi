@@ -22,7 +22,7 @@
 
 import {
   readSession, readCookie, SESS_COOKIE,
-  slugMerchant, isTillFor, isOperator,
+  slugMerchant, isTillFor, isOperator, slugClaimedByOther,
 } from '../auth/_lib.js';
 
 /* À qui appartient ce magasin ? NULL = ligne d'avant le registre (ou magasin
@@ -118,7 +118,11 @@ export async function ownedStores(request, env, from) {
   // tel commerçant se verrait répondre « aucun établissement », y compris le sien.
   try {
     const acc = await env.DB.prepare('SELECT business FROM accounts WHERE id = ?').bind(aid).first();
-    if (acc && acc.business) push({ merchant: slugMerchant(acc.business), name: acc.business, type: '' });
+    /* Ce repli portait le même défaut que les deux résolveurs : il ajoutait le
+     * slug dérivé du nom sans vérifier qu'il n'est pas celui d'un autre. */
+    if (acc && acc.business && !(await slugClaimedByOther(env, slugMerchant(acc.business), aid))) {
+      push({ merchant: slugMerchant(acc.business), name: acc.business, type: '' });
+    }
   } catch (_) {}
 
   return out;
@@ -208,6 +212,11 @@ async function resolveTenant(request, env, asked, strict) {
   try { if (await isOperator(request, env)) return asked || sessionMerchant; } catch (_) {}
 
   if (!sessionMerchant) return '';
+  /* Même trou que dans entitledMerchant : le slug du compte était rendu sans
+   * qu'on demande au registre à qui il appartient. Un compte créé avec le nom
+   * d'un commerçant existant tombait directement dans son tenant, en lecture
+   * comme en écriture. */
+  if (await slugClaimedByOther(env, sessionMerchant, sessionAid)) return '';
   if (!asked || asked === sessionMerchant) return sessionMerchant;
   // Une deuxième boutique du même compte : autorisée si la base confirme qu'elle
   // lui appartient. Un slug inconnu retombe sur le magasin du compte plutôt que

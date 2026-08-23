@@ -86,6 +86,17 @@ export async function onRequestPost(context) {
       ).bind(sessionId, merchant).first();
     } catch (_) { session = null; }
     if (!session || session.status !== 'open') return json({ error: 'session-closed' }, 409);
+    /* La garde ne s'armait QUE pour une session de table : une session « à
+     * emporter » sautait le contrôle et pouvait donc porter une commande
+     * déclarée sur une table. Le règlement, lui, ne rattrape que les commandes
+     * d'une session de table ouverte ou celles sans session du tout
+     * (sale.js › UPDATE orders … WHERE session_id IN (…) OR session_id IS NULL) :
+     * le ticket partait en cuisine, était servi, et paid_ts restait vide pour
+     * toujours. Le mode de la commande doit désormais correspondre à celui de
+     * sa session, et la table avec, quand c'en est une. */
+    if (session.mode !== mode) {
+      return json({ error: 'session-mode-mismatch' }, 409);
+    }
     if (session.mode === 'table' && normTable(session.table_no) !== table) {
       return json({ error: 'session-table-mismatch' }, 409);
     }

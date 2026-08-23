@@ -53,6 +53,11 @@ function makeDB() {
             const refs = sales.filter((s) => s.merchant === args[0] && s.ts >= args[1] && s.ts < args[2] && /^\d+$/.test(s.ref) && +s.ref <= 99999).map((s) => +s.ref);
             return { n: refs.length ? Math.max(...refs) : null };
           }
+          if (q.startsWith('SELECT next_value FROM ticket_sequences')) {
+            // Lecture préalable : la route refuse une plage impossible AVANT d'écrire.
+            const row = sequences.get(args[0] + ':' + args[1]);
+            return row ? { next_value: row.next } : null;
+          }
           if (q.startsWith('UPDATE ticket_sequences SET')) {
             /* Model SQLite's serialized write lock even when Promise.all starts
              * both endpoint calls before either UPDATE resolves. */

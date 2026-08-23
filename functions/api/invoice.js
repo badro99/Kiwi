@@ -74,9 +74,14 @@ export async function getOrCreateSaleInvoice(env, merchant, saleId, customerData
     };
   }
 
-  // Filet de sécurité serveur : la vente doit exister dans la table D1 sales
+  /* Le filet ne vérifiait QUE l'existence — littéralement `SELECT 1`. Tout ce
+   * qui s'imprime sur la facture venait ensuite du client sans jamais être
+   * confronté à la vente : montants, lignes, TVA, et l'horodatage qui décide de
+   * l'année du numéro officiel. On pouvait donc stocker une facture antidatée
+   * dans un exercice clos, d'un montant choisi, contre une vente déjà annulée.
+   * On lit maintenant la vente pour de bon. */
   const saleRow = await env.DB.prepare(
-    'SELECT 1 FROM sales WHERE merchant = ? AND id = ?'
+    'SELECT ts, void_ts, amount, amount_cents FROM sales WHERE merchant = ? AND id = ?'
   ).bind(merchant, saleId).first();
 
   if (!saleRow) {
@@ -85,13 +90,46 @@ export async function getOrCreateSaleInvoice(env, merchant, saleId, customerData
     throw err;
   }
 
+  // Une vente annulée ne donne pas lieu à une facture : c'est un avoir.
+  if (saleRow.void_ts) {
+    const err = new Error('sale-voided');
+    err.status = 409;
+    throw err;
+  }
+
   // 2. Création d'une nouvelle facture avec retry sur collision séquentielle
   const customer = validateCustomer(customerData);
   const now = Date.now();
 
   const snap = clientSnapshot && typeof clientSnapshot === 'object' ? { ...clientSnapshot } : {};
-  const issuedTs = Number(snap.issuedTs) || now;
-  const year = new Date(issuedTs).getFullYear();
+
+  /* L'exercice d'une facture est celui de la VENTE, jamais celui que le client
+   * annonce : `seq` étant global au commerçant et non annuel, un issuedTs choisi
+   * laissait sortir F-2024-0087 après F-2026-0086 sans violer la moindre
+   * contrainte. On borne l'horodatage entre la vente et maintenant. */
+  const saleTs = Number(saleRow.ts) || now;
+  const askedTs = Number(snap.issuedTs);
+  const issuedTs = Number.isFinite(askedTs)
+    ? Math.min(Math.max(askedTs, saleTs), now)
+    : now;
+  const year = new Date(saleTs).getFullYear();
+
+  /* Le total imprimé doit être celui encaissé. `totals.ttc` est en dirhams
+   * (assets/invoice.js le construit depuis amountCents/100), la colonne en
+   * centimes fait foi. On tolère le centime d'arrondi et on REFUSE au-delà
+   * plutôt que de réécrire le champ : corriger le seul TTC laisserait un
+   * document dont HT + TVA ne retombent plus dessus. Les lignes d'avant la
+   * migration n'ont qu'un montant en dirhams entiers : rien à confronter. */
+  if (saleRow.amount_cents != null) {
+    const saleCents = Number(saleRow.amount_cents);
+    const askedTtc = snap.totals && Number(snap.totals.ttc);
+    if (Number.isFinite(saleCents) && Number.isFinite(askedTtc)
+        && Math.abs(Math.round(askedTtc * 100) - saleCents) > 1) {
+      const err = new Error('total-mismatch');
+      err.status = 409;
+      throw err;
+    }
+  }
 
   let attempts = 0;
   while (attempts < 5) {

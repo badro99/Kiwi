@@ -47,9 +47,25 @@ export async function reserveTicketRange(env, merchant, requestedSize, requested
   const dbFloor = Math.max(FIRST_TICKET, ((old && Number(old.n)) || 0) + 1);
   const floor = Math.max(clientFloor, dbFloor);
 
-  await env.DB.prepare(
-    'INSERT OR IGNORE INTO ticket_sequences (merchant, period, next_value, updated_ts) VALUES (?, ?, ?, ?)'
-  ).bind(merchant, period, floor, now).run();
+  /* L'INSERT écrivait le plancher AVANT que l'UPDATE ne vérifie qu'une plage y
+   * tienne encore. Une demande impossible — plancher au ras de LAST_TICKET —
+   * échouait donc en 500 tout en PERSISTANT son plancher : la caisse ne pouvait
+   * plus tirer un seul numéro de l'année, alors que la requête fautive n'avait
+   * rien obtenu. On refuse maintenant avant d'écrire quoi que ce soit ; une
+   * demande refusée laisse le compteur exactement où il était. */
+  const seen = await env.DB.prepare(
+    'SELECT next_value FROM ticket_sequences WHERE merchant = ? AND period = ?'
+  ).bind(merchant, period).first();
+  const start = seen ? Math.max(Number(seen.next_value) || 0, floor) : floor;
+  if (!Number.isFinite(start) || start + size - 1 > LAST_TICKET) {
+    throw new Error('allocation-failed');
+  }
+
+  if (!seen) {
+    await env.DB.prepare(
+      'INSERT OR IGNORE INTO ticket_sequences (merchant, period, next_value, updated_ts) VALUES (?, ?, ?, ?)'
+    ).bind(merchant, period, floor, now).run();
+  }
 
   /* One UPDATE is the allocation boundary. SQLite serializes writers to this
    * row, so concurrent tills receive disjoint ranges. `next_value` always

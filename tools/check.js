@@ -377,6 +377,7 @@ for (const test of [
   'pin-hardening-test.mjs',
   'config-pin-projection-test.mjs',
   'team-doc-redaction-test.mjs',
+  'tenant-guard-test.mjs',
   'pressing-workspace-test.js',
   'pressing-auto-ready-test.mjs',
   'inventory-waste-test.mjs',
