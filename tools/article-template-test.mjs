@@ -33,6 +33,7 @@ const minimumWords = {
 const pageRecord = (route, metadata, locale, type) => ({
   path: route.slice(1) + 'index.html', url: SITE + route, type,
   minWords: minimumWords[type][locale], image: metadata.image, locale, alternates: 4,
+  dateModified: metadata.dateModified, legalReviewDate: metadata.legalReviewDate,
 });
 const published = [
   ...PUBLISHED_LOCALES.map((locale) => pageRecord(`/${locale}/guides/`, HUBS[locale], locale, 'CollectionPage')),
@@ -131,6 +132,19 @@ for (const page of published) {
     const linkedArticles = new Set(hrefs.filter((href) => articleRouteSets[page.locale].has(href) && href !== ownRoute));
     articleGraph.set(ownRoute, linkedArticles);
     ok(linkedArticles.size >= 2, `${page.path} links contextually to at least two localized articles`);
+    const articleNode = graph.find((item) => item['@type'] === 'Article');
+    ok(articleNode?.dateModified === page.dateModified, `${page.path} structured data exposes its current modification date`);
+    if (page.legalReviewDate) {
+      const visibleText = source.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+      const reviewDate = {
+        fr: 'sources officielles vérifiées le 24 août 2026',
+        en: 'official sources checked on August 24, 2026',
+        ar: 'تم التحقق من المصادر الرسمية في 24 أغسطس 2026',
+      }[page.locale];
+      ok((source.match(/href="#sources"/g) || []).length === 2 && source.includes('id="sources"'), `${page.path} exposes its official-source block from both contents menus`);
+      ok(source.includes('finances.gov.ma/') && /(?:cndp\.ma|onssa\.gov\.ma)\//.test(source), `${page.path} cites the relevant Moroccan primary sources`);
+      ok(visibleText.includes(reviewDate), `${page.path} displays its legal-source verification date`);
+    }
   }
   const expectedAlternates = alternatesByUrl.get(page.url) || [];
   const htmlAlternates = [...source.matchAll(/<link rel="alternate" hreflang="([^"]+)" href="([^"]+)"/g)]

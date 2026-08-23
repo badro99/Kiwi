@@ -55,6 +55,8 @@ export const TOPICS = Object.freeze([
         'Les sept tests à faire passer à un logiciel de caisse restaurant au Maroc.',
         'Caisse restaurant', '2026-08-23T18:00:00+01:00',
         {
+          dateModified: '2026-08-24T14:30:00+02:00',
+          legalReviewDate: '2026-08-24',
           twitterTitle: 'Logiciel de caisse restaurant au Maroc : 7 tests',
           twitterDescription: 'Testez le service, le hors-ligne, le matériel, les données, le support et le vrai coût.',
           twitterImageAlt: 'Un protocole de soixante minutes pour tester une caisse restaurant.',
@@ -68,6 +70,7 @@ export const TOPICS = Object.freeze([
         'assets/articles/restaurant-pos-software-morocco-en.png',
         'Seven practical tests for restaurant POS software in Morocco, covering service, offline sales, hardware and data.',
         'Restaurant POS', '2026-08-23T22:00:00+02:00',
+        { dateModified: '2026-08-24T14:30:00+02:00', legalReviewDate: '2026-08-24' },
       ),
       ar: article(
         'برنامج كاشير للمطعم في المغرب: 7 اختبارات قبل التوقيع · Kiwi',
@@ -77,6 +80,7 @@ export const TOPICS = Object.freeze([
         'assets/articles/restaurant-pos-software-morocco-ar.png',
         'سبعة اختبارات لبرنامج كاشير المطعم في المغرب تشمل الخدمة والعمل دون إنترنت والمعدات والبيانات.',
         'نقطة بيع المطعم', '2026-08-23T22:00:00+02:00',
+        { dateModified: '2026-08-24T14:30:00+02:00', legalReviewDate: '2026-08-24' },
       ),
     },
   },
@@ -97,6 +101,8 @@ export const TOPICS = Object.freeze([
         'Exemple de calcul d’un food cost de 27,3 pour cent à partir de 20,50 et 75 dirhams.',
         'Marge restaurant', '2026-08-23T18:00:00+01:00',
         {
+          dateModified: '2026-08-24T14:30:00+02:00',
+          legalReviewDate: '2026-08-24',
           twitterTitle: 'Food cost restaurant : formule et exemple en MAD',
           twitterDescription: 'Calculez le coût matière par plat, le coût réel de la période et leur écart.',
           twitterImageAlt: 'La formule du food cost restaurant expliquée avec un exemple en MAD.',
@@ -110,6 +116,7 @@ export const TOPICS = Object.freeze([
         'assets/articles/restaurant-food-cost-en.png',
         'Restaurant food cost example: 20.50 MAD divided by a 75 MAD selling price equals 27.3 percent.',
         'Restaurant margin', '2026-08-23T22:00:00+02:00',
+        { dateModified: '2026-08-24T14:30:00+02:00', legalReviewDate: '2026-08-24' },
       ),
       ar: article(
         'حساب تكلفة الطعام للمطعم: الصيغة ومثال بالدرهم · Kiwi',
@@ -119,6 +126,7 @@ export const TOPICS = Object.freeze([
         'assets/articles/restaurant-food-cost-ar.png',
         'مثال تكلفة الطعام: 20.50 درهما مقسومة على سعر بيع 75 درهما تساوي 27.3 بالمئة.',
         'هامش المطعم', '2026-08-23T22:00:00+02:00',
+        { dateModified: '2026-08-24T14:30:00+02:00', legalReviewDate: '2026-08-24' },
       ),
     },
   },
@@ -139,6 +147,8 @@ export const TOPICS = Object.freeze([
         'Un écart de stock restaurant calculé entre quantité attendue et quantité comptée.',
         'Stock restaurant', '2026-08-23T18:00:00+01:00',
         {
+          dateModified: '2026-08-24T14:30:00+02:00',
+          legalReviewDate: '2026-08-24',
           twitterTitle: 'Gestion de stock restaurant : méthode et exemple en MAD',
           twitterDescription: 'Unités, mouvements, comptage, écarts et seuil de réapprovisionnement expliqués pas à pas.',
           twitterImageAlt: 'La méthode Kiwi pour expliquer un écart de stock restaurant.',
@@ -152,6 +162,7 @@ export const TOPICS = Object.freeze([
         'assets/articles/restaurant-inventory-management-en.png',
         'Restaurant chicken inventory compares 23.4 expected kilograms with 21.9 counted kilograms and a minus 63 MAD variance.',
         'Restaurant inventory', '2026-08-23T22:00:00+02:00',
+        { dateModified: '2026-08-24T14:30:00+02:00', legalReviewDate: '2026-08-24' },
       ),
       ar: article(
         'إدارة مخزون المطعم: الطريقة ومثال بالدرهم · Kiwi',
@@ -161,6 +172,7 @@ export const TOPICS = Object.freeze([
         'assets/articles/restaurant-inventory-management-ar.png',
         'مثال مخزون الدجاج يقارن 23.4 كيلوغراما متوقعة مع 21.9 محسوبة وفرق ناقص 63 درهما.',
         'مخزون المطعم', '2026-08-23T22:00:00+02:00',
+        { dateModified: '2026-08-24T14:30:00+02:00', legalReviewDate: '2026-08-24' },
       ),
     },
   },
