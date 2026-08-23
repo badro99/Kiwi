@@ -31,6 +31,11 @@ import { storeSuspended, storeSubscriptionPending } from './_private.js';
 import { CORE, MENU_LANGS, normalizeMenuLangs } from './_menu-langs.js';
 
 const str = (v, n) => String(v == null ? '' : v).slice(0, n);
+const MENU_ALLERGENS = [
+  'gluten', 'crustaces', 'oeufs', 'poissons', 'arachides', 'soja', 'lait',
+  'fruits_a_coque', 'celeri', 'moutarde', 'sesame', 'sulfites', 'lupin', 'mollusques',
+];
+const MENU_NUTRIENT_LIMITS = { kcal: 5000, protein: 500, carbs: 500, fat: 500, sugars: 500, salt: 500 };
 const OPTION_EMOJIS = new Set([
   '🍏', '🍎', '🍐', '🍊', '🍋', '🍋‍🟩', '🍌', '🍉', '🍇', '🍓', '🫐', '🍈',
   '🍒', '🍑', '🥭', '🍍', '🥥', '🥝', '🍅', '🫒', '🥑', '🍆', '🥔', '🍠', '🥕',
@@ -152,6 +157,30 @@ function withI18n(target, source, nameMax, descMax) {
   return target;
 }
 
+function sanitizeNutrition(raw) {
+  if (!raw || typeof raw !== 'object') return null;
+  const out = {};
+  for (const [key, max] of Object.entries(MENU_NUTRIENT_LIMITS)) {
+    if (typeof raw[key] !== 'number' || !Number.isFinite(raw[key]) || raw[key] < 0 || raw[key] > max) return null;
+    out[key] = raw[key];
+  }
+  out.perPortion = true;
+  return out;
+}
+
+function withNutrition(target, source) {
+  target.hideNutrition = !!(source && source.hideNutrition);
+  target.nutritionComplete = false;
+  if (!source || source.nutritionComplete !== true || !Array.isArray(source.allergens)) return target;
+  const nutrition = sanitizeNutrition(source.nutrition);
+  if (!nutrition) return target;
+  const present = new Set(source.allergens.filter((key) => MENU_ALLERGENS.includes(key)));
+  target.nutrition = nutrition;
+  target.allergens = MENU_ALLERGENS.filter((key) => present.has(key));
+  target.nutritionComplete = true;
+  return target;
+}
+
 export function sanitizeMenu(raw) {
   const out = { langs: CORE.slice(), cats: [], items: [], stations: [], kitchenId: '', opts: [], formulaTemplates: [] };
   if (!raw || typeof raw !== 'object') return out;
@@ -236,6 +265,7 @@ export function sanitizeMenu(raw) {
     };
     // Les traductions du plat (nom + description), voir sanitizeI18n.
     withI18n(item, it, 120, 400);
+    withNutrition(item, it);
     return item;
   }).filter((it) => it.id && it.name);
   const rawItemsById = new Map(items.filter((it) => it && it.id).map((it) => [str(it.id, 40), it]));
@@ -257,11 +287,23 @@ export function sanitizeMenu(raw) {
  * formula-only products must not be placed there: otherwise an old grid could
  * sell one standalone. Updated clients union `formulaItems` only while painting
  * a formula picker. Archived products leave neither collection. */
-function publicMenu(menu) {
+function publicMenu(menu, nutritionEnabled) {
   if (!menu) return null;
+  const publicItem = (source) => {
+    const item = { ...source };
+    const showNutrition = nutritionEnabled !== false && item.nutritionComplete === true
+      && item.hideNutrition !== true && item.nutrition && Array.isArray(item.allergens);
+    delete item.hideNutrition;
+    if (!showNutrition) {
+      delete item.nutrition;
+      delete item.allergens;
+      delete item.nutritionComplete;
+    }
+    return item;
+  };
   return Object.assign({}, menu, {
-    items: (menu.items || []).filter((it) => !it.archived && !it.formulaOnly),
-    formulaItems: (menu.items || []).filter((it) => !it.archived && it.formulaOnly),
+    items: (menu.items || []).filter((it) => !it.archived && !it.formulaOnly).map(publicItem),
+    formulaItems: (menu.items || []).filter((it) => !it.archived && it.formulaOnly).map(publicItem),
   });
 }
 
@@ -394,6 +436,18 @@ async function menuLangsEnabled(env, merchant) {
   } catch (_) { return true; }
 }
 
+// Valeurs nutritionnelles et allergènes : allumées par défaut, comme les
+// langues de carte. Une clé explicitement fausse coupe toute publication.
+async function menuNutritionEnabled(env, merchant) {
+  try {
+    const row = await env.DB.prepare(
+      'SELECT features FROM merchant_config WHERE merchant = ?'
+    ).bind(merchant).first();
+    if (!row || !row.features) return true;
+    return (JSON.parse(row.features) || {}).menuNutrition !== false;
+  } catch (_) { return true; }
+}
+
 export async function onRequestGet(context) {
   const { request, env } = context;
   const url = new URL(request.url);
@@ -461,15 +515,11 @@ export async function onRequestGet(context) {
           // A boutique publishes stock instead of a carte. Both live in the same
           // row; `type` says which one to read back.
           if (isShop(type)) shop = sanitizeShop(parsed);
-          else menu = publicMenu(sanitizeMenu(parsed));
+          else menu = sanitizeMenu(parsed);
         } catch (_) { menu = null; shop = null; }
       }
     }
   } catch (_) { /* table missing / db error → neutral (menu stays null) */ }
-
-  // A published-but-empty menu is treated as "nothing to show yet" too.
-  if (menu && !(menu.items && menu.items.length)) menu = null;
-  if (shop && !(shop.products && shop.products.length)) shop = null;
 
   // `orderpro` is additive: kiwi-order.html (the QR page) ignores it and keeps
   // working for every merchant exactly as before. OrderPro.html — the NFC
@@ -480,13 +530,17 @@ export async function onRequestGet(context) {
    * après qu'un compte a cessé de payer ; laisser la carte se servir toute seule
    * ferait prendre des commandes que personne n'ira préparer. */
   if (await storeSuspended(env, merchant)) {
-    return json({ name, type, menu: null, shop: null, orderpro: false, menuLangs: false, suspended: true });
+    return json({ name, type, menu: null, shop: null, orderpro: false, menuLangs: false, menuNutrition: false, suspended: true });
   }
 
-  const [orderpro, menuLangs] = await Promise.all([
-    orderProEnabled(env, merchant), menuLangsEnabled(env, merchant),
+  const [orderpro, menuLangs, menuNutrition] = await Promise.all([
+    orderProEnabled(env, merchant), menuLangsEnabled(env, merchant), menuNutritionEnabled(env, merchant),
   ]);
-  return json({ name, type, menu, shop, orderpro, menuLangs });
+  if (menu) menu = publicMenu(menu, menuNutrition);
+  // A published-but-empty menu is treated as "nothing to show yet" too.
+  if (menu && !(menu.items && menu.items.length)) menu = null;
+  if (shop && !(shop.products && shop.products.length)) shop = null;
+  return json({ name, type, menu, shop, orderpro, menuLangs, menuNutrition });
 }
 
 export async function onRequestPost(context) {

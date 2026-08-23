@@ -122,6 +122,7 @@
       nutritionComplete: 'Nutrition complete',
       nutritionIncomplete: 'Nutrition incomplete',
       nutritionHidden: 'Nutrition hidden',
+      nutritionDisabled: 'Nutrition disabled',
       nutritionMissing: 'Incomplete: {n} ingredient(s) without a complete nutrition record',
       nutritionFix: 'Complete in Stock',
       nutritionAllergens: 'Allergens',
@@ -407,6 +408,7 @@
       nutritionComplete: 'القيم الغذائية مكتملة',
       nutritionIncomplete: 'القيم الغذائية غير مكتملة',
       nutritionHidden: 'القيم الغذائية مخفية',
+      nutritionDisabled: 'القيم الغذائية معطلة',
       nutritionMissing: 'غير مكتمل: {n} مكونات بدون بطاقة غذائية مكتملة',
       nutritionFix: 'الإكمال في المخزون',
       nutritionAllergens: 'مسببات الحساسية',
@@ -692,6 +694,7 @@
       nutritionComplete: 'Nutrition complète',
       nutritionIncomplete: 'Nutrition incomplète',
       nutritionHidden: 'Nutrition masquée',
+      nutritionDisabled: 'Nutrition désactivée',
       nutritionMissing: 'Incomplet : {n} ingrédient(s) sans fiche nutrition complète',
       nutritionFix: 'Compléter dans Stock',
       nutritionAllergens: 'Allergènes',
@@ -1020,6 +1023,7 @@
     return gap>15?['opt',ui('statusCheckStock')]:gap>5?['opt',ui('statusToMonitor')]:['req',ui('statusCostCompliant')];
   }
   function nutritionStatus(x){
+    if(!menuNutritionFeature())return['mode',ui('nutritionDisabled')];
     if(x.hideNutrition)return['mode',ui('nutritionHidden')];
     return x.nutritionComplete===true?['req',ui('nutritionComplete')]:['opt',ui('nutritionIncomplete')];
   }
@@ -1230,6 +1234,7 @@
   const I18N_BATCH=40;
   // Allumé par défaut ; l'opérateur le coupe dans kiwi-admin (features.menuLangs === false).
   const menuLangFeature=()=>window.KiwiConfig?.features?.menuLangs!==false;
+  const menuNutritionFeature=()=>window.KiwiConfig?.features?.menuNutrition!==false;
   const I18N_LANG_LABELS={
     fr:{es:'Espagnol',de:'Allemand',it:'Italien',pt:'Portugais',nl:'Néerlandais',ru:'Russe','zh-Hans':'Chinois simplifié','zh-Hant':'Chinois traditionnel',ja:'Japonais',ko:'Coréen',tr:'Turc',he:'Hébreu',pl:'Polonais',sv:'Suédois',no:'Norvégien',da:'Danois',hi:'Hindi',id:'Indonésien',el:'Grec',uk:'Ukrainien'},
     en:{es:'Spanish',de:'German',it:'Italian',pt:'Portuguese',nl:'Dutch',ru:'Russian','zh-Hans':'Simplified Chinese','zh-Hant':'Traditional Chinese',ja:'Japanese',ko:'Korean',tr:'Turkish',he:'Hebrew',pl:'Polish',sv:'Swedish',no:'Norwegian',da:'Danish',hi:'Hindi',id:'Indonesian',el:'Greek',uk:'Ukrainian'},

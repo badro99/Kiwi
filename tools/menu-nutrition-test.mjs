@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import vm from 'node:vm';
+import { onRequestGet as getPublicMenu, sanitizeMenu } from '../functions/api/menu.js';
 
 const require = createRequire(import.meta.url);
 const N = require('../assets/menu-nutrition.js');
@@ -57,6 +58,43 @@ const ambiguous = N.compute({ portions: 1, ingredients: [{ name: 'Sucre', qty: 1
 assert.equal(ambiguous.complete, false, 'un nom ambigu échoue sans produire un chiffre possiblement faux');
 
 assert.deepEqual(N.normalizeAllergens(['lait', 'bogus', 'gluten', 'lait']), ['gluten', 'lait']);
+
+const publicNutrition = { kcal: 520, protein: 32, carbs: 45, fat: 18, sugars: 7, salt: 1.2, perPortion: true };
+const sanitized = sanitizeMenu({ items: [
+  { id: 'ok', name: 'Plat', nutrition: publicNutrition, allergens: ['lait', 'bogus', 'gluten', 'lait'], nutritionComplete: true },
+  { id: 'high', name: 'Hors borne', nutrition: { ...publicNutrition, kcal: 5001 }, allergens: [], nutritionComplete: true },
+] });
+assert.deepEqual(sanitized.items[0].nutrition, publicNutrition);
+assert.deepEqual(sanitized.items[0].allergens, ['gluten', 'lait'], 'l’API ne conserve que les clés EU-14');
+assert.equal(sanitized.items[0].nutritionComplete, true);
+assert.equal(sanitized.items[1].nutrition, undefined, 'une valeur hors borne est entièrement refusée');
+assert.equal(sanitized.items[1].nutritionComplete, false);
+
+const storedMenu = JSON.stringify({ items: [
+  { id: 'ok', name: 'Plat', price: 40, nutrition: publicNutrition, allergens: ['lait'], nutritionComplete: true },
+  { id: 'hidden', name: 'Masqué', price: 40, nutrition: publicNutrition, allergens: [], nutritionComplete: true, hideNutrition: true },
+  { id: 'incomplete', name: 'Incomplet', price: 40, nutrition: publicNutrition, allergens: [], nutritionComplete: false },
+] });
+const publicResponse = async (features) => {
+  const env = { DB: { prepare: (sql) => ({ bind: () => ({ first: async () => {
+    if (sql.includes('FROM menus')) return { name: 'Kiwi', type: 'restaurant', data: storedMenu };
+    if (sql.includes('SELECT status')) return { status: 'active' };
+    if (sql.includes('SELECT features')) return features == null ? null : { features };
+    return null;
+  } }) }) } };
+  const response = await getPublicMenu({ request: new Request('https://kiwi.test/api/menu?merchant=test'), env });
+  return response.json();
+};
+const nutritionDefaultOn = await publicResponse('{}');
+assert.equal(nutritionDefaultOn.menuNutrition, true);
+assert.equal(nutritionDefaultOn.menu.items[0].nutrition.kcal, 520, 'clé absente : publication nutritionnelle active');
+assert.equal(nutritionDefaultOn.menu.items[1].nutrition, undefined, 'le masquage par plat retire toute nutrition publique');
+assert.equal(nutritionDefaultOn.menu.items[2].nutrition, undefined, 'une recette incomplète ne publie rien');
+const nutritionOff = await publicResponse('{"menuNutrition":false}');
+assert.equal(nutritionOff.menuNutrition, false);
+assert.equal(nutritionOff.menu.items[0].nutrition, undefined, 'flag faux : nutrition retirée de la réponse publique');
+assert.equal(nutritionOff.menu.items[0].allergens, undefined);
+assert.equal(nutritionOff.menu.items[0].nutritionComplete, undefined);
 
 const ciqualPath = new URL('../assets/data/ciqual-lite.json', import.meta.url);
 const ciqualSize = fs.statSync(ciqualPath).size;
@@ -119,4 +157,7 @@ assert.equal(menuDoc.items[0].nutrition, undefined, 'une cascade incomplète eff
 const workspaceSource = fs.readFileSync(new URL('../assets/restaurant-menu-workspace.js', import.meta.url), 'utf8');
 assert.match(workspaceSource, /nutritionStatus\(x\)/, 'le workspace affiche un indicateur nutrition par plat');
 assert.match(workspaceSource, /data-hide-nutrition/, 'le masquage par plat reste disponible dans la recette');
+assert.match(workspaceSource, /features\?\.menuNutrition!==false/, 'le workspace copie la règle absent = actif');
+const adminSource = fs.readFileSync(new URL('../kiwi-admin.html', import.meta.url), 'utf8');
+assert.match(adminSource, /key:'menuNutrition'/, 'God Mode expose le flag restaurant');
 console.log('✓ menu nutrition (unités, portions, arrondis, complétude et allergènes)');
