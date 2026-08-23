@@ -89,7 +89,7 @@ const account = fs.readFileSync(new URL('../assets/account.js', import.meta.url)
 const dashboard = fs.readFileSync(new URL('../dashboard.html', import.meta.url), 'utf8');
 const admin = fs.readFileSync(new URL('../kiwi-admin.html', import.meta.url), 'utf8');
 const tickets = fs.readFileSync(new URL('../functions/api/support/tickets.js', import.meta.url), 'utf8');
-const landing = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+const landing = fs.readFileSync(new URL('../fr/index.html', import.meta.url), 'utf8');
 const legal = fs.readFileSync(new URL('../mentions-legales.html', import.meta.url), 'utf8');
 ok(help.includes('sent.handoff&&sent.handoff.phone'), 'WhatsApp handoff opens only a configured support destination');
 ok(!help.includes("String(payload.contact).replace"), 'the client is never sent to a chat with their own number');
@@ -97,7 +97,7 @@ ok(tickets.includes('phone: SUPPORT_WHATSAPP_PHONE'), 'ticket creation always re
 ok(landing.includes('https://wa.me/212624495159'), 'landing calls-to-action use the official Kiwi WhatsApp number');
 ok(legal.includes('+212 6 24 49 51 59'), 'legal contact details show the official Kiwi number');
 ok(!account.includes('Support WhatsApp 7j/7'), 'billing no longer promises an unverified response schedule');
-ok(dashboard.includes('assets/help-centre.js?v=3'), 'dashboard loads the active help client');
-ok(admin.includes('assets/admin-support.js?v=2'), 'God Mode loads the support console');
+ok(dashboard.includes('assets/help-centre.js?v=4'), 'dashboard loads the active help client');
+ok(admin.includes('assets/admin-support.js?v=5'), 'God Mode loads the support console');
 
 console.log(`support-system-test: ${controls} controls passed`);

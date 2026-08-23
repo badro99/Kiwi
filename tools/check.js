@@ -868,6 +868,7 @@ section('Whole-project regressions');
     'employee-live-test.mjs',
     'employee-trade-shell-test.mjs',
     'locale-handoff-test.mjs',
+    'canonical-origin-test.mjs',
     'void-stock-test.js',
     'caisse-stock-test.mjs',
     'inventory-ledger-test.mjs',

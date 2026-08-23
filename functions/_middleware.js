@@ -33,6 +33,33 @@ const UNLOCK_PATH = '/__unlock';
 const OPERATOR_PATH = '/__operator';
 const LANGUAGE_COOKIE = 'kiwi_lang';
 const MAX_AGE = 60 * 60 * 24 * 30; // 30 days
+const CANONICAL_HOST = 'kiwi-os.com';
+
+/* One public origin, one landing URL. The previous static export served a full
+ * second copy at `/`, while `www` could serve every page again under another
+ * hostname. Redirect before the account gate so crawlers and visitors receive
+ * the same single-hop answer without needing JavaScript or a session. The
+ * destination host is fixed, never derived from an untrusted Host header. */
+function canonicalSiteRedirect(request) {
+  const url = new URL(request.url);
+  const isRoot = url.pathname === '/' || url.pathname === '/index.html';
+  const isApex = url.hostname === CANONICAL_HOST;
+  const isWww = url.hostname === `www.${CANONICAL_HOST}`;
+  const isHttp = url.protocol !== 'https:';
+  if (!isWww && !(isApex && (isRoot || isHttp))) return null;
+
+  url.protocol = 'https:';
+  url.hostname = CANONICAL_HOST;
+  url.port = '';
+  if (isRoot) url.pathname = '/fr/';
+  return new Response(null, {
+    status: 308,
+    headers: {
+      Location: url.toString(),
+      'Cache-Control': 'public, max-age=3600',
+    },
+  });
+}
 
 /* ── App native (Capacitor) — docs/roadmaps/KIWI_APP_PLAN.md §1.4 ───────────
  * Les surfaces embarquées dans l'app tournent sous capacitor://localhost (iOS)
@@ -143,6 +170,8 @@ async function routeRequest(context) {
   const { request, env, next } = context;
   const url = new URL(request.url);
   const path = url.pathname;
+  const canonicalRedirect = canonicalSiteRedirect(request);
+  if (canonicalRedirect) return canonicalRedirect;
   const authSecret = env.AUTH_SECRET;
   const sitePassword = env.SITE_PASSWORD;
   const isApi = path.indexOf('/api/') === 0;

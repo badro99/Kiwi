@@ -46,6 +46,7 @@ const json = (value) => JSON.stringify(value, null, 2)
 const absolute = (route) => SITE + route;
 const outputPath = (route) => path.join(ROOT, route.replace(/^\//, ''), 'index.html');
 const contentPath = (id, locale) => path.join(ROOT, 'content', 'guides', 'pages', id, `${locale}.html`);
+const landingRoutes = Object.freeze(Object.fromEntries(PUBLISHED_LOCALES.map((locale) => [locale, `/${locale}/`])));
 const hubRoutes = Object.freeze(Object.fromEntries(PUBLISHED_LOCALES.map((locale) => [locale, `/${locale}/guides/`])));
 
 const clusters = [
@@ -246,19 +247,18 @@ function sitemapRow(route, routes, lastmod) {
     ...PUBLISHED_LOCALES.map((locale) => `<xhtml:link rel="alternate" hreflang="${locale}" href="${esc(absolute(routes[locale]))}" />`),
     `<xhtml:link rel="alternate" hreflang="x-default" href="${esc(absolute(routes.fr))}" />`,
   ].join('');
-  return `<url><loc>${esc(absolute(route))}</loc><lastmod>${lastmod}</lastmod>${links}</url>`;
+  const modified = lastmod ? `<lastmod>${lastmod}</lastmod>` : '';
+  return `<url><loc>${esc(absolute(route))}</loc>${modified}${links}</url>`;
 }
 
 function renderSitemap() {
-  const current = fs.readFileSync(path.join(ROOT, 'sitemap.xml'), 'utf8');
-  const existing = current.match(/<url>[\s\S]*?<\/url>/g) || [];
-  const nonGuideRows = existing.filter((row) => !/<loc>https:\/\/kiwi-os\.com\/(?:fr|en|ar)\/guides\//.test(row));
   const newest = TOPICS.map((topic) => topic.pages.fr.dateModified.slice(0, 10)).sort().at(-1);
+  const landingRows = PUBLISHED_LOCALES.map((locale) => sitemapRow(landingRoutes[locale], landingRoutes));
   const guideRows = clusters.flatMap((cluster) => {
     const lastmod = cluster.type === 'hub' ? newest : cluster.pages.fr.dateModified.slice(0, 10);
     return PUBLISHED_LOCALES.map((locale) => sitemapRow(cluster.routes[locale], cluster.routes, lastmod));
   });
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n${[...nonGuideRows, ...guideRows].join('\n')}\n</urlset>\n`;
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n${[...landingRows, ...guideRows].join('\n')}\n</urlset>\n`;
 }
 
 function listPublishedGuideFiles() {

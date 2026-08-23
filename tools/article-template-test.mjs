@@ -13,6 +13,7 @@ const guideClusters = [
   Object.fromEntries(PUBLISHED_LOCALES.map((locale) => [locale, `/${locale}/guides/`])),
   ...TOPICS.map((topic) => topic.routes),
 ];
+const landingRoutes = Object.fromEntries(PUBLISHED_LOCALES.map((locale) => [locale, `/${locale}/`]));
 const alternatesByUrl = new Map(guideClusters.flatMap((routes) => {
   const expected = [
     ...PUBLISHED_LOCALES.map((locale) => [locale, SITE + routes[locale]]),
@@ -158,6 +159,15 @@ ok(publishedImages.size === published.length, 'every published locale page has i
 ok(publishedVersions.size === 1 && publishedVersions.has('10:4'), 'all published guides use the current shared asset versions');
 const sitemapGuideRows = (sitemap.match(/<url>[\s\S]*?<\/url>/g) || []).filter((row) => /<loc>https:\/\/kiwi-os\.com\/(?:fr|en|ar)\/guides\//.test(row));
 ok(sitemapGuideRows.length === guideClusters.length * PUBLISHED_LOCALES.length, 'sitemap has exactly one row for every manifested localized guide page');
+const sitemapRows = sitemap.match(/<url>[\s\S]*?<\/url>/g) || [];
+for (const locale of PUBLISHED_LOCALES) {
+  const expected = [...PUBLISHED_LOCALES.map((code) => [code, SITE + landingRoutes[code]]), ['x-default', SITE + landingRoutes.fr]];
+  const row = sitemapRows.find((entry) => entry.includes(`<loc>${SITE + landingRoutes[locale]}</loc>`)) || '';
+  const actual = [...row.matchAll(/<xhtml:link rel="alternate" hreflang="([^"]+)" href="([^"]+)"/g)].map((match) => [match[1], match[2]]);
+  ok(JSON.stringify(actual) === JSON.stringify(expected), `${locale.toUpperCase()} landing sitemap row is slash-final and matches the exact locale cluster`);
+}
+ok(sitemapRows.length === published.length + PUBLISHED_LOCALES.length, 'sitemap contains only the manifested landings, hubs and localized articles');
+ok(!/<loc>https:\/\/kiwi-os\.com\/(?:fr|en|ar)<\/loc>/.test(sitemap), 'sitemap contains no redirecting slashless locale URL');
 
 try {
   new vm.Script(js, { filename: 'assets/articles/article.js' });
