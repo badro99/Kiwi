@@ -1,7 +1,7 @@
 /* Kiwi · restaurant menu workspace. Preview layout, production data only. */
 (function () {
   'use strict';
-  let tab='menu', filter='all', subFilter=null, query='', hoursPeriod=null, openItemMenu=null; // subFilter : sous-catégorie active ('__none' = non classés)
+  let tab='menu', filter='all', subFilter=null, query='', hoursPeriod=null, openItemMenu=null, nutriFilter='all'; // subFilter : sous-catégorie active ('__none' = non classés)
   const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
   const esc=(s)=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const cash=(n)=>new Intl.NumberFormat('fr-FR',{maximumFractionDigits:2}).format(+n||0)+' MAD';
@@ -134,6 +134,21 @@
       nutritionComplete: 'Nutrition complete',
       nutritionIncomplete: 'Nutrition incomplete',
       nutritionShort: 'Nutrition',
+      tabNutrition: 'Nutrition',
+      nutritionTitle: 'Nutrition and allergens',
+      nutritionSub: 'Computed from recipes and stock records; published on the menu once a dish is complete. Nothing is typed here.',
+      nutritionProgress: '{done} / {total} complete',
+      nutritionFilterAll: 'All',
+      nutritionFilterTodo: 'To complete',
+      nutritionFilterDone: 'Complete',
+      nutritionFilterHidden: 'Hidden',
+      nutritionFilterEmpty: 'No dish in this state.',
+      nutritionNoRecipe: 'No recipe',
+      nutritionNoRecipeHint: 'Add the recipe to compute.',
+      nutritionMissingShort: 'Incomplete: {n} ingredient(s) to complete in Stock',
+      nutritionVisibleToggle: 'Visible',
+      nutritionHiddenToggle: 'Hidden',
+      nutritionDisabledNotice: 'Nutrition is switched off for this venue (operator setting): nothing is published on the menu, the records stay computed here.',
       nutritionHidden: 'Nutrition hidden',
       nutritionDisabled: 'Nutrition disabled',
       nutritionMissing: 'Incomplete: {n} ingredient(s) without a complete nutrition record',
@@ -433,6 +448,21 @@
       nutritionComplete: 'القيم الغذائية مكتملة',
       nutritionIncomplete: 'القيم الغذائية غير مكتملة',
       nutritionShort: 'القيم الغذائية',
+      tabNutrition: 'القيم الغذائية',
+      nutritionTitle: 'القيم الغذائية ومسببات الحساسية',
+      nutritionSub: 'تُحسب من الوصفات وبطاقات المخزون، وتُنشر في القائمة عندما تكتمل بطاقة الطبق. لا شيء يُدخل هنا.',
+      nutritionProgress: '{done} / {total} مكتملة',
+      nutritionFilterAll: 'الكل',
+      nutritionFilterTodo: 'للإكمال',
+      nutritionFilterDone: 'مكتملة',
+      nutritionFilterHidden: 'مخفية',
+      nutritionFilterEmpty: 'لا طبق في هذه الحالة.',
+      nutritionNoRecipe: 'بدون وصفة',
+      nutritionNoRecipeHint: 'أضف الوصفة للحساب.',
+      nutritionMissingShort: 'غير مكتمل: {n} مكوّن(ات) لإكمالها في المخزون',
+      nutritionVisibleToggle: 'ظاهرة',
+      nutritionHiddenToggle: 'مخفية',
+      nutritionDisabledNotice: 'القيم الغذائية معطّلة لهذا المحل (إعداد المشغّل): لا يُنشر شيء في القائمة، وتبقى البطاقات محسوبة هنا.',
       nutritionHidden: 'القيم الغذائية مخفية',
       nutritionDisabled: 'القيم الغذائية معطلة',
       nutritionMissing: 'غير مكتمل: {n} مكونات بدون بطاقة غذائية مكتملة',
@@ -732,6 +762,21 @@
       nutritionComplete: 'Nutrition complète',
       nutritionIncomplete: 'Nutrition incomplète',
       nutritionShort: 'Nutrition',
+      tabNutrition: 'Nutrition',
+      nutritionTitle: 'Nutrition et allergènes',
+      nutritionSub: 'Calculées depuis les recettes et les fiches du stock ; publiées sur la carte dès que la fiche du plat est complète. Rien ne se saisit ici.',
+      nutritionProgress: '{done} / {total} fiches complètes',
+      nutritionFilterAll: 'Toutes',
+      nutritionFilterTodo: 'À compléter',
+      nutritionFilterDone: 'Complètes',
+      nutritionFilterHidden: 'Masquées',
+      nutritionFilterEmpty: 'Aucun plat dans cet état.',
+      nutritionNoRecipe: 'Pas de recette',
+      nutritionNoRecipeHint: 'Ajoutez la recette pour calculer.',
+      nutritionMissingShort: 'Incomplet : {n} ingrédient(s) à compléter dans Stock',
+      nutritionVisibleToggle: 'Visible',
+      nutritionHiddenToggle: 'Masquée',
+      nutritionDisabledNotice: 'La nutrition est désactivée pour cet établissement (réglage opérateur) : rien n’est publié sur la carte, les fiches restent calculées ici.',
       nutritionHidden: 'Nutrition masquée',
       nutritionDisabled: 'Nutrition désactivée',
       nutritionMissing: 'Incomplet : {n} ingrédient(s) sans fiche nutrition complète',
@@ -927,7 +972,7 @@
     return text;
   }
   const t=(str)=>window.KiwiMenuI18n?window.KiwiMenuI18n.t(str,lang()):str;
-  const icons={menu:'menu',languages:'languages',station:'cooking-pot',book:'book-open',chart:'bar-chart-3',clock:'clock',alert:'alert-triangle',tag:'tag',plus:'plus',edit:'pencil',trash:'trash-2',archive:'archive',restore:'archive-restore',more:'more-vertical'};
+  const icons={menu:'menu',languages:'languages',station:'cooking-pot',book:'book-open',leaf:'leaf',chart:'bar-chart-3',clock:'clock',alert:'alert-triangle',tag:'tag',plus:'plus',edit:'pencil',trash:'trash-2',archive:'archive',restore:'archive-restore',more:'more-vertical'};
   const ic=(n)=>`<i data-lucide="${icons[n]||icons.menu}" style="width:14px;height:14px" aria-hidden="true"></i>`;
   const pickerSearchIcon='<svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M784-120 532-372q-30 24-69 38t-83 14q-109 0-184.5-75.5T120-580q0-109 75.5-184.5T380-840q109 0 184.5 75.5T640-580q0 44-14 83t-38 69l252 252-56 56ZM380-400q75 0 127.5-52.5T560-580q0-75-52.5-127.5T380-760q-75 0-127.5 52.5T200-580q0 75 52.5 127.5T380-400Z"/></svg>';
   const pickerChevronIcon='<svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M480-360 280-560l56-56 144 144 144-144 56 56-200 200Z"/></svg>';
@@ -939,6 +984,7 @@
       ['i18n', ui('tabI18n'), 'languages'],
       ['stations', ui('tabStations'), 'station'],
       ['recipes', ui('tabRecipes'), 'book'],
+      ['nutrition', ui('tabNutrition'), 'leaf'],
       ['performance', ui('tabPerformance'), 'chart'],
       ['hours', ui('tabHours'), 'clock'],
       ['alerts', ui('tabAlerts'), 'alert'],
@@ -969,7 +1015,7 @@
     root.innerHTML=`<div class="mi-head"><div><div class="mi-title">${esc(ui('title'))}</div><div class="mi-sub">${itemCountStr} · ${catCountStr} · ${esc(v.name||'')}</div></div><div class="mi-head-acts"><button class="btn-slim" data-action="rmw-menu-scan">${esc(ui('scanMenu'))}</button><button class="btn-slim" data-action="mx-import">${esc(ui('importExcel'))}</button></div></div><div class="mi-filters"><div class="mi-pill-row">${tabs()}</div></div><div class="mi-panel" data-rmw-panel>${panel()}</div>`;
     if(tab==='nfc')window.KiwiOrderProPanel?.mount?.($('[data-rmw-nfc]',root));
   }
-  function panel(){return ({i18n:i18nPanel,stations:stationsPanel,recipes:recipesPanel,performance:performancePanel,hours:hoursPanel,alerts:alertsPanel,nfc:nfcPanel}[tab]||menuPanel)();}
+  function panel(){return ({i18n:i18nPanel,stations:stationsPanel,recipes:recipesPanel,nutrition:nutritionPanel,performance:performancePanel,hours:hoursPanel,alerts:alertsPanel,nfc:nfcPanel}[tab]||menuPanel)();}
   function shownItems(){const q=query.trim().toLowerCase();return D().items.filter(x=>(filter==='all'||x.catId===filter)&&(filter==='all'||!subFilter||(subFilter==='__none'?!x.subId:x.subId===subFilter))&&(!q||`${t(x.name)} ${x.name} ${x.desc||''}`.toLowerCase().includes(q)));}
   const subsOf=(cid)=>cat(cid)?.sub||[];
   function subChips(){
@@ -1075,6 +1121,24 @@
   function recipesPanel(){
     const api=window.KiwiRestaurantRecipes,items=D().items,done=items.filter(x=>api?.get(x.id,x.name,venue())?.ingredients?.length).length;
     return `<section class="mi-section"><div class="mi-recettes-head"><div><div class="mi-title">${esc(ui('recipesTitle'))}</div><div class="mi-sub">${esc(ui('recipesSub'))}</div></div><div class="mi-recettes-progress"><div class="mi-recettes-progress-l">${esc(ui('recipesCompletedCount', { done, total: items.length }))}</div><div class="mi-recettes-progress-bar"><i style="width:${items.length?done/items.length*100:0}%"></i></div></div></div><div class="rmw-recipe-list">${items.map(x=>{const r=api?.get(x.id,x.name,venue()),m=r?api?.metrics(x,r,venue()):null,[cls,label]=recipeStatus(m,r);return `<div class="rmw-recipe-card"><div><div class="rmw-recipe-name">${esc(t(x.name))}</div><div class="rmw-recipe-meta">${esc(ui('ingredientCount', { n: r?.ingredients?.length||0 }))}${r?.prepMinutes?` · ${r.prepMinutes} min`:''}</div></div><div class="rmw-recipe-result"><span class="mi-group-card-pill ${cls}">${esc(label)}</span>${nutritionPill(x)}${m?.costComplete?`<small>${esc(ui('costSummaryPortion', { cost: m.theoreticalCost.toFixed(2) }))}</small>`:`<small>${esc(ui('missingCostOrQty'))}</small>`}</div><button class="btn-slim${r?'':' primary'}" data-action="rmw-recipe-edit" data-arg="${x.id}">${esc(r?ui('viewAndEdit'):ui('complete'))} →</button></div>`;}).join('')||`<div class="rmw-empty">${esc(ui('addItemsFirst'))}</div>`}</div></section>`;
+  }
+  /* Onglet Nutrition : une ligne par plat, l'état de la fiche (complète, à
+     compléter, masquée), les valeurs par portion et les allergènes, le
+     commutateur Visible/Masquée et le lien vers la recette. Tout est calculé
+     depuis les recettes + fiches du stock ; rien n'est saisi ici. */
+  function nutritionPanel(){
+    const api=window.KiwiRestaurantRecipes,items=D().items,feature=menuNutritionFeature();
+    const rows=items.map(x=>{const r=api?.get(x.id,x.name,venue());const res=r&&r.ingredients?.length?api.nutrition(r,x.id):null;const missing=res?[...new Set([...res.missingNutrition,...res.missingConversion,...res.missingAllergens])]:[];const state=x.hideNutrition?'hidden':(res&&res.complete?'done':'todo');return {x,r,res,missing,state};});
+    const count=k=>rows.filter(o=>k==='all'||o.state===k).length,done=count('done');
+    const list=rows.filter(o=>nutriFilter==='all'||o.state===nutriFilter);
+    const pills=[['all',ui('nutritionFilterAll')],['todo',ui('nutritionFilterTodo')],['done',ui('nutritionFilterDone')],['hidden',ui('nutritionFilterHidden')]].map(([k,l])=>`<button class="mi-pill${nutriFilter===k?' on':''}" data-action="rmw-nutrition-filter" data-arg="${k}">${esc(l)}<span class="mi-tab-badge">${count(k)}</span></button>`).join('');
+    const row=o=>{const {x,r,res,missing,state}=o;const cat=D().cats.find(c=>c.id===x.catId);let values;
+      if(!r||!r.ingredients?.length)values=`<span class="rmw-nutri-muted">${esc(ui('nutritionNoRecipe'))} · ${esc(ui('nutritionNoRecipeHint'))}</span>`;
+      else if(res&&res.complete)values=`<div class="rmw-nutrition-values"><bdi dir="ltr">${res.nutrition.kcal} kcal</bdi><bdi dir="ltr">P ${res.nutrition.protein} g</bdi><bdi dir="ltr">G ${res.nutrition.carbs} g</bdi><bdi dir="ltr">L ${res.nutrition.fat} g</bdi></div><div class="rmw-nutri-allergens">${res.allergens.length?res.allergens.map(k=>`<span>${esc(ui(`allergen_${k}`))}</span>`).join(''):`<span class="rmw-nutri-muted">${esc(ui('nutritionAllergens'))} : ${esc(ui('nutritionNone'))}</span>`}</div>`;
+      else values=`<span class="rmw-nutri-muted">${esc(ui('nutritionMissingShort',{n:missing.length}))}</span>`;
+      const stateLabel=state==='hidden'?ui('nutritionHidden'):state==='done'?ui('nutritionComplete'):ui('nutritionIncomplete');
+      return `<div class="rmw-recipe-card rmw-nutri-row ${state}"><div><div class="rmw-recipe-name">${esc(t(x.name))}</div><div class="rmw-recipe-meta">${esc(cat?t(cat.name):'')}${r?.ingredients?.length?` · ${esc(ui('ingredientCount',{n:r.ingredients.length}))}`:''}</div></div><div class="rmw-nutri-values"><span class="rmw-nutri-dot ${state==='done'?'req':state==='hidden'?'mode':'opt'}"><i></i>${esc(stateLabel)}</span>${values}</div><div class="rmw-nutri-acts"><button class="mi-state-toggle" role="switch" aria-checked="${x.hideNutrition?'false':'true'}" data-action="rmw-nutrition-hide" data-arg="${x.id}" title="${esc(ui('nutritionHideHint'))}">${esc(x.hideNutrition?ui('nutritionHiddenToggle'):ui('nutritionVisibleToggle'))}</button><button class="btn-slim${state==='todo'?' primary':''}" data-action="rmw-recipe-edit" data-arg="${x.id}">${esc(state==='todo'?ui('complete'):ui('viewAndEdit'))} →</button></div></div>`;};
+    return `<section class="mi-section"><div class="mi-recettes-head"><div><div class="mi-title">${esc(ui('nutritionTitle'))}</div><div class="mi-sub">${esc(ui('nutritionSub'))}</div></div><div class="mi-recettes-progress"><div class="mi-recettes-progress-l">${esc(ui('nutritionProgress',{done,total:items.length}))}</div><div class="mi-recettes-progress-bar"><i style="width:${items.length?done/items.length*100:0}%"></i></div></div></div>${feature?'':`<div class="rmw-nutri-notice">${esc(ui('nutritionDisabledNotice'))}</div>`}<div class="rmw-nutri-filters">${pills}</div><div class="rmw-recipe-list">${list.map(row).join('')||`<div class="rmw-empty">${esc(items.length?ui('nutritionFilterEmpty'):ui('addItemsFirst'))}</div>`}</div></section>`;
   }
   function sales(){try{return window.KiwiSales?.list?.(venue())||[];}catch(_){return[];}}
   const norm=(v)=>String(v==null?'':v).trim().toLocaleLowerCase('fr').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
@@ -1450,6 +1514,8 @@ table.rmw-i18n td.st-manual input{border-inline-start:3px solid var(--atlas)}
     H['rmw-station-edit']=(_e,id)=>ask(ui('renameStationTitle'),ui('stationNameLabel'),station(id)?.name,v=>S().renameStation(id,v));
     H['rmw-station-delete']=(_e,id)=>confirm(ui('deleteStationConfirm', { name: station(id)?.name||ui('stationDefault') }),()=>S().deleteStation(id));
     H['rmw-recipe-edit']=(_e,id)=>{const x=item(id);if(x)openRecipe(x);};
+    H['rmw-nutrition-filter']=(_e,k)=>{nutriFilter=k||'all';render();};
+    H['rmw-nutrition-hide']=(_e,id)=>{const x=item(id);if(!x)return;S().updateItem(id,{hideNutrition:x.hideNutrition!==true});render();toast(ui('nutritionTitle'),x.hideNutrition?ui('nutritionVisibleToggle'):ui('nutritionHiddenToggle'));};
     H['rmw-reactivate']=(_e,id)=>{S().updateItem(id,{avail:true});render();};
     H['rmw-menu-scan']=()=>{if(window.KiwiMenuScan?.open)window.KiwiMenuScan.open({onDone:()=>render()});else window.Kiwi?.toast?.(ui('scanUnavailable'),{type:'warn',desc:ui('reloadPage')});};
     H['rmw-menu-translate']=()=>{tab='i18n';render();};
@@ -1473,6 +1539,7 @@ const pos=e.target.selectionStart;p.innerHTML=menuPanel();const next=$('[data-rm
 .rmw-nutrition-state{display:grid;gap:10px;padding:14px 15px;border:1px solid var(--n-200);border-radius:14px;background:var(--surface)}.rmw-nutrition-state.complete{border-color:color-mix(in srgb,var(--atlas) 30%,var(--n-200));background:color-mix(in srgb,var(--atlas) 6%,var(--surface))}.rmw-nutrition-state.incomplete{grid-template-columns:minmax(0,1fr) auto;align-items:center}.rmw-nutrition-state.incomplete>b{font-size:12px}.rmw-nutrition-values{display:flex;flex-wrap:wrap;gap:7px}.rmw-nutrition-values bdi{padding:6px 8px;border:1px solid var(--n-200);border-radius:8px;background:var(--paper-soft);font:650 11px var(--mono)}.rmw-nutrition-allergens{display:flex;flex-wrap:wrap;gap:7px;font-size:11.5px}.rmw-nutrition-allergens span,.rmw-nutrition-state small{color:var(--n-500)}
 .rmw-nutrition-hide{display:flex;align-items:flex-start;gap:10px;padding:13px 15px;border:1px solid var(--n-200);border-radius:14px;background:var(--paper-soft);cursor:pointer}.rmw-nutrition-hide input{width:18px;height:18px;margin-top:1px;accent-color:var(--atlas)}.rmw-nutrition-hide span{display:grid;gap:3px}.rmw-nutrition-hide b{font-size:12.5px}.rmw-nutrition-hide small{color:var(--n-500);font-size:11px;line-height:1.4}
 @media(max-width:620px){.rmw-nutrition-state.incomplete{grid-template-columns:1fr}.rmw-nutrition-state.incomplete .btn-slim{width:100%;justify-content:center}.mi-card-foot .rmw-nutrition-pill{display:none}}
+.rmw-nutri-filters{display:flex;flex-wrap:wrap;gap:6px;margin:14px 0 12px}.rmw-nutri-filters .mi-pill{display:inline-flex;align-items:center;gap:6px}.rmw-nutri-notice{margin-top:12px;padding:11px 13px;border:1px dashed var(--n-300);border-radius:12px;color:var(--n-500);font-size:12px;line-height:1.45}.rmw-recipe-card.rmw-nutri-row{grid-template-columns:minmax(170px,1fr) minmax(240px,1.4fr) auto}.rmw-nutri-values{display:grid;gap:6px;font-size:12px}.rmw-nutri-values .rmw-nutrition-values{gap:9px;font:600 12px var(--mono);color:var(--ink)}.rmw-nutri-allergens{display:flex;flex-wrap:wrap;gap:5px;font-size:11px}.rmw-nutri-allergens>span{padding:2px 7px;border:1px solid var(--n-200);border-radius:999px;color:var(--n-600)}.rmw-nutri-muted{color:var(--n-500);font-size:11.5px;line-height:1.45}.rmw-nutri-acts{display:flex;align-items:center;gap:8px;justify-self:end}.rmw-nutri-row.hidden{opacity:.72}@media(max-width:800px){.rmw-recipe-card.rmw-nutri-row{grid-template-columns:1fr}.rmw-nutri-acts{justify-self:start}}
 `;document.head.appendChild(s)}
   function searchStyle(){if($('#rmw-menu-search-css'))return;const s=document.createElement('style');s.id='rmw-menu-search-css';s.textContent=`
 .rmw-search-toolbar{padding:0!important;background:transparent!important;border:0!important}

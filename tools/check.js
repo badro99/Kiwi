@@ -856,6 +856,7 @@ section('Whole-project regressions');
     'restaurant-menu-route-test.js',
     'menu-pull-route-test.js',
     'restaurant-menu-performance-test.js',
+    'restaurant-menu-nutrition-tab-test.js',
     'restaurant-menu-peak-hours-test.js',
     'restaurant-units-test.js',
     'menu-nutrition-test.mjs',
