@@ -187,5 +187,9 @@ for (const f of ['assets/kitchen-print-queue.js', 'assets/food-production-print.
   assert(/:has\(\.rmw-formula-builder:not\(\[hidden\]\)\)/.test(ws) && !/:has\(\.rmw-formula-builder\)/.test(ws), 'éditeur d’article : la largeur 1120 px ne vaut que si le constructeur de formule est visible, pas pour tout article');
 }
 
+// Pied de carte : la pastille nutrition compacte (point + mot, kcal si complet),
+// jamais la pastille longue « Nutrition incomplète » qui passait sous Disponible.
+assert(/groupe\(s\) d’options`\}\$\{nutritionCardPill\(x\)\}<\/span>/.test(ws) && /\.mi-card-foot>span:first-child\{[^}]*overflow:hidden;text-overflow:ellipsis/.test(ws) && !/· \$\{nutritionPill\(x\)\}<\/span><span class="mi-card-acts"/.test(ws), 'carte article : pastille nutrition compacte dans le pied, premier span tronqué au lieu de déborder sous le bouton Disponible');
+
 console.log(failures ? `\nmenu-i18n-test : ${failures} échec(s)` : '\nmenu-i18n-test : tout passe');
 process.exit(failures ? 1 : 0);
