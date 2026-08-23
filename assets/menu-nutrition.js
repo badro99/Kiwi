@@ -148,12 +148,13 @@
   function matchRank(text, query) {
     if (!text) return -1;
     if (text === query) return 0;
-    // Plusieurs mots (« huile olive ») : chacun doit se retrouver, le rang est
-    // celui du mot le moins bien placé. « Huile d'olive vierge » passe, « Huile
-    // de lin » non.
+    // Plusieurs mots (« huile olive », « pois chiche ») : chacun doit se
+    // retrouver, et le rang est celui du premier mot, c'est lui qui nomme
+    // l'aliment. « Pois chiche, sec » (1) passe devant « Farine de pois
+    // chiche » (3) ; « Huile de lin » ne passe pas du tout.
     if (query.includes(' ')) {
       const ranks = query.split(' ').map((part) => matchRank(text, part));
-      return ranks.some((rank) => rank < 0) ? -1 : Math.max(1, ...ranks);
+      return ranks.some((rank) => rank < 0) ? -1 : Math.max(1, ranks[0]);
     }
     const words = text.split(' ');
     if (words[0] === query) return 1;
@@ -187,8 +188,19 @@
       const rank = fr < 0 ? enRank : (enRank < 0 ? fr : Math.min(fr, enRank));
       offer(food, rank, '');
     });
+    // À rang égal, l'aliment de base avant la préparation : « citron » veut le
+    // citron, pas le sorbet ; « banane » la banane, pas le plantain cuit. On ne
+    // récompense pas « cru » (« Lait de chèvre, cru » passerait devant le lait
+    // UHT) : on recule ce qui est cuisiné, cuit, en conserve ou préemballé.
+    const PREPARED = new Set(['sorbet', 'tarte', 'jus', 'nectar', 'salade', 'sauce', 'soupe', 'compote', 'confiture', 'sirop',
+      'glace', 'gateau', 'biscuit', 'chips', 'pizza', 'sandwich', 'gratin', 'puree', 'poudre', 'seche', 'sec', 'deshydrate',
+      'deshydratee', 'confit', 'confite', 'cuit', 'cuite', 'cuits', 'cuites', 'bouilli', 'bouillie', 'roti', 'rotie', 'frit',
+      'frite', 'frites', 'saute', 'sautee', 'grille', 'grillee', 'poele', 'poelee', 'appertise', 'appertisee', 'surgele',
+      'surgelee', 'preemballe', 'preemballee', 'aromatise', 'aromatisee', 'gelifie', 'empresure', 'plantain']);
+    const preparedLast = (hit) => (searchKey(hit.food.nameFr).split(' ').some((word) => PREPARED.has(word)) ? 1 : 0);
     return Array.from(best.values())
       .sort((a, b) => a.rank - b.rank
+        || preparedLast(a) - preparedLast(b)
         || searchKey(a.food.nameFr).length - searchKey(b.food.nameFr).length
         || String(a.food.nameFr).localeCompare(String(b.food.nameFr), 'fr'))
       .slice(0, limit || 8);

@@ -47,6 +47,10 @@ MOROCCAN_ALIASES = {
     "denjal": "20053", "badenjal": "20053",
     "zitoun": "13184",
     "djaj": "36016", "kefta": "6254",
+    "creme fraiche": "19410", "crème fraîche": "19410",
+    "lben": "19805", "leben": "19805", "raib": "19593", "rayeb": "19593",
+    "matecha": "20276", "maticha": "20276", "zit zitoun": "17270",
+    "khizzo": "20009", "khizo": "20009", "hamed": "13009", "l7amed": "13009",
 }
 
 PORTION_SUGGESTIONS = {
@@ -57,10 +61,16 @@ PORTION_SUGGESTIONS = {
     "potato": {"grams": 170, "labelFr": "pomme de terre moyenne", "labelEn": "medium potato", "labelAr": "بطاطس متوسطة"},
     "apple": {"grams": 150, "labelFr": "pomme moyenne", "labelEn": "medium apple", "labelAr": "تفاحة متوسطة"},
     "zucchini": {"grams": 200, "labelFr": "courgette moyenne", "labelEn": "medium zucchini", "labelAr": "كوسة متوسطة"},
+    "lemon": {"grams": 60, "labelFr": "citron moyen, chair", "labelEn": "medium lemon, flesh", "labelAr": "ليمونة متوسطة"},
+    "banana": {"grams": 120, "labelFr": "banane moyenne, sans peau", "labelEn": "medium banana, peeled", "labelAr": "موزة متوسطة مقشرة"},
+    "orange": {"grams": 150, "labelFr": "orange moyenne, chair", "labelEn": "medium orange, flesh", "labelAr": "برتقالة متوسطة"},
+    "carrot": {"grams": 80, "labelFr": "carotte moyenne", "labelEn": "medium carrot", "labelAr": "جزرة متوسطة"},
+    "cucumber": {"grams": 250, "labelFr": "concombre moyen", "labelEn": "medium cucumber", "labelAr": "خيارة متوسطة"},
 }
 PORTION_CATEGORY_BY_ID = {
-    "22000": "egg", "20119": "tomato", "7200": "bread_slice",
-    "20034": "onion", "4023": "potato", "13039": "apple", "20020": "zucchini",
+    "22000": "egg", "20276": "tomato", "7200": "bread_slice",
+    "20034": "onion", "4008": "potato", "13039": "apple", "20020": "zucchini",
+    "13009": "lemon", "13005": "banana", "13034": "orange", "20009": "carrot", "20019": "cucumber",
 }
 
 
@@ -109,10 +119,27 @@ def english_names(path: Path) -> dict[str, str]:
 
 
 def number(value):
-    text = str(value or "").strip().replace(",", ".")
+    """Lit une cellule Ciqual. Retourne (valeur, bornée).
+
+    Ciqual écrit « < 0,5 » quand la teneur est sous le seuil de quantification et
+    « traces » quand elle est négligeable. La première version rejetait ces
+    lignes entières : la tomate crue, le citron, la carotte, l'ail, l'huile
+    d'olive, l'orange et la banane disparaissaient de la table, soit les
+    aliments les plus courants d'une cuisine marocaine (décision du
+    2026-08-23). Une borne « < x » est une information, pas une inconnue : on
+    garde x, la borne supérieure, celle qu'une étiquette afficherait, et on
+    marque le nutriment comme borné pour que l'interface puisse dire « ≤ ».
+    « traces » vaut 0. Une cellule vide ou « - » reste une vraie inconnue et
+    continue d'exclure la ligne."""
+    text = str(value or "").strip().replace(",", ".").lower()
+    if text in {"traces", "trace"}:
+        return 0.0, True
+    bounded = re.fullmatch(r"<\s*(\d+(?:\.\d+)?)", text)
+    if bounded:
+        return float(bounded.group(1)), True
     if not re.fullmatch(r"\d+(?:\.\d+)?", text):
-        return None
-    return float(text)
+        return None, False
+    return float(text), False
 
 
 def compact_number(value: float):
@@ -153,9 +180,19 @@ def allergen_hints(name_fr: str, name_en: str, subgroup: str) -> list[str]:
 
 
 def preference(row: dict) -> tuple:
+    """Plus petit = préféré. Ciqual nomme l'aliment de base « Citron, chair sans
+    peau, sans pépins, cru » et la préparation « Citron givré (sorbet) » : compter
+    les virgules faisait gagner le sorbet. L'aliment cru ou frais est celui qu'une
+    cuisine pèse, il passe devant ; les préparations (sorbet, tarte, jus, nectar,
+    salade, sauce, plat) reculent."""
     name = folded(row["nameFr"])
-    penalties = ["preemballe", "aliment moyen", "non precise", "sans precision", "de restauration", "industriel"]
+    words = re.sub(r"[^a-z0-9]+", " ", name).split()
+    penalties = ["preemballe", "aliment moyen", "non precise", "sans precision", "de restauration", "industriel", "surgele", "appertise"]
     penalty = sum(20 for marker in penalties if marker in name)
+    if any(word in {"cru", "crue", "crus", "crues", "frais", "fraiche", "fraiches"} for word in words):
+        penalty -= 30
+    if any(word in {"sorbet", "tarte", "jus", "nectar", "salade", "sauce", "soupe", "compote", "confiture", "sirop", "glace", "gateau", "biscuit", "chips", "pizza", "sandwich", "plat", "gratin", "puree", "poudre", "seche", "sec", "deshydrate", "deshydratee", "confit", "confite"} for word in words):
+        penalty += 15
     penalty += name.count(",") * 2 + max(0, len(name) - 72) // 8
     return penalty, len(name), name, row["id"]
 
@@ -169,6 +206,29 @@ PRIORITY_PATTERNS = [
     r"^saumon\b", r"^crevette\b", r"^lait\b", r"^yaourt\b", r"^fromage\b", r"^beurre\b",
     r"^huile d olive\b", r"^sucre\b", r"^miel\b", r"^sel\b", r"^cumin\b", r"^cannelle\b",
     r"^paprika\b", r"^persil\b", r"^coriandre\b", r"^menthe\b", r"^cafe\b", r"^the\b", r"^chocolat\b",
+    # Ajout du 2026-08-23 : les aliments crus que la première sélection perdait
+    # (voir preference), les légumes, fruits, épices et produits laitiers d'une
+    # cuisine marocaine, et quelques bases de pâtisserie.
+    r"^concombre\b", r"^citron vert\b", r"^navet\b", r"^chou\b", r"^chou fleur\b", r"^haricot vert\b", r"^petit pois\b",
+    r"^fenouil\b", r"^celeri\b", r"^poireau\b", r"^epinard\b", r"^betterave\b", r"^artichaut\b", r"^champignon\b",
+    r"^potiron\b", r"^courge\b", r"^patate douce\b", r"^avocat\b", r"^piment\b", r"^echalote\b", r"^mais\b",
+    r"^fraise\b", r"^melon\b", r"^pasteque\b", r"^raisin\b", r"^figue\b", r"^abricot\b", r"^peche\b", r"^poire\b",
+    r"^grenade\b", r"^kiwi\b", r"^ananas\b", r"^mangue\b", r"^nectarine\b", r"^cerise\b", r"^prune\b", r"^clementine\b",
+    r"^pamplemousse\b", r"^raisin sec\b", r"^pruneau\b", r"^noix de coco\b", r"^cacahuete\b", r"^sesame\b", r"^pistache\b",
+    r"^noisette\b", r"^noix de cajou\b", r"^graine de tournesol\b", r"^graine de lin\b",
+    r"^gingembre\b", r"^curcuma\b", r"^safran\b", r"^poivre\b", r"^clou de girofle\b", r"^anis\b", r"^fenugrec\b",
+    r"^muscade\b", r"^laurier\b", r"^thym\b", r"^origan\b", r"^basilic\b", r"^vinaigre\b", r"^harissa\b",
+    r"^huile de tournesol\b", r"^huile d arachide\b", r"^huile de colza\b", r"^margarine\b", r"^levure\b", r"^bicarbonate\b",
+    r"^creme 30% mg epaisse\b", r"^creme 30% mg fluide\b", r"^creme 12 a 25% mg legere epaisse\b", r"^creme chantilly\b",
+    r"^lait fermente a boire ou lait ribot nature au lait entier\b", r"^fromage blanc\b", r"^mozzarella\b", r"^emmental\b", r"^gruyere\b", r"^parmesan\b",
+    r"^mascarpone\b", r"^feta\b", r"^ricotta\b", r"^lait concentre\b", r"^lait en poudre\b", r"^lait de coco\b",
+    r"^lait fermente\b", r"^lben\b", r"^petit suisse\b", r"^cacao\b", r"^vanille\b", r"^confiture\b", r"^sirop\b",
+    r"^mayonnaise\b", r"^ketchup\b", r"^moutarde\b", r"^concentre de tomate\b", r"^capre\b", r"^cornichon\b",
+    r"^feve\b", r"^haricot rouge\b", r"^quinoa\b", r"^flocons d avoine\b", r"^orge\b", r"^boulgour\b", r"^vermicelle\b",
+    r"^pates\b", r"^nouilles\b", r"^pain complet\b", r"^pain de mie\b", r"^baguette\b", r"^croissant\b", r"^brioche\b",
+    r"^merlan\b", r"^dorade\b", r"^calamar\b", r"^moule\b", r"^sole\b", r"^maquereau\b", r"^anchois\b", r"^cabillaud\b",
+    r"^foie\b", r"^mouton\b", r"^caille\b", r"^lapin\b", r"^chevre\b", r"^eau\b", r"^jus d orange\b", r"^olive verte\b",
+    r"^huile d olive vierge\b", r"^tomate ronde\b", r"^tomate cerise\b", r"^banane\b",
 ]
 
 
@@ -180,7 +240,8 @@ def build(xlsx: Path, old_xml_zip: Path) -> list[dict]:
             continue
         code, name_fr, subgroup = str(row[6] or "").strip(), str(row[7] or "").strip(), str(row[1] or "").strip().zfill(4)
         name_en = names_en.get(code, "")
-        values = [number(row[column]) for column in (10, 14, 16, 17, 18, 49)]
+        parsed = [number(row[column]) for column in (10, 14, 16, 17, 18, 49)]
+        values = [value for value, _bounded in parsed]
         if not code or not name_fr or not name_en or subgroup in EXCLUDED_SUBGROUPS or any(value is None for value in values):
             continue
         kcal, protein, carbs, fat, sugars, salt = values
@@ -191,6 +252,9 @@ def build(xlsx: Path, old_xml_zip: Path) -> list[dict]:
             "sugars": compact_number(sugars), "salt": compact_number(salt),
             "allergenHints": allergen_hints(name_fr, name_en, subgroup),
         }
+        bounded_keys = [key for key, (_value, bounded) in zip(("kcal", "protein", "carbs", "fat", "sugars", "salt"), parsed) if bounded]
+        if bounded_keys:
+            item["bounded"] = bounded_keys
         if code in PORTION_CATEGORY_BY_ID:
             item["portionCategory"] = PORTION_CATEGORY_BY_ID[code]
         groups[subgroup].append(item)
@@ -258,6 +322,7 @@ def main() -> None:
                 "citation": "Anses. 2025. Table de composition nutritionnelle des aliments Ciqual",
                 "doi": "10.57745/RDMHWY", "licence": "Licence Ouverte / Etalab 2.0",
                 "englishNames": "Anses-Ciqual 2020, jointure par alim_code",
+                "boundedValues": "« < x » conservé comme x (borne supérieure), « traces » comme 0 ; les nutriments concernés sont listés dans `bounded`",
             },
             "aliases": MOROCCAN_ALIASES,
             "portionSuggestions": PORTION_SUGGESTIONS,

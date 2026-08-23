@@ -5306,7 +5306,7 @@
   let ciqualPromise = null;
   function loadCiqual() {
     if (!ciqualPromise) {
-      ciqualPromise = fetch('assets/data/ciqual-lite.json?v=3', { credentials: 'same-origin' })
+      ciqualPromise = fetch('assets/data/ciqual-lite.json?v=4', { credentials: 'same-origin' })
         .then((response) => { if (!response.ok) throw new Error('ciqual ' + response.status); return response.json(); })
         .then((payload) => ({
           foods: Array.isArray(payload?.foods) ? payload.foods : [],

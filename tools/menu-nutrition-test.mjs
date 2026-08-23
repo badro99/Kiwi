@@ -132,6 +132,31 @@ assert.deepEqual(N.searchFoods(ciqual, 'smen', 3).map((hit) => [hit.alias, Strin
 assert.equal(top('lait entier')[0], 'Lait entier, UHT', 'requête à plusieurs mots');
 assert.equal(N.searchFoods(ciqual, 'x', 5).length, 0, 'moins de deux caractères : rien');
 assert.equal(N.searchFoods(ciqual, 'zzzz', 5).length, 0, 'aucune correspondance : liste vide');
+/* Politique des valeurs bornées (2026-08-23) : « < x » vaut x, « traces » vaut 0,
+ * et les aliments de base d'une cuisine marocaine sont dans la table. */
+assert.match(ciqual.source.boundedValues || '', /borne supérieure/, 'la source documente la politique des valeurs bornées');
+for (const [id, label] of [['20276', 'Tomate ronde, crue'], ['17270', 'Huile d\'olive vierge extra'], ['13009', 'Citron'], ['20009', 'Carotte, crue'],
+  ['13005', 'Banane'], ['20019', 'Concombre'], ['19410', 'Crème 30% MG'], ['19805', 'lait ribot'], ['13034', 'Orange'], ['4008', 'Pomme de terre, sans peau, crue']]) {
+  const food = ciqual.foods.find((row) => String(row.id) === id);
+  assert.ok(food && String(food.nameFr).toLowerCase().includes(label.toLowerCase().split(',')[0]), `aliment de base absent : ${label} (${id})`);
+}
+assert.ok(ciqual.foods.every((food) => !food.bounded || (Array.isArray(food.bounded) && food.bounded.every((key) => N.NUTRIENT_KEYS.includes(key)))),
+  '`bounded` ne liste que des nutriments');
+assert.ok(ciqual.foods.some((food) => food.bounded), 'des lignes bornées sont présentes (sinon la politique n’a pas été appliquée)');
+for (const [category, grams] of [['lemon', 60], ['banana', 120], ['orange', 150], ['carrot', 80], ['cucumber', 250]]) {
+  assert.equal(ciqual.portionSuggestions?.[category]?.grams, grams, `préfill portion absent : ${category}`);
+  assert.ok(ciqual.foods.some((food) => food.portionCategory === category), `catégorie portion sans aliment : ${category}`);
+}
+for (const [alias, id] of [['creme fraiche', '19410'], ['lben', '19805'], ['maticha', '20276'], ['zit zitoun', '17270'], ['hamed', '13009'], ['khizzo', '20009']]) {
+  assert.equal(String(ciqual.aliases?.[alias]), id, `alias absent : ${alias}`);
+}
+assert.equal(top('citron')[0].slice(0, 6), 'Citron', 'citron → le citron');
+assert.ok(!/sorbet/i.test(top('citron')[0]), 'citron → pas le sorbet');
+assert.equal(top('banane')[0], 'Banane, chair sans peau, crue', 'banane → la banane crue, pas le plantain cuit');
+assert.equal(top('tomate')[0], 'Tomate ronde, crue', 'tomate → la tomate crue');
+assert.equal(top('pois chiche')[0], 'Pois chiche, sec', 'requête à deux mots : le premier mot nomme l’aliment');
+assert.equal(top('huile olive')[0], 'Huile d\'olive vierge extra', 'huile olive → l’huile d’olive');
+assert.ok(!/cru$/.test(top('lait')[0]), 'lait → pas le lait cru de chèvre');
 assert.ok(ciqual.foods.length >= 800 && ciqual.foods.length <= 1500);
 assert.ok(ciqualSize < 250 * 1024, `ciqual-lite dépasse 250 Ko (${ciqualSize} octets)`);
 assert.ok(ciqual.foods.every((food) => ['id', 'nameFr', 'nameEn', 'kcal', 'protein', 'carbs', 'fat', 'sugars', 'salt', 'allergenHints'].every((key) => Object.hasOwn(food, key))));
