@@ -31,6 +31,7 @@ const merchantState = { value: 'amira-cafe' };
 let printerMode = 'ok';
 const printed = [];
 const receipts = [];
+const legacyReceipts = [];
 
 function boot() {
   const listeners = Object.create(null);
@@ -43,6 +44,13 @@ function boot() {
     addEventListener(type, fn) { (listeners[type] ||= []).push(fn); },
     dispatchEvent(event) { (listeners[event.type] || []).forEach((fn) => fn(event)); },
     KiwiKitchenRelay: { merchant: () => merchantState.value },
+    KiwiReceipt: {
+      print(payload) {
+        receipts.push(payload);
+        if (printerMode === 'throw') return Promise.reject(new Error('bridge-offline'));
+        return Promise.resolve(printerMode === 'ok' ? { ok: true, via: 'socket' } : { ok: false, reason: 'paper-out' });
+      },
+    },
     KiwiPrinter: {
       isConnected: () => true,
       printKitchen(payload) {
@@ -51,7 +59,7 @@ function boot() {
         return Promise.resolve(printerMode === 'ok' ? { ok: true, via: 'bridge' } : { ok: false, reason: 'paper-out' });
       },
       printReceipt(payload) {
-        receipts.push(payload);
+        legacyReceipts.push(payload);
         if (printerMode === 'throw') return Promise.reject(new Error('bridge-offline'));
         return Promise.resolve(printerMode === 'ok' ? { ok: true, via: 'socket' } : { ok: false, reason: 'paper-out' });
       },
@@ -126,10 +134,19 @@ ok('la file et les confirmations sont isolées par commerçant', app.KiwiKitchen
 
 merchantState.value = 'amira-cafe';
 app = boot();
-const receiptDoc = { ref: 'R-1042', total: 84, customer: 'ne-doit-pas-sortir' };
+const receiptDoc = {
+  shop: { name: 'Amira Cafe', contact: ['Casablanca'], legal: ['ICE 001122334455667'] },
+  lines: [{ name: 'Ice Tea', qty: 1, total: 28 }],
+  totals: { subtotal: 28, discount: 0, promo: 0, tip: 0, total: 28, vat: null },
+  ref: 'R-1042', customer: 'ne-doit-pas-sortir',
+};
 result = app.KiwiKitchenPrint.enqueueReceipt('sale-1042', receiptDoc, 'original');
 await wait();
 ok('le reçu original utilise la même file durable', result.accepted === 1 && app.KiwiKitchenPrint._alreadyDone('sale-1042:original'));
+ok('la file confie le document structuré au moteur de reçu canonique',
+  receipts.some((doc) => doc.shop && doc.shop.name === 'Amira Cafe'
+    && doc.lines && doc.lines[0].total === 28 && doc.totals && doc.totals.total === 28));
+ok('le document structuré ne passe jamais dans l’ancien encodeur plat', legacyReceipts.length === 0);
 result = app.KiwiKitchenPrint.enqueueReceipt('sale-1042', receiptDoc, 'original');
 await wait();
 ok('un retry du reçu original garde le même identifiant logique', result.accepted === 0 && app.KiwiKitchenPrint._alreadyDone('sale-1042:original'));

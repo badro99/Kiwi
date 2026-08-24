@@ -195,8 +195,16 @@
     running = true; emit();
     record('printing', job);
     var station = job.station || (job.payload && job.payload.station) || '';
+    /* Receipt jobs carry the canonical KiwiReceipt document (shop is a block,
+       prices live on line.total, and totals live under doc.totals). Feeding that
+       document to KiwiPrinter.printReceipt invokes the legacy flat encoder,
+       which stringifies shop as "[object Object]" and prints blank amounts.
+       Keep the durable queue, but let the canonical renderer encode its own
+       document before KiwiPrinter transports the resulting bytes. */
     var print = job.type === 'receipt'
-      ? window.KiwiPrinter.printReceipt(job.payload, { station: 'caisse' })
+      ? (window.KiwiReceipt && typeof window.KiwiReceipt.print === 'function'
+          ? window.KiwiReceipt.print(job.payload)
+          : Promise.resolve({ ok: false, reason: 'receipt-renderer-unavailable' }))
       : window.KiwiPrinter.printKitchen(job.payload, { station: station });
     return Promise.resolve(print).then(function (result) {
       running = false;
