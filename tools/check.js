@@ -935,6 +935,7 @@ section('Whole-project regressions');
     'error-redaction-test.mjs',
     'supplier-actions-test.mjs',
     'print-paper-test.mjs',
+    'day-report-print-format-test.mjs',
     'station-printer-routing-test.mjs',
     'print-socket-test.mjs',
     /* l'iPad n'a ni pont local ni WebUSB : la caisse dépose le ticket sur

@@ -226,7 +226,13 @@
   function dayReport(o) {
     o = o || {}; var paper = o.paper || '80';
     var r = o.report || {};
-    var f = o.fmt || function (n) { return String(Math.round(+n || 0)); };
+    /* Intl.NumberFormat('fr-FR') separates thousands with U+202F (narrow
+       no-break space). ESC/POS CP1252 cannot encode it and used to print
+       `1?000` / `1?163` in the cash-drawer block. Keep the dashboard's
+       formatting, but translate every Unicode spacing character to the plain
+       ASCII space the printer supports. */
+    var sourceFmt = o.fmt || function (n) { return String(Math.round(+n || 0)); };
+    var f = function (n) { return String(sourceFmt(n)).replace(/[\s\u00A0\u202F]+/g, ' '); };
     var money = function (n) { return f(n) + ' MAD'; };
     var b = new Builder().init();
 
