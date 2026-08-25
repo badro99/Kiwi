@@ -31,3 +31,22 @@
 
 /_next/static/*
   Cache-Control: public, max-age=31536000, immutable
+
+# 3. The app's own assets.
+#
+#    Sans règle, Cloudflare Pages sert `/assets/*` en
+#    `max-age=14400, must-revalidate`. Passé quatre heures, `must-revalidate`
+#    interdit au navigateur de réutiliser un fichier sans avoir redemandé au
+#    serveur — soit ~130 allers-retours bloquants avant que le tableau de bord
+#    démarre, plusieurs fois par jour, pour des octets qui n'ont pas bougé.
+#
+#    Pas d'`immutable` ici, contrairement à `_next/static` : 63 des fichiers
+#    que charge `dashboard.html` n'ont PAS d'estampille `?v=` (`auth-guard.js`,
+#    `kiwi-env.js`, `theme.css`…). Les figer un an, c'est se priver du moyen de
+#    corriger un bug d'authentification chez un client déjà venu.
+#
+#    `stale-while-revalidate` donne les deux : la copie en cache part
+#    immédiatement, sans attendre le réseau, et la mise à jour se fait derrière.
+#    Une estampille qui bouge reste servie tout de suite, puisque l'URL change.
+/assets/*
+  Cache-Control: public, max-age=3600, stale-while-revalidate=604800

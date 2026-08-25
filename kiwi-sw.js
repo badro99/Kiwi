@@ -407,8 +407,22 @@ self.addEventListener('fetch', function (e) {
   // ASSETS (JS, CSS, images, fonts, icons, manifests): STALE-WHILE-REVALIDATE ·
   // serve the cached copy instantly (fast + offline), and refresh it in the
   // background so a deploy still lands on the next load with no manual refresh.
+  //
+  // …sauf pour une URL estampillée (`?v=NNNN`), qui est immuable par contrat :
+  // le jour où le fichier change, `tools/bump-stamp.js` déplace l'estampille,
+  // l'URL change, et c'est un défaut de cache qui va chercher la version neuve.
+  // Revalider une URL estampillée ne peut donc rien rapporter, et ça coûtait
+  // cher : `fetch()` partait même quand le cache répondait, si bien que chaque
+  // ouverture du tableau de bord rejouait ~130 requêtes et réécrivait ~7 Mo
+  // dans le Cache Storage pour des octets identiques. Deux onglets ouverts
+  // (caisse + tableau de bord) doublaient la note.
+  //
+  // Les fichiers NON estampillés gardent le comportement d'avant : eux peuvent
+  // changer sans que leur URL bouge, donc il faut continuer à les revalider.
+  var stamped = /[?&]v=/.test(url.search);
   e.respondWith(
     caches.match(req).then(function (hit) {
+      if (hit && stamped) return hit;
       var net = fetch(req).then(function (res) { return put(req, res); }).catch(function () { return hit; });
       return hit || net;
     })
