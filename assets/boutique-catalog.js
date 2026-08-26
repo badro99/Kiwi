@@ -94,7 +94,13 @@
     const fam = k ? k.normalize(id, srcLabel, srcHex)
       : (KC_FALLBACK.find((c) => c.id === id) || KC_FALLBACK[2]);
     const source = srcLabel && String(srcLabel).toLowerCase() !== String(fam.label).toLowerCase() ? srcLabel : '';
-    return { family: fam, source };
+    const isCustom = /^custom-[0-9a-f]{6}$/i.test(String(id || '')) && /^#[0-9a-f]{6}$/i.test(String(srcHex || ''));
+    return {
+      family: fam, source,
+      displayLabel: isCustom ? (srcLabel || `Couleur personnalisée ${String(srcHex).toUpperCase()}`) : fam.label,
+      displayHex: isCustom ? String(srcHex).toUpperCase() : fam.hex,
+      custom: isCustom,
+    };
   }
 
   /* Size presets per garment kind. `taille` = clothing, `pointure` = shoes,
@@ -1035,7 +1041,7 @@
       id: nextId('var'), productId,
       colorId: String(colorId || n.family.id),
       colorFamily: n.family.id,
-      colorLabel: n.family.label, colorHex: n.family.hex,
+      colorLabel: n.displayLabel, colorHex: n.displayHex,
       size: String(size), stock: Math.max(0, stock | 0),
       base: Math.max(0, stock | 0), baseAt: now(),
       sku: '', barcodes: [],
@@ -1065,8 +1071,8 @@
         if (!v.colorSourceHex && v.colorHex) v.colorSourceHex = v.colorHex;
       }
       v.colorFamily = n.family.id;
-      v.colorLabel = n.family.label;
-      v.colorHex = n.family.hex;
+      v.colorLabel = n.displayLabel;
+      v.colorHex = n.displayHex;
       touched++;
     });
     if (Array.isArray(db.moves)) {
@@ -1396,8 +1402,8 @@
       if (had && !v.colorWas) v.colorWas = had;
       v.colorId = String(patch.colorId);
       v.colorFamily = n.family.id;
-      v.colorLabel = n.family.label;
-      v.colorHex = n.family.hex;
+      v.colorLabel = n.displayLabel;
+      v.colorHex = n.displayHex;
       v.colorSource = n.source;
       if (n.source && (patch.colorHex || v.colorSourceHex)) v.colorSourceHex = patch.colorHex || v.colorSourceHex;
       else delete v.colorSourceHex;
@@ -1616,13 +1622,13 @@
       // pos-boutique.js persistStock(), preferring an exact id then stock on hand.
       vs.forEach((v) => {
         sizes[v.size] = (sizes[v.size] || 0) + (v.stock || 0);
-        const f = famOf(v);
+        const f = /^custom-[0-9a-f]{6}$/i.test(String(v.colorId || '')) ? v.colorId : famOf(v);
         if (!colorSet.includes(f)) colorSet.push(f);
         (v.barcodes || []).forEach((b) => { BY_EAN[b.code] = p.id; });
       });
       const primaryV = vs.find((v) => v.barcodes && v.barcodes.length) || vs[0];
       const item = {
-        id: p.id, name: p.name, price: p.priceMAD, art: p.art, kind: p.kind, flag: p.flag, sku: p.sku || '',
+        id: p.id, name: p.name, price: p.priceMAD, art: p.art, photo: p.photo || '', video: p.video || '', kind: p.kind, flag: p.flag, sku: p.sku || '',
         marque: p.marque || '',
         format: p.format || 'piece',
         servicePieces: p.servicePieces || null,

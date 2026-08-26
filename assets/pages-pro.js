@@ -9820,7 +9820,7 @@ function _bqxSubscribe() {
 function _colorPicker(sel, opts) {
   const k = window.KiwiColors;
   if (!k) return '';
-  return k.picker('bqx-color', sel, Object.assign({ optional: true, label: 'Couleur' }, opts || {}));
+  return k.picker('bqx-color', sel, Object.assign({ optional: true, custom: true, label: 'Couleur' }, opts || {}));
 }
 /* La famille qu'une variante affiche, tolérante à un enregistrement écrit avant
    la normalisation (copie serveur d'un ancien build). */
@@ -10459,15 +10459,16 @@ handlers['bqx-var-add'] = (_el, arg) => {
 handlers['bqx-var-add-save'] = (_el, arg) => {
   const b = document.querySelector('.kiwi-backdrop');
   if (!b) return;
-  const colorId = (window.KiwiColors && window.KiwiColors.value(b)) || 'noir';
+  const color = (window.KiwiColors && window.KiwiColors.selection(b)) || { id: 'noir' };
+  const colorId = color.id;
   const size = b.querySelector('[data-bqx-vsize]').value.trim() || 'TU';
   const stock = parseInt(b.querySelector('[data-bqx-vstock]').value, 10) || 0;
   const bc = b.querySelector('[data-bqx-vbc]').value;
   const note = (b.querySelector('[data-bqx-vnote]') || {}).value || '';
-  const v = CAT().addVariant({ productId: arg, colorId, size, stock, note: note.trim() });
+  const v = CAT().addVariant({ productId: arg, colorId, colorLabel: color.label, colorHex: color.hex, size, stock, note: note.trim() });
   if (v && bc === 'gen') CAT().generateBarcode(v.id);
   if (_bqxModal) _bqxModal.close();
-  toast('Variante ajoutée', { desc: `${CAT().colorById(colorId)?.label || colorId} · ${size}${bc === 'gen' ? ' · EAN-13 généré' : ''}`, type: 'success', duration: 2400 });
+  toast('Variante ajoutée', { desc: `${color.label || CAT().colorById(colorId)?.label || colorId} · ${size}${bc === 'gen' ? ' · EAN-13 généré' : ''}`, type: 'success', duration: 2400 });
 };
 
 /* Recolorer une variante existante. Elle garde son stock, ses codes-barres et
@@ -10482,7 +10483,7 @@ handlers['bqx-var-color'] = (_el, arg) => {
     desc: data ? `${data.product.name}${v.colorSource ? ` · saisie à l'origine « ${v.colorSource} »` : ''}` : '',
     width: 460,
     body: `
-      <div class="kf-group"><label class="kf-label">Couleur</label>${_colorPicker(_bqxFam(v))}</div>
+      <div class="kf-group"><label class="kf-label">Couleur</label>${_colorPicker(/^custom-/i.test(v.colorId || '') ? { id: v.colorId, label: v.colorLabel, hex: v.colorHex, custom: true } : _bqxFam(v))}</div>
       <div class="kf-group"><label class="kf-label">Précision (facultatif)</label>
         <input class="kf-input" maxlength="60" value="${_esc(v.note || '')}" data-bqx-vcnote placeholder="Ex. rayé, délavé, motif" />
         <div class="kf-help">Sert à distinguer deux variantes de même couleur. Le sélecteur, lui, reste simple.</div></div>`,
@@ -10492,9 +10493,9 @@ handlers['bqx-var-color'] = (_el, arg) => {
 handlers['bqx-var-color-save'] = (_el, arg) => {
   const b = document.querySelector('.kiwi-backdrop');
   if (!b) return;
-  const colorId = window.KiwiColors && window.KiwiColors.value(b);
+  const color = window.KiwiColors && window.KiwiColors.selection(b);
   const note = (b.querySelector('[data-bqx-vcnote]') || {}).value || '';
-  CAT().updateVariant(arg, { colorId: colorId || undefined, note: note.trim() });
+  CAT().updateVariant(arg, { colorId: color ? color.id : undefined, colorLabel: color && color.label, colorHex: color && color.hex, note: note.trim() });
   if (_bqxModal) _bqxModal.close();
   toast('Couleur mise à jour', { type: 'success', duration: 2000 });
 };
@@ -15810,4 +15811,3 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     });
   });
 })();
-

@@ -352,8 +352,8 @@
     "sha": "8a06283900f70dfb"
   },
   "assets/pages-pro.js": {
-    "v": "2083",
-    "sha": "d135c178fc64ff84"
+    "v": "2084",
+    "sha": "0582d7facbde2fb2"
   },
   "assets/pages.js": {
     "v": "3",
@@ -404,12 +404,12 @@
     "sha": "530ff7c046c57b2c"
   },
   "assets/pos-boutique.css": {
-    "v": "6",
-    "sha": "42a2a9683aad20a9"
+    "v": "8",
+    "sha": "374aa9562b323299"
   },
   "assets/pos-boutique.js": {
-    "v": "6",
-    "sha": "b606db79d817a32f"
+    "v": "8",
+    "sha": "addec57c79874a88"
   },
   "assets/pos-coiffure.css": {
     "v": "5",
@@ -421,7 +421,7 @@
   },
   "assets/pos-dispatch.js": {
     "v": "31",
-    "sha": "0d946d08c3d20ad7"
+    "sha": "8f4db836ba814cb3"
   },
   "assets/pos-epicerie.css": {
     "v": "5",

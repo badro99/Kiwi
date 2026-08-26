@@ -221,7 +221,7 @@
      affichable : une variante ne peut pas devenir grise faute de correspondance. */
   const KC = () => window.KiwiColors || null;
   const KC_MISS = { id: 'gris', label: 'Gris', hex: '#9AA0A6' };
-  function colorOf(id) { const k = KC(); return (k && k.normalize(id)) || KC_MISS; }
+  function colorOf(id) { const k = KC(); return (k && (k.display ? k.display(id) : k.normalize(id))) || KC_MISS; }
   function colorLabel(id) { return colorOf(id).label; }
   function colorHex(id) { return colorOf(id).hex; }
   // Une pastille non cliquable (ligne de ticket, retour, tableau) — même dessin
@@ -230,6 +230,11 @@
     const k = KC();
     if (k) return k.swatch(id, { size: size || 'sm' });
     return `<i class="kc-sw kc-sm" style="background-color:${KC_MISS.hex}" title="${KC_MISS.label}"></i>`;
+  }
+
+  function productVisual(p) {
+    if (p && p.photo) return `<img class="bq-product-photo" src="${esc(p.photo)}" alt="${esc(p.name || 'Produit')}" loading="lazy" />`;
+    return artOf(p && p.art);
   }
 
   /* ───────────────────────── catalogue (base partagée) ─────────────────────────
@@ -1589,7 +1594,7 @@
         const pr = promoFor(p.id);
         return `
         <button class="bq-card ${stockOf(p) === 0 ? 'is-out' : ''}${pr ? ' is-promo' : ''}" data-bq-item="${p.id}" style="--i:${i++}">
-          <span class="bq-card-art">${artOf(p.art)}</span>
+          <span class="bq-card-art">${productVisual(p)}</span>
           <span class="bq-card-name">${esc(p.name)}</span>
           <span class="bq-card-price">${pr ? `<s>${fmtMAD(pr.was)}</s> ` : ''}${fmtMAD(pr ? pr.price : p.price)}</span>
           ${cardFlag(p)}
@@ -1843,7 +1848,7 @@
     el.innerHTML = `
       <button class="bq-modal-x" data-bq-close aria-label="Fermer"><i data-lucide="x"></i></button>
       <div class="bq-sheet-head">
-        <span class="bq-sheet-art">${artOf(p.art)}</span>
+        <span class="bq-sheet-art">${productVisual(p)}</span>
         <span class="bq-sheet-title"><h3>${esc(p.name)}</h3><span class="sub">${esc((RAYONS.find((r) => r.id === p.rayon) || { label: 'Divers' }).label)}${p.flag ? ` · ${esc(p.flag)}` : ''}${p.ean ? ` · ${esc(p.ean)}` : ''}</span></span>
         <span class="bq-sheet-price">
           <span class="val" id="bq-sheet-total">${fmtMAD(unit * sheet.qty)}</span>
@@ -2600,7 +2605,8 @@
       toast(`${p.name}, épuisé dans toutes les tailles`);
       return;
     }
-    const color = (hit && hit.colorFamily && p.colors.includes(hit.colorFamily)) ? hit.colorFamily : p.colors[0];
+    const color = (hit && hit.colorId && p.colors.includes(hit.colorId)) ? hit.colorId
+      : ((hit && hit.colorFamily && p.colors.includes(hit.colorFamily)) ? hit.colorFamily : p.colors[0]);
     addToTicket(pid, { size, color, qty: 1, remise: 0 }, { quiet: true });
     toast(`Bip, ${p.name} · ${size} sur le ticket (${fmtMAD(p.price)})`);
     if (state.view === 'vente') renderTicket();
@@ -2631,7 +2637,8 @@
     /* on affiche la variante scannée même si elle est à zéro — c'est justement le
        stock qu'on vient vérifier. À défaut de taille scannée, la 1re taille. */
     const size = (hit && hit.size && p.sizes[hit.size] != null) ? hit.size : (firstFree(p) || sizesOf(p)[0] || '');
-    const color = (hit && hit.colorFamily && p.colors.includes(hit.colorFamily)) ? hit.colorFamily : p.colors[0];
+    const color = (hit && hit.colorId && p.colors.includes(hit.colorId)) ? hit.colorId
+      : ((hit && hit.colorFamily && p.colors.includes(hit.colorFamily)) ? hit.colorFamily : p.colors[0]);
     state.lookup = { pid, size, color, ean: code, at: new Date() };
     state.scanLog.unshift({ at: new Date(), ok: true, label: `${p.name}${size ? ' · ' + size : ''}, vérifié`, ean: code, pid, size });
     const tot = stockOf(p);
