@@ -57,12 +57,12 @@
       return stableRows.map((row) => ({ ...row, unit: units()?.normalize?.(row.unit) || row.unit }));
     } catch (_) { return []; }
   }
-  function stockFor(ingredient, id) {
-    const rows = inventory(id);
+  function stockForRows(ingredient, rows) {
     return window.KiwiStockIdentity?.resolve?.(ingredient, rows)
       || rows.find((x) => ingredient.stockId && String(x.id) === ingredient.stockId)
       || rows.find((x) => norm(x.name) === norm(ingredient.name)) || null;
   }
+  function stockFor(ingredient, id) { return stockForRows(ingredient, inventory(id)); }
   function ingredientInfo(ingredient, id) {
     const stock = stockFor(ingredient, id);
     const cost = stock && Number.isFinite(Number(stock.costPerUnit)) ? number(stock.costPerUnit) : null;
@@ -281,24 +281,36 @@
     setTimeout(() => { healPending = false; try { heal(id); } catch (_) {} }, 0);
   }
 
+  function theoreticalUsageMap(id, days, sourceRows) {
+    const vid = venue(id);
+    const rows = Array.isArray(sourceRows) ? sourceRows : inventory(vid);
+    const out = Object.create(null);
+    all(vid).forEach((recipe) => {
+      const sold = salesFor(recipe.itemId, recipe.itemName, vid, days || 7);
+      if (!(sold > 0)) return;
+      recipe.ingredients.forEach((line) => {
+        const stock = stockForRows(line, rows);
+        if (!stock?.id) return;
+        const from = line.unit || stock.unit;
+        const converted = units()?.convert
+          ? units().convert(number(line.qty), from, stock.unit)
+          : (from === stock.unit ? number(line.qty) : null);
+        if (converted == null) return;
+        const stockId = String(stock.id);
+        out[stockId] = (out[stockId] || 0) + sold * converted / Math.max(1, recipe.portions);
+      });
+    });
+    Object.keys(out).forEach((stockId) => { out[stockId] = round(out[stockId]); });
+    return out;
+  }
   function theoreticalUsage(stockId, id, days) {
     if (!stockId) return 0;
-    const stock = inventory(id).find((row) => String(row.id) === String(stockId));
-    return round(all(id).reduce((sum, recipe) => {
-      const sold = salesFor(recipe.itemId, recipe.itemName, id, days || 7);
-      const perPortion = recipe.ingredients.filter((line) => String(stockFor(line, id)?.id || '') === String(stockId)).reduce((n, line) => {
-        const from = line.unit || stock?.unit, converted = units()?.convert
-          ? units().convert(number(line.qty), from, stock?.unit)
-          : (from === stock?.unit ? number(line.qty) : null);
-        return n + (converted == null ? 0 : converted);
-      }, 0) / Math.max(1, recipe.portions);
-      return sum + sold * perPortion;
-    }, 0));
+    return theoreticalUsageMap(id, days)[String(stockId)] || 0;
   }
 
   window.KiwiRestaurantRecipes = {
     all, get, save, remove, inventory, stockFor, ingredientInfo, metrics, nutrition: nutritionResult,
-    recompute, recomputeForStock, recomputeAll, theoreticalUsage, heal,
+    recompute, recomputeForStock, recomputeAll, theoreticalUsage, theoreticalUsageMap, heal,
     subscribe: (fn) => store.subscribe(fn), _store: store,
   };
 

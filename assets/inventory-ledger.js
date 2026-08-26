@@ -7,6 +7,11 @@
   var PREFIX = 'kiwi:inventoryLedger:v1:';
   var subs = new Set();
   var syncing = false;
+  var cachedKey = '';
+  var cachedRaw = null;
+  var cachedDoc = null;
+  var cachedSnapshotDoc = null;
+  var cachedSnapshot = null;
 
   function real() {
     try { return !!(window.KiwiEnv && window.KiwiEnv.isReal && window.KiwiEnv.isReal()) || !!window.KiwiPlatform?.isPaired?.() || !!paired(); }
@@ -49,12 +54,17 @@
   function read() {
     if (!real() || !merchant()) return blank();
     try {
-      var d = JSON.parse(localStorage.getItem(key()) || 'null');
-      if (!d || typeof d !== 'object') return blank();
+      var k = key();
+      var raw = localStorage.getItem(k) || 'null';
+      if (cachedDoc && cachedKey === k && cachedRaw === raw) return cachedDoc;
+      var d = JSON.parse(raw);
+      if (!d || typeof d !== 'object') d = blank();
       d.base = d.base && typeof d.base === 'object' ? d.base : {};
       d.rows = Array.isArray(d.rows) ? d.rows : [];
       d.queued = Array.isArray(d.queued) ? d.queued : [];
       d.cursor = Math.max(0, +d.cursor || 0);
+      cachedKey = k; cachedRaw = raw; cachedDoc = d;
+      cachedSnapshotDoc = null; cachedSnapshot = null;
       return d;
     } catch (_) { return blank(); }
   }
@@ -72,7 +82,15 @@
     return d;
   }
   function write(d) {
-    try { localStorage.setItem(key(), JSON.stringify(compact(d))); } catch (_) {}
+    try {
+      var k = key(); var next = compact(d); var raw = JSON.stringify(next);
+      localStorage.setItem(k, raw);
+      cachedKey = k; cachedRaw = raw; cachedDoc = next;
+      cachedSnapshotDoc = null; cachedSnapshot = null;
+    } catch (_) {
+      cachedKey = ''; cachedRaw = null; cachedDoc = null;
+      cachedSnapshotDoc = null; cachedSnapshot = null;
+    }
     subs.forEach(function (fn) { try { fn(); } catch (_) {} });
   }
   function hash(s) {
@@ -129,15 +147,18 @@
       occurredTs: opts.occurredTs,
     });
   }
-  function snapshot() {
-    var d = read(); var out = Object.assign({}, d.base);
+  function snapshotFor(d) {
+    if (cachedSnapshotDoc === d && cachedSnapshot) return cachedSnapshot;
+    var out = Object.assign({}, d.base);
     d.rows.forEach(function (r) {
       var k = balanceKey(r); out[k] = Math.round(((+out[k] || 0) + (+r.qty || 0)) * 1000) / 1000;
     });
+    cachedSnapshotDoc = d; cachedSnapshot = out;
     return out;
   }
+  function snapshot() { return Object.assign({}, snapshotFor(read())); }
   function balance(itemId, opts) {
-    opts = opts || {}; var snap = snapshot(); var total = 0;
+    opts = opts || {}; var snap = snapshotFor(read()); var total = 0;
     Object.keys(snap).forEach(function (k) {
       var p = k.split('|');
       if (p[0] !== String(itemId)) return;
