@@ -247,10 +247,16 @@ em, i, cite, dfn, var { font-style: normal; }
   .biz-row{display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end}
   .biz-row label{display:flex; flex-direction:column; gap:6px; font:600 12px/1.2 var(--sans);
     letter-spacing:0; color:var(--muted)}
+  .biz-row label[hidden]{display:none}
   .biz-row .inp{width:170px}
   .biz-row .inp.n{width:120px}
   .subscription-console{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:18px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(120deg,rgba(11,110,79,.08),transparent)}
   .subscription-console strong{display:block;font-size:1rem}.subscription-console p{margin:5px 0 0;color:var(--muted);font-size:.84rem;line-height:1.45}.subscription-console .active{color:var(--ok)}.subscription-console .pending{color:var(--warn)}
+  .billing-alerts{margin:18px 0 4px;padding:16px 18px;border:1px solid rgba(224,153,26,.35);border-radius:16px;background:rgba(224,153,26,.08)}
+  .billing-alerts h3{margin:0 0 8px;font-size:.92rem}.billing-alerts-list{display:flex;flex-direction:column;gap:7px}
+  .billing-alert{display:flex;justify-content:space-between;gap:12px;font-size:.82rem;color:var(--muted)}.billing-alert b{color:var(--ink)}
+  .billing-alert.expired{color:var(--danger)}.billing-alert button{border:0;background:transparent;color:var(--accent-lit);cursor:pointer;font:inherit;padding:0;text-align:right}
+  .biz-row .wide{width:190px}.biz-kind{display:flex;gap:6px;align-items:center;min-height:38px}.biz-kind input{accent-color:var(--accent)}
   @media (max-width:880px){
     .ov-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
     .ov-split{grid-template-columns:1fr; gap:24px}
@@ -712,6 +718,10 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
       <div><p class="crm-eyebrow">Kiwi customer intelligence</p><h2>Chaque client, en contexte.</h2><p>Relation, activation, revenus, activité et opérations réunis dans un cockpit pensé pour accompagner chaque établissement sur la durée.</p></div>
       <div class="crm-time">Données opérationnelles en direct</div>
     </div>
+    <section class="billing-alerts" id="billing-alerts" hidden aria-live="polite">
+      <h3 id="billing-alerts-title">Échéances à suivre</h3>
+      <div class="billing-alerts-list" id="billing-alerts-list"></div>
+    </section>
     <section id="crm-command" class="crm-command">
       <div class="sec-head">
         <div><h2>Centre de relation client</h2><p class="sec-copy">Ce qui avance, ce qui demande une décision et qui contacter aujourd’hui.</p></div>
@@ -853,6 +863,37 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
             <label>Abonnement convenu
               <input class="inp n" id="biz-mrr" type="number" min="0" step="1" placeholder="·"
                      aria-label="Abonnement mensuel convenu en dirhams" />
+            </label>
+            <label>Statut commercial
+              <select class="inp" id="biz-kind" aria-label="Statut commercial">
+                <option value="paid">Abonnement payant</option>
+                <option value="trial">Période d’essai</option>
+              </select>
+            </label>
+            <label id="biz-cycle-label">Facturation
+              <select class="inp" id="biz-cycle" aria-label="Périodicité de facturation">
+                <option value="monthly">Mensuelle</option>
+                <option value="annual">Annuelle</option>
+              </select>
+            </label>
+            <label id="biz-sub-start-label">Début d’abonnement
+              <input class="inp" id="biz-sub-start" type="date" aria-label="Date de début de l’abonnement" />
+            </label>
+            <label id="biz-sub-end-label">Fin d’abonnement
+              <input class="inp" id="biz-sub-end" type="date" aria-label="Date de fin de l’abonnement" />
+            </label>
+            <label id="biz-trial-days-label" hidden>Durée de l’essai
+              <select class="inp" id="biz-trial-days" aria-label="Durée de la période d’essai">
+                <option value="7">7 jours</option><option value="14">14 jours</option>
+                <option value="15">15 jours</option><option value="30">30 jours</option>
+                <option value="60">60 jours</option><option value="90">90 jours</option>
+              </select>
+            </label>
+            <label id="biz-trial-start-label" hidden>Début de l’essai
+              <input class="inp" id="biz-trial-start" type="date" aria-label="Date de début de l’essai" />
+            </label>
+            <label id="biz-trial-end-label" hidden>Fin de l’essai
+              <input class="inp" id="biz-trial-end" type="date" aria-label="Date de fin de l’essai" />
             </label>
             <button class="mini" id="biz-save" type="button">Enregistrer</button>
           </div>
@@ -1489,28 +1530,41 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
       if (LIVE) {
         var r = await api('/config?merchant=' + encodeURIComponent(merchant));
         return { city:r.city || '', mrr:(r.mrr == null ? null : +r.mrr),
-                 columns:r.columns || { city:true, mrr:true } };
+          subscriptionKind:r.subscriptionKind || 'paid', billingCycle:r.billingCycle || 'monthly',
+          subscriptionStart:r.subscriptionStart || '', subscriptionEnd:r.subscriptionEnd || '',
+          trialStart:r.trialStart || '', trialEnd:r.trialEnd || '', trialDays:r.trialDays || 15,
+          columns:r.columns || { city:true, mrr:true, lifecycle:true } };
       }
       var hit = (mock().clients || []).filter(function(c){ return c.merchant === merchant; })[0] || {};
       return { city:hit.city || '', mrr:(hit.mrr == null ? null : +hit.mrr),
-               columns:{ city:true, mrr:true } };
+        subscriptionKind:hit.subscription_kind || 'paid', billingCycle:hit.billing_cycle || 'monthly',
+        subscriptionStart:hit.subscription_start || '', subscriptionEnd:hit.subscription_end || '',
+        trialStart:hit.trial_start || '', trialEnd:hit.trial_end || '', trialDays:hit.trial_days || 15,
+        columns:{ city:true, mrr:true, lifecycle:true } };
     },
     /* On renvoie les modules et le palier courants avec : le PUT écrase la
        ligne entière, donc n'envoyer que la ville effacerait les interrupteurs.
        Même précaution que setType(), pour la même raison. */
-    async setBiz(merchant, city, mrr, plan){
+    async setBiz(merchant, city, mrr, plan, lifecycle){
       if (LIVE) {
         var features = await store.config(merchant);
         var p = (plan !== undefined) ? plan : ((selected && selected.merchant === merchant && selected.plan) || '');
-        return api('/config', { method:'PUT', body:JSON.stringify({
-          merchant:merchant, features:features, plan:p, city:city, mrr:mrr }) });
+        return api('/config', { method:'PUT', body:JSON.stringify(Object.assign({
+          merchant:merchant, features:features, plan:p, city:city, mrr:mrr }, lifecycle || {})) });
       }
       var m = mock();
       (m.clients || []).forEach(function(c){
-        if (c.merchant === merchant){ c.city = city; c.mrr = mrr; if (plan !== undefined) c.plan = plan; }
+        if (c.merchant === merchant){
+          c.city = city; c.mrr = mrr; if (plan !== undefined) c.plan = plan;
+          if (lifecycle) {
+            c.subscription_kind=lifecycle.subscriptionKind; c.billing_cycle=lifecycle.billingCycle;
+            c.subscription_start=lifecycle.subscriptionStart; c.subscription_end=lifecycle.subscriptionEnd;
+            c.trial_start=lifecycle.trialStart; c.trial_end=lifecycle.trialEnd; c.trial_days=lifecycle.trialDays;
+          }
+        }
       });
       saveMock(m);
-      return { ok:true, columns:{ city:true, mrr:true } };
+      return { ok:true, columns:{ city:true, mrr:true, lifecycle:true } };
     },
     /* Le journal des changements de modules. `merchant_config` ne garde que le
        dernier état : « les réservations sont coupées » ne dit ni depuis quand,
@@ -1756,6 +1810,52 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
   function foldText(s){
     s = String(s == null ? '' : s).toLowerCase();
     try { return s.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch(_) { return s; }
+  }
+  function isoToday(){
+    var d=new Date(), pad=function(n){return String(n).padStart(2,'0');};
+    return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+  }
+  function addDaysIso(iso, days){
+    if (!iso) return '';
+    var d = new Date(iso + 'T12:00:00Z');
+    if (isNaN(d.getTime())) return '';
+    d.setUTCDate(d.getUTCDate() + Number(days || 0));
+    return d.toISOString().slice(0,10);
+  }
+  function addCycleIso(iso, cycle){
+    if (!iso) return '';
+    var d = new Date(iso + 'T12:00:00Z');
+    if (isNaN(d.getTime())) return '';
+    cycle === 'annual' ? d.setUTCFullYear(d.getUTCFullYear() + 1) : d.setUTCMonth(d.getUTCMonth() + 1);
+    return d.toISOString().slice(0,10);
+  }
+  function daysUntil(iso){
+    if (!iso) return null;
+    var end = new Date(iso + 'T12:00:00Z').getTime();
+    var today = new Date(isoToday() + 'T12:00:00Z').getTime();
+    return isNaN(end) ? null : Math.ceil((end - today) / 86400000);
+  }
+  function renderBillingAlerts(rows){
+    var panel=document.getElementById('billing-alerts'), list=document.getElementById('billing-alerts-list'), title=document.getElementById('billing-alerts-title');
+    if(!panel||!list)return;
+    var alerts=[];
+    (rows||[]).filter(function(c){return !isDemoClient(c)&&c.store_status!=='suspended';}).forEach(function(c){
+      var trial=c.subscription_kind==='trial';
+      var end=trial?c.trial_end:c.subscription_end;
+      var left=daysUntil(end);
+      if(left==null||left>7)return;
+      alerts.push({c:c,left:left,end:end,trial:trial});
+    });
+    alerts.sort(function(a,b){return a.left-b.left;});
+    clear(list); panel.hidden=!alerts.length;
+    if(!alerts.length)return;
+    title.textContent=alerts.length+' échéance'+(alerts.length>1?'s':'')+' à traiter';
+    alerts.forEach(function(a){
+      var wording=a.left<0?'expiré depuis '+Math.abs(a.left)+' j':a.left===0?'expire aujourd’hui':'expire dans '+a.left+' j';
+      var btn=h('button',{type:'button'},'Ouvrir la fiche'); btn.onclick=function(){select(a.c);};
+      list.appendChild(h('div',{class:'billing-alert'+(a.left<0?' expired':'')},
+        h('span',null,h('b',null,a.c.business||a.c.merchant),' · '+(a.trial?'Essai':'Abonnement')+' '+wording+' ('+stampDay(a.end)+')'),btn));
+    });
   }
   function filterClients(rows){
     var filtered = rows.filter(function(c){
@@ -2279,6 +2379,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
     var list = await store.clients();
     CRM_CLIENTS = list.slice();
     renderCrmHub(CRM_CLIENTS);
+    renderBillingAlerts(CRM_CLIENTS);
     var allReal = list.filter(function(c){ return !isDemoClient(c); });
     var allDemos = list.filter(isDemoClient);
     /* La recherche. Un back-office qui tient dix-huit clients se lit d'un coup
@@ -2589,6 +2690,13 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
     var state = document.getElementById('biz-state');
     var hint = document.getElementById('biz-hint');
     var err = document.getElementById('biz-err');
+    var kind = document.getElementById('biz-kind');
+    var cycle = document.getElementById('biz-cycle');
+    var subStart = document.getElementById('biz-sub-start');
+    var subEnd = document.getElementById('biz-sub-end');
+    var trialDays = document.getElementById('biz-trial-days');
+    var trialStart = document.getElementById('biz-trial-start');
+    var trialEnd = document.getElementById('biz-trial-end');
     if (!city || !mrr || !save || !selected) return;
     err.textContent = '';
 
@@ -2600,11 +2708,20 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
     city.value = b.city || '';
     mrr.value = (b.mrr == null ? '' : String(b.mrr));
     if (planSel) planSel.value = (selected.plan || '').toLowerCase();
+    kind.value = b.subscriptionKind || 'paid';
+    cycle.value = b.billingCycle || 'monthly';
+    subStart.value = b.subscriptionStart || '';
+    subEnd.value = b.subscriptionEnd || '';
+    trialDays.value = String(b.trialDays || 15);
+    trialStart.value = b.trialStart || '';
+    trialEnd.value = b.trialEnd || '';
+    syncLifecycleFields();
 
     var noColumn = b.columns && b.columns.city === false;
     var readOnly = SENIOR === false;
     city.disabled = mrr.disabled = save.disabled = noColumn || readOnly;
     if (planSel) planSel.disabled = readOnly;
+    [kind,cycle,subStart,subEnd,trialDays,trialStart,trialEnd].forEach(function(el){el.disabled=noColumn||readOnly;});
 
     var plan = (selected.plan || '').toLowerCase();
     var listed = TIER_PRICE[plan] || null;
@@ -2614,7 +2731,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
       ? (b.city + (b.mrr != null ? ' · ' + fmt(b.mrr) + ' MAD/mois' : ''))
       : 'ville non renseignée') + vText;
 
-    if (noColumn){
+    if (noColumn || (b.columns && b.columns.lifecycle === false)){
       hint.textContent = 'La fiche commerciale n’est pas encore disponible sur cet environnement. Une mise à niveau technique est nécessaire ; aucune donnée client n’a été modifiée.';
     } else if (readOnly){
       hint.textContent = 'Lecture seule : modifier la fiche commerciale demande un code opérateur personnel, pas l’accès équipe partagé.';
@@ -2637,6 +2754,16 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
     var mrr = document.getElementById('biz-mrr');
     var planSel = document.getElementById('biz-plan');
     var err = document.getElementById('biz-err');
+    var kind = document.getElementById('biz-kind').value;
+    var cycle = document.getElementById('biz-cycle').value;
+    var lifecycle = {
+      subscriptionKind:kind, billingCycle:cycle,
+      subscriptionStart:document.getElementById('biz-sub-start').value,
+      subscriptionEnd:document.getElementById('biz-sub-end').value,
+      trialDays:Number(document.getElementById('biz-trial-days').value || 15),
+      trialStart:document.getElementById('biz-trial-start').value,
+      trialEnd:document.getElementById('biz-trial-end').value
+    };
     err.textContent = '';
     var raw = mrr.value.trim();
     var amount = raw === '' ? null : Number(raw);
@@ -2644,8 +2771,14 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
     if (amount != null && (!isFinite(amount) || amount < 0)){
       err.textContent = 'Montant invalide.'; return;
     }
+    if (kind === 'paid' && (!lifecycle.subscriptionStart || !lifecycle.subscriptionEnd || lifecycle.subscriptionEnd < lifecycle.subscriptionStart)){
+      err.textContent = 'Choisissez des dates valides pour l’abonnement.'; return;
+    }
+    if (kind === 'trial' && (!lifecycle.trialStart || !lifecycle.trialEnd || lifecycle.trialEnd < lifecycle.trialStart)){
+      err.textContent = 'Choisissez des dates valides pour la période d’essai.'; return;
+    }
     try {
-      var r = await store.setBiz(selected.merchant, city.value.trim(), amount, nextPlan);
+      var r = await store.setBiz(selected.merchant, city.value.trim(), amount, nextPlan, lifecycle);
       /* Une base sans les colonnes accepte l'enregistrement des MODULES et
          laisse tomber la ville. Le dire : « enregistré » sur un geste à moitié
          fait est le mensonge le plus coûteux d'une console d'assistance. */
@@ -2655,6 +2788,13 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
       }
       selected.city = city.value.trim();
       selected.plan = nextPlan;
+      selected.subscription_kind=kind; selected.billing_cycle=cycle;
+      selected.subscription_start=lifecycle.subscriptionStart; selected.subscription_end=lifecycle.subscriptionEnd;
+      selected.trial_start=lifecycle.trialStart; selected.trial_end=lifecycle.trialEnd; selected.trial_days=lifecycle.trialDays;
+      if (kind === 'trial' && selected.store_status !== 'active') {
+        await store.setStoreStatus(selected.merchant, 'active');
+        selected.store_status='active'; selected.subscription='active';
+      }
       notify('Fiche commerciale enregistrée.');
       await Promise.all([renderBiz(), renderClients(), renderOverview()]);
     } catch (e) {
@@ -2663,6 +2803,28 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
         : 'Échec de l’enregistrement.';
     }
   }
+
+  function syncLifecycleFields(){
+    var trial=document.getElementById('biz-kind').value==='trial';
+    ['biz-cycle-label','biz-sub-start-label','biz-sub-end-label'].forEach(function(id){document.getElementById(id).hidden=trial;});
+    ['biz-trial-days-label','biz-trial-start-label','biz-trial-end-label'].forEach(function(id){document.getElementById(id).hidden=!trial;});
+  }
+
+  document.getElementById('biz-kind').addEventListener('change', function(){
+    syncLifecycleFields();
+    if(this.value==='trial'&&!document.getElementById('biz-trial-start').value) document.getElementById('biz-trial-start').value=isoToday();
+    document.getElementById('biz-trial-end').value=addDaysIso(document.getElementById('biz-trial-start').value,document.getElementById('biz-trial-days').value);
+  });
+  function refreshSubscriptionEnd(){
+    document.getElementById('biz-sub-end').value=addCycleIso(document.getElementById('biz-sub-start').value,document.getElementById('biz-cycle').value);
+  }
+  function refreshTrialEnd(){
+    document.getElementById('biz-trial-end').value=addDaysIso(document.getElementById('biz-trial-start').value,document.getElementById('biz-trial-days').value);
+  }
+  document.getElementById('biz-sub-start').addEventListener('change',refreshSubscriptionEnd);
+  document.getElementById('biz-cycle').addEventListener('change',refreshSubscriptionEnd);
+  document.getElementById('biz-trial-start').addEventListener('change',refreshTrialEnd);
+  document.getElementById('biz-trial-days').addEventListener('change',refreshTrialEnd);
 
   function featState(feats, mod){
     var explicit = Object.prototype.hasOwnProperty.call(feats, mod.key);
