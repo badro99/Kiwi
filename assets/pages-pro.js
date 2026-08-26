@@ -9830,6 +9830,14 @@ function _bqxFam(v) {
   const k = window.KiwiColors;
   return k ? k.familyId(v.colorId, v.colorLabel, v.colorHex) : 'gris';
 }
+/* Families drive filters; a variant row must show the exact custom colour the
+   merchant picked instead of repainting it as the nearest family. */
+function _bqxShownColor(v) {
+  const k = window.KiwiColors;
+  if (k && k.display) return k.display(v.colorId, v.colorLabel, v.colorHex);
+  const id = _bqxFam(v);
+  return { id, label: v.colorLabel || id, hex: v.colorHex || '#9AA0A6' };
+}
 /* Ce qui distingue deux variantes tombant dans la même famille : la précision
    saisie par le commerçant, sinon la nuance d'origine. */
 function _bqxVarNote(v) { return (v && (v.note || v.colorSource)) || ''; }
@@ -9940,7 +9948,7 @@ function _bqxGridHtml() {
       <div class="kx-sku-body">
         <div class="kx-sku-head"><div class="n">${_esc(p.name)}${_bqxAbOn() && p.ownership === 'consignment'
           ? '<span class="bqx-ab-b" title="Catégorie B">B</span>' : ''}</div><span class="chip neutral">${cat ? _esc(cat.name) : 'Divers'}</span></div>
-        <div class="bqx-card-cols">${(data.colors || []).slice(0, 8).map((c) => (window.KiwiColors ? window.KiwiColors.swatch(c.id) : '')).join('')}${data.colors.length > 8 ? `<em>+${data.colors.length - 8}</em>` : ''}</div>
+        <div class="bqx-card-cols">${(data.colors || []).slice(0, 8).map((c) => (window.KiwiColors ? window.KiwiColors.swatch(c) : '')).join('')}${data.colors.length > 8 ? `<em>+${data.colors.length - 8}</em>` : ''}</div>
         <div class="kx-sku-sku mono">${data.sizes.length} taille${data.sizes.length > 1 ? 's' : ''} · ${_bqxN(data.variants.length, 'variante')}</div>
         <div class="kx-sku-row">
           <div class="kx-sku-price mono">${_mad(p.priceMAD)} MAD</div>
@@ -10235,13 +10243,13 @@ function _variantRow(v, kind) {
   const genOrPrint = primary
     ? `<button class="kb ghost xs" data-action="bqx-var-print" data-arg="${v.id}" title="Imprimer l'étiquette">${_ICN.upload}Étiquette</button>`
     : `<button class="kb ghost xs" data-action="bqx-var-gen" data-arg="${v.id}" title="Générer un EAN-13">${_ICN.scan}Générer</button>`;
-  const fam = _bqxFam(v);
+  const shown = _bqxShownColor(v);
   const note = _bqxVarNote(v);
   const kc = window.KiwiColors;
   return `<tr>
     <td><div class="bqx-ccell">
       <button class="bqx-cbtn" data-action="bqx-var-color" data-arg="${v.id}" title="Changer la couleur">
-        ${kc ? kc.swatch(fam) : ''}<span>${_esc(kc ? kc.label(fam) : v.colorLabel)}</span></button>
+        ${kc ? kc.swatch(shown) : ''}<span>${_esc(shown.label)}</span></button>
       ${note ? `<em class="bqx-csrc">${_esc(note)}</em>` : ''}</div></td>
     <td class="mono">${_esc(v.size)}</td>
     <td><span class="bqx-stk">

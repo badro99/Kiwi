@@ -1585,25 +1585,29 @@
   }
 
   /* full product view for editors: product + variants + matrix helpers.
-     `colors` is one entry per DISTINCT FAMILY — what a person sees on the card
-     ("3 couleurs"). Two variants that both read Bleu count once here while
-     staying two separate rows in the matrix, which is exactly the point. */
+     `colors` is what the merchant actually chose: preset shades collapse to
+     their broad family, but an exact custom hex keeps its own swatch. `families`
+     remains the distinct broad set used by filters and reports. */
   function getProduct(id) {
     const p = prodById(id); if (!p) return null;
     const variants = variantsOf(id);
-    const colors = []; const sizes = [];
+    const colors = []; const families = []; const sizes = [];
     variants.forEach((v) => {
       const f = famOf(v);
-      if (!colors.some((c) => c.id === f)) {
-        const fam = COLOR_BY_ID(f) || { id: f, label: v.colorLabel, hex: v.colorHex };
-        colors.push({ id: fam.id, label: fam.label, hex: fam.hex });
+      if (!families.includes(f)) families.push(f);
+      const custom = /^custom-[0-9a-f]{6}$/i.test(String(v.colorId || ''));
+      const colorId = custom ? v.colorId : f;
+      if (!colors.some((c) => c.id === colorId)) {
+        const shown = custom
+          ? { id: v.colorId, label: v.colorLabel, hex: v.colorHex, custom: true }
+          : (COLOR_BY_ID(f) || { id: f, label: v.colorLabel, hex: v.colorHex });
+        colors.push({ id: shown.id, label: shown.label, hex: shown.hex, custom: !!shown.custom });
       }
       if (!sizes.includes(v.size)) sizes.push(v.size);
     });
     return {
       // copie : `variants` vient de l'index, et cet objet sort du module.
-      product: p, category: catById(p.categoryId), variants: variants.slice(), colors, sizes,
-      families: colors.map((c) => c.id),
+      product: p, category: catById(p.categoryId), variants: variants.slice(), colors, sizes, families,
       // le stock se somme sur le tableau qu'on vient de parcourir, pas en
       // redemandant les déclinaisons (getProduct est appelé PAR LIGNE de liste).
       stock: variants.reduce((s, v) => s + (v.stock || 0), 0),

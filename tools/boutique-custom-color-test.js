@@ -50,9 +50,16 @@ assert.equal(v.colorLabel, 'Bleu client', 'catalogue keeps the owner-facing cust
 const till = C.compat().P[p.id];
 assert.deepEqual(till.colors, ['custom-12abef'], 'caisse receives the exact custom colour id');
 assert.equal(till.photo, 'https://cdn.example.test/chemise.jpg', 'caisse receives the product photo');
+assert.deepEqual(C.getProduct(p.id).colors, [{
+  id: 'custom-12abef', label: 'Bleu client', hex: '#12ABEF', custom: true,
+}], 'dashboard product view keeps the exact custom swatch');
+assert.deepEqual(C.getProduct(p.id).families, ['bleu'], 'dashboard filters still use the broad reporting family');
 
 const pos = fs.readFileSync(path.join(ROOT, 'assets/pos-boutique.js'), 'utf8');
 assert.match(pos, /productVisual\(p\)/, 'caisse cards use the shared product media renderer');
 assert.match(pos, /hit\.colorId && p\.colors\.includes\(hit\.colorId\)/, 'barcode scans retain exact custom colour identity');
+assert.match(pos, /k\.display\(v\.colorId, v\.colorLabel, v\.colorHex\)/, 'caisse inventory renders the exact custom swatch');
+const pages = fs.readFileSync(path.join(ROOT, 'assets/pages-pro.js'), 'utf8');
+assert.match(pages, /k\.display\(v\.colorId, v\.colorLabel, v\.colorHex\)/, 'dashboard variant rows render the exact custom swatch');
 
-console.log('boutique-custom-color-test: 13 controls passed');
+console.log('boutique-custom-color-test: 17 controls passed');

@@ -231,6 +231,10 @@
     if (k) return k.swatch(id, { size: size || 'sm' });
     return `<i class="kc-sw kc-sm" style="background-color:${KC_MISS.hex}" title="${KC_MISS.label}"></i>`;
   }
+  function variantColor(v) {
+    const k = KC();
+    return (k && k.display ? k.display(v.colorId, v.colorLabel, v.colorHex) : colorOf(v.colorFamily || v.colorId));
+  }
 
   function productVisual(p) {
     if (p && p.photo) return `<img class="bq-product-photo" src="${esc(p.photo)}" alt="${esc(p.name || 'Produit')}" loading="lazy" />`;
@@ -5251,8 +5255,9 @@
     const genOrPrint = primary
       ? `<button class="bqi-mini" data-vprint="${v.id}" title="Imprimer l'étiquette"><i data-lucide="printer"></i></button>`
       : `<button class="bqi-mini" data-vgen="${v.id}" title="Générer un EAN-13"><i data-lucide="scan-line"></i></button>`;
+    const shown = variantColor(v);
     return `<tr>
-      <td><span class="bqi-cbtn is-locked" aria-disabled="true" title="Modifier dans le tableau de bord">${colorDot(v.colorFamily || v.colorId)} ${esc(colorLabel(v.colorFamily || v.colorId))}</span>${v.colorSource ? `<em class="bqi-csrc">${esc(v.colorSource)}</em>` : ''} · <b>${esc(v.size)}</b></td>
+      <td><span class="bqi-cbtn is-locked" aria-disabled="true" title="Modifier dans le tableau de bord">${colorDot(shown)} ${esc(shown.label)}</span>${v.colorSource ? `<em class="bqi-csrc">${esc(v.colorSource)}</em>` : ''} · <b>${esc(v.size)}</b></td>
       <td><span class="bqi-stk-val" style="font-weight:700;padding:4px 8px;border-radius:6px;background:var(--n-100);">${v.stock}</span></td>
       <td>${bc}</td>
       <td class="bqi-vact">${genOrPrint}<button class="bqi-mini" data-vreg="${v.id}" title="Enregistrer un code existant"><i data-lucide="link"></i></button><span class="bqi-mini is-locked danger" aria-disabled="true" title="Supprimer dans le tableau de bord"><i data-lucide="trash-2"></i></span></td>
@@ -5483,7 +5488,7 @@
     ].join(' · ');
     const html = `
       <button class="bq-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button>
-      <div class="bqi-modh"><div><h3>Supprimer ${esc(colorLabel(v.colorFamily || v.colorId))} · ${esc(v.size)} ?</h3><span>${esc(d.product.name)} · ${perte}. La suppression est définitive.</span></div></div>
+      <div class="bqi-modh"><div><h3>Supprimer ${esc(variantColor(v).label)} · ${esc(v.size)} ?</h3><span>${esc(d.product.name)} · ${perte}. La suppression est définitive.</span></div></div>
       <div class="bqi-modfoot"><button class="bq-btn secondary" data-inv-back>Annuler</button><button class="bq-btn danger" id="bqi-vdel-ok"><i data-lucide="trash-2"></i>Supprimer la variante</button></div>`;
     invSetModal(html, (el) => {
       $('[data-inv-back]', el).addEventListener('click', () => openInvProduct(pid));
@@ -5514,7 +5519,7 @@
       <button class="bq-modal-x" data-inv-x aria-label="Fermer"><i data-lucide="x"></i></button>
       <div class="bqi-modh"><div><h3>Couleur de la variante</h3><span>${esc(d.product.name)} · taille ${esc(v.size)}${v.colorSource ? ` · saisie à l'origine « ${esc(v.colorSource)} »` : ''}</span></div></div>
       <div class="bqi-form">
-        <div class="bqi-fg"><label>Couleur</label>${colorPicker(v.colorFamily || v.colorId)}</div>
+        <div class="bqi-fg"><label>Couleur</label>${colorPicker(variantColor(v))}</div>
         <div class="bqi-fg"><label>Précision (facultatif)</label><input id="bqi-vc-note" maxlength="60" value="${esc(v.note || '')}" placeholder="Ex. rayé, délavé, motif · pour distinguer deux variantes de même couleur" /></div>
       </div>
       <div class="bqi-modfoot"><button class="bq-btn secondary" data-inv-back>Retour</button><button class="bq-btn" id="bqi-vc-save">Enregistrer</button></div>`;
