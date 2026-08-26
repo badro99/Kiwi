@@ -791,19 +791,27 @@
     var tenant = merchant();
     if (!tenant) return;                            // identity unresolved → bridge nothing
     var have = {};
-    try { (window.KiwiSales.list(vid) || []).forEach(function (e) { if (e && e.cursor) have[e.cursor] = 1; }); } catch (_) {}
+    try { (window.KiwiSales.list(vid) || []).forEach(function (e) { if (e && e.cursor) have[e.cursor] = e; }); } catch (_) {}
     feedSales.forEach(function (row) {
       if (row.tenant !== tenant) return;             // another store's money — never this one's
       var s = row.s;
       var cur = Number(s.cursor) || 0;
       if (!cur) return;
       if (have[cur]) {
+        var existing = have[cur];
+        var patch = {
+          ref: s.orderRef || s.ref || '', receiptRef: s.receiptRef || s.ref || '',
+          origin: s.origin || '', server: s.server || '', channel: s.channel || '',
+          saleId: s.id || s.saleId || '',
+        };
+        /* annotate() rereads and searches the persisted ledger. Calling it for
+           every already-current row turns a full replay into quadratic work. */
+        var changed = Object.keys(patch).some(function (key) {
+          return patch[key] && String(existing[key] || '') !== String(patch[key]);
+        });
+        if (!changed) return;
         try {
-          if (window.KiwiSales.annotate) window.KiwiSales.annotate(vid, cur, {
-            ref: s.orderRef || s.ref || '', receiptRef: s.receiptRef || s.ref || '',
-            origin: s.origin || '', server: s.server || '', channel: s.channel || '',
-            saleId: s.id || s.saleId || '',
-          });
+          if (window.KiwiSales.annotate) window.KiwiSales.annotate(vid, cur, patch);
         } catch (_) {}
         return;
       }
@@ -846,7 +854,10 @@
     if (!snapshot) flushQueue(); // a merchant device may still owe the server a sale
     watchFeed(function (sales, backfill, tenant) {
       accumulateFeed(sales, tenant);
-      bridgeToStore();        // ← this is what moves the dashboard's real numbers
+      /* A full history arrives in 50-row pages. Rebuilding and reconciling the
+         complete ledger after every page made mature merchants progressively
+         slower. The final short page sets feedComplete before this callback. */
+      if (!backfill || feedComplete[tenant]) bridgeToStore();
       if (!backfill) sales.forEach(notifySale);
     }, null, { oneShot: !!snapshot });
     // Re-run the bridge whenever the venue settles/changes — the operator scoped
@@ -995,8 +1006,12 @@
     /* Operator UI is mounted only in the signed-identity branch above. An URL
        containing `op=1` alone must show neither the banner nor the PIN bypass. */
   }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
-  else boot();
+  function startBoot() {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });
+    else boot();
+  }
+  if (window.KiwiDashboardBoot?.whenUnlocked) window.KiwiDashboardBoot.whenUnlocked(startBoot);
+  else startBoot();
 
   window.KiwiLive = {
     isOn: on, merchant: merchant, postSale: postSale, watchFeed: watchFeed,
