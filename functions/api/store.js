@@ -121,7 +121,7 @@ const FEATURES = {
   business:     { keys: ['name', 'tradeName', 'logo', 'slogan', 'legal'], max: 400000, maxStr: 350000 },
   /* L'apparence du reçu — logo, en-tête, messages, ce qu'on affiche, largeur
    * du rouleau. `max` généreux à cause du logo, qui est une image en data: URI
-   * (bornée à 200 ko côté client, voir assets/receipt.js).
+   * (fichier borné à 300 ko avant encodage côté client ; data URI ≤ 500 ko).
    *
    * `maxStr` : le logo est UNE chaîne de plusieurs dizaines de milliers de
    * caractères, et le bornage générique refuse toute chaîne au-delà de 4 000.

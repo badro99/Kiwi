@@ -960,6 +960,7 @@ section('Whole-project regressions');
     'err-reporter-silence-test.mjs',
     'depenses-demo-gate-test.mjs',
     'invoice-receipt-test.mjs',
+    'receipt-logo-print-test.mjs',
     'sale-invoice-test.mjs',
     'ai-routes-test.mjs',
     'inventory-count-test.mjs',

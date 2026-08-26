@@ -171,7 +171,7 @@
     return {
       v: VER,
       look: {
-        logo: '',            /* data: URI, ≤ 24 ko — voir setLogo() */
+        logo: '',            /* data: URI, ≤ 300 ko avant encodage — receipt-ui.js */
         logoOn: true,
         header: '',          /* remplace l'enseigne en tête ; vide = le nom de l'établissement */
         tagline: '',
@@ -219,7 +219,11 @@
     var o = blankConfig();
     if (!d || typeof d !== 'object') return o;
     var L = d.look || {}, S = d.show || {}, M = d.msg || {}, P = d.print || {}, V = d.vat || {};
-    if (typeof L.logo === 'string' && L.logo.indexOf('data:image/') === 0) o.look.logo = L.logo.slice(0, 200000);
+    /* receipt-ui accepts a 300 KiB PNG/JPEG. Base64 adds roughly one third, so
+       truncating the data URI at 200k made a perfectly accepted logo invalid
+       before it ever reached the caisse. The receipt API has a matching 500k
+       per-string safety rail. Keep the image whole or reject it whole. */
+    if (typeof L.logo === 'string' && L.logo.indexOf('data:image/') === 0 && L.logo.length <= 500000) o.look.logo = L.logo;
     o.look.logoOn = L.logoOn !== false;
     o.look.header = str(L.header, 60);
     o.look.tagline = str(L.tagline, 80);
@@ -802,6 +806,7 @@
 
     /* — l'enseigne — */
     b.align('center');
+    if (o.logoRaster && o.logoRaster.length) b.raw(o.logoRaster).feed(1);
     if (doc.shop.name) b.bold(true).size(2, 2).line(doc.shop.name).size(1, 1).bold(false);
     if (doc.shop.legalName) b.line(doc.shop.legalName);
     if (doc.shop.tagline) b.line(doc.shop.tagline);
@@ -1144,17 +1149,64 @@
    * Thermique d'abord, pilote système ensuite. Jamais de toast qui annonce une
    * impression qui n'a pas eu lieu — c'est exactement ce que faisait le bouton
    * « Imprimer » du reçu de la caisse. */
+  function rasterLogo(dataUri, paper) {
+    if (!dataUri || typeof Image === 'undefined' || typeof document === 'undefined') return Promise.resolve(null);
+    return new Promise(function (resolve) {
+      var img = new Image();
+      img.onload = function () {
+        try {
+          var dots = ({ '44': 288, '57': 384, '58': 384, '76': 512, '80': 576, '110': 800, '112': 800 })[String(paper || '80')] || 576;
+          var maxW = Math.max(64, Math.floor(dots * 0.72)), maxH = Math.min(220, Math.floor(dots * 0.38));
+          var scale = Math.min(maxW / img.naturalWidth, maxH / img.naturalHeight, 1);
+          var w = Math.max(1, Math.round(img.naturalWidth * scale));
+          var h = Math.max(1, Math.round(img.naturalHeight * scale));
+          /* GS v 0 consumes complete bytes per row. Padding with white pixels
+             avoids a dark stripe on logos whose width is not divisible by 8. */
+          var byteW = Math.ceil(w / 8), canvas = document.createElement('canvas');
+          canvas.width = byteW * 8; canvas.height = h;
+          var ctx = canvas.getContext('2d', { willReadFrequently: true });
+          if (!ctx) { resolve(null); return; }
+          ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0, w, h);
+          var px = ctx.getImageData(0, 0, canvas.width, h).data;
+          var out = [0x1D, 0x76, 0x30, 0x00, byteW & 255, (byteW >> 8) & 255, h & 255, (h >> 8) & 255];
+          for (var y = 0; y < h; y++) {
+            for (var xb = 0; xb < byteW; xb++) {
+              var bits = 0;
+              for (var bit = 0; bit < 8; bit++) {
+                var i = (y * canvas.width + xb * 8 + bit) * 4;
+                var alpha = px[i + 3] / 255;
+                var lum = (0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2]) * alpha + 255 * (1 - alpha);
+                if (lum < 180) bits |= (0x80 >> bit);
+              }
+              out.push(bits);
+            }
+          }
+          resolve(out);
+        } catch (_) { resolve(null); }
+      };
+      img.onerror = function () { resolve(null); };
+      img.src = dataUri;
+    });
+  }
+
   function print(doc, o) {
     o = o || {};
     var KP = window.KiwiPrinter;
-    var bytes = escpos(doc, o);
-    if (KP && bytes && (KP.isConnected ? KP.isConnected() : KP.isConfigured && KP.isConfigured())) {
-      return KP.printBytes(bytes, 'caisse').then(function (r) {
-        if (r && r.ok) return r;
-        return browser(doc, o);
-      }, function () { return browser(doc, o); });
-    }
-    return Promise.resolve(browser(doc, o));
+    /* HTML receipts have always shown the logo. Direct ESC/POS receipts did
+       not: text bytes were sent immediately and the image was never encoded.
+       Prepare the raster first, then send one atomic ticket to the printer. */
+    return rasterLogo(doc && doc.shop && doc.shop.logo, doc && doc.paper).then(function (logoRaster) {
+      var renderOpts = Object.assign({}, o, { logoRaster: logoRaster });
+      var bytes = escpos(doc, renderOpts);
+      if (KP && bytes && (KP.isConnected ? KP.isConnected() : KP.isConfigured && KP.isConfigured())) {
+        return KP.printBytes(bytes, 'caisse').then(function (r) {
+          if (r && r.ok) return r;
+          return browser(doc, o);
+        }, function () { return browser(doc, o); });
+      }
+      return browser(doc, o);
+    });
   }
   function browser(doc, o) {
     var KP = window.KiwiPrinter;
