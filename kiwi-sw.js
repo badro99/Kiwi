@@ -194,7 +194,7 @@ var SHELL = [
   '/assets/auth-guard.js',
   '/assets/idle-lock.js?v=2',
   '/assets/caisse-hardware.js?v=1',
-  '/assets/live-socket.js?v=3',
+  '/assets/live-socket.js?v=4',
   '/assets/escpos.js?v=6',
   '/assets/printer-bridge.js?v=8',
   '/assets/barcode.js',
