@@ -1160,28 +1160,37 @@
           var scale = Math.min(maxW / img.naturalWidth, maxH / img.naturalHeight, 1);
           var w = Math.max(1, Math.round(img.naturalWidth * scale));
           var h = Math.max(1, Math.round(img.naturalHeight * scale));
-          /* GS v 0 consumes complete bytes per row. Padding with white pixels
-             avoids a dark stripe on logos whose width is not divisible by 8. */
-          var byteW = Math.ceil(w / 8), canvas = document.createElement('canvas');
-          canvas.width = byteW * 8; canvas.height = h;
+          var canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
           var ctx = canvas.getContext('2d', { willReadFrequently: true });
           if (!ctx) { resolve(null); return; }
           ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
           ctx.drawImage(img, 0, 0, w, h);
           var px = ctx.getImageData(0, 0, canvas.width, h).data;
-          var out = [0x1D, 0x76, 0x30, 0x00, byteW & 255, (byteW >> 8) & 255, h & 255, (h >> 8) & 255];
-          for (var y = 0; y < h; y++) {
-            for (var xb = 0; xb < byteW; xb++) {
-              var bits = 0;
-              for (var bit = 0; bit < 8; bit++) {
-                var i = (y * canvas.width + xb * 8 + bit) * 4;
-                var alpha = px[i + 3] / 255;
-                var lum = (0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2]) * alpha + 255 * (1 - alpha);
-                if (lum < 180) bits |= (0x80 >> bit);
+          /* ESC * 33 (24-dot double-density) is understood by old Epson heads
+             and the inexpensive ESC/POS-compatible printers commonly used at
+             Moroccan counters. Several of those silently ignore GS v 0, which
+             made the preview correct while the physical ticket lost the logo. */
+          var out = [0x1B, 0x33, 24]; // ESC 3: 24-dot line spacing
+          for (var band = 0; band < h; band += 24) {
+            out.push(0x1B, 0x2A, 33, w & 255, (w >> 8) & 255);
+            for (var x = 0; x < w; x++) {
+              for (var slice = 0; slice < 3; slice++) {
+                var bits = 0;
+                for (var bit = 0; bit < 8; bit++) {
+                  var y = band + slice * 8 + bit;
+                  if (y >= h) continue;
+                  var i = (y * w + x) * 4;
+                  var alpha = px[i + 3] / 255;
+                  var lum = (0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2]) * alpha + 255 * (1 - alpha);
+                  if (lum < 180) bits |= (0x80 >> bit);
+                }
+                out.push(bits);
               }
-              out.push(bits);
             }
+            out.push(0x0A);
           }
+          out.push(0x1B, 0x32); // ESC 2: restore default line spacing
           resolve(out);
         } catch (_) { resolve(null); }
       };
