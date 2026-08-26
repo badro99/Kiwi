@@ -23,6 +23,16 @@
       .replace(/"/g, '&quot;');
   }
 
+  /* Les moteurs adossés au CATALOGUE boutique (window.KiwiBoutiqueCatalog) :
+     la boutique et la maison tiennent le même inventaire produit × déclinaison.
+     Le moteur « ledger » est celui des verticales qui comptent des ingrédients
+     (window.stockItems). Un moteur inconnu qui tomberait ici compterait le
+     mauvais stock en silence — d'où la liste nommée plutôt qu'un `else`. */
+  const CATALOG_ENGINES = ['boutique', 'maison'];
+  function usesCatalog(engine) {
+    return CATALOG_ENGINES.indexOf(engine) >= 0 && !!window.KiwiBoutiqueCatalog;
+  }
+
   function detectEngine() {
     if (window.KiwiBoutiqueCatalog) return 'boutique';
     return 'ledger';
@@ -41,48 +51,54 @@
 
   function loadCountableItems(engine) {
     const items = [];
-    if (engine === 'boutique' && window.KiwiBoutiqueCatalog) {
+    if (usesCatalog(engine)) {
+      /* ON PASSE PAR L'API PUBLIQUE DU CATALOGUE, PAS PAR SA FORME INTERNE.
+         La première version appelait `KiwiBoutiqueCatalog.export()` et
+         `stockOf()` : deux méthodes qui n'ont jamais existé. `export` étant
+         `undefined`, le ternaire retombait sur `null`, la liste des variantes
+         était vide, et le comptage s'ouvrait sur « 0 / 0 articles » devant un
+         inventaire de sept déclinaisons. Aucune erreur en console : lire une
+         propriété absente rend `undefined`, pas une exception. C'est pour ça
+         que tools/pos-inventory-count-test.mjs vérifie l'existence de chaque
+         méthode appelée ici — un renommage côté catalogue doit casser le
+         build, pas l'écran du caissier. */
       try {
-        const cat = window.KiwiBoutiqueCatalog.export ? window.KiwiBoutiqueCatalog.export() : null;
-        const products = (cat && cat.products) || [];
-        const variants = (cat && cat.variants) || [];
-        const prodMap = new Map(products.map(p => [p.id, p]));
-
-        variants.forEach(v => {
-          if (!v || !v.id) return;
-          const p = prodMap.get(v.productId) || { name: 'Article' };
-          const pName = p.name || 'Article';
-          const color = v.colorLabel || v.color || '';
-          const size = v.size || '';
-          const sku = v.sku || (v.barcodes && v.barcodes[0]) || '';
-          const barcode = (v.barcodes && v.barcodes[0]) || '';
-          const unit = 'pièce';
-          const cost = Number(v.costPrice != null ? v.costPrice : (v.price != null ? v.price : 0));
-          
-          let sysStock = 0;
-          if (typeof window.KiwiBoutiqueCatalog.stockOf === 'function') {
-            sysStock = window.KiwiBoutiqueCatalog.stockOf(v.id);
-          } else {
-            sysStock = Number(v.base || 0);
-          }
-
-          items.push({
-            key: `v_${v.id}`,
-            itemId: v.productId,
-            variantId: v.id,
-            locationId: 'magasin',
-            productName: pName,
-            color: color,
-            size: size,
-            sku: sku,
-            barcode: barcode,
-            unit: unit,
-            unitCost: cost,
-            systemQty: sysStock,
-            countedQty: 0,
-            counted: false,
-            explanation: '',
-            note: ''
+        const cat = window.KiwiBoutiqueCatalog;
+        const products = cat.listProducts ? cat.listProducts({}) : [];
+        products.forEach((p) => {
+          if (!p || !p.id) return;
+          const variants = cat.listVariants ? cat.listVariants(p.id) : [];
+          variants.forEach((v) => {
+            if (!v || !v.id) return;
+            /* Le code-barres passe par primaryBarcode() : `v.barcodes` est une
+               liste d'OBJETS {code, type, primary}. `barcodes[0]` rendait donc
+               un objet, affiché « [object Object] » et introuvable à la
+               douchette. */
+            const barcode = (cat.primaryBarcode ? cat.primaryBarcode(v) : '') || '';
+            items.push({
+              key: 'v_' + v.id,
+              itemId: p.id,
+              variantId: v.id,
+              locationId: 'magasin',
+              productName: p.name || 'Article',
+              /* La NUANCE d'origine si le magasin en a saisi une, sinon la
+                 famille : c'est ce que le caissier lit sur l'étiquette. */
+              color: v.colorSource || v.colorLabel || v.colorId || '',
+              size: v.size || '',
+              sku: v.sku || barcode,
+              barcode: barcode,
+              unit: 'pièce',
+              /* Le coût vit sur le PRODUIT, jamais sur la déclinaison. */
+              unitCost: Number(p.cost || 0),
+              /* `v.stock` est le stock matérialisé (socle + mouvements) — le
+                 même nombre que la grille et les ruptures. `v.base` est le
+                 socle seul : il aurait ignoré toutes les ventes du jour. */
+              systemQty: Number(v.stock || 0),
+              countedQty: 0,
+              counted: false,
+              explanation: '',
+              note: ''
+            });
           });
         });
       } catch (_) {}
@@ -474,5 +490,8 @@
     renderModal();
   }
 
-  window.KiwiPosInventoryCount = { open };
+  /* `_loadItems` est exposé pour tools/pos-inventory-count-test.mjs : le
+     défaut qu'il garde est une LISTE VIDE, et une liste vide ne se voit pas
+     depuis l'extérieur du module. */
+  window.KiwiPosInventoryCount = { open, _loadItems: loadCountableItems };
 })();

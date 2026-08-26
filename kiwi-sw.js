@@ -214,7 +214,7 @@ var SHELL = [
      document; quantities are append-only movements, both usable offline. */
   '/assets/inventory-ledger.js?v=4',
   '/assets/caisse-stock-sync.js?v=9',
-  '/assets/pos-inventory-count.js?v=3',
+  '/assets/pos-inventory-count.js?v=4',
   '/assets/stock.js?v=34',
   /* Le coût de revient. Dans la coquille parce que les tuiles Marge brute,
      Bénéfice brut et Coût matière du tableau de bord passent toutes par lui :

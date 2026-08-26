@@ -912,6 +912,10 @@ section('Whole-project regressions');
        la suite tient le stock à zéro et interdit qu'un modèle posé deux fois
        double le catalogue. */
     'store-templates-test.mjs',
+    /* L'inventaire physique en caisse : il appelait deux méthodes du catalogue
+       qui n'existent pas, s'ouvrait sur « 0 / 0 articles » et ne disait rien.
+       La suite vérifie d'abord le CONTRAT — chaque méthode appelée existe. */
+    'pos-inventory-count-test.mjs',
     'formula-protocol-test.mjs',
     'trade-copy-test.mjs',
     'floor-accept-test.mjs',
