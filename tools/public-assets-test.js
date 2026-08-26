@@ -95,6 +95,7 @@ prefixes.forEach((pre) => {
 ok('/api/config reste privé', !publiclyReadable('/api/config'));
 ok('/sitemap.xml reste lisible par les moteurs sans session', publiclyReadable('/sitemap.xml'));
 ok('/robots.txt reste lisible par les moteurs sans session', publiclyReadable('/robots.txt'));
+ok("l'APK signé du pont Android est téléchargeable sans cookie", publiclyReadable('/downloads/kiwi-print-bridge.apk'));
 ok('/api/order/queue reste privé', !publiclyReadable('/api/order/queue'));
 ok('/api/channel/keys reste privé', !publiclyReadable('/api/channel/keys'));
 ok('/dashboard.html reste privé', !publiclyReadable('/dashboard.html'));

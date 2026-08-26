@@ -301,6 +301,11 @@ async function routeRequest(context) {
   if (isRead && (path === '/kiwi-sw.js'
     || path === '/dashboard.webmanifest' || path === '/manifest.webmanifest'
     || path === '/cuisine.webmanifest')) return next();
+  /* L'APK Android est distribué par un lien Kiwi direct. Il ne contient aucune
+   * donnée marchande ni aucun secret ; exiger une session ici renverrait la
+   * page de connexion (401) au gestionnaire de téléchargements Android. Chemin
+   * exact + lecture seule : aucun dossier ni autre artefact n'est ouvert. */
+  if (isRead && path === '/downloads/kiwi-print-bridge.apk') return next();
   if (isRead && (path === '/kiwi-order.html' || path === '/kiwi-order' || path === '/api/menu'
     || path === '/booking.html' || path === '/booking' || path === '/api/booking')) return next();
   // A guest may create one booking against the merchant's published services.
