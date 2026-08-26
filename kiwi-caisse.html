@@ -112,7 +112,7 @@
        choisies à la pastille). Chargé AVANT le catalogue, qui s'en sert pour
        normaliser les variantes existantes. -->
   <script src="assets/color-palette.js" defer></script>
-  <script src="assets/boutique-catalog.js" defer></script>
+  <script src="assets/boutique-catalog.js?v=1" defer></script>
   <script src="assets/sold-insights.js?v=2" defer></script>
   <!-- Les promotions. Après le catalogue, dont elles lisent les articles pour
        savoir qui elles visent ; avant la caisse boutique, qui les interroge
@@ -1718,6 +1718,23 @@
       color: #E03131;
     }
     .or-item-del-btn svg { width: 15px; height: 15px; }
+    .or-item-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .or-item-edit-btn {
+      min-height: 30px;
+      padding: 0 10px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: transparent;
+      color: var(--forest);
+      font-size: 11.5px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .or-item-edit-btn:hover { background: var(--mint-tint); }
 
     .or-summary-box {
       background: var(--paper-soft, rgba(0,0,0,0.025));
@@ -5374,7 +5391,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=427" defer></script>
+  <script src="assets/caisse-pwa.js?v=428" defer></script>
   <script src="assets/live-link.js?v=15" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -9362,13 +9379,81 @@
       pushCartLine(item, []);
     }
 
-    function openCaisseFormula(item, onChosen) {
+    function formulaInitialSelections(slots, groups, initial) {
+      const parent = initial && initial.parent;
+      const parts = initial && Array.isArray(initial.parts) ? initial.parts : [];
+      const picked = Object.fromEntries(slots.map(slot => {
+        const indexes = parts
+          .filter(part => String(part.formulaSlotId || '') === String(slot.id || ''))
+          .map(part => slot.choices.findIndex(choice => String(choice.itemId || '') === String(part.id || '')))
+          .filter(index => index >= 0);
+        return [slot.id, [...new Set(indexes)]];
+      }));
+      const parentOpts = parent && Array.isArray(parent.opts) ? parent.opts : [];
+      const optPicked = Object.fromEntries(groups.map(group => [group.id, parentOpts
+        .filter(option => String(option.g || option.group || '') === String(group.id || ''))
+        .map(option => group.choices.find(choice => String(choice.id) === String(option.c || option.choice || '')))
+        .filter(Boolean)
+        .map(choice => choice.id)]));
+      return { picked, optPicked };
+    }
+
+    function buildCaisseFormulaGroup(item, slots, groups, picked, optPicked, choiceItem, initial) {
+      const previousParent = initial && initial.parent;
+      const previousParts = initial && Array.isArray(initial.parts) ? initial.parts : [];
+      const formulaUid = String((previousParent && previousParent.formulaUid) || newLineUid());
+      const qty = Math.max(1, +(previousParent && previousParent.qty) || 1);
+      const usedPrevious = new Set();
+      const parts = [];
+      const opts = [];
+      let formulaExtra = 0;
+      let optExtra = 0;
+
+      slots.forEach(slot => (picked[slot.id] || []).forEach(choiceIndex => {
+        const choice = slot.choices[choiceIndex];
+        const target = choice && choiceItem(choice);
+        if (!target) return;
+        formulaExtra += +choice.extra || 0;
+        const previousIndex = previousParts.findIndex((part, index) => !usedPrevious.has(index)
+          && String(part.formulaSlotId || '') === String(slot.id || '')
+          && String(part.id || '') === String(target.id || ''));
+        const previous = previousIndex >= 0 ? previousParts[previousIndex] : null;
+        if (previousIndex >= 0) usedPrevious.add(previousIndex);
+        parts.push(Object.assign({}, previous || {}, {
+          uid: (previous && previous.uid) || newLineUid(),
+          id: target.id, name: target.name, price: 0, qty,
+          note: (previous && previous.note) || '', kind: 'formula-part',
+          formulaUid, formulaName: item.name, slotLabel: slot.label || '',
+          formulaSlotId: slot.id,
+          lineId: (previous && previous.lineId) || `${formulaUid}-${slot.id}-${choiceIndex}`,
+        }));
+      }));
+      groups.forEach(group => (optPicked[group.id] || []).forEach(id => {
+        const choice = group.choices.find(candidate => String(candidate.id) === String(id));
+        if (!choice) return;
+        optExtra += +choice.price || 0;
+        opts.push({ g: group.id, gn: group.name, c: choice.id, cn: choice.name, e: choice.emoji || '', p: +choice.price || 0 });
+      }));
+      const parent = Object.assign({}, previousParent || {}, {
+        uid: (previousParent && previousParent.uid) || formulaUid,
+        id: item.id, name: item.name,
+        price: item.price + formulaExtra + optExtra, basePrice: item.price,
+        qty, note: (previousParent && previousParent.note) || '',
+        kind: 'formula', formulaUid, formulaName: item.name,
+        opts, optSig: optSig(opts),
+      });
+      return { parent, parts };
+    }
+
+    function openCaisseFormula(item, onChosen, initial) {
       const slots = item.formula.slots.filter(s => s && Array.isArray(s.choices) && s.choices.length);
       if (!slots.length) return;
       const groups = itemOptGroups(item);
       if (!optVeil) { optVeil = document.createElement('div'); optVeil.className = 'cloture-veil opt-veil'; document.body.appendChild(optVeil); }
-      const picked = Object.fromEntries(slots.map(s => [s.id, []]));
-      const optPicked = Object.fromEntries(groups.map(g => [g.id, []]));
+      const initialSelections = formulaInitialSelections(slots, groups, initial);
+      const picked = initialSelections.picked;
+      const optPicked = initialSelections.optPicked;
+      const editing = !!(initial && initial.parent);
       const choiceItem = c => (carteState.formulaItems || menuItems).find(m => String(m.id) === String(c.itemId) && !m.archived && m.avail !== false);
       function paint() {
         const missingSlots = slots.filter(s => picked[s.id].length < Math.max(0, +s.min || 0));
@@ -9377,7 +9462,7 @@
           + groups.reduce((n, g) => n + optPicked[g.id].reduce((x, id) => { const c=g.choices.find(v=>v.id===id); return x+(c ? +c.price||0 : 0); }, 0), 0);
         const regularHTML = groups.map(g => `<div class="opt-g"><div class="opt-g-h">${kdsEsc(g.name)}${g.required?'<i class="req">obligatoire</i>':''}</div><div class="opt-g-c">${g.choices.map(c=>`<button type="button" class="opt-c${optPicked[g.id].includes(c.id)?' on':''}" data-og="${kdsEsc(g.id)}" data-oc="${kdsEsc(c.id)}"><span>${c.emoji?`${kdsEsc(c.emoji)} `:''}${kdsEsc(c.name)}</span>${c.price?`<b class="mono">+${fmtMAD(c.price)}</b>`:''}</button>`).join('')}</div></div>`).join('');
         const missing = missingSlots.map(s=>s.label||'Choix').concat(missingGroups.map(g=>g.name));
-        optVeil.innerHTML = `<div class="cloture-card opt-card"><div class="clo-eyebrow">${kdsEsc(item.name)}</div><div class="clo-title">Formule & options</div><div class="opt-groups">${slots.map(s => `<div class="opt-g"><div class="opt-g-h">${kdsEsc(s.label || 'Choix')}<i class="req">${+s.min || 0}–${Math.max(+s.min || 0, +s.max || 1)}</i></div><div class="opt-g-c">${s.choices.map((c,i) => { const target=choiceItem(c); return target ? `<button type="button" class="opt-c${picked[s.id].includes(i)?' on':''}" data-fslot="${kdsEsc(s.id)}" data-fchoice="${i}"><span>${kdsEsc(target.name)}</span>${+c.extra?`<b class="mono">+${fmtMAD(+c.extra)}</b>`:''}</button>`:''; }).join('')}</div></div>`).join('')}${regularHTML}</div>${missing.length?`<div class="opt-miss">À choisir : ${missing.map(kdsEsc).join(', ')}</div>`:''}<div class="clo-actions"><button class="clo-btn primary" data-formula-ok ${missing.length?'disabled':''}>Ajouter · ${fmtMAD(item.price+extra)}</button></div><div class="clo-foot"><button data-opt-cancel>Annuler</button></div></div>`;
+        optVeil.innerHTML = `<div class="cloture-card opt-card"><div class="clo-eyebrow">${kdsEsc(item.name)}</div><div class="clo-title">Formule & options</div><div class="opt-groups">${slots.map(s => `<div class="opt-g"><div class="opt-g-h">${kdsEsc(s.label || 'Choix')}<i class="req">${+s.min || 0}–${Math.max(+s.min || 0, +s.max || 1)}</i></div><div class="opt-g-c">${s.choices.map((c,i) => { const target=choiceItem(c); return target ? `<button type="button" class="opt-c${picked[s.id].includes(i)?' on':''}" data-fslot="${kdsEsc(s.id)}" data-fchoice="${i}"><span>${kdsEsc(target.name)}</span>${+c.extra?`<b class="mono">+${fmtMAD(+c.extra)}</b>`:''}</button>`:''; }).join('')}</div></div>`).join('')}${regularHTML}</div>${missing.length?`<div class="opt-miss">À choisir : ${missing.map(kdsEsc).join(', ')}</div>`:''}<div class="clo-actions"><button class="clo-btn primary" data-formula-ok ${missing.length?'disabled':''}>${editing ? 'Enregistrer' : 'Ajouter'} · ${fmtMAD(item.price+extra)}</button></div><div class="clo-foot"><button data-opt-cancel>Annuler</button></div></div>`;
       }
       optVeil.onclick = e => {
         const b=e.target.closest('[data-fchoice]');
@@ -9385,7 +9470,7 @@
         const ob=e.target.closest('[data-oc]');
         if(ob){const g=groups.find(x=>String(x.id)===ob.dataset.og);if(!g)return;const a=optPicked[g.id],id=ob.dataset.oc,at=a.indexOf(id);if(g.kind==='many'){if(at>=0)a.splice(at,1);else a.push(id);}else optPicked[g.id]=at>=0?[]:[id];paint();return;}
         if(e.target===optVeil||e.target.closest('[data-opt-cancel]')){closeOptSheet();return;}
-        if(e.target.closest('[data-formula-ok]')) { const uid=newLineUid(), parts=[],opts=[]; let formulaExtra=0,optExtra=0; slots.forEach(s=>picked[s.id].forEach(i=>{const c=s.choices[i], target=choiceItem(c); if(!target)return; formulaExtra+=+c.extra||0; parts.push({uid:newLineUid(),id:target.id,name:target.name,price:0,qty:1,note:'',kind:'formula-part',formulaUid:uid,formulaName:item.name,slotLabel:s.label||'',formulaSlotId:s.id,lineId:`${uid}-${s.id}`});}));groups.forEach(g=>optPicked[g.id].forEach(id=>{const c=g.choices.find(x=>x.id===id);if(c){optExtra+=+c.price||0;opts.push({g:g.id,gn:g.name,c:c.id,cn:c.name,e:c.emoji||'',p:+c.price||0});}})); closeOptSheet(); onChosen({uid,id:item.id,name:item.name,price:item.price+formulaExtra+optExtra,basePrice:item.price,qty:1,note:'',kind:'formula',formulaUid:uid,formulaName:item.name,opts,optSig:optSig(opts)},parts); }
+        if(e.target.closest('[data-formula-ok]')) { const group=buildCaisseFormulaGroup(item,slots,groups,picked,optPicked,choiceItem,initial); closeOptSheet(); onChosen(group.parent,group.parts); }
       };
       paint(); optVeil.classList.add('is-open');
     }
@@ -9463,6 +9548,48 @@
       if (!line) return lines || [];
       if (line.formulaUid) return lines.filter(candidate => candidate.formulaUid !== line.formulaUid);
       return lines.filter(candidate => candidate.uid !== uid);
+    }
+
+    function replaceFormulaGroup(lines, formulaUid, replacement) {
+      const source = lines || [];
+      const firstIndex = source.findIndex(line => line.formulaUid === formulaUid);
+      if (firstIndex < 0) return source;
+      const next = [];
+      source.forEach((line, index) => {
+        if (index === firstIndex) next.push(replacement.parent, ...replacement.parts);
+        if (line.formulaUid !== formulaUid) next.push(line);
+      });
+      return next;
+    }
+
+    function editFormulaLine(uid) {
+      const isVrap = mode === 'vrap';
+      const lines = isVrap ? cart : ((selectedId && tableOrders[selectedId]) || []);
+      const parent = lines.find(line => line.uid === uid);
+      if (!parent || parent.kind !== 'formula' || parent.sent) return;
+      const item = (carteState.formulaItems || []).find(candidate => String(candidate.id) === String(parent.id))
+        || menuItems.find(candidate => String(candidate.id) === String(parent.id));
+      if (!item || !item.formula || !Array.isArray(item.formula.slots)) {
+        toast('Cette formule n’est plus disponible sur la carte');
+        return;
+      }
+      const initial = {
+        parent,
+        parts: lines.filter(line => line.kind === 'formula-part' && line.formulaUid === parent.formulaUid),
+      };
+      openCaisseFormula(item, (nextParent, nextParts) => {
+        const replacement = { parent: nextParent, parts: nextParts };
+        if (isVrap) {
+          cart = replaceFormulaGroup(cart, parent.formulaUid, replacement);
+          renderCart();
+        } else if (selectedId && tableOrders[selectedId]) {
+          tableOrders[selectedId] = replaceFormulaGroup(tableOrders[selectedId], parent.formulaUid, replacement);
+          renderOrderPanel(selectedId);
+        }
+        nativeHapticLight();
+        renderMenu();
+        renderOrderReviewContent();
+      }, initial);
     }
 
     /* Cart panel +/- · targets one specific line by its uid. */
@@ -9737,7 +9864,12 @@
                 </div>
               </div>
               <div class="or-item-price mono">${fmtMAD(l.price * l.qty)}</div>
-              <div>
+              <div class="or-item-actions">
+                ${!l.sent && l.kind === 'formula' ? `
+                  <button class="or-item-edit-btn" data-review-action="edit-formula" aria-label="Modifier la formule">
+                    Modifier
+                  </button>
+                ` : ''}
                 ${l.sent || l.kind === 'formula-part' ? '' : `
                   <button class="or-item-del-btn" data-review-action="del" title="Supprimer la ligne" aria-label="Supprimer">
                     <i data-lucide="trash-2"></i>
@@ -9802,6 +9934,14 @@
           changeTableOrderLineQty(selectedId, uid, d);
         }
         renderOrderReviewContent();
+        return;
+      }
+
+      // Action inside review modal: edit an unsent formula as one bundle
+      const editFormulaBtn = e.target.closest('.or-item-edit-btn');
+      if (editFormulaBtn) {
+        const row = editFormulaBtn.closest('[data-review-uid]');
+        if (row) editFormulaLine(row.dataset.reviewUid);
         return;
       }
 

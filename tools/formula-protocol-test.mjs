@@ -539,16 +539,27 @@ ok(recordedLines[1].name === 'Formule Brunch' && recordedLines[1].total === 104 
 const caisseFormulaGroupMatch = caisseSource.match(/function formulaGroup\(lines, line\) \{[\s\S]*?\n    \}/);
 const caisseGroupedDeltaMatch = caisseSource.match(/function applyGroupedLineQtyDelta\(lines, line, delta\) \{[\s\S]*?\n    \}/);
 const caisseGroupedRemoveMatch = caisseSource.match(/function removeGroupedLine\(lines, uid\) \{[\s\S]*?\n    \}/);
+const caisseInitialSelectionsMatch = caisseSource.match(/function formulaInitialSelections\(slots, groups, initial\) \{[\s\S]*?\n    \}/);
+const caisseBuildFormulaGroupMatch = caisseSource.match(/function buildCaisseFormulaGroup\(item, slots, groups, picked, optPicked, choiceItem, initial\) \{[\s\S]*?\n    \}/);
+const caisseReplaceFormulaGroupMatch = caisseSource.match(/function replaceFormulaGroup\(lines, formulaUid, replacement\) \{[\s\S]*?\n    \}/);
 const confirmCaisseVoidMatch = caisseSource.match(/async function confirmCaisseVoid\(\) \{[\s\S]*?\n    \}/);
 
-if (!caisseFormulaGroupMatch || !caisseGroupedDeltaMatch || !caisseGroupedRemoveMatch || !confirmCaisseVoidMatch) {
-  ok(false, 'caisse formula group helpers or confirmCaisseVoid missing');
+if (!caisseFormulaGroupMatch || !caisseGroupedDeltaMatch || !caisseGroupedRemoveMatch
+  || !caisseInitialSelectionsMatch || !caisseBuildFormulaGroupMatch || !caisseReplaceFormulaGroupMatch
+  || !confirmCaisseVoidMatch) {
+  ok(false, 'caisse formula group/edit helpers or confirmCaisseVoid missing');
 } else {
   const caisseGroupHarness = new Function(`
+    let idSeq = 0;
+    const newLineUid = () => 'new-' + (++idSeq);
+    const optSig = (opts) => (opts || []).map(option => option.c).join('|');
     ${caisseFormulaGroupMatch[0]}
     ${caisseGroupedDeltaMatch[0]}
     ${caisseGroupedRemoveMatch[0]}
-    return { applyGroupedLineQtyDelta, removeGroupedLine };
+    ${caisseInitialSelectionsMatch[0]}
+    ${caisseBuildFormulaGroupMatch[0]}
+    ${caisseReplaceFormulaGroupMatch[0]}
+    return { applyGroupedLineQtyDelta, removeGroupedLine, formulaInitialSelections, buildCaisseFormulaGroup, replaceFormulaGroup };
   `)();
   const caisseFormulaLines = [
     { uid: 'cash-parent', id: 'f-brunch', kind: 'formula', formulaUid: 'cash-f1', qty: 1 },
@@ -566,6 +577,44 @@ if (!caisseFormulaGroupMatch || !caisseGroupedDeltaMatch || !caisseGroupedRemove
   ok(/cart = removeGroupedLine\(cart, uid\)/.test(caisseSource) && /tableOrders\[selectedId\] = removeGroupedLine\(tableOrders\[selectedId\], uid\)/.test(caisseSource), 'caisse review trash routes takeaway and table formulas through grouped removal');
   ok(/l\.sent \|\| l\.kind === 'formula-part' \? ''/.test(caisseSource) && /l\.kind === 'formula-part' \? `<span class="rp-sent-qty">/.test(caisseSource), 'caisse component rows expose no independent delete or quantity controls');
   ok(/if \(!res\.ok \|\| !data \|\| !data\.ok\) throw/.test(confirmCaisseVoidMatch[0]) && /catch \(err\) \{[\s\S]*?return;/.test(confirmCaisseVoidMatch[0]), 'caisse failed kitchen void preserves local formula group for retry');
+
+  const editSlots = [
+    { id: 'bread', label: 'Pain', choices: [{ itemId: 'p1', extra: 0 }, { itemId: 'p2', extra: 8 }] },
+    { id: 'drink', label: 'Boisson', choices: [{ itemId: 'b1', extra: 0 }, { itemId: 'b2', extra: 5 }] }
+  ];
+  const editGroups = [{ id: 'milk', name: 'Lait', choices: [{ id: 'oat', name: 'Avoine', price: 2 }] }];
+  const initialFormula = {
+    parent: { uid: 'parent-stable', id: 'formula-1', formulaUid: 'formula-stable', qty: 2, note: 'Sans sel', opts: [{ g: 'milk', c: 'oat' }] },
+    parts: [
+      { uid: 'bread-stable', id: 'p1', formulaUid: 'formula-stable', formulaSlotId: 'bread', lineId: 'line-bread', note: 'Bien grillé', qty: 2 },
+      { uid: 'drink-old', id: 'b1', formulaUid: 'formula-stable', formulaSlotId: 'drink', lineId: 'line-drink', note: '', qty: 2 }
+    ]
+  };
+  const initialPicked = caisseGroupHarness.formulaInitialSelections(editSlots, editGroups, initialFormula);
+  ok(initialPicked.picked.bread[0] === 0 && initialPicked.picked.drink[0] === 0, 'formula editor preselects the current included bread and drink');
+  ok(initialPicked.optPicked.milk[0] === 'oat', 'formula editor preselects the current paid option');
+
+  initialPicked.picked.drink = [1];
+  const editItems = {
+    p1: { id: 'p1', name: 'Pain complet' }, p2: { id: 'p2', name: 'Brioche' },
+    b1: { id: 'b1', name: 'Café' }, b2: { id: 'b2', name: 'Jus' }
+  };
+  const editedGroup = caisseGroupHarness.buildCaisseFormulaGroup(
+    { id: 'formula-1', name: 'Formule Midi', price: 100 }, editSlots, editGroups,
+    initialPicked.picked, initialPicked.optPicked, choice => editItems[choice.itemId], initialFormula
+  );
+  ok(editedGroup.parent.uid === 'parent-stable' && editedGroup.parent.formulaUid === 'formula-stable' && editedGroup.parent.qty === 2, 'formula edit preserves parent identity, formulaUid, and quantity');
+  ok(editedGroup.parent.note === 'Sans sel' && editedGroup.parent.price === 107 && editedGroup.parent.optSig === 'oat', 'formula edit preserves parent note and recalculates extras to 107 MAD');
+  ok(editedGroup.parts.find(part => part.id === 'p1').uid === 'bread-stable' && editedGroup.parts.find(part => part.id === 'p1').note === 'Bien grillé', 'unchanged formula component preserves its identity and kitchen note');
+  ok(editedGroup.parts.find(part => part.id === 'b2').uid !== 'drink-old' && editedGroup.parts.find(part => part.id === 'b2').qty === 2, 'changed formula component gets a fresh identity with synchronized quantity');
+
+  const replacedEdit = caisseGroupHarness.replaceFormulaGroup(
+    [{ uid: 'before' }, initialFormula.parent, ...initialFormula.parts, { uid: 'after' }],
+    'formula-stable', editedGroup
+  );
+  ok(replacedEdit.map(line => line.uid).join('|') === `before|parent-stable|bread-stable|${editedGroup.parts[1].uid}|after`, 'formula edit atomically replaces the group in place without moving unrelated lines');
+  ok(/!l\.sent && l\.kind === 'formula'/.test(caisseSource) && /data-review-action="edit-formula"/.test(caisseSource) && /editFormulaLine\(row\.dataset\.reviewUid\)/.test(caisseSource), 'review modal exposes Modifier only for unsent formula parents and wires it to editing');
+  ok(/cart = replaceFormulaGroup\(cart, parent\.formulaUid, replacement\)/.test(caisseSource) && /tableOrders\[selectedId\] = replaceFormulaGroup\(tableOrders\[selectedId\], parent\.formulaUid, replacement\)/.test(caisseSource), 'formula editor replaces takeaway and table groups through the same atomic helper');
 }
 
 const serveurGroupedDeltaMatch = serveurSource.match(/function applyGroupedLineQtyDelta\(lines, line, delta, adjustSentQty\) \{[\s\S]*?\n    \}/);
@@ -1088,7 +1137,7 @@ if (!renderSlotsMatch) {
 }
 
 // ── 10. Hard Count Pinning ──────────────────────────────────────────────────
-const EXPECTED_COUNT = 114;
+const EXPECTED_COUNT = 123;
 ok(passed + 1 === EXPECTED_COUNT, `exact control count verified (${passed + 1}/${EXPECTED_COUNT})`);
 
 console.log(`\n✓ ${passed} controls green (${failures.length} failure(s))`);

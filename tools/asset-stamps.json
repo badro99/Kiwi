@@ -47,6 +47,10 @@
     "v": "10",
     "sha": "be6f22488f18d3ff"
   },
+  "assets/boutique-catalog.js": {
+    "v": "1",
+    "sha": "c5588854197eb122"
+  },
   "assets/boutique-promos-dashboard.js": {
     "v": "4",
     "sha": "11e22450950ed7f8"
@@ -80,8 +84,8 @@
     "sha": "112638dbbb35294e"
   },
   "assets/caisse-pwa.js": {
-    "v": "427",
-    "sha": "4deb0bc45bd0eda5"
+    "v": "428",
+    "sha": "8c1213b6a5824312"
   },
   "assets/caisse-skin.css": {
     "v": "3",
@@ -127,9 +131,13 @@
     "v": "3",
     "sha": "94d688b1b5cdb89a"
   },
+  "assets/dashboard-native.js": {
+    "v": "1",
+    "sha": "cd751f73c0180449"
+  },
   "assets/dashboard-pwa.js": {
-    "v": "426",
-    "sha": "cfad0ab524a17751"
+    "v": "427",
+    "sha": "50904de8cc88425a"
   },
   "assets/dateRange.js": {
     "v": "14",
@@ -160,8 +168,8 @@
     "sha": "aa550a22766dac1a"
   },
   "assets/employee-live.js": {
-    "v": "425",
-    "sha": "471b72041e9a317f"
+    "v": "426",
+    "sha": "1776c80e41811d17"
   },
   "assets/employee-planning.js": {
     "v": "8",
