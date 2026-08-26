@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
 import path from 'node:path';
+import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 
@@ -527,6 +528,69 @@ ok(liveSocketSource.includes('window.KiwiLiveSocket = {')
   && serviceSource.includes("KiwiLiveSocket.on(merchant, 'service', pollServiceSync)")
   && serviceSource.includes('window.KiwiLiveSocket && KiwiLiveSocket.live()'),
   'la socket de réveil ne remplace jamais le journal KiwiLive ni sa boucle automatique');
+function exerciseColdSocketRecovery(source) {
+  let timerId = 0;
+  const timers = new Map();
+  const sockets = [];
+  const onlineHandlers = [];
+  const visibilityHandlers = [];
+  class FakeWebSocket {
+    constructor(url) { this.url = url; sockets.push(this); }
+    send() {}
+    close() {}
+  }
+  const document = {
+    visibilityState: 'visible',
+    addEventListener(type, fn) {
+      if (type === 'visibilitychange') visibilityHandlers.push(fn);
+    },
+  };
+  const window = {
+    addEventListener(type, fn) {
+      if (type === 'online') onlineHandlers.push(fn);
+    },
+  };
+  const context = {
+    window, document, WebSocket: FakeWebSocket,
+    location: { protocol: 'https:', host: 'kiwi.test' },
+    encodeURIComponent,
+    setTimeout(fn, delay) {
+      const id = ++timerId;
+      timers.set(id, { fn, delay });
+      return id;
+    },
+    clearTimeout(id) { timers.delete(id); },
+    setInterval() { return ++timerId; },
+    clearInterval() {},
+  };
+  vm.runInNewContext(source, context);
+  window.KiwiLiveSocket.on('amira-cafe', 'caisse', () => {});
+
+  const failCurrent = () => sockets[sockets.length - 1].onclose();
+  const runNextRetry = () => {
+    const next = [...timers.entries()].sort((a, b) => a[1].delay - b[1].delay)[0];
+    if (!next) return null;
+    timers.delete(next[0]);
+    next[1].fn();
+    return next[1].delay;
+  };
+  failCurrent(); runNextRetry();
+  failCurrent(); runNextRetry();
+  failCurrent();
+  const coldDelay = [...timers.values()].map((entry) => entry.delay).sort((a, b) => b - a)[0] || 0;
+  const beforeOnline = sockets.length;
+  onlineHandlers.forEach((fn) => fn());
+  return {
+    coldDelay,
+    onlineOpened: sockets.length === beforeOnline + 1,
+    visibilityWired: visibilityHandlers.length > 0,
+  };
+}
+const coldSocketRecovery = exerciseColdSocketRecovery(liveSocketSource);
+ok(coldSocketRecovery.coldDelay >= 60000,
+  'trois refus à froid passent sur un repli long au lieu de tuer la socket pour la page');
+ok(coldSocketRecovery.onlineOpened && coldSocketRecovery.visibilityWired,
+  'le retour réseau et le retour au premier plan relancent immédiatement la socket froide');
 ok(caisseSource.includes('setInterval(pollLiveTeam, 1000)'),
   'la caisse reflète en direct les employés pointés, en pause et sortis');
 ok(caisseSource.includes('function startEmployeeSaleJournalSync()')

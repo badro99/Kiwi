@@ -24,13 +24,14 @@
    * six écritures et donc six pokes ; il n'en faut qu'une relecture. */
   var COALESCE_MS = 400;
 
-  /* Trois ouvertures ratées d'affilée et on abandonne DÉFINITIVEMENT pour la
-   * durée de la page. Un WebSocket ne peut pas lire le code HTTP du refus :
-   * binding absent (503), droits refusés (403) et proxy hostile se présentent
-   * tous comme une fermeture immédiate. Sans ce compteur, une caisse chez un
-   * commerçant où la fonctionnalité n'est pas déployée réessaierait toute la
-   * journée. */
+  /* Trois ouvertures ratées d'affilée passent sur un repli d'une minute. Un
+   * WebSocket ne peut pas lire le code HTTP du refus : binding absent (503),
+   * droits refusés (403) et proxy hostile se présentent tous comme une fermeture
+   * immédiate. On évite donc la boucle courte sans condamner un poste ouvert
+   * pendant un déploiement ou une coupure Wi-Fi à rester dégradé jusqu'au prochain
+   * rechargement. */
   var MAX_COLD_FAILURES = 3;
+  var COLD_RETRY_MS = 60000;
 
   /* Reconnexion — seulement après une socket qui avait bien vécu. */
   var BACKOFF = [2000, 5000, 15000, 30000];
@@ -42,7 +43,6 @@
   var opened = false;      // socket effectivement ouverte à l'instant
   var everOpened = false;  // au moins une ouverture réussie depuis le début
   var coldFailures = 0;
-  var gaveUp = false;
   var attempt = 0;
   var subs = [];
   var coalesceTimer = null;
@@ -68,16 +68,16 @@
     sock = null;
   }
 
-  function retry() {
-    if (gaveUp || retryTimer || !cfg) return;
-    var wait = BACKOFF[Math.min(attempt, BACKOFF.length - 1)];
-    attempt++;
+  function retry(coldWait) {
+    if (retryTimer || !cfg) return;
+    var wait = coldWait || BACKOFF[Math.min(attempt, BACKOFF.length - 1)];
+    if (!coldWait) attempt++;
     retryTimer = setTimeout(function () { retryTimer = null; open(); }, wait);
   }
 
   function open() {
-    if (gaveUp || sock || !cfg) return;
-    if (typeof WebSocket === 'undefined') { gaveUp = true; return; }
+    if (sock || !cfg) return;
+    if (typeof WebSocket === 'undefined') return;
 
     var proto = location.protocol === 'https:' ? 'wss://' : 'ws://';
     var url = proto + location.host + '/api/live/socket'
@@ -85,7 +85,7 @@
       + '&role=' + encodeURIComponent(cfg.role);
 
     var ws;
-    try { ws = new WebSocket(url); } catch (_) { gaveUp = true; return; }
+    try { ws = new WebSocket(url); } catch (_) { retry(COLD_RETRY_MS); return; }
     sock = ws;
 
     ws.onopen = function () {
@@ -112,12 +112,29 @@
       if (wasOpen || everOpened) { retry(); return; }
       /* Fermée sans jamais s'être ouverte : refus, pas panne. */
       coldFailures++;
-      if (coldFailures >= MAX_COLD_FAILURES) { gaveUp = true; return; }
+      if (coldFailures >= MAX_COLD_FAILURES) { retry(COLD_RETRY_MS); return; }
       retry();
     };
 
     ws.onerror = function () { /* onclose suit toujours */ };
   }
+
+  /* Un retour réseau ou un poste que l'employé reprend en main est une preuve
+   * plus fraîche que les trois refus initiaux. On annule le repli long et on
+   * tente tout de suite, sans multiplier les sockets si l'ancienne vit encore. */
+  function wake() {
+    if (!cfg || sock) return;
+    if (retryTimer) { clearTimeout(retryTimer); retryTimer = null; }
+    coldFailures = 0;
+    attempt = 0;
+    open();
+  }
+  try { window.addEventListener('online', wake); } catch (_) {}
+  try {
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible') wake();
+    });
+  } catch (_) {}
 
   /* Keep the wake-up socket separate from assets/live-link.js. That module
    * deliberately owns `window.KiwiLive` for the durable sales ledger. Sharing
@@ -150,7 +167,6 @@
       attempt = 0;
       coldFailures = 0;
       everOpened = false;
-      gaveUp = false;
     },
   };
 })();
