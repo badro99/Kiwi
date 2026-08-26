@@ -1309,6 +1309,7 @@
           <button class="mz-nav-it" data-mz-view="clientes"><i data-lucide="users"></i><span>Clients</span><b class="mz-nav-badge" id="mz-badge-cl"></b></button>
         </nav>
         <div class="mz-rail-foot">
+          <button class="mz-lock" data-action="printer-connect" title="Configurer les imprimantes"><i data-lucide="printer"></i><span>Imprimantes</span></button>
           <button class="mz-net" id="mz-net" title="${IS_DEMO ? 'Simuler une coupure réseau' : 'État de la synchronisation'}">
             <i class="mz-net-dot"></i><span class="mz-net-label">En ligne</span>
           </button>

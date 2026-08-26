@@ -1245,6 +1245,7 @@
           <button class="bq-nav-it" data-bq-view="clientes"><i data-lucide="users"></i><span>Clientes</span><b class="bq-nav-badge" id="bq-badge-cl"></b></button>
         </nav>
         <div class="bq-rail-foot">
+          <button class="bq-lock" data-action="printer-connect" title="Configurer les imprimantes"><i data-lucide="printer"></i><span>Imprimantes</span></button>
           <button class="bq-net" id="bq-net" title="${IS_DEMO ? 'Simuler une coupure réseau' : 'État de la synchronisation'}">
             <i class="bq-net-dot"></i><span class="bq-net-label">En ligne</span>
           </button>

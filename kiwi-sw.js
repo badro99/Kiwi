@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted · fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v483';
+var CACHE = 'kiwi-app-v484';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -139,13 +139,13 @@ var SHELL = [
   // offline with no table geometry at all.
   '/assets/floorplan-core.js?v=2050',
   '/assets/oppo-cards.js',
-  '/assets/dashboard-pwa.js?v=427',
+  '/assets/dashboard-pwa.js?v=428',
   '/assets/dashboard-native.js?v=1',
   '/assets/pwa-update.js?v=359',
   '/assets/caisse-skin.css?v=3',
   '/assets/pos-mobile.css?v=3',
   '/assets/caisse-motion.js',
-  '/assets/caisse-pwa.js?v=428',
+  '/assets/caisse-pwa.js?v=429',
   '/assets/vendor/dexie.min.js',
   '/assets/offline-db.js?v=3',
   '/assets/platform-kernel.js?v=5',
@@ -228,7 +228,7 @@ var SHELL = [
   '/assets/stock-identity.js?v=2',
   '/assets/restaurant-recipes.js?v=7',
   '/assets/restaurant-units.js',
-  '/assets/employee-live.js?v=426',
+  '/assets/employee-live.js?v=427',
   '/assets/employee-planning.js?v=8',
   '/assets/employee-trade-shell.css?v=2',
   '/assets/employee-trade-shell.js?v=2',
@@ -268,8 +268,8 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=8',
-  '/assets/pos-boutique.js?v=8',
+  '/assets/pos-boutique.css?v=9',
+  '/assets/pos-boutique.js?v=9',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */
@@ -301,8 +301,8 @@ var SHELL = [
   '/assets/pos-gym.js?v=5',
   '/assets/pos-autre.css?v=2',
   '/assets/pos-autre.js?v=2',
-  '/assets/pos-maison.css?v=19',
-  '/assets/pos-maison.js?v=19',
+  '/assets/pos-maison.css?v=20',
+  '/assets/pos-maison.js?v=20',
   '/assets/caisse-pairing.js?v=15',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là

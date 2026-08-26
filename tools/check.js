@@ -904,6 +904,7 @@ section('Whole-project regressions');
     'bump-stamp-test.mjs',
     'pos-registry-sync-test.mjs',
     'pos-maison-test.mjs',
+    'boutique-printer-settings-test.mjs',
     /* Le panneau d'activation : il doit pouvoir se fermer. Il ne le pouvait
        pas, et rien ne le disait — voir l'en-tête de la suite. */
     'entitlements-test.mjs',
