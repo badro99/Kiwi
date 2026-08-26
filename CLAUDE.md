@@ -405,10 +405,27 @@ merchant PINs, so rotate those before running any doc pass.
 
 ## 9. This checkout's environment
 
-- **The repo lives on an iCloud-synced Desktop.** That is why `.git/index` has been
-  wiped repeatedly mid-session and why ~30 `* 2.*` conflict copies keep reappearing.
-  If a git command fails strangely, check for a stale zero-byte `.git/index.lock`
-  before theorising. Moving the repo off iCloud is a standing recommendation.
+- **Work in `/Users/zaka/Developer/kiwi`. It is the healthy checkout.** (2026-08-26)
+  The old copy at `/Users/zaka/Desktop/kiwi` sits on the iCloud-synced Desktop and
+  is progressively rotting: macOS evicts files it then cannot re-download, and a
+  `read()` on an evicted file **blocks forever at 0% CPU** instead of erroring.
+  Measured that day: 1 unreadable ref in the morning, 33 by the evening (including
+  the local branches `feat/inventory-complete` and `codex/menu-nutrition-20260823`,
+  the tag `bridge-v1.4.0`, and most of `refs/remotes/`), plus 2 897 dataless files
+  under `.git/`. Freeing 12 GB did not bring them back.
+
+  Nothing was lost — the nutrition branch is merged into `main`,
+  `feat/inventory-complete` is on both mirrors, and the repo pushes no tags — but
+  do not run git there. The symptom does not look like a disk problem: `git push`
+  prints nothing, burns no CPU, and never returns, because `get_local_heads`
+  enumerates local refs and blocks on the evicted one. `ls` and `find` will NOT
+  reveal it; metadata survives eviction, only a read blocks. Diagnose with
+  `sample <pid> 3`, and detect with `find .git -type f -flags +dataless`.
+
+  The Developer clone is off iCloud, has 0 blocked refs and 0 dataless files, and
+  is 150 MB against the Desktop copy's 948 MB. If a git command hangs, check which
+  checkout you are in before theorising — and check for a stale zero-byte
+  `.git/index.lock` too, the older failure mode.
 - **Multiple Claude/Codex sessions share this working tree**, plus a stack of
   `/private/tmp/kiwi-*` worktrees. Leave files you didn't change alone, stage by
   path, and don't stash to clear someone else's work.
