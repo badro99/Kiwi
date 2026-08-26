@@ -5313,8 +5313,12 @@
     _truth: { tenderBucket, realMixRows, realTopProducts, realLowStock, realInsightSummary, buildRealHeroRec, buildRealHeatmapRec },
   };
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
-  else init();
+  function startDashboardRendering() {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });
+    else init();
+  }
+  if (window.KiwiDashboardBoot?.whenUnlocked) window.KiwiDashboardBoot.whenUnlocked(startDashboardRendering);
+  else startDashboardRendering();
 
   /* Ce fichier est `defer` : à son exécution readyState vaut déjà 'interactive',
    * donc init() part TOUT DE SUITE — avant pages-pro.js, chargé plus bas, qui

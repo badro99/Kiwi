@@ -127,7 +127,7 @@ var SHELL = [
   '/assets/pressing-products/baskets.png',
   '/assets/pressing-products/babouches.png',
   '/assets/demoClock.js',
-  '/assets/dateRange.js?v=14',
+  '/assets/dateRange.js?v=15',
   '/assets/mobile-nav.js?v=2',
   '/assets/liquid-lens.js',
   '/assets/pages.js?v=3',
@@ -212,7 +212,7 @@ var SHELL = [
   '/assets/venue-store.js?v=3',
   /* One stock across owner dashboard and till. Catalog metadata is a cloud
      document; quantities are append-only movements, both usable offline. */
-  '/assets/inventory-ledger.js?v=4',
+  '/assets/inventory-ledger.js?v=5',
   '/assets/caisse-stock-sync.js?v=9',
   '/assets/pos-inventory-count.js?v=4',
   '/assets/stock.js?v=34',
@@ -234,7 +234,7 @@ var SHELL = [
   '/assets/employee-trade-shell.js?v=2',
   '/assets/planning-core.js?v=8',
   '/assets/planning-ui.css?v=10',
-  '/assets/team.js?v=281',
+  '/assets/team.js?v=282',
   '/assets/menu-i18n.js?v=5',
   '/assets/restaurant-menu-workspace.js?v=66',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).

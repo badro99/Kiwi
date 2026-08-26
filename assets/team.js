@@ -1292,8 +1292,12 @@
     const wait = (pageActive && !hidden) ? LIVE_TEAM_FAST_MS : LIVE_TEAM_IDLE_MS;
     liveTeamTimer = setTimeout(() => { try { pollLiveTeam(); } catch (_) {} scheduleLiveTeam(); }, wait);
   }
-  scheduleLiveTeam();
-  try { document.addEventListener('visibilitychange', scheduleLiveTeam); } catch (_) {}
+  function startLiveTeamPolling() {
+    scheduleLiveTeam();
+    try { document.addEventListener('visibilitychange', scheduleLiveTeam); } catch (_) {}
+  }
+  if (window.KiwiDashboardBoot?.whenUnlocked) window.KiwiDashboardBoot.whenUnlocked(startLiveTeamPolling);
+  else startLiveTeamPolling();
 
   /* ═══════════════ HELPERS ═══════════════ */
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

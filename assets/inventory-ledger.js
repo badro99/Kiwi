@@ -212,11 +212,15 @@
     });
   }
 
-  window.addEventListener('online', sync);
-  window.addEventListener('focus', sync);
-  window.addEventListener('storage', function (e) { if (e.key && e.key.indexOf(PREFIX) === 0) subs.forEach(function (fn) { try { fn(); } catch (_) {} }); });
-  setInterval(sync, 20000);
-  setTimeout(sync, 1200);
+  function startBackgroundSync() {
+    window.addEventListener('online', sync);
+    window.addEventListener('focus', sync);
+    window.addEventListener('storage', function (e) { if (e.key && e.key.indexOf(PREFIX) === 0) subs.forEach(function (fn) { try { fn(); } catch (_) {} }); });
+    setInterval(sync, 20000);
+    setTimeout(sync, 1200);
+  }
+  if (window.KiwiDashboardBoot?.whenUnlocked) window.KiwiDashboardBoot.whenUnlocked(startBackgroundSync);
+  else startBackgroundSync();
 
   window.KiwiInventory = {
     isReal: real, merchant: merchant, add: add, reverse: reverse,
