@@ -61,7 +61,9 @@ export async function onRequestGet(context) {
   let row = null, hasCols = true;
   try {
     row = await context.env.DB.prepare(
-      `SELECT features, plan, type, city, mrr FROM merchant_config WHERE merchant = ?`
+      `SELECT features, plan, type, city, mrr, subscription_kind, billing_cycle,
+              subscription_start, subscription_end, trial_start, trial_end, trial_days
+         FROM merchant_config WHERE merchant = ?`
     ).bind(merchant).first();
   } catch (_) {
     hasCols = false;
@@ -77,7 +79,14 @@ export async function onRequestGet(context) {
     type: (row && row.type) || '',
     city: (row && row.city) || '',
     mrr: (row && row.mrr != null) ? Number(row.mrr) : null,
-    columns: { city: hasCols, mrr: hasCols },
+    subscriptionKind: (row && row.subscription_kind) || 'paid',
+    billingCycle: (row && row.billing_cycle) || 'monthly',
+    subscriptionStart: (row && row.subscription_start) || '',
+    subscriptionEnd: (row && row.subscription_end) || '',
+    trialStart: (row && row.trial_start) || '',
+    trialEnd: (row && row.trial_end) || '',
+    trialDays: (row && row.trial_days != null) ? Number(row.trial_days) : null,
+    columns: { city: hasCols, mrr: hasCols, lifecycle: hasCols },
   });
 }
 
@@ -122,6 +131,28 @@ export async function onRequestPut(context) {
   const mrr = (hasMrr && Number.isFinite(mrrNum) && mrrNum > 0)
     ? Math.min(Math.round(mrrNum), 10000000) : null;
 
+  const hasLifecycle = ['subscriptionKind', 'billingCycle', 'subscriptionStart',
+    'subscriptionEnd', 'trialStart', 'trialEnd', 'trialDays']
+    .some((key) => Object.prototype.hasOwnProperty.call(body, key));
+  const subscriptionKind = body.subscriptionKind === 'trial' ? 'trial' : 'paid';
+  const billingCycle = body.billingCycle === 'annual' ? 'annual' : 'monthly';
+  const isoDate = (value) => /^\d{4}-\d{2}-\d{2}$/.test(String(value || '')) ? String(value) : null;
+  const subscriptionStart = isoDate(body.subscriptionStart);
+  const subscriptionEnd = isoDate(body.subscriptionEnd);
+  const trialStart = isoDate(body.trialStart);
+  const trialEnd = isoDate(body.trialEnd);
+  const trialNum = Number(body.trialDays);
+  const trialDays = Number.isFinite(trialNum) && trialNum > 0 ? Math.min(Math.round(trialNum), 365) : null;
+
+  if (hasLifecycle) {
+    if (subscriptionKind === 'paid' && (!subscriptionStart || !subscriptionEnd || subscriptionEnd < subscriptionStart)) {
+      return json({ error: 'invalid-subscription-dates' }, 400);
+    }
+    if (subscriptionKind === 'trial' && (!trialStart || !trialEnd || trialEnd < trialStart || !trialDays)) {
+      return json({ error: 'invalid-trial-dates' }, 400);
+    }
+  }
+
   // L'état d'AVANT, lu avant d'écrire : c'est la seule façon de savoir ce qui a
   // changé, et donc quoi inscrire au journal. Couper un module n'efface aucune
   // donnée — le catalogue, les réservations, les notes restent dans leurs tables
@@ -139,11 +170,13 @@ export async function onRequestPut(context) {
      modules, eux, doivent s'enregistrer. La réponse dit alors `columns.city:
      false`, et la console affiche que la ville n'a PAS été retenue au lieu de
      laisser croire à un enregistrement complet. */
-  let columns = { city: true, mrr: true };
+  let columns = { city: true, mrr: true, lifecycle: true };
   try {
     await context.env.DB.prepare(
-      `INSERT INTO merchant_config (merchant, features, plan, type, account_id, city, mrr, updated_ts)
-       VALUES (?,?,?,?,?,?,?,?)
+      `INSERT INTO merchant_config (merchant, features, plan, type, account_id, city, mrr,
+         subscription_kind, billing_cycle, subscription_start, subscription_end,
+         trial_start, trial_end, trial_days, updated_ts)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
        ON CONFLICT(merchant) DO UPDATE SET
          features = excluded.features,
          plan = excluded.plan,
@@ -151,10 +184,19 @@ export async function onRequestPut(context) {
          account_id = ${hasOwner ? 'excluded.account_id' : 'merchant_config.account_id'},
          city = ${hasCity ? 'excluded.city' : 'merchant_config.city'},
          mrr = ${hasMrr ? 'excluded.mrr' : 'merchant_config.mrr'},
+         subscription_kind = ${hasLifecycle ? 'excluded.subscription_kind' : 'merchant_config.subscription_kind'},
+         billing_cycle = ${hasLifecycle ? 'excluded.billing_cycle' : 'merchant_config.billing_cycle'},
+         subscription_start = ${hasLifecycle ? 'excluded.subscription_start' : 'merchant_config.subscription_start'},
+         subscription_end = ${hasLifecycle ? 'excluded.subscription_end' : 'merchant_config.subscription_end'},
+         trial_start = ${hasLifecycle ? 'excluded.trial_start' : 'merchant_config.trial_start'},
+         trial_end = ${hasLifecycle ? 'excluded.trial_end' : 'merchant_config.trial_end'},
+         trial_days = ${hasLifecycle ? 'excluded.trial_days' : 'merchant_config.trial_days'},
          updated_ts = excluded.updated_ts`
-    ).bind(merchant, JSON.stringify(clean), plan, type, accountId, city, mrr, Date.now()).run();
+    ).bind(merchant, JSON.stringify(clean), plan, type, accountId, city, mrr,
+      subscriptionKind, billingCycle, subscriptionStart, subscriptionEnd,
+      trialStart, trialEnd, trialDays, Date.now()).run();
   } catch (_) {
-    columns = { city: false, mrr: false };
+    columns = { city: false, mrr: false, lifecycle: false };
     await context.env.DB.prepare(
       `INSERT INTO merchant_config (merchant, features, plan, type, account_id, updated_ts) VALUES (?,?,?,?,?,?)
        ON CONFLICT(merchant) DO UPDATE SET
@@ -171,6 +213,13 @@ export async function onRequestPut(context) {
     accountId: hasOwner ? accountId : undefined,
     city: hasCity ? city : undefined,
     mrr: hasMrr ? mrr : undefined,
+    subscriptionKind: hasLifecycle ? subscriptionKind : undefined,
+    billingCycle: hasLifecycle ? billingCycle : undefined,
+    subscriptionStart: hasLifecycle ? subscriptionStart : undefined,
+    subscriptionEnd: hasLifecycle ? subscriptionEnd : undefined,
+    trialStart: hasLifecycle ? trialStart : undefined,
+    trialEnd: hasLifecycle ? trialEnd : undefined,
+    trialDays: hasLifecycle ? trialDays : undefined,
     columns,
   });
 }

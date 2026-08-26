@@ -21,6 +21,10 @@ check('dashboard action remains available', html.includes('openDashboard(c.merch
 check('confidential view remains available', html.includes('openPrivateDashboard(c.merchant)'));
 check('caisse access remains available', html.includes('openCaisse(c)'));
 check('subscription activation remains available', html.includes('activateSubscription(c)'));
+check('monthly and annual billing are available', html.includes('value="monthly"') && html.includes('value="annual"'));
+check('paid subscriptions carry start and end dates', html.includes('id="biz-sub-start"') && html.includes('id="biz-sub-end"'));
+check('trials carry selectable duration and dates', html.includes('id="biz-trial-days"') && html.includes('id="biz-trial-start"') && html.includes('id="biz-trial-end"'));
+check('expiring subscriptions are surfaced at the top', html.includes('id="billing-alerts"') && html.includes('renderBillingAlerts(CRM_CLIENTS)'));
 check('store suspension remains available', html.includes('toggleStoreSuspend(c)'));
 check('account suspension remains available', html.includes('toggleSuspend(c)'));
 check('destructive store deletion remains guarded', html.includes('askDeleteStore(c)'));

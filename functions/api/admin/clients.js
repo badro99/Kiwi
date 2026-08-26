@@ -98,7 +98,9 @@ export async function onRequestGet(context) {
     try {
       // `city` est posée par l'opérateur (voir /api/admin/overview) : la console
       // la montre dans le roster ET la cherche, donc elle voyage avec la ligne.
-      cfg = await env.DB.prepare(`SELECT merchant, plan, type, account_id, name, status, city FROM merchant_config`).all();
+      cfg = await env.DB.prepare(`SELECT merchant, plan, type, account_id, name, status, city,
+        subscription_kind, billing_cycle, subscription_start, subscription_end,
+        trial_start, trial_end, trial_days FROM merchant_config`).all();
     } catch (_0) {
     try {
       cfg = await env.DB.prepare(`SELECT merchant, plan, type, account_id, name, status FROM merchant_config`).all();
@@ -115,6 +117,13 @@ export async function onRequestGet(context) {
       r.plan = c.plan || '';
       r.type = c.type || '';
       r.city = c.city || '';
+      r.subscription_kind = c.subscription_kind || 'paid';
+      r.billing_cycle = c.billing_cycle || 'monthly';
+      r.subscription_start = c.subscription_start || '';
+      r.subscription_end = c.subscription_end || '';
+      r.trial_start = c.trial_start || '';
+      r.trial_end = c.trial_end || '';
+      r.trial_days = c.trial_days == null ? null : Number(c.trial_days);
       if (c.status === 'suspended') r.store_status = 'suspended';
       if (c.status === 'pending') { r.store_status = 'pending'; r.subscription = 'pending'; }
       if (c.name) r.business = c.name;              // the store's own name

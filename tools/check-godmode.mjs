@@ -958,8 +958,43 @@ G('14bis · Vue d’ensemble — nos chiffres, et ce qu’on ne sait pas');
   db.prepare('DELETE FROM merchant_config WHERE merchant IN (?,?)').bind('demo-orpheline', 'rif-annexe').run();
 }
 
-/* ═══ 14 · MUTATIONS DANGEREUSES ET RÉVOCATION ════════════════════════════ */
-G('14 · Révocation — supprimer un droit coupe vraiment la session');
+/* ═══ 14 · ABONNEMENTS ET ESSAIS ══════════════════════════════════════════ */
+G('14 · Abonnements — cycles, essais et échéances restent attachés au magasin');
+{
+  const paid = await call(R.config, 'PUT', '/api/admin/config', { body: {
+    merchant:'amira-boutique', features:{}, plan:'pro', city:'Casablanca', mrr:399,
+    subscriptionKind:'paid', billingCycle:'annual',
+    subscriptionStart:'2026-08-27', subscriptionEnd:'2027-08-27',
+    trialStart:'', trialEnd:'', trialDays:15,
+  }});
+  ok(paid.status === 200 && paid.json.columns.lifecycle === true,
+    'un abonnement annuel est enregistré par la vraie route God Mode');
+  const paidRead = await call(R.config, 'GET', '/api/admin/config?merchant=amira-boutique');
+  ok(paidRead.json.subscriptionKind === 'paid' && paidRead.json.billingCycle === 'annual' &&
+     paidRead.json.subscriptionStart === '2026-08-27' && paidRead.json.subscriptionEnd === '2027-08-27',
+    'le cycle et ses deux dates sont relus sans mémoire locale');
+
+  const trial = await call(R.config, 'PUT', '/api/admin/config', { body: {
+    merchant:'amira-cafe', features:{}, plan:'basic',
+    subscriptionKind:'trial', billingCycle:'monthly', subscriptionStart:'', subscriptionEnd:'',
+    trialStart:'2026-08-27', trialEnd:'2026-09-11', trialDays:15,
+  }});
+  ok(trial.status === 200, 'une période d’essai à durée choisie est enregistrée');
+  const roster = await call(R.clients, 'GET', '/api/admin/clients');
+  const cafe = roster.json.clients.find((c) => c.merchant === 'amira-cafe');
+  ok(cafe && cafe.subscription_kind === 'trial' && cafe.trial_days === 15 && cafe.trial_end === '2026-09-11',
+    'le roster remonte l’essai et son échéance au bandeau de rappel');
+
+  const invalid = await call(R.config, 'PUT', '/api/admin/config', { body: {
+    merchant:'amira-cafe', features:{}, plan:'basic', subscriptionKind:'trial',
+    trialStart:'2026-09-11', trialEnd:'2026-08-27', trialDays:15,
+  }});
+  ok(invalid.status === 400 && invalid.json.error === 'invalid-trial-dates',
+    'le serveur refuse une échéance antérieure au début');
+}
+
+/* ═══ 15 · MUTATIONS DANGEREUSES ET RÉVOCATION ════════════════════════════ */
+G('15 · Révocation — supprimer un droit coupe vraiment la session');
 {
   /* Le contrôle visait `?merchant=…&email=…`, et il visait à côté depuis que la
      suppression d'UN établissement existe : avec un merchant, la route prend le

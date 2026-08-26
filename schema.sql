@@ -227,6 +227,20 @@ CREATE TABLE IF NOT EXISTS merchant_config (
   -- palier — c'est ce qui permet aussi d'inscrire une remise consentie.
   city       TEXT,
   mrr        INTEGER,
+
+  -- ── CYCLE COMMERCIAL ────────────────────────────────────────────────────
+  -- Ces champs sont administrés uniquement depuis God Mode. `billing_cycle`
+  -- décrit la périodicité du contrat payant ; les dates ISO (YYYY-MM-DD)
+  -- restent lisibles dans D1 et évitent les décalages de fuseau horaire.
+  -- `subscription_kind=trial` donne accès au magasin via status=active, tout en
+  -- conservant une échéance distincte et visible par l'opérateur.
+  subscription_kind  TEXT,          -- paid | trial (NULL = ancien contrat payé)
+  billing_cycle      TEXT,          -- monthly | annual
+  subscription_start TEXT,          -- YYYY-MM-DD
+  subscription_end   TEXT,          -- YYYY-MM-DD
+  trial_start        TEXT,          -- YYYY-MM-DD
+  trial_end          TEXT,          -- YYYY-MM-DD
+  trial_days         INTEGER,       -- durée convenue, en jours
   updated_ts INTEGER NOT NULL
 );
 -- Base déjà déployée : `node tools/d1-schema.mjs` dit ce qui manque.
@@ -1201,5 +1215,4 @@ CREATE TABLE IF NOT EXISTS inventory_count_events (
 );
 
 CREATE INDEX IF NOT EXISTS idx_inventory_count_events_merchant_count ON inventory_count_events (merchant, count_id, ts);
-
 
