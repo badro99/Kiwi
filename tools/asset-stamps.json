@@ -127,6 +127,10 @@
     "v": "3",
     "sha": "94d688b1b5cdb89a"
   },
+  "assets/dashboard-native.js": {
+    "v": "1",
+    "sha": "cd751f73c0180449"
+  },
   "assets/dashboard-pwa.js": {
     "v": "426",
     "sha": "cfad0ab524a17751"

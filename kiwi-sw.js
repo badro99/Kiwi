@@ -140,7 +140,7 @@ var SHELL = [
   '/assets/floorplan-core.js?v=2050',
   '/assets/oppo-cards.js',
   '/assets/dashboard-pwa.js?v=426',
-  '/assets/dashboard-native.js',
+  '/assets/dashboard-native.js?v=1',
   '/assets/pwa-update.js?v=359',
   '/assets/caisse-skin.css?v=3',
   '/assets/pos-mobile.css?v=3',
