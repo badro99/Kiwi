@@ -255,6 +255,59 @@
   const sizesOf   = (p) => Object.keys(p.sizes);
   const stockOf   = (p) => sizesOf(p).reduce((s, k) => s + p.sizes[k], 0);
   const stockAdd  = (pid, size, d) => { P[pid].sizes[size] = Math.max(0, (P[pid].sizes[size] || 0) + d); };
+  const canonicalPid = (pid) => (P[pid] && P[pid].id) || pid;
+  function colorKey(pid, color) {
+    const cat = window.KiwiBoutiqueCatalog;
+    const p = P[pid];
+    const exact = p && (p._variants || []).find((v) => String(v.colorId) === String(color));
+    return String(exact && cat && cat.colorFamily ? cat.colorFamily(exact) : color);
+  }
+  function variantStock(pid, size, color) {
+    const cat = window.KiwiBoutiqueCatalog;
+    const id = canonicalPid(pid);
+    if (cat && cat.variantStock) return cat.variantStock(id, size, color);
+    const p = P[pid];
+    const vs = (p && p._variants) || [];
+    return vs.reduce((sum, v) => {
+      const family = cat && cat.colorFamily ? cat.colorFamily(v) : v.colorId;
+      return String(v.size) === String(size) && (String(v.colorId) === String(color) || String(family) === String(color))
+        ? sum + Math.max(0, +v.stock || 0) : sum;
+    }, 0);
+  }
+  function ticketHeld(pid, size, color, ticket) {
+    const id = canonicalPid(pid);
+    const wantedColor = colorKey(pid, color);
+    const lines = ticket && ticket.lines ? ticket.lines : [];
+    return lines.reduce((sum, ln) => canonicalPid(ln.pid) === id
+      && String(ln.size) === String(size) && colorKey(ln.pid, ln.color) === wantedColor
+      ? sum + (+ln.qty || 0) : sum, 0);
+  }
+  function availableStock(pid, size, color, ticket) {
+    return Math.max(0, variantStock(pid, size, color) - ticketHeld(pid, size, color, ticket || state.ticket));
+  }
+  function firstFreeFor(p, color, ticket) {
+    return sizesOf(p).find((size) => availableStock(p.id, size, color, ticket) > 0) || null;
+  }
+  function ticketStockIssue(ticket) {
+    const seen = new Set();
+    for (const ln of ticket.lines || []) {
+      const id = canonicalPid(ln.pid);
+      const color = colorKey(ln.pid, ln.color);
+      const key = JSON.stringify([id, String(ln.size), color]);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const needed = ticketHeld(id, ln.size, color, ticket);
+      const onHand = variantStock(id, ln.size, color);
+      if (needed > onHand) return { pid: ln.pid, size: ln.size, color, needed, onHand };
+    }
+    return null;
+  }
+  function showStockIssue(issue) {
+    const p = P[issue.pid];
+    const label = p ? p.name : 'Article';
+    toast(`${label} · ${colorLabel(issue.color)} · ${issue.size}, stock insuffisant`,
+      `${issue.onHand} disponible${issue.onHand > 1 ? 's' : ''}, ${issue.needed} sur le ticket. Retirez la quantité manquante.`);
+  }
   /* Persist a COMMITTED stock movement (real vente / retour / échange) to the SHARED
      catalogue — the same base the owner's dashboard reads. stockAdd() above only moves
      the in-memory projection (live display + oversell guard for the open ticket); that
@@ -269,42 +322,18 @@
   /* La vente choisit une FAMILLE ("Bleu"), l'inventaire garde des variantes
      distinctes ("navy" et "blue" restent deux articles, deux stocks, deux codes
      — on ne fusionne jamais dans le dos du commerçant). Il faut donc décider
-     laquelle bouge, dans cet ordre : l'identifiant exact s'il correspond, sinon
-     la même famille EN AYANT du stock (une sortie ne doit pas creuser une
-     variante déjà vide pendant qu'une autre est pleine), sinon la même famille,
-     sinon la taille seule. Un retour (delta > 0) revient de préférence sur une
-     variante existante de la même famille. */
+     laquelle bouge : l'identifiant exact s'il correspond, puis les autres tons
+     de cette famille. Une SORTIE ne doit jamais emprunter le stock d'une autre
+     couleur. Un retour ancien sans couleur appariable garde, lui, le repli par
+     taille afin de ne pas perdre physiquement une pièce rendue. */
   function persistStock(pid, size, color, delta) {
-    if (!delta || !pvReal()) return;
+    if (!delta || !pvReal()) return true;
     try {
       const cat = window.KiwiBoutiqueCatalog;
-      if (!cat || !cat.listVariants || !cat.adjustStock) return;
-      const sameSize = (cat.listVariants(pid) || []).filter((x) => String(x.size) === String(size));
-      const fam = (x) => (cat.colorFamily ? cat.colorFamily(x) : x.colorId);
-      const covers = (x) => (x.stock || 0) >= -delta;
-      // Sur une SORTIE, « en avoir » passe avant « porter le même identifiant » :
-      // sinon une vente de bleu se déduirait d'une variante bleue déjà vide
-      // pendant que la variante marine, elle, est pleine — le magasin perdrait la
-      // sortie de son stock. Sur un RETOUR, l'identifiant exact suffit.
-      const matched = (delta < 0 && sameSize.find((x) => x.colorId === color && covers(x)))
-             || (delta < 0 && sameSize.find((x) => fam(x) === color && covers(x)))
-             || sameSize.find((x) => x.colorId === color)
-             || sameSize.find((x) => fam(x) === color);
-      /* Dernier recours : la couleur vendue n'existe pas du tout dans cette
-         taille. Ne rien bouger fausserait le total du magasin — la pièce est
-         bien sortie. Mais imputer en silence sur `sameSize[0]` écrivait « vente
-         de marine » sur un article que personne n'a pris, et creusait au hasard
-         une variante peut-être déjà vide pendant qu'une autre était pleine. On
-         retient donc d'abord une variante qui a réellement du stock, et on DIT
-         dans le motif que la couleur n'a pas été appariée : l'approximation
-         reste lisible dans le journal au lieu d'être maquillée en certitude. */
-      const v = matched || sameSize.find((x) => covers(x)) || sameSize[0];
-      /* Le MOTIF suit le mouvement. Le stock est désormais un journal
-         (assets/boutique-catalog.js) : « vente » et « retour » distinguent une
-         sortie au comptoir d'une reprise, ce qui rend le journal lisible le jour
-         où quelqu'un demande où sont passées douze pièces. */
-      if (v) cat.adjustStock(v.id, delta, (delta < 0 ? 'vente' : 'retour') + (matched ? '' : ' · couleur non appariée'));
-    } catch (_) {}
+      if (!cat || !cat.adjustVariantStock) return false;
+      const id = canonicalPid(pid);
+      return cat.adjustVariantStock(id, size, colorKey(pid, color), delta);
+    } catch (_) { return false; }
   }
   /* ══════════ UNE VENTE SORTIE DES LIVRES REND SON STOCK ═══════════════════
    * La console opérateur peut retirer une vente d'essai des livres (« god mode » ,
@@ -1439,7 +1468,7 @@
     const picks = [];
     for (const r of RAYONS) {
       for (const it of r.items) {
-        const size = firstFree(it);
+        const size = firstFreeFor(it, it.colors[0], { lines: picks });
         if (size) { picks.push({ pid: it.id, size, color: it.colors[0], qty: 1, remise: 0 }); }
         if (picks.length >= 2) break;
       }
@@ -1746,7 +1775,7 @@
       if (idx < 0) return;
       const ln = t.lines[idx];
       if (plus) {
-        if ((P[ln.pid].sizes[ln.size] || 0) <= 0) {
+        if (availableStock(ln.pid, ln.size, ln.color, t) <= 0) {
           toast(`${P[ln.pid].name} · ${ln.size}, plus de stock, dernière pièce déjà sur le ticket`);
           return;
         }
@@ -1793,8 +1822,10 @@
   /* central add — stock-aware, merges identical lines */
   function addToTicket(pid, cfg, opts) {
     const p = P[pid];
-    if ((p.sizes[cfg.size] || 0) < cfg.qty) {
-      toast(`${p.name} · ${cfg.size}, stock insuffisant`);
+    const available = availableStock(pid, cfg.size, cfg.color, state.ticket);
+    if (available < cfg.qty) {
+      toast(`${p.name} · ${colorLabel(cfg.color)} · ${cfg.size}, stock insuffisant`,
+        `${available} disponible${available > 1 ? 's' : ''}`);
       return false;
     }
     stockAdd(pid, cfg.size, -cfg.qty);
@@ -1817,8 +1848,8 @@
 
   function defaultSize(p) {
     const c = ticketClient();
-    if (!sheet.exchange && c && p.kind === 'taille' && (p.sizes[c.taille] || 0) > 0) return c.taille;
-    return firstFree(p) || sizesOf(p)[0];
+    if (!sheet.exchange && c && p.kind === 'taille' && availableStock(p.id, c.taille, sheet.color) > 0) return c.taille;
+    return firstFreeFor(p, sheet.color) || sizesOf(p)[0];
   }
 
   function openSheet(pid, opts) {
@@ -1844,7 +1875,8 @@
     const shPromo = promoFor(sheet.pid);
     const shBase = shPromo ? shPromo.price : p.price;
     const unit = Math.round(shBase * (100 - sheet.remise) / 100);
-    const canAdd = (p.sizes[sheet.size] || 0) > 0;
+    const available = availableStock(p.id, sheet.size, sheet.color);
+    const canAdd = available >= sheet.qty;
     const el = $('#bq-sheetm', root);
     el.innerHTML = `
       <button class="bq-modal-x" data-bq-close aria-label="Fermer"><i data-lucide="x"></i></button>
@@ -1866,7 +1898,7 @@
         <div class="bq-f-lbl">${sizeWord(p)} <span class="opt">· stock par taille en direct</span></div>
         <div class="bq-seg" data-lens-demo id="bq-size-seg">
           ${sizesOf(p).map((s) => {
-            const st = p.sizes[s];
+            const st = availableStock(p.id, s, sheet.color);
             const usual = !sheet.exchange && c && p.kind === 'taille' && s === c.taille;
             return `<button class="bq-seg-it ${s === sheet.size ? 'on' : ''}" data-lens-item data-bq-size="${esc(s)}" ${st === 0 ? 'disabled' : ''}>
               ${usual ? '<span class="bq-seg-usual">habituelle</span>' : ''}${esc(s)}<small>${st === 0 ? 'épuisé' : `${st} en stock`}</small></button>`;
@@ -1921,18 +1953,27 @@
       const b = e.target.closest('[data-bq-size]');
       if (!b || b.disabled) return;
       sheet.size = b.dataset.bqSize;
-      if (sheet.qty > (p.sizes[sheet.size] || 0)) sheet.qty = Math.max(1, p.sizes[sheet.size]);
+      const available = availableStock(p.id, sheet.size, sheet.color);
+      if (sheet.qty > available) sheet.qty = Math.max(1, available);
       $$('[data-bq-size]', el).forEach((x) => x.classList.toggle('on', x === b));
       refreshPrice();
     };
     // Le picker gère lui-même sélection, clavier et libellé au survol : on écoute
     // seulement le choix retenu.
-    $('#bq-colors', el).addEventListener('kc:change', (e) => { sheet.color = e.detail.value; });
+    $('#bq-colors', el).addEventListener('kc:change', (e) => {
+      sheet.color = e.detail.value;
+      if (availableStock(p.id, sheet.size, sheet.color) <= 0) {
+        sheet.size = firstFreeFor(p, sheet.color) || sizesOf(p)[0];
+      }
+      sheet.qty = Math.max(1, Math.min(sheet.qty, availableStock(p.id, sheet.size, sheet.color)));
+      renderSheet(); icons(); lens();
+    });
     const qMinus = $('#bq-qty-minus', el);
     if (qMinus) qMinus.onclick = () => { if (sheet.qty > 1) { sheet.qty--; refreshPrice(); } };
     const qPlus = $('#bq-qty-plus', el);
     if (qPlus) qPlus.onclick = () => {
-      if (sheet.qty >= (p.sizes[sheet.size] || 0)) { toast(`${p.name} · ${sheet.size}, ${p.sizes[sheet.size]} en stock, pas plus`); return; }
+      const available = availableStock(p.id, sheet.size, sheet.color);
+      if (sheet.qty >= available) { toast(`${p.name} · ${colorLabel(sheet.color)} · ${sheet.size}, ${available} en stock, pas plus`); return; }
       sheet.qty++; refreshPrice();
     };
     const remRow = $('#bq-remise', el);
@@ -2239,7 +2280,7 @@
                  : tot <= 3 ? { cls: 'low', label: 'Stock bas' }
                  : { cls: 'ok', label: 'Disponible' };
     const sizes = sizesOf(p).map((s) => {
-      const q = p.sizes[s] || 0;
+      const q = variantStock(p.id, s, lk.color);
       const cls = q === 0 ? 'out' : q <= 2 ? 'low' : '';
       const on = s === lk.size ? ' is-on' : '';
       return `<span class="bq-look-size ${cls}${on}"><b>${esc(s)}</b><i>${q}</i></span>`;
@@ -2574,10 +2615,11 @@
       const lk = state.lookup;
       if (!lk || !P[lk.pid]) return;
       const p = P[lk.pid];
-      const size = (p.sizes[lk.size] || 0) > 0 ? lk.size : firstFree(p);
-      if (!size) { toast(`${p.name}, épuisé dans toutes les tailles`); return; }
+      const color = lk.color || p.colors[0];
+      const size = availableStock(lk.pid, lk.size, color) > 0 ? lk.size : firstFreeFor(p, color);
+      if (!size) { toast(`${p.name} · ${colorLabel(color)}, épuisé dans toutes les tailles`); return; }
       switchView('vente');
-      addToTicket(lk.pid, { size, color: lk.color || p.colors[0], qty: 1, remise: 0 });
+      addToTicket(lk.pid, { size, color, qty: 1, remise: 0 });
     };
     icons();
     setTimeout(() => { const i = $('#bq-ean', panel); if (i) i.focus(); }, 60);
@@ -2599,15 +2641,19 @@
     }
     const p = P[pid];
     const c = ticketClient();
-    let size = (hit && hit.size && (p.sizes[hit.size] || 0) > 0) ? hit.size
-             : (c && p.kind === 'taille' && (p.sizes[c.taille] || 0) > 0) ? c.taille
-             : firstFree(p);
-    if (!size) {
-      toast(`${p.name}, épuisé dans toutes les tailles`);
-      return;
-    }
     const color = (hit && hit.colorId && p.colors.includes(hit.colorId)) ? hit.colorId
       : ((hit && hit.colorFamily && p.colors.includes(hit.colorFamily)) ? hit.colorFamily : p.colors[0]);
+    /* Un code-barres identifie une déclinaison exacte. S'il est épuisé, on ne
+       remplace jamais silencieusement un S noir scanné par la taille habituelle
+       de la cliente ou par une autre couleur. Le repli ne concerne que les
+       anciens codes produit qui ne portent aucune déclinaison. */
+    let size = hit ? hit.size
+      : (c && p.kind === 'taille' && availableStock(pid, c.taille, color) > 0) ? c.taille
+      : firstFreeFor(p, color);
+    if (!size || availableStock(pid, size, color) <= 0) {
+      toast(`${p.name} · ${colorLabel(color)}${size ? ' · ' + size : ''}, épuisé`);
+      return;
+    }
     addToTicket(pid, { size, color, qty: 1, remise: 0 }, { quiet: true });
     toast(`Bip, ${p.name} · ${size} sur le ticket (${fmtMAD(p.price)})`);
     if (state.view === 'vente') renderTicket();
@@ -2635,11 +2681,11 @@
       return;
     }
     const p = P[pid];
-    /* on affiche la variante scannée même si elle est à zéro — c'est justement le
-       stock qu'on vient vérifier. À défaut de taille scannée, la 1re taille. */
-    const size = (hit && hit.size && p.sizes[hit.size] != null) ? hit.size : (firstFree(p) || sizesOf(p)[0] || '');
     const color = (hit && hit.colorId && p.colors.includes(hit.colorId)) ? hit.colorId
       : ((hit && hit.colorFamily && p.colors.includes(hit.colorFamily)) ? hit.colorFamily : p.colors[0]);
+    /* on affiche la variante scannée même si elle est à zéro — c'est justement le
+       stock qu'on vient vérifier. À défaut de taille scannée, la 1re taille. */
+    const size = (hit && hit.size && p.sizes[hit.size] != null) ? hit.size : (firstFreeFor(p, color) || sizesOf(p)[0] || '');
     state.lookup = { pid, size, color, ean: code, at: new Date() };
     state.scanLog.unshift({ at: new Date(), ok: true, label: `${p.name}${size ? ' · ' + size : ''}, vérifié`, ean: code, pid, size });
     const tot = stockOf(p);
@@ -3252,6 +3298,12 @@
       toast('Vente suspendue', 'La tablette ne peut plus sécuriser la file hors-ligne. Contactez le support avant de continuer.');
       return;
     }
+    /* Le ticket tient une réservation LOCALE, tandis que le catalogue peut être
+       corrigé depuis l'inventaire ou un autre onglet pendant qu'il reste ouvert.
+       On relit donc les vraies déclinaisons avant même de consommer un numéro de
+       ticket. Une taille disponible dans une autre couleur ne compte pas. */
+    const stockIssue = ticketStockIssue(t);
+    if (stockIssue) { showStockIssue(stockIssue); return; }
     /* A cart left open over New Year's midnight belongs to the new annual
        sequence at payment time. It has not been printed or committed yet, so
        replacing the number is safe and prevents a January sale from consuming
@@ -3297,6 +3349,12 @@
       promo: tot.promo ? { amount: tot.promo, label: promoLabelForTicket(t) } : null,
       discount: tot.remise + tot.reward,
       customer: c ? { name: c.name, phone: c.phone, points: c.points, loyalty: (t.reward && t.reward.clientId === t.client) ? t.reward.label : '' } : null,
+      /* Deuxième lecture juste avant que la caissière choisisse son premier mode
+         de paiement : elle couvre une correction de stock arrivée pendant que
+         la fenêtre d'encaissement était ouverte, sans jamais bloquer un paiement
+         déjà commencé. */
+      stockCheck: () => ticketStockIssue(t),
+      onStockError: showStockIssue,
       waName: c ? firstName(c.name) : null, waPhone: c ? c.phone : null,
       onPaid: (parts) => {
         // Récompense fidélité effectivement portée sur ce ticket (attachée à cette
@@ -3563,6 +3621,14 @@
       }
       $$('[data-bq-m]', el).forEach((b) => {
         b.onclick = () => {
+          if (!settled.length && !avoirPart && opts.stockCheck) {
+            const issue = opts.stockCheck();
+            if (issue) {
+              closeVeil('#bq-pay-veil');
+              if (opts.onStockError) opts.onStockError(issue);
+              return;
+            }
+          }
           const m = b.dataset.bqM;
           if (m === 'especes') stepCash(portion());
           else if (m === 'carte') stepCard(portion());

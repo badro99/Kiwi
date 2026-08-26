@@ -1197,6 +1197,50 @@
 
   function productStock(pid) { return variantsOf(pid).reduce((s, v) => s + (v.stock || 0), 0); }
 
+  /* Stock vendable d'une déclinaison telle que la caisse la présente :
+     produit × taille × FAMILLE de couleur. compat() additionne volontairement
+     toutes les couleurs dans `sizes` pour les cartes produit ; cette somme ne
+     doit jamais servir à autoriser une vente de Noir quand seules les pièces
+     Blanches sont encore en rayon. Une couleur personnalisée reste appariée
+     par son identifiant exact. */
+  function variantStock(pid, size, color) {
+    const wantedSize = String(size == null ? '' : size);
+    const wantedColor = String(color == null ? '' : color);
+    return variantsOf(pid).reduce((sum, v) => {
+      if (String(v.size) !== wantedSize) return sum;
+      if (String(v.colorId) !== wantedColor && String(famOf(v)) !== wantedColor) return sum;
+      return sum + Math.max(0, +v.stock || 0);
+    }, 0);
+  }
+
+  /* Mouvement atomique sur la même déclinaison vendable. Une vente peut vider
+     plusieurs tons d'une même famille (Bleu + Bleu nuit), mais jamais une autre
+     couleur. On vérifie le total AVANT la première écriture : insuffisant veut
+     dire zéro mouvement, pas un stock à moitié décrémenté. Les vieux retours qui
+     ne portaient pas de couleur exacte gardent le repli par taille. */
+  function adjustVariantStock(pid, size, color, delta) {
+    delta = Math.trunc(+delta || 0);
+    if (!delta) return true;
+    const sameSize = variantsOf(pid).filter((v) => String(v.size) === String(size));
+    const matched = sameSize.filter((v) => String(v.colorId) === String(color) || String(famOf(v)) === String(color));
+    if (delta < 0) {
+      let remaining = -delta;
+      if (variantStock(pid, size, color) < remaining) return false;
+      batch(() => matched
+        .slice().sort((a, b) => (String(b.colorId) === String(color) ? 1 : 0) - (String(a.colorId) === String(color) ? 1 : 0))
+        .forEach((v) => {
+          if (!remaining) return;
+          const qty = Math.min(remaining, Math.max(0, +v.stock || 0));
+          if (qty) { adjustStock(v.id, -qty, 'vente'); remaining -= qty; }
+        }));
+      return remaining === 0;
+    }
+    const v = matched[0] || sameSize[0];
+    if (!v) return false;
+    adjustStock(v.id, delta, 'retour' + (matched.length ? '' : ' · couleur non appariée'));
+    return true;
+  }
+
   function normCode(s) { return String(s == null ? '' : s).trim(); }
 
   /* La référence commune, mise à plat avant d'être comparée. Elle est SAISIE À
@@ -1780,6 +1824,8 @@
     _ahead: () => ({ mine: ahead.mine, theirs: ahead.theirs }),
     archiveProduct: (id, v) => (load(), archiveProduct(id, v)), deleteProduct: (id) => (load(), deleteProduct(id)),
     productStock: (id) => (load(), productStock(id)),
+    variantStock: (id, size, color) => (load(), variantStock(id, size, color)),
+    adjustVariantStock: (id, size, color, delta) => (load(), adjustVariantStock(id, size, color, delta)),
     // variants
     // .slice() : variantsOf() rend le tableau vivant de l'index (voir index()).
     // À l'intérieur du module on ne fait que le lire ; dehors, une copie, pour

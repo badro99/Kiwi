@@ -48,8 +48,8 @@
     "sha": "be6f22488f18d3ff"
   },
   "assets/boutique-catalog.js": {
-    "v": "1",
-    "sha": "c5588854197eb122"
+    "v": "2",
+    "sha": "25ba1aa2e1a39f88"
   },
   "assets/boutique-promos-dashboard.js": {
     "v": "4",
@@ -412,12 +412,12 @@
     "sha": "530ff7c046c57b2c"
   },
   "assets/pos-boutique.css": {
-    "v": "9",
+    "v": "10",
     "sha": "374aa9562b323299"
   },
   "assets/pos-boutique.js": {
-    "v": "9",
-    "sha": "3c243836f092cab5"
+    "v": "10",
+    "sha": "2d7e647bc99acdd5"
   },
   "assets/pos-coiffure.css": {
     "v": "5",
@@ -429,7 +429,7 @@
   },
   "assets/pos-dispatch.js": {
     "v": "32",
-    "sha": "f30601f259a2a13f"
+    "sha": "5021a9187e98a9ae"
   },
   "assets/pos-epicerie.css": {
     "v": "5",

@@ -876,6 +876,7 @@ section('Whole-project regressions');
     'canonical-origin-test.mjs',
     'void-stock-test.js',
     'caisse-stock-test.mjs',
+    'boutique-variant-stock-test.mjs',
     'inventory-ledger-test.mjs',
     'stock-costing-migration-test.mjs',
     'stock-category-management-test.mjs',
