@@ -65,10 +65,14 @@
    * leftover value would keep it animating over a page that is no longer Vexel.
    */
   function syncMode() {
+    var mode = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+    /* CSS accepts either root during first paint, so both roots must always
+     * describe the same palette after a theme change. */
+    document.documentElement.setAttribute(MODE_ATTR, mode);
     var body = document.body;
     if (!body) return;
     if (!body.classList.contains(CLASS)) { body.removeAttribute(MODE_ATTR); return; }
-    body.setAttribute(MODE_ATTR, document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light');
+    body.setAttribute(MODE_ATTR, mode);
     paintGradient();
   }
 

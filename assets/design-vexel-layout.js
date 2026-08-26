@@ -1055,6 +1055,13 @@
     new MutationObserver(sync).observe(document.body, { attributes: true, attributeFilter: ['class'] });
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
-  else init();
+  function start() {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });
+    else init();
+  }
+
+  /* This adapter observes and recomposes the complete dashboard tree. Do not
+   * spend renderer time on profile-restored, hidden data behind the PIN gate. */
+  if (window.KiwiDashboardBoot?.whenUnlocked) window.KiwiDashboardBoot.whenUnlocked(start);
+  else start();
 })();

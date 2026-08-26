@@ -20,10 +20,9 @@
       document.documentElement.lang = lang;
       document.documentElement.dir = picked === 'ar' ? 'rtl' : 'ltr';
 
-      var theme = localStorage.getItem('kiwiDashTheme') || localStorage.getItem('kiwiTheme');
-      if (!theme && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        theme = 'dark';
-      }
+      /* Keep first paint aligned with KiwiDashTheme: a fresh dashboard starts
+         light and does not inherit the public site's or the OS preference. */
+      var theme = localStorage.getItem('kiwiDashTheme');
       var isDark = theme === 'dark';
       document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
       document.documentElement.setAttribute('data-vexel-mode', isDark ? 'dark' : 'light');
@@ -5219,7 +5218,7 @@
 <!-- Read the persisted Vexel climate while the document is still in <head>.
      The first line after <body> applies it before any visible markup exists. -->
 <script src="assets/dashboard-startup-gate.js?v=1"></script>
-<script src="assets/design-vexel.js?v=2077"></script>
+<script src="assets/design-vexel.js?v=2078"></script>
 <!-- Vitrine skin · the marketing site's COMPOSITION on the product's paper ·
      solid-set type at -0.06em, the +0.16em micro-label, real glass over a still
      field, one page-wide reveal. Not its palette: the two tiers are a decision
@@ -6414,7 +6413,7 @@
 <script src="assets/account.js?v=17" defer fetchpriority="low"></script>
 <script src="assets/design-2026.js" defer fetchpriority="low"></script>
 <script src="assets/design-ios27.js" defer fetchpriority="low"></script>
-<script src="assets/design-vexel-layout.js?v=2079" defer fetchpriority="low"></script>
+<script src="assets/design-vexel-layout.js?v=2080" defer fetchpriority="low"></script>
 <script src="assets/liquid-glass.js" defer fetchpriority="low"></script>
 <!-- Hotel vertical (assets/hotel.js) · powers 0000-onboarded hotels
      (wizard « Hôtel / Riad », starter pages on the live rack/folio
