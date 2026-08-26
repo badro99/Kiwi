@@ -1,0 +1,59 @@
+plugins { id 'com.android.application' }
+
+def signingFile = rootProject.file('keystore.properties')
+def signing = new Properties()
+if (signingFile.exists()) signing.load(new FileInputStream(signingFile))
+def storePath = signing['storeFile'] ?: System.getenv('KIWI_BRIDGE_KEYSTORE')
+def storePass = signing['storePassword'] ?: System.getenv('KIWI_BRIDGE_KEYSTORE_PASSWORD')
+def keyAliasValue = signing['keyAlias'] ?: System.getenv('KIWI_BRIDGE_KEY_ALIAS')
+def keyPass = signing['keyPassword'] ?: System.getenv('KIWI_BRIDGE_KEY_PASSWORD')
+def signedRelease = storePath && storePass && keyAliasValue && keyPass
+
+android {
+    namespace 'com.kiwios.printbridge'
+    compileSdk 35
+    defaultConfig {
+        applicationId 'com.kiwios.printbridge'
+        minSdk 26
+        targetSdk 35
+        versionCode 1
+        versionName '1.0.0'
+    }
+    signingConfigs {
+        release {
+            if (signedRelease) {
+                storeFile file(storePath)
+                storePassword storePass
+                keyAlias keyAliasValue
+                keyPassword keyPass
+            }
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            if (signedRelease) signingConfig signingConfigs.release
+        }
+    }
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.7.1'
+    implementation 'androidx.core:core:1.15.0'
+}
+
+configurations.configureEach {
+    exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk7'
+    exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk8'
+}
+
+tasks.register('requireReleaseSigning') {
+    doLast {
+        if (!signedRelease) throw new GradleException('Release signing is missing. Copy keystore.properties.example and keep the keystore outside Git.')
+    }
+}
+tasks.matching { it.name == 'assembleRelease' || it.name == 'bundleRelease' }.configureEach {
+    dependsOn tasks.named('requireReleaseSigning')
+}

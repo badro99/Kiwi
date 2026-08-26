@@ -75,6 +75,7 @@ em, i, cite, dfn, var { font-style: normal; }
       <div class="step">1 · Télécharger</div>
       <a class="dl" id="dl-primary" href="#" download>Télécharger pour Windows</a>
       <p class="others">Autres plateformes ·
+        <a id="dl-android" href="/downloads/kiwi-print-bridge.apk" download>Android</a> ·
         <a id="dl-win"   href="#" download>Windows</a> ·
         <a id="dl-mac"   href="#" download>macOS</a> ·
         <a id="dl-linux" href="#" download>Linux</a>
@@ -87,7 +88,7 @@ em, i, cite, dfn, var { font-style: normal; }
         <button class="os-tab" data-os="win">Windows</button>
         <button class="os-tab" data-os="mac">macOS</button>
         <button class="os-tab" data-os="linux">Linux</button>
-        <button class="os-tab" data-os="android">Android (Termux)</button>
+        <button class="os-tab" data-os="android">Android</button>
       </div>
       <div class="os-body" data-os="win">
         <ol class="run">
@@ -125,18 +126,11 @@ start "" /min "%USERPROFILE%\Downloads\kiwi-printer-bridge-win.exe"</code>
       </div>
       <div class="os-body" data-os="android">
         <ol class="run">
-          <li><b>Préparer le téléphone :</b> connectez-le au Wi-Fi du café, coupez les données mobiles (4G), et laissez-le branché sur secteur au comptoir.</li>
-          <li><b>Installer Termux depuis F-Droid :</b> installez l'application <b>Termux</b> via <a href="https://f-droid.org/packages/com.termux/" target="_blank" rel="noopener" style="color:var(--mint);text-decoration:underline">F-Droid</a> (ne pas utiliser la version Google Play Store, obsolète). Recommandé : installer aussi <b>Termux:Boot</b> sur F-Droid et l'ouvrir une fois.</li>
-          <li><b>Lancer l'installateur :</b> ouvrez Termux et collez :<br>
-            <code>curl -fsSL https://raw.githubusercontent.com/badro99/Kiwi/main/bridge/install-termux.sh | bash</code></li>
-          <li><b>Appairer avec la caisse iPad :</b><br>
-            Sur l'iPad dans Kiwi → icône imprimante (haut) → section <i>« Imprimer depuis un iPad ou une tablette · relais Kiwi »</i> → cliquez sur <b>« Associer un pont »</b>. Un code à 6 chiffres apparaît (15 min).<br>
-            Tapez ce code quand Termux vous le demande.</li>
-          <li><b>Si vous avez raté la question dans Termux :</b> redemandez un code sur l'iPad, puis dans Termux lancez :<br>
-            <code>curl -X POST -H 'Content-Type: application/json' -d '{"code":"123456"}' http://127.0.0.1:9110/kiwi/relay/pair</code><br>
-            (ou ouvrez <code>http://127.0.0.1:9110/</code> dans Chrome sur le téléphone pour le saisir).</li>
-          <li><b>Paramètres Android indispensables :</b> <i>Paramètres → Applications → Termux → Batterie</i> → sélectionnez <b>« Sans restriction »</b>. Laissez Termux tourner en arrière-plan (ne faites jamais « Exit » dans sa notification).</li>
-          <li><b>Tester l'impression sur l'iPad :</b> dans les réglages imprimante de la caisse → <i>Option avancée · imprimante réseau globale</i> → IP <code>192.168.11.199</code>, port <code>9100</code>, 80 mm, ESC/POS générique → <b>« Imprimer un ticket test »</b> → <b>Enregistrer</b>.</li>
+          <li>Téléchargez <b>Kiwi Print Bridge</b> avec le bouton ci-dessus. Si Android le demande, autorisez Chrome à <b>installer des applications inconnues</b>, puis installez l'APK.</li>
+          <li>Ouvrez l'application. Autorisez les notifications : la notification permanente confirme que le pont reste actif.</li>
+          <li>Dans Kiwi → <b>Imprimantes → Relais Kiwi → Associer un pont</b>, générez le code à 6 chiffres, puis saisissez-le dans Kiwi Print Bridge.</li>
+          <li>Dans <b>Paramètres Samsung → Applications → Kiwi Print Bridge → Batterie</b>, choisissez <b>Sans restriction</b>. Le pont redémarrera automatiquement avec la tablette.</li>
+          <li>Configurez l'adresse IP de chaque imprimante dans Kiwi. Pour vérifier le réseau immédiatement, saisissez aussi l'IP dans l'application et imprimez un ticket test.</li>
         </ol>
       </div>
     </div>
@@ -147,13 +141,14 @@ start "" /min "%USERPROFILE%\Downloads\kiwi-printer-bridge-win.exe"</code>
   <script>
   (function(){
     var BASE = 'https://github.com/badro99/Kiwi/releases/latest/download/';
-    var FILES = { win: 'kiwi-printer-bridge-win.exe', mac: 'kiwi-printer-bridge-macos.zip', linux: 'kiwi-printer-bridge-linux' };
+    var FILES = { win: 'kiwi-printer-bridge-win.exe', mac: 'kiwi-printer-bridge-macos.zip', linux: 'kiwi-printer-bridge-linux', android: '/downloads/kiwi-print-bridge.apk' };
     var LABEL = { win: 'Windows', mac: 'macOS', linux: 'Linux', android: 'Android' };
     function $(s){ return document.querySelector(s); }
 
     document.getElementById('dl-win').href   = BASE + FILES.win;
     document.getElementById('dl-mac').href   = BASE + FILES.mac;
     document.getElementById('dl-linux').href = BASE + FILES.linux;
+    document.getElementById('dl-android').href = FILES.android;
 
     function detectOS(){
       var p = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '';
@@ -166,9 +161,9 @@ start "" /min "%USERPROFILE%\Downloads\kiwi-printer-bridge-win.exe"</code>
     var os = detectOS();
     var prim = document.getElementById('dl-primary');
     if (os === 'android') {
-      prim.href = 'https://f-droid.org/packages/com.termux/';
-      prim.removeAttribute('download');
-      prim.textContent = 'Télécharger Termux sur F-Droid';
+      prim.href = FILES.android;
+      prim.setAttribute('download', '');
+      prim.textContent = 'Télécharger Kiwi Print Bridge pour Android';
     } else {
       prim.href = BASE + FILES[os];
       prim.setAttribute('download', '');

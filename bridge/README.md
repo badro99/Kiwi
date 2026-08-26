@@ -141,7 +141,13 @@ Then publish `dist/*` as a GitHub Release and point the app's download links at 
     sudo bash bridge/install-linux.sh --pair 123456
     ```
   - Le script installe le binaire dans `/usr/local/bin/kiwi-printer-bridge`, active le service systemd `kiwi-printer-bridge.service` et vérifie l'état sur `http://127.0.0.1:9110/`.
-- **Android / Termux (Box gratuite avec un vieux smartphone) :**
+- **Android — application Kiwi Print Bridge (recommandé) :**
+  - Téléchargez l'APK officiel sur `https://kiwi-os.com/downloads/kiwi-print-bridge.apk`.
+  - Installez-le, ouvrez-le, saisissez le code à 6 chiffres généré dans Kiwi, puis autorisez les notifications.
+  - Samsung : *Paramètres → Applications → Kiwi Print Bridge → Batterie → Sans restriction*.
+  - Le service d'impression reste actif avec une notification discrète et redémarre après le reboot.
+  - Le code source et le guide de signature sont dans `bridge/android/README.md`.
+- **Android / Termux (solution de secours) :**
   - **Préparation :** connectez le téléphone au Wi-Fi du café, coupez les données mobiles (4G), et laissez-le branché sur chargeur permanent.
   - **Installation :** installez **Termux** depuis [F-Droid](https://f-droid.org/packages/com.termux/) (ne pas utiliser la version Play Store, obsolète). Recommandé : installer aussi **Termux:Boot** sur F-Droid et l'ouvrir une fois.
   - **Lancement du script :** ouvrez Termux et lancez :
