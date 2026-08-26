@@ -5218,7 +5218,7 @@
 <link rel="stylesheet" href="assets/invoicing.css?v=6" />
 <!-- Read the persisted Vexel climate while the document is still in <head>.
      The first line after <body> applies it before any visible markup exists. -->
-<script src="assets/dashboard-boot.js?v=1"></script>
+<script src="assets/dashboard-boot.js?v=2"></script>
 <script src="assets/design-vexel.js?v=2077"></script>
 <!-- Vitrine skin · the marketing site's COMPOSITION on the product's paper ·
      solid-set type at -0.06em, the +0.16em micro-label, real glass over a still
@@ -6726,8 +6726,14 @@
       window.scrollTo({ top: 0 });
     } catch (_) {}
   }
+  let dashboardReadyAnnounced = false;
+  function announceDashboardReady() {
+    if (dashboardReadyAnnounced) return;
+    dashboardReadyAnnounced = true;
+    window.dispatchEvent(new Event('kiwi:dashboard-unlocked'));
+  }
   window.__kiwiLock = {
-    hide() { resetToDashboard(); lock.style.display = 'none'; },
+    hide() { resetToDashboard(); lock.style.display = 'none'; announceDashboardReady(); },
     show() { resetToDashboard(); lock.style.display = ''; document.documentElement.style.overflow = 'hidden'; setTimeout(() => { try { pinInput.focus(); } catch (_) {} }, 60); },
     reveal() { skipToApp(); },
     setGreetName,
@@ -6929,6 +6935,7 @@
       if (demoBar) demoBar.classList.remove('kw-bar-hidden');
       if (greet && greet.parentNode) greet.remove();
       document.body.classList.add('cards-enter');
+      announceDashboardReady();
     }, 880);
     setTimeout(() => {
       const h = window.Kiwi && window.Kiwi.handlers && window.Kiwi.handlers['onboard'];
@@ -7006,6 +7013,7 @@
     /* 3200 ms: greeting fully faded · remove from DOM. */
     setTimeout(() => {
       if (greet.parentNode) greet.remove();
+      announceDashboardReady();
     }, 3200);
   }
 
@@ -7023,6 +7031,7 @@
     if (app)     app.classList.remove('kw-app-hidden');
     if (demoBar) demoBar.classList.remove('kw-bar-hidden');
     document.body.classList.add('cards-enter');
+    announceDashboardReady();
     if (lock && lock.parentNode) {
       lock.classList.add('is-unlocking');
       setTimeout(() => { if (lock.parentNode) lock.remove(); }, 280);
