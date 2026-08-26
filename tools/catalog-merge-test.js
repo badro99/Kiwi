@@ -204,6 +204,32 @@ const vr = (stock, stockAt) => ({ id: 'var_1', productId: 'prod_1', size: 'M', s
 }
 
 /* ═══ 5 · SUPPRIMER PUIS FUSIONNER, PAR L'API PUBLIQUE ══════════════════════
+ * MEDIA REGRESSION (4b): a caisse may already know the product with blank media when
+ * the dashboard uploads the photo. The newer media state must cross devices. */
+{
+  const caisse = doc([vr(5, NOW)]);
+  caisse.products[0].photo = '';
+  caisse.products[0].video = '';
+  const dashboard = JSON.parse(JSON.stringify(caisse));
+  dashboard.products[0].photo = '/api/media/boutique/photo.jpg';
+  dashboard.products[0].mediaAt = NOW;
+  const added = C._merge(caisse, dashboard);
+  eq(added.products[0].photo, '/api/media/boutique/photo.jpg', 'la photo ajoutée au dashboard arrive en caisse');
+  eq(added.products[0].mediaAt, NOW, 'la date du média traverse la fusion');
+
+  const removed = JSON.parse(JSON.stringify(dashboard));
+  removed.products[0].photo = '';
+  removed.products[0].mediaAt = NOW + 1000;
+  eq(C._merge(dashboard, removed).products[0].photo, '', 'une suppression de photo plus récente arrive aussi en caisse');
+
+  const legacyCaisse = doc([vr(5, NOW)]);
+  const legacyDashboard = JSON.parse(JSON.stringify(legacyCaisse));
+  legacyDashboard.products[0].photo = '/api/media/boutique/legacy.jpg';
+  eq(C._merge(legacyCaisse, legacyDashboard).products[0].photo, '/api/media/boutique/legacy.jpg',
+    'une photo existante sans horodatage répare une ancienne caisse vide');
+}
+
+/* ═══ 5 · SUPPRIMER PUIS FUSIONNER, PAR L'API PUBLIQUE
  * On ne teste pas seulement la fonction : on vérifie que le geste réel
  * (deleteProduct) inscrit bien la suppression. Un tombstone que personne ne
  * pose ne protège rien. */

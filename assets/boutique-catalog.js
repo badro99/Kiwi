@@ -648,8 +648,31 @@
            récent des deux gagne, parce qu'un inventaire physique fait ce matin
            n'a pas à céder devant un chiffre d'hier. Les MOUVEMENTS ne sont
            arbitrés nulle part ici : ils sont réunis plus bas, tous. */
-        if (k !== 'variants') return;
         const kept = seen[e.id];
+        if (k === 'products') {
+          /* Product media is edited on the dashboard but consumed on caisse.
+             A caisse that already knew the product used to keep its older blank
+             `photo` forever because local metadata always won the merge. Keep a
+             small media clock so upload, replacement and removal all propagate.
+             Legacy documents have no clock: in that one migration case, a real
+             URL beats a blank value. */
+          const mineAt = +kept.mediaAt || 0;
+          const theirAt = +e.mediaAt || 0;
+          const mineMedia = !!(kept.photo || kept.video);
+          const theirMedia = !!(e.photo || e.video);
+          const differs = String(kept.photo || '') !== String(e.photo || '')
+            || String(kept.video || '') !== String(e.video || '');
+          if (theirAt > mineAt || (!mineAt && !theirAt && !mineMedia && theirMedia)) {
+            kept.photo = String(e.photo || '');
+            kept.video = String(e.video || '');
+            if (theirAt) kept.mediaAt = theirAt;
+            ahead.theirs = true;
+          } else if (differs && (mineAt > theirAt || mineMedia)) {
+            ahead.mine = true;
+          }
+          return;
+        }
+        if (k !== 'variants') return;
         if (kept === 1) return;
         if (baseAtOf(e) > baseAtOf(kept)) {
           kept.base = baseOf(e);
@@ -661,7 +684,7 @@
          et non seulement savoir qu'il existe. */
       ((mine && mine[k]) || []).forEach((e) => {
         if (!e || !e.id || gone[e.id] || seen[e.id]) return;
-        seen[e.id] = k === 'variants' ? e : 1;
+        seen[e.id] = (k === 'variants' || k === 'products') ? e : 1;
         list.push(e);
         if (!theirIds[e.id]) ahead.mine = true;   // créé ici, inconnu là-bas
       });
@@ -1303,12 +1326,14 @@
       // One medium per product: a video supersedes a photo and vice-versa.
       photo: String(data.photo || ''),
       video: String(data.video || ''),
+      mediaAt: +data.mediaAt || ((data.photo || data.video) ? Date.now() : 0),
       createdAt: Date.now(), archived: false,
     };
     db.products.push(p); ixAddProduct(p); commit(); return p;
   }
   function updateProduct(id, patch) {
     const p = prodById(id); if (!p) return null;
+    const mediaPatch = patch.photo !== undefined || patch.video !== undefined;
     ['name', 'categoryId', 'priceMAD', 'cost', 'art', 'kind', 'flag', 'grad', 'photo', 'video', 'sku',
      'marque', 'format', 'servicePieces', 'piecePriceMAD', 'motif', 'fragile', 'ownership', 'consignor'].forEach((k) => {
       if (patch[k] !== undefined) {
@@ -1327,6 +1352,7 @@
         }
       }
     });
+    if (mediaPatch) p.mediaAt = Date.now();
     commit(); return p;
   }
   function archiveProduct(id, val) { const p = prodById(id); if (p) { p.archived = val !== false; commit(); } return p; }

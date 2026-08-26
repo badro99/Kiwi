@@ -199,7 +199,7 @@ var SHELL = [
   '/assets/printer-bridge.js?v=8',
   '/assets/barcode.js',
   '/assets/color-palette.js',
-  '/assets/boutique-catalog.js',
+  '/assets/boutique-catalog.js?v=1',
   '/assets/store-templates.js?v=2',
   /* Les promotions. Dans la coquille avec le catalogue : hors ligne, une caisse
      qui a perdu ses promotions vend au prix plein pendant que la vitrine
