@@ -1002,9 +1002,25 @@ export async function onRequestPost(context) {
 
     if (!isCooking) {
       // ── Niveau 1 : Annulation immédiate (plat non entamé) ──────────────────
-      if (!isFormula && targetLine.qty > qtyToVoid) {
+      const directVoidQty = new Map();
+      if (isFormula) {
+        const primaryQty = Math.max(1, Math.round(Number(targetLine.qty) || 1));
+        const askedQty = Math.min(primaryQty, qtyToVoid);
+        const ratio = askedQty / primaryQty;
+        affectedLines.forEach(line => {
+          const lineQty = Math.max(1, Math.round(Number(line.qty) || 1));
+          const delta = line === targetLine
+            ? askedQty
+            : Math.max(1, Math.min(lineQty, Math.round(lineQty * ratio)));
+          directVoidQty.set(line, delta);
+          line.qty = Math.max(0, lineQty - delta);
+        });
+        lines = lines.filter(line => !affectedLines.includes(line) || Number(line.qty) > 0);
+      } else if (targetLine.qty > qtyToVoid) {
+        directVoidQty.set(targetLine, qtyToVoid);
         targetLine.qty -= qtyToVoid;
       } else {
+        affectedLines.forEach(line => directVoidQty.set(line, Math.max(1, Number(line.qty) || qtyToVoid)));
         lines = lines.filter(l => !affectedLines.includes(l));
       }
       const newTotal = lines.reduce((s, l) => s + ((Number(l.unitPrice ?? l.price) || 0) * (Number(l.qty) || 0)), 0);
@@ -1020,7 +1036,7 @@ export async function onRequestPost(context) {
           await env.DB.prepare(
             `INSERT INTO kitchen_voids (id, merchant, order_id, table_no, item_id, item_name, qty, price, reason, is_waste, actor, status, created_ts)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'approved', ?)`
-          ).bind(vId, merchant, targetOrder.id, targetOrder.table_no, affLine.id || affLine.uid || lineId, affLine.name || lineId, affLine.qty || qtyToVoid, affLine.unitPrice ?? affLine.price ?? 0, reason, isWaste, actor, now).run();
+          ).bind(vId, merchant, targetOrder.id, targetOrder.table_no, affLine.id || affLine.uid || lineId, affLine.name || lineId, directVoidQty.get(affLine) || qtyToVoid, affLine.unitPrice ?? affLine.price ?? 0, reason, isWaste, actor, now).run();
         } catch (err) {
           console.error('[queue] Failed to insert approved kitchen void record', vId, 'merchant', merchant);
         }

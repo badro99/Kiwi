@@ -7949,6 +7949,22 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
     let selectedVoidReason = 'client_change';
     let selectedVoidIsWaste = 0;
 
+    /* Le parent facturé et les composants gratuits sont atomiques. Le lien
+       formulaUid évite de toucher une boisson identique ajoutée hors formule. */
+    function applyGroupedLineQtyDelta(lines, line, delta, adjustSentQty) {
+      if (!line || line.kind === 'formula-part') return lines || [];
+      const members = line.formulaUid
+        ? (lines || []).filter(candidate => candidate.formulaUid === line.formulaUid)
+        : [line];
+      members.forEach(member => {
+        member.qty = Math.max(0, (+member.qty || 0) + delta);
+        if (adjustSentQty && member.sentQty != null) {
+          member.sentQty = Math.max(0, (+member.sentQty || 0) + delta);
+        }
+      });
+      return (lines || []).filter(member => (+member.qty || 0) > 0);
+    }
+
     function openVoidReasonModal(tableId, line) {
       voidLineTarget = { tableId: tableId, line: line };
       selectedVoidReason = 'client_change';
@@ -7992,14 +8008,12 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
           }
         } catch (err) {
           toast(`Annulation : ${err.message || 'erreur réseau'}`);
+          if (confirmBtn) confirmBtn.disabled = false;
+          return;
         }
       }
 
-      line.qty -= 1;
-      if (line.sentQty) line.sentQty = Math.max(0, line.sentQty - 1);
-      if (line.qty <= 0) {
-        tableOrders[tableId] = (tableOrders[tableId] || []).filter(l => l.uid !== line.uid);
-      }
+      tableOrders[tableId] = applyGroupedLineQtyDelta(tableOrders[tableId] || [], line, -1, true);
       markDirty(tableId);
       $('#void-reason-modal').classList.remove('is-open');
       if (confirmBtn) confirmBtn.disabled = false;
@@ -8039,10 +8053,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
 
       // Pre-send local modification
       if (!line.sentQty || (line.qty > line.sentQty && delta < 0 && line.qty - 1 >= line.sentQty)) {
-        line.qty += delta;
-        if (line.qty <= 0) {
-          tableOrders[tableId] = order.filter(l => l.uid !== uid && (!line.formulaUid || l.formulaUid !== line.formulaUid));
-        }
+        tableOrders[tableId] = applyGroupedLineQtyDelta(order, line, delta, false);
         markDirty(tableId);
         renderTableDetail();
         return;

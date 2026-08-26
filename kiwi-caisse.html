@@ -9440,12 +9440,36 @@
     })();
 
 
+    /* Une formule et ses composants gratuits forment une seule ligne métier.
+       Les laisser diverger fabrique des boissons à 0 MAD dès que le parent est
+       retiré. formulaUid est le lien strict : un article ajouté séparément,
+       même avec le même id qu'une boisson de formule, reste indépendant. */
+    function formulaGroup(lines, line) {
+      if (!line) return [];
+      if (!line.formulaUid) return [line];
+      return (lines || []).filter(candidate => candidate.formulaUid === line.formulaUid);
+    }
+
+    function applyGroupedLineQtyDelta(lines, line, delta) {
+      if (!line || line.kind === 'formula-part') return lines || [];
+      formulaGroup(lines, line).forEach(member => {
+        member.qty = Math.max(0, (+member.qty || 0) + delta);
+      });
+      return (lines || []).filter(member => (+member.qty || 0) > 0);
+    }
+
+    function removeGroupedLine(lines, uid) {
+      const line = (lines || []).find(candidate => candidate.uid === uid);
+      if (!line) return lines || [];
+      if (line.formulaUid) return lines.filter(candidate => candidate.formulaUid !== line.formulaUid);
+      return lines.filter(candidate => candidate.uid !== uid);
+    }
+
     /* Cart panel +/- · targets one specific line by its uid. */
     function changeCartLineQty(uid, delta) {
       const line = cart.find(c => c.uid === uid);
       if (!line) return;
-      line.qty += delta;
-      if (line.qty <= 0) cart = cart.filter(c => c.uid !== uid);
+      cart = applyGroupedLineQtyDelta(cart, line, delta);
       renderMenu();
       renderCart();
     }
@@ -9500,11 +9524,11 @@
       // Items with +/- controls
       let itemsHTML = cart.map(l => `
         <div class="rp-item rp-item--cart" data-cart-uid="${l.uid}">
-          <div class="qty-control">
+          ${l.kind === 'formula-part' ? `<span class="rp-sent-qty">${l.qty}×</span>` : `<div class="qty-control">
             <button class="qty-btn" data-cart-action="dec" aria-label="Moins">−</button>
             <span class="qty-num mono">${l.qty}</span>
             <button class="qty-btn" data-cart-action="inc" aria-label="Plus">+</button>
-          </div>
+          </div>`}
           <span class="rp-item-name">${lineName(l)}${(l.opts && l.opts.length) ? `<i class="rp-item-opts">${kdsEsc(optText(l.opts))}</i>` : ''}</span>
           <span class="rp-item-price mono">${fmtMAD(l.price * l.qty)}</span>
           <input class="rp-item-note${(l.note || '').trim() ? ' has-note' : ''}" data-note-uid="${l.uid}"
@@ -9689,7 +9713,9 @@
           return `
             <div class="or-item-card" data-review-uid="${l.uid}">
               <div class="or-item-stepper-col">
-                ${l.sent ? `
+                ${l.kind === 'formula-part' ? `
+                  <span class="or-item-sent-badge">Inclus</span>
+                ` : l.sent ? `
                   <span class="or-item-sent-badge">
                     ${KDS_SVG.check} En cuisine
                   </span>
@@ -9712,7 +9738,7 @@
               </div>
               <div class="or-item-price mono">${fmtMAD(l.price * l.qty)}</div>
               <div>
-                ${l.sent ? '' : `
+                ${l.sent || l.kind === 'formula-part' ? '' : `
                   <button class="or-item-del-btn" data-review-action="del" title="Supprimer la ligne" aria-label="Supprimer">
                     <i data-lucide="trash-2"></i>
                   </button>
@@ -9786,11 +9812,11 @@
         if (!row) return;
         const uid = row.dataset.reviewUid;
         if (mode === 'vrap') {
-          cart = cart.filter(c => c.uid !== uid);
+          cart = removeGroupedLine(cart, uid);
           renderMenu();
           renderCart();
         } else if (selectedId && tableOrders[selectedId]) {
-          tableOrders[selectedId] = tableOrders[selectedId].filter(l => l.uid !== uid);
+          tableOrders[selectedId] = removeGroupedLine(tableOrders[selectedId], uid);
           renderMenu();
           renderOrderPanel(selectedId);
         }
@@ -11011,6 +11037,7 @@
             })
           });
           const data = await res.json().catch(() => null);
+          if (!res.ok || !data || !data.ok) throw new Error((data && data.error) || 'void-failed');
           if (data && data.alertSent) {
             toast(`Alerte transmise en cuisine · ${line.name}`);
           } else {
@@ -11018,11 +11045,12 @@
           }
         } catch (err) {
           toast(`Annulation : ${err.message || 'erreur réseau'}`);
+          if (confirmBtn) confirmBtn.disabled = false;
+          return;
         }
       }
 
-      line.qty -= 1;
-      if (line.qty <= 0) tableOrders[tableId] = (tableOrders[tableId] || []).filter(l => l.uid !== line.uid);
+      tableOrders[tableId] = applyGroupedLineQtyDelta(tableOrders[tableId] || [], line, -1);
       const modal = $('#caisse-void-modal');
       if (modal) modal.classList.remove('is-open');
       if (confirmBtn) confirmBtn.disabled = false;
@@ -11105,8 +11133,7 @@
         if (delta < 0) openCaisseVoidModal(tableId, line);
         return;
       }
-      line.qty += delta;
-      if (line.qty <= 0) tableOrders[tableId] = tableOrders[tableId].filter(l => l.uid !== uid);
+      tableOrders[tableId] = applyGroupedLineQtyDelta(tableOrders[tableId], line, delta);
       renderMenu();
       renderOrderPanel(tableId);
     }
@@ -11187,11 +11214,11 @@
             ${(l.note || '').trim() ? `<span class="rp-item-noteline">Note cuisine · ${kdsEsc(l.note)}</span>` : ''}
           </div>` : `
           <div class="rp-item rp-item--cart" data-order-uid="${l.uid}">
-            <div class="qty-control">
+            ${l.kind === 'formula-part' ? `<span class="rp-sent-qty">${l.qty}×</span>` : `<div class="qty-control">
               <button class="qty-btn" data-cart-action="dec" aria-label="Moins">−</button>
               <span class="qty-num mono">${l.qty}</span>
               <button class="qty-btn" data-cart-action="inc" aria-label="Plus">+</button>
-            </div>
+            </div>`}
             <span class="rp-item-name">${lineName(l)}${(l.opts && l.opts.length) ? `<i class="rp-item-opts">${kdsEsc(optText(l.opts))}</i>` : ''}</span>
             <span class="rp-item-price mono">${fmtMAD(l.price * l.qty)}</span>
             <input class="rp-item-note${(l.note || '').trim() ? ' has-note' : ''}" data-note-uid="${l.uid}"

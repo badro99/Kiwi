@@ -536,18 +536,55 @@ ok(recordedLines[0].name === 'Tajine poulet' && recordedLines[0].total === 95, '
 ok(recordedLines[1].name === 'Formule Brunch' && recordedLines[1].total === 104 && recordedLines[1].kind === 'formula', 'recorded formula parent carries 104 MAD total');
 
 // ── 7. Void & Pre-send Cascade Extraction ───────────────────────────────────
+const caisseFormulaGroupMatch = caisseSource.match(/function formulaGroup\(lines, line\) \{[\s\S]*?\n    \}/);
+const caisseGroupedDeltaMatch = caisseSource.match(/function applyGroupedLineQtyDelta\(lines, line, delta\) \{[\s\S]*?\n    \}/);
+const caisseGroupedRemoveMatch = caisseSource.match(/function removeGroupedLine\(lines, uid\) \{[\s\S]*?\n    \}/);
+const confirmCaisseVoidMatch = caisseSource.match(/async function confirmCaisseVoid\(\) \{[\s\S]*?\n    \}/);
+
+if (!caisseFormulaGroupMatch || !caisseGroupedDeltaMatch || !caisseGroupedRemoveMatch || !confirmCaisseVoidMatch) {
+  ok(false, 'caisse formula group helpers or confirmCaisseVoid missing');
+} else {
+  const caisseGroupHarness = new Function(`
+    ${caisseFormulaGroupMatch[0]}
+    ${caisseGroupedDeltaMatch[0]}
+    ${caisseGroupedRemoveMatch[0]}
+    return { applyGroupedLineQtyDelta, removeGroupedLine };
+  `)();
+  const caisseFormulaLines = [
+    { uid: 'cash-parent', id: 'f-brunch', kind: 'formula', formulaUid: 'cash-f1', qty: 1 },
+    { uid: 'cash-drink', id: 'orange', kind: 'formula-part', formulaUid: 'cash-f1', qty: 1, price: 0 },
+    { uid: 'cash-side', id: 'bread', kind: 'formula-part', formulaUid: 'cash-f1', qty: 1, price: 0 },
+    { uid: 'cash-standalone', id: 'orange', qty: 1, price: 18 }
+  ];
+  const caisseAfterDelete = caisseGroupHarness.removeGroupedLine(caisseFormulaLines, 'cash-parent');
+  ok(caisseAfterDelete.length === 1 && caisseAfterDelete[0].uid === 'cash-standalone', 'caisse review delete removes formula parent and every linked free component only');
+
+  const qtyTwo = caisseFormulaLines.map(line => ({ ...line, qty: line.formulaUid ? 2 : line.qty }));
+  const caisseAfterDec = caisseGroupHarness.applyGroupedLineQtyDelta(qtyTwo, qtyTwo[0], -1);
+  ok(caisseAfterDec.filter(line => line.formulaUid === 'cash-f1').every(line => line.qty === 1), 'caisse formula decrement keeps parent and component quantities synchronized');
+  ok(caisseAfterDec.find(line => line.uid === 'cash-standalone').qty === 1, 'caisse formula decrement does not touch an identical standalone drink');
+  ok(/cart = removeGroupedLine\(cart, uid\)/.test(caisseSource) && /tableOrders\[selectedId\] = removeGroupedLine\(tableOrders\[selectedId\], uid\)/.test(caisseSource), 'caisse review trash routes takeaway and table formulas through grouped removal');
+  ok(/l\.sent \|\| l\.kind === 'formula-part' \? ''/.test(caisseSource) && /l\.kind === 'formula-part' \? `<span class="rp-sent-qty">/.test(caisseSource), 'caisse component rows expose no independent delete or quantity controls');
+  ok(/if \(!res\.ok \|\| !data \|\| !data\.ok\) throw/.test(confirmCaisseVoidMatch[0]) && /catch \(err\) \{[\s\S]*?return;/.test(confirmCaisseVoidMatch[0]), 'caisse failed kitchen void preserves local formula group for retry');
+}
+
+const serveurGroupedDeltaMatch = serveurSource.match(/function applyGroupedLineQtyDelta\(lines, line, delta, adjustSentQty\) \{[\s\S]*?\n    \}/);
 const confirmVoidLineMatch = serveurSource.match(/async function confirmVoidLine\(\) \{[\s\S]*?\n    \}/);
 const changeOrderQtyMatch = serveurSource.match(/async function changeOrderQty\(tableId, uid, delta\) \{[\s\S]*?\n    \}/);
 
-if (!confirmVoidLineMatch || !changeOrderQtyMatch) {
-  ok(false, 'confirmVoidLine or changeOrderQty missing in kiwi-serveur.html');
+if (!serveurGroupedDeltaMatch || !confirmVoidLineMatch || !changeOrderQtyMatch) {
+  ok(false, 'grouped qty helper, confirmVoidLine, or changeOrderQty missing in kiwi-serveur.html');
 } else {
   const voidHarnessCode = `
     let tableOrders = {};
     let voidLineTarget = null;
     let selectedVoidReason = 'client_change';
     let selectedVoidIsWaste = 0;
-    const SV_DEMO = true;
+    let SV_DEMO = true;
+    let fetchResult = { ok: true, data: { ok: true } };
+    const fetch = async () => ({ ok: fetchResult.ok, json: async () => fetchResult.data });
+    const svSlug = () => 'test-merchant';
+    const activeRole = { fullName: 'Test Serveur', name: 'Test' };
     const markDirty = () => {};
     const renderTableDetail = () => {};
     const openFormulaSheet = () => {};
@@ -557,6 +594,7 @@ if (!confirmVoidLineMatch || !changeOrderQtyMatch) {
       voidLineTarget = { tableId, line };
     };
 
+    ${serveurGroupedDeltaMatch[0]}
     ${confirmVoidLineMatch[0]}
     ${changeOrderQtyMatch[0]}
 
@@ -566,6 +604,8 @@ if (!confirmVoidLineMatch || !changeOrderQtyMatch) {
       changeOrderQty,
       confirmVoidLine,
       getVoidLineTarget: () => voidLineTarget,
+      setDemo: (value) => { SV_DEMO = value; },
+      setFetchResult: (value) => { fetchResult = value; },
     };
   `;
   const voidHarness = new Function(voidHarnessCode)();
@@ -595,7 +635,7 @@ if (!confirmVoidLineMatch || !changeOrderQtyMatch) {
   await voidHarness.changeOrderQty('T1', 'u-c1', 1);
   ok(voidHarness.getTableOrders().T1[0].qty === 1, 'stepper increment on kind: formula-part is locked (no-op)');
 
-  // Test 3: Sent line void client honesty (client sends no sibling deletions of its own)
+  // Test 3: Sent formula void mirrors the server's formulaUid cascade locally.
   voidHarness.setTableOrders({
     T1: [
       { uid: 'u-parent-sent', id: 'm-brunch', name: 'Formule Brunch', kind: 'formula', price: 104, qty: 1, formulaUid: 'fml-casc-2', sentQty: 1 },
@@ -609,9 +649,21 @@ if (!confirmVoidLineMatch || !changeOrderQtyMatch) {
   ok(voidHarness.getVoidLineTarget() != null, 'sent formula decrement triggered void modal target');
   await voidHarness.confirmVoidLine();
   const postVoidOrders = voidHarness.getTableOrders().T1;
-  ok(postVoidOrders.length === 3, 'client confirmVoidLine removes only targeted parent, sending no sibling deletions of its own');
-  ok(!postVoidOrders.some(l => l.uid === 'u-parent-sent'), 'parent line removed from client tableOrders');
-  ok(postVoidOrders.some(l => l.uid === 'u-c1-sent') && postVoidOrders.some(l => l.uid === 'u-c2-sent'), 'child lines preserved on client until server confirmation');
+  ok(postVoidOrders.length === 1 && postVoidOrders[0].uid === 'u-norm-sent', 'confirmed sent formula void removes parent and all linked components locally');
+
+  // Test 4: A failed server void is atomic: no optimistic local deletion.
+  voidHarness.setTableOrders({
+    T1: [
+      { uid: 'u-parent-fail', id: 'm-brunch', name: 'Formule Brunch', kind: 'formula', qty: 1, formulaUid: 'fml-fail', sentQty: 1 },
+      { uid: 'u-child-fail', id: 'm-b1', name: 'Boisson', kind: 'formula-part', qty: 1, formulaUid: 'fml-fail', sentQty: 1 }
+    ]
+  });
+  voidHarness.setDemo(false);
+  voidHarness.setFetchResult({ ok: false, data: { ok: false, error: 'db-down' } });
+  await voidHarness.changeOrderQty('T1', 'u-parent-fail', -1);
+  await voidHarness.confirmVoidLine();
+  ok(voidHarness.getTableOrders().T1.length === 2, 'failed server void leaves formula parent and component intact locally');
+  ok(voidHarness.getVoidLineTarget() != null, 'failed server void keeps target available for retry');
 }
 
 // ── 7B. Server-Side Void Cascade Extraction (queue.js) ──────────────────────
@@ -734,6 +786,17 @@ if (!dispatchPendingVoidMatch || !voidLineServerBlockMatch) {
   const v2 = harnessQty2.getInsertedKitchenVoids();
   ok(v2.length === 3, 'qty-2 formula voided by 1 still touches parent + 2 children');
   ok(v2.every(v => Number(v.qty) === 1), 'voiding ONE of a ×2 formula books qty 1 on the parent and on each child — the delta, never the whole line');
+
+  const directQty2 = new Function(serverVoidHarnessCode
+    .replaceAll('stationAccepted: true', 'stationAccepted: false')
+    .replace("qty: 1, formulaUid: 'fml-srv-1', stationAccepted: false },\n                    { uid: 'u-p1'", "qty: 2, formulaUid: 'fml-srv-1', stationAccepted: false },\n                    { uid: 'u-p1'")
+    .replace("name: 'Pain', kind: 'formula-part', price: 0, qty: 1", "name: 'Pain', kind: 'formula-part', price: 0, qty: 2")
+    .replace("name: 'Boisson', kind: 'formula-part', price: 0, qty: 1", "name: 'Boisson', kind: 'formula-part', price: 0, qty: 2"))();
+  await directQty2.handleVoidLine({ voidLine: { orderId: 'ord-server-1', lineId: 'u-fml', qty: 1, reason: 'client_change', isWaste: 0, actor: 'Hamza' } });
+  const directRemaining = directQty2.getUpdatedOrders()[0].lines;
+  ok(directRemaining.filter(line => line.formulaUid === 'fml-srv-1').every(line => Number(line.qty) === 1), 'direct void of one ×2 formula decrements parent and both components to qty 1');
+  ok(directRemaining.some(line => line.uid === 'u-norm' && Number(line.qty) === 1), 'direct formula void leaves unrelated sent items untouched');
+  ok(directQty2.getInsertedKitchenVoids().filter(row => ['u-fml', 'u-p1', 'u-b1'].includes(row.item_id)).every(row => Number(row.qty) === 1), 'direct formula void audit records the removed delta, not the remaining quantity');
 }
 
 // ── 7C. Inventory Consumption Skip for Kind: Formula ─────────────────────────
@@ -1025,7 +1088,7 @@ if (!renderSlotsMatch) {
 }
 
 // ── 10. Hard Count Pinning ──────────────────────────────────────────────────
-const EXPECTED_COUNT = 105;
+const EXPECTED_COUNT = 114;
 ok(passed + 1 === EXPECTED_COUNT, `exact control count verified (${passed + 1}/${EXPECTED_COUNT})`);
 
 console.log(`\n✓ ${passed} controls green (${failures.length} failure(s))`);
