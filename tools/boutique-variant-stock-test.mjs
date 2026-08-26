@@ -76,6 +76,10 @@ eq(C.adjustVariantStock(product.id, 'L', 'bleu', -4), false, 'une famille refuse
 eq(C.variantStock(product.id, 'L', 'bleu'), 3, 'un refus ne décrémente aucune déclinaison à moitié');
 eq(C.adjustVariantStock(product.id, 'L', 'bleu', -3), true, 'une famille peut vider plusieurs tons sans changer de couleur');
 eq(C.variantStock(product.id, 'L', 'bleu'), 0, 'les trois pièces bleues ont été décrémentées');
+eq(C.adjustVariantStock(product.id, 'S', 'bleu', 1), false,
+  'un retour sans couleur appariable ne crédite pas une autre couleur de même taille');
+eq(C.variantStock(product.id, 'S', 'blanc'), 6,
+  'le retour à rapprocher laisse le stock blanc intact');
 
 const pos = fs.readFileSync(path.join(ROOT, 'assets/pos-boutique.js'), 'utf8');
 ok(pos.includes('availableStock(pid, cfg.size, cfg.color, state.ticket)'),
@@ -86,5 +90,7 @@ ok(pos.includes('const st = availableStock(p.id, s, sheet.color);'),
   'les nombres du modal suivent la couleur sélectionnée');
 ok(!pos.includes('const st = p.sizes[s];'),
   'le modal n’affiche plus le total toutes couleurs');
+ok(/function commitEan\(raw\) \{\s*if \(state\.checkoutBusy/.test(pos),
+  'le champ douchette lui-même refuse un scan derrière le paiement');
 
 if (!process.exitCode) console.log(`✓ stock boutique par déclinaison : ${passed} contrôles`);

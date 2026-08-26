@@ -139,13 +139,13 @@ var SHELL = [
   // offline with no table geometry at all.
   '/assets/floorplan-core.js?v=2050',
   '/assets/oppo-cards.js',
-  '/assets/dashboard-pwa.js?v=430',
+  '/assets/dashboard-pwa.js?v=433',
   '/assets/dashboard-native.js?v=1',
   '/assets/pwa-update.js?v=359',
   '/assets/caisse-skin.css?v=3',
   '/assets/pos-mobile.css?v=3',
   '/assets/caisse-motion.js',
-  '/assets/caisse-pwa.js?v=431',
+  '/assets/caisse-pwa.js?v=434',
   '/assets/vendor/dexie.min.js',
   '/assets/offline-db.js?v=3',
   '/assets/platform-kernel.js?v=5',
@@ -199,7 +199,7 @@ var SHELL = [
   '/assets/printer-bridge.js?v=8',
   '/assets/barcode.js',
   '/assets/color-palette.js',
-  '/assets/boutique-catalog.js?v=2',
+  '/assets/boutique-catalog.js?v=4',
   '/assets/store-templates.js?v=2',
   /* Les promotions. Dans la coquille avec le catalogue : hors ligne, une caisse
      qui a perdu ses promotions vend au prix plein pendant que la vitrine
@@ -228,7 +228,7 @@ var SHELL = [
   '/assets/stock-identity.js?v=2',
   '/assets/restaurant-recipes.js?v=7',
   '/assets/restaurant-units.js',
-  '/assets/employee-live.js?v=429',
+  '/assets/employee-live.js?v=432',
   '/assets/employee-planning.js?v=8',
   '/assets/employee-trade-shell.css?v=2',
   '/assets/employee-trade-shell.js?v=2',
@@ -268,8 +268,8 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=10',
-  '/assets/pos-boutique.js?v=10',
+  '/assets/pos-boutique.css?v=12',
+  '/assets/pos-boutique.js?v=12',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */

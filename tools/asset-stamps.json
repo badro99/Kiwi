@@ -48,8 +48,8 @@
     "sha": "be6f22488f18d3ff"
   },
   "assets/boutique-catalog.js": {
-    "v": "2",
-    "sha": "25ba1aa2e1a39f88"
+    "v": "4",
+    "sha": "bdcefbb124e3549c"
   },
   "assets/boutique-promos-dashboard.js": {
     "v": "4",
@@ -84,8 +84,8 @@
     "sha": "112638dbbb35294e"
   },
   "assets/caisse-pwa.js": {
-    "v": "431",
-    "sha": "2fe61c2ba9cdefd9"
+    "v": "434",
+    "sha": "9d4604b6e063b7f0"
   },
   "assets/caisse-skin.css": {
     "v": "3",
@@ -136,8 +136,12 @@
     "sha": "cd751f73c0180449"
   },
   "assets/dashboard-pwa.js": {
-    "v": "430",
-    "sha": "a7b98de1dab61883"
+    "v": "433",
+    "sha": "a43731dc7e956063"
+  },
+  "assets/dashboard-startup-gate.js": {
+    "v": "1",
+    "sha": "a3636b0a0729db7e"
   },
   "assets/dateRange.js": {
     "v": "15",
@@ -156,20 +160,20 @@
     "sha": "db87c2940f314de9"
   },
   "assets/design-vexel-layout.js": {
-    "v": "2079",
-    "sha": "82881a43bfa3fe7a"
+    "v": "2080",
+    "sha": "9f4c1b927ecf0dd2"
   },
   "assets/design-vexel.css": {
     "v": "2104",
     "sha": "e9bb78a222404b2d"
   },
   "assets/design-vexel.js": {
-    "v": "2077",
-    "sha": "aa550a22766dac1a"
+    "v": "2078",
+    "sha": "74b872eee6e9256a"
   },
   "assets/employee-live.js": {
-    "v": "429",
-    "sha": "ad0ca489af72188f"
+    "v": "432",
+    "sha": "d051436b2568c87e"
   },
   "assets/employee-planning.js": {
     "v": "8",
@@ -412,12 +416,12 @@
     "sha": "530ff7c046c57b2c"
   },
   "assets/pos-boutique.css": {
-    "v": "10",
+    "v": "12",
     "sha": "374aa9562b323299"
   },
   "assets/pos-boutique.js": {
-    "v": "10",
-    "sha": "2d7e647bc99acdd5"
+    "v": "12",
+    "sha": "6af55002878589fc"
   },
   "assets/pos-coiffure.css": {
     "v": "5",
@@ -429,7 +433,7 @@
   },
   "assets/pos-dispatch.js": {
     "v": "32",
-    "sha": "5021a9187e98a9ae"
+    "sha": "e623f76492a18120"
   },
   "assets/pos-epicerie.css": {
     "v": "5",

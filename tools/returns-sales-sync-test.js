@@ -25,7 +25,7 @@ const checks = [
   ['un échange autorise une seule pièce issue d’une ligne multiple', /const qty = pickedQty\(ret, idx, ln\)[\s\S]*state\.exchange = \{ saleId: ret\.saleId, idx, qty: 1[,}]/.test(src)],
   ['le motif choisi suit l’échange jusqu’au registre', /state\.exchange = \{[^}]*motif: ret\.motif/.test(src) && /recordReturn\(sale, \[ex\.idx\], ln\.unit, ex\.motif \|\| 'Non précisé', 'echange'/.test(src)],
   ['l’avoir utilise la quantité choisie et non toute la ligne', /const quantities = new Map\(idxs\.map[\s\S]*sale\.lines\[i\]\.unit \* quantities\.get\(i\)/.test(src)],
-  ['seules les pièces réellement rendues reviennent au stock', /markLineReturned\(ln, qty, note\)[\s\S]*persistStock\(ln\.pid, ln\.size, ln\.color, qty\)/.test(src)],
+  ['seules les pièces réellement rendues reviennent au stock', /const restored = persistStock\(ln\.pid, ln\.size, ln\.color, qty,[\s\S]*markLineReturned\(ln, qty, restored/.test(src)],
   ['le journal propriétaire reçoit la quantité partielle exacte', /const motif = ret\.motif \|\| 'Non précisé'[\s\S]*recordReturn\(sale, idxs, amount, motif, 'avoir', av\.code, quantities\)/.test(src)],
   ['aucun motif n’est inventé quand la vendeuse n’en choisit pas', /state\.ret = \{ saleId, picks: new Set\(\), quantities: new Map\(\), motif: null \}/.test(src)],
   ['la pastille du dashboard se lit sur le type, pas sur le libellé', /kind: ret\.kind \|\| 'avoir'/.test(dash) && /r\.kind === 'echange' \? 'Échangé' : 'Retourné'/.test(dash)],

@@ -40,6 +40,7 @@ import { tenantFor } from './_private.js';
 
 const str = (v, n) => String(v == null ? '' : v).slice(0, n);
 const num = (v, max) => Math.max(0, Math.min(max, Number(v) || 0));
+const signed = (v, max) => Math.max(-max, Math.min(max, Number(v) || 0));
 /* Un INSTANT en millisecondes. Pas `num(...) | 0` : l'opérateur binaire ramène à
  * un entier 32 bits, et un horodatage d'aujourd'hui (~1,78 × 10¹²) y déborde —
  * il ressortait donc en une date arbitraire. C'est ce qui arrivait déjà à
@@ -79,9 +80,9 @@ function sanitize(raw) {
    * ventes simultanées s'ADDITIONNENT au lieu de s'écraser — donc ils doivent
    * traverser le serveur, sinon chaque appareil ne connaît que ses propres
    * ventes et on retombe sur un arbitrage entre deux nombres absolus.
-   * 12 000 mouvements, les plus RÉCENTS d'abord : le client replie les vieux
-   * dans le socle (compact()), donc perdre les plus anciens ne perd aucune
-   * unité — perdre les plus récents, si. */
+   * 12 000 mouvements, les plus RÉCENTS d'abord. This slice is a read-side
+   * corruption guard only; POST refuses an oversized un-compacted journal rather
+   * than pretending discarded sales were already folded into the base. */
   out.moves = (Array.isArray(raw.moves) ? raw.moves : [])
     .map((m) => {
       const row = {
@@ -111,6 +112,7 @@ function sanitize(raw) {
       name: str(c && c.name, 80),
       color: str(c && c.color, 24),
       order: num(c && c.order, 1e4) | 0,
+      metaAt: ts(c && c.metaAt),
     }))
     .filter((c) => c.id);
 
@@ -126,11 +128,22 @@ function sanitize(raw) {
       kind: str(p && p.kind, 24),
       flag: str(p && p.flag, 60),
       grad: p && typeof p.grad === 'string' ? str(p.grad, 200) : null,
+      marque: str(p && p.marque, 80),
+      format: p && p.format === 'service' ? 'service' : 'piece',
+      servicePieces: p && p.servicePieces != null ? Math.max(1, num(p.servicePieces, 1e5) | 0) : null,
+      piecePriceMAD: p && p.piecePriceMAD != null ? num(p.piecePriceMAD, 1e7) : null,
+      motif: str(p && p.motif, 80),
+      fragile: !!(p && p.fragile),
+      ownership: p && p.ownership === 'consignment' ? 'consignment' : 'outright',
+      consignor: str(p && p.consignor, 120),
+      sku: str(p && p.sku, 48),
       // Médias : des URLs (/api/media/…), jamais des octets.
       photo: str(p && p.photo, 300),
       video: str(p && p.video, 300),
+      mediaAt: ts(p && p.mediaAt),
       createdAt: ts(p && p.createdAt),
       archived: !!(p && p.archived),
+      metaAt: ts(p && p.metaAt),
     }))
     .filter((p) => p.id && p.name);
 
@@ -162,7 +175,9 @@ function sanitize(raw) {
       // LE SOCLE : un comptage absolu (création, inventaire physique, saisie
       // directe) et son instant. Le plus récent des deux appareils gagne, parce
       // qu'un comptage à la main ne cède pas devant un chiffre de la veille.
-      base: num(v && v.base, 1e6) | 0,
+      // A signed base preserves a temporary oversold deficit through compaction.
+      // `stock` stays clamped at zero for every user-facing reader.
+      base: Math.round(v && v.base != null ? signed(v.base, 1e6) : num(v && v.stock, 1e6)),
       baseAt: ts(v && v.baseAt),
       // Gardé le temps que tous les appareils passent au journal : un client qui
       // n'a pas encore rechargé envoie encore `stockAt`, et baseAtOf() sait le
@@ -171,6 +186,17 @@ function sanitize(raw) {
       sku: str(v && v.sku, 40),
       // Précision facultative : ce qui distingue deux variantes de même couleur.
       note: str(v && v.note, 60),
+      metaAt: ts(v && v.metaAt),
+      barcodeRemoved: (() => {
+        const removed = {};
+        if (v && v.barcodeRemoved && typeof v.barcodeRemoved === 'object' && !Array.isArray(v.barcodeRemoved)) {
+          Object.keys(v.barcodeRemoved).slice(0, 24).forEach((code) => {
+            const key = str(code, 40), at = ts(v.barcodeRemoved[code]);
+            if (key && at) removed[key] = at;
+          });
+        }
+        return removed;
+      })(),
       // Un EAN-13 maison généré ici (`primary`, celui de l'étiquette) et les
       // codes de l'ancien système relevés à la douchette, gardés tels quels —
       // c'est ce qui fait qu'un ancien scan résout encore.
@@ -180,7 +206,9 @@ function sanitize(raw) {
           : {
             code: str(b && b.code, 40),
             type: str(b && b.type, 16) || 'imported',
+            sym: str(b && b.sym, 16),
             primary: !!(b && b.primary),
+            at: ts(b && b.at),
           }))
         .filter((b) => b.code),
     }))
@@ -188,6 +216,152 @@ function sanitize(raw) {
 
   return out;
 }
+
+function materialize(data) {
+  const by = new Map();
+  for (const v of data.variants || []) {
+    by.set(v.id, { v, n: Number(v.base != null ? v.base : v.stock) || 0, at: Number(v.baseAt || v.stockAt) || 0 });
+  }
+  for (const m of data.moves || []) {
+    const slot = m && by.get(m.vid);
+    if (slot && Number(m.at) > slot.at) slot.n += Number(m.d) || 0;
+  }
+  for (const { v, n } of by.values()) v.stock = Math.max(0, Math.round(n));
+  return data;
+}
+
+function compactForWrite(data) {
+  const moves = Array.isArray(data.moves) ? data.moves.slice() : [];
+  if (moves.length <= 11000) return data;
+  const by = new Map((data.variants || []).map((v) => [v.id, v]));
+  const foldable = moves.filter((m) => m && m.why !== 'reserve')
+    .sort((a, b) => Number(a.at || 0) - Number(b.at || 0));
+  const foldIds = new Set(foldable.slice(0, Math.max(0, moves.length - 10000)).map((m) => m.id));
+  const folded = new Map();
+  for (const m of moves) {
+    if (!foldIds.has(m.id)) continue;
+    const v = by.get(m.vid);
+    if (!v || Number(m.at || 0) <= Number(v.baseAt || v.stockAt || 0)) continue;
+    const f = folded.get(v.id) || { d: 0, at: Number(v.baseAt || v.stockAt || 0) };
+    f.d += Number(m.d) || 0; f.at = Math.max(f.at, Number(m.at) || 0); folded.set(v.id, f);
+  }
+  for (const [id, f] of folded) {
+    const v = by.get(id); v.base = Number(v.base != null ? v.base : v.stock) + f.d; v.baseAt = f.at;
+  }
+  data.moves = moves.filter((m) => !foldIds.has(m.id));
+  return materialize(data);
+}
+
+const stockColorMatch = (v, color) => String(v.colorId || '') === String(color || '')
+  || String(v.colorFamily || '') === String(color || '');
+
+function stockMutation(data, body, now) {
+  compactForWrite(data);
+  const action = str(body && body.stockAction, 16);
+  const ref = str(body && body.ref, 64);
+  if (!ref || !['reserve', 'confirm', 'release'].includes(action)) return { error: 'bad-stock-action', status: 400 };
+  materialize(data);
+  const own = (data.moves || []).filter((m) => m && m.ref === ref);
+  const paid = own.some((m) => m.why === 'vente');
+  const held = own.filter((m) => m.why === 'reserve');
+  const released = own.some((m) => m.why === 'release');
+
+  if (action === 'confirm') {
+    if (paid) return { ok: true, data };
+    if (released || !held.length) return { error: released ? 'reservation-released' : 'reservation-missing', status: 409 };
+    held.forEach((m) => { m.why = 'vente'; });
+    return { ok: true, data };
+  }
+  if (action === 'release') {
+    if (paid) return { error: 'reservation-confirmed', status: 409 };
+    if (released || !held.length) return { ok: true, data };
+    let at = now;
+    held.forEach((m) => {
+      const v = (data.variants || []).find((x) => x.id === m.vid);
+      at = Math.max(at + 1, Number(v && v.baseAt) + 1 || 0, Number(m.at) + 1 || 0);
+      data.moves.push({ id: `rel-${String(m.id).slice(0, 60)}`, vid: m.vid, d: -m.d, at, why: 'release', ref });
+    });
+    materialize(data);
+    return { ok: true, data };
+  }
+
+  if (paid || (held.length && !released)) return { ok: true, data };
+  if (released) return { error: 'reservation-released', status: 409 };
+  const lines = Array.isArray(body && body.lines) ? body.lines.slice(0, 40) : [];
+  if (!lines.length) return { error: 'empty-stock-lines', status: 400 };
+  const grouped = new Map();
+  for (const raw of lines) {
+    const pid = str(raw && raw.pid, 40), size = str(raw && raw.size, 12), color = str(raw && raw.color, 40);
+    const qty = Math.max(0, Math.min(1e6, Math.round(Number(raw && raw.qty) || 0)));
+    if (!pid || !size || !color || !qty) return { error: 'bad-stock-line', status: 400 };
+    const key = JSON.stringify([pid, size, color]);
+    const row = grouped.get(key) || { pid, size, color, qty: 0, price: Number(raw && raw.price) || 0 };
+    row.qty += qty; grouped.set(key, row);
+  }
+  for (const row of grouped.values()) {
+    const product = (data.products || []).find((p) => p.id === row.pid);
+    if (!product || product.archived) {
+      return { error: 'stock-insufficient', status: 409, issue: { pid: row.pid, size: row.size, color: row.color, needed: row.qty, onHand: 0 } };
+    }
+    if (Math.round(Number(product.priceMAD || 0) * 100) !== Math.round(Number(row.price || 0) * 100)) {
+      return { error: 'catalog-stale', status: 409, issue: { pid: row.pid, price: product.priceMAD } };
+    }
+    const variants = (data.variants || []).filter((v) => v.productId === row.pid
+      && String(v.size) === row.size && stockColorMatch(v, row.color));
+    const available = variants.reduce((sum, v) => sum + Math.max(0, Number(v.stock) || 0), 0);
+    if (available < row.qty) {
+      return { error: 'stock-insufficient', status: 409, issue: { pid: row.pid, size: row.size, color: row.color, needed: row.qty, onHand: available } };
+    }
+  }
+  let at = now, seq = 0;
+  for (const row of grouped.values()) {
+    let remaining = row.qty;
+    const variants = (data.variants || []).filter((v) => v.productId === row.pid
+      && String(v.size) === row.size && stockColorMatch(v, row.color))
+      .sort((a, b) => (String(b.colorId) === row.color ? 1 : 0) - (String(a.colorId) === row.color ? 1 : 0));
+    for (const v of variants) {
+      if (!remaining) break;
+      const qty = Math.min(remaining, Math.max(0, Number(v.stock) || 0));
+      if (!qty) continue;
+      at = Math.max(at + 1, Number(v.baseAt) + 1 || 0);
+      data.moves.push({ id: `rsv-${ref.slice(0, 36)}-${seq++}`, vid: v.id, d: -qty, at, why: 'reserve', ref });
+      v.stock = Math.max(0, Number(v.stock) - qty);
+      remaining -= qty;
+    }
+  }
+  materialize(data);
+  return { ok: true, data };
+}
+
+async function applyStockAction(env, merchant, body) {
+  for (let attempt = 0; attempt < 4; attempt++) {
+    let row;
+    try {
+      row = await env.DB.prepare('SELECT data, rev FROM catalogs WHERE merchant = ?').bind(merchant).first();
+    } catch (_) { return json({ error: 'unmigrated' }, 503); }
+    if (!row || !row.data) return json({ error: 'catalog-missing' }, 409);
+    let data;
+    try { data = sanitize(JSON.parse(row.data)); } catch (_) { return json({ error: 'catalog-invalid' }, 409); }
+    const changed = stockMutation(data, body, Date.now());
+    if (!changed.ok) return json({ error: changed.error, issue: changed.issue || null, data, rev: Number(row.rev || 0) }, changed.status || 409);
+    const next = Number(row.rev || 0) + 1;
+    let write;
+    try {
+      write = await env.DB.prepare(
+        'UPDATE catalogs SET data = ?, rev = ?, updated_ts = ? WHERE merchant = ? AND rev = ?'
+      ).bind(JSON.stringify(data), next, Date.now(), merchant, Number(row.rev || 0)).run();
+    } catch (_) { return json({ error: 'write-failed' }, 500); }
+    if (write && write.meta && Number(write.meta.changes) === 1) {
+      return json({ ok: true, merchant, rev: next, data });
+    }
+  }
+  return json({ error: 'stock-contention' }, 409);
+}
+
+/* Pure contract hooks. Cloudflare ignores this named export; the repository test
+ * executes the exact sanitizer and reservation arithmetic instead of copying
+ * their business rules into a fake implementation. */
+export const __test = { sanitize, materialize, stockMutation, compactForWrite };
 
 const empty = (d) => !d || !(d.products && d.products.length) && !(d.variants && d.variants.length);
 
@@ -226,6 +400,8 @@ export async function onRequestPost(context) {
   const merchant = await tenantFor(request, env, body && body.merchant, { strict: true });
   if (!merchant) return json({ error: 'unauthorized' }, 401);
 
+  if (body && body.stockAction) return applyStockAction(env, merchant, body);
+
   const raw = (body && body.data) || null;
 
   // Garde-fou de forme. Un document qui ne ressemble pas à un catalogue passerait
@@ -235,6 +411,13 @@ export async function onRequestPost(context) {
   if (!raw || typeof raw !== 'object'
       || !(Array.isArray(raw.products) || Array.isArray(raw.variants))) {
     return json({ error: 'shape-mismatch', expected: 'catalog' }, 409);
+  }
+  /* Never silently slice an un-compacted ledger. The browser folds entries into
+   * the signed base before it crosses this limit; accepting and truncating an
+   * oversized document would make a new till load stock without the discarded
+   * sales. */
+  if (Array.isArray(raw.moves) && raw.moves.length > 12000) {
+    return json({ error: 'moves-uncompacted', max: 12000 }, 413);
   }
 
   const data = sanitize(raw);
@@ -272,12 +455,27 @@ export async function onRequestPost(context) {
 
   const rev = serverRev + 1;
   try {
-    await env.DB.prepare(
-      `INSERT INTO catalogs (merchant, data, rev, updated_ts)
-       VALUES (?, ?, ?, ?)
-       ON CONFLICT(merchant) DO UPDATE SET
-         data = excluded.data, rev = excluded.rev, updated_ts = excluded.updated_ts`
-    ).bind(merchant, JSON.stringify(data), rev, now).run();
+    let write;
+    if (serverRev) {
+      /* The earlier SELECT is only a snapshot. The revision predicate on the
+       * UPDATE is the actual compare-and-swap: two requests may both read N, but
+       * only one is allowed to turn N into N+1. */
+      write = await env.DB.prepare(
+        `UPDATE catalogs SET data = ?, rev = ?, updated_ts = ?
+          WHERE merchant = ? AND rev = ?`
+      ).bind(JSON.stringify(data), rev, now, merchant, serverRev).run();
+    } else {
+      write = await env.DB.prepare(
+        `INSERT OR IGNORE INTO catalogs (merchant, data, rev, updated_ts)
+         VALUES (?, ?, ?, ?)`
+      ).bind(merchant, JSON.stringify(data), rev, now).run();
+    }
+    if (!write || !write.meta || Number(write.meta.changes) !== 1) {
+      const latest = await env.DB.prepare('SELECT data, rev FROM catalogs WHERE merchant = ?').bind(merchant).first();
+      let mine = null;
+      try { mine = latest && latest.data ? sanitize(JSON.parse(latest.data)) : null; } catch (_) {}
+      return json({ error: 'stale', rev: Number(latest && latest.rev) || 0, data: mine }, 409);
+    }
   } catch (_) { return json({ error: 'write-failed' }, 500); }
 
   return json({

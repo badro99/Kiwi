@@ -251,7 +251,21 @@
     return DEV;
   }
   var moveSeq = 0;
-  function moveId() { moveSeq++; return devId() + '-' + Date.now().toString(36) + '-' + moveSeq; }
+  function moveId() {
+    /* devId is shared by every tab through localStorage, while moveSeq is local
+       to one page. Add entropy so two tabs moving stock in the same millisecond
+       cannot generate the same id and make the merge discard one real sale. */
+    moveSeq++;
+    var random = '';
+    try {
+      if (window.crypto && window.crypto.getRandomValues) {
+        var bytes = new Uint32Array(2); window.crypto.getRandomValues(bytes);
+        random = bytes[0].toString(36) + bytes[1].toString(36);
+      }
+    } catch (e) {}
+    if (!random) random = Math.random().toString(36).slice(2, 10);
+    return devId() + '-' + Date.now().toString(36) + '-' + moveSeq + '-' + random;
+  }
 
   /* ── une horloge qui ne rend jamais deux fois le même instant ─────────────
      La règle de fusion est stricte : un mouvement ne compte que s'il est
@@ -347,6 +361,7 @@
     var byId = Object.create(null);
     (doc.variants || []).forEach(function (v) { if (v && v.id) byId[v.id] = v; });
     var keep = [];
+    var folded = Object.create(null);
     moves.forEach(function (m, i) {
       var old = (+m.at || 0) <= cutoff || i < over;
       var v = byId[m.vid];
@@ -366,8 +381,17 @@
         return;
       }
       if ((+m.at || 0) <= baseAtOf(v)) return;              // déjà replié
-      v.base = Math.max(0, baseOf(v) + (+m.d || 0));
-      v.baseAt = Math.max(baseAtOf(v), +m.at || 0);
+      var slot = folded[v.id] || (folded[v.id] = { d: 0, at: baseAtOf(v) });
+      slot.d += (+m.d || 0);
+      slot.at = Math.max(slot.at, +m.at || 0);
+    });
+    Object.keys(folded).forEach(function (id) {
+      var v = byId[id], f = folded[id];
+      if (!v || !f) return;
+      /* `stock` is clamped for display; the ledger base is not. Remembering an
+         oversold deficit is what keeps a later return from inventing stock. */
+      v.base = baseOf(v) + f.d;
+      v.baseAt = f.at;
     });
     doc.moves = keep;
     return doc;
@@ -458,6 +482,7 @@
   // le réseau pour encaisser.
   function commit() {
     if (batchDepth > 0) { batchDirty = true; return; }
+    if (Array.isArray(db.moves) && db.moves.length > MOVE_MAX) { compact(db); materialize(db); }
     markCatalogDirty();      // une mutation locale : nous avons quelque chose à dire
     persist(); notify(); schedulePush();
   }
@@ -483,6 +508,7 @@
       batchDepth--;
       if (batchDepth === 0 && batchDirty) {
         batchDirty = false;
+        if (Array.isArray(db.moves) && db.moves.length > MOVE_MAX) { compact(db); materialize(db); }
         markCatalogDirty();
         persist(); notify(); schedulePush();
       }
@@ -649,6 +675,15 @@
            n'a pas à céder devant un chiffre d'hier. Les MOUVEMENTS ne sont
            arbitrés nulle part ici : ils sont réunis plus bas, tous. */
         const kept = seen[e.id];
+        const mineMetaAt = +(kept && kept.metaAt) || 0;
+        const theirMetaAt = +(e && e.metaAt) || 0;
+        if (k === 'categories') {
+          if (theirMetaAt > mineMetaAt) {
+            ['name', 'color', 'order', 'metaAt'].forEach((f) => { kept[f] = e[f]; });
+            ahead.theirs = true;
+          } else if (mineMetaAt > theirMetaAt) ahead.mine = true;
+          return;
+        }
         if (k === 'products') {
           /* Product media is edited on the dashboard but consumed on caisse.
              A caisse that already knew the product used to keep its older blank
@@ -662,6 +697,15 @@
           const theirMedia = !!(e.photo || e.video);
           const differs = String(kept.photo || '') !== String(e.photo || '')
             || String(kept.video || '') !== String(e.video || '');
+          const fields = ['legacyId', 'name', 'categoryId', 'priceMAD', 'cost', 'art', 'kind', 'flag', 'grad',
+            'marque', 'format', 'servicePieces', 'piecePriceMAD', 'motif', 'fragile', 'ownership', 'consignor',
+            'sku', 'createdAt', 'archived', 'metaAt'];
+          if (theirMetaAt > mineMetaAt) {
+            fields.forEach((f) => {
+              if (e[f] === undefined) delete kept[f]; else kept[f] = e[f];
+            });
+            ahead.theirs = true;
+          } else if (mineMetaAt > theirMetaAt) ahead.mine = true;
           if (theirAt > mineAt || (!mineAt && !theirAt && !mineMedia && theirMedia)) {
             kept.photo = String(e.photo || '');
             kept.video = String(e.video || '');
@@ -673,7 +717,34 @@
           return;
         }
         if (k !== 'variants') return;
-        if (kept === 1) return;
+        const variantFields = ['productId', 'colorId', 'colorFamily', 'colorSource', 'colorSourceHex', 'colorWas',
+          'colorLabel', 'colorHex', 'size', 'sku', 'note', 'metaAt'];
+        if (theirMetaAt > mineMetaAt) {
+          variantFields.forEach((f) => {
+            if (e[f] === undefined) delete kept[f]; else kept[f] = e[f];
+          });
+          ahead.theirs = true;
+        } else if (mineMetaAt > theirMetaAt) ahead.mine = true;
+
+        /* Barcode additions are a union. Timestamped removals cross devices and
+           beat older additions, so scanning a label on one till cannot be undone
+           by a stale copy from another. */
+        const removed = Object.assign({}, kept.barcodeRemoved || {});
+        Object.keys(e.barcodeRemoved || {}).forEach((code) => {
+          removed[code] = Math.max(+removed[code] || 0, +e.barcodeRemoved[code] || 0);
+        });
+        const codes = Object.create(null);
+        ;(kept.barcodes || []).concat(e.barcodes || []).forEach((b) => {
+          if (!b || !b.code) return;
+          const prior = codes[b.code];
+          if (!prior || (+b.at || 0) > (+prior.at || 0)) codes[b.code] = Object.assign({}, b);
+        });
+        const mergedCodes = Object.keys(codes).map((code) => codes[code])
+          .filter((b) => (+removed[b.code] || 0) < (+b.at || 0) || (!(+removed[b.code] || 0) && !b.at));
+        if (JSON.stringify(mergedCodes) !== JSON.stringify(kept.barcodes || [])) ahead.theirs = true;
+        kept.barcodes = mergedCodes;
+        kept.barcodeRemoved = removed;
+
         if (baseAtOf(e) > baseAtOf(kept)) {
           kept.base = baseOf(e);
           kept.baseAt = baseAtOf(e);
@@ -684,7 +755,7 @@
          et non seulement savoir qu'il existe. */
       ((mine && mine[k]) || []).forEach((e) => {
         if (!e || !e.id || gone[e.id] || seen[e.id]) return;
-        seen[e.id] = (k === 'variants' || k === 'products') ? e : 1;
+        seen[e.id] = e;
         list.push(e);
         if (!theirIds[e.id]) ahead.mine = true;   // créé ici, inconnu là-bas
       });
@@ -708,6 +779,9 @@
     });
     Object.keys(theirMove).forEach((id) => {
       if (!byMove[id]) { byMove[id] = theirMove[id]; ahead.theirs = true; }
+      else if (byMove[id].why === 'reserve' && theirMove[id].why === 'vente') {
+        byMove[id] = theirMove[id]; ahead.theirs = true;
+      }
     });
     out.moves = Object.keys(byMove).map((id) => byMove[id])
       .filter((m) => !gone[m.vid]);   // les mouvements d'un article supprimé s'en vont avec lui
@@ -842,7 +916,7 @@
       .then((res) => {
         if (slug !== VENUE) return;
         if (res.status === 200 && res.j && res.j.ok) {
-          cloud.rev = +res.j.rev || 0;
+          cloud.rev = Math.max(cloud.rev, +res.j.rev || 0);
           writeRev(slug, cloud.rev);
           /* Accepté : plus rien à remonter. Levé ICI et nulle part ailleurs — un
              drapeau baissé sur un envoi refusé perdrait la vente silencieusement. */
@@ -869,6 +943,89 @@
         cloud.busy = false;
         if (cloud.again) { cloud.again = false; schedulePush(400); }
       });
+  }
+
+  /* A checkout reservation is a small server-side compare-and-swap against the
+     current catalogue. Unlike the background full-document mirror, it returns a
+     definite answer before payment: either these exact variants are held, or the
+     till must not collect money. Network failure remains an explicit offline
+     fallback; a real stock refusal never does. */
+  function saleStockAction(action, ref, lines) {
+    load();
+    if (!cloudOn() || typeof fetch !== 'function') return Promise.resolve({ ok: false, offline: true });
+    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const timeout = controller ? setTimeout(() => controller.abort(), 4500) : null;
+    return fetch('/api/catalog', {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ merchant: VENUE, stockAction: action, ref: String(ref || '').slice(0, 64), lines: lines || [] }),
+      signal: controller ? controller.signal : undefined,
+    }).then((r) => r.json().then((j) => ({ status: r.status, j })).catch(() => ({ status: r.status, j: null })))
+      .then((res) => {
+        if (res.status === 200 && res.j && res.j.ok && res.j.data) {
+          db = mergeDocs(db, res.j.data);
+          dropIndex(); migrate(); materialize(db);
+          cloud.rev = Math.max(cloud.rev, +res.j.rev || 0);
+          writeRev(VENUE, cloud.rev); persist(); healSeq(); notify();
+          if (ahead.mine) { markCatalogDirty(); schedulePush(0); }
+          return { ok: true };
+        }
+        if (res.status === 409 && res.j && res.j.error === 'stock-insufficient') {
+          if (res.j.data) {
+            db = mergeDocs(db, res.j.data); dropIndex(); migrate(); materialize(db);
+            cloud.rev = Math.max(cloud.rev, +res.j.rev || 0); writeRev(VENUE, cloud.rev); persist(); notify();
+            if (ahead.mine) { markCatalogDirty(); schedulePush(0); }
+          }
+          return { ok: false, issue: res.j.issue || null };
+        }
+        if (res.status === 409) {
+          if (res.j && res.j.data) {
+            db = mergeDocs(db, res.j.data); dropIndex(); migrate(); materialize(db);
+            cloud.rev = Math.max(cloud.rev, +res.j.rev || 0); writeRev(VENUE, cloud.rev); persist(); notify();
+            if (ahead.mine) { markCatalogDirty(); schedulePush(0); }
+          }
+          return { ok: false, fatal: true, reason: (res.j && res.j.error) || 'stock-contention' };
+        }
+        if (res.status === 401 || res.status === 403 || res.status === 400) {
+          return { ok: false, fatal: true, reason: (res.j && res.j.error) || 'stock-action-refused' };
+        }
+        /* Once a request was sent, a lost/5xx response is ambiguous: Cloudflare
+           may have committed the hold before the connection broke. Never fall
+           back to a second local debit. Retrying the same ref is idempotent. */
+        return { ok: false, fatal: true, uncertain: true, reason: (res.j && res.j.error) || ('http-' + res.status) };
+      }).catch(() => ({ ok: false, fatal: true, uncertain: true, reason: 'network-uncertain' }))
+      .finally(() => { if (timeout) clearTimeout(timeout); });
+  }
+
+  function reserveSale(ref, lines) { return saleStockAction('reserve', ref, lines); }
+  function confirmSale(ref) {
+    /* Confirm locally first. If the network disappears after the card terminal
+       approves, the next catalogue push carries `vente`, never an ambiguous hold. */
+    let touched = false;
+    (db.moves || []).forEach((m) => {
+      if (m && m.ref === ref && m.why === 'reserve') { m.why = 'vente'; touched = true; }
+    });
+    if (touched) commit();
+    return saleStockAction('confirm', ref);
+  }
+  function releaseSale(ref) {
+    /* Release locally before asking the server. If Wi-Fi dies between opening and
+       cancelling payment, the inverse movement remains durable and retries through
+       the ordinary catalogue mirror. IDs match the server action, so both routes
+       arriving is still exactly one release. */
+    const held = (db.moves || []).filter((m) => m && m.ref === ref && m.why === 'reserve');
+    const paid = (db.moves || []).some((m) => m && m.ref === ref && m.why === 'vente');
+    if (!paid && held.length) {
+      let at = now();
+      held.forEach((m) => {
+        const id = 'rel-' + String(m.id).slice(0, 60);
+        if ((db.moves || []).some((x) => x && x.id === id)) return;
+        const v = varById(m.vid); at = Math.max(at + 1, baseAtOf(v) + 1, (+m.at || 0) + 1);
+        db.moves.push({ id, vid: m.vid, d: -(+m.d || 0), at, why: 'release', ref: String(ref).slice(0, 64) });
+      });
+      materialize(db); commit();
+    }
+    return saleStockAction('release', ref);
   }
 
   /* ─── « et dans l'autre boutique ? » ──────────────────────────────────────
@@ -984,6 +1141,16 @@
     else if (Date.now() - cloud.last >= 20000) pull(false);
   });
 
+  /* A till can stay visible for an entire shift. Visibility-only refresh meant
+     two open tills never learned about each other's sales. Poll only hosted real
+     pages, only while visible, and retain the existing 20 s floor. */
+  if (window.location && typeof window.setInterval === 'function') {
+    window.setInterval(() => {
+      if (document.visibilityState !== 'visible' || !cloudOn() || cloud.busy) return;
+      if (Date.now() - cloud.last >= 20000) pull(false);
+    }, 20000);
+  }
+
   // Une modification en attente ne doit pas mourir avec l'onglet.
   window.addEventListener('pagehide', () => {
     if (cloud.timer) { clearTimeout(cloud.timer); cloud.timer = null; pushNow({ keepalive: true }); }
@@ -1008,7 +1175,7 @@
     const palette = ['atlas', 'warn', 'riad', 'mint', 'info', 'danger'];
     const currentSeed = (DEMO_SEEDS[VENUE] || DEMO_SEEDS[DEMO_VENUE])();
     currentSeed.forEach((rayon, ri) => {
-      const cat = { id: nextId('cat'), name: rayon.rayonLabel, color: palette[ri % palette.length], order: ri };
+      const cat = { id: nextId('cat'), name: rayon.rayonLabel, color: palette[ri % palette.length], order: ri, metaAt: now() };
       db.categories.push(cat);
       rayon.items.forEach((it) => {
         const prod = {
@@ -1028,7 +1195,7 @@
            * dû au déposant. Voir le journal dépôt-vente dans assets/pos-maison.js. */
           ownership: it.ownership === 'consignment' ? 'consignment' : 'outright',
           consignor: String(it.consignor || '').trim(),
-          createdAt: Date.now(), archived: false,
+          createdAt: Date.now(), archived: false, metaAt: now(),
         };
         db.products.push(prod);
         const sizeKeys = Object.keys(it.sizes);
@@ -1067,7 +1234,7 @@
       colorLabel: n.displayLabel, colorHex: n.displayHex,
       size: String(size), stock: Math.max(0, stock | 0),
       base: Math.max(0, stock | 0), baseAt: now(),
-      sku: '', barcodes: [],
+      sku: '', barcodes: [], barcodeRemoved: {}, metaAt: now(),
     };
     if (n.source) {
       v.colorSource = n.source;
@@ -1216,9 +1383,10 @@
   /* Mouvement atomique sur la même déclinaison vendable. Une vente peut vider
      plusieurs tons d'une même famille (Bleu + Bleu nuit), mais jamais une autre
      couleur. On vérifie le total AVANT la première écriture : insuffisant veut
-     dire zéro mouvement, pas un stock à moitié décrémenté. Les vieux retours qui
-     ne portaient pas de couleur exacte gardent le repli par taille. */
-  function adjustVariantStock(pid, size, color, delta) {
+     dire zéro mouvement, pas un stock à moitié décrémenté. Un retour dont la
+     couleur n'existe plus est signalé à rapprocher, jamais crédité sur une autre. */
+  function adjustVariantStock(pid, size, color, delta, opts) {
+    opts = opts || {};
     delta = Math.trunc(+delta || 0);
     if (!delta) return true;
     const sameSize = variantsOf(pid).filter((v) => String(v.size) === String(size));
@@ -1231,13 +1399,14 @@
         .forEach((v) => {
           if (!remaining) return;
           const qty = Math.min(remaining, Math.max(0, +v.stock || 0));
-          if (qty) { adjustStock(v.id, -qty, 'vente'); remaining -= qty; }
+          if (qty) { adjustStock(v.id, -qty, opts.why || 'vente', { ref: opts.ref, actor: opts.actor }); remaining -= qty; }
         }));
       return remaining === 0;
     }
-    const v = matched[0] || sameSize[0];
+    const v = matched[0];
     if (!v) return false;
-    adjustStock(v.id, delta, 'retour' + (matched.length ? '' : ' · couleur non appariée'));
+    adjustStock(v.id, delta, opts.why || 'retour',
+      { ref: opts.ref, actor: opts.actor });
     return true;
   }
 
@@ -1297,15 +1466,15 @@
   function listCategories() { return db.categories.slice().sort((a, b) => (a.order || 0) - (b.order || 0)); }
 
   function addCategory(name, color) {
-    const cat = { id: nextId('cat'), name: String(name || 'Catégorie').trim() || 'Catégorie', color: color || 'atlas', order: db.categories.length };
+    const cat = { id: nextId('cat'), name: String(name || 'Catégorie').trim() || 'Catégorie', color: color || 'atlas', order: db.categories.length, metaAt: now() };
     db.categories.push(cat); commit(); return cat;
   }
-  function renameCategory(id, name) { const c = catById(id); if (c) { c.name = String(name || c.name).trim() || c.name; commit(); } return c; }
-  function setCategoryColor(id, color) { const c = catById(id); if (c) { c.color = color; commit(); } return c; }
+  function renameCategory(id, name) { const c = catById(id); if (c) { c.name = String(name || c.name).trim() || c.name; c.metaAt = now(); commit(); } return c; }
+  function setCategoryColor(id, color) { const c = catById(id); if (c) { c.color = color; c.metaAt = now(); commit(); } return c; }
   function deleteCategory(id, opts) {
     opts = opts || {};
     const reassignTo = opts.reassignTo || null; // null → uncategorised
-    db.products.forEach((p) => { if (p.categoryId === id) p.categoryId = reassignTo; });
+    db.products.forEach((p) => { if (p.categoryId === id) { p.categoryId = reassignTo; p.metaAt = now(); } });
     db.categories = db.categories.filter((c) => c.id !== id);
     tomb(id);
     commit();
@@ -1371,7 +1540,7 @@
       photo: String(data.photo || ''),
       video: String(data.video || ''),
       mediaAt: +data.mediaAt || ((data.photo || data.video) ? Date.now() : 0),
-      createdAt: Date.now(), archived: false,
+      createdAt: Date.now(), archived: false, metaAt: now(),
     };
     db.products.push(p); ixAddProduct(p); commit(); return p;
   }
@@ -1397,9 +1566,10 @@
       }
     });
     if (mediaPatch) p.mediaAt = Date.now();
+    p.metaAt = now();
     commit(); return p;
   }
-  function archiveProduct(id, val) { const p = prodById(id); if (p) { p.archived = val !== false; commit(); } return p; }
+  function archiveProduct(id, val) { const p = prodById(id); if (p) { p.archived = val !== false; p.metaAt = now(); commit(); } return p; }
   function deleteProduct(id) {
     /* Les déclinaisons AUSSI, nommément. Le nettoyage par parent absent existe
        plus bas dans mergeDocs, mais il ne peut agir que si le produit reste
@@ -1479,6 +1649,7 @@
       else delete v.colorSourceHex;
       if (!n.source) delete v.colorSource;
     }
+    if (patch.size != null || patch.sku != null || patch.note != null || patch.colorId) v.metaAt = now();
     commit(); return v;
   }
   /* TOUT changement de quantité passe par ici et s'horodate. C'est cet
@@ -1491,7 +1662,7 @@
      s'additionner au lieu de s'écraser. La distinction n'est pas cosmétique —
      c'est toute la différence entre « il y en a 8 » et « il en est parti 2 ». */
   function setStock(id, n) { const v = varById(id); if (v) { setAbsolute(v, n); commit(); } return v; }
-  function adjustStock(id, d, why) { const v = varById(id); if (v) { move(v, d, why || 'ajust'); commit(); } return v; }
+  function adjustStock(id, d, why, extra) { const v = varById(id); if (v) { move(v, d, why || 'ajust', extra); commit(); } return v; }
   function deleteVariant(id) {
     db.variants = db.variants.filter((v) => v.id !== id);
     if (Array.isArray(db.moves)) db.moves = db.moves.filter((m) => !m || m.vid !== id);
@@ -1600,7 +1771,8 @@
     if (v.barcodes.some((b) => b.primary)) return primaryBarcode(v); // already has one
     let code; let guard = 0;
     do { code = genEan(); } while (barcodeOwner(code) && guard++ < 50);
-    v.barcodes.push({ code, type: 'ean13', primary: true });
+    v.barcodes.push({ code, type: 'ean13', primary: true, at: now() });
+    v.metaAt = now();
     ixAddCode(v, code);
     commit(); return code;
   }
@@ -1633,7 +1805,9 @@
     if (owner) return { ok: false, reason: 'doublon', owner: { variant: owner, product: prodById(owner.productId) } };
     const sym = opts.sym || (KB && KB.detect ? KB.detect(code) : '');
     const isPrimary = !v.barcodes.some((b) => b.primary);
-    v.barcodes.push({ code, type: opts.type || 'imported', sym, primary: isPrimary });
+    v.barcodes.push({ code, type: opts.type || 'imported', sym, primary: isPrimary, at: now() });
+    if (v.barcodeRemoved) delete v.barcodeRemoved[code];
+    v.metaAt = now();
     ixAddCode(v, code);
     commit(); return { ok: true, code, sym };
   }
@@ -1642,6 +1816,9 @@
     const c = normCode(code); const wasPrimary = v.barcodes.some((b) => b.code === c && b.primary);
     v.barcodes = v.barcodes.filter((b) => b.code !== c);
     if (wasPrimary && v.barcodes.length) v.barcodes[0].primary = true;
+    if (!v.barcodeRemoved) v.barcodeRemoved = {};
+    v.barcodeRemoved[c] = now();
+    v.metaAt = now();
     dropIndex();
     commit();
   }
@@ -1825,7 +2002,10 @@
     archiveProduct: (id, v) => (load(), archiveProduct(id, v)), deleteProduct: (id) => (load(), deleteProduct(id)),
     productStock: (id) => (load(), productStock(id)),
     variantStock: (id, size, color) => (load(), variantStock(id, size, color)),
-    adjustVariantStock: (id, size, color, delta) => (load(), adjustVariantStock(id, size, color, delta)),
+    adjustVariantStock: (id, size, color, delta, opts) => (load(), adjustVariantStock(id, size, color, delta, opts)),
+    reserveSale: (ref, lines) => reserveSale(ref, lines),
+    confirmSale: (ref) => (load(), confirmSale(ref)),
+    releaseSale: (ref) => (load(), releaseSale(ref)),
     // variants
     // .slice() : variantsOf() rend le tableau vivant de l'index (voir index()).
     // À l'intérieur du module on ne fait que le lire ; dehors, une copie, pour
@@ -1834,7 +2014,7 @@
     updateVariant: (id, p) => (load(), updateVariant(id, p)), setStock: (id, n) => (load(), setStock(id, n)),
     // Le MOTIF fait partie de l'appel : sans lui, une vente arrive au journal
     // étiquetée « ajust » et le journal cesse d'être lisible.
-    adjustStock: (id, d, why) => (load(), adjustStock(id, d, why)), deleteVariant: (id) => (load(), deleteVariant(id)),
+    adjustStock: (id, d, why, extra) => (load(), adjustStock(id, d, why, extra)), deleteVariant: (id) => (load(), deleteVariant(id)),
     // intake — les trois gestes distincts (voir le bloc au-dessus de findVariant)
     findVariant: (pid, c, s) => (load(), findVariant(pid, c, s)),
     ensureVariant: (d) => (load(), ensureVariant(d)),

@@ -254,7 +254,12 @@
 
   const sizesOf   = (p) => Object.keys(p.sizes);
   const stockOf   = (p) => sizesOf(p).reduce((s, k) => s + p.sizes[k], 0);
-  const stockAdd  = (pid, size, d) => { P[pid].sizes[size] = Math.max(0, (P[pid].sizes[size] || 0) + d); };
+  const stockAdd  = (pid, size, d) => {
+    const p = P[pid];
+    if (!p || !p.sizes) return false;
+    p.sizes[size] = Math.max(0, (p.sizes[size] || 0) + d);
+    return true;
+  };
   const canonicalPid = (pid) => (P[pid] && P[pid].id) || pid;
   function colorKey(pid, color) {
     const cat = window.KiwiBoutiqueCatalog;
@@ -324,15 +329,18 @@
      — on ne fusionne jamais dans le dos du commerçant). Il faut donc décider
      laquelle bouge : l'identifiant exact s'il correspond, puis les autres tons
      de cette famille. Une SORTIE ne doit jamais emprunter le stock d'une autre
-     couleur. Un retour ancien sans couleur appariable garde, lui, le repli par
-     taille afin de ne pas perdre physiquement une pièce rendue. */
-  function persistStock(pid, size, color, delta) {
+     couleur. Un retour sans couleur appariable remonte maintenant comme stock à
+     rapprocher au lieu de créditer silencieusement une autre couleur. */
+  function persistStock(pid, size, color, delta, ref, why) {
     if (!delta || !pvReal()) return true;
     try {
       const cat = window.KiwiBoutiqueCatalog;
       if (!cat || !cat.adjustVariantStock) return false;
       const id = canonicalPid(pid);
-      return cat.adjustVariantStock(id, size, colorKey(pid, color), delta);
+      return cat.adjustVariantStock(id, size, colorKey(pid, color), delta, {
+        ref: ref || '', why: why || (delta < 0 ? 'vente' : 'retour'),
+        actor: STAFF && STAFF.caissiere ? STAFF.caissiere.name : '',
+      });
     } catch (_) { return false; }
   }
   /* ══════════ UNE VENTE SORTIE DES LIVRES REND SON STOCK ═══════════════════
@@ -859,6 +867,7 @@
     syncBlocked: false,
     syncStorageError: false,
     ticketStorageError: false,
+    checkoutBusy: false,
   };
 
   /* Journal partagé des retours. Avant ceci, le stock et l'avoir changeaient
@@ -1350,7 +1359,11 @@
     syncNetworkState();
     setupFullscreenBtn();
     $$('.modal-veil', root).forEach((v) => {
-      v.addEventListener('click', (e) => { if (e.target === v) closeVeil(v); });
+      v.addEventListener('click', (e) => {
+        /* Payment owns a server stock reservation. It may close only through its
+           own handlers, which release that reservation when nothing was paid. */
+        if (e.target === v && v.id !== 'bq-pay-veil') closeVeil(v);
+      });
     });
 
     /* Vente — scan-to-sell bar : a code scanned or typed here drops the article
@@ -2630,6 +2643,10 @@
      supermarket lane. Resolves EAN-13 or any old/alphanumeric code registered on
      an article. Unknown → offer to register it on a product (no reprint). */
   function commitEan(raw) {
+    if (state.checkoutBusy || (root && $$('.modal-veil.is-open', root).length)) {
+      toast('Terminez la fenêtre ouverte avant de scanner');
+      return;
+    }
     const code = normScan(raw);
     if (!code) return;
     const hit = window.KiwiBoutiqueCatalog ? window.KiwiBoutiqueCatalog.resolveScan(code) : null;
@@ -2955,16 +2972,21 @@
   }
 
   function restoreLines(sale, idxs, quantities, note) {
+    let unresolved = 0;
     idxs.forEach((i) => {
       const ln = sale.lines[i];
       const qty = Math.min(lineAvailableQty(ln), Number(quantities.get(i)) || 0);
       if (!qty) return;
-      markLineReturned(ln, qty, note);
-      stockAdd(ln.pid, ln.size, qty);
       // Returned pieces go back into the real inventory too, not just the display.
-      persistStock(ln.pid, ln.size, ln.color, qty);
+      const restored = persistStock(ln.pid, ln.size, ln.color, qty,
+        `ret-${sale.syncId || sale.id}-${i}-${lineReturnedQty(ln) + qty}`, 'retour');
+      stockAdd(ln.pid, ln.size, qty);
+      markLineReturned(ln, qty, restored ? note : `${note} · stock à rapprocher`);
+      if (!restored) unresolved += qty;
     });
     persistDay();  // le retour change la recette du jour, pas seulement l'affichage
+    if (unresolved) toast('Retour enregistré, stock à rapprocher', `${unresolved} pièce${unresolved > 1 ? 's' : ''} appartenait à une variante supprimée du catalogue.`);
+    return unresolved === 0;
   }
 
   function issueAvoir(amount, cliente, motif, fromSaleId) {
@@ -3091,20 +3113,35 @@
     $$('[data-bq-close]', el).forEach((b) => { b.onclick = () => closeVeil('#bq-exch-veil'); });
 
     let applied = false;
-    const apply = () => {
-      if (applied) return;
+    const stockRef = `exch-${newSaleId()}`;
+    const cat = window.KiwiBoutiqueCatalog;
+    const reserveReplacement = () => {
+      if (variantStock(newPid, newSize, newColor) < 1) {
+        return Promise.resolve({ ok: false, issue: { pid: newPid, size: newSize, color: newColor, needed: 1, onHand: 0 } });
+      }
+      if (IS_DEMO || state.offline || !cat || !cat.reserveSale) return Promise.resolve({ ok: false, offline: true });
+      return cat.reserveSale(stockRef, [{ pid: newPid, size: newSize, color: colorKey(newPid, newColor), qty: 1, price: newP.price }]);
+    };
+    const apply = (reserved) => {
+      if (applied) return true;
+      if (!reserved && !persistStock(newPid, newSize, newColor, -1, stockRef, 'vente')) {
+        showStockIssue({ pid: newPid, size: newSize, color: newColor, needed: 1, onHand: variantStock(newPid, newSize, newColor) });
+        return false;
+      }
       applied = true;
-      stockAdd(ln.pid, ln.size, 1);
+      if (reserved && cat && cat.confirmSale) cat.confirmSale(stockRef);
       stockAdd(newPid, newSize, -1);
-      // Commit the swap to the shared inventory: rendered piece back in, replacement out.
-      persistStock(ln.pid, ln.size, ln.color, 1);
-      persistStock(newPid, newSize, newColor, -1);
+      // Commit the swap to the shared inventory: returned piece back in, replacement out.
+      const oldRestored = persistStock(ln.pid, ln.size, ln.color, 1, `ret-${stockRef}`, 'retour');
+      stockAdd(ln.pid, ln.size, 1);
       markLineReturned(ln, 1, `échangée → ${newP.name} · ${newSize}`);
       recordReturn(sale, [ex.idx], ln.unit, ex.motif || 'Non précisé', 'echange', '', new Map([[ex.idx, 1]]));
       state.exchange = null;
       persistDay();
       queueIfOffline(`Échange ${sale.id}`);
       renderExchNote(); renderGrid(); renderBadges();
+      if (!oldRestored) toast('Échange enregistré, retour à rapprocher', 'La variante d’origine a été supprimée du catalogue.');
+      return true;
     };
 
     $('#bq-exch-go', el).onclick = () => {
@@ -3112,8 +3149,16 @@
         const go = $('#bq-exch-go', el);
         if (go) go.disabled = true;
         nextStandaloneTicketNumber().then((exchangeNumber) => {
-          closeVeil('#bq-exch-veil');
-          openPay({
+          return reserveReplacement().then((reservation) => {
+            if (!reservation.ok && !reservation.offline) {
+              if (go) go.disabled = false;
+              if (reservation.issue) showStockIssue(reservation.issue);
+              else toast('Échange suspendu', 'Impossible de réserver l’article de remplacement.');
+              return;
+            }
+            const reserved = !!reservation.ok;
+            closeVeil('#bq-exch-veil');
+            openPay({
             amount: diff,
             title: 'Différence échange',
             subtitle: `${sale.id} · ${esc(oldP.name)} → ${esc(newP.name)}`,
@@ -3128,8 +3173,9 @@
             subtotal: diff,
             doneLabel: 'Terminer',
             waName: c ? firstName(c.name) : null, waPhone: c ? c.phone : null,
+            onCancel: () => { if (reserved && cat && cat.releaseSale) cat.releaseSale(stockRef); },
             onPaid: (parts) => {
-              apply();
+              if (!apply(reserved)) return { line: 'Échange non enregistré · stock insuffisant' };
               const rec = {
                 id: exchangeNumber, syncId: newSaleId(), at: new Date(), clientId: sale.clientId, by: STAFF.caissiere.name, kind: 'echange',
                 methods: parts.map((x) => x.m).join(' + '),
@@ -3166,22 +3212,38 @@
               refreshOps();
               return { ref: rec.id, sale: rec, line: `Échange ${sale.id} réglé, différence ${fmtMAD(diff)}` };
             },
+            });
           });
         }).catch(() => {
           if (go) go.disabled = false;
           toast('Numéro de ticket indisponible', 'Reconnectez cette caisse pour réserver sa prochaine série.');
         });
       } else if (diff < 0) {
-        closeVeil('#bq-exch-veil');
-        apply();
-        const av = issueAvoir(-diff, c, `Différence échange ${sale.id}`, sale.id);
-        refreshOps();
-        openVoucher(av, { mode: 'fresh' });
+        const go = $('#bq-exch-go', el); if (go) go.disabled = true;
+        reserveReplacement().then((reservation) => {
+          if (!reservation.ok && !reservation.offline) {
+            if (go) go.disabled = false;
+            if (reservation.issue) showStockIssue(reservation.issue);
+            return;
+          }
+          closeVeil('#bq-exch-veil');
+          if (!apply(!!reservation.ok)) return;
+          const av = issueAvoir(-diff, c, `Différence échange ${sale.id}`, sale.id);
+          refreshOps(); openVoucher(av, { mode: 'fresh' });
+        });
       } else {
-        closeVeil('#bq-exch-veil');
-        apply();
-        refreshOps();
-        toast(`Échange ${sale.id}, ${oldP.name} ${ln.size} contre ${newP.name} ${newSize}`);
+        const go = $('#bq-exch-go', el); if (go) go.disabled = true;
+        reserveReplacement().then((reservation) => {
+          if (!reservation.ok && !reservation.offline) {
+            if (go) go.disabled = false;
+            if (reservation.issue) showStockIssue(reservation.issue);
+            return;
+          }
+          closeVeil('#bq-exch-veil');
+          if (!apply(!!reservation.ok)) return;
+          refreshOps();
+          toast(`Échange ${sale.id}, ${oldP.name} ${ln.size} contre ${newP.name} ${newSize}`);
+        });
       }
     };
   }
@@ -3293,7 +3355,7 @@
 
   function checkout() {
     const t = state.ticket;
-    if (!t.lines.length) return;
+    if (!t.lines.length || state.checkoutBusy) return;
     if (state.syncStorageError || state.ticketStorageError) {
       toast('Vente suspendue', 'La tablette ne peut plus sécuriser la file hors-ligne. Contactez le support avant de continuer.');
       return;
@@ -3322,25 +3384,42 @@
     const tot = ticketTotals(t);
     const total = tot.total;
     const c = ticketClient();
-    openPay({
+    /* Everything after this line reads this immutable snapshot. Catalogue pulls,
+       barcode scans and ticket pruning may still happen asynchronously, but they
+       can no longer change what is charged, printed, journalled or deducted. */
+    const frozen = {
+      num: t.num, syncId: t.syncId || newSaleId(), clientId: c ? c.id : null,
+      reward: t.reward ? Object.assign({}, t.reward) : null,
+      remiseAuth: (t.remiseAuth && typeof t.remiseAuth === 'object') ? Object.assign({}, t.remiseAuth) : null,
+      lines: t.lines.map((ln) => {
+        const p = P[ln.pid] || {};
+        return {
+          pid: ln.pid, size: ln.size, color: ln.color, qty: ln.qty, remise: ln.remise,
+          promo: linePromo(ln), unit: lineUnit(ln), name: p.name || 'Article',
+          price: +p.price || 0, barcode: p.barcode || '', rayon: rayonOf(ln.pid) || '',
+        };
+      }),
+    };
+    const cat = window.KiwiBoutiqueCatalog;
+    const beginPay = (reserved) => openPay({
       amount: total,
       title: 'Encaissement',
-      subtitle: `${t.num} · ${c ? esc(c.name) : 'Cliente de passage'}`,
+      subtitle: `${frozen.num} · ${c ? esc(c.name) : 'Cliente de passage'}`,
       // Real ticket contents, so the printed receipt itemises the sale instead
       // of showing a single lump sum.
-      ref: t.num,
-      lines: t.lines.map((ln) => ({
+      ref: frozen.num,
+      lines: frozen.lines.map((ln) => ({
         qty: ln.qty,
-        name: (P[ln.pid] ? P[ln.pid].name : 'Article') + (ln.size ? ' ' + ln.size : ''),
-        amount: lineUnit(ln) * ln.qty,
+        name: ln.name + (ln.size ? ' ' + ln.size : ''),
+        amount: ln.unit * ln.qty,
         ref: ln.pid,
-        barcode: (P[ln.pid] && P[ln.pid].barcode) || '',
+        barcode: ln.barcode,
       })),
       /* Ce qui rend le ticket lisible pour la cliente : ce qu'elle aurait payé,
          ce qu'on lui a retiré, et à quel nom la fidélité est comptée. Sans ça le
          reçu affiche un total qui ne correspond pas à l'addition des lignes et
          personne ne peut vérifier sa remise. */
-      subtotal: t.lines.reduce((s, ln) => s + P[ln.pid].price * ln.qty, 0),
+      subtotal: frozen.lines.reduce((s, ln) => s + ln.price * ln.qty, 0),
       /* Trois baisses, deux lignes distinctes sur le reçu. `promo` porte son
          NOM quand une seule promotion a joué — la cliente retrouve l'affiche
          qu'elle a lue en vitrine. Quand plusieurs se croisent sur le même
@@ -3348,20 +3427,25 @@
          deux ferait croire que l'autre n'a pas été appliquée. */
       promo: tot.promo ? { amount: tot.promo, label: promoLabelForTicket(t) } : null,
       discount: tot.remise + tot.reward,
-      customer: c ? { name: c.name, phone: c.phone, points: c.points, loyalty: (t.reward && t.reward.clientId === t.client) ? t.reward.label : '' } : null,
+      customer: c ? { name: c.name, phone: c.phone, points: c.points, loyalty: (frozen.reward && frozen.reward.clientId === frozen.clientId) ? frozen.reward.label : '' } : null,
       /* Deuxième lecture juste avant que la caissière choisisse son premier mode
          de paiement : elle couvre une correction de stock arrivée pendant que
          la fenêtre d'encaissement était ouverte, sans jamais bloquer un paiement
          déjà commencé. */
-      stockCheck: () => ticketStockIssue(t),
+      stockCheck: reserved ? null : () => ticketStockIssue({ lines: frozen.lines }),
       onStockError: showStockIssue,
+      onCancel: () => {
+        state.checkoutBusy = false;
+        if (reserved && cat && cat.releaseSale) cat.releaseSale(frozen.syncId);
+      },
       waName: c ? firstName(c.name) : null, waPhone: c ? c.phone : null,
       onPaid: (parts) => {
+        state.checkoutBusy = false;
         // Récompense fidélité effectivement portée sur ce ticket (attachée à cette
         // cliente) — on la débite des points APRÈS avoir enregistré l'achat.
-        const rewardUsed = !!(t.reward && c && c.id && t.reward.clientId === c.id);
+        const rewardUsed = !!(frozen.reward && c && c.id && frozen.reward.clientId === c.id);
         const sale = {
-          id: t.num, syncId: t.syncId || newSaleId(), at: new Date(), clientId: c ? c.id : null, by: STAFF.caissiere.name, kind: 'vente',
+          id: frozen.num, syncId: frozen.syncId, at: new Date(), clientId: frozen.clientId, by: STAFF.caissiere.name, kind: 'vente',
           methods: parts.map((x) => x.m).join(' + '),
           /* Les parts de règlement, figées : c'est elles qui rendent le tiroir
              de la clôture exact quand un ticket est réglé moitié carte moitié
@@ -3371,8 +3455,8 @@
           /* L'accord responsable suit la vente, pas seulement l'écran : qui a
              autorisé, quand, quel pourcentage, et ce que la remise a coûté au
              magasin. C'est la seule chose relisible le jour d'un contrôle. */
-          remiseAuth: (t.remiseAuth && typeof t.remiseAuth === 'object')
-            ? { by: t.remiseAuth.by || '', role: t.remiseAuth.role || '', at: t.remiseAuth.at, pct: t.remiseAuth.pct, amount: Math.round(tot.remise) }
+          remiseAuth: frozen.remiseAuth
+            ? { by: frozen.remiseAuth.by || '', role: frozen.remiseAuth.role || '', at: frozen.remiseAuth.at, pct: frozen.remiseAuth.pct, amount: Math.round(tot.remise) }
             : null,
           promoOff: Math.round(tot.promo),        // ce que les promotions ont coûté, pour la clôture
           /* `promo` suit la ligne dans le journal. Un retour se rembourse sur
@@ -3380,18 +3464,19 @@
              trois jours plus tard a besoin de SAVOIR pourquoi le prix était bas —
              sinon la caissière voit un caftan à 700 sur un ticket, 1 000 en rayon,
              et n'a aucun moyen de trancher. */
-          lines: t.lines.map((ln) => ({ pid: ln.pid, size: ln.size, color: ln.color, qty: ln.qty, remise: ln.remise, promo: linePromo(ln), unit: lineUnit(ln), returned: false, note: '' })),
-          reward: rewardUsed ? t.reward.label : null,
+          lines: frozen.lines.map((ln) => ({ pid: ln.pid, size: ln.size, color: ln.color, qty: ln.qty, remise: ln.remise, promo: ln.promo, unit: ln.unit, name: ln.name, returned: false, note: '' })),
+          reward: rewardUsed ? frozen.reward.label : null,
           total,
         };
         SALES.unshift(sale);
         persistDay();
+        if (reserved && cat && cat.confirmSale) cat.confirmSale(frozen.syncId);
         bqSaveProvisional();              // le Z provisoire suit la vente (voir day-report.js)
         if (IS_DEMO) saleSeq++;
         // Draw the sold pieces down from the SHARED inventory — a real sale must move
         // stock through to the base (the in-memory ticket holds alone evaporate on the
         // next catalogue sync). Real/paired store only; the local demo stays in-memory.
-        sale.lines.forEach((ln) => persistStock(ln.pid, ln.size, ln.color, -ln.qty));
+        if (!reserved) sale.lines.forEach((ln) => persistStock(ln.pid, ln.size, ln.color, -ln.qty, sale.syncId, 'vente'));
         // Mirror the sale to the owner/operator dashboard (Live Link) so the
         // boutique's real sales show up on the "En direct" feed + running total —
         // the main caisse does the same via recordSale(). No-op unless live is on;
@@ -3401,10 +3486,10 @@
             const received = (parts || []).filter((x) => x && x.m !== 'avoir' && x.m !== 'livraison' && (+x.amount || 0) > 0);
             const receivedMethods = received.map((x) => x.m);
             const method = receivedMethods.indexOf('carte') >= 0 ? 'card' : (receivedMethods.indexOf('espèces') >= 0 ? 'cash' : 'wallet');
-            const first = t.lines[0];
-            const pieces = t.lines.reduce((n, ln) => n + ln.qty, 0);
-            const name = (first && P[first.pid]) ? P[first.pid].name : 'Vente';
-            const label = t.lines.length > 1 ? (name + ' +' + (pieces - first.qty) + ' art.') : name;
+            const first = frozen.lines[0];
+            const pieces = frozen.lines.reduce((n, ln) => n + ln.qty, 0);
+            const name = first ? first.name : 'Vente';
+            const label = frozen.lines.length > 1 ? (name + ' +' + (pieces - first.qty) + ' art.') : name;
             /* On remonte l'argent QUI RENTRE, pas la valeur du ticket. Un avoir
                n'est pas un encaissement : c'est la consommation d'une dette née
                d'une vente déjà comptée. Remonter le total, c'est compter deux
@@ -3422,13 +3507,13 @@
                ligne — c'est lui qui fait tenir le « Catégorie : Jeans » du
                rapport de fin de journée même si le rayon est renommé plus tard.
                Bornes identiques à celles de /api/sale : 40 lignes, 60 signes. */
-            const basket = t.lines.slice(0, 40).map((ln) => ({
+            const basket = frozen.lines.slice(0, 40).map((ln) => ({
               itemId: ln.pid,
               variantId: [ln.pid, ln.size || '', ln.color || ''].join(':'),
-              name: (P[ln.pid] ? P[ln.pid].name : 'Article') + (ln.size ? ' ' + ln.size : ''),
+              name: ln.name + (ln.size ? ' ' + ln.size : ''),
               qty: ln.qty,
-              total: Math.round(lineUnit(ln) * ln.qty),
-              cat: rayonOf(ln.pid) || '',
+              total: Math.round(ln.unit * ln.qty),
+              cat: ln.rayon,
               unit: 'piece',
               kind: 'product',
             }));
@@ -3462,7 +3547,7 @@
           const pts = Math.round(total / 10);
           c.points += pts;
           c.achats += 1;
-          ptsLine = ` · +${pts} pts pour ${firstName(c.name)}` + (rewardUsed ? ` · récompense ${t.reward.label}` : '');
+          ptsLine = ` · +${pts} pts pour ${firstName(c.name)}` + (rewardUsed ? ` · récompense ${frozen.reward.label}` : '');
         }
         queueIfOffline(`Vente ${sale.id}`);
         freshTicket();
@@ -3473,6 +3558,29 @@
           ? `Vente ${sale.id} en livraison, ${fmtMAD(total)} à recevoir${ptsLine}`
           : `Vente ${sale.id} encaissée, ${fmtMAD(total)}${ptsLine}` };
       },
+    });
+
+    state.checkoutBusy = true;
+    const wait = $('#bq-paym', root);
+    wait.innerHTML = '<h3 class="modal-title">Vérification du stock…</h3><p class="modal-subtle">Kiwi réserve les variantes exactes avant l\'encaissement.</p>';
+    openVeil('#bq-pay-veil');
+    const reserveLines = frozen.lines.map((ln) => ({ pid: ln.pid, size: ln.size, color: colorKey(ln.pid, ln.color), qty: ln.qty, price: ln.price }));
+    if (IS_DEMO || state.offline || !cat || !cat.reserveSale) {
+      beginPay(false);
+      return;
+    }
+    cat.reserveSale(frozen.syncId, reserveLines).then((res) => {
+      if (res && res.ok) { beginPay(true); return; }
+      if (res && res.issue) {
+        state.checkoutBusy = false; closeVeil('#bq-pay-veil'); showStockIssue(res.issue); return;
+      }
+      if (res && res.fatal) {
+        state.checkoutBusy = false; closeVeil('#bq-pay-veil');
+        toast('Stock non confirmé, rien n’a été encaissé', 'Touchez de nouveau Encaisser : la même réservation sera relue sans doubler le stock.');
+        return;
+      }
+      toast('Stock non confirmé en ligne', 'La vente continue hors ligne et sera synchronisée avec son identifiant unique.');
+      beginPay(false);
     });
   }
 
@@ -3513,6 +3621,7 @@
           toast('Paiement commencé', `Il reste ${fmtMAD(due())} à régler avant de fermer.`);
           return;
         }
+        if (!committed && opts.onCancel) opts.onCancel();
         closeVeil('#bq-pay-veil');
       };
     });
@@ -3761,7 +3870,10 @@
         const cancel = $('#bq-card-cancel', el);
         if (cancel) cancel.onclick = () => {
           if (settled.length || avoirPart) stepMethods();
-          else closeVeil('#bq-pay-veil');
+          else {
+            if (opts.onCancel) opts.onCancel();
+            closeVeil('#bq-pay-veil');
+          }
         };
       }, 1400);
     };
@@ -4236,6 +4348,10 @@
 
   function handleWedge(code) {
     if (scanCapture) { try { scanCapture(code); } catch (_) {} return; }  /* saisie inventaire */
+    if (state.checkoutBusy || (root && $$('.modal-veil.is-open', root).length)) {
+      toast('Terminez la fenêtre ouverte avant de scanner');
+      return;
+    }
     if (state.view === 'inventaire') { invScanHandle(code); return; }   /* fiche stock */
     if (state.view === 'scan') { lookupScan(code); return; }            /* vérif prix/stock */
     commitEan(code);                                                    /* vente → ticket */

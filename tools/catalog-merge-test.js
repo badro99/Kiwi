@@ -129,11 +129,54 @@ if (!C || !C._merge) {
   ok(source.includes("'kiwiCatalogDirty:v1:'") && source.includes('cloud.dirty = !!dirtyToken(slug)') &&
     source.includes('clearCatalogDirty(slug, sentDirty)'),
   'le stock en attente survit au rechargement et seul le POST correspondant peut l’acquitter');
-  ok(/batchDirty = false;\s*markCatalogDirty\(\);/.test(source),
+  ok(/batchDirty = false;[\s\S]{0,180}markCatalogDirty\(\);/.test(source),
     'un import ou autre mutation groupée est marqué en attente comme une vente isolée');
 }
 
 const NOW = Date.now();
+
+/* ═══ 11 · LES MODIFICATIONS MÉTIER LES PLUS RÉCENTES TRAVERSENT ═════════════
+ * Keeping the local record unconditionally made an old till resurrect an archived
+ * product and its old price, then publish both on its next sale. */
+{
+  const base = { v: 2, seq: 1, categories: [], removed: {}, moves: [],
+    variants: [{ id: 'v-meta', productId: 'p-meta', size: 'S', colorId: 'noir', colorFamily: 'noir', stock: 2, base: 2, baseAt: NOW }] };
+  const local = Object.assign({}, base, { products: [{ id: 'p-meta', name: 'Polo', priceMAD: 400, archived: false, metaAt: NOW }] });
+  const server = Object.assign({}, base, { products: [{ id: 'p-meta', name: 'Polo nouveau', priceMAD: 500, archived: true, metaAt: NOW + 1 }] });
+  const merged = C._merge(local, server);
+  eq(merged.products[0].priceMAD, 500, 'le prix le plus récent atteint la caisse');
+  eq(merged.products[0].archived, true, 'un article archivé ne reste pas vendable sur une vieille caisse');
+
+  const localCodes = Object.assign({}, base, { products: local.products,
+    variants: [{ id: 'v-meta', productId: 'p-meta', size: 'S', colorId: 'noir', colorFamily: 'noir', stock: 2, base: 2, baseAt: NOW,
+      metaAt: NOW, barcodes: [{ code: 'LOCAL', at: NOW, primary: true }], barcodeRemoved: {} }] });
+  const serverCodes = Object.assign({}, base, { products: server.products,
+    variants: [{ id: 'v-meta', productId: 'p-meta', size: 'S', colorId: 'noir', colorFamily: 'noir', stock: 2, base: 2, baseAt: NOW,
+      metaAt: NOW + 1, barcodes: [{ code: 'REMOTE', at: NOW + 1, primary: true }], barcodeRemoved: {} }] });
+  const both = C._merge(localCodes, serverCodes);
+  eq(both.variants[0].barcodes.map((b) => b.code).sort().join(','), 'LOCAL,REMOTE',
+    'deux codes ajoutés sur deux appareils survivent ensemble');
+  serverCodes.variants[0].barcodeRemoved.LOCAL = NOW + 2;
+  const removed = C._merge(both, serverCodes);
+  eq(removed.variants[0].barcodes.some((b) => b.code === 'LOCAL'), false,
+    'la suppression horodatée d’un code traverse les appareils');
+}
+
+/* ═══ 12 · COMPACTION : AUCUNE UNITÉ NE RÉAPPARAÎT ═════════════════════════════ */
+{
+  const old = Date.now() - 46 * 86400000;
+  const d = { v: 2, seq: 1, categories: [], products: [{ id: 'p-fold', name: 'Polo' }], removed: {},
+    variants: [{ id: 'v-fold', productId: 'p-fold', size: 'S', stock: 0, base: 1, baseAt: 1 }],
+    moves: [
+      { id: 'fold-a', vid: 'v-fold', d: -1, at: old, why: 'vente' },
+      { id: 'fold-b', vid: 'v-fold', d: -1, at: old + 1, why: 'vente' },
+      { id: 'fold-c', vid: 'v-fold', d: 1, at: old + 2, why: 'retour' },
+    ] };
+  const merged = C._merge(d, d);
+  eq(merged.variants[0].stock, 0, 'la compaction conserve le zéro réel après survente puis retour');
+  eq(merged.variants[0].base, 0, 'le socle replié reste algébriquement exact');
+}
+
 /* Un document minimal, à la forme du vrai. */
 const doc = (variants, removed) => ({
   v: 1, seq: 10,
