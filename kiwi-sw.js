@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted · fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v492';
+var CACHE = 'kiwi-app-v493';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -139,13 +139,13 @@ var SHELL = [
   // offline with no table geometry at all.
   '/assets/floorplan-core.js?v=2050',
   '/assets/oppo-cards.js',
-  '/assets/dashboard-pwa.js?v=435',
+  '/assets/dashboard-pwa.js?v=436',
   '/assets/dashboard-native.js?v=1',
   '/assets/pwa-update.js?v=359',
   '/assets/caisse-skin.css?v=3',
   '/assets/pos-mobile.css?v=3',
   '/assets/caisse-motion.js',
-  '/assets/caisse-pwa.js?v=436',
+  '/assets/caisse-pwa.js?v=437',
   '/assets/vendor/dexie.min.js',
   '/assets/offline-db.js?v=3',
   '/assets/platform-kernel.js?v=5',
@@ -228,7 +228,7 @@ var SHELL = [
   '/assets/stock-identity.js?v=2',
   '/assets/restaurant-recipes.js?v=8',
   '/assets/restaurant-units.js',
-  '/assets/employee-live.js?v=434',
+  '/assets/employee-live.js?v=435',
   '/assets/employee-planning.js?v=8',
   '/assets/employee-trade-shell.css?v=2',
   '/assets/employee-trade-shell.js?v=2',
@@ -256,7 +256,7 @@ var SHELL = [
   '/assets/kitchen-print-queue.js?v=6',
   '/assets/food-production-print.js?v=2',
   '/assets/pos-sale.js?v=4',
-  '/assets/pos-dispatch.js?v=32',
+  '/assets/pos-dispatch.js?v=33',
   '/assets/retail-scan.css?v=7',
   '/assets/vendor/zxing-browser.min.js?v=1',
   '/assets/retail-scan.js?v=6',
