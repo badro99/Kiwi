@@ -978,6 +978,18 @@
           }
           return { ok: false, issue: res.j.issue || null };
         }
+        /* The till can legitimately have a durable local catalogue before the
+           shared catalogue table is available (freshly paired shop, migration
+           still rolling out, or the first background upload not accepted yet).
+           Those replies are explicit non-writes: no server hold exists, so the
+           established offline checkout path is safe and will publish the sale
+           with its idempotency reference later. Treating every 409/503 as an
+           ambiguous hold blocked a stocked shop at “Vérification du stock…”. */
+        const reason = (res.j && res.j.error) || '';
+        if ((res.status === 409 && reason === 'catalog-missing')
+            || (res.status === 503 && (reason === 'unmigrated' || reason === 'not-configured'))) {
+          return { ok: false, offline: true, reason };
+        }
         if (res.status === 409) {
           if (res.j && res.j.data) {
             db = mergeDocs(db, res.j.data); dropIndex(); migrate(); materialize(db);
@@ -992,7 +1004,7 @@
         /* Once a request was sent, a lost/5xx response is ambiguous: Cloudflare
            may have committed the hold before the connection broke. Never fall
            back to a second local debit. Retrying the same ref is idempotent. */
-        return { ok: false, fatal: true, uncertain: true, reason: (res.j && res.j.error) || ('http-' + res.status) };
+        return { ok: false, fatal: true, uncertain: true, reason: reason || ('http-' + res.status) };
       }).catch(() => ({ ok: false, fatal: true, uncertain: true, reason: 'network-uncertain' }))
       .finally(() => { if (timeout) clearTimeout(timeout); });
   }

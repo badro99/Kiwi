@@ -52,6 +52,20 @@ const stalePrice = T.stockMutation(T.sanitize(raw), {
 ok(!stalePrice.ok && stalePrice.error === 'catalog-stale',
   'une vieille caisse ne peut pas encaisser un ancien prix avant resynchronisation');
 
+const stockedTransparent = T.sanitize({
+  v: 2, seq: 1, categories: raw.categories, removed: {}, moves: [],
+  products: [{ id: 'pantalon-classe', name: 'Pantalon classe', priceMAD: 150, archived: false, metaAt: now }],
+  variants: [{ id: 'variant-tu-transparent', productId: 'pantalon-classe', colorId: 'transparent',
+    colorFamily: 'transparent', colorLabel: 'Transparent', colorHex: '#DCDCDC', size: 'TU',
+    stock: 276, base: 276, baseAt: now - 10, metaAt: now, barcodes: [] }],
+});
+const transparentSale = T.stockMutation(stockedTransparent, {
+  stockAction: 'reserve', ref: 'sale-transparent',
+  lines: [{ pid: 'pantalon-classe', size: 'TU', color: 'transparent', qty: 1, price: 150 }],
+}, now);
+ok(transparentSale.ok && stockedTransparent.variants[0].stock === 275,
+  'une variante Transparent · TU avec 276 unités est réservable et descend exactement à 275');
+
 const api = fs.readFileSync(path.join(ROOT, 'functions/api/catalog.js'), 'utf8');
 const pos = fs.readFileSync(path.join(ROOT, 'assets/pos-boutique.js'), 'utf8');
 ok(/UPDATE catalogs SET data = \?, rev = \?, updated_ts = \?[\s\S]*WHERE merchant = \? AND rev = \?/.test(api),
@@ -60,6 +74,11 @@ ok(pos.includes('const frozen = {') && pos.includes('lines: frozen.lines.map'),
   'prix, reçu, journal et stock lisent le snapshot immuable du checkout');
 ok(pos.includes("cat.reserveSale(frozen.syncId, reserveLines)") && pos.includes("cat.confirmSale(frozen.syncId)"),
   'la caisse réserve avant paiement puis confirme la même référence');
+ok(pos.includes('if (res && res.offline)') && pos.includes(".catch(() => {"),
+  'un catalogue central absent reprend le chemin hors-ligne et aucune exception ne laisse le voile bloqué');
+const client = fs.readFileSync(path.join(ROOT, 'assets/boutique-catalog.js'), 'utf8');
+ok(client.includes("reason === 'catalog-missing'") && client.includes("reason === 'unmigrated'"),
+  'les réponses explicites sans écriture serveur ne sont pas confondues avec une réservation ambiguë');
 ok(/state\.checkoutBusy \|\| \(root && \$\$\('\.modal-veil\.is-open'/.test(pos),
   'la douchette ne peut pas modifier un ticket derrière le paiement');
 

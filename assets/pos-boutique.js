@@ -3575,6 +3575,11 @@
     }
     cat.reserveSale(frozen.syncId, reserveLines).then((res) => {
       if (res && res.ok) { beginPay(true); return; }
+      if (res && res.offline) {
+        toast('Stock enregistré sur cette caisse', 'La synchronisation centrale reprendra automatiquement.');
+        beginPay(false);
+        return;
+      }
       if (res && res.issue) {
         state.checkoutBusy = false; closeVeil('#bq-pay-veil'); showStockIssue(res.issue); return;
       }
@@ -3585,6 +3590,14 @@
       }
       toast('Stock non confirmé en ligne', 'La vente continue hors ligne et sera synchronisée avec son identifiant unique.');
       beginPay(false);
+    }).catch(() => {
+      /* reserveSale is designed to settle every network outcome, but checkout
+         must still own its loading state if a catalogue reconciliation or a
+         future adapter unexpectedly throws. A rejected promise previously left
+         the cashier behind an uncloseable stock-verification veil forever. */
+      state.checkoutBusy = false;
+      closeVeil('#bq-pay-veil');
+      toast('Vérification interrompue, rien n’a été encaissé', 'Touchez de nouveau Encaisser. Le ticket et le stock sont conservés.');
     });
   }
 
