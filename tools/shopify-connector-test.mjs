@@ -223,10 +223,13 @@ ok('refreshing the current Shopify location preserves active sync state', ui.inc
 ok('Shopify-only rows require an explicit checkbox selection', ui.includes("check.type = 'checkbox'") && ui.includes('importBtn.disabled = true'));
 ok('selected Shopify rows use the dedicated import action', ui.includes("shopApi('import-selected', { variantIds: ids })"));
 ok('Shopify import rows render external text through textContent', ui.includes("name.textContent = row.title || ''"));
+ok('Shopify import browser searches the full candidate payload', ui.includes("search.addEventListener('input', renderImportRows)") && ui.includes('filtered.slice(0, 100)'));
+ok('Shopify import browser preserves the 100-product write limit', ui.includes('selectedIds.size >= 100') && ui.includes('Array.from(selectedIds)'));
 
 const statusRoute = read('functions/api/shopify/status.js');
 ok('import selections are revalidated against live eligible Shopify rows', statusRoute.includes('eligible.get(id)') && statusRoute.includes("throw new Error('import-selection-invalid')"));
 ok('catalog import uses revision compare-and-swap', statusRoute.includes('WHERE merchant = ? AND rev = ?'));
+ok('Shopify candidate payload covers large catalogs for client-side search', statusRoute.includes('imports.slice(0, 5000)'));
 
 const dashboardUi = read('assets/dateRange.js');
 ok('real merchant dashboard exposes a Shopify card', dashboardUi.includes("{ n: 'Shopify', logo: 'S', bg: '#5E8E3E', channel: 'shopify' }"));

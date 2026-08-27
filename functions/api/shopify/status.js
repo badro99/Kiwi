@@ -109,7 +109,7 @@ function preview(result, candidates) {
     })),
     unmatched: result.unmatched.slice(0, 100).map((x) => ({ id: x.id, title: x.title, sku: x.sku })),
     ambiguous: result.ambiguous.slice(0, 100).map((x) => ({ id: x.id, title: x.title, sku: x.sku })),
-    unmatchedShopify: imports.slice(0, 100).map((x) => ({
+    unmatchedShopify: imports.slice(0, 5000).map((x) => ({
       shopifyVariantId: x.id,
       title: x.title,
       sku: x.sku,

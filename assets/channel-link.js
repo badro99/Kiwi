@@ -129,6 +129,7 @@
       unmatched: 'sans correspondance', ambiguous: 'ambiguës', activate: 'Activer et aligner le stock',
       shopifyOnly: 'sur Shopify uniquement', importable: 'importables', importTitle: 'Importer vers Kiwi',
       importSelected: 'Importer la sélection', selected: 'sélectionnés', imported: 'Import terminé', importedCount: 'article(s) importé(s)',
+      importSearch: 'Rechercher un produit Shopify', importLimit: 'Maximum 100 articles par import.',
       importHint: 'Les articles importés restent inactifs dans Kiwi jusqu’à ce que vous confirmiez leur prix en MAD.',
       missingIdentifier: 'Ajoutez un SKU ou un code-barres dans Shopify', duplicateIdentifier: 'SKU ou code-barres dupliqué', identifierUsed: 'Identifiant déjà utilisé dans Kiwi',
       activateWarn: 'Shopify prendra les quantités Kiwi pour les variantes liées. Les lignes sans correspondance ne seront pas modifiées.',
@@ -147,6 +148,7 @@
       unmatched: 'unmatched', ambiguous: 'ambiguous', activate: 'Activate and align inventory',
       shopifyOnly: 'Shopify only', importable: 'importable', importTitle: 'Import into Kiwi',
       importSelected: 'Import selected', selected: 'selected', imported: 'Import complete', importedCount: 'product(s) imported',
+      importSearch: 'Search Shopify products', importLimit: 'Maximum 100 products per import.',
       importHint: 'Imported products remain inactive in Kiwi until you confirm their price in MAD.',
       missingIdentifier: 'Add a SKU or barcode in Shopify', duplicateIdentifier: 'Duplicate SKU or barcode', identifierUsed: 'Identifier already used in Kiwi',
       activateWarn: 'Shopify will use Kiwi quantities for linked variants. Unmatched rows will not be changed.',
@@ -165,6 +167,7 @@
       unmatched: 'غير متطابقة', ambiguous: 'ملتبسة', activate: 'تفعيل ومطابقة المخزون',
       shopifyOnly: 'في Shopify فقط', importable: 'قابلة للاستيراد', importTitle: 'الاستيراد إلى Kiwi',
       importSelected: 'استيراد المحدد', selected: 'محدد', imported: 'اكتمل الاستيراد', importedCount: 'منتج مستورد',
+      importSearch: 'البحث في منتجات Shopify', importLimit: 'الحد الأقصى 100 منتج لكل عملية استيراد.',
       importHint: 'تبقى المنتجات المستوردة غير نشطة في Kiwi حتى تأكيد سعرها بالدرهم.',
       missingIdentifier: 'أضف SKU أو باركود في Shopify', duplicateIdentifier: 'SKU أو باركود مكرر', identifierUsed: 'المعرّف مستخدم بالفعل في Kiwi',
       activateWarn: 'ستستخدم Shopify كميات Kiwi للمتغيرات المرتبطة. لن تتغير الأسطر غير المتطابقة.',
@@ -247,23 +250,47 @@
     if ((p.unmatchedShopify || []).length) {
       var shopOnly = document.createElement('details'); shopOnly.className = 'shp-list shp-import';
       var ss = document.createElement('summary'); ss.textContent = (c.unmatchedShopify || p.unmatchedShopify.length) + ' ' + s.shopifyOnly; shopOnly.appendChild(ss);
-      var eligible = 0;
-      (p.unmatchedShopify || []).forEach(function (row) {
-        var line = document.createElement('label'); line.className = 'shp-import-row';
-        var check = document.createElement('input'); check.type = 'checkbox'; check.value = row.shopifyVariantId || ''; check.disabled = !row.eligible;
-        if (row.eligible) eligible++;
-        var copy = document.createElement('span');
-        var name = document.createElement('strong'); name.textContent = row.title || '';
-        var meta = document.createElement('small');
-        var identifier = row.barcode ? s.byBarcode + ' ' + row.barcode : row.sku ? 'SKU ' + row.sku : '';
-        var reason = row.reason === 'missing-identifier' ? s.missingIdentifier : row.reason === 'duplicate-identifier' ? s.duplicateIdentifier : row.reason ? s.identifierUsed : '';
-        meta.textContent = [row.quantity == null ? '' : String(row.quantity), identifier, reason].filter(Boolean).join(' · ');
-        copy.appendChild(name); copy.appendChild(meta); line.appendChild(check); line.appendChild(copy); shopOnly.appendChild(line);
-      });
+      var importRows = p.unmatchedShopify || [];
+      var eligible = importRows.filter(function (row) { return row.eligible; }).length;
+      var selectedIds = new Set();
+      var search = document.createElement('input'); search.className = 'shp-import-search'; search.type = 'search'; search.placeholder = s.importSearch; shopOnly.appendChild(search);
+      var resultCount = document.createElement('small'); resultCount.className = 'shp-import-count'; shopOnly.appendChild(resultCount);
+      var rows = document.createElement('div'); rows.className = 'shp-import-rows'; shopOnly.appendChild(rows);
+      var importBtn;
+      function updateImportButton() {
+        if (!importBtn) return;
+        var count = selectedIds.size;
+        importBtn.disabled = !count; importBtn.textContent = s.importSelected + (count ? ' · ' + count + ' ' + s.selected : '');
+      }
+      function renderImportRows() {
+        var query = String(search.value || '').trim().toLowerCase();
+        var filtered = importRows.filter(function (row) {
+          return !query || [row.title, row.sku, row.barcode].some(function (value) { return String(value || '').toLowerCase().indexOf(query) !== -1; });
+        });
+        rows.textContent = '';
+        filtered.slice(0, 100).forEach(function (row) {
+          var line = document.createElement('label'); line.className = 'shp-import-row';
+          var check = document.createElement('input'); check.type = 'checkbox'; check.value = row.shopifyVariantId || ''; check.disabled = !row.eligible; check.checked = selectedIds.has(check.value);
+          check.addEventListener('change', function () {
+            if (check.checked && selectedIds.size >= 100) { check.checked = false; toast(s.importLimit, { type: 'error' }); return; }
+            if (check.checked) selectedIds.add(check.value); else selectedIds.delete(check.value);
+            updateImportButton();
+          });
+          var copy = document.createElement('span');
+          var name = document.createElement('strong'); name.textContent = row.title || '';
+          var meta = document.createElement('small');
+          var identifier = row.barcode ? s.byBarcode + ' ' + row.barcode : row.sku ? 'SKU ' + row.sku : '';
+          var reason = row.reason === 'missing-identifier' ? s.missingIdentifier : row.reason === 'duplicate-identifier' ? s.duplicateIdentifier : row.reason ? s.identifierUsed : '';
+          meta.textContent = [row.quantity == null ? '' : String(row.quantity), identifier, reason].filter(Boolean).join(' · ');
+          copy.appendChild(name); copy.appendChild(meta); line.appendChild(check); line.appendChild(copy); rows.appendChild(line);
+        });
+        resultCount.textContent = String(Math.min(filtered.length, 100)) + ' / ' + String(filtered.length);
+      }
+      search.addEventListener('input', renderImportRows);
       var hint = document.createElement('p'); hint.className = 'chl-note shp-warn'; hint.textContent = s.importHint; shopOnly.appendChild(hint);
       if (eligible) {
-        var importBtn = shopButton(s.importSelected, function () {
-          var ids = Array.prototype.map.call(shopOnly.querySelectorAll('input[type="checkbox"]:checked'), function (box) { return box.value; }).filter(Boolean);
+        importBtn = shopButton(s.importSelected, function () {
+          var ids = Array.from(selectedIds);
           if (!ids.length) throw new Error(s.importSelected);
           return shopApi('import-selected', { variantIds: ids }).then(function (out) {
             toast(s.imported, { type: 'success', desc: String(out.imported || ids.length) + ' ' + s.importedCount });
@@ -271,12 +298,9 @@
           });
         });
         importBtn.disabled = true;
-        shopOnly.addEventListener('change', function () {
-          var count = shopOnly.querySelectorAll('input[type="checkbox"]:checked').length;
-          importBtn.disabled = !count; importBtn.textContent = s.importSelected + (count ? ' · ' + count + ' ' + s.selected : '');
-        });
         shopOnly.appendChild(importBtn);
       }
+      renderImportRows();
       root.appendChild(shopOnly);
     }
     var warn = document.createElement('p'); warn.className = 'chl-note shp-warn'; warn.textContent = s.activateWarn; root.appendChild(warn);
@@ -589,6 +613,9 @@
   .shp-import-row strong { color:var(--ink); font-size:11.5px; overflow-wrap:anywhere; }\
   .shp-import-row small { color:var(--n-500); font-size:10.5px; overflow-wrap:anywhere; }\
   .shp-import-row:has(input:disabled) { cursor:not-allowed; opacity:.58; }\
+  .shp-import-search { width:100%; margin-top:10px; padding:10px 12px; border:1px solid var(--n-200); border-radius:10px; background:var(--surface); color:var(--ink); font:inherit; }\
+  .shp-import-count { display:block; margin:5px 0 3px; color:var(--n-500); text-align:right; }\
+  .shp-import-rows { max-height:340px; overflow:auto; }\
   html[data-theme="dark"] .chl-f-v.is-key { color:var(--mint); }';
 
   try {
