@@ -9,6 +9,7 @@ import {
   enqueueStockChanges, flushShopifyOutbox, sha256Hex, stockSnapshot,
   SHOPIFY_SCOPES, verifyOAuthHmac, verifyWebhookHmac,
 } from '../functions/api/shopify/_lib.js';
+import { __test as statusTest } from '../functions/api/shopify/status.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
@@ -74,6 +75,24 @@ ok('unique SKU matches second', mapping.matches.some((x) => x.kiwi.id === 'k-sku
 ok('same product name alone never matches', mapping.unmatched.some((x) => x.id === 'k-name'));
 ok('duplicate SKU is reported ambiguous', mapping.ambiguous.filter((x) => x.id.startsWith('k-dup')).length === 2);
 ok('stock snapshot keeps exact variant ids', stockSnapshot(catalog).get('k-bar') === 2);
+
+const importRemote = [
+  { id: 'gid://shopify/ProductVariant/101', productId: 'gid://shopify/Product/10', productTitle: 'Toner A', variantTitle: 'Default Title', inventoryItemId: 'i-101', title: 'Toner A · Default Title', barcode: '99001', sku: '', tracked: true, quantity: 6 },
+  { id: 'gid://shopify/ProductVariant/102', productId: 'gid://shopify/Product/10', productTitle: 'Toner A', variantTitle: 'XL', inventoryItemId: 'i-102', title: 'Toner A · XL', barcode: '', sku: 'TONER-A-XL', tracked: true, quantity: 4 },
+  { id: 'gid://shopify/ProductVariant/103', productId: 'gid://shopify/Product/11', productTitle: 'No identifier', variantTitle: 'Default Title', inventoryItemId: 'i-103', title: 'No identifier · Default Title', barcode: '', sku: '', tracked: true, quantity: 2 },
+  { id: 'gid://shopify/ProductVariant/104', productId: 'gid://shopify/Product/12', productTitle: 'Duplicate one', variantTitle: 'Default Title', inventoryItemId: 'i-104', title: 'Duplicate one · Default Title', barcode: '', sku: 'DUP-REMOTE', tracked: true, quantity: 1 },
+  { id: 'gid://shopify/ProductVariant/105', productId: 'gid://shopify/Product/13', productTitle: 'Duplicate two', variantTitle: 'Default Title', inventoryItemId: 'i-105', title: 'Duplicate two · Default Title', barcode: '', sku: 'DUP-REMOTE', tracked: true, quantity: 1 },
+];
+const importMapping = buildExactVariantMapping({ products: [], variants: [] }, importRemote);
+const importable = statusTest.importCandidates({ products: [], variants: [] }, importRemote, importMapping);
+ok('Shopify-only variants need a unique barcode or SKU before import', importable.filter((x) => x.eligible).length === 2);
+ok('identifier-free Shopify variants stay disabled', importable.some((x) => x.id.endsWith('/103') && x.reason === 'missing-identifier'));
+ok('duplicate Shopify identifiers stay disabled', importable.filter((x) => x.reason === 'duplicate-identifier').length === 2);
+const importedCatalog = statusTest.appendImportedVariants({ v: 1, categories: [], products: [], variants: [], removed: {} }, importable.filter((x) => x.eligible), 1787860000000);
+ok('selected Shopify variants create one grouped Kiwi product', importedCatalog.products === 1 && importedCatalog.variants === 2 && importedCatalog.data.products.length === 1);
+ok('imported Shopify products are inactive until priced', importedCatalog.data.products[0].archived === true && importedCatalog.data.products[0].priceMAD === 0);
+ok('imported stock starts from the selected Shopify location quantity', importedCatalog.data.variants.some((x) => x.stock === 6 && x.base === 6));
+ok('import preserves exact identifiers for future mapping', importedCatalog.data.variants.some((x) => x.barcodes[0] && x.barcodes[0].code === '99001') && importedCatalog.data.variants.some((x) => x.sku === 'TONER-A-XL'));
 
 // Exercise the real coalesced outbox and real GraphQL request builder against a
 // pocket D1. A second local write must replace the target/idempotency key, not
@@ -201,6 +220,13 @@ ok('Shopify card has a router-independent click path', ui.includes("[data-action
 ok('dedicated Shopify click wins before a stale shared router', ui.includes("event.stopImmediatePropagation()"));
 ok('connected Shopify store can reauthorize added scopes', ui.includes('authorizeShopify(connection.shop)'));
 ok('refreshing the current Shopify location preserves active sync state', ui.includes("sameLocation ? 'refresh-mapping' : 'select-location'"));
+ok('Shopify-only rows require an explicit checkbox selection', ui.includes("check.type = 'checkbox'") && ui.includes('importBtn.disabled = true'));
+ok('selected Shopify rows use the dedicated import action', ui.includes("shopApi('import-selected', { variantIds: ids })"));
+ok('Shopify import rows render external text through textContent', ui.includes("name.textContent = row.title || ''"));
+
+const statusRoute = read('functions/api/shopify/status.js');
+ok('import selections are revalidated against live eligible Shopify rows', statusRoute.includes('eligible.get(id)') && statusRoute.includes("throw new Error('import-selection-invalid')"));
+ok('catalog import uses revision compare-and-swap', statusRoute.includes('WHERE merchant = ? AND rev = ?'));
 
 const dashboardUi = read('assets/dateRange.js');
 ok('real merchant dashboard exposes a Shopify card', dashboardUi.includes("{ n: 'Shopify', logo: 'S', bg: '#5E8E3E', channel: 'shopify' }"));

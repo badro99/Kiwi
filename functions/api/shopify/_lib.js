@@ -211,7 +211,7 @@ export async function listShopifyVariants(env, merchant, locationId) {
     productVariants(first: 100, after: $after) {
       nodes {
         id title sku barcode
-        product { title }
+        product { id title }
         inventoryItem {
           id tracked
           inventoryLevel(locationId: $location) { quantities(names: ["available"]) { name quantity } }
@@ -230,6 +230,9 @@ export async function listShopifyVariants(env, merchant, locationId) {
       const available = level && (level.quantities || []).find((q) => q && q.name === 'available');
       all.push({
         id: small(v && v.id, 120),
+        productId: small(v && v.product && v.product.id, 120),
+        productTitle: small(v && v.product && v.product.title, 120),
+        variantTitle: small(v && v.title, 80),
         inventoryItemId: small(v && v.inventoryItem && v.inventoryItem.id, 120),
         title: small(`${v && v.product && v.product.title || ''} · ${v && v.title || ''}`, 220),
         sku: small(v && v.sku, 120).trim(),
