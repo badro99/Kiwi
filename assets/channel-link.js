@@ -528,6 +528,23 @@
 
   window.KiwiChannels = { connect: connect, list: list, shopifyStatus: openShopify };
 
+  /* Shopify is operationally independent from the dashboard's generic action
+   * registry. Returning merchant shells have historically loaded that registry
+   * too early and silently skipped its integration handlers, leaving a visible
+   * Shopify card that does nothing. Own this one exact action here, in capture
+   * phase, so OAuth remains reachable even when the optional dashboard helper
+   * failed to register. The shared handler stays in place for every other
+   * connector and for shells where it loaded normally. */
+  document.addEventListener('click', function (event) {
+    var target = event.target && event.target.closest
+      ? event.target.closest('[data-action="integration-connect"][data-channel="shopify"]')
+      : null;
+    if (!target) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    openShopify();
+  }, true);
+
   try {
     var oauth = new URL(window.location.href).searchParams.get('shopify');
     if (oauth) {

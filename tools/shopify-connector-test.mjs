@@ -196,6 +196,8 @@ ok('inventory webhook detects external drift', webhook.includes("drift ? 'drift'
 const ui = read('assets/channel-link.js');
 ok('Shopify card starts OAuth instead of creating a manual key', ui.includes("if (channel === 'shopify') return openShopify()"));
 ok('activation warning states Kiwi quantities will replace linked Shopify quantities', ui.includes('Shopify prendra les quantités Kiwi'));
+ok('Shopify card has a router-independent click path', ui.includes("[data-action=\"integration-connect\"][data-channel=\"shopify\"]"));
+ok('dedicated Shopify click wins before a stale shared router', ui.includes("event.stopImmediatePropagation()"));
 
 const dashboardUi = read('assets/dateRange.js');
 ok('real merchant dashboard exposes a Shopify card', dashboardUi.includes("{ n: 'Shopify', logo: 'S', bg: '#5E8E3E', channel: 'shopify' }"));
