@@ -6057,7 +6057,14 @@
   window.KiwiRestaurantStock = {
     items: () => {
       stEnsureOverlay();
-      return getInv().map((it) => ({ ...it, currentStock: currentStockFor(it), theoreticalUsage: theoreticalUsageFor(it) }));
+      const rows = getInv().map((it) => ({ ...it, currentStock: currentStockFor(it) }));
+      const recipeUsage = window.KiwiRestaurantRecipes?.theoreticalUsageMap
+        ? window.KiwiRestaurantRecipes.theoreticalUsageMap(currentVenueId(), 7, rows)
+        : null;
+      return rows.map((it) => ({
+        ...it,
+        theoreticalUsage: recipeUsage ? (+recipeUsage[String(it.id)] || 0) : theoreticalUsageFor(it),
+      }));
     },
     /* Same rows without the recipe-derived usage. The recipe engine reads the
      * inventory to resolve units and costs, and it is what computes that usage

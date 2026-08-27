@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted · fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v490';
+var CACHE = 'kiwi-app-v491';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -212,10 +212,10 @@ var SHELL = [
   '/assets/venue-store.js?v=3',
   /* One stock across owner dashboard and till. Catalog metadata is a cloud
      document; quantities are append-only movements, both usable offline. */
-  '/assets/inventory-ledger.js?v=5',
+  '/assets/inventory-ledger.js?v=6',
   '/assets/caisse-stock-sync.js?v=9',
   '/assets/pos-inventory-count.js?v=4',
-  '/assets/stock.js?v=34',
+  '/assets/stock.js?v=35',
   /* Le coût de revient. Dans la coquille parce que les tuiles Marge brute,
      Bénéfice brut et Coût matière du tableau de bord passent toutes par lui :
      sans lui hors ligne, elles retomberaient sur un tiret alors que le
@@ -226,7 +226,7 @@ var SHELL = [
   '/assets/clients-directory.js',
   '/assets/menu-catalog.js?v=23',
   '/assets/stock-identity.js?v=2',
-  '/assets/restaurant-recipes.js?v=7',
+  '/assets/restaurant-recipes.js?v=8',
   '/assets/restaurant-units.js',
   '/assets/employee-live.js?v=433',
   '/assets/employee-planning.js?v=8',
