@@ -124,6 +124,7 @@
       domain: 'Adresse de la boutique', domainPh: 'ma-boutique.myshopify.com', authorize: 'Continuer vers Shopify',
       legacy: 'Les commandes Shopify arrivent déjà par l’ancien webhook. Connectez aussi l’inventaire pour synchroniser le stock.',
       connected: 'Boutique autorisée', location: 'Emplacement Shopify', inspect: 'Vérifier les articles',
+      reauthorize: 'Réautoriser Shopify',
       mapTitle: 'Correspondances exactes', matched: 'liées', byBarcode: 'par code-barres', bySku: 'par SKU',
       unmatched: 'sans correspondance', ambiguous: 'ambiguës', activate: 'Activer et aligner le stock',
       activateWarn: 'Shopify prendra les quantités Kiwi pour les variantes liées. Les lignes sans correspondance ne seront pas modifiées.',
@@ -137,6 +138,7 @@
       domain: 'Store address', domainPh: 'my-store.myshopify.com', authorize: 'Continue to Shopify',
       legacy: 'Shopify orders already arrive through the legacy webhook. Connect inventory as well to synchronize stock.',
       connected: 'Authorized store', location: 'Shopify location', inspect: 'Check products',
+      reauthorize: 'Reauthorize Shopify',
       mapTitle: 'Exact matches', matched: 'linked', byBarcode: 'by barcode', bySku: 'by SKU',
       unmatched: 'unmatched', ambiguous: 'ambiguous', activate: 'Activate and align inventory',
       activateWarn: 'Shopify will use Kiwi quantities for linked variants. Unmatched rows will not be changed.',
@@ -150,6 +152,7 @@
       domain: 'عنوان المتجر', domainPh: 'my-store.myshopify.com', authorize: 'المتابعة إلى Shopify',
       legacy: 'تصل طلبات Shopify عبر الربط القديم. اربط المخزون أيضًا لمزامنة الكميات.',
       connected: 'المتجر المصرح', location: 'موقع Shopify', inspect: 'فحص المنتجات',
+      reauthorize: 'إعادة تفويض Shopify',
       mapTitle: 'المطابقات الدقيقة', matched: 'مرتبطة', byBarcode: 'بالباركود', bySku: 'برمز SKU',
       unmatched: 'غير متطابقة', ambiguous: 'ملتبسة', activate: 'تفعيل ومطابقة المخزون',
       activateWarn: 'ستستخدم Shopify كميات Kiwi للمتغيرات المرتبطة. لن تتغير الأسطر غير المتطابقة.',
@@ -168,6 +171,15 @@
       method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify(Object.assign({ action: action }, extra || {})),
     }).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.detail || j.error || 'shopify'); return j; }); });
+  }
+
+  function authorizeShopify(shop) {
+    return fetch('/api/shopify/connect', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ shop: shop }),
+    })
+      .then(function (r) { return r.json().then(function (j) { if (!r.ok || !j.authorize) throw new Error(j.error || shopStr().invalid); return j; }); })
+      .then(function (j) { window.location.assign(j.authorize); });
   }
 
   function shopButton(label, fn, ghost) {
@@ -238,9 +250,7 @@
       f.appendChild(lb); f.appendChild(input); root.appendChild(f);
       root.appendChild(shopButton(s.authorize, function () {
         var shop = String(input.value || '').trim(); if (!shop) { input.focus(); throw new Error(s.invalid); }
-        return fetch('/api/shopify/connect', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ shop: shop }) })
-          .then(function (r) { return r.json().then(function (j) { if (!r.ok || !j.authorize) throw new Error(j.error || s.invalid); return j; }); })
-          .then(function (j) { window.location.assign(j.authorize); });
+        return authorizeShopify(shop);
       }));
       return;
     }
@@ -249,6 +259,7 @@
     var storeLabel = document.createElement('span'); storeLabel.textContent = s.connected;
     var storeName = document.createElement('strong'); storeName.textContent = connection.shop;
     store.appendChild(storeLabel); store.appendChild(storeName); root.appendChild(store);
+    root.appendChild(shopButton(s.reauthorize, function () { return authorizeShopify(connection.shop); }, true));
 
     var select = document.createElement('select'); select.className = 'chl-f-v chl-in shp-select';
     var first = document.createElement('option'); first.value = ''; first.textContent = s.location; select.appendChild(first);
