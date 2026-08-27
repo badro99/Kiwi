@@ -86,7 +86,30 @@ function importCandidates(catalog, shopifyVariants, result) {
   });
 }
 
-function preview(result, candidates) {
+function pendingImportProducts(catalog) {
+  const variants = (catalog && catalog.variants) || [];
+  const stats = new Map();
+  for (const variant of variants) {
+    if (!variant || !variant.productId) continue;
+    const row = stats.get(variant.productId) || { variants: 0, stock: 0 };
+    row.variants++; row.stock += n(variant.stock); stats.set(variant.productId, row);
+  }
+  return ((catalog && catalog.products) || [])
+    .filter((product) => product && String(product.id || '').startsWith('shp_p_') && product.flag === 'Shopify · price required')
+    .slice(0, 500)
+    .map((product) => {
+      const row = stats.get(product.id) || { variants: 0, stock: 0 };
+      return {
+        productId: product.id,
+        name: clean(product.name, 120),
+        priceMAD: Math.max(0, Number(product.priceMAD) || 0),
+        variants: row.variants,
+        stock: row.stock,
+      };
+    });
+}
+
+function preview(result, candidates, catalog) {
   const imports = candidates || [];
   return {
     counts: {
@@ -118,6 +141,7 @@ function preview(result, candidates) {
       eligible: x.eligible,
       reason: x.reason,
     })),
+    setup: pendingImportProducts(catalog),
   };
 }
 
@@ -160,6 +184,30 @@ function appendImportedVariants(catalog, selected, now) {
   return { data, products, variants };
 }
 
+function applyImportSetup(catalog, rawRows, now) {
+  const data = JSON.parse(JSON.stringify(catalog || {}));
+  data.products = Array.isArray(data.products) ? data.products : [];
+  const rows = Array.isArray(rawRows) ? rawRows.slice(0, 100) : [];
+  if (!rows.length) throw new Error('setup-selection-required');
+  const pending = new Map(pendingImportProducts(data).map((product) => [product.productId, product]));
+  const seen = new Set();
+  let updated = 0;
+  for (const row of rows) {
+    const productId = clean(row && row.productId, 40);
+    const priceMAD = Number(row && row.priceMAD);
+    if (!productId || seen.has(productId) || !pending.has(productId)) throw new Error('setup-selection-invalid');
+    if (!Number.isFinite(priceMAD) || priceMAD <= 0 || priceMAD > 1e7) throw new Error('setup-price-invalid');
+    const product = data.products.find((candidate) => candidate && candidate.id === productId);
+    if (!product) throw new Error('setup-selection-invalid');
+    product.priceMAD = Math.round(priceMAD * 100) / 100;
+    product.archived = false;
+    product.flag = 'Shopify';
+    product.metaAt = now;
+    seen.add(productId); updated++;
+  }
+  return { data, updated };
+}
+
 async function refreshMapping(env, merchant) {
   const connection = await connectionFor(env, merchant);
   if (!connection || !connection.location_id) throw new Error('location-required');
@@ -196,7 +244,7 @@ async function refreshMapping(env, merchant) {
     `UPDATE shopify_connections SET status = ?, updated_ts = ?, last_error = '' WHERE merchant = ?`
   ).bind(nextStatus, now, merchant));
   await env.DB.batch(statements);
-  return { ...preview(result, candidates), catalog: cat };
+  return { ...preview(result, candidates, cat.data), catalog: cat };
 }
 
 async function importSelected(env, merchant, rawIds) {
@@ -229,6 +277,35 @@ async function importSelected(env, merchant, rawIds) {
   throw new Error('import-contention');
 }
 
+async function configureImportedProducts(env, merchant, rows) {
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const cat = await catalogue(env, merchant);
+    const now = Date.now();
+    const configured = applyImportSetup(cat.data, rows, now);
+    const next = cat.rev + 1;
+    const write = cat.rev
+      ? await env.DB.prepare('UPDATE catalogs SET data = ?, rev = ?, updated_ts = ? WHERE merchant = ? AND rev = ?')
+        .bind(JSON.stringify(configured.data), next, now, merchant, cat.rev).run()
+      : null;
+    if (write && write.meta && Number(write.meta.changes) === 1) {
+      const mapped = await refreshMapping(env, merchant);
+      return { updated: configured.updated, preview: mapped };
+    }
+  }
+  throw new Error('setup-contention');
+}
+
+function previewPayload(mapped) {
+  return {
+    counts: mapped.counts,
+    matches: mapped.matches,
+    unmatched: mapped.unmatched,
+    ambiguous: mapped.ambiguous,
+    unmatchedShopify: mapped.unmatchedShopify,
+    setup: mapped.setup,
+  };
+}
+
 export async function onRequestGet({ request, env, waitUntil }) {
   if (!env.DB) return json({ error: 'not-configured' }, 503);
   const merchant = await tenantFor(request, env, new URL(request.url).searchParams.get('merchant'));
@@ -241,6 +318,7 @@ export async function onRequestGet({ request, env, waitUntil }) {
       out.connection.lastError = out.connection.lastError || String(e && e.message || e).slice(0, 300);
     }
     if (waitUntil && out.queue.pending + out.queue.failed > 0) waitUntil(flushShopifyOutbox(env, merchant, 5));
+    try { out.setup = pendingImportProducts((await catalogue(env, merchant)).data); } catch (_) { out.setup = []; }
   }
   return json({ ok: true, merchant, ...out, locations });
 }
@@ -265,29 +343,33 @@ export async function onRequestPost({ request, env, waitUntil }) {
           WHERE merchant = ?`
       ).bind(location.id, String(location.name || '').slice(0, 120), Date.now(), merchant).run();
       const mapped = await refreshMapping(env, merchant);
-      return json({ ok: true, action, preview: { counts: mapped.counts, matches: mapped.matches, unmatched: mapped.unmatched, ambiguous: mapped.ambiguous, unmatchedShopify: mapped.unmatchedShopify }, ...(await health(env, merchant)) });
+      return json({ ok: true, action, preview: previewPayload(mapped), ...(await health(env, merchant)) });
     }
 
     if (action === 'refresh-mapping') {
       const mapped = await refreshMapping(env, merchant);
-      return json({ ok: true, action, preview: { counts: mapped.counts, matches: mapped.matches, unmatched: mapped.unmatched, ambiguous: mapped.ambiguous, unmatchedShopify: mapped.unmatchedShopify }, ...(await health(env, merchant)) });
+      return json({ ok: true, action, preview: previewPayload(mapped), ...(await health(env, merchant)) });
     }
 
     if (action === 'activate' || action === 'reconcile') {
       const mapped = await refreshMapping(env, merchant);
+      if (!mapped.counts.matched) throw new Error('no-linked-variants');
+      if (action === 'activate' && mapped.setup.length) throw new Error('setup-required');
       await env.DB.prepare(`UPDATE shopify_connections SET status = 'active', updated_ts = ?, last_error = '' WHERE merchant = ?`)
         .bind(Date.now(), merchant).run();
       const queued = await enqueueStockChanges(env, merchant, null, mapped.catalog.data, mapped.catalog.rev, true);
       if (waitUntil) waitUntil(flushShopifyOutbox(env, merchant, 25));
-      return json({ ok: true, action, queued, preview: { counts: mapped.counts, matches: mapped.matches, unmatched: mapped.unmatched, ambiguous: mapped.ambiguous, unmatchedShopify: mapped.unmatchedShopify }, ...(await health(env, merchant)) });
+      return json({ ok: true, action, queued, preview: previewPayload(mapped), ...(await health(env, merchant)) });
     }
 
     if (action === 'import-selected') {
       const imported = await importSelected(env, merchant, body && body.variantIds);
-      return json({ ok: true, action, imported: imported.imported, createdProducts: imported.createdProducts, inactive: imported.inactive, preview: {
-        counts: imported.preview.counts, matches: imported.preview.matches, unmatched: imported.preview.unmatched,
-        ambiguous: imported.preview.ambiguous, unmatchedShopify: imported.preview.unmatchedShopify,
-      }, ...(await health(env, merchant)) });
+      return json({ ok: true, action, imported: imported.imported, createdProducts: imported.createdProducts, inactive: imported.inactive, preview: previewPayload(imported.preview), ...(await health(env, merchant)) });
+    }
+
+    if (action === 'configure-imports') {
+      const configured = await configureImportedProducts(env, merchant, body && body.products);
+      return json({ ok: true, action, updated: configured.updated, preview: previewPayload(configured.preview), ...(await health(env, merchant)) });
     }
 
     if (action === 'retry') {
@@ -300,11 +382,14 @@ export async function onRequestPost({ request, env, waitUntil }) {
     }
   } catch (e) {
     const message = String(e && e.message || e).slice(0, 300);
-    await env.DB.prepare('UPDATE shopify_connections SET last_error = ?, updated_ts = ? WHERE merchant = ?')
-      .bind(message, Date.now(), merchant).run().catch(() => {});
-    return json({ error: 'shopify-action-failed', detail: message }, 502);
+    const clientError = /^(import-|setup-|no-linked-variants|location-required)/.test(message);
+    if (!clientError) {
+      await env.DB.prepare('UPDATE shopify_connections SET last_error = ?, updated_ts = ? WHERE merchant = ?')
+        .bind(message, Date.now(), merchant).run().catch(() => {});
+    }
+    return json({ error: 'shopify-action-failed', detail: message }, clientError ? 400 : 502);
   }
   return json({ error: 'bad-action' }, 400);
 }
 
-export const __test = { preview, importCandidates, appendImportedVariants };
+export const __test = { preview, importCandidates, appendImportedVariants, pendingImportProducts, applyImportSetup };

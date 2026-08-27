@@ -93,6 +93,14 @@ ok('selected Shopify variants create one grouped Kiwi product', importedCatalog.
 ok('imported Shopify products are inactive until priced', importedCatalog.data.products[0].archived === true && importedCatalog.data.products[0].priceMAD === 0);
 ok('imported stock starts from the selected Shopify location quantity', importedCatalog.data.variants.some((x) => x.stock === 6 && x.base === 6));
 ok('import preserves exact identifiers for future mapping', importedCatalog.data.variants.some((x) => x.barcodes[0] && x.barcodes[0].code === '99001') && importedCatalog.data.variants.some((x) => x.sku === 'TONER-A-XL'));
+const pendingSetup = statusTest.pendingImportProducts(importedCatalog.data);
+ok('new Shopify products appear in the post-import setup queue', pendingSetup.length === 1 && pendingSetup[0].variants === 2 && pendingSetup[0].stock === 10);
+const configuredCatalog = statusTest.applyImportSetup(importedCatalog.data, [{ productId: pendingSetup[0].productId, priceMAD: 349.5 }], 1787860000100);
+ok('post-import setup writes the MAD price and activates the product', configuredCatalog.updated === 1 && configuredCatalog.data.products[0].priceMAD === 349.5 && configuredCatalog.data.products[0].archived === false);
+ok('configured Shopify products leave the pending setup queue', statusTest.pendingImportProducts(configuredCatalog.data).length === 0 && configuredCatalog.data.products[0].flag === 'Shopify');
+let invalidSetupRejected = false;
+try { statusTest.applyImportSetup(importedCatalog.data, [{ productId: pendingSetup[0].productId, priceMAD: 0 }], 1787860000100); } catch (error) { invalidSetupRejected = error.message === 'setup-price-invalid'; }
+ok('zero-price Shopify activation is rejected server-side', invalidSetupRejected);
 
 // Exercise the real coalesced outbox and real GraphQL request builder against a
 // pocket D1. A second local write must replace the target/idempotency key, not
@@ -225,11 +233,20 @@ ok('selected Shopify rows use the dedicated import action', ui.includes("shopApi
 ok('Shopify import rows render external text through textContent', ui.includes("name.textContent = row.title || ''"));
 ok('Shopify import browser searches the full candidate payload', ui.includes("search.addEventListener('input', renderImportRows)") && ui.includes('filtered.slice(0, 100)'));
 ok('Shopify import browser preserves the 100-product write limit', ui.includes('selectedIds.size >= 100') && ui.includes('Array.from(selectedIds)'));
+ok('Shopify modal includes an in-product connection and feature guide', ui.includes('guideSteps:') && ui.includes('features:') && ui.includes('shopGuide(root, s)'));
+ok('post-import pricing uses a dedicated server action', ui.includes("shopApi('configure-imports', { products: rows })"));
+ok('inventory alignment requires explicit acknowledgement', ui.includes("ack.type = 'checkbox'") && ui.includes('activate.disabled = true'));
+ok('manual reconciliation asks before replacing Shopify quantities', ui.includes('window.confirm(s.reconcileConfirm)'));
+ok('connector health shows linked count and last completed sync', ui.includes('s.linkedVariants') && ui.includes('connection.lastSyncTs'));
+ok('known setup errors are translated instead of exposing internal codes', ui.includes("code === 'no-linked-variants'") && ui.includes("code === 'setup-required'"));
 
 const statusRoute = read('functions/api/shopify/status.js');
 ok('import selections are revalidated against live eligible Shopify rows', statusRoute.includes('eligible.get(id)') && statusRoute.includes("throw new Error('import-selection-invalid')"));
 ok('catalog import uses revision compare-and-swap', statusRoute.includes('WHERE merchant = ? AND rev = ?'));
 ok('Shopify candidate payload covers large catalogs for client-side search', statusRoute.includes('imports.slice(0, 5000)'));
+ok('server refuses activation when no variants are linked', statusRoute.includes("throw new Error('no-linked-variants')"));
+ok('server refuses first activation while imported products still need prices', statusRoute.includes("action === 'activate' && mapped.setup.length") && statusRoute.includes("throw new Error('setup-required')"));
+ok('user input errors do not poison connector health', statusRoute.includes('clientError ? 400 : 502') && statusRoute.includes('if (!clientError)'));
 
 const dashboardUi = read('assets/dateRange.js');
 ok('real merchant dashboard exposes a Shopify card', dashboardUi.includes("{ n: 'Shopify', logo: 'S', bg: '#5E8E3E', channel: 'shopify' }"));

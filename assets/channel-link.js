@@ -131,6 +131,17 @@
       importSelected: 'Importer la sélection', selected: 'sélectionnés', imported: 'Import terminé', importedCount: 'article(s) importé(s)',
       importSearch: 'Rechercher un produit Shopify', importLimit: 'Maximum 100 articles par import.',
       importHint: 'Les articles importés restent inactifs dans Kiwi jusqu’à ce que vous confirmiez leur prix en MAD.',
+      guideTitle: 'Comment connecter cette boutique',
+      guideSteps: ['Saisissez le domaine .myshopify.com et autorisez Kiwi dans Shopify.', 'Choisissez l’emplacement Shopify qui correspond à cette boutique Kiwi.', 'Vérifiez les correspondances exactes par code-barres ou SKU.', 'Importez uniquement les produits voulus, puis confirmez leurs prix en MAD.', 'Activez la synchronisation : les quantités Kiwi remplacent alors celles des variantes liées.'],
+      featuresTitle: 'Fonctions incluses',
+      features: ['Les commandes Shopify en MAD arrivent à valider dans Kiwi et le stock est déduit une seule fois.', 'Stock Kiwi envoyé à Shopify après une vente ou correction locale.', 'Détection des modifications de stock faites directement dans Shopify.', 'File de reprise automatique en cas d’erreur Shopify.', 'Jetons chiffrés côté serveur ; aucun secret envoyé au navigateur.'],
+      setupTitle: 'Produits importés à terminer', priceMAD: 'Prix de vente MAD', setupMeta: 'variantes · stock',
+      configureSelected: 'Enregistrer les prix et activer', configured: 'Produits activés', invalidPrice: 'Saisissez un prix MAD supérieur à zéro pour chaque produit sélectionné.',
+      finishSetup: 'Terminez les prix MAD des produits importés avant d’activer la synchronisation.',
+      noLinks: 'Aucun produit n’est lié. Importez un produit ou ajoutez le même code-barres/SKU dans Kiwi avant d’activer la synchronisation.',
+      acknowledge: 'Je comprends que Kiwi remplacera les quantités Shopify des variantes liées.',
+      reconcileConfirm: 'Remplacer maintenant les quantités Shopify liées par les quantités Kiwi ?', connectedNoLinks: 'Shopify connecté · aucun produit lié',
+      linkedVariants: 'variantes liées', lastSync: 'dernière synchro', neverSynced: 'aucune synchro terminée',
       missingIdentifier: 'Ajoutez un SKU ou un code-barres dans Shopify', duplicateIdentifier: 'SKU ou code-barres dupliqué', identifierUsed: 'Identifiant déjà utilisé dans Kiwi',
       activateWarn: 'Shopify prendra les quantités Kiwi pour les variantes liées. Les lignes sans correspondance ne seront pas modifiées.',
       active: 'Synchronisation active', pending: 'en attente', failed: 'en erreur', drift: 'écarts détectés',
@@ -150,6 +161,17 @@
       importSelected: 'Import selected', selected: 'selected', imported: 'Import complete', importedCount: 'product(s) imported',
       importSearch: 'Search Shopify products', importLimit: 'Maximum 100 products per import.',
       importHint: 'Imported products remain inactive in Kiwi until you confirm their price in MAD.',
+      guideTitle: 'How to connect this boutique',
+      guideSteps: ['Enter the .myshopify.com domain and authorize Kiwi in Shopify.', 'Choose the Shopify location that represents this Kiwi boutique.', 'Review exact barcode or SKU matches.', 'Import only the products you want, then confirm their selling prices in MAD.', 'Activate synchronization: Kiwi quantities then replace the linked Shopify variant quantities.'],
+      featuresTitle: 'Included features',
+      features: ['MAD Shopify orders arrive in Kiwi for approval and reduce stock exactly once.', 'Kiwi stock is sent to Shopify after a local sale or correction.', 'Direct Shopify inventory edits are detected as drift.', 'A durable retry queue handles temporary Shopify failures.', 'Tokens are encrypted server-side; no secret is returned to the browser.'],
+      setupTitle: 'Imported products to finish', priceMAD: 'Selling price MAD', setupMeta: 'variants · stock',
+      configureSelected: 'Save prices and activate', configured: 'Products activated', invalidPrice: 'Enter a MAD price above zero for every selected product.',
+      finishSetup: 'Finish the MAD prices for imported products before activating synchronization.',
+      noLinks: 'No product is linked. Import a product or add the same barcode/SKU in Kiwi before activating synchronization.',
+      acknowledge: 'I understand that Kiwi will replace Shopify quantities for linked variants.',
+      reconcileConfirm: 'Replace linked Shopify quantities with Kiwi quantities now?', connectedNoLinks: 'Shopify connected · no products linked',
+      linkedVariants: 'linked variants', lastSync: 'last sync', neverSynced: 'no completed sync yet',
       missingIdentifier: 'Add a SKU or barcode in Shopify', duplicateIdentifier: 'Duplicate SKU or barcode', identifierUsed: 'Identifier already used in Kiwi',
       activateWarn: 'Shopify will use Kiwi quantities for linked variants. Unmatched rows will not be changed.',
       active: 'Sync active', pending: 'pending', failed: 'failed', drift: 'drift detected',
@@ -169,6 +191,17 @@
       importSelected: 'استيراد المحدد', selected: 'محدد', imported: 'اكتمل الاستيراد', importedCount: 'منتج مستورد',
       importSearch: 'البحث في منتجات Shopify', importLimit: 'الحد الأقصى 100 منتج لكل عملية استيراد.',
       importHint: 'تبقى المنتجات المستوردة غير نشطة في Kiwi حتى تأكيد سعرها بالدرهم.',
+      guideTitle: 'كيفية ربط هذا المتجر',
+      guideSteps: ['أدخل نطاق .myshopify.com وامنح Kiwi الإذن داخل Shopify.', 'اختر موقع Shopify الذي يمثل متجر Kiwi هذا.', 'راجع المطابقات الدقيقة بواسطة الباركود أو SKU.', 'استورد المنتجات المطلوبة فقط ثم أكد أسعار البيع بالدرهم.', 'فعّل المزامنة: بعدها تستبدل كميات Kiwi كميات متغيرات Shopify المرتبطة.'],
+      featuresTitle: 'الميزات المتضمنة',
+      features: ['تصل طلبات Shopify بالدرهم إلى Kiwi للموافقة ويُخصم المخزون مرة واحدة فقط.', 'تُرسل كميات Kiwi إلى Shopify بعد البيع أو التصحيح المحلي.', 'يتم اكتشاف تعديلات المخزون المباشرة داخل Shopify.', 'قائمة إعادة محاولة دائمة تعالج أعطال Shopify المؤقتة.', 'الرموز مشفرة على الخادم ولا يُرسل أي سر إلى المتصفح.'],
+      setupTitle: 'منتجات مستوردة تحتاج الإكمال', priceMAD: 'سعر البيع بالدرهم', setupMeta: 'متغيرات · المخزون',
+      configureSelected: 'حفظ الأسعار والتفعيل', configured: 'تم تفعيل المنتجات', invalidPrice: 'أدخل سعراً بالدرهم أكبر من صفر لكل منتج محدد.',
+      finishSetup: 'أكمل أسعار المنتجات المستوردة بالدرهم قبل تفعيل المزامنة.',
+      noLinks: 'لا يوجد منتج مرتبط. استورد منتجاً أو أضف نفس الباركود/SKU في Kiwi قبل تفعيل المزامنة.',
+      acknowledge: 'أفهم أن Kiwi سيستبدل كميات Shopify للمتغيرات المرتبطة.',
+      reconcileConfirm: 'هل تريد استبدال كميات Shopify المرتبطة بكميات Kiwi الآن؟', connectedNoLinks: 'Shopify متصل · لا توجد منتجات مرتبطة',
+      linkedVariants: 'متغيرات مرتبطة', lastSync: 'آخر مزامنة', neverSynced: 'لا توجد مزامنة مكتملة بعد',
       missingIdentifier: 'أضف SKU أو باركود في Shopify', duplicateIdentifier: 'SKU أو باركود مكرر', identifierUsed: 'المعرّف مستخدم بالفعل في Kiwi',
       activateWarn: 'ستستخدم Shopify كميات Kiwi للمتغيرات المرتبطة. لن تتغير الأسطر غير المتطابقة.',
       active: 'المزامنة نشطة', pending: 'قيد الانتظار', failed: 'أخطاء', drift: 'اختلافات مكتشفة',
@@ -181,6 +214,13 @@
   function toast(m, o) { try { window.Kiwi && window.Kiwi.toast && window.Kiwi.toast(m, o); } catch (_) {} }
 
   function shopStr() { return SHOP[LANG()] || SHOP.fr; }
+  function shopError(message) {
+    var s = shopStr(), code = String(message || '');
+    if (code === 'no-linked-variants') return s.noLinks;
+    if (code === 'setup-required') return s.finishSetup;
+    if (code === 'setup-price-invalid') return s.invalidPrice;
+    return code || s.invalid;
+  }
   function shopApi(action, extra) {
     return fetch('/api/shopify/status', {
       method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -203,7 +243,7 @@
     b.addEventListener('click', function () {
       b.disabled = true;
       Promise.resolve(fn()).catch(function (e) {
-        toast(shopStr().error, { type: 'warn', desc: String(e && e.message || shopStr().invalid) });
+        toast(shopStr().error, { type: 'warn', desc: shopError(e && e.message) });
       }).finally(function () { b.disabled = false; });
     });
     return b;
@@ -216,8 +256,54 @@
     box.appendChild(n); box.appendChild(l); return box;
   }
 
+  function shopGuide(root, s) {
+    var guide = document.createElement('details'); guide.className = 'shp-guide';
+    var summary = document.createElement('summary'); summary.textContent = s.guideTitle; guide.appendChild(summary);
+    var steps = document.createElement('ol');
+    (s.guideSteps || []).forEach(function (copy) { var item = document.createElement('li'); item.textContent = copy; steps.appendChild(item); });
+    guide.appendChild(steps);
+    var title = document.createElement('strong'); title.textContent = s.featuresTitle; guide.appendChild(title);
+    var features = document.createElement('ul');
+    (s.features || []).forEach(function (copy) { var item = document.createElement('li'); item.textContent = copy; features.appendChild(item); });
+    guide.appendChild(features); root.appendChild(guide);
+  }
+
+  function shopSetup(root, products, reload) {
+    var s = shopStr(), pending = products || [];
+    if (!pending.length) return;
+    var setup = document.createElement('details'); setup.className = 'shp-list shp-setup'; setup.open = true;
+    var summary = document.createElement('summary'); summary.textContent = String(pending.length) + ' · ' + s.setupTitle; setup.appendChild(summary);
+    var selected = new Set(), inputs = new Map(), button;
+    pending.slice(0, 100).forEach(function (product) {
+      var row = document.createElement('div'); row.className = 'shp-setup-row';
+      var check = document.createElement('input'); check.type = 'checkbox'; check.value = product.productId || '';
+      var copy = document.createElement('span');
+      var name = document.createElement('strong'); name.textContent = product.name || '';
+      var meta = document.createElement('small'); meta.textContent = String(product.variants || 0) + ' ' + s.setupMeta + ' ' + String(product.stock || 0);
+      copy.appendChild(name); copy.appendChild(meta);
+      var price = document.createElement('input'); price.type = 'number'; price.min = '0.01'; price.max = '10000000'; price.step = '0.01'; price.inputMode = 'decimal'; price.placeholder = s.priceMAD; price.value = product.priceMAD > 0 ? String(product.priceMAD) : '';
+      inputs.set(check.value, price);
+      check.addEventListener('change', function () {
+        if (check.checked) selected.add(check.value); else selected.delete(check.value);
+        if (button) { button.disabled = !selected.size; button.textContent = s.configureSelected + (selected.size ? ' · ' + selected.size : ''); }
+      });
+      row.appendChild(check); row.appendChild(copy); row.appendChild(price); setup.appendChild(row);
+    });
+    button = shopButton(s.configureSelected, function () {
+      var rows = Array.from(selected).map(function (productId) { return { productId: productId, priceMAD: Number(inputs.get(productId).value) }; });
+      var invalid = rows.find(function (row) { return !Number.isFinite(row.priceMAD) || row.priceMAD <= 0; });
+      if (!rows.length || invalid) { if (invalid) inputs.get(invalid.productId).focus(); throw new Error(s.invalidPrice); }
+      return shopApi('configure-imports', { products: rows }).then(function (out) {
+        toast(s.configured, { type: 'success', desc: String(out.updated || rows.length) });
+        return out.preview ? shopPreview(root, out, reload) : reload();
+      });
+    });
+    button.disabled = true; setup.appendChild(button); root.appendChild(setup);
+  }
+
   function shopPreview(root, data, reload) {
     var s = shopStr(), p = data && data.preview || data || {}, c = p.counts || {};
+    var alreadyActive = !!(data && data.connection && data.connection.status === 'active');
     root.textContent = '';
     var h = document.createElement('div'); h.className = 'chl-h'; h.textContent = s.mapTitle; root.appendChild(h);
     var metrics = document.createElement('div'); metrics.className = 'shp-metrics';
@@ -229,6 +315,7 @@
     metrics.appendChild(shopMetric(c.unmatchedShopify, s.shopifyOnly));
     metrics.appendChild(shopMetric(c.importable, s.importable));
     root.appendChild(metrics);
+    shopSetup(root, p.setup || [], reload);
     if ((p.matches || []).length) {
       var matched = document.createElement('details'); matched.className = 'shp-list';
       var ms = document.createElement('summary'); ms.textContent = (c.matched || 0) + ' ' + s.matched; matched.appendChild(ms);
@@ -294,7 +381,7 @@
           if (!ids.length) throw new Error(s.importSelected);
           return shopApi('import-selected', { variantIds: ids }).then(function (out) {
             toast(s.imported, { type: 'success', desc: String(out.imported || ids.length) + ' ' + s.importedCount });
-            return reload(out);
+            return out.preview ? shopPreview(root, out, reload) : reload();
           });
         });
         importBtn.disabled = true;
@@ -303,15 +390,27 @@
       renderImportRows();
       root.appendChild(shopOnly);
     }
-    var warn = document.createElement('p'); warn.className = 'chl-note shp-warn'; warn.textContent = s.activateWarn; root.appendChild(warn);
-    root.appendChild(shopButton(s.activate, function () {
-      return shopApi('activate').then(function (out) { toast(s.active, { type: 'success' }); return reload(out); });
-    }));
+    if (c.matched && !(p.setup || []).length && !alreadyActive) {
+      var warn = document.createElement('p'); warn.className = 'chl-note shp-warn'; warn.textContent = s.activateWarn; root.appendChild(warn);
+      var acknowledge = document.createElement('label'); acknowledge.className = 'shp-ack';
+      var ack = document.createElement('input'); ack.type = 'checkbox';
+      var ackCopy = document.createElement('span'); ackCopy.textContent = s.acknowledge;
+      acknowledge.appendChild(ack); acknowledge.appendChild(ackCopy); root.appendChild(acknowledge);
+      var activate = shopButton(s.activate, function () {
+        return shopApi('activate').then(function (out) { toast(s.active, { type: 'success' }); return reload(out); });
+      });
+      activate.disabled = true; ack.addEventListener('change', function () { activate.disabled = !ack.checked; }); root.appendChild(activate);
+    } else if ((p.setup || []).length && !alreadyActive) {
+      var finishSetup = document.createElement('p'); finishSetup.className = 'chl-note shp-warn'; finishSetup.textContent = s.finishSetup; root.appendChild(finishSetup);
+    } else if (!c.matched) {
+      var noLinks = document.createElement('p'); noLinks.className = 'chl-note shp-warn'; noLinks.textContent = s.noLinks; root.appendChild(noLinks);
+    }
   }
 
   function renderShopify(root, status) {
     var s = shopStr(); root.textContent = '';
     var intro = document.createElement('p'); intro.className = 'chl-hdr'; intro.textContent = s.intro; root.appendChild(intro);
+    shopGuide(root, s);
     var connection = status && status.connection;
     if (!connection) {
       if (status && status.legacyWebhookLinks) {
@@ -354,12 +453,14 @@
 
     if (connection.status === 'active') {
       var live = document.createElement('div'); live.className = 'shp-live';
-      var liveTitle = document.createElement('strong'); liveTitle.textContent = s.active; live.appendChild(liveTitle);
+      var linkedCount = Number(status.mapping.active || 0) + Number(status.mapping.drift || 0);
+      var liveTitle = document.createElement('strong'); liveTitle.textContent = linkedCount ? s.active : s.connectedNoLinks; live.appendChild(liveTitle);
       var liveStats = document.createElement('span');
-      liveStats.textContent = (status.queue.pending || 0) + ' ' + s.pending + ' · ' + (status.queue.failed || 0) + ' ' + s.failed + ' · ' + (status.mapping.drift || 0) + ' ' + s.drift;
+      var syncWhen = connection.lastSyncTs ? new Date(connection.lastSyncTs).toLocaleString(document.documentElement.lang || undefined) : s.neverSynced;
+      liveStats.textContent = linkedCount + ' ' + s.linkedVariants + ' · ' + (status.queue.pending || 0) + ' ' + s.pending + ' · ' + (status.queue.failed || 0) + ' ' + s.failed + ' · ' + (status.mapping.drift || 0) + ' ' + s.drift + ' · ' + s.lastSync + ' ' + syncWhen;
       live.appendChild(liveStats); root.appendChild(live);
       var actions = document.createElement('div'); actions.className = 'shp-actions';
-      actions.appendChild(shopButton(s.reconcile, function () { return shopApi('reconcile').then(reload); }));
+      if (linkedCount) actions.appendChild(shopButton(s.reconcile, function () { if (!window.confirm(s.reconcileConfirm)) return; return shopApi('reconcile').then(reload); }));
       if (status.queue.failed) actions.appendChild(shopButton(s.retry, function () { return shopApi('retry').then(reload); }, true));
       root.appendChild(actions);
     }
@@ -367,6 +468,7 @@
       var err = document.createElement('div'); err.className = 'chl-once'; err.textContent = connection.lastError; root.appendChild(err);
     }
     root.appendChild(previewSlot);
+    shopSetup(previewSlot, status.setup || [], reload);
   }
 
   function loadShopify(root) {
@@ -603,6 +705,10 @@
   .shp-metric span { font-size:10.5px; color:var(--n-500); }\
   .shp-warn { padding:10px 12px; border-inline-start:3px solid var(--atlas); background:var(--paper-soft); }\
   .shp-actions { display:flex; flex-wrap:wrap; gap:8px; }\
+  .shp-guide { border:1px solid var(--n-200); border-radius:11px; padding:10px 12px; background:var(--paper-soft); color:var(--n-600); font-size:11.5px; }\
+  .shp-guide summary { cursor:pointer; color:var(--ink); font-weight:700; }\
+  .shp-guide ol,.shp-guide ul { margin:10px 0; padding-inline-start:20px; display:grid; gap:6px; line-height:1.45; }\
+  .shp-guide strong { display:block; margin-top:12px; color:var(--ink); }\
   .shp-list { border:1px solid var(--n-200); border-radius:10px; padding:9px 11px; color:var(--n-600); font-size:11.5px; }\
   .shp-list summary { cursor:pointer; color:var(--ink); font-weight:600; }\
   .shp-list div { padding:7px 0; border-top:1px solid var(--n-200); overflow-wrap:anywhere; }\
@@ -616,6 +722,15 @@
   .shp-import-search { width:100%; margin-top:10px; padding:10px 12px; border:1px solid var(--n-200); border-radius:10px; background:var(--surface); color:var(--ink); font:inherit; }\
   .shp-import-count { display:block; margin:5px 0 3px; color:var(--n-500); text-align:right; }\
   .shp-import-rows { max-height:340px; overflow:auto; }\
+  .shp-setup-row { display:grid; grid-template-columns:auto minmax(0,1fr) minmax(120px,160px); gap:10px; align-items:center; }\
+  .shp-setup-row>input[type="checkbox"] { width:17px; height:17px; accent-color:var(--atlas); }\
+  .shp-setup-row>span { display:flex; flex-direction:column; gap:3px; min-width:0; }\
+  .shp-setup-row strong { color:var(--ink); overflow-wrap:anywhere; }\
+  .shp-setup-row small { color:var(--n-500); }\
+  .shp-setup-row>input[type="number"] { width:100%; padding:9px 10px; border:1px solid var(--n-200); border-radius:9px; background:var(--surface); color:var(--ink); font:inherit; }\
+  .shp-ack { display:flex; align-items:flex-start; gap:9px; padding:10px 12px; border:1px solid var(--n-200); border-radius:10px; color:var(--n-600); font-size:11.5px; line-height:1.45; cursor:pointer; }\
+  .shp-ack input { width:17px; height:17px; flex:0 0 auto; accent-color:var(--atlas); }\
+  @media(max-width:560px){.shp-setup-row{grid-template-columns:auto 1fr}.shp-setup-row>input[type="number"]{grid-column:2}}\
   html[data-theme="dark"] .chl-f-v.is-key { color:var(--mint); }';
 
   try {
