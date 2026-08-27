@@ -2,7 +2,7 @@
 // No token is ever returned to the browser: D1 stores AES-GCM ciphertext only.
 
 export const SHOPIFY_API_VERSION = '2026-07';
-export const SHOPIFY_SCOPES = 'read_products,read_inventory,write_inventory,read_orders';
+export const SHOPIFY_SCOPES = 'read_products,read_inventory,write_inventory,read_orders,read_locations';
 
 const enc = new TextEncoder();
 const dec = new TextDecoder();

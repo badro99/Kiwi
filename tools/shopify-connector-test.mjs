@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import {
   buildExactVariantMapping, decryptToken, encryptToken, normalizeShopDomain,
   enqueueStockChanges, flushShopifyOutbox, sha256Hex, stockSnapshot,
-  verifyOAuthHmac, verifyWebhookHmac,
+  SHOPIFY_SCOPES, verifyOAuthHmac, verifyWebhookHmac,
 } from '../functions/api/shopify/_lib.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -20,6 +20,7 @@ ok('bare shop name becomes a myshopify domain', normalizeShopDomain('Atlas-Casa'
 ok('full shop URL is normalized', normalizeShopDomain('https://Atlas-Casa.myshopify.com/admin') === 'atlas-casa.myshopify.com');
 ok('lookalike host is rejected', normalizeShopDomain('atlas.myshopify.com.evil.test') === '');
 ok('path-only injection is rejected', normalizeShopDomain('evil.test/@atlas.myshopify.com') === '');
+ok('OAuth requests location read access', SHOPIFY_SCOPES.split(',').includes('read_locations'));
 
 // Token ciphertext must be randomized and authenticated.
 const tokenKey = 'unit-test-token-key-with-more-than-32-bytes';

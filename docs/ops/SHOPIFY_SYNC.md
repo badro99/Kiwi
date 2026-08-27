@@ -26,7 +26,7 @@ pilot runs. The app can remain API-only; there is no embedded Shopify UI.
 
 - App URL: `https://kiwi-os.com`
 - Allowed redirect: `https://kiwi-os.com/api/shopify/callback`
-- Scopes: `read_products,read_inventory,write_inventory,read_orders`
+- Scopes: `read_products,read_inventory,write_inventory,read_orders,read_locations`
 - Use expiring offline tokens.
 
 The OAuth callback creates shop-specific `orders/create`,
