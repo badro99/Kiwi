@@ -273,7 +273,10 @@
     var reload = function () { return loadShopify(root); };
     root.appendChild(shopButton(connection.location ? s.refresh : s.inspect, function () {
       if (!select.value) { select.focus(); throw new Error(s.location); }
-      return shopApi('select-location', { locationId: select.value }).then(function (out) { shopPreview(previewSlot, out, reload); });
+      var sameLocation = connection.location && connection.location.id === select.value;
+      var action = sameLocation ? 'refresh-mapping' : 'select-location';
+      var payload = sameLocation ? null : { locationId: select.value };
+      return shopApi(action, payload).then(function (out) { shopPreview(previewSlot, out, reload); });
     }));
 
     if (connection.status === 'active') {

@@ -200,6 +200,7 @@ ok('activation warning states Kiwi quantities will replace linked Shopify quanti
 ok('Shopify card has a router-independent click path', ui.includes("[data-action=\"integration-connect\"][data-channel=\"shopify\"]"));
 ok('dedicated Shopify click wins before a stale shared router', ui.includes("event.stopImmediatePropagation()"));
 ok('connected Shopify store can reauthorize added scopes', ui.includes('authorizeShopify(connection.shop)'));
+ok('refreshing the current Shopify location preserves active sync state', ui.includes("sameLocation ? 'refresh-mapping' : 'select-location'"));
 
 const dashboardUi = read('assets/dateRange.js');
 ok('real merchant dashboard exposes a Shopify card', dashboardUi.includes("{ n: 'Shopify', logo: 'S', bg: '#5E8E3E', channel: 'shopify' }"));
