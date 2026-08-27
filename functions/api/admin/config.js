@@ -16,6 +16,41 @@ import { isOperator, isSeniorOperator, json, operatorActor } from '../../auth/_l
  * occasions de diverger sur la seule colonne dont l'exactitude compte. */
 const actorOf = (context) => operatorActor(context.request, context.env);
 
+/* God Mode is the only surface that owns these commercial fields. Production
+ * used to require a separate, easy-to-forget D1 command before the form could
+ * save anything; when that command was missed, every control was disabled even
+ * though the deployed code was current. Keep this migration additive and
+ * idempotent: inspect the registry, add only absent nullable columns, and never
+ * rewrite an existing value. Concurrent first loads are harmless because a
+ * duplicate-column race is ignored and the authoritative SELECT is retried. */
+const COMMERCIAL_COLUMNS = {
+  city: 'TEXT',
+  mrr: 'INTEGER',
+  subscription_kind: 'TEXT',
+  billing_cycle: 'TEXT',
+  subscription_start: 'TEXT',
+  subscription_end: 'TEXT',
+  trial_start: 'TEXT',
+  trial_end: 'TEXT',
+  trial_days: 'INTEGER',
+};
+
+async function ensureCommercialColumns(env) {
+  let rows;
+  try { rows = await env.DB.prepare("SELECT name FROM pragma_table_info('merchant_config')").all(); }
+  catch (_) { return false; }
+  const present = new Set((rows.results || []).map((row) => row.name));
+  for (const [name, type] of Object.entries(COMMERCIAL_COLUMNS)) {
+    if (present.has(name)) continue;
+    try { await env.DB.prepare(`ALTER TABLE merchant_config ADD COLUMN ${name} ${type}`).run(); }
+    catch (_) {
+      // Another request may have added it after the PRAGMA. The final SELECT is
+      // the source of truth and will still fail closed if this was a real error.
+    }
+  }
+  return true;
+}
+
 /* Une ligne par module RÉELLEMENT changé. Un enregistrement qui ne touche que le
  * plan, ou qui renvoie les mêmes valeurs, n'écrit rien — un journal qui grossit
  * à chaque ouverture de panneau ne se lit plus.
@@ -53,6 +88,7 @@ export async function onRequestGet(context) {
   const url = new URL(context.request.url);
   const merchant = (url.searchParams.get('merchant') || '').trim();
   if (!merchant) return json({ error: 'merchant-required' }, 400);
+  await ensureCommercialColumns(context.env);
   /* city / mrr sont posées par l'opérateur et peuvent manquer sur une base qui
      n'a pas encore reçu l'ALTER (voir schema.sql). On retombe alors sur la
      requête d'origine et on annonce `columns:false` : le panneau affiche « pas
@@ -92,6 +128,7 @@ export async function onRequestGet(context) {
 
 export async function onRequestPut(context) {
   const bad = await guard(context, true); if (bad) return bad;
+  await ensureCommercialColumns(context.env);
   let body;
   try { body = await context.request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
   const merchant = (body.merchant || '').toString().trim();

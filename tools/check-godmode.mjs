@@ -961,6 +961,23 @@ G('14bis · Vue d’ensemble — nos chiffres, et ce qu’on ne sait pas');
 /* ═══ 14 · ABONNEMENTS ET ESSAIS ══════════════════════════════════════════ */
 G('14 · Abonnements — cycles, essais et échéances restent attachés au magasin');
 {
+  const legacy = makeDB();
+  for (const col of ['trial_days','trial_end','trial_start','subscription_end','subscription_start','billing_cycle','subscription_kind','mrr','city']) {
+    legacy._db.exec(`ALTER TABLE merchant_config DROP COLUMN ${col}`);
+  }
+  legacy.prepare('INSERT INTO operators (id,label,salt,hash,created_ts) VALUES (?,?,?,?,?)')
+    .bind('op-1','Badr','ff','ff',now).run();
+  legacy.prepare('INSERT INTO merchant_config (merchant,features,plan,type,updated_ts) VALUES (?,?,?,?,?)')
+    .bind('legacy-shop','{}','pro','boutique',now).run();
+  const legacyReq = new Request('https://kiwi.test/api/admin/config?merchant=legacy-shop', {
+    headers:{ Cookie:AS.operator },
+  });
+  const legacyRes = await R.config.onRequestGet({ env:{ ...env, DB:legacy }, request:legacyReq });
+  const legacyBody = await legacyRes.json();
+  ok(legacyRes.status === 200 && legacyBody.columns.lifecycle === true &&
+     legacy._db.prepare("SELECT COUNT(*) AS n FROM pragma_table_info('merchant_config') WHERE name IN ('city','mrr','subscription_kind','billing_cycle','subscription_start','subscription_end','trial_start','trial_end','trial_days')").get().n === 9,
+    'la première ouverture répare une ancienne base sans commande Cloudflare manuelle');
+
   const paid = await call(R.config, 'PUT', '/api/admin/config', { body: {
     merchant:'amira-boutique', features:{}, plan:'pro', city:'Casablanca', mrr:399,
     subscriptionKind:'paid', billingCycle:'annual',
