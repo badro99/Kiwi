@@ -197,6 +197,11 @@ const ui = read('assets/channel-link.js');
 ok('Shopify card starts OAuth instead of creating a manual key', ui.includes("if (channel === 'shopify') return openShopify()"));
 ok('activation warning states Kiwi quantities will replace linked Shopify quantities', ui.includes('Shopify prendra les quantités Kiwi'));
 
+const dashboardUi = read('assets/dateRange.js');
+ok('real merchant dashboard exposes a Shopify card', dashboardUi.includes("{ n: 'Shopify', logo: 'S', bg: '#5E8E3E', channel: 'shopify' }"));
+ok('direct integration cards preserve their connector channel', dashboardUi.includes("data-channel=\"${it.channel || ''}\""));
+ok('Shopify card opens its connector without the generic chooser', dashboardUi.includes("it.channel ? 'integration-connect' : 'add-integration'"));
+
 ok('state hashes are deterministic but do not expose input', (await sha256Hex('state')) !== 'state');
 
 console.log(`\nShopify connector · ${pass} checks`);

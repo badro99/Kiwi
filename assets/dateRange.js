@@ -4289,6 +4289,7 @@
   const INTEG_LIST = [
     { n: 'Glovo', logo: 'G', bg: '#F29137' },
     { n: 'Yassir Express', logo: 'Y', bg: '#2B5AA8' },
+    { n: 'Shopify', logo: 'S', bg: '#5E8E3E', channel: 'shopify' },
     { n: 'Comptabilité', logo: 'A', bg: '#1D3F6B' },
     { n: 'Bank of Africa', logo: 'B', bg: '#00613E' },
   ];
@@ -4353,7 +4354,8 @@
       const notConn = INTEG_NOTCONN[lang] || INTEG_NOTCONN.fr;
       const addLbl = (window.KiwiI18n?.t?.('dash.integ.add')) || '+ Ajouter une intégration';
       const cards = INTEG_LIST.map(it =>
-        `<div class="integ-card" data-action="add-integration">` +
+        `<div class="integ-card" data-action="${it.channel ? 'integration-connect' : 'add-integration'}"` +
+        ` data-arg="${it.n}" data-channel="${it.channel || ''}">` +
         `<div class="logo" style="background:${it.bg};opacity:.55;">${it.logo}</div>` +
         `<div class="info"><div class="n">${it.n}</div>` +
         `<div class="s"><span class="dot warn"></span><span>${notConn}</span></div></div></div>`
