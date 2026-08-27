@@ -3404,8 +3404,7 @@
         };
       }),
     };
-    const cat = window.KiwiBoutiqueCatalog;
-    const beginPay = (reserved) => openPay({
+    const beginPay = () => openPay({
       amount: total,
       title: 'Encaissement',
       subtitle: `${frozen.num} · ${c ? esc(c.name) : 'Cliente de passage'}`,
@@ -3436,11 +3435,10 @@
          de paiement : elle couvre une correction de stock arrivée pendant que
          la fenêtre d'encaissement était ouverte, sans jamais bloquer un paiement
          déjà commencé. */
-      stockCheck: reserved ? null : () => ticketStockIssue({ lines: frozen.lines }),
+      stockCheck: () => ticketStockIssue({ lines: frozen.lines }),
       onStockError: showStockIssue,
       onCancel: () => {
         state.checkoutBusy = false;
-        if (reserved && cat && cat.releaseSale) cat.releaseSale(frozen.syncId);
       },
       waName: c ? firstName(c.name) : null, waPhone: c ? c.phone : null,
       onPaid: (parts) => {
@@ -3474,13 +3472,12 @@
         };
         SALES.unshift(sale);
         persistDay();
-        if (reserved && cat && cat.confirmSale) cat.confirmSale(frozen.syncId);
         bqSaveProvisional();              // le Z provisoire suit la vente (voir day-report.js)
         if (IS_DEMO) saleSeq++;
         // Draw the sold pieces down from the SHARED inventory — a real sale must move
         // stock through to the base (the in-memory ticket holds alone evaporate on the
         // next catalogue sync). Real/paired store only; the local demo stays in-memory.
-        if (!reserved) sale.lines.forEach((ln) => persistStock(ln.pid, ln.size, ln.color, -ln.qty, sale.syncId, 'vente'));
+        sale.lines.forEach((ln) => persistStock(ln.pid, ln.size, ln.color, -ln.qty, sale.syncId, 'vente'));
         // Mirror the sale to the owner/operator dashboard (Live Link) so the
         // boutique's real sales show up on the "En direct" feed + running total —
         // the main caisse does the same via recordSale(). No-op unless live is on;
@@ -3564,41 +3561,15 @@
       },
     });
 
+    /* Checkout is deliberately local-first. The exact product × colour × size
+       is checked above and again when the cashier chooses a payment method; the
+       committed movement is then mirrored through the catalogue ledger with the
+       sale's idempotency reference. A remote reservation used to sit between
+       the Encaisser button and this panel. When that request never settled, a
+       stocked shop was trapped forever behind the stock-verification screen. Network
+       synchronization must never be a prerequisite for taking payment. */
     state.checkoutBusy = true;
-    const wait = $('#bq-paym', root);
-    wait.innerHTML = '<h3 class="modal-title">Vérification du stock…</h3><p class="modal-subtle">Kiwi réserve les variantes exactes avant l\'encaissement.</p>';
-    openVeil('#bq-pay-veil');
-    const reserveLines = frozen.lines.map((ln) => ({ pid: ln.pid, size: ln.size, color: colorKey(ln.pid, ln.color), qty: ln.qty, price: ln.price }));
-    if (IS_DEMO || state.offline || !cat || !cat.reserveSale) {
-      beginPay(false);
-      return;
-    }
-    cat.reserveSale(frozen.syncId, reserveLines).then((res) => {
-      if (res && res.ok) { beginPay(true); return; }
-      if (res && res.offline) {
-        toast('Stock enregistré sur cette caisse', 'La synchronisation centrale reprendra automatiquement.');
-        beginPay(false);
-        return;
-      }
-      if (res && res.issue) {
-        state.checkoutBusy = false; closeVeil('#bq-pay-veil'); showStockIssue(res.issue); return;
-      }
-      if (res && res.fatal) {
-        state.checkoutBusy = false; closeVeil('#bq-pay-veil');
-        toast('Stock non confirmé, rien n’a été encaissé', 'Touchez de nouveau Encaisser : la même réservation sera relue sans doubler le stock.');
-        return;
-      }
-      toast('Stock non confirmé en ligne', 'La vente continue hors ligne et sera synchronisée avec son identifiant unique.');
-      beginPay(false);
-    }).catch(() => {
-      /* reserveSale is designed to settle every network outcome, but checkout
-         must still own its loading state if a catalogue reconciliation or a
-         future adapter unexpectedly throws. A rejected promise previously left
-         the cashier behind an uncloseable stock-verification veil forever. */
-      state.checkoutBusy = false;
-      closeVeil('#bq-pay-veil');
-      toast('Vérification interrompue, rien n’a été encaissé', 'Touchez de nouveau Encaisser. Le ticket et le stock sont conservés.');
-    });
+    beginPay();
   }
 
   /* ── UNE VENTE, PLUSIEURS RÈGLEMENTS ──────────────────────────────────────

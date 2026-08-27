@@ -72,10 +72,13 @@ ok(/UPDATE catalogs SET data = \?, rev = \?, updated_ts = \?[\s\S]*WHERE merchan
   'le write catalogue est un compare-and-swap atomique');
 ok(pos.includes('const frozen = {') && pos.includes('lines: frozen.lines.map'),
   'prix, reçu, journal et stock lisent le snapshot immuable du checkout');
-ok(pos.includes("cat.reserveSale(frozen.syncId, reserveLines)") && pos.includes("cat.confirmSale(frozen.syncId)"),
-  'la caisse réserve avant paiement puis confirme la même référence');
-ok(pos.includes('if (res && res.offline)') && pos.includes(".catch(() => {"),
-  'un catalogue central absent reprend le chemin hors-ligne et aucune exception ne laisse le voile bloqué');
+ok(pos.includes('state.checkoutBusy = true;\n    beginPay();')
+    && !pos.includes('Vérification du stock…')
+    && !pos.includes('cat.reserveSale(frozen.syncId, reserveLines)'),
+  'aucun aller-retour réseau ne peut bloquer l’ouverture du paiement');
+ok(pos.includes('stockCheck: () => ticketStockIssue({ lines: frozen.lines })')
+    && pos.includes("persistStock(ln.pid, ln.size, ln.color, -ln.qty, sale.syncId, 'vente')"),
+  'la variante exacte est revérifiée au paiement puis débitée avec la référence idempotente de la vente');
 const client = fs.readFileSync(path.join(ROOT, 'assets/boutique-catalog.js'), 'utf8');
 ok(client.includes("reason === 'catalog-missing'") && client.includes("reason === 'unmigrated'"),
   'les réponses explicites sans écriture serveur ne sont pas confondues avec une réservation ambiguë');
