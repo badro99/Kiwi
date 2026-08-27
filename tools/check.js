@@ -849,6 +849,7 @@ section('Whole-project regressions');
   const { spawnSync } = require('child_process');
   const suites = [
     'dashboard-analytics-toggle-test.mjs',
+    'vexel-startup-test.mjs',
     'channel-percentage-test.mjs',
     'sales-day-contrast-test.mjs',
     'day-report-export-test.mjs',

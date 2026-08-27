@@ -6413,7 +6413,9 @@
 <script src="assets/account.js?v=17" defer fetchpriority="low"></script>
 <script src="assets/design-2026.js" defer fetchpriority="low"></script>
 <script src="assets/design-ios27.js" defer fetchpriority="low"></script>
-<script src="assets/design-vexel-layout.js?v=2080" defer fetchpriority="low"></script>
+<!-- Default home composition: critical before the PIN overlay reveals the app.
+     Low-priority + post-unlock scheduling painted the legacy dashboard first. -->
+<script src="assets/design-vexel-layout.js?v=2081" defer></script>
 <script src="assets/liquid-glass.js" defer fetchpriority="low"></script>
 <!-- Hotel vertical (assets/hotel.js) · powers 0000-onboarded hotels
      (wizard « Hôtel / Riad », starter pages on the live rack/folio

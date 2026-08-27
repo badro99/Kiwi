@@ -1060,8 +1060,10 @@
     else init();
   }
 
-  /* This adapter observes and recomposes the complete dashboard tree. Do not
-   * spend renderer time on profile-restored, hidden data behind the PIN gate. */
-  if (window.KiwiDashboardBoot?.whenUnlocked) window.KiwiDashboardBoot.whenUnlocked(start);
-  else start();
+  /* Vexel is the default dashboard, so its DOM composition is first-paint
+   * work, not background work. Waiting for the PIN/greeting gate exposed the
+   * legacy source layout, then replaced it on the next idle callback. Compose
+   * while the lock still covers the app; the observer keeps the moved live
+   * widgets current as their deferred data modules finish booting. */
+  start();
 })();
