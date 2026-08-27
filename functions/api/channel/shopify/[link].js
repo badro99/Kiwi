@@ -38,6 +38,7 @@
 
 import { json } from '../../../auth/_lib.js';
 import { startOfWeek } from '../../order/_lib.js';
+import { __test as catalogFns } from '../../catalog.js';
 
 const MAX_LINES = 60;
 const MAX_TOTAL = 200000;          // 200 000 MAD — garde-fou, pas une règle
@@ -48,7 +49,12 @@ const CHANNEL = 'shopify';
 /* Shopify pousse une trentaine de sujets sur la même URL si on l'y abonne.
  * Seuls ceux-ci créent un ticket ; les autres reçoivent 200 (sans quoi Shopify
  * réessaie pendant 48 h) mais ne fabriquent rien. */
-const TOPICS = { 'orders/create': 1, 'orders/paid': 1 };
+const TOPICS = {
+  'orders/create': 1,
+  'orders/paid': 1,
+  'inventory_levels/update': 1,
+  'app/uninstalled': 1,
+};
 
 const str = (v, n) => String(v == null ? '' : v).slice(0, n);
 
@@ -160,6 +166,111 @@ function translate(o) {
   };
 }
 
+async function webhookSeen(env, shop, id) {
+  if (!id) return false;
+  try {
+    return !!(await env.DB.prepare('SELECT 1 AS seen FROM shopify_webhook_events WHERE shop_domain = ? AND webhook_id = ?').bind(shop, id).first());
+  } catch (_) { return false; }
+}
+
+async function rememberWebhook(env, shop, id, topic) {
+  if (!id) return;
+  try {
+    await env.DB.prepare(
+      `INSERT OR IGNORE INTO shopify_webhook_events (shop_domain, webhook_id, topic, received_ts) VALUES (?, ?, ?, ?)`
+    ).bind(shop, id, topic, Date.now()).run();
+  } catch (_) {}
+}
+
+async function observeInventoryLevel(env, merchant, payload) {
+  const inventoryItemId = str(payload && (payload.inventory_item_id || payload.admin_graphql_api_id), 160);
+  const locationRaw = str(payload && payload.location_id, 80);
+  const locationId = locationRaw.startsWith('gid://') ? locationRaw : `gid://shopify/Location/${locationRaw}`;
+  const available = Math.max(0, Math.round(Number(payload && payload.available) || 0));
+  if (!inventoryItemId) return;
+  const itemId = inventoryItemId.startsWith('gid://') ? inventoryItemId : `gid://shopify/InventoryItem/${inventoryItemId}`;
+  try {
+    const link = await env.DB.prepare(
+      `SELECT kiwi_variant_id, last_shopify_quantity FROM shopify_variant_links
+        WHERE merchant = ? AND inventory_item_id = ? AND location_id = ?`
+    ).bind(merchant, itemId, locationId).first();
+    if (!link) return;
+    const pending = await env.DB.prepare(
+      `SELECT target_quantity FROM shopify_sync_outbox
+        WHERE merchant = ? AND kiwi_variant_id = ? AND status IN ('pending','processing')`
+    ).bind(merchant, link.kiwi_variant_id).first();
+    const expected = pending ? Number(pending.target_quantity) : Number(link.last_shopify_quantity);
+    const drift = Number.isFinite(expected) && expected !== available;
+    await env.DB.batch([
+      env.DB.prepare(
+        `UPDATE shopify_variant_links
+            SET last_shopify_quantity = ?, status = ?, updated_ts = ?
+          WHERE merchant = ? AND kiwi_variant_id = ?`
+      ).bind(available, drift ? 'drift' : 'active', Date.now(), merchant, link.kiwi_variant_id),
+      env.DB.prepare(
+        `UPDATE shopify_connections SET last_error = ?, updated_ts = ? WHERE merchant = ?`
+      ).bind(drift ? 'Stock modifié directement dans Shopify · réconciliation requise' : '', Date.now(), merchant),
+    ]);
+  } catch (_) {}
+}
+
+/* Shopify has already deducted its own inventory when the order webhook lands.
+ * Apply the same movement once to Kiwi, directly from the immutable variant
+ * link. This path deliberately does NOT call the outbound queue: an online sale
+ * must never echo back into Shopify and deduct twice. */
+async function applyShopifyOrderStock(env, merchant, order) {
+  const ref = str(order && (order.id || order.name), 36);
+  const lines = Array.isArray(order && order.line_items) ? order.line_items : [];
+  if (!ref || !lines.length) return { applied: 0, unmatched: 0 };
+  let links;
+  try {
+    const rs = await env.DB.prepare(
+      `SELECT kiwi_variant_id, shopify_variant_id FROM shopify_variant_links
+        WHERE merchant = ? AND status IN ('active','drift')`
+    ).bind(merchant).all();
+    links = new Map((rs.results || []).map((r) => [String(r.shopify_variant_id), String(r.kiwi_variant_id)]));
+  } catch (_) { return { applied: 0, unmatched: lines.length }; }
+  if (!links.size) return { applied: 0, unmatched: lines.length };
+
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const row = await env.DB.prepare('SELECT data, rev FROM catalogs WHERE merchant = ?').bind(merchant).first().catch(() => null);
+    if (!row || !row.data) return { applied: 0, unmatched: lines.length };
+    let data, rawData;
+    try { rawData = JSON.parse(row.data); } catch (_) { return { applied: 0, unmatched: lines.length }; }
+    // Refuse to risk slicing an un-compacted journal. The order remains safely
+    // queued and the connector reports unmatched stock instead of corrupting
+    // older sale movements.
+    if (Array.isArray(rawData.moves) && rawData.moves.length > 11000) return { applied: 0, unmatched: lines.length };
+    data = catalogFns.sanitize(rawData);
+    catalogFns.materialize(data);
+    const existing = new Set((data.moves || []).map((m) => String(m.id)));
+    let applied = 0, unmatched = 0, at = Date.now();
+    for (const line of lines) {
+      const shopifyVariantId = String(line && line.variant_id || '');
+      const gid = shopifyVariantId.startsWith('gid://') ? shopifyVariantId : `gid://shopify/ProductVariant/${shopifyVariantId}`;
+      const kiwiVariantId = links.get(gid);
+      const qty = Math.max(0, Math.min(1000000, Math.round(Number(line && line.quantity) || 0)));
+      if (!kiwiVariantId || !qty) { unmatched++; continue; }
+      const lineId = String(line && (line.id || line.variant_id) || '');
+      const moveId = `so-${ref.slice(-24)}-${lineId.slice(-24)}`.slice(0, 64);
+      if (existing.has(moveId)) continue;
+      const variant = (data.variants || []).find((v) => v.id === kiwiVariantId);
+      if (!variant) { unmatched++; continue; }
+      at = Math.max(at + 1, Number(variant.baseAt || variant.stockAt || 0) + 1);
+      data.moves.push({ id: moveId, vid: kiwiVariantId, d: -qty, at, why: 'vente', ref: `shopify:${ref}`.slice(0, 64) });
+      existing.add(moveId); applied++;
+    }
+    if (!applied) return { applied: 0, unmatched };
+    catalogFns.materialize(data);
+    const next = Number(row.rev || 0) + 1;
+    const write = await env.DB.prepare(
+      `UPDATE catalogs SET data = ?, rev = ?, updated_ts = ? WHERE merchant = ? AND rev = ?`
+    ).bind(JSON.stringify(data), next, Date.now(), merchant, Number(row.rev || 0)).run().catch(() => null);
+    if (write && write.meta && Number(write.meta.changes) === 1) return { applied, unmatched };
+  }
+  return { applied: 0, unmatched: lines.length };
+}
+
 export async function onRequestPost(context) {
   const { request, env, params } = context;
   if (!env.DB) return json({ error: 'not-configured' }, 503);
@@ -182,7 +293,8 @@ export async function onRequestPost(context) {
 
   let cfg = {};
   try { cfg = link.config ? JSON.parse(link.config) : {}; } catch (_) { cfg = {}; }
-  const secret = str(cfg && cfg.shopifySecret, 200);
+  const oauth = !!(cfg && cfg.oauth);
+  const secret = str(oauth ? env.SHOPIFY_CLIENT_SECRET : cfg && cfg.shopifySecret, 200);
   if (!secret) {
     /* La configuration n'est pas finie. On refuse — et on l'écrit sur la ligne
      * du canal, parce que c'est le seul endroit où le commerçant peut le lire
@@ -229,6 +341,30 @@ export async function onRequestPost(context) {
     return json({ error: 'bad-json' }, 400);
   }
 
+  const deliveryId = str(request.headers.get('X-Shopify-Webhook-Id'), 120);
+  if ((topic === 'app/uninstalled' || topic === 'inventory_levels/update')
+      && await webhookSeen(env, shop || known, deliveryId)) {
+    return json({ ok: true, duplicate: true });
+  }
+
+  if (topic === 'app/uninstalled') {
+    try {
+      await env.DB.batch([
+        env.DB.prepare(`UPDATE shopify_connections SET status = 'disconnected', updated_ts = ?, last_error = 'Application désinstallée dans Shopify' WHERE merchant = ?`).bind(Date.now(), String(link.merchant || '').toLowerCase()),
+        env.DB.prepare(`UPDATE channel_links SET status = 'paused' WHERE id = ?`).bind(link.id),
+      ]);
+    } catch (_) {}
+    await rememberWebhook(env, shop || known, deliveryId, topic);
+    return json({ ok: true });
+  }
+
+  if (topic === 'inventory_levels/update') {
+    await observeInventoryLevel(env, String(link.merchant || '').toLowerCase(), o);
+    await rememberWebhook(env, shop || known, deliveryId, topic);
+    await mark(env, link.id, true);
+    return json({ ok: true });
+  }
+
   /* La devise, avant tout le reste. Un ticket marocain affiche des dirhams ;
    * une commande en euros imprimée telle quelle ferait encaisser dix fois
    * trop, et rien en aval ne le rattraperait. */
@@ -259,6 +395,7 @@ export async function onRequestPost(context) {
         'SELECT id, number FROM orders WHERE merchant = ? AND channel = ? AND ext_ref = ?'
       ).bind(merchant, CHANNEL, t.ref).first();
       if (dup) {
+        await applyShopifyOrderStock(env, merchant, o);
         await mark(env, link.id, true);
         return json({ ok: true, id: dup.id, number: dup.number, duplicate: true });
       }
@@ -303,6 +440,7 @@ export async function onRequestPost(context) {
           'SELECT id, number FROM orders WHERE merchant = ? AND channel = ? AND ext_ref = ?'
         ).bind(merchant, CHANNEL, t.ref).first();
         if (raced) {
+          await applyShopifyOrderStock(env, merchant, o);
           await mark(env, link.id, true);
           return json({ ok: true, id: raced.id, number: raced.number, duplicate: true });
         }
@@ -313,6 +451,15 @@ export async function onRequestPost(context) {
     return json({ error: 'write-failed', detail }, 500);
   }
 
+  const stock = await applyShopifyOrderStock(env, merchant, o);
+  if (stock.unmatched) {
+    try {
+      await env.DB.prepare('UPDATE shopify_connections SET last_error = ?, updated_ts = ? WHERE merchant = ?')
+        .bind(`${stock.unmatched} ligne(s) Shopify sans variante Kiwi liée`, Date.now(), merchant).run();
+    } catch (_) {}
+  }
   await mark(env, link.id, true);
   return json({ ok: true, id, number: (row && row.number) || 1 });
 }
+
+export const __test = { translate, applyShopifyOrderStock, observeInventoryLevel };

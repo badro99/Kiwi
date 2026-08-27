@@ -609,6 +609,17 @@ section('Réception Shopify (tools/shopify-webhook-test.js)');
   }
 }
 
+section('Connecteur inventaire Shopify (tools/shopify-connector-test.mjs)');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'shopify-connector-test.mjs')], { encoding: 'utf8' });
+  const out = `${r.stdout || ''}${r.stderr || ''}`;
+  process.stdout.write(out);
+  if (r.status !== 0) {
+    if (!out.includes('✗')) fail(`shopify-connector-test.mjs exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+  }
+}
+
 /* ── 8 · le bouton « Rafraîchir » de la caisse ───────────────────────────────
  * Il n'a qu'une façon de nuire : dire « à jour » sans avoir joint le serveur.
  * Le commerçant en conclut que l'écran dit vrai, et vend ce qu'il n'a plus.

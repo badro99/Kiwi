@@ -350,6 +350,11 @@ async function routeRequest(context) {
   if (isRead && (path === '/OrderPro.html' || path === '/OrderPro'
     || path === '/api/order' || path === '/api/order/session'
     || path.startsWith('/api/media/'))) return next();
+  /* Shopify revient ici après son écran d'autorisation. Le navigateur a bien
+   * une session Kiwi, mais le callback ne doit pas dépendre du cookie : son
+   * propre état aléatoire, stocké sous forme de hash pendant dix minutes, lie
+   * la boutique au commerçant. Chemin exact + GET/HEAD seulement. */
+  if (isRead && path === '/api/shopify/callback') return next();
   /* Les deux seules écritures publiques : déposer une commande, et s'asseoir.
    * Chemins EXACTS — surtout pas le préfixe /api/order/, qui ouvrirait
    * /api/order/queue, c'est-à-dire la file du personnel avec ses articles, ses

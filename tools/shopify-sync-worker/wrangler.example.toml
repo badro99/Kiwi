@@ -1,0 +1,19 @@
+name = "kiwi-shopify-sync"
+main = "src/index.js"
+compatibility_date = "2026-08-27"
+
+[triggers]
+crons = ["* * * * *"]
+
+[observability]
+enabled = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "kiwi-sales"
+database_id = "REPLACE_WITH_PRODUCTION_D1_ID"
+
+# Set with `wrangler secret put`, never in this file:
+#   SHOPIFY_CLIENT_ID
+#   SHOPIFY_CLIENT_SECRET
+#   SHOPIFY_TOKEN_KEY

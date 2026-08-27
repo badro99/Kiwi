@@ -38,7 +38,7 @@ const ok = (l, c, d) => { if (c) pass++; else fails.push(l + (d ? ' — ' + d : 
 
 /* ── D1 de poche ─────────────────────────────────────────────────────────── */
 function makeDB() {
-  const T = { channel_links: [], orders: [], merchant_config: [], accounts: {}, hideDuplicateOnce: false };
+  const T = { channel_links: [], orders: [], merchant_config: [], accounts: {}, catalogs: [], shopify_variant_links: [], hideDuplicateOnce: false };
   T.accounts[ACC_A] = { business: 'Atlas Casa' };
   T.accounts[ACC_B] = { business: 'Chez Rival' };
 
@@ -53,6 +53,9 @@ function makeDB() {
         async all() {
           if (q.startsWith('SELECT id, channel, label, status, created_ts, last_ts, last_err FROM channel_links')) {
             return { results: T.channel_links.filter((r) => r.merchant === a[0]) };
+          }
+          if (q.startsWith('SELECT kiwi_variant_id, shopify_variant_id FROM shopify_variant_links')) {
+            return { results: T.shopify_variant_links.filter((r) => r.merchant === a[0] && ['active', 'drift'].includes(r.status)) };
           }
           throw new Error('unexpected all(): ' + q);
         },
@@ -94,6 +97,15 @@ function makeDB() {
           }
           if (q.startsWith('SELECT COUNT(*) AS n FROM orders')) {
             return { n: T.orders.filter((o) => o.merchant === a[0] && o.status === 'pending').length };
+          }
+          if (q.startsWith('SELECT data, rev FROM catalogs WHERE merchant')) {
+            return T.catalogs.find((c) => c.merchant === a[0]) || null;
+          }
+          if (q.startsWith('UPDATE catalogs SET data')) {
+            const r = T.catalogs.find((c) => c.merchant === a[3] && c.rev === a[4]);
+            if (!r) return { meta: { changes: 0 } };
+            r.data = a[0]; r.rev = a[1]; r.updated_ts = a[2];
+            return { meta: { changes: 1 } };
           }
           if (q.startsWith('INSERT INTO orders')) {
             const [id, merchant, mode, total, lines, created, updated, channel, ref, customer] = a;
@@ -161,7 +173,7 @@ const ORDER = (over) => JSON.stringify(Object.assign({
   total_price: '240.00',
   note: 'Sonner deux fois',
   line_items: [
-    { id: 11, title: 'Tajine kefta', quantity: 2, price: '120.00', variant_title: 'Default Title' },
+    { id: 11, variant_id: 901, title: 'Tajine kefta', quantity: 2, price: '120.00', variant_title: 'Default Title' },
   ],
   customer: { first_name: 'Karim', last_name: 'B.' },
   shipping_address: {
@@ -175,6 +187,15 @@ const ORDER = (over) => JSON.stringify(Object.assign({
   const sessB = sessionCookie(await makeSession(ACC_B, SECRET)).split(';')[0];
   DB._t.merchant_config.push({ merchant: 'atlas-casa', account_id: ACC_A });
   DB._t.merchant_config.push({ merchant: 'chez-rival', account_id: ACC_B });
+  DB._t.shopify_variant_links.push({ merchant: 'atlas-casa', kiwi_variant_id: 'kv-1', shopify_variant_id: 'gid://shopify/ProductVariant/901', status: 'active' });
+  DB._t.catalogs.push({
+    merchant: 'atlas-casa', rev: 1, updated_ts: Date.now(),
+    data: JSON.stringify({
+      v: 1, seq: 1, categories: [], removed: {}, moves: [],
+      products: [{ id: 'kp-1', name: 'Tajine kefta', priceMAD: 120, createdAt: 1 }],
+      variants: [{ id: 'kv-1', productId: 'kp-1', colorId: 'default', colorFamily: 'default', size: 'U', stock: 10, base: 10, baseAt: 1, barcodes: [] }],
+    }),
+  });
 
   /* ── 1 · le lien, et l'adresse qu'on remet au commerçant ────────────────── */
   let r = await post(postKeys, { channel: 'shopify', label: 'Boutique' }, { Cookie: sessA });
@@ -236,6 +257,7 @@ const ORDER = (over) => JSON.stringify(Object.assign({
   r = await signed(linkId, raw);
   ok('une commande correctement signée est acceptée', r.status === 200 && r.body.ok === true, JSON.stringify(r.body));
   ok('…un seul ticket existe', DB._t.orders.length === 1);
+  ok('…la variante Kiwi liée est décrémentée une fois', JSON.parse(DB._t.catalogs[0].data).variants[0].stock === 8);
 
   const t = DB._t.orders[0];
   ok('le ticket appartient au magasin du LIEN', t.merchant === 'atlas-casa', t.merchant);
@@ -261,6 +283,7 @@ const ORDER = (over) => JSON.stringify(Object.assign({
   r = await signed(linkId, raw);
   ok('rejouer la même commande ne crée pas un second ticket', r.status === 200 && r.body.duplicate === true, JSON.stringify(r.body));
   ok('…il n\'y a toujours qu\'un ticket', DB._t.orders.length === 1);
+  ok('…et le rejeu ne décrémente pas une deuxième fois', JSON.parse(DB._t.catalogs[0].data).variants[0].stock === 8);
 
   DB._t.hideDuplicateOnce = true;
   r = await signed(linkId, raw);

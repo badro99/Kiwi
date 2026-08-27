@@ -37,6 +37,7 @@ import { json } from '../auth/_lib.js';
 // dans _private.js pour qu'il n'en existe qu'UNE. Trois copies dérivent : on en
 // corrige une, les deux autres restent ouvertes.
 import { tenantFor } from './_private.js';
+import { enqueueStockChanges, flushShopifyOutbox } from './shopify/_lib.js';
 
 const str = (v, n) => String(v == null ? '' : v).slice(0, n);
 const num = (v, max) => Math.max(0, Math.min(max, Number(v) || 0));
@@ -333,7 +334,17 @@ function stockMutation(data, body, now) {
   return { ok: true, data };
 }
 
-async function applyStockAction(env, merchant, body) {
+function scheduleShopifySync(env, merchant, before, after, rev, waitUntil) {
+  const task = enqueueStockChanges(env, merchant, before, after, rev, false)
+    .then((queued) => queued ? flushShopifyOutbox(env, merchant, 2) : null)
+    .catch(() => null);
+  // Cloudflare keeps this promise alive after the catalogue response. Shopify
+  // can be down without turning a successful local sale into a failed sale.
+  if (typeof waitUntil === 'function') waitUntil(task);
+  return task;
+}
+
+async function applyStockAction(env, merchant, body, waitUntil) {
   for (let attempt = 0; attempt < 4; attempt++) {
     let row;
     try {
@@ -342,6 +353,7 @@ async function applyStockAction(env, merchant, body) {
     if (!row || !row.data) return json({ error: 'catalog-missing' }, 409);
     let data;
     try { data = sanitize(JSON.parse(row.data)); } catch (_) { return json({ error: 'catalog-invalid' }, 409); }
+    const before = JSON.parse(JSON.stringify(materialize(data)));
     const changed = stockMutation(data, body, Date.now());
     if (!changed.ok) return json({ error: changed.error, issue: changed.issue || null, data, rev: Number(row.rev || 0) }, changed.status || 409);
     const next = Number(row.rev || 0) + 1;
@@ -352,6 +364,7 @@ async function applyStockAction(env, merchant, body) {
       ).bind(JSON.stringify(data), next, Date.now(), merchant, Number(row.rev || 0)).run();
     } catch (_) { return json({ error: 'write-failed' }, 500); }
     if (write && write.meta && Number(write.meta.changes) === 1) {
+      scheduleShopifySync(env, merchant, before, data, next, waitUntil);
       return json({ ok: true, merchant, rev: next, data });
     }
   }
@@ -391,7 +404,7 @@ export async function onRequestGet(context) {
 }
 
 export async function onRequestPost(context) {
-  const { request, env } = context;
+  const { request, env, waitUntil } = context;
   if (!env.DB || !env.AUTH_SECRET) return json({ error: 'not-configured' }, 503);
 
   let body;
@@ -400,7 +413,7 @@ export async function onRequestPost(context) {
   const merchant = await tenantFor(request, env, body && body.merchant, { strict: true });
   if (!merchant) return json({ error: 'unauthorized' }, 401);
 
-  if (body && body.stockAction) return applyStockAction(env, merchant, body);
+  if (body && body.stockAction) return applyStockAction(env, merchant, body, waitUntil);
 
   const raw = (body && body.data) || null;
 
@@ -477,6 +490,10 @@ export async function onRequestPost(context) {
       return json({ error: 'stale', rev: Number(latest && latest.rev) || 0, data: mine }, 409);
     }
   } catch (_) { return json({ error: 'write-failed' }, 500); }
+
+  let before = null;
+  try { before = current && current.data ? materialize(sanitize(JSON.parse(current.data))) : null; } catch (_) {}
+  scheduleShopifySync(env, merchant, before, data, rev, waitUntil);
 
   return json({
     ok: true, merchant, rev, updated_ts: now,
