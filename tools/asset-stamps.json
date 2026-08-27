@@ -84,8 +84,8 @@
     "sha": "112638dbbb35294e"
   },
   "assets/caisse-pwa.js": {
-    "v": "435",
-    "sha": "dfad3e9f07cb03b5"
+    "v": "436",
+    "sha": "9eca87481e196169"
   },
   "assets/caisse-skin.css": {
     "v": "3",
@@ -136,8 +136,8 @@
     "sha": "cd751f73c0180449"
   },
   "assets/dashboard-pwa.js": {
-    "v": "434",
-    "sha": "f79301ab321511b9"
+    "v": "435",
+    "sha": "350a1ff31ba7187d"
   },
   "assets/dashboard-startup-gate.js": {
     "v": "1",
@@ -172,8 +172,8 @@
     "sha": "74b872eee6e9256a"
   },
   "assets/employee-live.js": {
-    "v": "433",
-    "sha": "2a9ed238ac602d2a"
+    "v": "434",
+    "sha": "e2cdf0475bf0d9bf"
   },
   "assets/employee-planning.js": {
     "v": "8",
@@ -248,8 +248,8 @@
     "sha": "25cb7d0b5c0fa358"
   },
   "assets/inventory-ledger.js": {
-    "v": "5",
-    "sha": "06cdfa2f37fe6b5a"
+    "v": "7",
+    "sha": "c18db9a93f360d79"
   },
   "assets/invoice.js": {
     "v": "6",
@@ -612,8 +612,8 @@
     "sha": "7c6e34ecd4884e0d"
   },
   "assets/restaurant-recipes.js": {
-    "v": "7",
-    "sha": "656e25f39494a749"
+    "v": "8",
+    "sha": "5b5e9551978cca41"
   },
   "assets/retail-scan.css": {
     "v": "7",
@@ -640,8 +640,8 @@
     "sha": "d49ee85d276e22d4"
   },
   "assets/stock.js": {
-    "v": "34",
-    "sha": "8bfe36d686fed7cf"
+    "v": "35",
+    "sha": "63fe56923ca7056b"
   },
   "assets/store-templates.js": {
     "v": "2",
