@@ -39,6 +39,22 @@
   position: absolute;
   top: 0; right: 0; bottom: 0; left: 212px;
   width: auto; height: auto; min-height: 0;
+  /* The sale panel used to be a flex item whose block size could still be
+     resolved from its contents by tablet WebKit. The root and rail then filled
+     the screen while the product/ticket panel floated in a shorter band. Keep
+     the optional offline notice in its own row and force the active workspace
+     to consume every remaining pixel of the viewport. */
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+}
+#pos-boutique > .bq-main > .bq-view.is-on {
+  grid-row: 2;
+  width: 100%;
+  padding: 0;
+  min-width: 0;
+  min-height: 0;
+  align-self: stretch;
 }
 
 /* ═══════════════ LEFT RAIL (dark, dashboard-matching) ═══════════════ */

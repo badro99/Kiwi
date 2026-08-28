@@ -267,7 +267,26 @@
 /* Boutique historically pins its rail/main with absolute offsets. Keep that
  * layout model and only feed it the new visual width. */
 #pos-boutique.kiwi-dna > .kiwi-dna-rail { width: var(--kiwi-dna-rail-w); }
-#pos-boutique.kiwi-dna > .kiwi-dna-main { left: var(--kiwi-dna-rail-w); }
+#pos-boutique.kiwi-dna > .kiwi-dna-main {
+  left: var(--kiwi-dna-rail-w);
+  /* Repeat the structural guarantee in the eager caisse skin. This prevents a
+   * cached vertical stylesheet from reviving the old content-height panel
+   * while the service worker swaps to the freshly versioned boutique bundle. */
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+}
+#pos-boutique.kiwi-dna > .kiwi-dna-main > .bq-view.is-on {
+  grid-row: 2;
+  width: 100%;
+  /* tokens.css gives every marketing <section> 96px above and below. The
+   * boutique workspace is also a <section>, but it is an application surface:
+   * that inherited rhythm was the visible blank band on iPad. */
+  padding: 0;
+  min-width: 0;
+  min-height: 0;
+  align-self: stretch;
+}
 .kiwi-rtl #pos-boutique.kiwi-dna > .kiwi-dna-rail { left: auto; right: 0; }
 .kiwi-rtl #pos-boutique.kiwi-dna > .kiwi-dna-main {
   inset: 0 var(--kiwi-dna-rail-w) 0 0;
