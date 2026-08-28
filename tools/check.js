@@ -344,7 +344,7 @@ section('Shared platform kernel and adapters');
 for (const test of [
   'platform-kernel-test.mjs', 'platform-ops-test.mjs', 'operations-system-test.mjs',
   'vertical-feature-parity-test.mjs', 'pos-sale-cloud-sync-test.mjs',
-  'sw-immutable-revalidation-test.mjs',
+  'sw-immutable-revalidation-test.mjs', 'load-test-suite-test.mjs',
 ]) {
   const { spawnSync } = require('child_process');
   const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', test)], { encoding:'utf8' });

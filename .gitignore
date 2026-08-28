@@ -24,6 +24,9 @@ Desktop.ini
 *.log
 npm-debug.log*
 
+# Local k6 summary exports (may contain tested URLs and environment metadata)
+capacity-*.json
+
 # Local preview / scratch
 /tmp-preview/
 *.pid

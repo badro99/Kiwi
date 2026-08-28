@@ -36,6 +36,8 @@ import { DatabaseSync } from 'node:sqlite';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = Number(process.env.PORT || 4181);
+const LOAD_TEST = process.env.KIWI_LOAD_TEST === '1';
+const LOAD_MERCHANT = 'amira-loadtest';
 /* Tiré au sort à chaque démarrage, jamais écrit nulle part : il ne signe que les
    cookies de CE processus, contre une base en mémoire qui disparaît avec lui.
    Une valeur en dur dans le dépôt n'aurait servi à rien et aurait fini par
@@ -152,6 +154,8 @@ const ROUTES = {
   '/api/admin/health': await import(path.join(ROOT, 'functions/api/admin/health.js')),
   '/auth/reset': await import(path.join(ROOT, 'functions/auth/reset.js')),
 };
+const CHANNEL_ORDER = await import(path.join(ROOT, 'functions/api/channel/order.js'));
+const CHANNEL_SHOPIFY = await import(path.join(ROOT, 'functions/api/channel/shopify/[link].js'));
 
 /* ── amorce : un client d'avant, un client d'après ────────────────────────── */
 // NEW_ACCOUNT_FROM dans functions/api/config.js. Lu ici pour que le banc suive
@@ -246,10 +250,50 @@ db.prepare('INSERT INTO store_docs (merchant,feature,data,rev,updated_ts) VALUES
 db.prepare('INSERT INTO clients (merchant,id,name,points,spend,deleted,updated_ts,srv_ts) VALUES (?,?,?,?,?,?,?,?)')
   .bind('amira-boutique', 'c1', 'Lalla Khadija', 1240, 1240, 0, NOW, NOW).run();
 
+/* k6 never needs a production credential.  In load-test mode this process adds
+   one deliberately synthetic merchant to the already-ephemeral SQLite DB.  The
+   tenant, token and Shopify signing secret disappear when the process exits. */
+let loadChannelToken = '';
+let loadShopifySecret = '';
+let loadShopifyLink = '';
+const loadStockAccepted = new Map();
+if (LOAD_TEST) {
+  acc('acc-load', 'capacity@kiwi.test', 'Amira Load Test', NOW);
+  db.prepare('INSERT INTO merchant_config (merchant,features,plan,type,account_id,name,updated_ts) VALUES (?,?,?,?,?,?,?)')
+    .bind(LOAD_MERCHANT, '{"orderpro":true}', 'pro', 'restaurant', 'acc-load', 'Amira Load Test', NOW).run();
+  db.prepare('INSERT INTO menus (merchant,name,type,data,updated_ts) VALUES (?,?,?,?,?)')
+    .bind(LOAD_MERCHANT, 'Amira Load Test', 'restaurant', JSON.stringify({
+      seq: 3,
+      cats: [{ id: 'cat-load', name: 'Load test', sub: [] }],
+      items: [{ id: 'item-load', name: 'Article synthétique', price: 25, catId: 'cat-load', avail: true }],
+    }), NOW).run();
+  db.prepare('INSERT INTO store_docs (merchant,feature,data,rev,updated_ts) VALUES (?,?,?,?,?)')
+    .bind(LOAD_MERCHANT, 'stock', JSON.stringify({ items: [], movements: [] }), 1, NOW).run();
+
+  const digest = async (value) => {
+    const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
+    return [...new Uint8Array(bytes)].map((b) => b.toString(16).padStart(2, '0')).join('');
+  };
+  const channelSecret = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '');
+  const channelId = 'chl-load-order';
+  loadChannelToken = `kwc.${channelId}.${channelSecret}`;
+  await db.prepare(
+    'INSERT INTO channel_links (id,merchant,channel,label,hash,status,created_ts) VALUES (?,?,?,?,?,\'active\',?)'
+  ).bind(channelId, LOAD_MERCHANT, 'kiwi', 'k6 local order replay', await digest(channelSecret), NOW).run();
+
+  loadShopifySecret = crypto.randomUUID() + crypto.randomUUID();
+  loadShopifyLink = 'chl-load-shopify';
+  await db.prepare(
+    'INSERT INTO channel_links (id,merchant,channel,label,hash,config,status,created_ts) VALUES (?,?,?,?,?,?,\'active\',?)'
+  ).bind(loadShopifyLink, LOAD_MERCHANT, 'shopify', 'k6 local Shopify replay',
+    await digest(crypto.randomUUID()), JSON.stringify({ shopifySecret: loadShopifySecret, shop: 'amira-loadtest.myshopify.com' }), NOW).run();
+}
+
 const SESSIONS = {
   'amira-boutique': await lib.makeSession('acc-old', AUTH_SECRET),
   'snack-rif': await lib.makeSession('acc-new', AUTH_SECRET),
 };
+if (LOAD_TEST) SESSIONS[LOAD_MERCHANT] = await lib.makeSession('acc-load', AUTH_SECRET);
 const OP = await lib.operatorToken(AUTH_SECRET);
 const OPID = await lib.operatorIdToken(AUTH_SECRET, 'op-dev');
 
@@ -270,7 +314,7 @@ const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.
   '.webp': 'image/webp', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.woff2': 'font/woff2',
   '.ico': 'image/x-icon', '.txt': 'text/plain' };
 
-http.createServer(async (rq, rs) => {
+const server = http.createServer(async (rq, rs) => {
   const url = new URL(rq.url, 'http://localhost:' + PORT);
   const p = decodeURIComponent(url.pathname);
 
@@ -286,6 +330,54 @@ http.createServer(async (rq, rs) => {
   if (p === '/__outbox') {
     rs.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
     return rs.end(JSON.stringify({ mail: outbox }));
+  }
+
+  /* These endpoints exist only on a loopback process explicitly started with
+     KIWI_LOAD_TEST=1.  They let k6 discover throwaway credentials and verify
+     invariants without ever storing or printing a production secret. */
+  if (LOAD_TEST && p === '/__loadtest/config') {
+    rs.writeHead(200, {
+      'Content-Type': 'application/json', 'Cache-Control': 'no-store',
+      'X-Kiwi-Load-Fixture': 'amira-loadtest',
+    });
+    return rs.end(JSON.stringify({
+      merchant: LOAD_MERCHANT,
+      channelToken: loadChannelToken,
+      shopifyLink: loadShopifyLink,
+      shopifySecret: loadShopifySecret,
+      shopifyDomain: 'amira-loadtest.myshopify.com',
+    }));
+  }
+  if (LOAD_TEST && p === '/__loadtest/stats') {
+    const runId = String(url.searchParams.get('runId') || '').replace(/[^0-9]/g, '').slice(0, 24);
+    if (!runId) { rs.writeHead(400, { 'Content-Type': 'application/json' }); return rs.end('{"error":"run-required"}'); }
+    const orders = db._db.prepare(
+      'SELECT channel, COUNT(*) AS n FROM orders WHERE merchant = ? AND ext_ref IN (?, ?) GROUP BY channel'
+    ).all(LOAD_MERCHANT, `k6-channel-${runId}`, `k6-shopify-${runId}`);
+    const sales = db._db.prepare(
+      'SELECT COUNT(*) AS n FROM sales WHERE merchant = ? AND id LIKE ?'
+    ).get(LOAD_MERCHANT, `k6-sale-${runId}-%`);
+    const stockRow = db._db.prepare(
+      "SELECT data, rev FROM store_docs WHERE merchant = ? AND feature = 'stock'"
+    ).get(LOAD_MERCHANT);
+    let stock = { movements: [] };
+    try { stock = JSON.parse(stockRow && stockRow.data || '{}'); } catch (_) {}
+    const byChannel = Object.fromEntries(orders.map((row) => [row.channel || '', Number(row.n) || 0]));
+    rs.writeHead(200, {
+      'Content-Type': 'application/json', 'Cache-Control': 'no-store',
+      'X-Kiwi-Load-Fixture': 'amira-loadtest',
+    });
+    return rs.end(JSON.stringify({
+      merchant: LOAD_MERCHANT,
+      sales: Number(sales && sales.n) || 0,
+      channelOrders: byChannel.kiwi || 0,
+      shopifyOrders: byChannel.shopify || 0,
+      stockAccepted: loadStockAccepted.get(runId) || 0,
+      stockMovements: Array.isArray(stock.movements)
+        ? stock.movements.filter((movement) => String(movement && movement.id || '').startsWith(`k6-stock-${runId}-`)).length
+        : 0,
+      stockRev: Number(stockRow && stockRow.rev) || 0,
+    }));
   }
 
   /* LE SERVICE WORKER, NEUTRALISÉ ICI — et seulement ici.
@@ -307,7 +399,11 @@ http.createServer(async (rq, rs) => {
       + '});\n');
   }
 
-  const mod = ROUTES[p];
+  let params = {};
+  let mod = ROUTES[p];
+  if (p === '/api/channel/order') mod = CHANNEL_ORDER;
+  const shopifyMatch = /^\/api\/channel\/shopify\/([A-Za-z0-9-]{6,64})$/.exec(p);
+  if (shopifyMatch) { mod = CHANNEL_SHOPIFY; params = { link: shopifyMatch[1] }; }
 
   if (mod) {
     const chunks = [];
@@ -346,11 +442,28 @@ http.createServer(async (rq, rs) => {
     const fn = mod['onRequest' + rq.method[0] + rq.method.slice(1).toLowerCase()];
     if (!fn) { rs.writeHead(405); return rs.end(); }
     try {
+      const headers = new Headers();
+      Object.entries(rq.headers).forEach(([key, value]) => {
+        if (Array.isArray(value)) value.forEach((item) => headers.append(key, item));
+        else if (value != null) headers.set(key, String(value));
+      });
+      headers.set('Cookie', cookie);
       const out = await fn({ env, request: new Request('https://kiwi.test' + rq.url, {
         method: rq.method,
-        headers: { 'Content-Type': 'application/json', Cookie: cookie },
+        headers,
         body: (rq.method === 'GET' || rq.method === 'HEAD') ? null : Buffer.concat(chunks),
-      }) });
+      }), params });
+      if (LOAD_TEST && p === '/api/store' && rq.method === 'POST' && out.status === 200) {
+        try {
+          const parsed = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}');
+          if (parsed.merchant === LOAD_MERCHANT && parsed.feature === 'stock') {
+            const movements = parsed.data && Array.isArray(parsed.data.movements) ? parsed.data.movements : [];
+            const lastId = String(movements.length && movements[movements.length - 1].id || '');
+            const match = /^k6-stock-([0-9]+)-/.exec(lastId);
+            if (match) loadStockAccepted.set(match[1], (loadStockAccepted.get(match[1]) || 0) + 1);
+          }
+        } catch (_) {}
+      }
       rs.writeHead(out.status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
       return rs.end(Buffer.from(await out.arrayBuffer()));
     } catch (e) {
@@ -368,12 +481,20 @@ http.createServer(async (rq, rs) => {
       'Cache-Control': 'no-store, must-revalidate' });
     rs.end(data);
   });
-}).listen(PORT, () => {
+});
+
+const announce = () => {
   console.log(`Kiwi · banc d'essai sur http://localhost:${PORT}`);
   console.log('  /kiwi-admin.html                    console opérateur (Live · D1)');
   console.log('  /dashboard.html                     Amira Boutique — client d’AVANT, tout allumé');
   console.log('  /dashboard.html?merchant=snack-rif  Snack Rif — client d’APRÈS, cinq modules coupés');
   console.log('  /__outbox                           les e-mails « envoyés » (liens de réinitialisation)');
+  if (LOAD_TEST) console.log('  /__loadtest/config                  fixture k6 locale · amira-loadtest');
   console.log('\nLe service worker sert des fichiers en cache : première ouverture,');
   console.log('videz-le (DevTools › Application › Service Workers › Unregister).');
-});
+};
+
+// The load-test endpoints expose ephemeral fixture credentials. Never make
+// them reachable from the LAN, even if the developer's firewall is permissive.
+if (LOAD_TEST) server.listen(PORT, '127.0.0.1', announce);
+else server.listen(PORT, announce);
