@@ -27,6 +27,9 @@
   /* ═══════════════ HELPERS ═══════════════ */
   const fmt = (n) => Math.round(n).toLocaleString('fr-FR');
   const MAD = (n) => fmt(n) + ' MAD';
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  }[c]));
   const TAX_PP_NIGHT = 25; // taxe de séjour (TPT + taxe communale) · MAD / adulte / nuit
 
   /* ═══════════════ ROOMS · 24 chambres / 3 niveaux ═══════════════ */
@@ -311,10 +314,12 @@
   let openModal = null;
   const K = () => window.Kiwi;
 
-  /* ═══════════════ CUSTOM (0000-SESSION) HOTELS ═══════════════
-   * A merchant-created hotel (onboarding wizard, type 'hotel') gets its OWN
-   * rooms + folios — sized by the step-2 « Nombre de chambres » answer —
-   * never the Riad Yasmina demo data. State is per-venue, session-local. */
+  /* ═══════════════ CUSTOM HOTELS · DURABLE ROOM REGISTER ═══════════════
+   * The old custom-hotel path derived rooms once from the optional onboarding
+   * answer and kept the result in a page-memory object. A skipped answer meant
+   * a permanently blank rack; even a configured hotel lost every operational
+   * change on refresh. The room register now has one venue-scoped local copy
+   * and, for real stores, a tenant-scoped CloudDoc (`feature: rooms`). */
   const isCustomHotel = () => {
     const KV = window.KiwiVenue;
     let paired = null;
@@ -327,29 +332,165 @@
       || (paired && (paired.subtype || paired.type));
     return own && type === 'hotel';
   };
-  const CUSTOM_HX = {}; // venueId → { rooms, folios, baseRate, count, sold }
+  const CUSTOM_HX = {}; // venueId → hydrated operating state
+  const HX_STORE_PREFIX = 'kiwi:hotel-rooms:v2:';
+  let hotelCloud = null;
+
+  function cuVenueId() {
+    try { return String(window.KiwiVenue?.getVenue?.() || ''); } catch (_) { return ''; }
+  }
+  function cuStateId() {
+    const id = cuVenueId();
+    if (id !== 'scoped' && id !== 'own') return id;
+    try {
+      const slug = String(window.KiwiVenue?.getCurrentVenueData?.()?.slug || '').trim();
+      return slug ? id + ':' + slug : id + ':unresolved';
+    } catch (_) { return id + ':unresolved'; }
+  }
+  function cuStoreKey(id) { return HX_STORE_PREFIX + String(id || cuStateId() || 'unknown'); }
+  function cuStamp() { return Date.now(); }
+  function cuSeed() {
+    const vd = window.KiwiVenue?.getCurrentVenueData?.() || {};
+    const configuredRooms = parseInt(vd.profileInfo && vd.profileInfo.rooms, 10);
+    const count = Number.isFinite(configuredRooms) && configuredRooms > 0
+      ? Math.min(120, configuredRooms) : 0;
+    const rooms = {};
+    const now = cuStamp();
+    for (let n = 1; n <= count; n++) rooms[n] = {
+      id: 'room:' + n, n, typeName: 'Chambre', floor: count > 8 ? 'Niveau ' + (Math.floor((n - 1) / 8) + 1) : 'Vos chambres',
+      rate: null, status: 'libre', hk: 'clean', guest: null, meta: 'Libre · propre', updatedAt: now,
+    };
+    return { v: 2, rooms, roomRecords: Object.values(rooms), folios: {}, baseRate: null, rateUpdatedAt: 0, sold: 0, updatedAt: now };
+  }
+  function cuHydrate(raw) {
+    raw = raw && typeof raw === 'object' ? raw : {};
+    const roomRecords = Array.isArray(raw.rooms) ? raw.rooms : (Array.isArray(raw.roomRecords) ? raw.roomRecords : []);
+    const rooms = {};
+    roomRecords.forEach((x) => {
+      if (!x || x.deletedAt) return;
+      const n = parseInt(x.n, 10);
+      if (!Number.isFinite(n) || n < 1 || n > 9999 || rooms[n]) return;
+      rooms[n] = {
+        id: String(x.id || ('room:' + n)), n,
+        typeName: String(x.typeName || x.type || 'Chambre').slice(0, 60),
+        floor: String(x.floor || 'Vos chambres').slice(0, 60),
+        rate: x.rate != null && Number.isFinite(+x.rate) && +x.rate >= 0 ? +x.rate : null,
+        status: ['libre', 'sale', 'hs', 'occ', 'depart', 'arrivee'].includes(x.status) ? x.status : 'libre',
+        hk: String(x.hk || (x.status === 'sale' ? 'dirty' : 'clean')),
+        guest: x.guest ? String(x.guest).slice(0, 120) : null,
+        meta: String(x.meta || (x.status === 'sale' ? 'À remettre à blanc' : 'Libre · propre')).slice(0, 180),
+        updatedAt: +x.updatedAt || 0,
+      };
+    });
+    const folios = {};
+    const folioRows = Array.isArray(raw.folios) ? raw.folios : Object.values(raw.folios || {});
+    folioRows.forEach((f) => { if (f && rooms[+f.room]) folios[+f.room] = f; });
+    return {
+      v: 2, rooms, roomRecords: roomRecords.slice(), folios,
+      baseRate: raw.baseRate != null && Number.isFinite(+raw.baseRate) && +raw.baseRate >= 0 ? +raw.baseRate : null,
+      rateUpdatedAt: +raw.rateUpdatedAt || 0,
+      sold: Math.max(0, +raw.sold || 0), updatedAt: +raw.updatedAt || 0,
+      count: Object.keys(rooms).length,
+    };
+  }
+  function cuDocument(st) {
+    const live = Object.values(st.rooms || {});
+    const byId = {};
+    (st.roomRecords || []).forEach((r) => { if (r && r.id) byId[r.id] = r; });
+    live.forEach((r) => { byId[r.id || ('room:' + r.n)] = { ...r, id: r.id || ('room:' + r.n) }; });
+    return {
+      v: 2, rooms: Object.values(byId), folios: Object.values(st.folios || {}),
+      baseRate: st.baseRate, rateUpdatedAt: st.rateUpdatedAt || 0,
+      sold: st.sold || 0, updatedAt: st.updatedAt || 0,
+    };
+  }
+  function cuWriteLocal(st, id) {
+    try { localStorage.setItem(cuStoreKey(id), JSON.stringify(cuDocument(st))); } catch (_) {}
+  }
+  function cuReadLocal(id) {
+    try {
+      const raw = JSON.parse(localStorage.getItem(cuStoreKey(id)) || 'null');
+      return raw ? cuHydrate(raw) : null;
+    } catch (_) { return null; }
+  }
+  function cuMerge(mine, theirs) {
+    const a = mine && typeof mine === 'object' ? mine : {};
+    const b = theirs && typeof theirs === 'object' ? theirs : {};
+    const rows = {};
+    const take = (x) => {
+      if (!x) return;
+      const id = String(x.id || ('room:' + x.n));
+      const old = rows[id];
+      const xt = Math.max(+x.updatedAt || 0, +x.deletedAt || 0);
+      const ot = old ? Math.max(+old.updatedAt || 0, +old.deletedAt || 0) : -1;
+      if (!old || xt >= ot) rows[id] = x;
+    };
+    (Array.isArray(b.rooms) ? b.rooms : []).forEach(take);
+    (Array.isArray(a.rooms) ? a.rooms : []).forEach(take);
+    const folios = {};
+    const takeFolio = (f) => {
+      if (!f || !f.room) return;
+      const old = folios[f.room];
+      if (!old || (+f.updatedAt || 0) >= (+old.updatedAt || 0)) folios[f.room] = f;
+    };
+    (Array.isArray(b.folios) ? b.folios : []).forEach(takeFolio);
+    (Array.isArray(a.folios) ? a.folios : []).forEach(takeFolio);
+    const rateOwner = (+a.rateUpdatedAt || 0) >= (+b.rateUpdatedAt || 0) ? a : b;
+    return {
+      v: 2, rooms: Object.values(rows), folios: Object.values(folios),
+      baseRate: rateOwner.baseRate == null ? null : +rateOwner.baseRate,
+      rateUpdatedAt: +rateOwner.rateUpdatedAt || 0,
+      sold: Math.max(+a.sold || 0, +b.sold || 0), updatedAt: Math.max(+a.updatedAt || 0, +b.updatedAt || 0),
+    };
+  }
   function cuState() {
-    const KV = window.KiwiVenue;
-    const id = KV.getVenue();
+    const id = cuStateId();
     if (!CUSTOM_HX[id]) {
-      const vd = KV.getCurrentVenueData() || {};
-      const configuredRooms = parseInt(vd.profileInfo && vd.profileInfo.rooms, 10);
-      const count = Number.isFinite(configuredRooms) && configuredRooms > 0
-        ? Math.min(120, configuredRooms) : 0;
-      const rooms = {};
-      for (let n = 1; n <= count; n++) rooms[n] = { n, type: 'std', status: 'libre', hk: 'clean', guest: null, meta: 'Libre · propre' };
-      /* No server/config source currently provides the nightly rate. `null`
-         renders as unknown and blocks a walk-in until the owner sets it. */
-      CUSTOM_HX[id] = { rooms, folios: {}, baseRate: null, count, sold: 0 };
+      CUSTOM_HX[id] = cuReadLocal(id) || cuSeed();
+      cuWriteLocal(CUSTOM_HX[id], id);
     }
+    CUSTOM_HX[id].count = Object.keys(CUSTOM_HX[id].rooms || {}).length;
     return CUSTOM_HX[id];
+  }
+  function cuSave(st) {
+    st = st || cuState();
+    st.count = Object.keys(st.rooms || {}).length;
+    st.updatedAt = cuStamp();
+    cuWriteLocal(st, cuStateId());
+    if (hotelCloud) hotelCloud.push();
+  }
+  function cuCloudWrite(doc) {
+    const id = cuStateId();
+    if (!id) return;
+    CUSTOM_HX[id] = cuHydrate(doc);
+    cuWriteLocal(CUSTOM_HX[id], id);
+    if (openDrawer && isCustomHotel()) rerender();
+  }
+  function bindCuCloud() {
+    if (!window.KiwiCloudDoc || !window.KiwiVenue) return;
+    if (!hotelCloud) hotelCloud = window.KiwiCloudDoc.attach({
+      feature: 'rooms',
+      slug: () => window.KiwiCloudDoc.slugFor(cuVenueId()),
+      localKey: () => cuStoreKey(),
+      read: () => cuDocument(cuState()),
+      write: cuCloudWrite,
+      merge: cuMerge,
+      isEmpty: (d) => !d || !Array.isArray(d.rooms) || !d.rooms.some((r) => r && !r.deletedAt),
+      onPulled: () => { if (openDrawer && isCustomHotel()) rerender(); },
+    });
+    hotelCloud.bind();
   }
   /* Venue-routed accessors — the shared folio/rack/walk-in engine reads
    * through these so it operates on whichever hotel is active. */
   const R = () => (isCustomHotel() ? cuState().rooms : ROOMS);
   const F = () => (isCustomHotel() ? cuState().folios : FOLIOS);
-  const roomTypeOf = (n) => (isCustomHotel() ? { name: 'Chambre', base: cuState().baseRate } : TYPES[ROOMS[n].type]);
+  const roomTypeOf = (n) => {
+    if (!isCustomHotel()) return TYPES[ROOMS[n].type];
+    const r = cuState().rooms[n] || {};
+    return { name: r.typeName || 'Chambre', base: r.rate == null ? cuState().baseRate : r.rate };
+  };
   const totalRooms = () => (isCustomHotel() ? cuState().count : 24);
+  const roomCountLabel = () => totalRooms() + ' chambre' + (totalRooms() === 1 ? '' : 's');
   const vName = () => ((window.KiwiVenue && window.KiwiVenue.getCurrentVenueData && window.KiwiVenue.getCurrentVenueData()) || {}).name || 'Votre établissement';
   /* A custom hotel's encaissements are REAL — feed the merchant sales store
    * so the hero, KPI band and feed recompute from them (same pipeline as
@@ -369,6 +510,10 @@
     if (!openDrawer) return;
     const body = openDrawer.el.querySelector('.genpage-body') || openDrawer.el.querySelector('.kiwi-drawer-body');
     if (body) body.innerHTML = openDrawer.bodyFn();
+    if (openDrawer.page === 'chambres' && isCustomHotel()) {
+      const first = openDrawer.el.querySelector('.genpage-head p .seg');
+      if (first) first.textContent = roomCountLabel();
+    }
   }
 
   /* ═══════════════ FOLIO MODAL · la note unifiée ═══════════════ */
@@ -468,6 +613,8 @@
     const f = F()[room];
     if (!f) return;
     f.lines.push({ t: nowLabel(), label, qty: '', amt, src, isNew: true });
+    f.updatedAt = cuStamp();
+    if (isCustomHotel()) cuSave();
     if (!silent) K().toast(label + ' → folio Ch. ' + room, { type: 'success', desc: (src === 'resto' ? 'Restaurant · POS' : 'Hammam & spa') + ' · ' + MAD(amt) + ' postés sur la note de chambre.' });
   }
 
@@ -1020,34 +1167,74 @@
       </div>
     </div>`;
   }
+  function cuRoomEditor(n) {
+    const current = n == null ? null : cuState().rooms[+n];
+    const next = Object.keys(cuState().rooms).map(Number).reduce((m, x) => Math.max(m, x), 0) + 1;
+    const room = current || { n: next, typeName: 'Chambre', floor: 'Vos chambres', rate: null, status: 'libre' };
+    const locked = current && ['occ', 'depart', 'arrivee'].includes(current.status);
+    const status = locked ? current.status : (current?.status || 'libre');
+    const m = K().modal({
+      tag: current ? 'CHAMBRE · CONFIGURATION' : 'NOUVELLE CHAMBRE',
+      title: current ? 'Modifier la chambre ' + current.n : 'Ajouter une chambre',
+      desc: 'Numéro, type, niveau et tarif restent modifiables depuis le plan.', width: 560,
+      body: `<div class="hx-room-form">
+        <label><span>Numéro de chambre</span><input data-hx-room-number type="number" inputmode="numeric" min="1" max="9999" value="${room.n}"></label>
+        <label><span>Type de chambre</span><input data-hx-room-type maxlength="60" value="${esc(room.typeName)}" placeholder="Ex. Suite, Double, Twin"></label>
+        <label><span>Niveau / aile</span><input data-hx-room-floor maxlength="60" value="${esc(room.floor)}" placeholder="Ex. 1er étage, Patio"></label>
+        <label><span>Tarif par nuit <small>· MAD · optionnel</small></span><input data-hx-room-rate type="number" inputmode="decimal" min="0" step="1" value="${room.rate == null ? '' : room.rate}" placeholder="Utiliser le tarif général"></label>
+        <label class="hx-room-form-wide"><span>État opérationnel</span><select data-hx-room-status ${locked ? 'disabled' : ''}>
+          <option value="libre" ${status === 'libre' ? 'selected' : ''}>Libre · propre</option>
+          <option value="sale" ${status === 'sale' ? 'selected' : ''}>Libre · à nettoyer</option>
+          <option value="hs" ${status === 'hs' ? 'selected' : ''}>Hors-service</option>
+          ${locked ? `<option value="${status}" selected>${status === 'occ' ? 'Occupée' : status === 'depart' ? 'Départ du jour' : 'Arrivée attendue'}</option>` : ''}
+        </select>${locked ? '<small>Le statut d’une chambre avec séjour actif se gère depuis son folio.</small>' : ''}</label>
+      </div>
+      <div class="hx-room-form-actions">
+        ${current ? `<button class="hx-btn warn" data-action="hx-room-delete-open" data-arg="${current.n}">Supprimer la chambre</button>` : '<span></span>'}
+        <button class="hx-btn atlas" data-action="hx-room-save" data-arg="${current ? current.n : 'new'}">Enregistrer</button>
+      </div>`,
+    });
+    openModal = { el: m.el, close: m.close };
+  }
   function cuFloors() {
     const st = cuState();
     const nums = Object.keys(st.rooms).map(Number).sort((a, b) => a - b);
-    if (nums.length <= 8) return [{ lbl: 'Vos chambres', rooms: nums }];
-    const out = [];
-    for (let i = 0; i < nums.length; i += 8) out.push({ lbl: 'Niveau ' + (Math.floor(i / 8) + 1), rooms: nums.slice(i, i + 8) });
-    return out;
+    const groups = new Map();
+    nums.forEach((n) => {
+      const label = st.rooms[n].floor || 'Vos chambres';
+      if (!groups.has(label)) groups.set(label, []);
+      groups.get(label).push(n);
+    });
+    return [...groups].map(([lbl, rooms]) => ({ lbl, rooms }));
   }
   function cuRackBody() {
     const floors = cuFloors().map((f) => `
-      <div class="hx-floor-lbl">${f.lbl}</div>
+      <div class="hx-floor-lbl">${esc(f.lbl)}</div>
       <div class="hx-rack">${f.rooms.map((n) => {
         const r = R()[n];
         const bdg = r.status === 'sale' ? '<span class="bdg">MÉNAGE</span>' : '';
         return `<div class="hx-room st-${r.status}" data-action="hx-room" data-arg="${n}">
           ${bdg}
-          <div><div class="no">CH. ${n}</div><div class="ty">Chambre</div></div>
-          <div><div class="gu">${r.guest || 'Libre'}</div><div class="mt">${r.meta || ''}</div></div>
+          <button class="hx-room-edit" type="button" data-action="hx-room-edit" data-arg="${n}" aria-label="Modifier la chambre ${n}" title="Modifier">✎</button>
+          <div><div class="no">CH. ${n}</div><div class="ty">${esc(r.typeName || 'Chambre')}</div></div>
+          <div><div class="gu">${esc(r.guest || (r.status === 'hs' ? 'Hors-service' : 'Libre'))}</div><div class="mt">${esc(r.meta || '')}</div></div>
         </div>`;
       }).join('')}</div>`).join('');
+    const empty = !totalRooms() ? cuStarter(
+      'Commencez par ajouter vos chambres.',
+      'Le plan est vide parce qu’aucune chambre n’a encore été configurée. Ajoutez-les une par une ; vous pourrez modifier le numéro, le type, le niveau et le tarif à tout moment.',
+      ['Plan des chambres utilisable immédiatement', 'Tarif propre à chaque type de chambre', 'Synchronisation avec réception, folios et ménage'],
+      '<button class="hx-btn atlas" data-action="hx-room-add">+ Ajouter ma première chambre</button>'
+    ) : floors;
     return `<div class="hx-page">
       <div class="hx-legend">
         <span><span class="sw" style="background:var(--atlas);border-color:var(--atlas);"></span>Occupée</span>
         <span><span class="sw" style="background:var(--surface,#fff);"></span>Libre · propre</span>
         <span><span class="sw" style="background:var(--warn-soft);border-color:var(--warning);"></span>Libre · sale</span>
-        <span style="margin-left:auto;">Toucher une chambre libre → walk-in · occupée → folio</span>
+        <span class="hx-room-legend-help">Toucher une chambre libre → walk-in · occupée → folio</span>
+        <button class="hx-btn atlas" data-action="hx-room-add">+ Ajouter une chambre</button>
       </div>
-      ${floors}
+      ${empty}
     </div>`;
   }
   function cuMenageBody() {
@@ -1335,6 +1522,12 @@
     if (!window.Kiwi || !window.Kiwi.handlers || !window.Kiwi.appPage) { setTimeout(register, 80); return; }
     const { handlers, toast } = window.Kiwi;
 
+    /* Read the tenant-scoped room document as soon as the hotel module is
+     * operational. Venue switches reuse the same conflict-safe handle under
+     * the new slug; the local copy still paints immediately while it loads. */
+    bindCuCloud();
+    try { window.KiwiVenue.subscribe(() => { bindCuCloud(); }); } catch (_) {}
+
     /* The 0000 wizard now offers « Hôtel / Riad » — fork of
      * interactive.js's onboard handler (see obOnboard above). Re-asserted
      * after load like pages-pro's starter wraps, in case of re-registration. */
@@ -1347,7 +1540,7 @@
       ? page('reception', 'Réception', vName() + ' · arrivées, départs, walk-ins, en un geste', cuReceptionBody)
       : page('reception', 'Réception', 'Riad Yasmina · Médina, Marrakech · arrivées, départs, walk-ins, en un geste', receptionBody);
     handlers['nav-chambres'] = () => cu()
-      ? page('chambres', 'Plan des chambres', totalRooms() + ' chambres · toucher une chambre libre la vend en walk-in', cuRackBody)
+      ? page('chambres', 'Plan des chambres', roomCountLabel() + ' · toucher une chambre libre la vend en walk-in', cuRackBody)
       : page('chambres', 'Plan des chambres', '24 chambres · 3 niveaux · toucher une chambre ouvre le client et son folio', rackBody);
     handlers['nav-sejours'] = () => cu()
       ? page('sejours', 'Réservations & séjours', vName() + ' · le tape chart se remplit avec vos réservations', cuSejoursBody)
@@ -1372,10 +1565,112 @@
       : page('hotelintel', 'Intelligence hôtel', 'Prévision d\'occupation · tarification · no-shows · où part l\'argent', intelBody);
 
     /* — custom-hotel controls — */
+    handlers['hx-room-add'] = () => {
+      if (!isCustomHotel()) return;
+      cuRoomEditor(null);
+    };
+    handlers['hx-room-edit'] = (el, arg) => {
+      if (!isCustomHotel()) return;
+      cuRoomEditor(parseInt(arg, 10));
+    };
+    handlers['hx-room-save'] = (el, arg) => {
+      if (!isCustomHotel()) return;
+      const root = el.closest('.kiwi-modal');
+      const oldN = arg === 'new' ? null : parseInt(arg, 10);
+      const n = parseInt(root?.querySelector('[data-hx-room-number]')?.value || '', 10);
+      const typeName = String(root?.querySelector('[data-hx-room-type]')?.value || '').trim();
+      const floor = String(root?.querySelector('[data-hx-room-floor]')?.value || '').trim();
+      const rateRaw = String(root?.querySelector('[data-hx-room-rate]')?.value || '').trim();
+      const statusEl = root?.querySelector('[data-hx-room-status]');
+      const status = statusEl ? statusEl.value : 'libre';
+      const st = cuState();
+      if (!Number.isFinite(n) || n < 1 || n > 9999) {
+        toast('Numéro de chambre invalide', { type: 'warn', desc: 'Utilisez un numéro entre 1 et 9999.' });
+        root?.querySelector('[data-hx-room-number]')?.focus();
+        return;
+      }
+      if (oldN !== n && st.rooms[n]) {
+        toast('Ce numéro existe déjà', { type: 'warn', desc: 'Choisissez un numéro de chambre unique.' });
+        root?.querySelector('[data-hx-room-number]')?.focus();
+        return;
+      }
+      if (!typeName) {
+        toast('Indiquez le type de chambre', { type: 'warn', desc: 'Ex. Chambre, Suite, Double ou Twin.' });
+        root?.querySelector('[data-hx-room-type]')?.focus();
+        return;
+      }
+      if (rateRaw && (!Number.isFinite(+rateRaw) || +rateRaw < 0)) {
+        toast('Tarif invalide', { type: 'warn', desc: 'Le tarif doit être positif, ou laissez le champ vide pour utiliser le tarif général.' });
+        root?.querySelector('[data-hx-room-rate]')?.focus();
+        return;
+      }
+      const prior = oldN == null ? null : st.rooms[oldN];
+      const active = prior && ['occ', 'depart', 'arrivee'].includes(prior.status);
+      const savedStatus = active ? prior.status : (['libre', 'sale', 'hs'].includes(status) ? status : 'libre');
+      const now = cuStamp();
+      const room = {
+        ...(prior || {}), id: prior?.id || ('room:' + now.toString(36) + ':' + n), n,
+        typeName: typeName.slice(0, 60), floor: (floor || 'Vos chambres').slice(0, 60),
+        rate: rateRaw === '' ? null : Math.round(+rateRaw), status: savedStatus,
+        hk: savedStatus === 'sale' ? 'dirty' : savedStatus === 'libre' ? 'clean' : (prior?.hk || 'clean'),
+        guest: prior?.guest || null,
+        meta: active ? prior.meta : savedStatus === 'libre' ? 'Libre · propre' : savedStatus === 'sale' ? 'À remettre à blanc' : 'Hors-service',
+        updatedAt: now,
+      };
+      if (oldN != null && oldN !== n) {
+        delete st.rooms[oldN];
+        if (st.folios[oldN]) {
+          st.folios[n] = { ...st.folios[oldN], room: n, updatedAt: now };
+          delete st.folios[oldN];
+        }
+      }
+      st.rooms[n] = room;
+      cuSave(st);
+      openModal?.close?.();
+      toast('Chambre ' + n + ' enregistrée', { type: 'success', desc: typeName + ' · ' + (floor || 'Vos chambres') + (room.rate == null ? '' : ' · ' + MAD(room.rate) + ' / nuit') });
+      rerender();
+    };
+    handlers['hx-room-delete-open'] = (el, arg) => {
+      if (!isCustomHotel()) return;
+      const n = parseInt(arg, 10);
+      const st = cuState();
+      const room = st.rooms[n];
+      if (!room) return;
+      if (st.folios[n] || ['occ', 'depart', 'arrivee'].includes(room.status)) {
+        toast('Suppression impossible', { type: 'warn', desc: 'Clôturez d’abord le séjour et le folio de cette chambre.' });
+        return;
+      }
+      openModal?.close?.();
+      const m = K().modal({
+        tag: 'SUPPRIMER UNE CHAMBRE', title: 'Supprimer la chambre ' + n + ' ?',
+        desc: 'Elle disparaîtra du plan, des disponibilités et du ménage.', width: 440,
+        body: `<p style="font-size:13px;line-height:1.55;color:var(--n-600);margin:0;">Cette action supprime <b>Ch. ${n} · ${esc(room.typeName)}</b>. Les ventes historiques restent intactes.</p>
+          <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;"><button class="hx-btn warn" data-action="hx-room-delete" data-arg="${n}">Confirmer la suppression</button></div>`,
+      });
+      openModal = { el: m.el, close: m.close };
+    };
+    handlers['hx-room-delete'] = (el, arg) => {
+      if (!isCustomHotel()) return;
+      const n = parseInt(arg, 10);
+      const st = cuState();
+      const room = st.rooms[n];
+      if (!room || st.folios[n]) return;
+      const tombstone = { ...room, updatedAt: cuStamp(), deletedAt: cuStamp() };
+      const records = st.roomRecords || (st.roomRecords = []);
+      const i = records.findIndex((r) => r && r.id === room.id);
+      if (i >= 0) records[i] = tombstone; else records.push(tombstone);
+      delete st.rooms[n];
+      cuSave(st);
+      openModal?.close?.();
+      toast('Chambre ' + n + ' supprimée', { type: 'success', desc: 'Le plan et les disponibilités ont été mis à jour.' });
+      rerender();
+    };
     handlers['hx-cb-rate-step'] = (el, arg) => {
       if (!isCustomHotel()) return;
       const st = cuState();
       st.baseRate = Math.max(150, (st.baseRate || 0) + parseInt(arg, 10));
+      st.rateUpdatedAt = cuStamp();
+      cuSave(st);
       rerender();
     };
     handlers['hx-cb-connect'] = (el, arg) => {
@@ -1411,8 +1706,9 @@
         recordSale(due);
         const r = R()[room];
         r.status = 'sale'; r.hk = 'dirty'; r.guest = null;
-        r.meta = 'Départ soldé · à remettre à blanc';
+        r.meta = 'Départ soldé · à remettre à blanc'; r.updatedAt = cuStamp();
         delete F()[room];
+        cuSave();
         setTimeout(() => toast('Ch. ' + room + ' → à remettre à blanc', { type: 'info', desc: 'Marquez-la propre depuis Ménage pour la revendre ce soir.' }), 1400);
         rerender();
         return;
@@ -1444,15 +1740,16 @@
     };
     handlers['hx-checkout'] = (el, arg) => openFolio(parseInt(arg, 10));
     handlers['hx-walkin'] = () => {
-      if (isCustomHotel() && cuState().baseRate == null) {
+      const custom = isCustomHotel();
+      const free = Object.values(R()).filter((r) => r.status === 'libre');
+      if (custom && free.length && !free.some((r) => roomTypeOf(r.n).base != null)) {
         toast('Tarif non configuré', { type: 'info', desc: 'Définissez d’abord votre tarif de base dans Tarifs.' });
         return;
       }
-      const free = Object.values(R()).filter((r) => r.status === 'libre');
       const m = K().modal({
         tag: 'WALK-IN', title: 'Vendre une chambre ce soir', desc: free.length + ' chambres libres et propres', width: 460,
         body: free.map((r) => `<div class="hx-fol-line" style="cursor:pointer;" data-action="hx-walkin-room" data-arg="${r.n}">
-            <span><b style="font-family:var(--mono);">Ch. ${r.n}</b> · ${roomTypeOf(r.n).name}</span><span class="qt">1 nuit</span><span class="am">${MAD(roomTypeOf(r.n).base)}</span>
+            <span><b style="font-family:var(--mono);">Ch. ${r.n}</b> · ${esc(roomTypeOf(r.n).name)}</span><span class="qt">1 nuit</span><span class="am">${roomTypeOf(r.n).base == null ? 'Tarif à définir' : MAD(roomTypeOf(r.n).base)}</span>
           </div>`).join('') || `<div style="padding:14px;font-size:13px;color:var(--n-500);">${isCustomHotel() && totalRooms() === 0 ? 'Aucune chambre configurée.' : 'Complet ce soir, aucune chambre libre.'}</div>`,
       });
       openModal = { el: m.el, close: m.close };
@@ -1461,15 +1758,18 @@
       const n = parseInt(arg, 10);
       const r = R()[n];
       const cu = isCustomHotel();
-      if (cu && cuState().baseRate == null) return;
+      if (cu && roomTypeOf(n).base == null) {
+        toast('Tarif non configuré', { type: 'info', desc: 'Ajoutez un tarif à cette chambre ou définissez le tarif général dans Tarifs.' });
+        return;
+      }
       const guest = cu ? 'Client sans nom' : 'Walk-in · M. Idrissi';
       const rate = roomTypeOf(n).base;
       r.status = 'occ'; r.guest = guest; r.meta = 'Walk-in · 1 nuit · réglé d\'avance';
       F()[n] = { room: n, guest, src: 'walkin', pax: 1, nights: 1, lines: [
         { t: nowLabel(), label: 'Nuit 1 · ' + roomTypeOf(n).name, qty: '×1', amt: rate, src: 'room', paid: true },
         { t: 'auto', label: 'Taxe de séjour · 1 pers × 1 nuit', qty: '', amt: TAX_PP_NIGHT, src: 'taxe' },
-      ] };
-      if (cu) { recordSale(rate); cuState().sold += 1; }
+      ], updatedAt: cuStamp() };
+      if (cu) { r.updatedAt = cuStamp(); recordSale(rate); cuState().sold += 1; cuSave(); }
       openModal?.close?.();
       toast('Ch. ' + n + ' vendue · ' + MAD(rate), { type: 'success', desc: 'Walk-in enregistré · occupation ce soir ' + counts().occToNight + ' / ' + totalRooms() + (cu ? ' · vente réelle au compteur.' : '.') });
       rerender();
@@ -1500,7 +1800,7 @@
       const room = parseInt(arg, 10);
       if (isCustomHotel()) {
         const r = R()[room];
-        if (r) { r.status = 'libre'; r.hk = 'clean'; r.guest = null; r.meta = 'Libre · propre'; }
+        if (r) { r.status = 'libre'; r.hk = 'clean'; r.guest = null; r.meta = 'Libre · propre'; r.updatedAt = cuStamp(); cuSave(); }
         openModal?.close?.();
         toast('Ch. ' + room + ' remise à blanc', { type: 'success', desc: 'Propre et relouable, visible « libre » sur le plan des chambres.' });
         rerender();
@@ -1593,6 +1893,14 @@
       }, 3300);
     };
   }
+  /* Small model surface for the POS/hotel shells and the regression harness.
+   * Mutations still go through the handlers above; consumers receive copies. */
+  window.KiwiHotelRooms = Object.freeze({
+    current: () => cuDocument(cuState()),
+    merge: (mine, theirs) => cuMerge(mine, theirs),
+    hydrate: (doc) => cuHydrate(doc),
+  });
+
   register();
   /* Same insurance as pages-pro's starter wraps: modules that re-install
    * handlers at load+setTimeout(0) must not clobber the wizard override. */

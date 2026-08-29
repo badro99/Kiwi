@@ -69,6 +69,10 @@
 .hx-room .gu { font-size: 12px; font-weight: 500; margin-top: 8px; line-height: 1.3; }
 .hx-room .mt { font-size: 10px; opacity: 0.8; margin-top: 2px; font-family: var(--mono); }
 .hx-room .bdg { position: absolute; top: 9px; right: 9px; font-size: 9.5px; font-family: var(--mono); letter-spacing: 0.04em; padding: 2px 7px; border-radius: 999px; }
+.hx-room-edit { position:absolute; top:8px; right:8px; z-index:2; width:28px; height:28px; display:grid; place-items:center; border:1px solid var(--n-200); border-radius:9px; background:var(--surface,#fff); color:var(--atlas); cursor:pointer; font-size:14px; line-height:1; opacity:0; transition:opacity 140ms,border-color 140ms,transform 140ms; }
+.hx-room:hover .hx-room-edit,.hx-room-edit:focus-visible { opacity:1; }
+.hx-room-edit:hover { border-color:var(--atlas); transform:translateY(-1px); }
+.hx-room .bdg + .hx-room-edit { right:70px; }
 
 /* the six rack states */
 .hx-room.st-occ        { background: var(--atlas); border-color: var(--atlas); color: var(--paper); }
@@ -88,6 +92,21 @@
 /* legend */
 .hx-legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 11.5px; color: var(--n-500); align-items: center; }
 .hx-legend .sw { display: inline-block; width: 13px; height: 13px; border-radius: 4px; margin-right: 5px; vertical-align: -2px; border: 1px solid var(--n-200); }
+.hx-room-legend-help { margin-left:auto; }
+.hx-room-form { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.hx-room-form label { display:flex; flex-direction:column; gap:6px; color:var(--n-600); font-size:12px; font-weight:600; }
+.hx-room-form label > span small,.hx-room-form label > small { color:var(--n-500); font-weight:400; }
+.hx-room-form input,.hx-room-form select { width:100%; box-sizing:border-box; border:1px solid var(--n-200); border-radius:10px; background:var(--surface,#fff); color:var(--ink); padding:11px 12px; font:500 14px var(--sans); outline:none; }
+.hx-room-form input:focus,.hx-room-form select:focus { border-color:var(--atlas); box-shadow:0 0 0 3px rgba(11,110,79,.08); }
+.hx-room-form-wide { grid-column:1/-1; }
+.hx-room-form-actions { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-top:20px; }
+
+@media (hover:none) { .hx-room-edit { opacity:1; } }
+@media (max-width:640px) {
+  .hx-room-form { grid-template-columns:1fr; }
+  .hx-room-form-wide { grid-column:auto; }
+  .hx-room-legend-help { margin-left:0; width:100%; }
+}
 
 /* ── Tape chart (rooms × dates) ───────────────────────────────────────── */
 .hx-tape-wrap { overflow-x: auto; padding-bottom: 6px; }
