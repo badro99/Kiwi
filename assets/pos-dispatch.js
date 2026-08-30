@@ -57,7 +57,7 @@
     '0000': { id: 'pressing',    file: 'pressing-caisse', rev: '39', label: 'Pressing · Pressing Marshan' },
     '0002': { id: 'boutique',    file: 'pos-boutique',    rev: '16', label: 'Boutique · Maison Mansour' },
     '0003': { id: 'spa',         file: 'pos-spa',         rev: '5', label: 'Spa · Spa Bahia' },
-    '0004': { id: 'hotel',       file: 'pos-hotel',       rev: '3', label: 'Hôtel / Riad · Riad Yasmina' },
+    '0004': { id: 'hotel',       file: 'pos-hotel',       rev: '4', label: 'Hôtel / Riad' },
     '0005': { id: 'fastfood',    file: 'pos-fastfood',    rev: '5', label: 'Fast-food · Snack Chamal' },
     '0006': { id: 'boulangerie', file: 'pos-boulangerie', rev: '7', label: 'Boulangerie · Bab Kasbah' },
     '0007': { id: 'pizzeria',    file: 'pos-pizzeria',    rev: '3', label: 'Pizzeria · La Marsa' },

@@ -228,6 +228,10 @@
 
 /* ═══════════════ CHAMBRES — the board ═══════════════ */
 .ht-board { flex: 1; min-height: 0; overflow-y: auto; padding: 14px 22px 26px; }
+.ht-room-empty { min-height:300px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:9px; padding:36px; border:1px dashed var(--line); border-radius:18px; background:var(--paper); text-align:center; color:var(--ink-muted); }
+.ht-room-empty i { width:28px; height:28px; color:var(--forest); }
+.ht-room-empty b { color:var(--ink); font-size:16px; }
+.ht-room-empty span { max-width:430px; font-size:12px; line-height:1.55; }
 .ht-legend { display: flex; gap: 12px; flex-wrap: wrap; padding: 12px 22px 0; }
 .ht-leg { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--ink-3); }
 .ht-leg i { width: 9px; height: 9px; border-radius: 3px; flex-shrink: 0; }

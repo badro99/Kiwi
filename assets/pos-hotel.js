@@ -97,11 +97,8 @@
 
   /* ───────────────────────── constants (canon: assets/hotel.js) ───────────────────────── */
   const TPT = 27;                       /* taxe de séjour · MAD / nuit / adulte */
-  const TYPES = {
-    patio:   { name: 'Chambre Patio',  rate: 750 },
-    confort: { name: 'Confort Médina', rate: 950 },
-    suite:   { name: 'Suite Yasmina',  rate: 1400 },
-  };
+  const DEMO_HOTEL = !pvReal();
+  const TYPES = {};
   const SRC = {
     booking: { label: 'Booking.com', cls: 'booking' },
     airbnb:  { label: 'Airbnb',      cls: 'airbnb' },
@@ -124,16 +121,26 @@
 
   /* ───────────────────────── rooms (8 — riad scale) ─────────────────────────
      status: occ | depart | libre | menage | hs */
-  const FLOORS = [
-    { lbl: 'Rez-de-chaussée · patio', rooms: [1, 2, 3] },
-    { lbl: '1er étage',               rooms: [4, 5, 6] },
-    { lbl: '2e étage · terrasse',     rooms: [7, 8] },
-  ];
+  const FLOORS = [];
   const typeOf = (n) => (n <= 3 ? 'patio' : n <= 6 ? 'confort' : 'suite');
   const ROOMS = {};
-  for (let n = 1; n <= 8; n++) ROOMS[n] = { n, type: typeOf(n), status: 'libre', note: '' };
-  const roomName = (n) => TYPES[ROOMS[n].type].name;
-  const roomRate = (n) => TYPES[ROOMS[n].type].rate;
+  if (DEMO_HOTEL) {
+    Object.assign(TYPES, {
+      patio: { name: 'Chambre Patio', rate: 750 },
+      confort: { name: 'Confort Médina', rate: 950 },
+      suite: { name: 'Suite Yasmina', rate: 1400 },
+    });
+    FLOORS.push(
+      { lbl: 'Rez-de-chaussée · patio', rooms: [1, 2, 3] },
+      { lbl: '1er étage', rooms: [4, 5, 6] },
+      { lbl: '2e étage · terrasse', rooms: [7, 8] },
+    );
+    for (let n = 1; n <= 8; n++) ROOMS[n] = { n, type: typeOf(n), status: 'libre', note: '' };
+  }
+  const roomName = (n) => (ROOMS[n] && (ROOMS[n].name || TYPES[ROOMS[n].type]?.name)) || 'Chambre ' + n;
+  const roomRate = (n) => Math.max(0, +(ROOMS[n] && (ROOMS[n].rate ?? TYPES[ROOMS[n].type]?.rate)) || 0);
+  let ROOM_DOC = { v: 4, rooms: [], roomTypes: [], floors: [], folios: [], updatedAt: 0 };
+  let roomCloud = null;
 
   /* ───────────────────────── stays / folios (seed, mid-shift) ───────────────────────── */
   const STAYS = {};                     /* room n → open stay */
@@ -159,7 +166,21 @@
   }
   let chargeUid = 100;
 
-  function setRoom(n, status, note) { ROOMS[n].status = status; ROOMS[n].note = note || ''; }
+  function setRoom(n, status, note) {
+    if (!ROOMS[n]) return;
+    ROOMS[n].status = status; ROOMS[n].note = note || '';
+    if (!DEMO_HOTEL) {
+      const row = (ROOM_DOC.rooms || []).find((r) => r && !r.deletedAt && +r.n === +n);
+      if (row) {
+        row.status = status === 'menage' ? 'sale' : status;
+        row.hk = status === 'menage' ? 'dirty' : status === 'libre' ? 'clean' : row.hk;
+        row.meta = note || row.meta || '';
+        row.updatedAt = Date.now();
+        ROOM_DOC.updatedAt = row.updatedAt;
+        roomCloud?.push?.();
+      }
+    }
+  }
 
   /* En maison (j-courant) — 5 chambres sur 8 ≈ 60 % · demo seed only, a real riad starts empty */
   if (!pvReal()) {
@@ -210,6 +231,76 @@
     { id: 'd2', t: '12h00', guest: 'Karim Bennis',  room: 2, done: false, late: true },
   ];
 
+  /* The dashboard owns the room catalogue. A paired front desk adopts that
+   * exact document; it never invents rooms, room names, floors or prices. */
+  function applyRoomDocument(raw) {
+    if (DEMO_HOTEL) return;
+    const doc = raw && typeof raw === 'object' ? raw : {};
+    ROOM_DOC = { ...doc, rooms: Array.isArray(doc.rooms) ? doc.rooms.slice() : [], roomTypes: Array.isArray(doc.roomTypes) ? doc.roomTypes.slice() : [], floors: Array.isArray(doc.floors) ? doc.floors.slice() : [] };
+    Object.keys(TYPES).forEach((k) => delete TYPES[k]);
+    Object.keys(ROOMS).forEach((k) => delete ROOMS[k]);
+    FLOORS.splice(0, FLOORS.length);
+    ROOM_DOC.roomTypes.filter((t) => t && !t.deletedAt).forEach((t) => {
+      TYPES[t.id] = { name: String(t.name || 'Chambre'), rate: t.rate == null ? null : Math.max(0, +t.rate || 0) };
+    });
+    const floorMap = new Map();
+    ROOM_DOC.floors.filter((f) => f && !f.deletedAt).sort((a, b) => (+a.order || 0) - (+b.order || 0)).forEach((f) => {
+      const group = { id: String(f.id || ''), lbl: String(f.name || 'Vos chambres'), rooms: [] };
+      floorMap.set(group.id, group); FLOORS.push(group);
+    });
+    ROOM_DOC.rooms.filter((r) => r && !r.deletedAt).sort((a, b) => (+a.n || 0) - (+b.n || 0)).forEach((r) => {
+      const n = parseInt(r.n, 10);
+      if (!Number.isFinite(n) || n < 1 || n > 9999 || ROOMS[n]) return;
+      const type = TYPES[r.typeId] || { name: r.typeName || 'Chambre', rate: r.rate };
+      const status = r.status === 'sale' ? 'menage' : ['occ', 'depart', 'hs', 'libre'].includes(r.status) ? r.status : 'libre';
+      ROOMS[n] = { n, type: r.typeId || '', name: type.name, rate: r.rate == null ? (type.rate == null ? doc.baseRate : type.rate) : r.rate, status, note: r.meta || '' };
+      let group = floorMap.get(String(r.floorId || ''));
+      if (!group) {
+        const name = String(r.floor || 'Vos chambres');
+        group = FLOORS.find((f) => f.lbl === name);
+        if (!group) { group = { id: String(r.floorId || 'legacy:' + name), lbl: name, rooms: [] }; FLOORS.push(group); }
+      }
+      group.rooms.push(n);
+    });
+    const populated = FLOORS.filter((f) => f.rooms.length);
+    FLOORS.splice(0, FLOORS.length, ...populated);
+    if (root) refreshOps();
+  }
+  function mergeRoomDocuments(mine, theirs) {
+    const mergeRows = (a, b, fallback) => {
+      const rows = {};
+      [...(Array.isArray(b) ? b : []), ...(Array.isArray(a) ? a : [])].forEach((x) => {
+        if (!x) return;
+        const id = String(x.id || fallback(x));
+        const old = rows[id];
+        const stamp = Math.max(+x.updatedAt || 0, +x.deletedAt || 0);
+        const prior = old ? Math.max(+old.updatedAt || 0, +old.deletedAt || 0) : -1;
+        if (!old || stamp >= prior) rows[id] = { ...x, id };
+      });
+      return Object.values(rows);
+    };
+    const a = mine || {}, b = theirs || {};
+    return {
+      ...b, ...a, v: 4,
+      rooms: mergeRows(a.rooms, b.rooms, (r) => 'room:' + r.n),
+      roomTypes: mergeRows(a.roomTypes, b.roomTypes, (t) => 'type:' + (t.name || 'chambre')),
+      floors: mergeRows(a.floors, b.floors, (f) => 'floor:' + (f.name || 'section')),
+      updatedAt: Math.max(+a.updatedAt || 0, +b.updatedAt || 0),
+    };
+  }
+  function bindRoomDocument() {
+    if (DEMO_HOTEL || roomCloud || !window.KiwiCloudDoc?.attach) return roomCloud;
+    roomCloud = window.KiwiCloudDoc.attach({
+      feature: 'rooms', slug: () => window.KiwiCloudDoc.currentSlug(),
+      localKey: () => 'kiwi:hotel-pos-rooms:v1:' + (window.KiwiCloudDoc.currentSlug() || 'unpaired'),
+      read: () => ROOM_DOC, write: applyRoomDocument, merge: mergeRoomDocuments,
+      isEmpty: (d) => !d || !Array.isArray(d.rooms) || !d.rooms.some((r) => r && !r.deletedAt),
+      onPulled: () => { if (root) refreshOps(); },
+    });
+    roomCloud.bind();
+    return roomCloud;
+  }
+
   /* ───────────────────────── folio math ───────────────────────── */
   function chargeAmt(c) { return CHARGE[c.cid].unit * c.qty; }
   function stayTotals(st) {
@@ -231,10 +322,12 @@
   let root = null;
 
   const hotelOps = window.KiwiVerticalState?.open?.('hotel', {
-    schema: 1,
-    snapshot: () => ({ rooms: ROOMS, stays: STAYS, arrivals: ARRIVALS, departures: DEPARTURES, factureSeq, policeSeq, chargeUid }),
+    schema: 2,
+    snapshot: () => ({ catalogSource: DEMO_HOTEL ? 'demo' : 'rooms-doc-v4', rooms: DEMO_HOTEL ? ROOMS : {}, stays: STAYS, arrivals: ARRIVALS, departures: DEPARTURES, factureSeq, policeSeq, chargeUid }),
     restore: (d) => {
-      Object.keys(ROOMS).forEach(k => delete ROOMS[k]); Object.assign(ROOMS, d.rooms || {});
+      if (DEMO_HOTEL) {
+        Object.keys(ROOMS).forEach(k => delete ROOMS[k]); Object.assign(ROOMS, d.rooms || {});
+      }
       Object.keys(STAYS).forEach(k => delete STAYS[k]);
       Object.entries(d.stays || {}).forEach(([k, st]) => { st.inAt = new Date(st.inAt); st.outAt = new Date(st.outAt); STAYS[k] = st; });
       ARRIVALS.splice(0, ARRIVALS.length, ...(d.arrivals || [])); DEPARTURES.splice(0, DEPARTURES.length, ...(d.departures || []));
@@ -283,6 +376,7 @@
   function mount(rootEl) {
     hotelOps?.hydrate?.();
     root = rootEl;
+    bindRoomDocument();
     root.classList.add('ht-app');
     root.innerHTML = `
       <aside class="ht-rail">
@@ -331,7 +425,7 @@
     renderAll();
   }
 
-  function onShow() { renderAll(); }
+  function onShow() { roomCloud?.pull?.(false); renderAll(); }
 
   function openVeil(id) { const v = $(id, root); v.classList.add('is-open'); return v; }
   function closeVeil(v) { (typeof v === 'string' ? $(v, root) : v).classList.remove('is-open'); }
@@ -534,9 +628,12 @@
         ${Object.entries(ST_META).map(([s, m]) => `<span class="ht-leg"><i style="background:${m.dot}"></i>${m.label} <b>${counts[s] || 0}</b></span>`).join('')}
       </div>
       <div class="ht-board">
-        ${FLOORS.map((f) => `
+        ${FLOORS.length ? FLOORS.map((f) => `
           <div class="ht-floor-lbl">${esc(f.lbl)}</div>
-          <div class="ht-rooms">${f.rooms.map((n) => roomCard(n, i++)).join('')}</div>`).join('')}
+          <div class="ht-rooms">${f.rooms.map((n) => roomCard(n, i++)).join('')}</div>`).join('') : `<div class="ht-room-empty">
+            <i data-lucide="cloud-download"></i><b>Aucune chambre synchronisée</b>
+            <span>Ajoutez vos chambres dans le tableau de bord, puis touchez Rafraîchir. Kiwi n’affiche aucune donnée fictive.</span>
+          </div>`}
       </div>`;
     panel.onclick = (e) => {
       const b = e.target.closest('[data-ht-room]');
@@ -703,7 +800,7 @@
           <label class="ht-ci-lbl" style="margin-top:12px;">Montant de caution (MAD)</label>
           <input class="ht-in" id="ht-caution-amount" type="number" min="0" step="1" placeholder="À définir" value="${ci.cautionAmount || ''}" />
         </div>
-        <div class="ht-welcome"><i data-lucide="sparkles"></i><span><b>Accueil Yasmina</b>, thé à la menthe offert au salon, plateau envoyé à l'arrivée.${a.note && a.note.includes('thé') ? ' Sans sucre pour ce client.' : ''}</span></div>
+        <div class="ht-welcome"><i data-lucide="sparkles"></i><span><b>Accueil de l’hôtel</b>, thé à la menthe offert au salon, plateau envoyé à l'arrivée.${a.note && a.note.includes('thé') ? ' Sans sucre pour ce client.' : ''}</span></div>
         <div class="ht-ci-foot">
           <button class="ht-btn secondary" id="ht-ci-back">Retour</button>
           <button class="ht-btn primary" id="ht-ci-done"><i data-lucide="check"></i>Terminer le check-in</button>
@@ -1255,12 +1352,16 @@
   }
 
   /* ═══════════════════════ register ═══════════════════════ */
+  window.KiwiHotelPosCatalog = Object.freeze({
+    current: () => ({ rooms: Object.values(ROOMS).map((r) => ({ ...r })), floors: FLOORS.map((f) => ({ ...f, rooms: f.rooms.slice() })) }),
+    apply: (doc) => applyRoomDocument(doc),
+  });
   window.KiwiPosDispatch.register({
     id: 'hotel',
     greet: {
-      line1: 'Bonjour Hamza,',
+      line1: pvReal() ? 'Bonjour,' : 'Bonjour Hamza,',
       em: 'bienvenue.',
-      sub: 'Riad Yasmina <em>·</em> 3 arrivées cet après-midi, un départ à encaisser',
+      sub: pvReal() ? esc(pvName('') || 'Votre hôtel') : 'Riad Yasmina <em>·</em> 3 arrivées cet après-midi, un départ à encaisser',
     },
     mount,
     onShow,
