@@ -285,6 +285,20 @@
 
 /* ═══════════════ FOLIOS — list ═══════════════ */
 .ht-folist { flex: 1; min-height: 0; overflow-y: auto; padding: 16px 22px 26px; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 11px; align-content: start; }
+.ht-folio-empty {
+  grid-column: 1 / -1; min-height: 300px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 9px; padding: 34px;
+  border-radius: 18px; background: var(--paper); color: var(--ink-3);
+}
+.ht-folio-empty-icon {
+  width: 48px; height: 48px; display: grid; place-items: center; margin-bottom: 3px;
+  border-radius: 14px; background: var(--mint-tint); color: var(--forest);
+}
+.ht-folio-empty-icon svg { width: 23px; height: 23px; }
+.ht-folio-empty b { color: var(--ink); font-size: 17px; }
+.ht-folio-empty p { max-width: 500px; margin: 0; font-size: 12.5px; line-height: 1.6; }
+.ht-folio-empty-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 9px; margin-top: 8px; }
+.ht-folio-empty-actions .ht-btn { flex: none; min-width: 176px; }
 .ht-focard {
   display: flex; flex-direction: column; gap: 9px;
   text-align: left;

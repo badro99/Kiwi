@@ -26,6 +26,8 @@ ok('shared dashboard client entry is renamed Hospitality+ for hotels', venues.in
 ok('dashboard Hospitality+ renders identity and preference data', /documentNumber/.test(dashboard) && /roomPreferences/.test(dashboard) && /allergies/.test(dashboard));
 ok('caisse Hospitality+ captures passport, room, food and allergy fields', /kcb-f-doc-number/.test(caisse) && /kcb-f-room/.test(caisse) && /kcb-f-food/.test(caisse) && /kcb-f-allergies/.test(caisse));
 ok('hotel check-in writes into the same KiwiClients profile', /KiwiClients\.upsert/.test(hotelPos) && /source:\s*'hotel-checkin'/.test(hotelPos));
+ok('hotel caisse gives Hospitality+ a native navigation tab', /data-ht-view="clients"[^>]*>[\s\S]*?Hospitality\+/.test(hotelPos));
+ok('an empty folio view explains the workflow and links back to reception', /data-ht-empty-view="reception"/.test(hotelPos) && /s’ouvre automatiquement au check-in/.test(hotelPos));
 
 const sqlite = new DatabaseSync(':memory:');
 sqlite.exec(read('schema.sql'));

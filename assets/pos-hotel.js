@@ -389,6 +389,7 @@
           <button class="ht-nav-it on" data-ht-view="reception"><i data-lucide="layout-dashboard"></i><span>Réception</span><b class="ht-nav-badge" id="ht-badge-rec"></b></button>
           <button class="ht-nav-it" data-ht-view="chambres"><i data-lucide="building-2"></i><span>Chambres</span><b class="ht-nav-badge" id="ht-badge-rooms"></b></button>
           <button class="ht-nav-it" data-ht-view="folios"><i data-lucide="clipboard-list"></i><span>Folios</span><b class="ht-nav-badge" id="ht-badge-folios"></b></button>
+          <button class="ht-nav-it" data-ht-view="clients"><i data-lucide="heart-handshake"></i><span>Hospitality+</span></button>
         </nav>
         <div class="ht-rail-foot">
           <button class="ht-net" id="ht-net" title="Simuler une coupure réseau">
@@ -970,9 +971,19 @@
               ${t.due > 0 ? `<span class="ht-pill due">solde ${fmtMAD(t.due)}</span>` : '<span class="ht-pill ok">soldé</span>'}
             </div>
           </button>`;
-        }).join('') || '<div class="ht-empty" style="display:flex; flex-direction:column; align-items:center; padding:40px 16px;"><div style="width:44px; height:44px; border-radius:12px; background:rgba(11,110,79,0.10); color:var(--atlas); display:grid; place-items:center; margin-bottom:10px;"><svg width="22" height="22" viewBox="0 -960 960 960" fill="currentColor"><path d="M200-80q-33 0-56.5-23.5T120-160v-451q-18-11-29-28.5T80-680v-120q0-33 23.5-56.5T160-880h640q33 0 56.5 23.5T880-800v120q0 23-11 40.5T840-611v451q0 33-23.5 56.5T760-80H200Zm0-520v440h560v-440H200Zm-40-80h640v-120H160v120Zm200 280h240v-80H360v80Zm120 20Z"/></svg></div><div style="font-weight:600; font-size:14.5px; color:var(--ink); margin-bottom:4px;">Aucun folio ouvert</div><div style="font-size:12.5px; color:var(--n-500);">La maison est vide ce soir.</div></div>'}
+        }).join('') || `<div class="ht-empty ht-folio-empty">
+          <span class="ht-folio-empty-icon"><i data-lucide="clipboard-list"></i></span>
+          <b>Aucun folio ouvert</b>
+          <p>Un folio s’ouvre automatiquement au check-in et regroupe la chambre, les extras et la taxe de séjour jusqu’au départ.</p>
+          <div class="ht-folio-empty-actions">
+            <button class="ht-btn primary" data-ht-empty-view="reception"><i data-lucide="layout-dashboard"></i>Aller à la réception</button>
+            <button class="ht-btn secondary" data-ht-empty-view="chambres"><i data-lucide="building-2"></i>Voir les chambres</button>
+          </div>
+        </div>`}
       </div>`;
     panel.onclick = (e) => {
+      const jump = e.target.closest('[data-ht-empty-view]');
+      if (jump) { switchView(jump.dataset.htEmptyView); return; }
       const b = e.target.closest('[data-ht-fo]');
       if (b) openFolioDetail(+b.dataset.htFo);
     };
