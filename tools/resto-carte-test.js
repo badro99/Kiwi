@@ -549,7 +549,7 @@ ok(/\.mx-og-ch\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:\s*48px minma
    main avant de lire, sinon il ne verrait jamais un seul bon. */
 const tick = () => new Promise((r) => setTimeout(r, 0));
 
-function runTickets(items, stations) {
+function runTickets(items, stations, order) {
   const jobs = [];
   const scope = {
     STATION_PALETTE, IS_DEMO: false,
@@ -568,7 +568,7 @@ function runTickets(items, stations) {
     ${extract(caisse, 'kdsKitchenId')}
     ${extract(caisse, 'kdsStationFor')}
     ${extract(caisse, 'printKitchenTickets')}
-    printKitchenTickets({ num: 7, sentAt: new Date(2026, 0, 1, 12, 5) }, ${JSON.stringify(items)});
+    printKitchenTickets(Object.assign({ num: 7, sentAt: new Date(2026, 0, 1, 12, 5) }, ${JSON.stringify(order || {})}), ${JSON.stringify(items)});
   `);
   fn(scope);
   return jobs;
@@ -581,6 +581,14 @@ const split = runTickets([
   { q: 1, n: 'Pastilla', note: '', stations: ['st_1', 'st_2'] },
 ], STS);
 const solo1 = runTickets([{ q: 1, n: 'Café noir', note: '', stations: ['st_2'] }], STS);
+const caisseTable = runTickets([{ q: 1, n: 'Tajine', stations: ['st_1'] }], STS,
+  { table: '12', opChannel: 'caisse' });
+const employeeTable = runTickets([{ q: 1, n: 'Tajine', stations: ['st_1'] }], STS,
+  { table: '7', opId: 'employee-7', opChannel: 'serveur' });
+const nfcTable = runTickets([{ q: 1, n: 'Tajine', stations: ['st_1'] }], STS,
+  { table: 'T4', opId: 'nfc-t4', opChannel: 'orderpro' });
+const takeawayTicket = runTickets([{ q: 1, n: 'Tajine', stations: ['st_1'] }], STS,
+  { type: 'takeaway' });
 const ticketChecks = tick().then(() => {
   eq(split.length, 2, 'deux postes concernés → deux bons, pas un fourre-tout');
   if (split.length === 2) {
@@ -594,6 +602,14 @@ const ticketChecks = tick().then(() => {
   }
   eq(solo1.length, 1, 'un seul poste concerné → un seul bon, comme avant');
   if (solo1.length === 1) eq(solo1[0].title, 'BAR', 'et il est adressé à ce poste');
+  eq(caisseTable[0] && caisseTable[0].table, 'Table 12',
+    'un bon envoyé depuis la caisse imprime sa table');
+  eq(employeeTable[0] && employeeTable[0].table, 'Table 7',
+    'un bon envoyé depuis l’application employé imprime sa table');
+  eq(nfcTable[0] && nfcTable[0].table, 'Table T4',
+    'un bon envoyé depuis le lien NFC/OrderPro imprime sa table');
+  eq(takeawayTicket[0] && takeawayTicket[0].table, '',
+    'un bon à emporter ne fabrique jamais de fausse table');
 });
 
 /* Une caisse SANS imprimante n'envoie rien et ne jette pas : l'écran cuisine

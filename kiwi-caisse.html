@@ -5391,7 +5391,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=442" defer></script>
+  <script src="assets/caisse-pwa.js?v=443" defer></script>
   <script src="assets/live-link.js?v=15" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -17336,6 +17336,16 @@
         const sentAt = order.sentAt instanceof Date ? order.sentAt : new Date(order.sentAt || Date.now());
         const jobAt = new Date((options && options.createdAt) || sentAt);
         const time = pad2HO(sentAt.getHours()) + ':' + pad2HO(sentAt.getMinutes());
+        /* Le numéro de table voyage déjà dans les trois chemins restaurant :
+           caisse locale (`sendTableToKitchen`), application employé et lien
+           NFC/OrderPro (`opIngest`). Il était perdu seulement à la dernière
+           frontière, au moment de construire le document ESC/POS. Le préfixe
+           lisible évite au passe de devoir traduire un numéro de commande en
+           table ; les bons à emporter gardent volontairement cette ligne vide. */
+        const rawTable = String((order && order.table) || '').trim();
+        const tableLabel = rawTable
+          ? (/^table(?:\s|$)/i.test(rawTable) ? rawTable : `Table ${rawTable}`)
+          : '';
         const fallback = kdsStationFor(null);
         const byStation = new Map();
         (items || []).filter(Boolean).forEach((it) => {
@@ -17361,6 +17371,7 @@
           payload: {
             title: String(names[sid] || 'Cuisine').toUpperCase(),
             station: sid,
+            table: tableLabel,
             order: '#' + (order.opNum != null ? order.opNum : order.num), time: time,
             items: byStation.get(sid),
           },
