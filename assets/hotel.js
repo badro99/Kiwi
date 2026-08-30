@@ -355,6 +355,11 @@
       .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 36) || 'type';
     return 'type:' + slug + ':' + String(stamp || cuStamp()).slice(-6);
   }
+  function cuFloorId(name, stamp) {
+    const slug = String(name || 'section').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 36) || 'section';
+    return 'floor:' + slug + ':' + String(stamp || cuStamp()).slice(-6);
+  }
   function cuDefaultTypes(now) {
     return [
       { id: 'type:chambre', name: 'Chambre', rate: null, updatedAt: now },
@@ -374,8 +379,16 @@
       floor: count > 8 ? 'Niveau ' + (Math.floor((n - 1) / 8) + 1) : 'Vos chambres',
       rate: null, status: 'libre', hk: 'clean', guest: null, meta: 'Libre · propre', updatedAt: now,
     };
+    const floorNames = [...new Set(Object.values(rooms).map((r) => r.floor))];
+    if (!floorNames.length) floorNames.push('Vos chambres');
+    const floors = Object.fromEntries(floorNames.map((name, order) => {
+      const id = cuFloorId(name, now + order);
+      Object.values(rooms).filter((r) => r.floor === name).forEach((r) => { r.floorId = id; });
+      return [id, { id, name, order, updatedAt: now + order }];
+    }));
     return {
-      v: 3, rooms, roomRecords: Object.values(rooms), roomTypes,
+      v: 4, rooms, roomRecords: Object.values(rooms), roomTypes, floors,
+      floorRecords: Object.values(floors),
       typeRecords: Object.values(roomTypes), folios: {}, baseRate: null,
       rateUpdatedAt: 0, sold: 0, updatedAt: now,
     };
@@ -413,6 +426,27 @@
       const name = String(x.typeName || x.type || 'Chambre').trim().toLocaleLowerCase('fr');
       return Object.values(roomTypes).find((t) => t.name.toLocaleLowerCase('fr') === name)?.id || Object.keys(roomTypes)[0];
     };
+    let floorRecords = Array.isArray(raw.floors) ? raw.floors : (Array.isArray(raw.floorRecords) ? raw.floorRecords : []);
+    if (!floorRecords.length) {
+      const names = [];
+      roomRecords.filter((x) => x && !x.deletedAt).forEach((x) => {
+        const name = String(x.floor || 'Vos chambres').trim() || 'Vos chambres';
+        if (!names.some((n) => n.toLocaleLowerCase('fr') === name.toLocaleLowerCase('fr'))) names.push(name);
+      });
+      if (!names.length) names.push('Vos chambres');
+      floorRecords = names.map((name, order) => ({ id: cuFloorId(name, order + 1), name, order, updatedAt: 0 }));
+    }
+    const floors = {};
+    floorRecords.forEach((x, index) => {
+      if (!x || x.deletedAt) return;
+      const id = String(x.id || cuFloorId(x.name, x.updatedAt));
+      floors[id] = { id, name: String(x.name || 'Vos chambres').trim().slice(0, 60) || 'Vos chambres', order: Number.isFinite(+x.order) ? +x.order : index, updatedAt: +x.updatedAt || 0 };
+    });
+    const findFloor = (x) => {
+      if (x.floorId && floors[x.floorId]) return x.floorId;
+      const name = String(x.floor || 'Vos chambres').trim().toLocaleLowerCase('fr');
+      return Object.values(floors).find((f) => f.name.toLocaleLowerCase('fr') === name)?.id || Object.keys(floors)[0];
+    };
     const rooms = {};
     roomRecords.forEach((x) => {
       if (!x || x.deletedAt) return;
@@ -422,7 +456,8 @@
         id: String(x.id || ('room:' + n)), n,
         typeId: findType(x),
         typeName: String(x.typeName || x.type || 'Chambre').slice(0, 60),
-        floor: String(x.floor || 'Vos chambres').slice(0, 60),
+        floorId: findFloor(x),
+        floor: String(x.floor || floors[findFloor(x)]?.name || 'Vos chambres').slice(0, 60),
         rate: x.rate != null && Number.isFinite(+x.rate) && +x.rate >= 0 ? +x.rate : null,
         status: ['libre', 'sale', 'hs', 'occ', 'depart', 'arrivee'].includes(x.status) ? x.status : 'libre',
         hk: String(x.hk || (x.status === 'sale' ? 'dirty' : 'clean')),
@@ -435,7 +470,8 @@
     const folioRows = Array.isArray(raw.folios) ? raw.folios : Object.values(raw.folios || {});
     folioRows.forEach((f) => { if (f && rooms[+f.room]) folios[+f.room] = f; });
     return {
-      v: 3, rooms, roomRecords: roomRecords.slice(), roomTypes, typeRecords: typeRecords.slice(), folios,
+      v: 4, rooms, roomRecords: roomRecords.slice(), roomTypes, typeRecords: typeRecords.slice(), floors,
+      floorRecords: floorRecords.slice(), folios,
       baseRate: raw.baseRate != null && Number.isFinite(+raw.baseRate) && +raw.baseRate >= 0 ? +raw.baseRate : null,
       rateUpdatedAt: +raw.rateUpdatedAt || 0,
       sold: Math.max(0, +raw.sold || 0), updatedAt: +raw.updatedAt || 0,
@@ -450,8 +486,11 @@
     const typeById = {};
     (st.typeRecords || []).forEach((t) => { if (t && t.id) typeById[t.id] = t; });
     Object.values(st.roomTypes || {}).forEach((t) => { typeById[t.id] = t; });
+    const floorById = {};
+    (st.floorRecords || []).forEach((f) => { if (f && f.id) floorById[f.id] = f; });
+    Object.values(st.floors || {}).forEach((f) => { floorById[f.id] = f; });
     return {
-      v: 3, rooms: Object.values(byId), roomTypes: Object.values(typeById), folios: Object.values(st.folios || {}),
+      v: 4, rooms: Object.values(byId), roomTypes: Object.values(typeById), floors: Object.values(floorById), folios: Object.values(st.folios || {}),
       baseRate: st.baseRate, rateUpdatedAt: st.rateUpdatedAt || 0,
       sold: st.sold || 0, updatedAt: st.updatedAt || 0,
     };
@@ -490,6 +529,17 @@
     };
     (Array.isArray(b.roomTypes) ? b.roomTypes : []).forEach(takeType);
     (Array.isArray(a.roomTypes) ? a.roomTypes : []).forEach(takeType);
+    const floors = {};
+    const takeFloor = (x) => {
+      if (!x) return;
+      const id = String(x.id || cuFloorId(x.name, x.updatedAt));
+      const old = floors[id];
+      const xt = Math.max(+x.updatedAt || 0, +x.deletedAt || 0);
+      const ot = old ? Math.max(+old.updatedAt || 0, +old.deletedAt || 0) : -1;
+      if (!old || xt >= ot) floors[id] = { ...x, id };
+    };
+    (Array.isArray(b.floors) ? b.floors : []).forEach(takeFloor);
+    (Array.isArray(a.floors) ? a.floors : []).forEach(takeFloor);
     const folios = {};
     const takeFolio = (f) => {
       if (!f || !f.room) return;
@@ -500,7 +550,7 @@
     (Array.isArray(a.folios) ? a.folios : []).forEach(takeFolio);
     const rateOwner = (+a.rateUpdatedAt || 0) >= (+b.rateUpdatedAt || 0) ? a : b;
     return {
-      v: 3, rooms: Object.values(rows), roomTypes: Object.values(types), folios: Object.values(folios),
+      v: 4, rooms: Object.values(rows), roomTypes: Object.values(types), floors: Object.values(floors), folios: Object.values(folios),
       baseRate: rateOwner.baseRate == null ? null : +rateOwner.baseRate,
       rateUpdatedAt: +rateOwner.rateUpdatedAt || 0,
       sold: Math.max(+a.sold || 0, +b.sold || 0), updatedAt: Math.max(+a.updatedAt || 0, +b.updatedAt || 0),
@@ -1260,6 +1310,8 @@
   function cuRoomBatchEditor(prefillFloor) {
     const types = cuTypes();
     const firstType = types[0]?.id || '';
+    const floors = cuFloorRows();
+    const selectedFloorId = floors.some((f) => f.id === prefillFloor) ? prefillFloor : floors[0]?.id || '';
     const m = K().modal({
       tag: 'CONFIGURATION RAPIDE', title: 'Ajouter plusieurs chambres',
       desc: 'Une seule configuration pour tout un étage, une aile ou une catégorie.', width: 680,
@@ -1271,7 +1323,7 @@
         <div class="hx-room-form hx-room-form-batch">
           <label class="hx-room-form-wide hx-room-number-field"><span>Numéros des chambres</span><input data-hx-room-numbers inputmode="numeric" autocomplete="off" placeholder="101-108, 110, 112"><small>Kiwi créera chaque numéro sans doublon.</small></label>
           <label><span>Type de chambre</span><select data-hx-room-type-id>${cuTypeOptions(firstType)}</select><small>Même catégorie et tarif pour ce lot.</small></label>
-          <label><span>Étage ou aile</span><input data-hx-room-floor maxlength="60" value="${esc(prefillFloor || '1er étage')}" placeholder="Ex. 1er étage, Patio"><small>Vous pourrez filtrer le plan avec ce nom.</small></label>
+          <label><span>Étage, aile ou section</span><select data-hx-room-floor-id>${floors.map((f) => `<option value="${esc(f.id)}" ${f.id === selectedFloorId ? 'selected' : ''}>${esc(f.name)}</option>`).join('')}</select><small>Gérez les noms et l’ordre depuis le plan.</small></label>
         </div>
         <div class="hx-batch-foot">
           <button class="hx-link-btn" type="button" data-action="hx-room-types">Gérer les types et tarifs</button>
@@ -1292,7 +1344,7 @@
       body: `<div class="hx-room-form">
         <label><span>Numéro</span><input data-hx-room-number type="number" inputmode="numeric" min="1" max="9999" value="${room.n}"></label>
         <label><span>Type</span><select data-hx-room-type-id>${cuTypeOptions(room.typeId)}</select></label>
-        <label><span>Étage / aile</span><input data-hx-room-floor maxlength="60" value="${esc(room.floor)}" placeholder="Ex. 1er étage, Patio"></label>
+        <label><span>Étage / aile</span><select data-hx-room-floor-id>${cuFloorRows().map((f) => `<option value="${esc(f.id)}" ${f.id === room.floorId ? 'selected' : ''}>${esc(f.name)}</option>`).join('')}</select></label>
         <label><span>État</span><select data-hx-room-status ${locked ? 'disabled' : ''}>
           <option value="libre" ${status === 'libre' ? 'selected' : ''}>Libre · propre</option>
           <option value="sale" ${status === 'sale' ? 'selected' : ''}>Libre · à nettoyer</option>
@@ -1347,16 +1399,53 @@
     m.el.querySelector('.kiwi-modal')?.classList.add('hx-hotel-modal');
     openModal = { el: m.el, close: m.close };
   }
+  function cuFloorRows() {
+    return Object.values(cuState().floors || {}).sort((a, b) => (+a.order || 0) - (+b.order || 0) || a.name.localeCompare(b.name, 'fr'));
+  }
+  function cuFloorsManager() {
+    const st = cuState();
+    const rows = cuFloorRows().map((f, index, list) => {
+      const count = Object.values(st.rooms).filter((r) => r.floorId === f.id).length;
+      return `<div class="hx-floor-manager-row">
+        <span class="hx-floor-manager-grip">⋮⋮</span>
+        <span class="hx-floor-manager-copy"><b>${esc(f.name)}</b><small>${count} chambre${count === 1 ? '' : 's'}</small></span>
+        <span class="hx-floor-manager-order">
+          <button data-action="hx-floor-move" data-arg="${esc(f.id)}:-1" ${index === 0 ? 'disabled' : ''} aria-label="Monter">↑</button>
+          <button data-action="hx-floor-move" data-arg="${esc(f.id)}:1" ${index === list.length - 1 ? 'disabled' : ''} aria-label="Descendre">↓</button>
+        </span>
+        <button class="hx-floor-manager-edit" data-action="hx-floor-edit" data-arg="${esc(f.id)}">Modifier</button>
+      </div>`;
+    }).join('');
+    const m = K().modal({
+      tag: 'ORGANISATION', title: 'Étages, ailes & sections',
+      desc: 'Renommez, réordonnez ou supprimez vos sections sans perdre les chambres.', width: 620,
+      body: `<div class="hx-floor-manager-list">${rows || '<p>Aucune section.</p>'}</div>
+        <button class="hx-type-add" type="button" data-action="hx-floor-new">+ Créer une section</button>`,
+    });
+    m.el.querySelector('.kiwi-modal')?.classList.add('hx-hotel-modal', 'hx-floors-modal');
+    openModal = { el: m.el, close: m.close };
+  }
+  function cuFloorEditor(id) {
+    const st = cuState();
+    const floor = id ? st.floors[id] : null;
+    const others = cuFloorRows().filter((f) => f.id !== id);
+    const count = floor ? Object.values(st.rooms).filter((r) => r.floorId === id).length : 0;
+    const m = K().modal({
+      tag: floor ? 'SECTION' : 'NOUVELLE SECTION', title: floor ? 'Modifier « ' + esc(floor.name) + ' »' : 'Créer une section',
+      desc: floor ? count + ' chambre' + (count === 1 ? '' : 's') + ' dans cette section.' : 'Ex. 1er étage, Patio, Aile Atlas…', width: 500,
+      body: `<div class="hx-room-form"><label class="hx-room-form-wide"><span>Nom affiché</span><input data-hx-floor-name maxlength="60" value="${esc(floor?.name || '')}" placeholder="Ex. 1er étage"></label></div>
+        ${floor && count && others.length ? `<label class="hx-floor-delete-target"><span>En cas de suppression, déplacer les chambres vers</span><select data-hx-floor-target>${others.map((f) => `<option value="${esc(f.id)}">${esc(f.name)}</option>`).join('')}</select></label>` : ''}
+        <div class="hx-room-form-actions">
+          ${floor ? `<button class="hx-btn warn" data-action="hx-floor-delete" data-arg="${esc(floor.id)}" ${count && !others.length ? 'disabled title="Créez une autre section avant de supprimer celle-ci"' : ''}>Supprimer</button>` : '<span></span>'}
+          <button class="hx-btn atlas" data-action="hx-floor-save" data-arg="${esc(floor?.id || 'new')}">Enregistrer</button>
+        </div>`,
+    });
+    m.el.querySelector('.kiwi-modal')?.classList.add('hx-hotel-modal');
+    openModal = { el: m.el, close: m.close };
+  }
   function cuFloors() {
     const st = cuState();
-    const nums = Object.keys(st.rooms).map(Number).sort((a, b) => a - b);
-    const groups = new Map();
-    nums.forEach((n) => {
-      const label = st.rooms[n].floor || 'Vos chambres';
-      if (!groups.has(label)) groups.set(label, []);
-      groups.get(label).push(n);
-    });
-    return [...groups].map(([lbl, rooms]) => ({ lbl, rooms }));
+    return cuFloorRows().map((f) => ({ id: f.id, lbl: f.name, rooms: Object.keys(st.rooms).map(Number).filter((n) => st.rooms[n].floorId === f.id).sort((a, b) => a - b) }));
   }
   function cuRoomStatus(room) {
     if (room.status === 'occ') return { key: 'occ', label: 'Occupée' };
@@ -1388,7 +1477,7 @@
       });
       if (!rooms.length) return '';
       return `<section class="hx-floor-section" data-hx-floor-section>
-        <div class="hx-floor-head"><div><b>${esc(f.lbl)}</b><span>${rooms.length} affichée${rooms.length === 1 ? '' : 's'}</span></div><button data-action="hx-room-add-floor" data-arg="${esc(f.lbl)}">+ Ajouter ici</button></div>
+        <div class="hx-floor-head"><div><b>${esc(f.lbl)}</b><span>${rooms.length} affichée${rooms.length === 1 ? '' : 's'}</span></div><div class="hx-floor-head-actions"><button data-action="hx-floor-edit" data-arg="${esc(f.id)}">Gérer</button><button data-action="hx-room-add-floor" data-arg="${esc(f.id)}">+ Ajouter ici</button></div></div>
         <div class="hx-rack">${rooms.map((r) => {
           const status = cuRoomStatus(r);
           const type = roomTypeOf(r.n);
@@ -1426,7 +1515,7 @@
       <div class="hx-room-kpis" style="--hx-kpi-count:${kpis.length}">${kpis.map(([key, cls, label, note]) => `<button class="${cls} ${cuRackFilter.status === key ? 'on' : ''}" data-action="hx-room-status" data-arg="${key}"><span>${label}</span><b>${counts[key]}</b><small>${note}</small></button>`).join('')}</div>
       <div class="hx-room-toolbar">
         ${compactProperty ? '<div class="hx-room-compact-hint">Touchez une chambre pour la vendre ou ouvrir son folio.</div>' : `<label class="hx-room-search"><span>⌕</span><input data-hx-room-search value="${esc(cuRackFilter.q)}" placeholder="Rechercher une chambre, un client…"><button data-action="hx-room-search">Rechercher</button></label>`}
-        <div class="hx-room-toolbar-actions"><button class="hx-btn ghost" data-action="hx-room-types">Gérer les catégories</button><button class="hx-btn atlas" data-action="hx-room-add">+ Ajouter des chambres</button></div>
+        <div class="hx-room-toolbar-actions"><button class="hx-btn ghost" data-action="hx-floors">Gérer les sections</button><button class="hx-btn ghost" data-action="hx-room-types">Gérer les catégories</button><button class="hx-btn atlas" data-action="hx-room-add">+ Ajouter des chambres</button></div>
       </div>
       ${floorRows.length > 1 ? `<div class="hx-floor-tabs">${floorTabs}</div>` : ''}
       ${floorSections}${noMatch}
@@ -1802,8 +1891,9 @@
       const raw = String(root?.querySelector('[data-hx-room-numbers]')?.value || '').trim();
       const numbers = cuParseRoomNumbers(raw);
       const typeId = String(root?.querySelector('[data-hx-room-type-id]')?.value || '');
-      const floor = String(root?.querySelector('[data-hx-room-floor]')?.value || '').trim() || 'Vos chambres';
+      const floorId = String(root?.querySelector('[data-hx-room-floor-id]')?.value || '');
       const st = cuState();
+      const floor = st.floors[floorId];
       if (!numbers.length) {
         toast('Ajoutez les numéros de chambres', { type: 'warn', desc: 'Exemple : 101-108, 110, 112.' });
         root?.querySelector('[data-hx-room-numbers]')?.focus();
@@ -1811,6 +1901,10 @@
       }
       if (!st.roomTypes[typeId]) {
         toast('Choisissez un type de chambre', { type: 'warn', desc: 'Vous pouvez créer vos propres types et tarifs.' });
+        return;
+      }
+      if (!floor) {
+        toast('Choisissez une section', { type: 'warn', desc: 'Créez vos étages et ailes depuis le plan.' });
         return;
       }
       const duplicates = numbers.filter((n) => st.rooms[n]);
@@ -1822,16 +1916,16 @@
       numbers.forEach((n, i) => {
         st.rooms[n] = {
           id: 'room:' + now.toString(36) + ':' + n, n, typeId,
-          typeName: st.roomTypes[typeId].name, floor: floor.slice(0, 60), rate: null,
+          typeName: st.roomTypes[typeId].name, floorId, floor: floor.name, rate: null,
           status: 'libre', hk: 'clean', guest: null, meta: 'Libre · propre', updatedAt: now + i,
         };
       });
       cuSave(st);
       openModal?.close?.();
       toast(numbers.length + ' chambre' + (numbers.length === 1 ? '' : 's') + ' ajoutée' + (numbers.length === 1 ? '' : 's'), {
-        type: 'success', desc: st.roomTypes[typeId].name + ' · ' + floor + ' · ' + numbers[0] + (numbers.length > 1 ? ' à ' + numbers[numbers.length - 1] : ''),
+        type: 'success', desc: st.roomTypes[typeId].name + ' · ' + floor.name + ' · ' + numbers[0] + (numbers.length > 1 ? ' à ' + numbers[numbers.length - 1] : ''),
       });
-      cuRackFilter.floor = floor;
+      cuRackFilter.floor = floor.name;
       cuRackFilter.status = 'all';
       cuRackFilter.q = '';
       rerender();
@@ -1842,7 +1936,7 @@
       const oldN = parseInt(arg, 10);
       const n = parseInt(root?.querySelector('[data-hx-room-number]')?.value || '', 10);
       const typeId = String(root?.querySelector('[data-hx-room-type-id]')?.value || '');
-      const floor = String(root?.querySelector('[data-hx-room-floor]')?.value || '').trim();
+      const floorId = String(root?.querySelector('[data-hx-room-floor-id]')?.value || '');
       const statusEl = root?.querySelector('[data-hx-room-status]');
       const status = statusEl ? statusEl.value : 'libre';
       const st = cuState();
@@ -1860,6 +1954,10 @@
         toast('Choisissez un type de chambre', { type: 'warn' });
         return;
       }
+      if (!st.floors[floorId]) {
+        toast('Choisissez une section', { type: 'warn' });
+        return;
+      }
       const prior = st.rooms[oldN];
       if (!prior) return;
       const active = prior && ['occ', 'depart', 'arrivee'].includes(prior.status);
@@ -1867,7 +1965,7 @@
       const now = cuStamp();
       const room = {
         ...prior, n, typeId, typeName: st.roomTypes[typeId].name,
-        floor: (floor || 'Vos chambres').slice(0, 60), rate: null, status: savedStatus,
+        floorId, floor: st.floors[floorId].name, rate: null, status: savedStatus,
         hk: savedStatus === 'sale' ? 'dirty' : savedStatus === 'libre' ? 'clean' : (prior?.hk || 'clean'),
         guest: prior?.guest || null,
         meta: active ? prior.meta : savedStatus === 'libre' ? 'Libre · propre' : savedStatus === 'sale' ? 'À remettre à blanc' : 'Hors-service',
@@ -1883,10 +1981,84 @@
       st.rooms[n] = room;
       cuSave(st);
       openModal?.close?.();
-      toast('Chambre ' + n + ' enregistrée', { type: 'success', desc: st.roomTypes[typeId].name + ' · ' + (floor || 'Vos chambres') });
+      toast('Chambre ' + n + ' enregistrée', { type: 'success', desc: st.roomTypes[typeId].name + ' · ' + st.floors[floorId].name });
       rerender();
     };
     handlers['hx-room-types'] = () => { if (isCustomHotel()) cuTypesManager(); };
+    handlers['hx-floors'] = () => { if (isCustomHotel()) cuFloorsManager(); };
+    handlers['hx-floor-new'] = () => { if (isCustomHotel()) cuFloorEditor(null); };
+    handlers['hx-floor-edit'] = (el, arg) => { if (isCustomHotel()) cuFloorEditor(String(arg || '')); };
+    handlers['hx-floor-save'] = (el, arg) => {
+      if (!isCustomHotel()) return;
+      const root = el.closest('.kiwi-modal');
+      const name = String(root?.querySelector('[data-hx-floor-name]')?.value || '').trim();
+      const st = cuState();
+      if (!name) {
+        toast('Donnez un nom à cette section', { type: 'warn', desc: 'Ex. 1er étage, Patio, Aile Atlas.' });
+        root?.querySelector('[data-hx-floor-name]')?.focus();
+        return;
+      }
+      const duplicate = Object.values(st.floors).find((f) => f.name.toLocaleLowerCase('fr') === name.toLocaleLowerCase('fr') && f.id !== arg);
+      if (duplicate) {
+        toast('Cette section existe déjà', { type: 'warn' });
+        return;
+      }
+      const now = cuStamp();
+      const id = arg === 'new' ? cuFloorId(name, now) : String(arg);
+      const order = arg === 'new' ? cuFloorRows().length : (st.floors[id]?.order || 0);
+      st.floors[id] = { ...(st.floors[id] || {}), id, name: name.slice(0, 60), order, updatedAt: now };
+      Object.values(st.rooms).filter((r) => r.floorId === id).forEach((r) => { r.floor = name.slice(0, 60); r.updatedAt = now; });
+      cuRackFilter.floor = 'all';
+      cuSave(st);
+      openModal?.close?.();
+      toast('Section « ' + name + ' » enregistrée', { type: 'success' });
+      rerender();
+    };
+    handlers['hx-floor-move'] = (el, arg) => {
+      if (!isCustomHotel()) return;
+      const value = String(arg || '');
+      const cut = value.lastIndexOf(':');
+      const id = value.slice(0, cut);
+      const rawDelta = value.slice(cut + 1);
+      const delta = parseInt(rawDelta, 10);
+      const st = cuState();
+      const list = cuFloorRows();
+      const index = list.findIndex((f) => f.id === id);
+      const target = index + delta;
+      if (index < 0 || target < 0 || target >= list.length) return;
+      const now = cuStamp();
+      const a = list[index], b = list[target], old = a.order;
+      a.order = b.order; b.order = old; a.updatedAt = now; b.updatedAt = now + 1;
+      cuSave(st);
+      openModal?.close?.();
+      if (el) cuFloorsManager();
+      rerender();
+    };
+    handlers['hx-floor-delete'] = (el, arg) => {
+      if (!isCustomHotel()) return;
+      const root = el.closest('.kiwi-modal');
+      const st = cuState();
+      const floor = st.floors[arg];
+      if (!floor) return;
+      const rooms = Object.values(st.rooms).filter((r) => r.floorId === arg);
+      const targetId = String(root?.querySelector('[data-hx-floor-target]')?.value || '');
+      if (rooms.length && !st.floors[targetId]) {
+        toast('Créez une autre section avant de supprimer celle-ci', { type: 'warn', desc: 'Aucune chambre ne sera supprimée automatiquement.' });
+        return;
+      }
+      const now = cuStamp();
+      if (rooms.length) rooms.forEach((r, index) => { r.floorId = targetId; r.floor = st.floors[targetId].name; r.updatedAt = now + index; });
+      const tombstone = { ...floor, updatedAt: now, deletedAt: now };
+      const records = st.floorRecords || (st.floorRecords = []);
+      const i = records.findIndex((f) => f && f.id === arg);
+      if (i >= 0) records[i] = tombstone; else records.push(tombstone);
+      delete st.floors[arg];
+      cuRackFilter.floor = 'all';
+      cuSave(st);
+      openModal?.close?.();
+      toast('Section supprimée', { type: 'success', desc: rooms.length ? rooms.length + ' chambre' + (rooms.length === 1 ? '' : 's') + ' déplacée' + (rooms.length === 1 ? '' : 's') + ' vers « ' + st.floors[targetId].name + ' ».' : 'La section était vide.' });
+      rerender();
+    };
     handlers['hx-room-type-new'] = () => { if (isCustomHotel()) cuTypeEditor(null); };
     handlers['hx-room-type-edit'] = (el, arg) => { if (isCustomHotel()) cuTypeEditor(String(arg || '')); };
     handlers['hx-room-type-save'] = (el, arg) => {

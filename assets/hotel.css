@@ -145,6 +145,20 @@
 .hx-floor-head b { font-size:13px; }
 .hx-floor-head span { color:var(--n-500); font-size:10.5px; }
 .hx-floor-head button { border:0; background:transparent; color:var(--atlas); padding:6px 2px 8px 10px; font:600 11px var(--sans); cursor:pointer; }
+.hx-floor-head .hx-floor-head-actions { padding:0; align-items:center; gap:4px; }
+.hx-floor-head-actions button:first-child { color:var(--n-500); }
+.hx-floor-manager-list { display:flex; flex-direction:column; gap:8px; }
+.hx-floor-manager-row { display:grid; grid-template-columns:24px minmax(0,1fr) auto auto; align-items:center; gap:10px; padding:11px 12px; border:1px solid var(--n-150,var(--n-200)); border-radius:14px; background:var(--surface,#fff); }
+.hx-floor-manager-grip { color:var(--n-500); letter-spacing:-3px; font-size:15px; }
+.hx-floor-manager-copy { min-width:0; display:flex; flex-direction:column; gap:2px; }
+.hx-floor-manager-copy b { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12.5px; }
+.hx-floor-manager-copy small { color:var(--n-500); font-size:10px; }
+.hx-floor-manager-order { display:flex; gap:4px; }
+.hx-floor-manager-order button,.hx-floor-manager-edit { min-width:32px; height:32px; border:1px solid var(--n-200); border-radius:9px; background:var(--n-50,#f7f8f7); color:var(--ink); cursor:pointer; font:600 11px var(--sans); }
+.hx-floor-manager-order button:disabled { opacity:.3; cursor:default; }
+.hx-floor-manager-edit { padding:0 11px; color:var(--atlas); background:var(--mint-soft); border-color:transparent; }
+.hx-floor-delete-target { display:flex; flex-direction:column; gap:7px; margin-top:14px; color:var(--n-600); font-size:11px; }
+.hx-floor-delete-target select { width:100%; min-height:44px; border:1px solid var(--n-200); border-radius:12px; background:var(--surface,#fff); padding:0 12px; color:var(--ink); font:500 12px var(--sans); }
 .hx-rack { grid-template-columns:repeat(auto-fill,minmax(154px,1fr)); gap:9px; }
 .hx-room { min-height:112px; padding:13px; border-color:var(--n-200); border-radius:14px; box-shadow:0 8px 24px -22px rgba(5,28,20,.45); }
 .hx-room:hover { border-color:var(--atlas); box-shadow:0 12px 28px -18px rgba(5,57,43,.36); }

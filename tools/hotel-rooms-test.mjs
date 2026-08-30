@@ -63,10 +63,12 @@ ok(typeof first.handlers['hx-room-batch-save'] === 'function' && typeof first.ha
 ok(Array.isArray(empty.roomTypes) && empty.roomTypes.length >= 2, 'editable room-type categories are available from the first setup');
 
 const roomTypeId = empty.roomTypes.find((t) => t.name === 'Chambre').id;
+const firstFloorId = empty.floors.find((f) => !f.deletedAt).id;
+first.handlers['hx-floor-save'](editor({ '[data-hx-floor-name]': '1er étage' }), firstFloorId);
 first.handlers['hx-room-batch-save'](editor({
   '[data-hx-room-numbers]': '101-105, 110',
   '[data-hx-room-type-id]': roomTypeId,
-  '[data-hx-room-floor]': '1er étage',
+  '[data-hx-room-floor-id]': firstFloorId,
 }));
 
 let doc = JSON.parse(first.data.get('kiwi:hotel-rooms:v2:vhotel'));
@@ -86,7 +88,7 @@ ok(savedType && savedType.name === 'Chambre Atlas' && savedType.rate === 890, 'a
 first.handlers['hx-room-save'](editor({
   '[data-hx-room-number]': 201,
   '[data-hx-room-type-id]': roomTypeId,
-  '[data-hx-room-floor]': 'Terrasse',
+  '[data-hx-room-floor-id]': firstFloorId,
   '[data-hx-room-status]': 'hs',
 }), '101');
 doc = JSON.parse(first.data.get('kiwi:hotel-rooms:v2:vhotel'));
@@ -110,32 +112,51 @@ ok(merged.rooms.some((r) => r.n === 201 && r.deletedAt), 'a newer deletion canno
 
 const large = boot();
 const largeTypeId = large.window.KiwiHotelRooms.current().roomTypes.find((t) => t.name === 'Chambre').id;
+const initialLargeFloorId = large.window.KiwiHotelRooms.current().floors.find((f) => !f.deletedAt).id;
 for (const [numbers, floor] of [
   ['101-125', '1er étage'],
   ['201-225', '2e étage'],
   ['301-325', '3e étage'],
   ['401-425', '4e étage'],
 ]) {
+  const floorId = floor === '1er étage' ? initialLargeFloorId : 'new';
+  if (floorId === 'new') large.handlers['hx-floor-save'](editor({ '[data-hx-floor-name]': floor }), 'new');
+  else large.handlers['hx-floor-save'](editor({ '[data-hx-floor-name]': floor }), floorId);
+  const savedFloorId = large.window.KiwiHotelRooms.current().floors.find((f) => !f.deletedAt && f.name === floor).id;
   large.handlers['hx-room-batch-save'](editor({
     '[data-hx-room-numbers]': numbers,
     '[data-hx-room-type-id]': largeTypeId,
-    '[data-hx-room-floor]': floor,
+    '[data-hx-room-floor-id]': savedFloorId,
   }));
 }
 let largeDoc = JSON.parse(large.data.get('kiwi:hotel-rooms:v2:vhotel'));
 ok(largeDoc.rooms.filter((r) => !r.deletedAt).length === 100 && new Set(largeDoc.rooms.map((r) => r.floor)).size === 4,
   'batch setup scales to 100 rooms across multiple floors without changing the data model');
+const secondFloor = largeDoc.floors.filter((f) => !f.deletedAt).find((f) => f.name === '2e étage');
+large.handlers['hx-floor-save'](editor({ '[data-hx-floor-name]': 'Aile Atlas' }), secondFloor.id);
+largeDoc = JSON.parse(large.data.get('kiwi:hotel-rooms:v2:vhotel'));
+ok(largeDoc.rooms.filter((r) => !r.deletedAt && r.floorId === secondFloor.id).every((r) => r.floor === 'Aile Atlas'),
+  'renaming a section updates every room in that section');
+large.handlers['hx-floor-move'](null, secondFloor.id + ':-1');
+largeDoc = JSON.parse(large.data.get('kiwi:hotel-rooms:v2:vhotel'));
+ok(largeDoc.floors.find((f) => f.id === secondFloor.id).order === 0,
+  'sections can be reordered and keep their new position');
+const thirdFloor = largeDoc.floors.filter((f) => !f.deletedAt).find((f) => f.name === '3e étage');
+large.handlers['hx-floor-delete'](editor({ '[data-hx-floor-target]': secondFloor.id }), thirdFloor.id);
+largeDoc = JSON.parse(large.data.get('kiwi:hotel-rooms:v2:vhotel'));
+ok(largeDoc.floors.some((f) => f.id === thirdFloor.id && f.deletedAt) && largeDoc.rooms.filter((r) => !r.deletedAt && r.n >= 301 && r.n <= 325).every((r) => r.floorId === secondFloor.id),
+  'deleting a section safely moves its rooms and writes a sync tombstone');
 ok(source.includes("const compactProperty = all.length <= 20") && source.includes('data-hx-room-search') && source.includes('hx-room-floor'),
   'the room plan progressively adds dense search and floor navigation only for larger properties');
 ok(source.includes('hx-room-section-tabs') && styles.includes('.hx-room-section-tabs') && styles.includes('.hx-floor-section { display:flex; flex-direction:column; gap:10px; padding:0; }'),
   'room plan and housekeeping use styled Kiwi tabs without inheriting generic section spacing');
-ok(dashboard.includes('assets/hotel.css?v=10') && serviceWorker.includes("'/assets/hotel.css?v=10'"),
+ok(dashboard.includes('assets/hotel.css?v=11') && serviceWorker.includes("'/assets/hotel.css?v=11'"),
   'the live page and offline shell request the same cache-busted hotel stylesheet');
 
 large.handlers['hx-room-save'](editor({
   '[data-hx-room-number]': 101,
   '[data-hx-room-type-id]': largeTypeId,
-  '[data-hx-room-floor]': '1er étage',
+  '[data-hx-room-floor-id]': initialLargeFloorId,
   '[data-hx-room-status]': 'sale',
 }), '101');
 largeDoc = JSON.parse(large.data.get('kiwi:hotel-rooms:v2:vhotel'));
