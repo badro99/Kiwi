@@ -349,7 +349,6 @@
         { nav: 'sejours',    label: 'Réservations & séjours', i18n: 'sidebar.hotel.sejours',                icon: ICONS.sejours },
         { nav: 'menage',     label: 'Ménage',                 i18n: 'sidebar.hotel.menage',                 icon: ICONS.menage },
         { nav: 'tarifs',     label: 'Tarifs & occupation',    i18n: 'sidebar.hotel.tarifs',                 icon: ICONS.tarifs },
-        { nav: 'hotes',      label: 'Clients & fidélité',     i18n: 'sidebar.hotel.hotes',                  icon: ICONS.hotes },
         { nav: 'folios',     label: 'Notes clients · folios', i18n: 'sidebar.hotel.folios',                 icon: ICONS.folios },
         { nav: 'canaux',     label: 'Canaux & OTA',           i18n: 'sidebar.hotel.canaux',                 icon: ICONS.canaux },
         { nav: 'hotelintel', label: 'Intelligence hôtel',     i18n: 'sidebar.hotel.intel',     tag: 'IA',   icon: ICONS.intel },
@@ -2076,6 +2075,23 @@
     relabelOrdersNav();
     const wrap = document.querySelector('[data-vertical-section]');
     if (!wrap) return;
+    /* Hotels use the same client book as every other Kiwi store. The former
+     * `hotes` entry opened a second, hotel-only mock page, so a guest captured
+     * at reception and a client visible to the owner could become unrelated
+     * records. Keep one shared entry below Rapport journalier, and give it the
+     * hotel-facing Hospitality+ name while this venue is active. */
+    const crmLabel = document.querySelector('.sidebar nav a[data-action="clients-directory"] span');
+    if (crmLabel) {
+      const activeType = currentVenue === 'fusion' ? '' : (typeOverride || safeVenueData(currentVenue)?.type || '');
+      if (activeType === 'hotel') {
+        crmLabel.removeAttribute('data-i18n');
+        crmLabel.textContent = 'Hospitality+';
+      } else {
+        crmLabel.setAttribute('data-i18n', 'dash.sidebar.crm');
+        const labels = { fr: 'Clients & Marketing', en: 'Customers & Marketing', ar: 'العملاء والتسويق' };
+        crmLabel.textContent = labels[subLang()] || labels.fr;
+      }
+    }
     // In fusion mode: replace the per-vertical menu with the aggregated
     // portfolio KPI block. Same fade-in/out as the regular swap.
     if (currentVenue === 'fusion') {

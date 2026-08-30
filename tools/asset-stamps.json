@@ -84,8 +84,8 @@
     "sha": "112638dbbb35294e"
   },
   "assets/caisse-pwa.js": {
-    "v": "444",
-    "sha": "8d1638bca3fc0fe8"
+    "v": "445",
+    "sha": "e9e9823a352c0d39"
   },
   "assets/caisse-skin.css": {
     "v": "3",
@@ -116,12 +116,16 @@
     "sha": "ec5fa6bd71818a12"
   },
   "assets/clients-book.js": {
-    "v": "9",
-    "sha": "7e89120067d2d75b"
+    "v": "10",
+    "sha": "6b257b5b2de1b441"
+  },
+  "assets/clients-directory.js": {
+    "v": "2",
+    "sha": "1fc1471a49a36689"
   },
   "assets/clients-store.js": {
-    "v": "3",
-    "sha": "7e2e843e504de4ae"
+    "v": "4",
+    "sha": "15e453bcc915c598"
   },
   "assets/cost.js": {
     "v": "3",
@@ -140,8 +144,8 @@
     "sha": "cd751f73c0180449"
   },
   "assets/dashboard-pwa.js": {
-    "v": "443",
-    "sha": "56178d106934b6ed"
+    "v": "444",
+    "sha": "6331d7442b939cab"
   },
   "assets/dashboard-startup-gate.js": {
     "v": "1",
@@ -176,8 +180,8 @@
     "sha": "74b872eee6e9256a"
   },
   "assets/employee-live.js": {
-    "v": "442",
-    "sha": "7ea97f7b19da622f"
+    "v": "443",
+    "sha": "fa2bb97ad17aea1f"
   },
   "assets/employee-planning.js": {
     "v": "8",
@@ -232,8 +236,8 @@
     "sha": "6e1ea25a6e02aae3"
   },
   "assets/hotel.js": {
-    "v": "11",
-    "sha": "23f5afc7974989a4"
+    "v": "12",
+    "sha": "ed53d0f4b369fe35"
   },
   "assets/i18n.js": {
     "v": "7",
@@ -441,7 +445,7 @@
   },
   "assets/pos-dispatch.js": {
     "v": "35",
-    "sha": "3cf93fb533504e77"
+    "sha": "171b7136910c827a"
   },
   "assets/pos-epicerie.css": {
     "v": "5",
@@ -484,12 +488,12 @@
     "sha": "3da516413a960632"
   },
   "assets/pos-hotel.css": {
-    "v": "4",
-    "sha": "4ca90423d2a6dcb5"
+    "v": "5",
+    "sha": "7952c17a4f8cc5f8"
   },
   "assets/pos-hotel.js": {
-    "v": "4",
-    "sha": "26b8113603097f49"
+    "v": "5",
+    "sha": "464120f3ed3fbc0f"
   },
   "assets/pos-inventory-count.js": {
     "v": "4",
@@ -692,8 +696,8 @@
     "sha": "dfa3b4d5ebb25d51"
   },
   "assets/venues.js": {
-    "v": "24",
-    "sha": "e2136a8ef7b205d7"
+    "v": "25",
+    "sha": "594af613f68878ef"
   },
   "assets/vexel-neon.js": {
     "v": "2047",

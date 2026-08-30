@@ -651,6 +651,7 @@ CREATE TABLE IF NOT EXISTS clients (
   city          TEXT NOT NULL DEFAULT '',
   address       TEXT NOT NULL DEFAULT '',
   notes         TEXT NOT NULL DEFAULT '',
+  hospitality   TEXT NOT NULL DEFAULT '{}', -- hotel identity, preferences, allergies
   points        INTEGER NOT NULL DEFAULT 0,
   stamps        INTEGER NOT NULL DEFAULT 0,
   visits        INTEGER NOT NULL DEFAULT 0,
@@ -1304,4 +1305,3 @@ CREATE TABLE IF NOT EXISTS inventory_count_events (
 );
 
 CREATE INDEX IF NOT EXISTS idx_inventory_count_events_merchant_count ON inventory_count_events (merchant, count_id, ts);
-

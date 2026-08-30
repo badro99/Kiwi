@@ -23,6 +23,13 @@
   function esc(x) { return String(x == null ? '' : x).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
   function fmt(n) { try { return (Math.round(n) || 0).toLocaleString('fr-FR'); } catch (_) { return String(Math.round(n) || 0); } }
   function paired() { try { return !!(window.KiwiCaissePairing && KiwiCaissePairing.isPaired && KiwiCaissePairing.isPaired()); } catch (_) { return false; } }
+  function hospitalityMode() {
+    try {
+      if (document.body.classList.contains('is-pos-hotel')) return true;
+      var p = window.KiwiCaissePairing && KiwiCaissePairing.pairedVenue && KiwiCaissePairing.pairedVenue();
+      return !!(p && String(p.type || p.subtype || '').toLowerCase() === 'hotel');
+    } catch (_) { return false; }
+  }
   // A visible caisse chrome we can hang a NATIVE "Clients" entry off of — every
   // pos vertical + pressing render a <nav class="XX-nav">, the main café/resto
   // caisse a .act-selector. When one is on screen we inject there (wireCaisseEntry)
@@ -134,6 +141,7 @@
       '.kcb-field input{width:100%;box-sizing:border-box;padding:13px 14px;border:1px solid rgba(10,15,13,.14);border-radius:12px;font-size:1rem;background:var(--surface);color:var(--ink,#0A0F0D);}',
       '.kcb-field input:focus{outline:none;border-color:var(--atlas,#0B6E4F);box-shadow:0 0 0 3px rgba(11,110,79,.12);}',
       '.kcb-field select.kcb-select{width:100%;box-sizing:border-box;padding:13px 14px;border:1px solid rgba(10,15,13,.14);border-radius:12px;font-size:1rem;background:var(--surface);color:var(--ink,#0A0F0D);}',
+      '.kcb-section{margin:18px 0 12px;padding-top:16px;border-top:1px solid rgba(10,15,13,.09);font-size:.72rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--atlas,#0B6E4F);}',
       '.kcb-grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}',
       '@media (max-width:520px){.kcb-grid2{grid-template-columns:1fr;}}',
       '.kcb-info{background:var(--surface);border:1px solid rgba(10,15,13,.08);border-radius:16px;padding:4px 16px;margin-bottom:14px;}',
@@ -204,7 +212,7 @@
       document.body.appendChild(b);
     }
     var n = KC.count();
-    b.innerHTML = ICON.users + '<span class="kcb-lbl">Clients</span>' + (n ? '<span class="kcb-badge">' + n + '</span>' : '');
+    b.innerHTML = ICON.users + '<span class="kcb-lbl">' + (hospitalityMode() ? 'Hospitality+' : 'Clients') + '</span>' + (n ? '<span class="kcb-badge">' + n + '</span>' : '');
   }
 
   /* ── root panel ────────────────────────────────────────────────────────── */
@@ -283,7 +291,7 @@
     positionRoot(root);
     markNav(entry);
     root.innerHTML =
-      '<div class="kcb-head"><h2>Carnet clients</h2><span class="kcb-prog">' + esc(progLabel()) + '</span></div>' +
+      '<div class="kcb-head"><h2>' + (hospitalityMode() ? 'Hospitality+' : 'Carnet clients') + '</h2><span class="kcb-prog">' + esc(progLabel()) + '</span></div>' +
       '<div class="kcb-tools"><div class="kcb-searchwrap">' + ICON.search +
         '<input class="kcb-search" id="kcb-q" inputmode="search" placeholder="Rechercher un nom ou 06…" value="' + esc(state.q) + '"></div>' +
         '<button class="kcb-add" id="kcb-add">' + ICON.userplus + '<span>Nouveau client</span></button></div>' +
@@ -360,9 +368,26 @@
   function openForm(client) {
     var c = client || {};
     var editing = !!client;
+    var hotel = hospitalityMode();
+    var h = c.hospitality || {};
+    var hospitalityFields = hotel ?
+      '<div class="kcb-section">Profil hôtelier</div>' +
+      '<div class="kcb-grid2">' +
+        '<div class="kcb-field"><label>Type de pièce</label><select id="kcb-f-doc-type" class="kcb-select">' +
+          ['', 'Passeport', 'CIN', 'Carte de séjour', 'Autre'].map(function (v) { return '<option value="' + esc(v) + '"' + (h.documentType === v ? ' selected' : '') + '>' + esc(v || 'Sélectionner') + '</option>'; }).join('') + '</select></div>' +
+        '<div class="kcb-field"><label>Numéro passeport / ID</label><input id="kcb-f-doc-number" value="' + esc(h.documentNumber || '') + '" placeholder="N° du document" autocomplete="off"></div>' +
+      '</div>' +
+      '<div class="kcb-grid2">' +
+        '<div class="kcb-field"><label>Nationalité</label><input id="kcb-f-nationality" value="' + esc(h.nationality || '') + '" placeholder="Marocaine, française…" autocomplete="off"></div>' +
+        '<div class="kcb-field"><label>Langue préférée</label><input id="kcb-f-language" value="' + esc(h.preferredLanguage || '') + '" placeholder="Français, العربية…" autocomplete="off"></div>' +
+      '</div>' +
+      '<div class="kcb-field"><label>Préférences de chambre</label><input id="kcb-f-room" value="' + esc(h.roomPreferences || '') + '" placeholder="Étage calme, lit king, loin de l’ascenseur…" autocomplete="off"></div>' +
+      '<div class="kcb-field"><label>Préférences de repas</label><input id="kcb-f-food" value="' + esc(h.foodPreferences || '') + '" placeholder="Végétarien, petit-déjeuner salé, thé sans sucre…" autocomplete="off"></div>' +
+      '<div class="kcb-field"><label>Allergies</label><input id="kcb-f-allergies" value="' + esc(h.allergies || '') + '" placeholder="Arachides, gluten, aucune connue…" autocomplete="off"></div>' +
+      '<div class="kcb-field"><label>Besoins particuliers</label><input id="kcb-f-access" value="' + esc(h.accessibilityNeeds || '') + '" placeholder="Mobilité, lit bébé, accessibilité…" autocomplete="off"></div>' : '';
     sheet(
-      '<h3>' + (editing ? 'Modifier le client' : 'Nouveau client') + '</h3>' +
-      '<div class="kcb-sub">' + (editing ? esc(c.name || '') : 'Renseignez un maximum d’informations · elles nourrissent la fidélité et le marketing.') + '</div>' +
+      '<h3>' + (editing ? (hotel ? 'Modifier le profil' : 'Modifier le client') : (hotel ? 'Nouveau profil client' : 'Nouveau client')) + '</h3>' +
+      '<div class="kcb-sub">' + (editing ? esc(c.name || '') : (hotel ? 'Identité, préférences et attentions utiles pour le prochain séjour.' : 'Renseignez un maximum d’informations · elles nourrissent la fidélité et le marketing.')) + '</div>' +
       '<div class="kcb-field"><label>Nom complet</label><input id="kcb-f-name" value="' + esc(c.name || '') + '" placeholder="Prénom Nom" autocomplete="off"></div>' +
       '<div class="kcb-grid2">' +
         '<div class="kcb-field"><label>Téléphone</label><input id="kcb-f-phone" inputmode="tel" autocomplete="tel" value="' + esc(c.phone || '') + '" placeholder="06… / +33… / +49…"></div>' +
@@ -376,9 +401,11 @@
         '<div class="kcb-field"><label>Ville</label><input id="kcb-f-city" value="' + esc(c.city || '') + '" placeholder="Casablanca" autocomplete="off"></div>' +
         '<div class="kcb-field"><label>Adresse</label><input id="kcb-f-address" value="' + esc(c.address || '') + '" placeholder="Quartier, rue…" autocomplete="off"></div>' +
       '</div>' +
-      '<div class="kcb-field"><label>Notes</label><input id="kcb-f-notes" value="' + esc(c.notes || '') + '" placeholder="Préférences, tailles, allergies…" autocomplete="off"></div>' +
-      '<label class="kcb-consent"><input type="checkbox" id="kcb-f-consent" ' + (editing ? (c.consent ? 'checked' : '') : 'checked') + '>' +
-        '<span>Accepte les messages <b>WhatsApp / SMS</b> (offres, fidélité). Consentement requis · CNDP loi 09-08.</span></label>' +
+      hospitalityFields +
+      '<div class="kcb-field"><label>Notes internes</label><input id="kcb-f-notes" value="' + esc(c.notes || '') + '" placeholder="Informations utiles à l’équipe…" autocomplete="off"></div>' +
+      '<div class="kcb-section">Communication</div>' +
+      '<label class="kcb-consent"><input type="checkbox" id="kcb-f-consent" ' + (editing ? (c.consent ? 'checked' : '') : (hotel ? '' : 'checked')) + '>' +
+        '<span>Accepte les messages <b>WhatsApp / SMS</b> (offres, fidélité).' + (hotel ? ' Optionnel et distinct de la fiche de séjour.' : ' Consentement requis · CNDP loi 09-08.') + '</span></label>' +
       '<label class="kcb-consent" style="margin-top:8px"><input type="checkbox" id="kcb-f-consent-email" ' + (c.consentEmail ? 'checked' : '') + '>' +
         /* « emails marketing » d'un seul tenant : coupé en deux nœuds, l'anglais
            reconstruisait « Accepts marketing emails marketing ». */
@@ -399,7 +426,7 @@
       var consent = sh.querySelector('#kcb-f-consent').checked;
       if (!name && !phone) { toast('Renseignez au moins un nom ou un numéro'); return; }
       if (phone && window.KiwiPhone && !window.KiwiPhone.valid(phone)) { toast('Numéro invalide', 'Pour l’étranger, ajoutez + et l’indicatif pays.'); return; }
-      if (!consent) { toast('Le consentement est requis', 'Cochez la case WhatsApp / SMS pour enregistrer.'); return; }
+      if (!hotel && !consent) { toast('Le consentement est requis', 'Cochez la case WhatsApp / SMS pour enregistrer.'); return; }
       // dedup on phone when adding
       if (!editing && phone) {
         var dupe = KC.findByPhone(phone);
@@ -409,6 +436,12 @@
         id: editing ? c.id : '', name: name, phone: phone, email: email,
         birthday: val('#kcb-f-bday'), gender: val('#kcb-f-gender'), city: val('#kcb-f-city'),
         address: val('#kcb-f-address'), notes: val('#kcb-f-notes'),
+        hospitality: hotel ? {
+          documentType: val('#kcb-f-doc-type'), documentNumber: val('#kcb-f-doc-number'),
+          nationality: val('#kcb-f-nationality'), preferredLanguage: val('#kcb-f-language'),
+          roomPreferences: val('#kcb-f-room'), foodPreferences: val('#kcb-f-food'),
+          allergies: val('#kcb-f-allergies'), accessibilityNeeds: val('#kcb-f-access'),
+        } : (c.hospitality || {}),
         consent: consent, consentEmail: sh.querySelector('#kcb-f-consent-email').checked,
       });
       closeSheet(); renderList(); ensureChip();
@@ -440,11 +473,20 @@
         '<button class="kcb-big" id="kcb-rec" style="flex:1;justify-content:center">' + ICON.plus + '+ 1 <span>' + esc(unit) + '</span></button></div></div>';
     }
     var infoRows = [];
+    var hotel = hospitalityMode();
+    var h = c.hospitality || {};
     if (c.email) infoRows.push(['Email', c.email]);
     if (c.city) infoRows.push(['Ville', c.city]);
     if (c.address) infoRows.push(['Adresse', c.address]);
     if (c.birthday) infoRows.push(['Anniversaire', c.birthday]);
     if (c.gender) infoRows.push(['Genre', c.gender]);
+    if (hotel && h.nationality) infoRows.push(['Nationalité', h.nationality]);
+    if (hotel && (h.documentType || h.documentNumber)) infoRows.push(['Passeport / ID', [h.documentType, h.documentNumber].filter(Boolean).join(' · ')]);
+    if (hotel && h.preferredLanguage) infoRows.push(['Langue préférée', h.preferredLanguage]);
+    if (hotel && h.roomPreferences) infoRows.push(['Préférences chambre', h.roomPreferences]);
+    if (hotel && h.foodPreferences) infoRows.push(['Préférences repas', h.foodPreferences]);
+    if (hotel && h.allergies) infoRows.push(['Allergies', h.allergies]);
+    if (hotel && h.accessibilityNeeds) infoRows.push(['Besoins particuliers', h.accessibilityNeeds]);
     if (c.notes) infoRows.push(['Notes', c.notes]);
     var consentTxt = [c.consent ? 'WhatsApp/SMS' : '', c.consentEmail ? 'Email' : ''].filter(Boolean).join(' · ');
     infoRows.push(['Consentement', consentTxt || 'Aucun']);
@@ -462,7 +504,7 @@
       '<div class="kcb-stat"><div class="kcb-progtxt">' + progTxt + '</div>' +
         '<div class="kcb-progwrap"><div class="kcb-progbar" style="width:' + Math.round(prog * 100) + '%"></div></div></div>' +
       '<div class="kcb-kpis">' +
-        '<div class="kcb-kpi"><div class="v">' + (c.visits || 0) + '</div><div class="l">Visites</div></div>' +
+        '<div class="kcb-kpi"><div class="v">' + (c.visits || 0) + '</div><div class="l">' + (hotel ? 'Séjours' : 'Visites') + '</div></div>' +
         '<div class="kcb-kpi"><div class="v">' + fmt(c.spend) + '</div><div class="l">Dépensé (MAD)</div></div>' +
         // « 3 j » et non « 3j » : l'abréviation doit être un mot à part pour se
         // traduire — collée au nombre elle se relisait « j3 » en arabe.
@@ -542,6 +584,7 @@
     // 1) vertical rails — pos-* and pressing.
     var navs = document.querySelectorAll('nav[class$="-nav"]');
     Array.prototype.forEach.call(navs, function (nav) {
+      var entryLabel = hospitalityMode() ? 'Hospitality+' : 'Clients';
       var buttons = nav.querySelectorAll('button, a');
       if (!buttons.length) return;
       var existing = Array.prototype.filter.call(buttons, function (b) {
@@ -552,10 +595,11 @@
         existing.setAttribute('data-kcb-redirect', '1');
         existing.addEventListener('click', function (e) { e.preventDefault(); e.stopImmediatePropagation(); open(existing); }, true);
       } else {
-        if (nav.querySelector('[data-kcb-navitem]')) return;
+        var injected = nav.querySelector('[data-kcb-navitem]');
+        if (injected) { var label = injected.querySelector('span'); if (label) label.textContent = entryLabel; return; }
         var sample = buttons[0];
         var cls = sample.className.replace(/\b(on|is-on|active|is-active|sel|selected)\b/g, '').replace(/\s+/g, ' ').trim();
-        nav.appendChild(makeItem(sample.tagName.toLowerCase(), cls, 'Clients'));
+        nav.appendChild(makeItem(sample.tagName.toLowerCase(), cls, entryLabel));
       }
     });
     // 2) the main café/resto caisse — .rail-links.

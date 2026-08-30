@@ -3,7 +3,7 @@
  *
  * Pages (sidebar · VERTICAL_SECTIONS.hotel in venues.js):
  *   Réception · Plan des chambres · Réservations & séjours (tape chart) ·
- *   Ménage · Tarifs & occupation · Clients & fidélité · Folios ·
+ *   Ménage · Tarifs & occupation · Folios ·
  *   Canaux & OTA · Intelligence hôtel
  *
  * The folio engine is the strategic core: restaurant (POS) and hammam (spa)
@@ -1859,9 +1859,10 @@
     handlers['nav-tarifs'] = () => cu()
       ? page('tarifs', 'Tarifs & occupation', 'Tarif de base · ADR, RevPAR et IA s\'activent avec vos nuitées', cuTarifsBody)
       : page('tarifs', 'Tarifs & occupation', 'ADR · RevPAR · calendrier tarifaire propriétaire + suggestions IA', tarifsBody);
-    handlers['nav-hotes'] = () => cu()
-      ? page('hotes', 'Clients & fidélité', vName() + ' · vos fiches clients se créent au premier séjour', cuHotesBody)
-      : page('hotes', 'Clients & fidélité', 'Reconnaissance des habitués · préférences · valeur vie · mix nationalités', hotesBody);
+    /* Backward-compatible alias for old bookmarks only. The hotel-specific
+     * guest mock was removed from the sidebar; Hospitality+ is the real shared
+     * client directory used by dashboard and reception caisse. */
+    handlers['nav-hotes'] = () => handlers['clients-directory']?.();
     handlers['nav-folios'] = () => cu()
       ? page('folios', 'Notes clients · folios', 'Chambres + extras + taxe de séjour, une seule note par séjour', cuFoliosBody)
       : page('folios', 'Notes clients · folios', 'Chambres + restaurant + hammam + taxe de séjour, une seule note par séjour', foliosBody);

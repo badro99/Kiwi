@@ -46,6 +46,22 @@
   var SEG_LBL = function (T, id) { return T.tag[id] || id; };
   var DAY = 86400000;
   function daysSince(ts) { return ts ? Math.floor((Date.now() - ts) / DAY) : Infinity; }
+  function hospitalityMode() {
+    try {
+      var V = window.KiwiVenue;
+      var d = V && V.getCurrentVenueData && V.getCurrentVenueData();
+      var type = (V && V.getVenueType && V.getVenueType()) || (d && (d.type || d.kind)) || '';
+      return String(type).toLowerCase() === 'hotel';
+    } catch (_) { return false; }
+  }
+  var HOTEL = {
+    fr: { title: 'Hospitality+', sub: 'Chaque séjour enrichit une seule fiche client · identité, préférences et attention personnalisée.', empty: 'Aucun client · créez la première fiche depuis la caisse.',
+      nationality: 'Nationalité', identity: 'Passeport / ID', language: 'Langue', room: 'Préférences chambre', food: 'Préférences repas', allergies: 'Allergies', access: 'Besoins particuliers', stays: 'Séjours' },
+    en: { title: 'Hospitality+', sub: 'Every stay enriches one guest profile · identity, preferences and personalised care.', empty: 'No guests yet · create the first profile from the till.',
+      nationality: 'Nationality', identity: 'Passport / ID', language: 'Language', room: 'Room preferences', food: 'Food preferences', allergies: 'Allergies', access: 'Accessibility needs', stays: 'Stays' },
+    ar: { title: 'Hospitality+', sub: 'كل إقامة تثري ملف ضيف واحداً · الهوية والتفضيلات والعناية الشخصية.', empty: 'لا يوجد ضيوف بعد · أنشئ أول ملف من الصندوق.',
+      nationality: 'الجنسية', identity: 'جواز السفر / الهوية', language: 'اللغة', room: 'تفضيلات الغرفة', food: 'تفضيلات الطعام', allergies: 'الحساسيات', access: 'احتياجات خاصة', stays: 'الإقامات' },
+  };
 
   // Demo directory — shown only when there's no real/paired store (pitch demo).
   var DEMO = [
@@ -85,7 +101,7 @@
     if (KCl && KCl.hasBook && KCl.hasBook() && (KCl.count() > 0 || isRealTenant())) {
       var rows = KCl.list().map(function (c) {
         return { id: c.id, name: c.name, phone: c.phone, email: c.email, city: c.city, address: c.address,
-          birthday: c.birthday, gender: c.gender, notes: c.notes, visits: c.visits, spend: c.spend,
+          birthday: c.birthday, gender: c.gender, notes: c.notes, hospitality: c.hospitality || {}, visits: c.visits, spend: c.spend,
           points: c.points, consent: c.consent, consentEmail: c.consentEmail, seg: KCl.segment(c),
           last: daysSince(c.lastSeen) === Infinity ? 0 : daysSince(c.lastSeen), firstSeen: daysSince(c.firstSeen) };
       });
@@ -137,6 +153,14 @@
     var body = rows.map(function (c) {
       return [c.name || '', c.phone || '', c.email || '', c.city || '', c.birthday || '', c.visits || 0, c.spend || 0, c.points || 0, SEG_LBL(T, c.seg), c.consent ? 'oui' : 'non', c.consentEmail ? 'oui' : 'non'];
     });
+    if (hospitalityMode()) {
+      var H = HOTEL[lang()] || HOTEL.fr;
+      head = head.concat([H.nationality, H.identity, H.language, H.room, H.food, H.allergies, H.access]);
+      body = body.map(function (r, i) {
+        var h = rows[i].hospitality || {};
+        return r.concat([h.nationality || '', [h.documentType, h.documentNumber].filter(Boolean).join(' · '), h.preferredLanguage || '', h.roomPreferences || '', h.foodPreferences || '', h.allergies || '', h.accessibilityNeeds || '']);
+      });
+    }
     var csvCell = function (v) {
       var s = String(v == null ? '' : v);
       // Excel/LibreOffice execute cells beginning with these characters. Client
@@ -156,6 +180,9 @@
 
   window.Kiwi.handlers['clients-directory'] = function () {
     var T = STR[lang()] || STR.fr;
+    var hotel = hospitalityMode();
+    var H = HOTEL[lang()] || HOTEL.fr;
+    if (hotel) T = Object.assign({}, T, { title: H.title, sub: H.sub, empty: H.empty });
     var data = load();
     var all = data.rows.slice().sort(function (a, b) { return (b.spend || 0) - (a.spend || 0); });
     var state = { q: '', seg: 'all' };
@@ -172,11 +199,26 @@
         return (c.name || '').toLowerCase().indexOf(q) >= 0 ||
           String(c.phone || '').replace(/\s/g, '').indexOf(q.replace(/\s/g, '')) >= 0 ||
           (c.email || '').toLowerCase().indexOf(q) >= 0 ||
-          (c.city || '').toLowerCase().indexOf(q) >= 0;
+          (c.city || '').toLowerCase().indexOf(q) >= 0 ||
+          (hotel && Object.keys(c.hospitality || {}).some(function (k) { return String(c.hospitality[k] || '').toLowerCase().indexOf(q) >= 0; }));
       });
     }
 
     function rowHtml(c) {
+      if (hotel) {
+        var h = c.hospitality || {};
+        var identity = [h.documentType, h.documentNumber].filter(Boolean).join(' · ') || T.none;
+        return '<tr data-cd-id="' + esc(c.id) + '">' +
+          '<td class="cd-nm">' + esc(c.name || T.none) + '</td>' +
+          '<td class="mono">' + esc(c.phone || T.none) + '</td>' +
+          '<td>' + esc(h.nationality || T.none) + '</td>' +
+          '<td class="mono">' + esc(identity) + '</td>' +
+          '<td>' + esc(h.roomPreferences || T.none) + '</td>' +
+          '<td class="' + (h.allergies ? '' : 'cd-muted') + '">' + esc(h.allergies || T.none) + '</td>' +
+          '<td class="mono">' + (c.visits || 0) + '</td>' +
+          '<td class="mono">' + fmt(c.spend) + '</td>' +
+          '<td class="cd-muted">' + T.ago(c.last) + '</td></tr>';
+      }
       return '<tr data-cd-id="' + esc(c.id) + '">' +
         '<td class="cd-nm">' + esc(c.name || T.none) + '</td>' +
         '<td class="mono">' + esc(c.phone || T.none) + '</td>' +
@@ -191,6 +233,9 @@
     function tableHtml() {
       var rows = filtered();
       if (!rows.length) return '<div class="cd-empty">' + esc(T.empty) + '</div>';
+      if (hotel) return '<div class="cd-tblwrap"><table class="cd-tbl"><thead><tr>' +
+        [T.th.name, T.th.phone, H.nationality, H.identity, H.room, H.allergies, H.stays, T.th.spend, T.th.last].map(function (label) { return '<th>' + esc(label) + '</th>'; }).join('') +
+        '</tr></thead><tbody>' + rows.map(rowHtml).join('') + '</tbody></table></div>';
       return '<div class="cd-tblwrap"><table class="cd-tbl"><thead><tr>' +
         ['name', 'phone', 'email', 'city', 'visits', 'spend', 'points', 'seg', 'last'].map(function (k) { return '<th>' + T.th[k] + '</th>'; }).join('') +
         '</tr></thead><tbody>' + rows.map(rowHtml).join('') + '</tbody></table></div>';
@@ -271,9 +316,17 @@
     if (!c || !window.Kiwi.modal) return;
     function row(k, v) { return v ? '<div class="cd-drow"><span class="k">' + esc(k) + '</span><span class="v">' + esc(v) + '</span></div>' : ''; }
     var consent = [c.consent ? T.consentWa : '', c.consentEmail ? T.consentEmail : ''].filter(Boolean).join(' · ') || T.none;
+    var hotel = hospitalityMode();
+    var H = HOTEL[lang()] || HOTEL.fr;
+    var h = c.hospitality || {};
+    var hospitalityRows = hotel ?
+      row(H.nationality, h.nationality) + row(H.identity, [h.documentType, h.documentNumber].filter(Boolean).join(' · ')) +
+      row(H.language, h.preferredLanguage) + row(H.room, h.roomPreferences) + row(H.food, h.foodPreferences) +
+      row(H.allergies, h.allergies) + row(H.access, h.accessibilityNeeds) : '';
     var body = '<div style="margin-top:4px">' +
       row(T.th.phone, c.phone) + row(T.th.email, c.email) + row(T.th.city, c.city) + row(T.address, c.address) +
       row(T.birthday, c.birthday) + row(T.gender, c.gender) +
+      hospitalityRows +
       '<div class="cd-drow"><span class="k">' + T.th.visits + ' · ' + T.th.spend + '</span><span class="v">' + (c.visits || 0) + ' · ' + fmt(c.spend) + ' MAD</span></div>' +
       '<div class="cd-drow"><span class="k">' + T.th.points + ' · ' + T.th.seg + '</span><span class="v">' + fmt(c.points) + ' · ' + SEG_LBL(T, c.seg) + '</span></div>' +
       row(T.notes, c.notes) +

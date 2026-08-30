@@ -461,7 +461,7 @@
 .ht-rs-actions .ht-btn { flex: 1 1 auto; padding: 12px 13px; font-size: 12.5px; }
 
 /* check-in */
-.modal.ht-checkin { width: 560px; padding: 24px 24px 20px; }
+.modal.ht-checkin { width: min(720px, calc(100vw - 28px)); max-height: 92vh; overflow-y: auto; padding: 24px 24px 20px; }
 .ht-ci-steps { display: flex; align-items: center; gap: 7px; margin-bottom: 14px; }
 .ht-ci-step {
   display: inline-flex; align-items: center; gap: 6px;
@@ -495,6 +495,15 @@
   margin-bottom: 7px; display: flex; align-items: center; gap: 6px;
 }
 .ht-ci-lbl .opt { text-transform: none; letter-spacing: 0; color: var(--ink-4); font-weight: 500; }
+.ht-ci-profile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ht-ci-profile-grid label { display: grid; gap: 5px; min-width: 0; }
+.ht-ci-profile-grid label > span { font-size: 11.5px; font-weight: 600; color: var(--ink-2); }
+.ht-ci-profile-grid label.wide { grid-column: 1 / -1; }
+.ht-ci-profile-grid select.ht-in { appearance: auto; }
+@media (max-width: 620px) {
+  .ht-ci-profile-grid { grid-template-columns: 1fr; }
+  .ht-ci-profile-grid label.wide { grid-column: auto; }
+}
 
 /* passport scan stage */
 .ht-scan-stage {

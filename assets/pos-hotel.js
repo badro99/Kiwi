@@ -727,7 +727,34 @@
     }
 
     const el = $('#ht-checkinm', root);
-    const ci = { scanned: false, police: null, caution: 'carte', cautionAmount: 0 };
+    const guestClient = (() => {
+      try {
+        const want = String(a.guest || '').trim().toLocaleLowerCase('fr');
+        return window.KiwiClients?.list?.().find((c) => String(c.name || '').trim().toLocaleLowerCase('fr') === want) || null;
+      } catch (_) { return null; }
+    })();
+    const gh = guestClient?.hospitality || {};
+    const ci = {
+      scanned: false, police: null, caution: 'carte', cautionAmount: 0,
+      profile: {
+        phone: guestClient?.phone || '', email: guestClient?.email || '',
+        documentType: gh.documentType || 'Passeport', documentNumber: gh.documentNumber || '',
+        nationality: gh.nationality || '', preferredLanguage: gh.preferredLanguage || '',
+        roomPreferences: gh.roomPreferences || '', foodPreferences: gh.foodPreferences || '',
+        allergies: gh.allergies || '', accessibilityNeeds: gh.accessibilityNeeds || '',
+      },
+    };
+
+    const readGuestProfile = () => {
+      const val = (id) => String($(id, el)?.value || '').trim();
+      ci.profile = {
+        phone: val('#ht-ci-phone'), email: val('#ht-ci-email'),
+        documentType: val('#ht-ci-doc-type'), documentNumber: val('#ht-ci-doc-number'),
+        nationality: val('#ht-ci-nationality'), preferredLanguage: val('#ht-ci-language'),
+        roomPreferences: val('#ht-ci-room-prefs'), foodPreferences: val('#ht-ci-food-prefs'),
+        allergies: val('#ht-ci-allergies'), accessibilityNeeds: val('#ht-ci-access'),
+      };
+    };
 
     const guestCard = () => `
       <div class="ht-ci-guest">
@@ -752,6 +779,21 @@
         ${steps(1)}
         ${guestCard()}
         ${a.note ? `<div class="ht-arr-note" style="margin:-4px 0 10px;"><i data-lucide="sticky-note"></i>${esc(a.note)}</div>` : ''}
+        <div class="ht-ci-f">
+          <div class="ht-ci-lbl">Hospitality+ <span class="opt">· informations utiles pendant et après le séjour</span></div>
+          <div class="ht-ci-profile-grid">
+            <label><span>Téléphone</span><input class="ht-in" id="ht-ci-phone" inputmode="tel" value="${esc(ci.profile.phone)}" placeholder="06… / +33…"></label>
+            <label><span>Email</span><input class="ht-in" id="ht-ci-email" type="email" value="${esc(ci.profile.email)}" placeholder="nom@email.com"></label>
+            <label><span>Type de pièce</span><select class="ht-in" id="ht-ci-doc-type">${['Passeport','CIN','Carte de séjour','Autre'].map((v) => `<option ${ci.profile.documentType === v ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
+            <label><span>Numéro passeport / ID</span><input class="ht-in" id="ht-ci-doc-number" value="${esc(ci.profile.documentNumber)}" placeholder="N° du document"></label>
+            <label><span>Nationalité</span><input class="ht-in" id="ht-ci-nationality" value="${esc(ci.profile.nationality)}" placeholder="Nationalité"></label>
+            <label><span>Langue préférée</span><input class="ht-in" id="ht-ci-language" value="${esc(ci.profile.preferredLanguage)}" placeholder="Français, العربية…"></label>
+            <label class="wide"><span>Préférences de chambre</span><input class="ht-in" id="ht-ci-room-prefs" value="${esc(ci.profile.roomPreferences)}" placeholder="Étage calme, lit king, loin de l’ascenseur…"></label>
+            <label class="wide"><span>Préférences de repas</span><input class="ht-in" id="ht-ci-food-prefs" value="${esc(ci.profile.foodPreferences)}" placeholder="Végétarien, petit-déjeuner salé, thé sans sucre…"></label>
+            <label><span>Allergies</span><input class="ht-in" id="ht-ci-allergies" value="${esc(ci.profile.allergies)}" placeholder="Aucune connue…"></label>
+            <label><span>Besoins particuliers</span><input class="ht-in" id="ht-ci-access" value="${esc(ci.profile.accessibilityNeeds)}" placeholder="Mobilité, lit bébé…"></label>
+          </div>
+        </div>
         <div class="ht-ci-f">
           <div class="ht-ci-lbl">Pièce d'identité <span class="opt">· passeport ou CIN</span></div>
           <div class="ht-scan-stage" id="ht-scan-stage">
@@ -779,7 +821,7 @@
         $('#ht-scan-result', el).innerHTML = `<div class="ht-scan-ok"><i data-lucide="check-circle-2"></i>Vérification locale · fiche ${ci.police}<span>Kiwi ne conserve pas la photo et n’effectue aucun envoi DGSN.</span></div>`;
         hotelOps?.save?.('identity-document-checked'); icons(); refreshNext();
       };
-      $('#ht-ci-next', el).onclick = () => { if (ci.scanned) step2(); };
+      $('#ht-ci-next', el).onclick = () => { if (ci.scanned) { readGuestProfile(); step2(); } };
       refreshNext();
     };
 
@@ -861,6 +903,23 @@
         charges: [], payments: a.acompte ? [['carte', a.acompte, 'Acompte à la réservation']] : [],
       });
       st.police = ci.police;
+      try {
+        if (window.KiwiClients?.upsert) {
+          const client = window.KiwiClients.upsert({
+            id: guestClient?.id || '', name: a.guest, phone: ci.profile.phone, email: ci.profile.email,
+            hospitality: {
+              documentType: ci.profile.documentType, documentNumber: ci.profile.documentNumber,
+              nationality: ci.profile.nationality, preferredLanguage: ci.profile.preferredLanguage,
+              roomPreferences: ci.profile.roomPreferences, foodPreferences: ci.profile.foodPreferences,
+              allergies: ci.profile.allergies, accessibilityNeeds: ci.profile.accessibilityNeeds,
+            },
+            consent: guestClient?.consent || false, consentEmail: guestClient?.consentEmail || false,
+            source: 'hotel-checkin',
+          });
+          st.clientId = client?.id || '';
+          if (client?.id) window.KiwiClients.recordPurchase(client.id, { amount: 0, visit: 1 });
+        }
+      } catch (_) {}
       /* L'acompte de réservation entre dans les livres ici : le check-out ne
          journalise que le SOLDE, donc sans cette ligne cet argent n'arrivait
          jamais au tableau de bord. La caution, elle, n'est pas une recette :

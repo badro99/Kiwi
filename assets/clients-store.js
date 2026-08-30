@@ -280,6 +280,7 @@
   }
   function blankClient() {
     return { id: '', name: '', phone: '', email: '', birthday: '', gender: '', city: '', address: '', notes: '', tags: [],
+      hospitality: {},
       points: 0, stamps: 0, visits: 0, spend: 0, consent: false, consentEmail: false,
       source: 'caisse', firstSeen: 0, lastSeen: 0, updated: 0 };
   }
@@ -309,12 +310,16 @@
       if (typeof input.consent === 'boolean') rec.consent = input.consent;
       if (typeof input.consentEmail === 'boolean') rec.consentEmail = input.consentEmail;
       if (Array.isArray(input.tags)) rec.tags = input.tags.slice();
+      if (input.hospitality && typeof input.hospitality === 'object') {
+        rec.hospitality = Object.assign({}, rec.hospitality || {}, input.hospitality);
+      }
     } else {
       rec = Object.assign(blankClient(), {
         id: 'c' + (++d.seq) + '_' + Math.abs(hash(book + (input.phone || input.name || d.seq))).toString(36),
         name: input.name || '', phone: normPhone(input.phone), email: input.email || '',
         birthday: input.birthday || '', gender: input.gender || '', city: input.city || '',
         address: input.address || '', notes: input.notes || '',
+        hospitality: input.hospitality && typeof input.hospitality === 'object' ? Object.assign({}, input.hospitality) : {},
         consent: !!input.consent, consentEmail: !!input.consentEmail,
         tags: Array.isArray(input.tags) ? input.tags.slice() : [],
         source: input.source || 'caisse', firstSeen: now(), lastSeen: now(),
@@ -518,9 +523,12 @@
 
   // map a D1 row (snake_case, 0/1) back onto a client record.
   function fromServer(r) {
+    var hospitality = {};
+    try { hospitality = JSON.parse(r.hospitality || '{}') || {}; } catch (_) {}
     return {
       id: r.id, name: r.name || '', phone: r.phone || '', email: r.email || '', birthday: r.birthday || '',
       gender: r.gender || '', city: r.city || '', address: r.address || '', notes: r.notes || '', tags: [],
+      hospitality: hospitality && typeof hospitality === 'object' && !Array.isArray(hospitality) ? hospitality : {},
       points: r.points || 0, stamps: r.stamps || 0, visits: r.visits || 0, spend: r.spend || 0,
       consent: !!r.consent, consentEmail: !!r.consent_email, source: r.source || 'caisse',
       firstSeen: r.first_seen || 0, lastSeen: r.last_seen || 0, updated: r.updated_ts || 0,

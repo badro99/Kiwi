@@ -46,6 +46,20 @@ const str = (v, n) => String(v == null ? '' : v).slice(0, n);
 const int = (v, max) => Math.max(0, Math.min(max, Math.round(Number(v) || 0)));
 const PAGE = 500;
 
+function hospitalityJson(value) {
+  const h = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  return JSON.stringify({
+    documentType: str(h.documentType, 24),
+    documentNumber: str(h.documentNumber, 80),
+    nationality: str(h.nationality, 80),
+    preferredLanguage: str(h.preferredLanguage, 40),
+    roomPreferences: str(h.roomPreferences, 500),
+    foodPreferences: str(h.foodPreferences, 500),
+    allergies: str(h.allergies, 500),
+    accessibilityNeeds: str(h.accessibilityNeeds, 500),
+  });
+}
+
 /* Bornage d'une fiche. Le carnet appartient au commerçant : on ne juge pas le
  * contenu, on borne la taille. Les champs sont énumérés parce que ce sont des
  * COLONNES — ici, contrairement à /api/store, en oublier un ne le fait pas
@@ -61,6 +75,7 @@ function sanitize(raw) {
     city: str(raw && raw.city, 80),
     address: str(raw && raw.address, 240),
     notes: str(raw && raw.notes, 1000),
+    hospitality: hospitalityJson(raw && raw.hospitality),
     points: int(raw && raw.points, 1e9),
     stamps: int(raw && raw.stamps, 1e6),
     visits: int(raw && raw.visits, 1e6),
@@ -120,7 +135,7 @@ export async function onRequestGet(context) {
 
   try {
     const res = await env.DB.prepare(
-      `SELECT id, name, phone, email, birthday, gender, city, address, notes,
+      `SELECT id, name, phone, email, birthday, gender, city, address, notes, hospitality,
               points, stamps, visits, spend, consent, consent_email, source,
               first_seen, last_seen, updated_ts, srv_ts, deleted
          FROM clients
@@ -165,14 +180,15 @@ export async function onRequestPost(context) {
   try {
     await env.DB.prepare(
       `INSERT INTO clients (merchant, id, name, phone, email, birthday, gender, city,
-                            address, notes, points, stamps, visits, spend, consent,
+                            address, notes, hospitality, points, stamps, visits, spend, consent,
                             consent_email, source, first_seen, last_seen, updated_ts,
                             srv_ts, deleted)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
        ON CONFLICT(merchant, id) DO UPDATE SET
          name = excluded.name, phone = excluded.phone, email = excluded.email,
          birthday = excluded.birthday, gender = excluded.gender, city = excluded.city,
-         address = excluded.address, notes = excluded.notes, points = excluded.points,
+         address = excluded.address, notes = excluded.notes, hospitality = excluded.hospitality,
+         points = excluded.points,
          stamps = excluded.stamps, visits = excluded.visits, spend = excluded.spend,
          consent = excluded.consent, consent_email = excluded.consent_email,
          source = excluded.source, first_seen = excluded.first_seen,
@@ -181,7 +197,7 @@ export async function onRequestPost(context) {
        WHERE excluded.updated_ts >= clients.updated_ts`
     ).bind(
       merchant, c.id, c.name, c.phone, c.email, c.birthday, c.gender, c.city,
-      c.address, c.notes, c.points, c.stamps, c.visits, c.spend, c.consent,
+      c.address, c.notes, c.hospitality, c.points, c.stamps, c.visits, c.spend, c.consent,
       c.consent_email, c.source, c.first_seen, c.last_seen, c.updated_ts, srv
     ).run();
   } catch (_) {
@@ -217,7 +233,7 @@ export async function onRequestDelete(context) {
     await env.DB.prepare(
       `UPDATE clients
           SET deleted = 1, name = '', phone = '', email = '', birthday = '',
-              gender = '', city = '', address = '', notes = '',
+              gender = '', city = '', address = '', notes = '', hospitality = '{}',
               updated_ts = CASE WHEN updated_ts >= ? THEN updated_ts + 1 ELSE ? END,
               srv_ts = ?
         WHERE merchant = ? AND id = ?`
