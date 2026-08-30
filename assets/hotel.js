@@ -1264,19 +1264,21 @@
       tag: 'CONFIGURATION RAPIDE', title: 'Ajouter plusieurs chambres',
       desc: 'Une seule configuration pour tout un étage, une aile ou une catégorie.', width: 680,
       body: `<div class="hx-batch-intro">
-          <span class="hx-batch-mark">✦</span>
-          <div><b>Ajoutez toutes les chambres similaires en une fois.</b><span>Exemple : <strong>101-108, 110, 112</strong></span></div>
+          <span class="hx-batch-mark">01</span>
+          <div><b>Indiquez simplement les numéros.</b><span>Une plage, des numéros séparés, ou les deux.</span></div>
+          <code>101–108, 110, 112</code>
         </div>
         <div class="hx-room-form hx-room-form-batch">
-          <label class="hx-room-form-wide"><span>Numéros des chambres</span><input data-hx-room-numbers inputmode="numeric" autocomplete="off" placeholder="Ex. 101-108, 110, 112"></label>
-          <label><span>Type de chambre</span><select data-hx-room-type-id>${cuTypeOptions(firstType)}</select></label>
-          <label><span>Étage / aile</span><input data-hx-room-floor maxlength="60" value="${esc(prefillFloor || '1er étage')}" placeholder="Ex. 1er étage, Patio"></label>
+          <label class="hx-room-form-wide hx-room-number-field"><span>Numéros des chambres</span><input data-hx-room-numbers inputmode="numeric" autocomplete="off" placeholder="101-108, 110, 112"><small>Kiwi créera chaque numéro sans doublon.</small></label>
+          <label><span>Type de chambre</span><select data-hx-room-type-id>${cuTypeOptions(firstType)}</select><small>Même catégorie et tarif pour ce lot.</small></label>
+          <label><span>Étage ou aile</span><input data-hx-room-floor maxlength="60" value="${esc(prefillFloor || '1er étage')}" placeholder="Ex. 1er étage, Patio"><small>Vous pourrez filtrer le plan avec ce nom.</small></label>
         </div>
         <div class="hx-batch-foot">
           <button class="hx-link-btn" type="button" data-action="hx-room-types">Gérer les types et tarifs</button>
           <button class="hx-btn atlas" type="button" data-action="hx-room-batch-save">Ajouter les chambres</button>
         </div>`,
     });
+    m.el.querySelector('.kiwi-modal')?.classList.add('hx-hotel-modal', 'hx-batch-modal');
     openModal = { el: m.el, close: m.close };
   }
   function cuRoomEditor(n) {
@@ -1303,6 +1305,7 @@
         <button class="hx-btn atlas" data-action="hx-room-save" data-arg="${room.n}">Enregistrer</button>
       </div>`,
     });
+    m.el.querySelector('.kiwi-modal')?.classList.add('hx-hotel-modal');
     openModal = { el: m.el, close: m.close };
   }
   function cuTypesManager() {
@@ -1319,9 +1322,11 @@
     const m = K().modal({
       tag: 'CATÉGORIES', title: 'Types de chambres',
       desc: 'Vos noms et tarifs maison. Toute modification s’applique aux chambres de ce type.', width: 620,
-      body: `<div class="hx-type-list">${rows}</div>
+      body: `<div class="hx-type-summary"><span>${cuTypes().length}</span><div><b>Catégories actives</b><small>Un seul réglage met à jour toutes les chambres concernées.</small></div></div>
+        <div class="hx-type-list">${rows}</div>
         <button class="hx-type-add" type="button" data-action="hx-room-type-new">+ Créer un type de chambre</button>`,
     });
+    m.el.querySelector('.kiwi-modal')?.classList.add('hx-hotel-modal', 'hx-types-modal');
     openModal = { el: m.el, close: m.close };
   }
   function cuTypeEditor(id) {
@@ -1339,6 +1344,7 @@
         <button class="hx-btn atlas" data-action="hx-room-type-save" data-arg="${esc(type?.id || 'new')}">Enregistrer</button>
       </div>`,
     });
+    m.el.querySelector('.kiwi-modal')?.classList.add('hx-hotel-modal');
     openModal = { el: m.el, close: m.close };
   }
   function cuFloors() {
@@ -1412,10 +1418,15 @@
       ['sale', 'dirty', 'À nettoyer', 'ménage'], ['hs', 'offline', 'Hors-service', 'maintenance'],
     ].filter(([key]) => !compactProperty || ['all', 'libre', 'occ', 'sale'].includes(key) || counts[key] > 0);
     return `<div class="hx-page hx-room-workspace ${compactProperty ? 'hx-room-compact-property' : ''}">
+      <div class="hx-room-section-tabs" role="tablist" aria-label="Espaces hôtel">
+        <button class="on" role="tab" aria-selected="true" data-action="nav-chambres"><span>Plan</span><small>${counts.all} chambres</small></button>
+        <button role="tab" aria-selected="false" data-action="nav-menage"><span>Ménage</span><small>${counts.sale} à nettoyer</small></button>
+        <button role="tab" aria-selected="false" data-action="nav-tarifs"><span>Tarifs</span><small>par catégorie</small></button>
+      </div>
       <div class="hx-room-kpis" style="--hx-kpi-count:${kpis.length}">${kpis.map(([key, cls, label, note]) => `<button class="${cls} ${cuRackFilter.status === key ? 'on' : ''}" data-action="hx-room-status" data-arg="${key}"><span>${label}</span><b>${counts[key]}</b><small>${note}</small></button>`).join('')}</div>
       <div class="hx-room-toolbar">
         ${compactProperty ? '<div class="hx-room-compact-hint">Touchez une chambre pour la vendre ou ouvrir son folio.</div>' : `<label class="hx-room-search"><span>⌕</span><input data-hx-room-search value="${esc(cuRackFilter.q)}" placeholder="Rechercher une chambre, un client…"><button data-action="hx-room-search">Rechercher</button></label>`}
-        <div class="hx-room-toolbar-actions"><button class="hx-btn ghost" data-action="hx-room-types">Types de chambres</button><button class="hx-btn ghost" data-action="nav-menage">Ménage <b>${counts.sale}</b></button><button class="hx-btn atlas" data-action="hx-room-add">+ Ajouter des chambres</button></div>
+        <div class="hx-room-toolbar-actions"><button class="hx-btn ghost" data-action="hx-room-types">Gérer les catégories</button><button class="hx-btn atlas" data-action="hx-room-add">+ Ajouter des chambres</button></div>
       </div>
       ${floorRows.length > 1 ? `<div class="hx-floor-tabs">${floorTabs}</div>` : ''}
       ${floorSections}${noMatch}
@@ -1433,7 +1444,12 @@
         <span class="hx-pill late">À FAIRE</span>
         <button class="hx-btn ghost" data-action="hx-hk-done" data-arg="${r.n}">Marquer propre</button>
       </div>`).join('');
-    return `<div class="hx-page">
+    return `<div class="hx-page hx-room-workspace">
+      <div class="hx-room-section-tabs" role="tablist" aria-label="Espaces hôtel">
+        <button role="tab" aria-selected="false" data-action="nav-chambres"><span>Plan</span><small>${Object.values(R()).length} chambres</small></button>
+        <button class="on" role="tab" aria-selected="true" data-action="nav-menage"><span>Ménage</span><small>${dirty.length} à nettoyer</small></button>
+        <button role="tab" aria-selected="false" data-action="nav-tarifs"><span>Tarifs</span><small>par catégorie</small></button>
+      </div>
       <div class="hx-room-kpis hx-hk-kpis">
         <button><span>À nettoyer</span><b>${dirty.length}</b><small>file active</small></button>
         <button class="ready"><span>Prêtes</span><b>${clean}</b><small>à vendre</small></button>

@@ -139,7 +139,7 @@
 .hx-floor-tabs button b { margin-left:5px; color:var(--n-500); font:600 10px var(--mono); }
 .hx-floor-tabs button.on { background:var(--atlas); border-color:var(--atlas); color:#fff; }
 .hx-floor-tabs button.on b { color:rgba(255,255,255,.65); }
-.hx-floor-section { display:flex; flex-direction:column; gap:10px; }
+.hx-floor-section { display:flex; flex-direction:column; gap:10px; padding:0; }
 .hx-floor-head { display:flex; align-items:center; justify-content:space-between; padding-top:3px; border-bottom:1px solid var(--n-100); }
 .hx-floor-head > div { display:flex; align-items:baseline; gap:8px; padding-bottom:8px; }
 .hx-floor-head b { font-size:13px; }
@@ -219,6 +219,243 @@
   .hx-type-card { grid-template-columns:38px minmax(0,1fr) 18px; }
   .hx-type-rate { grid-column:2; text-align:left; }
   .hx-rack { grid-template-columns:repeat(auto-fill,minmax(138px,1fr)); }
+}
+
+/* ── Hotel workspace polish v10 ────────────────────────────────────────
+   This section deliberately repeats a few structural properties. The hotel
+   module is loaded beside the generic page kit, so these rules make every
+   room control self-contained and prevent a stale/general button rule from
+   collapsing labels, values and helper text onto one line. */
+.hx-room-workspace {
+  width:100%;
+  gap:20px;
+}
+.hx-room-section-tabs {
+  width:max-content;
+  max-width:100%;
+  display:flex;
+  align-items:stretch;
+  gap:4px;
+  padding:4px;
+  border:1px solid var(--n-200);
+  border-radius:16px;
+  background:var(--n-100);
+  overflow-x:auto;
+  scrollbar-width:none;
+}
+.hx-room-section-tabs::-webkit-scrollbar { display:none; }
+.hx-room-section-tabs > button {
+  appearance:none;
+  min-width:122px;
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:2px;
+  padding:10px 14px;
+  border:0;
+  border-radius:12px;
+  background:transparent;
+  color:var(--n-600);
+  font-family:var(--sans);
+  text-align:left;
+  cursor:pointer;
+  transition:background 160ms,color 160ms,box-shadow 160ms,transform 160ms;
+}
+.hx-room-section-tabs > button:hover { color:var(--atlas); transform:translateY(-1px); }
+.hx-room-section-tabs > button.on {
+  background:var(--surface,#fff);
+  color:var(--ink);
+  box-shadow:0 6px 18px -14px rgba(5,57,43,.48),0 0 0 1px rgba(11,110,79,.08);
+}
+.hx-room-section-tabs > button span { display:block; font-size:12.5px; font-weight:700; }
+.hx-room-section-tabs > button small { display:block; color:var(--n-500); font-size:9.5px; font-weight:500; }
+.hx-room-section-tabs > button.on span { color:var(--atlas); }
+
+.hx-room-workspace .hx-room-kpis {
+  display:grid;
+  grid-template-columns:repeat(var(--hx-kpi-count,6),minmax(112px,1fr));
+  gap:10px;
+}
+.hx-room-workspace .hx-room-kpis > button {
+  appearance:none;
+  min-width:0;
+  min-height:96px;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  grid-template-rows:auto 1fr;
+  column-gap:12px;
+  align-items:start;
+  padding:14px 15px;
+  border:1px solid var(--n-200);
+  border-radius:16px;
+  background:var(--surface,#fff);
+  color:var(--ink);
+  text-align:left;
+}
+.hx-room-workspace .hx-room-kpis > button span {
+  min-width:0;
+  overflow:hidden;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+  color:var(--n-600);
+  font-size:11px;
+  font-weight:650;
+}
+.hx-room-workspace .hx-room-kpis > button b {
+  grid-column:2;
+  grid-row:1 / span 2;
+  align-self:center;
+  margin:0;
+  color:var(--ink);
+  font:650 27px/1 var(--mono);
+  letter-spacing:-.06em;
+}
+.hx-room-workspace .hx-room-kpis > button small {
+  align-self:end;
+  display:block;
+  color:var(--n-500);
+  font-size:10px;
+  line-height:1.25;
+}
+.hx-room-workspace .hx-room-kpis > button.on {
+  border-color:var(--atlas);
+  background:var(--atlas);
+  color:#fff;
+  box-shadow:0 14px 30px -22px rgba(5,57,43,.75);
+}
+.hx-room-workspace .hx-room-kpis > button.on span,
+.hx-room-workspace .hx-room-kpis > button.on small { color:rgba(255,255,255,.72); }
+.hx-room-workspace .hx-room-kpis > button.on b { color:#fff; }
+
+.hx-room-workspace .hx-room-toolbar {
+  min-height:56px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  padding:10px;
+  border:1px solid var(--n-200);
+  border-radius:16px;
+  background:var(--surface,#fff);
+  box-shadow:0 10px 30px -28px rgba(5,57,43,.55);
+}
+.hx-room-workspace .hx-room-compact-hint {
+  padding:0 8px;
+  color:var(--n-600);
+  font-size:12px;
+  line-height:1.45;
+}
+.hx-room-workspace .hx-room-toolbar-actions { display:flex; align-items:center; gap:8px; }
+.hx-room-workspace .hx-room-toolbar-actions .hx-btn { min-height:40px; display:inline-flex; align-items:center; justify-content:center; padding-inline:16px; }
+
+.hx-hotel-modal { overflow:hidden; }
+.hx-hotel-modal .kiwi-modal-head { padding:28px 30px 18px; }
+.hx-hotel-modal .kiwi-modal-head h3 { font-size:24px; line-height:1.15; }
+.hx-hotel-modal .kiwi-modal-body { padding:2px 30px 30px; }
+.hx-hotel-modal .kiwi-modal-close { top:20px; right:20px; }
+.hx-hotel-modal .hx-room-form label > span {
+  color:var(--ink);
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:.015em;
+}
+.hx-hotel-modal .hx-room-form label > small {
+  min-height:26px;
+  color:var(--n-500);
+  font-size:10px;
+  font-weight:500;
+  line-height:1.35;
+}
+.hx-hotel-modal .hx-room-form input,
+.hx-hotel-modal .hx-room-form select {
+  appearance:none;
+  min-height:50px;
+  border:1px solid var(--n-200);
+  border-radius:13px;
+  background:var(--surface,#fff);
+  color:var(--ink);
+  font-size:13.5px;
+  box-shadow:0 8px 24px -25px rgba(5,57,43,.7);
+}
+.hx-hotel-modal .hx-room-form select {
+  background-image:linear-gradient(45deg,transparent 50%,var(--n-500) 50%),linear-gradient(135deg,var(--n-500) 50%,transparent 50%);
+  background-position:calc(100% - 18px) 21px,calc(100% - 13px) 21px;
+  background-size:5px 5px,5px 5px;
+  background-repeat:no-repeat;
+  padding-right:34px;
+}
+.hx-batch-modal .kiwi-modal-body { padding-top:4px; }
+.hx-batch-intro {
+  display:grid;
+  grid-template-columns:42px minmax(0,1fr) auto;
+  gap:13px;
+  align-items:center;
+  margin-bottom:20px;
+  padding:15px;
+  border-color:rgba(11,110,79,.16);
+  background:linear-gradient(135deg,var(--mint-soft),var(--surface,#fff));
+}
+.hx-batch-mark { width:42px; height:42px; border-radius:13px; font:700 10px var(--mono); letter-spacing:.06em; }
+.hx-batch-intro code {
+  padding:8px 10px;
+  border:1px solid rgba(11,110,79,.13);
+  border-radius:9px;
+  background:rgba(255,255,255,.65);
+  color:var(--atlas);
+  font:600 10.5px var(--mono);
+  white-space:nowrap;
+}
+.hx-room-number-field input { font-family:var(--mono) !important; font-size:16px !important; letter-spacing:.01em; }
+.hx-batch-foot { padding-top:4px; border-top:1px solid var(--n-100); }
+
+.hx-type-summary {
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin-bottom:14px;
+  padding:12px 14px;
+  border-radius:14px;
+  background:var(--n-100);
+}
+.hx-type-summary > span {
+  width:40px;
+  height:40px;
+  display:grid;
+  place-items:center;
+  flex:none;
+  border-radius:12px;
+  background:var(--atlas);
+  color:#fff;
+  font:650 15px var(--mono);
+}
+.hx-type-summary b,.hx-type-summary small { display:block; }
+.hx-type-summary b { color:var(--ink); font-size:12px; }
+.hx-type-summary small { margin-top:3px; color:var(--n-500); font-size:10.5px; line-height:1.35; }
+.hx-type-list { gap:9px; }
+.hx-type-card { min-height:68px; padding:12px 13px; border-radius:15px; }
+.hx-type-card:hover { background:color-mix(in srgb,var(--mint-soft) 48%,var(--surface,#fff)); }
+.hx-type-copy b { font-size:13.5px; }
+.hx-type-rate { font-size:12.5px; }
+.hx-type-add { min-height:46px; margin-top:12px; background:color-mix(in srgb,var(--mint-soft) 45%,transparent); }
+.hx-type-add:hover { background:var(--mint-soft); }
+
+@media (max-width:1050px) {
+  .hx-room-workspace .hx-room-kpis { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .hx-room-workspace .hx-room-toolbar { align-items:stretch; flex-direction:column; }
+  .hx-room-workspace .hx-room-toolbar-actions { justify-content:flex-end; }
+}
+@media (max-width:720px) {
+  .hx-room-section-tabs { width:100%; box-sizing:border-box; }
+  .hx-room-section-tabs > button { min-width:108px; flex:1; padding:9px 11px; }
+  .hx-room-workspace .hx-room-kpis { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); overflow:visible; }
+  .hx-room-workspace .hx-room-kpis > button { min-width:0; min-height:86px; }
+  .hx-room-workspace .hx-room-toolbar-actions { display:grid; grid-template-columns:1fr 1fr; }
+  .hx-room-workspace .hx-room-toolbar-actions .hx-btn { width:100%; }
+  .hx-hotel-modal .kiwi-modal-head { padding:24px 22px 16px; }
+  .hx-hotel-modal .kiwi-modal-body { padding:0 22px 24px; }
+  .hx-batch-intro { grid-template-columns:38px minmax(0,1fr); }
+  .hx-batch-intro code { grid-column:1/-1; text-align:center; }
+  .hx-type-summary { align-items:flex-start; }
 }
 
 /* ── Tape chart (rooms × dates) ───────────────────────────────────────── */

@@ -6,6 +6,9 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const source = fs.readFileSync(path.join(ROOT, 'assets/hotel.js'), 'utf8');
+const styles = fs.readFileSync(path.join(ROOT, 'assets/hotel.css'), 'utf8');
+const dashboard = fs.readFileSync(path.join(ROOT, 'dashboard.html'), 'utf8');
+const serviceWorker = fs.readFileSync(path.join(ROOT, 'kiwi-sw.js'), 'utf8');
 let failures = 0;
 const ok = (condition, message) => {
   if (condition) console.log('  ✓ ' + message);
@@ -124,6 +127,10 @@ ok(largeDoc.rooms.filter((r) => !r.deletedAt).length === 100 && new Set(largeDoc
   'batch setup scales to 100 rooms across multiple floors without changing the data model');
 ok(source.includes("const compactProperty = all.length <= 20") && source.includes('data-hx-room-search') && source.includes('hx-room-floor'),
   'the room plan progressively adds dense search and floor navigation only for larger properties');
+ok(source.includes('hx-room-section-tabs') && styles.includes('.hx-room-section-tabs') && styles.includes('.hx-floor-section { display:flex; flex-direction:column; gap:10px; padding:0; }'),
+  'room plan and housekeeping use styled Kiwi tabs without inheriting generic section spacing');
+ok(dashboard.includes('assets/hotel.css?v=10') && serviceWorker.includes("'/assets/hotel.css?v=10'"),
+  'the live page and offline shell request the same cache-busted hotel stylesheet');
 
 large.handlers['hx-room-save'](editor({
   '[data-hx-room-number]': 101,
