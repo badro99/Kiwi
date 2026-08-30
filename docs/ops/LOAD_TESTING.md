@@ -50,6 +50,19 @@ KIWI_PROFILE=capacity k6 run --summary-export=capacity-local.json tests/load/k6/
 
 The database is SQLite in memory and disappears when the fixture server stops. Its ephemeral channel token and Shopify signing secret are generated on startup, returned only over loopback and never committed.
 
+## OrderPro pressure
+
+This is the actual customer OrderPro lifecycle, not the external-channel adapter. Each iteration sends two simultaneous copies of one checkout, proves they resolve to one ticket, then moves that ticket through cashier acceptance, kitchen-ready, served, and the customer's final status read.
+
+With the same local fixture server running:
+
+```sh
+npm run load:orderpro:smoke
+npm run load:orderpro:pressure
+```
+
+The pressure profile ramps through 10, 25, 50, 100 and 200 concurrent OrderPro customers. A `429` is counted separately as intentional queue backpressure; malformed responses, duplicate tickets, illegal transitions and lost final states fail the run. This proves route-code concurrency on the local in-memory database. It does not measure Cloudflare Functions or production D1 write capacity.
+
 ## Interpreting the result
 
 - `http_req_duration p(95)`: 95% of requests completed within this time.

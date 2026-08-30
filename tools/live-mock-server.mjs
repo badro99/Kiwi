@@ -357,6 +357,13 @@ const server = http.createServer(async (rq, rs) => {
     const sales = db._db.prepare(
       'SELECT COUNT(*) AS n FROM sales WHERE merchant = ? AND id LIKE ?'
     ).get(LOAD_MERCHANT, `k6-sale-${runId}-%`);
+    const orderPro = db._db.prepare(
+      `SELECT COUNT(*) AS n,
+              COUNT(DISTINCT client_ref) AS refs,
+              SUM(CASE WHEN status = 'served' THEN 1 ELSE 0 END) AS served,
+              SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending
+         FROM orders WHERE merchant = ? AND client_ref LIKE ?`
+    ).get(LOAD_MERCHANT, `k6-orderpro-${runId}-%`);
     const stockRow = db._db.prepare(
       "SELECT data, rev FROM store_docs WHERE merchant = ? AND feature = 'stock'"
     ).get(LOAD_MERCHANT);
@@ -370,6 +377,10 @@ const server = http.createServer(async (rq, rs) => {
     return rs.end(JSON.stringify({
       merchant: LOAD_MERCHANT,
       sales: Number(sales && sales.n) || 0,
+      orderProOrders: Number(orderPro && orderPro.n) || 0,
+      orderProRefs: Number(orderPro && orderPro.refs) || 0,
+      orderProServed: Number(orderPro && orderPro.served) || 0,
+      orderProPending: Number(orderPro && orderPro.pending) || 0,
       channelOrders: byChannel.kiwi || 0,
       shopifyOrders: byChannel.shopify || 0,
       stockAccepted: loadStockAccepted.get(runId) || 0,

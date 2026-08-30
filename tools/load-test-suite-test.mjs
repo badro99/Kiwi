@@ -7,6 +7,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (name) => fs.readFileSync(path.join(ROOT, name), 'utf8');
 const production = read('tests/load/k6/production-readonly.js');
 const local = read('tests/load/k6/local-operations.js');
+const orderPro = read('tests/load/k6/orderpro-pressure.js');
 const mock = read('tools/live-mock-server.mjs');
 const docs = read('docs/ops/LOAD_TESTING.md');
 let failures = 0;
@@ -27,6 +28,15 @@ ok('operational script refuses every non-loopback target',
   /127\\\.0\\\.0\\\.1\|localhost/.test(local) && /hard-locked to a loopback/.test(local));
 ok('operational script verifies the synthetic tenant before writes',
   /X-Kiwi-Load-Fixture/.test(local) && /amira-loadtest/.test(local));
+ok('OrderPro pressure test is loopback-only and verifies the synthetic tenant',
+  /127\\\.0\\\.0\\\.1\|localhost/.test(orderPro) && /X-Kiwi-Load-Fixture/.test(orderPro)
+    && /amira-loadtest/.test(orderPro));
+ok('OrderPro pressure test covers the real guest and staff lifecycle',
+  /\/api\/order`/.test(orderPro) && /\/api\/order\/queue/.test(orderPro)
+    && ['accepted', 'ready', 'served'].every((state) => orderPro.includes(`'${state}'`)));
+ok('OrderPro pressure teardown verifies uniqueness and an empty pending queue',
+  /orderProOrders === stats\.orderProRefs/.test(orderPro)
+    && /orderProPending === 0/.test(orderPro));
 ok('local fixture is opt-in and uses an in-memory synthetic merchant',
   /KIWI_LOAD_TEST/.test(mock) && /LOAD_MERCHANT = 'amira-loadtest'/.test(mock));
 ok('credential-bearing fixture server is bound to loopback',

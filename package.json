@@ -11,7 +11,9 @@
     "load:validate": "node tools/load-test-suite-test.mjs",
     "load:prod:smoke": "KIWI_PROFILE=smoke k6 run tests/load/k6/production-readonly.js",
     "load:prod:baseline": "KIWI_PROFILE=baseline k6 run tests/load/k6/production-readonly.js",
-    "load:local:smoke": "KIWI_PROFILE=smoke k6 run tests/load/k6/local-operations.js"
+    "load:local:smoke": "KIWI_PROFILE=smoke k6 run tests/load/k6/local-operations.js",
+    "load:orderpro:smoke": "KIWI_PROFILE=smoke k6 run tests/load/k6/orderpro-pressure.js",
+    "load:orderpro:pressure": "KIWI_PROFILE=pressure k6 run tests/load/k6/orderpro-pressure.js"
   },
   "engines": {
     "node": ">=18.0.0"
