@@ -36,6 +36,11 @@
 import { json, entitledMerchant } from '../auth/_lib.js';
 import { tenantFor } from './_private.js';
 import { poke } from './_live.js';
+import {
+  HOTEL_UNITS_FEATURE,
+  isHotelMerchantType,
+  validateHotelUnits,
+} from './_hotel-units.js';
 
 /* Les fonctionnalités qui ont le droit d'exister ici, et ce qu'on sait de leur
  * forme. La liste est FERMÉE : sans elle, n'importe quel client authentifié
@@ -56,6 +61,7 @@ import { poke } from './_live.js';
  * planning au mois pèsent lourd, et refuser l'écriture d'un commerçant parce
  * qu'il a trop de salariés serait absurde. */
 const FEATURES = {
+  [HOTEL_UNITS_FEATURE]: { keys: ['units'],                       max: 80000 },
   /* PAS la carte. `menu` est listé pour qu'un slug connu ne devienne pas un nom
    * inventé, mais assets/menu-catalog.js ne passe PAS par ici : il relit sa
    * carte par GET /api/menu?mine=1, la ligne que la page client lit déjà. Deux
@@ -318,6 +324,7 @@ function stripBriefing() { return { days: [] }; }
 
 /* Quelles fonctionnalités cachent un secret à qui ne l'écrit pas. */
 const REDACT = { team: stripTeamCodes, agentactions: stripAgentActions, briefing: stripBriefing };
+const OWNER_EDIT_FEATURES = new Set([HOTEL_UNITS_FEATURE]);
 
 /* Celui-ci tient-il la fiche, ou ne fait-il que la consulter ?
  * `entitledMerchant` SANS `allowTill` répond exactement à ça : la session du
@@ -332,6 +339,17 @@ async function editsRoster(request, env, merchant) {
   if (!merchant) return false;
   try { return (await entitledMerchant(request, env, merchant)) === merchant; }
   catch (_) { return false; }
+}
+
+async function isHotelMerchant(env, merchant) {
+  try {
+    const row = await env.DB.prepare('SELECT type FROM merchant_config WHERE merchant=?')
+      .bind(merchant)
+      .first();
+    return isHotelMerchantType(row && row.type);
+  } catch (_) {
+    return false;
+  }
 }
 
 function employeeAccessFromTeam(team, merchant) {
@@ -375,6 +393,9 @@ export async function onRequestGet(context) {
 
   const merchant = await tenantFor(request, env, url.searchParams.get('merchant'));
   if (!merchant) return json({ error: 'unauthorized' }, 401);
+  if (feature === HOTEL_UNITS_FEATURE && !(await isHotelMerchant(env, merchant))) {
+    return json({ feature, merchant, data: null, rev: 0 });
+  }
 
   try {
     const row = await env.DB.prepare(
@@ -416,6 +437,12 @@ export async function onRequestPost(context) {
   if (REDACT[feature] && !(await editsRoster(request, env, merchant))) {
     return json({ error: 'forbidden-feature', feature }, 403);
   }
+  if (OWNER_EDIT_FEATURES.has(feature) && !(await editsRoster(request, env, merchant))) {
+    return json({ error: 'forbidden-feature', feature }, 403);
+  }
+  if (feature === HOTEL_UNITS_FEATURE && !(await isHotelMerchant(env, merchant))) {
+    return json({ error: 'hotel-only' }, 403);
+  }
 
   const raw = (body && body.data) || null;
 
@@ -429,7 +456,7 @@ export async function onRequestPost(context) {
   // copie locale — il ne perd rien, il n'a simplement pas de copie serveur.
   if (!clean.ok) return json({ error: 'too-large', why: clean.why }, 413);
 
-  const text = JSON.stringify(clean.value);
+  let text = JSON.stringify(clean.value);
   if (text.length > FEATURES[feature].max) {
     return json({ error: 'too-large', why: 'byte-size', max: FEATURES[feature].max }, 413);
   }
@@ -449,21 +476,28 @@ export async function onRequestPost(context) {
   }
 
   const serverRev = (current && current.rev) || 0;
+  let mine = null;
+  try { mine = current ? JSON.parse(current.data) : null; } catch (_) { mine = null; }
 
   // Écriture basée sur une révision périmée : on ne l'applique PAS. On renvoie la
   // copie serveur pour que le client fusionne et repropose. Sans ça, deux
   // appareils ouverts en même temps se recouvrent l'un l'autre.
   if (serverRev && baseRev !== serverRev) {
-    let mine = null;
-    try { mine = JSON.parse(current.data); } catch (_) { mine = null; }
     return json({ error: 'stale', feature, rev: serverRev, data: mine }, 409);
+  }
+
+  if (feature === HOTEL_UNITS_FEATURE) {
+    const checked = validateHotelUnits(clean.value, mine);
+    if (!checked.ok) {
+      return json({ error: checked.error, detail: checked.detail }, checked.status || 422);
+    }
+    clean.value = checked.value;
+    text = JSON.stringify(clean.value);
   }
 
   // Un premier envoi VIDE ne doit pas effacer un document déjà en ligne : c'est
   // la signature d'un navigateur neuf qui pousse avant d'avoir hydraté.
   if (serverRev && isEmptyDoc(clean.value)) {
-    let mine = null;
-    try { mine = JSON.parse(current.data); } catch (_) { mine = null; }
     if (!isEmptyDoc(mine)) {
       return json({ error: 'refused-empty', feature, rev: serverRev, data: mine }, 409);
     }
