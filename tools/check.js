@@ -932,6 +932,11 @@ section('Whole-project regressions');
        qui n'existent pas, s'ouvrait sur « 0 / 0 articles » et ne disait rien.
        La suite vérifie d'abord le CONTRAT — chaque méthode appelée existe. */
     'pos-inventory-count-test.mjs',
+    /* Le locataire hôtelier de test : le socle sur lequel les douze phases de
+       l'économat s'appuieront, parce qu'il est interdit de muter un marchand
+       qui paie pour prouver une migration. Une fixture que rien ne garde
+       pourrit en silence et emporte toutes les suites qui s'y adossent. */
+    'hotel-seed-test.mjs',
     'formula-protocol-test.mjs',
     'trade-copy-test.mjs',
     'floor-accept-test.mjs',

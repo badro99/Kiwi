@@ -247,6 +247,43 @@ This is a refusal, not a warning, and it is the one place in this project where 
 system blocks an operational action. It is defensible because the fix is immediate and
 local: record the cost at the Économat, then confirm.
 
+### 3.4.2 The allocator is not location-aware · Phase 8 must fix this
+
+**"The source location's blended rate" is not what `allocateCost()` returns.** It has no
+idea locations exist:
+
+- `history(itemId)` in `assets/inventory-ledger.js` filters on `itemId` only · there is
+  no `locationId` filter.
+- `deriveLots()` in `assets/inventory-consumption.js` does not even carry `locationId`
+  into the lot objects it builds.
+
+So the allocator blends lots from **every** unit. Today that is harmless, because there
+is exactly one location. From Phase 2, when each unit gets its own, it is wrong.
+
+Measured on the seeded tenant (`tools/fixtures/hotel-tenant.mjs`), where the Économat
+holds 12 whisky across two lots at 120 and 150, and the rooftop bar holds 6 at 300:
+
+| Asked of the Économat | Returned | Reality |
+|---|---|---|
+| 6 | 120.00 | correct |
+| 12 | 135.00 | correct **by accident** · the Économat's lots happen to sort first |
+| 13 | 147.69 | **wrong** · now billing the rooftop bar's stock to the Économat |
+| 18 | 190.00 | the whole hotel blended together |
+
+The 12 is the dangerous number, not the 13: it is right only because of lot ordering, and
+a changed expiry date moves that boundary silently.
+
+**The fix is surgical and belongs to Phase 8:** carry `locationId` into the lot, let
+`history()` filter on it, and accept `{ locationId }` in `allocateCost()`. Roughly three
+small edits.
+
+**It is not a lot-tracking project** · §3.4 still stands, V1 stores one blended rate per
+transfer. This only makes that one rate come from the right shelf.
+
+`tools/hotel-seed-test.mjs` pins the current behaviour with the numbers above, so the day
+someone makes the allocator location-aware, that suite goes red and has to be rewritten
+deliberately rather than drifting.
+
 Approval does not move stock, but it does create a workflow commitment. To prevent two
 managers approving the same bottles, the server computes **available to promise** as
 on-hand less approved, unclosed quantities for that source location. Approval and its

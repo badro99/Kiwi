@@ -103,9 +103,40 @@ job in phase 2 is to stop passing `'principal'`, not to build location support.
 - Colours: existing tokens in `assets/tokens.css`. No new accents. Type is roman, never
   italic.
 - Gate every real-data path on `KiwiEnv.isReal()`, not on "is this a demo account".
-- Never mutate a paying merchant to prove a migration. Use a seeded, live-shaped hotel
-  tenant in staging; production verification is read-only until the hotel authorises a
-  controlled pilot.
+- Never mutate a paying merchant to prove a migration. Use the seeded, live-shaped hotel
+  tenant; production verification is read-only until the hotel authorises a controlled
+  pilot.
+
+### The seeded tenant already exists · use it
+
+`tools/fixtures/hotel-tenant.mjs` · **built and guarded before Phase 0**, because every
+phase's acceptance rests on it.
+
+```js
+import { createHotelTenant, UNITS } from './fixtures/hotel-tenant.mjs';
+const t = createHotelTenant();          // horodatage fixe, reproductible
+
+t.balanceAt('economat', 'whisky')       // 12 · solde d'UNE unité
+t.balanceHotel('whisky')                // 18 · le cumul de l'hôtel
+t.consumption.allocateCost('whisky', 12, null)   // 135.00 · taux mélangé FEFO
+t.put({ itemId, locationId, qty, reason, unitCost, occurredTs })  // ajouter un mouvement
+```
+
+It loads the **real** `inventory-ledger.js` and `inventory-consumption.js` through the
+real identity path (`KiwiEnv.isReal()` then `KiwiCloudDoc.currentSlug()`), so a test
+exercises the product rather than a mock of it.
+
+Five units (one Économat, three outlets, one department), each with an immutable
+`locationId`. Seeded deliberately for the cases the spec argues about: whisky in **two
+lots at different costs and expiries** so the blended FEFO rate is a real blend; the same
+whisky held by the rooftop bar **at a different cost**, which is how §3.4.2's
+cross-location bug is demonstrable; and `verrerie` with **no known cost**, so §3.4.1's
+refusal can be tested at all.
+
+Two properties matter and are asserted in `tools/hotel-seed-test.mjs`: **the fixture has
+no network** (`fetch` rejects) and **no live timers** (the ledger's background sync would
+otherwise hang the suite and try to POST the seeded movements to
+`/api/inventory/movements`).
 
 ---
 
@@ -353,9 +384,16 @@ read-modify-write. Build it in two steps instead:
 1. Resolve merchant, employee and permitted units from the request identity.
 2. Load the exact approved request revision and the hotel's confirmation policy.
 3. Refuse excess quantity, stale revision (`409`), wrong side, or missing source approval.
-4. Resolve the source cost: **the single blended FEFO rate `allocateCost()` already
-   returns.** Not per-lot layers · spec §3.4. If it returns `null`, **refuse the
+4. Resolve the source cost: **the single blended FEFO rate**, scoped to the source
+   location. Not per-lot layers · spec §3.4. If it resolves to `null`, **refuse the
    confirmation** and tell the employee the source has no known cost · spec §3.4.1.
+
+   **`allocateCost()` cannot do this yet · spec §3.4.2.** It blends lots from every unit,
+   because `history()` does not filter on `locationId` and `deriveLots()` does not carry
+   it. Make the allocator location-aware first · three small edits: carry `locationId`
+   into the lot, filter the history, accept `{ locationId }`. Then update
+   `tools/hotel-seed-test.mjs`, which deliberately pins today's cross-location numbers so
+   this change cannot land silently.
 5. **Reserve the cursor range in one statement:**
    `UPDATE inventory_sync_sequences SET last_ts = last_ts + N WHERE merchant = ?
    RETURNING last_ts`, with `N` = the number of movements. Derive each `srv_ts` from the
