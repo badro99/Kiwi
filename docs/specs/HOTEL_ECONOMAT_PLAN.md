@@ -3,7 +3,25 @@
 **Audience: the agent or engineer implementing `HOTEL_ECONOMAT.md`.**
 Read that document first. This one is how to build it without breaking a live product.
 
-Twelve phases. Each is independently shippable, independently testable, and ends green.
+Twelve phases. Each is independently testable. Phase 8 is the first point at which stock
+may cross units.
+
+**There is no feature-flag system in this repository.** `assets/entitlements.js` is a
+subscription paywall (`KiwiSubscription.active()`), not a per-feature gate, and
+`pos-dispatch.js` selects a vertical by store type. Do not invent a flag framework for
+this project.
+
+**The rollout gate is data.** A hotel with no configured units gets no new behaviour,
+because every surface in phases 0 to 7 reads the unit registry and must no-op when it is
+empty. That is the gate, and it is testable: *"a merchant with zero units is
+byte-identical to today"* belongs in every phase's suite up to 7. Phase 8 is where that
+stops being true, which is why it is the phase that needs a named pilot hotel rather than
+a flag flip.
+
+**Scope note.** Spec v1.2 is heavier than v1.1: a transactional D1 record set for
+requests, lines and fulfilment events, available-to-promise under concurrency control, a
+revision protocol, and append-only fulfilment projections. All of it is correctness, none
+of it optional, and any estimate carried over from v1.1 is low.
 **A later phase must not start until the preceding phase's stock behaviour is verified
 against real data.** This is not a style preference: phases 3 to 8 each write to a ledger
 that carries live merchant money, and a wrong movement is not a rendering bug.
@@ -58,11 +76,18 @@ job in phase 2 is to stop passing `'principal'`, not to build location support.
    lazily loaded verticals. Bumping some is worse than bumping none.
 2. **New test files guard nothing until `tools/check.js` names them.** Add the filename
    to the suite array in the same commit.
-3. **`node tools/check.js` is the gate.** It currently reports **9 pre-existing failures**
-   in `build-guides-check.mjs` and `article-template-test.mjs` (another workstream's
-   landing/guides work, all 21 generated guide pages stale). Those are not yours. If you
-   see a tenth, it is. Prove any failure pre-existing in a detached worktree at your base
-   before chasing it.
+3. **`node tools/check.js` is the gate, and it is red before you start.** Other
+   workstreams leave failures on `main` · at the time of writing they sit in
+   `build-guides-check.mjs`, `article-template-test.mjs` and `stamp-drift-test.js`.
+   **Do not copy a number out of this document.** Any count written here is stale within
+   the hour: it was 9 when this plan was drafted and 10 an hour later, when another
+   session committed a partial stamp bump on `live-link.js`.
+
+   Record your own base instead. Before Phase 0, capture the base commit and its full
+   checker output; every phase must then add **zero failures relative to that exact
+   base**. Prove any suspected pre-existing failure in a detached worktree at that base
+   before chasing it. Time-box known hanging checks and run their focused suites
+   separately · a killed checker is not a green checker.
 4. **Prod D1 lags `schema.sql`.** Query the live DB before assuming a table or column
    exists.
 
@@ -78,6 +103,9 @@ job in phase 2 is to stop passing `'principal'`, not to build location support.
 - Colours: existing tokens in `assets/tokens.css`. No new accents. Type is roman, never
   italic.
 - Gate every real-data path on `KiwiEnv.isReal()`, not on "is this a demo account".
+- Never mutate a paying merchant to prove a migration. Use a seeded, live-shaped hotel
+  tenant in staging; production verification is read-only until the hotel authorises a
+  controlled pilot.
 
 ---
 
@@ -93,6 +121,8 @@ job in phase 2 is to stop passing `'principal'`, not to build location support.
 - Store as a new `store_docs` feature in the FEATURES registry of
   `functions/api/store.js`, following the existing entries.
 - Child units keep their existing store type behaviour untouched.
+- A hotel is one merchant tenant. Units never become independent merchant slugs.
+- Once referenced, a unit can only be deactivated; `locationId` is never deleted or reused.
 
 **Do not** add stock, requests, catalogues or UI beyond listing and creating units.
 
@@ -101,7 +131,10 @@ job in phase 2 is to stop passing `'principal'`, not to build location support.
 - A `locationId` is immutable once assigned.
 - An existing non-hotel venue is completely unaffected.
 
-**Acceptance:** an existing hotel merchant loads, sells and prints exactly as before.
+**Acceptance:** on the seeded hotel tenant, a merchant with zero configured units is
+byte-identical to today · loads, sells and prints unchanged. Verification against a
+paying merchant is **read-only observation only**: compare rendered totals and reports,
+write nothing, create no unit, and post no movement.
 
 ---
 
@@ -156,16 +189,20 @@ server-side idempotency is already done. You are adding authority, not plumbing.
 **The other trap:** a till changes merchant by pairing, with nobody signing in. A guard
 keyed on the logged-in account misses that path. Test the paired-till path explicitly.
 
+At this phase, a paired till still cannot post a transfer. The bounded transfer authority
+depends on request and transfer records introduced in Phases 5 and 8. Build the unit-scope
+resolver and deny-by-default hook now; activate transfer confirmation only in Phase 8.
+
 **Test** `tools/hotel-unit-scope-test.mjs`
 - A paired till for the Rooftop Bar reading Économat balances gets a rejection.
 - The same till posting a movement with the Économat's `locationId` gets a rejection.
 - A hotel manager session reads every unit.
 - A payload-supplied `unitId` never widens the permitted set.
 - A non-hotel merchant is unaffected.
-- A till posts `transfer-in` for its own unit against an approved request · accepted.
-- The same till posts `transfer-in` with no authorising request · **403**.
-- The same till posts a quantity above what the request approved · **403**.
+- A till posting any transfer before Phase 8's authorising command · **403**.
 - The same till posts `loss` or `gift` · still **403**, owner-only, unchanged.
+- A paired device without a currently authenticated, unit-assigned employee cannot make
+  any discretionary stock change.
 
 **Acceptance:** every assertion above passes against the live-shaped route, not a mock.
 
@@ -188,7 +225,10 @@ keyed on the logged-in account misses that path. Test the paired-till path expli
 - Consolidated hotel inventory equals the sum of unit balances.
 - Pre-existing `'principal'` rows still resolve after the mapping.
 
-**Acceptance:** a real hotel merchant's totals before and after are identical.
+**Acceptance:** on the seeded tenant, totals before and after the location mapping are
+identical. The migration is **never run against a paying merchant to prove it works** ·
+it is proven on the seed, then applied once the hotel authorises it. Reading a real
+merchant's totals to compare is fine; writing to one is not.
 
 ---
 
@@ -234,7 +274,8 @@ keyed on the logged-in account misses that path. Test the paired-till path expli
 **Build the line model from `HOTEL_ECONOMAT.md` §5.1 exactly:**
 
 ```
-line: { itemId, unit, qtyRequested, qtyApproved, qtyPrepared, qtyReceived,
+line: { itemId, unit, conversionSnapshot, qtyRequestedBase,
+        qtyRequested, qtyApproved, qtyPrepared, qtyReceived,
         resolution, substituteFor, note }
 ```
 
@@ -243,10 +284,16 @@ Stored request states are **`draft` | `open` | `closed`** plus a `cancelled` fla
 If you find yourself writing a state-transition table, stop · you have re-introduced the
 bug this model exists to prevent.
 
+Use transactional D1 request/line/event records with `revision` and command idempotency
+keys. Do not put concurrent requests in one `store_docs` document. Derive received state
+line-by-line in base units; never sum kilograms, bottles and cartons together.
+
 **Test** `tools/internal-request-test.mjs`
 - Submitting writes zero movements. Assert the ledger row count is unchanged.
 - Derived labels match the table in §5.1 for each quantity combination.
 - Drafts survive a reload.
+- Two reviewers editing the same revision: one succeeds, the stale writer receives `409`.
+- A later unit-conversion edit does not change an open request's base quantity.
 
 ---
 
@@ -260,10 +307,13 @@ bug this model exists to prevent.
   link it to `assets/procurement.js` yet, that is V2.
 - **Substitutions are V2.** In V1, refuse the line; the department raises a new request.
 - A change to quantity, timing or product is a **proposal** until the department accepts.
+- Approval checks source **available to promise** in the same server transaction and
+  refuses over-commitment caused by a concurrent approval.
 
 **Test** `tools/economat-review-test.mjs`
 - A reduced quantity stays a proposal until accepted; the ledger stays untouched.
 - A refused line remains visible as refused, never silently received.
+- Two requests cannot both commit the same remaining central quantity.
 
 ---
 
@@ -272,8 +322,12 @@ bug this model exists to prevent.
 **Goal:** record who prepared, who handed over, pickup or delivery, times, notes.
 **Still no stock movement** · see spec §3.3, the Économat holds stock in transit.
 
+Record partial actions as append-only fulfilment events. Project cumulative quantities
+from events; do not overwrite the actor and timestamp of an earlier partial handover.
+
 **Test** `tools/economat-handover-test.mjs`
 - Handover recorded, ledger unchanged, Économat balance still holds the goods.
+- Three partial handovers preserve three actors, quantities and timestamps.
 
 ---
 
@@ -283,27 +337,52 @@ bug this model exists to prevent.
 
 **Build**
 
-```js
-const ref = transferRef;                       // one reference for the whole transfer
-const id  = (dir, i, itemId) =>
-  'inv-xfer-' + hash([merchant, ref, i, itemId, dir].join('|'));
+Create one authenticated server command such as
+`POST /api/hotel/transfers/:id/confirm`.
 
-KiwiInventory.add({ id: id('out', i, itemId), locationId: fromUnit, qty: -confirmed,
-                    reason: 'transfer-out', refType: 'transfer', refId: ref,
-                    unitCost: economatCost, actor, occurredTs });
-KiwiInventory.add({ id: id('in',  i, itemId), locationId: toUnit,   qty: +confirmed,
-                    reason: 'transfer-in',  refType: 'transfer', refId: ref,
-                    unitCost: economatCost, actor, occurredTs });
-```
+**D1 has no interactive transaction · there is no `BEGIN` spanning awaits.** The atomic
+primitive is `env.DB.batch()` (already used in `functions/api/booking.js`,
+`functions/api/store.js`, `functions/api/hotel/stays.js`). `batch()` binds every value up
+front, so **no statement in a batch can read a value returned by an earlier one.**
+
+That rules out copying the existing writer's shape: `functions/api/inventory/movements.js`
+calls `nextCursor()` once per movement inside a loop, and `nextCursor()` is itself a
+read-modify-write. Build it in two steps instead:
+
+**Step A · validate and resolve (before the batch)**
+1. Resolve merchant, employee and permitted units from the request identity.
+2. Load the exact approved request revision and the hotel's confirmation policy.
+3. Refuse excess quantity, stale revision (`409`), wrong side, or missing source approval.
+4. Resolve the source cost: **the single blended FEFO rate `allocateCost()` already
+   returns.** Not per-lot layers · spec §3.4. If it returns `null`, **refuse the
+   confirmation** and tell the employee the source has no known cost · spec §3.4.1.
+5. **Reserve the cursor range in one statement:**
+   `UPDATE inventory_sync_sequences SET last_ts = last_ts + N WHERE merchant = ?
+   RETURNING last_ts`, with `N` = the number of movements. Derive each `srv_ts` from the
+   returned range. A gap in the sequence on a fully-ignored replay is expected and
+   harmless · `srv_ts` is a sync cursor, not a counter anyone reconciles.
+
+**Step B · one `DB.batch()`**
+6. The prepared `transfer-out` / `transfer-in` inserts (deterministic ids,
+   `INSERT OR IGNORE`), the request update, and the confirmation event. All commit, or
+   none do.
+
+The browser mirrors the acknowledged server result into `KiwiInventory`; it never makes
+two independent `KiwiInventory.add()` calls and calls that atomic.
 
 Four rules, each of which has a test:
 
-1. **Deterministic ids.** Reuse the sale pattern. A retry, an offline replay or a
-   double-tap produces the same id and `add()` drops it. Do not invent a new mechanism.
+1. **Deterministic ids, enforced server-side.** The id derives from
+   `(merchant, transferRef, lineIndex, itemId, direction)` and the insert is
+   `INSERT OR IGNORE`, exactly as `movements.js` already writes. `KiwiInventory.add()`'s
+   own duplicate check is a client cache guard, **not** the guarantee. Do not invent a
+   third mechanism.
 2. **Never one side alone.** A decrease without its matching increase is the failure mode
-   that makes stock vanish between departments. Both or neither.
-3. **Real cost, always.** `unitCost` is the Économat's cost. **0 MAD is a display choice
-   and never a stored value** (spec §3.1).
+   that makes stock vanish between departments. Both or neither, enforced by the batch
+   rather than by client sequencing.
+3. **Real cost, always.** `unitCost` is the source's blended FEFO rate. **0 MAD is a
+   display choice and never a stored value** (spec §3.1), and **a null cost refuses the
+   confirmation** rather than writing an uncosted movement (spec §3.4.1).
 4. **Single-side confirmation.** The hotel setting picks recipient or Économat. Only that
    side gets the action. The other side can view and dispute, never confirm again.
 
@@ -313,8 +392,23 @@ Four rules, each of which has a test:
 - The non-authorised side is refused server-side.
 - A partial confirmation moves only the confirmed quantity; the remainder stays open.
 - The sum of both balances is unchanged by the transfer.
-- The stored `unit_cost_cents` is the Économat's cost and is never zero.
+- The stored `unit_cost_cents` is the source's blended rate and is never zero.
+- An item whose source cost resolves to `null` refuses confirmation and writes no
+  movement · assert the ledger row count is unchanged and the request stays open.
+- Two movements drawn across several lots produce **one** pair at the blended rate, not
+  one pair per lot.
 - An offline replay of the same confirmation is a no-op.
+- Cursor reservation: `N` movements consume exactly `N` cursor values, and a replay that
+  inserts nothing still leaves every prior cursor readable in order.
+- Force the second movement insert to fail; assert the first movement, request update and
+  confirmation event all roll back.
+- A stale request revision returns `409` and writes no movement.
+- A paired till with no active employee identity returns `403`.
+- Approval exists but source balance has since changed: confirmation refuses or moves
+  only a newly accepted reduced quantity; it never silently creates negative stock.
+
+**Offline rule:** the action may queue as "awaiting sync", but balances do not change
+until server acknowledgement. V1 does not issue offline transfer authority.
 
 **Acceptance:** run it against a seeded two-location merchant and assert the ledger, not
 the UI.
@@ -325,12 +419,17 @@ the UI.
 
 **Goal:** unit-to-unit without Économat approval, same atomic pair, fully auditable.
 
-**Build:** reuse phase 8's writer unchanged. Only the approval path differs.
+**Build:** reuse phase 8's writer unchanged. Only the approval path differs. The source
+unit's authorised manager approves, and the cost is **the source unit's own blended FEFO
+rate**, not the Économat's and not a catalogue price. A null source cost refuses the
+transfer here too. A return to the Économat uses the same path with source and
+destination reversed.
 
 **Test** `tools/direct-transfer-test.mjs`
 - Rooftop Bar ← Lobby Bar produces the same movement pair shape.
 - The transfer appears in the hotel audit trail.
 - It cannot be performed as an undocumented manual adjustment.
+- Cancelling a received request does not erase stock; a return creates a new linked pair.
 
 ---
 
@@ -374,7 +473,10 @@ empty or, worse, plausible and wrong.
 
 **Test** `tools/hotel-reports-test.mjs`
 - Consolidated inventory equals the sum of unit balances at any instant.
-- Department consumption reconciles to sales plus transfers minus counts.
+- For each unit, `opening + receipts + transfers in - transfers out - consumption ±
+  posted corrections = closing`.
+- A physical count alone changes nothing; only its linked variance correction enters the
+  reconciliation.
 
 ---
 
@@ -383,13 +485,15 @@ empty or, worse, plausible and wrong.
 A phase is done when **all** of these hold:
 
 - [ ] The phase's own test suite exists **and is named in `tools/check.js`**.
-- [ ] `node tools/check.js` shows no failure beyond the 9 pre-existing guides failures.
+- [ ] Focused suites pass and `node tools/check.js` adds zero failures relative to the
+      recorded base commit; any timed-out phase is reported, never called green.
 - [ ] Every edited stamped asset went through `node tools/bump-stamp.js`.
 - [ ] Nothing is staged; `git status` is clean.
-- [ ] `main` is pushed to **both** mirrors.
+- [ ] `main` is pushed to **both** mirrors when the user authorises release.
 - [ ] No credential, PIN, guest name or room number is logged, printed or committed.
 - [ ] For phases 2, 8 and 9: balances were verified on a seeded two-location merchant by
       reading the ledger, not the UI.
+- [ ] No paying merchant was mutated for validation.
 
 ## Things that will go wrong, and what they look like
 
@@ -402,6 +506,10 @@ A phase is done when **all** of these hold:
 | A double-tap moves stock twice | You generated a random movement id instead of a deterministic one |
 | An outlet iPad reads the Économat | Scoping done in the browser instead of server-side |
 | Status and quantities disagree | You added a status enum column. Derive it from lines |
+| `batch()` inserts bind `undefined` as a cursor | You tried to read `nextCursor()`'s return inside the batch. Reserve the range first (§5.4.1) |
+| Phase 8 balloons into a lot-tracking project | You read "cost layers" and built per-lot pairs. V1 is one blended FEFO rate (§3.4) |
+| A `transfer-in` lands with a null cost | `allocateCost()` returned `null`. Refuse the confirmation, do not store it (§3.4.1) |
+| A transfer confirms while the till is offline | You mirrored the client ledger instead of waiting for the server ack |
 | `git push` hangs, prints nothing, no CPU | You are in `/Users/zaka/Desktop/kiwi`. Work in `/Users/zaka/Developer/kiwi` |
 
 ## What not to build

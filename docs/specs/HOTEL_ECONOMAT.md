@@ -1,13 +1,23 @@
 # Kiwi Hotel · Économat, outlets and internal stock
 
-**Version 1.1 · supersedes the 1.0 requirements PDF of 31 August 2026.**
+**Version 1.2 · supersedes the 1.0 requirements PDF of 31 August 2026.**
 Status: ready for implementation. Build order lives in `HOTEL_ECONOMAT_PLAN.md`.
 
 Version 1.0 was operationally sound and technically over-scoped. This revision keeps
 its operating model intact and changes five things: it cuts the V1 boundary, replaces
 the status enum with a quantity model, promotes tenancy to a blocking prerequisite,
 reverses the room-charge identity check, and names what Kiwi already ships so nobody
-rebuilds it.
+rebuilds it. Version 1.2 closes the remaining execution gaps: one canonical hotel
+tenant, server-atomic transfer pairs, revision-safe approvals, base-unit quantity
+invariants, append-only fulfilment events and explicit offline semantics.
+
+**V1.2 is more work than V1.1, not the same work described better.** It adds a
+transactional D1 record set for requests, lines and fulfilment events, an
+available-to-promise check under concurrency control, a revision protocol, and
+append-only fulfilment projections. Each is correctness rather than feature: without
+them you get double allocation and lost updates. But the V1 list grew from eleven items
+to twelve while several items got heavier, so any estimate built on V1.1 is low. The one
+thing V1.2 does **not** add is per-lot cost layers · see §3.4.
 
 ---
 
@@ -126,6 +136,24 @@ the browser and never by trusting a `unitId` in the payload. Concretely:
 Phase 0 ships this with tests before any request workflow is written. If phase 0 slips,
 everything after it waits.
 
+### 2.2 One tenant, many units
+
+A hotel remains **one merchant tenant**. A unit is not a second merchant slug and does
+not receive an independent owner account, catalogue namespace or inventory ledger.
+Existing restaurant, bar, spa and boutique behaviour is selected by the unit's
+`storeType`, while every shared record remains keyed by the hotel merchant plus a stable
+`unitId` / `locationId`.
+
+This avoids cross-merchant joins for stock, guests and reporting, and makes the hotel
+manager's aggregate a scoped view of one tenant rather than a privileged query across
+several tenants. A unit may be deactivated but never hard-deleted once it has a movement,
+request, folio line or sale. Its `locationId` is immutable and never reused.
+
+For discretionary stock actions, a paired device is not an actor. The request must also
+carry a currently authenticated employee identity from the staff-code flow, and the
+server resolves that employee's role and unit assignment. A client-provided role,
+employee name or `unitId` is never authority.
+
 ---
 
 ## 3. The Économat
@@ -178,6 +206,53 @@ This makes the two movements a single atomic pair at confirmation time, which is
 only way the consolidated hotel inventory ties out at any instant. Preparation and
 handover are workflow states with no ledger effect.
 
+### 3.4 Cost allocation and commitments
+
+"Économat cost" means the source location's cost allocation at confirmation time, frozen
+onto both movements. It is not the latest catalogue price and not a number recomputed
+later. Direct department transfers use the source department's cost on the same basis.
+
+**V1 uses the single blended rate the existing allocator already returns. It does not
+split a transfer into per-lot layer pairs.**
+
+`allocateCost()` in `assets/inventory-consumption.js` walks the derived lots, sorted by
+`expiresAt` (first-expired-first-out, not first-in-first-out), and returns **one blended
+rate** rounded to four decimals: `totalCost / reqQty`. It returns a number, never a set
+of layers, and nothing persists which lot was drawn.
+
+Per-layer transfer pairs would therefore require a lot-identity model that does not
+exist: lot identity carried on movements, persisted layer consumption, and layer state
+surviving offline replay. That is a V2 project, and it is not the reason a hotel is
+waiting for this feature.
+
+The decisive argument for the blended rate is consistency, not effort: **sales already
+value stock this way.** A bar that sells a bottle and a bar that receives a bottle must
+put the same number on the same goods, or outlet material cost stops reconciling against
+outlet revenue for reasons no one will find.
+
+### 3.4.1 Unknown cost refuses the transfer
+
+`allocateCost()` returns **`null`** when coverage is partial and no default rate exists ·
+deliberately, rather than diluting the average. `unit_cost_cents` is nullable in the
+schema ("NULL si inconnu"), so a null would be stored without complaint.
+
+**A transfer whose source cost resolves to null is refused.** The confirming employee is
+told the item has no known cost at the source and that a receipt or opening cost must be
+recorded first. V1 does not move goods at an unknown value, because an uncosted
+`transfer-in` silently understates the destination's material cost exactly like a stored
+zero would · §3.1 exists to prevent that, and null is the same wound through a different
+door.
+
+This is a refusal, not a warning, and it is the one place in this project where the
+system blocks an operational action. It is defensible because the fix is immediate and
+local: record the cost at the Économat, then confirm.
+
+Approval does not move stock, but it does create a workflow commitment. To prevent two
+managers approving the same bottles, the server computes **available to promise** as
+on-hand less approved, unclosed quantities for that source location. Approval and its
+commitment check are one concurrency-controlled server operation. V1 refuses an
+over-commitment; it does not hide it behind negative future stock or a client warning.
+
 ---
 
 ## 4. Controlled department catalogues
@@ -219,6 +294,7 @@ Each request line carries four quantities and a resolution:
 ```
 line: {
   itemId, unit,
+  qtyRequestedBase,      // immutable base-unit quantity used for every comparison
   qtyRequested,          // what the department asked for
   qtyApproved,           // what the Économat committed to · 0 = refused
   qtyPrepared,           // what was physically assembled
@@ -228,6 +304,12 @@ line: {
   note
 }
 ```
+
+`unit` and its conversion factor are snapshots. A later catalogue conversion edit must
+not change an open or historical request. All server invariants use the base quantity;
+display quantities remain for the employee. Quantities are non-negative and monotonic:
+approved cannot exceed requested, prepared cannot exceed accepted approval, and received
+cannot exceed prepared. Refused lines have approved quantity zero.
 
 The request's displayed state is computed from its lines, not stored:
 
@@ -240,8 +322,8 @@ The request's displayed state is computed from its lines, not stored:
 | Approved | all lines resolved, none awaiting acceptance |
 | Preparing | approved, `qtyPrepared` incomplete |
 | Ready / Out for delivery | fulfilment method chosen, handover not confirmed |
-| Partially received | `0 < sum(qtyReceived) < sum(qtyApproved)` |
-| Received | `sum(qtyReceived) == sum(qtyApproved)` |
+| Partially received | at least one approved line has received quantity, and at least one approved line still has a remainder |
+| Received | every approved line is fully received; refused lines are excluded |
 | Disputed | a discrepancy is open |
 | Cancelled | explicitly cancelled |
 
@@ -251,6 +333,20 @@ from 1.0 are preserved; only the storage changes.
 
 Unfulfilled quantities remain visible as outstanding, delayed, substituted, rejected or
 cancelled. They are never silently marked received.
+
+Quantities from kilograms, bottles and cartons are never added together to derive a
+state. Derivation is line-by-line in base units, then reduced with `every` / `some`.
+
+### 5.1.1 Persistence and concurrent edits
+
+Requests, lines, approvals and transfers are transactional D1 records, not one shared
+`store_docs` JSON document. `store_docs` remains appropriate for unit and catalogue
+configuration; it is not appropriate for two employees reviewing the same request.
+
+Every request has a monotonically increasing `revision`. Review, acceptance,
+preparation and confirmation submit the revision they saw; stale writes receive `409`
+and must reload. Accepting a reduction accepts one exact revision, never "whatever is
+current". Every create/submit/approve/confirm command also has an idempotency key.
 
 ### 5.2 Économat review
 
@@ -278,24 +374,71 @@ delivered to or collected by, preparation time, handover time, notes and discrep
 
 Neither preparation nor handover writes to the ledger. See §3.3.
 
+Partial preparation, handover and receipt are append-only fulfilment events carrying
+line, quantity, actor, unit and timestamp. The line quantities above are projections of
+those events, not values repeatedly overwritten in place. This preserves who handled
+each of three partial deliveries and makes corrections reversible.
+
 ### 5.4 Confirmation writes the transfer
 
-Confirmation is the only ledger event in this workflow. It writes one linked, atomic
-pair sharing a single transfer reference:
+Confirmation is the only ledger event in this workflow. A dedicated server command writes
+one linked pair, atomically, sharing a transfer reference:
 
 ```
 Économat        · reason transfer-out · qty −confirmed · unit_cost_cents = Économat cost
 Department      · reason transfer-in  · qty +confirmed · same cost, same ref, same ts
 ```
 
-Both movements share `refType: 'transfer'` and one `refId`. The system must never
-decrease one location without increasing the other, and must never apply the same
-confirmation twice.
+Both movements share `refType: 'transfer'` and one `refId`. The request update,
+confirmation event and movement pair commit together. The system must never decrease one
+location without increasing the other, and must never apply the same confirmation twice.
 
-Idempotency uses the pattern already proven for sales: a **deterministic movement id**
-derived from `(merchant, transferRef, lineIndex, itemId, direction)`, so a retry, an
-offline replay or a double-tap produces the same id and `KiwiInventory.add()` drops it.
-Do not invent a new idempotency mechanism.
+### 5.4.1 The atomic mechanism, precisely
+
+**D1 has no interactive transaction.** There is no `BEGIN` / `COMMIT` spanning awaits in
+the Workers binding. The atomic primitive is `env.DB.batch()`, already used in
+`functions/api/booking.js`, `functions/api/store.js` and `functions/api/hotel/stays.js`.
+
+`batch()` takes prepared statements whose values are **bound up front**, so no statement
+in a batch can consume a value returned by an earlier statement in the same batch. That
+rules out the shape the existing writer uses: `functions/api/inventory/movements.js`
+calls `nextCursor()` once per movement inside a loop, and `nextCursor()` is itself a
+read-modify-write (`INSERT OR IGNORE` then `UPDATE … RETURNING`).
+
+The confirmation command therefore runs in two steps:
+
+1. **Reserve the cursor range first**, outside the batch, in one statement:
+   `UPDATE inventory_sync_sequences SET last_ts = last_ts + N WHERE merchant = ?
+   RETURNING last_ts`, where `N` is the number of movements about to be written.
+   Compute each movement's `srv_ts` from the returned range.
+2. **Then `DB.batch()`** the prepared inserts, the request update and the confirmation
+   event together. All of it commits, or none of it does.
+
+Reserving cursors ahead of a batch that may be fully ignored on replay can leave a gap in
+the sequence. That is fine and intended: `srv_ts` is a monotonic **cursor** for
+incremental sync, not a counter anyone reconciles. Gaps cost nothing; collisions would
+cost a resynchronisation.
+
+### 5.4.2 Idempotency is server-side
+
+Idempotency is enforced **on the server**, by a deterministic movement id plus
+`INSERT OR IGNORE`, which is how `functions/api/inventory/movements.js` already writes.
+The id derives from `(merchant, transferRef, lineIndex, itemId, direction)`, so a retry,
+an offline replay or a double-tap produces the same id and the insert is ignored.
+
+`KiwiInventory.add()`'s own duplicate check is a **client-side cache guard, not the
+guarantee.** Two sequential browser calls to `add()` are not atomic and are forbidden for
+transfer confirmation. The browser mirrors the acknowledged server result into the local
+ledger; it never authors the pair.
+
+Do not invent a third idempotency mechanism. The deterministic id and
+`INSERT OR IGNORE` already carry sales, and transfers use the same pattern.
+
+Final confirmation requires a server acknowledgement in V1. Drafting, submission,
+review notes and preparation may queue offline, but the UI must show "awaiting sync" and
+must not alter either final balance until the server has revalidated authority,
+revision, available quantity and idempotency. A replay after reconnection is safe; an
+offline device is never allowed to mint its own transfer authority.
 
 ### 5.5 Configurable confirmation authority
 
@@ -313,8 +456,9 @@ result and raise a discrepancy, but cannot confirm the same transfer again.
 
 ## 6. Direct department-to-department transfers
 
-Unchanged from 1.0. Departments may transfer directly without Économat approval:
-Rooftop Bar requests five bottles from Lobby Bar, Lobby Bar approves and hands over,
+Departments may transfer directly without Économat approval, but never without source
+approval. Rooftop Bar requests five bottles from Lobby Bar, an authorised Lobby Bar
+manager approves and hands over,
 the configured side confirms, and Kiwi writes the same atomic pair as §5.4.
 
 These remain fully visible to hotel management and in the audit trail. They must never
@@ -323,6 +467,11 @@ be performed as an undocumented manual adjustment.
 Recorded: source and destination, requested/approved/received quantities, requesting,
 approving and receiving employees, method, dates and times, notes, substitutions,
 discrepancies, and the linked movement pair.
+
+A return to the Économat is this same workflow with source and destination reversed. It
+is not a negative receipt, deletion or manual adjustment. Only the unconfirmed remainder
+of a request may be cancelled; received goods leave through a new return transfer or an
+append-only correction.
 
 ---
 
@@ -394,8 +543,9 @@ and what can be verified against real stock.
 7. Configurable single-side confirmation.
 8. Atomic transfer pair with deterministic idempotency (§5.4).
 9. Direct department-to-department transfers.
-10. Room-charge ordering fix and the per-cashier shift report (§8).
-11. Économat, department and hotel management reports covering the above.
+10. Returns using the same controlled transfer workflow.
+11. Room-charge ordering fix and the per-cashier shift report (§8).
+12. Économat, department and hotel management reports covering the above.
 
 ### Explicitly deferred to V2
 
@@ -442,6 +592,13 @@ outlet-to-outlet transfers · incorrect quantities · damaged goods at handover 
 duplicate confirmation attempts · sale reversal after recipe consumption · room-charge
 reversal · negative stock shown as a warning rather than blocking a real sale · offline
 POS synchronisation without duplicate consumption.
+
+The hotel inventory equation used by tests and reports is:
+
+`opening + external receipts + transfers in - transfers out - consumption ± append-only corrections = closing`
+
+A physical count is an observation; only its posted variance correction enters the
+equation. Reports never describe a count itself as consumption.
 
 The last three already work. The rest is this project.
 
