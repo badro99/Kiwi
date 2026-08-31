@@ -260,8 +260,8 @@
     "sha": "25cb7d0b5c0fa358"
   },
   "assets/inventory-ledger.js": {
-    "v": "7",
-    "sha": "c18db9a93f360d79"
+    "v": "8",
+    "sha": "7e642d13b2d0385f"
   },
   "assets/invoice.js": {
     "v": "6",
@@ -496,8 +496,8 @@
     "sha": "e74ea96ef32acfbd"
   },
   "assets/pos-inventory-count.js": {
-    "v": "4",
-    "sha": "d080fcbcd0db46ea"
+    "v": "5",
+    "sha": "7c310fa45e0cb431"
   },
   "assets/pos-librairie.css": {
     "v": "5",

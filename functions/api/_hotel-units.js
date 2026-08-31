@@ -2,7 +2,7 @@ export const HOTEL_UNITS_FEATURE = 'hotel-units';
 
 const MAX_UNITS = 100;
 const KINDS = new Set(['outlet', 'department', 'economat']);
-const ROOT_KEYS = new Set(['units']);
+const ROOT_KEYS = new Set(['units', 'terminalUnits']);
 const UNIT_KEYS = new Set(['id', 'name', 'kind', 'storeType', 'locationId', 'active']);
 const TOKEN_RE = /^[A-Za-z0-9][A-Za-z0-9._:-]*$/;
 
@@ -121,5 +121,26 @@ export function validateHotelUnits(raw, previous = null) {
      * le référence ») exige un prédicat qui n'existera qu'à la phase 2. */
   }
 
-  return { ok: true, value: { units } };
+  const terminalUnits = {};
+  if (Object.prototype.hasOwnProperty.call(raw, 'terminalUnits')) {
+    if (!raw.terminalUnits || typeof raw.terminalUnits !== 'object' || Array.isArray(raw.terminalUnits)) {
+      return failure('invalid-hotel-units', 'terminal-units-object-required');
+    }
+    const activeOutlets = new Set(units
+      .filter((unit) => unit.active && unit.kind === 'outlet')
+      .map((unit) => unit.id));
+    for (const [rawTerminalId, rawUnitId] of Object.entries(raw.terminalUnits)) {
+      const terminalId = boundedText(rawTerminalId, 80, true);
+      const unitId = boundedText(rawUnitId, 80, true);
+      if (!terminalId) return failure('invalid-hotel-units', 'invalid-terminal-id');
+      if (!unitId || !activeOutlets.has(unitId)) {
+        return failure('invalid-hotel-units', `invalid-terminal-unit:${terminalId}`);
+      }
+      terminalUnits[terminalId] = unitId;
+    }
+  }
+
+  const value = { units };
+  if (Object.prototype.hasOwnProperty.call(raw, 'terminalUnits')) value.terminalUnits = terminalUnits;
+  return { ok: true, value };
 }

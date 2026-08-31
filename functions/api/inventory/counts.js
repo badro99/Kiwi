@@ -12,6 +12,7 @@
 
 import { json, entitledMerchant } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
+import { resolveInventoryUnitScope, scopeSql } from './_unit-scope.js';
 
 const str = (v, n) => String(v == null ? '' : v).trim().slice(0, n);
 const num = (v) => Number.isFinite(Number(v)) ? Number(v) : 0;
@@ -119,6 +120,17 @@ export async function onRequestGet({ request, env }) {
   if (!env || !env.DB) return json({ counts: [] });
   const merchant = await tenantFor(request, env, url.searchParams.get('merchant'));
   if (!merchant) return json({ error: 'unauthorized' }, 401);
+  const scope = await resolveInventoryUnitScope(request, env, merchant, {
+    terminalId: url.searchParams.get('terminalId'),
+  });
+  if (scope.scoped && !scope.allowed) return json({ error: 'unit-forbidden' }, 403);
+  const requestedStore = str(url.searchParams.get('storeId') || url.searchParams.get('store_id'), 80);
+  if (requestedStore && !scope.permitsUnit(requestedStore)) {
+    return json({ error: 'unit-forbidden' }, 403);
+  }
+  const storeFilter = scopeSql('store_id', scope.scoped
+    ? (requestedStore ? [requestedStore] : [...scope.unitIds])
+    : []);
 
   try { await ensureSchema(env); } catch (_) {}
 
@@ -126,8 +138,8 @@ export async function onRequestGet({ request, env }) {
   if (countId) {
     try {
       const row = await env.DB.prepare(
-        `SELECT * FROM inventory_counts WHERE merchant = ? AND id = ?`
-      ).bind(merchant, countId).first();
+        `SELECT * FROM inventory_counts WHERE merchant = ?${storeFilter.clause} AND id = ?`
+      ).bind(merchant, ...storeFilter.values, countId).first();
       if (!row) return json({ error: 'not_found' }, 404);
       let lines = []; try { lines = JSON.parse(row.lines_json || '[]'); } catch (_) {}
       let meta = {}; try { meta = JSON.parse(row.meta_json || '{}'); } catch (_) {}
@@ -184,9 +196,9 @@ export async function onRequestGet({ request, env }) {
       const until = num(url.searchParams.get('until')) || (Date.now() + 864e5);
       const res = await env.DB.prepare(
         `SELECT * FROM inventory_counts
-          WHERE merchant = ? AND submitted_at >= ? AND submitted_at <= ?
+          WHERE merchant = ?${storeFilter.clause} AND submitted_at >= ? AND submitted_at <= ?
           ORDER BY submitted_at DESC`
-      ).bind(merchant, since, until).all();
+      ).bind(merchant, ...storeFilter.values, since, until).all();
       const rows = (res && res.results) || [];
       
       const variantRollup = new Map();
@@ -252,8 +264,8 @@ export async function onRequestGet({ request, env }) {
                         applied_at, total_lines, total_counted, total_system, total_diff,
                         total_variance_cost_mad, abs_variance_cost_mad, created_ts, updated_ts
                    FROM inventory_counts
-                  WHERE merchant = ? AND submitted_at >= ? AND submitted_at <= ?`;
-    const args = [merchant, since, until];
+                  WHERE merchant = ?${storeFilter.clause} AND submitted_at >= ? AND submitted_at <= ?`;
+    const args = [merchant, ...storeFilter.values, since, until];
     if (statusFilter) {
       query += ` AND status = ?`;
       args.push(statusFilter);
@@ -305,12 +317,37 @@ export async function onRequestPost({ request, env }) {
 
   const url = new URL(request.url);
   const merchantParam = body.merchant || url.searchParams.get('merchant');
-  const merchant = await tenantFor(request, env, merchantParam);
+  const merchant = await tenantFor(request, env, merchantParam, { strict: true });
   if (!merchant) return json({ error: 'unauthorized' }, 401);
+  const scope = await resolveInventoryUnitScope(request, env, merchant, {
+    terminalId: body && body.terminalId,
+  });
+  if (scope.scoped && !scope.allowed) return json({ error: 'unit-forbidden' }, 403);
 
   try { await ensureSchema(env); } catch (_) {}
 
   const action = str(body.action, 32) || 'submit';
+  if (scope.scoped && action === 'submit') {
+    const requestedStore = str(body.storeId || body.store_id, 80);
+    if (requestedStore && !scope.permitsUnit(requestedStore)) {
+      return json({ error: 'unit-forbidden' }, 403);
+    }
+    const effectiveStore = scope.effectiveUnit(requestedStore);
+    if (!effectiveStore) return json({ error: 'unit-required' }, 422);
+    const unit = scope.byUnit.get(effectiveStore);
+    body.storeId = effectiveStore;
+    for (const line of (Array.isArray(body.lines) ? body.lines : [])) {
+      const explicit = str(line && (line.locationId || line.location_id), 80);
+      if (explicit && !scope.permitsLocation(explicit)) {
+        return json({ error: 'location-forbidden' }, 403);
+      }
+      const effectiveLocation = explicit ? scope.effectiveLocation(explicit) : (unit && unit.locationId);
+      if (!unit || effectiveLocation !== unit.locationId) {
+        return json({ error: 'unit-location-mismatch' }, 422);
+      }
+      line.locationId = effectiveLocation;
+    }
+  }
 
   // ── ACTIONS PROPRIÉTAIRE : REVIEW / APPROVE / REJECT / REQUEST-CORRECTION ───
   if (action === 'review' || action === 'approve' || action === 'reject' || action === 'request-correction') {
@@ -327,6 +364,9 @@ export async function onRequestPost({ request, env }) {
       `SELECT * FROM inventory_counts WHERE merchant = ? AND id = ?`
     ).bind(merchant, countId).first();
     if (!row) return json({ error: 'not_found' }, 404);
+    if (scope.scoped && !scope.permitsUnit(row.store_id)) {
+      return json({ error: 'unit-forbidden' }, 403);
+    }
 
     if (row.status === 'applied') {
       return json({ success: true, count: { id: countId, status: 'applied', alreadyApplied: true } });

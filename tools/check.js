@@ -938,6 +938,7 @@ section('Whole-project regressions');
        pourrit en silence et emporte toutes les suites qui s'y adossent. */
     'hotel-seed-test.mjs',
     'hotel-units-test.mjs',
+    'hotel-unit-scope-test.mjs',
     'formula-protocol-test.mjs',
     'trade-copy-test.mjs',
     'floor-accept-test.mjs',

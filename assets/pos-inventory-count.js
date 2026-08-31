@@ -427,6 +427,9 @@
 
     const payload = {
       engine: engine,
+      terminalId: (window.KiwiInventory && window.KiwiInventory.terminalId)
+        ? window.KiwiInventory.terminalId()
+        : '',
       storeId: (window.KiwiEnv && window.KiwiEnv.storeId) || '',
       storeName: (window.KiwiEnv && window.KiwiEnv.storeName) || 'Caisse Principale',
       employeeId: cashier.id,

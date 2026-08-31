@@ -6,6 +6,7 @@
 
 import { json, entitledMerchant } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
+import { resolveInventoryUnitScope, scopeSql } from './_unit-scope.js';
 
 const PAGE = 500;
 const REASONS = new Set([
@@ -112,6 +113,15 @@ export async function onRequestGet({ request, env }) {
   if (!env || !env.DB) return json({ merchant: '', movements: [], cursor: 0 });
   const merchant = await tenantFor(request, env, url.searchParams.get('merchant'));
   if (!merchant) return json({ error: 'unauthorized' }, 401);
+  const scope = await resolveInventoryUnitScope(request, env, merchant, {
+    terminalId: url.searchParams.get('terminalId'),
+  });
+  if (scope.scoped && !scope.allowed) return json({ error: 'unit-forbidden' }, 403);
+  const requestedLocation = str(url.searchParams.get('locationId') || url.searchParams.get('location_id'), 80);
+  if (requestedLocation && !scope.permitsLocation(requestedLocation)) {
+    return json({ error: 'location-forbidden' }, 403);
+  }
+  const locationFilter = scopeSql('location_id', scope.storageLocations(requestedLocation));
   try { await ensureSchema(env); } catch (_) { return json({ merchant, movements: [], cursor: 0, unmigrated: true }); }
 
   if (url.searchParams.get('summary') === '1') {
@@ -120,15 +130,22 @@ export async function onRequestGet({ request, env }) {
         `SELECT item_id, variant_id, location_id, SUM(qty_milli) AS qty_milli,
                 MAX(srv_ts) AS cursor
            FROM inventory_movements
-          WHERE merchant = ?
+          WHERE merchant = ?${locationFilter.clause}
           GROUP BY item_id, variant_id, location_id
           ORDER BY item_id, variant_id, location_id`
-      ).bind(merchant).all();
-      const balances = ((res && res.results) || []).map((r) => ({
-        itemId: r.item_id, variantId: r.variant_id, locationId: r.location_id,
-        qty: Number(r.qty_milli || 0) / 1000, cursor: Number(r.cursor || 0),
-      }));
-      return json({ merchant, balances });
+      ).bind(merchant, ...locationFilter.values).all();
+      const grouped = new Map();
+      for (const r of ((res && res.results) || [])) {
+        const locationId = scope.projectLocation(r.location_id);
+        const key = `${r.item_id}\u0000${r.variant_id}\u0000${locationId}`;
+        const old = grouped.get(key) || {
+          itemId: r.item_id, variantId: r.variant_id, locationId, qty: 0, cursor: 0,
+        };
+        old.qty += Number(r.qty_milli || 0) / 1000;
+        old.cursor = Math.max(old.cursor, Number(r.cursor || 0));
+        grouped.set(key, old);
+      }
+      return json({ merchant, balances: [...grouped.values()], scope: scope.metadata() });
     } catch (_) { return json({ error: 'db' }, 503); }
   }
 
@@ -147,13 +164,15 @@ export async function onRequestGet({ request, env }) {
         query += ` AND reason = ?`;
         args.push(reasonFilter);
       }
+      query += locationFilter.clause;
+      args.push(...locationFilter.values);
       query += ` ORDER BY occurred_ts ASC, srv_ts ASC LIMIT 200`;
       const res = await env.DB.prepare(query).bind(...args).all();
       const rows = (res && res.results) || [];
       const movements = rows.map((r) => {
         let meta = null; try { meta = r.meta ? JSON.parse(r.meta) : null; } catch (_) {}
         return {
-          id: r.id, itemId: r.item_id, variantId: r.variant_id, locationId: r.location_id,
+          id: r.id, itemId: r.item_id, variantId: r.variant_id, locationId: scope.projectLocation(r.location_id),
           qty: Number(r.qty_milli || 0) / 1000, reason: r.reason,
           unitCost: r.unit_cost_cents == null ? null : Number(r.unit_cost_cents) / 100,
           currency: r.currency, refType: r.ref_type, refId: r.ref_id, note: r.note,
@@ -161,7 +180,7 @@ export async function onRequestGet({ request, env }) {
           reversalOf: r.reversal_of, meta,
         };
       });
-      return json({ merchant, movements, cursor: 0, more: false });
+      return json({ merchant, movements, cursor: 0, more: false, scope: scope.metadata() });
     } catch (_) { return json({ error: 'db' }, 503); }
   }
 
@@ -172,16 +191,16 @@ export async function onRequestGet({ request, env }) {
               unit_cost_cents, currency, ref_type, ref_id, note, actor,
               occurred_ts, srv_ts, reversal_of, meta
          FROM inventory_movements
-        WHERE merchant = ? AND srv_ts > ?
+        WHERE merchant = ? AND srv_ts > ?${locationFilter.clause}
         ORDER BY srv_ts ASC LIMIT ?`
-    ).bind(merchant, since, PAGE).all();
+    ).bind(merchant, since, ...locationFilter.values, PAGE).all();
     const rows = (res && res.results) || [];
     let cursor = since;
     const movements = rows.map((r) => {
       cursor = Math.max(cursor, Number(r.srv_ts || 0));
       let meta = null; try { meta = r.meta ? JSON.parse(r.meta) : null; } catch (_) {}
       return {
-        id: r.id, itemId: r.item_id, variantId: r.variant_id, locationId: r.location_id,
+        id: r.id, itemId: r.item_id, variantId: r.variant_id, locationId: scope.projectLocation(r.location_id),
         qty: Number(r.qty_milli || 0) / 1000, reason: r.reason,
         unitCost: r.unit_cost_cents == null ? null : Number(r.unit_cost_cents) / 100,
         currency: r.currency, refType: r.ref_type, refId: r.ref_id, note: r.note,
@@ -189,7 +208,7 @@ export async function onRequestGet({ request, env }) {
         reversalOf: r.reversal_of, meta,
       };
     });
-    return json({ merchant, movements, cursor, more: rows.length === PAGE });
+    return json({ merchant, movements, cursor, more: rows.length === PAGE, scope: scope.metadata() });
   } catch (_) { return json({ error: 'db' }, 503); }
 }
 
@@ -198,11 +217,25 @@ export async function onRequestPost({ request, env }) {
   let body; try { body = await request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
   const merchant = await tenantFor(request, env, body && body.merchant, { strict: true });
   if (!merchant) return json({ error: 'unauthorized' }, 401);
+  const scope = await resolveInventoryUnitScope(request, env, merchant, {
+    terminalId: body && body.terminalId,
+  });
+  if (scope.scoped && !scope.allowed) return json({ error: 'unit-forbidden' }, 403);
   const raw = Array.isArray(body && body.movements) ? body.movements : [body && body.movement || body];
   if (!raw.length || raw.length > 200) return json({ error: 'bad-count' }, 400);
   const now = Date.now();
   const movements = raw.map((m) => sanitize(m, now));
   if (movements.some((m) => !valid(m))) return json({ error: 'bad-movement' }, 400);
+  for (let index = 0; index < movements.length; index += 1) {
+    const source = raw[index] || {};
+    const explicit = str(source.locationId ?? source.location_id, 80);
+    if (explicit && !scope.permitsLocation(explicit)) {
+      return json({ error: 'location-forbidden' }, 403);
+    }
+    const effective = scope.effectiveLocation(explicit);
+    if (scope.scoped && !effective) return json({ error: 'location-required' }, 422);
+    movements[index].locationId = effective;
+  }
 
   /* `entitledMerchant` SANS allowTill : la session du propriétaire ou un
    * opérateur nommé, comme pour l'approbation d'un écart dans counts.js. */
@@ -239,5 +272,5 @@ export async function onRequestPost({ request, env }) {
       accepted.push({ id: m.id, cursor: Number(stored && stored.cursor) || cursor });
     }
   } catch (_) { return json({ error: 'db' }, 503); }
-  return json({ ok: true, merchant, accepted });
+  return json({ ok: true, merchant, accepted, scope: scope.metadata() });
 }

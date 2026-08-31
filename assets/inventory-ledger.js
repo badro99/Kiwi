@@ -49,8 +49,21 @@
     } catch (_) {}
     return '';
   }
+  function terminalId() {
+    try { return String(localStorage.getItem('kiwi:caisse:terminal-id:v1') || '').trim().slice(0, 80); }
+    catch (_) { return ''; }
+  }
   function key() { return PREFIX + merchant(); }
-  function blank() { return { cursor: 0, base: {}, rows: [], queued: [] }; }
+  function blank() {
+    return { cursor: 0, base: {}, rows: [], queued: [], unitId: '', locationId: '', economatLocationId: '' };
+  }
+  function retainScope(d, scope) {
+    if (!scope || typeof scope !== 'object') return d;
+    d.unitId = String(scope.unitId || '').slice(0, 80);
+    d.locationId = String(scope.locationId || '').slice(0, 80);
+    d.economatLocationId = String(scope.economatLocationId || '').slice(0, 80);
+    return d;
+  }
   function read() {
     if (!real() || !merchant()) return blank();
     try {
@@ -63,6 +76,9 @@
       d.rows = Array.isArray(d.rows) ? d.rows : [];
       d.queued = Array.isArray(d.queued) ? d.queued : [];
       d.cursor = Math.max(0, +d.cursor || 0);
+      d.unitId = String(d.unitId || '').slice(0, 80);
+      d.locationId = String(d.locationId || '').slice(0, 80);
+      d.economatLocationId = String(d.economatLocationId || '').slice(0, 80);
       cachedKey = k; cachedRaw = raw; cachedDoc = d;
       cachedSnapshotDoc = null; cachedSnapshot = null;
       return d;
@@ -189,10 +205,11 @@
     if (!movements.length) { d.queued = d.queued.filter(function (id) { return !set.has(id); }); return d; }
     var res = await fetch('/api/inventory/movements', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      credentials: 'same-origin', body: JSON.stringify({ merchant: m, movements: movements }),
+      credentials: 'same-origin', body: JSON.stringify({ merchant: m, movements: movements, terminalId: terminalId() }),
     });
     if (!res.ok) throw new Error('inventory-push-' + res.status);
     var body = await res.json();
+    retainScope(d, body.scope);
     var cursors = new Map((body.accepted || []).map(function (x) { return [x.id, +x.cursor || 0]; }));
     d.rows.forEach(function (r) { if (cursors.has(r.id)) r.cursor = cursors.get(r.id); });
     d.queued = d.queued.filter(function (id) { return !cursors.has(id); });
@@ -200,9 +217,10 @@
   }
   async function pull(d, m) {
     do {
-      var res = await fetch('/api/inventory/movements?merchant=' + encodeURIComponent(m) + '&since=' + encodeURIComponent(d.cursor), { credentials: 'same-origin', cache: 'no-store' });
+      var res = await fetch('/api/inventory/movements?merchant=' + encodeURIComponent(m) + '&since=' + encodeURIComponent(d.cursor) + '&terminalId=' + encodeURIComponent(terminalId()), { credentials: 'same-origin', cache: 'no-store' });
       if (!res.ok) throw new Error('inventory-pull-' + res.status);
-      var body = await res.json(); var byId = new Map(d.rows.map(function (r) { return [r.id, r]; }));
+      var body = await res.json(); retainScope(d, body.scope);
+      var byId = new Map(d.rows.map(function (r) { return [r.id, r]; }));
       (body.movements || []).forEach(function (raw) {
         var r = clean(raw); r.cursor = +raw.cursor || 0;
         if (!byId.has(r.id)) { d.rows.push(r); byId.set(r.id, r); }
@@ -244,7 +262,7 @@
   else startBackgroundSync();
 
   window.KiwiInventory = {
-    isReal: real, merchant: merchant, add: add, reverse: reverse,
+    isReal: real, merchant: merchant, terminalId: terminalId, add: add, reverse: reverse,
     ensureOpening: ensureOpening, balance: balance, snapshot: snapshot, history: history, between: between,
     sync: sync, pending: function () { return read().queued.length; },
     subscribe: function (fn) { subs.add(fn); return function () { subs.delete(fn); }; },
