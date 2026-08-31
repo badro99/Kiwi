@@ -11,6 +11,7 @@ let n=0;const ok=(c,m)=>{assert.ok(c,m);n++;console.log('  ✓ '+m);};
 ok(/world\.openfoodfacts\.org\/api\/v2\/product/.test(ops),'product enrichment uses the official v2 product endpoint');
 ok(/router\.project-osrm\.org/.test(ops)&&/\/route\/v1\/driving\//.test(ops),'routing uses OSRM and never invents a route');
 ok(/navigator\.onLine===false\)\{fail\('offline'\)/.test(ops),'uploads refuse false offline success');
+ok(/opts\.merchant.*merchant=/.test(ops)&&/readSession\(readCookie\(request, SESS_COOKIE\)/.test(fs.readFileSync(new URL('../functions/api/media/index.js',import.meta.url),'utf8'))&&/tenantFor\(request, env, asked, \{ strict: true \}\)/.test(fs.readFileSync(new URL('../functions/api/media/index.js',import.meta.url),'utf8')),'multi-store uploads are filed under the authenticated selected store, never by a paired till alone');
 /* Le refus doit arriver à l'écran avec SA raison. Les codes du téléverseur
  * local et ceux du serveur (functions/api/media/index.js) doivent être le MÊME
  * vocabulaire, et chacun doit avoir sa phrase dans KiwiOrderPro.uploadError :

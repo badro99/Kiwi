@@ -1,0 +1,31 @@
+#!/usr/bin/env node
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import { DatabaseSync } from 'node:sqlite';
+import { makeSession, sessionCookie } from '../functions/auth/_lib.js';
+import { onRequestPost } from '../functions/api/media/index.js';
+
+const sqlite = new DatabaseSync(':memory:');
+sqlite.exec(fs.readFileSync(new URL('../schema.sql', import.meta.url), 'utf8'));
+const now=Date.now(),secret='media-upload-test-secret-0123456789';
+sqlite.prepare('INSERT INTO accounts (id,email,name,business,salt,hash,created_ts) VALUES (?,?,?,?,?,?,?)').run('acc-1','owner@test.ma','Owner','Main Shop','s','h',now);
+sqlite.prepare('INSERT INTO accounts (id,email,name,business,salt,hash,created_ts) VALUES (?,?,?,?,?,?,?)').run('acc-2','other@test.ma','Other','Other Shop','s','h',now);
+sqlite.prepare('INSERT INTO merchant_config (merchant,features,type,account_id,name,status,updated_ts) VALUES (?,?,?,?,?,?,?)').run('main-shop','{}','boutique','acc-1','Main Shop','active',now);
+sqlite.prepare('INSERT INTO merchant_config (merchant,features,type,account_id,name,status,updated_ts) VALUES (?,?,?,?,?,?,?)').run('second-hotel','{}','hotel','acc-1','Second Hotel','active',now);
+sqlite.prepare('INSERT INTO merchant_config (merchant,features,type,account_id,name,status,updated_ts) VALUES (?,?,?,?,?,?,?)').run('other-shop','{}','boutique','acc-2','Other Shop','active',now);
+const DB={prepare(text){let args=[];return{bind(...v){args=v;return this},async first(){return sqlite.prepare(text).get(...args)||null}}}};
+const puts=[];
+const env={DB,AUTH_SECRET:secret,MEDIA:{async put(key,bytes,opts){puts.push({key,size:bytes.byteLength,opts})}}};
+const cookie=sessionCookie(await makeSession('acc-1',secret)).split(';')[0];
+const call=(merchant,auth=true,type='image/jpeg')=>onRequestPost({env,request:new Request('https://kiwi.test/api/media?name=room.jpg'+(merchant?'&merchant='+merchant:''),{method:'POST',headers:{'Content-Type':type,...(auth?{Cookie:cookie}:{})},body:new Uint8Array([1,2,3,4])})});
+let n=0;const ok=(v,m)=>{assert.ok(v,m);n++};
+let res=await call('second-hotel');let body=await res.json();
+ok(res.status===200&&body.ok&&puts[0].key.startsWith('second-hotel/'),'an owned secondary hotel receives its own R2 prefix');
+ok(body.url==='/api/media/'+puts[0].key&&puts[0].opts.httpMetadata.contentType==='image/jpeg','the public URL and immutable image metadata match the stored object');
+res=await call('other-shop');
+ok(res.status===401&&puts.length===1,'an owner cannot file media under another merchant');
+res=await call('second-hotel',false);
+ok(res.status===401&&puts.length===1,'a caller without an owner session cannot upload');
+res=await call('second-hotel',true,'text/html');
+ok(res.status===415&&puts.length===1,'active content types are rejected before R2');
+console.log(`media-upload-test: ${n} controls passed`);

@@ -364,9 +364,14 @@
   }
   function cuDefaultTypes(now) {
     return [
-      { id: 'type:chambre', name: 'Chambre', rate: null, description: '', maxGuests: 2, beds: '1 grand lit', sizeM2: null, view: '', amenities: [], public: true, updatedAt: now },
-      { id: 'type:suite', name: 'Suite', rate: null, description: '', maxGuests: 2, beds: '1 grand lit', sizeM2: null, view: '', amenities: [], public: true, updatedAt: now },
+      { id: 'type:chambre', name: 'Chambre', rate: null, description: '', maxGuests: 2, beds: '1 grand lit', sizeM2: null, view: '', amenities: [], photos: [], public: true, updatedAt: now },
+      { id: 'type:suite', name: 'Suite', rate: null, description: '', maxGuests: 2, beds: '1 grand lit', sizeM2: null, view: '', amenities: [], photos: [], public: true, updatedAt: now },
     ];
+  }
+  function cuSafePhoto(x, index, typeName) {
+    const url = String(typeof x === 'string' ? x : x?.url || '').trim();
+    if (!/^\/api\/media\/[a-z0-9][a-z0-9-]{2,63}\/[a-z0-9-]{6,80}\.(?:jpe?g|png|webp|gif|avif)$/i.test(url)) return null;
+    return { url, alt: String(x?.alt || (typeName + ' · photo ' + (index + 1))).trim().slice(0, 120), updatedAt: +x?.updatedAt || 0 };
   }
   function cuSeed() {
     const vd = window.KiwiVenue?.getCurrentVenueData?.() || {};
@@ -426,6 +431,7 @@
         view: String(x.view || '').trim().slice(0, 80),
         amenities: (Array.isArray(x.amenities) ? x.amenities : String(x.amenities || '').split(','))
           .map((v) => String(v || '').trim().slice(0, 40)).filter(Boolean).slice(0, 12),
+        photos: (Array.isArray(x.photos) ? x.photos : []).slice(0, 8).map((p, i) => cuSafePhoto(p, i, String(x.name || 'Chambre'))).filter(Boolean),
         public: x.public !== false,
         updatedAt: +x.updatedAt || 0,
       };
@@ -1391,6 +1397,51 @@
     m.el.querySelector('.kiwi-modal')?.classList.add('hx-hotel-modal', 'hx-types-modal');
     openModal = { el: m.el, close: m.close };
   }
+  function cuPhotoEditorMarkup(photos) {
+    return photos.length ? photos.map((p, i) => `<div class="hx-type-photo"><img src="${esc(p.url)}" alt="${esc(p.alt || '')}"><span>${i === 0 ? 'PHOTO PRINCIPALE' : (i + 1) + ' / ' + photos.length}</span><div><button type="button" data-action="hx-type-photo-move" data-arg="${i}:-1" ${i === 0 ? 'disabled' : ''} aria-label="Déplacer avant">←</button><button type="button" data-action="hx-type-photo-move" data-arg="${i}:1" ${i === photos.length - 1 ? 'disabled' : ''} aria-label="Déplacer après">→</button><button type="button" data-action="hx-type-photo-remove" data-arg="${i}" aria-label="Retirer la photo">×</button></div></div>`).join('') : '<div class="hx-type-photo-empty"><b>Aucune photo</b><span>Le visuel Kiwi reste affiché tant que vous n’ajoutez rien.</span></div>';
+  }
+  function cuRenderPhotoEditor(root) {
+    const host = root?.querySelector('[data-hx-type-photos]');
+    if (host) host.innerHTML = cuPhotoEditorMarkup(root.__hxPhotos || []);
+    const add = root?.querySelector('[data-action="hx-type-photo-pick"]');
+    if (add) add.disabled = (root.__hxPhotos || []).length >= 8;
+  }
+  function cuShrinkHotelPhoto(file) {
+    if (!file || !/^image\/(jpeg|png|webp|avif)$/i.test(file.type || '') || file.size < 900 * 1024 || typeof createImageBitmap !== 'function') return Promise.resolve(file);
+    return createImageBitmap(file, { imageOrientation: 'from-image' }).catch(() => createImageBitmap(file)).then((image) => {
+      const scale = Math.min(1, 1800 / Math.max(image.width, image.height));
+      const canvas = document.createElement('canvas'); canvas.width = Math.max(1, Math.round(image.width * scale)); canvas.height = Math.max(1, Math.round(image.height * scale));
+      const ctx = canvas.getContext('2d'); if (!ctx) return file;
+      ctx.drawImage(image, 0, 0, canvas.width, canvas.height); try { image.close(); } catch (_) {}
+      return new Promise((resolve) => canvas.toBlob((blob) => {
+        if (!blob || blob.size >= file.size) return resolve(file);
+        const name = String(file.name || 'chambre').replace(/\.[a-z0-9]{1,6}$/i, '') + '.jpg';
+        try { resolve(new File([blob], name, { type: 'image/jpeg', lastModified: Date.now() })); } catch (_) { resolve(blob); }
+      }, 'image/jpeg', .84));
+    }).catch(() => file);
+  }
+  async function cuUploadTypePhotos(root, files) {
+    const status = root?.querySelector('[data-hx-type-photo-status]'), typeName = String(root?.querySelector('[data-hx-type-name]')?.value || 'Chambre').trim() || 'Chambre';
+    const queue = Array.from(files || []).filter((f) => /^image\/(jpeg|png|webp|gif|avif)$/i.test(f.type || '')).slice(0, Math.max(0, 8 - (root.__hxPhotos || []).length));
+    if (!queue.length) { if (status) status.textContent = 'Choisissez une image JPG, PNG, WebP, GIF ou AVIF.'; return; }
+    const uploader = window.KiwiPlatformOps?.uploads;
+    if (!uploader?.upload) { if (status) status.textContent = 'Le stockage photo n’est pas disponible sur cet appareil.'; return; }
+    for (let i = 0; i < queue.length; i++) {
+      if (status) status.textContent = 'Préparation de la photo ' + (i + 1) + ' / ' + queue.length + '…';
+      try {
+        const ready = await cuShrinkHotelPhoto(queue[i]);
+        const uploaded = await uploader.upload(ready, { merchant: window.KiwiStore?.slugFor?.(cuVenueId()) || '', progress: (pct) => { if (status) status.textContent = 'Envoi ' + (i + 1) + ' / ' + queue.length + ' · ' + pct + ' %'; } });
+        const photo = cuSafePhoto({ url: uploaded.url, alt: typeName + ' · photo ' + ((root.__hxPhotos || []).length + 1), updatedAt: cuStamp() }, (root.__hxPhotos || []).length, typeName);
+        if (photo) root.__hxPhotos.push(photo);
+        cuRenderPhotoEditor(root);
+      } catch (error) {
+        const code = error?.code || error?.message;
+        if (status) status.textContent = code === 'too-large' ? 'Photo trop lourde même après compression.' : code === 'bad-type' ? 'Format photo non accepté.' : 'Envoi interrompu. Les autres photos restent intactes.';
+        return;
+      }
+    }
+    if (status) status.textContent = queue.length + ' photo' + (queue.length > 1 ? 's ajoutées' : ' ajoutée') + ' · enregistrez le type pour publier.';
+  }
   function cuTypeEditor(id) {
     const type = id ? cuState().roomTypes[id] : null;
     const amenities = (type?.amenities || []).join(', ');
@@ -1407,6 +1458,7 @@
         <label><span>Surface <small>· m²</small></span><input data-hx-type-size type="number" inputmode="numeric" min="1" max="999" value="${type?.sizeM2 || ''}" placeholder="24"></label>
         <label><span>Vue</span><input data-hx-type-view maxlength="80" value="${esc(type?.view || '')}" placeholder="Patio, médina, montagne…"></label>
         <label class="hx-room-form-wide"><span>Équipements <small>· séparés par des virgules</small></span><input data-hx-type-amenities maxlength="500" value="${esc(amenities)}" placeholder="Wi-Fi, climatisation, petit-déjeuner"></label>
+        <section class="hx-type-photos hx-room-form-wide"><div class="hx-type-photos-head"><div><b>Galerie publique</b><span>8 photos maximum · la première devient la couverture</span></div><button class="hx-btn ghost" type="button" data-action="hx-type-photo-pick">+ Ajouter des photos</button><input data-hx-type-photo-input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" multiple hidden></div><div class="hx-type-photo-grid" data-hx-type-photos></div><p data-hx-type-photo-status></p></section>
         <label class="hx-room-form-wide"><span><input data-hx-type-public type="checkbox" ${type?.public === false ? '' : 'checked'}> Visible sur le lien de réservation</span></label>
       </div>
       <div class="hx-room-form-actions">
@@ -1415,6 +1467,10 @@
       </div>`,
     });
     m.el.querySelector('.kiwi-modal')?.classList.add('hx-hotel-modal');
+    const root = m.el.querySelector('.kiwi-modal');
+    root.__hxPhotos = (type?.photos || []).map((p) => ({ ...p }));
+    cuRenderPhotoEditor(root);
+    root.querySelector('[data-hx-type-photo-input]')?.addEventListener('change', (e) => { cuUploadTypePhotos(root, e.target.files); e.target.value = ''; });
     openModal = { el: m.el, close: m.close };
   }
   function cuFloorRows() {
@@ -2206,6 +2262,17 @@
     };
     handlers['hx-room-type-new'] = () => { if (isCustomHotel()) cuTypeEditor(null); };
     handlers['hx-room-type-edit'] = (el, arg) => { if (isCustomHotel()) cuTypeEditor(String(arg || '')); };
+    handlers['hx-type-photo-pick'] = (el) => el.closest('.kiwi-modal')?.querySelector('[data-hx-type-photo-input]')?.click();
+    handlers['hx-type-photo-remove'] = (el, arg) => {
+      const root = el.closest('.kiwi-modal'), index = +arg;
+      if (!root || !Number.isInteger(index) || !root.__hxPhotos?.[index]) return;
+      root.__hxPhotos.splice(index, 1); cuRenderPhotoEditor(root);
+    };
+    handlers['hx-type-photo-move'] = (el, arg) => {
+      const root = el.closest('.kiwi-modal'), [from, delta] = String(arg || '').split(':').map(Number), to = from + delta;
+      if (!root || !root.__hxPhotos?.[from] || !root.__hxPhotos?.[to]) return;
+      const photo = root.__hxPhotos.splice(from, 1)[0]; root.__hxPhotos.splice(to, 0, photo); cuRenderPhotoEditor(root);
+    };
     handlers['hx-room-type-save'] = (el, arg) => {
       if (!isCustomHotel()) return;
       const root = el.closest('.kiwi-modal');
@@ -2227,6 +2294,7 @@
       const amenities = String(amenitiesEl ? amenitiesEl.value : (priorType.amenities || []).join(',')).split(',')
         .map((v) => v.trim().slice(0, 40)).filter(Boolean).slice(0, 12);
       const isPublic = publicEl ? !!publicEl.checked : priorType.public !== false;
+      const photos = (root?.__hxPhotos || priorType.photos || []).slice(0, 8).map((p, i) => cuSafePhoto(p, i, name || priorType.name || 'Chambre')).filter(Boolean);
       const st = cuState();
       if (!name) {
         toast('Donnez un nom à ce type', { type: 'warn', desc: 'Ex. Chambre Deluxe, Suite Atlas, Twin Patio.' });
@@ -2260,7 +2328,7 @@
         rate: rateRaw === '' ? null : Math.round(+rateRaw),
         description: description.slice(0, 300), maxGuests: Math.round(+guestsRaw),
         beds: beds.slice(0, 80), sizeM2: sizeRaw === '' ? null : Math.round(+sizeRaw),
-        view: view.slice(0, 80), amenities, public: isPublic, updatedAt: now,
+        view: view.slice(0, 80), amenities, photos, public: isPublic, updatedAt: now,
       };
       Object.values(st.rooms).filter((r) => r.typeId === id).forEach((r) => { r.typeName = name.slice(0, 60); r.updatedAt = now; });
       cuSave(st);

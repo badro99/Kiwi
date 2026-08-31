@@ -342,7 +342,7 @@ section('Offline transaction foundation (tools/offline-foundation-test.mjs)');
 
 section('Shared platform kernel and adapters');
 for (const test of [
-  'platform-kernel-test.mjs', 'platform-ops-test.mjs', 'operations-system-test.mjs',
+  'platform-kernel-test.mjs', 'platform-ops-test.mjs', 'media-upload-test.mjs', 'operations-system-test.mjs',
   'vertical-feature-parity-test.mjs', 'pos-sale-cloud-sync-test.mjs',
   'caisse-opening-gate-test.mjs',
   'hotel-rooms-test.mjs', 'hotel-stays-test.mjs', 'hotel-caisse-catalog-test.mjs',

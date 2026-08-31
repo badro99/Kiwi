@@ -48,9 +48,9 @@ function boot(saved) {
   return { data, window, handlers };
 }
 
-function editor(fields) {
+function editor(fields, rootData) {
   const controls = Object.fromEntries(Object.entries(fields).map(([key, value]) => [key, { value: String(value), checked: value === true, focus() {} }]));
-  const root = { querySelector: (sel) => controls[sel] || null };
+  const root = Object.assign({ querySelector: (sel) => controls[sel] || null }, rootData || {});
   return { closest: () => root };
 }
 
@@ -87,12 +87,17 @@ first.handlers['hx-room-type-save'](editor({
   '[data-hx-type-view]': 'Patio',
   '[data-hx-type-amenities]': 'Wi-Fi, Climatisation, Petit-déjeuner',
   '[data-hx-type-public]': true,
-}), roomTypeId);
+}, { __hxPhotos: [
+  { url:'/api/media/riad-test/room-atlas-01.jpg', alt:'Chambre Atlas · patio', updatedAt:100 },
+  { url:'https://tracker.invalid/room.jpg', alt:'must not persist', updatedAt:101 },
+] }), roomTypeId);
 doc = JSON.parse(first.data.get('kiwi:hotel-rooms:v2:vhotel'));
 const savedType = doc.roomTypes.find((t) => t.id === roomTypeId && !t.deletedAt);
 ok(savedType && savedType.name === 'Chambre Atlas' && savedType.rate === 890, 'a hotel can rename a room category and set its shared nightly rate');
 ok(savedType.maxGuests === 3 && savedType.view === 'Patio' && savedType.amenities.length === 3 && savedType.public === true,
   'guest-facing occupancy, view, bedding and amenities persist with the room category');
+ok(savedType.photos.length === 1 && savedType.photos[0].url === '/api/media/riad-test/room-atlas-01.jpg',
+  'room galleries persist only bounded same-origin R2 media references');
 
 first.handlers['hx-room-save'](editor({
   '[data-hx-room-number]': 201,
@@ -107,6 +112,7 @@ ok(room && room.n === 201 && room.status === 'hs', 'editing can renumber one roo
 const reloaded = boot(first.data);
 const afterReload = reloaded.window.KiwiHotelRooms.current();
 ok(afterReload.rooms.some((r) => r.n === 201 && r.typeId === roomTypeId), 'room and category configuration survive a full page reload');
+ok(afterReload.roomTypes.find((t) => t.id === roomTypeId).photos[0].alt === 'Chambre Atlas · patio', 'room photo order and alt text survive a full page reload');
 
 reloaded.handlers['hx-room-delete'](null, '201');
 const deleted = JSON.parse(first.data.get('kiwi:hotel-rooms:v2:vhotel'));

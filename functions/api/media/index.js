@@ -5,8 +5,8 @@
 // the whole point: localStorage caps out around 5 MB, and a single base64 clip
 // would blow both it and the published-catalogue row.
 //
-// Session-gated (a merchant uploads only under its own slug, derived from the
-// session, never the body). Reading them back is public — see [[key]].js — since
+// Session-gated (the optional merchant query is accepted only when tenantFor
+// proves that store belongs to this caller). Reading them back is public — see [[key]].js — since
 // a customer's phone has no session and must be able to see the photos.
 //
 // Requires an R2 bucket bound as MEDIA (see docs/specs/ORDERPRO_SPEC.md). If the binding is
@@ -19,7 +19,8 @@
 //   ?name=<original filename>   → only used to pick the extension
 //   Content-Type: image/… | video/…
 
-import { json, readSession, readCookie, SESS_COOKIE, slugMerchant } from '../../auth/_lib.js';
+import { json, readSession, readCookie, SESS_COOKIE } from '../../auth/_lib.js';
+import { tenantFor } from '../_private.js';
 
 // Le navigateur rétrécit la photo avant l'envoi (orderpro-publish.js shrinkPhoto :
 // ~300 Ko), donc ces plafonds sont un filet, pas la norme. 16 Mo couvre le JPEG
@@ -40,11 +41,18 @@ export async function onRequestPost(context) {
   if (!env.DB || !env.AUTH_SECRET) return json({ error: 'not-configured' }, 503);
   if (!env.MEDIA) return json({ error: 'no-media' }, 503);
 
+  /* Media publishing remains owner-session-only. tenantFor also understands
+   * paired tills, which is correct for operational documents but would let a
+   * compromised cashier fill the merchant's R2 bucket. */
   const sess = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET);
-  if (!sess || !sess.aid) return json({ error: 'unauthorized' }, 401);
-  const acc = await env.DB.prepare('SELECT business FROM accounts WHERE id = ?').bind(sess.aid).first();
-  if (!acc) return json({ error: 'unauthorized' }, 401);
-  const merchant = slugMerchant(acc.business);
+  if (!sess?.aid) return json({ error: 'unauthorized' }, 401);
+  /* A proprietor may own several stores. The old route always filed media
+   * under the account's first business name, even while the dashboard edited
+   * a second hotel. tenantFor keeps the caller-derived boundary, but lets an
+   * explicitly selected, actually-owned store receive its own R2 prefix. */
+  const asked = new URL(request.url).searchParams.get('merchant');
+  const merchant = await tenantFor(request, env, asked, { strict: true });
+  if (!merchant) return json({ error: 'unauthorized' }, 401);
 
   const ctype = (request.headers.get('Content-Type') || '').split(';')[0].trim().toLowerCase();
   const ext = EXT[ctype];

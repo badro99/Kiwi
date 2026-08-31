@@ -629,10 +629,28 @@
 .hx-cu-tape-empty b { color:var(--ink); }
 .hx-cu-tape-empty p { color:var(--n-500); font-size:12px; }
 .hx-stay-error { min-height:18px; color:var(--warn-ink); font-size:12px; margin:8px 0; }
+.hx-type-photos { border:1px solid var(--n-200); border-radius:14px; padding:12px; }
+.hx-type-photos-head { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.hx-type-photos-head b,.hx-type-photos-head span { display:block; }
+.hx-type-photos-head b { font-size:12px; color:var(--ink); }
+.hx-type-photos-head span { margin-top:3px; font-size:10.5px; color:var(--n-500); }
+.hx-type-photo-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin-top:11px; }
+.hx-type-photo { position:relative; min-height:102px; border-radius:10px; overflow:hidden; background:var(--n-100); }
+.hx-type-photo img { width:100%; height:102px; object-fit:cover; display:block; }
+.hx-type-photo>span { position:absolute; inset:6px auto auto 6px; padding:3px 5px; border-radius:5px; background:var(--riad); color:var(--paper); font:8px var(--mono); }
+.hx-type-photo>div { position:absolute; inset:auto 5px 5px 5px; display:flex; justify-content:flex-end; gap:3px; }
+.hx-type-photo button { width:24px; height:24px; border:0; border-radius:6px; background:var(--surface); color:var(--ink); cursor:pointer; box-shadow:var(--shadow-1); }
+.hx-type-photo button:disabled { opacity:.35; cursor:default; }
+.hx-type-photo-empty { grid-column:1/-1; min-height:78px; display:flex; flex-direction:column; align-items:center; justify-content:center; border:1px dashed var(--n-200); border-radius:10px; color:var(--n-500); }
+.hx-type-photo-empty b { font-size:11px; color:var(--ink); }
+.hx-type-photo-empty span { margin-top:3px; font-size:10px; }
+.hx-type-photos>p { min-height:15px; margin:7px 0 0; font-size:10.5px; color:var(--n-500); }
 
 @media(max-width:760px) {
   .hx-cu-tape { padding:13px; }
   .hx-cu-tape-head { display:block; }
   .hx-cu-tape-actions { justify-content:flex-start; margin-top:14px; }
   .hx-cu-tape-actions .hx-btn.atlas { flex:1; }
+  .hx-type-photo-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .hx-type-photos-head { align-items:flex-start; flex-direction:column; }
 }

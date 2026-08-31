@@ -128,7 +128,7 @@ db.doc = { ...doc, settings:{ ...doc.settings, published:true, confirmation:'ins
 db.rooms = {
   v:4, baseRate:700,
   roomTypes:[
-    { id:'type-atlas', name:'Chambre Atlas', rate:850, description:'Calme et lumineuse', maxGuests:2, beds:'1 grand lit', sizeM2:24, view:'Patio', amenities:['Wi-Fi','Climatisation'], public:true },
+    { id:'type-atlas', name:'Chambre Atlas', rate:850, description:'Calme et lumineuse', maxGuests:2, beds:'1 grand lit', sizeM2:24, view:'Patio', amenities:['Wi-Fi','Climatisation'], photos:[{url:'/api/media/riad-test/atlas-cover-01.jpg',alt:'Chambre Atlas sur patio'},{url:'https://tracker.invalid/pixel.jpg',alt:'bad'}], public:true },
     { id:'type-family', name:'Suite famille', rate:1200, description:'Pour les familles', maxGuests:4, beds:'1 grand lit + 2 lits', sizeM2:42, view:'Médina', amenities:['Wi-Fi'], public:true },
     { id:'type-hidden', name:'Interne', rate:300, maxGuests:2, public:false },
   ],
@@ -148,6 +148,7 @@ check(!JSON.stringify(body).includes('101') && !JSON.stringify(body).includes('r
 response = await callGet(`merchant=test-shop&checkIn=${hotelIn}&checkOut=${hotelOut}&guests=2`); body = await response.json();
 const atlas = body.hotel.categories.find((x)=>x.id==='type-atlas');
 check(atlas.total===1700 && atlas.view==='Patio', 'whole-stay search returns the server-calculated total and guest-facing details');
+check(atlas.photos.length===1&&atlas.photos[0].url==='/api/media/riad-test/atlas-cover-01.jpg', 'public room gallery exposes only bounded same-origin media references');
 check(atlas.available===2, 'an in-house multi-night stay is excluded without leaking its room number');
 check(!body.hotel.categories.some((x)=>x.id==='type-hidden'), 'private room categories never appear publicly');
 response = await callGet(`merchant=test-shop&checkIn=${hotelIn}&checkOut=${hotelOut}&guests=3`); body = await response.json();

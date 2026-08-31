@@ -130,11 +130,13 @@ function slotsFor(doc, svc, date, hours, asked, partySize = 1, team = safeTeam(n
 function safeHotel(raw) {
   let d = raw; if (typeof d === 'string') { try { d = JSON.parse(d); } catch (_) { d = null; } }
   d = d && typeof d === 'object' ? d : {};
+  const safePhoto = (x) => { const url=str(typeof x==='string'?x:x?.url,240); return /^\/api\/media\/[a-z0-9][a-z0-9-]{2,63}\/[a-z0-9-]{6,80}\.(?:jpe?g|png|webp|gif|avif)$/i.test(url)?{url,alt:str(x?.alt,120)}:null; };
   const types = (Array.isArray(d.roomTypes) ? d.roomTypes : []).slice(0,200).map((x) => ({
     id:str(x?.id,64), name:str(x?.name,100), rate:x?.rate == null ? null : num(x.rate,0,1000000,null),
     description:str(x?.description,300), maxGuests:num(x?.maxGuests,1,12,2), beds:str(x?.beds,80),
     sizeM2:x?.sizeM2 == null ? null : num(x.sizeM2,1,999,null), view:str(x?.view,80),
     amenities:(Array.isArray(x?.amenities) ? x.amenities : []).slice(0,12).map((v)=>str(v,40)).filter(Boolean),
+    photos:(Array.isArray(x?.photos)?x.photos:[]).slice(0,8).map(safePhoto).filter(Boolean),
     public:x?.public !== false,
   })).filter((x)=>x.id&&x.name);
   const typeIds = new Set(types.map((x)=>x.id));
@@ -172,7 +174,7 @@ function hotelCategories(doc, hotel, stay, guests, onlyType='') {
     return { ...t, rate, total:rate == null ? null : Math.round(rate*stay.nights), rooms };
   }).filter((t)=>t.rate != null);
 }
-function publicHotelCategory(x) { return { id:x.id,name:x.name,description:x.description,maxGuests:x.maxGuests,beds:x.beds,sizeM2:x.sizeM2,view:x.view,amenities:x.amenities,rate:x.rate,total:x.total,available:x.rooms.length }; }
+function publicHotelCategory(x) { return { id:x.id,name:x.name,description:x.description,maxGuests:x.maxGuests,beds:x.beds,sizeM2:x.sizeM2,view:x.view,amenities:x.amenities,photos:x.photos,rate:x.rate,total:x.total,available:x.rooms.length }; }
 async function readRows(env, merchant) {
   const rows = await env.DB.batch([
     env.DB.prepare("SELECT data, rev FROM store_docs WHERE merchant = ? AND feature = 'reservations'").bind(merchant),
