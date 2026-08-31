@@ -14,9 +14,11 @@
   };
 
   const current = document.documentElement.lang.split('-')[0];
+  let mounting = false;
   const mount = () => {
     const control = document.querySelector('header [role="group"][aria-label]');
-    if (!control || control.dataset.localeReady === 'true') return;
+    if (!control || control.dataset.localeReady === 'true' || mounting) return;
+    mounting = true;
     control.dataset.localeReady = 'true';
     control.dataset.open = 'false';
     control.classList.add('kw-locale-dropdown');
@@ -53,8 +55,17 @@
     document.addEventListener('pointerdown', event => {
       if (!control.contains(event.target)) setOpen(false);
     });
+    mounting = false;
   };
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount);
-  else mount();
+  const start = () => {
+    mount();
+    // Next.js can replace the server-rendered header while hydrating. Re-apply
+    // the locale control whenever that happens so every locale keeps the same
+    // six-language dropdown instead of falling back to FR / EN / AR.
+    new MutationObserver(mount).observe(document.body, { childList: true, subtree: true });
+  };
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+  else start();
 })();
