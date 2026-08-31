@@ -64,6 +64,15 @@
     d.economatLocationId = String(scope.economatLocationId || '').slice(0, 80);
     return d;
   }
+  function unitId() { return String(read().unitId || '').slice(0, 80); }
+  function locationId() {
+    var d = read();
+    return String(d.locationId || d.economatLocationId || 'principal').slice(0, 80);
+  }
+  function effectiveLocation(d, value) {
+    var id = String(value || 'principal').slice(0, 80);
+    return id === 'principal' && d.economatLocationId ? d.economatLocationId : id;
+  }
   function read() {
     if (!real() || !merchant()) return blank();
     try {
@@ -84,14 +93,16 @@
       return d;
     } catch (_) { return blank(); }
   }
-  function balanceKey(r) { return [r.itemId || '', r.variantId || '', r.locationId || 'principal'].join('|'); }
+  function balanceKey(r, d) {
+    return [r.itemId || '', r.variantId || '', effectiveLocation(d, r.locationId)].join('|');
+  }
   function compact(d) {
     if (d.rows.length <= 6000) return d;
     var keep = d.rows.slice(-4000);
     var kept = new Set(keep.map(function (r) { return r.id; }));
     d.rows.forEach(function (r) {
       if (kept.has(r.id) || !(+r.cursor > 0)) return;
-      var k = balanceKey(r);
+      var k = balanceKey(r, d);
       d.base[k] = Math.round(((+d.base[k] || 0) + (+r.qty || 0)) * 1000) / 1000;
     });
     d.rows = keep;
@@ -143,6 +154,8 @@
   }
   function add(raw) {
     if (!real() || !merchant()) return null;
+    raw = Object.assign({}, raw || {});
+    if (!raw.locationId) raw.locationId = locationId();
     var m = clean(raw);
     if (!m.itemId || !m.qty) return null;
     var d = read();
@@ -155,37 +168,52 @@
     opts = opts || {};
     qty = Math.round((+qty || 0) * 1000) / 1000;
     if (!itemId || !qty) return null;
-    var seed = [merchant(), itemId, opts.variantId || '', opts.locationId || 'principal'].join('|');
+    var targetLocation = opts.locationId || locationId();
+    var seed = [merchant(), itemId, opts.variantId || '', targetLocation].join('|');
     return add({
       id: 'inv-open-' + hash(seed), itemId: itemId, variantId: opts.variantId,
-      locationId: opts.locationId, qty: qty, reason: 'opening', unitCost: opts.unitCost,
+      locationId: targetLocation, qty: qty, reason: 'opening', unitCost: opts.unitCost,
       refType: 'opening', refId: itemId, note: opts.note || 'Solde initial migré',
       occurredTs: opts.occurredTs,
     });
   }
   function snapshotFor(d) {
     if (cachedSnapshotDoc === d && cachedSnapshot) return cachedSnapshot;
-    var out = Object.assign({}, d.base);
+    var out = {};
+    Object.keys(d.base).forEach(function (key) {
+      var parts = key.split('|');
+      var mapped = [parts[0] || '', parts[1] || '', effectiveLocation(d, parts[2])].join('|');
+      out[mapped] = Math.round(((+out[mapped] || 0) + (+d.base[key] || 0)) * 1000) / 1000;
+    });
     d.rows.forEach(function (r) {
-      var k = balanceKey(r); out[k] = Math.round(((+out[k] || 0) + (+r.qty || 0)) * 1000) / 1000;
+      var k = balanceKey(r, d); out[k] = Math.round(((+out[k] || 0) + (+r.qty || 0)) * 1000) / 1000;
     });
     cachedSnapshotDoc = d; cachedSnapshot = out;
     return out;
   }
   function snapshot() { return Object.assign({}, snapshotFor(read())); }
   function balance(itemId, opts) {
-    opts = opts || {}; var snap = snapshotFor(read()); var total = 0;
+    opts = opts || {}; var d = read(); var snap = snapshotFor(d); var total = 0;
+    var requestedLocation = opts.locationId == null ? null : effectiveLocation(d, opts.locationId);
     Object.keys(snap).forEach(function (k) {
       var p = k.split('|');
       if (p[0] !== String(itemId)) return;
       if (opts.variantId != null && p[1] !== String(opts.variantId)) return;
-      if (opts.locationId != null && p[2] !== String(opts.locationId)) return;
+      if (requestedLocation != null && p[2] !== requestedLocation) return;
       total += +snap[k] || 0;
     });
     return Math.round(total * 1000) / 1000;
   }
-  function history(itemId) {
-    return read().rows.filter(function (r) { return !itemId || r.itemId === itemId; })
+  function history(itemId, opts) {
+    var d = read(); opts = opts || {};
+    var requestedLocation = opts.locationId == null ? null : effectiveLocation(d, opts.locationId);
+    return d.rows.filter(function (r) {
+      if (itemId && r.itemId !== itemId) return false;
+      return requestedLocation == null || effectiveLocation(d, r.locationId) === requestedLocation;
+    }).map(function (r) {
+      if (requestedLocation == null) return r;
+      return Object.assign({}, r, { locationId: effectiveLocation(d, r.locationId) });
+    })
       .sort(function (a, b) { return b.occurredTs - a.occurredTs; });
   }
   /* Read-only bounded range for exports.  Keeping this filtering in the ledger
@@ -262,7 +290,8 @@
   else startBackgroundSync();
 
   window.KiwiInventory = {
-    isReal: real, merchant: merchant, terminalId: terminalId, add: add, reverse: reverse,
+    isReal: real, merchant: merchant, terminalId: terminalId, unitId: unitId, locationId: locationId,
+    add: add, reverse: reverse,
     ensureOpening: ensureOpening, balance: balance, snapshot: snapshot, history: history, between: between,
     sync: sync, pending: function () { return read().queued.length; },
     subscribe: function (fn) { subs.add(fn); return function () { subs.delete(fn); }; },

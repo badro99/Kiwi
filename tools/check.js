@@ -939,6 +939,7 @@ section('Whole-project regressions');
     'hotel-seed-test.mjs',
     'hotel-units-test.mjs',
     'hotel-unit-scope-test.mjs',
+    'hotel-location-attribution-test.mjs',
     'formula-protocol-test.mjs',
     'trade-copy-test.mjs',
     'floor-accept-test.mjs',

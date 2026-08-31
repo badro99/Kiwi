@@ -15,8 +15,8 @@
  *  2. LE CLOISONNEMENT EXISTE DÉJÀ. Les soldes par unité sont indépendants —
  *     c'est l'affirmation centrale de la spec §0 : le registre est multi-lieux
  *     depuis toujours et n'a jamais reçu autre chose que 'principal'.
- *  3. LE COÛT, LUI, N'EST PAS CLOISONNÉ. Et c'est la découverte que cette
- *     suite existe pour figer — voir le bloc « LE PIÈGE » plus bas.
+ *  3. LE COÛT EST CLOISONNÉ. L'allocateur reçoit le lieu source et ne peut
+ *     jamais valoriser une sortie avec le lot d'une autre unité.
  * ─────────────────────────────────────────────────────────────────────────── */
 import { createHotelTenant, UNITS } from './fixtures/hotel-tenant.mjs';
 
@@ -49,45 +49,26 @@ ok(t.balanceHotel('whisky') === 18, 'hôtel : 18 whisky au total');
 ok(t.balanceAt('economat', 'savon') === 100 && t.balanceAt('housekeeping', 'savon') === 0,
   'la fourniture d\'un département part de l\'économat, pas de sa réserve');
 
-/* ── 3 · le coût mélangé FEFO, et le cas sans coût ───────────────────────── */
+/* ── 3 · le coût FEFO reste dans le lieu source ─────────────────────────── */
 const A = t.consumption.allocateCost;
-ok(near(A('whisky', 6, null), 120), '6 whisky → 120,00 : le lot le plus proche de la péremption d\'abord');
-ok(near(A('whisky', 12, null), 135), '12 whisky → 135,00 : UN taux mélangé (6×120 + 6×150) / 12');
-ok(A('cola', 10, null) === 4, 'un article à lot unique reste à son coût');
-ok(A('verrerie', 5, null) === null,
-  'un article sans coût connu rend null — c\'est le refus de confirmation de la spec §3.4.1');
+ok(near(A('whisky', 6, null, { locationId: 'u-economat' }), 120), '6 whisky économat → 120,00');
+ok(near(A('whisky', 12, null, { locationId: 'u-economat' }), 135),
+  '12 whisky économat → 135,00 : UN taux mélangé (6×120 + 6×150) / 12');
+ok(A('cola', 10, null, { locationId: 'u-economat' }) === 4, 'un article à lot unique reste à son coût');
+ok(A('verrerie', 5, null, { locationId: 'u-economat' }) === null,
+  "un article sans coût connu rend null — c'est le refus de confirmation de la spec §3.4.1");
 
-/* ═══ LE PIÈGE · le coût ignore les lieux ══════════════════════════════════
- * `history(itemId)` ne filtre PAS sur locationId, et `deriveLots()` ne porte
- * même pas le lieu dans le lot qu'il produit. L'allocateur mélange donc les
- * lots de TOUTES les unités.
- *
- * Aujourd'hui c'est inoffensif : il n'existe qu'un seul lieu, 'principal'. À
- * la phase 2, chaque unité reçoit le sien, et à la phase 8 la spec demande
- * « le taux mélangé FEFO de la source ». Cette fonction ne sait pas le
- * calculer.
- *
- * Ce que la fixture démontre : l'économat détient 12 whisky, le rooftop 6 à
- * 300 MAD. Demander 13 fait franchir la frontière et le coût saute à 147,69 —
- * du stock du rooftop facturé à l'économat. Et les 12 ne sont justes que par
- * chance, parce que les lots de l'économat trient en tête : changez une date
- * de péremption et la borne se déplace sans un mot.
- *
- * La correction est chirurgicale et appartient à la phase 8 : porter
- * locationId dans le lot, filtrer l'historique dessus, accepter une option
- * { locationId } dans allocateCost. Ce n'est PAS un projet de suivi par lot.
- * Ce contrôle échouera le jour où quelqu'un le fera : c'est voulu, il faudra
- * alors le réécrire sciemment. */
-ok(near(A('whisky', 13, null), 147.6923),
-  'PIÈGE FIGÉ : 13 whisky → 147,69 — le coût traverse la frontière et pioche chez le rooftop');
-ok(near(A('whisky', 18, null), 190),
-  'PIÈGE FIGÉ : 18 whisky → 190,00 — soit tout le stock de l\'hôtel mélangé, économat compris');
-const lots = t.consumption.deriveLots('whisky');
-ok(lots.length === 3, 'les trois lots sont vus…');
-ok(lots.every((l) => l.locationId === undefined),
-  '…et AUCUN ne porte de locationId : la phase 8 doit l\'ajouter avant de parler de « coût de la source »');
+/* ── 4 · le coût ne traverse jamais une frontière d'unité ───────────────── */
+ok(A('whisky', 13, null, { locationId: 'u-economat' }) === null,
+  '13 whisky économat sans taux de secours → null, sans emprunter le rooftop');
+ok(near(A('whisky', 6, null, { locationId: 'u-bar-rooftop' }), 300),
+  '6 whisky rooftop → 300,00 : uniquement le lot du rooftop');
+const lots = t.consumption.deriveLots('whisky', { locationId: 'u-economat' });
+ok(lots.length === 2, "l'économat ne voit que ses deux lots");
+ok(lots.every((l) => l.locationId === 'u-economat'),
+  'chaque lot dérivé porte le lieu source demandé');
 
-/* ── 4 · le socle reste inerte ───────────────────────────────────────────── */
+/* ── 5 · le socle reste inerte ───────────────────────────────────────────── */
 ok(t.count() === 6, '6 mouvements semés, pas un de plus — la fixture n\'écrit rien en douce');
 const before = t.count();
 t.put({ itemId: 'cola', locationId: 'u-bar-lobby', qty: 6, reason: 'transfer-in', unitCost: 4, occurredTs: t.now });

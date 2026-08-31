@@ -5432,12 +5432,12 @@
   <script src="assets/vertical-state.js" defer></script>
   <script src="assets/image-proof.js" defer></script>
   <script src="assets/operational-print.js" defer></script>
-  <script src="assets/inventory-ledger.js?v=8" defer></script>
+  <script src="assets/inventory-ledger.js?v=9" defer></script>
   <!-- Catalogue, seuils, coûts et quantités : exactement le même stock que le
        tableau de bord. Les quantités passent par le registre append-only ; ce
        pont ne maintient jamais un second snapshot propre à la caisse. -->
   <script src="assets/caisse-stock-sync.js?v=9" defer></script>
-  <script src="assets/pos-inventory-count.js?v=5" defer></script>
+  <script src="assets/pos-inventory-count.js?v=6" defer></script>
   <!-- Les horaires de l'établissement, réglés une seule fois côté tableau de
        bord. La caisse les LIT : ouvrir un service hors horaires demande une
        dérogation nommée, et la journée commerciale du Z suit l'heure de
@@ -5455,7 +5455,7 @@
   <!-- Coûts privés + recettes : nécessaires pour transformer une vente de
        produit en sorties d'ingrédients sans exposer les prix d'achat. -->
   <script src="assets/cost.js?v=3" defer></script>
-  <script src="assets/inventory-consumption.js?v=10" defer></script>
+  <script src="assets/inventory-consumption.js?v=11" defer></script>
   <script src="assets/procurement.js" defer></script>
   <!-- Tenant-scoped operational outbox: receipt delivery and device health are
        server-confirmed or explicitly blocked, never presentation-only. -->

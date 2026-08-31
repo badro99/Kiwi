@@ -256,12 +256,12 @@
     "sha": "e17235bc030c227f"
   },
   "assets/inventory-consumption.js": {
-    "v": "10",
-    "sha": "25cb7d0b5c0fa358"
+    "v": "11",
+    "sha": "3ed759afcec8d2fb"
   },
   "assets/inventory-ledger.js": {
-    "v": "8",
-    "sha": "7e642d13b2d0385f"
+    "v": "9",
+    "sha": "3fa321b9ab4bc425"
   },
   "assets/invoice.js": {
     "v": "6",
@@ -496,8 +496,8 @@
     "sha": "e74ea96ef32acfbd"
   },
   "assets/pos-inventory-count.js": {
-    "v": "5",
-    "sha": "7c310fa45e0cb431"
+    "v": "6",
+    "sha": "9e1f1b33b0f0c02c"
   },
   "assets/pos-librairie.css": {
     "v": "5",
@@ -652,8 +652,8 @@
     "sha": "d49ee85d276e22d4"
   },
   "assets/stock.js": {
-    "v": "35",
-    "sha": "63fe56923ca7056b"
+    "v": "36",
+    "sha": "306206dd8ae78baa"
   },
   "assets/store-templates.js": {
     "v": "2",

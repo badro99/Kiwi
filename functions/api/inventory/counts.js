@@ -94,20 +94,25 @@ async function nextCursor(env, merchant) {
 }
 
 /* Calcul du système actuel pour le moteur ledger par (item_id, variant_id, location_id) */
-async function fetchLedgerBalances(env, merchant) {
+async function fetchLedgerBalances(env, merchant, scope, storeId) {
   if (!env || !env.DB) return new Map();
   try {
+    const unit = scope && scope.scoped ? scope.byUnit.get(storeId) : null;
+    const locationFilter = scopeSql('location_id', scope && scope.scoped && unit
+      ? scope.storageLocations(unit.locationId)
+      : []);
     const res = await env.DB.prepare(
       `SELECT item_id, COALESCE(variant_id, '') AS variant_id, COALESCE(location_id, 'principal') AS location_id,
               SUM(qty_milli) AS qty_milli
          FROM inventory_movements
-        WHERE merchant = ?
+        WHERE merchant = ?${locationFilter.clause}
         GROUP BY item_id, variant_id, location_id`
-    ).bind(merchant).all();
+    ).bind(merchant, ...locationFilter.values).all();
     const map = new Map();
     ((res && res.results) || []).forEach(r => {
-      const key = `${r.item_id}|${r.variant_id}|${r.location_id}`;
-      map.set(key, Number(r.qty_milli || 0) / 1000);
+      const locationId = scope ? scope.projectLocation(r.location_id) : r.location_id;
+      const key = `${r.item_id}|${r.variant_id}|${locationId}`;
+      map.set(key, (map.get(key) || 0) + Number(r.qty_milli || 0) / 1000);
     });
     return map;
   } catch (_) {
@@ -457,7 +462,7 @@ export async function onRequestPost({ request, env }) {
           ).bind(
             movId, merchant, itemId, variantId, locationId, qtyMilli,
             unitCostCents, countId, lineNote, reviewerName,
-            nowMs, srvTs, JSON.stringify({ countId, lineKey: line.key || itemId }), nowMs
+            nowMs, srvTs, JSON.stringify({ countId, unitId: row.store_id || '', lineKey: line.key || itemId }), nowMs
           )
         );
       });
@@ -571,7 +576,7 @@ export async function onRequestPost({ request, env }) {
 
   let ledgerBalances = new Map();
   if (engine === 'ledger') {
-    ledgerBalances = await fetchLedgerBalances(env, merchant);
+    ledgerBalances = await fetchLedgerBalances(env, merchant, scope, storeId);
   }
 
   let boutiqueStockMap = new Map();

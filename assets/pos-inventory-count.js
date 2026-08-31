@@ -105,6 +105,9 @@
     } else {
       // Moteur Ledger / Restaurant / Épicerie
       const stockItems = window.stockItems || [];
+      const ledgerLocation = (window.KiwiInventory && window.KiwiInventory.locationId)
+        ? window.KiwiInventory.locationId()
+        : 'principal';
       stockItems.forEach(it => {
         if (!it || !it.id) return;
         const cost = Number(it.cost || 0);
@@ -112,7 +115,7 @@
           key: `it_${it.id}`,
           itemId: it.id,
           variantId: '',
-          locationId: 'principal',
+          locationId: ledgerLocation,
           productName: it.name,
           color: '',
           size: '',
@@ -120,7 +123,9 @@
           barcode: '',
           unit: it.unit || 'unité',
           unitCost: cost,
-          systemQty: Number(it.stock || 0),
+          systemQty: (window.KiwiInventory && window.KiwiInventory.balance)
+            ? window.KiwiInventory.balance(it.id, { locationId: ledgerLocation })
+            : Number(it.stock || 0),
           countedQty: 0,
           counted: false,
           explanation: '',
@@ -430,7 +435,8 @@
       terminalId: (window.KiwiInventory && window.KiwiInventory.terminalId)
         ? window.KiwiInventory.terminalId()
         : '',
-      storeId: (window.KiwiEnv && window.KiwiEnv.storeId) || '',
+      storeId: (window.KiwiInventory && window.KiwiInventory.unitId && window.KiwiInventory.unitId())
+        || (window.KiwiEnv && window.KiwiEnv.storeId) || '',
       storeName: (window.KiwiEnv && window.KiwiEnv.storeName) || 'Caisse Principale',
       employeeId: cashier.id,
       employeeName: cashier.name,

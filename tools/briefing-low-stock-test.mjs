@@ -44,7 +44,9 @@ assert.equal(requested.args.lines[0].itemId, 'item-0', 'the proposal carries the
 assert.equal(opened, 1, 'the Action Center opens for merchant review');
 
 assert.match(stock, /window\.KiwiStockBriefing = \{ items: briefingStockItems \}/, 'Stock exposes a read-only briefing projection');
-assert.match(stock, /window\.KiwiInventory\.history\(it\.id\)/, 'tracking requires durable ledger history');
+assert.match(stock,
+  /window\.KiwiInventory\.history\(it\.id, \{ locationId \}\)[\s\S]{0,160}window\.KiwiInventory\.balance\(it\.id, \{ locationId \}\)/,
+  'tracking requires durable ledger history and balance from the resolved unit location');
 assert.match(actions, /name === 'create-po'/, 'audited agent actions validate create-po');
 assert.match(actions, /O\.agentRun\('create-po'/, 'confirmation opens a server-audited PO command');
 

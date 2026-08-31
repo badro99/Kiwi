@@ -81,8 +81,8 @@ function publicScope(scoped, role, units, assignedUnit, economat) {
       if (!scoped) return null;
       return {
         role,
-        unitId: assignedUnit ? assignedUnit.id : '',
-        locationId: assignedUnit ? assignedUnit.locationId : '',
+        unitId: assignedUnit ? assignedUnit.id : (role === 'manager' && economat ? economat.id : ''),
+        locationId: assignedUnit ? assignedUnit.locationId : (role === 'manager' && economat ? economat.locationId : ''),
         economatLocationId,
         unitIds: [...unitIds],
         locationIds: [...locationIds],

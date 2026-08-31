@@ -85,10 +85,13 @@
     return out;
   }
 
-  function deriveLots(itemId) {
+  function deriveLots(itemId, opts) {
+    opts = opts || {};
     var I = window.KiwiInventory;
     if (!I || (!I.history && !I.listMovements)) return [];
-    var raw = I.history ? (I.history(itemId) || []) : (I.listMovements ? I.listMovements(itemId) : []);
+    var raw = I.history
+      ? (I.history(itemId, opts.locationId ? { locationId: opts.locationId } : undefined) || [])
+      : (I.listMovements ? I.listMovements(itemId) : []);
     var rows = raw.slice().sort(function (a, b) {
       var ta = +a.occurredTs || +a.createdTs || 0;
       var tb = +b.occurredTs || +b.createdTs || 0;
@@ -120,6 +123,7 @@
           expiresAt: expiresAt,
           shelfLifeDays: m.meta && m.meta.shelfLifeDays ? Number(m.meta.shelfLifeDays) : null,
           batchNum: (m.meta && (m.meta.batchNum || m.meta.lot)) || null,
+          locationId: m.locationId || 'principal',
           meta: m.meta || null,
           supplierName: (m.meta && m.meta.supplierName) || null,
         });
@@ -177,7 +181,7 @@
     
     items.forEach(function (it) {
       if (!it || !it.id) return;
-      var lots = deriveLots(it.id) || [];
+      var lots = deriveLots(it.id, opts.locationId ? { locationId: opts.locationId } : undefined) || [];
       lots.forEach(function (lot) {
         if (!(lot.remainingQty > 0)) return;
         var exp = lot.expiresAt;
@@ -210,10 +214,10 @@
     return results;
   }
 
-  function allocateCost(itemId, reqQty, defaultUnitCost) {
+  function allocateCost(itemId, reqQty, defaultUnitCost, opts) {
     reqQty = Math.max(0, +reqQty || 0);
     if (!(reqQty > 0)) return defaultUnitCost;
-    var lots = deriveLots(itemId);
+    var lots = deriveLots(itemId, opts || {});
     var remainingReq = reqQty;
     var totalCost = 0;
     var coveredQty = 0;
@@ -258,6 +262,7 @@
     if (!I || !I.isReal?.() || !sale || !Array.isArray(sale.lines)) return { written: 0, skipped: 0 };
     var d = doc(); var written = 0, skipped = 0;
     var ref = String(sale.ref || sale.id || ('sale-' + n(sale.ts || sale.time))).slice(0, 100);
+    var locationId = String(sale.locationId || I.locationId?.() || 'principal').slice(0, 80);
     sale.lines.forEach(function (line, idx) {
       if (!line) return;
       var kind = String(line.kind || '').toLowerCase();
@@ -280,15 +285,15 @@
         var baseCost = x.direct
           ? (line.unitCost != null ? n(line.unitCost) : null)
           : (x.unitCost != null ? n(x.unitCost) : null);
-        var realizedCost = allocateCost(x.itemId, x.qty, baseCost);
+        var realizedCost = allocateCost(x.itemId, x.qty, baseCost, { locationId: locationId });
         var m = I.add({
           id: movementId(ref, idx, x.itemId, part), itemId: x.itemId,
-          variantId: x.direct ? String(line.variantId || '') : '', qty: -x.qty,
+          variantId: x.direct ? String(line.variantId || '') : '', locationId: locationId, qty: -x.qty,
           reason: 'sale', refType: 'sale', refId: ref,
           unitCost: realizedCost,
           occurredTs: n(sale.ts || sale.time) || Date.now(),
           note: x.direct ? String(line.name || 'Vente') : `Recette · ${line.name || itemId}`,
-          meta: { sourceItemId: itemId, recipe: x.recipe || '', line: idx, part: part, lineQty: n(line.qty || line.quantity || 1) },
+          meta: { unitId: I.unitId?.() || '', sourceItemId: itemId, recipe: x.recipe || '', line: idx, part: part, lineQty: n(line.qty || line.quantity || 1) },
         });
         if (m) written++;
       });
@@ -412,7 +417,10 @@
     var remoteRows = null;
     try {
       if (typeof fetch === 'function' && merchant && orderId) {
-        var u = '/api/inventory/movements?merchant=' + encodeURIComponent(merchant) + '&refId=' + encodeURIComponent(orderId) + '&reason=sale';
+        var u = '/api/inventory/movements?merchant=' + encodeURIComponent(merchant)
+          + '&refId=' + encodeURIComponent(orderId) + '&reason=sale'
+          + '&terminalId=' + encodeURIComponent(I.terminalId?.() || '')
+          + '&locationId=' + encodeURIComponent(I.locationId?.() || 'principal');
         var res = await fetch(u, { credentials: 'same-origin', cache: 'no-store' });
         if (res.ok) {
           var body = await res.json();
@@ -460,7 +468,7 @@
         id: voidMvId,
         itemId: x.itemId,
         variantId: '',
-        locationId: 'principal',
+        locationId: String(voidRecord.locationId || I.locationId?.() || 'principal').slice(0, 80),
         qty: x.qty,
         reason: 'sale-reversal',
         refType: 'kitchen-void',
@@ -469,7 +477,7 @@
         occurredTs: Date.now(),
         note: note || (voidRecord.reason ? `Annulation cuisine · ${voidRecord.reason}` : 'Annulation cuisine'),
         reversalOf: '', // Do not invent lineIndex link
-        meta: { sourceItemId: itemId, recipe: x.recipe || '', voidId: voidId, part: part || 0, costSource: 'recipe-estimate' },
+        meta: { unitId: I.unitId?.() || '', sourceItemId: itemId, recipe: x.recipe || '', voidId: voidId, part: part || 0, costSource: 'recipe-estimate' },
       });
       if (m) written++;
     });

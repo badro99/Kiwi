@@ -1374,13 +1374,22 @@
   /* ═══════════════════════════════════════════════════════════════════════
    * Computed metrics
    * ═══════════════════════════════════════════════════════════════════════ */
+  function stockLocationId() {
+    try { return window.KiwiInventory?.locationId?.() || 'principal'; }
+    catch (_) { return 'principal'; }
+  }
+  function stockUnitId() {
+    try { return window.KiwiInventory?.unitId?.() || ''; }
+    catch (_) { return ''; }
+  }
   function ledgerOpeningFor(it) {
     const legacy = stStockOverrides[it.id] != null ? stStockOverrides[it.id] : it.currentStock;
     try {
       const L = window.KiwiInventory;
       if (stShowReal() && L && L.isReal && L.isReal()) {
-        L.ensureOpening(it.id, +legacy || 0, { unitCost: +it.costPerUnit || null });
-        return L.balance(it.id);
+        const locationId = stockLocationId();
+        L.ensureOpening(it.id, +legacy || 0, { unitCost: +it.costPerUnit || null, locationId });
+        return L.balance(it.id, { locationId });
       }
     } catch (_) {}
     return legacy;
@@ -1395,8 +1404,9 @@
       let history = [], balance = null;
       try {
         if (window.KiwiInventory?.history && window.KiwiInventory?.balance) {
-          history = window.KiwiInventory.history(it.id) || [];
-          if (history.length) balance = window.KiwiInventory.balance(it.id);
+          const locationId = stockLocationId();
+          history = window.KiwiInventory.history(it.id, { locationId }) || [];
+          if (history.length) balance = window.KiwiInventory.balance(it.id, { locationId });
         }
       } catch (_) { history = []; balance = null; }
       return {
@@ -1415,10 +1425,13 @@
     try {
       const L = window.KiwiInventory;
       if (stShowReal() && L && L.isReal && L.isReal()) {
+        const locationId = meta && meta.locationId ? meta.locationId : stockLocationId();
+        const movementMeta = Object.assign({}, meta || {}, { unitId: (meta && meta.unitId) || stockUnitId() });
+        delete movementMeta.locationId;
         return L.add({
-          itemId: it.id, qty, reason, refType: refType || 'manual', refId: refId || '',
+          itemId: it.id, locationId, qty, reason, refType: refType || 'manual', refId: refId || '',
           note: note || '', unitCost: unitCost == null ? (+it.costPerUnit || null) : unitCost,
-          meta: meta || null,
+          meta: movementMeta,
         });
       }
     } catch (_) {}
@@ -2268,6 +2281,7 @@
           const it = items.find(x => x.id === itemId);
           const unitCost = it ? (it.costPerUnit || it.cost || null) : null;
           window.KiwiInventory.add({
+            locationId: stockLocationId(),
             itemId,
             qty: -qty,
             reason: 'waste',
@@ -2760,7 +2774,9 @@
     if (decision === 'approved' && count && Array.isArray(count.lines)) {
       count.lines.forEach(l => {
         if (l.diff) {
-          moveStock({ id: l.itemId, costPerUnit: l.unitCost }, l.diff, 'count', 'count', countId, l.explanation || 'Inventaire physique validé');
+          moveStock({ id: l.itemId, costPerUnit: l.unitCost }, l.diff, 'count', 'count', countId,
+            l.explanation || 'Inventaire physique validé', null,
+            { locationId: l.locationId || stockLocationId(), unitId: count.storeId || '' });
         }
       });
       stSaveOverlay();
@@ -5604,7 +5620,7 @@
         stUserItems.push(item);
         try {
           if (window.KiwiInventory && stShowReal()) {
-            window.KiwiInventory.ensureOpening(item.id, currentStock, { unitCost: costPerUnit });
+            window.KiwiInventory.ensureOpening(item.id, currentStock, { unitCost: costPerUnit, locationId: stockLocationId() });
           }
         } catch (_) {}
         stSaveOverlay();
