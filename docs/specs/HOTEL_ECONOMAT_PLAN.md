@@ -140,6 +140,46 @@ otherwise hang the suite and try to POST the seeded movements to
 
 ---
 
+## Pre-pilot checklist · before units are enabled on a live hotel
+
+**Read this before creating a single unit on a real merchant.** Everything below is
+harmless today only because the live hotel has no registry: with `units.length === 0` the
+resolver returns `scoped: false` and nothing changes for anyone. Writing the first
+registry is the moment that stops being true, and both hazards here fail **silently**.
+
+There are twelve merchants in production and exactly one hotel. It is a real business, so
+this is a one-shot first impression.
+
+- [ ] **Every caisse terminal is mapped in `terminalUnits` in the same write that creates
+      `units`.** A paired till whose terminal id is absent from the map resolves to
+      `allowed: false` and gets **403 on every inventory read and write**. There is no
+      management screen — Phase 0 deliberately shipped none — so the map is written by
+      hand. Create units and terminal mappings in one document, never units first.
+- [ ] **Collect the terminal ids before you start.** Each till mints its own on pairing,
+      as `term_<uuid>` in `localStorage['kiwi:caisse:terminal-id:v1']`
+      (`assets/caisse-pairing.js`). A till that has never paired has no id, and therefore
+      cannot be mapped or scoped.
+- [ ] **Confirm the failure mode is understood before you flip anything.** A denied till
+      does not lose data and does not stop selling: `sync()` throws before the queue is
+      filtered, so movements stay queued and the caisse keeps trading. It simply never
+      syncs, and nobody is told. That is a good failure, but it is invisible — you will
+      not notice it from the floor, only from the dashboard's stock going quiet.
+- [ ] **Verify on the seeded tenant first**, never by writing a registry to the live
+      hotel to see what happens.
+- [ ] **No unit that still holds stock is deactivated** until Phase 3 defines
+      inactive-unit semantics · see that phase. Drain it first.
+
+**Two things not to do as a shortcut**, both of which look like kindnesses and are not:
+
+- **Never auto-assign an unmapped terminal to a unit.** Guessing which outlet a till
+  belongs to is the whole security boundary of Phase 1, given away for convenience. A
+  wrong guess posts one outlet's sales against another's stock, silently and durably.
+- **Never expose inactive locations just to make stock reappear.** Read and write have
+  different answers there; settle them in Phase 3 rather than widening a scope to clear a
+  symptom.
+
+---
+
 ## Phase 0 · Hotel hierarchy
 
 **Goal:** a Hotel venue can own child units. Nothing else changes.
@@ -273,9 +313,44 @@ merchant's totals to compare is fine; writing to one is not.
   unit (bottle), consumption unit (4 cl), with conversions.
 - The ledger stores the base unit. The UI shows the unit the user is thinking in.
 
+### Also in Phase 3 · define what an inactive unit means for stock
+
+**Deactivating a unit currently strands its stock, and this must be settled before any
+hotel retires a unit for real.**
+
+Found reviewing Phase 1. `activeUnits()` in `functions/api/inventory/_unit-scope.js`
+filters out inactive units before any scope is built, so a deactivated outlet's
+`locationId` belongs to nobody's `locationIds` — **not even the hotel manager's**. Its
+balances drop out of the summary and `permitsLocation()` refuses that location to every
+caller.
+
+Phase 0 makes deactivation the only alternative to deletion. So today, "retire this bar"
+silently means "lose sight of whatever stock it held", and Phase 8 will not be able to
+transfer that stock out either, because the source location is forbidden to everyone.
+
+**Do not fix this by simply exposing inactive locations.** Read and write are not the
+same question and must be answered separately:
+
+- **Read.** A manager almost certainly should see an inactive unit's remaining balance ·
+  otherwise stock disappears from the hotel's consolidated inventory, which is a
+  reporting lie. Decide whether outlets see it too (probably not).
+- **Write.** An inactive unit must not accept `transfer-in`, or deactivation means
+  nothing. But it has to permit **draining**: a `transfer-out` to another unit, so the
+  stock can be recovered before the unit is closed for good.
+- **Sales** at an inactive unit stay refused, unconditionally.
+
+The likely shape is a manager-only read scope that includes inactive units, plus a
+one-directional write permit for draining. Write the semantics down before the code.
+
+Until this phase lands, treat "deactivate a unit that still holds stock" as unsupported,
+and drain it first.
+
 **Test** `tools/economat-catalogue-test.mjs`
 - A case of 12 received, issued as 3 bottles, leaves 9 bottles of central stock.
 - A conversion that would lose precision is refused rather than rounded silently.
+- A deactivated unit's balance is still visible to a manager and to nobody else.
+- A deactivated unit refuses `transfer-in` and refuses sales, but permits `transfer-out`
+  so its stock can be drained.
 
 ---
 

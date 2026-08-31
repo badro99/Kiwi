@@ -149,6 +149,17 @@ manager's aggregate a scoped view of one tenant rather than a privileged query a
 several tenants. A unit may be deactivated but never hard-deleted once it has a movement,
 request, folio line or sale. Its `locationId` is immutable and never reused.
 
+**Deactivation is not yet a complete answer, and V1 must finish it.** As shipped in
+Phase 1, an inactive unit leaves every scope, so its remaining balance becomes invisible
+to the hotel manager and its location is refused to every caller · stock cannot be read,
+and cannot be transferred out. Since deactivation is the only alternative to deletion,
+that turns "retire a unit" into "strand its stock". Phase 3 must define the semantics
+separately for each direction: manager-only **read** of an inactive unit's balance so it
+never vanishes from consolidated inventory; **write** refused for `transfer-in` and for
+sales, but permitted for `transfer-out` so the unit can be drained before it closes.
+Widening the scope to expose inactive locations without settling that split would make
+deactivation meaningless.
+
 For discretionary stock actions, a paired device is not an actor. The request must also
 carry a currently authenticated employee identity from the staff-code flow, and the
 server resolves that employee's role and unit assignment. A client-provided role,
