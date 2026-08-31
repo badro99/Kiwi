@@ -42,7 +42,7 @@ function safeDoc(raw) {
   out.services = (Array.isArray(d.services) ? d.services : []).slice(0, 120).map((x) => ({ id: str(x?.id, 64), name: str(x?.name, 100), duration: num(x?.duration, 5, 1440, 30), price: num(x?.price, 0, 1000000, 0), deposit: num(x?.deposit, 0, 1000000, 0), capacity: num(x?.capacity, 1, 999, 1), resourceIds: (Array.isArray(x?.resourceIds) ? x.resourceIds : []).slice(0, 60).map((z) => str(z, 64)).filter(Boolean), active: x?.active !== false, updatedAt: +x?.updatedAt || 0 })).filter((x) => x.id && x.name);
   out.resources = (Array.isArray(d.resources) ? d.resources : []).slice(0, 120).map((x) => ({ id: str(x?.id, 64), name: str(x?.name, 100), kind: ['person','room','table'].includes(x?.kind) ? x.kind : 'person', capacity: num(x?.capacity, 1, 999, 1), active: x?.active !== false, week: x?.week && typeof x.week === 'object' ? x.week : null, updatedAt: +x?.updatedAt || 0 })).filter((x) => x.id && x.name);
   out.blocked = (Array.isArray(d.blocked) ? d.blocked : []).slice(-500).map((x) => ({ id: str(x?.id, 64), resourceId: str(x?.resourceId, 64), startAt: +x?.startAt || 0, endAt: +x?.endAt || 0, reason: str(x?.reason, 120), updatedAt: +x?.updatedAt || 0 })).filter((x) => x.startAt && x.endAt > x.startAt);
-  out.bookings = (Array.isArray(d.bookings) ? d.bookings : []).slice(-4000).map((x) => ({ id: str(x?.id, 64), code: str(x?.code, 24), customer: { name: str(x?.customer?.name, 100), phone: str(x?.customer?.phone, 32), email: str(x?.customer?.email, 160) }, serviceId: str(x?.serviceId, 64), resourceId: str(x?.resourceId, 64), startAt: +x?.startAt || 0, endAt: +x?.endAt || 0, partySize: num(x?.partySize, 1, 999, 1), status: ['requested','confirmed','checked_in','completed','cancelled','no_show'].includes(x?.status) ? x.status : 'requested', source: ['public','staff','import'].includes(x?.source) ? x.source : 'staff', note: str(x?.note, 600), manageToken: str(x?.manageToken, 80), publicRef: str(x?.publicRef, 80), createdAt: +x?.createdAt || 0, updatedAt: +x?.updatedAt || 0 })).filter((x) => x.id && x.customer.name && x.serviceId && x.startAt && x.endAt > x.startAt);
+  out.bookings = (Array.isArray(d.bookings) ? d.bookings : []).slice(-4000).map((x) => ({ id: str(x?.id, 64), code: str(x?.code, 24), customer: { name: str(x?.customer?.name, 100), phone: str(x?.customer?.phone, 32), email: str(x?.customer?.email, 160) }, serviceId: str(x?.serviceId, 64), resourceId: str(x?.resourceId, 64), startAt: +x?.startAt || 0, endAt: +x?.endAt || 0, partySize: num(x?.partySize, 1, 999, 1), status: ['requested','confirmed','checked_in','completed','cancelled','no_show'].includes(x?.status) ? x.status : 'requested', source: ['public','staff','import'].includes(x?.source) ? x.source : 'staff', note: str(x?.note, 600), manageToken: str(x?.manageToken, 80), publicRef: str(x?.publicRef, 80), hotel: x?.hotel && typeof x.hotel === 'object' ? { roomTypeName:str(x.hotel.roomTypeName,100), checkIn:str(x.hotel.checkIn,10), checkOut:str(x.hotel.checkOut,10), nights:num(x.hotel.nights,1,365,1), rate:num(x.hotel.rate,0,1000000,0), total:num(x.hotel.total,0,100000000,0) } : null, createdAt: +x?.createdAt || 0, updatedAt: +x?.updatedAt || 0 })).filter((x) => x.id && x.customer.name && x.serviceId && x.startAt && x.endAt > x.startAt);
   return out;
 }
 function dateParts(epoch, tz = TZ) {
@@ -127,15 +127,62 @@ function slotsFor(doc, svc, date, hours, asked, partySize = 1, team = safeTeam(n
   }
   return [...out.values()].sort((a,b) => a.startAt - b.startAt).slice(0, 160);
 }
+function safeHotel(raw) {
+  let d = raw; if (typeof d === 'string') { try { d = JSON.parse(d); } catch (_) { d = null; } }
+  d = d && typeof d === 'object' ? d : {};
+  const types = (Array.isArray(d.roomTypes) ? d.roomTypes : []).slice(0,200).map((x) => ({
+    id:str(x?.id,64), name:str(x?.name,100), rate:x?.rate == null ? null : num(x.rate,0,1000000,null),
+    description:str(x?.description,300), maxGuests:num(x?.maxGuests,1,12,2), beds:str(x?.beds,80),
+    sizeM2:x?.sizeM2 == null ? null : num(x.sizeM2,1,999,null), view:str(x?.view,80),
+    amenities:(Array.isArray(x?.amenities) ? x.amenities : []).slice(0,12).map((v)=>str(v,40)).filter(Boolean),
+    public:x?.public !== false,
+  })).filter((x)=>x.id&&x.name);
+  const typeIds = new Set(types.map((x)=>x.id));
+  const rooms = (Array.isArray(d.rooms) ? d.rooms : []).slice(0,1000).map((x)=>({
+    id:str(x?.id,64), n:num(x?.n,1,9999,0), typeId:str(x?.typeId,64), status:['libre','sale','hs','occ','depart','arrivee'].includes(x?.status)?x.status:'libre', updatedAt:+x?.updatedAt||0,
+  })).filter((x)=>x.id&&x.n&&typeIds.has(x.typeId));
+  const folios = (Array.isArray(d.folios) ? d.folios : []).slice(0,1000).map((x)=>({ room:num(x?.room,1,9999,0), nights:num(x?.nights,1,365,1), updatedAt:+x?.updatedAt||0 })).filter((x)=>x.room);
+  return { baseRate:d.baseRate == null ? null : num(d.baseRate,0,1000000,null), types, rooms, folios };
+}
+function hotelTrade(meta) { return /hotel|riad/.test(str(meta?.type,60).toLowerCase()); }
+function stayRange(checkIn, checkOut, settings) {
+  if (!DATE.test(checkIn) || !DATE.test(checkOut) || checkOut <= checkIn) return null;
+  const nights = Math.round((Date.parse(checkOut+'T12:00:00Z')-Date.parse(checkIn+'T12:00:00Z'))/86400000);
+  if (nights < 1 || nights > 365) return null;
+  const startAt=zonedEpoch(checkIn,'15:00'), endAt=zonedEpoch(checkOut,'11:00'), now=Date.now();
+  if (!startAt || !endAt || startAt < now + settings.minNoticeMinutes*60000 || startAt > now + settings.windowDays*86400000) return null;
+  return { checkIn, checkOut, nights, startAt, endAt };
+}
+function currentRoomFree(hotel, room, startAt, endAt) {
+  if (room.status === 'hs') return false;
+  if (!['occ','depart','arrivee'].includes(room.status)) return true;
+  /* Room.updatedAt is the check-in transition. A folio's updatedAt moves every
+   * time restaurant, spa or minibar posts a charge, so using it here would
+   * silently extend the stay and hide inventory after each room charge. */
+  const folio=hotel.folios.find((x)=>x.room===room.n), stamp=room.updatedAt||folio?.updatedAt;
+  const p=dateParts(stamp||Date.now(),TZ), day=`${p.year}-${p.month}-${p.day}`;
+  const busyStart=zonedEpoch(day,'15:00'), busyEnd=zonedEpoch(addDays(day,folio?.nights||1),'11:00');
+  return !overlaps(startAt,endAt,busyStart,busyEnd);
+}
+function hotelCategories(doc, hotel, stay, guests, onlyType='') {
+  guests=num(guests,1,12,1);
+  return hotel.types.filter((t)=>t.public&&t.maxGuests>=guests&&(!onlyType||t.id===onlyType)).map((t)=>{
+    const rate=t.rate == null ? hotel.baseRate : t.rate;
+    const rooms=hotel.rooms.filter((r)=>r.typeId===t.id&&currentRoomFree(hotel,r,stay.startAt,stay.endAt)&&free(doc,r.id,stay.startAt,stay.endAt));
+    return { ...t, rate, total:rate == null ? null : Math.round(rate*stay.nights), rooms };
+  }).filter((t)=>t.rate != null);
+}
+function publicHotelCategory(x) { return { id:x.id,name:x.name,description:x.description,maxGuests:x.maxGuests,beds:x.beds,sizeM2:x.sizeM2,view:x.view,amenities:x.amenities,rate:x.rate,total:x.total,available:x.rooms.length }; }
 async function readRows(env, merchant) {
   const rows = await env.DB.batch([
     env.DB.prepare("SELECT data, rev FROM store_docs WHERE merchant = ? AND feature = 'reservations'").bind(merchant),
     env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'hours'").bind(merchant),
     env.DB.prepare('SELECT name, type FROM merchant_config WHERE merchant = ?').bind(merchant),
     env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'team'").bind(merchant),
+    env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'rooms'").bind(merchant),
   ]);
   const first = (r) => r?.results?.[0] || null;
-  return { reservation: first(rows[0]), hours: publicHours(first(rows[1])?.data), merchant: first(rows[2]), team: safeTeam(first(rows[3])?.data) };
+  return { reservation: first(rows[0]), hours: publicHours(first(rows[1])?.data), merchant: first(rows[2]), team: safeTeam(first(rows[3])?.data), hotel:safeHotel(first(rows[4])?.data) };
 }
 function publicConfig(merchant, meta, doc, slots) {
   return { ok:true, merchant, name:str(meta?.name,100), trade:str(meta?.type,60), settings:{ confirmation:doc.settings.confirmation, cancellationHours:doc.settings.cancellationHours, windowDays:doc.settings.windowDays }, services:doc.services.filter((x)=>x.active).map((x)=>({id:x.id,name:x.name,duration:x.duration,price:x.price,deposit:x.deposit,capacity:x.capacity,maxParty:maxParty(doc,x)})), slots:slots || [] };
@@ -147,6 +194,13 @@ export async function onRequestGet({ request, env }) {
   let rows; try { rows = await readRows(env, merchant); } catch (_) { return json({ error:'unavailable' },503); }
   const doc = safeDoc(rows.reservation?.data);
   if (!rows.merchant || !doc.settings.published) return json({ error:'booking-closed' },404);
+  if (hotelTrade(rows.merchant)) {
+    const checkIn=str(u.searchParams.get('checkIn'),10), checkOut=str(u.searchParams.get('checkOut'),10), guests=num(u.searchParams.get('guests'),1,12,2);
+    let stay=null,categories=[];
+    if (checkIn||checkOut) { stay=stayRange(checkIn,checkOut,doc.settings); if(!stay)return json({error:'invalid-dates'},400); categories=hotelCategories(doc,rows.hotel,stay,guests).map(publicHotelCategory); }
+    else categories=rows.hotel.types.filter((t)=>t.public&&t.maxGuests>=guests).map((t)=>publicHotelCategory({...t,rate:t.rate==null?rows.hotel.baseRate:t.rate,total:null,rooms:[]})).filter((t)=>t.rate!=null);
+    return json({ok:true,kind:'hotel',merchant,name:str(rows.merchant.name,100),trade:str(rows.merchant.type,60),settings:{confirmation:doc.settings.confirmation,cancellationHours:doc.settings.cancellationHours,windowDays:doc.settings.windowDays},hotel:{checkIn:stay?.checkIn||'',checkOut:stay?.checkOut||'',nights:stay?.nights||0,guests,categories}},200,{'Cache-Control':'no-store'});
+  }
   const sid = str(u.searchParams.get('service'),64), date = str(u.searchParams.get('date'),10), rid = str(u.searchParams.get('resource'),64), partySize = num(u.searchParams.get('partySize'),1,999,1);
   let slots = [];
   if (sid && DATE.test(date)) { const svc = doc.services.find((x)=>x.id===sid && x.active); if (!svc) return json({ error:'service-not-found' },404); slots = slotsFor(doc,svc,date,rows.hours,rid,partySize,rows.team); }
@@ -156,9 +210,9 @@ export async function onRequestPost({ request, env }) {
   if (!env.DB) return json({ error:'not-configured' },503);
   const limited = await limitCheck(request,env,'booking'); if (limited) return limited;
   let b; try { b=await request.json(); } catch (_) { await limitFail(request,env,'booking'); return json({error:'bad-json'},400); }
-  const merchant=str(b?.merchant,64).toLowerCase(), ref=str(b?.ref,80), sid=str(b?.serviceId,64), asked=str(b?.resourceId,64), startAt=+b?.startAt||0;
+  const merchant=str(b?.merchant,64).toLowerCase(), ref=str(b?.ref,80), sid=str(b?.serviceId||b?.roomTypeId,64), asked=str(b?.resourceId,64), startAt=+b?.startAt||0;
   const name=str(b?.customer?.name,100), rawPhone=str(b?.customer?.phone,32), phone=normalizePhone(rawPhone), email=str(b?.customer?.email,160), partySize=num(b?.partySize,1,999,1);
-  if(!ID.test(merchant)||!REF.test(ref)||!name||(!rawPhone&&!email)||rawPhone&&!phone||!sid||!startAt){await limitFail(request,env,'booking');return json({error:'invalid'},400);}
+  if(!ID.test(merchant)||!REF.test(ref)||!name||(!rawPhone&&!email)||rawPhone&&!phone||!sid){await limitFail(request,env,'booking');return json({error:'invalid'},400);}
   if(await storeSubscriptionPending(env,merchant))return json({error:'subscription-required'},402);
   for(let attempt=0;attempt<4;attempt++){
     let rows;try{rows=await readRows(env,merchant);}catch(_){return json({error:'unavailable'},503);}
@@ -169,6 +223,17 @@ export async function onRequestPost({ request, env }) {
     const recentForContact=doc.bookings.filter((x)=>x.source==='public'&&x.createdAt>now-86400000&&((phone&&phoneKey(x.customer.phone)===contactKey)||String(x.customer.email||'').toLowerCase()===contactKey)).length;
     const activeFuture=doc.bookings.filter((x)=>ACTIVE.has(x.status)&&x.endAt>now).length;
     if(recentForContact>=5||activeFuture>=2000){await limitFail(request,env,'booking');return json({error:'booking-limit'},429);}
+    if(hotelTrade(rows.merchant)){
+      const stay=stayRange(str(b?.checkIn,10),str(b?.checkOut,10),doc.settings);if(!stay)return json({error:'invalid-dates'},400);
+      const categories=hotelCategories(doc,rows.hotel,stay,partySize,sid),category=categories[0];
+      if(!category||!category.rooms.length)return json({error:'room-unavailable'},409);
+      const room=category.rooms[0],code='H-'+crypto.randomUUID().replace(/-/g,'').slice(0,8).toUpperCase(),token=crypto.randomUUID().replace(/-/g,'');
+      const rec={id:'bk-'+crypto.randomUUID(),code,customer:{name,phone,email},serviceId:category.id,resourceId:room.id,startAt:stay.startAt,endAt:stay.endAt,partySize,status:doc.settings.confirmation==='request'?'requested':'confirmed',source:'public',note:str(b?.note,600),manageToken:token,publicRef:ref,hotel:{roomTypeName:category.name,checkIn:stay.checkIn,checkOut:stay.checkOut,nights:stay.nights,rate:category.rate,total:category.total},createdAt:now,updatedAt:now};
+      doc.bookings.push(rec);const text=JSON.stringify(doc),next=rev+1;
+      try{let result;if(rev){result=await env.DB.prepare("UPDATE store_docs SET data = ?, rev = ?, updated_ts = ? WHERE merchant = ? AND feature = 'reservations' AND rev = ?").bind(text,next,now,merchant,rev).run();}else{result=await env.DB.prepare("INSERT OR IGNORE INTO store_docs (merchant, feature, data, rev, updated_ts) VALUES (?, 'reservations', ?, 1, ?)").bind(merchant,text,now).run();}if((result?.meta?.changes||0)>0){await poke(env,merchant,'reservations');await limitClear(request,env,'booking');return json({ok:true,id:rec.id,code,status:rec.status,checkIn:stay.checkIn,checkOut:stay.checkOut,nights:stay.nights,total:category.total,manageToken:token});}}catch(_){return json({error:'write-failed'},503);}
+      continue;
+    }
+    if(!startAt)return json({error:'invalid'},400);
     const svc=doc.services.find((x)=>x.id===sid&&x.active);if(!svc)return json({error:'service-not-found'},409);
     const endAt=startAt+svc.duration*60000, date=dateParts(startAt,TZ), ymd=`${date.year}-${date.month}-${date.day}`;
     const validSlot=slotsFor(doc,svc,ymd,rows.hours,asked,partySize,rows.team).find((x)=>x.startAt===startAt);

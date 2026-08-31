@@ -127,6 +127,12 @@ ok(bookingSource.includes('partySize:party()') && bookingSource.includes("partyS
 ok(!/isDining/.test(bookingSource), 'the guest stepper is no longer gated on the free-text trade label');
 ok(bookingSource.includes('Number(s&&s.maxParty||0)'), 'guest ceiling is read from the seats published per service');
 ok(bookingApiSource.includes('function maxParty(') && /maxParty:maxParty\(doc,x\)/.test(bookingApiSource), 'the public booking config publishes each service seating ceiling');
+ok(bookingSource.includes('function hotelSearch()') && bookingSource.includes('function hotelRoomList()') && bookingSource.includes('roomTypeId:state.service.id'), 'public hotel booking has date search, room-category selection and a dedicated stay submission');
+ok(bookingSource.includes("state.config.kind==='hotel'") && bookingSource.includes("['fr','en','ar']"), 'hotel mode is server-selected and keeps all three locale controls');
+ok(bookingApiSource.includes("feature = 'rooms'") && bookingApiSource.includes('function safeHotel('), 'hotel availability reads the tenant-scoped room register');
+ok(!/resourceIds:.*hotel\.categories/.test(bookingApiSource), 'hotel category responses do not publish assignable room identifiers');
+const hotelNormalized=R.normalize({bookings:[{id:'hotel-1',customer:{name:'Nora'},serviceId:'type-atlas',resourceId:'room:101',startAt:future,endAt:future+86400000,partySize:2,status:'confirmed',source:'public',hotel:{roomTypeName:'Suite Atlas',checkIn:'2026-09-01',checkOut:'2026-09-02',nights:1,rate:900,total:900}}]});
+ok(hotelNormalized.bookings[0].hotel.roomTypeName==='Suite Atlas' && hotelNormalized.bookings[0].hotel.total===900, 'dashboard normalization preserves the hotel stay snapshot');
 
 const templates = R.restaurantTemplates();
 ok(templates.length === 3, 'restaurant onboarding provides three practical starter templates');

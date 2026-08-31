@@ -362,8 +362,8 @@
   }
   function cuDefaultTypes(now) {
     return [
-      { id: 'type:chambre', name: 'Chambre', rate: null, updatedAt: now },
-      { id: 'type:suite', name: 'Suite', rate: null, updatedAt: now },
+      { id: 'type:chambre', name: 'Chambre', rate: null, description: '', maxGuests: 2, beds: '1 grand lit', sizeM2: null, view: '', amenities: [], public: true, updatedAt: now },
+      { id: 'type:suite', name: 'Suite', rate: null, description: '', maxGuests: 2, beds: '1 grand lit', sizeM2: null, view: '', amenities: [], public: true, updatedAt: now },
     ];
   }
   function cuSeed() {
@@ -417,6 +417,14 @@
       roomTypes[id] = {
         id, name: String(x.name || 'Chambre').trim().slice(0, 60) || 'Chambre',
         rate: x.rate != null && Number.isFinite(+x.rate) && +x.rate >= 0 ? +x.rate : null,
+        description: String(x.description || '').trim().slice(0, 300),
+        maxGuests: Number.isFinite(+x.maxGuests) ? Math.max(1, Math.min(12, Math.round(+x.maxGuests))) : 2,
+        beds: String(x.beds || '').trim().slice(0, 80),
+        sizeM2: x.sizeM2 != null && Number.isFinite(+x.sizeM2) && +x.sizeM2 > 0 ? Math.min(999, Math.round(+x.sizeM2)) : null,
+        view: String(x.view || '').trim().slice(0, 80),
+        amenities: (Array.isArray(x.amenities) ? x.amenities : String(x.amenities || '').split(','))
+          .map((v) => String(v || '').trim().slice(0, 40)).filter(Boolean).slice(0, 12),
+        public: x.public !== false,
         updatedAt: +x.updatedAt || 0,
       };
     });
@@ -1383,13 +1391,21 @@
   }
   function cuTypeEditor(id) {
     const type = id ? cuState().roomTypes[id] : null;
+    const amenities = (type?.amenities || []).join(', ');
     const m = K().modal({
       tag: type ? 'TYPE DE CHAMBRE' : 'NOUVEAU TYPE',
       title: type ? 'Modifier « ' + esc(type.name) + ' »' : 'Créer un type',
-      desc: 'Ex. Chambre Deluxe, Suite Atlas, Twin Patio…', width: 500,
+      desc: 'Décrivez ce que le client verra sur votre lien de réservation.', width: 680,
       body: `<div class="hx-room-form hx-type-form">
         <label class="hx-room-form-wide"><span>Nom affiché</span><input data-hx-type-name maxlength="60" value="${esc(type?.name || '')}" placeholder="Ex. Suite Atlas"></label>
         <label class="hx-room-form-wide"><span>Tarif par nuit <small>· MAD · optionnel</small></span><input data-hx-type-rate type="number" inputmode="decimal" min="0" step="1" value="${type?.rate == null ? '' : type.rate}" placeholder="Utiliser le tarif général"></label>
+        <label class="hx-room-form-wide"><span>Description publique</span><textarea data-hx-type-description maxlength="300" rows="3" placeholder="Une chambre calme et lumineuse, idéale pour…">${esc(type?.description || '')}</textarea></label>
+        <label><span>Voyageurs maximum</span><input data-hx-type-guests type="number" inputmode="numeric" min="1" max="12" value="${type?.maxGuests || 2}"></label>
+        <label><span>Couchage</span><input data-hx-type-beds maxlength="80" value="${esc(type?.beds || '')}" placeholder="1 grand lit"></label>
+        <label><span>Surface <small>· m²</small></span><input data-hx-type-size type="number" inputmode="numeric" min="1" max="999" value="${type?.sizeM2 || ''}" placeholder="24"></label>
+        <label><span>Vue</span><input data-hx-type-view maxlength="80" value="${esc(type?.view || '')}" placeholder="Patio, médina, montagne…"></label>
+        <label class="hx-room-form-wide"><span>Équipements <small>· séparés par des virgules</small></span><input data-hx-type-amenities maxlength="500" value="${esc(amenities)}" placeholder="Wi-Fi, climatisation, petit-déjeuner"></label>
+        <label class="hx-room-form-wide"><span><input data-hx-type-public type="checkbox" ${type?.public === false ? '' : 'checked'}> Visible sur le lien de réservation</span></label>
       </div>
       <div class="hx-room-form-actions">
         ${type ? `<button class="hx-btn warn" data-action="hx-room-type-delete" data-arg="${esc(type.id)}">Supprimer</button>` : '<span></span>'}
@@ -2065,8 +2081,24 @@
     handlers['hx-room-type-save'] = (el, arg) => {
       if (!isCustomHotel()) return;
       const root = el.closest('.kiwi-modal');
+      const priorType = cuState().roomTypes[String(arg)] || {};
       const name = String(root?.querySelector('[data-hx-type-name]')?.value || '').trim();
       const rateRaw = String(root?.querySelector('[data-hx-type-rate]')?.value || '').trim();
+      const descriptionEl = root?.querySelector('[data-hx-type-description]');
+      const guestsEl = root?.querySelector('[data-hx-type-guests]');
+      const bedsEl = root?.querySelector('[data-hx-type-beds]');
+      const sizeEl = root?.querySelector('[data-hx-type-size]');
+      const viewEl = root?.querySelector('[data-hx-type-view]');
+      const amenitiesEl = root?.querySelector('[data-hx-type-amenities]');
+      const publicEl = root?.querySelector('[data-hx-type-public]');
+      const description = String(descriptionEl ? descriptionEl.value : (priorType.description || '')).trim();
+      const guestsRaw = String(guestsEl ? guestsEl.value : (priorType.maxGuests || 2)).trim();
+      const beds = String(bedsEl ? bedsEl.value : (priorType.beds || '')).trim();
+      const sizeRaw = String(sizeEl ? sizeEl.value : (priorType.sizeM2 || '')).trim();
+      const view = String(viewEl ? viewEl.value : (priorType.view || '')).trim();
+      const amenities = String(amenitiesEl ? amenitiesEl.value : (priorType.amenities || []).join(',')).split(',')
+        .map((v) => v.trim().slice(0, 40)).filter(Boolean).slice(0, 12);
+      const isPublic = publicEl ? !!publicEl.checked : priorType.public !== false;
       const st = cuState();
       if (!name) {
         toast('Donnez un nom à ce type', { type: 'warn', desc: 'Ex. Chambre Deluxe, Suite Atlas, Twin Patio.' });
@@ -2078,6 +2110,16 @@
         root?.querySelector('[data-hx-type-rate]')?.focus();
         return;
       }
+      if (!Number.isFinite(+guestsRaw) || +guestsRaw < 1 || +guestsRaw > 12) {
+        toast('Capacité invalide', { type: 'warn', desc: 'Indiquez entre 1 et 12 voyageurs.' });
+        root?.querySelector('[data-hx-type-guests]')?.focus();
+        return;
+      }
+      if (sizeRaw && (!Number.isFinite(+sizeRaw) || +sizeRaw < 1 || +sizeRaw > 999)) {
+        toast('Surface invalide', { type: 'warn' });
+        root?.querySelector('[data-hx-type-size]')?.focus();
+        return;
+      }
       const duplicate = Object.values(st.roomTypes).find((t) => t.name.toLocaleLowerCase('fr') === name.toLocaleLowerCase('fr') && t.id !== arg);
       if (duplicate) {
         toast('Ce type existe déjà', { type: 'warn', desc: 'Modifiez « ' + duplicate.name + ' » directement.' });
@@ -2085,7 +2127,13 @@
       }
       const now = cuStamp();
       const id = arg === 'new' ? cuTypeId(name, now) : String(arg);
-      st.roomTypes[id] = { ...(st.roomTypes[id] || {}), id, name: name.slice(0, 60), rate: rateRaw === '' ? null : Math.round(+rateRaw), updatedAt: now };
+      st.roomTypes[id] = {
+        ...(st.roomTypes[id] || {}), id, name: name.slice(0, 60),
+        rate: rateRaw === '' ? null : Math.round(+rateRaw),
+        description: description.slice(0, 300), maxGuests: Math.round(+guestsRaw),
+        beds: beds.slice(0, 80), sizeM2: sizeRaw === '' ? null : Math.round(+sizeRaw),
+        view: view.slice(0, 80), amenities, public: isPublic, updatedAt: now,
+      };
       Object.values(st.rooms).filter((r) => r.typeId === id).forEach((r) => { r.typeName = name.slice(0, 60); r.updatedAt = now; });
       cuSave(st);
       openModal?.close?.();

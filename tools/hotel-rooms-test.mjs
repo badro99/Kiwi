@@ -49,7 +49,7 @@ function boot(saved) {
 }
 
 function editor(fields) {
-  const controls = Object.fromEntries(Object.entries(fields).map(([key, value]) => [key, { value: String(value), focus() {} }]));
+  const controls = Object.fromEntries(Object.entries(fields).map(([key, value]) => [key, { value: String(value), checked: value === true, focus() {} }]));
   const root = { querySelector: (sel) => controls[sel] || null };
   return { closest: () => root };
 }
@@ -80,10 +80,19 @@ ok(liveRooms.every((r) => r.typeId === roomTypeId && r.floor === '1er étage'), 
 first.handlers['hx-room-type-save'](editor({
   '[data-hx-type-name]': 'Chambre Atlas',
   '[data-hx-type-rate]': 890,
+  '[data-hx-type-description]': 'Calme, lumineuse et ouverte sur le patio.',
+  '[data-hx-type-guests]': 3,
+  '[data-hx-type-beds]': '1 grand lit + 1 lit simple',
+  '[data-hx-type-size]': 28,
+  '[data-hx-type-view]': 'Patio',
+  '[data-hx-type-amenities]': 'Wi-Fi, Climatisation, Petit-déjeuner',
+  '[data-hx-type-public]': true,
 }), roomTypeId);
 doc = JSON.parse(first.data.get('kiwi:hotel-rooms:v2:vhotel'));
 const savedType = doc.roomTypes.find((t) => t.id === roomTypeId && !t.deletedAt);
 ok(savedType && savedType.name === 'Chambre Atlas' && savedType.rate === 890, 'a hotel can rename a room category and set its shared nightly rate');
+ok(savedType.maxGuests === 3 && savedType.view === 'Patio' && savedType.amenities.length === 3 && savedType.public === true,
+  'guest-facing occupancy, view, bedding and amenities persist with the room category');
 
 first.handlers['hx-room-save'](editor({
   '[data-hx-room-number]': 201,

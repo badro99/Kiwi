@@ -40,12 +40,12 @@
     "sha": "cbde5a06734a8047"
   },
   "assets/booking.css": {
-    "v": "10",
-    "sha": "59f537c0c75d8ba0"
+    "v": "11",
+    "sha": "eb5cf9a975c0e8c0"
   },
   "assets/booking.js": {
-    "v": "10",
-    "sha": "be6f22488f18d3ff"
+    "v": "11",
+    "sha": "a68c3f45a72c8018"
   },
   "assets/boutique-catalog.js": {
     "v": "6",
@@ -236,8 +236,8 @@
     "sha": "6e1ea25a6e02aae3"
   },
   "assets/hotel.js": {
-    "v": "12",
-    "sha": "ed53d0f4b369fe35"
+    "v": "13",
+    "sha": "1b98741b53c6af17"
   },
   "assets/i18n.js": {
     "v": "7",
@@ -616,8 +616,8 @@
     "sha": "564bac0e65269a9d"
   },
   "assets/reservations.js": {
-    "v": "10",
-    "sha": "a12f4d15384e16eb"
+    "v": "11",
+    "sha": "cd6912411d17ed20"
   },
   "assets/restaurant-menu-workspace.js": {
     "v": "66",
