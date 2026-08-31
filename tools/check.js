@@ -345,7 +345,7 @@ for (const test of [
   'platform-kernel-test.mjs', 'platform-ops-test.mjs', 'media-upload-test.mjs', 'operations-system-test.mjs',
   'vertical-feature-parity-test.mjs', 'pos-sale-cloud-sync-test.mjs',
   'caisse-opening-gate-test.mjs',
-  'hotel-rooms-test.mjs', 'hotel-stays-test.mjs', 'hotel-caisse-catalog-test.mjs',
+  'hotel-rooms-test.mjs', 'hotel-stays-test.mjs', 'hotel-channel-sync-test.mjs', 'hotel-sync-worker-test.mjs', 'hotel-caisse-catalog-test.mjs',
   'sw-immutable-revalidation-test.mjs', 'load-test-suite-test.mjs',
 ]) {
   const { spawnSync } = require('child_process');

@@ -620,6 +620,7 @@
 .hx-cu-stay b { font-size:10.5px; }
 .hx-cu-stay span { font:8.5px var(--mono); opacity:.8; margin-top:1px; }
 .hx-cu-stay.status-requested { opacity:.68; border-style:dashed; }
+.hx-cu-stay.has-conflict { outline:3px solid var(--danger); outline-offset:1px; z-index:3; }
 .hx-cu-occupancy { background:var(--n-50); }
 .hx-cu-occupancy .hx-cu-room { border-bottom:0; }
 .hx-cu-occupancy>div:last-child>div { border-bottom:0; padding:7px 2px 8px; }

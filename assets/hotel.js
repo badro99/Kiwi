@@ -1705,7 +1705,7 @@
       const to = Math.min(14, distance(start, b.hotel.checkOut));
       const channel = channels[b.hotel.channel] ? b.hotel.channel : (b.source === 'public' ? 'direct' : 'other');
       const left = from / 14 * 100, width = Math.max(1, (to - from) / 14 * 100);
-      return `<button class="hx-cu-stay src-${channel} status-${esc(b.status)}" style="left:${left}%;width:calc(${width}% - 3px)" data-action="hx-stay-edit" data-arg="${esc(b.id)}" title="${esc((b.customer?.name || '') + ' · ' + channels[channel] + ' · ' + b.hotel.checkIn + ' → ' + b.hotel.checkOut)}"><b>${esc(b.customer?.name || 'Séjour')}</b><span>${esc(channels[channel])}</span></button>`;
+      return `<button class="hx-cu-stay src-${channel} status-${esc(b.status)} ${b.hotel.conflict ? 'has-conflict' : ''}" style="left:${left}%;width:calc(${width}% - 3px)" data-action="hx-stay-edit" data-arg="${esc(b.id)}" title="${esc((b.hotel.conflict ? 'CONFLIT À RÉSOUDRE · ' : '') + (b.customer?.name || '') + ' · ' + channels[channel] + ' · ' + b.hotel.checkIn + ' → ' + b.hotel.checkOut)}"><b>${esc(b.customer?.name || 'Séjour')}</b><span>${b.hotel.conflict ? '⚠ CONFLIT' : esc(channels[channel])}</span></button>`;
     }).join('');
     const dateHead = dates.map((d) => { const dt = new Date(d + 'T12:00:00Z'); return `<div class="${d === today ? 'today' : ''}"><b>${new Intl.DateTimeFormat('fr-FR', { weekday: 'short', timeZone: 'UTC' }).format(dt).replace('.', '')}</b><span>${dt.getUTCDate()}</span></div>`; }).join('');
     const rows = rooms.map((room) => `<div class="hx-cu-tape-row"><div class="hx-cu-room"><b>${room.n}</b><span>${esc(roomTypeOf(room.n).name)}</span></div><div class="hx-cu-days">${dates.map((d) => `<i class="${d === today ? 'today' : ''}"></i>`).join('')}${barsFor(room)}</div></div>`).join('');
@@ -1805,25 +1805,58 @@
       </div>
     </div>`;
   }
+  const cuChannelState = { loading: false, loaded: false, rows: [], error: '' };
+  function cuChannelMerchant() { return window.KiwiStore?.slugFor?.(cuVenueId()) || ''; }
+  async function cuLoadChannels(sync) {
+    const merchant = cuChannelMerchant(); if (!merchant || cuChannelState.loading) return;
+    cuChannelState.loading = true; cuChannelState.error = ''; rerender();
+    try {
+      const res = sync
+        ? await fetch('/api/hotel/channels', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ action:'sync', merchant }) })
+        : await fetch('/api/hotel/channels?merchant=' + encodeURIComponent(merchant), { headers:{Accept:'application/json'} });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.error || 'unavailable');
+      cuChannelState.rows = Array.isArray(body.channels) ? body.channels : [];
+      cuChannelState.loaded = true;
+      if (sync) toast('Calendriers actualisés', { type:'success', desc:(body.processed || 0) + ' connexion' + ((body.processed || 0) === 1 ? '' : 's') + ' vérifiée' + ((body.processed || 0) === 1 ? '' : 's') + '.' });
+    } catch (_) { cuChannelState.error = 'Synchronisation indisponible. Vos réservations existantes restent intactes.'; }
+    finally { cuChannelState.loading = false; rerender(); }
+  }
+  function cuChannelRoomLabel(id) {
+    const room = Object.values(cuState().rooms || {}).find((x) => x.id === id);
+    return room ? 'Chambre ' + room.n : 'Chambre supprimée';
+  }
+  function cuChannelEditor(provider) {
+    const name = provider === 'airbnb' ? 'Airbnb' : 'Booking.com';
+    const rooms = Object.values(cuState().rooms || {}).sort((a,b) => a.n-b.n);
+    if (!rooms.length) { toast('Ajoutez d’abord vos chambres', {type:'warn'}); return; }
+    const m = K().modal({ tag:'CALENDRIER OTA', title:'Connecter ' + name,
+      desc:'Collez le lien iCal exporté par ' + name + ' et liez-le à une chambre physique. Le lien reste chiffré et ne sera plus affiché.', width:600,
+      body:`<div class="hx-room-form">
+        <label><span>Nom de la connexion</span><input data-hx-channel-label maxlength="80" value="${esc(name)} · ${esc(vName())}"></label>
+        <label><span>Chambre Kiwi</span><select data-hx-channel-room>${rooms.map((r)=>`<option value="${esc(r.id)}">Chambre ${r.n} · ${esc(r.typeName || '')}</option>`).join('')}</select></label>
+        <label class="hx-room-form-wide"><span>Lien calendrier iCal (.ics)</span><input data-hx-channel-url type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://…/calendar.ics"></label>
+        <p class="hx-room-form-wide" data-hx-channel-status>Une connexion par chambre. Ajoutez les autres chambres ensuite.</p>
+      </div><div class="hx-room-form-actions"><button class="hx-btn ghost" data-action="hx-channel-close">Annuler</button><button class="hx-btn atlas" data-action="hx-channel-save" data-arg="${provider}">Connecter et vérifier</button></div>` });
+    m.el.querySelector('.kiwi-modal')?.classList.add('hx-hotel-modal'); openModal={el:m.el,close:m.close};
+  }
   function cuCanauxBody() {
-    const ch = [
-      { id: 'booking', name: 'Booking.com', fee: '15–18 %' },
-      { id: 'expedia', name: 'Expedia', fee: '15–18 %' },
-      { id: 'airbnb', name: 'Airbnb', fee: '3 % + frais voyageur' },
-    ];
-    const rows = ch.map((c) => `
-      <div class="hx-arr">
-        <span class="tm">OTA</span>
-        <div class="who"><b>${c.name}</b><div class="sub">commission ${c.fee}, visible sur chaque réservation une fois connecté</div></div>
-        <button class="hx-btn ghost" data-action="hx-cb-connect" data-arg="${c.name}">Connecter</button>
-      </div>`).join('');
+    const connected = cuChannelState.rows.map((c) => `<div class="hx-arr">
+      <span class="tm ${c.lastError ? 'red' : ''}">${c.channel === 'airbnb' ? 'AIRBNB' : 'BOOKING'}</span>
+      <div class="who"><b>${esc(c.label)}</b><div class="sub">${esc(cuChannelRoomLabel(c.roomId))} · ${c.lastError ? 'erreur : ' + esc(c.lastError) : c.lastSyncAt ? 'actualisé ' + new Date(c.lastSyncAt).toLocaleString('fr-FR') : 'première synchronisation en attente'}</div></div>
+      <button class="hx-btn ghost" data-action="hx-channel-status" data-arg="${esc(c.id)}:${c.status === 'paused' ? 'active' : 'paused'}">${c.status === 'paused' ? 'Réactiver' : 'Pause'}</button>
+      <button class="hx-btn ghost" data-action="hx-channel-delete" data-arg="${esc(c.id)}">Retirer</button>
+    </div>`).join('');
+    const choices = [{id:'booking',name:'Booking.com',fee:'15–18 %'},{id:'airbnb',name:'Airbnb',fee:'3 % + frais voyageur'}].map((c)=>`<div class="hx-arr"><span class="tm">ICAL</span><div class="who"><b>${c.name}</b><div class="sub">commission ${c.fee} · import automatique chambre par chambre</div></div><button class="hx-btn ghost" data-action="hx-cb-connect" data-arg="${c.id}">Connecter</button></div>`).join('');
     return `<div class="hx-page">
       <div class="hx-strip">
         <div class="hx-kpi"><div class="l">Réservation directe</div><div class="v">·</div><div class="d">source de réservations non connectée</div></div>
-        <div class="hx-kpi"><div class="l">Canaux connectés</div><div class="v">·</div><div class="d">source de canaux non connectée</div></div>
+        <div class="hx-kpi"><div class="l">Canaux connectés</div><div class="v">${cuChannelState.loaded ? cuChannelState.rows.filter((x)=>x.status==='active').length : '·'}</div><div class="d">calendriers actifs</div></div>
       </div>
-      <div class="hx-h"><span class="t">Connecter un canal</span><span class="s">Kiwi affiche la commission de chaque canal, réservation par réservation</span></div>
-      <div class="block" style="padding:8px 14px;"><div class="hx-list">${rows}</div></div>
+      <div class="hx-h"><span class="t">Calendriers connectés</span><span class="s">les liens privés ne sont jamais renvoyés au navigateur</span><button class="hx-btn ghost" data-action="hx-channel-sync" ${cuChannelState.loading?'disabled':''}>${cuChannelState.loading?'Actualisation…':'Actualiser maintenant'}</button></div>
+      <div class="block" style="padding:8px 14px;"><div class="hx-list">${cuChannelState.error?`<div class="hx-empty">${esc(cuChannelState.error)}</div>`:connected||'<div class="hx-empty">Aucun calendrier connecté.</div>'}</div></div>
+      <div class="hx-h"><span class="t">Connecter un canal</span><span class="s">Kiwi bloque les dates OTA dans la disponibilité directe</span></div>
+      <div class="block" style="padding:8px 14px;"><div class="hx-list">${choices}</div></div>
       <div class="block" style="padding:8px 14px;margin-top:14px;">
         ${cuStarter(
           'Le vrai prix des OTA, enfin visible.',
@@ -2048,7 +2081,7 @@
       ? page('folios', 'Notes clients · folios', 'Chambres + extras + taxe de séjour, une seule note par séjour', cuFoliosBody)
       : page('folios', 'Notes clients · folios', 'Chambres + restaurant + hammam + taxe de séjour, une seule note par séjour', foliosBody);
     handlers['nav-canaux'] = () => cu()
-      ? page('canaux', 'Canaux & OTA', '100 % direct aujourd\'hui · connectez vos canaux quand vous êtes prêt', cuCanauxBody)
+      ? (page('canaux', 'Canaux & OTA', '100 % direct aujourd\'hui · connectez vos canaux quand vous êtes prêt', cuCanauxBody), setTimeout(()=>cuLoadChannels(false),0))
       : page('canaux', 'Canaux & OTA', 'Booking.com, Expedia, Airbnb, direct · commissions visibles, enfin', canauxBody);
     handlers['nav-hotelintel'] = () => cu()
       ? page('hotelintel', 'Intelligence hôtel', 'Prévisions et suggestions, l\'IA s\'entraîne sur vos données réelles', cuIntelBody)
@@ -2415,8 +2448,19 @@
       rerender();
     };
     handlers['hx-cb-connect'] = (el, arg) => {
-      toast('Connexion ' + arg + ' demandée', { type: 'success', desc: 'Notre équipe configure le channel manager avec vous, vos réservations arriveront ici avec leur commission visible.' });
+      if (arg === 'booking' || arg === 'airbnb') cuChannelEditor(String(arg));
     };
+    handlers['hx-channel-close'] = () => { openModal?.close?.(); openModal=null; };
+    handlers['hx-channel-sync'] = () => cuLoadChannels(true);
+    handlers['hx-channel-save'] = async (el,arg) => {
+      const root=el.closest('.kiwi-modal'), status=root?.querySelector('[data-hx-channel-status]');
+      const label=String(root?.querySelector('[data-hx-channel-label]')?.value||'').trim(), roomId=String(root?.querySelector('[data-hx-channel-room]')?.value||''), feedUrl=String(root?.querySelector('[data-hx-channel-url]')?.value||'').trim();
+      if(!label||!roomId||!feedUrl){if(status)status.textContent='Complétez les trois champs.';return;}
+      el.disabled=true;if(status)status.textContent='Connexion et première vérification…';
+      try{const res=await fetch('/api/hotel/channels',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'save',merchant:cuChannelMerchant(),channel:String(arg),label,roomId,feedUrl})}),body=await res.json().catch(()=>({}));if(!res.ok)throw new Error(body.error||'unavailable');cuChannelState.rows=body.channels||[];cuChannelState.loaded=true;openModal?.close?.();openModal=null;toast('Calendrier connecté',{type:'success',desc:'Les dates OTA sont maintenant dans le tape chart.'});rerender();}catch(error){if(status)status.textContent=error.message==='invalid-feed-url'?'Utilisez le lien iCal officiel fourni par Booking.com ou Airbnb.':'Connexion impossible : '+error.message;}finally{el.disabled=false;}
+    };
+    handlers['hx-channel-status'] = async (el,arg) => { const cut=String(arg).lastIndexOf(':'),id=String(arg).slice(0,cut),status=String(arg).slice(cut+1);el.disabled=true;try{const res=await fetch('/api/hotel/channels',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'status',merchant:cuChannelMerchant(),id,status})}),body=await res.json();if(res.ok){cuChannelState.rows=body.channels||[];rerender();}}finally{el.disabled=false;} };
+    handlers['hx-channel-delete'] = async (el,id) => { if(!confirm('Retirer ce calendrier ? Les séjours déjà importés restent dans l’historique.'))return;el.disabled=true;try{const res=await fetch('/api/hotel/channels',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({merchant:cuChannelMerchant(),id:String(id)})}),body=await res.json();if(res.ok){cuChannelState.rows=body.channels||[];rerender();}}finally{el.disabled=false;} };
 
     /* — folio — */
     handlers['hx-folio'] = (el, arg) => openFolio(parseInt(arg, 10));

@@ -32,6 +32,7 @@ function safeDoc(raw) {
       nights: num(x.hotel.nights, 1, 365, 1), rate: num(x.hotel.rate, 0, 1000000, 0), total: num(x.hotel.total, 0, 100000000, 0),
       channel: CHANNELS.has(x.hotel.channel) ? x.hotel.channel : (x.source === 'public' ? 'direct' : 'other'),
       externalRef: str(x.hotel.externalRef, 80),
+      feedId: str(x.hotel.feedId, 64), syncedAt: +x.hotel.syncedAt || 0, conflict: !!x.hotel.conflict,
     } : null;
     return {
       id: str(x?.id, 64), code: str(x?.code, 24), customer: { name: str(x?.customer?.name, 100), phone: str(x?.customer?.phone, 32), email: str(x?.customer?.email, 160) },

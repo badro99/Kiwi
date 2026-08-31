@@ -1,0 +1,42 @@
+#!/usr/bin/env node
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import { DatabaseSync } from 'node:sqlite';
+import { makeSession, sessionCookie } from '../functions/auth/_lib.js';
+import { onRequestGet, onRequestPost } from '../functions/api/hotel/channels.js';
+import { decryptFeed, normalizeFeedUrl, parseIcal, syncHotelChannels } from '../functions/api/hotel/_channels.js';
+
+const sql=new DatabaseSync(':memory:');sql.exec(fs.readFileSync(new URL('../schema.sql',import.meta.url),'utf8'));
+const now=Date.now(),secret='hotel-channel-test-secret-0123456789';
+sql.prepare('INSERT INTO accounts (id,email,name,business,salt,hash,created_ts) VALUES (?,?,?,?,?,?,?)').run('acc-h','h@test.ma','H','Riad Sync','s','h',now);
+sql.prepare('INSERT INTO merchant_config (merchant,features,type,account_id,name,status,updated_ts) VALUES (?,?,?,?,?,?,?)').run('riad-sync','{}','hotel','acc-h','Riad Sync','active',now);
+sql.prepare('INSERT INTO store_docs (merchant,feature,data,rev,updated_ts) VALUES (?,?,?,?,?)').run('riad-sync','rooms',JSON.stringify({v:4,baseRate:600,roomTypes:[{id:'type-a',name:'Atlas',rate:750}],rooms:[{id:'room:101',n:101,typeId:'type-a',status:'libre'}]}),1,now);
+sql.prepare('INSERT INTO store_docs (merchant,feature,data,rev,updated_ts) VALUES (?,?,?,?,?)').run('riad-sync','reservations',JSON.stringify({v:1,settings:{},services:[],resources:[],blocked:[],bookings:[]}),1,now);
+class Statement{constructor(text){this.text=text;this.args=[]}bind(...a){this.args=a;return this}async first(){return sql.prepare(this.text).get(...this.args)||null}async all(){return{results:sql.prepare(this.text).all(...this.args)}}async run(){const r=sql.prepare(this.text).run(...this.args);return{success:true,meta:{changes:Number(r.changes)}}}rows(){return{results:sql.prepare(this.text).all(...this.args)}}}
+const DB={prepare(text){return new Statement(text)},async batch(ss){return ss.map((s)=>s.rows())}};
+const cookie=sessionCookie(await makeSession('acc-h',secret)).split(';')[0];
+let calendar=`BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:airbnb-reservation-1\r\nDTSTART;VALUE=DATE:20260910\r\nDTEND;VALUE=DATE:20260913\r\nSUMMARY:Reserved\r\nEND:VEVENT\r\nEND:VCALENDAR`;
+const env={DB,AUTH_SECRET:secret,HOTEL_FEED_FETCH:async()=>new Response(calendar,{headers:{'Content-Type':'text/calendar'}})};
+const request=(body,auth=true)=>new Request('https://kiwi.test/api/hotel/channels',{method:'POST',headers:{'Content-Type':'application/json',...(auth?{Cookie:cookie}:{})},body:JSON.stringify(body)});
+let controls=0;const ok=(v,label)=>{assert.ok(v,label);controls++;console.log('  ✓ '+label)};
+
+ok(!normalizeFeedUrl('https://127.0.0.1/private.ics','airbnb')&&!normalizeFeedUrl('https://airbnb.com.attacker.test/x.ics','airbnb'),'calendar URL validation blocks private and lookalike SSRF targets');
+ok(normalizeFeedUrl('webcal://www.airbnb.com/calendar/ical/123.ics?s=secret','airbnb').startsWith('https://www.airbnb.com/'),'official webcal links are upgraded to HTTPS');
+ok(parseIcal(calendar).length===1&&parseIcal(calendar)[0].checkOut==='2026-09-13','fold-safe iCal parser reads exclusive hotel dates');
+let response=await onRequestPost({env,request:request({action:'save',merchant:'riad-sync',channel:'airbnb',label:'Airbnb 101',roomId:'room:101',feedUrl:'https://www.airbnb.com/calendar/ical/123.ics?s=secret'},false)});
+ok(response.status===401,'a paired or anonymous terminal cannot manage OTA bearer URLs');
+response=await onRequestPost({env,request:request({action:'save',merchant:'riad-sync',channel:'airbnb',label:'Airbnb 101',roomId:'room:101',feedUrl:'https://evil.test/steal.ics'})});
+ok(response.status===400,'only the selected provider official host can be fetched');
+response=await onRequestPost({env,request:request({action:'save',merchant:'riad-sync',channel:'airbnb',label:'Airbnb 101',roomId:'room:101',feedUrl:'https://www.airbnb.com/calendar/ical/123.ics?s=secret'})});
+let body=await response.json();ok(response.status===201&&body.channels.length===1&&body.channels[0].hasFeed&&!JSON.stringify(body).includes('s=secret'),'save performs first sync but never reflects the feed URL');
+const link=sql.prepare('SELECT * FROM channel_links').get(),cfg=JSON.parse(link.config);
+ok(!link.config.includes('airbnb.com')&&(await decryptFeed(cfg.feedEnc,secret)).includes('s=secret'),'D1 stores authenticated ciphertext and decrypts only server-side');
+let doc=JSON.parse(sql.prepare("SELECT data FROM store_docs WHERE feature='reservations'").get().data);
+ok(doc.bookings.length===1&&doc.bookings[0].resourceId==='room:101'&&doc.bookings[0].hotel.feedId===link.id,'OTA event blocks the exact mapped physical room in shared availability');
+await syncHotelChannels(env,{merchant:'riad-sync'});doc=JSON.parse(sql.prepare("SELECT data FROM store_docs WHERE feature='reservations'").get().data);
+ok(doc.bookings.length===1,'repeated polling is idempotent by encrypted feed id and event UID');
+calendar='BEGIN:VCALENDAR\r\nVERSION:2.0\r\nEND:VCALENDAR';await syncHotelChannels(env,{merchant:'riad-sync'});doc=JSON.parse(sql.prepare("SELECT data FROM store_docs WHERE feature='reservations'").get().data);
+ok(doc.bookings[0].status==='cancelled','an event removed from a successful feed becomes cancelled history instead of disappearing');
+response=await onRequestGet({env,request:new Request('https://kiwi.test/api/hotel/channels?merchant=riad-sync',{headers:{Cookie:cookie}})});body=await response.json();
+ok(response.status===200&&body.channels[0].lastSyncAt>0&&!('feedUrl' in body.channels[0]),'connection status exposes health metadata only');
+console.log(`hotel-channel-sync-test: ${controls} controls passed`);
