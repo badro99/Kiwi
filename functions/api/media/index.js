@@ -54,11 +54,13 @@ export async function onRequestPost(context) {
   const merchant = await tenantFor(request, env, asked, { strict: true });
   if (!merchant) return json({ error: 'unauthorized' }, 401);
 
+  const url = new URL(request.url), scope = url.searchParams.get('scope') === 'hotel-room' ? 'hotel-room' : '';
   const ctype = (request.headers.get('Content-Type') || '').split(';')[0].trim().toLowerCase();
   const ext = EXT[ctype];
   if (!ext) return json({ error: 'bad-type', accepted: Object.keys(EXT) }, 415);
 
   const isVideo = ctype.startsWith('video/');
+  if (scope === 'hotel-room' && isVideo) return json({ error: 'bad-type', accepted: Object.keys(EXT).filter((x) => x.startsWith('image/')) }, 415);
   const limit = isVideo ? MAX_VIDEO : MAX_IMAGE;
 
   // Trust Content-Length when present so an oversized upload is refused before
@@ -72,7 +74,7 @@ export async function onRequestPost(context) {
 
   // Key is namespaced by merchant so one client's media can never collide with
   // (or be guessed from) another's, and a whole store can be purged by prefix.
-  const key = `${merchant}/${Date.now().toString(36)}-${crypto.randomUUID().slice(0, 8)}.${ext}`;
+  const key = `${merchant}/${scope ? scope + '/' : ''}${Date.now().toString(36)}-${crypto.randomUUID().slice(0, 8)}.${ext}`;
   try {
     await env.MEDIA.put(key, bytes, {
       httpMetadata: { contentType: ctype, cacheControl: 'public, max-age=31536000, immutable' },

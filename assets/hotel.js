@@ -370,7 +370,7 @@
   }
   function cuSafePhoto(x, index, typeName) {
     const url = String(typeof x === 'string' ? x : x?.url || '').trim();
-    if (!/^\/api\/media\/[a-z0-9][a-z0-9-]{2,63}\/[a-z0-9-]{6,80}\.(?:jpe?g|png|webp|gif|avif)$/i.test(url)) return null;
+    if (!/^\/api\/media\/[a-z0-9][a-z0-9-]{2,63}\/(?:hotel-room\/)?[a-z0-9-]{6,80}\.(?:jpe?g|png|webp|gif|avif)$/i.test(url)) return null;
     return { url, alt: String(x?.alt || (typeName + ' · photo ' + (index + 1))).trim().slice(0, 120), updatedAt: +x?.updatedAt || 0 };
   }
   function cuSeed() {
@@ -1430,7 +1430,7 @@
       if (status) status.textContent = 'Préparation de la photo ' + (i + 1) + ' / ' + queue.length + '…';
       try {
         const ready = await cuShrinkHotelPhoto(queue[i]);
-        const uploaded = await uploader.upload(ready, { merchant: window.KiwiStore?.slugFor?.(cuVenueId()) || '', progress: (pct) => { if (status) status.textContent = 'Envoi ' + (i + 1) + ' / ' + queue.length + ' · ' + pct + ' %'; } });
+        const uploaded = await uploader.upload(ready, { merchant: window.KiwiStore?.slugFor?.(cuVenueId()) || '', scope: 'hotel-room', progress: (pct) => { if (status) status.textContent = 'Envoi ' + (i + 1) + ' / ' + queue.length + ' · ' + pct + ' %'; } });
         const photo = cuSafePhoto({ url: uploaded.url, alt: typeName + ' · photo ' + ((root.__hxPhotos || []).length + 1), updatedAt: cuStamp() }, (root.__hxPhotos || []).length, typeName);
         if (photo) root.__hxPhotos.push(photo);
         cuRenderPhotoEditor(root);

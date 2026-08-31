@@ -61,6 +61,7 @@
         var span=K.telemetry.start('media.upload',{capability:'uploads',bytes:file.size}),xhr=new XMLHttpRequest();
         var mediaUrl='/api/media?name='+encodeURIComponent(clean(file.name,120));
         if(opts.merchant)mediaUrl+='&merchant='+encodeURIComponent(clean(opts.merchant,64));
+        if(opts.scope==='hotel-room')mediaUrl+='&scope=hotel-room';
         xhr.open('POST',mediaUrl,true); xhr.setRequestHeader('Content-Type',file.type);
         xhr.upload.onprogress=function(e){if(e.lengthComputable&&typeof opts.progress==='function')opts.progress(Math.round(e.loaded/e.total*100));};
         xhr.onerror=function(){span.end('network-error');fail('network');};

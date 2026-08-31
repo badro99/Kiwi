@@ -35,7 +35,7 @@ export async function onRequestGet(context) {
   let key;
   try { key = decodeURIComponent(raw); } catch (_) { return NOT_FOUND(); }
   // Defence in depth: no traversal, no absolute paths, nothing but the shape we
-  // write in index.js (merchant-slug / file).
+  // write in index.js (merchant-slug / optional safe scope / file).
   if (!key || key.includes('..') || key.startsWith('/') || key.length > 200) return NOT_FOUND();
 
   const object = await env.MEDIA.get(key);
