@@ -44,8 +44,8 @@
     "sha": "9f470ff51768fc37"
   },
   "assets/booking.js": {
-    "v": "13",
-    "sha": "f11c3f3f28784348"
+    "v": "14",
+    "sha": "1ee1ffa763fe51d3"
   },
   "assets/boutique-catalog.js": {
     "v": "6",
@@ -84,8 +84,8 @@
     "sha": "112638dbbb35294e"
   },
   "assets/caisse-pwa.js": {
-    "v": "448",
-    "sha": "d7ec57f198d4c6ad"
+    "v": "450",
+    "sha": "76af611e3fed0ccd"
   },
   "assets/caisse-skin.css": {
     "v": "3",
@@ -144,8 +144,8 @@
     "sha": "cd751f73c0180449"
   },
   "assets/dashboard-pwa.js": {
-    "v": "447",
-    "sha": "0c3a4c3dc19ff2db"
+    "v": "449",
+    "sha": "0abcfad391189770"
   },
   "assets/dashboard-startup-gate.js": {
     "v": "1",
@@ -180,8 +180,8 @@
     "sha": "74b872eee6e9256a"
   },
   "assets/employee-live.js": {
-    "v": "446",
-    "sha": "7fe0839b74cf33ce"
+    "v": "448",
+    "sha": "4669af0e406addcd"
   },
   "assets/employee-planning.js": {
     "v": "8",
@@ -232,12 +232,12 @@
     "sha": "7a0b181ecedf5f85"
   },
   "assets/hotel.css": {
-    "v": "13",
-    "sha": "a22eab3185232873"
+    "v": "14",
+    "sha": "891a656f1a4205ab"
   },
   "assets/hotel.js": {
-    "v": "16",
-    "sha": "5a65de1793e8ac20"
+    "v": "18",
+    "sha": "a8f301d8799b98d0"
   },
   "assets/i18n.js": {
     "v": "7",
@@ -408,8 +408,8 @@
     "sha": "5de0e6b683e8535a"
   },
   "assets/platform-ops.js": {
-    "v": "4",
-    "sha": "2bb82dcf99eba6df"
+    "v": "5",
+    "sha": "c079860f2f3bf82e"
   },
   "assets/pos-autre.css": {
     "v": "2",
@@ -616,8 +616,8 @@
     "sha": "564bac0e65269a9d"
   },
   "assets/reservations.js": {
-    "v": "12",
-    "sha": "cafde0c398648d5c"
+    "v": "13",
+    "sha": "6e049265c76a74fa"
   },
   "assets/restaurant-menu-workspace.js": {
     "v": "66",
