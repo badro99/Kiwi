@@ -71,10 +71,44 @@ check('a location id can never be reissued', () => {
   assert.equal(validateHotelUnits(next, accepted.value).detail, `duplicate-location-id:${retired.locationId}`);
 });
 
-check('store type behavior is immutable after unit creation', () => {
+/* `storeType` se corrige : sans écran de gestion ni suppression, le figer
+   rendait définitive la moindre faute de frappe. La spec ne gèle que
+   l'identité de lieu. */
+check('store type can be corrected after unit creation', () => {
   const next = clone(accepted.value);
-  next.units[1].storeType = 'replacement';
-  assert.match(validateHotelUnits(next, accepted.value).detail, /^store-type-immutable:/);
+  next.units[1].storeType = 'restaurant';
+  const result = validateHotelUnits(next, accepted.value);
+  assert.equal(result.ok, true);
+  assert.equal(result.value.units[1].storeType, 'restaurant');
+});
+
+check('correcting a store type never loosens the identity that is frozen', () => {
+  const next = clone(accepted.value);
+  next.units[1].storeType = 'restaurant';
+  next.units[1].locationId = 'u-somewhere-else';
+  assert.match(validateHotelUnits(next, accepted.value).detail, /^location-id-immutable:/);
+});
+
+/* L'économat doit rester ACTIF, pas seulement exister : compter par `kind`
+   laissait passer un hôtel sans fournisseur interne, et le trou ne se serait
+   vu qu'à la phase 5, quand une demande n'aurait eu nulle part où aller. */
+check('deactivating the only economat is refused', () => {
+  const next = clone(accepted.value);
+  next.units.find((unit) => unit.kind === 'economat').active = false;
+  assert.equal(validateHotelUnits(next, accepted.value).detail, 'active-economat-required');
+});
+
+check('a hotel cannot be created with an inactive economat either', () => {
+  const next = clone(canonical);
+  next.units.find((unit) => unit.kind === 'economat').active = false;
+  assert.equal(validateHotelUnits(next).detail, 'active-economat-required');
+});
+
+check('outlets and departments stay freely deactivable', () => {
+  const next = clone(accepted.value);
+  next.units.find((unit) => unit.kind === 'outlet').active = false;
+  next.units.find((unit) => unit.kind === 'department').active = false;
+  assert.equal(validateHotelUnits(next, accepted.value).ok, true);
 });
 
 check('tenant identity cannot be embedded in a child unit', () => {

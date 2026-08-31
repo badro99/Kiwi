@@ -46,6 +46,7 @@ export function validateHotelUnits(raw, previous = null) {
   const ids = new Set();
   const locations = new Set();
   let economats = 0;
+  let activeEconomats = 0;
 
   for (let index = 0; index < raw.units.length; index += 1) {
     const input = raw.units[index];
@@ -74,12 +75,24 @@ export function validateHotelUnits(raw, previous = null) {
 
     ids.add(id);
     locations.add(locationId);
-    if (kind === 'economat') economats += 1;
+    if (kind === 'economat') {
+      economats += 1;
+      if (input.active) activeEconomats += 1;
+    }
     units.push({ id, name, kind, storeType, locationId, active: input.active });
   }
 
   if (units.length && economats !== 1) {
     return failure('invalid-hotel-units', 'exactly-one-economat-required');
+  }
+  /* L'unique économat doit rester ACTIF, et pas seulement exister.
+   * Compter par `kind` laissait passer un registre dont le seul économat était
+   * désactivé : la forme restait valide, l'hôtel n'avait plus de fournisseur
+   * interne. Toutes les phases suivantes en dépendent — la phase 5 n'a nulle
+   * part où envoyer une demande, la phase 8 n'a pas de lieu source. Le trou ne
+   * se serait vu qu'au moment où quelqu'un aurait essayé de commander. */
+  if (units.length && activeEconomats !== 1) {
+    return failure('invalid-hotel-units', 'active-economat-required');
   }
 
   const nextById = new Map(units.map((unit) => [unit.id, unit]));
@@ -95,9 +108,17 @@ export function validateHotelUnits(raw, previous = null) {
     if (nextUnit.kind !== oldUnit.kind) {
       return failure('hotel-unit-conflict', `kind-immutable:${oldUnit.id}`, 409);
     }
-    if (nextUnit.storeType !== oldUnit.storeType) {
-      return failure('hotel-unit-conflict', `store-type-immutable:${oldUnit.id}`, 409);
-    }
+    /* `storeType` est CORRIGEABLE, volontairement.
+     * La spec ne gèle que l'identité de lieu : `locationId` finit sur chaque
+     * mouvement de stock, donc le renommer réécrirait l'histoire. `id` et
+     * `kind` la suivent parce qu'ils décident de quel registre et de quel rôle
+     * il s'agit. `storeType` ne fait que choisir l'expérience de caisse.
+     * Le figer coûtait plus qu'il ne protégeait : sans écran de gestion et
+     * sans suppression possible, un bar créé par erreur en « restaurant »
+     * l'était pour toujours, et le seul recours était de le désactiver et d'en
+     * créer un jumeau — un cadavre de plus dans le registre à chaque faute de
+     * frappe. La version de principe (« modifiable tant qu'aucun mouvement ne
+     * le référence ») exige un prédicat qui n'existera qu'à la phase 2. */
   }
 
   return { ok: true, value: { units } };
