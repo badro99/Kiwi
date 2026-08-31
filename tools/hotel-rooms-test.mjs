@@ -159,7 +159,8 @@ ok(source.includes("const compactProperty = all.length <= 20") && source.include
   'the room plan progressively adds dense search and floor navigation only for larger properties');
 ok(source.includes('hx-room-section-tabs') && styles.includes('.hx-room-section-tabs') && styles.includes('.hx-floor-section { display:flex; flex-direction:column; gap:10px; padding:0; }'),
   'room plan and housekeeping use styled Kiwi tabs without inheriting generic section spacing');
-ok(dashboard.includes('assets/hotel.css?v=11') && serviceWorker.includes("'/assets/hotel.css?v=11'"),
+const hotelCssStamp = dashboard.match(/assets\/hotel\.css\?v=(\d+)/)?.[1];
+ok(!!hotelCssStamp && serviceWorker.includes("'/assets/hotel.css?v=" + hotelCssStamp + "'"),
   'the live page and offline shell request the same cache-busted hotel stylesheet');
 
 large.handlers['hx-room-save'](editor({

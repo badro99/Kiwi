@@ -312,6 +312,8 @@
 
   let openDrawer = null;   // { el, page }
   let openModal = null;
+  let cuTapeOffset = 0;
+  let cuReservationEventsBound = false;
   const cuRackFilter = { floor: 'all', status: 'all', q: '' };
   const K = () => window.Kiwi;
 
@@ -1623,17 +1625,118 @@
     </div>`;
   }
   function cuSejoursBody() {
+    const st = cuState();
+    const rooms = Object.values(st.rooms || {}).sort((a, b) => a.n - b.n);
+    const doc = window.KiwiReservations?.get?.() || { bookings: [] };
+    const active = { requested: 1, confirmed: 1, checked_in: 1 };
+    const channels = { direct: 'Direct', booking: 'Booking.com', airbnb: 'Airbnb', expedia: 'Expedia', walkin: 'Walk-in', other: 'Autre OTA' };
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+    const add = (ymd, n) => { const d = new Date(ymd + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+    const distance = (a, b) => Math.round((Date.parse(b + 'T12:00:00Z') - Date.parse(a + 'T12:00:00Z')) / 86400000);
+    const start = add(today, cuTapeOffset);
+    const end = add(start, 14);
+    const dates = Array.from({ length: 14 }, (_, i) => add(start, i));
+    const real = (doc.bookings || []).filter((b) => b.hotel && b.hotel.checkIn && b.hotel.checkOut && b.status !== 'cancelled' && b.status !== 'no_show');
+    const matched = new Set(real.map((b) => b.resourceId));
+    const walkins = Object.values(st.folios || {}).filter((f) => f && !matched.has(st.rooms?.[f.room]?.id)).map((f) => {
+      const room = st.rooms?.[f.room], stamp = +f.updatedAt || Date.now();
+      const cin = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(stamp));
+      return room ? { id: 'folio:' + room.id, resourceId: room.id, customer: { name: f.guest || room.guest || 'Walk-in' }, status: 'checked_in', hotel: { checkIn: cin, checkOut: add(cin, +f.nights || 1), channel: 'walkin', roomTypeName: roomTypeOf(room.n).name } } : null;
+    }).filter(Boolean);
+    const stays = real.concat(walkins);
+    const barsFor = (room) => stays.filter((b) => b.resourceId === room.id && b.hotel.checkIn < end && b.hotel.checkOut > start).map((b) => {
+      const from = Math.max(0, distance(start, b.hotel.checkIn));
+      const to = Math.min(14, distance(start, b.hotel.checkOut));
+      const channel = channels[b.hotel.channel] ? b.hotel.channel : (b.source === 'public' ? 'direct' : 'other');
+      const left = from / 14 * 100, width = Math.max(1, (to - from) / 14 * 100);
+      return `<button class="hx-cu-stay src-${channel} status-${esc(b.status)}" style="left:${left}%;width:calc(${width}% - 3px)" data-action="hx-stay-edit" data-arg="${esc(b.id)}" title="${esc((b.customer?.name || '') + ' · ' + channels[channel] + ' · ' + b.hotel.checkIn + ' → ' + b.hotel.checkOut)}"><b>${esc(b.customer?.name || 'Séjour')}</b><span>${esc(channels[channel])}</span></button>`;
+    }).join('');
+    const dateHead = dates.map((d) => { const dt = new Date(d + 'T12:00:00Z'); return `<div class="${d === today ? 'today' : ''}"><b>${new Intl.DateTimeFormat('fr-FR', { weekday: 'short', timeZone: 'UTC' }).format(dt).replace('.', '')}</b><span>${dt.getUTCDate()}</span></div>`; }).join('');
+    const rows = rooms.map((room) => `<div class="hx-cu-tape-row"><div class="hx-cu-room"><b>${room.n}</b><span>${esc(roomTypeOf(room.n).name)}</span></div><div class="hx-cu-days">${dates.map((d) => `<i class="${d === today ? 'today' : ''}"></i>`).join('')}${barsFor(room)}</div></div>`).join('');
+    const occupancy = dates.map((d) => {
+      const count = rooms.filter((r) => stays.some((b) => b.resourceId === r.id && active[b.status] && b.hotel.checkIn <= d && b.hotel.checkOut > d)).length;
+      const pct = rooms.length ? Math.round(count / rooms.length * 100) : 0;
+      return `<div class="${d === today ? 'today' : ''}" title="${count} / ${rooms.length} chambres"><b>${pct}%</b><span>${count}</span></div>`;
+    }).join('');
     return `<div class="hx-page">
       ${cuStrip()}
-      <div class="block" style="padding:8px 14px;">
-        ${cuStarter(
-          'Votre tape chart arrive avec vos réservations.',
-          'Chambres × dates : chaque séjour devient une barre colorée par canal, Booking, direct, Airbnb, walk-in, avec la ligne d\'occupation en pied.',
-          ['Vue 14 jours glissants par chambre', 'Sources de réservation identifiables d\'un coup d\'œil', 'Taux d\'occupation calculé par jour'],
-          '<button class="hx-btn ghost" data-action="nav-canaux">Connecter mes canaux →</button>'
-        )}
+      <div class="hx-cu-tape block">
+        <div class="hx-cu-tape-head"><div><span class="hx-kicker">DISPONIBILITÉ UNIFIÉE</span><h3>Chambres × 14 jours</h3><p>Direct, saisie manuelle et OTA bloquent tous la même chambre.</p></div><div class="hx-cu-tape-actions"><button class="hx-btn ghost" data-action="hx-tape-prev" aria-label="14 jours précédents">←</button><button class="hx-btn ghost" data-action="hx-tape-today">Aujourd’hui</button><button class="hx-btn ghost" data-action="hx-tape-next" aria-label="14 jours suivants">→</button><button class="hx-btn atlas" data-action="hx-stay-new">+ Réservation</button></div></div>
+        <div class="hx-cu-legend">${Object.keys(channels).map((c) => `<span class="src-${c}"><i></i>${channels[c]}</span>`).join('')}</div>
+        ${rooms.length ? `<div class="hx-cu-tape-scroll"><div class="hx-cu-tape-grid"><div class="hx-cu-date-row"><div class="hx-cu-room"><span>CHAMBRE</span></div><div class="hx-cu-date-days">${dateHead}</div></div>${rows}<div class="hx-cu-occupancy"><div class="hx-cu-room"><b>Occupation</b><span>vendues</span></div><div>${occupancy}</div></div></div></div>` : `<div class="hx-cu-tape-empty"><b>Ajoutez d’abord vos chambres</b><p>Le tape chart attribue chaque séjour à une chambre réelle.</p><button class="hx-btn atlas" data-action="hx-room-add">Configurer les chambres</button></div>`}
       </div>
     </div>`;
+  }
+
+  function cuStayEditor(booking) {
+    const st = cuState(), types = cuTypes(), rooms = Object.values(st.rooms || {}).sort((a, b) => a.n - b.n);
+    if (!types.length || !rooms.length) { toast('Configurez vos chambres d’abord', { type: 'warn' }); return; }
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+    const add = (ymd, n) => { const d = new Date(ymd + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+    const typeId = booking?.serviceId || types[0].id;
+    const m = K().modal({ tag: booking ? booking.code || 'SÉJOUR' : 'NOUVEAU SÉJOUR', title: booking ? 'Modifier la réservation' : 'Ajouter une réservation', desc: 'La chambre est contrôlée et bloquée côté serveur avant confirmation.', width: 720,
+      body: `<form class="hx-stay-form" data-hx-stay-form>
+        <div class="hx-room-form hx-type-form">
+          <label class="hx-room-form-wide"><span>Nom du client</span><input name="name" maxlength="100" required value="${esc(booking?.customer?.name || '')}" placeholder="Nom et prénom"></label>
+          <label><span>Arrivée</span><input name="checkIn" type="date" required value="${esc(booking?.hotel?.checkIn || today)}"></label>
+          <label><span>Départ</span><input name="checkOut" type="date" required value="${esc(booking?.hotel?.checkOut || add(today, 1))}"></label>
+          <label><span>Catégorie</span><select name="roomTypeId">${types.map((t) => `<option value="${esc(t.id)}" ${t.id === typeId ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select></label>
+          <label><span>Chambre</span><select name="resourceId"><option value="">Attribution automatique</option>${rooms.map((r) => `<option value="${esc(r.id)}" data-type="${esc(r.typeId)}" ${r.id === booking?.resourceId ? 'selected' : ''}>Ch. ${r.n} · ${esc(roomTypeOf(r.n).name)}</option>`).join('')}</select></label>
+          <label><span>Canal</span><select name="channel"><option value="direct">Direct</option><option value="booking">Booking.com</option><option value="airbnb">Airbnb</option><option value="expedia">Expedia</option><option value="walkin">Walk-in</option><option value="other">Autre OTA</option></select></label>
+          <label><span>Statut</span><select name="status"><option value="confirmed">Confirmée</option><option value="requested">Demandée</option><option value="checked_in">Client arrivé</option><option value="completed">Terminée</option><option value="no_show">No-show</option></select></label>
+          <label><span>Voyageurs</span><input name="partySize" type="number" min="1" max="12" value="${booking?.partySize || 1}"></label>
+          <label><span>Référence OTA <small>· optionnel</small></span><input name="externalRef" maxlength="80" value="${esc(booking?.hotel?.externalRef || '')}" placeholder="Ex. 4219-8840"></label>
+          <label><span>Téléphone <small>· optionnel</small></span><input name="phone" maxlength="32" value="${esc(booking?.customer?.phone || '')}"></label>
+          <label><span>E-mail <small>· optionnel</small></span><input name="email" type="email" maxlength="160" value="${esc(booking?.customer?.email || '')}"></label>
+          <label class="hx-room-form-wide"><span>Note interne</span><textarea name="note" maxlength="600" rows="2">${esc(booking?.note || '')}</textarea></label>
+        </div><p class="hx-stay-error" data-hx-stay-error></p><div class="hx-room-form-actions">${booking && booking.status !== 'cancelled' ? `<button type="button" class="hx-btn warn" data-action="hx-stay-cancel" data-arg="${esc(booking.id)}">Annuler le séjour</button>` : '<span></span>'}<button class="hx-btn atlas" type="submit">${booking ? 'Enregistrer' : 'Bloquer la chambre'}</button></div>
+      </form>` });
+    const form = m.el.querySelector('[data-hx-stay-form]');
+    form.elements.channel.value = booking?.hotel?.channel || (booking?.source === 'public' ? 'direct' : 'other');
+    form.elements.status.value = booking?.status || 'confirmed';
+    const filterRooms = () => { const selected = form.elements.resourceId.value; Array.from(form.elements.resourceId.options).forEach((o, i) => { if (!i) return; o.hidden = o.dataset.type !== form.elements.roomTypeId.value; }); if (selected && form.elements.resourceId.selectedOptions[0]?.hidden) form.elements.resourceId.value = ''; };
+    form.elements.roomTypeId.addEventListener('change', filterRooms); filterRooms();
+    form.addEventListener('submit', (e) => { e.preventDefault(); cuSubmitStay(form, booking, m); });
+    openModal = { el: m.el, close: m.close };
+  }
+
+  async function cuSubmitStay(form, booking, modal) {
+    const fd = new FormData(form), submit = form.querySelector('[type="submit"]'), error = form.querySelector('[data-hx-stay-error]');
+    const slug = window.KiwiStore?.slugFor?.(cuVenueId()) || '';
+    const payload = { action: 'save', merchant: slug, id: booking?.id || '', clientRef: booking?.publicRef || ('staff-' + crypto.randomUUID()), roomTypeId: fd.get('roomTypeId'), resourceId: fd.get('resourceId'), checkIn: fd.get('checkIn'), checkOut: fd.get('checkOut'), partySize: fd.get('partySize'), channel: fd.get('channel'), status: fd.get('status'), externalRef: fd.get('externalRef'), note: fd.get('note'), customer: { name: fd.get('name'), phone: fd.get('phone'), email: fd.get('email') } };
+    if (!slug) { error.textContent = 'Cette boutique n’est pas encore reliée à son compte Kiwi.'; return; }
+    submit.disabled = true; error.textContent = '';
+    try {
+      const res = await fetch('/api/hotel/stays', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body.booking) {
+        const messages = { 'room-unavailable': 'Cette chambre vient d’être prise sur ces dates. Choisissez-en une autre.', 'duplicate-reference': 'Cette référence OTA existe déjà.', 'invalid-dates': 'Les dates du séjour sont invalides.', invalid: 'Complétez le nom, les dates et la catégorie.', unauthorized: 'Votre session a expiré. Reconnectez-vous.' };
+        error.textContent = messages[body.error] || 'Impossible d’enregistrer ce séjour pour le moment.'; return;
+      }
+      const doc = window.KiwiReservations.get(), i = doc.bookings.findIndex((x) => x.id === body.booking.id);
+      if (i < 0) doc.bookings.push(body.booking); else doc.bookings[i] = body.booking;
+      window.KiwiReservations.set(doc); modal.close(); openModal = null;
+      toast('Séjour enregistré · ch. ' + (cuState().rooms && Object.values(cuState().rooms).find((r) => r.id === body.booking.resourceId)?.n || ''), { type: 'success', desc: body.booking.hotel.checkIn + ' → ' + body.booking.hotel.checkOut + ' · ' + (body.booking.hotel.channel || 'direct') });
+      rerender();
+    } catch (_) { error.textContent = 'Réseau indisponible : rien n’a été enregistré.'; }
+    finally { submit.disabled = false; }
+  }
+
+  async function cuCancelStay(id, button, modal) {
+    const slug = window.KiwiStore?.slugFor?.(cuVenueId()) || '';
+    if (!slug || !id) return;
+    button.disabled = true;
+    try {
+      const res = await fetch('/api/hotel/stays', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'cancel', merchant: slug, id }) });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body.booking) { toast('Annulation impossible', { type: 'warn', desc: body.error || 'Réessayez.' }); return; }
+      const doc = window.KiwiReservations.get(), i = doc.bookings.findIndex((x) => x.id === body.booking.id);
+      if (i >= 0) doc.bookings[i] = body.booking;
+      window.KiwiReservations.set(doc); modal?.close?.(); openModal?.close?.(); openModal = null;
+      toast('Séjour annulé', { type: 'success', desc: 'La chambre est de nouveau disponible sur tous les canaux.' });
+      rerender();
+    } catch (_) { toast('Réseau indisponible', { type: 'warn', desc: 'Le séjour n’a pas été annulé.' }); }
+    finally { button.disabled = false; }
   }
   function cuHotesBody() {
     return `<div class="hx-page">
@@ -1851,6 +1954,12 @@
      * the new slug; the local copy still paints immediately while it loads. */
     bindCuCloud();
     try { window.KiwiVenue.subscribe(() => { bindCuCloud(); }); } catch (_) {}
+    if (!cuReservationEventsBound) {
+      cuReservationEventsBound = true;
+      window.addEventListener('kiwi-reservations-changed', () => {
+        if (isCustomHotel() && openDrawer?.page === 'sejours') rerender();
+      });
+    }
 
     /* The 0000 wizard now offers « Hôtel / Riad » — fork of
      * interactive.js's onboard handler (see obOnboard above). Re-asserted
@@ -1890,6 +1999,25 @@
       : page('hotelintel', 'Intelligence hôtel', 'Prévision d\'occupation · tarification · no-shows · où part l\'argent', intelBody);
 
     /* — custom-hotel controls — */
+    handlers['hx-tape-prev'] = () => { cuTapeOffset -= 14; rerender(); };
+    handlers['hx-tape-next'] = () => { cuTapeOffset += 14; rerender(); };
+    handlers['hx-tape-today'] = () => { cuTapeOffset = 0; rerender(); };
+    handlers['hx-stay-new'] = () => { if (isCustomHotel()) cuStayEditor(null); };
+    handlers['hx-stay-edit'] = (el, arg) => {
+      if (!isCustomHotel() || String(arg).startsWith('folio:')) return;
+      const booking = window.KiwiReservations?.get?.().bookings.find((b) => b.id === String(arg));
+      if (booking?.hotel) cuStayEditor(booking);
+    };
+    handlers['hx-stay-cancel'] = (el, arg) => {
+      const booking = window.KiwiReservations?.get?.().bookings.find((b) => b.id === String(arg));
+      if (!booking) return;
+      openModal?.close?.();
+      const m = K().modal({ tag: 'ANNULATION', title: 'Libérer cette chambre ?', desc: booking.customer.name + ' · ' + booking.hotel.checkIn + ' → ' + booking.hotel.checkOut, width: 460,
+        body: '<p style="font-size:13px;line-height:1.6;color:var(--n-600);">Le séjour restera dans l’historique avec le statut annulé. La chambre redeviendra immédiatement réservable en direct et sur la saisie OTA.</p><div class="hx-room-form-actions"><button class="hx-btn ghost" data-action="hx-stay-cancel-close">Garder le séjour</button><button class="hx-btn warn" data-action="hx-stay-cancel-confirm" data-arg="' + esc(booking.id) + '">Annuler et libérer</button></div>' });
+      openModal = { el: m.el, close: m.close };
+    };
+    handlers['hx-stay-cancel-close'] = () => { openModal?.close?.(); openModal = null; };
+    handlers['hx-stay-cancel-confirm'] = (el, arg) => cuCancelStay(String(arg), el, openModal);
     handlers['hx-room-add'] = () => {
       if (!isCustomHotel()) return;
       cuRoomBatchEditor();

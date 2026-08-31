@@ -232,12 +232,12 @@
     "sha": "7a0b181ecedf5f85"
   },
   "assets/hotel.css": {
-    "v": "11",
-    "sha": "6e1ea25a6e02aae3"
+    "v": "12",
+    "sha": "8ec1e90d76fe1f25"
   },
   "assets/hotel.js": {
-    "v": "13",
-    "sha": "1b98741b53c6af17"
+    "v": "14",
+    "sha": "e6fde501ce6b8317"
   },
   "assets/i18n.js": {
     "v": "7",
@@ -616,8 +616,8 @@
     "sha": "564bac0e65269a9d"
   },
   "assets/reservations.js": {
-    "v": "11",
-    "sha": "cd6912411d17ed20"
+    "v": "12",
+    "sha": "cafde0c398648d5c"
   },
   "assets/restaurant-menu-workspace.js": {
     "v": "66",

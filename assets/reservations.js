@@ -182,7 +182,9 @@
       var hotel = x && x.hotel && typeof x.hotel === 'object' ? {
         roomTypeName: cleanText(x.hotel.roomTypeName, 100), checkIn: cleanText(x.hotel.checkIn, 10),
         checkOut: cleanText(x.hotel.checkOut, 10), nights: number(x.hotel.nights, 1, 365, 1),
-        rate: number(x.hotel.rate, 0, 1000000, 0), total: number(x.hotel.total, 0, 100000000, 0)
+        rate: number(x.hotel.rate, 0, 1000000, 0), total: number(x.hotel.total, 0, 100000000, 0),
+        channel: ['direct','booking','airbnb','expedia','walkin','other'].indexOf(x.hotel.channel) >= 0 ? x.hotel.channel : (x.source === 'public' ? 'direct' : 'other'),
+        externalRef: cleanText(x.hotel.externalRef, 80)
       } : null;
       return { id: cleanText(x && x.id, 64) || id('bk'), code: cleanText(x && x.code, 24), customer: { name: cleanText(x && x.customer && x.customer.name, 100), phone: cleanText(x && x.customer && x.customer.phone, 32), email: cleanText(x && x.customer && x.customer.email, 160) }, serviceId: cleanText(x && x.serviceId, 64), resourceId: cleanText(x && x.resourceId, 64), startAt: +x.startAt || 0, endAt: +x.endAt || 0, partySize: number(x && x.partySize, 1, 999, 1), status: status, source: ['public','staff','import'].indexOf(x && x.source) >= 0 ? x.source : 'staff', note: cleanText(x && x.note, 600), manageToken: cleanText(x && x.manageToken, 80), publicRef: cleanText(x && x.publicRef, 80), hotel: hotel, createdAt: +x.createdAt || 0, updatedAt: +x.updatedAt || 0 };
     }).filter(function (x) { return x.id && x.customer.name && x.serviceId && x.startAt && x.endAt > x.startAt; });

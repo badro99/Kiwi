@@ -586,3 +586,53 @@
 [data-theme="dark"] .hx-room.st-libre { background: var(--n-100); }
 [data-theme="dark"] .hx-donut::after { background: var(--n-100); }
 [data-theme="dark"] .hx-kpi { background: var(--n-100); }
+
+/* ── Live custom-hotel tape chart ────────────────────────────────────── */
+.hx-cu-tape { padding:18px; overflow:hidden; }
+.hx-cu-tape-head { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; }
+.hx-cu-tape-head h3 { margin:3px 0 4px; font-size:20px; color:var(--ink); }
+.hx-cu-tape-head p { margin:0; color:var(--n-500); font-size:12.5px; }
+.hx-cu-tape-actions { display:flex; align-items:center; gap:7px; flex-wrap:wrap; justify-content:flex-end; }
+.hx-cu-legend { display:flex; gap:14px; flex-wrap:wrap; margin:17px 0 10px; font:10px var(--mono); color:var(--n-500); }
+.hx-cu-legend span { display:flex; align-items:center; gap:5px; }
+.hx-cu-legend i { width:8px; height:8px; border-radius:3px; background:var(--n-400); }
+.hx-cu-legend .src-direct i,.hx-cu-stay.src-direct { background:var(--atlas); color:var(--paper); }
+.hx-cu-legend .src-booking i,.hx-cu-stay.src-booking { background:var(--riad); color:var(--paper); }
+.hx-cu-legend .src-airbnb i,.hx-cu-stay.src-airbnb { background:var(--warning); color:var(--paper); }
+.hx-cu-legend .src-expedia i,.hx-cu-stay.src-expedia { background:var(--n-400); color:var(--paper); }
+.hx-cu-legend .src-walkin i,.hx-cu-stay.src-walkin { background:var(--mint-soft); color:var(--riad); border:1px solid var(--atlas); }
+.hx-cu-legend .src-other i,.hx-cu-stay.src-other { background:var(--n-300); color:var(--ink); }
+.hx-cu-tape-scroll { overflow-x:auto; padding-bottom:8px; }
+.hx-cu-tape-grid { min-width:980px; border:1px solid var(--n-200); border-radius:14px; overflow:hidden; }
+.hx-cu-date-row,.hx-cu-tape-row,.hx-cu-occupancy { display:grid; grid-template-columns:135px minmax(840px,1fr); }
+.hx-cu-room { padding:8px 11px; border-right:1px solid var(--n-200); border-bottom:1px solid var(--n-100); min-width:0; }
+.hx-cu-room b { display:block; font:600 12px var(--mono); color:var(--ink); }
+.hx-cu-room span { display:block; font-size:10px; color:var(--n-500); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px; }
+.hx-cu-date-days,.hx-cu-days,.hx-cu-occupancy>div:last-child { display:grid; grid-template-columns:repeat(14,minmax(60px,1fr)); position:relative; }
+.hx-cu-date-days>div,.hx-cu-occupancy>div:last-child>div { text-align:center; padding:7px 2px; border-right:1px solid var(--n-100); border-bottom:1px solid var(--n-100); }
+.hx-cu-date-days b { display:block; font:600 9.5px var(--mono); text-transform:uppercase; color:var(--n-500); }
+.hx-cu-date-days span { display:block; font:600 12px var(--mono); color:var(--ink); margin-top:2px; }
+.hx-cu-date-days .today,.hx-cu-days .today,.hx-cu-occupancy .today { background:var(--mint-soft); }
+.hx-cu-days { min-height:45px; }
+.hx-cu-days>i { border-right:1px dashed var(--n-100); border-bottom:1px solid var(--n-100); }
+.hx-cu-stay { position:absolute; top:6px; height:32px; z-index:2; border:0; border-radius:8px; padding:4px 7px; text-align:left; overflow:hidden; cursor:pointer; font-family:var(--sans); box-shadow:0 2px 7px rgba(10,15,13,.12); }
+.hx-cu-stay b,.hx-cu-stay span { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.hx-cu-stay b { font-size:10.5px; }
+.hx-cu-stay span { font:8.5px var(--mono); opacity:.8; margin-top:1px; }
+.hx-cu-stay.status-requested { opacity:.68; border-style:dashed; }
+.hx-cu-occupancy { background:var(--n-50); }
+.hx-cu-occupancy .hx-cu-room { border-bottom:0; }
+.hx-cu-occupancy>div:last-child>div { border-bottom:0; padding:7px 2px 8px; }
+.hx-cu-occupancy b { display:block; font:600 10px var(--mono); color:var(--riad); }
+.hx-cu-occupancy span { display:block; font:9px var(--mono); color:var(--n-500); margin-top:2px; }
+.hx-cu-tape-empty { text-align:center; padding:44px 16px 34px; border:1px dashed var(--n-200); border-radius:14px; }
+.hx-cu-tape-empty b { color:var(--ink); }
+.hx-cu-tape-empty p { color:var(--n-500); font-size:12px; }
+.hx-stay-error { min-height:18px; color:var(--warn-ink); font-size:12px; margin:8px 0; }
+
+@media(max-width:760px) {
+  .hx-cu-tape { padding:13px; }
+  .hx-cu-tape-head { display:block; }
+  .hx-cu-tape-actions { justify-content:flex-start; margin-top:14px; }
+  .hx-cu-tape-actions .hx-btn.atlas { flex:1; }
+}
