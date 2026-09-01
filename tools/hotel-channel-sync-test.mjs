@@ -15,8 +15,8 @@ sql.prepare('INSERT INTO store_docs (merchant,feature,data,rev,updated_ts) VALUE
 class Statement{constructor(text){this.text=text;this.args=[]}bind(...a){this.args=a;return this}async first(){return sql.prepare(this.text).get(...this.args)||null}async all(){return{results:sql.prepare(this.text).all(...this.args)}}async run(){const r=sql.prepare(this.text).run(...this.args);return{success:true,meta:{changes:Number(r.changes)}}}rows(){return{results:sql.prepare(this.text).all(...this.args)}}}
 const DB={prepare(text){return new Statement(text)},async batch(ss){return ss.map((s)=>s.rows())}};
 const cookie=sessionCookie(await makeSession('acc-h',secret)).split(';')[0];
-let calendar=`BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:airbnb-reservation-1\r\nDTSTART;VALUE=DATE:20260910\r\nDTEND;VALUE=DATE:20260913\r\nSUMMARY:Reserved\r\nEND:VEVENT\r\nEND:VCALENDAR`;
-const env={DB,AUTH_SECRET:secret,HOTEL_FEED_FETCH:async()=>new Response(calendar,{headers:{'Content-Type':'text/calendar'}})};
+let calendar=`BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:airbnb-reservation-1\r\nDTSTART;VALUE=DATE:20260910\r\nDTEND;VALUE=DATE:20260913\r\nSUMMARY:Reserved\r\nEND:VEVENT\r\nEND:VCALENDAR`, clock=now;
+const env={DB,AUTH_SECRET:secret,HOTEL_NOW:()=>clock,HOTEL_FEED_FETCH:async()=>new Response(calendar,{headers:{'Content-Type':'text/calendar'}})};
 const request=(body,auth=true)=>new Request('https://kiwi.test/api/hotel/channels',{method:'POST',headers:{'Content-Type':'application/json',...(auth?{Cookie:cookie}:{})},body:JSON.stringify(body)});
 let controls=0;const ok=(v,label)=>{assert.ok(v,label);controls++;console.log('  ✓ '+label)};
 
@@ -33,10 +33,19 @@ const link=sql.prepare('SELECT * FROM channel_links').get(),cfg=JSON.parse(link.
 ok(!link.config.includes('airbnb.com')&&(await decryptFeed(cfg.feedEnc,secret)).includes('s=secret'),'D1 stores authenticated ciphertext and decrypts only server-side');
 let doc=JSON.parse(sql.prepare("SELECT data FROM store_docs WHERE feature='reservations'").get().data);
 ok(doc.bookings.length===1&&doc.bookings[0].resourceId==='room:101'&&doc.bookings[0].hotel.feedId===link.id,'OTA event blocks the exact mapped physical room in shared availability');
+const stableRev=sql.prepare("SELECT rev FROM store_docs WHERE feature='reservations'").get().rev;
+sql.prepare("UPDATE store_docs SET data=? WHERE feature='rooms'").run(JSON.stringify({v:4,baseRate:600,roomTypes:[{id:'type-a',name:'Atlas',rate:990}],rooms:[{id:'room:101',n:101,typeId:'type-a',status:'libre'}]}));
 await syncHotelChannels(env,{merchant:'riad-sync'});doc=JSON.parse(sql.prepare("SELECT data FROM store_docs WHERE feature='reservations'").get().data);
-ok(doc.bookings.length===1,'repeated polling is idempotent by encrypted feed id and event UID');
-calendar='BEGIN:VCALENDAR\r\nVERSION:2.0\r\nEND:VCALENDAR';await syncHotelChannels(env,{merchant:'riad-sync'});doc=JSON.parse(sql.prepare("SELECT data FROM store_docs WHERE feature='reservations'").get().data);
-ok(doc.bookings[0].status==='cancelled','an event removed from a successful feed becomes cancelled history instead of disappearing');
+ok(doc.bookings.length===1&&doc.bookings[0].hotel.rate===750&&sql.prepare("SELECT rev FROM store_docs WHERE feature='reservations'").get().rev===stableRev,'unchanged polling preserves the booked rate and does not rewrite the reservation document');
+doc.bookings[0].status='checked_in';doc.bookings[0].customer={name:'Fatima Zahra',phone:'0600000000',email:''};
+sql.prepare("UPDATE store_docs SET data=?,rev=rev+1 WHERE feature='reservations'").run(JSON.stringify(doc));
+await syncHotelChannels(env,{merchant:'riad-sync'});doc=JSON.parse(sql.prepare("SELECT data FROM store_docs WHERE feature='reservations'").get().data);
+ok(doc.bookings[0].status==='checked_in'&&doc.bookings[0].customer.name==='Fatima Zahra','polling never regresses check-in state or overwrites front-desk guest details');
+doc.bookings[0].status='confirmed';sql.prepare("UPDATE store_docs SET data=?,rev=rev+1 WHERE feature='reservations'").run(JSON.stringify(doc));
+calendar='BEGIN:VCALENDAR\r\nVERSION:2.0\r\nEND:VCALENDAR';let sync=await syncHotelChannels(env,{merchant:'riad-sync'});doc=JSON.parse(sql.prepare("SELECT data FROM store_docs WHERE feature='reservations'").get().data);
+ok(doc.bookings[0].status==='confirmed'&&sync.results[0].pendingCancellation===1,'one empty calendar observation cannot cancel a live reservation');
+clock+=6*60*1000;sync=await syncHotelChannels(env,{merchant:'riad-sync'});doc=JSON.parse(sql.prepare("SELECT data FROM store_docs WHERE feature='reservations'").get().data);
+ok(doc.bookings[0].status==='cancelled'&&sync.results[0].pendingCancellation===0,'a second spaced missing observation cancels the imported reservation without deleting history');
 response=await onRequestGet({env,request:new Request('https://kiwi.test/api/hotel/channels?merchant=riad-sync',{headers:{Cookie:cookie}})});body=await response.json();
-ok(response.status===200&&body.channels[0].lastSyncAt>0&&!('feedUrl' in body.channels[0]),'connection status exposes health metadata only');
+ok(response.status===200&&body.channels[0].health==='healthy'&&body.channels[0].syncMode==='ical-import'&&!body.channels[0].capabilities.pushesRates&&!('feedUrl' in body.channels[0]),'connection status exposes truthful one-way capability and health metadata only');
 console.log(`hotel-channel-sync-test: ${controls} controls passed`);

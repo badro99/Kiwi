@@ -68,7 +68,7 @@
 <link rel="stylesheet" href="assets/ux.css" />
 <link rel="stylesheet" href="assets/pages-pro.css" />
 <link rel="stylesheet" href="assets/polish-dashboard.css" />
-<link rel="stylesheet" href="assets/hotel.css?v=14" />
+<link rel="stylesheet" href="assets/hotel.css?v=16" />
 <!-- Shared design language for the thirteen Kiwi.appPage() destinations.
      Loaded LAST on purpose: it wins equal-specificity ties against the
      per-vertical component CSS above, which is how it replaces four different
@@ -429,13 +429,11 @@
   .role-badge svg { color: var(--warning); flex-shrink: 0; }
   body.role-manager .role-badge { display: inline-flex; }
   body.role-manager .sidebar a[data-nav="finance"],
-  body.role-manager .sidebar a[data-nav="depenses"],
   body.role-manager .sidebar a[data-nav="promos"] { display: none !important; }
   /* Staff (an onboarding-created team code) · operational surfaces only:
    * caisse, commandes, salle, KDS, stock. No money, no admin, no compliance. */
   body.role-staff .role-badge { display: inline-flex; }
   body.role-staff .sidebar a[data-nav="finance"],
-  body.role-staff .sidebar a[data-nav="depenses"],
   body.role-staff .sidebar a[data-nav="promos"],
   body.role-staff .sidebar a[data-nav="payroll"],
   body.role-staff .sidebar a[data-nav="conformite"],
@@ -5400,13 +5398,6 @@
         <span class="tag" data-i18n="dash.sidebar.new">NOUV.</span>
       </a>
 
-      <div class="sect" data-feature="depenses" data-i18n="dash.sidebar.kiwipay">Kiwi Pay</div>
-      <a href="#" data-nav="depenses" data-feature="depenses">
-        <svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M880-720v480q0 33-23.5 56.5T800-160H160q-33 0-56.5-23.5T80-240v-480q0-33 23.5-56.5T160-800h640q33 0 56.5 23.5T880-720Zm-720 80h640v-80H160v80Zm0 160v240h640v-240H160Z"/></svg>
-        <span data-i18n="dash.sidebar.depenses">Dépenses &amp; cartes</span>
-        <span class="tag">PHASE 2</span>
-      </a>
-
       <!-- La bande « Croissance » · Commande en ligne, Commander à table,
            Clients & Marketing, Cartes cadeaux · est retirée. growth-ordering,
            growth-qr et growth-giftcards ont été supprimés du projet. Seul
@@ -6208,7 +6199,7 @@
 <script src="assets/invoice.js?v=8" defer></script>
 <script src="assets/invoicing.js?v=8" defer></script>
 <script src="assets/depenses.js?v=1" defer></script>
-<script src="assets/oppo-cards.js?v=1" defer></script>
+<script src="assets/oppo-cards.js?v=2" defer></script>
 <script src="assets/insights.js?v=1" defer></script>
 <script src="assets/qrcode.js?v=1" defer></script>
 <script src="assets/growth-kit.js?v=1" defer></script>
@@ -6231,7 +6222,7 @@
      Une URL neuve rate le cache et part au réseau tout de suite. À incrémenter
      à CHAQUE modification de ces deux fichiers, et à recopier à l'identique
      dans la liste de pré-cache de kiwi-sw.js. -->
-<script src="assets/venues.js?v=25" defer></script>
+<script src="assets/venues.js?v=26" defer></script>
 <!-- The pressing till and dashboard share a tenant-scoped operational snapshot. -->
 <script src="assets/pressing-ops.js?v=7" defer></script>
 <script src="assets/pressing-garment-icons.js?v=2" defer></script>
@@ -6294,7 +6285,7 @@
 <script src="assets/agent-voice.js?v=5" defer fetchpriority="low"></script>
 <script src="assets/agent-skin.js?v=4" defer fetchpriority="low"></script>
 <script src="assets/accounting.js?v=1" defer fetchpriority="low"></script>
-<script src="assets/pages.js?v=3" defer fetchpriority="low"></script>
+<script src="assets/pages.js?v=4" defer fetchpriority="low"></script>
 <!-- Boutique shared product database + real barcode engine (EAN-13 / Code 128).
      Same modules the caisse loads, so inventory stays in sync between the two. -->
 <script src="assets/barcode.js?v=1" defer fetchpriority="low"></script>
@@ -6422,6 +6413,7 @@
      engine). No demo hotel venue ships: the Riad Yasmina fixture went
      with dashboard2.html when that fork was deleted. -->
 <script src="assets/hotel.js?v=18" defer fetchpriority="low"></script>
+<script src="assets/hotel-economat.js?v=2" defer fetchpriority="low"></script>
 <!-- Exact-trade operational boards. Loaded after the specialist modules so it
      only replaces the generic placeholders; Accueil and Hotel stay untouched. -->
 <script src="assets/trade-workspace-schema.js?v=4" defer fetchpriority="low"></script>

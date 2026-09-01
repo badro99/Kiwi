@@ -2359,6 +2359,7 @@
     'menu',     // Menu & modificateurs
     'kds',      // Écran cuisine
     'stock',    // Stock & approvisionnement
+    'economat', // Économat hôtelier
     'equipe',   // Équipe
     'payroll',  // Paie & planning
     'depenses', // Dépenses & cartes (Kiwi Pay · Phase 2)

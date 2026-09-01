@@ -655,3 +655,287 @@
   .hx-type-photo-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .hx-type-photos-head { align-items:flex-start; flex-direction:column; }
 }
+
+/* ── Hotel operations UX · fast, legible and touch-safe ─────────────── */
+.hx-page {
+  --hx-focus:0 0 0 3px color-mix(in srgb,var(--mint) 38%,transparent);
+  --hx-lift:0 18px 42px -34px color-mix(in srgb,var(--riad) 58%,transparent);
+  max-width:1540px;
+  margin-inline:auto;
+}
+.hx-page :where(button,a,input,select,textarea,[tabindex]):focus-visible {
+  outline:2px solid var(--atlas);
+  outline-offset:3px;
+  box-shadow:var(--hx-focus);
+}
+.hx-page :where(button,[role="button"]):disabled {
+  cursor:not-allowed;
+  opacity:.48;
+  transform:none;
+}
+.hx-btn {
+  min-height:40px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:7px;
+}
+.hx-btn.atlas {
+  box-shadow:0 8px 22px -14px color-mix(in srgb,var(--atlas) 72%,transparent);
+}
+.hx-btn.ghost { background:var(--surface,var(--paper)); }
+.hx-btn.ghost:hover { background:color-mix(in srgb,var(--mint-soft) 52%,var(--surface,var(--paper))); }
+
+/* A quieter hierarchy keeps the operational number visible before decoration. */
+.hx-strip { gap:12px; }
+.hx-kpi {
+  min-width:0;
+  padding:15px 16px;
+  border-color:color-mix(in srgb,var(--atlas) 12%,var(--n-200));
+  background:linear-gradient(145deg,var(--surface,var(--paper)),color-mix(in srgb,var(--mint-soft) 18%,var(--surface,var(--paper))));
+  box-shadow:var(--hx-lift);
+}
+.hx-kpi .l { line-height:1.35; }
+.hx-kpi .v { font-size:clamp(21px,2.2vw,28px); line-height:1.05; }
+.hx-h {
+  align-items:center;
+  min-height:42px;
+  padding:0 2px 9px;
+  border-bottom:1px solid var(--n-100);
+}
+.hx-h .t { font-size:15.5px; }
+.hx-h .a {
+  min-height:36px;
+  display:inline-flex;
+  align-items:center;
+  padding:0 10px;
+  border-radius:9px;
+}
+.hx-h .a:hover { background:var(--mint-soft); }
+
+/* Status must remain understandable without relying on colour alone. */
+.hx-pill::before {
+  content:'';
+  width:6px;
+  height:6px;
+  flex:none;
+  border-radius:50%;
+  background:currentColor;
+  box-shadow:0 0 0 3px color-mix(in srgb,currentColor 13%,transparent);
+}
+.hx-pill.late::before { border-radius:2px; transform:rotate(45deg); }
+.hx-pill.neutral::before { opacity:.55; }
+
+/* Lists become scannable rows with a clear hover and focus destination. */
+.hx-arr,.hx-q,.hx-hk,.hx-folio-row,.hx-guest {
+  padding-inline:10px;
+  border-radius:11px;
+  transition:background 140ms,border-color 140ms,transform 140ms;
+}
+.hx-arr:hover,.hx-q:hover,.hx-hk:hover,.hx-folio-row:hover,.hx-guest:hover {
+  background:color-mix(in srgb,var(--mint-soft) 42%,transparent);
+}
+.hx-folio-row:focus-visible,.hx-guest:focus-visible { transform:translateX(2px); }
+
+/* The room diary keeps dates and room numbers anchored while staff scroll. */
+.hx-tape-wrap,.hx-cu-tape-scroll {
+  position:relative;
+  overscroll-behavior-inline:contain;
+  scrollbar-color:color-mix(in srgb,var(--atlas) 45%,var(--n-200)) transparent;
+  scrollbar-width:thin;
+}
+.hx-tape-wrap::-webkit-scrollbar,.hx-cu-tape-scroll::-webkit-scrollbar { height:8px; }
+.hx-tape-wrap::-webkit-scrollbar-thumb,.hx-cu-tape-scroll::-webkit-scrollbar-thumb {
+  border-radius:99px;
+  background:color-mix(in srgb,var(--atlas) 40%,var(--n-200));
+}
+.hx-tape .hd {
+  position:sticky;
+  top:0;
+  z-index:5;
+  min-height:28px;
+  background:var(--surface,var(--paper));
+}
+.hx-tape .hd:first-child { left:0; z-index:7; }
+.hx-tape .rm {
+  position:sticky;
+  left:0;
+  z-index:4;
+  height:38px;
+  background:var(--surface,var(--paper));
+  box-shadow:7px 0 16px -16px var(--riad);
+}
+.hx-tape .cell { height:38px; }
+.hx-tape .stay {
+  height:30px;
+  margin-block:4px;
+  padding-inline:10px;
+  border-radius:9px;
+  box-shadow:0 5px 14px -9px rgba(10,15,13,.55);
+}
+.hx-cu-date-row { position:sticky; top:0; z-index:8; background:var(--surface,var(--paper)); }
+.hx-cu-room {
+  position:sticky;
+  left:0;
+  z-index:5;
+  background:var(--surface,var(--paper));
+  box-shadow:8px 0 20px -20px var(--riad);
+}
+.hx-cu-date-row .hx-cu-room { z-index:9; }
+.hx-cu-days { min-height:52px; }
+.hx-cu-stay {
+  top:7px;
+  height:38px;
+  padding:5px 9px;
+  border-radius:10px;
+  transition:filter 140ms,transform 140ms,box-shadow 140ms;
+}
+.hx-cu-stay:hover,.hx-cu-stay:focus-visible {
+  z-index:6;
+  filter:saturate(1.08);
+  transform:translateY(-1px);
+  box-shadow:0 10px 22px -12px rgba(10,15,13,.7);
+}
+.hx-cu-stay.has-conflict { outline-width:2px; box-shadow:0 0 0 5px color-mix(in srgb,var(--danger) 14%,transparent); }
+
+/* Channel mix reads as an operational control, not a decorative chart. */
+.hx-donut-wrap {
+  padding:18px;
+  border:1px solid color-mix(in srgb,var(--atlas) 14%,var(--n-200));
+  border-radius:18px;
+  background:linear-gradient(145deg,var(--surface,var(--paper)),color-mix(in srgb,var(--mint-soft) 20%,var(--surface,var(--paper))));
+  box-shadow:var(--hx-lift);
+}
+.hx-donut {
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--atlas) 12%,transparent),0 16px 34px -28px var(--riad);
+}
+.hx-dlg { gap:6px; }
+.hx-dlg .r {
+  min-height:42px;
+  padding:0 10px;
+  border:1px solid transparent;
+  border-radius:11px;
+  transition:background 140ms,border-color 140ms;
+}
+.hx-dlg .r:hover {
+  border-color:var(--n-200);
+  background:var(--surface,var(--paper));
+}
+.hx-bleed {
+  position:relative;
+  overflow:hidden;
+  background:radial-gradient(circle at 88% 0,color-mix(in srgb,var(--mint) 24%,transparent),transparent 38%),var(--riad);
+  box-shadow:0 20px 46px -34px var(--riad);
+}
+
+/* Compact screens keep actions reachable and data readable. */
+@media(max-width:720px) {
+  .hx-page { gap:14px; }
+  .hx-strip {
+    display:flex;
+    overflow-x:auto;
+    scroll-snap-type:x mandatory;
+    padding:2px 2px 8px;
+    scrollbar-width:none;
+  }
+  .hx-strip::-webkit-scrollbar { display:none; }
+  .hx-kpi { flex:0 0 min(72vw,220px); scroll-snap-align:start; }
+  .hx-arr { grid-template-columns:44px minmax(0,1fr) auto; gap:9px; }
+  .hx-arr .hx-btn { grid-column:2/-1; width:100%; }
+  .hx-q { grid-template-columns:9px minmax(0,1fr) auto; gap:9px; }
+  .hx-q .hx-btn { grid-column:2/-1; width:100%; }
+  .hx-donut-wrap { align-items:flex-start; padding:15px; }
+  .hx-donut { width:124px; height:124px; }
+  .hx-dlg { min-width:100%; }
+  .hx-cu-tape-grid { border-radius:12px; }
+}
+@media(pointer:coarse) {
+  .hx-btn,.hx-h .a,.hx-floor-tabs button,.hx-room-kpis>button { min-height:46px; }
+  .hx-cu-stay { min-height:40px; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .hx-page * { scroll-behavior:auto!important; animation-duration:.01ms!important; animation-iteration-count:1!important; transition-duration:.01ms!important; }
+}
+
+/* Dark mode keeps layers distinct without bright borders or washed-out copy. */
+[data-theme="dark"] .hx-kpi,
+[data-theme="dark"] .hx-donut-wrap,
+[data-theme="dark"] .hx-tape .hd,
+[data-theme="dark"] .hx-tape .rm,
+[data-theme="dark"] .hx-cu-date-row,
+[data-theme="dark"] .hx-cu-room {
+  background:linear-gradient(145deg,var(--n-100),color-mix(in srgb,var(--atlas) 7%,var(--n-100)));
+  border-color:color-mix(in srgb,var(--atlas) 24%,var(--n-200));
+}
+[data-theme="dark"] .hx-dlg .r:hover { background:color-mix(in srgb,var(--atlas) 10%,var(--n-100)); }
+
+/* ── Économat · central hotel stock workspace ───────────────────────── */
+.hx-eco { gap:16px; }
+.hx-eco-hero {
+  position:relative;
+  overflow:hidden;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  align-items:end;
+  gap:24px;
+  padding:24px;
+  border-radius:20px;
+  color:var(--paper);
+  background:radial-gradient(circle at 88% 8%,color-mix(in srgb,var(--mint) 30%,transparent),transparent 34%),linear-gradient(135deg,var(--riad),var(--atlas));
+  box-shadow:0 22px 52px -38px var(--riad);
+}
+.hx-eco-hero .eyebrow { font:650 10px var(--mono); letter-spacing:.11em; text-transform:uppercase; color:var(--mint); }
+.hx-eco-hero h2 { margin:7px 0 5px; font-size:clamp(24px,3vw,38px); line-height:1; letter-spacing:-.035em; color:var(--paper); }
+.hx-eco-hero p { max-width:680px; margin:0; color:color-mix(in srgb,var(--paper) 78%,transparent); font-size:13px; line-height:1.55; }
+.hx-eco-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px; }
+.hx-eco-actions .hx-btn { border-color:rgba(255,255,255,.24); }
+.hx-eco-actions .hx-btn.ghost { background:rgba(255,255,255,.1); color:var(--paper); }
+.hx-eco-actions .hx-btn.atlas { background:var(--mint); color:var(--riad); box-shadow:none; }
+.hx-eco-actions .hx-btn.atlas:hover { background:var(--paper); }
+.hx-eco-grid { display:grid; grid-template-columns:minmax(0,1.55fr) minmax(300px,.75fr); gap:14px; }
+.hx-eco-card { min-width:0; padding:18px; border:1px solid var(--n-200); border-radius:17px; background:var(--surface,var(--paper)); box-shadow:var(--hx-lift); }
+.hx-eco-card-head { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; padding-bottom:13px; border-bottom:1px solid var(--n-100); }
+.hx-eco-card-head b,.hx-eco-card-head span { display:block; }
+.hx-eco-card-head b { color:var(--ink); font-size:14px; }
+.hx-eco-card-head span { margin-top:3px; color:var(--n-500); font-size:11px; }
+.hx-eco-table { margin-top:4px; }
+.hx-eco-row { display:grid; grid-template-columns:minmax(0,1fr) 90px 92px; align-items:center; gap:12px; min-height:52px; padding:0 7px; border-bottom:1px solid var(--n-100); }
+.hx-eco-row:last-child { border-bottom:0; }
+.hx-eco-row:hover { background:color-mix(in srgb,var(--mint-soft) 42%,transparent); }
+.hx-eco-item { min-width:0; }
+.hx-eco-item b { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--ink); font-size:12.5px; }
+.hx-eco-item small { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-top:3px; color:var(--n-500); font:9.5px var(--mono); }
+.hx-eco-qty { text-align:right; color:var(--ink); font:650 13px var(--mono); font-variant-numeric:tabular-nums; }
+.hx-eco-state { justify-self:end; }
+.hx-eco-side { display:flex; flex-direction:column; gap:14px; }
+.hx-eco-activity { display:flex; flex-direction:column; margin-top:6px; }
+.hx-eco-event { display:grid; grid-template-columns:9px minmax(0,1fr) auto; align-items:center; gap:10px; min-height:48px; border-bottom:1px solid var(--n-100); }
+.hx-eco-event:last-child { border-bottom:0; }
+.hx-eco-event>i { width:8px; height:8px; border-radius:3px; background:var(--atlas); }
+.hx-eco-event.pending>i { background:var(--warning); }
+.hx-eco-event b { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--ink); font-size:11.5px; }
+.hx-eco-event small { display:block; margin-top:2px; color:var(--n-500); font-size:9.5px; }
+.hx-eco-event>span { color:var(--n-500); font:10px var(--mono); }
+.hx-eco-empty { min-height:190px; display:grid; place-items:center; align-content:center; gap:7px; padding:24px; text-align:center; color:var(--n-500); }
+.hx-eco-empty b { color:var(--ink); font-size:13px; }
+.hx-eco-empty p { max-width:380px; margin:0; font-size:11px; line-height:1.5; }
+.hx-eco-form { display:grid; grid-template-columns:1fr 1fr; gap:13px; }
+.hx-eco-form label { display:flex; flex-direction:column; gap:6px; color:var(--n-600); font-size:11px; font-weight:600; }
+.hx-eco-form label.wide { grid-column:1/-1; }
+.hx-eco-form input { min-height:44px; box-sizing:border-box; width:100%; border:1px solid var(--n-200); border-radius:11px; background:var(--surface,var(--paper)); color:var(--ink); padding:0 12px; font:500 13px var(--sans); }
+.hx-eco-form input:focus { border-color:var(--atlas); outline:0; box-shadow:0 0 0 3px color-mix(in srgb,var(--mint) 30%,transparent); }
+@media(max-width:920px) {
+  .hx-eco-grid { grid-template-columns:1fr; }
+  .hx-eco-side { display:grid; grid-template-columns:1fr 1fr; }
+}
+@media(max-width:680px) {
+  .hx-eco-hero { grid-template-columns:1fr; align-items:start; padding:20px; }
+  .hx-eco-actions { justify-content:flex-start; }
+  .hx-eco-actions .hx-btn { flex:1; }
+  .hx-eco-side { display:flex; }
+  .hx-eco-row { grid-template-columns:minmax(0,1fr) 70px; }
+  .hx-eco-state { grid-column:1/-1; justify-self:start; margin-bottom:9px; }
+  .hx-eco-form { grid-template-columns:1fr; }
+  .hx-eco-form label.wide { grid-column:auto; }
+}
+[data-theme="dark"] .hx-eco-card { background:linear-gradient(145deg,var(--n-100),color-mix(in srgb,var(--atlas) 7%,var(--n-100))); border-color:color-mix(in srgb,var(--atlas) 22%,var(--n-200)); }

@@ -19,7 +19,13 @@ async function rows(env, merchant) {
   const result = await env.DB.prepare("SELECT id,channel,label,status,config,created_ts,last_ts,last_err FROM channel_links WHERE merchant=? AND channel IN ('booking','airbnb') ORDER BY created_ts DESC").bind(merchant).all();
   return (result.results || []).map((x) => {
     let cfg; try { cfg = JSON.parse(x.config || '{}'); } catch (_) { cfg = {}; }
-    return { id:x.id, channel:x.channel, label:x.label || '', status:x.status, roomId:str(cfg.roomId,64), createdAt:+x.created_ts||0, lastSyncAt:+x.last_ts||0, lastError:str(x.last_err,180), hasFeed:!!cfg.feedEnc };
+    const lastSyncAt=+x.last_ts||0, lastError=str(x.last_err,180);
+    const health=x.status==='paused'?'paused':lastError?'error':!lastSyncAt?'pending':Date.now()-lastSyncAt>45*60*1000?'stale':'healthy';
+    return {
+      id:x.id, channel:x.channel, label:x.label || '', status:x.status, roomId:str(cfg.roomId,64),
+      createdAt:+x.created_ts||0, lastSyncAt, lastError, hasFeed:!!cfg.feedEnc, health,
+      syncMode:'ical-import', capabilities:{ importsReservations:true, pushesAvailability:false, pushesRates:false },
+    };
   });
 }
 

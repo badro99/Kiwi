@@ -348,6 +348,7 @@
         { nav: 'chambres',   label: 'Plan des chambres',      i18n: 'sidebar.hotel.chambres',               icon: ICONS.chambres },
         { nav: 'sejours',    label: 'Réservations & séjours', i18n: 'sidebar.hotel.sejours',                icon: ICONS.sejours },
         { nav: 'menage',     label: 'Ménage',                 i18n: 'sidebar.hotel.menage',                 icon: ICONS.menage },
+        { nav: 'economat',    label: 'Économat',               i18n: '',                                     icon: ICONS.stock },
         { nav: 'tarifs',     label: 'Tarifs & occupation',    i18n: 'sidebar.hotel.tarifs',                 icon: ICONS.tarifs },
         { nav: 'folios',     label: 'Notes clients · folios', i18n: 'sidebar.hotel.folios',                 icon: ICONS.folios },
         { nav: 'canaux',     label: 'Canaux & OTA',           i18n: 'sidebar.hotel.canaux',                 icon: ICONS.canaux },

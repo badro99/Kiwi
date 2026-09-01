@@ -112,8 +112,8 @@
     "sha": "112638dbbb35294e"
   },
   "assets/caisse-pwa.js": {
-    "v": "453",
-    "sha": "55e8fc9663d03949"
+    "v": "454",
+    "sha": "f6e143933a947ade"
   },
   "assets/caisse-refresh.js": {
     "v": "1",
@@ -188,8 +188,8 @@
     "sha": "cd751f73c0180449"
   },
   "assets/dashboard-pwa.js": {
-    "v": "451",
-    "sha": "d55147a7ce30b78d"
+    "v": "452",
+    "sha": "c5b4dd28bcac6375"
   },
   "assets/dashboard-startup-gate.js": {
     "v": "1",
@@ -244,8 +244,8 @@
     "sha": "5d6507bf65311b04"
   },
   "assets/employee-live.js": {
-    "v": "450",
-    "sha": "b6ed0f47813998db"
+    "v": "451",
+    "sha": "b4ef733b11cb682b"
   },
   "assets/employee-planning.js": {
     "v": "8",
@@ -315,9 +315,13 @@
     "v": "4",
     "sha": "7a0b181ecedf5f85"
   },
+  "assets/hotel-economat.js": {
+    "v": "2",
+    "sha": "d597ba5cac11de01"
+  },
   "assets/hotel.css": {
-    "v": "14",
-    "sha": "891a656f1a4205ab"
+    "v": "16",
+    "sha": "b0d6c16a7cad853e"
   },
   "assets/hotel.js": {
     "v": "18",
@@ -425,7 +429,7 @@
   },
   "assets/menu-catalog.js": {
     "v": "23",
-    "sha": "d007532c38d98cb6"
+    "sha": "695e2f6a7bb71777"
   },
   "assets/menu-i18n.js": {
     "v": "5",
@@ -480,8 +484,8 @@
     "sha": "bfb67d0993b644f5"
   },
   "assets/oppo-cards.js": {
-    "v": "1",
-    "sha": "9bda24b590905c1a"
+    "v": "2",
+    "sha": "c538bbe259e5da8a"
   },
   "assets/order-course.js": {
     "v": "2",
@@ -497,7 +501,7 @@
   },
   "assets/orderpro-inbox.js": {
     "v": "7",
-    "sha": "4f767ede0512485f"
+    "sha": "2355691f89f6119e"
   },
   "assets/orderpro-panel.js": {
     "v": "1",
@@ -512,8 +516,8 @@
     "sha": "9974ad214c77ff01"
   },
   "assets/pages.js": {
-    "v": "3",
-    "sha": "a1eec317bd911abc"
+    "v": "4",
+    "sha": "69efd5cc9d71c940"
   },
   "assets/pairing-commit.js": {
     "v": "1",
@@ -785,7 +789,7 @@
   },
   "assets/restaurant-menu-workspace.js": {
     "v": "66",
-    "sha": "7c6e34ecd4884e0d"
+    "sha": "8b2b0714dbe89c59"
   },
   "assets/restaurant-recipes.js": {
     "v": "8",
@@ -880,8 +884,8 @@
     "sha": "dfa3b4d5ebb25d51"
   },
   "assets/venues.js": {
-    "v": "25",
-    "sha": "594af613f68878ef"
+    "v": "26",
+    "sha": "8d7e5287e5c9278b"
   },
   "assets/vertical-state.js": {
     "v": "1",

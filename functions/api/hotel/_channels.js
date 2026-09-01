@@ -5,9 +5,13 @@
 const enc = new TextEncoder();
 const dec = new TextDecoder();
 const ACTIVE = new Set(['requested', 'confirmed', 'checked_in']);
+const AUTO_CANCELLABLE = new Set(['requested', 'confirmed']);
+const PRESERVED_STATES = new Set(['checked_in', 'completed', 'no_show']);
 const PROVIDERS = new Set(['booking', 'airbnb']);
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_FEED_BYTES = 1024 * 1024;
+const MAX_MISSING_EVENTS = 1000;
+const MISSING_CONFIRM_MS = 5 * 60 * 1000;
 const str = (v, n = 200) => String(v == null ? '' : v).trim().slice(0, n);
 
 function bytesToB64(bytes) {
@@ -93,6 +97,29 @@ function at(date, time) {
   return guess;
 }
 function overlaps(a0, a1, b0, b1) { return a0 < b1 && b0 < a1; }
+function clock(env) { return typeof env?.HOTEL_NOW === 'function' ? +env.HOTEL_NOW() : Date.now(); }
+function missingEvents(value) {
+  const source = value && typeof value === 'object' ? value : {}, out = Object.create(null);
+  for (const [ref, state] of Object.entries(source).slice(0, MAX_MISSING_EVENTS)) {
+    if (!/^ical-[0-9a-f]{32}$/.test(ref)) continue;
+    const firstAt = Number(state?.firstAt), observations = Number(state?.observations);
+    if (Number.isSafeInteger(firstAt) && firstAt > 0) out[ref] = { firstAt, observations: Math.max(1, Math.min(99, observations || 1)) };
+  }
+  return out;
+}
+function importedSignature(value) {
+  const booking = value && typeof value === 'object' ? value : {}, hotel = booking.hotel && typeof booking.hotel === 'object' ? booking.hotel : {};
+  return JSON.stringify({
+    customer: booking.customer || {}, serviceId: booking.serviceId || '', resourceId: booking.resourceId || '',
+    startAt: +booking.startAt || 0, endAt: +booking.endAt || 0, partySize: +booking.partySize || 1,
+    status: booking.status || '', source: booking.source || '', note: booking.note || '', publicRef: booking.publicRef || '',
+    hotel: {
+      roomTypeName: hotel.roomTypeName || '', checkIn: hotel.checkIn || '', checkOut: hotel.checkOut || '',
+      nights: +hotel.nights || 0, rate: +hotel.rate || 0, total: +hotel.total || 0,
+      channel: hotel.channel || '', externalRef: hotel.externalRef || '', feedId: hotel.feedId || '', conflict: !!hotel.conflict,
+    },
+  });
+}
 
 async function fetchFeed(env, rawUrl, provider) {
   const run = env?.HOTEL_FEED_FETCH || fetch;
@@ -139,7 +166,7 @@ export async function syncHotelChannel(env, row) {
   const merchant = str(row?.merchant, 64), provider = str(row?.channel, 20), feedId = str(row?.id, 64);
   if (!merchant || !feedId || !PROVIDERS.has(provider) || !env?.DB || !env?.AUTH_SECRET) throw new Error('invalid-channel');
   const cfg = parseJson(row.config, {}), feed = await decryptFeed(cfg.feedEnc, env.AUTH_SECRET);
-  const events = await fetchFeed(env, feed, provider), now = Date.now();
+  const events = await fetchFeed(env, feed, provider), now = clock(env), previousMissing = missingEvents(cfg.missingEvents);
   for (let attempt = 0; attempt < 4; attempt++) {
     const rows = await loadDocs(env, merchant), roomsDoc = parseJson(rows.rooms?.data, {}), doc = parseJson(rows.reservations?.data, { v:1, settings:{}, services:[], resources:[], blocked:[], bookings:[] });
     doc.bookings = Array.isArray(doc.bookings) ? doc.bookings : [];
@@ -147,7 +174,8 @@ export async function syncHotelChannel(env, row) {
     const room = roomList.find((x) => x && !x.deletedAt && String(x.id) === String(cfg.roomId));
     const type = room && typeList.find((x) => x && !x.deletedAt && String(x.id) === String(room.typeId));
     if (!room || !type) throw new Error('mapped-room-missing');
-    const seen = new Set(), imported = [], conflicts = [];
+    const seen = new Set(), imported = [], conflicts = [], nextMissing = Object.create(null);
+    let changed = 0;
     for (const event of events) {
       const nights = daysBetween(event.checkIn, event.checkOut); if (nights < 1 || nights > 730) continue;
       const digest = (await sha(feedId + '\0' + event.uid)).slice(0, 32), externalRef = 'ical-' + digest;
@@ -156,28 +184,40 @@ export async function syncHotelChannel(env, row) {
       let rec = doc.bookings.find((x) => x?.hotel?.feedId === feedId && x?.hotel?.externalRef === externalRef);
       const conflict = doc.bookings.some((x) => x !== rec && ACTIVE.has(x?.status) && x?.resourceId === room.id && overlaps(startAt, endAt, +x.startAt || 0, +x.endAt || 0));
       if (conflict) conflicts.push(externalRef);
-      const rate = Number(type.rate ?? roomsDoc.baseRate) || 0;
+      const currentRate = Number(type.rate ?? roomsDoc.baseRate), bookedRate = Number(rec?.hotel?.rate);
+      const rate = rec && Number.isFinite(bookedRate) && bookedRate >= 0 ? bookedRate : (Number.isFinite(currentRate) && currentRate >= 0 ? currentRate : 0);
+      const customer = rec?.customer && str(rec.customer.name, 100)
+        ? { name:str(rec.customer.name,100), phone:str(rec.customer.phone,32), email:str(rec.customer.email,160) }
+        : { name: (provider === 'airbnb' ? 'Airbnb' : 'Booking.com') + ' · Réservation', phone:'', email:'' };
       const next = {
         id: rec?.id || 'bk-' + crypto.randomUUID(), code: rec?.code || 'OTA-' + digest.slice(0, 8).toUpperCase(),
-        customer: { name: (provider === 'airbnb' ? 'Airbnb' : 'Booking.com') + ' · Réservation', phone:'', email:'' },
-        serviceId: String(type.id), resourceId: String(room.id), startAt, endAt, partySize:1, status:'confirmed', source:'import', note:'', manageToken:'',
+        customer, serviceId: String(type.id), resourceId: String(room.id), startAt, endAt,
+        partySize: Math.max(1, +rec?.partySize || 1), status: rec && PRESERVED_STATES.has(rec.status) ? rec.status : 'confirmed',
+        source:'import', note:str(rec?.note,600), manageToken:str(rec?.manageToken,200),
         publicRef: 'feed-' + digest, hotel: { roomTypeName:str(type.name,100), checkIn:event.checkIn, checkOut:event.checkOut, nights, rate, total:Math.round(rate*nights), channel:provider, externalRef, feedId, syncedAt:now, conflict },
-        createdAt:+rec?.createdAt || now, updatedAt:now,
+        createdAt:+rec?.createdAt || now, updatedAt:+rec?.updatedAt || now,
       };
-      if (rec) Object.assign(rec, next); else doc.bookings.push(next);
+      if (!rec) { doc.bookings.push(next); changed++; }
+      else if (importedSignature(rec) !== importedSignature(next)) { next.updatedAt = now; Object.assign(rec, next); changed++; }
       imported.push(externalRef);
     }
     let cancelled = 0;
     for (const rec of doc.bookings) {
-      if (rec?.hotel?.feedId === feedId && ACTIVE.has(rec.status) && rec.endAt >= now - 86400000 && !seen.has(rec.hotel.externalRef)) {
-        rec.status = 'cancelled'; rec.updatedAt = now; rec.hotel.syncedAt = now; cancelled++;
+      if (rec?.hotel?.feedId === feedId && AUTO_CANCELLABLE.has(rec.status) && rec.endAt >= now - 86400000 && !seen.has(rec.hotel.externalRef)) {
+        const prior = previousMissing[rec.hotel.externalRef];
+        if (!prior || prior.observations < 1 || now - prior.firstAt < MISSING_CONFIRM_MS) {
+          nextMissing[rec.hotel.externalRef] = { firstAt:prior?.firstAt || now, observations:Math.min(99, (prior?.observations || 0) + 1) };
+          continue;
+        }
+        rec.status = 'cancelled'; rec.updatedAt = now; rec.hotel.syncedAt = now; cancelled++; changed++;
       }
     }
     if (doc.bookings.length > 4000) doc.bookings = doc.bookings.slice(-4000);
-    if (await writeDoc(env, merchant, doc, +rows.reservations?.rev || 0, now)) {
-      await env.DB.prepare("UPDATE channel_links SET last_ts=?,last_err='' WHERE id=? AND merchant=?").bind(now, feedId, merchant).run();
-      return { ok:true, merchant, id:feedId, provider, imported:imported.length, cancelled, conflicts:conflicts.length };
-    }
+    if (changed && !(await writeDoc(env, merchant, doc, +rows.reservations?.rev || 0, now))) continue;
+    const nextConfig = { ...cfg };
+    if (Object.keys(nextMissing).length) nextConfig.missingEvents = nextMissing; else delete nextConfig.missingEvents;
+    await env.DB.prepare("UPDATE channel_links SET config=?,last_ts=?,last_err='' WHERE id=? AND merchant=?").bind(JSON.stringify(nextConfig), now, feedId, merchant).run();
+    return { ok:true, merchant, id:feedId, provider, imported:imported.length, changed, cancelled, pendingCancellation:Object.keys(nextMissing).length, conflicts:conflicts.length };
   }
   throw new Error('write-conflict');
 }
@@ -191,7 +231,7 @@ export async function syncHotelChannels(env, options = {}) {
     try { results.push(await syncHotelChannel(env, row)); }
     catch (error) {
       const message = str(error?.message || error, 180);
-      await env.DB.prepare('UPDATE channel_links SET last_err=? WHERE id=?').bind(message, row.id).run().catch(() => {});
+      await env.DB.prepare('UPDATE channel_links SET last_err=? WHERE id=? AND merchant=?').bind(message, row.id, row.merchant).run().catch(() => {});
       results.push({ ok:false, merchant:row.merchant, id:row.id, provider:row.channel, error:message });
     }
   }

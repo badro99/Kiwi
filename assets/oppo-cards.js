@@ -90,14 +90,6 @@
   /* ─── Card pool — one feature per card, CTA = the feature's real handler ─── */
   const POOL = [
     {
-      id: 'depenses', art: 'depenses', action: 'open-depenses', feat: 'depenses',
-      t: { fr: 'Maîtrisez vos sorties', en: 'Control what goes out', ar: 'تحكّم في مصاريفك' },
-      d: { fr: 'Des cartes Kiwi pour votre équipe, un plafond par catégorie, et chaque dirham qui sort, net de ce qui rentre.',
-           en: 'Kiwi cards for your team, a per-category limit, and every dirham going out, net of what comes in.',
-           ar: 'بطاقات Kiwi لفريقك، حدّ لكل فئة، وكل درهم يخرج، مقابل ما يدخل.' },
-      cta: { fr: 'Voir Dépenses', en: 'Open Spend', ar: 'فتح المصاريف' },
-    },
-    {
       id: 'paylink', art: 'paylink', action: 'payment-link',
       t: { fr: 'Encaissez à distance', en: 'Get paid remotely', ar: 'حصّل عن بُعد' },
       d: { fr: 'Envoyez un lien de paiement par WhatsApp, acomptes, commandes, réservations. L\'argent arrive avant le client.',
