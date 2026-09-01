@@ -1,14 +1,1 @@
-{
-  "assets/caisse-motion.js": "bare shell URL, missing manifest entry",
-  "assets/color-palette.js": "bare shell URL, missing manifest entry",
-  "assets/demoClock.js": "bare shell URL, missing manifest entry",
-  "assets/design-2026.js": "bare shell URL, missing manifest entry",
-  "assets/design-ios27.js": "bare shell URL, missing manifest entry",
-  "assets/design-vitrine.js": "bare shell URL, missing manifest entry",
-  "assets/employee-pwa.js": "bare shell URL, missing manifest entry",
-  "assets/liquid-glass.js": "bare shell URL, missing manifest entry",
-  "assets/liquid-lens.js": "bare shell URL, missing manifest entry",
-  "assets/polish.js": "bare shell URL, missing manifest entry",
-  "assets/ux.js": "bare shell URL, missing manifest entry",
-  "assets/vendor/dexie.min.js": "bare shell URL, missing manifest entry"
-}
+{}

@@ -5226,7 +5226,7 @@
      now the default · carries the dark one. Inert unless body.design-vitrine.
      OFF by default · KiwiDesignVitrine.enable() or ?skin=vitrine. -->
 <link rel="stylesheet" href="assets/design-vitrine.css" />
-<script src="assets/design-vitrine.js"></script>
+<script src="assets/design-vitrine.js?v=1"></script>
 <!-- Liquid Glass · real SVG-displacement refraction. Provides #kiwi-lg; the iOS-27
      tier's frosted panels upgrade to genuine glass when active. KiwiGlass.disable() reverts. -->
 <link rel="stylesheet" href="assets/liquid-glass.css" />
@@ -6218,11 +6218,11 @@
      bouton « Campagne » du vrai Clients & Marketing l'ouvre. -->
 <script src="assets/growth-crm.js?v=1" defer></script>
 <script src="assets/dark-fixes.js?v=2" defer></script>
-<script src="assets/polish.js" defer></script>
+<script src="assets/polish.js?v=1" defer></script>
 <script src="assets/channel-link.js?v=202608272300" defer></script>
 <script src="assets/dashboard-extra.js?v=4" defer></script>
 <script src="assets/simple.js?v=3" defer></script>
-<script src="assets/ux.js" defer></script>
+<script src="assets/ux.js?v=1" defer></script>
 <!-- venues.js et dateRange.js portent un ?v= depuis la migration v2. Sans lui,
      l'URL ne change jamais d'un déploiement à l'autre : le service worker sert
      l'ancienne copie en cache au premier chargement (stratégie stale-while-
@@ -6237,7 +6237,7 @@
 <script src="assets/pressing-garment-icons.js?v=2" defer></script>
 <script src="assets/pressing-catalog.js?v=7" defer></script>
 <script src="assets/pressing-dashboard.js?v=14" defer></script>
-<script src="assets/demoClock.js" defer></script>
+<script src="assets/demoClock.js?v=1" defer></script>
 <script src="assets/dateRange.js?v=16" defer></script>
 <script src="assets/mobile-nav.js?v=2" defer></script>
 <script defer src="assets/pwa-update.js?v=359"></script>
@@ -6245,7 +6245,7 @@
 <script defer src="assets/dashboard-native.js?v=1"></script>
 <!-- Same durable outbox as the tills. It also lets this surface report the
      real device sync state instead of inferring it from navigator.onLine. -->
-<script defer src="assets/vendor/dexie.min.js"></script>
+<script defer src="assets/vendor/dexie.min.js?v=1"></script>
 <script defer src="assets/offline-db.js?v=3"></script>
 <script defer src="assets/platform-kernel.js?v=5"></script>
 <script defer src="assets/platform-ops.js?v=5"></script>
@@ -6274,7 +6274,7 @@
 <script defer src="assets/idle-lock.js?v=2"></script>
 <!-- Global operator access · long-press any Kiwi logo to open the console. -->
 <script defer src="assets/operator-access.js?v=1"></script>
-<script src="assets/liquid-lens.js" defer></script>
+<script src="assets/liquid-lens.js?v=1" defer></script>
 <script src="assets/onboarding.js?v=2081" defer></script>
 <!-- Connect-your-caisse: auto side-panel + 6-digit code that binds a till to this
      store (same-browser today, cross-device once /api/pair/* deploys). Real
@@ -6303,7 +6303,7 @@
      Orange · Jaune · Vert · Bleu · Violet · Rose · Multicolore), choisies à la
      pastille, jamais à la nuance. AVANT boutique-catalog.js, qui s'en sert pour
      normaliser les variantes au chargement. -->
-<script src="assets/color-palette.js" defer fetchpriority="low"></script>
+<script src="assets/color-palette.js?v=1" defer fetchpriority="low"></script>
 <!-- Real thermal printing (shared with the caisse): ESC/POS encoder + bridge
      client, so inventory can print barcode étiquettes to a thermal printer. -->
 <script src="assets/escpos.js?v=6" defer fetchpriority="low"></script>
@@ -6411,12 +6411,12 @@
 <link rel="stylesheet" href="assets/help-centre.css?v=4">
 <script src="assets/help-centre.js?v=4" defer fetchpriority="low"></script>
 <script src="assets/account.js?v=17" defer fetchpriority="low"></script>
-<script src="assets/design-2026.js" defer fetchpriority="low"></script>
-<script src="assets/design-ios27.js" defer fetchpriority="low"></script>
+<script src="assets/design-2026.js?v=1" defer fetchpriority="low"></script>
+<script src="assets/design-ios27.js?v=1" defer fetchpriority="low"></script>
 <!-- Default home composition: critical before the PIN overlay reveals the app.
      Low-priority + post-unlock scheduling painted the legacy dashboard first. -->
 <script src="assets/design-vexel-layout.js?v=2081" defer></script>
-<script src="assets/liquid-glass.js" defer fetchpriority="low"></script>
+<script src="assets/liquid-glass.js?v=1" defer fetchpriority="low"></script>
 <!-- Hotel vertical (assets/hotel.js) · powers 0000-onboarded hotels
      (wizard « Hôtel / Riad », starter pages on the live rack/folio
      engine). No demo hotel venue ships: the Riad Yasmina fixture went

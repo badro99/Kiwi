@@ -69,7 +69,7 @@
   <script src="assets/kiwi-env.js?v=1"></script><!-- must run FIRST (before the inline app script), so KiwiEnv.isReal() is ready when demo data is seeded -->
   <!-- Durable tenant-scoped command outbox. Dexie is vendored: the caisse can
        boot and bank transactions with no CDN and no build step. -->
-  <script src="assets/vendor/dexie.min.js" defer></script>
+  <script src="assets/vendor/dexie.min.js?v=1" defer></script>
   <script src="assets/offline-db.js?v=3" defer></script>
   <script src="assets/platform-kernel.js?v=5" defer></script>
   <script src="assets/platform-ops.js?v=5" defer></script>
@@ -84,8 +84,8 @@
   <!-- liquid-lens.js is the brand's segmented-control motion: its selectors
        match nothing in the restaurant markup, only the data-lens opt-ins of the
        lazy-loaded métiers (dont le pressing). -->
-  <script src="assets/liquid-lens.js" defer></script>
-  <script src="assets/caisse-motion.js" defer></script>
+  <script src="assets/liquid-lens.js?v=1" defer></script>
+  <script src="assets/caisse-motion.js?v=1" defer></script>
   <!-- Real thermal printing: ESC/POS encoder + the Kiwi Printer Bridge client.
        KiwiHardware.print routes receipts through them when a printer is paired. -->
   <script src="assets/escpos.js?v=6" defer></script>
@@ -111,7 +111,7 @@
   <!-- Même vocabulaire couleur que le tableau de bord (familles générales,
        choisies à la pastille). Chargé AVANT le catalogue, qui s'en sert pour
        normaliser les variantes existantes. -->
-  <script src="assets/color-palette.js" defer></script>
+  <script src="assets/color-palette.js?v=1" defer></script>
   <script src="assets/boutique-catalog.js?v=6" defer></script>
   <script src="assets/sold-insights.js?v=2" defer></script>
   <!-- Les promotions. Après le catalogue, dont elles lisent les articles pour

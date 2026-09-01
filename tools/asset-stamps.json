@@ -103,6 +103,10 @@
     "v": "10",
     "sha": "722476147c908ce3"
   },
+  "assets/caisse-motion.js": {
+    "v": "1",
+    "sha": "216d8525555e8c8b"
+  },
   "assets/caisse-pairing.js": {
     "v": "15",
     "sha": "112638dbbb35294e"
@@ -159,6 +163,10 @@
     "v": "1",
     "sha": "d0c5823f8ffdcf26"
   },
+  "assets/color-palette.js": {
+    "v": "1",
+    "sha": "19b5d9a6a813d0c0"
+  },
   "assets/conformite.js": {
     "v": "1",
     "sha": "2f2a887f2e8f0a33"
@@ -203,9 +211,21 @@
     "v": "5",
     "sha": "db87c2940f314de9"
   },
+  "assets/demoClock.js": {
+    "v": "1",
+    "sha": "7790e1702d19278d"
+  },
   "assets/depenses.js": {
     "v": "1",
     "sha": "610ae7e8d391f668"
+  },
+  "assets/design-2026.js": {
+    "v": "1",
+    "sha": "72e8949f31ff46ac"
+  },
+  "assets/design-ios27.js": {
+    "v": "1",
+    "sha": "2443568851cf6ee1"
   },
   "assets/design-vexel-layout.js": {
     "v": "2081",
@@ -219,6 +239,10 @@
     "v": "2078",
     "sha": "74b872eee6e9256a"
   },
+  "assets/design-vitrine.js": {
+    "v": "1",
+    "sha": "5d6507bf65311b04"
+  },
   "assets/employee-live.js": {
     "v": "448",
     "sha": "4669af0e406addcd"
@@ -226,6 +250,10 @@
   "assets/employee-planning.js": {
     "v": "8",
     "sha": "213a7cb8edf36757"
+  },
+  "assets/employee-pwa.js": {
+    "v": "1",
+    "sha": "0dbe7672198d2ae2"
   },
   "assets/employee-trade-shell.css": {
     "v": "2",
@@ -371,6 +399,14 @@
     "v": "2",
     "sha": "5829242ec789b552"
   },
+  "assets/liquid-glass.js": {
+    "v": "1",
+    "sha": "e6199b1d6a79b435"
+  },
+  "assets/liquid-lens.js": {
+    "v": "1",
+    "sha": "c9d6036ca657c76e"
+  },
   "assets/live-link.js": {
     "v": "16",
     "sha": "e62a9dd4a943a635"
@@ -506,6 +542,10 @@
   "assets/platform-ops.js": {
     "v": "5",
     "sha": "c079860f2f3bf82e"
+  },
+  "assets/polish.js": {
+    "v": "1",
+    "sha": "b26e29893cff37be"
   },
   "assets/pos-autre.css": {
     "v": "2",
@@ -822,6 +862,14 @@
   "assets/trades.js": {
     "v": "6",
     "sha": "85b12b9390c4a27c"
+  },
+  "assets/ux.js": {
+    "v": "1",
+    "sha": "7bb4c31bfd99ad48"
+  },
+  "assets/vendor/dexie.min.js": {
+    "v": "1",
+    "sha": "2694f0f0758f6871"
   },
   "assets/vendor/zxing-browser.min.js": {
     "v": "1",
