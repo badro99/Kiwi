@@ -258,42 +258,50 @@ This is a refusal, not a warning, and it is the one place in this project where 
 system blocks an operational action. It is defensible because the fix is immediate and
 local: record the cost at the Économat, then confirm.
 
-### 3.4.2 The allocator is not location-aware · Phase 8 must fix this
+### 3.4.2 The allocator is location-aware · landed in Phase 2
 
-**"The source location's blended rate" is not what `allocateCost()` returns.** It has no
-idea locations exist:
+**This section described a Phase 8 fix. It moved to Phase 2 and is done.** The reason is
+sequencing, not ambition: `record()` in `assets/inventory-consumption.js` calls
+`allocateCost()` on **every sale**, so the moment Phase 2 gave each unit its own location,
+a rooftop sale would have started blending the Économat's shelf into its cost. Phase 2
+created the bug and therefore had to close it in the same commit.
 
-- `history(itemId)` in `assets/inventory-ledger.js` filters on `itemId` only · there is
+What was wrong, for the record:
+
+- `history(itemId)` in `assets/inventory-ledger.js` filtered on `itemId` only · there was
   no `locationId` filter.
-- `deriveLots()` in `assets/inventory-consumption.js` does not even carry `locationId`
-  into the lot objects it builds.
+- `deriveLots()` in `assets/inventory-consumption.js` did not carry `locationId` into the
+  lot objects it built.
 
-So the allocator blends lots from **every** unit. Today that is harmless, because there
-is exactly one location. From Phase 2, when each unit gets its own, it is wrong.
+So the allocator blended lots from **every** unit. Measured on the seeded tenant
+(`tools/fixtures/hotel-tenant.mjs`) before the fix, where the Économat holds 12 whisky
+across two lots at 120 and 150 and the rooftop bar holds 6 at 300:
 
-Measured on the seeded tenant (`tools/fixtures/hotel-tenant.mjs`), where the Économat
-holds 12 whisky across two lots at 120 and 150, and the rooftop bar holds 6 at 300:
-
-| Asked of the Économat | Returned | Reality |
+| Asked of the Économat | Returned then | Reality |
 |---|---|---|
 | 6 | 120.00 | correct |
 | 12 | 135.00 | correct **by accident** · the Économat's lots happen to sort first |
-| 13 | 147.69 | **wrong** · now billing the rooftop bar's stock to the Économat |
+| 13 | 147.69 | **wrong** · billing the rooftop bar's stock to the Économat |
 | 18 | 190.00 | the whole hotel blended together |
 
-The 12 is the dangerous number, not the 13: it is right only because of lot ordering, and
-a changed expiry date moves that boundary silently.
+The 12 was the dangerous number, not the 13: it was right only because of lot ordering,
+and a changed expiry date moved that boundary silently.
 
-**The fix is surgical and belongs to Phase 8:** carry `locationId` into the lot, let
-`history()` filter on it, and accept `{ locationId }` in `allocateCost()`. Roughly three
-small edits.
+**The three edits that landed** (commit `7d59fd6b`): `history()` accepts and filters on
+`{ locationId }`; `deriveLots()` carries `locationId` into each lot and accepts the same
+filter; `allocateCost()` passes it through, and `record()` supplies the sale's own
+location instead of defaulting to `'principal'`.
+
+Asked for 13 whisky at the Économat, the allocator now returns **`null`** rather than a
+number · partial coverage with no fallback rate, exactly as §3.4.1 requires, and the
+confirmation is refused instead of being priced off the wrong shelf.
 
 **It is not a lot-tracking project** · §3.4 still stands, V1 stores one blended rate per
 transfer. This only makes that one rate come from the right shelf.
 
-`tools/hotel-seed-test.mjs` pins the current behaviour with the numbers above, so the day
-someone makes the allocator location-aware, that suite goes red and has to be rewritten
-deliberately rather than drifting.
+`tools/hotel-seed-test.mjs` now pins the **scoped** boundary rather than the blended one:
+13 at the Économat is `null` without borrowing the rooftop, 6 at the rooftop is 300, and
+`deriveLots()` at the Économat sees exactly its own two lots.
 
 Approval does not move stock, but it does create a workflow commitment. To prevent two
 managers approving the same bottles, the server computes **available to promise** as

@@ -118,7 +118,8 @@ const t = createHotelTenant();          // horodatage fixe, reproductible
 
 t.balanceAt('economat', 'whisky')       // 12 · solde d'UNE unité
 t.balanceHotel('whisky')                // 18 · le cumul de l'hôtel
-t.consumption.allocateCost('whisky', 12, null)   // 135.00 · taux mélangé FEFO
+t.consumption.allocateCost('whisky', 12, null, { locationId: 'u-economat' })
+                                        // 135.00 · taux mélangé FEFO, économat seul
 t.put({ itemId, locationId, qty, reason, unitCost, occurredTs })  // ajouter un mouvement
 ```
 
@@ -130,7 +131,8 @@ Five units (one Économat, three outlets, one department), each with an immutabl
 `locationId`. Seeded deliberately for the cases the spec argues about: whisky in **two
 lots at different costs and expiries** so the blended FEFO rate is a real blend; the same
 whisky held by the rooftop bar **at a different cost**, which is how §3.4.2's
-cross-location bug is demonstrable; and `verrerie` with **no known cost**, so §3.4.1's
+cross-location boundary is demonstrable · the same fixture that exposed the blending
+bug now proves it is closed; and `verrerie` with **no known cost**, so §3.4.1's
 refusal can be tested at all.
 
 Two properties matter and are asserted in `tools/hotel-seed-test.mjs`: **the fixture has
@@ -463,12 +465,11 @@ read-modify-write. Build it in two steps instead:
    location. Not per-lot layers · spec §3.4. If it resolves to `null`, **refuse the
    confirmation** and tell the employee the source has no known cost · spec §3.4.1.
 
-   **`allocateCost()` cannot do this yet · spec §3.4.2.** It blends lots from every unit,
-   because `history()` does not filter on `locationId` and `deriveLots()` does not carry
-   it. Make the allocator location-aware first · three small edits: carry `locationId`
-   into the lot, filter the history, accept `{ locationId }`. Then update
-   `tools/hotel-seed-test.mjs`, which deliberately pins today's cross-location numbers so
-   this change cannot land silently.
+   **`allocateCost()` already does this · spec §3.4.2, landed in Phase 2** (`7d59fd6b`).
+   It was not location-aware when this plan was written, and the fix was scheduled here.
+   It moved forward because `record()` calls `allocateCost()` on every sale, so Phase 2's
+   per-unit locations activated the bug immediately. Pass `{ locationId }` and trust the
+   answer · including the `null`. Nothing to build at this step.
 5. **Reserve the cursor range in one statement:**
    `UPDATE inventory_sync_sequences SET last_ts = last_ts + N WHERE merchant = ?
    RETURNING last_ts`, with `N` = the number of movements. Derive each `srv_ts` from the
@@ -598,6 +599,17 @@ empty or, worse, plausible and wrong.
 A phase is done when **all** of these hold:
 
 - [ ] The phase's own test suite exists **and is named in `tools/check.js`**.
+- [ ] The suite **cannot pass silently.** Three guards, all three required · a suite that
+      reports green while asserting nothing is worse than no suite, and one shipped in
+      this project already (the Phase 3 harness declared `check(name, fn)` synchronous and
+      threw away every async callback's promise · two assertions never ran, and it printed
+      green):
+      - `check()` is `async` and every call site **awaits** it.
+      - `process.on('unhandledRejection', (e) => { console.error(e); process.exit(1); })`
+        at the top of the file, so a dropped promise fails the run instead of vanishing.
+      - `const EXPECTED = N;` and `assert.equal(checks, EXPECTED)` at the end, so a check
+        that stops executing is a failure rather than a smaller number nobody reads.
+      Prove it once: break the code the suite guards and confirm it actually goes red.
 - [ ] Focused suites pass and `node tools/check.js` adds zero failures relative to the
       recorded base commit; any timed-out phase is reported, never called green.
 - [ ] Every edited stamped asset went through `node tools/bump-stamp.js`.
