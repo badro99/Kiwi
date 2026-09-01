@@ -911,6 +911,9 @@ section('Whole-project regressions');
     'phone-test.mjs',
     'clients-sync-test.mjs',
     'pwa-shell-test.js',
+    /* stamp-drift couvre les assets deja estampilles. Celui-ci refuse qu'un
+       shell charge silencieusement une URL nue absente du manifeste. */
+    'asset-stamp-coverage-test.mjs',
     /* pwa-shell-test vérifie que les copies d'une estampille s'accordent ;
        celui-ci vérifie qu'elle a bougé quand le fichier a bougé. Sans lui, un
        asset édité sans bump est parfaitement cohérent — sur l'ancienne URL. */
