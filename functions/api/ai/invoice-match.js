@@ -59,14 +59,15 @@ export function validateInvoiceMatchData(raw) {
 
 export async function onRequestPost(context) {
   const { request, env } = context;
-  const who = await tenantFor(context);
+
+  let b;
+  try { b = await request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
+
+  const who = await tenantFor(request, env, b?.merchant);
   if (!who) return json({ error: 'unauthorized' }, 401);
 
   const allowed = await quotaOk(env, who, 'invoicematch', DAILY_CAP);
   if (!allowed) return json({ error: 'daily-quota-exceeded' }, 429);
-
-  let b;
-  try { b = await request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
 
   const currentLines = Array.isArray(b?.currentLines) ? b.currentLines.slice(0, 40) : [];
   const historicalItems = Array.isArray(b?.historicalItems) ? b.historicalItems.slice(0, 40) : [];

@@ -62,14 +62,15 @@ export function validateMenuRankData(raw) {
 
 export async function onRequestPost(context) {
   const { request, env } = context;
-  const who = await tenantFor(context);
+
+  let b;
+  try { b = await request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
+
+  const who = await tenantFor(request, env, b?.merchant);
   if (!who) return json({ error: 'unauthorized' }, 401);
 
   const allowed = await quotaOk(env, who, 'menurank', DAILY_CAP);
   if (!allowed) return json({ error: 'daily-quota-exceeded' }, 429);
-
-  let b;
-  try { b = await request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
 
   const items = Array.isArray(b?.items) ? b.items.slice(0, 30) : [];
   const hour = typeof b?.hour === 'string' ? b.hour : '13:00';

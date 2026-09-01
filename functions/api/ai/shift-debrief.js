@@ -65,14 +65,15 @@ export function validateDebriefData(raw) {
 
 export async function onRequestPost(context) {
   const { request, env } = context;
-  const who = await tenantFor(context);
+
+  let b;
+  try { b = await request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
+
+  const who = await tenantFor(request, env, b?.merchant);
   if (!who) return json({ error: 'unauthorized' }, 401);
 
   const allowed = await quotaOk(env, who, 'debrief', DAILY_CAP);
   if (!allowed) return json({ error: 'daily-quota-exceeded' }, 429);
-
-  let b;
-  try { b = await request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
 
   const text = typeof b?.text === 'string' ? b.text.trim().slice(0, 4000) : '';
   if (!text) return json({ error: 'text-required' }, 400);

@@ -56,14 +56,15 @@ export function validatePlanningData(raw) {
 
 export async function onRequestPost(context) {
   const { request, env } = context;
-  const who = await tenantFor(context);
+
+  let b;
+  try { b = await request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
+
+  const who = await tenantFor(request, env, b?.merchant);
   if (!who) return json({ error: 'unauthorized' }, 401);
 
   const allowed = await quotaOk(env, who, 'planning', DAILY_CAP);
   if (!allowed) return json({ error: 'daily-quota-exceeded' }, 429);
-
-  let b;
-  try { b = await request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
 
   const prompt = typeof b?.prompt === 'string' ? b.prompt.trim().slice(0, 2000) : '';
   const staff = Array.isArray(b?.staff) ? b.staff.slice(0, 50) : [];
