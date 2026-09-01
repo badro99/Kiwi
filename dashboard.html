@@ -6207,16 +6207,16 @@
 <script src="assets/features.js?v=4" defer></script>
 <script src="assets/invoice.js?v=6" defer></script>
 <script src="assets/invoicing.js?v=8" defer></script>
-<script src="assets/depenses.js" defer></script>
-<script src="assets/oppo-cards.js" defer></script>
-<script src="assets/insights.js" defer></script>
+<script src="assets/depenses.js?v=1" defer></script>
+<script src="assets/oppo-cards.js?v=1" defer></script>
+<script src="assets/insights.js?v=1" defer></script>
 <script src="assets/qrcode.js?v=1" defer></script>
-<script src="assets/growth-kit.js" defer></script>
+<script src="assets/growth-kit.js?v=1" defer></script>
 <script src="assets/order-qr.js?v=3" defer></script>
 <!-- growth-ordering / growth-qr / growth-giftcards ont été supprimés du dépôt :
      morts depuis le chantier, aucun point d'entrée sur le tableau de bord. growth-crm reste · le
      bouton « Campagne » du vrai Clients & Marketing l'ouvre. -->
-<script src="assets/growth-crm.js" defer></script>
+<script src="assets/growth-crm.js?v=1" defer></script>
 <script src="assets/dark-fixes.js?v=2" defer></script>
 <script src="assets/polish.js" defer></script>
 <script src="assets/channel-link.js?v=202608272300" defer></script>
@@ -6281,8 +6281,8 @@
      merchants only; the pitch demo never sees it. -->
 <script src="assets/caisse-link.js?v=10" defer></script>
 <!-- Below: user-triggered surfaces · not needed for first paint. -->
-<script src="assets/ai-telemetry.js" defer fetchpriority="low"></script>
-<script src="assets/agent-data.js" defer fetchpriority="low"></script>
+<script src="assets/ai-telemetry.js?v=1" defer fetchpriority="low"></script>
+<script src="assets/agent-data.js?v=1" defer fetchpriority="low"></script>
 <!-- Product truth for Kiwi AI: derives the active merchant's capabilities
      from the same trade/profile/workspace registries as the dashboard. -->
 <script src="assets/agent-features.js?v=4" defer fetchpriority="low"></script>
@@ -6293,7 +6293,7 @@
 <script src="assets/agent.js?v=22" defer fetchpriority="low"></script>
 <script src="assets/agent-voice.js?v=5" defer fetchpriority="low"></script>
 <script src="assets/agent-skin.js?v=4" defer fetchpriority="low"></script>
-<script src="assets/accounting.js" defer fetchpriority="low"></script>
+<script src="assets/accounting.js?v=1" defer fetchpriority="low"></script>
 <script src="assets/pages.js?v=3" defer fetchpriority="low"></script>
 <!-- Boutique shared product database + real barcode engine (EAN-13 / Code 128).
      Same modules the caisse loads, so inventory stays in sync between the two. -->
@@ -6369,7 +6369,7 @@
 <!-- OrderPro · publishes boutique stock + owns media upload (menu-catalog.js
      already publishes the carte), and the NFC-tag panel. AFTER both catalogues. -->
 <script src="assets/orderpro-publish.js?v=5" defer fetchpriority="low"></script>
-<script src="assets/orderpro-panel.js" defer fetchpriority="low"></script>
+<script src="assets/orderpro-panel.js?v=1" defer fetchpriority="low"></script>
 <!-- Floor-plan vocabulary shared with the caisse. MUST load before pages-pro.js,
      which reads its top-level declarations as globals. -->
 <script src="assets/floorplan-core.js?v=2050" defer fetchpriority="low"></script>
@@ -6400,8 +6400,8 @@
 <script src="assets/cash-sessions.js?v=2" defer fetchpriority="low"></script>
 <script src="assets/order-course.js?v=2" defer fetchpriority="low"></script>
 <script src="assets/briefing.js?v=17" defer fetchpriority="low"></script>
-<script src="assets/finance.js" defer fetchpriority="low"></script>
-<script src="assets/conformite.js" defer fetchpriority="low"></script>
+<script src="assets/finance.js?v=1" defer fetchpriority="low"></script>
+<script src="assets/conformite.js?v=1" defer fetchpriority="low"></script>
 <!-- Final production boundary for presentation-only actions. -->
 <script src="assets/production-action-guard.js?v=1" defer fetchpriority="low"></script>
 <!-- The shared staff-role catalogue: the login gate needs it to tell an owner
@@ -6467,7 +6467,7 @@
 </script>
 <!-- "Introducing Kiwi Marketing Suite" tease · fired by PIN 0505 after the
      greeting fades. Self-contained overlay + animation, no first-paint cost. -->
-<script src="assets/marketing-suite-tease.js" defer fetchpriority="low"></script>
+<script src="assets/marketing-suite-tease.js?v=1" defer fetchpriority="low"></script>
 
 <!-- PIN lock + greeting flash controller -->
 <script>

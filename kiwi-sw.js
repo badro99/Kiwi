@@ -66,8 +66,8 @@ var SHELL = [
   '/assets/agent-action-center.js?v=2',
   '/assets/cancellation-history.js?v=2',
   '/assets/briefing.js?v=17',
-  '/assets/ai-telemetry.js',
-  '/assets/agent-data.js',
+  '/assets/ai-telemetry.js?v=1',
+  '/assets/agent-data.js?v=1',
   '/assets/agent-features.js?v=4',
   '/assets/agent-truth.js?v=6',
   '/assets/agent-voice.js?v=5',
@@ -138,7 +138,7 @@ var SHELL = [
   // read it, so leaving it out of the shell meant the till could come up
   // offline with no table geometry at all.
   '/assets/floorplan-core.js?v=2050',
-  '/assets/oppo-cards.js',
+  '/assets/oppo-cards.js?v=1',
   '/assets/dashboard-pwa.js?v=449',
   '/assets/dashboard-native.js?v=1',
   '/assets/pwa-update.js?v=359',
@@ -244,7 +244,7 @@ var SHELL = [
   '/assets/salle-scan.js?v=2',
   // OrderPro · publisher + NFC panel (dashboard), inbox (caisse).
   '/assets/orderpro-publish.js?v=5',
-  '/assets/orderpro-panel.js',
+  '/assets/orderpro-panel.js?v=1',
   '/assets/orderpro-inbox.js?v=7',
   /* Le relais cuisine · la caisse pose ses bons, la tablette du passe les lit.
      Dans la coquille pour les deux pages : c'est lui qui porte la file de
