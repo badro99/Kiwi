@@ -942,6 +942,7 @@ section('Whole-project regressions');
   'hotel-location-attribution-test.mjs',
   'economat-catalogue-test.mjs',
   'department-catalogue-test.mjs',
+  'internal-request-test.mjs',
     'formula-protocol-test.mjs',
     'trade-copy-test.mjs',
     'floor-accept-test.mjs',
