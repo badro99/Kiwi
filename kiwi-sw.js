@@ -212,7 +212,7 @@ var SHELL = [
   '/assets/venue-store.js?v=3',
   /* One stock across owner dashboard and till. Catalog metadata is a cloud
      document; quantities are append-only movements, both usable offline. */
-  '/assets/inventory-ledger.js?v=9',
+  '/assets/inventory-ledger.js?v=10',
   '/assets/caisse-stock-sync.js?v=9',
   '/assets/pos-inventory-count.js?v=6',
   '/assets/stock.js?v=36',

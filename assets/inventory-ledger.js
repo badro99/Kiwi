@@ -164,6 +164,23 @@
     setTimeout(sync, 0);
     return m;
   }
+  /* A transfer pair is authored atomically by the server. This hook mirrors
+   * only acknowledged rows into the local ledger and never queues them for a
+   * second POST, so the browser cannot split the pair or mint authority. */
+  function acknowledge(rows) {
+    if (!real() || !merchant() || !Array.isArray(rows)) return 0;
+    var d = read(); var byId = new Map(d.rows.map(function (r) { return [r.id, r]; })); var added = 0;
+    rows.forEach(function (raw) {
+      var m = clean(raw);
+      if (!m.id || !m.itemId || !m.qty) return;
+      if (!byId.has(m.id)) { d.rows.push(m); byId.set(m.id, m); added++; }
+      else if (m.cursor) byId.get(m.id).cursor = m.cursor;
+      d.queued = d.queued.filter(function (id) { return id !== m.id; });
+      d.cursor = Math.max(d.cursor, m.cursor || 0);
+    });
+    if (added || rows.length) write(d);
+    return added;
+  }
   function ensureOpening(itemId, qty, opts) {
     opts = opts || {};
     qty = Math.round((+qty || 0) * 1000) / 1000;
@@ -291,7 +308,7 @@
 
   window.KiwiInventory = {
     isReal: real, merchant: merchant, terminalId: terminalId, unitId: unitId, locationId: locationId,
-    add: add, reverse: reverse,
+    add: add, acknowledge: acknowledge, reverse: reverse,
     ensureOpening: ensureOpening, balance: balance, snapshot: snapshot, history: history, between: between,
     sync: sync, pending: function () { return read().queued.length; },
     subscribe: function (fn) { subs.add(fn); return function () { subs.delete(fn); }; },
