@@ -538,7 +538,48 @@ the UI.
 
 ---
 
-## Phase 9 · Direct department transfers
+## Discovery D · blocking gate before any Phase 9 build
+
+**Phase 9 is not authorised.** Phases 0–8 prove the backend contract against fixtures;
+they do not prove that the contract matches the hotel's paper workflow. Before another
+backend phase, run a disposable, non-writing four-step prototype with the actual staff on
+their own phones:
+
+1. A department creates a request.
+2. The Économat reduces, refuses or proposes an alternative.
+3. A storekeeper prepares it.
+4. A receiver confirms quantities and records a discrepancy.
+
+Run five scenarios: routine request, partial fulfilment, substitution, urgent after-hours
+request and disputed handover. Observe without coaching. Record the words staff use for
+locations, requisitions and the Économat; who really approves; whether WhatsApp remains in
+the loop; when they believe stock moved; and whether the audit record matches the physical
+handover. Time the last three paper *bons de sortie*, ask the trolley custody question from
+§3.3, and count crossed-out substitutions on 30 days of slips.
+
+**Discovery exits only when both are true:** staff complete the workflow without coaching,
+and the resulting audit record matches what physically happened. "They like it" is not an
+exit criterion.
+
+### Commercial success must be classified before Phase 9
+
+Record a baseline and a 30-day pilot target for all five measures:
+
+| Measure | Baseline | Pilot target | Evidence source |
+|---|---:|---:|---|
+| Internal requests per week | pending discovery | set after slip count | Kiwi events vs paper slips |
+| Median request-to-handover time | pending discovery | set after timing | request/event timestamps |
+| Substitution and discrepancy frequency | pending discovery | set after 30-day sample | crossed-out slips and Kiwi events |
+| Stock variance or write-off reduction | pending discovery | owner decision | counts and append-only corrections |
+| Share handled in Kiwi instead of WhatsApp | pending discovery | owner decision | staff observation and request events |
+
+The evidence must choose the product: low volume with required paper signatures supports a
+lightweight requisition overlay; frequent requests with material variance support the full
+Économat platform. Do not choose the answer before measuring it.
+
+---
+
+## Phase 9 · Direct department transfers · blocked by Discovery D
 
 **Goal:** unit-to-unit without Économat approval, same atomic pair, fully auditable.
 
