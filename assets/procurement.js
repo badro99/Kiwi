@@ -61,6 +61,10 @@
     store.update(function (d) { hit = d.orders.find(function (x) { return x.id === orderId; }); if (hit && hit.status === 'draft') { hit.status = 'sent'; hit.sentAt = Date.now(); hit.updatedAt = hit.sentAt; } return d; });
     return hit;
   }
+  function economatReceiptLocation() {
+    var inventory = window.KiwiInventory;
+    return String(inventory && inventory.locationId && inventory.locationId() || 'principal').slice(0, 80);
+  }
   function writeReceipt(input, order) {
     var lines = (input.lines || []).map(cleanLine).filter(function (x) { return x.itemId && x.qty > 0; });
     if (!lines.length) return { error: 'invalid-receipt' };
@@ -76,7 +80,7 @@
       return d;
     });
     lines.forEach(function (line, idx) {
-      window.KiwiInventory?.add?.({ id: `inv-${row.id}-${idx}`, itemId: line.itemId, qty: line.qty, reason: 'receipt', unitCost: line.unitCost || null, refType: 'receipt', refId: row.id, occurredTs: row.receivedAt, note: row.externalRef || row.number });
+      window.KiwiInventory?.add?.({ id: `inv-${row.id}-${idx}`, itemId: line.itemId, locationId: economatReceiptLocation(), qty: line.qty, reason: 'receipt', unitCost: line.unitCost || null, refType: 'receipt', refId: row.id, occurredTs: row.receivedAt, note: row.externalRef || row.number });
       if (line.unitCost > 0) window.KiwiCost?.setItemCost?.(line.itemId, line.unitCost, row.supplierId);
     });
     return row;
