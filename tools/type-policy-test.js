@@ -30,15 +30,16 @@ function rel(file) { return path.relative(ROOT, file); }
 function fail(file, reason) { failures.push(`${rel(file)}: ${reason}`); }
 
 function jsVisibleDashes(source) {
+  if (!source.includes('—')) return [];
   const hits = [];
   let i = 0;
   while (i < source.length) {
-    if (source.startsWith('//', i)) {
+    if (source.charCodeAt(i) === 47 && source.charCodeAt(i + 1) === 47) {
       const end = source.indexOf('\n', i + 2);
       i = end < 0 ? source.length : end + 1;
       continue;
     }
-    if (source.startsWith('/*', i)) {
+    if (source.charCodeAt(i) === 47 && source.charCodeAt(i + 1) === 42) {
       const end = source.indexOf('*/', i + 2);
       i = end < 0 ? source.length : end + 2;
       continue;
@@ -62,10 +63,11 @@ function jsVisibleDashes(source) {
 }
 
 function cssVisibleDashes(source) {
+  if (!source.includes('—')) return [];
   const hits = [];
   let i = 0;
   while (i < source.length) {
-    if (source.startsWith('/*', i)) {
+    if (source.charCodeAt(i) === 47 && source.charCodeAt(i + 1) === 42) {
       const end = source.indexOf('*/', i + 2);
       i = end < 0 ? source.length : end + 2;
       continue;
@@ -89,16 +91,16 @@ function cssVisibleDashes(source) {
 }
 
 function htmlVisibleDashes(source) {
-  let sanitized = source.replace(/<!--[\s\S]*?-->/g, '');
+  if (!source.includes('—')) return [];
+  let s = source.replace(/<!--[\s\S]*?-->/g, '');
+  s = s.replace(/<script\b[\s\S]*?<\/script>/gi, '');
   const hits = [];
-  sanitized = sanitized.replace(/<script\b[^>]*>([\s\S]*?)<\/script\s*>/gi, (_, body) => {
-    return '';
-  });
-  sanitized = sanitized.replace(/<style\b[^>]*>([\s\S]*?)<\/style\s*>/gi, (_, body) => {
-    if (cssVisibleDashes(body).length) hits.push(1);
-    return '';
-  });
-  if (sanitized.includes('—')) hits.push(1);
+  const styleMatches = [...s.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)];
+  for (const m of styleMatches) {
+    if (cssVisibleDashes(m[1]).length) hits.push(1);
+  }
+  s = s.replace(/<style\b[\s\S]*?<\/style>/gi, '');
+  if (s.includes('—')) hits.push(1);
   return hits;
 }
 
@@ -121,8 +123,10 @@ for (const file of files) {
 
   const ext = path.extname(file).toLowerCase();
   if (ext === '.css' || ext === '.html' || ext === '.svg') {
-    for (const rule of source.match(/[^{}]*\{[^{}]*(?:var\(--serif\)|var\(--font-editorial\))[^{}]*\}/gi) || []) {
-      if (/font-style\s*:\s*italic/i.test(rule)) fail(file, 'editorial alias is italic');
+    if (source.includes('var(--serif)') || source.includes('var(--font-editorial)')) {
+      for (const rule of source.match(/[^{}]*\{[^{}]*(?:var\(--serif\)|var\(--font-editorial\))[^{}]*\}/gi) || []) {
+        if (/font-style\s*:\s*italic/i.test(rule)) fail(file, 'editorial alias is italic');
+      }
     }
   }
 

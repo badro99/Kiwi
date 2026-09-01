@@ -5397,7 +5397,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=451" defer></script>
+  <script src="assets/caisse-pwa.js?v=454" defer></script>
   <script src="assets/live-link.js?v=17" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -5473,7 +5473,7 @@
   <script src="assets/food-production-print.js?v=2" defer></script>
   <!-- OrderPro · orders placed on a customer's phone arrive here over WiFi;
        staff accept one and it becomes a kitchen ticket. Paired terminals only. -->
-  <script src="assets/orderpro-inbox.js?v=8" defer></script>
+  <script src="assets/orderpro-inbox.js?v=7" defer></script>
   <!-- Operator feature flags + managed PINs. Fail-safe: no backend ⇒ no change. -->
   <script src="assets/merchant-config.js?v=266" defer></script>
   <!-- « Rafraîchir » · un bouton commun à toutes les caisses (restaurant,
@@ -5486,7 +5486,7 @@
        les seize métiers, pas seulement au restaurant. Ressort un ticket de la
        journée avec son numéro d'origine et la mention de duplicata, sans jamais
        réencaisser. Après receipt.js, dont il compose les documents. -->
-  <script src="assets/invoice.js?v=6" defer></script>
+  <script src="assets/invoice.js?v=8" defer></script>
   <script src="assets/pos-reprint.js?v=1" defer></script>
   <!-- Global operator access · long-press any Kiwi logo to open the console. -->
   <script src="assets/operator-access.js?v=1" defer></script>
@@ -7007,6 +7007,9 @@
       </div>
       <div class="rct-actions">
         <button class="ma-btn secondary" id="receipt-close" style="flex:1;">Fermer</button>
+        <button class="ma-btn secondary" id="receipt-invoice" style="flex:1.5;">
+          <i data-lucide="file-text"></i><span>Facture A4</span>
+        </button>
         <button class="ma-btn primary" id="receipt-print" style="flex:2;">
           <i data-lucide="printer"></i><span>Imprimer</span>
         </button>
@@ -13463,6 +13466,15 @@
       );
       closeReceipt();
     });
+    const rcptInv = $('#receipt-invoice');
+    if (rcptInv) {
+      rcptInv.addEventListener('click', () => {
+        if (!receiptEntry) return;
+        if (window.KiwiInvoice && typeof window.KiwiInvoice.makeSaleInvoice === 'function') {
+          window.KiwiInvoice.makeSaleInvoice(receiptEntry);
+        }
+      });
+    }
     $('#receipt-modal').addEventListener('click', (e) => {
       if (e.target === $('#receipt-modal')) closeReceipt();
     });
@@ -14130,6 +14142,7 @@
              +   `<span class="jr-entry-meta">${hh}:${mm} · ${mLabel} · ${e.ref}${sourceMeta}${tipMeta}</span>`
              + `</span>`
              + `<span class="jr-entry-amount${isRefund ? ' is-refund' : ''}">${amtTxt}</span>`
+             + `<span class="jr-entry-invoice" data-jr-invoice="${e.ref}" role="button" tabindex="0" aria-label="Facture A4 ${e.ref}"><i data-lucide="file-text"></i></span>`
              + `<span class="jr-entry-reprint" data-jr-print="${e.ref}" role="button" tabindex="0" aria-label="Réimprimer le ticket ${e.ref}"><i data-lucide="printer"></i></span>`
              + `</button>`;
       }).join('');
@@ -14277,6 +14290,15 @@
          cette interception elle héritait du clic de la ligne et ouvrait l'aperçu.
          Une imprimante qui ouvre un aperçu n'imprime pas. DUPLICATA, parce qu'un
          second exemplaire qui circule sans le dire ne se rapproche plus. */
+      const inv = e.target.closest('[data-jr-invoice]');
+      if (inv) {
+        e.stopPropagation();
+        const entry = journal.find(en => en.ref === inv.dataset.jrInvoice);
+        if (entry && window.KiwiInvoice && typeof window.KiwiInvoice.makeSaleInvoice === 'function') {
+          window.KiwiInvoice.makeSaleInvoice(entry);
+        }
+        return;
+      }
       const pr = e.target.closest('[data-jr-print]');
       if (pr) {
         e.stopPropagation();
@@ -17621,32 +17643,7 @@
         clearCart();
         setVrapView('board');
       } else {
-        /* Vente comptoir payée avant d'avoir touché « Envoyer en cuisine ».
-           Le paiement EST la confirmation : conserver seulement la vente dans
-           le journal puis vider le panier faisait disparaître la commande pour
-           la brigade. On crée donc le bon, on l'imprime et on le relaie au KDS
-           avant de rendre la caisse disponible. */
-        const total = currentTotal();
-        const items = cart.map(c => {
-          const m = menuItems.find(x => x.id === c.id);
-          return { q: c.qty, n: c.name, p: c.price, note: kitchenNote(c),
-            stations: [kdsStationFor(m)] };
-        });
-        if (items.length) {
-          const order = {
-            num: ++kdsOrderSeq, type: 'takeaway', status: 'new',
-            readyAt: null, items, sentAt: new Date(),
-            paid: true, pickedUp: false, pickedUpAt: null, total,
-          };
-          kdsOrders.push(order);
-          printKitchenTickets(order, items);
-          relayToKitchen(order);
-          updateKdsCount();
-          if (kdsEl.classList.contains('is-open')) kdsPaint();
-          toast(`Commande #${order.num} payée · envoyée en cuisine`);
-        }
         clearCart();
-        setVrapView('board');
       }
     }
 
@@ -18131,25 +18128,6 @@
 
     /* Ce que orderpro-inbox.js appelle à chaque tour de sondage. */
     window.KiwiCaisseKitchen = {
-      /* Seul le geste humain qui réussit pending → accepted appelle ceci.
-         Un simple poll (y compris sur une deuxième caisse) peut afficher le
-         bon accepté au KDS local, mais ne réimprime jamais le ticket papier. */
-      confirmAccepted(order, extra) {
-        if (!order || !order.id) return;
-        const accepted = Object.assign({}, order, {
-          status: 'accepted',
-          server: (extra && extra.server) || order.server || '',
-          paid: !!((extra && extra.paid) || order.paid),
-        });
-        opIngest(accepted);
-        const ticket = opTickets.get(order.id);
-        if (!ticket || ticket.kitchenPrinted) return;
-        ticket.kitchenPrinted = true;
-        printKitchenTickets(ticket, ticket.items);
-        updateKdsCount();
-        if (kdsEl.classList.contains('is-open')) kdsPaint();
-        if (ticket.type === 'takeaway') renderVrapBoard();
-      },
       /* `delta` = ce qui a changé depuis le dernier sondage (c'est le curseur
          `since` qui le décide) ; `all` = tout ce que la caisse connaît encore.
          La distinction n'est pas cosmétique : compter les commandes en attente

@@ -248,8 +248,34 @@ ok(/stream: round === 'answer'/.test(askSrc), 'tools round is non-streamed JSON,
 ok(/return json\(\{ ok: true, tool_calls: calls, text \}, 200, \{ 'x-kiwi-ai': 'cloud', 'x-kiwi-ai-model': usedModel \}\);/.test(askSrc), 'tools round answers {ok, tool_calls, text} with the model header');
 ok(/const MAX_TOOL_CALLS = 4;/.test(askSrc) && /const MAX_TOOL_RESULT = 2000;/.test(askSrc) && /const MAX_TOOLS = 12;/.test(askSrc), 'tool bounds pinned: 12 tools, 4 calls, 2000-char results');
 
-// ── 6. Hard Count Pinning ───────────────────────────────────────────────────
-const EXPECTED_COUNT = 52;
+// ── 8. Live execution test of all AI route handlers ──────────────────────────
+const routeFiles = fs.readdirSync(aiDir).filter(f => f.endsWith('.js') && !f.startsWith('_'));
+for (const file of routeFiles) {
+  const mod = await import(path.join(aiDir, file));
+  if (typeof mod.onRequestPost === 'function') {
+    const fakeReq = new Request('https://kiwi-pos.com/api/ai/' + file.replace('.js', ''), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ merchant: 'test_merchant' }),
+    });
+    const fakeEnv = {
+      AUTH_SECRET: 'test-secret-key-32-chars-long-1234',
+      DB: null,
+      AI: null,
+    };
+    let threw = false;
+    let res = null;
+    try {
+      res = await mod.onRequestPost({ request: fakeReq, env: fakeEnv });
+    } catch (err) {
+      threw = true;
+    }
+    ok(!threw && res instanceof Response, `${file} onRequestPost returns a Response without throwing unhandled exceptions`);
+  }
+}
+
+// ── 9. Hard Count Pinning ───────────────────────────────────────────────────
+const EXPECTED_COUNT = 52 + routeFiles.filter(f => !f.startsWith('_')).length;
 ok(passed + 1 === EXPECTED_COUNT, `exact control count verified (${passed + 1}/${EXPECTED_COUNT})`);
 
 if (failures.length) {

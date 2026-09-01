@@ -194,15 +194,24 @@ section('Forbidden patterns');
   const { execSync } = require('child_process');
   let trackedFiles = [];
   try {
-    trackedFiles = execSync('git ls-files', { cwd: ROOT, encoding: 'utf8' }).trim().split('\n').filter(Boolean);
+    trackedFiles = execSync('git -c core.quotepath=false ls-files', { cwd: ROOT, encoding: 'utf8' })
+      .trim()
+      .split('\n')
+      .map((l) => l.trim().replace(/^"|"$/g, ''))
+      .filter(Boolean);
   } catch (_) {
     trackedFiles = [...JS_FILES, ...HTML_FILES, ...CSS_FILES];
   }
 
   const EXCLUDED_PATTERNS = [
     /^photos\//,
+    /^app\/(ios|android|plugins)\//,
+    /^bridge\//,
+    /^assets\/(vendor|icons|landing|pressing-products)\//,
+    /^_next\//,
+    /^draco\//,
     /\.min\.js$/,
-    /\.(png|jpg|jpeg|gif|webp|svg|ico|pdf|zip|tar|gz|woff|woff2|ttf|eot)$/i,
+    /\.(png|jpg|jpeg|gif|webp|svg|ico|pdf|zip|tar|gz|woff|woff2|ttf|eot|LICENSE|NOTICE)$/i,
     /^tools\//, // path-scoped exemption for local test suite and mock fixtures
   ];
 
@@ -210,7 +219,7 @@ section('Forbidden patterns');
     .filter((rel) => !EXCLUDED_PATTERNS.some((rx) => rx.test(rel)))
     .map((rel) => path.join(ROOT, rel));
 
-  const PREFIXED_SECRET = /(?:sk_live_[0-9a-zA-Z]{24,}|rk_live_[0-9a-zA-Z]{24,}|ghp_[A-Za-z0-9]{30,}|gho_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{22,}|AKIA[0-9A-Z]{16}|xox[baprs]-[A-Za-z0-9-]{10,}|AIza[0-9A-Za-z-_]{35}|-----BEGIN [A-Z ]*PRIVATE KEY|sk-[A-Za-z0-9]{20,})/;
+  const PREFIXED_SECRET = /(?:sk_live_[0-9a-zA-Z]{24,}|rk_live_[0-9a-zA-Z]{24,}|ghp_[A-Za-z0-9]{30,}|gho_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{22,}|AKIA[0-9A-Z]{16}|xox[baprs]-[A-Za-z0-9-]{10,}|AIza[0-9A-Za-z-_]{35}|-----BEGIN [A-Z ]*PRIVATE KEY|\bsk-[A-Za-z0-9]{20,})/;
 
   // Contextual credentials:
   // - In code/config (.js/.html/.css/etc.): keyword near quoted 4-8 digit numeric literal

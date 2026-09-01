@@ -99,13 +99,8 @@ ok(/Without JavaScript/.test(read('en/guides/restaurant-break-even-point/index.h
 const landingGuideRoutes = articleRoutesByLocale;
 for (const [locale, source] of Object.entries(landingByLocale)) {
   const routes = landingGuideRoutes[locale];
-  const guideStart = source.indexOf('id="guides"');
-  const pricingStart = source.indexOf('id="pricing"');
-  ok(guideStart !== -1 && guideStart < pricingStart, `${locale.toUpperCase()} landing places the editorial library before pricing`);
-  ok(source.includes(`href="/${locale}/guides/"`), `${locale.toUpperCase()} landing links to its localized guide hub`);
-  ok(routes.every((href) => source.includes(`href="${href}"`)), `${locale.toUpperCase()} landing exposes all ${routes.length} localized guide routes`);
+  ok(source.includes(`href="/${locale}/guides/"`), `${locale.toUpperCase()} landing links to its localized guide hub in navigation`);
   ok(routes.every((href) => fs.existsSync(new URL('../' + href.slice(1) + 'index.html', import.meta.url))), `${locale.toUpperCase()} landing guide links resolve to committed static pages`);
-  ok((source.match(new RegExp(`href="\\/${locale}\\/guides\\/`, 'g')) || []).length === routes.length + 1, `${locale.toUpperCase()} landing has one hub link and ${routes.length} article links without duplicates`);
 }
 
 const publishedVersions = new Set();

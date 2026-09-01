@@ -746,12 +746,23 @@
     }
   }
 
+  function makeSaleInvoice(entry, mode) {
+    if (!entry) return null;
+    let saleId = entry.saleId || entry.id || '';
+    if (!saleId && window.KiwiLive && typeof window.KiwiLive.saleIdFor === 'function') {
+      saleId = window.KiwiLive.saleIdFor(entry);
+    }
+    const sale = Object.assign({}, entry, { saleId: saleId || entry.ref || entry.label });
+    return generate(sale, mode || 'print');
+  }
+
   // ── L'API publique exportée ────────────────────────────────────────────────
   window.KiwiInvoice = {
     build,
     html,
     open,
     generate,
+    makeSaleInvoice,
     getCachedInvoices,
     promptCustomer,
     getSellerBusiness,
