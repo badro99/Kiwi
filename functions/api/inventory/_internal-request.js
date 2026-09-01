@@ -2,8 +2,8 @@ import { catalogueItem, quantityToBase, snapshotForUnit } from './_economat-cata
 import { departmentAllowsItem } from './_department-catalogue.js';
 
 export const REQUEST_STATES = Object.freeze(['draft', 'open', 'closed']);
-export const REQUEST_ACTIONS = Object.freeze(['submit', 'review', 'accept', 'prepare', 'confirm', 'cancel']);
-const RESOLUTIONS = new Set(['pending', 'approved', 'reduced', 'substituted', 'rejected']);
+export const REQUEST_ACTIONS = Object.freeze(['submit', 'review', 'accept', 'prepare', 'confirm', 'dispute', 'cancel']);
+const RESOLUTIONS = new Set(['approved', 'reduced', 'refused', 'rejected']);
 
 function token(value, max = 100) {
   const text = String(value == null ? '' : value).trim();
@@ -70,6 +70,7 @@ function reviewLines(currentLines, updates) {
     const qtyApproved = quantity(update && update.qtyApproved);
     const resolution = String(update && update.resolution || '').trim();
     if (!line || qtyApproved == null || !RESOLUTIONS.has(resolution)) return { error: 'bad-review-line', status: 422 };
+    if (token(update && update.substituteFor, 80)) return { error: 'substitution-v2', status: 422 };
     const approvedBase = baseQuantity(line, qtyApproved);
     if (approvedBase == null || approvedBase > line.qtyRequestedBase + 1e-9) {
       return { error: `approved-exceeds-requested:${line.itemId}`, status: 422 };
@@ -77,9 +78,15 @@ function reviewLines(currentLines, updates) {
     if (qtyApproved < line.qtyPrepared || qtyApproved < line.qtyReceived) {
       return { error: `approved-below-progress:${line.itemId}`, status: 422 };
     }
+    const full = same(approvedBase, line.qtyRequestedBase);
+    if ((qtyApproved === 0 && !['refused', 'rejected'].includes(resolution))
+      || (qtyApproved > 0 && qtyApproved < line.qtyRequested && resolution !== 'reduced')
+      || (full && resolution !== 'approved')) {
+      return { error: `resolution-quantity-mismatch:${line.itemId}`, status: 422 };
+    }
     line.qtyApproved = qtyApproved;
     line.resolution = resolution;
-    line.substituteFor = token(update && update.substituteFor, 80);
+    line.substituteFor = '';
     line.note = String(update && update.note || line.note || '').trim().slice(0, 500);
   }
   return { value: next };
@@ -116,7 +123,7 @@ export function applyRequestCommand(current, actionValue, payload = {}) {
     request.state = 'open';
     request.submittedTs = Number(payload.now) || Date.now();
   } else if (action === 'review') {
-    if (request.state !== 'open' || Number(request.acceptedRevision) >= Number(request.reviewRevision) && Number(request.reviewRevision) > 0) {
+    if (request.state !== 'open') {
       return { ok: false, error: 'review-locked', status: 409 };
     }
     const checked = reviewLines(lines, payload.lines);
@@ -124,10 +131,16 @@ export function applyRequestCommand(current, actionValue, payload = {}) {
     lines = checked.value;
     request.reviewRevision = Number(request.revision) + 1;
   } else if (action === 'accept') {
-    if (request.state !== 'open' || !request.reviewRevision) return { ok: false, error: 'nothing-to-accept', status: 409 };
+    if (request.state !== 'open' || !request.reviewRevision
+      || Number(request.acceptedRevision) >= Number(request.reviewRevision)) {
+      return { ok: false, error: 'nothing-to-accept', status: 409 };
+    }
     request.acceptedRevision = Number(request.reviewRevision);
   } else if (action === 'prepare') {
     if (request.state !== 'open' || !request.reviewRevision) return { ok: false, error: 'not-approved', status: 409 };
+    if (lines.some((line) => !line.resolution || line.resolution === 'pending')) {
+      return { ok: false, error: 'review-incomplete', status: 409 };
+    }
     const changed = lines.some((line) => !same(baseQuantity(line, line.qtyApproved), line.qtyRequestedBase));
     if (changed && Number(request.acceptedRevision) < Number(request.reviewRevision)) {
       return { ok: false, error: 'changes-not-accepted', status: 409 };
@@ -135,15 +148,31 @@ export function applyRequestCommand(current, actionValue, payload = {}) {
     const checked = progressLines(lines, payload.lines, 'qtyPrepared', 'qtyApproved');
     if (!checked.value) return { ok: false, error: checked.error, status: checked.status };
     lines = checked.value;
+    if (payload.fulfilmentMethod != null) {
+      const method = String(payload.fulfilmentMethod || '').trim();
+      if (!['pickup', 'delivery'].includes(method)) return { ok: false, error: 'bad-fulfilment-method', status: 422 };
+      request.fulfilmentMethod = method;
+    }
+    if (payload.handover && request.fulfilmentMethod === 'delivery' && !request.deliveryStartedTs) {
+      request.deliveryStartedTs = Number(payload.now) || Date.now();
+    }
   } else if (action === 'confirm') {
-    if (request.state !== 'open') return { ok: false, error: 'not-open', status: 409 };
+    if (request.state !== 'open' || !request.reviewRevision) return { ok: false, error: 'not-approved', status: 409 };
+    const changed = lines.some((line) => !same(baseQuantity(line, line.qtyApproved), line.qtyRequestedBase));
+    if (changed && Number(request.acceptedRevision) < Number(request.reviewRevision)) {
+      return { ok: false, error: 'changes-not-accepted', status: 409 };
+    }
     const checked = progressLines(lines, payload.lines, 'qtyReceived', 'qtyPrepared');
     if (!checked.value) return { ok: false, error: checked.error, status: checked.status };
     lines = checked.value;
-    if (lines.every((line) => same(line.qtyReceived, line.qtyPrepared))) {
+    const approved = lines.filter((line) => Number(line.qtyApproved) > 0);
+    if (approved.length && approved.every((line) => same(line.qtyReceived, line.qtyApproved))) {
       request.state = 'closed';
       request.closedTs = Number(payload.now) || Date.now();
     }
+  } else if (action === 'dispute') {
+    if (!['open', 'closed'].includes(request.state)) return { ok: false, error: 'not-disputable', status: 409 };
+    request.disputed = true;
   } else if (action === 'cancel') {
     request.cancelled = true;
     request.state = 'closed';
@@ -159,6 +188,9 @@ export function deriveRequestLabel(requestValue, linesValue) {
   if (request.cancelled) return 'cancelled';
   if (request.disputed) return 'disputed';
   if (request.state === 'draft') return 'draft';
+  const allRefused = lines.length && lines.every((line) => Number(line.qtyApproved) === 0
+    && ['refused', 'rejected'].includes(line.resolution));
+  if (allRefused) return 'rejected';
   if (request.state === 'closed') return 'received';
   if (!lines.length) return 'submitted';
   const reviewed = lines.filter((line) => line.resolution && line.resolution !== 'pending');
