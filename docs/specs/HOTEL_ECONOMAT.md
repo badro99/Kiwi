@@ -207,15 +207,31 @@ noise, and the whole feature reads as broken to the user.
 purchase unit, issue unit and consumption unit, with the conversion between them.
 Transfers are recorded in the issue unit; the ledger stores the base unit.
 
-### 3.3 Stock in transit · undecided in 1.0
+### 3.3 Stock in transit · conditional custody contract
 
-1.0's status list implies goods that have left the Économat and are not yet confirmed
-by the department, but never says whose balance holds them. **Decision: the Économat
-holds them.** Stock leaves the Économat's balance only when the transfer is confirmed.
+The shipped implementation remains the simple V1 rule: **the Économat holds the
+goods until the department confirms receipt.** Preparation and handover are workflow
+states with no ledger effect, and confirmation writes one atomic Économat-to-unit
+movement pair. This rule stays in force unless Discovery D observes a real interval
+where staff agree that the goods have left one custodian but have not reached another.
 
-This makes the two movements a single atomic pair at confirmation time, which is the
-only way the consolidated hotel inventory ties out at any instant. Preparation and
-handover are workflow states with no ledger effect.
+If that interval is confirmed, the only accepted replacement is an explicit custody
+model:
+
+1. **Prepared:** quantity is reserved but remains in the Économat balance.
+2. **Dispatched:** one atomic pair moves it from the Économat into a virtual
+   `transit:<request-id>` location. The hotel total is unchanged and exactly one
+   custodian owns every quantity.
+3. **Received:** one atomic pair moves the counted quantity from transit into the
+   destination unit.
+4. **Rejected, short or returned at the door:** one atomic pair moves the affected
+   quantity from transit back to the Économat. A discrepancy never disappears through
+   a status edit.
+
+Do not implement the virtual location or dispatch movements until Discovery D records
+who physically takes custody, when they say custody changes, and whether a separate
+dispatch action is operationally credible. If staff treat preparation and receipt as
+one handover, the current confirmation-only pair is the correct model.
 
 ### 3.4 Cost allocation and commitments
 

@@ -583,6 +583,12 @@ lightweight requisition overlay; frequent requests with material variance suppor
 
 **Goal:** unit-to-unit without Économat approval, same atomic pair, fully auditable.
 
+**Custody gate:** Phase 9 does not introduce dispatch or virtual transit by accident.
+Discovery D must first establish whether staff recognise a real custody interval.
+Until then, prepared stock remains at the source and receipt writes the existing atomic
+pair. If the interval is proven, implement the four-state contract in spec §3.3 with
+`transit:<request-id>`; otherwise keep confirmation-only custody.
+
 **Build:** reuse phase 8's writer unchanged. Only the approval path differs. The source
 unit's authorised manager approves, and the cost is **the source unit's own blended FEFO
 rate**, not the Économat's and not a catalogue price. A null source cost refuses the
