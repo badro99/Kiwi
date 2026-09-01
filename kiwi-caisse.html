@@ -5093,6 +5093,22 @@
       transition: transform 130ms ease;
     }
     .vrap-act:hover { transform: translateY(-1px); }
+    .vrap-order-acts {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .vrap-act.vrap-act-ready {
+      background: var(--mint-soft, #E6FBEF);
+      color: var(--riad, #053B2C);
+      border: 1px solid rgba(11,110,79,0.24);
+      box-shadow: none;
+    }
+    .vrap-act.vrap-act-ready:hover {
+      background: var(--mint, #7DF2B0);
+      color: var(--riad, #053B2C);
+      transform: translateY(-1px);
+    }
     .vrap-empty { text-align: center; padding: 46px 20px; color: var(--ink-4); }
     .vrap-empty svg { width: 30px; height: 30px; margin: 0 auto 8px; }
     .vrap-empty span { display: block; font-size: 13px; }
@@ -13312,7 +13328,7 @@
     });
     // The roster arrives async (/api/config → KiwiConfig.pins → kiwi-config), after
     // this file has painted its demo servers · rebuild the floor team when it lands.
-    document.addEventListener('kiwi-config', function () { try { rebuildRealRoster(); startLiveTeam(); } catch (_) {} });
+    document.addEventListener('kiwi-config', function () { try { rebuildRealRoster(); startLiveTeam(); if (mode === 'vrap') renderVrapBoard(); } catch (_) {} });
     setTimeout(startLiveTeam, 1000);
 
     /* Render a journal entry as a printed thermal ticket.
@@ -16612,8 +16628,17 @@
       });
     }
 
+    function isKdsOff() {
+      try {
+        if (window.KiwiConfig && typeof window.KiwiConfig.off === 'function' && window.KiwiConfig.off('kds')) return true;
+        if (window.KiwiConfig && window.KiwiConfig.features && window.KiwiConfig.features.kds === false) return true;
+        if (window.KiwiConfig && window.KiwiConfig.kds === false) return true;
+      } catch (_) {}
+      return false;
+    }
+
     function openKds() {
-      if (window.KiwiConfig && window.KiwiConfig.off && window.KiwiConfig.off('kds')) {
+      if (isKdsOff()) {
         toast('Écran cuisine désactivé dans la console God Mode');
         return;
       }
@@ -17542,9 +17567,20 @@
 
     function vrapOrderCard(o) {
       const ready = o.status === 'ready';
+      const kdsDisabled = isKdsOff();
+      const readyBtn = (kdsDisabled && !ready && o.status !== 'held')
+        ? `<button class="vrap-act vrap-act-ready" data-vrap-ready="${o.num}" title="Prévenir le client que la commande est prête">Marquer prêt</button>`
+        : '';
       let action = '';
-      if (!o.paid) action = `<button class="vrap-act">Encaisser</button>`;
-      else if (!o.pickedUp) action = `<button class="vrap-act" data-vrap-handover="${o.num}">Remettre au client</button>`;
+      if (!o.paid) {
+        action = readyBtn
+          ? `<div class="vrap-order-acts">${readyBtn}<button class="vrap-act">Encaisser</button></div>`
+          : `<button class="vrap-act">Encaisser</button>`;
+      } else if (!o.pickedUp) {
+        action = readyBtn
+          ? `<div class="vrap-order-acts">${readyBtn}<button class="vrap-act" data-vrap-handover="${o.num}">Remettre au client</button></div>`
+          : `<button class="vrap-act" data-vrap-handover="${o.num}">Remettre au client</button>`;
+      }
       const notes = o.items.filter(i => (i.note || '').trim())
         .map(i => `<div class="vrap-order-note"><i data-lucide="pencil-line"></i> <strong>${kdsEsc(i.n)}</strong> · ${kdsEsc(i.note)}</div>`)
         .join('');
@@ -17737,9 +17773,28 @@
       if (window.lucide) lucide.createIcons();
     }
 
+    function vrapMarkReady(num) {
+      const o = kdsOrders.find(x => x.num === num);
+      if (!o || o.status === 'ready') return;
+      o.items.forEach(i => { i.stationReady = true; });
+      o.status = 'ready';
+      o.readyAt = kdsNowHM();
+      kdsPaint();
+      renderVrapBoard();
+      // Le client apprend que sa commande est prête sur son téléphone (OrderPro)
+      opPush(o, 'ready');
+      try { persistShift(); } catch (_) {}
+      toast(`Commande ${ticketNo(o)} prête · client notifié`);
+    }
+
     function vrapHandover(num) {
       const o = kdsOrders.find(x => x.num === num);
       if (!o || o.pickedUp) return;
+      if (o.status !== 'ready') {
+        o.items.forEach(i => { i.stationReady = true; });
+        o.status = 'ready';
+        o.readyAt = kdsNowHM();
+      }
       o.pickedUp = true;
       o.pickedUpAt = kdsNowHM();
       renderVrapBoard();
@@ -17766,6 +17821,8 @@
         if (window.lucide) lucide.createIcons();
         return;
       }
+      const rdy = e.target.closest('[data-vrap-ready]');
+      if (rdy) { vrapMarkReady(Number(rdy.dataset.vrapReady)); return; }
       const ho = e.target.closest('[data-vrap-handover]');
       if (ho) { vrapHandover(Number(ho.dataset.vrapHandover)); return; }
       // Any other click on an order card opens it (unpaid → edit + checkout).

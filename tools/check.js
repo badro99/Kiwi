@@ -874,6 +874,7 @@ section('Whole-project regressions');
     'check-godmode.mjs',
     'floorplan-sync-test.js',
     'kitchen-relay-test.js',
+    'takeout-kds-ready-test.mjs',
     'kitchen-print-queue-test.mjs',
     'food-production-print-test.mjs',
     'order-mode-exit-test.js',
