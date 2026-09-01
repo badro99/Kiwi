@@ -84,6 +84,12 @@ ok(invSrc.includes("'x-kiwi-ai-model': usedModel") || invSrc.includes('"x-kiwi-a
 const invQuotaCall = invSrc.match(/quotaOk\(\s*env,\s*who,\s*['"]invoice['"]/);
 ok(!!invQuotaCall, 'invoice.js calls quotaOk with kind "invoice"');
 
+const menuOperationsSrc = fs.readFileSync(path.join(ROOT, 'functions/api/ai/menu-operations.js'), 'utf8');
+ok(/const DAILY_CAP = 60;/.test(menuOperationsSrc), 'menu-operations.js caps each merchant at 60 calls per day');
+ok(/quotaOk\(\s*env,\s*merchant,\s*['"]menuoperations['"],\s*DAILY_CAP\s*\)/.test(menuOperationsSrc)
+  && !/quotaOk\(\s*env,\s*merchant,\s*['"]menuimport['"]/.test(menuOperationsSrc),
+  'menu-operations.js uses its own menuoperations quota bucket');
+
 // ── 3. Static extraction from schema.sql ─────────────────────────────────────
 const schemaSrc = fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8');
 ok(schemaSrc.includes('CREATE TABLE IF NOT EXISTS ai_usage_kind'), 'schema.sql defines ai_usage_kind table');
@@ -158,6 +164,12 @@ ok(q3 === false, 'third call rejected when cap=2 reached');
 // Kind isolation: invoice should have its own count
 const qInv = await quotaOk(envWithDb, 'm1', 'invoice', 2);
 ok(qInv === true, 'invoice call succeeds independently from ask cap');
+
+await quotaOk(envWithDb, 'm2', 'menuimport', 1);
+const exhaustedMenuImport = await quotaOk(envWithDb, 'm2', 'menuimport', 1);
+const isolatedMenuOperations = await quotaOk(envWithDb, 'm2', 'menuoperations', 60);
+ok(exhaustedMenuImport === false && isolatedMenuOperations === true,
+  'menu-operations quota remains available when menu-import is exhausted');
 
 // ── 5. Runtime tests: ask.js gateway & fallback logic ────────────────────────
 const { runAiWithGateway, onRequestPost: askPost, MODEL, FALLBACK_MODEL } = await import(path.join(ROOT, 'functions/api/ai/ask.js'));
@@ -275,7 +287,7 @@ for (const file of routeFiles) {
 }
 
 // ── 9. Hard Count Pinning ───────────────────────────────────────────────────
-const EXPECTED_COUNT = 52 + routeFiles.filter(f => !f.startsWith('_')).length;
+const EXPECTED_COUNT = 55 + routeFiles.filter(f => !f.startsWith('_')).length;
 ok(passed + 1 === EXPECTED_COUNT, `exact control count verified (${passed + 1}/${EXPECTED_COUNT})`);
 
 if (failures.length) {
