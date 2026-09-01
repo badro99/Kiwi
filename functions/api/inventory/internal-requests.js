@@ -2,6 +2,7 @@ import { json } from '../../auth/_lib.js';
 import { resolveHotelActor } from './_hotel-actor.js';
 import { departmentCatalogueFeature } from './_department-catalogue.js';
 import { ECONOMAT_CATALOGUE_FEATURE } from './_economat-catalogue.js';
+import { quantityToBase } from './_economat-catalogue.js';
 import {
   applyRequestCommand, createRequestDraft, deriveRequestLabel, requestToken,
 } from './_internal-request.js';
@@ -9,6 +10,70 @@ import {
 const REQUEST_TABLE = 'hotel_internal_requests';
 const LINE_TABLE = 'hotel_internal_request_lines';
 const EVENT_TABLE = 'hotel_internal_request_events';
+
+function nowFor(env) {
+  return env && typeof env.NOW === 'function' ? Number(env.NOW()) || Date.now() : Date.now();
+}
+
+function hash(value) {
+  let h = 2166136261;
+  const text = String(value || '');
+  for (let i = 0; i < text.length; i += 1) { h ^= text.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return (h >>> 0).toString(36);
+}
+
+function transferMovementId(merchant, refId, lineNo, itemId, direction) {
+  return `inv-transfer-${hash([merchant, refId, lineNo, itemId, direction].join('|'))}`;
+}
+
+function parseMeta(raw) {
+  try { return raw ? JSON.parse(raw) : {}; } catch (_) { return {}; }
+}
+
+export function allocateTransferCost(rowsValue, requestedMilli) {
+  const requested = Math.max(0, Number(requestedMilli) || 0);
+  if (!requested) return null;
+  const rows = (Array.isArray(rowsValue) ? rowsValue : []).slice().sort((a, b) =>
+    Number(a.occurred_ts || 0) - Number(b.occurred_ts || 0)
+      || Number(a.srv_ts || 0) - Number(b.srv_ts || 0));
+  const lots = [];
+  const sortedLots = () => lots.filter((lot) => lot.remaining > 0).sort((a, b) =>
+    Number(a.expiresAt || Number.MAX_SAFE_INTEGER) - Number(b.expiresAt || Number.MAX_SAFE_INTEGER)
+      || Number(a.ts) - Number(b.ts));
+  for (const row of rows) {
+    const qty = Number(row.qty_milli || 0);
+    if (!qty) continue;
+    if (qty > 0) {
+      const meta = parseMeta(row.meta);
+      const expiresAt = meta.expiresAt == null ? null : Number(meta.expiresAt);
+      lots.push({
+        remaining: qty,
+        cost: row.unit_cost_cents == null ? null : Number(row.unit_cost_cents) / 100,
+        expiresAt: Number.isFinite(expiresAt) ? expiresAt : null,
+        ts: Number(row.occurred_ts || 0),
+      });
+      continue;
+    }
+    let depletion = Math.abs(qty);
+    for (const lot of sortedLots()) {
+      if (!depletion) break;
+      const take = Math.min(lot.remaining, depletion);
+      lot.remaining -= take;
+      depletion -= take;
+    }
+  }
+  let remaining = requested;
+  let value = 0;
+  for (const lot of sortedLots()) {
+    if (!remaining) break;
+    const take = Math.min(lot.remaining, remaining);
+    if (lot.cost == null) return null;
+    value += take * lot.cost;
+    remaining -= take;
+  }
+  if (remaining > 0) return null;
+  return Math.round((value / requested) * 10000) / 10000;
+}
 
 async function ensureSchema(env) {
   await env.DB.prepare(
@@ -64,15 +129,19 @@ async function readDoc(env, merchant, feature, fallback) {
 
 async function requestContext(request, env, merchant, unitId) {
   const actor = await resolveHotelActor(request, env, merchant);
-  if (!actor) return { error: 'unauthorized', status: 401 };
+  if (!actor) return { error: 'employee-required', status: 403 };
   let registry;
   try { registry = await readDoc(env, merchant, 'hotel-units', { units: [] }); }
   catch (_) { return { error: 'unmigrated', status: 503 }; }
   const unit = (Array.isArray(registry.units) ? registry.units : [])
     .find((entry) => entry && entry.id === unitId) || null;
   if (!unit) return { error: 'unit-not-found', status: 404 };
-  if (!actor.canReadUnit(unit)) return { error: 'unit-forbidden', status: 403 };
-  return { actor, unit };
+  const economat = (Array.isArray(registry.units) ? registry.units : [])
+    .find((entry) => entry && entry.kind === 'economat' && entry.active !== false) || null;
+  if (!actor.canReadUnit(unit) && !(economat && actor.canReadUnit(economat))) {
+    return { error: 'unit-forbidden', status: 403 };
+  }
+  return { actor, unit, economat, registry };
 }
 
 function rowRequest(row) {
@@ -139,6 +208,7 @@ async function createDraft(request, env, body, merchant, idempotencyKey) {
   const unitId = requestToken(body && body.unitId, 80);
   const context = await requestContext(request, env, merchant, unitId);
   if (context.error) return json({ error: context.error }, context.status);
+  if (!context.actor.canReadUnit(context.unit)) return json({ error: 'unit-forbidden' }, 403);
   if (context.unit.active === false) return json({ error: 'unit-inactive' }, 409);
   let department;
   let central;
@@ -148,7 +218,7 @@ async function createDraft(request, env, body, merchant, idempotencyKey) {
   } catch (_) { return json({ error: 'unmigrated' }, 503); }
   const checked = createRequestDraft(body, department, central);
   if (!checked.ok) return json({ error: checked.error }, checked.status || 422);
-  const now = Date.now();
+  const now = nowFor(env);
   const value = checked.value;
   const statements = [env.DB.prepare(
     `INSERT OR IGNORE INTO ${REQUEST_TABLE}
@@ -175,11 +245,187 @@ async function createDraft(request, env, body, merchant, idempotencyKey) {
   return stored ? json({ ok: true, ...stored }) : json({ error: 'write-failed' }, 503);
 }
 
-function mayRun(actor, unit, requestRecord, action) {
-  const manages = actor.canManageUnit(unit);
-  if (action === 'review' || action === 'prepare') return manages;
-  if (action === 'cancel') return manages || actor.id === requestRecord.requesterId;
-  return actor.id === requestRecord.requesterId || manages;
+function mayRun(actor, unit, economat, requestRecord, action) {
+  const managesDestination = actor.canManageUnit(unit);
+  const managesEconomat = economat ? actor.canManageUnit(economat) : false;
+  if (action === 'review' || action === 'prepare') return managesEconomat;
+  if (action === 'accept' || action === 'submit') return actor.id === requestRecord.requesterId || managesDestination;
+  if (action === 'cancel') return managesDestination || managesEconomat || actor.id === requestRecord.requesterId;
+  if (action === 'dispute') return actor.canReadUnit(unit) || (economat && actor.canReadUnit(economat));
+  return actor.id === requestRecord.requesterId || managesDestination || managesEconomat;
+}
+
+function approvedBaseMilli(line, field = 'qtyApproved') {
+  const base = quantityToBase(Number(line && line[field]) || 0, line && line.conversionSnapshot);
+  return base == null ? null : Math.round(base * 1000);
+}
+
+export function buildReviewAtpGuard(current, next, merchant, sourceLocations) {
+  const locations = [...new Set((sourceLocations || []).filter(Boolean))];
+  if (!locations.length) return { sql: ' AND 0', args: [] };
+  const clauses = [];
+  const args = [];
+  next.lines.forEach((line, index) => {
+    const receivedMilli = approvedBaseMilli(current.lines[index], 'qtyReceived') || 0;
+    const proposedMilli = Math.max(0, (approvedBaseMilli(line) || 0) - receivedMilli);
+    if (!proposedMilli) return;
+    const marks = locations.map(() => '?').join(',');
+    clauses.push(`? <=
+      (SELECT COALESCE(SUM(qty_milli), 0) FROM inventory_movements
+        WHERE merchant = ? AND item_id = ? AND location_id IN (${marks}))
+      - (SELECT COALESCE(SUM(CAST(ROUND(MAX(0, l.qty_approved - l.qty_received)
+          * l.qty_requested_base_milli / l.qty_requested) AS INTEGER)), 0)
+           FROM ${LINE_TABLE} l JOIN ${REQUEST_TABLE} r
+             ON r.merchant = l.merchant AND r.id = l.request_id
+          WHERE r.merchant = ? AND r.id <> ? AND r.state = 'open' AND r.cancelled = 0
+            AND l.item_id = ? AND r.review_revision > 0
+            AND (r.accepted_revision >= r.review_revision
+              OR ABS(l.qty_approved - l.qty_requested) < 0.000000001))`);
+    args.push(proposedMilli, merchant, line.itemId, ...locations, merchant, next.request.id, line.itemId);
+  });
+  return { sql: clauses.length ? ` AND ${clauses.map((clause) => `(${clause})`).join(' AND ')}` : '', args };
+}
+
+async function sourceRows(env, merchant, itemId, locations) {
+  const ids = [...new Set((locations || []).filter(Boolean))];
+  if (!ids.length) return [];
+  const result = await env.DB.prepare(
+    `SELECT qty_milli, reason, unit_cost_cents, occurred_ts, srv_ts, meta
+       FROM inventory_movements
+      WHERE merchant = ? AND item_id = ? AND location_id IN (${ids.map(() => '?').join(',')})
+      ORDER BY occurred_ts, srv_ts`
+  ).bind(merchant, itemId, ...ids).all();
+  return (result && result.results) || [];
+}
+
+async function reserveCursors(env, merchant, count, now) {
+  await env.DB.prepare(
+    'INSERT OR IGNORE INTO inventory_sync_sequences (merchant, last_ts) VALUES (?, ?)'
+  ).bind(merchant, now).run();
+  const row = await env.DB.prepare(
+    'UPDATE inventory_sync_sequences SET last_ts = last_ts + ? WHERE merchant = ? RETURNING last_ts AS value'
+  ).bind(count, merchant).first();
+  const end = Number(row && row.value);
+  if (!Number.isSafeInteger(end)) throw new Error('cursor-reservation-failed');
+  return end - count + 1;
+}
+
+function confirmationSide(registry) {
+  const raw = String(registry && (registry.confirmationSide || registry.transferConfirmation) || 'recipient').trim();
+  return raw === 'economat' ? 'economat' : 'recipient';
+}
+
+function mayConfirm(context, requestRecord) {
+  const side = confirmationSide(context.registry);
+  if (side === 'economat') return !!context.economat && context.actor.canManageUnit(context.economat);
+  return context.actor.id === requestRecord.requesterId || context.actor.canManageUnit(context.unit);
+}
+
+async function confirmCommand(env, body, merchant, id, idempotencyKey, current, context, expectedRevision) {
+  if (!mayConfirm(context, current.request)) return json({ error: 'confirmation-side-forbidden' }, 403);
+  const now = nowFor(env);
+  const changed = applyRequestCommand(current, 'confirm', { ...(body && body.data || {}), now });
+  if (!changed.ok) return json({ error: changed.error }, changed.status || 422);
+  const next = changed.value;
+  const sourceLocation = context.economat && context.economat.locationId;
+  const destinationLocation = context.unit && context.unit.locationId;
+  if (!sourceLocation || !destinationLocation || sourceLocation === destinationLocation) {
+    return json({ error: 'bad-transfer-locations' }, 422);
+  }
+  const sourceLocations = [sourceLocation, 'principal'];
+  const transferRef = `request:${id}:${idempotencyKey}`.slice(0, 100);
+  const transfers = [];
+  for (let index = 0; index < next.lines.length; index += 1) {
+    const before = current.lines[index];
+    const after = next.lines[index];
+    const beforeMilli = approvedBaseMilli(before, 'qtyReceived');
+    const afterMilli = approvedBaseMilli(after, 'qtyReceived');
+    const deltaMilli = Number(afterMilli) - Number(beforeMilli);
+    if (!(deltaMilli > 0)) continue;
+    const rows = await sourceRows(env, merchant, after.itemId, sourceLocations);
+    const onHandMilli = rows.reduce((sum, row) => sum + Number(row.qty_milli || 0), 0);
+    if (onHandMilli < deltaMilli) return json({ error: `source-shortage:${after.itemId}` }, 409);
+    const unitCost = allocateTransferCost(rows, deltaMilli);
+    if (unitCost == null) return json({ error: `source-cost-unknown:${after.itemId}` }, 409);
+    transfers.push({ index, line: after, deltaMilli, unitCost });
+  }
+  if (!transfers.length) return json({ error: 'nothing-to-confirm' }, 409);
+  const movementCount = transfers.length * 2;
+  let cursor;
+  try { cursor = await reserveCursors(env, merchant, movementCount, now); }
+  catch (_) { return json({ error: 'cursor-failed' }, 503); }
+  const movements = [];
+  const movementStatements = [];
+  for (const transfer of transfers) {
+    for (const direction of ['out', 'in']) {
+      const isOut = direction === 'out';
+      const movement = {
+        id: transferMovementId(merchant, transferRef, transfer.index, transfer.line.itemId, direction),
+        itemId: transfer.line.itemId,
+        variantId: '',
+        locationId: isOut ? sourceLocation : destinationLocation,
+        qty: (isOut ? -1 : 1) * transfer.deltaMilli / 1000,
+        reason: isOut ? 'transfer-out' : 'transfer-in',
+        unitCost: transfer.unitCost,
+        currency: 'MAD', refType: 'transfer', refId: transferRef,
+        note: transfer.line.note || '', actor: context.actor.name,
+        occurredTs: now, cursor: cursor++, reversalOf: '',
+        meta: { requestId: id, line: transfer.index, reviewRevision: current.request.reviewRevision },
+      };
+      movements.push(movement);
+      movementStatements.push(env.DB.prepare(
+        `INSERT OR IGNORE INTO inventory_movements
+          (id, merchant, item_id, variant_id, location_id, qty_milli, reason,
+           unit_cost_cents, currency, ref_type, ref_id, note, actor, occurred_ts,
+           srv_ts, reversal_of, meta, created_ts)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ).bind(
+        movement.id, merchant, movement.itemId, movement.variantId, movement.locationId,
+        Math.round(movement.qty * 1000), movement.reason, Math.round(movement.unitCost * 100),
+        movement.currency, movement.refType, movement.refId, movement.note, movement.actor,
+        movement.occurredTs, movement.cursor, movement.reversalOf, JSON.stringify(movement.meta), now,
+      ));
+    }
+  }
+  const updateRequest = env.DB.prepare(
+    `UPDATE ${REQUEST_TABLE}
+        SET state = ?, cancelled = ?, revision = ?, last_command_key = ?,
+            review_revision = ?, accepted_revision = ?, fulfilment_method = ?, delivery_started_ts = ?,
+            disputed = ?, updated_ts = ?, submitted_ts = ?, closed_ts = ?
+      WHERE merchant = ? AND id = ? AND revision = ?`
+  ).bind(
+    next.request.state, next.request.cancelled ? 1 : 0, next.request.revision, idempotencyKey,
+    next.request.reviewRevision || 0, next.request.acceptedRevision || 0,
+    next.request.fulfilmentMethod || 'pickup', next.request.deliveryStartedTs || null,
+    next.request.disputed ? 1 : 0, now, next.request.submittedTs || null,
+    next.request.closedTs || null, merchant, id, expectedRevision,
+  );
+  const statements = [...movementStatements, updateRequest];
+  next.lines.forEach((line, index) => statements.push(env.DB.prepare(
+    `UPDATE ${LINE_TABLE} SET qty_received = ?
+      WHERE merchant = ? AND request_id = ? AND line_no = ?
+        AND EXISTS (SELECT 1 FROM ${REQUEST_TABLE}
+                    WHERE merchant = ? AND id = ? AND last_command_key = ?)`
+  ).bind(line.qtyReceived, merchant, id, index, merchant, id, idempotencyKey)));
+  statements.push(env.DB.prepare(
+    `INSERT OR IGNORE INTO ${EVENT_TABLE}
+      (merchant, id, request_id, revision, event, idempotency_key, actor_id, actor_name, payload, ts)
+     SELECT ?, ?, ?, revision, 'confirm', ?, ?, ?, ?, ? FROM ${REQUEST_TABLE}
+      WHERE merchant = ? AND id = ? AND last_command_key = ?`
+  ).bind(
+    merchant, `evt:${idempotencyKey}`, id, idempotencyKey, context.actor.id, context.actor.name,
+    JSON.stringify(body && body.data || {}), now, merchant, id, idempotencyKey,
+  ));
+  let results;
+  try { results = await env.DB.batch(statements); }
+  catch (_) { return json({ error: 'write-failed' }, 503); }
+  const requestResult = results[movementStatements.length];
+  if (!(Number(requestResult && requestResult.meta && requestResult.meta.changes) > 0)) {
+    const replay = await replayFor(env, merchant, idempotencyKey);
+    return replay ? json({ ok: true, replayed: true, ...replay }) : json({ error: 'stale' }, 409);
+  }
+  const stored = await loadRequest(env, merchant, id);
+  return json({ ok: true, transferRef, movements, ...stored });
 }
 
 async function command(request, env, body, merchant, action, idempotencyKey) {
@@ -190,25 +436,34 @@ async function command(request, env, body, merchant, action, idempotencyKey) {
   if (!current) return json({ error: 'not-found' }, 404);
   const context = await requestContext(request, env, merchant, current.request.unitId);
   if (context.error) return json({ error: context.error }, context.status);
-  if (!mayRun(context.actor, context.unit, current.request, action)) return json({ error: 'forbidden-action' }, 403);
+  if (!mayRun(context.actor, context.unit, context.economat, current.request, action)) return json({ error: 'forbidden-action' }, 403);
   const expectedRevision = Math.max(0, Number(body && body.revision) || 0);
   if (expectedRevision !== current.request.revision) return json({ error: 'stale', revision: current.request.revision }, 409);
-  const changed = applyRequestCommand(current, action, { ...(body && body.data || {}), now: Date.now() });
+  if (action === 'confirm') {
+    return confirmCommand(env, body, merchant, id, idempotencyKey, current, context, expectedRevision);
+  }
+  const now = nowFor(env);
+  const changed = applyRequestCommand(current, action, { ...(body && body.data || {}), now });
   if (!changed.ok) return json({ error: changed.error }, changed.status || 422);
   const next = changed.value;
-  const now = Date.now();
+  const sourceLocations = context.economat
+    ? [context.economat.locationId, 'principal']
+    : [];
+  const atp = action === 'review'
+    ? buildReviewAtpGuard(current, next, merchant, sourceLocations)
+    : { sql: '', args: [] };
   const updateRequest = env.DB.prepare(
     `UPDATE ${REQUEST_TABLE}
         SET state = ?, cancelled = ?, revision = ?, last_command_key = ?,
-            review_revision = ?, accepted_revision = ?, delivery_started_ts = ?,
+            review_revision = ?, accepted_revision = ?, fulfilment_method = ?, delivery_started_ts = ?,
             disputed = ?, updated_ts = ?, submitted_ts = ?, closed_ts = ?
-      WHERE merchant = ? AND id = ? AND revision = ?`
+      WHERE merchant = ? AND id = ? AND revision = ?${atp.sql}`
   ).bind(
     next.request.state, next.request.cancelled ? 1 : 0, next.request.revision, idempotencyKey,
     next.request.reviewRevision || 0, next.request.acceptedRevision || 0,
-    next.request.deliveryStartedTs || null, next.request.disputed ? 1 : 0,
+    next.request.fulfilmentMethod || 'pickup', next.request.deliveryStartedTs || null, next.request.disputed ? 1 : 0,
     now, next.request.submittedTs || null, next.request.closedTs || null,
-    merchant, id, expectedRevision,
+    merchant, id, expectedRevision, ...atp.args,
   );
   const statements = [updateRequest];
   next.lines.forEach((line, index) => statements.push(env.DB.prepare(
@@ -239,7 +494,12 @@ async function command(request, env, body, merchant, action, idempotencyKey) {
   const won = Number(results && results[0] && results[0].meta && results[0].meta.changes) > 0;
   if (!won) {
     const replay = await replayFor(env, merchant, idempotencyKey);
-    return replay ? json({ ok: true, replayed: true, ...replay }) : json({ error: 'stale' }, 409);
+    if (replay) return json({ ok: true, replayed: true, ...replay });
+    if (action === 'review') {
+      const latest = await loadRequest(env, merchant, id);
+      if (latest && latest.request.revision === expectedRevision) return json({ error: 'insufficient-stock' }, 409);
+    }
+    return json({ error: 'stale' }, 409);
   }
   const stored = await loadRequest(env, merchant, id);
   return json({ ok: true, ...stored });
@@ -268,7 +528,7 @@ export async function onRequestPost({ request, env }) {
   const merchant = requestToken(body && body.merchant, 80);
   const action = String(body && body.action || '').trim();
   const idempotencyKey = requestToken(body && body.idempotencyKey, 100);
-  if (!merchant || !idempotencyKey || !['create', 'submit', 'review', 'accept', 'prepare', 'confirm', 'cancel'].includes(action)) {
+  if (!merchant || !idempotencyKey || !['create', 'submit', 'review', 'accept', 'prepare', 'confirm', 'dispute', 'cancel'].includes(action)) {
     return json({ error: 'bad-request' }, 400);
   }
   try { await ensureSchema(env); } catch (_) { return json({ error: 'unmigrated' }, 503); }
