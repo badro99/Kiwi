@@ -1366,3 +1366,25 @@ CREATE INDEX IF NOT EXISTS idx_hotel_requests_unit
   ON hotel_internal_requests (merchant, unit_id, updated_ts);
 CREATE INDEX IF NOT EXISTS idx_hotel_request_events
   ON hotel_internal_request_events (merchant, request_id, revision);
+
+-- Non-guest room-charge audit. Guest identity and room assignment remain in
+-- the hotel folio; this table carries only sale, outlet, shift and cashier
+-- attribution needed for exactly-once reversal and management reporting.
+CREATE TABLE IF NOT EXISTS hotel_room_charge_events (
+  merchant TEXT NOT NULL,
+  id TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  sale_id TEXT NOT NULL,
+  outlet_id TEXT NOT NULL,
+  shift_id TEXT NOT NULL,
+  cashier_id TEXT NOT NULL,
+  cashier_name TEXT NOT NULL DEFAULT '',
+  amount_cents INTEGER NOT NULL,
+  occurred_ts INTEGER NOT NULL,
+  reversal_of TEXT NOT NULL DEFAULT '',
+  reversed_by_id TEXT NOT NULL DEFAULT '',
+  PRIMARY KEY (merchant, id),
+  UNIQUE (merchant, sale_id, kind)
+);
+CREATE INDEX IF NOT EXISTS idx_hotel_room_charge_shift
+  ON hotel_room_charge_events (merchant, shift_id, occurred_ts);

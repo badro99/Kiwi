@@ -610,7 +610,9 @@ destination reversed.
 **Build**
 - Reorder the caisse flow: **ask for the name before revealing it.** The screen must not
   display the guest name until the cashier has confirmed they asked.
-- Folio line records the cashier, already required.
+- The current server folio records only room, nights and update time; it has no
+  charge lines or cashier identity. The room-charge writer must therefore freeze
+  the stable cashier id, outlet and shift when the linked sale is recorded.
 - **New:** a per-shift report of room charges grouped by cashier.
 - Reversing an outlet transaction reverses its linked folio charge exactly once.
 
