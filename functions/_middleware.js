@@ -242,12 +242,15 @@ async function routeRequest(context) {
   // aperçu de lien, puisque le scraper WhatsApp recevait l'écran de connexion
   // à la place de l'image OG.
   //
-  // Ça n'ouvre rien : ces trois dossiers sont la sortie statique du site
+  // Ça n'ouvre rien : ces six dossiers sont la sortie statique du site
   // vitrine, ils ne contiennent ni données marchandes ni API.
   const isLandingPath = path === '/'
     || path === '/fr' || path.startsWith('/fr/')
     || path === '/en' || path.startsWith('/en/')
     || path === '/ar' || path.startsWith('/ar/')
+    || path === '/de' || path.startsWith('/de/')
+    || path === '/it' || path.startsWith('/it/')
+    || path === '/nl' || path.startsWith('/nl/')
     || path.startsWith('/_next/') || path.startsWith('/images/')
     || path.startsWith('/model/') || path.startsWith('/draco/')
     // La favicone du site vitrine vit a la racine, pas sous /assets : Next la

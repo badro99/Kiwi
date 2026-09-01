@@ -95,6 +95,16 @@ prefixes.forEach((pre) => {
 ok('/api/config reste privé', !publiclyReadable('/api/config'));
 ok('/sitemap.xml reste lisible par les moteurs sans session', publiclyReadable('/sitemap.xml'));
 ok('/robots.txt reste lisible par les moteurs sans session', publiclyReadable('/robots.txt'));
+
+/* Les six versions de la vitrine doivent passer avant le gate de compte. Une
+ * langue oubliée ici répond avec le formulaire de connexion tout en conservant
+ * son URL (`/it/`, par exemple), ce qui ressemble à une navigation cassée. */
+for (const locale of ['fr', 'en', 'ar', 'de', 'it', 'nl']) {
+  const exactLocale = new RegExp(`path === '/${locale}'`);
+  const localeTree = new RegExp(`path\\.startsWith\\('/${locale}/'\\)`);
+  ok(`/${locale} et ses fichiers Next sont publics`, exactLocale.test(MW) && localeTree.test(MW));
+}
+
 ok("l'APK signé du pont Android est téléchargeable sans cookie", publiclyReadable('/downloads/kiwi-print-bridge.apk'));
 ok('/api/order/queue reste privé', !publiclyReadable('/api/order/queue'));
 ok('/api/channel/keys reste privé', !publiclyReadable('/api/channel/keys'));
