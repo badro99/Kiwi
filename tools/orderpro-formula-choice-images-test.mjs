@@ -27,6 +27,7 @@ assert.equal(sanitized.items.find((item) => item.id === 'legacy').showPhotoInFor
 const catalog = read('assets/menu-catalog.js');
 const workspace = read('assets/restaurant-menu-workspace.js');
 const orderPro = read('OrderPro.html');
+const dashboard = read('dashboard.html');
 
 for (const [surface, source] of [['menu catalogue', catalog], ['restaurant workspace', workspace]]) {
   assert.match(source, /showPhotoInFormulas/, `${surface} persists the item setting`);
@@ -44,4 +45,8 @@ assert.match(orderPro, /\.option-group\.has-choice-images \.option-chips[\s\S]*g
 assert.match(orderPro, /@media \(max-width: 350px\)[\s\S]*grid-template-columns: 1fr/,
   'very narrow phones fall back to one readable column');
 
-console.log('OrderPro formula choice images: 12 checks passed.');
+const workspaceStamp = Number(dashboard.match(/restaurant-menu-workspace\.js\?v=(\d+)/)?.[1] || 0);
+assert.ok(workspaceStamp >= 68,
+  'the dashboard never rolls back to a pre-formula-photo workspace cache key');
+
+console.log('OrderPro formula choice images: 13 checks passed.');
