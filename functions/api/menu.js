@@ -245,6 +245,9 @@ export function sanitizeMenu(raw) {
       desc: str(it && it.desc, 400),
       avail: !(it && it.avail === false),
       formulaOnly: !!(it && it.formulaOnly),
+      // Explicit merchant opt-in: formula-only items are public by design, but
+      // their media should only become a visual choice in OrderPro when asked.
+      showPhotoInFormulas: !!(it && it.showPhotoInFormulas),
       archived: !!(it && it.archived),
       // Le poste de préparation (bar, cuisson, froid…). La caisse route le bon de
       // cuisine dessus ; sans ce champ dans la liste blanche il était retiré

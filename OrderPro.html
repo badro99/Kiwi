@@ -1744,6 +1744,105 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .option-chip.is-active .delta { color: var(--forest); }
 
+    /* Formula steps can become a visual catalogue when the merchant explicitly
+       opts individual component photos in. The whole step uses one grid so a
+       missing/disabled photo never leaves a crooked half-card beside the others. */
+    .option-group.has-choice-images { margin-top: 22px; }
+    .option-group.has-choice-images .option-group-label { margin-bottom: 11px; }
+    .option-group.has-choice-images .option-chips {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .option-group.has-choice-images .option-chip {
+      position: relative;
+      min-width: 0;
+      padding: 0;
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      align-items: stretch;
+      gap: 0;
+      border-color: var(--line);
+      border-radius: 16px;
+      background: var(--surface);
+      color: var(--ink);
+      text-align: start;
+      box-shadow: 0 5px 18px rgba(12, 28, 21, 0.06);
+    }
+    .option-group.has-choice-images .option-chip.is-active {
+      border-color: var(--forest);
+      background: var(--surface);
+      box-shadow: 0 0 0 2px var(--forest), 0 9px 24px rgba(7, 92, 66, 0.14);
+    }
+    .option-choice-media {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      overflow: hidden;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(145deg, var(--paper-mute), var(--mint-tint));
+      border-bottom: 1px solid var(--line-soft);
+    }
+    .option-choice-media img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+    }
+    .option-choice-fallback {
+      color: var(--forest);
+      font-family: var(--display);
+      font-size: 30px;
+      font-weight: 600;
+      opacity: 0.58;
+    }
+    .option-choice-copy {
+      min-width: 0;
+      padding: 10px 11px 11px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 7px;
+      line-height: 1.25;
+    }
+    .option-choice-name {
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+    .option-group.has-choice-images .option-chip .delta {
+      flex: 0 0 auto;
+      padding-top: 2px;
+      white-space: nowrap;
+    }
+    .option-choice-check {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 25px;
+      height: 25px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      color: transparent;
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.88);
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.16);
+      transition: color 160ms ease, background 160ms ease, transform 160ms ease;
+    }
+    .option-choice-check svg { width: 14px; height: 14px; }
+    .option-chip.is-active .option-choice-check {
+      color: #fff;
+      background: var(--forest);
+      border-color: var(--forest);
+      transform: scale(1.04);
+    }
+    @media (max-width: 350px) {
+      .option-group.has-choice-images .option-chips { grid-template-columns: 1fr; }
+      .option-choice-media { aspect-ratio: 16 / 9; }
+    }
+
     .custom-note-section { margin-top: 18px; }
     .custom-note-label {
       font-family: var(--sans);
@@ -4673,8 +4772,10 @@ em, i, cite, dfn, var { font-style: normal; }
 
       // Render option groups
       const opts = $('#custom-options');
-      opts.innerHTML = (item.options || []).map(opt => `
-        <div class="option-group" data-opt="${opt.key}">
+      opts.innerHTML = (item.options || []).map(opt => {
+        const showChoiceImages = !!opt.formulaSlotId && opt.choices.some(choice => choice.photo);
+        return `
+        <div class="option-group${showChoiceImages ? ' has-choice-images' : ''}" data-opt="${opt.key}">
           <div class="option-group-label">
             <span>${groupLabel(opt.key)}</span>
             <span class="opt-type">${opt.type === 'multi' ? t('opt_choose_many') : t('opt_choose_one')}</span>
@@ -4683,13 +4784,17 @@ em, i, cite, dfn, var { font-style: normal; }
             ${opt.choices.map(c => `
               <button class="option-chip" type="button"
                       data-opt="${opt.key}" data-choice="${c.id}" data-type="${opt.type}">
-                <span>${c.emoji ? `${escapeHtml(c.emoji)} ` : ''}${choiceLabel(opt.key, c.id)}</span>
-                ${c.delta ? `<span class="delta">+${c.delta} ${cur()}</span>` : ''}
+                ${showChoiceImages ? `<span class="option-choice-media">${c.photo
+                  ? `<img src="${escapeHtml(c.photo)}" alt="" loading="lazy" decoding="async" />`
+                  : `<span class="option-choice-fallback" aria-hidden="true">${escapeHtml(choiceLabel(opt.key, c.id).slice(0, 1).toUpperCase())}</span>`}</span>` : ''}
+                <span class="${showChoiceImages ? 'option-choice-copy' : ''}"><span class="${showChoiceImages ? 'option-choice-name' : ''}">${c.emoji ? `${escapeHtml(c.emoji)} ` : ''}${choiceLabel(opt.key, c.id)}</span>
+                ${c.delta ? `<span class="delta">+${c.delta} ${cur()}</span>` : ''}</span>
+                ${showChoiceImages ? '<span class="option-choice-check" aria-hidden="true"><i data-lucide="check"></i></span>' : ''}
               </button>
             `).join('')}
           </div>
         </div>
-      `).join('');
+      `; }).join('');
 
       // Mark defaults as active
       $$('.option-chip', opts).forEach(chip => {
@@ -5742,7 +5847,7 @@ em, i, cite, dfn, var { font-style: normal; }
       for (const it of items) {
         const formulaOptions = it.formula && Array.isArray(it.formula.slots) ? it.formula.slots.map(s => {
           const g = { key: 'formula_' + String(s.id), formulaSlotId: String(s.id), label: String(s.label || ''), type: (+s.max || 1) > 1 ? 'multi' : 'single', default: '', required: (+s.min || 0) > 0, min: Math.max(0, +s.min || 0), max: Math.max(1, +s.max || 1),
-            choices: (Array.isArray(s.choices) ? s.choices : []).map(c => { const target=allItems.find(x=>String(x.id)===String(c.itemId) && !x.archived && x.avail !== false); return target ? {id:String(c.itemId),label:String(target.name),emoji:'',delta:Math.max(0,Number(c.extra)||0)} : null; }).filter(Boolean) };
+            choices: (Array.isArray(s.choices) ? s.choices : []).map(c => { const target=allItems.find(x=>String(x.id)===String(c.itemId) && !x.archived && x.avail !== false); return target ? {id:String(c.itemId),label:String(target.name),emoji:'',delta:Math.max(0,Number(c.extra)||0),photo:target.showPhotoInFormulas === true ? String(target.photo || '') : ''} : null; }).filter(Boolean) };
           OPT[g.key] = g; return g;
         }).filter(g=>g.choices.length) : [];
         const formulaBroken = it.formula && Array.isArray(it.formula.slots)

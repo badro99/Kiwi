@@ -73,6 +73,8 @@
     avail:      { fr: 'Disponible', en: 'Available', ar: 'متاح' },
     unavail:    { fr: 'Indisponible', en: 'Unavailable', ar: 'غير متاح' },
     standalone: { fr: 'Vendable individuellement', en: 'Sellable individually', ar: 'كيتباع بوحدو' },
+    formulaPhoto:{ fr: 'Afficher la photo dans les formules', en: 'Show photo in set menus', ar: 'عرض الصورة داخل الفورمولات' },
+    formulaPhotoHint:{ fr: 'Dans OrderPro, cette photo illustre l’article lorsqu’il devient un choix de formule.', en: 'In OrderPro, this photo illustrates the item when it is offered as a set-menu choice.', ar: 'في OrderPro، تظهر هذه الصورة عندما يكون هذا الصنف اختياراً داخل فورمولة.' },
     formulaOnly:{ fr: 'Réservé aux formules', en: 'Formula only', ar: 'غير فالفورمولات' },
     archived:   { fr: 'Archivé', en: 'Archived', ar: 'مؤرشف' },
     saved:      { fr: 'Menu mis à jour', en: 'Menu updated', ar: 'تم تحديث القائمة' },
@@ -587,6 +589,7 @@
         desc: String(data.desc || '').trim(),
         avail: data.avail !== false,
         formulaOnly: data.formulaOnly === true,
+        showPhotoInFormulas: data.showPhotoInFormulas === true,
         archived: data.archived === true,
         // Pas de poste sur le plat : il suit sa catégorie. Les valeurs écrites
         // par la version précédente restent dans le document et ne sont plus
@@ -616,6 +619,7 @@
       if (patch.desc != null) it.desc = String(patch.desc).trim();
       if (patch.avail != null) it.avail = !!patch.avail;
       if (patch.formulaOnly != null) it.formulaOnly = !!patch.formulaOnly;
+      if (patch.showPhotoInFormulas != null) it.showPhotoInFormulas = !!patch.showPhotoInFormulas;
       if (patch.archived != null) it.archived = !!patch.archived;
       if ('opts' in patch) it.opts = Array.isArray(patch.opts) ? patch.opts.slice() : [];
       if ('photo' in patch) it.photo = String(patch.photo || '');
@@ -1535,7 +1539,7 @@
     const cats = d.cats || [];
     if (!cats.length) { promptText({ title: tr(T.addCat), desc: tr(T.firstCat), placeholder: tr(T.catName), ok: tr(T.addCat) }, (v) => { if (v) { addCategory(v); render(); } }); return; }
     const selectedCat = catById(d, activeCat) ? activeCat : cats[0].id;
-    const it = existing || { name: '', price: '', catId: selectedCat, subId: activeSub || null, desc: '', avail: true, formulaOnly: false, archived: false, photo: '', video: '', opts: [] };
+    const it = existing || { name: '', price: '', catId: selectedCat, subId: activeSub || null, desc: '', avail: true, formulaOnly: false, showPhotoInFormulas: false, archived: false, photo: '', video: '', opts: [] };
     /* Le coût ne vient pas de l'article : il se lit dans le carnet des coûts,
        par identifiant. Un article neuf n'en a pas encore — il sera écrit après
        addItem(), quand l'identifiant existe. */
@@ -1601,8 +1605,10 @@
         <div class="mx-field"><label>${esc(tr(T.descL))}</label><textarea data-f-desc placeholder="${esc(tr(T.descL))}">${esc(it.desc || '')}</textarea></div>
         <div class="mx-field two">
           <label class="mx-formula-toggle-label"><input type="checkbox" data-f-standalone ${it.formulaOnly ? '' : 'checked'} /><span>${esc(tr(T.standalone))}</span></label>
-          <label class="mx-formula-toggle-label"><input type="checkbox" data-f-archived ${it.archived ? 'checked' : ''} /><span>${esc(tr(T.archived))}</span></label>
+          <label class="mx-formula-toggle-label"><input type="checkbox" data-f-formula-photo ${it.showPhotoInFormulas ? 'checked' : ''} /><span>${esc(tr(T.formulaPhoto))}</span></label>
         </div>
+        <div class="mx-formula-hint" style="margin-top:-7px;">${esc(tr(T.formulaPhotoHint))}</div>
+        <div class="mx-field"><label class="mx-formula-toggle-label"><input type="checkbox" data-f-archived ${it.archived ? 'checked' : ''} /><span>${esc(tr(T.archived))}</span></label></div>
         <div class="mx-field">
           <label>${esc(tr(T.mediaL))}</label>
           <div class="mx-media" data-f-media></div>
@@ -1976,6 +1982,7 @@
         photo: media.photo, video: media.video,
         formula: formulaData,
         formulaOnly: !q('[data-f-standalone]').checked,
+        showPhotoInFormulas: q('[data-f-formula-photo]').checked,
         archived: q('[data-f-archived]').checked,
         // Aucun poste ici : un plat part au poste de SA catégorie. Changer de
         // catégorie dans ce formulaire change donc son poste — c'est la même
