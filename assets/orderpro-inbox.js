@@ -189,6 +189,17 @@
         if (j && j.ok) {
           if (prev && j.status) prev.status = j.status;
           if (prev && Array.isArray(j.lines)) prev.lines = j.lines;
+          /* `pending` n'est pas encore un bon de cuisine. Le papier ne doit
+           * sortir que sur l'appareil qui a réellement obtenu la transition
+           * pending → accepted du serveur — pas sur chaque caisse qui sonde la
+           * file, et surtout pas à l'arrivée de la commande OrderPro. */
+          if (status === 'accepted') {
+            try {
+              if (window.KiwiCaisseKitchen && window.KiwiCaisseKitchen.confirmAccepted) {
+                window.KiwiCaisseKitchen.confirmAccepted(prev, extra || {});
+              }
+            } catch (_) {}
+          }
           bridge(prev ? [prev] : []);
           return j;
         }

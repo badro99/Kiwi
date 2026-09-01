@@ -17621,7 +17621,32 @@
         clearCart();
         setVrapView('board');
       } else {
+        /* Vente comptoir payée avant d'avoir touché « Envoyer en cuisine ».
+           Le paiement EST la confirmation : conserver seulement la vente dans
+           le journal puis vider le panier faisait disparaître la commande pour
+           la brigade. On crée donc le bon, on l'imprime et on le relaie au KDS
+           avant de rendre la caisse disponible. */
+        const total = currentTotal();
+        const items = cart.map(c => {
+          const m = menuItems.find(x => x.id === c.id);
+          return { q: c.qty, n: c.name, p: c.price, note: kitchenNote(c),
+            stations: [kdsStationFor(m)] };
+        });
+        if (items.length) {
+          const order = {
+            num: ++kdsOrderSeq, type: 'takeaway', status: 'new',
+            readyAt: null, items, sentAt: new Date(),
+            paid: true, pickedUp: false, pickedUpAt: null, total,
+          };
+          kdsOrders.push(order);
+          printKitchenTickets(order, items);
+          relayToKitchen(order);
+          updateKdsCount();
+          if (kdsEl.classList.contains('is-open')) kdsPaint();
+          toast(`Commande #${order.num} payée · envoyée en cuisine`);
+        }
         clearCart();
+        setVrapView('board');
       }
     }
 
@@ -18106,6 +18131,25 @@
 
     /* Ce que orderpro-inbox.js appelle à chaque tour de sondage. */
     window.KiwiCaisseKitchen = {
+      /* Seul le geste humain qui réussit pending → accepted appelle ceci.
+         Un simple poll (y compris sur une deuxième caisse) peut afficher le
+         bon accepté au KDS local, mais ne réimprime jamais le ticket papier. */
+      confirmAccepted(order, extra) {
+        if (!order || !order.id) return;
+        const accepted = Object.assign({}, order, {
+          status: 'accepted',
+          server: (extra && extra.server) || order.server || '',
+          paid: !!((extra && extra.paid) || order.paid),
+        });
+        opIngest(accepted);
+        const ticket = opTickets.get(order.id);
+        if (!ticket || ticket.kitchenPrinted) return;
+        ticket.kitchenPrinted = true;
+        printKitchenTickets(ticket, ticket.items);
+        updateKdsCount();
+        if (kdsEl.classList.contains('is-open')) kdsPaint();
+        if (ticket.type === 'takeaway') renderVrapBoard();
+      },
       /* `delta` = ce qui a changé depuis le dernier sondage (c'est le curseur
          `since` qui le décide) ; `all` = tout ce que la caisse connaît encore.
          La distinction n'est pas cosmétique : compter les commandes en attente
