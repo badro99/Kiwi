@@ -101,14 +101,32 @@ async function waitForWorker(baseUrl, child, logs) {
   throw new Error(`wrangler dev did not become ready\n${logs()}`);
 }
 
+/* `npx` n'est pas le serveur : il lance wrangler, qui lance workerd. Signaler
+ * l'enfant direct laissait donc DEUX petits-enfants vivants à chaque exécution,
+ * qui gardaient un port et tournaient jusqu'au redémarrage — mesuré sur cette
+ * machine : des `workerd serve` orphelins à 56 % de CPU, assez nombreux pour
+ * faire tomber `check.js` en SIGKILL avant d'arriver au bout.
+ *
+ * On lance donc le processus DÉTACHÉ, ce qui en fait le chef d'un groupe, et on
+ * signale le GROUPE (`-pid`) : wrangler et workerd le reçoivent aussi. Le repli
+ * sur `child.kill` couvre le cas où le groupe a déjà disparu. */
+function signalGroup(child, signal) {
+  if (!child || child.pid == null) return;
+  try {
+    process.kill(-child.pid, signal);
+  } catch (_) {
+    try { child.kill(signal); } catch (_) {}
+  }
+}
+
 async function stop(child) {
   if (!child || child.exitCode != null) return;
-  child.kill('SIGTERM');
+  signalGroup(child, 'SIGTERM');
   await Promise.race([
     new Promise((resolve) => child.once('exit', resolve)),
     new Promise((resolve) => setTimeout(resolve, 3000)),
   ]);
-  if (child.exitCode == null) child.kill('SIGKILL');
+  if (child.exitCode == null) signalGroup(child, 'SIGKILL');
 }
 
 const supportSchema = `
@@ -216,7 +234,7 @@ async function main() {
   const child = spawn('npx', [
     '--yes', 'wrangler@4.127.1', 'dev', '--local', '--config', config,
     '--persist-to', persist, '--ip', '127.0.0.1', '--port', String(port),
-  ], { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'] });
+  ], { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'], detached: true });
   child.stdout.on('data', (chunk) => { stdout += String(chunk); });
   child.stderr.on('data', (chunk) => { stderr += String(chunk); });
 
