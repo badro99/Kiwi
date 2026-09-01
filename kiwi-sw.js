@@ -72,6 +72,7 @@ var SHELL = [
   '/assets/agent-features.js?v=4',
   '/assets/agent-truth.js?v=6',
   '/assets/agent-voice.js?v=5',
+  '/assets/agent-vision.js?v=1',
   '/assets/i18n.js?v=7',
   /* Les milliers en arabe. Dans la coquille avec i18n : hors ligne, un
      commerçant arabophone lirait sinon son objectif du jour à l'envers. */
@@ -256,7 +257,7 @@ var SHELL = [
      cuisine à l'écran sans jamais sortir sur la thermique. */
   '/assets/kitchen-print-queue.js?v=6',
   '/assets/food-production-print.js?v=2',
-  '/assets/pos-sale.js?v=4',
+  '/assets/pos-sale.js?v=5',
   '/assets/pos-dispatch.js?v=35',
   '/assets/retail-scan.css?v=7',
   '/assets/vendor/zxing-browser.min.js?v=1',
@@ -276,8 +277,8 @@ var SHELL = [
      particular métier has ever been opened cannot unlock that métier at all. */
   '/assets/pos-spa.css?v=5',
   '/assets/pos-spa.js?v=5',
-  '/assets/pos-hotel.css?v=7',
-  '/assets/pos-hotel.js?v=7',
+  '/assets/pos-hotel.css?v=10',
+  '/assets/pos-hotel.js?v=10',
   '/assets/pos-fastfood.css?v=5',
   '/assets/pos-fastfood.js?v=5',
   '/assets/pos-boulangerie.css?v=7',
