@@ -105,7 +105,7 @@
       var q = +m.qty || 0;
       if (!(q !== 0)) continue;
 
-      if (q > 0 && (m.reason === 'opening' || m.reason === 'receipt')) {
+      if (q > 0 && (m.reason === 'opening' || m.reason === 'receipt' || m.reason === 'transfer-in')) {
         var rank = m.meta && m.meta.rank != null ? +m.meta.rank : (m.reason === 'opening' ? 999 : 50);
         var expiresAt = null;
         if (m.meta && m.meta.expiresAt != null) {
@@ -128,10 +128,13 @@
           supplierName: (m.meta && m.meta.supplierName) || null,
         });
       } else if (q < 0) {
-        // Deplete from available active lots sorted by rank ASC, ts ASC
+        // FEFO first, then supplier rank and receipt time for deterministic ties.
         var needed = Math.abs(q);
         var active = lots.filter(function (l) { return l.remainingQty > 0; });
         active.sort(function (a, b) {
+          var ae = a.expiresAt == null ? Number.MAX_SAFE_INTEGER : a.expiresAt;
+          var be = b.expiresAt == null ? Number.MAX_SAFE_INTEGER : b.expiresAt;
+          if (ae !== be) return ae - be;
           if (a.rank !== b.rank) return a.rank - b.rank;
           return a.ts - b.ts;
         });
@@ -160,8 +163,11 @@
       }
     }
 
-    // Sort lots: rank ASC (primary supplier rank 1 first, rank 2 next, legacy opening last), then ts ASC (FIFO within rank)
+    // The allocator consumes this order: FEFO, then supplier rank and receipt time.
     lots.sort(function (a, b) {
+      var ae = a.expiresAt == null ? Number.MAX_SAFE_INTEGER : a.expiresAt;
+      var be = b.expiresAt == null ? Number.MAX_SAFE_INTEGER : b.expiresAt;
+      if (ae !== be) return ae - be;
       if (a.rank !== b.rank) return a.rank - b.rank;
       return a.ts - b.ts;
     });

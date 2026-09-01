@@ -31,7 +31,7 @@ function parseMeta(raw) {
   try { return raw ? JSON.parse(raw) : {}; } catch (_) { return {}; }
 }
 
-export function allocateTransferCost(rowsValue, requestedMilli) {
+export function allocateTransferAllocation(rowsValue, requestedMilli) {
   const requested = Math.max(0, Number(requestedMilli) || 0);
   if (!requested) return null;
   const rows = (Array.isArray(rowsValue) ? rowsValue : []).slice().sort((a, b) =>
@@ -48,9 +48,12 @@ export function allocateTransferCost(rowsValue, requestedMilli) {
       const meta = parseMeta(row.meta);
       const expiresAt = meta.expiresAt == null ? null : Number(meta.expiresAt);
       lots.push({
+        movementId: String(row.id || ''),
         remaining: qty,
         cost: row.unit_cost_cents == null ? null : Number(row.unit_cost_cents) / 100,
         expiresAt: Number.isFinite(expiresAt) ? expiresAt : null,
+        batchNum: String(meta.batchNum || ''),
+        supplierName: String(meta.supplierName || ''),
         ts: Number(row.occurred_ts || 0),
       });
       continue;
@@ -65,15 +68,34 @@ export function allocateTransferCost(rowsValue, requestedMilli) {
   }
   let remaining = requested;
   let value = 0;
+  const allocations = [];
   for (const lot of sortedLots()) {
     if (!remaining) break;
     const take = Math.min(lot.remaining, remaining);
     if (lot.cost == null) return null;
     value += take * lot.cost;
+    allocations.push({
+      sourceMovementId: lot.movementId,
+      qtyMilli: take,
+      unitCost: lot.cost,
+      expiresAt: lot.expiresAt,
+      batchNum: lot.batchNum,
+      supplierName: lot.supplierName,
+    });
     remaining -= take;
   }
   if (remaining > 0) return null;
-  return Math.round((value / requested) * 10000) / 10000;
+  const expiries = allocations.map((entry) => entry.expiresAt).filter(Number.isFinite);
+  return {
+    unitCost: Math.round((value / requested) * 10000) / 10000,
+    allocations,
+    expiresAt: expiries.length ? Math.min(...expiries) : null,
+  };
+}
+
+export function allocateTransferCost(rowsValue, requestedMilli) {
+  const allocation = allocateTransferAllocation(rowsValue, requestedMilli);
+  return allocation ? allocation.unitCost : null;
 }
 
 async function ensureSchema(env) {
@@ -301,7 +323,7 @@ async function sourceRows(env, merchant, itemId, locations) {
   const ids = [...new Set((locations || []).filter(Boolean))];
   if (!ids.length) return [];
   const result = await env.DB.prepare(
-    `SELECT qty_milli, reason, unit_cost_cents, occurred_ts, srv_ts, meta
+    `SELECT id, qty_milli, reason, unit_cost_cents, occurred_ts, srv_ts, meta
        FROM inventory_movements
       WHERE merchant = ? AND item_id = ? AND location_id IN (${ids.map(() => '?').join(',')})
       ORDER BY occurred_ts, srv_ts`
@@ -357,9 +379,13 @@ async function confirmCommand(env, body, merchant, id, idempotencyKey, current, 
     const rows = await sourceRows(env, merchant, itemId, sourceLocations);
     const onHandMilli = rows.reduce((sum, row) => sum + Number(row.qty_milli || 0), 0);
     if (onHandMilli < deltaMilli) return json({ error: `source-shortage:${after.itemId}` }, 409);
-    const unitCost = allocateTransferCost(rows, deltaMilli);
-    if (unitCost == null) return json({ error: `source-cost-unknown:${after.itemId}` }, 409);
-    transfers.push({ index, line: after, itemId, deltaMilli, unitCost });
+    const allocation = allocateTransferAllocation(rows, deltaMilli);
+    if (!allocation) return json({ error: `source-cost-unknown:${after.itemId}` }, 409);
+    transfers.push({
+      index, line: after, itemId, deltaMilli,
+      unitCost: allocation.unitCost,
+      allocation,
+    });
   }
   if (!transfers.length) return json({ error: 'nothing-to-confirm' }, 409);
   const movementCount = transfers.length * 2;
@@ -382,7 +408,15 @@ async function confirmCommand(env, body, merchant, id, idempotencyKey, current, 
         currency: 'MAD', refType: 'transfer', refId: transferRef,
         note: transfer.line.note || '', actor: context.actor.name,
         occurredTs: now, cursor: cursor++, reversalOf: '',
-        meta: { requestId: id, line: transfer.index, reviewRevision: current.request.reviewRevision },
+        meta: {
+          requestId: id,
+          line: transfer.index,
+          reviewRevision: current.request.reviewRevision,
+          allocationBreakdown: transfer.allocation.allocations,
+          ...(isOut || transfer.allocation.expiresAt == null
+            ? {}
+            : { expiresAt: transfer.allocation.expiresAt }),
+        },
       };
       movements.push(movement);
       movementStatements.push(env.DB.prepare(
