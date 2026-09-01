@@ -1342,6 +1342,9 @@ CREATE TABLE IF NOT EXISTS hotel_internal_request_lines (
   qty_received REAL NOT NULL DEFAULT 0,
   resolution TEXT NOT NULL DEFAULT 'pending',
   substitute_for TEXT NOT NULL DEFAULT '',
+  substitute_unit TEXT NOT NULL DEFAULT '',
+  substitute_conversion_snapshot TEXT NOT NULL DEFAULT '{}',
+  substitute_reason TEXT NOT NULL DEFAULT '',
   note TEXT NOT NULL DEFAULT '',
   PRIMARY KEY (merchant, request_id, line_no)
 );

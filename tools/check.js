@@ -943,6 +943,7 @@ section('Whole-project regressions');
   'economat-catalogue-test.mjs',
   'department-catalogue-test.mjs',
   'internal-request-test.mjs',
+  'economat-substitution-test.mjs',
   'economat-review-revision-test.mjs',
   'economat-v1-resolution-test.mjs',
   'economat-request-fields-test.mjs',

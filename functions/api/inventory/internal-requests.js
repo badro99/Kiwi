@@ -2,9 +2,10 @@ import { json } from '../../auth/_lib.js';
 import { resolveHotelActor } from './_hotel-actor.js';
 import { departmentCatalogueFeature } from './_department-catalogue.js';
 import { ECONOMAT_CATALOGUE_FEATURE } from './_economat-catalogue.js';
-import { quantityToBase } from './_economat-catalogue.js';
+import { catalogueItem, quantityToBase, snapshotForUnit } from './_economat-catalogue.js';
 import {
-  applyRequestCommand, createRequestDraft, deriveRequestLabel, requestToken,
+  applyRequestCommand, createRequestDraft, deriveRequestLabel,
+  fulfilmentConversionSnapshot, fulfilmentItemId, requestToken,
 } from './_internal-request.js';
 
 const REQUEST_TABLE = 'hotel_internal_requests';
@@ -96,7 +97,9 @@ async function ensureSchema(env) {
       qty_requested_base_milli INTEGER NOT NULL, qty_requested REAL NOT NULL,
       qty_approved REAL NOT NULL DEFAULT 0, qty_prepared REAL NOT NULL DEFAULT 0,
       qty_received REAL NOT NULL DEFAULT 0, resolution TEXT NOT NULL DEFAULT 'pending',
-      substitute_for TEXT NOT NULL DEFAULT '', note TEXT NOT NULL DEFAULT '',
+      substitute_for TEXT NOT NULL DEFAULT '', substitute_unit TEXT NOT NULL DEFAULT '',
+      substitute_conversion_snapshot TEXT NOT NULL DEFAULT '{}',
+      substitute_reason TEXT NOT NULL DEFAULT '', note TEXT NOT NULL DEFAULT '',
       PRIMARY KEY (merchant, request_id, line_no)
     )`
   ).run();
@@ -162,7 +165,10 @@ function rowLine(row) {
     qtyRequestedBase: Number(row.qty_requested_base_milli) / 1000,
     qtyRequested: Number(row.qty_requested), qtyApproved: Number(row.qty_approved),
     qtyPrepared: Number(row.qty_prepared), qtyReceived: Number(row.qty_received),
-    resolution: row.resolution, substituteFor: row.substitute_for || '', note: row.note || '',
+    resolution: row.resolution, substituteFor: row.substitute_for || '',
+    substituteUnit: row.substitute_unit || '',
+    substituteConversionSnapshot: parse(row.substitute_conversion_snapshot, {}),
+    substituteReason: row.substitute_reason || '', note: row.note || '',
   };
 }
 
@@ -192,14 +198,17 @@ function lineInsert(env, merchant, requestId, createKey, line, lineNo) {
     `INSERT OR IGNORE INTO ${LINE_TABLE}
       (merchant, request_id, line_no, item_id, unit, conversion_snapshot,
        qty_requested_base_milli, qty_requested, qty_approved, qty_prepared,
-       qty_received, resolution, substitute_for, note)
-     SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+       qty_received, resolution, substitute_for, substitute_unit,
+       substitute_conversion_snapshot, substitute_reason, note)
+     SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
       WHERE EXISTS (SELECT 1 FROM ${REQUEST_TABLE}
                      WHERE merchant = ? AND id = ? AND create_key = ?)`
   ).bind(
     merchant, requestId, lineNo, line.itemId, line.unit, JSON.stringify(line.conversionSnapshot),
     Math.round(line.qtyRequestedBase * 1000), line.qtyRequested, line.qtyApproved,
-    line.qtyPrepared, line.qtyReceived, line.resolution, line.substituteFor, line.note,
+    line.qtyPrepared, line.qtyReceived, line.resolution, line.substituteFor,
+    line.substituteUnit, JSON.stringify(line.substituteConversionSnapshot || {}),
+    line.substituteReason, line.note,
     merchant, requestId, createKey,
   );
 }
@@ -256,7 +265,7 @@ function mayRun(actor, unit, economat, requestRecord, action) {
 }
 
 function approvedBaseMilli(line, field = 'qtyApproved') {
-  const base = quantityToBase(Number(line && line[field]) || 0, line && line.conversionSnapshot);
+  const base = quantityToBase(Number(line && line[field]) || 0, fulfilmentConversionSnapshot(line));
   return base == null ? null : Math.round(base * 1000);
 }
 
@@ -278,10 +287,12 @@ export function buildReviewAtpGuard(current, next, merchant, sourceLocations) {
            FROM ${LINE_TABLE} l JOIN ${REQUEST_TABLE} r
              ON r.merchant = l.merchant AND r.id = l.request_id
           WHERE r.merchant = ? AND r.id <> ? AND r.state = 'open' AND r.cancelled = 0
-            AND l.item_id = ? AND r.review_revision > 0
+            AND (CASE WHEN l.resolution = 'substituted' THEN l.substitute_for ELSE l.item_id END) = ?
+            AND r.review_revision > 0
             AND (r.accepted_revision >= r.review_revision
               OR ABS(l.qty_approved - l.qty_requested) < 0.000000001))`);
-    args.push(proposedMilli, merchant, line.itemId, ...locations, merchant, next.request.id, line.itemId);
+    const fulfilmentItem = fulfilmentItemId(line);
+    args.push(proposedMilli, merchant, fulfilmentItem, ...locations, merchant, next.request.id, fulfilmentItem);
   });
   return { sql: clauses.length ? ` AND ${clauses.map((clause) => `(${clause})`).join(' AND ')}` : '', args };
 }
@@ -342,12 +353,13 @@ async function confirmCommand(env, body, merchant, id, idempotencyKey, current, 
     const afterMilli = approvedBaseMilli(after, 'qtyReceived');
     const deltaMilli = Number(afterMilli) - Number(beforeMilli);
     if (!(deltaMilli > 0)) continue;
-    const rows = await sourceRows(env, merchant, after.itemId, sourceLocations);
+    const itemId = fulfilmentItemId(after);
+    const rows = await sourceRows(env, merchant, itemId, sourceLocations);
     const onHandMilli = rows.reduce((sum, row) => sum + Number(row.qty_milli || 0), 0);
     if (onHandMilli < deltaMilli) return json({ error: `source-shortage:${after.itemId}` }, 409);
     const unitCost = allocateTransferCost(rows, deltaMilli);
     if (unitCost == null) return json({ error: `source-cost-unknown:${after.itemId}` }, 409);
-    transfers.push({ index, line: after, deltaMilli, unitCost });
+    transfers.push({ index, line: after, itemId, deltaMilli, unitCost });
   }
   if (!transfers.length) return json({ error: 'nothing-to-confirm' }, 409);
   const movementCount = transfers.length * 2;
@@ -360,8 +372,8 @@ async function confirmCommand(env, body, merchant, id, idempotencyKey, current, 
     for (const direction of ['out', 'in']) {
       const isOut = direction === 'out';
       const movement = {
-        id: transferMovementId(merchant, transferRef, transfer.index, transfer.line.itemId, direction),
-        itemId: transfer.line.itemId,
+        id: transferMovementId(merchant, transferRef, transfer.index, transfer.itemId, direction),
+        itemId: transfer.itemId,
         variantId: '',
         locationId: isOut ? sourceLocation : destinationLocation,
         qty: (isOut ? -1 : 1) * transfer.deltaMilli / 1000,
@@ -443,7 +455,37 @@ async function command(request, env, body, merchant, action, idempotencyKey) {
     return confirmCommand(env, body, merchant, id, idempotencyKey, current, context, expectedRevision);
   }
   const now = nowFor(env);
-  const changed = applyRequestCommand(current, action, { ...(body && body.data || {}), now });
+  let commandData = { ...(body && body.data || {}) };
+  if (action === 'review') {
+    let central;
+    try { central = await readDoc(env, merchant, ECONOMAT_CATALOGUE_FEATURE, { items: [] }); }
+    catch (_) { return json({ error: 'unmigrated' }, 503); }
+    const reviewedLines = Array.isArray(commandData.lines) ? commandData.lines : [];
+    const trustedLines = [];
+    for (const update of reviewedLines) {
+      if (String(update && update.resolution || '').trim() !== 'substituted') {
+        trustedLines.push(update);
+        continue;
+      }
+      const substituteFor = requestToken(update && update.substituteFor, 80);
+      const substitute = catalogueItem(central, substituteFor);
+      const substituteUnit = String(update && update.substituteUnit || '').trim();
+      const snapshot = substitute && substitute.active !== false
+        ? snapshotForUnit(substitute, substituteUnit)
+        : null;
+      if (!substitute || substitute.active === false || !snapshot) {
+        return json({ error: 'bad-substitute:' + (substituteFor || 'unknown') }, 422);
+      }
+      trustedLines.push({
+        ...update,
+        substituteFor,
+        substituteUnit: snapshot.unit,
+        substituteConversionSnapshot: { ...snapshot },
+      });
+    }
+    commandData = { ...commandData, lines: trustedLines };
+  }
+  const changed = applyRequestCommand(current, action, { ...commandData, now });
   if (!changed.ok) return json({ error: changed.error }, changed.status || 422);
   const next = changed.value;
   const sourceLocations = context.economat
@@ -469,13 +511,15 @@ async function command(request, env, body, merchant, action, idempotencyKey) {
   next.lines.forEach((line, index) => statements.push(env.DB.prepare(
     `UPDATE ${LINE_TABLE}
         SET qty_approved = ?, qty_prepared = ?, qty_received = ?,
-            resolution = ?, substitute_for = ?, note = ?
+            resolution = ?, substitute_for = ?, substitute_unit = ?,
+            substitute_conversion_snapshot = ?, substitute_reason = ?, note = ?
       WHERE merchant = ? AND request_id = ? AND line_no = ?
         AND EXISTS (SELECT 1 FROM ${REQUEST_TABLE}
                      WHERE merchant = ? AND id = ? AND last_command_key = ?)`
   ).bind(
     line.qtyApproved, line.qtyPrepared, line.qtyReceived, line.resolution,
-    line.substituteFor, line.note, merchant, id, index, merchant, id, idempotencyKey,
+    line.substituteFor, line.substituteUnit, JSON.stringify(line.substituteConversionSnapshot || {}),
+    line.substituteReason, line.note, merchant, id, index, merchant, id, idempotencyKey,
   )));
   statements.push(env.DB.prepare(
     `INSERT OR IGNORE INTO ${EVENT_TABLE}
@@ -485,7 +529,7 @@ async function command(request, env, body, merchant, action, idempotencyKey) {
       WHERE merchant = ? AND id = ? AND last_command_key = ?`
   ).bind(
     merchant, `evt:${idempotencyKey}`, id, action, idempotencyKey,
-    context.actor.id, context.actor.name, JSON.stringify(body && body.data || {}), now,
+    context.actor.id, context.actor.name, JSON.stringify(commandData), now,
     merchant, id, idempotencyKey,
   ));
   let results;

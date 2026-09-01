@@ -3,7 +3,7 @@ import { departmentAllowsItem } from './_department-catalogue.js';
 
 export const REQUEST_STATES = Object.freeze(['draft', 'open', 'closed']);
 export const REQUEST_ACTIONS = Object.freeze(['submit', 'review', 'accept', 'prepare', 'confirm', 'dispute', 'cancel']);
-const RESOLUTIONS = new Set(['approved', 'reduced', 'refused', 'rejected']);
+const RESOLUTIONS = new Set(['approved', 'reduced', 'refused', 'rejected', 'substituted']);
 
 function token(value, max = 100) {
   const text = String(value == null ? '' : value).trim();
@@ -17,8 +17,20 @@ function quantity(value) {
 
 function same(a, b) { return Math.abs(Number(a) - Number(b)) <= 1e-9; }
 
+export function fulfilmentItemId(line) {
+  return line && line.resolution === 'substituted' && line.substituteFor
+    ? line.substituteFor
+    : String(line && line.itemId || '');
+}
+
+export function fulfilmentConversionSnapshot(line) {
+  return line && line.resolution === 'substituted' && line.substituteConversionSnapshot
+    ? line.substituteConversionSnapshot
+    : line && line.conversionSnapshot;
+}
+
 function baseQuantity(line, displayQuantity) {
-  return quantityToBase(displayQuantity, line && line.conversionSnapshot);
+  return quantityToBase(displayQuantity, fulfilmentConversionSnapshot(line));
 }
 
 function lineByItem(lines, itemId) {
@@ -55,14 +67,20 @@ export function createRequestDraft(input, departmentCatalogue, economatCatalogue
       itemId, unit: conversionSnapshot.unit,
       conversionSnapshot: { ...conversionSnapshot },
       qtyRequestedBase, qtyRequested, qtyApproved: 0, qtyPrepared: 0, qtyReceived: 0,
-      resolution: 'pending', substituteFor: '', note: String(source.note || '').trim().slice(0, 500),
+      resolution: 'pending', substituteFor: '', substituteUnit: '',
+      substituteConversionSnapshot: {}, substituteReason: '',
+      note: String(source.note || '').trim().slice(0, 500),
     });
   }
   return { ok: true, value: { id, unitId, lines } };
 }
 
 function reviewLines(currentLines, updates) {
-  const next = currentLines.map((line) => ({ ...line, conversionSnapshot: { ...line.conversionSnapshot } }));
+  const next = currentLines.map((line) => ({
+    ...line,
+    conversionSnapshot: { ...line.conversionSnapshot },
+    substituteConversionSnapshot: { ...(line.substituteConversionSnapshot || {}) },
+  }));
   const provided = Array.isArray(updates) ? updates : [];
   if (!provided.length) return { error: 'review-lines-required', status: 422 };
   for (const update of provided) {
@@ -70,8 +88,38 @@ function reviewLines(currentLines, updates) {
     const qtyApproved = quantity(update && update.qtyApproved);
     const resolution = String(update && update.resolution || '').trim();
     if (!line || qtyApproved == null || !RESOLUTIONS.has(resolution)) return { error: 'bad-review-line', status: 422 };
-    if (token(update && update.substituteFor, 80)) return { error: 'substitution-v2', status: 422 };
-    const approvedBase = baseQuantity(line, qtyApproved);
+    const substituteFor = token(update && update.substituteFor, 80);
+    if (resolution === 'substituted') {
+      const substituteUnit = String(update && update.substituteUnit || '').trim();
+      const substituteConversionSnapshot = update && update.substituteConversionSnapshot;
+      const substituteReason = String(update && update.substituteReason || '').trim().slice(0, 500);
+      const substituteBase = quantityToBase(qtyApproved, substituteConversionSnapshot);
+      if (!substituteFor || !substituteUnit || !substituteReason || !(qtyApproved > 0)
+        || !substituteConversionSnapshot || substituteConversionSnapshot.unit !== substituteUnit
+        || substituteBase == null) {
+        return { error: 'bad-substitution:' + line.itemId, status: 422 };
+      }
+      const currentSnapshot = fulfilmentConversionSnapshot(line) || {};
+      const changingFulfilment = fulfilmentItemId(line) !== substituteFor
+        || currentSnapshot.unit !== substituteConversionSnapshot.unit
+        || Number(currentSnapshot.basePerUnit) !== Number(substituteConversionSnapshot.basePerUnit);
+      if (changingFulfilment && (Number(line.qtyPrepared) > 0 || Number(line.qtyReceived) > 0)) {
+        return { error: 'substitution-after-progress:' + line.itemId, status: 409 };
+      }
+      if (qtyApproved < line.qtyPrepared || qtyApproved < line.qtyReceived) {
+        return { error: 'approved-below-progress:' + line.itemId, status: 422 };
+      }
+      line.qtyApproved = qtyApproved;
+      line.resolution = resolution;
+      line.substituteFor = substituteFor;
+      line.substituteUnit = substituteUnit;
+      line.substituteConversionSnapshot = { ...substituteConversionSnapshot };
+      line.substituteReason = substituteReason;
+      line.note = String(update && update.note || line.note || '').trim().slice(0, 500);
+      continue;
+    }
+    if (substituteFor) return { error: 'resolution-substitution-mismatch:' + line.itemId, status: 422 };
+    const approvedBase = quantityToBase(qtyApproved, line.conversionSnapshot);
     if (approvedBase == null || approvedBase > line.qtyRequestedBase + 1e-9) {
       return { error: `approved-exceeds-requested:${line.itemId}`, status: 422 };
     }
@@ -87,13 +135,20 @@ function reviewLines(currentLines, updates) {
     line.qtyApproved = qtyApproved;
     line.resolution = resolution;
     line.substituteFor = '';
+    line.substituteUnit = '';
+    line.substituteConversionSnapshot = {};
+    line.substituteReason = '';
     line.note = String(update && update.note || line.note || '').trim().slice(0, 500);
   }
   return { value: next };
 }
 
 function progressLines(currentLines, updates, field, ceilingField) {
-  const next = currentLines.map((line) => ({ ...line, conversionSnapshot: { ...line.conversionSnapshot } }));
+  const next = currentLines.map((line) => ({
+    ...line,
+    conversionSnapshot: { ...line.conversionSnapshot },
+    substituteConversionSnapshot: { ...(line.substituteConversionSnapshot || {}) },
+  }));
   const provided = Array.isArray(updates) ? updates : [];
   if (!provided.length) return { error: `${field}-lines-required`, status: 422 };
   for (const update of provided) {
@@ -141,7 +196,8 @@ export function applyRequestCommand(current, actionValue, payload = {}) {
     if (lines.some((line) => !line.resolution || line.resolution === 'pending')) {
       return { ok: false, error: 'review-incomplete', status: 409 };
     }
-    const changed = lines.some((line) => !same(baseQuantity(line, line.qtyApproved), line.qtyRequestedBase));
+    const changed = lines.some((line) => line.resolution === 'substituted'
+      || !same(baseQuantity(line, line.qtyApproved), line.qtyRequestedBase));
     if (changed && Number(request.acceptedRevision) < Number(request.reviewRevision)) {
       return { ok: false, error: 'changes-not-accepted', status: 409 };
     }
@@ -158,7 +214,8 @@ export function applyRequestCommand(current, actionValue, payload = {}) {
     }
   } else if (action === 'confirm') {
     if (request.state !== 'open' || !request.reviewRevision) return { ok: false, error: 'not-approved', status: 409 };
-    const changed = lines.some((line) => !same(baseQuantity(line, line.qtyApproved), line.qtyRequestedBase));
+    const changed = lines.some((line) => line.resolution === 'substituted'
+      || !same(baseQuantity(line, line.qtyApproved), line.qtyRequestedBase));
     if (changed && Number(request.acceptedRevision) < Number(request.reviewRevision)) {
       return { ok: false, error: 'changes-not-accepted', status: 409 };
     }
@@ -196,7 +253,8 @@ export function deriveRequestLabel(requestValue, linesValue) {
   const reviewed = lines.filter((line) => line.resolution && line.resolution !== 'pending');
   if (!reviewed.length) return 'submitted';
   if (reviewed.length !== lines.length) return 'under-review';
-  const changed = lines.some((line) => !same(baseQuantity(line, line.qtyApproved), line.qtyRequestedBase));
+  const changed = lines.some((line) => line.resolution === 'substituted'
+    || !same(baseQuantity(line, line.qtyApproved), line.qtyRequestedBase));
   if (changed && Number(request.acceptedRevision) < Number(request.reviewRevision)) return 'changes-proposed';
   const anyReceived = lines.some((line) => Number(line.qtyReceived) > 0);
   const allReceived = lines.every((line) => same(line.qtyReceived, line.qtyPrepared));

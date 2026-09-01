@@ -96,7 +96,8 @@ class FakeDb {
         }
         if (query.startsWith('INSERT OR IGNORE INTO hotel_internal_request_lines')) {
           const [merchant, requestId, lineNo, itemId, unit, snapshot, requestedBaseMilli,
-            qtyRequested, qtyApproved, qtyPrepared, qtyReceived, resolution, substituteFor, note,
+            qtyRequested, qtyApproved, qtyPrepared, qtyReceived, resolution, substituteFor,
+            substituteUnit, substituteSnapshot, substituteReason, note,
             guardMerchant, guardId, createKey] = stmt.args;
           const request = db.requests.get(`${guardMerchant}|${guardId}`);
           if (!request || request.create_key !== createKey) return { success: true, meta: { changes: 0 } };
@@ -106,7 +107,9 @@ class FakeDb {
             merchant, request_id: requestId, line_no: lineNo, item_id: itemId, unit,
             conversion_snapshot: snapshot, qty_requested_base_milli: requestedBaseMilli,
             qty_requested: qtyRequested, qty_approved: qtyApproved, qty_prepared: qtyPrepared,
-            qty_received: qtyReceived, resolution, substitute_for: substituteFor, note,
+            qty_received: qtyReceived, resolution, substitute_for: substituteFor,
+            substitute_unit: substituteUnit, substitute_conversion_snapshot: substituteSnapshot,
+            substitute_reason: substituteReason, note,
           });
           db.lines.set(key, rows.sort((a, b) => a.line_no - b.line_no));
           return { success: true, meta: { changes: 1 } };
@@ -126,13 +129,19 @@ class FakeDb {
           return { success: true, meta: { changes: 1 } };
         }
         if (query.startsWith('UPDATE hotel_internal_request_lines')) {
-          const [approved, prepared, received, resolution, substituteFor, note,
+          const [approved, prepared, received, resolution, substituteFor, substituteUnit,
+            substituteSnapshot, substituteReason, note,
             merchant, requestId, lineNo, guardMerchant, guardId, commandKey] = stmt.args;
           const request = db.requests.get(`${guardMerchant}|${guardId}`);
           if (!request || request.last_command_key !== commandKey) return { success: true, meta: { changes: 0 } };
           const line = (db.lines.get(`${merchant}|${requestId}`) || []).find((row) => row.line_no === lineNo);
           if (!line) return { success: true, meta: { changes: 0 } };
-          Object.assign(line, { qty_approved: approved, qty_prepared: prepared, qty_received: received, resolution, substitute_for: substituteFor, note });
+          Object.assign(line, {
+            qty_approved: approved, qty_prepared: prepared, qty_received: received,
+            resolution, substitute_for: substituteFor, substitute_unit: substituteUnit,
+            substitute_conversion_snapshot: substituteSnapshot,
+            substitute_reason: substituteReason, note,
+          });
           return { success: true, meta: { changes: 1 } };
         }
         if (query.startsWith('INSERT OR IGNORE INTO hotel_internal_request_events')) {
@@ -196,7 +205,8 @@ await check('create persists an exact draft line model', () => {
   assert.equal(created.request.state, 'draft');
   assert.deepEqual(Object.keys(created.lines[0]), [
     'itemId', 'unit', 'conversionSnapshot', 'qtyRequestedBase', 'qtyRequested',
-    'qtyApproved', 'qtyPrepared', 'qtyReceived', 'resolution', 'substituteFor', 'note',
+    'qtyApproved', 'qtyPrepared', 'qtyReceived', 'resolution', 'substituteFor',
+    'substituteUnit', 'substituteConversionSnapshot', 'substituteReason', 'note',
   ]);
 });
 await check('drafts survive a fresh GET reload', async () => {
