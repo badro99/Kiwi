@@ -170,7 +170,21 @@
       body: JSON.stringify(body),
     }).then(function (r) { return r.ok ? r.json() : null; })
       .then(function (j) {
-        if (j && j.ok) { bridge([]); return j; }
+        if (j && j.ok) {
+          /* `pending` n'est pas encore un bon de cuisine. Le papier ne doit
+           * sortir que sur l'appareil qui a réellement obtenu la transition
+           * pending → accepted du serveur — pas sur chaque caisse qui sonde la
+           * file, et surtout pas à l'arrivée de la commande OrderPro. */
+          if (status === 'accepted') {
+            try {
+              if (window.KiwiCaisseKitchen && window.KiwiCaisseKitchen.confirmAccepted) {
+                window.KiwiCaisseKitchen.confirmAccepted(prev, extra || {});
+              }
+            } catch (_) {}
+          }
+          bridge([]);
+          return j;
+        }
         /* Refus du serveur. Un 409 « bad-transition » n'est PAS une panne :
          * c'est une autre caisse qui a fait le geste avant nous. Remettre
          * l'état d'avant serait alors faux dans l'autre sens — le prochain
