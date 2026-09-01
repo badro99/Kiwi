@@ -1,4 +1,40 @@
 #!/usr/bin/env node
+/* tools/economat-real-d1-transfer-test.mjs — le transfert, prouvé sur le vrai D1.
+ *
+ * Les autres suites de la famille économat s'appuient sur
+ * tools/fixtures/hotel-request-db.mjs : du vrai SQLite (node:sqlite), avec de
+ * vraies transactions, mais dont le SCHÉMA est recopié à la main dans la
+ * fixture. Elles prouvent la logique d'écriture. Elles ne peuvent pas prouver
+ * que cette logique tient sur la base que la production exécute vraiment.
+ *
+ * Trois choses ne se vérifient que là, et pas dans une fixture :
+ *   1. le schéma vient de `migrations/`, pas d'une copie. Une colonne ajoutée
+ *      demain à une migration sans que la fixture suive fait rougir CE test ;
+ *   2. `env.DB.batch()` est l'atomicité de D1, pas celle qu'on s'est écrite.
+ *      Un lot qui échoue à mi-course doit tout rendre — mouvement déjà inséré,
+ *      état de la demande, événement de confirmation ;
+ *   3. la réservation de curseurs passe par un vrai
+ *      `UPDATE … RETURNING`, exécuté par le moteur de D1.
+ *
+ * Le point 2 ne s'observe pas depuis l'extérieur sans provoquer la panne : le
+ * worker de test (tools/fixtures/economat-real-d1-worker.mjs) pose donc un
+ * TRIGGER qui fait ABORT sur la seconde écriture d'un transfert précis, et on
+ * vérifie qu'il ne reste RIEN des trois écritures. C'est la seule assertion de
+ * ce dépôt qui regarde un rollback D1 se produire.
+ *
+ * CE QUE ÇA COÛTE, et c'est délibéré : c'est la seule suite du dépôt qui lance
+ * `npx wrangler dev --local`. Elle a donc besoin du réseau au premier appel, le
+ * temps que npm serve wrangler ; ensuite le cache npx suffit. Elle NE SAUTE PAS
+ * quand wrangler manque, elle échoue : une preuve d'atomicité qui se tait toute
+ * seule sur une machine sans réseau ne prouve plus rien, et personne ne le
+ * remarquerait. Si vous cherchez la vérification de schéma qui, elle, tourne
+ * hors ligne et sans wrangler, c'est tools/d1-schema-test.mjs.
+ *
+ * Tout est jetable : base, config et état vivent dans un dossier temporaire
+ * effacé en `finally`. Aucune base distante, aucun `--remote`, jamais.
+ *
+ * `node tools/economat-real-d1-transfer-test.mjs`
+ */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import net from 'node:net';
