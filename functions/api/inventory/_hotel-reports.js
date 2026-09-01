@@ -41,6 +41,7 @@ function blankReconciliation(locationId) {
     consumptionMilli: 0,
     correctionsMilli: 0,
     unclassifiedMilli: 0,
+    unclassifiedCount: 0,
     computedClosingMilli: 0,
     closingMilli: 0,
     differenceMilli: 0,
@@ -61,7 +62,10 @@ export function reconcileUnitMovements(rowsValue, locationIdValue) {
     else if (row.reason === 'transfer-out' && row.qtyMilli < 0) summary.transfersOutMilli += Math.abs(row.qtyMilli);
     else if (CONSUMPTION_REASONS.has(row.reason)) summary.consumptionMilli += -row.qtyMilli;
     else if (CORRECTION_REASONS.has(row.reason)) summary.correctionsMilli += row.qtyMilli;
-    else summary.unclassifiedMilli += row.qtyMilli;
+    else {
+      summary.unclassifiedMilli += row.qtyMilli;
+      summary.unclassifiedCount += 1;
+    }
   }
   summary.computedClosingMilli = summary.openingMilli
     + summary.receiptsMilli
@@ -70,7 +74,7 @@ export function reconcileUnitMovements(rowsValue, locationIdValue) {
     - summary.consumptionMilli
     + summary.correctionsMilli;
   summary.differenceMilli = summary.closingMilli - summary.computedClosingMilli;
-  summary.balanced = summary.differenceMilli === 0 && summary.unclassifiedMilli === 0;
+  summary.balanced = summary.differenceMilli === 0 && summary.unclassifiedCount === 0;
   return summary;
 }
 
@@ -122,26 +126,46 @@ export async function queryHotelInventoryReport(db, merchantValue, optionsValue 
   const merchant = token(merchantValue);
   const at = integer(optionsValue && optionsValue.at) || Date.now();
   if (!db || typeof db.prepare !== 'function' || !merchant) throw new Error('invalid-hotel-report-query');
-  const movementResult = await db.prepare(
-    `SELECT id, item_id, variant_id, location_id, qty_milli, reason, occurred_ts
-       FROM inventory_movements
-      WHERE merchant = ? AND occurred_ts <= ?
-      ORDER BY occurred_ts, srv_ts, id`
-  ).bind(merchant, at).all();
-  let physicalCounts = [];
+  const unavailable = (dependency, cause) => {
+    const error = new Error('hotel-report-unavailable');
+    error.code = 'hotel-report-unavailable';
+    error.dependency = dependency;
+    error.cause = cause;
+    return error;
+  };
+  let movementResult;
   try {
-    const countResult = await db.prepare(
+    movementResult = await db.prepare(
+      `SELECT id, item_id, variant_id, location_id, qty_milli, reason, occurred_ts
+         FROM inventory_movements
+        WHERE merchant = ? AND occurred_ts <= ?
+        ORDER BY occurred_ts, srv_ts, id`
+    ).bind(merchant, at).all();
+  } catch (error) {
+    throw unavailable('inventory_movements', error);
+  }
+  let countResult;
+  try {
+    countResult = await db.prepare(
       `SELECT id, store_id, status, submitted_at, applied_at
          FROM inventory_counts
         WHERE merchant = ? AND submitted_at <= ?
         ORDER BY submitted_at, id`
     ).bind(merchant, at).all();
-    physicalCounts = (countResult && countResult.results) || [];
-  } catch (_) {
-    physicalCounts = [];
+  } catch (error) {
+    throw unavailable('inventory_counts', error);
   }
+  const options = optionsValue && typeof optionsValue === 'object' ? optionsValue : {};
+  const locationIds = new Set((Array.isArray(options.locationIds) ? options.locationIds : []).map(token).filter(Boolean));
+  const unitIds = new Set((Array.isArray(options.unitIds) ? options.unitIds : []).map(token).filter(Boolean));
+  const projectLocation = typeof options.projectLocation === 'function' ? options.projectLocation : (value) => value;
+  const movements = ((movementResult && movementResult.results) || []).map((row) => ({
+    ...row, location_id: token(projectLocation(row.location_id), 'principal'),
+  })).filter((row) => !locationIds.size || locationIds.has(row.location_id));
+  const physicalCounts = ((countResult && countResult.results) || [])
+    .filter((row) => !unitIds.size || unitIds.has(token(row.store_id)));
   return buildHotelInventoryReport({
-    movements: (movementResult && movementResult.results) || [],
+    movements,
     physicalCounts,
     at,
   });
