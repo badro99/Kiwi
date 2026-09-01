@@ -8,6 +8,9 @@ const PRIMARY_MODEL = '@cf/zai-org/glm-5.3-flash';
 const FALLBACK_MODEL = '@cf/qwen/qwen3-30b-a3b-fp8';
 const MAX_CATEGORIES = 80;
 const MAX_ITEMS = 400;
+/* Compteur propre : en partageant le kind 'menuimport', un gros import de
+ * carte vidait le quota des opérations de menu pour le reste de la journée. */
+const DAILY_CAP = 60;
 
 function shortText(value, max) {
   return String(value == null ? '' : value).trim().slice(0, max);
@@ -110,7 +113,7 @@ export async function onRequestPost({ request, env }) {
   if (!kind) return json({ ok: false, error: 'invalid-kind' }, 400);
   const merchant = await accountMerchant(request, env, shortText(body?.merchant, 100));
   if (!merchant) return json({ ok: false, error: 'forbidden' }, 403);
-  const allowed = await quotaOk(env, merchant, 'menuimport', 60);
+  const allowed = await quotaOk(env, merchant, 'menuoperations', DAILY_CAP);
   if (!allowed) return json({ ok: false, error: 'daily-quota-exceeded' }, 429);
   const catalogue = cleanCatalogue(body?.catalogue);
   if (!catalogue.items.length) return json({ ok: false, error: 'empty-menu' }, 400);
