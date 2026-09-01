@@ -14,27 +14,31 @@ function parseRegistry(value) {
   }
 }
 
-function activeUnits(registry) {
+function validUnits(registry) {
   return (Array.isArray(registry.units) ? registry.units : []).filter((unit) =>
-    unit && unit.active !== false && token(unit.id) && token(unit.locationId)
+    unit && token(unit.id) && token(unit.locationId)
   );
 }
 
-function publicScope(scoped, role, units, assignedUnit, economat) {
-  const permitted = assignedUnit ? [assignedUnit] : units;
+function publicScope(scoped, role, readableUnits, activeUnits, assignedUnit, economat) {
+  const permitted = assignedUnit ? [assignedUnit] : readableUnits;
   const unitIds = new Set(permitted.map((unit) => unit.id));
   const locationIds = new Set(permitted.map((unit) => unit.locationId));
-  const byUnit = new Map(units.map((unit) => [unit.id, unit]));
-  const byLocation = new Map(units.map((unit) => [unit.locationId, unit]));
+  const activeUnitIds = new Set(activeUnits.map((unit) => unit.id));
+  const activeLocationIds = new Set(activeUnits.map((unit) => unit.locationId));
+  const byUnit = new Map(readableUnits.map((unit) => [unit.id, unit]));
+  const byLocation = new Map(readableUnits.map((unit) => [unit.locationId, unit]));
   const economatLocationId = economat ? economat.locationId : '';
   return {
     scoped,
     role,
     allowed: !scoped || role === 'manager' || !!assignedUnit,
     units: permitted,
-    allUnits: units,
+    allUnits: readableUnits,
     unitIds,
     locationIds,
+    activeUnitIds,
+    activeLocationIds,
     byUnit,
     byLocation,
     unitId: assignedUnit ? assignedUnit.id : '',
@@ -50,6 +54,14 @@ function publicScope(scoped, role, units, assignedUnit, economat) {
       if (id === 'principal') return !!economatLocationId && locationIds.has(economatLocationId);
       return locationIds.has(token(id));
     },
+    permitsMovementLocation(value, reason) {
+      if (!scoped) return true;
+      const id = String(value || '').trim();
+      const locationId = id === 'principal' ? economatLocationId : token(id);
+      if (!locationIds.has(locationId)) return false;
+      if (activeLocationIds.has(locationId)) return true;
+      return role === 'manager' && reason === 'transfer-out';
+    },
     effectiveLocation(value) {
       const id = String(value || '').trim();
       if (!scoped) return id || 'principal';
@@ -58,6 +70,14 @@ function publicScope(scoped, role, units, assignedUnit, economat) {
         return economatLocationId || '';
       }
       return locationIds.has(id) ? id : '';
+    },
+    effectiveMovementLocation(value, reason) {
+      const id = String(value || '').trim();
+      if (!scoped) return id || 'principal';
+      const effective = (!id || id === 'principal')
+        ? (assignedUnit ? assignedUnit.locationId : economatLocationId || '')
+        : token(id);
+      return this.permitsMovementLocation(effective, reason) ? effective : '';
     },
     effectiveUnit(value) {
       const id = token(value);
@@ -86,13 +106,14 @@ function publicScope(scoped, role, units, assignedUnit, economat) {
         economatLocationId,
         unitIds: [...unitIds],
         locationIds: [...locationIds],
+        inactiveUnitIds: [...unitIds].filter((id) => !activeUnitIds.has(id)),
       };
     },
   };
 }
 
 export async function resolveInventoryUnitScope(request, env, merchant, options = {}) {
-  const none = publicScope(false, 'legacy', [], null, null);
+  const none = publicScope(false, 'legacy', [], [], null, null);
   if (!env || !env.DB || !merchant) return none;
 
   let config;
@@ -114,12 +135,13 @@ export async function resolveInventoryUnitScope(request, env, merchant, options 
     return none;
   }
   const registry = parseRegistry(stored && stored.data);
-  const units = activeUnits(registry);
-  if (!units.length) return none;
-  const economat = units.find((unit) => unit.kind === 'economat') || null;
+  const units = validUnits(registry);
+  const active = units.filter((unit) => unit.active !== false);
+  if (!active.length) return none;
+  const economat = active.find((unit) => unit.kind === 'economat') || null;
 
   if (await entitledMerchant(request, env, merchant)) {
-    return publicScope(true, 'manager', units, null, economat);
+    return publicScope(true, 'manager', units, active, null, economat);
   }
 
   const terminalId = token(options.terminalId, 80);
@@ -127,11 +149,11 @@ export async function resolveInventoryUnitScope(request, env, merchant, options 
     ? registry.terminalUnits
     : {};
   const assignedId = token(terminalUnits[terminalId]);
-  const assigned = units.find((unit) => unit.id === assignedId && unit.kind === 'outlet') || null;
+  const assigned = active.find((unit) => unit.id === assignedId && unit.kind === 'outlet') || null;
   const paired = terminalId
     && await isTillFor(request, env, merchant)
     && await isTerminalFor(request, env, merchant, terminalId);
-  return publicScope(true, paired ? 'till' : 'denied', units, paired ? assigned : null, economat);
+  return publicScope(true, paired ? 'till' : 'denied', active, active, paired ? assigned : null, economat);
 }
 
 export function scopeSql(column, values) {

@@ -41,6 +41,10 @@ import {
   isHotelMerchantType,
   validateHotelUnits,
 } from './_hotel-units.js';
+import {
+  ECONOMAT_CATALOGUE_FEATURE,
+  validateEconomatCatalogue,
+} from './inventory/_economat-catalogue.js';
 
 /* Les fonctionnalités qui ont le droit d'exister ici, et ce qu'on sait de leur
  * forme. La liste est FERMÉE : sans elle, n'importe quel client authentifié
@@ -62,6 +66,7 @@ import {
  * qu'il a trop de salariés serait absurde. */
 const FEATURES = {
   [HOTEL_UNITS_FEATURE]: { keys: ['units'],                       max: 80000 },
+  [ECONOMAT_CATALOGUE_FEATURE]: { keys: ['items'],                max: 600000 },
   /* PAS la carte. `menu` est listé pour qu'un slug connu ne devienne pas un nom
    * inventé, mais assets/menu-catalog.js ne passe PAS par ici : il relit sa
    * carte par GET /api/menu?mine=1, la ligne que la page client lit déjà. Deux
@@ -324,7 +329,7 @@ function stripBriefing() { return { days: [] }; }
 
 /* Quelles fonctionnalités cachent un secret à qui ne l'écrit pas. */
 const REDACT = { team: stripTeamCodes, agentactions: stripAgentActions, briefing: stripBriefing };
-const OWNER_EDIT_FEATURES = new Set([HOTEL_UNITS_FEATURE]);
+const OWNER_EDIT_FEATURES = new Set([HOTEL_UNITS_FEATURE, ECONOMAT_CATALOGUE_FEATURE]);
 
 /* Celui-ci tient-il la fiche, ou ne fait-il que la consulter ?
  * `entitledMerchant` SANS `allowTill` répond exactement à ça : la session du
@@ -393,7 +398,8 @@ export async function onRequestGet(context) {
 
   const merchant = await tenantFor(request, env, url.searchParams.get('merchant'));
   if (!merchant) return json({ error: 'unauthorized' }, 401);
-  if (feature === HOTEL_UNITS_FEATURE && !(await isHotelMerchant(env, merchant))) {
+  if ((feature === HOTEL_UNITS_FEATURE || feature === ECONOMAT_CATALOGUE_FEATURE)
+      && !(await isHotelMerchant(env, merchant))) {
     return json({ feature, merchant, data: null, rev: 0 });
   }
 
@@ -440,7 +446,8 @@ export async function onRequestPost(context) {
   if (OWNER_EDIT_FEATURES.has(feature) && !(await editsRoster(request, env, merchant))) {
     return json({ error: 'forbidden-feature', feature }, 403);
   }
-  if (feature === HOTEL_UNITS_FEATURE && !(await isHotelMerchant(env, merchant))) {
+  if ((feature === HOTEL_UNITS_FEATURE || feature === ECONOMAT_CATALOGUE_FEATURE)
+      && !(await isHotelMerchant(env, merchant))) {
     return json({ error: 'hotel-only' }, 403);
   }
 
@@ -491,6 +498,12 @@ export async function onRequestPost(context) {
     if (!checked.ok) {
       return json({ error: checked.error, detail: checked.detail }, checked.status || 422);
     }
+    clean.value = checked.value;
+    text = JSON.stringify(clean.value);
+  }
+  if (feature === ECONOMAT_CATALOGUE_FEATURE) {
+    const checked = validateEconomatCatalogue(clean.value);
+    if (!checked.ok) return json({ error: checked.error }, checked.status || 422);
     clean.value = checked.value;
     text = JSON.stringify(clean.value);
   }

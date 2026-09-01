@@ -229,10 +229,10 @@ export async function onRequestPost({ request, env }) {
   for (let index = 0; index < movements.length; index += 1) {
     const source = raw[index] || {};
     const explicit = str(source.locationId ?? source.location_id, 80);
-    if (explicit && !scope.permitsLocation(explicit)) {
+    if (explicit && !scope.permitsMovementLocation(explicit, movements[index].reason)) {
       return json({ error: 'location-forbidden' }, 403);
     }
-    const effective = scope.effectiveLocation(explicit);
+    const effective = scope.effectiveMovementLocation(explicit, movements[index].reason);
     if (scope.scoped && !effective) return json({ error: 'location-required' }, 422);
     movements[index].locationId = effective;
   }
