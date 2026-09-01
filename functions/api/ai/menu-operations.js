@@ -110,6 +110,8 @@ export async function onRequestPost({ request, env }) {
   if (!kind) return json({ ok: false, error: 'invalid-kind' }, 400);
   const merchant = await accountMerchant(request, env, shortText(body?.merchant, 100));
   if (!merchant) return json({ ok: false, error: 'forbidden' }, 403);
+  const allowed = await quotaOk(env, merchant, 'menuimport', 60);
+  if (!allowed) return json({ ok: false, error: 'daily-quota-exceeded' }, 429);
   const catalogue = cleanCatalogue(body?.catalogue);
   if (!catalogue.items.length) return json({ ok: false, error: 'empty-menu' }, 400);
   const instruction = shortText(body?.instruction, 700);
