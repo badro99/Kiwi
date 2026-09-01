@@ -30,8 +30,8 @@ var SHELL = [
      sous-sol. La tablette doit au minimum se rouvrir sur son dernier tableau
      quand le réseau tousse, au lieu d'une page blanche au milieu du service. */
   '/kiwi-cuisine.html',
-  '/assets/err-reporter.js',
-  '/assets/kiwi-env.js',
+  '/assets/err-reporter.js?v=1',
+  '/assets/kiwi-env.js?v=1',
   '/dashboard.webmanifest',
   '/manifest.webmanifest',
   '/cuisine.webmanifest',
@@ -62,7 +62,7 @@ var SHELL = [
   '/assets/agent-skin.css?v=15',
   '/assets/agent-skin.js?v=4',
   '/assets/dashboard-native.css',
-  '/assets/cloud-doc.js',
+  '/assets/cloud-doc.js?v=1',
   '/assets/agent-action-center.js?v=2',
   '/assets/cancellation-history.js?v=2',
   '/assets/briefing.js?v=17',
@@ -176,10 +176,10 @@ var SHELL = [
   '/assets/receipt.js',
   '/assets/receipt-ui.js',
   '/assets/invoice.js?v=6',
-  '/assets/merchant-config.js?v=265',
+  '/assets/merchant-config.js?v=266',
   '/assets/entitlements.css?v=5',
   '/assets/entitlements.js?v=6',
-  '/assets/staff-roles.js',
+  '/assets/staff-roles.js?v=1',
   /* Ce qui appartient à un commerçant. Dans la coquille parce que la purge se
      déclenche au ré-appairage, et qu'un ré-appairage se fait souvent dans un
      réseau douteux : absente, la caisse s'ouvrirait chez B avec les ventes de A. */
@@ -190,8 +190,8 @@ var SHELL = [
   '/assets/pairing-commit.js?v=1',
   '/assets/identity.js?v=2',
   '/assets/caisse-link.js?v=10',
-  '/assets/operator-access.js',
-  '/assets/auth-guard.js',
+  '/assets/operator-access.js?v=1',
+  '/assets/auth-guard.js?v=1',
   '/assets/idle-lock.js?v=2',
   '/assets/caisse-hardware.js?v=1',
   '/assets/live-socket.js?v=4',

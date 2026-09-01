@@ -64,9 +64,9 @@
        Version pinned at download (v1.17.0). To upgrade, re-download from
        https://unpkg.com/lucide@latest/dist/umd/lucide.min.js into assets/. -->
   <!-- Client error reporter & observability (fail-soft telemetry) -->
-  <script src="assets/err-reporter.js"></script>
+  <script src="assets/err-reporter.js?v=1"></script>
   <!-- ENV first: separates the owner's local demo copy from the hosted app. -->
-  <script src="assets/kiwi-env.js"></script><!-- must run FIRST (before the inline app script), so KiwiEnv.isReal() is ready when demo data is seeded -->
+  <script src="assets/kiwi-env.js?v=1"></script><!-- must run FIRST (before the inline app script), so KiwiEnv.isReal() is ready when demo data is seeded -->
   <!-- Durable tenant-scoped command outbox. Dexie is vendored: the caisse can
        boot and bank transactions with no CDN and no build step. -->
   <script src="assets/vendor/dexie.min.js" defer></script>
@@ -5401,7 +5401,7 @@
   <script src="assets/live-link.js?v=15" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
-  <script src="assets/staff-roles.js" defer></script>
+  <script src="assets/staff-roles.js?v=1" defer></script>
   <!-- Ce qui appartient à un commerçant, et part quand cet appareil en change.
        AVANT caisse-pairing.js : c'est l'appairage qui déclenche la purge, et une
        serrure chargée après la porte ne ferme rien. -->
@@ -5416,7 +5416,7 @@
   <!-- La copie serveur des données d'établissement (fidélité, carnet) : une
        caisse neuve doit retrouver le magasin, pas repartir vide. AVANT
        venue-store.js, qui s'y branche. -->
-  <script src="assets/cloud-doc.js" defer></script>
+  <script src="assets/cloud-doc.js?v=1" defer></script>
   <!-- Shared trade boards: reads the same tenant document as the owner
        dashboard and grafts a compact operational entry into each exact POS. -->
   <script src="assets/trade-workspace-schema.js?v=4" defer></script>
@@ -5475,7 +5475,7 @@
        staff accept one and it becomes a kitchen ticket. Paired terminals only. -->
   <script src="assets/orderpro-inbox.js?v=7" defer></script>
   <!-- Operator feature flags + managed PINs. Fail-safe: no backend ⇒ no change. -->
-  <script src="assets/merchant-config.js" defer></script>
+  <script src="assets/merchant-config.js?v=266" defer></script>
   <!-- « Rafraîchir » · un bouton commun à toutes les caisses (restaurant,
        pressing, et les seize métiers de pos-dispatch) : il redemande au serveur
        l'inventaire, les documents du magasin, les commandes en ligne et les
@@ -5489,11 +5489,11 @@
   <script src="assets/invoice.js?v=6" defer></script>
   <script src="assets/pos-reprint.js" defer></script>
   <!-- Global operator access · long-press any Kiwi logo to open the console. -->
-  <script src="assets/operator-access.js" defer></script>
+  <script src="assets/operator-access.js?v=1" defer></script>
   <!-- Auth guard: redirects to the auth page the moment the server signals
        the account has been deleted / suspended, so a revoked merchant never
        gets stranded in a half-broken shell (see assets/auth-guard.js). -->
-  <script src="assets/auth-guard.js" defer></script>
+  <script src="assets/auth-guard.js?v=1" defer></script>
 </head>
 
 <body>

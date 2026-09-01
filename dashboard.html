@@ -6189,9 +6189,9 @@
      past dateRange.js and marked fetchpriority="low" · the first screen
      no longer waits on 657 KB it doesn't need yet. (Codex roast P1) -->
 <!-- Client error reporter & observability (fail-soft telemetry) -->
-<script src="assets/err-reporter.js" defer></script>
+<script src="assets/err-reporter.js?v=1" defer></script>
 <!-- Env gate (demos local-only) · must run before venues.js and the app. -->
-<script src="assets/kiwi-env.js" defer></script>
+<script src="assets/kiwi-env.js?v=1" defer></script>
 <script src="assets/i18n.js?v=7" defer></script>
 <!-- Les milliers en arabe (assets/rtl-numbers.js). Une espace ordinaire entre
      deux nombres prend la direction du paragraphe : « 31 500 » s'affichait
@@ -6258,7 +6258,7 @@
 <script defer src="assets/channel-sales.js?v=3"></script>
 <!-- Operator feature flags · hides modules the operator toggled off for this
      merchant. Fail-safe: no backend ⇒ nothing changes. See ADMIN.md. -->
-<script defer src="assets/merchant-config.js?v=265"></script>
+<script defer src="assets/merchant-config.js?v=266"></script>
 <!-- Real logged-in identity · swaps the demo owner/business (Rachid · Café Atlas)
      for the account's own via /api/me. No-op for the local demo / staff / operator. -->
   <link rel="stylesheet" href="assets/entitlements.css?v=5">
@@ -6266,14 +6266,14 @@
 <!-- Auth guard: redirects to the auth page the moment the server signals
      the account has been deleted / suspended, so a revoked merchant never
      gets stranded in a half-broken shell (see assets/auth-guard.js). -->
-<script defer src="assets/auth-guard.js"></script>
+<script defer src="assets/auth-guard.js?v=1"></script>
 <!-- Verrouillage par inactivité : un tableau de bord laissé ouvert sur un iPad
      ne reste pas ouvert pour toujours. Recharge la page (donc rejoue la porte à
      code) après 10 min sans geste, ou 3 min d'onglet caché. Voir
      assets/idle-lock.js pour pourquoi ce n'est pas un simple minuteur. -->
 <script defer src="assets/idle-lock.js?v=2"></script>
 <!-- Global operator access · long-press any Kiwi logo to open the console. -->
-<script defer src="assets/operator-access.js"></script>
+<script defer src="assets/operator-access.js?v=1"></script>
 <script src="assets/liquid-lens.js" defer></script>
 <script src="assets/onboarding.js?v=2081" defer></script>
 <!-- Connect-your-caisse: auto side-panel + 6-digit code that binds a till to this
@@ -6316,7 +6316,7 @@
 <!-- La copie serveur de tout ce qu'un commerçant configure (carte, équipe,
      fidélité…) : un deuxième appareil ne doit pas trouver un établissement
      vide. AVANT venue-store.js et team.js, qui s'y branchent. -->
-<script src="assets/cloud-doc.js" defer fetchpriority="low"></script>
+<script src="assets/cloud-doc.js?v=1" defer fetchpriority="low"></script>
 <!-- Tenant-scoped approval queue and audited inverse operations for Kiwi AI. -->
 <script src="assets/agent-action-center.js?v=2" defer fetchpriority="low"></script>
 <!-- Promotions use the same per-boutique catalogue key. The owner edits them
@@ -6407,7 +6407,7 @@
 <!-- The shared staff-role catalogue: the login gate needs it to tell an owner
      from a barista whatever wording the role was filed under. Fail-soft · the
      gate falls back to its own small map for the access-critical values. -->
-<script src="assets/staff-roles.js" defer></script>
+<script src="assets/staff-roles.js?v=1" defer></script>
 <link rel="stylesheet" href="assets/help-centre.css?v=4">
 <script src="assets/help-centre.js?v=4" defer fetchpriority="low"></script>
 <script src="assets/account.js?v=17" defer fetchpriority="low"></script>

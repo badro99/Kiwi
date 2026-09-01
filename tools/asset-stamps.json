@@ -39,6 +39,10 @@
     "v": "22",
     "sha": "cbde5a06734a8047"
   },
+  "assets/auth-guard.js": {
+    "v": "1",
+    "sha": "7bfa02e1a7f71f89"
+  },
   "assets/booking.css": {
     "v": "12",
     "sha": "9f470ff51768fc37"
@@ -127,6 +131,10 @@
     "v": "4",
     "sha": "15e453bcc915c598"
   },
+  "assets/cloud-doc.js": {
+    "v": "1",
+    "sha": "d0c5823f8ffdcf26"
+  },
   "assets/cost.js": {
     "v": "3",
     "sha": "5c0938ec006b2275"
@@ -202,6 +210,10 @@
   "assets/entitlements.js": {
     "v": "6",
     "sha": "38ff09eb1ba33754"
+  },
+  "assets/err-reporter.js": {
+    "v": "1",
+    "sha": "b30017496f9a5369"
   },
   "assets/escpos.js": {
     "v": "6",
@@ -283,6 +295,10 @@
     "v": "4",
     "sha": "d66f67e7bc8d4e4b"
   },
+  "assets/kiwi-env.js": {
+    "v": "1",
+    "sha": "221e8f9a89dc1b4c"
+  },
   "assets/kiwi-select.css": {
     "v": "2",
     "sha": "35571c6a73eb331e"
@@ -324,7 +340,7 @@
     "sha": "741c0a2e08bf8694"
   },
   "assets/merchant-config.js": {
-    "v": "265",
+    "v": "266",
     "sha": "e38746910f9a3a40"
   },
   "assets/mobile-nav.js": {
@@ -354,6 +370,10 @@
   "assets/operations.js": {
     "v": "10",
     "sha": "f530e5d41ee4a1a3"
+  },
+  "assets/operator-access.js": {
+    "v": "1",
+    "sha": "bfb67d0993b644f5"
   },
   "assets/order-course.js": {
     "v": "2",
@@ -650,6 +670,10 @@
   "assets/sold-insights.js": {
     "v": "2",
     "sha": "a4c3a6b89b6ee0d0"
+  },
+  "assets/staff-roles.js": {
+    "v": "1",
+    "sha": "f5ff14add73eba1e"
   },
   "assets/stock-identity.js": {
     "v": "2",
