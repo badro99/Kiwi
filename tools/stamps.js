@@ -92,6 +92,18 @@ function scan() {
   return found;
 }
 
+/* Fichiers qui referencent un asset, estampille ou non. `scan()` ne voit que
+   les URLs qui ont deja un ?v= ; bump-stamp en a aussi besoin pour poser la
+   toute premiere estampille sans modifier a la main les shells et le SW. */
+function referenceFiles(asset) {
+  const files = [];
+  for (const doc of shellDocs()) {
+    if (read(doc).includes(asset)) files.push(doc);
+  }
+  if (exists(SW) && read(SW).includes(`/${asset}`)) files.push(SW);
+  return files;
+}
+
 function manifestPath() { return path.join(ROOT, MANIFEST); }
 
 function readManifest() {
@@ -116,4 +128,4 @@ function writeManifest(m) {
   fs.writeFileSync(manifestPath(), JSON.stringify(m, null, 2) + '\n');
 }
 
-module.exports = { ROOT, SW, DISPATCH, MANIFEST, read, exists, sha, shellDocs, dispatchRevs, scan, readManifest, buildManifest, writeManifest };
+module.exports = { ROOT, SW, DISPATCH, MANIFEST, read, exists, sha, shellDocs, dispatchRevs, scan, referenceFiles, readManifest, buildManifest, writeManifest };

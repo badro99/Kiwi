@@ -4,7 +4,9 @@
  *
  *   node tools/bump-stamp-test.mjs
  *
- * Deux choses que rien ne testait :
+ * Trois choses que rien ne testait :
+ *   · un asset charge par une URL nue recoit sa premiere estampille dans tous
+ *     ses shells, dans le SW s'il y vit deja, puis dans le manifeste.
  *   · `node tools/bump-stamp.js --sw` avance la génération du service worker
  *     dans les QUATRE fichiers (CACHE + trois register()) puis déplace les
  *     estampilles des bootstraps réécrits — shell, SW, manifeste.
@@ -36,11 +38,12 @@ function fixture(dir) {
   w('assets/caisse-pwa.js', "navigator.serviceWorker.register('/kiwi-sw.js?v=40').then(function(){});\n");
   w('assets/employee-live.js', "navigator.serviceWorker.register('/kiwi-sw.js?v=40').then(function(){});\n");
   w('assets/venues.js', 'window.KiwiVenue = {};\n');
+  w('assets/procurement.js', 'window.KiwiProcurement = {};\n');
   w('assets/pos-dispatch.js', "const REGISTRY = { '0002': { id: 'boutique', file: 'pos-boutique', rev: '3' } };\n");
   w('assets/pos-boutique.js', '// boutique\n');
-  w('dashboard.html', '<script src="assets/venues.js?v=7"></script><script src="assets/dashboard-pwa.js?v=2"></script>\n');
-  w('kiwi-caisse.html', '<script src="assets/caisse-pwa.js?v=5"></script><script src="assets/employee-live.js?v=9"></script>\n');
-  w('kiwi-sw.js', "var CACHE = 'kiwi-app-v40';\nvar SHELL = ['/assets/venues.js?v=7','/assets/dashboard-pwa.js?v=2','/assets/caisse-pwa.js?v=5','/assets/employee-live.js?v=9'];\n");
+  w('dashboard.html', '<script src="assets/venues.js?v=7"></script><script src="assets/dashboard-pwa.js?v=2"></script><script src="assets/procurement.js"></script>\n');
+  w('kiwi-caisse.html', '<script src="assets/caisse-pwa.js?v=5"></script><script src="assets/employee-live.js?v=9"></script><script src="assets/procurement.js"></script>\n');
+  w('kiwi-sw.js', "var CACHE = 'kiwi-app-v40';\nvar SHELL = ['/assets/venues.js?v=7','/assets/dashboard-pwa.js?v=2','/assets/caisse-pwa.js?v=5','/assets/employee-live.js?v=9','/assets/procurement.js'];\n");
 }
 const env = (dir) => ({ ...process.env, KIWI_STAMPS_ROOT: dir });
 const run = (dir, args) => spawnSync(process.execPath, [path.join(dir, 'tools/bump-stamp.js'), ...args], { env: env(dir), encoding: 'utf8' });
@@ -51,6 +54,11 @@ const rd = (dir, rel) => fs.readFileSync(path.join(dir, rel), 'utf8');
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kiwi-bump-'));
   fixture(dir);
   ok(run(dir, ['--sync']).status === 0, 'fixture : manifeste scellé (--sync)');
+  const introduced = run(dir, ['assets/procurement.js']);
+  ok(introduced.status === 0, 'un asset sans estampille recoit sa premiere estampille');
+  ok(/procurement\.js\?v=1/.test(rd(dir, 'dashboard.html')) && /procurement\.js\?v=1/.test(rd(dir, 'kiwi-caisse.html')), 'premiere estampille dans les deux shells');
+  ok(/procurement\.js\?v=1/.test(rd(dir, 'kiwi-sw.js')), 'premiere estampille dans SHELL quand la reference y existait deja');
+  ok(JSON.parse(rd(dir, 'tools/asset-stamps.json'))['assets/procurement.js']?.v === '1', 'premiere estampille scellee dans le manifeste');
   const r = run(dir, ['--sw']);
   ok(r.status === 0, `--sw sort en 0 (${(r.stderr || '').trim().slice(0, 80)})`);
   ok(/CACHE = 'kiwi-app-v41'/.test(rd(dir, 'kiwi-sw.js')), 'kiwi-sw.js : CACHE v40 → v41');
