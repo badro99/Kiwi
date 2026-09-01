@@ -956,6 +956,7 @@ section('Whole-project regressions');
   'hotel-transfer-test.mjs',
   'economat-real-d1-transfer-test.mjs',
   'room-charge-test.mjs',
+  'hotel-reports-test.mjs',
   'economat-transfer-provenance-test.mjs',
   'economat-procurement-location-test.mjs',
   'economat-custody-contract-test.mjs',
