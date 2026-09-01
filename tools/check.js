@@ -937,8 +937,9 @@ section('Whole-project regressions');
        qui paie pour prouver une migration. Une fixture que rien ne garde
        pourrit en silence et emporte toutes les suites qui s'y adossent. */
     'hotel-seed-test.mjs',
-    'hotel-units-test.mjs',
-    'hotel-unit-scope-test.mjs',
+  'hotel-units-test.mjs',
+  'economat-unit-deactivation-test.mjs',
+  'hotel-unit-scope-test.mjs',
   'hotel-location-attribution-test.mjs',
   'economat-catalogue-test.mjs',
   'department-catalogue-test.mjs',

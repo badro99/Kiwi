@@ -45,6 +45,7 @@ import {
   ECONOMAT_CATALOGUE_FEATURE,
   validateEconomatCatalogue,
 } from './inventory/_economat-catalogue.js';
+import { hotelUnitDeactivationBlockers } from './inventory/_hotel-unit-deactivation.js';
 
 /* Les fonctionnalités qui ont le droit d'exister ici, et ce qu'on sait de leur
  * forme. La liste est FERMÉE : sans elle, n'importe quel client authentifié
@@ -499,6 +500,15 @@ export async function onRequestPost(context) {
       return json({ error: checked.error, detail: checked.detail }, checked.status || 422);
     }
     clean.value = checked.value;
+    let drained;
+    try {
+      drained = await hotelUnitDeactivationBlockers(env.DB, merchant, mine, clean.value);
+    } catch (_) {
+      return json({ error: 'unmigrated' }, 503);
+    }
+    if (!drained.ok) {
+      return json({ error: drained.error, blockers: drained.blockers }, drained.status || 409);
+    }
     text = JSON.stringify(clean.value);
   }
   if (feature === ECONOMAT_CATALOGUE_FEATURE) {
