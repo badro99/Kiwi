@@ -52,6 +52,7 @@
 import {
   isOperator, isSeniorOperator, operatorActor, json,
 } from '../../auth/_lib.js';
+import { roomChargeId, roomChargeReversalId } from '../hotel/_room-charge-data.js';
 
 /* Les motifs. Fermés côté serveur : un journal dont le motif est du texte libre
    se remplit de « test », « ok », « rien » et ne répond plus à la question qu'on
@@ -428,6 +429,21 @@ export async function onRequestPost(context) {
      une vente déjà sortie, c'est-à-dire un bouton qui ne pouvait rien faire. */
   if (action === 'void' && rows.some((r) => r.void_ts)) return json({ error: 'already-void' }, 409);
   if (action === 'restore' && rows.every((r) => !r.void_ts)) return json({ error: 'not-void' }, 409);
+  const roomRows = rows.filter((r) => ['room', 'folio'].includes(String(r.method || '').toLowerCase()));
+  if (action === 'restore' && roomRows.length) {
+    return json({ error: 'room-charge-restore-unsupported' }, 409);
+  }
+  if (action === 'void' && roomRows.length) {
+    try {
+      const originals = await Promise.all(roomRows.map((r) => env.DB.prepare(
+        `SELECT id FROM hotel_room_charge_events
+          WHERE merchant = ? AND id = ? AND kind = 'room-charge' LIMIT 1`
+      ).bind(merchant, roomChargeId(r.id)).first()));
+      if (originals.some((row) => !row || !row.id)) {
+        return json({ error: 'room-charge-not-found' }, 409);
+      }
+    } catch (_) { return json({ error: 'room-charge-unavailable', migrationRequired: true }, 503); }
+  }
 
   const impact = await impactFor(env, merchant, rows);
   /* Les blocages, eux, sont des risques que l'opérateur PEUT assumer : on
@@ -448,6 +464,17 @@ export async function onRequestPost(context) {
         `UPDATE sales SET void_ts = ?, void_reason = ?, void_note = ?, void_actor = ?, void_actor_id = ?
           WHERE id = ? AND merchant = ?`
       ).bind(ts, reason, note, actor.label, actor.id, r.id, merchant));
+      if (['room', 'folio'].includes(String(r.method || '').toLowerCase())) {
+        stmts.push(env.DB.prepare(
+          `INSERT OR IGNORE INTO hotel_room_charge_events
+            (merchant, id, kind, sale_id, outlet_id, shift_id, cashier_id, cashier_name,
+             amount_cents, occurred_ts, reversal_of, reversed_by_id)
+           SELECT merchant, ?, 'room-charge-reversal', sale_id, outlet_id, shift_id,
+                  cashier_id, cashier_name, -ABS(amount_cents), ?, id, ?
+             FROM hotel_room_charge_events
+            WHERE merchant = ? AND id = ? AND kind = 'room-charge'`
+        ).bind(roomChargeReversalId(r.id), ts, actor.id, merchant, roomChargeId(r.id)));
+      }
     } else {
       stmts.push(env.DB.prepare(
         `UPDATE sales SET void_ts = NULL, void_reason = NULL, void_note = NULL, void_actor = NULL, void_actor_id = NULL

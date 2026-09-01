@@ -98,7 +98,7 @@
   <!-- Journal de vente partagé · DOIT précéder les modules métier (pressing +
        tout ce que pos-dispatch charge à la volée) : c'est lui qui persiste la
        recette du jour et la renvoie au tableau de bord. -->
-  <script src="assets/pos-sale.js?v=5" defer></script>
+  <script src="assets/pos-sale.js?v=6" defer></script>
   <!-- Garment workflow snapshot shared with the pressing owner dashboard. -->
   <link rel="stylesheet" href="assets/pressing-catalog.css?v=4" />
   <script src="assets/pressing-ops.js?v=7" defer></script>
@@ -5753,6 +5753,7 @@
       <div class="cashier-card">
         <div class="cashier-name">Othmane N.</div>
         <div class="cashier-role">Caissier</div>
+        <button id="caisse-terminal-id" type="button" style="margin-top:9px;border:1px solid rgba(125,242,176,.28);border-radius:9px;padding:6px 9px;background:rgba(125,242,176,.08);color:inherit;font:600 9px var(--mono);letter-spacing:.06em;text-transform:uppercase;cursor:pointer;">Identifiant caisse</button>
         <div class="cashier-divider"></div>
         <div id="clock-time" class="clock-time">14:32</div>
         <div id="clock-date" class="clock-date">Vendredi 24 avril</div>
@@ -15647,6 +15648,37 @@
       if (roleEl) roleEl.textContent = currentCashier.role
         + (handovers.length > 0 ? ' · poste ' + (handovers.length + 1) : '');
     }
+
+    /* Stable, read-only operational identity for vertical modules. The PIN is
+       deliberately absent: a folio charge carries the named roster member,
+       open shift and signed terminal id, never the unlock secret. */
+    window.KiwiCaisseContext = Object.freeze({
+      current: function () {
+        let terminalId = '', merchant = '';
+        try { terminalId = String(localStorage.getItem('kiwi:caisse:terminal-id:v1') || '').trim(); } catch (_) {}
+        try {
+          merchant = String(window.KiwiCloudDoc?.currentSlug?.()
+            || window.KiwiLive?.merchant?.()
+            || window.KiwiPlatform?.pairedVenue?.()?.merchant
+            || '').trim();
+        } catch (_) {}
+        return {
+          merchant,
+          terminalId,
+          cashierId: cashActorId(currentCashier && currentCashier.id),
+          cashierName: String(currentCashier && currentCashier.name || '').slice(0, 100),
+          shiftId: shiftOpenedAt ? cashSessionId() : '',
+          shiftOpenedAt: shiftOpenedAt ? shiftOpenedAt.getTime() : 0,
+        };
+      },
+    });
+    const terminalIdButton = document.getElementById('caisse-terminal-id');
+    if (terminalIdButton) terminalIdButton.addEventListener('click', async () => {
+      const id = window.KiwiCaisseContext.current().terminalId;
+      if (!id) { toast('Cette caisse doit d’abord être appairée'); return; }
+      try { await navigator.clipboard.writeText(id); toast('Identifiant de caisse copié'); }
+      catch (_) { window.prompt('Identifiant de cette caisse', id); }
+    });
 
     const handoverModal = $('#handover-modal');
     const handoverState = { expected: 0, counted: 0, incoming: null, verifyCount: 0 };

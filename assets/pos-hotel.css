@@ -594,6 +594,13 @@
 
 /* charge sheet */
 .modal.ht-chsheet { width: 470px; padding: 24px 24px 20px; }
+.modal-veil.ht-identity-veil { background: var(--ink-bg); backdrop-filter: none; }
+.ht-verify-mark { width:52px; height:52px; display:grid; place-items:center; border-radius:16px; background:var(--mint-tint); color:var(--forest); margin-bottom:18px; box-shadow:inset 0 0 0 1px var(--mint-edge); }
+.ht-verify-mark svg { width:24px; height:24px; }
+.ht-verify-kicker { font:700 10px var(--mono); letter-spacing:.12em; text-transform:uppercase; color:var(--forest); }
+.ht-verify-title { margin:8px 0 7px; max-width:390px; font-size:25px; line-height:1.08; letter-spacing:-.025em; }
+.ht-verify-copy { margin:0 0 20px; color:var(--ink-3); font-size:13px; line-height:1.55; }
+.ht-verify-name { margin:12px 0 8px; padding:18px; border-radius:16px; background:var(--mint-tint); border:1px solid var(--mint-edge); color:var(--forest); font-size:24px; font-weight:750; letter-spacing:-.02em; text-align:center; }
 .ht-ch-head { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
 .ht-ch-art { width: 62px; height: 62px; border-radius: 16px; background: var(--paper-soft); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .ht-ch-art svg { width: 46px; height: 46px; }

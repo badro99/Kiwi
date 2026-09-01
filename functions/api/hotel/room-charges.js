@@ -86,7 +86,10 @@ export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
   const merchant = token(url.searchParams.get('merchant'), 64);
   const shiftId = token(url.searchParams.get('shiftId'), 80);
-  if (!merchant || !shiftId) return json({ error: 'merchant-and-shift-required' }, 400);
+  const mode = String(url.searchParams.get('mode') || (shiftId ? 'shift' : ''));
+  if (!merchant || !['shift', 'shifts'].includes(mode) || (mode === 'shift' && !shiftId)) {
+    return json({ error: 'merchant-and-shift-required' }, 400);
+  }
   if (!(await hotelManager(request, env, merchant))) return json({ error: 'forbidden' }, 403);
   const scope = await resolveInventoryUnitScope(request, env, merchant);
   if (!scope.scoped) return json({ error: 'hotel-units-required' }, 409);
@@ -94,6 +97,32 @@ export async function onRequestGet({ request, env }) {
   const until = timestamp(url.searchParams.get('until')) || Date.now();
   if (since && until < since) return json({ error: 'bad-range' }, 400);
   try {
+    if (mode === 'shifts') {
+      const result = await env.DB.prepare(
+        `SELECT id, kind, sale_id, outlet_id, shift_id, cashier_id, cashier_name,
+                amount_cents, occurred_ts, reversal_of, reversed_by_id
+           FROM ${TABLE}
+          WHERE merchant = ? AND occurred_ts >= ? AND occurred_ts <= ?
+          ORDER BY occurred_ts DESC, id DESC`
+      ).bind(merchant, since, until).all();
+      const lines = ((result && result.results) || []).map(eventFromRow)
+        .filter((line) => line && scope.unitIds.has(line.outletId));
+      const grouped = new Map();
+      for (const line of lines) {
+        const row = grouped.get(line.shiftId) || {
+          shiftId: line.shiftId, firstTs: line.occurredTs, lastTs: line.occurredTs,
+          lineCount: 0, chargeCount: 0, reversalCount: 0, netCents: 0,
+        };
+        row.firstTs = Math.min(row.firstTs, line.occurredTs);
+        row.lastTs = Math.max(row.lastTs, line.occurredTs);
+        row.lineCount += 1;
+        row.chargeCount += line.kind === 'room-charge' ? 1 : 0;
+        row.reversalCount += line.kind === 'room-charge-reversal' ? 1 : 0;
+        row.netCents += line.amountCents;
+        grouped.set(line.shiftId, row);
+      }
+      return json({ ok: true, shifts: [...grouped.values()].sort((a, b) => b.lastTs - a.lastTs).slice(0, 50) });
+    }
     const result = await env.DB.prepare(
       `SELECT id, kind, sale_id, outlet_id, shift_id, cashier_id, cashier_name,
               amount_cents, occurred_ts, reversal_of, reversed_by_id

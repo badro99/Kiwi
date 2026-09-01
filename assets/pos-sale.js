@@ -163,6 +163,7 @@
     cheque: 'wallet', qr: 'qr', tap: 'tap',
     split: 'split', mixed: 'split', partage: 'split',
     credit: 'credit', ardoise: 'credit', acompte: 'credit',
+    room: 'room', folio: 'room', chambre: 'room',
   };
   function normMethod(m) {
     /* NFD d'abord. Sans ça « chèque » se réduisait à « chque », introuvable
@@ -268,7 +269,7 @@
        une panne du miroir ne doit jamais casser la vente au comptoir. */
     try {
       if (window.KiwiLive && window.KiwiLive.isOn && window.KiwiLive.isOn()) {
-        window.KiwiLive.postSale({
+        var queued = window.KiwiLive.postSale({
           amount: total, method: entry.method, label: entry.label,
           ref: entry.ref, time: at, channel: entry.channel || '',
           /* Le détail du panier suit la vente. Il était construit juste
@@ -280,6 +281,11 @@
              est au comptoir et le tableau de bord dans l'arrière-boutique. */
           lines: entry.lines || null,
         });
+        /* Linked ledgers (hotel folios today, other append-only journals
+           tomorrow) need the exact idempotency key that /api/sale receives.
+           Returning it here avoids rebuilding live-link's stableId recipe in
+           every vertical and keeps retries attached to one financial row. */
+        if (queued && queued.id) entry.saleId = String(queued.id);
       }
     } catch (_) {}
 

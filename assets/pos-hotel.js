@@ -320,6 +320,58 @@
     offline: false, queued: 0,
   };
   let root = null;
+  const ROOM_CHARGE_QUEUE = 'kiwi:hotelRoomChargeOutbox:v1';
+  let roomChargeFlushing = false;
+
+  function roomChargeRows() {
+    try {
+      const rows = JSON.parse(localStorage.getItem(ROOM_CHARGE_QUEUE) || '[]');
+      return Array.isArray(rows) ? rows.filter((row) => row && row.saleId) : [];
+    } catch (_) { return []; }
+  }
+  function writeRoomChargeRows(rows) {
+    try { localStorage.setItem(ROOM_CHARGE_QUEUE, JSON.stringify(rows.slice(-300))); return true; }
+    catch (_) { return false; }
+  }
+  function roomChargeContext() {
+    try { return window.KiwiCaisseContext?.current?.() || {}; }
+    catch (_) { return {}; }
+  }
+  async function flushRoomCharges() {
+    if (roomChargeFlushing || state.offline || navigator.onLine === false) return;
+    const rows = roomChargeRows();
+    if (!rows.length) { state.queued = 0; renderNet(); return; }
+    roomChargeFlushing = true;
+    const pending = [];
+    for (const row of rows) {
+      try {
+        const response = await fetch('/api/hotel/room-charges', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(row),
+        });
+        if (response.ok) continue;
+        const body = await response.json().catch(() => ({}));
+        if (response.status === 404 && body.error === 'sale-not-found') pending.push(row);
+        else if (response.status >= 500) pending.push(row);
+        else pending.push({ ...row, blocked: String(body.error || 'refused').slice(0, 80) });
+      } catch (_) { pending.push(row); }
+    }
+    writeRoomChargeRows(pending);
+    state.queued = pending.length;
+    roomChargeFlushing = false;
+    renderNet();
+    if (pending.length && navigator.onLine !== false) setTimeout(flushRoomCharges, 3500);
+  }
+  function enqueueRoomCharge(payload) {
+    const rows = roomChargeRows();
+    if (!rows.some((row) => row.saleId === payload.saleId)) rows.push(payload);
+    if (!writeRoomChargeRows(rows)) return false;
+    state.queued = rows.length;
+    renderNet();
+    setTimeout(flushRoomCharges, 900);
+    return true;
+  }
+  window.addEventListener?.('online', () => setTimeout(flushRoomCharges, 250));
 
   const hotelOps = window.KiwiVerticalState?.open?.('hotel', {
     schema: 2,
@@ -423,10 +475,12 @@
       v.addEventListener('click', (e) => { if (e.target === v) closeVeil(v); });
     });
 
+    state.queued = roomChargeRows().length;
     renderAll();
+    flushRoomCharges();
   }
 
-  function onShow() { roomCloud?.pull?.(false); renderAll(); }
+  function onShow() { roomCloud?.pull?.(false); state.queued = roomChargeRows().length; renderAll(); flushRoomCharges(); }
 
   function openVeil(id) { const v = $(id, root); v.classList.add('is-open'); return v; }
   function closeVeil(v) { (typeof v === 'string' ? $(v, root) : v).classList.remove('is-open'); }
@@ -1126,51 +1180,76 @@
     const st = STAYS[roomN];
     if (!st) return;
     const def = CHARGE[cid];
-    const sheet = { qty: 1, note: '' };
+    const sheet = { qty: 1, note: '', stage: 'ask', busy: false };
     const el = $('#ht-chargem', root);
-    el.innerHTML = `
-      <button class="ht-modal-x" data-ht-close aria-label="Fermer"><i data-lucide="x"></i></button>
-      <div class="ht-ch-head">
-        <span class="ht-ch-art">${ART[cid] || ''}</span>
-        <span class="ht-ch-title"><h3>${esc(def.label)}</h3><span class="sub">${esc(def.sub)} · ${esc(def.per)}</span></span>
-        <span class="ht-ch-price"><span class="val" id="ht-ch-total">${fmtMAD(def.unit)}</span><span class="per">${def.unit} MAD × <span id="ht-ch-qn">1</span></span></span>
-      </div>
-      <div class="ht-ci-f">
-        <div class="ht-ci-lbl">Quantité</div>
-        <div class="ht-stepper">
-          <button id="ht-ch-minus" aria-label="Moins">−</button>
-          <b id="ht-ch-qty">1</b>
-          <button id="ht-ch-plus" aria-label="Plus">+</button>
-        </div>
-      </div>
-      <div class="ht-ci-f">
-        <div class="ht-ci-lbl">Note <span class="opt">· optionnel, visible sur la facture</span></div>
-        <input class="ht-note-free" id="ht-ch-note" placeholder="ex. « sans sucre », « chambre à 19h »…" />
-      </div>
-      <div class="ht-ci-foot">
-        <button class="ht-btn secondary" data-ht-close>Annuler</button>
-        <button class="ht-btn primary" id="ht-ch-add"><i data-lucide="plus"></i>Poster sur le folio · <span id="ht-ch-cta">${fmtMAD(def.unit)}</span></button>
-      </div>`;
-    openVeil('#ht-charge-veil');
-    icons();
-    const refresh = () => {
-      $('#ht-ch-qty', el).textContent = sheet.qty;
-      $('#ht-ch-qn', el).textContent = sheet.qty;
-      $('#ht-ch-total', el).textContent = fmtMAD(def.unit * sheet.qty);
-      $('#ht-ch-cta', el).textContent = fmtMAD(def.unit * sheet.qty);
+    const veil = openVeil('#ht-charge-veil');
+    veil.classList.add('ht-identity-veil');
+    const close = () => { veil.classList.remove('ht-identity-veil'); closeVeil(veil); };
+    const render = () => {
+      if (sheet.stage === 'ask') {
+        el.innerHTML = `<button class="ht-modal-x" data-ht-close aria-label="Fermer"><i data-lucide="x"></i></button>
+          <div class="ht-verify-mark"><i data-lucide="shield-check"></i></div>
+          <div class="ht-verify-kicker">Vérification · chambre ${roomN}</div>
+          <h3 class="ht-verify-title">Demandez au client de dire son nom.</h3>
+          <p class="ht-verify-copy">Ne proposez aucun nom et ne montrez pas la fiche. La réponse vient d’abord.</p>
+          <div class="ht-ci-foot"><button class="ht-btn secondary" data-ht-close>Annuler</button><button class="ht-btn primary" id="ht-ch-reveal">Le client a répondu · révéler</button></div>`;
+      } else if (sheet.stage === 'reveal') {
+        el.innerHTML = `<button class="ht-modal-x" data-ht-close aria-label="Fermer"><i data-lucide="x"></i></button>
+          <div class="ht-verify-kicker">Nom attendu · chambre ${roomN}</div>
+          <div class="ht-verify-name">${esc(st.guest)}</div>
+          <p class="ht-verify-copy">Comparez exactement avec la réponse donnée, sans lire le nom à voix haute.</p>
+          <div class="ht-ci-foot"><button class="ht-btn secondary" id="ht-ch-mismatch">Le nom ne correspond pas</button><button class="ht-btn primary" id="ht-ch-match"><i data-lucide="check"></i>Le nom correspond</button></div>`;
+      } else {
+        el.innerHTML = `<button class="ht-modal-x" data-ht-close aria-label="Fermer"><i data-lucide="x"></i></button>
+          <div class="ht-ch-head"><span class="ht-ch-art">${ART[cid] || ''}</span><span class="ht-ch-title"><h3>${esc(def.label)}</h3><span class="sub">Ch. ${roomN} · identité vérifiée · ${esc(def.per)}</span></span><span class="ht-ch-price"><span class="val" id="ht-ch-total">${fmtMAD(def.unit * sheet.qty)}</span><span class="per">${def.unit} MAD × <span id="ht-ch-qn">${sheet.qty}</span></span></span></div>
+          <div class="ht-ci-f"><div class="ht-ci-lbl">Quantité</div><div class="ht-stepper"><button id="ht-ch-minus" aria-label="Moins">−</button><b id="ht-ch-qty">${sheet.qty}</b><button id="ht-ch-plus" aria-label="Plus">+</button></div></div>
+          <div class="ht-ci-f"><div class="ht-ci-lbl">Note <span class="opt">· optionnel, visible sur la facture</span></div><input class="ht-note-free" id="ht-ch-note" value="${esc(sheet.note)}" placeholder="ex. « sans sucre », « chambre à 19h »…" /></div>
+          <div class="ht-ci-foot"><button class="ht-btn secondary" data-ht-close>Annuler</button><button class="ht-btn primary" id="ht-ch-add" ${sheet.busy ? 'disabled' : ''}><i data-lucide="plus"></i>${sheet.busy ? 'Enregistrement…' : 'Poster sur le folio · ' + fmtMAD(def.unit * sheet.qty)}</button></div>`;
+      }
+      icons();
+      $$('[data-ht-close]', el).forEach((b) => { b.onclick = close; });
+      const reveal = $('#ht-ch-reveal', el); if (reveal) reveal.onclick = () => { sheet.stage = 'reveal'; render(); };
+      const mismatch = $('#ht-ch-mismatch', el); if (mismatch) mismatch.onclick = () => { toast('Charge annulée · identité non confirmée'); close(); };
+      const match = $('#ht-ch-match', el); if (match) match.onclick = () => { sheet.stage = 'charge'; render(); };
+      const minus = $('#ht-ch-minus', el); if (minus) minus.onclick = () => { if (sheet.qty > 1) { sheet.qty--; render(); } };
+      const plus = $('#ht-ch-plus', el); if (plus) plus.onclick = () => { sheet.qty++; render(); };
+      const note = $('#ht-ch-note', el); if (note) note.oninput = (e) => { sheet.note = e.target.value; };
+      const add = $('#ht-ch-add', el); if (add) add.onclick = async () => {
+        if (sheet.busy) return;
+        sheet.note = String($('#ht-ch-note', el)?.value || sheet.note).trim();
+        const total = def.unit * sheet.qty;
+        let saleId = '';
+        if (pvReal()) {
+          const ctx = roomChargeContext();
+          if (!ctx.merchant || !ctx.terminalId || !ctx.cashierId || !ctx.shiftId) {
+            toast('Ouvrez le service et appairez cette caisse avant de poster sur une chambre', 4200);
+            return;
+          }
+          sheet.busy = true; render();
+          let entry = null;
+          try {
+            entry = window.KiwiPosSale?.record?.('hotel', {
+              total, method: 'room', label: def.label,
+              ref: window.KiwiReceipt?.nextRef?.() || '',
+              lines: [{ itemId: cid, name: def.label, category: 'extras', qty: sheet.qty, unit: def.per, kind: 'service', total }],
+            });
+          } catch (_) {}
+          saleId = String(entry && entry.saleId || '');
+          if (!saleId || !enqueueRoomCharge({ merchant: ctx.merchant, terminalId: ctx.terminalId, saleId, shiftId: ctx.shiftId, cashierId: ctx.cashierId })) {
+            sheet.busy = false; render();
+            toast('Impossible de sécuriser la charge · espace local indisponible', 4200);
+            return;
+          }
+        }
+        st.charges.push({ uid: `c${chargeUid++}`, cid, qty: sheet.qty, at: `auj. ${nowHM()}`, note: sheet.note, saleId });
+        close();
+        queueIfOffline(`Charge ${def.label}`);
+        toast(`${def.label} × ${sheet.qty}, posté sur le folio Ch. ${roomN} (+${fmtMAD(total)})`);
+        refreshOps();
+        if (state.view === 'folios' && state.folioRoom === roomN) { renderFolioDetail(); icons(); }
+      };
     };
-    $$('[data-ht-close]', el).forEach((b) => { b.onclick = () => closeVeil('#ht-charge-veil'); });
-    $('#ht-ch-minus', el).onclick = () => { if (sheet.qty > 1) { sheet.qty--; refresh(); } };
-    $('#ht-ch-plus', el).onclick = () => { sheet.qty++; refresh(); };
-    $('#ht-ch-note', el).oninput = (e) => { sheet.note = e.target.value; };
-    $('#ht-ch-add', el).onclick = () => {
-      st.charges.push({ uid: `c${chargeUid++}`, cid, qty: sheet.qty, at: `auj. ${nowHM()}`, note: sheet.note.trim() });
-      closeVeil('#ht-charge-veil');
-      queueIfOffline(`Charge ${def.label}`);
-      toast(`${def.label} × ${sheet.qty}, posté sur le folio Ch. ${roomN} (+${fmtMAD(def.unit * sheet.qty)})`);
-      refreshOps();
-      if (state.view === 'folios' && state.folioRoom === roomN) { renderFolioDetail(); icons(); }
-    };
+    render();
   }
 
   /* ═══════════════════════ CHECK-OUT ═══════════════════════ */

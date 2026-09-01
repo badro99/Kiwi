@@ -30,6 +30,11 @@
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
   }[c]));
+  /* Editors are declared outside register(), so they cannot see the
+   * register-local `toast` destructuring. Always resolve the shared UI helper
+   * at call time; this keeps reservation and OTA actions usable without
+   * duplicating notification code in each workflow. */
+  const toast = (message, options) => window.Kiwi?.toast?.(message, options);
   const TAX_PP_NIGHT = 25; // taxe de séjour (TPT + taxe communale) · MAD / adulte / nuit
 
   /* ═══════════════ ROOMS · 24 chambres / 3 niveaux ═══════════════ */
@@ -1727,6 +1732,15 @@
   function cuStayEditor(booking) {
     const st = cuState(), types = cuTypes(), rooms = Object.values(st.rooms || {}).sort((a, b) => a.n - b.n);
     if (!types.length || !rooms.length) { toast('Configurez vos chambres d’abord', { type: 'warn' }); return; }
+    const statusLabels = { requested: 'Demandée', confirmed: 'Confirmée', checked_in: 'Client arrivé', completed: 'Terminée', cancelled: 'Annulée', no_show: 'No-show' };
+    const nextStatuses = {
+      requested: ['requested', 'confirmed', 'no_show'],
+      confirmed: ['confirmed', 'checked_in', 'no_show'],
+      checked_in: ['checked_in', 'completed'],
+      completed: ['completed'], cancelled: ['cancelled'], no_show: ['no_show'],
+    };
+    const currentStatus = booking?.status || 'confirmed';
+    const statusChoices = booking ? (nextStatuses[currentStatus] || [currentStatus]) : ['requested', 'confirmed', 'checked_in'];
     const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
     const add = (ymd, n) => { const d = new Date(ymd + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
     const typeId = booking?.serviceId || types[0].id;
@@ -1739,7 +1753,7 @@
           <label><span>Catégorie</span><select name="roomTypeId">${types.map((t) => `<option value="${esc(t.id)}" ${t.id === typeId ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select></label>
           <label><span>Chambre</span><select name="resourceId"><option value="">Attribution automatique</option>${rooms.map((r) => `<option value="${esc(r.id)}" data-type="${esc(r.typeId)}" ${r.id === booking?.resourceId ? 'selected' : ''}>Ch. ${r.n} · ${esc(roomTypeOf(r.n).name)}</option>`).join('')}</select></label>
           <label><span>Canal</span><select name="channel"><option value="direct">Direct</option><option value="booking">Booking.com</option><option value="airbnb">Airbnb</option><option value="expedia">Expedia</option><option value="walkin">Walk-in</option><option value="other">Autre OTA</option></select></label>
-          <label><span>Statut</span><select name="status"><option value="confirmed">Confirmée</option><option value="requested">Demandée</option><option value="checked_in">Client arrivé</option><option value="completed">Terminée</option><option value="no_show">No-show</option></select></label>
+          <label><span>Statut</span><select name="status">${statusChoices.map((value) => `<option value="${value}">${statusLabels[value]}</option>`).join('')}</select></label>
           <label><span>Voyageurs</span><input name="partySize" type="number" min="1" max="12" value="${booking?.partySize || 1}"></label>
           <label><span>Référence OTA <small>· optionnel</small></span><input name="externalRef" maxlength="80" value="${esc(booking?.hotel?.externalRef || '')}" placeholder="Ex. 4219-8840"></label>
           <label><span>Téléphone <small>· optionnel</small></span><input name="phone" maxlength="32" value="${esc(booking?.customer?.phone || '')}"></label>
@@ -1866,15 +1880,218 @@
       </div>
     </div>`;
   }
-  function cuIntelBody() {
-    return `<div class="hx-page">
-      <div class="block" style="padding:8px 14px;">
-        ${cuStarter(
-          'L\'intelligence hôtel s\'entraîne sur vos données.',
-          'Avec quelques semaines d\'historique, Kiwi prévoit votre occupation, saisons marocaines, Ramadan et Aïd compris, et vous dit où part l\'argent.',
-          ['Prévision d\'occupation 12 mois', 'Suggestions tarifaires par période', 'Risque de no-show par réservation', '« Où part l\'argent », commissions, taxe, frais']
-        )}
+  const cuEconomatState = {
+    loading: false, loaded: false, saving: false, error: '', rev: 0,
+    registry: { units: [], terminalUnits: {} }, draft: null,
+    report: null, reportError: '', shifts: [], shiftReport: null, selectedShift: '',
+  };
+  function cuMerchantSlug() {
+    try {
+      return String(window.KiwiStore?.slugFor?.(cuVenueId())
+        || window.KiwiVenue?.getCurrentVenueData?.()?.slug
+        || window.KiwiMe?.merchant
+        || '').trim();
+    } catch (_) { return ''; }
+  }
+  function cuEconomatDraft(value) {
+    const raw = value && typeof value === 'object' ? value : {};
+    let units = Array.isArray(raw.units) ? raw.units.map((unit) => ({ ...unit })) : [];
+    if (!units.length) units = [{
+      id: 'economat-central', name: 'Économat central', kind: 'economat',
+      storeType: 'economat', locationId: 'loc-economat-central', active: true,
+    }];
+    return {
+      units,
+      terminals: Object.entries(raw.terminalUnits || {}).map(([terminalId, unitId]) => ({ terminalId, unitId })),
+    };
+  }
+  function cuNewUnit(kind) {
+    const tail = Date.now().toString(36).slice(-7);
+    const id = `${kind}-${tail}`;
+    return {
+      id, name: kind === 'department' ? 'Nouveau département' : 'Nouveau point de vente',
+      kind, storeType: kind === 'department' ? '' : 'restaurant',
+      locationId: `loc-${id}`, active: true,
+    };
+  }
+  function cuQty(milli) {
+    return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 3 }).format((Number(milli) || 0) / 1000);
+  }
+  function cuMoney(cents) { return new Intl.NumberFormat('fr-FR').format((Number(cents) || 0) / 100) + ' MAD'; }
+  function cuCaptureEconomatDraft() {
+    if (!openDrawer || openDrawer.page !== 'hotelintel' || !cuEconomatState.draft) return;
+    const host = openDrawer.el.querySelector('[data-hx-economat]');
+    if (!host) return;
+    cuEconomatState.draft.units.forEach((unit) => {
+      const row = host.querySelector(`[data-hx-econ-unit="${CSS.escape(unit.id)}"]`);
+      if (!row) return;
+      unit.name = String(row.querySelector('[data-hx-econ-name]')?.value || unit.name).trim();
+      unit.storeType = String(row.querySelector('[data-hx-econ-store]')?.value ?? unit.storeType);
+      unit.active = unit.kind === 'economat' ? true : !!row.querySelector('[data-hx-econ-active]')?.checked;
+    });
+    cuEconomatState.draft.terminals = [...host.querySelectorAll('[data-hx-econ-terminal-row]')].map((row) => ({
+      terminalId: String(row.querySelector('[data-hx-econ-terminal]')?.value || '').trim(),
+      unitId: String(row.querySelector('[data-hx-econ-terminal-unit]')?.value || '').trim(),
+    }));
+  }
+  function cuEconomatBody() {
+    const s = cuEconomatState;
+    if (!s.loaded && s.loading) return '<div class="hx-econ-loading"><i></i>Lecture de la configuration et des migrations…</div>';
+    const d = s.draft || cuEconomatDraft(s.registry);
+    const outlets = d.units.filter((unit) => unit.kind === 'outlet' && unit.active);
+    const mapped = new Set(d.terminals.filter((row) => row.terminalId && row.unitId).map((row) => row.unitId));
+    const allOutletsMapped = outlets.length > 0 && outlets.every((unit) => mapped.has(unit.id));
+    const registryReady = s.registry.units.length > 0 && allOutletsMapped;
+    const inventory = s.report ? `<div class="hx-econ-kpis">
+      <div><span>Stock hôtel consolidé</span><b>${cuQty(s.report.consolidated?.closingMilli)}</b><small>${s.report.consolidated?.items?.length || 0} références</small></div>
+      <div><span>Unités suivies</span><b>${s.report.units?.length || 0}</b><small>${s.report.units?.every((u) => u.reconciliation?.balanced) ? 'réconciliées' : 'écart à examiner'}</small></div>
+      <div><span>Comptages physiques</span><b>${s.report.physicalCounts?.observed || 0}</b><small>${s.report.physicalCounts?.applied || 0} appliqués</small></div>
+    </div><div class="hx-econ-unit-report">${(s.report.units || []).map((unit) => `<div><span><b>${esc(unit.locationId)}</b><small>${unit.items?.length || 0} références</small></span><strong>${cuQty(unit.reconciliation?.closingMilli)}</strong><i class="${unit.reconciliation?.balanced ? 'ok' : 'bad'}">${unit.reconciliation?.balanced ? 'équilibré' : 'à vérifier'}</i></div>`).join('')}</div>`
+      : `<div class="hx-econ-empty">${esc(s.reportError || (s.registry.units.length ? 'Le rapport sera disponible après les migrations de production.' : 'Configurez les unités pour ouvrir le rapport consolidé.'))}</div>`;
+    const shiftRows = s.shifts.length ? s.shifts.map((shift) => `<button data-action="hx-econ-shift" data-arg="${esc(shift.shiftId)}" class="${s.selectedShift === shift.shiftId ? 'on' : ''}"><span><b>${new Date(shift.lastTs).toLocaleString('fr-FR')}</b><small>${shift.chargeCount} charges · ${shift.reversalCount} annulations</small></span><strong>${cuMoney(shift.netCents)}</strong></button>`).join('') : '<div class="hx-econ-empty">Aucune charge chambre enregistrée sur les 30 derniers jours.</div>';
+    const cashiers = s.shiftReport ? `<div class="hx-econ-cashiers">${(s.shiftReport.cashiers || []).map((row) => `<div><span><b>${esc(row.cashierName || row.cashierId)}</b><small>${row.chargeCount} charges · ${row.reversalCount} annulations</small></span><strong>${cuMoney(row.netCents)}</strong></div>`).join('')}</div>` : '';
+    const unitRows = d.units.map((unit) => `<div class="hx-econ-unit" data-hx-econ-unit="${esc(unit.id)}">
+      <span class="kind">${unit.kind === 'economat' ? 'ÉCONOMAT' : unit.kind === 'department' ? 'DÉPARTEMENT' : 'POINT DE VENTE'}</span>
+      <input data-hx-econ-name value="${esc(unit.name)}" maxlength="120" aria-label="Nom de l’unité">
+      ${unit.kind === 'department' ? '<input data-hx-econ-store value="" type="hidden"><span class="type">service interne</span>' : unit.kind === 'economat' ? '<input data-hx-econ-store value="economat" type="hidden"><span class="type">stock central</span>' : `<select data-hx-econ-store><option value="restaurant" ${unit.storeType === 'restaurant' ? 'selected' : ''}>Restaurant</option><option value="bar" ${unit.storeType === 'bar' ? 'selected' : ''}>Bar</option><option value="cafe" ${unit.storeType === 'cafe' ? 'selected' : ''}>Café</option><option value="spa" ${unit.storeType === 'spa' ? 'selected' : ''}>Spa</option></select>`}
+      <label><input data-hx-econ-active type="checkbox" ${unit.active ? 'checked' : ''} ${unit.kind === 'economat' ? 'disabled' : ''}> active</label>
+      <code>${esc(unit.locationId)}</code>
+    </div>`).join('');
+    const terminalRows = d.terminals.map((row, index) => `<div class="hx-econ-terminal" data-hx-econ-terminal-row>
+      <input data-hx-econ-terminal value="${esc(row.terminalId)}" maxlength="80" placeholder="term_…">
+      <select data-hx-econ-terminal-unit><option value="">Choisir le point de vente</option>${outlets.map((unit) => `<option value="${esc(unit.id)}" ${row.unitId === unit.id ? 'selected' : ''}>${esc(unit.name)}</option>`).join('')}</select>
+      <button data-action="hx-econ-remove-terminal" data-arg="${index}" aria-label="Retirer">×</button>
+    </div>`).join('');
+    return `<div class="hx-econ-shell" data-hx-economat>
+      <div class="hx-econ-head"><div><span>ÉCONOMAT · PILOTE</span><h3>La vérité opérationnelle de l’hôtel</h3><p>Configuration des unités, stock consolidé et charges chambre, sans données client.</p></div><button class="hx-btn ghost" data-action="hx-econ-refresh">Actualiser</button></div>
+      ${s.error ? `<div class="hx-econ-alert bad">${esc(s.error)}</div>` : ''}
+      <div class="hx-econ-readiness"><div class="${registryReady ? 'ok' : 'wait'}"><b>${registryReady ? 'Registre prêt' : 'Registre incomplet'}</b><span>${s.registry.units.length ? `${s.registry.units.length} unités · ${Object.keys(s.registry.terminalUnits || {}).length} caisses` : 'aucune écriture en production'}</span></div><div class="${s.report ? 'ok' : 'wait'}"><b>${s.report ? 'Rapports disponibles' : 'Migration à confirmer'}</b><span>${s.report ? 'stock et comptages lisibles' : esc(s.reportError || 'aucune donnée fabriquée')}</span></div><div class="wait"><b>Discovery D</b><span>visite terrain requise · jamais validée par logiciel</span></div></div>
+      <div class="hx-econ-section"><div class="hx-h"><span class="t">Stock consolidé</span><span class="s">équation par unité et vue hôtel</span></div>${inventory}</div>
+      <div class="hx-econ-section"><div class="hx-h"><span class="t">Charges chambre par poste</span><span class="s">aucun nom de client ni numéro de chambre</span></div><div class="hx-econ-shifts">${shiftRows}</div>${cashiers}</div>
+      <div class="hx-econ-section"><div class="hx-h"><span class="t">Unités et caisses</span><span class="s">un seul enregistrement atomique</span></div><div class="hx-econ-units">${unitRows}</div><div class="hx-econ-add"><button class="hx-btn ghost" data-action="hx-econ-add-unit" data-arg="outlet">+ Point de vente</button><button class="hx-btn ghost" data-action="hx-econ-add-unit" data-arg="department">+ Département</button></div>
+        <div class="hx-econ-terminal-head"><b>Assignation des caisses</b><span>Copiez l’identifiant depuis chaque caisse physique.</span><button class="hx-btn ghost" data-action="hx-econ-add-terminal">+ Caisse</button></div><div>${terminalRows || '<div class="hx-econ-empty">Aucune caisse assignée. Le premier registre ne peut pas être activé ainsi.</div>'}</div>
+        <label class="hx-econ-confirm"><input type="checkbox" data-hx-econ-confirm> J’ai relevé toutes les caisses physiques et vérifié leur point de vente.</label>
+        <div class="hx-econ-save"><span>${allOutletsMapped ? 'Chaque point de vente actif a au moins une caisse.' : 'Chaque point de vente actif doit avoir une caisse.'}</span><button class="hx-btn atlas" data-action="hx-econ-save" ${s.saving ? 'disabled' : ''}>${s.saving ? 'Enregistrement…' : 'Enregistrer unités + caisses'}</button></div>
       </div>
+    </div>`;
+  }
+  async function cuLoadEconomat(force) {
+    if (!isCustomHotel() || cuEconomatState.loading) return;
+    const merchant = cuMerchantSlug();
+    if (!merchant) { cuEconomatState.error = 'Établissement hôtel introuvable.'; cuEconomatState.loaded = true; rerender(); return; }
+    cuEconomatState.loading = true;
+    if (!cuEconomatState.loaded) rerender();
+    const qs = encodeURIComponent(merchant);
+    try {
+      const docResponse = await fetch(`/api/store?feature=hotel-units&merchant=${qs}`, { credentials: 'same-origin' });
+      const doc = await docResponse.json();
+      if (!docResponse.ok) throw new Error(doc.error || 'unités indisponibles');
+      cuEconomatState.rev = Number(doc.rev) || 0;
+      cuEconomatState.registry = doc.data && Array.isArray(doc.data.units) ? doc.data : { units: [], terminalUnits: {} };
+      if (force || !cuEconomatState.draft) cuEconomatState.draft = cuEconomatDraft(cuEconomatState.registry);
+      cuEconomatState.report = null; cuEconomatState.reportError = ''; cuEconomatState.shifts = [];
+      if (cuEconomatState.registry.units.length) {
+        const since = Date.now() - 30 * 86400000;
+        const [inventoryResponse, shiftsResponse] = await Promise.all([
+          fetch(`/api/inventory/hotel-reports?merchant=${qs}`, { credentials: 'same-origin' }),
+          fetch(`/api/hotel/room-charges?merchant=${qs}&mode=shifts&since=${since}`, { credentials: 'same-origin' }),
+        ]);
+        const inventoryBody = await inventoryResponse.json();
+        const shiftsBody = await shiftsResponse.json();
+        if (inventoryResponse.ok) cuEconomatState.report = inventoryBody.report;
+        else cuEconomatState.reportError = inventoryBody.dependency ? `Migration manquante : ${inventoryBody.dependency}` : String(inventoryBody.error || 'rapport indisponible');
+        if (shiftsResponse.ok) cuEconomatState.shifts = Array.isArray(shiftsBody.shifts) ? shiftsBody.shifts : [];
+        else if (!cuEconomatState.reportError) cuEconomatState.reportError = String(shiftsBody.error || 'charges chambre indisponibles');
+      }
+      cuEconomatState.error = '';
+    } catch (error) { cuEconomatState.error = String(error && error.message || error); }
+    cuEconomatState.loading = false; cuEconomatState.loaded = true;
+    rerender();
+  }
+  async function cuLoadRoomShift(shiftId) {
+    const merchant = cuMerchantSlug();
+    if (!merchant || !shiftId) return;
+    cuEconomatState.selectedShift = shiftId; cuEconomatState.shiftReport = null; rerender();
+    try {
+      const response = await fetch(`/api/hotel/room-charges?merchant=${encodeURIComponent(merchant)}&shiftId=${encodeURIComponent(shiftId)}`, { credentials: 'same-origin' });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || 'rapport indisponible');
+      cuEconomatState.shiftReport = body.report;
+    } catch (error) { cuEconomatState.error = String(error && error.message || error); }
+    rerender();
+  }
+  async function cuSaveEconomat(el) {
+    if (cuEconomatState.saving) return;
+    cuCaptureEconomatDraft();
+    const host = el.closest('[data-hx-economat]');
+    const d = cuEconomatState.draft;
+    if (!host?.querySelector('[data-hx-econ-confirm]')?.checked) {
+      toast('Confirmez le relevé de toutes les caisses', { type: 'warn', desc: 'Une caisse oubliée continuerait à vendre sans synchroniser son stock.' }); return;
+    }
+    const outlets = d.units.filter((unit) => unit.kind === 'outlet' && unit.active);
+    if (!outlets.length) { toast('Ajoutez au moins un point de vente actif', { type: 'warn' }); return; }
+    if (d.units.some((unit) => !unit.name)) { toast('Chaque unité doit avoir un nom', { type: 'warn' }); return; }
+    const terminalUnits = {};
+    for (const row of d.terminals) {
+      if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,79}$/.test(row.terminalId) || !outlets.some((unit) => unit.id === row.unitId) || terminalUnits[row.terminalId]) {
+        toast('Corrigez les identifiants de caisse', { type: 'warn', desc: 'Chaque identifiant doit être unique et relié à un point de vente actif.' }); return;
+      }
+      terminalUnits[row.terminalId] = row.unitId;
+    }
+    if (outlets.some((unit) => !Object.values(terminalUnits).includes(unit.id))) {
+      toast('Une caisse manque pour un point de vente actif', { type: 'warn' }); return;
+    }
+    const merchant = cuMerchantSlug();
+    const data = { units: d.units.map((unit) => ({ id: unit.id, name: unit.name, kind: unit.kind, storeType: unit.storeType, locationId: unit.locationId, active: !!unit.active })), terminalUnits };
+    cuEconomatState.saving = true; rerender();
+    try {
+      const response = await fetch('/api/store', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ feature: 'hotel-units', merchant, baseRev: cuEconomatState.rev, data }) });
+      const body = await response.json();
+      if (!response.ok) {
+        if (response.status === 409 && body.data) { cuEconomatState.rev = body.rev; cuEconomatState.registry = body.data; cuEconomatState.draft = cuEconomatDraft(body.data); }
+        throw new Error(body.detail || body.error || 'enregistrement refusé');
+      }
+      cuEconomatState.rev = body.rev; cuEconomatState.registry = data; cuEconomatState.draft = cuEconomatDraft(data);
+      toast('Unités et caisses enregistrées ensemble', { type: 'success', desc: `${data.units.length} unités · ${Object.keys(terminalUnits).length} caisses.` });
+    } catch (error) { cuEconomatState.error = String(error && error.message || error); }
+    cuEconomatState.saving = false; cuEconomatState.loaded = false;
+    cuLoadEconomat(true);
+  }
+  function cuIntelBody() {
+    const st = cuState();
+    const rooms = Object.values(st.rooms || {});
+    const folios = Object.values(st.folios || {}).filter(Boolean);
+    const occupied = rooms.filter((room) => ['occ', 'depart'].includes(room.status)).length;
+    const arrivals = rooms.filter((room) => room.status === 'arrivee').length;
+    const dirty = rooms.filter((room) => room.status === 'sale').length;
+    const unavailable = rooms.filter((room) => room.status === 'hs').length;
+    const sellable = Math.max(0, rooms.length - unavailable);
+    const occupancy = sellable ? Math.round(occupied / sellable * 100) : 0;
+    const openBalance = folios.reduce((sum, folio) => sum + folioTotal(folio), 0);
+    const configuredRates = cuTypes().map((type) => type.rate == null ? st.baseRate : type.rate).filter((rate) => Number.isFinite(+rate));
+    const averageRate = configuredRates.length ? Math.round(configuredRates.reduce((sum, rate) => sum + +rate, 0) / configuredRates.length) : null;
+    const activeChannels = cuChannelState.loaded ? cuChannelState.rows.filter((row) => row.status === 'active').length : null;
+    const recommendations = [];
+    if (!rooms.length) recommendations.push(['Configurer les chambres', 'Le plan, les séjours, le ménage et les prévisions ont besoin de chambres réelles.']);
+    if (rooms.length && averageRate == null) recommendations.push(['Définir les tarifs', 'Aucun revenu potentiel ne peut être calculé tant que le tarif général ou les tarifs par type sont vides.']);
+    if (dirty) recommendations.push(['Prioriser le ménage', `${dirty} chambre${dirty === 1 ? '' : 's'} ne ${dirty === 1 ? 'peut' : 'peuvent'} pas être revendue${dirty === 1 ? '' : 's'} immédiatement.`]);
+    if (sellable && occupancy >= 80 && averageRate != null) recommendations.push(['Demande forte', `Occupation actuelle ${occupancy} %. Vérifiez les prochaines dates avant d’augmenter les tarifs, sans modifier les réservations existantes.`]);
+    if (sellable && occupancy < 40) recommendations.push(['Occupation basse', `Occupation actuelle ${occupancy} %. Travaillez d’abord la vente directe et les dates creuses plutôt qu’une remise générale.`]);
+    if (activeChannels === 0) recommendations.push(['Connecter les calendriers OTA', 'Booking.com et Airbnb doivent bloquer la même disponibilité que les réservations directes.']);
+    if (!recommendations.length) recommendations.push(['Aucune urgence opérationnelle', 'Les chambres, tarifs, folios et canaux ne montrent pas de blocage immédiat.']);
+    return `<div class="hx-page">
+      <div class="hx-strip">
+        <div class="hx-kpi"><div class="l">Occupation actuelle</div><div class="v">${occupancy} %</div><div class="d">${occupied} occupée${occupied === 1 ? '' : 's'} · ${sellable} vendable${sellable === 1 ? '' : 's'}</div></div>
+        <div class="hx-kpi"><div class="l">Arrivées attendues</div><div class="v">${arrivals}</div><div class="d">selon le plan des chambres</div></div>
+        <div class="hx-kpi"><div class="l">Folios ouverts</div><div class="v">${folios.length}</div><div class="d">${MAD(openBalance)} à suivre</div></div>
+        <div class="hx-kpi"><div class="l">Tarif moyen configuré</div><div class="v">${averageRate == null ? '·' : fmt(averageRate) + ' <small>MAD</small>'}</div><div class="d">types de chambres actifs</div></div>
+      </div>
+      <div class="hx-h"><span class="t">Décisions du jour</span><span class="s">calculées uniquement avec les données visibles de cet établissement</span></div>
+      <div class="block" style="padding:8px 14px;">
+        <div class="hx-list">${recommendations.map(([title, detail], index) => `<div class="hx-arr"><span class="tm">${String(index + 1).padStart(2, '0')}</span><div class="who"><b>${esc(title)}</b><div class="sub">${esc(detail)}</div></div><span class="hx-pill ${index ? 'neutral' : 'ok'}">${index ? 'À SUIVRE' : 'PRIORITÉ'}</span></div>`).join('')}</div>
+      </div>
+      <div class="block" style="padding:16px 18px;margin-top:14px;"><div class="hx-h" style="margin:0;"><span class="t">Limite des données</span><span class="s">Kiwi n’affiche pas encore de prévision 12 mois ni de risque no-show tant que l’historique quotidien requis n’existe pas.</span></div></div>
+      ${cuEconomatBody()}
     </div>`;
   }
 
@@ -2084,8 +2301,15 @@
       ? (page('canaux', 'Canaux & OTA', '100 % direct aujourd\'hui · connectez vos canaux quand vous êtes prêt', cuCanauxBody), setTimeout(()=>cuLoadChannels(false),0))
       : page('canaux', 'Canaux & OTA', 'Booking.com, Expedia, Airbnb, direct · commissions visibles, enfin', canauxBody);
     handlers['nav-hotelintel'] = () => cu()
-      ? page('hotelintel', 'Intelligence hôtel', 'Prévisions et suggestions, l\'IA s\'entraîne sur vos données réelles', cuIntelBody)
+      ? (page('hotelintel', 'Intelligence hôtel', 'Prévisions, Économat et contrôle opérationnel', cuIntelBody), setTimeout(() => cuLoadEconomat(false), 0))
       : page('hotelintel', 'Intelligence hôtel', 'Prévision d\'occupation · tarification · no-shows · où part l\'argent', intelBody);
+
+    handlers['hx-econ-refresh'] = () => { cuEconomatState.loaded = false; cuLoadEconomat(true); };
+    handlers['hx-econ-add-unit'] = (el, arg) => { cuCaptureEconomatDraft(); cuEconomatState.draft.units.push(cuNewUnit(arg === 'department' ? 'department' : 'outlet')); rerender(); };
+    handlers['hx-econ-add-terminal'] = () => { cuCaptureEconomatDraft(); cuEconomatState.draft.terminals.push({ terminalId: '', unitId: '' }); rerender(); };
+    handlers['hx-econ-remove-terminal'] = (el, arg) => { cuCaptureEconomatDraft(); cuEconomatState.draft.terminals.splice(Math.max(0, parseInt(arg, 10) || 0), 1); rerender(); };
+    handlers['hx-econ-save'] = (el) => cuSaveEconomat(el);
+    handlers['hx-econ-shift'] = (el, arg) => cuLoadRoomShift(String(arg || ''));
 
     /* — custom-hotel controls — */
     handlers['hx-tape-prev'] = () => { cuTapeOffset -= 14; rerender(); };

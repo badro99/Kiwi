@@ -11,7 +11,7 @@ process.on('unhandledRejection', (error) => {
   process.exit(1);
 });
 
-const EXPECTED = 14;
+const EXPECTED = 15;
 let checks = 0;
 
 async function check(name, fn) {
@@ -180,8 +180,11 @@ function makeDb({ missingEvents = false } = {}) {
           }
           if (query.includes('FROM hotel_room_charge_events')) {
             if (missingEvents) throw new Error('no such table: hotel_room_charge_events');
-            return { results: state.events.filter((event) =>
-              event.merchant === args[0] && event.shift_id === args[1]) };
+            return { results: state.events.filter((event) => {
+              if (event.merchant !== args[0]) return false;
+              if (query.includes('shift_id = ?')) return event.shift_id === args[1];
+              return event.occurred_ts >= args[1] && event.occurred_ts <= args[2];
+            }) };
           }
           return { results: [] };
         },
@@ -262,6 +265,19 @@ await check('the privileged route returns aggregates without guest, room, PIN, o
   const body = await response.json();
   assert.equal(response.status, 200);
   assert.equal(body.report.totals.netCents, 12500);
+  assert.equal(/guest|roomNumber|roomId|pin|code/i.test(JSON.stringify(body)), false);
+});
+await check('the privileged shift index is scoped, ordered, and contains no guest or room identity', async () => {
+  const response = await roomChargeRoute.onRequestGet({
+    request: new Request(`https://kiwi.test/api/hotel/room-charges?merchant=${MERCHANT}&mode=shifts`, {
+      headers: { cookie: `${SESS_COOKIE}=${ownerToken}` },
+    }),
+    env: { AUTH_SECRET: SECRET, DB: fixture.db },
+  });
+  const body = await response.json();
+  assert.equal(response.status, 200);
+  assert.deepEqual(body.shifts.map((row) => row.shiftId), ['shift-route']);
+  assert.equal(body.shifts[0].netCents, 12500);
   assert.equal(/guest|roomNumber|roomId|pin|code/i.test(JSON.stringify(body)), false);
 });
 fixture.state.sales.get('sale-route').void_ts = 2200;

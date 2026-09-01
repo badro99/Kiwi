@@ -8,6 +8,14 @@ import { poke } from '../_live.js';
 const ACTIVE = new Set(['requested', 'confirmed', 'checked_in']);
 const CHANNELS = new Set(['direct', 'booking', 'airbnb', 'expedia', 'walkin', 'other']);
 const STATUSES = new Set(['requested', 'confirmed', 'checked_in', 'completed', 'cancelled', 'no_show']);
+const STATUS_TRANSITIONS = new Map([
+  ['requested', new Set(['confirmed', 'cancelled', 'no_show'])],
+  ['confirmed', new Set(['checked_in', 'cancelled', 'no_show'])],
+  ['checked_in', new Set(['completed'])],
+  ['completed', new Set()],
+  ['cancelled', new Set()],
+  ['no_show', new Set()],
+]);
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const REF = /^[A-Za-z0-9_-]{8,80}$/;
 const TZ = 'Africa/Casablanca';
@@ -71,6 +79,9 @@ function zonedEpoch(date, time) {
 }
 function addDays(date, count) { const d = new Date(date + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + count); return d.toISOString().slice(0, 10); }
 function overlaps(a0, a1, b0, b1) { return a0 < b1 && b0 < a1; }
+function canTransition(from, to) {
+  return from === to || !!STATUS_TRANSITIONS.get(from)?.has(to);
+}
 function currentRoomFree(hotel, room, startAt, endAt) {
   if (room.status === 'hs') return false;
   if (!['occ', 'depart', 'arrivee'].includes(room.status)) return true;
@@ -114,6 +125,9 @@ export async function onRequestPost({ request, env }) {
 
     if (action === 'cancel') {
       if (!old) return json({ error: 'stay-not-found' }, 404);
+      if (!canTransition(old.status, 'cancelled')) {
+        return json({ error: 'invalid-status-transition', from: old.status, to: 'cancelled' }, 409);
+      }
       old.status = 'cancelled'; old.updatedAt = now;
       try { const next = await write(env, merchant, doc, rev, now); if (next) { await poke(env, merchant, 'reservations'); return json({ ok: true, rev: next, booking: old }); } } catch (_) { return json({ error: 'write-failed' }, 503); }
       continue;
@@ -130,6 +144,9 @@ export async function onRequestPost({ request, env }) {
     const startAt = zonedEpoch(checkIn, '15:00'), endAt = zonedEpoch(checkOut, '11:00');
     const type = hotel.types.find((x) => x.id === typeId && x.maxGuests >= partySize);
     if (!type) return json({ error: 'room-type-not-found' }, 409);
+    if (old && !canTransition(old.status, status)) {
+      return json({ error: 'invalid-status-transition', from: old.status, to: status }, 409);
+    }
     if (!old) {
       const replay = doc.bookings.find((x) => x.publicRef === clientRef);
       if (replay) return json({ ok: true, rev, booking: replay, replayed: true });
@@ -141,9 +158,15 @@ export async function onRequestPost({ request, env }) {
     const rec = {
       id: old?.id || 'bk-' + crypto.randomUUID(), code: old?.code || 'H-' + crypto.randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase(),
       customer: { name, phone, email }, serviceId: type.id, resourceId: room.id, startAt, endAt, partySize, status,
-      source: channel === 'direct' || channel === 'walkin' ? 'staff' : 'import', note,
+      source: old?.source || (channel === 'direct' || channel === 'walkin' ? 'staff' : 'import'), note,
       manageToken: old?.manageToken || '', publicRef: old?.publicRef || clientRef,
-      hotel: { roomTypeName: type.name, checkIn, checkOut, nights, rate: rate == null ? 0 : rate, total: rate == null ? 0 : Math.round(rate * nights), channel, externalRef },
+      hotel: {
+        roomTypeName: type.name, checkIn, checkOut, nights,
+        rate: rate == null ? 0 : rate, total: rate == null ? 0 : Math.round(rate * nights),
+        channel, externalRef: externalRef || old?.hotel?.externalRef || '',
+        feedId: old?.hotel?.feedId || '', syncedAt: old?.hotel?.syncedAt || 0,
+        conflict: false,
+      },
       createdAt: old?.createdAt || now, updatedAt: now,
     };
     const index = old ? doc.bookings.findIndex((x) => x.id === old.id) : -1;

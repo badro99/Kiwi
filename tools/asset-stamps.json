@@ -324,12 +324,12 @@
     "sha": "d597ba5cac11de01"
   },
   "assets/hotel.css": {
-    "v": "16",
-    "sha": "b0d6c16a7cad853e"
+    "v": "17",
+    "sha": "6adeb79b59822054"
   },
   "assets/hotel.js": {
-    "v": "21",
-    "sha": "a8f301d8799b98d0"
+    "v": "22",
+    "sha": "57bfd92b5dd637e5"
   },
   "assets/hours-ui.js": {
     "v": "1",
@@ -589,7 +589,7 @@
   },
   "assets/pos-dispatch.js": {
     "v": "35",
-    "sha": "3cf80128f69127b4"
+    "sha": "b1ad104d99692b8e"
   },
   "assets/pos-epicerie.css": {
     "v": "5",
@@ -632,12 +632,12 @@
     "sha": "3da516413a960632"
   },
   "assets/pos-hotel.css": {
-    "v": "10",
-    "sha": "29803c3e7ad4be76"
+    "v": "12",
+    "sha": "ecf294d2c2574bd9"
   },
   "assets/pos-hotel.js": {
-    "v": "10",
-    "sha": "e74ea96ef32acfbd"
+    "v": "12",
+    "sha": "644da9146bc9d2e2"
   },
   "assets/pos-inventory-count.js": {
     "v": "6",
@@ -688,8 +688,8 @@
     "sha": "268d006746e8216d"
   },
   "assets/pos-sale.js": {
-    "v": "5",
-    "sha": "ca61760d42c6dca3"
+    "v": "6",
+    "sha": "a5dbd12fd9522b46"
   },
   "assets/pos-spa.css": {
     "v": "5",
