@@ -64,3 +64,24 @@ put the asset in the manifest.
 Each group should use `node tools/bump-stamp.js` and land as its own reviewed
 commit. Do not delete a tag during stamping work, and do not add an asset to the
 service-worker precache merely because its URL is being stamped.
+
+## Le cliquet · `tools/asset-stamp-backlog.json`
+
+Le retard ci-dessus est **gelé nommément**, pas compté. `tools/asset-stamp-coverage-test.js`
+(nommé dans `tools/check.js`) refuse trois choses :
+
+- un actif de coquille non couvert **qui n'est pas déjà dans le retard** · une dette
+  nouvelle est un échec immédiat, et on n'allonge jamais la liste pour la faire taire ;
+- une entrée du retard **qui a cessé d'être un problème** · une fois l'actif estampillé,
+  ou sa balise retirée, la ligne doit disparaître du fichier. La liste ne peut que
+  rétrécir ;
+- un actif présent **à la fois** dans le retard et dans `asset-stamp-exceptions.json` ·
+  une exception est permanente et argumentée, une entrée de retard est une dette à
+  rembourser. Les deux ne décrivent pas la même chose.
+
+Un plafond chiffré (« pas plus de 47 ») aurait laissé passer l'échange : on estampille un
+actif, quelqu'un en introduit un autre sans estampille, le total reste 47, la porte reste
+verte et la dette a simplement changé de visage. C'est pourquoi le cliquet est ensembliste.
+
+En pratique, estampiller un groupe se termine donc par une ligne de plus dans le commit :
+retirer du retard les actifs que l'on vient de couvrir.

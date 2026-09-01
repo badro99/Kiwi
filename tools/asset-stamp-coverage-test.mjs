@@ -11,7 +11,7 @@ process.on('unhandledRejection', (error) => {
 const DEFAULT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const ROOT = path.resolve(process.env.KIWI_STAMP_COVERAGE_ROOT || DEFAULT_ROOT);
 const SHELLS = ['dashboard.html', 'kiwi-caisse.html', 'kiwi-serveur.html'];
-const EXPECTED_CHECKS = 5;
+const EXPECTED_CHECKS = 7;
 let checks = 0;
 const failures = [];
 
@@ -90,11 +90,44 @@ await check('manifest and exception files are readable', async () => {
   if (!manifest || Array.isArray(manifest) || !exceptions || Array.isArray(exceptions)) throw new Error('invalid JSON shape');
 });
 
-await check('every non-excepted shell asset has a matching stamp and manifest entry', async () => {
+/* Un cliquet ENSEMBLISTE, pas un compteur.
+ *
+ * Un simple plafond chiffré (« pas plus de 47 ») laisse passer l'échange : on
+ * estampille un actif, quelqu'un en introduit un autre sans estampille, le
+ * total reste 47 et la porte reste verte alors que la dette a changé de
+ * visage. Le retard est donc gelé nommément dans
+ * tools/asset-stamp-backlog.json, et la liste ne peut que rétrécir. */
+await check('no shell asset is uncovered outside the frozen backlog', async () => {
   const { issues } = audit();
-  if (issues.size) {
-    const detail = [...issues].map(([asset, reasons]) => `${asset} (${[...reasons].join(', ')})`).join('; ');
-    throw new Error(`${issues.size} uncovered asset(s): ${detail}`);
+  const backlog = readJson('tools/asset-stamp-backlog.json');
+  const fresh = [...issues].filter(([asset]) => !Object.prototype.hasOwnProperty.call(backlog, asset));
+  if (fresh.length) {
+    const detail = fresh.map(([asset, reasons]) => `${asset} (${[...reasons].join(', ')})`).join('; ');
+    throw new Error(`${fresh.length} NEW uncovered asset(s) · stamp them, never extend the backlog: ${detail}`);
+  }
+});
+
+await check('the frozen backlog only ever shrinks', async () => {
+  const { issues, referenced } = audit();
+  const backlog = readJson('tools/asset-stamp-backlog.json');
+  const stale = Object.keys(backlog).filter((asset) => !issues.has(asset));
+  if (stale.length) {
+    const detail = stale
+      .map((asset) => `${asset} (${referenced.has(asset) ? 'now covered' : 'no longer referenced'})`)
+      .join('; ');
+    throw new Error(`${stale.length} backlog entry(ies) resolved · remove them from tools/asset-stamp-backlog.json: ${detail}`);
+  }
+});
+
+await check('backlog entries carry a reason and never overlap the exception list', async () => {
+  const backlog = readJson('tools/asset-stamp-backlog.json');
+  const exceptions = readJson('tools/asset-stamp-exceptions.json');
+  for (const [asset, reason] of Object.entries(backlog)) {
+    if (!asset.startsWith('assets/')) throw new Error(`invalid asset: ${asset}`);
+    if (typeof reason !== 'string' || !reason.trim()) throw new Error(`missing reason: ${asset}`);
+    if (Object.prototype.hasOwnProperty.call(exceptions, asset)) {
+      throw new Error(`${asset} is both excepted and backlogged · an exception is permanent, a backlog entry is debt`);
+    }
   }
 });
 
