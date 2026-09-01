@@ -414,7 +414,12 @@ line-by-line in base units; never sum kilograms, bottles and cartons together.
 - Reasons per §5.2. "Supplier delivery expected" is a **free-text note in V1** · do not
   link it to `assets/procurement.js` yet, that is V2.
 - **Substitutions are V2.** In V1, refuse the line; the department raises a new request.
+  `substitute_for` remains a reserved migration column but is always empty and is rejected
+  by the V1 command surface.
 - A change to quantity, timing or product is a **proposal** until the department accepts.
+- Re-review after acceptance is allowed while the request is open and cannot reduce below
+  preparation or receipt already recorded. It advances `reviewRevision` and deliberately
+  leaves `acceptedRevision` behind until the department accepts again.
 - Approval checks source **available to promise** in the same server transaction and
   refuses over-commitment caused by a concurrent approval.
 
@@ -432,6 +437,9 @@ line-by-line in base units; never sum kilograms, bottles and cartons together.
 
 Record partial actions as append-only fulfilment events. Project cumulative quantities
 from events; do not overwrite the actor and timestamp of an earlier partial handover.
+V1 keeps the shipped action set compact: `prepare` carries `fulfilmentMethod` and a
+`handover` marker. A dedicated handover action would duplicate the same monotonic
+quantity and create two competing projections.
 
 **Test** `tools/economat-handover-test.mjs`
 - Handover recorded, ledger unchanged, Économat balance still holds the goods.
@@ -499,6 +507,7 @@ Four rules, each of which has a test:
    confirmation** rather than writing an uncosted movement (spec §3.4.1).
 4. **Single-side confirmation.** The hotel setting picks recipient or Économat. Only that
    side gets the action. The other side can view and dispute, never confirm again.
+   `dispute` is a separate non-ledger command that writes the existing `disputed` field.
 
 **Test** `tools/hotel-transfer-test.mjs` · the most important suite in this project
 - Confirmation writes exactly two movements sharing one `refId`.

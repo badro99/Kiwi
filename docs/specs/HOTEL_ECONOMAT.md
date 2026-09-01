@@ -355,8 +355,8 @@ line: {
   qtyApproved,           // what the Économat committed to · 0 = refused
   qtyPrepared,           // what was physically assembled
   qtyReceived,           // what the confirming side accepted
-  resolution,            // pending | approved | reduced | substituted | delayed | refused
-  substituteFor,         // itemId when this line replaces another
+  resolution,            // pending | approved | reduced | refused
+  substituteFor,         // reserved for V2; always empty in V1
   note
 }
 ```
@@ -406,8 +406,16 @@ current". Every create/submit/approve/confirm command also has an idempotency ke
 
 ### 5.2 Économat review
 
-The Économat may approve as submitted, approve partially, change the quantity, propose
-a substitute, delay a line, or reject a line or the request, with a reason.
+The Économat may approve as submitted, approve partially, change the quantity, or reject
+a line or the request, with a reason. Substitution is refused in V1; the department
+raises a new request. The persisted `substitute_for` column is reserved for V2 and every
+V1 command keeps it empty.
+
+An accepted review is not permanently locked. The Économat may re-review an open request
+while no proposed quantity drops below preparation or receipt already recorded. A new
+review raises `reviewRevision` above `acceptedRevision`, returning the request to
+`changes-proposed` until the department accepts that exact revision. This is required
+when central stock changes after an earlier approval.
 
 Reasons: insufficient central stock · supplier delivery expected · product unavailable
 in Morocco · temporarily discontinued · reserved for another requirement · replaced by
@@ -434,6 +442,11 @@ Partial preparation, handover and receipt are append-only fulfilment events carr
 line, quantity, actor, unit and timestamp. The line quantities above are projections of
 those events, not values repeatedly overwritten in place. This preserves who handled
 each of three partial deliveries and makes corrections reversible.
+
+V1 deliberately uses the existing `prepare` command for handover rather than adding a
+second action with the same cumulative quantity. Its payload carries `fulfilmentMethod`
+and `handover`; the first delivery handover freezes `delivery_started_ts`, while every
+partial command remains an event with its own actor, payload and timestamp.
 
 ### 5.4 Confirmation writes the transfer
 
@@ -507,6 +520,8 @@ Hotel settings, which side finalises a transfer:
 
 Only the selected side sees the final confirmation action. The other side can view the
 result and raise a discrepancy, but cannot confirm the same transfer again.
+Raising that discrepancy is the non-ledger `dispute` command; it writes `disputed` and an
+audit event without authoring a stock movement.
 
 ---
 
