@@ -954,6 +954,7 @@ section('Whole-project regressions');
   'economat-transfer-provenance-test.mjs',
   'economat-procurement-location-test.mjs',
   'economat-custody-contract-test.mjs',
+  'economat-rd-invariants-test.mjs',
     'formula-protocol-test.mjs',
     'trade-copy-test.mjs',
     'floor-accept-test.mjs',
