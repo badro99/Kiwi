@@ -6197,7 +6197,7 @@
      deux nombres prend la direction du paragraphe : « 31 500 » s'affichait
      « 500 31 » en RTL. Ne s'exécute que sur dir="rtl" · le français et
      l'anglais ne changent pas d'un pixel. -->
-<script src="assets/rtl-numbers.js" defer></script>
+<script src="assets/rtl-numbers.js?v=1" defer></script>
 <!-- Les métiers (assets/trades.js). AVANT tout le reste : venues.js construit
      sa table métier→famille à l'évaluation, et les trois assistants
      d'inscription construisent leur grille pareil. Aucun DOM, ~7 Ko. -->
@@ -6210,7 +6210,7 @@
 <script src="assets/depenses.js" defer></script>
 <script src="assets/oppo-cards.js" defer></script>
 <script src="assets/insights.js" defer></script>
-<script src="assets/qrcode.js" defer></script>
+<script src="assets/qrcode.js?v=1" defer></script>
 <script src="assets/growth-kit.js" defer></script>
 <script src="assets/order-qr.js?v=3" defer></script>
 <!-- growth-ordering / growth-qr / growth-giftcards ont été supprimés du dépôt :
@@ -6297,7 +6297,7 @@
 <script src="assets/pages.js?v=3" defer fetchpriority="low"></script>
 <!-- Boutique shared product database + real barcode engine (EAN-13 / Code 128).
      Same modules the caisse loads, so inventory stays in sync between the two. -->
-<script src="assets/barcode.js" defer fetchpriority="low"></script>
+<script src="assets/barcode.js?v=1" defer fetchpriority="low"></script>
 <!-- Le vocabulaire couleur, défini une seule fois pour les deux applications :
      des familles générales (Noir · Blanc · Gris · Marron · Beige · Rouge ·
      Orange · Jaune · Vert · Bleu · Violet · Rose · Multicolore), choisies à la
@@ -6321,10 +6321,10 @@
 <script src="assets/agent-action-center.js?v=2" defer fetchpriority="low"></script>
 <!-- Promotions use the same per-boutique catalogue key. The owner edits them
      here; the caisse only consumes the resulting prices. -->
-<script src="assets/promos.js" defer fetchpriority="low"></script>
+<script src="assets/promos.js?v=1" defer fetchpriority="low"></script>
 <script src="assets/venue-store.js?v=3" defer fetchpriority="low"></script>
 <script src="assets/phone.js?v=1" defer fetchpriority="low"></script>
-<script src="assets/vertical-state.js" defer fetchpriority="low"></script>
+<script src="assets/vertical-state.js?v=1" defer fetchpriority="low"></script>
 <!-- Registre de stock append-only : mouvements locaux immédiats, synchronisés
      et dédupliqués en D1. Avant stock.js, qui remplace ses anciens snapshots
      par des réceptions et ajustements traçables chez un vrai commerçant. -->
@@ -6334,15 +6334,15 @@
      ouvert (caisse, réservations, Order Pro, page client, rapport journalier,
      assistant) interroge KiwiHours · aucun de ces modules n'a de réglage à lui.
      Après venue-store.js, dont il tient sa fiche par établissement. -->
-<script src="assets/hours.js" defer fetchpriority="low"></script>
+<script src="assets/hours.js?v=1" defer fetchpriority="low"></script>
 <script src="assets/morocco-holidays.js?v=1" defer fetchpriority="low"></script>
-<script src="assets/hours-ui.js" defer fetchpriority="low"></script>
+<script src="assets/hours-ui.js?v=1" defer fetchpriority="low"></script>
 <!-- Le reçu de caisse. receipt.js n'a pas de DOM : il porte la fiche légale de
      l'établissement, la fiche d'apparence et le moteur de rendu (thermique,
      écran, pilote système). receipt-ui.js est l'éditeur, chargé ici seulement ·
      la caisse LIT le reçu, elle ne le règle pas. -->
-<script src="assets/receipt.js" defer fetchpriority="low"></script>
-<script src="assets/receipt-ui.js" defer fetchpriority="low"></script>
+<script src="assets/receipt.js?v=1" defer fetchpriority="low"></script>
+<script src="assets/receipt-ui.js?v=1" defer fetchpriority="low"></script>
 <!-- Le coût de revient · LA source unique de « combien me coûte ce produit ».
      Le carnet des coûts vit dans son propre document par établissement, jamais
      sur l'article de la carte : GET /api/menu sans ?mine=1 est public (c'est ce
@@ -6376,7 +6376,7 @@
 <script src="assets/pages-pro.js?v=2085" defer fetchpriority="low"></script>
 <!-- Restaurant-only menu redesign. Recipes stay in a private document; the
      workspace is loaded last so it can present the new shell over MenuStore. -->
-<script src="assets/restaurant-units.js" defer fetchpriority="low"></script>
+<script src="assets/restaurant-units.js?v=1" defer fetchpriority="low"></script>
 <script src="assets/stock-identity.js?v=2" defer fetchpriority="low"></script>
 <script src="assets/menu-nutrition.js?v=4" defer fetchpriority="low"></script>
 <script src="assets/restaurant-recipes.js?v=8" defer fetchpriority="low"></script>
@@ -6403,7 +6403,7 @@
 <script src="assets/finance.js" defer fetchpriority="low"></script>
 <script src="assets/conformite.js" defer fetchpriority="low"></script>
 <!-- Final production boundary for presentation-only actions. -->
-<script src="assets/production-action-guard.js" defer fetchpriority="low"></script>
+<script src="assets/production-action-guard.js?v=1" defer fetchpriority="low"></script>
 <!-- The shared staff-role catalogue: the login gate needs it to tell an owner
      from a barista whatever wording the role was filed under. Fail-soft · the
      gate falls back to its own small map for the access-critical values. -->

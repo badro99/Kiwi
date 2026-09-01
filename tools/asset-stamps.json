@@ -43,6 +43,10 @@
     "v": "1",
     "sha": "7bfa02e1a7f71f89"
   },
+  "assets/barcode.js": {
+    "v": "1",
+    "sha": "fd4a9bd67297b0ff"
+  },
   "assets/booking.css": {
     "v": "12",
     "sha": "9f470ff51768fc37"
@@ -79,6 +83,10 @@
     "v": "1",
     "sha": "c5a59ef57daea8a2"
   },
+  "assets/caisse-lang.js": {
+    "v": "1",
+    "sha": "a49a6e4b1a05bc1c"
+  },
   "assets/caisse-link.js": {
     "v": "10",
     "sha": "722476147c908ce3"
@@ -90,6 +98,10 @@
   "assets/caisse-pwa.js": {
     "v": "450",
     "sha": "76af611e3fed0ccd"
+  },
+  "assets/caisse-refresh.js": {
+    "v": "1",
+    "sha": "b0255a09597a8e14"
   },
   "assets/caisse-skin.css": {
     "v": "3",
@@ -251,6 +263,14 @@
     "v": "18",
     "sha": "a8f301d8799b98d0"
   },
+  "assets/hours-ui.js": {
+    "v": "1",
+    "sha": "e986e7cc037f90d8"
+  },
+  "assets/hours.js": {
+    "v": "1",
+    "sha": "b45b0260ef0d82b2"
+  },
   "assets/i18n.js": {
     "v": "7",
     "sha": "4c15205549dae860"
@@ -262,6 +282,10 @@
   "assets/idle-lock.js": {
     "v": "2",
     "sha": "2bf00e5cd40cdf5c"
+  },
+  "assets/image-proof.js": {
+    "v": "1",
+    "sha": "0ce560e7506b2c69"
   },
   "assets/interactive.js": {
     "v": "26",
@@ -362,6 +386,10 @@
   "assets/onboarding.js": {
     "v": "2081",
     "sha": "4bbbed2e2b454711"
+  },
+  "assets/operational-print.js": {
+    "v": "1",
+    "sha": "b24347182d9bcf25"
   },
   "assets/operations-ui.js": {
     "v": "12",
@@ -559,6 +587,10 @@
     "v": "3",
     "sha": "1d7afef595f08e96"
   },
+  "assets/pos-reprint.js": {
+    "v": "1",
+    "sha": "268d006746e8216d"
+  },
   "assets/pos-sale.js": {
     "v": "4",
     "sha": "ca61760d42c6dca3"
@@ -631,9 +663,29 @@
     "v": "1",
     "sha": "67eeb113f6fb6ca8"
   },
+  "assets/production-action-guard.js": {
+    "v": "1",
+    "sha": "77e8ef75f0017142"
+  },
+  "assets/promos.js": {
+    "v": "1",
+    "sha": "48e28a536b69074e"
+  },
   "assets/pwa-update.js": {
     "v": "359",
     "sha": "9a41b1a08debe7f5"
+  },
+  "assets/qrcode.js": {
+    "v": "1",
+    "sha": "29a61f8a61cba6b3"
+  },
+  "assets/receipt-ui.js": {
+    "v": "1",
+    "sha": "66ae233c079d385a"
+  },
+  "assets/receipt.js": {
+    "v": "1",
+    "sha": "199bc3f95ce89a8a"
   },
   "assets/reservations.css": {
     "v": "5",
@@ -651,6 +703,10 @@
     "v": "8",
     "sha": "5b5e9551978cca41"
   },
+  "assets/restaurant-units.js": {
+    "v": "1",
+    "sha": "d1333d22f26e3570"
+  },
   "assets/retail-scan.css": {
     "v": "7",
     "sha": "60c57d3b95133a41"
@@ -658,6 +714,10 @@
   "assets/retail-scan.js": {
     "v": "6",
     "sha": "18d82faaebb5bb78"
+  },
+  "assets/rtl-numbers.js": {
+    "v": "1",
+    "sha": "8abf8684b022329c"
   },
   "assets/salle-scan.js": {
     "v": "2",
@@ -726,6 +786,10 @@
   "assets/venues.js": {
     "v": "25",
     "sha": "594af613f68878ef"
+  },
+  "assets/vertical-state.js": {
+    "v": "1",
+    "sha": "783174b74dec174a"
   },
   "assets/vexel-neon.js": {
     "v": "2047",

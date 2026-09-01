@@ -74,7 +74,7 @@ var SHELL = [
   '/assets/i18n.js?v=7',
   /* Les milliers en arabe. Dans la coquille avec i18n : hors ligne, un
      commerçant arabophone lirait sinon son objectif du jour à l'envers. */
-  '/assets/rtl-numbers.js',
+  '/assets/rtl-numbers.js?v=1',
   /* Les métiers. Dans la coquille parce que venues.js et les assistants
      d'inscription la lisent à l'évaluation : sans elle hors ligne, un
      établissement retombe sur la famille par défaut. */
@@ -133,7 +133,7 @@ var SHELL = [
   '/assets/pages.js?v=3',
   '/assets/help-centre.js?v=4',
   '/assets/account.js?v=17',
-  '/assets/production-action-guard.js',
+  '/assets/production-action-guard.js?v=1',
   // Shared floor-plan vocabulary · the dashboard designer AND the caisse both
   // read it, so leaving it out of the shell meant the till could come up
   // offline with no table geometry at all.
@@ -167,14 +167,14 @@ var SHELL = [
      Sans eux le contrôle « ouvre-t-on maintenant ? » ne peut pas se faire, et
      un contrôle qui ne peut pas se faire doit laisser passer · donc autant
      qu'il puisse se faire. */
-  '/assets/hours.js',
+  '/assets/hours.js?v=1',
   '/assets/morocco-holidays.js?v=1',
-  '/assets/hours-ui.js',
+  '/assets/hours-ui.js?v=1',
   /* Le reçu de caisse. Dans la coquille hors-ligne pour la même raison que le
      rapport journalier : un ticket s'imprime au comptoir, parfois sans réseau,
      et un client qui repart sans reçu ne revient pas le chercher. */
-  '/assets/receipt.js',
-  '/assets/receipt-ui.js',
+  '/assets/receipt.js?v=1',
+  '/assets/receipt-ui.js?v=1',
   '/assets/invoice.js?v=6',
   '/assets/merchant-config.js?v=266',
   '/assets/entitlements.css?v=5',
@@ -197,18 +197,18 @@ var SHELL = [
   '/assets/live-socket.js?v=4',
   '/assets/escpos.js?v=6',
   '/assets/printer-bridge.js?v=8',
-  '/assets/barcode.js',
+  '/assets/barcode.js?v=1',
   '/assets/color-palette.js',
   '/assets/boutique-catalog.js?v=6',
   '/assets/store-templates.js?v=2',
   /* Les promotions. Dans la coquille avec le catalogue : hors ligne, une caisse
      qui a perdu ses promotions vend au prix plein pendant que la vitrine
      annonce −30 % · et c'est la caissière qui doit s'en expliquer. */
-  '/assets/promos.js',
+  '/assets/promos.js?v=1',
   '/assets/boutique-promos-dashboard.js?v=4',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js',
+  '/assets/caisse-lang.js?v=1',
   '/assets/venue-store.js?v=3',
   /* One stock across owner dashboard and till. Catalog metadata is a cloud
      document; quantities are append-only movements, both usable offline. */
@@ -227,7 +227,7 @@ var SHELL = [
   '/assets/menu-catalog.js?v=23',
   '/assets/stock-identity.js?v=2',
   '/assets/restaurant-recipes.js?v=8',
-  '/assets/restaurant-units.js',
+  '/assets/restaurant-units.js?v=1',
   '/assets/employee-live.js?v=448',
   '/assets/employee-planning.js?v=8',
   '/assets/employee-trade-shell.css?v=2',
@@ -308,7 +308,7 @@ var SHELL = [
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là
      qu'il faut pouvoir ressortir le ticket. Un bouton de secours qui a besoin du
      réseau n'est pas un secours. */
-  '/assets/pos-reprint.js',
+  '/assets/pos-reprint.js?v=1',
   '/assets/pressing-caisse.js?v=39',
   '/assets/pressing-caisse.css?v=39',
   '/assets/lucide.min.js?v=4',
