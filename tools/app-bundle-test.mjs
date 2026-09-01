@@ -68,7 +68,7 @@ if (first) {
   // ne laissait aucune trace.
   for (const page of PAGES.concat(['index.html'])) {
     const html = fs.readFileSync(path.join(first.out, page), 'utf8');
-    assert(/<script src="assets\/err-reporter\.js"/.test(html), `${page} : charge assets/err-reporter.js`);
+    assert(/<script src="assets\/err-reporter\.js(?:\?v=\d+)?"/.test(html), `${page} : charge assets/err-reporter.js`);
   }
   const runtime = fs.readFileSync(path.join(first.out, 'native-runtime.js'), 'utf8');
   assert(/window\.__KIWI_APP_VERSION = 'pro\/' \+ platform/.test(runtime) && /call\(app, 'getInfo'\)/.test(runtime), 'native-runtime : les rapports d’erreur portent plateforme et version de l’app (App.getInfo)');

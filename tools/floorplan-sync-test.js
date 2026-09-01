@@ -203,7 +203,7 @@ function run(opts) {
   // Si un jour cloud-doc.js cesse d'être `defer`, la relance devient une
   // ceinture en plus d'une bretelle — pas une panne. Mais on veut le SAVOIR.
   ok('assets/cloud-doc.js est bien chargé en `defer` (d’où la relance)',
-    /<script src="assets\/cloud-doc\.js" defer><\/script>/.test(CAISSE));
+    /<script src="assets\/cloud-doc\.js(?:\?v=\d+)?" defer><\/script>/.test(CAISSE));
   ok('le lecteur du plan vit dans le script EN LIGNE (pas un module différé)',
     CAISSE.indexOf(BLOCK) > CAISSE.indexOf('<script>'));
 
