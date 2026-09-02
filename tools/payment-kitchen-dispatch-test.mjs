@@ -132,6 +132,12 @@ assert.match(source, /confirmAccepted\(order\)[\s\S]{0,500}?opIngest\(Object\.as
   'successful OrderPro acceptance returns through the idempotent ingestion bridge');
 assert.match(source, /data-vrap-send[\s\S]{0,500}?dispatchHeldTakeaway\(order, false, true\)/,
   'an unpaid OrderPro takeaway exposes a separate kitchen action that keeps it unpaid');
+assert.match(source, /const readyBtn = \(!ready && o\.status !== 'held'\)/,
+  'every accepted takeaway exposes Marquer prêt regardless of merchant or KDS configuration');
+assert.doesNotMatch(source, /const readyBtn = \(kdsDisabled/,
+  'readiness is never restricted to stores without a KDS');
+assert.match(source, /action = readyBtn \|\| `<button class="vrap-act" data-vrap-handover=/,
+  'paid takeaways must become ready before the caisse offers handover');
 assert.match(source, /remote: o\.localKitchenAction === true \? false[\s\S]{0,180}?o\.session && o\.server \? 'connected' : true[\s\S]{0,160}?sourceId: o\.id/,
   'operator acceptance prints locally, employee-authorised tables print on the connected caisse, and other polling remains hub-only');
 assert.match(source, /!l\.sent && !l\.orderProPending/,

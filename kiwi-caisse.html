@@ -5441,7 +5441,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=462" defer></script>
+  <script src="assets/caisse-pwa.js?v=463" defer></script>
   <script src="assets/live-link.js?v=20" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -17884,8 +17884,11 @@
 
     function vrapOrderCard(o) {
       const ready = o.status === 'ready';
-      const kdsDisabled = isKdsOff();
-      const readyBtn = (kdsDisabled && !ready && o.status !== 'held')
+      /* Readiness is an ORDER state, not a merchant or printer capability.
+         The counter must be able to mark every accepted takeaway ready even
+         when a KDS is configured: some restaurants run the pass from the
+         caisse, and the same OrderPro workflow must work for every tenant. */
+      const readyBtn = (!ready && o.status !== 'held')
         ? `<button class="vrap-act vrap-act-ready" data-vrap-ready="${o.num}" title="Prévenir le client que la commande est prête">Marquer prêt</button>`
         : '';
       const sendBtn = o.status === 'held'
@@ -17898,9 +17901,10 @@
       if (!o.paid) {
         action = `<div class="vrap-order-acts">${cancelBtn}${sendBtn}${readyBtn}<button class="vrap-act vrap-act-pay">Encaisser · ${fmtMAD(o.total)}</button></div>`;
       } else if (!o.pickedUp) {
-        action = readyBtn
-          ? `<div class="vrap-order-acts">${readyBtn}<button class="vrap-act" data-vrap-handover="${o.num}">Remettre au client</button></div>`
-          : `<button class="vrap-act" data-vrap-handover="${o.num}">Remettre au client</button>`;
+        /* Do not offer handover while the card still says "En préparation".
+           That shortcut silently marked the order ready and served in one
+           click, hiding the readiness step from every KDS-enabled merchant. */
+        action = readyBtn || `<button class="vrap-act" data-vrap-handover="${o.num}">Remettre au client</button>`;
       }
       const notes = o.items.filter(i => (i.note || '').trim())
         .map(i => `<div class="vrap-order-note"><i data-lucide="pencil-line"></i> <strong>${kdsEsc(i.n)}</strong> · ${kdsEsc(i.note)}</div>`)
