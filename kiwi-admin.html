@@ -1230,6 +1230,22 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
         hint:'Fait choisir une catégorie à chaque article : A pour la marchandise du magasin, B pour le dépôt-vente. Le client ne voit que les lettres.' },
     ],
   };
+  var CAISSE_MODULES = [
+    { key:'salle',         label:'Mode Salle (service à table)',
+      hint:'Onglet Salle sur la caisse tactile. Coupé, la caisse masque le plan de salle et bascule vers la vente à emporter ou le comptoir direct.' },
+    { key:'vrap',          label:'Mode À emporter',
+      hint:'Onglet À emporter sur la caisse tactile pour la gestion des commandes à emporter et retraits comptoir.' },
+    { key:'waitlist',      label:'Mode File d’attente',
+      hint:'Onglet Attente sur la caisse pour enregistrer et appeler les clients en file d’attente de table.' },
+    { key:'remboursement', label:'Bouton Remboursement',
+      hint:'Bouton Remboursement sur le bandeau latéral de la caisse tactile pour restituer une vente passée.' },
+    { key:'cashMove',      label:'Bouton Mouvement caisse',
+      hint:'Bouton Mouvement de caisse (entrées et sorties d’espèces manuelles) sur le bandeau latéral.' },
+    { key:'passation',     label:'Bouton Passation caisse',
+      hint:'Bouton Passation de caisse (clôture de shift et passation de relais) sur le bandeau latéral.' },
+    { key:'openDrawer',    label:'Bouton Ouvrir le tiroir',
+      hint:'Bouton d’ouverture manuelle du tiroir-caisse sans vente.' },
+  ];
   var ADDON_MODULES = [
     { key:'orderpro', label:'Order Pro', off:true,
       hint:'Commande depuis le téléphone du client (tag NFC) · carte + stock en ligne.' },
@@ -1243,6 +1259,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
       { title:'Modules communs', items:CORE_MODULES },
       { title:VERTICAL_TITLES[base] || VERTICAL_TITLES.restaurant,
         items:(VERTICAL_MODULES[base] || VERTICAL_MODULES.restaurant) },
+      { title:'Modes & Actions caisse', items:CAISSE_MODULES },
       // Bande vide ⇒ non affichée (renderFeatures saute les groupes sans item).
       { title:'Options à la demande', items:(OPTIN_MODULES[base] || []) },
       { title:'Options payantes', items:ADDON_MODULES },
@@ -2868,7 +2885,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
   // Libellé lisible d'une clé de module, quel que soit le métier du client — le
   // journal peut contenir une clé d'un vertical que ce client n'a plus.
   function moduleLabel(key){
-    var all = [CORE_MODULES, ADDON_MODULES];
+    var all = [CORE_MODULES, CAISSE_MODULES, ADDON_MODULES];
     Object.keys(VERTICAL_MODULES).forEach(function(k){ all.push(VERTICAL_MODULES[k]); });
     Object.keys(OPTIN_MODULES).forEach(function(k){ all.push(OPTIN_MODULES[k]); });
     for (var i=0;i<all.length;i++) for (var j=0;j<all[i].length;j++)

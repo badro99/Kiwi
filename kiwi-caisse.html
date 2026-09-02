@@ -5491,7 +5491,7 @@
        staff accept one and it becomes a kitchen ticket. Paired terminals only. -->
   <script src="assets/orderpro-inbox.js?v=7" defer></script>
   <!-- Operator feature flags + managed PINs. Fail-safe: no backend ⇒ no change. -->
-  <script src="assets/merchant-config.js?v=266" defer></script>
+  <script src="assets/merchant-config.js?v=267" defer></script>
   <!-- « Rafraîchir » · un bouton commun à toutes les caisses (restaurant,
        pressing, et les seize métiers de pos-dispatch) : il redemande au serveur
        l'inventaire, les documents du magasin, les commandes en ligne et les
@@ -5776,34 +5776,34 @@
       </div>
 
       <div class="mode-selector" role="tablist" aria-label="Mode caisse">
-        <button class="mode-pill" data-mode="salle" aria-pressed="true">
+        <button class="mode-pill" data-mode="salle" data-feature="salle" aria-pressed="true">
           <svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M280-600v-240q0-17 11.5-28.5T320-880q17 0 28.5 11.5T360-840v240h40v-240q0-17 11.5-28.5T440-880q17 0 28.5 11.5T480-840v240q0 56-34.5 98T360-446v326q0 17-11.5 28.5T320-80q-17 0-28.5-11.5T280-120v-326q-51-14-85.5-56T160-600v-240q0-17 11.5-28.5T200-880q17 0 28.5 11.5T240-840v240h40Zm400 200h-80q-17 0-28.5-11.5T560-440v-240q0-70 51.5-135T718-880q18 0 30 14t12 33v713q0 17-11.5 28.5T720-80q-17 0-28.5-11.5T680-120v-280Z"/></svg>
           <span>Salle</span>
         </button>
-        <button class="mode-pill" data-mode="vrap" aria-pressed="false">
+        <button class="mode-pill" data-mode="vrap" data-feature="vrap" aria-pressed="false">
           <svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M240-80q-33 0-56.5-23.5T160-160v-480q0-33 23.5-56.5T240-720h80q0-66 47-113t113-47q66 0 113 47t47 113h80q33 0 56.5 23.5T800-640v480q0 33-23.5 56.5T720-80H240Zm0-80h480v-480h-80v80q0 17-11.5 28.5T600-520q-17 0-28.5-11.5T560-560v-80H400v80q0 17-11.5 28.5T360-520q-17 0-28.5-11.5T320-560v-80h-80v480Zm160-560h160q0-33-23.5-56.5T480-800q-33 0-56.5 23.5T400-720ZM240-160v-480 480Z"/></svg>
           <span>À emporter</span>
         </button>
-        <button class="mode-pill" data-mode="waitlist" aria-pressed="false">
+        <button class="mode-pill" data-mode="waitlist" data-feature="waitlist" aria-pressed="false">
           <svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M40-240q-17 0-28.5-11.5T0-280v-23q0-43 44-70t116-27q13 0 25 .5t23 2.5q-14 21-21 44t-7 48v65H40Zm240 0q-17 0-28.5-11.5T240-280v-25q0-32 17.5-58.5T307-410q32-20 76.5-30t96.5-10q53 0 97.5 10t76.5 30q32 20 49 46.5t17 58.5v25q0 17-11.5 28.5T680-240H280Zm500 0v-65q0-26-6.5-49T754-397q11-2 22.5-2.5t23.5-.5q72 0 116 26.5t44 70.5v23q0 17-11.5 28.5T920-240H780Zm-455-80h311q-10-20-55.5-35T480-370q-55 0-100.5 15T325-320ZM160-440q-33 0-56.5-23.5T80-520q0-34 23.5-57t56.5-23q34 0 57 23t23 57q0 33-23 56.5T160-440Zm640 0q-33 0-56.5-23.5T720-520q0-34 23.5-57t56.5-23q34 0 57 23t23 57q0 33-23 56.5T800-440Zm-320-40q-50 0-85-35t-35-85q0-51 35-85.5t85-34.5q51 0 85.5 34.5T600-600q0 50-34.5 85T480-480Zm0-80q17 0 28.5-11.5T520-600q0-17-11.5-28.5T480-640q-17 0-28.5 11.5T440-600q0 17 11.5 28.5T480-560Z"/></svg>
           <span>Attente</span>
         </button>
       </div>
 
       <div class="act-selector" aria-label="Actions caisse">
-        <button class="act-pill" data-action="remboursement">
+        <button class="act-pill" data-action="remboursement" data-feature="remboursement">
           <svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M320-200q-17 0-28.5-11.5T280-240q0-17 11.5-28.5T320-280h244q63 0 109.5-40T720-420q0-60-46.5-100T564-560H312l76 76q11 11 11 28t-11 28q-11 11-28 11t-28-11L188-572q-6-6-8.5-13t-2.5-15q0-8 2.5-15t8.5-13l144-144q11-11 28-11t28 11q11 11 11 28t-11 28l-76 76h252q97 0 166.5 63T800-420q0 94-69.5 157T564-200H320Z"/></svg>
           <span>Remboursement</span>
         </button>
-        <button class="act-pill" data-action="cash-move">
+        <button class="act-pill" data-action="cash-move" data-feature="cash-move">
           <svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M331.5-451.5Q320-463 320-480v-247l-75 75q-11 11-27.5 11T189-652q-12-12-12-28.5t12-28.5l143-143q6-6 13-8.5t15-2.5q8 0 15 2.5t13 8.5l144 144q12 12 11.5 28T531-652q-12 11-28 11.5T475-652l-75-75v247q0 17-11.5 28.5T360-440q-17 0-28.5-11.5ZM585-99.5q-7-2.5-13-8.5L428-252q-12-12-11.5-28t12.5-28q12-11 28-11.5t28 11.5l75 75v-247q0-17 11.5-28.5T600-520q17 0 28.5 11.5T640-480v247l75-75q11-11 27.5-11t28.5 11q12 12 12 28.5T771-251L628-108q-6 6-13 8.5T600-97q-8 0-15-2.5Z"/></svg>
           <span>Mouvement caisse</span>
         </button>
-        <button class="act-pill" data-action="passation">
+        <button class="act-pill" data-action="passation" data-feature="passation">
           <svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="m233-280 76 76q12 12 11.5 28T308-148q-12 11-28 11.5T252-148L108-292q-6-6-8.5-13T97-320q0-8 2.5-15t8.5-13l144-144q11-11 27.5-11t28.5 11q12 12 12 28.5T308-435l-75 75h567q17 0 28.5 11.5T840-320q0 17-11.5 28.5T800-280H233Zm494-320H160q-17 0-28.5-11.5T120-640q0-17 11.5-28.5T160-680h567l-76-76q-12-12-11.5-28t12.5-28q12-11 28-11.5t28 11.5l144 144q6 6 8.5 13t2.5 15q0 8-2.5 15t-8.5 13L708-468q-11 11-27.5 11T652-468q-12-12-12-28.5t12-28.5l75-75Z"/></svg>
           <span>Passation caisse</span>
         </button>
-        <button class="act-pill" data-action="open-drawer">
+        <button class="act-pill" data-action="open-drawer" data-feature="open-drawer">
           <svg viewBox="0 -960 960 960" fill="currentColor" aria-hidden="true"><path d="M280-640q-33 0-56.5-23.5T200-720v-80q0-33 23.5-56.5T280-880h400q33 0 56.5 23.5T760-800v80q0 33-23.5 56.5T680-640H280Zm40-80h320q16 0 22.5-14.5T680-760q0-17-11.5-28.5T640-800H320q-17 0-28.5 11.5T280-760q11 11 17.5 25.5T320-720ZM160-80q-33 0-56.5-23.5T80-160v-40h800v40q0 33-23.5 56.5T800-80H160ZM80-240l139-313q10-22 30-34.5t43-12.5h376q23 0 43 12.5t30 34.5l139 313H80Zm260-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm120 160h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm120 160h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Zm0-80h40q8 0 14-6t6-14q0-8-6-14t-14-6h-40q-8 0-14 6t-6 14q0 8 6 14t14 6Z"/></svg>
           <span>Ouvrir le tiroir</span>
         </button>
@@ -8296,7 +8296,44 @@
     let newTableId = null;
     let newTableCovers = 2;
 
+    function isFeatureOff(key) {
+      try {
+        if (window.KiwiConfig && typeof window.KiwiConfig.off === 'function') {
+          return window.KiwiConfig.off(key);
+        }
+        if (window.KiwiConfig && window.KiwiConfig.features) {
+          const feats = window.KiwiConfig.features;
+          if (feats[key] === false) return true;
+          if (key === 'salle' && feats.tables === false) return true;
+          if (key === 'tables' && feats.salle === false) return true;
+          if (key === 'vrap' && (feats['a-emporter'] === false || feats.takeout === false)) return true;
+          if (key === 'waitlist' && feats.attente === false) return true;
+          if (key === 'remboursement' && (feats.refund === false || feats.returns === false)) return true;
+          if (key === 'cash-move' && (feats.cashMove === false || feats['mouvement-caisse'] === false)) return true;
+          if (key === 'cashMove' && (feats['cash-move'] === false || feats['mouvement-caisse'] === false)) return true;
+          if (key === 'open-drawer' && feats.openDrawer === false) return true;
+          if (key === 'openDrawer' && feats['open-drawer'] === false) return true;
+          if (key === 'kds' && feats.kds === false) return true;
+        }
+      } catch (_) {}
+      return false;
+    }
+
+    function syncActiveMode() {
+      if (isFeatureOff(mode)) {
+        const fallback = ['salle', 'vrap', 'waitlist'].find(m => !isFeatureOff(m));
+        if (fallback && fallback !== mode) {
+          setMode(fallback);
+        }
+      }
+    }
+
     function setMode(newMode) {
+      if (isFeatureOff(newMode)) {
+        const fallback = ['salle', 'vrap', 'waitlist'].find(m => !isFeatureOff(m));
+        if (!fallback || fallback === newMode) return;
+        newMode = fallback;
+      }
       if (newMode === mode) return;
       mode = newMode;
       document.body.dataset.mode = newMode;
@@ -8360,6 +8397,8 @@
 
     $$('.mode-pill').forEach(btn => {
       btn.addEventListener('click', () => {
+        if (btn.dataset.feature && isFeatureOff(btn.dataset.feature)) return;
+        if (btn.dataset.mode && isFeatureOff(btn.dataset.mode)) return;
         /* QUITTER LE MODE COMMANDE PAR LES PASTILLES.
            Le garde-fou refusait tout, toujours · y compris sur une mesa vide, où
            il n'y a rien à protéger. Or « j'ai ouvert la table par erreur, ils ne
@@ -8374,7 +8413,7 @@
             return;
           }
           cancelNewOrder();
-          if (btn.dataset.mode && btn.dataset.mode !== 'salle') setMode(btn.dataset.mode);
+          if (btn.dataset.mode && btn.dataset.mode !== 'salle' && !isFeatureOff(btn.dataset.mode)) setMode(btn.dataset.mode);
           return;
         }
         setMode(btn.dataset.mode);
@@ -10165,6 +10204,12 @@
     $$('.qa-btn, .act-pill').forEach(btn => {
       btn.addEventListener('click', () => {
         const a = btn.dataset.action;
+        const f = btn.dataset.feature;
+        if (f && isFeatureOff(f)) return;
+        if (a === 'remboursement' && (isFeatureOff('remboursement') || isFeatureOff('refund'))) return;
+        if (a === 'open-drawer' && (isFeatureOff('open-drawer') || isFeatureOff('openDrawer'))) return;
+        if (a === 'cash-move' && (isFeatureOff('cash-move') || isFeatureOff('cashMove'))) return;
+        if (a === 'passation' && isFeatureOff('passation')) return;
         if (a === 'remboursement')   openRefund();
         else if (a === 'open-drawer') openDrawerNoSale();
         else if (a === 'cash-move')  openCashMove();
@@ -13328,7 +13373,7 @@
     });
     // The roster arrives async (/api/config → KiwiConfig.pins → kiwi-config), after
     // this file has painted its demo servers · rebuild the floor team when it lands.
-    document.addEventListener('kiwi-config', function () { try { rebuildRealRoster(); startLiveTeam(); if (mode === 'vrap') renderVrapBoard(); } catch (_) {} });
+    document.addEventListener('kiwi-config', function () { try { rebuildRealRoster(); startLiveTeam(); syncActiveMode(); if (mode === 'vrap') renderVrapBoard(); } catch (_) {} });
     setTimeout(startLiveTeam, 1000);
 
     /* Render a journal entry as a printed thermal ticket.
@@ -14382,6 +14427,10 @@
       if (window.lucide) lucide.createIcons();
     }
     function openCashMove() {
+      if (isFeatureOff('cash-move') || isFeatureOff('cashMove')) {
+        toast('Module mouvements de caisse désactivé dans la console God Mode');
+        return;
+      }
       cmType = 'out';
       $$('#cm-type .cm-type-btn').forEach(b => b.classList.toggle('is-active', b.dataset.cmType === 'out'));
       $('#cm-amount').value = '';
@@ -14421,6 +14470,10 @@
      * montant nul, le fond attendu ne bouge pas, mais la passation et le
      * rapport journalier montrent qui a fait sonner le tiroir et quand. */
     function openDrawerNoSale() {
+      if (isFeatureOff('open-drawer') || isFeatureOff('openDrawer')) {
+        toast('Ouverture manuelle du tiroir désactivée dans la console God Mode');
+        return;
+      }
       requireManager('Ouvrir le tiroir sans vente', () => {
         cashMovements.push({
           id: 'cm-' + Date.now(), time: new Date(),
@@ -15502,6 +15555,10 @@
       if (window.lucide) lucide.createIcons();
     }
     function openRefund() {
+      if (isFeatureOff('remboursement') || isFeatureOff('refund')) {
+        toast('Module remboursement désactivé dans la console God Mode');
+        return;
+      }
       refundState.search = '';
       refundState.orig   = null;
       $('#rf-search-input').value = '';
@@ -15832,6 +15889,10 @@
     }
 
     function openHandover() {
+      if (isFeatureOff('passation')) {
+        toast('Passation de caisse désactivée dans la console God Mode');
+        return;
+      }
       handoverState.counted = 0;
       handoverState.incoming = null;
       handoverState.verifyCount = 0;
@@ -16629,12 +16690,7 @@
     }
 
     function isKdsOff() {
-      try {
-        if (window.KiwiConfig && typeof window.KiwiConfig.off === 'function' && window.KiwiConfig.off('kds')) return true;
-        if (window.KiwiConfig && window.KiwiConfig.features && window.KiwiConfig.features.kds === false) return true;
-        if (window.KiwiConfig && window.KiwiConfig.kds === false) return true;
-      } catch (_) {}
-      return false;
+      return isFeatureOff('kds');
     }
 
     function openKds() {

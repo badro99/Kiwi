@@ -106,7 +106,38 @@
    * with `reservations:false` and `payroll:false`, creating an impossible loop.
    * assets/team.js still reads `payroll:false` to withhold pay figures; it no
    * longer means "remove scheduling". */
-  function featureOff(key) { return key !== 'reservations' && key !== 'payroll' && cfg.features[key] === false; }
+  var HANDLER_ALIASES = {
+    terminaux: ['nav-terminals'],
+    depenses: ['open-depenses'],
+    orderpro: ['orderpro-tags'],
+    crm: ['clients-directory', 'growth-crm'],
+    loyalty: ['loyalty'],
+    reservations: ['new-reservation'],
+    kds: ['nav-kds', 'open-kds'],
+    salle: ['tables'],
+    tables: ['salle'],
+    vrap: ['a-emporter', 'takeout'],
+    waitlist: ['attente'],
+    remboursement: ['refund', 'returns'],
+    refund: ['remboursement'],
+    cashMove: ['cash-move', 'mouvement-caisse'],
+    'cash-move': ['cashMove', 'mouvement-caisse'],
+    passation: ['shift-handoff'],
+    openDrawer: ['open-drawer'],
+    'open-drawer': ['openDrawer'],
+  };
+
+  function featureOff(key) {
+    if (key === 'reservations' || key === 'payroll') return false;
+    if (cfg.features && cfg.features[key] === false) return true;
+    var aliases = HANDLER_ALIASES[key];
+    if (aliases && cfg.features) {
+      for (var i = 0; i < aliases.length; i++) {
+        if (cfg.features[aliases[i]] === false) return true;
+      }
+    }
+    return false;
+  }
 
   var pinSeen = Object.create(null);
   function ownerRole(role) {
@@ -359,15 +390,6 @@
    * Les identifiants de nav SONT les clés de modules (venues.js), donc
    * `nav-<clé>` se déduit. Les alias sont les entrées qui portent un autre nom.
    */
-  var HANDLER_ALIASES = {
-    terminaux: ['nav-terminals'],
-    depenses: ['open-depenses'],
-    orderpro: ['orderpro-tags'],
-    crm: ['clients-directory', 'growth-crm'],
-    loyalty: ['loyalty'],
-    reservations: ['new-reservation'],
-    kds: ['nav-kds', 'open-kds'],
-  };
   function gateOne(H, name, key) {
     var fn = H[name];
     if (typeof fn !== 'function' || fn.__kiwiGate) return;
