@@ -412,6 +412,7 @@ for (const test of [
   'planning-layout-test.mjs',
   'reservations-test.mjs',
   'serveur-menu-live-test.mjs',
+  'menu-availability-test.mjs',
   'service-settlement-test.mjs',
   'recipe-heal-test.js',
   'sale-line-v2-test.mjs',

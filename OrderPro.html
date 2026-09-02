@@ -5854,6 +5854,27 @@ em, i, cite, dfn, var { font-style: normal; }
       }
     }
 
+    /* A cashier can sell out a dish while this page is already open. Refresh
+       only when the availability map changes, so browsing is uninterrupted
+       while the unavailable card disappears from the public menu. */
+    let availabilitySignature = '';
+    function availabilityOf(data) {
+      return ((Array.isArray(data && data.items) ? data.items : []).concat(Array.isArray(data && data.formulaItems) ? data.formulaItems : []))
+        .map((it) => String(it && it.id || '') + ':' + (it && it.avail === false ? '0' : '1')).sort().join('|');
+    }
+    setInterval(async () => {
+      if (!STORE.ready || STORE.type === 'boutique' || !STORE.slug) return;
+      const res = await NET.catalog();
+      const data = res && res.menu;
+      if (!data) return;
+      const next = availabilityOf(data);
+      if (!availabilitySignature) { availabilitySignature = next; return; }
+      if (next === availabilitySignature) return;
+      availabilitySignature = next;
+      bootRestaurant(data);
+      renderMenu(activeMenuFilter());
+    }, 15000);
+
     /* ═══════════════════════════════════════════════════════════════════════
        RESTAURANT — map the dashboard's published carte onto the app's model.
        Published shape (assets/menu-catalog.js):
@@ -5864,9 +5885,11 @@ em, i, cite, dfn, var { font-style: normal; }
     function bootRestaurant(data) {
       const cats = Array.isArray(data.cats) ? data.cats : [];
       const allItems = (Array.isArray(data.items) ? data.items : []).concat(Array.isArray(data.formulaItems) ? data.formulaItems : []);
+      availabilitySignature = availabilityOf(data);
       const items = allItems.filter(i => i && i.avail !== false && !i.formulaOnly && !i.archived);
-      if (!items.length) return false;
       MENU_ALL.clear();
+      MENU.length = 0;
+      if (!items.length) return false;
       allItems.forEach((it) => { if (it && it.id) MENU_ALL.set(String(it.id), it); });
 
       const groups = new Map();
@@ -5887,7 +5910,6 @@ em, i, cite, dfn, var { font-style: normal; }
         groups.set(key, mapped);
       });
 
-      MENU.length = 0;
       const names = {}, namesEn = {}, namesAr = {};
       for (const it of items) {
         const formulaOptions = it.formula && Array.isArray(it.formula.slots) ? it.formula.slots.map(s => {
