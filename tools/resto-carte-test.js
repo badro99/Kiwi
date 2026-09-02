@@ -639,7 +639,7 @@ eq(noPrinter, 0, 'sans imprimante jointe, aucun bon n\'est tenté — et rien ne
 /* La salle part en cuisine, elle aussi — et n'y renvoie pas deux fois. */
 ok(/function sendTableToKitchen\(tableId\)/.test(caisse),
   'une mesa validée a un chemin vers l\'écran cuisine');
-ok(/\.filter\(l => l && l\.qty > 0 && !l\.sent\)/.test(caisse),
+ok(/\.filter\(l => l && l\.qty > 0 && !l\.sent && !l\.orderProPending\)/.test(caisse),
   'seules les lignes JAMAIS envoyées repartent — rouvrir une mesa ne relance pas le repas');
 ok(/lines\.forEach\(\(l\) => \{ l\.sent = true; \}\);/.test(caisse),
   'et elles sont marquées une fois parties');

@@ -8578,8 +8578,16 @@
       $('#cash-received').value = net;
       updateRendu();
       showPayButtons(false);
-      // "Envoyer en cuisine" is À emporter only
-      $('#rp-send-kitchen').hidden = true;
+      /* Une commande OrderPro à table est rattachée à l'addition avant d'être
+         acceptée. Elle doit pouvoir partir depuis CETTE fiche, sans obliger le
+         caissier à découvrir le panneau secondaire « Commandes ». Le bouton
+         reste caché quand toutes les lignes sont déjà parties. */
+      const kitchenBtn = $('#rp-send-kitchen');
+      const tableKitchenPending = (tableOrders[id] || []).some(l => l && (l.orderProPending || !l.sent));
+      kitchenBtn.hidden = !tableKitchenPending;
+      const kitchenBtnLabel = kitchenBtn.querySelector('span');
+      if (kitchenBtnLabel) kitchenBtnLabel.textContent = (tableOrders[id] || []).some(l => l && l.orderProPending)
+        ? 'Accepter · envoyer en cuisine' : 'Envoyer en cuisine';
       /* La seule porte de retour vers le menu depuis une addition ouverte. Elle
          n'existe qu'en salle, et pas sur une table déjà encaissée · on ne
          rouvre pas une note soldée, on rouvre une mesa. */
@@ -10533,6 +10541,12 @@
        is later dismissed. A reload/Escape after cash was accepted or the reader
        approved must never leave the order due and invite a second charge. */
     function finalizeTender(method) {
+      /* Paiement = confirmation ferme. Avant d'écrire la vente ou de libérer
+         la table, rattraper tout ce qui n'est pas encore parti en cuisine.
+         Chaque chemin garde sa propre preuve durable (ligne.sent, statut held,
+         ou identifiant OrderPro), donc les encaissements/retours suivants ne
+         peuvent jamais produire un second bon. */
+      dispatchUnsentKitchenBeforePayment();
       const tenderBase = currentTotal();
       const tenderTip = payTipAmount();
       const saleLabel = mode === 'vrap'
@@ -11558,7 +11572,10 @@
     }
 
     function sendTableToKitchen(tableId) {
-      const lines = (tableOrders[tableId] || []).filter(l => l && l.qty > 0 && !l.sent);
+      /* Les lignes OrderPro pending ont leur propre identifiant canonique et
+         doivent être acceptées comme leur commande d'origine, pas fusionnées
+         dans un nouveau bon caisse. */
+      const lines = (tableOrders[tableId] || []).filter(l => l && l.qty > 0 && !l.sent && !l.orderProPending);
       if (!lines.length) return null;
       const items = kitchenItemsFromLines(lines);
       const order = {
@@ -17621,9 +17638,37 @@
     }
 
     /* À emporter / Table · push current items to the kitchen */
+    function createTakeawayKitchenOrder(lines) {
+      const source = (Array.isArray(lines) ? lines : []).filter(l => l && l.qty > 0);
+      if (!source.length) return null;
+      const total = source.reduce((s, l) => s + l.price * l.qty, 0);
+      const items = kitchenItemsFromLines(source);
+      const order = {
+        num: ++kdsOrderSeq, type: 'takeaway', status: 'new',
+        readyAt: null, items, relayLines: relayLinesFromCaisse(source), sentAt: new Date(),
+        kitchenDispatchedAt: Date.now(),
+        paid: false, pickedUp: false, pickedUpAt: null, total,
+      };
+      kdsOrders.push(order);
+      relayToKitchen(order);
+      printKitchenTickets(order, items);
+      try { persistShift(); } catch (_) {}
+      updateKdsCount();
+      if (kdsEl.classList.contains('is-open')) kdsPaint();
+      return order;
+    }
+
     function sendToKitchen() {
       if (mode === 'order' && selectedId) {
         validateOrder(selectedId);
+        return;
+      }
+      if (mode === 'salle' && selectedId) {
+        const sent = dispatchTableUnsentToKitchen(selectedId, false);
+        const count = sent.remote + (sent.local ? 1 : 0);
+        if (count) toast(`${count} commande${count > 1 ? 's' : ''} envoyée${count > 1 ? 's' : ''} en cuisine`);
+        else toast('Rien de neuf à envoyer');
+        renderRightPanel(selectedId);
         return;
       }
       const list = (cart && cart.length) ? cart : (selectedId && tableOrders[selectedId] && tableOrders[selectedId].length ? tableOrders[selectedId] : []);
@@ -17646,23 +17691,9 @@
       }
 
       if (!cart.length && list.length) cart = list.slice();
-      const total  = cart.reduce((s, l) => s + l.price * l.qty, 0);
-      const items = kitchenItemsFromLines(cart);
-      const order = {
-        num: ++kdsOrderSeq, type: 'takeaway', status: 'new',
-        readyAt: null, items: items, relayLines: relayLinesFromCaisse(cart), sentAt: new Date(),
-        paid: false, pickedUp: false, pickedUpAt: null, total: total,
-      };
-      kdsOrders.push(order);
-      relayToKitchen(order);
-      printKitchenTickets(order, items);
-      /* Même garantie que pour une table : si le navigateur redémarre juste
-         après l'envoi, le board À emporter et la clé d'impression restent. */
-      try { persistShift(); } catch (_) {}
-      // …et sur la tablette de la cuisine, qui n'a pas d'imprimante.
+      const order = createTakeawayKitchenOrder(cart);
+      if (!order) return;
       const count = list.reduce((s, l) => s + l.qty, 0);
-      updateKdsCount();
-      if (kdsEl.classList.contains('is-open')) kdsPaint();
       clearCart();
       setVrapView('board');
       toast(`Commande #${order.num} envoyée en cuisine · ${count} article${count > 1 ? 's' : ''}`);
@@ -17844,13 +17875,7 @@
              client vient d'annoncer son numéro et de payer, donc elle part en
              cuisine MAINTENANT, et pas avant. C'est ce que le paiement protège
              · on ne prépare rien pour quelqu'un qui n'est jamais venu. */
-          if (o.status === 'held') {
-            o.status = 'new';
-            o.sentAt = new Date();          // le chrono cuisine part au paiement
-            opPush(o, 'accepted', { paid: true });
-            updateKdsCount();
-            if (kdsEl.classList.contains('is-open')) kdsPaint();
-          }
+          dispatchHeldTakeaway(o, true);
           toast(`Commande ${ticketNo(o)} encaissée · ${fmtMAD(o.total)}`);
         }
         vrapEditingNum = null;
@@ -18029,6 +18054,99 @@
       } catch (_) {}
     }
 
+    function orderProPendingIdsForTable(tableId) {
+      const ids = new Set();
+      (tableOrders[tableId] || []).forEach((line) => {
+        if (!line || !line.orderProPending) return;
+        const marker = String(line.orderProLine || '');
+        const cut = marker.lastIndexOf(':');
+        if (cut > 0) ids.add(marker.slice(0, cut));
+      });
+      return Array.from(ids);
+    }
+
+    /* Accept locally first so a paid/confirmed order reaches this caisse's KDS
+       and printer even if the network acknowledgement takes a moment. The
+       subsequent server echo reuses the same opId; opTickets and the durable
+       print queue therefore turn it into a no-op instead of a duplicate. */
+    function dispatchPendingOrderProAtTable(tableId, paid) {
+      const ids = orderProPendingIdsForTable(tableId);
+      if (!ids.length) return 0;
+      let inbox = {};
+      try { inbox = (window.KiwiOrderInbox && KiwiOrderInbox.orders && KiwiOrderInbox.orders()) || {}; }
+      catch (_) { inbox = {}; }
+      const server = serverNameFor(tableId);
+      ids.forEach((id) => {
+        const attached = (tableOrders[tableId] || []).filter(line =>
+          String(line && line.orderProLine || '').startsWith(id + ':'));
+        const remote = inbox[id] || (attached.length ? {
+          id, mode: 'table', table: tableId, status: 'pending', server,
+          total: attached.reduce((sum, line) => sum + (+line.price || 0) * (+line.qty || 1), 0),
+          lines: attached.map(line => ({
+            id: line.id || '', name: line.name || '', qty: line.qty || 1,
+            unitPrice: Math.max(0, +line.price || 0), note: line.note || '',
+            options: line.options || '', visuals: Array.isArray(line.visuals) ? line.visuals : [],
+            station: line.station || '', kind: line.kind || '', formulaUid: line.formulaUid || '',
+            formulaName: line.formulaName || '', slotLabel: line.slotLabel || '',
+            formulaSlotId: line.formulaSlotId || '', lineId: line.lineId || '',
+          })),
+        } : null);
+        if (remote) {
+          opIngest(Object.assign({}, remote, {
+            status: 'accepted', server: server || remote.server || '',
+            paid: paid === true || remote.paid === true, updated_ts: Date.now(),
+          }));
+        }
+        try {
+          if (window.KiwiOrderInbox && KiwiOrderInbox.setStatus) {
+            KiwiOrderInbox.setStatus(id, 'accepted', { server, paid: paid === true });
+          }
+        } catch (_) {}
+      });
+      return ids.length;
+    }
+
+    function dispatchHeldTakeaway(o, paid) {
+      if (!o || o.status !== 'held') return false;
+      o.status = 'new';
+      o.sentAt = new Date();
+      if (!o.kitchenDispatchedAt) {
+        o.kitchenDispatchedAt = Date.now();
+        printKitchenTickets(o, o.items || [], {
+          remote: !!o.opId, sourceId: o.opId || '', createdAt: o.kitchenDispatchedAt,
+        });
+      }
+      opPush(o, 'accepted', { paid: paid === true });
+      updateKdsCount();
+      if (kdsEl.classList.contains('is-open')) kdsPaint();
+      try { persistShift(); } catch (_) {}
+      return true;
+    }
+
+    function dispatchTableUnsentToKitchen(tableId, paid) {
+      const remote = dispatchPendingOrderProAtTable(tableId, paid);
+      const local = sendTableToKitchen(tableId);
+      return { remote, local };
+    }
+
+    function dispatchUnsentKitchenBeforePayment() {
+      if (mode === 'vrap') {
+        if (vrapEditingNum != null) {
+          const existing = kdsOrders.find(x => x && x.num === vrapEditingNum);
+          if (existing) dispatchHeldTakeaway(existing, true);
+          return existing || null;
+        }
+        if (cart && cart.length) {
+          const created = createTakeawayKitchenOrder(cart);
+          if (created) vrapEditingNum = created.num;
+          return created;
+        }
+        return null;
+      }
+      if (selectedId) return dispatchTableUnsentToKitchen(selectedId, true);
+      return null;
+    }
+
     /* Le serveur affecté à la table, tel que le plan de salle le connaît. */
     function serverNameFor(tableId) {
       const t = tables[tableId];
@@ -18163,6 +18281,8 @@
           uid: newLineUid(), id: (menuHit && menuHit.id) || l.id || ('op-' + marker),
           name: l.name || (menuHit && menuHit.name) || '', price: +l.unitPrice || 0,
           qty: Math.max(1, +l.qty || 1), note: l.note || '', opts: [], optSig: '',
+          options: l.options || '', visuals: Array.isArray(l.visuals) ? l.visuals.slice() : [],
+          station: l.station || (menuHit && menuHit.station) || '',
           kind: l.kind || '', formulaUid: l.formulaUid || '', formulaName: l.formulaName || '',
           slotLabel: l.slotLabel || '', formulaSlotId: l.formulaSlotId || '', lineId: l.lineId || '',
           sent: true, orderProLine: marker, orderSession: String(o.session || ''),
@@ -18495,6 +18615,14 @@
             KiwiOrderInbox.setStatus(orderId, 'accepted', { server });
           }
         } catch (_) {}
+      },
+      /* orderpro-inbox appelle ce pont uniquement après avoir obtenu la vraie
+         transition pending → accepted. opIngest est idempotent sur opId : un
+         bon déjà créé localement par le bouton de table ou l'encaissement est
+         reconnu, jamais imprimé une seconde fois. */
+      confirmAccepted(order) {
+        if (!order || !order.id) return;
+        opIngest(Object.assign({}, order, { status: 'accepted' }));
       },
       sessionOf: phoneSessionOf,
       serverFor: serverNameFor,

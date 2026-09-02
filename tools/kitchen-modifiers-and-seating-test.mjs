@@ -159,7 +159,7 @@ check('caisse relay preserves formula and canonical option metadata',
   caisseHtml.includes('function relayLinesFromCaisse(lines)')
     && caisseHtml.includes("['kind', 'formulaUid', 'formulaName', 'slotLabel', 'formulaSlotId', 'lineId']")
     && caisseHtml.includes('relayLines: relayLinesFromCaisse(lines)')
-    && caisseHtml.includes('relayLines: relayLinesFromCaisse(cart)'));
+    && caisseHtml.includes('relayLines: relayLinesFromCaisse(source)'));
 check('kiwi-caisse.html migrates tableSplits on confirmCaisseTransfer',
   caisseHtml.includes('tableSplits.set(to, tableSplits.get(from))'));
 check('kiwi-caisse.html clears tableSplits on confirmCaisseMerge',
