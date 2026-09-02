@@ -171,10 +171,10 @@ export async function onRequestGet({ request, env }) {
       rows = (rs && rs.results) || [];
     }
     const vs = await env.DB.prepare(
-      'SELECT rowid AS cursor, ref FROM sales WHERE merchant IN (?, ?) AND void_ts IS NOT NULL ' +
+      'SELECT rowid AS cursor, id, ref FROM sales WHERE merchant IN (?, ?) AND void_ts IS NOT NULL ' +
       'ORDER BY void_ts DESC LIMIT 500'
     ).bind(merchant, legacy || merchant).all();
-    voided = ((vs && vs.results) || []).map((r) => ({ c: r.cursor, r: r.ref || '' }));
+    voided = ((vs && vs.results) || []).map((r) => ({ c: r.cursor, i: r.id || '', r: r.ref || '' }));
   } catch (e) {
     const msg = String((e && e.message) || e);
     const noVoid = msg.includes('void_ts');

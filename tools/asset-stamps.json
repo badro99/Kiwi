@@ -116,8 +116,8 @@
     "sha": "112638dbbb35294e"
   },
   "assets/caisse-pwa.js": {
-    "v": "459",
-    "sha": "32919d132db2519e"
+    "v": "460",
+    "sha": "547915cccd721bea"
   },
   "assets/caisse-refresh.js": {
     "v": "1",
@@ -192,8 +192,8 @@
     "sha": "cd751f73c0180449"
   },
   "assets/dashboard-pwa.js": {
-    "v": "457",
-    "sha": "1af1e620475ccac2"
+    "v": "458",
+    "sha": "44fef47c8bb48b90"
   },
   "assets/dashboard-startup-gate.js": {
     "v": "1",
@@ -248,8 +248,8 @@
     "sha": "5d6507bf65311b04"
   },
   "assets/employee-live.js": {
-    "v": "456",
-    "sha": "37f4057835d6baf4"
+    "v": "457",
+    "sha": "3abf19e3ef15a20e"
   },
   "assets/employee-planning.js": {
     "v": "8",
@@ -416,8 +416,8 @@
     "sha": "c9d6036ca657c76e"
   },
   "assets/live-link.js": {
-    "v": "19",
-    "sha": "5ac5337705f71583"
+    "v": "20",
+    "sha": "dd42d59e5126f05b"
   },
   "assets/live-socket.js": {
     "v": "4",
@@ -504,8 +504,8 @@
     "sha": "47b1d8a268c10551"
   },
   "assets/orderpro-inbox.js": {
-    "v": "8",
-    "sha": "146bda6029a9d500"
+    "v": "9",
+    "sha": "99dde12be0cf9f7c"
   },
   "assets/orderpro-panel.js": {
     "v": "1",

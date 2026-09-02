@@ -260,7 +260,11 @@ function runVoids(journalRows, refs, opts) {
   const scope = {
     journal: journalRows,
     storeIsReal: () => (opts && opts.real === false ? false : true),
-    window: { KiwiPosSale: { refMatcher } },
+    currentMerchantSlug: () => 'resto-test',
+    window: {
+      KiwiPosSale: { refMatcher },
+      KiwiLive: { saleIdFor: (entry) => entry.serverId || entry.id || '' },
+    },
     renderShiftStats() { scope.painted = (scope.painted || 0) + 1; },
     persistShift() { scope.persisted = (scope.persisted || 0) + 1; },
     saveProvisional() {},
@@ -268,11 +272,12 @@ function runVoids(journalRows, refs, opts) {
     painted: 0, persisted: 0,
   };
   const fn = new Function('scope', `
-    const { journal, storeIsReal, window, renderShiftStats, persistShift, saveProvisional, $ } = scope;
+    const { journal, storeIsReal, currentMerchantSlug, window, renderShiftStats, persistShift, saveProvisional, $ } = scope;
     ${extract(caisse, 'reconcileVoids')}
-    return reconcileVoids(scope.__refs);
+    return reconcileVoids(scope.__refs, scope.__ids);
   `);
   scope.__refs = refs;
+  scope.__ids = (opts && opts.ids) || [];
   const touched = fn(scope);
   return { touched, journal: journalRows, painted: scope.painted, persisted: scope.persisted };
 }
@@ -304,6 +309,14 @@ eq(runVoids(J, []).touched, 0, 'et le rétablissement est idempotent lui aussi')
 /* Une référence étrangère ne doit toucher à rien. */
 J = mkJournal();
 eq(runVoids(J, ['ZZ-9']).touched, 0, 'une référence d\'un autre magasin ne retire rien');
+
+/* God Mode supprime par l'identifiant serveur. Une caisse peut avoir conservé
+   un autre libellé imprimé : l'identité stable doit quand même retirer la vente. */
+J = mkJournal();
+J[1].serverId = 'sale-cloud-42';
+eq(runVoids(J, [], { ids: ['sale-cloud-42'] }).touched, 1,
+  'une suppression God Mode atteint la caisse par identifiant stable');
+eq(J[1].voided, true, 'la vente supprimée du dashboard disparaît aussi de la caisse');
 
 /* La démo n'a pas de livres à tenir. */
 J = mkJournal();

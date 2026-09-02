@@ -42,7 +42,7 @@
 //    sans un deuxième sondage, et sans une deuxième horloge à désynchroniser.
 
 import { json, entitledMerchant, activeServiceEmployee } from '../../auth/_lib.js';
-import { startOfDay, startOfWeek, deskTouch, normTable, priceOrder, newSessionId, SESSION_ID, pollCursor } from './_lib.js';
+import { startOfDay, nextOrderNumber, deskTouch, normTable, priceOrder, newSessionId, SESSION_ID, pollCursor } from './_lib.js';
 import { recordOrderCourse, closeOrderCourses } from './_course.js';
 
 function deferCourse(context, promise) {
@@ -61,7 +61,7 @@ function deferCourse(context, promise) {
  * figurent dans aucune liste de départ — donc rien ne les rouvre. */
 const FROM = {
   accepted: ['pending'],
-  rejected: ['pending'],
+  rejected: ['pending', 'accepted', 'ready'],
   ready:    ['accepted'],
   served:   ['ready', 'accepted'],
 };
@@ -661,7 +661,6 @@ export async function onRequestPost(context) {
 
     const server = String((b && b.server) || '').trim().slice(0, 40);
     const today = startOfDay(now);
-    const week = startOfWeek(now);
     /* Resolve a retry BEFORE opening a visit. A late Wi-Fi replay after the
        bill was paid must return its original ticket, not silently create a
        fresh open session for the now-empty physical table. */
@@ -690,7 +689,9 @@ export async function onRequestPost(context) {
      * « Lancer ». Sans clé, la cuisine sortait deux fois le même plat. */
     const id = 'ord-' + now.toString(36) + '-' + crypto.randomUUID().slice(0, 8);
     const linesJson = JSON.stringify(priced.lines);
-    const NUMBER = `COALESCE(MAX(number), 0) + 1`;
+    let orderNumber;
+    try { orderNumber = await nextOrderNumber(env, merchant, now); }
+    catch (_) { return json({ error: 'number-allocation-failed' }, 503); }
 
     /* Deux écritures, une seule idée — même discipline que index.js : les
      * colonnes tardives (server_name, menu_rev, priced_ts, client_ref) font
@@ -701,13 +702,11 @@ export async function onRequestPost(context) {
       row = await env.DB.prepare(
         `INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status,
                              created_ts, updated_ts, server_name, menu_rev, priced_ts, client_ref, session_id)
-         SELECT ?, ?, ${NUMBER}, ?, ?, ?, ?, 'accepted', ?, ?, ?, ?, ?, ?, ?
-           FROM orders WHERE merchant = ? AND created_ts >= ?
+         VALUES (?, ?, ?, ?, ?, ?, ?, 'accepted', ?, ?, ?, ?, ?, ?, ?)
          RETURNING number`
       ).bind(
-        id, merchant, mode, table, total, linesJson, now, now,
-        server || null, priced.menuRev, priced.priced ? now : null, clientRef, serviceSession && serviceSession.id,
-        merchant, week
+        id, merchant, orderNumber, mode, table, total, linesJson, now, now,
+        server || null, priced.menuRev, priced.priced ? now : null, clientRef, serviceSession && serviceSession.id
       ).first();
     } catch (_) {
       /* La clé a-t-elle parlé avant la migration ? Deux envois simultanés de la
@@ -729,11 +728,10 @@ export async function onRequestPost(context) {
         row = await env.DB.prepare(
           `INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status,
                                created_ts, updated_ts, session_id)
-           SELECT ?, ?, ${NUMBER}, ?, ?, ?, ?, 'accepted', ?, ?, ?
-             FROM orders WHERE merchant = ? AND created_ts >= ?
+           VALUES (?, ?, ?, ?, ?, ?, ?, 'accepted', ?, ?, ?)
            RETURNING number`
-        ).bind(id, merchant, mode, table, total, linesJson, now, now,
-          serviceSession && serviceSession.id, merchant, week).first();
+        ).bind(id, merchant, orderNumber, mode, table, total, linesJson, now, now,
+          serviceSession && serviceSession.id).first();
       } catch (e) {
         return json({ error: 'write-failed', detail: String((e && e.message) || e) }, 500);
       }
@@ -1566,8 +1564,9 @@ export async function onRequestPost(context) {
               server_name = COALESCE(NULLIF(?, ''), server_name),
               paid_ts = CASE WHEN ? = 1 AND paid_ts IS NULL THEN ? ELSE paid_ts END
         WHERE id = ? AND merchant = ? AND status IN (${marks})
+          AND (? <> 'rejected' OR paid_ts IS NULL)
         RETURNING id, status, number`
-    ).bind(status, now, server, paid ? 1 : 0, now, id, merchant, ...from).first();
+    ).bind(status, now, server, paid ? 1 : 0, now, id, merchant, ...from, status).first();
   } catch (_) {
     // Colonnes de session pas encore migrées : on fait avancer l'état seul.
     try {
@@ -1728,7 +1727,6 @@ async function createTicket(context, env, merchant, c, now) {
   const sessionId = ticketSession && ticketSession.id ? ticketSession.id : null;
   const total = lines.reduce((s, l) => s + l.unitPrice * l.qty, 0);
   const linesJson = JSON.stringify(lines);
-  const week = startOfWeek(now);
 
   /* Renvoi du même bon (le réseau est tombé, la caisse rejoue). On rend la
    * commande telle qu'elle est, sans rien réécrire : elle a peut-être déjà été
@@ -1740,16 +1738,16 @@ async function createTicket(context, env, merchant, c, now) {
     if (dup) return json({ ok: true, id: dup.id, number: dup.number, status: dup.status, replayed: true });
   } catch (_) { /* table absente → l'insertion ci-dessous tranchera */ }
 
-  /* Même numérotation que le relais téléphone : un compteur par commerçant et
-   * par semaine, calculé dans l'énoncé lui-même pour qu'il n'y ait pas de fenêtre
-   * entre « lire le max » et « écrire ». MAX() sans GROUP BY rend toujours une
-   * ligne, donc le premier bon de la semaine reçoit bien le numéro 1. */
-  const NUMBER = 'COALESCE(MAX(number), 0) + 1';
-  const FROM_WEEK = `FROM orders WHERE merchant = ? AND created_ts >= ? RETURNING number`;
+  /* Même numérotation que le relais téléphone : un compteur durable par
+   * commerçant et par semaine. Supprimer ou annuler un bon laisse un trou et ne
+   * permet jamais de réutiliser son numéro. */
+  let orderNumber;
+  try { orderNumber = await nextOrderNumber(env, merchant, now); }
+  catch (_) { return json({ error: 'number-allocation-failed' }, 503); }
+  const RETURN_NUMBER = 'RETURNING number';
   const BASE_COLS = 'id, merchant, number, mode, table_no, total, lines, status, created_ts, updated_ts';
-  const BASE_VALS = `?, ?, ${NUMBER}, ?, ?, ?, ?, 'accepted', ?, ?`;
-  const head = [id, merchant, mode, table, total, linesJson, now, now];
-  const tail = [merchant, week];
+  const BASE_VALS = `?, ?, ?, ?, ?, ?, ?, 'accepted', ?, ?`;
+  const head = [id, merchant, orderNumber, mode, table, total, linesJson, now, now];
 
   /* Les colonnes se sont ajoutées par vagues, et toutes les bases n'ont pas reçu
    * les mêmes : `server_name` est venu avec la session de table, `channel` avec
@@ -1775,8 +1773,8 @@ async function createTicket(context, env, merchant, c, now) {
   let lastErr = null;
   for (const s of SHAPES) {
     try {
-      row = await env.DB.prepare(`INSERT INTO orders (${s.cols}) SELECT ${s.vals} ${FROM_WEEK}`)
-        .bind(...head, ...s.mid, ...tail).first();
+      row = await env.DB.prepare(`INSERT INTO orders (${s.cols}) VALUES (${s.vals}) ${RETURN_NUMBER}`)
+        .bind(...head, ...s.mid).first();
       lastErr = null;
       break;
     } catch (e) { lastErr = e; row = null; }

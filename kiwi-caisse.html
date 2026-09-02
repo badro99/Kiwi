@@ -5116,6 +5116,11 @@
       box-shadow: none;
     }
     .vrap-act.vrap-act-send:hover { background: var(--mint-soft, #E6FBEF); }
+    .vrap-act.vrap-act-cancel {
+      background: transparent; color: var(--danger, #B85245);
+      border: 1px solid rgba(184,82,69,.28); box-shadow: none;
+    }
+    .vrap-act.vrap-act-cancel:hover { background: rgba(184,82,69,.08); }
     .vrap-empty { text-align: center; padding: 46px 20px; color: var(--ink-4); }
     .vrap-empty svg { width: 30px; height: 30px; margin: 0 auto 8px; }
     .vrap-empty span { display: block; font-size: 13px; }
@@ -5420,8 +5425,8 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=459" defer></script>
-  <script src="assets/live-link.js?v=19" defer></script>
+  <script src="assets/caisse-pwa.js?v=460" defer></script>
+  <script src="assets/live-link.js?v=20" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
   <script src="assets/staff-roles.js?v=1" defer></script>
@@ -5496,7 +5501,7 @@
   <script src="assets/food-production-print.js?v=2" defer></script>
   <!-- OrderPro · orders placed on a customer's phone arrive here over WiFi;
        staff accept one and it becomes a kitchen ticket. Paired terminals only. -->
-  <script src="assets/orderpro-inbox.js?v=8" defer></script>
+  <script src="assets/orderpro-inbox.js?v=9" defer></script>
   <!-- Operator feature flags + managed PINs. Fail-safe: no backend ⇒ no change. -->
   <script src="assets/merchant-config.js?v=269" defer></script>
   <!-- « Rafraîchir » · un bouton commun à toutes les caisses (restaurant,
@@ -10233,6 +10238,13 @@
             return;
           }
           if (mode === 'vrap') {
+            if (vrapEditingNum != null) {
+              const order = kdsOrders.find(x => x && x.num === vrapEditingNum);
+              if (order && order.opId && !order.paid) {
+                cancelOrderProTakeaway(order);
+                return;
+              }
+            }
             clearCart();
             toast('Commande vidée');
             return;
@@ -12722,14 +12734,17 @@
      * drapeau `voided` porté par l'écriture est le registre · ce qui rend
      * l'opération idempotente sur les quatre-vingt-dix secondes suivantes.
      * Même mécanique que la boutique (assets/pos-boutique.js). */
-    function reconcileVoids(refs) {
+    function reconcileVoids(refs, saleIds) {
       if (!storeIsReal()) return 0;
       const KP = window.KiwiPosSale;
       const hit = (KP && KP.refMatcher) ? KP.refMatcher(refs) : null;
+      const ids = new Set((saleIds || []).map((id) => String(id || '')).filter(Boolean));
       let touched = 0;
       journal.forEach((e) => {
-        if (!e || !e.ref) return;
-        const out = !!(hit && hit(e.ref));
+        if (!e) return;
+        let serverId = '';
+        try { serverId = window.KiwiLive?.saleIdFor?.(e, currentMerchantSlug()) || ''; } catch (_) {}
+        const out = !!((hit && e.ref && hit(e.ref)) || ids.has(String(e.id || '')) || (serverId && ids.has(serverId)));
         if (out === !!e.voided) return;
         e.voided = out;
         /* La vente a sorti sa marchandise en entrant (recordSale plus bas). La
@@ -12756,11 +12771,13 @@
       return touched;
     }
     document.addEventListener('kiwi-sales-voided', (e) => {
-      try { reconcileVoids((e && e.detail && e.detail.refs) || []); } catch (_) {}
+      try { reconcileVoids((e && e.detail && e.detail.refs) || [], (e && e.detail && e.detail.ids) || []); } catch (_) {}
     });
     /* Le sondage qui a précédé cet écouteur ne se rejouera pas tout seul. */
     try {
-      if (window.KiwiLive && window.KiwiLive.voidedRefs) reconcileVoids(window.KiwiLive.voidedRefs());
+      if (window.KiwiLive && window.KiwiLive.voidedRefs) {
+        reconcileVoids(window.KiwiLive.voidedRefs(), window.KiwiLive.voidedSaleIds ? window.KiwiLive.voidedSaleIds() : []);
+      }
     } catch (_) {}
 
     /* Seed the ledger so the demo opens mid-service (~2h of transactions) */
@@ -12889,7 +12906,12 @@
         id: orderProSaleId || ('sale-' + Date.now() + '-' + journal.length),
         time: new Date(),
         label: label || 'Vente',
-        amount: amount, method: method, ref: genRef(),
+        /* Le reçu client, la caisse et la cuisine parlent du MÊME numéro de
+           commande. La clé comptable reste `entry.id`; `ref` est le repère
+           humain imprimé et doit être le numéro opérationnel. */
+        amount: amount, method: method,
+        ref: vrapOrder ? ticketNo(vrapOrder)
+          : (settlementTable ? settledOrderLabel(settlementTable) : genRef()),
         tip: money(tip),
         cashier: currentCashier.name,
       };
@@ -17853,9 +17875,12 @@
       const sendBtn = o.status === 'held'
         ? `<button class="vrap-act vrap-act-send" data-vrap-send="${o.num}">Envoyer en cuisine</button>`
         : '';
+      const cancelBtn = o.opId
+        ? `<button class="vrap-act vrap-act-cancel" data-vrap-cancel="${o.num}">Annuler</button>`
+        : '';
       let action = '';
       if (!o.paid) {
-        action = `<div class="vrap-order-acts">${sendBtn}${readyBtn}<button class="vrap-act">Encaisser</button></div>`;
+        action = `<div class="vrap-order-acts">${cancelBtn}${sendBtn}${readyBtn}<button class="vrap-act">Encaisser</button></div>`;
       } else if (!o.pickedUp) {
         action = readyBtn
           ? `<div class="vrap-order-acts">${readyBtn}<button class="vrap-act" data-vrap-handover="${o.num}">Remettre au client</button></div>`
@@ -17964,6 +17989,32 @@
       if (!o || o.paid || cart.length === 0) return;
       saveVrapBillItems(o, vrapCartItems(o));
       o.total = cart.reduce((s, c) => s + c.price * c.qty, 0);  // gross · réduction is checkout-only
+    }
+
+    function cancelOrderProTakeaway(o) {
+      if (!o || !o.opId || o.paid) return false;
+      const label = ticketNo(o);
+      if (!confirm(`Annuler la commande ${label} ?`)) return false;
+      toast(`Annulation de ${label}…`);
+      Promise.resolve(opPush(o, 'rejected')).then((result) => {
+        if (!result || !result.ok) {
+          toast(`Commande ${label} non annulée · réessayez`);
+          return;
+        }
+        opTickets.delete(o.opId);
+        const index = kdsOrders.indexOf(o);
+        if (index >= 0) kdsOrders.splice(index, 1);
+        if (vrapEditingNum === o.num) {
+          vrapEditingNum = null;
+          clearCart();
+          setVrapView('board');
+        } else renderVrapBoard();
+        updateKdsCount();
+        if (kdsEl.classList.contains('is-open')) kdsPaint();
+        try { persistShift(); } catch (_) {}
+        toast(`Commande ${label} annulée`);
+      });
+      return true;
     }
 
     /* Card / cash cleared in À emporter mode. For an order being edited this
@@ -18111,6 +18162,11 @@
       }
       const rdy = e.target.closest('[data-vrap-ready]');
       if (rdy) { vrapMarkReady(Number(rdy.dataset.vrapReady)); return; }
+      const cancel = e.target.closest('[data-vrap-cancel]');
+      if (cancel) {
+        cancelOrderProTakeaway(kdsOrders.find(x => x && x.num === Number(cancel.dataset.vrapCancel)));
+        return;
+      }
       const send = e.target.closest('[data-vrap-send]');
       if (send) {
         const order = kdsOrders.find(x => x && x.num === Number(send.dataset.vrapSend));
@@ -18172,12 +18228,13 @@
     /* Pousser l'état vers le serveur, pour que le TÉLÉPHONE l'apprenne. Sans
        cet écho, la cuisine sait que le plat est prêt et le client, non. */
     function opPush(o, status, extra) {
-      if (!o || !o.opId) return;
+      if (!o || !o.opId) return Promise.resolve(null);
       try {
         if (window.KiwiOrderInbox && KiwiOrderInbox.setStatus) {
-          KiwiOrderInbox.setStatus(o.opId, status, extra || {});
+          return KiwiOrderInbox.setStatus(o.opId, status, extra || {});
         }
       } catch (_) {}
+      return Promise.resolve(null);
     }
 
     function orderProPendingIdsForTable(tableId) {

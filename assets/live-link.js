@@ -736,26 +736,29 @@
      une vente sortie des livres, mais aussi une vente REMISE dedans, qui se
      signale justement par sa disparition de cette liste. Un delta ne dirait
      jamais la seconde. */
-  var voidedRefs = [];
+  var voidedRefs = [], voidedIds = [];
   function voided() { return voidedRefs.slice(); }
+  function voidedSaleIds() { return voidedIds.slice(); }
 
   function applyVoids(list, tenant) {
     if (!list) return;
-    var cursors = [], refs = [];
+    var cursors = [], refs = [], ids = [];
     list.forEach(function (v) {
       if (!v) return;
       var c = Number(v.c) || 0;
       if (c) { cursors.push(c); if (tenant) delete feedSeen[tenant + '#' + c]; }
       if (v.r) refs.push(String(v.r));
+      if (v.i) ids.push(String(v.i));
     });
     voidedRefs = refs;
+    voidedIds = ids;
     /* Annoncé À CHAQUE passage, même quand la liste est vide ou inchangée. Le
        module métier qui écoute est idempotent par construction (il compare son
        journal à cette liste), et c'est ce passage-là qui lui apprend qu'une
        vente est revenue. */
     try {
       document.dispatchEvent(new CustomEvent('kiwi-sales-voided', {
-        detail: { refs: refs.slice(), merchant: tenant || '', source: 'live-link' },
+        detail: { refs: refs.slice(), ids: ids.slice(), merchant: tenant || '', source: 'live-link' },
       }));
     } catch (_) {}
     if (!list.length) return;
@@ -946,7 +949,7 @@
    * arriver dans la minute suffit, et une caisse en plein service a mieux à
    * faire que de sonder. Ne demande QUE la liste des retraits (voids=1), donc
    * une requête minuscule qui ne rejoue jamais la journée. */
-  var VOID_MS = 90000;
+  var VOID_MS = 15000;
   function watchVoids() {
     if (!on()) return;
     var timer = null;
@@ -1040,6 +1043,7 @@
        module métier monté APRÈS le premier passage : l'événement lui a échappé,
        l'état, non. */
     voidedRefs: voided,
+    voidedSaleIds: voidedSaleIds,
     /* What the assistant prints under an answer: which tenant it is reading,
        when the server last answered, how many rows it has bridged, and how
        many sales this device still owes the server. A number a merchant can

@@ -331,19 +331,23 @@
     var pay = !o.paid
       ? '<button class="kop-btn go" data-kop-pay="' + esc(o.id) + '">Encaisser</button>'
       : '';
+    var cancel = !o.paid
+      ? '<button class="kop-btn ghost" data-kop-rej="' + esc(o.id) + '">' +
+          (o.status === 'pending' ? 'Refuser' : 'Annuler') + '</button>'
+      : '';
     var acts = o.status === 'pending'
       ? '<div class="kop-acts">' +
-          '<button class="kop-btn ghost" data-kop-rej="' + esc(o.id) + '">Refuser</button>' +
+          cancel +
           '<button class="kop-btn send" data-kop-acc="' + esc(o.id) + '">Envoyer en cuisine</button>' + pay +
         '</div>'
       : (o.status === 'accepted'
-          ? '<div class="kop-acts"><button class="kop-btn send" data-kop-ready="' + esc(o.id) + '">Marquer prêt</button>' + pay + '</div>'
+          ? '<div class="kop-acts">' + cancel + '<button class="kop-btn send" data-kop-ready="' + esc(o.id) + '">Marquer prêt</button>' + pay + '</div>'
           : (o.status === 'ready'
               /* Le point final. Sans lui, une commande restait « prête » pour
                * toujours : le téléphone du client ne recevait jamais son
                * remerciement, et la file gardait une ligne que plus personne
                * n'avait à traiter. */
-              ? '<div class="kop-acts"><button class="kop-btn send" data-kop-served="' + esc(o.id) + '">' +
+              ? '<div class="kop-acts">' + cancel + '<button class="kop-btn send" data-kop-served="' + esc(o.id) + '">' +
                 (o.mode === 'table' ? 'Servie' : 'Remise au client') + '</button>' + pay + '</div>'
               : ''));
     return '<div class="kop-card ' + esc(o.status) + '">' +

@@ -30,6 +30,34 @@ export function startOfWeek(now) {
   return day - ((shiftedDay + 6) % 7) * 86400000;
 }
 
+/* Allocate the next human-facing restaurant order number. The counter is
+ * independent from deletable order rows: cancellation/support cleanup leaves a
+ * deliberate gap and can never make a number reappear. The MAX query is only a
+ * one-time migration floor for weeks already in progress when this ships. */
+export async function nextOrderNumber(env, merchant, now) {
+  const period = startOfWeek(now);
+  const stamp = Date.now();
+  await env.DB.prepare(
+    'CREATE TABLE IF NOT EXISTS order_sequences (' +
+    'merchant TEXT NOT NULL, period INTEGER NOT NULL, next_value INTEGER NOT NULL, ' +
+    'updated_ts INTEGER NOT NULL, PRIMARY KEY (merchant, period))'
+  ).run();
+  const old = await env.DB.prepare(
+    'SELECT COALESCE(MAX(number), 0) + 1 AS n FROM orders WHERE merchant = ? AND created_ts >= ?'
+  ).bind(merchant, period).first();
+  const floor = Math.max(1, Number(old && old.n) || 1);
+  await env.DB.prepare(
+    'INSERT OR IGNORE INTO order_sequences (merchant, period, next_value, updated_ts) VALUES (?, ?, ?, ?)'
+  ).bind(merchant, period, floor, stamp).run();
+  const row = await env.DB.prepare(
+    'UPDATE order_sequences SET next_value = ' +
+    '(CASE WHEN next_value < ? THEN ? ELSE next_value END) + 1, updated_ts = ? ' +
+    'WHERE merchant = ? AND period = ? RETURNING next_value - 1 AS number'
+  ).bind(floor, floor, stamp, merchant, period).first();
+  if (!row || !Number.isFinite(Number(row.number))) throw new Error('order-number-allocation-failed');
+  return Number(row.number);
+}
+
 /* ── L'option est-elle ouverte chez ce commerçant ? ────────────────────────
  * ATTENTION, cette clé inverse la convention de merchant_config : partout
  * ailleurs une clé ABSENTE veut dire « module allumé », parce que ces modules

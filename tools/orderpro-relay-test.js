@@ -361,6 +361,16 @@ async function get(fn, qs, headers = {}) {
   r = await post(queuePost, { merchant: SLUG, id: rejId, status: 'accepted' }, asStaff);
   ok('refusée, elle est terminale', r.status === 409);
 
+  let cancellable = await post(placeOrder, { merchant: SLUG, mode: 'takeout', lines: [line('i2')] });
+  await post(queuePost, { merchant: SLUG, id: cancellable.body.id, status: 'accepted' }, asStaff);
+  r = await post(queuePost, { merchant: SLUG, id: cancellable.body.id, status: 'rejected' }, asStaff);
+  ok('un doublon accepté mais non payé peut encore être annulé', r.status === 200 && r.body.status === 'rejected');
+
+  let paidOrder = await post(placeOrder, { merchant: SLUG, mode: 'takeout', lines: [line('i2')] });
+  await post(queuePost, { merchant: SLUG, id: paidOrder.body.id, status: 'accepted', paid: true }, asStaff);
+  r = await post(queuePost, { merchant: SLUG, id: paidOrder.body.id, status: 'rejected' }, asStaff);
+  ok('une commande déjà encaissée ne disparaît pas par annulation', r.status === 409);
+
   r = await post(queuePost, { merchant: SLUG, id: 'ord-nexistepas', status: 'accepted' }, asStaff);
   ok('une commande inconnue est un 404, pas un 409', r.status === 404);
 
@@ -434,6 +444,14 @@ async function get(fn, qs, headers = {}) {
   ok('…et n\'écrit qu\'une ligne',
     DB._db.prepare('SELECT COUNT(*) n FROM orders WHERE client_ref=?').get(ref).n === 1);
   ok('…avec un seul numéro', a.body.number === b.body.number);
+
+  DB._db.prepare('DELETE FROM orders WHERE id=?').run(a.body.id);
+  const afterDeleted = await post(placeOrder, {
+    merchant: SLUG, mode: 'takeout', ref: 'ref-after-deleted', lines: [line('i1')],
+  });
+  ok('supprimer une commande laisse un trou et ne réutilise jamais son numéro',
+    afterDeleted.body.number > a.body.number,
+    `avant=${a.body.number}, après=${afterDeleted.body.number}`);
 
   /* ═══ 7. L'ADDITION FERME LA SESSION ════════════════════════════════════ */
   r = await post(queuePost, { merchant: SLUG, closeSession: sess, closedBy: 'settle' }, asStaff);

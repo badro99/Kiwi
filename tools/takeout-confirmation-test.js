@@ -48,6 +48,11 @@ ok('le statut payé est persisté après la confirmation, même si le modal est 
   /function settleVrapPayment\(\)[\s\S]{0,1800}opPush\(o, remoteStatus, \{ paid: true \}\)[\s\S]{0,400}persistShift\(\)/.test(CAISSE));
 ok('la vente cloud transporte l’identifiant OrderPro sans dépendre du libellé',
   LIVE.includes('if (entry.orderId) body.orderId ='));
-
+ok('le reçu imprime le même numéro que la caisse et la cuisine',
+  /ref: vrapOrder \? ticketNo\(vrapOrder\)/.test(CAISSE));
+ok('une commande OrderPro non payée peut être annulée depuis son ticket',
+  /function cancelOrderProTakeaway\(o\)[\s\S]{0,420}opPush\(o, 'rejected'\)/.test(CAISSE)
+    && /data-vrap-cancel/.test(CAISSE)
+    && /mode === 'vrap'[\s\S]{0,300}cancelOrderProTakeaway\(order\)/.test(CAISSE));
 if (failed) process.exit(1);
 console.log('\n  Caisse takeout + OrderPro confirmation boundaries verified.\n');

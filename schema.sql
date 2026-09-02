@@ -87,6 +87,17 @@ CREATE TABLE IF NOT EXISTS ticket_sequences (
   PRIMARY KEY (merchant, period)
 );
 
+-- Restaurant order numbers are operational call numbers, reset weekly. They
+-- cannot be derived from MAX(orders.number): support may delete a test/cancelled
+-- row, and that must create a gap rather than make the next guest reuse it.
+CREATE TABLE IF NOT EXISTS order_sequences (
+  merchant   TEXT NOT NULL,
+  period     INTEGER NOT NULL, -- Monday 00:00 Africa/Casablanca, epoch ms
+  next_value INTEGER NOT NULL,
+  updated_ts INTEGER NOT NULL,
+  PRIMARY KEY (merchant, period)
+);
+
 -- ── Accounts (merchant login + lead capture) ────────────────────────────────
 -- One row per merchant who signs up. Passwords are PBKDF2-SHA256: `salt` and
 -- `hash` are hex; the plaintext password is never stored. This table doubles as
