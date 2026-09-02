@@ -78,11 +78,24 @@ let result = app.KiwiKitchenPrint.enqueue([
 ok('un poste non désigné ne vole pas les bons des autres caisses', result.skipped === 'not-print-hub');
 ok('aucun papier distant ne sort sans hub explicite', printed.length === 0);
 
+result = app.KiwiKitchenPrint.enqueue([
+  { id: 'ord-employee-connected:cuisson', createdAt: Date.now(), payload: { title: 'CUISSON', items: [{ name: 'Tajine serveur' }] } },
+], { remote: 'connected' });
+ok('Lancer la commande imprime sur la caisse dont la cuisine est connectée', result.accepted === 1);
+await wait(90);
+ok('le bon employé sort sans confirmation caisse ni hub manuel',
+  printed.length === 1 && printed[0].items[0].name === 'Tajine serveur');
+app.KiwiKitchenPrint.enqueue([
+  { id: 'ord-employee-connected:cuisson', createdAt: Date.now(), payload: { title: 'CUISSON', items: [{ name: 'Tajine serveur' }] } },
+], { remote: 'connected' });
+await wait();
+ok('le polling du même bon employé ne le réimprime pas', printed.length === 1);
+
 app.KiwiKitchenPrint.setHub(true);
 result = app.KiwiKitchenPrint.enqueue([
   { id: 'ord-before-hub:cuisson', createdAt: Date.now() - 60_000, payload: { title: 'ANCIEN', items: [] } },
 ], { remote: true });
-ok('activer le hub au milieu du service ne réimprime pas les anciens bons', result.accepted === 0 && printed.length === 0);
+ok('activer le hub au milieu du service ne réimprime pas les anciens bons', result.accepted === 0 && printed.length === 1);
 
 const now = Date.now() + 20;
 result = app.KiwiKitchenPrint.enqueue([
@@ -94,9 +107,9 @@ result = app.KiwiKitchenPrint.enqueue([
 ], { remote: true });
 ok('un bon accepté sur téléphone entre dans la file du hub', result.accepted === 2);
 await wait(190);
-ok('chaque poste reçoit son propre bon', printed.length === 2 && printed[0].title === 'CUISSON' && printed[1].title === 'BAR');
+ok('chaque poste reçoit son propre bon', printed.length === 3 && printed[1].title === 'CUISSON' && printed[2].title === 'BAR');
 ok('un article réservé aux formules imprime comme tout autre composant de formule',
-  printed[0].items.some((item) => item.name === 'Dessert formule' && item.kind === 'formula-part' && item.price === 0));
+  printed[1].items.some((item) => item.name === 'Dessert formule' && item.kind === 'formula-part' && item.price === 0));
 ok('le reçu conserve son contrat parent-only sans règle spéciale formulaOnly',
   /l\.kind !== 'formula-part'/.test(caisse) && !/formulaOnly/.test(receipt));
 ok('la file est vide seulement après les deux confirmations réelles', app.KiwiKitchenPrint.pending() === 0);
@@ -105,14 +118,14 @@ app.KiwiKitchenPrint.enqueue([
   { id: 'ord-server-2:cuisson', createdAt: now, payload: { title: 'CUISSON', items: [] } },
 ], { remote: true });
 await wait();
-ok('le même ordre revenu du polling ne ressort jamais', printed.length === 2);
+ok('le même ordre revenu du polling ne ressort jamais', printed.length === 3);
 
 app = boot();
 app.KiwiKitchenPrint.enqueue([
   { id: 'ord-server-2:bar', createdAt: now, payload: { title: 'BAR', items: [] } },
 ], { remote: true });
 await wait();
-ok('le registre anti-doublon survit à un rafraîchissement', printed.length === 2);
+ok('le registre anti-doublon survit à un rafraîchissement', printed.length === 3);
 
 printerMode = 'fail';
 app.KiwiKitchenPrint.enqueue([
@@ -200,7 +213,10 @@ ok('le même identifiant OrderPro ne réimprime jamais le bon', printed.length =
 ok('la caisse charge la file durable après le relais canonique',
   /kitchen-relay\.js[^]*kitchen-print-queue\.js/.test(caisse));
 ok('les commandes distantes acceptées appellent bien le papier',
-  /o\.status === 'accepted'\) printKitchenTickets\(t, t\.items, \{[^]*?remote: o\.localKitchenAction !== true/.test(caisse));
+  /o\.status === 'accepted'\) printKitchenTickets\(t, t\.items, \{[^]*?o\.mode === 'table' && o\.session && o\.server \? 'connected' : true/.test(caisse));
+ok('une commande lancée ou acceptée par un serveur imprime sans second geste caisse',
+  /options\.remote === 'connected' && !isHub\(\) && !printerReady\(\)/.test(source)
+  && /remote: options\.remote === true \|\| options\.remote === 'connected'/.test(source));
 ok('la caisse qui accepte imprime localement sans exiger le bail du hub',
   /confirmAccepted\(order\)[^]*?localKitchenAction: true/.test(caisse));
 ok('une commande en attente devenue acceptée déclenche aussi son bon',

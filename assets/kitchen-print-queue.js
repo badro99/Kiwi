@@ -222,12 +222,19 @@
     return flush();
   }
 
-  /* plan = [{id, payload, station}]. Remote jobs are accepted only by the selected hub;
-     local jobs always retain the pre-existing "this till prints its own order"
-     behaviour. Both paths use the same durable, idempotent queue. */
+  /* plan = [{id, payload, station}]. Generic remote jobs are accepted only by
+     the selected hub. Authenticated floor-service jobs use `remote: 'connected'`:
+     the employee has already made the kitchen decision by tapping “Lancer la
+     commande”, so a caisse with the kitchen printer physically ready must not
+     wait for a second human confirmation or a hidden hub preference. Devices
+     without a printer skip the job instead of accumulating a phantom queue.
+     Every path still uses the same stable job id + done ledger. */
   function enqueue(plan, options) {
     options = options || {};
     if (options.remote === true && !isHub()) return { accepted: 0, skipped: 'not-print-hub' };
+    if (options.remote === 'connected' && !isHub() && !printerReady()) {
+      return { accepted: 0, skipped: 'printer-not-connected' };
+    }
     /* Turning a till into the hub during service must not empty the last half
        hour of the server queue onto paper.  The polling API intentionally
        replays recent rows after a refresh; the done ledger handles refreshes,
@@ -249,7 +256,7 @@
         payload: raw.payload,
         station: raw.station || (raw.payload && raw.payload.station) || '',
         createdAt: createdAt,
-        remote: options.remote === true,
+        remote: options.remote === true || options.remote === 'connected',
         attempts: 0,
         nextAt: 0,
         lastError: ''

@@ -5441,7 +5441,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=461" defer></script>
+  <script src="assets/caisse-pwa.js?v=462" defer></script>
   <script src="assets/live-link.js?v=20" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -5513,7 +5513,7 @@
        kiwi-cuisine.html l'affiche. Après caisse-pairing.js : il lit le magasin
        appairé. -->
   <script src="assets/kitchen-relay.js?v=4" defer></script>
-  <script src="assets/kitchen-print-queue.js?v=7" defer></script>
+  <script src="assets/kitchen-print-queue.js?v=8" defer></script>
   <script src="assets/food-production-print.js?v=2" defer></script>
   <!-- OrderPro · orders placed on a customer's phone arrive here over WiFi;
        staff accept one and it becomes a kitchen ticket. Paired terminals only. -->
@@ -17761,7 +17761,7 @@
            garde les anciennes caisses fonctionnelles si le nouveau module ne
            s'est pas chargé, mais il ne ment plus sur un échec d'impression. */
         if (window.KiwiKitchenPrint && KiwiKitchenPrint.enqueue) {
-          return KiwiKitchenPrint.enqueue(plan, { remote: !!(options && options.remote) });
+          return KiwiKitchenPrint.enqueue(plan, { remote: options && options.remote });
         }
         if (!KP || !KP.printKitchen || (KP.isConnected && !KP.isConnected())) return;
         return plan.reduce((chain, job) => chain.then(() => Promise.resolve(KP.printKitchen(job.payload, { station: job.station || sid })).then((result) => {
@@ -18622,7 +18622,12 @@
            attente ne passent jamais ici ; les prêts/servis retrouvés après un
            redémarrage ne ressortent pas non plus. */
         if (o.status === 'accepted') printKitchenTickets(t, t.items, {
-          remote: o.localKitchenAction !== true,
+          /* A table-service order carrying both a visit and a named employee
+             has already been authorised in the employee app. “Lancer” (or the
+             employee accepting its OrderPro table request) is the kitchen
+             confirmation; a connected printer must act immediately. */
+          remote: o.localKitchenAction === true ? false
+            : (o.mode === 'table' && o.session && o.server ? 'connected' : true),
           sourceId: o.id, createdAt: o.updated_ts || o.created_ts,
         });
         return;
@@ -18670,7 +18675,8 @@
            l'attente du paiement. Son passage à accepted ne recrée donc pas le
            ticket dans la branche !known : il faut lancer le papier ici. */
         printKitchenTickets(known, known.items, {
-          remote: o.localKitchenAction !== true,
+          remote: o.localKitchenAction === true ? false
+            : (o.mode === 'table' && o.session && o.server ? 'connected' : true),
           sourceId: o.id, createdAt: o.updated_ts || Date.now(),
         });
       }
