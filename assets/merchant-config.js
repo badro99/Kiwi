@@ -55,6 +55,14 @@
 
   function merchant() {
     if (urlScope) return urlScope;
+    try {
+      var h = JSON.parse(localStorage.getItem('kiwiPairHandoff') || 'null');
+      if (h && h.merchant) return h.merchant;
+    } catch (_) {}
+    try {
+      var pv = JSON.parse(localStorage.getItem('kiwiPairedVenue') || 'null');
+      if (pv && pv.merchant) return pv.merchant;
+    } catch (_) {}
     try { return localStorage.getItem('kiwiLiveMerchant') || 'cafe-atlas'; } catch (_) { return 'cafe-atlas'; }
   }
 
@@ -351,29 +359,22 @@
 
   var appliedOff = [];
   function applyFeatures() {
-    var features = cfg.features || {};
     if (!document.body) return;
-    // First, un-hide anything a PREVIOUS store had switched off. The venue
-    // switcher moves between shops that don't buy the same modules, so a hide
-    // left over from the boutique would blank a section the restaurant pays for.
-    appliedOff.forEach(function (key) {
-      if (featureOff(key)) return;                         // still off — leave it
-      document.body.classList.remove('feat-off-' + key);
-      var was = document.querySelectorAll('[data-feature="' + key + '"]');
-      for (var j = 0; j < was.length; j++) { was[j].removeAttribute('hidden'); was[j].style.display = ''; }
-    });
     appliedOff = [];
-    Object.keys(features).forEach(function (key) {
-      if (featureOff(key)) {
-        appliedOff.push(key);
-        document.body.classList.add('feat-off-' + key);
-        var nodes = document.querySelectorAll('[data-feature="' + key + '"]');
-        for (var i = 0; i < nodes.length; i++) {
-          nodes[i].setAttribute('hidden', '');
-          nodes[i].style.display = 'none';
-        }
+    var nodes = document.querySelectorAll('[data-feature]');
+    for (var i = 0; i < nodes.length; i++) {
+      var feat = nodes[i].getAttribute('data-feature');
+      if (featureOff(feat)) {
+        nodes[i].setAttribute('hidden', '');
+        nodes[i].style.display = 'none';
+        if (appliedOff.indexOf(feat) < 0) appliedOff.push(feat);
+        document.body.classList.add('feat-off-' + feat);
+      } else {
+        nodes[i].removeAttribute('hidden');
+        nodes[i].style.display = '';
+        document.body.classList.remove('feat-off-' + feat);
       }
-    });
+    }
     syncSectionHeaders();
     gateHandlers();
     watchLateNodes();
@@ -668,7 +669,25 @@
     }
   }
 
-  function boot() { fetchConfig(); fetchAccountPins(); watchStore(); }
+  function boot() {
+    fetchConfig();
+    fetchAccountPins();
+    watchStore();
+  }
+
+  window.addEventListener('focus', function () { fetchConfig(); });
+  document.addEventListener('kiwi-paired', function (e) {
+    if (e && e.detail && e.detail.merchant) {
+      try { localStorage.setItem('kiwiLiveMerchant', e.detail.merchant); } catch (_) {}
+    }
+    fetchConfig();
+  });
+  window.addEventListener('storage', function (e) {
+    if (e && (e.key === 'kiwiLiveMerchant' || e.key === 'kiwiPairedVenue' || e.key === 'kiwiPairHandoff')) {
+      fetchConfig();
+    }
+  });
+
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
 })();

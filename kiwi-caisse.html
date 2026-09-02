@@ -5498,7 +5498,7 @@
        staff accept one and it becomes a kitchen ticket. Paired terminals only. -->
   <script src="assets/orderpro-inbox.js?v=8" defer></script>
   <!-- Operator feature flags + managed PINs. Fail-safe: no backend ⇒ no change. -->
-  <script src="assets/merchant-config.js?v=268" defer></script>
+  <script src="assets/merchant-config.js?v=269" defer></script>
   <!-- « Rafraîchir » · un bouton commun à toutes les caisses (restaurant,
        pressing, et les seize métiers de pos-dispatch) : il redemande au serveur
        l'inventaire, les documents du magasin, les commandes en ligne et les
@@ -6141,7 +6141,7 @@
             <i data-lucide="plus"></i>
             <span>Ajouter des articles</span>
           </button>
-          <div class="rp-table-tools" id="rp-table-tools">
+          <div class="rp-table-tools" id="rp-table-tools" hidden style="display:none;">
             <button class="rp-table-tool-btn" id="rp-transfer-table" data-feature="table-transfer" type="button"><i data-lucide="arrow-right-left"></i>Déplacer table</button>
             <button class="rp-table-tool-btn" id="rp-merge-table" data-feature="table-merge" type="button"><i data-lucide="merge"></i>Fusionner</button>
           </div>
@@ -8338,6 +8338,7 @@
         }
       }
     }
+    document.addEventListener('kiwi-config', () => { syncActiveMode(); });
 
     function hasTables() {
       if (isFeatureOff('salle') || isFeatureOff('tables')) return false;
@@ -8358,6 +8359,12 @@
       $$('.mode-pill').forEach(p =>
         p.setAttribute('aria-pressed',
           (newMode === 'salle' || newMode === 'vrap' || newMode === 'waitlist') && p.dataset.mode === newMode ? 'true' : 'false'));
+
+      const ttTools = $('#rp-table-tools');
+      if (ttTools && newMode !== 'salle') {
+        ttTools.hidden = true;
+        ttTools.style.display = 'none';
+      }
 
       // Toggle main headers + views
       // 'order' mode reuses the vrap menu sections
