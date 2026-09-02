@@ -517,7 +517,21 @@
          persistence and transport complete in this durable promise chain. Any
          IndexedDB failure immediately falls back to the old queue and paints a
          visible storage warning instead of discarding the taking. */
+      /* WRITE-AHEAD COPY — enqueue() is asynchronous. A payment success screen
+       * may be followed immediately by a register close/reload, especially at
+       * the end of service. If the page dies before IndexedDB commits, the Z
+       * still contains the taking but /api/feed never receives it: Journal and
+       * Dashboard then disagree forever. Put the exact same idempotent body in
+       * localStorage synchronously first. Remove it only AFTER IndexedDB owns
+       * the row. A crash in between leaves two copies, never two sales: both
+       * the outbox and /api/sale deduplicate on body.id. */
+      var writeAhead = qRead();
+      if (!writeAhead.some(function (x) { return x && x.id === body.id; })) {
+        writeAhead.push(body);
+        if (!qWrite(writeAhead)) return { ok: false, reason: 'queue-storage-full', id: body.id };
+      }
       window.KiwiOffline.enqueue(OUTBOX_CHANNEL, m, body, { id: body.id, createdAt: body.ts }).then(function () {
+        qWrite(qRead().filter(function (x) { return x && x.id !== body.id; }));
         return refreshOutboxStatus();
       }).then(function () {
         pingLocal();

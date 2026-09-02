@@ -333,6 +333,18 @@ section('Live sale resilience (tools/live-link-test.js)');
   }
 }
 
+/* A synchronous write-ahead copy closes the tiny but real gap between payment
+ * confirmation and the asynchronous IndexedDB commit. Closing/reloading the
+ * till inside that gap must leave a replayable sale, never only a larger Z. */
+section('Live sale write-ahead durability');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'live-link-write-ahead-test.mjs')], { encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0) ok(`live sale write-ahead green (${(out.match(/✓/g) || []).length} crash-window checks)`);
+  else fail(`live-link-write-ahead-test.mjs exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+}
+
 /* ── 4e · durable browser outbox wiring ────────────────────────────────────
  * The behavioral fixtures run in a real browser; this zero-dependency gate
  * locks their tested engine into every operational shell and the PWA cache. */

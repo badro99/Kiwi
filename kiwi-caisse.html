@@ -5441,8 +5441,8 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=464" defer></script>
-  <script src="assets/live-link.js?v=20" defer></script>
+  <script src="assets/caisse-pwa.js?v=465" defer></script>
+  <script src="assets/live-link.js?v=21" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
   <script src="assets/staff-roles.js?v=1" defer></script>
@@ -14040,6 +14040,21 @@
         source: 'caisse',
       });
     }
+    /* The local journal is the payment truth used by the printed Z. Before a
+       snapshot or final close, replay every locally-created positive sale into
+       Live Link. postSale() derives the same stable server id each time, so
+       this heals a missed asynchronous enqueue without ever booking twice.
+       Cloud-imported rows are already in /api/feed and must not be mirrored. */
+    function reconcileJournalSales() {
+      if (!window.KiwiLive || !window.KiwiLive.postSale) return 0;
+      let n = 0;
+      journal.forEach((entry) => {
+        if (!entry || entry.origin || entry.voided || entry.kind === 'refund' || !(Number(entry.amount) > 0)) return;
+        try { if (window.KiwiLive.postSale(entry)) n++; } catch (_) {}
+      });
+      try { window.KiwiLive.flush(true); } catch (_) {}
+      return n;
+    }
     /* L'instantané provisoire. `reopen:false` : tenir le tableau de bord à jour
        pendant le service n'est pas une clôture et ne doit ni incrémenter le
        compteur de fermetures ni salir l'historique des révisions. */
@@ -14145,6 +14160,9 @@
       const counted = (countedRaw === '' || countedRaw == null) ? null : parseFloat(countedRaw);
       let report = null;
       try {
+        /* Reconcile BEFORE freezing the Z. The synchronous write-ahead copy in
+           Live Link survives the reload below, while flush starts delivery now. */
+        reconcileJournalSales();
         report = buildDayReport(counted, Date.now());
         if (report && window.KiwiDayReport) {
           report.closed = true;
