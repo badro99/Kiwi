@@ -6,6 +6,7 @@ class Statement {
   constructor(db, sql) { this.db = db; this.sql = sql; this.args = []; }
   bind(...args) { this.args = args; return this; }
   async first() {
+    if (this.sql.includes("sqlite_master") && this.db.type === 'hotel') return { name:'hotel_stay_events' };
     if (this.sql.includes('pair_attempts')) return null;
     return null;
   }
@@ -21,13 +22,20 @@ class Statement {
       this.db.doc = JSON.parse(this.args[1]); this.db.rev = 1;
       return { meta: { changes: 1 } };
     }
+    if (this.sql.startsWith('INSERT INTO hotel_stay_events')) {
+      this.db.events.push({ eventType:this.args[3], payload:this.args[4], cursor:this.args[6], actorId:this.args[8], actorRole:this.args[9] });
+      return { meta:{ changes:1 } };
+    }
     return { meta: { changes: 1 } };
   }
 }
 class MockDB {
-  constructor(doc) { this.merchant = 'test-shop'; this.doc = doc; this.rev = 1; this.team = { members: [], shifts: {} }; this.hours = { week: {}, exceptions: [] }; this.type = 'boutique'; this.rooms = null; }
+  constructor(doc) { this.merchant = 'test-shop'; this.doc = doc; this.rev = 1; this.team = { members: [], shifts: {} }; this.hours = { week: {}, exceptions: [] }; this.type = 'boutique'; this.rooms = null; this.events = []; }
   prepare(sql) { return new Statement(this, sql); }
-  async batch() {
+  async batch(statements) {
+    if (statements?.length && !statements[0].sql.startsWith('SELECT data')) {
+      const results=[]; for (const statement of statements) results.push(await statement.run()); return results;
+    }
     return [
       { results: [{ data: JSON.stringify(this.doc), rev: this.rev }] },
       { results: [{ data: JSON.stringify(this.hours) }] },
@@ -157,8 +165,11 @@ const hotelRequest={merchant:'test-shop',ref:'hotel-public-ref-0001',roomTypeId:
 response=await callPost(hotelRequest);body=await response.json();
 check(response.status===200&&body.code.startsWith('H-')&&body.total===1700, 'hotel stay commits with a hotel reference and server-calculated total');
 check(db.doc.bookings[0].hotel.nights===2&&db.doc.bookings[0].resourceId==='room:101', 'booking stores the stay snapshot and assigns one hidden room atomically');
+check(db.events.length===1&&db.events[0].eventType==='created'&&db.events[0].actorRole==='public','public hotel booking appends one server-attributed shadow event');
+check(!db.events[0].payload.includes('Salma')&&!db.events[0].payload.includes('0612345678'),'public shadow event excludes customer name and contact PII');
 response=await callPost(hotelRequest);body=await response.json();
 check(response.status===200&&body.replayed===true&&db.doc.bookings.length===1, 'hotel submission retry is idempotent');
+check(db.events.length===1,'public booking replay does not duplicate the shadow event');
 response=await callPost({...hotelRequest,ref:'hotel-public-ref-0002',customer:{name:'Yasmine',phone:'0623456789',email:''}});
 check(response.status===200&&db.doc.bookings.length===2, 'a simultaneous stay consumes the next room in the category');
 response=await callPost({...hotelRequest,ref:'hotel-public-ref-0003',customer:{name:'Imane',phone:'0634567890',email:''}});body=await response.json();

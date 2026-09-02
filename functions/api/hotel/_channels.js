@@ -1,6 +1,7 @@
 // Shared OTA calendar importer for Pages Functions and the scheduled Worker.
 // Feed URLs are bearer secrets: D1 receives authenticated ciphertext only and
 // the browser receives connection metadata, never the URL.
+import { currentRoomSegment, normalizeGuestSegments, writeReservationWithEvents } from './_stay-events.js';
 
 const enc = new TextEncoder();
 const dec = new TextDecoder();
@@ -154,14 +155,6 @@ async function loadDocs(env, merchant) {
   const first = (x) => x?.results?.[0] || null;
   return { reservations: first(rows[0]), rooms: first(rows[1]) };
 }
-async function writeDoc(env, merchant, doc, rev, now) {
-  const text = JSON.stringify(doc), next = rev + 1;
-  const result = rev
-    ? await env.DB.prepare("UPDATE store_docs SET data=?,rev=?,updated_ts=? WHERE merchant=? AND feature='reservations' AND rev=?").bind(text, next, now, merchant, rev).run()
-    : await env.DB.prepare("INSERT OR IGNORE INTO store_docs (merchant,feature,data,rev,updated_ts) VALUES (?,'reservations',?,1,?)").bind(merchant, text, now).run();
-  return (result?.meta?.changes || 0) > 0;
-}
-
 export async function syncHotelChannel(env, row) {
   const merchant = str(row?.merchant, 64), provider = str(row?.channel, 20), feedId = str(row?.id, 64);
   if (!merchant || !feedId || !PROVIDERS.has(provider) || !env?.DB || !env?.AUTH_SECRET) throw new Error('invalid-channel');
@@ -174,7 +167,7 @@ export async function syncHotelChannel(env, row) {
     const room = roomList.find((x) => x && !x.deletedAt && String(x.id) === String(cfg.roomId));
     const type = room && typeList.find((x) => x && !x.deletedAt && String(x.id) === String(room.typeId));
     if (!room || !type) throw new Error('mapped-room-missing');
-    const seen = new Set(), imported = [], conflicts = [], nextMissing = Object.create(null);
+    const seen = new Set(), imported = [], conflicts = [], nextMissing = Object.create(null), stayEvents = [];
     let changed = 0;
     for (const event of events) {
       const nights = daysBetween(event.checkIn, event.checkOut); if (nights < 1 || nights > 730) continue;
@@ -194,11 +187,11 @@ export async function syncHotelChannel(env, row) {
         customer, serviceId: String(type.id), resourceId: String(room.id), startAt, endAt,
         partySize: Math.max(1, +rec?.partySize || 1), status: rec && PRESERVED_STATES.has(rec.status) ? rec.status : 'confirmed',
         source:'import', note:str(rec?.note,600), manageToken:str(rec?.manageToken,200),
-        publicRef: 'feed-' + digest, hotel: { roomTypeName:str(type.name,100), checkIn:event.checkIn, checkOut:event.checkOut, nights, rate, total:Math.round(rate*nights), channel:provider, externalRef, feedId, syncedAt:now, conflict },
+        publicRef: 'feed-' + digest, hotel: { roomTypeName:str(type.name,100), checkIn:event.checkIn, checkOut:event.checkOut, nights, rate, total:Math.round(rate*nights), channel:provider, externalRef, feedId, syncedAt:now, conflict, guestSegments:normalizeGuestSegments(null,rec?.hotel?.guestSegments,Math.max(1,+rec?.partySize||1),event.checkIn,event.checkOut), roomSegments:currentRoomSegment(room.id,event.checkIn,event.checkOut) },
         createdAt:+rec?.createdAt || now, updatedAt:+rec?.updatedAt || now,
       };
-      if (!rec) { doc.bookings.push(next); changed++; }
-      else if (importedSignature(rec) !== importedSignature(next)) { next.updatedAt = now; Object.assign(rec, next); changed++; }
+      if (!rec) { doc.bookings.push(next); stayEvents.push({ previous:null, current:next, action:'create' }); changed++; }
+      else if (importedSignature(rec) !== importedSignature(next)) { const previous={...rec,hotel:{...rec.hotel}}; next.updatedAt = now; Object.assign(rec, next); stayEvents.push({ previous, current:rec, action:'update' }); changed++; }
       imported.push(externalRef);
     }
     let cancelled = 0;
@@ -209,11 +202,11 @@ export async function syncHotelChannel(env, row) {
           nextMissing[rec.hotel.externalRef] = { firstAt:prior?.firstAt || now, observations:Math.min(99, (prior?.observations || 0) + 1) };
           continue;
         }
-        rec.status = 'cancelled'; rec.updatedAt = now; rec.hotel.syncedAt = now; cancelled++; changed++;
+        const previous={...rec,hotel:{...rec.hotel}}; rec.status = 'cancelled'; rec.updatedAt = now; rec.hotel.syncedAt = now; stayEvents.push({ previous, current:rec, action:'cancel' }); cancelled++; changed++;
       }
     }
     if (doc.bookings.length > 4000) doc.bookings = doc.bookings.slice(-4000);
-    if (changed && !(await writeDoc(env, merchant, doc, +rows.reservations?.rev || 0, now))) continue;
+    if (changed && !(await writeReservationWithEvents(env, { merchant, doc, rev:+rows.reservations?.rev||0, now, actor:{id:`channel:${feedId}`,role:'system'}, events:stayEvents }))) continue;
     const nextConfig = { ...cfg };
     if (Object.keys(nextMissing).length) nextConfig.missingEvents = nextMissing; else delete nextConfig.missingEvents;
     await env.DB.prepare("UPDATE channel_links SET config=?,last_ts=?,last_err='' WHERE id=? AND merchant=?").bind(JSON.stringify(nextConfig), now, feedId, merchant).run();

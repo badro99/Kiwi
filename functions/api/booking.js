@@ -2,6 +2,7 @@
 import { json, limitCheck, limitFail, limitClear } from '../auth/_lib.js';
 import { storeSubscriptionPending } from './_private.js';
 import { poke } from './_live.js';
+import { currentRoomSegment, normalizeGuestSegments, writeReservationWithEvents } from './hotel/_stay-events.js';
 
 const ACTIVE = new Set(['requested', 'confirmed', 'checked_in']);
 const ID = /^[a-z0-9][a-z0-9-]{2,63}$/;
@@ -230,9 +231,9 @@ export async function onRequestPost({ request, env }) {
       const categories=hotelCategories(doc,rows.hotel,stay,partySize,sid),category=categories[0];
       if(!category||!category.rooms.length)return json({error:'room-unavailable'},409);
       const room=category.rooms[0],code='H-'+crypto.randomUUID().replace(/-/g,'').slice(0,8).toUpperCase(),token=crypto.randomUUID().replace(/-/g,'');
-      const rec={id:'bk-'+crypto.randomUUID(),code,customer:{name,phone,email},serviceId:category.id,resourceId:room.id,startAt:stay.startAt,endAt:stay.endAt,partySize,status:doc.settings.confirmation==='request'?'requested':'confirmed',source:'public',note:str(b?.note,600),manageToken:token,publicRef:ref,hotel:{roomTypeName:category.name,checkIn:stay.checkIn,checkOut:stay.checkOut,nights:stay.nights,rate:category.rate,total:category.total,channel:'direct',externalRef:''},createdAt:now,updatedAt:now};
-      doc.bookings.push(rec);const text=JSON.stringify(doc),next=rev+1;
-      try{let result;if(rev){result=await env.DB.prepare("UPDATE store_docs SET data = ?, rev = ?, updated_ts = ? WHERE merchant = ? AND feature = 'reservations' AND rev = ?").bind(text,next,now,merchant,rev).run();}else{result=await env.DB.prepare("INSERT OR IGNORE INTO store_docs (merchant, feature, data, rev, updated_ts) VALUES (?, 'reservations', ?, 1, ?)").bind(merchant,text,now).run();}if((result?.meta?.changes||0)>0){await poke(env,merchant,'reservations');await limitClear(request,env,'booking');return json({ok:true,id:rec.id,code,status:rec.status,checkIn:stay.checkIn,checkOut:stay.checkOut,nights:stay.nights,total:category.total,manageToken:token});}}catch(_){return json({error:'write-failed'},503);}
+      const rec={id:'bk-'+crypto.randomUUID(),code,customer:{name,phone,email},serviceId:category.id,resourceId:room.id,startAt:stay.startAt,endAt:stay.endAt,partySize,status:doc.settings.confirmation==='request'?'requested':'confirmed',source:'public',note:str(b?.note,600),manageToken:token,publicRef:ref,hotel:{roomTypeName:category.name,checkIn:stay.checkIn,checkOut:stay.checkOut,nights:stay.nights,rate:category.rate,total:category.total,channel:'direct',externalRef:'',guestSegments:normalizeGuestSegments([],[],partySize,stay.checkIn,stay.checkOut),roomSegments:currentRoomSegment(room.id,stay.checkIn,stay.checkOut)},createdAt:now,updatedAt:now};
+      doc.bookings.push(rec);
+      try{const next=await writeReservationWithEvents(env,{merchant,doc,rev,now,actor:{id:'public-booking',role:'public'},events:[{previous:null,current:rec,action:'create'}]});if(next){await poke(env,merchant,'reservations');await limitClear(request,env,'booking');return json({ok:true,id:rec.id,code,status:rec.status,checkIn:stay.checkIn,checkOut:stay.checkOut,nights:stay.nights,total:category.total,manageToken:token});}}catch(_){return json({error:'write-failed'},503);}
       continue;
     }
     if(!startAt)return json({error:'invalid'},400);

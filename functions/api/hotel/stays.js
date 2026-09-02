@@ -1,23 +1,12 @@
 // Authenticated hotel stay writer. Manual, direct and OTA stays are committed
 // into the same revisioned reservations document used by /api/booking, so a
 // room accepted here disappears from public availability in the same write.
-import {
-  isTerminalFor,
-  json,
-  operatorActor,
-  readCookie,
-  readSession,
-  SESS_COOKIE,
-} from '../../auth/_lib.js';
+import { json } from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
 import { poke } from '../_live.js';
 import {
-  currentRoomSegment,
-  normalizeGuestSegments,
-  readGuestSegments,
-  readRoomSegments,
-  stayEventPayload,
-  stayEventType,
+  currentRoomSegment, normalizeGuestSegments, readGuestSegments, readRoomSegments,
+  resolveStayActor, writeReservationWithEvents,
 } from './_stay-events.js';
 
 const ACTIVE = new Set(['requested', 'confirmed', 'checked_in']);
@@ -59,12 +48,29 @@ function safeDoc(raw) {
       guestSegments: readGuestSegments(x.hotel.guestSegments, str(x.hotel.checkIn, 10), str(x.hotel.checkOut, 10)),
       roomSegments: readRoomSegments(x.hotel.roomSegments, str(x.hotel.checkIn, 10), str(x.hotel.checkOut, 10)),
     } : null;
+    const guests = (Array.isArray(x?.guests) ? x.guests : []).slice(0, 20).map((g) => ({
+      id: str(g?.id, 64) || ('gst_' + crypto.randomUUID().slice(0, 12)),
+      name: str(g?.name, 100),
+      sex: ['M', 'F'].includes(g?.sex) ? g.sex : '',
+      nationality: str(g?.nationality, 64),
+      birthDate: str(g?.birthDate, 10),
+      residenceCountry: str(g?.residenceCountry, 64),
+      minorsUnder18: num(g?.minorsUnder18, 0, 10, 0),
+      idDocType: ['CNIE', 'passeport', 'carte_sejour', 'autre'].includes(g?.idDocType) ? g.idDocType : '',
+      idDocNumber: str(g?.idDocNumber, 40),
+    })).filter((g) => g.name || g.nationality || g.idDocNumber);
+    const roomSegments = (Array.isArray(x?.roomSegments) ? x.roomSegments : []).slice(0, 20).map((rs) => ({
+      roomId: str(rs?.roomId, 64),
+      fromDate: str(rs?.fromDate, 10),
+      toDate: str(rs?.toDate, 10),
+    })).filter((rs) => rs.roomId && rs.fromDate && rs.toDate);
     return {
       id: str(x?.id, 64), code: str(x?.code, 24), customer: { name: str(x?.customer?.name, 100), phone: str(x?.customer?.phone, 32), email: str(x?.customer?.email, 160) },
       serviceId: str(x?.serviceId, 64), resourceId: str(x?.resourceId, 64), startAt: +x?.startAt || 0, endAt: +x?.endAt || 0,
       partySize: num(x?.partySize, 1, 999, 1), status: STATUSES.has(x?.status) ? x.status : 'requested',
       source: ['public', 'staff', 'import'].includes(x?.source) ? x.source : 'staff', note: str(x?.note, 600),
       manageToken: str(x?.manageToken, 80), publicRef: str(x?.publicRef, 80), hotel: h,
+      guests, roomSegments,
       createdAt: +x?.createdAt || 0, updatedAt: +x?.updatedAt || 0,
     };
   }).filter((x) => x.id && x.customer.name && x.serviceId && x.startAt && x.endAt > x.startAt);
@@ -114,63 +120,17 @@ async function rowsFor(env, merchant) {
   const rows = await env.DB.batch([
     env.DB.prepare("SELECT data, rev FROM store_docs WHERE merchant = ? AND feature = 'reservations'").bind(merchant),
     env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'rooms'").bind(merchant),
-    env.DB.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'hotel_stay_events'"),
   ]);
   const first = (r) => r?.results?.[0] || null;
-  return { reservation: first(rows[0]), rooms: first(rows[1]), hasEventLedger: !!first(rows[2]) };
+  return { reservation: first(rows[0]), rooms: first(rows[1]) };
 }
-async function actorFor(request, env, merchant, terminalId) {
-  try {
-    const session = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET);
-    if (session?.aid) return { id: str(session.aid, 80), role: 'owner' };
-  } catch (_) {}
-  try {
-    const actor = await operatorActor(request, env);
-    if (actor?.id) return { id: str(actor.id, 80), role: 'operator' };
-  } catch (_) {}
-  try {
-    if (terminalId && await isTerminalFor(request, env, merchant, terminalId)) {
-      return { id: terminalId, role: 'till' };
-    }
-  } catch (_) {}
-  return { id: 'authenticated', role: 'merchant' };
-}
-async function write(env, merchant, doc, rev, now, event, hasEventLedger) {
-  const text = JSON.stringify(doc), next = rev + 1;
-  const statement = rev
-    ? env.DB.prepare("UPDATE store_docs SET data = ?, rev = ?, updated_ts = ? WHERE merchant = ? AND feature = 'reservations' AND rev = ?").bind(text, next, now, merchant, rev)
-    : env.DB.prepare("INSERT OR IGNORE INTO store_docs (merchant, feature, data, rev, updated_ts) VALUES (?, 'reservations', ?, 1, ?)").bind(merchant, text, now);
-  if (!hasEventLedger) {
-    const result = await statement.run();
-    return (result?.meta?.changes || 0) > 0 ? next : 0;
-  }
-  const payload = JSON.stringify(stayEventPayload(event.booking));
-  const eventStatement = env.DB.prepare(`
-    INSERT OR IGNORE INTO hotel_stay_events
-      (merchant,id,stay_id,event_type,payload_json,occurred_ts,srv_cursor,event_ordinal,actor_id,actor_role)
-    SELECT ?,?,?,?,?,?,?,0,?,?
-    WHERE EXISTS (
-      SELECT 1 FROM store_docs
-      WHERE merchant = ? AND feature = 'reservations' AND rev = ? AND data = ?
-    )
-  `).bind(
-    merchant, event.id, event.booking.id, event.type, payload, now, next, event.actorId, event.actorRole,
-    merchant, next, text,
-  );
-  const results = await env.DB.batch([statement, eventStatement]);
-  const result = results[0];
-  return (result?.meta?.changes || 0) > 0 ? next : 0;
-}
-
 export async function onRequestPost({ request, env }) {
   if (!env.DB || !env.AUTH_SECRET) return json({ error: 'not-configured' }, 503);
   let b; try { b = await request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
   const merchant = await tenantFor(request, env, b?.merchant, { strict: true });
   if (!merchant) return json({ error: 'unauthorized' }, 401);
   const action = str(b?.action || 'save', 16), existingId = str(b?.id, 64);
-  const eventId = 'evt_' + crypto.randomUUID();
-  const actor = await actorFor(request, env, merchant, str(b?.terminalId, 80));
-  const actorId = actor.id, actorRole = actor.role;
+  const actor = await resolveStayActor(request, env, merchant, str(b?.terminalId, 96));
 
   for (let attempt = 0; attempt < 4; attempt++) {
     let rows; try { rows = await rowsFor(env, merchant); } catch (_) { return json({ error: 'unavailable' }, 503); }
@@ -184,9 +144,12 @@ export async function onRequestPost({ request, env }) {
       if (!canTransition(old.status, 'cancelled')) {
         return json({ error: 'invalid-status-transition', from: old.status, to: 'cancelled' }, 409);
       }
+      const previous = { ...old, hotel: { ...old.hotel } };
       old.status = 'cancelled'; old.updatedAt = now;
-      const event = { id: eventId, type: stayEventType(old, old, action), booking: old, actorId, actorRole };
-      try { const next = await write(env, merchant, doc, rev, now, event, rows.hasEventLedger); if (next) { await poke(env, merchant, 'reservations'); return json({ ok: true, rev: next, booking: old }); } } catch (_) { return json({ error: 'write-failed' }, 503); }
+      try {
+        const next = await writeReservationWithEvents(env, { merchant, doc, rev, now, actor, events: [{ previous, current: old, action: 'cancel' }] });
+        if (next) { await poke(env, merchant, 'reservations'); return json({ ok: true, rev: next, booking: old }); }
+      } catch (_) { return json({ error: 'write-failed' }, 503); }
       continue;
     }
     if (action !== 'save') return json({ error: 'bad-action' }, 400);
@@ -212,11 +175,29 @@ export async function onRequestPost({ request, env }) {
     const candidates = hotel.rooms.filter((r) => r.typeId === typeId && (!askedRoom || r.id === askedRoom) && roomFree(doc, hotel, r, startAt, endAt, existingId));
     if (!candidates.length) return json({ error: 'room-unavailable' }, 409);
     const room = candidates[0], rate = type.rate == null ? hotel.baseRate : type.rate;
+    const saveGuests = (Array.isArray(b?.guests) ? b.guests : (old?.guests || [])).slice(0, 20).map((g) => ({
+      id: str(g?.id, 64) || ('gst_' + crypto.randomUUID().slice(0, 12)),
+      name: str(g?.name, 100),
+      sex: ['M', 'F'].includes(g?.sex) ? g.sex : '',
+      nationality: str(g?.nationality, 64),
+      birthDate: str(g?.birthDate, 10),
+      residenceCountry: str(g?.residenceCountry, 64),
+      minorsUnder18: num(g?.minorsUnder18, 0, 10, 0),
+      idDocType: ['CNIE', 'passeport', 'carte_sejour', 'autre'].includes(g?.idDocType) ? g.idDocType : '',
+      idDocNumber: str(g?.idDocNumber, 40),
+    })).filter((g) => g.name || g.nationality || g.idDocNumber);
+    const saveRoomSegments = (Array.isArray(b?.roomSegments) ? b.roomSegments : (old?.roomSegments || [])).slice(0, 20).map((rs) => ({
+      roomId: str(rs?.roomId, 64),
+      fromDate: str(rs?.fromDate, 10),
+      toDate: str(rs?.toDate, 10),
+    })).filter((rs) => rs.roomId && rs.fromDate && rs.toDate);
     const rec = {
       id: old?.id || 'bk-' + crypto.randomUUID(), code: old?.code || 'H-' + crypto.randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase(),
       customer: { name, phone, email }, serviceId: type.id, resourceId: room.id, startAt, endAt, partySize, status,
       source: old?.source || (channel === 'direct' || channel === 'walkin' ? 'staff' : 'import'), note,
       manageToken: old?.manageToken || '', publicRef: old?.publicRef || clientRef,
+      guests: saveGuests,
+      roomSegments: saveRoomSegments,
       hotel: {
         roomTypeName: type.name, checkIn, checkOut, nights,
         rate: rate == null ? 0 : rate, total: rate == null ? 0 : Math.round(rate * nights),
@@ -230,8 +211,10 @@ export async function onRequestPost({ request, env }) {
     };
     const index = old ? doc.bookings.findIndex((x) => x.id === old.id) : -1;
     if (index < 0) doc.bookings.push(rec); else doc.bookings[index] = rec;
-    const event = { id: eventId, type: stayEventType(old, rec, action), booking: rec, actorId, actorRole };
-    try { const next = await write(env, merchant, doc, rev, now, event, rows.hasEventLedger); if (next) { await poke(env, merchant, 'reservations'); return json({ ok: true, rev: next, booking: rec }); } } catch (_) { return json({ error: 'write-failed' }, 503); }
+    try {
+      const next = await writeReservationWithEvents(env, { merchant, doc, rev, now, actor, events: [{ previous: old, current: rec, action: old ? 'update' : 'create' }] });
+      if (next) { await poke(env, merchant, 'reservations'); return json({ ok: true, rev: next, booking: rec }); }
+    } catch (_) { return json({ error: 'write-failed' }, 503); }
   }
   return json({ error: 'write-conflict' }, 409);
 }

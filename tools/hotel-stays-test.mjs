@@ -35,11 +35,15 @@ class Statement {
 const DB = {
   prepare(text) { return new Statement(text); },
   async batch(statements) {
-    const results = [];
-    for (const statement of statements) {
-      results.push(/^\s*SELECT\b/i.test(statement.text) ? statement.rows() : await statement.run());
-    }
-    return results;
+    const writing = statements.some((statement) => !/^\s*SELECT\b/i.test(statement.text));
+    if (!writing) return statements.map((statement) => statement.rows());
+    sql.exec('BEGIN IMMEDIATE');
+    try {
+      const results = [];
+      for (const statement of statements) results.push(/^\s*SELECT\b/i.test(statement.text) ? statement.rows() : await statement.run());
+      sql.exec('COMMIT');
+      return results;
+    } catch (error) { sql.exec('ROLLBACK'); throw error; }
   },
 };
 const cookie = sessionCookie(await makeSession('acc-hotel', secret)).split(';')[0];
@@ -88,4 +92,11 @@ ok(response.status === 409 && body.error === 'duplicate-reference', 'one OTA ref
 
 const finalDoc = JSON.parse(sql.prepare("SELECT data FROM store_docs WHERE merchant='riad-test' AND feature='reservations'").get().data);
 ok(finalDoc.bookings.some((x) => x.source === 'import') && finalDoc.bookings.some((x) => x.status === 'cancelled'), 'the shared reservations document holds OTA and lifecycle truth');
+
+const beforeAtomicRev = sql.prepare("SELECT rev FROM store_docs WHERE merchant='riad-test' AND feature='reservations'").get().rev;
+sql.prepare("INSERT INTO hotel_stay_events (merchant,id,stay_id,event_type,payload_json,occurred_ts,srv_cursor,event_ordinal,actor_id,actor_role) VALUES (?,?,?,?,?,?,?,?,?,?)").run('riad-test','hse:blocker','bk-blocker','created','{}',Date.now(),beforeAtomicRev+1,0,'test','system');
+response = await call({ ...base, clientRef:'staff-ref-atomic', externalRef:'OTA-ATOMIC', checkIn:day(30), checkOut:day(32), customer:{name:'Atomic Test'} });
+ok(response.status === 503, 'an event-ledger constraint failure refuses the stay write');
+const afterAtomic = sql.prepare("SELECT data,rev FROM store_docs WHERE merchant='riad-test' AND feature='reservations'").get();
+ok(afterAtomic.rev === beforeAtomicRev && !afterAtomic.data.includes('staff-ref-atomic'), 'the failed event insert rolls the reservation document back atomically');
 console.log(`hotel-stays-test: ${controls} controls passed`);

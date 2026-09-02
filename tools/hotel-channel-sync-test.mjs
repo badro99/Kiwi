@@ -13,7 +13,7 @@ sql.prepare('INSERT INTO merchant_config (merchant,features,type,account_id,name
 sql.prepare('INSERT INTO store_docs (merchant,feature,data,rev,updated_ts) VALUES (?,?,?,?,?)').run('riad-sync','rooms',JSON.stringify({v:4,baseRate:600,roomTypes:[{id:'type-a',name:'Atlas',rate:750}],rooms:[{id:'room:101',n:101,typeId:'type-a',status:'libre'}]}),1,now);
 sql.prepare('INSERT INTO store_docs (merchant,feature,data,rev,updated_ts) VALUES (?,?,?,?,?)').run('riad-sync','reservations',JSON.stringify({v:1,settings:{},services:[],resources:[],blocked:[],bookings:[]}),1,now);
 class Statement{constructor(text){this.text=text;this.args=[]}bind(...a){this.args=a;return this}async first(){return sql.prepare(this.text).get(...this.args)||null}async all(){return{results:sql.prepare(this.text).all(...this.args)}}async run(){const r=sql.prepare(this.text).run(...this.args);return{success:true,meta:{changes:Number(r.changes)}}}rows(){return{results:sql.prepare(this.text).all(...this.args)}}}
-const DB={prepare(text){return new Statement(text)},async batch(ss){return ss.map((s)=>s.rows())}};
+const DB={prepare(text){return new Statement(text)},async batch(ss){const writing=ss.some((s)=>!/^\s*SELECT\b/i.test(s.text));if(!writing)return ss.map((s)=>s.rows());sql.exec('BEGIN IMMEDIATE');try{const out=[];for(const s of ss)out.push(/^\s*SELECT\b/i.test(s.text)?s.rows():await s.run());sql.exec('COMMIT');return out}catch(error){sql.exec('ROLLBACK');throw error}}};
 const cookie=sessionCookie(await makeSession('acc-h',secret)).split(';')[0];
 let calendar=`BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:airbnb-reservation-1\r\nDTSTART;VALUE=DATE:20260910\r\nDTEND;VALUE=DATE:20260913\r\nSUMMARY:Reserved\r\nEND:VEVENT\r\nEND:VCALENDAR`, clock=now;
 const env={DB,AUTH_SECRET:secret,HOTEL_NOW:()=>clock,HOTEL_FEED_FETCH:async()=>new Response(calendar,{headers:{'Content-Type':'text/calendar'}})};
@@ -33,10 +33,14 @@ const link=sql.prepare('SELECT * FROM channel_links').get(),cfg=JSON.parse(link.
 ok(!link.config.includes('airbnb.com')&&(await decryptFeed(cfg.feedEnc,secret)).includes('s=secret'),'D1 stores authenticated ciphertext and decrypts only server-side');
 let doc=JSON.parse(sql.prepare("SELECT data FROM store_docs WHERE feature='reservations'").get().data);
 ok(doc.bookings.length===1&&doc.bookings[0].resourceId==='room:101'&&doc.bookings[0].hotel.feedId===link.id,'OTA event blocks the exact mapped physical room in shared availability');
+let audit=sql.prepare("SELECT event_type,payload_json,actor_id,actor_role FROM hotel_stay_events WHERE merchant='riad-sync' ORDER BY srv_cursor,event_ordinal").all();
+ok(audit.length===1&&audit[0].event_type==='created'&&audit[0].actor_id===`channel:${link.id}`&&audit[0].actor_role==='system','OTA creation appends one channel-attributed shadow event');
+ok(!audit[0].payload_json.includes('Réservation')&&!audit[0].payload_json.includes('customer'),'OTA shadow payload excludes placeholder and customer PII');
 const stableRev=sql.prepare("SELECT rev FROM store_docs WHERE feature='reservations'").get().rev;
 sql.prepare("UPDATE store_docs SET data=? WHERE feature='rooms'").run(JSON.stringify({v:4,baseRate:600,roomTypes:[{id:'type-a',name:'Atlas',rate:990}],rooms:[{id:'room:101',n:101,typeId:'type-a',status:'libre'}]}));
 await syncHotelChannels(env,{merchant:'riad-sync'});doc=JSON.parse(sql.prepare("SELECT data FROM store_docs WHERE feature='reservations'").get().data);
 ok(doc.bookings.length===1&&doc.bookings[0].hotel.rate===750&&sql.prepare("SELECT rev FROM store_docs WHERE feature='reservations'").get().rev===stableRev,'unchanged polling preserves the booked rate and does not rewrite the reservation document');
+ok(sql.prepare("SELECT COUNT(*) AS n FROM hotel_stay_events WHERE merchant='riad-sync'").get().n===1,'unchanged OTA polling does not duplicate the shadow event');
 doc.bookings[0].status='checked_in';doc.bookings[0].customer={name:'Fatima Zahra',phone:'0600000000',email:''};
 sql.prepare("UPDATE store_docs SET data=?,rev=rev+1 WHERE feature='reservations'").run(JSON.stringify(doc));
 await syncHotelChannels(env,{merchant:'riad-sync'});doc=JSON.parse(sql.prepare("SELECT data FROM store_docs WHERE feature='reservations'").get().data);
@@ -46,6 +50,8 @@ calendar='BEGIN:VCALENDAR\r\nVERSION:2.0\r\nEND:VCALENDAR';let sync=await syncHo
 ok(doc.bookings[0].status==='confirmed'&&sync.results[0].pendingCancellation===1,'one empty calendar observation cannot cancel a live reservation');
 clock+=6*60*1000;sync=await syncHotelChannels(env,{merchant:'riad-sync'});doc=JSON.parse(sql.prepare("SELECT data FROM store_docs WHERE feature='reservations'").get().data);
 ok(doc.bookings[0].status==='cancelled'&&sync.results[0].pendingCancellation===0,'a second spaced missing observation cancels the imported reservation without deleting history');
+audit=sql.prepare("SELECT event_type FROM hotel_stay_events WHERE merchant='riad-sync' ORDER BY srv_cursor,event_ordinal").all();
+ok(audit.length===2&&audit[1].event_type==='cancelled','confirmed OTA removal appends a cancellation event instead of rewriting history');
 response=await onRequestGet({env,request:new Request('https://kiwi.test/api/hotel/channels?merchant=riad-sync',{headers:{Cookie:cookie}})});body=await response.json();
 ok(response.status===200&&body.channels[0].health==='healthy'&&body.channels[0].syncMode==='ical-import'&&!body.channels[0].capabilities.pushesRates&&!('feedUrl' in body.channels[0]),'connection status exposes truthful one-way capability and health metadata only');
 console.log(`hotel-channel-sync-test: ${controls} controls passed`);
