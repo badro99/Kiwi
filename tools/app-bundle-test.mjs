@@ -83,6 +83,8 @@ if (first) {
     'assistant : la session crée une liaison pour son magasin, la consomme, puis utilise le commit locataire partagé avec identité terminal');
   assert(shell.includes('id="store-list"') && !shell.includes('id="pair-code"') && nativeShell.includes('Array.isArray(me && me.stores)'),
     'assistant : choisit un établissement autorisé de /api/me au lieu de demander un code supprimé du dashboard');
+  assert(nativeShell.includes("next.disabled = !state.paired || !same"),
+    'assistant : changer la sélection bloque Continuer tant que le nouvel établissement n’est pas réellement relié');
   assert(nativeShell.includes("node.classList.toggle('skipped', skipped)") && nativeShell.includes("stageReady:'La configuration est enregistrée"),
     'assistant : les étapes non requises restent sautées et le rail de marque suit le contexte');
   assert(nativeShell.includes("marker.textContent = muted ? '—' : '✓'"),

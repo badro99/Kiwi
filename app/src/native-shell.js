@@ -183,9 +183,10 @@
   });
   function sameStore(store, venue) { return !!(store && venue && store.merchant && venue.merchant === store.merchant); }
   function syncPairButton() {
-    var button = $('#pair-btn'), same = sameStore(state.selectedStore, state.venue);
+    var button = $('#pair-btn'), same = sameStore(state.selectedStore, state.venue), next = $('#connect-next');
     button.disabled = !state.selectedStore || same;
     button.textContent = same ? tr('alreadyPaired') : tr('pair');
+    if (state.role === 'caisse' || state.role === 'cuisine') next.disabled = !state.paired || !same;
   }
   function selectStore(index) {
     state.selectedStore = state.stores[index] || null;
