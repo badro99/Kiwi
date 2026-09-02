@@ -345,6 +345,15 @@ section('Live sale write-ahead durability');
   else fail(`live-link-write-ahead-test.mjs exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
 }
 
+section('Caisse service ledger scope');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'caisse-service-ledger-scope-test.mjs')], { encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0) ok(`caisse service scope green (${(out.match(/✓/g) || []).length} close/reopen checks)`);
+  else fail(`caisse-service-ledger-scope-test.mjs exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+}
+
 /* ── 4e · durable browser outbox wiring ────────────────────────────────────
  * The behavioral fixtures run in a real browser; this zero-dependency gate
  * locks their tested engine into every operational shell and the PWA cache. */

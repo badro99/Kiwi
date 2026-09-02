@@ -5441,7 +5441,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=465" defer></script>
+  <script src="assets/caisse-pwa.js?v=466" defer></script>
   <script src="assets/live-link.js?v=21" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -13049,14 +13049,15 @@
       let changed = false;
       (sales || []).forEach((sale) => {
         if (!sale || !(Number(sale.amount) > 0)) return;
-          /* A caisse reload/reopen must not hide employee payments already made
-             during the same commercial day. The old shiftOpenedAt filter did:
-             a waiter paid at 17:00, the till reopened at 17:02, and the journal
-             stayed at zero forever. Use the shared business-day boundary. */
+        /* The caisse journal is THIS service, not the commercial day. Closing
+           the register freezes and clears it; reopening at 19:20 must start at
+           0 even though Dashboard keeps the full day's ledger. Employee and
+           OrderPro payments still enter when their settlement happened after
+           this service opened. Importing the whole business day here made the
+           freshly opened caisse resurrect every transaction from the Z that
+           had just been printed. */
         const saleTs = Number(sale.ts || 0);
-        const DR = window.KiwiDayReport;
-        if (DR && DR.businessDay && DR.businessDay(saleTs || Date.now()) !== currentBusinessDay()) return;
-        if (!DR && saleTs < shiftOpenedAt.getTime() - 18 * 60 * 60 * 1000) return;
+        if (!saleTs || saleTs < shiftOpenedAt.getTime()) return;
         const saleRefs = [sale.receiptRef, sale.ref, sale.orderRef]
           .map((v) => String(v || '')).filter(Boolean);
         if (journal.some((entry) => entry && (
@@ -13088,15 +13089,13 @@
       return 1;
     }
 
-    /* Reconcile the complete commercial day before listening for deltas. This
-       is the authoritative parity pass shared with Dashboard Commandes. */
+    /* Reconcile this OPEN SERVICE before listening for deltas. Dashboard owns
+       the complete commercial-day ledger; the till owns only its current Z. */
     function syncSettledBusinessDay() {
       if (!(shiftOpenedAt instanceof Date) || isNaN(shiftOpenedAt.getTime())) return Promise.resolve(false);
       const merchant = currentMerchantSlug();
       if (!merchant) return Promise.resolve(false);
-      const DR = window.KiwiDayReport;
-      const bounds = DR && DR.dayBounds ? DR.dayBounds(currentBusinessDay()) : null;
-      const from = Number(bounds && bounds.from) || (Date.now() - 18 * 60 * 60 * 1000);
+      const from = shiftOpenedAt.getTime();
       return fetch('/api/feed?merchant=' + encodeURIComponent(merchant) + '&from=' + from, {
         credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' },
       }).then((r) => r.ok ? r.json() : null)
