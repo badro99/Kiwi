@@ -88,7 +88,7 @@
   <script src="assets/caisse-motion.js?v=1" defer></script>
   <!-- Real thermal printing: ESC/POS encoder + the Kiwi Printer Bridge client.
        KiwiHardware.print routes receipts through them when a printer is paired. -->
-  <script src="assets/escpos.js?v=6" defer></script>
+  <script src="assets/escpos.js?v=7" defer></script>
   <script src="assets/printer-bridge.js?v=8" defer></script>
   <script src="assets/caisse-hardware.js?v=1" defer></script>
   <!-- Canal de poussée facultatif : quand le concentrateur temps réel est
@@ -5413,7 +5413,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=455" defer></script>
+  <script src="assets/caisse-pwa.js?v=456" defer></script>
   <script src="assets/live-link.js?v=17" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -17501,6 +17501,68 @@
      *
      * Silencieux sans imprimante : l'écran cuisine reste le chemin nominal, le
      * papier est un plus, jamais une condition d'envoi. */
+    /* Paper-only hierarchy for composed menus. KDS keeps its richer parent +
+       component model; the thermal ticket needs a faster visual scan:
+
+         1× Prépare ton Plat
+           > Gnocchi
+           > Crema di Formaggi
+
+       Grouping happens AFTER station routing. A formula split between cuisine
+       and bar is therefore headed on both tickets, but each printer receives
+       only the choices it must prepare. Non-formula items follow the exact old
+       mapping and are intentionally untouched. */
+    function kitchenPaperItems(items, station, fallback) {
+      const source = (Array.isArray(items) ? items : []).filter(Boolean);
+      const parents = new Map();
+      source.forEach((it) => {
+        if (it.kind === 'formula' && it.formulaUid) parents.set(it.formulaUid, it);
+      });
+      const grouped = new Map();
+      const out = [];
+      const stationIds = (it) => (it.stations && it.stations.length) ? it.stations : [fallback];
+      const visualText = (it) => (Array.isArray(it.visuals) ? it.visuals : [])
+        .map(v => v && (v.name || v.label || v.cn)).filter(Boolean).join(' · ');
+      const withoutFormulaTag = (value) => String(value || '')
+        .replace(/^\s*\[[^\]]*\]\s*(?:·\s*)?/, '').trim();
+
+      source.forEach((it) => {
+        if (stationIds(it).indexOf(station) < 0) return;
+        /* The formula parent is a billing/container line, not a preparation
+           line. Its heading is emitted when the first component for THIS
+           station is encountered. */
+        if (it.kind === 'formula') return;
+        if (it.kind === 'formula-part' && it.formulaUid) {
+          let formula = grouped.get(it.formulaUid);
+          if (!formula) {
+            const parent = parents.get(it.formulaUid);
+            const parentVisual = parent ? visualText(parent) : '';
+            formula = {
+              qty: (parent && parent.q) || it.q || 1,
+              name: (parent && (parent.formulaName || parent.n))
+                || it.formulaName || 'Formule',
+              note: parent
+                ? [parentVisual, parentVisual ? parent.note : (parent.paperNote || parent.note)]
+                    .filter(Boolean).join(' · ')
+                : '',
+              formulaChoices: [],
+            };
+            grouped.set(it.formulaUid, formula);
+            out.push(formula);
+          }
+          const choiceVisual = visualText(it);
+          const rawDetail = withoutFormulaTag(choiceVisual ? it.note : (it.paperNote || it.note));
+          const detail = [choiceVisual, rawDetail].filter(Boolean).join(' · ');
+          if (it.n) formula.formulaChoices.push({ name: it.n, note: detail });
+          return;
+        }
+        const visualNote = visualText(it);
+        out.push({ qty: it.q, name: it.n,
+          note: [visualNote, visualNote ? it.note : (it.paperNote || it.note)].filter(Boolean).join(' · ') });
+      });
+      return out;
+    }
+
     function printKitchenTickets(order, items, options) {
       try {
         const KP = window.KiwiPrinter;
@@ -17520,15 +17582,13 @@
         const fallback = kdsStationFor(null);
         const byStation = new Map();
         (items || []).filter(Boolean).forEach((it) => {
+          if (it.kind === 'formula') return;
           const sids = (it.stations && it.stations.length) ? it.stations : [fallback];
           sids.forEach((sid) => {
-            if (!byStation.has(sid)) byStation.set(sid, []);
-            const visualNote = (Array.isArray(it.visuals) ? it.visuals : [])
-              .map(v => v && (v.name || v.label || v.cn)).filter(Boolean).join(' · ');
-            byStation.get(sid).push({ qty: it.q, name: it.n,
-              note: [visualNote, visualNote ? it.note : (it.paperNote || it.note)].filter(Boolean).join(' · ') });
+            if (!byStation.has(sid)) byStation.set(sid, null);
           });
         });
+        byStation.forEach((_, sid) => { byStation.set(sid, kitchenPaperItems(items, sid, fallback)); });
         const list = kdsStations();
         const names = {};
         list.forEach((s) => { names[s.id] = s.name; });

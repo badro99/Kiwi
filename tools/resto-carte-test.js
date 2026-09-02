@@ -567,6 +567,7 @@ function runTickets(items, stations, order) {
     ${extract(caisse, 'kdsStations')}
     ${extract(caisse, 'kdsKitchenId')}
     ${extract(caisse, 'kdsStationFor')}
+    ${extract(caisse, 'kitchenPaperItems')}
     ${extract(caisse, 'printKitchenTickets')}
     printKitchenTickets(Object.assign({ num: 7, sentAt: new Date(2026, 0, 1, 12, 5) }, ${JSON.stringify(order || {})}), ${JSON.stringify(items)});
   `);
@@ -626,6 +627,7 @@ const noPrinter = (() => {
     ${extract(caisse, 'kdsStations')}
     ${extract(caisse, 'kdsKitchenId')}
     ${extract(caisse, 'kdsStationFor')}
+    ${extract(caisse, 'kitchenPaperItems')}
     ${extract(caisse, 'printKitchenTickets')}
     printKitchenTickets({ num: 1, sentAt: new Date() }, [{ q: 1, n: 'X', note: '', stations: ['c'] }]);
     return jobs.length;

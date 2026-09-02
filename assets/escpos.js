@@ -167,6 +167,19 @@
     b.align('left').line(rule(paper));
     (o.items || []).forEach(function (it) {
       b.bold(true).size(2, 2).line(fit((it.qty ? it.qty + '× ' : '') + (it.name || ''), paper, 2)).size(1, 1).bold(false);
+      /* A composed menu is one kitchen instruction, not a row of unrelated
+       * dishes. Its selected components are deliberately smaller than the
+       * formula name and each starts with the same unmistakable `>` marker.
+       * Ordinary dishes never carry formulaChoices, so their long-standing
+       * name + note layout stays byte-for-byte unchanged. */
+      (it.formulaChoices || []).forEach(function (choice) {
+        var label = typeof choice === 'string' ? choice : (choice && choice.name);
+        var detail = typeof choice === 'object' && choice ? choice.note : '';
+        if (!label) return;
+        b.bold(false).size(1, 1)
+          .line(fit('> ' + label + (detail ? ' · ' + detail : ''), paper))
+          .size(1, 1);
+      });
       if (it.note) b.bold(true).size(1, 2).line(fit('   > ' + it.note, paper)).size(1, 1).bold(false);
     });
     b.line(rule(paper)).feed(3).cut();
