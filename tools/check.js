@@ -1027,6 +1027,7 @@ section('Whole-project regressions');
     'depenses-demo-gate-test.mjs',
     'invoice-receipt-test.mjs',
     'receipt-logo-print-test.mjs',
+    'formula-receipt-pricing-test.mjs',
     'sale-invoice-test.mjs',
     'ai-routes-test.mjs',
     'inventory-count-test.mjs',

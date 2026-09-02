@@ -705,6 +705,10 @@ async function get(fn, qs, headers = {}) {
       && formulaLines[1].kind === 'formula-part' && formulaLines[1].unitPrice === 0
       && formulaLines[3].kind === 'formula-part' && formulaLines[3].unitPrice === 0,
     formulaRow && formulaRow.lines);
+  ok('le reçu garde le supplément exact de chaque choix sans le refacturer',
+    formulaLines[1] && formulaLines[1].formulaExtra === 0
+      && formulaLines[3] && formulaLines[3].formulaExtra === 20,
+    formulaRow && formulaRow.lines);
   ok('seul le supplément configuré est ajouté au parent',
     formulaLines[0] && formulaLines[0].unitPrice === 68
       && formulaLines[2] && formulaLines[2].unitPrice === 88,

@@ -281,7 +281,7 @@
   },
   "assets/escpos.js": {
     "v": "7",
-      "sha": "19796ee5ba1d120d"
+    "sha": "19796ee5ba1d120d"
   },
   "assets/features.js": {
     "v": "4",
@@ -416,8 +416,8 @@
     "sha": "c9d6036ca657c76e"
   },
   "assets/live-link.js": {
-    "v": "17",
-    "sha": "e62a9dd4a943a635"
+    "v": "18",
+    "sha": "a1ae51864c7cfcab"
   },
   "assets/live-socket.js": {
     "v": "4",
@@ -780,8 +780,8 @@
     "sha": "66ae233c079d385a"
   },
   "assets/receipt.js": {
-    "v": "1",
-    "sha": "199bc3f95ce89a8a"
+    "v": "2",
+    "sha": "50330f402656e8da"
   },
   "assets/reservations.css": {
     "v": "5",

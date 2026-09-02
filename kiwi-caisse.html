@@ -5414,7 +5414,7 @@
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
   <script src="assets/caisse-pwa.js?v=456" defer></script>
-  <script src="assets/live-link.js?v=17" defer></script>
+  <script src="assets/live-link.js?v=18" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
   <script src="assets/staff-roles.js?v=1" defer></script>
@@ -5467,7 +5467,7 @@
        (receipt-ui.js) n'est PAS chargé ici : un réglage à deux endroits, ce sont
        deux vérités. Après venue-store.js, dont il tient sa fiche par
        établissement. -->
-  <script src="assets/receipt.js?v=1" defer></script>
+  <script src="assets/receipt.js?v=2" defer></script>
   <!-- Coûts privés + recettes : nécessaires pour transformer une vente de
        produit en sorties d'ingrédients sans exposer les prix d'achat. -->
   <script src="assets/cost.js?v=3" defer></script>
@@ -9515,6 +9515,9 @@
         parts.push(Object.assign({}, previous || {}, {
           uid: (previous && previous.uid) || newLineUid(),
           id: target.id, name: target.name, price: 0, qty,
+          /* Chargé une seule fois sur le parent, mais conservé sur le choix
+             pour que le reçu client puisse expliquer le prix de la formule. */
+          formulaExtra: Math.max(0, +choice.extra || 0),
           note: (previous && previous.note) || '', kind: 'formula-part',
           formulaUid, formulaName: item.name, slotLabel: slot.label || '',
           formulaSlotId: slot.id,
@@ -10302,13 +10305,56 @@
        recettes ne sait pas quoi chercher : il reçoit "Tajine poulet citron"
        et n'a qu'une table indexée par it_3. Toute vente était donc muette
        pour le stock · aucun gramme de poulet ne sortait jamais des livres. */
-    function currentSaleLines() {
-      if (mode === 'vrap') {
-        return cart.map(c => ({ itemId: c.id || '', name: lineLabel(c), qty: c.qty, total: c.price * c.qty, cat: lineCat(c.id, c.name) }));
+    function formulaPartSupplement(parent, part) {
+      /* New remote orders carry this server-authoritative field. Local orders
+         carry the same value from the published formula. The catalogue lookup
+         keeps already-open legacy tickets itemised after a hot update. */
+      if (part && Object.prototype.hasOwnProperty.call(part, 'formulaExtra')) {
+        return Math.max(0, +part.formulaExtra || 0);
       }
+      const item = (carteState.formulaItems || []).find(candidate => String(candidate.id) === String(parent && parent.id))
+        || menuItems.find(candidate => String(candidate.id) === String(parent && parent.id));
+      const slots = item && item.formula && Array.isArray(item.formula.slots) ? item.formula.slots : [];
+      const slot = slots.find(candidate => String(candidate.id || '') === String((part && part.formulaSlotId) || ''));
+      const choice = slot && Array.isArray(slot.choices)
+        ? slot.choices.find(candidate => String(candidate.itemId || '') === String((part && part.id) || '')) : null;
+      return Math.max(0, +(choice && choice.extra) || 0);
+    }
+
+    function receiptLinesFromOrder(lines) {
+      const source = Array.isArray(lines) ? lines.filter(Boolean) : [];
+      return source.filter(line => line.kind !== 'formula-part').map(line => {
+        const qty = Math.max(1, +line.qty || 1);
+        const total = line.total != null ? +line.total || 0 : (+line.price || +line.unitPrice || 0) * qty;
+        const out = {
+          itemId: line.id || line.itemId || '', name: lineLabel(line), qty,
+          total, cat: lineCat(line.id || line.itemId, line.name),
+          kind: line.kind || '', formulaUid: line.formulaUid || '',
+        };
+        if (line.kind === 'formula') {
+          const parts = source.filter(part => part.kind === 'formula-part'
+            && String(part.formulaUid || '') === String(line.formulaUid || ''));
+          const saved = Array.isArray(line.formulaChoices) ? line.formulaChoices : [];
+          out.formulaChoices = (parts.length ? parts.map(part => {
+            const partQty = Math.max(1, +part.qty || qty);
+            const unit = formulaPartSupplement(line, part);
+            return { name: lineLabel(part), qty: partQty, total: unit * partQty };
+          }) : saved.map(choice => ({
+            name: String((choice && choice.name) || 'Choix'),
+            qty: Math.max(1, +(choice && choice.qty) || qty),
+            total: Math.max(0, +(choice && choice.total) || 0),
+          })));
+        }
+        return out;
+      });
+    }
+
+    function currentSaleLines() {
+      if (mode === 'vrap') return receiptLinesFromOrder(cart);
       if (selectedId && tables[selectedId]) {
-        return generateOrder(selectedId, tables[selectedId])
-          .map(l => ({ itemId: l.id || '', name: l.name, qty: l.qty, total: l.total, cat: lineCat(l.id, l.name), kind: l.kind, formulaUid: l.formulaUid }));
+        const source = Object.prototype.hasOwnProperty.call(tableOrders, selectedId)
+          ? tableOrders[selectedId] : generateOrder(selectedId, tables[selectedId]);
+        return receiptLinesFromOrder(source);
       }
       return [];
     }
@@ -11567,6 +11613,7 @@
         ['kind', 'formulaUid', 'formulaName', 'slotLabel', 'formulaSlotId', 'lineId'].forEach(key => {
           if (l[key]) line[key] = l[key];
         });
+        if (l.kind === 'formula-part') line.formulaExtra = Math.max(0, +l.formulaExtra || 0);
         return line;
       });
     }
@@ -12833,10 +12880,20 @@
         entry.channel = 'takeaway';
       }
       if (Array.isArray(lines) && lines.length) {
-        entry.lines = lines.filter(l => l.kind !== 'formula-part').map(l => Object.assign(
-          { name: l.name, qty: l.qty, total: money(l.total != null ? l.total : (l.price * l.qty)), cat: l.cat || '' },
-          l.itemId ? { itemId: l.itemId } : null,
-          l.kind ? { kind: l.kind } : null));
+        entry.lines = lines.filter(l => l.kind !== 'formula-part').map(l => {
+          const saved = Object.assign(
+            { name: l.name, qty: l.qty, total: money(l.total != null ? l.total : (l.price * l.qty)), cat: l.cat || '' },
+            l.itemId ? { itemId: l.itemId } : null,
+            l.kind ? { kind: l.kind } : null);
+          if (Array.isArray(l.formulaChoices)) {
+            saved.formulaChoices = l.formulaChoices.map(choice => ({
+              name: String((choice && choice.name) || 'Choix'),
+              qty: Math.max(1, +(choice && choice.qty) || +l.qty || 1),
+              total: money(Math.max(0, +(choice && choice.total) || 0)),
+            }));
+          }
+          return saved;
+        });
       }
       /* Le reçu se fige ICI, au moment de la vente. Si le propriétaire change
          de raison sociale, de logo ou de pied de page en septembre, les tickets
@@ -12903,6 +12960,12 @@
           name: String(line.name || 'Article'), qty: Math.max(1, Number(line.qty) || 1),
           total: money(line.total), cat: String(line.cat || ''),
           itemId: String(line.itemId || ''),
+          formulaChoices: Array.isArray(line.formulaChoices)
+            ? line.formulaChoices.map(choice => ({
+                name: String((choice && choice.name) || 'Choix'),
+                qty: Math.max(1, +(choice && choice.qty) || 1),
+                total: money(Math.max(0, +(choice && choice.total) || 0)),
+              })) : [],
         }));
       }
       return entry;
@@ -17837,6 +17900,7 @@
            café qui devait aller au bar. Même résolution que partout ailleurs. */
         return { q: c.qty, n: c.name, p: c.price, note: (c.note || '').trim(),
           kind: (orig && orig.kind) || c.kind || '', formulaUid: (orig && orig.formulaUid) || c.formulaUid || '',
+          formulaChoices: Array.isArray(c.formulaChoices) ? c.formulaChoices.map(choice => ({ ...choice })) : [],
           stations: orig ? orig.stations : [kdsStationFor(m)] };
       });
     }
@@ -17903,6 +17967,7 @@
           qty:   i.q,
           note:  i.note || '',
           kind: i.kind || '', formulaUid: i.formulaUid || '',
+          formulaChoices: Array.isArray(i.formulaChoices) ? i.formulaChoices.map(choice => ({ ...choice })) : [],
         };
       });
       setVrapView('builder');
@@ -18192,7 +18257,9 @@
           const slot = slots.find(candidate => String(candidate.id || '') === String(child.formulaSlotId || ''));
           const choice = slot && Array.isArray(slot.choices)
             ? slot.choices.find(candidate => String(candidate.itemId || '') === String(child.id || '')) : null;
-          formulaExtra += Math.max(0, +(choice && choice.extra) || 0);
+          const choiceExtra = Math.max(0, +(choice && choice.extra) || 0);
+          child.formulaExtra = choiceExtra;
+          formulaExtra += choiceExtra;
         });
         const inheritedVisuals = children.flatMap(child => Array.isArray(child.visuals) ? child.visuals : []);
         let optionExtra = 0;
@@ -18285,6 +18352,7 @@
           station: l.station || (menuHit && menuHit.station) || '',
           kind: l.kind || '', formulaUid: l.formulaUid || '', formulaName: l.formulaName || '',
           slotLabel: l.slotLabel || '', formulaSlotId: l.formulaSlotId || '', lineId: l.lineId || '',
+          formulaExtra: l.kind === 'formula-part' ? Math.max(0, +l.formulaExtra || 0) : undefined,
           sent: true, orderProLine: marker, orderSession: String(o.session || ''),
           orderProPending: o.status === 'pending',
         });
@@ -18376,6 +18444,7 @@
               formulaUid: l.formulaUid || '',
               slotLabel: l.slotLabel || '',
               formulaName: l.formulaName || '',
+              formulaExtra: l.kind === 'formula-part' ? Math.max(0, +l.formulaExtra || 0) : 0,
               note: [formulaNote, ownVisuals.length ? '' : l.options, l.note].filter(Boolean).join(' · '),
               visuals: ownVisuals.slice(),
               /* Le poste porté PAR LA LIGNE gagne. Un bon posé par une caisse le
@@ -18393,6 +18462,13 @@
             q: l.qty || 1, n: l.name || '', p: l.unitPrice || 0, note: l.note || '',
             visuals: Array.isArray(l.visuals) ? l.visuals.slice() : [],
             kind: l.kind || '', formulaUid: l.formulaUid || '', formulaName: l.formulaName || '',
+            formulaChoices: l.kind === 'formula' ? (o.lines || [])
+              .filter(part => part.kind === 'formula-part'
+                && String(part.formulaUid || '') === String(l.formulaUid || ''))
+              .map(part => ({
+                name: part.name || 'Choix', qty: Math.max(1, +part.qty || +l.qty || 1),
+                total: Math.max(0, +part.formulaExtra || 0) * Math.max(1, +part.qty || +l.qty || 1),
+              })) : [],
             stations: [(l.station && kdsStations().some(s => s.id === l.station))
               ? l.station : kdsStationForName(l.name)],
           })),

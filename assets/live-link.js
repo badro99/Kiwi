@@ -464,6 +464,16 @@
           if (u) o.u = u;
           if (kd) o.kd = kd;
           if (r) o.r = r;
+          if (Array.isArray(l.formulaChoices)) {
+            var formulaChoices = l.formulaChoices.slice(0, 30).map(function (choice) {
+              return {
+                n: String((choice && choice.name) || 'Choix').slice(0, 60),
+                q: Math.round(Math.max(0, +(choice && choice.qty) || 1) * 1000) / 1000 || 1,
+                t: Math.round(Math.max(0, +(choice && choice.total) || 0) * 100) / 100,
+              };
+            });
+            if (formulaChoices.length) o.fc = formulaChoices;
+          }
           var cost = +(l.unitCost ?? l.unit_cost);
           if (Number.isFinite(cost) && cost >= 0) o.k = Math.round(cost * 100) / 100;
           if (Array.isArray(l.options)) {

@@ -230,6 +230,12 @@ export async function onRequestGet({ request, env }) {
             variantId: (l && l.v) || '', unit: (l && l.u) || '',
             kind: (l && l.kd) || '', unitCost: (l && l.k),
             recipeVersionId: (l && l.r) || '',
+            formulaChoices: Array.isArray(l && l.fc)
+              ? l.fc.map((choice) => ({
+                  name: (choice && choice.n) || 'Choix', qty: (choice && choice.q) || 1,
+                  total: Math.max(0, Number(choice && choice.t) || 0),
+                }))
+              : [],
             options: Array.isArray(l && l.o)
               ? l.o.map((x) => ({ id: (x && x.i) || '', qty: x && x.q })).filter((x) => x.id)
               : [],

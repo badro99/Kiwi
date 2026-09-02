@@ -331,6 +331,11 @@ export async function priceOrder(env, merchant, rawLines) {
       && String((line && line.formulaUid) || '').slice(0, 40) === uid);
     let valid = !!(slots && slots.length);
     let extra = 0;
+    /* Keep the authoritative supplement of EACH selected component. Billing
+     * still charges the composed-menu parent once; this map only lets the
+     * customer receipt explain which choice contributed 0 MAD and which one
+     * contributed (for example) 12 MAD. Never trust a client-supplied amount. */
+    const choiceExtras = new Map();
     const assigned = new Set();
     /* Le créneau se comptait en LIGNES. Une seule ligne satisfaisait donc
        « min ≤ 1 ≤ max » tout en portant la quantité de l'appelant — jusqu'à 99 —
@@ -357,13 +362,15 @@ export async function priceOrder(env, merchant, rawLines) {
           const childId = String((child && child.id) || '');
           if (!slot.choices.has(childId)) { valid = false; break; }
           assigned.add(childIndex);
-          extra += slot.choices.get(childId) || 0;
+          const choiceExtra = slot.choices.get(childId) || 0;
+          choiceExtras.set(child, choiceExtra);
+          extra += choiceExtra;
         }
         if (!valid) break;
       }
       if (assigned.size !== children.length) valid = false;
     }
-    formulaContexts.set(uid, { valid, extra, parentId: String((parent && parent.id) || '') });
+    formulaContexts.set(uid, { valid, extra, choiceExtras, parentId: String((parent && parent.id) || '') });
   }
 
   for (const l of rawLines) {
@@ -426,6 +433,13 @@ export async function priceOrder(env, merchant, rawLines) {
     if (l && l.slotLabel) line.slotLabel = String(l.slotLabel).slice(0, 80);
     if (l && l.formulaSlotId) line.formulaSlotId = String(l.formulaSlotId).slice(0, 40);
     if (l && l.lineId) line.lineId = String(l.lineId).slice(0, 60);
+    if (kind === 'formula-part') {
+      /* `unitPrice` deliberately remains zero: the parent already carries the
+       * supplement in the payable total. `formulaExtra` is presentation data
+       * for the itemised receipt, computed from the published catalogue. */
+      line.formulaExtra = Math.max(0, Number(formulaContext && formulaContext.choiceExtras
+        && formulaContext.choiceExtras.get(l)) || 0);
+    }
     lines.push(line);
     total += unitPrice * qty;
   }

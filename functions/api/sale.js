@@ -229,6 +229,18 @@ export async function onRequestPost({ request, env }) {
         if (kind) o.kd = kind;
         if (recipeVersion) o.r = recipeVersion;
 
+        const rawFormulaChoices = l && (l.fc ?? l.formulaChoices);
+        if (Array.isArray(rawFormulaChoices)) {
+          const formulaChoices = rawFormulaChoices.slice(0, 30).map((choice) => ({
+            n: String((choice && (choice.n ?? choice.name)) || 'Choix').slice(0, 60),
+            q: Math.round(Math.max(0, Math.min(1000000,
+              Number(choice && (choice.q ?? choice.qty)) || 1)) * 1000) / 1000 || 1,
+            t: Math.round(Math.max(0, Math.min(100000000,
+              Number(choice && (choice.t ?? choice.total)) || 0)) * 100) / 100,
+          }));
+          if (formulaChoices.length) o.fc = formulaChoices;
+        }
+
         const rawCost = Number(l && (l.k ?? l.unitCost ?? l.unit_cost));
         if (Number.isFinite(rawCost) && rawCost >= 0 && rawCost <= 10000000) {
           o.k = Math.round(rawCost * 100) / 100;

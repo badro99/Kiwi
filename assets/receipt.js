@@ -491,16 +491,36 @@
     var refund = sale.kind === 'refund';
 
     /* ── les lignes ── */
-    var lines = (Array.isArray(sale.lines) ? sale.lines : []).slice(0, 120).map(function (l) {
+    var lines = [];
+    (Array.isArray(sale.lines) ? sale.lines : []).slice(0, 120).forEach(function (l) {
       var qty = num(l && l.qty) || 1;
       var total = Math.abs(num(l && (l.total != null ? l.total : (l.amount != null ? l.amount : (num(l.unit) * qty)))));
-      var o = { name: str(l && l.name, 60) || T.article, qty: qty, total: total };
+      /* A formula is billed internally as one parent line, but its receipt must
+       * explain that total: base menu + every selected component supplement.
+       * Free choices remain explicit at 0 MAD. Paid choices carry their exact
+       * server-authoritative amount. Subtracting the choice rows from the
+       * parent is presentation only and keeps the printed rows equal to the
+       * amount actually paid (40 + 0 + 12 = 52, never 52 + 12). */
+      var choices = (Array.isArray(l && l.formulaChoices) ? l.formulaChoices : []).slice(0, 30).map(function (choice) {
+        return {
+          name: str(choice && choice.name, 60) || T.article,
+          qty: num(choice && choice.qty) || qty,
+          total: Math.abs(num(choice && choice.total)),
+        };
+      });
+      var choiceTotal = choices.reduce(function (sum, choice) { return sum + choice.total; }, 0);
+      var o = { name: str(l && l.name, 60) || T.article, qty: qty, total: Math.max(0, total - choiceTotal) };
       var unit = num(l && (l.unit != null ? l.unit : l.price));
       if (unit && qty > 1) o.unit = Math.abs(unit);
       if (cfg.show.itemRef && l && l.ref) o.ref = str(l.ref, 32);
       if (cfg.show.itemBarcode && l && l.barcode) o.barcode = str(l.barcode, 20);
       if (l && l.note) o.note = str(l.note, 60);
-      return o;
+      lines.push(o);
+      choices.forEach(function (choice) {
+        var row = { name: choice.name, qty: choice.qty, total: choice.total, formulaChoice: true };
+        if (choice.total && choice.qty > 1) row.unit = choice.total / choice.qty;
+        lines.push(row);
+      });
     });
 
     /* ── les totaux ──
