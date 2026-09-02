@@ -3,7 +3,7 @@
 **Domaine :** Kiwi Hôtel / Riad  
 **Cadre juridique :** Loi n° 80-14 (BO n° 6404) & Décret n° 2-15-865 (BO n° 6488, Annexes 1 & 2)  
 **Sources professionnelles secondaires :** Guide professionnel MGH diffusé à la demande de la DRT (créé en 2022), à confirmer localement  
-**Statut :** **Sprint 0 — Découverte Administrative Consolidée (Cadrage Légal Verrouillé)**  
+**Statut :** **Sprint 0 — Découverte Administrative Consolidée (Cadrage Légal & Sémantique Verrouillé)**  
 **Emplacement :** `docs/specs/HOTEL_TOURISM_REPORTING_SPEC.md`
 
 ---
@@ -23,9 +23,10 @@ L'exploitation des textes officiels du Bulletin Officiel (Loi 80-14, Décret 2-1
   ```
   **Règle de sécurité opérationnelle :** Tant qu'une dispense écrite formelle n'a pas été enregistrée, toute valeur `'unknown'` est traitée opérationnellement comme `'required'` pour les deux statuts, évitant tout risque d'omission administrative.
 
-### B. Statut du Formulaire Photographié vs. Annexe 2 du Décret
-* **Annexe 2 officielle du Décret 2-15-865 :** Tableau nominatif d'avarie (mode dégradé > 24h non résorbé dans le mois) listant par voyageur : date d'arrivée, date de départ, sexe, nationalité, mineurs de moins de 18 ans, numéro de chambre.
-* **Le document photographié :** Un relevé mensuel agrégé semblant émaner d'une Délégation du Tourisme ; sa provenance exacte, son applicabilité réglementaire actuelle et la maquette formellement acceptée restent en attente de confirmation auprès du riad pilote et de sa délégation.
+### B. Distinction Rigoureuse : Annexe 2 Légale vs. Relevé Mensuel Statistique
+L'Annexe 2 et le relevé photographié ne sont pas des alternatives substituables ; ce sont deux instruments juridiques distincts pouvant coexister sur une même période :
+* **Annexe 2 officielle du Décret 2-15-865 (Formulaire d'avarie légal) :** Tableau nominatif d'avarie obligatoire en cas d'indisponibilité STDN > 24h non résorbée dans le mois (Décret 2-15-865, Art. 4), listant par voyageur : date d'arrivée, date de départ, sexe, nationalité, mineurs de moins de 18 ans, numéro de chambre.
+* **Le document photographié (Relevé mensuel statistique de routine) :** Un relevé mensuel agrégé par nationalité et par jour calendaire (J1 à J31), exigé à titre de suivi statistique par les Délégations du Tourisme tant que l'établissement n'a pas reçu de dispense formelle (`tourismMonthlyStatus !== 'exempt'`). Sa maquette exacte acceptée localement doit être confirmée avec la délégation compétente.
 
 ### C. Dictionnaire des Données Voyageur STDN (Annexe 1 du Décret 2-15-865)
 Le *bulletin individuel d'hébergement* légal et l'interface STDN prévoient les attributs suivants :
@@ -66,24 +67,29 @@ Au lieu de dépendre d'une API privée non documentée, Kiwi adopte la passerell
     [ MODULE QUOTIDIEN STDN ]               [ MODULE STATISTIQUES MENSUELLES ]
   • Génération fichier d'import agréé     • Si tourismMonthlyStatus !== 'exempt' :
     (Documentation historique :             Relevé mensuel conforme à l'usage local
-     JJMMAAAAhhmm.xls ; production        • Calcul TO (brut/net) & DMS
-     calquée sur le modèle actuel)        • Snapshot append-only mensuel
-  • Téléversement assisté sur stdn.ma       côté serveur avec audit lineage
-  • File locale chiffrée (outbox)
-  • Registre d'audit serveur canonique
-  • Suppression automatique du fichier
-    local après transfert confirmé
+     JJMMAAAAhhmm.xls ; production        • Si panne STDN > 24h dans le mois :
+     calquée sur le modèle actuel)          Annexe 2 officielle (Décret Art. 4)
+  • Téléversement assisté sur stdn.ma     • Calcul TO (brut/net) & DMS
+  • File locale chiffrée (outbox)         • Snapshot append-only serveur
+  • Registre d'audit serveur canonique      avec audit lineage
+  • Rétention sécurisée en outbox
+    jusqu'à confirmation d'intégration
 ```
 
 ### Principes d'Architecture & Sécurité :
 1. **Modèle de Fichier d'Import :** La documentation historique utilise le motif `JJMMAAAAhhmm.xls` ; le nom de fichier de production, son extension (`.xls` ou `.xlsx`) et l'ordonnancement exact des colonnes doivent être strictement calqués sur le modèle actuellement agréé par le portail STDN.
-2. **Cloisonnement du Stockage & Conservation :**
-   * **Poste local / tablette :** File temporaire chiffrée pour le fonctionnement hors-ligne ; suppression automatique des fichiers locaux dès confirmation du transfert.
+2. **Cloisonnement du Stockage & Définition du « Transfert Confirmé » :**
+   * **Poste local / tablette :** File temporaire chiffrée (*encrypted outbox*) pour le fonctionnement hors-ligne.
+   * **Critères stricts de suppression locale :** Un fichier d'export généré localement n'est **jamais supprimé** sur simple téléchargement ou téléversement. Sa suppression de l'outbox locale intervient **exclusivement et cumulativement** lorsque :
+     1. Le portail STDN a retourné un compte-rendu de traitement avec succès (sans rejet de lot ni d'anomalie bloquante) ;
+     2. La preuve de traitement / rapport d'intégration a été consignée ;
+     3. L'écriture d'audit canonique correspondante a été validée et enregistrée côté serveur.
+     *Tout fichier rejeté ou en attente reste accessible et recouvrable dans la file chiffrée.*
    * **Serveur Kiwi :** Registre d'audit canonique append-only conservant nom de fichier, hash, horodatages, compteurs de lignes, statut de validation STDN et éventuelles corrections.
    * **Conservation légale des bulletins :** L'Article 38 de la Loi 80-14 impose la conservation des bulletins individuels d'hébergement pendant **un an (1 an)**. Les délais pour les métadonnées d'audit et exports restent à confirmer selon les normes fiscales et CNDP.
 3. **Gestion Complète de l'Indisponibilité STDN (> 24 heures) :**
    * *Avarie quotidienne :* Dépôt des copies de bulletins individuels avant 8h du matin auprès de la DGSN/Gendarmerie (Décret 2-15-865, Art. 4).
-   * *Régularisation mensuelle obligatoire :* Si toutes les arrivées du mois n'ont pas pu être télé-déclarées au cours du mois, dépôt du relevé d'avarie (Annexe 2 du Décret 2-15-865) avant le 3ᵉ jour du mois suivant auprès des services extérieurs de l'administration chargée du tourisme (Art. 4).
+   * *Régularisation mensuelle obligatoire :* Si toutes les arrivées du mois n'ont pas pu être télé-déclarées au cours du mois, dépôt de l'**Annexe 2 officielle du Décret 2-15-865** avant le 3ᵉ jour du mois suivant auprès des services extérieurs de l'administration chargée du tourisme (Art. 4).
    * *Régularisation électronique :* Transmission électronique de rattrapage sous 72 heures dès rétablissement du système (Art. 6).
 
 ---
@@ -115,7 +121,8 @@ Avant d'écrire la moindre ligne de code dans `hotel.js` ou d'exécuter une migr
 | **Encodage nationalités / pays** | *Codes ISO ou Libellés en clair* | Portail STDN (*Espace pratique*) | Spécification technique | À confirmer |
 | **Découpage des mineurs** | *Global < 18 (légal) ou -15 / 15-18*| Portail STDN (*Espace pratique*) | Annexe 1 Décret / Template| À confirmer |
 | **Prise en compte de la signature client** | *Papier conservé ou émargement* | DGSN / STDN | Guide juridique | À confirmer |
-| **Maquette acceptée du relevé mensuel** | *Modèle photographié ou Annexe 2*| Délégation Provinciale | Formulaire fourni | À confirmer |
+| **Relevé mensuel statistique de routine** | *Modèle photographié ou modèle Délégation* | Délégation Provinciale | Formulaire fourni | À confirmer |
+| **Formulaire d'avarie légal (mode dégradé > 24h)**| **Annexe 2 officielle du Décret** | Services extérieurs Tourisme | Art. 4 Décret 2-15-865 | À confirmer |
 | **Conservation des bulletins individuels** | **1 an (Obligatoire)** | DGSN / Ministère | Art. 38 Loi 80-14 | Confirmé |
 | **Conservation des métadonnées d'audit/fichiers**| *À renseigner (Fiscale / CNDP)* | CNDP / DGI | Code Commerce / Lois | À confirmer |
 
