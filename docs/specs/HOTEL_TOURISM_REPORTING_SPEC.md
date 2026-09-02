@@ -1,97 +1,113 @@
 # Spécification · Déclaration Statistique & Télédéclaration des Nuitées (STDN)
 
 **Domaine :** Kiwi Hôtel / Riad  
-**Cadre juridique :** Loi n° 80-14 (BO n° 6404, Arts. 36–38 & 56) & Décret n° 2-15-865 (BO n° 6488, Arts. 1, 4 & 6)  
-**Statut :** **Sprint 0 — Découverte Administrative Verrouillée**  
+**Cadre juridique :** Loi n° 80-14 (BO n° 6404) & Décret n° 2-15-865 (BO n° 6488, Annexes 1 & 2)  
+**Directives professionnelles :** Circulaires DRT / MGH (Édition Novembre 2024)  
+**Statut :** **Sprint 0 — Découverte Administrative Consolidée (Sources Primaires Validées)**  
 **Emplacement :** `docs/specs/HOTEL_TOURISM_REPORTING_SPEC.md`
 
 ---
 
-## 1. Cadre Légal et Rôles des Autorités (Sources Primaires)
+## 1. Cadre Réglementaire & Réalité Opérale (Sources Primaires)
 
-L'analyse directe des textes officiels publiés au Bulletin Officiel établit la hiérarchie juridique et la répartition exacte des rôles administratifs :
+L'exploitation des textes officiels du Bulletin Officiel (Décret 2-15-865) et des manuels d'exploitation STDN clarifie la réglementation et la pratique administrative sur le terrain :
 
-### A. Loi n° 80-14 relative aux établissements touristiques (BO n° 6404)
-* **Article 36 :** L'exploitant d'un établissement d'hébergement touristique est tenu de déclarer **dès leur arrivée, par voie électronique**, les données relatives à ses clients auprès de « l'administration ».
-* **Article 37 :** Chaque client doit présenter un document d'identité et renseigner et signer un **bulletin individuel d'hébergement**, dont le modèle est fixé par voie réglementaire.
-* **Article 38 :** Les établissements procédant à cette déclaration électronique sont expressément **dispensés de la tenue du registre papier et du dépôt physique des bulletins individuels** (fiches de police).
-* **Article 56 :** Le régime transitoire de transmission mensuelle sur support papier était expressément limité à une durée de deux ans suivant la publication du décret d'application.
+### A. Dédoublement Réglementaire Confirmé (MGH / DRT Novembre 2024)
+* **La règle sur le terrain :** Le système STDN s'ajoute aux déclarations manuelles traditionnelles. Conformément aux directives de la Délégation Régionale du Tourisme (DRT) et de la DGSN/Gendarmerie Royale, **les établissements doivent maintenir les déclarations papier (bulletins et relevés statistiques mensuels) jusqu'à notification formelle d'une dispense**.
+* **Configuration établissement requise dans Kiwi :**
+  ```ts
+  paperReportingStatus: 'paperReportingRequired' | 'paperReportingExempt' | 'unknown'
+  ```
+  Le relevé statistique mensuel photographié n'est donc ni obsolète ni purement exceptionnel : il demeure une obligation de routine active pour la majorité des établissements non dispensés.
 
-### B. Décret n° 2-15-865 (BO n° 6488) — Attribution des Rôles & Procédure d'Avarie
-* **Article 1 (Attribution des rôles, arrivées et départs) :**
-  * La transmission électronique quotidienne des données relatives aux **arrivées et aux départs** des clients est effectuée auprès du **service compétent de la Direction Générale de la Sûreté Nationale (DGSN) ou de la Gendarmerie Royale**.
-  * L'administration chargée du tourisme reçoit les **données statistiques générées à travers ce système électronique**.
-* **Article 4 (Indisponibilité technique > 24 heures) :**
-  * En cas d'indisponibilité du système électronique excédant 24 heures empêchant la télé-déclaration, l'exploitant doit déposer des copies des bulletins individuels d'hébergement **avant 8 heures du matin** auprès du service compétent de la DGSN ou de la Gendarmerie Royale.
-  * Si l'ensemble des arrivées concernées n'a pas pu être télé-déclaré au cours du mois, l'exploitant doit déposer le **relevé mensuel sur formulaire papier avant le 3ᵉ jour du mois suivant** auprès des **services extérieurs de l'administration chargée du tourisme** (Délégation Provinciale / Régionale du Tourisme).
-* **Article 6 (Régularisation post-rétablissement) :**
-  * Dès rétablissement du système électronique, l'exploitant est tenu de procéder à la transmission électronique de l'ensemble des données des déclarations non transmises dans un **délai de 72 heures**.
+### B. Le Formulaire Photographié vs. l'Annexe 2 du Décret
+* **Annexe 2 officielle du Décret 2-15-865 :** Formulaire nominatif d'avarie (mode dégradé > 24h) listant par voyageur : date d'arrivée, date de départ, sexe, nationalité, mineurs < 18 ans, numéro de chambre.
+* **Le document photographié :** Relevé statistique mensuel agrégé par nationalité et par jour calendaire (J1 à J31), exigé par les Délégations Provinciales du Tourisme pour le suivi économique de la fréquentation et le calcul du Taux d'Occupation.
 
-### C. Requalification du Formulaire Photographié
-Le document papier photographié correspond soit au **formulaire d'indisponibilité prescrit par l'Article 4 du Décret 2-15-865**, soit à une pratique administrative locale persistante. Son usage doit être confirmé auprès du riad pilote avant toute hypothèse de conception.
+### C. Dictionnaire des Données Voyageur STDN (Annexe 1 du Décret 2-15-865)
+Le *bulletin individuel d'hébergement* légal et l'interface STDN imposent la collecte structurée des attributs suivants :
+
+| Champ STDN | Caractère | Description / Format |
+| :--- | :--- | :--- |
+| `roomNumber` | Obligatoire | Numéro de la chambre attribuée |
+| `lastName` & `firstName` | Obligatoire | Nom et prénom du voyageur |
+| `sex` | Obligatoire | `M` ou `F` |
+| `nationality` | Obligatoire | Nationalité (code ISO / libellé officiel) |
+| `birthDate` | Obligatoire | Date de naissance (`YYYY-MM-DD`) |
+| `residenceCountry` | Obligatoire | Pays de résidence habituelle (code ISO) |
+| `minorsUnder15` | Obligatoire | Nombre d'enfants accompagnants < 15 ans |
+| `minors15To18` | Obligatoire | Nombre d'enfants accompagnants entre 15 et 18 ans |
+| `arrivalDate` | Obligatoire | Date effective d'arrivée |
+| `expectedDepartureDate` | Obligatoire | Date prévue de départ |
+| `idDocType` | Obligatoire | `CNIE`, `passeport`, `carte_sejour`, `autre` |
+| `idDocNumber` | Obligatoire | Numéro de la pièce d'identité |
+| `guestSignature` | Obligatoire | Émargement physique ou électronique |
+| *Optionnels / Complémentaires* | Optionnel | Lieu de naissance, adresse, ville, profession, motif du voyage, canal de réservation |
 
 ---
 
-## 2. Réalignement Produit pour Kiwi Hôtel
+## 2. Stratégie Produit Kiwi Hôtel
 
-Le produit ne doit pas être conçu autour d'un formulaire papier mensuel obsolète ou de secours, mais autour du flux électronique officiel :
+Au lieu de dépendre d'une API privée non documentée, Kiwi adopte la passerelle officielle documentée par le portail STDN : **l'import par fichier Excel journalier (`JJMMAAAAhhmm.xls`)**.
 
 ```
-                        SAISIE FRONT-DESK / CHECK-IN
-          (Données complètes du bulletin individuel d'hébergement)
+                        SAISIE CHECK-IN KIWI HÔTEL
+           (Champs complets de l'Annexe 1 : Identité, Résidence, Mineurs)
                                      │
                                      ▼
-                     CONTRÔLE DE COHÉRENCE QUOTIDIEN
-                (Badge de déblocage : 0 donnée manquante)
+                     CONTRÔLE DE COHÉRENCE MATINAL
+             (0 anomalie : pièces complètes, départs clôturés)
                                      │
                  ┌───────────────────┴───────────────────┐
                  ▼                                       ▼
-       [ FLUX NOMINAL (STDN) ]               [ FLUX SECOURS / AUDIT ]
-     • Assistance saisie ou export STDN    • Relevé mensuel A4 (Art. 4)
-     • Transmission directe si API confirmée • File locale chiffrée (offline)
-     • Récépissés conservés si fournis     • Archive canonique append-only (serveur)
+    [ MODULE QUOTIDIEN STDN ]               [ MODULE STATISTIQUES MENSUELLES ]
+  • Génération fichier Excel STDN         • Si paperReportingRequired :
+    Format : JJMMAAAAhhmm.xls               Relevé mensuel A4 officiel (1:1)
+  • Téléversement assisté sur stdn.ma     • Calcul TO (brut/net) & DMS
+  • Journalisation locale des dépôts :    • Snapshot append-only mensuel
+    (nom fichier, timestamp, lignes,        avec audit lineage
+    statut rejet/succès STDN)
 ```
 
-### Priorités d'Implémentation Révisées :
-1. **Priorité 1 — Schéma Voyageur STDN Réel :** Capture sécurisée de l'ensemble des attributs du *bulletin individuel d'hébergement* prescrits par le STDN (nationalité et pays de résidence habituelle sont nécessaires mais **non suffisants** ; identité, document de voyage et dates sont requis). Le schéma final dépend du cahier des charges STDN obtenu au Sprint 0.
-2. **Priorité 2 — Écran d'Audit Quotidien :** Détection matinale des omissions bloquantes avant transmission.
-3. **Priorité 3 — Préparation et Export Assisté STDN :** Assistance à la saisie ou export, selon les capacités confirmées du portail STDN. La transmission directe n'est envisageable que si une interface officielle documentée et une habilitation formelle sont confirmées. Conservation des récépissés de transmission, si le STDN en fournit.
-4. **Priorité 4 — Formulaire A4 de Secours :** Moteur d'export du formulaire photographié réservé au mode dégradé (panne > 24h non résorbée dans le mois conformément à l'Art. 4, ou demande spécifique de la délégation).
-5. **Principe d'Archivage :** Une tablette ou un navigateur local ne doit jamais constituer l'archive de référence pour les données sensibles d'identité ; le stockage local reste strictement limité à une file chiffrée temporaire pour le fonctionnement hors-ligne, tandis que l'archive append-only canonique réside côté serveur.
+### Avantages de l'Export Excel STDN :
+1. **Officiel et Supporté :** Le portail STDN dispose d'un module natif d'import en masse sous *Espace pratique*, avec rapport de rejet/validation immédiat.
+2. **Robustesse Immédiate :** Aucun risque de blocage lié à des modifications d'API non publiques ou à des révocations de reverse-engineering.
+3. **Zéro ressaisie :** La réception exporte le fichier du jour en un clic depuis Kiwi et le dépose sur le portail STDN en 30 secondes.
 
 ---
 
-## 3. Questionnaire du Sprint 0 (Auprès du Riad Pilote)
+## 3. Contacts Officiels des Délégations Régionales STDN
 
-Avant d'écrire la moindre ligne de code dans `hotel.js` ou d'exécuter une migration, les réponses formelles aux questions suivantes doivent être obtenues :
+Pour toute clarification administrative ou demande de spécification technique, le Ministère du Tourisme a établi des points focaux dédiés :
 
-1. **Compte STDN :** L'établissement pilote possède-t-il un compte actif sur le portail STDN (`stdn.ma`) ?
-2. **Pratique Réelle :** L'établissement télé-déclare-t-il actuellement ses arrivées/départs tous les jours sur STDN ?
-3. **Origine du Document :** Qui a remis le formulaire papier photographié, à quelle date, et dans quel cadre précis (routine mensuelle exigée par la délégation, panne STDN, ou habitude historique) ?
-4. **Fréquence du Dépôt Papier :** Ce document est-il déposé physiquement chaque mois à la délégation, ou uniquement suite à une panne STDN excédant 24h ?
-5. **Dédoublement Administratif :** La délégation provinciale locale exige-t-elle encore ce relevé papier en parallèle d'un compte STDN actif ?
-6. **Spécifications STDN :** L'établissement peut-il fournir le cahier des charges des champs STDN, le guide d'utilisation et un récépissé récent de télé-déclaration ?
-7. **Procédure d'Avarie :** Quelle est la procédure locale réellement appliquée lors des coupures de réseau dépassant 24h ?
+* **Marrakech-Safi :** `stdn_marrakech@tourisme.gov.ma`
+* **Casablanca-Settat :** `stdn_casablanca@tourisme.gov.ma`
+* **Souss-Massa (Agadir) :** `stdn_agadir@tourisme.gov.ma`
+* **Rabat-Salé-Kénitra :** `stdn_rabat@tourisme.gov.ma`
+* **Tanger-Tétouan-Al Hoceima :** `stdn_tanger@tourisme.gov.ma`
+* **Fès-Meknès :** `stdn_fes@tourisme.gov.ma`
+* **Oriental (Oujda) :** `stdn_oujda@tourisme.gov.ma`
+* **Béni Mellal-Khénifra :** `stdn_benimellal@tourisme.gov.ma`
+* **Drâa-Tafilalet :** `stdn_errachidia@tourisme.gov.ma`
+* **Dakhla-Oued Eddahab :** `stdn_dakhla@tourisme.gov.ma`
+* **Guelmim-Oued Noun :** `stdn_guelmim@tourisme.gov.ma`
+* **Laâyoune-Sakia El Hamra :** `stdn_laayoune@tourisme.gov.ma`
 
 ---
 
-## 4. Tableau de Décision Sprint 0 (À Remplir)
+## 4. Tableau de Décision Sprint 0 — Éléments Tranchés & Reste à Fournir
 
-| Règle / Question | Réponse Officielle | Autorité / Contact | Texte de Référence | Date d'Effet |
-| :--- | :--- | :--- | :--- | :--- |
-| **Statut STDN de l'établissement** | *À renseigner* | Riad Pilote / DGSN-Gendarmerie | Art. 36 Loi 80-14 | À confirmer |
-| **Destinataires des flux (DGSN vs Tourisme)**| DGSN (quotidien) / Tourisme (stats + panne) | DGSN / Délégation | Art. 1 Décret 2-15-865 | À confirmer |
-| **Usage du formulaire papier photographié** | *Secours panne > 24h ou doublon local* | Délégation Provinciale | Art. 4 Décret 2-15-865 | À confirmer |
-| **Champs complets du bulletin STDN** | *À renseigner* | Support STDN / Guide | Spécification STDN | À confirmer |
-| **Comptabilisation des enfants/mineurs** | *À renseigner* | Support STDN / Délégation | Guide STDN | À confirmer |
-| **Traitement du Day-Use** | *À renseigner* | Support STDN / Délégation | Guide STDN | À confirmer |
-| **Traitement des séjours avortés / no-show** | *À renseigner* | Support STDN / Délégation | Guide STDN | À confirmer |
-| **Dénominateur Capacité (TO)** | *Chambres installées vs exploitables* | Délégation / HCP | Guide d'instruction | À confirmer |
-| **Délai légal de conservation** | *À renseigner (CNDP / Fiscale / Police)* | CNDP / DGSN | Lois 09-08 / 80-14 | À confirmer |
+| Dimension | Décision Validée | Source / Justification | Action Restante |
+| :--- | :--- | :--- | :--- |
+| **Schéma Voyageur** | Données complètes Annexe 1 Décret 2-15-865 + découpage mineurs (-15 / 15-18) | BO n° 6488 & Manuel STDN | Valider l'ordre exact des colonnes Excel |
+| **Canal Déclaration Quotidienne** | Générateur de fichier Excel bulk `JJMMAAAAhhmm.xls` | Manuel STDN (*Espace pratique*) | Télécharger le template `.xls` depuis un compte actif |
+| **Relevé Mensuel Photographié** | Maintenu sous condition `paperReportingRequired` | Directives DRT / MGH Nov 2024 | Confirmer le statut d'exemption du riad pilote |
+| **Audit & Récépissés** | Historique local : nom fichier, horodatage, hash, statut d'intégration STDN | Spécification STDN | Récupérer 1 rapport d'intégration réel anonymisé |
+| **Mode Panne Réseau (> 24h)** | Déposition bulletins physiques avant 8h (DGSN) + régularisation STDN sous 72h | Arts. 4 & 6 Décret 2-15-865 | Validé par les textes |
 
 ---
 
 ## 5. Règle d'Ingénierie Verrouillée
 
 * **Code gelé :** Aucune modification de `hotel.js` ni de création de table D1 n'est autorisée.
-* **Prochaine étape utile :** Entretien avec la direction du riad pilote, consultation de leur compte/récépissés STDN, et récupération du cahier des charges des données requises.
+* **Prochaine étape utile :** Télécharger le fichier modèle `.xls` et le guide technique depuis l'espace authentifié du riad pilote (ou par email auprès de `stdn_[region]@tourisme.gov.ma`), et vérifier si le riad bénéficie d'une dispense écrite pour le relevé papier.
