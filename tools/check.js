@@ -975,6 +975,7 @@ section('Whole-project regressions');
   'economat-rd-invariants-test.mjs',
     'formula-protocol-test.mjs',
     'formula-kitchen-paper-test.mjs',
+    'orderpro-formula-explicit-choice-test.mjs',
     'orderpro-formula-choice-images-test.mjs',
     'trade-copy-test.mjs',
     'floor-accept-test.mjs',

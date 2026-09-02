@@ -1691,6 +1691,14 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     .option-group { margin-top: 16px; }
     .option-group:first-child { margin-top: 4px; }
+    .option-group.is-invalid {
+      border-radius: 14px;
+      box-shadow: 0 0 0 2px #B3261E;
+      padding: 10px;
+      margin-left: 2px;
+      margin-right: 2px;
+    }
+    .option-group.is-invalid .option-group-label { color: #B3261E; }
     .option-group-label {
       font-family: var(--sans);
       font-size: 11px;
@@ -3731,6 +3739,8 @@ em, i, cite, dfn, var { font-style: normal; }
         btn_add: "Ajouter",
         opt_choose_one: "choisir 1",
         opt_choose_many: "plusieurs possibles",
+        opt_required: "obligatoire",
+        opt_required_missing: "Choisissez une option pour « {name} ».",
         // Per-option translations go here, keyed opt_label_<key> and opt_<key>_<choiceId>.
         // Missing keys fall back to the OPT definition's own label. Add per client menu.
         opt_retirer_prefix: "Sans ",
@@ -3905,6 +3915,8 @@ em, i, cite, dfn, var { font-style: normal; }
         btn_add: "Add",
         opt_choose_one: "pick 1",
         opt_choose_many: "pick any",
+        opt_required: "required",
+        opt_required_missing: "Choose an option for “{name}”.",
         // Per-option translations go here, keyed opt_label_<key> and opt_<key>_<choiceId>.
         // Missing keys fall back to the OPT definition's own label. Add per client menu.
         opt_retirer_prefix: "No ",
@@ -4076,6 +4088,8 @@ em, i, cite, dfn, var { font-style: normal; }
         btn_add: "زيد",
         opt_choose_one: "اختار 1",
         opt_choose_many: "اختار اللي بغيتي",
+        opt_required: "ضروري",
+        opt_required_missing: "اختار واحد الاختيار فـ «{name}».",
         // Per-option translations go here, keyed opt_label_<key> and opt_<key>_<choiceId>.
         // Missing keys fall back to the OPT definition's own label. Add per client menu.
         opt_retirer_prefix: "بلا ",
@@ -4751,14 +4765,27 @@ em, i, cite, dfn, var { font-style: normal; }
     }
 
     /* ============ Customizer ============ */
+    function initialCustomizerSelections(options) {
+      const selections = {};
+      for (const opt of options || []) {
+        if (opt.type === 'single') {
+          /* Formula stages describe the customer's meal. Even a configured
+             default must never count as consent: every formula choice starts
+             empty and only an explicit tap may fill it. Ordinary item options
+             retain their existing default/first-choice behaviour. */
+          selections[opt.key] = opt.formulaSlotId
+            ? ''
+            : (opt.default || (opt.choices && opt.choices[0] && opt.choices[0].id) || '');
+        } else {
+          selections[opt.key] = [];
+        }
+      }
+      return selections;
+    }
+
     function openCustomizer(item) {
       customizerItem = item;
-      // Initialize with defaults
-      customizerSelections = {};
-      for (const opt of item.options || []) {
-        if (opt.type === 'single') customizerSelections[opt.key] = opt.default || opt.choices[0].id;
-        else customizerSelections[opt.key] = [];
-      }
+      customizerSelections = initialCustomizerSelections(item.options);
       customizerNote = '';
 
       // Populate header
@@ -4778,7 +4805,9 @@ em, i, cite, dfn, var { font-style: normal; }
         <div class="option-group${showChoiceImages ? ' has-choice-images' : ''}" data-opt="${opt.key}">
           <div class="option-group-label">
             <span>${groupLabel(opt.key)}</span>
-            <span class="opt-type">${opt.type === 'multi' ? t('opt_choose_many') : t('opt_choose_one')}</span>
+            <span class="opt-type">${opt.formulaSlotId && Math.max(0, Number(opt.min) || 0) > 0
+              ? `${t('opt_required')} · ${opt.type === 'multi' ? t('opt_choose_many') : t('opt_choose_one')}`
+              : (opt.type === 'multi' ? t('opt_choose_many') : t('opt_choose_one'))}</span>
           </div>
           <div class="option-chips">
             ${opt.choices.map(c => `
@@ -4806,6 +4835,8 @@ em, i, cite, dfn, var { font-style: normal; }
       $('#custom-note-input').value = '';
 
       refreshCustomizerPrice();
+      const customScroll = $('.custom-scroll', $('#custom-sheet'));
+      if (customScroll) customScroll.scrollTop = 0;
       $('#custom-sheet').classList.add('is-open');
       $('#custom-sheet').setAttribute('aria-hidden', 'false');
       if (window.lucide) window.lucide.createIcons();
@@ -4829,6 +4860,8 @@ em, i, cite, dfn, var { font-style: normal; }
       // Update chip visuals
       const group = document.querySelector(`.option-group[data-opt="${optKey}"]`);
       if (!group) return;
+      group.classList.remove('is-invalid');
+      group.removeAttribute('aria-invalid');
       if (type === 'single') {
         $$('.option-chip', group).forEach(c => {
           c.classList.toggle('is-active', c.dataset.choice === choiceId);
@@ -4868,7 +4901,19 @@ em, i, cite, dfn, var { font-style: normal; }
         const count = Array.isArray(selected) ? selected.length : (selected ? 1 : 0);
         return count < Math.max(0, Number(opt.min) || 0) || count > Math.max(1, Number(opt.max) || 1);
       });
-      if (invalidFormulaSlot) { showToast(t('order_send_failed')); return; }
+      if (invalidFormulaSlot) {
+        const group = Array.from(document.querySelectorAll('.option-group'))
+          .find(el => el.dataset.opt === invalidFormulaSlot.key);
+        if (group) {
+          group.classList.add('is-invalid');
+          group.setAttribute('aria-invalid', 'true');
+          group.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          const firstChoice = group.querySelector('.option-chip');
+          if (firstChoice) window.setTimeout(() => firstChoice.focus({ preventScroll: true }), 260);
+        }
+        showToast(t('opt_required_missing').replace('{name}', groupLabel(invalidFormulaSlot.key)));
+        return;
+      }
       customizerNote = $('#custom-note-input').value.trim();
       addLineToCart({
         id: customizerItem.id,
