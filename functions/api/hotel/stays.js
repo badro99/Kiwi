@@ -1,9 +1,24 @@
 // Authenticated hotel stay writer. Manual, direct and OTA stays are committed
 // into the same revisioned reservations document used by /api/booking, so a
 // room accepted here disappears from public availability in the same write.
-import { json } from '../../auth/_lib.js';
+import {
+  isTerminalFor,
+  json,
+  operatorActor,
+  readCookie,
+  readSession,
+  SESS_COOKIE,
+} from '../../auth/_lib.js';
 import { tenantFor } from '../_private.js';
 import { poke } from '../_live.js';
+import {
+  currentRoomSegment,
+  normalizeGuestSegments,
+  readGuestSegments,
+  readRoomSegments,
+  stayEventPayload,
+  stayEventType,
+} from './_stay-events.js';
 
 const ACTIVE = new Set(['requested', 'confirmed', 'checked_in']);
 const CHANNELS = new Set(['direct', 'booking', 'airbnb', 'expedia', 'walkin', 'other']);
@@ -41,6 +56,8 @@ function safeDoc(raw) {
       channel: CHANNELS.has(x.hotel.channel) ? x.hotel.channel : (x.source === 'public' ? 'direct' : 'other'),
       externalRef: str(x.hotel.externalRef, 80),
       feedId: str(x.hotel.feedId, 64), syncedAt: +x.hotel.syncedAt || 0, conflict: !!x.hotel.conflict,
+      guestSegments: readGuestSegments(x.hotel.guestSegments, str(x.hotel.checkIn, 10), str(x.hotel.checkOut, 10)),
+      roomSegments: readRoomSegments(x.hotel.roomSegments, str(x.hotel.checkIn, 10), str(x.hotel.checkOut, 10)),
     } : null;
     return {
       id: str(x?.id, 64), code: str(x?.code, 24), customer: { name: str(x?.customer?.name, 100), phone: str(x?.customer?.phone, 32), email: str(x?.customer?.email, 160) },
@@ -97,15 +114,51 @@ async function rowsFor(env, merchant) {
   const rows = await env.DB.batch([
     env.DB.prepare("SELECT data, rev FROM store_docs WHERE merchant = ? AND feature = 'reservations'").bind(merchant),
     env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'rooms'").bind(merchant),
+    env.DB.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'hotel_stay_events'"),
   ]);
   const first = (r) => r?.results?.[0] || null;
-  return { reservation: first(rows[0]), rooms: first(rows[1]) };
+  return { reservation: first(rows[0]), rooms: first(rows[1]), hasEventLedger: !!first(rows[2]) };
 }
-async function write(env, merchant, doc, rev, now) {
+async function actorFor(request, env, merchant, terminalId) {
+  try {
+    const session = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET);
+    if (session?.aid) return { id: str(session.aid, 80), role: 'owner' };
+  } catch (_) {}
+  try {
+    const actor = await operatorActor(request, env);
+    if (actor?.id) return { id: str(actor.id, 80), role: 'operator' };
+  } catch (_) {}
+  try {
+    if (terminalId && await isTerminalFor(request, env, merchant, terminalId)) {
+      return { id: terminalId, role: 'till' };
+    }
+  } catch (_) {}
+  return { id: 'authenticated', role: 'merchant' };
+}
+async function write(env, merchant, doc, rev, now, event, hasEventLedger) {
   const text = JSON.stringify(doc), next = rev + 1;
-  let result;
-  if (rev) result = await env.DB.prepare("UPDATE store_docs SET data = ?, rev = ?, updated_ts = ? WHERE merchant = ? AND feature = 'reservations' AND rev = ?").bind(text, next, now, merchant, rev).run();
-  else result = await env.DB.prepare("INSERT OR IGNORE INTO store_docs (merchant, feature, data, rev, updated_ts) VALUES (?, 'reservations', ?, 1, ?)").bind(merchant, text, now).run();
+  const statement = rev
+    ? env.DB.prepare("UPDATE store_docs SET data = ?, rev = ?, updated_ts = ? WHERE merchant = ? AND feature = 'reservations' AND rev = ?").bind(text, next, now, merchant, rev)
+    : env.DB.prepare("INSERT OR IGNORE INTO store_docs (merchant, feature, data, rev, updated_ts) VALUES (?, 'reservations', ?, 1, ?)").bind(merchant, text, now);
+  if (!hasEventLedger) {
+    const result = await statement.run();
+    return (result?.meta?.changes || 0) > 0 ? next : 0;
+  }
+  const payload = JSON.stringify(stayEventPayload(event.booking));
+  const eventStatement = env.DB.prepare(`
+    INSERT OR IGNORE INTO hotel_stay_events
+      (merchant,id,stay_id,event_type,payload_json,occurred_ts,srv_cursor,event_ordinal,actor_id,actor_role)
+    SELECT ?,?,?,?,?,?,?,0,?,?
+    WHERE EXISTS (
+      SELECT 1 FROM store_docs
+      WHERE merchant = ? AND feature = 'reservations' AND rev = ? AND data = ?
+    )
+  `).bind(
+    merchant, event.id, event.booking.id, event.type, payload, now, next, event.actorId, event.actorRole,
+    merchant, next, text,
+  );
+  const results = await env.DB.batch([statement, eventStatement]);
+  const result = results[0];
   return (result?.meta?.changes || 0) > 0 ? next : 0;
 }
 
@@ -115,6 +168,9 @@ export async function onRequestPost({ request, env }) {
   const merchant = await tenantFor(request, env, b?.merchant, { strict: true });
   if (!merchant) return json({ error: 'unauthorized' }, 401);
   const action = str(b?.action || 'save', 16), existingId = str(b?.id, 64);
+  const eventId = 'evt_' + crypto.randomUUID();
+  const actor = await actorFor(request, env, merchant, str(b?.terminalId, 80));
+  const actorId = actor.id, actorRole = actor.role;
 
   for (let attempt = 0; attempt < 4; attempt++) {
     let rows; try { rows = await rowsFor(env, merchant); } catch (_) { return json({ error: 'unavailable' }, 503); }
@@ -129,7 +185,8 @@ export async function onRequestPost({ request, env }) {
         return json({ error: 'invalid-status-transition', from: old.status, to: 'cancelled' }, 409);
       }
       old.status = 'cancelled'; old.updatedAt = now;
-      try { const next = await write(env, merchant, doc, rev, now); if (next) { await poke(env, merchant, 'reservations'); return json({ ok: true, rev: next, booking: old }); } } catch (_) { return json({ error: 'write-failed' }, 503); }
+      const event = { id: eventId, type: stayEventType(old, old, action), booking: old, actorId, actorRole };
+      try { const next = await write(env, merchant, doc, rev, now, event, rows.hasEventLedger); if (next) { await poke(env, merchant, 'reservations'); return json({ ok: true, rev: next, booking: old }); } } catch (_) { return json({ error: 'write-failed' }, 503); }
       continue;
     }
     if (action !== 'save') return json({ error: 'bad-action' }, 400);
@@ -166,12 +223,15 @@ export async function onRequestPost({ request, env }) {
         channel, externalRef: externalRef || old?.hotel?.externalRef || '',
         feedId: old?.hotel?.feedId || '', syncedAt: old?.hotel?.syncedAt || 0,
         conflict: false,
+        guestSegments: normalizeGuestSegments(b?.guestSegments, old?.hotel?.guestSegments, partySize, checkIn, checkOut),
+        roomSegments: currentRoomSegment(room.id, checkIn, checkOut),
       },
       createdAt: old?.createdAt || now, updatedAt: now,
     };
     const index = old ? doc.bookings.findIndex((x) => x.id === old.id) : -1;
     if (index < 0) doc.bookings.push(rec); else doc.bookings[index] = rec;
-    try { const next = await write(env, merchant, doc, rev, now); if (next) { await poke(env, merchant, 'reservations'); return json({ ok: true, rev: next, booking: rec }); } } catch (_) { return json({ error: 'write-failed' }, 503); }
+    const event = { id: eventId, type: stayEventType(old, rec, action), booking: rec, actorId, actorRole };
+    try { const next = await write(env, merchant, doc, rev, now, event, rows.hasEventLedger); if (next) { await poke(env, merchant, 'reservations'); return json({ ok: true, rev: next, booking: rec }); } } catch (_) { return json({ error: 'write-failed' }, 503); }
   }
   return json({ error: 'write-conflict' }, 409);
 }

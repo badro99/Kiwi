@@ -596,6 +596,26 @@ CREATE TABLE IF NOT EXISTS store_docs (
   PRIMARY KEY (merchant, feature)
 );
 
+-- Append-only, non-PII hotel stay history. `srv_cursor` reuses the monotonic
+-- reservations-document revision; gaps are valid and batch imports may use
+-- `event_ordinal` for several stay events committed under one revision.
+CREATE TABLE IF NOT EXISTS hotel_stay_events (
+  merchant      TEXT NOT NULL,
+  id            TEXT NOT NULL,
+  stay_id       TEXT NOT NULL,
+  event_type    TEXT NOT NULL,
+  payload_json  TEXT NOT NULL,
+  occurred_ts   INTEGER NOT NULL,
+  srv_cursor    INTEGER NOT NULL,
+  event_ordinal INTEGER NOT NULL DEFAULT 0,
+  actor_id      TEXT NOT NULL,
+  actor_role    TEXT NOT NULL,
+  PRIMARY KEY (merchant, id),
+  UNIQUE (merchant, srv_cursor, event_ordinal)
+);
+CREATE INDEX IF NOT EXISTS idx_hotel_stay_events_stay
+  ON hotel_stay_events (merchant, stay_id, srv_cursor);
+
 -- ── STOCK RÉEL · REGISTRE DE MOUVEMENTS ──────────────────────────────────
 -- Une quantité de stock n'est jamais écrasée : elle est la somme de ce journal
 -- append-only. L'identifiant vient du client et rend le rejeu hors-ligne

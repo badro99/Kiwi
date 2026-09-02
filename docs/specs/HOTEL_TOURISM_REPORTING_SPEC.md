@@ -3,7 +3,7 @@
 **Domaine :** Kiwi Hôtel / Riad  
 **Cadre juridique :** Loi n° 80-14 (BO n° 6404) & Décret n° 2-15-865 (BO n° 6488, Annexes 1 & 2)  
 **Sources professionnelles secondaires :** Guide professionnel MGH diffusé à la demande de la DRT (créé en 2022), à confirmer localement  
-**Statut :** **Sprint 0 — Découverte Administrative Consolidée (Cadrage Légal & Sémantique Verrouillé)**  
+**Statut :** **Sprint 0 administratif ouvert · Sprint 1A technique autorisé en mode non réglementaire**  
 **Emplacement :** `docs/specs/HOTEL_TOURISM_REPORTING_SPEC.md`
 
 ---
@@ -130,5 +130,7 @@ Avant d'écrire la moindre ligne de code dans `hotel.js` ou d'exécuter une migr
 
 ## 5. Règle d'Ingénierie Verrouillée
 
-* **Code gelé :** Aucune modification de `hotel.js` ni de création de table D1 n'est autorisée.
-* **Prochaine étape utile :** Télécharger le fichier modèle actuel et la notice technique depuis l'espace pratique du compte STDN du riad pilote, et clarifier ses deux statuts d'exemption (`policePaperStatus` et `tourismMonthlyStatus`).
+* **Autorisé sans les pièces STDN :** modèle interne normalisé, segments voyageurs/chambres, journal append-only sans PII, contrôles de complétude, permissions et écriture en ombre. Ces éléments ne dépendent ni de l'ordre des colonnes STDN ni de la maquette provinciale.
+* **Toujours gelé :** sérialiseur STDN, calculs MRE/REM, règles mineurs/day-use, taux d'occupation réglementaire, clôture officielle, PDF/Excel/CSV administratif et toute migration de production.
+* **Compatibilité :** tant que la table `hotel_stay_events` n'existe pas dans une base, le writer conserve le chemin historique `store_docs`. La migration fournie n'est pas appliquée automatiquement.
+* **Prochaine preuve utile :** télécharger le modèle actuel et la notice technique depuis l'espace pratique du compte STDN du riad pilote, puis clarifier ses deux statuts d'exemption (`policePaperStatus` et `tourismMonthlyStatus`). Ces preuves débloquent les Sprints 4 et 5, pas le socle interne des Sprints 1 à 3.
