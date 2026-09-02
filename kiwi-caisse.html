@@ -5420,8 +5420,8 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=458" defer></script>
-  <script src="assets/live-link.js?v=18" defer></script>
+  <script src="assets/caisse-pwa.js?v=459" defer></script>
+  <script src="assets/live-link.js?v=19" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
   <script src="assets/staff-roles.js?v=1" defer></script>
@@ -12863,16 +12863,30 @@
     function recordSale(amount, method, label, tip, lines, settlementTable) {
       amount = money(amount);
       if (amount <= 0) return;
+      /* An OrderPro takeaway is one commercial event even if the success modal
+         is closed, the PWA reloads, or the remote paid flag arrives late. Tie
+         the ledger row to the immutable OrderPro id instead of minting a new
+         sale id on every tap. This is the financial last line of defence: a
+         second Encaisser can reconcile the UI, never book the money twice. */
+      const vrapOrder = mode === 'vrap' && vrapEditingNum != null
+        ? kdsOrders.find(o => o && o.num === vrapEditingNum) : null;
+      const orderProSaleId = vrapOrder && vrapOrder.opId
+        ? ('sale-' + String(vrapOrder.opId).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 58)) : '';
+      if (orderProSaleId) {
+        const existingSale = journal.find(row => row && row.id === orderProSaleId);
+        if (existingSale) { lastSaleId = existingSale.id; return existingSale; }
+      }
       const discount = activeSaleDiscount(amount, lines);
       accountActiveDiscount();
       const entry = {
-        id: 'sale-' + Date.now() + '-' + journal.length,
+        id: orderProSaleId || ('sale-' + Date.now() + '-' + journal.length),
         time: new Date(),
         label: label || 'Vente',
         amount: amount, method: method, ref: genRef(),
         tip: money(tip),
         cashier: currentCashier.name,
       };
+      if (vrapOrder && vrapOrder.opId) entry.orderId = String(vrapOrder.opId);
       if (discount) Object.assign(entry, discount);
       if (settlementTable) {
         const visit = phoneSessionOf(settlementTable);
@@ -12941,6 +12955,7 @@
       try { if (window.KiwiLive) window.KiwiLive.postSale(entry); } catch (_) {}
       renderShiftStats();
       if ($('#journal-drawer').classList.contains('is-open')) renderJournal();
+      return entry;
     }
 
     /* Every completed payment already exists in the SAME cloud sales ledger
@@ -17958,6 +17973,18 @@
              cuisine MAINTENANT, et pas avant. C'est ce que le paiement protège
              · on ne prépare rien pour quelqu'un qui n'est jamais venu. */
           dispatchHeldTakeaway(o, true, true);
+          /* Already-sent orders are no longer `held`, so dispatchHeldTakeaway
+             correctly does nothing. Payment still has to cross the server
+             boundary; the queue endpoint accepts this same-state paid stamp
+             idempotently without replaying the kitchen transition. */
+          if (o.opId) {
+            const remoteStatus = o.pickedUp ? 'served' : (o.status === 'ready' ? 'ready' : 'accepted');
+            opPush(o, remoteStatus, { paid: true });
+          }
+          /* dispatchHeldTakeaway persists before this function flips `paid`.
+             Persist again at the money boundary so closing the success modal,
+             refreshing, or a PWA takeover cannot resurrect an unpaid card. */
+          try { persistShift(); } catch (_) {}
           toast(`Commande ${ticketNo(o)} encaissée · ${fmtMAD(o.total)}`);
         }
         vrapEditingNum = null;

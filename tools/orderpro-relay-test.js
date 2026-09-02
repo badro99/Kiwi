@@ -375,6 +375,10 @@ async function get(fn, qs, headers = {}) {
   let tk = await post(placeOrder, { merchant: SLUG, mode: 'takeout', session: tkSess, lines: [line('i1')] });
   const tkId = tk.body.id;
   await post(queuePost, { merchant: SLUG, id: tkId, status: 'accepted', paid: true }, asStaff);
+  r = await post(queuePost, { merchant: SLUG, id: tkId, status: 'accepted', paid: true }, asStaff);
+  ok('encaisser après l’envoi cuisine estampille le paiement sans rejouer la transition',
+    r.status === 200 && r.body.paid === true && r.body.replayed === true
+      && !!DB._db.prepare('SELECT paid_ts FROM orders WHERE id=?').get(tkId).paid_ts);
   await post(queuePost, { merchant: SLUG, id: tkId, status: 'ready' }, asStaff);
   r = await post(queuePost, { merchant: SLUG, id: tkId, status: 'served' }, asStaff);
   ok('la commande à emporter est remise', r.status === 200);

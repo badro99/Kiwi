@@ -501,6 +501,7 @@
       lines: lines,                                           // null ⇒ unknown, never "empty basket"
     };
     if (entry.channel) body.channel = String(entry.channel).slice(0, 24);
+    if (entry.orderId) body.orderId = String(entry.orderId).slice(0, 64);
     if (entry.session) body.session = String(entry.session).slice(0, 64);
     if (entry.discountAmountCents != null) {
       body.grossAmountCents = Math.round(Number(entry.grossAmountCents));

@@ -1592,6 +1592,21 @@ export async function onRequestPost(context) {
         .bind(id, merchant).first();
     } catch (_) {}
     if (!cur) return json({ error: 'not-found' }, 404);
+    /* Encaisser an already accepted/ready takeaway is not a kitchen status
+       transition; it is an idempotent payment stamp. Previously the repeated
+       status returned 409 before paid_ts was written, so the sale reached the
+       books while the caisse card stayed payable and could be booked twice. */
+    if (paid && cur.status === status) {
+      try {
+        await env.DB.prepare(
+          `UPDATE orders SET paid_ts = COALESCE(paid_ts, ?), updated_ts = ?
+            WHERE id = ? AND merchant = ?`
+        ).bind(now, now, id, merchant).run();
+        return json({ ok: true, id, status: cur.status, number: cur.number, paid: true, replayed: true });
+      } catch (e) {
+        return json({ error: 'payment-state-write-failed', detail: String((e && e.message) || e) }, 503);
+      }
+    }
     return json({ error: 'bad-transition', status: cur.status, number: cur.number }, 409);
   }
 

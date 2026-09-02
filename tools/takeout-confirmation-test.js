@@ -9,6 +9,7 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '..');
 const CAISSE = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
 const INBOX = fs.readFileSync(path.join(ROOT, 'assets/orderpro-inbox.js'), 'utf8');
+const LIVE = fs.readFileSync(path.join(ROOT, 'assets/live-link.js'), 'utf8');
 let failed = 0;
 function ok(label, yes) {
   if (yes) console.log('  ✓ ' + label);
@@ -41,6 +42,12 @@ ok('le crochet imprime localement avec l’identifiant OrderPro dédupliqué',
 ok('envoyer en cuisine et encaisser restent deux gestes distincts sur OrderPro',
   /data-kop-acc/.test(INBOX) && /data-kop-pay/.test(INBOX) &&
   /data-vrap-send/.test(CAISSE));
+ok('le premier encaissement OrderPro possède une clé comptable stable',
+  /orderProSaleId[\s\S]{0,500}journal\.find\(row => row && row\.id === orderProSaleId\)/.test(CAISSE));
+ok('le statut payé est persisté après la confirmation, même si le modal est fermé',
+  /function settleVrapPayment\(\)[\s\S]{0,1800}opPush\(o, remoteStatus, \{ paid: true \}\)[\s\S]{0,400}persistShift\(\)/.test(CAISSE));
+ok('la vente cloud transporte l’identifiant OrderPro sans dépendre du libellé',
+  LIVE.includes('if (entry.orderId) body.orderId ='));
 
 if (failed) process.exit(1);
 console.log('\n  Caisse takeout + OrderPro confirmation boundaries verified.\n');
