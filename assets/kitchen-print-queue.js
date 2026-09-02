@@ -184,11 +184,6 @@
     if (running) return Promise.resolve(status());
     var q = readQueue();
     if (!q.length) { emit(); return Promise.resolve(status()); }
-    if (!printerReady()) {
-      lastError = 'printer-not-configured';
-      notifyWaiting(lastError); emit(); schedule();
-      return Promise.resolve(status());
-    }
     var now = Date.now();
     var job = q.find(function (x) { return !x.nextAt || Number(x.nextAt) <= now; });
     if (!job) { schedule(); return Promise.resolve(status()); }
@@ -205,7 +200,9 @@
       ? (window.KiwiReceipt && typeof window.KiwiReceipt.print === 'function'
           ? window.KiwiReceipt.print(job.payload)
           : Promise.resolve({ ok: false, reason: 'receipt-renderer-unavailable' }))
-      : window.KiwiPrinter.printKitchen(job.payload, { station: station });
+      : (window.KiwiPrinter && typeof window.KiwiPrinter.printKitchen === 'function'
+          ? window.KiwiPrinter.printKitchen(job.payload, { station: station })
+          : Promise.resolve({ ok: false, reason: 'printer-not-configured' }));
     return Promise.resolve(print).then(function (result) {
       running = false;
       if (result && result.ok) complete(job, result);

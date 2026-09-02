@@ -29,6 +29,7 @@ const localStorage = {
 };
 const merchantState = { value: 'amira-cafe' };
 let printerMode = 'ok';
+let printerConnected = true;
 const printed = [];
 const receipts = [];
 const legacyReceipts = [];
@@ -52,7 +53,7 @@ function boot() {
       },
     },
     KiwiPrinter: {
-      isConnected: () => true,
+      isConnected: () => printerConnected,
       printKitchen(payload) {
         printed.push(payload);
         if (printerMode === 'throw') return Promise.reject(new Error('bridge-offline'));
@@ -127,6 +128,19 @@ ok('la relance imprime le bon conservé', printed.length === attemptsAfterFailur
 app.KiwiKitchenPrint.retryNow();
 await wait();
 ok('relancer après succès ne fabrique pas une copie', printed.length === attemptsAfterFailure + 1);
+
+// The bridge readiness hint can briefly be stale while its merchant/printer
+// configuration is loading. Encaisser must still attempt the real transport
+// immediately; otherwise the ticket waits for an unrelated later UI action.
+printerConnected = false;
+const beforeStaleHint = printed.length;
+app.KiwiKitchenPrint.enqueue([
+  { id: 'op-takeout-paid-stale-hint:cuisson', createdAt: Date.now(), payload: { title: 'CUISSON', items: [{ name: 'Tajine' }] } },
+]);
+await wait();
+ok('encaisser un OrderPro à emporter tente immédiatement le transport même si le témoin de connexion est périmé',
+  printed.length === beforeStaleHint + 1 && app.KiwiKitchenPrint.pending() === 0);
+printerConnected = true;
 
 merchantState.value = 'restaurant-rival';
 app = boot();
