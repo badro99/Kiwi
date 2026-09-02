@@ -24,7 +24,7 @@ L'exploitation des textes officiels du Bulletin Officiel (Loi 80-14, Décret 2-1
   **Règle de sécurité opérationnelle :** Tant qu'une dispense écrite formelle n'a pas été enregistrée, toute valeur `'unknown'` est traitée opérationnellement comme `'required'` pour les deux statuts, évitant tout risque d'omission administrative.
 
 ### B. Distinction Rigoureuse : Annexe 2 Légale vs. Relevé Mensuel Statistique
-L'Annexe 2 et le relevé photographié ne sont pas des alternatives substituables ; ce sont deux instruments juridiques distincts pouvant coexister sur une même période :
+L'Annexe 2 et le relevé photographié ne sont pas des alternatives substituables ; ce sont deux instruments administratifs distincts pouvant coexister sur une même période :
 * **Annexe 2 officielle du Décret 2-15-865 (Formulaire d'avarie légal) :** Tableau nominatif d'avarie obligatoire en cas d'indisponibilité STDN > 24h non résorbée dans le mois (Décret 2-15-865, Art. 4), listant par voyageur : date d'arrivée, date de départ, sexe, nationalité, mineurs de moins de 18 ans, numéro de chambre.
 * **Le document photographié (Relevé mensuel statistique de routine) :** Un relevé mensuel agrégé par nationalité et par jour calendaire (J1 à J31), exigé à titre de suivi statistique par les Délégations du Tourisme tant que l'établissement n'a pas reçu de dispense formelle (`tourismMonthlyStatus !== 'exempt'`). Sa maquette exacte acceptée localement doit être confirmée avec la délégation compétente.
 
@@ -67,10 +67,10 @@ Au lieu de dépendre d'une API privée non documentée, Kiwi adopte la passerell
     [ MODULE QUOTIDIEN STDN ]               [ MODULE STATISTIQUES MENSUELLES ]
   • Génération fichier d'import agréé     • Si tourismMonthlyStatus !== 'exempt' :
     (Documentation historique :             Relevé mensuel conforme à l'usage local
-     JJMMAAAAhhmm.xls ; production        • Si panne STDN > 24h dans le mois :
-     calquée sur le modèle actuel)          Annexe 2 officielle (Décret Art. 4)
-  • Téléversement assisté sur stdn.ma     • Calcul TO (brut/net) & DMS
-  • File locale chiffrée (outbox)         • Snapshot append-only serveur
+     JJMMAAAAhhmm.xls ; production        • Si des arrivées restent non télédéclarées
+     calquée sur le modèle actuel)          au terme du mois d'indisponibilité :
+  • Téléversement assisté sur stdn.ma       Annexe 2 officielle (Décret Art. 4)
+  • File locale chiffrée (outbox)         • Calcul TO (brut/net) & DMS
   • Registre d'audit serveur canonique      avec audit lineage
   • Rétention sécurisée en outbox
     jusqu'à confirmation d'intégration
