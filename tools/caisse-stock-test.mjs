@@ -60,7 +60,9 @@ ok('une vente sortie des livres rend la marchandise',
 ok('une addition réglée sur le téléphone du serveur sort la marchandise',
   /KiwiInventoryConsumption\?\.record\?\.\(entry\)/.test(body('ingestSettledCloudSales')));
 /* Les lignes doivent porter leur identifiant, sinon tout repose sur le nom. */
-ok('les lignes du comptoir portent leur itemId', /itemId:\s*(c\.id|l\.id)/.test(body('currentSaleLines')));
+ok('les lignes du comptoir portent leur itemId',
+  /function receiptLinesFromOrder[\s\S]{0,800}itemId:\s*line\.id\s*\|\|\s*line\.itemId/.test(CAISSE)
+  && /return receiptLinesFromOrder\((?:cart|source)\)/.test(body('currentSaleLines')));
 
 /* ── II · le contrat, contre le vrai moteur et le vrai registre ──────────── */
 const memory = new Map();

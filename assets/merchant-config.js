@@ -492,8 +492,10 @@
   }
 
   var lastSlug = null;
+  var lastMerchant = null;
   function fetchConfig() {
     lastSlug = storeSlug();
+    lastMerchant = merchant();
     return fetch(configUrl(), { headers: { Accept: 'application/json' } })
       .then(function (r) { return (r && r.ok) ? r.json() : null; })
       .then(function (data) {
@@ -683,9 +685,11 @@
     fetchConfig();
   });
   window.addEventListener('storage', function (e) {
-    if (e && (e.key === 'kiwiLiveMerchant' || e.key === 'kiwiPairedVenue' || e.key === 'kiwiPairHandoff')) {
-      fetchConfig();
-    }
+    /* Pairing identity is resolved in merchant(), through the shared tenant
+       boundary. Do not duplicate its storage-key allowlist here: comparing the
+       resolved tenant refreshes cross-tab pairing changes without giving this
+       feature module a second, divergent definition of "current merchant". */
+    if (e && merchant() !== lastMerchant) fetchConfig();
   });
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
