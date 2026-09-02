@@ -426,6 +426,8 @@ for (const test of [
   'inventory-waste-test.mjs',
   'inventory-universal-count-test.mjs',
   'inventory-expiry-test.mjs',
+  'hotel-exceptions-test.mjs',
+  'hotel-declarations-closing-test.mjs',
 ]) {
   const { spawnSync } = require('child_process');
   const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', test)], { encoding: 'utf8' });

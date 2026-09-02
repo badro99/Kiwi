@@ -1292,10 +1292,134 @@
       <div class="hx-kpi"><div class="l">Tarif de base</div><div class="v">${cuState().baseRate == null ? '·' : fmt(cuState().baseRate) + ' <small>MAD</small>'}</div><div class="d">réglable dans Tarifs</div></div>
     </div>`;
   }
+  function cuEvaluateStayExceptions(b, today) {
+    const errs = [];
+    if (!b || !b.hotel || b.status === 'cancelled' || b.status === 'no_show') return errs;
+    const cin = b.hotel.checkIn, cout = b.hotel.checkOut;
+    const guests = Array.isArray(b.guests) ? b.guests : [];
+    const partySize = +b.partySize || 1;
+
+    // Stale check-out (in-house guest past departure date)
+    if (b.status === 'checked_in' && cout < today) {
+      errs.push({
+        code: 'stale_checkout',
+        severity: 'danger',
+        label: 'Départ dépassé non clôturé',
+        detail: 'Départ prévu le ' + cout,
+      });
+    }
+
+    // In-house missing guest manifest
+    if (b.status === 'checked_in') {
+      if (guests.length < partySize) {
+        errs.push({
+          code: 'missing_manifest',
+          severity: 'warn',
+          label: 'Fiche incomplète (' + guests.length + '/' + partySize + ' pers.)',
+          detail: 'Voyageurs physiques non enregistrés',
+        });
+      }
+      guests.forEach((g, idx) => {
+        const num = idx + 1;
+        if (!g.idDocNumber || !g.idDocType) {
+          errs.push({
+            code: 'missing_identity',
+            severity: 'danger',
+            label: 'Pièce d’identité manquante (Voyageur ' + num + ')',
+            detail: g.name || 'Nom non renseigné',
+          });
+        }
+        if (!g.nationality) {
+          errs.push({
+            code: 'missing_nationality',
+            severity: 'danger',
+            label: 'Nationalité manquante (Voyageur ' + num + ')',
+            detail: g.name || 'Nom non renseigné',
+          });
+        }
+        if (!g.residenceCountry) {
+          errs.push({
+            code: 'missing_residence',
+            severity: 'warn',
+            label: 'Pays de résidence manquant (Voyageur ' + num + ')',
+            detail: g.name || 'Nom non renseigné',
+          });
+        }
+      });
+    } else if ((b.status === 'confirmed' || b.status === 'requested') && cin <= today) {
+      if (!guests.length) {
+        errs.push({
+          code: 'unconfirmed_arrival',
+          severity: 'info',
+          label: 'Arrivée & fiche en attente',
+          detail: 'Arrivée prévue le ' + cin,
+        });
+      }
+    }
+
+    return errs;
+  }
+
   function cuReceptionBody() {
     const sold = cuState().sold;
+    const doc = window.KiwiReservations?.get?.() || { bookings: [] };
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+
+    const activeStays = (doc.bookings || []).filter((b) => b.hotel && b.status !== 'cancelled' && b.status !== 'no_show');
+    const exceptionsList = [];
+    activeStays.forEach((b) => {
+      const errs = cuEvaluateStayExceptions(b, today);
+      if (errs.length) exceptionsList.push({ booking: b, errs });
+    });
+
+    const criticalCount = exceptionsList.filter((x) => x.errs.some((e) => e.severity === 'danger')).length;
+    const warningCount = exceptionsList.length - criticalCount;
+
+    let auditCard = '';
+    if (exceptionsList.length > 0) {
+      const itemsHtml = exceptionsList.slice(0, 6).map(({ booking: b, errs }) => {
+        const room = R()[b.resourceId] || Object.values(R()).find((r) => r.id === b.resourceId);
+        const roomLabel = room ? ('Ch. ' + room.n) : (b.hotel.roomTypeName || 'Chambre');
+        const badgesHtml = errs.map((e) => `<span class="hx-exc-badge ${e.severity}" title="${esc(e.detail)}">${esc(e.label)}</span>`).join('');
+        return `<div class="hx-exc-row">
+          <div>
+            <div class="hx-exc-meta"><b>${esc(roomLabel)}</b> · ${esc(b.customer?.name || 'Client')} <span>(${b.hotel.checkIn} → ${b.hotel.checkOut})</span></div>
+            <div class="hx-exc-badges">${badgesHtml}</div>
+          </div>
+          <button class="hx-btn ghost hx-btn-sm" data-action="hx-stay-edit" data-arg="${esc(b.id)}">Compléter fiche →</button>
+        </div>`;
+      }).join('');
+
+      auditCard = `<div class="block hx-audit ${criticalCount ? 'danger' : 'warn'}">
+        <div class="hx-audit-head">
+          <div>
+            <span class="hx-kicker hx-audit-kicker ${criticalCount ? 'danger' : 'warn'}">CONTRÔLE RÉCEPTION · REVUE INTERNE</span>
+            <h3 class="hx-audit-title">
+              ${criticalCount ? (criticalCount + ' dossier(s) à régulariser avant départ') : (warningCount + ' dossier(s) à compléter')}
+            </h3>
+            <p class="hx-audit-sub">Cohérence des fiches voyageurs et des départs — contrôle interne, sans valeur déclarative.</p>
+          </div>
+          <button class="hx-btn atlas hx-btn-sm" data-action="hx-monthly-closing">Contrôle mensuel</button>
+        </div>
+        <div class="hx-audit-list">
+          ${itemsHtml}
+        </div>
+      </div>`;
+    } else {
+      auditCard = `<div class="block hx-audit ok">
+        <div class="hx-audit-head">
+          <div>
+            <span class="hx-kicker hx-audit-kicker ok">CONTRÔLE RÉCEPTION · REVUE INTERNE</span>
+            <div class="hx-audit-title">${activeStays.length > 0 ? 'Dossiers en maison cohérents (0 anomalie bloquante)' : 'Aucun séjour actif — le contrôle mensuel reste disponible'}</div>
+          </div>
+          <button class="hx-btn ghost hx-btn-sm" data-action="hx-monthly-closing">Contrôle mensuel</button>
+        </div>
+      </div>`;
+    }
+
     return `<div class="hx-page">
       ${cuStrip()}
+      ${auditCard}
       <div class="hx-h"><span class="t">Arrivées & départs</span><span class="s">vos réservations apparaîtront ici · le walk-in fonctionne dès maintenant</span>
         <button class="hx-btn atlas" data-action="hx-walkin">+ Walk-in · vendre une chambre</button>
       </div>
@@ -1566,9 +1690,14 @@
         <div class="hx-rack">${rooms.map((r) => {
           const status = cuRoomStatus(r);
           const type = roomTypeOf(r.n);
+          const doc = window.KiwiReservations?.get?.() || { bookings: [] };
+          const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+          const roomStay = (doc.bookings || []).find((b) => b.resourceId === r.id && b.status === 'checked_in');
+          const roomErrs = roomStay ? cuEvaluateStayExceptions(roomStay, today) : [];
+          const exChip = roomErrs.length ? `<span class="hx-exc-chip" title="${esc(roomErrs.map((e) => e.label).join(' · '))}">Incomplet</span>` : '';
           return `<div class="hx-room st-${r.status}" data-action="hx-room" data-arg="${r.n}" data-hx-room-card>
             <button class="hx-room-edit" type="button" data-action="hx-room-edit" data-arg="${r.n}" aria-label="Modifier la chambre ${r.n}" title="Modifier">✎</button>
-            <div class="hx-room-top"><span class="no">${r.n}</span><span class="hx-room-state ${status.key}">${esc(status.label)}</span></div>
+            <div class="hx-room-top"><span class="no">${r.n}</span><span class="hx-room-state ${status.key}">${esc(status.label)}</span>${exChip}</div>
             <div class="ty">${esc(type.name)}</div>
             <div class="hx-room-bottom"><span class="gu">${esc(r.guest || (r.status === 'libre' ? 'Prête à vendre' : r.meta || status.label))}</span><span class="hx-room-price">${type.base == null ? '—' : fmt(type.base)}<small>${type.base == null ? '' : ' MAD'}</small></span></div>
           </div>`;
@@ -1750,6 +1879,35 @@
     const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
     const add = (ymd, n) => { const d = new Date(ymd + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
     const typeId = booking?.serviceId || types[0].id;
+    const existingGuests = Array.isArray(booking?.guests) && booking.guests.length ? booking.guests : (
+      booking?.customer?.name ? [{ name: booking.customer.name, sex: '', nationality: '', residenceCountry: '', birthDate: '', idDocType: '', idDocNumber: '', minorsUnder18: 0 }] : [{ name: '', sex: '', nationality: '', residenceCountry: '', birthDate: '', idDocType: '', idDocNumber: '', minorsUnder18: 0 }]
+    );
+    const guestRowHtml = (g, idx) => `
+      <div class="hx-guest-item" data-hx-guest-row>
+        <div class="hx-guest-head">
+          <span>VOYAGEUR ${idx + 1}</span>
+          ${idx > 0 ? `<button type="button" class="hx-link-btn hx-guest-remove" data-action="hx-remove-guest-row">Retirer</button>` : ''}
+        </div>
+        <div class="hx-guest-grid">
+          <label><span>Nom complet</span><input data-hx-guest-name placeholder="Nom et prénom" value="${esc(g.name || '')}"></label>
+          <label><span>Sexe</span><select data-hx-guest-sex>
+            <option value="">Indéterminé</option>
+            <option value="M" ${g.sex === 'M' ? 'selected' : ''}>Masculin (M)</option>
+            <option value="F" ${g.sex === 'F' ? 'selected' : ''}>Féminin (F)</option>
+          </select></label>
+          <label><span>Nationalité</span><input data-hx-guest-nationality placeholder="Ex. Marocaine, Française" value="${esc(g.nationality || '')}"></label>
+          <label><span>Pays de résidence</span><input data-hx-guest-residence placeholder="Ex. Maroc, France" value="${esc(g.residenceCountry || '')}"></label>
+          <label><span>Type de pièce</span><select data-hx-guest-id-type>
+            <option value="">Sélectionner</option>
+            <option value="CNIE" ${g.idDocType === 'CNIE' ? 'selected' : ''}>CNIE (Maroc)</option>
+            <option value="passeport" ${g.idDocType === 'passeport' ? 'selected' : ''}>Passeport</option>
+            <option value="carte_sejour" ${g.idDocType === 'carte_sejour' ? 'selected' : ''}>Carte de séjour</option>
+            <option value="autre" ${g.idDocType === 'autre' ? 'selected' : ''}>Autre pièce</option>
+          </select></label>
+          <label><span>N° de document</span><input data-hx-guest-id-num placeholder="Ex. AB123456" value="${esc(g.idDocNumber || '')}"></label>
+        </div>
+      </div>
+    `;
     const m = K().modal({ tag: booking ? booking.code || 'SÉJOUR' : 'NOUVEAU SÉJOUR', title: booking ? 'Modifier la réservation' : 'Ajouter une réservation', desc: 'La chambre est contrôlée et bloquée côté serveur avant confirmation.', width: 720,
       body: `<form class="hx-stay-form" data-hx-stay-form>
         <div class="hx-room-form hx-type-form">
@@ -1764,6 +1922,15 @@
           <label><span>Référence OTA <small>· optionnel</small></span><input name="externalRef" maxlength="80" value="${esc(booking?.hotel?.externalRef || '')}" placeholder="Ex. 4219-8840"></label>
           <label><span>Téléphone <small>· optionnel</small></span><input name="phone" maxlength="32" value="${esc(booking?.customer?.phone || '')}"></label>
           <label><span>E-mail <small>· optionnel</small></span><input name="email" type="email" maxlength="160" value="${esc(booking?.customer?.email || '')}"></label>
+          <div class="hx-room-form-wide hx-guest-block">
+            <div class="hx-guest-block-head">
+              <b>Fiche Voyageurs · identité (fiche de police, Loi 80-14)</b>
+              <button type="button" class="hx-link-btn hx-guest-add" data-action="hx-add-guest-row">+ Ajouter un voyageur</button>
+            </div>
+            <div data-hx-guests-container>
+              ${existingGuests.map(guestRowHtml).join('')}
+            </div>
+          </div>
           <label class="hx-room-form-wide"><span>Note interne</span><textarea name="note" maxlength="600" rows="2">${esc(booking?.note || '')}</textarea></label>
         </div><p class="hx-stay-error" data-hx-stay-error></p><div class="hx-room-form-actions">${booking && booking.status !== 'cancelled' ? `<button type="button" class="hx-btn warn" data-action="hx-stay-cancel" data-arg="${esc(booking.id)}">Annuler le séjour</button>` : '<span></span>'}<button class="hx-btn atlas" type="submit">${booking ? 'Enregistrer' : 'Bloquer la chambre'}</button></div>
       </form>` });
@@ -1772,6 +1939,20 @@
     form.elements.status.value = booking?.status || 'confirmed';
     const filterRooms = () => { const selected = form.elements.resourceId.value; Array.from(form.elements.resourceId.options).forEach((o, i) => { if (!i) return; o.hidden = o.dataset.type !== form.elements.roomTypeId.value; }); if (selected && form.elements.resourceId.selectedOptions[0]?.hidden) form.elements.resourceId.value = ''; };
     form.elements.roomTypeId.addEventListener('change', filterRooms); filterRooms();
+    form.addEventListener('click', (e) => {
+      if (e.target.closest('[data-action="hx-add-guest-row"]')) {
+        const c = form.querySelector('[data-hx-guests-container]');
+        if (c) {
+          const count = c.querySelectorAll('[data-hx-guest-row]').length;
+          const wrap = document.createElement('div');
+          wrap.innerHTML = guestRowHtml({}, count);
+          c.appendChild(wrap.firstElementChild);
+        }
+      } else if (e.target.closest('[data-action="hx-remove-guest-row"]')) {
+        const row = e.target.closest('[data-hx-guest-row]');
+        if (row) row.remove();
+      }
+    });
     form.addEventListener('submit', (e) => { e.preventDefault(); cuSubmitStay(form, booking, m); });
     openModal = { el: m.el, close: m.close };
   }
@@ -1779,7 +1960,16 @@
   async function cuSubmitStay(form, booking, modal) {
     const fd = new FormData(form), submit = form.querySelector('[type="submit"]'), error = form.querySelector('[data-hx-stay-error]');
     const slug = window.KiwiStore?.slugFor?.(cuVenueId()) || '';
-    const payload = { action: 'save', merchant: slug, id: booking?.id || '', clientRef: booking?.publicRef || ('staff-' + crypto.randomUUID()), roomTypeId: fd.get('roomTypeId'), resourceId: fd.get('resourceId'), checkIn: fd.get('checkIn'), checkOut: fd.get('checkOut'), partySize: fd.get('partySize'), channel: fd.get('channel'), status: fd.get('status'), externalRef: fd.get('externalRef'), note: fd.get('note'), customer: { name: fd.get('name'), phone: fd.get('phone'), email: fd.get('email') } };
+    const guestRows = Array.from(form.querySelectorAll('[data-hx-guest-row]')).map((row) => ({
+      name: String(row.querySelector('[data-hx-guest-name]')?.value || '').trim(),
+      sex: String(row.querySelector('[data-hx-guest-sex]')?.value || '').trim(),
+      nationality: String(row.querySelector('[data-hx-guest-nationality]')?.value || '').trim(),
+      residenceCountry: String(row.querySelector('[data-hx-guest-residence]')?.value || '').trim(),
+      idDocType: String(row.querySelector('[data-hx-guest-id-type]')?.value || '').trim(),
+      idDocNumber: String(row.querySelector('[data-hx-guest-id-num]')?.value || '').trim(),
+    })).filter((g) => g.name || g.nationality || g.idDocNumber);
+
+    const payload = { action: 'save', merchant: slug, id: booking?.id || '', clientRef: booking?.publicRef || ('staff-' + crypto.randomUUID()), roomTypeId: fd.get('roomTypeId'), resourceId: fd.get('resourceId'), checkIn: fd.get('checkIn'), checkOut: fd.get('checkOut'), partySize: fd.get('partySize'), channel: fd.get('channel'), status: fd.get('status'), externalRef: fd.get('externalRef'), note: fd.get('note'), guests: guestRows, customer: { name: fd.get('name'), phone: fd.get('phone'), email: fd.get('email') } };
     if (!slug) { error.textContent = 'Cette boutique n’est pas encore reliée à son compte Kiwi.'; return; }
     submit.disabled = true; error.textContent = '';
     try {
@@ -2317,8 +2507,203 @@
     handlers['hx-econ-save'] = (el) => cuSaveEconomat(el);
     handlers['hx-econ-shift'] = (el, arg) => cuLoadRoomShift(String(arg || ''));
 
-    /* — custom-hotel controls — */
-    handlers['hx-tape-prev'] = () => { cuTapeOffset -= 14; rerender(); };
+  async function cuMonthlyClosingModal() {
+    const slug = window.KiwiStore?.slugFor?.(cuVenueId()) || '';
+    if (!slug) { toast('Boutique non connectée', { type: 'warn' }); return; }
+
+    const now = new Date();
+    const curY = now.getFullYear();
+    const curM = now.getMonth() + 1;
+    const defaultMonth = (now.getDate() <= 5)
+      ? (curM === 1 ? `${curY - 1}-12` : `${curY}-${String(curM - 1).padStart(2, '0')}`)
+      : `${curY}-${String(curM).padStart(2, '0')}`;
+
+    let activeMonth = defaultMonth;
+
+    const m = K().modal({
+      tag: 'REVUE INTERNE',
+      title: 'Contrôle mensuel interne',
+      desc: 'Cohérence des séjours du mois — scellé horodaté à usage interne, sans valeur déclarative.',
+      width: 760,
+      body: `<div data-hx-closing-container class="hx-close-loading">
+        <span>Chargement des contrôles...</span>
+      </div>`
+    });
+
+    openModal = { el: m.el, close: m.close };
+
+    function serverExceptionsHtml(exceptions) {
+      if (!Array.isArray(exceptions) || !exceptions.length) return '';
+      const rows = exceptions.slice(0, 12).map((e) => {
+        const where = [e.bookingCode, e.roomId].filter(Boolean).map((x) => esc(String(x))).join(' · ');
+        return `<div class="hx-close-exc-row"><b>${esc(String(e.code || 'anomalie'))}</b><span>${esc(String(e.label || ''))}</span>${where ? `<small>${where}</small>` : ''}</div>`;
+      }).join('');
+      return `<div class="hx-close-exc-list" role="alert">${rows}</div>`;
+    }
+
+    async function postReview(action, extra, btn) {
+      const pin = prompt('Code PIN Direction / Gérant (si non connecté avec le compte propriétaire) :') || '';
+      btn.disabled = true;
+      const errBox = m.el.querySelector('[data-hx-closing-error]');
+      if (errBox) errBox.innerHTML = '';
+      try {
+        const resp = await fetch('/api/hotel/declarations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action, merchant: slug, month: activeMonth, pin, idempotencyKey: action + '-' + activeMonth + '-' + Date.now(), ...(extra || {}) })
+        });
+        const resBody = await resp.json().catch(() => ({}));
+        if (!resp.ok) {
+          if (errBox) {
+            errBox.innerHTML = `<div class="hx-close-err">${esc(resBody.detail || resBody.error || 'Contrôle impossible pour ce mois.')}${serverExceptionsHtml(resBody.exceptions)}</div>`;
+          } else {
+            toast(resBody.detail || resBody.error || 'Contrôle impossible pour ce mois.', { type: 'error' });
+          }
+        } else if (resBody.replayed) {
+          toast('Demande déjà scellée — révision existante rechargée', { type: 'success' });
+          load(activeMonth);
+        } else {
+          toast(action === 'finalize' ? ('Mois ' + activeMonth + ' scellé en contrôle interne') : ('Révision ' + resBody.declaration?.revision + ' enregistrée'), { type: 'success' });
+          load(activeMonth);
+        }
+      } catch (_) {
+        if (errBox) errBox.innerHTML = '<div class="hx-close-err">Erreur réseau.</div>';
+        else toast('Erreur réseau.', { type: 'error' });
+      } finally { btn.disabled = false; }
+    }
+
+    async function load(month) {
+      activeMonth = month;
+      const container = m.el.querySelector('[data-hx-closing-container]');
+      if (!container) return;
+      container.innerHTML = '<div class="hx-close-loading"><span>Calcul et vérification des règles...</span></div>';
+
+      try {
+        const res = await fetch(`/api/hotel/declarations?merchant=${encodeURIComponent(slug)}&month=${encodeURIComponent(month)}`);
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          container.innerHTML = `<div class="hx-close-err">${esc(data.detail || data.error || 'Lecture impossible.')}</div>`;
+          return;
+        }
+        const decls = data.declarations || [];
+        const latest = decls[0] || null;
+
+        const doc = window.KiwiReservations?.get?.() || { bookings: [] };
+        const [yStr, mStr] = month.split('-');
+        const y = parseInt(yStr, 10), mVal = parseInt(mStr, 10);
+        const mStart = `${month}-01`;
+        const mEnd = mVal === 12 ? `${y + 1}-01-01` : `${y}-${String(mVal + 1).padStart(2, '0')}-01`;
+
+        const monthStays = (doc.bookings || []).filter((b) => b.hotel && b.status !== 'cancelled' && b.status !== 'no_show' && b.hotel.checkIn < mEnd && b.hotel.checkOut > mStart);
+        const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+
+        const exceptions = [];
+        monthStays.forEach((b) => {
+          const errs = cuEvaluateStayExceptions(b, todayStr);
+          if (errs.length) exceptions.push({ booking: b, errs });
+        });
+
+        const blockingCount = exceptions.filter((x) => x.errs.some((e) => e.severity === 'danger')).length;
+
+        let statusBadge = '';
+        if (latest) {
+          statusBadge = `<span class="hx-close-badge closed">CONTRÔLÉ (Rév. ${latest.revision})</span>`;
+        } else if (blockingCount > 0) {
+          statusBadge = `<span class="hx-close-badge blocked">NON CONTRÔLÉ · ${blockingCount} ANOMALIE(S)</span>`;
+        } else {
+          statusBadge = `<span class="hx-close-badge ready">PRÊT POUR CONTRÔLE</span>`;
+        }
+
+        let summaryHtml = '';
+        if (latest) {
+          const p = latest.payload || {};
+          summaryHtml = `<div class="hx-close-grid">
+            <div class="hx-close-stat"><span>Arrivées</span><b>${p.totalArrivals || 0}</b></div>
+            <div class="hx-close-stat"><span>Nuitées clients</span><b>${p.totalBedNights || 0}</b></div>
+            <div class="hx-close-stat"><span>Nuits-chambres occupées</span><b>${p.occupiedRoomNightsCount || 0}</b></div>
+            <div class="hx-close-stat"><span>Empreinte SHA-256</span><small class="hx-mono">${esc((latest.canonicalHash || '').slice(0, 16))}...</small></div>
+          </div>`;
+        } else if (!monthStays.length) {
+          summaryHtml = `<p class="hx-close-note">Aucun séjour sur ce mois — un mois sans activité peut être scellé tel quel.</p>`;
+        }
+
+        let historyHtml = '';
+        if (decls.length > 0) {
+          historyHtml = `<div class="hx-close-hist">
+            <div class="hx-close-hist-title">HISTORIQUE DES RÉVISIONS</div>
+            <div class="hx-close-hist-scroll">
+              <table>
+                <thead><tr><th>Rév.</th><th>Date</th><th>Responsable</th><th>Motif</th></tr></thead>
+                <tbody>
+                  ${decls.map((d) => `<tr>
+                    <td><b>#${d.revision}</b> (${esc(d.state || '')})</td>
+                    <td>${new Date(d.closedAt).toLocaleDateString('fr-FR')} ${new Date(d.closedAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</td>
+                    <td>${esc(d.closedBy?.name || 'Direction')}</td>
+                    <td>${esc(d.rectificationReason || 'Contrôle initial')}</td>
+                  </tr>`).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>`;
+        }
+
+        let actionBlock = '';
+        if (!latest) {
+          if (blockingCount > 0) {
+            actionBlock = `<div class="hx-close-blocked">
+              <b>Contrôle bloqué : ${blockingCount} anomalie(s) bloquante(s)</b>
+              <p>Complétez les fiches voyageurs ou clôturez les départs dépassés avant de sceller le contrôle interne.</p>
+            </div>`;
+          } else {
+            actionBlock = `<div class="hx-close-actions">
+              <button class="hx-btn atlas hx-close-finalize">Valider le contrôle du mois (Réservé Direction)</button>
+            </div>`;
+          }
+        } else {
+          actionBlock = `<div class="hx-close-actions between">
+            <span class="hx-close-note">Contrôle interne scellé. Toute correction se fait par révision motivée.</span>
+            <button class="hx-btn warn hx-close-rectify">Déposer une révision corrective...</button>
+          </div>`;
+        }
+
+        container.innerHTML = `
+          <div class="hx-close-bar">
+            <div>
+              <label>Mois contrôlé :</label>
+              <input type="month" data-hx-closing-month value="${month}">
+            </div>
+            <div>${statusBadge}</div>
+          </div>
+          ${summaryHtml}
+          <div data-hx-closing-error></div>
+          ${actionBlock}
+          ${historyHtml}
+        `;
+
+        const monthInput = container.querySelector('[data-hx-closing-month]');
+        monthInput?.addEventListener('change', (e) => load(e.target.value));
+
+        const finalizeBtn = container.querySelector('.hx-close-finalize');
+        finalizeBtn?.addEventListener('click', () => postReview('finalize', null, finalizeBtn));
+
+        const rectifyBtn = container.querySelector('.hx-close-rectify');
+        rectifyBtn?.addEventListener('click', () => {
+          const reason = prompt('Motif de la révision corrective (au moins 10 caractères) :');
+          if (!reason || reason.trim().length < 10) { toast('Un motif d’au moins 10 caractères est obligatoire.', { type: 'warn' }); return; }
+          postReview('rectify', { rectificationReason: reason.trim() }, rectifyBtn);
+        });
+
+      } catch (err) {
+        container.innerHTML = '<div class="hx-close-err">Erreur : ' + esc(err.message) + '</div>';
+      }
+    }
+
+    load(activeMonth);
+  }
+
+  /* — custom-hotel controls — */
+  handlers['hx-monthly-closing'] = () => { if (isCustomHotel()) cuMonthlyClosingModal(); };
+  handlers['hx-tape-prev'] = () => { cuTapeOffset -= 14; rerender(); };
     handlers['hx-tape-next'] = () => { cuTapeOffset += 14; rerender(); };
     handlers['hx-tape-today'] = () => { cuTapeOffset = 0; rerender(); };
     handlers['hx-stay-new'] = () => { if (isCustomHotel()) cuStayEditor(null); };
