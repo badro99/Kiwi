@@ -2,53 +2,56 @@
 
 **Domaine :** Kiwi Hôtel / Riad  
 **Cadre juridique :** Loi n° 80-14 (BO n° 6404) & Décret n° 2-15-865 (BO n° 6488, Annexes 1 & 2)  
-**Directives professionnelles :** Circulaires DRT / MGH (Édition Novembre 2024)  
-**Statut :** **Sprint 0 — Découverte Administrative Consolidée (Sources Primaires Validées)**  
+**Sources professionnelles secondaires :** Guide professionnel MGH diffusé à la demande de la DRT (créé en 2022), à confirmer localement  
+**Statut :** **Sprint 0 — Découverte Administrative Consolidée (Corrections Légales Intégrées)**  
 **Emplacement :** `docs/specs/HOTEL_TOURISM_REPORTING_SPEC.md`
 
 ---
 
-## 1. Cadre Réglementaire & Réalité Opérale (Sources Primaires)
+## 1. Cadre Réglementaire & Réalité Opérale (Sources Primaires & Secondaires)
 
-L'exploitation des textes officiels du Bulletin Officiel (Décret 2-15-865) et des manuels d'exploitation STDN clarifie la réglementation et la pratique administrative sur le terrain :
+L'exploitation des textes officiels du Bulletin Officiel (Décret 2-15-865) et des guides d'exploitation STDN clarifie la réglementation et la pratique administrative sur le terrain :
 
-### A. Dédoublement Réglementaire Confirmé (MGH / DRT Novembre 2024)
-* **La règle sur le terrain :** Le système STDN s'ajoute aux déclarations manuelles traditionnelles. Conformément aux directives de la Délégation Régionale du Tourisme (DRT) et de la DGSN/Gendarmerie Royale, **les établissements doivent maintenir les déclarations papier (bulletins et relevés statistiques mensuels) jusqu'à notification formelle d'une dispense**.
+### A. Dédoublement Réglementaire et Deux Régimes d'Exemption Distincts
+* **Deux dispenses distinctes et indépendantes :**
+  1. **Dispense Sûreté (DGSN / Gendarmerie Royale) :** Dispense de la tenue du registre papier et du dépôt physique des fiches de police individuelles.
+  2. **Dispense Tourisme (Délégation du Tourisme) :** Dispense du dépôt du relevé statistique mensuel de fréquentation.
 * **Configuration établissement requise dans Kiwi :**
   ```ts
-  paperReportingStatus: 'paperReportingRequired' | 'paperReportingExempt' | 'unknown'
+  policePaperStatus: 'required' | 'exempt' | 'unknown'
+  tourismMonthlyStatus: 'required' | 'exempt' | 'unknown'
   ```
-  Le relevé statistique mensuel photographié n'est donc ni obsolète ni purement exceptionnel : il demeure une obligation de routine active pour la majorité des établissements non dispensés.
+  Le relevé statistique mensuel n'est pas globalement caduc : il continue d'être exigé tant que `tourismMonthlyStatus` n'a pas fait l'objet d'une dispense notifiée par l'autorité touristique compétente.
 
-### B. Le Formulaire Photographié vs. l'Annexe 2 du Décret
-* **Annexe 2 officielle du Décret 2-15-865 :** Formulaire nominatif d'avarie (mode dégradé > 24h) listant par voyageur : date d'arrivée, date de départ, sexe, nationalité, mineurs < 18 ans, numéro de chambre.
-* **Le document photographié :** Relevé statistique mensuel agrégé par nationalité et par jour calendaire (J1 à J31), exigé par les Délégations Provinciales du Tourisme pour le suivi économique de la fréquentation et le calcul du Taux d'Occupation.
+### B. Statut du Formulaire Photographié
+* **Annexe 2 officielle du Décret 2-15-865 :** Tableau nominatif d'avarie (mode dégradé > 24h) listant par voyageur : date d'arrivée, date de départ, sexe, nationalité, mineurs de moins de 18 ans, numéro de chambre.
+* **Le document photographié :** Un relevé mensuel agrégé semblant émaner d'une Délégation du Tourisme ; sa provenance exacte, son applicabilité réglementaire actuelle et la maquette formellement acceptée restent en attente de confirmation auprès du riad pilote et de sa délégation.
 
 ### C. Dictionnaire des Données Voyageur STDN (Annexe 1 du Décret 2-15-865)
-Le *bulletin individuel d'hébergement* légal et l'interface STDN imposent la collecte structurée des attributs suivants :
+Le *bulletin individuel d'hébergement* légal et l'interface STDN prévoient les attributs suivants :
 
-| Champ STDN | Caractère | Description / Format |
+| Champ STDN | Référence Légale / Statut | Description / Précisions |
 | :--- | :--- | :--- |
-| `roomNumber` | Obligatoire | Numéro de la chambre attribuée |
-| `lastName` & `firstName` | Obligatoire | Nom et prénom du voyageur |
-| `sex` | Obligatoire | `M` ou `F` |
-| `nationality` | Obligatoire | Nationalité (code ISO / libellé officiel) |
-| `birthDate` | Obligatoire | Date de naissance (`YYYY-MM-DD`) |
-| `residenceCountry` | Obligatoire | Pays de résidence habituelle (code ISO) |
-| `minorsUnder15` | Obligatoire | Nombre d'enfants accompagnants < 15 ans |
-| `minors15To18` | Obligatoire | Nombre d'enfants accompagnants entre 15 et 18 ans |
-| `arrivalDate` | Obligatoire | Date effective d'arrivée |
-| `expectedDepartureDate` | Obligatoire | Date prévue de départ |
-| `idDocType` | Obligatoire | `CNIE`, `passeport`, `carte_sejour`, `autre` |
-| `idDocNumber` | Obligatoire | Numéro de la pièce d'identité |
-| `guestSignature` | Obligatoire | Émargement physique ou électronique |
-| *Optionnels / Complémentaires* | Optionnel | Lieu de naissance, adresse, ville, profession, motif du voyage, canal de réservation |
+| `roomNumber` | Annexe 1 Décret | Numéro de la chambre attribuée |
+| `lastName` & `firstName` | Annexe 1 Décret | Nom et prénom du voyageur |
+| `sex` | Annexe 1 Décret | Sexe du voyageur (`M` ou `F`) |
+| `nationality` | Annexe 1 Décret | Nationalité (format texte ou code selon modèle portail) |
+| `birthDate` | Annexe 1 Décret | Date de naissance (`YYYY-MM-DD`) |
+| `residenceCountry` | Annexe 1 Décret | Pays de résidence habituelle (format selon modèle portail) |
+| `minorsUnder18` | Annexe 1 Décret | Nombre d'enfants mineurs de moins de 18 ans |
+| *`minorsUnder15` & `minors15To18`* | *Comportement historique portail* | Distinction observée sur l'ancienne interface, à valider sur le modèle actuel |
+| `arrivalDate` | Annexe 1 Décret | Date d'arrivée |
+| `expectedDepartureDate` | Annexe 1 Décret | Date prévue de départ |
+| `idDocType` | Annexe 1 Décret | Type de pièce (`CNIE`, `passeport`, `titre_sejour`, `autre`) |
+| `idDocNumber` | Annexe 1 Décret | Numéro de la pièce d'identité présentée |
+| `clientSignature` | Annexe 1 Décret | Signature du client (validité juridique d'une signature électronique à confirmer) |
+| *Optionnels / Complémentaires* | Annexe 1 Décret | Lieu de naissance, adresse, ville, profession, motif du voyage, canal de réservation |
 
 ---
 
 ## 2. Stratégie Produit Kiwi Hôtel
 
-Au lieu de dépendre d'une API privée non documentée, Kiwi adopte la passerelle officielle documentée par le portail STDN : **l'import par fichier Excel journalier (`JJMMAAAAhhmm.xls`)**.
+Au lieu de dépendre d'une API privée non documentée, Kiwi adopte la passerelle d'import par fichier du portail STDN (*Espace pratique*) :
 
 ```
                         SAISIE CHECK-IN KIWI HÔTEL
@@ -61,53 +64,55 @@ Au lieu de dépendre d'une API privée non documentée, Kiwi adopte la passerell
                  ┌───────────────────┴───────────────────┐
                  ▼                                       ▼
     [ MODULE QUOTIDIEN STDN ]               [ MODULE STATISTIQUES MENSUELLES ]
-  • Génération fichier Excel STDN         • Si paperReportingRequired :
-    Format : JJMMAAAAhhmm.xls               Relevé mensuel A4 officiel (1:1)
+  • Génération fichier Excel agréé        • Si tourismMonthlyStatus !== 'exempt' :
+    Format : JJMMAAAAhhmm.[xls/xlsx]        Relevé mensuel conforme à l'usage local
   • Téléversement assisté sur stdn.ma     • Calcul TO (brut/net) & DMS
   • Journalisation locale des dépôts :    • Snapshot append-only mensuel
     (nom fichier, timestamp, lignes,        avec audit lineage
     statut rejet/succès STDN)
 ```
 
-### Avantages de l'Export Excel STDN :
-1. **Officiel et Supporté :** Le portail STDN dispose d'un module natif d'import en masse sous *Espace pratique*, avec rapport de rejet/validation immédiat.
-2. **Robustesse Immédiate :** Aucun risque de blocage lié à des modifications d'API non publiques ou à des révocations de reverse-engineering.
-3. **Zéro ressaisie :** La réception exporte le fichier du jour en un clic depuis Kiwi et le dépose sur le portail STDN en 30 secondes.
+### Principes Directeurs :
+1. **Modèle Excel Agréé :** Kiwi générera le fichier dans le format de modèle Excel actuellement agréé par le portail STDN (`.xls` ou `.xlsx`), selon le fichier source extrait de l'espace pratique.
+2. **Encadrement des Formats de Pays :** Le codage (codes ISO vs libellés en clair) sera calqué strictement sur les listes déroulantes du modèle officiel STDN une fois obtenu.
+3. **Assistance à l'Export :** La réception exporte le fichier du jour en un clic et le dépose sur le portail STDN, en conservant le rapport de traitement et les éventuels récépissés.
+4. **Gestion de l'Indisponibilité STDN :** En cas d'indisponibilité du système STDN dépassant 24 heures, application de la procédure légale (dépôt des copies de bulletins avant 8h à la DGSN/Gendarmerie, et régularisation électronique sous 72h après rétablissement).
 
 ---
 
-## 3. Contacts Officiels des Délégations Régionales STDN
+## 3. Questionnaire Révisé du Sprint 0 (Auprès du Riad Pilote)
 
-Pour toute clarification administrative ou demande de spécification technique, le Ministère du Tourisme a établi des points focaux dédiés :
+Avant d'écrire la moindre ligne de code dans `hotel.js` ou d'exécuter une migration, les réponses formelles aux questions suivantes doivent être obtenues :
 
-* **Marrakech-Safi :** `stdn_marrakech@tourisme.gov.ma`
-* **Casablanca-Settat :** `stdn_casablanca@tourisme.gov.ma`
-* **Souss-Massa (Agadir) :** `stdn_agadir@tourisme.gov.ma`
-* **Rabat-Salé-Kénitra :** `stdn_rabat@tourisme.gov.ma`
-* **Tanger-Tétouan-Al Hoceima :** `stdn_tanger@tourisme.gov.ma`
-* **Fès-Meknès :** `stdn_fes@tourisme.gov.ma`
-* **Oriental (Oujda) :** `stdn_oujda@tourisme.gov.ma`
-* **Béni Mellal-Khénifra :** `stdn_benimellal@tourisme.gov.ma`
-* **Drâa-Tafilalet :** `stdn_errachidia@tourisme.gov.ma`
-* **Dakhla-Oued Eddahab :** `stdn_dakhla@tourisme.gov.ma`
-* **Guelmim-Oued Noun :** `stdn_guelmim@tourisme.gov.ma`
-* **Laâyoune-Sakia El Hamra :** `stdn_laayoune@tourisme.gov.ma`
+1. **Compte STDN :** L'établissement pilote possède-t-il un compte actif sur le portail STDN (`stdn.ma`) ?
+2. **Pratique Réelle :** L'établissement télé-déclare-t-il actuellement ses arrivées/départs tous les jours sur STDN ?
+3. **Statut d'Exemption de l'Établissement :**
+   * A-t-il reçu une dispense écrite de la DGSN/Gendarmerie pour les fiches de police ? (`policePaperStatus`)
+   * A-t-il reçu une dispense écrite de la Délégation pour le relevé mensuel papier ? (`tourismMonthlyStatus`)
+4. **Origine du Relevé Photographié :** Qui a remis ce formulaire spécifique, à quelle date, et sous quelle directive ?
+5. **Modèle Excel Officiel :** Télécharger depuis l'*Espace pratique* du compte STDN le modèle de fichier d'import actuel ainsi que sa notice technique.
+6. **Rapports & Récépissés :** Obtenir un exemple réel anonymisé de rapport de traitement après import ou de récépissé de transmission.
+7. **Procédure d'Avarie Locale :** Quelle est la procédure acceptée localement en cas d'indisponibilité du système STDN dépassant 24 heures ?
 
 ---
 
-## 4. Tableau de Décision Sprint 0 — Éléments Tranchés & Reste à Fournir
+## 4. Tableau de Décision Sprint 0 (À Remplir)
 
-| Dimension | Décision Validée | Source / Justification | Action Restante |
-| :--- | :--- | :--- | :--- |
-| **Schéma Voyageur** | Données complètes Annexe 1 Décret 2-15-865 + découpage mineurs (-15 / 15-18) | BO n° 6488 & Manuel STDN | Valider l'ordre exact des colonnes Excel |
-| **Canal Déclaration Quotidienne** | Générateur de fichier Excel bulk `JJMMAAAAhhmm.xls` | Manuel STDN (*Espace pratique*) | Télécharger le template `.xls` depuis un compte actif |
-| **Relevé Mensuel Photographié** | Maintenu sous condition `paperReportingRequired` | Directives DRT / MGH Nov 2024 | Confirmer le statut d'exemption du riad pilote |
-| **Audit & Récépissés** | Historique local : nom fichier, horodatage, hash, statut d'intégration STDN | Spécification STDN | Récupérer 1 rapport d'intégration réel anonymisé |
-| **Mode Panne Réseau (> 24h)** | Déposition bulletins physiques avant 8h (DGSN) + régularisation STDN sous 72h | Arts. 4 & 6 Décret 2-15-865 | Validé par les textes |
+| Règle / Dimension | Réponse Officielle | Autorité / Contact | Texte / Document Source | Date d'Effet |
+| :--- | :--- | :--- | :--- | :--- |
+| **Statut Dispense Police (`policePaperStatus`)** | *À renseigner* | DGSN / Gendarmerie | Notification écrite | À confirmer |
+| **Statut Dispense Tourisme (`tourismMonthlyStatus`)**| *À renseigner* | Délégation Provinciale | Notification écrite | À confirmer |
+| **Format du modèle Excel agréé** | *À renseigner (.xls / .xlsx)* | Portail STDN (*Espace pratique*) | Template officiel | À confirmer |
+| **Encodage nationalités / pays** | *Codes ISO ou Libellés en clair* | Portail STDN (*Espace pratique*) | Spécification technique | À confirmer |
+| **Découpage des mineurs** | *Global < 18 ou détail -15 / 15-18* | Portail STDN (*Espace pratique*) | Template officiel | À confirmer |
+| **Prise en compte de la signature client** | *Papier conservé ou émargement* | DGSN / STDN | Guide juridique | À confirmer |
+| **Maquette acceptée du relevé mensuel** | *Modèle photographié ou autre* | Délégation Provinciale | Formulaire fourni | À confirmer |
+| **Procédure indisponibilité STDN > 24h** | *Procédure Décret Art. 4 & 6* | DGSN / Délégation | Arts. 4 & 6 Décret 2-15-865 | À confirmer |
+| **Délai de conservation légale** | *À renseigner (CNDP / Fiscale / Police)* | CNDP / DGSN | Lois 09-08 / 80-14 | À confirmer |
 
 ---
 
 ## 5. Règle d'Ingénierie Verrouillée
 
 * **Code gelé :** Aucune modification de `hotel.js` ni de création de table D1 n'est autorisée.
-* **Prochaine étape utile :** Télécharger le fichier modèle `.xls` et le guide technique depuis l'espace authentifié du riad pilote (ou par email auprès de `stdn_[region]@tourisme.gov.ma`), et vérifier si le riad bénéficie d'une dispense écrite pour le relevé papier.
+* **Prochaine étape utile :** Télécharger le fichier modèle Excel actuellement agréé et la notice technique depuis l'espace pratique du compte STDN du riad pilote, et clarifier ses deux statuts d'exemption (`policePaperStatus` et `tourismMonthlyStatus`).
