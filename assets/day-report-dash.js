@@ -368,6 +368,12 @@
     });
     return { net: Math.round(net * 100) / 100, gross: Math.round(gross * 100) / 100, txns: txns };
   }
+  function feedIsAuthoritative() {
+    try {
+      var status = window.KiwiLive && window.KiwiLive.status && window.KiwiLive.status();
+      return !!(status && status.on && status.backfillComplete);
+    } catch (_) { return false; }
+  }
 
   /* L'instantané de la caisse peut avoir RATÉ des ventes que le serveur, lui,
      a bien reçues — une vente encaissée sans service ouvert n'entre dans aucun
@@ -408,7 +414,7 @@
     var d = DR(); if (!d) return null;
     var snap = null;
     try { snap = d.load(day); } catch (_) {}
-    if (snap && !snapMissesSales(snap, day)) return snap;
+    if (snap && !feedIsAuthoritative() && !snapMissesSales(snap, day)) return snap;
     var built = null;
     try {
       built = d.build({ day: day, sales: dashSales(), session: snap ? sessionOf(snap) : {},
@@ -434,7 +440,7 @@
     var d = DR(); if (!d) return { net: 0, gross: 0, txns: 0, has: false, closed: false };
     var snap = null;
     try { snap = d.load(day); } catch (_) {}
-    if (snap && !snapMissesSales(snap, day)) {
+    if (snap && !feedIsAuthoritative() && !snapMissesSales(snap, day)) {
       return {
         net: +snap.net || 0, gross: +snap.gross || 0, txns: +snap.txns || 0,
         has: !!(snap.txns || (snap.refunds && snap.refunds.count)),

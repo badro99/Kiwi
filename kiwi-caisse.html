@@ -12997,7 +12997,12 @@
       creditSaleToClient(entry);
       // Live Link (opt-in, off by default): mirror this sale to the owner's
       // dashboard via /api/sale. No-op unless kiwiLive is on. Never blocks the sale.
-      try { if (window.KiwiLive) window.KiwiLive.postSale(entry); } catch (_) {}
+      try {
+        if (window.KiwiLive) {
+          const posted = window.KiwiLive.postSale(entry);
+          if (posted && posted.id) entry.serverSaleId = posted.id;
+        }
+      } catch (_) {}
       renderShiftStats();
       if ($('#journal-drawer').classList.contains('is-open')) renderJournal();
       return entry;

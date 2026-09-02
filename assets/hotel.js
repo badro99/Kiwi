@@ -634,10 +634,16 @@
   /* A custom hotel's encaissements are REAL — feed the merchant sales store
    * so the hero, KPI band and feed recompute from them (same pipeline as
    * the POS «Nouvelle vente»). */
-  function recordSale(amount) {
-    const KV = window.KiwiVenue;
-    if (!isCustomHotel() || !window.KiwiSales || !KV) return;
-    if (amount > 0) window.KiwiSales.add(KV.getVenue(), { amount: Math.round(amount), method: 'card' });
+  function recordSale(amount, identity, label) {
+    if (!isCustomHotel() || !(amount > 0)) return false;
+    const live = window.KiwiLive;
+    if (!live?.isOn?.() || !live?.postSale) return false;
+    const key = String(identity || ('hotel-' + Date.now())).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 54);
+    return !!live.postSale({
+      id: 'hotel-' + key, amount: Math.round(amount * 100) / 100, method: 'card',
+      label: String(label || 'Encaissement hôtel').slice(0, 80), ref: key,
+      time: new Date(), channel: 'hotel'
+    });
   }
 
   function page(pageKey, title, subtitle, bodyFn) {
@@ -2712,7 +2718,7 @@
       openModal?.close?.();
       toast('Folio Ch. ' + room + ' encaissé · ' + MAD(due), { type: 'success', desc: 'Taxe de séjour incluse · règlement T+1 demain 9h00 sur votre IBAN.' });
       if (isCustomHotel()) {
-        recordSale(due);
+        recordSale(due, 'checkout-' + room + '-' + String(f.updatedAt || cuStamp()), 'Départ · Ch. ' + room);
         const r = R()[room];
         r.status = 'sale'; r.hk = 'dirty'; r.guest = null;
         r.meta = 'Départ soldé · à remettre à blanc'; r.updatedAt = cuStamp();
@@ -2778,7 +2784,7 @@
         { t: nowLabel(), label: 'Nuit 1 · ' + roomTypeOf(n).name, qty: '×1', amt: rate, src: 'room', paid: true },
         { t: 'auto', label: 'Taxe de séjour · 1 pers × 1 nuit', qty: '', amt: TAX_PP_NIGHT, src: 'taxe' },
       ], updatedAt: cuStamp() };
-      if (cu) { r.updatedAt = cuStamp(); recordSale(rate); cuState().sold += 1; cuSave(); }
+      if (cu) { r.updatedAt = cuStamp(); recordSale(rate, 'walkin-' + n + '-' + String(F()[n].updatedAt), 'Walk-in · Ch. ' + n); cuState().sold += 1; cuSave(); }
       openModal?.close?.();
       toast('Ch. ' + n + ' vendue · ' + MAD(rate), { type: 'success', desc: 'Walk-in enregistré · occupation ce soir ' + counts().occToNight + ' / ' + totalRooms() + (cu ? ' · vente réelle au compteur.' : '.') });
       rerender();

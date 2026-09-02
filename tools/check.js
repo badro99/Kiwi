@@ -354,6 +354,15 @@ section('Caisse service ledger scope');
   else fail(`caisse-service-ledger-scope-test.mjs exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
 }
 
+section('Financial ledger invariant');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'financial-ledger-invariant-test.mjs')], { encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0) ok('financial surfaces use the central ledger');
+  else fail(`financial-ledger-invariant-test.mjs exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+}
+
 /* ── 4e · durable browser outbox wiring ────────────────────────────────────
  * The behavioral fixtures run in a real browser; this zero-dependency gate
  * locks their tested engine into every operational shell and the PWA cache. */

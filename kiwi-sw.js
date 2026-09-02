@@ -81,7 +81,7 @@ var SHELL = [
      d'inscription la lisent à l'évaluation : sans elle hors ligne, un
      établissement retombe sur la famille par défaut. */
   '/assets/trades.js?v=6',
-  '/assets/interactive.js?v=26',
+  '/assets/interactive.js?v=27',
   '/assets/features.js?v=4',
   '/assets/invoicing.css?v=6',
   '/assets/invoicing.js?v=8',
@@ -162,7 +162,7 @@ var SHELL = [
      dans un sous-sol sans wifi, et c'est précisément le moment où le Z doit
      s'écrire et s'imprimer. La remontée serveur, elle, retentera plus tard. */
   '/assets/day-report.js?v=5',
-  '/assets/day-report-dash.js?v=8',
+  '/assets/day-report-dash.js?v=9',
   '/assets/day-report-export.js?v=5',
   /* Les horaires d'ouverture. Dans la coquille hors-ligne parce que la caisse
      s'en sert au moment le plus hors-ligne qui soit : l'ouverture du service.

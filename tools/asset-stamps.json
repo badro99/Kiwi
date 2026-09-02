@@ -204,8 +204,8 @@
     "sha": "cf3fd55867d2915e"
   },
   "assets/day-report-dash.js": {
-    "v": "8",
-    "sha": "a0c379dc09936a9d"
+    "v": "9",
+    "sha": "b3e09494aca30722"
   },
   "assets/day-report-export.js": {
     "v": "5",
@@ -328,8 +328,8 @@
     "sha": "6adeb79b59822054"
   },
   "assets/hotel.js": {
-    "v": "22",
-    "sha": "57bfd92b5dd637e5"
+    "v": "23",
+    "sha": "8902a19c6dc72039"
   },
   "assets/hours-ui.js": {
     "v": "1",
@@ -360,8 +360,8 @@
     "sha": "21040572d903f0b8"
   },
   "assets/interactive.js": {
-    "v": "26",
-    "sha": "e17235bc030c227f"
+    "v": "27",
+    "sha": "48b5e81a052275b5"
   },
   "assets/inventory-consumption.js": {
     "v": "12",

@@ -2691,8 +2691,17 @@ ar: {
             // Read BEFORE adding — the very first sale is a milestone, not a
             // routine toast. This is the moment onboarding literally promised.
             const first = (window.KiwiSales.totals(vid).count === 0);
+            const sale = {
+              id: 'dashboard-' + Date.now() + '-' + Math.random().toString(36).slice(2, 10),
+              amount: num, method, label: 'Vente tableau de bord',
+              ref: 'WEB-' + Date.now(), time: new Date(), channel: 'dashboard'
+            };
+            const queued = window.KiwiLive?.postSale?.(sale);
+            if (!queued || queued.ok === false) {
+              toast(tr({fr:'Vente non enregistrée · vérifiez la connexion de la caisse', en:'Sale not recorded · check the register connection', ar:'لم يتم تسجيل البيع · تحقق من اتصال الصندوق'}), { type:'error', force:true });
+              return;
+            }
             m.close();
-            window.KiwiSales.add(vid, { amount: num, method });
             const ML = { card: 'carte', qr: 'QR Wallet', link: 'lien de paiement' };
             // Pulse the hero number so the merchant SEES their money land — a
             // spring scale via Web Animations (no CSS dependency).
