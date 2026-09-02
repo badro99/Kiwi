@@ -15,23 +15,32 @@ function ok(label, yes) {
   else { failed++; console.log('  ✗ ' + label); }
 }
 
-const settle = CAISSE.slice(
-  CAISSE.indexOf('function settleVrapPayment()'),
-  CAISSE.indexOf('function openVrapOrder(', CAISSE.indexOf('function settleVrapPayment()'))
+const finalize = CAISSE.slice(
+  CAISSE.indexOf('function finalizeTender('),
+  CAISSE.indexOf('function updateRendu(', CAISSE.indexOf('function finalizeTender('))
 );
-ok('payer un nouveau retrait crée un bon avant clearCart',
-  settle.indexOf('kdsOrders.push(order)') >= 0 &&
-  settle.indexOf('kdsOrders.push(order)') < settle.lastIndexOf('clearCart()'));
-ok('le paiement imprime le bon cuisine', /printKitchenTickets\(order, items\)/.test(settle));
-ok('le paiement relaie le bon vers le KDS', /relayToKitchen\(order\)/.test(settle));
-ok('le bon payé reste marqué payé', /paid:\s*true/.test(settle));
+const dispatch = CAISSE.slice(
+  CAISSE.indexOf('function createTakeawayKitchenOrder('),
+  CAISSE.indexOf('function serverNameFor(', CAISSE.indexOf('function createTakeawayKitchenOrder('))
+);
+ok('payer un retrait envoie le bon avant d’enregistrer la vente',
+  finalize.indexOf('dispatchUnsentKitchenBeforePayment()') >= 0 &&
+  finalize.indexOf('dispatchUnsentKitchenBeforePayment()') < finalize.indexOf('recordSale('));
+ok('le paiement imprime le bon cuisine', /printKitchenTickets\(order, items\)/.test(dispatch));
+ok('le paiement relaie le bon vers le KDS', /relayToKitchen\(order\)/.test(dispatch));
+ok('un retrait OrderPro payé sort de held avec l’état paid',
+  /dispatchHeldTakeaway\(existing, true, true\)/.test(dispatch));
 
 ok('une arrivée OrderPro pending ne déclenche aucune impression',
   !/status === ['"]pending['"][\s\S]{0,300}printKitchenTickets/.test(CAISSE));
 ok('seul un accepted réussi appelle le crochet de confirmation',
   /if \(j && j\.ok\)[\s\S]{0,500}status === 'accepted'[\s\S]{0,300}confirmAccepted/.test(INBOX));
-ok('le crochet imprime une seule fois',
-  /if \(!ticket \|\| ticket\.kitchenPrinted\) return;[\s\S]{0,120}ticket\.kitchenPrinted = true;[\s\S]{0,120}printKitchenTickets/.test(CAISSE));
+ok('le crochet imprime localement avec l’identifiant OrderPro dédupliqué',
+  /confirmAccepted\(order\)[\s\S]{0,500}localKitchenAction: true/.test(CAISSE) &&
+  /sourceId: o\.id/.test(CAISSE));
+ok('envoyer en cuisine et encaisser restent deux gestes distincts sur OrderPro',
+  /data-kop-acc/.test(INBOX) && /data-kop-pay/.test(INBOX) &&
+  /data-vrap-send/.test(CAISSE));
 
 if (failed) process.exit(1);
 console.log('\n  Caisse takeout + OrderPro confirmation boundaries verified.\n');

@@ -32,8 +32,8 @@ const takeawayHarness = new Function(`
   const persistShift = () => {};
   ${extractFunction('dispatchHeldTakeaway')}
   const order = { num: 8, opId: 'op-takeout-8', status: 'held', items: [{ q: 1, n: 'Pasta' }] };
-  const first = dispatchHeldTakeaway(order, true);
-  const second = dispatchHeldTakeaway(order, true);
+  const first = dispatchHeldTakeaway(order, true, true);
+  const second = dispatchHeldTakeaway(order, true, true);
   return { first, second, order, prints, pushes };
 `)();
 
@@ -42,6 +42,8 @@ assert.equal(takeawayHarness.second, false, 'the same order cannot dispatch twic
 assert.equal(takeawayHarness.order.status, 'new', 'the order becomes visible to KDS');
 assert.equal(takeawayHarness.prints.length, 1, 'the kitchen ticket is printed exactly once');
 assert.equal(takeawayHarness.prints[0].options.sourceId, 'op-takeout-8', 'paper dedup uses the canonical OrderPro id');
+assert.equal(takeawayHarness.prints[0].options.remote, false,
+  'the accepting caisse prints its own OrderPro ticket without requiring the remote hub lease');
 assert.deepEqual(takeawayHarness.pushes.map(x => [x.status, x.extra.paid]), [['accepted', true]],
   'the customer queue learns that the paid order was accepted');
 
@@ -115,6 +117,8 @@ assert.equal(tableHarness.second, 0, 'the manual/payment fallback cannot resend 
 assert.deepEqual(tableHarness.ingested.map(x => x.id), ['op-table-a', 'op-table-b'],
   'each original OrderPro id enters KDS once');
 assert.ok(tableHarness.ingested.every(x => x.status === 'accepted'), 'local KDS sees accepted orders immediately');
+assert.ok(tableHarness.ingested.every(x => x.localKitchenAction === true),
+  'table acceptance is classified as a local operator print action');
 assert.deepEqual(tableHarness.statuses.map(x => x.id), ['op-table-a', 'op-table-b'],
   'each acceptance is acknowledged to the server once');
 
@@ -124,8 +128,12 @@ assert.match(source, /tableKitchenPending[\s\S]{0,220}?kitchenBtn\.hidden = !tab
   'the table bill exposes a kitchen button while anything is pending');
 assert.match(source, /mode === 'salle' && selectedId[\s\S]{0,180}?dispatchTableUnsentToKitchen\(selectedId, false\)/,
   'the table kitchen button uses the shared dispatch path');
-assert.match(source, /confirmAccepted\(order\)[\s\S]{0,180}?opIngest\(Object\.assign/,
+assert.match(source, /confirmAccepted\(order\)[\s\S]{0,500}?opIngest\(Object\.assign/,
   'successful OrderPro acceptance returns through the idempotent ingestion bridge');
+assert.match(source, /data-vrap-send[\s\S]{0,500}?dispatchHeldTakeaway\(order, false, true\)/,
+  'an unpaid OrderPro takeaway exposes a separate kitchen action that keeps it unpaid');
+assert.match(source, /remote: o\.localKitchenAction !== true[\s\S]{0,160}?sourceId: o\.id/,
+  'operator acceptance prints locally while passive remote polling remains hub-only');
 assert.match(source, /!l\.sent && !l\.orderProPending/,
   'pending remote lines cannot be merged into a second local table ticket');
 assert.match(source, /if \(cart && cart\.length\)[\s\S]{0,180}?createTakeawayKitchenOrder\(cart\)[\s\S]{0,100}?vrapEditingNum = created\.num/,

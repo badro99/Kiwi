@@ -5109,6 +5109,13 @@
       color: var(--riad, #053B2C);
       transform: translateY(-1px);
     }
+    .vrap-act.vrap-act-send {
+      background: var(--surface, #fff);
+      color: var(--forest, #0B6E4F);
+      border: 1px solid rgba(11,110,79,0.28);
+      box-shadow: none;
+    }
+    .vrap-act.vrap-act-send:hover { background: var(--mint-soft, #E6FBEF); }
     .vrap-empty { text-align: center; padding: 46px 20px; color: var(--ink-4); }
     .vrap-empty svg { width: 30px; height: 30px; margin: 0 auto 8px; }
     .vrap-empty span { display: block; font-size: 13px; }
@@ -5413,7 +5420,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=456" defer></script>
+  <script src="assets/caisse-pwa.js?v=457" defer></script>
   <script src="assets/live-link.js?v=18" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -5489,7 +5496,7 @@
   <script src="assets/food-production-print.js?v=2" defer></script>
   <!-- OrderPro · orders placed on a customer's phone arrive here over WiFi;
        staff accept one and it becomes a kitchen ticket. Paired terminals only. -->
-  <script src="assets/orderpro-inbox.js?v=7" defer></script>
+  <script src="assets/orderpro-inbox.js?v=8" defer></script>
   <!-- Operator feature flags + managed PINs. Fail-safe: no backend ⇒ no change. -->
   <script src="assets/merchant-config.js?v=268" defer></script>
   <!-- « Rafraîchir » · un bouton commun à toutes les caisses (restaurant,
@@ -9782,8 +9789,11 @@
       $('#cash-received').value = net;
       updateRendu();
       showPayButtons(false);
-      // "Envoyer en cuisine" only for a brand-new order (not when editing one).
-      $('#rp-send-kitchen').hidden = editing;
+      /* Une commande OrderPro à emporter s'ouvre dans le builder pour pouvoir
+         être encaissée, mais elle reste `held` tant que personne ne l'a envoyée.
+         Les deux gestes doivent donc rester visibles et indépendants. */
+      const editingOrder = editing ? kdsOrders.find(x => x && x.num === vrapEditingNum) : null;
+      $('#rp-send-kitchen').hidden = editing && !(editingOrder && editingOrder.status === 'held');
       if (discAmt > 0 && window.lucide) lucide.createIcons();
     }
 
@@ -17741,6 +17751,13 @@
         const o = kdsOrders.find(x => x.num === vrapEditingNum);
         if (o) {
           saveVrapEdits();
+          if (o.status === 'held') {
+            dispatchHeldTakeaway(o, false, true);
+            clearCart();
+            setVrapView('board');
+            toast(`Commande ${ticketNo(o)} envoyée en cuisine · paiement en attente`);
+            return;
+          }
           const items = kitchenItemsFromLines(cart);
           printKitchenTickets(o, items);
           try { persistShift(); } catch (_) {}
@@ -17811,11 +17828,12 @@
       const readyBtn = (kdsDisabled && !ready && o.status !== 'held')
         ? `<button class="vrap-act vrap-act-ready" data-vrap-ready="${o.num}" title="Prévenir le client que la commande est prête">Marquer prêt</button>`
         : '';
+      const sendBtn = o.status === 'held'
+        ? `<button class="vrap-act vrap-act-send" data-vrap-send="${o.num}">Envoyer en cuisine</button>`
+        : '';
       let action = '';
       if (!o.paid) {
-        action = readyBtn
-          ? `<div class="vrap-order-acts">${readyBtn}<button class="vrap-act">Encaisser</button></div>`
-          : `<button class="vrap-act">Encaisser</button>`;
+        action = `<div class="vrap-order-acts">${sendBtn}${readyBtn}<button class="vrap-act">Encaisser</button></div>`;
       } else if (!o.pickedUp) {
         action = readyBtn
           ? `<div class="vrap-order-acts">${readyBtn}<button class="vrap-act" data-vrap-handover="${o.num}">Remettre au client</button></div>`
@@ -17939,7 +17957,7 @@
              client vient d'annoncer son numéro et de payer, donc elle part en
              cuisine MAINTENANT, et pas avant. C'est ce que le paiement protège
              · on ne prépare rien pour quelqu'un qui n'est jamais venu. */
-          dispatchHeldTakeaway(o, true);
+          dispatchHeldTakeaway(o, true, true);
           toast(`Commande ${ticketNo(o)} encaissée · ${fmtMAD(o.total)}`);
         }
         vrapEditingNum = null;
@@ -18059,6 +18077,15 @@
       }
       const rdy = e.target.closest('[data-vrap-ready]');
       if (rdy) { vrapMarkReady(Number(rdy.dataset.vrapReady)); return; }
+      const send = e.target.closest('[data-vrap-send]');
+      if (send) {
+        const order = kdsOrders.find(x => x && x.num === Number(send.dataset.vrapSend));
+        if (order && dispatchHeldTakeaway(order, false, true)) {
+          renderVrapBoard();
+          toast(`Commande ${ticketNo(order)} envoyée en cuisine · paiement en attente`);
+        }
+        return;
+      }
       const ho = e.target.closest('[data-vrap-handover]');
       if (ho) { vrapHandover(Number(ho.dataset.vrapHandover)); return; }
       // Any other click on an order card opens it (unpaid → edit + checkout).
@@ -18160,6 +18187,7 @@
           opIngest(Object.assign({}, remote, {
             status: 'accepted', server: server || remote.server || '',
             paid: paid === true || remote.paid === true, updated_ts: Date.now(),
+            localKitchenAction: true,
           }));
         }
         try {
@@ -18171,14 +18199,17 @@
       return ids.length;
     }
 
-    function dispatchHeldTakeaway(o, paid) {
+    function dispatchHeldTakeaway(o, paid, localKitchenAction) {
       if (!o || o.status !== 'held') return false;
       o.status = 'new';
       o.sentAt = new Date();
       if (!o.kitchenDispatchedAt) {
         o.kitchenDispatchedAt = Date.now();
         printKitchenTickets(o, o.items || [], {
-          remote: !!o.opId, sourceId: o.opId || '', createdAt: o.kitchenDispatchedAt,
+          /* A click on THIS till must print on THIS till. `remote` is reserved
+             for passive polling, where only the elected hub may print. */
+          remote: !!o.opId && localKitchenAction !== true,
+          sourceId: o.opId || '', createdAt: o.kitchenDispatchedAt,
         });
       }
       opPush(o, 'accepted', { paid: paid === true });
@@ -18198,7 +18229,7 @@
       if (mode === 'vrap') {
         if (vrapEditingNum != null) {
           const existing = kdsOrders.find(x => x && x.num === vrapEditingNum);
-          if (existing) dispatchHeldTakeaway(existing, true);
+          if (existing) dispatchHeldTakeaway(existing, true, true);
           return existing || null;
         }
         if (cart && cart.length) {
@@ -18484,7 +18515,8 @@
            attente ne passent jamais ici ; les prêts/servis retrouvés après un
            redémarrage ne ressortent pas non plus. */
         if (o.status === 'accepted') printKitchenTickets(t, t.items, {
-          remote: true, sourceId: o.id, createdAt: o.updated_ts || o.created_ts,
+          remote: o.localKitchenAction !== true,
+          sourceId: o.id, createdAt: o.updated_ts || o.created_ts,
         });
         return;
       } else {
@@ -18531,7 +18563,8 @@
            l'attente du paiement. Son passage à accepted ne recrée donc pas le
            ticket dans la branche !known : il faut lancer le papier ici. */
         printKitchenTickets(known, known.items, {
-          remote: true, sourceId: o.id, createdAt: o.updated_ts || Date.now(),
+          remote: o.localKitchenAction !== true,
+          sourceId: o.id, createdAt: o.updated_ts || Date.now(),
         });
       }
       if (o.paid && !known.paid) known.paid = true;
@@ -18698,7 +18731,32 @@
          reconnu, jamais imprimé une seconde fois. */
       confirmAccepted(order) {
         if (!order || !order.id) return;
-        opIngest(Object.assign({}, order, { status: 'accepted' }));
+        /* This callback runs only on the caisse whose operator obtained the
+           pending → accepted transition. It is therefore a local print action,
+           not a passive remote-poll job requiring the hub lease. */
+        opIngest(Object.assign({}, order, { status: 'accepted', localKitchenAction: true }));
+      },
+      checkoutOrder(orderId) {
+        let remote = null;
+        try {
+          const orders = window.KiwiOrderInbox && KiwiOrderInbox.orders && KiwiOrderInbox.orders();
+          remote = orders && orders[orderId];
+        } catch (_) {}
+        const local = opTickets.get(orderId);
+        if (remote && remote.mode === 'table') {
+          const tableId = caisseTableId(remote.table);
+          if (!tableId) { toast('Table introuvable sur le plan'); return false; }
+          if (mode !== 'salle') setMode('salle');
+          openTable(tableId);
+          return true;
+        }
+        if (local && local.type === 'takeaway') {
+          if (mode !== 'vrap') setMode('vrap');
+          openVrapOrder(local.num);
+          return true;
+        }
+        toast('Commande introuvable dans la caisse');
+        return false;
       },
       sessionOf: phoneSessionOf,
       serverFor: serverNameFor,

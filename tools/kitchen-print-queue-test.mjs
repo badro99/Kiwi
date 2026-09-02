@@ -164,10 +164,31 @@ ok('un second appareil ne vole pas un bail vivant', app.KiwiKitchenPrint.setHub(
 memory.set('kiwiKitchenPrintHubV1', JSON.stringify({ enabled: true, merchant: 'amira-cafe', deviceId: 'other-device', expiresAt: Date.now() - 1 }));
 ok('le même appareil reprend le hub seulement après expiration', app.KiwiKitchenPrint.setHub(true) === true && memory.get('kiwiKitchenPrintHubV1').includes(ownDevice));
 
+/* An OrderPro order accepted or paid on this caisse is no longer a passive
+   remote replay: the operator explicitly chose this device, so it must print
+   here even when another device owns the remote-hub lease. The canonical
+   OrderPro id still makes a retry a no-op. */
+merchantState.value = 'operator-action-cafe';
+app = boot();
+const beforeLocalOrderPro = printed.length;
+result = app.KiwiKitchenPrint.enqueue([
+  { id: 'orderpro-local-action:cuisson', createdAt: Date.now(), payload: { title: 'CUISSON', items: [{ name: 'Pasta' }] } },
+], { remote: false });
+await wait(90);
+ok('le clic caisse imprime le bon OrderPro sans bail de hub',
+  result.accepted === 1 && printed.length === beforeLocalOrderPro + 1);
+app.KiwiKitchenPrint.enqueue([
+  { id: 'orderpro-local-action:cuisson', createdAt: Date.now(), payload: { title: 'CUISSON', items: [{ name: 'Pasta' }] } },
+], { remote: false });
+await wait();
+ok('le même identifiant OrderPro ne réimprime jamais le bon', printed.length === beforeLocalOrderPro + 1);
+
 ok('la caisse charge la file durable après le relais canonique',
   /kitchen-relay\.js[^]*kitchen-print-queue\.js/.test(caisse));
 ok('les commandes distantes acceptées appellent bien le papier',
-  /o\.status === 'accepted'\) printKitchenTickets\(t, t\.items, \{[^]*?remote: true/.test(caisse));
+  /o\.status === 'accepted'\) printKitchenTickets\(t, t\.items, \{[^]*?remote: o\.localKitchenAction !== true/.test(caisse));
+ok('la caisse qui accepte imprime localement sans exiger le bail du hub',
+  /confirmAccepted\(order\)[^]*?localKitchenAction: true/.test(caisse));
 ok('une commande en attente devenue acceptée déclenche aussi son bon',
   /o\.status === 'accepted' && known\.status === 'held'[^]*?printKitchenTickets\(known/.test(caisse));
 ok('l’impression locale relaie d’abord l’ordre pour partager son identifiant idempotent',

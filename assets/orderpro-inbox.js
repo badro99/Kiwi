@@ -71,9 +71,10 @@
       '#kop-root .kop-line{display:flex;gap:9px;font-size:.9rem;padding:3px 0;color:var(--ink,#0A0F0D);}',
       '#kop-root .kop-line .q{font-family:"JetBrains Mono",ui-monospace,monospace;color:var(--atlas,#0B6E4F);font-weight:600;min-width:24px;}',
       '#kop-root .kop-line .o{color:rgba(10,15,13,.55);font-size:.82rem;}',
-      '#kop-root .kop-acts{display:flex;gap:8px;margin-top:13px;}',
+      '#kop-root .kop-acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:13px;}',
       '#kop-root .kop-btn{flex:1;border:0;border-radius:11px;padding:12px;font:600 .92rem/1 inherit;cursor:pointer;}',
       '#kop-root .kop-btn.go{background:var(--atlas,#0B6E4F);color:#fff;}',
+      '#kop-root .kop-btn.send{background:var(--mint-soft,#E6FBEF);color:var(--riad,#053B2C);border:1px solid rgba(11,110,79,.22);}',
       '#kop-root .kop-btn.ghost{background:var(--surface);border:1px solid rgba(10,15,13,.14);color:rgba(10,15,13,.65);}',
       '#kop-root .kop-btn.ghost:hover{color:var(--danger,#b0402f);border-color:var(--danger,#b0402f);}',
       '#kop-root .kop-empty{text-align:center;color:rgba(10,15,13,.5);font-size:.92rem;padding:60px 20px;line-height:1.6;}',
@@ -172,6 +173,7 @@
           prev.status = 'ready';
         }
       } else prev.status = status;
+      if (extra && extra.paid) prev.paid = true;
       paint();
     }
     var body = { merchant: m, id: id, status: status };
@@ -326,20 +328,23 @@
         (l.options ? ' <span class="o">' + esc(l.options) + '</span>' : '') +
         (l.note ? ' <span class="o">·' + esc(l.note) + '</span>' : '') + '</span></div>';
     }).join('');
+    var pay = !o.paid
+      ? '<button class="kop-btn go" data-kop-pay="' + esc(o.id) + '">Encaisser</button>'
+      : '';
     var acts = o.status === 'pending'
       ? '<div class="kop-acts">' +
           '<button class="kop-btn ghost" data-kop-rej="' + esc(o.id) + '">Refuser</button>' +
-          '<button class="kop-btn go" data-kop-acc="' + esc(o.id) + '">Accepter · envoyer en cuisine</button>' +
+          '<button class="kop-btn send" data-kop-acc="' + esc(o.id) + '">Envoyer en cuisine</button>' + pay +
         '</div>'
       : (o.status === 'accepted'
-          ? '<div class="kop-acts"><button class="kop-btn go" data-kop-ready="' + esc(o.id) + '">Marquer prêt</button></div>'
+          ? '<div class="kop-acts"><button class="kop-btn send" data-kop-ready="' + esc(o.id) + '">Marquer prêt</button>' + pay + '</div>'
           : (o.status === 'ready'
               /* Le point final. Sans lui, une commande restait « prête » pour
                * toujours : le téléphone du client ne recevait jamais son
                * remerciement, et la file gardait une ligne que plus personne
                * n'avait à traiter. */
-              ? '<div class="kop-acts"><button class="kop-btn go" data-kop-served="' + esc(o.id) + '">' +
-                (o.mode === 'table' ? 'Servie' : 'Remise au client') + '</button></div>'
+              ? '<div class="kop-acts"><button class="kop-btn send" data-kop-served="' + esc(o.id) + '">' +
+                (o.mode === 'table' ? 'Servie' : 'Remise au client') + '</button>' + pay + '</div>'
               : ''));
     return '<div class="kop-card ' + esc(o.status) + '">' +
       '<div class="kop-top"><span class="kop-num">' + orderRef(o) + '</span>' +
@@ -411,10 +416,15 @@
       document.body.appendChild(root);
       root.addEventListener('click', function (e) {
         if (e.target === root) { close(); return; }
-        var t = e.target.closest('[data-kop-acc],[data-kop-rej],[data-kop-ready],[data-kop-served],#kop-close');
+        var t = e.target.closest('[data-kop-acc],[data-kop-pay],[data-kop-rej],[data-kop-ready],[data-kop-served],#kop-close');
         if (!t) return;
         if (t.id === 'kop-close') { close(); return; }
-        if (t.dataset.kopAcc) {
+        if (t.dataset.kopPay) {
+          try {
+            if (window.KiwiCaisseKitchen && window.KiwiCaisseKitchen.checkoutOrder
+                && window.KiwiCaisseKitchen.checkoutOrder(t.dataset.kopPay)) close();
+          } catch (_) {}
+        } else if (t.dataset.kopAcc) {
           /* Accepter une commande en salle, c'est aussi décider AU NOM DE QUI
            * elle part : le bon de cuisine porte le serveur affecté à la table,
            * et seule la caisse connaît cette affectation à cet instant. */
