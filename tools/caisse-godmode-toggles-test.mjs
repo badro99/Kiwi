@@ -23,17 +23,13 @@ function check(label, ok) {
   }
 }
 
-console.log('■ Caisse God Mode Toggles & Grouping Test (tools/caisse-godmode-toggles-test.mjs)');
+console.log('■ Caisse God Mode & Intertwined Table Tools Test (tools/caisse-godmode-toggles-test.mjs)');
 
-// 1. God Mode (kiwi-admin.html) configuration & clear arrangement
+// 1. Clean God Mode (kiwi-admin.html) configuration
 check('kiwi-admin.html defines CAISSE_MODES (Modes de service)', ADMIN.includes('var CAISSE_MODES = ['));
 check('CAISSE_MODES includes salle (Mode Salle)', /key:'salle'/.test(ADMIN));
 check('CAISSE_MODES includes vrap (Mode À emporter)', /key:'vrap'/.test(ADMIN));
 check('CAISSE_MODES includes waitlist (Mode File d’attente)', /key:'waitlist'/.test(ADMIN));
-
-check('kiwi-admin.html defines CAISSE_TABLE_TOOLS (Outils de table)', ADMIN.includes('var CAISSE_TABLE_TOOLS = ['));
-check('CAISSE_TABLE_TOOLS includes tableTransfer (Déplacer table)', /key:'tableTransfer'/.test(ADMIN));
-check('CAISSE_TABLE_TOOLS includes tableMerge (Fusionner tables)', /key:'tableMerge'/.test(ADMIN));
 
 check('kiwi-admin.html defines CAISSE_ACTIONS (Actions rapides & tiroir)', ADMIN.includes('var CAISSE_ACTIONS = ['));
 check('CAISSE_ACTIONS includes remboursement (Bouton Remboursement)', /key:'remboursement'/.test(ADMIN));
@@ -41,15 +37,12 @@ check('CAISSE_ACTIONS includes cashMove (Bouton Mouvement caisse)', /key:'cashMo
 check('CAISSE_ACTIONS includes passation (Bouton Passation caisse)', /key:'passation'/.test(ADMIN));
 check('CAISSE_ACTIONS includes openDrawer (Bouton Ouvrir le tiroir)', /key:'openDrawer'/.test(ADMIN));
 
-// Grouping clarity
-check('modulesForType cleanly splits Modes de service, Outils de table, Actions rapides',
+// Grouping clarity without confusing micro-switches
+check('modulesForType cleanly structures Modes de service and Actions rapides',
   ADMIN.includes("title:'Caisse · Modes de service'") &&
-  ADMIN.includes("title:'Caisse · Outils de table & Salle'") &&
   ADMIN.includes("title:'Caisse · Actions rapides & Tiroir'"));
-check('moduleLabel includes all sub-arrays',
-  ADMIN.includes('CAISSE_MODES') &&
-  ADMIN.includes('CAISSE_TABLE_TOOLS') &&
-  ADMIN.includes('CAISSE_ACTIONS'));
+check('God Mode does NOT clutter UI with separate sub-buttons for table tools',
+  !ADMIN.includes('CAISSE_TABLE_TOOLS'));
 check('.featgrp has clear visual divider styling',
   ADMIN.includes('.featgrp::after{content:"";flex:1;height:1px'));
 
@@ -78,18 +71,23 @@ check('act pill cash-move has data-feature="cash-move"', CAISSE.includes('data-a
 check('act pill passation has data-feature="passation"', CAISSE.includes('data-action="passation" data-feature="passation"'));
 check('act pill open-drawer has data-feature="open-drawer"', CAISSE.includes('data-action="open-drawer" data-feature="open-drawer"'));
 
-// 4. Caisse JS logic (kiwi-caisse.html)
-check('isFeatureOff helper supports tableTransfer and tableMerge',
-  CAISSE.includes("key === 'tableTransfer'") && CAISSE.includes("key === 'tableMerge'"));
-check('renderRightPanel hides #rp-table-tools when transfer and merge are both off',
-  CAISSE.includes("transferOff && mergeOff"));
-check('openCaisseTransferModal is gated by isFeatureOff',
-  /function openCaisseTransferModal\([\s\S]{0,200}isFeatureOff\('tableTransfer'\)/.test(CAISSE));
-check('openCaisseMergeModal is gated by isFeatureOff',
-  /function openCaisseMergeModal\([\s\S]{0,200}isFeatureOff\('tableMerge'\)/.test(CAISSE));
-check('table tool click listeners check isFeatureOff',
+// 4. Intertwined table awareness logic (kiwi-caisse.html)
+check('hasTables helper checks both features and actual venue table count',
+  CAISSE.includes('function hasTables()') &&
+  CAISSE.includes("isFeatureOff('salle')") &&
+  CAISSE.includes('Object.keys(tables).length > 1'));
+check('renderRightPanel intertwines table tools with hasTables()',
+  CAISSE.includes('const canUseTableTools = hasTables()') &&
+  CAISSE.includes('tt.hidden = transferOff && mergeOff'));
+check('openCaisseTransferModal checks hasTables()',
+  CAISSE.includes('function openCaisseTransferModal') &&
+  CAISSE.includes('!hasTables()'));
+check('openCaisseMergeModal checks hasTables()',
+  CAISSE.includes('function openCaisseMergeModal') &&
+  CAISSE.includes('!hasTables()'));
+check('table tool click listeners check hasTables()',
   CAISSE.includes("$('#rp-transfer-table') && $('#rp-transfer-table').addEventListener('click'") &&
-  CAISSE.includes("isFeatureOff('tableTransfer')"));
+  CAISSE.includes('!hasTables()'));
 
 if (failed > 0) {
   console.error(`\nCaisse God Mode toggle tests failed (${failed} error(s)).`);

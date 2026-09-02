@@ -8332,6 +8332,11 @@
       }
     }
 
+    function hasTables() {
+      if (isFeatureOff('salle') || isFeatureOff('tables')) return false;
+      return typeof tables === 'object' && tables !== null && Object.keys(tables).length > 1;
+    }
+
     function setMode(newMode) {
       if (isFeatureOff(newMode)) {
         const fallback = ['salle', 'vrap', 'waitlist'].find(m => !isFeatureOff(m));
@@ -8499,9 +8504,15 @@
       renderRpSplitCard(id);
       const tt = $('#rp-table-tools');
       if (tt) {
-        const transferOff = isFeatureOff('tableTransfer') || isFeatureOff('table-transfer');
-        const mergeOff = isFeatureOff('tableMerge') || isFeatureOff('table-merge');
+        const canUseTableTools = hasTables();
+        const transferOff = !canUseTableTools || isFeatureOff('tableTransfer') || isFeatureOff('table-transfer');
+        const mergeOff = !canUseTableTools || isFeatureOff('tableMerge') || isFeatureOff('table-merge');
+        const trBtn = $('#rp-transfer-table');
+        const mgBtn = $('#rp-merge-table');
+        if (trBtn) { trBtn.hidden = transferOff; trBtn.style.display = transferOff ? 'none' : ''; }
+        if (mgBtn) { mgBtn.hidden = mergeOff; mgBtn.style.display = mergeOff ? 'none' : ''; }
         tt.hidden = transferOff && mergeOff;
+        tt.style.display = (transferOff && mergeOff) ? 'none' : '';
       }
 
       // Remise · recompute the discount amount against the current gross
@@ -10981,8 +10992,8 @@
     let ctrfSelectedToId = null;
 
     function openCaisseTransferModal(tableId) {
-      if (isFeatureOff('tableTransfer') || isFeatureOff('table-transfer')) {
-        toast('Déplacement de table désactivé dans la console God Mode');
+      if (!hasTables() || isFeatureOff('tableTransfer') || isFeatureOff('table-transfer')) {
+        toast('Déplacement de table non disponible');
         return;
       }
       ctrfFromId = tableId;
@@ -11084,8 +11095,8 @@
     let cmrgSelectedTargetId = null;
 
     function openCaisseMergeModal(tableId) {
-      if (isFeatureOff('tableMerge') || isFeatureOff('table-merge')) {
-        toast('Fusion de tables désactivée dans la console God Mode');
+      if (!hasTables() || isFeatureOff('tableMerge') || isFeatureOff('table-merge')) {
+        toast('Fusion de tables non disponible');
         return;
       }
       cmrgSourceId = tableId;
@@ -11180,11 +11191,11 @@
     }
 
     $('#rp-transfer-table') && $('#rp-transfer-table').addEventListener('click', () => {
-      if (isFeatureOff('tableTransfer') || isFeatureOff('table-transfer')) return;
+      if (!hasTables() || isFeatureOff('tableTransfer') || isFeatureOff('table-transfer')) return;
       if (selectedId) openCaisseTransferModal(selectedId);
     });
     $('#rp-merge-table') && $('#rp-merge-table').addEventListener('click', () => {
-      if (isFeatureOff('tableMerge') || isFeatureOff('table-merge')) return;
+      if (!hasTables() || isFeatureOff('tableMerge') || isFeatureOff('table-merge')) return;
       if (selectedId) openCaisseMergeModal(selectedId);
     });
 
