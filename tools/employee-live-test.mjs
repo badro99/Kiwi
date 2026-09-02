@@ -600,7 +600,8 @@ ok(caisseSource.includes('function startEmployeeSaleJournalSync()')
   && caisseSource.includes('saleRefs.some((ref) => String(entry.ref || \'\') === ref)')
   && caisseSource.includes("'&from=' + from")
   && caisseSource.includes('KiwiLive.watchFeed(ingestSettledCloudSales)')
-  && caisseSource.includes('DR.businessDay(saleTs || Date.now()) !== currentBusinessDay()')
+  && caisseSource.includes('saleTs < shiftOpenedAt.getTime()')
+  && caisseSource.includes('const from = shiftOpenedAt.getTime()')
   && caisseSource.includes('journal.push(entry)')
   && caisseSource.includes('saveProvisional(true)'),
   "un paiement téléphone rejoint une seule fois le journal du service caisse avec ses lignes");

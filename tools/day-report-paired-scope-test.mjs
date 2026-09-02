@@ -58,5 +58,18 @@ vm.runInContext(src, ctx2);
 ok(ctx2.window.KiwiDayReport.storeSlug() === 'merchant-slug-canonical',
   'fallback path without KiwiCaissePairing resolves identical canonical merchant slug (not name slug)');
 
+// 4. Moroccan late service: midnight is not the accounting boundary. With the
+// default 05:00 cutoff, closing and reopening at 03:00 remains on the previous
+// evening's dashboard day even though the new caisse service itself starts at 0.
+const evening = new Date(2026, 8, 2, 18, 0).getTime();
+const afterMidnight = new Date(2026, 8, 3, 3, 0).getTime();
+const boundary = new Date(2026, 8, 3, 5, 0).getTime();
+ok(ctx2.window.KiwiDayReport.businessDay(evening) === '2026-09-02',
+  'an evening service belongs to its opening calendar day');
+ok(ctx2.window.KiwiDayReport.businessDay(afterMidnight) === '2026-09-02',
+  'a 03:00 close/reopen remains in the same dashboard business day');
+ok(ctx2.window.KiwiDayReport.businessDay(boundary) === '2026-09-03',
+  'the next dashboard business day starts at the 05:00 safety boundary');
+
 if (process.exitCode) process.exit(process.exitCode);
 console.log(`  ✓ day-report paired scope (${pass} controls: canonical merchant consistency)`);
