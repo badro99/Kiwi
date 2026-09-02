@@ -24,7 +24,8 @@ console.log('■ Takeout KDS Disabled "Marquer prêt" Test (tools/takeout-kds-re
 
 // 1. isKdsOff helper exists and checks KiwiConfig.off('kds')
 check('isKdsOff helper is defined', CAISSE.includes('function isKdsOff()'));
-check('isKdsOff checks KiwiConfig.off(\'kds\')', /KiwiConfig\.off\('kds'\)/.test(CAISSE));
+check('isKdsOff checks the shared kds feature gate',
+  /function isKdsOff\(\)\s*\{[\s\S]{0,100}(?:KiwiConfig\.off\('kds'\)|isFeatureOff\('kds'\))/.test(CAISSE));
 
 // 2. vrapOrderCard renders Marquer prêt button when KDS is disabled
 check('vrapOrderCard includes Marquer prêt button when KDS is disabled',
@@ -48,7 +49,14 @@ check('vrap-board click handler delegates data-vrap-ready to vrapMarkReady',
 check('.vrap-act.vrap-act-ready CSS is defined',
   CAISSE.includes('.vrap-act.vrap-act-ready') && CAISSE.includes('.vrap-order-acts'));
 
-// 7. Functional execution simulation
+// 7. The three unpaid-order actions must remain inside narrow tablet cards.
+check('takeout action group uses a bounded responsive grid',
+  /\.vrap-order-acts\s*\{[\s\S]{0,220}grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/.test(CAISSE));
+check('Encaisser occupies its own full-width action row',
+  CAISSE.includes('vrap-act vrap-act-pay') &&
+  /\.vrap-order-acts \.vrap-act-pay\s*\{[\s\S]{0,100}grid-column:\s*1\s*\/\s*-1/.test(CAISSE));
+
+// 8. Functional execution simulation
 {
   const order = {
     num: 42,

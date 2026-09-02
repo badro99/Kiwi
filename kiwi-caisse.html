@@ -5084,19 +5084,35 @@
     .vrap-order-items { font-size: 12.5px; color: var(--ink-2); line-height: 1.45; }
     .vrap-order-note { font-size: 11.5px; color: #8A6210; background: var(--cream); border-radius: 8px; padding: 5px 9px; margin-top: 8px; display: flex; align-items: center; gap: 6px; }
     .vrap-order-note svg { width: 12px; height: 12px; flex-shrink: 0; }
-    .vrap-order-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 12px; padding-top: 11px; border-top: 1px solid var(--line); }
+    .vrap-order-foot {
+      display: grid; gap: 10px;
+      margin-top: 12px; padding-top: 11px;
+      border-top: 1px solid var(--line);
+    }
     .vrap-order-total { font-size: 15px; font-weight: 700; color: var(--ink); font-feature-settings: "tnum" 1; }
     .vrap-act {
       padding: 9px 15px; border-radius: 999px;
       background: var(--gradient); color: #fff;
       font-size: 12.5px; font-weight: 600; box-shadow: var(--shadow-1);
+      line-height: 1.2; text-align: center;
       transition: transform 130ms ease;
     }
     .vrap-act:hover { transform: translateY(-1px); }
     .vrap-order-acts {
-      display: inline-flex;
-      align-items: center;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 7px;
+      width: 100%; min-width: 0;
+    }
+    .vrap-order-acts .vrap-act {
+      min-width: 0; min-height: 40px;
+      padding-inline: 10px;
+      white-space: normal;
+    }
+    .vrap-order-acts .vrap-act-pay {
+      grid-column: 1 / -1;
+      min-height: 42px;
+      font-size: 13px;
     }
     .vrap-act.vrap-act-ready {
       background: var(--mint-soft, #E6FBEF);
@@ -5425,7 +5441,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=460" defer></script>
+  <script src="assets/caisse-pwa.js?v=461" defer></script>
   <script src="assets/live-link.js?v=20" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -17880,7 +17896,7 @@
         : '';
       let action = '';
       if (!o.paid) {
-        action = `<div class="vrap-order-acts">${cancelBtn}${sendBtn}${readyBtn}<button class="vrap-act">Encaisser</button></div>`;
+        action = `<div class="vrap-order-acts">${cancelBtn}${sendBtn}${readyBtn}<button class="vrap-act vrap-act-pay">Encaisser · ${fmtMAD(o.total)}</button></div>`;
       } else if (!o.pickedUp) {
         action = readyBtn
           ? `<div class="vrap-order-acts">${readyBtn}<button class="vrap-act" data-vrap-handover="${o.num}">Remettre au client</button></div>`
