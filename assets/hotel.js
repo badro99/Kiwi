@@ -2519,6 +2519,7 @@
       : `${curY}-${String(curM).padStart(2, '0')}`;
 
     let activeMonth = defaultMonth;
+    const pendingReviewKeys = new Map();
 
     const m = K().modal({
       tag: 'REVUE INTERNE',
@@ -2543,6 +2544,12 @@
 
     async function postReview(action, extra, btn) {
       const pin = prompt('Code PIN Direction / Gérant (si non connecté avec le compte propriétaire) :') || '';
+      const intent = [action, activeMonth, String(extra?.rectificationReason || '')].join('|');
+      let idempotencyKey = pendingReviewKeys.get(intent);
+      if (!idempotencyKey) {
+        idempotencyKey = 'hotel-review-' + crypto.randomUUID();
+        pendingReviewKeys.set(intent, idempotencyKey);
+      }
       btn.disabled = true;
       const errBox = m.el.querySelector('[data-hx-closing-error]');
       if (errBox) errBox.innerHTML = '';
@@ -2550,9 +2557,10 @@
         const resp = await fetch('/api/hotel/declarations', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action, merchant: slug, month: activeMonth, pin, idempotencyKey: action + '-' + activeMonth + '-' + Date.now(), ...(extra || {}) })
+          body: JSON.stringify({ action, merchant: slug, month: activeMonth, pin, idempotencyKey, ...(extra || {}) })
         });
         const resBody = await resp.json().catch(() => ({}));
+        if (resp.ok || resp.status < 500) pendingReviewKeys.delete(intent);
         if (!resp.ok) {
           if (errBox) {
             errBox.innerHTML = `<div class="hx-close-err">${esc(resBody.detail || resBody.error || 'Contrôle impossible pour ce mois.')}${serverExceptionsHtml(resBody.exceptions)}</div>`;

@@ -120,6 +120,12 @@ planEvent('riad-test', 'bk-e', 'created', payloadFor('bk-e', { status: 'requeste
 planEvent('riad-test', 'bk-c', 'cancelled', payloadFor('bk-c', { status: 'cancelled', checkIn: `${HAPPY}-06`, checkOut: `${HAPPY}-08`, roomId: 'room:R9', segments: [seg('gst-c1', 'FR', `${HAPPY}-06`, `${HAPPY}-08`)] }), 104);
 planEvent('riad-test', 'bk-d', 'status_no_show', payloadFor('bk-d', { status: 'no_show', checkIn: `${HAPPY}-11`, checkOut: `${HAPPY}-13`, roomId: 'room:R9', segments: [seg('gst-d1', 'FR', `${HAPPY}-11`, `${HAPPY}-13`)] }), 105);
 
+/* Cursor ordering must be numeric, not lexicographic: cursor 10 is newer than
+ * cursor 9 and cancels this stay. The old string comparison resurrected it. */
+const DIGIT_MONTH = '2024-01';
+planEvent('riad-test', 'bk-digit-order', 'status_completed', payloadFor('bk-digit-order', { status: 'completed', checkIn: `${DIGIT_MONTH}-05`, checkOut: `${DIGIT_MONTH}-06`, roomId: 'room:R8', segments: [seg('gst-digit', 'FR', `${DIGIT_MONTH}-05`, `${DIGIT_MONTH}-06`)] }), 9);
+planEvent('riad-test', 'bk-digit-order', 'cancelled', payloadFor('bk-digit-order', { status: 'cancelled', checkIn: `${DIGIT_MONTH}-05`, checkOut: `${DIGIT_MONTH}-06`, roomId: 'room:R8', segments: [seg('gst-digit', 'FR', `${DIGIT_MONTH}-05`, `${DIGIT_MONTH}-06`)] }), 10);
+
 const STALE = PREV_MONTH;
 const staleBookings = [
   bookingFor('bk-stale', 'H-STL', { status: 'checked_in', checkIn: `${STALE}-05`, checkOut: `${STALE}-10`, roomId: 'room:R1', partySize: 1, guests: [guest('Stale Guest', 'MA', 'STALEDOC1')] }),
@@ -362,6 +368,13 @@ let rev1Hash = '';
   ok(r.body.declaration.sourceCursor === maxEventCursor, 'cursor still marks the ledger position read, even with no stays');
 }
 
+/* ── P2 · latest event uses numeric cursor ordering ──────────────────────── */
+{
+  const r = await post({ merchant: 'riad-test', month: DIGIT_MONTH, action: 'finalize', idempotencyKey: 'k-digit-order-001' }, ownerCookie);
+  ok(r.status === 200, 'cross-digit cursor month seals');
+  ok(r.body.declaration.payload.activeStaysCount === 0, 'cursor 10 cancellation wins over cursor 9 completion');
+}
+
 /* ── O · 4 100 stays aggregate from the uncapped ledger ───────────────────── */
 {
   const r = await post({ merchant: 'riad-bulk', month: BULK, action: 'finalize', idempotencyKey: 'k-bulk-001' }, ownerCookie);
@@ -472,6 +485,15 @@ let raceRev1 = '';
 }
 
 /* ── AD · no event ledger → authoritative review refused ──────────────────── */
+{
+  const corruptId = 'hse:corrupt:99999:0';
+  sql.prepare('INSERT INTO hotel_stay_events (merchant,id,stay_id,event_type,payload_json,occurred_ts,srv_cursor,event_ordinal,actor_id,actor_role) VALUES (?,?,?,?,?,?,?,?,?,?)')
+    .run('riad-test', corruptId, 'bk-corrupt', 'updated', '{not-json', now, 99999, 0, 'seed', 'owner');
+  const r = await post({ merchant: 'riad-test', month: '2024-02', action: 'finalize', idempotencyKey: 'k-corrupt-001' }, ownerCookie);
+  ok(r.status === 503 && r.body.error === 'event-ledger-invalid', 'corrupt event fails closed instead of reviving an older snapshot');
+  sql.prepare('DELETE FROM hotel_stay_events WHERE merchant=? AND id=?').run('riad-test', corruptId);
+}
+
 {
   sql.exec('DROP TABLE hotel_stay_events');
   const r = await post({ merchant: 'riad-test', month: '2025-05', action: 'finalize', idempotencyKey: 'k-noevents-001' }, ownerCookie);

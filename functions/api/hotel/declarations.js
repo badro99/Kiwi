@@ -154,12 +154,21 @@ function overlapNights(fromDate, toDate, monthStart, nextMonth) {
 function staysFromEvents(eventRows) {
   const latest = new Map();
   for (const row of eventRows) {
+    const cursor = Number(row.srv_cursor);
+    const ordinal = Number(row.event_ordinal);
+    if (!Number.isSafeInteger(cursor) || cursor < 0 || !Number.isSafeInteger(ordinal) || ordinal < 0) {
+      throw new Error('invalid-event-ledger');
+    }
     let payload = null;
-    try { payload = JSON.parse(row.payload_json || 'null'); } catch (_) { /* skip corrupt row */ }
-    if (!payload || typeof payload !== 'object' || !payload.stayId) continue;
-    const key = `${+row.srv_cursor || 0}:${+row.event_ordinal || 0}`;
-    const prev = latest.get(payload.stayId);
-    if (!prev || key >= prev.key) latest.set(payload.stayId, { key, payload });
+    try { payload = JSON.parse(row.payload_json || 'null'); } catch (_) { throw new Error('invalid-event-ledger'); }
+    const stayId = String(row.stay_id || '');
+    if (!payload || typeof payload !== 'object' || !stayId || String(payload.stayId || '') !== stayId) {
+      throw new Error('invalid-event-ledger');
+    }
+    const prev = latest.get(stayId);
+    if (!prev || cursor > prev.cursor || (cursor === prev.cursor && ordinal > prev.ordinal)) {
+      latest.set(stayId, { cursor, ordinal, payload });
+    }
   }
   return [...latest.values()].map((entry) => entry.payload).filter((stay) => {
     const status = String(stay.status || '');
@@ -318,11 +327,16 @@ export async function onRequestPost({ request, env }) {
   const daysInMonth = new Date(Date.UTC(year, mNum, 0)).getUTCDate();
   const monthStart = `${month}-01`;
   const nextMonth = mNum === 12 ? `${year + 1}-01-01` : `${year}-${String(mNum + 1).padStart(2, '0')}-01`;
-  const stays = staysFromEvents(eventRows).filter((stay) => {
-    const checkIn = String(stay.checkIn || '');
-    const checkOut = String(stay.checkOut || '');
-    return DATE_RE.test(checkIn) && DATE_RE.test(checkOut) && checkIn < nextMonth && checkOut > monthStart;
-  });
+  let stays = [];
+  try {
+    stays = staysFromEvents(eventRows).filter((stay) => {
+      const checkIn = String(stay.checkIn || '');
+      const checkOut = String(stay.checkOut || '');
+      return DATE_RE.test(checkIn) && DATE_RE.test(checkOut) && checkIn < nextMonth && checkOut > monthStart;
+    });
+  } catch (_) {
+    return json({ error: 'event-ledger-invalid', detail: 'Journal des séjours invalide : contrôle interne refusé.' }, 503);
+  }
 
   // Per-stay PII detail lives in the operational cache. A ledger stay the
   // cache lost (4 000-booking cap, eviction) BLOCKS the review: silently

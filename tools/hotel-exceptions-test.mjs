@@ -170,6 +170,10 @@ ok(hotelJs.includes('sans valeur déclarative'), 'non-declarative disclaimer shi
 ok(hotelJs.includes('un mois sans activité peut être scellé'), 'zero-activity month copy ships');
 ok(hotelJs.includes("handlers['hx-monthly-closing']"), 'monthly review entry point is wired');
 ok(!hotelJs.includes('KiwiSales.add('), 'hotel money never touches the browser-only store');
+const closingModal = hotelJs.match(/async function cuMonthlyClosingModal\(\)[\s\S]*?\n  \}/)?.[0] || '';
+ok(closingModal.includes("'hotel-review-' + crypto.randomUUID()"), 'monthly review creates collision-safe idempotency keys');
+ok(closingModal.includes('pendingReviewKeys.get(intent)'), 'network retries reuse the same operation key');
+ok(!closingModal.includes("idempotencyKey: action + '-' + activeMonth + '-' + Date.now()"), 'monthly review never uses the clock as an idempotency key');
 
 /* Presentation lives in the stylesheet, with a dark variant. */
 for (const cls of ['hx-audit', 'hx-exc-badge', 'hx-close-badge', 'hx-close-grid', 'hx-close-hist', 'hx-guest-grid', 'hx-close-err']) {
