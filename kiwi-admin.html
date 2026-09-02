@@ -330,7 +330,8 @@ em, i, cite, dfn, var { font-style: normal; }
   .fsrc{display:block; font-size:12px; color:var(--muted); margin-top:3px; font-weight:400}
   /* Band header — "Modules communs" / the trade / "Options payantes". Keeps a
      15-row switch list readable instead of one undifferentiated column. */
-  .featgrp{margin:18px 0 4px}
+  .featgrp{margin:22px 0 8px;font:700 11px/1.2 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:10px}
+  .featgrp::after{content:"";flex:1;height:1px;background:var(--line)}
   .featgrp:first-child{margin-top:2px}
   .feat .fl .fh{display:block; font-size:13px; color:var(--muted); margin-top:3px; line-height:1.4; font-weight:400}
   .sw{position:relative; width:44px; height:26px; border-radius:999px; background:var(--line-2); border:0; cursor:pointer; transition:background .2s var(--ease); flex:none}
@@ -1230,13 +1231,26 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
         hint:'Fait choisir une catégorie à chaque article : A pour la marchandise du magasin, B pour le dépôt-vente. Le client ne voit que les lettres.' },
     ],
   };
-  var CAISSE_MODULES = [
+  // Caisse · Modes de service (bandeau supérieur)
+  var CAISSE_MODES = [
     { key:'salle',         label:'Mode Salle (service à table)',
       hint:'Onglet Salle sur la caisse tactile. Coupé, la caisse masque le plan de salle et bascule vers la vente à emporter ou le comptoir direct.' },
     { key:'vrap',          label:'Mode À emporter',
       hint:'Onglet À emporter sur la caisse tactile pour la gestion des commandes à emporter et retraits comptoir.' },
     { key:'waitlist',      label:'Mode File d’attente',
       hint:'Onglet Attente sur la caisse pour enregistrer et appeler les clients en file d’attente de table.' },
+  ];
+
+  // Caisse · Outils de table & plan de salle
+  var CAISSE_TABLE_TOOLS = [
+    { key:'tableTransfer', label:'Bouton Déplacer table',
+      hint:'Bouton Déplacer table sur la commande d’une table pour transférer l’addition vers une autre table libre.' },
+    { key:'tableMerge',    label:'Bouton Fusionner',
+      hint:'Bouton Fusionner sur la commande d’une table pour regrouper deux tables ouvertes en une seule addition.' },
+  ];
+
+  // Caisse · Actions rapides & tiroir (bandeau latéral)
+  var CAISSE_ACTIONS = [
     { key:'remboursement', label:'Bouton Remboursement',
       hint:'Bouton Remboursement sur le bandeau latéral de la caisse tactile pour restituer une vente passée.' },
     { key:'cashMove',      label:'Bouton Mouvement caisse',
@@ -1246,6 +1260,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
     { key:'openDrawer',    label:'Bouton Ouvrir le tiroir',
       hint:'Bouton d’ouverture manuelle du tiroir-caisse sans vente.' },
   ];
+
   var ADDON_MODULES = [
     { key:'orderpro', label:'Order Pro', off:true,
       hint:'Commande depuis le téléphone du client (tag NFC) · carte + stock en ligne.' },
@@ -1255,15 +1270,23 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
   function modulesForType(typeId){
     var meta = typeMeta(typeId);
     var base = (meta && meta.base) || 'restaurant';
-    return [
-      { title:'Modules communs', items:CORE_MODULES },
-      { title:VERTICAL_TITLES[base] || VERTICAL_TITLES.restaurant,
+    var isResto = base === 'restaurant';
+    var groups = [
+      { title:'Modules communs (Tableau de bord)', items:CORE_MODULES },
+      { title:(VERTICAL_TITLES[base] || VERTICAL_TITLES.restaurant) + ' (Métier)',
         items:(VERTICAL_MODULES[base] || VERTICAL_MODULES.restaurant) },
-      { title:'Modes & Actions caisse', items:CAISSE_MODULES },
+      { title:'Caisse · Modes de service', items:CAISSE_MODES },
+    ];
+    if (isResto) {
+      groups.push({ title:'Caisse · Outils de table & Salle', items:CAISSE_TABLE_TOOLS });
+    }
+    groups.push(
+      { title:'Caisse · Actions rapides & Tiroir', items:CAISSE_ACTIONS },
       // Bande vide ⇒ non affichée (renderFeatures saute les groupes sans item).
       { title:'Options à la demande', items:(OPTIN_MODULES[base] || []) },
-      { title:'Options payantes', items:ADDON_MODULES },
-    ];
+      { title:'Options payantes (Add-ons)', items:ADDON_MODULES }
+    );
+    return groups;
   }
 
   // ── store: real /api/admin/* in production; mock only on an explicit local dev
@@ -2885,7 +2908,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
   // Libellé lisible d'une clé de module, quel que soit le métier du client — le
   // journal peut contenir une clé d'un vertical que ce client n'a plus.
   function moduleLabel(key){
-    var all = [CORE_MODULES, CAISSE_MODULES, ADDON_MODULES];
+    var all = [CORE_MODULES, CAISSE_MODES, CAISSE_TABLE_TOOLS, CAISSE_ACTIONS, ADDON_MODULES];
     Object.keys(VERTICAL_MODULES).forEach(function(k){ all.push(VERTICAL_MODULES[k]); });
     Object.keys(OPTIN_MODULES).forEach(function(k){ all.push(OPTIN_MODULES[k]); });
     for (var i=0;i<all.length;i++) for (var j=0;j<all[i].length;j++)

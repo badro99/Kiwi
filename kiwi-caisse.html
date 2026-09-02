@@ -5491,7 +5491,7 @@
        staff accept one and it becomes a kitchen ticket. Paired terminals only. -->
   <script src="assets/orderpro-inbox.js?v=7" defer></script>
   <!-- Operator feature flags + managed PINs. Fail-safe: no backend ⇒ no change. -->
-  <script src="assets/merchant-config.js?v=267" defer></script>
+  <script src="assets/merchant-config.js?v=268" defer></script>
   <!-- « Rafraîchir » · un bouton commun à toutes les caisses (restaurant,
        pressing, et les seize métiers de pos-dispatch) : il redemande au serveur
        l'inventaire, les documents du magasin, les commandes en ligne et les
@@ -6135,8 +6135,8 @@
             <span>Ajouter des articles</span>
           </button>
           <div class="rp-table-tools" id="rp-table-tools">
-            <button class="rp-table-tool-btn" id="rp-transfer-table" type="button"><i data-lucide="arrow-right-left"></i>Déplacer table</button>
-            <button class="rp-table-tool-btn" id="rp-merge-table" type="button"><i data-lucide="merge"></i>Fusionner</button>
+            <button class="rp-table-tool-btn" id="rp-transfer-table" data-feature="table-transfer" type="button"><i data-lucide="arrow-right-left"></i>Déplacer table</button>
+            <button class="rp-table-tool-btn" id="rp-merge-table" data-feature="table-merge" type="button"><i data-lucide="merge"></i>Fusionner</button>
           </div>
           <!-- Normal payment buttons (salle read-to-pay + vrap) -->
           <div id="rp-pay-normal">
@@ -8308,6 +8308,10 @@
           if (key === 'tables' && feats.salle === false) return true;
           if (key === 'vrap' && (feats['a-emporter'] === false || feats.takeout === false)) return true;
           if (key === 'waitlist' && feats.attente === false) return true;
+          if (key === 'tableTransfer' && (feats['table-transfer'] === false || feats['caisse-transfer'] === false)) return true;
+          if (key === 'table-transfer' && (feats.tableTransfer === false || feats['caisse-transfer'] === false)) return true;
+          if (key === 'tableMerge' && (feats['table-merge'] === false || feats['caisse-merge'] === false)) return true;
+          if (key === 'table-merge' && (feats.tableMerge === false || feats['caisse-merge'] === false)) return true;
           if (key === 'remboursement' && (feats.refund === false || feats.returns === false)) return true;
           if (key === 'cash-move' && (feats.cashMove === false || feats['mouvement-caisse'] === false)) return true;
           if (key === 'cashMove' && (feats['cash-move'] === false || feats['mouvement-caisse'] === false)) return true;
@@ -8493,7 +8497,12 @@
 
       // Split-in-progress card and table tools
       renderRpSplitCard(id);
-      const tt = $('#rp-table-tools'); if (tt) tt.hidden = false;
+      const tt = $('#rp-table-tools');
+      if (tt) {
+        const transferOff = isFeatureOff('tableTransfer') || isFeatureOff('table-transfer');
+        const mergeOff = isFeatureOff('tableMerge') || isFeatureOff('table-merge');
+        tt.hidden = transferOff && mergeOff;
+      }
 
       // Remise · recompute the discount amount against the current gross
       const discAmt = discountAmountFor(id, total);
@@ -10972,6 +10981,10 @@
     let ctrfSelectedToId = null;
 
     function openCaisseTransferModal(tableId) {
+      if (isFeatureOff('tableTransfer') || isFeatureOff('table-transfer')) {
+        toast('Déplacement de table désactivé dans la console God Mode');
+        return;
+      }
       ctrfFromId = tableId;
       ctrfSelectedToId = null;
       $('#ctrf-from-id').textContent = tableId;
@@ -11071,6 +11084,10 @@
     let cmrgSelectedTargetId = null;
 
     function openCaisseMergeModal(tableId) {
+      if (isFeatureOff('tableMerge') || isFeatureOff('table-merge')) {
+        toast('Fusion de tables désactivée dans la console God Mode');
+        return;
+      }
       cmrgSourceId = tableId;
       cmrgSelectedTargetId = null;
       $('#cmrg-source-id').textContent = tableId;
@@ -11163,9 +11180,11 @@
     }
 
     $('#rp-transfer-table') && $('#rp-transfer-table').addEventListener('click', () => {
+      if (isFeatureOff('tableTransfer') || isFeatureOff('table-transfer')) return;
       if (selectedId) openCaisseTransferModal(selectedId);
     });
     $('#rp-merge-table') && $('#rp-merge-table').addEventListener('click', () => {
+      if (isFeatureOff('tableMerge') || isFeatureOff('table-merge')) return;
       if (selectedId) openCaisseMergeModal(selectedId);
     });
 
