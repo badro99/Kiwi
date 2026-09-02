@@ -3,70 +3,111 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
-<meta name="color-scheme" content="light dark" />
-<meta name="theme-color" content="#F7F5F0" />
+<meta name="color-scheme" content="light" />
+<meta name="theme-color" content="#0A0F0D" />
 <title>Kiwi Pro</title>
-<!-- Écran d'accueil natif (docs/roadmaps/KIWI_APP_PLAN.md §4, semaine 1) : oriente vers
-     la surface du rôle — Caisse, KiwiÉquipe, Cuisine, Tableau de bord — dans la même
-     WebView, mémorise le dernier rôle, et porte la connexion marchande (POST /auth/login)
-     que le gate HTML de kiwi-os.com assurait sur le web. tools/build-app-www.mjs injecte
-     assets/api-base.js en tête au moment du build ; ne pas le référencer ici. -->
+<!-- tools/build-app-www.mjs injecte assets/api-base.js en tête du bundle. -->
 <link rel="stylesheet" href="native-shell.css" />
 </head>
 <body>
 <main class="shell" id="shell" hidden>
-  <header class="shell-head">
-    <div class="wordmark" aria-label="Kiwi Pro"><span class="wm-kiwi">Kiwi</span><span class="wm-pro">Pro</span></div>
-    <p class="shell-sub" data-native-i18n="shellSub">Choisissez le rôle de cet appareil. Il s'en souviendra.</p>
-  </header>
+  <aside class="brand-panel">
+    <span class="brand-orbit orbit-a" aria-hidden="true"></span>
+    <span class="brand-orbit orbit-b" aria-hidden="true"></span>
+    <header class="shell-head">
+      <div class="wordmark">
+        <img class="brand-logo" src="assets/kiwi-newlogo-inverse.svg" width="886" height="486" alt="Kiwi" />
+        <span class="product-label">Pro</span>
+      </div>
+      <p class="brand-kicker" data-native-i18n="brandKicker">Le système d’exploitation du commerçant marocain.</p>
+      <p class="shell-sub" id="shell-sub" data-native-i18n="welcomeSub">Configurons cet appareil. Cela prend environ deux minutes.</p>
+    </header>
 
-  <section class="account" id="account" aria-live="polite">
-    <div class="acct-row" id="acct-state" hidden>
-      <span class="dot ok" aria-hidden="true"></span>
-      <span class="acct-text" id="acct-text">Connecté</span>
-      <button type="button" class="link" id="logout" data-native-i18n="logout">Se déconnecter</button>
+    <ol class="progress" id="setup-progress" aria-label="Progression" data-native-i18n-aria="progress" hidden>
+      <li data-progress="account"><span>1</span><b data-native-i18n="accountStep">Compte</b></li>
+      <li data-progress="role"><span>2</span><b data-native-i18n="roleStep">Rôle</b></li>
+      <li data-progress="connect"><span>3</span><b data-native-i18n="connectStep">Connexion</b></li>
+      <li data-progress="printer"><span>4</span><b data-native-i18n="printerStep">Imprimante</b></li>
+      <li data-progress="ready"><span>5</span><b data-native-i18n="readyStep">Prêt</b></li>
+    </ol>
+
+    <div class="brand-proof"><span class="proof-dot" aria-hidden="true"></span><span data-native-i18n="localSetup">Configuration sécurisée sur cet appareil</span></div>
+  </aside>
+
+  <div class="flow-panel">
+    <div class="flow-topbar"><span data-native-i18n="deviceSetup">Configuration de l’appareil</span><span class="live-chip"><i aria-hidden="true"></i><span data-native-i18n="guided">Guidée</span></span></div>
+
+  <section class="setup-step" id="step-account" data-step="account">
+    <div class="step-heading">
+      <p class="eyebrow" data-native-i18n="stepOne">Étape 1</p>
+      <h1 data-native-i18n="accountTitle">Connectez le compte marchand</h1>
+      <p data-native-i18n="accountIntro">Le tableau de bord, la caisse et la cuisine utilisent le compte marchand. KiwiÉquipe peut continuer avec le code de l’employé.</p>
     </div>
-    <form class="login" id="login" autocomplete="on" hidden>
-      <p class="login-title" data-native-i18n="merchantAccount">Compte marchand</p>
-      <label class="field"><span data-native-i18n="email">E-mail</span><input name="email" type="email" inputmode="email" autocomplete="username" required /></label>
-      <label class="field"><span data-native-i18n="password">Mot de passe</span><input name="password" type="password" autocomplete="current-password" required minlength="10" /></label>
-      <p class="err" id="login-err" role="alert" hidden></p>
-      <button type="submit" class="cta" id="login-btn" data-native-i18n="login">Se connecter</button>
-      <p class="hint" data-native-i18n="loginHint">Caisse appairée ou compte équipe ? Pas besoin de compte marchand : choisissez directement le rôle ci-dessous.</p>
-    </form>
-    <p class="acct-row muted" id="acct-unknown" hidden><span class="dot" aria-hidden="true"></span><span data-native-i18n="serverOffline">Serveur injoignable. La caisse démarre quand même hors ligne.</span></p>
+    <section class="account" id="account" aria-live="polite">
+      <div class="acct-row" id="acct-state" hidden>
+        <span class="dot ok" aria-hidden="true"></span><span class="acct-text" id="acct-text">Connecté</span>
+        <button type="button" class="link" id="logout" data-native-i18n="logout">Se déconnecter</button>
+      </div>
+      <form class="login" id="login" autocomplete="on" hidden>
+        <p class="login-title" data-native-i18n="merchantAccount">Compte marchand</p>
+        <label class="field"><span data-native-i18n="email">E-mail</span><input name="email" type="email" inputmode="email" autocomplete="username" required /></label>
+        <label class="field"><span data-native-i18n="password">Mot de passe</span><input name="password" type="password" autocomplete="current-password" required minlength="10" /></label>
+        <p class="err" id="login-err" role="alert" hidden></p>
+        <button type="submit" class="cta" id="login-btn" data-native-i18n="login">Se connecter</button>
+      </form>
+      <p class="acct-row muted" id="acct-unknown" hidden><span class="dot" aria-hidden="true"></span><span data-native-i18n="serverOffline">Serveur injoignable. Vous pourrez réessayer dans votre espace.</span></p>
+    </section>
+    <div class="actions"><button type="button" class="cta" id="account-next" data-native-i18n="continue">Continuer</button><button type="button" class="secondary" id="manual-mode" data-native-i18n="manual">Choisir un rôle sans assistant</button></div>
   </section>
 
-  <nav class="tiles" aria-label="Rôle de l'appareil" data-native-i18n-aria="roles">
-    <button type="button" class="tile" data-role="caisse">
-      <span class="ico" style="--ico:url(assets/icons/material/storefront.svg)" aria-hidden="true"></span>
-      <span class="tile-name" data-native-i18n="caisse">Caisse</span>
-      <span class="tile-sub" data-native-i18n="caisseSub">Encaissement, tickets, imprimante</span>
-    </button>
-    <button type="button" class="tile" data-role="equipe">
-      <span class="ico" style="--ico:url(assets/icons/material/room_service.svg)" aria-hidden="true"></span>
-      <span class="tile-name" data-native-i18n="team">KiwiÉquipe</span>
-      <span class="tile-sub" data-native-i18n="teamSub">Salle, planning, pointage</span>
-    </button>
-    <button type="button" class="tile" data-role="cuisine">
-      <span class="ico" style="--ico:url(assets/icons/material/restaurant.svg)" aria-hidden="true"></span>
-      <span class="tile-name" data-native-i18n="kitchen">Cuisine</span>
-      <span class="tile-sub" data-native-i18n="kitchenSub">Écran de production (KDS)</span>
-    </button>
-    <button type="button" class="tile tile-soft" data-role="dashboard">
-      <span class="ico" style="--ico:url(assets/icons/material/bar_chart.svg)" aria-hidden="true"></span>
-      <span class="tile-name" data-native-i18n="dashboard">Tableau de bord</span>
-      <span class="tile-sub" data-native-i18n="dashboardSub">Propriétaire, lecture et actions rapides</span>
-    </button>
-  </nav>
+  <section class="setup-step" id="step-role" data-step="role" hidden>
+    <div class="step-heading"><p class="eyebrow" data-native-i18n="stepTwo">Étape 2</p><h1 data-native-i18n="roleTitle">À quoi servira cet appareil ?</h1><p data-native-i18n="roleIntro">Kiwi ouvrira ce rôle automatiquement aux prochains lancements.</p></div>
+    <nav class="tiles" aria-label="Rôle de l'appareil" data-native-i18n-aria="roles">
+      <button type="button" class="tile" data-role="caisse"><span class="ico" style="--ico:url(assets/icons/material/storefront.svg)" aria-hidden="true"></span><span class="tile-name" data-native-i18n="caisse">Caisse</span><span class="tile-sub" data-native-i18n="caisseSub">Encaissement, tickets, imprimante</span></button>
+      <button type="button" class="tile" data-role="equipe"><span class="ico" style="--ico:url(assets/icons/material/room_service.svg)" aria-hidden="true"></span><span class="tile-name" data-native-i18n="team">KiwiÉquipe</span><span class="tile-sub" data-native-i18n="teamSub">Salle, planning, pointage</span></button>
+      <button type="button" class="tile" data-role="cuisine"><span class="ico" style="--ico:url(assets/icons/material/restaurant.svg)" aria-hidden="true"></span><span class="tile-name" data-native-i18n="kitchen">Cuisine</span><span class="tile-sub" data-native-i18n="kitchenSub">Écran de production (KDS)</span></button>
+      <button type="button" class="tile tile-soft" data-role="dashboard"><span class="ico" style="--ico:url(assets/icons/material/bar_chart.svg)" aria-hidden="true"></span><span class="tile-name" data-native-i18n="dashboard">Tableau de bord</span><span class="tile-sub" data-native-i18n="dashboardSub">Propriétaire, lecture et actions rapides</span></button>
+    </nav>
+    <p class="err" id="role-err" role="alert" hidden></p>
+    <div class="actions setup-actions"><button type="button" class="secondary" data-back="account" data-native-i18n="back">Retour</button><button type="button" class="cta" id="role-next" data-native-i18n="continue" disabled>Continuer</button></div>
+  </section>
 
-  <footer class="shell-foot">
-    <span id="platform">Kiwi Pro</span>
-    <span class="sep" aria-hidden="true">·</span>
-    <span id="bundle">bundle local</span>
-  </footer>
+  <section class="setup-step" id="step-connect" data-step="connect" hidden>
+    <div class="step-heading"><p class="eyebrow" data-native-i18n="stepThree">Étape 3</p><h1 data-native-i18n="connectTitle">Reliez l’appareil à l’établissement</h1></div>
+    <div class="connect-box" id="pair-box" hidden>
+      <p data-native-i18n="pairIntro">Choisissez l’établissement auquel cet appareil doit envoyer ses ventes et ses commandes.</p>
+      <div class="store-list" id="store-list" role="group" aria-label="Établissements du compte" data-native-i18n-aria="stores"></div>
+      <button type="button" class="cta pair-submit" id="pair-btn" data-native-i18n="pair" disabled>Relier cet appareil</button>
+      <p class="status" id="pair-status" role="status" aria-live="polite"></p>
+    </div>
+    <div class="connect-box" id="dashboard-box" hidden><p data-native-i18n="dashboardConnect">Le tableau de bord utilise le compte marchand connecté à l’étape 1.</p><p class="status" id="dashboard-status" role="status"></p></div>
+    <div class="connect-box" id="team-box" hidden><p data-native-i18n="teamConnect">Chaque membre se connectera avec son code équipe sur l’écran suivant. Aucun appairage marchand n’est nécessaire ici.</p></div>
+    <div class="actions setup-actions"><button type="button" class="secondary" data-back="role" data-native-i18n="back">Retour</button><button type="button" class="cta" id="connect-next" data-native-i18n="continue" disabled>Continuer</button></div>
+  </section>
+
+  <section class="setup-step" id="step-printer" data-step="printer" hidden>
+    <div class="step-heading"><p class="eyebrow" data-native-i18n="stepFour">Étape 4</p><h1 data-native-i18n="printerTitle">Testez l’imprimante thermique</h1><p data-native-i18n="printerIntro">L’iPad et l’imprimante doivent être sur le même Wi-Fi. Le port standard est 9100.</p></div>
+    <form id="printer-form" class="printer-form">
+      <div class="printer-grid"><label class="field"><span data-native-i18n="printerIp">Adresse IP</span><input id="printer-ip" name="ip" type="text" inputmode="decimal" autocomplete="off" placeholder="192.168.1.50" /></label><label class="field port-field"><span data-native-i18n="printerPort">Port</span><input id="printer-port" name="port" type="number" inputmode="numeric" min="1" max="65535" value="9100" /></label><label class="field paper-field"><span data-native-i18n="paper">Papier</span><select id="printer-paper" name="paper"><option value="80">80 mm</option><option value="58">58 mm</option></select></label></div>
+      <div class="inline-actions"><button type="button" class="secondary" id="printer-scan" data-native-i18n="scan">Rechercher sur le réseau</button><button type="submit" class="cta" id="printer-test" data-native-i18n="testPrinter">Tester et enregistrer</button></div>
+    </form>
+    <div class="scan-results" id="scan-results" aria-live="polite"></div><p class="status" id="printer-status" role="status" aria-live="polite"></p>
+    <div class="actions setup-actions"><button type="button" class="secondary" data-back="connect" data-native-i18n="back">Retour</button><button type="button" class="link" id="printer-skip" data-native-i18n="printerLater">Configurer plus tard</button><button type="button" class="cta" id="printer-next" data-native-i18n="continue" disabled>Continuer</button></div>
+  </section>
+
+  <section class="setup-step" id="step-ready" data-step="ready" hidden>
+    <div class="step-heading"><p class="eyebrow" data-native-i18n="stepFive">Étape 5</p><h1 data-native-i18n="readyTitle">Cet appareil est prêt</h1><p data-native-i18n="readyIntro">Cette vérification n’a créé aucune vente, aucun paiement et aucun ticket client.</p></div>
+    <ul class="checklist" id="ready-list"><li id="check-role"><span aria-hidden="true">✓</span><b data-native-i18n="checkRole">Rôle choisi</b><small></small></li><li id="check-connect"><span aria-hidden="true">✓</span><b data-native-i18n="checkConnect">Établissement</b><small></small></li><li id="check-printer"><span aria-hidden="true">✓</span><b data-native-i18n="checkPrinter">Imprimante</b><small></small></li></ul>
+    <div class="actions setup-actions"><button type="button" class="secondary" id="ready-back" data-native-i18n="back">Retour</button><button type="button" class="cta" id="finish" data-native-i18n="openKiwi">Ouvrir Kiwi</button></div>
+  </section>
+
+    <footer class="shell-foot"><span id="platform">Kiwi Pro</span><span class="sep" aria-hidden="true">·</span><span id="bundle">bundle local</span></footer>
+  </div>
 </main>
 <script src="assets/err-reporter.js"></script>
+<script src="assets/tenant-purge.js"></script>
+<script src="assets/pairing-commit.js"></script>
+<script src="assets/escpos.js"></script>
 <script src="native-shell.js"></script>
 </body>
 </html>

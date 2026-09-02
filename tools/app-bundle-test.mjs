@@ -73,7 +73,24 @@ if (first) {
   const runtime = fs.readFileSync(path.join(first.out, 'native-runtime.js'), 'utf8');
   assert(/window\.__KIWI_APP_VERSION = 'pro\/' \+ platform/.test(runtime) && /call\(app, 'getInfo'\)/.test(runtime), 'native-runtime : les rapports d’erreur portent plateforme et version de l’app (App.getInfo)');
   const shell = fs.readFileSync(path.join(first.out, 'index.html'), 'utf8');
+  const nativeShell = fs.readFileSync(path.join(first.out, 'native-shell.js'), 'utf8');
   assert(/<meta name="kiwi-bundle" content="[0-9a-f]{64}"/.test(shell), 'index.html porte l’empreinte du bundle');
+  assert(/params\.has\('setup'\)/.test(nativeShell) && /params\.has\('choose'\)/.test(nativeShell),
+    'assistant : ?setup relance le parcours et ?choose conserve le lanceur manuel');
+  assert(/state\.role !== 'equipe' && state\.account !== 'connected'/.test(nativeShell),
+    'assistant : caisse, cuisine et dashboard exigent la session marchande; Équipe garde son code employé');
+  assert(nativeShell.includes("fetch('/api/pair/create'") && nativeShell.includes("fetch('/api/pair/redeem'") && nativeShell.includes('window.KiwiPairingCommit.commit') && nativeShell.includes('terminalId:device'),
+    'assistant : la session crée une liaison pour son magasin, la consomme, puis utilise le commit locataire partagé avec identité terminal');
+  assert(shell.includes('id="store-list"') && !shell.includes('id="pair-code"') && nativeShell.includes('Array.isArray(me && me.stores)'),
+    'assistant : choisit un établissement autorisé de /api/me au lieu de demander un code supprimé du dashboard');
+  assert(nativeShell.includes("node.classList.toggle('skipped', skipped)") && nativeShell.includes("stageReady:'La configuration est enregistrée"),
+    'assistant : les étapes non requises restent sautées et le rail de marque suit le contexte');
+  assert(nativeShell.includes("marker.textContent = muted ? '—' : '✓'"),
+    'assistant : le récapitulatif distingue une étape sautée d’une étape réellement validée');
+  assert(nativeShell.includes('p.probe({host:values.host') && nativeShell.includes('window.KiwiEscPos.testSlip') && nativeShell.includes('p.send({host:values.host') && nativeShell.includes("var PRINTER_KEY = 'kiwiPrinterCfg'"),
+    'assistant : le test sonde, imprime un ticket ESC/POS et enregistre le format déjà lu par la caisse');
+  assert(!/fetch\(['"]\/api\/(?:sale|payment)/.test(nativeShell) && nativeShell.includes('aucune vente'),
+    'assistant : le parcours de test ne crée aucune vente ni aucun paiement');
 
   // --api-base injecte la constante AVANT api-base.js
   const forced = transformPage('<html><head><title>x</title></head><body></body></html>', { apiBase: 'https://preview.example' });
