@@ -10,7 +10,7 @@
 // qu'un crash 500 ou un faux 200.
 
 import { tenantFor } from '../_private.js';
-import { json } from '../../auth/_lib.js';
+import { isTillFor, json } from '../../auth/_lib.js';
 
 const VALID_PLATFORMS = new Set(['ios', 'android', 'web']);
 const VALID_ROLES = new Set(['caisse', 'cuisine', 'equipe', 'dashboard', 'all']);
@@ -53,13 +53,20 @@ export async function onRequestPost({ request, env }) {
   }
 
   const action = typeof body.action === 'string' ? body.action.trim().toLowerCase() : 'register';
+  const pairedTill = await isTillFor(request, env, merchant);
 
   if (action === 'unregister') {
     try {
-      await env.DB.prepare('DELETE FROM push_tokens WHERE merchant = ? AND token = ?')
-        .bind(merchant, token)
-        .run();
-      return json({ ok: true, unregistered: true });
+      // The stored role is authoritative. Trusting body.role here would let a
+      // till call a kitchen token "caisse" and delete it. A role-qualified
+      // DELETE is atomic, keeps repeated unregister calls harmless, and reveals
+      // no distinction between an unknown token and a forbidden-role token.
+      const deletion = pairedTill
+        ? await env.DB.prepare('DELETE FROM push_tokens WHERE merchant = ? AND token = ? AND role = ?')
+          .bind(merchant, token, 'caisse').run()
+        : await env.DB.prepare('DELETE FROM push_tokens WHERE merchant = ? AND token = ?')
+          .bind(merchant, token).run();
+      return json({ ok: true, unregistered: Number(deletion && deletion.meta && deletion.meta.changes || 0) > 0 });
     } catch (err) {
       const msg = String(err && err.message || '');
       if (msg.includes('no such table')) {
@@ -81,7 +88,15 @@ export async function onRequestPost({ request, env }) {
     ? body.role.toLowerCase().trim()
     : 'caisse';
 
-  const employeeId = typeof body.employeeId === 'string' ? body.employeeId.slice(0, 64).trim() : null;
+  // A paired counter may subscribe only to the notifications it operates.
+  // Broader targets (kitchen, team, dashboard, all) require an owner/operator
+  // session; otherwise one till cookie could turn an arbitrary device into a
+  // cross-role notification receiver for the whole establishment.
+  if (pairedTill && role !== 'caisse') {
+    return json({ error: 'forbidden-role', message: 'Une caisse appairée ne peut enregistrer que les notifications de caisse.' }, 403);
+  }
+
+  const employeeId = !pairedTill && typeof body.employeeId === 'string' ? body.employeeId.slice(0, 64).trim() : null;
   const deviceId = typeof body.deviceId === 'string' ? body.deviceId.slice(0, 128).trim() : null;
   const now = Date.now();
 
