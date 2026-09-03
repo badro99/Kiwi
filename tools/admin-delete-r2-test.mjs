@@ -18,7 +18,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 
-const EXPECTED = 12;
+const EXPECTED = 15;
 let checks = 0;
 process.on('unhandledRejection', (error) => { console.error(error); process.exit(1); });
 async function check(name, fn) {
@@ -66,24 +66,25 @@ function makeDb(flags = {}) {
   };
 }
 
-/* Sosie R2 à pagination honnête : curseur opaque, pages de `pageSize`, échecs
- * injectables via l'objet `flags` partagé (modifiables entre deux appels).
- * `delete` accepte une clé ou un tableau, comme le vrai seau. */
+/* Sosie R2 à pagination honnête : pages de `pageSize`, curseur keyset stable,
+ * échecs injectables via l'objet `flags` partagé (modifiables entre appels).
+ * `delete` EXIGE un tableau (la route ne fait que du bulk ≤ 1000) et modélise
+ * trois pannes : 'throw' (rien d'appliqué), 'partial' (moitié appliquée puis
+ * erreur — le pire cas), 'noop' (succès mensonger, pour le garde anti-bourbier). */
 function makeR2(flags = {}) {
   const keys = new Map();
   let deletes = 0;
+  let bulkCalls = 0;
   const { pageSize = 1000 } = flags;
   return {
     keys,
     flags,
-    stats: () => ({ deletes }),
+    stats: () => ({ deletes, bulkCalls }),
     put: (key, bytes) => { keys.set(String(key), bytes); },
     async list({ prefix = '', limit = 1000, cursor = '' } = {}) {
       if (flags.failList) throw new Error('R2 list failed');
       if (prefix.includes('..') || prefix.includes('//')) throw new Error('bad prefix');
       const all = [...keys.keys()].filter((k) => k.startsWith(prefix)).sort();
-      // Curseur stable à la R2 : premier trié APRÈS le curseur parmi les clés
-      // PRÉSENTES (les clés déjà supprimées ne décalent rien — keyset, pas offset).
       let start = 0;
       if (cursor) {
         const c = String(cursor);
@@ -93,16 +94,29 @@ function makeR2(flags = {}) {
       const n = Math.min(limit || 1000, pageSize);
       const page = all.slice(start, start + n);
       const end = start + page.length;
+      const objects = page.map((key) => ({ key }));
+      if (flags.injectForeign && !flags._foreignSpent) {
+        flags._foreignSpent = true;
+        objects.push({ key: 'support/voisin/x.pdf' });
+      }
       return {
-        objects: page.map((key) => ({ key })),
+        objects,
         truncated: end < all.length,
         cursor: end < all.length ? page[page.length - 1] : undefined,
       };
     },
     async delete(keyOrKeys) {
-      const list = Array.isArray(keyOrKeys) ? keyOrKeys : [keyOrKeys];
+      if (!Array.isArray(keyOrKeys)) throw new Error('R2 double: bulk array required');
+      bulkCalls += 1;
+      if (flags.failDelete === 'throw') throw new Error('R2 delete failed');
+      if (flags.failDelete === 'noop') return {};
+      const list = keyOrKeys;
+      if (flags.failDelete === 'partial') {
+        const half = list.slice(0, Math.max(1, Math.floor(list.length / 2)));
+        for (const key of half) { keys.delete(String(key)); deletes += 1; }
+        throw new Error('R2 delete failed mid-page');
+      }
       for (const key of list) {
-        if (flags.failDeleteAfter >= 0 && deletes >= flags.failDeleteAfter) throw new Error('R2 delete failed');
         keys.delete(String(key));
         deletes += 1;
       }
@@ -174,7 +188,7 @@ await check('more than 1000 objects paginate to completion', async () => {
   assert.equal(status, 200);
   assert.equal(body.r2.listed, 2501);
   assert.equal(body.r2.deleted, 2501);
-  assert.equal([...w.r2.keys].filter((k) => k.startsWith('intake/' + M + '/')).length, 0);
+  assert.equal([...w.r2.keys.keys()].filter((k) => k.startsWith('intake/' + M + '/')).length, 0);
   assert.equal(body.removed['intake_docs'], 2500);
 });
 
@@ -201,23 +215,57 @@ await check('list failure aborts with no success and nothing touched', async () 
   assert.ok(w.r2.keys.has('intake/' + M + '/' + docId(1) + '.pdf'));
 });
 
-await check('partial delete failure is resumable without losing the registry', async () => {
-  const r2flags = { failDeleteAfter: 3 };
+await check('partial bulk failure is resumable without losing the registry', async () => {
+  const r2flags = { failDelete: 'partial' };
   const w = makeWorld({ r2flags });
   for (let i = 0; i < 5; i++) seedIntake(w, M, docId(i), 1000 + i);
   const first = await del(w.env, M);
   assert.equal(first.status, 500);
   assert.equal(first.body.error, 'r2-cleanup-failed');
   assert.ok(!first.body.ok);
-  assert.equal(w.r2.stats().deletes, 3);
+  const remaining = [...w.r2.keys.keys()].filter((k) => k.startsWith('intake/' + M + '/')).length;
+  assert.ok(remaining > 0 && remaining < 5, 'page partiellement appliquée, reste visible');
   assert.equal(w.env.DB.prepare('SELECT COUNT(*) AS n FROM intake_docs WHERE merchant = ?').bind(M).first().n, 5);
-  r2flags.failDeleteAfter = -1;
+  delete r2flags.failDelete;
   const retry = await del(w.env, M);
   assert.equal(retry.status, 200);
   assert.equal(retry.body.ok, true);
-  assert.equal(retry.body.r2.deleted, 2);
+  assert.equal(retry.body.r2.deleted, remaining);
   assert.equal(w.env.DB.prepare('SELECT COUNT(*) AS n FROM intake_docs WHERE merchant = ?').bind(M).first().n, 0);
-  assert.equal([...w.r2.keys].filter((k) => k.startsWith('intake/' + M + '/')).length, 0);
+  assert.equal([...w.r2.keys.keys()].filter((k) => k.startsWith('intake/' + M + '/')).length, 0);
+});
+
+await check('exactly 1000 objects drain in one bulk page', async () => {
+  const w = makeWorld({ r2flags: { pageSize: 1000 } });
+  for (let i = 0; i < 1000; i++) seedIntake(w, M, docId(i), 1000 + i);
+  const { status, body } = await del(w.env, M);
+  assert.equal(status, 200);
+  assert.equal(body.r2.listed, 1000);
+  assert.equal(body.r2.deleted, 1000);
+  assert.equal(w.r2.stats().bulkCalls, 1, 'single bulk call for a single full page');
+  assert.equal([...w.r2.keys.keys()].filter((k) => k.startsWith('intake/' + M + '/')).length, 0);
+});
+
+await check('lying bucket that never deletes trips the stall guard, registry intact', async () => {
+  const w = makeWorld({ r2flags: { failDelete: 'noop' } });
+  for (let i = 0; i < 3; i++) seedIntake(w, M, docId(i), 1000 + i);
+  const { status, body } = await del(w.env, M);
+  assert.equal(status, 500);
+  assert.equal(body.error, 'r2-cleanup-failed');
+  assert.ok(String(body.detail || '').includes('r2-delete-stalled'), 'stall diagnosed, not masked');
+  assert.ok(!body.ok);
+  assert.equal(w.env.DB.prepare('SELECT COUNT(*) AS n FROM intake_docs WHERE merchant = ?').bind(M).first().n, 3);
+});
+
+await check('foreign key in a listing aborts before any delete of the page', async () => {
+  const r2flags = { injectForeign: true };
+  const w = makeWorld({ r2flags });
+  seedIntake(w, M, docId(1), 1000);
+  const { status, body } = await del(w.env, M);
+  assert.equal(status, 500);
+  assert.equal(body.error, 'r2-scope-violation');
+  assert.ok(!body.ok);
+  assert.ok(w.r2.keys.has('intake/' + M + '/' + docId(1) + '.pdf'), 'nothing deleted once scope breaks');
 });
 
 await check('D1 failure after R2 cleanup errors, then retry converges', async () => {
@@ -228,7 +276,7 @@ await check('D1 failure after R2 cleanup errors, then retry converges', async ()
   assert.equal(first.status, 500);
   assert.equal(first.body.error, 'delete-failed');
   assert.ok(!first.body.ok);
-  assert.equal([...w.r2.keys].filter((k) => k.startsWith('intake/' + M + '/')).length, 0);
+  assert.equal([...w.r2.keys.keys()].filter((k) => k.startsWith('intake/' + M + '/')).length, 0);
   assert.equal(w.env.DB.prepare('SELECT COUNT(*) AS n FROM intake_docs WHERE merchant = ?').bind(M).first().n, 1);
   dbflags.failDeletes = false;
   const retry = await del(w.env, M);

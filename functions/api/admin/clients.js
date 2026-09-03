@@ -417,25 +417,42 @@ export async function onRequestDelete(context) {
   }
   if (env.MEDIA) {
     try {
+      /* Vidage par vagues SANS curseur conservé : chaque tour reliste depuis
+       * le début du préfixe et supprime la page reçue en UN appel bulk
+       * (tableaux de 1000 clés au plus). Aucune hypothèse sur la stabilité
+       * d'un curseur après suppression — la reprise (normale ou après
+       * échec) retrouve simplement ce qui reste. Terminaison : chaque tour
+       * réussi retire ≥1 objet (décroissance stricte) ; une page vide, même
+       * annoncée `truncated`, termine ; une tête de page qui survit à deux
+       * suppressions annoncées réussies signale un seau menteur et avorte. */
       const prefix = 'intake/' + merchant + '/';
       r2.prefix = prefix;
-      let cursor;
+      let lastHead = null;
+      let headRepeats = 0;
       for (;;) {
-        const page = await env.MEDIA.list({ prefix, limit: 1000, ...(cursor ? { cursor } : {}) });
+        const page = await env.MEDIA.list({ prefix, limit: 1000 });
         const objects = (page && page.objects) || [];
+        if (!objects.length) break;
+        const keys = [];
         for (const o of objects) {
           const key = o && o.key;
           if (typeof key !== 'string' || !key.startsWith(prefix)) {
             return json({ error: 'r2-scope-violation', detail: 'R2 listed a key outside ' + prefix }, 500);
           }
+          keys.push(key);
         }
-        r2.listed += objects.length;
-        for (const o of objects) {
-          await env.MEDIA.delete(o.key);
-          r2.deleted += 1;
+        r2.listed += keys.length;
+        for (let i = 0; i < keys.length; i += 1000) {
+          await env.MEDIA.delete(keys.slice(i, i + 1000));
         }
-        if (page && page.truncated && page.cursor) cursor = page.cursor;
-        else break;
+        r2.deleted += keys.length;
+        if (keys[0] === lastHead) {
+          headRepeats += 1;
+          if (headRepeats >= 2) throw new Error('r2-delete-stalled');
+        } else {
+          lastHead = keys[0];
+          headRepeats = 0;
+        }
       }
       r2.status = 'cleaned';
     } catch (e) {
