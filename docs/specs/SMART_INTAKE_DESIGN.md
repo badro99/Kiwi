@@ -209,3 +209,28 @@ proceed in parallel: they add value even with today's extractors.
 3. **Agreed on both** — retention until account close (purge R2 prefix + D1
    rows on close); double metering (`intake` kind for registry/classify,
    specialist kind for extraction).
+
+## Slice 1 hardening (review fixes, built — same sign-off, no scope change)
+
+A safety review of the slice found seven truthfulness gaps; all fixed:
+
+1. **Archive is now a verified fact, not a claim.** `intakeDocId` is set only
+   after a successful `PUT`, and `mark confirmed` returns `409 not-archived`
+   unless `has_object = 1`. An upload failure archives nothing, claims
+   nothing, and still lets the merchant work (extraction continues unarchived).
+2. **No double stock posting.** Confirm consults a guard *before* any
+   `moveStock`: local posted-set OR server `confirmed` (second device) stops
+   the write. The posting key is deterministic (`receipt-<docId16>`), and a
+   retry outbox (per-merchant `localStorage`, replayed at scan open) retries
+   only the *mark*, never the stock write.
+3. **Manual fallback keeps the document context** (`intakeDocId` survives the
+   extraction-failure path, so an archived doc always reaches `confirmed`).
+4. **Server binds bytes to id**: `PUT` recomputes SHA-256 and rejects
+   mismatches (`400 hash-mismatch`) before touching R2.
+5. **Concurrent commits converge**: `INSERT OR IGNORE` + canonical read —
+   loser gets `200 duplicate`, never 503.
+6. **`intake_docs` in `schema.sql` + `migrations/2026-09-03-intake-docs.sql`** —
+   no runtime-DDL-only drift.
+7. **Suite at 22 checks**, including live route execution on in-memory D1/R2
+   doubles (happy path, hash mismatch, concurrent commit, R2-down, sealed
+   re-upload) and executed client guard/outbox tests.

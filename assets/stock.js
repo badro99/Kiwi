@@ -171,6 +171,7 @@
       mScanDupDone: (d) => `Cette facture a déjà été enregistrée${d ? ` (${d})` : ''}. Nouvel envoi bloqué pour protéger vos stocks.`,
       mScanArchived: 'Document archivé comme pièce comptable',
       mScanResume: 'Dépôt déjà en cours : reprise sans doublon.',
+      mScanMarkRetry: 'Stock mis à jour. Le statut d’archive sera resynchronisé automatiquement.',
       mCountTitle: 'Inventaire physique',
       mCountSub: 'Comptez chaque article et saisissez la quantité réelle. Kiwi calcule l\'écart automatiquement.',
       mCountColTheo: 'STOCK THÉORIQUE', mCountColReal: 'QUANTITÉ COMPTÉE', mCountColVar: 'ÉCART', mCountColCost: 'VALEUR ÉCART',
@@ -440,6 +441,7 @@
       mScanDupDone: (d) => `This invoice was already recorded${d ? ` (${d})` : ''}. Re-upload blocked to protect your stock.`,
       mScanArchived: 'Document archived as a business record',
       mScanResume: 'Filing already in progress: resuming without duplicating.',
+      mScanMarkRetry: 'Stock updated. The archive status will resync automatically.',
       mCountTitle: 'Physical count',
       mCountSub: 'Count each item and enter the actual quantity. Kiwi computes the variance automatically.',
       mCountColTheo: 'THEORETICAL STOCK', mCountColReal: 'COUNTED QTY', mCountColVar: 'VARIANCE', mCountColCost: 'VARIANCE VALUE',
@@ -697,6 +699,7 @@
       mScanDupDone: (d) => `تم تسجيل هذه الفاتورة مسبقًا${d ? ` (${d})` : ''}. تم حظر الإرسال الجديد لحماية مخزونك.`,
       mScanArchived: 'تمت أرشفة المستند كوثيقة محاسبية',
       mScanResume: 'الإيداع جارٍ مسبقًا: استئناف بدون تكرار.',
+      mScanMarkRetry: 'تم تحديث المخزون. ستتم إعادة مزامنة حالة الأرشفة تلقائيًا.',
       mCountTitle: 'جرد فعلي',
       mCountSub: 'عُدّ كل منتج وأدخل الكمية الفعلية. Kiwi يحسب الفرق تلقائيًا.',
       mCountColTheo: 'المخزون النظري', mCountColReal: 'الكمية المعدودة', mCountColVar: 'الفرق', mCountColCost: 'قيمة الفرق',
@@ -3853,22 +3856,93 @@
     return { status: res.status, data };
   }
   async function stIntakeUpload(docId, bytes) {
-    const res = await fetch(`/api/ai/intake?merchant=${encodeURIComponent(stIntakeMerchant())}&docId=${encodeURIComponent(docId)}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/pdf' },
-      body: bytes,
-    });
-    return res.ok;
-  }
-  function stIntakeMark(docId, status) {
-    // Fire-and-forget, fail-soft : le brouillon reste rejouable par son statut.
+    // Booléen, jamais d'exception : l'appelant décide (archive ou repli).
     try {
-      fetch('/api/ai/intake', {
+      const res = await fetch(`/api/ai/intake?merchant=${encodeURIComponent(stIntakeMerchant())}&docId=${encodeURIComponent(docId)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/pdf' },
+        body: bytes,
+      });
+      return res.ok;
+    } catch (_) { return false; }
+  }
+  function stIntakeOutboxKey() { return 'kiwi:intakeOutbox:v1:' + (stIntakeMerchant() || 'local'); }
+  function stIntakeOutboxRead() {
+    try {
+      const raw = window.localStorage.getItem(stIntakeOutboxKey());
+      const arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr.filter((e) => e && typeof e.docId === 'string').slice(-50) : [];
+    } catch (_) { return []; }
+  }
+  function stIntakeOutboxWrite(list) {
+    try { window.localStorage.setItem(stIntakeOutboxKey(), JSON.stringify((list || []).slice(-50))); } catch (_) {}
+  }
+  function stIntakePostedKey() { return 'kiwi:intakePosted:v1:' + (stIntakeMerchant() || 'local'); }
+  function stIntakePostedHas(docId) {
+    try {
+      const raw = window.localStorage.getItem(stIntakePostedKey());
+      const arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) && arr.indexOf(docId) !== -1;
+    } catch (_) { return false; }
+  }
+  function stIntakePostedAdd(docId) {
+    try {
+      const raw = window.localStorage.getItem(stIntakePostedKey());
+      const arr = raw ? JSON.parse(raw) : [];
+      const list = Array.isArray(arr) ? arr : [];
+      if (list.indexOf(docId) === -1) list.push(docId);
+      window.localStorage.setItem(stIntakePostedKey(), JSON.stringify(list.slice(-200)));
+    } catch (_) {}
+  }
+  /* Garde pure : un docId déjà posté ici, ou déjà confirmé côté serveur
+   * (deuxième appareil), ne reposte jamais le stock. Testée. */
+  function stIntakePostGuard(posted, serverStatus) {
+    if (posted) return 'duplicate-local';
+    if (serverStatus === 'confirmed') return 'duplicate-server';
+    return 'ok';
+  }
+  async function stIntakeServerStatus(docId) {
+    // Injoignable → '' : la garde reste ouverte, l'outbox garde la vérité.
+    try {
+      const res = await fetch(`/api/ai/intake?merchant=${encodeURIComponent(stIntakeMerchant())}&docId=${encodeURIComponent(docId)}`);
+      if (!res.ok) return '';
+      const data = await res.json().catch(() => null);
+      return (data && data.doc && data.doc.status) || '';
+    } catch (_) { return ''; }
+  }
+  /* Une seule tentative de marquage, outbox tenue à jour. L'outbox ne
+   * contient que des « stock déjà posté, marquage en attente » : la rejouer
+   * ne reposte jamais le stock, elle ne renvoie que le marquage. */
+  async function stIntakeMarkOnce(docId) {
+    const box = stIntakeOutboxRead();
+    if (!box.some((e) => e.docId === docId)) {
+      box.push({ docId, ts: Date.now() });
+      stIntakeOutboxWrite(box);
+    }
+    try {
+      const res = await fetch('/api/ai/intake', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ merchant: stIntakeMerchant(), action: 'mark', docId, status }),
-      }).catch(() => {});
+        body: JSON.stringify({ merchant: stIntakeMerchant(), action: 'mark', docId, status: 'confirmed' }),
+      });
+      if (res.ok) {
+        stIntakeOutboxWrite(stIntakeOutboxRead().filter((e) => e.docId !== docId));
+        return true;
+      }
     } catch (_) {}
+    return false;
+  }
+  async function stIntakeFlushOutbox() {
+    const pending = stIntakeOutboxRead();
+    for (const e of pending) {
+      try {
+        if (await stIntakeServerStatus(e.docId) === 'confirmed') {
+          stIntakeOutboxWrite(stIntakeOutboxRead().filter((x) => x.docId !== e.docId));
+          continue;
+        }
+        await stIntakeMarkOnce(e.docId);
+      } catch (_) {}
+    }
   }
   function stRenderIntakeStop(title, body) {
     return `
@@ -3894,6 +3968,8 @@
   function openInvoiceScan(opts) {
     // Pré-chargement discret en tâche de fond de pdf.js
     try { loadPdfJs(); } catch (_) {}
+    // Guichet unique : rejoue les marquages interrompus (marquage seul).
+    try { if (stIntakeEnabled()) stIntakeFlushOutbox(); } catch (_) {}
 
     const preSupId = typeof opts === 'string' ? opts : opts?.supplierId;
     const sup = preSupId ? getSup().find((s) => s.id === preSupId) : null;
@@ -4007,9 +4083,17 @@
                 return;
               }
               if (commit.data && (commit.data.docId || (commit.data.doc && commit.data.doc.docId))) {
-                intakeDocId = commit.data.docId || commit.data.doc.docId;
-                if (commit.data.duplicate) window.Kiwi.toast?.(t('mScanResume'), { type: 'info' });
-                try { await stIntakeUpload(intakeDocId, bytes); } catch (_) {}
+                const candidate = commit.data.docId || commit.data.doc.docId;
+                // Vérité de l'archive : intakeDocId n'est posé que si l'objet
+                // R2 est écrit et vérifié (le serveur compare le SHA-256).
+                // Sans archive, l'extraction continue mais l'UI ne prétend
+                // rien et aucun marquage ne sera possible (409 not-archived).
+                if (await stIntakeUpload(candidate, bytes)) {
+                  intakeDocId = candidate;
+                  if (commit.data.duplicate) window.Kiwi.toast?.(t('mScanResume'), { type: 'info' });
+                } else {
+                  intakeDocId = '';
+                }
               }
               // Registre ou quota indisponible (429, 503, réseau) : on ne
               // bloque jamais le travail, l'extraction continue sans archive.
@@ -4035,7 +4119,9 @@
           throw new Error(data.error || data.reason || 'unparsed');
         } catch (err) {
           window.Kiwi.toast?.(t('mScanFailFallback'), { type: 'warn' });
-          stage.innerHTML = renderRealReceiptReview({ supplier: null });
+          // Repli manuel : le contexte documentaire est préservé (si le
+          // PDF est archivé, la confirmation marquera le brouillon).
+          stage.innerHTML = renderRealReceiptReview({ supplier: null, intakeDocId });
           wireScanReview();
           return;
         }
@@ -4358,10 +4444,11 @@
     wireRows();
     recompute();
 
-    scope.querySelector('[data-stock-scan-confirm]')?.addEventListener('click', () => {
+    scope.querySelector('[data-stock-scan-confirm]')?.addEventListener('click', async () => {
       const supplier = scope.querySelector('[data-stock-receive-supplier]')?.value.trim() || '';
       const externalRef = scope.querySelector('[data-stock-receive-ref]')?.value.trim() || '';
       const date = scope.querySelector('[data-stock-receive-date]')?.value || '';
+      const intakeDocId = scope.querySelector('[data-stock-intake-doc]')?.value || '';
 
       const lines = Array.from(scope.querySelectorAll('[data-stock-receive-row]')).map((row) => ({
         itemId: row.querySelector('[data-stock-receive-item]')?.value || '',
@@ -4377,7 +4464,22 @@
         return;
       }
 
-      const receiptRef = 'receipt-' + Date.now().toString(36);
+      // Guichet unique : jamais deux écritures stock pour le même document.
+      // Le même PDF re-déposé (deuxième appareil, marquage interrompu) est
+      // arrêté ici, AVANT tout moveStock.
+      if (intakeDocId) {
+        const guard = stIntakePostGuard(stIntakePostedHas(intakeDocId), await stIntakeServerStatus(intakeDocId));
+        if (guard !== 'ok') {
+          const st = scope.querySelector('[data-stock-scan-stage]');
+          if (st) { st.innerHTML = stRenderIntakeStop(t('mScanDupT'), t('mScanDupDone', '')); wireIntakeStop(); }
+          else window.Kiwi.toast?.(t('mScanDupT'), { type: 'warn' });
+          return;
+        }
+      }
+
+      // Clé d'écriture déterministe : le même document produit toujours la
+      // même référence (traçabilité des doublons, pas d'id aléatoire).
+      const receiptRef = intakeDocId ? 'receipt-' + intakeDocId.slice(0, 16) : 'receipt-' + Date.now().toString(36);
       const receivedAt = date ? new Date(`${date}T12:00:00`).getTime() : Date.now();
       const inv = getInv();
 
@@ -4475,12 +4577,16 @@
       });
 
       stSaveOverlay();
-      // Guichet unique : la confirmation humaine fait sortir le brouillon du
-      // statut « received ». Best-effort : l'écriture stock a déjà réussi.
-      try {
-        const docId = scope.querySelector('[data-stock-intake-doc]')?.value || '';
-        if (docId) stIntakeMark(docId, 'confirmed');
-      } catch (_) {}
+      // Guichet unique : le stock est écrit, on scelle le brouillon. Si le
+      // marquage échoue (onglet tué, réseau coupé), l'outbox le rejouera —
+      // marquage seul, jamais de repost — à la prochaine ouverture du scan.
+      if (intakeDocId) {
+        stIntakePostedAdd(intakeDocId);
+        try {
+          const marked = await stIntakeMarkOnce(intakeDocId);
+          if (!marked) window.Kiwi.toast?.(t('mScanMarkRetry'), { type: 'warn' });
+        } catch (_) {}
+      }
       closeTopModal();
       window.Kiwi.toast?.(`${lines.length} ligne${lines.length > 1 ? 's' : ''} reçue${lines.length > 1 ? 's' : ''} et ajoutée${lines.length > 1 ? 's' : ''} au stock.`, { type: 'success', duration: 3800 });
       if (stPageActive) render();

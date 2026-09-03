@@ -68,6 +68,15 @@ export function isPdfBytes(buffer) {
   return b[0] === 0x25 && b[1] === 0x50 && b[2] === 0x44 && b[3] === 0x46 && b[4] === 0x2d; // %PDF-
 }
 
+/* L'empreinte est l'identifiant : le serveur la recalcule sur les octets
+ * reçus AVANT d'écrire en R2. Un client qui annoncerait un sha256 puis
+ * enverrait d'autres octets verrait son dépôt rattaché au mauvais brouillon
+ * (et un doublon passerait à travers) — d'où le refus sec ici. */
+export async function sha256Hex(buffer) {
+  const digest = await crypto.subtle.digest('SHA-256', buffer);
+  return Array.from(new Uint8Array(digest)).map((x) => x.toString(16).padStart(2, '0')).join('');
+}
+
 let ensured = false;
 export async function ensureIntakeSchema(db) {
   if (!db || typeof db.prepare !== 'function') return;
@@ -135,20 +144,25 @@ export async function onRequestPost(context) {
       return json({ error: 'daily-quota-exceeded' }, 429);
     }
     try { await ensureIntakeSchema(env.DB); } catch (_) { return json({ error: 'db' }, 503); }
+    /* INSERT OR IGNORE puis lecture de la ligne canonique : deux dépôts
+     * concurrents du même papier convergent vers la même réponse, le perdant
+     * reçoit `duplicate:true` (200), jamais une 503. Le sens fail-safe si
+     * `meta.changes` était absent : se déclarer doublon (le chemin reprise
+     * re-téléverse et continue). */
     let row = null;
+    let isNew = false;
     try {
+      const ins = await env.DB.prepare(
+        'INSERT OR IGNORE INTO intake_docs (merchant, doc_id, mime, size, r2_key, has_object, status, doc_type, source, created_ts, updated_ts) ' +
+        'VALUES (?, ?, ?, ?, ?, 0, \'received\', ?, ?, ?, ?)'
+      ).bind(who, v.sha256, v.mime, v.size, r2KeyFor(who, v.sha256), v.docType, v.source, Date.now(), Date.now()).run();
+      isNew = !!(ins && ins.meta && ins.meta.changes === 1);
       row = await env.DB.prepare(
         'SELECT * FROM intake_docs WHERE merchant = ? AND doc_id = ?'
       ).bind(who, v.sha256).first();
     } catch (_) { return json({ error: 'db' }, 503); }
-    if (row) return json({ ok: true, duplicate: true, doc: publicDoc(row) });
-    const now = Date.now();
-    try {
-      await env.DB.prepare(
-        'INSERT INTO intake_docs (merchant, doc_id, mime, size, r2_key, has_object, status, doc_type, source, created_ts, updated_ts) ' +
-        'VALUES (?, ?, ?, ?, ?, 0, \'received\', ?, ?, ?, ?)'
-      ).bind(who, v.sha256, v.mime, v.size, r2KeyFor(who, v.sha256), v.docType, v.source, now, now).run();
-    } catch (_) { return json({ error: 'db' }, 503); }
+    if (!row) return json({ error: 'db' }, 503);
+    if (!isNew) return json({ ok: true, duplicate: true, doc: publicDoc(row) });
     return json({ ok: true, duplicate: false, docId: v.sha256 });
   }
 
@@ -161,14 +175,23 @@ export async function onRequestPost(context) {
     }
     try { await ensureIntakeSchema(env.DB); } catch (_) { return json({ error: 'db' }, 503); }
     try {
-      const r = await env.DB.prepare(
-        'UPDATE intake_docs SET status = ?, updated_ts = ? WHERE merchant = ? AND doc_id = ?'
-      ).bind(status, Date.now(), who, docId).run();
-      if (!r || !r.meta || r.meta.changes === 0) return json({ error: 'doc-not-found' }, 404);
       const row = await env.DB.prepare(
         'SELECT * FROM intake_docs WHERE merchant = ? AND doc_id = ?'
       ).bind(who, docId).first();
-      return json({ ok: true, doc: publicDoc(row) });
+      if (!row) return json({ error: 'doc-not-found' }, 404);
+      /* Vérité du marquage : `confirmed` exige l'objet archivé. Sans cela,
+       * un brouillon dont l'upload a échoué pourrait être marqué confirmé
+       * alors que l'UI n'aurait rien à montrer comme pièce comptable. */
+      if (status === 'confirmed' && Number(row.has_object || 0) !== 1) {
+        return json({ error: 'not-archived' }, 409);
+      }
+      await env.DB.prepare(
+        'UPDATE intake_docs SET status = ?, updated_ts = ? WHERE merchant = ? AND doc_id = ?'
+      ).bind(status, Date.now(), who, docId).run();
+      const fresh = await env.DB.prepare(
+        'SELECT * FROM intake_docs WHERE merchant = ? AND doc_id = ?'
+      ).bind(who, docId).first();
+      return json({ ok: true, doc: publicDoc(fresh || row) });
     } catch (_) { return json({ error: 'db' }, 503); }
   }
 
@@ -205,6 +228,9 @@ export async function onRequestPut(context) {
   if (bytes.byteLength > MAX_PDF_BYTES) return json({ error: 'too-large', max: MAX_PDF_BYTES }, 413);
   if (Number(row.size) !== bytes.byteLength) return json({ error: 'size-mismatch' }, 400);
   if (!isPdfBytes(bytes)) return json({ error: 'content-mismatch' }, 415);
+  let hex = '';
+  try { hex = await sha256Hex(bytes); } catch (_) { return json({ error: 'upload-failed' }, 500); }
+  if (hex !== docId) return json({ error: 'hash-mismatch' }, 400);
 
   const key = r2KeyFor(merchant, docId);
   try {
