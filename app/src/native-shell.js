@@ -56,6 +56,42 @@
   all('[data-native-i18n]').forEach(function (node) { node.textContent = tr(node.getAttribute('data-native-i18n')); });
   all('[data-native-i18n-aria]').forEach(function (node) { node.setAttribute('aria-label', tr(node.getAttribute('data-native-i18n-aria'))); });
 
+  function initDynamicType() {
+    var p = plugin();
+    if (!p) return;
+    function applyScale(scale) {
+      if (typeof scale !== 'number' || isNaN(scale)) return;
+      var capped = Math.min(1.35, Math.max(0.85, scale));
+      if (Math.abs(capped - 1.0) < 0.005) {
+        document.documentElement.style.removeProperty('--type-scale');
+      } else {
+        document.documentElement.style.setProperty('--type-scale', capped.toString());
+      }
+    }
+    if (typeof p.getDynamicTypeScale === 'function') {
+      try {
+        Promise.race([
+          p.getDynamicTypeScale(),
+          new Promise(function (_, reject) { setTimeout(function () { reject(new Error('timeout')); }, 1000); })
+        ]).then(function (res) {
+          if (res && typeof res.scale === 'number') {
+            applyScale(res.scale);
+          }
+        }).catch(function () {});
+      } catch (_) {}
+    }
+    if (typeof p.addListener === 'function') {
+      try {
+        p.addListener('dynamicTypeChange', function (data) {
+          if (data && typeof data.scale === 'number') {
+            applyScale(data.scale);
+          }
+        });
+      } catch (_) {}
+    }
+  }
+  initDynamicType();
+
   var params = new URLSearchParams(location.search);
   var manual = params.has('choose') || params.has('home');
   var forceSetup = params.has('setup');

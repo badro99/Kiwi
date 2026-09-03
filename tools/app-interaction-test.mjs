@@ -137,25 +137,55 @@ function applyPluginStub(pluginCfg) {
   var secure = typeof pluginCfg === 'string' ? pluginCfg : (pluginCfg && pluginCfg.secure);
   var scanMode = pluginCfg && typeof pluginCfg === 'object' ? pluginCfg.scan : null;
   var appInfo = pluginCfg && typeof pluginCfg === 'object' ? pluginCfg.appInfo : null;
+  var dtCfg = pluginCfg && typeof pluginCfg === 'object' ? pluginCfg.dynamicType : null;
+
+  var listeners = {};
+  var socketPlugin = {
+    probe: function () { return Promise.resolve({ ok: true }); },
+    send: function () { return Promise.resolve({ ok: true }); },
+    scan: function () {
+      if (scanMode === 'empty') return Promise.resolve({ ok: true, hosts: [] });
+      if (scanMode === 'reject') return Promise.reject(new Error('local network permission denied'));
+      return Promise.resolve({ ok: true, hosts: [{ host: '192.168.1.50' }, { host: '192.168.1.51' }] });
+    },
+    secureSet: function () { return Promise.resolve({}); },
+    secureGet: function () {
+      if (secure === 'value') return Promise.resolve({ value: 'caisse' });
+      if (secure === 'reject') return Promise.reject(new Error('denied'));
+      if (secure === 'hang') return new Promise(function () {});
+      if (secure === 'slow') return later({ value: '' }, 800);
+      return Promise.resolve({ value: '' });
+    },
+    getDynamicTypeScale: function () {
+      if (dtCfg === 'reject') return Promise.reject(new Error('dynamic type bridge unavailable'));
+      if (dtCfg === 'hang') return new Promise(function () {});
+      if (typeof dtCfg === 'number') return Promise.resolve({ scale: dtCfg, category: 'custom' });
+      if (dtCfg && typeof dtCfg === 'object' && typeof dtCfg.scale === 'number') return Promise.resolve(dtCfg);
+      return Promise.resolve({ scale: 1.0, category: 'UICTContentSizeCategoryL' });
+    },
+    addListener: function (eventName, handler) {
+      if (!listeners[eventName]) listeners[eventName] = [];
+      listeners[eventName].push(handler);
+      return Promise.resolve({
+        remove: function () {
+          listeners[eventName] = (listeners[eventName] || []).filter(function (h) { return h !== handler; });
+          return Promise.resolve();
+        }
+      });
+    },
+    __emit: function (eventName, data) {
+      var handlers = listeners[eventName] || [];
+      handlers.forEach(function (h) { try { h(data); } catch (_) {} });
+    }
+  };
+
+  if (dtCfg === 'unavailable') {
+    delete socketPlugin.getDynamicTypeScale;
+    delete socketPlugin.addListener;
+  }
 
   var plugins = {
-    KiwiPrinterSocket: {
-      probe: function () { return Promise.resolve({ ok: true }); },
-      send: function () { return Promise.resolve({ ok: true }); },
-      scan: function () {
-        if (scanMode === 'empty') return Promise.resolve({ ok: true, hosts: [] });
-        if (scanMode === 'reject') return Promise.reject(new Error('local network permission denied'));
-        return Promise.resolve({ ok: true, hosts: [{ host: '192.168.1.50' }, { host: '192.168.1.51' }] });
-      },
-      secureSet: function () { return Promise.resolve({}); },
-      secureGet: function () {
-        if (secure === 'value') return Promise.resolve({ value: 'caisse' });
-        if (secure === 'reject') return Promise.reject(new Error('denied'));
-        if (secure === 'hang') return new Promise(function () {});
-        if (secure === 'slow') return later({ value: '' }, 800);
-        return Promise.resolve({ value: '' });
-      },
-    },
+    KiwiPrinterSocket: socketPlugin,
   };
   if (scanMode === 'unavailable') {
     delete plugins.KiwiPrinterSocket.scan;
@@ -1660,6 +1690,208 @@ for (const locale of ['fr', 'en', 'ar']) {
     : bad(`Arabic line-height ratio unexpected: ${JSON.stringify(lhCheck)}`);
 
   await p.closeCtx();
+}
+
+/* ── 12 · iOS Dynamic Type scaling & fail-soft containment ───────────────── */
+{
+  // 12.1: Default text size is a strict no-op (byte/pixel-identical to baseline)
+  const pNoPlugin = await openShell({ locale: 'fr', viewport: 'iphone', me: 'login', plugin: null });
+  const baseMetrics = await pNoPlugin.evaluate(() => {
+    const rootScale = document.documentElement.style.getPropertyValue('--type-scale');
+    const bodyFs = window.getComputedStyle(document.body).fontSize;
+    const h1Fs = window.getComputedStyle(document.querySelector('.brand-kicker')).fontSize;
+    const ctaFs = window.getComputedStyle(document.querySelector('.cta')).fontSize;
+    return { rootScale, bodyFs, h1Fs, ctaFs };
+  });
+  await pNoPlugin.closeCtx();
+
+  const pDefault = await openShell({ locale: 'fr', viewport: 'iphone', me: 'login', plugin: { dynamicType: 1.0 } });
+  const defaultMetrics = await pDefault.evaluate(() => {
+    const rootScale = document.documentElement.style.getPropertyValue('--type-scale');
+    const bodyFs = window.getComputedStyle(document.body).fontSize;
+    const h1Fs = window.getComputedStyle(document.querySelector('.brand-kicker')).fontSize;
+    const ctaFs = window.getComputedStyle(document.querySelector('.cta')).fontSize;
+    return { rootScale, bodyFs, h1Fs, ctaFs };
+  });
+  await pDefault.closeCtx();
+
+  const isDefaultNoOp =
+    baseMetrics.rootScale === '' &&
+    defaultMetrics.rootScale === '' &&
+    baseMetrics.bodyFs === defaultMetrics.bodyFs &&
+    baseMetrics.h1Fs === defaultMetrics.h1Fs &&
+    baseMetrics.ctaFs === defaultMetrics.ctaFs;
+
+  isDefaultNoOp
+    ? ok(`Dynamic Type default no-op: scale 1.0 produces exact baseline computed sizes (body: ${baseMetrics.bodyFs}, cta: ${baseMetrics.ctaFs}, kicker: ${baseMetrics.h1Fs}) and sets no inline --type-scale`)
+    : bad(`Dynamic Type default no-op mismatch: base=${JSON.stringify(baseMetrics)} vs default=${JSON.stringify(defaultMetrics)}`);
+
+  // 12.2: Raised category (1.35x ceiling) scales computed type proportionally
+  const pRaised = await openShell({ locale: 'fr', viewport: 'iphone', me: 'login', plugin: { dynamicType: 1.35 } });
+  await pRaised.waitForFunction(() => document.documentElement.style.getPropertyValue('--type-scale') === '1.35', { timeout: 3000 });
+  const raisedMetrics = await pRaised.evaluate(() => {
+    const rootScale = document.documentElement.style.getPropertyValue('--type-scale');
+    const bodyFs = parseFloat(window.getComputedStyle(document.body).fontSize);
+    const ctaFs = parseFloat(window.getComputedStyle(document.querySelector('.cta')).fontSize);
+    return { rootScale, bodyFs, ctaFs };
+  });
+  await pRaised.closeCtx();
+
+  const raisedOk =
+    raisedMetrics.rootScale === '1.35' &&
+    Math.abs(raisedMetrics.bodyFs - (16 * 1.35)) < 0.1 &&
+    Math.abs(raisedMetrics.ctaFs - (14 * 1.35)) < 0.1;
+
+  raisedOk
+    ? ok(`Dynamic Type raised category: scale 1.35x proportionally scales computed typography (body: ${raisedMetrics.bodyFs}px, cta: ${raisedMetrics.ctaFs}px)`)
+    : bad(`Dynamic Type raised scale failed: ${JSON.stringify(raisedMetrics)}`);
+
+  // 12.3: Scale capping ceiling (1.35x) and floor (0.85x)
+  const pCapped = await openShell({ locale: 'fr', viewport: 'iphone', me: 'login', plugin: { dynamicType: 2.5 } });
+  await pCapped.waitForFunction(() => document.documentElement.style.getPropertyValue('--type-scale') === '1.35', { timeout: 3000 });
+  const cappedVal = await pCapped.evaluate(() => document.documentElement.style.getPropertyValue('--type-scale'));
+  await pCapped.closeCtx();
+
+  const pFloored = await openShell({ locale: 'fr', viewport: 'iphone', me: 'login', plugin: { dynamicType: 0.5 } });
+  await pFloored.waitForFunction(() => document.documentElement.style.getPropertyValue('--type-scale') === '0.85', { timeout: 3000 });
+  const flooredVal = await pFloored.evaluate(() => document.documentElement.style.getPropertyValue('--type-scale'));
+  await pFloored.closeCtx();
+
+  cappedVal === '1.35' && flooredVal === '0.85'
+    ? ok(`Dynamic Type safety bounding: scale ceiling capped at 1.35x (got ${cappedVal}) and floor bounded at 0.85x (got ${flooredVal})`)
+    : bad(`Dynamic Type bounding failed: capped=${cappedVal}, floored=${flooredVal}`);
+
+  // 12.4: Fail-soft resilience (reject, hang, unavailable)
+  const pReject = await openShell({ locale: 'fr', viewport: 'iphone', me: 'login', plugin: { dynamicType: 'reject' } });
+  const rejectScale = await pReject.evaluate(() => document.documentElement.style.getPropertyValue('--type-scale'));
+  const rejectBtn = await pReject.evaluate(() => document.querySelector('.cta') !== null);
+  await pReject.closeCtx();
+
+  const pHang = await openShell({ locale: 'fr', viewport: 'iphone', me: 'login', plugin: { dynamicType: 'hang' } });
+  const hangScale = await pHang.evaluate(() => document.documentElement.style.getPropertyValue('--type-scale'));
+  const hangBtn = await pHang.evaluate(() => document.querySelector('.cta') !== null);
+  await pHang.closeCtx();
+
+  const pUnavail = await openShell({ locale: 'fr', viewport: 'iphone', me: 'login', plugin: { dynamicType: 'unavailable' } });
+  const unavailScale = await pUnavail.evaluate(() => document.documentElement.style.getPropertyValue('--type-scale'));
+  const unavailBtn = await pUnavail.evaluate(() => document.querySelector('.cta') !== null);
+  await pUnavail.closeCtx();
+
+  const failSoftOk =
+    rejectScale === '' && rejectBtn &&
+    hangScale === '' && hangBtn &&
+    unavailScale === '' && unavailBtn;
+
+  failSoftOk
+    ? ok('Dynamic Type fail-soft: rejecting, hanging, or absent native bridge cleanly preserves default scale without crashing or blocking setup shell')
+    : bad(`Dynamic Type fail-soft failed: reject=${rejectScale}, hang=${hangScale}, unavail=${unavailScale}`);
+
+  // 12.5: Real-time dynamicTypeChange notification listener
+  const pLive = await openShell({ locale: 'fr', viewport: 'iphone', me: 'login', plugin: { dynamicType: 1.0 } });
+  const liveResult = await pLive.evaluate(async () => {
+    const pl = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.KiwiPrinterSocket;
+    if (!pl || typeof pl.__emit !== 'function') return { ok: false, reason: 'no emit' };
+
+    // Emit live change to 1.25
+    pl.__emit('dynamicTypeChange', { scale: 1.25, category: 'UICTContentSizeCategoryXXL' });
+    const scale125 = document.documentElement.style.getPropertyValue('--type-scale');
+    const ctaFs125 = parseFloat(window.getComputedStyle(document.querySelector('.cta')).fontSize);
+
+    // Emit live change back to 1.0 (should remove property)
+    pl.__emit('dynamicTypeChange', { scale: 1.0, category: 'UICTContentSizeCategoryL' });
+    const scale100 = document.documentElement.style.getPropertyValue('--type-scale');
+    const ctaFs100 = parseFloat(window.getComputedStyle(document.querySelector('.cta')).fontSize);
+
+    return {
+      ok: true,
+      scale125,
+      ctaFs125,
+      scale100,
+      ctaFs100,
+    };
+  });
+  await pLive.closeCtx();
+
+  const liveOk =
+    liveResult.ok &&
+    liveResult.scale125 === '1.25' &&
+    Math.abs(liveResult.ctaFs125 - 17.5) < 0.1 &&
+    liveResult.scale100 === '' &&
+    Math.abs(liveResult.ctaFs100 - 14.0) < 0.1;
+
+  liveOk
+    ? ok('Dynamic Type real-time listener: dynamicTypeChange event updates layout immediately and removes property at default 1.0')
+    : bad(`Dynamic Type live listener failed: ${JSON.stringify(liveResult)}`);
+
+  // 12.6: Layout survival at 320 CSS px under maximum 1.35x ceiling across all 5 steps (FR, EN, AR)
+  for (const locale of ['fr', 'en', 'ar']) {
+    const p320 = await openShell({ locale, viewport: 'iphone', me: 'multi', plugin: { dynamicType: 1.35, scan: 'hosts' } });
+    await p320.setViewport({ width: 320, height: 568, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+    await settleAccount(p320);
+
+    // Step 1
+    const s1 = await p320.evaluate(() => ({
+      noHScroll: document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
+      ctaVisible: document.querySelector('#account-next') && document.querySelector('#account-next').offsetWidth > 0,
+    }));
+    s1.noHScroll && s1.ctaVisible
+      ? ok(`Dynamic Type 320px ceiling survival: Step 1 (Account) intact, no hscroll (${locale.toUpperCase()})`)
+      : bad(`Dynamic Type 320px Step 1 failed in ${locale}: ${JSON.stringify(s1)}`);
+
+    await toRole(p320);
+
+    // Step 2
+    const s2 = await p320.evaluate(() => ({
+      noHScroll: document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
+      tilesCount: document.querySelectorAll('.tile').length,
+      allVisible: Array.from(document.querySelectorAll('.tile')).every((t) => t.offsetWidth > 0 && t.offsetHeight > 0),
+    }));
+    s2.noHScroll && s2.tilesCount === 4 && s2.allVisible
+      ? ok(`Dynamic Type 320px ceiling survival: Step 2 (Role) intact, no hscroll (${locale.toUpperCase()})`)
+      : bad(`Dynamic Type 320px Step 2 failed in ${locale}: ${JSON.stringify(s2)}`);
+
+    await p320.click('.tile[data-role="caisse"]');
+    await p320.click('#role-next');
+    await p320.waitForFunction(() => !document.querySelector('#step-connect').hidden, { timeout: 8000 });
+
+    // Step 3
+    const s3 = await p320.evaluate(() => ({
+      noHScroll: document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
+      pairBtnVisible: document.querySelector('#pair-btn') && document.querySelector('#pair-btn').offsetWidth > 0,
+    }));
+    s3.noHScroll && s3.pairBtnVisible
+      ? ok(`Dynamic Type 320px ceiling survival: Step 3 (Connect) intact, no hscroll (${locale.toUpperCase()})`)
+      : bad(`Dynamic Type 320px Step 3 failed in ${locale}: ${JSON.stringify(s3)}`);
+
+    await p320.click('.store-choice');
+    await p320.click('#pair-btn');
+    await p320.waitForFunction(() => document.querySelector('#pair-status').classList.contains('ok'), { timeout: 8000 });
+    await p320.click('#connect-next');
+    await p320.waitForFunction(() => !document.querySelector('#step-printer').hidden, { timeout: 8000 });
+
+    // Step 4
+    const s4 = await p320.evaluate(() => ({
+      noHScroll: document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
+      testVisible: document.querySelector('#printer-test') && document.querySelector('#printer-test').offsetWidth > 0,
+    }));
+    s4.noHScroll && s4.testVisible
+      ? ok(`Dynamic Type 320px ceiling survival: Step 4 (Printer) intact, no hscroll (${locale.toUpperCase()})`)
+      : bad(`Dynamic Type 320px Step 4 failed in ${locale}: ${JSON.stringify(s4)}`);
+
+    await p320.click('#printer-skip');
+    await p320.waitForFunction(() => !document.querySelector('#step-ready').hidden, { timeout: 8000 });
+
+    // Step 5
+    const s5 = await p320.evaluate(() => ({
+      noHScroll: document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
+      finishVisible: document.querySelector('#finish') && document.querySelector('#finish').offsetWidth > 0,
+    }));
+    s5.noHScroll && s5.finishVisible
+      ? ok(`Dynamic Type 320px ceiling survival: Step 5 (Ready) intact, no hscroll (${locale.toUpperCase()})`)
+      : bad(`Dynamic Type 320px Step 5 failed in ${locale}: ${JSON.stringify(s5)}`);
+
+    await p320.closeCtx();
+  }
 }
 
 await browser.close();
