@@ -936,6 +936,7 @@ section('Whole-project regressions');
     'void-stock-test.js',
     'caisse-stock-test.mjs',
     'boutique-variant-stock-test.mjs',
+    'boutique-custom-color-test.js',
     'catalog-stock-transaction-test.mjs',
     'inventory-ledger-test.mjs',
     'stock-costing-migration-test.mjs',

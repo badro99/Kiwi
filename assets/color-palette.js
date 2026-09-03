@@ -278,7 +278,12 @@
       .kc-tag-src { font-size: 11px; color: var(--n-500, #77807b); }
       .kc-more { display:inline-flex; align-items:center; justify-content:center; font-size:21px; line-height:1; background:var(--paper,#fff); color:var(--atlas,#0B6E4F); }
       .kc-custom-wrap { position:relative; }
-      .kc-custom-pop { position:absolute; z-index:8; inset-inline-end:0; width:min(430px,calc(100vw - 40px)); margin-top:8px; padding:12px; border:1px solid var(--line,#ddd); border-radius:12px; background:var(--paper,#fff); box-shadow:0 12px 30px rgba(10,15,13,.18); display:flex; flex-wrap:wrap; align-items:center; gap:10px; }
+      /* The custom controls used to be a 430px absolute popover anchored to the
+         30px plus button. In a two-column modal that pushed its leading controls
+         outside the dialog, where the modal clipped them. Keep the editor in the
+         picker's own flow: every control stays visible and the form grows instead
+         of covering the stock and barcode fields below it. */
+      .kc-custom-pop { box-sizing:border-box; position:static; width:100%; margin-top:10px; padding:12px; border:1px solid var(--line,#ddd); border-radius:12px; background:var(--paper,#fff); box-shadow:0 8px 22px rgba(10,15,13,.12); display:flex; flex-wrap:wrap; align-items:center; gap:10px; }
       .kc-custom-pop[hidden] { display:none; }
       .kc-custom-pop input[type="color"] { width:54px; height:42px; padding:2px; border:1px solid var(--line,#ddd); border-radius:9px; background:transparent; cursor:pointer; }
       .kc-custom-pop input[type="text"] { min-height:42px; padding:9px; border:1px solid var(--line,#ddd); border-radius:9px; background:var(--paper,#fff); color:var(--ink,#0A0F0D); }
@@ -344,12 +349,13 @@
     })() : '';
     const customName = customSelected && !/^Couleur personnalisée\s+#[0-9a-f]{6}$/i.test(String(customSelected.label || ''))
       ? customSelected.label : '';
-    const more = opts.custom ? `<span class="kc-custom-wrap"><button type="button" class="kc-sw kc-more" data-kc-more aria-label="Choisir une couleur personnalisée" title="Plus de couleurs">+</button><span class="kc-custom-pop" data-kc-pop hidden><input type="color" value="${customSelected ? esc(customSelected.hex) : '#4A67D6'}" data-kc-native aria-label="Sélecteur de couleur"><input type="text" value="${customSelected ? esc(customSelected.hex) : '#4A67D6'}" data-kc-hex-input maxlength="7" aria-label="Code hexadécimal"><input type="text" value="${esc(customName)}" data-kc-name-input maxlength="40" placeholder="Nom, ex. Bleu clair" aria-label="Nom affiché de la couleur"><button type="button" data-kc-apply>Choisir</button></span></span>` : '';
+    const moreButton = opts.custom ? `<span class="kc-custom-wrap"><button type="button" class="kc-sw kc-more" data-kc-more aria-expanded="false" aria-label="Choisir une couleur personnalisée" title="Plus de couleurs">+</button></span>` : '';
+    const customPanel = opts.custom ? `<div class="kc-custom-pop" data-kc-pop hidden><input type="color" value="${customSelected ? esc(customSelected.hex) : '#4A67D6'}" data-kc-native aria-label="Sélecteur de couleur"><input type="text" value="${customSelected ? esc(customSelected.hex) : '#4A67D6'}" data-kc-hex-input maxlength="7" aria-label="Code hexadécimal"><input type="text" value="${esc(customName)}" data-kc-name-input maxlength="40" placeholder="Nom, ex. Bleu clair" aria-label="Nom affiché de la couleur"><button type="button" data-kc-apply>Choisir</button></div>` : '';
     const cap = opts.caption === false ? ''
       : `<div class="kc-cap" data-kc-cap data-kc-empty="${esc(opts.hint || 'Survolez une pastille pour lire son nom')}">`
         + `${sel ? esc(BY_ID[sel] ? BY_ID[sel].label : '') : ''}</div>`;
     return `<div class="kc-picker" data-kc-picker="${esc(name || 'color')}" role="radiogroup" `
-      + `aria-label="${esc(opts.label || 'Couleur')}"><div class="kc-row">${btns}${customBtn}${more}</div>${cap}</div>`;
+      + `aria-label="${esc(opts.label || 'Couleur')}"><div class="kc-row">${btns}${customBtn}${moreButton}</div>${customPanel}${cap}</div>`;
   }
 
   /* Read the current value out of a rendered picker (or its container). */
@@ -396,8 +402,16 @@
     document.addEventListener('click', (e) => {
       const more = e.target.closest && e.target.closest('[data-kc-more]');
       if (more) {
-        const pop = more.parentElement.querySelector('[data-kc-pop]');
-        if (pop) pop.hidden = !pop.hidden;
+        const box = more.closest('[data-kc-picker]');
+        const pop = box && box.querySelector('[data-kc-pop]');
+        if (pop) {
+          pop.hidden = !pop.hidden;
+          more.setAttribute('aria-expanded', pop.hidden ? 'false' : 'true');
+          if (!pop.hidden) {
+            const first = pop.querySelector('[data-kc-native]');
+            if (first) first.focus();
+          }
+        }
         return;
       }
       const apply = e.target.closest && e.target.closest('[data-kc-apply]');
@@ -427,6 +441,8 @@
           b.setAttribute('aria-label', label);
         }
         select(box, id); pop.hidden = true;
+        const moreButton = box.querySelector('[data-kc-more]');
+        if (moreButton) moreButton.setAttribute('aria-expanded', 'false');
         box.dispatchEvent(new CustomEvent('kc:change', {
           bubbles: true,
           detail: { value: id, name: box.getAttribute('data-kc-picker'), label, hex, custom: true },

@@ -37,10 +37,17 @@ assert.equal(colors.familyId('custom-12abef', '', '#12ABEF'), 'bleu', 'custom co
 assert.deepEqual(colors.display('custom-12abef'), {
   id: 'custom-12abef', label: 'Couleur personnalisée #12ABEF', hex: '#12ABEF', light: false, custom: true,
 }, 'custom colour keeps its exact display value');
-assert.match(colors.picker('test', 'noir', { custom: true }), /data-kc-more/, 'picker exposes the plus button');
-assert.match(colors.picker('test', 'noir', { custom: true }), /data-kc-name-input/, 'custom picker lets the merchant name the colour');
+const customPicker = colors.picker('test', 'noir', { custom: true });
+assert.match(customPicker, /data-kc-more/, 'picker exposes the plus button');
+assert.match(customPicker, /data-kc-name-input/, 'custom picker lets the merchant name the colour');
+assert.match(customPicker, /data-kc-more[^>]*aria-expanded="false"/, 'custom colour trigger exposes its collapsed state');
+assert.match(customPicker, /<\/div><div class="kc-custom-pop" data-kc-pop hidden>/, 'custom editor is outside the swatch row so it cannot be anchored off-dialog');
+const paletteSource = fs.readFileSync(path.join(ROOT, 'assets/color-palette.js'), 'utf8');
+assert.match(paletteSource, /\.kc-custom-pop \{[^}]*position:static;[^}]*width:100%/, 'custom editor expands inline to the picker width instead of using an absolute 430px overlay');
+assert.match(paletteSource, /more\.closest\('\[data-kc-picker\]'\)/, 'custom trigger resolves the inline editor from the full picker');
+assert.match(paletteSource, /more\.setAttribute\('aria-expanded', pop\.hidden \? 'false' : 'true'\)/, 'custom trigger announces whether its editor is open');
 assert.match(colors.picker('test', { id: 'custom-12abef', label: 'Bleu client', hex: '#12ABEF', custom: true }, { custom: true }), /background-color:#12ABEF/, 'picker restores an existing custom selection');
-assert.match(fs.readFileSync(path.join(ROOT, 'assets/color-palette.js'), 'utf8'), /label, hex, custom: true/, 'custom picker reports its edited name to the host form');
+assert.match(paletteSource, /label, hex, custom: true/, 'custom picker reports its edited name to the host form');
 
 const C = window.KiwiBoutiqueCatalog;
 C.use('custom-colour-test');
@@ -83,4 +90,4 @@ assert.match(pages, /data-bqx-vselected/, 'colour editor exposes a live selected
 assert.match(pages, /Le stock, la taille et les codes-barres ne seront pas modifiés/, 'colour editor explains which inventory data remains untouched');
 assert.match(pages, /classList\.add\('bqx-color-modal'\)/, 'colour editor keeps its actions visible on short screens');
 
-console.log('boutique-custom-color-test: 33 controls passed');
+console.log('boutique-custom-color-test: 38 controls passed');
