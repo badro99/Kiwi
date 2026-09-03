@@ -28,7 +28,7 @@ const failures = [];
 function pngSize(file) {
   const data = fs.readFileSync(new URL('../' + file, import.meta.url));
   if (data.length < 24 || data.toString('hex', 0, 8) !== '89504e470d0a1a0a') return null;
-  return { width: data.readUInt32BE(16), height: data.readUInt32BE(20) };
+  return { width: data.readUInt32BE(16), height: data.readUInt32BE(20), colorType: data[25] };
 }
 
 function check(label, condition) {
@@ -102,6 +102,10 @@ const androidSplash = [
 ];
 check('all iOS launch assets are valid 2732px square PNGs',
   iosSplash.every((file) => { const size = pngSize(file); return size && size.width === 2732 && size.height === 2732; }));
+check('iOS app icon is an opaque 1024px production PNG', (() => {
+  const icon = pngSize('app/ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png');
+  return icon && icon.width === 1024 && icon.height === 1024 && icon.colorType !== 4 && icon.colorType !== 6;
+})());
 check('all Android launch assets exist at their density-specific dimensions',
   androidSplash.every(([file, width, height]) => { const size = pngSize(file); return size && size.width === width && size.height === height; }));
 check('iOS launch canvas uses Kiwi ink instead of the retired light splash',
@@ -139,4 +143,4 @@ if (failures.length) {
   console.error('\napp-release-test: ' + failures.length + ' failure(s)');
   process.exit(1);
 }
-console.log('\napp-release-test: 31 controls green');
+console.log('\napp-release-test: 32 controls green');
