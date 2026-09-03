@@ -58,7 +58,7 @@
   var forceSetup = params.has('setup');
   var state = { step: 'account', role: '', account: 'pending', accountLabel: '', stores: [], selectedStore: null, paired: false, venue: null, printer: false, printerSkipped: false };
   var shell = $('#shell'), login = $('#login'), loginErr = $('#login-err'), loginBtn = $('#login-btn');
-  var acctState = $('#acct-state'), acctText = $('#acct-text'), acctUnknown = $('#acct-unknown');
+  var acctState = $('#acct-state'), acctText = $('#acct-text'), acctUnknown = $('#acct-unknown'), acctNext = $('#account-next');
   var boot = $('#boot');
   function clearBoot() {
     if (!boot) return;
@@ -110,6 +110,7 @@
     state.account = 'signedout'; state.accountLabel = ''; state.stores = []; state.selectedStore = null;
     login.hidden = false; acctState.hidden = true; acctUnknown.hidden = true;
     loginErr.hidden = !err; loginErr.textContent = err || '';
+    if (acctNext) acctNext.className = 'secondary';
   }
   function showAccount(me) {
     state.account = 'connected';
@@ -121,10 +122,12 @@
     state.selectedStore = state.stores.length === 1 ? state.stores[0] : null;
     acctText.textContent = tr('connected') + ' · ' + state.accountLabel;
     acctState.hidden = false; login.hidden = true; acctUnknown.hidden = true;
+    if (acctNext) acctNext.className = 'cta';
   }
   function showUnknown() {
     state.account = 'offline'; state.accountLabel = ''; state.stores = []; state.selectedStore = null;
     acctUnknown.hidden = false; login.hidden = true; acctState.hidden = true;
+    if (acctNext) acctNext.className = 'secondary';
   }
   function refreshAccount() {
     return fetch('/api/me', { headers: { Accept: 'application/json' }, cache: 'no-store' }).then(function (r) {
