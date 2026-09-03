@@ -48,7 +48,9 @@ ok('Arabic account gate translates account creation', ar.includes('>إنشاء �
 
 const dashboard = fs.readFileSync(new URL('../dashboard.html', import.meta.url), 'utf8');
 ok('dashboard applies an explicit locale before deferred modules', dashboard.indexOf("localStorage.setItem('kiwiLang', picked)") < dashboard.indexOf('assets/i18n.js'));
-ok('dashboard applies Arabic direction before onboarding', dashboard.includes("picked === 'ar' ? 'rtl' : 'ltr'"));
+ok('dashboard applies Arabic direction before onboarding and after a persisted-language reload',
+  dashboard.includes("document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr'") &&
+  !dashboard.includes("document.documentElement.dir = picked === 'ar' ? 'rtl' : 'ltr'"));
 ok('dashboard persists explicit locale for the account gate', dashboard.includes("document.cookie = 'kiwi_lang=' + picked"));
 
 const i18n = fs.readFileSync(new URL('../assets/i18n.js', import.meta.url), 'utf8');

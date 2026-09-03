@@ -118,6 +118,19 @@
   }
 }
 
+/* The desktop header needs more horizontal room than an iPad portrait gives
+ * it once login, demo, and locale controls are present. Hand the centre links
+ * to the already-rendered mobile menu before they collide or clip. */
+@media (min-width: 768px) and (max-width: 1100px) {
+  header nav[aria-label] {
+    display: none !important;
+  }
+
+  header button[aria-controls="kw-mobile-menu"] {
+    display: flex !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .kw-locale-chevron,
   .kw-locale-list {

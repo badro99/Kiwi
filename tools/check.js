@@ -1087,6 +1087,26 @@ section('Whole-project regressions');
   });
 }
 
+/* ── 13b · coquille native, pilotée pour de vrai ──────────────────────────
+ * app-bundle-test.mjs prouve le paquet ; celui-ci conduit la coquille dans un
+ * vrai Chromium : boot borné, parcours guidé, appairage, imprimante, locales,
+ * cibles tactiles, débordements, reduced motion. Sans Chromium ni
+ * puppeteer-core la suite se déclare SKIPPÉE (vert explicite) plutôt que de
+ * mentir : un navigateur absent est un trou d'environnement, pas une
+ * régression produit. */
+section('Native setup shell interaction (tools/app-interaction-test.mjs)');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'app-interaction-test.mjs')], { encoding: 'utf8', timeout: 420000 });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0 && out.includes('○ skip')) warn('app interaction suite skipped (no Chromium — browser assertions not executed)');
+  else if (r.status === 0) ok(`app interaction green (${(out.match(/✓/g) || []).length} controls)`);
+  else {
+    out.split('\n').filter((line) => line.includes('✗')).forEach((line) => fail(line.replace(/^\s*✗\s*/, '')));
+    if (!out.includes('✗')) fail(`app-interaction-test.mjs exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+  }
+}
+
 /* ── 14 · text contrast tokens ────────────────────────────────────────────
  * Low-contrast neutrals are valid borders and decoration, never body copy.
  * Keep the semantic distinction enforceable after the rendered theme audit. */

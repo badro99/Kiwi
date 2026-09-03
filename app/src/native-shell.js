@@ -16,7 +16,7 @@
   var COPY = {
     fr: {
       brandKicker:'Le système d’exploitation du commerçant marocain.',localSetup:'Configuration sécurisée sur cet appareil',deviceSetup:'Configuration de l’appareil',guided:'Guidée',welcomeSub:'Configurons cet appareil. Cela prend environ deux minutes.',launcherSub:'Choisissez le rôle de cet appareil. Kiwi s’en souviendra.',stageAccount:'Votre espace et vos droits restent liés au bon établissement.',stageRole:'Un appareil, un rôle clair — Kiwi ouvrira directement le bon espace.',stageConnect:'La liaison sécurisée empêche tout mélange entre établissements.',stagePrinter:'Vérifiez le matériel maintenant pour être prêt au premier encaissement.',stageReady:'La configuration est enregistrée sur cet appareil.',progress:'Progression de la configuration',accountStep:'Compte',roleStep:'Rôle',connectStep:'Connexion',printerStep:'Imprimante',readyStep:'Prêt',
-      stepOne:'Étape 1',stepTwo:'Étape 2',stepThree:'Étape 3',stepFour:'Étape 4',stepFive:'Étape 5',accountTitle:'Connectez le compte marchand',accountIntro:'Le tableau de bord, la caisse et la cuisine utilisent le compte marchand. KiwiÉquipe peut continuer avec le code de l’employé.',merchantAccount:'Compte marchand',email:'E-mail',password:'Mot de passe',login:'Se connecter',logout:'Se déconnecter',serverOffline:'Serveur injoignable. Vous pourrez réessayer dans votre espace.',continue:'Continuer',manual:'Choisir un rôle sans assistant',back:'Retour',
+      stepOne:'Étape 1',stepTwo:'Étape 2',stepThree:'Étape 3',stepFour:'Étape 4',stepFive:'Étape 5',accountTitle:'Connectez le compte marchand',accountIntro:'Le tableau de bord, la caisse et la cuisine utilisent le compte marchand. KiwiÉquipe peut continuer avec le code de l’employé.',merchantAccount:'Compte marchand',email:'E-mail',password:'Mot de passe',showPassword:'Afficher le mot de passe',hidePassword:'Masquer le mot de passe',login:'Se connecter',logout:'Se déconnecter',serverOffline:'Serveur injoignable. Vous pourrez réessayer dans votre espace.',continue:'Continuer',manual:'Choisir un rôle sans assistant',back:'Retour',
       roleTitle:'À quoi servira cet appareil ?',roleIntro:'Kiwi ouvrira ce rôle automatiquement aux prochains lancements.',roles:'Rôle de l’appareil',caisse:'Caisse',caisseSub:'Encaissement, tickets, imprimante',team:'KiwiÉquipe',teamSub:'Salle, planning, pointage',kitchen:'Cuisine',kitchenSub:'Écran de production (KDS)',dashboard:'Tableau de bord',dashboardSub:'Propriétaire, lecture et actions rapides',chooseRole:'Choisissez un rôle pour continuer.',dashboardNeedsAccount:'Ce rôle exige un compte marchand connecté. Revenez à l’étape 1.',
       connectTitle:'Reliez l’appareil à l’établissement',pairIntro:'Choisissez l’établissement auquel cet appareil doit envoyer ses ventes et ses commandes.',stores:'Établissements du compte',chooseStore:'Choisissez un établissement.',store:'Établissement',pair:'Relier cet appareil',pairing:'Connexion…',paired:'Appareil relié',alreadyPaired:'Déjà relié',pairRate:'Trop de tentatives. Réessayez dans quelques minutes.',pairNetwork:'Impossible de joindre Kiwi. Vérifiez le Wi-Fi.',pairUnavailable:'La liaison est momentanément indisponible.',dashboardConnect:'Le tableau de bord utilise le compte marchand connecté à l’étape 1.',accountConnected:'Compte marchand connecté',teamConnect:'Chaque membre se connectera avec son code équipe sur l’écran suivant. Aucun appairage marchand n’est nécessaire ici.',teamReady:'Connexion par code équipe',
       printerTitle:'Testez l’imprimante thermique',printerIntro:'L’iPad et l’imprimante doivent être sur le même Wi-Fi. Le port standard est 9100.',printerIp:'Adresse IP',printerPort:'Port',paper:'Papier',scan:'Rechercher sur le réseau',scanning:'Recherche…',testPrinter:'Tester et enregistrer',testing:'Test en cours…',printerLater:'Configurer plus tard',printerRequired:'Saisissez une adresse et un port valides.',printerNativeOnly:'La recherche réseau est disponible dans l’app Kiwi Pro.',printerNone:'Aucune imprimante trouvée. Vérifiez le Wi-Fi et l’alimentation.',printerMany:'Imprimantes trouvées — choisissez-en une :',printerFound:'Imprimante trouvée',printerOk:'Ticket test envoyé et imprimante enregistrée.',printerFail:'Imprimante injoignable. Vérifiez son IP, son port et le Wi-Fi local.',printerDenied:'Autorisez l’accès au réseau local dans Réglages > Kiwi Pro.',printerSkipped:'À configurer dans Kiwi',
@@ -24,7 +24,7 @@
     },
     en: {
       brandKicker:'The operating system for Moroccan merchants.',localSetup:'Secure setup on this device',deviceSetup:'Device setup',guided:'Guided',welcomeSub:'Let’s set up this device. It takes about two minutes.',launcherSub:'Choose this device’s role. Kiwi will remember it.',stageAccount:'Your workspace and permissions stay tied to the right establishment.',stageRole:'One device, one clear role — Kiwi opens the right workspace directly.',stageConnect:'Secure device binding keeps establishments from ever mixing.',stagePrinter:'Check the hardware now so the first checkout is ready.',stageReady:'This setup is saved on this device.',progress:'Setup progress',accountStep:'Account',roleStep:'Role',connectStep:'Connect',printerStep:'Printer',readyStep:'Ready',
-      stepOne:'Step 1',stepTwo:'Step 2',stepThree:'Step 3',stepFour:'Step 4',stepFive:'Step 5',accountTitle:'Sign in to the merchant account',accountIntro:'The dashboard, till, and kitchen use the merchant account. Kiwi Team can continue with the employee code.',merchantAccount:'Merchant account',email:'Email',password:'Password',login:'Sign in',logout:'Sign out',serverOffline:'Server unavailable. You can retry inside your workspace.',continue:'Continue',manual:'Choose a role without setup',back:'Back',
+      stepOne:'Step 1',stepTwo:'Step 2',stepThree:'Step 3',stepFour:'Step 4',stepFive:'Step 5',accountTitle:'Sign in to the merchant account',accountIntro:'The dashboard, till, and kitchen use the merchant account. Kiwi Team can continue with the employee code.',merchantAccount:'Merchant account',email:'Email',password:'Password',showPassword:'Show password',hidePassword:'Hide password',login:'Sign in',logout:'Sign out',serverOffline:'Server unavailable. You can retry inside your workspace.',continue:'Continue',manual:'Choose a role without setup',back:'Back',
       roleTitle:'What will this device be used for?',roleIntro:'Kiwi will open this role automatically on future launches.',roles:'Device role',caisse:'Till',caisseSub:'Payments, receipts, printer',team:'Kiwi Team',teamSub:'Floor, schedule, attendance',kitchen:'Kitchen',kitchenSub:'Production screen (KDS)',dashboard:'Dashboard',dashboardSub:'Owner view and quick actions',chooseRole:'Choose a role to continue.',dashboardNeedsAccount:'This role requires a signed-in merchant account. Return to step 1.',
       connectTitle:'Connect the device to the establishment',pairIntro:'Choose the establishment that should receive this device’s sales and orders.',stores:'Account establishments',chooseStore:'Choose an establishment.',store:'Establishment',pair:'Connect this device',pairing:'Connecting…',paired:'Device connected',alreadyPaired:'Already connected',pairRate:'Too many attempts. Try again in a few minutes.',pairNetwork:'Could not reach Kiwi. Check Wi-Fi.',pairUnavailable:'Device connection is temporarily unavailable.',dashboardConnect:'The dashboard uses the merchant account signed in at step 1.',accountConnected:'Merchant account connected',teamConnect:'Each team member signs in with their team code on the next screen. No merchant pairing is needed here.',teamReady:'Team code sign-in',
       printerTitle:'Test the thermal printer',printerIntro:'The iPad and printer must be on the same Wi-Fi. The standard port is 9100.',printerIp:'IP address',printerPort:'Port',paper:'Paper',scan:'Search the network',scanning:'Searching…',testPrinter:'Test and save',testing:'Testing…',printerLater:'Set up later',printerRequired:'Enter a valid address and port.',printerNativeOnly:'Network discovery is available in the Kiwi Pro app.',printerNone:'No printer found. Check Wi-Fi and printer power.',printerMany:'Printers found — choose one:',printerFound:'Printer found',printerOk:'Test slip sent and printer saved.',printerFail:'Printer unreachable. Check its IP, port, and local Wi-Fi.',printerDenied:'Allow Local Network access in Settings > Kiwi Pro.',printerSkipped:'Set up inside Kiwi',
@@ -32,7 +32,7 @@
     },
     ar: {
       brandKicker:'نظام التشغيل للتجار المغاربة.',localSetup:'إعداد آمن على هذا الجهاز',deviceSetup:'إعداد الجهاز',guided:'إعداد موجّه',welcomeSub:'لنقم بإعداد هذا الجهاز. يستغرق الأمر حوالي دقيقتين.',launcherSub:'اختر دور هذا الجهاز. سيتذكر Kiwi اختيارك.',stageAccount:'تبقى مساحتك وصلاحياتك مرتبطة بالمؤسسة الصحيحة.',stageRole:'جهاز واحد ودور واضح — يفتح Kiwi المساحة المناسبة مباشرة.',stageConnect:'الربط الآمن يمنع اختلاط بيانات المؤسسات.',stagePrinter:'تحقق من المعدات الآن ليكون أول بيع جاهزا.',stageReady:'تم حفظ هذا الإعداد على الجهاز.',progress:'تقدم الإعداد',accountStep:'الحساب',roleStep:'الدور',connectStep:'الربط',printerStep:'الطابعة',readyStep:'جاهز',
-      stepOne:'الخطوة 1',stepTwo:'الخطوة 2',stepThree:'الخطوة 3',stepFour:'الخطوة 4',stepFive:'الخطوة 5',accountTitle:'سجّل الدخول إلى حساب التاجر',accountIntro:'تستخدم لوحة التحكم والصندوق والمطبخ حساب التاجر. يمكن لفريق Kiwi المتابعة برمز الموظف.',merchantAccount:'حساب التاجر',email:'البريد الإلكتروني',password:'كلمة المرور',login:'تسجيل الدخول',logout:'تسجيل الخروج',serverOffline:'الخادم غير متاح. يمكنك المحاولة من داخل مساحتك.',continue:'متابعة',manual:'اختيار الدور بدون المساعد',back:'رجوع',
+      stepOne:'الخطوة 1',stepTwo:'الخطوة 2',stepThree:'الخطوة 3',stepFour:'الخطوة 4',stepFive:'الخطوة 5',accountTitle:'سجّل الدخول إلى حساب التاجر',accountIntro:'تستخدم لوحة التحكم والصندوق والمطبخ حساب التاجر. يمكن لفريق Kiwi المتابعة برمز الموظف.',merchantAccount:'حساب التاجر',email:'البريد الإلكتروني',password:'كلمة المرور',showPassword:'إظهار كلمة المرور',hidePassword:'إخفاء كلمة المرور',login:'تسجيل الدخول',logout:'تسجيل الخروج',serverOffline:'الخادم غير متاح. يمكنك المحاولة من داخل مساحتك.',continue:'متابعة',manual:'اختيار الدور بدون المساعد',back:'رجوع',
       roleTitle:'ما استخدام هذا الجهاز؟',roleIntro:'سيفتح Kiwi هذا الدور تلقائيا في المرات القادمة.',roles:'دور الجهاز',caisse:'الصندوق',caisseSub:'الدفع والإيصالات والطابعة',team:'فريق Kiwi',teamSub:'الصالة والتخطيط والحضور',kitchen:'المطبخ',kitchenSub:'شاشة الإنتاج',dashboard:'لوحة التحكم',dashboardSub:'عرض المالك والإجراءات السريعة',chooseRole:'اختر دورا للمتابعة.',dashboardNeedsAccount:'يتطلب هذا الدور حساب تاجر متصلا. ارجع إلى الخطوة 1.',
       connectTitle:'اربط الجهاز بالمؤسسة',pairIntro:'اختر المؤسسة التي ستستقبل مبيعات وطلبات هذا الجهاز.',stores:'مؤسسات الحساب',chooseStore:'اختر مؤسسة.',store:'المؤسسة',pair:'ربط هذا الجهاز',pairing:'جارٍ الربط…',paired:'تم ربط الجهاز',alreadyPaired:'مرتبط مسبقا',pairRate:'محاولات كثيرة. أعد المحاولة بعد بضع دقائق.',pairNetwork:'تعذر الاتصال بـ Kiwi. تحقق من الواي فاي.',pairUnavailable:'ربط الجهاز غير متاح مؤقتا.',dashboardConnect:'تستخدم لوحة التحكم حساب التاجر المتصل في الخطوة 1.',accountConnected:'حساب التاجر متصل',teamConnect:'يسجل كل عضو دخوله برمز الفريق في الشاشة التالية. لا يلزم إقران حساب التاجر هنا.',teamReady:'الدخول برمز الفريق',
       printerTitle:'اختبر الطابعة الحرارية',printerIntro:'يجب أن يكون الآيباد والطابعة على نفس شبكة الواي فاي. المنفذ المعتاد 9100.',printerIp:'عنوان IP',printerPort:'المنفذ',paper:'الورق',scan:'البحث في الشبكة',scanning:'جارٍ البحث…',testPrinter:'اختبار وحفظ',testing:'جارٍ الاختبار…',printerLater:'الإعداد لاحقا',printerRequired:'أدخل عنوانا ومنفذا صالحين.',printerNativeOnly:'البحث في الشبكة متاح داخل تطبيق Kiwi Pro.',printerNone:'لم يتم العثور على طابعة. تحقق من الشبكة والطاقة.',printerMany:'تم العثور على طابعات — اختر واحدة:',printerFound:'تم العثور على الطابعة',printerOk:'أُرسل إيصال الاختبار وحُفظت الطابعة.',printerFail:'تعذر الوصول إلى الطابعة. تحقق من العنوان والمنفذ والشبكة.',printerDenied:'اسمح بالوصول إلى الشبكة المحلية من الإعدادات > Kiwi Pro.',printerSkipped:'تُضبط من داخل Kiwi',
@@ -59,6 +59,19 @@
   var state = { step: 'account', role: '', account: 'pending', accountLabel: '', stores: [], selectedStore: null, paired: false, venue: null, printer: false, printerSkipped: false };
   var shell = $('#shell'), login = $('#login'), loginErr = $('#login-err'), loginBtn = $('#login-btn');
   var acctState = $('#acct-state'), acctText = $('#acct-text'), acctUnknown = $('#acct-unknown');
+  var boot = $('#boot');
+  function clearBoot() {
+    if (!boot) return;
+    try { boot.remove(); } catch (_) { try { boot.hidden = true; } catch (_) {} }
+    boot = null;
+  }
+  var passwordToggle = $('#password-toggle');
+  passwordToggle.addEventListener('click', function () {
+    var reveal = login.password.type === 'password';
+    login.password.type = reveal ? 'text' : 'password';
+    passwordToggle.setAttribute('aria-pressed', reveal ? 'true' : 'false');
+    passwordToggle.setAttribute('aria-label', tr(reveal ? 'hidePassword' : 'showPassword'));
+  });
 
   function rememberSecure(role) {
     if (!ROLES[role]) return;
@@ -69,12 +82,27 @@
   function rememberedSecure() {
     var local = remembered(), p = plugin();
     if (!p || typeof p.secureGet !== 'function') return Promise.resolve(local);
-    return Promise.resolve(p.secureGet({ key: 'app-role' })).then(function (result) {
+    return secureGetBounded(p, 'app-role').then(function (result) {
       var role = result && ROLES[result.value] ? result.value : '';
       if (role) { setLs(ROLE_KEY, role); return role; }
       if (local && typeof p.secureSet === 'function') p.secureSet({ key: 'app-role', value: local }).catch(function () {});
       return local;
     }).catch(function () { return local; });
+  }
+  /* The native bridge answers secure storage in milliseconds — unless it
+   * doesn't answer at all. An unanswered read used to leave the app on its
+   * boot stage forever, so the lookup is bounded: on timeout the device falls
+   * back to its local role exactly as if the plugin were absent. */
+  var SECURE_TIMEOUT_MS = 2500;
+  function secureGetBounded(p, key) {
+    return new Promise(function (resolve) {
+      var done = false;
+      var timer = setTimeout(function () { if (!done) { done = true; resolve(null); } }, SECURE_TIMEOUT_MS);
+      var settle = function (value) { if (!done) { done = true; clearTimeout(timer); resolve(value); } };
+      try {
+        Promise.resolve(p.secureGet({ key: key })).then(settle, function () { settle(null); });
+      } catch (_) { settle(null); }
+    });
   }
   function go(role) { rememberSecure(role); location.href = ROLES[role]; }
 
@@ -293,6 +321,7 @@
   } catch (_) {}
 
   rememberedSecure().then(function (role) {
+    clearBoot();
     if (role && !manual && !forceSetup) { location.replace(ROLES[role]); return; }
     shell.hidden = false;
     if (manual) enterManual(); else { $('#setup-progress').hidden = false; showStep('account'); }

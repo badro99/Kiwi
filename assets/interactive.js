@@ -3433,8 +3433,8 @@ ar: {
   // Shared style helpers for inline composition
   const kpiHero = (big, sub, deltaTxt, deltaCls = 'good') => `
     <div style="display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-bottom:6px;">
-      <div style="font-size:42px; font-weight:600; letter-spacing:-0.035em; line-height:1; font-feature-settings:'tnum' 1;">${big}</div>
-      ${deltaTxt ? `<div style="font-size:13px; font-weight:500; color:var(--${deltaCls === 'good' ? 'success' : deltaCls === 'warn' ? 'warning' : 'n-500'});">${deltaTxt}</div>` : ''}
+      <div dir="ltr" style="font-size:42px; font-weight:600; letter-spacing:-0.035em; line-height:1; font-feature-settings:'tnum' 1; unicode-bidi:isolate;">${big}</div>
+      ${deltaTxt ? `<div style="min-width:0; max-width:100%; overflow-wrap:anywhere; font-size:13px; font-weight:500; color:var(--${deltaCls === 'good' ? 'success' : deltaCls === 'warn' ? 'warning' : 'n-500'});">${deltaTxt}</div>` : ''}
     </div>
     <div style="font-size:13px; color:var(--n-500); margin-bottom:22px;">${sub}</div>
   `;
@@ -3453,7 +3453,7 @@ ar: {
   const kpiRow = (left, right, sub = '') => `
     <div style="display:grid; grid-template-columns:1fr auto; gap:12px; padding:10px 0; border-top:1px solid var(--n-200); font-size:13.5px; align-items:center;">
       <div><div style="font-weight:500;">${left}</div>${sub ? `<div style="font-size:11.5px; color:var(--n-500); margin-top:2px;">${sub}</div>` : ''}</div>
-      <div style="font-family:var(--mono); font-weight:500; font-size:12.5px;">${right}</div>
+      <bdi dir="ltr" style="font-family:var(--mono); font-weight:500; font-size:12.5px;">${right}</bdi>
     </div>
   `;
   const kpiFootBtns = (ghostLabel, atlasLabel) => `
@@ -3765,7 +3765,7 @@ ar: {
       tx_foot_close: 'إغلاق',
       tx_foot_journal: 'عرض السجل الكامل →',
       tx_hero_pic: 'ذروة في الساعة 13:00 · 24 معاملة في الساعة',
-      tx_hero_delta: '↑ +24 مقابل أمس (+15%)',
+      tx_hero_delta: '↑ <bdi dir="ltr">+24</bdi> مقابل أمس <bdi dir="ltr">(+15%)</bdi>',
       tx_section_repartition: 'التوزيع بالساعة',
       tx_section_server: 'حسب النادل',
       tx_server_sofia: 'صوفيا بلقاضي',
@@ -3797,7 +3797,7 @@ ar: {
       tips_subtitle: 'الإجمالي اليومي · للتوزيع في نهاية الخدمة',
       tips_foot_distribute: 'التوزيع الآن →',
       tips_hero_avg: '7,6% من الإيرادات المحصلة · متوسط المعدل 8,2%',
-      tips_hero_delta: '↑ +32% مقابل الأسبوع',
+      tips_hero_delta: '↑ <bdi dir="ltr">+32%</bdi> مقابل الأسبوع',
       tips_section_prompt: 'طلب الإكرامية',
       tips_prompt_auto: 'طلب تلقائي +10%',
       tips_prompt_auto_sub: 'معروض على 78% من التذاكر اليوم · معدل القبول 64%',
@@ -3824,7 +3824,7 @@ ar: {
       marge_subtitle: 'الإيرادات ناقص تكلفة المواد · 30 يومًا',
       marge_foot_cogs: 'عرض تكلفة المواد →',
       marge_hero_cogs: 'تكلفة المواد 28,6% من الإيرادات · الهدف ≤ 30%',
-      marge_hero_delta: '↑ +1,8 نقطة مقابل 30 يومًا سابقًا',
+      marge_hero_delta: '↑ <bdi dir="ltr">+1,8</bdi> نقطة مقابل 30 يومًا سابقًا',
       marge_section_category: 'الهامش حسب الفئة',
       marge_cat_hot_drinks: 'المشروبات الساخنة',
       marge_cat_hot_drinks_sub: '28% من الإيرادات',
@@ -3844,7 +3844,7 @@ ar: {
       success_subtitle: 'امتثال الشبكة وبوابة بنك المغرب',
       success_foot_failures: 'عرض الإخفاقات →',
       success_hero_attempts: '184 محاولة · 183 نجاح · 1 فشل',
-      success_hero_delta: '↑ +0,2 نقطة مقابل أمس',
+      success_hero_delta: '↑ <bdi dir="ltr">+0,2</bdi> نقطة مقابل أمس',
       success_section_benchmark: 'مقارنة بالسوق',
       success_bench_you: 'مقهى أطلس (أنتم)',
       success_bench_avg: 'متوسط مقاهي الدار البيضاء',
@@ -3868,7 +3868,7 @@ ar: {
       ratio_subtitle: 'مزيج الدفع · آخر 24 ساعة',
       ratio_foot_disable_cash: 'تعطيل النقد →',
       ratio_hero_gain: 'البطاقة تكسب 4 نقاط مقابل الأسبوع الماضي · +12 نقطة منذ الإطلاق',
-      ratio_hero_delta: '↑ +4 نقاط بطاقة',
+      ratio_hero_delta: '↑ <bdi dir="ltr">+4</bdi> نقاط بطاقة',
       ratio_section_means: 'تفاصيل وسائل الدفع',
       ratio_means_cash: 'نقداً',
       ratio_section_hidden_cost: 'التكلفة الخفية للنقد',
@@ -3885,7 +3885,7 @@ ar: {
       regulars_subtitle: 'مُعرَّفون بالبطاقة المرمزة أو محفظة كيوي',
       regulars_foot_loyalty: 'إطلاق برنامج الولاء →',
       regulars_hero_base: '26٪ من قاعدة العملاء · معدل الاحتفاظ لمدة 30 يومًا = 72٪',
-      regulars_hero_delta: '↑ +9 جدد هذا الأسبوع',
+      regulars_hero_delta: '↑ <bdi dir="ltr">+9</bdi> جدد هذا الأسبوع',
       regulars_section_top5: 'أفضل 5 عملاء منتظمين · هذا الشهر',
       regulars_top5_1_sub: '12 زيارة · 18 قهوة · 6 طواجن',
       regulars_top5_2_sub: '10 زيارات · عضو منذ 2024',
@@ -4090,8 +4090,8 @@ ar: {
               <div style="display:grid; grid-template-columns:120px 1fr 50px 100px; gap:10px; align-items:center; padding:6px 0; font-size:12.5px;">
                 <div style="display:flex; align-items:center; gap:8px; color:var(--n-700);"><i style="width:10px; height:10px; border-radius:3px; background:${c}; display:inline-block;"></i>${lbl}</div>
                 <div style="height:8px; background:var(--surface); border-radius:4px; overflow:hidden;"><div style="width:${pct/48*100}%; height:100%; background:${c}; border-radius:4px;"></div></div>
-                <div style="font-family:var(--mono); text-align:end; font-weight:500;">${pct} %</div>
-                <div style="font-family:var(--mono); text-align:end; color:var(--n-500); font-size:11.5px;">${mad}</div>
+                <bdi dir="ltr" style="font-family:var(--mono); text-align:end; font-weight:500;">${pct} %</bdi>
+                <bdi dir="ltr" style="font-family:var(--mono); text-align:end; color:var(--n-500); font-size:11.5px;">${mad}</bdi>
               </div>
             `).join('')}
           </div>

@@ -10,6 +10,12 @@
 <link rel="stylesheet" href="native-shell.css" />
 </head>
 <body>
+<!-- Boot stage: painted by the parser before any script resolves. The shell
+  stays hidden until the stored role (or its absence) is known, so without
+  this the launch is a bare ink void — and a stalled native bridge would leave
+  it black forever. Logo + ring only, no words: nothing to localize, nothing
+  to flash in the wrong language. Removed by clearBoot() on every path. -->
+<div class="boot" id="boot" aria-hidden="true"><div class="boot-inner"><img class="boot-logo" src="assets/kiwi-newlogo-inverse.svg" width="886" height="486" alt="" /><span class="boot-ring"></span></div></div>
 <main class="shell" id="shell" hidden>
   <aside class="brand-panel">
     <span class="brand-orbit orbit-a" aria-hidden="true"></span>
@@ -51,7 +57,7 @@
       <form class="login" id="login" autocomplete="on" hidden>
         <p class="login-title" data-native-i18n="merchantAccount">Compte marchand</p>
         <label class="field"><span data-native-i18n="email">E-mail</span><input name="email" type="email" inputmode="email" autocomplete="username" required /></label>
-        <label class="field"><span data-native-i18n="password">Mot de passe</span><input name="password" type="password" autocomplete="current-password" required minlength="10" /></label>
+        <div class="field"><label for="login-password" data-native-i18n="password">Mot de passe</label><div class="password-input"><input id="login-password" name="password" type="password" autocomplete="current-password" required minlength="10" /><button type="button" class="password-toggle" id="password-toggle" data-native-i18n-aria="showPassword" aria-label="Afficher le mot de passe" aria-pressed="false"><span aria-hidden="true"></span></button></div></div>
         <p class="err" id="login-err" role="alert" hidden></p>
         <button type="submit" class="cta" id="login-btn" data-native-i18n="login">Se connecter</button>
       </form>
@@ -63,10 +69,10 @@
   <section class="setup-step" id="step-role" data-step="role" hidden>
     <div class="step-heading"><p class="eyebrow" data-native-i18n="stepTwo">Étape 2</p><h1 data-native-i18n="roleTitle">À quoi servira cet appareil ?</h1><p data-native-i18n="roleIntro">Kiwi ouvrira ce rôle automatiquement aux prochains lancements.</p></div>
     <nav class="tiles" aria-label="Rôle de l'appareil" data-native-i18n-aria="roles">
-      <button type="button" class="tile" data-role="caisse" aria-pressed="false"><span class="ico" style="--ico:url(assets/icons/material/storefront.svg)" aria-hidden="true"></span><span class="tile-name" data-native-i18n="caisse">Caisse</span><span class="tile-sub" data-native-i18n="caisseSub">Encaissement, tickets, imprimante</span></button>
-      <button type="button" class="tile" data-role="equipe" aria-pressed="false"><span class="ico" style="--ico:url(assets/icons/material/room_service.svg)" aria-hidden="true"></span><span class="tile-name" data-native-i18n="team">KiwiÉquipe</span><span class="tile-sub" data-native-i18n="teamSub">Salle, planning, pointage</span></button>
-      <button type="button" class="tile" data-role="cuisine" aria-pressed="false"><span class="ico" style="--ico:url(assets/icons/material/restaurant.svg)" aria-hidden="true"></span><span class="tile-name" data-native-i18n="kitchen">Cuisine</span><span class="tile-sub" data-native-i18n="kitchenSub">Écran de production (KDS)</span></button>
-      <button type="button" class="tile tile-soft" data-role="dashboard" aria-pressed="false"><span class="ico" style="--ico:url(assets/icons/material/bar_chart.svg)" aria-hidden="true"></span><span class="tile-name" data-native-i18n="dashboard">Tableau de bord</span><span class="tile-sub" data-native-i18n="dashboardSub">Propriétaire, lecture et actions rapides</span></button>
+      <button type="button" class="tile" data-role="caisse" aria-pressed="false"><span class="ico" style="--ico:url(assets/icons/material/storefront.svg)" aria-hidden="true"></span><span class="tile-name" data-native-i18n="caisse">Caisse</span><span class="tile-sub" data-native-i18n="caisseSub">Encaissement, tickets, imprimante</span><span class="tile-arrow" aria-hidden="true"></span></button>
+      <button type="button" class="tile" data-role="equipe" aria-pressed="false"><span class="ico" style="--ico:url(assets/icons/material/room_service.svg)" aria-hidden="true"></span><span class="tile-name" data-native-i18n="team">KiwiÉquipe</span><span class="tile-sub" data-native-i18n="teamSub">Salle, planning, pointage</span><span class="tile-arrow" aria-hidden="true"></span></button>
+      <button type="button" class="tile" data-role="cuisine" aria-pressed="false"><span class="ico" style="--ico:url(assets/icons/material/restaurant.svg)" aria-hidden="true"></span><span class="tile-name" data-native-i18n="kitchen">Cuisine</span><span class="tile-sub" data-native-i18n="kitchenSub">Écran de production (KDS)</span><span class="tile-arrow" aria-hidden="true"></span></button>
+      <button type="button" class="tile tile-soft" data-role="dashboard" aria-pressed="false"><span class="ico" style="--ico:url(assets/icons/material/bar_chart.svg)" aria-hidden="true"></span><span class="tile-name" data-native-i18n="dashboard">Tableau de bord</span><span class="tile-sub" data-native-i18n="dashboardSub">Propriétaire, lecture et actions rapides</span><span class="tile-arrow" aria-hidden="true"></span></button>
     </nav>
     <p class="err" id="role-err" role="alert" hidden></p>
     <div class="actions setup-actions"><button type="button" class="secondary" data-back="account" data-native-i18n="back">Retour</button><button type="button" class="cta" id="role-next" data-native-i18n="continue" disabled>Continuer</button></div>

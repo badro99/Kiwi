@@ -3,6 +3,8 @@ import fs from 'node:fs';
 
 const read = (file) => fs.readFileSync(new URL('../' + file, import.meta.url), 'utf8');
 const runtime = read('app/src/native-runtime.js');
+const appShell = read('app/src/index.html');
+const nativeShell = read('app/src/native-shell.js');
 const manifest = read('app/android/app/src/main/AndroidManifest.xml');
 const privacy = read('app/ios/App/App/PrivacyInfo.xcprivacy');
 const project = read('app/ios/App/App.xcodeproj/project.pbxproj');
@@ -15,7 +17,18 @@ const appIgnore = read('app/.gitignore');
 const gate = read('functions/_middleware.js');
 const storeDoc = read('docs/ops/APP_STORE.md');
 const interactive = read('assets/interactive.js');
+const pagesPro = read('assets/pages-pro.js');
+const landingLocaleCss = read('assets/landing-locale-menu.css');
+const dashboard = read('dashboard.html');
+const launchStoryboard = read('app/ios/App/App/Base.lproj/LaunchScreen.storyboard');
+const androidStyles = read('app/android/app/src/main/res/values/styles.xml');
 const failures = [];
+
+function pngSize(file) {
+  const data = fs.readFileSync(new URL('../' + file, import.meta.url));
+  if (data.length < 24 || data.toString('hex', 0, 8) !== '89504e470d0a1a0a') return null;
+  return { width: data.readUInt32BE(16), height: data.readUInt32BE(20) };
+}
 
 function check(label, condition) {
   if (condition) console.log('  + ' + label);
@@ -65,9 +78,60 @@ check('the store pack exists with listing, privacy labels, review notes and demo
 check('the dashboard offers in-app account deletion (App Store 5.1.1 v)',
   interactive.includes("'settings-delete-account'") && interactive.includes('mailto:dpo@kiwi-os.com') && interactive.includes("action: 'settings-delete-account'"));
 
+/* Native first paint must match the dark Kiwi Pro boot stage. Keep the
+ * platform resource matrices complete: missing one density/scale otherwise
+ * produces a fallback flash only on that device class. */
+const iosSplash = [
+  'app/ios/App/App/Assets.xcassets/Splash.imageset/splash-2732x2732.png',
+  'app/ios/App/App/Assets.xcassets/Splash.imageset/splash-2732x2732-1.png',
+  'app/ios/App/App/Assets.xcassets/Splash.imageset/splash-2732x2732-2.png',
+];
+const androidSplash = [
+  ['app/android/app/src/main/res/drawable/splash.png', 480, 320],
+  ['app/android/app/src/main/res/drawable-land-mdpi/splash.png', 480, 320],
+  ['app/android/app/src/main/res/drawable-land-hdpi/splash.png', 800, 480],
+  ['app/android/app/src/main/res/drawable-land-xhdpi/splash.png', 1280, 720],
+  ['app/android/app/src/main/res/drawable-land-xxhdpi/splash.png', 1600, 960],
+  ['app/android/app/src/main/res/drawable-land-xxxhdpi/splash.png', 1920, 1280],
+  ['app/android/app/src/main/res/drawable-port-mdpi/splash.png', 320, 480],
+  ['app/android/app/src/main/res/drawable-port-hdpi/splash.png', 480, 800],
+  ['app/android/app/src/main/res/drawable-port-xhdpi/splash.png', 720, 1280],
+  ['app/android/app/src/main/res/drawable-port-xxhdpi/splash.png', 960, 1600],
+  ['app/android/app/src/main/res/drawable-port-xxxhdpi/splash.png', 1280, 1920],
+];
+check('all iOS launch assets are valid 2732px square PNGs',
+  iosSplash.every((file) => { const size = pngSize(file); return size && size.width === 2732 && size.height === 2732; }));
+check('all Android launch assets exist at their density-specific dimensions',
+  androidSplash.every(([file, width, height]) => { const size = pngSize(file); return size && size.width === width && size.height === height; }));
+check('iOS launch canvas uses Kiwi ink instead of the retired light splash',
+  launchStoryboard.includes('red="0.03921568627450980"') && launchStoryboard.includes('green="0.05882352941176471"') && launchStoryboard.includes('blue="0.05098039215686274"'));
+check('Android launch theme still owns the branded splash drawable',
+  androidStyles.includes('<item name="android:background">@drawable/splash</item>'));
+check('native setup uses the vendored Material visibility and direction icons',
+  ['visibility.svg', 'visibility_off.svg', 'north_east.svg'].every((name) => {
+    const file = new URL('../assets/icons/material/' + name, import.meta.url);
+    return fs.existsSync(file) && fs.readFileSync(file, 'utf8').includes('viewBox="0 -960 960 960"');
+  }));
+check('password visibility is localized, stateful and keeps the password field addressable',
+  appShell.includes('id="login-password"') && appShell.includes('id="password-toggle"') &&
+  nativeShell.includes("tr(reveal ? 'hidePassword' : 'showPassword')") && nativeShell.includes("aria-pressed', reveal ? 'true' : 'false'"));
+check('Arabic KPI mixed-direction numbers are explicitly isolated',
+  interactive.includes('<div dir="ltr" style="font-size:42px') &&
+  interactive.includes('<bdi dir="ltr">+32%</bdi>') && interactive.includes('<bdi dir="ltr">+1,8</bdi>') &&
+  interactive.includes('<bdi dir="ltr" style="font-family:var(--mono); text-align:end; font-weight:500;">${pct} %</bdi>'));
+check('dashboard restores RTL from the persisted language, not only the query parameter',
+  dashboard.includes("document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr'") &&
+  !dashboard.includes("document.documentElement.dir = picked === 'ar' ? 'rtl' : 'ltr'"));
+check('illustrative terminal and settlement figures use stable keyed demo values',
+  pagesPro.includes('function demoUnit(key)') && pagesPro.includes('demoUnit(`${t.id}:minute`)') &&
+  pagesPro.includes('demoUnit(`settlements:forecast:${i}`)') && !pagesPro.includes("'14:' + (28 + Math.floor(Math.random() * 9))"));
+check('landing header switches to its real menu before iPad controls collide',
+  landingLocaleCss.includes('@media (min-width: 768px) and (max-width: 1100px)') &&
+  landingLocaleCss.includes('header nav[aria-label]') && landingLocaleCss.includes('header button[aria-controls="kw-mobile-menu"]'));
+
 if (failures.length) {
   failures.forEach((label) => console.error('  x ' + label));
   console.error('\napp-release-test: ' + failures.length + ' failure(s)');
   process.exit(1);
 }
-console.log('\napp-release-test: 20 controls green');
+console.log('\napp-release-test: 30 controls green');

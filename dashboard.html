@@ -18,7 +18,7 @@
       }
       var lang = picked || localStorage.getItem('kiwiLang') || 'fr';
       document.documentElement.lang = lang;
-      document.documentElement.dir = picked === 'ar' ? 'rtl' : 'ltr';
+      document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
 
       /* Keep first paint aligned with KiwiDashTheme: a fresh dashboard starts
          light and does not inherit the public site's or the OS preference. */
@@ -6194,7 +6194,7 @@
      d'inscription construisent leur grille pareil. Aucun DOM, ~7 Ko. -->
 <script src="assets/trades.js?v=6" defer></script>
 <script src="assets/lucide.min.js?v=4" defer></script>
-<script src="assets/interactive.js?v=27" defer></script>
+<script src="assets/interactive.js?v=28" defer></script>
 <script src="assets/features.js?v=4" defer></script>
 <script src="assets/invoice.js?v=8" defer></script>
 <script src="assets/invoicing.js?v=8" defer></script>
@@ -6365,7 +6365,7 @@
 <!-- Floor-plan vocabulary shared with the caisse. MUST load before pages-pro.js,
      which reads its top-level declarations as globals. -->
 <script src="assets/floorplan-core.js?v=2050" defer fetchpriority="low"></script>
-<script src="assets/pages-pro.js?v=2089" defer fetchpriority="low"></script>
+<script src="assets/pages-pro.js?v=2090" defer fetchpriority="low"></script>
 <!-- Restaurant-only menu redesign. Recipes stay in a private document; the
      workspace is loaded last so it can present the new shell over MenuStore. -->
 <script src="assets/restaurant-units.js?v=1" defer fetchpriority="low"></script>

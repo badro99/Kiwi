@@ -747,6 +747,19 @@ const TERMINAUX_STR = {
  * Terminaux drawer being closed & re-opened within a session. A full page
  * reload re-seeds the demo fleet. */
 let TERM_FLEET = null;
+/* Stable pseudo-random demo values. These cards are illustrative, but figures
+ * that change on every open look like a live-data defect. The key gives each
+ * terminal/day its own repeatable value without touching IDs or real data. */
+function demoUnit(key) {
+  let h = 2166136261;
+  const text = String(key);
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  h += h << 13; h ^= h >>> 7; h += h << 3; h ^= h >>> 17; h += h << 5;
+  return (h >>> 0) / 4294967295;
+}
 function termFleetSeed() {
   return [
     { id: 'KP-PRO-2831', model: 'KiwiPad pro',     loc: 'comptoir', net: 'wifi', img: 'assets/media/hardware/Hardware_gamefication4.png',    state: 'on',  batt: 87,  battStart: 96,  fw: '4.2.1', fwUpdate: false, txDay: 87,  life: 'loaned',      pulse: 0.70 },
@@ -788,7 +801,7 @@ handlers['nav-terminaux'] = () => {
     for (let i = 0; i <= 12; i++) pts.push(start + ((end - start) * i / 12));
     return spark(pts, 'var(--atlas)');
   };
-  const beat = (n) => Array.from({ length: 30 }, () => Math.max(0.4, n + (Math.random() - 0.5) * 0.5));
+  const beat = (id, n) => Array.from({ length: 30 }, (_, i) => Math.max(0.4, n + (demoUnit(`${id}:beat:${i}`) - 0.5) * 0.5));
 
   /* ── fleet markup · re-rendered in place after every mutation ───────── */
   function fleetHtml() {
@@ -835,7 +848,7 @@ handlers['nav-terminaux'] = () => {
           <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; padding-top:12px; border-top:1px solid var(--n-200);">
             <div>
               <div style="font-size:10px; letter-spacing:0.08em; color:var(--n-500); font-family:var(--mono); margin-bottom:4px;">${T.beats}</div>
-              ${spark(beat(t.state === 'on' ? t.pulse : 0.05), sparkColor)}
+              ${spark(beat(t.id, t.state === 'on' ? t.pulse : 0.05), sparkColor)}
             </div>
             <div>
               <div style="font-size:10px; letter-spacing:0.08em; color:var(--n-500); font-family:var(--mono); margin-bottom:4px;">${T.battery} · ${t.batt} %</div>
@@ -843,8 +856,8 @@ handlers['nav-terminaux'] = () => {
             </div>
             <div>
               <div style="font-size:10px; letter-spacing:0.08em; color:var(--n-500); font-family:var(--mono); margin-bottom:4px;">${T.lastTx}</div>
-              <div style="font-family:var(--mono); font-weight:500; font-size:13px;">${t.state === 'on' ? '14:' + (28 + Math.floor(Math.random() * 9)) : '09:18'}</div>
-              <div style="font-size:11px; color:var(--n-500); margin-top:2px;">${t.state === 'on' ? Math.round(40 + Math.random() * 200) + ',00 MAD' : T.beforeDisconnect}</div>
+              <div style="font-family:var(--mono); font-weight:500; font-size:13px;">${t.state === 'on' ? '14:' + (28 + Math.floor(demoUnit(`${t.id}:minute`) * 9)) : '09:18'}</div>
+              <div style="font-size:11px; color:var(--n-500); margin-top:2px;">${t.state === 'on' ? Math.round(40 + demoUnit(`${t.id}:amount`) * 200) + ',00 MAD' : T.beforeDisconnect}</div>
             </div>
           </div>
         </div>`;
@@ -1363,7 +1376,7 @@ handlers['nav-reglements'] = () => {
   for (let i = 0; i < days; i++) {
     const dow = (i + 3) % 7; // mon=0..sun=6
     const weekendBoost = dow >= 4 ? 1.18 : 1.0;
-    const drift = base + Math.sin(i / 4) * 2200 + (Math.random() - 0.5) * 1800;
+    const drift = base + Math.sin(i / 4) * 2200 + (demoUnit(`settlements:forecast:${i}`) - 0.5) * 1800;
     fc.push(Math.round(drift * weekendBoost));
   }
   const W = 660, H = 110, pad = 6;
