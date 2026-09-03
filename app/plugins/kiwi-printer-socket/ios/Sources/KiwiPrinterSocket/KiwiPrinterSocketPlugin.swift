@@ -3,10 +3,6 @@ import Foundation
 import LocalAuthentication
 import Network
 import Security
-#if canImport(UIKit)
-import UIKit
-#endif
-
 #if canImport(Darwin)
 import Darwin
 #endif
@@ -98,8 +94,7 @@ public class KiwiPrinterSocketPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "ledgerRead", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "ledgerWrite", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "checkBiometrics", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "authenticateBiometric", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "getDynamicTypeScale", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "authenticateBiometric", returnType: CAPPluginReturnPromise)
     ]
 
     @objc func send(_ call: CAPPluginCall) {
@@ -216,58 +211,6 @@ public class KiwiPrinterSocketPlugin: CAPPlugin, CAPBridgedPlugin {
                     call.resolve(["authenticated": false, "errorCode": errCode, "fallback": true])
                 }
             }
-        }
-    }
-
-    override public func load() {
-        super.load()
-        NotificationCenter.default.addObserver(self, selector: #selector(contentSizeCategoryChanged), name: UIContentSizeCategory.didChangeNotification, object: nil)
-    }
-
-    deinit {
-        NotificationCenter.default.removeObserver(self)
-    }
-
-    @objc private func contentSizeCategoryChanged() {
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            let category = UIApplication.shared.preferredContentSizeCategory
-            let scale = Self.scaleForCategory(category)
-            self.notifyListeners("dynamicTypeChange", data: [
-                "scale": scale,
-                "category": category.rawValue
-            ])
-        }
-    }
-
-    @objc func getDynamicTypeScale(_ call: CAPPluginCall) {
-        DispatchQueue.main.async {
-            let category = UIApplication.shared.preferredContentSizeCategory
-            let scale = Self.scaleForCategory(category)
-            call.resolve([
-                "scale": scale,
-                "category": category.rawValue
-            ])
-        }
-    }
-
-    public static func scaleForCategory(_ category: UIContentSizeCategory) -> Double {
-        switch category {
-        case .extraSmall: return 0.85
-        case .small: return 0.90
-        case .medium: return 0.95
-        case .large: return 1.00
-        case .extraLarge: return 1.12
-        case .extraExtraLarge: return 1.24
-        case .extraExtraExtraLarge,
-             .accessibilityMedium,
-             .accessibilityLarge,
-             .accessibilityExtraLarge,
-             .accessibilityExtraExtraLarge,
-             .accessibilityExtraExtraExtraLarge:
-            return 1.35
-        default:
-            return 1.00
         }
     }
 

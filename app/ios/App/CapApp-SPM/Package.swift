@@ -17,6 +17,7 @@ let package = Package(
         .package(name: "CapacitorHaptics", path: "../../../node_modules/@capacitor/haptics"),
         .package(name: "CapacitorNetwork", path: "../../../node_modules/@capacitor/network"),
         .package(name: "CapacitorStatusBar", path: "../../../node_modules/@capacitor/status-bar"),
+        .package(name: "KiwiDynamicType", path: "../../../plugins/kiwi-dynamic-type"),
         .package(name: "KiwiPrinterSocket", path: "../../../plugins/kiwi-printer-socket")
     ],
     targets: [
@@ -30,6 +31,7 @@ let package = Package(
                 .product(name: "CapacitorHaptics", package: "CapacitorHaptics"),
                 .product(name: "CapacitorNetwork", package: "CapacitorNetwork"),
                 .product(name: "CapacitorStatusBar", package: "CapacitorStatusBar"),
+                .product(name: "KiwiDynamicType", package: "KiwiDynamicType"),
                 .product(name: "KiwiPrinterSocket", package: "KiwiPrinterSocket")
             ]
         )

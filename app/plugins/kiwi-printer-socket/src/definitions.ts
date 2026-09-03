@@ -58,7 +58,6 @@ export interface DeviceIdentityResult { id: string; }
 export interface LedgerOptions { name: string; }
 export interface LedgerWriteOptions extends LedgerOptions { value: string; }
 export interface LedgerReadResult { value: string | null; }
-export interface DynamicTypeResult { scale: number; category: string; }
 
 export interface KiwiPrinterSocketPlugin {
   send(options: SendOptions): Promise<SendResult | PrinterSocketError>;
@@ -70,5 +69,4 @@ export interface KiwiPrinterSocketPlugin {
   deviceIdentity(): Promise<DeviceIdentityResult>;
   ledgerRead(options: LedgerOptions): Promise<LedgerReadResult>;
   ledgerWrite(options: LedgerWriteOptions): Promise<void>;
-  getDynamicTypeScale(): Promise<DynamicTypeResult>;
 }

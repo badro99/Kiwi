@@ -139,7 +139,6 @@ function applyPluginStub(pluginCfg) {
   var appInfo = pluginCfg && typeof pluginCfg === 'object' ? pluginCfg.appInfo : null;
   var dtCfg = pluginCfg && typeof pluginCfg === 'object' ? pluginCfg.dynamicType : null;
 
-  var listeners = {};
   var socketPlugin = {
     probe: function () { return Promise.resolve({ ok: true }); },
     send: function () { return Promise.resolve({ ok: true }); },
@@ -155,7 +154,11 @@ function applyPluginStub(pluginCfg) {
       if (secure === 'hang') return new Promise(function () {});
       if (secure === 'slow') return later({ value: '' }, 800);
       return Promise.resolve({ value: '' });
-    },
+    }
+  };
+
+  var dtListeners = {};
+  var dtPlugin = {
     getDynamicTypeScale: function () {
       if (dtCfg === 'reject') return Promise.reject(new Error('dynamic type bridge unavailable'));
       if (dtCfg === 'hang') return new Promise(function () {});
@@ -164,29 +167,34 @@ function applyPluginStub(pluginCfg) {
       return Promise.resolve({ scale: 1.0, category: 'UICTContentSizeCategoryL' });
     },
     addListener: function (eventName, handler) {
-      if (!listeners[eventName]) listeners[eventName] = [];
-      listeners[eventName].push(handler);
+      if (!dtListeners[eventName]) dtListeners[eventName] = [];
+      dtListeners[eventName].push(handler);
       return Promise.resolve({
         remove: function () {
-          listeners[eventName] = (listeners[eventName] || []).filter(function (h) { return h !== handler; });
+          dtListeners[eventName] = (dtListeners[eventName] || []).filter(function (h) { return h !== handler; });
           return Promise.resolve();
         }
       });
     },
     __emit: function (eventName, data) {
-      var handlers = listeners[eventName] || [];
+      var handlers = dtListeners[eventName] || [];
       handlers.forEach(function (h) { try { h(data); } catch (_) {} });
     }
   };
 
   if (dtCfg === 'unavailable') {
-    delete socketPlugin.getDynamicTypeScale;
-    delete socketPlugin.addListener;
+    dtPlugin = null;
   }
 
   var plugins = {
     KiwiPrinterSocket: socketPlugin,
   };
+  if (dtPlugin) {
+    plugins.KiwiDynamicType = dtPlugin;
+  }
+  if (pluginCfg && pluginCfg.printerSocket === false) {
+    delete plugins.KiwiPrinterSocket;
+  }
   if (scanMode === 'unavailable') {
     delete plugins.KiwiPrinterSocket.scan;
   }
@@ -1789,7 +1797,7 @@ for (const locale of ['fr', 'en', 'ar']) {
   // 12.5: Real-time dynamicTypeChange notification listener
   const pLive = await openShell({ locale: 'fr', viewport: 'iphone', me: 'login', plugin: { dynamicType: 1.0 } });
   const liveResult = await pLive.evaluate(async () => {
-    const pl = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.KiwiPrinterSocket;
+    const pl = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.KiwiDynamicType;
     if (!pl || typeof pl.__emit !== 'function') return { ok: false, reason: 'no emit' };
 
     // Emit live change to 1.25
@@ -1823,7 +1831,29 @@ for (const locale of ['fr', 'en', 'ar']) {
     ? ok('Dynamic Type real-time listener: dynamicTypeChange event updates layout immediately and removes property at default 1.0')
     : bad(`Dynamic Type live listener failed: ${JSON.stringify(liveResult)}`);
 
-  // 12.6: Layout survival at 320 CSS px under maximum 1.35x ceiling across all 5 steps (FR, EN, AR)
+  // 12.6: Decoupling verification — Dynamic Type operates when KiwiPrinterSocket is completely absent
+  const pDecoupled = await openShell({ locale: 'fr', viewport: 'iphone', me: 'login', plugin: { dynamicType: 1.35, printerSocket: false } });
+  await pDecoupled.waitForFunction(() => document.documentElement.style.getPropertyValue('--type-scale') === '1.35', { timeout: 3000 });
+  const decoupleResult = await pDecoupled.evaluate(() => {
+    const hasPrinter = !!(window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.KiwiPrinterSocket);
+    const hasDynamicType = !!(window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.KiwiDynamicType);
+    const rootScale = document.documentElement.style.getPropertyValue('--type-scale');
+    const ctaFs = parseFloat(window.getComputedStyle(document.querySelector('.cta')).fontSize);
+    return { hasPrinter, hasDynamicType, rootScale, ctaFs };
+  });
+  await pDecoupled.closeCtx();
+
+  const decoupleOk =
+    !decoupleResult.hasPrinter &&
+    decoupleResult.hasDynamicType &&
+    decoupleResult.rootScale === '1.35' &&
+    Math.abs(decoupleResult.ctaFs - (14 * 1.35)) < 0.1;
+
+  decoupleOk
+    ? ok('Dynamic Type plugin decoupling: functions independently when KiwiPrinterSocket plugin is completely absent')
+    : bad(`Dynamic Type decoupling check failed: ${JSON.stringify(decoupleResult)}`);
+
+  // 12.7: Layout survival at 320 CSS px under maximum 1.35x ceiling across all 5 steps (FR, EN, AR)
   for (const locale of ['fr', 'en', 'ar']) {
     const p320 = await openShell({ locale, viewport: 'iphone', me: 'multi', plugin: { dynamicType: 1.35, scan: 'hosts' } });
     await p320.setViewport({ width: 320, height: 568, deviceScaleFactor: 2, isMobile: true, hasTouch: true });

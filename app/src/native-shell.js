@@ -48,6 +48,12 @@
   function ls(key) { try { return localStorage.getItem(key); } catch (_) { return null; } }
   function setLs(key, value) { try { localStorage.setItem(key, value); } catch (_) {} }
   function plugin() { try { return window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.KiwiPrinterSocket; } catch (_) { return null; } }
+  function dynamicTypePlugin() {
+    try {
+      var cap = window.Capacitor && window.Capacitor.Plugins;
+      return cap && cap.KiwiDynamicType ? cap.KiwiDynamicType : null;
+    } catch (_) { return null; }
+  }
   function remembered() { var role = ls(ROLE_KEY); return ROLES[role] ? role : ''; }
   function pairedVenue() { try { return JSON.parse(ls('kiwiPairedVenue') || 'null'); } catch (_) { return null; } }
 
@@ -57,7 +63,7 @@
   all('[data-native-i18n-aria]').forEach(function (node) { node.setAttribute('aria-label', tr(node.getAttribute('data-native-i18n-aria'))); });
 
   function initDynamicType() {
-    var p = plugin();
+    var p = dynamicTypePlugin();
     if (!p) return;
     function applyScale(scale) {
       if (typeof scale !== 'number' || isNaN(scale)) return;
