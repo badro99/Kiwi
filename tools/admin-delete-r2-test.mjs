@@ -18,7 +18,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 
-const EXPECTED = 10;
+const EXPECTED = 12;
 let checks = 0;
 process.on('unhandledRejection', (error) => { console.error(error); process.exit(1); });
 async function check(name, fn) {
@@ -46,7 +46,10 @@ function makeDb(flags = {}) {
           if (flags.failDeletes && /^\s*DELETE\s/i.test(sql)) throw new Error('D1 delete failed');
           return st.run(...args);
         },
-        first() { return st.get(...args) || null; },
+        first() {
+          if (flags.failCount && /COUNT\(\*\) AS n FROM intake_docs/.test(sql)) throw new Error('D1 count failed');
+          return st.get(...args) || null;
+        },
         all() { return { results: st.all(...args) }; },
       });
       return {
@@ -260,6 +263,28 @@ await check('missing MEDIA binding: zero rows proceed explicitly, rows present r
   assert.equal(body.error, 'r2-binding-missing');
   assert.ok(!body.ok);
   assert.equal(w.env.DB.prepare('SELECT COUNT(*) AS n FROM intake_docs WHERE merchant = ?').bind(M).first().n, 1);
+});
+
+await check('missing MEDIA plus missing table proceeds: positively proven absent', async () => {
+  const w = makeWorld({ withMedia: false });
+  w.env.DB.prepare('DROP TABLE intake_docs').run();
+  const { status, body } = await del(w.env, M);
+  assert.equal(status, 200);
+  assert.equal(body.ok, true);
+  assert.equal(body.r2.status, 'binding-missing-no-rows');
+});
+
+await check('count-query failure without MEDIA is 503 with zero deletion', async () => {
+  const dbflags = { failCount: true };
+  const w = makeWorld({ withMedia: false, dbflags });
+  seedIntake(w, M, docId(1), 1000);
+  const { status, body } = await del(w.env, M);
+  assert.equal(status, 503);
+  assert.equal(body.error, 'db-unavailable');
+  assert.ok(!body.ok);
+  dbflags.failCount = false;
+  assert.equal(w.env.DB.prepare('SELECT COUNT(*) AS n FROM intake_docs WHERE merchant = ?').bind(M).first().n, 1);
+  assert.ok(w.r2.keys.has('intake/' + M + '/' + docId(1) + '.pdf'));
 });
 
 await check('operator gate and confirm slug still guard the whole gesture', async () => {

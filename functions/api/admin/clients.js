@@ -387,18 +387,27 @@ export async function onRequestDelete(context) {
    * registre D1 n'est pas touché et la suppression n'est pas annoncée. */
   let r2 = { status: 'skipped', prefix: null, listed: 0, deleted: 0 };
   if (!env.MEDIA) {
-    // Liaison absente : on ne peut ni lister ni supprimer. Si le registre ne
-    // connaît AUCUNE pièce pour ce marchand, rien ne peut survivre — on
-    // continue et on le dit explicitement (c'est aussi ce qui garde le flux
-    // opérateur historique ouvert là où R2 n'est pas lié). Sinon, refuser :
-    // des lignes has_object=1 sans seau vérifiable, c'est l'orphelin assuré.
-    let pending = -1;
+    // Liaison absente : on ne peut ni lister ni supprimer. On ne continue que
+    // sur preuve POSITIVE qu'il n'y a rien à orpheliner — jamais sur une
+    // erreur transformée en zéro. D'où la sonde en deux temps (même motif que
+    // hotel/declarations.js) : table absente ⇒ aucun dépôt n'a jamais existé
+    // ici ; table présente mais illisible ⇒ 503 sans rien toucher.
     try {
-      const c = await env.DB.prepare('SELECT COUNT(*) AS n FROM intake_docs WHERE merchant = ?').bind(merchant).first();
-      pending = Number((c && c.n) || 0);
-    } catch (_) { pending = 0; } // table absente ⇒ aucun dépôt n'a jamais existé ici
-    if (pending > 0) {
-      return json({ error: 'r2-binding-missing', detail: pending + ' intake row(s) reference objects no bound bucket can verify' }, 503);
+      const t = await env.DB.prepare(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='intake_docs' LIMIT 1"
+      ).first();
+      if (t && t.name) {
+        const c = await env.DB.prepare('SELECT COUNT(*) AS n FROM intake_docs WHERE merchant = ?').bind(merchant).first();
+        const pending = Number((c && c.n) || 0);
+        if (pending > 0) {
+          return json({ error: 'r2-binding-missing', detail: pending + ' intake row(s) reference objects no bound bucket can verify' }, 503);
+        }
+      }
+    } catch (_) {
+      // Base illisible : on ne sait pas s'il reste des pièces — refus,
+      // aucune suppression. (C'est aussi ce qui garde le flux opérateur
+      // historique ouvert là où R2 n'est pas lié et le registre est vide.)
+      return json({ error: 'db-unavailable', detail: 'cannot verify intake_docs without MEDIA binding' }, 503);
     }
     r2 = { status: 'binding-missing-no-rows', prefix: null, listed: 0, deleted: 0 };
   } else if (!/^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(merchant)) {
