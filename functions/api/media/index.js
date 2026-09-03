@@ -19,8 +19,8 @@
 //   ?name=<original filename>   → only used to pick the extension
 //   Content-Type: image/… | video/…
 
-import { json, readSession, readCookie, SESS_COOKIE } from '../../auth/_lib.js';
-import { tenantFor } from '../_private.js';
+import { json } from '../../auth/_lib.js';
+import { ownerMerchant } from '../_private.js';
 
 // Le navigateur rétrécit la photo avant l'envoi (orderpro-publish.js shrinkPhoto :
 // ~300 Ko), donc ces plafonds sont un filet, pas la norme. 16 Mo couvre le JPEG
@@ -41,17 +41,22 @@ export async function onRequestPost(context) {
   if (!env.DB || !env.AUTH_SECRET) return json({ error: 'not-configured' }, 503);
   if (!env.MEDIA) return json({ error: 'no-media' }, 503);
 
-  /* Media publishing remains owner-session-only. tenantFor also understands
-   * paired tills, which is correct for operational documents but would let a
-   * compromised cashier fill the merchant's R2 bucket. */
-  const sess = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET);
-  if (!sess?.aid) return json({ error: 'unauthorized' }, 401);
+  /* Media publishing remains owner-session-only — enforced, not just
+   * documented. The previous code checked the session, then resolved the
+   * tenant via tenantFor(), which honours a paired-till cookie FIRST: an
+   * owner-A session carrying a till-B cookie filed under B's prefix, exactly
+   * what a compromised cashier's device would do. ownerMerchant() never
+   * consults the till (nor an operator cookie alone); { strict: true } keeps
+   * the suspended/pending write block this upload route always had. */
+  const asked = new URL(request.url).searchParams.get('merchant');
   /* A proprietor may own several stores. The old route always filed media
    * under the account's first business name, even while the dashboard edited
-   * a second hotel. tenantFor keeps the caller-derived boundary, but lets an
-   * explicitly selected, actually-owned store receive its own R2 prefix. */
-  const asked = new URL(request.url).searchParams.get('merchant');
-  const merchant = await tenantFor(request, env, asked, { strict: true });
+   * a second hotel. The owner check keeps the caller-derived boundary, but
+   * lets an explicitly selected, actually-owned store receive its own R2
+   * prefix. */
+  let merchant = '';
+  try { merchant = await ownerMerchant(request, env, asked, { strict: true }); }
+  catch (_) { merchant = ''; }
   if (!merchant) return json({ error: 'unauthorized' }, 401);
 
   const url = new URL(request.url), scope = url.searchParams.get('scope') === 'hotel-room' ? 'hotel-room' : '';

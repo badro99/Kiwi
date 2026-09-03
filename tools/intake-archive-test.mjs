@@ -3,11 +3,14 @@
  * Kiwi · intake archive test — le coffre privé des pièces déposées.
  *
  * La route /api/ai/intake-archive sert métadonnées paginées + octets PDF
- * sous session propriétaire stricte, sans URL R2 publique, sans clé cliente,
- * sans hash/empreinte/contenu dans les métadonnées. Cette suite exécute la
- * VRAIE route (extraite de functions/api/ai/intake-archive.js, imports
- * neutralisés) contre des sosies D1/R2, avec les VRAIS json/readCookie de
- * functions/auth/_lib.js — seuls readSession/tenantFor sont simulés.
+ * sous session propriétaire stricte (ownerMerchant, jamais tenantFor : un
+ * cookie de caisse valide ne doit ni élargir ni détourner l'autorité de la
+ * session), sans URL R2 publique, sans clé cliente, sans hash/empreinte/
+ * contenu dans les métadonnées. Cette suite exécute la VRAIE route avec le
+ * VRAI code auth — sessions, caisse et opérateur signés puis vérifiés pour
+ * de vrai (makeSession/readSession, tillToken/isTillFor, operatorToken/
+ * namedOperatorId), vrai ownerMerchant, vrai tenantFor pour la preuve de
+ * non-vacuité — contre des sosies D1/R2.
  * Le rendu du coffre (vrai renderScanArchive de assets/stock.js) est exercé
  * en FR/EN/AR avec les vrais dictionnaires.
  *
@@ -19,7 +22,7 @@ import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
-const EXPECTED = 13;
+const EXPECTED = 17;
 let checks = 0;
 process.on('unhandledRejection', (error) => { console.error(error); process.exit(1); });
 async function check(name, fn) {
@@ -30,77 +33,85 @@ async function check(name, fn) {
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const routeSrc = fs.readFileSync(path.join(root, 'functions/api/ai/intake-archive.js'), 'utf8');
-const authSrc = fs.readFileSync(path.join(root, 'functions/auth/_lib.js'), 'utf8');
 const stockSrc = fs.readFileSync(path.join(root, 'assets/stock.js'), 'utf8');
 
-/* ── Vrais json/readCookie (sans dépendances), session simulée ───────────── */
-function grabAuth(re, what) {
-  const m = authSrc.match(re);
-  assert.ok(m, 'extractable auth: ' + what);
-  return m[0].replace(/^export\s+/gm, '');
-}
-const SESSIONS = { 'sess-a': { aid: 'a1' }, 'sess-b': { aid: 'b1' } };
-const OWNED = { a1: ['demo-tenant'], b1: ['second-souk'] };
-function aidOf(cookie) {
-  const raw = String(cookie || '');
-  const m = raw.match(/(?:^|;\s*)kiwi_sess=([^;]+)/);
-  const key = m ? m[1].trim() : raw.trim();
-  const s = SESSIONS[key];
-  return s ? s.aid : null;
-}
-const routePrelude = [
-  grabAuth(/export const SESS_COOKIE = [^\n]+\n/, 'SESS_COOKIE'),
-  grabAuth(/export function readCookie\(request, name\) \{[\s\S]*?\n\}/, 'readCookie'),
-  grabAuth(/export function json\(obj, status, extraHeaders\) \{[\s\S]*?\n\}/, 'json'),
-  `const __SESSIONS = ${JSON.stringify(SESSIONS)};`,
-  `const __OWNED = ${JSON.stringify(OWNED)};`,
-  'const __aidOf = (cookie) => { const raw = String(cookie || ""); const m = raw.match(/(?:^|;\\s*)kiwi_sess=([^;]+)/); const key = m ? m[1].trim() : raw.trim(); const s = __SESSIONS[key]; return s ? s.aid : null; };',
-  'const readSession = async (cookie) => { const aid = __aidOf(cookie); return aid ? { aid } : null; };',
-  `const tenantFor = async (request, env, asked) => {
-     const aid = __aidOf(request.headers.get('Cookie'));
-     if (!aid) return '';
-     const want = String(asked || '');
-     return ((__OWNED[aid] || []).includes(want)) ? want : '';
-   };`,
-  'const ensureIntakeSchema = async () => {};',
-].join('\n');
-const route = new Function(routePrelude + '\n' + routeSrc
-  .split('\n')
-  .filter((l) => !/^import\s/.test(l))
-  .join('\n')
-  .replace(/^export\s+/gm, '') + '\nreturn { onRequestGet };'
-)();
+/* ── Vrai code auth + vraies routes, sosies D1/R2 ────────────────────────── */
+const auth = await import(path.join(root, 'functions/auth/_lib.js'));
+const priv = await import(path.join(root, 'functions/api/_private.js'));
+const archive = await import(path.join(root, 'functions/api/ai/intake-archive.js'));
 
-/* ── Sosies D1/R2 ───────────────────────────────────────────────────────── */
+const SECRET = 'archive-owner-test-secret-32bytes!';
+const A = 'cafe-atlas';
+const A2 = 'atlas-branch';
+const B = 'maison-rivale';
+const SUSP = 'cafe-suspended';
+const PEND = 'cafe-pending';
+const SOLO = 'cafe-solo';
+const LIBRE = 'cafe-libre';
+
 function makeWorld() {
+  const accounts = new Map([
+    ['acc-owner-a', { business: 'Café Atlas' }],
+    ['acc-owner-b', { business: 'Maison Rivale' }],
+    ['acc-solo', { business: 'Café Solo' }],
+    ['acc-claimant', { business: 'Café Libre' }],
+  ]);
+  const merchants = new Map([
+    [A, { account_id: 'acc-owner-a', status: 'active', till_epoch: 0 }],
+    [A2, { account_id: 'acc-owner-a', status: 'active', till_epoch: 0 }],
+    [B, { account_id: 'acc-owner-b', status: 'active', till_epoch: 0 }],
+    [SUSP, { account_id: 'acc-owner-a', status: 'suspended', till_epoch: 0 }],
+    [PEND, { account_id: 'acc-owner-a', status: 'pending', till_epoch: 0 }],
+    [LIBRE, { account_id: 'acc-solo', status: 'active', till_epoch: 0 }],
+  ]);
+  const operators = new Map([['op1', {}]]);
   const docs = new Map(); // merchant|docId -> ligne complète
   const r2 = new Map();   // key -> bytes
   const DB = {
-    prepare(sql) {
-      const s = String(sql);
-      const stmt = (...args) => {
-        if (/FROM intake_docs WHERE merchant = \? AND \(created_ts </.test(s)) {
+    prepare(rawSql) {
+      const q = String(rawSql).replace(/\s+/g, ' ').trim();
+      const intList = (merchant, pred, n) => Array.from(docs.values())
+        .filter((r) => r.merchant === merchant && pred(r))
+        .sort((x, y) => (y.created_ts - x.created_ts) || (y.doc_id < x.doc_id ? -1 : 1))
+        .slice(0, n);
+      const exec = (args) => {
+        if (q.startsWith('SELECT business FROM accounts')) return accounts.get(String(args[0])) || null;
+        if (q.startsWith('SELECT account_id FROM merchant_config')) {
+          const row = merchants.get(String(args[0]));
+          return row ? { account_id: row.account_id } : null;
+        }
+        if (q.startsWith('SELECT status FROM merchant_config')) {
+          const row = merchants.get(String(args[0]));
+          return row ? { status: row.status } : null;
+        }
+        if (q.startsWith('SELECT till_epoch FROM merchant_config')) {
+          const row = merchants.get(String(args[0]));
+          return row ? { till_epoch: row.till_epoch } : null;
+        }
+        if (q.startsWith('SELECT id FROM operators')) {
+          return operators.has(String(args[0])) ? { id: String(args[0]) } : null;
+        }
+        if (/FROM intake_docs WHERE merchant = \? AND \(created_ts </.test(q)) {
           const [merchant, ts, ts2, id, n] = args;
-          const rows = Array.from(docs.values())
-            .filter((r) => r.merchant === merchant && (r.created_ts < ts || (r.created_ts === ts2 && r.doc_id < id)))
-            .sort((a, b) => (b.created_ts - a.created_ts) || (b.doc_id < a.doc_id ? -1 : 1))
-            .slice(0, n);
-          return { results: rows };
+          return intList(merchant, (r) => r.created_ts < ts || (r.created_ts === ts2 && r.doc_id < id), n);
         }
-        if (/FROM intake_docs WHERE merchant = \? ORDER BY/.test(s)) {
-          const [merchant, n] = args;
-          const rows = Array.from(docs.values())
-            .filter((r) => r.merchant === merchant)
-            .sort((a, b) => (b.created_ts - a.created_ts) || (b.doc_id < a.doc_id ? -1 : 1))
-            .slice(0, n);
-          return { results: rows };
+        if (/FROM intake_docs WHERE merchant = \? ORDER BY/.test(q)) {
+          return intList(args[0], () => true, args[1]);
         }
-        if (/FROM intake_docs WHERE merchant = \? AND doc_id = \?/.test(s)) {
+        if (/FROM intake_docs WHERE merchant = \? AND doc_id = \?/.test(q)) {
           return docs.get(args[0] + '|' + args[1]) || null;
         }
-        throw new Error('unexpected sql: ' + s.slice(0, 70));
+        return null; // CREATE TABLE and anything else: accepted, no rows
       };
-      return { bind: (...a) => ({ first: async () => stmt(...a), run: async () => stmt(...a), all: async () => stmt(...a) }) };
+      const api = (...args) => ({
+        run: async () => ({ success: true, meta: { changes: 0 } }),
+        first: async () => exec(args),
+        all: async () => {
+          const v = exec(args);
+          return { results: Array.isArray(v) ? v : (v ? [v] : []) };
+        },
+      });
+      return Object.assign(api(), { bind: (...a) => api(...a) });
     },
   };
   const MEDIA = {
@@ -114,8 +125,9 @@ function makeWorld() {
         writeHttpMetadata: (h) => { h.set('Content-Type', 'application/pdf'); },
       };
     },
+    delete: async (key) => { r2.delete(String(key)); },
   };
-  return { docs, r2, env: { DB, MEDIA, AUTH_SECRET: 'test-secret' } };
+  return { docs, r2, env: { DB, MEDIA, AUTH_SECRET: SECRET } };
 }
 function seedDoc(world, merchant, docId, over = {}) {
   const row = Object.assign({
@@ -131,15 +143,97 @@ function seedDoc(world, merchant, docId, over = {}) {
 }
 const DOC_A = 'a'.repeat(64);
 const DOC_B = 'b'.repeat(64);
-function get(url, sess) {
-  const headers = sess ? { Cookie: 'kiwi_sess=' + sess } : {};
-  return { request: new Request(url, { headers }) };
+async function sessCookie(aid) {
+  return `${auth.SESS_COOKIE}=${await auth.makeSession(aid, SECRET)}`;
 }
+async function tillCookie(merchant) {
+  return `${auth.TILL_COOKIE}=${await auth.tillToken(SECRET, merchant, 0)}`;
+}
+async function opCookies() {
+  return `kiwi_op=${await auth.operatorToken(SECRET)}; kiwi_op_id=${await auth.operatorIdToken(SECRET, 'op1')}`;
+}
+function get(url, ...cookies) {
+  const jar = cookies.filter(Boolean).join('; ');
+  return { request: new Request(url, { headers: jar ? { Cookie: jar } : {} }) };
+}
+
+await check('mixed cookies denied on listing, and the setup is non-vacuous', async () => {
+  const w = makeWorld();
+  seedDoc(w, B, DOC_B);
+  const sessA = await sessCookie('acc-owner-a');
+  const tillB = await tillCookie(B);
+  const req = get('https://t/api/ai/intake-archive?merchant=' + B, sessA, tillB).request;
+  // Preuve de non-vacuité : le VRAI tenantFor honore la caisse et rend B.
+  assert.equal(await priv.tenantFor(req, w.env, B, { strict: true }), B);
+  const res = await archive.onRequestGet({ request: req, env: w.env });
+  assert.equal(res.status, 404);
+  assert.equal((await res.json()).error, 'missing-object');
+});
+
+await check('mixed cookies denied on bytes too', async () => {
+  const w = makeWorld();
+  seedDoc(w, B, DOC_B);
+  const cookie = await sessCookie('acc-owner-a') + '; ' + await tillCookie(B);
+  const res = await archive.onRequestGet({ ...get('https://t/api/ai/intake-archive?merchant=' + B + '&docId=' + DOC_B, cookie), env: w.env });
+  assert.equal(res.status, 404);
+});
+
+await check('owner session wins over a foreign till on its own store', async () => {
+  const w = makeWorld();
+  seedDoc(w, B, DOC_B);
+  const cookie = await sessCookie('acc-owner-b') + '; ' + await tillCookie(A);
+  const list = await archive.onRequestGet({ ...get('https://t/api/ai/intake-archive?merchant=' + B, cookie), env: w.env });
+  assert.equal(list.status, 200);
+  assert.deepEqual((await list.json()).docs.map((d) => d.docId), [DOC_B]);
+  const bytes = await archive.onRequestGet({ ...get('https://t/api/ai/intake-archive?merchant=' + B + '&docId=' + DOC_B, cookie), env: w.env });
+  assert.equal(bytes.status, 200);
+});
+
+await check('till alone, operator alone, and unknown stores fail closed', async () => {
+  const w = makeWorld();
+  seedDoc(w, B, DOC_B);
+  const r1 = await archive.onRequestGet({ ...get('https://t/api/ai/intake-archive?merchant=' + B, await tillCookie(B)), env: w.env });
+  assert.equal(r1.status, 401);
+  const r2 = await archive.onRequestGet({ ...get('https://t/api/ai/intake-archive?merchant=' + B, await opCookies()), env: w.env });
+  assert.equal(r2.status, 401);
+  const r3 = await archive.onRequestGet({ ...get('https://t/api/ai/intake-archive?merchant=' + B + '&docId=' + DOC_B, await opCookies()), env: w.env });
+  assert.equal(r3.status, 401);
+  const r4 = await archive.onRequestGet({ ...get('https://t/api/ai/intake-archive?merchant=' + B, await sessCookie('acc-owner-a'), await opCookies()), env: w.env });
+  assert.equal(r4.status, 404);
+  const r5 = await archive.onRequestGet({ ...get('https://t/api/ai/intake-archive?merchant=boutique-fantome', await sessCookie('acc-owner-a')), env: w.env });
+  assert.equal(r5.status, 404);
+  assert.equal((await r5.json()).error, 'missing-object');
+});
+
+await check('owned secondary store allowed; registry claim beats account slug', async () => {
+  const w = makeWorld();
+  seedDoc(w, A2, DOC_A);
+  const ok = await archive.onRequestGet({ ...get('https://t/api/ai/intake-archive?merchant=' + A2, await sessCookie('acc-owner-a')), env: w.env });
+  assert.equal(ok.status, 200);
+  const denied = await archive.onRequestGet({ ...get('https://t/api/ai/intake-archive?merchant=' + LIBRE, await sessCookie('acc-claimant')), env: w.env });
+  assert.equal(denied.status, 404);
+  seedDoc(w, LIBRE, DOC_B);
+  const allowed = await archive.onRequestGet({ ...get('https://t/api/ai/intake-archive?merchant=' + LIBRE, await sessCookie('acc-solo')), env: w.env });
+  assert.equal(allowed.status, 200);
+});
+
+await check('legacy mono-store fallback allows the unclaimed, reads stay open when suspended', async () => {
+  const w = makeWorld();
+  seedDoc(w, SOLO, DOC_A);
+  const ok = await archive.onRequestGet({ ...get('https://t/api/ai/intake-archive?merchant=' + SOLO, await sessCookie('acc-solo')), env: w.env });
+  assert.equal(ok.status, 200);
+  seedDoc(w, SUSP, DOC_A);
+  seedDoc(w, PEND, DOC_B);
+  const s = await archive.onRequestGet({ ...get('https://t/api/ai/intake-archive?merchant=' + SUSP, await sessCookie('acc-owner-a')), env: w.env });
+  assert.equal(s.status, 200);
+  const p = await archive.onRequestGet({ ...get('https://t/api/ai/intake-archive?merchant=' + PEND, await sessCookie('acc-owner-a')), env: w.env });
+  assert.equal(p.status, 200);
+});
 
 await check('owner lists own metadata with the exact safe projection', async () => {
   const w = makeWorld();
-  seedDoc(w, 'demo-tenant', DOC_A);
-  const res = await route.onRequestGet({ ...get('https://t/api/ai/intake-archive?merchant=demo-tenant', 'sess-a'), env: w.env });
+  seedDoc(w, A, DOC_A);
+  const res = await archive.onRequestGet({ ...get('https://t/api/ai/intake-archive?merchant=' + A, await sessCookie('acc-owner-a')), env: w.env });
   assert.equal(res.status, 200);
   const body = await res.json();
   assert.equal(body.ok, true);
@@ -150,32 +244,10 @@ await check('owner lists own metadata with the exact safe projection', async () 
   assert.equal(body.nextCursor, null);
 });
 
-await check('no session means 401, unknown tenant means 401', async () => {
-  const w = makeWorld();
-  seedDoc(w, 'demo-tenant', DOC_A);
-  const r1 = await route.onRequestGet({ ...get('https://t/api/ai/intake-archive?merchant=demo-tenant', null), env: w.env });
-  assert.equal(r1.status, 401);
-  assert.equal((await r1.json()).error, 'unauthorized');
-  const r2 = await route.onRequestGet({ ...get('https://t/api/ai/intake-archive?merchant=nope', 'sess-a'), env: w.env });
-  assert.equal(r2.status, 401);
-});
-
-await check('cross-merchant isolation on list and bytes', async () => {
-  const w = makeWorld();
-  seedDoc(w, 'demo-tenant', DOC_A);
-  seedDoc(w, 'second-souk', DOC_B);
-  const list = await route.onRequestGet({ ...get('https://t/api/ai/intake-archive?merchant=second-souk', 'sess-b'), env: w.env });
-  const ids = (await list.json()).docs.map((d) => d.docId);
-  assert.deepEqual(ids, [DOC_B]);
-  const cross = await route.onRequestGet({ ...get('https://t/api/ai/intake-archive?merchant=second-souk&docId=' + DOC_A, 'sess-b'), env: w.env });
-  assert.equal(cross.status, 404);
-  assert.equal((await cross.json()).error, 'missing-object');
-});
-
 await check('owner reads own bytes with private no-store headers', async () => {
   const w = makeWorld();
-  seedDoc(w, 'demo-tenant', DOC_A);
-  const res = await route.onRequestGet({ ...get('https://t/api/ai/intake-archive?merchant=demo-tenant&docId=' + DOC_A, 'sess-a'), env: w.env });
+  seedDoc(w, A, DOC_A);
+  const res = await archive.onRequestGet({ ...get('https://t/api/ai/intake-archive?merchant=' + A + '&docId=' + DOC_A, await sessCookie('acc-owner-a')), env: w.env });
   assert.equal(res.status, 200);
   assert.equal(res.headers.get('Cache-Control'), 'private, no-store');
   assert.equal(res.headers.get('Content-Type'), 'application/pdf');
@@ -187,8 +259,8 @@ await check('owner reads own bytes with private no-store headers', async () => {
 
 await check('download flag switches to attachment without leaking internals', async () => {
   const w = makeWorld();
-  seedDoc(w, 'demo-tenant', DOC_A);
-  const res = await route.onRequestGet({ ...get('https://t/api/ai/intake-archive?merchant=demo-tenant&docId=' + DOC_A + '&download=1', 'sess-a'), env: w.env });
+  seedDoc(w, A, DOC_A);
+  const res = await archive.onRequestGet({ ...get('https://t/api/ai/intake-archive?merchant=' + A + '&docId=' + DOC_A + '&download=1', await sessCookie('acc-owner-a')), env: w.env });
   assert.equal(res.status, 200);
   const disp = String(res.headers.get('Content-Disposition') || '');
   assert.ok(disp.startsWith('attachment;'));
@@ -198,50 +270,53 @@ await check('download flag switches to attachment without leaking internals', as
 
 await check('missing object states: no row, pending upload, lost bytes, tampered key', async () => {
   const w = makeWorld();
-  const r1 = await route.onRequestGet({ ...get('https://t/api/ai/intake-archive?merchant=demo-tenant&docId=' + DOC_A, 'sess-a'), env: w.env });
+  const sess = await sessCookie('acc-owner-a');
+  const r1 = await archive.onRequestGet({ ...get('https://t/api/ai/intake-archive?merchant=' + A + '&docId=' + DOC_A, sess), env: w.env });
   assert.equal(r1.status, 404);
-  seedDoc(w, 'demo-tenant', DOC_A, { has_object: 0 });
-  w.r2.delete('intake/demo-tenant/' + DOC_A + '.pdf');
-  const r2 = await route.onRequestGet({ ...get('https://t/api/ai/intake-archive?merchant=demo-tenant&docId=' + DOC_A, 'sess-a'), env: w.env });
+  seedDoc(w, A, DOC_A, { has_object: 0 });
+  w.r2.delete('intake/' + A + '/' + DOC_A + '.pdf');
+  const r2 = await archive.onRequestGet({ ...get('https://t/api/ai/intake-archive?merchant=' + A + '&docId=' + DOC_A, sess), env: w.env });
   assert.equal(r2.status, 404);
   assert.equal((await r2.json()).error, 'missing-object');
-  seedDoc(w, 'demo-tenant', DOC_B, { has_object: 1, r2_key: 'intake/demo-tenant/elsewhere.pdf' });
-  const r3 = await route.onRequestGet({ ...get('https://t/api/ai/intake-archive?merchant=demo-tenant&docId=' + DOC_B, 'sess-a'), env: w.env });
+  seedDoc(w, A, DOC_B, { has_object: 1, r2_key: 'intake/' + A + '/elsewhere.pdf' });
+  const r3 = await archive.onRequestGet({ ...get('https://t/api/ai/intake-archive?merchant=' + A + '&docId=' + DOC_B, sess), env: w.env });
   assert.equal(r3.status, 404);
-  w.r2.delete('intake/demo-tenant/' + DOC_A + '.pdf');
-  seedDoc(w, 'demo-tenant', DOC_A, { has_object: 1 });
-  w.r2.delete('intake/demo-tenant/' + DOC_A + '.pdf');
-  const r4 = await route.onRequestGet({ ...get('https://t/api/ai/intake-archive?merchant=demo-tenant&docId=' + DOC_A, 'sess-a'), env: w.env });
+  seedDoc(w, A, DOC_A, { has_object: 1 });
+  w.r2.delete('intake/' + A + '/' + DOC_A + '.pdf');
+  const r4 = await archive.onRequestGet({ ...get('https://t/api/ai/intake-archive?merchant=' + A + '&docId=' + DOC_A, sess), env: w.env });
   assert.equal(r4.status, 404);
 });
 
 await check('storage-unavailable and bad inputs are explicit', async () => {
   const w = makeWorld();
-  seedDoc(w, 'demo-tenant', DOC_A);
-  const noMedia = await route.onRequestGet({ ...get('https://t/api/ai/intake-archive?merchant=demo-tenant', 'sess-a'), env: { DB: w.env.DB, AUTH_SECRET: 'x' } });
+  seedDoc(w, A, DOC_A);
+  const sess = await sessCookie('acc-owner-a');
+  const sessX = `${auth.SESS_COOKIE}=${await auth.makeSession('acc-owner-a', 'x')}`;
+  const noMedia = await archive.onRequestGet({ ...get('https://t/api/ai/intake-archive?merchant=' + A, sessX), env: { DB: w.env.DB, AUTH_SECRET: 'x' } });
   assert.equal(noMedia.status, 503);
   assert.equal((await noMedia.json()).error, 'storage-unavailable');
-  const badDoc = await route.onRequestGet({ ...get('https://t/api/ai/intake-archive?merchant=demo-tenant&docId=zzz', 'sess-a'), env: w.env });
+  const badDoc = await archive.onRequestGet({ ...get('https://t/api/ai/intake-archive?merchant=' + A + '&docId=zzz', sess), env: w.env });
   assert.equal(badDoc.status, 400);
-  const badCur = await route.onRequestGet({ ...get('https://t/api/ai/intake-archive?merchant=demo-tenant&cursor=bogus', 'sess-a'), env: w.env });
+  const badCur = await archive.onRequestGet({ ...get('https://t/api/ai/intake-archive?merchant=' + A + '&cursor=bogus', sess), env: w.env });
   assert.equal(badCur.status, 400);
   assert.equal((await badCur.json()).error, 'bad-cursor');
 });
 
 await check('pagination is bounded, deterministic and lossless', async () => {
   const w = makeWorld();
+  const sess = await sessCookie('acc-owner-a');
   const ids = [];
   for (let i = 0; i < 5; i++) {
     const hex = ('' + i).padStart(64, String.fromCharCode(97 + (i % 6)));
     ids.push(hex);
-    seedDoc(w, 'demo-tenant', hex, { created_ts: 1788000000000 + (i < 3 ? 0 : i), size: 1000 + i });
+    seedDoc(w, A, hex, { created_ts: 1788000000000 + (i < 3 ? 0 : i), size: 1000 + i });
   }
-  const huge = await route.onRequestGet({ ...get('https://t/api/ai/intake-archive?merchant=demo-tenant&limit=999', 'sess-a'), env: w.env });
+  const huge = await archive.onRequestGet({ ...get('https://t/api/ai/intake-archive?merchant=' + A + '&limit=999', sess), env: w.env });
   assert.equal((await huge.json()).docs.length, 5);
   const seen = [];
   let cursor = null;
   for (let page = 0; page < 4; page++) {
-    const r = await route.onRequestGet({ ...get('https://t/api/ai/intake-archive?merchant=demo-tenant&limit=2' + (cursor ? '&cursor=' + encodeURIComponent(cursor) : ''), 'sess-a'), env: w.env });
+    const r = await archive.onRequestGet({ ...get('https://t/api/ai/intake-archive?merchant=' + A + '&limit=2' + (cursor ? '&cursor=' + encodeURIComponent(cursor) : ''), sess), env: w.env });
     const b = await r.json();
     for (const d of b.docs) seen.push(d.docId);
     cursor = b.nextCursor;

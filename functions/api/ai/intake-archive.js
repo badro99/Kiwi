@@ -4,11 +4,13 @@
 //   ?merchant=<slug>                          → métadonnées paginées (JSON)
 //   ?merchant=<slug>&docId=<sha256>           → octets PDF (inline / download)
 //
-// Autorisation (plus forte que tenantFor seul, calquée sur l'upload média
-// owner-session-only de functions/api/media/index.js) :
-//   1. session propriétaire valide (readSession → aid), sinon 401 ;
-//   2. tenantFor strict sur le marchand demandé ;
-//   3. la ligne D1 doit appartenir à ce marchand (jamais de clé R2 cliente).
+// Autorisation owner-only (ownerMerchant, pas tenantFor) :
+//   1. session propriétaire valide, sinon 401 (ne révèle aucun document) ;
+//   2. le MÊME aid doit posséder EXACTEMENT le marchand demandé, sinon 404
+//      indiscernable d'un document absent (aucune existence révélée).
+// tenantFor est exclu ici à dessein : il fait passer un cookie de caisse
+// valide AVANT la session, donc une session A + une caisse B ouvraient
+// l'archive de B. Un cookie opérateur seul n'ouvre rien non plus.
 // Les octets ne partent que si has_object = 1 et que la clé stockée égale
 // la clé dérivée côté serveur. Pas de clé R2 cliente, jamais.
 // Jamais d'URL R2 publique, jamais de posting_hash / empreinte / contenu
@@ -16,7 +18,7 @@
 // rétention jusqu'à la clôture du compte.
 
 import { json, readSession, readCookie, SESS_COOKIE } from '../../auth/_lib.js';
-import { tenantFor } from '../_private.js';
+import { ownerMerchant } from '../_private.js';
 import { ensureIntakeSchema } from './intake.js';
 
 const SHA256_RE = /^[0-9a-f]{64}$/;
@@ -55,15 +57,23 @@ function toEntry(row) {
 }
 
 async function authorize(request, env, asked) {
-  // 1. session propriétaire ; 2. tenant strict. Tient sans AUTH_SECRET ?
-  // Non : sans secret il n'y a pas de session à vérifier, on refuse plutôt
+  // Sans DB ni secret il n'y a pas de session à vérifier : on refuse plutôt
   // que d'ouvrir des factures sur une garde inerte.
   if (!env || !env.DB || !env.AUTH_SECRET) return { error: 'not-configured', status: 503 };
-  let sess = null;
-  try { sess = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET); } catch (_) { sess = null; }
-  if (!sess || !sess.aid) return { error: 'unauthorized', status: 401 };
-  const merchant = await tenantFor(request, env, asked, { strict: true });
-  if (!merchant) return { error: 'unauthorized', status: 401 };
+  let merchant = '';
+  try { merchant = await ownerMerchant(request, env, asked); }
+  catch (_) { merchant = ''; }
+  if (!merchant) {
+    // 401 : aucun aid prouvé (ni session, ni compte). 404 : session valide
+    // mais magasin non possédé — même réponse qu'un document absent, pour
+    // ne révéler aucune existence.
+    let hasSession = false;
+    try {
+      const sess = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET);
+      hasSession = !!(sess && sess.aid);
+    } catch (_) { hasSession = false; }
+    return hasSession ? { error: 'missing-object', status: 404 } : { error: 'unauthorized', status: 401 };
+  }
   return { merchant };
 }
 

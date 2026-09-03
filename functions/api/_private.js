@@ -233,3 +233,51 @@ async function resolveTenant(request, env, asked, strict) {
   if (strict) return '';
   return sessionMerchant;
 }
+
+/* Le locataire vu UNIQUEMENT par sa session propriétaire. Contrairement à
+ * `tenantFor`, cette règle ne consulte JAMAIS le cookie de caisse appairée
+ * (`isTillFor`) ni le cookie opérateur : un terminal compromis ou prêté ne
+ * peut ni élargir, ni détourner, ni rediriger l'autorité de la session, et
+ * une console sans session propriétaire n'ouvre rien. C'est l'outil des
+ * lectures privées où la session suffit et où rien d'autre ne doit parler :
+ * archives de pièces, exports comptables.
+ *
+ * Règles, dans l'ordre :
+ *   1. session propriétaire valide → aid, sinon '' (jamais d'anonyme) ;
+ *   2. le registre attribue EXACTEMENT le magasin demandé à cet aid ;
+ *   3. repli mono-boutique historique : le slug du compte, UNIQUEMENT s'il
+ *      n'est revendiqué par personne d'autre (même garde que resolveTenant) ;
+ *   4. lecture par défaut : ni suspension ni attente ne ferment la lecture
+ *      (politique explicite de tenantFor : couper la lecture ferait passer
+ *      une suspension pour une suppression). Avec `{ strict: true }`, une
+ *      ÉCRITURE exige en plus un magasin actif — même miroir que tenantFor.
+ * Renvoie le slug demandé ou '' : l'appelant refuse, sans rien révéler. */
+export async function ownerMerchant(request, env, asked, opts) {
+  asked = String(asked == null ? '' : asked).slice(0, 64).trim();
+  if (!asked) return '';
+  if (!env || !env.DB || !env.AUTH_SECRET) return '';
+  let aid = '';
+  try {
+    const sess = await readSession(readCookie(request, SESS_COOKIE), env.AUTH_SECRET);
+    if (sess && sess.aid) aid = sess.aid;
+  } catch (_) { return ''; }
+  if (!aid) return '';
+  let owned = false;
+  try {
+    if ((await storeOwner(env, asked)) === aid) owned = true;
+  } catch (_) { /* registre illisible → repli ci-dessous */ }
+  if (!owned) {
+    try {
+      const acc = await env.DB.prepare('SELECT business FROM accounts WHERE id = ?').bind(aid).first();
+      if (acc && acc.business && slugMerchant(acc.business) === asked
+          && !(await slugClaimedByOther(env, asked, aid))) owned = true;
+    } catch (_) { /* base non migrée → refus sauf registre */ }
+  }
+  if (!owned) return '';
+  if (opts && opts.strict) {
+    try {
+      if (await storeSuspended(env, asked) || await storeSubscriptionPending(env, asked)) return '';
+    } catch (_) { /* erreur de lecture ne ferme jamais un magasin qui paie */ }
+  }
+  return asked;
+}
