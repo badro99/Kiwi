@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import { makeSession, sessionCookie } from '../functions/auth/_lib.js';
 import { onRequestPost } from '../functions/api/hotel/stays.js';
+import { writeReservationWithEvents } from '../functions/api/hotel/_stay-events.js';
 
 const sql = new DatabaseSync(':memory:');
 sql.exec(fs.readFileSync(new URL('../schema.sql', import.meta.url), 'utf8'));
@@ -51,6 +52,8 @@ const env = { DB, AUTH_SECRET: secret };
 const call = (body, withCookie = true) => onRequestPost({ env, request:new Request('https://kiwi.test/api/hotel/stays', { method:'POST', headers:{ 'Content-Type':'application/json', ...(withCookie ? { Cookie:cookie } : {}) }, body:JSON.stringify(body) }) });
 const day = (n) => new Date(Date.now()+n*86400000).toISOString().slice(0,10);
 const base = { action:'save', merchant:'riad-test', clientRef:'staff-ref-0001', roomTypeId:'type-atlas', checkIn:day(5), checkOut:day(7), partySize:2, channel:'booking', status:'confirmed', externalRef:'OTA-4219', actorId:'spoofed-client', actorRole:'admin', customer:{name:'Salma',phone:'0612345678',email:''}, guestSegments:[{guestId:'gst_test_0001',nationalityCountry:'MA',usualResidenceCountry:'MA',ageCategory:'adult'},{guestId:'gst_test_0002',nationalityCountry:'FR',usualResidenceCountry:'FR',ageCategory:'minor'}] };
+const EXPECTED = 21;
+process.on('unhandledRejection', (error) => { console.error(error); process.exit(1); });
 let controls = 0;
 function ok(value, label) { assert.ok(value, label); controls++; }
 
@@ -99,4 +102,32 @@ response = await call({ ...base, clientRef:'staff-ref-atomic', externalRef:'OTA-
 ok(response.status === 503, 'an event-ledger constraint failure refuses the stay write');
 const afterAtomic = sql.prepare("SELECT data,rev FROM store_docs WHERE merchant='riad-test' AND feature='reservations'").get();
 ok(afterAtomic.rev === beforeAtomicRev && !afterAtomic.data.includes('staff-ref-atomic'), 'the failed event insert rolls the reservation document back atomically');
+/* ── le refus « stay-event-required » ────────────────────────────────────────
+ * Créer hotel_stay_events bascule writeReservationWithEvents du simple write
+ * vers un batch() atomique — et ouvre un refus que rien n'exerçait : des
+ * événements fournis dont AUCUN ne porte d'identifiant de séjour. La route ne
+ * peut pas l'atteindre (elle numérote toujours le séjour sauvegardé), donc on
+ * appelle l'écrivain directement. Ce qui compte n'est pas le jet lui-même,
+ * c'est qu'il précède la première écriture : le document ne doit pas bouger. */
+const beforeGuard = sql.prepare("SELECT data,rev FROM store_docs WHERE merchant='riad-test' AND feature='reservations'").get();
+let refused = null;
+try {
+  await writeReservationWithEvents(env, {
+    merchant: 'riad-test',
+    rev: beforeGuard.rev,
+    now: Date.now(),
+    doc: { ...JSON.parse(beforeGuard.data), sentinel: 'stay-event-guard' },
+    actor: { id: 'acc-hotel', role: 'owner' },
+    events: [{ action: 'save', previous: null, current: { code: 'H-NOID' } }],
+  });
+} catch (error) { refused = error; }
+ok(refused instanceof Error && refused.message === 'stay-event-required',
+  'events carrying no stay id are refused instead of silently dropped');
+const afterGuard = sql.prepare("SELECT data,rev FROM store_docs WHERE merchant='riad-test' AND feature='reservations'").get();
+ok(afterGuard.rev === beforeGuard.rev && !afterGuard.data.includes('stay-event-guard'),
+  'the refusal happens before the document write, so nothing is persisted');
+ok(sql.prepare("SELECT COUNT(*) AS n FROM hotel_stay_events WHERE stay_id=''").get().n === 0,
+  'no anonymous event row is appended by the refused write');
+
+assert.equal(controls, EXPECTED, `expected ${EXPECTED} executed controls, got ${controls}`);
 console.log(`hotel-stays-test: ${controls} controls passed`);
