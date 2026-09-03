@@ -144,6 +144,7 @@
 
   const num = (v) => { const n = +v; return Number.isFinite(n) && n >= 0 ? n : null; };
   const r2 = (n) => Math.round(n * 100) / 100;
+  const r4 = (n) => Math.round(n * 10000) / 10000;
   const norm = (s) => String(s == null ? '' : s).trim().toLowerCase();
 
   /* ─────────────────────────── la base TVA ─────────────────────────── */
@@ -423,7 +424,9 @@
       d.items = d.items || {};
       const c = num(mad);
       if (c == null || c <= 0) delete d.items[id];
-      else d.items[id] = { cost: r2(c), at: Date.now(), by: String(who || '') };
+      /* Un coût unitaire est un taux : le centime détruit les ingrédients
+       * suivis au gramme (0,0045 MAD/g). Les montants restent arrondis en aval. */
+      else d.items[id] = { cost: r4(c), at: Date.now(), by: String(who || '') };
       return d;
     });
   }

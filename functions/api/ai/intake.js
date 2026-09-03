@@ -19,6 +19,9 @@
 //     → { ok:true, docId } (l'objet R2 ; réinscriptible, même clé)
 //   POST { action:'mark', docId, status:'confirmed' }
 //     → { ok:true, doc } (seule sortie du brouillon en slice 1)
+//   POST { action:'prepare', docId, postingHash, lineCount }
+//     → { ok:true, prepared:true } (fige l'empreinte du brouillon relu avant
+//       la première écriture ; une reprise différente est refusée)
 //   GET ?merchant=&docId= → { ok:true, doc } (reprise après échec)
 //
 // Sécurité : tenantFor strict partout ; AUCUN log du contenu ; quota 'intake'.
@@ -93,6 +96,8 @@ export async function ensureIntakeSchema(db) {
       'status TEXT NOT NULL DEFAULT \'received\', ' +
       'doc_type TEXT NOT NULL DEFAULT \'\', ' +
       'source TEXT NOT NULL DEFAULT \'\', ' +
+      'posting_hash TEXT NOT NULL DEFAULT \'\', ' +
+      'posting_count INTEGER NOT NULL DEFAULT 0, ' +
       'created_ts INTEGER NOT NULL DEFAULT 0, ' +
       'updated_ts INTEGER NOT NULL DEFAULT 0, ' +
       'PRIMARY KEY (merchant, doc_id)' +
@@ -166,6 +171,39 @@ export async function onRequestPost(context) {
     return json({ ok: true, duplicate: false, docId: v.sha256 });
   }
 
+  if (action === 'prepare') {
+    const docId = String(b?.docId || '').toLowerCase().trim();
+    const postingHash = String(b?.postingHash || '').toLowerCase().trim();
+    const lineCount = Math.floor(Number(b?.lineCount) || 0);
+    if (!SHA256_RE.test(docId) || !SHA256_RE.test(postingHash)
+      || lineCount < 1 || lineCount > 200) {
+      return json({ error: 'bad-prepare' }, 400);
+    }
+    try { await ensureIntakeSchema(env.DB); } catch (_) { return json({ error: 'db' }, 503); }
+    try {
+      /* Le premier appareil fige uniquement une empreinte SHA-256, jamais le
+       * contenu relu. L'UPDATE conditionnel est le point d'arbitrage atomique :
+       * deux appareils avec le même brouillon convergent ; deux corrections
+       * différentes ne peuvent pas mélanger leurs lignes sous les mêmes ids. */
+      await env.DB.prepare(
+        'UPDATE intake_docs SET posting_hash = CASE WHEN posting_hash = \'\' THEN ? ELSE posting_hash END, ' +
+        'posting_count = CASE WHEN posting_hash = \'\' THEN ? ELSE posting_count END, updated_ts = ? ' +
+        'WHERE merchant = ? AND doc_id = ? AND has_object = 1 AND status = \'received\' ' +
+        'AND (posting_hash = \'\' OR (posting_hash = ? AND posting_count = ?))'
+      ).bind(postingHash, lineCount, Date.now(), who, docId, postingHash, lineCount).run();
+      const row = await env.DB.prepare(
+        'SELECT * FROM intake_docs WHERE merchant = ? AND doc_id = ?'
+      ).bind(who, docId).first();
+      if (!row) return json({ error: 'doc-not-found' }, 404);
+      if (String(row.status) === 'confirmed') return json({ error: 'already-confirmed' }, 409);
+      if (Number(row.has_object || 0) !== 1) return json({ error: 'not-archived' }, 409);
+      if (String(row.posting_hash || '') !== postingHash || Number(row.posting_count || 0) !== lineCount) {
+        return json({ error: 'posting-conflict' }, 409);
+      }
+      return json({ ok: true, prepared: true });
+    } catch (_) { return json({ error: 'db' }, 503); }
+  }
+
   if (action === 'mark') {
     const docId = String(b?.docId || '').toLowerCase().trim();
     if (!SHA256_RE.test(docId)) return json({ error: 'bad-doc' }, 400);
@@ -184,6 +222,26 @@ export async function onRequestPost(context) {
        * alors que l'UI n'aurait rien à montrer comme pièce comptable. */
       if (status === 'confirmed' && Number(row.has_object || 0) !== 1) {
         return json({ error: 'not-archived' }, 409);
+      }
+      /* Une confirmation sans empreinte préparée contournerait l'arbitrage
+       * de reprise et permettrait de sceller un lot partiellement écrit. */
+      if (status === 'confirmed' && !SHA256_RE.test(String(row.posting_hash || ''))) {
+        return json({ error: 'not-prepared' }, 409);
+      }
+      if (status === 'confirmed') {
+        const expected = Number(row.posting_count || 0);
+        if (!Number.isInteger(expected) || expected < 1 || expected > 200) {
+          return json({ error: 'not-prepared' }, 409);
+        }
+        /* Le registre local n'est pas une preuve de durabilité. On ne scelle
+         * qu'après présence, dans D1, de toutes les lignes de cette réception. */
+        const posted = await env.DB.prepare(
+          'SELECT COUNT(*) AS n FROM inventory_movements ' +
+          'WHERE merchant = ? AND ref_id = ? AND reason = \'receipt\' AND id LIKE \'mov-intake-%\''
+        ).bind(who, 'grn-intake-' + docId.slice(0, 16)).first();
+        if (Number((posted && posted.n) || 0) !== expected) {
+          return json({ error: 'not-posted' }, 409);
+        }
       }
       await env.DB.prepare(
         'UPDATE intake_docs SET status = ?, updated_ts = ? WHERE merchant = ? AND doc_id = ?'

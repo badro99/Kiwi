@@ -1441,8 +1441,9 @@ CREATE INDEX IF NOT EXISTS idx_push_tokens_target ON push_tokens (merchant, role
 -- Registre des dépôts : l'empreinte SHA-256 du fichier est l'identifiant, donc
 -- un re-dépôt du même papier converge vers la même ligne (idempotence). Les
 -- octets vivent en R2 (préfixe intake/), jamais en D1 : cette table ne porte
--- que le statut du brouillon (received → confirmed) et la preuve d'archive
--- (has_object). Aucune écriture métier ne transite par ici.
+-- que le statut du brouillon (received → confirmed), la preuve d'archive
+-- (has_object) et le hash du brouillon relu qui arbitre les reprises. Aucune
+-- donnée extraite ni écriture métier ne transite par ici.
 CREATE TABLE IF NOT EXISTS intake_docs (
   merchant   TEXT    NOT NULL,             -- slugMerchant (tenantFor strict)
   doc_id     TEXT    NOT NULL,             -- SHA-256 hex des octets déposés
@@ -1453,9 +1454,10 @@ CREATE TABLE IF NOT EXISTS intake_docs (
   status     TEXT    NOT NULL DEFAULT 'received', -- received | confirmed
   doc_type   TEXT    NOT NULL DEFAULT '',  -- supplier_invoice (V1)
   source     TEXT    NOT NULL DEFAULT '',  -- ex. stock-scan
+  posting_hash TEXT  NOT NULL DEFAULT '',  -- SHA-256 du brouillon relu ; jamais son contenu
+  posting_count INTEGER NOT NULL DEFAULT 0, -- nb de mouvements requis avant confirmed
   created_ts INTEGER NOT NULL DEFAULT 0,
   updated_ts INTEGER NOT NULL DEFAULT 0,
   PRIMARY KEY (merchant, doc_id)
 );
 CREATE INDEX IF NOT EXISTS idx_intake_docs_status ON intake_docs (merchant, status);
-

@@ -1,6 +1,7 @@
 -- Migration: registre du guichet unique documentaire (slice 1 : factures PDF).
 -- L'empreinte SHA-256 est l'identifiant : un re-dépôt converge vers la même
--- ligne (INSERT OR IGNORE côté route). Les octets vivent en R2, jamais en D1.
+-- ligne (INSERT OR IGNORE côté route). Les octets vivent en R2, jamais en D1 ;
+-- posting_hash ne porte que l'empreinte du brouillon relu avant comptabilisation.
 CREATE TABLE IF NOT EXISTS intake_docs (
   merchant   TEXT    NOT NULL,
   doc_id     TEXT    NOT NULL,
@@ -11,6 +12,8 @@ CREATE TABLE IF NOT EXISTS intake_docs (
   status     TEXT    NOT NULL DEFAULT 'received',
   doc_type   TEXT    NOT NULL DEFAULT '',
   source     TEXT    NOT NULL DEFAULT '',
+  posting_hash TEXT  NOT NULL DEFAULT '',
+  posting_count INTEGER NOT NULL DEFAULT 0,
   created_ts INTEGER NOT NULL DEFAULT 0,
   updated_ts INTEGER NOT NULL DEFAULT 0,
   PRIMARY KEY (merchant, doc_id)

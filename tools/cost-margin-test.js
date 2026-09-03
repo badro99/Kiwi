@@ -123,6 +123,8 @@ const MENU = [
   C.setItemCost('it_1', 2);
   ok('coût saisi ⇒ relu', C.itemCost('it_1') === 2);
   ok('coût saisi ⇒ src flat', C.of({ kind: 'menu', id: 'it_1' }).src === 'flat');
+  C.setItemCost('it_1', 0.0045);
+  ok('coût unitaire fin ⇒ 4 décimales conservées', C.itemCost('it_1') === 0.0045);
 
   /* Vider le champ EFFACE. Un 0 conservé rendrait « 100 % de marge », ce qui est
      le chiffre inventé que tout ce travail supprime. */

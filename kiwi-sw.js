@@ -217,12 +217,12 @@ var SHELL = [
   '/assets/inventory-ledger.js?v=10',
   '/assets/caisse-stock-sync.js?v=9',
   '/assets/pos-inventory-count.js?v=6',
-  '/assets/stock.js?v=40',
+  '/assets/stock.js?v=42',
   /* Le coût de revient. Dans la coquille parce que les tuiles Marge brute,
      Bénéfice brut et Coût matière du tableau de bord passent toutes par lui :
      sans lui hors ligne, elles retomberaient sur un tiret alors que le
      commerçant a bel et bien saisi ses coûts. */
-  '/assets/cost.js?v=3',
+  '/assets/cost.js?v=4',
   '/assets/clients-store.js?v=4',
   '/assets/clients-book.js?v=10',
   '/assets/clients-directory.js?v=2',

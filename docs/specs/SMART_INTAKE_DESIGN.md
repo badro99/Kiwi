@@ -286,3 +286,27 @@ retry (or a second device) posted again. Corrected at the layer that matters:
   after receipt creation and after movement 0, cross-merchant same-PDF
   (4 server rows, disjoint), forged foreign-id POST → 409, all against the
   real ledger + real procurement + real intake and movements routes.
+
+## Reviewed-payload arbitration (final retry hardening, same sign-off)
+
+Index-based ids converge only while every retry carries the same reviewed
+lines. A re-extraction or merchant correction could otherwise reuse index 0
+for a different item after a partial write and silently produce mixed stock.
+
+- Before any receipt or movement write, `stIntakePostAll` hashes one canonical,
+  normalized representation of the reviewed supplier/date/lines. The intake
+  route atomically pins that SHA-256 plus the expected line count on the
+  `received` row. D1 stores no extracted fields or document content.
+- Same-hash retries and two-device races converge. A changed or reordered
+  review receives `409 posting-conflict` before the posting core writes.
+- `K.add` remains local-first, so the posting core now requires `K.sync()` to
+  succeed. `mark confirmed` independently counts the matching intake receipt
+  movements in D1 and returns `409 not-posted` until every prepared line is
+  durable; local state alone can never seal the document.
+- `tools/intake-posting-test.mjs` now has 16 executed checks, including a
+  changed retry after movement 0, two devices presenting divergent reviews,
+  and an offline write that may not confirm until its ledger reaches D1.
+  `tools/intake-slice1-test.mjs` has 23 checks, including atomic prepare,
+  non-reflection of the fingerprint, and refusal before server rows exist.
+- The checkbox-gated flat-cost write now preserves 4-decimal unit rates in
+  `cost.js`; rounding to cents remains an output/display concern only.

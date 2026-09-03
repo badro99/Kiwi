@@ -4,8 +4,9 @@
  *
  * Le garde client ne suffit pas : deux appareils peuvent lire `received`
  * ensemble, et une confirmation interrompue peut rejouer. Ce qui ferme ces
- * fenêtres, c'est la convergence des écritures elles-mêmes — ids primaires
- * déterministes et upsert à chaque couche. Cette suite l'exécute POUR DE VRAI :
+ * fenêtres, c'est l'empreinte atomiquement figée avant écriture puis la
+ * convergence des écritures elles-mêmes — ids primaires déterministes et
+ * upsert à chaque couche. Cette suite l'exécute POUR DE VRAI :
  * le vrai inventory-ledger.js, le vrai procurement.js et le vrai noyau
  * stIntakePostAll de stock.js tournent dans un contexte vm par appareil
  * (localStorage séparé = deux appareils), avec des sosies partagés pour la
@@ -20,7 +21,7 @@ import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
-const EXPECTED = 12;
+const EXPECTED = 16;
 let checks = 0;
 process.on('unhandledRejection', (error) => { console.error(error); process.exit(1); });
 // Comparaison inter-règnes vm : les objets d'un contexte ont un autre
@@ -83,12 +84,14 @@ function makeShared() {
     prepare(sql) {
       const s = String(sql);
       const stmt = (...args) => {
+        const expectedBinds = (s.match(/\?/g) || []).length;
+        if (args.length !== expectedBinds) throw new Error('D1_BIND_MISMATCH: expected ' + expectedBinds + ', got ' + args.length);
         if (/CREATE TABLE IF NOT EXISTS intake_docs/.test(s)) return {};
         if (/INSERT OR IGNORE INTO intake_docs/.test(s)) {
           const [merchant, docId, mime, size, r2key, docType, source, cts, uts] = args;
           const k = merchant + '|' + docId;
           const isNew = !docs.has(k);
-          if (isNew) docs.set(k, { merchant, doc_id: docId, mime, size, r2_key: r2key, has_object: 1, status: 'received', doc_type: docType, source, created_ts: cts, updated_ts: uts });
+          if (isNew) docs.set(k, { merchant, doc_id: docId, mime, size, r2_key: r2key, has_object: 1, status: 'received', doc_type: docType, source, posting_hash: '', posting_count: 0, created_ts: cts, updated_ts: uts });
           return { meta: { changes: isNew ? 1 : 0 } };
         }
         if (/SELECT \* FROM intake_docs/.test(s)) {
@@ -99,6 +102,22 @@ function makeShared() {
           if (!row) return { meta: { changes: 0 } };
           row.status = args[0]; row.updated_ts = args[1];
           return { meta: { changes: 1 } };
+        }
+        if (/UPDATE intake_docs SET posting_hash/.test(s)) {
+          const [postingHash, lineCount, uts, merchant, docId, requiredHash, requiredCount] = args;
+          const row = docs.get(merchant + '|' + docId);
+          const allowed = !!row && row.has_object === 1 && row.status === 'received'
+            && (!row.posting_hash || (row.posting_hash === requiredHash && row.posting_count === requiredCount));
+          if (!allowed) return { meta: { changes: 0 } };
+          if (!row.posting_hash) { row.posting_hash = postingHash; row.posting_count = lineCount; }
+          row.updated_ts = uts;
+          return { meta: { changes: 1 } };
+        }
+        if (/SELECT COUNT\(\*\) AS n FROM inventory_movements/.test(s)) {
+          const [merchant, refId] = args;
+          const n = Array.from(movRows.values()).filter((r) => r.merchant === merchant
+            && r.ref_id === refId && r.reason === 'receipt' && String(r.id).startsWith('mov-intake-')).length;
+          return { n };
         }
         throw new Error('unexpected intake sql: ' + s);
       };
@@ -120,6 +139,8 @@ function makeShared() {
         all: async () => stmt(...args),
       });
       const stmt = (...args) => {
+        const expectedBinds = (s.match(/\?/g) || []).length;
+        if (args.length !== expectedBinds) throw new Error('D1_BIND_MISMATCH: expected ' + expectedBinds + ', got ' + args.length);
         if (/CREATE TABLE IF NOT EXISTS inventory_movements/.test(s)) return {};
         if (/ALTER TABLE inventory_movements ADD COLUMN unit_cost_rate/.test(s)) {
           if (movCols.has('unit_cost_rate')) throw new Error('duplicate column name: unit_cost_rate');
@@ -206,7 +227,7 @@ function makeShared() {
 }
 
 /* ── Un appareil = un contexte vm (vrai registre + vraie compta + vrai noyau) */
-const STOCK_FNS = ['stIntakeHash', 'stIntakePostingIds', 'stIntakeSupplierId', 'stIntakePostGuard', 'stIntakeMerchant', 'stIntakeServerStatus', 'stIntakeMarkOnce', 'stIntakePostedHas', 'stIntakePostedAdd', 'stIntakeOutboxRead', 'stIntakeOutboxWrite', 'stIntakePostAll'];
+const STOCK_FNS = ['stIntakeHash', 'stSha256Hex', 'stIntakePostingLines', 'stIntakePostingCanonical', 'stIntakePostingFingerprint', 'stIntakePrepare', 'stIntakePostingIds', 'stIntakeSupplierId', 'stIntakePostGuard', 'stIntakeMerchant', 'stIntakeServerStatus', 'stIntakeMarkOnce', 'stIntakePostedHas', 'stIntakePostedAdd', 'stIntakeOutboxRead', 'stIntakeOutboxWrite', 'stIntakePostAll'];
 function extractStock(name) {
   const m = stockSrc.match(new RegExp('  (?:async )?function ' + name + '\\([^)]*\\) \\{[\\s\\S]*?\\n  \\}'));
   assert.ok(m, 'stock helper extractable: ' + name);
@@ -305,6 +326,25 @@ await check('posting ids are merchant-scoped, deterministic and collision-free p
   const s1 = await dev.run(`window.__intake.stIntakeSupplierId('Coopérative Taliouine')`);
   const s2 = await dev.run(`window.__intake.stIntakeSupplierId('  coopérative taliouine ')`);
   assert.equal(s1, s2);
+});
+
+await check('posting fingerprint is deterministic and line-order sensitive', async () => {
+  const shared = makeShared();
+  const dev = makeDevice(shared, 'demo-tenant');
+  const original = postCtx();
+  const reordered = postCtx();
+  reordered.lines.reverse();
+  const cacheVariant = postCtx();
+  cacheVariant.lines[0].cardSupplierId = 'another-local-card';
+  cacheVariant.lines[0].cardRank = 9;
+  const a = await dev.run(`window.__intake.stIntakePostingFingerprint(${JSON.stringify(original)} )`);
+  const b = await dev.run(`window.__intake.stIntakePostingFingerprint(${JSON.stringify(original)} )`);
+  const c = await dev.run(`window.__intake.stIntakePostingFingerprint(${JSON.stringify(reordered)} )`);
+  const d = await dev.run(`window.__intake.stIntakePostingFingerprint(${JSON.stringify(cacheVariant)} )`);
+  assert.match(a, /^[0-9a-f]{64}$/);
+  assert.equal(a, b);
+  assert.notEqual(a, c);
+  assert.equal(a, d, 'derived supplier-card cache state is not part of reviewed payload');
 });
 
 await check('one device, full sequence: one receipt, one invoice, one movement per line, stock once', async () => {
@@ -460,6 +500,25 @@ await check('fault after receipt creation: retry posts exactly once', async () =
   assert.equal(dev.K.balance('safran'), 1000);
 });
 
+await check('offline ledger cannot confirm; reconnect syncs before sealing', async () => {
+  const shared = makeShared();
+  await shared.fetch('https://t/api/ai/intake', { method: 'POST', body: JSON.stringify({ merchant: 'demo-tenant', action: 'commit', sha256: DOC, mime: 'application/pdf', size: 10, docType: 'supplier_invoice', source: 's' }) });
+  const dev = makeDevice(shared, 'demo-tenant');
+  await dev.run(`navigator.onLine = false`);
+  await assert.rejects(
+    dev.run(`window.__intake.stIntakePostAll(${JSON.stringify(postCtx()).replace(/</g, '\\u003c')})`),
+    /intake-movement-sync-required/
+  );
+  assert.equal(shared.movRows.size, 0);
+  assert.equal(await dev.run(`window.__intake.stIntakeMarkOnce(${JSON.stringify(DOC)})`), false);
+  assert.equal(shared.docs.get('demo-tenant|' + DOC).status, 'received');
+  await dev.run(`navigator.onLine = true`);
+  assert.equal(await confirmSequence(dev, shared, DOC), 'posted');
+  assert.equal(shared.movRows.size, 2);
+  assert.equal(dev.K.balance('flour'), 5);
+  assert.equal(dev.K.balance('safran'), 1000);
+});
+
 await check('fault after movement 0: retry does not duplicate the persisted row', async () => {
   const shared = makeShared();
   await shared.fetch('https://t/api/ai/intake', { method: 'POST', body: JSON.stringify({ merchant: 'demo-tenant', action: 'commit', sha256: DOC, mime: 'application/pdf', size: 10, docType: 'supplier_invoice', source: 's' }) });
@@ -475,6 +534,51 @@ await check('fault after movement 0: retry does not duplicate the persisted row'
   assert.equal(dev.K.history('safran').length, 1);
   assert.equal(dev.K.balance('flour'), 5);
   assert.equal(dev.K.balance('safran'), 1000);
+});
+
+await check('changed retry after movement 0 is refused before it can mix indexed lines', async () => {
+  const shared = makeShared();
+  await shared.fetch('https://t/api/ai/intake', { method: 'POST', body: JSON.stringify({ merchant: 'demo-tenant', action: 'commit', sha256: DOC, mime: 'application/pdf', size: 10, docType: 'supplier_invoice', source: 's' }) });
+  const dev = makeDevice(shared, 'demo-tenant');
+  await armAddFault(dev, 1);
+  await assert.rejects(dev.run(`window.__intake.stIntakePostAll(${JSON.stringify(postCtx()).replace(/</g, '\\u003c')})`), /fault-injected-add/);
+  await disarmAddFault(dev);
+  const changed = postCtx();
+  changed.lines.reverse();
+  await assert.rejects(
+    dev.run(`window.__intake.stIntakePostAll(${JSON.stringify(changed).replace(/</g, '\\u003c')})`),
+    /intake-posting-conflict/
+  );
+  assert.equal(dev.K.history('flour').length, 1);
+  assert.equal(dev.K.history('safran').length, 0);
+  assert.equal(shared.docs.get('demo-tenant|' + DOC).status, 'received');
+  assert.equal(await dev.run(`window.__intake.stIntakeMarkOnce(${JSON.stringify(DOC)})`), false, 'partial server state cannot be confirmed');
+  assert.equal(shared.docs.get('demo-tenant|' + DOC).status, 'received');
+  // Le brouillon original reste rejouable et converge ensuite normalement.
+  assert.equal(await confirmSequence(dev, shared, DOC), 'posted');
+  assert.equal(dev.K.balance('flour'), 5);
+  assert.equal(dev.K.balance('safran'), 1000);
+});
+
+await check('two devices with divergent reviews elect one payload before either writes', async () => {
+  const shared = makeShared();
+  await shared.fetch('https://t/api/ai/intake', { method: 'POST', body: JSON.stringify({ merchant: 'demo-tenant', action: 'commit', sha256: DOC, mime: 'application/pdf', size: 10, docType: 'supplier_invoice', source: 's' }) });
+  const devA = makeDevice(shared, 'demo-tenant');
+  const devB = makeDevice(shared, 'demo-tenant');
+  const a = postCtx();
+  const b = postCtx();
+  b.lines.reverse();
+  const results = await Promise.allSettled([
+    devA.run(`window.__intake.stIntakePostAll(${JSON.stringify(a).replace(/</g, '\\u003c')})`),
+    devB.run(`window.__intake.stIntakePostAll(${JSON.stringify(b).replace(/</g, '\\u003c')})`),
+  ]);
+  assert.equal(results.filter((r) => r.status === 'fulfilled').length, 1);
+  assert.equal(results.filter((r) => r.status === 'rejected' && /posting-conflict/.test(String(r.reason))).length, 1);
+  await Promise.all([devA.K.sync(), devB.K.sync()]);
+  assert.equal(shared.movRows.size, 2);
+  jseq(Array.from(shared.movRows.values()).map((r) => r.item_id).sort(), ['flour', 'safran']);
+  assert.match(shared.docs.get('demo-tenant|' + DOC).posting_hash, /^[0-9a-f]{64}$/);
+  assert.equal(shared.docs.get('demo-tenant|' + DOC).status, 'received');
 });
 
 await check('same PDF on a second merchant: disjoint ids accepted, foreign ids rejected, rate-first read', async () => {

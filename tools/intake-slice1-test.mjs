@@ -17,7 +17,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const EXPECTED = 22;
+const EXPECTED = 23;
 let checks = 0;
 process.on('unhandledRejection', (error) => { console.error(error); process.exit(1); });
 async function check(name, fn) {
@@ -167,17 +167,20 @@ const harness = new Function(harnessPrelude + harnessSrc + '\nreturn { onRequest
 function makeDoubles() {
   const docs = new Map();
   const r2 = new Map();
-  const flags = { r2Fails: false };
+  const flags = { r2Fails: false, movementCount: 0 };
   const DB = {
     prepare(sql) {
       const s = String(sql);
       // Forme réelle de D1 : prepare(sql).bind(...).first()/.run().
       const stmt = (...args) => {
+        const expectedBinds = (s.match(/\?/g) || []).length;
+        if (args.length !== expectedBinds) throw new Error('D1_BIND_MISMATCH: expected ' + expectedBinds + ', got ' + args.length);
+        if (/CREATE TABLE IF NOT EXISTS intake_docs/.test(s)) return {};
         if (/INSERT OR IGNORE INTO intake_docs/.test(s)) {
           const [merchant, docId, mime, size, r2key, docType, source, cts, uts] = args;
           const k = merchant + '|' + docId;
           const isNew = !docs.has(k);
-          if (isNew) docs.set(k, { merchant, doc_id: docId, mime, size, r2_key: r2key, has_object: 0, status: 'received', doc_type: docType, source, created_ts: cts, updated_ts: uts });
+          if (isNew) docs.set(k, { merchant, doc_id: docId, mime, size, r2_key: r2key, has_object: 0, status: 'received', doc_type: docType, source, posting_hash: '', posting_count: 0, created_ts: cts, updated_ts: uts });
           return { meta: { changes: isNew ? 1 : 0 } };
         }
         if (/SELECT \* FROM intake_docs/.test(s)) {
@@ -191,6 +194,19 @@ function makeDoubles() {
           row.status = status; row.updated_ts = uts;
           return { meta: { changes: 1 } };
         }
+        if (/UPDATE intake_docs SET posting_hash/.test(s)) {
+          const [postingHash, lineCount, uts, merchant, docId, requiredHash, requiredCount] = args;
+          const row = docs.get(merchant + '|' + docId);
+          const allowed = !!row && row.has_object === 1 && row.status === 'received'
+            && (!row.posting_hash || (row.posting_hash === requiredHash && row.posting_count === requiredCount));
+          if (!allowed) return { meta: { changes: 0 } };
+          if (!row.posting_hash) { row.posting_hash = postingHash; row.posting_count = lineCount; }
+          row.updated_ts = uts;
+          return { meta: { changes: 1 } };
+        }
+        if (/SELECT COUNT\(\*\) AS n FROM inventory_movements/.test(s)) {
+          return { n: flags.movementCount };
+        }
         if (/UPDATE intake_docs SET r2_key/.test(s)) {
           const [key, uts, merchant, docId] = args;
           const row = docs.get(merchant + '|' + docId);
@@ -200,7 +216,8 @@ function makeDoubles() {
         }
         throw new Error('unexpected sql: ' + s);
       };
-      return { bind: (...args) => ({ first: async () => stmt(...args), run: async () => stmt(...args) }) };
+      const api = (...args) => ({ first: async () => stmt(...args), run: async () => stmt(...args), all: async () => stmt(...args) });
+      return Object.assign(api(), { bind: (...args) => api(...args) });
     },
   };
   const MEDIA = {
@@ -234,12 +251,41 @@ await check('happy path on live route code: commit, verified upload, confirm, re
   const u = await harness.onRequestPut({ request: putReq(MERCHANT, sha, bytes), env: h.env });
   assert.equal(u.status, 200);
   assert.equal(h.r2.size, 1);
+  const early = await harness.onRequestPost({ request: postReq({ merchant: MERCHANT, action: 'mark', docId: sha, status: 'confirmed' }), env: h.env });
+  assert.equal(early.status, 409);
+  assert.equal(early.body.error, 'not-prepared');
+  const p = await harness.onRequestPost({ request: postReq({ merchant: MERCHANT, action: 'prepare', docId: sha, postingHash: 'b'.repeat(64), lineCount: 2 }), env: h.env });
+  assert.equal(p.status, 200);
+  assert.equal(p.body.prepared, true);
+  assert.doesNotMatch(JSON.stringify(p.body), /b{32}/, 'posting hash is not reflected');
+  const beforeRows = await harness.onRequestPost({ request: postReq({ merchant: MERCHANT, action: 'mark', docId: sha, status: 'confirmed' }), env: h.env });
+  assert.equal(beforeRows.status, 409);
+  assert.equal(beforeRows.body.error, 'not-posted');
+  h.flags.movementCount = 2;
   const m = await harness.onRequestPost({ request: postReq({ merchant: MERCHANT, action: 'mark', docId: sha, status: 'confirmed' }), env: h.env });
   assert.equal(m.status, 200);
   assert.equal(m.body.doc.status, 'confirmed');
   const g = await harness.onRequestGet({ request: new Request('https://kiwi.test/api/ai/intake?merchant=' + MERCHANT + '&docId=' + sha), env: h.env });
   assert.equal(g.body.doc.status, 'confirmed');
   assert.equal(g.body.doc.hasObject, true);
+  assert.equal(Object.hasOwn(g.body.doc, 'postingHash'), false);
+  assert.equal(Object.hasOwn(g.body.doc, 'postingCount'), false);
+});
+
+await check('concurrent divergent prepare elects one hash and refuses the other atomically', async () => {
+  const h = makeDoubles();
+  const bytes = pdfBytes('prepare-race');
+  const sha = await realSha(bytes);
+  await harness.onRequestPost({ request: postReq({ merchant: MERCHANT, action: 'commit', sha256: sha, mime: 'application/pdf', size: bytes.byteLength, docType: 'supplier_invoice', source: 's' }), env: h.env });
+  await harness.onRequestPut({ request: putReq(MERCHANT, sha, bytes), env: h.env });
+  const [a, b] = await Promise.all([
+    harness.onRequestPost({ request: postReq({ merchant: MERCHANT, action: 'prepare', docId: sha, postingHash: 'a'.repeat(64), lineCount: 2 }), env: h.env }),
+    harness.onRequestPost({ request: postReq({ merchant: MERCHANT, action: 'prepare', docId: sha, postingHash: 'b'.repeat(64), lineCount: 2 }), env: h.env }),
+  ]);
+  assert.deepEqual([a.status, b.status].sort(), [200, 409]);
+  const refusal = a.status === 409 ? a : b;
+  assert.equal(refusal.body.error, 'posting-conflict');
+  assert.match(h.docs.get(MERCHANT + '|' + sha).posting_hash, /^(a{64}|b{64})$/);
 });
 
 await check('hash mismatch refused before R2: bytes never attach to the wrong draft', async () => {
@@ -294,6 +340,8 @@ await check('sealed drafts stay sealed: re-upload after confirm 409, unknown doc
   const sha = await realSha(bytes);
   await harness.onRequestPost({ request: postReq({ merchant: MERCHANT, action: 'commit', sha256: sha, mime: 'application/pdf', size: bytes.byteLength, docType: 'supplier_invoice', source: 's' }), env: h.env });
   await harness.onRequestPut({ request: putReq(MERCHANT, sha, bytes), env: h.env });
+  await harness.onRequestPost({ request: postReq({ merchant: MERCHANT, action: 'prepare', docId: sha, postingHash: 'c'.repeat(64), lineCount: 1 }), env: h.env });
+  h.flags.movementCount = 1;
   await harness.onRequestPost({ request: postReq({ merchant: MERCHANT, action: 'mark', docId: sha, status: 'confirmed' }), env: h.env });
   const re = await harness.onRequestPut({ request: putReq(MERCHANT, sha, bytes), env: h.env });
   assert.equal(re.status, 409);
@@ -360,6 +408,8 @@ await check('confirm path ordered: guard and single-owner core before any stock 
   assert.match(stockSrc, /renderRealReceiptReview\(\{ supplier: null, intakeDocId \}\)/, 'manual fallback preserves doc context');
   assert.match(intakeSrc, /INSERT OR IGNORE INTO intake_docs/, 'commit converges on concurrent inserts');
   assert.match(intakeSrc, /error: 'not-archived'/, 'confirm requires the archived object');
+  assert.match(intakeSrc, /error: 'not-prepared'/, 'confirm requires a pinned reviewed payload');
+  assert.match(intakeSrc, /error: 'posting-conflict'/, 'changed retries fail closed');
   assert.match(intakeSrc, /error: 'hash-mismatch'/, 'upload binds bytes to docId');
   const schema = fs.readFileSync(path.join(root, 'schema.sql'), 'utf8');
   assert.match(schema, /CREATE TABLE IF NOT EXISTS intake_docs/, 'canonical schema carries intake_docs');

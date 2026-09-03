@@ -3878,6 +3878,57 @@
     return { supId, supRank };
   }
 
+  /* Empreinte du brouillon RELU, distincte du hash du PDF. L'ordre des lignes
+   * est volontairement significatif puisque les ids de mouvement portent
+   * l'index : une reprise réordonnée doit être refusée avant toute écriture,
+   * jamais mêlée silencieusement à la tentative précédente. */
+  function stIntakePostingLines(ctx) {
+    return ((ctx && ctx.lines) || []).map((l) => ({
+      itemId: String(l.itemId || '').slice(0, 80),
+      name: String(l.name || l.itemId || '').slice(0, 120),
+      qty: Math.round(Math.max(0, +(l.qty || 0)) * 1000) / 1000,
+      unit: String(l.unit || 'unité').slice(0, 24),
+      unitCost: Math.round(Math.max(0, +(l.unitCost || 0)) * 10000) / 10000,
+      updateCost: !!l.updateCost,
+      dlc: String(l.dlc || '').slice(0, 10),
+      /* Dérivés de la carte locale : nécessaires au mouvement, mais exclus de
+       * l'empreinte pour que deux appareils au cache différent ne divergent. */
+      cardSupplierId: String(l.cardSupplierId || '').slice(0, 80),
+      cardRank: Math.max(1, Math.round(+l.cardRank || 1)),
+    })).filter((l) => l.itemId && l.qty > 0);
+  }
+  function stIntakePostingCanonical(ctx) {
+    ctx = ctx || {};
+    return {
+      supplierName: String(ctx.supplierName || ''),
+      externalRef: String(ctx.externalRef || ''),
+      receivedAt: Math.max(0, Math.round(+ctx.receivedAt || 0)),
+      issuedAt: Math.max(0, Math.round(+ctx.issuedAt || 0)),
+      source: String(ctx.source || 'pdf'),
+      lines: stIntakePostingLines(ctx).map((l) => ({
+        itemId: l.itemId, name: l.name, qty: l.qty, unit: l.unit,
+        unitCost: l.unitCost, updateCost: l.updateCost, dlc: l.dlc,
+      })),
+    };
+  }
+  async function stIntakePostingFingerprint(ctx) {
+    const bytes = new TextEncoder().encode(JSON.stringify(stIntakePostingCanonical(ctx)));
+    return stSha256Hex(bytes);
+  }
+  async function stIntakePrepare(docId, postingHash, lineCount) {
+    const res = await fetch('/api/ai/intake', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ merchant: stIntakeMerchant(), action: 'prepare', docId, postingHash, lineCount }),
+    });
+    let data = null;
+    try { data = await res.json(); } catch (_) {}
+    if (!res.ok || !data || data.ok !== true || data.prepared !== true) {
+      throw new Error('intake-' + String((data && data.error) || ('prepare-' + res.status)));
+    }
+    return true;
+  }
+
   /* ── Guichet unique : le SEUL propriétaire des écritures d'un dépôt ──────
    * Reçoit des données pures (aucun DOM), écrit : ligne comptable
    * (upsert déterministe), mouvements (ids déterministes, registre
@@ -3897,7 +3948,6 @@
     if (!K || typeof K.add !== 'function') throw new Error('intake-ledger-required');
     const owner = (typeof K.merchant === 'function') ? String(K.merchant() || '') : '';
     if (!owner) throw new Error('intake-merchant-required');
-    const ids = await stIntakePostingIds(owner, docId, (ctx.lines || []).length);
     const supplierName = String(ctx.supplierName || '');
     const externalRef = String(ctx.externalRef || '');
     const receivedAt = +ctx.receivedAt || Date.now();
@@ -3915,14 +3965,22 @@
       }
     }
 
-    const cleanLines = (ctx.lines || []).map((l) => ({
-      itemId: String(l.itemId || ''),
-      name: String(l.name || l.itemId || ''),
-      qty: Math.max(0, +(l.qty || 0)),
-      unit: String(l.unit || 'unité'),
-      unitCost: Math.max(0, +(l.unitCost || 0)),
-    })).filter((l) => l.itemId && l.qty > 0);
+    const normalizedCtx = Object.assign({}, ctx, {
+      receivedAt, issuedAt, lines: ctx.lines || [],
+    });
+    const canonical = stIntakePostingCanonical(normalizedCtx);
+    const postLines = stIntakePostingLines(normalizedCtx);
+    const cleanLines = postLines.map((l) => ({
+      itemId: l.itemId, name: l.name, qty: l.qty, unit: l.unit, unitCost: l.unitCost,
+    }));
     if (!cleanLines.length) throw new Error('intake-lines-required');
+    const ids = await stIntakePostingIds(owner, docId, postLines.length);
+
+    /* Avant la première écriture locale, le serveur fige l'empreinte du
+     * brouillon relu. Un crash puis une nouvelle extraction/correction ne peut
+     * donc pas réutiliser les ids indexés avec un autre contenu. */
+    const postingHash = await stSha256Hex(new TextEncoder().encode(JSON.stringify(canonical)));
+    await stIntakePrepare(docId, postingHash, cleanLines.length);
 
     let receipt = null;
     if (P && P.receiveDirect) {
@@ -3933,8 +3991,7 @@
       if (!receipt || receipt.error) throw new Error((receipt && receipt.error) || 'receipt-failed');
     }
 
-    ctx.lines.forEach((l, idx) => {
-      if (!l.itemId || !(+l.qty > 0)) return;
+    postLines.forEach((l, idx) => {
       /* Acceptation vérifiée ligne par ligne : K.add rend null quand le
        * registre refuse (pas réel, pas de marchand, ligne invalide). Un
        * refus silencieux serait une confirmation mensongère — on lève, la
@@ -3957,6 +4014,13 @@
         try { C.setItemCost(l.itemId, +l.unitCost, supplierName); } catch (_) {}
       }
     });
+
+    /* K.add est local-first et ne constitue pas un accusé de réception D1.
+     * Sans ce sync explicite, le document pouvait être marqué confirmed puis
+     * l'onglet mourir avant que le setTimeout du registre pousse ses lignes. */
+    if (typeof K.sync !== 'function' || await K.sync() !== true) {
+      throw new Error('intake-movement-sync-required');
+    }
 
     let invoice = null;
     if (P && P.attachInvoice) {
