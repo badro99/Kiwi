@@ -1,9 +1,10 @@
 // functions/api/ai/_quota.js
 // Quota journalier par type d'appel AI et par établissement.
-// Table ai_usage_kind : isolation par kind ('ask', 'invoice', 'menuimport', 'index', 'resolve', 'transcribe', 'image').
+// Table ai_usage_kind : isolation par kind ('ask', 'intake', 'invoice', 'menuimport', 'index', 'resolve', 'transcribe', 'image').
 
 export const DAILY_CAPS = {
   ask: 200,
+  intake: 100,
   invoice: 200,
   menuimport: 60,
   menutranslate: 120,

@@ -165,6 +165,12 @@
       mScanWarn: '⚠ 1 nouvel article détecté, voulez-vous l\'ajouter au catalogue ?',
       mScanConfirm: 'Confirmer la facture',
       mScanToast: 'Facture enregistrée · Stock mis à jour · 3 articles',
+      mScanIdTitle: 'Pièce d’identité non acceptée',
+      mScanIdBody: 'Ce guichet ne traite que les factures fournisseur. Rien n’a été envoyé ni conservé : choisissez un autre document ou saisissez manuellement.',
+      mScanDupT: 'Document déjà déposé',
+      mScanDupDone: (d) => `Cette facture a déjà été enregistrée${d ? ` (${d})` : ''}. Nouvel envoi bloqué pour protéger vos stocks.`,
+      mScanArchived: 'Document archivé comme pièce comptable',
+      mScanResume: 'Dépôt déjà en cours : reprise sans doublon.',
       mCountTitle: 'Inventaire physique',
       mCountSub: 'Comptez chaque article et saisissez la quantité réelle. Kiwi calcule l\'écart automatiquement.',
       mCountColTheo: 'STOCK THÉORIQUE', mCountColReal: 'QUANTITÉ COMPTÉE', mCountColVar: 'ÉCART', mCountColCost: 'VALEUR ÉCART',
@@ -428,6 +434,12 @@
       mScanWarn: '⚠ 1 new item detected, add to catalogue?',
       mScanConfirm: 'Confirm invoice',
       mScanToast: 'Invoice recorded · Stock updated · 3 items',
+      mScanIdTitle: 'ID document not accepted',
+      mScanIdBody: 'This intake only handles supplier invoices. Nothing was sent or kept: pick another document or enter it manually.',
+      mScanDupT: 'Document already filed',
+      mScanDupDone: (d) => `This invoice was already recorded${d ? ` (${d})` : ''}. Re-upload blocked to protect your stock.`,
+      mScanArchived: 'Document archived as a business record',
+      mScanResume: 'Filing already in progress: resuming without duplicating.',
       mCountTitle: 'Physical count',
       mCountSub: 'Count each item and enter the actual quantity. Kiwi computes the variance automatically.',
       mCountColTheo: 'THEORETICAL STOCK', mCountColReal: 'COUNTED QTY', mCountColVar: 'VARIANCE', mCountColCost: 'VARIANCE VALUE',
@@ -679,6 +691,12 @@
       mScanWarn: '⚠ تم اكتشاف منتج جديد، هل تريد إضافته للكتالوج؟',
       mScanConfirm: 'تأكيد الفاتورة',
       mScanToast: 'تم تسجيل الفاتورة · تحديث المخزون · 3 منتجات',
+      mScanIdTitle: 'وثيقة هوية غير مقبولة',
+      mScanIdBody: 'هذا الشباك يعالج فواتير الموردين فقط. لم يتم إرسال أو حفظ أي شيء: اختر مستندًا آخر أو أدخل يدويًا.',
+      mScanDupT: 'تم إيداع هذا المستند مسبقًا',
+      mScanDupDone: (d) => `تم تسجيل هذه الفاتورة مسبقًا${d ? ` (${d})` : ''}. تم حظر الإرسال الجديد لحماية مخزونك.`,
+      mScanArchived: 'تمت أرشفة المستند كوثيقة محاسبية',
+      mScanResume: 'الإيداع جارٍ مسبقًا: استئناف بدون تكرار.',
       mCountTitle: 'جرد فعلي',
       mCountSub: 'عُدّ كل منتج وأدخل الكمية الفعلية. Kiwi يحسب الفرق تلقائيًا.',
       mCountColTheo: 'المخزون النظري', mCountColReal: 'الكمية المعدودة', mCountColVar: 'الفرق', mCountColCost: 'قيمة الفرق',
@@ -3802,6 +3820,74 @@
     return fullText.trim();
   }
 
+  /* ── Guichet unique, slice 1 (facture PDF) — derrière fanion ────────────
+   * Fanion : ?intake=1 ou localStorage kiwiIntake1=1. Éteint = comportement
+   * historique à l'octet près. Le pré-filtre identité tourne sur le texte
+   * pdf.js AVANT tout upload et tout appel modèle (sign-off : pré-filtre
+   * exigé avant expédition) ; l'empreinte SHA-256 est l'identifiant du
+   * document (re-dépôt = même id, jamais de doublon silencieux). */
+  function stIntakeEnabled() {
+    try {
+      if (new URLSearchParams(window.location.search).get('intake') === '1') return true;
+      return window.localStorage.getItem('kiwiIntake1') === '1';
+    } catch (_) { return false; }
+  }
+  function stIntakeIdHint(text) {
+    return /passeport|passport|carte\s+(nationale|d['’]identit)|c\.?\s*n\.?\s*i\.?\s*e\.?\b|\bcin\b|fiche\s+de\s+police|acte\s+de\s+naissance|جواز\s*السفر|بطاقة\s*(التعريف|الوطنية)| الحالة\s*المدنية/i.test(String(text || ''));
+  }
+  async function stSha256Hex(buffer) {
+    const digest = await window.crypto.subtle.digest('SHA-256', buffer);
+    return Array.from(new Uint8Array(digest)).map((x) => x.toString(16).padStart(2, '0')).join('');
+  }
+  function stIntakeMerchant() {
+    try { return (window.Kiwi && window.Kiwi.venue && window.Kiwi.venue()) || ''; } catch (_) { return ''; }
+  }
+  async function stIntakeCommit(payload) {
+    const res = await fetch('/api/ai/intake', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ merchant: stIntakeMerchant(), action: 'commit', ...payload }),
+    });
+    let data = null;
+    try { data = await res.json(); } catch (_) { data = null; }
+    return { status: res.status, data };
+  }
+  async function stIntakeUpload(docId, bytes) {
+    const res = await fetch(`/api/ai/intake?merchant=${encodeURIComponent(stIntakeMerchant())}&docId=${encodeURIComponent(docId)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/pdf' },
+      body: bytes,
+    });
+    return res.ok;
+  }
+  function stIntakeMark(docId, status) {
+    // Fire-and-forget, fail-soft : le brouillon reste rejouable par son statut.
+    try {
+      fetch('/api/ai/intake', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ merchant: stIntakeMerchant(), action: 'mark', docId, status }),
+      }).catch(() => {});
+    } catch (_) {}
+  }
+  function stRenderIntakeStop(title, body) {
+    return `
+      <div class="st-notice warn">${svg('alertTriangle', 14)}<div><b>${esc(title)}</b><br />${esc(body)}</div></div>
+      <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:14px;">
+        <button class="st-btn" data-dismiss-modal>${esc(STR[lang()].btnCancel || 'Annuler')}</button>
+        <button class="st-btn" type="button" data-stock-scan-manual2>${esc(t('mScanManual'))}</button>
+      </div>`;
+  }
+  function wireIntakeStop() {
+    const scope = topBackdrop() || document;
+    const stage = scope.querySelector('[data-stock-scan-stage]');
+    scope.querySelector('[data-stock-scan-manual2]')?.addEventListener('click', () => {
+      if (!stage) return;
+      stage.innerHTML = renderRealReceiptReview({ supplier: null });
+      wireScanReview();
+    });
+  }
+
   /* ═══════════════════════════════════════════════════════════════════════
    * MODAL · Scan invoice
    * ═══════════════════════════════════════════════════════════════════════ */
@@ -3891,6 +3977,45 @@
           const text = await extractPdfText(file);
           if (!text) throw new Error('empty-text');
 
+          // Guichet unique (fanion stIntakeEnabled) : le texte est déjà là,
+          // donc le pré-filtre identité ne coûte aucun appel et précède tout.
+          let intakeDocId = '';
+          if (stIntakeEnabled()) {
+            if (stIntakeIdHint(text)) {
+              stage.innerHTML = stRenderIntakeStop(t('mScanIdTitle'), t('mScanIdBody'));
+              wireIntakeStop();
+              return;
+            }
+            try {
+              const bytes = await file.arrayBuffer();
+              if (!bytes.byteLength || bytes.byteLength > 10 * 1024 * 1024) throw new Error('too-large');
+              const sha = await stSha256Hex(bytes);
+              const commit = await stIntakeCommit({
+                sha256: sha, mime: 'application/pdf', size: bytes.byteLength,
+                docType: 'supplier_invoice', source: 'stock-scan',
+                textSample: text.slice(0, 4000),
+              });
+              if (commit.status === 422) {
+                stage.innerHTML = stRenderIntakeStop(t('mScanIdTitle'), t('mScanIdBody'));
+                wireIntakeStop();
+                return;
+              }
+              if (commit.data && commit.data.duplicate && commit.data.doc && commit.data.doc.status === 'confirmed') {
+                const d = commit.data.doc.createdTs ? new Date(commit.data.doc.createdTs).toLocaleDateString() : '';
+                stage.innerHTML = stRenderIntakeStop(t('mScanDupT'), t('mScanDupDone', d));
+                wireIntakeStop();
+                return;
+              }
+              if (commit.data && (commit.data.docId || (commit.data.doc && commit.data.doc.docId))) {
+                intakeDocId = commit.data.docId || commit.data.doc.docId;
+                if (commit.data.duplicate) window.Kiwi.toast?.(t('mScanResume'), { type: 'info' });
+                try { await stIntakeUpload(intakeDocId, bytes); } catch (_) {}
+              }
+              // Registre ou quota indisponible (429, 503, réseau) : on ne
+              // bloque jamais le travail, l'extraction continue sans archive.
+            } catch (_) { intakeDocId = ''; }
+          }
+
           const venue = (window.Kiwi && window.Kiwi.venue && window.Kiwi.venue()) || '';
           const res = await fetch('/api/ai/invoice', {
             method: 'POST',
@@ -3903,7 +4028,7 @@
           }
           const data = await res.json();
           if (data.ok && Array.isArray(data.lines) && data.lines.length) {
-            stage.innerHTML = renderRealReceiptReview({ parsed: data });
+            stage.innerHTML = renderRealReceiptReview({ parsed: data, intakeDocId });
             wireScanReview();
             return;
           }
@@ -4081,6 +4206,7 @@
     return `
       <div class="st-mb-eyebrow">${parsed ? esc(t('mScanReviewT')) : 'Réception fournisseur'}</div>
       <div class="st-notice ok">${svg('checkCircle', 14)}<div>Le document reste à vérifier : les prix et quantités sont pré-remplis pour vérification humaine.</div></div>
+      ${opts?.intakeDocId ? `<input type="hidden" data-stock-intake-doc value="${esc(String(opts.intakeDocId))}" /><div class="st-notice info" style="margin-top:8px;">${svg('receipt', 14)}<div>${esc(t('mScanArchived'))} · <span class="mono">${esc(String(opts.intakeDocId).slice(0, 12))}…</span></div></div>` : ''}
       <div class="st-mb-row three" style="margin-top:12px;">
         <div class="st-mb-field"><label class="st-mb-label">${esc(t('mScanSupplier'))}</label>${supInputHtml}</div>
         <div class="st-mb-field"><label class="st-mb-label">${esc(t('mScanDate'))}</label><input class="st-mb-input mono" data-stock-receive-date type="date" value="${invoiceDate}" /></div>
@@ -4349,6 +4475,12 @@
       });
 
       stSaveOverlay();
+      // Guichet unique : la confirmation humaine fait sortir le brouillon du
+      // statut « received ». Best-effort : l'écriture stock a déjà réussi.
+      try {
+        const docId = scope.querySelector('[data-stock-intake-doc]')?.value || '';
+        if (docId) stIntakeMark(docId, 'confirmed');
+      } catch (_) {}
       closeTopModal();
       window.Kiwi.toast?.(`${lines.length} ligne${lines.length > 1 ? 's' : ''} reçue${lines.length > 1 ? 's' : ''} et ajoutée${lines.length > 1 ? 's' : ''} au stock.`, { type: 'success', duration: 3800 });
       if (stPageActive) render();

@@ -56,7 +56,12 @@ export function validateInvoiceData(raw) {
 
     const qty = Math.max(0, Math.round((Number(l.qty) || 0) * 1000) / 1000);
     const unit = String(l.unit || 'unité').slice(0, 24).trim() || 'unité';
-    const unitCost = Math.max(0, Math.round((Number(l.unitCost != null ? l.unitCost : l.price) || 0) * 100) / 100);
+    /* Le coût unitaire est un TAUX, pas un montant affiché : 4 décimales,
+     * comme le registre (inventory-ledger.js) qui le conserve tel quel.
+     * Arrondi à 2, un ingrédient à 0,0045 MAD/g tombe à 0,00 et fausse le
+     * coût de recette d'environ 25 % (symptôme HOTEL_ECONOMAT_PLAN.md).
+     * Les TOTAUX restent à 2 décimales : ce sont eux qui s'affichent. */
+    const unitCost = Math.max(0, Math.round((Number(l.unitCost != null ? l.unitCost : l.price) || 0) * 10000) / 10000);
     const total = Math.max(0, Math.round((Number(l.total != null ? l.total : (qty * unitCost)) || 0) * 100) / 100);
 
     /* Une remise de ligne vit dans le TOTAL, pas dans le prix unitaire : « 2 ×
@@ -69,7 +74,7 @@ export function validateInvoiceData(raw) {
     let netUnitCost = unitCost;
     if (qty > 0 && total > 0 && unitCost > 0) {
       const gross = qty * unitCost;
-      if (Math.abs(gross - total) / gross > 0.005) netUnitCost = Math.round((total / qty) * 100) / 100;
+      if (Math.abs(gross - total) / gross > 0.005) netUnitCost = Math.round((total / qty) * 10000) / 10000;
     }
     const line = {
       label,

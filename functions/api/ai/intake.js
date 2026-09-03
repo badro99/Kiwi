@@ -1,0 +1,244 @@
+// /api/ai/intake — registre du guichet unique documentaire (« dépose un papier,
+// il se range tout seul »). Slice 1 : factures fournisseur PDF via le scan stock.
+//
+// Ce que cette route fait : constater un dépôt (empreinte = identifiant),
+// conserver l'original comme pièce comptable (R2 privé), refuser les pièces
+// d'identité, et suivre le statut du brouillon jusqu'à la confirmation humaine.
+//
+// Ce qu'elle ne fait PAS : aucune extraction (les spécialistes existants —
+// invoice.js, expense-ocr.js, tpe-reconcile.js — restent les seuls lecteurs),
+// AUCUNE écriture en stock, dépenses, chiffre d'affaires ou prix fournisseur.
+// La confirmation réutilise les chemins d'écriture existants côté client.
+// Proposer, jamais comptabiliser : il n'y a pas de chemin auto-classe.
+//
+// Protocole (idempotent par conception, l'empreinte est l'identifiant) :
+//   POST { action:'commit', sha256, mime, size, docType, source }
+//     → { duplicate:false, docId } ou { duplicate:true, doc } (déjà déposé :
+//       date + statut, jamais de doublon silencieux)
+//   PUT ?merchant=&docId= (corps = octets bruts, Content-Type: application/pdf)
+//     → { ok:true, docId } (l'objet R2 ; réinscriptible, même clé)
+//   POST { action:'mark', docId, status:'confirmed' }
+//     → { ok:true, doc } (seule sortie du brouillon en slice 1)
+//   GET ?merchant=&docId= → { ok:true, doc } (reprise après échec)
+//
+// Sécurité : tenantFor strict partout ; AUCUN log du contenu ; quota 'intake'.
+
+import { json } from '../../auth/_lib.js';
+import { tenantFor } from '../_private.js';
+import { quotaOk, DAILY_CAPS } from './_quota.js';
+
+export const DAILY_CAP = DAILY_CAPS.intake;
+export const MAX_PDF_BYTES = 10 * 1024 * 1024; // comme annoncé dans le scan stock (« max 10 Mo »)
+export const DOC_TYPES_V1 = ['supplier_invoice'];
+export const DOC_STATUSES_V1 = ['received', 'confirmed'];
+const SHA256_RE = /^[0-9a-f]{64}$/;
+
+/* ── Pré-filtre pièces d'identité (§7 du design) ──────────────────────────
+ * Tourne AVANT tout envoi : le client l'applique sur le texte pdf.js avant
+ * même l'upload, le serveur le ré-applique sur commit (défense en profondeur,
+ * jamais de confiance envers le client). Sens fail-safe : un faux positif
+ * bloque un dépôt légitime (le commerçant saisit manuellement), un faux
+ * négatif est rattrapé par le verdict `identity_rejected` du classifieur
+ * (slice 2) qui supprime l'objet R2 aussitôt. */
+export function containsIdentityHints(text) {
+  const t = String(text || '');
+  if (!t) return false;
+  return /passeport|passport|carte\s+(nationale|d['’]identit)|c\.?\s*n\.?\s*i\.?\s*e\.?\b|\bcin\b|fiche\s+de\s+police|acte\s+de\s+naissance|جواز\s*السفر|بطاقة\s*(التعريف|الوطنية)| الحالة\s*المدنية/i.test(t);
+}
+
+/* Corps de commit acceptés en slice 1 : PDF uniquement, types V1 uniquement.
+ * Renvoie la forme normalisée ou null. Fonction pure, testée. */
+export function validateCommitBody(b) {
+  if (!b || typeof b !== 'object') return null;
+  const sha256 = String(b.sha256 || '').toLowerCase().trim();
+  if (!SHA256_RE.test(sha256)) return null;
+  const mime = String(b.mime || '').toLowerCase().trim();
+  if (mime !== 'application/pdf') return null;
+  const size = Math.floor(Number(b.size) || 0);
+  if (!Number.isFinite(size) || size <= 0 || size > MAX_PDF_BYTES) return null;
+  const docType = String(b.docType || '').trim();
+  if (!DOC_TYPES_V1.includes(docType)) return null;
+  const source = String(b.source || '').slice(0, 40).trim() || 'unknown';
+  return { sha256, mime, size, docType, source };
+}
+
+export function isPdfBytes(buffer) {
+  if (!buffer || !buffer.byteLength || buffer.byteLength < 5) return false;
+  const b = new Uint8Array(buffer, 0, 5);
+  return b[0] === 0x25 && b[1] === 0x50 && b[2] === 0x44 && b[3] === 0x46 && b[4] === 0x2d; // %PDF-
+}
+
+let ensured = false;
+export async function ensureIntakeSchema(db) {
+  if (!db || typeof db.prepare !== 'function') return;
+  if (ensured) return;
+  try {
+    await db.prepare(
+      'CREATE TABLE IF NOT EXISTS intake_docs (' +
+      'merchant TEXT NOT NULL, ' +
+      'doc_id TEXT NOT NULL, ' +
+      'mime TEXT NOT NULL DEFAULT \'\', ' +
+      'size INTEGER NOT NULL DEFAULT 0, ' +
+      'r2_key TEXT NOT NULL DEFAULT \'\', ' +
+      'has_object INTEGER NOT NULL DEFAULT 0, ' +
+      'status TEXT NOT NULL DEFAULT \'received\', ' +
+      'doc_type TEXT NOT NULL DEFAULT \'\', ' +
+      'source TEXT NOT NULL DEFAULT \'\', ' +
+      'created_ts INTEGER NOT NULL DEFAULT 0, ' +
+      'updated_ts INTEGER NOT NULL DEFAULT 0, ' +
+      'PRIMARY KEY (merchant, doc_id)' +
+      ')'
+    ).run();
+    ensured = true;
+  } catch (_) {}
+}
+
+/* Projection publique d'une ligne : jamais de contenu documentaire (nous
+ * n'en stockons aucun en D1 de toute façon — seul R2 détient les octets). */
+export function publicDoc(row) {
+  if (!row) return null;
+  return {
+    docId: String(row.doc_id || ''),
+    status: String(row.status || 'received'),
+    docType: String(row.doc_type || ''),
+    source: String(row.source || ''),
+    mime: String(row.mime || ''),
+    size: Number(row.size || 0),
+    hasObject: Number(row.has_object || 0) === 1,
+    createdTs: Number(row.created_ts || 0),
+    updatedTs: Number(row.updated_ts || 0),
+  };
+}
+
+function r2KeyFor(merchant, docId) {
+  return 'intake/' + merchant + '/' + docId + '.pdf';
+}
+
+export async function onRequestPost(context) {
+  const { request, env } = context;
+  let b;
+  try { b = await request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
+
+  const who = await tenantFor(request, env, b?.merchant, { strict: true });
+  if (!who) return json({ error: 'unauthorized' }, 401);
+  if (!env || !env.DB) return json({ error: 'not-configured' }, 503);
+
+  const action = String(b?.action || '').trim();
+
+  if (action === 'commit') {
+    const v = validateCommitBody(b);
+    if (!v) return json({ error: 'bad-commit' }, 400);
+    if (typeof b?.textSample === 'string' && containsIdentityHints(b.textSample.slice(0, 4000))) {
+      return json({ error: 'identity-rejected' }, 422);
+    }
+    if (!(await quotaOk(env, who, 'intake', DAILY_CAP))) {
+      return json({ error: 'daily-quota-exceeded' }, 429);
+    }
+    try { await ensureIntakeSchema(env.DB); } catch (_) { return json({ error: 'db' }, 503); }
+    let row = null;
+    try {
+      row = await env.DB.prepare(
+        'SELECT * FROM intake_docs WHERE merchant = ? AND doc_id = ?'
+      ).bind(who, v.sha256).first();
+    } catch (_) { return json({ error: 'db' }, 503); }
+    if (row) return json({ ok: true, duplicate: true, doc: publicDoc(row) });
+    const now = Date.now();
+    try {
+      await env.DB.prepare(
+        'INSERT INTO intake_docs (merchant, doc_id, mime, size, r2_key, has_object, status, doc_type, source, created_ts, updated_ts) ' +
+        'VALUES (?, ?, ?, ?, ?, 0, \'received\', ?, ?, ?, ?)'
+      ).bind(who, v.sha256, v.mime, v.size, r2KeyFor(who, v.sha256), v.docType, v.source, now, now).run();
+    } catch (_) { return json({ error: 'db' }, 503); }
+    return json({ ok: true, duplicate: false, docId: v.sha256 });
+  }
+
+  if (action === 'mark') {
+    const docId = String(b?.docId || '').toLowerCase().trim();
+    if (!SHA256_RE.test(docId)) return json({ error: 'bad-doc' }, 400);
+    const status = String(b?.status || '').trim();
+    if (!DOC_STATUSES_V1.includes(status) || status === 'received') {
+      return json({ error: 'bad-status' }, 400);
+    }
+    try { await ensureIntakeSchema(env.DB); } catch (_) { return json({ error: 'db' }, 503); }
+    try {
+      const r = await env.DB.prepare(
+        'UPDATE intake_docs SET status = ?, updated_ts = ? WHERE merchant = ? AND doc_id = ?'
+      ).bind(status, Date.now(), who, docId).run();
+      if (!r || !r.meta || r.meta.changes === 0) return json({ error: 'doc-not-found' }, 404);
+      const row = await env.DB.prepare(
+        'SELECT * FROM intake_docs WHERE merchant = ? AND doc_id = ?'
+      ).bind(who, docId).first();
+      return json({ ok: true, doc: publicDoc(row) });
+    } catch (_) { return json({ error: 'db' }, 503); }
+  }
+
+  return json({ error: 'bad-action' }, 400);
+}
+
+export async function onRequestPut(context) {
+  const { request, env } = context;
+  if (!env || !env.DB || !env.MEDIA) return json({ error: 'no-media' }, 503);
+  const url = new URL(request.url);
+  const merchant = await tenantFor(request, env, url.searchParams.get('merchant'), { strict: true });
+  if (!merchant) return json({ error: 'unauthorized' }, 401);
+  const docId = String(url.searchParams.get('docId') || '').toLowerCase().trim();
+  if (!SHA256_RE.test(docId)) return json({ error: 'bad-doc' }, 400);
+
+  try { await ensureIntakeSchema(env.DB); } catch (_) { return json({ error: 'db' }, 503); }
+  let row = null;
+  try {
+    row = await env.DB.prepare(
+      'SELECT * FROM intake_docs WHERE merchant = ? AND doc_id = ?'
+    ).bind(merchant, docId).first();
+  } catch (_) { return json({ error: 'db' }, 503); }
+  if (!row) return json({ error: 'doc-not-found' }, 404);
+  if (String(row.status) === 'confirmed') return json({ error: 'already-confirmed' }, 409);
+
+  const ctype = (request.headers.get('Content-Type') || '').split(';')[0].trim().toLowerCase();
+  if (ctype !== 'application/pdf') return json({ error: 'bad-type' }, 415);
+  const declared = Number(request.headers.get('Content-Length') || 0);
+  if (declared && declared > MAX_PDF_BYTES) return json({ error: 'too-large', max: MAX_PDF_BYTES }, 413);
+
+  let bytes = null;
+  try { bytes = await request.arrayBuffer(); } catch (_) { return json({ error: 'empty' }, 400); }
+  if (!bytes || !bytes.byteLength) return json({ error: 'empty' }, 400);
+  if (bytes.byteLength > MAX_PDF_BYTES) return json({ error: 'too-large', max: MAX_PDF_BYTES }, 413);
+  if (Number(row.size) !== bytes.byteLength) return json({ error: 'size-mismatch' }, 400);
+  if (!isPdfBytes(bytes)) return json({ error: 'content-mismatch' }, 415);
+
+  const key = r2KeyFor(merchant, docId);
+  try {
+    await env.MEDIA.put(key, bytes, {
+      httpMetadata: { contentType: 'application/pdf', cacheControl: 'private, no-store' },
+    });
+  } catch (_) {
+    return json({ error: 'upload-failed' }, 500);
+  }
+  try {
+    await env.DB.prepare(
+      'UPDATE intake_docs SET r2_key = ?, has_object = 1, updated_ts = ? WHERE merchant = ? AND doc_id = ?'
+    ).bind(key, Date.now(), merchant, docId).run();
+  } catch (_) {
+    try { await env.MEDIA.delete(key); } catch (_) {}
+    return json({ error: 'db' }, 503);
+  }
+  return json({ ok: true, docId });
+}
+
+export async function onRequestGet(context) {
+  const { request, env } = context;
+  if (!env || !env.DB) return json({ error: 'not-configured' }, 503);
+  const url = new URL(request.url);
+  const merchant = await tenantFor(request, env, url.searchParams.get('merchant'), { strict: true });
+  if (!merchant) return json({ error: 'unauthorized' }, 401);
+  const docId = String(url.searchParams.get('docId') || '').toLowerCase().trim();
+  if (!SHA256_RE.test(docId)) return json({ error: 'bad-doc' }, 400);
+  try { await ensureIntakeSchema(env.DB); } catch (_) { return json({ error: 'db' }, 503); }
+  try {
+    const row = await env.DB.prepare(
+      'SELECT * FROM intake_docs WHERE merchant = ? AND doc_id = ?'
+    ).bind(merchant, docId).first();
+    if (!row) return json({ error: 'doc-not-found' }, 404);
+    return json({ ok: true, doc: publicDoc(row) });
+  } catch (_) { return json({ error: 'db' }, 503); }
+}

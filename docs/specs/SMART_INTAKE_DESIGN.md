@@ -193,3 +193,19 @@ proceed in parallel: they add value even with today's extractors.
 5. Residual §7 risk (one classifier call sees an ID photo before rejection)
    acceptable, or require client-side ID pre-screen before V1?
 6. Proceed with slice 1 (supplier-invoice PDF on the existing stock.js path)?
+
+## Sign-off recorded 2026-09-03 (owner answers, no code yet at that point)
+
+1. **Approved, build slice 1** — supplier-invoice PDF on the existing stock.js
+   scan path, behind a flag, demo tenant first.
+2. **Pre-screen REQUIRED before anything ships** (option "Require pre-screen").
+   Consequence, sequenced honestly: slice 1 is PDF-only, where the keyword
+   screen runs on the client-extracted pdf.js text **before any byte is
+   uploaded and before any inference call** — full compliance with zero new
+   machinery. Photo slices (receipt, TPE) stay blocked until an on-device ID
+   pre-screen exists or entries remain typed-context-only; the classifier
+   action (§1, call 1) lands with slice 2's generic dropzone, and `doc_type`
+   is recorded from entry context until then.
+3. **Agreed on both** — retention until account close (purge R2 prefix + D1
+   rows on close); double metering (`intake` kind for registry/classify,
+   specialist kind for extraction).
