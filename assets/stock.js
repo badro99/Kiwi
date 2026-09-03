@@ -3891,7 +3891,13 @@
     const C = window.KiwiCost || null;
     const docId = String((ctx && ctx.docId) || '');
     if (!docId) throw new Error('intake-doc-required');
-    const ids = stIntakePostingIds(docId, (ctx.lines || []).length);
+    /* Sans registre, aucun mouvement ne doit partir : un K.add absent
+     * avalerait chaque ligne en silence et le document serait marqué
+     * confirmé sur du vide. */
+    if (!K || typeof K.add !== 'function') throw new Error('intake-ledger-required');
+    const owner = (typeof K.merchant === 'function') ? String(K.merchant() || '') : '';
+    if (!owner) throw new Error('intake-merchant-required');
+    const ids = await stIntakePostingIds(owner, docId, (ctx.lines || []).length);
     const supplierName = String(ctx.supplierName || '');
     const externalRef = String(ctx.externalRef || '');
     const receivedAt = +ctx.receivedAt || Date.now();
@@ -3929,21 +3935,24 @@
 
     ctx.lines.forEach((l, idx) => {
       if (!l.itemId || !(+l.qty > 0)) return;
-      if (K && K.add) {
-        K.add({
-          id: ids.movementIds[idx],
-          itemId: l.itemId, qty: +l.qty, reason: 'receipt',
-          refType: 'receipt', refId: receipt ? receipt.id : ids.receiptId,
-          note: [supplierName, externalRef].filter(Boolean).join(' · '),
-          unitCost: l.unitCost, occurredTs: receivedAt,
-          meta: {
-            supplierId: l.cardSupplierId || supplierId,
-            supplierName, externalRef, receiptRef: ids.receiptId,
-            receivedAt, rank: l.cardRank || 1,
-            expiresAt: l.dlc ? new Date(l.dlc + 'T23:59:59').getTime() : null,
-          },
-        });
-      }
+      /* Acceptation vérifiée ligne par ligne : K.add rend null quand le
+       * registre refuse (pas réel, pas de marchand, ligne invalide). Un
+       * refus silencieux serait une confirmation mensongère — on lève, la
+       * reprise rejouera (ids déterministes, couches convergentes). */
+      const accepted = K.add({
+        id: ids.movementIds[idx],
+        itemId: l.itemId, qty: +l.qty, reason: 'receipt',
+        refType: 'receipt', refId: receipt ? receipt.id : ids.receiptId,
+        note: [supplierName, externalRef].filter(Boolean).join(' · '),
+        unitCost: l.unitCost, occurredTs: receivedAt,
+        meta: {
+          supplierId: l.cardSupplierId || supplierId,
+          supplierName, externalRef, receiptRef: ids.receiptId,
+          receivedAt, rank: l.cardRank || 1,
+          expiresAt: l.dlc ? new Date(l.dlc + 'T23:59:59').getTime() : null,
+        },
+      });
+      if (!accepted) throw new Error('intake-movement-rejected:' + l.itemId);
       if (l.updateCost && +l.unitCost > 0 && C && C.setItemCost) {
         try { C.setItemCost(l.itemId, +l.unitCost, supplierName); } catch (_) {}
       }
@@ -3978,17 +3987,33 @@
     for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
     return (h >>> 0).toString(16).padStart(8, '0');
   }
-  /* Tous les ids primaires d'un dépôt, dérivés du docId : rejouer le même
-   * document produit les mêmes ids, et chaque couche déduplique sur l'id
-   * (registre, lignes comptables, registre des mouvements côté serveur).
-   * Pur, testé. */
-  function stIntakePostingIds(docId, lineCount) {
-    const short = String(docId || '').slice(0, 16);
+  /* Ids primaires d'un dépôt — contrat d'idempotence inter-marchands.
+   * `inventory_movements.id` est GLOBALEMENT unique : sans le marchand dans
+   * l'empreinte, deux marchands traitant le même PDF partageraient les ids —
+   * le second INSERT serait ignoré puis faussement acquitté. Ici :
+   * SHA-256(marchand + docId + index). Le `merchant` est celui qui possédera
+   * le mouvement (registre local, même valeur que la synchro enverra) ; le
+   * serveur refuse en plus un id pris par un autre (409 id-conflict).
+   * Les ids comptables (réception/facture) restent doc-scopés : leurs
+   * magasins sont par-marchand, seule la table des mouvements est globale.
+   * Async (SubtleCrypto) ; échoue fermé sans marchand ni crypto. */
+  async function stIntakePostingIds(merchant, docId, lineCount) {
+    const m = String(merchant || '');
+    const d = String(docId || '');
+    if (!m || !d) throw new Error('intake-id-scope-required');
+    const subtle = (window.crypto && window.crypto.subtle) || null;
+    if (!subtle) throw new Error('intake-crypto-required');
+    const enc = new TextEncoder();
     const movementIds = [];
-    for (let i = 0; i < Math.max(0, Math.min(200, lineCount | 0)); i++) movementIds.push('mov-intake-' + short + '-' + i);
+    const n = Math.max(0, Math.min(200, lineCount | 0));
+    for (let i = 0; i < n; i++) {
+      const digest = await subtle.digest('SHA-256', enc.encode(m + '\n' + d + '\n' + i));
+      const hex = Array.from(new Uint8Array(digest)).map((x) => x.toString(16).padStart(2, '0')).join('');
+      movementIds.push('mov-intake-' + hex.slice(0, 20) + '-' + i);
+    }
     return {
-      receiptId: 'grn-intake-' + short,
-      invoiceId: 'invdoc-intake-' + short,
+      receiptId: 'grn-intake-' + d.slice(0, 16),
+      invoiceId: 'invdoc-intake-' + d.slice(0, 16),
       movementIds,
     };
   }

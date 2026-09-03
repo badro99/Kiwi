@@ -39,12 +39,21 @@ async function ensureSchema(env) {
       id TEXT PRIMARY KEY, merchant TEXT NOT NULL, item_id TEXT NOT NULL,
       variant_id TEXT NOT NULL DEFAULT '', location_id TEXT NOT NULL DEFAULT 'principal',
       qty_milli INTEGER NOT NULL, reason TEXT NOT NULL, unit_cost_cents INTEGER,
+      unit_cost_rate INTEGER,
       currency TEXT NOT NULL DEFAULT 'MAD', ref_type TEXT NOT NULL DEFAULT '',
       ref_id TEXT NOT NULL DEFAULT '', note TEXT NOT NULL DEFAULT '', actor TEXT NOT NULL DEFAULT '',
       occurred_ts INTEGER NOT NULL, srv_ts INTEGER NOT NULL, reversal_of TEXT NOT NULL DEFAULT '',
       meta TEXT, created_ts INTEGER NOT NULL
     )`
   ).run();
+  /* Prod D1 lags schema.sql : CREATE TABLE IF NOT EXISTS n'ajoute pas la
+   * colonne aux tables existantes. Le ALTER est donc systématique et
+   * l'erreur « colonne déjà là » est l'état stable attendu, pas une panne. */
+  try {
+    await env.DB.prepare(
+      'ALTER TABLE inventory_movements ADD COLUMN unit_cost_rate INTEGER'
+    ).run();
+  } catch (_) {}
   await env.DB.prepare(
     'CREATE TABLE IF NOT EXISTS inventory_sync_sequences (merchant TEXT PRIMARY KEY, last_ts INTEGER NOT NULL)'
   ).run();
@@ -78,6 +87,10 @@ function sanitize(raw, now) {
     ? Math.round(Number(raw.qtyMilli))
     : Math.round((qty == null ? 0 : qty) * 1000);
   const cost = finite(raw && (raw.unitCost ?? raw.unit_cost));
+  /* Deux écritures du coût, deux lecteurs : `unit_cost_cents` reste pour les
+   * lecteurs historiques, `unit_cost_rate` (×1e-4, entier) porte le TAUX —
+   * à 2 décimales, 0,0045 MAD/g devenait 0 et le coût matière disparaissait. */
+  const unitCostRate = cost != null && cost >= 0 ? Math.round(cost * 10000) : null;
   let meta = null;
   try {
     if (raw && raw.meta && typeof raw.meta === 'object') {
@@ -92,6 +105,7 @@ function sanitize(raw, now) {
     locationId: str(raw && (raw.locationId ?? raw.location_id), 80) || 'principal',
     qtyMilli,
     unitCostCents: cost != null && cost >= 0 ? Math.round(cost * 100) : null,
+    unitCostRate,
     currency: str(raw && raw.currency, 3).toUpperCase() || 'MAD',
     refType: str(raw && (raw.refType ?? raw.ref_type), 32),
     refId: str(raw && (raw.refId ?? raw.ref_id), 100),
@@ -106,6 +120,13 @@ function valid(m) {
   return !!(m.id && m.itemId && REASONS.has(m.reason)
     && Number.isSafeInteger(m.qtyMilli) && m.qtyMilli !== 0
     && Math.abs(m.qtyMilli) <= 1e12);
+}
+
+/* Lecture du coût : le taux ×1e-4 prime ; les lignes historiques (taux NULL)
+ * retombent sur les centimes. Un seul endroit pour les deux projections. */
+function rateOf(r) {
+  if (r.unit_cost_rate != null) return Number(r.unit_cost_rate) / 10000;
+  return r.unit_cost_cents == null ? null : Number(r.unit_cost_cents) / 100;
 }
 
 export async function onRequestGet({ request, env }) {
@@ -155,7 +176,7 @@ export async function onRequestGet({ request, env }) {
   if (refIdFilter) {
     try {
       let query = `SELECT id, item_id, variant_id, location_id, qty_milli, reason,
-                          unit_cost_cents, currency, ref_type, ref_id, note, actor,
+                           unit_cost_cents, unit_cost_rate, currency, ref_type, ref_id, note, actor,
                           occurred_ts, srv_ts, reversal_of, meta
                      FROM inventory_movements
                     WHERE merchant = ? AND ref_id = ?`;
@@ -174,7 +195,7 @@ export async function onRequestGet({ request, env }) {
         return {
           id: r.id, itemId: r.item_id, variantId: r.variant_id, locationId: scope.projectLocation(r.location_id),
           qty: Number(r.qty_milli || 0) / 1000, reason: r.reason,
-          unitCost: r.unit_cost_cents == null ? null : Number(r.unit_cost_cents) / 100,
+          unitCost: rateOf(r),
           currency: r.currency, refType: r.ref_type, refId: r.ref_id, note: r.note,
           actor: r.actor, occurredTs: r.occurred_ts, cursor: r.srv_ts,
           reversalOf: r.reversal_of, meta,
@@ -188,7 +209,7 @@ export async function onRequestGet({ request, env }) {
   try {
     const res = await env.DB.prepare(
       `SELECT id, item_id, variant_id, location_id, qty_milli, reason,
-              unit_cost_cents, currency, ref_type, ref_id, note, actor,
+              unit_cost_cents, unit_cost_rate, currency, ref_type, ref_id, note, actor,
               occurred_ts, srv_ts, reversal_of, meta
          FROM inventory_movements
         WHERE merchant = ? AND srv_ts > ?${locationFilter.clause}
@@ -202,7 +223,7 @@ export async function onRequestGet({ request, env }) {
       return {
         id: r.id, itemId: r.item_id, variantId: r.variant_id, locationId: scope.projectLocation(r.location_id),
         qty: Number(r.qty_milli || 0) / 1000, reason: r.reason,
-        unitCost: r.unit_cost_cents == null ? null : Number(r.unit_cost_cents) / 100,
+        unitCost: rateOf(r),
         currency: r.currency, refType: r.ref_type, refId: r.ref_id, note: r.note,
         actor: r.actor, occurredTs: r.occurred_ts, cursor: r.srv_ts,
         reversalOf: r.reversal_of, meta,
@@ -248,6 +269,18 @@ export async function onRequestPost({ request, env }) {
 
   try { await ensureSchema(env); } catch (_) { return json({ error: 'unmigrated' }, 503); }
 
+  /* L'id est GLOBALEMENT unique (PRIMARY KEY sans merchant) : si un id du
+   * lot appartient déjà à UN AUTRE établissement, l'INSERT OR IGNORE
+   * l'ignorerait silencieusement puis l'acquittement le déclarerait écrit —
+   * une écriture fantôme. On refuse le lot entier AVANT toute écriture. */
+  try {
+    const found = await env.DB.prepare(
+      `SELECT id FROM inventory_movements WHERE id IN (${movements.map(() => '?').join(',')}) AND merchant != ?`
+    ).bind(...movements.map((m) => m.id), merchant).all();
+    const taken = ((found && found.results) || []).map((r) => r.id);
+    if (taken.length) return json({ error: 'id-conflict', ids: taken.slice(0, 20) }, 409);
+  } catch (_) { return json({ error: 'db' }, 503); }
+
   const accepted = [];
   try {
     for (const m of movements) {
@@ -255,12 +288,12 @@ export async function onRequestPost({ request, env }) {
       await env.DB.prepare(
         `INSERT OR IGNORE INTO inventory_movements
           (id, merchant, item_id, variant_id, location_id, qty_milli, reason,
-           unit_cost_cents, currency, ref_type, ref_id, note, actor, occurred_ts,
+           unit_cost_cents, unit_cost_rate, currency, ref_type, ref_id, note, actor, occurred_ts,
            srv_ts, reversal_of, meta, created_ts)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       ).bind(
         m.id, merchant, m.itemId, m.variantId, m.locationId, m.qtyMilli, m.reason,
-        m.unitCostCents, m.currency, m.refType, m.refId, m.note, m.actor,
+        m.unitCostCents, m.unitCostRate, m.currency, m.refType, m.refId, m.note, m.actor,
         m.occurredTs, cursor, m.reversalOf, m.meta, now
       ).run();
       // INSERT OR IGNORE is deliberately idempotent. When another device has

@@ -264,3 +264,25 @@ retry (or a second device) posted again. Corrected at the layer that matters:
   handler `moveStock` loop — two movements per line on every scan confirm
   while procurement is loaded. Fixing it changes live merchants' figures and
   needs a backfill decision, so it stays out of this slice.
+
+## Cross-merchant ids + rate column (review fix, built — same sign-off)
+
+- **Movement ids are merchant-scoped**: `mov-intake-<sha20>-<idx>` with
+  `sha = SHA-256(merchant + docId + idx)`, merchant read from the owning
+  ledger. `inventory_movements.id` is globally unique, so doc-only ids would
+  collide across merchants sharing one supplier PDF. Belt and suspenders:
+  the POST route pre-checks `WHERE id IN (…) AND merchant != ?` and rejects
+  the batch `409 id-conflict` instead of falsely acknowledging an ignored
+  insert. No lock needed — retries and racers converge on identical ids.
+- **Rate survives the server**: `unit_cost_rate INTEGER` (×1e-4) alongside
+  `unit_cost_cents` (kept for old readers); reads prefer the rate, NULL
+  falls back to cents. Migration + `schema.sql` + tolerant `ALTER` in
+  `ensureSchema` (prod lags schema). Verified through the real route:
+  0.0045 stores as rate 45 / cents 0 and reads back 0.0045.
+- **No silent skips**: `stIntakePostAll` throws without an active ledger
+  (`K.add` function) and verifies every `K.add` acceptance; a refusal aborts
+  the confirm (toast, no close, no mark) and the retry converges.
+- **Proven by `tools/intake-posting-test.mjs` (12 checks)**: faults injected
+  after receipt creation and after movement 0, cross-merchant same-PDF
+  (4 server rows, disjoint), forged foreign-id POST → 409, all against the
+  real ledger + real procurement + real intake and movements routes.

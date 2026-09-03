@@ -629,7 +629,8 @@ CREATE TABLE IF NOT EXISTS inventory_movements (
   location_id     TEXT NOT NULL DEFAULT 'principal',
   qty_milli       INTEGER NOT NULL,              -- signé : entrée +, sortie −
   reason          TEXT NOT NULL,                 -- opening|receipt|sale|count|loss|transfer-*|production-*|return
-  unit_cost_cents INTEGER,                       -- coût d'entrée gelé ; NULL si inconnu
+  unit_cost_cents INTEGER,                       -- coût d'entrée gelé ; NULL si inconnu (lecteurs historiques)
+  unit_cost_rate  INTEGER,                       -- TAUX ×1e-4 ; prime sur les centimes (0,0045 MAD/g survivra)
   currency        TEXT NOT NULL DEFAULT 'MAD',
   ref_type        TEXT NOT NULL DEFAULT '',       -- sale|receipt|count|transfer|production|manual
   ref_id          TEXT NOT NULL DEFAULT '',

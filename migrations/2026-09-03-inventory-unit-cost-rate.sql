@@ -1,0 +1,12 @@
+-- Migration: le coût unitaire est un taux — 0,0045 MAD/g devenait 0 centime.
+-- unit_cost_rate porte le taux ×1e-4 ; unit_cost_cents reste écrit pour les
+-- lecteurs historiques, et la lecture préfère le taux (NULL = repli centimes).
+--
+-- NOT idempotent: SQLite has no ADD COLUMN IF NOT EXISTS, so a second run fails
+-- with "duplicate column name: unit_cost_rate". That error is safe to ignore —
+-- it means the column is already there. Check first rather than re-running blind:
+--   SELECT name FROM pragma_table_info('inventory_movements') WHERE name = 'unit_cost_rate';
+--
+-- La route applique elle-même ce ALTER à chaque ensureSchema (erreur ignorée),
+-- donc un déploiement du code seul migre la prod au premier appel.
+ALTER TABLE inventory_movements ADD COLUMN unit_cost_rate INTEGER;

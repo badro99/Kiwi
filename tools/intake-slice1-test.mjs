@@ -353,7 +353,9 @@ await check('confirm path ordered: guard and single-owner core before any stock 
   assert.ok(intakeBranch.includes('stIntakePostAll('), 'intake path posts through the core');
   assert.ok(!intakeBranch.includes('receiveDirect(') && !intakeBranch.includes('moveStock('), 'no direct writes on the intake path: one owner');
   assert.match(stockSrc, /function stIntakePostAll\(ctx\)/, 'single-owner posting core exists');
-  assert.match(stockSrc, /stIntakePostingIds\(docId/, 'core derives deterministic ids');
+  assert.match(stockSrc, /await stIntakePostingIds\(owner, docId/, 'core derives merchant-scoped deterministic ids');
+  assert.match(stockSrc, /intake-ledger-required/, 'posting refuses without an active ledger');
+  assert.match(stockSrc, /intake-movement-rejected/, 'every movement acceptance is verified');
   assert.ok(stockSrc.indexOf('stIntakeMarkOnce(intakeDocId)') > stockSrc.indexOf('stSaveOverlay();\n      // Guichet unique'), 'mark after stock write');
   assert.match(stockSrc, /renderRealReceiptReview\(\{ supplier: null, intakeDocId \}\)/, 'manual fallback preserves doc context');
   assert.match(intakeSrc, /INSERT OR IGNORE INTO intake_docs/, 'commit converges on concurrent inserts');
