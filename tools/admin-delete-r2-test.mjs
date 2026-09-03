@@ -248,8 +248,12 @@ await check('repeated deletion succeeds idempotently with zero deltas', async ()
   assert.ok(!('intake_docs' in (second.body.removed || {})));
 });
 
-await check('missing MEDIA binding refuses instead of orphaning silently', async () => {
+await check('missing MEDIA binding: zero rows proceed explicitly, rows present refuse', async () => {
   const w = makeWorld({ withMedia: false });
+  const okEmpty = await del(w.env, M);
+  assert.equal(okEmpty.status, 200);
+  assert.equal(okEmpty.body.ok, true);
+  assert.equal(okEmpty.body.r2.status, 'binding-missing-no-rows');
   seedIntake(w, M, docId(1), 1000);
   const { status, body } = await del(w.env, M);
   assert.equal(status, 503);

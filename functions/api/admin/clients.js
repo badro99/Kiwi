@@ -387,40 +387,52 @@ export async function onRequestDelete(context) {
    * registre D1 n'est pas touché et la suppression n'est pas annoncée. */
   let r2 = { status: 'skipped', prefix: null, listed: 0, deleted: 0 };
   if (!env.MEDIA) {
-    // Liaison absente : impossible de vérifier le seau. On refuse plutôt que
-    // d'annoncer une suppression dont les pièces survivraient peut-être.
-    return json({ error: 'r2-binding-missing', detail: 'MEDIA is not bound; refusing to delete without verifying R2' }, 503);
-  }
-  if (!/^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(merchant)) {
+    // Liaison absente : on ne peut ni lister ni supprimer. Si le registre ne
+    // connaît AUCUNE pièce pour ce marchand, rien ne peut survivre — on
+    // continue et on le dit explicitement (c'est aussi ce qui garde le flux
+    // opérateur historique ouvert là où R2 n'est pas lié). Sinon, refuser :
+    // des lignes has_object=1 sans seau vérifiable, c'est l'orphelin assuré.
+    let pending = -1;
+    try {
+      const c = await env.DB.prepare('SELECT COUNT(*) AS n FROM intake_docs WHERE merchant = ?').bind(merchant).first();
+      pending = Number((c && c.n) || 0);
+    } catch (_) { pending = 0; } // table absente ⇒ aucun dépôt n'a jamais existé ici
+    if (pending > 0) {
+      return json({ error: 'r2-binding-missing', detail: pending + ' intake row(s) reference objects no bound bucket can verify' }, 503);
+    }
+    r2 = { status: 'binding-missing-no-rows', prefix: null, listed: 0, deleted: 0 };
+  } else if (!/^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(merchant)) {
     // Le préfixe R2 est dérivé du slug : tout caractère hors alphabet
     // (surtout '/' ou '.') pourrait déborder sur un autre marchand.
     return json({ error: 'invalid-merchant' }, 400);
   }
-  try {
-    const prefix = 'intake/' + merchant + '/';
-    r2.prefix = prefix;
-    let cursor;
-    for (;;) {
-      const page = await env.MEDIA.list({ prefix, limit: 1000, ...(cursor ? { cursor } : {}) });
-      const objects = (page && page.objects) || [];
-      for (const o of objects) {
-        const key = o && o.key;
-        if (typeof key !== 'string' || !key.startsWith(prefix)) {
-          return json({ error: 'r2-scope-violation', detail: 'R2 listed a key outside ' + prefix }, 500);
+  if (env.MEDIA) {
+    try {
+      const prefix = 'intake/' + merchant + '/';
+      r2.prefix = prefix;
+      let cursor;
+      for (;;) {
+        const page = await env.MEDIA.list({ prefix, limit: 1000, ...(cursor ? { cursor } : {}) });
+        const objects = (page && page.objects) || [];
+        for (const o of objects) {
+          const key = o && o.key;
+          if (typeof key !== 'string' || !key.startsWith(prefix)) {
+            return json({ error: 'r2-scope-violation', detail: 'R2 listed a key outside ' + prefix }, 500);
+          }
         }
+        r2.listed += objects.length;
+        for (const o of objects) {
+          await env.MEDIA.delete(o.key);
+          r2.deleted += 1;
+        }
+        if (page && page.truncated && page.cursor) cursor = page.cursor;
+        else break;
       }
-      r2.listed += objects.length;
-      for (const o of objects) {
-        await env.MEDIA.delete(o.key);
-        r2.deleted += 1;
-      }
-      if (page && page.truncated && page.cursor) cursor = page.cursor;
-      else break;
+      r2.status = 'cleaned';
+    } catch (e) {
+      r2.status = 'failed';
+      return json({ error: 'r2-cleanup-failed', detail: String((e && e.message) || e), r2 }, 500);
     }
-    r2.status = 'cleaned';
-  } catch (e) {
-    r2.status = 'failed';
-    return json({ error: 'r2-cleanup-failed', detail: String((e && e.message) || e), r2 }, 500);
   }
 
   try {
