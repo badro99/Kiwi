@@ -1069,6 +1069,7 @@ section('Whole-project regressions');
     'menu-scan-test.mjs',
     'intake-slice1-test.mjs',
     'intake-posting-test.mjs',
+    'intake-conflict-test.mjs',
     'menu-translate-test.mjs',
     /* La carte dans la langue de chacun : traductions portées par les
        entités, jamais à la place du libellé du patron ; résolues par toutes
