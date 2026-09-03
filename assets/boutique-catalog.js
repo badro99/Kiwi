@@ -1668,6 +1668,28 @@
     if (patch.size != null || patch.sku != null || patch.note != null || patch.colorId) v.metaAt = now();
     commit(); return v;
   }
+  /* Un nom de couleur personnalisee appartient a la couleur, pas a une taille.
+     Le meme `custom-rrggbb` peut etre porte par S, M, L et par plusieurs
+     produits : les renommer ensemble evite le catalogue contradictoire vu en
+     rayon, sans toucher a l'identite, au stock ni aux codes-barres. */
+  function renameColor(colorId, label) {
+    const id = String(colorId || '');
+    const clean = String(label || '').trim().replace(/\s+/g, ' ').slice(0, 40);
+    if (!/^custom-[0-9a-f]{6}$/i.test(id) || !clean) return 0;
+    const stamp = now();
+    let matched = 0, changed = 0;
+    db.variants.forEach((v) => {
+      if (!v || String(v.colorId) !== id) return;
+      matched++;
+      if (v.colorLabel === clean && v.colorSource === clean) return;
+      v.colorLabel = clean;
+      v.colorSource = clean;
+      v.metaAt = stamp;
+      changed++;
+    });
+    if (changed) commit();
+    return matched;
+  }
   /* TOUT changement de quantité passe par ici et s'horodate. C'est cet
      horodatage, et lui seul, qui permet à la fusion de savoir lequel des deux
      appareils a le compte le plus récent (voir mergeDocs). Une écriture de
@@ -2027,7 +2049,8 @@
     // À l'intérieur du module on ne fait que le lire ; dehors, une copie, pour
     // qu'un appelant qui pousserait dedans ne fasse pas mentir l'index.
     listVariants: (pid) => (load(), variantsOf(pid).slice()), addVariant: (d) => (load(), addVariant(d)),
-    updateVariant: (id, p) => (load(), updateVariant(id, p)), setStock: (id, n) => (load(), setStock(id, n)),
+    updateVariant: (id, p) => (load(), updateVariant(id, p)), renameColor: (id, label) => (load(), renameColor(id, label)),
+    setStock: (id, n) => (load(), setStock(id, n)),
     // Le MOTIF fait partie de l'appel : sans lui, une vente arrive au journal
     // étiquetée « ajust » et le journal cesse d'être lisible.
     adjustStock: (id, d, why, extra) => (load(), adjustStock(id, d, why, extra)), deleteVariant: (id) => (load(), deleteVariant(id)),

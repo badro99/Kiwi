@@ -235,6 +235,12 @@
     const k = KC();
     return (k && k.display ? k.display(v.colorId, v.colorLabel, v.colorHex) : colorOf(v.colorFamily || v.colorId));
   }
+  function variantSource(v) {
+    if (!v || !v.colorSource) return '';
+    const shown = variantColor(v);
+    return String(v.colorSource).trim().toLowerCase() === String(shown.label || '').trim().toLowerCase()
+      ? '' : v.colorSource;
+  }
 
   function productVisual(p) {
     if (p && p.photo) return `<img class="bq-product-photo" src="${esc(p.photo)}" alt="${esc(p.name || 'Produit')}" loading="lazy" />`;
@@ -5241,7 +5247,7 @@
       : `<button class="bqi-mini" data-vgen="${v.id}" title="Générer un EAN-13"><i data-lucide="scan-line"></i></button>`;
     const shown = variantColor(v);
     return `<tr>
-      <td><span class="bqi-cbtn is-locked" aria-disabled="true" title="Modifier dans le tableau de bord">${colorDot(shown)} ${esc(shown.label)}</span>${v.colorSource ? `<em class="bqi-csrc">${esc(v.colorSource)}</em>` : ''} · <b>${esc(v.size)}</b></td>
+      <td><span class="bqi-cbtn is-locked" aria-disabled="true" title="Modifier dans le tableau de bord">${colorDot(shown)} ${esc(shown.label)}</span>${variantSource(v) ? `<em class="bqi-csrc">${esc(variantSource(v))}</em>` : ''} · <b>${esc(v.size)}</b></td>
       <td><span class="bqi-stk-val" style="font-weight:700;padding:4px 8px;border-radius:6px;background:var(--n-100);">${v.stock}</span></td>
       <td>${bc}</td>
       <td class="bqi-vact">${genOrPrint}<button class="bqi-mini" data-vreg="${v.id}" title="Enregistrer un code existant"><i data-lucide="link"></i></button><span class="bqi-mini is-locked danger" aria-disabled="true" title="Supprimer dans le tableau de bord"><i data-lucide="trash-2"></i></span></td>
@@ -5588,7 +5594,7 @@
     // endroit où la couleur reste écrite. Quand deux variantes portent la même
     // famille, la nuance d'origine ou la précision les départage.
     const varOptions = (pid) => cat.listVariants(pid).map((v) => {
-      const extra = v.note || v.colorSource || '';
+      const extra = v.note || variantSource(v) || '';
       return `<option value="${v.id}">${esc(v.colorLabel)}${extra ? ` (${esc(extra)})` : ''} · ${esc(v.size)}</option>`;
     }).join('');
     const html = `
@@ -6339,7 +6345,7 @@
     const cat = catDB(); const p = cat.getProduct(pid).product;
     const code = cat.primaryBarcode(v);
     if (!code) return null;
-    const extra = v.note || v.colorSource || '';
+    const extra = v.note || variantSource(v) || '';
     const pr = promoFor(pid);
     return {
       title: p.name, sub: `${v.colorLabel}${extra ? ` (${extra})` : ''} · ${v.size}`,

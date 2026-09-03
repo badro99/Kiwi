@@ -9840,7 +9840,13 @@ function _bqxShownColor(v) {
 }
 /* Ce qui distingue deux variantes tombant dans la même famille : la précision
    saisie par le commerçant, sinon la nuance d'origine. */
-function _bqxVarNote(v) { return (v && (v.note || v.colorSource)) || ''; }
+function _bqxColorSource(v) {
+  if (!v || !v.colorSource) return '';
+  const shown = _bqxShownColor(v);
+  return String(v.colorSource).trim().toLowerCase() === String(shown.label || '').trim().toLowerCase()
+    ? '' : v.colorSource;
+}
+function _bqxVarNote(v) { return (v && (v.note || _bqxColorSource(v))) || ''; }
 function _catOptions(sel, includeNone) {
   const none = includeNone ? `<option value="">·Sans catégorie</option>` : '';
   return none + CAT().listCategories().map((c) => `<option value="${c.id}" ${c.id === sel ? 'selected' : ''}>${_esc(c.name)}</option>`).join('');
@@ -10486,26 +10492,51 @@ handlers['bqx-var-color'] = (_el, arg) => {
   const v = (CAT().listVariants(_bqxDrawerPid) || []).find((x) => x.id === arg);
   if (!v) return;
   const data = CAT().getProduct(_bqxDrawerPid);
+  const custom = /^custom-[0-9a-f]{6}$/i.test(String(v.colorId || ''));
   _bqxModal = modal({
     title: 'Couleur de la variante', tag: `TAILLE ${_esc(v.size)}`,
-    desc: data ? `${data.product.name}${v.colorSource ? ` · saisie à l'origine « ${v.colorSource} »` : ''}` : '',
+    desc: data ? `${data.product.name}${_bqxColorSource(v) ? ` · saisie à l'origine « ${_bqxColorSource(v)} »` : ''}` : '',
     width: 460,
     body: `
       <div class="kf-group"><label class="kf-label">Couleur</label>${_colorPicker(/^custom-/i.test(v.colorId || '') ? { id: v.colorId, label: v.colorLabel, hex: v.colorHex, custom: true } : _bqxFam(v))}</div>
+      <div class="kf-group" data-bqx-vcname-wrap ${custom ? '' : 'hidden'}><label class="kf-label">Nom affiché</label>
+        <input class="kf-input" maxlength="40" value="${custom ? _esc(v.colorLabel || '') : ''}" data-bqx-vcname placeholder="Ex. Bleu clair" />
+        <div class="kf-help">Ce nom sera appliqué à toutes les tailles qui utilisent exactement cette couleur.</div></div>
       <div class="kf-group"><label class="kf-label">Précision (facultatif)</label>
         <input class="kf-input" maxlength="60" value="${_esc(v.note || '')}" data-bqx-vcnote placeholder="Ex. rayé, délavé, motif" />
         <div class="kf-help">Sert à distinguer deux variantes de même couleur. Le sélecteur, lui, reste simple.</div></div>`,
     foot: `<button class="kb ghost" data-dismiss>Annuler</button><button class="kb atlas" data-action="bqx-var-color-save" data-arg="${arg}">Enregistrer</button>`,
   });
+  const b = document.querySelector('.kiwi-backdrop');
+  const picker = b && b.querySelector('[data-kc-picker]');
+  const nameWrap = b && b.querySelector('[data-bqx-vcname-wrap]');
+  const nameInput = b && b.querySelector('[data-bqx-vcname]');
+  const syncName = () => {
+    const color = window.KiwiColors && window.KiwiColors.selection(b);
+    const isCustom = !!(color && color.custom);
+    if (nameWrap) nameWrap.hidden = !isCustom;
+    if (!isCustom || !nameInput || nameInput.dataset.colorId === color.id) return;
+    nameInput.value = /^Couleur personnalisée\s+#[0-9a-f]{6}$/i.test(String(color.label || '')) ? '' : (color.label || '');
+    nameInput.dataset.colorId = color.id;
+  };
+  if (nameInput && custom) nameInput.dataset.colorId = v.colorId;
+  if (picker) picker.addEventListener('kc:change', syncName);
+  syncName();
 };
 handlers['bqx-var-color-save'] = (_el, arg) => {
   const b = document.querySelector('.kiwi-backdrop');
   if (!b) return;
-  const color = window.KiwiColors && window.KiwiColors.selection(b);
+  let color = window.KiwiColors && window.KiwiColors.selection(b);
+  const name = String((b.querySelector('[data-bqx-vcname]') || {}).value || '').trim().replace(/\s+/g, ' ').slice(0, 40);
+  if (color && color.custom && name) color = Object.assign({}, color, { label: name });
   const note = (b.querySelector('[data-bqx-vcnote]') || {}).value || '';
-  CAT().updateVariant(arg, { colorId: color ? color.id : undefined, colorLabel: color && color.label, colorHex: color && color.hex, note: note.trim() });
+  let renamed = 0;
+  CAT().batch(() => {
+    CAT().updateVariant(arg, { colorId: color ? color.id : undefined, colorLabel: color && color.label, colorHex: color && color.hex, note: note.trim() });
+    if (color && color.custom && name) renamed = CAT().renameColor(color.id, name);
+  });
   if (_bqxModal) _bqxModal.close();
-  toast('Couleur mise à jour', { type: 'success', duration: 2000 });
+  toast('Couleur mise à jour', { desc: renamed > 1 ? `Nom appliqué à ${renamed} variantes.` : '', type: 'success', duration: 2000 });
 };
 
 /* Order Pro is a paid add-on and a PUBLIC surface — its entry point only exists

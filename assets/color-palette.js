@@ -277,10 +277,13 @@
       .kc-tag { display: inline-flex; align-items: center; gap: 6px; }
       .kc-tag-src { font-size: 11px; color: var(--n-500, #77807b); }
       .kc-more { display:inline-flex; align-items:center; justify-content:center; font-size:21px; line-height:1; background:var(--paper,#fff); color:var(--atlas,#0B6E4F); }
-      .kc-custom-pop { position:absolute; z-index:8; margin-top:8px; padding:12px; border:1px solid var(--line,#ddd); border-radius:12px; background:var(--paper,#fff); box-shadow:0 12px 30px rgba(10,15,13,.18); display:flex; align-items:center; gap:10px; }
+      .kc-custom-wrap { position:relative; }
+      .kc-custom-pop { position:absolute; z-index:8; inset-inline-end:0; width:min(430px,calc(100vw - 40px)); margin-top:8px; padding:12px; border:1px solid var(--line,#ddd); border-radius:12px; background:var(--paper,#fff); box-shadow:0 12px 30px rgba(10,15,13,.18); display:flex; flex-wrap:wrap; align-items:center; gap:10px; }
       .kc-custom-pop[hidden] { display:none; }
       .kc-custom-pop input[type="color"] { width:54px; height:42px; padding:2px; border:1px solid var(--line,#ddd); border-radius:9px; background:transparent; cursor:pointer; }
-      .kc-custom-pop input[type="text"] { width:92px; padding:9px; border:1px solid var(--line,#ddd); border-radius:9px; font:12px var(--mono,monospace); text-transform:uppercase; }
+      .kc-custom-pop input[type="text"] { min-height:42px; padding:9px; border:1px solid var(--line,#ddd); border-radius:9px; background:var(--paper,#fff); color:var(--ink,#0A0F0D); }
+      .kc-custom-pop input[data-kc-hex-input] { width:92px; font:12px var(--mono,monospace); text-transform:uppercase; }
+      .kc-custom-pop input[data-kc-name-input] { flex:1 1 150px; min-width:150px; font:13px var(--sans,system-ui); }
       .kc-custom-pop button { padding:9px 11px; border:0; border-radius:9px; background:var(--atlas,#0B6E4F); color:#fff; cursor:pointer; }
       @media (max-width: 720px) { .kc-sw { width: 36px; height: 36px; } .kc-sw.kc-sm { width: 16px; height: 16px; } }
       @media (prefers-reduced-motion: reduce) { .kc-sw { transition: none; } button.kc-sw:hover { transform: none; } }
@@ -339,7 +342,9 @@
       const a = swAttrs(customSelected, size);
       return `<button type="button" class="${a.cls}" style="${a.style}" data-kc-color="${esc(customSelected.id)}" data-kc-hex="${esc(customSelected.hex)}" value="${esc(customSelected.id)}" role="radio" aria-checked="true" tabindex="0" title="${esc(customSelected.label)}" aria-label="${esc(customSelected.label)}"></button>`;
     })() : '';
-    const more = opts.custom ? `<span class="kc-custom-wrap"><button type="button" class="kc-sw kc-more" data-kc-more aria-label="Choisir une couleur personnalisée" title="Plus de couleurs">+</button><span class="kc-custom-pop" data-kc-pop hidden><input type="color" value="${customSelected ? esc(customSelected.hex) : '#4A67D6'}" data-kc-native aria-label="Sélecteur de couleur"><input type="text" value="${customSelected ? esc(customSelected.hex) : '#4A67D6'}" data-kc-hex-input maxlength="7" aria-label="Code hexadécimal"><button type="button" data-kc-apply>Choisir</button></span></span>` : '';
+    const customName = customSelected && !/^Couleur personnalisée\s+#[0-9a-f]{6}$/i.test(String(customSelected.label || ''))
+      ? customSelected.label : '';
+    const more = opts.custom ? `<span class="kc-custom-wrap"><button type="button" class="kc-sw kc-more" data-kc-more aria-label="Choisir une couleur personnalisée" title="Plus de couleurs">+</button><span class="kc-custom-pop" data-kc-pop hidden><input type="color" value="${customSelected ? esc(customSelected.hex) : '#4A67D6'}" data-kc-native aria-label="Sélecteur de couleur"><input type="text" value="${customSelected ? esc(customSelected.hex) : '#4A67D6'}" data-kc-hex-input maxlength="7" aria-label="Code hexadécimal"><input type="text" value="${esc(customName)}" data-kc-name-input maxlength="40" placeholder="Nom, ex. Bleu clair" aria-label="Nom affiché de la couleur"><button type="button" data-kc-apply>Choisir</button></span></span>` : '';
     const cap = opts.caption === false ? ''
       : `<div class="kc-cap" data-kc-cap data-kc-empty="${esc(opts.hint || 'Survolez une pastille pour lire son nom')}">`
         + `${sel ? esc(BY_ID[sel] ? BY_ID[sel].label : '') : ''}</div>`;
@@ -400,19 +405,26 @@
         const pop = apply.closest('[data-kc-pop]');
         const box = apply.closest('[data-kc-picker]');
         const input = pop && pop.querySelector('[data-kc-hex-input]');
+        const nameInput = pop && pop.querySelector('[data-kc-name-input]');
         const raw = input && input.value.trim();
         if (!box || !/^#[0-9a-f]{6}$/i.test(raw || '')) return;
         const hex = raw.toUpperCase();
         const id = `custom-${hex.slice(1).toLowerCase()}`;
+        const label = String(nameInput && nameInput.value || '').trim().replace(/\s+/g, ' ').slice(0, 40)
+          || `Couleur personnalisée ${hex}`;
         let b = box.querySelector(`[data-kc-color="${id}"]`);
         if (!b) {
-          const f = display(id, `Couleur personnalisée ${hex}`, hex);
+          const f = display(id, label, hex);
           const a = swAttrs(f, 'md');
           b = document.createElement('button');
           b.type = 'button'; b.className = a.cls; b.style.cssText = a.style;
           b.setAttribute('data-kc-color', id); b.setAttribute('data-kc-hex', hex);
           b.setAttribute('role', 'radio'); b.setAttribute('title', f.label); b.setAttribute('aria-label', f.label);
           box.querySelector('.kc-custom-wrap').before(b);
+        } else {
+          b.setAttribute('data-kc-hex', hex);
+          b.setAttribute('title', label);
+          b.setAttribute('aria-label', label);
         }
         select(box, id); pop.hidden = true;
         box.dispatchEvent(new CustomEvent('kc:change', { bubbles: true, detail: { value: id, name: box.getAttribute('data-kc-picker') } }));

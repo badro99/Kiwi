@@ -200,8 +200,8 @@ var SHELL = [
   '/assets/escpos.js?v=7',
   '/assets/printer-bridge.js?v=8',
   '/assets/barcode.js?v=1',
-  '/assets/color-palette.js?v=1',
-  '/assets/boutique-catalog.js?v=6',
+  '/assets/color-palette.js?v=2',
+  '/assets/boutique-catalog.js?v=7',
   '/assets/store-templates.js?v=2',
   /* Les promotions. Dans la coquille avec le catalogue : hors ligne, une caisse
      qui a perdu ses promotions vend au prix plein pendant que la vitrine
@@ -270,8 +270,8 @@ var SHELL = [
   /* La boutique est chargée après le code employé. La garder dans la coquille
      versionnée évite qu'une ancienne mise en page reste centrée/coupée après
      une mise à jour de la caisse. */
-  '/assets/pos-boutique.css?v=16',
-  '/assets/pos-boutique.js?v=16',
+  '/assets/pos-boutique.css?v=17',
+  '/assets/pos-boutique.js?v=17',
   /* pos-dispatch lazy-loads these verticals only after a PIN is entered. If
      they are not pre-cached, an installed till that loses Wi-Fi before a
      particular métier has ever been opened cannot unlock that métier at all. */
