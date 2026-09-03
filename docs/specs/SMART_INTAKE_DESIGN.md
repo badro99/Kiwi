@@ -234,3 +234,33 @@ A safety review of the slice found seven truthfulness gaps; all fixed:
 7. **Suite at 22 checks**, including live route execution on in-memory D1/R2
    doubles (happy path, hash mismatch, concurrent commit, R2-down, sealed
    re-upload) and executed client guard/outbox tests.
+
+## Write-layer idempotency (review fix, built — same sign-off, no scope change)
+
+The client guard was advisory: the write layer still minted fresh ids, so a
+retry (or a second device) posted again. Corrected at the layer that matters:
+
+- **Deterministic primary keys everywhere**: receipt `grn-intake-<doc16>`,
+  invoice `invdoc-intake-<doc16>`, movements `mov-intake-<doc16>-<idx>`,
+  supplier `sup-intake-<hash(name)>`, overlay cards `supc-intake-<hash>`.
+- **One owner on the intake path**: `stIntakePostAll` (stock.js) writes the
+  procurement receipt (upsert), the movements with full meta incl. DLC
+  (ledger dedups on id), checkbox-gated costs, and the invoice (upsert).
+  Neither `receiveDirect`'s movement loop nor the handler's `moveStock` loop
+  runs there. Procurement gained additive-only options (`receiptId`,
+  `invoiceId`, `input.id`, `skipMovements`, `skipCosts`) plus upsert reads;
+  legacy callers are byte-identical in behavior.
+- **No lock, by design**: with every write convergent (local dedup on id +
+  server `INSERT OR IGNORE` on movement id), two devices racing `received`
+  converge instead of excluding — a lease without an owner would only add
+  stuck-`posting` states. The guard stays as a cheap early exit.
+- **Rate preserved**: procurement `cleanLine` keeps 4dp like the ledger.
+- **Proven by `tools/intake-posting-test.mjs` (9 checks)** on the real
+  ledger + real procurement + real route: two devices concurrently, retry
+  after kill-before-`postedAdd`, kill-mid-writes — exactly one receipt, one
+  invoice, one movement per line, stock incremented once, saffron at 0.0045.
+- **Discovered live issue (NOT fixed, owner decision needed)**: the legacy
+  (non-flag) scan path calls `receiveDirect` (which posts movements) AND the
+  handler `moveStock` loop — two movements per line on every scan confirm
+  while procurement is loaded. Fixing it changes live merchants' figures and
+  needs a backfill decision, so it stays out of this slice.

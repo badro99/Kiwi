@@ -1449,11 +1449,16 @@
         const locationId = meta && meta.locationId ? meta.locationId : stockLocationId();
         const movementMeta = Object.assign({}, meta || {}, { unitId: (meta && meta.unitId) || stockUnitId() });
         delete movementMeta.locationId;
-        return L.add({
+        /* movementId explicite ⇒ le registre déduplique sur l'id (rejouer le
+         * même dépôt est un no-op). Absent ⇒ comportement historique (UUID). */
+        const payload = {
           itemId: it.id, locationId, qty, reason, refType: refType || 'manual', refId: refId || '',
           note: note || '', unitCost: unitCost == null ? (+it.costPerUnit || null) : unitCost,
           meta: movementMeta,
-        });
+        };
+        if (movementMeta.movementId) payload.id = movementMeta.movementId;
+        delete movementMeta.movementId;
+        return L.add(payload);
       }
     } catch (_) {}
     stStockOverrides[it.id] = currentStockFor(it) + qty;
@@ -3829,6 +3834,132 @@
    * pdf.js AVANT tout upload et tout appel modèle (sign-off : pré-filtre
    * exigé avant expédition) ; l'empreinte SHA-256 est l'identifiant du
    * document (re-dépôt = même id, jamais de doublon silencieux). */
+
+  /* Entretien des cartes fournisseur d'un article (surcouche locale).
+   * Convergent : retrouver une carte existante par nom, sinon créer avec un
+   * id fourni (déterministe sur le chemin guichet) ou historique sinon.
+   * Ne poste JAMAIS de mouvement — le propriétaire des mouvements est
+   * l'appelant. Extraite du flux de confirmation, comportement identique. */
+  function stUpsertSupplierCard(it, supplier, line, forcedId) {
+    let supRank = 1;
+    let supId = forcedId || ('sup-' + Date.now().toString(36));
+    if (!stShowReal()) return { supId, supRank };
+    const ov = stItemOverrides[it.id] || {};
+    const cards = Array.isArray(it.suppliers) ? it.suppliers.slice() : [];
+    let existing = cards.find((s) => String(s.supplierName || '').trim().toLowerCase() === String(supplier).toLowerCase());
+
+    if (!existing) {
+      supRank = cards.length + 1;
+      existing = {
+        id: supId,
+        supplierName: supplier,
+        defaultPrice: line.cost || +it.costPerUnit || 0,
+        purchaseUnit: it.unit || 'unité',
+        factor: 1,
+        rank: supRank,
+      };
+      if (line.updateCost) {
+        cards.push(existing);
+      }
+    } else {
+      supId = existing.id;
+      supRank = existing.rank || 1;
+      // MISE À JOUR DE defaultPrice SEULEMENT SI LA CASE EST COCHÉE
+      if (line.updateCost && line.cost > 0) {
+        const factor = (Number.isFinite(+existing.factor) && +existing.factor > 0) ? +existing.factor : 1;
+        existing.defaultPrice = Math.round((line.cost / factor) * 100) / 100;
+      }
+    }
+    if (cards.length > 0) {
+      ov.suppliers = cards;
+      ov.updatedAt = Date.now();
+      stItemOverrides[it.id] = ov;
+    }
+    return { supId, supRank };
+  }
+
+  /* ── Guichet unique : le SEUL propriétaire des écritures d'un dépôt ──────
+   * Reçoit des données pures (aucun DOM), écrit : ligne comptable
+   * (upsert déterministe), mouvements (ids déterministes, registre
+   * déduplique), coûts (cases à cocher), facture (upsert déterministe).
+   * Chaque couche converge : rejouer après N'IMPORTE QUELLE interruption
+   * (y compris entre deux lignes) produit exactement le même état.
+   * Dépend uniquement de window.* — exécutable en test sur le vrai code. */
+  async function stIntakePostAll(ctx) {
+    const P = window.KiwiProcurement || null;
+    const K = window.KiwiInventory || null;
+    const C = window.KiwiCost || null;
+    const docId = String((ctx && ctx.docId) || '');
+    if (!docId) throw new Error('intake-doc-required');
+    const ids = stIntakePostingIds(docId, (ctx.lines || []).length);
+    const supplierName = String(ctx.supplierName || '');
+    const externalRef = String(ctx.externalRef || '');
+    const receivedAt = +ctx.receivedAt || Date.now();
+    const issuedAt = +ctx.issuedAt || receivedAt;
+
+    let supplierId = '';
+    if (P) {
+      const list = (P.doc && P.doc().suppliers) || [];
+      const norm = supplierName.trim().toLowerCase();
+      const known = list.find((s) => String((s && s.name) || '').trim().toLowerCase() === norm);
+      if (known) supplierId = known.id;
+      else if (norm) {
+        const created = P.addSupplier({ id: stIntakeSupplierId(supplierName), name: supplierName });
+        supplierId = (created && created.id) || '';
+      }
+    }
+
+    const cleanLines = (ctx.lines || []).map((l) => ({
+      itemId: String(l.itemId || ''),
+      name: String(l.name || l.itemId || ''),
+      qty: Math.max(0, +(l.qty || 0)),
+      unit: String(l.unit || 'unité'),
+      unitCost: Math.max(0, +(l.unitCost || 0)),
+    })).filter((l) => l.itemId && l.qty > 0);
+    if (!cleanLines.length) throw new Error('intake-lines-required');
+
+    let receipt = null;
+    if (P && P.receiveDirect) {
+      receipt = P.receiveDirect({
+        receiptId: ids.receiptId, supplierId, externalRef, receivedAt,
+        lines: cleanLines, skipMovements: true, skipCosts: true,
+      });
+      if (!receipt || receipt.error) throw new Error((receipt && receipt.error) || 'receipt-failed');
+    }
+
+    ctx.lines.forEach((l, idx) => {
+      if (!l.itemId || !(+l.qty > 0)) return;
+      if (K && K.add) {
+        K.add({
+          id: ids.movementIds[idx],
+          itemId: l.itemId, qty: +l.qty, reason: 'receipt',
+          refType: 'receipt', refId: receipt ? receipt.id : ids.receiptId,
+          note: [supplierName, externalRef].filter(Boolean).join(' · '),
+          unitCost: l.unitCost, occurredTs: receivedAt,
+          meta: {
+            supplierId: l.cardSupplierId || supplierId,
+            supplierName, externalRef, receiptRef: ids.receiptId,
+            receivedAt, rank: l.cardRank || 1,
+            expiresAt: l.dlc ? new Date(l.dlc + 'T23:59:59').getTime() : null,
+          },
+        });
+      }
+      if (l.updateCost && +l.unitCost > 0 && C && C.setItemCost) {
+        try { C.setItemCost(l.itemId, +l.unitCost, supplierName); } catch (_) {}
+      }
+    });
+
+    let invoice = null;
+    if (P && P.attachInvoice) {
+      const inv = P.attachInvoice({
+        invoiceId: ids.invoiceId, supplierId, number: externalRef,
+        issuedAt, receiptId: receipt ? receipt.id : ids.receiptId,
+        lines: cleanLines, source: String(ctx.source || 'pdf'),
+      });
+      if (inv && !inv.error) invoice = inv;
+    }
+    return { receiptId: receipt ? receipt.id : ids.receiptId, invoiceId: invoice ? invoice.id : null, movementIds: ids.movementIds };
+  }
   function stIntakeEnabled() {
     try {
       if (new URLSearchParams(window.location.search).get('intake') === '1') return true;
@@ -3837,6 +3968,32 @@
   }
   function stIntakeIdHint(text) {
     return /passeport|passport|carte\s+(nationale|d['’]identit)|c\.?\s*n\.?\s*i\.?\s*e\.?\b|\bcin\b|fiche\s+de\s+police|acte\s+de\s+naissance|جواز\s*السفر|بطاقة\s*(التعريف|الوطنية)| الحالة\s*المدنية/i.test(String(text || ''));
+  }
+  /* FNV-1a 32 bits → hex : empreinte courte stable pour dériver des ids
+   * déterministes (ce n'est PAS un identifiant de sécurité, cf. SHA-256
+   * côté registre). Pure, testée. */
+  function stIntakeHash(str) {
+    let h = 2166136261;
+    const s = String(str || '');
+    for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return (h >>> 0).toString(16).padStart(8, '0');
+  }
+  /* Tous les ids primaires d'un dépôt, dérivés du docId : rejouer le même
+   * document produit les mêmes ids, et chaque couche déduplique sur l'id
+   * (registre, lignes comptables, registre des mouvements côté serveur).
+   * Pur, testé. */
+  function stIntakePostingIds(docId, lineCount) {
+    const short = String(docId || '').slice(0, 16);
+    const movementIds = [];
+    for (let i = 0; i < Math.max(0, Math.min(200, lineCount | 0)); i++) movementIds.push('mov-intake-' + short + '-' + i);
+    return {
+      receiptId: 'grn-intake-' + short,
+      invoiceId: 'invdoc-intake-' + short,
+      movementIds,
+    };
+  }
+  function stIntakeSupplierId(name) {
+    return 'sup-intake-' + stIntakeHash(String(name || '').trim().toLowerCase());
   }
   async function stSha256Hex(buffer) {
     const digest = await window.crypto.subtle.digest('SHA-256', buffer);
@@ -4477,11 +4634,48 @@
         }
       }
 
-      // Clé d'écriture déterministe : le même document produit toujours la
-      // même référence (traçabilité des doublons, pas d'id aléatoire).
-      const receiptRef = intakeDocId ? 'receipt-' + intakeDocId.slice(0, 16) : 'receipt-' + Date.now().toString(36);
+      // Chemin historique (hors guichet) : référence aléatoire, inchangé.
+      const receiptRef = 'receipt-' + Date.now().toString(36);
       const receivedAt = date ? new Date(`${date}T12:00:00`).getTime() : Date.now();
       const inv = getInv();
+
+      if (intakeDocId) {
+        // Guichet unique : UN SEUL propriétaire des écritures (stIntakePostAll
+        // : ligne comptable + mouvements + coûts + facture, tout déterministe
+        // et rejouable après n'importe quelle interruption). Ni receiveDirect
+        // ni moveStock ne sont appelés sur ce chemin.
+        const ctxLines = lines.map((line) => {
+          const it = inv.find((x) => x.id === line.itemId);
+          let cardSupplierId = '';
+          let cardRank = 1;
+          if (it) {
+            const card = stUpsertSupplierCard(it, supplier, line,
+              'supc-intake-' + stIntakeHash(it.id + '|' + String(supplier).toLowerCase()));
+            cardSupplierId = card.supId;
+            cardRank = card.supRank;
+          }
+          return {
+            itemId: line.itemId,
+            name: it?.name || line.itemId,
+            qty: line.qty,
+            unit: it?.unit || 'unité',
+            unitCost: line.cost,
+            updateCost: line.updateCost,
+            dlc: line.dlc || '',
+            cardSupplierId, cardRank,
+          };
+        }).filter((l) => l.itemId && l.qty > 0);
+        try {
+          await stIntakePostAll({
+            docId: intakeDocId, supplierName: supplier, externalRef, receivedAt,
+            issuedAt: date ? new Date(`${date}T12:00:00`).getTime() : receivedAt,
+            source: 'pdf', lines: ctxLines,
+          });
+        } catch (_) {
+          window.Kiwi.toast?.(t('mScanFailFallback'), { type: 'warn' });
+          return; // ni postedAdd, ni marquage, ni fermeture : la reprise converge.
+        }
+      } else {
 
       const receivingLines = lines.map((line) => {
         const it = inv.find((x) => x.id === line.itemId);
@@ -4517,47 +4711,15 @@
         }
       }
 
+      // (le else se referme après la boucle : receivingLines + procurement +
+      //  moveStock forment le chemin historique unique)
+
       // Toujours enregistrer les mouvements dans KiwiInventory / moveStock et MAJ conditionnelle des cartes fournisseur
       lines.forEach((line) => {
         const it = inv.find((x) => x.id === line.itemId);
         if (!it) return;
 
-        let supRank = 1;
-        let supId = 'sup-' + Date.now().toString(36);
-
-        if (stShowReal()) {
-          const ov = stItemOverrides[it.id] || {};
-          const cards = Array.isArray(it.suppliers) ? it.suppliers.slice() : [];
-          let existing = cards.find((s) => String(s.supplierName || '').trim().toLowerCase() === supplier.toLowerCase());
-
-          if (!existing) {
-            supRank = cards.length + 1;
-            existing = {
-              id: supId,
-              supplierName: supplier,
-              defaultPrice: line.cost || +it.costPerUnit || 0,
-              purchaseUnit: it.unit || 'unité',
-              factor: 1,
-              rank: supRank,
-            };
-            if (line.updateCost) {
-              cards.push(existing);
-            }
-          } else {
-            supId = existing.id;
-            supRank = existing.rank || 1;
-            // MISE À JOUR DE defaultPrice SEULEMENT SI LA CASE EST COCHÉE
-            if (line.updateCost && line.cost > 0) {
-              const factor = (Number.isFinite(+existing.factor) && +existing.factor > 0) ? +existing.factor : 1;
-              existing.defaultPrice = Math.round((line.cost / factor) * 100) / 100;
-            }
-          }
-          if (cards.length > 0) {
-            ov.suppliers = cards;
-            ov.updatedAt = Date.now();
-            stItemOverrides[it.id] = ov;
-          }
-        }
+        const { supId, supRank } = stUpsertSupplierCard(it, supplier, line);
 
         // moveStock enregistre TOUJOURS le coût réel facturé pour l'historique d'achat
         moveStock(it, line.qty, 'receipt', 'receipt', receiptRef,
@@ -4575,6 +4737,7 @@
           window.KiwiCost.setItemCost(it.id, line.cost, supplier);
         }
       });
+      } // fin chemin historique (receiveDirect + moveStock, inchangé)
 
       stSaveOverlay();
       // Guichet unique : le stock est écrit, on scelle le brouillon. Si le

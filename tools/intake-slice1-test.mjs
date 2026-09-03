@@ -343,12 +343,17 @@ await check('outbox and posted-set round-trip per merchant namespace', () => {
   assert.equal(clientScope(win2, 'stIntakeMerchant', 'stIntakePostedKey', 'stIntakePostedHas').stIntakePostedHas('abc'), false);
 });
 
-await check('confirm path ordered: guard and deterministic ref before any stock write', () => {
-  const confirmZone = stockSrc.slice(stockSrc.indexOf("data-stock-scan-confirm']") + 40, stockSrc.indexOf('stSaveOverlay();\n      // Guichet unique'));
+await check('confirm path ordered: guard and single-owner core before any stock write', () => {
+  const confirmZone = stockSrc.slice(stockSrc.indexOf("querySelector('[data-stock-scan-confirm]')"), stockSrc.indexOf('stSaveOverlay();\n      // Guichet unique'));
+  assert.ok(confirmZone.indexOf('stIntakePostGuard(') > 0, 'guard present on the confirm path');
   assert.ok(confirmZone.includes('stIntakePostGuard('), 'guard consulted on confirm');
   assert.ok(confirmZone.includes('stIntakeServerStatus('), 'server status consulted on confirm');
-  assert.ok(confirmZone.indexOf('stIntakePostGuard(') < confirmZone.indexOf('receiptRef'), 'guard before posting key');
-  assert.match(stockSrc, /receipt-' \+ intakeDocId\.slice\(0, 16\)/, 'posting key derived from docId');
+  assert.ok(confirmZone.indexOf('stIntakePostGuard(') < confirmZone.indexOf('stIntakePostAll('), 'guard before posting core');
+  const intakeBranch = confirmZone.slice(confirmZone.indexOf('if (intakeDocId) {'), confirmZone.indexOf('} else {'));
+  assert.ok(intakeBranch.includes('stIntakePostAll('), 'intake path posts through the core');
+  assert.ok(!intakeBranch.includes('receiveDirect(') && !intakeBranch.includes('moveStock('), 'no direct writes on the intake path: one owner');
+  assert.match(stockSrc, /function stIntakePostAll\(ctx\)/, 'single-owner posting core exists');
+  assert.match(stockSrc, /stIntakePostingIds\(docId/, 'core derives deterministic ids');
   assert.ok(stockSrc.indexOf('stIntakeMarkOnce(intakeDocId)') > stockSrc.indexOf('stSaveOverlay();\n      // Guichet unique'), 'mark after stock write');
   assert.match(stockSrc, /renderRealReceiptReview\(\{ supplier: null, intakeDocId \}\)/, 'manual fallback preserves doc context');
   assert.match(intakeSrc, /INSERT OR IGNORE INTO intake_docs/, 'commit converges on concurrent inserts');

@@ -760,8 +760,8 @@
     "sha": "8c1101b4ca58f8ee"
   },
   "assets/procurement.js": {
-    "v": "1",
-    "sha": "67eeb113f6fb6ca8"
+    "v": "2",
+    "sha": "f0fe3e749b82f556"
   },
   "assets/production-action-guard.js": {
     "v": "1",
@@ -840,8 +840,8 @@
     "sha": "d49ee85d276e22d4"
   },
   "assets/stock.js": {
-    "v": "38",
-    "sha": "bd78457a1fb19607"
+    "v": "39",
+    "sha": "38e20b1b1993c87f"
   },
   "assets/store-templates.js": {
     "v": "2",
