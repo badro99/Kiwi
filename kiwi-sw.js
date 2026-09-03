@@ -200,7 +200,7 @@ var SHELL = [
   '/assets/escpos.js?v=7',
   '/assets/printer-bridge.js?v=8',
   '/assets/barcode.js?v=1',
-  '/assets/color-palette.js?v=2',
+  '/assets/color-palette.js?v=3',
   '/assets/boutique-catalog.js?v=7',
   '/assets/store-templates.js?v=2',
   /* Les promotions. Dans la coquille avec le catalogue : hors ligne, une caisse

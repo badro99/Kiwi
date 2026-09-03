@@ -40,6 +40,7 @@ assert.deepEqual(colors.display('custom-12abef'), {
 assert.match(colors.picker('test', 'noir', { custom: true }), /data-kc-more/, 'picker exposes the plus button');
 assert.match(colors.picker('test', 'noir', { custom: true }), /data-kc-name-input/, 'custom picker lets the merchant name the colour');
 assert.match(colors.picker('test', { id: 'custom-12abef', label: 'Bleu client', hex: '#12ABEF', custom: true }, { custom: true }), /background-color:#12ABEF/, 'picker restores an existing custom selection');
+assert.match(fs.readFileSync(path.join(ROOT, 'assets/color-palette.js'), 'utf8'), /label, hex, custom: true/, 'custom picker reports its edited name to the host form');
 
 const C = window.KiwiBoutiqueCatalog;
 C.use('custom-colour-test');
@@ -78,5 +79,8 @@ assert.match(pages, /k\.display\(v\.colorId, v\.colorLabel, v\.colorHex\)/, 'das
 assert.match(pages, /function _bqxColorSource\(v\)/, 'dashboard suppresses a duplicate custom colour subtitle');
 assert.match(pages, /data-bqx-vcname/, 'dashboard exposes the custom colour name field');
 assert.match(pages, /CAT\(\)\.renameColor\(color\.id, name\)/, 'dashboard applies a renamed colour to every matching variant');
+assert.match(pages, /data-bqx-vselected/, 'colour editor exposes a live selected-colour summary');
+assert.match(pages, /Le stock, la taille et les codes-barres ne seront pas modifiés/, 'colour editor explains which inventory data remains untouched');
+assert.match(pages, /classList\.add\('bqx-color-modal'\)/, 'colour editor keeps its actions visible on short screens');
 
-console.log('boutique-custom-color-test: 29 controls passed');
+console.log('boutique-custom-color-test: 33 controls passed');

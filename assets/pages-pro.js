@@ -9792,6 +9792,40 @@ function _bqxCss() {
     .bqx-ab b { display: block; font-size: 13px; font-weight: 600; }
     .bqx-ab-b { font-family: var(--mono, monospace); font-size: 10px; letter-spacing: .06em; color: var(--atlas, #0B6E4F);
       border: 1px solid var(--atlas, #0B6E4F); border-radius: 999px; padding: 0 5px; margin-left: 6px; vertical-align: 1px; }
+    /* Variant colour editor: the active choice reads as a labelled value, not
+       merely as a ring around one of fourteen anonymous dots. The optional
+       note remains available but sits below the merchant's actual task. */
+    .bqx-color-edit { display: grid; gap: 12px; }
+    .kiwi-modal.bqx-color-modal { display: flex; flex-direction: column; overflow: hidden; }
+    .kiwi-modal.bqx-color-modal .kiwi-modal-head,
+    .kiwi-modal.bqx-color-modal .kiwi-modal-foot { flex: none; }
+    .kiwi-modal.bqx-color-modal .kiwi-modal-body { min-height: 0; overflow-y: auto; }
+    .bqx-color-card { padding: 16px; border: 1px solid var(--n-200, #e7e3da); border-radius: 16px; background: var(--surface, #fff); }
+    .bqx-color-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 16px; }
+    .bqx-color-heading { display: flex; align-items: flex-start; gap: 10px; min-width: 0; }
+    .bqx-color-step { display: inline-flex; width: 24px; height: 24px; flex: none; align-items: center; justify-content: center; border-radius: 8px; background: var(--mint-soft, rgba(125,242,176,.2)); color: var(--atlas, #0B6E4F); font: 650 11px/1 var(--mono, monospace); }
+    .bqx-color-heading strong { display: block; font-size: 13.5px; line-height: 1.3; letter-spacing: -.01em; }
+    .bqx-color-heading small { display: block; margin-top: 3px; color: var(--n-500, #77807b); font-size: 11.5px; line-height: 1.35; }
+    .bqx-color-selected { display: inline-flex; flex: none; align-items: center; gap: 8px; max-width: 46%; padding: 6px 10px 6px 7px; border: 1px solid var(--n-200, #e7e3da); border-radius: 999px; background: var(--paper-soft, #f3f1ea); color: var(--ink, #0A0F0D); font-size: 12px; font-weight: 600; }
+    .bqx-color-selected > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .bqx-color-selected .kc-sw { width: 22px; height: 22px; flex: none; }
+    .bqx-color-picker .kc-picker { position: relative; }
+    .bqx-color-picker .kc-row { gap: 10px; }
+    .bqx-color-picker .kc-sw { width: 34px; height: 34px; }
+    .bqx-color-picker .kc-cap { margin-top: 10px; min-height: 17px; }
+    .bqx-color-field { padding: 14px 16px; border: 1px solid var(--n-200, #e7e3da); border-radius: 14px; background: color-mix(in srgb, var(--surface, #fff) 62%, transparent); }
+    .bqx-color-field .kf-group { margin: 0; }
+    .bqx-color-field .kf-label { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 7px; font-size: 12.5px; color: var(--ink, #0A0F0D); }
+    .bqx-color-optional { color: var(--n-500, #77807b); font-size: 10.5px; font-weight: 500; }
+    .bqx-color-safe { display: flex; align-items: center; gap: 8px; padding: 2px 3px; color: var(--n-500, #77807b); font-size: 11.5px; line-height: 1.35; }
+    .bqx-color-safe svg { flex: none; color: var(--atlas, #0B6E4F); }
+    @media (max-width: 520px) {
+      .bqx-color-card, .bqx-color-field { padding: 13px; }
+      .bqx-color-head { display: grid; gap: 10px; }
+      .bqx-color-selected { max-width: 100%; width: fit-content; }
+      .bqx-color-picker .kc-custom-wrap { position: static; }
+      .bqx-color-picker .kc-custom-pop { inset-inline: 0; width: 100%; }
+    }
   `;
   document.head.appendChild(st);
 }
@@ -10493,34 +10527,68 @@ handlers['bqx-var-color'] = (_el, arg) => {
   if (!v) return;
   const data = CAT().getProduct(_bqxDrawerPid);
   const custom = /^custom-[0-9a-f]{6}$/i.test(String(v.colorId || ''));
+  const shown = _bqxShownColor(v);
+  const selected = /^custom-/i.test(v.colorId || '')
+    ? { id: v.colorId, label: v.colorLabel, hex: v.colorHex, custom: true }
+    : _bqxFam(v);
+  const selectedSwatch = window.KiwiColors && window.KiwiColors.swatch
+    ? window.KiwiColors.swatch(shown, { name: shown.label }) : '';
   _bqxModal = modal({
-    title: 'Couleur de la variante', tag: `TAILLE ${_esc(v.size)}`,
-    desc: data ? `${data.product.name}${_bqxColorSource(v) ? ` · saisie à l'origine « ${_bqxColorSource(v)} »` : ''}` : '',
-    width: 460,
+    title: 'Modifier la couleur', tag: `VARIANTE · TAILLE ${_esc(v.size)}`,
+    desc: data ? data.product.name : '',
+    width: 520,
     body: `
-      <div class="kf-group"><label class="kf-label">Couleur</label>${_colorPicker(/^custom-/i.test(v.colorId || '') ? { id: v.colorId, label: v.colorLabel, hex: v.colorHex, custom: true } : _bqxFam(v))}</div>
-      <div class="kf-group" data-bqx-vcname-wrap ${custom ? '' : 'hidden'}><label class="kf-label">Nom affiché</label>
-        <input class="kf-input" maxlength="40" value="${custom ? _esc(v.colorLabel || '') : ''}" data-bqx-vcname placeholder="Ex. Bleu clair" />
-        <div class="kf-help">Ce nom sera appliqué à toutes les tailles qui utilisent exactement cette couleur.</div></div>
-      <div class="kf-group"><label class="kf-label">Précision (facultatif)</label>
-        <input class="kf-input" maxlength="60" value="${_esc(v.note || '')}" data-bqx-vcnote placeholder="Ex. rayé, délavé, motif" />
-        <div class="kf-help">Sert à distinguer deux variantes de même couleur. Le sélecteur, lui, reste simple.</div></div>`,
-    foot: `<button class="kb ghost" data-dismiss>Annuler</button><button class="kb atlas" data-action="bqx-var-color-save" data-arg="${arg}">Enregistrer</button>`,
+      <div class="bqx-color-edit">
+        <section class="bqx-color-card">
+          <div class="bqx-color-head">
+            <div class="bqx-color-heading"><span class="bqx-color-step">1</span><span><strong>Choisissez une couleur</strong><small>Les couleurs standard restent faciles à retrouver en caisse.</small></span></div>
+            <div class="bqx-color-selected" aria-live="polite"><span data-bqx-vpreview>${selectedSwatch}</span><span data-bqx-vselected>${_esc(shown.label)}</span></div>
+          </div>
+          <div class="bqx-color-picker">${_colorPicker(selected)}</div>
+        </section>
+        <section class="bqx-color-field" data-bqx-vcname-wrap ${custom ? '' : 'hidden'}>
+          <div class="kf-group"><label class="kf-label" for="bqx-vcname">Nom de cette couleur</label>
+            <input class="kf-input" id="bqx-vcname" maxlength="40" value="${custom ? _esc(v.colorLabel || '') : ''}" data-bqx-vcname placeholder="Ex. Bleu clair" autocomplete="off" />
+            <div class="kf-help">Le même nom sera repris pour toutes les tailles de cette couleur exacte.</div></div>
+        </section>
+        <section class="bqx-color-field">
+          <div class="kf-group"><label class="kf-label" for="bqx-vcnote"><span>Détail de la variante</span><span class="bqx-color-optional">Facultatif</span></label>
+            <input class="kf-input" id="bqx-vcnote" maxlength="60" value="${_esc(v.note || '')}" data-bqx-vcnote placeholder="Ex. Rayé, délavé, motif…" autocomplete="off" />
+            <div class="kf-help">Ajoutez-le uniquement pour distinguer deux articles de couleur similaire.</div></div>
+        </section>
+        <div class="bqx-color-safe"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg><span>Le stock, la taille et les codes-barres ne seront pas modifiés.</span></div>
+      </div>`,
+    foot: `<button class="kb ghost" data-dismiss>Annuler</button><button class="kb atlas" data-action="bqx-var-color-save" data-arg="${arg}">Enregistrer les modifications</button>`,
   });
   const b = document.querySelector('.kiwi-backdrop');
+  const modalPanel = b && b.querySelector('.kiwi-modal');
+  if (modalPanel) modalPanel.classList.add('bqx-color-modal');
   const picker = b && b.querySelector('[data-kc-picker]');
   const nameWrap = b && b.querySelector('[data-bqx-vcname-wrap]');
   const nameInput = b && b.querySelector('[data-bqx-vcname]');
-  const syncName = () => {
+  const selectedLabel = b && b.querySelector('[data-bqx-vselected]');
+  const selectedPreview = b && b.querySelector('[data-bqx-vpreview]');
+  const syncName = (event) => {
     const color = window.KiwiColors && window.KiwiColors.selection(b);
     const isCustom = !!(color && color.custom);
+    const customApplied = !!(event && event.detail && event.detail.custom);
     if (nameWrap) nameWrap.hidden = !isCustom;
-    if (!isCustom || !nameInput || nameInput.dataset.colorId === color.id) return;
-    nameInput.value = /^Couleur personnalisée\s+#[0-9a-f]{6}$/i.test(String(color.label || '')) ? '' : (color.label || '');
-    nameInput.dataset.colorId = color.id;
+    if (selectedLabel) selectedLabel.textContent = color ? color.label : 'Aucune couleur';
+    if (selectedPreview) selectedPreview.innerHTML = color && window.KiwiColors.swatch
+      ? window.KiwiColors.swatch(color, { name: color.label }) : '';
+    if (isCustom && nameInput && (customApplied || nameInput.dataset.colorId !== color.id)) {
+      nameInput.value = /^Couleur personnalisée\s+#[0-9a-f]{6}$/i.test(String(color.label || '')) ? '' : (color.label || '');
+      nameInput.dataset.colorId = color.id;
+    }
+  };
+  const syncTypedName = () => {
+    const color = window.KiwiColors && window.KiwiColors.selection(b);
+    if (!color || !color.custom || !selectedLabel) return;
+    selectedLabel.textContent = nameInput.value.trim() || color.label;
   };
   if (nameInput && custom) nameInput.dataset.colorId = v.colorId;
   if (picker) picker.addEventListener('kc:change', syncName);
+  if (nameInput) nameInput.addEventListener('input', syncTypedName);
   syncName();
 };
 handlers['bqx-var-color-save'] = (_el, arg) => {

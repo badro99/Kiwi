@@ -427,7 +427,10 @@
           b.setAttribute('aria-label', label);
         }
         select(box, id); pop.hidden = true;
-        box.dispatchEvent(new CustomEvent('kc:change', { bubbles: true, detail: { value: id, name: box.getAttribute('data-kc-picker') } }));
+        box.dispatchEvent(new CustomEvent('kc:change', {
+          bubbles: true,
+          detail: { value: id, name: box.getAttribute('data-kc-picker'), label, hex, custom: true },
+        }));
         return;
       }
       const b = e.target.closest && e.target.closest('button.kc-sw[data-kc-color]');
