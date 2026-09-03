@@ -20,7 +20,7 @@ import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
-const EXPECTED = 8;
+const EXPECTED = 9;
 let checks = 0;
 process.on('unhandledRejection', (error) => { console.error(error); process.exit(1); });
 function jseq(actual, expected, msg) {
@@ -196,6 +196,23 @@ await check('ultra invoice still files against the real receipt', async () => {
   const inv = dev.procState.invoices[0];
   assert.equal(inv.receiptId, dev.procState.receipts[0].id);
   assert.equal(out.receiptId, dev.procState.receipts[0].id);
+});
+
+await check('receipt.id === movement.refId === invoice.receiptId on Basic and Ultra', async () => {
+  for (const plan of ['basic', 'ultra']) {
+    const dev = makeDevice({ real: true, plan });
+    await postLegacy(dev, legacyCtx(catalog()));
+    const receipt = dev.procState.receipts[0];
+    assert.equal(receipt.id, 'receipt-test-1', plan + ': receipt keeps the caller-supplied id');
+    for (const itemId of ['flour', 'safran']) {
+      for (const m of dev.K.history(itemId)) {
+        assert.equal(m.refId, receipt.id, plan + ': movement ' + m.id + ' links the receipt');
+      }
+    }
+    if (plan === 'ultra') {
+      assert.equal(dev.procState.invoices[0].receiptId, receipt.id, 'ultra: invoice links the same receipt');
+    }
+  }
 });
 
 assert.equal(checks, EXPECTED, 'expected ' + EXPECTED + ' executed checks, got ' + checks);

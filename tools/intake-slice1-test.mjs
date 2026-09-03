@@ -17,7 +17,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const EXPECTED = 24;
+const EXPECTED = 26;
 let checks = 0;
 process.on('unhandledRejection', (error) => { console.error(error); process.exit(1); });
 async function check(name, fn) {
@@ -435,6 +435,31 @@ await check('confirm path ordered: guard and single-owner core before any stock 
   const schema = fs.readFileSync(path.join(root, 'schema.sql'), 'utf8');
   assert.match(schema, /CREATE TABLE IF NOT EXISTS intake_docs/, 'canonical schema carries intake_docs');
   assert.ok(fs.existsSync(path.join(root, 'migrations', '2026-09-03-intake-docs.sql')), 'migration ships with the route');
+});
+
+await check('server repeats only the supplied text: no sample, no refusal', async () => {
+  const w = makeDoubles();
+  const base = { merchant: 'demo-tenant', action: 'commit', sha256: 'c'.repeat(64), mime: 'application/pdf', size: 100, docType: 'supplier_invoice', source: 's' };
+  const post = (body) => harness.onRequestPost({
+    request: new Request('https://t/api/ai/intake', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),
+    env: w.env,
+  });
+  const bad = await post({ ...base, textSample: 'Passeport marocain X123' });
+  assert.equal(bad.status, 422);
+  assert.equal(bad.body.error, 'identity-rejected');
+  const silent = await post({ ...base, sha256: 'd'.repeat(64) });
+  assert.equal(silent.status, 200, 'without textSample the server cannot see content — and says so nowhere');
+  const forged = await post({ ...base, sha256: 'e'.repeat(64), textSample: 'Facture F-118, total 228 MAD' });
+  assert.equal(forged.status, 200, 'a falsified clean sample passes: supplied-text check only');
+});
+
+await check('no server-verified identity claim anywhere', async () => {
+  for (const [name, src] of [['intake.js', intakeSrc], ['stock.js', stockSrc]]) {
+    assert.doesNotMatch(src, /server-verified|server-side (content|identity) (verific|inspect|boundary)/i, name + ': no server-verified claim');
+  }
+  assert.match(intakeSrc, /un client modifié peut donc omettre ou falsifier textSample/, 'modified-client bypass stated');
+  assert.match(intakeSrc, /PAS une détection d'identité vérifiée/, 'no-verified-detection rule stated');
+  assert.match(stockSrc, /AVANT tout upload et tout appel modèle/, 'client-side ordering claim kept');
 });
 
 assert.equal(checks, EXPECTED, 'expected ' + EXPECTED + ' executed checks, got ' + checks);

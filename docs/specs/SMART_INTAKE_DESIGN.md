@@ -121,18 +121,23 @@ namespaced `localStorage` outbox of pending docIds (namespace, don't wipe) so a
 dead tab doesn't lose the thread. Quota-exhausted and model-down are distinct,
 merchant-readable errors, never silent.
 
-## 7 · Identity documents: hard reject, with a disclosed residual
+## 7 · Identity documents: accidental-upload screen, honestly bounded
 
-The classifier prompt carries `identity_rejected` as a first-class verdict
-(passport, CIN, *fiche de police*). On verdict: immediate R2 delete, no D1
-content row, `422 identity-rejected` to the client. PDFs get an additional
-**pre-inference screen**: keyword pre-check on the client-extracted pdf.js text
-(`passeport`, `passport`, `CIN`, `بطاقة`) refuses before any byte is uploaded.
-Residual risk, disclosed honestly: a *photo* of an ID reaches the classifier
-itself (one vision call) before rejection, since content can't be known before
-looking. A client-side ID detector is optional V2 hardening. If the hotel needs
-*fiche de police* capture, that is a separate project with legal review — this
-intake must never become its back door.
+What the screen is and is not, stated plainly:
+- The normal Kiwi client screens the pdf.js-EXTRACTED text (keyword hints +
+  ICAO-9303 MRZ zones: passports, CIN, *fiches de police*) BEFORE any upload
+  or model call, and refuses locally.
+- The server repeats the SAME check on the client-SUPPLIED `textSample` at
+  commit (`422 identity-rejected`); it does not extract or inspect the PDF
+  itself.
+- A modified client can therefore omit or falsify `textSample` and pass:
+  this is accidental-upload protection (wrong file dropped in the intake),
+  NOT server-verified identity-document detection — no such claim is allowed
+  anywhere in code, tests, UI copy or docs.
+- Photo intake remains closed (commit accepts `application/pdf` only), so no
+  current path bypasses the screen through an image.
+If the hotel needs *fiche de police* capture, that is a separate project
+with legal review — this intake must never become its back door.
 
 ## 8 · Quota, money, tenancy, silence (non-negotiables checklist)
 

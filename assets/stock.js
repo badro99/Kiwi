@@ -4986,6 +4986,7 @@
       let known = window.KiwiProcurement.doc()?.suppliers?.find((s) => String(s.name || '').toLowerCase() === supplier.toLowerCase());
       if (!known) known = window.KiwiProcurement.addSupplier({ name: supplier });
       const receipt = window.KiwiProcurement.receiveDirect({
+        receiptId: receiptRef,
         supplierId: known?.id || supplier,
         externalRef,
         receivedAt,

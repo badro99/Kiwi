@@ -37,12 +37,18 @@ export const DOC_STATUSES_V1 = ['received', 'confirmed'];
 const SHA256_RE = /^[0-9a-f]{64}$/;
 
 /* ── Pré-filtre pièces d'identité (§7 du design) ──────────────────────────
- * Tourne AVANT tout envoi : le client l'applique sur le texte pdf.js avant
- * même l'upload, le serveur le ré-applique sur commit (défense en profondeur,
- * jamais de confiance envers le client). Sens fail-safe : un faux positif
- * bloque un dépôt légitime (le commerçant saisit manuellement), un faux
- * négatif est rattrapé par le verdict `identity_rejected` du classifieur
- * (slice 2) qui supprime l'objet R2 aussitôt. */
+ * Limites honnêtes de ce contrôle, lues avant de s'y fier :
+ *   · le client Kiwi normal filtre le texte pdf.js EXTRAIT avant tout envoi ;
+ *   · le serveur ne refait que le MÊME contrôle sur le textSample FOURNI —
+ *     il n'extrait ni n'inspecte le PDF lui-même ;
+ *   · un client modifié peut donc omettre ou falsifier textSample et passer
+ *     ce contrôle : c'est une protection contre l'envoi accidentel (mauvais
+ *     fichier glissé dans le dépôt), PAS une détection d'identité vérifiée
+ *     côté serveur — aucune affirmation de ce type n'est autorisée ;
+ *   · l'entrée photo reste fermée (commit n'accepte que application/pdf),
+ *     donc aucun chemin actuel ne contourne le filtre par l'image.
+ * Sens fail-safe conservé : un faux positif bloque un dépôt légitime (le
+ * commerçant saisit manuellement) sans jamais écrire quoi que ce soit. */
 export function containsIdentityHints(text) {
   const t = String(text || '');
   if (!t) return false;
