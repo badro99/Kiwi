@@ -310,3 +310,29 @@ for a different item after a partial write and silently produce mixed stock.
   non-reflection of the fingerprint, and refusal before server rows exist.
 - The checkbox-gated flat-cost write now preserves 4-decimal unit rates in
   `cost.js`; rounding to cents remains an output/display concern only.
+
+## Phase 4 boundary (2026-09-03): photos stay closed, expense/TPE unlinked
+
+Identity screening today is genuinely on-device and zero-dependency, but
+only where text already exists on-device: keyword hints plus ICAO-9303 MRZ
+zone detection (`containsMrzZone` server-side, `stIntakeMrzZone` client-side)
+run on pdf.js-extracted text before any upload, model call, or byte leaves
+the device. That covers CIN, passports and police sheets for the PDF slice.
+
+Photos cannot be screened with the present architecture, and the requirement
+is not weakened to fit:
+- Web has no on-device OCR: no Tesseract/ONNX/TF vendored, nothing planned.
+- Native shell (Capacitor 8) ships printer, keep-awake, haptics, network and
+  status-bar plugins only — no ML Kit / Vision text-recognition plugin, no
+  camera plugin (camera runs via WebView `getUserMedia`).
+- A filename check or a cloud classifier is explicitly not a pre-screen.
+- Receipt and TPE-slip photos therefore have no lawful intake path: the
+  commit contract still accepts `application/pdf` only, and no
+  `expense_receipt` / `tpe_slip` routing, schemas, quota kinds or type picker
+  were built. `expense-ocr.js` and `tpe-reconcile.js` remain directly called,
+  human-initiated surfaces — not intake routes.
+
+What would unblock photos: a native on-device text plugin (ML Kit on
+Android, Vision `VNRecognizeTextRequest` on iOS) or a vendored OCR engine,
+plus real-device testing across the merchant fleet — a native-shell project
+of its own, with its own privacy review, not a web-diff follow-up.

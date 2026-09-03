@@ -17,7 +17,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const EXPECTED = 23;
+const EXPECTED = 24;
 let checks = 0;
 process.on('unhandledRejection', (error) => { console.error(error); process.exit(1); });
 async function check(name, fn) {
@@ -42,7 +42,7 @@ function loadRoute(src, names, prelude) {
     .replace(/^export\s+/gm, '');
   return new Function(bare + '\nreturn { ' + names.join(', ') + ' };')();
 }
-const intake = loadRoute(intakeSrc, ['containsIdentityHints', 'validateCommitBody', 'isPdfBytes', 'publicDoc', 'DOC_TYPES_V1', 'DOC_STATUSES_V1', 'MAX_PDF_BYTES'], 'const DAILY_CAPS = { intake: 100 };');
+const intake = loadRoute(intakeSrc, ['containsIdentityHints', 'containsMrzZone', 'validateCommitBody', 'isPdfBytes', 'publicDoc', 'DOC_TYPES_V1', 'DOC_STATUSES_V1', 'MAX_PDF_BYTES'], 'const DAILY_CAPS = { intake: 100 };');
 const invoice = loadRoute(invoiceSrc, ['validateInvoiceData']);
 
 await check('identity pre-screen catches passports, CIN and police sheets', () => {
@@ -105,6 +105,27 @@ await check('net-price rule preserved at 4 decimals: 2 x 780, total 1482 → 741
   const v = invoice.validateInvoiceData({ lines: [{ label: 'Service', qty: 2, unit: 'pièce', unitCost: 780, total: 1482 }] });
   assert.equal(v.lines[0].unitCost, 741);
   assert.equal(v.lines[0].grossUnitCost, 780);
+});
+
+await check('MRZ zones refused on-device, invoice text passes', () => {
+  const passport = 'P<UTOERIKSSON<<ANNA<MARIA<<<<<<<<<<<<<<<<<<<\nL898902C36UTO7408122F1204159ZE184226B<<<<<10';
+  const cnie = 'IDMARAB1234567<<<<<<<<<<<<<<<\n9001011M3001011MAR<<<<<<<<<<<<<\nBENJELLOUN<<YASMINE<<<<<<<<<<<<';
+  const invoice = 'Facture F-118 · Total 228,00 MAD\nTVA 20% · ICE 001234567000012 · BL-77';
+  assert.equal(intake.containsMrzZone(passport), true);
+  assert.equal(intake.containsMrzZone(cnie), true);
+  assert.equal(intake.containsMrzZone(invoice), false);
+  assert.equal(intake.containsMrzZone(''), false);
+  assert.equal(intake.containsMrzZone('a < b'), false);
+  assert.equal(intake.containsMrzZone('REFERENCE MA64012345678901234567890'), false);
+  assert.match(intakeSrc, /containsIdentityHints\(sample\) \|\| containsMrzZone\(sample\)/, 'server re-checks both screens');
+  const m = stockSrc.match(/function stIntakeMrzZone\(text\) \{[\s\S]*?\n  \}/);
+  assert.ok(m, 'client MRZ screen extractable and self-contained');
+  const fn = new Function(m[0] + '; return stIntakeMrzZone;')();
+  assert.equal(fn(passport), true);
+  assert.equal(fn(cnie), true);
+  assert.equal(fn(invoice), false);
+  const branch = stockSrc.slice(stockSrc.indexOf('if (isPdf) {'), stockSrc.indexOf("kind: 'text'"));
+  assert.ok(branch.indexOf('stIntakeMrzZone(text)') < branch.indexOf('stIntakeCommit('), 'MRZ screen before commit');
 });
 
 await check('intake quota kind registered and metered', () => {

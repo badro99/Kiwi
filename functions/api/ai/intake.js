@@ -49,6 +49,25 @@ export function containsIdentityHints(text) {
   return /passeport|passport|carte\s+(nationale|d['’]identit)|c\.?\s*n\.?\s*i\.?\s*e\.?\b|\bcin\b|fiche\s+de\s+police|acte\s+de\s+naissance|جواز\s*السفر|بطاقة\s*(التعريف|الوطنية)| الحالة\s*المدنية/i.test(t);
 }
 
+/* Zone MRZ (ICAO 9303) : passeports, CNIE et titres de voyage portent 2-3
+ * lignes de 30-44 signes sur l'alphabet [A-Z0-9<], bourrées de chevrons de
+ * remplissage. Un texte comptable ne contient quasiment jamais '<', et
+ * jamais 10+ sur une même ligne de 30 signes : le test est quasi sans
+ * faux positif, et il tourne sur place (texte pdf.js déjà extrait), sans
+ * modèle ni réseau. Sens fail-safe comme le filtre mots-clés. */
+export function containsMrzZone(text) {
+  const lines = String(text || '').split(/\r?\n/);
+  for (const raw of lines) {
+    const line = raw.replace(/\s+/g, '').toUpperCase();
+    if (line.length < 30) continue;
+    if (!/^[A-Z0-9<]+$/.test(line)) continue;
+    let fillers = 0;
+    for (const ch of line) if (ch === '<') fillers++;
+    if (fillers >= 10) return true;
+  }
+  return false;
+}
+
 /* Corps de commit acceptés en slice 1 : PDF uniquement, types V1 uniquement.
  * Renvoie la forme normalisée ou null. Fonction pure, testée. */
 export function validateCommitBody(b) {
@@ -142,8 +161,11 @@ export async function onRequestPost(context) {
   if (action === 'commit') {
     const v = validateCommitBody(b);
     if (!v) return json({ error: 'bad-commit' }, 400);
-    if (typeof b?.textSample === 'string' && containsIdentityHints(b.textSample.slice(0, 4000))) {
-      return json({ error: 'identity-rejected' }, 422);
+    if (typeof b?.textSample === 'string') {
+      const sample = b.textSample.slice(0, 4000);
+      if (containsIdentityHints(sample) || containsMrzZone(sample)) {
+        return json({ error: 'identity-rejected' }, 422);
+      }
     }
     if (!(await quotaOk(env, who, 'intake', DAILY_CAP))) {
       return json({ error: 'daily-quota-exceeded' }, 429);

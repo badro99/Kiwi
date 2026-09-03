@@ -4147,6 +4147,18 @@
   function stIntakeIdHint(text) {
     return /passeport|passport|carte\s+(nationale|d['’]identit)|c\.?\s*n\.?\s*i\.?\s*e\.?\b|\bcin\b|fiche\s+de\s+police|acte\s+de\s+naissance|جواز\s*السفر|بطاقة\s*(التعريف|الوطنية)| الحالة\s*المدنية/i.test(String(text || ''));
   }
+  function stIntakeMrzZone(text) {
+    const lines = String(text || '').split(/\r?\n/);
+    for (const raw of lines) {
+      const line = raw.replace(/\s+/g, '').toUpperCase();
+      if (line.length < 30) continue;
+      if (!/^[A-Z0-9<]+$/.test(line)) continue;
+      let fillers = 0;
+      for (const ch of line) if (ch === '<') fillers++;
+      if (fillers >= 10) return true;
+    }
+    return false;
+  }
   /* FNV-1a 32 bits → hex : empreinte courte stable pour dériver des ids
    * déterministes (ce n'est PAS un identifiant de sécurité, cf. SHA-256
    * côté registre). Pure, testée. */
@@ -4560,7 +4572,7 @@
           // donc le pré-filtre identité ne coûte aucun appel et précède tout.
           let intakeDocId = '';
           if (stIntakeEnabled()) {
-            if (stIntakeIdHint(text)) {
+            if (stIntakeIdHint(text) || stIntakeMrzZone(text)) {
               stage.innerHTML = stRenderIntakeStop(t('mScanIdTitle'), t('mScanIdBody'));
               wireIntakeStop();
               return;
