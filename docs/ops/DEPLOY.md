@@ -72,6 +72,29 @@ remembered on that device for 30 days.
 - **`.ma` (~250–400 MAD/yr + local paperwork):** a Moroccan registrar (Genious, HB,
   etc.). Skip until past the pilot.
 
+## 4. Post-deploy schema attestation (mandatory after schema-affecting releases)
+
+`schema.sql` describes a FRESH database. A live database never receives it —
+`CREATE TABLE IF NOT EXISTS` does not add columns to tables that already
+exist — so after any release that touches `schema.sql`, attest the deployed
+base with the read-only command (needs `CLOUDFLARE_ACCOUNT_ID`,
+`CLOUDFLARE_D1_DATABASE_ID`, `CLOUDFLARE_API_TOKEN` in the environment):
+
+```bash
+node tools/d1-schema.mjs
+```
+
+- Exit **0** : the deployed base matches `schema.sql` — nothing to do.
+- Exit **1** : drift — the output names every missing table, column and
+  index. Do not ship features that depend on them until this is green.
+- Exit **2** : the check itself errored (credentials, network) — attestation
+  did NOT happen; fix access and re-run, never assume green.
+
+`--apply --yes` (`node tools/d1-schema.mjs --apply --yes`) is a SEPARATE
+migration authorization, not part of attestation: it WRITES additive orders
+to the live base. Read the plan it prints, confirm each statement, and only
+then authorize it explicitly. Attestation itself never writes.
+
 ## Notes
 
 - The gate (`functions/_middleware.js`) sits in front of the whole app **and**

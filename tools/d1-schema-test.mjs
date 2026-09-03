@@ -205,6 +205,23 @@ async function main() {
     });
     check('aucun faux positif sur une base conforme',
       !empty.missingTables.length && !empty.missingColumns.length && !empty.missingIndexes.length);
+
+    /* ── 4. Le runbook exige l'attestation, pas seulement l'outil ──────────
+     * docs/ops/DEPLOY.md doit prescrire `node tools/d1-schema.mjs` après
+     * chaque release qui touche schema.sql, documenter les sorties, et
+     * séparer l'autorisation de migration (--apply --yes) de l'attestation
+     * (lecture seule). Sans cette phrase, l'outil existe mais personne ne
+     * le lance — c'est exactement comme ça que les trois dérives ont eu lieu. */
+    const deploy = await readFile(resolve(ROOT, 'docs/ops/DEPLOY.md'), 'utf8');
+    check('DEPLOY.md prescrit node tools/d1-schema.mjs après release schéma',
+      /node tools\/d1-schema\.mjs/.test(deploy) && /schema-affecting releases|touche schema\.sql/.test(deploy));
+    check('DEPLOY.md documente les sorties 0/1/2',
+      /Exit \*\*0\*\*|sortie 0/.test(deploy) && /Exit \*\*1\*\*|dérive|drift/.test(deploy)
+      && /Exit \*\*2\*\*|erreur/i.test(deploy));
+    check('DEPLOY.md sépare --apply --yes de l\u2019attestation',
+      /--apply --yes/.test(deploy) && /SEPARATE|jamais.*écrit|never writes|n'écrit/i.test(deploy));
+    check('DEPLOY.md ne duplique pas la vérité schéma en listes PRAGMA',
+      !/pragma_table_info/i.test(deploy));
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
