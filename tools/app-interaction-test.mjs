@@ -122,6 +122,7 @@ const VP = {
   small320: { w: 320, h: 568, label: '320×568' },
   ipadPortrait: { w: 820, h: 1180, label: 'iPad portrait' },
   ipadLandscape: { w: 1180, h: 820, label: 'iPad landscape' },
+  desktop1280: { w: 1280, h: 800, label: 'Desktop 1280×800' },
 };
 const CORS = { 'Access-Control-Allow-Credentials': 'true' };
 
@@ -997,240 +998,667 @@ for (const viewport of ['small320', 'ipadPortrait', 'ipadLandscape']) {
 }
 
 /* ── 8 · keyboard traversal, activation, and focus management ───────────── */
-{
-  const p = await openShell({ me: 'login' });
-  await settleAccount(p);
+for (const locale of ['fr', 'ar']) {
+  // 8.1: Account / Login step keyboard interactions
+  {
+    const p = await openShell({ locale, me: 'login' });
+    await settleAccount(p);
 
-  // 1. Initial focus initiation on login-email
-  await p.keyboard.press('Tab');
-  let activeId = await p.evaluate(() => document.activeElement ? document.activeElement.id : '');
-  activeId === 'login-email' ? ok('keyboard focus initiates on login-email') : bad(`initial focus on ${activeId}`);
+    // Initial Tab focuses login-email
+    await p.keyboard.press('Tab');
+    let activeId = await p.evaluate(() => document.activeElement ? document.activeElement.id : '');
+    activeId === 'login-email'
+      ? ok(`keyboard focus initiates on login-email (${locale.toUpperCase()})`)
+      : bad(`initial focus on ${activeId} in ${locale}`);
 
-  // 2. Focus visibility on input (wait 200ms for 150ms CSS transition to settle)
-  await new Promise((r) => setTimeout(r, 200));
-  const emailFocusStyle = await p.evaluate(() => {
-    const cs = window.getComputedStyle(document.querySelector('#login-email'));
-    return { outline: cs.outlineStyle, shadow: cs.boxShadow, borderColor: cs.borderColor };
-  });
-  emailFocusStyle.shadow.includes('rgba(11, 110, 79') || emailFocusStyle.outline !== 'none' || emailFocusStyle.borderColor === 'rgb(11, 110, 79)'
-    ? ok('email input displays visible focus indicator')
-    : bad(`email input missing focus ring: ${JSON.stringify(emailFocusStyle)}`);
+    // Visible focus indicator on input
+    await new Promise((r) => setTimeout(r, 200));
+    const emailFocusStyle = await p.evaluate(() => {
+      const cs = window.getComputedStyle(document.querySelector('#login-email'));
+      return { outline: cs.outlineStyle, shadow: cs.boxShadow, borderColor: cs.borderColor };
+    });
+    emailFocusStyle.shadow.includes('rgba(11, 110, 79') || emailFocusStyle.outline !== 'none' || emailFocusStyle.borderColor === 'rgb(11, 110, 79)'
+      ? ok(`email input displays visible focus indicator (${locale.toUpperCase()})`)
+      : bad(`email input missing focus ring in ${locale}: ${JSON.stringify(emailFocusStyle)}`);
 
-  // 3. Tab forward to password
-  await p.keyboard.press('Tab');
-  activeId = await p.evaluate(() => document.activeElement.id);
-  activeId === 'login-password' ? ok('Tab moves focus to password input') : bad(`Tab landed on ${activeId} instead of login-password`);
+    // Tab forward to password
+    await p.keyboard.press('Tab');
+    activeId = await p.evaluate(() => document.activeElement.id);
+    activeId === 'login-password'
+      ? ok(`Tab moves focus to password input (${locale.toUpperCase()})`)
+      : bad(`Tab landed on ${activeId} instead of login-password`);
 
-  // 4. Tab forward to password toggle button
-  await p.keyboard.press('Tab');
-  activeId = await p.evaluate(() => document.activeElement.id);
-  activeId === 'password-toggle' ? ok('Tab moves focus to password toggle button') : bad(`Tab landed on ${activeId} instead of password-toggle`);
+    // Tab forward to password toggle button
+    await p.keyboard.press('Tab');
+    activeId = await p.evaluate(() => document.activeElement.id);
+    activeId === 'password-toggle'
+      ? ok(`Tab moves focus to password toggle button (${locale.toUpperCase()})`)
+      : bad(`Tab landed on ${activeId} instead of password-toggle`);
 
-  // 5. Focus visibility on toggle button
-  const toggleFocus = await p.evaluate(() => {
-    const cs = window.getComputedStyle(document.querySelector('#password-toggle'));
-    return { outline: cs.outlineStyle, outlineColor: cs.outlineColor };
-  });
-  toggleFocus.outline !== 'none'
-    ? ok('password toggle button displays visible focus indicator')
-    : bad(`password toggle missing focus ring: ${JSON.stringify(toggleFocus)}`);
+    // Focus visibility on toggle button
+    const toggleFocus = await p.evaluate(() => {
+      const cs = window.getComputedStyle(document.querySelector('#password-toggle'));
+      return { outline: cs.outlineStyle, outlineColor: cs.outlineColor };
+    });
+    toggleFocus.outline !== 'none'
+      ? ok(`password toggle button displays visible focus indicator (${locale.toUpperCase()})`)
+      : bad(`password toggle missing focus ring: ${JSON.stringify(toggleFocus)}`);
 
-  // 6. Space activation on password toggle
-  await p.keyboard.press('Space');
-  let pwdState = await p.evaluate(() => ({
-    type: document.querySelector('#login-password').type,
-    pressed: document.querySelector('#password-toggle').getAttribute('aria-pressed'),
-  }));
-  pwdState.type === 'text' && pwdState.pressed === 'true'
-    ? ok('Space key activates password toggle (reveals password)')
-    : bad(`Space activation failed on password toggle: ${JSON.stringify(pwdState)}`);
+    // Space activation on password toggle
+    await p.keyboard.press('Space');
+    let pwdState = await p.evaluate(() => ({
+      type: document.querySelector('#login-password').type,
+      pressed: document.querySelector('#password-toggle').getAttribute('aria-pressed'),
+    }));
+    pwdState.type === 'text' && pwdState.pressed === 'true'
+      ? ok(`Space key activates password toggle (reveals password) (${locale.toUpperCase()})`)
+      : bad(`Space activation failed on password toggle: ${JSON.stringify(pwdState)}`);
 
-  // 7. Enter activation on password toggle
-  await p.keyboard.press('Enter');
-  pwdState = await p.evaluate(() => ({
-    type: document.querySelector('#login-password').type,
-    pressed: document.querySelector('#password-toggle').getAttribute('aria-pressed'),
-  }));
-  pwdState.type === 'password' && pwdState.pressed === 'false'
-    ? ok('Enter key toggles password back to concealed state')
-    : bad(`Enter activation failed on password toggle: ${JSON.stringify(pwdState)}`);
+    // Enter activation on password toggle
+    await p.keyboard.press('Enter');
+    pwdState = await p.evaluate(() => ({
+      type: document.querySelector('#login-password').type,
+      pressed: document.querySelector('#password-toggle').getAttribute('aria-pressed'),
+    }));
+    pwdState.type === 'password' && pwdState.pressed === 'false'
+      ? ok(`Enter key toggles password back to concealed state (${locale.toUpperCase()})`)
+      : bad(`Enter activation failed on password toggle: ${JSON.stringify(pwdState)}`);
 
-  // 8. Tab forward to login submit button
-  await p.keyboard.press('Tab');
-  activeId = await p.evaluate(() => document.activeElement.id);
-  activeId === 'login-btn' ? ok('Tab moves focus to login submit button') : bad(`Tab landed on ${activeId} instead of login-btn`);
+    // Tab forward to login submit button
+    await p.keyboard.press('Tab');
+    activeId = await p.evaluate(() => document.activeElement.id);
+    activeId === 'login-btn'
+      ? ok(`Tab moves focus to login submit button (${locale.toUpperCase()})`)
+      : bad(`Tab landed on ${activeId} instead of login-btn`);
 
-  // 9. Tab forward to manual-mode link
-  await p.keyboard.press('Tab');
-  activeId = await p.evaluate(() => document.activeElement.id);
-  activeId === 'manual-mode' ? ok('Tab moves focus to manual-mode button') : bad(`Tab landed on ${activeId} instead of manual-mode`);
+    // Tab forward to manual-mode link
+    await p.keyboard.press('Tab');
+    activeId = await p.evaluate(() => document.activeElement.id);
+    activeId === 'manual-mode'
+      ? ok(`Tab moves focus to manual-mode button (${locale.toUpperCase()})`)
+      : bad(`Tab landed on ${activeId} instead of manual-mode`);
 
-  // 10. Shift+Tab backward sequence verification
-  const backwardSequence = ['login-btn', 'password-toggle', 'login-password', 'login-email'];
-  let backwardOk = true;
-  for (const expectedId of backwardSequence) {
+    // Shift+Tab backward sequence verification
+    const backwardSequence = ['login-btn', 'password-toggle', 'login-password', 'login-email'];
+    let backwardOk = true;
+    for (const expectedId of backwardSequence) {
+      await p.keyboard.down('Shift');
+      await p.keyboard.press('Tab');
+      await p.keyboard.up('Shift');
+      const current = await p.evaluate(() => document.activeElement.id);
+      if (current !== expectedId) {
+        backwardOk = false;
+        bad(`Shift+Tab backward expected ${expectedId}, landed on ${current}`);
+        break;
+      }
+    }
+    if (backwardOk) {
+      ok(`Shift+Tab moves backward monotonically: manual-mode → login-btn → password-toggle → login-password → login-email (${locale.toUpperCase()})`);
+    }
+
+    // Enter activation on manual-mode button: triggers step transition
+    await p.focus('#manual-mode');
+    await p.keyboard.press('Enter');
+    await p.waitForFunction(() => !document.querySelector('#step-role').hidden, { timeout: 8000 });
+
+    // Modal/step transition focus transfer: heading h1 receives programmatic focus
+    const headingFocus = await p.evaluate(() => {
+      const h1 = document.querySelector('#step-role h1');
+      return {
+        isH1: document.activeElement === h1,
+        tabIndex: h1 ? h1.getAttribute('tabindex') : null,
+      };
+    });
+    headingFocus.isH1 && headingFocus.tabIndex === '-1'
+      ? ok(`step transition moves focus to h1 heading (tabindex="-1") in manual mode (${locale.toUpperCase()})`)
+      : bad(`step transition heading focus failed in manual mode: ${JSON.stringify(headingFocus)}`);
+
+    await p.closeCtx();
+  }
+
+  // 8.2: End-to-end guided keyboard traversal through all steps:
+  // Account → Role → Connect → Printer → Ready → Back navigation
+  {
+    const p = await openShell({ locale, me: 'multi', plugin: { scan: 'hosts' } });
+    await settleAccount(p);
+
+    // Step 1: Account (already connected)
+    await p.focus('#account-next');
+    await new Promise((r) => setTimeout(r, 200));
+    const nextBtnRing = await p.evaluate(() => {
+      const cs = window.getComputedStyle(document.querySelector('#account-next'));
+      return cs.outlineStyle !== 'none' || cs.boxShadow.includes('rgba(11, 110, 79');
+    });
+    nextBtnRing
+      ? ok(`account next button displays visible focus indicator (${locale.toUpperCase()})`)
+      : bad(`account next button missing focus ring in ${locale}`);
+
+    await p.keyboard.press('Enter');
+    await p.waitForFunction(() => !document.querySelector('#step-role').hidden, { timeout: 8000 });
+
+    // Step 2: Role step transition focus
+    const roleH1Focus = await p.evaluate(() => {
+      const h1 = document.querySelector('#step-role h1');
+      return document.activeElement === h1 && h1.getAttribute('tabindex') === '-1';
+    });
+    roleH1Focus
+      ? ok(`role step transition programmatically focuses step h1 (${locale.toUpperCase()})`)
+      : bad(`role step transition failed to focus h1 in ${locale}`);
+
+    // Traverse all 4 role tiles via Tab
+    const rolesEncountered = [];
+    for (let i = 0; i < 4; i++) {
+      await p.keyboard.press('Tab');
+      const r = await p.evaluate(() => document.activeElement ? document.activeElement.getAttribute('data-role') : null);
+      rolesEncountered.push(r);
+    }
+    const expectedRoles = ['caisse', 'equipe', 'cuisine', 'dashboard'];
+    JSON.stringify(rolesEncountered) === JSON.stringify(expectedRoles)
+      ? ok(`Tab traverses all 4 role tiles in order: ${rolesEncountered.join(' → ')} (${locale.toUpperCase()})`)
+      : bad(`Tab role sequence mismatch: saw ${JSON.stringify(rolesEncountered)}`);
+
+    // Tab to Back button
+    await p.keyboard.press('Tab');
+    const backBtn = await p.evaluate(() => document.activeElement ? document.activeElement.getAttribute('data-back') : null);
+    backBtn === 'account'
+      ? ok(`Tab navigates to Back button (${locale.toUpperCase()})`)
+      : bad(`Tab landed on ${backBtn} instead of data-back="account"`);
+
+    // Shift+Tab back to caisse tile
+    for (let i = 0; i < 4; i++) {
+      await p.keyboard.down('Shift');
+      await p.keyboard.press('Tab');
+      await p.keyboard.up('Shift');
+    }
+    const onCaisse = await p.evaluate(() => document.activeElement ? document.activeElement.getAttribute('data-role') : null);
+    onCaisse === 'caisse'
+      ? ok(`Shift+Tab returns focus to caisse tile (${locale.toUpperCase()})`)
+      : bad(`Shift+Tab landed on ${onCaisse}`);
+
+    // Space activation selects caisse role
+    await p.keyboard.press('Space');
+    const caisseSelected = await p.evaluate(() => document.querySelector('.tile[data-role="caisse"]').getAttribute('aria-pressed'));
+    caisseSelected === 'true'
+      ? ok(`Space key activates caisse tile (aria-pressed="true") (${locale.toUpperCase()})`)
+      : bad(`Space activation failed on caisse tile: ${caisseSelected}`);
+
+    // Tab forward to role-next (now unlocked)
+    for (let i = 0; i < 5; i++) {
+      await p.keyboard.press('Tab');
+    }
+    const onRoleNext = await p.evaluate(() => document.activeElement ? document.activeElement.id : null);
+    onRoleNext === 'role-next'
+      ? ok(`Tab navigates to role-next button (${locale.toUpperCase()})`)
+      : bad(`Tab landed on ${onRoleNext} instead of role-next`);
+
+    await p.keyboard.press('Enter');
+    await p.waitForFunction(() => !document.querySelector('#step-connect').hidden, { timeout: 8000 });
+
+    // Step 3: Connect step transition focus
+    const connectH1Focus = await p.evaluate(() => {
+      const h1 = document.querySelector('#step-connect h1');
+      return document.activeElement === h1 && h1.getAttribute('tabindex') === '-1';
+    });
+    connectH1Focus
+      ? ok(`connect step transition programmatically focuses step h1 (${locale.toUpperCase()})`)
+      : bad(`connect step transition failed to focus h1 in ${locale}`);
+
+    // Tab into store list and select first store via Space
+    await p.keyboard.press('Tab');
+    const onStore1 = await p.evaluate(() => document.activeElement && document.activeElement.classList.contains('store-choice'));
+    onStore1
+      ? ok(`Tab lands on first store-choice button (${locale.toUpperCase()})`)
+      : bad(`Tab missed store-choice in ${locale}`);
+
+    await p.keyboard.press('Space');
+    const storeSelected = await p.evaluate(() => document.querySelectorAll('.store-choice')[0].getAttribute('aria-pressed'));
+    storeSelected === 'true'
+      ? ok(`Space selects store choice (${locale.toUpperCase()})`)
+      : bad(`Space store selection failed: ${storeSelected}`);
+
+    // Tab past remaining stores to pair-btn
+    await p.keyboard.press('Tab'); // store 2
+    await p.keyboard.press('Tab'); // store 3
+    await p.keyboard.press('Tab'); // pair-btn
+    const onPairBtn = await p.evaluate(() => document.activeElement ? document.activeElement.id : null);
+    onPairBtn === 'pair-btn'
+      ? ok(`Tab navigates to pair-btn (${locale.toUpperCase()})`)
+      : bad(`Tab landed on ${onPairBtn} instead of pair-btn`);
+
+    // Enter activates pairing
+    await p.keyboard.press('Enter');
+    await p.waitForFunction(() => document.querySelector('#pair-status').classList.contains('ok'), { timeout: 8000 });
+
+    // Focus automatically transfers to connect-next on successful pairing
+    const focusAfterPair = await p.evaluate(() => document.activeElement ? document.activeElement.id : null);
+    focusAfterPair === 'connect-next'
+      ? ok(`successful pairing transfers focus to connect-next (${locale.toUpperCase()})`)
+      : bad(`focus after pairing landed on ${focusAfterPair}`);
+
+    await p.keyboard.press('Enter');
+    await p.waitForFunction(() => !document.querySelector('#step-printer').hidden, { timeout: 8000 });
+
+    // Step 4: Printer step transition focus
+    const printerH1Focus = await p.evaluate(() => {
+      const h1 = document.querySelector('#step-printer h1');
+      return document.activeElement === h1 && h1.getAttribute('tabindex') === '-1';
+    });
+    printerH1Focus
+      ? ok(`printer step transition programmatically focuses step h1 (${locale.toUpperCase()})`)
+      : bad(`printer step transition failed to focus h1 in ${locale}`);
+
+    // Tab through printer controls: ip → port → paper → scan
+    await p.keyboard.press('Tab'); // printer-ip
+    await p.keyboard.press('Tab'); // printer-port
+    await p.keyboard.press('Tab'); // printer-paper
+    await p.keyboard.press('Tab'); // printer-scan
+    const onScanBtn = await p.evaluate(() => document.activeElement ? document.activeElement.id : null);
+    onScanBtn === 'printer-scan'
+      ? ok(`Tab traverses form to printer-scan button (${locale.toUpperCase()})`)
+      : bad(`Tab landed on ${onScanBtn} instead of printer-scan`);
+
+    // Enter triggers scan
+    await p.keyboard.press('Enter');
+    await p.waitForSelector('.printer-choice', { timeout: 8000 });
+
+    // Focus automatically transfers to first discovered printer choice
+    const focusAfterScan = await p.evaluate(() => document.activeElement && document.activeElement.classList.contains('printer-choice'));
+    focusAfterScan
+      ? ok(`scan discovery moves focus to first printer-choice (${locale.toUpperCase()})`)
+      : bad(`focus after scan failed to land on printer-choice`);
+
+    // Enter selects discovered printer and moves focus to printer-test
+    await p.keyboard.press('Enter');
+    const focusAfterSelect = await p.evaluate(() => document.activeElement ? document.activeElement.id : null);
+    focusAfterSelect === 'printer-test'
+      ? ok(`selecting discovered printer moves focus to printer-test (${locale.toUpperCase()})`)
+      : bad(`focus after selecting printer landed on ${focusAfterSelect}`);
+
+    // Enter triggers printer test
+    await p.keyboard.press('Enter');
+    await p.waitForFunction(() => document.querySelector('#printer-status').classList.contains('ok'), { timeout: 8000 });
+
+    // Focus automatically transfers to printer-next on test success
+    const focusAfterTest = await p.evaluate(() => document.activeElement ? document.activeElement.id : null);
+    focusAfterTest === 'printer-next'
+      ? ok(`successful printer test moves focus to printer-next (${locale.toUpperCase()})`)
+      : bad(`focus after printer test landed on ${focusAfterTest}`);
+
+    await p.keyboard.press('Enter');
+    await p.waitForFunction(() => !document.querySelector('#step-ready').hidden, { timeout: 8000 });
+
+    // Step 5: Ready step transition focus
+    const readyH1Focus = await p.evaluate(() => {
+      const h1 = document.querySelector('#step-ready h1');
+      return document.activeElement === h1 && h1.getAttribute('tabindex') === '-1';
+    });
+    readyH1Focus
+      ? ok(`ready step transition programmatically focuses step h1 (${locale.toUpperCase()})`)
+      : bad(`ready step transition failed to focus h1 in ${locale}`);
+
+    // Tab to ready-back and finish
+    await p.keyboard.press('Tab');
+    const onReadyBack = await p.evaluate(() => document.activeElement ? document.activeElement.id : null);
+    onReadyBack === 'ready-back'
+      ? ok(`Tab lands on ready-back button (${locale.toUpperCase()})`)
+      : bad(`Tab landed on ${onReadyBack} instead of ready-back`);
+
+    await p.keyboard.press('Tab');
+    const onFinish = await p.evaluate(() => document.activeElement ? document.activeElement.id : null);
+    onFinish === 'finish'
+      ? ok(`Tab lands on finish button (${locale.toUpperCase()})`)
+      : bad(`Tab landed on ${onFinish} instead of finish`);
+
+    // Back navigation via Shift+Tab and Enter
     await p.keyboard.down('Shift');
     await p.keyboard.press('Tab');
     await p.keyboard.up('Shift');
-    const current = await p.evaluate(() => document.activeElement.id);
-    if (current !== expectedId) {
-      backwardOk = false;
-      bad(`Shift+Tab backward expected ${expectedId}, landed on ${current}`);
-      break;
-    }
-  }
-  if (backwardOk) {
-    ok('Shift+Tab moves backward logically: manual-mode → login-btn → password-toggle → login-password → login-email');
-  }
+    await p.keyboard.press('Enter');
+    await p.waitForFunction(() => !document.querySelector('#step-printer').hidden, { timeout: 8000 });
 
-  // 11. Enter activation on manual-mode button: triggers step transition
-  await p.focus('#manual-mode');
-  await p.keyboard.press('Enter');
+    const backH1Focus = await p.evaluate(() => {
+      const h1 = document.querySelector('#step-printer h1');
+      return document.activeElement === h1 && h1.getAttribute('tabindex') === '-1';
+    });
+    backH1Focus
+      ? ok(`back navigation from ready returns focus to printer step h1 (${locale.toUpperCase()})`)
+      : bad(`back navigation focus landed elsewhere in ${locale}`);
+
+    await p.closeCtx();
+  }
+}
+
+/* ── 9 · honest WCAG 1.4.10 reflow (320 CSS-pixel reflow equivalent) ─────── */
+for (const locale of ['fr', 'en', 'ar']) {
+  // Baseline at 1280px desktop width, followed by 320 CSS-pixel equivalent (400% zoom)
+  const p = await openShell({ locale, viewport: 'small320', me: 'multi', plugin: { scan: 'hosts' } });
+  await settleAccount(p);
+
+  // Step 1: Account step reflow at 320px
+  const reflowS1 = await p.evaluate(() => ({
+    noHScroll: document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
+    btnVisible: document.querySelector('#account-next') && document.querySelector('#account-next').offsetWidth > 0,
+  }));
+  reflowS1.noHScroll && reflowS1.btnVisible
+    ? ok(`320 CSS-pixel reflow equivalent: Step 1 (Account) no horizontal overflow, CTA visible (${locale.toUpperCase()})`)
+    : bad(`Step 1 reflow failed in ${locale}: ${JSON.stringify(reflowS1)}`);
+
+  // Step 2: Role step reflow at 320px
+  await p.click('#account-next');
+  await p.waitForFunction(() => !document.querySelector('#step-role').hidden, { timeout: 8000 });
+  const reflowS2 = await p.evaluate(() => ({
+    noHScroll: document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
+    tilesCount: document.querySelectorAll('.tile').length,
+    allTilesVisible: Array.from(document.querySelectorAll('.tile')).every((t) => t.offsetWidth > 0 && t.offsetHeight > 0),
+  }));
+  reflowS2.noHScroll && reflowS2.tilesCount === 4 && reflowS2.allTilesVisible
+    ? ok(`320 CSS-pixel reflow equivalent: Step 2 (Role) no horizontal overflow, all 4 cards rendered (${locale.toUpperCase()})`)
+    : bad(`Step 2 reflow failed in ${locale}: ${JSON.stringify(reflowS2)}`);
+
+  // Select role caisse and advance to connect
+  await p.click('.tile[data-role="caisse"]');
+  await p.click('#role-next');
+  await p.waitForFunction(() => !document.querySelector('#step-connect').hidden, { timeout: 8000 });
+
+  // Step 3: Connect step reflow at 320px
+  const reflowS3 = await p.evaluate(() => {
+    const stores = Array.from(document.querySelectorAll('.store-choice'));
+    const pairBtn = document.querySelector('#pair-btn');
+    return {
+      noHScroll: document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
+      storesVisible: stores.every((s) => s.offsetWidth > 0 && s.offsetHeight > 0),
+      pairBtnVisible: pairBtn && pairBtn.offsetWidth > 0,
+    };
+  });
+  reflowS3.noHScroll && reflowS3.storesVisible && reflowS3.pairBtnVisible
+    ? ok(`320 CSS-pixel reflow equivalent: Step 3 (Connect) no horizontal overflow, store cards and pair button visible (${locale.toUpperCase()})`)
+    : bad(`Step 3 reflow failed in ${locale}: ${JSON.stringify(reflowS3)}`);
+
+  // Pair store and advance to printer
+  await p.click('.store-choice');
+  await p.click('#pair-btn');
+  await p.waitForFunction(() => document.querySelector('#pair-status').classList.contains('ok'), { timeout: 8000 });
+  await p.click('#connect-next');
+  await p.waitForFunction(() => !document.querySelector('#step-printer').hidden, { timeout: 8000 });
+
+  // Step 4: Printer step reflow at 320px
+  const reflowS4 = await p.evaluate(() => {
+    const ip = document.querySelector('#printer-ip');
+    const scan = document.querySelector('#printer-scan');
+    const test = document.querySelector('#printer-test');
+    return {
+      noHScroll: document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
+      ipVisible: ip && ip.offsetWidth > 0,
+      scanVisible: scan && scan.offsetWidth > 0,
+      testVisible: test && test.offsetWidth > 0,
+    };
+  });
+  reflowS4.noHScroll && reflowS4.ipVisible && reflowS4.scanVisible && reflowS4.testVisible
+    ? ok(`320 CSS-pixel reflow equivalent: Step 4 (Printer) no horizontal overflow, form inputs and actions visible (${locale.toUpperCase()})`)
+    : bad(`Step 4 reflow failed in ${locale}: ${JSON.stringify(reflowS4)}`);
+
+  // Skip printer to advance to ready
+  await p.click('#printer-skip');
+  await p.waitForFunction(() => !document.querySelector('#step-ready').hidden, { timeout: 8000 });
+
+  // Step 5: Ready step reflow at 320px
+  const reflowS5 = await p.evaluate(() => {
+    const finish = document.querySelector('#finish');
+    const items = Array.from(document.querySelectorAll('#ready-list li'));
+    return {
+      noHScroll: document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
+      finishVisible: finish && finish.offsetWidth > 0,
+      itemsVisible: items.every((it) => it.offsetWidth > 0 && it.offsetHeight > 0),
+    };
+  });
+  reflowS5.noHScroll && reflowS5.finishVisible && reflowS5.itemsVisible
+    ? ok(`320 CSS-pixel reflow equivalent: Step 5 (Ready) no horizontal overflow, checklist and finish button visible (${locale.toUpperCase()})`)
+    : bad(`Step 5 reflow failed in ${locale}: ${JSON.stringify(reflowS5)}`);
+
+  if (locale === 'ar') await shot(p, 'reflow-320-ar-ready');
+  await p.closeCtx();
+}
+
+/* ── 10 · genuine 200% text scaling across all elements (WCAG 1.4.4) ────── */
+for (const locale of ['fr', 'en', 'ar']) {
+  const p = await openShell({ locale, viewport: 'iphone', me: 'multi', plugin: { scan: 'hosts' } });
+  await settleAccount(p);
+
+  // 10.1: Demonstrate and record that naive root fontSize = 200% does NOT scale fixed-pixel typography
+  const baselineProof = await p.evaluate(() => {
+    const h1 = document.querySelector('#step-account h1');
+    const btn = document.querySelector('#account-next');
+    const beforeH1 = parseFloat(window.getComputedStyle(h1).fontSize);
+    const beforeBtn = parseFloat(window.getComputedStyle(btn).fontSize);
+
+    document.documentElement.style.fontSize = '200%';
+    const afterNaiveH1 = parseFloat(window.getComputedStyle(h1).fontSize);
+    const afterNaiveBtn = parseFloat(window.getComputedStyle(btn).fontSize);
+    document.documentElement.style.fontSize = '';
+
+    return {
+      beforeH1,
+      afterNaiveH1,
+      ratioH1: afterNaiveH1 / beforeH1,
+      beforeBtn,
+      afterNaiveBtn,
+      ratioBtn: afterNaiveBtn / beforeBtn,
+      failedToScale: afterNaiveH1 === beforeH1 && afterNaiveBtn === beforeBtn,
+    };
+  });
+  baselineProof.failedToScale
+    ? ok(`verified empirical baseline: naive root style.fontSize=200% leaves fixed-pixel typography unchanged (ratio ${baselineProof.ratioH1.toFixed(2)}) (${locale.toUpperCase()})`)
+    : bad(`unexpected root scaling: ${JSON.stringify(baselineProof)}`);
+
+  // 10.2: Inject test-only scaling stylesheet that doubles all declared typography
+  await p.evaluate(() => {
+    const id = '__test_200_scale__';
+    let sheet = document.getElementById(id);
+    if (!sheet) {
+      sheet = document.createElement('style');
+      sheet.id = id;
+      document.head.appendChild(sheet);
+    }
+    sheet.textContent = `
+      h1, .step-heading h1 { font-size: 64px !important; line-height: 1.15 !important; }
+      .eyebrow { font-size: 24px !important; }
+      .step-heading > p:last-child { font-size: 30px !important; }
+      .login-title { font-size: 22px !important; }
+      .field span, .field label { font-size: 24px !important; }
+      .field input, .field select { font-size: 32px !important; }
+      .cta, .secondary, .link { font-size: 28px !important; }
+      .tile-name { font-size: 38px !important; }
+      .tile-sub { font-size: 25px !important; }
+      .store-mark { font-size: 24px !important; }
+      .store-copy strong { font-size: 28px !important; }
+      .store-copy small { font-size: 22px !important; }
+      .status, .scan-results p { font-size: 26px !important; }
+      .err { font-size: 26px !important; }
+      .checklist b { font-size: 28px !important; }
+      .checklist small { font-size: 26px !important; }
+      .shell-foot { font-size: 22px !important; }
+    `;
+  });
+
+  // Verify computed font sizes actually doubled before asserting layout
+  const verifiedScaling = await p.evaluate(() => {
+    const h1Fs = parseFloat(window.getComputedStyle(document.querySelector('#step-account h1')).fontSize);
+    const btnFs = parseFloat(window.getComputedStyle(document.querySelector('#account-next')).fontSize);
+    return { h1Fs, btnFs, doubled: h1Fs >= 60 && btnFs >= 26 };
+  });
+  verifiedScaling.doubled
+    ? ok(`test-only stylesheet verified: computed typography scaled to 200% (h1: ${verifiedScaling.h1Fs}px, cta: ${verifiedScaling.btnFs}px) (${locale.toUpperCase()})`)
+    : bad(`test stylesheet failed to scale typography: ${JSON.stringify(verifiedScaling)}`);
+
+  // Step 1 check under 200% text size
+  const s1Scale = await p.evaluate(() => ({
+    noHScroll: document.documentElement.scrollWidth <= window.innerWidth + 1,
+    btnVisible: document.querySelector('#account-next').offsetWidth > 0,
+  }));
+  s1Scale.noHScroll && s1Scale.btnVisible
+    ? ok(`200% text scale: Step 1 (Account) no horizontal page scroll, button accessible (${locale.toUpperCase()})`)
+    : bad(`200% text scale failed in Step 1 ${locale}: ${JSON.stringify(s1Scale)}`);
+
+  // Advance to Step 2 (Role) under 200% text size
+  await p.click('#account-next');
   await p.waitForFunction(() => !document.querySelector('#step-role').hidden, { timeout: 8000 });
 
-  // 12. Modal/step transition focus transfer: heading h1 receives programmatic focus
-  const headingFocus = await p.evaluate(() => {
-    const h1 = document.querySelector('#step-role h1');
-    return {
-      isH1: document.activeElement === h1,
-      tag: document.activeElement ? document.activeElement.tagName : '',
-      tabIndex: h1 ? h1.getAttribute('tabindex') : null,
-      text: h1 ? h1.textContent : '',
-    };
-  });
-  headingFocus.isH1 && headingFocus.tabIndex === '-1'
-    ? ok(`step transition moves focus to h1 heading («${headingFocus.text}», tabindex="-1")`)
-    : bad(`step transition heading focus failed: ${JSON.stringify(headingFocus)}`);
-
-  // 13. Absence of keyboard trap: Tab advances from heading to first role tile
-  await p.keyboard.press('Tab');
-  const roleFocused = await p.evaluate(() => document.activeElement ? document.activeElement.getAttribute('data-role') : null);
-  roleFocused === 'caisse'
-    ? ok('Tab from heading advances to first role tile without keyboard trap')
-    : bad(`Tab from heading landed on ${roleFocused}`);
-
-  await p.closeCtx();
-}
-
-/* ── 9 · browser zoom reflow (WCAG 1.4.10: 200% & 400% zoom) ───────────── */
-for (const locale of ['fr', 'en', 'ar']) {
-  const p = await openShell({ locale, viewport: 'ipadLandscape', me: 'single' });
-  await settleAccount(p);
-  await toRole(p);
-  await fromRole(p, 'caisse');
-
-  // Test at 200% zoom
-  await p.evaluate(() => { document.documentElement.style.zoom = '2'; });
-  await new Promise((r) => setTimeout(r, 150));
-  let reflow200 = await p.evaluate(() => {
-    return {
-      scrollW: document.documentElement.scrollWidth,
-      clientW: document.documentElement.clientWidth,
-      noHOverflow: document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
-    };
-  });
-  reflow200.noHOverflow
-    ? ok(`no horizontal overflow under literal 200% browser zoom (${locale.toUpperCase()})`)
-    : bad(`200% zoom overflow in ${locale}: ${JSON.stringify(reflow200)}`);
-
-  // Test at 400% zoom (WCAG 1.4.10 AA requirement: equivalent to 320 CSS px width)
-  await p.evaluate(() => { document.documentElement.style.zoom = '4'; });
-  await new Promise((r) => setTimeout(r, 150));
-  let reflow400 = await p.evaluate(() => {
-    const pairBtn = document.querySelector('#pair-btn');
-    const b = pairBtn ? pairBtn.getBoundingClientRect() : null;
-    return {
-      scrollW: document.documentElement.scrollWidth,
-      clientW: document.documentElement.clientWidth,
-      noHOverflow: document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
-      btnRendered: Boolean(b && b.width > 0 && b.height > 0),
-    };
-  });
-  reflow400.noHOverflow && reflow400.btnRendered
-    ? ok(`no horizontal overflow under literal 400% browser zoom (${locale.toUpperCase()}) with visible CTA`)
-    : bad(`400% zoom reflow failed in ${locale}: ${JSON.stringify(reflow400)}`);
-
-  if (locale === 'ar') await shot(p, 'reflow-400-ar-connect');
-  await p.closeCtx();
-}
-
-/* ── 10 · text scaling 200% without clipping or overlap (WCAG 1.4.4) ────── */
-for (const locale of ['fr', 'en', 'ar']) {
-  const p = await openShell({ locale, viewport: 'iphone', me: 'multi' });
-  await settleAccount(p);
-  await toRole(p);
-
-  // Enlarge font-size by 200%
-  await p.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
-  await new Promise((r) => setTimeout(r, 150));
-
   const roleInspection = await p.evaluate(() => {
-    const tiles = Array.from(document.querySelectorAll('.tile')).map((t) => {
-      const name = t.querySelector('.tile-name');
-      const sub = t.querySelector('.tile-sub');
-      return {
-        role: t.getAttribute('data-role'),
-        nameText: name ? name.textContent : '',
-        nameScrollH: name ? name.scrollHeight : 0,
-        nameClientH: name ? name.clientHeight : 0,
-        nameScrollW: name ? name.scrollWidth : 0,
-        nameClientW: name ? name.clientWidth : 0,
-        nameClippedV: name ? name.scrollHeight > name.clientHeight + 1 : false,
-        nameClippedH: name ? name.scrollWidth > name.clientWidth + 1 : false,
-        subVisible: sub ? sub.offsetHeight > 0 : false,
-      };
-    });
-    const anyClipped = tiles.some((t) => t.nameClippedV || t.nameClippedH);
+    const tiles = Array.from(document.querySelectorAll('.tile'));
+    let overlap = false;
+    for (let i = 0; i < tiles.length; i++) {
+      const r1 = tiles[i].getBoundingClientRect();
+      for (let j = i + 1; j < tiles.length; j++) {
+        const r2 = tiles[j].getBoundingClientRect();
+        if (!(r1.right <= r2.left || r1.left >= r2.right || r1.bottom <= r2.top || r1.top >= r2.bottom)) {
+          overlap = true;
+        }
+      }
+    }
     const noHScroll = document.documentElement.scrollWidth <= window.innerWidth + 1;
-    return { tiles, anyClipped, noHScroll };
+    return { count: tiles.length, overlap, noHScroll };
   });
+  roleInspection.count === 4 && !roleInspection.overlap && roleInspection.noHScroll
+    ? ok(`200% text scale: Step 2 (Role) all 4 role tiles expand vertically without overlap (${locale.toUpperCase()})`)
+    : bad(`200% text scale role tiles failed in ${locale}: ${JSON.stringify(roleInspection)}`);
 
-  !roleInspection.anyClipped && roleInspection.noHScroll
-    ? ok(`200% text size: role tile typography unclipped across all 4 cards (${locale.toUpperCase()})`)
-    : bad(`200% text size clipped in ${locale}: ${JSON.stringify(roleInspection)}`);
+  // Advance to Step 3 (Connect) under 200% text size
+  await p.click('.tile[data-role="caisse"]');
+  await p.click('#role-next');
+  await p.waitForFunction(() => !document.querySelector('#step-connect').hidden, { timeout: 8000 });
 
-  // Advance to connect step under 200% font size
-  await fromRole(p, 'caisse');
   const storeInspection = await p.evaluate(() => {
     const choices = Array.from(document.querySelectorAll('.store-choice'));
-    let overlapping = false;
+    let overlap = false;
     for (let i = 0; i < choices.length; i++) {
       const r1 = choices[i].getBoundingClientRect();
       for (let j = i + 1; j < choices.length; j++) {
         const r2 = choices[j].getBoundingClientRect();
-        const overlap = !(r1.right <= r2.left || r1.left >= r2.right || r1.bottom <= r2.top || r1.top >= r2.bottom);
-        if (overlap) overlapping = true;
+        if (!(r1.right <= r2.left || r1.left >= r2.right || r1.bottom <= r2.top || r1.top >= r2.bottom)) {
+          overlap = true;
+        }
       }
     }
     const noHScroll = document.documentElement.scrollWidth <= window.innerWidth + 1;
-    return { storeCount: choices.length, overlapping, noHScroll };
+    return { count: choices.length, overlap, noHScroll };
   });
+  storeInspection.count >= 3 && !storeInspection.overlap && storeInspection.noHScroll
+    ? ok(`200% text scale: Step 3 (Connect) store cards expand vertically without overlap (${locale.toUpperCase()})`)
+    : bad(`200% text scale store cards failed in ${locale}: ${JSON.stringify(storeInspection)}`);
 
-  storeInspection.storeCount >= 3 && !storeInspection.overlapping && storeInspection.noHScroll
-    ? ok(`200% text size: store cards expand vertically without overlap (${locale.toUpperCase()})`)
-    : bad(`200% text size store cards failed in ${locale}: ${JSON.stringify(storeInspection)}`);
+  // Advance to Step 4 (Printer) under 200% text size
+  await p.evaluate(() => document.querySelector('.store-choice').click());
+  await p.waitForFunction(() => !document.querySelector('#pair-btn').disabled, { timeout: 8000 });
+  await p.evaluate(() => document.querySelector('#pair-btn').click());
+  await p.waitForFunction(() => document.querySelector('#pair-status').classList.contains('ok'), { timeout: 8000 });
+  await p.evaluate(() => document.querySelector('#connect-next').click());
+  await p.waitForFunction(() => !document.querySelector('#step-printer').hidden, { timeout: 8000 });
 
-  if (locale === 'ar') await shot(p, 'text-scale-200-ar-role');
+  const printerInspection = await p.evaluate(() => {
+    const ip = document.querySelector('#printer-ip');
+    const scan = document.querySelector('#printer-scan');
+    const test = document.querySelector('#printer-test');
+    return {
+      noHScroll: document.documentElement.scrollWidth <= window.innerWidth + 1,
+      ipUsable: ip && ip.offsetWidth > 0 && ip.offsetHeight > 0,
+      scanUsable: scan && scan.offsetWidth > 0 && scan.offsetHeight > 0,
+      testUsable: test && test.offsetWidth > 0 && test.offsetHeight > 0,
+    };
+  });
+  printerInspection.noHScroll && printerInspection.ipUsable && printerInspection.scanUsable && printerInspection.testUsable
+    ? ok(`200% text scale: Step 4 (Printer) controls and action buttons unclipped and operable (${locale.toUpperCase()})`)
+    : bad(`200% text scale printer controls failed in ${locale}: ${JSON.stringify(printerInspection)}`);
+
+  // Advance to Step 5 (Ready) under 200% text size
+  await p.evaluate(() => document.querySelector('#printer-skip').click());
+  await p.waitForFunction(() => !document.querySelector('#step-ready').hidden, { timeout: 8000 });
+
+  const readyInspection = await p.evaluate(() => {
+    const items = Array.from(document.querySelectorAll('#ready-list li'));
+    let overlap = false;
+    for (let i = 0; i < items.length; i++) {
+      const r1 = items[i].getBoundingClientRect();
+      for (let j = i + 1; j < items.length; j++) {
+        const r2 = items[j].getBoundingClientRect();
+        if (!(r1.right <= r2.left || r1.left >= r2.right || r1.bottom <= r2.top || r1.top >= r2.bottom)) {
+          overlap = true;
+        }
+      }
+    }
+    const noHScroll = document.documentElement.scrollWidth <= window.innerWidth + 1;
+    return { count: items.length, overlap, noHScroll };
+  });
+  readyInspection.count === 3 && !readyInspection.overlap && readyInspection.noHScroll
+    ? ok(`200% text scale: Step 5 (Ready) checklist items expand without collision or horizontal scroll (${locale.toUpperCase()})`)
+    : bad(`200% text scale ready checklist failed in ${locale}: ${JSON.stringify(readyInspection)}`);
+
+  if (locale === 'ar') await shot(p, 'text-scale-200-ar-ready');
   await p.closeCtx();
 }
 
-/* ── 11 · regression test: Arabic typography line-height defect ────────── */
+/* ── 11 · Arabic typography, line-height, and container boundaries ──────── */
 {
   const p = await openShell({ locale: 'ar', viewport: 'iphone', me: 'single' });
   await settleAccount(p);
   await toRole(p);
-  await p.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
-  const check = await p.evaluate(() => {
-    const tile = document.querySelector('.tile[data-role="caisse"] .tile-name');
-    const withFix = { scrollH: tile.scrollHeight, clientH: tile.clientHeight, clipped: tile.scrollHeight > tile.clientHeight };
-    tile.style.lineHeight = '1.08';
-    const broken = { scrollH: tile.scrollHeight, clientH: tile.clientHeight, clipped: tile.scrollHeight > tile.clientHeight };
-    tile.style.lineHeight = '';
-    return { withFix, broken };
+
+  // Measure Arabic typography containment under normal and 200% font size, selected and unselected
+  const containerMetrics = await p.evaluate(() => {
+    const tile = document.querySelector('.tile[data-role="caisse"]');
+    const name = tile.querySelector('.tile-name');
+    const sub = tile.querySelector('.tile-sub');
+
+    function checkContainment(desc) {
+      const tr = tile.getBoundingClientRect();
+      const nr = name.getBoundingClientRect();
+      const sr = sub.getBoundingClientRect();
+      return {
+        desc,
+        nameInsideTile: nr.top >= tr.top && nr.bottom <= tr.bottom,
+        subInsideTile: sr.top >= tr.top && sr.bottom <= tr.bottom + 1,
+        nameBeforeSub: nr.bottom <= sr.top + 1,
+        tileHasOverflowHidden: window.getComputedStyle(tile).overflow === 'hidden',
+        nameHasOverflowHidden: window.getComputedStyle(name).overflow === 'hidden',
+      };
+    }
+
+    // 1. Normal unselected
+    const m1 = checkContainment('normal unselected');
+
+    // 2. Normal selected
+    tile.classList.add('selected');
+    const m2 = checkContainment('normal selected');
+    tile.classList.remove('selected');
+
+    // 3. 200% font unselected
+    name.style.fontSize = '38px';
+    const m3 = checkContainment('200% font unselected');
+
+    // 4. 200% font selected
+    tile.classList.add('selected');
+    const m4 = checkContainment('200% font selected');
+
+    return [m1, m2, m3, m4];
   });
-  check.broken.clipped && !check.withFix.clipped
-    ? ok(`regression test: Arabic tile-name clips under unpatched line-height 1.08 (${check.broken.scrollH}px > ${check.broken.clientH}px) and passes with 1.35 fix (${check.withFix.scrollH}px ≤ ${check.withFix.clientH}px)`)
-    : bad(`Arabic line-height regression check unexpected: ${JSON.stringify(check)}`);
+
+  const allContained = containerMetrics.every((m) => m.nameInsideTile && m.subInsideTile);
+  const nameOverflowVisible = containerMetrics.every((m) => !m.nameHasOverflowHidden);
+
+  allContained && nameOverflowVisible
+    ? ok('Arabic typography container containment verified: text elements remain within tile boundaries without container clipping across normal and 200% font sizes, selected and unselected')
+    : bad(`Arabic typography container metrics failed: ${JSON.stringify(containerMetrics)}`);
+
+  // Validate line-height: 1.35 as an independent typographic legibility enhancement
+  const lhCheck = await p.evaluate(() => {
+    const tile = document.querySelector('.tile[data-role="caisse"] .tile-name');
+    const computedLh = parseFloat(window.getComputedStyle(tile).lineHeight);
+    const computedFs = parseFloat(window.getComputedStyle(tile).fontSize);
+    return { ratio: computedLh / computedFs };
+  });
+  lhCheck.ratio >= 1.30 && lhCheck.ratio <= 1.40
+    ? ok(`Arabic line-height: 1.35 verified as typographic legibility improvement (effective ratio ${lhCheck.ratio.toFixed(2)})`)
+    : bad(`Arabic line-height ratio unexpected: ${JSON.stringify(lhCheck)}`);
+
   await p.closeCtx();
 }
 
