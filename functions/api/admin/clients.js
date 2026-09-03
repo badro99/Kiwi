@@ -297,11 +297,13 @@ async function merchantTables(env) {
  * pouvait fabriquer un établissement fantôme, et la console n'offrait aucun
  * moyen de le retirer.
  *
- * Trois garde-fous, parce que c'est irréversible :
+ * Quatre garde-fous, parce que c'est irréversible :
  *   · code opérateur nommé (senior), pas le laissez-passer d'équipe ;
  *   · `confirm` doit répéter le slug — on ne supprime pas d'un doigt qui glisse ;
- *   · tout part en un seul batch (atomique côté D1) : pas de magasin à moitié
- *     effacé si la connexion lâche au milieu.
+ *   · les pièces R2 `intake/<merchant>/` sont listées (paginé) puis supprimées
+ *     AVANT le batch D1 : un échec R2 annule tout et ne rapporte aucun succès ;
+ *   · le batch D1 reste atomique, mais D1+R2 ne le sont pas ensemble : voir le
+ *     commentaire au-dessus de la phase R2 pour l'ordre et la reprise.
  *
  * La réponse est un CONSTAT, pas une promesse : elle liste chaque table touchée
  * avec le nombre de lignes réellement retirées, et les journaux conservés. */
@@ -374,6 +376,53 @@ export async function onRequestDelete(context) {
     } catch (_) { /* illisible → elle sortira du batch aussi */ }
   }
 
+  /* R2 : les pièces du guichet vivent sous `intake/<merchant>/`. Supprimer
+   * les lignes D1 seules les orphelinerait — des PDF privés sans index pour
+   * les retrouver — alors que `merchantTables` ci-dessus efface déjà
+   * `intake_docs`. Il n'existe pas de transaction distribuée D1+R2 : l'ordre
+   * est donc R2 PUIS D1. Un crash entre les deux laisse des lignes D1 dont
+   * les octets manquent (lectures en 404, rien d'orphelin), et la reprise
+   * re-liste ce qui reste puis rejoue le batch D1, idempotent par nature
+   * (des DELETE répétés). Tant que des objets R2 connus subsistent, le
+   * registre D1 n'est pas touché et la suppression n'est pas annoncée. */
+  let r2 = { status: 'skipped', prefix: null, listed: 0, deleted: 0 };
+  if (!env.MEDIA) {
+    // Liaison absente : impossible de vérifier le seau. On refuse plutôt que
+    // d'annoncer une suppression dont les pièces survivraient peut-être.
+    return json({ error: 'r2-binding-missing', detail: 'MEDIA is not bound; refusing to delete without verifying R2' }, 503);
+  }
+  if (!/^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(merchant)) {
+    // Le préfixe R2 est dérivé du slug : tout caractère hors alphabet
+    // (surtout '/' ou '.') pourrait déborder sur un autre marchand.
+    return json({ error: 'invalid-merchant' }, 400);
+  }
+  try {
+    const prefix = 'intake/' + merchant + '/';
+    r2.prefix = prefix;
+    let cursor;
+    for (;;) {
+      const page = await env.MEDIA.list({ prefix, limit: 1000, ...(cursor ? { cursor } : {}) });
+      const objects = (page && page.objects) || [];
+      for (const o of objects) {
+        const key = o && o.key;
+        if (typeof key !== 'string' || !key.startsWith(prefix)) {
+          return json({ error: 'r2-scope-violation', detail: 'R2 listed a key outside ' + prefix }, 500);
+        }
+      }
+      r2.listed += objects.length;
+      for (const o of objects) {
+        await env.MEDIA.delete(o.key);
+        r2.deleted += 1;
+      }
+      if (page && page.truncated && page.cursor) cursor = page.cursor;
+      else break;
+    }
+    r2.status = 'cleaned';
+  } catch (e) {
+    r2.status = 'failed';
+    return json({ error: 'r2-cleanup-failed', detail: String((e && e.message) || e), r2 }, 500);
+  }
+
   try {
     const deletes = tables.map((t) =>
       env.DB.prepare(`DELETE FROM ${t} WHERE merchant = ?`).bind(merchant));
@@ -391,12 +440,13 @@ export async function onRequestDelete(context) {
   }
 
   await logStoreAction(context, merchant, 'store-delete', 'deleted',
-    'suppression définitive · ' + JSON.stringify(removed));
+    'suppression définitive · ' + JSON.stringify(removed) + ' · r2 ' + JSON.stringify(r2));
 
   return json({
     ok: true, merchant,
     scanned: tables,          // tout ce qui porte une colonne `merchant`
     removed,                  // table → lignes réellement retirées
     kept: AUDIT_TABLES,       // les journaux d'opérateur, conservés exprès
+    r2,                       // préfixe, objets listés/supprimés, statut
   });
 }

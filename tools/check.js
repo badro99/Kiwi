@@ -1072,6 +1072,7 @@ section('Whole-project regressions');
     'intake-conflict-test.mjs',
     'intake-archive-test.mjs',
     'media-owner-test.mjs',
+    'admin-delete-r2-test.mjs',
     'legacy-scan-test.mjs',
     'menu-translate-test.mjs',
     /* La carte dans la langue de chacun : traductions portées par les
