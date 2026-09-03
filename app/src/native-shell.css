@@ -60,7 +60,7 @@ button, input, select { font-family: inherit; }
 .wordmark { display: flex; align-items: center; gap: var(--space-3); width: fit-content; }
 .brand-logo { display: block; width: 128px; height: auto; }
 .product-label { border: 1px solid rgba(247,245,240,.32); border-radius: var(--r-full); padding: 6px 9px 5px; color: var(--mint); font: 600 11px/1 var(--sans); letter-spacing: .14em; text-transform: uppercase; }
-.brand-kicker { max-width: 370px; margin: var(--space-8) 0 0; font: 500 clamp(30px, 3.1vw, 48px)/.98 var(--sans); letter-spacing: -.055em; text-wrap: balance; }
+.brand-kicker { max-width: 370px; margin: var(--space-8) 0 0; font: 500 clamp(30px, 3.1vw, 48px)/1.08 var(--sans); letter-spacing: -.055em; text-wrap: balance; }
 .shell-sub { max-width: 340px; margin: 0; color: rgba(247,245,240,.62); font-size: 15px; }
 .brand-proof { margin-top: auto; display: flex; align-items: center; gap: var(--space-2); color: rgba(247,245,240,.58); font-size: 12px; }
 .proof-dot, .live-chip i { width: 7px; height: 7px; border-radius: 50%; background: var(--mint); box-shadow: 0 0 0 5px rgba(125,242,176,.10); flex: none; }
@@ -85,9 +85,9 @@ html[dir="rtl"] .progress li:not(:last-child)::after { left: auto; right: 16px; 
 .live-chip i { width: 6px; height: 6px; background: var(--atlas); box-shadow: 0 0 0 4px rgba(11,110,79,.09); }
 .setup-step { width: 100%; max-width: 700px; min-height: 0; margin: auto; padding: 38px 0 28px; display: flex; flex-direction: column; gap: var(--space-6); justify-content: center; }
 .step-heading { display: flex; flex-direction: column; gap: var(--space-2); }
-.step-heading h1 { max-width: 640px; margin: 0; font: 600 clamp(34px, 4.4vw, 54px)/.98 var(--sans); letter-spacing: -.055em; text-wrap: balance; outline: none; }
+.step-heading h1 { max-width: 640px; margin: 0; font: 600 clamp(34px, 4.4vw, 54px)/1.10 var(--sans); letter-spacing: -.055em; text-wrap: balance; outline: none; }
 .step-heading > p:last-child { max-width: 590px; margin: 0; color: var(--n-500); font-size: 15px; }
-.eyebrow { margin: 0; color: var(--atlas); font: 650 11px/1 var(--sans); letter-spacing: .12em; text-transform: uppercase; }
+.eyebrow { margin: 0; color: var(--atlas); font: 600 12px/1 var(--sans); letter-spacing: .14em; text-transform: uppercase; }
 
 .account, .connect-box, .printer-form, .checklist {
   border: 1px solid rgba(10,15,13,.09); border-radius: var(--r-xl); background: var(--surface); padding: var(--space-5);
@@ -103,7 +103,7 @@ html[dir="rtl"] .progress li:not(:last-child)::after { left: auto; right: 16px; 
 .login-title, .login .err, .login .cta { grid-column: 1 / -1; }
 .login-title { margin: 0; color: var(--n-500); font: 600 11px/1 var(--sans); letter-spacing: .1em; text-transform: uppercase; }
 .field { display: flex; flex-direction: column; gap: 6px; color: var(--n-500); font-size: 12px; }
-.field input, .field select { width: 100%; min-height: 48px; padding: var(--space-3) 14px; outline: none; border: 1px solid var(--n-200); border-radius: var(--r-md); background: rgba(247,245,240,.78); color: var(--ink); font: 450 16px/1.2 var(--sans); transition: border-color 150ms ease, box-shadow 150ms ease, background 150ms ease; }
+.field input, .field select { width: 100%; min-height: 48px; padding: var(--space-3) 14px; outline: none; border: 1px solid var(--n-200); border-radius: var(--r-md); background: rgba(247,245,240,.78); color: var(--ink); font: 500 16px/1.2 var(--sans); transition: border-color 150ms ease, box-shadow 150ms ease, background 150ms ease; }
 .field input:focus, .field select:focus { border-color: var(--atlas); background: #fff; box-shadow: 0 0 0 4px rgba(11,110,79,.09); }
 .password-input { position: relative; }
 .password-input input { padding-inline-end: 52px; }
@@ -150,8 +150,8 @@ html[dir="rtl"] .tile-arrow { transform: scaleX(-1); }
 .store-choice.selected { border-color: var(--atlas); background: rgba(11,110,79,.055); box-shadow: 0 0 0 3px rgba(11,110,79,.075); }
 /* Selected store carries a check disc as well as the filled mark: selection
  * must never be color alone. ✓ is the shell's own check vocabulary. */
-.store-choice.selected::after { content: "✓"; position: absolute; top: 8px; inset-inline-end: 8px; width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; background: var(--atlas); color: var(--paper); font-size: 12px; font-weight: 700; }
-.store-mark { width: 34px; height: 34px; flex: none; display: grid; place-items: center; border-radius: var(--r-sm); background: rgba(11,110,79,.09); color: var(--atlas); font: 650 12px/1 var(--sans); }
+.store-choice.selected::after { content: "✓"; position: absolute; top: 8px; inset-inline-end: 8px; width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; background: var(--atlas); color: var(--paper); font-size: 12px; font-weight: 600; }
+.store-mark { width: 34px; height: 34px; flex: none; display: grid; place-items: center; border-radius: var(--r-sm); background: rgba(11,110,79,.09); color: var(--atlas); font: 600 12px/1 var(--sans); }
 .store-choice.selected .store-mark { background: var(--atlas); color: var(--paper); }
 .store-copy { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .store-copy strong, .store-copy small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -172,7 +172,7 @@ html[dir="rtl"] .tile-arrow { transform: scaleX(-1); }
 .checklist li { min-height: 56px; display: grid; grid-template-columns: 32px 1fr auto; align-items: center; gap: 11px; border-bottom: 1px solid var(--n-100); }
 .checklist li:last-child { border-bottom: 0; }
 .checklist li > span { width: 27px; height: 27px; display: grid; place-items: center; border-radius: 50%; background: var(--atlas); color: var(--paper); font-size: 13px; }
-.checklist b { font-weight: 550; }
+.checklist b { font-weight: 500; }
 .checklist small { color: var(--atlas); text-align: end; }
 .checklist li.muted > span { background: var(--n-200); color: var(--n-700); }
 .checklist li.muted small { color: var(--n-500); }
@@ -190,7 +190,7 @@ html[dir="rtl"] .tile-arrow { transform: scaleX(-1); }
   .shell-head { gap: var(--space-2); }
   .brand-logo { width: 92px; }
   .product-label { padding: 5px 7px 4px; font-size: 9px; }
-  .brand-kicker { max-width: 290px; margin-top: 14px; font-size: 23px; line-height: 1.02; }
+  .brand-kicker { max-width: 290px; margin-top: 14px; font-size: 23px; line-height: 1.16; }
   .shell-sub { max-width: 300px; font-size: 12px; }
   .brand-proof { display: none; }
   /* In-flow progress: absolute dots either hid behind the overlapping sheet
@@ -206,7 +206,7 @@ html[dir="rtl"] .tile-arrow { transform: scaleX(-1); }
   .flow-topbar { min-height: 30px; }
   .setup-step { max-width: 620px; margin: 0 auto; padding: 24px 0 18px; gap: 17px; justify-content: flex-start; }
   .step-heading { gap: 6px; }
-  .step-heading h1 { font-size: clamp(30px, 8.6vw, 38px); line-height: .98; }
+  .step-heading h1 { font-size: clamp(30px, 8.6vw, 38px); line-height: 1.12; }
   .step-heading > p:last-child { font-size: 13px; }
   .account, .connect-box, .printer-form, .checklist { padding: var(--space-4); border-radius: var(--r-lg); }
   .login { grid-template-columns: 1fr; gap: 10px; }
