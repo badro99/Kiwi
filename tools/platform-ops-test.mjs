@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import fs from 'node:fs';import assert from 'node:assert/strict';
+import fs from 'node:fs';import assert from 'node:assert/strict';import vm from 'node:vm';
 const ops=fs.readFileSync(new URL('../assets/platform-ops.js',import.meta.url),'utf8');
 const scan=fs.readFileSync(new URL('../assets/retail-scan.js',import.meta.url),'utf8');
 const publish=fs.readFileSync(new URL('../assets/orderpro-publish.js',import.meta.url),'utf8');
@@ -11,7 +11,29 @@ let n=0;const ok=(c,m)=>{assert.ok(c,m);n++;console.log('  ✓ '+m);};
 ok(/world\.openfoodfacts\.org\/api\/v2\/product/.test(ops),'product enrichment uses the official v2 product endpoint');
 ok(/router\.project-osrm\.org/.test(ops)&&/\/route\/v1\/driving\//.test(ops),'routing uses OSRM and never invents a route');
 ok(/navigator\.onLine===false\)\{fail\('offline'\)/.test(ops),'uploads refuse false offline success');
-ok(/opts\.merchant.*merchant=/.test(ops)&&/readSession\(readCookie\(request, SESS_COOKIE\)/.test(fs.readFileSync(new URL('../functions/api/media/index.js',import.meta.url),'utf8'))&&/tenantFor\(request, env, asked, \{ strict: true \}\)/.test(fs.readFileSync(new URL('../functions/api/media/index.js',import.meta.url),'utf8')),'multi-store uploads are filed under the authenticated selected store, never by a paired till alone');
+const mediaSource=fs.readFileSync(new URL('../functions/api/media/index.js',import.meta.url),'utf8');
+ok(/opts\.merchant.*merchant=/.test(ops)&&/ownerMerchant\(request, env, asked, \{ strict: true \}\)/.test(mediaSource),'multi-store uploads are filed under the authenticated selected store, never by a paired till alone');
+/* Execute the shipped publisher, not a copy. The regression captured on iPad
+ * was precisely that the resilient adapter supported opts.merchant while its
+ * caller never supplied it, so a valid owner session received 401 forever. */
+{
+  let uploadCall=null;
+  const window={
+    KiwiVenue:{isCustom:()=>true,getCurrentVenueData:()=>({name:'Maison 121',slug:'maison-121-pinned',id:'v1',type:'boutique'})},
+    KiwiEnv:{isReal:()=>true},KiwiConfig:{type:'boutique'},
+    KiwiPlatformOps:{uploads:{upload:async(file,opts)=>{uploadCall={file,opts};return{ok:true,url:'/api/media/test.jpg'};}}},
+  };
+  const context=Object.assign(window,{window,localStorage:{getItem:()=>null},document:{readyState:'loading',addEventListener:()=>{}},fetch:()=>{throw new Error('fallback should not run');},setTimeout:()=>0,clearTimeout:()=>{},console,Promise,encodeURIComponent});
+  vm.runInNewContext(publish,context,{filename:'assets/orderpro-publish.js'});
+  const file={name:'look.jpg',type:'image/jpeg',size:1024};
+  const result=await window.KiwiOrderPro.uploadMedia(file);
+  ok(result.ok===true&&uploadCall&&uploadCall.file===file&&uploadCall.opts&&uploadCall.opts.merchant==='maison-121-pinned','catalog upload sends the pinned selected merchant to the owner-only media route');
+  let fallbackUrl='';
+  window.KiwiPlatformOps=null;
+  context.fetch=async(url)=>{fallbackUrl=String(url);return{ok:true,json:async()=>({ok:true,url:'/api/media/test-fallback.jpg'})};};
+  const fallback=await window.KiwiOrderPro.uploadMedia(file);
+  ok(fallback.ok===true&&fallbackUrl.includes('merchant=maison-121-pinned'),'fallback upload sends the same pinned merchant when the resilient adapter is unavailable');
+}
 /* Le refus doit arriver à l'écran avec SA raison. Les codes du téléverseur
  * local et ceux du serveur (functions/api/media/index.js) doivent être le MÊME
  * vocabulaire, et chacun doit avoir sa phrase dans KiwiOrderPro.uploadError :
@@ -29,7 +51,7 @@ ok(/KiwiPlatformOps\s*&&\s*window\.KiwiPlatformOps\.uploads/.test(publish),'cata
 /* Les plafonds vivent en trois copies (serveur, pré-contrôle local, message
  * affiché) : on teste leur ACCORD, pas un chiffre. Et la photo est rétrécie
  * dans le navigateur AVANT l'envoi — c'est ce qui rend le plafond invisible. */
-const mediaApi=fs.readFileSync(new URL('../functions/api/media/index.js',import.meta.url),'utf8');
+const mediaApi=mediaSource;
 const capS=(re,src)=>{const m=src.match(re);return m?Number(m[1])*1024*1024:NaN;};
 const srvImg=capS(/const MAX_IMAGE = (\d+) \* 1024 \* 1024/,mediaApi), srvVid=capS(/const MAX_VIDEO = (\d+) \* 1024 \* 1024/,mediaApi);
 const pubImg=capS(/var MAX_PHOTO = (\d+) \* 1024 \* 1024/,publish), pubVid=capS(/var MAX_VIDEO = (\d+) \* 1024 \* 1024/,publish);

@@ -327,13 +327,22 @@
     return shrinkPhoto(file).then(function (ready) { return sendMedia(ready || file); });
   }
   function sendMedia(file) {
+    /* /api/media authorizes the exact selected store, not merely the account.
+     * Since the owner-only hardening, omitting `merchant` makes every otherwise
+     * valid dashboard upload look unauthenticated. Keep the store derived from
+     * the same pinned venue identity used by catalogue publishing; never
+     * re-slugify the editable display name here. */
+    var biz = currentBiz();
+    var merchant = biz ? biz.merchant : '';
     var resilient = window.KiwiPlatformOps && window.KiwiPlatformOps.uploads;
     if (resilient && typeof resilient.upload === 'function') {
-      return resilient.upload(file).catch(function (error) {
+      return resilient.upload(file, { merchant: merchant }).catch(function (error) {
         return failure((error && (error.code || error.message)) || 'upload-failed', file, error && error.detail);
       });
     }
-    return fetch('/api/media?name=' + encodeURIComponent(file.name || 'file'), {
+    var mediaUrl = '/api/media?name=' + encodeURIComponent(file.name || 'file');
+    if (merchant) mediaUrl += '&merchant=' + encodeURIComponent(merchant);
+    return fetch(mediaUrl, {
       method: 'POST',
       headers: { 'Content-Type': file.type || 'application/octet-stream' },
       body: file,

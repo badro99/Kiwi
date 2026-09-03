@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted · fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v524';
+var CACHE = 'kiwi-app-v525';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -141,13 +141,13 @@ var SHELL = [
   // offline with no table geometry at all.
   '/assets/floorplan-core.js?v=2050',
   '/assets/oppo-cards.js?v=2',
-  '/assets/dashboard-pwa.js?v=467',
+  '/assets/dashboard-pwa.js?v=468',
   '/assets/dashboard-native.js?v=1',
   '/assets/pwa-update.js?v=359',
   '/assets/caisse-skin.css?v=3',
   '/assets/pos-mobile.css?v=3',
   '/assets/caisse-motion.js?v=1',
-  '/assets/caisse-pwa.js?v=469',
+  '/assets/caisse-pwa.js?v=470',
   '/assets/vendor/dexie.min.js?v=1',
   '/assets/offline-db.js?v=3',
   '/assets/platform-kernel.js?v=5',
@@ -230,7 +230,7 @@ var SHELL = [
   '/assets/stock-identity.js?v=2',
   '/assets/restaurant-recipes.js?v=8',
   '/assets/restaurant-units.js?v=1',
-  '/assets/employee-live.js?v=466',
+  '/assets/employee-live.js?v=467',
   '/assets/employee-planning.js?v=8',
   '/assets/employee-trade-shell.css?v=2',
   '/assets/employee-trade-shell.js?v=2',
@@ -245,7 +245,7 @@ var SHELL = [
   '/assets/menu-scan.js?v=2',
   '/assets/salle-scan.js?v=2',
   // OrderPro · publisher + NFC panel (dashboard), inbox (caisse).
-  '/assets/orderpro-publish.js?v=5',
+  '/assets/orderpro-publish.js?v=6',
   '/assets/orderpro-panel.js?v=1',
   '/assets/orderpro-inbox.js?v=9',
   /* Le relais cuisine · la caisse pose ses bons, la tablette du passe les lit.

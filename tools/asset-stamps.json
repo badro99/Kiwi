@@ -120,8 +120,8 @@
     "sha": "112638dbbb35294e"
   },
   "assets/caisse-pwa.js": {
-    "v": "469",
-    "sha": "21c4d559d1f8029f"
+    "v": "470",
+    "sha": "f79d5de935feaff8"
   },
   "assets/caisse-refresh.js": {
     "v": "1",
@@ -196,8 +196,8 @@
     "sha": "cd751f73c0180449"
   },
   "assets/dashboard-pwa.js": {
-    "v": "467",
-    "sha": "8ce14daf66b770d8"
+    "v": "468",
+    "sha": "0351978d1fed61e0"
   },
   "assets/dashboard-startup-gate.js": {
     "v": "1",
@@ -252,8 +252,8 @@
     "sha": "5d6507bf65311b04"
   },
   "assets/employee-live.js": {
-    "v": "466",
-    "sha": "d01ca31c859d890c"
+    "v": "467",
+    "sha": "c63b54c363dddec3"
   },
   "assets/employee-planning.js": {
     "v": "8",
@@ -516,8 +516,8 @@
     "sha": "b7230ceb7c27a788"
   },
   "assets/orderpro-publish.js": {
-    "v": "5",
-    "sha": "8a06283900f70dfb"
+    "v": "6",
+    "sha": "57b562b061dc24d0"
   },
   "assets/pages-pro.js": {
     "v": "2090",
