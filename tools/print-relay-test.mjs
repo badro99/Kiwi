@@ -21,6 +21,7 @@ import os from 'node:os';
 import path from 'node:path';
 import http from 'node:http';
 import net from 'node:net';
+import vm from 'node:vm';
 import { spawn } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -169,14 +170,25 @@ if (DatabaseSync) {
     const badtok = await call(jobsRoute, 'GET', '/api/print/jobs', { bearer: 'kpb_' + 'f'.repeat(64) }, env);
     ok(badtok.status === 401, 'A6 · un jeton inconnu → 401');
   }
-  // A7 · un échec d'impression remonte à la caisse
+  // A7 · un échec est repris par le relais durable, sans bloquer la caisse
   {
     const r = await call(jobsRoute, 'POST', '/api/print/jobs?merchant=browse', { body: { target: { ip: '192.168.11.199' }, dataB64: data, kind: 'kitchen' }, cookie: till }, env);
     const c = await call(jobsRoute, 'GET', '/api/print/jobs', { bearer: token }, env);
     ok(c.j.jobs.length === 1 && c.j.jobs[0].kind === 'kitchen', 'A7 · ticket cuisine réclamé');
     await call(jobsRoute, 'POST', '/api/print/jobs', { bearer: token, body: { action: 'ack', id: r.j.id, ok: false, error: 'printer timeout' } }, env);
     const st = await call(jobsRoute, 'GET', '/api/print/jobs?merchant=browse&id=' + r.j.id, { cookie: till }, env);
-    ok(st.j.job.status === 'failed' && st.j.job.error === 'printer timeout', 'A7 · la caisse voit « failed · printer timeout »');
+    ok(st.j.job.status === 'queued' && st.j.job.error === 'printer timeout' && st.j.job.claimed_ts > Date.now(),
+      'A7 · un échec est remis en file avec délai, sous le même id');
+    const early = await call(jobsRoute, 'GET', '/api/print/jobs', { bearer: token }, env);
+    ok(early.j.jobs.length === 0, 'A7 · le pont ne reprend pas le ticket avant le délai');
+    db.prepare('UPDATE print_jobs SET claimed_ts = ? WHERE id = ?').run(Date.now() - 1, r.j.id);
+    const retry = await call(jobsRoute, 'GET', '/api/print/jobs', { bearer: token }, env);
+    ok(retry.j.jobs.length === 1 && retry.j.jobs[0].id === r.j.id,
+      'A7 · le relais ressert automatiquement le même ticket après le délai');
+    await call(jobsRoute, 'POST', '/api/print/jobs', { bearer: token, body: { action: 'ack', id: r.j.id, ok: true, bytes: 11 } }, env);
+    const done = await call(jobsRoute, 'GET', '/api/print/jobs?merchant=browse&id=' + r.j.id, { cookie: till }, env);
+    ok(done.j.job.status === 'done' && done.j.job.bytes === 11 && done.j.job.error === null,
+      'A7 · la reprise réussie clôt le ticket et efface l’erreur précédente');
   }
   // A8 · péremption : un ticket de plus de 10 min n'est plus servi
   {
@@ -308,6 +320,7 @@ if (DatabaseSync) {
   ok(/reason === 'bridge-unreachable'\) \{ bridgePort = 0; return viaRelayOrFail/.test(pb), 'C2 · un pont local disparu bascule aussi sur le relais');
   ok(/credentials: 'same-origin'/.test(pb) && /RELAY_API = '\/api\/print'/.test(pb), 'C2 · le relais est appelé même origine avec le cookie de caisse');
   ok(/relayProbe: relayProbe, relayEnqueue: relayEnqueue, relayPairCode: relayPairCode, relayRevoke: relayRevoke/.test(pb), 'C2 · KiwiPrinter expose le relais');
+  ok(/watchRelayJob\(id, qs, bytes\.length\);\s*return \{ ok: true, via: 'relay', queued: true, id: id \}/.test(pb), 'C2 · un dépôt accepté libère la file locale sans attendre l’acquittement');
   ok(/id="kpr-relay-pair"/.test(pb) && /id="kpr-relay-pair-local"/.test(pb) && /\/kiwi\/relay\/pair/.test(pb), 'C2 · le modal propose « Associer un pont » et l’association directe du pont local');
   ok(/r === 'relay-offline'/.test(pb), 'C2 · frReason explique relay-offline');
 
@@ -318,6 +331,8 @@ if (DatabaseSync) {
 
   const schema = read('schema.sql');
   ok(/CREATE TABLE IF NOT EXISTS print_bridges/.test(schema) && /CREATE TABLE IF NOT EXISTS print_bridge_codes/.test(schema) && /CREATE TABLE IF NOT EXISTS print_jobs/.test(schema), 'C4 · schema.sql porte les trois tables du relais');
+  const jobs = read('functions/api/print/jobs.js');
+  ok(/claimed_ts IS NULL OR claimed_ts <= \?/.test(jobs) && /RETRY_DELAY_MS = 10000/.test(jobs), 'C4 · le relais durable diffère puis reprend les écritures imprimante échouées');
   const srv = read('bridge/server.js');
   ok(/const VERSION = '1\.4\.0'/.test(srv) && /"version": "1\.4\.0"/.test(read('bridge/package.json')), 'C5 · bridge 1.4.0 (server.js et package.json d’accord)');
   ok(/const HOST = '127\.0\.0\.1'/.test(srv) && !/0\.0\.0\.0/.test(srv), 'C5 · le pont écoute toujours sur loopback uniquement — le relais est sortant');
@@ -333,6 +348,81 @@ if (DatabaseSync) {
   const termuxInstall = read('bridge/install-termux.sh');
   ok(/termux-wake-lock/.test(termuxInstall) && /server\.js/.test(termuxInstall) && /--pair/.test(termuxInstall), 'C6 · install-termux.sh configure l’anti-veille et l’appairage');
   ok(/nohup node "\$SERVER_JS"/.test(termuxInstall) && /\/kiwi\/relay\/pair/.test(termuxInstall) && /read -r c < \/dev\/tty/.test(termuxInstall) && !/exec node "\$SERVER_JS"$/m.test(termuxInstall), 'C6 · install-termux.sh lance le pont en arrière-plan puis appaire via l’API locale, code lu sur /dev/tty');
+}
+
+/* ═══ D · la file cuisine ne doit pas attendre l'acquittement cloud ═════════
+ * A relay bridge may need a moment to acknowledge paper, especially when an
+ * order has several prep stations. The server already owns every accepted job;
+ * keeping the browser queue locked until GET /jobs reports done serializes
+ * those independent tickets into 12 s + 12 s + 12 s. Execute the shipped
+ * printer client and shipped durable queue together, with acknowledgements
+ * deliberately delayed, and prove all station jobs are deposited immediately. */
+{
+  const store = new Map([
+    ['kiwiPaired', '1'],
+    ['kiwiLiveMerchant', 'latency-cafe'],
+  ]);
+  const listeners = Object.create(null);
+  const postAt = [];
+  let sequence = 0;
+  const response = (status, body) => ({ status, ok: status >= 200 && status < 300, json: async () => body });
+  const context = {
+    console, Promise, Date, JSON, Math, Object, Array, String, Number, Boolean,
+    RegExp, Uint8Array, AbortController,
+    localStorage: {
+      getItem: (key) => store.has(key) ? store.get(key) : null,
+      setItem: (key, value) => store.set(key, String(value)),
+      removeItem: (key) => store.delete(key),
+    },
+    navigator: {},
+    document: {
+      readyState: 'complete',
+      head: { appendChild() {} }, body: { appendChild() {} },
+      getElementById: () => null, addEventListener() {},
+      createElement: () => ({ style: {}, setAttribute() {}, addEventListener() {}, remove() {} }),
+    },
+    CustomEvent: class { constructor(type, init) { this.type = type; this.detail = init && init.detail; } },
+    setTimeout, clearTimeout,
+    // The production modules use intervals only for retries/lease renewal. The
+    // immediate flush under test is driven directly by enqueue().
+    setInterval: () => 1, clearInterval() {},
+    addEventListener(type, fn) { (listeners[type] ||= []).push(fn); },
+    dispatchEvent(event) { (listeners[event.type] || []).forEach((fn) => fn(event)); },
+    KiwiEscPos: { toB64: () => 'AQID' },
+    KiwiKitchenRelay: { merchant: () => 'latency-cafe' },
+    fetch(url, opts = {}) {
+      if (!String(url).startsWith('/api/print/jobs')) return Promise.resolve(response(404, {}));
+      if (opts.method === 'POST') {
+        const id = 'pj_fast_' + (++sequence);
+        postAt.push({ id, at: Date.now() });
+        return Promise.resolve(response(200, { ok: true, id }));
+      }
+      // Paper acknowledgement is intentionally slower than the browser's next
+      // queue turn. Monitoring may wait for it; dispatching another station may not.
+      return new Promise((resolve) => setTimeout(() => resolve(response(200, {
+        ok: true, job: { status: 'done', bytes: 3 },
+      })), 800));
+    },
+  };
+  context.window = context;
+  vm.runInNewContext(read('assets/printer-bridge.js'), context, { filename: 'assets/printer-bridge.js' });
+  const relayEnqueue = context.KiwiPrinter.relayEnqueue;
+  context.KiwiPrinter.printKitchen = () => relayEnqueue(new Uint8Array([1, 2, 3]), { ip: '192.168.1.50', port: 9100 }, 'kitchen');
+  vm.runInNewContext(read('assets/kitchen-print-queue.js'), context, { filename: 'assets/kitchen-print-queue.js' });
+
+  const accepted = context.KiwiKitchenPrint.enqueue([
+    { id: 'latency:bar', station: 'bar', createdAt: Date.now(), payload: { station: 'bar' } },
+    { id: 'latency:cuisine', station: 'cuisine', createdAt: Date.now(), payload: { station: 'cuisine' } },
+    { id: 'latency:pass', station: 'pass', createdAt: Date.now(), payload: { station: 'pass' } },
+  ]);
+  ok(accepted.accepted === 3, 'D1 · les trois postes entrent dans la file durable');
+  await sleep(500);
+  const spread = postAt.length === 3 ? postAt[2].at - postAt[0].at : Infinity;
+  ok(postAt.length === 3 && spread < 400,
+    'D1 · trois tickets relayés sont déposés sans attendre les acquittements (' + postAt.length + ' dépôts, écart ' + spread + ' ms)');
+  await sleep(700);
+  ok(context.KiwiKitchenPrint.pending() === 0,
+    'D1 · la file locale est vide après transfert de propriété au relais durable');
 }
 
 console.log('print-relay-test: ' + pass + ' contrôles' + (process.exitCode ? ' · ÉCHEC' : ' ✓'));

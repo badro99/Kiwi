@@ -622,9 +622,11 @@
     });
   }
   function viaRelayOrFail(bytes, target) {
-    return relayProbe().then(function (st) {
-      return st.online ? relayEnqueue(bytes, target, relayKind(bytes)) : { ok: false, reason: 'bridge-unreachable' };
-    });
+    /* POST /jobs already performs the authoritative "bridge seen recently"
+       check.  Probing /bridges first was a redundant round-trip on the exact
+       path used by tablets and remote caisses, and could add six seconds before
+       the ticket even existed. */
+    return relayEnqueue(bytes, target, relayKind(bytes));
   }
   function bridgePrintNow(bytes, target) {
     var cfg = getConfig();
@@ -694,9 +696,34 @@
     if (cfg.ip) return { ip: cfg.ip, port: Number(cfg.port) || 9100 };
     return null;
   }
-  /* Dépose le ticket puis attend (≤ 12 s) que le pont l'acquitte, pour que le
-   * comptoir voie « imprimé » ou la vraie raison de l'échec. Passé ce délai le
-   * ticket est toujours vivant côté serveur (10 min) : on répond ok·queued. */
+  /* Observe an accepted relay job without holding the local durable queue.
+   * The server owns that job for ten minutes once POST /jobs succeeds. Waiting
+   * here for its acknowledgement used to serialize every station ticket for up
+   * to twelve seconds: cuisine behind bar behind pass could therefore start
+   * printing 30–40 seconds after the caisse receipt. Monitoring remains useful
+   * for a concrete printer failure, but it must be a background concern. */
+  function watchRelayJob(id, qs, bytesLength) {
+    var started = Date.now();
+    (function tick() {
+      relayFetch('/jobs' + (qs ? qs + '&' : '?') + 'id=' + encodeURIComponent(id), { method: 'GET' }, 5000).then(function (st) {
+        var job = st.j && st.j.ok && st.j.job;
+        if (job && job.status === 'done') {
+          try { window.dispatchEvent(new CustomEvent('kiwi:printer-relay-status', { detail: { ok: true, id: id, bytes: job.bytes || bytesLength } })); } catch (_) {}
+          return;
+        }
+        if (job && (job.status === 'failed' || job.status === 'expired')) {
+          var reason = job.error || job.status;
+          try { window.dispatchEvent(new CustomEvent('kiwi:printer-relay-status', { detail: { ok: false, id: id, reason: reason } })); } catch (_) {}
+          fallbackNotice('Impression distante échouée · ' + frReason(reason));
+          return;
+        }
+        if (Date.now() - started <= 12000) setTimeout(tick, 700);
+      });
+    })();
+  }
+
+  /* Dépose le ticket. Dès que le serveur l'a accepté, rendre la main : le pont
+   * le réclame de façon atomique et le job reste durable côté serveur. */
   function relayEnqueue(bytes, target, kind) {
     var t = relayTargetOf(target);
     if (!t) return Promise.resolve({ ok: false, reason: 'not-configured' });
@@ -710,18 +737,9 @@
         if (why === 'relay-offline') { relayState.online = false; relayState.at = Date.now(); }
         return { ok: false, reason: why };
       }
-      var id = r.j.id, started = Date.now();
-      return new Promise(function (resolve) {
-        (function tick() {
-          relayFetch('/jobs' + (qs ? qs + '&' : '?') + 'id=' + encodeURIComponent(id), { method: 'GET' }, 5000).then(function (st) {
-            var job = st.j && st.j.ok && st.j.job;
-            if (job && job.status === 'done') return resolve({ ok: true, via: 'relay', bytes: job.bytes || bytes.length, id: id });
-            if (job && (job.status === 'failed' || job.status === 'expired')) return resolve({ ok: false, reason: job.error || job.status, via: 'relay', id: id });
-            if (Date.now() - started > 12000) return resolve({ ok: true, via: 'relay', queued: true, id: id });
-            setTimeout(tick, 700);
-          });
-        })();
-      });
+      var id = r.j.id;
+      watchRelayJob(id, qs, bytes.length);
+      return { ok: true, via: 'relay', queued: true, id: id };
     });
   }
   /* Génère le code à taper sur le pont (ou à lui passer directement quand il

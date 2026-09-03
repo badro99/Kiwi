@@ -25,6 +25,7 @@ import {
 } from './_relay.js';
 
 const KINDS = ['receipt', 'kitchen', 'label', 'test', 'drawer', 'report', 'other'];
+const RETRY_DELAY_MS = 10000;
 
 function cleanTarget(t) {
   if (!t || typeof t !== 'object') return null;
@@ -67,9 +68,10 @@ export async function onRequestGet(context) {
           WHERE id IN (SELECT id FROM print_jobs
                         WHERE merchant = ? AND status = 'queued' AND expires_ts > ?
                           AND (bridge_id IS NULL OR bridge_id = ?)
+                          AND (claimed_ts IS NULL OR claimed_ts <= ?)
                         ORDER BY created_ts LIMIT ${CLAIM_BATCH})
           RETURNING id, kind, target, data_b64`
-      ).bind(t, bridge.id, bridge.merchant, t, bridge.id).all();
+      ).bind(t, bridge.id, bridge.merchant, t, bridge.id, t).all();
       const jobs = (rs.results || []).map((j) => ({
         id: j.id, kind: j.kind || 'other', target: safeJsonParse(j.target, {}), dataB64: j.data_b64,
       }));
@@ -117,10 +119,26 @@ export async function onRequestPost(context) {
     const bytes = Number(body.bytes) || 0;
     const error = ok ? null : String(body.error || 'print-failed').replace(/[\x00-\x1f]/g, ' ').slice(0, 300);
     try {
-      const r = await env.DB.prepare(
-        `UPDATE print_jobs SET status = ?, done_ts = ?, bytes = ?, error = ?
-          WHERE id = ? AND merchant = ? AND bridge_id = ? AND status = 'claimed'`
-      ).bind(ok ? 'done' : 'failed', t, bytes, error, id, bridge.merchant, bridge.id).run();
+      /* Once a caisse has deposited a job, the durable relay owns retries.
+       * A failed printer write is re-queued with the same id after the same
+       * 10-second backoff the browser queue historically used. This lets the
+       * browser release independent station tickets immediately without
+       * weakening delivery or losing retries on navigation/reload. Keep the
+       * claimant bridge id: it both preserves an explicitly targeted bridge
+       * and lets that same bridge reclaim an untargeted job safely. */
+      const r = ok
+        ? await env.DB.prepare(
+          `UPDATE print_jobs SET status = 'done', done_ts = ?, bytes = ?, error = NULL
+            WHERE id = ? AND merchant = ? AND bridge_id = ? AND status = 'claimed'`
+        ).bind(t, bytes, id, bridge.merchant, bridge.id).run()
+        : await env.DB.prepare(
+          `UPDATE print_jobs
+              SET status = CASE WHEN expires_ts <= ? THEN 'failed' ELSE 'queued' END,
+                  done_ts = CASE WHEN expires_ts <= ? THEN ? ELSE NULL END,
+                  claimed_ts = CASE WHEN expires_ts <= ? THEN claimed_ts ELSE ? END,
+                  bytes = 0, error = ?
+            WHERE id = ? AND merchant = ? AND bridge_id = ? AND status = 'claimed'`
+        ).bind(t, t, t, t, t + RETRY_DELAY_MS, error, id, bridge.merchant, bridge.id).run();
       return relayJson({ ok: true, updated: !!(r && r.meta && r.meta.changes) }, 200, request);
     } catch (e) {
       if (isMissingTable(e)) return relayJson({ ok: false, error: 'relay-not-provisioned' }, 503, request);
