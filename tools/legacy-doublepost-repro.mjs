@@ -2,7 +2,7 @@
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · legacy double-post repro (AUDIT ARTIFACT — not a gate).
  *
- * Reproduces docs/audits/LEGACY_SCAN_DOUBLEPOST_2026-09-04.md finding 1 with
+ * Reproduces docs/audits/LEGACY_SCAN_DOUBLEPOST_2026-09-03.md finding 1 with
  * synthetic fixtures only: on the NON-FLAG scan path, one human confirmation
  * posts TWO ledger movements per line (receiveDirect's `inv-<grn>-<idx>` plus
  * the handler moveStock loop's fresh UUID), bypassing both dedup layers.
@@ -11,7 +11,8 @@
  * context, driving them with the exact argument shapes the non-flag confirm
  * handler in assets/stock.js uses (call sites pinned statically below).
  * No network, no production data, no writes outside this process.
- * Exit code is ALWAYS 0 — this documents, it does not gate. Run manually:
+ * This is not wired into the gate, but a failed pin exits non-zero so a manual
+ * run cannot be mistaken for proof. Run manually:
  *
  *   node tools/legacy-doublepost-repro.mjs
  * ═══════════════════════════════════════════════════════════════════════════ */
@@ -99,3 +100,4 @@ say(procState.receipts.length === 1, 'exactly one receipt document (documents do
 process.stdout.write(failures
   ? `\nrepro INCOMPLETE (${failures} pin(s) unmet — re-check against stock.js)\n`
   : '\nrepro COMPLETE: non-flag confirm double-posts every receipt line on real merchants\n');
+if (failures) process.exitCode = 1;

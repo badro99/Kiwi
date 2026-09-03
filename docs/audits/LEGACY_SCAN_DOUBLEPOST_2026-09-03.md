@@ -2,8 +2,8 @@
 
 Date: 2026-09-03 · Scope: audit only, no fix, no figure rewritten, no
 production tenant inspected. Reproduction: `node
-tools/legacy-doublepost-repro.mjs` (synthetic fixtures, offline, exit 0,
-NOT wired into `tools/check.js`).
+tools/legacy-doublepost-repro.mjs` (synthetic fixtures, offline, NOT wired into
+`tools/check.js`; exits non-zero if any reproduction pin fails).
 
 ## 1 · Call chain and required conditions
 
@@ -24,7 +24,7 @@ refs — but different primary keys. Conditions, all required: real merchant
 (`KiwiEnv.isReal()`, else both ledger writes no-op and only the demo overlay
 moves once), `window.KiwiProcurement` loaded, `window.KiwiInventory` real.
 The flagged intake path is NOT affected (single owner `stIntakePostAll`,
-pinned by `intake-posting-test.mjs` check 22 and `intake-slice1-test.mjs`).
+pinned by the posting and slice-1 suites).
 
 ## 2 · Blast radius: plans, verticals, pages, asset combinations
 
@@ -94,7 +94,7 @@ path since 2026-08-10 for real merchants.
   one receipt, never counts ledger rows against a second writer.
 - `tools/economat-procurement-location-test.mjs`: asserts receipt location
   routing, not write cardinality.
-- `tools/intake-*-test.mjs` (34 checks): pin single ownership ONLY on the
+- The three `tools/intake-*-test.mjs` suites: pin single ownership ONLY on the
   flagged path (`stIntakePostAll`); the non-flag branch is asserted nowhere.
 - No suite executes the non-flag confirm handler end to end (DOM-bound), and
   no suite counts `KiwiInventory.history(item)` rows after a legacy confirm.

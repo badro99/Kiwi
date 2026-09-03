@@ -17,7 +17,7 @@ import path from 'node:path';
 import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
-const EXPECTED = 6;
+const EXPECTED = 8;
 let checks = 0;
 process.on('unhandledRejection', (error) => { console.error(error); process.exit(1); });
 async function check(name, fn) {
@@ -43,7 +43,7 @@ const stockPrelude = [
   grab(/  const lang = [^\n]+\n/, 'lang'),
   grab(/  const t = \(k, \.\.\.args\) => \{[\s\S]*?\n  \};/, 't'),
 ].join('\n');
-const CONFLICT_FNS = ['stIntakeMerchant', 'stIntakeFetchRecorded', 'stIntakeCompareConflict', 'stRenderIntakeConflict', 'stShowIntakeConflict', 'stRestoreIntakeReview'];
+const CONFLICT_FNS = ['stIntakeMerchant', 'stIntakePrepare', 'stIntakeFetchRecorded', 'stIntakeCompareConflict', 'stRenderIntakeConflict', 'stShowIntakeConflict', 'stHandleIntakePostingConflict', 'stRestoreIntakeReview'];
 function extractStock(name) {
   const m = stockSrc.match(new RegExp('  (?:async )?function ' + name + '\\([^)]*\\) \\{[\\s\\S]*?\\n  \\}'));
   assert.ok(m, 'stock helper extractable: ' + name);
@@ -130,13 +130,37 @@ async function runShow({ lang: lg = 'fr', rows = recordedFixture(), current = cu
 }
 
 await check('409 renders the dedicated state, never the generic toast, with zero writes', async () => {
-  const { out, stage, calls, toastCalls, addCalls, html } = await runShow();
-  assert.equal(out.fetchFailed, false);
-  assert.equal(out.rows.length, 3);
-  assert.ok(calls.length === 1, 'one comparison fetch');
-  assert.ok(calls[0].includes('refId=grn-intake-' + DOC.slice(0, 16)), 'fetch targets the receipt ref');
-  assert.ok(calls[0].includes('reason=receipt'), 'fetch filters receipt movements');
-  assert.ok(calls[0].includes('merchant=demo-tenant'), 'fetch is tenant-scoped');
+  const calls = [];
+  const toastCalls = [];
+  const addCalls = [];
+  const impl = async (url) => {
+    calls.push(String(url));
+    if (String(url) === '/api/ai/intake') {
+      return { ok: false, status: 409, json: async () => ({ error: 'posting-conflict' }) };
+    }
+    return { ok: true, status: 200, json: async () => ({ ok: true, movements: recordedFixture() }) };
+  };
+  const { ctx } = makeCtx({ lang: 'fr', fetchImpl: impl, toastCalls, addCalls });
+  const stage = fakeStage();
+  ctx.STAGE = stage;
+  ctx.SCOPE = { querySelector: (sel) => sel === '[data-stock-scan-stage]' ? stage : null };
+  ctx.CURRENT = currentFixture();
+  ctx.DOCID = DOC;
+  const handled = await vm.runInContext(`(async () => {
+    try {
+      await window.__conflict.stIntakePrepare(DOCID, '${'a'.repeat(64)}', CURRENT.length);
+    } catch (err) {
+      return window.__conflict.stHandleIntakePostingConflict(SCOPE, err, DOCID, CURRENT);
+    }
+    return false;
+  })()`, ctx);
+  const html = stage._html;
+  assert.equal(handled, true, 'the error thrown from a real 409 response is handled');
+  assert.equal(calls.length, 2, 'one prepare request and one comparison fetch');
+  assert.equal(calls[0], '/api/ai/intake', 'the executed prepare path receives the 409');
+  assert.ok(calls[1].includes('refId=grn-intake-' + DOC.slice(0, 16)), 'fetch targets the receipt ref');
+  assert.ok(calls[1].includes('reason=receipt'), 'fetch filters receipt movements');
+  assert.ok(calls[1].includes('merchant=demo-tenant'), 'fetch is tenant-scoped');
   assert.ok(html.includes('ne correspond plus au premier envoi'), 'dedicated title, not the generic fallback');
   assert.ok(!html.includes('Lecture automatique indisponible'), 'no generic toast copy in the conflict state');
   assert.ok(html.includes('Modifié') && html.includes('Ajouté') && html.includes('Manquant'), 'all three row kinds shown');
@@ -209,6 +233,8 @@ await check('existing-vs-current rows are escaped and classified correctly', asy
   const { html } = await runShow();
   assert.ok(html.includes('Sucre &lt;script&gt;alert(1)&lt;/script&gt;'), 'item names escaped');
   assert.ok(!html.includes('<script>alert(1)</script>'), 'no raw markup injected');
+  assert.ok(html.includes('Qté ·') && html.includes('Coût ·'), 'quantity and cost values are explicitly labelled');
+  assert.ok(html.includes('uniquement les mouvements de stock'), 'partial comparison scope is stated');
   const nul = await vm.runInContext(
     `window.__conflict.stIntakeCompareConflict(
       [{ itemId: 'x', qty: 1, unitCost: null }],
@@ -224,6 +250,32 @@ await check('existing-vs-current rows are escaped and classified correctly', asy
     ctx,
   );
   assert.equal(same.length, 0, 'identical rows omitted');
+});
+
+await check('duplicate item lines are compared occurrence by occurrence', async () => {
+  const { ctx } = makeCtx({ lang: 'fr' });
+  const rows = await vm.runInContext(
+    `window.__conflict.stIntakeCompareConflict(
+      [{ itemId: 'x', qty: 1, unitCost: 4 }, { itemId: 'x', qty: 2, unitCost: 5 }],
+      [{ itemId: 'x', name: 'X lot A', qty: 1, unit: 'kg', unitCost: 4 },
+       { itemId: 'x', name: 'X lot B', qty: 3, unit: 'kg', unitCost: 5 },
+       { itemId: 'x', name: 'X lot C', qty: 4, unit: 'kg', unitCost: 6 }])`,
+    ctx,
+  );
+  assert.equal(rows.length, 2, 'later occurrences are not collapsed');
+  assert.equal(rows[0].kind, 'changed', 'second occurrence is compared');
+  assert.equal(rows[0].recQty, 2);
+  assert.equal(rows[0].curQty, 3);
+  assert.equal(rows[1].kind, 'added', 'third occurrence remains visible');
+});
+
+await check('metadata-only conflicts render an honest limited-comparison state', async () => {
+  const same = [{ itemId: 'x', qty: 1, unitCost: 2 }];
+  const current = [{ itemId: 'x', name: 'X', qty: 1, unit: 'kg', unitCost: 2 }];
+  const { html } = await runShow({ rows: same, current });
+  assert.ok(html.includes('Aucun écart de quantité ou de coût'), 'empty comparison explains its limit');
+  assert.ok(html.includes('autre détail relu'), 'metadata-only causes are named honestly');
+  assert.ok(!html.includes('<table'), 'no empty comparison table');
 });
 
 await check('a failed comparison fetch remains fail-closed', async () => {
@@ -250,6 +302,9 @@ await check('the normal successful intake path is unchanged', async () => {
   assert.ok(postAll.indexOf('stIntakePrepare(docId, postingHash') < postAll.indexOf('K.add('), 'prepare precedes ledger writes too');
   const confirmZone = stockSrc.slice(stockSrc.indexOf("querySelector('[data-stock-scan-confirm]')"));
   assert.ok(confirmZone.includes('mScanFailFallback'), 'generic fallback retained for non-conflict errors');
-  assert.ok(confirmZone.includes('stShowIntakeConflict'), 'conflict branch wired in the confirm handler');
-  assert.ok(confirmZone.indexOf('stShowIntakeConflict') < confirmZone.indexOf('stSaveOverlay()'), 'conflict returns before any seal');
+  assert.ok(confirmZone.includes('stHandleIntakePostingConflict'), 'executed conflict branch helper wired in the confirm handler');
+  assert.ok(confirmZone.indexOf('stHandleIntakePostingConflict') < confirmZone.indexOf('stSaveOverlay()'), 'conflict returns before any seal');
 });
+
+assert.equal(checks, EXPECTED, `expected ${EXPECTED} checks, ran ${checks}`);
+process.stdout.write(`intake-conflict-test: ${checks} checks passed\n`);

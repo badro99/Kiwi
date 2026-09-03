@@ -187,6 +187,8 @@
       mScanConflictColQty: 'Qté',
       mScanConflictColCost: 'Coût',
       mScanConflictNoRec: 'Les lignes déjà enregistrées n’ont pas pu être chargées. Rien n’a été ajouté.',
+      mScanConflictPartial: 'La comparaison ci-dessous couvre uniquement les mouvements de stock déjà enregistrés.',
+      mScanConflictNoDiff: 'Aucun écart de quantité ou de coût n’est visible dans l’historique. Le conflit concerne un autre détail relu, l’ordre des lignes, la DLC ou le choix de mise à jour du coût, que Kiwi ne conserve pas dans cet historique.',
       mCountTitle: 'Inventaire physique',
       mCountSub: 'Comptez chaque article et saisissez la quantité réelle. Kiwi calcule l\'écart automatiquement.',
       mCountColTheo: 'STOCK THÉORIQUE', mCountColReal: 'QUANTITÉ COMPTÉE', mCountColVar: 'ÉCART', mCountColCost: 'VALEUR ÉCART',
@@ -472,6 +474,8 @@
       mScanConflictColQty: 'Qty',
       mScanConflictColCost: 'Cost',
       mScanConflictNoRec: 'Recorded lines could not be loaded. Nothing was added.',
+      mScanConflictPartial: 'The comparison below covers only stock movements that were already recorded.',
+      mScanConflictNoDiff: 'No quantity or cost difference is visible in stock history. The conflict concerns another reviewed detail, line order, expiry date, or cost-update choice that Kiwi does not retain in this history.',
       mCountTitle: 'Physical count',
       mCountSub: 'Count each item and enter the actual quantity. Kiwi computes the variance automatically.',
       mCountColTheo: 'THEORETICAL STOCK', mCountColReal: 'COUNTED QTY', mCountColVar: 'VARIANCE', mCountColCost: 'VARIANCE VALUE',
@@ -745,6 +749,8 @@
       mScanConflictColQty: 'الكمية',
       mScanConflictColCost: 'التكلفة',
       mScanConflictNoRec: 'تعذّر تحميل الأسطر المسجلة. لم تتم إضافة أي شيء.',
+      mScanConflictPartial: 'تغطي المقارنة أدناه حركات المخزون المسجلة فقط.',
+      mScanConflictNoDiff: 'لا يظهر أي اختلاف في الكمية أو التكلفة في سجل المخزون. يتعلق التعارض بتفصيل آخر تمت مراجعته أو ترتيب الأسطر أو تاريخ الصلاحية أو اختيار تحديث التكلفة، وهي بيانات لا يحتفظ بها Kiwi في هذا السجل.',
       mCountTitle: 'جرد فعلي',
       mCountSub: 'عُدّ كل منتج وأدخل الكمية الفعلية. Kiwi يحسب الفرق تلقائيًا.',
       mCountColTheo: 'المخزون النظري', mCountColReal: 'الكمية المعدودة', mCountColVar: 'الفرق', mCountColCost: 'قيمة الفرق',
@@ -4277,11 +4283,16 @@
     })).filter((r) => r.itemId);
   }
   function stIntakeCompareConflict(recorded, current) {
+    /* Plusieurs lignes d'une même facture peuvent pointer vers le même article
+     * (lots ou DLC différents). On conserve donc chaque occurrence dans l'ordre
+     * au lieu d'écraser silencieusement les suivantes dans une Map par article. */
     const index = (rows, pick) => {
       const m = new Map();
       for (const r of rows || []) {
         const id = String((r && r.itemId) || '');
-        if (id && !m.has(id)) m.set(id, pick(r));
+        if (!id) continue;
+        if (!m.has(id)) m.set(id, []);
+        m.get(id).push(pick(r));
       }
       return m;
     };
@@ -4289,15 +4300,20 @@
     const cur = index(current, (r) => ({ name: String(r.name || r.itemId || ''), qty: +r.qty || 0, unit: String(r.unit || ''), unitCost: r.unitCost == null ? null : +r.unitCost }));
     const sameCost = (a, b) => (a == null && b == null) || (a != null && b != null && Math.abs(a - b) < 0.00005);
     const rows = [];
-    for (const [id, c] of cur) {
-      const r = rec.get(id);
-      if (!r) rows.push({ kind: 'added', itemId: id, name: c.name, recQty: null, recCost: null, curQty: c.qty, curCost: c.unitCost, unit: c.unit });
-      else if (r.qty !== c.qty || !sameCost(r.unitCost, c.unitCost)) {
-        rows.push({ kind: 'changed', itemId: id, name: c.name, recQty: r.qty, recCost: r.unitCost, curQty: c.qty, curCost: c.unitCost, unit: c.unit });
+    const ids = new Set([...cur.keys(), ...rec.keys()]);
+    for (const id of ids) {
+      const currentRows = cur.get(id) || [];
+      const recordedRows = rec.get(id) || [];
+      const count = Math.max(currentRows.length, recordedRows.length);
+      for (let occurrence = 0; occurrence < count; occurrence += 1) {
+        const c = currentRows[occurrence] || null;
+        const r = recordedRows[occurrence] || null;
+        if (c && !r) rows.push({ kind: 'added', itemId: id, name: c.name, recQty: null, recCost: null, curQty: c.qty, curCost: c.unitCost, unit: c.unit });
+        else if (r && !c) rows.push({ kind: 'missing', itemId: id, name: id, recQty: r.qty, recCost: r.unitCost, curQty: null, curCost: null, unit: '' });
+        else if (r && c && (r.qty !== c.qty || !sameCost(r.unitCost, c.unitCost))) {
+          rows.push({ kind: 'changed', itemId: id, name: c.name, recQty: r.qty, recCost: r.unitCost, curQty: c.qty, curCost: c.unitCost, unit: c.unit });
+        }
       }
-    }
-    for (const [id, r] of rec) {
-      if (!cur.has(id)) rows.push({ kind: 'missing', itemId: id, name: id, recQty: r.qty, recCost: r.unitCost, curQty: null, curCost: null, unit: '' });
     }
     return rows;
   }
@@ -4321,18 +4337,19 @@
       <div class="st-notice warn">${svg('alertTriangle', 14)}<div><b>${esc(t('mScanConflictT'))}</b><br />${esc(t('mScanConflictB1'))}<br />${esc(t('mScanConflictB2'))}<br />${esc(t('mScanConflictB3'))}</div></div>
       ${fetchFailed
         ? `<div class="st-notice" style="margin-top:8px;">${svg('info', 14)}<div>${esc(t('mScanConflictNoRec'))}</div></div>`
-        : `<div style="overflow-x:auto;margin-top:12px;border:1px solid var(--n-200,#e5e7eb);border-radius:6px;">
+        : rows.length ? `<div class="st-notice" style="margin-top:8px;">${svg('info', 14)}<div>${esc(t('mScanConflictPartial'))}</div></div>
+        <div style="overflow-x:auto;margin-top:12px;border:1px solid var(--n-200,#e5e7eb);border-radius:6px;">
         <table class="st-inv-items" style="margin:0;width:100%;">
           <thead><tr><th>${esc(t('mScanConflictColItem'))}</th><th class="r">${esc(t('mScanConflictRec'))}</th><th class="r">${esc(t('mScanConflictCur'))}</th><th></th></tr></thead>
           <tbody>${rows.map((r) => `
             <tr>
-              <td style="min-width:140px;"><div style="font-size:12px;font-weight:500;color:var(--n-800);">${esc(r.name)}</div><div class="mono" style="font-size:11px;color:var(--n-500);">${cell(r.curQty ?? r.recQty, r.unit)}</div></td>
-              <td class="r mono" style="font-size:12px;">${cell(r.recQty)}<br />${cell(r.recCost)}</td>
-              <td class="r mono" style="font-size:12px;">${cell(r.curQty)}<br />${cell(r.curCost)}</td>
+              <td style="min-width:140px;"><div style="font-size:12px;font-weight:500;color:var(--n-800);">${esc(r.name)}</div></td>
+              <td class="r" style="font-size:12px;"><span>${esc(t('mScanConflictColQty'))} · ${cell(r.recQty, r.unit)}</span><br /><span>${esc(t('mScanConflictColCost'))} · ${cell(r.recCost)}</span></td>
+              <td class="r" style="font-size:12px;"><span>${esc(t('mScanConflictColQty'))} · ${cell(r.curQty, r.unit)}</span><br /><span>${esc(t('mScanConflictColCost'))} · ${cell(r.curCost)}</span></td>
               <td style="min-width:90px;">${badge(r.kind)}</td>
             </tr>`).join('')}</tbody>
         </table>
-      </div>`}
+      </div>` : `<div class="st-notice" style="margin-top:8px;">${svg('info', 14)}<div>${esc(t('mScanConflictNoDiff'))}</div></div>`}
       <div style="display:flex; justify-content:flex-end; flex-wrap:wrap; gap:8px; margin-top:14px;">
         ${firstId && !fetchFailed ? `<button class="st-btn" type="button" data-action="stock-item-detail" data-item-id="${esc(firstId)}">${svg('eye', 12)}<span>${esc(t('mScanConflictHistory'))}</span></button>` : ''}
         <button class="st-btn" data-dismiss-modal>${esc(STR[lang()].btnCancel || 'Annuler')}</button>
@@ -4361,6 +4378,13 @@
       });
     }
     return { rows, fetchFailed };
+  }
+  async function stHandleIntakePostingConflict(scope, err, docId, currentLines) {
+    if (!docId || String((err && err.message) || err).indexOf('posting-conflict') === -1) return false;
+    const stage = scope && scope.querySelector ? scope.querySelector('[data-stock-scan-stage]') : null;
+    if (stage) await stShowIntakeConflict(scope, stage, { docId, currentLines });
+    else window.Kiwi.toast?.(t('mScanFailFallback'), { type: 'warn' });
+    return true;
   }
   function stRestoreIntakeReview(scope, stage) {
     const kept = stConflictStash; stConflictStash = null;
@@ -4932,12 +4956,7 @@
           /* Reprise divergente : aucun écrit n'a eu lieu (le prepare précède
            * tout), on montre l'état dédié plutôt que l'échec générique — et
            * toujours ni postedAdd, ni marquage, ni fermeture. */
-          if (intakeDocId && String((err && err.message) || err).indexOf('posting-conflict') !== -1) {
-            const st = scope.querySelector('[data-stock-scan-stage]');
-            if (st) await stShowIntakeConflict(scope, st, { docId: intakeDocId, currentLines: ctxLines });
-            else window.Kiwi.toast?.(t('mScanFailFallback'), { type: 'warn' });
-            return;
-          }
+          if (await stHandleIntakePostingConflict(scope, err, intakeDocId, ctxLines)) return;
           window.Kiwi.toast?.(t('mScanFailFallback'), { type: 'warn' });
           return; // ni postedAdd, ni marquage, ni fermeture : la reprise converge.
         }
