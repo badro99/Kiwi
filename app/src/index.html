@@ -2,7 +2,7 @@
 <html lang="fr" dir="ltr">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="color-scheme" content="light" />
 <meta name="theme-color" content="#0A0F0D" />
 <title>Kiwi Pro</title>
@@ -57,16 +57,16 @@
       </form>
       <p class="acct-row muted" id="acct-unknown" hidden><span class="dot" aria-hidden="true"></span><span data-native-i18n="serverOffline">Serveur injoignable. Vous pourrez réessayer dans votre espace.</span></p>
     </section>
-    <div class="actions"><button type="button" class="cta" id="account-next" data-native-i18n="continue">Continuer</button><button type="button" class="secondary" id="manual-mode" data-native-i18n="manual">Choisir un rôle sans assistant</button></div>
+    <div class="actions"><button type="button" class="cta" id="account-next" data-native-i18n="continue">Continuer</button><button type="button" class="link" id="manual-mode" data-native-i18n="manual">Choisir un rôle sans assistant</button></div>
   </section>
 
   <section class="setup-step" id="step-role" data-step="role" hidden>
     <div class="step-heading"><p class="eyebrow" data-native-i18n="stepTwo">Étape 2</p><h1 data-native-i18n="roleTitle">À quoi servira cet appareil ?</h1><p data-native-i18n="roleIntro">Kiwi ouvrira ce rôle automatiquement aux prochains lancements.</p></div>
     <nav class="tiles" aria-label="Rôle de l'appareil" data-native-i18n-aria="roles">
-      <button type="button" class="tile" data-role="caisse"><span class="ico" style="--ico:url(assets/icons/material/storefront.svg)" aria-hidden="true"></span><span class="tile-name" data-native-i18n="caisse">Caisse</span><span class="tile-sub" data-native-i18n="caisseSub">Encaissement, tickets, imprimante</span></button>
-      <button type="button" class="tile" data-role="equipe"><span class="ico" style="--ico:url(assets/icons/material/room_service.svg)" aria-hidden="true"></span><span class="tile-name" data-native-i18n="team">KiwiÉquipe</span><span class="tile-sub" data-native-i18n="teamSub">Salle, planning, pointage</span></button>
-      <button type="button" class="tile" data-role="cuisine"><span class="ico" style="--ico:url(assets/icons/material/restaurant.svg)" aria-hidden="true"></span><span class="tile-name" data-native-i18n="kitchen">Cuisine</span><span class="tile-sub" data-native-i18n="kitchenSub">Écran de production (KDS)</span></button>
-      <button type="button" class="tile tile-soft" data-role="dashboard"><span class="ico" style="--ico:url(assets/icons/material/bar_chart.svg)" aria-hidden="true"></span><span class="tile-name" data-native-i18n="dashboard">Tableau de bord</span><span class="tile-sub" data-native-i18n="dashboardSub">Propriétaire, lecture et actions rapides</span></button>
+      <button type="button" class="tile" data-role="caisse" aria-pressed="false"><span class="ico" style="--ico:url(assets/icons/material/storefront.svg)" aria-hidden="true"></span><span class="tile-name" data-native-i18n="caisse">Caisse</span><span class="tile-sub" data-native-i18n="caisseSub">Encaissement, tickets, imprimante</span></button>
+      <button type="button" class="tile" data-role="equipe" aria-pressed="false"><span class="ico" style="--ico:url(assets/icons/material/room_service.svg)" aria-hidden="true"></span><span class="tile-name" data-native-i18n="team">KiwiÉquipe</span><span class="tile-sub" data-native-i18n="teamSub">Salle, planning, pointage</span></button>
+      <button type="button" class="tile" data-role="cuisine" aria-pressed="false"><span class="ico" style="--ico:url(assets/icons/material/restaurant.svg)" aria-hidden="true"></span><span class="tile-name" data-native-i18n="kitchen">Cuisine</span><span class="tile-sub" data-native-i18n="kitchenSub">Écran de production (KDS)</span></button>
+      <button type="button" class="tile tile-soft" data-role="dashboard" aria-pressed="false"><span class="ico" style="--ico:url(assets/icons/material/bar_chart.svg)" aria-hidden="true"></span><span class="tile-name" data-native-i18n="dashboard">Tableau de bord</span><span class="tile-sub" data-native-i18n="dashboardSub">Propriétaire, lecture et actions rapides</span></button>
     </nav>
     <p class="err" id="role-err" role="alert" hidden></p>
     <div class="actions setup-actions"><button type="button" class="secondary" data-back="account" data-native-i18n="back">Retour</button><button type="button" class="cta" id="role-next" data-native-i18n="continue" disabled>Continuer</button></div>
@@ -88,10 +88,10 @@
   <section class="setup-step" id="step-printer" data-step="printer" hidden>
     <div class="step-heading"><p class="eyebrow" data-native-i18n="stepFour">Étape 4</p><h1 data-native-i18n="printerTitle">Testez l’imprimante thermique</h1><p data-native-i18n="printerIntro">L’iPad et l’imprimante doivent être sur le même Wi-Fi. Le port standard est 9100.</p></div>
     <form id="printer-form" class="printer-form">
-      <div class="printer-grid"><label class="field"><span data-native-i18n="printerIp">Adresse IP</span><input id="printer-ip" name="ip" type="text" inputmode="decimal" autocomplete="off" placeholder="192.168.1.50" /></label><label class="field port-field"><span data-native-i18n="printerPort">Port</span><input id="printer-port" name="port" type="number" inputmode="numeric" min="1" max="65535" value="9100" /></label><label class="field paper-field"><span data-native-i18n="paper">Papier</span><select id="printer-paper" name="paper"><option value="80">80 mm</option><option value="58">58 mm</option></select></label></div>
+      <div class="printer-grid"><label class="field"><span data-native-i18n="printerIp">Adresse IP</span><input id="printer-ip" name="ip" type="text" inputmode="decimal" autocomplete="off" placeholder="192.168.1.50" /></label><label class="field port-field"><span data-native-i18n="printerPort">Port</span><input id="printer-port" name="port" type="number" inputmode="numeric" min="1" max="65535" value="9100" /></label><label class="field paper-field"><span data-native-i18n="paper">Papier</span><select id="printer-paper" name="paper"><option value="80" dir="ltr">80 mm</option><option value="58" dir="ltr">58 mm</option></select></label></div>
       <div class="inline-actions"><button type="button" class="secondary" id="printer-scan" data-native-i18n="scan">Rechercher sur le réseau</button><button type="submit" class="cta" id="printer-test" data-native-i18n="testPrinter">Tester et enregistrer</button></div>
+      <div class="scan-results" id="scan-results" aria-live="polite"></div><p class="status" id="printer-status" role="status" aria-live="polite"></p>
     </form>
-    <div class="scan-results" id="scan-results" aria-live="polite"></div><p class="status" id="printer-status" role="status" aria-live="polite"></p>
     <div class="actions setup-actions"><button type="button" class="secondary" data-back="connect" data-native-i18n="back">Retour</button><button type="button" class="link" id="printer-skip" data-native-i18n="printerLater">Configurer plus tard</button><button type="button" class="cta" id="printer-next" data-native-i18n="continue" disabled>Continuer</button></div>
   </section>
 

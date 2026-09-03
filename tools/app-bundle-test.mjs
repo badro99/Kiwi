@@ -74,6 +74,7 @@ if (first) {
   assert(/window\.__KIWI_APP_VERSION = 'pro\/' \+ platform/.test(runtime) && /call\(app, 'getInfo'\)/.test(runtime), 'native-runtime : les rapports d’erreur portent plateforme et version de l’app (App.getInfo)');
   const shell = fs.readFileSync(path.join(first.out, 'index.html'), 'utf8');
   const nativeShell = fs.readFileSync(path.join(first.out, 'native-shell.js'), 'utf8');
+  const shellCss = fs.readFileSync(path.join(first.out, 'native-shell.css'), 'utf8');
   assert(/<meta name="kiwi-bundle" content="[0-9a-f]{64}"/.test(shell), 'index.html porte l’empreinte du bundle');
   assert(/params\.has\('setup'\)/.test(nativeShell) && /params\.has\('choose'\)/.test(nativeShell),
     'assistant : ?setup relance le parcours et ?choose conserve le lanceur manuel');
@@ -93,6 +94,13 @@ if (first) {
     'assistant : le test sonde, imprime un ticket ESC/POS et enregistre le format déjà lu par la caisse');
   assert(!/fetch\(['"]\/api\/(?:sale|payment)/.test(nativeShell) && nativeShell.includes('aucune vente'),
     'assistant : le parcours de test ne crée aucune vente ni aucun paiement');
+  assert(!/user-scalable=no/.test(shell), 'assistant : le shell autorise le zoom (pas de user-scalable=no)');
+  assert((shell.match(/data-role="[a-z]+" aria-pressed="false"/g) || []).length >= 4, 'assistant : les tuiles annoncent leur état avant tout choix (aria-pressed initial)');
+  assert((nativeShell.match(/browser:'/g) || []).length === 3 && (nativeShell.match(/loggingIn:'/g) || []).length === 3, 'assistant : la plateforme et l’envoi du login sont traduits en fr/en/ar');
+  assert(/<form id="printer-form"[\s\S]*?id="scan-results"[\s\S]*?id="printer-status"[\s\S]*?<\/form>/.test(shell), 'assistant : résultats de scan et statut imprimante vivent dans la carte, pas sous elle');
+  assert(shell.includes('option value="80" dir="ltr"'), 'assistant : les largeurs papier restent ordonnées en arabe (80 mm, pas mm 80)');
+  assert(nativeShell.includes('button.hidden = same'), 'assistant : relié au bon établissement, le bouton d’appairage s’efface au lieu d’occuper le créneau principal');
+  assert(/\.store-choice\.selected::after/.test(shellCss) && /:focus-visible/.test(shellCss), 'assistant : la sélection se voit aussi sans la couleur (pastille ✓) et le clavier voit le focus');
 
   // --api-base injecte la constante AVANT api-base.js
   const forced = transformPage('<html><head><title>x</title></head><body></body></html>', { apiBase: 'https://preview.example' });
