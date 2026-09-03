@@ -93,8 +93,105 @@
     call(keepAwake, page === 'kiwi-caisse.html' || page === 'kiwi-cuisine.html' ? 'keepAwake' : 'allowSleep');
   }
 
+  function checkBiometrics() {
+    return call(socket, 'checkBiometrics').then(function (r) {
+      return r || { isAvailable: false, biometryType: 'none' };
+    });
+  }
+
+  function authenticateBiometric(reason) {
+    return call(socket, 'authenticateBiometric', { reason: reason || 'Déverrouiller Kiwi Pro' }).then(function (r) {
+      return r || { authenticated: false, fallback: true };
+    });
+  }
+
+  var NATIVE_IDLE_TIMEOUT_MS = 20 * 60 * 1000; // 20 min per Acceptance Criterion #4
+
+  function handleNativeAppState(state) {
+    if (!state) return;
+    if (state.isActive === false) {
+      savePairing();
+      try { localStorage.setItem('kiwi:native:last-active', String(Date.now())); } catch (_) {}
+    } else if (state.isActive === true) {
+      var lastActive = 0;
+      try { lastActive = parseInt(localStorage.getItem('kiwi:native:last-active') || '0', 10); } catch (_) {}
+      var awayFor = lastActive > 0 ? (Date.now() - lastActive) : 0;
+      if (awayFor >= NATIVE_IDLE_TIMEOUT_MS) {
+        try { sessionStorage.setItem('kiwi:native:biometric-pending', '1'); } catch (_) {}
+        try { localStorage.setItem('kiwi:native:last-active', String(Date.now())); } catch (_) {}
+        location.reload();
+      }
+    }
+  }
+
+  function maybePromptBiometricUnlock() {
+    var isPending = false;
+    try {
+      isPending = sessionStorage.getItem('kiwi:native:biometric-pending') === '1' || !!sessionStorage.getItem('kiwiIdleLockReason');
+    } catch (_) {}
+    if (!isPending) return Promise.resolve(false);
+
+    return checkBiometrics().then(function (info) {
+      if (!info || !info.isAvailable) {
+        try { sessionStorage.removeItem('kiwi:native:biometric-pending'); } catch (_) {}
+        return false;
+      }
+      return authenticateBiometric('Déverrouiller Kiwi Pro').then(function (res) {
+        try {
+          sessionStorage.removeItem('kiwi:native:biometric-pending');
+          sessionStorage.removeItem('kiwiIdleLockReason');
+        } catch (_) {}
+        if (res && res.authenticated) {
+          if (window.__kiwiLock && typeof window.__kiwiLock.reveal === 'function') {
+            window.__kiwiLock.reveal();
+          } else if (typeof window.__kiwiUnlockApp === 'function') {
+            window.__kiwiUnlockApp();
+          } else {
+            var pin = document.getElementById('pin-screen');
+            if (pin) pin.style.display = 'none';
+            document.body.classList.add('is-unlocked');
+          }
+          return true;
+        }
+        return false;
+      });
+    });
+  }
+
+  function registerPushToken(token, role) {
+    if (!token) return Promise.resolve(null);
+    var merchant = '';
+    try {
+      var venue = JSON.parse(localStorage.getItem('kiwiPairedVenue') || '{}');
+      merchant = (venue && venue.merchant) || localStorage.getItem('kiwiLiveMerchant') || '';
+    } catch (_) {}
+    if (!merchant) return Promise.resolve(null);
+    var body = {
+      merchant: merchant,
+      token: token,
+      role: role || 'caisse',
+      platform: cap.getPlatform ? cap.getPlatform() : 'ios',
+      deviceId: (window.KiwiNative && window.KiwiNative.deviceId) ? window.KiwiNative.deviceId : null
+    };
+    return fetch('/api/push/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    }).then(function (res) {
+      return res.ok ? res.json() : null;
+    }).catch(function () { return null; });
+  }
+
   window.KiwiNative = {
-    secureGet: secureGet, secureSet: secureSet, savePairing: savePairing, hapticLight: hapticLight,
+    secureGet: secureGet,
+    secureSet: secureSet,
+    savePairing: savePairing,
+    hapticLight: hapticLight,
+    checkBiometrics: checkBiometrics,
+    authenticateBiometric: authenticateBiometric,
+    handleNativeAppState: handleNativeAppState,
+    maybePromptBiometricUnlock: maybePromptBiometricUnlock,
+    registerPushToken: registerPushToken,
     deviceIdentity: function () { return call(socket, 'deviceIdentity').then(function (r) { return r && r.id || ''; }); }
   };
   restorePairing();
@@ -116,7 +213,16 @@
   configureKeepAwake();
   call(network, 'getStatus').then(paintNetwork);
   if (network && typeof network.addListener === 'function') network.addListener('networkStatusChange', paintNetwork);
-  if (app && typeof app.addListener === 'function') app.addListener('appStateChange', function (state) { if (!state || state.isActive === false) savePairing(); });
+  if (app && typeof app.addListener === 'function') {
+    app.addListener('appStateChange', function (state) {
+      handleNativeAppState(state);
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', maybePromptBiometricUnlock);
+  } else {
+    maybePromptBiometricUnlock();
+  }
 })();
 
 /* Native lifecycle telemetry. The shared err-reporter owns redaction, rate

@@ -1419,3 +1419,20 @@ CREATE TABLE IF NOT EXISTS hotel_room_charge_events (
 );
 CREATE INDEX IF NOT EXISTS idx_hotel_room_charge_shift
   ON hotel_room_charge_events (merchant, shift_id, occurred_ts);
+
+-- ── Enregistrement des jetons de notification Push ──────────────────────────
+-- Enregistrés par POST /api/push/register (Capacitor iOS, Android, PWA Web).
+-- Un jeton est un secret matériel : jamais journalisé, jamais exposé par un GET.
+CREATE TABLE IF NOT EXISTS push_tokens (
+  merchant TEXT NOT NULL,
+  token TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT 'caisse',
+  employee_id TEXT,
+  platform TEXT NOT NULL CHECK(platform IN ('ios', 'android', 'web')),
+  device_id TEXT,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  PRIMARY KEY (merchant, token)
+);
+CREATE INDEX IF NOT EXISTS idx_push_tokens_target ON push_tokens (merchant, role);
+

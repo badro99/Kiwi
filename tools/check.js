@@ -1020,6 +1020,8 @@ section('Whole-project regressions');
        porte accepte les origines de l'app sur /api et /auth seulement. */
     'app-bundle-test.mjs',
     'app-release-test.mjs',
+    'biometric-unlock-test.mjs',
+    'push-registration-test.mjs',
     'security-regression-test.js',
     'sold-insights-test.js',
     'table-refresh-test.js',

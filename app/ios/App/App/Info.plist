@@ -36,6 +36,9 @@
 	<string>Kiwi envoie vos tickets à l'imprimante thermique de votre réseau local.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Kiwi utilise l'appareil photo pour scanner un code-barres à la caisse ou photographier un bon de livraison.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Kiwi utilise Face ID pour déverrouiller rapidement votre caisse et vos écrans en toute sécurité.</string>
+
 	<key>CFBundleLocalizations</key>
 	<array>
 		<string>fr</string>

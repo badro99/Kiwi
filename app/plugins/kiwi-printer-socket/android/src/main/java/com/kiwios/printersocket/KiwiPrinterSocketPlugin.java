@@ -209,6 +209,22 @@ public class KiwiPrinterSocketPlugin extends Plugin {
         catch (Exception error) { resolveError(call, "ledger-write", "Registre d’impression indisponible."); }
     }
 
+    @PluginMethod
+    public void checkBiometrics(PluginCall call) {
+        JSObject res = new JSObject();
+        res.put("isAvailable", false);
+        res.put("biometryType", "none");
+        call.resolve(res);
+    }
+
+    @PluginMethod
+    public void authenticateBiometric(PluginCall call) {
+        JSObject res = new JSObject();
+        res.put("authenticated", false);
+        res.put("fallback", true);
+        call.resolve(res);
+    }
+
     private File ledgerFile(PluginCall call) {
         String name = call.getString("name");
         if (name == null || !name.matches("^[a-z0-9-]{1,96}$")) return null;

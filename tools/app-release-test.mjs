@@ -66,6 +66,8 @@ check('the support page exists and names a contact',
   fs.existsSync(new URL('../support.html', import.meta.url)) && read('support.html').includes('contact@kiwi-os.com'));
 check('Info.plist declares camera usage (the boutique barcode scan calls getUserMedia in the WebView)',
   plist.includes('NSCameraUsageDescription'));
+check('Info.plist declares Face ID usage for biometric idle unlock',
+  plist.includes('<key>NSFaceIDUsageDescription</key>'));
 check('Info.plist lists the three store languages', /CFBundleLocalizations[\s\S]*<string>fr<\/string>[\s\S]*<string>en<\/string>[\s\S]*<string>ar<\/string>/.test(plist));
 check('Info.plist no longer requires armv7', !plist.includes('<string>armv7</string>') && plist.includes('<string>arm64</string>'));
 check('ExportOptions.plist carries no Team ID and targets App Store Connect',
@@ -143,4 +145,4 @@ if (failures.length) {
   console.error('\napp-release-test: ' + failures.length + ' failure(s)');
   process.exit(1);
 }
-console.log('\napp-release-test: 32 controls green');
+console.log('\napp-release-test: 33 controls green');

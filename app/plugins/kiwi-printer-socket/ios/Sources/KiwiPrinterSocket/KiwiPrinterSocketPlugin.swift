@@ -1,5 +1,6 @@
 import Capacitor
 import Foundation
+import LocalAuthentication
 import Network
 import Security
 
@@ -92,7 +93,9 @@ public class KiwiPrinterSocketPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "secureRemove", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "deviceIdentity", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "ledgerRead", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "ledgerWrite", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "ledgerWrite", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "checkBiometrics", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "authenticateBiometric", returnType: CAPPluginReturnPromise)
     ]
 
     @objc func send(_ call: CAPPluginCall) {
@@ -167,6 +170,49 @@ public class KiwiPrinterSocketPlugin: CAPPlugin, CAPBridgedPlugin {
             try value.write(to: url, atomically: true, encoding: .utf8)
             call.resolve()
         } catch { resolveError(call, code: "ledger-write", message: "Registre d’impression indisponible.") }
+    }
+
+    @objc func checkBiometrics(_ call: CAPPluginCall) {
+        let context = LAContext()
+        var error: NSError?
+        let isAvailable = context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error)
+        let biometryType: String
+        if #available(iOS 11.0, *) {
+            switch context.biometryType {
+            case .faceID: biometryType = "faceId"
+            case .touchID: biometryType = "touchId"
+            case .opticID: biometryType = "opticId"
+            default: biometryType = "none"
+            }
+        } else {
+            biometryType = isAvailable ? "touchId" : "none"
+        }
+        call.resolve([
+            "isAvailable": isAvailable,
+            "biometryType": biometryType,
+            "errorCode": error != nil ? error!.code : NSNull()
+        ])
+    }
+
+    @objc func authenticateBiometric(_ call: CAPPluginCall) {
+        let reason = call.getString("reason") ?? "Déverrouiller Kiwi Pro"
+        let context = LAContext()
+        var error: NSError?
+        guard context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: &error) else {
+            let code = error != nil ? "\(error!.code)" : "unavailable"
+            call.resolve(["authenticated": false, "errorCode": code, "fallback": true])
+            return
+        }
+        context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, localizedReason: reason) { success, evalError in
+            DispatchQueue.main.async {
+                if success {
+                    call.resolve(["authenticated": true])
+                } else {
+                    let errCode = (evalError as? NSError)?.code ?? -1
+                    call.resolve(["authenticated": false, "errorCode": errCode, "fallback": true])
+                }
+            }
+        }
     }
 
     private func ledgerURL(_ call: CAPPluginCall) -> URL? {
