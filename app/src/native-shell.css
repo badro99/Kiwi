@@ -157,6 +157,7 @@ html[dir="rtl"] .tile-arrow { transform: scaleX(-1); }
 .tile.selected .ico { background-color: rgba(125,242,176,.12); }
 .tile.selected .ico::after { background: var(--mint); }
 .tile-name { align-self: end; padding-inline-end: 20px; font: 600 19px/1.08 var(--sans); letter-spacing: -.025em; }
+html[dir="rtl"] .tile-name { line-height: 1.35; }
 .tile-sub { grid-column: 2; align-self: start; margin-top: 5px; color: var(--n-500); font-size: 12.5px; line-height: 1.28; }
 .tile.selected .tile-sub { color: rgba(247,245,240,.58); }
 

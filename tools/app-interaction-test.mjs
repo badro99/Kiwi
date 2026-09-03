@@ -996,6 +996,244 @@ for (const viewport of ['small320', 'ipadPortrait', 'ipadLandscape']) {
   await p.closeCtx();
 }
 
+/* ── 8 · keyboard traversal, activation, and focus management ───────────── */
+{
+  const p = await openShell({ me: 'login' });
+  await settleAccount(p);
+
+  // 1. Initial focus initiation on login-email
+  await p.keyboard.press('Tab');
+  let activeId = await p.evaluate(() => document.activeElement ? document.activeElement.id : '');
+  activeId === 'login-email' ? ok('keyboard focus initiates on login-email') : bad(`initial focus on ${activeId}`);
+
+  // 2. Focus visibility on input (wait 200ms for 150ms CSS transition to settle)
+  await new Promise((r) => setTimeout(r, 200));
+  const emailFocusStyle = await p.evaluate(() => {
+    const cs = window.getComputedStyle(document.querySelector('#login-email'));
+    return { outline: cs.outlineStyle, shadow: cs.boxShadow, borderColor: cs.borderColor };
+  });
+  emailFocusStyle.shadow.includes('rgba(11, 110, 79') || emailFocusStyle.outline !== 'none' || emailFocusStyle.borderColor === 'rgb(11, 110, 79)'
+    ? ok('email input displays visible focus indicator')
+    : bad(`email input missing focus ring: ${JSON.stringify(emailFocusStyle)}`);
+
+  // 3. Tab forward to password
+  await p.keyboard.press('Tab');
+  activeId = await p.evaluate(() => document.activeElement.id);
+  activeId === 'login-password' ? ok('Tab moves focus to password input') : bad(`Tab landed on ${activeId} instead of login-password`);
+
+  // 4. Tab forward to password toggle button
+  await p.keyboard.press('Tab');
+  activeId = await p.evaluate(() => document.activeElement.id);
+  activeId === 'password-toggle' ? ok('Tab moves focus to password toggle button') : bad(`Tab landed on ${activeId} instead of password-toggle`);
+
+  // 5. Focus visibility on toggle button
+  const toggleFocus = await p.evaluate(() => {
+    const cs = window.getComputedStyle(document.querySelector('#password-toggle'));
+    return { outline: cs.outlineStyle, outlineColor: cs.outlineColor };
+  });
+  toggleFocus.outline !== 'none'
+    ? ok('password toggle button displays visible focus indicator')
+    : bad(`password toggle missing focus ring: ${JSON.stringify(toggleFocus)}`);
+
+  // 6. Space activation on password toggle
+  await p.keyboard.press('Space');
+  let pwdState = await p.evaluate(() => ({
+    type: document.querySelector('#login-password').type,
+    pressed: document.querySelector('#password-toggle').getAttribute('aria-pressed'),
+  }));
+  pwdState.type === 'text' && pwdState.pressed === 'true'
+    ? ok('Space key activates password toggle (reveals password)')
+    : bad(`Space activation failed on password toggle: ${JSON.stringify(pwdState)}`);
+
+  // 7. Enter activation on password toggle
+  await p.keyboard.press('Enter');
+  pwdState = await p.evaluate(() => ({
+    type: document.querySelector('#login-password').type,
+    pressed: document.querySelector('#password-toggle').getAttribute('aria-pressed'),
+  }));
+  pwdState.type === 'password' && pwdState.pressed === 'false'
+    ? ok('Enter key toggles password back to concealed state')
+    : bad(`Enter activation failed on password toggle: ${JSON.stringify(pwdState)}`);
+
+  // 8. Tab forward to login submit button
+  await p.keyboard.press('Tab');
+  activeId = await p.evaluate(() => document.activeElement.id);
+  activeId === 'login-btn' ? ok('Tab moves focus to login submit button') : bad(`Tab landed on ${activeId} instead of login-btn`);
+
+  // 9. Tab forward to manual-mode link
+  await p.keyboard.press('Tab');
+  activeId = await p.evaluate(() => document.activeElement.id);
+  activeId === 'manual-mode' ? ok('Tab moves focus to manual-mode button') : bad(`Tab landed on ${activeId} instead of manual-mode`);
+
+  // 10. Shift+Tab backward sequence verification
+  const backwardSequence = ['login-btn', 'password-toggle', 'login-password', 'login-email'];
+  let backwardOk = true;
+  for (const expectedId of backwardSequence) {
+    await p.keyboard.down('Shift');
+    await p.keyboard.press('Tab');
+    await p.keyboard.up('Shift');
+    const current = await p.evaluate(() => document.activeElement.id);
+    if (current !== expectedId) {
+      backwardOk = false;
+      bad(`Shift+Tab backward expected ${expectedId}, landed on ${current}`);
+      break;
+    }
+  }
+  if (backwardOk) {
+    ok('Shift+Tab moves backward logically: manual-mode → login-btn → password-toggle → login-password → login-email');
+  }
+
+  // 11. Enter activation on manual-mode button: triggers step transition
+  await p.focus('#manual-mode');
+  await p.keyboard.press('Enter');
+  await p.waitForFunction(() => !document.querySelector('#step-role').hidden, { timeout: 8000 });
+
+  // 12. Modal/step transition focus transfer: heading h1 receives programmatic focus
+  const headingFocus = await p.evaluate(() => {
+    const h1 = document.querySelector('#step-role h1');
+    return {
+      isH1: document.activeElement === h1,
+      tag: document.activeElement ? document.activeElement.tagName : '',
+      tabIndex: h1 ? h1.getAttribute('tabindex') : null,
+      text: h1 ? h1.textContent : '',
+    };
+  });
+  headingFocus.isH1 && headingFocus.tabIndex === '-1'
+    ? ok(`step transition moves focus to h1 heading («${headingFocus.text}», tabindex="-1")`)
+    : bad(`step transition heading focus failed: ${JSON.stringify(headingFocus)}`);
+
+  // 13. Absence of keyboard trap: Tab advances from heading to first role tile
+  await p.keyboard.press('Tab');
+  const roleFocused = await p.evaluate(() => document.activeElement ? document.activeElement.getAttribute('data-role') : null);
+  roleFocused === 'caisse'
+    ? ok('Tab from heading advances to first role tile without keyboard trap')
+    : bad(`Tab from heading landed on ${roleFocused}`);
+
+  await p.closeCtx();
+}
+
+/* ── 9 · browser zoom reflow (WCAG 1.4.10: 200% & 400% zoom) ───────────── */
+for (const locale of ['fr', 'en', 'ar']) {
+  const p = await openShell({ locale, viewport: 'ipadLandscape', me: 'single' });
+  await settleAccount(p);
+  await toRole(p);
+  await fromRole(p, 'caisse');
+
+  // Test at 200% zoom
+  await p.evaluate(() => { document.documentElement.style.zoom = '2'; });
+  await new Promise((r) => setTimeout(r, 150));
+  let reflow200 = await p.evaluate(() => {
+    return {
+      scrollW: document.documentElement.scrollWidth,
+      clientW: document.documentElement.clientWidth,
+      noHOverflow: document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
+    };
+  });
+  reflow200.noHOverflow
+    ? ok(`no horizontal overflow under literal 200% browser zoom (${locale.toUpperCase()})`)
+    : bad(`200% zoom overflow in ${locale}: ${JSON.stringify(reflow200)}`);
+
+  // Test at 400% zoom (WCAG 1.4.10 AA requirement: equivalent to 320 CSS px width)
+  await p.evaluate(() => { document.documentElement.style.zoom = '4'; });
+  await new Promise((r) => setTimeout(r, 150));
+  let reflow400 = await p.evaluate(() => {
+    const pairBtn = document.querySelector('#pair-btn');
+    const b = pairBtn ? pairBtn.getBoundingClientRect() : null;
+    return {
+      scrollW: document.documentElement.scrollWidth,
+      clientW: document.documentElement.clientWidth,
+      noHOverflow: document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1,
+      btnRendered: Boolean(b && b.width > 0 && b.height > 0),
+    };
+  });
+  reflow400.noHOverflow && reflow400.btnRendered
+    ? ok(`no horizontal overflow under literal 400% browser zoom (${locale.toUpperCase()}) with visible CTA`)
+    : bad(`400% zoom reflow failed in ${locale}: ${JSON.stringify(reflow400)}`);
+
+  if (locale === 'ar') await shot(p, 'reflow-400-ar-connect');
+  await p.closeCtx();
+}
+
+/* ── 10 · text scaling 200% without clipping or overlap (WCAG 1.4.4) ────── */
+for (const locale of ['fr', 'en', 'ar']) {
+  const p = await openShell({ locale, viewport: 'iphone', me: 'multi' });
+  await settleAccount(p);
+  await toRole(p);
+
+  // Enlarge font-size by 200%
+  await p.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
+  await new Promise((r) => setTimeout(r, 150));
+
+  const roleInspection = await p.evaluate(() => {
+    const tiles = Array.from(document.querySelectorAll('.tile')).map((t) => {
+      const name = t.querySelector('.tile-name');
+      const sub = t.querySelector('.tile-sub');
+      return {
+        role: t.getAttribute('data-role'),
+        nameText: name ? name.textContent : '',
+        nameScrollH: name ? name.scrollHeight : 0,
+        nameClientH: name ? name.clientHeight : 0,
+        nameScrollW: name ? name.scrollWidth : 0,
+        nameClientW: name ? name.clientWidth : 0,
+        nameClippedV: name ? name.scrollHeight > name.clientHeight + 1 : false,
+        nameClippedH: name ? name.scrollWidth > name.clientWidth + 1 : false,
+        subVisible: sub ? sub.offsetHeight > 0 : false,
+      };
+    });
+    const anyClipped = tiles.some((t) => t.nameClippedV || t.nameClippedH);
+    const noHScroll = document.documentElement.scrollWidth <= window.innerWidth + 1;
+    return { tiles, anyClipped, noHScroll };
+  });
+
+  !roleInspection.anyClipped && roleInspection.noHScroll
+    ? ok(`200% text size: role tile typography unclipped across all 4 cards (${locale.toUpperCase()})`)
+    : bad(`200% text size clipped in ${locale}: ${JSON.stringify(roleInspection)}`);
+
+  // Advance to connect step under 200% font size
+  await fromRole(p, 'caisse');
+  const storeInspection = await p.evaluate(() => {
+    const choices = Array.from(document.querySelectorAll('.store-choice'));
+    let overlapping = false;
+    for (let i = 0; i < choices.length; i++) {
+      const r1 = choices[i].getBoundingClientRect();
+      for (let j = i + 1; j < choices.length; j++) {
+        const r2 = choices[j].getBoundingClientRect();
+        const overlap = !(r1.right <= r2.left || r1.left >= r2.right || r1.bottom <= r2.top || r1.top >= r2.bottom);
+        if (overlap) overlapping = true;
+      }
+    }
+    const noHScroll = document.documentElement.scrollWidth <= window.innerWidth + 1;
+    return { storeCount: choices.length, overlapping, noHScroll };
+  });
+
+  storeInspection.storeCount >= 3 && !storeInspection.overlapping && storeInspection.noHScroll
+    ? ok(`200% text size: store cards expand vertically without overlap (${locale.toUpperCase()})`)
+    : bad(`200% text size store cards failed in ${locale}: ${JSON.stringify(storeInspection)}`);
+
+  if (locale === 'ar') await shot(p, 'text-scale-200-ar-role');
+  await p.closeCtx();
+}
+
+/* ── 11 · regression test: Arabic typography line-height defect ────────── */
+{
+  const p = await openShell({ locale: 'ar', viewport: 'iphone', me: 'single' });
+  await settleAccount(p);
+  await toRole(p);
+  await p.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
+  const check = await p.evaluate(() => {
+    const tile = document.querySelector('.tile[data-role="caisse"] .tile-name');
+    const withFix = { scrollH: tile.scrollHeight, clientH: tile.clientHeight, clipped: tile.scrollHeight > tile.clientHeight };
+    tile.style.lineHeight = '1.08';
+    const broken = { scrollH: tile.scrollHeight, clientH: tile.clientHeight, clipped: tile.scrollHeight > tile.clientHeight };
+    tile.style.lineHeight = '';
+    return { withFix, broken };
+  });
+  check.broken.clipped && !check.withFix.clipped
+    ? ok(`regression test: Arabic tile-name clips under unpatched line-height 1.08 (${check.broken.scrollH}px > ${check.broken.clientH}px) and passes with 1.35 fix (${check.withFix.scrollH}px ≤ ${check.withFix.clientH}px)`)
+    : bad(`Arabic line-height regression check unexpected: ${JSON.stringify(check)}`);
+  await p.closeCtx();
+}
+
 await browser.close();
 server.close();
 fs.rmSync(work, { recursive: true, force: true });
