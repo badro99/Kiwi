@@ -4762,6 +4762,97 @@
       </div>`;
   }
 
+  /* Chemin historique (hors guichet) : UN SEUL propriétaire des mouvements.
+   * La boucle moveStock du handler reste l'unique écrivain ; receiveDirect ne
+   * fait que la pièce comptable (skipMovements) et n'applique aucun coût
+   * (skipCosts — la case à cocher du handler reste seule décisionnaire).
+   * Reçoit des données pures + le catalogue résolu ; testable en vm. */
+  function stLegacyPostAll(ctx) {
+    const supplier = String((ctx && ctx.supplier) || '');
+    const externalRef = String((ctx && ctx.externalRef) || '');
+    const date = String((ctx && ctx.date) || '');
+    const receivedAt = +((ctx && ctx.receivedAt) || Date.now());
+    const receiptRef = String((ctx && ctx.receiptRef) || ('receipt-' + Date.now().toString(36)));
+    const lines = Array.isArray(ctx && ctx.lines) ? ctx.lines : [];
+    const items = Array.isArray(ctx && ctx.items) ? ctx.items : [];
+    const receivingLines = lines.map((line) => {
+      const it = items.find((x) => x.id === line.itemId);
+      return {
+        itemId: line.itemId,
+        name: it?.name || line.itemId,
+        qty: line.qty,
+        unit: it?.unit || 'unité',
+        unitCost: line.cost,
+      };
+    });
+    let receiptId = receiptRef;
+    if (window.KiwiProcurement?.receiveDirect) {
+      let known = window.KiwiProcurement.doc()?.suppliers?.find((s) => String(s.name || '').toLowerCase() === supplier.toLowerCase());
+      if (!known) known = window.KiwiProcurement.addSupplier({ name: supplier });
+      const receipt = window.KiwiProcurement.receiveDirect({
+        supplierId: known?.id || supplier,
+        externalRef,
+        receivedAt,
+        lines: receivingLines,
+        skipMovements: true,
+        skipCosts: true,
+      });
+      if (receipt && receipt.id) receiptId = receipt.id;
+      if (window.KiwiProcurement?.attachInvoice) {
+        try {
+          window.KiwiProcurement.attachInvoice({
+            supplierId: known?.id || supplier,
+            number: externalRef,
+            date,
+            receiptId,
+            lines: receivingLines,
+            source: 'pdf',
+          });
+        } catch (_) {}
+      }
+    }
+    // La boucle moveStock reste la SEULE à écrire des mouvements sur ce chemin.
+    lines.forEach((line) => {
+      const it = items.find((x) => x.id === line.itemId);
+      if (!it) return;
+      const { supId, supRank } = stUpsertSupplierCard(it, supplier, line);
+      moveStock(it, line.qty, 'receipt', 'receipt', receiptRef,
+        [supplier, externalRef, date].filter(Boolean).join(' · '), line.cost || null, {
+          supplierId: supId,
+          supplierName: supplier,
+          externalRef,
+          receiptRef,
+          receivedAt,
+          rank: supRank,
+          expiresAt: line.dlc ? new Date(line.dlc + 'T23:59:59').getTime() : null,
+        });
+      if (line.updateCost && line.cost > 0 && window.KiwiCost?.setItemCost) {
+        window.KiwiCost.setItemCost(it.id, line.cost, supplier);
+      }
+    });
+    return { receiptId };
+  }
+
+  /* Garde anti double-clic du bouton de confirmation : le premier appui
+   * pose le fanion et désactive le bouton ; tout appui concurrent est jeté.
+   * Libérer (stReleaseConfirmBusy) sur chaque échec récupérable ; le succès
+   * ferme la modale, le bouton disparaît avec elle. */
+  function stClaimConfirmBusy(btn) {
+    if (!btn || btn.dataset?.busy === '1') return false;
+    try {
+      btn.dataset.busy = '1';
+      if (typeof btn.setAttribute === 'function') btn.setAttribute('disabled', '');
+    } catch (_) {}
+    return true;
+  }
+  function stReleaseConfirmBusy(btn) {
+    if (!btn) return;
+    try {
+      delete btn.dataset.busy;
+      if (typeof btn.removeAttribute === 'function') btn.removeAttribute('disabled');
+    } catch (_) {}
+  }
+
   function wireScanReview() {
     const scope = topBackdrop() || document;
     const tbody = scope.querySelector('[data-stock-receive-rows]');
@@ -4882,7 +4973,8 @@
     wireRows();
     recompute();
 
-    scope.querySelector('[data-stock-scan-confirm]')?.addEventListener('click', async () => {
+    const confirmBtn = scope.querySelector('[data-stock-scan-confirm]');
+    confirmBtn?.addEventListener('click', async () => {
       const supplier = scope.querySelector('[data-stock-receive-supplier]')?.value.trim() || '';
       const externalRef = scope.querySelector('[data-stock-receive-ref]')?.value.trim() || '';
       const date = scope.querySelector('[data-stock-receive-date]')?.value || '';
@@ -4902,6 +4994,11 @@
         return;
       }
 
+      // Garde anti double-clic : un seul appui effectif jusqu'à la fermeture
+      // ou l'échec récupérable. Les appuis concurrents sont jetés.
+      if (!stClaimConfirmBusy(confirmBtn)) return;
+      const releaseBusy = () => stReleaseConfirmBusy(confirmBtn);
+
       // Guichet unique : jamais deux écritures stock pour le même document.
       // Le même PDF re-déposé (deuxième appareil, marquage interrompu) est
       // arrêté ici, AVANT tout moveStock.
@@ -4911,6 +5008,7 @@
           const st = scope.querySelector('[data-stock-scan-stage]');
           if (st) { st.innerHTML = stRenderIntakeStop(t('mScanDupT'), t('mScanDupDone', '')); wireIntakeStop(); }
           else window.Kiwi.toast?.(t('mScanDupT'), { type: 'warn' });
+          releaseBusy();
           return;
         }
       }
@@ -4956,73 +5054,23 @@
           /* Reprise divergente : aucun écrit n'a eu lieu (le prepare précède
            * tout), on montre l'état dédié plutôt que l'échec générique — et
            * toujours ni postedAdd, ni marquage, ni fermeture. */
-          if (await stHandleIntakePostingConflict(scope, err, intakeDocId, ctxLines)) return;
+          if (await stHandleIntakePostingConflict(scope, err, intakeDocId, ctxLines)) { releaseBusy(); return; }
           window.Kiwi.toast?.(t('mScanFailFallback'), { type: 'warn' });
+          releaseBusy();
           return; // ni postedAdd, ni marquage, ni fermeture : la reprise converge.
         }
       } else {
 
-      const receivingLines = lines.map((line) => {
-        const it = inv.find((x) => x.id === line.itemId);
-        return {
-          itemId: line.itemId,
-          name: it?.name || line.itemId,
-          qty: line.qty,
-          unit: it?.unit || 'unité',
-          unitCost: line.cost,
-        };
-      });
-
-      if (window.KiwiProcurement?.receiveDirect) {
-        let known = window.KiwiProcurement.doc()?.suppliers?.find((s) => String(s.name || '').toLowerCase() === supplier.toLowerCase());
-        if (!known) known = window.KiwiProcurement.addSupplier({ name: supplier });
-        window.KiwiProcurement.receiveDirect({
-          supplierId: known?.id || supplier,
-          externalRef,
-          receivedAt,
-          lines: receivingLines,
-        });
-        if (window.KiwiProcurement?.attachInvoice) {
-          try {
-            window.KiwiProcurement.attachInvoice({
-              supplierId: known?.id || supplier,
-              number: externalRef,
-              date,
-              receiptId: receiptRef,
-              lines: receivingLines,
-              source: 'pdf',
-            });
-          } catch (_) {}
-        }
+      // Chemin historique : stLegacyPostAll est l'unique écrivain (boucle
+      // moveStock seule ; receiveDirect ne fait que la pièce + facture).
+      try {
+        stLegacyPostAll({ supplier, externalRef, date, receivedAt, lines, items: inv, receiptRef });
+      } catch (_) {
+        window.Kiwi.toast?.(t('mScanFailFallback'), { type: 'warn' });
+        releaseBusy();
+        return;
       }
-
-      // (le else se referme après la boucle : receivingLines + procurement +
-      //  moveStock forment le chemin historique unique)
-
-      // Toujours enregistrer les mouvements dans KiwiInventory / moveStock et MAJ conditionnelle des cartes fournisseur
-      lines.forEach((line) => {
-        const it = inv.find((x) => x.id === line.itemId);
-        if (!it) return;
-
-        const { supId, supRank } = stUpsertSupplierCard(it, supplier, line);
-
-        // moveStock enregistre TOUJOURS le coût réel facturé pour l'historique d'achat
-        moveStock(it, line.qty, 'receipt', 'receipt', receiptRef,
-          [supplier, externalRef, date].filter(Boolean).join(' · '), line.cost || null, {
-            supplierId: supId,
-            supplierName: supplier,
-            externalRef,
-            receiptRef,
-            receivedAt,
-            rank: supRank,
-            expiresAt: line.dlc ? new Date(line.dlc + 'T23:59:59').getTime() : null,
-          });
-
-        if (line.updateCost && line.cost > 0 && window.KiwiCost?.setItemCost) {
-          window.KiwiCost.setItemCost(it.id, line.cost, supplier);
-        }
-      });
-      } // fin chemin historique (receiveDirect + moveStock, inchangé)
+      } // fin chemin historique
 
       stSaveOverlay();
       // Guichet unique : le stock est écrit, on scelle le brouillon. Si le

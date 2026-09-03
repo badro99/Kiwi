@@ -2,17 +2,18 @@
 /* ═══════════════════════════════════════════════════════════════════════════
  * Kiwi · legacy double-post repro (AUDIT ARTIFACT — not a gate).
  *
- * Reproduces docs/audits/LEGACY_SCAN_DOUBLEPOST_2026-09-03.md finding 1 with
- * synthetic fixtures only: on the NON-FLAG scan path, one human confirmation
- * posts TWO ledger movements per line (receiveDirect's `inv-<grn>-<idx>` plus
- * the handler moveStock loop's fresh UUID), bypassing both dedup layers.
+ * HISTORICAL: reproduces docs/audits/LEGACY_SCAN_DOUBLEPOST_2026-09-03.md
+ * finding 1 as it stood before the forward fix — the then-current non-flag
+ * confirm handler posted TWO ledger movements per line (receiveDirect's
+ * `inv-<grn>-<idx>` plus the moveStock loop's fresh UUID), bypassing both
+ * dedup layers. The wired handler no longer performs this sequence
+ * (stLegacyPostAll is the single writer; see tools/legacy-scan-test.mjs,
+ * wired into tools/check.js). This script still demonstrates the raw
+ * mechanism with synthetic fixtures only, so the audit stays reproducible.
  *
  * Executes the REAL inventory-ledger.js and the REAL procurement.js in a vm
- * context, driving them with the exact argument shapes the non-flag confirm
- * handler in assets/stock.js uses (call sites pinned statically below).
- * No network, no production data, no writes outside this process.
- * This is not wired into the gate, but a failed pin exits non-zero so a manual
- * run cannot be mistaken for proof. Run manually:
+ * context. No network, no production data, no writes outside this process.
+ * Exit code is ALWAYS 0 — this documents, it does not gate. Run manually:
  *
  *   node tools/legacy-doublepost-repro.mjs
  * ═══════════════════════════════════════════════════════════════════════════ */
@@ -36,10 +37,10 @@ const say = (ok, msg) => {
 const confirmZone = stockSrc.slice(stockSrc.indexOf("querySelector('[data-stock-scan-confirm]')"));
 const flagSplit = confirmZone.indexOf('} else {');
 const legacyBranch = confirmZone.slice(confirmZone.indexOf('} else {'), confirmZone.indexOf('} // fin chemin historique'));
-say(legacyBranch.includes('window.KiwiProcurement?.receiveDirect') && legacyBranch.includes('.receiveDirect({'), 'non-flag branch calls receiveDirect (procurement writes movements)');
-say(legacyBranch.includes("moveStock(it, line.qty, 'receipt', 'receipt', receiptRef,"), 'non-flag branch then calls moveStock per line (second movement)');
-say(!legacyBranch.includes('skipMovements') && !legacyBranch.includes('movementId'), 'neither call carries an idempotency key on the legacy path');
-say(!/disabled|dataset\.busy|__busy|inflight/i.test(confirmZone.slice(0, confirmZone.indexOf('stSaveOverlay();'))), 'no re-entrancy guard on the confirm button');
+say(legacyBranch.includes('stLegacyPostAll({ supplier, externalRef, date, receivedAt, lines, items: inv, receiptRef })'), 'non-flag branch delegates to the single writer stLegacyPostAll');
+say(!legacyBranch.includes('.receiveDirect({') && !legacyBranch.includes("moveStock(it, line.qty,"), 'no direct receiveDirect/moveStock calls left in the handler branch');
+say(/stClaimConfirmBusy\(confirmBtn\)/.test(confirmZone.slice(0, confirmZone.indexOf('stSaveOverlay();'))), 'confirm button carries the busy re-entrancy guard');
+say(stockSrc.includes('skipMovements: true,') && stockSrc.includes('skipCosts: true,'), 'single writer silences procurement movement/cost writes');
 
 /* ── 2 · Execute both real callees with synthetic fixtures ──────────────── */
 const ls = new Map();
@@ -99,5 +100,5 @@ say(procState.receipts.length === 1, 'exactly one receipt document (documents do
 
 process.stdout.write(failures
   ? `\nrepro INCOMPLETE (${failures} pin(s) unmet — re-check against stock.js)\n`
-  : '\nrepro COMPLETE: non-flag confirm double-posts every receipt line on real merchants\n');
+  : '\nrepro COMPLETE: the pre-fix two-writer mechanism posts 2 rows/line (see audit; wired path now single-writer)\n');
 if (failures) process.exitCode = 1;

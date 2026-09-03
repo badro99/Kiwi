@@ -1,9 +1,31 @@
 # Audit — non-flag stock scan posts two ledger movements per line
 
-Date: 2026-09-03 · Scope: audit only, no fix, no figure rewritten, no
+Date: 2026-09-03 · Scope: audit only, no figure rewritten, no
 production tenant inspected. Reproduction: `node
 tools/legacy-doublepost-repro.mjs` (synthetic fixtures, offline, NOT wired into
 `tools/check.js`; exits non-zero if any reproduction pin fails).
+
+## 0 · Forward fix status: FIXED (this section added after the audit)
+
+The forward defect described in §1 is fixed, forward-only, by the phase-1
+commit titled `intake · legacy scan forward fix: single writer + busy guard`,
+direct child of `d370a3c8` (exact hash in the delivery report):
+- `stLegacyPostAll()` (`assets/stock.js`) is the single writer on the
+  non-flag path: the handler's `moveStock()` loop stays the sole movement
+  writer, `receiveDirect()` is called with `skipMovements: true` (receipt
+  document preserved) and `skipCosts: true` (handler checkbox stays the sole
+  cost decision), Ultra `attachInvoice` unchanged and now linked to the real
+  receipt id.
+- Busy/re-entrancy guard (`stClaimConfirmBusy`/`stReleaseConfirmBusy`) on the
+  confirm button: concurrent taps dropped, released on every recoverable
+  failure path.
+- Regression suite `tools/legacy-scan-test.mjs` (8 checks, wired into
+  `tools/check.js`): one receipt + one movement per line, stock +1x, costs
+  only when checked, busy semantics, demo intact, intake path untouched.
+- Historical merchant movements were NOT modified, deleted, reversed or
+  "repaired" by the fix. Historical reconciliation remains EXPLICITLY
+  UNRESOLVED — see §9, still awaiting a separate owner decision. No backfill,
+  migration, repair button or production query was added.
 
 ## 1 · Call chain and required conditions
 
@@ -99,7 +121,7 @@ path since 2026-08-10 for real merchants.
 - No suite executes the non-flag confirm handler end to end (DOM-bound), and
   no suite counts `KiwiInventory.history(item)` rows after a legacy confirm.
 
-## 8 · Remediation design (not built)
+## 8 · Remediation design (forward half BUILT — see §0; history still open)
 
 - Minimal fix: give the legacy path one owner — pass `skipMovements: true`
   (and `skipCosts`, honoring the checkbox gate) from the handler's
