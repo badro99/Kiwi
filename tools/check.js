@@ -1070,6 +1070,7 @@ section('Whole-project regressions');
     'intake-slice1-test.mjs',
     'intake-posting-test.mjs',
     'intake-conflict-test.mjs',
+    'intake-archive-test.mjs',
     'legacy-scan-test.mjs',
     'menu-translate-test.mjs',
     /* La carte dans la langue de chacun : traductions portées par les

@@ -172,6 +172,24 @@
       mScanArchived: 'Document archivé comme pièce comptable',
       mScanResume: 'Dépôt déjà en cours : reprise sans doublon.',
       mScanMarkRetry: 'Stock mis à jour. Le statut d’archive sera resynchronisé automatiquement.',
+      mScanArcLink: 'Documents fournisseurs',
+      mScanArcTitle: 'Documents fournisseurs',
+      mScanArcEmpty: 'Aucun document déposé pour le moment.',
+      mScanArcDown: 'Archive indisponible. Vérifiez la connexion puis réessayez.',
+      mScanArcRetry: 'Réessayer',
+      mScanArcView: 'Voir',
+      mScanArcDownload: 'Télécharger',
+      mScanArcBack: 'Retour',
+      mScanArcMore: 'Afficher plus',
+      mScanArcLoading: 'Chargement…',
+      mScanArcTypeInvoice: 'Facture fournisseur',
+      mScanArcTypeOther: 'Document',
+      mScanArcStReceived: 'Déposé',
+      mScanArcStConfirmed: 'Confirmé',
+      mScanArcPending: 'Envoi en cours…',
+      mScanArcUB: 'o',
+      mScanArcUKB: 'Ko',
+      mScanArcUMB: 'Mo',
       mScanConflictT: 'Cette tentative ne correspond plus au premier envoi',
       mScanConflictB1: 'Un premier envoi utilisait des valeurs relues différentes.',
       mScanConflictB2: 'Cette tentative n’a ajouté aucun stock.',
@@ -459,6 +477,24 @@
       mScanArchived: 'Document archived as a business record',
       mScanResume: 'Filing already in progress: resuming without duplicating.',
       mScanMarkRetry: 'Stock updated. The archive status will resync automatically.',
+      mScanArcLink: 'Supplier documents',
+      mScanArcTitle: 'Supplier documents',
+      mScanArcEmpty: 'No documents filed yet.',
+      mScanArcDown: 'Archive unavailable. Check your connection and retry.',
+      mScanArcRetry: 'Retry',
+      mScanArcView: 'View',
+      mScanArcDownload: 'Download',
+      mScanArcBack: 'Back',
+      mScanArcMore: 'Show more',
+      mScanArcLoading: 'Loading…',
+      mScanArcTypeInvoice: 'Supplier invoice',
+      mScanArcTypeOther: 'Document',
+      mScanArcStReceived: 'Filed',
+      mScanArcStConfirmed: 'Confirmed',
+      mScanArcPending: 'Upload pending…',
+      mScanArcUB: 'B',
+      mScanArcUKB: 'KB',
+      mScanArcUMB: 'MB',
       mScanConflictT: 'This attempt no longer matches the first submission',
       mScanConflictB1: 'An earlier attempt used different reviewed values.',
       mScanConflictB2: 'This attempt added no stock.',
@@ -734,6 +770,24 @@
       mScanArchived: 'تمت أرشفة المستند كوثيقة محاسبية',
       mScanResume: 'الإيداع جارٍ مسبقًا: استئناف بدون تكرار.',
       mScanMarkRetry: 'تم تحديث المخزون. ستتم إعادة مزامنة حالة الأرشفة تلقائيًا.',
+      mScanArcLink: 'مستندات الموردين',
+      mScanArcTitle: 'مستندات الموردين',
+      mScanArcEmpty: 'لا توجد مستندات مودعة بعد.',
+      mScanArcDown: 'الأرشيف غير متاح. تحقق من الاتصال ثم أعد المحاولة.',
+      mScanArcRetry: 'إعادة المحاولة',
+      mScanArcView: 'عرض',
+      mScanArcDownload: 'تنزيل',
+      mScanArcBack: 'رجوع',
+      mScanArcMore: 'عرض المزيد',
+      mScanArcLoading: 'جارٍ التحميل…',
+      mScanArcTypeInvoice: 'فاتورة مورد',
+      mScanArcTypeOther: 'مستند',
+      mScanArcStReceived: 'مودع',
+      mScanArcStConfirmed: 'مؤكد',
+      mScanArcPending: 'جارٍ الرفع…',
+      mScanArcUB: 'ب',
+      mScanArcUKB: 'ك.ب',
+      mScanArcUMB: 'م.ب',
       mScanConflictT: 'هذه المحاولة لم تعد تطابق الإرسال الأول',
       mScanConflictB1: 'استخدم إرسال سابق قيمًا مراجعة مختلفة.',
       mScanConflictB2: 'لم تضف هذه المحاولة أي مخزون.',
@@ -4446,6 +4500,9 @@
       <div class="st-dropzone-link" data-stock-scan-manual style="text-align:center;margin-top:12px;cursor:pointer;color:var(--primary,#0070f3);font-size:13px;text-decoration:underline;">
         ${esc(t('mScanManual'))}
       </div>
+      ${stIntakeEnabled() ? `<div class="st-dropzone-link" data-stock-scan-archive style="text-align:center;margin-top:6px;cursor:pointer;color:var(--primary,#0070f3);font-size:13px;text-decoration:underline;">
+        ${esc(t('mScanArcLink'))}
+      </div>` : ''}
     `;
   }
 
@@ -4464,6 +4521,14 @@
         if (!stage) return;
         stage.innerHTML = renderRealReceiptReview({ supplier: null });
         wireScanReview();
+      };
+    }
+
+    const linkArchive = scope.querySelector('[data-stock-scan-archive]');
+    if (linkArchive) {
+      linkArchive.onclick = () => {
+        if (!stage) return;
+        openScanArchive(scope, stage);
       };
     }
 
@@ -4596,6 +4661,125 @@
         if (files && files[0]) processFile(files[0]);
       });
     }
+  }
+
+  /* ── Coffre des pièces déposées (lecture seule) ─────────────────────────
+   * Liste paginée des métadonnées + visionneuse PDF authentifiée (cookie de
+   * session). N'invente ni fournisseur ni montant : D1 ne retient que le
+   * type, la date, le statut, la taille et l'identifiant raccourci. Aucune
+   * mention « archivé » sans hasObject. Mise en page fluide (aucune largeur
+   * fixe) : 320 px comme desktop, sens de lecture hérité de la page. */
+  function stArchiveUrl(docId, download) {
+    return '/api/ai/intake-archive?merchant=' + encodeURIComponent(stIntakeMerchant()) +
+      '&docId=' + encodeURIComponent(String(docId || '')) + (download ? '&download=1' : '');
+  }
+  async function stIntakeArchiveList(cursor) {
+    const res = await fetch('/api/ai/intake-archive?merchant=' + encodeURIComponent(stIntakeMerchant()) +
+      '&limit=20' + (cursor ? '&cursor=' + encodeURIComponent(cursor) : ''));
+    if (!res.ok) throw new Error('archive-' + res.status);
+    const data = await res.json().catch(() => null);
+    if (!data || data.ok !== true || !Array.isArray(data.docs)) throw new Error('archive-bad-shape');
+    return data;
+  }
+  function stFmtSize(bytes) {
+    const n = Math.max(0, Number(bytes) || 0);
+    const dec = (x) => x.toFixed(1).replace('.', lang() === 'en' ? '.' : ',');
+    if (n >= 1048576) return dec(n / 1048576) + ' ' + t('mScanArcUMB');
+    if (n >= 1024) return dec(n / 1024) + ' ' + t('mScanArcUKB');
+    return Math.round(n) + ' ' + t('mScanArcUB');
+  }
+  function stFmtArcDate(ts) {
+    try {
+      const loc = lang() === 'ar' ? 'ar-MA' : lang() === 'en' ? 'en-GB' : 'fr-MA';
+      return new Date(Number(ts) || 0).toLocaleDateString(loc, { day: '2-digit', month: '2-digit', year: 'numeric' });
+    } catch (_) { return ''; }
+  }
+  function stArcTypeLabel(docType) {
+    if (docType === 'supplier_invoice') return t('mScanArcTypeInvoice');
+    const raw = String(docType || '').trim();
+    return raw ? raw.slice(0, 24) : t('mScanArcTypeOther');
+  }
+  function stArcStatusLabel(status) {
+    return status === 'confirmed' ? t('mScanArcStConfirmed') : t('mScanArcStReceived');
+  }
+  function renderScanArchive(state) {
+    const st = state || {};
+    const status = st.status || 'loading';
+    const docs = Array.isArray(st.docs) ? st.docs : [];
+    const head = `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <button class="st-btn small" type="button" data-stock-arc-back>${esc(t('mScanArcBack'))}</button>
+        <div class="st-mb-eyebrow" style="margin:0;">${esc(t('mScanArcTitle'))}</div>
+      </div>`;
+    if (status === 'loading') {
+      return head + `<div style="text-align:center;padding:28px 12px;font-size:13px;color:var(--n-500,#6b7280);">${esc(t('mScanArcLoading'))}</div>`;
+    }
+    if (status === 'unavailable' && !docs.length) {
+      return head + `<div class="st-notice warn">${svg('alertTriangle', 14)}<div>${esc(t('mScanArcDown'))}</div></div>
+        <div style="display:flex;justify-content:flex-end;margin-top:12px;">
+          <button class="st-btn" type="button" data-stock-arc-retry>${esc(t('mScanArcRetry'))}</button>
+        </div>`;
+    }
+    if (!docs.length) {
+      return head + `<div class="st-notice">${svg('info', 14)}<div>${esc(t('mScanArcEmpty'))}</div></div>`;
+    }
+    const rows = docs.map((d) => {
+      const id = String((d && d.docId) || '');
+      const short = id ? id.slice(0, 12) + '…' : '·';
+      const archived = !!d.hasObject && !!id;
+      const acts = archived
+        ? `<a class="st-btn small" href="${esc(stArchiveUrl(id, false))}" target="_blank" rel="noopener">${esc(t('mScanArcView'))}</a>`
+          + `<a class="st-btn small" href="${esc(stArchiveUrl(id, true))}" download>${esc(t('mScanArcDownload'))}</a>`
+        : `<span style="font-size:11.5px;color:var(--n-500,#6b7280);">${esc(t('mScanArcPending'))}</span>`;
+      return `
+        <div style="display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;justify-content:space-between;padding:10px 4px;border-bottom:1px solid var(--n-200,#e5e7eb);">
+          <div style="min-width:0;flex:1 1 180px;">
+            <div style="font-size:13px;font-weight:600;">${esc(stArcTypeLabel(d.docType))}</div>
+            <div style="font-size:11.5px;color:var(--n-500,#6b7280);display:flex;flex-wrap:wrap;gap:2px 8px;">
+              <bdi dir="ltr" class="mono">${esc(short)}</bdi>
+              <bdi dir="ltr">${esc(stFmtArcDate(d.createdTs))}</bdi>
+              <bdi dir="ltr">${esc(stFmtSize(d.size))}</bdi>
+              <span>${esc(stArcStatusLabel(d.status))}</span>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;flex-shrink:0;">${acts}</div>
+        </div>`;
+    }).join('');
+    return head + `<div>${rows}</div>` + (st.nextCursor
+      ? `<div style="display:flex;justify-content:center;margin-top:12px;">
+          <button class="st-btn" type="button" data-stock-arc-more data-cursor="${esc(st.nextCursor)}">${esc(t('mScanArcMore'))}</button>
+        </div>`
+      : '');
+  }
+  function openScanArchive(scope, stage) {
+    if (!stage) return;
+    const acc = [];
+    let cursor = null;
+    let busy = false;
+    function paint(state) {
+      stage.innerHTML = renderScanArchive(state);
+      const back = scope.querySelector('[data-stock-arc-back]');
+      if (back) back.onclick = () => { stage.innerHTML = renderScanStage1(); wireScanStage1(); };
+      const retry = scope.querySelector('[data-stock-arc-retry]');
+      if (retry) retry.onclick = () => load(true);
+      const more = scope.querySelector('[data-stock-arc-more]');
+      if (more) more.onclick = () => load(false);
+    }
+    async function load(reset) {
+      if (reset) { acc.length = 0; cursor = null; paint({ status: 'loading', docs: [] }); }
+      else if (busy) return;
+      busy = true;
+      try {
+        const data = await stIntakeArchiveList(reset ? null : cursor);
+        for (const d of data.docs) acc.push(d);
+        cursor = data.nextCursor || null;
+        paint({ status: acc.length ? 'ready' : 'empty', docs: acc, nextCursor: cursor });
+      } catch (_) {
+        paint({ status: acc.length ? 'ready' : 'unavailable', docs: acc, nextCursor: cursor });
+      }
+      busy = false;
+    }
+    load(true);
   }
 
   function renderScanReview(opts) {
