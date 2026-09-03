@@ -124,9 +124,22 @@ html[dir="rtl"] .field input[dir="ltr"] { text-align: left; }
 .cta, .secondary, .printer-choice, .link { appearance: none; cursor: pointer; min-height: 46px; border-radius: var(--r-full); font: 600 14px/1 var(--sans); transition: transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease, background 140ms ease; }
 .cta:focus-visible, .secondary:focus-visible, .printer-choice:focus-visible, .link:focus-visible, .tile:focus-visible, .store-choice:focus-visible { outline: 2px solid var(--atlas); outline-offset: 2px; }
 .cta { border: 1px solid var(--atlas); padding: 13px 20px; background: var(--atlas); color: var(--paper); box-shadow: 0 12px 30px -18px rgba(5,59,44,.72); }
-.cta:disabled { opacity: .55; cursor: default; box-shadow: none; }
+.cta:disabled {
+  background: var(--n-100);
+  border-color: var(--n-200);
+  color: var(--n-500);
+  box-shadow: none;
+  cursor: default;
+}
 .cta:not(:disabled):active, .secondary:active, .printer-choice:active { transform: scale(.98); }
 .secondary { border: 1px solid var(--n-200); padding: 13px 18px; background: rgba(255,255,255,.44); color: var(--n-700); }
+.secondary:disabled {
+  background: var(--n-100);
+  border-color: var(--n-200);
+  color: var(--n-500);
+  box-shadow: none;
+  cursor: default;
+}
 .link { border: 0; padding: 11px 14px; background: transparent; color: var(--atlas); min-height: 44px; }
 .manual .setup-actions, .manual .eyebrow { display: none; }
 .err { margin: 0; color: #9B2C2C; font-size: 13px; }

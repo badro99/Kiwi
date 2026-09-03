@@ -129,30 +129,48 @@ const CORS = { 'Access-Control-Allow-Credentials': 'true' };
  * string pageFunctions evaluate in expression position on some puppeteer
  * builds, where a trailing semicolon throws — functions run identically
  * everywhere). `secure` selects the secureGet behavior for the case. */
-function applyPluginStub(secure) {
+function applyPluginStub(pluginCfg) {
   function later(value, ms) {
     return new Promise(function (res) { setTimeout(function () { res(value); }, ms); });
   }
-  window.Capacitor = {
-    isNativePlatform: function () { return true; },
-    getPlatform: function () { return 'ios'; },
-    Plugins: {
-      KiwiPrinterSocket: {
-        probe: function () { return Promise.resolve({ ok: true }); },
-        send: function () { return Promise.resolve({ ok: true }); },
-        scan: function () {
-          return Promise.resolve({ ok: true, hosts: [{ host: '192.168.1.50' }, { host: '192.168.1.51' }] });
-        },
-        secureSet: function () { return Promise.resolve({}); },
-        secureGet: function () {
-          if (secure === 'value') return Promise.resolve({ value: 'caisse' });
-          if (secure === 'reject') return Promise.reject(new Error('denied'));
-          if (secure === 'hang') return new Promise(function () {});
-          if (secure === 'slow') return later({ value: '' }, 800);
-          return Promise.resolve({ value: '' });
-        },
+  var secure = typeof pluginCfg === 'string' ? pluginCfg : (pluginCfg && pluginCfg.secure);
+  var scanMode = pluginCfg && typeof pluginCfg === 'object' ? pluginCfg.scan : null;
+  var appInfo = pluginCfg && typeof pluginCfg === 'object' ? pluginCfg.appInfo : null;
+
+  var plugins = {
+    KiwiPrinterSocket: {
+      probe: function () { return Promise.resolve({ ok: true }); },
+      send: function () { return Promise.resolve({ ok: true }); },
+      scan: function () {
+        if (scanMode === 'empty') return Promise.resolve({ ok: true, hosts: [] });
+        if (scanMode === 'reject') return Promise.reject(new Error('local network permission denied'));
+        return Promise.resolve({ ok: true, hosts: [{ host: '192.168.1.50' }, { host: '192.168.1.51' }] });
+      },
+      secureSet: function () { return Promise.resolve({}); },
+      secureGet: function () {
+        if (secure === 'value') return Promise.resolve({ value: 'caisse' });
+        if (secure === 'reject') return Promise.reject(new Error('denied'));
+        if (secure === 'hang') return new Promise(function () {});
+        if (secure === 'slow') return later({ value: '' }, 800);
+        return Promise.resolve({ value: '' });
       },
     },
+  };
+  if (scanMode === 'unavailable') {
+    delete plugins.KiwiPrinterSocket.scan;
+  }
+  if (appInfo !== false) {
+    plugins.App = {
+      getInfo: function () {
+        if (appInfo && typeof appInfo === 'object') return Promise.resolve(appInfo);
+        return Promise.resolve({ version: '1.0.0', build: '42' });
+      }
+    };
+  }
+  window.Capacitor = {
+    isNativePlatform: function () { return true; },
+    getPlatform: function () { return (pluginCfg && pluginCfg.platform) || 'ios'; },
+    Plugins: plugins,
   };
 }
 
@@ -184,8 +202,12 @@ async function openShell({ locale = 'fr', viewport = 'iphone', me = 'login', plu
       return req.respond({ status: 200, headers: cors, contentType: 'application/json', body: JSON.stringify(body) });
     }
     if (u.includes('/auth/login')) {
+      if (login === 'abort' || (login && login.abort)) return req.abort();
       if (login && login.delayMs) {
         return new Promise((res) => setTimeout(() => res(req.respond({ status: login.status || 401, headers: cors, contentType: 'application/json', body: JSON.stringify(login.body || { error: 'bad-creds' }) })), login.delayMs));
+      }
+      if (login && (login.status || login.body)) {
+        return req.respond({ status: login.status || 200, headers: cors, contentType: 'application/json', body: JSON.stringify(login.body || { ok: true }) });
       }
       return req.respond({ status: 200, headers: cors, contentType: 'application/json', body: '{"ok":true}' });
     }
@@ -361,16 +383,71 @@ async function fromRole(page, role = 'caisse') {
     ? ok('login failure sets aria-invalid/describedby on inputs and retains focus on password field')
     : bad(`login failure accessibility state wrong: ${JSON.stringify(errAria)}`);
 
-  // typing clears aria-invalid
+  // Typing into email clears only email invalidity, leaving password invalid
+  await p.type('#login-email', 'x');
+  const emailClearedOnly = await p.evaluate(() => {
+    const email = document.querySelector('#login-email');
+    const pass = document.querySelector('#login-password');
+    const err = document.querySelector('#login-err');
+    return {
+      emailInvalid: email.hasAttribute('aria-invalid'),
+      emailDescribedBy: email.hasAttribute('aria-describedby'),
+      passInvalid: pass.getAttribute('aria-invalid'),
+      passDescribedBy: pass.getAttribute('aria-describedby'),
+      errStillShown: !err.hidden && err.textContent.length > 0,
+    };
+  });
+  !emailClearedOnly.emailInvalid && !emailClearedOnly.emailDescribedBy &&
+  emailClearedOnly.passInvalid === 'true' && emailClearedOnly.passDescribedBy === 'login-err' &&
+  emailClearedOnly.errStillShown
+    ? ok('editing marked email clears only its own aria-invalid/describedby; password stays invalid and alert remains visible')
+    : bad(`per-field clearing state wrong: ${JSON.stringify(emailClearedOnly)}`);
+
+  // typing into password clears password invalidity
   await p.type('#login-password', 'x');
-  const errCleared = await p.evaluate(() => {
+  const passCleared = await p.evaluate(() => {
     const pass = document.querySelector('#login-password');
     return !pass.hasAttribute('aria-invalid') && !pass.hasAttribute('aria-describedby');
   });
-  errCleared ? ok('typing into invalid login input clears aria-invalid and aria-describedby') : bad('typing did not clear aria-invalid');
+  passCleared ? ok('typing into invalid password input clears its aria-invalid and aria-describedby') : bad('typing did not clear password aria-invalid');
 
   await shot(p, 'flow-02-login-error');
   await p.closeCtx();
+}
+
+{
+  // Operational errors (network, 429, not-configured, unknown): no aria-invalid, alert announced, focus on loginBtn
+  const cases = [
+    { label: 'network failure', login: 'abort', match: /Réseau injoignable|Network unavailable/ },
+    { label: 'HTTP 429 rate limit', login: { status: 429, body: { error: 'too-many' } }, match: /Trop de tentatives|Too many attempts/ },
+    { label: 'server configuration error', login: { status: 503, body: { error: 'not-configured' } }, match: /momentanément indisponible|temporarily unavailable/ },
+    { label: 'unknown operational error', login: { status: 500, body: {} }, match: /Une erreur est survenue|Something went wrong/ },
+  ];
+  for (const c of cases) {
+    const pOp = await openShell({ me: 'login', login: c.login });
+    await settleAccount(pOp);
+    await pOp.type('#login input[name="email"]', 'owner@cafeatlas.ma');
+    await pOp.type('#login input[name="password"]', 'password12345');
+    await pOp.click('#login-btn');
+    await pOp.waitForFunction(() => !document.querySelector('#login-err').hidden, { timeout: 8000 });
+    const opState = await pOp.evaluate(() => {
+      const email = document.querySelector('#login-email');
+      const pass = document.querySelector('#login-password');
+      const err = document.querySelector('#login-err');
+      const btn = document.querySelector('#login-btn');
+      return {
+        emailInvalid: email.hasAttribute('aria-invalid'),
+        passInvalid: pass.hasAttribute('aria-invalid'),
+        errText: err ? err.textContent : '',
+        btnDisabled: btn.disabled,
+        btnFocused: document.activeElement === btn,
+      };
+    });
+    !opState.emailInvalid && !opState.passInvalid && c.match.test(opState.errText) && !opState.btnDisabled && opState.btnFocused
+      ? ok(`operational failure (${c.label}) announces alert, avoids marking credentials invalid, and focuses enabled submit button`)
+      : bad(`operational failure (${c.label}) state wrong: ${JSON.stringify(opState)}`);
+    await pOp.closeCtx();
+  }
 }
 
 {
@@ -415,6 +492,24 @@ async function fromRole(page, role = 'caisse') {
     ? ok('authenticated state promotes Continuer to primary CTA and unhides it')
     : bad(`authenticated CTA state wrong: ${JSON.stringify(authCta)}`);
   await toRole(p);
+
+  // Disabled CTA presentation: solid tokens, default cursor, no low opacity
+  const disabledCta = await p.evaluate(() => {
+    const btn = document.querySelector('#role-next');
+    const cs = window.getComputedStyle(btn);
+    return {
+      disabled: btn.disabled,
+      opacity: cs.opacity,
+      cursor: cs.cursor,
+      bg: cs.backgroundColor,
+      color: cs.color,
+    };
+  });
+  disabledCta.disabled && disabledCta.opacity === '1' && disabledCta.cursor === 'default' &&
+  /rgb\(236,\s*232,\s*223\)/.test(disabledCta.bg) && /rgb\(93,\s*107,\s*99\)/.test(disabledCta.color)
+    ? ok('disabled CTA styles cleanly without low opacity alone (solid neutral tokens --n-100/--n-500, default cursor, opacity:1)')
+    : bad(`disabled CTA styling wrong: ${JSON.stringify(disabledCta)}`);
+
   const pressed0 = await p.evaluate(() => [...document.querySelectorAll('.tile[data-role]')].map((t) => t.getAttribute('aria-pressed')));
   pressed0.every((v) => v === 'false') ? ok('role tiles announce unpressed before any choice') : bad('role tiles lack initial aria-pressed');
   await shot(p, 'flow-03-role');
@@ -529,15 +624,19 @@ async function fromRole(page, role = 'caisse') {
 
   const scanChoices = await p.evaluate(() => {
     const btns = [...document.querySelectorAll('.printer-choice')];
+    const scanBtn = document.querySelector('#printer-scan');
     const active = document.activeElement;
     return {
       count: btns.length,
       allLtr: btns.every((b) => b.getAttribute('dir') === 'ltr'),
       firstFocused: active === btns[0],
+      scanEnabled: !scanBtn.disabled,
+      scanIdleLabel: scanBtn.textContent,
     };
   });
-  scanChoices.count === 2 && scanChoices.allLtr && scanChoices.firstFocused
-    ? ok('printer scan results carry dir="ltr" and focus lands on the first result')
+  scanChoices.count === 2 && scanChoices.allLtr && scanChoices.firstFocused &&
+  scanChoices.scanEnabled && /Rechercher|Search|البحث/.test(scanChoices.scanIdleLabel)
+    ? ok('printer scan results carry dir="ltr", button re-enables to idle, and focus lands on first result')
     : bad(`scan results accessibility wrong: ${JSON.stringify(scanChoices)}`);
 
   await p.evaluate(() => document.querySelectorAll('.printer-choice')[0].click());
@@ -575,6 +674,90 @@ async function fromRole(page, role = 'caisse') {
     .then(() => ok('Ouvrir Kiwi opens the chosen role surface'))
     .catch(() => bad('finish did not navigate to the role surface'));
   await p.closeCtx();
+}
+
+{
+  // Printer scan focus recovery: empty results, native rejection, and unavailable plugin
+  // 1. Empty results: zero printers found
+  {
+    const p = await openShell({ me: 'multi', plugin: { scan: 'empty' } });
+    await toRole(p);
+    await fromRole(p, 'caisse');
+    await p.evaluate(() => document.querySelectorAll('.store-choice')[0].click());
+    await p.click('#pair-btn');
+    await p.waitForFunction(() => document.querySelector('#connect-next').disabled === false, { timeout: 8000 });
+    await p.click('#connect-next');
+    await p.waitForFunction(() => !document.querySelector('#step-printer').hidden, { timeout: 8000 });
+
+    await p.click('#printer-scan');
+    await p.waitForFunction(() => /Aucune imprimante trouvée|No printer found|لم يتم العثور/.test(document.querySelector('#scan-results').textContent), { timeout: 8000 });
+    const emptyRecovery = await p.evaluate(() => {
+      const btn = document.querySelector('#printer-scan');
+      return {
+        disabled: btn.disabled,
+        label: btn.textContent,
+        focused: document.activeElement === btn,
+      };
+    });
+    !emptyRecovery.disabled && /Rechercher|Search|البحث/.test(emptyRecovery.label) && emptyRecovery.focused
+      ? ok('empty printer scan re-enables button, restores idle label, and returns focus to scan button')
+      : bad(`empty scan recovery wrong: ${JSON.stringify(emptyRecovery)}`);
+    await p.closeCtx();
+  }
+
+  // 2. Scan rejection: native scan rejection/error
+  {
+    const p = await openShell({ me: 'multi', plugin: { scan: 'reject' } });
+    await toRole(p);
+    await fromRole(p, 'caisse');
+    await p.evaluate(() => document.querySelectorAll('.store-choice')[0].click());
+    await p.click('#pair-btn');
+    await p.waitForFunction(() => document.querySelector('#connect-next').disabled === false, { timeout: 8000 });
+    await p.click('#connect-next');
+    await p.waitForFunction(() => !document.querySelector('#step-printer').hidden, { timeout: 8000 });
+
+    await p.click('#printer-scan');
+    await p.waitForFunction(() => document.querySelector('#scan-results').textContent.length > 0, { timeout: 8000 });
+    const rejectRecovery = await p.evaluate(() => {
+      const btn = document.querySelector('#printer-scan');
+      return {
+        disabled: btn.disabled,
+        label: btn.textContent,
+        focused: document.activeElement === btn,
+      };
+    });
+    !rejectRecovery.disabled && /Rechercher|Search|البحث/.test(rejectRecovery.label) && rejectRecovery.focused
+      ? ok('rejected printer scan re-enables button, restores idle label, and returns focus to scan button')
+      : bad(`rejected scan recovery wrong: ${JSON.stringify(rejectRecovery)}`);
+    await p.closeCtx();
+  }
+
+  // 3. Unavailable plugin: scan plugin missing
+  {
+    const p = await openShell({ me: 'multi', plugin: { scan: 'unavailable' } });
+    await toRole(p);
+    await fromRole(p, 'caisse');
+    await p.evaluate(() => document.querySelectorAll('.store-choice')[0].click());
+    await p.click('#pair-btn');
+    await p.waitForFunction(() => document.querySelector('#connect-next').disabled === false, { timeout: 8000 });
+    await p.click('#connect-next');
+    await p.waitForFunction(() => !document.querySelector('#step-printer').hidden, { timeout: 8000 });
+
+    await p.click('#printer-scan');
+    await p.waitForFunction(() => /disponible dans l’app|available in the Kiwi Pro app|متاح داخل تطبيق/.test(document.querySelector('#scan-results').textContent), { timeout: 8000 });
+    const unavailRecovery = await p.evaluate(() => {
+      const btn = document.querySelector('#printer-scan');
+      return {
+        disabled: btn.disabled,
+        label: btn.textContent,
+        focused: document.activeElement === btn,
+      };
+    });
+    !unavailRecovery.disabled && /Rechercher|Search|البحث/.test(unavailRecovery.label) && unavailRecovery.focused
+      ? ok('unavailable native scan plugin re-enables button, restores idle label, and returns focus to scan button')
+      : bad(`unavailable scan recovery wrong: ${JSON.stringify(unavailRecovery)}`);
+    await p.closeCtx();
+  }
 }
 
 /* ── 4 · viewport sweeps (fr): overflow + layout invariants per step ───── */
@@ -696,12 +879,43 @@ for (const viewport of ['small320', 'ipadPortrait', 'ipadLandscape']) {
       opacity: cs ? cs.opacity : '',
     };
   });
-  /^v1\.0/.test(footerA11y.text) && footerA11y.bdiDir === 'ltr' && footerA11y.hasTitle && footerA11y.hasAria &&
+  /^[a-f0-9]{7}$/.test(footerA11y.text) && footerA11y.bdiDir === 'ltr' && footerA11y.hasTitle && footerA11y.hasAria &&
   footerA11y.fontSize === '11px' && footerA11y.opacity === '1'
-    ? ok(`footer version label formatted cleanly («${footerA11y.text}») with accessible title/aria-label and 11px opaque contrast`)
+    ? ok(`browser footer build label derived from bundle metadata («${footerA11y.text}») with accessible title/aria-label and 11px opaque contrast`)
     : bad(`footer version formatting wrong: ${JSON.stringify(footerA11y)}`);
 
   await p.closeCtx();
+}
+
+{
+  // Native metadata truthfulness across FR, EN, and AR
+  const expectations = {
+    fr: { text: 'v1.2.0 (89)', aria: 'Version 1.2.0, build 89', titlePrefix: 'Lot : ' },
+    en: { text: 'v1.2.0 (89)', aria: 'Version 1.2.0, build 89', titlePrefix: 'Bundle: ' },
+    ar: { text: 'v1.2.0 (89)', aria: 'الإصدار 1.2.0، البنية 89', titlePrefix: 'الحزمة: ' },
+  };
+  for (const [lang, exp] of Object.entries(expectations)) {
+    const pNat = await openShell({
+      locale: lang,
+      plugin: { appInfo: { version: '1.2.0', build: '89' } },
+    });
+    await settleAccount(pNat);
+    const meta = await pNat.evaluate(() => {
+      const bundle = document.querySelector('#bundle');
+      const bdi = bundle ? bundle.querySelector('bdi') : null;
+      return {
+        text: bundle ? bundle.textContent : '',
+        bdiDir: bdi ? bdi.getAttribute('dir') : '',
+        aria: bundle ? bundle.getAttribute('aria-label') : '',
+        title: bundle ? bundle.getAttribute('title') : '',
+      };
+    });
+    meta.text === exp.text && meta.bdiDir === 'ltr' && meta.aria === exp.aria && meta.title.startsWith(exp.titlePrefix)
+      ? ok(`native version metadata localized in ${lang.toUpperCase()} («${meta.text}», aria: «${meta.aria}», dir="${meta.bdiDir}")`)
+      : bad(`native version metadata wrong for ${lang}: ${JSON.stringify(meta)}`);
+    if (lang === 'ar') await shot(pNat, 'locale-ar-bundle-ltr');
+    await pNat.closeCtx();
+  }
 }
 {
   // compact single-store Arabic flow: auto-select, pair, badge side, paper order

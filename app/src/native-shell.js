@@ -20,7 +20,8 @@
       roleTitle:'À quoi servira cet appareil ?',roleIntro:'Kiwi ouvrira ce rôle automatiquement aux prochains lancements.',roles:'Rôle de l’appareil',caisse:'Caisse',caisseSub:'Encaissement, tickets, imprimante',team:'KiwiÉquipe',teamSub:'Salle, planning, pointage',kitchen:'Cuisine',kitchenSub:'Écran de production (KDS)',dashboard:'Tableau de bord',dashboardSub:'Propriétaire, lecture et actions rapides',chooseRole:'Choisissez un rôle pour continuer.',dashboardNeedsAccount:'Ce rôle exige un compte marchand connecté. Revenez à l’étape 1.',
       connectTitle:'Reliez l’appareil à l’établissement',pairIntro:'Choisissez l’établissement auquel cet appareil doit envoyer ses ventes et ses commandes.',stores:'Établissements du compte',chooseStore:'Choisissez un établissement.',store:'Établissement',pair:'Relier cet appareil',pairing:'Connexion…',paired:'Appareil relié',alreadyPaired:'Déjà relié',pairRate:'Trop de tentatives. Réessayez dans quelques minutes.',pairNetwork:'Impossible de joindre Kiwi. Vérifiez le Wi-Fi.',pairUnavailable:'La liaison est momentanément indisponible.',dashboardConnect:'Le tableau de bord utilise le compte marchand connecté à l’étape 1.',accountConnected:'Compte marchand connecté',teamConnect:'Chaque membre se connectera avec son code équipe sur l’écran suivant. Aucun appairage marchand n’est nécessaire ici.',teamReady:'Connexion par code équipe',
       printerTitle:'Testez l’imprimante thermique',printerIntro:'L’iPad et l’imprimante doivent être sur le même Wi-Fi. Le port standard est 9100.',printerIp:'Adresse IP',printerPort:'Port',paper:'Papier',scan:'Rechercher sur le réseau',scanning:'Recherche…',testPrinter:'Tester et enregistrer',testing:'Test en cours…',printerLater:'Configurer plus tard',printerRequired:'Saisissez une adresse et un port valides.',printerNativeOnly:'La recherche réseau est disponible dans l’app Kiwi Pro.',printerNone:'Aucune imprimante trouvée. Vérifiez le Wi-Fi et l’alimentation.',printerMany:'Imprimantes trouvées — choisissez-en une :',printerFound:'Imprimante trouvée',printerOk:'Ticket test envoyé et imprimante enregistrée.',printerFail:'Imprimante injoignable. Vérifiez son IP, son port et le Wi-Fi local.',printerDenied:'Autorisez l’accès au réseau local dans Réglages > Kiwi Pro.',printerSkipped:'À configurer dans Kiwi',
-      readyTitle:'Cet appareil est prêt',readyIntro:'Cette vérification n’a créé aucune vente, aucun paiement et aucun ticket client.',checkRole:'Rôle choisi',checkConnect:'Établissement',checkPrinter:'Imprimante',openKiwi:'Ouvrir Kiwi',notRequired:'Non requise',connected:'Connecté',merchant:'Compte marchand',browser:'navigateur',loggingIn:'Connexion…',badCreds:'E-mail ou mot de passe incorrect.',badJson:'Requête invalide.',notConfigured:'Service momentanément indisponible.',tooMany:'Trop de tentatives. Réessayez dans quelques minutes.',network:'Réseau injoignable. Vérifiez le Wi-Fi de l’appareil.',unknown:'Une erreur est survenue. Réessayez.'
+      readyTitle:'Cet appareil est prêt',readyIntro:'Cette vérification n’a créé aucune vente, aucun paiement et aucun ticket client.',checkRole:'Rôle choisi',checkConnect:'Établissement',checkPrinter:'Imprimante',openKiwi:'Ouvrir Kiwi',notRequired:'Non requise',connected:'Connecté',merchant:'Compte marchand',browser:'navigateur',loggingIn:'Connexion…',badCreds:'E-mail ou mot de passe incorrect.',badJson:'Requête invalide.',notConfigured:'Service momentanément indisponible.',tooMany:'Trop de tentatives. Réessayez dans quelques minutes.',network:'Réseau injoignable. Vérifiez le Wi-Fi de l’appareil.',unknown:'Une erreur est survenue. Réessayez.',
+      versionBuildAria:'Version {version}, build {build}',versionOnlyAria:'Version {version}',buildOnlyAria:'Build {build}',bundlePrefix:'Lot : ',localBuild:'Version locale'
     },
     en: {
       brandKicker:'The operating system for Moroccan merchants.',localSetup:'Secure setup on this device',deviceSetup:'Device setup',guided:'Guided',welcomeSub:'Let’s set up this device. It takes about two minutes.',launcherSub:'Choose this device’s role. Kiwi will remember it.',stageAccount:'Your workspace and permissions stay tied to the right establishment.',stageRole:'One device, one clear role — Kiwi opens the right workspace directly.',stageConnect:'Secure device binding keeps establishments from ever mixing.',stagePrinter:'Check the hardware now so the first checkout is ready.',stageReady:'This setup is saved on this device.',progress:'Setup progress',accountStep:'Account',roleStep:'Role',connectStep:'Connect',printerStep:'Printer',readyStep:'Ready',
@@ -28,7 +29,8 @@
       roleTitle:'What will this device be used for?',roleIntro:'Kiwi will open this role automatically on future launches.',roles:'Device role',caisse:'Till',caisseSub:'Payments, receipts, printer',team:'Kiwi Team',teamSub:'Floor, schedule, attendance',kitchen:'Kitchen',kitchenSub:'Production screen (KDS)',dashboard:'Dashboard',dashboardSub:'Owner view and quick actions',chooseRole:'Choose a role to continue.',dashboardNeedsAccount:'This role requires a signed-in merchant account. Return to step 1.',
       connectTitle:'Connect the device to the establishment',pairIntro:'Choose the establishment that should receive this device’s sales and orders.',stores:'Account establishments',chooseStore:'Choose an establishment.',store:'Establishment',pair:'Connect this device',pairing:'Connecting…',paired:'Device connected',alreadyPaired:'Already connected',pairRate:'Too many attempts. Try again in a few minutes.',pairNetwork:'Could not reach Kiwi. Check Wi-Fi.',pairUnavailable:'Device connection is temporarily unavailable.',dashboardConnect:'The dashboard uses the merchant account signed in at step 1.',accountConnected:'Merchant account connected',teamConnect:'Each team member signs in with their team code on the next screen. No merchant pairing is needed here.',teamReady:'Team code sign-in',
       printerTitle:'Test the thermal printer',printerIntro:'The iPad and printer must be on the same Wi-Fi. The standard port is 9100.',printerIp:'IP address',printerPort:'Port',paper:'Paper',scan:'Search the network',scanning:'Searching…',testPrinter:'Test and save',testing:'Testing…',printerLater:'Set up later',printerRequired:'Enter a valid address and port.',printerNativeOnly:'Network discovery is available in the Kiwi Pro app.',printerNone:'No printer found. Check Wi-Fi and printer power.',printerMany:'Printers found — choose one:',printerFound:'Printer found',printerOk:'Test slip sent and printer saved.',printerFail:'Printer unreachable. Check its IP, port, and local Wi-Fi.',printerDenied:'Allow Local Network access in Settings > Kiwi Pro.',printerSkipped:'Set up inside Kiwi',
-      readyTitle:'This device is ready',readyIntro:'This check created no sale, payment, or customer receipt.',checkRole:'Selected role',checkConnect:'Establishment',checkPrinter:'Printer',openKiwi:'Open Kiwi',notRequired:'Not required',connected:'Connected',merchant:'Merchant account',browser:'browser',loggingIn:'Signing in…',badCreds:'Incorrect email or password.',badJson:'Invalid request.',notConfigured:'Service temporarily unavailable.',tooMany:'Too many attempts. Try again in a few minutes.',network:'Network unavailable. Check this device’s Wi-Fi.',unknown:'Something went wrong. Try again.'
+      readyTitle:'This device is ready',readyIntro:'This check created no sale, payment, or customer receipt.',checkRole:'Selected role',checkConnect:'Establishment',checkPrinter:'Printer',openKiwi:'Open Kiwi',notRequired:'Not required',connected:'Connected',merchant:'Merchant account',browser:'browser',loggingIn:'Signing in…',badCreds:'Incorrect email or password.',badJson:'Invalid request.',notConfigured:'Service temporarily unavailable.',tooMany:'Too many attempts. Try again in a few minutes.',network:'Network unavailable. Check this device’s Wi-Fi.',unknown:'Something went wrong. Try again.',
+      versionBuildAria:'Version {version}, build {build}',versionOnlyAria:'Version {version}',buildOnlyAria:'Build {build}',bundlePrefix:'Bundle: ',localBuild:'Local build'
     },
     ar: {
       brandKicker:'نظام التشغيل للتجار المغاربة.',localSetup:'إعداد آمن على هذا الجهاز',deviceSetup:'إعداد الجهاز',guided:'إعداد موجّه',welcomeSub:'لنقم بإعداد هذا الجهاز. يستغرق الأمر حوالي دقيقتين.',launcherSub:'اختر دور هذا الجهاز. سيتذكر Kiwi اختيارك.',stageAccount:'تبقى مساحتك وصلاحياتك مرتبطة بالمؤسسة الصحيحة.',stageRole:'جهاز واحد ودور واضح — يفتح Kiwi المساحة المناسبة مباشرة.',stageConnect:'الربط الآمن يمنع اختلاط بيانات المؤسسات.',stagePrinter:'تحقق من المعدات الآن ليكون أول بيع جاهزا.',stageReady:'تم حفظ هذا الإعداد على الجهاز.',progress:'تقدم الإعداد',accountStep:'الحساب',roleStep:'الدور',connectStep:'الربط',printerStep:'الطابعة',readyStep:'جاهز',
@@ -36,7 +38,8 @@
       roleTitle:'ما استخدام هذا الجهاز؟',roleIntro:'سيفتح Kiwi هذا الدور تلقائيا في المرات القادمة.',roles:'دور الجهاز',caisse:'الصندوق',caisseSub:'الدفع والإيصالات والطابعة',team:'فريق Kiwi',teamSub:'الصالة والتخطيط والحضور',kitchen:'المطبخ',kitchenSub:'شاشة الإنتاج',dashboard:'لوحة التحكم',dashboardSub:'عرض المالك والإجراءات السريعة',chooseRole:'اختر دورا للمتابعة.',dashboardNeedsAccount:'يتطلب هذا الدور حساب تاجر متصلا. ارجع إلى الخطوة 1.',
       connectTitle:'اربط الجهاز بالمؤسسة',pairIntro:'اختر المؤسسة التي ستستقبل مبيعات وطلبات هذا الجهاز.',stores:'مؤسسات الحساب',chooseStore:'اختر مؤسسة.',store:'المؤسسة',pair:'ربط هذا الجهاز',pairing:'جارٍ الربط…',paired:'تم ربط الجهاز',alreadyPaired:'مرتبط مسبقا',pairRate:'محاولات كثيرة. أعد المحاولة بعد بضع دقائق.',pairNetwork:'تعذر الاتصال بـ Kiwi. تحقق من الواي فاي.',pairUnavailable:'ربط الجهاز غير متاح مؤقتا.',dashboardConnect:'تستخدم لوحة التحكم حساب التاجر المتصل في الخطوة 1.',accountConnected:'حساب التاجر متصل',teamConnect:'يسجل كل عضو دخوله برمز الفريق في الشاشة التالية. لا يلزم إقران حساب التاجر هنا.',teamReady:'الدخول برمز الفريق',
       printerTitle:'اختبر الطابعة الحرارية',printerIntro:'يجب أن يكون الآيباد والطابعة على نفس شبكة الواي فاي. المنفذ المعتاد 9100.',printerIp:'عنوان IP',printerPort:'المنفذ',paper:'الورق',scan:'البحث في الشبكة',scanning:'جارٍ البحث…',testPrinter:'اختبار وحفظ',testing:'جارٍ الاختبار…',printerLater:'الإعداد لاحقا',printerRequired:'أدخل عنوانا ومنفذا صالحين.',printerNativeOnly:'البحث في الشبكة متاح داخل تطبيق Kiwi Pro.',printerNone:'لم يتم العثور على طابعة. تحقق من الشبكة والطاقة.',printerMany:'تم العثور على طابعات — اختر واحدة:',printerFound:'تم العثور على الطابعة',printerOk:'أُرسل إيصال الاختبار وحُفظت الطابعة.',printerFail:'تعذر الوصول إلى الطابعة. تحقق من العنوان والمنفذ والشبكة.',printerDenied:'اسمح بالوصول إلى الشبكة المحلية من الإعدادات > Kiwi Pro.',printerSkipped:'تُضبط من داخل Kiwi',
-      readyTitle:'هذا الجهاز جاهز',readyIntro:'لم ينشئ هذا الفحص أي بيع أو دفع أو إيصال عميل.',checkRole:'الدور المختار',checkConnect:'المؤسسة',checkPrinter:'الطابعة',openKiwi:'فتح Kiwi',notRequired:'غير مطلوبة',connected:'متصل',merchant:'حساب التاجر',browser:'متصفح',loggingIn:'جارٍ تسجيل الدخول…',badCreds:'البريد الإلكتروني أو كلمة المرور غير صحيحة.',badJson:'الطلب غير صالح.',notConfigured:'الخدمة غير متاحة مؤقتا.',tooMany:'محاولات كثيرة. أعد المحاولة لاحقا.',network:'الشبكة غير متاحة. تحقق من الواي فاي.',unknown:'حدث خطأ. أعد المحاولة.'
+      readyTitle:'هذا الجهاز جاهز',readyIntro:'لم ينشئ هذا الفحص أي بيع أو دفع أو إيصال عميل.',checkRole:'الدور المختار',checkConnect:'المؤسسة',checkPrinter:'الطابعة',openKiwi:'فتح Kiwi',notRequired:'غير مطلوبة',connected:'متصل',merchant:'حساب التاجر',browser:'متصفح',loggingIn:'جارٍ تسجيل الدخول…',badCreds:'البريد الإلكتروني أو كلمة المرور غير صحيحة.',badJson:'الطلب غير صالح.',notConfigured:'الخدمة غير متاحة مؤقتا.',tooMany:'محاولات كثيرة. أعد المحاولة لاحقا.',network:'الشبكة غير متاحة. تحقق من الواي فاي.',unknown:'حدث خطأ. أعد المحاولة.',
+      versionBuildAria:'الإصدار {version}، البنية {build}',versionOnlyAria:'الإصدار {version}',buildOnlyAria:'البنية {build}',bundlePrefix:'الحزمة: ',localBuild:'بنية محلية'
     }
   };
   function tr(key) { return (COPY[lang] && COPY[lang][key]) || COPY.fr[key] || key; }
@@ -113,35 +116,44 @@
     if (type) el.classList.add(type);
   }
 
-  function clearLoginErrors() {
-    if (login && login.email) {
-      login.email.removeAttribute('aria-invalid');
-      login.email.removeAttribute('aria-describedby');
-    }
-    if (login && login.password) {
-      login.password.removeAttribute('aria-invalid');
-      login.password.removeAttribute('aria-describedby');
-    }
+  function clearFieldInvalid(input) {
+    if (!input) return;
+    input.removeAttribute('aria-invalid');
+    input.removeAttribute('aria-describedby');
   }
 
-  function setLoginError(msg) {
+  function clearLoginErrors() {
+    clearFieldInvalid(login && login.email);
+    clearFieldInvalid(login && login.password);
+  }
+
+  function setLoginError(msg, isCredential) {
     showLogin(msg);
-    if (login && login.email) {
-      login.email.setAttribute('aria-invalid', 'true');
-      login.email.setAttribute('aria-describedby', 'login-err');
-    }
-    if (login && login.password) {
-      login.password.setAttribute('aria-invalid', 'true');
-      login.password.setAttribute('aria-describedby', 'login-err');
-      login.password.focus();
+    if (isCredential) {
+      if (login && login.email) {
+        login.email.setAttribute('aria-invalid', 'true');
+        login.email.setAttribute('aria-describedby', 'login-err');
+      }
+      if (login && login.password) {
+        login.password.setAttribute('aria-invalid', 'true');
+        login.password.setAttribute('aria-describedby', 'login-err');
+        login.password.focus();
+      }
+    } else {
+      clearLoginErrors();
+      if (loginBtn) loginBtn.focus();
     }
   }
 
   if (login && login.email) {
-    ['input', 'change'].forEach(function (ev) { login.email.addEventListener(ev, clearLoginErrors); });
+    ['input', 'change'].forEach(function (ev) {
+      login.email.addEventListener(ev, function () { clearFieldInvalid(login.email); });
+    });
   }
   if (login && login.password) {
-    ['input', 'change'].forEach(function (ev) { login.password.addEventListener(ev, clearLoginErrors); });
+    ['input', 'change'].forEach(function (ev) {
+      login.password.addEventListener(ev, function () { clearFieldInvalid(login.password); });
+    });
   }
 
   function showLogin(err) {
@@ -181,14 +193,23 @@
     if (!email || !password) return;
     loginBtn.disabled = true; loginErr.hidden = true;
     var loginIdle = loginBtn.textContent; loginBtn.textContent = tr('loggingIn');
+    function restoreBtn() {
+      loginBtn.disabled = false;
+      loginBtn.textContent = loginIdle;
+    }
     fetch('/auth/login', { method:'POST', headers:{'Content-Type':'application/json',Accept:'application/json'}, body:JSON.stringify({email:email,password:password}) })
       .then(function (r) { return r.json().catch(function () { return {}; }).then(function (body) {
-        if (r.ok && body && body.ok) { login.password.value = ''; clearLoginErrors(); return refreshAccount(); }
-        var msg = ERRORS[(body && body.error) || (r.status === 429 ? 'too-many' : '')] || tr('unknown');
-        setLoginError(msg);
+        if (r.ok && body && body.ok) { login.password.value = ''; clearLoginErrors(); restoreBtn(); return refreshAccount(); }
+        var isCreds = !!(body && body.error === 'bad-creds');
+        var errCode = (body && body.error) || (r.status === 429 ? 'too-many' : '');
+        var msg = ERRORS[errCode] || tr('unknown');
+        restoreBtn();
+        setLoginError(msg, isCreds);
       }); })
-      .catch(function () { setLoginError(ERRORS.network); })
-      .then(function () { loginBtn.disabled = false; loginBtn.textContent = loginIdle; });
+      .catch(function () {
+        restoreBtn();
+        setLoginError(ERRORS.network, false);
+      });
   });
   $('#logout').addEventListener('click', function () { var done = function () { clearLoginErrors(); showLogin(); }; fetch('/auth/logout', { credentials:'include', redirect:'manual' }).then(done, done); });
 
@@ -354,6 +375,10 @@
       return;
     }
     if (!p || !window.KiwiEscPos) { setStatus(status, tr('printerNativeOnly'), 'bad'); return; }
+    function restoreTestBtn() {
+      button.disabled = false;
+      button.textContent = tr('testPrinter');
+    }
     button.disabled = true; button.textContent = tr('testing'); setStatus(status, '', '');
     p.probe({host:values.host,port:values.port,timeoutMs:4000}).then(function (probe) {
       if (!probe || !probe.ok) throw new Error((probe && probe.code) || 'unreachable');
@@ -363,31 +388,51 @@
       if (!sent || !sent.ok) throw new Error((sent && sent.code) || 'unreachable');
       savePrinter(values); state.printer = true; state.printerSkipped = false;
       setStatus(status, tr('printerOk'), 'ok');
+      restoreTestBtn();
       $('#printer-next').disabled = false;
       $('#printer-next').focus();
     }).catch(function (err) {
       setStatus(status, printerReason(err && err.message), 'bad');
+      restoreTestBtn();
       button.focus();
-    }).then(function () { button.disabled = false; button.textContent = tr('testPrinter'); });
+    });
   });
   $('#printer-scan').addEventListener('click', function () {
     var p = printerPlugin(), button = this, out = $('#scan-results'), port = Number($('#printer-port').value) || 9100;
     out.textContent = '';
-    if (!p || typeof p.scan !== 'function') { out.textContent = tr('printerNativeOnly'); return; }
+    function restoreScanBtn() {
+      button.disabled = false;
+      button.textContent = tr('scan');
+    }
+    if (!p || typeof p.scan !== 'function') {
+      out.textContent = tr('printerNativeOnly');
+      restoreScanBtn();
+      button.focus();
+      return;
+    }
     button.disabled = true; button.textContent = tr('scanning');
     p.scan({port:port,timeoutMs:600}).then(function (result) {
       var hosts = result && result.ok && Array.isArray(result.hosts) ? result.hosts : [];
-      if (!hosts.length) { out.textContent = tr('printerNone'); button.focus(); return; }
+      if (!hosts.length) {
+        out.textContent = tr('printerNone');
+        restoreScanBtn();
+        button.focus();
+        return;
+      }
       var label = document.createElement('p'); label.textContent = hosts.length > 1 ? tr('printerMany') : tr('printerFound'); out.appendChild(label);
       hosts.forEach(function (item) {
         var pick = document.createElement('button'); pick.type = 'button'; pick.className = 'printer-choice'; pick.setAttribute('dir', 'ltr'); pick.textContent = item.host;
         pick.addEventListener('click', function () { $('#printer-ip').value = item.host; clearPrinterErrors(); out.textContent = tr('printerFound') + ' · ' + item.host; $('#printer-test').focus(); });
         out.appendChild(pick);
       });
+      restoreScanBtn();
       var firstPick = out.querySelector('.printer-choice');
       if (firstPick) firstPick.focus();
-    }).catch(function (err) { out.textContent = printerReason(err && err.message); button.focus(); })
-      .then(function () { button.disabled = false; button.textContent = tr('scan'); });
+    }).catch(function (err) {
+      out.textContent = printerReason(err && err.message);
+      restoreScanBtn();
+      button.focus();
+    });
   });
   $('#printer-skip').addEventListener('click', function () { state.printer = false; state.printerSkipped = true; renderReady(); showStep('ready'); });
   $('#printer-next').addEventListener('click', function () { renderReady(); showStep('ready'); });
@@ -405,17 +450,59 @@
   $('#ready-back').addEventListener('click', function () { showStep((state.role === 'caisse' || state.role === 'cuisine') ? 'printer' : 'connect'); });
   $('#finish').addEventListener('click', function () { go(state.role); });
 
+  function updateBundleMeta(info) {
+    var bundleNode = $('#bundle');
+    if (!bundleNode) return;
+    var meta = document.querySelector('meta[name="kiwi-bundle"]');
+    var rawHash = meta && meta.content ? meta.content.trim() : '';
+    var shortHash = rawHash ? rawHash.slice(0, 7) : '';
+    var version = (info && typeof info.version === 'string' && info.version.trim()) || '';
+    var build = (info && typeof info.build === 'string' && info.build.trim()) || shortHash;
+    if (!version && !build) build = 'local';
+
+    while (bundleNode.firstChild) {
+      bundleNode.removeChild(bundleNode.firstChild);
+    }
+
+    var visibleText = '';
+    if (version && build) {
+      visibleText = 'v' + version + ' (' + build + ')';
+    } else if (version) {
+      visibleText = 'v' + version;
+    } else {
+      visibleText = build;
+    }
+
+    var bdi = document.createElement('bdi');
+    bdi.setAttribute('dir', 'ltr');
+    bdi.textContent = visibleText;
+    bundleNode.appendChild(bdi);
+
+    var ariaText = '';
+    if (version && build) {
+      ariaText = tr('versionBuildAria').replace('{version}', version).replace('{build}', build);
+    } else if (version) {
+      ariaText = tr('versionOnlyAria').replace('{version}', version);
+    } else {
+      ariaText = tr('buildOnlyAria').replace('{build}', build === 'local' ? tr('localBuild') : build);
+    }
+    bundleNode.setAttribute('aria-label', ariaText);
+
+    if (rawHash) {
+      bundleNode.setAttribute('title', tr('bundlePrefix') + rawHash);
+    } else {
+      bundleNode.setAttribute('title', tr('localBuild'));
+    }
+  }
+
   try {
     var cap = window.Capacitor, platform = cap && typeof cap.getPlatform === 'function' ? cap.getPlatform() : 'web';
     $('#platform').textContent = 'Kiwi Pro · ' + ({ios:'iOS',android:'Android',web:tr('browser')}[platform] || platform);
-    var meta = document.querySelector('meta[name="kiwi-bundle"]');
-    var bundleNode = $('#bundle');
-    if (bundleNode) {
-      var rawHash = meta && meta.content ? meta.content.trim() : '';
-      var shortHash = rawHash ? rawHash.slice(0, 7) : 'local';
-      bundleNode.innerHTML = '<bdi dir="ltr">v1.0 (' + shortHash + ')</bdi>';
-      bundleNode.setAttribute('title', rawHash ? 'Bundle: ' + rawHash : 'Kiwi Pro Local Build');
-      bundleNode.setAttribute('aria-label', rawHash ? 'Version 1.0, build ' + shortHash : 'Version 1.0, build local');
+    updateBundleMeta();
+    if (cap && cap.Plugins && cap.Plugins.App && typeof cap.Plugins.App.getInfo === 'function') {
+      cap.Plugins.App.getInfo().then(function (info) {
+        if (info) updateBundleMeta(info);
+      }).catch(function () {});
     }
   } catch (_) {}
 
