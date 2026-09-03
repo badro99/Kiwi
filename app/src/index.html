@@ -49,21 +49,21 @@
       <h1 data-native-i18n="accountTitle">Connectez le compte marchand</h1>
       <p data-native-i18n="accountIntro">Le tableau de bord, la caisse et la cuisine utilisent le compte marchand. KiwiÉquipe peut continuer avec le code de l’employé.</p>
     </div>
-    <section class="account" id="account" aria-live="polite">
+    <div class="account" id="account">
       <div class="acct-row" id="acct-state" hidden>
         <span class="dot ok" aria-hidden="true"></span><span class="acct-text" id="acct-text">Connecté</span>
         <button type="button" class="link" id="logout" data-native-i18n="logout">Se déconnecter</button>
       </div>
       <form class="login" id="login" autocomplete="on" hidden>
         <p class="login-title" data-native-i18n="merchantAccount">Compte marchand</p>
-        <label class="field"><span data-native-i18n="email">E-mail</span><input name="email" type="email" inputmode="email" autocomplete="username" required /></label>
+        <label class="field" for="login-email"><span data-native-i18n="email">E-mail</span><input id="login-email" name="email" type="email" inputmode="email" autocomplete="username" required /></label>
         <div class="field"><label for="login-password" data-native-i18n="password">Mot de passe</label><div class="password-input"><input id="login-password" name="password" type="password" autocomplete="current-password" required minlength="10" /><button type="button" class="password-toggle" id="password-toggle" data-native-i18n-aria="showPassword" aria-label="Afficher le mot de passe" aria-pressed="false"><span aria-hidden="true"></span></button></div></div>
         <p class="err" id="login-err" role="alert" hidden></p>
         <button type="submit" class="cta" id="login-btn" data-native-i18n="login">Se connecter</button>
       </form>
       <p class="acct-row muted" id="acct-unknown" hidden><span class="dot" aria-hidden="true"></span><span data-native-i18n="serverOffline">Serveur injoignable. Vous pourrez réessayer dans votre espace.</span></p>
-    </section>
-    <div class="actions"><button type="button" class="secondary" id="account-next" data-native-i18n="continue">Continuer</button><button type="button" class="link" id="manual-mode" data-native-i18n="manual">Choisir un rôle sans assistant</button></div>
+    </div>
+    <div class="actions"><button type="button" class="cta" id="account-next" data-native-i18n="continue" hidden>Continuer</button><button type="button" class="link" id="manual-mode" data-native-i18n="manual">Choisir un rôle sans assistant</button></div>
   </section>
 
   <section class="setup-step" id="step-role" data-step="role" hidden>
@@ -86,7 +86,7 @@
       <button type="button" class="cta pair-submit" id="pair-btn" data-native-i18n="pair" disabled>Relier cet appareil</button>
       <p class="status" id="pair-status" role="status" aria-live="polite"></p>
     </div>
-    <div class="connect-box" id="dashboard-box" hidden><p data-native-i18n="dashboardConnect">Le tableau de bord utilise le compte marchand connecté à l’étape 1.</p><p class="status" id="dashboard-status" role="status"></p></div>
+    <div class="connect-box" id="dashboard-box" hidden><p data-native-i18n="dashboardConnect">Le tableau de bord utilise le compte marchand connecté à l’étape 1.</p><p class="status" id="dashboard-status" role="status" aria-live="polite"></p></div>
     <div class="connect-box" id="team-box" hidden><p data-native-i18n="teamConnect">Chaque membre se connectera avec son code équipe sur l’écran suivant. Aucun appairage marchand n’est nécessaire ici.</p></div>
     <div class="actions setup-actions"><button type="button" class="secondary" data-back="role" data-native-i18n="back">Retour</button><button type="button" class="cta" id="connect-next" data-native-i18n="continue" disabled>Continuer</button></div>
   </section>
@@ -94,7 +94,7 @@
   <section class="setup-step" id="step-printer" data-step="printer" hidden>
     <div class="step-heading"><p class="eyebrow" data-native-i18n="stepFour">Étape 4</p><h1 data-native-i18n="printerTitle">Testez l’imprimante thermique</h1><p data-native-i18n="printerIntro">L’iPad et l’imprimante doivent être sur le même Wi-Fi. Le port standard est 9100.</p></div>
     <form id="printer-form" class="printer-form">
-      <div class="printer-grid"><label class="field"><span data-native-i18n="printerIp">Adresse IP</span><input id="printer-ip" name="ip" type="text" inputmode="decimal" autocomplete="off" placeholder="192.168.1.50" /></label><label class="field port-field"><span data-native-i18n="printerPort">Port</span><input id="printer-port" name="port" type="number" inputmode="numeric" min="1" max="65535" value="9100" /></label><label class="field paper-field"><span data-native-i18n="paper">Papier</span><select id="printer-paper" name="paper"><option value="80" dir="ltr">80 mm</option><option value="58" dir="ltr">58 mm</option></select></label></div>
+      <div class="printer-grid"><label class="field" for="printer-ip"><span data-native-i18n="printerIp">Adresse IP</span><input id="printer-ip" name="ip" type="text" inputmode="decimal" autocomplete="off" placeholder="192.168.1.50" dir="ltr" /></label><label class="field port-field" for="printer-port"><span data-native-i18n="printerPort">Port</span><input id="printer-port" name="port" type="number" inputmode="numeric" min="1" max="65535" value="9100" dir="ltr" /></label><label class="field paper-field" for="printer-paper"><span data-native-i18n="paper">Papier</span><select id="printer-paper" name="paper"><option value="80" dir="ltr">80 mm</option><option value="58" dir="ltr">58 mm</option></select></label></div>
       <div class="inline-actions"><button type="button" class="secondary" id="printer-scan" data-native-i18n="scan">Rechercher sur le réseau</button><button type="submit" class="cta" id="printer-test" data-native-i18n="testPrinter">Tester et enregistrer</button></div>
       <div class="scan-results" id="scan-results" aria-live="polite"></div><p class="status" id="printer-status" role="status" aria-live="polite"></p>
     </form>
@@ -107,7 +107,7 @@
     <div class="actions setup-actions"><button type="button" class="secondary" id="ready-back" data-native-i18n="back">Retour</button><button type="button" class="cta" id="finish" data-native-i18n="openKiwi">Ouvrir Kiwi</button></div>
   </section>
 
-    <footer class="shell-foot"><span id="platform">Kiwi Pro</span><span class="sep" aria-hidden="true">·</span><span id="bundle">bundle local</span></footer>
+    <footer class="shell-foot"><span id="platform">Kiwi Pro</span><span class="sep" aria-hidden="true">·</span><span id="bundle"><bdi dir="ltr">v1.0</bdi></span></footer>
   </div>
 </main>
 <script src="assets/err-reporter.js"></script>

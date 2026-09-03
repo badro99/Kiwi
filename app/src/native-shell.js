@@ -106,11 +106,49 @@
   }
   function go(role) { rememberSecure(role); location.href = ROLES[role]; }
 
+  function setStatus(el, text, type) {
+    if (!el) return;
+    el.textContent = text || '';
+    el.classList.remove('ok', 'bad');
+    if (type) el.classList.add(type);
+  }
+
+  function clearLoginErrors() {
+    if (login && login.email) {
+      login.email.removeAttribute('aria-invalid');
+      login.email.removeAttribute('aria-describedby');
+    }
+    if (login && login.password) {
+      login.password.removeAttribute('aria-invalid');
+      login.password.removeAttribute('aria-describedby');
+    }
+  }
+
+  function setLoginError(msg) {
+    showLogin(msg);
+    if (login && login.email) {
+      login.email.setAttribute('aria-invalid', 'true');
+      login.email.setAttribute('aria-describedby', 'login-err');
+    }
+    if (login && login.password) {
+      login.password.setAttribute('aria-invalid', 'true');
+      login.password.setAttribute('aria-describedby', 'login-err');
+      login.password.focus();
+    }
+  }
+
+  if (login && login.email) {
+    ['input', 'change'].forEach(function (ev) { login.email.addEventListener(ev, clearLoginErrors); });
+  }
+  if (login && login.password) {
+    ['input', 'change'].forEach(function (ev) { login.password.addEventListener(ev, clearLoginErrors); });
+  }
+
   function showLogin(err) {
     state.account = 'signedout'; state.accountLabel = ''; state.stores = []; state.selectedStore = null;
     login.hidden = false; acctState.hidden = true; acctUnknown.hidden = true;
     loginErr.hidden = !err; loginErr.textContent = err || '';
-    if (acctNext) acctNext.className = 'secondary';
+    if (acctNext) { acctNext.hidden = true; acctNext.classList.remove('cta'); acctNext.classList.add('secondary'); }
   }
   function showAccount(me) {
     state.account = 'connected';
@@ -122,12 +160,12 @@
     state.selectedStore = state.stores.length === 1 ? state.stores[0] : null;
     acctText.textContent = tr('connected') + ' · ' + state.accountLabel;
     acctState.hidden = false; login.hidden = true; acctUnknown.hidden = true;
-    if (acctNext) acctNext.className = 'cta';
+    if (acctNext) { acctNext.hidden = false; acctNext.classList.remove('secondary'); acctNext.classList.add('cta'); }
   }
   function showUnknown() {
     state.account = 'offline'; state.accountLabel = ''; state.stores = []; state.selectedStore = null;
     acctUnknown.hidden = false; login.hidden = true; acctState.hidden = true;
-    if (acctNext) acctNext.className = 'secondary';
+    if (acctNext) { acctNext.hidden = true; acctNext.classList.remove('cta'); acctNext.classList.add('secondary'); }
   }
   function refreshAccount() {
     return fetch('/api/me', { headers: { Accept: 'application/json' }, cache: 'no-store' }).then(function (r) {
@@ -145,13 +183,14 @@
     var loginIdle = loginBtn.textContent; loginBtn.textContent = tr('loggingIn');
     fetch('/auth/login', { method:'POST', headers:{'Content-Type':'application/json',Accept:'application/json'}, body:JSON.stringify({email:email,password:password}) })
       .then(function (r) { return r.json().catch(function () { return {}; }).then(function (body) {
-        if (r.ok && body && body.ok) { login.password.value = ''; return refreshAccount(); }
-        showLogin(ERRORS[(body && body.error) || (r.status === 429 ? 'too-many' : '')] || tr('unknown'));
+        if (r.ok && body && body.ok) { login.password.value = ''; clearLoginErrors(); return refreshAccount(); }
+        var msg = ERRORS[(body && body.error) || (r.status === 429 ? 'too-many' : '')] || tr('unknown');
+        setLoginError(msg);
       }); })
-      .catch(function () { showLogin(ERRORS.network); })
+      .catch(function () { setLoginError(ERRORS.network); })
       .then(function () { loginBtn.disabled = false; loginBtn.textContent = loginIdle; });
   });
-  $('#logout').addEventListener('click', function () { var done = function () { showLogin(); }; fetch('/auth/logout', { credentials:'include', redirect:'manual' }).then(done, done); });
+  $('#logout').addEventListener('click', function () { var done = function () { clearLoginErrors(); showLogin(); }; fetch('/auth/logout', { credentials:'include', redirect:'manual' }).then(done, done); });
 
   var ORDER = ['account', 'role', 'connect', 'printer', 'ready'];
   function showStep(name) {
@@ -199,13 +238,19 @@
     var next = $('#connect-next'); next.disabled = true;
     if (state.role === 'equipe') { next.disabled = false; return; }
     if (state.role === 'dashboard') {
-      $('#dashboard-status').textContent = state.account === 'connected' ? tr('accountConnected') : tr('dashboardNeedsAccount');
-      $('#dashboard-status').className = 'status ' + (state.account === 'connected' ? 'ok' : 'bad'); next.disabled = state.account !== 'connected'; return;
+      var ok = state.account === 'connected';
+      setStatus($('#dashboard-status'), ok ? tr('accountConnected') : tr('dashboardNeedsAccount'), ok ? 'ok' : 'bad');
+      next.disabled = !ok;
+      return;
     }
     var venue = pairedVenue();
     state.paired = ls('kiwiPaired') === '1' && !!(venue && venue.merchant); state.venue = state.paired ? venue : null;
-    if (state.paired) { $('#pair-status').textContent = tr('alreadyPaired') + ' · ' + (venue.name || venue.merchant); $('#pair-status').className = 'status ok'; next.disabled = false; }
-    else { $('#pair-status').textContent = ''; $('#pair-status').className = 'status'; }
+    if (state.paired) {
+      setStatus($('#pair-status'), tr('alreadyPaired') + ' · ' + (venue.name || venue.merchant), 'ok');
+      next.disabled = false;
+    } else {
+      setStatus($('#pair-status'), '', '');
+    }
     renderStores();
   }
   $('#role-next').addEventListener('click', function () {
@@ -227,7 +272,7 @@
   function selectStore(index) {
     state.selectedStore = state.stores[index] || null;
     all('.store-choice').forEach(function (button, i) { var on = i === index; button.classList.toggle('selected', on); button.setAttribute('aria-pressed', on ? 'true' : 'false'); });
-    if (!sameStore(state.selectedStore, state.venue)) { $('#pair-status').textContent = ''; $('#pair-status').className = 'status'; }
+    if (!sameStore(state.selectedStore, state.venue)) { setStatus($('#pair-status'), '', ''); }
     syncPairButton();
   }
   function renderStores() {
@@ -244,8 +289,8 @@
   }
   $('#pair-btn').addEventListener('click', function () {
     var store = state.selectedStore, button = this, status = $('#pair-status');
-    if (!store) { status.textContent = tr('chooseStore'); status.className = 'status bad'; return; }
-    var device = terminalId(); button.disabled = true; button.textContent = tr('pairing'); status.textContent = '';
+    if (!store) { setStatus(status, tr('chooseStore'), 'bad'); return; }
+    var device = terminalId(); button.disabled = true; button.textContent = tr('pairing'); setStatus(status, '', '');
     fetch('/api/pair/create', { method:'POST', headers:{'Content-Type':'application/json',Accept:'application/json'}, body:JSON.stringify({merchant:store.merchant,name:store.name,type:store.type}) })
       .then(function (r) { return r.json().catch(function () { return {}; }).then(function (body) { if (!r.ok || !body || !body.ok || !body.code) throw new Error(r.status === 429 ? 'pairRate' : 'pairUnavailable'); return body.code; }); })
       .then(function (code) { return fetch('/api/pair/redeem', { method:'POST', headers:{'Content-Type':'application/json',Accept:'application/json'}, body:JSON.stringify({code:code,terminalId:device}) }).then(function (r) { return r.json().catch(function () { return {}; }).then(function (body) { if (!r.ok || !body || !body.ok) throw new Error(r.status === 429 ? 'pairRate' : 'pairUnavailable'); return { code:code, body:body }; }); }); })
@@ -254,10 +299,16 @@
         if (!commit) throw new Error('pairUnavailable');
         var result = commit(pairing.code, pairing.body); setLs(TERMINAL_KEY, device);
         if (state.selectedStore && !state.selectedStore.merchant) state.selectedStore.merchant = result.venue.merchant;
-        state.paired = true; state.venue = result.venue; status.textContent = tr('paired') + ' · ' + (result.venue.name || result.venue.merchant); status.className = 'status ok'; $('#connect-next').disabled = false;
+        state.paired = true; state.venue = result.venue;
+        setStatus(status, tr('paired') + ' · ' + (result.venue.name || result.venue.merchant), 'ok');
+        $('#connect-next').disabled = false;
       })
-      .catch(function (err) { var key = err && /^pair/.test(err.message) ? err.message : 'pairNetwork'; status.textContent = tr(key); status.className = 'status bad'; })
-      .then(syncPairButton);
+      .catch(function (err) { var key = err && /^pair/.test(err.message) ? err.message : 'pairNetwork'; setStatus(status, tr(key), 'bad'); })
+      .then(function () {
+        syncPairButton();
+        if (!button.hidden) button.focus();
+        else $('#connect-next').focus();
+      });
   });
 
   function printerPlugin() { var p = plugin(); return p && typeof p.probe === 'function' && typeof p.send === 'function' ? p : null; }
@@ -272,21 +323,52 @@
   function savePrinter(v) { setLs(PRINTER_KEY, JSON.stringify({ ip:v.host, port:v.port, osPrinter:'', model:'escpos', paper:v.paper, label:{w:50,h:20} })); }
   function enterPrinterOrReady() { if (state.role === 'caisse' || state.role === 'cuisine') { loadPrinterConfig(); showStep('printer'); } else { state.printerSkipped = true; renderReady(); showStep('ready'); } }
   $('#connect-next').addEventListener('click', enterPrinterOrReady);
+
+  function clearPrinterErrors() {
+    var ipInput = $('#printer-ip'), portInput = $('#printer-port');
+    if (ipInput) { ipInput.removeAttribute('aria-invalid'); ipInput.removeAttribute('aria-describedby'); }
+    if (portInput) { portInput.removeAttribute('aria-invalid'); portInput.removeAttribute('aria-describedby'); }
+  }
+  var prIp = $('#printer-ip'), prPort = $('#printer-port');
+  if (prIp) prIp.addEventListener('input', clearPrinterErrors);
+  if (prPort) prPort.addEventListener('input', clearPrinterErrors);
+
   $('#printer-form').addEventListener('submit', function (e) {
     e.preventDefault();
     var values = printerValues(), p = printerPlugin(), status = $('#printer-status'), button = $('#printer-test');
-    if (!values.valid) { status.textContent = tr('printerRequired'); status.className = 'status bad'; return; }
-    if (!p || !window.KiwiEscPos) { status.textContent = tr('printerNativeOnly'); status.className = 'status bad'; return; }
-    button.disabled = true; button.textContent = tr('testing'); status.textContent = '';
+    if (!values.valid) {
+      setStatus(status, tr('printerRequired'), 'bad');
+      if (!values.host || /\s/.test(values.host)) {
+        if (prIp) {
+          prIp.setAttribute('aria-invalid', 'true');
+          prIp.setAttribute('aria-describedby', 'printer-status');
+          prIp.focus();
+        }
+      } else {
+        if (prPort) {
+          prPort.setAttribute('aria-invalid', 'true');
+          prPort.setAttribute('aria-describedby', 'printer-status');
+          prPort.focus();
+        }
+      }
+      return;
+    }
+    if (!p || !window.KiwiEscPos) { setStatus(status, tr('printerNativeOnly'), 'bad'); return; }
+    button.disabled = true; button.textContent = tr('testing'); setStatus(status, '', '');
     p.probe({host:values.host,port:values.port,timeoutMs:4000}).then(function (probe) {
       if (!probe || !probe.ok) throw new Error((probe && probe.code) || 'unreachable');
       var bytes = window.KiwiEscPos.testSlip({ip:values.host,paper:values.paper});
       return p.send({host:values.host,port:values.port,data:window.KiwiEscPos.toB64(bytes),timeoutMs:4000});
     }).then(function (sent) {
       if (!sent || !sent.ok) throw new Error((sent && sent.code) || 'unreachable');
-      savePrinter(values); state.printer = true; state.printerSkipped = false; status.textContent = tr('printerOk'); status.className = 'status ok'; $('#printer-next').disabled = false;
-    }).catch(function (err) { status.textContent = printerReason(err && err.message); status.className = 'status bad'; })
-      .then(function () { button.disabled = false; button.textContent = tr('testPrinter'); });
+      savePrinter(values); state.printer = true; state.printerSkipped = false;
+      setStatus(status, tr('printerOk'), 'ok');
+      $('#printer-next').disabled = false;
+      $('#printer-next').focus();
+    }).catch(function (err) {
+      setStatus(status, printerReason(err && err.message), 'bad');
+      button.focus();
+    }).then(function () { button.disabled = false; button.textContent = tr('testPrinter'); });
   });
   $('#printer-scan').addEventListener('click', function () {
     var p = printerPlugin(), button = this, out = $('#scan-results'), port = Number($('#printer-port').value) || 9100;
@@ -295,10 +377,16 @@
     button.disabled = true; button.textContent = tr('scanning');
     p.scan({port:port,timeoutMs:600}).then(function (result) {
       var hosts = result && result.ok && Array.isArray(result.hosts) ? result.hosts : [];
-      if (!hosts.length) { out.textContent = tr('printerNone'); return; }
+      if (!hosts.length) { out.textContent = tr('printerNone'); button.focus(); return; }
       var label = document.createElement('p'); label.textContent = hosts.length > 1 ? tr('printerMany') : tr('printerFound'); out.appendChild(label);
-      hosts.forEach(function (item) { var pick = document.createElement('button'); pick.type = 'button'; pick.className = 'printer-choice'; pick.textContent = item.host; pick.addEventListener('click', function () { $('#printer-ip').value = item.host; out.textContent = tr('printerFound') + ' · ' + item.host; }); out.appendChild(pick); });
-    }).catch(function (err) { out.textContent = printerReason(err && err.message); })
+      hosts.forEach(function (item) {
+        var pick = document.createElement('button'); pick.type = 'button'; pick.className = 'printer-choice'; pick.setAttribute('dir', 'ltr'); pick.textContent = item.host;
+        pick.addEventListener('click', function () { $('#printer-ip').value = item.host; clearPrinterErrors(); out.textContent = tr('printerFound') + ' · ' + item.host; $('#printer-test').focus(); });
+        out.appendChild(pick);
+      });
+      var firstPick = out.querySelector('.printer-choice');
+      if (firstPick) firstPick.focus();
+    }).catch(function (err) { out.textContent = printerReason(err && err.message); button.focus(); })
       .then(function () { button.disabled = false; button.textContent = tr('scan'); });
   });
   $('#printer-skip').addEventListener('click', function () { state.printer = false; state.printerSkipped = true; renderReady(); showStep('ready'); });
@@ -320,7 +408,15 @@
   try {
     var cap = window.Capacitor, platform = cap && typeof cap.getPlatform === 'function' ? cap.getPlatform() : 'web';
     $('#platform').textContent = 'Kiwi Pro · ' + ({ios:'iOS',android:'Android',web:tr('browser')}[platform] || platform);
-    var meta = document.querySelector('meta[name="kiwi-bundle"]'); $('#bundle').textContent = meta && meta.content ? 'bundle ' + meta.content.slice(0, 12) : 'bundle local';
+    var meta = document.querySelector('meta[name="kiwi-bundle"]');
+    var bundleNode = $('#bundle');
+    if (bundleNode) {
+      var rawHash = meta && meta.content ? meta.content.trim() : '';
+      var shortHash = rawHash ? rawHash.slice(0, 7) : 'local';
+      bundleNode.innerHTML = '<bdi dir="ltr">v1.0 (' + shortHash + ')</bdi>';
+      bundleNode.setAttribute('title', rawHash ? 'Bundle: ' + rawHash : 'Kiwi Pro Local Build');
+      bundleNode.setAttribute('aria-label', rawHash ? 'Version 1.0, build ' + shortHash : 'Version 1.0, build local');
+    }
   } catch (_) {}
 
   rememberedSecure().then(function (role) {

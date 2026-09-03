@@ -289,6 +289,36 @@ async function fromRole(page, role = 'caisse') {
   await settleAccount(p);
   await shot(p, 'flow-01-account');
   await noOverflow(p, 'fr/iPhone account');
+
+  // Label associations (for/id)
+  const labelForEmail = await p.evaluate(() => {
+    const l = document.querySelector('label[for="login-email"]');
+    const input = document.querySelector('#login-email');
+    return !!(l && input && l.contains(input));
+  });
+  const labelForPass = await p.evaluate(() => {
+    const l = document.querySelector('label[for="login-password"]');
+    const input = document.querySelector('#login-password');
+    return !!(l && input);
+  });
+  labelForEmail && labelForPass
+    ? ok('login form fields have explicit for/id label associations')
+    : bad('missing login for/id associations');
+
+  // Signed-out CTA promotion/demotion: Continuer is hidden, manual-mode is visible
+  const signedOutCta = await p.evaluate(() => {
+    const next = document.querySelector('#account-next');
+    const manual = document.querySelector('#manual-mode');
+    return {
+      nextHidden: next ? next.hidden : false,
+      nextHasCta: next ? next.classList.contains('cta') : false,
+      manualVisible: manual ? !manual.hidden : false,
+    };
+  });
+  signedOutCta.nextHidden && !signedOutCta.nextHasCta && signedOutCta.manualVisible
+    ? ok('signed-out Continuer is hidden and manual role is the explicit unauthenticated route')
+    : bad(`signed-out CTA state wrong: ${JSON.stringify(signedOutCta)}`);
+
   await p.type('#login input[name="email"]', 'owner@cafeatlas.ma');
   await p.type('#login input[name="password"]', 'wrongpassword1');
   const passwordBefore = await p.evaluate(() => ({ type: document.querySelector('#login-password').type, label: document.querySelector('#password-toggle').ariaLabel }));
@@ -313,7 +343,53 @@ async function fromRole(page, role = 'caisse') {
   !recovered.dis && recovered.label === 'Se connecter' && recovered.err.length > 0
     ? ok('login recovers after failure (button restored, error announced)')
     : bad('login did not recover after failure');
+
+  const errAria = await p.evaluate(() => {
+    const email = document.querySelector('#login-email');
+    const pass = document.querySelector('#login-password');
+    const active = document.activeElement;
+    return {
+      emailInvalid: email.getAttribute('aria-invalid'),
+      emailDescribedBy: email.getAttribute('aria-describedby'),
+      passInvalid: pass.getAttribute('aria-invalid'),
+      passDescribedBy: pass.getAttribute('aria-describedby'),
+      passFocused: active === pass,
+    };
+  });
+  errAria.emailInvalid === 'true' && errAria.emailDescribedBy === 'login-err' &&
+  errAria.passInvalid === 'true' && errAria.passDescribedBy === 'login-err' && errAria.passFocused
+    ? ok('login failure sets aria-invalid/describedby on inputs and retains focus on password field')
+    : bad(`login failure accessibility state wrong: ${JSON.stringify(errAria)}`);
+
+  // typing clears aria-invalid
+  await p.type('#login-password', 'x');
+  const errCleared = await p.evaluate(() => {
+    const pass = document.querySelector('#login-password');
+    return !pass.hasAttribute('aria-invalid') && !pass.hasAttribute('aria-describedby');
+  });
+  errCleared ? ok('typing into invalid login input clears aria-invalid and aria-describedby') : bad('typing did not clear aria-invalid');
+
   await shot(p, 'flow-02-login-error');
+  await p.closeCtx();
+}
+
+{
+  // offline / server unreachable: #account-next is hidden, #manual-mode is visible
+  const p = await openShell({ me: 'abort' });
+  await settleAccount(p);
+  const offlineCta = await p.evaluate(() => {
+    const next = document.querySelector('#account-next');
+    const unknown = document.querySelector('#acct-unknown');
+    const manual = document.querySelector('#manual-mode');
+    return {
+      unknownShown: unknown ? !unknown.hidden : false,
+      nextHidden: next ? next.hidden : false,
+      manualVisible: manual ? !manual.hidden : false,
+    };
+  });
+  offlineCta.unknownShown && offlineCta.nextHidden && offlineCta.manualVisible
+    ? ok('offline state displays server offline notice, hides Continuer, and keeps manual role route')
+    : bad(`offline CTA state wrong: ${JSON.stringify(offlineCta)}`);
   await p.closeCtx();
 }
 /* ── 3 · full guided flow, fr/iPhone (connected account) ────────────────── */
@@ -325,6 +401,19 @@ async function fromRole(page, role = 'caisse') {
   logoutH >= 44 && manualH >= 44
     ? ok(`account links measure ${Math.round(logoutH)}/${Math.round(manualH)}px (logout/manual, fr)`)
     : bad(`account link under 44px: logout=${Math.round(logoutH)} manual=${Math.round(manualH)}`);
+
+  // Authenticated state promotes Continuer to primary CTA and unhides it
+  const authCta = await p.evaluate(() => {
+    const next = document.querySelector('#account-next');
+    return {
+      hidden: next ? next.hidden : true,
+      hasCta: next ? next.classList.contains('cta') : false,
+      hasSecondary: next ? next.classList.contains('secondary') : true,
+    };
+  });
+  !authCta.hidden && authCta.hasCta && !authCta.hasSecondary
+    ? ok('authenticated state promotes Continuer to primary CTA and unhides it')
+    : bad(`authenticated CTA state wrong: ${JSON.stringify(authCta)}`);
   await toRole(p);
   const pressed0 = await p.evaluate(() => [...document.querySelectorAll('.tile[data-role]')].map((t) => t.getAttribute('aria-pressed')));
   pressed0.every((v) => v === 'false') ? ok('role tiles announce unpressed before any choice') : bad('role tiles lack initial aria-pressed');
@@ -369,6 +458,26 @@ async function fromRole(page, role = 'caisse') {
   await shot(p, 'flow-06-printer');
   await p.closeCtx();
 }
+
+{
+  // logging out demotes and hides Continuer CTA
+  const p = await openShell({ me: 'multi' });
+  await settleAccount(p);
+  await p.click('#logout');
+  await p.waitForFunction(() => !document.querySelector('#login').hidden, { timeout: 8000 });
+  const postLogout = await p.evaluate(() => {
+    const next = document.querySelector('#account-next');
+    return {
+      nextHidden: next ? next.hidden : false,
+      nextHasCta: next ? next.classList.contains('cta') : false,
+    };
+  });
+  postLogout.nextHidden && !postLogout.nextHasCta
+    ? ok('logging out demotes and hides Continuer CTA')
+    : bad(`post-logout CTA state wrong: ${JSON.stringify(postLogout)}`);
+  await p.closeCtx();
+}
+
 {
   // printer pipeline with stubbed native plugin: scan → fill → test → save
   const p = await openShell({ me: 'multi', plugin: 'empty' });
@@ -379,9 +488,58 @@ async function fromRole(page, role = 'caisse') {
   await p.waitForFunction(() => document.querySelector('#connect-next').disabled === false, { timeout: 8000 });
   await p.click('#connect-next');
   await p.waitForFunction(() => !document.querySelector('#step-printer').hidden, { timeout: 8000 });
+
+  // Printer labels and dir="ltr"
+  const prLabels = await p.evaluate(() => {
+    const ip = document.querySelector('#printer-ip');
+    const port = document.querySelector('#printer-port');
+    const paper = document.querySelector('#printer-paper');
+    return {
+      ipLabel: !!document.querySelector('label[for="printer-ip"]'),
+      portLabel: !!document.querySelector('label[for="printer-port"]'),
+      paperLabel: !!document.querySelector('label[for="printer-paper"]'),
+      ipDir: ip ? ip.getAttribute('dir') : '',
+      portDir: port ? port.getAttribute('dir') : '',
+    };
+  });
+  prLabels.ipLabel && prLabels.portLabel && prLabels.paperLabel && prLabels.ipDir === 'ltr' && prLabels.portDir === 'ltr'
+    ? ok('printer form has explicit for/id labels and dir="ltr" on IP/port inputs')
+    : bad(`printer label or dir attributes wrong: ${JSON.stringify(prLabels)}`);
+
+  // Invalid printer submission sets aria-invalid, status.bad, and focuses invalid field
+  await p.evaluate(() => { document.querySelector('#printer-ip').value = ''; });
+  await p.click('#printer-test');
+  const prInvalid = await p.evaluate(() => {
+    const ip = document.querySelector('#printer-ip');
+    const status = document.querySelector('#printer-status');
+    return {
+      ipInvalid: ip.getAttribute('aria-invalid'),
+      ipDescribedBy: ip.getAttribute('aria-describedby'),
+      statusBad: status.classList.contains('bad'),
+      ipFocused: document.activeElement === ip,
+    };
+  });
+  prInvalid.ipInvalid === 'true' && prInvalid.ipDescribedBy === 'printer-status' && prInvalid.statusBad && prInvalid.ipFocused
+    ? ok('empty printer IP triggers aria-invalid, non-destructive status bad class, and focuses IP input')
+    : bad(`printer validation state wrong: ${JSON.stringify(prInvalid)}`);
+
   await p.click('#printer-scan');
   await p.waitForFunction(() => document.querySelectorAll('.printer-choice').length === 2, { timeout: 8000 });
   ok('network scan lists the two discovered printers');
+
+  const scanChoices = await p.evaluate(() => {
+    const btns = [...document.querySelectorAll('.printer-choice')];
+    const active = document.activeElement;
+    return {
+      count: btns.length,
+      allLtr: btns.every((b) => b.getAttribute('dir') === 'ltr'),
+      firstFocused: active === btns[0],
+    };
+  });
+  scanChoices.count === 2 && scanChoices.allLtr && scanChoices.firstFocused
+    ? ok('printer scan results carry dir="ltr" and focus lands on the first result')
+    : bad(`scan results accessibility wrong: ${JSON.stringify(scanChoices)}`);
+
   await p.evaluate(() => document.querySelectorAll('.printer-choice')[0].click());
   const filled = await p.evaluate(() => document.querySelector('#printer-ip').value);
   filled === '192.168.1.50' ? ok('choosing a discovery result fills the IP field') : bad(`IP field holds «${filled}»`);
@@ -394,6 +552,15 @@ async function fromRole(page, role = 'caisse') {
   await p.waitForFunction(() => !document.querySelector('#printer-next').disabled, { timeout: 8000 });
   const st = await p.evaluate(() => document.querySelector('#printer-status').textContent);
   /enregistr|saved|حُفظ/.test(st) ? ok('test slip succeeds and the printer is saved') : bad(`unexpected printer status: «${st}»`);
+
+  const prSuccess = await p.evaluate(() => {
+    const next = document.querySelector('#printer-next');
+    return document.activeElement === next;
+  });
+  prSuccess
+    ? ok('printer test success advances keyboard focus to Continuer button')
+    : bad('printer test success did not focus Continuer');
+
   await shot(p, 'flow-07-printer-ok');
   await p.click('#printer-next');
   await p.waitForFunction(() => !document.querySelector('#step-ready').hidden, { timeout: 8000 });
@@ -432,7 +599,77 @@ for (const viewport of ['small320', 'ipadPortrait', 'ipadLandscape']) {
   await p.closeCtx();
 }
 
-/* ── 5 · locales ───────────────────────────────────────────────────────── */
+/* ── 4b · tablet breakpoints & grid split (760 / 761 / 1040 / 1041px) ──── */
+{
+  const p = await openShell({ me: 'multi' });
+  await settleAccount(p);
+
+  // 760px: mobile stacked layout
+  await p.setViewport({ width: 760, height: 900 });
+  const bp760 = await p.evaluate(() => {
+    const shell = document.querySelector('.shell');
+    const cs = window.getComputedStyle(shell);
+    const media = window.matchMedia('(max-width: 760px)').matches;
+    return { display: cs.display, media };
+  });
+  bp760.media && bp760.display === 'block'
+    ? ok('760px breakpoint applies mobile stacked layout (display: block)')
+    : bad(`760px layout unexpected: ${JSON.stringify(bp760)}`);
+
+  // 761px: tablet 32%/68% rule activates
+  await p.setViewport({ width: 761, height: 900 });
+  const bp761 = await p.evaluate(() => {
+    const brand = document.querySelector('.brand-panel');
+    const flow = document.querySelector('.flow-panel');
+    const media = window.matchMedia('(min-width: 761px) and (max-width: 1040px)').matches;
+    return { media, brandW: brand.offsetWidth, flowW: flow.offsetWidth };
+  });
+  bp761.media && bp761.brandW >= 260
+    ? ok(`761px breakpoint activates tablet layout (brand clamped to min 260px, ${bp761.brandW}px / ${bp761.flowW}px)`)
+    : bad(`761px layout unexpected: ${JSON.stringify(bp761)}`);
+
+  // 900px: tablet 32%/68% split
+  await p.setViewport({ width: 900, height: 900 });
+  const bp900 = await p.evaluate(() => {
+    const brand = document.querySelector('.brand-panel');
+    const flow = document.querySelector('.flow-panel');
+    const ratio = brand.offsetWidth / (brand.offsetWidth + flow.offsetWidth);
+    return { ratio, brandW: brand.offsetWidth, flowW: flow.offsetWidth };
+  });
+  bp900.ratio >= 0.31 && bp900.ratio <= 0.33
+    ? ok(`tablet viewport renders 32%/68% split (${Math.round(bp900.ratio * 100)}% / ${Math.round((1 - bp900.ratio) * 100)}%)`)
+    : bad(`tablet split unexpected: ${JSON.stringify(bp900)}`);
+
+  // 1040px: tablet upper boundary preserves 32%/68% split
+  await p.setViewport({ width: 1040, height: 900 });
+  const bp1040 = await p.evaluate(() => {
+    const brand = document.querySelector('.brand-panel');
+    const flow = document.querySelector('.flow-panel');
+    const media = window.matchMedia('(min-width: 761px) and (max-width: 1040px)').matches;
+    const ratio = brand.offsetWidth / (brand.offsetWidth + flow.offsetWidth);
+    return { media, ratio, brandW: brand.offsetWidth, flowW: flow.offsetWidth };
+  });
+  bp1040.media && bp1040.ratio >= 0.31 && bp1040.ratio <= 0.33
+    ? ok(`1040px upper boundary preserves 32%/68% split (${Math.round(bp1040.ratio * 100)}% / ${Math.round((1 - bp1040.ratio) * 100)}%)`)
+    : bad(`1040px layout unexpected: ${JSON.stringify(bp1040)}`);
+
+  // 1041px: wide desktop layout switches to 38%/62% split
+  await p.setViewport({ width: 1041, height: 900 });
+  const bp1041 = await p.evaluate(() => {
+    const brand = document.querySelector('.brand-panel');
+    const flow = document.querySelector('.flow-panel');
+    const mediaTablet = window.matchMedia('(min-width: 761px) and (max-width: 1040px)').matches;
+    const ratio = brand.offsetWidth / (brand.offsetWidth + flow.offsetWidth);
+    return { mediaTablet, ratio, brandW: brand.offsetWidth, flowW: flow.offsetWidth };
+  });
+  !bp1041.mediaTablet && bp1041.ratio >= 0.37 && bp1041.ratio <= 0.39
+    ? ok(`1041px desktop layout switches to 38%/62% split (${Math.round(bp1041.ratio * 100)}% / ${Math.round((1 - bp1041.ratio) * 100)}%)`)
+    : bad(`1041px layout unexpected: ${JSON.stringify(bp1041)}`);
+
+  await p.closeCtx();
+}
+
+/* ── 5 · locales & metadata ────────────────────────────────────────────── */
 {
   const p = await openShell({ locale: 'en', me: 'login' });
   await settleAccount(p);
@@ -442,6 +679,28 @@ for (const viewport of ['small320', 'ipadPortrait', 'ipadLandscape']) {
   /browser/.test(plat) && !/navigateur/.test(plat) && loginLabel === 'Sign in' && manualEn >= 44
     ? ok(`platform label and login read Browser / Sign in in English (manual link ${Math.round(manualEn)}px)`)
     : bad(`EN strings off: footer «${plat.trim()}», login «${loginLabel}», manual ${Math.round(manualEn)}px`);
+
+  const footerA11y = await p.evaluate(() => {
+    const bundle = document.querySelector('#bundle');
+    const foot = document.querySelector('.shell-foot');
+    const bdi = bundle ? bundle.querySelector('bdi') : null;
+    const title = bundle ? bundle.getAttribute('title') : '';
+    const aria = bundle ? bundle.getAttribute('aria-label') : '';
+    const cs = foot ? window.getComputedStyle(foot) : null;
+    return {
+      text: bundle ? bundle.textContent : '',
+      bdiDir: bdi ? bdi.getAttribute('dir') : '',
+      hasTitle: !!(title && title.length > 0),
+      hasAria: !!(aria && aria.length > 0),
+      fontSize: cs ? cs.fontSize : '',
+      opacity: cs ? cs.opacity : '',
+    };
+  });
+  /^v1\.0/.test(footerA11y.text) && footerA11y.bdiDir === 'ltr' && footerA11y.hasTitle && footerA11y.hasAria &&
+  footerA11y.fontSize === '11px' && footerA11y.opacity === '1'
+    ? ok(`footer version label formatted cleanly («${footerA11y.text}») with accessible title/aria-label and 11px opaque contrast`)
+    : bad(`footer version formatting wrong: ${JSON.stringify(footerA11y)}`);
+
   await p.closeCtx();
 }
 {
