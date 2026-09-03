@@ -5,7 +5,11 @@
 html.kiwi-native{--kiwi-safe-top:env(safe-area-inset-top,0px);--kiwi-safe-right:env(safe-area-inset-right,0px);--kiwi-safe-bottom:env(safe-area-inset-bottom,0px);--kiwi-safe-left:env(safe-area-inset-left,0px);--kiwi-keyboard:0px;overscroll-behavior:none;background:#F7F5F0}
 html.kiwi-native,html.kiwi-native body{min-height:100%;font-family:"Inter Tight",sans-serif;-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}
 html.kiwi-native[lang="ar"],html.kiwi-native[dir="rtl"]{font-family:"IBM Plex Sans Arabic","Inter Tight",sans-serif}
-html.kiwi-native body{min-height:calc(100dvh - var(--kiwi-keyboard));padding-top:var(--kiwi-safe-top)!important;padding-right:var(--kiwi-safe-right)!important;padding-bottom:calc(var(--kiwi-safe-bottom) + var(--kiwi-keyboard))!important;padding-left:var(--kiwi-safe-left)!important;overscroll-behavior:none}
+/* Shared pages need a safe content inset. The setup shell paints its own
+   edge-to-edge stage and applies the insets inside each panel; padding its body
+   here would expose top/bottom gutters and apply the safe area twice. */
+html.kiwi-native body:not(.native-shell-page){min-height:calc(100dvh - var(--kiwi-keyboard));padding-top:var(--kiwi-safe-top)!important;padding-right:var(--kiwi-safe-right)!important;padding-bottom:calc(var(--kiwi-safe-bottom) + var(--kiwi-keyboard))!important;padding-left:var(--kiwi-safe-left)!important;overscroll-behavior:none}
+html.kiwi-native body.native-shell-page{min-height:calc(100dvh - var(--kiwi-keyboard));padding:0!important;overscroll-behavior:none}
 html.kiwi-native button,html.kiwi-native [role="button"],html.kiwi-native nav,html.kiwi-native header,html.kiwi-native footer,html.kiwi-native .sidebar,html.kiwi-native .topbar{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
 html.kiwi-native input,html.kiwi-native textarea,html.kiwi-native [contenteditable="true"]{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
 html.kiwi-native .kiwi-native-scroll{-webkit-overflow-scrolling:touch;overscroll-behavior:contain}

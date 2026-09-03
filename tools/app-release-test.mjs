@@ -5,6 +5,7 @@ const read = (file) => fs.readFileSync(new URL('../' + file, import.meta.url), '
 const runtime = read('app/src/native-runtime.js');
 const appShell = read('app/src/index.html');
 const nativeShell = read('app/src/native-shell.js');
+const nativeRuntimeCss = read('app/src/native-runtime.css');
 const manifest = read('app/android/app/src/main/AndroidManifest.xml');
 const privacy = read('app/ios/App/App/PrivacyInfo.xcprivacy');
 const project = read('app/ios/App/App.xcodeproj/project.pbxproj');
@@ -115,6 +116,10 @@ check('native setup uses the vendored Material visibility and direction icons',
 check('password visibility is localized, stateful and keeps the password field addressable',
   appShell.includes('id="login-password"') && appShell.includes('id="password-toggle"') &&
   nativeShell.includes("tr(reveal ? 'hidePassword' : 'showPassword')") && nativeShell.includes("aria-pressed', reveal ? 'true' : 'false'"));
+check('native setup paints edge-to-edge without applying the safe area twice',
+  appShell.includes('<body class="native-shell-page">') &&
+  nativeRuntimeCss.includes('body:not(.native-shell-page)') &&
+  nativeRuntimeCss.includes('body.native-shell-page{min-height:calc(100dvh - var(--kiwi-keyboard));padding:0!important'));
 check('Arabic KPI mixed-direction numbers are explicitly isolated',
   interactive.includes('<div dir="ltr" style="font-size:42px') &&
   interactive.includes('<bdi dir="ltr">+32%</bdi>') && interactive.includes('<bdi dir="ltr">+1,8</bdi>') &&
@@ -134,4 +139,4 @@ if (failures.length) {
   console.error('\napp-release-test: ' + failures.length + ' failure(s)');
   process.exit(1);
 }
-console.log('\napp-release-test: 30 controls green');
+console.log('\napp-release-test: 31 controls green');
