@@ -766,7 +766,7 @@ CREATE TABLE IF NOT EXISTS sale_audit (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   merchant   TEXT NOT NULL,             -- l'établissement, jamais un autre (voir sales.js)
   sale_id    TEXT NOT NULL,             -- sales.id
-  action     TEXT NOT NULL,             -- 'void' | 'restore'
+  action     TEXT NOT NULL,             -- 'void' | 'restore' | 'refund' (paired till counter-entry)
   reason     TEXT NOT NULL DEFAULT '',  -- le motif imposé
   note       TEXT NOT NULL DEFAULT '',  -- l'explication écrite
   actor      TEXT NOT NULL DEFAULT '',  -- libellé du code opérateur, ou 'equipe'

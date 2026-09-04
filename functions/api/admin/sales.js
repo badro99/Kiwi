@@ -96,11 +96,10 @@ async function dayIndex(env, merchant) {
   } catch (_) { return null; }
 }
 
-/* La vente porte-t-elle déjà les marques d'un retour ? /api/sale refuse les
-   montants négatifs, donc un remboursement n'atteint JAMAIS cette table : il
-   n'existe que dans le rapport journalier. On ne peut donc pas prétendre relier
-   une vente à son avoir. Ce qu'on peut faire honnêtement, c'est lire le libellé
-   que la caisse a écrit — « Retour », « Avoir », « Remb. » — et le signaler. */
+/* Les anciennes lignes positives peuvent encore porter un libellé de retour
+   sans contre-écriture structurée. Les nouveaux remboursements sont des lignes
+   négatives channel=refund et sont reconnus explicitement par tsRow(); ce
+   détecteur reste le filet de lecture pour l'historique antérieur. */
 function looksLikeReturn(row) {
   const s = ((row && row.label) || '') + ' ' + ((row && row.ref) || '');
   return /\b(retour|avoir|remb|refund|annul)/i.test(s);
@@ -420,6 +419,13 @@ export async function onRequestPost(context) {
      entier. Traiter les autres et taire celui-là serait le pire des deux mondes :
      l'opérateur croirait avoir sorti cinq lignes et en aurait sorti quatre. */
   if (rows.length !== ids.length) return json({ error: 'foreign-sale', found: rows.length, asked: ids.length }, 409);
+  /* A refund is already the immutable counter-entry to a sale. Treating it as
+     an ordinary test sale and voiding it would silently raise revenue again
+     without issuing a compensating financial event. It stays readable in God
+     Mode, but this generic test-sale action cannot mutate it. */
+  if (rows.some((row) => Number(row && row.amountCents) < 0)) {
+    return json({ error: 'refund-event-read-only' }, 409);
+  }
 
   /* L'état d'abord, le risque ensuite. « Déjà sortie » n'est pas un danger à
      assumer, c'est une erreur de manipulation, et aucun `force` ne la passe —

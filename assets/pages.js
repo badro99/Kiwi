@@ -76,43 +76,51 @@
   function renderRealTransactions(T) {
     const lang = trLang();
     const L = {
-      fr: { empty: 'Aucune vente aujourd’hui.', unavailable: 'La source de ventes de cet établissement n’est pas disponible.', detail: 'DÉTAIL', sale: 'Vente', status: 'Enregistrée', methods: { cash: 'Espèces', card: 'Carte', tap: 'Kiwi Tap', qr: 'QR Wallet', wallet: 'Kiwi Wallet', link: 'Lien de paiement', delivery: 'Livraison' } },
-      en: { empty: 'No sales today.', unavailable: 'This venue’s sales source is unavailable.', detail: 'DETAIL', sale: 'Sale', status: 'Recorded', methods: { cash: 'Cash', card: 'Card', tap: 'Kiwi Tap', qr: 'QR Wallet', wallet: 'Kiwi Wallet', link: 'Payment link', delivery: 'Delivery' } },
-      ar: { empty: 'لا توجد مبيعات اليوم.', unavailable: 'مصدر مبيعات هذا الفرع غير متوفر.', detail: 'التفاصيل', sale: 'بيع', status: 'مسجلة', methods: { cash: 'نقدًا', card: 'بطاقة', tap: 'Kiwi Tap', qr: 'QR Wallet', wallet: 'Kiwi Wallet', link: 'رابط دفع', delivery: 'توصيل' } },
+      fr: { empty: 'Aucune vente aujourd’hui.', unavailable: 'La source de ventes de cet établissement n’est pas disponible.', detail: 'DÉTAIL', sale: 'Vente', refund: 'Remboursement', status: 'Enregistrée', refunded: 'Remboursé', methods: { cash: 'Espèces', card: 'Carte', tap: 'Kiwi Tap', qr: 'QR Wallet', wallet: 'Kiwi Wallet', link: 'Lien de paiement', delivery: 'Livraison' } },
+      en: { empty: 'No sales today.', unavailable: 'This venue’s sales source is unavailable.', detail: 'DETAIL', sale: 'Sale', refund: 'Refund', status: 'Recorded', refunded: 'Refunded', methods: { cash: 'Cash', card: 'Card', tap: 'Kiwi Tap', qr: 'QR Wallet', wallet: 'Kiwi Wallet', link: 'Payment link', delivery: 'Delivery' } },
+      ar: { empty: 'لا توجد مبيعات اليوم.', unavailable: 'مصدر مبيعات هذا الفرع غير متوفر.', detail: 'التفاصيل', sale: 'بيع', refund: 'استرداد', status: 'مسجلة', refunded: 'مسترد', methods: { cash: 'نقدًا', card: 'بطاقة', tap: 'Kiwi Tap', qr: 'QR Wallet', wallet: 'Kiwi Wallet', link: 'رابط دفع', delivery: 'توصيل' } },
     }[lang] || null;
     const venue = (() => { try { return window.KiwiVenue?.getVenue?.(); } catch (_) { return undefined; } })();
-    const hasSource = typeof window.KiwiSales?.list === 'function';
+    const hasSource = typeof window.KiwiSales?.list === 'function' || typeof window.KiwiRefunds?.list === 'function';
     let sales = [];
     if (hasSource) {
-      try { sales = window.KiwiSales.list(venue) || []; } catch (_) { sales = []; }
+      try {
+        sales = window.KiwiSales?.list?.(venue) || [];
+        sales = sales.concat((window.KiwiRefunds?.list?.(venue) || []).map((r) => ({
+          ...r, amount: -Math.abs(+r.amount || 0), kind: 'refund',
+        })));
+      } catch (_) { sales = []; }
     }
     const start = new Date(); start.setHours(0, 0, 0, 0);
     const end = start.getTime() + 86400000;
     const rows = sales.filter((s) => {
       const ts = +(s && s.ts) || 0;
-      return ts >= start.getTime() && ts < end && Number(s.amount) >= 0;
+      return ts >= start.getTime() && ts < end && Number(s.amount) !== 0;
     }).slice().reverse();
     const total = rows.reduce((sum, s) => sum + (+s.amount || 0), 0);
-    const avg = rows.length ? Math.round(total / rows.length) : 0;
+    const positive = rows.filter((s) => Number(s.amount) > 0);
+    const gross = positive.reduce((sum, s) => sum + (+s.amount || 0), 0);
+    const avg = positive.length ? Math.round(gross / positive.length) : 0;
     const fmt = (n, digits = 0) => Number(n || 0).toLocaleString(lang === 'ar' ? 'ar-MA' : 'fr-FR', { minimumFractionDigits: digits, maximumFractionDigits: digits });
     const empty = hasSource ? L.empty : L.unavailable;
     const r = drawer({
       title: T.transactionsTitle,
-      subtitle: rows.length ? T.transactionsSubtitle(rows.length, fmt(total)) : empty,
+      subtitle: rows.length ? T.transactionsSubtitle(positive.length, fmt(total)) : empty,
       width: 920,
       body: rows.length ? `
         <div class="p-hero">
           <div class="l">${pageEsc(T.transactionsHeroLabel)}</div>
           <div class="big">${pageEsc(fmt(total))} <span style="font-size:18px;opacity:.7;">MAD</span></div>
-          <div class="sub">${pageEsc(T.transactionsHeroSub(rows.length, avg))}</div>
+          <div class="sub">${pageEsc(T.transactionsHeroSub(positive.length, avg))}</div>
         </div>
         <table class="p-table" data-real-transactions>
           <thead><tr><th>${pageEsc(T.transactionsThTime)}</th><th>${pageEsc(T.transactionsThMethod)}</th><th>${pageEsc(L.detail)}</th><th class="right">${pageEsc(T.transactionsThAmount)}</th><th>${pageEsc(T.transactionsThStatus)}</th></tr></thead>
           <tbody>${rows.map((s) => {
             const d = new Date(+s.ts || 0);
             const time = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
-            const method = L.methods[String(s.method || '')] || L.sale;
-            return `<tr><td class="mono">${pageEsc(time)}</td><td><b>${pageEsc(method)}</b></td><td style="color:var(--n-600);">${pageEsc(s.label || L.sale)}</td><td class="mono right">${pageEsc(fmt(s.amount, 2))}</td><td><span class="chip ok">${pageEsc(L.status)}</span></td></tr>`;
+            const isRefund = s.kind === 'refund' || Number(s.amount) < 0;
+            const method = isRefund ? L.refund : (L.methods[String(s.method || '')] || L.sale);
+            return `<tr><td class="mono">${pageEsc(time)}</td><td><b>${pageEsc(method)}</b></td><td style="color:var(--n-600);">${pageEsc(s.label || (isRefund ? L.refund : L.sale))}</td><td class="mono right">${pageEsc(fmt(s.amount, 2))}</td><td><span class="chip ok">${pageEsc(isRefund ? L.refunded : L.status)}</span></td></tr>`;
           }).join('')}</tbody>
         </table>` : `<div data-real-empty="transactions" style="padding:48px 24px;text-align:center;display:flex;flex-direction:column;align-items:center;">
         <div style="width:48px;height:48px;border-radius:14px;background:rgba(11,110,79,0.10);border:1px solid rgba(11,110,79,0.18);color:var(--atlas);display:grid;place-items:center;margin-bottom:16px;">

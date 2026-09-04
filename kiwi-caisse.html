@@ -5441,8 +5441,8 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=475" defer></script>
-  <script src="assets/live-link.js?v=21" defer></script>
+  <script src="assets/caisse-pwa.js?v=476" defer></script>
+  <script src="assets/live-link.js?v=23" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
   <script src="assets/staff-roles.js?v=1" defer></script>
@@ -5454,7 +5454,7 @@
        avec kiwi-cuisine.html, qui s'appaire sur la même route. -->
   <script src="assets/pairing-commit.js?v=1" defer></script>
   <!-- Hosted: 6-digit pairing pad binds this caisse to its store (no demo PINs). -->
-  <script src="assets/caisse-pairing.js?v=15" defer></script>
+  <script src="assets/caisse-pairing.js?v=16" defer></script>
   <script src="assets/kiwi-select.js?v=2" defer></script>
   <script src="assets/cash-sessions.js?v=2" defer></script>
   <!-- La copie serveur des données d'établissement (fidélité, carnet) : une
@@ -14100,13 +14100,39 @@
        Live Link. postSale() derives the same stable server id each time, so
        this heals a missed asynchronous enqueue without ever booking twice.
        Cloud-imported rows are already in /api/feed and must not be mirrored. */
-    function reconcileJournalSales() {
+    function reconcileJournalSales(onlyMissing) {
       if (!window.KiwiLive || !window.KiwiLive.postSale) return 0;
       let n = 0;
       journal.forEach((entry) => {
         if (!entry || entry.origin || entry.voided || entry.kind === 'refund' || !(Number(entry.amount) > 0)) return;
-        try { if (window.KiwiLive.postSale(entry)) n++; } catch (_) {}
+        if (onlyMissing && entry.serverSaleId) return;
+        try {
+          const queued = window.KiwiLive.postSale(entry);
+          if (queued && queued.id) { entry.serverSaleId = queued.id; n++; }
+        } catch (_) {}
       });
+      /* Refunds use the same durable queue, but carry the manager identity
+         proved at approval time. This second pass closes the crash window
+         between writing the local journal and enqueueing the counter-entry.
+         Older journals did not retain that identity; they may be recovered
+         only when the current cashier is themselves a manager, never by
+         inventing an approver. */
+      if (window.KiwiLive.postRefund) journal.forEach((entry) => {
+        if (!entry || entry.origin || entry.voided || entry.kind !== 'refund' || !(Number(entry.amount) < 0)) return;
+        if (onlyMissing && entry.serverSaleId) return;
+        const orig = journal.find((sale) => sale && sale.kind !== 'refund' && sale.ref === entry.refundOf);
+        if (!orig) return;
+        let actor = entry.refundActor || null;
+        if (!actor && currentCashier && /owner|propri|manager|g[eé]rant|responsable|admin/i.test(String(currentCashier.role || ''))) {
+          actor = { id: currentCashier.id, name: currentCashier.name, role: currentCashier.role };
+        }
+        if (!actor || !actor.id || !actor.name || !actor.role) return;
+        try {
+          const queued = window.KiwiLive.postRefund(entry, orig, actor);
+          if (queued && queued.id) { entry.serverSaleId = queued.id; n++; }
+        } catch (_) {}
+      });
+      if (n) { try { persistShift(); } catch (_) {} }
       try { window.KiwiLive.flush(true); } catch (_) {}
       return n;
     }
@@ -14115,7 +14141,13 @@
        compteur de fermetures ni salir l'historique des révisions. */
     let lastProvisional = 0;
     function saveProvisional(force) {
-      if (!window.KiwiDayReport || !shiftOpenedAt || registerClosing) return;
+      if (!shiftOpenedAt || registerClosing) return;
+      /* A sale may be rung in the short boot window before the paired merchant
+         identity resolves. postSale() correctly refuses to guess a tenant, but
+         the old code retried only at register close. Heal only entries that do
+         not yet carry a stable server id on every report heartbeat/refund. */
+      try { reconcileJournalSales(true); } catch (_) {}
+      if (!window.KiwiDayReport) return;
       if (!force && Date.now() - lastProvisional < 90000) return;
       lastProvisional = Date.now();
       try {
@@ -14939,6 +14971,7 @@
     let   mgrOnApprove = null;
     let   mgrBusy    = false;    // true during the success beat
     let   mgrAccess  = 'manager';
+    let   mgrAuthContext = null;
 
     function renderMgrDots() {
       $$('#mgr-dots .mgr-dot').forEach((d, i) => {
@@ -14951,21 +14984,23 @@
       mgrBuffer = '';
       mgrOnApprove = null;
       mgrBusy = false;
+      mgrAuthContext = null;
       $$('#mgr-dots .mgr-dot').forEach(d => d.classList.remove('is-filled', 'is-success'));
     }
 
-    function requireManager(actionLabel, onApprove) {
-      openAuthorization(actionLabel, onApprove, 'manager');
+    function requireManager(actionLabel, onApprove, authContext) {
+      openAuthorization(actionLabel, onApprove, 'manager', authContext);
     }
 
     function requireTillOperator(actionLabel, onApprove) {
       openAuthorization(actionLabel, onApprove, 'till');
     }
 
-    function openAuthorization(actionLabel, onApprove, access) {
+    function openAuthorization(actionLabel, onApprove, access, authContext) {
       mgrBuffer = '';
       mgrBusy = false;
       mgrAccess = access === 'till' ? 'till' : 'manager';
+      mgrAuthContext = authContext || null;
       mgrOnApprove = typeof onApprove === 'function' ? onApprove : null;
       $('#manager-modal-title').textContent = mgrAccess === 'till' ? 'Autorisation caisse' : 'Autorisation manager';
       $('#manager-modal-sub').textContent = actionLabel || 'Action à autoriser';
@@ -14993,7 +15028,7 @@
       const P = window.KiwiCaissePairing;
       const ask = mgrAccess === 'till' ? P?.authorizeTill : P?.authorizeManager;
       if (typeof ask !== 'function') return Promise.resolve(false);
-      try { return Promise.resolve(ask.call(P, code)).then((ok) => ok === true, () => false); }
+      try { return Promise.resolve(ask.call(P, code, mgrAuthContext)).then((ok) => ok === true, () => false); }
       catch (_) { return Promise.resolve(false); }
     }
 
@@ -15837,11 +15872,15 @@
       clampRefundAmount();
       const amount = refundState.amount;
       if (amount <= 0) { toast('Saisis un montant'); return; }
+      const refundLocalId = 'refund-' + Date.now() + '-' + journal.length;
+      const originalSaleId = String(orig.serverSaleId || window.KiwiLive?.moneyId?.(orig) || '');
+      const refundServerId = String(window.KiwiLive?.moneyId?.({ id: refundLocalId }) || '');
       requireManager('Remboursement', () => {
         if (refundableLeft(orig) <= 0) { toast('Transaction déjà remboursée'); return; }
+        const manager = window.KiwiCaissePairing?.lastManager?.() || {};
         // NEGATIVE journal entry · NOT via recordSale (it rejects amount<=0).
         const entry = {
-          id: 'refund-' + Date.now() + '-' + journal.length,
+          id: refundLocalId,
           time: new Date(),
           label: 'Remboursement · ' + orig.label,
           amount: -amount,
@@ -15851,6 +15890,12 @@
           refundOf: orig.ref,
           reason: refundState.reason,
           cashier: (currentCashier && currentCashier.name) || '',
+          refundActor: {
+            id: String(manager.id || '').slice(0, 96),
+            name: String(manager.name || '').slice(0, 80),
+            role: String(manager.role || '').slice(0, 80),
+            approval: String(manager.approval || '').slice(0, 1400),
+          },
           /* Le panier remboursé, quand le ticket d'origine le portait · un
              remboursement partiel n'en reprend pas les lignes (le montant seul
              est vrai), un remboursement total les reprend toutes. */
@@ -15867,15 +15912,22 @@
         lastSaleId = entry.id;
         try { persistShift(); } catch (_) {}
         renderShiftStats();
-        /* Un remboursement change le TOTAL, et c'est la seule écriture que le
-           serveur ne verra jamais (/api/sale refuse les montants ≤ 0). Sans
-           remontée immédiate, le tableau de bord afficherait une recette trop
-           haute jusqu'au prochain battement · l'écart le plus visible qui soit. */
+        /* Un remboursement change le TOTAL. Il passe par son endpoint append-only
+           (l'endpoint vente continue de refuser les montants ≤ 0), puis le même
+           flux alimente Caisse, Dashboard et God Mode avec le contre-mouvement. */
+        let refundQueued = null;
+        try {
+          refundQueued = window.KiwiLive?.postRefund?.(entry, orig, manager) || null;
+          if (refundQueued && refundQueued.id) entry.serverSaleId = refundQueued.id;
+        } catch (_) {}
+        try { persistShift(); } catch (_) {}
         try { saveProvisional(true); } catch (_) {}
         if ($('#journal-drawer').classList.contains('is-open')) renderJournal();
         closeRefund();
-        toast('Remboursement · −' + fmtMAD(amount));
-      });
+        if (window.KiwiEnv?.isReal?.() && (!refundQueued || refundQueued.ok === false)) {
+          toast('Remboursement enregistré ici · synchronisation à reprendre');
+        } else toast('Remboursement · −' + fmtMAD(amount));
+      }, { kind: 'refund', refundId: refundServerId, originalSaleId, amountCents: Math.round(amount * 100) });
     }
 
     refundModal.addEventListener('click', (e) => {

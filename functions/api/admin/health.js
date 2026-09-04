@@ -31,13 +31,13 @@ export async function onRequestGet({ request, env }) {
          FROM merchant_config mc LEFT JOIN accounts a ON a.id = mc.account_id
         WHERE mc.merchant = ?`, [merchant], 'configuration', missing),
     first(env, [
-      `SELECT COUNT(*) AS total,
-              SUM(CASE WHEN ts >= ? AND void_ts IS NULL THEN 1 ELSE 0 END) AS last_24h,
+      `SELECT SUM(CASE WHEN COALESCE(amount_cents, amount * 100) > 0 THEN 1 ELSE 0 END) AS total,
+              SUM(CASE WHEN ts >= ? AND void_ts IS NULL AND COALESCE(amount_cents, amount * 100) > 0 THEN 1 ELSE 0 END) AS last_24h,
               SUM(CASE WHEN ts >= ? AND void_ts IS NULL THEN COALESCE(amount_cents, amount * 100) ELSE 0 END) / 100.0 AS amount_24h,
               MAX(CASE WHEN void_ts IS NULL THEN ts ELSE NULL END) AS last_ts
          FROM sales WHERE merchant = ?`,
-      `SELECT COUNT(*) AS total,
-              SUM(CASE WHEN ts >= ? AND void_ts IS NULL THEN 1 ELSE 0 END) AS last_24h,
+      `SELECT SUM(CASE WHEN amount > 0 THEN 1 ELSE 0 END) AS total,
+              SUM(CASE WHEN ts >= ? AND void_ts IS NULL AND amount > 0 THEN 1 ELSE 0 END) AS last_24h,
               SUM(CASE WHEN ts >= ? AND void_ts IS NULL THEN amount ELSE 0 END) AS amount_24h,
               MAX(CASE WHEN void_ts IS NULL THEN ts ELSE NULL END) AS last_ts
          FROM sales WHERE merchant = ?`,

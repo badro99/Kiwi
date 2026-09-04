@@ -64,7 +64,11 @@
   }
   function saleRows(report) {
     var b = bounds(report), list = [];
-    try { list = window.KiwiSales && window.KiwiSales.list ? window.KiwiSales.list() : []; } catch (_) {}
+    try {
+      list = window.KiwiSales && window.KiwiSales.list ? window.KiwiSales.list() : [];
+      var refunds = window.KiwiRefunds && window.KiwiRefunds.list ? window.KiwiRefunds.list() : [];
+      list = list.concat((refunds || []).map(function (r) { return Object.assign({}, r, { amount: -Math.abs(+r.amount || 0), kind: 'refund' }); }));
+    } catch (_) {}
     var seen = Object.create(null), out = [];
     (list || []).forEach(function (s) {
       var ts = +(s && (s.ts != null ? s.ts : s.time));
@@ -182,7 +186,9 @@
   function currentSales() {
     try {
       var venue=window.KiwiVenue&&window.KiwiVenue.getCurrentVenue?window.KiwiVenue.getCurrentVenue():undefined;
-      return window.KiwiSales&&window.KiwiSales.list?window.KiwiSales.list(venue)||[]:[];
+      var sales=window.KiwiSales&&window.KiwiSales.list?window.KiwiSales.list(venue)||[]:[];
+      var refunds=window.KiwiRefunds&&window.KiwiRefunds.list?window.KiwiRefunds.list(venue)||[]:[];
+      return sales.concat(refunds.map(function(r){return Object.assign({},r,{amount:-Math.abs(+r.amount||0),kind:'refund'});}));
     } catch(_){return [];}
   }
   function sessionFrom(report) {

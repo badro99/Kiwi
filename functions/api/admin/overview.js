@@ -107,18 +107,18 @@ export async function onRequestGet(context) {
               COALESCE(SUM(CASE WHEN ts >= ? THEN COALESCE(amount_cents, amount * 100) ELSE 0 END),0) / 100.0 AS today,
               COALESCE(SUM(CASE WHEN ts >= ? THEN COALESCE(amount_cents, amount * 100) ELSE 0 END),0) / 100.0 AS w,
               COALESCE(SUM(CASE WHEN ts >= ? THEN COALESCE(amount_cents, amount * 100) ELSE 0 END),0) / 100.0 AS m,
-              COALESCE(SUM(CASE WHEN ts >= ? THEN 1 ELSE 0 END),0)      AS mcount,
+              COALESCE(SUM(CASE WHEN ts >= ? AND COALESCE(amount_cents, amount * 100) > 0 THEN 1 ELSE 0 END),0) AS mcount,
               COALESCE(SUM(COALESCE(amount_cents, amount * 100)),0) / 100.0 AS total,
-              COALESCE(COUNT(*),0)                                      AS tcount,
+              COALESCE(SUM(CASE WHEN COALESCE(amount_cents, amount * 100) > 0 THEN 1 ELSE 0 END),0) AS tcount,
               MAX(ts)                                                   AS last_ts
          FROM sales WHERE void_ts IS NULL GROUP BY merchant`,
       `SELECT merchant,
               COALESCE(SUM(CASE WHEN ts >= ? THEN amount ELSE 0 END),0) AS today,
               COALESCE(SUM(CASE WHEN ts >= ? THEN amount ELSE 0 END),0) AS w,
               COALESCE(SUM(CASE WHEN ts >= ? THEN amount ELSE 0 END),0) AS m,
-              COALESCE(SUM(CASE WHEN ts >= ? THEN 1 ELSE 0 END),0)      AS mcount,
+              COALESCE(SUM(CASE WHEN ts >= ? AND amount > 0 THEN 1 ELSE 0 END),0) AS mcount,
               COALESCE(SUM(amount),0)                                   AS total,
-              COALESCE(COUNT(*),0)                                      AS tcount,
+              COALESCE(SUM(CASE WHEN amount > 0 THEN 1 ELSE 0 END),0)   AS tcount,
               MAX(ts)                                                   AS last_ts
          FROM sales GROUP BY merchant`,
     ], [dayStart, d7, d30, d30]);

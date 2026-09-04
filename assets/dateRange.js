@@ -1665,6 +1665,12 @@
   function realSalesList() {
     try { return (window.KiwiSales?.list?.(getCurrentVenue()) || []); } catch (_) { return []; }
   }
+  function realRefundList() {
+    try { return (window.KiwiRefunds?.list?.(getCurrentVenue()) || []); } catch (_) { return []; }
+  }
+  function realMoneyList() {
+    return realSalesList().concat(realRefundList().map((r) => ({ ...r, amount: -Math.abs(+r.amount || 0), kind: 'refund' })));
+  }
   // Window bounds [from, to) in ms for a range, relative to now.
   function rangeBounds(range) {
     /* A merchant-picked range is exact. Demo tables may use a presentation
@@ -1687,12 +1693,16 @@
   // Windowed revenue / count / basket from the merchant's real sales.
   function realSalesTotals(range) {
     const [from, to] = rangeBounds(range == null ? currentRange : range);
-    let revenue = 0, count = 0;
+    let revenue = 0, gross = 0, count = 0;
     realSalesList().forEach(e => {
       const ts = +e.ts || 0;
-      if (ts >= from && ts < to) { revenue += Math.max(0, +e.amount || 0); count++; }
+      if (ts >= from && ts < to) { const amt = Math.max(0, +e.amount || 0); revenue += amt; gross += amt; count++; }
     });
-    return { revenue, count, basket: count ? revenue / count : 0 };
+    realRefundList().forEach(e => {
+      const ts = +e.ts || 0;
+      if (ts >= from && ts < to) revenue -= Math.abs(+e.amount || 0);
+    });
+    return { revenue, count, basket: count ? gross / count : 0 };
   }
   /* Keep tender attribution deliberately conservative. A value the ledger does
    * not identify is "other", never a bank card; customer credit and delivery
@@ -1714,17 +1724,26 @@
    * real-venue comparison below is built on this one primitive so the KPI
    * band, the hero deltas and the card/cash tile can never disagree. */
   function realWindowStats(from, to) {
-    let revenue = 0, count = 0, card = 0, cash = 0;
+    let revenue = 0, gross = 0, count = 0, card = 0, cash = 0;
     realSalesList().forEach((e) => {
       const ts = +e.ts || 0;
       if (ts < from || ts >= to) return;
       const amt = Math.max(0, +e.amount || 0);
-      revenue += amt; count++;
+      revenue += amt; gross += amt; count++;
       const tender = tenderBucket(e.method);
       if (tender === 'cash') cash += amt;
       if (tender === 'card' || tender === 'tap') card += amt;
     });
-    return { revenue, count, basket: count ? revenue / count : 0, card, cash };
+    realRefundList().forEach((e) => {
+      const ts = +e.ts || 0;
+      if (ts < from || ts >= to) return;
+      const amt = Math.abs(+e.amount || 0);
+      revenue -= amt;
+      const tender = tenderBucket(e.method);
+      if (tender === 'cash') cash -= amt;
+      if (tender === 'card' || tender === 'tap') card -= amt;
+    });
+    return { revenue, count, basket: count ? gross / count : 0, card, cash };
   }
 
   /* One read model for every headline and insight sentence. Nothing falls back
@@ -1736,11 +1755,11 @@
       const ts = +e.ts || 0;
       return ts >= from && ts < to;
     });
-    let revenue = 0, collected = 0;
+    let revenue = 0, gross = 0, collected = 0;
     const byHour = {}, byTender = {};
     rows.forEach((e) => {
       const amount = Math.max(0, +e.amount || 0);
-      revenue += amount;
+      revenue += amount; gross += amount;
       if (amount) {
         const hour = new Date(+e.ts || 0).getHours();
         byHour[hour] = (byHour[hour] || 0) + amount;
@@ -1751,13 +1770,23 @@
         collected += amount;
       }
     });
+    realRefundList().forEach((e) => {
+      const ts = +e.ts || 0;
+      if (ts < from || ts >= to) return;
+      const amount = Math.abs(+e.amount || 0);
+      revenue -= amount;
+      const hour = new Date(ts).getHours();
+      byHour[hour] = (byHour[hour] || 0) - amount;
+      const tender = tenderBucket(e && e.method);
+      if (tender) { byTender[tender] = (byTender[tender] || 0) - amount; collected -= amount; }
+    });
     const topKey = (obj) => Object.keys(obj).reduce((best, key) =>
       best == null || obj[key] > obj[best] ? key : best, null);
     const peakHour = topKey(byHour);
     const topTender = topKey(byTender);
     return {
       from, to, count: rows.length, revenue,
-      basket: rows.length ? revenue / rows.length : 0,
+      basket: rows.length ? gross / rows.length : 0,
       peakHour: peakHour == null ? null : +peakHour,
       peakRevenue: peakHour == null ? 0 : byHour[peakHour],
       activeHours: Object.keys(byHour).length,
@@ -1884,7 +1913,7 @@
       const ts = +e.ts || 0;
       if (ts >= base && ts < end) {
         const idx = Math.floor((ts - base) / 3600000);
-        if (idx >= 0 && idx < 24) per[idx] += Math.max(0, +e.amount || 0);
+        if (idx >= 0 && idx < 24) per[idx] += (+e.amount || 0);
       }
     });
     const out = [];
@@ -1897,7 +1926,7 @@
     const out = new Array(days).fill(0);
     list.forEach(e => {
       const ts = +e.ts || 0;
-      if (ts >= start) { const idx = Math.floor((dayStartMs(ts) - start) / 864e5); if (idx >= 0 && idx < days) out[idx] += Math.max(0, +e.amount || 0); }
+      if (ts >= start) { const idx = Math.floor((dayStartMs(ts) - start) / 864e5); if (idx >= 0 && idx < days) out[idx] += (+e.amount || 0); }
     });
     return out;
   }
@@ -1914,7 +1943,7 @@
   // fabricated baseline claims a comparison that was never possible.
   function realRevSeries(range) {
     range = range == null ? currentRange : range;
-    const list = realSalesList();
+    const list = realMoneyList();
     const hourly = (range === 'aujourdhui' || range === 'hier');
     let rev = [], prev = [], xLabels = [], visibleXIdx = [], sub = '', rangeBadge = '', cmpPrefix = '', total = 0, prevTotal = 0;
 
@@ -3905,9 +3934,11 @@
      * titre du panneau rendait la chose pire : ces ventes-là n'étaient ni en
      * direct, ni du jour. */
     const [lo, hi] = rangeBounds(currentRange);
-    const sales = (window.KiwiSales?.list?.(venue) || [])
+    const sales = (window.KiwiSales?.list?.(venue) || []).concat(
+      (window.KiwiRefunds?.list?.(venue) || []).map((r) => ({ ...r, amount: -Math.abs(+r.amount || 0), kind: 'refund' }))
+    )
       .filter((s) => { const ts = +(s && s.ts) || 0; return ts >= lo && ts < hi; })
-      .slice(-8).reverse();
+      .sort((a, b) => (+a.ts || 0) - (+b.ts || 0)).slice(-8).reverse();
     const lang = getLang();
     /* Every method the till can actually record (see live-link METHOD_LABEL).
      * `cash` was missing, so `L[s.method] || L.card` relabelled EVERY cash sale
@@ -3927,19 +3958,20 @@
     return sales.map((s, i) => {
       const d = new Date(s.ts);
       const t = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+      const isRefund = s.kind === 'refund' || Number(s.amount) < 0;
       return {
         t,
         method: ICON_FOR[s.method] || 'cmi',
-        primary: L[s.method] || L.card,
+        primary: isRefund ? (lang === 'en' ? 'Refund' : lang === 'ar' ? 'استرداد' : 'Remboursement') : (L[s.method] || L.card),
         /* The "who/what" column. On a boutique the useful identifier is the item,
          * which the sale now carries — a row reading "Chemise en lin" is what the
          * owner needs to find the original sale when that customer returns. Falls
          * back to the generic subtitle only when the till sent no label. */
-        sub: (s.method === 'delivery' || s.method === 'credit') ? L.deliverySub : L.sub, flag: '', ctx: s.label || '',
+        sub: isRefund ? (s.ref || '') : ((s.method === 'delivery' || s.method === 'credit') ? L.deliverySub : L.sub), flag: '', ctx: s.label || '',
         // Amount ONLY — the row template appends its own <span class="cur">MAD</span>,
         // so spelling the unit here too printed "450,00 MADMAD" on every real sale.
-        amt: (s.amount || 0).toFixed(2).replace('.', ','),
-        tip: '·', neg: false, isNew: i === 0,
+        amt: (isRefund ? '− ' : '') + Math.abs(s.amount || 0).toFixed(2).replace('.', ','),
+        tip: '·', neg: isRefund, isNew: i === 0,
         saleId: String(s.id || ''),
         ref: String(s.ref || s.receiptRef || s.id || '').trim(),
         receiptNo: String(s.ref || s.receiptRef || '').trim(),

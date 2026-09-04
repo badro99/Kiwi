@@ -7,7 +7,10 @@
 // the codes to the browser (GET /api/config?accountPins=owners) and comparing them
 // there; the comparison now happens here, so no four-digit code ever leaves D1.
 // Both shapes are rate-limited and answer with an identity, never with a code.
-import { verifyStaffPin, verifyAccountPin, json } from '../../auth/_lib.js';
+import {
+  verifyStaffPin, verifyAccountPin, employeeRoleOpensDashboard,
+  managerRefundProof, json,
+} from '../../auth/_lib.js';
 
 export async function onRequestPost(context) {
   const { request, env } = context;
@@ -33,9 +36,19 @@ export async function onRequestPost(context) {
     return json({ error: verified.error }, verified.status);
   }
 
+  let approval = '';
+  const action = body && body.action;
+  if (merchant && action && action.kind === 'refund' && employeeRoleOpensDashboard(verified.staff.role)) {
+    approval = await managerRefundProof(env.AUTH_SECRET, {
+      merchant, staffId: verified.staff.id, staffName: verified.staff.name, staffRole: verified.staff.role,
+      refundId: action.refundId, originalSaleId: action.originalSaleId, amountCents: action.amountCents,
+    });
+  }
+
   return json({
     ok: true,
     staff: verified.staff,
+    ...(approval ? { approval } : {}),
     ...(verified.merchant ? { merchant: verified.merchant } : {}),
   });
 }

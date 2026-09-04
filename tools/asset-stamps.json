@@ -116,12 +116,12 @@
     "sha": "216d8525555e8c8b"
   },
   "assets/caisse-pairing.js": {
-    "v": "15",
-    "sha": "112638dbbb35294e"
+    "v": "16",
+    "sha": "9becc82571b35af3"
   },
   "assets/caisse-pwa.js": {
-    "v": "475",
-    "sha": "4545b567d4a087a7"
+    "v": "476",
+    "sha": "f7a3a0f8e5648681"
   },
   "assets/caisse-refresh.js": {
     "v": "1",
@@ -188,32 +188,32 @@
     "sha": "d9d9ffc0deaae7a7"
   },
   "assets/dashboard-extra.js": {
-    "v": "4",
-    "sha": "94d688b1b5cdb89a"
+    "v": "7",
+    "sha": "44a4c6f0b56b8640"
   },
   "assets/dashboard-native.js": {
     "v": "1",
     "sha": "cd751f73c0180449"
   },
   "assets/dashboard-pwa.js": {
-    "v": "473",
-    "sha": "20f3303561aaf62e"
+    "v": "474",
+    "sha": "9d29b063acc65c11"
   },
   "assets/dashboard-startup-gate.js": {
     "v": "1",
     "sha": "a3636b0a0729db7e"
   },
   "assets/dateRange.js": {
-    "v": "16",
-    "sha": "cf3fd55867d2915e"
+    "v": "17",
+    "sha": "f08c5430b68a96d3"
   },
   "assets/day-report-dash.js": {
-    "v": "9",
-    "sha": "b3e09494aca30722"
+    "v": "10",
+    "sha": "b59b98c778596610"
   },
   "assets/day-report-export.js": {
-    "v": "5",
-    "sha": "970e9abf97f6866f"
+    "v": "6",
+    "sha": "44dd6ba2de061983"
   },
   "assets/day-report.js": {
     "v": "5",
@@ -252,8 +252,8 @@
     "sha": "5d6507bf65311b04"
   },
   "assets/employee-live.js": {
-    "v": "472",
-    "sha": "d43d6b0815d58a53"
+    "v": "473",
+    "sha": "79b0c67bbc211a09"
   },
   "assets/employee-planning.js": {
     "v": "8",
@@ -420,8 +420,8 @@
     "sha": "c9d6036ca657c76e"
   },
   "assets/live-link.js": {
-    "v": "21",
-    "sha": "6fc1695b365cc6e2"
+    "v": "23",
+    "sha": "5b94d85e0028235c"
   },
   "assets/live-socket.js": {
     "v": "4",
@@ -520,12 +520,12 @@
     "sha": "57b562b061dc24d0"
   },
   "assets/pages-pro.js": {
-    "v": "2090",
-    "sha": "3cd9936bfffa926a"
+    "v": "2092",
+    "sha": "c96afe8106862978"
   },
   "assets/pages.js": {
-    "v": "4",
-    "sha": "69efd5cc9d71c940"
+    "v": "5",
+    "sha": "1c16c2f7e5e3e5c4"
   },
   "assets/pairing-commit.js": {
     "v": "1",
@@ -787,6 +787,10 @@
     "v": "3",
     "sha": "8b88c63cd11d7bc8"
   },
+  "assets/report.js": {
+    "v": "2",
+    "sha": "93ded8eec9d79bb3"
+  },
   "assets/reservations.css": {
     "v": "5",
     "sha": "564bac0e65269a9d"
@@ -892,8 +896,8 @@
     "sha": "dfa3b4d5ebb25d51"
   },
   "assets/venues.js": {
-    "v": "26",
-    "sha": "8d7e5287e5c9278b"
+    "v": "27",
+    "sha": "948f94f1c1c11676"
   },
   "assets/vertical-state.js": {
     "v": "1",

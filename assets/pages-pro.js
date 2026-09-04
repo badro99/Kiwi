@@ -15601,6 +15601,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       '.rtx-method.on{background:var(--atlas);border-color:var(--atlas);color:#fff}' +
       '.rtx-list{display:flex;flex-direction:column}' +
       '.rtx-row{display:grid;grid-template-columns:auto auto minmax(0,1fr) auto auto;align-items:center;gap:12px;padding:14px 2px;border-bottom:1px solid var(--n-100)}' +
+      '.rtx-row.is-refund .rtx-a{color:var(--danger)}.rtx-row.is-refund .rtx-m{background:color-mix(in srgb,var(--danger) 10%,transparent);color:var(--danger)}' +
       '.rtx-row.is-new{animation:rtx-in .45s cubic-bezier(.32,.72,0,1)}' +
       '@keyframes rtx-in{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}' +
       '.rtx-t{font-family:var(--mono);font-size:12.5px;color:var(--n-500)}' +
@@ -15663,6 +15664,9 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     const vd = KV?.getCurrentVenueData?.() || {};
     const lang = window.KiwiI18n?.getLang?.() || 'fr';
     const sales = (window.KiwiSales?.list?.() || []).slice();
+    const refunds = (window.KiwiRefunds?.list?.() || []).map((r) => ({
+      ...r, amount: -Math.abs(+r.amount || 0), kind: 'refund', origin: 'caisse',
+    }));
     const ML = {
       fr: { cash: 'Espèces', card: 'Carte', tap: 'Kiwi Tap', qr: 'QR Wallet', wallet: 'Kiwi Wallet', link: 'Lien', split: 'Partagée', delivery: 'Livraison', unknown: 'Non renseigné' },
       en: { cash: 'Cash', card: 'Card', tap: 'Kiwi Tap', qr: 'QR Wallet', wallet: 'Kiwi Wallet', link: 'Link', split: 'Split', delivery: 'Delivery', unknown: 'Not recorded' },
@@ -15691,7 +15695,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     selectedDay.setDate(selectedDay.getDate() - dayOffset);
     const lo = selectedDay.getTime();
     const hi = new Date(selectedDay.getFullYear(), selectedDay.getMonth(), selectedDay.getDate() + 1).getTime();
-    const daySales = sales.filter((s) => { const ts = +(s && s.ts) || 0; return ts >= lo && ts < hi; });
+    const daySales = sales.concat(refunds).filter((s) => { const ts = +(s && s.ts) || 0; return ts >= lo && ts < hi; });
     const inWindow = selectedMethods.length
       ? daySales.filter((s) => selectedMethods.includes(salesMethodKey(s)))
       : daySales;
@@ -15714,12 +15718,13 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       return `<button class="rtx-method${active ? ' on' : ''}" type="button" data-action="sales-method" data-arg="${method}" aria-pressed="${active}">${escS(methodLabels[method])}</button>`;
     }).join('');
     const total = inWindow.reduce((a, s) => a + (s.amount || 0), 0);
-    const count = inWindow.length;
-    const rows = inWindow.slice().reverse().map((s, i) => {
+    const count = inWindow.filter((s) => s.kind !== 'refund' && Number(s.amount) > 0).length;
+    const rows = inWindow.slice().sort((a, b) => (+b.ts || 0) - (+a.ts || 0)).map((s, i) => {
+      const isRefund = s.kind === 'refund' || Number(s.amount) < 0;
       const d = new Date(s.ts || Date.now());
       const hh = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
       const when = hh;
-      const m = L[salesMethodKey(s)] || L.unknown;
+      const m = isRefund ? T({ fr: 'Remboursement', en: 'Refund', ar: 'استرداد' }) : (L[salesMethodKey(s)] || L.unknown);
       const ref = String(s.ref || s.label || '').trim();
       const origin = String(s.origin || (ref ? 'caisse' : '')).toLowerCase();
       const source = origin === 'employee'
@@ -15734,7 +15739,9 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
         const qty = Math.max(1, Number(l.qty) || 1);
         const lineAmount = Number(l.total);
         return `<div class="rtx-product"><span class="rtx-product-name">${qty} × ${escS(l.name)}</span>${Number.isFinite(lineAmount) ? `<span class="rtx-product-amount">${fmt(lineAmount)} MAD</span>` : ''}</div>`;
-      }).join('') : `<span class="rtx-products-missing">${escS(T({ fr: 'Détail produit indisponible', en: 'Product detail unavailable', ar: 'تفاصيل المنتج غير متوفرة' }))}</span>`;
+      }).join('') : `<span class="rtx-products-missing">${escS(isRefund
+        ? T({ fr: 'Montant rendu au client', en: 'Amount returned to customer', ar: 'المبلغ المعاد إلى العميل' })
+        : T({ fr: 'Détail produit indisponible', en: 'Product detail unavailable', ar: 'تفاصيل المنتج غير متوفرة' }))}</span>`;
       const saleId = String(s.saleId || s.id || '').trim();
       const hasId = !!saleId;
       const cachedInv = hasId && window.KiwiInvoice?.getCachedInvoices?.()[saleId];
@@ -15743,7 +15750,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
         : '';
       const tooltip = hasId ? '' : ' title="Facture disponible après synchronisation de la vente"';
       const disabledAttr = hasId ? '' : ' disabled aria-disabled="true"';
-      const invoiceActions = `
+      const invoiceActions = isRefund ? '<div class="rtx-actions"></div>' : `
         <div class="rtx-actions">
           ${invBadge}
           <button class="rtx-act-btn" type="button" data-action="sale-invoice-pdf" data-arg="${escS(saleId)}"${disabledAttr}${tooltip || ' title="Facture PDF"'} aria-label="Facture PDF">
@@ -15753,7 +15760,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
             <svg viewBox="0 -960 960 960" width="15" height="15" fill="currentColor"><path d="M640-640v-120H320v120h-80v-200h480v200h-80Zm-480 80h640-640Zm560 100q17 0 28.5-11.5T760-500q0-17-11.5-28.5T720-540q-17 0-28.5 11.5T680-500q0 17 11.5 28.5T720-460Zm-80 260v-160H320v160h320Zm80 80H240v-160H80v-240q0-51 35-85.5t85-34.5h560q51 0 85.5 34.5T880-520v240H720v160Zm80-240v-160q0-17-11.5-28.5T760-560H200q-17 0-28.5 11.5T160-520v160h80v-80h480v80h80Z"/></svg>
           </button>
         </div>`;
-      return `<div class="rtx-row${i === 0 ? ' is-new' : ''}">` +
+      return `<div class="rtx-row${i === 0 ? ' is-new' : ''}${isRefund ? ' is-refund' : ''}">` +
         `<span class="rtx-t">${when}</span>` +
         `<span class="rtx-m">${escS(m)}</span>` +
         `<span class="rtx-products">${identity}${products}</span>` +

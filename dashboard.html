@@ -6211,7 +6211,8 @@
 <script src="assets/dark-fixes.js?v=2" defer></script>
 <script src="assets/polish.js?v=1" defer></script>
 <script src="assets/channel-link.js?v=202608272300" defer></script>
-<script src="assets/dashboard-extra.js?v=4" defer></script>
+<link rel="preload" href="assets/report.js?v=2" as="script">
+<script src="assets/dashboard-extra.js?v=7" defer></script>
 <script src="assets/simple.js?v=3" defer></script>
 <script src="assets/ux.js?v=1" defer></script>
 <!-- venues.js et dateRange.js portent un ?v= depuis la migration v2. Sans lui,
@@ -6222,17 +6223,17 @@
      Une URL neuve rate le cache et part au réseau tout de suite. À incrémenter
      à CHAQUE modification de ces deux fichiers, et à recopier à l'identique
      dans la liste de pré-cache de kiwi-sw.js. -->
-<script src="assets/venues.js?v=26" defer></script>
+<script src="assets/venues.js?v=27" defer></script>
 <!-- The pressing till and dashboard share a tenant-scoped operational snapshot. -->
 <script src="assets/pressing-ops.js?v=7" defer></script>
 <script src="assets/pressing-garment-icons.js?v=2" defer></script>
 <script src="assets/pressing-catalog.js?v=7" defer></script>
 <script src="assets/pressing-dashboard.js?v=14" defer></script>
 <script src="assets/demoClock.js?v=1" defer></script>
-<script src="assets/dateRange.js?v=16" defer></script>
+<script src="assets/dateRange.js?v=17" defer></script>
 <script src="assets/mobile-nav.js?v=2" defer></script>
 <script defer src="assets/pwa-update.js?v=359"></script>
-<script defer src="assets/dashboard-pwa.js?v=473"></script>
+<script defer src="assets/dashboard-pwa.js?v=474"></script>
 <script defer src="assets/dashboard-native.js?v=1"></script>
 <!-- Same durable outbox as the tills. It also lets this surface report the
      real device sync state instead of inferring it from navigator.onLine. -->
@@ -6245,7 +6246,7 @@
      its one-shot snapshot must not miss the identity promise at boot. -->
 <script defer src="assets/tenant-purge.js?v=1"></script>
 <script defer src="assets/identity.js?v=2"></script>
-<script defer src="assets/live-link.js?v=21"></script>
+<script defer src="assets/live-link.js?v=23"></script>
 <script defer src="assets/channel-sales.js?v=3"></script>
 <!-- Operator feature flags · hides modules the operator toggled off for this
      merchant. Fail-safe: no backend ⇒ nothing changes. See ADMIN.md. -->
@@ -6286,7 +6287,7 @@
 <script src="assets/agent-vision.js?v=1" defer fetchpriority="low"></script>
 <script src="assets/agent-skin.js?v=4" defer fetchpriority="low"></script>
 <script src="assets/accounting.js?v=1" defer fetchpriority="low"></script>
-<script src="assets/pages.js?v=4" defer fetchpriority="low"></script>
+<script src="assets/pages.js?v=5" defer fetchpriority="low"></script>
 <!-- Boutique shared product database + real barcode engine (EAN-13 / Code 128).
      Same modules the caisse loads, so inventory stays in sync between the two. -->
 <script src="assets/barcode.js?v=1" defer fetchpriority="low"></script>
@@ -6365,7 +6366,7 @@
 <!-- Floor-plan vocabulary shared with the caisse. MUST load before pages-pro.js,
      which reads its top-level declarations as globals. -->
 <script src="assets/floorplan-core.js?v=2050" defer fetchpriority="low"></script>
-<script src="assets/pages-pro.js?v=2090" defer fetchpriority="low"></script>
+<script src="assets/pages-pro.js?v=2092" defer fetchpriority="low"></script>
 <!-- Restaurant-only menu redesign. Recipes stay in a private document; the
      workspace is loaded last so it can present the new shell over MenuStore. -->
 <script src="assets/restaurant-units.js?v=1" defer fetchpriority="low"></script>
@@ -6380,8 +6381,8 @@
 <!-- Rapport journalier : le calcul (partagé avec la caisse) puis la page.
      Après pages-pro.js, dont il emprunte la coquille Kiwi.appPage. -->
 <script src="assets/day-report.js?v=5" defer fetchpriority="low"></script>
-<script src="assets/day-report-export.js?v=5" defer fetchpriority="low"></script>
-<script src="assets/day-report-dash.js?v=9" defer fetchpriority="low"></script>
+<script src="assets/day-report-export.js?v=6" defer fetchpriority="low"></script>
+<script src="assets/day-report-dash.js?v=10" defer fetchpriority="low"></script>
 <script src="assets/stock.js?v=49" defer fetchpriority="low"></script>
 <script src="assets/planning-core.js?v=8" defer fetchpriority="low"></script>
 <link rel="stylesheet" href="assets/planning-ui.css?v=10">

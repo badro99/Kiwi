@@ -339,7 +339,13 @@
 
   /* Les ventes que le tableau de bord connaît, pour le repli sans instantané. */
   function dashSales() {
-    try { return (window.KiwiSales && window.KiwiSales.list && window.KiwiSales.list()) || []; }
+    try {
+      var sales = (window.KiwiSales && window.KiwiSales.list && window.KiwiSales.list()) || [];
+      var refunds = (window.KiwiRefunds && window.KiwiRefunds.list && window.KiwiRefunds.list()) || [];
+      return sales.concat(refunds.map(function (r) {
+        return Object.assign({}, r, { amount: -Math.abs(+r.amount || 0), kind: 'refund' });
+      }));
+    }
     catch (_) { return []; }
   }
   function storeInfo() {

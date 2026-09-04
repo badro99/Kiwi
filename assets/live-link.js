@@ -358,7 +358,7 @@
       } else queueSignal();                    // offline/transient → unchanged and retryable
     }
     try {
-      fetch('/api/sale', {
+      fetch(body && body.kind === 'refund' ? '/api/sale/refund' : '/api/sale', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -394,7 +394,7 @@
           if (state.pending > 0 && navigator.onLine) flushOutbox();
         });
       }
-      return fetch('/api/sale', {
+      return fetch(body && body.kind === 'refund' ? '/api/sale/refund' : '/api/sale', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -417,6 +417,44 @@
     return flushLegacyQueue();
   }
 
+  function enqueueMoneyBody(body, m) {
+    var q = outboxUsing ? [] : qRead();
+    /* The same completed receipt can be observed by two local persistence
+       paths. Stable IDs plus this local check prevent it entering the queue
+       twice; the server-side primary key remains the second lock. */
+    if (outboxUsing && window.KiwiOffline && window.KiwiOffline.available()) {
+      /* WRITE-AHEAD COPY — enqueue() is asynchronous. Keep the exact command
+         synchronously until IndexedDB owns it; this applies equally to a sale
+         and its refund, whose financial ordering must survive a reload. */
+      var writeAhead = qRead();
+      if (!writeAhead.some(function (x) { return x && x.id === body.id; })) {
+        writeAhead.push(body);
+        if (!qWrite(writeAhead)) return { ok: false, reason: 'queue-storage-full', id: body.id };
+      }
+      window.KiwiOffline.enqueue(OUTBOX_CHANNEL, m, body, { id: body.id, createdAt: body.ts }).then(function () {
+        qWrite(qRead().filter(function (x) { return x && x.id !== body.id; }));
+        return refreshOutboxStatus();
+      }).then(function () {
+        pingLocal();
+        flushQueue();
+      }).catch(function () {
+        var fallback = qRead();
+        if (!fallback.some(function (x) { return x && x.id === body.id; })) fallback.push(body);
+        qWrite(fallback);
+        outboxStatus.storageError = true;
+        queueSignal();
+        flushLegacyQueue();
+      });
+      return { ok: true, queued: true, durable: 'indexeddb', id: body.id };
+    }
+    if (q.some(function (x) { return x && x.id === body.id; })) return { ok: true, queued: true, duplicate: true, id: body.id };
+    q.push(body);
+    if (!qWrite(q)) return { ok: false, reason: 'queue-storage-full', id: body.id };
+    pingLocal();
+    flushQueue();
+    return { ok: true, queued: true, id: body.id };
+  }
+
   function postSale(entry) {
     if (!on() || !entry) return;
     var rawAmt = entry.amountCents != null
@@ -432,7 +470,6 @@
     // this just skips a guaranteed 400 rather than changing behaviour.
     var m = merchant();
     if (!m) return;
-    var q = outboxUsing ? [] : qRead();
     /* The basket, compacted. {n,q,t} rather than {name,qty,total} because this
      * payload is replayed after an outage and also has to fit the emergency
      * localStorage fallback — a busy lunch service can hold a few hundred queued
@@ -509,49 +546,35 @@
       body.discountReason = String(entry.discountReason || '').slice(0, 32);
       body.actorId = String(entry.actorId || '').slice(0, 96);
     }
-    /* The same completed receipt can be observed by two local persistence
-       paths. Stable IDs plus this local check prevent it entering the queue
-       twice; INSERT OR IGNORE remains the server-side second lock. */
-    if (outboxUsing && window.KiwiOffline && window.KiwiOffline.available()) {
-      /* The checkout stays synchronous from the caller's perspective, while
-         persistence and transport complete in this durable promise chain. Any
-         IndexedDB failure immediately falls back to the old queue and paints a
-         visible storage warning instead of discarding the taking. */
-      /* WRITE-AHEAD COPY — enqueue() is asynchronous. A payment success screen
-       * may be followed immediately by a register close/reload, especially at
-       * the end of service. If the page dies before IndexedDB commits, the Z
-       * still contains the taking but /api/feed never receives it: Journal and
-       * Dashboard then disagree forever. Put the exact same idempotent body in
-       * localStorage synchronously first. Remove it only AFTER IndexedDB owns
-       * the row. A crash in between leaves two copies, never two sales: both
-       * the outbox and /api/sale deduplicate on body.id. */
-      var writeAhead = qRead();
-      if (!writeAhead.some(function (x) { return x && x.id === body.id; })) {
-        writeAhead.push(body);
-        if (!qWrite(writeAhead)) return { ok: false, reason: 'queue-storage-full', id: body.id };
-      }
-      window.KiwiOffline.enqueue(OUTBOX_CHANNEL, m, body, { id: body.id, createdAt: body.ts }).then(function () {
-        qWrite(qRead().filter(function (x) { return x && x.id !== body.id; }));
-        return refreshOutboxStatus();
-      }).then(function () {
-        pingLocal();
-        flushQueue();
-      }).catch(function () {
-        var fallback = qRead();
-        if (!fallback.some(function (x) { return x && x.id === body.id; })) fallback.push(body);
-        qWrite(fallback);
-        outboxStatus.storageError = true;
-        queueSignal();
-        flushLegacyQueue();
-      });
-      return { ok: true, queued: true, durable: 'indexeddb', id: body.id };
-    }
-    if (q.some(function (x) { return x && x.id === body.id; })) return { ok: true, queued: true, duplicate: true, id: body.id };
-    q.push(body);
-    if (!qWrite(q)) return { ok: false, reason: 'queue-storage-full', id: body.id };
-    pingLocal();     // a dashboard in this browser starts polling before the POST lands
-    flushQueue();
-    return { ok: true, queued: true, id: body.id };
+    return enqueueMoneyBody(body, m);
+  }
+
+  function postRefund(entry, original, actor) {
+    if (!on() || !entry || !original) return;
+    var m = merchant();
+    if (!m) return;
+    /* Queue/reconcile the original first. Both commands share one ordered
+       outbox, so an offline refund can never outrun a sale that was skipped
+       while the till identity was still resolving. */
+    var saleResult = postSale(original);
+    var originalSaleId = String(original.serverSaleId || (saleResult && saleResult.id) || stableId(m, original));
+    if (saleResult && saleResult.id) original.serverSaleId = saleResult.id;
+    var amountCents = Math.abs(entry.amountCents != null
+      ? Math.round(Number(entry.amountCents))
+      : Math.round(Number(entry.amount || 0) * 100));
+    if (!Number.isFinite(amountCents) || amountCents <= 0) return;
+    actor = actor || entry.refundActor || {};
+    var body = {
+      id: stableId(m, entry), merchant: m, kind: 'refund', originalSaleId: originalSaleId,
+      amountCents: amountCents, method: entry.method || original.method || 'cash',
+      label: entry.label || 'Remboursement', ref: entry.ref || '',
+      reason: String(entry.reason || 'refund').slice(0, 80),
+      actorId: String(actor.id || '').slice(0, 96), actor: String(actor.name || '').slice(0, 80),
+      actorRole: String(actor.role || '').slice(0, 80),
+      approval: String(actor.approval || '').slice(0, 1400),
+      ts: (entry.time && entry.time.getTime) ? entry.time.getTime() : Date.now(),
+    };
+    return enqueueMoneyBody(body, m);
   }
 
   /* ─── dashboard ← server (poll) ───
@@ -680,9 +703,16 @@
     if (!s || !window.Kiwi || typeof window.Kiwi.toast !== 'function') return;
     var mlabel = METHOD_LABEL[s.method] || (s.method || 'Vente');
     try {
-      window.Kiwi.toast('Vente encaissée · ' + fmtMAD(s.amount) + ' MAD', {
-        desc: mlabel + ' · ' + (s.label || 'en direct'), type: 'success',
-      });
+      var cents = s.amountCents != null ? Number(s.amountCents) : Number(s.amount || 0) * 100;
+      if (cents < 0) {
+        window.Kiwi.toast('Remboursement enregistré · −' + fmtMAD(Math.abs(cents) / 100) + ' MAD', {
+          desc: mlabel + ' · ' + (s.label || 'en direct'), type: 'info',
+        });
+      } else {
+        window.Kiwi.toast('Vente encaissée · ' + fmtMAD(s.amount) + ' MAD', {
+          desc: mlabel + ' · ' + (s.label || 'en direct'), type: 'success',
+        });
+      }
     } catch (_) {}
   }
 
@@ -820,11 +850,26 @@
     if (!tenant) return;                            // identity unresolved → bridge nothing
     var have = {};
     try { (window.KiwiSales.list(vid) || []).forEach(function (e) { if (e && e.cursor) have[e.cursor] = e; }); } catch (_) {}
+    var haveRefund = {};
+    try { (window.KiwiRefunds.list(vid) || []).forEach(function (e) { if (e && e.cursor) haveRefund[e.cursor] = e; }); } catch (_) {}
     feedSales.forEach(function (row) {
       if (row.tenant !== tenant) return;             // another store's money — never this one's
       var s = row.s;
       var cur = Number(s.cursor) || 0;
       if (!cur) return;
+      var signedCents = s.amountCents != null
+        ? Math.round(Number(s.amountCents)) : Math.round(Number(s.amount || 0) * 100);
+      if (signedCents < 0) {
+        if (haveRefund[cur] || !window.KiwiRefunds || !window.KiwiRefunds.add) return;
+        try {
+          window.KiwiRefunds.add(vid, {
+            amount: Math.abs(signedCents) / 100, method: s.method || 'cash', cursor: cur, ts: s.ts,
+            label: s.label || 'Remboursement', ref: s.orderRef || s.ref || '', saleId: s.id || '',
+          });
+          haveRefund[cur] = 1;
+        } catch (_) {}
+        return;
+      }
       if (have[cur]) {
         var existing = have[cur];
         var patch = {
@@ -866,9 +911,23 @@
        local row absent from it is foreign (or voided), including rows copied by
        the former shared-placeholder migration. */
     if (feedComplete[tenant] && window.KiwiSales.retainCursors) {
-      var allowed = feedSales.filter(function (row) { return row && row.tenant === tenant; })
+      var allowed = feedSales.filter(function (row) {
+        if (!row || row.tenant !== tenant) return false;
+        var cents = row.s && row.s.amountCents != null
+          ? Number(row.s.amountCents) : Number(row.s && row.s.amount || 0) * 100;
+        return cents > 0;
+      })
         .map(function (row) { return Number(row.s && row.s.cursor) || 0; }).filter(Boolean);
       try { window.KiwiSales.retainCursors(vid, allowed); } catch (_) {}
+      if (window.KiwiRefunds && window.KiwiRefunds.retainCursors) {
+        var refundAllowed = feedSales.filter(function (row) {
+          if (!row || row.tenant !== tenant) return false;
+          var cents = row.s && row.s.amountCents != null
+            ? Number(row.s.amountCents) : Number(row.s && row.s.amount || 0) * 100;
+          return cents < 0;
+        }).map(function (row) { return Number(row.s && row.s.cursor) || 0; }).filter(Boolean);
+        try { window.KiwiRefunds.retainCursors(vid, refundAllowed); } catch (_) {}
+      }
     }
   }
 
@@ -1042,7 +1101,8 @@
   else startBoot();
 
   window.KiwiLive = {
-    isOn: on, merchant: merchant, postSale: postSale, watchFeed: watchFeed,
+    isOn: on, merchant: merchant, postSale: postSale, postRefund: postRefund,
+    moneyId: function (entry) { var m = merchant(); return m && entry ? stableId(m, entry) : ''; }, watchFeed: watchFeed,
     flush: flushQueue, pending: function () { return queueStatus().total; },
     queueStatus: queueStatus, refreshQueue: refreshOutboxStatus,
     /* Le serveur a confirmé la portée opérateur : le slug de l'adresse peut

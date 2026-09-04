@@ -68,7 +68,7 @@ export async function onRequestGet(context) {
       sales = await env.DB.prepare(
         `SELECT merchant,
                 COALESCE(SUM(CASE WHEN ts >= ? THEN COALESCE(amount_cents, amount * 100) ELSE 0 END), 0) / 100.0 AS today_amount,
-                COALESCE(SUM(CASE WHEN ts >= ? THEN 1 ELSE 0 END), 0)      AS today_count,
+                COALESCE(SUM(CASE WHEN ts >= ? AND COALESCE(amount_cents, amount * 100) > 0 THEN 1 ELSE 0 END), 0) AS today_count,
                 MAX(ts) AS last_ts
          FROM sales GROUP BY merchant`
       ).bind(dayStart, dayStart).all();
@@ -76,7 +76,7 @@ export async function onRequestGet(context) {
       sales = await env.DB.prepare(
         `SELECT merchant,
                 COALESCE(SUM(CASE WHEN ts >= ? THEN amount ELSE 0 END), 0) AS today_amount,
-                COALESCE(SUM(CASE WHEN ts >= ? THEN 1 ELSE 0 END), 0)      AS today_count,
+                COALESCE(SUM(CASE WHEN ts >= ? AND amount > 0 THEN 1 ELSE 0 END), 0) AS today_count,
                 MAX(ts) AS last_ts
          FROM sales GROUP BY merchant`
       ).bind(dayStart, dayStart).all();

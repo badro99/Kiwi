@@ -130,6 +130,41 @@ async function hmacHex(secret, message) {
   return toHex(sig);
 }
 
+/* A manager PIN must never be copied into the durable till outbox. After the
+ * server verifies that PIN, it can instead mint this short-lived capability.
+ * It is bound to one exact refund command, so stealing/replaying it cannot
+ * authorize a different sale, amount, merchant or refund id. */
+export async function managerRefundProof(authSecret, claims) {
+  const body = {
+    v: 1,
+    merchant: String(claims && claims.merchant || '').slice(0, 64),
+    staffId: String(claims && claims.staffId || '').slice(0, 96),
+    staffName: String(claims && claims.staffName || '').slice(0, 80),
+    staffRole: String(claims && claims.staffRole || '').slice(0, 80),
+    refundId: String(claims && claims.refundId || '').slice(0, 64),
+    originalSaleId: String(claims && claims.originalSaleId || '').slice(0, 64),
+    amountCents: Math.round(Number(claims && claims.amountCents) || 0),
+    exp: Date.now() + 10 * 60 * 1000,
+  };
+  if (!authSecret || !body.merchant || !body.staffId || !body.refundId
+      || !body.originalSaleId || body.amountCents <= 0) return '';
+  const payload = bytesToB64url(encoder.encode(JSON.stringify(body)));
+  return payload + '.' + await hmacHex(authSecret, 'kiwi-manager-refund-v1:' + payload);
+}
+
+export async function readManagerRefundProof(token, authSecret) {
+  if (!token || !authSecret || typeof token !== 'string' || token.indexOf('.') < 1) return null;
+  const dot = token.indexOf('.');
+  const payload = token.slice(0, dot);
+  const signature = token.slice(dot + 1);
+  const expected = await hmacHex(authSecret, 'kiwi-manager-refund-v1:' + payload);
+  if (!timingSafeEqualHex(signature, expected)) return null;
+  let body;
+  try { body = JSON.parse(new TextDecoder().decode(b64urlToBytes(payload))); } catch (_) { return null; }
+  if (!body || body.v !== 1 || !Number.isFinite(body.exp) || body.exp < Date.now()) return null;
+  return body;
+}
+
 // ── Gate tokens (staff bypass + operator console) ───────────────────────────
 // Both are unforgeable HMACs. The staff token is keyed by the shared SITE_PASSWORD
 // (so it matches the "Accès équipe" cookie in _middleware.js). The legacy operator

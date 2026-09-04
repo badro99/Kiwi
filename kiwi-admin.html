@@ -3059,7 +3059,7 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
     if (stale('ts', tok)) return;
     tsRows = (data && data.sales) || [];
     document.getElementById('ts-count').textContent =
-      tsRows.length + ' vente' + (tsRows.length === 1 ? '' : 's') + (data && data.truncated ? ' (affinez la recherche)' : '');
+      tsRows.length + ' opération' + (tsRows.length === 1 ? '' : 's') + (data && data.truncated ? ' (affinez la recherche)' : '');
     if (data && data.migration === 'needed'){
       err.textContent = 'Base pas encore migrée : la recherche fonctionne, l’annulation non. Relancez schema.sql.';
     }
@@ -3079,7 +3079,9 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
 
   function tsRow(s){
     var voided = !!s.void_ts;
+    var refunded = Number(s.amount) < 0;
     var box = h('input', { type:'checkbox', 'aria-label':'Sélectionner la vente ' + (s.ref || s.id) });
+    box.disabled = refunded;
     box.checked = !!tsSel[s.id];
     box.addEventListener('click', function(e){
       e.stopPropagation();
@@ -3093,7 +3095,8 @@ tr.store-row td:first-child{padding-left:20px;border-left:1px solid var(--line)!
       h('span', { class:'ts-amt' }, fmt(s.amount) + ' MAD'),
       h('span', { class:'ts-ref' }, METHOD_FR[s.method] || s.method || '·'),
       h('span', { class:'ts-lbl' }, s.label || '·',
-        s.returnish ? h('span', { class:'vpill', style:'margin-left:8px' }, 'retour ?') : null),
+        refunded ? h('span', { class:'vpill', style:'margin-left:8px' }, 'remboursement')
+          : (s.returnish ? h('span', { class:'vpill', style:'margin-left:8px' }, 'retour ?') : null)),
       voided ? h('span', { class:'vpill' }, 'sortie') : h('span', { class:'ts-ref' }, s.ref || ''));
     /* Cliquer la LIGNE ouvre le ticket ; cliquer la case sélectionne. Deux
        gestes distincts exprès : « ouvrir la transaction complète avant d'agir »

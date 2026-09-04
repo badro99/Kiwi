@@ -6,7 +6,7 @@
   if (window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform()) return;
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function () {
-      navigator.serviceWorker.register('/kiwi-sw.js?v=530').then(function (reg) {
+      navigator.serviceWorker.register('/kiwi-sw.js?v=531').then(function (reg) {
         try { reg.update(); } catch (_) {}
         if (window.KiwiPWAUpdate) window.KiwiPWAUpdate.watch(reg);
       }).catch(function () {});
@@ -96,20 +96,20 @@
     var tone, label, detail;
     if (q.storageError || q.blocked) {
       tone = '#9F3028';
-      label = q.storageError ? 'Protection locale à vérifier' : q.blocked + ' vente' + (q.blocked > 1 ? 's' : '') + ' conservée' + (q.blocked > 1 ? 's' : '');
+      label = q.storageError ? 'Protection locale à vérifier' : q.blocked + ' opération' + (q.blocked > 1 ? 's' : '') + ' conservée' + (q.blocked > 1 ? 's' : '');
       detail = 'Touchez pour relancer · rien n’est supprimé';
     } else if (!navigator.onLine) {
       tone = '#B85245';
       label = 'Hors ligne' + (q.pending ? ' · ' + q.pending + ' en attente' : '');
-      detail = q.pending ? 'Ventes protégées sur cet appareil' : 'La caisse continue normalement';
+      detail = q.pending ? 'Opérations protégées sur cet appareil' : 'La caisse continue normalement';
     } else if (q.pending) {
       tone = '#A56A16';
-      label = q.pending + ' vente' + (q.pending > 1 ? 's' : '') + ' à synchroniser';
+      label = q.pending + ' opération' + (q.pending > 1 ? 's' : '') + ' à synchroniser';
       detail = q.sending ? 'Envoi sécurisé en cours' : 'Touchez pour envoyer maintenant';
     } else {
       tone = '#287B55';
       label = 'Synchronisé';
-      detail = q.engine === 'indexeddb' ? 'Ventes protégées hors ligne' : 'En ligne';
+      detail = q.engine === 'indexeddb' ? 'Opérations protégées hors ligne' : 'En ligne';
     }
     var dot = d.querySelector('.kn-dot'), txt = d.querySelector('.kn-txt'), sub = d.querySelector('.kn-detail');
     if (dot && txt) {

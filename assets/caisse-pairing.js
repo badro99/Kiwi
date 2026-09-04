@@ -318,7 +318,7 @@
    * for the code anyway. The code itself is never stored — only the identity it
    * proved. */
   var STAFF_KEY = 'kiwiTillStaff';
-  var lastManager = null;   // { name, role } du dernier code responsable validé
+  var lastManager = null;   // { id, name, role, approval } du dernier code responsable validé
   function firstNameOf(n) { return String(n || '').trim().split(/\s+/)[0] || ''; }
   function setStaff(p) {
     var s = null;
@@ -605,7 +605,7 @@
   /* Le code frappé, soumis au serveur, contre l'identité qu'il prouve — ou null.
    * Un seul chemin pour toutes les portes de la caisse, et aucune comparaison
    * de code dans le navigateur. */
-  function verifyCode(code) {
+  function verifyCode(code, action) {
     code = String(code || '');
     var venue = pinVenue || pairedVenue();
     var merchant = (venue && venue.merchant) || '';
@@ -613,10 +613,13 @@
     return fetch('/api/pin/verify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ merchant: merchant, pin: code }),
+      body: JSON.stringify({ merchant: merchant, pin: code, ...(action ? { action: action } : {}) }),
     })
       .then(function (r) { return r && r.ok ? r.json() : null; })
-      .then(function (d) { return (d && d.ok && d.staff) ? d.staff : null; })
+      .then(function (d) {
+        if (!(d && d.ok && d.staff)) return null;
+        return Object.assign({}, d.staff, d.approval ? { approval: String(d.approval) } : {});
+      })
       .catch(function () { return null; });
   }
 
@@ -639,15 +642,16 @@
         return !!who && roles.opensTill(who.role || '');
       });
     },
-    authorizeManager: function (code) {
-      return verifyCode(code).then(function (who) {
+    authorizeManager: function (code, action) {
+      return verifyCode(code, action).then(function (who) {
         var role = String((who && who.role) || '').toLowerCase();
         if (!who || !/owner|propri|manager|g[eé]rant|responsable|admin/.test(role)) return false;
         /* Une autorisation qui ne dit pas QUI a autorisé ne vaut rien le jour où
          * on la relit : le code prouve une personne, on garde donc son nom
          * (jamais le code) pour que la surface qui a demandé l'accord puisse
          * l'écrire dans sa vente. */
-        lastManager = { id: String(who.id || '').slice(0, 80), name: String(who.name || '').trim() || 'Responsable', role: String(who.role || '').trim() };
+        if (action && action.kind === 'refund' && !who.approval) return false;
+        lastManager = { id: String(who.id || '').slice(0, 80), name: String(who.name || '').trim() || 'Responsable', role: String(who.role || '').trim(), approval: String(who.approval || '') };
         return true;
       });
     },

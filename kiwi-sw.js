@@ -16,7 +16,7 @@
  * waiting for every tab to close; it does NOT force a reload, so a caisse sale in
  * progress is never interrupted · fresh assets are simply served on the next load. */
 'use strict';
-var CACHE = 'kiwi-app-v530';
+var CACHE = 'kiwi-app-v531';
 var SHELL = [
   '/dashboard.html',
   '/kiwi-caisse.html',
@@ -91,7 +91,7 @@ var SHELL = [
      entrée pré-cachée sans estampille ne répondrait jamais à la requête de la
      page (donc pas de hors-ligne), tandis qu'une estampille périmée ici
      re-servirait l'ancien fichier. Voir le commentaire dans dashboard.html. */
-  '/assets/venues.js?v=26',
+  '/assets/venues.js?v=27',
   '/assets/phone.js?v=1',
   '/assets/trade-workspace-schema.js?v=4',
   '/assets/trade-workspaces.js?v=4',
@@ -129,10 +129,10 @@ var SHELL = [
   '/assets/pressing-products/baskets.png',
   '/assets/pressing-products/babouches.png',
   '/assets/demoClock.js?v=1',
-  '/assets/dateRange.js?v=16',
+  '/assets/dateRange.js?v=17',
   '/assets/mobile-nav.js?v=2',
   '/assets/liquid-lens.js?v=1',
-  '/assets/pages.js?v=4',
+  '/assets/pages.js?v=5',
   '/assets/help-centre.js?v=4',
   '/assets/account.js?v=17',
   '/assets/production-action-guard.js?v=1',
@@ -141,13 +141,13 @@ var SHELL = [
   // offline with no table geometry at all.
   '/assets/floorplan-core.js?v=2050',
   '/assets/oppo-cards.js?v=2',
-  '/assets/dashboard-pwa.js?v=473',
+  '/assets/dashboard-pwa.js?v=474',
   '/assets/dashboard-native.js?v=1',
   '/assets/pwa-update.js?v=359',
   '/assets/caisse-skin.css?v=3',
   '/assets/pos-mobile.css?v=3',
   '/assets/caisse-motion.js?v=1',
-  '/assets/caisse-pwa.js?v=475',
+  '/assets/caisse-pwa.js?v=476',
   '/assets/vendor/dexie.min.js?v=1',
   '/assets/offline-db.js?v=3',
   '/assets/platform-kernel.js?v=5',
@@ -155,15 +155,16 @@ var SHELL = [
   '/assets/platform-ops.css?v=1',
   '/assets/operations.js?v=10',
   '/assets/operations-ui.js?v=12',
-  '/assets/live-link.js?v=21',
+  '/assets/live-link.js?v=23',
   '/assets/channel-sales.js?v=3',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
      dans un sous-sol sans wifi, et c'est précisément le moment où le Z doit
      s'écrire et s'imprimer. La remontée serveur, elle, retentera plus tard. */
   '/assets/day-report.js?v=5',
-  '/assets/day-report-dash.js?v=9',
-  '/assets/day-report-export.js?v=5',
+  '/assets/report.js?v=2',
+  '/assets/day-report-dash.js?v=10',
+  '/assets/day-report-export.js?v=6',
   /* Les horaires d'ouverture. Dans la coquille hors-ligne parce que la caisse
      s'en sert au moment le plus hors-ligne qui soit : l'ouverture du service.
      Sans eux le contrôle « ouvre-t-on maintenant ? » ne peut pas se faire, et
@@ -230,7 +231,7 @@ var SHELL = [
   '/assets/stock-identity.js?v=2',
   '/assets/restaurant-recipes.js?v=8',
   '/assets/restaurant-units.js?v=1',
-  '/assets/employee-live.js?v=472',
+  '/assets/employee-live.js?v=473',
   '/assets/employee-planning.js?v=8',
   '/assets/employee-trade-shell.css?v=2',
   '/assets/employee-trade-shell.js?v=2',
@@ -305,7 +306,7 @@ var SHELL = [
   '/assets/pos-autre.js?v=2',
   '/assets/pos-maison.css?v=21',
   '/assets/pos-maison.js?v=21',
-  '/assets/caisse-pairing.js?v=15',
+  '/assets/caisse-pairing.js?v=16',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là
      qu'il faut pouvoir ressortir le ticket. Un bouton de secours qui a besoin du

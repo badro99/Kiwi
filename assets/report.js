@@ -189,7 +189,11 @@
   function sales() {
     try {
       var rows = window.KiwiSales && window.KiwiSales.list && window.KiwiSales.list(venueId());
-      return Array.isArray(rows) ? rows.slice() : [];
+      var refunds = window.KiwiRefunds && window.KiwiRefunds.list && window.KiwiRefunds.list(venueId());
+      rows = Array.isArray(rows) ? rows.slice() : [];
+      return rows.concat((Array.isArray(refunds) ? refunds : []).map(function (r) {
+        return Object.assign({}, r, { amount: -Math.abs(+(r && r.amount) || 0), kind: 'refund' });
+      }));
     } catch (_) { return []; }
   }
 
@@ -201,18 +205,18 @@
   }
 
   function aggregate(rows) {
-    var out = { revenue: 0, count: 0, methods: { card: 0, cash: 0, other: 0 } };
+    var out = { revenue: 0, gross: 0, count: 0, methods: { card: 0, cash: 0, other: 0 } };
     rows.forEach(function (row) {
-      var amount = Math.max(0, +(row && row.amount) || 0);
+      var amount = +(row && row.amount) || 0;
       if (!amount) return;
       out.revenue += amount;
-      out.count++;
+      if (amount > 0) { out.gross += amount; out.count++; }
       var method = String(row && row.method || 'card').toLowerCase();
       if (method === 'cash') out.methods.cash += amount;
       else if (method === 'card' || method === 'tap') out.methods.card += amount;
       else out.methods.other += amount;
     });
-    out.basket = out.count ? out.revenue / out.count : null;
+    out.basket = out.count ? out.gross / out.count : null;
     return out;
   }
 
@@ -230,7 +234,7 @@
     rows.forEach(function (row) {
       var ts = +(row && row.ts) || 0;
       var index = Math.floor((ts - period.from) / (hourly ? 3600000 : DAY));
-      if (index >= 0 && index < values.length) values[index] += Math.max(0, +(row && row.amount) || 0);
+      if (index >= 0 && index < values.length) values[index] += +(row && row.amount) || 0;
     });
     if (hourly) {
       var running = 0;
@@ -332,17 +336,20 @@
     if (!chart || !chart.values || !chart.values.length) return '';
     var W = 920, H = 260, left = 68, right = 20, top = 18, bottom = 42;
     var iw = W - left - right, ih = H - top - bottom;
-    var max = Math.max.apply(Math, chart.values.concat([1]));
+    var max = Math.max.apply(Math, chart.values.concat([0]));
+    var min = Math.min.apply(Math, chart.values.concat([0]));
+    if (max === min) max = min + 1;
+    var span = max - min;
     var points = chart.values.map(function (value, i) {
       var x = left + (chart.values.length === 1 ? iw / 2 : i * iw / (chart.values.length - 1));
-      var y = top + ih - value / max * ih;
+      var y = top + (max - value) / span * ih;
       return [x, y];
     });
     var path = points.map(function (p, i) { return (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join(' ');
     var grid = [0, .25, .5, .75, 1].map(function (ratio) {
       var y = top + ih - ratio * ih;
       return '<line x1="' + left + '" y1="' + y.toFixed(1) + '" x2="' + (W - right) + '" y2="' + y.toFixed(1) + '"/>' +
-        '<text x="' + (left - 12) + '" y="' + (y + 4).toFixed(1) + '" text-anchor="end">' + esc(formatNumber(max * ratio, { lang: lang, compact: true, digits: 0 })) + '</text>';
+        '<text x="' + (left - 12) + '" y="' + (y + 4).toFixed(1) + '" text-anchor="end">' + esc(formatNumber(min + span * ratio, { lang: lang, compact: true, digits: 0 })) + '</text>';
     }).join('');
     var step = Math.max(1, Math.ceil(chart.labels.length / 6));
     var xlabels = chart.labels.map(function (label, i) {

@@ -31,7 +31,7 @@ ok(/permanent \? 'blocked' : 'pending'/.test(db) && /Number\.MAX_SAFE_INTEGER/.t
 ok(/localStorage\.removeItem\(storageKey\)/.test(db) && /db\.transaction\('rw'/.test(db), 'legacy storage retires only after a transaction');
 ok(/KiwiOffline\.enqueue/.test(live) && /O\.claim/.test(live) && /O\.acknowledge/.test(live) && /O\.reject/.test(live), 'live sales use the durable outbox lifecycle');
 ok(/flushLegacyQueue/.test(live) && /queue-storage-full/.test(live), 'IndexedDB denial retains the proven emergency fallback');
-ok(/Ventes protégées hors ligne/.test(pwa) && /kiwi:outbox/.test(pwa), 'cashiers see truthful durable-sync state');
+ok(/Opérations protégées hors ligne/.test(pwa) && /kiwi:outbox/.test(pwa), 'cashiers see truthful durable-sync state');
 ok(/assets\/vendor\/dexie\.min\.js/.test(sw) && /assets\/offline-db\.js\?v=3/.test(sw), 'the outbox engine is available in the offline shell');
 
 for (const page of ['dashboard.html', 'kiwi-caisse.html', 'kiwi-serveur.html']) {

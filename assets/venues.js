@@ -8070,6 +8070,7 @@
    * the unsafe shape this file used to delete on every load; heal them once. */
   TRANSIENT_IDS.forEach((tid) => {
     try { localStorage.removeItem('kiwiSales:' + tid); } catch (_) {}
+    try { localStorage.removeItem('kiwiRefunds:' + tid); } catch (_) {}
     try { localStorage.removeItem('kiwiPlanDeSalle:' + tid); } catch (_) {}
   });
   function salesAdd(id, sale) {
@@ -8217,6 +8218,54 @@
     salesSubs.forEach((fn) => { try { fn(id); } catch (_) {} });
     return gone;
   }
+  /* Refunds are financial events, not sales. Keep them in a sibling store so
+     product rankings, units sold and cost coverage never count returned money
+     as another item sold, while revenue readers can subtract the same durable
+     events the till and God Mode see. */
+  const refundSubs = new Set();
+  function REFUNDS_KEY(id) {
+    const saleKey = SALES_KEY(id || currentVenue);
+    return saleKey ? saleKey.replace(/^kiwiSales:/, 'kiwiRefunds:') : '';
+  }
+  function refundsList(id) {
+    const key = REFUNDS_KEY(id || currentVenue); if (!key) return [];
+    try { const rows = JSON.parse(localStorage.getItem(key) || '[]'); return Array.isArray(rows) ? rows : []; }
+    catch (_) { return []; }
+  }
+  function refundsWrite(id, rows) {
+    const key = REFUNDS_KEY(id || currentVenue); if (!key) return false;
+    try { localStorage.setItem(key, JSON.stringify(rows)); return true; } catch (_) { return false; }
+  }
+  function refundsAdd(id, refund) {
+    id = id || currentVenue;
+    const rows = refundsList(id);
+    const cursor = Number(refund && refund.cursor) || 0;
+    const saleId = String((refund && (refund.saleId || refund.id)) || '').slice(0, 80);
+    if ((cursor && rows.some((r) => Number(r && r.cursor) === cursor))
+      || (saleId && rows.some((r) => String(r && r.saleId) === saleId))) return false;
+    const entry = {
+      ts: Number(refund && refund.ts) || Date.now(), amount: Math.abs(Number(refund && refund.amount) || 0),
+      method: String((refund && refund.method) || 'cash').slice(0, 16), kind: 'refund',
+      label: String((refund && refund.label) || 'Remboursement').slice(0, 80),
+      ref: String((refund && refund.ref) || '').slice(0, 80), cursor, saleId,
+    };
+    if (!(entry.amount > 0) || !refundsWrite(id, rows.concat(entry))) return false;
+    refundSubs.forEach((fn) => { try { fn(id); } catch (_) {} });
+    salesSubs.forEach((fn) => { try { fn(id); } catch (_) {} });
+    return true;
+  }
+  function refundsRetainCursors(id, cursors) {
+    id = id || currentVenue;
+    const keep = new Set((cursors || []).map(Number).filter(Boolean));
+    const rows = refundsList(id);
+    const clean = rows.filter((r) => !(r && r.cursor) || keep.has(Number(r.cursor)));
+    const gone = rows.length - clean.length;
+    if (gone && refundsWrite(id, clean)) {
+      refundSubs.forEach((fn) => { try { fn(id); } catch (_) {} });
+      salesSubs.forEach((fn) => { try { fn(id); } catch (_) {} });
+    }
+    return gone;
+  }
   /* Bornes FACULTATIVES. Sans elles le total reste ce qu'il a toujours été —
    * tout l'historique — parce que plusieurs appelants veulent précisément ça :
    * « ce commerce a-t-il déjà vendu une seule fois ? » (interactive.js) n'a pas
@@ -8226,14 +8275,18 @@
     const list = salesList(id);
     const lo = (from == null) ? -Infinity : from;
     const hi = (to == null) ? Infinity : to;
-    let revenue = 0, count = 0;
+    let revenue = 0, gross = 0, count = 0;
     list.forEach((x) => {
       const ts = +(x && x.ts) || 0;
       if (ts < lo || ts >= hi) return;
-      revenue += (x.amount || 0);
+      revenue += (x.amount || 0); gross += (x.amount || 0);
       count++;
     });
-    return { revenue, count, basket: count ? revenue / count : 0 };
+    refundsList(id).forEach((x) => {
+      const ts = +(x && x.ts) || 0;
+      if (ts >= lo && ts < hi) revenue -= Math.abs(x.amount || 0);
+    });
+    return { revenue, count, basket: count ? gross / count : 0 };
   }
   /* Live dashboard recommendations are owned by KiwiDateRange. Keeping a
    * second calculator here previously let the insight fall back to all-time
@@ -8247,6 +8300,10 @@
     retainCursors: salesRetainCursors,
     totals: salesTotals,
     subscribe: fn => { salesSubs.add(fn); return () => salesSubs.delete(fn); },
+  };
+  window.KiwiRefunds = {
+    add: refundsAdd, list: refundsList, retainCursors: refundsRetainCursors,
+    subscribe: fn => { refundSubs.add(fn); return () => refundSubs.delete(fn); },
   };
   // Keep the sidebar "Commandes" badge in lockstep with recorded sales.
   salesSubs.add(() => renderSidebarCounts());

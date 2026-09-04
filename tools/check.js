@@ -345,6 +345,18 @@ section('Live sale write-ahead durability');
   else fail(`live-link-write-ahead-test.mjs exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
 }
 
+/* Refunds are immutable negative financial events. Exercise the real Worker
+ * route against SQLite plus the shipped browser queue so Caisse, Dashboard and
+ * God Mode cannot silently disagree again. */
+section('Refund reporting ledger');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'refund-reporting-test.mjs')], { encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0) ok(`refund reporting green (${(out.match(/\u2713/g) || []).length - 1} route/queue/reporting checks)`);
+  else fail(`refund-reporting-test.mjs exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+}
+
 section('Caisse service ledger scope');
 {
   const { spawnSync } = require('child_process');
