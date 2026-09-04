@@ -47,7 +47,7 @@ const path = require('path');
 const { execFile, spawn } = require('child_process');
 
 const NAME = 'kiwi-printer-bridge';
-const VERSION = '1.4.0';
+const VERSION = '1.4.1';
 const HOST = '127.0.0.1';
 const PORT = Number(process.env.KIWI_BRIDGE_PORT) || 9110; // bridge's own port
 const DEFAULT_PRINTER_PORT = 9100;                          // RAW/JetDirect
@@ -344,6 +344,43 @@ const printerWarmers = new Map();
 
 function printerKey(printerIp, port) { return String(printerIp) + ':' + Number(port); }
 
+/* The warm loop above only exists once a real ticket has named a target: the
+ * printer's address arrives with each job, it is never read from config. So a
+ * bridge that just restarted — the Mac rebooted, the LaunchAgent recycled, the
+ * Termux box was unplugged overnight — knows no printer, warms nothing, and the
+ * first ticket of the service pays the full 15-20 s wake again. Remembering the
+ * last raw target lets the loop resume at boot, before anyone orders.
+ * Throttled: a busy till must not write the config file once per ticket. */
+const PRINTER_WARM_PERSIST_MS = 5 * 60 * 1000;
+let warmPersistedAt = 0;
+
+function rememberWarmTarget(printerIp, port) {
+  const now = Date.now();
+  if (now - warmPersistedAt < PRINTER_WARM_PERSIST_MS) return;
+  const cfg = readConfig();
+  const saved = cfg.warmPrinter;
+  if (saved && saved.ip === printerIp && Number(saved.port) === Number(port)
+      && now - Number(saved.at || 0) < PRINTER_WARM_PERSIST_MS) return;
+  cfg.warmPrinter = { ip: String(printerIp), port: Number(port), at: now };
+  if (writeConfig(cfg)) warmPersistedAt = now;
+}
+
+function resumePrinterWarm() {
+  const saved = readConfig().warmPrinter;
+  if (!saved || !saved.ip) return;
+  const at = Number(saved.at || 0);
+  if (!at || Date.now() - at > PRINTER_WARM_WINDOW_MS) return;
+  const port = Number(saved.port) || DEFAULT_PRINTER_PORT;
+  /* Seed the window from the saved timestamp rather than from now, so a target
+   * last used 11 h ago still expires on its own schedule instead of buying a
+   * fresh 12 h every restart. The first heartbeat is what actually wakes the
+   * interface, so fire one immediately instead of waiting 30 s. */
+  printerWarmers.set(printerKey(saved.ip, port), { lastRealAt: at, timer: null });
+  sendToPrinter(saved.ip, port, PRINTER_WAKE_BYTES, true)
+    .then(() => console.log('[imprimante] canal réchauffé au démarrage · ' + saved.ip + ':' + port))
+    .catch(() => schedulePrinterWarm(saved.ip, port, false));
+}
+
 function closePrinterChannel(key, channel) {
   if (printerChannels.get(key) === channel) printerChannels.delete(key);
   try { channel.socket.destroy(); } catch (_) {}
@@ -407,7 +444,7 @@ function writePrinterChannel(channel, buf) {
 function schedulePrinterWarm(printerIp, port, realTicket) {
   const key = printerKey(printerIp, port);
   const state = printerWarmers.get(key) || { lastRealAt: 0, timer: null };
-  if (realTicket) state.lastRealAt = Date.now();
+  if (realTicket) { state.lastRealAt = Date.now(); rememberWarmTarget(printerIp, port); }
   if (state.timer) clearTimeout(state.timer);
   if (!state.lastRealAt || Date.now() - state.lastRealAt > PRINTER_WARM_WINDOW_MS) {
     printerWarmers.delete(key);
@@ -876,6 +913,7 @@ function tryListen() {
     console.log(`${NAME} v${VERSION} listening on http://${HOST}:${port}`);
     console.log('Laissez cette fenêtre ouverte. Elle relaie les impressions Kiwi vers votre imprimante.');
     console.log(`Page du pont : http://${HOST}:${port}/`);
+    resumePrinterWarm();
     if (relayPaired()) {
       relayLog('appairé au commerce « ' + relay.cfg.relay.merchant + ' » · connexion à ' + RELAY_URL + '…');
       relayStart();

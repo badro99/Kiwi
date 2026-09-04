@@ -117,7 +117,7 @@ if (DatabaseSync) {
   // A3 · le pont échange le code contre un jeton ; le code ne sert qu'une fois
   let token, bridgeId;
   {
-    const r = await call(bridgesRoute, 'POST', '/api/print/bridges', { body: { action: 'redeem', code, name: 'PC comptoir', platform: 'darwin', version: '1.4.0' }, ip: '1.2.3.6' }, env);
+    const r = await call(bridgesRoute, 'POST', '/api/print/bridges', { body: { action: 'redeem', code, name: 'PC comptoir', platform: 'darwin', version: '1.4.1' }, ip: '1.2.3.6' }, env);
     ok(r.status === 200 && r.j.ok && /^kpb_[0-9a-f]{64}$/.test(r.j.token) && r.j.merchant === 'browse', 'A3 · le pont reçoit un jeton kpb_ pour browse');
     token = r.j.token; bridgeId = r.j.bridgeId;
     const again = await call(bridgesRoute, 'POST', '/api/print/bridges', { body: { action: 'redeem', code }, ip: '1.2.3.6' }, env);
@@ -225,8 +225,20 @@ if (DatabaseSync) {
   const TOKEN = 'kpb_' + '7'.repeat(64);
 
   // la fausse imprimante : capture les octets reçus
+  /* Record each connection as it opens and accumulate its bytes live. Pushing on
+   * 'close' instead would race the assertion: since the bridge keeps the RAW
+   * channel warm between tickets (that is the whole point — a printer that sleeps
+   * when port 9100 closes takes 15-20 s to wake), the socket stays open, and the
+   * close that eventually arrives is the bridge exiting, not the ticket ending. */
   const printed = [];
-  const printer = net.createServer((sock) => { const ch = []; sock.on('data', (d) => ch.push(d)); sock.on('close', () => printed.push(Buffer.concat(ch))); });
+  const printerSockets = [];
+  const printer = net.createServer((sock) => {
+    const entry = { chunks: [] };
+    printed.push(entry);
+    printerSockets.push(sock);
+    sock.on('data', (d) => entry.chunks.push(d));
+  });
+  const printedBytes = (i) => Buffer.concat((printed[i] || { chunks: [] }).chunks);
   await new Promise((r) => printer.listen(0, '127.0.0.1', r));
   const printerPort = printer.address().port;
 
@@ -272,21 +284,25 @@ if (DatabaseSync) {
   ok(up, 'B1 · le pont démarre sur ' + BPORT);
   if (up) {
     const ping = await bget('/kiwi/ping');
-    ok(ping.j.version === '1.4.0' && ping.j.relay && ping.j.relay.paired === false, 'B1 · /kiwi/ping v1.4.0 annonce relay.paired=false');
+    ok(ping.j.version === '1.4.1' && ping.j.relay && ping.j.relay.paired === false, 'B1 · /kiwi/ping v1.4.1 annonce relay.paired=false');
     const page = await bget('/');
     ok(page.status === 200 && /Kiwi Printer Bridge/.test(page.text) && /Associer ce pont/.test(page.text), 'B1 · la page locale du pont se sert sur /');
     const bad = await bpost('/kiwi/relay/pair', { code: '111111' });
     ok(bad.status === 422 && bad.j.ok === false, 'B2 · un mauvais code est refusé par le faux serveur et remonté tel quel');
     const good = await bpost('/kiwi/relay/pair', { code: '424242' });
     ok(good.status === 200 && good.j.ok && good.j.merchant === 'browse', 'B2 · le pont s’appaire avec 424242 → browse');
-    ok(seen.redeem && seen.redeem.version === '1.4.0' && seen.redeem.platform === process.platform && seen.redeem.name, 'B2 · il se présente avec version, plateforme et nom de machine');
+    ok(seen.redeem && seen.redeem.version === '1.4.1' && seen.redeem.platform === process.platform && seen.redeem.name, 'B2 · il se présente avec version, plateforme et nom de machine');
     const cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
     ok(cfg.relay && cfg.relay.token === TOKEN && cfg.relay.merchant === 'browse', 'B2 · le jeton est écrit dans le fichier de config du pont');
     if (process.platform !== 'win32') ok((fs.statSync(cfgPath).mode & 0o777) === 0o600, 'B2 · …en mode 0600');
     // le poll doit récupérer le ticket et l'imprimer
     for (let i = 0; i < 60 && !seen.acks.length; i++) await sleep(100);
     ok(seen.polls >= 1, 'B3 · le pont a interrogé /api/print/jobs (' + seen.polls + ' fois)');
-    ok(printed.length === 1 && Buffer.compare(printed[0], ESC) === 0, 'B3 · la fausse imprimante a reçu exactement les octets ESC/POS du ticket');
+    ok(printed.length === 1 && Buffer.compare(printedBytes(0), ESC) === 0, 'B3 · la fausse imprimante a reçu exactement les octets ESC/POS du ticket');
+    /* Le canal reste ouvert après le ticket : une seule connexion, jamais refermée
+     * entre deux impressions. C'est ce qui évite le réveil de 15-20 s au premier
+     * ticket après une accalmie (Pasta Corner, 2026-09-04). */
+    ok(printed.length === 1 && !printerSockets[0].destroyed, 'B3 · le canal RAW reste ouvert après le ticket (imprimante tenue éveillée)');
     ok(seen.acks.length === 1 && seen.acks[0].action === 'ack' && seen.acks[0].id === 'pj_test' && seen.acks[0].ok === true && seen.acks[0].bytes === ESC.length, 'B3 · le pont a acquitté ok·' + ESC.length + ' o');
     const st = await bget('/kiwi/relay');
     ok(st.j.paired && st.j.online && st.j.printed === 1 && st.j.merchant === 'browse', 'B3 · /kiwi/relay : appairé · en ligne · 1 imprimé');
@@ -334,7 +350,7 @@ if (DatabaseSync) {
   const jobs = read('functions/api/print/jobs.js');
   ok(/claimed_ts IS NULL OR claimed_ts <= \?/.test(jobs) && /RETRY_DELAY_MS = 10000/.test(jobs), 'C4 · le relais durable diffère puis reprend les écritures imprimante échouées');
   const srv = read('bridge/server.js');
-  ok(/const VERSION = '1\.4\.0'/.test(srv) && /"version": "1\.4\.0"/.test(read('bridge/package.json')), 'C5 · bridge 1.4.0 (server.js et package.json d’accord)');
+  ok(/const VERSION = '1\.4\.1'/.test(srv) && /"version": "1\.4\.1"/.test(read('bridge/package.json')), 'C5 · bridge 1.4.1 (server.js et package.json d’accord)');
   ok(/const HOST = '127\.0\.0\.1'/.test(srv) && !/0\.0\.0\.0/.test(srv), 'C5 · le pont écoute toujours sur loopback uniquement — le relais est sortant');
 
   const lin = read('bridge/install-linux.sh');

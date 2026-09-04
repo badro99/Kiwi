@@ -13,7 +13,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 
 final class RelayClient {
-    static final String VERSION = "1.0.0";
+    static final String VERSION = "1.0.1";
     private static final long PRINTER_KEEPALIVE_MS = 30000;
     private static final long PRINTER_WARM_WINDOW_MS = 12 * 60 * 60 * 1000;
     private static final byte[] PRINTER_WAKE_BYTES = new byte[] { 0x1b, 0x40 };
