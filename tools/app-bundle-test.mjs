@@ -63,6 +63,9 @@ if (first) {
     assert(!/rel=["']manifest["']/i.test(html), `${page} : aucun <link rel="manifest">`);
     assert(!/fonts\.(?:googleapis|gstatic)\.com/i.test(html), `${page} : aucune police réseau`);
   }
+  const caisse = fs.readFileSync(path.join(first.out, 'kiwi-caisse.html'), 'utf8');
+  const setMode = caisse.match(/function setMode\(newMode\) \{[\s\S]*?\n    \}/)?.[0] || '';
+  assert(/if \(window\.lucide\) lucide\.createIcons\(\);/.test(setMode), 'caisse : reprendre un service avant le runtime d’icônes reste non bloquant');
   // Chaque page embarquée rapporte ses plantages (POST /api/error via api-base) : la
   // cuisine et la coquille native ne le faisaient pas, un écran qui plantait au passe
   // ne laissait aucune trace.

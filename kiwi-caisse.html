@@ -8459,7 +8459,10 @@
         showPayButtons(false);
         renderCart();
       }
-      lucide.createIcons();
+      /* A persisted native shift can reach setMode() while this inline script is
+         still parsing, before the deferred icon runtime has executed. Icons are
+         decorative; their loader's own first-paint pass will fill them in. */
+      if (window.lucide) lucide.createIcons();
     }
 
     $$('.mode-pill').forEach(btn => {
