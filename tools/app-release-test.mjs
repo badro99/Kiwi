@@ -22,8 +22,13 @@ const pagesPro = read('assets/pages-pro.js');
 const landingLocaleCss = read('assets/landing-locale-menu.css');
 const dashboard = read('dashboard.html');
 const launchStoryboard = read('app/ios/App/App/Base.lproj/LaunchScreen.storyboard');
+const sceneDelegate = read('app/ios/App/App/SceneDelegate.swift');
+const caisse = read('kiwi-caisse.html');
+const capacitorConfig = read('app/capacitor.config.ts');
+const appPackage = JSON.parse(read('app/package.json'));
 const androidStyles = read('app/android/app/src/main/res/values/styles.xml');
 const failures = [];
+let controls = 0;
 
 function pngSize(file) {
   const data = fs.readFileSync(new URL('../' + file, import.meta.url));
@@ -32,6 +37,7 @@ function pngSize(file) {
 }
 
 function check(label, condition) {
+  controls++;
   if (condition) console.log('  + ' + label);
   else failures.push(label);
 }
@@ -126,6 +132,22 @@ check('native setup paints edge-to-edge without applying the safe area twice',
   appShell.includes('<body class="native-shell-page">') &&
   nativeRuntimeCss.includes('body:not(.native-shell-page)') &&
   nativeRuntimeCss.includes('body.native-shell-page{min-height:calc(100dvh - var(--kiwi-keyboard));padding:0!important'));
+check('iOS uses interactive keyboard dismissal in the embedded workspaces',
+  sceneDelegate.includes('scrollView.keyboardDismissMode = .interactive'));
+check('native login requests the right mobile keyboard actions',
+  appShell.includes('autocapitalize="none"') && appShell.includes('enterkeyhint="next"') && appShell.includes('enterkeyhint="go"'));
+check('the automatic launcher keeps the branded boot stage mounted through redirect',
+  /if \(role && !manual && !forceSetup\) \{ location\.replace\(ROLES\[role\]\); return; \}\s*clearBoot\(\)/.test(nativeShell));
+check('the native launch screen stays up until the final workspace paints, with a bounded escape hatch',
+  appPackage.dependencies['@capacitor/splash-screen'] === '8.0.2' &&
+  capacitorConfig.includes('launchAutoHide: false') && runtime.includes("call(splashScreen, 'hide')") &&
+  runtime.includes('setTimeout(hideLaunchSplash, 8000)') && nativeShell.includes("CustomEvent('kiwi:native-ready')"));
+check('the native till removes the empty bill shelf and synchronizes sheet accessibility',
+  nativeRuntimeCss.includes('.kiwi-native-cart-empty .rightpanel') && runtime.includes("peek.setAttribute('aria-expanded'") &&
+  runtime.includes("attributeFilter: ['hidden', 'style']") &&
+  runtime.includes("classList.contains('kiwi-native-cart-empty') !== empty"));
+check('successful tender completion emits semantic native feedback',
+  caisse.includes('function nativeHapticSuccess()') && caisse.includes('nativeHapticSuccess();'));
 check('Arabic KPI mixed-direction numbers are explicitly isolated',
   interactive.includes('<div dir="ltr" style="font-size:42px') &&
   interactive.includes('<bdi dir="ltr">+32%</bdi>') && interactive.includes('<bdi dir="ltr">+1,8</bdi>') &&
@@ -145,4 +167,4 @@ if (failures.length) {
   console.error('\napp-release-test: ' + failures.length + ' failure(s)');
   process.exit(1);
 }
-console.log('\napp-release-test: 33 controls green');
+console.log(`\napp-release-test: ${controls} controls green`);

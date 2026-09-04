@@ -8,8 +8,15 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         guard let windowScene = scene as? UIWindowScene else { return }
 
         window = UIWindow(windowScene: windowScene)
-        window?.rootViewController = CAPBridgeViewController()
+        let bridgeViewController = CAPBridgeViewController()
+        window?.rootViewController = bridgeViewController
         window?.makeKeyAndVisible()
+
+        // The embedded workspaces use real text fields (notes, customer search,
+        // counts). Let a downward drag dismiss the keyboard progressively, like
+        // a native form, instead of trapping the merchant behind a binary Done
+        // button supplied by WKWebView.
+        bridgeViewController.webView?.scrollView.keyboardDismissMode = .interactive
 
         SceneDelegateProxy.shared.scene(scene, willConnectTo: session, options: connectionOptions)
     }

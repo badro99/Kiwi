@@ -149,7 +149,11 @@
       } catch (_) { settle(null); }
     });
   }
-  function go(role) { rememberSecure(role); location.href = ROLES[role]; }
+  function go(role) {
+    rememberSecure(role);
+    try { if (window.KiwiNative && typeof window.KiwiNative.hapticLight === 'function') window.KiwiNative.hapticLight(); } catch (_) {}
+    location.href = ROLES[role];
+  }
 
   function setStatus(el, text, type) {
     if (!el) return;
@@ -549,10 +553,14 @@
   } catch (_) {}
 
   rememberedSecure().then(function (role) {
-    clearBoot();
+    /* Keep the branded boot stage mounted through an automatic redirect. If we
+       remove it first, WKWebView can paint one bare frame between index.html
+       and the remembered workspace — the dark launch "void" seen on device. */
     if (role && !manual && !forceSetup) { location.replace(ROLES[role]); return; }
+    clearBoot();
     shell.hidden = false;
     if (manual) enterManual(); else { $('#setup-progress').hidden = false; showStep('account'); }
+    try { window.dispatchEvent(new CustomEvent('kiwi:native-ready')); } catch (_) {}
     refreshAccount();
   });
 })();

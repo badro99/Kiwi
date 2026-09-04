@@ -56,8 +56,8 @@
       </div>
       <form class="login" id="login" autocomplete="on" hidden>
         <p class="login-title" data-native-i18n="merchantAccount">Compte marchand</p>
-        <label class="field" for="login-email"><span data-native-i18n="email">E-mail</span><input id="login-email" name="email" type="email" inputmode="email" autocomplete="username" required /></label>
-        <div class="field"><label for="login-password" data-native-i18n="password">Mot de passe</label><div class="password-input"><input id="login-password" name="password" type="password" autocomplete="current-password" required minlength="10" /><button type="button" class="password-toggle" id="password-toggle" data-native-i18n-aria="showPassword" aria-label="Afficher le mot de passe" aria-pressed="false"><span aria-hidden="true"></span></button></div></div>
+        <label class="field" for="login-email"><span data-native-i18n="email">E-mail</span><input id="login-email" name="email" type="email" inputmode="email" autocomplete="username" autocapitalize="none" spellcheck="false" enterkeyhint="next" required /></label>
+        <div class="field"><label for="login-password" data-native-i18n="password">Mot de passe</label><div class="password-input"><input id="login-password" name="password" type="password" autocomplete="current-password" enterkeyhint="go" required minlength="10" /><button type="button" class="password-toggle" id="password-toggle" data-native-i18n-aria="showPassword" aria-label="Afficher le mot de passe" aria-pressed="false"><span aria-hidden="true"></span></button></div></div>
         <p class="err" id="login-err" role="alert" hidden></p>
         <button type="submit" class="cta" id="login-btn" data-native-i18n="login">Se connecter</button>
       </form>

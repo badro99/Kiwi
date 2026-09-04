@@ -9412,6 +9412,10 @@
       try { window.dispatchEvent(new CustomEvent('kiwi:native-haptic', { detail: { kind: 'light' } })); } catch (_) {}
     }
 
+    function nativeHapticSuccess() {
+      try { window.dispatchEvent(new CustomEvent('kiwi:native-haptic', { detail: { kind: 'success' } })); } catch (_) {}
+    }
+
     function pushCartLine(item, opts) {
       nativeHapticLight();
       const sig = optSig(opts);
@@ -10672,17 +10676,18 @@
         ? (vrapEditingNum != null ? 'À emporter #' + vrapEditingNum : 'À emporter')
         : settledOrderLabel(selectedId);
       const lines = currentSaleLines();
-      nativeHapticLight();
       if (!splitPayCallback) recordSale(tenderBase, method, saleLabel, tenderTip, lines,
         mode !== 'vrap' ? selectedId : '', tenderOrder);
       if (splitPayCallback) {
         const cb = splitPayCallback;
         splitPayCallback = null;
         cb();
+        nativeHapticSuccess();
         return 'split';
       }
       if (mode === 'vrap') settleVrapPayment();
       else if (selectedId) { markPaid(selectedId); closeRightPanel(); }
+      nativeHapticSuccess();
       return 'complete';
     }
     function updateRendu() {

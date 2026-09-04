@@ -119,6 +119,7 @@ function runtimeHarness({
     matchMedia: () => ({ matches: false }),
     addEventListener(name, callback) { (listeners['window:' + name] ||= []).push(callback); },
     setTimeout(callback) { callback(); return 1; },
+    clearTimeout() {},
   };
   window.window = window;
   if (lock) window.__kiwiLock = { reveal() { counters.reveal++; } };
@@ -128,7 +129,7 @@ function runtimeHarness({
     window, document, localStorage, sessionStorage, location: window.location,
     Date: FakeDate, MutationObserver: class { observe() {} },
     URLSearchParams, Event, Error, Promise, JSON, Math, String, Number,
-    setTimeout: window.setTimeout,
+    setTimeout: window.setTimeout, clearTimeout: window.clearTimeout,
   });
   new vm.Script(nativeRuntime, { filename: 'app/src/native-runtime.js' }).runInContext(context);
 

@@ -31,6 +31,14 @@ const config: CapacitorConfig = {
   plugins: {
     CapacitorHttp: { enabled: true },
     CapacitorCookies: { enabled: true },
+    // Keep the real platform launch screen above the WebView until the final
+    // embedded workspace has painted. Auto-hide exposed a blank frame while
+    // index.html redirected to the remembered role on slower devices.
+    SplashScreen: {
+      launchAutoHide: false,
+      backgroundColor: '#0A0F0D',
+      showSpinner: false,
+    },
   },
 };
 

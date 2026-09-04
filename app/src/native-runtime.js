@@ -5,7 +5,8 @@
   if (!cap || typeof cap.isNativePlatform !== 'function' || !cap.isNativePlatform()) return;
   var root = document.documentElement, plugins = cap.Plugins || {};
   var socket = plugins.KiwiPrinterSocket, app = plugins.App, network = plugins.Network;
-  var haptics = plugins.Haptics, statusBar = plugins.StatusBar, keepAwake = plugins.KeepAwake;
+  var haptics = plugins.Haptics, statusBar = plugins.StatusBar, keepAwake = plugins.KeepAwake, splashScreen = plugins.SplashScreen;
+  var appearance = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
   var pairingKeys = ['kiwiPaired', 'kiwiPairedVenue', 'kiwiLiveMerchant', 'kiwiLive'];
   root.classList.add('kiwi-native');
 
@@ -28,6 +29,29 @@
       return Promise.resolve(plugin[method](args || {})).catch(function () { return null; });
     } catch (_) { return Promise.resolve(null); }
   }
+  var splashHidden = false;
+  var splashFallback = setTimeout(hideLaunchSplash, 8000);
+  function hideLaunchSplash() {
+    if (splashHidden) return;
+    splashHidden = true;
+    clearTimeout(splashFallback);
+    var hide = function () { call(splashScreen, 'hide'); };
+    /* Two frames guarantee the parsed workspace has submitted one real paint
+       before the native launch layer fades. The bounded fallback above means
+       a broken page can never trap the merchant behind the splash forever. */
+    if (typeof window.requestAnimationFrame === 'function') {
+      window.requestAnimationFrame(function () { window.requestAnimationFrame(hide); });
+    } else setTimeout(hide, 0);
+  }
+  function armLaunchHandoff() {
+    var launcher = /(?:^|\/)index\.html$/.test(location.pathname) || location.pathname === '/';
+    if (launcher) {
+      window.addEventListener('kiwi:native-ready', hideLaunchSplash, { once: true });
+    } else if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', hideLaunchSplash, { once: true });
+    } else hideLaunchSplash();
+  }
+  armLaunchHandoff();
   function secureGet(key) { return call(socket, 'secureGet', { key: key }).then(function (r) { return r && typeof r.value === 'string' ? r.value : null; }); }
   function secureSet(key, value) { return value == null ? call(socket, 'secureRemove', { key: key }) : call(socket, 'secureSet', { key: key, value: String(value) }); }
   function pairingSnapshot() {
@@ -52,7 +76,7 @@
   function hapticLight() { return call(haptics, 'impact', { style: 'LIGHT' }); }
   function hapticNotice(kind) { return call(haptics, 'notification', { type: kind === 'danger' ? 'ERROR' : 'SUCCESS' }); }
   function paintStatusBar() {
-    var dark = root.getAttribute('data-theme') === 'dark' || root.getAttribute('data-vexel-mode') === 'dark' || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches && !root.getAttribute('data-theme'));
+    var dark = root.getAttribute('data-theme') === 'dark' || root.getAttribute('data-vexel-mode') === 'dark' || (appearance && appearance.matches && !root.getAttribute('data-theme'));
     call(statusBar, 'setStyle', { style: dark ? 'DARK' : 'LIGHT' });
     if (cap.getPlatform && cap.getPlatform() === 'android') call(statusBar, 'setBackgroundColor', { color: dark ? '#0A0F0D' : '#F7F5F0' });
   }
@@ -233,10 +257,13 @@
 
     var cart = document.querySelector('.rightpanel');
     if (cart) {
+      var peek = cart.querySelector('.rp-peek');
+      var activeCart = cart.querySelector('.rp-active');
       var grabber = document.createElement('button');
       grabber.type = 'button';
       grabber.className = 'kiwi-native-sheet-grabber';
       grabber.setAttribute('aria-label', copy.close);
+      grabber.setAttribute('aria-controls', 'rp-active');
       grabber.addEventListener('click', function () { document.body.classList.remove('ticket-open'); });
       cart.insertBefore(grabber, cart.firstChild);
       var startY = 0, dragY = 0;
@@ -256,8 +283,9 @@
       }, { passive: true });
 
       var meta = cart.querySelector('.rp-meta');
+      var more = null;
       if (meta) {
-        var more = document.createElement('button');
+        more = document.createElement('button');
         more.type = 'button';
         more.className = 'kiwi-native-cart-more';
         more.setAttribute('aria-expanded', 'false');
@@ -269,6 +297,35 @@
         });
         meta.parentNode.insertBefore(more, meta);
       }
+
+      /* On phones the bill is a bottom sheet. Do not reserve a second bottom
+         shelf when no table/cart is selected, and keep the sheet's expanded
+         state truthful for VoiceOver as the existing caisse code opens/closes
+         the panel. The observer watches state only; no money or cart data is
+         duplicated here. */
+      function syncCartSheet() {
+        var empty = !activeCart || activeCart.hidden || activeCart.style.display === 'none';
+        var expanded = !empty && document.body.classList.contains('ticket-open');
+        if (document.body.classList.contains('kiwi-native-cart-empty') !== empty) {
+          document.body.classList.toggle('kiwi-native-cart-empty', empty);
+        }
+        if (empty || !expanded) {
+          if (document.body.classList.contains('kiwi-native-cart-actions')) document.body.classList.remove('kiwi-native-cart-actions');
+          if (more) {
+            more.setAttribute('aria-expanded', 'false');
+            more.textContent = copy.actions;
+          }
+        }
+        if (empty && document.body.classList.contains('ticket-open')) document.body.classList.remove('ticket-open');
+        if (peek) {
+          peek.setAttribute('aria-controls', 'rp-active');
+          peek.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+        }
+        grabber.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+      }
+      if (activeCart) new MutationObserver(syncCartSheet).observe(activeCart, { attributes: true, attributeFilter: ['hidden', 'style'] });
+      new MutationObserver(syncCartSheet).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+      syncCartSheet();
     }
 
     function syncCategory() {
@@ -413,6 +470,10 @@
     keyboardInsets();
   }
   new MutationObserver(paintStatusBar).observe(root, { attributes: true, attributeFilter: ['data-theme', 'data-vexel-mode', 'lang', 'dir'] });
+  if (appearance) {
+    if (typeof appearance.addEventListener === 'function') appearance.addEventListener('change', paintStatusBar);
+    else if (typeof appearance.addListener === 'function') appearance.addListener(paintStatusBar);
+  }
   paintStatusBar();
   configureKeepAwake();
   applyDynamicTypeToWorkspace();

@@ -52,6 +52,9 @@ const document = {
 const windowListeners = {};
 const appListeners = {};
 const hapticCalls = [];
+const statusBarCalls = [];
+const appearanceListeners = [];
+const appearance = { matches: false, addEventListener(type, handler) { if (type === 'change') appearanceListeners.push(handler); } };
 let exits = 0, backs = 0, confirms = true;
 const localStorage = { values: new Map(), getItem(k) { return this.values.get(k) || null; }, setItem(k, v) { this.values.set(k, String(v)); }, removeItem(k) { this.values.delete(k); } };
 const sessionStorage = { values: new Map(), getItem(k) { return this.values.get(k) || null; }, setItem(k, v) { this.values.set(k, String(v)); }, removeItem(k) { this.values.delete(k); } };
@@ -63,12 +66,13 @@ const window = {
     Plugins: {
       App: { getInfo: () => Promise.resolve({ version: '1', build: '1' }), addListener(type, handler) { (appListeners[type] ||= []).push(handler); }, exitApp() { exits++; } },
       Haptics: { impact(args) { hapticCalls.push(['impact', args.style]); }, notification(args) { hapticCalls.push(['notification', args.type]); } },
+      StatusBar: { setStyle(args) { statusBarCalls.push(args.style); }, setBackgroundColor() {} },
       KiwiDynamicType: { getDynamicTypeScale: () => Promise.resolve({ scale: 1.3 }), addListener() {} }
     }
   },
   location, history, localStorage, sessionStorage,
   addEventListener(type, handler) { (windowListeners[type] ||= []).push(handler); },
-  matchMedia: () => ({ matches: false }),
+  matchMedia: () => appearance,
   confirm: () => confirms,
   setTimeout, clearTimeout
 };
@@ -97,8 +101,13 @@ ok(exits === 1, 'confirmed terminal Back exits only after every dismissible laye
 
 (windowListeners['kiwi:toast'] || []).forEach((handler) => handler({ detail: { type: 'danger' } }));
 (windowListeners['kiwi:native-haptic'] || []).forEach((handler) => handler({ detail: { kind: 'light' } }));
+(windowListeners['kiwi:native-haptic'] || []).forEach((handler) => handler({ detail: { kind: 'success' } }));
 ok(hapticCalls.some((call) => call[0] === 'notification' && call[1] === 'ERROR'), 'operational error toasts trigger native error feedback');
-ok(hapticCalls.some((call) => call[0] === 'impact' && call[1] === 'LIGHT'), 'existing item/payment events still trigger light impact feedback');
+ok(hapticCalls.some((call) => call[0] === 'impact' && call[1] === 'LIGHT'), 'item and navigation taps trigger light impact feedback');
+ok(hapticCalls.some((call) => call[0] === 'notification' && call[1] === 'SUCCESS'), 'completed payments can trigger native success feedback');
+appearance.matches = true;
+appearanceListeners.forEach((handler) => handler({ matches: true }));
+ok(statusBarCalls.at(-1) === 'DARK', 'a live system appearance change repaints status-bar content for a dark surface');
 ok(root.style.getPropertyValue('--type-scale') === '1.3', 'Dynamic Type scale reaches workspace pages, not only onboarding');
 
 console.log(`native-workspace-ux-test: ${controls} controls passed`);

@@ -47,6 +47,8 @@ html.kiwi-native .team-trigger,html.kiwi-native .mode-pill,html.kiwi-native .cat
   html.kiwi-native body.kiwi-native-till .kiwi-native-tabbar i{width:21px;height:21px;background:currentColor;-webkit-mask:var(--native-tab-icon) center/contain no-repeat;mask:var(--native-tab-icon) center/contain no-repeat}
   html.kiwi-native[dir="rtl"] body.kiwi-native-till .kiwi-native-tabbar button{font-family:"IBM Plex Sans Arabic","Inter Tight",sans-serif}
   html.kiwi-native body.kiwi-native-till .rightpanel{bottom:var(--kiwi-native-tabs);max-height:calc(88dvh - var(--kiwi-native-tabs));--rp-peek-h:68px}
+  html.kiwi-native body.kiwi-native-till.kiwi-native-cart-empty .rightpanel{transform:translateY(100%);pointer-events:none;box-shadow:none}
+  html.kiwi-native body.kiwi-native-till.kiwi-native-cart-empty .main{padding-bottom:calc(16px + var(--kiwi-native-tabs))}
   html.kiwi-native body.kiwi-native-till .rp-active{padding-bottom:12px;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
   html.kiwi-native body.kiwi-native-till.ticket-open .rp-peek{display:none}
   html.kiwi-native body.kiwi-native-till .kiwi-native-sheet-grabber{display:none}
