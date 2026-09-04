@@ -109,5 +109,7 @@ appearance.matches = true;
 appearanceListeners.forEach((handler) => handler({ matches: true }));
 ok(statusBarCalls.at(-1) === 'DARK', 'a live system appearance change repaints status-bar content for a dark surface');
 ok(root.style.getPropertyValue('--type-scale') === '1.3', 'Dynamic Type scale reaches workspace pages, not only onboarding');
+ok((source.match(/!document\.body\.classList\.contains\('kiwi-native-hosted'\)/g) || []).length === 2,
+  'native host publication cannot retrigger its own body-class observer on iOS or Android');
 
 console.log(`native-workspace-ux-test: ${controls} controls passed`);

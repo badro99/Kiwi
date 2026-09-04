@@ -32,9 +32,18 @@
   function nativeHostPost(payload) {
     try {
       var ios = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.kiwiShell;
-      if (ios && typeof ios.postMessage === 'function') { ios.postMessage(payload); if (document.body) document.body.classList.add('kiwi-native-hosted'); return true; }
+      if (ios && typeof ios.postMessage === 'function') {
+        ios.postMessage(payload);
+        /* syncTabs observes body.class. Re-applying an existing class still
+           produces an attribute mutation in WKWebView, which called syncTabs
+           again until WebKit killed the runaway content process. */
+        if (document.body && !document.body.classList.contains('kiwi-native-hosted')) document.body.classList.add('kiwi-native-hosted');
+        return true;
+      }
       if (window.KiwiShellHost && typeof window.KiwiShellHost.postMessage === 'function') {
-        window.KiwiShellHost.postMessage(JSON.stringify(payload)); if (document.body) document.body.classList.add('kiwi-native-hosted'); return true;
+        window.KiwiShellHost.postMessage(JSON.stringify(payload));
+        if (document.body && !document.body.classList.contains('kiwi-native-hosted')) document.body.classList.add('kiwi-native-hosted');
+        return true;
       }
     } catch (_) {}
     return false;
