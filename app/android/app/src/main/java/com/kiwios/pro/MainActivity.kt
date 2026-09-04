@@ -7,6 +7,7 @@ import android.view.Gravity
 import android.view.ViewGroup
 import android.webkit.JavascriptInterface
 import android.widget.FrameLayout
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -57,12 +58,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.sp
 import com.getcapacitor.BridgeActivity
 import org.json.JSONObject
@@ -169,18 +172,15 @@ class MainActivity : BridgeActivity() {
 }
 
 @Composable private fun LaunchSurface() {
-    Box(Modifier.fillMaxSize().background(KiwiInk), contentAlignment = Alignment.Center) { KiwiWordmark() }
+    Box(Modifier.fillMaxSize().background(KiwiInk), contentAlignment = Alignment.Center) { KiwiBrandIcon(132.dp, 30.dp) }
 }
 
-@Composable private fun KiwiWordmark() {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Box(Modifier.width(42.dp).height(15.dp).clip(RoundedCornerShape(5.dp)).background(KiwiMint.copy(alpha = .55f)))
-            Box(Modifier.width(52.dp).height(15.dp).clip(RoundedCornerShape(5.dp)).background(KiwiMint))
-        }
-        Text("kiwi", color = KiwiPaper, fontSize = 43.sp, fontWeight = FontWeight.Black)
-        Text("PRO", color = KiwiMint, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp, modifier = Modifier.border(1.dp, KiwiMint.copy(alpha = .55f), CircleShape).padding(horizontal = 10.dp, vertical = 6.dp))
-    }
+@Composable private fun KiwiBrandIcon(size: Dp, corner: Dp) {
+    Image(
+        painter = painterResource(R.drawable.kiwi_brand_icon),
+        contentDescription = "Kiwi Pro",
+        modifier = Modifier.size(size).clip(RoundedCornerShape(corner))
+    )
 }
 
 @Composable private fun SetupSurface(context: HostContext, revision: Int, send: (String, String, Map<String, String>) -> Unit) {
@@ -196,7 +196,7 @@ class MainActivity : BridgeActivity() {
         context.choices.firstOrNull { it.group == "paper" && it.selected }?.id?.let { paper = it }
     }
     LazyColumn(modifier = Modifier.fillMaxSize().background(KiwiInk).padding(horizontal = 18.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
-        item { Spacer(Modifier.height(18.dp)); KiwiWordmark() }
+        item { Spacer(Modifier.height(18.dp)); KiwiBrandIcon(76.dp, 18.dp) }
         if (context.progressTotal > 0) item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                 repeat(context.progressTotal) { index -> Box(Modifier.weight(1f).height(4.dp).clip(CircleShape).background(if (index < context.progress) KiwiMint else KiwiPaper.copy(alpha = .2f))) }

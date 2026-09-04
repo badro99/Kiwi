@@ -116,6 +116,18 @@ check('iOS app icon is an opaque 1024px production PNG', (() => {
   const icon = pngSize('app/ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png');
   return icon && icon.width === 1024 && icon.height === 1024 && icon.colorType !== 4 && icon.colorType !== 6;
 })());
+check('native shells render the approved sculpted icon asset instead of a reconstructed logo', (() => {
+  const ios = new URL('../app/ios/App/App/Assets.xcassets/KiwiBrandIcon.imageset/kiwi-brand@2x.png', import.meta.url);
+  const android = new URL('../app/android/app/src/main/res/drawable-nodpi/kiwi_brand_icon.png', import.meta.url);
+  const iosSize = pngSize('app/ios/App/App/Assets.xcassets/KiwiBrandIcon.imageset/kiwi-brand@2x.png');
+  const androidSize = pngSize('app/android/app/src/main/res/drawable-nodpi/kiwi_brand_icon.png');
+  return iosSize && iosSize.width === 512 && iosSize.height === 512 &&
+    androidSize && androidSize.width === 512 && androidSize.height === 512 &&
+    fs.readFileSync(ios).equals(fs.readFileSync(android)) &&
+    swiftNativeShell.includes('Image("KiwiBrandIcon")') &&
+    composeNativeShell.includes('painterResource(R.drawable.kiwi_brand_icon)') &&
+    !swiftNativeShell.includes('Text("kiwi")') && !composeNativeShell.includes('Text("kiwi"');
+})());
 check('all Android launch assets exist at their density-specific dimensions',
   androidSplash.every(([file, width, height]) => { const size = pngSize(file); return size && size.width === width && size.height === height; }));
 check('iOS launch canvas uses Kiwi ink instead of the retired light splash',

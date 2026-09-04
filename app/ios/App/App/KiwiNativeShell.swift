@@ -195,16 +195,15 @@ final class KiwiNativeShellCoordinator: NSObject, WKScriptMessageHandler {
 }
 
 private struct KiwiMark: View {
+    var size: CGFloat = 132
+
     var body: some View {
-        HStack(spacing: 8) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 5).fill(kiwiMint.opacity(0.5)).frame(width: 17, height: 43).rotationEffect(.degrees(-34)).offset(x: -12, y: -9)
-                RoundedRectangle(cornerRadius: 5).fill(kiwiMint.opacity(0.75)).frame(width: 42, height: 17).rotationEffect(.degrees(-34)).offset(x: 8, y: 0)
-                RoundedRectangle(cornerRadius: 5).fill(kiwiMint).frame(width: 39, height: 16).rotationEffect(.degrees(31)).offset(x: 14, y: 22)
-            }.frame(width: 58, height: 62)
-            Text("kiwi").font(.system(size: 42, weight: .black, design: .rounded)).foregroundStyle(kiwiPaper)
-            Text("PRO").font(.system(size: 11, weight: .bold)).tracking(2).foregroundStyle(kiwiMint).padding(.horizontal, 10).padding(.vertical, 6).overlay(Capsule().stroke(kiwiMint.opacity(0.55), lineWidth: 1))
-        }
+        Image("KiwiBrandIcon")
+            .resizable()
+            .interpolation(.high)
+            .aspectRatio(contentMode: .fit)
+            .frame(width: size, height: size)
+            .clipShape(RoundedRectangle(cornerRadius: size * 0.23, style: .continuous))
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Kiwi Pro")
     }
@@ -234,7 +233,7 @@ private struct KiwiNativeSetupRoot: View {
     private var setup: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                KiwiMark().scaleEffect(0.76, anchor: model.context.rtl ? .trailing : .leading)
+                KiwiMark(size: 76)
                 progress
                 VStack(alignment: .leading, spacing: 18) {
                     if !model.context.eyebrow.isEmpty { Text(model.context.eyebrow.uppercased()).font(.caption.weight(.bold)).tracking(1.6).foregroundStyle(kiwiInk.opacity(0.58)) }
