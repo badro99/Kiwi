@@ -161,6 +161,10 @@ function seedSupport(world, merchant, id, ts = 1000) {
     `INSERT INTO support_attachments (id, ticket_id, merchant, object_key, name, mime, size, created_ts)
      VALUES (?, ?, ?, ?, 'piece.pdf', 'application/pdf', 10, ?)`
   ).bind('attachment-' + merchant + '-' + id, ticket, merchant, key, ts).run();
+  world.env.DB.prepare(
+    `INSERT INTO support_messages (id, ticket_id, kind, channel, author, body, delivery, ts)
+     VALUES (?, ?, 'merchant', 'web', 'Owner', 'private support message', '', ?)`
+  ).bind('message-' + merchant + '-' + id, ticket, ts).run();
   world.r2.put(key, new TextEncoder().encode('%PDF support'));
   return key;
 }
@@ -213,16 +217,18 @@ await check('one object is removed from R2 and reported', async () => {
 
 await check('catalog, hotel and support objects are purged with their D1 registries', async () => {
   const w = makeWorld();
-  const menuKey = seedPublishedMedia(w, M, 'menus', M + '/menu-photo.jpg');
-  const catalogKey = seedPublishedMedia(w, M, 'catalogs', M + '/product-photo.jpg');
-  const hotelKey = seedPublishedMedia(w, M, 'store_docs', M + '/hotel-room/room-photo.jpg');
+  const menuKey = seedPublishedMedia(w, M, 'menus', 'media/' + M + '/menu-photo.jpg');
+  const catalogKey = seedPublishedMedia(w, M, 'catalogs', M + '/legacy-product-photo.jpg');
+  const hotelKey = seedPublishedMedia(w, M, 'store_docs', 'media/' + M + '/hotel-room/room-photo.jpg');
   const supportKey = seedSupport(w, M, '1');
   const { status, body } = await del(w.env, M);
   assert.equal(status, 200);
-  assert.deepEqual(body.r2.prefixes, ['intake/' + M + '/', M + '/', 'support/' + M + '/']);
+  assert.deepEqual(body.r2.prefixes, ['intake/' + M + '/', 'media/' + M + '/', M + '/', 'support/' + M + '/']);
   assert.equal(body.r2.deleted, 4);
   for (const key of [menuKey, catalogKey, hotelKey, supportKey]) assert.ok(!w.r2.keys.has(key), key + ' purged');
   assert.equal(w.env.DB.prepare('SELECT COUNT(*) AS n FROM support_attachments WHERE merchant = ?').bind(M).first().n, 0);
+  assert.equal(w.env.DB.prepare('SELECT COUNT(*) AS n FROM support_messages WHERE ticket_id = ?').bind('ticket-' + M + '-1').first().n, 0);
+  assert.equal(body.removed.support_messages, 1);
   assert.equal(w.env.DB.prepare('SELECT COUNT(*) AS n FROM menus WHERE merchant = ?').bind(M).first().n, 0);
   assert.equal(w.env.DB.prepare('SELECT COUNT(*) AS n FROM catalogs WHERE merchant = ?').bind(M).first().n, 0);
   assert.equal(w.env.DB.prepare('SELECT COUNT(*) AS n FROM store_docs WHERE merchant = ?').bind(M).first().n, 0);
@@ -387,9 +393,9 @@ await check('missing MEDIA refuses support attachments without touching D1', asy
 
 await check('missing MEDIA refuses published menu, catalog and hotel media references', async () => {
   for (const [table, key] of [
-    ['menus', M + '/menu-photo.jpg'],
-    ['catalogs', M + '/product-photo.jpg'],
-    ['store_docs', M + '/hotel-room/room-photo.jpg'],
+    ['menus', 'media/' + M + '/menu-photo.jpg'],
+    ['catalogs', M + '/legacy-product-photo.jpg'],
+    ['store_docs', 'media/' + M + '/hotel-room/room-photo.jpg'],
   ]) {
     const w = makeWorld({ withMedia: false });
     seedPublishedMedia(w, M, table, key);

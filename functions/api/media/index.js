@@ -1,4 +1,6 @@
 // POST /api/media — upload one photo or video for a menu item / product.
+// New objects live below media/<merchant>/; the public reader keeps serving
+// the historical <merchant>/ keys already embedded in published catalogues.
 //
 // The merchant picks a file in the dashboard; it lands in Cloudflare R2 and this
 // returns a URL. The catalogue then stores THAT URL, never the bytes — which is
@@ -79,7 +81,7 @@ export async function onRequestPost(context) {
 
   // Key is namespaced by merchant so one client's media can never collide with
   // (or be guessed from) another's, and a whole store can be purged by prefix.
-  const key = `${merchant}/${scope ? scope + '/' : ''}${Date.now().toString(36)}-${crypto.randomUUID().slice(0, 8)}.${ext}`;
+  const key = `media/${merchant}/${scope ? scope + '/' : ''}${Date.now().toString(36)}-${crypto.randomUUID().slice(0, 8)}.${ext}`;
   try {
     await env.MEDIA.put(key, bytes, {
       httpMetadata: { contentType: ctype, cacheControl: 'public, max-age=31536000, immutable' },

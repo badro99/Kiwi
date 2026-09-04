@@ -131,7 +131,7 @@ function slotsFor(doc, svc, date, hours, asked, partySize = 1, team = safeTeam(n
 function safeHotel(raw) {
   let d = raw; if (typeof d === 'string') { try { d = JSON.parse(d); } catch (_) { d = null; } }
   d = d && typeof d === 'object' ? d : {};
-  const safePhoto = (x) => { const url=str(typeof x==='string'?x:x?.url,240); return /^\/api\/media\/[a-z0-9][a-z0-9-]{2,63}\/(?:hotel-room\/)?[a-z0-9-]{6,80}\.(?:jpe?g|png|webp|gif|avif)$/i.test(url)?{url,alt:str(x?.alt,120)}:null; };
+  const safePhoto = (x) => { const url=str(typeof x==='string'?x:x?.url,240); return /^\/api\/media\/(?:media\/)?[a-z0-9][a-z0-9-]{2,63}\/(?:hotel-room\/)?[a-z0-9-]{6,80}\.(?:jpe?g|png|webp|gif|avif)$/i.test(url)?{url,alt:str(x?.alt,120)}:null; };
   const types = (Array.isArray(d.roomTypes) ? d.roomTypes : []).slice(0,200).map((x) => ({
     id:str(x?.id,64), name:str(x?.name,100), rate:x?.rate == null ? null : num(x.rate,0,1000000,null),
     description:str(x?.description,300), maxGuests:num(x?.maxGuests,1,12,2), beds:str(x?.beds,80),

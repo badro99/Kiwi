@@ -4,10 +4,10 @@ const KEEP_MS = 7 * 86400000;
 const str=(v,n=200)=>String(v==null?'':v).trim().slice(0,n);
 function parse(v){try{const x=JSON.parse(v);return x&&typeof x==='object'?x:{};}catch(_){return{};}}
 export function hotelRoomMediaKey(value,merchant){
-  const url=str(typeof value==='string'?value:value?.url,260), prefix='/api/media/'+merchant+'/hotel-room/';
-  if(!url.startsWith(prefix))return'';
+  const url=str(typeof value==='string'?value:value?.url,260), prefixes=['/api/media/media/'+merchant+'/hotel-room/','/api/media/'+merchant+'/hotel-room/'];
+  if(!prefixes.some((prefix)=>url.startsWith(prefix)))return'';
   const key=url.slice('/api/media/'.length);
-  return /^[a-z0-9][a-z0-9-]{2,63}\/hotel-room\/[a-z0-9-]{6,80}\.(?:jpe?g|png|webp|gif|avif)$/i.test(key)?key:'';
+  return /^(?:media\/)?[a-z0-9][a-z0-9-]{2,63}\/hotel-room\/[a-z0-9-]{6,80}\.(?:jpe?g|png|webp|gif|avif)$/i.test(key)?key:'';
 }
 export async function cleanupHotelMedia(env,options={}){
   const merchant=str(options.merchant,64),dryRun=options.dryRun!==false,now=+options.now||Date.now(),limit=Math.max(1,Math.min(500,+options.limit||100));
@@ -16,16 +16,20 @@ export async function cleanupHotelMedia(env,options={}){
   if(!row)throw new Error('rooms-document-missing');
   const doc=parse(row.data),live=new Set();
   for(const type of (Array.isArray(doc.roomTypes)?doc.roomTypes:[]))for(const photo of (Array.isArray(type?.photos)?type.photos:[])){const key=hotelRoomMediaKey(photo,merchant);if(key)live.add(key);}
-  const candidates=[];let cursor;
-  do{
-    const page=await env.MEDIA.list({prefix:merchant+'/hotel-room/',limit:1000,...(cursor?{cursor}:{})});
-    for(const object of (page.objects||[])){
-      const uploaded=object.uploaded instanceof Date?object.uploaded.getTime():Date.parse(object.uploaded||0);
-      if(!live.has(object.key)&&uploaded&&uploaded<=now-KEEP_MS)candidates.push(object.key);
-      if(candidates.length>=limit)break;
-    }
-    cursor=page.truncated&&candidates.length<limit?page.cursor:'';
-  }while(cursor);
+  const candidates=[];
+  for(const prefix of ['media/'+merchant+'/hotel-room/',merchant+'/hotel-room/']){
+    let cursor;
+    do{
+      const page=await env.MEDIA.list({prefix,limit:1000,...(cursor?{cursor}:{})});
+      for(const object of (page.objects||[])){
+        const uploaded=object.uploaded instanceof Date?object.uploaded.getTime():Date.parse(object.uploaded||0);
+        if(!live.has(object.key)&&uploaded&&uploaded<=now-KEEP_MS)candidates.push(object.key);
+        if(candidates.length>=limit)break;
+      }
+      cursor=page.truncated&&candidates.length<limit?page.cursor:'';
+    }while(cursor);
+    if(candidates.length>=limit)break;
+  }
   if(!dryRun&&candidates.length)await env.MEDIA.delete(candidates);
   return{ok:true,merchant,dryRun,live:live.size,candidates:candidates.length,deleted:dryRun?0:candidates.length,keys:dryRun?candidates:[]};
 }

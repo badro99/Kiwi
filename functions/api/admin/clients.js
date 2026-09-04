@@ -375,6 +375,26 @@ export async function onRequestDelete(context) {
       if (n) removed[t] = n;
     } catch (_) { /* illisible → elle sortira du batch aussi */ }
   }
+  let deleteSupportMessages = null;
+  if (tables.indexOf('support_tickets') >= 0) {
+    try {
+      const sm = await env.DB.prepare(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='support_messages' LIMIT 1"
+      ).first();
+      if (sm && sm.name) {
+        const c = await env.DB.prepare(
+          'SELECT COUNT(*) AS n FROM support_messages WHERE ticket_id IN (SELECT id FROM support_tickets WHERE merchant = ?)'
+        ).bind(merchant).first();
+        const n = Number((c && c.n) || 0);
+        if (n) removed.support_messages = n;
+        deleteSupportMessages = env.DB.prepare(
+          'DELETE FROM support_messages WHERE ticket_id IN (SELECT id FROM support_tickets WHERE merchant = ?)'
+        ).bind(merchant);
+      }
+    } catch (e) {
+      return json({ error: 'inventory-failed', detail: 'cannot inventory support messages: ' + String(e) }, 500);
+    }
+  }
 
   /* R2 : trois familles d'objets appartiennent à l'établissement : pièces du
    * guichet (`intake/<merchant>/`), médias catalogue/chambres
@@ -396,13 +416,14 @@ export async function onRequestDelete(context) {
     /* Les médias historiques sont à la racine `<merchant>/`. Pour ces deux
      * slugs seulement, cette racine recouvrirait les espaces partagés
      * `intake/<autre marchand>/` ou `support/<autre marchand>/`. Refuser vaut
-     * mieux qu'une clôture cross-tenant ; une migration vers `media/<merchant>/`
-     * pourra lever ce blocage sans deviner quelles anciennes clés appartiennent
-     * réellement au magasin. */
+     * mieux qu'une clôture cross-tenant. Les nouveaux dépôts vivent sous
+     * `media/<merchant>/`, mais ce garde reste nécessaire tant que des URLs
+     * historiques peuvent encore référencer l'ancienne racine ambiguë. */
     return json({ error: 'r2-prefix-collision', detail: 'merchant slug overlaps a reserved R2 namespace' }, 409);
   }
   const r2Prefixes = [
     'intake/' + merchant + '/',
+    'media/' + merchant + '/',
     merchant + '/',
     'support/' + merchant + '/',
   ];
@@ -417,13 +438,13 @@ export async function onRequestDelete(context) {
     // toucher. `instr`, pas LIKE : '_' est autorisé dans un slug et ne doit pas
     // devenir un joker SQL.
     try {
-      const mediaNeedle = '/api/media/' + merchant + '/';
+      const mediaNeedles = ['/api/media/media/' + merchant + '/', '/api/media/' + merchant + '/'];
       const registries = [
         { table: 'intake_docs', sql: 'SELECT COUNT(*) AS n FROM intake_docs WHERE merchant = ?', args: [merchant] },
         { table: 'support_attachments', sql: 'SELECT COUNT(*) AS n FROM support_attachments WHERE merchant = ?', args: [merchant] },
-        { table: 'menus', sql: 'SELECT COUNT(*) AS n FROM menus WHERE merchant = ? AND instr(data, ?) > 0', args: [merchant, mediaNeedle] },
-        { table: 'catalogs', sql: 'SELECT COUNT(*) AS n FROM catalogs WHERE merchant = ? AND instr(data, ?) > 0', args: [merchant, mediaNeedle] },
-        { table: 'store_docs', sql: 'SELECT COUNT(*) AS n FROM store_docs WHERE merchant = ? AND instr(data, ?) > 0', args: [merchant, mediaNeedle] },
+        { table: 'menus', sql: 'SELECT COUNT(*) AS n FROM menus WHERE merchant = ? AND (instr(data, ?) > 0 OR instr(data, ?) > 0)', args: [merchant, ...mediaNeedles] },
+        { table: 'catalogs', sql: 'SELECT COUNT(*) AS n FROM catalogs WHERE merchant = ? AND (instr(data, ?) > 0 OR instr(data, ?) > 0)', args: [merchant, ...mediaNeedles] },
+        { table: 'store_docs', sql: 'SELECT COUNT(*) AS n FROM store_docs WHERE merchant = ? AND (instr(data, ?) > 0 OR instr(data, ?) > 0)', args: [merchant, ...mediaNeedles] },
       ];
       const pending = {};
       for (const registry of registries) {
@@ -499,6 +520,7 @@ export async function onRequestDelete(context) {
   try {
     const deletes = tables.map((t) =>
       env.DB.prepare(`DELETE FROM ${t} WHERE merchant = ?`).bind(merchant));
+    if (deleteSupportMessages) deletes.unshift(deleteSupportMessages);
     if (owner && nextStore && slugMerchant(owner.business) === merchant) {
       deletes.push(env.DB.prepare('UPDATE accounts SET business = ? WHERE id = ?')
         .bind(nextStore.name || nextStore.merchant, owner.id));

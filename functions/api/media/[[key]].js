@@ -1,4 +1,6 @@
-// GET /api/media/<merchant>/<file> — serve one uploaded photo or video from R2.
+// GET /api/media/media/<merchant>/<file> — serve one uploaded photo or video
+// from R2. Legacy /api/media/<merchant>/<file> keys remain readable: object URLs
+// are immutable and already published on customer menus.
 //
 // PUBLIC on purpose: the phone showing a menu has no account and no passcode, so
 // the site gate carves this read out (functions/_middleware.js). What it exposes
