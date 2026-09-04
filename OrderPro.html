@@ -3661,7 +3661,7 @@ em, i, cite, dfn, var { font-style: normal; }
             body: JSON.stringify(body),
           });
           const j = await r.json().catch(() => null);
-          if (!r.ok) return { ok: false, status: r.status, error: (j && j.error) || 'http-' + r.status };
+          if (!r.ok) return Object.assign({ ok: false, status: r.status, error: (j && j.error) || 'http-' + r.status }, j || {});
           return j || { ok: false, error: 'empty' };
         } catch (_) { return { ok: false, error: 'network' }; }
       }
@@ -3845,6 +3845,9 @@ em, i, cite, dfn, var { font-style: normal; }
         order_refused: "Le comptoir n'a pas pu prendre cette commande",
         order_served: "Servie · bon appétit",
         order_gone: "Plus disponible : {n}",
+        order_options_changed: "Options à rechoisir pour {n}",
+        order_menu_updated: "La carte a changé · vérifiez votre commande",
+        order_item_fallback: "un article",
         thanks_title_a: "Merci de votre",
         thanks_title_em: "visite.",
         thanks_sub: "Votre addition est réglée. À très bientôt.",
@@ -4019,6 +4022,9 @@ em, i, cite, dfn, var { font-style: normal; }
         order_refused: "The counter couldn't take this order",
         order_served: "Served · enjoy",
         order_gone: "No longer available: {n}",
+        order_options_changed: "Please reselect options for {n}",
+        order_menu_updated: "The menu has changed · please review your order",
+        order_item_fallback: "an item",
         thanks_title_a: "Thank you for",
         thanks_title_em: "visiting.",
         thanks_sub: "Your bill is settled. See you soon.",
@@ -4192,6 +4198,9 @@ em, i, cite, dfn, var { font-style: normal; }
         order_refused: "الكونطوار ماقدرش ياخد هاد الطلب",
         order_served: "تقدّم · بالصحة",
         order_gone: "ماكاينش: {n}",
+        order_options_changed: "يرجى إعادة اختيار خيارات {n}",
+        order_menu_updated: "تبدلات القائمة · عافاك راجع الطلب ديالك",
+        order_item_fallback: "أحد الأطباق",
         thanks_title_a: "شكراً على",
         thanks_title_em: "الزيارة.",
         thanks_sub: "الحساب تخلّص. نتلاقاو قريب.",
@@ -4348,6 +4357,8 @@ em, i, cite, dfn, var { font-style: normal; }
     let customizerItem = null;
     let customizerSelections = {};
     let customizerNote = '';
+    let customizerEditingKey = null;
+    let customizerEditingQty = 1;
 
     /* ============ greeting flash (ported from kiwi-serveur) ============ */
     function runGreetingFlash() {
@@ -4650,8 +4661,11 @@ em, i, cite, dfn, var { font-style: normal; }
       for (const opt of item.options) {
         if (opt.formulaSlotId) continue;
         const sel = line.options?.[opt.key];
-        const ids = opt.type === 'multi' ? (Array.isArray(sel) ? sel : []) : (sel == null ? [] : [sel]);
-        ids.forEach(id => out.push({ group: opt.key, label: choiceLabel(opt.key, id) }));
+        const ids = opt.type === 'multi' ? (Array.isArray(sel) ? sel : []) : (!sel ? [] : [sel]);
+        ids.forEach(id => {
+          if (!id) return;
+          out.push({ group: opt.key, choiceId: id, label: choiceLabel(opt.key, id) });
+        });
       }
       return out;
     }
@@ -4662,8 +4676,9 @@ em, i, cite, dfn, var { font-style: normal; }
       for (const opt of item.options) {
         if (regularOnly && opt.formulaSlotId) continue;
         const sel = line.options?.[opt.key];
-        const ids = opt.type === 'multi' ? (Array.isArray(sel) ? sel : []) : (sel == null ? [] : [sel]);
+        const ids = opt.type === 'multi' ? (Array.isArray(sel) ? sel : []) : (!sel ? [] : [sel]);
         ids.forEach(id => {
+          if (!id) return;
           const emoji = choiceEmoji(opt.key, id);
           const name = choiceLabel(opt.key, id);
           if (name) out.push({ emoji: emoji || '', name });
@@ -4721,10 +4736,11 @@ em, i, cite, dfn, var { font-style: normal; }
 
     function addLineToCart(line) {
       const key = lineKey(line.id, line.options, line.note);
+      const addQty = Math.max(1, Number(line && line.qty) || 1);
       if (cart.has(key)) {
-        cart.get(key).qty += 1;
+        cart.get(key).qty += addQty;
       } else {
-        cart.set(key, { ...line, qty: 1 });
+        cart.set(key, { ...line, qty: addQty });
       }
       refreshCartUI();
       showToast(`${nameOf(line.id)} · ${t('toast_added')}`);
@@ -4776,8 +4792,10 @@ em, i, cite, dfn, var { font-style: normal; }
       return selections;
     }
 
-    function openCustomizer(item) {
+    function openCustomizer(item, qty, editingKey) {
       customizerItem = item;
+      customizerEditingKey = editingKey || null;
+      customizerEditingQty = Math.max(1, Number(qty) || 1);
       customizerSelections = initialCustomizerSelections(item.options);
       customizerNote = '';
 
@@ -4838,6 +4856,8 @@ em, i, cite, dfn, var { font-style: normal; }
       $('#custom-sheet').classList.remove('is-open');
       $('#custom-sheet').setAttribute('aria-hidden', 'true');
       customizerItem = null;
+      customizerEditingKey = null;
+      customizerEditingQty = 1;
     }
     function selectCustomizerChoice(optKey, choiceId, type) {
       if (type === 'single') {
@@ -4907,15 +4927,23 @@ em, i, cite, dfn, var { font-style: normal; }
           const firstChoice = group.querySelector('.option-chip');
           if (firstChoice) window.setTimeout(() => firstChoice.focus({ preventScroll: true }), 260);
         }
-        showToast(t('opt_required_missing').replace('{name}', groupLabel(invalidRequiredOption.key)));
+        const optGroupName = groupLabel(invalidRequiredOption.key) || '';
+        showToast(t('opt_required_missing').replace('{name}', optGroupName));
         return;
       }
+      if (customizerEditingKey && cart.has(customizerEditingKey)) {
+        cart.delete(customizerEditingKey);
+      }
+      const restoreQty = customizerEditingQty || 1;
+      customizerEditingKey = null;
+      customizerEditingQty = 1;
       customizerNote = $('#custom-note-input').value.trim();
       addLineToCart({
         id: customizerItem.id,
         options: { ...customizerSelections },
         note: customizerNote,
         unitPrice: customizerUnitPrice(),
+        qty: restoreQty,
       });
       closeCustomizer();
     }
@@ -5103,7 +5131,7 @@ em, i, cite, dfn, var { font-style: normal; }
       const subtitleEl = $('#split-subtitle');
       if (subtitleEl) {
         subtitleEl.textContent = t('split_subtitle_tpl')
-          .replace('{n}', tableNumber)
+          .replace('{n}', tableNumber || '—')
           .replace('{total}', grand)
           .replace('{cur}', cur());
       }
@@ -5188,11 +5216,16 @@ em, i, cite, dfn, var { font-style: normal; }
     /* ============ toast ============ */
     let toastTimer = null;
     function showToast(text) {
-      const t = $('#toast');
-      $('#toast-text').textContent = text;
-      t.classList.add('is-visible');
+      let clean = String(text || '').trim();
+      if (!clean) return;
+      if (clean.includes('{n}')) clean = clean.replace(/\{n\}/g, '').trim();
+      clean = clean.replace(/[:：]\s*$/, '').trim();
+      if (!clean) clean = t('order_menu_updated') || 'Menu mis à jour';
+      const tEl = $('#toast');
+      $('#toast-text').textContent = clean;
+      tEl.classList.add('is-visible');
       clearTimeout(toastTimer);
-      toastTimer = setTimeout(() => t.classList.remove('is-visible'), 1400);
+      toastTimer = setTimeout(() => tEl.classList.remove('is-visible'), 1400);
     }
 
     /* ============ cart sheet ============ */
@@ -5289,10 +5322,39 @@ em, i, cite, dfn, var { font-style: normal; }
            retiré. On le dit avec le nom, et on retire la ligne : réessayer à
            l'identique échouerait exactement pareil. */
         if (err === 'menu-changed') {
-          const gone = [].concat(res.unavailable || [], res.unknown || []);
-          showToast(t('order_gone').replace('{n}', gone.join(', ')));
           pendingRef = '';
-          dropUnavailable(res.unknown || [], res.unavailable || []);
+          const invalidOpts = Array.isArray(res.invalidOptions) ? res.invalidOptions.filter(Boolean) : [];
+          const gone = [].concat(res.unavailable || [], res.unknown || []).filter(Boolean);
+
+          if (invalidOpts.length) {
+            const targetNames = invalidOpts.join(', ');
+            showToast(t('order_options_changed').replace('{n}', targetNames || t('order_item_fallback')));
+            let reopened = false;
+            for (const [key, line] of [...cart.entries()]) {
+              const m = itemOf(line.id);
+              const match = invalidOpts.includes(line.id) || (m && invalidOpts.includes(m.name));
+              if (match && m) {
+                openCustomizer(m, line.qty, key);
+                reopened = true;
+                break;
+              }
+            }
+            if (!reopened) {
+              refreshCartUI();
+              reloadMenu();
+            }
+            return;
+          }
+
+          if (gone.length) {
+            const targetGone = gone.join(', ');
+            showToast(t('order_gone').replace('{n}', targetGone || t('order_item_fallback')));
+            dropUnavailable(res.unknown || [], res.unavailable || []);
+            return;
+          }
+
+          showToast(t('order_menu_updated'));
+          reloadMenu();
           return;
         }
         showToast(err === 'network' ? t('order_offline') : t('order_failed'));
@@ -5617,7 +5679,7 @@ em, i, cite, dfn, var { font-style: normal; }
         serviceBar.hidden = false;
       } else {
         badge.innerHTML = `<i data-lucide="utensils"></i><span id="menu-badge-text">${t('badge_table')} ${tableNumber}</span>`;
-        subtitle.textContent = t('cart_subtitle_table').replace('{n}', tableNumber);
+        subtitle.textContent = t('cart_subtitle_table').replace('{n}', tableNumber || '—');
         note.textContent = t('cart_note_table');
         sendLabel.textContent = t('send_table');
         serviceBar.classList.remove('is-takeout');
@@ -5798,6 +5860,19 @@ em, i, cite, dfn, var { font-style: normal; }
       body.textContent = t('boot_' + kind + '_body');
       icon.innerHTML = `<i data-lucide="${(opts && opts.icon) || 'nfc'}"></i>`;
       if (window.lucide) window.lucide.createIcons();
+    }
+
+    async function reloadMenu() {
+      try {
+        const res = await NET.catalog();
+        if (!res) return;
+        if (STORE.type === 'boutique' && res.shop) {
+          bootBoutique(res.shop);
+        } else if (res.menu) {
+          bootRestaurant(res.menu);
+        }
+        refreshCartUI();
+      } catch (_) {}
     }
 
     /* ═══════════════════════════════════════════════════════════════════════

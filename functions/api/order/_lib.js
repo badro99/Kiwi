@@ -252,18 +252,27 @@ export async function priceOrder(env, merchant, rawLines) {
         for (const group of (Array.isArray(parsed && parsed.opts) ? parsed.opts : [])) {
           if (!group || !group.id) continue;
           const choices = new Map();
+          const choicesById = new Map();
           for (const choice of (Array.isArray(group.choices) ? group.choices : [])) {
-            if (!choice || !choice.name) continue;
-            choices.set(String(choice.name).trim().toLocaleLowerCase('fr'), {
-              name: String(choice.name).trim(),
+            if (!choice) continue;
+            const cObj = {
+              id: String(choice.id || '').trim(),
+              name: String(choice.name || '').trim(),
               price: Math.max(0, Math.round(Number(choice.price) || 0)),
               emoji: String(choice.emoji || '').trim().slice(0, 16),
-            });
+            };
+            if (cObj.name) {
+              choices.set(cObj.name.toLocaleLowerCase('fr'), cObj);
+            }
+            if (cObj.id) {
+              choicesById.set(cObj.id, cObj);
+            }
           }
           optionIndex.set(String(group.id), {
             name: String(group.name || '').trim(),
             kind: group.kind === 'many' ? 'many' : 'one',
             choices,
+            choicesById,
           });
         }
         index = new Map();
@@ -419,7 +428,7 @@ export async function priceOrder(env, merchant, rawLines) {
     const formulaUid = String((l && l.formulaUid) || '').slice(0, 40);
     const formulaContext = formulaUid ? formulaContexts.get(formulaUid) : null;
     if ((kind === 'formula' || kind === 'formula-part') && (!formulaContext || !formulaContext.valid)) {
-      invalidOptions.push(ref.name || id);
+      invalidOptions.push(ref.name || id || '?');
       continue;
     }
     if (ref.archived) { archived.push(ref.name || id); continue; }
@@ -434,10 +443,16 @@ export async function priceOrder(env, merchant, rawLines) {
       const oneSeen = new Set();
       let valid = true;
       for (const picked of selected) {
+        if (!picked) continue;
         const groupId = String((picked && picked.group) || '').slice(0, 40);
+        const choiceId = String((picked && (picked.choiceId || picked.id)) || '').trim().slice(0, 40);
         const labelKey = String((picked && picked.label) || '').trim().toLocaleLowerCase('fr');
+        if (!choiceId && !labelKey) continue;
         const group = optionIndex.get(groupId);
-        const choice = group && group.choices.get(labelKey);
+        const choice = group && (
+          (choiceId && group.choicesById && group.choicesById.get(choiceId)) ||
+          (labelKey && group.choices && group.choices.get(labelKey))
+        );
         if (!group || !ref.opts || !ref.opts.has(groupId) || !choice
             || (group.kind === 'one' && oneSeen.has(groupId))) {
           valid = false;
@@ -448,7 +463,7 @@ export async function priceOrder(env, merchant, rawLines) {
         optionExtra += choice.price;
         canonicalVisuals.push({ emoji: choice.emoji || '', name: choice.name });
       }
-      if (!valid) { invalidOptions.push(ref.name || id); continue; }
+      if (!valid) { invalidOptions.push(ref.name || id || '?'); continue; }
       options = labels.join(' · ').slice(0, 200);
     }
     const formulaExtra = kind === 'formula' && formulaContext ? formulaContext.extra : 0;

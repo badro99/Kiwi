@@ -1033,6 +1033,7 @@ section('Whole-project regressions');
     'formula-kitchen-paper-test.mjs',
     'orderpro-formula-explicit-choice-test.mjs',
     'orderpro-formula-choice-images-test.mjs',
+    'orderpro-invalid-options-test.mjs',
     'trade-copy-test.mjs',
     'floor-accept-test.mjs',
     'onboarding-gate-test.mjs',

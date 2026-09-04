@@ -647,12 +647,15 @@ export async function onRequestPost(context) {
     if (priced.noCatalogue) return json({ error: 'menu-not-published' }, 409);
     if (priced.archived.length) return json({ error: 'archived', archived: priced.archived }, 409);
     if (priced.formulaOnly.length) return json({ error: 'formula_only', formulaOnly: priced.formulaOnly }, 409);
-    if (priced.unknown.length || priced.unavailable.length || priced.invalidOptions.length) {
+    const unknown = (priced.unknown || []).filter(Boolean);
+    const unavailable = (priced.unavailable || []).filter(Boolean);
+    const invalidOptions = (priced.invalidOptions || []).filter(Boolean);
+    if (unknown.length || unavailable.length || invalidOptions.length) {
       return json({
         error: 'menu-changed',
-        unknown: priced.unknown,
-        unavailable: priced.unavailable,
-        invalidOptions: priced.invalidOptions,
+        unknown,
+        unavailable,
+        invalidOptions,
       }, 409);
     }
     if (!priced.lines.length) return json({ error: 'empty-order' }, 400);
