@@ -222,7 +222,7 @@ ok('la caisse qui accepte imprime localement sans exiger le bail du hub',
 ok('une commande en attente devenue acceptée déclenche aussi son bon',
   /o\.status === 'accepted' && known\.status === 'held'[^]*?printKitchenTickets\(known/.test(caisse));
 ok('l’impression locale relaie d’abord l’ordre pour partager son identifiant idempotent',
-  /relayToKitchen\(order\)\.then\(\(\) => printKitchenTickets\(order, items\)\)/.test(caisse));
+  /order\.canonicalNumberPromise\s*=\s*relayToKitchen\(order\);[^]*?order\.canonicalNumberPromise\.then\(\(\) => printKitchenTickets\(order, items\)\)/.test(caisse));
 ok('le réglage explique qu’un seul ordinateur doit être hub',
   /Activez cette option sur un seul ordinateur par établissement/.test(bridge));
 const stampMatch = caisse.match(/assets\/kitchen-print-queue\.js\?v=(\d+)/);

@@ -5462,7 +5462,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=476" defer></script>
+  <script src="assets/caisse-pwa.js?v=477" defer></script>
   <script src="assets/live-link.js?v=24" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -10673,7 +10673,8 @@
       const tenderBase = currentTotal();
       const tenderTip = payTipAmount();
       const saleLabel = mode === 'vrap'
-        ? (vrapEditingNum != null ? 'À emporter #' + vrapEditingNum : 'À emporter')
+        ? (tenderOrder ? 'À emporter #' + ticketNo(tenderOrder)
+          : (vrapEditingNum != null ? 'À emporter #' + vrapEditingNum : 'À emporter'))
         : settledOrderLabel(selectedId);
       const lines = currentSaleLines();
       if (!splitPayCallback) recordSale(tenderBase, method, saleLabel, tenderTip, lines,
@@ -13049,7 +13050,14 @@
       try {
         if (window.KiwiLive) {
           const posted = window.KiwiLive.postSale(entry);
-          if (posted && posted.id) entry.serverSaleId = posted.id;
+          if (posted && posted.id) {
+            entry.serverSaleId = posted.id;
+            /* The feed echoes this same sale under `posted.id`. Persist that
+               bridge immediately: without it, a reload before the next
+               autosave forgot the relationship and displayed the local row
+               plus its cloud echo as two cash transactions. */
+            try { persistShift(); } catch (_) {}
+          }
         }
       } catch (_) {}
       renderShiftStats();
@@ -13095,6 +13103,60 @@
       return entry;
     }
 
+    function journalEntryMatchesCloudSale(entry, sale) {
+      if (!entry || !sale) return false;
+      const saleId = String(sale.id || sale.saleId || '');
+      if (saleId && (String(entry.id || '') === saleId
+        || String(entry.serverSaleId || '') === saleId)) return true;
+      const saleOrderId = String(sale.orderId || '');
+      if (saleOrderId && String(entry.orderId || '') === saleOrderId) return true;
+
+      /* A caisse row uses `ref = 25` and `label = À emporter #25`; the feed
+         deliberately exposes both the fiscal receipt ref (86) and the human
+         order ref (À emporter #25). Comparing only entry.ref was the exact
+         reason these pairs survived. Require same amount and a tight time
+         window before using labels, so two genuine 35 MAD sales remain two. */
+      if (money(entry.amount) !== money(sale.amount)) return false;
+      const entryTs = +new Date(entry.time || 0);
+      const saleTs = Number(sale.ts || 0);
+      if (!entryTs || !saleTs || Math.abs(entryTs - saleTs) > 5000) return false;
+      const localRefs = [entry.ref, entry.label].map((v) => String(v || '').trim()).filter(Boolean);
+      const cloudRefs = [sale.receiptRef, sale.ref, sale.orderRef, sale.label]
+        .map((v) => String(v || '').trim()).filter(Boolean);
+      return localRefs.some((ref) => cloudRefs.includes(ref));
+    }
+
+    function reconcileCloudSaleInJournal(sale) {
+      const matches = [];
+      journal.forEach((entry, index) => {
+        if (journalEntryMatchesCloudSale(entry, sale)) matches.push(index);
+      });
+      if (!matches.length) return null;
+
+      /* Prefer the locally captured row: it owns the frozen customer receipt,
+         option detail and inventory metadata. Then remove every cloud echo of
+         that exact payment from the open-service journal. This also repairs
+         already persisted Pasta Corner pairs when the day sync replays them. */
+      const keepIndex = matches.find((index) => !journal[index].origin) ?? matches[0];
+      const keep = journal[keepIndex];
+      keep.serverSaleId = String(sale.id || sale.saleId || keep.serverSaleId || '');
+      if (!keep.orderId && sale.orderId) keep.orderId = String(sale.orderId);
+      const permanentRef = String(sale.receiptRef || sale.ref || '').trim();
+      if (permanentRef && (keep.channel === 'takeaway'
+        || /^à emporter\b/i.test(String(keep.label || '')))) {
+        keep.ref = permanentRef;
+        keep.label = 'À emporter #' + permanentRef;
+        /* Repair the frozen client copy too. This only runs after the exact
+           amount/time/order match above, never from a guessed sequence. */
+        attachReceipt(keep);
+      }
+      for (let i = matches.length - 1; i >= 0; i--) {
+        const index = matches[i];
+        if (index !== keepIndex) journal.splice(index, 1);
+      }
+      return keep;
+    }
+
     function ingestSettledCloudSales(sales) {
       /* Never advance/drop the financial feed before a register exists. This
          was the parity bug: watchFeed started at DOMContentLoaded, called this
@@ -13112,12 +13174,7 @@
            had just been printed. */
         const saleTs = Number(sale.ts || 0);
         if (!saleTs || saleTs < shiftOpenedAt.getTime()) return;
-        const saleRefs = [sale.receiptRef, sale.ref, sale.orderRef]
-          .map((v) => String(v || '')).filter(Boolean);
-        if (journal.some((entry) => entry && (
-          String(entry.id) === String(sale.id)
-          || saleRefs.some((ref) => String(entry.ref || '') === ref)
-        ))) return;
+        if (reconcileCloudSaleInJournal(sale)) { changed = true; return; }
         const entry = cloudSaleJournalEntry(sale);
         attachReceipt(entry);
         journal.push(entry);
@@ -18039,7 +18096,12 @@
       kdsOrders.push(order);
       /* Print only after the permanent queue number has had its first chance
          to land on the same object used by Caisse, KDS and the receipt. */
-      relayToKitchen(order).then(() => printKitchenTickets(order, items));
+      /* Keep the allocation promise on the order. finalizeTender() awaits this
+         exact field before freezing the sale, receipt and report row. The old
+         fire-and-forget call let local sequence #25 reach accounting while the
+         same order became permanent #86 moments later. */
+      order.canonicalNumberPromise = relayToKitchen(order);
+      order.canonicalNumberPromise.then(() => printKitchenTickets(order, items));
       try { persistShift(); } catch (_) {}
       updateKdsCount();
       if (kdsEl.classList.contains('is-open')) kdsPaint();
