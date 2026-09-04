@@ -2,7 +2,7 @@
 @font-face{font-family:"IBM Plex Sans Arabic";src:url("native-fonts/ibm-plex-sans-arabic-400.woff2") format("woff2");font-style:normal;font-weight:400;font-display:swap}
 @font-face{font-family:"IBM Plex Sans Arabic";src:url("native-fonts/ibm-plex-sans-arabic-500.woff2") format("woff2");font-style:normal;font-weight:500;font-display:swap}
 @font-face{font-family:"IBM Plex Sans Arabic";src:url("native-fonts/ibm-plex-sans-arabic-600.woff2") format("woff2");font-style:normal;font-weight:600;font-display:swap}
-html.kiwi-native{--kiwi-safe-top:env(safe-area-inset-top,0px);--kiwi-safe-right:env(safe-area-inset-right,0px);--kiwi-safe-bottom:env(safe-area-inset-bottom,0px);--kiwi-safe-left:env(safe-area-inset-left,0px);--kiwi-keyboard:0px;overscroll-behavior:none;background:#F7F5F0}
+html.kiwi-native{--kiwi-host-safe-top:0px;--kiwi-host-safe-right:0px;--kiwi-host-safe-bottom:0px;--kiwi-host-safe-left:0px;--kiwi-safe-top:max(env(safe-area-inset-top,0px),var(--kiwi-host-safe-top));--kiwi-safe-right:max(env(safe-area-inset-right,0px),var(--kiwi-host-safe-right));--kiwi-safe-bottom:max(env(safe-area-inset-bottom,0px),var(--kiwi-host-safe-bottom));--kiwi-safe-left:max(env(safe-area-inset-left,0px),var(--kiwi-host-safe-left));--kiwi-keyboard:0px;overscroll-behavior:none;background:#F7F5F0}
 html.kiwi-native,html.kiwi-native body{min-height:100%;font-family:"Inter Tight",sans-serif;-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}
 html.kiwi-native[lang="ar"],html.kiwi-native[dir="rtl"]{font-family:"IBM Plex Sans Arabic","Inter Tight",sans-serif}
 /* Shared pages need a safe content inset. The setup shell paints its own
@@ -34,6 +34,8 @@ html.kiwi-native .team-trigger,html.kiwi-native .mode-pill,html.kiwi-native .cat
 html.kiwi-native body.kiwi-native-hosted .kiwi-native-tabbar{display:none!important}
 @media (max-width:900px),(orientation:landscape) and (max-width:1024px) and (max-height:600px){
   html.kiwi-native{--kiwi-native-tabs:calc(64px + var(--kiwi-safe-bottom))}
+  html.kiwi-native.kiwi-native-ios{--kiwi-native-tabs:calc(66px + var(--kiwi-safe-bottom))}
+  html.kiwi-native.kiwi-native-ios body.kiwi-native-hosted:not(.native-shell-page){padding-bottom:var(--kiwi-keyboard)!important}
   html.kiwi-native body.kiwi-native-till .kw-hamburger{display:none!important}
   html.kiwi-native body.kiwi-native-till .main{padding-bottom:calc(92px + var(--kiwi-native-tabs))}
   html.kiwi-native body.kiwi-native-till .main-head{padding:10px 14px 8px;gap:6px}

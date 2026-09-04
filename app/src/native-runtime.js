@@ -17,6 +17,7 @@
   var bundleMeta = document.querySelector('meta[name="kiwi-bundle"]');
   var bundleTag = bundleMeta && bundleMeta.content ? ' · ' + String(bundleMeta.content).slice(0, 8) : '';
   var platform = cap.getPlatform ? cap.getPlatform() : 'native';
+  root.classList.add('kiwi-native-' + platform);
   window.__KIWI_APP_VERSION = 'pro/' + platform + bundleTag;
   call(app, 'getInfo').then(function (info) {
     if (!info || !info.version) return;

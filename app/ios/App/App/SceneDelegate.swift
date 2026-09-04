@@ -1,6 +1,19 @@
 import UIKit
 import Capacitor
 
+final class KiwiBridgeViewController: CAPBridgeViewController {
+    var safeAreaInsetsDidChange: ((UIEdgeInsets) -> Void)?
+    private var publishedSafeAreaInsets = UIEdgeInsets.zero
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        let insets = view.safeAreaInsets
+        guard insets != publishedSafeAreaInsets else { return }
+        publishedSafeAreaInsets = insets
+        safeAreaInsetsDidChange?(insets)
+    }
+}
+
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     var window: UIWindow?
     private var nativeShell: KiwiNativeShellCoordinator?
@@ -9,7 +22,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         guard let windowScene = scene as? UIWindowScene else { return }
 
         window = UIWindow(windowScene: windowScene)
-        let bridgeViewController = CAPBridgeViewController()
+        let bridgeViewController = KiwiBridgeViewController()
         window?.rootViewController = bridgeViewController
         window?.makeKeyAndVisible()
 
@@ -20,7 +33,9 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         bridgeViewController.webView?.scrollView.keyboardDismissMode = .interactive
 
         let nativeShell = KiwiNativeShellCoordinator()
+        bridgeViewController.safeAreaInsetsDidChange = { [weak nativeShell] in nativeShell?.updateSafeAreaInsets($0) }
         nativeShell.attach(to: bridgeViewController)
+        nativeShell.updateSafeAreaInsets(bridgeViewController.view.safeAreaInsets)
         self.nativeShell = nativeShell
 
         SceneDelegateProxy.shared.scene(scene, willConnectTo: session, options: connectionOptions)

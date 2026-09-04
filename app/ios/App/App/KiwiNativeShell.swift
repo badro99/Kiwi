@@ -127,9 +127,12 @@ private final class KiwiNativeShellModel: ObservableObject {
 }
 
 final class KiwiNativeShellCoordinator: NSObject, WKScriptMessageHandler {
+    private static let tabContentHeight: CGFloat = 66
     private let model = KiwiNativeShellModel()
     private var setupHost: UIHostingController<KiwiNativeSetupRoot>?
     private var tabHost: UIHostingController<KiwiNativeTabRoot>?
+    private var tabHeightConstraint: NSLayoutConstraint?
+    private var safeAreaInsets = UIEdgeInsets.zero
 
     func attach(to bridge: CAPBridgeViewController) {
         model.bridge = bridge
@@ -155,18 +158,31 @@ final class KiwiNativeShellCoordinator: NSObject, WKScriptMessageHandler {
         tabs.view.backgroundColor = .clear
         bridge.addChild(tabs)
         bridge.view.addSubview(tabs.view)
+        let tabHeightConstraint = tabs.view.heightAnchor.constraint(equalToConstant: Self.tabContentHeight)
+        let tabWidthConstraint = tabs.view.widthAnchor.constraint(equalToConstant: 264)
+        tabWidthConstraint.priority = .defaultHigh
         NSLayoutConstraint.activate([
-            tabs.view.leadingAnchor.constraint(equalTo: bridge.view.leadingAnchor),
-            tabs.view.trailingAnchor.constraint(equalTo: bridge.view.trailingAnchor),
+            tabs.view.centerXAnchor.constraint(equalTo: bridge.view.centerXAnchor),
+            tabs.view.leadingAnchor.constraint(greaterThanOrEqualTo: bridge.view.leadingAnchor, constant: 12),
+            tabs.view.trailingAnchor.constraint(lessThanOrEqualTo: bridge.view.trailingAnchor, constant: -12),
+            tabWidthConstraint,
             tabs.view.bottomAnchor.constraint(equalTo: bridge.view.bottomAnchor),
-            tabs.view.heightAnchor.constraint(equalToConstant: 100)
+            tabHeightConstraint
         ])
         tabs.didMove(toParent: bridge)
         tabHost = tabs
+        self.tabHeightConstraint = tabHeightConstraint
 
         model.didChangeLayout = { [weak self] context in self?.apply(context) }
         apply(model.context)
         requestState()
+    }
+
+    func updateSafeAreaInsets(_ insets: UIEdgeInsets) {
+        guard insets != safeAreaInsets else { return }
+        safeAreaInsets = insets
+        tabHeightConstraint?.constant = Self.tabContentHeight + insets.bottom
+        publishSafeAreaInsets()
     }
 
     private func apply(_ context: KiwiHostContext) {
@@ -174,6 +190,13 @@ final class KiwiNativeShellCoordinator: NSObject, WKScriptMessageHandler {
         tabHost?.view.isHidden = context.screen != "workspace" || context.tabs.isEmpty
         if let setupView = setupHost?.view, !setupView.isHidden { setupView.superview?.bringSubviewToFront(setupView) }
         if let tabView = tabHost?.view, !tabView.isHidden { tabView.superview?.bringSubviewToFront(tabView) }
+        publishSafeAreaInsets()
+    }
+
+    private func publishSafeAreaInsets() {
+        let values = [safeAreaInsets.top, safeAreaInsets.right, safeAreaInsets.bottom, safeAreaInsets.left]
+            .map { String(format: "%.2f", Double($0)) + "px" }
+        bridgeEvaluate("document.documentElement.style.setProperty('--kiwi-host-safe-top','\(values[0])');document.documentElement.style.setProperty('--kiwi-host-safe-right','\(values[1])');document.documentElement.style.setProperty('--kiwi-host-safe-bottom','\(values[2])');document.documentElement.style.setProperty('--kiwi-host-safe-left','\(values[3])')")
     }
 
     private func requestState() {
@@ -368,24 +391,56 @@ private struct KiwiNativeSetupRoot: View {
 
 private struct KiwiNativeTabRoot: View {
     @ObservedObject var model: KiwiNativeShellModel
+    @Namespace private var selectionLens
+
     var body: some View {
-        HStack(spacing: 5) {
+        capsule
+            .padding(.top, 4)
+            .padding(.bottom, 4)
+            .environment(\.layoutDirection, model.context.rtl ? .rightToLeft : .leftToRight)
+    }
+
+    private var tabs: some View {
+        HStack(spacing: 2) {
             ForEach(model.context.tabs) { tab in
+                let active = model.context.selected == tab.id
                 Button { model.send("navigate", id: tab.id) } label: {
-                    VStack(spacing: 4) {
-                        Image(systemName: symbol(tab.id)).font(.system(size: 20, weight: .semibold))
-                        Text(tab.label).font(.system(size: 11, weight: .semibold)).lineLimit(1).minimumScaleFactor(0.75)
+                    ZStack {
+                        if active {
+                            Capsule()
+                                .fill(Color.white.opacity(0.17))
+                                .overlay(Capsule().stroke(Color.white.opacity(0.18), lineWidth: 0.75))
+                                .matchedGeometryEffect(id: "kiwi-tab-selection", in: selectionLens)
+                        }
+                        Image(systemName: symbol(tab.id))
+                            .font(.system(size: 21, weight: .semibold))
+                            .symbolVariant(active ? .fill : .none)
+                            .foregroundStyle(active ? kiwiMint : Color.white.opacity(0.70))
                     }
-                    .foregroundStyle(model.context.selected == tab.id ? kiwiMint : kiwiInk.opacity(0.58))
-                    .frame(maxWidth: .infinity).frame(height: 58)
-                    .background(model.context.selected == tab.id ? kiwiInk : Color.clear, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                }.buttonStyle(.plain).accessibilityAddTraits(model.context.selected == tab.id ? .isSelected : [])
+                    .frame(width: 56, height: 46)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text(tab.label))
+                .accessibilityAddTraits(active ? .isSelected : [])
             }
         }
-        .padding(.horizontal, 10).padding(.top, 7).padding(.bottom, 34)
-        .background(kiwiPaper.opacity(0.98))
-        .shadow(color: kiwiInk.opacity(0.12), radius: 16, x: 0, y: -4)
-        .environment(\.layoutDirection, model.context.rtl ? .rightToLeft : .leftToRight)
+        .padding(6)
+        .animation(.spring(response: 0.31, dampingFraction: 0.76), value: model.context.selected)
+    }
+
+    @ViewBuilder private var capsule: some View {
+        if #available(iOS 26.0, *) {
+            tabs
+                .glassEffect(.regular.tint(kiwiInk.opacity(0.42)).interactive(), in: Capsule())
+                .shadow(color: kiwiInk.opacity(0.24), radius: 18, x: 0, y: 8)
+        } else {
+            tabs
+                .background(.ultraThinMaterial, in: Capsule())
+                .background(kiwiInk.opacity(0.78), in: Capsule())
+                .overlay(Capsule().stroke(Color.white.opacity(0.18), lineWidth: 0.75))
+                .shadow(color: kiwiInk.opacity(0.24), radius: 18, x: 0, y: 8)
+        }
     }
 
     private func symbol(_ id: String) -> String {
