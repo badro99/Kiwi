@@ -5441,7 +5441,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=470" defer></script>
+  <script src="assets/caisse-pwa.js?v=471" defer></script>
   <script src="assets/live-link.js?v=21" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -11688,8 +11688,10 @@
       /* Le relais donne immédiatement au bon son identifiant canonique. La file
          papier l'utilise ensuite comme clé d'idempotence : l'écho du serveur ou
          un rechargement ne peut donc pas réimprimer le même plat. */
-      relayToKitchen(order);
-      printKitchenTickets(order, items);
+      /* The queue owns the permanent customer-facing number. Wait for that
+         allocation before freezing the paper document, otherwise the caisse
+         can show local #64 while the server echo (and later reprints) use #3. */
+      relayToKitchen(order).then(() => printKitchenTickets(order, items));
       try { persistShift(); } catch (_) {}
       return order;
     }
@@ -11715,11 +11717,11 @@
      * file de secours du relais réessaiera toute seule. */
     function relayToKitchen(order) {
       try {
-        if (!order || !window.KiwiKitchenRelay || !KiwiKitchenRelay.merchant()) return;
+        if (!order || !window.KiwiKitchenRelay || !KiwiKitchenRelay.merchant()) return Promise.resolve(null);
         const id = KiwiKitchenRelay.newId();
         order.opId = id;
         opTickets.set(id, order);
-        KiwiKitchenRelay.send({
+        return KiwiKitchenRelay.send({
           id: id,
           mode: order.type === 'dineIn' ? 'table' : 'takeout',
           table: order.table || '',
@@ -11747,9 +11749,11 @@
             updateKdsCount();
             if (kdsEl.classList.contains('is-open')) kdsPaint();
             if (mode === 'vrap' && vrapView === 'board') renderVrapBoard();
+            try { persistShift(); } catch (_) {}
           }
+          return r || null;
         });
-      } catch (_) {}
+      } catch (_) { return Promise.resolve(null); }
     }
 
     /* ═══════ REVENIR À LA SALLE · LA SORTIE QUI N'EXISTAIT PAS ══════════════
@@ -17806,8 +17810,9 @@
         paid: false, pickedUp: false, pickedUpAt: null, total,
       };
       kdsOrders.push(order);
-      relayToKitchen(order);
-      printKitchenTickets(order, items);
+      /* Print only after the permanent queue number has had its first chance
+         to land on the same object used by Caisse, KDS and the receipt. */
+      relayToKitchen(order).then(() => printKitchenTickets(order, items));
       try { persistShift(); } catch (_) {}
       updateKdsCount();
       if (kdsEl.classList.contains('is-open')) kdsPaint();
@@ -18119,7 +18124,7 @@
       setVrapView('builder');
       const vrapTitle = $('.main-head[data-mode-section="vrap"] .main-title');
       if (vrapTitle) {
-        vrapTitle.innerHTML = `Commande <strong style="color:var(--forest)">#${num}</strong>
+        vrapTitle.innerHTML = `Commande <strong style="color:var(--forest)">${ticketNo(o)}</strong>
           <span class="order-mode-badge"><i data-lucide="package"></i> à emporter</span>`;
       }
       renderMenu();
@@ -18663,6 +18668,11 @@
            la provenance. La file serveur la rend : on restaure donc le préfixe
            exact sans recréer le ticket. */
         known.opChannel = o.channel || known.opChannel || 'kiwi';
+        /* Recovery is as important as the first POST response. A reload,
+           transient network failure or queued retry can make the poll the
+           first place this till learns the permanent number. Never leave the
+           recognized local ticket on its private kdsOrderSeq value. */
+        if (o.number != null && String(o.number).trim()) known.opNum = o.number;
       }
 
       /* Partial KDS readiness is stored on the canonical order lines. Pull it
