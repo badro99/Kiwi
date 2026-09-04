@@ -19,8 +19,12 @@ final class RelayClient {
     static JSONObject request(String method, String path, String token, JSONObject body) throws Exception {
         HttpURLConnection c = (HttpURLConnection) new URL(BridgeStore.RELAY + path).openConnection();
         c.setRequestMethod(method);
-        c.setConnectTimeout(12000);
-        c.setReadTimeout(12000);
+        // Pairing and acknowledgements may tolerate a slow network. The hot job
+        // poll may not: a 12 s stalled GET plus the service's retry sleep was
+        // the intermittent 15-20 s delay seen at the till.
+        int timeout = "GET".equals(method) && "/api/print/jobs".equals(path) ? 3000 : 12000;
+        c.setConnectTimeout(timeout);
+        c.setReadTimeout(timeout);
         c.setRequestProperty("Accept", "application/json");
         c.setRequestProperty("User-Agent", "kiwi-print-bridge-android/" + VERSION);
         if (!token.isEmpty()) c.setRequestProperty("Authorization", "Bearer " + token);

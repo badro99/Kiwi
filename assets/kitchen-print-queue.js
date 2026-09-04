@@ -23,7 +23,8 @@
   var MAX_JOBS = 120;
   var MAX_DONE = 500;
   var MAX_AGE = 30 * 60 * 1000;
-  var RETRY_MS = 10000;
+  var RETRY_MS = 1200;
+  var RETRY_MAX_MS = 15000;
   var HUB_LEASE_MS = 45000;
   var HUB_RENEW_MS = 15000;
   var MAX_RECORDS = 120;
@@ -152,11 +153,23 @@
     }
   }
   function schedule() {
-    if (timer || !readQueue().length) return;
-    timer = setInterval(function () {
-      if (!readQueue().length) { clearInterval(timer); timer = null; return; }
+    var q = readQueue();
+    if (!q.length) {
+      if (timer) clearTimeout(timer);
+      timer = null;
+      return;
+    }
+    var now = Date.now();
+    var dueAt = q.reduce(function (earliest, job) {
+      var at = Number(job && job.nextAt || 0);
+      return !at ? now : Math.min(earliest, at);
+    }, Number.MAX_SAFE_INTEGER);
+    var delay = Math.max(0, Math.min(RETRY_MAX_MS, dueAt - now));
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(function () {
+      timer = null;
       flush();
-    }, RETRY_MS);
+    }, delay);
   }
   function retry(job, reason) {
     var q = readQueue();
@@ -164,7 +177,15 @@
     if (hit) {
       hit.attempts = Number(hit.attempts || 0) + 1;
       hit.lastError = reason || 'print-failed';
-      hit.nextAt = Date.now() + Math.min(60000, RETRY_MS * Math.max(1, hit.attempts));
+      /* The old fixed 10 s interval raced its own `nextAt`: the interval could
+         fire a few milliseconds too early, miss the job, then wait another
+         full interval. One transient transport failure therefore became a
+         visible 15-20 s pause. Retry quickly once, then back off precisely to
+         the job deadline instead of polling on an unrelated clock. */
+      hit.nextAt = Date.now() + Math.min(
+        RETRY_MAX_MS,
+        RETRY_MS * Math.pow(2, Math.min(5, Math.max(0, hit.attempts - 1)))
+      );
       writeQueue(q);
     }
     lastError = reason || 'print-failed';

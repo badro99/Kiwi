@@ -61,7 +61,8 @@ const PRINT_TIMEOUT_MS = 8000;
 const https = require('https');
 const RELAY_URL = (process.env.KIWI_RELAY_URL || 'https://kiwi-os.com').replace(/\/+$/, '');
 const RELAY_POLL_MS = 1000;
-const RELAY_BACKOFF_MAX_MS = 15000;
+const RELAY_POLL_TIMEOUT_MS = 3000;
+const RELAY_BACKOFF_MAX_MS = 3000;
 const RELAY_HTTP_TIMEOUT_MS = 12000;
 const CONFIG_PATH = process.env.KIWI_BRIDGE_CONFIG
   || path.join(os.homedir && os.homedir() ? os.homedir() : process.cwd(), '.kiwi-printer-bridge.json');
@@ -76,7 +77,7 @@ function writeConfig(cfg) {
 
 /* Une requête JSON minimale, http ou https selon l'URL (les tests pointent
  * KIWI_RELAY_URL sur un serveur local). Résout toujours { status, json }. */
-function httpJson(method, url, headers, body) {
+function httpJson(method, url, headers, body, timeoutMs) {
   return new Promise((resolve) => {
     let u;
     try { u = new URL(url); } catch (_) { return resolve({ status: 0, json: null, error: 'bad-url' }); }
@@ -96,7 +97,7 @@ function httpJson(method, url, headers, body) {
         resolve({ status: res.statusCode || 0, json: j });
       });
     });
-    req.setTimeout(RELAY_HTTP_TIMEOUT_MS, () => { try { req.destroy(new Error('timeout')); } catch (_) {} });
+    req.setTimeout(Number(timeoutMs) || RELAY_HTTP_TIMEOUT_MS, () => { try { req.destroy(new Error('timeout')); } catch (_) {} });
     req.on('error', (e) => resolve({ status: 0, json: null, error: (e && e.message) || String(e) }));
     if (payload) req.write(payload);
     req.end();
@@ -172,7 +173,10 @@ async function relayTick() {
   let next = RELAY_POLL_MS;
   try {
     const auth = { Authorization: 'Bearer ' + relay.cfg.relay.token };
-    const r = await httpJson('GET', RELAY_URL + '/api/print/jobs', auth, null);
+    /* A stalled idle poll must not block a newly queued ticket for the generic
+     * 12 s API timeout. Pairing and acknowledgements keep that generous limit;
+     * the one-second operational poll gets a tight recovery window. */
+    const r = await httpJson('GET', RELAY_URL + '/api/print/jobs', auth, null, RELAY_POLL_TIMEOUT_MS);
     relay.lastPollTs = Date.now();
     if (r.status === 401) {
       /* Révoqué depuis Kiwi. Trois refus de suite avant d'oublier le jeton :

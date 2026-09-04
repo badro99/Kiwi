@@ -62,7 +62,10 @@ public final class BridgeService extends Service {
                 sleep(count > 0 ? 250 : 1000);
             } catch (Exception e) {
                 publish("Hors ligne · " + readable(e));
-                sleep(5000);
+                // Stay conservative while offline, but do not leave a newly
+                // queued ticket behind a five-second blind window after the
+                // bounded three-second poll timeout.
+                sleep(2000);
             }
         }
     }
