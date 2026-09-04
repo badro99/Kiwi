@@ -117,7 +117,7 @@ await check('owner upload still works on the owned store', async () => {
   assert.equal(res.status, 200);
   const body = await res.json();
   assert.equal(body.ok, true);
-  assert.ok(String(body.key).startsWith(A + '/'));
+  assert.ok(String(body.key).startsWith('media/' + A + '/'));
   assert.equal(w.r2.size, 1);
 });
 
@@ -125,7 +125,7 @@ await check('secondary owned store works for the same owner session', async () =
   const w = makeWorld();
   const res = await postUpload(w.env, A2, await sessCookie('acc-owner-a'));
   assert.equal(res.status, 200);
-  assert.ok(String((await res.json()).key).startsWith(A2 + '/'));
+  assert.ok(String((await res.json()).key).startsWith('media/' + A2 + '/'));
 });
 
 await check('suspended write stays blocked under the strict owner rule', async () => {
