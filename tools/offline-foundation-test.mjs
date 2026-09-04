@@ -28,16 +28,18 @@ ok(/\[tenant\+channel\]/.test(db) && /assertScope/.test(db), 'every command is e
 ok(/leaseToken/.test(db) && /leaseUntil/.test(db), 'cross-tab replay uses an expiring owner lease');
 ok(/BroadcastChannel\('kiwi-outbox-v1'\)/.test(db) && /message\.source === instanceId/.test(db), 'cross-tab queue changes refresh every open surface');
 ok(/permanent \? 'blocked' : 'pending'/.test(db) && /Number\.MAX_SAFE_INTEGER/.test(db), 'permanent rejections remain quarantined');
+ok(/opts\.replaceExisting/.test(db) && /type: 'replace'/.test(db), 'an exact manager re-approval can refresh a queued refund without duplicating it');
 ok(/localStorage\.removeItem\(storageKey\)/.test(db) && /db\.transaction\('rw'/.test(db), 'legacy storage retires only after a transaction');
 ok(/KiwiOffline\.enqueue/.test(live) && /O\.claim/.test(live) && /O\.acknowledge/.test(live) && /O\.reject/.test(live), 'live sales use the durable outbox lifecycle');
 ok(/flushLegacyQueue/.test(live) && /queue-storage-full/.test(live), 'IndexedDB denial retains the proven emergency fallback');
 ok(/Opérations protégées hors ligne/.test(pwa) && /kiwi:outbox/.test(pwa), 'cashiers see truthful durable-sync state');
-ok(/assets\/vendor\/dexie\.min\.js/.test(sw) && /assets\/offline-db\.js\?v=3/.test(sw), 'the outbox engine is available in the offline shell');
+ok(/assets\/vendor\/dexie\.min\.js/.test(sw) && /assets\/offline-db\.js\?v=\d+/.test(sw), 'the outbox engine is available in the offline shell');
 
 for (const page of ['dashboard.html', 'kiwi-caisse.html', 'kiwi-serveur.html']) {
   const html = read(page);
   const dexieAt = html.indexOf('assets/vendor/dexie.min.js');
-  const offlineAt = html.indexOf('assets/offline-db.js?v=3');
+  const offlineMatch = html.match(/assets\/offline-db\.js\?v=\d+/);
+  const offlineAt = offlineMatch ? html.indexOf(offlineMatch[0]) : -1;
   const liveMatch = html.match(/assets\/live-link\.js\?v=\d+/);
   const liveAt = liveMatch ? html.indexOf(liveMatch[0]) : -1;
   ok(dexieAt >= 0 && dexieAt < offlineAt && offlineAt < liveAt, page + ' loads Dexie → KiwiOffline → Live Link');

@@ -168,6 +168,21 @@ ok('client queues the original before the refund', queued.length === 2 && queued
 ok('durable refund command contains signed approval but never the manager PIN',
   queued[1].actorId === 'staff-manager-1' && queued[1].approval
   && !('pin' in queued[1]) && !JSON.stringify(queued).includes('2819'));
+const refusedBefore = JSON.parse(storage.kiwiSaleQueue || '[]').length;
+const refused = context.window.KiwiLive.postRefund(
+  { id: 'legacy-without-proof', amount: -10, ref: 'LEGACY-RB', time: new Date() }, original,
+  { id: 'staff-manager-1', name: 'Sara', role: 'manager' },
+);
+ok('an unsigned legacy refund never pollutes the durable outbox',
+  refused && refused.ok === false && refused.reason === 'manager-approval-required'
+  && JSON.parse(storage.kiwiSaleQueue || '[]').length === refusedBefore);
+context.window.KiwiLive.postRefund(refundEntry, original, {
+  id: 'staff-manager-1', name: 'Sara', role: 'manager', approval: 'fresh-signed-proof',
+}, { replaceExisting: true });
+const refreshedQueue = JSON.parse(storage.kiwiSaleQueue || '[]');
+ok('manager reconciliation replaces the same queued refund instead of adding another',
+  refreshedQueue.length === 2 && refreshedQueue.filter((row) => row.id === queued[1].id).length === 1
+  && refreshedQueue.find((row) => row.id === queued[1].id).approval === 'fresh-signed-proof');
 
 /* The same shipped feed bridge must keep the negative row out of KiwiSales
    (product counts) while placing it in KiwiRefunds (revenue/reporting). */
@@ -201,6 +216,7 @@ ok('feed bridge keeps refunds out of product sales and in the refund ledger',
   && bridgedRefunds.length === 1 && bridgedRefunds[0].amount === 35);
 
 const caisse = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
+const offlineDb = fs.readFileSync(path.join(ROOT, 'assets/offline-db.js'), 'utf8');
 const dashboard = fs.readFileSync(path.join(ROOT, 'assets/dateRange.js'), 'utf8');
 const report = fs.readFileSync(path.join(ROOT, 'assets/report.js'), 'utf8');
 const transactions = fs.readFileSync(path.join(ROOT, 'assets/pages-pro.js'), 'utf8');
@@ -208,6 +224,19 @@ ok('provisional heartbeat heals sales skipped before merchant resolution', /reco
 ok('refund approval persists signed manager proof for crash-safe replay',
   /refundActor:\s*\{/.test(caisse) && /approval:\s*String\(manager\.approval/.test(caisse)
   && /postRefund\(entry, orig, actor\)/.test(caisse));
+ok('old local refunds expose an exact manager-approved reconciliation action',
+  /id="rf-recovery"/.test(caisse) && /data-rf-recover/.test(caisse)
+  && /requireManager\('Synchroniser le remboursement/.test(caisse)
+  && /postRefund\?\.\(entry, original, manager, \{ replaceExisting: true \}\)/.test(caisse));
+ok('refund reconciliation metadata survives a till reload',
+  /if \(e\.serverSaleId\)\s+entry\.serverSaleId/.test(caisse)
+  && /if \(e\.refundActor/.test(caisse) && /if \(e\.refundSynced\)/.test(caisse));
+ok('accepted server/feed evidence retires the capability and closes recovery',
+  /kiwi:money-sync/.test(caisse) && /entry\.refundSynced = true/.test(caisse)
+  && /entry\.refundActor\.approval = ''/.test(caisse));
+ok('IndexedDB refreshes only the same scoped command during manager reconciliation',
+  /opts\.replaceExisting/.test(offlineDb) && /existing\.tenant !== scope\.tenant/.test(offlineDb)
+  && /payload: clone\(payload\), state: 'pending'/.test(offlineDb));
 ok('dashboard revenue subtracts its dedicated refund store', /realRefundList\(\)/.test(dashboard) && /revenue\s*-=?\s*Math\.abs/.test(dashboard));
 ok('generated reports consume signed refund events', /KiwiRefunds/.test(report) && /out\.revenue\s*\+=\s*amount/.test(report));
 ok('dashboard transaction rows render refunds without counting them as sales', /const refunds\s*=/.test(transactions) && /kind\s*!==\s*'refund'/.test(transactions));

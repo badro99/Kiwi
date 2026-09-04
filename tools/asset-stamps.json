@@ -100,8 +100,8 @@
     "sha": "c5a59ef57daea8a2"
   },
   "assets/caisse-lang.js": {
-    "v": "1",
-    "sha": "a49a6e4b1a05bc1c"
+    "v": "2",
+    "sha": "067afd813f547b10"
   },
   "assets/caisse-link.js": {
     "v": "10",
@@ -420,8 +420,8 @@
     "sha": "c9d6036ca657c76e"
   },
   "assets/live-link.js": {
-    "v": "23",
-    "sha": "5b94d85e0028235c"
+    "v": "24",
+    "sha": "d6256de54296ef69"
   },
   "assets/live-socket.js": {
     "v": "4",
@@ -468,8 +468,8 @@
     "sha": "0a1f2bda4e9b0357"
   },
   "assets/offline-db.js": {
-    "v": "3",
-    "sha": "d1b0f3fa2625e19d"
+    "v": "4",
+    "sha": "10e09d99f93a4c6f"
   },
   "assets/onboarding.js": {
     "v": "2081",

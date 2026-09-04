@@ -70,7 +70,7 @@
   <!-- Durable tenant-scoped command outbox. Dexie is vendored: the caisse can
        boot and bank transactions with no CDN and no build step. -->
   <script src="assets/vendor/dexie.min.js?v=1" defer></script>
-  <script src="assets/offline-db.js?v=3" defer></script>
+  <script src="assets/offline-db.js?v=4" defer></script>
   <script src="assets/platform-kernel.js?v=5" defer></script>
   <script src="assets/platform-ops.js?v=5" defer></script>
   <script src="assets/phone.js?v=1" defer></script>
@@ -124,7 +124,7 @@
   <script src="assets/retail-scan.js?v=6" defer></script>
   <!-- La langue du comptoir. Après les modules de caisse : il greffe son
        sélecteur dans le rail du métier ouvert et rebalaye après chaque rendu. -->
-  <script src="assets/caisse-lang.js?v=1" defer></script>
+  <script src="assets/caisse-lang.js?v=2" defer></script>
   <script src="assets/menu-i18n.js?v=5" defer></script>
   <!-- Multi-métier PIN dispatcher: 0000 + 0002–0015 lazy-load one POS vertical
        each (assets/pos-<id>.{js,css}, assets/pressing-caisse.{js,css} pour le
@@ -4151,6 +4151,27 @@
       font-family: inherit; font-size: 13px; color: var(--ink); outline: none;
     }
     .rf-search input::placeholder { color: var(--ink-4); }
+    .rf-recovery {
+      margin: 0 0 12px; padding: 12px;
+      border: 1px solid rgba(184,82,69,0.22);
+      border-radius: var(--r-lg); background: rgba(184,82,69,0.07);
+    }
+    .rf-recovery-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .rf-recovery-head strong { font-size: 13px; color: var(--ink); }
+    .rf-recovery-count {
+      min-width: 24px; height: 24px; padding: 0 7px; border-radius: 999px;
+      display: inline-flex; align-items: center; justify-content: center;
+      background: var(--danger-mute); color: #fff; font-size: 11px; font-weight: 700;
+    }
+    .rf-recovery > p { margin: 5px 0 9px; color: var(--ink-3); font-size: 11.5px; line-height: 1.4; }
+    .rf-recovery-row {
+      display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 10px;
+      padding: 9px 0; border-top: 1px solid rgba(184,82,69,0.16);
+    }
+    .rf-recovery-main { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+    .rf-recovery-main b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px; }
+    .rf-recovery-main span { color: var(--ink-4); font: 10.5px var(--mono); }
+    .rf-recovery-btn { min-height: 38px; padding: 0 12px; font-size: 11px; }
     .rf-list {
       display: flex; flex-direction: column; gap: 2px;
       max-height: 308px; overflow-y: auto;
@@ -5442,7 +5463,7 @@
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
   <script src="assets/caisse-pwa.js?v=476" defer></script>
-  <script src="assets/live-link.js?v=23" defer></script>
+  <script src="assets/live-link.js?v=24" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
   <script src="assets/staff-roles.js?v=1" defer></script>
@@ -6916,6 +6937,7 @@
           <i data-lucide="search"></i>
           <input type="text" id="rf-search-input" placeholder="Rechercher, table, montant, réf" aria-label="Rechercher une transaction" />
         </div>
+        <div class="rf-recovery" id="rf-recovery" hidden></div>
         <div class="rf-list" id="rf-list"></div>
         <div class="modal-actions is-visible">
           <button class="ma-btn secondary" id="rf-cancel" style="flex:1;">Annuler</button>
@@ -14049,15 +14071,12 @@
        parties par /api/sale et n'ont aucun besoin d'être recopiées ici.
 
        Pourquoi on enregistre AUSSI en cours de service et pas seulement à la
-       clôture : un remboursement est une écriture NÉGATIVE, et /api/sale refuse
-       les montants ≤ 0 (à raison · c'est le garde-fou qui empêche d'injecter des
-       écritures dans les livres d'autrui). Le serveur ne voit donc jamais les
-       remboursements ni les remises. Si le rapport n'existait qu'à la fermeture,
-       le tableau de bord afficherait toute la journée un total plus haut que la
-       caisse, et l'écart ne se résorberait qu'au soir. On dépose donc un
-       instantané PROVISOIRE (closed:false) pendant le service, remplacé par
-       l'instantané DÉFINITIF à la clôture. Recalculé à chaque fois depuis le
-       journal, jamais accumulé : c'est ce qui rend la double clôture inoffensive.
+       clôture : remises, fond, comptage et mouvements de tiroir ne sont pas des
+       ventes. Les remboursements ont désormais leur propre contre-écriture
+       append-only dans le flux financier ; le rapport provisoire reste la vérité
+       opérationnelle du poste pendant le service. Il est remplacé par
+       l'instantané DÉFINITIF à la clôture, recalculé depuis le journal plutôt
+       qu'accumulé : c'est ce qui rend la double clôture inoffensive.
     */
     function dayReportSession(counted) {
       return {
@@ -14114,19 +14133,19 @@
       /* Refunds use the same durable queue, but carry the manager identity
          proved at approval time. This second pass closes the crash window
          between writing the local journal and enqueueing the counter-entry.
-         Older journals did not retain that identity; they may be recovered
-         only when the current cashier is themselves a manager, never by
-         inventing an approver. */
+         Older journals did not retain that signed capability; the visible
+         recovery block asks a manager again, never invents an approver. */
       if (window.KiwiLive.postRefund) journal.forEach((entry) => {
         if (!entry || entry.origin || entry.voided || entry.kind !== 'refund' || !(Number(entry.amount) < 0)) return;
         if (onlyMissing && entry.serverSaleId) return;
         const orig = journal.find((sale) => sale && sale.kind !== 'refund' && sale.ref === entry.refundOf);
         if (!orig) return;
-        let actor = entry.refundActor || null;
-        if (!actor && currentCashier && /owner|propri|manager|g[eé]rant|responsable|admin/i.test(String(currentCashier.role || ''))) {
-          actor = { id: currentCashier.id, name: currentCashier.name, role: currentCashier.role };
-        }
-        if (!actor || !actor.id || !actor.name || !actor.role) return;
+        const actor = entry.refundActor || null;
+        /* A manager identity is not a manager authorization. Legacy rows and
+           expired offline approvals go through the visible recovery flow below;
+           silently inventing a capability here would only fill the outbox with
+           requests the server must reject. */
+        if (!actor || !actor.id || !actor.name || !actor.role || !actor.approval) return;
         try {
           const queued = window.KiwiLive.postRefund(entry, orig, actor);
           if (queued && queued.id) { entry.serverSaleId = queued.id; n++; }
@@ -14136,6 +14155,38 @@
       try { window.KiwiLive.flush(true); } catch (_) {}
       return n;
     }
+    document.addEventListener('kiwi:money-sync', (event) => {
+      const detail = event && event.detail || {};
+      if (detail.kind !== 'refund' || !detail.id) return;
+      let changed = false;
+      journal.forEach((entry) => {
+        if (!entry || entry.kind !== 'refund') return;
+        let serverId = String(entry.serverSaleId || '');
+        if (!serverId) {
+          try { serverId = String(window.KiwiLive?.moneyId?.(entry) || ''); } catch (_) {}
+        }
+        if (!serverId || serverId !== String(detail.id)) return;
+        if (detail.state === 'accepted') {
+          entry.serverSaleId = serverId;
+          entry.refundSynced = true;
+          entry.refundSyncNeedsApproval = false;
+          entry.refundSyncStatus = 'accepted';
+          /* The server has consumed the exact capability. Retain the named
+             approver for the local audit, not the bearer token. */
+          if (entry.refundActor) entry.refundActor.approval = '';
+          changed = true;
+        } else if (Number(detail.status) === 403) {
+          entry.refundSyncNeedsApproval = true;
+          entry.refundSyncStatus = 'manager-required';
+          changed = true;
+        }
+      });
+      if (!changed) return;
+      try { persistShift(); } catch (_) {}
+      try {
+        if ($('#refund-modal') && $('#refund-modal').classList.contains('is-open')) renderRefundRecovery();
+      } catch (_) {}
+    });
     /* L'instantané provisoire. `reopen:false` : tenir le tableau de bord à jour
        pendant le service n'est pas une clôture et ne doit ni incrémenter le
        compteur de fermetures ni salir l'historique des révisions. */
@@ -15757,6 +15808,72 @@
     const refundModal = $('#refund-modal');
     const refundState = { search: '', orig: null, amount: 0, reason: 'Erreur de saisie' };
 
+    function refundApprovalExpiry(entry) {
+      try {
+        const token = String(entry && entry.refundActor && entry.refundActor.approval || '');
+        const raw = token.split('.')[0].replace(/-/g, '+').replace(/_/g, '/');
+        if (!raw) return 0;
+        const padded = raw + '='.repeat((4 - raw.length % 4) % 4);
+        const bytes = Uint8Array.from(atob(padded), (ch) => ch.charCodeAt(0));
+        const payload = JSON.parse(new TextDecoder().decode(bytes));
+        return Number(payload && payload.exp) || 0;
+      } catch (_) { return 0; }
+    }
+    function refundRecoveryCandidates() {
+      if (!storeIsReal()) return [];
+      return journal.filter((entry) => entry && entry.kind === 'refund' && Number(entry.amount) < 0
+        && !entry.voided && !entry.refundSynced
+        && (entry.refundSyncNeedsApproval || refundApprovalExpiry(entry) <= Date.now() + 30000));
+    }
+    function renderRefundRecovery() {
+      const host = $('#rf-recovery');
+      if (!host) return;
+      const rows = refundRecoveryCandidates();
+      host.hidden = rows.length === 0;
+      if (!rows.length) { host.innerHTML = ''; return; }
+      host.innerHTML = `<div class="rf-recovery-head"><strong>Remboursements à synchroniser</strong>`
+        + `<span class="rf-recovery-count mono">${rows.length}</span></div>`
+        + `<p>Ils sont déjà déduits de cette caisse, mais pas encore des rapports. Un manager doit confirmer chaque montant.</p>`
+        + rows.map((entry) => {
+          const original = journal.find((sale) => sale && sale.kind !== 'refund' && sale.ref === entry.refundOf);
+          const label = original ? original.label : (entry.refundOf || 'Vente introuvable');
+          return `<div class="rf-recovery-row"><span class="rf-recovery-main">`
+            + `<b>${escTeam(label)}</b><span>${escTeam(entry.refundOf || '')} · <bdi dir="ltr">−${fmtMAD(Math.abs(Number(entry.amount) || 0))}</bdi></span></span>`
+            + `<button type="button" class="ma-btn danger rf-recovery-btn" data-rf-recover="${escTeam(entry.id || entry.ref)}">Autoriser et synchroniser</button></div>`;
+        }).join('');
+      try { window.KiwiCaisseLang?.apply?.(host); } catch (_) {}
+    }
+
+    function recoverRefund(entry) {
+      const original = journal.find((sale) => sale && sale.kind !== 'refund' && sale.ref === entry.refundOf);
+      if (!original) { toast('Ticket original introuvable · aucune écriture envoyée'); return; }
+      const amountCents = Math.abs(Math.round(Number(entry.amount) * 100));
+      const originalSaleId = String(original.serverSaleId || window.KiwiLive?.moneyId?.(original) || '');
+      const refundServerId = String(entry.serverSaleId || window.KiwiLive?.moneyId?.(entry) || '');
+      if (!amountCents || !originalSaleId || !refundServerId) {
+        toast('Synchronisation impossible · aucune écriture envoyée'); return;
+      }
+      requireManager('Synchroniser le remboursement · ' + fmtMAD(amountCents / 100), () => {
+        const manager = window.KiwiCaissePairing?.lastManager?.() || {};
+        if (!manager.approval) { toast('Autorisation manager non reçue'); return; }
+        entry.refundActor = {
+          id: String(manager.id || '').slice(0, 96), name: String(manager.name || '').slice(0, 80),
+          role: String(manager.role || '').slice(0, 80), approval: String(manager.approval).slice(0, 1400),
+        };
+        entry.refundSyncNeedsApproval = false;
+        entry.refundSyncStatus = 'pending';
+        entry.refundRecoveryRequestedAt = Date.now();
+        const queued = window.KiwiLive?.postRefund?.(entry, original, manager, { replaceExisting: true }) || null;
+        if (queued && queued.id) entry.serverSaleId = queued.id;
+        try { persistShift(); } catch (_) {}
+        try { saveProvisional(true); } catch (_) {}
+        renderRefundRecovery();
+        toast(queued && queued.ok !== false
+          ? 'Remboursement autorisé · synchronisation en cours'
+          : 'Remboursement conservé · synchronisation impossible');
+      }, { kind: 'refund', refundId: refundServerId, originalSaleId, amountCents });
+    }
+
     function refundedSoFar(entry) {
       if (!entry) return 0;
       if (entry.refundedAmount != null) return money(Math.max(0, entry.refundedAmount));
@@ -15850,6 +15967,7 @@
       refundState.search = '';
       refundState.orig   = null;
       $('#rf-search-input').value = '';
+      renderRefundRecovery();
       renderRefundList();
       showRefundStep('pick');
       refundModal.classList.add('is-open');
@@ -15946,6 +16064,12 @@
       if (reasonBtn) {
         refundState.reason = reasonBtn.dataset.rfReason;
         $$('#rf-reasons .rf-reason').forEach(b => b.classList.toggle('is-active', b === reasonBtn));
+        return;
+      }
+      const recoveryBtn = e.target.closest('[data-rf-recover]');
+      if (recoveryBtn) {
+        const refund = journal.find((item) => item && String(item.id || item.ref) === recoveryBtn.dataset.rfRecover);
+        if (refund) recoverRefund(refund);
         return;
       }
       if (e.target.closest('#rf-confirm')) { confirmRefund(); return; }
@@ -19343,6 +19467,17 @@
         if (e.tip)             entry.tip      = e.tip;       // pourboire
         if (e.lines)           entry.lines    = e.lines;     // itemised receipt
         if (e.cashier)         entry.cashier  = e.cashier;   // ringing cashier
+        if (e.serverSaleId)    entry.serverSaleId = e.serverSaleId;
+        if (e.refundActor && typeof e.refundActor === 'object') {
+          entry.refundActor = {
+            id: String(e.refundActor.id || '').slice(0, 96), name: String(e.refundActor.name || '').slice(0, 80),
+            role: String(e.refundActor.role || '').slice(0, 80), approval: String(e.refundActor.approval || '').slice(0, 1400),
+          };
+        }
+        if (e.refundSynced) entry.refundSynced = true;
+        if (e.refundSyncNeedsApproval) entry.refundSyncNeedsApproval = true;
+        if (e.refundSyncStatus) entry.refundSyncStatus = String(e.refundSyncStatus).slice(0, 24);
+        if (e.refundRecoveryRequestedAt) entry.refundRecoveryRequestedAt = Number(e.refundRecoveryRequestedAt) || 0;
         if (e.channel)         entry.channel  = e.channel;   // dining / takeaway / OrderPro
         if (e.origin)          entry.origin   = e.origin;    // caisse / employee / OrderPro
         /* Le reçu figé au moment de la vente. Cette boucle recopie champ par

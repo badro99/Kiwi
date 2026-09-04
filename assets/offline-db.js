@@ -106,6 +106,21 @@
             if (existing.tenant !== scope.tenant || existing.channel !== scope.channel) {
               throw new Error('Outbox id already belongs to another scope');
             }
+            /* A refund approval is deliberately short-lived. If the till was
+               offline past its expiry, the manager re-authorises the SAME
+               immutable refund and we replace only that queued command's
+               capability. The stable id, tenant and channel cannot change. */
+            if (opts.replaceExisting) {
+              var refreshedAt = now();
+              return db.outbox.update(id, {
+                payload: clone(payload), state: 'pending', attempts: 0,
+                updatedAt: refreshedAt, nextAt: refreshedAt,
+                leaseToken: '', leaseUntil: 0, lastStatus: 0, lastError: '',
+              }).then(function () {
+                signal({ type: 'replace', tenant: scope.tenant, channel: scope.channel, id: id });
+                return { ok: true, duplicate: true, replaced: true, id: id };
+              });
+            }
             return { ok: true, duplicate: true, id: id };
           }
           var at = now();

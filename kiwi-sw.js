@@ -149,13 +149,13 @@ var SHELL = [
   '/assets/caisse-motion.js?v=1',
   '/assets/caisse-pwa.js?v=476',
   '/assets/vendor/dexie.min.js?v=1',
-  '/assets/offline-db.js?v=3',
+  '/assets/offline-db.js?v=4',
   '/assets/platform-kernel.js?v=5',
   '/assets/platform-ops.js?v=5',
   '/assets/platform-ops.css?v=1',
   '/assets/operations.js?v=10',
   '/assets/operations-ui.js?v=12',
-  '/assets/live-link.js?v=23',
+  '/assets/live-link.js?v=24',
   '/assets/channel-sales.js?v=3',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
@@ -211,7 +211,7 @@ var SHELL = [
   '/assets/boutique-promos-dashboard.js?v=4',
   /* La langue du comptoir. Dans la coquille : une caissière arabophone hors
      ligne ne doit pas retrouver son écran en français au premier creux réseau. */
-  '/assets/caisse-lang.js?v=1',
+  '/assets/caisse-lang.js?v=2',
   '/assets/venue-store.js?v=3',
   /* One stock across owner dashboard and till. Catalog metadata is a cloud
      document; quantities are append-only movements, both usable offline. */

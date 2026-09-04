@@ -203,6 +203,15 @@
     try { localStorage.setItem(PING_KEY, Date.now() + ':' + Math.random().toString(36).slice(2)); } catch (_) {}
     try { if (chan) chan.postMessage('sale'); } catch (_) {}
   }
+  function moneySignal(body, state, status) {
+    if (!body || !body.id) return;
+    try {
+      window.dispatchEvent(new CustomEvent('kiwi:money-sync', { detail: {
+        id: String(body.id), kind: body.kind === 'refund' ? 'refund' : 'sale',
+        state: String(state || ''), status: Number(status) || 0,
+      } }));
+    } catch (_) {}
+  }
 
   /* ─── caisse → server, with an offline queue ───
    * WiFi in a boutique drops. A sale that failed to reach D1 used to be lost for
@@ -345,6 +354,7 @@
       if (settled) {
         var rest = current.filter(function (x) { return x && x.id !== body.id; });
         qWrite(rest);
+        moneySignal(body, 'accepted', status);
         pingLocal();                           // the row exists now — tell the dashboards
         if (rest.some(function (x) { return x && !x._blocked; })) flushLegacyQueue();
         return;
@@ -354,8 +364,12 @@
           if (x && x.id === body.id) { x._blocked = true; x._status = status || 0; x._blockedAt = Date.now(); }
         });
         qWrite(current);                       // retained, visible, skipped on the next send
+        moneySignal(body, 'blocked', status);
         if (current.some(function (x) { return x && !x._blocked; })) flushLegacyQueue();
-      } else queueSignal();                    // offline/transient → unchanged and retryable
+      } else {
+        moneySignal(body, 'retry', status);
+        queueSignal();                          // offline/transient → unchanged and retryable
+      }
     }
     try {
       fetch(body && body.kind === 'refund' ? '/api/sale/refund' : '/api/sale', {
@@ -388,7 +402,8 @@
           : O.reject(row.id, row.leaseToken, { permanent: permanent, status: status, error: error });
         return action.then(function () {
           flushing = false;
-          if (ok) pingLocal();
+          if (ok) { moneySignal(body, 'accepted', status); pingLocal(); }
+          else moneySignal(body, permanent ? 'blocked' : 'retry', status);
           return refreshOutboxStatus();
         }).then(function (state) {
           if (state.pending > 0 && navigator.onLine) flushOutbox();
@@ -417,7 +432,8 @@
     return flushLegacyQueue();
   }
 
-  function enqueueMoneyBody(body, m) {
+  function enqueueMoneyBody(body, m, opts) {
+    opts = opts || {};
     var q = outboxUsing ? [] : qRead();
     /* The same completed receipt can be observed by two local persistence
        paths. Stable IDs plus this local check prevent it entering the queue
@@ -427,11 +443,17 @@
          synchronously until IndexedDB owns it; this applies equally to a sale
          and its refund, whose financial ordering must survive a reload. */
       var writeAhead = qRead();
-      if (!writeAhead.some(function (x) { return x && x.id === body.id; })) {
+      var writeAheadAt = writeAhead.findIndex(function (x) { return x && x.id === body.id; });
+      if (writeAheadAt < 0) {
         writeAhead.push(body);
         if (!qWrite(writeAhead)) return { ok: false, reason: 'queue-storage-full', id: body.id };
+      } else if (opts.replaceExisting && writeAhead[writeAheadAt].merchant === m) {
+        writeAhead[writeAheadAt] = body;
+        if (!qWrite(writeAhead)) return { ok: false, reason: 'queue-storage-full', id: body.id };
       }
-      window.KiwiOffline.enqueue(OUTBOX_CHANNEL, m, body, { id: body.id, createdAt: body.ts }).then(function () {
+      window.KiwiOffline.enqueue(OUTBOX_CHANNEL, m, body, {
+        id: body.id, createdAt: body.ts, replaceExisting: !!opts.replaceExisting,
+      }).then(function () {
         qWrite(qRead().filter(function (x) { return x && x.id !== body.id; }));
         return refreshOutboxStatus();
       }).then(function () {
@@ -447,7 +469,17 @@
       });
       return { ok: true, queued: true, durable: 'indexeddb', id: body.id };
     }
-    if (q.some(function (x) { return x && x.id === body.id; })) return { ok: true, queued: true, duplicate: true, id: body.id };
+    var existingAt = q.findIndex(function (x) { return x && x.id === body.id; });
+    if (existingAt >= 0) {
+      if (!opts.replaceExisting || q[existingAt].merchant !== m) {
+        return { ok: true, queued: true, duplicate: true, id: body.id };
+      }
+      q[existingAt] = body;
+      if (!qWrite(q)) return { ok: false, reason: 'queue-storage-full', id: body.id };
+      pingLocal();
+      flushQueue();
+      return { ok: true, queued: true, duplicate: true, replaced: true, id: body.id };
+    }
     q.push(body);
     if (!qWrite(q)) return { ok: false, reason: 'queue-storage-full', id: body.id };
     pingLocal();
@@ -549,7 +581,7 @@
     return enqueueMoneyBody(body, m);
   }
 
-  function postRefund(entry, original, actor) {
+  function postRefund(entry, original, actor, opts) {
     if (!on() || !entry || !original) return;
     var m = merchant();
     if (!m) return;
@@ -564,6 +596,9 @@
       : Math.round(Number(entry.amount || 0) * 100));
     if (!Number.isFinite(amountCents) || amountCents <= 0) return;
     actor = actor || entry.refundActor || {};
+    if (!actor.approval) {
+      return { ok: false, reason: 'manager-approval-required', id: stableId(m, entry) };
+    }
     var body = {
       id: stableId(m, entry), merchant: m, kind: 'refund', originalSaleId: originalSaleId,
       amountCents: amountCents, method: entry.method || original.method || 'cash',
@@ -574,7 +609,7 @@
       approval: String(actor.approval || '').slice(0, 1400),
       ts: (entry.time && entry.time.getTime) ? entry.time.getTime() : Date.now(),
     };
-    return enqueueMoneyBody(body, m);
+    return enqueueMoneyBody(body, m, { replaceExisting: !!(opts && opts.replaceExisting) });
   }
 
   /* ─── dashboard ← server (poll) ───
@@ -832,6 +867,7 @@
       if (feedSeen[k]) return;
       feedSeen[k] = 1;
       feedSales.push({ s: s, tenant: tenant });
+      moneySignal({ id: s.id || s.saleId, kind: Number(s.amountCents != null ? s.amountCents : Number(s.amount || 0) * 100) < 0 ? 'refund' : 'sale' }, 'accepted', 200);
     });
   }
   function bridgeToStore() {

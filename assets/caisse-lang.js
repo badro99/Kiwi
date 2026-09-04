@@ -255,6 +255,17 @@
       /* ── paiement ── */
       'Encaissement': 'Payment', 'Espèces': 'Cash', 'espèces': 'cash',
       'Carte': 'Card', 'carte': 'card', 'Livraison': 'Delivery',
+      'Remboursements à synchroniser': 'Refunds to sync',
+      'Ils sont déjà déduits de cette caisse, mais pas encore des rapports. Un manager doit confirmer chaque montant.':
+        'They are already deducted from this till, but not from reports yet. A manager must confirm each amount.',
+      'Autoriser et synchroniser': 'Approve and sync',
+      'Vente introuvable': 'Sale not found',
+      'Ticket original introuvable · aucune écriture envoyée': 'Original receipt not found · nothing was sent',
+      'Synchronisation impossible · aucune écriture envoyée': 'Sync unavailable · nothing was sent',
+      'Synchroniser le remboursement': 'Sync the refund',
+      'Autorisation manager non reçue': 'Manager approval not received',
+      'Remboursement autorisé · synchronisation en cours': 'Refund approved · syncing',
+      'Remboursement conservé · synchronisation impossible': 'Refund kept · unable to sync',
     },
 
     ar: {
@@ -446,6 +457,17 @@
       /* ── paiement ── */
       'Encaissement': 'الأداء', 'Espèces': 'نقداً', 'espèces': 'نقداً',
       'Carte': 'بطاقة', 'carte': 'بطاقة', 'Livraison': 'توصيل',
+      'Remboursements à synchroniser': 'مبالغ مسترجعة بانتظار المزامنة',
+      'Ils sont déjà déduits de cette caisse, mais pas encore des rapports. Un manager doit confirmer chaque montant.':
+        'تم خصمها من هذا الصندوق، لكنها لم تظهر بعد في التقارير. يجب على المسؤول تأكيد كل مبلغ.',
+      'Autoriser et synchroniser': 'الموافقة والمزامنة',
+      'Vente introuvable': 'العملية الأصلية غير موجودة',
+      'Ticket original introuvable · aucune écriture envoyée': 'التذكرة الأصلية غير موجودة · لم يتم إرسال أي قيد',
+      'Synchronisation impossible · aucune écriture envoyée': 'تعذرت المزامنة · لم يتم إرسال أي قيد',
+      'Synchroniser le remboursement': 'مزامنة المبلغ المسترجع',
+      'Autorisation manager non reçue': 'لم تصل موافقة المسؤول',
+      'Remboursement autorisé · synchronisation en cours': 'تمت الموافقة على الاسترجاع · جارٍ المزامنة',
+      'Remboursement conservé · synchronisation impossible': 'تم الاحتفاظ بالاسترجاع · تعذرت المزامنة',
     },
   };
 
