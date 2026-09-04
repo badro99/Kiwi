@@ -50,6 +50,7 @@
     });
   }
   function hapticLight() { return call(haptics, 'impact', { style: 'LIGHT' }); }
+  function hapticNotice(kind) { return call(haptics, 'notification', { type: kind === 'danger' ? 'ERROR' : 'SUCCESS' }); }
   function paintStatusBar() {
     var dark = root.getAttribute('data-theme') === 'dark' || root.getAttribute('data-vexel-mode') === 'dark' || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches && !root.getAttribute('data-theme'));
     call(statusBar, 'setStyle', { style: dark ? 'DARK' : 'LIGHT' });
@@ -91,6 +92,207 @@
   function configureKeepAwake() {
     var page = location.pathname.split('/').pop();
     call(keepAwake, page === 'kiwi-caisse.html' || page === 'kiwi-cuisine.html' ? 'keepAwake' : 'allowSleep');
+  }
+
+  function applyDynamicTypeToWorkspace() {
+    if (document.body && document.body.classList.contains('native-shell-page')) return;
+    var dynamicType = plugins.KiwiDynamicType;
+    if (!dynamicType) return;
+    function applyScale(scale) {
+      if (typeof scale !== 'number' || isNaN(scale)) return;
+      var capped = Math.min(1.35, Math.max(0.85, scale));
+      if (Math.abs(capped - 1) < 0.005) root.style.removeProperty('--type-scale');
+      else root.style.setProperty('--type-scale', String(capped));
+    }
+    if (typeof dynamicType.getDynamicTypeScale === 'function') {
+      try {
+        Promise.race([
+          dynamicType.getDynamicTypeScale(),
+          new Promise(function (_, reject) { setTimeout(function () { reject(new Error('timeout')); }, 1000); })
+        ]).then(function (result) { if (result) applyScale(result.scale); }).catch(function () {});
+      } catch (_) {}
+    }
+    if (typeof dynamicType.addListener === 'function') {
+      try { dynamicType.addListener('dynamicTypeChange', function (result) { if (result) applyScale(result.scale); }); } catch (_) {}
+    }
+  }
+
+  function openNativeLayers() {
+    return Array.prototype.slice.call(document.querySelectorAll(
+      '.modal-veil.is-open,.drawer-veil.is-open,.cloture-veil.is-open,.kds-screen.is-open,#stock-screen.is-open'
+    )).filter(function (node) {
+      try { return getComputedStyle(node).display !== 'none' && getComputedStyle(node).visibility !== 'hidden'; }
+      catch (_) { return true; }
+    });
+  }
+
+  function dismissNativeLayer(layer) {
+    if (!layer) return false;
+    if (layer.matches && layer.matches('.modal-veil,.drawer-veil,.cloture-veil')) {
+      try { layer.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); } catch (_) {}
+      if (layer.classList.contains('is-open')) {
+        var close = layer.querySelector('[data-modal-action="close"],.modal-close,.drawer-close,[aria-label="Fermer"],[aria-label="Close"]');
+        if (close) close.click();
+      }
+    } else {
+      var button = layer.querySelector('.kds-close,[data-action="close"],[aria-label="Fermer"],[aria-label="Close"]');
+      if (button) button.click(); else layer.classList.remove('is-open');
+    }
+    return true;
+  }
+
+  function nativeExitCopy() {
+    var lang = String(root.lang || 'fr').toLowerCase();
+    if (lang.indexOf('ar') === 0) return 'هل تريد إغلاق Kiwi Pro؟';
+    if (lang.indexOf('en') === 0) return 'Close Kiwi Pro?';
+    return 'Fermer Kiwi Pro ?';
+  }
+
+  function handleNativeBack(event) {
+    var layers = openNativeLayers();
+    if (layers.length) return dismissNativeLayer(layers[layers.length - 1]);
+    if (document.body.classList.contains('ticket-open')) {
+      document.body.classList.remove('ticket-open');
+      return true;
+    }
+    if (document.body.classList.contains('nav-open')) {
+      document.body.classList.remove('nav-open');
+      return true;
+    }
+    var builder = document.getElementById('vrap-builder');
+    var builderBack = document.getElementById('vrap-back-board');
+    if (builder && !builder.hidden && builderBack) {
+      builderBack.click();
+      return true;
+    }
+    if (event && event.canGoBack && window.history && history.length > 1) {
+      history.back();
+      return true;
+    }
+    if (/kiwi-caisse\.html$/i.test(location.pathname) && !window.confirm(nativeExitCopy())) return true;
+    call(app, 'exitApp');
+    return true;
+  }
+
+  function nativeTillCopy() {
+    var lang = String(root.lang || 'fr').toLowerCase();
+    if (lang.indexOf('ar') === 0) return { label: 'التنقل الرئيسي', salle: 'الصالة', vrap: 'طلبات خارجية', waitlist: 'الانتظار', more: 'المزيد', actions: 'إجراءات أخرى', less: 'إخفاء الإجراءات', close: 'طي الفاتورة' };
+    if (lang.indexOf('en') === 0) return { label: 'Primary navigation', salle: 'Floor', vrap: 'Takeaway', waitlist: 'Waiting', more: 'More', actions: 'More actions', less: 'Hide actions', close: 'Collapse bill' };
+    return { label: 'Navigation principale', salle: 'Salle', vrap: 'À emporter', waitlist: 'Attente', more: 'Plus', actions: 'Autres actions', less: 'Masquer les actions', close: 'Replier l’addition' };
+  }
+
+  function initNativeTillUx() {
+    if (!/kiwi-caisse\.html$/i.test(location.pathname) || !document.body) return;
+    document.body.classList.add('kiwi-native-till');
+    var copy = nativeTillCopy();
+    var nav = document.createElement('nav');
+    nav.className = 'kiwi-native-tabbar';
+    nav.setAttribute('aria-label', copy.label);
+    nav.setAttribute('data-lens-demo', '');
+    nav.innerHTML = [
+      ['salle', copy.salle, 'table_restaurant.svg'],
+      ['vrap', copy.vrap, 'lunch_dining.svg'],
+      ['waitlist', copy.waitlist, 'group.svg'],
+      ['more', copy.more, 'category.svg']
+    ].map(function (item) {
+      return '<button type="button" data-lens-item data-native-tab="' + item[0] + '"><i style="--native-tab-icon:url(assets/icons/material/' + item[2] + ')" aria-hidden="true"></i><span>' + item[1] + '</span></button>';
+    }).join('');
+    document.body.appendChild(nav);
+    if (window.KiwiLens && typeof window.KiwiLens.rescan === 'function') {
+      window.KiwiLens.rescan();
+      window.KiwiLens.refresh();
+    }
+
+    function syncTabs() {
+      var mode = document.body.dataset.mode || 'salle';
+      var drawerOpen = document.body.classList.contains('nav-open');
+      nav.querySelectorAll('[data-native-tab]').forEach(function (button) {
+        var tab = button.getAttribute('data-native-tab');
+        var active = drawerOpen ? tab === 'more' : tab === mode;
+        button.classList.toggle('on', active);
+        button.setAttribute('aria-current', active ? 'page' : 'false');
+      });
+    }
+    nav.addEventListener('click', function (event) {
+      var button = event.target.closest('[data-native-tab]');
+      if (!button) return;
+      var mode = button.getAttribute('data-native-tab');
+      if (mode === 'more') {
+        document.body.classList.add('nav-open');
+        hapticLight();
+        return;
+      }
+      var source = document.querySelector('.mode-pill[data-mode="' + mode + '"]');
+      if (source && !source.disabled && !source.hidden) source.click();
+      document.body.classList.remove('nav-open');
+      hapticLight();
+      syncTabs();
+    });
+    new MutationObserver(syncTabs).observe(document.body, { attributes: true, attributeFilter: ['data-mode', 'class'] });
+    syncTabs();
+
+    var cart = document.querySelector('.rightpanel');
+    if (cart) {
+      var grabber = document.createElement('button');
+      grabber.type = 'button';
+      grabber.className = 'kiwi-native-sheet-grabber';
+      grabber.setAttribute('aria-label', copy.close);
+      grabber.addEventListener('click', function () { document.body.classList.remove('ticket-open'); });
+      cart.insertBefore(grabber, cart.firstChild);
+      var startY = 0, dragY = 0;
+      grabber.addEventListener('touchstart', function (event) {
+        startY = event.touches && event.touches[0] ? event.touches[0].clientY : 0;
+        dragY = 0;
+      }, { passive: true });
+      grabber.addEventListener('touchmove', function (event) {
+        if (!startY || !event.touches || !event.touches[0]) return;
+        dragY = Math.max(0, event.touches[0].clientY - startY);
+        cart.style.transform = 'translateY(' + dragY + 'px)';
+      }, { passive: true });
+      grabber.addEventListener('touchend', function () {
+        cart.style.removeProperty('transform');
+        if (dragY > 72) document.body.classList.remove('ticket-open');
+        startY = dragY = 0;
+      }, { passive: true });
+
+      var meta = cart.querySelector('.rp-meta');
+      if (meta) {
+        var more = document.createElement('button');
+        more.type = 'button';
+        more.className = 'kiwi-native-cart-more';
+        more.setAttribute('aria-expanded', 'false');
+        more.textContent = copy.actions;
+        more.addEventListener('click', function () {
+          var expanded = document.body.classList.toggle('kiwi-native-cart-actions');
+          more.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+          more.textContent = expanded ? copy.less : copy.actions;
+        });
+        meta.parentNode.insertBefore(more, meta);
+      }
+    }
+
+    function syncCategory() {
+      var active = document.querySelector('.cat-pill.is-active[data-cat]');
+      document.body.classList.toggle('kiwi-native-category-filtered', !!active && active.getAttribute('data-cat') !== 'all');
+    }
+    var categories = document.getElementById('cat-pills');
+    if (categories) new MutationObserver(syncCategory).observe(categories, { attributes: true, childList: true, subtree: true, attributeFilter: ['class'] });
+    syncCategory();
+
+    var welcome = document.getElementById('welcome-banner');
+    if (welcome) {
+      function syncWelcome() {
+        var visible = !welcome.hidden && welcome.classList.contains('is-visible');
+        welcome.inert = !visible;
+        welcome.setAttribute('aria-hidden', visible ? 'false' : 'true');
+      }
+      new MutationObserver(syncWelcome).observe(welcome, { attributes: true, attributeFilter: ['class', 'hidden'] });
+      welcome.addEventListener('animationend', function () {
+        welcome.inert = true;
+        welcome.setAttribute('aria-hidden', 'true');
+      });
+      syncWelcome();
+    }
   }
 
   function checkBiometrics() {
@@ -192,6 +394,7 @@
     handleNativeAppState: handleNativeAppState,
     maybePromptBiometricUnlock: maybePromptBiometricUnlock,
     registerPushToken: registerPushToken,
+    handleBackButton: handleNativeBack,
     deviceIdentity: function () { return call(socket, 'deviceIdentity').then(function (r) { return r && r.id || ''; }); }
   };
   restorePairing();
@@ -200,7 +403,8 @@
     window.KiwiNative.deviceId = r.id;
     try { localStorage.setItem('kiwi:caisse:terminal-id:v1', r.id); } catch (_) {}
   });
-  window.addEventListener('kiwi:native-haptic', function (event) { if (!event.detail || event.detail.kind === 'light') hapticLight(); });
+  window.addEventListener('kiwi:native-haptic', function (event) { if (!event.detail || event.detail.kind === 'light') hapticLight(); else hapticNotice(event.detail.kind); });
+  window.addEventListener('kiwi:toast', function (event) { if (event.detail && event.detail.type === 'danger') hapticNotice('danger'); });
   document.addEventListener('kiwi-paired', savePairing);
   document.addEventListener('focusin', revealFocused, true);
   if (window.visualViewport) {
@@ -211,16 +415,19 @@
   new MutationObserver(paintStatusBar).observe(root, { attributes: true, attributeFilter: ['data-theme', 'data-vexel-mode', 'lang', 'dir'] });
   paintStatusBar();
   configureKeepAwake();
+  applyDynamicTypeToWorkspace();
   call(network, 'getStatus').then(paintNetwork);
   if (network && typeof network.addListener === 'function') network.addListener('networkStatusChange', paintNetwork);
   if (app && typeof app.addListener === 'function') {
     app.addListener('appStateChange', function (state) {
       handleNativeAppState(state);
     });
+    app.addListener('backButton', handleNativeBack);
   }
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', maybePromptBiometricUnlock);
+    document.addEventListener('DOMContentLoaded', function () { initNativeTillUx(); maybePromptBiometricUnlock(); });
   } else {
+    initNativeTillUx();
     maybePromptBiometricUnlock();
   }
 })();

@@ -1022,6 +1022,7 @@ section('Whole-project regressions');
     'app-bundle-test.mjs',
     'app-release-test.mjs',
     'biometric-unlock-test.mjs',
+    'native-workspace-ux-test.mjs',
     'push-registration-test.mjs',
     'security-regression-test.js',
     'sold-insights-test.js',

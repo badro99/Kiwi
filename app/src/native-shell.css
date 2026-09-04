@@ -202,7 +202,7 @@ html[dir="rtl"] .tile-name { line-height: 1.35; }
 @media (max-width: 760px) {
   html, body { background: var(--ink); }
   .shell { display: block; min-height: 100dvh; background: var(--ink); overflow: visible; }
-  .brand-panel { min-height: 170px; padding: calc(var(--sat) + 14px) calc(var(--sar) + 20px) 20px calc(var(--sal) + 20px); }
+  .brand-panel { min-height: 152px; padding: calc(var(--sat) + 12px) calc(var(--sar) + 20px) 18px calc(var(--sal) + 20px); }
   .brand-panel::before { background-size: 38px 38px; opacity: .14; }
   .brand-panel::after { width: 230px; height: 230px; right: -145px; top: -28px; }
   .orbit-a { display: none; }
@@ -210,7 +210,7 @@ html[dir="rtl"] .tile-name { line-height: 1.35; }
   .shell-head { gap: var(--space-2); }
   .brand-logo { width: 88px; }
   .product-label { padding: 5px 7px 4px; font-size: calc(9px * var(--type-scale, 1)); }
-  .brand-kicker { max-width: 290px; margin-top: var(--space-3); font-size: calc(23px * var(--type-scale, 1)); line-height: 1.18; }
+  .brand-kicker { max-width: 300px; margin-top: var(--space-2); font-size: calc(21px * var(--type-scale, 1)); line-height: 1.16; }
   .shell-sub { max-width: 300px; font-size: calc(12px * var(--type-scale, 1)); }
   .brand-proof { display: none; }
   /* In-flow progress: absolute dots either hid behind the overlapping sheet
@@ -222,11 +222,11 @@ html[dir="rtl"] .tile-name { line-height: 1.35; }
   html[dir="rtl"] .progress li:not(:last-child)::after { right: calc(50% + 15px); left: auto; }
   .progress span { z-index: 1; width: 28px; height: 28px; background: #0A0F0D; }
   .progress b { display: none; }
-  .flow-panel { position: relative; z-index: 2; min-height: calc(100dvh - 170px); margin-top: -20px; padding: 12px calc(var(--sar) + 20px) calc(var(--sab) + 14px) calc(var(--sal) + 20px); border-radius: var(--r-xl) var(--r-xl) 0 0; overflow: visible; }
+  .flow-panel { position: relative; z-index: 2; min-height: calc(100dvh - 152px); margin-top: -18px; padding: 10px calc(var(--sar) + 20px) calc(var(--sab) + 14px) calc(var(--sal) + 20px); border-radius: var(--r-xl) var(--r-xl) 0 0; overflow: visible; }
   .flow-topbar { min-height: 28px; }
   .setup-step { max-width: 620px; margin: 0 auto; padding: 12px 0 10px; gap: 10px; justify-content: flex-start; }
   .step-heading { gap: 6px; /* off-scale: compact optical rhythm between mobile eyebrow and heading */ }
-  .step-heading h1 { font-size: calc(clamp(30px, 8.6vw, 38px) * var(--type-scale, 1)); line-height: 1.18; }
+  .step-heading h1 { font-size: calc(clamp(27px, 7.8vw, 34px) * var(--type-scale, 1)); line-height: 1.14; }
   .step-heading > p:last-child { font-size: calc(13px * var(--type-scale, 1)); }
   .account, .connect-box, .checklist { padding: var(--space-4); border-radius: var(--r-lg); }
   .printer-form { padding: var(--space-3); border-radius: var(--r-lg); }

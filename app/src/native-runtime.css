@@ -18,3 +18,65 @@ html.kiwi-native .kiwi-native-scroll{-webkit-overflow-scrolling:touch;overscroll
 html[dir="rtl"] .kiwi-native-offline{font-family:"IBM Plex Sans Arabic","Inter Tight",sans-serif}
 @media(prefers-reduced-motion:reduce){.kiwi-native-offline{transition:none}}
 @media(prefers-color-scheme:dark){html.kiwi-native{background:#0A0F0D;color-scheme:dark}}
+
+/* Native till: dense, stable touch geometry. Web/PWA layout remains untouched. */
+html.kiwi-native body:not(.native-shell-page){font-size:calc(16px * var(--type-scale,1))}
+html.kiwi-native input,html.kiwi-native select,html.kiwi-native textarea{font-size:max(16px,calc(16px * var(--type-scale,1)))!important}
+html.kiwi-native .main-title{font-size:calc(17px * var(--type-scale,1))}
+html.kiwi-native .menu-item-name{font-size:calc(14px * var(--type-scale,1))}
+html.kiwi-native .menu-item-cat{font-size:calc(10px * var(--type-scale,1))}
+html.kiwi-native .menu-item-price{font-size:calc(17px * var(--type-scale,1));white-space:nowrap}
+html.kiwi-native .rp-table,html.kiwi-native .pay-charge-lbl{font-size:calc(16px * var(--type-scale,1))}
+html.kiwi-native .rp-item,html.kiwi-native .rp-summary-row,html.kiwi-native .pay-btn{font-size:calc(13px * var(--type-scale,1))}
+html.kiwi-native .team-trigger,html.kiwi-native .mode-pill,html.kiwi-native .cat-pill,html.kiwi-native .floor-pill,html.kiwi-native .vrap-back-btn,html.kiwi-native .mlibre-toggle,html.kiwi-native .meta-btn,html.kiwi-native .qty-btn{min-height:44px}
+
+.kiwi-native-tabbar{display:none}
+@media (max-width:900px),(orientation:landscape) and (max-width:1024px) and (max-height:600px){
+  html.kiwi-native{--kiwi-native-tabs:calc(64px + var(--kiwi-safe-bottom))}
+  html.kiwi-native body.kiwi-native-till .kw-hamburger{display:none!important}
+  html.kiwi-native body.kiwi-native-till .main{padding-bottom:calc(92px + var(--kiwi-native-tabs))}
+  html.kiwi-native body.kiwi-native-till .main-head{padding:10px 14px 8px;gap:6px}
+  html.kiwi-native body.kiwi-native-till .main-head .main-title{padding-inline-start:0;min-height:34px}
+  html.kiwi-native body.kiwi-native-till .main-head .main-title em,html.kiwi-native body.kiwi-native-till .vrap-meta{display:none}
+  html.kiwi-native body.kiwi-native-till .sidebar .mode-selector,html.kiwi-native body.kiwi-native-till .sidebar .stats-section{display:none}
+  html.kiwi-native body.kiwi-native-till .sidebar .team-trigger{min-height:48px}
+  html.kiwi-native body.kiwi-native-till .kiwi-native-tabbar{--atlas:var(--forest);--riad:var(--emerald);position:fixed;z-index:46;inset:auto 0 0;min-height:var(--kiwi-native-tabs);padding:6px max(8px,var(--kiwi-safe-right)) var(--kiwi-safe-bottom) max(8px,var(--kiwi-safe-left));display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;border-top:1px solid rgba(10,15,13,.09);background:rgba(247,245,240,.96);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);box-shadow:0 -12px 32px -28px rgba(10,15,13,.55)}
+  html.kiwi-native body.kiwi-native-till.ticket-open .kiwi-native-tabbar{z-index:44}
+  html.kiwi-native body.kiwi-native-till .kiwi-native-tabbar button{position:relative;z-index:1;min-width:0;min-height:52px;padding:5px 4px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:0;border-radius:14px;background:transparent;color:#59615D;font:600 calc(10px * var(--type-scale,1))/1.1 "Inter Tight",sans-serif}
+  html.kiwi-native body.kiwi-native-till .kiwi-native-tabbar button.on{color:#F7F5F0}
+  html.kiwi-native body.kiwi-native-till .kiwi-native-tabbar i{width:21px;height:21px;background:currentColor;-webkit-mask:var(--native-tab-icon) center/contain no-repeat;mask:var(--native-tab-icon) center/contain no-repeat}
+  html.kiwi-native[dir="rtl"] body.kiwi-native-till .kiwi-native-tabbar button{font-family:"IBM Plex Sans Arabic","Inter Tight",sans-serif}
+  html.kiwi-native body.kiwi-native-till .rightpanel{bottom:var(--kiwi-native-tabs);max-height:calc(88dvh - var(--kiwi-native-tabs));--rp-peek-h:68px}
+  html.kiwi-native body.kiwi-native-till .rp-active{padding-bottom:12px;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+  html.kiwi-native body.kiwi-native-till.ticket-open .rp-peek{display:none}
+  html.kiwi-native body.kiwi-native-till .kiwi-native-sheet-grabber{display:none}
+  html.kiwi-native body.kiwi-native-till.ticket-open .kiwi-native-sheet-grabber{position:sticky;top:0;z-index:3;width:100%;height:28px;min-height:28px;display:block;border:0;background:var(--paper-elev);touch-action:pan-y}
+  html.kiwi-native body.kiwi-native-till.ticket-open .kiwi-native-sheet-grabber::after{content:"";position:absolute;left:50%;top:10px;width:40px;height:5px;transform:translateX(-50%);border-radius:999px;background:var(--line)}
+  html.kiwi-native body.kiwi-native-till .kiwi-native-cart-more{display:none}
+  html.kiwi-native body.kiwi-native-till.ticket-open .kiwi-native-cart-more{width:calc(100% - 40px);min-height:44px;margin:0 20px 8px;display:block;border:1px solid var(--line);border-radius:12px;background:var(--paper-mute);color:var(--ink-2);font:600 calc(13px * var(--type-scale,1))/1 "Inter Tight",sans-serif}
+  html.kiwi-native body.kiwi-native-till.ticket-open:not(.kiwi-native-cart-actions) .rp-pay .pay-row,html.kiwi-native body.kiwi-native-till.ticket-open:not(.kiwi-native-cart-actions) .rp-meta{display:none}
+  html.kiwi-native body.kiwi-native-till.ticket-open .rp-summary-row,html.kiwi-native body.kiwi-native-till.ticket-open .rp-tva-note{display:none}
+  html.kiwi-native body.kiwi-native-till.ticket-open .pay-charge-total{display:none}
+  html.kiwi-native body.kiwi-native-till.ticket-open .rp-meta{gap:8px;padding-bottom:12px;flex-wrap:wrap}
+  html.kiwi-native body.kiwi-native-till.ticket-open .meta-btn{min-width:44px;padding:10px 8px}
+  html.kiwi-native body.kiwi-native-till.ticket-open .meta-btn.danger{flex-basis:100%;justify-content:center;margin-left:0;border:1px solid currentColor;border-radius:10px}
+  html.kiwi-native body.kiwi-native-till .menu-grid{grid-template-columns:repeat(auto-fill,minmax(128px,1fr));grid-auto-rows:178px}
+  html.kiwi-native body.kiwi-native-till .menu-item{height:178px;min-height:178px;overflow:hidden}
+  html.kiwi-native body.kiwi-native-till .menu-item-art{width:34px;height:34px;margin-bottom:5px}
+  html.kiwi-native body.kiwi-native-till .menu-item-foot{min-height:58px;margin-top:5px;display:flex;flex-direction:column;align-items:stretch;gap:4px}
+  html.kiwi-native body.kiwi-native-till .menu-item-add,html.kiwi-native body.kiwi-native-till .menu-item-stepper{width:100%;min-height:34px;justify-content:center;border-radius:10px}
+  html.kiwi-native body.kiwi-native-till.kiwi-native-category-filtered .menu-item-cat{visibility:hidden;height:0;margin:0}
+  html.kiwi-native body.kiwi-native-till #vrap-builder{display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-rows:auto minmax(0,1fr);gap:8px 6px}
+  html.kiwi-native body.kiwi-native-till #vrap-builder[hidden]{display:none}
+  html.kiwi-native body.kiwi-native-till .vrap-back-btn{grid-column:1;margin:0;padding:8px 10px}
+  html.kiwi-native body.kiwi-native-till .vrap-back-btn span{display:none}
+  html.kiwi-native body.kiwi-native-till .cat-pills{grid-column:2;padding:0;align-items:center}
+  html.kiwi-native body.kiwi-native-till .mlibre-bar{grid-column:3;margin:0}
+  html.kiwi-native body.kiwi-native-till .mlibre-toggle{padding:8px 10px}
+  html.kiwi-native body.kiwi-native-till .mlibre-toggle span{display:none}
+  html.kiwi-native body.kiwi-native-till .mlibre-pad{grid-column:1/-1;margin:0;max-width:none}
+  html.kiwi-native body.kiwi-native-till .menu-grid{grid-column:1/-1}
+}
+@media (max-width:480px){html.kiwi-native body.kiwi-native-till .menu-grid{grid-template-columns:repeat(auto-fill,minmax(136px,1fr))}}
+@media(prefers-color-scheme:dark){html.kiwi-native body.kiwi-native-till .kiwi-native-tabbar{background:rgba(10,15,13,.96);border-top-color:rgba(247,245,240,.12)}html.kiwi-native body.kiwi-native-till .kiwi-native-tabbar button{color:rgba(247,245,240,.6)}}
+@media(prefers-reduced-motion:reduce){html.kiwi-native body.kiwi-native-till .rightpanel,html.kiwi-native body.kiwi-native-till .menu-item{transition:none!important}}
