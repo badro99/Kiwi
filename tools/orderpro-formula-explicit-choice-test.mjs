@@ -36,6 +36,8 @@ assert.match(source, /invalidRequiredOption[\s\S]*?scrollIntoView\(\{ behavior: 
   'Add scrolls to the first unanswered required option');
 assert.match(source, /opt\.required \? 1 : 0/,
   'ordinary required groups require an explicit customer choice');
+assert.match(source, /mayClear && customizerSelections\[optKey\] === choiceId \? '' : choiceId/,
+  'tapping an active optional single choice clears it');
 assert.match(source, /group\.classList\.add\('is-invalid'\)/,
   'the unanswered stage is visibly highlighted');
 assert.match(source, /group\.classList\.remove\('is-invalid'\)/,

@@ -4841,7 +4841,9 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     function selectCustomizerChoice(optKey, choiceId, type) {
       if (type === 'single') {
-        customizerSelections[optKey] = choiceId;
+        const definition = (customizerItem.options || []).find(opt => opt.key === optKey);
+        const mayClear = !definition || (!definition.required && !(definition.formulaSlotId && Math.max(0, Number(definition.min) || 0) > 0));
+        customizerSelections[optKey] = mayClear && customizerSelections[optKey] === choiceId ? '' : choiceId;
       } else {
         const arr = customizerSelections[optKey] || [];
         const i = arr.indexOf(choiceId);
@@ -4857,7 +4859,7 @@ em, i, cite, dfn, var { font-style: normal; }
       group.removeAttribute('aria-invalid');
       if (type === 'single') {
         $$('.option-chip', group).forEach(c => {
-          c.classList.toggle('is-active', c.dataset.choice === choiceId);
+          c.classList.toggle('is-active', customizerSelections[optKey] === c.dataset.choice);
         });
       } else {
         $$('.option-chip', group).forEach(c => {
