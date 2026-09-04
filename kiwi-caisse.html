@@ -5441,7 +5441,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=471" defer></script>
+  <script src="assets/caisse-pwa.js?v=472" defer></script>
   <script src="assets/live-link.js?v=21" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -10638,7 +10638,7 @@
          Chaque chemin garde sa propre preuve durable (ligne.sent, statut held,
          ou identifiant OrderPro), donc les encaissements/retours suivants ne
          peuvent jamais produire un second bon. */
-      dispatchUnsentKitchenBeforePayment();
+      const tenderOrder = dispatchUnsentKitchenBeforePayment();
       const tenderBase = currentTotal();
       const tenderTip = payTipAmount();
       const saleLabel = mode === 'vrap'
@@ -10647,7 +10647,7 @@
       const lines = currentSaleLines();
       nativeHapticLight();
       if (!splitPayCallback) recordSale(tenderBase, method, saleLabel, tenderTip, lines,
-        mode !== 'vrap' ? selectedId : '');
+        mode !== 'vrap' ? selectedId : '', tenderOrder);
       if (splitPayCallback) {
         const cb = splitPayCallback;
         splitPayCallback = null;
@@ -11741,6 +11741,11 @@
              caissier a sous les yeux. */
           if (r && r.ok && r.number != null) {
             order.opNum = r.number;
+            /* A fresh counter takeaway can be paid while this request is in
+               flight. Its customer receipt was already snapshotted with the
+               temporary local counter; replace that frozen reference as soon
+               as the permanent number lands. */
+            reconcileReceiptOrderNumber(order);
             if (order.table && tables[order.table]
                 && String(tables[order.table].orderNo) === String(order.num)) {
               tables[order.table].orderNo = ticketNo(order);
@@ -12905,7 +12910,7 @@
         actorId: String(d.actorId || (currentCashier && currentCashier.id) || '').slice(0, 96)
       };
     }
-    function recordSale(amount, method, label, tip, lines, settlementTable) {
+    function recordSale(amount, method, label, tip, lines, settlementTable, tenderOrder) {
       amount = money(amount);
       if (amount <= 0) return;
       /* An OrderPro takeaway is one commercial event even if the success modal
@@ -12913,8 +12918,13 @@
          the ledger row to the immutable OrderPro id instead of minting a new
          sale id on every tap. This is the financial last line of defence: a
          second Encaisser can reconcile the UI, never book the money twice. */
-      const vrapOrder = mode === 'vrap' && vrapEditingNum != null
-        ? kdsOrders.find(o => o && o.num === vrapEditingNum) : null;
+      /* `finalizeTender()` captures the order before any asynchronous relay can
+         repaint or clear the takeaway editor. Keep that exact object attached
+         to the receipt instead of rediscovering it through mutable UI state. */
+      const vrapOrder = tenderOrder && tenderOrder.type === 'takeaway'
+        ? tenderOrder
+        : (mode === 'vrap' && vrapEditingNum != null
+          ? kdsOrders.find(o => o && o.num === vrapEditingNum) : null);
       const orderProSaleId = vrapOrder && vrapOrder.opId
         ? ('sale-' + String(vrapOrder.opId).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 58)) : '';
       if (orderProSaleId) {
@@ -13392,6 +13402,23 @@
         entry.rc = K.snapshot(K.build(receiptSaleFrom(entry), receiptOpts()));
       } catch (_) {}
     }
+    function reconcileReceiptOrderNumber(order, entry) {
+      if (!order || order.opNum == null) return entry || null;
+      const orderId = String(order.opId || '');
+      const row = entry || (orderId ? journal.find(candidate =>
+        candidate && String(candidate.orderId || '') === orderId) : null);
+      if (!row) return null;
+      const canonical = ticketNo(order);
+      if (!canonical || String(row.ref || '') === String(canonical)) return row;
+      row.ref = canonical;
+      /* The snapshot is intentionally immutable for business details, but the
+         temporary order counter is not a legal receipt identity. Rebuild only
+         at this allocation boundary so every customer output uses the same
+         permanent number already shown by Caisse and kitchen. */
+      attachReceipt(row);
+      try { persistShift(); } catch (_) {}
+      return row;
+    }
     /* Rouvrir le ticket d'une écriture : le figé s'il existe (c'est LE ticket du
        client, mentions de l'époque comprises), sinon un rendu à partir de ce que
        le journal porte · le cas des ventes d'avant cette version. */
@@ -13400,6 +13427,14 @@
       if (!K) return null;
       opts = receiptOpts(opts);
       try {
+        /* Also heals a receipt restored from storage if the permanent number
+           arrived just before a reload but the final persistence lost the
+           race. This is global restaurant logic, independent of merchant. */
+        if (entry && entry.orderId) {
+          const order = opTickets.get(String(entry.orderId)) || kdsOrders.find(candidate =>
+            candidate && String(candidate.opId || '') === String(entry.orderId));
+          if (order) reconcileReceiptOrderNumber(order, entry);
+        }
         if (entry && entry.rc) return K.fromSnapshot(entry.rc, opts);
         return K.build(receiptSaleFrom(entry), opts);
       } catch (_) { return null; }
