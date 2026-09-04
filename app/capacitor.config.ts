@@ -31,11 +31,14 @@ const config: CapacitorConfig = {
   plugins: {
     CapacitorHttp: { enabled: true },
     CapacitorCookies: { enabled: true },
-    // Keep the real platform launch screen above the WebView until the final
-    // embedded workspace has painted. Auto-hide exposed a blank frame while
-    // index.html redirected to the remembered role on slower devices.
+    // The OS launch screen now hands off to the native SwiftUI/Compose shell,
+    // which stays above the WebView until setup or the remembered workspace is
+    // ready. Auto-hide must remain enabled: otherwise the system splash masks
+    // that native shell and can strand the merchant on the launch artwork.
     SplashScreen: {
-      launchAutoHide: false,
+      launchAutoHide: true,
+      launchShowDuration: 350,
+      launchFadeOutDuration: 120,
       backgroundColor: '#0A0F0D',
       showSpinner: false,
     },

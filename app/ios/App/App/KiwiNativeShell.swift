@@ -63,6 +63,37 @@ private struct KiwiHostContext: Codable {
     var summary: [KiwiHostSummary] = []
     var actions: [KiwiHostAction] = []
     var tabs: [KiwiHostTab] = []
+
+    private enum CodingKeys: String, CodingKey {
+        case version, screen, locale, rtl, kind, progress, progressTotal, eyebrow, title, message
+        case status, statusKind, accountLabel, role, selected, fields, choices, summary, actions, tabs
+    }
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        version = try values.decodeIfPresent(Int.self, forKey: .version) ?? 1
+        screen = try values.decodeIfPresent(String.self, forKey: .screen) ?? "launch"
+        locale = try values.decodeIfPresent(String.self, forKey: .locale) ?? "fr"
+        rtl = try values.decodeIfPresent(Bool.self, forKey: .rtl) ?? false
+        kind = try values.decodeIfPresent(String.self, forKey: .kind) ?? "account"
+        progress = try values.decodeIfPresent(Int.self, forKey: .progress) ?? 0
+        progressTotal = try values.decodeIfPresent(Int.self, forKey: .progressTotal) ?? 0
+        eyebrow = try values.decodeIfPresent(String.self, forKey: .eyebrow) ?? ""
+        title = try values.decodeIfPresent(String.self, forKey: .title) ?? ""
+        message = try values.decodeIfPresent(String.self, forKey: .message) ?? ""
+        status = try values.decodeIfPresent(String.self, forKey: .status) ?? ""
+        statusKind = try values.decodeIfPresent(String.self, forKey: .statusKind) ?? ""
+        accountLabel = try values.decodeIfPresent(String.self, forKey: .accountLabel) ?? ""
+        role = try values.decodeIfPresent(String.self, forKey: .role) ?? ""
+        selected = try values.decodeIfPresent(String.self, forKey: .selected) ?? ""
+        fields = try values.decodeIfPresent([KiwiHostField].self, forKey: .fields) ?? []
+        choices = try values.decodeIfPresent([KiwiHostChoice].self, forKey: .choices) ?? []
+        summary = try values.decodeIfPresent([KiwiHostSummary].self, forKey: .summary) ?? []
+        actions = try values.decodeIfPresent([KiwiHostAction].self, forKey: .actions) ?? []
+        tabs = try values.decodeIfPresent([KiwiHostTab].self, forKey: .tabs) ?? []
+    }
 }
 
 private final class KiwiNativeShellModel: ObservableObject {
@@ -156,7 +187,9 @@ final class KiwiNativeShellCoordinator: NSObject, WKScriptMessageHandler {
     }
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
-        guard message.name == "kiwiShell" else { return }
+        let origin = message.frameInfo.securityOrigin
+        guard message.name == "kiwiShell", message.frameInfo.isMainFrame,
+              origin.host == "localhost", origin.protocol == "capacitor" else { return }
         model.accept(message.body)
     }
 }
@@ -351,7 +384,8 @@ private struct KiwiNativeTabRoot: View {
             }
         }
         .padding(.horizontal, 10).padding(.top, 7).padding(.bottom, 34)
-        .background(kiwiPaper.opacity(0.98).shadow(.drop(color: kiwiInk.opacity(0.12), radius: 16, y: -4)))
+        .background(kiwiPaper.opacity(0.98))
+        .shadow(color: kiwiInk.opacity(0.12), radius: 16, x: 0, y: -4)
         .environment(\.layoutDirection, model.context.rtl ? .rightToLeft : .leftToRight)
     }
 

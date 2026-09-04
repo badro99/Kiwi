@@ -87,7 +87,8 @@ private data class HostContext(
 )
 
 class MainActivity : BridgeActivity() {
-    private var context by mutableStateOf(HostContext())
+    // Avoid Activity/View `context` shadowing inside Compose lambdas.
+    private var hostContext by mutableStateOf(HostContext())
     private var revision by mutableIntStateOf(0)
     private lateinit var nativeOverlay: ComposeView
 
@@ -102,9 +103,9 @@ class MainActivity : BridgeActivity() {
             setContent {
                 MaterialTheme {
                     when {
-                        context.screen == "launch" -> LaunchSurface()
-                        context.screen == "setup" -> SetupSurface(context, revision, ::sendAction)
-                        context.tabs.isNotEmpty() -> NativeTabs(context, ::sendAction)
+                        hostContext.screen == "launch" -> LaunchSurface()
+                        hostContext.screen == "setup" -> SetupSurface(hostContext, revision, ::sendAction)
+                        hostContext.tabs.isNotEmpty() -> NativeTabs(hostContext, ::sendAction)
                     }
                 }
             }
@@ -121,7 +122,7 @@ class MainActivity : BridgeActivity() {
             runOnUiThread {
                 val url = bridge?.webView?.url.orEmpty()
                 if (!url.startsWith("https://localhost/") && !url.startsWith("http://localhost/")) return@runOnUiThread
-                context = parseContext(raw)
+                hostContext = parseContext(raw)
                 revision += 1
                 applyOverlayLayout()
             }
@@ -131,8 +132,8 @@ class MainActivity : BridgeActivity() {
     private fun applyOverlayLayout() {
         if (!::nativeOverlay.isInitialized) return
         val height = when {
-            context.screen == "launch" || context.screen == "setup" -> ViewGroup.LayoutParams.MATCH_PARENT
-            context.tabs.isNotEmpty() -> (104 * resources.displayMetrics.density).toInt()
+            hostContext.screen == "launch" || hostContext.screen == "setup" -> ViewGroup.LayoutParams.MATCH_PARENT
+            hostContext.tabs.isNotEmpty() -> (104 * resources.displayMetrics.density).toInt()
             else -> 0
         }
         nativeOverlay.layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, height, Gravity.BOTTOM)

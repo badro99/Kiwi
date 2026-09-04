@@ -23,6 +23,8 @@ const landingLocaleCss = read('assets/landing-locale-menu.css');
 const dashboard = read('dashboard.html');
 const launchStoryboard = read('app/ios/App/App/Base.lproj/LaunchScreen.storyboard');
 const sceneDelegate = read('app/ios/App/App/SceneDelegate.swift');
+const swiftNativeShell = read('app/ios/App/App/KiwiNativeShell.swift');
+const composeNativeShell = read('app/android/app/src/main/java/com/kiwios/pro/MainActivity.kt');
 const caisse = read('kiwi-caisse.html');
 const capacitorConfig = read('app/capacitor.config.ts');
 const appPackage = JSON.parse(read('app/package.json'));
@@ -138,10 +140,35 @@ check('native login requests the right mobile keyboard actions',
   appShell.includes('autocapitalize="none"') && appShell.includes('enterkeyhint="next"') && appShell.includes('enterkeyhint="go"'));
 check('the automatic launcher keeps the branded boot stage mounted through redirect',
   /if \(role && !manual && !forceSetup\) \{ location\.replace\(ROLES\[role\]\); return; \}\s*clearBoot\(\)/.test(nativeShell));
-check('the native launch screen stays up until the final workspace paints, with a bounded escape hatch',
+check('the system splash hands off to the native host while the web fallback remains bounded',
   appPackage.dependencies['@capacitor/splash-screen'] === '8.0.2' &&
-  capacitorConfig.includes('launchAutoHide: false') && runtime.includes("call(splashScreen, 'hide')") &&
+  capacitorConfig.includes('launchAutoHide: true') && capacitorConfig.includes('launchShowDuration: 350') &&
+  runtime.includes("call(splashScreen, 'hide')") &&
   runtime.includes('setTimeout(hideLaunchSplash, 8000)') && nativeShell.includes("CustomEvent('kiwi:native-ready')"));
+check('iOS setup and navigation are native SwiftUI hosts above the Capacitor workspace',
+  swiftNativeShell.includes('UIHostingController<KiwiNativeSetupRoot>') &&
+  swiftNativeShell.includes('UIHostingController<KiwiNativeTabRoot>') &&
+  sceneDelegate.includes('KiwiNativeShellCoordinator()'));
+check('iOS bridge accepts only main-frame messages from the bundled Capacitor origin',
+  swiftNativeShell.includes('message.frameInfo.isMainFrame') &&
+  swiftNativeShell.includes('origin.host == "localhost"') &&
+  swiftNativeShell.includes('origin.protocol == "capacitor"'));
+check('iOS host messages tolerate additive or omitted fields instead of trapping the launch layer',
+  swiftNativeShell.includes('decodeIfPresent(String.self, forKey: .screen) ?? "launch"') &&
+  swiftNativeShell.includes('decodeIfPresent([KiwiHostTab].self, forKey: .tabs) ?? []'));
+check('Android setup and navigation use a Compose host with a local-origin-only bridge',
+  composeNativeShell.includes('ComposeView(this)') && composeNativeShell.includes('SetupSurface(hostContext') &&
+  composeNativeShell.includes('NativeTabs(hostContext') &&
+  composeNativeShell.includes('url.startsWith("https://localhost/")'));
+check('native views delegate intent to the existing web state machine and do not duplicate account APIs',
+  nativeShell.includes('window.KiwiNativeHostAction = function') &&
+  nativeShell.includes("login.requestSubmit()") && runtime.includes("payload.action === 'navigate'") &&
+  !swiftNativeShell.includes('/auth/') && !swiftNativeShell.includes('/api/') &&
+  !composeNativeShell.includes('/auth/') && !composeNativeShell.includes('/api/'));
+check('the browser/PWA setup remains visible unless a native host actually answers',
+  nativeShell.includes("var active = nativeHostPost(nativeSetupContext())") &&
+  nativeShell.includes("if (active && document.body)") &&
+  nativeRuntimeCss.includes('body.kiwi-native-hosted .kiwi-native-tabbar'));
 check('the native till removes the empty bill shelf and synchronizes sheet accessibility',
   nativeRuntimeCss.includes('.kiwi-native-cart-empty .rightpanel') && runtime.includes("peek.setAttribute('aria-expanded'") &&
   runtime.includes("attributeFilter: ['hidden', 'style']") &&
