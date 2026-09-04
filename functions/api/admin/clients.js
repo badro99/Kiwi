@@ -376,44 +376,70 @@ export async function onRequestDelete(context) {
     } catch (_) { /* illisible → elle sortira du batch aussi */ }
   }
 
-  /* R2 : les pièces du guichet vivent sous `intake/<merchant>/`. Supprimer
-   * les lignes D1 seules les orphelinerait — des PDF privés sans index pour
-   * les retrouver — alors que `merchantTables` ci-dessus efface déjà
-   * `intake_docs`. Il n'existe pas de transaction distribuée D1+R2 : l'ordre
-   * est donc R2 PUIS D1. Un crash entre les deux laisse des lignes D1 dont
-   * les octets manquent (lectures en 404, rien d'orphelin), et la reprise
-   * re-liste ce qui reste puis rejoue le batch D1, idempotent par nature
-   * (des DELETE répétés). Tant que des objets R2 connus subsistent, le
-   * registre D1 n'est pas touché et la suppression n'est pas annoncée. */
-  let r2 = { status: 'skipped', prefix: null, listed: 0, deleted: 0 };
+  /* R2 : trois familles d'objets appartiennent à l'établissement : pièces du
+   * guichet (`intake/<merchant>/`), médias catalogue/chambres
+   * (`<merchant>/`) et pièces support (`support/<merchant>/`). Supprimer les
+   * lignes D1 seules les orphelinerait sans index pour les retrouver. Il
+   * n'existe pas de transaction distribuée D1+R2 : l'ordre est donc R2 PUIS
+   * D1. Un crash entre les deux laisse des lignes D1 dont les octets manquent
+   * (lectures en 404, rien d'orphelin), et la reprise re-liste ce qui reste
+   * puis rejoue le batch D1, idempotent par nature (des DELETE répétés). Tant
+   * qu'un objet d'une famille connue subsiste, le registre D1 n'est pas touché
+   * et la suppression n'est pas annoncée. */
+  let r2 = { status: 'skipped', prefix: null, prefixes: [], listed: 0, deleted: 0 };
+  if (!/^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(merchant)) {
+    // Chaque préfixe R2 dérive du slug : interdire surtout '/' et '.' empêche
+    // toute suppression de déborder sur un autre établissement.
+    return json({ error: 'invalid-merchant' }, 400);
+  }
+  const r2Prefixes = [
+    'intake/' + merchant + '/',
+    merchant + '/',
+    'support/' + merchant + '/',
+  ];
+  r2.prefix = r2Prefixes[0]; // compatibilité avec les anciens rapports opérateur
+  r2.prefixes = r2Prefixes.slice();
   if (!env.MEDIA) {
     // Liaison absente : on ne peut ni lister ni supprimer. On ne continue que
-    // sur preuve POSITIVE qu'il n'y a rien à orpheliner — jamais sur une
-    // erreur transformée en zéro. D'où la sonde en deux temps (même motif que
-    // hotel/declarations.js) : table absente ⇒ aucun dépôt n'a jamais existé
-    // ici ; table présente mais illisible ⇒ 503 sans rien toucher.
+    // sur preuve POSITIVE qu'aucun registre ne référence encore un objet —
+    // jamais sur une erreur transformée en zéro. Chaque table est sondée avant
+    // sa lecture (même motif que hotel/declarations.js) : table absente ⇒ cette
+    // famille n'a jamais été enregistrée ici ; table illisible ⇒ 503 sans rien
+    // toucher. `instr`, pas LIKE : '_' est autorisé dans un slug et ne doit pas
+    // devenir un joker SQL.
     try {
-      const t = await env.DB.prepare(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name='intake_docs' LIMIT 1"
-      ).first();
-      if (t && t.name) {
-        const c = await env.DB.prepare('SELECT COUNT(*) AS n FROM intake_docs WHERE merchant = ?').bind(merchant).first();
-        const pending = Number((c && c.n) || 0);
-        if (pending > 0) {
-          return json({ error: 'r2-binding-missing', detail: pending + ' intake row(s) reference objects no bound bucket can verify' }, 503);
-        }
+      const mediaNeedle = '/api/media/' + merchant + '/';
+      const registries = [
+        { table: 'intake_docs', sql: 'SELECT COUNT(*) AS n FROM intake_docs WHERE merchant = ?', args: [merchant] },
+        { table: 'support_attachments', sql: 'SELECT COUNT(*) AS n FROM support_attachments WHERE merchant = ?', args: [merchant] },
+        { table: 'menus', sql: 'SELECT COUNT(*) AS n FROM menus WHERE merchant = ? AND instr(data, ?) > 0', args: [merchant, mediaNeedle] },
+        { table: 'catalogs', sql: 'SELECT COUNT(*) AS n FROM catalogs WHERE merchant = ? AND instr(data, ?) > 0', args: [merchant, mediaNeedle] },
+        { table: 'store_docs', sql: 'SELECT COUNT(*) AS n FROM store_docs WHERE merchant = ? AND instr(data, ?) > 0', args: [merchant, mediaNeedle] },
+      ];
+      const pending = {};
+      for (const registry of registries) {
+        const t = await env.DB.prepare(
+          "SELECT name FROM sqlite_master WHERE type='table' AND name=? LIMIT 1"
+        ).bind(registry.table).first();
+        if (!t || !t.name) continue;
+        const c = await env.DB.prepare(registry.sql).bind(...registry.args).first();
+        const n = Number((c && c.n) || 0);
+        if (n > 0) pending[registry.table] = n;
+      }
+      if (Object.keys(pending).length) {
+        return json({
+          error: 'r2-binding-missing',
+          detail: 'R2-backed rows exist but no bound bucket can verify or delete their objects',
+          pending,
+        }, 503);
       }
     } catch (_) {
-      // Base illisible : on ne sait pas s'il reste des pièces — refus,
-      // aucune suppression. (C'est aussi ce qui garde le flux opérateur
-      // historique ouvert là où R2 n'est pas lié et le registre est vide.)
-      return json({ error: 'db-unavailable', detail: 'cannot verify intake_docs without MEDIA binding' }, 503);
+      // Base illisible : on ne sait pas s'il reste des objets — refus, aucune
+      // suppression. Le flux historique reste ouvert quand les registres sont
+      // absents ou tous prouvés vides.
+      return json({ error: 'db-unavailable', detail: 'cannot verify R2-backed registries without MEDIA binding' }, 503);
     }
-    r2 = { status: 'binding-missing-no-rows', prefix: null, listed: 0, deleted: 0 };
-  } else if (!/^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(merchant)) {
-    // Le préfixe R2 est dérivé du slug : tout caractère hors alphabet
-    // (surtout '/' ou '.') pourrait déborder sur un autre marchand.
-    return json({ error: 'invalid-merchant' }, 400);
+    r2.status = 'binding-missing-no-rows';
   }
   if (env.MEDIA) {
     try {
@@ -425,33 +451,33 @@ export async function onRequestDelete(context) {
        * réussi retire ≥1 objet (décroissance stricte) ; une page vide, même
        * annoncée `truncated`, termine ; une tête de page qui survit à deux
        * suppressions annoncées réussies signale un seau menteur et avorte. */
-      const prefix = 'intake/' + merchant + '/';
-      r2.prefix = prefix;
-      let lastHead = null;
-      let headRepeats = 0;
-      for (;;) {
-        const page = await env.MEDIA.list({ prefix, limit: 1000 });
-        const objects = (page && page.objects) || [];
-        if (!objects.length) break;
-        const keys = [];
-        for (const o of objects) {
-          const key = o && o.key;
-          if (typeof key !== 'string' || !key.startsWith(prefix)) {
-            return json({ error: 'r2-scope-violation', detail: 'R2 listed a key outside ' + prefix }, 500);
+      for (const prefix of r2Prefixes) {
+        let lastHead = null;
+        let headRepeats = 0;
+        for (;;) {
+          const page = await env.MEDIA.list({ prefix, limit: 1000 });
+          const objects = (page && page.objects) || [];
+          if (!objects.length) break;
+          const keys = [];
+          for (const o of objects) {
+            const key = o && o.key;
+            if (typeof key !== 'string' || !key.startsWith(prefix)) {
+              return json({ error: 'r2-scope-violation', detail: 'R2 listed a key outside ' + prefix }, 500);
+            }
+            keys.push(key);
           }
-          keys.push(key);
-        }
-        r2.listed += keys.length;
-        for (let i = 0; i < keys.length; i += 1000) {
-          await env.MEDIA.delete(keys.slice(i, i + 1000));
-        }
-        r2.deleted += keys.length;
-        if (keys[0] === lastHead) {
-          headRepeats += 1;
-          if (headRepeats >= 2) throw new Error('r2-delete-stalled');
-        } else {
-          lastHead = keys[0];
-          headRepeats = 0;
+          r2.listed += keys.length;
+          for (let i = 0; i < keys.length; i += 1000) {
+            await env.MEDIA.delete(keys.slice(i, i + 1000));
+          }
+          r2.deleted += keys.length;
+          if (keys[0] === lastHead) {
+            headRepeats += 1;
+            if (headRepeats >= 2) throw new Error('r2-delete-stalled:' + prefix);
+          } else {
+            lastHead = keys[0];
+            headRepeats = 0;
+          }
         }
       }
       r2.status = 'cleaned';

@@ -3,9 +3,10 @@
  * Kiwi · admin delete R2 test — pas d'orphelins privés à la clôture.
  *
  * Le design promet la rétention jusqu'à la clôture du compte : supprimer un
- * établissement doit donc purger `intake/<merchant>/` en R2 AVANT d'effacer
- * le registre D1 (jamais l'inverse — des octets sans index seraient perdus
- * pour toujours). Cette suite exécute la VRAIE route
+ * établissement doit donc purger les trois familles R2 (`intake/<merchant>/`,
+ * `<merchant>/`, `support/<merchant>/`) AVANT d'effacer les registres D1
+ * (jamais l'inverse — des octets sans index seraient perdus pour toujours).
+ * Cette suite exécute la VRAIE route
  * (functions/api/admin/clients.js, import direct) sur une VRAIE base sqlite
  * construite depuis schema.sql, avec de VRAIS cookies opérateur signés, et
  * un sosie R2 à pagination honnête. Seul R2 est doublé (pas de seau en node).
@@ -18,7 +19,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 
-const EXPECTED = 15;
+const EXPECTED = 19;
 let checks = 0;
 process.on('unhandledRejection', (error) => { console.error(error); process.exit(1); });
 async function check(name, fn) {
@@ -48,6 +49,7 @@ function makeDb(flags = {}) {
         },
         first() {
           if (flags.failCount && /COUNT\(\*\) AS n FROM intake_docs/.test(sql)) throw new Error('D1 count failed');
+          if (flags.failSupportCount && /COUNT\(\*\) AS n FROM support_attachments/.test(sql)) throw new Error('D1 support count failed');
           return st.get(...args) || null;
         },
         all() { return { results: st.all(...args) }; },
@@ -148,6 +150,35 @@ function seedIntake(world, merchant, docId, ts) {
   ).bind(merchant, docId, 'intake/' + merchant + '/' + docId + '.pdf', ts, ts).run();
   world.r2.put('intake/' + merchant + '/' + docId + '.pdf', new TextEncoder().encode('%PDF-1.4 ' + docId.slice(0, 8)));
 }
+function seedSupport(world, merchant, id, ts = 1000) {
+  const ticket = 'ticket-' + merchant + '-' + id;
+  const key = 'support/' + merchant + '/' + ticket + '/' + id + '.pdf';
+  world.env.DB.prepare(
+    `INSERT INTO support_tickets (id, reference, merchant, store_type, category, priority, status, channel, contact, summary, diagnostics, assignee, created_ts, updated_ts)
+     VALUES (?, ?, ?, 'shop', 'other', 'normal', 'open', 'web', '', 'test', '{}', '', ?, ?)`
+  ).bind(ticket, 'REF-' + merchant + '-' + id, merchant, ts, ts).run();
+  world.env.DB.prepare(
+    `INSERT INTO support_attachments (id, ticket_id, merchant, object_key, name, mime, size, created_ts)
+     VALUES (?, ?, ?, ?, 'piece.pdf', 'application/pdf', 10, ?)`
+  ).bind('attachment-' + merchant + '-' + id, ticket, merchant, key, ts).run();
+  world.r2.put(key, new TextEncoder().encode('%PDF support'));
+  return key;
+}
+function seedPublishedMedia(world, merchant, table, key) {
+  const url = '/api/media/' + key;
+  world.r2.put(key, new TextEncoder().encode('image'));
+  if (table === 'menus') {
+    world.env.DB.prepare("INSERT INTO menus (merchant, name, type, data, updated_ts) VALUES (?, 'Test', 'boutique', ?, 1000)")
+      .bind(merchant, JSON.stringify({ products: [{ photo: url }] })).run();
+  } else if (table === 'catalogs') {
+    world.env.DB.prepare("INSERT INTO catalogs (merchant, data, rev, updated_ts) VALUES (?, ?, 1, 1000)")
+      .bind(merchant, JSON.stringify({ products: [{ photo: url }] })).run();
+  } else if (table === 'store_docs') {
+    world.env.DB.prepare("INSERT INTO store_docs (merchant, feature, data, rev, updated_ts) VALUES (?, 'rooms', ?, 1, 1000)")
+      .bind(merchant, JSON.stringify({ roomTypes: [{ photos: [{ url }] }] })).run();
+  }
+  return key;
+}
 async function del(env, merchant, confirm) {
   const res = await route.onRequestDelete({
     request: new Request('https://kiwi.test/api/admin/clients?merchant=' + encodeURIComponent(merchant) + '&confirm=' + encodeURIComponent(confirm ?? merchant), {
@@ -180,6 +211,23 @@ await check('one object is removed from R2 and reported', async () => {
   assert.equal(body.removed['intake_docs'], 1);
 });
 
+await check('catalog, hotel and support objects are purged with their D1 registries', async () => {
+  const w = makeWorld();
+  const menuKey = seedPublishedMedia(w, M, 'menus', M + '/menu-photo.jpg');
+  const catalogKey = seedPublishedMedia(w, M, 'catalogs', M + '/product-photo.jpg');
+  const hotelKey = seedPublishedMedia(w, M, 'store_docs', M + '/hotel-room/room-photo.jpg');
+  const supportKey = seedSupport(w, M, '1');
+  const { status, body } = await del(w.env, M);
+  assert.equal(status, 200);
+  assert.deepEqual(body.r2.prefixes, ['intake/' + M + '/', M + '/', 'support/' + M + '/']);
+  assert.equal(body.r2.deleted, 4);
+  for (const key of [menuKey, catalogKey, hotelKey, supportKey]) assert.ok(!w.r2.keys.has(key), key + ' purged');
+  assert.equal(w.env.DB.prepare('SELECT COUNT(*) AS n FROM support_attachments WHERE merchant = ?').bind(M).first().n, 0);
+  assert.equal(w.env.DB.prepare('SELECT COUNT(*) AS n FROM menus WHERE merchant = ?').bind(M).first().n, 0);
+  assert.equal(w.env.DB.prepare('SELECT COUNT(*) AS n FROM catalogs WHERE merchant = ?').bind(M).first().n, 0);
+  assert.equal(w.env.DB.prepare('SELECT COUNT(*) AS n FROM store_docs WHERE merchant = ?').bind(M).first().n, 0);
+});
+
 await check('more than 1000 objects paginate to completion', async () => {
   const w = makeWorld({ r2flags: { pageSize: 1000 } });
   for (let i = 0; i < 2500; i++) seedIntake(w, M, docId(i), 1000 + i);
@@ -192,15 +240,17 @@ await check('more than 1000 objects paginate to completion', async () => {
   assert.equal(body.removed['intake_docs'], 2500);
 });
 
-await check('unrelated merchants and other prefixes remain untouched', async () => {
+await check('unrelated merchants and unknown prefixes remain untouched', async () => {
   const w = makeWorld();
   seedIntake(w, M, docId(1), 1000);
   seedIntake(w, OTHER, docId(2), 1000);
-  w.r2.put('support/' + M + '/ticket-1/a.pdf', new TextEncoder().encode('x'));
+  const otherSupport = seedSupport(w, OTHER, '1');
+  w.r2.put('legacy/' + M + '/unowned.bin', new TextEncoder().encode('x'));
   const { status } = await del(w.env, M);
   assert.equal(status, 200);
   assert.ok(w.r2.keys.has('intake/' + OTHER + '/' + docId(2) + '.pdf'));
-  assert.ok(w.r2.keys.has('support/' + M + '/ticket-1/a.pdf'));
+  assert.ok(w.r2.keys.has(otherSupport));
+  assert.ok(w.r2.keys.has('legacy/' + M + '/unowned.bin'));
   assert.equal(w.env.DB.prepare('SELECT COUNT(*) AS n FROM intake_docs WHERE merchant = ?').bind(OTHER).first().n, 1);
 });
 
@@ -311,6 +361,43 @@ await check('missing MEDIA binding: zero rows proceed explicitly, rows present r
   assert.equal(body.error, 'r2-binding-missing');
   assert.ok(!body.ok);
   assert.equal(w.env.DB.prepare('SELECT COUNT(*) AS n FROM intake_docs WHERE merchant = ?').bind(M).first().n, 1);
+});
+
+await check('missing MEDIA refuses support attachments without touching D1', async () => {
+  const w = makeWorld({ withMedia: false });
+  seedSupport(w, M, '1');
+  const { status, body } = await del(w.env, M);
+  assert.equal(status, 503);
+  assert.equal(body.error, 'r2-binding-missing');
+  assert.equal(body.pending.support_attachments, 1);
+  assert.equal(w.env.DB.prepare('SELECT COUNT(*) AS n FROM support_attachments WHERE merchant = ?').bind(M).first().n, 1);
+});
+
+await check('missing MEDIA refuses published menu, catalog and hotel media references', async () => {
+  for (const [table, key] of [
+    ['menus', M + '/menu-photo.jpg'],
+    ['catalogs', M + '/product-photo.jpg'],
+    ['store_docs', M + '/hotel-room/room-photo.jpg'],
+  ]) {
+    const w = makeWorld({ withMedia: false });
+    seedPublishedMedia(w, M, table, key);
+    const { status, body } = await del(w.env, M);
+    assert.equal(status, 503, table);
+    assert.equal(body.error, 'r2-binding-missing', table);
+    assert.equal(body.pending[table], 1, table);
+    assert.equal(w.env.DB.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE merchant = ?`).bind(M).first().n, 1, table);
+  }
+});
+
+await check('missing MEDIA registry read failure is 503 with zero deletion', async () => {
+  const dbflags = { failSupportCount: true };
+  const w = makeWorld({ withMedia: false, dbflags });
+  seedSupport(w, M, '1');
+  const { status, body } = await del(w.env, M);
+  assert.equal(status, 503);
+  assert.equal(body.error, 'db-unavailable');
+  dbflags.failSupportCount = false;
+  assert.equal(w.env.DB.prepare('SELECT COUNT(*) AS n FROM support_attachments WHERE merchant = ?').bind(M).first().n, 1);
 });
 
 await check('missing MEDIA plus missing table proceeds: positively proven absent', async () => {
