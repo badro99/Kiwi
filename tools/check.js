@@ -1067,6 +1067,7 @@ section('Whole-project regressions');
     'sale-invoice-test.mjs',
     'ai-routes-test.mjs',
     'inventory-count-test.mjs',
+    'inventory-count-review-test.mjs',
     'menu-scan-test.mjs',
     'intake-slice1-test.mjs',
     'intake-posting-test.mjs',

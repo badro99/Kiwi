@@ -153,6 +153,11 @@
       mScanReadingFile: 'Extraction du texte PDF…',
       mScanServerNotice: 'La facture est analysée sur le serveur Kiwi pour pré-remplir les lignes.',
       mScanFailFallback: 'Lecture automatique indisponible · passage en saisie manuelle.',
+      mCountErrOffline: 'Connexion perdue · rien n’a été appliqué. Vérifiez le réseau et réessayez.',
+      mCountErrDenied: 'Action non autorisée pour ce rôle · rien n’a été appliqué.',
+      mCountErrGone: 'Cet inventaire n’existe plus côté serveur · rien n’a été appliqué.',
+      mCountErrConflict: 'Écriture refusée par le serveur · rien n’a été appliqué. Rouvrez la revue et réessayez.',
+      mCountErrGeneric: 'Échec d’enregistrement · rien n’a été appliqué.',
       mScanUpdateCost: 'Mettre à jour le prix d\'achat',
       mScanColCurrentCost: 'Prix réf.',
       mScanColInvoicedCost: 'Facturé',
@@ -458,6 +463,11 @@
       mScanReadingFile: 'Extracting PDF text…',
       mScanServerNotice: 'The invoice is analyzed on Kiwi\'s server to pre-fill lines.',
       mScanFailFallback: 'Automatic reading unavailable · switched to manual entry.',
+      mCountErrOffline: 'Connection lost · nothing was applied. Check the network and retry.',
+      mCountErrDenied: 'Action not allowed for this role · nothing was applied.',
+      mCountErrGone: 'This count no longer exists on the server · nothing was applied.',
+      mCountErrConflict: 'Write refused by the server · nothing was applied. Reopen the review and retry.',
+      mCountErrGeneric: 'Save failed · nothing was applied.',
       mScanUpdateCost: 'Update purchase price',
       mScanColCurrentCost: 'Ref. price',
       mScanColInvoicedCost: 'Invoiced',
@@ -751,6 +761,11 @@
       mScanReadingFile: 'استخراج نص PDF…',
       mScanServerNotice: 'تتم قراءة الفاتورة على خادم Kiwi لملء البنود مسبقاً.',
       mScanFailFallback: 'القراءة التلقائية غير متوفرة · التحويل إلى الإدخال اليدوي.',
+      mCountErrOffline: 'انقطع الاتصال · لم يُطبَّق أي شيء. تحقق من الشبكة وأعد المحاولة.',
+      mCountErrDenied: 'غير مسموح بهذا الإجراء لهذا الدور · لم يُطبَّق أي شيء.',
+      mCountErrGone: 'هذا الجرد لم يعد موجودًا على الخادم · لم يُطبَّق أي شيء.',
+      mCountErrConflict: 'رفض الخادم الكتابة · لم يُطبَّق أي شيء. أعد فتح المراجعة وحاول مجددًا.',
+      mCountErrGeneric: 'فشل الحفظ · لم يُطبَّق أي شيء.',
       mScanUpdateCost: 'تحديث سعر الشراء',
       mScanColCurrentCost: 'السعر المرجعي',
       mScanColInvoicedCost: 'المفوتر',
@@ -2863,59 +2878,146 @@
     });
   }
 
+  /* Garde partagée approve/reject : un seul appui effectif à la fois. Le
+   * fanion module bloque le ré-appui pendant la requête ; les boutons portent
+   * disabled + aria-busy sur la modale pour les lecteurs d'écran et le tactile. */
+  let stReviewBusy = false;
+  function stReviewBusyTake(btns, root) {
+    if (stReviewBusy) return false;
+    stReviewBusy = true;
+    (btns || []).forEach((b) => { try { if (b) b.setAttribute('disabled', ''); } catch (_) {} });
+    try { if (root && root.setAttribute) root.setAttribute('aria-busy', 'true'); } catch (_) {}
+    return true;
+  }
+  function stReviewBusyRelease(btns, root) {
+    stReviewBusy = false;
+    (btns || []).forEach((b) => { try { if (b && b.removeAttribute) b.removeAttribute('disabled'); } catch (_) {} });
+    try { if (root && root.removeAttribute) root.removeAttribute('aria-busy'); } catch (_) {}
+  }
+
+  /* Envoi seul, sans état : construit le corps, appelle, rend le verdict brut.
+   * fetchFn injectable pour les tests (défaut : fetch global). */
+  async function stReviewCountSend({ countId, decision, note, fetchFn }) {
+    const F = fetchFn || fetch;
+    const res = await F('/api/inventory/counts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'review',
+        id: countId,
+        decision: decision,
+        reviewNote: note || '',
+        reviewerName: 'Propriétaire'
+      })
+    });
+    let data = null;
+    try { data = await res.json(); } catch (_) { data = null; }
+    return { ok: !!res.ok, status: res.status, data };
+  }
+
+  /* Décision pure : que doit faire la coquille à partir du verdict ?
+   * Jamais d'écriture ici — seulement un plan. Le serveur reste le seul
+   * écrivain des approbations réelles ; la surcouche locale (démo) rejoue
+   * le comportement historique, jamais en plus d'un succès serveur. */
+  function stReviewCountErr(send) {
+    if (!send) return 'mCountErrGeneric';
+    if (send.network) return 'mCountErrOffline';
+    const code = send.data && send.data.error;
+    if (send.status === 403 || code === 'forbidden') return 'mCountErrDenied';
+    if (send.status === 404 || code === 'not_found') return 'mCountErrGone';
+    if (send.status === 409 || code === 'catalog-conflict') return 'mCountErrConflict';
+    return 'mCountErrGeneric';
+  }
+  function stReviewCountPlan(decision, isReal, send) {
+    if (!send || !send.ok || !(send.data && send.data.success)) {
+      return { ok: false, err: stReviewCountErr(send), setStatus: null, overlay: false, close: false, sync: false };
+    }
+    const approved = decision === 'approved';
+    return {
+      ok: true, err: null,
+      setStatus: approved ? 'applied' : 'rejected',
+      overlay: !isReal && approved,
+      close: true,
+      sync: isReal && approved,
+    };
+  }
+
   async function reviewCount(countId, decision, note) {
     if (!countId) return;
-    const count = getAllCounts().find(c => c.id === countId);
+    const scope = topBackdrop() || document;
+    const approveBtn = scope.querySelector('#st-cnt-approve-btn');
+    const rejectBtn = scope.querySelector('#st-cnt-reject-btn');
+    if (!stReviewBusyTake([approveBtn, rejectBtn], scope)) return;
+    const release = () => stReviewBusyRelease([approveBtn, rejectBtn], scope);
     try {
-      const resp = await fetch('/api/inventory/counts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'review',
-          id: countId,
-          decision: decision,
-          reviewNote: note || '',
-          reviewerName: 'Propriétaire'
-        })
-      });
-      const data = await resp.json();
-      if (data && data.success) {
-        if (decision === 'approved') {
-          if (window.KiwiBoutiqueCatalog?.sync) {
-            window.KiwiBoutiqueCatalog.sync();
-          }
-          if (window.KiwiInventory?.sync) {
-            window.KiwiInventory.sync();
-          }
+      const count = getAllCounts().find(c => c.id === countId);
+      // Idempotence locale : un compte déjà tranché ne repasse jamais —
+      // couvre le second clic mis en file après fermeture (boutons détachés
+      // mais écouteurs vivants). Seul un échec (jamais muté) peut rejouer.
+      if (count && count.reviewDecision && (count.status === 'applied' || count.status === 'rejected')) {
+        release();
+        return;
+      }
+      let real = false;
+      try { real = stShowReal(); } catch (_) { real = false; }
+      let send;
+      if (!real) {
+        // Démo / hors-ligne local : pas d'appel serveur, comportement
+        // historique (surcouche locale), jamais présenté comme une écriture.
+        send = { ok: true, status: 200, data: { success: true, demo: true } };
+      } else {
+        try {
+          send = await stReviewCountSend({ countId, decision, note });
+        } catch (_) {
+          send = { ok: false, network: true };
         }
       }
-    } catch (_) {}
+      const plan = stReviewCountPlan(decision, real, send);
+      if (!plan.ok) {
+        window.Kiwi?.toast?.(t(plan.err), { type: 'error' });
+        release();
+        return; // modale ouverte, contrôles réactivés, RIEN d'appliqué
+      }
 
-    // Local state update for immediate feedback
-    if (count) {
-      count.status = decision === 'approved' ? 'applied' : 'rejected';
-      count.reviewDecision = decision;
-      count.reviewedAt = Date.now();
-      count.reviewerName = 'Propriétaire';
-      count.reviewNote = note || '';
-      if (decision === 'approved') count.appliedAt = Date.now();
+      if (count) {
+        count.status = plan.setStatus;
+        count.reviewDecision = decision;
+        count.reviewedAt = Date.now();
+        count.reviewerName = 'Propriétaire';
+        count.reviewNote = note || '';
+        if (decision === 'approved') count.appliedAt = Date.now();
+      }
+
+      // Surcouche locale : démo uniquement, jamais après un succès serveur.
+      if (plan.overlay && count && Array.isArray(count.lines)) {
+        count.lines.forEach(l => {
+          if (l.diff) {
+            moveStock({ id: l.itemId, costPerUnit: l.unitCost }, l.diff, 'count', 'count', countId,
+              l.explanation || 'Inventaire physique validé', null,
+              { locationId: l.locationId || stockLocationId(), unitId: count.storeId || '' });
+          }
+        });
+        stSaveOverlay();
+      }
+
+      if (decision === 'approved') {
+        try {
+          if (window.KiwiBoutiqueCatalog?.sync) window.KiwiBoutiqueCatalog.sync();
+        } catch (_) {}
+      }
+      if (plan.sync) {
+        // Succès réel : on tire l'état faisant foi, on ne reposte rien.
+        try { await window.KiwiInventory?.sync?.(); } catch (_) {}
+      }
+
+      try { closeTopModal(); } catch (_) {}
+      release();
+      window.Kiwi?.toast?.(decision === 'approved' ? 'Inventaire validé · stock mis à jour' : 'Inventaire refusé', { type: decision === 'approved' ? 'success' : 'info' });
+      if (stPageActive) render();
+    } catch (_) {
+      release();
+      try { window.Kiwi?.toast?.(t('mCountErrGeneric'), { type: 'error' }); } catch (_) {}
     }
-
-    // Apply local ledger movements if demo or offline
-    if (decision === 'approved' && count && Array.isArray(count.lines)) {
-      count.lines.forEach(l => {
-        if (l.diff) {
-          moveStock({ id: l.itemId, costPerUnit: l.unitCost }, l.diff, 'count', 'count', countId,
-            l.explanation || 'Inventaire physique validé', null,
-            { locationId: l.locationId || stockLocationId(), unitId: count.storeId || '' });
-        }
-      });
-      stSaveOverlay();
-    }
-
-    closeTopModal();
-    window.Kiwi?.toast?.(decision === 'approved' ? 'Inventaire validé · stock mis à jour' : 'Inventaire refusé', { type: decision === 'approved' ? 'success' : 'info' });
-    if (stPageActive) render();
   }
 
   function exportCountsCsv() {
