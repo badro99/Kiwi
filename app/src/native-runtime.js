@@ -29,6 +29,16 @@
       return Promise.resolve(plugin[method](args || {})).catch(function () { return null; });
     } catch (_) { return Promise.resolve(null); }
   }
+  function nativeHostPost(payload) {
+    try {
+      var ios = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.kiwiShell;
+      if (ios && typeof ios.postMessage === 'function') { ios.postMessage(payload); if (document.body) document.body.classList.add('kiwi-native-hosted'); return true; }
+      if (window.KiwiShellHost && typeof window.KiwiShellHost.postMessage === 'function') {
+        window.KiwiShellHost.postMessage(JSON.stringify(payload)); if (document.body) document.body.classList.add('kiwi-native-hosted'); return true;
+      }
+    } catch (_) {}
+    return false;
+  }
   var splashHidden = false;
   var splashFallback = setTimeout(hideLaunchSplash, 8000);
   function hideLaunchSplash() {
@@ -213,12 +223,13 @@
     nav.className = 'kiwi-native-tabbar';
     nav.setAttribute('aria-label', copy.label);
     nav.setAttribute('data-lens-demo', '');
-    nav.innerHTML = [
+    var tabItems = [
       ['salle', copy.salle, 'table_restaurant.svg'],
       ['vrap', copy.vrap, 'lunch_dining.svg'],
       ['waitlist', copy.waitlist, 'group.svg'],
       ['more', copy.more, 'category.svg']
-    ].map(function (item) {
+    ];
+    nav.innerHTML = tabItems.map(function (item) {
       return '<button type="button" data-lens-item data-native-tab="' + item[0] + '"><i style="--native-tab-icon:url(assets/icons/material/' + item[2] + ')" aria-hidden="true"></i><span>' + item[1] + '</span></button>';
     }).join('');
     document.body.appendChild(nav);
@@ -230,28 +241,39 @@
     function syncTabs() {
       var mode = document.body.dataset.mode || 'salle';
       var drawerOpen = document.body.classList.contains('nav-open');
+      var selected = drawerOpen ? 'more' : mode;
       nav.querySelectorAll('[data-native-tab]').forEach(function (button) {
         var tab = button.getAttribute('data-native-tab');
-        var active = drawerOpen ? tab === 'more' : tab === mode;
+        var active = tab === selected;
         button.classList.toggle('on', active);
         button.setAttribute('aria-current', active ? 'page' : 'false');
       });
+      nativeHostPost({
+        version:1, screen:'workspace', role:'caisse', locale:String(root.lang || 'fr'), rtl:root.dir === 'rtl', selected:selected,
+        tabs:tabItems.map(function (item) { return { id:item[0], label:item[1] }; })
+      });
     }
-    nav.addEventListener('click', function (event) {
-      var button = event.target.closest('[data-native-tab]');
-      if (!button) return;
-      var mode = button.getAttribute('data-native-tab');
+    function activateNativeTab(mode) {
       if (mode === 'more') {
         document.body.classList.add('nav-open');
         hapticLight();
-        return;
+        syncTabs();
+        return true;
       }
       var source = document.querySelector('.mode-pill[data-mode="' + mode + '"]');
       if (source && !source.disabled && !source.hidden) source.click();
       document.body.classList.remove('nav-open');
       hapticLight();
       syncTabs();
+      return true;
+    }
+    nav.addEventListener('click', function (event) {
+      var button = event.target.closest('[data-native-tab]');
+      if (!button) return;
+      activateNativeTab(button.getAttribute('data-native-tab'));
     });
+    window.KiwiNativeHostAction = function (payload) { if (payload && payload.action === 'navigate') activateNativeTab(String(payload.id || '')); };
+    window.KiwiNativeHostRequestState = syncTabs;
     new MutationObserver(syncTabs).observe(document.body, { attributes: true, attributeFilter: ['data-mode', 'class'] });
     syncTabs();
 
@@ -350,6 +372,16 @@
       });
       syncWelcome();
     }
+  }
+
+  function initNativeHostWorkspace() {
+    if (/kiwi-caisse\.html$/i.test(location.pathname)) return;
+    var role = /kiwi-serveur\.html$/i.test(location.pathname) ? 'equipe' : /kiwi-cuisine\.html$/i.test(location.pathname) ? 'cuisine' : /dashboard\.html$/i.test(location.pathname) ? 'dashboard' : '';
+    if (!role) return;
+    var push = function () { nativeHostPost({ version:1, screen:'workspace', role:role, locale:String(root.lang || 'fr'), rtl:root.dir === 'rtl', selected:'', tabs:[] }); };
+    window.KiwiNativeHostRequestState = push;
+    window.KiwiNativeHostAction = function () {};
+    push(); setTimeout(push, 300); setTimeout(push, 1200);
   }
 
   function checkBiometrics() {
@@ -486,9 +518,10 @@
     app.addListener('backButton', handleNativeBack);
   }
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function () { initNativeTillUx(); maybePromptBiometricUnlock(); });
+    document.addEventListener('DOMContentLoaded', function () { initNativeTillUx(); initNativeHostWorkspace(); maybePromptBiometricUnlock(); });
   } else {
     initNativeTillUx();
+    initNativeHostWorkspace();
     maybePromptBiometricUnlock();
   }
 })();

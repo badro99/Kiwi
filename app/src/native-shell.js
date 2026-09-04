@@ -102,6 +102,7 @@
   var manual = params.has('choose') || params.has('home');
   var forceSetup = params.has('setup');
   var state = { step: 'account', role: '', account: 'pending', accountLabel: '', stores: [], selectedStore: null, paired: false, venue: null, printer: false, printerSkipped: false };
+  var nativeHostTimer = 0;
   var shell = $('#shell'), login = $('#login'), loginErr = $('#login-err'), loginBtn = $('#login-btn');
   var acctState = $('#acct-state'), acctText = $('#acct-text'), acctUnknown = $('#acct-unknown'), acctNext = $('#account-next');
   var boot = $('#boot');
@@ -495,6 +496,150 @@
   }
   $('#ready-back').addEventListener('click', function () { showStep((state.role === 'caisse' || state.role === 'cuisine') ? 'printer' : 'connect'); });
   $('#finish').addEventListener('click', function () { go(state.role); });
+
+  /* The web flow remains the source of truth for authentication, tenancy,
+     pairing and printer tests. SwiftUI/Compose render that state and send
+     intent back through this narrow contract; they never duplicate ledger or
+     authorization logic. Browser/PWA builds have no host and keep this exact
+     HTML flow as the rollback path. */
+  function nativeHostPost(payload) {
+    try {
+      var ios = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.kiwiShell;
+      if (ios && typeof ios.postMessage === 'function') { ios.postMessage(payload); return true; }
+      if (window.KiwiShellHost && typeof window.KiwiShellHost.postMessage === 'function') {
+        window.KiwiShellHost.postMessage(JSON.stringify(payload)); return true;
+      }
+    } catch (_) {}
+    return false;
+  }
+  function hostAction(id, label, style, enabled) {
+    return { id:id, label:String(label || ''), style:style || 'secondary', enabled:enabled !== false };
+  }
+  function hostChoice(id, title, subtitle, selected, group) {
+    return { id:String(id), title:String(title || ''), subtitle:String(subtitle || ''), selected:!!selected, group:group || '' };
+  }
+  function hostField(id, label, value, input, secure) {
+    return { id:id, label:String(label || ''), value:String(value || ''), input:input || 'text', secure:!!secure };
+  }
+  function nativeSetupContext() {
+    var stepIndex = Math.max(0, ORDER.indexOf(state.step));
+    var titleKey = { account:'accountTitle', role:'roleTitle', connect:'connectTitle', printer:'printerTitle', ready:'readyTitle' }[state.step] || 'deviceSetup';
+    var introKey = { account:'accountIntro', role:'roleIntro', connect:'pairIntro', printer:'printerIntro', ready:'readyIntro' }[state.step] || 'welcomeSub';
+    var ctx = {
+      version:1, screen:shell.hidden ? 'launch' : 'setup', locale:lang, rtl:lang === 'ar', kind:state.step,
+      progress:manual ? 0 : stepIndex + 1, progressTotal:manual ? 0 : ORDER.length,
+      eyebrow:manual ? tr('deviceSetup') : tr('step' + ['One','Two','Three','Four','Five'][stepIndex]),
+      title:tr(titleKey), message:tr(introKey), status:'', statusKind:'',
+      accountLabel:state.accountLabel || '', fields:[], choices:[], summary:[], actions:[]
+    };
+    if (state.step === 'account') {
+      if (state.account === 'connected') {
+        ctx.status = tr('connected') + ' · ' + state.accountLabel; ctx.statusKind = 'ok';
+        ctx.actions.push(hostAction('account-next', tr('continue'), 'primary', true));
+        ctx.actions.push(hostAction('logout', tr('logout'), 'secondary', true));
+      } else if (state.account === 'offline') {
+        ctx.status = tr('serverOffline'); ctx.statusKind = 'warning';
+        ctx.actions.push(hostAction('retry-account', tr('login'), 'primary', true));
+        ctx.actions.push(hostAction('manual', tr('manual'), 'secondary', true));
+      } else {
+        ctx.fields.push(hostField('email', tr('email'), login.email.value, 'email', false));
+        ctx.fields.push(hostField('password', tr('password'), '', 'password', true));
+        ctx.status = loginErr.hidden ? '' : loginErr.textContent; ctx.statusKind = ctx.status ? 'error' : '';
+        ctx.actions.push(hostAction('login', loginBtn.textContent || tr('login'), 'primary', !loginBtn.disabled));
+        ctx.actions.push(hostAction('manual', tr('manual'), 'secondary', true));
+      }
+    } else if (state.step === 'role') {
+      [['caisse','caisse','caisseSub'],['equipe','team','teamSub'],['cuisine','kitchen','kitchenSub'],['dashboard','dashboard','dashboardSub']].forEach(function (item) {
+        ctx.choices.push(hostChoice(item[0], tr(item[1]), tr(item[2]), state.role === item[0], 'role'));
+      });
+      var roleError = $('#role-err'); ctx.status = roleError && !roleError.hidden ? roleError.textContent : ''; ctx.statusKind = ctx.status ? 'error' : '';
+      if (!manual) {
+        ctx.actions.push(hostAction('role-next', $('#role-next').textContent, 'primary', !$('#role-next').disabled));
+        ctx.actions.push(hostAction('back', tr('back'), 'secondary', true));
+      }
+    } else if (state.step === 'connect') {
+      if (state.role === 'caisse' || state.role === 'cuisine') {
+        state.stores.forEach(function (store, index) { ctx.choices.push(hostChoice(index, store.name, store.type || tr('store'), state.selectedStore === store, 'store')); });
+        var pairStatus = $('#pair-status'); ctx.status = pairStatus.textContent || ''; ctx.statusKind = pairStatus.classList.contains('bad') ? 'error' : pairStatus.classList.contains('ok') ? 'ok' : '';
+        var pairButton = $('#pair-btn');
+        if (!pairButton.hidden) ctx.actions.push(hostAction('pair', pairButton.textContent, 'secondary', !pairButton.disabled));
+      } else if (state.role === 'dashboard') {
+        ctx.message = tr('dashboardConnect'); ctx.status = $('#dashboard-status').textContent || ''; ctx.statusKind = $('#dashboard-status').classList.contains('bad') ? 'error' : 'ok';
+      } else {
+        ctx.message = tr('teamConnect'); ctx.status = tr('teamReady'); ctx.statusKind = 'ok';
+      }
+      ctx.actions.push(hostAction('connect-next', $('#connect-next').textContent, 'primary', !$('#connect-next').disabled));
+      ctx.actions.push(hostAction('back', tr('back'), 'secondary', true));
+    } else if (state.step === 'printer') {
+      ctx.fields.push(hostField('host', tr('printerIp'), $('#printer-ip').value, 'text', false));
+      ctx.fields.push(hostField('port', tr('printerPort'), $('#printer-port').value, 'number', false));
+      ['80','58'].forEach(function (paper) { ctx.choices.push(hostChoice(paper, paper + ' mm', '', $('#printer-paper').value === paper, 'paper')); });
+      all('#scan-results .printer-choice').forEach(function (node) { ctx.choices.push(hostChoice(node.textContent, node.textContent, tr('printerFound'), false, 'printer')); });
+      ctx.status = $('#printer-status').textContent || $('#scan-results').textContent || '';
+      ctx.statusKind = $('#printer-status').classList.contains('bad') ? 'error' : $('#printer-status').classList.contains('ok') ? 'ok' : '';
+      ctx.actions.push(hostAction('printer-test', $('#printer-test').textContent, 'primary', !$('#printer-test').disabled));
+      ctx.actions.push(hostAction('printer-scan', $('#printer-scan').textContent, 'secondary', !$('#printer-scan').disabled));
+      if (!$('#printer-next').disabled) ctx.actions.push(hostAction('printer-next', $('#printer-next').textContent, 'primary', true));
+      ctx.actions.push(hostAction('printer-skip', $('#printer-skip').textContent, 'tertiary', true));
+      ctx.actions.push(hostAction('back', tr('back'), 'secondary', true));
+    } else if (state.step === 'ready') {
+      all('#ready-list li').forEach(function (item) { ctx.summary.push({ label:item.querySelector('b').textContent, value:item.querySelector('small').textContent, muted:item.classList.contains('muted') }); });
+      ctx.actions.push(hostAction('finish', $('#finish').textContent, 'primary', true));
+      ctx.actions.push(hostAction('back', tr('back'), 'secondary', true));
+    }
+    return ctx;
+  }
+  function pushNativeSetupState() {
+    nativeHostTimer = 0;
+    var active = nativeHostPost(nativeSetupContext());
+    if (active && document.body) {
+      document.body.classList.add('kiwi-native-hosted-setup');
+      if (shell.getAttribute('aria-hidden') !== 'true') shell.setAttribute('aria-hidden', 'true');
+      try { if (!shell.inert) shell.inert = true; } catch (_) {}
+    }
+  }
+  function scheduleNativeSetupState(delay) {
+    if (nativeHostTimer) clearTimeout(nativeHostTimer);
+    nativeHostTimer = setTimeout(pushNativeSetupState, delay || 0);
+  }
+  function fillNativeField(selector, value) {
+    var node = $(selector); if (!node) return;
+    node.value = String(value == null ? '' : value);
+    try { node.dispatchEvent(new Event('input', { bubbles:true })); } catch (_) {}
+  }
+  window.KiwiNativeHostAction = function (payload) {
+    payload = payload || {};
+    var id = String(payload.action || '');
+    if (id === 'login') {
+      fillNativeField('#login-email', payload.email); fillNativeField('#login-password', payload.password);
+      if (login.requestSubmit) login.requestSubmit(); else login.dispatchEvent(new Event('submit', { cancelable:true }));
+    } else if (id === 'retry-account') refreshAccount();
+    else if (id === 'manual') $('#manual-mode').click();
+    else if (id === 'logout') $('#logout').click();
+    else if (id === 'select-role') { var roleNode = $('.tile[data-role="' + String(payload.id || '').replace(/[^a-z]/g, '') + '"]'); if (roleNode) roleNode.click(); }
+    else if (id === 'select-store') selectStore(Number(payload.id));
+    else if (id === 'select-paper') { $('#printer-paper').value = payload.id === '58' ? '58' : '80'; }
+    else if (id === 'select-printer') { fillNativeField('#printer-ip', payload.id); }
+    else if (id === 'pair') $('#pair-btn').click();
+    else if (id === 'role-next') $('#role-next').click();
+    else if (id === 'connect-next') $('#connect-next').click();
+    else if (id === 'printer-scan') $('#printer-scan').click();
+    else if (id === 'printer-test') {
+      fillNativeField('#printer-ip', payload.host); fillNativeField('#printer-port', payload.port); $('#printer-paper').value = payload.paper === '58' ? '58' : '80';
+      var printerForm = $('#printer-form'); if (printerForm.requestSubmit) printerForm.requestSubmit(); else printerForm.dispatchEvent(new Event('submit', { cancelable:true }));
+    } else if (id === 'printer-next') $('#printer-next').click();
+    else if (id === 'printer-skip') $('#printer-skip').click();
+    else if (id === 'finish') $('#finish').click();
+    else if (id === 'back') {
+      var back = state.step === 'ready' ? $('#ready-back') : $('[data-step="' + state.step + '"] [data-back]'); if (back) back.click();
+    }
+    scheduleNativeSetupState(0);
+  };
+  window.KiwiNativeHostRequestState = function () { scheduleNativeSetupState(0); };
+  try { new MutationObserver(function () { scheduleNativeSetupState(0); }).observe(shell, { attributes:true, childList:true, subtree:true, characterData:true }); } catch (_) {}
+  scheduleNativeSetupState(0);
+  setTimeout(function () { if (!document.body.classList.contains('kiwi-native-hosted-setup')) scheduleNativeSetupState(0); }, 300);
+  setTimeout(function () { if (!document.body.classList.contains('kiwi-native-hosted-setup')) scheduleNativeSetupState(0); }, 1200);
 
   function updateBundleMeta(info) {
     var bundleNode = $('#bundle');

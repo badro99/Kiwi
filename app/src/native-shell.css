@@ -284,3 +284,8 @@ html[dir="rtl"] .tile-name { line-height: 1.35; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
 }
+
+/* SwiftUI/Compose owns input and focus when the native host is present. The
+   embedded flow stays mounted as the state machine and rollback path. */
+body.kiwi-native-hosted-setup #boot,
+body.kiwi-native-hosted-setup #shell { opacity: 0; pointer-events: none; }
