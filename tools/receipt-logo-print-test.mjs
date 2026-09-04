@@ -37,6 +37,7 @@ vm.runInContext(fs.readFileSync(path.join(root, 'assets/escpos.js'), 'utf8'), co
 vm.runInContext(fs.readFileSync(path.join(root, 'assets/receipt.js'), 'utf8'), context);
 
 const R = window.KiwiReceipt;
+const CREDIT = 'Powered by kiwi-os.com';
 const acceptedLogo = 'data:image/png;base64,' + 'A'.repeat(410000);
 const cfg = R.normalizeConfig({ look: { logo: acceptedLogo } });
 if (cfg.look.logo !== acceptedLogo) throw new Error('an accepted 300 KiB logo data URI must remain intact');
@@ -49,6 +50,11 @@ const marker = [0x1B, 0x33, 24, 0x1B, 0x2A, 33, 0x01, 0x00, 0x80, 0x00, 0x00, 0x
 const bytes = Array.from(R.escpos(doc, { logoRaster: marker }));
 const at = bytes.findIndex((v, i) => marker.every((m, j) => bytes[i + j] === m));
 if (at < 0) throw new Error('ESC/POS receipt must include the prepared logo raster');
+if (!Buffer.from(bytes).toString('latin1').includes(CREDIT)) throw new Error('ESC/POS receipt must carry the full platform attribution');
+if (!R.html(doc).includes(CREDIT)) throw new Error('receipt preview must carry the same platform attribution');
+
+const fallbackBytes = window.KiwiEscPos.receipt({ shop: 'MixMax', total: '65 MAD' });
+if (!Buffer.from(fallbackBytes).toString('latin1').includes(CREDIT)) throw new Error('fallback receipt must carry the full platform attribution');
 
 doc.shop.logo = 'data:image/png;base64,AA==';
 await R.print(doc);
@@ -60,3 +66,4 @@ if (!printedBytes.some((v, i) => legacyRaster.every((m, j) => printedBytes[i + j
 console.log('✓ accepted receipt logos survive sync normalization');
 console.log('✓ ESC/POS receipt includes the logo raster before its text header');
 console.log('✓ physical print path uses the widely compatible 24-dot logo command');
+console.log('✓ physical, preview, and fallback receipts say "' + CREDIT + '"');

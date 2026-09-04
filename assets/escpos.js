@@ -23,6 +23,7 @@
   'use strict';
 
   var ESC = 0x1B, GS = 0x1D;
+  var PLATFORM_CREDIT = 'Powered by kiwi-os.com';
 
   // Windows-1252 upper-range specials (0x80–0x9F) that differ from Latin-1.
   var CP1252 = {
@@ -152,7 +153,7 @@
     b.bold(true).size(1, 2).line(row('TOTAL', (o.total != null ? o.total : '') + '', paper)).size(1, 1).bold(false);
     if (o.method) b.line(row('Paiement', o.method, paper));
     if (o.footer) b.feed(1).align('center').line(fit(o.footer, paper));
-    b.align('center').feed(1).line('Merci · Kiwi');
+    b.align('center').feed(1).line(PLATFORM_CREDIT);
     b.cut();
     if (o.openDrawer) b.drawer();
     return b.bytes();

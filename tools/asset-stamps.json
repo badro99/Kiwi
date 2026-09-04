@@ -284,8 +284,8 @@
     "sha": "b30017496f9a5369"
   },
   "assets/escpos.js": {
-    "v": "7",
-    "sha": "19796ee5ba1d120d"
+    "v": "8",
+    "sha": "b5ad3e18d61f498a"
   },
   "assets/features.js": {
     "v": "4",
@@ -784,8 +784,8 @@
     "sha": "66ae233c079d385a"
   },
   "assets/receipt.js": {
-    "v": "2",
-    "sha": "50330f402656e8da"
+    "v": "3",
+    "sha": "8b88c63cd11d7bc8"
   },
   "assets/reservations.css": {
     "v": "5",

@@ -58,6 +58,7 @@
   'use strict';
 
   var VER = 1;
+  var PLATFORM_CREDIT = 'Powered by kiwi-os.com';
 
   /* ═══════════════════ petites fonctions pures ═══════════════════ */
 
@@ -874,7 +875,7 @@
       b.align('center').feed(1);
       if (doc.foot.web) b.line(doc.foot.web);
       if (doc.second) secondLanguage(b, doc, cols);
-      b.feed(1).line('Kiwi');
+      b.feed(1).line(PLATFORM_CREDIT);
       b.cut();
       if (o.openDrawer) b.drawer();
       return b.bytes();
@@ -919,7 +920,7 @@
     if (doc.foot.web) b.line(doc.foot.web);
     if (doc.foot.whatsapp) b.line('WhatsApp ' + doc.foot.whatsapp);
     if (doc.second) secondLanguage(b, doc, cols);
-    b.feed(1).line('Kiwi');
+    b.feed(1).line(PLATFORM_CREDIT);
     b.feed(2).cut();
     if (o.openDrawer) b.drawer();
     return b.bytes();
@@ -1022,7 +1023,7 @@
         var T2s = dict(doc.second);
         P('kr-c kr-sm', T2s.total + ' : ' + moneyMAD(doc.totals.total, doc));
       }
-      P('kr-c kr-xs kr-kiwi', 'Kiwi');
+      P('kr-c kr-xs kr-kiwi', PLATFORM_CREDIT);
       out.push('</div>');
       return out.join('');
     }
@@ -1063,7 +1064,7 @@
       P('kr-c kr-sm', T2.total + ' : ' + moneyMAD(doc.totals.total + doc.totals.tip, doc));
       P('kr-c kr-xs', doc.foot.thanks || T2.thanks);
     }
-    P('kr-c kr-xs kr-kiwi', 'Kiwi');
+    P('kr-c kr-xs kr-kiwi', PLATFORM_CREDIT);
     out.push('</div>');
     return out.join('');
   }
