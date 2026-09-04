@@ -19,7 +19,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 
-const EXPECTED = 19;
+const EXPECTED = 20;
 let checks = 0;
 process.on('unhandledRejection', (error) => { console.error(error); process.exit(1); });
 async function check(name, fn) {
@@ -252,6 +252,18 @@ await check('unrelated merchants and unknown prefixes remain untouched', async (
   assert.ok(w.r2.keys.has(otherSupport));
   assert.ok(w.r2.keys.has('legacy/' + M + '/unowned.bin'));
   assert.equal(w.env.DB.prepare('SELECT COUNT(*) AS n FROM intake_docs WHERE merchant = ?').bind(OTHER).first().n, 1);
+});
+
+await check('reserved root slug cannot turn a store purge into a cross-tenant purge', async () => {
+  const w = makeWorld();
+  w.r2.put('support/logo.jpg', new TextEncoder().encode('merchant media'));
+  w.r2.put('support/' + OTHER + '/ticket-1/a.pdf', new TextEncoder().encode('foreign attachment'));
+  const { status, body } = await del(w.env, 'support');
+  assert.equal(status, 409);
+  assert.equal(body.error, 'r2-prefix-collision');
+  assert.ok(w.r2.keys.has('support/logo.jpg'));
+  assert.ok(w.r2.keys.has('support/' + OTHER + '/ticket-1/a.pdf'));
+  assert.equal(w.r2.stats().bulkCalls, 0);
 });
 
 await check('list failure aborts with no success and nothing touched', async () => {

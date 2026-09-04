@@ -392,6 +392,15 @@ export async function onRequestDelete(context) {
     // toute suppression de déborder sur un autre établissement.
     return json({ error: 'invalid-merchant' }, 400);
   }
+  if (merchant === 'intake' || merchant === 'support') {
+    /* Les médias historiques sont à la racine `<merchant>/`. Pour ces deux
+     * slugs seulement, cette racine recouvrirait les espaces partagés
+     * `intake/<autre marchand>/` ou `support/<autre marchand>/`. Refuser vaut
+     * mieux qu'une clôture cross-tenant ; une migration vers `media/<merchant>/`
+     * pourra lever ce blocage sans deviner quelles anciennes clés appartiennent
+     * réellement au magasin. */
+    return json({ error: 'r2-prefix-collision', detail: 'merchant slug overlaps a reserved R2 namespace' }, 409);
+  }
   const r2Prefixes = [
     'intake/' + merchant + '/',
     merchant + '/',
