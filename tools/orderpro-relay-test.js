@@ -204,7 +204,7 @@ async function get(fn, qs, headers = {}) {
     /const MENU_ALL = new Map\(\)/.test(orderProPage)
       && /function standaloneMenuItem\(itemId\)[\s\S]{0,260}source\.archived \|\| source\.formulaOnly \|\| source\.avail === false/.test(orderProPage));
   ok('OrderPro applique les bornes min/max des étapes et retire une formule devenue impossible',
-    /count < Math\.max\(0, Number\(opt\.min\)/.test(orderProPage)
+    /const minimum = opt\.formulaSlotId \? Math\.max\(0, Number\(opt\.min\)/.test(orderProPage)
       && /arr\.length < Math\.max\(1, Number\(def\.max\)/.test(orderProPage)
       && /if \(formulaBroken\) continue;/.test(orderProPage));
   ok('OrderPro envoie les identifiants canoniques des options ordinaires',

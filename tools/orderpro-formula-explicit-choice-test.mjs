@@ -27,13 +27,15 @@ const selections = initialize([
   { key: 'formula_toppings', formulaSlotId: 'toppings', type: 'multi', min: 1, max: 2, choices: [{ id: 'basil' }] },
 ]);
 
-assert.equal(selections.cooking, 'medium', 'ordinary product options keep their configured default');
+assert.equal(selections.cooking, '', 'ordinary product defaults never become customer consent');
 assert.equal(selections.formula_pasta, '', 'a formula default never becomes customer consent');
 assert.equal(selections.formula_sauce, '', 'the first formula choice is never selected implicitly');
 assert.deepEqual(selections.formula_toppings, [], 'multi-choice formula stages also begin empty');
 
-assert.match(source, /invalidFormulaSlot[\s\S]*?scrollIntoView\(\{ behavior: 'smooth', block: 'center' \}\)/,
-  'Add scrolls to the first unanswered required formula stage');
+assert.match(source, /invalidRequiredOption[\s\S]*?scrollIntoView\(\{ behavior: 'smooth', block: 'center' \}\)/,
+  'Add scrolls to the first unanswered required option');
+assert.match(source, /opt\.required \? 1 : 0/,
+  'ordinary required groups require an explicit customer choice');
 assert.match(source, /group\.classList\.add\('is-invalid'\)/,
   'the unanswered stage is visibly highlighted');
 assert.match(source, /group\.classList\.remove\('is-invalid'\)/,
@@ -48,4 +50,4 @@ assert.doesNotMatch(source,
   /if \(opt\.type === 'single'\) customizerSelections\[opt\.key\] = opt\.default \|\| opt\.choices\[0\]\.id/,
   'the old blanket first-choice selection cannot return unnoticed');
 
-console.log('✓ OrderPro requires an explicit customer tap for every formula choice');
+console.log('✓ OrderPro requires an explicit customer tap for every option choice');

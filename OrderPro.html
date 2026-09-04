@@ -4768,17 +4768,10 @@ em, i, cite, dfn, var { font-style: normal; }
     function initialCustomizerSelections(options) {
       const selections = {};
       for (const opt of options || []) {
-        if (opt.type === 'single') {
-          /* Formula stages describe the customer's meal. Even a configured
-             default must never count as consent: every formula choice starts
-             empty and only an explicit tap may fill it. Ordinary item options
-             retain their existing default/first-choice behaviour. */
-          selections[opt.key] = opt.formulaSlotId
-            ? ''
-            : (opt.default || (opt.choices && opt.choices[0] && opt.choices[0].id) || '');
-        } else {
-          selections[opt.key] = [];
-        }
+        /* A published default is menu configuration, not customer consent.
+           Every OrderPro option starts empty and only an explicit tap may
+           select it, for ordinary modifiers and formula stages alike. */
+        selections[opt.key] = opt.type === 'single' ? '' : [];
       }
       return selections;
     }
@@ -4805,7 +4798,7 @@ em, i, cite, dfn, var { font-style: normal; }
         <div class="option-group${showChoiceImages ? ' has-choice-images' : ''}" data-opt="${opt.key}">
           <div class="option-group-label">
             <span>${groupLabel(opt.key)}</span>
-            <span class="opt-type">${opt.formulaSlotId && Math.max(0, Number(opt.min) || 0) > 0
+            <span class="opt-type">${(opt.required || (opt.formulaSlotId && Math.max(0, Number(opt.min) || 0) > 0))
               ? `${t('opt_required')} · ${opt.type === 'multi' ? t('opt_choose_many') : t('opt_choose_one')}`
               : (opt.type === 'multi' ? t('opt_choose_many') : t('opt_choose_one'))}</span>
           </div>
@@ -4895,15 +4888,16 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     function confirmCustomizer() {
       if (!customizerItem) return;
-      const invalidFormulaSlot = (customizerItem.options || []).find((opt) => {
-        if (!opt.formulaSlotId) return false;
+      const invalidRequiredOption = (customizerItem.options || []).find((opt) => {
         const selected = customizerSelections[opt.key];
         const count = Array.isArray(selected) ? selected.length : (selected ? 1 : 0);
-        return count < Math.max(0, Number(opt.min) || 0) || count > Math.max(1, Number(opt.max) || 1);
+        const minimum = opt.formulaSlotId ? Math.max(0, Number(opt.min) || 0) : (opt.required ? 1 : 0);
+        const maximum = opt.formulaSlotId ? Math.max(1, Number(opt.max) || 1) : Infinity;
+        return count < minimum || count > maximum;
       });
-      if (invalidFormulaSlot) {
+      if (invalidRequiredOption) {
         const group = Array.from(document.querySelectorAll('.option-group'))
-          .find(el => el.dataset.opt === invalidFormulaSlot.key);
+          .find(el => el.dataset.opt === invalidRequiredOption.key);
         if (group) {
           group.classList.add('is-invalid');
           group.setAttribute('aria-invalid', 'true');
@@ -4911,7 +4905,7 @@ em, i, cite, dfn, var { font-style: normal; }
           const firstChoice = group.querySelector('.option-chip');
           if (firstChoice) window.setTimeout(() => firstChoice.focus({ preventScroll: true }), 260);
         }
-        showToast(t('opt_required_missing').replace('{name}', groupLabel(invalidFormulaSlot.key)));
+        showToast(t('opt_required_missing').replace('{name}', groupLabel(invalidRequiredOption.key)));
         return;
       }
       customizerNote = $('#custom-note-input').value.trim();
