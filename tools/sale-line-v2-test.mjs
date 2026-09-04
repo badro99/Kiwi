@@ -27,11 +27,14 @@ const MAX_AMOUNT_CENTS`);
 const mod = await import('data:text/javascript;base64,' + Buffer.from(api).toString('base64'));
 
 async function store(body) {
-  let bound = null;
+  let insertBound = null;
   const DB = {
-    prepare() {
+    prepare(sql) {
       return {
-        bind(...args) { bound = args; return this; },
+        bind(...args) {
+          if (/^INSERT OR IGNORE INTO sales\b/.test(sql)) insertBound = args;
+          return this;
+        },
         async run() { return { success: true }; },
       };
     },
@@ -39,8 +42,8 @@ async function store(body) {
   const request = { json: async () => body };
   const response = await mod.onRequestPost({ request, env: { DB } });
   ok('sale endpoint accepts the fixture', response.status === 200);
-  const parsed = JSON.parse(bound[7]);
-  parsed._channel = bound[8] || '';
+  const parsed = JSON.parse(insertBound[7]);
+  parsed._channel = insertBound[8] || '';
   return parsed;
 }
 

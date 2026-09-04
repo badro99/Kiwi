@@ -62,7 +62,7 @@ assert.match(dashboard, /body\.role-staff \.sidebar a\[data-nav="payroll"\]/, 's
 assert.match(team, /return role === 'staff' \? 'none' : role === 'manager' \|\| !payrollEnabled \? 'planning' : 'full'/, 'role access separates planning from payroll');
 assert.match(team, /renderPlanningPane\(T, venue, venueType, members, \{ showCosts: false \}\)/, 'manager planning omits labour cost at the renderer');
 assert.match(team, /if \(access === 'none'\)[\s\S]{0,220}return;/, 'staff access is blocked in the owned handler');
-assert.match(merchantConfig, /key !== 'reservations' && key !== 'payroll'/, 'legacy payroll-off config cannot remove core planning');
+assert.match(merchantConfig, /if \(key === 'reservations' \|\| key === 'payroll'\) return false;/, 'legacy feature flags cannot remove core reservations or planning');
 assert.match(team, /payrollEnabled = window\.KiwiConfig\?\.features\?\.payroll !== false/, 'payroll flag controls financial rendering instead');
 assert.match(dashboard, /data-i18n="dash\.sidebar\.payroll">Planning<\/span>/, 'the shared sidebar calls the feature Planning');
 assert.match(i18n, /'dash\.sidebar\.payroll': 'Planning'/, 'the English sidebar translation says Planning');

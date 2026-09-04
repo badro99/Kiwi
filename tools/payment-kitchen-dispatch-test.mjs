@@ -55,7 +55,7 @@ const freshTakeawayHarness = new Function(`
   const kdsEl = { classList: { contains: () => false } };
   const kitchenItemsFromLines = lines => lines.map(line => ({ q: line.qty, n: line.name, p: line.price }));
   const relayLinesFromCaisse = lines => lines;
-  const relayToKitchen = order => relays.push(order.num);
+  const relayToKitchen = order => { relays.push(order.num); return Promise.resolve(null); };
   const printKitchenTickets = order => prints.push(order.num);
   const persistShift = () => {};
   const updateKdsCount = () => {};
@@ -70,6 +70,9 @@ const freshTakeawayHarness = new Function(`
   const second = dispatchUnsentKitchenBeforePayment();
   return { first, second, vrapEditingNum, kdsOrders, prints, relays };
 `)();
+
+// Printing is deliberately scheduled after canonical-number allocation.
+await Promise.resolve();
 
 assert.equal(freshTakeawayHarness.kdsOrders.length, 1, 'paying a fresh counter cart creates one KDS order');
 assert.equal(freshTakeawayHarness.prints.length, 1, 'the fresh counter cart prints once');
@@ -122,8 +125,8 @@ assert.ok(tableHarness.ingested.every(x => x.localKitchenAction === true),
 assert.deepEqual(tableHarness.statuses.map(x => x.id), ['op-table-a', 'op-table-b'],
   'each acceptance is acknowledged to the server once');
 
-assert.match(source, /function finalizeTender\(method\)\s*\{\s*[\s\S]{0,500}?dispatchUnsentKitchenBeforePayment\(\);[\s\S]{0,160}?const tenderBase = currentTotal\(\)/,
-  'every confirmed tender dispatches before sale settlement');
+assert.match(source, /async function finalizeTender\(method\)\s*\{[\s\S]{0,900}?const tenderOrder = dispatchUnsentKitchenBeforePayment\(\);[\s\S]{0,500}?await awaitCanonicalTicketNumber\(tenderOrder\);[\s\S]{0,160}?const tenderBase = currentTotal\(\)/,
+  'every confirmed tender dispatches and resolves its canonical number before sale settlement');
 assert.match(source, /tableKitchenPending[\s\S]{0,220}?kitchenBtn\.hidden = !tableKitchenPending/,
   'the table bill exposes a kitchen button while anything is pending');
 assert.match(source, /mode === 'salle' && selectedId[\s\S]{0,180}?dispatchTableUnsentToKitchen\(selectedId, false\)/,

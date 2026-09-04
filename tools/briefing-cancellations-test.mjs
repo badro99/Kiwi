@@ -54,7 +54,7 @@ ok(/WHERE merchant = \? AND voided_ts >= \?/.test(endpoint), 'history read is te
 ok(/actor_id AS actorId/.test(endpoint) && !/pin AS/.test(endpoint), 'history projection exposes an id, never a code');
 ok(/INSERT OR IGNORE INTO sale_void_history/.test(endpoint), 'cancel endpoint appends the durable event');
 ok(/catch \(_\) \{ \/\* history unavailable: keep the successful void response \*\//.test(endpoint), 'history insertion is fail-soft after the canonical void');
-ok(/\{ c: r\.cursor, r: r\.ref \|\| '' \}/.test(feed), 'existing c/r reconciliation feed remains intact');
+ok(/\{ c: r\.cursor, i: r\.id \|\| '', r: r\.ref \|\| '' \}/.test(feed), 'c/r reconciliation feed remains intact and includes canonical sale identity');
 ok(/CREATE TABLE IF NOT EXISTS sale_void_history/.test(audit) && /fail-soft/.test(audit), 'AUDIT_AI records exact migration and fail-soft behavior');
 
 console.log(`briefing-cancellations-test: ${checks} controls passed`);

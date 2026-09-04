@@ -119,7 +119,7 @@ result = R.validate({ customer: { name: 'Nora' }, serviceId: 'missing', startAt:
 ok(!result.ok && result.error === 'invalid', 'unknown services are rejected');
 
 ok(/data-nav="reservations"(?![^>]*data-feature)/.test(dashboardSource), 'core reservations navigation is never hidden by legacy entitlements');
-ok(configClientSource.includes("key !== 'reservations'"), 'legacy reservations:false rows cannot lock owners out of setup');
+ok(configClientSource.includes("if (key === 'reservations' || key === 'payroll') return false;"), 'legacy reservations:false rows cannot lock owners out of setup');
 ok(!/reservations:\s*false/.test(configApiSource), 'new stores no longer seed reservations as disabled');
 ok(bookingSource.includes("document.documentElement.lang||'fr'"), 'public booking defaults to French instead of browser-dependent English');
 ok(bookingSource.includes('data-closed-lang'), 'closed booking state keeps FR, EN and Arabic language controls');

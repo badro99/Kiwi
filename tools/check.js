@@ -466,9 +466,10 @@ section('Numérotation multi-caisse (tools/ticket-sequence-test.mjs)');
 
 section('Réconciliation numéro commande (tools/order-number-reconciliation-test.mjs)');
 {
+  const { spawnSync } = require('child_process');
   const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'order-number-reconciliation-test.mjs')], { encoding: 'utf8' });
   const out = (r.stdout || '') + (r.stderr || '');
-  if (r.status === 0) pass('numéro permanent partagé entre caisse et tickets');
+  if (r.status === 0) ok('numéro permanent partagé entre caisse et tickets');
   else fail(`order-number-reconciliation-test.mjs exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
 }
 
