@@ -5441,7 +5441,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=472" defer></script>
+  <script src="assets/caisse-pwa.js?v=473" defer></script>
   <script src="assets/live-link.js?v=21" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -10525,10 +10525,10 @@
           });
       }, 2000);
     }
-    function triggerCardSuccess(result) {
+    async function triggerCardSuccess(result) {
       if (cardPaymentCommitted) return;
-      const settled = finalizeTender(cardTenderMethod);
       cardPaymentCommitted = true;
+      const settled = await finalizeTender(cardTenderMethod);
       if (settled === 'split') { closeCardModal(); return; }
       reader.disc.classList.remove('is-pulsing');
       reader.disc.classList.add('flash', 'is-success');
@@ -10632,13 +10632,18 @@
     /* Commit at the payment truth boundary, not when a decorative success modal
        is later dismissed. A reload/Escape after cash was accepted or the reader
        approved must never leave the order due and invite a second charge. */
-    function finalizeTender(method) {
+    async function finalizeTender(method) {
       /* Paiement = confirmation ferme. Avant d'écrire la vente ou de libérer
          la table, rattraper tout ce qui n'est pas encore parti en cuisine.
          Chaque chemin garde sa propre preuve durable (ligne.sent, statut held,
          ou identifiant OrderPro), donc les encaissements/retours suivants ne
          peuvent jamais produire un second bon. */
       const tenderOrder = dispatchUnsentKitchenBeforePayment();
+      /* A new counter order gets its permanent restaurant number from the
+         shared order queue. Never freeze a customer receipt or send a sale to
+         Dashboard while that allocation is still in flight: the temporary
+         till counter was the source of the #74 / #14 disagreement. */
+      await awaitCanonicalTicketNumber(tenderOrder);
       const tenderBase = currentTotal();
       const tenderTip = payTipAmount();
       const saleLabel = mode === 'vrap'
@@ -10738,14 +10743,15 @@
         updateRendu();
       });
     });
-    cashConfirm.addEventListener('click', () => {
+    cashConfirm.addEventListener('click', async () => {
       // Customer owes base + pourboire; rendu is the change off that.
       const total = currentTotal() + payTipAmount();
       const got = parseFloat(cashInput.value) || 0;
       if (cashPaymentCommitted || got < total) return;
       const change = got - total;
-      const settled = finalizeTender('cash');
       cashPaymentCommitted = true;
+      cashConfirm.disabled = true;
+      const settled = await finalizeTender('cash');
       if (settled === 'split') { closeCashModal(); return; }
       cashStepInput.hidden = true;
       cashStepInput.style.display = 'none';
@@ -11691,7 +11697,8 @@
       /* The queue owns the permanent customer-facing number. Wait for that
          allocation before freezing the paper document, otherwise the caisse
          can show local #64 while the server echo (and later reprints) use #3. */
-      relayToKitchen(order).then(() => printKitchenTickets(order, items));
+      order.canonicalNumberPromise = relayToKitchen(order);
+      order.canonicalNumberPromise.then(() => printKitchenTickets(order, items));
       try { persistShift(); } catch (_) {}
       return order;
     }
@@ -13416,6 +13423,10 @@
          at this allocation boundary so every customer output uses the same
          permanent number already shown by Caisse and kitchen. */
       attachReceipt(row);
+      /* The first mirror may have reached D1 during the old race. Replaying the
+         same immutable sale id is idempotent; /api/sale updates only its human
+         reference, so Dashboard is repaired without adding a transaction. */
+      try { window.KiwiLive?.postSale?.(row); } catch (_) {}
       try { persistShift(); } catch (_) {}
       return row;
     }
@@ -18397,6 +18408,20 @@
       const remote = dispatchPendingOrderProAtTable(tableId, paid);
       const local = sendTableToKitchen(tableId);
       return { remote, local };
+    }
+
+    async function awaitCanonicalTicketNumber(dispatched) {
+      if (!dispatched) return;
+      /* Table dispatch returns {remote, local}; takeaway dispatch returns the
+         order itself. Keep one gate for both paths so a fast payment can never
+         overtake number allocation on any restaurant checkout surface. */
+      const orders = [];
+      if (dispatched.canonicalNumberPromise) orders.push(dispatched);
+      if (dispatched.local && dispatched.local.canonicalNumberPromise) orders.push(dispatched.local);
+      if (dispatched.remote && dispatched.remote.canonicalNumberPromise) orders.push(dispatched.remote);
+      for (const order of orders) {
+        try { await order.canonicalNumberPromise; } catch (_) {}
+      }
     }
 
     function dispatchUnsentKitchenBeforePayment() {

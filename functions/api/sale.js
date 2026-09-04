@@ -344,6 +344,18 @@ export async function onRequestPost({ request, env }) {
     }
   }
 
+  /* An idempotent replay can carry a later canonical restaurant number. The
+   * money, method, timestamp and basket are immutable; only the human-facing
+   * reference may be reconciled. INSERT OR IGNORE alone kept the temporary
+   * till counter forever in Dashboard even after Caisse and kitchen agreed. */
+  if (ref) {
+    try {
+      await env.DB.prepare(
+        'UPDATE sales SET ref = ? WHERE id = ? AND merchant = ? AND (ref IS NULL OR ref <> ?)'
+      ).bind(ref, id, merchant, ref).run();
+    } catch (_) { /* Older schemas still retain the successfully inserted sale. */ }
+  }
+
   let settlementPending = false;
   if (employeeTable || serviceSession) {
     const settledTable = employeeTable || String(serviceSession.table_no || '');
