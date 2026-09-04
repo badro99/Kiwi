@@ -330,26 +330,110 @@ function sendJson(res, status, obj, origin) {
   res.end(body);
 }
 
-// Relay a buffer of ESC/POS bytes to printerIp:port over a raw TCP socket.
-function sendToPrinter(printerIp, port, buf) {
+/* Keep the RAW channel alive after a real ticket. Several inexpensive network
+ * printers put their interface to sleep as soon as the client closes port 9100;
+ * the next connect can then take 15-20 seconds, while every following ticket is
+ * instant. ESC @ resets the printer without feeding paper, so one serialized
+ * heartbeat keeps the transport awake without producing a ticket. */
+const PRINTER_KEEPALIVE_MS = 30000;
+const PRINTER_WARM_WINDOW_MS = 12 * 60 * 60 * 1000;
+const PRINTER_WAKE_BYTES = Buffer.from([0x1b, 0x40]);
+const printerChannels = new Map();
+const printerWrites = new Map();
+const printerWarmers = new Map();
+
+function printerKey(printerIp, port) { return String(printerIp) + ':' + Number(port); }
+
+function closePrinterChannel(key, channel) {
+  if (printerChannels.get(key) === channel) printerChannels.delete(key);
+  try { channel.socket.destroy(); } catch (_) {}
+}
+
+function openPrinterChannel(printerIp, port) {
+  const key = printerKey(printerIp, port);
+  const current = printerChannels.get(key);
+  if (current && current.socket && !current.socket.destroyed && current.socket.writable) {
+    return Promise.resolve(current);
+  }
+  if (current) closePrinterChannel(key, current);
   return new Promise((resolve, reject) => {
     const socket = new net.Socket();
+    const channel = { key, printerIp, port, socket };
     let settled = false;
-    const finish = (err) => {
-      if (settled) return; settled = true;
+    const fail = (error) => {
+      if (settled) return;
+      settled = true;
       try { socket.destroy(); } catch (_) {}
-      err ? reject(err) : resolve(buf.length);
+      reject(error);
     };
     socket.setTimeout(PRINT_TIMEOUT_MS);
-    socket.on('timeout', () => finish(new Error('printer timeout')));
-    socket.on('error', (e) => finish(e));
+    socket.once('timeout', () => fail(new Error('printer timeout')));
+    socket.once('error', fail);
     socket.connect(port, printerIp, () => {
-      socket.write(buf, () => {
-        // Give the printer a beat to drain, then close cleanly.
-        socket.end(() => finish(null));
+      if (settled) return;
+      settled = true;
+      socket.setTimeout(0);
+      try { socket.setKeepAlive(true, PRINTER_KEEPALIVE_MS); } catch (_) {}
+      socket.removeListener('error', fail);
+      socket.on('error', () => closePrinterChannel(key, channel));
+      socket.on('close', () => {
+        if (printerChannels.get(key) === channel) printerChannels.delete(key);
       });
+      printerChannels.set(key, channel);
+      resolve(channel);
     });
   });
+}
+
+function writePrinterChannel(channel, buf) {
+  return new Promise((resolve, reject) => {
+    if (!channel.socket || channel.socket.destroyed || !channel.socket.writable) {
+      reject(new Error('printer connection closed'));
+      return;
+    }
+    let settled = false;
+    const timer = setTimeout(() => finish(new Error('printer timeout')), PRINT_TIMEOUT_MS);
+    const finish = (error) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (error) closePrinterChannel(channel.key, channel);
+      error ? reject(error) : resolve(buf.length);
+    };
+    channel.socket.write(buf, (error) => finish(error || null));
+  });
+}
+
+function schedulePrinterWarm(printerIp, port, realTicket) {
+  const key = printerKey(printerIp, port);
+  const state = printerWarmers.get(key) || { lastRealAt: 0, timer: null };
+  if (realTicket) state.lastRealAt = Date.now();
+  if (state.timer) clearTimeout(state.timer);
+  if (!state.lastRealAt || Date.now() - state.lastRealAt > PRINTER_WARM_WINDOW_MS) {
+    printerWarmers.delete(key);
+    return;
+  }
+  state.timer = setTimeout(() => {
+    state.timer = null;
+    sendToPrinter(printerIp, port, PRINTER_WAKE_BYTES, true).catch(() => {
+      schedulePrinterWarm(printerIp, port, false);
+    });
+  }, PRINTER_KEEPALIVE_MS);
+  printerWarmers.set(key, state);
+}
+
+// Relay a buffer of ESC/POS bytes over one serialized, reusable RAW channel.
+function sendToPrinter(printerIp, port, buf, heartbeat) {
+  const key = printerKey(printerIp, port);
+  const previous = printerWrites.get(key) || Promise.resolve();
+  const task = previous.catch(() => {}).then(() => openPrinterChannel(printerIp, port))
+    .then((channel) => writePrinterChannel(channel, buf))
+    .then((bytes) => {
+      schedulePrinterWarm(printerIp, port, !heartbeat);
+      return heartbeat ? 0 : bytes;
+    });
+  printerWrites.set(key, task.catch(() => {}));
+  return task;
 }
 
 /* ── LAN printer discovery ────────────────────────────────────────────────────
