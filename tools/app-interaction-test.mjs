@@ -131,6 +131,9 @@ const CORS = { 'Access-Control-Allow-Credentials': 'true' };
  * builds, where a trailing semicolon throws — functions run identically
  * everywhere). `secure` selects the secureGet behavior for the case. */
 function applyPluginStub(pluginCfg) {
+  if (pluginCfg && pluginCfg.hosted) {
+    window.webkit = { messageHandlers: { kiwiShell: { postMessage: function (state) { window.__nativeSetupState = state; } } } };
+  }
   function later(value, ms) {
     return new Promise(function (res) { setTimeout(function () { res(value); }, ms); });
   }
@@ -1922,6 +1925,30 @@ for (const locale of ['fr', 'en', 'ar']) {
 
     await p320.closeCtx();
   }
+}
+
+// Exercise the shipped host bridge, not hidden web buttons: native setup makes
+// the web shell inert, so DOM-only onboarding tests cannot prove this journey.
+for (const locale of ['fr', 'en', 'ar']) {
+  const p = await openShell({ locale, me: 'multi', plugin: { hosted: true } });
+  const action = (payload) => p.evaluate((value) => window.KiwiNativeHostAction(value), payload);
+  const step = (kind) => p.waitForFunction((value) => window.__nativeSetupState?.kind === value, { timeout: 9000 }, kind);
+  await p.waitForFunction(() => window.__nativeSetupState?.actions.some(a => a.id === 'account-next' && a.enabled), { timeout: 9000 });
+  await action({ action: 'account-next' });
+  await step('role');
+  await action({ action: 'select-role', id: 'caisse' });
+  await action({ action: 'role-next' });
+  await step('connect');
+  await action({ action: 'select-store', id: '0' });
+  await action({ action: 'pair' });
+  await p.waitForFunction(() => window.__nativeSetupState?.actions.some(a => a.id === 'connect-next' && a.enabled), { timeout: 9000 });
+  await action({ action: 'connect-next' });
+  await step('printer');
+  await action({ action: 'printer-skip' });
+  await step('ready');
+  const ready = await p.evaluate(() => document.querySelector('#shell').inert && window.__nativeSetupState.actions.some(a => a.id === 'finish' && a.enabled));
+  ready ? ok(`native host account → role → paired store → printer → ready (${locale})`) : bad(`native host flow failed (${locale})`);
+  await p.closeCtx();
 }
 
 await browser.close();

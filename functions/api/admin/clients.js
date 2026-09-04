@@ -525,6 +525,13 @@ export async function onRequestDelete(context) {
       deletes.push(env.DB.prepare('UPDATE accounts SET business = ? WHERE id = ?')
         .bind(nextStore.name || nextStore.merchant, owner.id));
     } else if (owner && !nextStore) {
+      // Account-wide privacy requests intentionally have no merchant. Remove
+      // their PII only with the last store/account, never with a sibling store.
+      if (tables.includes('support_tickets')) {
+        const ownedRequest = "SELECT id FROM support_tickets WHERE merchant = '' AND category = 'account-deletion' AND json_valid(diagnostics) AND json_extract(diagnostics, '$.account_id') = ?";
+        if (deleteSupportMessages) deletes.push(env.DB.prepare('DELETE FROM support_messages WHERE ticket_id IN (' + ownedRequest + ')').bind(owner.id));
+        deletes.push(env.DB.prepare('DELETE FROM support_tickets WHERE id IN (' + ownedRequest + ')').bind(owner.id));
+      }
       deletes.push(env.DB.prepare('DELETE FROM reset_tokens WHERE account_id = ?').bind(owner.id));
       deletes.push(env.DB.prepare('DELETE FROM accounts WHERE id = ?').bind(owner.id));
       removed.accounts = 1;

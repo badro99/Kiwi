@@ -87,7 +87,7 @@ check('Android release signing reads keystore.properties or env, never a committ
 check('the store pack exists with listing, privacy labels, review notes and demo account',
   storeDoc.includes('## 3. Fiche App Store Connect') && storeDoc.includes('## 4. App Privacy') && storeDoc.includes('## 5. Notes pour la revue') && storeDoc.includes('## 2. Compte démo'));
 check('the dashboard offers in-app account deletion (App Store 5.1.1 v)',
-  interactive.includes("'settings-delete-account'") && interactive.includes('mailto:dpo@kiwi-os.com') && interactive.includes("action: 'settings-delete-account'"));
+  interactive.includes("'settings-delete-account'") && interactive.includes('/api/account/deletion-request') && !interactive.includes('mailto:dpo@kiwi-os.com') && interactive.includes("action: 'settings-delete-account'"));
 
 /* Native first paint must match the dark Kiwi Pro boot stage. Keep the
  * platform resource matrices complete: missing one density/scale otherwise

@@ -2149,36 +2149,67 @@ ar: {
       });
     },
 
-    /* Suppression de compte. Exigée par Apple (5.1.1 v) et Google dès qu'un compte
-     * sert à se connecter, même créé hors de l'app : le chemin doit partir DE
-     * l'app. La suppression elle-même reste un geste humain côté opérateur
-     * (console, sous 30 jours) : un bouton qui effacerait un livre de ventes
-     * réel en un clic serait pire que le problème. Ici : on explique, puis on
-     * ouvre le mail au DPO pré-rempli avec l'adresse du compte si on la connaît. */
+    /* Submit a durable owner-authenticated request, never an email-composer
+     * handoff or a client-selected merchant deletion. Processing stays manual. */
     'settings-delete-account': () => {
-      let email = '';
-      try { email = String(localStorage.getItem('kiwiOwnerEmail') || '').trim(); } catch (_) {}
-      const subject = tr({ fr: 'Suppression de mon compte Kiwi', en: 'Delete my Kiwi account', ar: 'حذف حسابي في كيوي' });
-      const bodyTxt = tr({
-        fr: 'Bonjour,\n\nJe demande la suppression de mon compte Kiwi' + (email ? ' (' + email + ')' : '') + ' et des données associées.\n\nMerci de me confirmer la prise en compte.\n',
-        en: 'Hello,\n\nPlease delete my Kiwi account' + (email ? ' (' + email + ')' : '') + ' and the associated data.\n\nPlease confirm once it is done.\n',
-        ar: 'مرحباً،\n\nأطلب حذف حسابي في كيوي' + (email ? ' (' + email + ')' : '') + ' والبيانات المرتبطة به.\n\nشكراً لتأكيد استلام الطلب.\n',
-      });
-      const href = 'mailto:dpo@kiwi-os.com?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(bodyTxt);
+      const copy = {
+        loading: tr({ fr: 'Vérification du compte…', en: 'Checking account…', ar: 'جارٍ التحقق من الحساب…' }),
+        send: tr({ fr: 'Confirmer la demande', en: 'Confirm request', ar: 'تأكيد الطلب' }),
+        sending: tr({ fr: 'Enregistrement…', en: 'Recording request…', ar: 'جارٍ تسجيل الطلب…' }),
+        received: tr({ fr: 'Demande enregistrée', en: 'Request recorded', ar: 'تم تسجيل الطلب' }),
+        failed: tr({ fr: 'La demande n’a pas pu être enregistrée. Réessayez ; aucune suppression n’a été lancée.', en: 'The request could not be recorded. Try again; no deletion was started.', ar: 'تعذّر تسجيل الطلب. حاول مجدداً؛ لم تبدأ أي عملية حذف.' }),
+        signin: tr({ fr: 'Connectez-vous au compte propriétaire pour demander sa suppression.', en: 'Sign in to the owner account to request its deletion.', ar: 'سجّل الدخول إلى حساب المالك لطلب حذفه.' }),
+        password: tr({ fr: 'Confirmez avec votre mot de passe', en: 'Confirm with your password', ar: 'أكد باستخدام كلمة المرور' }),
+        wrong: tr({ fr: 'Mot de passe incorrect. Réessayez.', en: 'Incorrect password. Try again.', ar: 'كلمة المرور غير صحيحة. حاول مجدداً.' }),
+        limit: tr({ fr: 'Trop de tentatives. Réessayez dans 15 minutes.', en: 'Too many attempts. Try again in 15 minutes.', ar: 'محاولات كثيرة. أعد المحاولة بعد 15 دقيقة.' })
+      };
       const m = modal({
         title: tr({ fr: 'Supprimer mon compte', en: 'Delete my account', ar: 'حذف حسابي' }),
         tag: tr({ fr: 'Compte', en: 'Account', ar: 'الحساب' }),
         desc: tr({
-          fr: 'La demande part à notre délégué à la protection des données. Le compte, l\'établissement, les ventes et l\'équipe sont supprimés sous 30 jours ; vous recevez une confirmation par e-mail. Exportez vos données avant si vous en avez besoin.',
-          en: 'The request goes to our data protection officer. The account, establishment, sales and team are deleted within 30 days; you get an e-mail confirmation. Export your data first if you need it.',
-          ar: 'يُرسل الطلب إلى مسؤول حماية البيانات لدينا. يُحذف الحساب والمنشأة والمبيعات والفريق خلال 30 يوماً، وتتلقى تأكيداً بالبريد. صدّر بياناتك أولاً إن كنت بحاجة إليها.',
+          fr: 'Cette demande concerne votre compte connecté et tous ses établissements, pas seulement l’écran affiché. Exportez vos données avant de confirmer. Notre équipe traite la suppression sous 30 jours et vous confirme par e-mail. Les données légalement requises peuvent être conservées ; nous vous préciserons lesquelles.',
+          en: 'This request covers your signed-in account and all its locations, not only the current screen. Export your data before confirming. Our team processes deletion within 30 days and confirms by email. Legally required records may be retained; we will explain which ones.',
+          ar: 'يشمل الطلب حسابك المتصل وجميع مؤسساته، وليس الشاشة الحالية فقط. صدّر بياناتك قبل التأكيد. يعالج فريقنا الحذف خلال 30 يوماً ويؤكده بالبريد. قد تُحتفظ بالسجلات المطلوبة قانونياً وسنوضح لك ما هي.',
         }),
-        body: `<p style="font-size:13px;color:var(--n-600);margin:0">${tr({ fr: 'Adresse de contact :', en: 'Contact address:', ar: 'عنوان التواصل:' })} <b>dpo@kiwi-os.com</b>${email ? ' · ' + tr({ fr: 'compte', en: 'account', ar: 'الحساب' }) + ' <b>' + escape(email) + '</b>' : ''}</p>`,
-        foot: `<button class="kb ghost" type="button" data-close>${tr({ fr: 'Annuler', en: 'Cancel', ar: 'إلغاء' })}</button>
-               <a class="kb danger" href="${href}" data-close>${tr({ fr: 'Envoyer la demande', en: 'Send the request', ar: 'إرسال الطلب' })}</a>`,
+        body: `<p data-delete-identity></p><label data-delete-form hidden>${copy.password}<input type="password" autocomplete="current-password" data-delete-password style="display:block;width:100%;min-height:44px;font-size:16px;margin-top:8px" /></label><p data-delete-status role="status" aria-live="polite">${copy.loading}</p>`,
+        foot: `<button class="kb ghost" type="button" data-close>${tr({ fr: 'Fermer', en: 'Close', ar: 'إغلاق' })}</button><button class="kb danger" type="button" data-delete-submit disabled>${copy.send}</button>`,
         width: 480,
       });
-      m.el.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => setTimeout(m.close, 50)));
+      const status = m.el.querySelector('[data-delete-status]'), button = m.el.querySelector('[data-delete-submit]');
+      const form = m.el.querySelector('[data-delete-form]'), password = m.el.querySelector('[data-delete-password]');
+      let ready = false, sending = false;
+      const showRecorded = (request) => {
+        ready = false; form.hidden = true; button.hidden = true; password.value = '';
+        status.textContent = copy.received + ' · ' + request.reference + ' · ' + new Date(request.createdAt).toLocaleDateString(document.documentElement.lang || 'fr');
+      };
+      const api = async (options) => {
+        const controller = new AbortController(), timeout = setTimeout(() => controller.abort(), 15000);
+        try {
+          const response = await fetch('/api/account/deletion-request', { credentials: 'include', cache: 'no-store', ...options, signal: controller.signal });
+          const body = await response.json();
+          if (!response.ok) throw new Error(body.error || 'unavailable');
+          return body;
+        } finally { clearTimeout(timeout); }
+      };
+      api().then((body) => {
+        m.el.querySelector('[data-delete-identity]').textContent = body.account.email;
+        if (body.request) { showRecorded(body.request); return; }
+        ready = true; form.hidden = false; button.disabled = false; status.textContent = '';
+      }).catch((err) => { status.textContent = err.message === 'unauthenticated' ? copy.signin : copy.failed; });
+      const submit = async () => {
+        if (!ready || sending) return;
+        if (!password.value) { password.focus(); return; }
+        sending = true; button.disabled = true; button.textContent = copy.sending; status.textContent = '';
+        const body = JSON.stringify({ confirm: true, password: password.value }); password.value = '';
+        try { const result = await api({ method: 'POST', headers: { 'Content-Type': 'application/json' }, body }); showRecorded(result.request); }
+        catch (err) {
+          status.textContent = err.message === 'bad-creds' ? copy.wrong : err.message === 'unauthenticated' ? copy.signin : err.message === 'too_many_attempts' ? copy.limit : copy.failed;
+          password.focus();
+        } finally { sending = false; button.disabled = !ready; button.textContent = copy.send; }
+      };
+      button.addEventListener('click', submit);
+      password.addEventListener('keydown', (event) => { if (event.key === 'Enter') { event.preventDefault(); submit(); } });
+      m.el.querySelector('[data-close]').addEventListener('click', () => { password.value = ''; m.close(); });
     },
 
     'glass-level': (el) => {

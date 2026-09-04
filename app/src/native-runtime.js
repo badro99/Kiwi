@@ -96,7 +96,9 @@
   function hapticLight() { return call(haptics, 'impact', { style: 'LIGHT' }); }
   function hapticNotice(kind) { return call(haptics, 'notification', { type: kind === 'danger' ? 'ERROR' : 'SUCCESS' }); }
   function paintStatusBar() {
-    var dark = root.getAttribute('data-theme') === 'dark' || root.getAttribute('data-vexel-mode') === 'dark' || (appearance && appearance.matches && !root.getAttribute('data-theme'));
+    // SwiftUI setup has an ink background regardless of the web/system theme.
+    var setup = document.body && document.body.classList.contains('native-shell-page');
+    var dark = setup || root.getAttribute('data-theme') === 'dark' || root.getAttribute('data-vexel-mode') === 'dark' || (appearance && appearance.matches && !root.getAttribute('data-theme'));
     call(statusBar, 'setStyle', { style: dark ? 'DARK' : 'LIGHT' });
     if (cap.getPlatform && cap.getPlatform() === 'android') call(statusBar, 'setBackgroundColor', { color: dark ? '#0A0F0D' : '#F7F5F0' });
   }

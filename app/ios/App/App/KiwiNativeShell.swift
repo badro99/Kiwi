@@ -7,6 +7,14 @@ private let kiwiInk = Color(red: 10 / 255, green: 15 / 255, blue: 13 / 255)
 private let kiwiMint = Color(red: 0, green: 1, blue: 174 / 255)
 private let kiwiPaper = Color(red: 247 / 255, green: 245 / 255, blue: 240 / 255)
 
+// JSON is already a JavaScript expression. Keep its UTF-8 intact: atob() yields
+// byte-valued characters, not Unicode, and used to corrupt non-ASCII passwords.
+func kiwiNativeActionScript(_ payload: [String: String]) -> String? {
+    guard let data = try? JSONSerialization.data(withJSONObject: payload),
+          let json = String(data: data, encoding: .utf8) else { return nil }
+    return "window.KiwiNativeHostAction&&window.KiwiNativeHostAction(\(json))"
+}
+
 private struct KiwiHostField: Codable, Identifiable {
     let id: String
     let label: String
@@ -117,10 +125,7 @@ private final class KiwiNativeShellModel: ObservableObject {
         var payload = values
         payload["action"] = action
         if !id.isEmpty { payload["id"] = id }
-        guard JSONSerialization.isValidJSONObject(payload),
-              let data = try? JSONSerialization.data(withJSONObject: payload) else { return }
-        let encoded = data.base64EncodedString()
-        let script = "window.KiwiNativeHostAction&&window.KiwiNativeHostAction(JSON.parse(atob('\(encoded)')))"
+        guard let script = kiwiNativeActionScript(payload) else { return }
         bridge?.webView?.evaluateJavaScript(script, completionHandler: nil)
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
@@ -392,6 +397,7 @@ private struct KiwiNativeSetupRoot: View {
 private struct KiwiNativeTabRoot: View {
     @ObservedObject var model: KiwiNativeShellModel
     @Namespace private var selectionLens
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         capsule
@@ -426,7 +432,7 @@ private struct KiwiNativeTabRoot: View {
             }
         }
         .padding(6)
-        .animation(.spring(response: 0.31, dampingFraction: 0.76), value: model.context.selected)
+        .animation(reduceMotion ? nil : .spring(response: 0.31, dampingFraction: 0.76), value: model.context.selected)
     }
 
     @ViewBuilder private var capsule: some View {

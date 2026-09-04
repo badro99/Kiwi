@@ -19,8 +19,27 @@ ok('an empty real sales journal is not discarded by itself',
   /const hadDemoSeeds = genuine\.length !== originalJournal\.length;[\s\S]{0,900}if \(hadDemoSeeds && !genuine\.length\)/.test(src));
 ok('only a journal emptied by demo cleanup is discarded',
   !/if \(!genuine\.length\)\s*\{\s*localStorage\.removeItem/.test(src));
-ok('an order action saves the shift before refresh',
-  /kdsOrders\.push\(order\);[\s\S]{0,500}persistShift\(\)/.test(src));
+// Execute both shipped entry points. Comments are not a persistence boundary.
+const vm = require('node:vm');
+for (const name of ['sendTableToKitchen', 'createTakeawayKitchenOrder']) {
+  const start = src.indexOf('    function ' + name + '(');
+  const end = src.indexOf('\n    }', start) + 6;
+  let saved = null;
+  const lines = [{ qty: 1, price: 35, sent: false }];
+  const ctx = {
+    tableOrders: { 1: lines }, tables: { 1: {} }, kdsOrders: [], kdsOrderSeq: 0,
+    kitchenItemsFromLines: (items) => items, relayLinesFromCaisse: (items) => items,
+    serverNameFor: () => 'Synthetic', ticketNo: (order) => order.num,
+    updateKdsCount() {}, kdsEl: { classList: { contains: () => false } },
+    relayToKitchen: () => Promise.resolve(), printKitchenTickets() {},
+    persistShift() { saved = { count: ctx.kdsOrders.length, sent: lines[0].sent }; }
+  };
+  vm.createContext(ctx);
+  vm.runInContext(src.slice(start, end), ctx);
+  ctx[name](name === 'sendTableToKitchen' ? 1 : lines);
+  ok(name + ' durably saves its queued order before returning', !!saved && saved.count === 1);
+  if (name === 'sendTableToKitchen') ok('saved table lines are already marked sent', saved.sent);
+}
 
 if (failures.length) {
   failures.forEach(x => console.log('  ✗ ' + x));

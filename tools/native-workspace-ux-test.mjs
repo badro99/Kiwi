@@ -108,6 +108,11 @@ ok(hapticCalls.some((call) => call[0] === 'notification' && call[1] === 'SUCCESS
 appearance.matches = true;
 appearanceListeners.forEach((handler) => handler({ matches: true }));
 ok(statusBarCalls.at(-1) === 'DARK', 'a live system appearance change repaints status-bar content for a dark surface');
+appearance.matches = false;
+body.classList.add('native-shell-page');
+appearanceListeners.forEach((handler) => handler({ matches: false }));
+ok(statusBarCalls.at(-1) === 'DARK', 'native setup keeps light status text on its ink background in system light mode');
+body.classList.remove('native-shell-page');
 ok(root.style.getPropertyValue('--type-scale') === '1.3', 'Dynamic Type scale reaches workspace pages, not only onboarding');
 ok((source.match(/!document\.body\.classList\.contains\('kiwi-native-hosted'\)/g) || []).length === 2,
   'native host publication cannot retrigger its own body-class observer on iOS or Android');

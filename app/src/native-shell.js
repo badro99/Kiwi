@@ -613,7 +613,8 @@
     if (id === 'login') {
       fillNativeField('#login-email', payload.email); fillNativeField('#login-password', payload.password);
       if (login.requestSubmit) login.requestSubmit(); else login.dispatchEvent(new Event('submit', { cancelable:true }));
-    } else if (id === 'retry-account') refreshAccount();
+    } else if (id === 'account-next' && state.account === 'connected') acctNext.click();
+    else if (id === 'retry-account') refreshAccount();
     else if (id === 'manual') $('#manual-mode').click();
     else if (id === 'logout') $('#logout').click();
     else if (id === 'select-role') { var roleNode = $('.tile[data-role="' + String(payload.id || '').replace(/[^a-z]/g, '') + '"]'); if (roleNode) roleNode.click(); }

@@ -19,7 +19,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 
-const EXPECTED = 20;
+const EXPECTED = 22;
 let checks = 0;
 process.on('unhandledRejection', (error) => { console.error(error); process.exit(1); });
 async function check(name, fn) {
@@ -457,6 +457,26 @@ await check('operator gate and confirm slug still guard the whole gesture', asyn
   assert.equal(mismatch.status, 400);
   assert.equal(w.env.DB.prepare('SELECT COUNT(*) AS n FROM intake_docs WHERE merchant = ?').bind(M).first().n, 1);
 });
+
+for (const hasSibling of [false, true]) {
+  await check('account deletion request cleanup respects owner and remaining stores: sibling=' + hasSibling, async () => {
+    const w = makeWorld();
+    if (hasSibling) w.DB.prepare("INSERT INTO merchant_config (merchant,account_id,features,updated_ts) VALUES ('sibling','acc-1','{}',1000)").run();
+    for (const owner of ['acc-1', 'unrelated-owner']) {
+      w.DB.prepare("INSERT INTO support_tickets (id,reference,merchant,category,priority,status,channel,contact,summary,diagnostics,assignee,created_ts,updated_ts) VALUES (?,?,'','account-deletion','urgent','open','email','','request',?,'',1000,1000)")
+        .bind('delete-' + owner, 'REF-' + owner, JSON.stringify({ account_id: owner })).run();
+      w.DB.prepare("INSERT INTO support_messages (id,ticket_id,kind,channel,author,body,delivery,ts) VALUES (?,?,'client','internal','owner','request','received',1000)")
+        .bind('msg-' + owner, 'delete-' + owner).run();
+    }
+    assert.equal((await del(w.env, M)).status, 200);
+    const count = (table, id) => w.DB.prepare('SELECT COUNT(*) AS n FROM ' + table + ' WHERE id = ?').bind(id).first().n;
+    assert.equal(count('accounts', 'acc-1'), hasSibling ? 1 : 0);
+    assert.equal(count('support_tickets', 'delete-acc-1'), hasSibling ? 1 : 0);
+    assert.equal(count('support_messages', 'msg-acc-1'), hasSibling ? 1 : 0);
+    assert.equal(count('support_tickets', 'delete-unrelated-owner'), 1);
+    assert.equal(count('support_messages', 'msg-unrelated-owner'), 1);
+  });
+}
 
 assert.equal(checks, EXPECTED, 'expected ' + EXPECTED + ' executed checks, got ' + checks);
 process.stdout.write('admin-delete-r2-test: ' + checks + ' checks passed\n');
