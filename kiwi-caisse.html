@@ -89,8 +89,8 @@
   <!-- Real thermal printing: ESC/POS encoder + the Kiwi Printer Bridge client.
        KiwiHardware.print routes receipts through them when a printer is paired. -->
   <script src="assets/escpos.js?v=8" defer></script>
-  <script src="assets/printer-bridge.js?v=10" defer></script>
-  <script src="assets/caisse-hardware.js?v=1" defer></script>
+  <script src="assets/printer-bridge.js?v=11" defer></script>
+  <script src="assets/caisse-hardware.js?v=2" defer></script>
   <!-- Canal de poussée facultatif : quand le concentrateur temps réel est
        déployé, la caisse relit l'état des tables à l'instant où un serveur le
        change, au lieu d'attendre son prochain tour. Absent → sondage d'origine. -->
@@ -9421,6 +9421,7 @@
 
     function pushCartLine(item, opts) {
       nativeHapticLight();
+      try { window.KiwiHardware && window.KiwiHardware.warmPrinter && window.KiwiHardware.warmPrinter(); } catch (_) {}
       const sig = optSig(opts);
       const extra = (opts || []).reduce((s, x) => s + (+x.p || 0), 0);
       /* Une ligne à options ne se confond qu'avec une ligne AUX MÊMES options :
@@ -10516,6 +10517,7 @@
        journal · sinon chaque paiement mobile compte comme une carte. */
     let cardTenderMethod = 'card';
     function openCardModal() {
+      try { window.KiwiHardware && window.KiwiHardware.warmPrinter && window.KiwiHardware.warmPrinter(); } catch (_) {}
       const attempt = ++cardAttemptSeq;
       cardPaymentCommitted = false;
       cardTenderMethod = 'card';
@@ -10716,6 +10718,7 @@
       });
     }
     function openCashModal() {
+      try { window.KiwiHardware && window.KiwiHardware.warmPrinter && window.KiwiHardware.warmPrinter(); } catch (_) {}
       cashPaymentCommitted = false;
       cashStepInput.hidden = false;
       cashStepInput.style.display = '';

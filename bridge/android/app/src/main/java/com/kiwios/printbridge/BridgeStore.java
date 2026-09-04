@@ -16,4 +16,10 @@ final class BridgeStore {
     static void clearPair(Context c) {
         prefs(c).edit().remove("token").remove("merchant").remove("bridgeId").apply();
     }
+    static void saveWarmTarget(Context c, String ip, int port) {
+        prefs(c).edit().putString("warmIp", ip).putInt("warmPort", port).putLong("warmAt", System.currentTimeMillis()).apply();
+    }
+    static String warmIp(Context c) { return prefs(c).getString("warmIp", ""); }
+    static int warmPort(Context c) { return prefs(c).getInt("warmPort", 9100); }
+    static long warmAt(Context c) { return prefs(c).getLong("warmAt", 0L); }
 }

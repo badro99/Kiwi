@@ -170,6 +170,14 @@ if (DatabaseSync) {
     const badtok = await call(jobsRoute, 'GET', '/api/print/jobs', { bearer: 'kpb_' + 'f'.repeat(64) }, env);
     ok(badtok.status === 401, 'A6 · un jeton inconnu → 401');
   }
+  // A6bis · job de réveil : kind='wake' sans dataB64
+  {
+    const wakeJob = await call(jobsRoute, 'POST', '/api/print/jobs?merchant=browse', { body: { target: { ip: '192.168.11.199' }, kind: 'wake' }, cookie: till }, env);
+    ok(wakeJob.status === 200 && wakeJob.j.ok && /^pj_/.test(wakeJob.j.id), 'A6bis · un job de pré-chauffe "wake" sans dataB64 est accepté');
+    const claim = await call(jobsRoute, 'GET', '/api/print/jobs', { bearer: token }, env);
+    ok(claim.status === 200 && claim.j.jobs.length === 1 && claim.j.jobs[0].kind === 'wake', 'A6bis · le pont réclame le job wake');
+    await call(jobsRoute, 'POST', '/api/print/jobs', { bearer: token, body: { action: 'ack', id: wakeJob.j.id, ok: true, bytes: 0 } }, env);
+  }
   // A7 · un échec est repris par le relais durable, sans bloquer la caisse
   {
     const r = await call(jobsRoute, 'POST', '/api/print/jobs?merchant=browse', { body: { target: { ip: '192.168.11.199' }, dataB64: data, kind: 'kitchen' }, cookie: till }, env);
@@ -284,14 +292,14 @@ if (DatabaseSync) {
   ok(up, 'B1 · le pont démarre sur ' + BPORT);
   if (up) {
     const ping = await bget('/kiwi/ping');
-    ok(ping.j.version === '1.4.1' && ping.j.relay && ping.j.relay.paired === false, 'B1 · /kiwi/ping v1.4.1 annonce relay.paired=false');
+    ok(ping.j.version === '1.4.2' && ping.j.relay && ping.j.relay.paired === false, 'B1 · /kiwi/ping v1.4.2 annonce relay.paired=false');
     const page = await bget('/');
     ok(page.status === 200 && /Kiwi Printer Bridge/.test(page.text) && /Associer ce pont/.test(page.text), 'B1 · la page locale du pont se sert sur /');
     const bad = await bpost('/kiwi/relay/pair', { code: '111111' });
     ok(bad.status === 422 && bad.j.ok === false, 'B2 · un mauvais code est refusé par le faux serveur et remonté tel quel');
     const good = await bpost('/kiwi/relay/pair', { code: '424242' });
     ok(good.status === 200 && good.j.ok && good.j.merchant === 'browse', 'B2 · le pont s’appaire avec 424242 → browse');
-    ok(seen.redeem && seen.redeem.version === '1.4.1' && seen.redeem.platform === process.platform && seen.redeem.name, 'B2 · il se présente avec version, plateforme et nom de machine');
+    ok(seen.redeem && seen.redeem.version === '1.4.2' && seen.redeem.platform === process.platform && seen.redeem.name, 'B2 · il se présente avec version, plateforme et nom de machine');
     const cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
     ok(cfg.relay && cfg.relay.token === TOKEN && cfg.relay.merchant === 'browse', 'B2 · le jeton est écrit dans le fichier de config du pont');
     if (process.platform !== 'win32') ok((fs.statSync(cfgPath).mode & 0o777) === 0o600, 'B2 · …en mode 0600');
@@ -308,6 +316,8 @@ if (DatabaseSync) {
     ok(st.j.paired && st.j.online && st.j.printed === 1 && st.j.merchant === 'browse', 'B3 · /kiwi/relay : appairé · en ligne · 1 imprimé');
     const ping2 = await bget('/kiwi/ping');
     ok(ping2.j.relay.paired === true && ping2.j.relay.merchant === 'browse', 'B3 · /kiwi/ping annonce relay.paired=true (la caisse masque alors « Associer ce pont »)');
+    const wake = await bpost('/kiwi/wake', { printerIp: '127.0.0.1', port: printerPort });
+    ok(wake.status === 200 && wake.j.ok && wake.j.warm === true, 'B3 · POST /kiwi/wake réchauffe le canal');
     const un = await bpost('/kiwi/relay/unpair');
     ok(un.j.ok && !(JSON.parse(fs.readFileSync(cfgPath, 'utf8')).relay), 'B4 · /kiwi/relay/unpair oublie le jeton');
     ok(!/kpb_/.test(log), 'B5 · le jeton n’apparaît jamais dans la console du pont');
@@ -350,7 +360,7 @@ if (DatabaseSync) {
   const jobs = read('functions/api/print/jobs.js');
   ok(/claimed_ts IS NULL OR claimed_ts <= \?/.test(jobs) && /RETRY_DELAY_MS = 10000/.test(jobs), 'C4 · le relais durable diffère puis reprend les écritures imprimante échouées');
   const srv = read('bridge/server.js');
-  ok(/const VERSION = '1\.4\.1'/.test(srv) && /"version": "1\.4\.1"/.test(read('bridge/package.json')), 'C5 · bridge 1.4.1 (server.js et package.json d’accord)');
+  ok(/const VERSION = '1\.4\.2'/.test(srv) && /"version": "1\.4\.2"/.test(read('bridge/package.json')), 'C5 · bridge 1.4.2 (server.js et package.json d’accord)');
   ok(/const HOST = '127\.0\.0\.1'/.test(srv) && !/0\.0\.0\.0/.test(srv), 'C5 · le pont écoute toujours sur loopback uniquement — le relais est sortant');
 
   const lin = read('bridge/install-linux.sh');

@@ -96,8 +96,8 @@
     "sha": "907c1ea564c48012"
   },
   "assets/caisse-hardware.js": {
-    "v": "1",
-    "sha": "c5a59ef57daea8a2"
+    "v": "2",
+    "sha": "d85bc83c0992cc77"
   },
   "assets/caisse-lang.js": {
     "v": "2",
@@ -756,8 +756,8 @@
     "sha": "a855894281afedca"
   },
   "assets/printer-bridge.js": {
-    "v": "10",
-    "sha": "f520ba2059c3b867"
+    "v": "11",
+    "sha": "cc7476df33fa2ff8"
   },
   "assets/procurement.js": {
     "v": "2",

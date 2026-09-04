@@ -131,5 +131,12 @@
     // rejection instead of a fabricated approval that could mark an unpaid sale paid.
     readCard: readCard,
     authorizeCard: authorizeCard,
+    // Pré-réchauffe le canal thermique dès qu'une intention d'encaissement apparaît,
+    // évitant la latence de réveil (15–20 s) au premier ticket après une accalmie.
+    warmPrinter: function (target) {
+      if (window.KiwiPrinter && typeof window.KiwiPrinter.wake === 'function') {
+        window.KiwiPrinter.wake(target);
+      }
+    },
   };
 })();

@@ -19,7 +19,8 @@
  *   GET  /kiwi/printers        → { ok, platform, printers[], default }
  *   POST /kiwi/print           { printerIp, port?, dataB64 }        (raw ESC/POS over TCP)
  *                              { printerName, dataB64 }             (raw ESC/POS via the OS spooler)
- *                              → { ok, bytes, via } | 502 { ok:false, error }
+ *                              → { ok, bytes, via, timing? } | 502 { ok:false, error }
+ *   POST /kiwi/wake            { printerIp, port? }                 (probe & pre-warm socket)
  *   GET  /kiwi/relay           → { ok, paired, merchant, name, online, lastPollTs, lastError }
  *   POST /kiwi/relay/pair      { code }  → échange le code d'appairage contre un jeton (relais cloud)
  *   POST /kiwi/relay/unpair    → oublie le jeton
@@ -47,7 +48,7 @@ const path = require('path');
 const { execFile, spawn } = require('child_process');
 
 const NAME = 'kiwi-printer-bridge';
-const VERSION = '1.4.1';
+const VERSION = '1.4.2';
 const HOST = '127.0.0.1';
 const PORT = Number(process.env.KIWI_BRIDGE_PORT) || 9110; // bridge's own port
 const DEFAULT_PRINTER_PORT = 9100;                          // RAW/JetDirect
@@ -122,6 +123,7 @@ function relayStatus() {
     ok: true, paired: relayPaired(), merchant: r.merchant || '', name: r.name || '', bridgeId: r.bridgeId || '',
     url: RELAY_URL, online: relay.online, lastPollTs: relay.lastPollTs, lastJobTs: relay.lastJobTs,
     lastError: relay.lastError, printed: relay.printed, failed: relay.failed, version: VERSION,
+    lastTiming: lastPrintTiming,
   };
 }
 function relayLog(msg) { console.log('[relais] ' + msg); }
@@ -135,29 +137,37 @@ async function relayPair(code, name) {
     action: 'redeem', code, name: name || os.hostname() || 'Pont d\'impression',
     platform: process.platform, version: VERSION,
   });
-  if (!r.json || !r.json.ok || !r.json.token) {
-    const why = (r.json && r.json.error) || r.error || ('http-' + r.status);
-    return { ok: false, error: why, status: r.status };
+  if (r.status === 200 && r.json && r.json.ok && r.json.token) {
+    const cfg = readConfig();
+    cfg.relay = { token: r.json.token, merchant: r.json.merchant, name: r.json.name, bridgeId: r.json.bridgeId, at: Date.now() };
+    if (writeConfig(cfg)) {
+      relay.cfg = cfg;
+      relayLog('associé à ' + r.json.merchant + ' (' + (r.json.bridgeId || 'nouveau') + ').');
+      relayStart();
+      return { ok: true, merchant: r.json.merchant };
+    }
+    return { ok: false, error: 'ecriture-config-impossible' };
   }
-  relay.cfg = Object.assign({}, relay.cfg, {
-    relay: { token: r.json.token, merchant: r.json.merchant || '', name: r.json.name || '', bridgeId: r.json.bridgeId || '', pairedTs: Date.now() },
-  });
-  writeConfig(relay.cfg);
-  relay.lastError = '';
-  relayLog('appairé au commerce « ' + relay.cfg.relay.merchant + ' » · les tickets déposés depuis un iPad ou une tablette s\'imprimeront ici.');
-  relayStart();
-  return { ok: true, merchant: relay.cfg.relay.merchant, name: relay.cfg.relay.name };
+  return { ok: false, error: (r.json && r.json.error) || 'erreur-serveur' };
 }
 function relayUnpair() {
-  relay.cfg = Object.assign({}, relay.cfg); delete relay.cfg.relay;
-  writeConfig(relay.cfg);
-  relay.online = false; relay.lastError = '';
+  const cfg = readConfig();
+  delete cfg.relay;
+  writeConfig(cfg);
+  relay.cfg = cfg;
+  relay.online = false;
   if (relay.timer) { clearTimeout(relay.timer); relay.timer = null; }
   relayLog('désappairé.');
 }
 
 async function relayPrintJob(job) {
   const t = job.target || {};
+  if (job.kind === 'wake') {
+    if (t.ip) {
+      warmPrinterNow(String(t.ip), Number(t.port) || DEFAULT_PRINTER_PORT).catch(() => {});
+    }
+    return 0;
+  }
   const buf = Buffer.from(String(job.dataB64 || ''), 'base64');
   if (!buf.length) throw new Error('ticket vide');
   if (t.osPrinter) return sendToOsPrinter(String(t.osPrinter), buf);
@@ -210,11 +220,11 @@ async function relayTick() {
         try {
           const bytes = await relayPrintJob(job);
           relay.printed++; relay.lastJobTs = Date.now();
-          ack = { action: 'ack', id: job.id, ok: true, bytes };
+          ack = Object.assign({ action: 'ack', id: job.id, ok: true, bytes }, lastPrintTiming ? { timing: lastPrintTiming } : {});
           relayLog('imprimé ' + (job.kind || 'ticket') + ' (' + bytes + ' o) → ' + (job.target && (job.target.ip || job.target.osPrinter)));
         } catch (e) {
           relay.failed++;
-          ack = { action: 'ack', id: job.id, ok: false, error: String((e && e.message) || e).slice(0, 300) };
+          ack = Object.assign({ action: 'ack', id: job.id, ok: false, error: String((e && e.message) || e).slice(0, 300) }, lastPrintTiming ? { timing: lastPrintTiming } : {});
           relayLog('échec ' + (job.kind || 'ticket') + ' : ' + ack.error);
         }
         await httpJson('POST', RELAY_URL + '/api/print/jobs', auth, ack);
@@ -333,14 +343,20 @@ function sendJson(res, status, obj, origin) {
 /* Keep the RAW channel alive after a real ticket. Several inexpensive network
  * printers put their interface to sleep as soon as the client closes port 9100;
  * the next connect can then take 15-20 seconds, while every following ticket is
- * instant. ESC @ resets the printer without feeding paper, so one serialized
- * heartbeat keeps the transport awake without producing a ticket. */
-const PRINTER_KEEPALIVE_MS = 30000;
+ * instant. DLE EOT 1 (0x10 0x04 0x01) queries printer status in real time and
+ * prompts an immediate 1-byte response without feeding paper, ensuring the Wi-Fi
+ * radio and print engine stay active and giving a concrete readiness probe. */
+const PRINTER_KEEPALIVE_MS = Number(process.env.KIWI_PRINTER_KEEPALIVE_MS)
+  || Number(readConfig().printerKeepaliveMs)
+  || 10000;
 const PRINTER_WARM_WINDOW_MS = 12 * 60 * 60 * 1000;
-const PRINTER_WAKE_BYTES = Buffer.from([0x1b, 0x40]);
+const PRINTER_WAKE_BYTES = Buffer.from([0x1b, 0x40]);        // ESC @
+const PRINTER_PROBE_BYTES = Buffer.from([0x10, 0x04, 0x01]); // DLE EOT 1: real-time status request
+const PRINTER_PROBE_TIMEOUT_MS = 2500;
 const printerChannels = new Map();
 const printerWrites = new Map();
 const printerWarmers = new Map();
+let lastPrintTiming = null;
 
 function printerKey(printerIp, port) { return String(printerIp) + ':' + Number(port); }
 
@@ -365,37 +381,59 @@ function rememberWarmTarget(printerIp, port) {
   if (writeConfig(cfg)) warmPersistedAt = now;
 }
 
-function resumePrinterWarm() {
-  const saved = readConfig().warmPrinter;
-  if (!saved || !saved.ip) return;
-  const at = Number(saved.at || 0);
-  if (!at || Date.now() - at > PRINTER_WARM_WINDOW_MS) return;
-  const port = Number(saved.port) || DEFAULT_PRINTER_PORT;
-  /* Seed the window from the saved timestamp rather than from now, so a target
-   * last used 11 h ago still expires on its own schedule instead of buying a
-   * fresh 12 h every restart. The first heartbeat is what actually wakes the
-   * interface, so fire one immediately instead of waiting 30 s. */
-  printerWarmers.set(printerKey(saved.ip, port), { lastRealAt: at, timer: null });
-  sendToPrinter(saved.ip, port, PRINTER_WAKE_BYTES, true)
-    .then(() => console.log('[imprimante] canal réchauffé au démarrage · ' + saved.ip + ':' + port))
-    .catch(() => schedulePrinterWarm(saved.ip, port, false));
-}
-
 function closePrinterChannel(key, channel) {
   if (printerChannels.get(key) === channel) printerChannels.delete(key);
   try { channel.socket.destroy(); } catch (_) {}
+}
+
+function probePrinterChannel(channel) {
+  return new Promise((resolve) => {
+    if (!channel || !channel.socket || channel.socket.destroyed || !channel.socket.writable) {
+      return resolve(false);
+    }
+    let settled = false;
+    const timer = setTimeout(() => finish(false), PRINTER_PROBE_TIMEOUT_MS);
+    const onData = () => finish(true);
+    const onEnd = () => finish(false);
+    const onError = () => finish(false);
+    function finish(ok) {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      try {
+        channel.socket.removeListener('data', onData);
+        channel.socket.removeListener('end', onEnd);
+        channel.socket.removeListener('error', onError);
+      } catch (_) {}
+      if (!ok) {
+        closePrinterChannel(channel.key, channel);
+      } else {
+        channel.lastWriteAt = Date.now();
+      }
+      resolve(ok);
+    }
+    channel.socket.once('data', onData);
+    channel.socket.once('end', onEnd);
+    channel.socket.once('error', onError);
+    channel.socket.write(PRINTER_PROBE_BYTES, (err) => {
+      if (err) finish(false);
+    });
+  });
 }
 
 function openPrinterChannel(printerIp, port) {
   const key = printerKey(printerIp, port);
   const current = printerChannels.get(key);
   if (current && current.socket && !current.socket.destroyed && current.socket.writable) {
+    current.lastReused = true;
+    current.lastConnectMs = 0;
     return Promise.resolve(current);
   }
   if (current) closePrinterChannel(key, current);
   return new Promise((resolve, reject) => {
+    const t0 = Date.now();
     const socket = new net.Socket();
-    const channel = { key, printerIp, port, socket };
+    const channel = { key, printerIp, port, socket, lastReused: false, lastConnectMs: 0, lastWriteAt: 0 };
     let settled = false;
     const fail = (error) => {
       if (settled) return;
@@ -409,6 +447,8 @@ function openPrinterChannel(printerIp, port) {
     socket.connect(port, printerIp, () => {
       if (settled) return;
       settled = true;
+      channel.lastConnectMs = Date.now() - t0;
+      channel.lastReused = false;
       socket.setTimeout(0);
       try { socket.setKeepAlive(true, PRINTER_KEEPALIVE_MS); } catch (_) {}
       socket.removeListener('error', fail);
@@ -428,17 +468,49 @@ function writePrinterChannel(channel, buf) {
       reject(new Error('printer connection closed'));
       return;
     }
+    const t0 = Date.now();
     let settled = false;
     const timer = setTimeout(() => finish(new Error('printer timeout')), PRINT_TIMEOUT_MS);
     const finish = (error) => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
-      if (error) closePrinterChannel(channel.key, channel);
-      error ? reject(error) : resolve(buf.length);
+      if (error) {
+        closePrinterChannel(channel.key, channel);
+        reject(error);
+      } else {
+        const writeMs = Date.now() - t0;
+        const idleMs = channel.lastWriteAt ? (Date.now() - channel.lastWriteAt) : 0;
+        channel.lastWriteAt = Date.now();
+        lastPrintTiming = {
+          connectMs: channel.lastConnectMs || 0,
+          writeMs,
+          reused: !!channel.lastReused,
+          idleMs,
+          totalMs: (channel.lastConnectMs || 0) + writeMs,
+          target: channel.key,
+          at: Date.now(),
+        };
+        resolve(buf.length);
+      }
     };
     channel.socket.write(buf, (error) => finish(error || null));
   });
+}
+
+function warmPrinterNow(printerIp, port) {
+  const key = printerKey(printerIp, port);
+  const previous = printerWrites.get(key) || Promise.resolve();
+  const task = previous.catch(() => {})
+    .then(() => openPrinterChannel(printerIp, port))
+    .then((channel) => probePrinterChannel(channel))
+    .then((alive) => {
+      if (!alive) {
+        return openPrinterChannel(printerIp, port).catch(() => {});
+      }
+    });
+  printerWrites.set(key, task.catch(() => {}));
+  return task;
 }
 
 function schedulePrinterWarm(printerIp, port, realTicket) {
@@ -452,11 +524,26 @@ function schedulePrinterWarm(printerIp, port, realTicket) {
   }
   state.timer = setTimeout(() => {
     state.timer = null;
-    sendToPrinter(printerIp, port, PRINTER_WAKE_BYTES, true).catch(() => {
-      schedulePrinterWarm(printerIp, port, false);
-    });
+    warmPrinterNow(printerIp, port)
+      .then(() => schedulePrinterWarm(printerIp, port, false))
+      .catch(() => schedulePrinterWarm(printerIp, port, false));
   }, PRINTER_KEEPALIVE_MS);
   printerWarmers.set(key, state);
+}
+
+function resumePrinterWarm() {
+  const saved = readConfig().warmPrinter;
+  if (!saved || !saved.ip) return;
+  const at = Number(saved.at || 0);
+  if (!at || Date.now() - at > PRINTER_WARM_WINDOW_MS) return;
+  const port = Number(saved.port) || DEFAULT_PRINTER_PORT;
+  printerWarmers.set(printerKey(saved.ip, port), { lastRealAt: at, timer: null });
+  warmPrinterNow(saved.ip, port)
+    .then(() => {
+      console.log('[imprimante] canal réchauffé au démarrage · ' + saved.ip + ':' + port);
+      schedulePrinterWarm(saved.ip, port, false);
+    })
+    .catch(() => schedulePrinterWarm(saved.ip, port, false));
 }
 
 // Relay a buffer of ESC/POS bytes over one serialized, reusable RAW channel.
@@ -761,6 +848,7 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'GET' && url === '/kiwi/ping') {
     const rs = relayStatus();
     sendJson(res, 200, { ok: true, name: NAME, version: VERSION,
+      lastTiming: lastPrintTiming,
       relay: { paired: rs.paired, online: rs.online, merchant: rs.merchant, name: rs.name, bridgeId: rs.bridgeId } }, origin);
     return;
   }
@@ -844,10 +932,25 @@ const server = http.createServer(async (req, res) => {
       const bytes = printerName
         ? await sendToOsPrinter(printerName, buf)
         : await sendToPrinter(printerIp, port, buf);
-      sendJson(res, 200, { ok: true, bytes, via: printerName ? 'os' : 'tcp' }, origin);
+      sendJson(res, 200, { ok: true, bytes, via: printerName ? 'os' : 'tcp', timing: lastPrintTiming }, origin);
     } catch (e) {
       sendJson(res, 502, { ok: false, error: String((e && e.message) || e) }, origin);
     }
+    return;
+  }
+
+  if (req.method === 'POST' && url === '/kiwi/wake') {
+    let body;
+    try { body = JSON.parse((await readBody(req)).toString('utf8') || '{}'); }
+    catch (_) { return sendJson(res, 400, { ok: false, error: 'bad-json' }, origin); }
+
+    const printerIp = String(body.printerIp || '').trim();
+    const port = Number(body.port) || DEFAULT_PRINTER_PORT;
+    if (!printerIp) {
+      return sendJson(res, 400, { ok: false, error: 'printer-ip-required' }, origin);
+    }
+    warmPrinterNow(printerIp, port).catch(() => {});
+    sendJson(res, 200, { ok: true, warm: true, waking: true, timing: lastPrintTiming }, origin);
     return;
   }
 

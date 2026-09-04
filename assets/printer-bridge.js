@@ -42,6 +42,8 @@
   var BRIDGE_URL = bridgeBase();   // kept for compatibility; prefer bridgeBase()
   var BRIDGE_DOWNLOAD = '/printer';
   var CFG_KEY = 'kiwiPrinterCfg';
+  var lastTiming = null;
+  var lastWakeAt = 0;
   var nativeFailureCount = 0;
   var nativeDiscoveryPending = false;
   var nativeDiscoveryRunning = false;
@@ -305,7 +307,10 @@
     var to = withTimeout(null, ms || 1400);
     return fetch(bridgeBase(p) + '/kiwi/ping', { signal: to.signal, cache: 'no-store' })
       .then(function (r) { to.done(); return r.ok ? r.json() : null; })
-      .then(function (j) { return (j && j.ok) ? j : null; })
+      .then(function (j) {
+        if (j && j.lastTiming) lastTiming = j.lastTiming;
+        return (j && j.ok) ? j : null;
+      })
       .catch(function () { to.done(); return null; });
   }
 
@@ -642,7 +647,10 @@
         : { printerIp: cfg.ip, port: Number(cfg.port) || 9100, dataB64: window.KiwiEscPos.toB64(bytes) }),
     }).then(function (r) {
       to.done();
-      return r.json().then(function (j) { return (r.ok && j && j.ok) ? { ok: true, via: 'bridge', bytes: j.bytes } : { ok: false, reason: (j && j.error) || 'print-failed' }; },
+      return r.json().then(function (j) {
+        if (j && j.timing) lastTiming = j.timing;
+        return (r.ok && j && j.ok) ? { ok: true, via: 'bridge', bytes: j.bytes, timing: j.timing } : { ok: false, reason: (j && j.error) || 'print-failed' };
+      },
         function () { return { ok: false, reason: 'bad-response' }; });
     }).catch(function () { to.done(); return { ok: false, reason: 'bridge-unreachable' }; });
   }
@@ -757,6 +765,52 @@
   function relayKind(bytes) {
     // Le relais range les tickets par genre pour le journal du pont ; rien de plus.
     return 'other';
+  }
+
+  function wakeViaRelay(t) {
+    var qs = relayMerchantQS();
+    return relayFetch('/jobs' + qs, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ target: t, dataB64: 'EAE=', kind: 'wake' }),
+    }, 6000).then(function (r) {
+      return (r.j && r.j.ok) ? { ok: true, via: 'relay', id: r.j.id } : { ok: false, reason: (r.j && r.j.error) || 'relay-offline' };
+    }).catch(function () { return { ok: false, reason: 'relay-unreachable' }; });
+  }
+
+  function wakePrinter(target) {
+    var now = Date.now();
+    if (now - lastWakeAt < 10000) return Promise.resolve({ ok: true, throttled: true });
+    lastWakeAt = now;
+    var t = relayTargetOf(target);
+    if (!t || !t.ip) return Promise.resolve({ ok: false, reason: 'not-configured' });
+    if (bridgePort) {
+      return fetch(bridgeBase() + '/kiwi/wake', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ printerIp: t.ip, port: t.port || 9100 }),
+      }).then(function (r) {
+        return r.json().then(function (j) {
+          if (j && j.timing) lastTiming = j.timing;
+          return { ok: true, via: 'bridge', waking: true };
+        }).catch(function () { return { ok: false, reason: 'bad-response' }; });
+      }).catch(function () {
+        bridgePort = 0;
+        return wakeViaRelay(t);
+      });
+    }
+    return ping().then(function (j) {
+      if (j) {
+        return fetch(bridgeBase() + '/kiwi/wake', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ printerIp: t.ip, port: t.port || 9100 }),
+        }).then(function (r) {
+          return r.json().then(function (res) {
+            if (res && res.timing) lastTiming = res.timing;
+            return { ok: true, via: 'bridge', waking: true };
+          }).catch(function () { return { ok: false, reason: 'bad-response' }; });
+        }).catch(function () { return wakeViaRelay(t); });
+      }
+      return wakeViaRelay(t);
+    });
   }
 
   /* Imprime directement sur un profil ou une cible donnée ({ type, ip, port, osPrinter }). */
@@ -2037,5 +2091,6 @@
     openSetup: openSetup, bridgeUrl: function () { return bridgeBase(); }, bridgePorts: BRIDGE_PORTS,
     // Le relais cloud · ce que l'iPad utilise à la place du pont local.
     relayProbe: relayProbe, relayEnqueue: relayEnqueue, relayPairCode: relayPairCode, relayRevoke: relayRevoke,
+    wake: wakePrinter, getLastTiming: function () { return lastTiming; },
   };
 })();

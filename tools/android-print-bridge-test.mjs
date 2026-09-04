@@ -20,6 +20,11 @@ check(service.includes('START_STICKY') && service.includes('startForeground'), '
 check(relay.includes('/api/print/bridges') && relay.includes('/api/print/jobs'), 'APK reuses the existing Kiwi pairing and job relay');
 check(relay.includes('new InetSocketAddress(ip, port)') && relay.includes('8000'), 'LAN printing has a bounded raw TCP connection');
 check(service.includes('RelayClient.ack') && service.includes('BridgeStore.clearPair'), 'jobs are acknowledged and revoked credentials are cleared');
+check(build.includes('versionCode 3') && build.includes("versionName '1.0.2'"), 'Android bridge build is bumped to v1.0.2 (code 3)');
+check(relay.includes('VERSION = "1.0.2"') && relay.includes('PRINTER_KEEPALIVE_MS = 10000'), 'RelayClient is v1.0.2 with 10s keepalive interval');
+check(relay.includes('0x10, 0x04, 0x01') && relay.includes('probePrinter'), 'RelayClient probes printer readiness via real-time DLE EOT status bytes');
+check(service.includes('resumePrinterWarm') && service.includes('saveWarmTarget'), 'BridgeService persists warm target and resumes warm channel on boot');
+check(relay.includes('"wake"') && relay.includes('timing'), 'RelayClient supports explicit wake jobs and reports print timing in ack');
 check(build.includes('requireReleaseSigning') && build.includes('KIWI_BRIDGE_KEYSTORE'), 'release build refuses to ship without external signing credentials');
 check(page.includes('/downloads/kiwi-print-bridge.apk') && !page.includes('Télécharger Termux sur F-Droid'), 'Kiwi download page offers the native Android APK');
 

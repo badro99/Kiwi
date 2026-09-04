@@ -24,7 +24,7 @@ import {
   bridgeFromRequest, dbDown, relayJson, isMissingTable, safeJsonParse, now,
 } from './_relay.js';
 
-const KINDS = ['receipt', 'kitchen', 'label', 'test', 'drawer', 'report', 'other'];
+const KINDS = ['receipt', 'kitchen', 'label', 'test', 'drawer', 'report', 'wake', 'other'];
 const RETRY_DELAY_MS = 10000;
 
 function cleanTarget(t) {
@@ -154,11 +154,13 @@ export async function onRequestPost(context) {
 
   const target = cleanTarget(body.target);
   if (!target) return relayJson({ ok: false, error: 'target-required' }, 400, request);
-  const dataB64 = String(body.dataB64 || '');
+  const kind = KINDS.indexOf(String(body.kind || '')) !== -1 ? String(body.kind) : 'other';
+  let dataB64 = String(body.dataB64 || '');
+  if (kind === 'wake' && !dataB64) dataB64 = 'EAE=';
   if (!dataB64) return relayJson({ ok: false, error: 'data-required' }, 400, request);
   if (dataB64.length > MAX_DATA_B64) return relayJson({ ok: false, error: 'too-large' }, 413, request);
   if (!/^[A-Za-z0-9+/]+={0,2}$/.test(dataB64)) return relayJson({ ok: false, error: 'bad-base64' }, 400, request);
-  const kind = KINDS.indexOf(String(body.kind || '')) !== -1 ? String(body.kind) : 'other';
+  const ttl = kind === 'wake' ? 60000 : JOB_TTL_MS;
   const bridgeId = /^pb_[0-9a-f]{16}$/.test(String(body.bridgeId || '')) ? String(body.bridgeId) : null;
 
   try {
@@ -175,11 +177,11 @@ export async function onRequestPost(context) {
       env.DB.prepare(
         `INSERT INTO print_jobs (id, merchant, bridge_id, kind, target, data_b64, status, created_ts, expires_ts)
          VALUES (?, ?, ?, ?, ?, ?, 'queued', ?, ?)`
-      ).bind(id, merchant, bridgeId, kind, JSON.stringify(target), dataB64, t, t + JOB_TTL_MS),
+      ).bind(id, merchant, bridgeId, kind, JSON.stringify(target), dataB64, t, t + ttl),
       // Ménage opportuniste : les tickets de plus de 24 h ne servent plus à personne.
       env.DB.prepare('DELETE FROM print_jobs WHERE merchant = ? AND created_ts < ?').bind(merchant, t - 86400000),
     ]);
-    return relayJson({ ok: true, id, expires_ts: t + JOB_TTL_MS }, 200, request);
+    return relayJson({ ok: true, id, expires_ts: t + ttl }, 200, request);
   } catch (e) {
     if (isMissingTable(e)) return relayJson({ ok: false, error: 'relay-not-provisioned' }, 503, request);
     return relayJson({ ok: false, error: 'write-failed' }, 500, request);

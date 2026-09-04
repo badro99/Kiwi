@@ -13,10 +13,10 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 
 final class RelayClient {
-    static final String VERSION = "1.0.1";
-    private static final long PRINTER_KEEPALIVE_MS = 30000;
+    static final String VERSION = "1.0.2";
+    private static final long PRINTER_KEEPALIVE_MS = 10000;
     private static final long PRINTER_WARM_WINDOW_MS = 12 * 60 * 60 * 1000;
-    private static final byte[] PRINTER_WAKE_BYTES = new byte[] { 0x1b, 0x40 };
+    private static final byte[] PRINTER_PROBE_BYTES = new byte[] { 0x10, 0x04, 0x01 };
     private static Socket printerSocket;
     private static OutputStream printerOutput;
     private static String printerIp = "";
@@ -24,6 +24,10 @@ final class RelayClient {
     private static long printerLastWrite;
     private static long printerLastRealWrite;
     private static long printerLastWarmAttempt;
+    private static long lastConnectMs;
+    private static boolean lastReused;
+    private static long lastWriteMs;
+    private static long lastIdleMs;
     private RelayClient() {}
 
     static JSONObject request(String method, String path, String token, JSONObject body) throws Exception {
@@ -73,18 +77,72 @@ final class RelayClient {
 
     private static void connectPrinter(String ip, int port) throws Exception {
         if (printerSocket != null && printerSocket.isConnected() && !printerSocket.isClosed()
-                && printerOutput != null && ip.equals(printerIp) && port == printerPort) return;
+                && printerOutput != null && ip.equals(printerIp) && port == printerPort) {
+            lastReused = true;
+            lastConnectMs = 0;
+            return;
+        }
         closePrinterSocket();
+        long t0 = System.currentTimeMillis();
         Socket socket = new Socket();
         socket.connect(new InetSocketAddress(ip, port), 8000);
         socket.setKeepAlive(true);
+        lastConnectMs = System.currentTimeMillis() - t0;
+        lastReused = false;
         printerSocket = socket;
         printerOutput = socket.getOutputStream();
         printerIp = ip;
         printerPort = port;
     }
 
+    private static boolean probePrinter() {
+        if (printerSocket == null || !printerSocket.isConnected() || printerSocket.isClosed() || printerOutput == null) {
+            return false;
+        }
+        try {
+            printerSocket.setSoTimeout(1500);
+            printerOutput.write(PRINTER_PROBE_BYTES);
+            printerOutput.flush();
+            InputStream in = printerSocket.getInputStream();
+            int b = in.read();
+            if (b < 0) {
+                closePrinterSocket();
+                return false;
+            }
+            printerSocket.setSoTimeout(0);
+            printerLastWrite = System.currentTimeMillis();
+            return true;
+        } catch (Exception e) {
+            closePrinterSocket();
+            return false;
+        }
+    }
+
+    static synchronized void warmPrinter(String ip, int port) {
+        if (ip == null || ip.isEmpty()) return;
+        printerIp = ip;
+        printerPort = port;
+        if (!probePrinter()) {
+            try {
+                connectPrinter(ip, port);
+            } catch (Exception ignored) {
+                closePrinterSocket();
+            }
+        }
+    }
+
+    static synchronized void resumePrinterWarm(String ip, int port, long at) {
+        long now = System.currentTimeMillis();
+        if (ip == null || ip.isEmpty() || at <= 0 || now - at > PRINTER_WARM_WINDOW_MS) return;
+        printerIp = ip;
+        printerPort = port;
+        printerLastRealWrite = at;
+        warmPrinter(ip, port);
+    }
+
     private static void writePrinter(String ip, int port, byte[] data) throws Exception {
+        long t0 = System.currentTimeMillis();
+        long idle = printerLastWrite > 0 ? (t0 - printerLastWrite) : 0;
         try {
             connectPrinter(ip, port);
             printerOutput.write(data);
@@ -98,16 +156,24 @@ final class RelayClient {
             printerOutput.write(data);
             printerOutput.flush();
         }
+        lastWriteMs = System.currentTimeMillis() - t0;
+        lastIdleMs = idle;
         printerLastWrite = System.currentTimeMillis();
     }
 
     static synchronized int print(JSONObject job) throws Exception {
         JSONObject target = job.optJSONObject("target");
         if (target == null || target.optString("ip").isEmpty()) throw new Exception("Adresse IP d’imprimante absente");
-        byte[] data = Base64.decode(job.optString("dataB64"), Base64.DEFAULT);
-        if (data.length == 0) throw new Exception("Ticket vide");
         String ip = target.getString("ip");
         int port = target.optInt("port", 9100);
+        String kind = job.optString("kind", "ticket");
+        if ("wake".equals(kind)) {
+            warmPrinter(ip, port);
+            return 0;
+        }
+        String dataB64 = job.optString("dataB64");
+        byte[] data = dataB64.isEmpty() ? new byte[0] : Base64.decode(dataB64, Base64.DEFAULT);
+        if (data.length == 0) throw new Exception("Ticket vide");
         writePrinter(ip, port, data);
         printerLastRealWrite = System.currentTimeMillis();
         return data.length;
@@ -120,13 +186,19 @@ final class RelayClient {
                 || now - printerLastWrite < PRINTER_KEEPALIVE_MS
                 || now - printerLastWarmAttempt < PRINTER_KEEPALIVE_MS) return;
         printerLastWarmAttempt = now;
-        try { writePrinter(printerIp, printerPort, PRINTER_WAKE_BYTES); }
-        catch (Exception ignored) { closePrinterSocket(); }
+        warmPrinter(printerIp, printerPort);
     }
 
     static JSONObject ack(String token, String id, boolean ok, int bytes, String error) throws Exception {
         JSONObject body = new JSONObject().put("action", "ack").put("id", id).put("ok", ok).put("bytes", bytes);
         if (!ok) body.put("error", error == null ? "print-failed" : error.substring(0, Math.min(300, error.length())));
+        JSONObject timing = new JSONObject()
+                .put("connectMs", lastConnectMs)
+                .put("writeMs", lastWriteMs)
+                .put("reused", lastReused)
+                .put("idleMs", lastIdleMs)
+                .put("totalMs", lastConnectMs + lastWriteMs);
+        body.put("timing", timing);
         return request("POST", "/api/print/jobs", token, body);
     }
 

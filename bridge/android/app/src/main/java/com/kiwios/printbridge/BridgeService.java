@@ -26,6 +26,10 @@ public final class BridgeService extends Service {
         super.onCreate();
         createChannel();
         startForeground(NOTIFICATION_ID, notification("Connexion à Kiwi…"));
+        String warmIp = BridgeStore.warmIp(this);
+        int warmPort = BridgeStore.warmPort(this);
+        long warmAt = BridgeStore.warmAt(this);
+        RelayClient.resumePrinterWarm(warmIp, warmPort, warmAt);
     }
 
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
@@ -53,7 +57,14 @@ public final class BridgeService extends Service {
                 for (int i = 0; i < count; i++) {
                     JSONObject job = jobs.getJSONObject(i);
                     boolean ok = false; int bytes = 0; String error = "";
-                    try { bytes = RelayClient.print(job); ok = true; }
+                    try {
+                        bytes = RelayClient.print(job);
+                        ok = true;
+                        JSONObject target = job.optJSONObject("target");
+                        if (target != null && !target.optString("ip").isEmpty()) {
+                            BridgeStore.saveWarmTarget(this, target.optString("ip"), target.optInt("port", 9100));
+                        }
+                    }
                     catch (Exception e) { error = readable(e); }
                     try { RelayClient.ack(token, job.optString("id"), ok, bytes, error); }
                     catch (Exception ignored) { /* le serveur conserve le claim ; ne jamais réimprimer à l'aveugle */ }
