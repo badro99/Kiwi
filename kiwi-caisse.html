@@ -5462,7 +5462,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=478" defer></script>
+  <script src="assets/caisse-pwa.js?v=479" defer></script>
   <script src="assets/live-link.js?v=24" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -11204,7 +11204,7 @@
             method: 'POST', credentials: 'same-origin', cache: 'no-store',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              merchant: (window.KiwiSales && window.KiwiSales.getMerchant && window.KiwiSales.getMerchant()) || '',
+              merchant: currentMerchantSlug(),
               transferTable: { from, to, covers: fromT.covers, server: fromT.server || 'Caisse' }
             })
           });
@@ -11307,7 +11307,7 @@
             method: 'POST', credentials: 'same-origin', cache: 'no-store',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              merchant: (window.KiwiSales && window.KiwiSales.getMerchant && window.KiwiSales.getMerchant()) || '',
+              merchant: currentMerchantSlug(),
               mergeTables: { targetTable: target, sourceTable: source, server: targetT.server || 'Caisse' }
             })
           });

@@ -95,6 +95,12 @@ async function postQueue(body, cookieHeader) {
 
 console.log('\n■ Table Transfer & Merge Behavioural Tests (tools/table-transfer-merge-test.mjs)');
 
+const caisseSource = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
+const tableToolMerchantPayloads = caisseSource.match(/merchant:\s*currentMerchantSlug\(\),\s*\n\s*(?:transferTable|mergeTables):/g) || [];
+check('caisse transfer and merge use the authoritative paired merchant', tableToolMerchantPayloads.length === 2);
+check('caisse table tools no longer depend on the retired KiwiSales merchant helper',
+  !/merchant:\s*\(window\.KiwiSales[\s\S]{0,180}(?:transferTable|mergeTables):/.test(caisseSource));
+
 await setupFloorAndStaff();
 
 const validToken = await employeeToken(
