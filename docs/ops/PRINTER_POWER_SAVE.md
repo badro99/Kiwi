@@ -70,7 +70,8 @@ Kiwi intègre désormais une architecture à trois niveaux pour empêcher toute 
 ### 3. Persistance et reprise au démarrage (`resumePrinterWarm`)
 - L'adresse IP et le port de la dernière imprimante active sont persistés localement (`BridgeStore.saveWarmTarget` sur Android, `config.json` sur Node).
 - Dès le redémarrage de la tablette ou du service en tâche de fond, le canal TCP est rétabli avant même la première commande du matin.
-- La fenêtre de maintien au chaud est étendue à 24 heures (`PRINTER_WARM_WINDOW_MS = 24 * 60 * 60 * 1000`) pour couvrir sans rupture la fermeture nocturne (13–18 h) et les coupures de service.
+- La fenêtre de maintien au chaud est étendue à sept jours (`PRINTER_WARM_WINDOW_MS = 7 * 24 * 60 * 60 * 1000`) : 24 heures couvraient la fermeture nocturne (13–18 h) mais pas le jour de fermeture hebdomadaire ni un week-end prolongé, au retour desquels le premier ticket repayait le réveil. Réglable sans recompiler côté Node (`KIWI_PRINTER_WARM_WINDOW_MS`, ou `printerWarmWindowMs` dans la configuration).
+- Sur cette fenêtre longue, une imprimante éteinte n'est plus sondée toutes les 10 s : l'attente double à chaque échec jusqu'à 5 min (`PRINTER_WARM_BACKOFF_MAX_MS`) et revient à 10 s dès qu'elle répond ou qu'un vrai ticket passe. Sur la tablette, cela compte : une sonde vers une imprimante éteinte bloque jusqu'à 8 s dans la boucle du service et retarde d'autant la récupération des tickets.
 - Le service maintient un verrou processeur (`PowerManager.PARTIAL_WAKE_LOCK`) et un verrou Wi-Fi haute performance (`WifiManager.WIFI_MODE_FULL_HIGH_PERF`) pour empêcher la coupure du réseau local quand l'écran s'éteint.
 - Le maintien au chaud LAN s'exécute dans un bloc `finally` indépendant des erreurs WAN, évitant ainsi qu'une coupure ADSL ou un timeout cloud ne bloque le ping local de l'imprimante.
 
@@ -87,7 +88,7 @@ Chaque impression mesure et remonte :
 ## 4. Procédure de Mise à Jour Terrain
 
 ### Mise à jour de l'application Android sur la tablette client
-1. Générer l'APK release signé (v1.0.3, versionCode 4) :
+1. Générer l'APK release signé (v1.0.4, versionCode 5) :
    ```bash
    app/android/gradlew -p bridge/android assembleRelease
    ```

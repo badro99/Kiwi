@@ -48,7 +48,7 @@ const path = require('path');
 const { execFile, spawn } = require('child_process');
 
 const NAME = 'kiwi-printer-bridge';
-const VERSION = '1.4.3';
+const VERSION = '1.4.4';
 const HOST = '127.0.0.1';
 const PORT = Number(process.env.KIWI_BRIDGE_PORT) || 9110; // bridge's own port
 const DEFAULT_PRINTER_PORT = 9100;                          // RAW/JetDirect
@@ -349,7 +349,17 @@ function sendJson(res, status, obj, origin) {
 const PRINTER_KEEPALIVE_MS = Number(process.env.KIWI_PRINTER_KEEPALIVE_MS)
   || Number(readConfig().printerKeepaliveMs)
   || 10000;
-const PRINTER_WARM_WINDOW_MS = 24 * 60 * 60 * 1000;
+// Une journée couvrait la fermeture de nuit mais pas le jour de fermeture
+// hebdomadaire ni un week-end prolongé : au retour, le premier ticket repayait
+// le réveil. Sept jours couvrent toute fermeture réaliste ; au-delà, on cesse
+// de sonder une imprimante vraisemblablement démontée.
+const PRINTER_WARM_WINDOW_MS = Number(process.env.KIWI_PRINTER_WARM_WINDOW_MS)
+  || Number(readConfig().printerWarmWindowMs)
+  || 7 * 24 * 60 * 60 * 1000;
+// Une imprimante éteinte fait échouer chaque sonde. Sur une fenêtre longue,
+// insister toutes les 10 s ne réveille personne et coûte une connexion morte
+// par cycle : on s'espace jusqu'à 5 min, et on revient à 10 s dès qu'elle répond.
+const PRINTER_WARM_BACKOFF_MAX_MS = 5 * 60 * 1000;
 const PRINTER_WAKE_BYTES = Buffer.from([0x1b, 0x40]);        // ESC @
 const PRINTER_PROBE_BYTES = Buffer.from([0x10, 0x04, 0x01]); // DLE EOT 1: real-time status request
 const PRINTER_PROBE_TIMEOUT_MS = 2500;
@@ -505,9 +515,10 @@ function warmPrinterNow(printerIp, port) {
     .then(() => openPrinterChannel(printerIp, port))
     .then((channel) => probePrinterChannel(channel))
     .then((alive) => {
-      if (!alive) {
-        return openPrinterChannel(printerIp, port).catch(() => {});
-      }
+      if (alive) return true;
+      // La sonde a échoué : on retente une ouverture franche. Réussir ici veut
+      // dire que le canal était mort, pas l'imprimante.
+      return openPrinterChannel(printerIp, port).then(() => true, () => false);
     });
   printerWrites.set(key, task.catch(() => {}));
   return task;
@@ -515,19 +526,23 @@ function warmPrinterNow(printerIp, port) {
 
 function schedulePrinterWarm(printerIp, port, realTicket) {
   const key = printerKey(printerIp, port);
-  const state = printerWarmers.get(key) || { lastRealAt: 0, timer: null };
-  if (realTicket) { state.lastRealAt = Date.now(); rememberWarmTarget(printerIp, port); }
+  const state = printerWarmers.get(key) || { lastRealAt: 0, timer: null, misses: 0 };
+  if (realTicket) { state.lastRealAt = Date.now(); state.misses = 0; rememberWarmTarget(printerIp, port); }
   if (state.timer) clearTimeout(state.timer);
   if (!state.lastRealAt || Date.now() - state.lastRealAt > PRINTER_WARM_WINDOW_MS) {
     printerWarmers.delete(key);
     return;
   }
+  const delay = Math.min(PRINTER_KEEPALIVE_MS * Math.pow(2, state.misses || 0), PRINTER_WARM_BACKOFF_MAX_MS);
   state.timer = setTimeout(() => {
     state.timer = null;
-    warmPrinterNow(printerIp, port)
-      .then(() => schedulePrinterWarm(printerIp, port, false))
-      .catch(() => schedulePrinterWarm(printerIp, port, false));
-  }, PRINTER_KEEPALIVE_MS);
+    const record = (alive) => {
+      const live = printerWarmers.get(key);
+      if (live) live.misses = alive ? 0 : (live.misses || 0) + 1;
+      schedulePrinterWarm(printerIp, port, false);
+    };
+    warmPrinterNow(printerIp, port).then(record, () => record(false));
+  }, delay);
   printerWarmers.set(key, state);
 }
 
@@ -537,7 +552,7 @@ function resumePrinterWarm() {
   const at = Number(saved.at || 0);
   if (!at || Date.now() - at > PRINTER_WARM_WINDOW_MS) return;
   const port = Number(saved.port) || DEFAULT_PRINTER_PORT;
-  printerWarmers.set(printerKey(saved.ip, port), { lastRealAt: at, timer: null });
+  printerWarmers.set(printerKey(saved.ip, port), { lastRealAt: at, timer: null, misses: 0 });
   warmPrinterNow(saved.ip, port)
     .then(() => {
       console.log('[imprimante] canal réchauffé au démarrage · ' + saved.ip + ':' + port);

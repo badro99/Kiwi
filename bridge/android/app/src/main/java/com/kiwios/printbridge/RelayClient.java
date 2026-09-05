@@ -13,9 +13,19 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 
 final class RelayClient {
-    static final String VERSION = "1.0.3";
+    static final String VERSION = "1.0.4";
     private static final long PRINTER_KEEPALIVE_MS = 10000;
-    private static final long PRINTER_WARM_WINDOW_MS = 24 * 60 * 60 * 1000L;
+    // Une journée couvrait la fermeture de nuit mais pas le jour de fermeture
+    // hebdomadaire ni un week-end prolongé : au retour, le premier ticket
+    // repayait le réveil. Sept jours couvrent toute fermeture réaliste.
+    private static final long PRINTER_WARM_WINDOW_MS = 7 * 24 * 60 * 60 * 1000L;
+    // Une sonde vers une imprimante éteinte bloque jusqu'à 8 s dans la boucle du
+    // service, donc retarde d'autant la récupération des tickets. Sur une
+    // fenêtre de sept jours, insister toutes les 10 s coûterait cher pour rien :
+    // on double l'attente à chaque échec jusqu'à 5 min, et on revient à 10 s dès
+    // que l'imprimante répond ou qu'un vrai ticket passe.
+    private static final long PRINTER_WARM_BACKOFF_MAX_MS = 5 * 60 * 1000L;
+    private static int printerWarmMisses;
     private static final byte[] PRINTER_PROBE_BYTES = new byte[] { 0x10, 0x04, 0x01 };
     private static Socket printerSocket;
     private static OutputStream printerOutput;
@@ -118,16 +128,19 @@ final class RelayClient {
         }
     }
 
-    static synchronized void warmPrinter(String ip, int port) {
-        if (ip == null || ip.isEmpty()) return;
+    static synchronized boolean warmPrinter(String ip, int port) {
+        if (ip == null || ip.isEmpty()) return false;
         printerIp = ip;
         printerPort = port;
-        if (!probePrinter()) {
-            try {
-                connectPrinter(ip, port);
-            } catch (Exception ignored) {
-                closePrinterSocket();
-            }
+        if (probePrinter()) return true;
+        try {
+            // La sonde a échoué : on retente une ouverture franche. Réussir ici
+            // veut dire que le canal était mort, pas l'imprimante.
+            connectPrinter(ip, port);
+            return true;
+        } catch (Exception ignored) {
+            closePrinterSocket();
+            return false;
         }
     }
 
@@ -176,17 +189,25 @@ final class RelayClient {
         if (data.length == 0) throw new Exception("Ticket vide");
         writePrinter(ip, port, data);
         printerLastRealWrite = System.currentTimeMillis();
+        printerWarmMisses = 0;
         return data.length;
+    }
+
+    private static long warmBackoffMs() {
+        long delay = PRINTER_KEEPALIVE_MS;
+        for (int i = 0; i < printerWarmMisses && delay < PRINTER_WARM_BACKOFF_MAX_MS; i++) delay *= 2;
+        return Math.min(delay, PRINTER_WARM_BACKOFF_MAX_MS);
     }
 
     static synchronized void keepPrinterWarm() {
         long now = System.currentTimeMillis();
+        long backoff = warmBackoffMs();
         if (printerIp.isEmpty() || printerLastRealWrite == 0
                 || now - printerLastRealWrite > PRINTER_WARM_WINDOW_MS
                 || now - printerLastWrite < PRINTER_KEEPALIVE_MS
-                || now - printerLastWarmAttempt < PRINTER_KEEPALIVE_MS) return;
+                || now - printerLastWarmAttempt < backoff) return;
         printerLastWarmAttempt = now;
-        warmPrinter(printerIp, printerPort);
+        printerWarmMisses = warmPrinter(printerIp, printerPort) ? 0 : printerWarmMisses + 1;
     }
 
     static JSONObject ack(String token, String id, boolean ok, int bytes, String error) throws Exception {

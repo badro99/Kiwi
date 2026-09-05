@@ -1,6 +1,6 @@
 {
   "name": "kiwi-printer-bridge",
-  "version": "1.4.3",
+  "version": "1.4.4",
   "description": "Local helper that relays ESC/POS print jobs from the Kiwi web app to a networked thermal printer.",
   "bin": "server.js",
   "main": "server.js",

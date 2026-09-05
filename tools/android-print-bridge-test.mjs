@@ -26,9 +26,11 @@ check(mainAct.includes('ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS') && mainAct
 check(relay.includes('/api/print/bridges') && relay.includes('/api/print/jobs'), 'APK reuses the existing Kiwi pairing and job relay');
 check(relay.includes('new InetSocketAddress(ip, port)') && relay.includes('8000'), 'LAN printing has a bounded raw TCP connection');
 check(service.includes('RelayClient.ack') && service.includes('BridgeStore.clearPair'), 'jobs are acknowledged and revoked credentials are cleared');
-check(build.includes('versionCode 4') && build.includes("versionName '1.0.3'"), 'Android bridge build is bumped to v1.0.3 (code 4)');
-check(relay.includes('VERSION = "1.0.3"') && relay.includes('PRINTER_KEEPALIVE_MS = 10000'), 'RelayClient is v1.0.3 with 10s keepalive interval');
-check(relay.includes('24 * 60 * 60 * 1000') && server.includes('24 * 60 * 60 * 1000'), 'printer warm window is 24 hours across Android and Node bridges');
+check(build.includes('versionCode 5') && build.includes("versionName '1.0.4'"), 'Android bridge build is bumped to v1.0.4 (code 5)');
+check(relay.includes('VERSION = "1.0.4"') && relay.includes('PRINTER_KEEPALIVE_MS = 10000'), 'RelayClient is v1.0.4 with 10s keepalive interval');
+check(relay.includes('7 * 24 * 60 * 60 * 1000') && server.includes('7 * 24 * 60 * 60 * 1000'), 'printer warm window is 7 days across Android and Node bridges — it survives a weekly closing day');
+check(relay.includes('PRINTER_WARM_BACKOFF_MAX_MS') && relay.includes('warmBackoffMs') && server.includes('PRINTER_WARM_BACKOFF_MAX_MS'), 'a printer that stops answering is probed less often, not every 10s for a week');
+check(/printerWarmMisses = warmPrinter\([^)]*\) \? 0 : printerWarmMisses \+ 1/.test(relay), 'the Android backoff resets the moment the printer answers again');
 check(relay.includes('0x10, 0x04, 0x01') && relay.includes('probePrinter'), 'RelayClient probes printer readiness via real-time DLE EOT status bytes');
 check(service.includes('resumePrinterWarm') && service.includes('saveWarmTarget'), 'BridgeService persists warm target and resumes warm channel on boot');
 check(relay.includes('"wake"') && relay.includes('timing'), 'RelayClient supports explicit wake jobs and reports print timing in ack');
