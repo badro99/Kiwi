@@ -390,7 +390,14 @@ export async function priceOrder(env, merchant, rawLines) {
           const explicitSlot = String((child && child.formulaSlotId) || '');
           const lineId = String((child && child.lineId) || '');
           const label = String((child && child.slotLabel) || '').trim();
-          return explicitSlot === slot.id || lineId === `${uid}-${slot.id}` || (!!slot.label && label === slot.label);
+          /* OrderPro appends a choice index to lineId when a slot allows
+             multiple selections (…-slot-0, …-slot-1). Match that stable slot
+             prefix as well as the legacy exact form; otherwise a perfectly
+             configured salle formula is rejected as “options à recueillir”. */
+          const slotLinePrefix = `${uid}-${slot.id}`;
+          return explicitSlot === slot.id || lineId === slotLinePrefix
+            || lineId.startsWith(slotLinePrefix + '-')
+            || (!!slot.label && label === slot.label);
         });
         const takenQty = selected.reduce((n, child) => n + childQty(child), 0);
         if (takenQty < slot.min * parentQty || takenQty > slot.max * parentQty) { valid = false; break; }
