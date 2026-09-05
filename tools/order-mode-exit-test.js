@@ -143,6 +143,30 @@ ok("annuler sur une mesa servie ne jette que les ajouts",
   /tableSentCount\(selectedId\) > 0/.test(cancelFn)
   && /filter\(l => l\.sent\)/.test(cancelFn));
 
+/* ── 1 ter. ANNULER UNE TABLE ORDERPRO DEPUIS SALLE ────────────────────────
+ * Un client peut ouvrir la table via NFC, consulter la carte, puis partir sans
+ * commander. « Annuler mesa » doit rendre la table et fermer sa session, sans
+ * jamais effacer un repas déjà envoyé en cuisine. */
+const cancelTableStart = CAISSE.indexOf("else if (a === 'cancel-table')");
+const cancelTableEnd = CAISSE.indexOf('\n      });\n    });', cancelTableStart);
+const cancelTableWire = cancelTableStart >= 0 && cancelTableEnd > cancelTableStart
+  ? CAISSE.slice(cancelTableStart, cancelTableEnd)
+  : '';
+ok('le bouton Annuler mesa distingue une commande déjà envoyée',
+  /tableSentCount\(selectedId\) === 0/.test(cancelTableWire));
+ok('Annuler mesa remet une table sans commande à zéro',
+  /cancelOpenTable\(selectedId\)/.test(cancelTableWire));
+ok('Annuler mesa protège une table avec commande en cours',
+  /annulation impossible/.test(cancelTableWire));
+const cancelOpenFn = (CAISSE.match(/function cancelOpenTable\(id\)\s*\{[\s\S]{0,1400}?\n    \}/) || [''])[0];
+ok('cancelOpenTable existe et libère la session OrderPro',
+  /releasePhoneTable\(id, 'caisse', true\)/.test(cancelOpenFn));
+ok('cancelOpenTable remet le statut à khawya',
+  /t\.status = 'khawya'/.test(cancelOpenFn));
+const releaseFn = (CAISSE.match(/function releasePhoneTable\(id, why, force\)\s*\{[\s\S]{0,900}?\n    \}/) || [''])[0];
+ok('releasePhoneTable peut fermer une session sans pastille locale',
+  /!seat && !force/.test(releaseFn));
+
 // La cuisine ne reçoit que le neuf — la règle existait, elle doit tenir.
 const sendFn = (CAISSE.match(/function sendTableToKitchen\(tableId\)\s*\{[\s\S]{0,2600}?\n {4}\}/) || [''])[0];
 ok('sendTableToKitchen n’envoie que les lignes non parties', /!l\.sent/.test(sendFn));

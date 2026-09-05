@@ -5462,7 +5462,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=477" defer></script>
+  <script src="assets/caisse-pwa.js?v=478" defer></script>
   <script src="assets/live-link.js?v=24" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -7971,14 +7971,17 @@
        resterait « assis » à une table libre et pourrait continuer à commander.
        L'état local part TOUT DE SUITE (la pastille s'éteint sous le doigt du
        caissier) et le réseau suit à son rythme, porté par orderpro-inbox.js. */
-    function releasePhoneTable(id, why) {
+    function releasePhoneTable(id, why, force) {
       const k = tableKey(id);
       const seat = phoneSeats.get(k);
       phoneSeats.delete(k);
       phonePending.delete(k);
-      if (!seat) return;
+      /* A caisse may not have observed the phone session yet. A forced
+         release must still close the table remotely, otherwise OrderPro keeps
+         the guest seated after the cashier has made the table free. */
+      if (!seat && !force) return;
       document.dispatchEvent(new CustomEvent('kiwi-table-released', {
-        detail: { table: String(id), session: seat.session, why: why || 'settle' },
+        detail: { table: String(id), session: seat ? seat.session : '', why: why || 'settle' },
       }));
     }
 
@@ -10297,12 +10300,22 @@
             return;
           }
           if (selectedId) {
+            /* A guest can open a table from the NFC menu, browse, then leave
+               without ordering. In that case this button must clear the local
+               table and close its OrderPro session. A meal already sent to
+               the kitchen must remain protected. */
+            if (tableSentCount(selectedId) === 0) {
+              cancelOpenTable(selectedId);
+              return;
+            }
             const t = tables[selectedId];
-            t.status = 'ka-yaklo';
-            delete t.discount; // clear remise · mesa rétablie
-            refreshTableNode(selectedId);
+            if (t) {
+              t.status = 'ka-yaklo';
+              delete t.discount; // clear remise · mesa rétablie
+              refreshTableNode(selectedId);
+            }
             closeRightPanel();
-            toast('Table rétablie · service en cours');
+            toast('Table avec commande en cours · annulation impossible');
           }
         }
       });
@@ -11877,6 +11890,28 @@
        repas d'une table qui mange. */
     function tableSentCount(id) {
       return (tableOrders[id] || []).reduce((s, l) => s + (l.sent ? l.qty : 0), 0);
+    }
+
+    /* Cancel an open table from Salle without touching a kitchen order. Salle
+       has no unsent-order editor, but it can still own an OrderPro phone
+       session that must be closed. */
+    function cancelOpenTable(id) {
+      if (!id || tableSentCount(id) > 0) return false;
+      delete tableOrders[id];
+      const t = tables[id];
+      if (t) {
+        t.status = 'khawya';
+        t.elapsed = 0;
+        delete t.discount;
+      }
+      /* Force the event when this caisse missed the local phone-seat badge.
+         orderpro-inbox.js safely falls back to closing by table number. */
+      releasePhoneTable(id, 'caisse', true);
+      refreshTableNode(id);
+      if (selectedId === id) selectedId = null;
+      backToSalle();
+      toast(`Table ${id} annulée · table remise à zéro`);
+      return true;
     }
 
     /* ---- cancel new order ---- */
