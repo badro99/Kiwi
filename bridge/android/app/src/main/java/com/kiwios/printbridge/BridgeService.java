@@ -94,6 +94,7 @@ public final class BridgeService extends Service {
                     try { RelayClient.ack(token, job.optString("id"), ok, bytes, error); }
                     catch (Exception ignored) { /* le serveur conserve le claim ; ne jamais réimprimer à l'aveugle */ }
                     publish(ok ? "Imprimé · " + BridgeStore.merchant(this) : "Échec d’impression · " + error);
+                }
                 sleep(count > 0 ? 250 : 1000);
             } catch (Exception e) {
                 publish("Hors ligne · " + readable(e));

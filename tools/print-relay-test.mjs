@@ -27,6 +27,10 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
+// La version du pont est LUE dans server.js, jamais recopiée ici : un test qui
+// épingle un littéral force une édition de test à chaque correctif et finit par
+// être « réparé » en le rabaissant. On vérifie l'accord des sources, pas un chiffre.
+const BRIDGE_VERSION = (read('bridge/server.js').match(/const VERSION = '([^']+)'/) || [])[1] || '';
 
 let pass = 0;
 function ok(v, msg) { if (!v) { console.error('  ✗ ' + msg); process.exitCode = 1; return false; } pass++; return true; }
@@ -292,14 +296,14 @@ if (DatabaseSync) {
   ok(up, 'B1 · le pont démarre sur ' + BPORT);
   if (up) {
     const ping = await bget('/kiwi/ping');
-    ok(ping.j.version === '1.4.2' && ping.j.relay && ping.j.relay.paired === false, 'B1 · /kiwi/ping v1.4.2 annonce relay.paired=false');
+    ok(ping.j.version === BRIDGE_VERSION && ping.j.relay && ping.j.relay.paired === false, 'B1 · /kiwi/ping v' + BRIDGE_VERSION + ' annonce relay.paired=false');
     const page = await bget('/');
     ok(page.status === 200 && /Kiwi Printer Bridge/.test(page.text) && /Associer ce pont/.test(page.text), 'B1 · la page locale du pont se sert sur /');
     const bad = await bpost('/kiwi/relay/pair', { code: '111111' });
     ok(bad.status === 422 && bad.j.ok === false, 'B2 · un mauvais code est refusé par le faux serveur et remonté tel quel');
     const good = await bpost('/kiwi/relay/pair', { code: '424242' });
     ok(good.status === 200 && good.j.ok && good.j.merchant === 'browse', 'B2 · le pont s’appaire avec 424242 → browse');
-    ok(seen.redeem && seen.redeem.version === '1.4.2' && seen.redeem.platform === process.platform && seen.redeem.name, 'B2 · il se présente avec version, plateforme et nom de machine');
+    ok(seen.redeem && seen.redeem.version === BRIDGE_VERSION && seen.redeem.platform === process.platform && seen.redeem.name, 'B2 · il se présente avec version, plateforme et nom de machine');
     const cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
     ok(cfg.relay && cfg.relay.token === TOKEN && cfg.relay.merchant === 'browse', 'B2 · le jeton est écrit dans le fichier de config du pont');
     if (process.platform !== 'win32') ok((fs.statSync(cfgPath).mode & 0o777) === 0o600, 'B2 · …en mode 0600');
@@ -360,7 +364,7 @@ if (DatabaseSync) {
   const jobs = read('functions/api/print/jobs.js');
   ok(/claimed_ts IS NULL OR claimed_ts <= \?/.test(jobs) && /RETRY_DELAY_MS = 10000/.test(jobs), 'C4 · le relais durable diffère puis reprend les écritures imprimante échouées');
   const srv = read('bridge/server.js');
-  ok(/const VERSION = '1\.4\.2'/.test(srv) && /"version": "1\.4\.2"/.test(read('bridge/package.json')), 'C5 · bridge 1.4.2 (server.js et package.json d’accord)');
+  ok(BRIDGE_VERSION !== '' && read('bridge/package.json').includes('"version": "' + BRIDGE_VERSION + '"'), 'C5 · bridge ' + BRIDGE_VERSION + ' (server.js et package.json d’accord)');
   ok(/const HOST = '127\.0\.0\.1'/.test(srv) && !/0\.0\.0\.0/.test(srv), 'C5 · le pont écoute toujours sur loopback uniquement — le relais est sortant');
 
   const lin = read('bridge/install-linux.sh');

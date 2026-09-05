@@ -48,7 +48,7 @@ const path = require('path');
 const { execFile, spawn } = require('child_process');
 
 const NAME = 'kiwi-printer-bridge';
-const VERSION = '1.4.2';
+const VERSION = '1.4.3';
 const HOST = '127.0.0.1';
 const PORT = Number(process.env.KIWI_BRIDGE_PORT) || 9110; // bridge's own port
 const DEFAULT_PRINTER_PORT = 9100;                          // RAW/JetDirect

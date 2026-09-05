@@ -36,5 +36,35 @@ check(build.includes('requireReleaseSigning') && build.includes('KIWI_BRIDGE_KEY
 check(page.includes('/downloads/kiwi-print-bridge.apk') && !page.includes('Télécharger Termux sur F-Droid'), 'Kiwi download page offers the native Android APK');
 check((fs.statSync(path.join(root, 'app/android/gradlew')).mode & 0o111) !== 0, 'Gradle wrapper in app/android/gradlew is executable');
 
+// No JDK ships with this repo and none is installed on the build machines, so
+// `check.js` can never compile the bridge. A dropped brace therefore reaches
+// both mirrors looking green — it did, in 0cb9f831, where the for-loop that
+// walks the job list lost its closing brace and left `catch` dangling off a
+// `for`. Balancing braces outside strings and comments is the cheapest thing
+// that would have caught it.
+function javaDepth(source) {
+  let depth = 0, min = 0, i = 0;
+  while (i < source.length) {
+    const c = source[i];
+    if (c === '"' || c === "'") {
+      const quote = c;
+      i++;
+      while (i < source.length && source[i] !== quote) i += source[i] === '\\' ? 2 : 1;
+      i++;
+      continue;
+    }
+    if (c === '/' && source[i + 1] === '/') { while (i < source.length && source[i] !== '\n') i++; continue; }
+    if (c === '/' && source[i + 1] === '*') { i += 2; while (i + 1 < source.length && !(source[i] === '*' && source[i + 1] === '/')) i++; i += 2; continue; }
+    if (c === '{') depth++;
+    else if (c === '}') { depth--; if (depth < min) min = depth; }
+    i++;
+  }
+  return { depth, min };
+}
+for (const file of ['BridgeService', 'RelayClient', 'MainActivity', 'BridgeStore', 'BootReceiver']) {
+  const { depth, min } = javaDepth(read(`bridge/android/app/src/main/java/com/kiwios/printbridge/${file}.java`));
+  check(depth === 0 && min === 0, `${file}.java braces balance (depth ${depth}, min ${min}) — the file can parse`);
+}
+
 console.log(`\nAndroid print bridge: ${passed} passed, ${failed} failed.`);
 if (failed) process.exit(1);

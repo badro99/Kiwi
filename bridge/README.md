@@ -88,7 +88,7 @@ cd bridge
 node server.js
 ```
 
-You should see `kiwi-printer-bridge v1.4.2 listening on http://127.0.0.1:9110`.
+You should see `kiwi-printer-bridge v1.4.3 listening on http://127.0.0.1:9110`.
 In the Kiwi app, open **Connecter une imprimante** → the status flips to
 **Bridge connecté**.
 
