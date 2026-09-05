@@ -5493,7 +5493,7 @@
        avec kiwi-cuisine.html, qui s'appaire sur la même route. -->
   <script src="assets/pairing-commit.js?v=1" defer></script>
   <!-- Hosted: 6-digit pairing pad binds this caisse to its store (no demo PINs). -->
-  <script src="assets/caisse-pairing.js?v=16" defer></script>
+  <script src="assets/caisse-pairing.js?v=17" defer></script>
   <script src="assets/kiwi-select.js?v=2" defer></script>
   <script src="assets/cash-sessions.js?v=2" defer></script>
   <!-- La copie serveur des données d'établissement (fidélité, carnet) : une
@@ -6696,8 +6696,8 @@
       </div>
       <div class="cm-reasons" id="cm-reasons"></div>
       <div class="cm-custom-wrap" id="cm-custom-wrap" hidden>
-        <label class="cash-input-label" id="cm-custom-label" for="cm-custom-input">Précisez le motif de la sortie (facultatif)</label>
-        <input class="cm-custom-input" id="cm-custom-input" type="text" maxlength="80" placeholder="Ex. Pain, taxi, courses, réparation..." autocomplete="off" enterkeyhint="done" />
+        <label class="cash-input-label" id="cm-custom-label" for="cm-custom-input">Précisez le motif de la sortie (obligatoire)</label>
+        <input class="cm-custom-input" id="cm-custom-input" type="text" maxlength="80" placeholder="Ex. Pain, taxi, courses, réparation..." autocomplete="off" enterkeyhint="done" required />
       </div>
       <div class="modal-actions is-visible">
         <button class="ma-btn secondary" id="cm-cancel" style="flex:1;">Annuler</button>
@@ -14869,8 +14869,8 @@
         wrap.removeAttribute('hidden');
         const isOut = (cmType === 'out');
         label.textContent = isOut
-          ? 'Précisez le motif de la sortie (facultatif)'
-          : "Précisez le motif de l'entrée (facultatif)";
+          ? 'Précisez le motif de la sortie (obligatoire)'
+          : "Précisez le motif de l'entrée (obligatoire)";
         input.placeholder = isOut
           ? 'Ex. Pain, taxi, courses, réparation...'
           : "Ex. Fond d'appoint, remboursement...";
@@ -14901,9 +14901,10 @@
         const icon = m.type === 'in' ? 'arrow-down-to-line' : 'arrow-up-from-line';
         const sign = m.type === 'in' ? '+ ' : '− ';
         const cleanReason = String(m.reason || 'Autre').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        const cleanActor = m.actorName ? ` · <span style="opacity:0.8">${String(m.actorName).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')}</span>` : '';
         return `<div class="cm-row">`
           + `<span class="cm-row-ic cm-row-ic--${m.type}"><i data-lucide="${icon}"></i></span>`
-          + `<span class="cm-row-reason">${cleanReason}</span>`
+          + `<span class="cm-row-reason">${cleanReason}${cleanActor}</span>`
           + `<span class="cm-row-time">${hh}:${mm}</span>`
           + `<span class="cm-row-amt cm-row-amt--${m.type}">${sign}${fmtMAD(m.amount)}</span>`
           + `</div>`;
@@ -14936,20 +14937,31 @@
       const amount = money(parseFloat($('#cm-amount').value) || 0);
       if (amount <= 0) { toast('Saisis un montant'); return; }
       const customInput = $('#cm-custom-input');
-      const customVal = customInput ? customInput.value.trim() : '';
-      const finalReason = (cmReason === 'Autre' && customVal) ? customVal : (cmReason || 'Autre');
-      cashMovements.push({
-        id: 'cm-' + Date.now(), time: new Date(),
-        type: cmType, amount: amount, reason: finalReason,
+      const customVal = (customInput && customInput.value ? customInput.value.trim() : '');
+      if (cmReason === 'Autre' && !customVal) {
+        toast(cmType === 'in' ? "Précisez le motif de l'entrée" : "Précisez le motif de la sortie");
+        if (customInput) customInput.focus();
+        return;
+      }
+      const finalReason = (cmReason === 'Autre') ? customVal : (cmReason || 'Autre');
+
+      requireTillOperator(`${cmType === 'in' ? 'Entrée' : 'Sortie'} de caisse · ${fmtMAD(amount)}`, (actor) => {
+        const actorId = String((actor && actor.id) || cashActorId()).slice(0, 96);
+        const actorName = String((actor && actor.name) || (currentCashier && currentCashier.name) || 'Caissier').slice(0, 80);
+        cashMovements.push({
+          id: 'cm-' + Date.now(), time: new Date(),
+          type: cmType, amount: amount, reason: finalReason,
+          actorId: actorId, actorName: actorName,
+        });
+        emitCashSession({
+          sessionId: cashSessionId(), eventType: 'movement', expectedCents: Math.round(drawerExpected() * 100),
+          countedCents: null, gapCents: null, movementKind: cmType,
+          movementAmountCents: Math.round(amount * 100), movementReason: finalReason,
+          actorId: actorId, openedAt: shiftOpenedAt.getTime(), occurredAt: Date.now()
+        });
+        toast(`${cmType === 'in' ? 'Entrée' : 'Sortie'} de caisse · ${fmtMAD(amount)} (${actorName})`);
+        closeCashMove();
       });
-      emitCashSession({
-        sessionId: cashSessionId(), eventType: 'movement', expectedCents: Math.round(drawerExpected() * 100),
-        countedCents: null, gapCents: null, movementKind: cmType,
-        movementAmountCents: Math.round(amount * 100), movementReason: finalReason,
-        actorId: cashActorId(), openedAt: shiftOpenedAt.getTime(), occurredAt: Date.now()
-      });
-      toast(`${cmType === 'in' ? 'Entrée' : 'Sortie'} de caisse · ${fmtMAD(amount)}`);
-      closeCashMove();
     }
 
     /* ── Ouverture sans vente ─────────────────────────────────────────────
@@ -15288,6 +15300,11 @@
       mgrBusy = true;
       const action  = $('#manager-modal-sub').textContent;
       const approve = mgrOnApprove;
+      const P = window.KiwiCaissePairing;
+      const verified = (mgrAccess === 'till' ? (P?.lastOperator?.() || P?.lastManager?.()) : P?.lastManager?.())
+        || (window.KiwiStaff ? { id: window.KiwiStaff.id || 'till', name: window.KiwiStaff.name || 'Caissier', role: window.KiwiStaff.role || 'Caissier' } : null)
+        || (currentCashier ? { id: currentCashier.id, name: currentCashier.name, role: currentCashier.role } : null)
+        || { id: 'till', name: 'Caissier', role: 'Caissier' };
       // Success beat · dots pop left → right, mirroring the access PIN.
       $$('#mgr-dots .mgr-dot').forEach((d, i) => {
         setTimeout(() => d.classList.add('is-success'), i * 70);
@@ -15295,7 +15312,7 @@
       setTimeout(() => {
         if (mgrAccess === 'manager') authorizations.push({ id: 'auth-' + Date.now(), time: new Date(), action: action });
         closeManagerModal();
-        if (approve) approve();
+        if (approve) approve(verified);
       }, 520);
     }
 
@@ -15314,6 +15331,22 @@
     $('#manager-cancel').addEventListener('click', closeManagerModal);
     mgrModal.addEventListener('click', (e) => {
       if (e.target === mgrModal) closeManagerModal();
+    });
+    window.addEventListener('keydown', (e) => {
+      if (!mgrModal.classList.contains('is-open') || mgrBusy) return;
+      if (e.key >= '0' && e.key <= '9') {
+        e.preventDefault();
+        mgrPushDigit(e.key);
+      } else if (e.key === 'Backspace') {
+        e.preventDefault();
+        if (mgrBuffer.length > 0) {
+          mgrBuffer = mgrBuffer.slice(0, -1);
+          renderMgrDots();
+        }
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        closeManagerModal();
+      }
     });
 
     window.requireManager = requireManager;
@@ -19670,6 +19703,7 @@
       cashMovements.length = 0;
       (d.cashMovements || []).forEach(m => cashMovements.push({
         id: m.id, time: new Date(m.time), type: m.type, amount: m.amount, reason: m.reason,
+        actorId: m.actorId, actorName: m.actorName,
       }));
       if (d.shift) {
         shift.discounts  = d.shift.discounts;

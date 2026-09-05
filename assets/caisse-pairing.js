@@ -319,6 +319,7 @@
    * proved. */
   var STAFF_KEY = 'kiwiTillStaff';
   var lastManager = null;   // { id, name, role, approval } du dernier code responsable validé
+  var lastOperator = null;  // { id, name, role } du dernier code caisse validé
   function firstNameOf(n) { return String(n || '').trim().split(/\s+/)[0] || ''; }
   function setStaff(p) {
     var s = null;
@@ -639,7 +640,9 @@
       var roles = window.KiwiRoles;
       if (!roles || typeof roles.opensTill !== 'function') return Promise.resolve(false);
       return verifyCode(code).then(function (who) {
-        return !!who && roles.opensTill(who.role || '');
+        if (!who || !roles.opensTill(who.role || '')) return false;
+        lastOperator = { id: String(who.id || '').slice(0, 80), name: String(who.name || '').trim() || 'Caissier', role: String(who.role || '').trim() };
+        return true;
       });
     },
     authorizeManager: function (code, action) {
@@ -652,11 +655,13 @@
          * l'écrire dans sa vente. */
         if (action && action.kind === 'refund' && !who.approval) return false;
         lastManager = { id: String(who.id || '').slice(0, 80), name: String(who.name || '').trim() || 'Responsable', role: String(who.role || '').trim(), approval: String(who.approval || '') };
+        lastOperator = lastManager;
         return true;
       });
     },
     // Le dernier responsable ayant validé un code, pour l'écrire dans un journal.
     lastManager: function () { return lastManager; },
+    lastOperator: function () { return lastOperator; },
   };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
