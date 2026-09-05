@@ -1,45 +1,79 @@
-# Mettre à jour le pont d'impression Android — mode d'emploi
+# Mettre à jour le pont d'impression — mode d'emploi
 
-Pour qui : la personne qui a **la clé de signature** de l'application
-(`kiwi-print-bridge-release.jks`). Sans elle, la mise à jour est impossible :
-Android refuse une application signée par une autre clé.
+## D'abord : quel pont tourne chez ce commerçant ?
 
-Pourquoi maintenant : la tablette de Pasta Corner tourne encore sur la version
-**1.0.0 d'août**. Tous les correctifs d'impression depuis sont dans le code mais
-**pas dans l'APK publié**. C'est pour ça que le premier ticket met toujours
-15-20 s. Il n'y a pas de mise à jour automatique : l'application est installée à
-la main, elle ne va jamais chercher une nouvelle version toute seule.
+Il en existe deux, et la mise à jour n'a rien à voir de l'un à l'autre.
+
+Sur la tablette du comptoir, ouvrir **Termux** et taper :
+
+```bash
+curl -s http://127.0.0.1:9110/kiwi/ping
+```
+
+- **Ça répond** (`{"name":"kiwi-printer-bridge","version":"…"}`) → pont **Termux**.
+  C'est le cas de Casablanca. Suivre la section A. Cinq minutes, rien à installer.
+- **Termux n'est pas là**, mais une application « Kiwi Print Bridge » est dans le
+  tiroir d'applications → pont **APK Android**. Suivre la section B, qui demande
+  la clé de signature.
 
 ---
 
-## Ce qu'il faut avoir une seule fois
+## A. Pont Termux — la mise à jour normale
 
-**1. Java** (l'APK ne peut pas se construire sans) :
+Le pont est un simple fichier `server.js` exécuté par Node. Le corriger, c'est
+remplacer ce fichier et relancer. **Pas de clé de signature, pas de Java, pas
+d'APK.**
+
+L'appairage n'est pas dans `server.js` : il est dans `~/.kiwi-printer-bridge.json`.
+Remplacer le programme **ne dé-appaire rien** — pas de code à six chiffres à
+refaire.
+
+Dans Termux, sur la tablette :
+
+```bash
+termux-wake-lock
+curl -fsSL https://raw.githubusercontent.com/badro99/Kiwi/main/bridge/server.js -o ~/kiwi-bridge/server.js
+pkill -f "node .*server.js"
+nohup node ~/kiwi-bridge/server.js >> ~/kiwi-bridge/bridge.log 2>&1 &
+```
+
+⚠️ **Le `pkill` n'est pas optionnel.** Télécharger le fichier ne change rien tant
+que l'ancien programme tourne encore : il garde son code en mémoire. C'est
+l'erreur qui fait croire que « la mise à jour n'a rien changé ».
+
+Vérifier que la nouvelle version tourne vraiment :
+
+```bash
+curl -s http://127.0.0.1:9110/kiwi/ping
+```
+
+Doit afficher **`"version":"1.4.4"`** ou plus. Si le numéro n'a pas bougé,
+l'ancien processus n'est pas mort — refaire le `pkill`.
+
+### Pourquoi Termux tenait déjà mieux que l'APK
+`termux-wake-lock` empêche Android d'endormir le processeur. L'installateur le
+lance au démarrage et au boot. C'est précisément ce qui manquait à l'APK.
+
+---
+
+## B. Pont APK Android — seulement si c'est celui-là
+
+Demande **la clé de signature d'origine** (`.jks` + son mot de passe, créée le
+26 août 2026). Android refuse une mise à jour signée par une autre clé : il
+faudrait désinstaller d'abord, ce qui **efface l'appairage**.
+
+Empreinte de la clé attendue, à vérifier avant toute tournée :
+`28:A8:36:D7:D6:54:2E:30:65:65:DC:6B:82:00:26:F6:CC:A0:90:FA:C1:98:C3:4D:7E:AC:A7:1C:9E:24:42:D8`
+
+Prérequis, une seule fois, sur la machine qui a la clé :
 
 ```bash
 brew install --cask temurin@21
-```
-
-**2. Le SDK Android.** S'il est déjà là (`~/Library/Android/sdk`), il suffit de
-créer le fichier qui dit à Gradle où le trouver :
-
-```bash
 echo "sdk.dir=$HOME/Library/Android/sdk" > bridge/android/local.properties
+cp bridge/android/keystore.properties.example bridge/android/keystore.properties   # puis remplir
 ```
 
-**3. La clé de signature.** Copier le modèle et remplir les quatre valeurs avec
-la clé d'août :
-
-```bash
-cp bridge/android/keystore.properties.example bridge/android/keystore.properties
-```
-
-⚠️ Ce fichier et le `.jks` ne doivent **jamais** être commités. Ils sont déjà
-dans `.gitignore`.
-
----
-
-## Construire et publier
+Construire et publier :
 
 ```bash
 git pull
@@ -51,42 +85,21 @@ git push https://github.com/zaka33333-hash/Kiwi.git main
 git push https://github.com/badro99/Kiwi.git main
 ```
 
-Vérifier que c'est bien parti (la taille doit avoir changé) :
-
-```bash
-curl -sI https://kiwi-os.com/downloads/kiwi-print-bridge.apk | grep -i content-length
-```
+Sur la tablette : télécharger l'APK depuis kiwi-os.com, **installer par-dessus**
+(jamais désinstaller), accepter « Ignorer les optimisations de batterie »,
+vérifier que l'application affiche **1.0.4**.
 
 ---
 
-## Sur la tablette du comptoir
+## Recette, dans les deux cas
 
-1. Ouvrir `https://kiwi-os.com/downloads/kiwi-print-bridge.apk` dans le
-   navigateur de la tablette, télécharger, appuyer pour installer.
-   **Installer par-dessus — ne jamais désinstaller d'abord** : la désinstallation
-   efface l'appairage et il faudrait refaire un code à six chiffres.
-2. À l'ouverture, accepter la demande **« Ignorer les optimisations de batterie »**.
-   C'est cette autorisation qui empêche Android d'endormir le pont.
-3. Dans les applications récentes, épingler la carte Kiwi Print Bridge
-   (cadenas / glisser vers le bas) pour que le système ne la ferme pas.
-4. Vérifier la version : la notification et l'écran de l'application doivent
-   afficher **1.0.4**. Si elle affiche encore 1.0.0, l'installation n'a pas pris.
+Laisser la caisse **20 minutes sans commande**, puis lancer un ticket : il doit
+sortir en une ou deux secondes, pas en quinze. Refaire le test le lendemain
+matin, et surtout **après le jour de fermeture hebdomadaire** — c'est le cas que
+corrige la fenêtre de sept jours.
 
----
+## En attendant, sans rien installer
 
-## Vérifier que c'est réglé
-
-Laisser la caisse tranquille **20 minutes sans commande**, puis lancer un
-ticket. Il doit sortir en une seconde ou deux, pas en quinze.
-
-Refaire le test le lendemain matin à l'ouverture, et surtout **après le jour de
-fermeture** : c'est le cas que la version 1.0.4 corrige en plus.
-
----
-
-## En attendant la mise à jour
-
-Réglage à faire directement sur l'imprimante, sans rien installer : désactiver
-**Energy Star / Auto Power Off / Sleep Mode / Wi-Fi Power Save** dans son
-interface web, et réserver son adresse IP sur le routeur. Détails dans
-[`PRINTER_POWER_SAVE.md`](PRINTER_POWER_SAVE.md).
+Sur l'imprimante elle-même : désactiver **Energy Star / Auto Power Off / Sleep
+Mode / Wi-Fi Power Save** dans son interface web, et réserver son IP sur le
+routeur. Voir [`PRINTER_POWER_SAVE.md`](PRINTER_POWER_SAVE.md).
