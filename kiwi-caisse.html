@@ -3470,7 +3470,7 @@
     }
     .cm-type-btn svg { width: 15px; height: 15px; }
     .cm-type-btn.is-active { background: var(--ink-bg); color: #fff; }
-    .cm-reasons { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 16px; }
+    .cm-reasons { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 14px; }
     .cm-reason {
       padding: 7px 13px; border-radius: 999px;
       font-size: 12px; font-weight: 500;
@@ -3479,6 +3479,24 @@
     }
     .cm-reason:hover { background: var(--line-soft); }
     .cm-reason.is-active { background: var(--forest); color: #fff; }
+    .cm-custom-wrap {
+      display: flex; flex-direction: column; gap: 6px;
+      margin: 0 0 14px;
+    }
+    .cm-custom-wrap[hidden] { display: none !important; }
+    .cm-custom-input {
+      width: 100%; height: 44px; border-radius: var(--r-lg);
+      background: var(--paper-mute); border: 1px solid var(--line);
+      padding: 0 14px; font-size: 14px; color: var(--ink);
+      font-family: inherit;
+      box-sizing: border-box;
+      transition: border-color 150ms ease, box-shadow 150ms ease, background 150ms ease;
+    }
+    .cm-custom-input::placeholder { color: var(--ink-4); }
+    .cm-custom-input:focus {
+      outline: none; border-color: var(--forest); background: var(--surface);
+      box-shadow: 0 0 0 3px rgba(31,93,60,.12);
+    }
     .cm-list-wrap { margin-top: 18px; border-top: 1px solid var(--line-soft); padding-top: 14px; }
     .cm-list-label {
       font-size: 10.5px; color: var(--ink-4);
@@ -5462,7 +5480,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=479" defer></script>
+  <script src="assets/caisse-pwa.js?v=480" defer></script>
   <script src="assets/live-link.js?v=24" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -6677,6 +6695,10 @@
         <button class="cash-preset" data-cm-add="500">+500</button>
       </div>
       <div class="cm-reasons" id="cm-reasons"></div>
+      <div class="cm-custom-wrap" id="cm-custom-wrap" hidden>
+        <label class="cash-input-label" id="cm-custom-label" for="cm-custom-input">Précisez le motif de la sortie (facultatif)</label>
+        <input class="cm-custom-input" id="cm-custom-input" type="text" maxlength="80" placeholder="Ex. Pain, taxi, courses, réparation..." autocomplete="off" enterkeyhint="done" />
+      </div>
       <div class="modal-actions is-visible">
         <button class="ma-btn secondary" id="cm-cancel" style="flex:1;">Annuler</button>
         <button class="ma-btn primary" id="cm-confirm" style="flex:2;"><i data-lucide="check"></i><span>Enregistrer</span></button>
@@ -14838,11 +14860,33 @@
     };
     let cmType = 'out', cmReason = '';
 
+    function updateCmCustomVisibility() {
+      const wrap = $('#cm-custom-wrap');
+      const input = $('#cm-custom-input');
+      const label = $('#cm-custom-label');
+      if (!wrap || !input || !label) return;
+      if (cmReason === 'Autre') {
+        wrap.removeAttribute('hidden');
+        const isOut = (cmType === 'out');
+        label.textContent = isOut
+          ? 'Précisez le motif de la sortie (facultatif)'
+          : "Précisez le motif de l'entrée (facultatif)";
+        input.placeholder = isOut
+          ? 'Ex. Pain, taxi, courses, réparation...'
+          : "Ex. Fond d'appoint, remboursement...";
+        setTimeout(() => input.focus(), 50);
+      } else {
+        wrap.setAttribute('hidden', '');
+        input.value = '';
+      }
+    }
+
     function renderCmReasons() {
       cmReason = CM_REASONS[cmType][0];
       $('#cm-reasons').innerHTML = CM_REASONS[cmType].map((r, i) =>
         `<button class="cm-reason${i === 0 ? ' is-active' : ''}" data-cm-reason="${r}">${r}</button>`
       ).join('');
+      updateCmCustomVisibility();
     }
     function renderCmList() {
       const list = $('#cm-list');
@@ -14856,9 +14900,10 @@
         const mm = String(m.time.getMinutes()).padStart(2, '0');
         const icon = m.type === 'in' ? 'arrow-down-to-line' : 'arrow-up-from-line';
         const sign = m.type === 'in' ? '+ ' : '− ';
+        const cleanReason = String(m.reason || 'Autre').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         return `<div class="cm-row">`
           + `<span class="cm-row-ic cm-row-ic--${m.type}"><i data-lucide="${icon}"></i></span>`
-          + `<span class="cm-row-reason">${m.reason}</span>`
+          + `<span class="cm-row-reason">${cleanReason}</span>`
           + `<span class="cm-row-time">${hh}:${mm}</span>`
           + `<span class="cm-row-amt cm-row-amt--${m.type}">${sign}${fmtMAD(m.amount)}</span>`
           + `</div>`;
@@ -14873,6 +14918,8 @@
       cmType = 'out';
       $$('#cm-type .cm-type-btn').forEach(b => b.classList.toggle('is-active', b.dataset.cmType === 'out'));
       $('#cm-amount').value = '';
+      const customInput = $('#cm-custom-input');
+      if (customInput) customInput.value = '';
       renderCmReasons();
       renderCmList();
       $('#cm-current').textContent = fmtMAD(drawerExpected());
@@ -14888,14 +14935,17 @@
          et l'écart de passation en fin de service accusait le compteur. */
       const amount = money(parseFloat($('#cm-amount').value) || 0);
       if (amount <= 0) { toast('Saisis un montant'); return; }
+      const customInput = $('#cm-custom-input');
+      const customVal = customInput ? customInput.value.trim() : '';
+      const finalReason = (cmReason === 'Autre' && customVal) ? customVal : (cmReason || 'Autre');
       cashMovements.push({
         id: 'cm-' + Date.now(), time: new Date(),
-        type: cmType, amount: amount, reason: cmReason || 'Autre',
+        type: cmType, amount: amount, reason: finalReason,
       });
       emitCashSession({
         sessionId: cashSessionId(), eventType: 'movement', expectedCents: Math.round(drawerExpected() * 100),
         countedCents: null, gapCents: null, movementKind: cmType,
-        movementAmountCents: Math.round(amount * 100), movementReason: cmReason || 'Autre',
+        movementAmountCents: Math.round(amount * 100), movementReason: finalReason,
         actorId: cashActorId(), openedAt: shiftOpenedAt.getTime(), occurredAt: Date.now()
       });
       toast(`${cmType === 'in' ? 'Entrée' : 'Sortie'} de caisse · ${fmtMAD(amount)}`);
@@ -14946,6 +14996,7 @@
       if (reasonBtn) {
         cmReason = reasonBtn.dataset.cmReason;
         $$('#cm-reasons .cm-reason').forEach(b => b.classList.toggle('is-active', b === reasonBtn));
+        updateCmCustomVisibility();
         return;
       }
       const preset = e.target.closest('[data-cm-add]');
@@ -14956,6 +15007,25 @@
       if (e.target.closest('#cm-cancel'))  { closeCashMove(); return; }
       if (e.target.closest('#cm-confirm')) { confirmCashMove(); return; }
     });
+
+    const cmAmountInput = $('#cm-amount');
+    if (cmAmountInput) {
+      cmAmountInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          confirmCashMove();
+        }
+      });
+    }
+    const cmCustomInput = $('#cm-custom-input');
+    if (cmCustomInput) {
+      cmCustomInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          confirmCashMove();
+        }
+      });
+    }
 
     /* ── Clock-in : le fond d'ouverture ───────────────────────────────────────
      * Trois pastilles rondes pour la voie rapide, « Autre » pour le montant réel.
