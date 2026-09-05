@@ -5,9 +5,12 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
+import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.IBinder;
+import android.os.PowerManager;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import java.util.concurrent.ExecutorService;
@@ -21,15 +24,37 @@ public final class BridgeService extends Service {
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
     private volatile boolean running;
     private int unauthorized;
+    private PowerManager.WakeLock wakeLock;
+    private WifiManager.WifiLock wifiLock;
 
     @Override public void onCreate() {
         super.onCreate();
         createChannel();
         startForeground(NOTIFICATION_ID, notification("Connexion à Kiwi…"));
+        acquireLocks();
         String warmIp = BridgeStore.warmIp(this);
         int warmPort = BridgeStore.warmPort(this);
         long warmAt = BridgeStore.warmAt(this);
         RelayClient.resumePrinterWarm(warmIp, warmPort, warmAt);
+    }
+
+    private void acquireLocks() {
+        try {
+            PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+            if (pm != null) {
+                wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "kiwi:printbridge");
+                wakeLock.setReferenceCounted(false);
+                wakeLock.acquire();
+            }
+        } catch (Exception ignored) {}
+        try {
+            WifiManager wm = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+            if (wm != null) {
+                wifiLock = wm.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "kiwi:printbridge");
+                wifiLock.setReferenceCounted(false);
+                wifiLock.acquire();
+            }
+        } catch (Exception ignored) {}
     }
 
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
@@ -69,8 +94,6 @@ public final class BridgeService extends Service {
                     try { RelayClient.ack(token, job.optString("id"), ok, bytes, error); }
                     catch (Exception ignored) { /* le serveur conserve le claim ; ne jamais réimprimer à l'aveugle */ }
                     publish(ok ? "Imprimé · " + BridgeStore.merchant(this) : "Échec d’impression · " + error);
-                }
-                RelayClient.keepPrinterWarm();
                 sleep(count > 0 ? 250 : 1000);
             } catch (Exception e) {
                 publish("Hors ligne · " + readable(e));
@@ -78,6 +101,8 @@ public final class BridgeService extends Service {
                 // queued ticket behind a five-second blind window after the
                 // bounded three-second poll timeout.
                 sleep(2000);
+            } finally {
+                try { RelayClient.keepPrinterWarm(); } catch (Throwable ignored) {}
             }
         }
     }
@@ -102,6 +127,12 @@ public final class BridgeService extends Service {
         }
     }
     private void sleep(long ms) { try { Thread.sleep(ms); } catch (InterruptedException e) { Thread.currentThread().interrupt(); } }
-    @Override public void onDestroy() { running = false; worker.shutdownNow(); super.onDestroy(); }
+    private void releaseLocks() {
+        try { if (wakeLock != null && wakeLock.isHeld()) wakeLock.release(); } catch (Exception ignored) {}
+        wakeLock = null;
+        try { if (wifiLock != null && wifiLock.isHeld()) wifiLock.release(); } catch (Exception ignored) {}
+        wifiLock = null;
+    }
+    @Override public void onDestroy() { running = false; worker.shutdownNow(); releaseLocks(); super.onDestroy(); }
     @Override public IBinder onBind(Intent intent) { return null; }
 }

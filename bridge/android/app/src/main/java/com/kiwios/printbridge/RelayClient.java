@@ -13,9 +13,9 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 
 final class RelayClient {
-    static final String VERSION = "1.0.2";
+    static final String VERSION = "1.0.3";
     private static final long PRINTER_KEEPALIVE_MS = 10000;
-    private static final long PRINTER_WARM_WINDOW_MS = 12 * 60 * 60 * 1000;
+    private static final long PRINTER_WARM_WINDOW_MS = 24 * 60 * 60 * 1000L;
     private static final byte[] PRINTER_PROBE_BYTES = new byte[] { 0x10, 0x04, 0x01 };
     private static Socket printerSocket;
     private static OutputStream printerOutput;

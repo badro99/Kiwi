@@ -70,6 +70,9 @@ Kiwi intègre désormais une architecture à trois niveaux pour empêcher toute 
 ### 3. Persistance et reprise au démarrage (`resumePrinterWarm`)
 - L'adresse IP et le port de la dernière imprimante active sont persistés localement (`BridgeStore.saveWarmTarget` sur Android, `config.json` sur Node).
 - Dès le redémarrage de la tablette ou du service en tâche de fond, le canal TCP est rétabli avant même la première commande du matin.
+- La fenêtre de maintien au chaud est étendue à 24 heures (`PRINTER_WARM_WINDOW_MS = 24 * 60 * 60 * 1000`) pour couvrir sans rupture la fermeture nocturne (13–18 h) et les coupures de service.
+- Le service maintient un verrou processeur (`PowerManager.PARTIAL_WAKE_LOCK`) et un verrou Wi-Fi haute performance (`WifiManager.WIFI_MODE_FULL_HIGH_PERF`) pour empêcher la coupure du réseau local quand l'écran s'éteint.
+- Le maintien au chaud LAN s'exécute dans un bloc `finally` indépendant des erreurs WAN, évitant ainsi qu'une coupure ADSL ou un timeout cloud ne bloque le ping local de l'imprimante.
 
 ### 4. Télémétrie d'impression
 Chaque impression mesure et remonte :
@@ -84,7 +87,7 @@ Chaque impression mesure et remonte :
 ## 4. Procédure de Mise à Jour Terrain
 
 ### Mise à jour de l'application Android sur la tablette client
-1. Générer l'APK release signé (v1.0.2, versionCode 3) :
+1. Générer l'APK release signé (v1.0.3, versionCode 4) :
    ```bash
    app/android/gradlew -p bridge/android assembleRelease
    ```
@@ -93,3 +96,15 @@ Chaque impression mesure et remonte :
    - Ouvrir Chrome et télécharger la mise à jour depuis `https://kiwi-os.com/downloads/kiwi-print-bridge.apk`.
    - Installer l'APK (la mise à jour conserve l'association cloud existante sans avoir à ressaisir de code).
    - Ouvrir l'application pour confirmer l'état : `En ligne · Pasta Corner`.
+   - Si la boîte de dialogue système apparaît, accepter l'exclusion d'optimisation de batterie (*Ignorer les optimisations de batterie*).
+
+### Configuration système requise sur tablette Blackview (Doke OS / MediaTek)
+Sur les tablettes Blackview Tab 18 / OS Doke, le système tue agressivement les processus en arrière-plan lorsque l'écran est éteint :
+1. **Gestionnaire de batterie** :
+   - Paramètres → Batterie → Optimisation de la batterie → Afficher toutes les applications → *Kiwi Print Bridge* → **Ne pas optimiser** (ou *Non restreint*).
+2. **Verrouillage dans les applications récentes** :
+   - Ouvrir le sélecteur d'applications récentes (geste du bas vers le haut ou bouton carré).
+   - Glisser l'icône de *Kiwi Print Bridge* vers le bas ou appuyer sur le cadenas pour **verrouiller l'application en mémoire**.
+3. **Démarrage automatique et arrière-plan (DuraSpeed)** :
+   - Paramètres → Système / Gestionnaire intelligent → Auto-start / Démarrage automatique : autoriser *Kiwi Print Bridge*.
+   - Si *DuraSpeed* est présent : s'assurer qu'il est désactivé ou que *Kiwi Print Bridge* est cochée dans les exceptions.
