@@ -917,6 +917,7 @@ section('Whole-project regressions');
     'vexel-startup-test.mjs',
     'channel-percentage-test.mjs',
     'sales-day-contrast-test.mjs',
+    'sales-ledger-cutoff-test.mjs',
     'day-report-export-test.mjs',
     'day-report-paired-scope-test.mjs',
     'live-feed-backfill-test.mjs',

@@ -15690,11 +15690,19 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     const merchant = auditMerchant() || String(vd.id || vd.name || 'venue');
     const dayOffset = Math.max(0, Math.min(6, Number(salesDayByMerchant[merchant]) || 0));
     const selectedMethods = (salesMethodsByMerchant[merchant] || []).filter((m) => ['cash', 'card', 'delivery'].includes(m));
-    const selectedDay = new Date();
-    selectedDay.setHours(0, 0, 0, 0);
-    selectedDay.setDate(selectedDay.getDate() - dayOffset);
-    const lo = selectedDay.getTime();
-    const hi = new Date(selectedDay.getFullYear(), selectedDay.getMonth(), selectedDay.getDate() + 1).getTime();
+    const cutoffH = (() => {
+      try {
+        const h = window.KiwiDayReport?.cutoff?.(merchant) ?? window.KiwiDayReport?.cutoff?.();
+        return (typeof h === 'number' && isFinite(h) && h >= 0 && h <= 12) ? h : 0;
+      } catch (_) { return 0; }
+    })();
+    const now = Date.now();
+    const currentBizDate = new Date(now - cutoffH * 3600000);
+    currentBizDate.setHours(0, 0, 0, 0);
+    const todayLo = currentBizDate.getTime() + cutoffH * 3600000;
+    const lo = todayLo - dayOffset * 864e5;
+    const hi = dayOffset === 0 ? Infinity : (todayLo - (dayOffset - 1) * 864e5);
+    const selectedDay = new Date(currentBizDate.getTime() - dayOffset * 864e5);
     const daySales = sales.concat(refunds).filter((s) => { const ts = +(s && s.ts) || 0; return ts >= lo && ts < hi; });
     const inWindow = selectedMethods.length
       ? daySales.filter((s) => selectedMethods.includes(salesMethodKey(s)))
@@ -15703,7 +15711,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       : dayOffset === 1 ? T({ fr: 'hier', en: 'yesterday', ar: 'أمس' })
       : selectedDay.toLocaleDateString(lang === 'ar' ? 'ar-MA' : lang, { weekday: 'long', day: 'numeric', month: 'short' });
     const dayButtons = Array.from({ length: 7 }, (_, offset) => {
-      const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - offset);
+      const d = new Date(currentBizDate.getTime() - offset * 864e5);
       const label = offset === 0 ? T({ fr: "Aujourd'hui", en: 'Today', ar: 'اليوم' })
         : offset === 1 ? T({ fr: 'Hier', en: 'Yesterday', ar: 'أمس' })
         : d.toLocaleDateString(lang === 'ar' ? 'ar-MA' : lang, { weekday: 'short', day: 'numeric', month: 'short' });
@@ -15909,6 +15917,11 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
      * the one on screen — the real list, or the empty starter that a first sale
      * should flip into the list. */
     if (window.KiwiSales?.subscribe) window.KiwiSales.subscribe(() => {
+      if (!document.querySelector('[data-real-tx], [data-starter-nav="transactions"]')) return;
+      const H = window.Kiwi && window.Kiwi.handlers;
+      try { if (H && H['nav-transactions']) H['nav-transactions'](); } catch (_) {}
+    });
+    window.addEventListener('kiwi-day-report-ready', () => {
       if (!document.querySelector('[data-real-tx], [data-starter-nav="transactions"]')) return;
       const H = window.Kiwi && window.Kiwi.handlers;
       try { if (H && H['nav-transactions']) H['nav-transactions'](); } catch (_) {}
