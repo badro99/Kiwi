@@ -129,10 +129,21 @@ export async function exchangeClientCredentials(env, shop) {
     }),
   });
   const data = await res.json().catch(() => ({}));
-  /* Le corps d'erreur de Shopify peut contenir de quoi identifier l'app. On ne
-   * relaie que le code HTTP : ni le secret, ni le corps, ne doivent atteindre
-   * un log ou une réponse. */
-  if (!res.ok || !data.access_token) throw new Error(`shopify-client-credentials-${res.status}`);
+  /* Le corps d'erreur de Shopify peut contenir de quoi identifier l'app, et
+   * `error_description` a déjà été vu répéter des valeurs envoyées. On ne
+   * relaie donc QUE `error`, qui est une énumération OAuth fermée
+   * (`invalid_request`, `invalid_client`, `unauthorized_client`,
+   * `unsupported_grant_type`, `invalid_scope`…), filtrée en plus par une
+   * expression qui n'admet que des lettres et des tirets bas. Jamais la
+   * description, jamais le corps, jamais le secret.
+   *
+   * Sans cette énumération, un refus se lit « 400 » et ne dit pas s'il faut
+   * corriger les identifiants, installer l'app, ou déplacer l'app dans la
+   * bonne organisation Shopify — trois gestes très différents. */
+  if (!res.ok || !data.access_token) {
+    const reason = /^[a-z_]{1,40}$/.test(String(data.error || '')) ? `-${data.error}` : '';
+    throw new Error(`shopify-client-credentials-${res.status}${reason}`);
+  }
   return data;
 }
 

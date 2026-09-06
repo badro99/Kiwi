@@ -80,7 +80,7 @@ export async function onRequestPost({ request, env }) {
      * l'écran, et le refus ressemblait à une panne de Kiwi. Un code 4xx passe
      * intact. Ce n'est pas une préférence de style : c'est la différence entre
      * un diagnostic et un cul-de-sac. */
-    const code = String((e && e.message) || '').replace(/[^a-z0-9-]/gi, '').slice(0, 60);
+    const code = String((e && e.message) || '').replace(/[^a-z0-9_-]/gi, '').slice(0, 60);
     return json({ error: 'client-credentials-refused', detail: code, shop }, 409);
   }
 

@@ -315,8 +315,30 @@ ok('a missing row is not a grant', isClientCredentials(null) === false);
   } catch (e) { message = String((e && e.message) || ''); }
   finally { globalThis.fetch = realFetch; }
   ok('a refused exchange throws', message !== '');
-  ok('the thrown error names only the HTTP status', message === 'shopify-client-credentials-401');
+  ok('the thrown error names the status and the OAuth reason, nothing else',
+    message === 'shopify-client-credentials-401-invalid_client', message);
   ok('the thrown error never carries the client secret', !message.includes('client-secret-test'));
+}
+
+// Le motif du refus doit remonter — mais SEULEMENT l'énumération OAuth, jamais
+// la description, qui a déjà été vue répéter des valeurs envoyées.
+{
+  const realFetch = globalThis.fetch;
+  const call = async (payload) => {
+    globalThis.fetch = async () => ({ ok: false, status: 400, json: async () => payload });
+    try {
+      await exchangeClientCredentials({ SHOPIFY_CLIENT_ID: 'a', SHOPIFY_CLIENT_SECRET: 'sekrit-value' }, 'atlas-casa.myshopify.com');
+    } catch (e) { return String((e && e.message) || ''); }
+    finally { globalThis.fetch = realFetch; }
+    return '';
+  };
+  const grant = await call({ error: 'unsupported_grant_type', error_description: 'secret sekrit-value rejected' });
+  ok('the OAuth error code reaches the caller', grant === 'shopify-client-credentials-400-unsupported_grant_type');
+  ok('the error description never travels with it', !grant.includes('sekrit-value') && !grant.includes('rejected'));
+  const junk = await call({ error: 'sekrit-value leaked <script>' });
+  ok('a non-enum error field is dropped rather than relayed', junk === 'shopify-client-credentials-400');
+  const none = await call({});
+  ok('a body with no error field still names the status', none === 'shopify-client-credentials-400');
 }
 
 // Un jeton sans `access_token` n'est pas un succès, quel que soit le code HTTP.
@@ -365,6 +387,8 @@ ok('a missing row is not a grant', isClientCredentials(null) === false);
   ok('the credentials refusal is reported, not a 5xx Cloudflare eats',
     !!refusal && Number(refusal) >= 400 && Number(refusal) < 500, `status ${refusal}`);
   ok('no branch of connect-direct returns 502', !/\}, 502\)/.test(direct));
+  ok('the refusal detail keeps underscores so the OAuth enum survives',
+    direct.includes("replace(/[^a-z0-9_-]/gi, '')"));
   ok('connect-direct keeps the shop exclusive to one merchant',
     direct.includes("'shop-already-connected'") && direct.includes("'merchant-already-connected'"));
   ok('changing shop clears the old variant mapping',
