@@ -848,19 +848,33 @@ export async function onRequestPost(context) {
         ).bind(toTable, now, sessionId, merchant).run();
       }
 
-      // 4. Déplacer les commandes en cours de cette session ou table
+      // 4. Déplacer TOUTES les commandes impayées de la table d'origine,
+      //    quelle que soit la session qu'elles portent (courante, éventée ou
+      //    absente). Ne déplacer que la session ouverte laissait le reste sur
+      //    place en silence pendant que la caisse migrait tout en local et
+      //    annonçait un succès : après rechargement, l'addition était vide
+      //    des deux côtés (les lignes rattachées refusent les sessions
+      //    étrangères) alors que les lignes dormaient encore en base.
+      //    Les lignes déjà réglées restent : déplacer un règlement réécrirait
+      //    l'histoire de l'encaissement — on les COMPTE pour l'affichage.
+      //    Les lignes déplacées sont rattachées à la visite déplacée quand il
+      //    y en a une, pour qu'elles se rattachent à destination au prochain
+      //    sondage au lieu de rester invisibles.
       let orderCount = 0;
-      if (sessionId) {
-        const res = await env.DB.prepare(
-          `UPDATE orders SET table_no = ?, updated_ts = ? WHERE merchant = ? AND session_id = ? AND paid_ts IS NULL`
-        ).bind(toTable, now, merchant, sessionId).run();
-        orderCount = (res && res.meta && res.meta.changes) || 0;
-      } else {
-        const res = await env.DB.prepare(
-          `UPDATE orders SET table_no = ?, updated_ts = ? WHERE merchant = ? AND table_no = ? AND paid_ts IS NULL`
-        ).bind(toTable, now, merchant, fromTable).run();
-        orderCount = (res && res.meta && res.meta.changes) || 0;
-      }
+      const moved = await env.DB.prepare(
+        `UPDATE orders SET table_no = ?, session_id = COALESCE(?, session_id), updated_ts = ?
+          WHERE merchant = ? AND table_no = ? AND paid_ts IS NULL`
+      ).bind(toTable, sessionId, now, merchant, fromTable).run();
+      orderCount = (moved && moved.meta && moved.meta.changes) || 0;
+      let paidLeftBehind = 0;
+      try {
+        if (sessionId) {
+          const paid = await env.DB.prepare(
+            `SELECT COUNT(*) AS n FROM orders WHERE merchant = ? AND table_no = ? AND paid_ts IS NOT NULL AND session_id = ?`
+          ).bind(merchant, fromTable, sessionId).first();
+          paidLeftBehind = Number((paid && paid.n) || 0);
+        }
+      } catch (_) { paidLeftBehind = 0; }
 
       // 5. Enregistrer le déplacement dans le registre d'audit table_transfers
       const transferId = 'trf-' + now.toString(36) + '-' + crypto.randomUUID().slice(0, 8);
@@ -878,6 +892,8 @@ export async function onRequestPost(context) {
         toTable,
         sessionId,
         ordersMoved: orderCount,
+        paidLeftBehind,
+        movedSession: sessionId,
         now,
       });
     } catch (e) {
@@ -913,14 +929,24 @@ export async function onRequestPost(context) {
       ).bind(merchant, sourceTable).first();
       const sourceSessionId = sourceSession ? String(sourceSession.id) : null;
 
-      // 3. Déplacer les commandes de source vers target
+      // 3. Déplacer les commandes de source vers target. Comme pour le
+      //    transfert : toutes les impayées de la table source, pas seulement
+      //    celles de la visite ouverte — sinon elles restent sur une session
+      //    qu'on clôt juste après, invisibles à l'addition fusionnée.
       let movedOrders = 0;
+      let mergePaidLeft = 0;
       if (sourceSessionId && targetSessionId) {
         const res = await env.DB.prepare(
           `UPDATE orders SET table_no = ?, session_id = ?, updated_ts = ?
-            WHERE merchant = ? AND session_id = ? AND paid_ts IS NULL`
-        ).bind(targetTable, targetSessionId, now, merchant, sourceSessionId).run();
+            WHERE merchant = ? AND table_no = ? AND paid_ts IS NULL`
+        ).bind(targetTable, targetSessionId, now, merchant, sourceTable).run();
         movedOrders = (res && res.meta && res.meta.changes) || 0;
+        try {
+          const paid = await env.DB.prepare(
+            `SELECT COUNT(*) AS n FROM orders WHERE merchant = ? AND table_no = ? AND paid_ts IS NOT NULL AND session_id = ?`
+          ).bind(merchant, sourceTable, sourceSessionId).first();
+          mergePaidLeft = Number((paid && paid.n) || 0);
+        } catch (_) { mergePaidLeft = 0; }
       } else {
         const res = await env.DB.prepare(
           `UPDATE orders SET table_no = ?, session_id = COALESCE(?, session_id), updated_ts = ?
@@ -953,6 +979,7 @@ export async function onRequestPost(context) {
         sourceTable,
         targetSessionId,
         ordersMerged: movedOrders,
+        paidLeftBehind: mergePaidLeft,
         now,
       });
     } catch (e) {

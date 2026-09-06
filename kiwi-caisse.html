@@ -11220,6 +11220,7 @@
       const toT = tables[to];
       if (!fromT || !toT) return;
 
+      let transferData = null;
       if (!IS_DEMO) {
         try {
           const res = await fetch('/api/order/queue', {
@@ -11232,6 +11233,7 @@
           });
           const data = await res.json().catch(() => null);
           if (!res.ok || !data || !data.ok) throw new Error((data && data.error) || 'transfer-failed');
+          transferData = data;
         } catch (err) {
           if (confirmBtn) confirmBtn.disabled = false;
           toast(`Déplacement impossible : ${err.message || 'erreur réseau'}`);
@@ -11269,7 +11271,18 @@
       $('#caisse-transfer-modal').classList.remove('is-open');
       selectedId = to;
       openTable(to);
-      toast(`Table ${from} déplacée vers Table ${to}`);
+      // Annonce ce que le serveur a VRAIMENT déplacé : un transfert qui
+      // laisse des lignes réglées derrière lui n'est pas un échec, mais
+      // l'annoncer « déplacée » sans compter mentirait autant que l'ancien
+      // silence sur les lignes non déplacées.
+      {
+        const moved = transferData && Number.isFinite(+transferData.ordersMoved) ? +transferData.ordersMoved : null;
+        const left = transferData && Number.isFinite(+transferData.paidLeftBehind) ? +transferData.paidLeftBehind : 0;
+        let msg = `Table ${from} déplacée vers Table ${to}`;
+        if (moved !== null) msg += ` · ${moved} ligne${moved > 1 ? 's' : ''}`;
+        if (left > 0) msg += ` · ${left} réglée${left > 1 ? 's' : ''} reste${left > 1 ? 'nt' : ''} sur ${from}`;
+        toast(msg);
+      }
     }
 
     let cmrgSourceId = null;
@@ -11323,6 +11336,7 @@
       const targetT = tables[target];
       if (!sourceT || !targetT) return;
 
+      let mergeData = null;
       if (!IS_DEMO) {
         try {
           const res = await fetch('/api/order/queue', {
@@ -11335,6 +11349,7 @@
           });
           const data = await res.json().catch(() => null);
           if (!res.ok || !data || !data.ok) throw new Error((data && data.error) || 'merge-failed');
+          mergeData = data;
         } catch (err) {
           if (confirmBtn) confirmBtn.disabled = false;
           toast(`Fusion impossible : ${err.message || 'erreur réseau'}`);
@@ -11368,7 +11383,14 @@
       $('#caisse-merge-modal').classList.remove('is-open');
       selectedId = target;
       openTable(target);
-      toast(`Table ${source} fusionnée dans Table ${target}`);
+      {
+        const moved = mergeData && Number.isFinite(+mergeData.ordersMerged) ? +mergeData.ordersMerged : null;
+        const left = mergeData && Number.isFinite(+mergeData.paidLeftBehind) ? +mergeData.paidLeftBehind : 0;
+        let msg = `Table ${source} fusionnée dans Table ${target}`;
+        if (moved !== null) msg += ` · ${moved} ligne${moved > 1 ? 's' : ''}`;
+        if (left > 0) msg += ` · ${left} réglée${left > 1 ? 's' : ''} reste${left > 1 ? 'nt' : ''} sur ${source}`;
+        toast(msg);
+      }
     }
 
     $('#rp-transfer-table') && $('#rp-transfer-table').addEventListener('click', () => {
