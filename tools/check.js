@@ -937,6 +937,7 @@ section('Whole-project regressions');
     'order-mode-exit-test.js',
     'table-takeaway-routing-test.js',
     'orderpro-inbox-display-test.js',
+    'caisse-discount-and-phantom-table-test.js',
     'resto-carte-test.js',
     'restaurant-menu-route-test.js',
     'menu-pull-route-test.js',

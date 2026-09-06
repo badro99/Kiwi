@@ -1861,6 +1861,10 @@
     .rp-item-price { font-weight: 600; color: var(--ink); font-feature-settings: "tnum" 1; }
 
     /* Remise line · negative discount inside the addition */
+    .rp-item--discount {
+      grid-template-columns: 28px 1fr auto auto;
+      gap: 6px;
+    }
     .rp-item--discount .rp-item-qty {
       background: var(--mint-tint);
       color: var(--forest);
@@ -1870,6 +1874,22 @@
     .rp-item--discount .rp-item-qty svg { width: 13px; height: 13px; }
     .rp-item--discount .rp-item-name { color: var(--forest); font-weight: 500; }
     .rp-item--discount .rp-item-price { color: var(--forest); }
+    .rp-item-del-btn {
+      width: 24px; height: 24px;
+      border-radius: 6px;
+      background: transparent;
+      border: 0;
+      color: var(--muted);
+      display: inline-flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      padding: 0;
+      transition: background 0.15s, color 0.15s;
+    }
+    .rp-item-del-btn svg { width: 14px; height: 14px; }
+    .rp-item-del-btn:hover {
+      background: rgba(220, 38, 38, 0.12);
+      color: #DC2626;
+    }
 
     /* Cart line (vente rapida) · adds qty +/- controls */
     .rp-item--cart {
@@ -6942,8 +6962,9 @@
       </div>
       <div class="rm-preview is-empty" id="rm-preview">Choisis une remise pour voir l'aperçu.</div>
       <div class="modal-actions is-visible">
-        <button class="ma-btn secondary" id="rm-cancel" style="flex:1;">Annuler</button>
-        <button class="ma-btn primary" id="rm-confirm" style="flex:2;"><i data-lucide="badge-percent"></i><span>Appliquer la remise</span></button>
+        <button class="ma-btn danger" id="rm-remove" style="flex:1;" hidden type="button"><i data-lucide="trash-2"></i><span>Supprimer</span></button>
+        <button class="ma-btn secondary" id="rm-cancel" style="flex:1;" type="button">Annuler</button>
+        <button class="ma-btn primary" id="rm-confirm" style="flex:2;" type="button"><i data-lucide="badge-percent"></i><span>Appliquer la remise</span></button>
       </div>
     </div>
   </div>
@@ -7852,6 +7873,7 @@
     const opUnmatchedTables = new Set();
     const phoneSeats = new Map();     // clé table → { session, since }
     const phonePending = new Map();   // clé table → nombre de commandes en attente
+    const tableClosedAt = Object.create(null); // clé table → horodatage de fermeture/annulation locale
     if (!storeIsReal()) initDemoPlanes();
     renderSalle();
 
@@ -7995,6 +8017,7 @@
        caissier) et le réseau suit à son rythme, porté par orderpro-inbox.js. */
     function releasePhoneTable(id, why, force) {
       const k = tableKey(id);
+      tableClosedAt[k] = Date.now();
       const seat = phoneSeats.get(k);
       phoneSeats.delete(k);
       phonePending.delete(k);
@@ -8621,9 +8644,12 @@
         const tag = d.kind === 'pct' ? `Remise ${d.value} %` : 'Remise';
         itemsHTML += `
         <div class="rp-item rp-item--discount">
-          <span class="rp-item-qty"><i data-lucide="badge-percent"></i></span>
-          <span class="rp-item-name">${tag}${d.reason ? ' · ' + d.reason : ''}</span>
-          <span class="rp-item-price mono">−${fmtMAD(discAmt)}</span>
+          <span class="rp-item-qty" style="cursor:pointer;" data-action="edit-discount" title="Modifier la remise"><i data-lucide="badge-percent"></i></span>
+          <span class="rp-item-name" style="cursor:pointer;" data-action="edit-discount" title="Modifier la remise">${tag}${d.reason ? ' · ' + d.reason : ''}</span>
+          <span class="rp-item-price mono" style="cursor:pointer;" data-action="edit-discount" title="Modifier la remise">−${fmtMAD(discAmt)}</span>
+          <button type="button" class="rp-item-del-btn" data-action="remove-table-discount" title="Supprimer la remise" aria-label="Supprimer la remise">
+            <i data-lucide="trash-2"></i>
+          </button>
         </div>`;
       }
       const currentCashier = (typeof cashierName !== 'undefined' && cashierName) || 'Caisse';
@@ -8801,6 +8827,7 @@
       const t = tables[id];
       t.status = 'khlass';
       t.elapsed = 0;
+      delete t.discount; // clear remise immédiatement à l'encaissement
       /* L'addition est réglée : le téléphone posé sur cette table cesse d'être
          un terminal de commande. C'est LE point de passage de tous les
          encaissements · carte, espèces, addition partagée · donc c'est ici et
@@ -8808,7 +8835,7 @@
          laissé la session ouverte. L'appel réseau est délégué à
          orderpro-inbox.js par un évènement : une vente ne doit jamais attendre
          le réseau, ni échouer parce qu'il est tombé. */
-      releasePhoneTable(id, 'settle');
+      releasePhoneTable(id, 'settle', true);
       refreshTableNode(id);
       shift.tablesPaid += 1;
       renderShiftStats();
@@ -9861,9 +9888,12 @@
         const tag = vrapDiscount.kind === 'pct' ? `Remise ${vrapDiscount.value} %` : 'Remise';
         itemsHTML += `
         <div class="rp-item rp-item--discount">
-          <span class="rp-item-qty"><i data-lucide="badge-percent"></i></span>
-          <span class="rp-item-name">${tag}${vrapDiscount.reason ? ' · ' + vrapDiscount.reason : ''}</span>
-          <span class="rp-item-price mono">−${fmtMAD(discAmt)}</span>
+          <span class="rp-item-qty" style="cursor:pointer;" data-action="edit-discount" title="Modifier la remise"><i data-lucide="badge-percent"></i></span>
+          <span class="rp-item-name" style="cursor:pointer;" data-action="edit-discount" title="Modifier la remise">${tag}${vrapDiscount.reason ? ' · ' + vrapDiscount.reason : ''}</span>
+          <span class="rp-item-price mono" style="cursor:pointer;" data-action="edit-discount" title="Modifier la remise">−${fmtMAD(discAmt)}</span>
+          <button type="button" class="rp-item-del-btn" data-action="remove-vrap-discount" title="Supprimer la remise" aria-label="Supprimer la remise">
+            <i data-lucide="trash-2"></i>
+          </button>
         </div>`;
       }
       $('#rp-items').innerHTML = itemsHTML;
@@ -11001,6 +11031,8 @@
       t.size    = newTableCovers >= 5 ? 6 : (newTableCovers <= 2 ? 2 : 4);
       t.status  = 'ka-yaklo';
       t.elapsed = 0;
+      delete t.discount; // Toute nouvelle table démarre sans remise
+      delete tableClosedAt[tableKey(newTableId)]; // Nouvelle table légitime · lever le filtre de fermeture
       tableOrders[newTableId] = [];
       serviceFloorLocalVersion[newTableId] = Date.now();
       serviceFloorRemoteVersion[newTableId] = Math.max(serviceFloorRemoteVersion[newTableId] || 0, Date.now());
@@ -12007,11 +12039,11 @@
         /* La table peut avoir disparu sous nos pieds · setupRealSalle() efface
            et reconstruit `tables` dès que le patron touche son plan depuis son
            téléphone. Ce n'est pas une raison pour rester coincé. */
-        if (t) { t.status = 'khawya'; t.elapsed = 0; }
+        if (t) { t.status = 'khawya'; t.elapsed = 0; delete t.discount; }
         /* La table est rendue sans encaissement. Sans ça, le téléphone resterait
            « assis » à une table redevenue libre et pourrait continuer à commander
            · le trou exact que la session existe pour boucher. */
-        releasePhoneTable(selectedId, 'caisse');
+        releasePhoneTable(selectedId, 'caisse', true);
         // Restore original covers (2 by default if we changed it)
         refreshTableNode(selectedId);
         selectedId = null;
@@ -13016,16 +13048,17 @@
     /* Record one completed tender (table payment, vente rapida, or split part).
        `amount` stays the base addition; `tip` (pourboire) is recorded alongside.
        `lines` (optional) · itemised order [{ name, qty, total }] for the receipt. */
-    function accountActiveDiscount() {
+    function accountActiveDiscount(settlementTable) {
       let d = null, cut = 0;
+      const tId = settlementTable || selectedId;
       if (mode === 'vrap') {
         d = vrapDiscount;
         const gross = cart.reduce((s, l) => s + l.price * l.qty, 0);
         cut = vrapDiscountAmount(gross);
-      } else if (selectedId && tables[selectedId]) {
-        d = tables[selectedId].discount;
-        const gross = generateOrder(selectedId, tables[selectedId]).reduce((s, l) => s + l.total, 0);
-        cut = discountAmountFor(selectedId, gross);
+      } else if (tId && tables[tId]) {
+        d = tables[tId].discount;
+        const gross = generateOrder(tId, tables[tId]).reduce((s, l) => s + l.total, 0);
+        cut = discountAmountFor(tId, gross);
       }
       /* New discounts explicitly carry `accounted:false`. Legacy persisted
          discounts have no flag and were already added at approval time. */
@@ -13042,8 +13075,9 @@
       if (/commercial/.test(key)) return 'commercial';
       return 'other';
     }
-    function activeSaleDiscount(amount, lines) {
-      const d = mode === 'vrap' ? vrapDiscount : (selectedId && tables[selectedId] && tables[selectedId].discount);
+    function activeSaleDiscount(amount, lines, settlementTable) {
+      const tId = settlementTable || selectedId;
+      const d = mode === 'vrap' ? vrapDiscount : (tId && tables[tId] && tables[tId].discount);
       if (!d || !Array.isArray(lines) || !lines.length) return null;
       const gross = money(lines.reduce((sum, line) => sum + (Number(line && (line.total != null ? line.total : ((line.price || 0) * (line.qty || 0)))) || 0), 0));
       const discount = money(Math.max(0, gross - money(amount)));
@@ -13075,8 +13109,8 @@
         const existingSale = journal.find(row => row && row.id === orderProSaleId);
         if (existingSale) { lastSaleId = existingSale.id; return existingSale; }
       }
-      const discount = activeSaleDiscount(amount, lines);
-      accountActiveDiscount();
+      const discount = activeSaleDiscount(amount, lines, settlementTable);
+      accountActiveDiscount(settlementTable);
       const entry = {
         id: orderProSaleId || ('sale-' + Date.now() + '-' + journal.length),
         time: new Date(),
@@ -15932,14 +15966,28 @@
       remiseState.target  = 'table';
       remiseState.tableId = id;
       remiseState.gross   = gross;
-      remiseState.kind    = 'pct';
-      remiseState.value   = 0;
-      remiseState.reason  = 'Geste commercial';
-      $('#rm-subtle').innerHTML = `${id} · addition <span class="mono">${fmtMAD(gross)}</span>`;
-      $('#rm-amount').value = '';
-      $$('#rm-pct-chips .rm-pct-chip').forEach(c => c.classList.remove('is-active'));
+      const existing = tables[id] && tables[id].discount;
+      if (existing) {
+        remiseState.kind   = existing.kind || 'pct';
+        remiseState.value  = Number(existing.value || 0);
+        remiseState.reason = existing.reason || 'Geste commercial';
+      } else {
+        remiseState.kind   = 'pct';
+        remiseState.value  = 0;
+        remiseState.reason = 'Geste commercial';
+      }
+      $('#rm-subtle').innerHTML = `Table ${id} · addition <span class="mono">${fmtMAD(gross)}</span>`;
+      $('#rm-amount').value = (remiseState.kind === 'amount' && remiseState.value) ? remiseState.value : '';
+      $$('#rm-pct-chips .rm-pct-chip').forEach(c => {
+        c.classList.toggle('is-active', remiseState.kind === 'pct' && parseFloat(c.dataset.rmPct) === remiseState.value);
+      });
       $$('#rm-reasons .rm-reason').forEach(b =>
-        b.classList.toggle('is-active', b.dataset.rmReason === 'Geste commercial'));
+        b.classList.toggle('is-active', b.dataset.rmReason === remiseState.reason));
+      const rmRemoveBtn = $('#rm-remove');
+      if (rmRemoveBtn) {
+        rmRemoveBtn.hidden = !existing;
+        rmRemoveBtn.style.display = existing ? '' : 'none';
+      }
       syncRemiseType();
       renderRemisePreview();
       remiseModal.classList.add('is-open');
@@ -15948,58 +15996,82 @@
     function closeRemiseModal() { remiseModal.classList.remove('is-open'); }
 
     function applyRemise() {
-      // À emporter · the réduction lands on the working cart, not a table.
-      if (remiseState.target === 'vrap') {
-        const cut = remiseCutPreview();
-        if (cut <= 0) { toast('Choisis une remise'); return; }
-        requireManager("Remise sur l'addition", () => {
+      const target = remiseState.target;
+      const targetTableId = remiseState.tableId;
+      const targetKind = remiseState.kind;
+      const targetValue = remiseState.value;
+      const targetReason = remiseState.reason;
+      const cut = remiseCutPreview();
+      if (cut <= 0) { toast('Choisis une remise'); return; }
+
+      requireManager("Remise sur l'addition", () => {
+        if (target === 'vrap') {
           const gross = cart.reduce((s, l) => s + l.price * l.qty, 0);
-          let amount = remiseState.kind === 'pct'
-            ? money(gross * (remiseState.value || 0) / 100)
-            : money(remiseState.value || 0);
+          let amount = targetKind === 'pct'
+            ? money(gross * (targetValue || 0) / 100)
+            : money(targetValue || 0);
           amount = money(Math.max(0, Math.min(amount, money(gross))));
           if (amount <= 0) { toast('Remise sans effet'); return; }
           vrapDiscount = {
-            kind:   remiseState.kind,
-            value:  remiseState.value,
+            kind:   targetKind,
+            value:  targetValue,
             amount: amount,
-            reason: remiseState.reason,
+            reason: targetReason,
             actorId: String(window.KiwiCaissePairing?.lastManager?.()?.id || currentCashier?.id || '').slice(0, 96),
             accounted: false,
           };
           closeRemiseModal();
           renderCart();
           toast(`Remise appliquée · −${fmtMAD(amount)}`);
-        });
-        return;
-      }
-      const id = remiseState.tableId;
-      if (!id || !tables[id]) { closeRemiseModal(); return; }
-      const cut = remiseCutPreview();
-      if (cut <= 0) { toast('Choisis une remise'); return; }
-      requireManager("Remise sur l'addition", () => {
+          return;
+        }
+
+        const id = targetTableId;
+        if (!id || !tables[id]) { closeRemiseModal(); return; }
         const t = tables[id];
-        if (!t) return;
         // Re-clamp against the live gross at approval time.
         const lines = generateOrder(id, t);
         const gross = lines.reduce((s, l) => s + l.total, 0);
-        let amount = remiseState.kind === 'pct'
-          ? money(gross * (remiseState.value || 0) / 100)
-          : money(remiseState.value || 0);
+        let amount = targetKind === 'pct'
+          ? money(gross * (targetValue || 0) / 100)
+          : money(targetValue || 0);
         amount = money(Math.max(0, Math.min(amount, money(gross))));
         if (amount <= 0) { toast('Remise sans effet'); return; }
         t.discount = {
-          kind:   remiseState.kind,
-          value:  remiseState.value,
+          kind:   targetKind,
+          value:  targetValue,
           amount: amount,
-          reason: remiseState.reason,
+          reason: targetReason,
           actorId: String(window.KiwiCaissePairing?.lastManager?.()?.id || currentCashier?.id || '').slice(0, 96),
           accounted: false,
         };
         closeRemiseModal();
         if (selectedId === id) renderRightPanel(id);
+        refreshTableNode(id);
         toast(`Remise appliquée · −${fmtMAD(amount)}`);
       });
+    }
+
+    function removeRemise() {
+      const target = remiseState.target;
+      const targetTableId = remiseState.tableId;
+      if (target === 'vrap') {
+        vrapDiscount = null;
+        closeRemiseModal();
+        renderCart();
+        toast('Remise supprimée');
+        return;
+      }
+      const id = targetTableId;
+      if (id && tables[id]) {
+        delete tables[id].discount;
+        closeRemiseModal();
+        if (selectedId === id) renderRightPanel(id);
+        refreshTableNode(id);
+        toast('Remise supprimée');
+      } else {
+        closeRemiseModal();
+      }
     }
 
     remiseModal.addEventListener('click', (e) => {
@@ -16032,6 +16104,7 @@
         return;
       }
       if (e.target.closest('#rm-cancel'))  { closeRemiseModal(); return; }
+      if (e.target.closest('#rm-remove'))  { removeRemise(); return; }
       if (e.target.closest('#rm-confirm')) { applyRemise(); return; }
     });
     $('#rm-amount').addEventListener('input', () => {
@@ -16698,10 +16771,31 @@
       const name = act.dataset.action;
       if (name === 'reassign-server' && selectedId) {
         openReassignModal(selectedId);
-      } else if (name === 'discount' && selectedId) {
-        openRemiseModal(selectedId);
-      } else if (name === 'discount' && mode === 'vrap') {
-        openVrapRemise();
+      } else if (name === 'discount') {
+        if (mode === 'vrap') {
+          openVrapRemise();
+        } else if (selectedId) {
+          openRemiseModal(selectedId);
+        } else {
+          toast('Sélectionne une table');
+        }
+      } else if (name === 'edit-discount') {
+        if (mode === 'vrap') {
+          openVrapRemise();
+        } else if (selectedId) {
+          openRemiseModal(selectedId);
+        }
+      } else if (name === 'remove-table-discount' && selectedId && tables[selectedId]) {
+        e.stopPropagation();
+        delete tables[selectedId].discount;
+        renderRightPanel(selectedId);
+        refreshTableNode(selectedId);
+        toast('Remise supprimée');
+      } else if (name === 'remove-vrap-discount') {
+        e.stopPropagation();
+        vrapDiscount = null;
+        renderCart();
+        toast('Remise supprimée');
       } else if (name === 'resume-split' && selectedId) {
         openSplitModal(selectedId);
       } else if (name === 'cancel-split' && selectedId) {
@@ -18679,23 +18773,37 @@
     /* Réduction on the À emporter cart · same modal as the Salle remise. */
     function openVrapRemise() {
       if (mode === 'order' && selectedId) {
-        openSalleRemise(selectedId);
+        openRemiseModal(selectedId);
         return;
       }
-      const list = (cart && cart.length) ? cart : (selectedId && tableOrders[selectedId] && tableOrders[selectedId].length ? tableOrders[selectedId] : []);
+      const list = (cart && cart.length) ? cart : [];
       if (!list.length) { toast('Ajoute des articles d\'abord'); return; }
       const gross = list.reduce((s, l) => s + l.price * l.qty, 0);
-      remiseState.target  = (mode === 'order' && selectedId) ? 'table' : 'vrap';
-      remiseState.tableId = (mode === 'order' && selectedId) ? selectedId : null;
+      remiseState.target  = 'vrap';
+      remiseState.tableId = null;
       remiseState.gross   = gross;
-      remiseState.kind    = 'pct';
-      remiseState.value   = 0;
-      remiseState.reason  = 'Geste commercial';
-      $('#rm-subtle').innerHTML = `${remiseState.target === 'table' ? 'Table ' + selectedId : 'À emporter'} · addition <span class="mono">${fmtMAD(gross)}</span>`;
-      $('#rm-amount').value = '';
-      $$('#rm-pct-chips .rm-pct-chip').forEach(c => c.classList.remove('is-active'));
+      const existing = vrapDiscount;
+      if (existing) {
+        remiseState.kind   = existing.kind || 'pct';
+        remiseState.value  = Number(existing.value || 0);
+        remiseState.reason = existing.reason || 'Geste commercial';
+      } else {
+        remiseState.kind   = 'pct';
+        remiseState.value  = 0;
+        remiseState.reason = 'Geste commercial';
+      }
+      $('#rm-subtle').innerHTML = `À emporter · addition <span class="mono">${fmtMAD(gross)}</span>`;
+      $('#rm-amount').value = (remiseState.kind === 'amount' && remiseState.value) ? remiseState.value : '';
+      $$('#rm-pct-chips .rm-pct-chip').forEach(c => {
+        c.classList.toggle('is-active', remiseState.kind === 'pct' && parseFloat(c.dataset.rmPct) === remiseState.value);
+      });
       $$('#rm-reasons .rm-reason').forEach(b =>
-        b.classList.toggle('is-active', b.dataset.rmReason === 'Geste commercial'));
+        b.classList.toggle('is-active', b.dataset.rmReason === remiseState.reason));
+      const rmRemoveBtn = $('#rm-remove');
+      if (rmRemoveBtn) {
+        rmRemoveBtn.hidden = !existing;
+        rmRemoveBtn.style.display = existing ? '' : 'none';
+      }
       syncRemiseType();
       renderRemisePreview();
       remiseModal.classList.add('is-open');
@@ -19363,7 +19471,20 @@
         const seats = new Map();
         (sessions || []).forEach(s => {
           if (s.mode !== 'table' || !s.table) return;
-          seats.set(tableKey(s.table), { session: s.id, since: s.opened_ts });
+          const k = tableKey(s.table);
+          const closedAt = Number(tableClosedAt[k] || 0);
+          const openTs = Number(s.opened_ts || 0);
+          // Si cette session a été ouverte à ou avant la fermeture/annulation locale de la table :
+          if (closedAt > 0 && ((openTs > 0 && openTs <= closedAt) || (Date.now() - closedAt < 60000))) {
+            if (openTs > 0 && openTs <= closedAt) {
+              // Clore activement la session zombie côté serveur dans D1
+              document.dispatchEvent(new CustomEvent('kiwi-table-released', {
+                detail: { table: String(s.table), session: String(s.id || ''), why: 'prune-stale' },
+              }));
+            }
+            return;
+          }
+          seats.set(k, { session: s.id, since: s.opened_ts });
           /* S'asseoir depuis OrderPro réserve déjà réellement la table. Même
              avant l'acceptation du bon, le prochain tap doit ouvrir cette
              table et surtout pas recommencer par le nombre de couverts. */
@@ -19393,6 +19514,7 @@
           tables[id].elapsed = 0;
           delete orders[id];
           delete tableOrders[id];
+          delete tables[id].discount;
           delete tables[id].orderNo;
           if (selectedId === id) closeRightPanel();
           refreshTableNode(id);
@@ -19708,6 +19830,7 @@
           if (state.status === 'khawya' || state.status === 'khlass') {
             delete orders[id];
             delete tableOrders[id];
+            delete tables[id].discount;
             if (selectedId === id) closeRightPanel();
           }
           refreshTableNode(id);
