@@ -8475,11 +8475,14 @@
         if (selectedId) renderRightPanel(selectedId);
         else showEmpty();
       } else if (newMode === 'order') {
+        cart = [];
         setVrapView('builder');
         renderOrderPanel(selectedId);
       } else if (newMode === 'waitlist') {
+        if (selectedId) { setCaisseTableLock(selectedId, 'release'); selectedId = null; }
         renderWaitlist();  // the right addition panel is hidden via body[data-mode] CSS
       } else {
+        if (selectedId) { setCaisseTableLock(selectedId, 'release'); selectedId = null; }
         setVrapView('board');
         showPayButtons(false);
         renderCart();
@@ -8734,6 +8737,10 @@
     function closeRightPanel() {
       $$('.tbl').forEach(el => el.classList.remove('is-selected')); // inner tabletops only
       selectedId = null;
+      if (mode === 'order') {
+        backToSalle();
+        return;
+      }
       showEmpty();
     }
 
@@ -9905,6 +9912,10 @@
         }
         if (t.status === 'khawya')  { openNewTableModal(id); return; }
         if (t.status === 'khlass')  { return; }
+        if (t.status === 'a-commander' || (!orders[id]?.length && !tableOrders[id]?.length && t.status !== 'bgha-ykhlass')) {
+          resumeTableOrder(id);
+          return;
+        }
         openTable(id);
         return;
       }
@@ -9925,8 +9936,13 @@
         const card = stepBtn.closest('.menu-item');
         if (card) {
           const mid = card.dataset.menuId, inc = stepBtn.dataset.step === 'inc';
-          if (mode === 'order' && selectedId) {
-            inc ? addToTableOrder(selectedId, mid) : tableOrderMinusMenu(selectedId, mid);
+          if (mode === 'order') {
+            if (selectedId) {
+              inc ? addToTableOrder(selectedId, mid) : tableOrderMinusMenu(selectedId, mid);
+            } else {
+              toast('Aucune table sélectionnée');
+              backToSalle();
+            }
           } else {
             inc ? addToCart(mid) : cartMinusMenu(mid);
           }
@@ -9937,8 +9953,13 @@
       // Menu card body → add one (to table order or cart depending on mode)
       const menuCard = e.target.closest('.menu-item');
       if (menuCard) {
-        if (mode === 'order' && selectedId) {
-          addToTableOrder(selectedId, menuCard.dataset.menuId);
+        if (mode === 'order') {
+          if (selectedId) {
+            addToTableOrder(selectedId, menuCard.dataset.menuId);
+          } else {
+            toast('Aucune table sélectionnée');
+            backToSalle();
+          }
         } else {
           addToCart(menuCard.dataset.menuId);
         }
@@ -10981,6 +11002,8 @@
       t.status  = 'ka-yaklo';
       t.elapsed = 0;
       tableOrders[newTableId] = [];
+      serviceFloorLocalVersion[newTableId] = Date.now();
+      serviceFloorRemoteVersion[newTableId] = Math.max(serviceFloorRemoteVersion[newTableId] || 0, Date.now());
       refreshTableNode(newTableId);
       selectedId = newTableId;
       newTableId = null;
@@ -12035,6 +12058,7 @@
       if (!tableOrders[id]) tableOrders[id] = [];
       selectedId = id;
       markSelectedTable(id);
+      cart = [];
       setMode('order');
       const n = tableSentCount(id);
       if (n > 0) toast(`Table ${id} · ${n} article${n > 1 ? 's' : ''} déjà en cuisine`);
@@ -13069,9 +13093,9 @@
       if (vrapOrder && vrapOrder.opId) entry.orderId = String(vrapOrder.opId);
       if (discount) Object.assign(entry, discount);
       if (settlementTable) {
+        entry.table = String(settlementTable);
         const visit = phoneSessionOf(settlementTable);
         if (visit) {
-          entry.table = String(settlementTable);
           entry.session = String(visit);
           /* Match the server's visit-derived id before writing the local
              journal. The employee feed then recognizes this caisse payment as
@@ -18287,7 +18311,12 @@
         renderRightPanel(selectedId);
         return;
       }
-      const list = (cart && cart.length) ? cart : (selectedId && tableOrders[selectedId] && tableOrders[selectedId].length ? tableOrders[selectedId] : []);
+      if (mode === 'order' && !selectedId) {
+        backToSalle();
+        toast('Aucune table en cours');
+        return;
+      }
+      const list = (cart && cart.length) ? cart : [];
       if (!list.length) { toast('Ajoute des articles d\'abord'); return; }
 
       if (vrapEditingNum != null) {
@@ -18313,7 +18342,6 @@
         }
       }
 
-      if (!cart.length && list.length) cart = list.slice();
       const order = createTakeawayKitchenOrder(cart);
       if (!order) return;
       const count = list.reduce((s, l) => s + l.qty, 0);
@@ -19359,6 +19387,7 @@
           if (!id || !tables[id]) return;
           const current = seats.get(tableKey(closed.table));
           if (current && String(current.session) !== String(closed.id)) return;
+          if (mode === 'order' && selectedId === id) return;
           tables[id].status = 'khawya';
           tables[id].covers = 0;
           tables[id].elapsed = 0;
@@ -19620,6 +19649,7 @@
           if (Array.isArray(state.lines) && Number(state.syncVersion || 0) < SERVICE_BILL_SYNC_VERSION) return;
           const id = caisseTableId(state.table || key);
           if (!id || !tables[id] || !state.status) return;
+          if (mode === 'order' && selectedId === id) return;
           /* Compare only server timestamps with server timestamps. The old
              non-terminal guard compared `state.ts` (Cloudflare's clock) with
              `serviceFloorLocalVersion` (this iPad's clock). An iPad even a few
