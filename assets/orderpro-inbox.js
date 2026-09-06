@@ -127,6 +127,7 @@
         state.closedSessions = j.closedSessions || [];
         bridge(delta);
         if (fresh) announce(fresh);
+        verifyCloses();
         paint();
         return fresh;
       })
@@ -220,16 +221,40 @@
    * commun à la carte, aux espèces et à l'addition partagée — et l'appel réseau
    * vit ici. Une vente ne doit jamais attendre le réseau, ni échouer parce
    * qu'il est tombé : la session se refermera au pire à son expiration. */
+  /* ── Une fermeture non confirmée n'est pas une fermeture ─────────────────
+   * Ce POST partait en aveugle : toute réponse HTTP (403, 500, même `closed: 0`
+   * dans un `ok:true`) passait par le même `.then`, et le réseau tombé par le
+   * même `.catch` vide. La caisse, elle, avait déjà tout éteint en local — et
+   * le sondage suivant rallumait la table, indéfiniment. La table ne fermait
+   * jamais, en silence.
+   *
+   * On attend donc la PREUVE : la visite absente des sessions ouvertes au
+   * sondage suivant. Sinon on rejoue (la fermeture est idempotente), cinq fois
+   * au plus, puis on le DIT au lieu de laisser la table se rallumer toute
+   * seule toute la soirée. */
+  var pendingCloses = [];
+  var CLOSE_ATTEMPTS = 5;
+  function normCloseTable(v) {
+    return String(v == null ? '' : v).toLowerCase().replace(/^table\s*/, '').replace(/^t(?=\d+$)/, '');
+  }
   function closeSession(detail) {
     var m = merchant();
     if (!m || !detail) return;
     var body = { merchant: m, closedBy: detail.why || 'settle' };
-    if (detail.session) body.closeSession = detail.session;
-    else if (detail.table) body.closeTable = String(detail.table);
+    var key = '';
+    if (detail.session) { body.closeSession = detail.session; key = 's:' + detail.session; }
+    else if (detail.table) { body.closeTable = String(detail.table); key = 't:' + normCloseTable(detail.table); }
     else return;
+    var known = null;
+    pendingCloses.forEach(function (p) { if (p.key === key) known = p; });
+    if (!known) { known = { body: body, key: key, attempts: 0 }; pendingCloses.push(known); }
+    sendClose(known);
+  }
+  function sendClose(p) {
+    p.attempts++;
     fetch('/api/order/queue', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+      body: JSON.stringify(p.body),
     /* `since = 0` REDEMANDE TOUT, volontairement. Fermer une table change des
        lignes que le curseur n'aurait pas rapportées — une commande soldée ne
        « change » pas au sens de updated_ts pour tout le monde — et la caisse
@@ -238,7 +263,37 @@
        C'est sûr parce que tout est idempotent : les tickets se reconnaissent
        par `opId`, les lignes d'addition par leur marqueur `<id>:<rang>`. Ce
        n'est donc pas une optimisation ratée, c'est une resynchronisation. */
-    }).then(function () { state.since = 0; return pull(); }).catch(function () {});
+    }).then(function (r) { return r.ok ? r.json() : null; })
+      .then(function () { state.since = 0; return pull(); })
+      .then(function () { verifyCloses(); })
+      .catch(function () { /* le sondage régulier suivant re-vérifiera */ });
+  }
+  function verifyCloses() {
+    if (!pendingCloses.length) return;
+    var openIds = {}, seated = {};
+    (state.sessions || []).forEach(function (s) {
+      if (!s) return;
+      if (s.id) openIds[String(s.id)] = 1;
+      if (s.table) seated[normCloseTable(s.table)] = 1;
+    });
+    pendingCloses = pendingCloses.filter(function (p) {
+      var done = p.body.closeSession
+        ? !openIds[String(p.body.closeSession)]
+        : !seated[normCloseTable(p.body.closeTable)];
+      if (done) return false;
+      if (p.attempts < CLOSE_ATTEMPTS) { sendClose(p); return true; }
+      try {
+        var stack = document.getElementById('toast-stack');
+        if (stack) {
+          var el = document.createElement('div'); el.className = 'toast';
+          el.textContent = 'Fermeture non confirmée par le serveur · la table peut se rallumer · réessaie de l’encaisser';
+          stack.appendChild(el);
+          setTimeout(function () { el.classList.add('fade'); }, 8000);
+          setTimeout(function () { el.remove(); }, 8300);
+        }
+      } catch (_) {}
+      return false;
+    });
   }
 
   /* ── attention: a new order must not be missable on a busy counter ────── */

@@ -165,6 +165,7 @@ async function get(fn, qs, headers = {}) {
     /postOrderToTill\(totalNow,\s*linesCopy\)\.then/.test(publicOrderPage)
       && /order_send_failed/.test(publicOrderPage));
 
+  const inboxPage = fs.readFileSync(path.join(ROOT, 'assets/orderpro-inbox.js'), 'utf8');
   ok('la semaine restaurant commence lundi à minuit au Maroc',
     startOfWeek(Date.parse('2026-08-03T12:00:00Z')) === Date.parse('2026-08-02T23:00:00Z'));
   ok('le dimanche reste dans la semaine qui précède',
@@ -353,6 +354,28 @@ async function get(fn, qs, headers = {}) {
   ok('servie, elle ne se rouvre pas', r.status === 409 && r.body.status === 'served');
   r = await post(queuePost, { merchant: SLUG, id: tableOrderId, status: 'rejected' }, asStaff);
   ok('…ni ne se refuse après coup', r.status === 409);
+
+  /* ═══ 4b. FERMETURE · le robinet se coupe vraiment, et le dit ═══════════
+   * Encaisser fermait « en aveugle » : toute réponse HTTP valait succès, donc
+   * une fermeture perdue (réseau, 403, base non migrée) rallumait la table au
+   * sondage suivant, indéfiniment — sans jamais le dire. Le serveur compte
+   * honnêtement (`closed`), et la caisse ne croit que la preuve au sondage. */
+  /* Table 9, jamais utilisée ailleurs : la section 7 ferme encore sess (T7). */
+  const closeVisit = (await post(openSession, { merchant: SLUG, mode: 'table', table: '9' })).body.session;
+  r = await post(queuePost, { merchant: SLUG, closeSession: closeVisit, closedBy: 'settle' }, asStaff);
+  ok('fermer une visite ouverte rend closed:1', r.status === 200 && r.body.ok === true && r.body.closed === 1);
+  r = await post(queuePost, { merchant: SLUG, closeSession: closeVisit, closedBy: 'settle' }, asStaff);
+  ok('…refermer ne ment pas (closed:0, toujours ok pour rester idempotent)',
+    r.status === 200 && r.body.ok === true && r.body.closed === 0);
+  r = await get(readSession, 'merchant=' + SLUG + '&session=' + closeVisit);
+  ok('…le téléphone apprend la fermeture au sondage suivant',
+    r.status === 200 && r.body.status === 'closed');
+  r = await get(queueGet, 'merchant=' + SLUG + '&since=0', asStaff);
+  ok('…et la caisse la reçoit dans les fermetures durables',
+    Array.isArray(r.body.closedSessions) && r.body.closedSessions.some((s) => s.id === closeVisit));
+  ok('la caisse rejoue une fermeture non confirmée au lieu de la croire',
+    /pendingCloses/.test(inboxPage) && /CLOSE_ATTEMPTS = 5/.test(inboxPage)
+      && /Fermeture non confirmée/.test(inboxPage));
 
   r = await post(placeOrder, { merchant: SLUG, mode: 'takeout', session: t1, lines: [line('i2')] });
   const rejId = r.body.id;

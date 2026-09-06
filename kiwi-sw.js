@@ -248,7 +248,7 @@ var SHELL = [
   // OrderPro · publisher + NFC panel (dashboard), inbox (caisse).
   '/assets/orderpro-publish.js?v=6',
   '/assets/orderpro-panel.js?v=1',
-  '/assets/orderpro-inbox.js?v=9',
+  '/assets/orderpro-inbox.js?v=10',
   /* Le relais cuisine · la caisse pose ses bons, la tablette du passe les lit.
      Dans la coquille pour les deux pages : c'est lui qui porte la file de
      secours hors ligne, donc il doit exister QUAND le réseau n'existe pas. */
