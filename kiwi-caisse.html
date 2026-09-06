@@ -5556,7 +5556,7 @@
   <script src="assets/food-production-print.js?v=2" defer></script>
   <!-- OrderPro · orders placed on a customer's phone arrive here over WiFi;
        staff accept one and it becomes a kitchen ticket. Paired terminals only. -->
-  <script src="assets/orderpro-inbox.js?v=11" defer></script>
+  <script src="assets/orderpro-inbox.js?v=12" defer></script>
   <script src="assets/caisse-menu-availability.js?v=4" defer></script>
   <!-- Operator feature flags + managed PINs. Fail-safe: no backend ⇒ no change. -->
   <script src="assets/merchant-config.js?v=270" defer></script>
@@ -19510,6 +19510,30 @@
           return true;
         }
         toast('Commande introuvable dans la caisse');
+        return false;
+      },
+      printOrder(orderId) {
+        const local = opTickets.get(orderId);
+        if (local) {
+          printKitchenTickets(local, local.items || [], { remote: false, force: true });
+          toast('Impression du bon envoyée');
+          return true;
+        }
+        let remote = null;
+        try {
+          const orders = window.KiwiOrderInbox && KiwiOrderInbox.orders && KiwiOrderInbox.orders();
+          remote = orders && orders[orderId];
+        } catch (_) {}
+        if (remote) {
+          opIngest(Object.assign({}, remote, { localKitchenAction: true }));
+          const created = opTickets.get(orderId);
+          if (created) {
+            printKitchenTickets(created, created.items || [], { remote: false, force: true });
+            toast('Impression du bon envoyée');
+            return true;
+          }
+        }
+        toast('Commande introuvable pour impression');
         return false;
       },
       sessionOf: phoneSessionOf,

@@ -64,19 +64,30 @@
       '#kop-root .kop-sec:first-child{margin-top:0;}',
       '#kop-root .kop-card{background:var(--surface);border:1px solid rgba(10,15,13,.08);border-radius:16px;padding:15px 17px;margin-bottom:11px;box-shadow:0 1px 2px rgba(10,15,13,.04);}',
       '#kop-root .kop-card.pending{border-color:rgba(11,110,79,.45);box-shadow:0 4px 16px rgba(11,110,79,.12);}',
-      '#kop-root .kop-top{display:flex;align-items:baseline;gap:10px;margin-bottom:9px;}',
+      '#kop-root .kop-top{display:flex;align-items:center;gap:8px;margin-bottom:9px;flex-wrap:wrap;}',
       '#kop-root .kop-num{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:1.15rem;font-weight:600;}',
       '#kop-root .kop-where{font-size:.82rem;font-weight:600;color:var(--riad,#053B2C);background:var(--mint-soft,#E6FBEF);padding:4px 10px;border-radius:999px;}',
+      '#kop-root button.kop-where-btn{border:0;cursor:pointer;touch-action:manipulation;transition:transform .1s,box-shadow .1s;}',
+      '#kop-root button.kop-where-btn:hover{transform:translateY(-1px);box-shadow:0 2px 6px rgba(11,110,79,.2);}',
+      '#kop-root .kop-server{font-size:.78rem;font-weight:600;color:var(--ink,#0A0F0D);opacity:.75;background:rgba(10,15,13,.06);padding:3px 8px;border-radius:6px;}',
+      '#kop-root .kop-time{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:.78rem;font-weight:600;color:rgba(10,15,13,.65);background:rgba(10,15,13,.04);padding:3px 8px;border-radius:6px;}',
+      '#kop-root .kop-time.is-late{color:#b0402f;background:rgba(176,64,47,.1);font-weight:700;}',
       '#kop-root .kop-total{margin-left:auto;font-family:"JetBrains Mono",ui-monospace,monospace;font-size:1rem;font-weight:600;}',
       '#kop-root .kop-line{display:flex;gap:9px;font-size:.9rem;padding:3px 0;color:var(--ink,#0A0F0D);}',
       '#kop-root .kop-line .q{font-family:"JetBrains Mono",ui-monospace,monospace;color:var(--atlas,#0B6E4F);font-weight:600;min-width:24px;}',
       '#kop-root .kop-line .o{color:rgba(10,15,13,.55);font-size:.82rem;}',
+      '#kop-root .kop-formula-parts{margin-left:26px;margin-top:2px;margin-bottom:6px;border-left:2px solid rgba(11,110,79,.18);padding-left:10px;}',
+      '#kop-root .kop-formula-part{display:flex;gap:6px;font-size:.84rem;padding:2px 0;color:rgba(10,15,13,.78);}',
+      '#kop-root .kop-part-bullet{color:var(--atlas,#0B6E4F);font-weight:700;}',
+      '#kop-root .kop-slot{color:rgba(10,15,13,.5);font-size:.78rem;}',
+      '#kop-root .kop-opt-badge{display:inline-block;background:rgba(11,110,79,.09);color:var(--atlas,#0B6E4F);font-size:.74rem;font-weight:600;padding:1px 6px;border-radius:4px;vertical-align:middle;margin-left:4px;}',
       '#kop-root .kop-acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:13px;}',
       '#kop-root .kop-btn{flex:1;border:0;border-radius:11px;padding:12px;font:600 .92rem/1 inherit;cursor:pointer;}',
       '#kop-root .kop-btn.go{background:var(--atlas,#0B6E4F);color:#fff;}',
       '#kop-root .kop-btn.send{background:var(--mint-soft,#E6FBEF);color:var(--riad,#053B2C);border:1px solid rgba(11,110,79,.22);}',
       '#kop-root .kop-btn.ghost{background:var(--surface);border:1px solid rgba(10,15,13,.14);color:rgba(10,15,13,.65);}',
       '#kop-root .kop-btn.ghost:hover{color:var(--danger,#b0402f);border-color:var(--danger,#b0402f);}',
+      '#kop-root .kop-btn.kop-print{flex:0 0 auto;min-width:86px;}',
       '#kop-root .kop-empty{text-align:center;color:rgba(10,15,13,.5);font-size:.92rem;padding:60px 20px;line-height:1.6;}',
       /* La provenance et l'adresse. Une commande de livraison sans elles renvoie
          le comptoir vers la tablette du prestataire — ce qui annule tout le
@@ -394,10 +405,22 @@
 
   /* ── render ───────────────────────────────────────────────────────────── */
   function list(status) {
+    var closedSet = {};
+    (state.closedSessions || []).forEach(function (s) { if (s) closedSet[String(s)] = 1; });
     return Object.keys(state.orders)
       .map(function (k) { return state.orders[k]; })
-      .filter(function (o) { return o.status === status; })
-      .sort(function (a, b) { return a.created_ts - b.created_ts; });
+      .filter(function (o) {
+        if (!o || o.status !== status) return false;
+        // Jamais de commandes internes de la caisse dans la boîte "Commandes clients"
+        if (o.channel === 'caisse') return false;
+        // Une commande sur table déjà réglée ou dont la session est close est achevée
+        if (o.mode === 'table') {
+          if (o.paid && (status === 'accepted' || status === 'pending')) return false;
+          if (o.session && closedSet[String(o.session)]) return false;
+        }
+        return true;
+      })
+      .sort(function (a, b) { return (a.created_ts || 0) - (b.created_ts || 0); });
   }
 
   /* D'où vient cette commande. 'kiwi' est le téléphone d'un client : c'est le
@@ -434,16 +457,100 @@
     return n;
   }
 
+  function timeAgo(ts) {
+    if (!ts) return '';
+    var min = Math.max(0, Math.floor((Date.now() - Number(ts)) / 60000));
+    if (min < 1) return 'à l\'instant';
+    if (min < 60) return min + ' min';
+    var h = Math.floor(min / 60);
+    var rem = min % 60;
+    return h + 'h' + (rem ? (rem < 10 ? '0' : '') + rem : '');
+  }
+
+  function clockTime(ts) {
+    if (!ts) return '';
+    try {
+      var d = new Date(Number(ts));
+      var hh = d.getHours();
+      var mm = d.getMinutes();
+      return (hh < 10 ? '0' : '') + hh + ':' + (mm < 10 ? '0' : '') + mm;
+    } catch (_) { return ''; }
+  }
+
+  function cleanLineNote(note) {
+    if (!note) return '';
+    return String(note).replace(/^\[.*?\]\s*(·\s*)?/, '').trim();
+  }
+
+  function linesHtml(o) {
+    var raw = o.lines || [];
+    if (!raw.length) return '';
+
+    var formulas = {};
+    var formulaParts = {};
+    raw.forEach(function (l) {
+      if (l.kind === 'formula' && l.formulaUid) formulas[l.formulaUid] = l;
+      if (l.kind === 'formula-part' && l.formulaUid) {
+        if (!formulaParts[l.formulaUid]) formulaParts[l.formulaUid] = [];
+        formulaParts[l.formulaUid].push(l);
+      }
+    });
+
+    var html = [];
+    raw.forEach(function (l) {
+      if (l.kind === 'formula-part' && l.formulaUid && formulas[l.formulaUid]) return;
+
+      var note = cleanLineNote(l.note);
+      var opts = l.options ? ' <span class="kop-opt-badge">' + esc(l.options) + '</span>' : '';
+      var noteSpan = note ? ' <span class="o">· ' + esc(note) + '</span>' : '';
+
+      if (l.kind === 'formula' && l.formulaUid && formulaParts[l.formulaUid]) {
+        var parts = formulaParts[l.formulaUid];
+        var partsHtml = parts.map(function (p) {
+          var pNote = cleanLineNote(p.note);
+          var pOpts = p.options ? ' <span class="kop-opt-badge">' + esc(p.options) + '</span>' : '';
+          var pNoteSpan = pNote ? ' <span class="o">· ' + esc(pNote) + '</span>' : '';
+          var slot = p.slotLabel ? '<span class="kop-slot">' + esc(p.slotLabel) + ' : </span>' : '';
+          return '<div class="kop-formula-part"><span class="kop-part-bullet">↳</span><span>' +
+            slot + esc(p.name || '') + pOpts + pNoteSpan + '</span></div>';
+        }).join('');
+
+        html.push(
+          '<div class="kop-line kop-line-parent">' +
+            '<span class="q">' + (l.qty || 1) + '×</span>' +
+            '<span class="kop-item-name">' + esc(l.name || '') + opts + noteSpan + '</span>' +
+          '</div>' +
+          '<div class="kop-formula-parts">' + partsHtml + '</div>'
+        );
+      } else {
+        html.push(
+          '<div class="kop-line">' +
+            '<span class="q">' + (l.qty || 1) + '×</span>' +
+            '<span>' + esc(l.name || '') + opts + noteSpan + '</span>' +
+          '</div>'
+        );
+      }
+    });
+
+    return html.join('');
+  }
+
   function cardHtml(o) {
-    var where = o.mode === 'table' ? 'Table ' + esc(o.table || '?')
-      : (o.mode === 'delivery' ? 'Livraison' : 'À emporter');
+    var where = o.mode === 'table'
+      ? '<button type="button" class="kop-where kop-where-btn" data-kop-table="' + esc(o.id) + '" title="Voir la table sur le plan">Table ' + esc(o.table || '?') + '</button>'
+      : '<span class="kop-where">' + (o.mode === 'delivery' ? 'Livraison' : 'À emporter') + '</span>';
     var src = o.channel && o.channel !== 'kiwi'
       ? '<span class="kop-src">' + esc(SRC[o.channel] || o.channel) + '</span>' : '';
-    var lines = (o.lines || []).map(function (l) {
-      return '<div class="kop-line"><span class="q">' + (l.qty || 1) + '×</span><span>' + esc(l.name || '') +
-        (l.options ? ' <span class="o">' + esc(l.options) + '</span>' : '') +
-        (l.note ? ' <span class="o">·' + esc(l.note) + '</span>' : '') + '</span></div>';
-    }).join('');
+    var serverHtml = o.server ? '<span class="kop-server" title="Serveur">Serveur : ' + esc(o.server) + '</span>' : '';
+
+    var elapsedMin = o.created_ts ? Math.floor((Date.now() - Number(o.created_ts)) / 60000) : 0;
+    var isLate = o.status !== 'ready' && o.status !== 'served' && elapsedMin >= 15;
+    var timeHtml = o.created_ts
+      ? '<span class="kop-time' + (isLate ? ' is-late' : '') + '">' +
+          clockTime(o.created_ts) + ' · ' + timeAgo(o.created_ts) + '</span>'
+      : '';
+
+    var lines = linesHtml(o);
     var pay = !o.paid
       ? '<button class="kop-btn go" data-kop-pay="' + esc(o.id) + '">Encaisser</button>'
       : '';
@@ -451,24 +558,22 @@
       ? '<button class="kop-btn ghost" data-kop-rej="' + esc(o.id) + '">' +
           (o.status === 'pending' ? 'Refuser' : 'Annuler') + '</button>'
       : '';
+    var printBtn = '<button type="button" class="kop-btn ghost kop-print" data-kop-print="' + esc(o.id) + '" title="Réimprimer le bon">Imprimer</button>';
+
     var acts = o.status === 'pending'
       ? '<div class="kop-acts">' +
           cancel +
-          '<button class="kop-btn send" data-kop-acc="' + esc(o.id) + '">Envoyer en cuisine</button>' + pay +
+          '<button class="kop-btn send" data-kop-acc="' + esc(o.id) + '">Envoyer en cuisine</button>' + pay + printBtn +
         '</div>'
       : (o.status === 'accepted'
-          ? '<div class="kop-acts">' + cancel + '<button class="kop-btn send" data-kop-ready="' + esc(o.id) + '">Marquer prêt</button>' + pay + '</div>'
+          ? '<div class="kop-acts">' + cancel + '<button class="kop-btn send" data-kop-ready="' + esc(o.id) + '">Marquer prêt</button>' + pay + printBtn + '</div>'
           : (o.status === 'ready'
-              /* Le point final. Sans lui, une commande restait « prête » pour
-               * toujours : le téléphone du client ne recevait jamais son
-               * remerciement, et la file gardait une ligne que plus personne
-               * n'avait à traiter. */
               ? '<div class="kop-acts">' + cancel + '<button class="kop-btn send" data-kop-served="' + esc(o.id) + '">' +
-                (o.mode === 'table' ? 'Servie' : 'Remise au client') + '</button>' + pay + '</div>'
+                (o.mode === 'table' ? 'Servie' : 'Remise au client') + '</button>' + pay + printBtn + '</div>'
               : ''));
     return '<div class="kop-card ' + esc(o.status) + '">' +
       '<div class="kop-top"><span class="kop-num">' + orderRef(o) + '</span>' +
-      '<span class="kop-where">' + where + '</span>' + src +
+      where + serverHtml + src + timeHtml +
       '<span class="kop-total">' + fmt(o.total) + ' MAD</span></div>' +
       lines + custHtml(o) + acts + '</div>';
   }
@@ -536,10 +641,21 @@
       document.body.appendChild(root);
       root.addEventListener('click', function (e) {
         if (e.target === root) { close(); return; }
-        var t = e.target.closest('[data-kop-acc],[data-kop-pay],[data-kop-rej],[data-kop-ready],[data-kop-served],#kop-close');
+        var t = e.target.closest('[data-kop-acc],[data-kop-pay],[data-kop-rej],[data-kop-ready],[data-kop-served],[data-kop-print],[data-kop-table],#kop-close');
         if (!t) return;
         if (t.id === 'kop-close') { close(); return; }
-        if (t.dataset.kopPay) {
+        if (t.dataset.kopTable) {
+          try {
+            if (window.KiwiCaisseKitchen && window.KiwiCaisseKitchen.checkoutOrder
+                && window.KiwiCaisseKitchen.checkoutOrder(t.dataset.kopTable)) close();
+          } catch (_) {}
+        } else if (t.dataset.kopPrint) {
+          try {
+            if (window.KiwiCaisseKitchen && window.KiwiCaisseKitchen.printOrder) {
+              window.KiwiCaisseKitchen.printOrder(t.dataset.kopPrint);
+            }
+          } catch (_) {}
+        } else if (t.dataset.kopPay) {
           try {
             if (window.KiwiCaisseKitchen && window.KiwiCaisseKitchen.checkoutOrder
                 && window.KiwiCaisseKitchen.checkoutOrder(t.dataset.kopPay)) close();
@@ -604,7 +720,24 @@
   /* L'addition réglée coupe le téléphone. L'évènement vient de markPaid() dans
    * kiwi-caisse.html — le seul point de passage commun à la carte, aux espèces
    * et à l'addition partagée. */
-  document.addEventListener('kiwi-table-released', function (e) { closeSession(e.detail); });
+  document.addEventListener('kiwi-table-released', function (e) {
+    var d = e && e.detail;
+    if (d) {
+      Object.keys(state.orders).forEach(function (id) {
+        var o = state.orders[id];
+        if (!o || o.mode !== 'table') return;
+        if ((d.session && String(o.session) === String(d.session)) ||
+            (d.table && normCloseTable(o.table) === normCloseTable(d.table))) {
+          o.paid = true;
+          if (o.session && state.closedSessions.indexOf(String(o.session)) < 0) {
+            state.closedSessions.push(String(o.session));
+          }
+        }
+      });
+      paint();
+    }
+    closeSession(e.detail);
+  });
 
   window.KiwiOrderInbox = {
     open: open, close: close, refresh: pull,

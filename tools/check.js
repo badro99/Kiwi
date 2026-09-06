@@ -936,6 +936,7 @@ section('Whole-project regressions');
     'food-production-print-test.mjs',
     'order-mode-exit-test.js',
     'table-takeaway-routing-test.js',
+    'orderpro-inbox-display-test.js',
     'resto-carte-test.js',
     'restaurant-menu-route-test.js',
     'menu-pull-route-test.js',
