@@ -98,10 +98,21 @@ still placeholder data, that's tech debt to replace, not the intended end state.
     the old path until the new one is verified against real data, and never do it as
     a side effect of another task.
 
-  **There is no `package.json` in this repo today.** If you introduce any tooling,
-  that's step zero — with a lockfile, and with the deploy still producing
-  static-hostable output for Cloudflare Pages + GitHub Pages (artefacts committed or
-  built in CI). Both mirrors in §1 must keep working.
+  **`package.json` exists** (added 2026-08-30 in `dd8d6a39`) and declares **no
+  dependencies** — there is no `node_modules`, no lockfile, and nothing to install.
+  It is a script index, not a build: `npm test` / `npm run check` run
+  `tools/check.js`, `npm run stamp` fronts `tools/bump-stamp.js`, `npm run dev` is
+  `wrangler pages dev .`, and the `load:*` scripts drive the k6 suites in
+  `tests/load/`. It sets no `"type"`, which is why running an ES-module file under
+  `functions/` prints a `MODULE_TYPELESS_PACKAGE_JSON` warning — noise, not a
+  failure; do not "fix" it by adding `"type": "module"` without checking every
+  CommonJS caller first.
+
+  So the zero-dependency property still holds, and it is worth keeping. If you
+  introduce tooling that genuinely needs packages, that's the step that changes
+  this — add a lockfile, and keep the deploy producing static-hostable output for
+  Cloudflare Pages + GitHub Pages (artefacts committed or built in CI). Both
+  mirrors in §1 must keep working.
 - **Real backend (live):** Cloudflare Pages Functions + D1 (`functions/`,
   `schema.sql`) — accounts/auth, Live Link sales, operator console, caisse↔dashboard
   pairing. See `docs/ops/LIVE_LINK.md` / `docs/ops/ADMIN.md`.
