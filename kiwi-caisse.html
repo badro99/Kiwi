@@ -5500,7 +5500,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=480" defer></script>
+  <script src="assets/caisse-pwa.js?v=481" defer></script>
   <script src="assets/live-link.js?v=24" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -5576,7 +5576,7 @@
   <script src="assets/food-production-print.js?v=2" defer></script>
   <!-- OrderPro · orders placed on a customer's phone arrive here over WiFi;
        staff accept one and it becomes a kitchen ticket. Paired terminals only. -->
-  <script src="assets/orderpro-inbox.js?v=12" defer></script>
+  <script src="assets/orderpro-inbox.js?v=13" defer></script>
   <script src="assets/caisse-menu-availability.js?v=4" defer></script>
   <!-- Operator feature flags + managed PINs. Fail-safe: no backend ⇒ no change. -->
   <script src="assets/merchant-config.js?v=270" defer></script>
@@ -7814,7 +7814,8 @@
       const h = shape === 'rect' ? Math.max(40, ((+t.h || 12) / 100) * P.h) : w;
       const x = Math.max(PAD, Math.min(P.w - w - PAD, ((+t.x || 0) / 100) * P.w));
       const y = Math.max(PAD, Math.min(P.h - h - PAD, ((+t.y || 0) / 100) * P.h));
-      const elapsed = (t.status === 'ka-yaklo' || t.status === 'bgha-ykhlass' || t.status === 'a-commander')
+      const hasOrder = (tableOrders[id] && tableOrders[id].length > 0) || (orders[id] && orders[id].length > 0);
+      const elapsed = ((t.status === 'ka-yaklo' || t.status === 'bgha-ykhlass' || t.status === 'a-commander') && hasOrder && t.elapsed != null)
         ? `<div class="tbl-elapsed cplan-since">${t.elapsed} mn</div>`
         : '';
       // Server avatar badge · always shown (even on empty tables) so the
@@ -8074,7 +8075,8 @@
       const sv = live.server && servers[live.server];
       const badge = sv
         ? `<span class="tbl-server" style="background:${sv.color};--server-badge-ink:${serverBadgeInk(sv.color)};">${serverInitials(sv)}</span>` : '';
-      const hot = live.status === 'ka-yaklo' || live.status === 'bgha-ykhlass' || live.status === 'a-commander';
+      const hasOrder = (tableOrders[id] && tableOrders[id].length > 0) || (orders[id] && orders[id].length > 0);
+      const hot = (live.status === 'ka-yaklo' || live.status === 'bgha-ykhlass' || live.status === 'a-commander') && hasOrder;
       const elapsed = hot && live.elapsed != null
         ? `<div class="tbl-elapsed cplan-since">${live.elapsed} mn</div>` : '';
       return caisseNoirCellHTML({
@@ -8593,11 +8595,14 @@
       const subEl = $('#rp-substatus');
       const flag = t.status === 'bgha-ykhlass' ? 'bgha-ykhlass' : (t.status === 'a-commander' ? 'a-commander' : 'ka-yaklo');
       subEl.dataset.flag = flag;
-      const subText = ({
-        'bgha-ykhlass': `Addition · ${t.elapsed} mn`,
-        'a-commander':  `À commander · ${t.elapsed} mn`,
-        'ka-yaklo':     `En cours · ${t.elapsed} mn`,
-      })[flag];
+      const hasOrder = (tableOrders[id] && tableOrders[id].length > 0) || (orders[id] && orders[id].length > 0);
+      const subText = !hasOrder
+        ? (phoneSeats.has(tableKey(id)) ? 'Client connecté sur téléphone' : (t.status === 'a-commander' ? 'À commander' : 'Table ouverte'))
+        : ({
+            'bgha-ykhlass': `Addition · ${t.elapsed || 0} mn`,
+            'a-commander':  `À commander · ${t.elapsed || 0} mn`,
+            'ka-yaklo':     `En cours · ${t.elapsed || 0} mn`,
+          })[flag];
       subEl.textContent = subText;
 
       // Server row
@@ -8828,6 +8833,9 @@
       t.status = 'khlass';
       t.elapsed = 0;
       delete t.discount; // clear remise immédiatement à l'encaissement
+      delete t.orderNo;
+      tableOrders[id] = [];
+      delete orders[id];
       /* L'addition est réglée : le téléphone posé sur cette table cesse d'être
          un terminal de commande. C'est LE point de passage de tous les
          encaissements · carte, espèces, addition partagée · donc c'est ici et
@@ -10955,8 +10963,9 @@
     setInterval(() => {
       Object.keys(tables).forEach(id => {
         const t = tables[id];
-        if (t.status === 'ka-yaklo' || t.status === 'bgha-ykhlass' || t.status === 'a-commander') {
-          t.elapsed += 1;
+        const hasOrder = (tableOrders[id] && tableOrders[id].length > 0) || (orders[id] && orders[id].length > 0);
+        if (hasOrder && (t.status === 'ka-yaklo' || t.status === 'bgha-ykhlass' || t.status === 'a-commander')) {
+          t.elapsed = (t.elapsed || 0) + 1;
           // Update DOM in place (cheaper than full re-render)
           const node = document.querySelector(`[data-table="${id}"] .tbl-elapsed`);
           if (node) node.textContent = `${t.elapsed} mn`;
@@ -18577,17 +18586,49 @@
       if (mode !== 'vrap') setMode('vrap');
       vrapEditingNum = null;
       vrapDiscount = null;
+      /* UN CHOIX DE FORMULE COÛTE ZÉRO, ET CE ZÉRO EST UN PRIX, PAS UN TROU.
+         Le serveur le pose exprès (priceLines : `kind === 'formula-part' ? 0`),
+         parce que le parent porte déjà le supplément dans le total payable.
+         `+l.unitPrice || (m ? m.price : 0)` lisait ce zéro comme une absence et
+         retombait sur la carte : chaque choix était refacturé à son prix à la
+         carte PAR-DESSUS la formule. Une expirée de 75 MAD revenait à 90 dans
+         le panier, et le client repartait en payant 15 MAD de trop. On ne
+         consulte donc la carte que si la ligne n'a VRAIMENT pas de prix. */
+      const withParent = new Set((e.lines || [])
+        .filter(l => l && l.kind === 'formula' && l.formulaUid)
+        .map(l => String(l.formulaUid)));
       cart = (e.lines || []).map(l => {
-        const m = menuLineFind(x => String(x.name || '').toLowerCase() === String(l.name || '').toLowerCase());
-        return {
+        const name = String((l && l.name) || '');
+        const m = menuLineFind(x => String(x.name || '').toLowerCase() === name.toLowerCase());
+        const recorded = Number(l && l.unitPrice);
+        const line = {
           uid: newLineUid(),
-          id: (m && m.id) || ('x-' + l.name),
-          name: l.name || (m && m.name) || '',
-          price: Math.max(0, +l.unitPrice || (m ? m.price : 0)),
-          qty: Math.max(1, +l.qty || 1),
-          note: l.note || '',
+          id: (m && m.id) || ('x-' + name),
+          name: name || (m && m.name) || '',
+          price: Number.isFinite(recorded) ? Math.max(0, recorded) : Math.max(0, (m && m.price) || 0),
+          qty: Math.max(1, +(l && l.qty) || 1),
+          note: (l && l.note) || '',
           kind: '', formulaUid: '', formulaChoices: [],
         };
+        /* La formule se reconstitue telle qu'elle est partie : le parent porte
+           le prix et les commandes de quantité, les choix suivent leur parent
+           et se suppriment avec lui (formulaGroup travaille sur formulaUid).
+           Un choix ORPHELIN — parent perdu en route — reste une ligne ordinaire
+           à 0 : marqué `formula-part` sans parent, il perdrait ses commandes de
+           quantité et le caissier ne pourrait plus le retirer du panier. */
+        if (l && l.formulaUid && String(l.kind || '') === 'formula') {
+          line.kind = 'formula';
+          line.formulaUid = String(l.formulaUid);
+          line.formulaName = l.formulaName || line.name;
+        } else if (l && l.formulaUid && String(l.kind || '') === 'formula-part'
+                   && withParent.has(String(l.formulaUid))) {
+          line.kind = 'formula-part';
+          line.formulaUid = String(l.formulaUid);
+          line.formulaName = l.formulaName || '';
+          line.slotLabel = l.slotLabel || '';
+          line.price = 0;
+        }
+        return line;
       }).filter(c => c.name);
       if (!cart.length) { toast('Expirée vide · rien à reprendre'); return; }
       setVrapView('builder');
@@ -19171,6 +19212,14 @@
       }
 
       const lines = tableOrders[id] || (tableOrders[id] = []);
+      if (activeSeat && activeSeat.session) {
+        const curSession = String(activeSeat.session);
+        const filtered = lines.filter(l => !l.orderSession || String(l.orderSession) === curSession);
+        if (filtered.length !== lines.length) {
+          tableOrders[id] = filtered;
+          changed = true;
+        }
+      }
       (o.lines || []).forEach((l, index) => {
         const marker = String(o.id) + ':' + index;
         const existing = lines.find(x => x.orderProLine === marker);

@@ -441,13 +441,27 @@ export async function onRequestGet(context) {
       try {
         const parsed = JSON.parse(r.lines);
         if (Array.isArray(parsed)) {
-          lines = parsed.slice(0, MAX_LINES).map((l) => ({
-            name: String((l && l.name) || '').slice(0, 80),
-            qty: Math.min(99, Math.max(1, Math.round(Number((l && l.qty) || 1)))),
-            unitPrice: Math.max(0, Math.round(Number((l && l.unitPrice) || 0))),
-            note: String((l && l.note) || '').slice(0, 200),
-            station: String((l && l.station) || '').slice(0, 40),
-          })).filter((l) => l.name);
+          lines = parsed.slice(0, MAX_LINES).map((l) => {
+            const line = {
+              name: String((l && l.name) || '').slice(0, 80),
+              qty: Math.min(99, Math.max(1, Math.round(Number((l && l.qty) || 1)))),
+              unitPrice: Math.max(0, Math.round(Number((l && l.unitPrice) || 0))),
+              note: String((l && l.note) || '').slice(0, 200),
+              station: String((l && l.station) || '').slice(0, 40),
+            };
+            /* L'APPARTENANCE À UNE FORMULE VOYAGE AVEC LA LIGNE. Sans elle, une
+             * expirée arrive au comptoir comme une liste de plats indépendants
+             * dont trois valent 0, et la reprise ne peut plus distinguer « ce
+             * choix est compris dans la formule » de « le prix manque ». Elle
+             * retombait alors sur la carte et refacturait le choix par-dessus
+             * le parent : une commande à 75 MAD revenait à 90. Les champs sont
+             * déjà stockés par cleanLines · il suffisait de les rendre. */
+            if (l && l.kind) line.kind = String(l.kind).slice(0, 20);
+            if (l && l.formulaUid) line.formulaUid = String(l.formulaUid).slice(0, 40);
+            if (l && l.formulaName) line.formulaName = String(l.formulaName).slice(0, 80);
+            if (l && l.slotLabel) line.slotLabel = String(l.slotLabel).slice(0, 80);
+            return line;
+          }).filter((l) => l.name);
         }
       } catch (_) { lines = []; }
       return {

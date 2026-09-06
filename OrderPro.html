@@ -2632,6 +2632,25 @@ em, i, cite, dfn, var { font-style: normal; }
       line-height: 1.5;
       color: rgba(255,255,255,0.72);
     }
+    .thanks-reorder-btn {
+      width: 100%;
+      padding: 16px 22px;
+      margin-bottom: 14px;
+      background: #fff;
+      color: var(--forest);
+      border: none;
+      border-radius: 14px;
+      font: 600 15px/1.2 "Inter Tight", system-ui, -apple-system, sans-serif;
+      letter-spacing: -0.005em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      cursor: pointer;
+      box-shadow: 0 4px 18px rgba(0,0,0,0.12);
+      transition: transform 180ms ease, opacity 180ms ease;
+    }
+    .thanks-reorder-btn:active { transform: scale(0.98); opacity: 0.92; }
     .screen-ready.is-active ~ .lang-picker,
     .screen-thanks.is-active ~ .lang-picker { display: none; }
     .kiwi-greet.is-visible ~ .lang-picker { display: none; }
@@ -3315,6 +3334,7 @@ em, i, cite, dfn, var { font-style: normal; }
         <div class="ready-sub" id="thanks-sub" data-i18n="thanks_sub">Votre addition est réglée. À très bientôt.</div>
       </div>
       <div class="ready-bottom">
+        <button class="thanks-reorder-btn" id="thanks-reorder-btn" type="button" data-i18n="thanks_reorder">Commander à nouveau</button>
         <div class="thanks-note" data-i18n="thanks_again">Pour commander à nouveau, approchez votre téléphone du tag.</div>
       </div>
     </section>
@@ -3853,6 +3873,7 @@ em, i, cite, dfn, var { font-style: normal; }
         thanks_sub: "Votre addition est réglée. À très bientôt.",
         thanks_expired: "Votre session s'est terminée. À très bientôt.",
         thanks_again: "Pour commander à nouveau, approchez votre téléphone du tag.",
+        thanks_reorder: "Commander à nouveau",
         prep_waiting: "En attente de la caisse",
         prep_accepted: "Acceptée · en préparation",
         // ── boutique vertical ──
@@ -4030,6 +4051,7 @@ em, i, cite, dfn, var { font-style: normal; }
         thanks_sub: "Your bill is settled. See you soon.",
         thanks_expired: "Your session has ended. See you soon.",
         thanks_again: "To order again, tap your phone on the tag.",
+        thanks_reorder: "Order again",
         prep_waiting: "Waiting for the till",
         prep_accepted: "Accepted · being prepared",
         bq_title: "Our products",
@@ -4206,6 +4228,7 @@ em, i, cite, dfn, var { font-style: normal; }
         thanks_sub: "الحساب تخلّص. نتلاقاو قريب.",
         thanks_expired: "الجلسة ديالك سالات. نتلاقاو قريب.",
         thanks_again: "باش تطلب من جديد، قرّب تيليفونك من التاڭ.",
+        thanks_reorder: "طلب من جديد",
         prep_waiting: "كنتسناو الكيس",
         prep_accepted: "تقبل · كيتوجد",
         bq_title: "المنتوجات ديالنا",
@@ -4569,7 +4592,7 @@ em, i, cite, dfn, var { font-style: normal; }
         const i = itemI18n(m.id);
         const out = m.avail === false;
         return `
-        <article class="dish-card${out ? ' is-out' : ''}"${out ? '' : ` data-add="${escapeHtml(m.id)}"`}>
+        <article class="dish-card${out ? ' is-out' : ''}"${out ? '' : ` data-card="${escapeHtml(m.id)}"`}>
           ${dishMedia(m)}${out ? `<div class="dish-out">${escapeHtml(t('dish_out'))}</div>` : ''}
           <div class="dish-meta">
             ${m.formula ? '<div class="dish-tag">FORMULE</div>' : ''}
@@ -5425,13 +5448,17 @@ em, i, cite, dfn, var { font-style: normal; }
         } catch (_) {}
       },
       /* Une addition réglée à l'instant, sur CETTE table. */
-      recentlySettled(mode, table) {
+      recentlySettled(mode, table, allowReorder = false) {
+        if (allowReorder) return false;
         // A counter tag starts a new takeaway purchase each time it is tapped.
         // Keeping its previous closed session here made the promised NFC retry
         // reopen the thank-you screen for 30 minutes instead of the menu.
         if (mode === 'takeout') return false;
         const s = this._read();
         if (!s || !s.closedAt) return false;
+        // Seule une vraie addition encaissée en caisse (settle) empêche la réouverture immédiate.
+        // Une table annulée sans encaissement ou expirée ne doit pas bloquer le client.
+        if (s.closedBy && s.closedBy !== 'settle') return false;
         if (s.mode !== mode || String(s.table || '') !== String(table || '')) return false;
         return (Date.now() - s.closedAt) < 30 * 60 * 1000;
       },
@@ -5464,7 +5491,7 @@ em, i, cite, dfn, var { font-style: normal; }
       markClosed(why) {
         if (this.closed) return;
         this.closed = true; this.closedBy = why || '';
-        this._write({ id: this.id, mode: this.mode, table: this.table, closedAt: Date.now() });
+        this._write({ id: this.id, mode: this.mode, table: this.table, closedAt: Date.now(), closedBy: this.closedBy });
         onSessionClosed();
       },
     };
@@ -5651,8 +5678,8 @@ em, i, cite, dfn, var { font-style: normal; }
     /* S'asseoir. Le seul chemin par lequel une session s'ouvre, pour que les
        trois entrées (tag de table, tag de comptoir, choix à la main) passent
        par les mêmes refus et les mêmes messages. */
-    async function seatHere(mode, table) {
-      if (SESSION.recentlySettled(mode, table)) {
+    async function seatHere(mode, table, allowReorder = false) {
+      if (SESSION.recentlySettled(mode, table, allowReorder)) {
         // L'addition vient d'être réglée sur ce téléphone : recharger la page
         // ne rouvre pas le robinet. Le tag de la table servira au client
         // suivant, qui n'a pas ce souvenir dans le sien.
@@ -6350,13 +6377,42 @@ em, i, cite, dfn, var { font-style: normal; }
         if (e.target.closest('#prep-perm-btn')) { askNotificationPermission(); return; }
         // Takeout: ready → restart
         if (e.target.closest('#ready-cta')) { restartMenu(); return; }
-        // Add to cart — opens customizer if item has options
+        // Thanks screen: reorder button clears dead session and immediately reopens menu
+        if (e.target.closest('#thanks-reorder-btn')) {
+          SESSION._write(null);
+          SESSION.closed = false;
+          SESSION.closedBy = '';
+          SESSION.id = '';
+          sentLines.length = 0;
+          sessionTotal = 0;
+          cart.clear();
+          refreshCartUI();
+          if (orderMode === 'table' && tableNumber) {
+            seatHere('table', tableNumber, true).then((ok) => {
+              if (ok) { gotoScreen('screen-menu'); applyMenuMode(); }
+            });
+          } else {
+            restartMenu();
+          }
+          return;
+        }
+        // Add to cart — dedicated + button opens customizer if item has options, or adds directly
         const addBtn = e.target.closest('[data-add]');
         if (addBtn) {
           handleAddClick(addBtn.dataset.add);
           addBtn.classList.remove('is-popped');
           void addBtn.offsetWidth;
           addBtn.classList.add('is-popped');
+          return;
+        }
+        // Dish card tap: ONLY opens customizer if item has customizable options!
+        // Never silently add items with no options (e.g. water, drinks) on touch/scroll.
+        const cardEl = e.target.closest('[data-card]');
+        if (cardEl) {
+          const item = standaloneMenuItem(cardEl.dataset.card);
+          if (item && item.options && item.options.length > 0) {
+            openCustomizer(item);
+          }
           return;
         }
         // Cart qty (uses encoded lineKey)

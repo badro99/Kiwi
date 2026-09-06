@@ -99,26 +99,43 @@ export async function onRequestPost(context) {
     let live = null;
     try {
       live = await env.DB.prepare(
-        `SELECT id, opened_ts FROM table_sessions
+        `SELECT id, opened_ts, seen_ts FROM table_sessions
           WHERE merchant = ? AND table_no = ? AND status = 'open'`
       ).bind(merchant, table).first();
     } catch (_) { /* table pas encore migrée → on tentera l'insertion, qui dira la vérité */ }
 
-    if (live && (now - (live.opened_ts || 0)) < SESSION_MAX_MS) {
+    // Une session n'est reprise que si elle a été vue récemment (moins de 30 min sans activité)
+    const lastSeen = Number((live && (live.seen_ts || live.opened_ts)) || 0);
+    const isRecent = live && (now - Number(live.opened_ts || 0)) < SESSION_MAX_MS && (now - lastSeen) < 30 * 60 * 1000;
+
+    let allPaid = false;
+    if (isRecent) {
+      try {
+        const orderCounts = await env.DB.prepare(
+          `SELECT COUNT(*) AS total, SUM(CASE WHEN paid_ts IS NOT NULL THEN 1 ELSE 0 END) AS paid
+             FROM orders WHERE merchant = ? AND session_id = ?`
+        ).bind(merchant, live.id).first();
+        if (orderCounts && orderCounts.total > 0 && Number(orderCounts.total) === Number(orderCounts.paid)) {
+          allPaid = true;
+        }
+      } catch (_) {}
+    }
+
+    if (isRecent && !allPaid) {
       try {
         await env.DB.prepare('UPDATE table_sessions SET seen_ts = ? WHERE id = ?')
           .bind(now, live.id).run();
       } catch (_) {}
       return json({ ok: true, session: live.id, mode, table, status: 'open', resumed: true });
     }
-    /* Session vivante mais périmée : on la ferme d'abord, sinon l'index unique
-     * partiel refuserait la nouvelle et la table resterait inutilisable. */
+    /* Session vivante mais périmée, inactive ou déjà réglée : on la ferme d'abord,
+     * sinon l'index unique partiel refuserait la nouvelle et la table resterait inutilisable. */
     if (live) {
       try {
         await env.DB.prepare(
-          `UPDATE table_sessions SET status = 'closed', closed_ts = ?, closed_by = 'expiry'
+          `UPDATE table_sessions SET status = 'closed', closed_ts = ?, closed_by = ?
             WHERE id = ? AND status = 'open'`
-        ).bind(now, live.id).run();
+        ).bind(now, allPaid ? 'settle' : 'expiry', live.id).run();
       } catch (_) {}
     }
   }

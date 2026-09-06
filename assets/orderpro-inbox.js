@@ -558,18 +558,17 @@
       ? '<button class="kop-btn ghost" data-kop-rej="' + esc(o.id) + '">' +
           (o.status === 'pending' ? 'Refuser' : 'Annuler') + '</button>'
       : '';
-    var printBtn = '<button type="button" class="kop-btn ghost kop-print" data-kop-print="' + esc(o.id) + '" title="Réimprimer le bon">Imprimer</button>';
 
     var acts = o.status === 'pending'
       ? '<div class="kop-acts">' +
           cancel +
-          '<button class="kop-btn send" data-kop-acc="' + esc(o.id) + '">Envoyer en cuisine</button>' + pay + printBtn +
+          '<button class="kop-btn send" data-kop-acc="' + esc(o.id) + '">Envoyer en cuisine</button>' + pay +
         '</div>'
       : (o.status === 'accepted'
-          ? '<div class="kop-acts">' + cancel + '<button class="kop-btn send" data-kop-ready="' + esc(o.id) + '">Marquer prêt</button>' + pay + printBtn + '</div>'
+          ? '<div class="kop-acts">' + cancel + '<button class="kop-btn send" data-kop-ready="' + esc(o.id) + '">Marquer prêt</button>' + pay + '</div>'
           : (o.status === 'ready'
               ? '<div class="kop-acts">' + cancel + '<button class="kop-btn send" data-kop-served="' + esc(o.id) + '">' +
-                (o.mode === 'table' ? 'Servie' : 'Remise au client') + '</button>' + pay + printBtn + '</div>'
+                (o.mode === 'table' ? 'Servie' : 'Remise au client') + '</button>' + pay + '</div>'
               : ''));
     return '<div class="kop-card ' + esc(o.status) + '">' +
       '<div class="kop-top"><span class="kop-num">' + orderRef(o) + '</span>' +

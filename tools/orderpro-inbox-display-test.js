@@ -58,8 +58,8 @@ ok('order cards include clock time and elapsed time',
 ok('order cards include server name when present',
   /kop-server/.test(INBOX_SRC) && /o\.server/.test(INBOX_SRC));
 
-ok('order cards include print button with data-kop-print',
-  /data-kop-print=/.test(INBOX_SRC));
+ok('order cards omit print button (removed for simplicity)',
+  !/class="[^"]*kop-print/.test(INBOX_SRC));
 
 ok('open() click handler routes data-kop-table and data-kop-print',
   /checkoutOrder\(t\.dataset\.kopTable\)/.test(INBOX_SRC) &&
@@ -163,7 +163,7 @@ ok('cardHtml nests formula choices under formula parent',
   cardHtml.includes('Tagliatelle') && cardHtml.includes('Crema di Fromaggi') && cardHtml.includes('Poulet'));
 ok('cardHtml strips technical bracket notes from choices',
   !cardHtml.includes('[Prépare ton Plat · Pâtes]'));
-ok('cardHtml includes print button', cardHtml.includes('data-kop-print="ord-1"'));
+ok('cardHtml omits print button', !cardHtml.includes('kop-print'));
 
 // Test table release event
 domListeners['kiwi-table-released']({ detail: { table: '3', why: 'settle' } });
