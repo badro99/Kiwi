@@ -104,22 +104,27 @@ export async function onRequestPost(context) {
       ).bind(merchant, table).first();
     } catch (_) { /* table pas encore migrée → on tentera l'insertion, qui dira la vérité */ }
 
-    // Une session n'est reprise que si elle a été vue récemment (moins de 30 min sans activité)
-    const lastSeen = Number((live && (live.seen_ts || live.opened_ts)) || 0);
-    const isRecent = live && (now - Number(live.opened_ts || 0)) < SESSION_MAX_MS && (now - lastSeen) < 30 * 60 * 1000;
-
     let allPaid = false;
-    if (isRecent) {
+    let totalOrders = 0;
+    if (live) {
       try {
         const orderCounts = await env.DB.prepare(
           `SELECT COUNT(*) AS total, SUM(CASE WHEN paid_ts IS NOT NULL THEN 1 ELSE 0 END) AS paid
              FROM orders WHERE merchant = ? AND session_id = ?`
         ).bind(merchant, live.id).first();
-        if (orderCounts && orderCounts.total > 0 && Number(orderCounts.total) === Number(orderCounts.paid)) {
+        totalOrders = Number((orderCounts && orderCounts.total) || 0);
+        const paidOrders = Number((orderCounts && orderCounts.paid) || 0);
+        if (totalOrders > 0 && totalOrders === paidOrders) {
           allPaid = true;
         }
       } catch (_) {}
     }
+
+    // Une session n'est reprise que si elle a été vue récemment :
+    // - tant qu'aucune commande n'a été passée (client qui choisit son repas), elle reste ouverte généreusement (6h / SESSION_MAX_MS)
+    // - si une commande a déjà été passée, elle expire après 30 minutes sans activité
+    const lastSeen = Number((live && (live.seen_ts || live.opened_ts)) || 0);
+    const isRecent = live && (now - Number(live.opened_ts || 0)) < SESSION_MAX_MS && (totalOrders === 0 || (now - lastSeen) < 30 * 60 * 1000);
 
     if (isRecent && !allPaid) {
       try {

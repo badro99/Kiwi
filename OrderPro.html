@@ -5297,39 +5297,60 @@ em, i, cite, dfn, var { font-style: normal; }
          lit le prix et recalcule le total. Avant, une requête modifiée créait
          une commande à 1 MAD pour un plat à 250 et le ticket cuisine sortait
          avec le faux prix. */
-      const res = await NET.placeOrder({
+      const linesPayload = linesCopy.flatMap((l, lineIndex) => {
+        const item = itemOf(l.id);
+        const formulaSlots = (item && item.options || []).filter(opt => opt.formulaSlotId);
+        const formulaUid = formulaSlots.length ? `${pendingRef}-${lineIndex}`.slice(0, 40) : '';
+        const parent = {
+          id: l.id, qty: l.qty,
+          options: describeOptionChoices(l).map(p => `${groupLabel(p.group)}: ${p.label}`).join(' · '),
+          optionChoices: describeOptionChoices(l),
+          visuals: describeOptionVisuals(l, true),
+          note: l.note || '',
+        };
+        if (!formulaUid) return [parent];
+        Object.assign(parent, { kind: 'formula', formulaUid, formulaName: nameOf(l.id) });
+        const children = [];
+        formulaSlots.forEach(slot => {
+          const selected = l.options?.[slot.key];
+          const ids = slot.type === 'multi' ? (Array.isArray(selected) ? selected : [])
+            : (selected == null ? [] : [selected]);
+          ids.forEach((id, choiceIndex) => children.push({
+            id, qty: l.qty, kind: 'formula-part', formulaUid,
+            formulaName: nameOf(l.id), slotLabel: slot.label || '',
+            formulaSlotId: slot.formulaSlotId,
+            lineId: `${formulaUid}-${slot.formulaSlotId}-${choiceIndex}`.slice(0, 60),
+          }));
+        });
+        return [parent].concat(children);
+      });
+
+      if (!SESSION.id || SESSION.closed) {
+        await SESSION.open(orderMode, orderMode === 'table' ? tableNumber : '');
+      }
+
+      let res = await NET.placeOrder({
         mode: orderMode,                       // 'table' | 'takeout'
         table: orderMode === 'table' ? tableNumber : '',
         session: SESSION.id || '',
         ref: pendingRef,
-        lines: linesCopy.flatMap((l, lineIndex) => {
-          const item = itemOf(l.id);
-          const formulaSlots = (item && item.options || []).filter(opt => opt.formulaSlotId);
-          const formulaUid = formulaSlots.length ? `${pendingRef}-${lineIndex}`.slice(0, 40) : '';
-          const parent = {
-            id: l.id, qty: l.qty,
-            options: describeOptionChoices(l).map(p => `${groupLabel(p.group)}: ${p.label}`).join(' · '),
-            optionChoices: describeOptionChoices(l),
-            visuals: describeOptionVisuals(l, true),
-            note: l.note || '',
-          };
-          if (!formulaUid) return [parent];
-          Object.assign(parent, { kind: 'formula', formulaUid, formulaName: nameOf(l.id) });
-          const children = [];
-          formulaSlots.forEach(slot => {
-            const selected = l.options?.[slot.key];
-            const ids = slot.type === 'multi' ? (Array.isArray(selected) ? selected : [])
-              : (selected == null ? [] : [selected]);
-            ids.forEach((id, choiceIndex) => children.push({
-              id, qty: l.qty, kind: 'formula-part', formulaUid,
-              formulaName: nameOf(l.id), slotLabel: slot.label || '',
-              formulaSlotId: slot.formulaSlotId,
-              lineId: `${formulaUid}-${slot.formulaSlotId}-${choiceIndex}`.slice(0, 60),
-            }));
-          });
-          return [parent].concat(children);
-        }),
+        lines: linesPayload,
       });
+
+      if (res && res.error === 'session-closed' && (!currentOrderId || (cart && cart.size > 0))) {
+        SESSION.id = '';
+        SESSION.closed = false;
+        const reop = await SESSION.open(orderMode, orderMode === 'table' ? tableNumber : '');
+        if (reop) {
+          res = await NET.placeOrder({
+            mode: orderMode,
+            table: orderMode === 'table' ? tableNumber : '',
+            session: SESSION.id || '',
+            ref: pendingRef,
+            lines: linesPayload,
+          });
+        }
+      }
 
       btn.classList.remove('is-loading');
       if (label) label.textContent = prevLabel;
@@ -5339,7 +5360,14 @@ em, i, cite, dfn, var { font-style: normal; }
         /* La session a été fermée pendant qu'on commandait : l'addition vient
            d'être réglée. Le dire franchement vaut mieux qu'un « échec » qui
            inviterait à réessayer indéfiniment. */
-        if (err === 'session-closed') { SESSION.markClosed('settle'); return; }
+        if (err === 'session-closed') {
+          if (!currentOrderId || (cart && cart.size > 0)) {
+            showToast(t('order_offline'));
+            return;
+          }
+          SESSION.markClosed('settle');
+          return;
+        }
         if (err === 'service-closed') { showToast(t('order_closed')); return; }
         /* La carte a bougé sous les doigts du client — un plat épuisé, un plat
            retiré. On le dit avec le nom, et on retire la ligne : réessayer à
@@ -5450,6 +5478,7 @@ em, i, cite, dfn, var { font-style: normal; }
       /* Une addition réglée à l'instant, sur CETTE table. */
       recentlySettled(mode, table, allowReorder = false) {
         if (allowReorder) return false;
+        if (cart && cart.size > 0) return false;
         // A counter tag starts a new takeaway purchase each time it is tapped.
         // Keeping its previous closed session here made the promised NFC retry
         // reopen the thank-you screen for 30 minutes instead of the menu.
@@ -5459,6 +5488,7 @@ em, i, cite, dfn, var { font-style: normal; }
         // Seule une vraie addition encaissée en caisse (settle) empêche la réouverture immédiate.
         // Une table annulée sans encaissement ou expirée ne doit pas bloquer le client.
         if (s.closedBy && s.closedBy !== 'settle') return false;
+        if (s.hadOrder === false) return false;
         if (s.mode !== mode || String(s.table || '') !== String(table || '')) return false;
         return (Date.now() - s.closedAt) < 30 * 60 * 1000;
       },
@@ -5491,7 +5521,7 @@ em, i, cite, dfn, var { font-style: normal; }
       markClosed(why) {
         if (this.closed) return;
         this.closed = true; this.closedBy = why || '';
-        this._write({ id: this.id, mode: this.mode, table: this.table, closedAt: Date.now(), closedBy: this.closedBy });
+        this._write({ closedBy: this.closedBy, id: this.id, mode: this.mode, table: this.table, closedAt: Date.now(), hadOrder: !!currentOrderId || (Array.isArray(sentLines) && sentLines.length > 0) });
         onSessionClosed();
       },
     };
@@ -5538,7 +5568,16 @@ em, i, cite, dfn, var { font-style: normal; }
           const s = await NET.sessionStatus(SESSION.id);
           // Injoignable ⇒ on ne conclut RIEN. Déclarer la session fermée sur un
           // réseau qui tousse mettrait le client dehors au milieu du repas.
-          if (s && s.ok && s.status !== 'open') { SESSION.markClosed(s.closedBy); return; }
+          if (s && s.ok && s.status !== 'open') {
+            // Un client qui choisit encore son repas (aucune commande passée)
+            // ou qui a un panier en cours ne doit JAMAIS être expulsé ni voir son panier vidé !
+            if (!currentOrderId || (cart && cart.size > 0)) {
+              SESSION.id = '';
+              return;
+            }
+            SESSION.markClosed(s.closedBy);
+            return;
+          }
         }
 
         if (currentOrderId) {

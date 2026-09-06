@@ -127,5 +127,21 @@ ok('queue.js onRequestPost handles dismiss_expired and marks server_name dismiss
 ok('queue.js GET query excludes orders marked dismissed',
   /WHERE merchant = \? AND status = 'rejected'[\s\S]*?AND \(server_name IS NULL OR server_name <> 'dismissed'\)/.test(QUEUE_SRC));
 
+console.log('■ Guest Ordering Protection (No Kickout While Ordering)');
+
+// 8. Guest ordering protection against kickout
+ok('LIVE.tick protects guests while choosing order: never calls markClosed when !currentOrderId or cart > 0',
+  /if \(s && s\.ok && s\.status !== 'open'\) \{[\s\S]*?if \(!currentOrderId \|\| \(cart && cart\.size > 0\)\) \{[\s\S]*?SESSION\.id = '';[\s\S]*?return;/.test(ORDERPRO_SRC));
+
+ok('SESSION.recentlySettled returns false if hadOrder === false or cart > 0',
+  /if \(cart && cart\.size > 0\) return false;/.test(ORDERPRO_SRC) &&
+  /if \(s\.hadOrder === false\) return false;/.test(ORDERPRO_SRC));
+
+ok('placeOrder retries transparently on session-closed when browsing',
+  /if \(res && res\.error === 'session-closed' && \(!currentOrderId \|\| \(cart && cart\.size > 0\)\)\) \{[\s\S]*?SESSION\.open\(orderMode/.test(ORDERPRO_SRC));
+
+ok('session.js allows full 6 hour lifetime when no orders are placed yet',
+  /totalOrders === 0 \|\| \(now - lastSeen\) < 30 \* 60 \* 1000/.test(SESSION_SRC));
+
 console.log(`\nResults: ${passed} passed, ${failed} failed.\n`);
 if (failed > 0) process.exit(1);
