@@ -165,7 +165,31 @@ async function get(fn, qs, headers = {}) {
     /postOrderToTill\(totalNow,\s*linesCopy\)\.then/.test(publicOrderPage)
       && /order_send_failed/.test(publicOrderPage));
 
+  /* ═══ 1b. À EMPORTER · ni disparition ni faux impayé ══════════════════════
+   * Le timbre « payé » ne voyageait que par un appel non attendu : un trou
+   * réseau, et l'argent était au journal pendant que la file disait « impayé ».
+   * La caisse repousse donc le timbre à chaque sondage tant que le serveur le
+   * nie (idempotent côté serveur, jamais sur une refusée). Et une commande
+   * tranchée par le TTL n'est plus un fantôme payable : le sondage expose ses
+   * refus récents, la caisse enterre ses `held` morts en le disant, prévient
+   * avant l'échéance, et propose la reprise en un geste. */
   const inboxPage = fs.readFileSync(path.join(ROOT, 'assets/orderpro-inbox.js'), 'utf8');
+  ok('la caisse repousse le timbre payé tant que le serveur le nie',
+    /known\.paid && !o\.paid/.test(caissePage)
+      && /opPush\(known,[\s\S]{0,160}\{\s*paid:\s*true\s*\}\)/.test(caissePage));
+  ok('…mais jamais sur une commande refusée',
+    /o\.status !== 'rejected'[\s\S]{0,280}paid:\s*true/.test(caissePage));
+  ok('la caisse enterre ses tickets en attente quand le serveur les dit refusés',
+    /t\.status !== 'held'/.test(caissePage) && /expirée sans validation/.test(caissePage));
+  ok('…et propose la reprise en un geste, comme une vente neuve',
+    /data-exp-reprendre/.test(caissePage) && /function reprendreExpired\(id\)/.test(caissePage));
+  ok('le sondage transmet les refus récents à la caisse',
+    /state\.expired = j\.expired/.test(inboxPage)
+      && /ingest\(delta, all, state\.sessions, state\.closedSessions, state\.expired\)/.test(inboxPage));
+  ok('…et prévient avant l’échéance, une fois par commande',
+    /EXPIRY_WARN_MS = 20 \* 60 \* 1000/.test(inboxPage) && /state\.expiryWarned\[id\]/.test(inboxPage));
+  ok('…et dit quand la base non migrée rend les statuts de paiement non fiables',
+    /warnDegraded\(j\.degraded\)/.test(inboxPage) && /statuts de paiement non fiables/.test(inboxPage));
   ok('la semaine restaurant commence lundi à minuit au Maroc',
     startOfWeek(Date.parse('2026-08-03T12:00:00Z')) === Date.parse('2026-08-02T23:00:00Z'));
   ok('le dimanche reste dans la semaine qui précède',
@@ -278,6 +302,12 @@ async function get(fn, qs, headers = {}) {
     !r.body.orders.some((o) => o.id === staleId));
   ok('…elle est fermée durablement côté serveur',
     DB._db.prepare('SELECT status FROM orders WHERE id=?').get(staleId).status === 'rejected');
+  ok('…mais elle reste lisible comme expirée pour que le comptoir la retrouve',
+    Array.isArray(r.body.expired) && r.body.expired.some((o) => o.id === staleId));
+  ok('…avec de quoi la reprendre (numéro, lignes, total)',
+    r.body.expired.some((o) => o.id === staleId && o.number === 999 && o.total === 15));
+  ok('…et elle ne pollue pas la file des vivantes',
+    !r.body.orders.some((o) => o.id === staleId));
 
   /* ═══ 3. SESSION ════════════════════════════════════════════════════════ */
   r = await post(openSession, { merchant: SLUG, mode: 'table', table: 'T7' });

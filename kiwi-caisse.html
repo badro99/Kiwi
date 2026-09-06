@@ -5556,7 +5556,7 @@
   <script src="assets/food-production-print.js?v=2" defer></script>
   <!-- OrderPro · orders placed on a customer's phone arrive here over WiFi;
        staff accept one and it becomes a kitchen ticket. Paired terminals only. -->
-  <script src="assets/orderpro-inbox.js?v=10" defer></script>
+  <script src="assets/orderpro-inbox.js?v=11" defer></script>
   <script src="assets/caisse-menu-availability.js?v=4" defer></script>
   <!-- Operator feature flags + managed PINs. Fail-safe: no backend ⇒ no change. -->
   <script src="assets/merchant-config.js?v=270" defer></script>
@@ -18405,6 +18405,53 @@
       </div>`;
     }
 
+    /* Une expirée n'est plus une commande, c'est un souvenir avec des lignes :
+       on la réaffiche en lecture seule, et la reprise en fait une vente neuve
+       (nouveau numéro, nouveau bon) — jamais une résurrection, le serveur ne
+       saurait pas la rouvrir. */
+    function expiredRow(e) {
+      const items = (e.lines || []).map(l => `${l.qty}× ${l.name}`).join(', ') || '—';
+      const when = (() => { try {
+        const mins = Math.max(0, Math.round((Date.now() - Number(e.updated_ts || 0)) / 60000));
+        return mins < 1 ? "à l'instant" : `il y a ${mins} min`;
+      } catch (_) { return ''; } })();
+      const where = e.mode === 'table' && e.table ? `Table ${kdsEsc(e.table)}` : 'À emporter';
+      return `<div class="vrap-hrow">
+        <span class="vrap-hrow-num">N°${kdsEsc(e.number)} · ${where}</span>
+        <span class="vrap-hrow-items">${kdsEsc(items)} <span style="opacity:.6">· ${kdsEsc(when)}</span></span>
+        <span class="vrap-hrow-total">${fmtMAD(e.total || 0)}</span>
+        <button class="vrap-act vrap-act-send" data-exp-reprendre="${kdsEsc(e.id)}">Reprendre</button>
+      </div>`;
+    }
+
+    /* Recharger les lignes d'une expirée dans le panier, comme une vente neuve :
+       re-saisie revue par le caissier, re-chiffrée au passage en caisse. Un
+       second tap recharge le même panier — jamais un doublon en cuisine. */
+    function reprendreExpired(id) {
+      const e = (expiredOrders || []).find(x => x && String(x.id) === String(id));
+      if (!e || !(e.lines || []).length) { toast('Expirée introuvable'); return; }
+      if (mode !== 'vrap') setMode('vrap');
+      vrapEditingNum = null;
+      vrapDiscount = null;
+      cart = (e.lines || []).map(l => {
+        const m = menuLineFind(x => String(x.name || '').toLowerCase() === String(l.name || '').toLowerCase());
+        return {
+          uid: newLineUid(),
+          id: (m && m.id) || ('x-' + l.name),
+          name: l.name || (m && m.name) || '',
+          price: Math.max(0, +l.unitPrice || (m ? m.price : 0)),
+          qty: Math.max(1, +l.qty || 1),
+          note: l.note || '',
+          kind: '', formulaUid: '', formulaChoices: [],
+        };
+      }).filter(c => c.name);
+      if (!cart.length) { toast('Expirée vide · rien à reprendre'); return; }
+      setVrapView('builder');
+      renderMenu();
+      renderCart();
+      toast(`N°${e.number} reprise · vérifie et encaisse`);
+    }
+
     function renderVrapBoard() {
       const body = $('#vrap-board-body');
       if (!body) return;
@@ -18423,6 +18470,18 @@
         ? `<div class="vrap-orders">${active.map(vrapOrderCard).join('')}</div>`
         : `<div class="vrap-empty"><i data-lucide="package"></i><span>Aucune commande à emporter, clique « Nouvelle commande » pour démarrer.</span></div>`;
       html += `</div>`;
+      /* ── LES EXPIRÉES ─────────────────────────────────────────────────
+       * Refus récents du serveur (TTL ou comptoir), lecture seule. Sans
+       * cette section, une commande jamais validée à temps n'existait plus
+       * nulle part : « on ne trouve rien ». Ici elle garde son numéro, ses
+       * lignes et son total, et « Reprendre » la recharge dans le panier
+       * comme une vente neuve — le client repart avec son sac, pas avec
+       * une excuse. */
+      const expList = (expiredOrders || []).filter(e => e && e.id);
+      if (expList.length) {
+        html += `<div class="vrap-section"><div class="vrap-section-label">Expirées · à reprendre (${expList.length})</div>`
+          + `<div class="vrap-hrows">${expList.map(expiredRow).join('')}</div></div>`;
+      }
       if (done.length) {
         html += `<div class="vrap-section"><div class="vrap-section-label">Historique · servies aujourd'hui</div>`
           + `<div class="vrap-hrows">${done.map(vrapHistoryRow).join('')}</div></div>`;
@@ -18659,6 +18718,8 @@
       }
       const ho = e.target.closest('[data-vrap-handover]');
       if (ho) { vrapHandover(Number(ho.dataset.vrapHandover)); return; }
+      const exp = e.target.closest('[data-exp-reprendre]');
+      if (exp) { reprendreExpired(exp.dataset.expReprendre); return; }
       // Any other click on an order card opens it (unpaid → edit + checkout).
       const card = e.target.closest('.vrap-order');
       if (card) { openVrapOrder(Number(card.dataset.vrapNum)); return; }
@@ -18701,6 +18762,7 @@
        second, on indexe sur le premier · sans quoi une commande client n°7 et
        une vente au comptoir n°7 se seraient écrasées l'une l'autre. */
     const opTickets = new Map();   // id serveur → ticket local
+    let expiredOrders = [];        // refus récents du serveur, lecture seule (reprise)
 
     function opMerchant() {
       try { return (window.KiwiOrderInbox && KiwiOrderInbox.merchant && KiwiOrderInbox.merchant()) || ''; }
@@ -19165,6 +19227,20 @@
         });
       }
       if (o.paid && !known.paid) known.paid = true;
+      /* Le timbre « payé » ne voyage que par UN appel non attendu (opPush dans
+         settleVrapPayment) : un trou réseau à cet instant, et l'argent est au
+         journal pendant que la file dit « impayé » pour toujours — le faux
+         impayé, avec son risque de double encaissement. Le serveur accepte ce
+         timbre en idempotent (branche `replayed`), donc on le repousse à
+         chaque sondage tant que le serveur le nie : ça s'arrête tout seul dès
+         qu'il l'accuse. Jamais sur une refusée — une décision humaine ne se
+         rejoue pas en boucle. */
+      if (known.paid && !o.paid && o.status !== 'rejected'
+          && (o.status === 'pending' || o.status === 'accepted' || o.status === 'ready' || o.status === 'served')) {
+        try {
+          opPush(known, o.status === 'ready' ? 'ready' : (o.status === 'served' ? 'served' : 'accepted'), { paid: true });
+        } catch (_) {}
+      }
       if (o.server && !known.server) known.server = o.server;
     }
 
@@ -19197,8 +19273,38 @@
          table aurait clignoté six secondes puis se serait tue, avec la commande
          toujours en attente. Les sessions, elles, arrivent en instantané
          complet et se relisent telles quelles. */
-      ingest(delta, all, sessions, closedSessions) {
+      ingest(delta, all, sessions, closedSessions, expired) {
         let touched = false;
+        /* ── LES MORTS NE PAIENT PLUS ─────────────────────────────────────
+         * Le serveur expose ses refus récents (voir `expired` dans queue.js) :
+         * un ticket local encore `held` dont le serveur dit « refusée » est
+         * une commande morte que le TTL a tranchée. Sans ce deuil, elle
+         * restait payable : on encaissait une commande que le serveur
+         * refuserait (409), après avoir imprimé la cuisine en local. On
+         * l'enterre donc ici, en le DISANT (numéro + reprise possible), et
+         * jamais en silence. Seuls les `held` : un ticket déjà validé a fait
+         * partir la cuisine, sa mort se règle au comptoir, pas ici. */
+        try {
+          const dead = new Set((expired || []).map(e => e && String(e.id || '')));
+          if (dead.size) {
+            for (let i = kdsOrders.length - 1; i >= 0; i--) {
+              const t = kdsOrders[i];
+              if (!t || t.status !== 'held' || !t.opId || !dead.has(String(t.opId))) continue;
+              const gone = (expired || []).find(e => e && String(e.id || '') === String(t.opId));
+              kdsOrders.splice(i, 1);
+              try { opTickets.delete(String(t.opId)); } catch (_) {}
+              try { toast(`${ticketNo(t)} expirée sans validation · voir Expirées pour la reprendre`); } catch (_) {}
+              void gone;
+              touched = true;
+            }
+            if (touched) { try { persistShift(); } catch (_) {} }
+          }
+          const freshExpired = Array.isArray(expired) ? expired.slice(0, 50) : [];
+          if (JSON.stringify(freshExpired.map(e => e && e.id)) !== JSON.stringify(expiredOrders.map(e => e && e.id))) {
+            expiredOrders = freshExpired;
+            touched = true;
+          }
+        } catch (_) {}
         /* Qui est assis, et où une commande attend. Les deux viennent de la
            même réponse, donc le plan de salle ne se contredit jamais avec la
            file. On reconstruit les deux cartes à neuf plutôt que d'y ajouter :

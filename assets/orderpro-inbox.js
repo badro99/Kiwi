@@ -20,7 +20,7 @@
   'use strict';
 
   var POLL_MS = 6000;
-  var state = { orders: {}, sessions: [], closedSessions: [], since: 0, open: false, timer: null, seen: {} };
+  var state = { orders: {}, sessions: [], closedSessions: [], expired: [], since: 0, open: false, timer: null, seen: {}, expiryWarned: {} };
 
   function esc(x) { return String(x == null ? '' : x).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
   function fmt(n) { try { return (Math.round(n) || 0).toLocaleString('fr-FR'); } catch (_) { return String(Math.round(n) || 0); } }
@@ -125,8 +125,11 @@
         });
         state.sessions = j.sessions || [];
         state.closedSessions = j.closedSessions || [];
+        state.expired = j.expired || [];
         bridge(delta);
         if (fresh) announce(fresh);
+        warnExpiring();
+        warnDegraded(j.degraded);
         verifyCloses();
         paint();
         return fresh;
@@ -147,7 +150,7 @@
     try {
       if (!window.KiwiCaisseKitchen) return;
       var all = Object.keys(state.orders).map(function (k) { return state.orders[k]; });
-      window.KiwiCaisseKitchen.ingest(delta, all, state.sessions, state.closedSessions);
+      window.KiwiCaisseKitchen.ingest(delta, all, state.sessions, state.closedSessions, state.expired);
     } catch (_) {}
   }
 
@@ -327,6 +330,64 @@
         stack.appendChild(el);
         setTimeout(function () { el.classList.add('fade'); }, 2600);
         setTimeout(function () { el.remove(); }, 2900);
+      }
+    } catch (_) {}
+  }
+
+  /* ── Une attente qui vieillit doit crier plus fort, pas s'éteindre ────────
+   * `announce()` ne sonne qu'à l'arrivée. En coup de feu, personne ne lève
+   * les yeux à temps, et à trente minutes le TTL tranche en silence : la
+   * commande disparaît sans que le comptoir ait jamais su qu'elle mourait.
+   * Passé vingt minutes sans décision, on prévient UNE fois par commande
+   * (le rechargement ré-avertit — c'est voulu : une attente qui survit au
+   * rechargement est exactement celle qu'il faut revoir). */
+  var EXPIRY_WARN_MS = 20 * 60 * 1000;
+  function warnExpiring() {
+    try {
+      var nowTs = Date.now();
+      Object.keys(state.orders).forEach(function (id) {
+        var o = state.orders[id];
+        if (!o || o.status !== 'pending' || state.expiryWarned[id]) return;
+        var age = nowTs - Number(o.created_ts || nowTs);
+        if (!(age > EXPIRY_WARN_MS)) return;
+        state.expiryWarned[id] = 1;
+        var left = Math.max(1, Math.round((30 * 60 * 1000 - age) / 60000));
+        var label = (o.number != null ? 'N°' + o.number : 'commande') +
+          (o.mode === 'table' && o.table ? ' · Table ' + o.table : ' · À emporter');
+        try {
+          var stack = document.getElementById('toast-stack');
+          if (stack) {
+            var el = document.createElement('div'); el.className = 'toast';
+            el.textContent = label + ' en attente depuis 20 min · expire dans ~' + left + ' min';
+            stack.appendChild(el);
+            setTimeout(function () { el.classList.add('fade'); }, 5000);
+            setTimeout(function () { el.remove(); }, 5300);
+          }
+        } catch (_) {}
+        try { if (navigator.vibrate) navigator.vibrate([60, 80, 60]); } catch (_) {}
+      });
+    } catch (_) {}
+  }
+
+  /* ── Une base non migrée ment sur les paiements : le dire ─────────────────
+   * Quand il manque `paid_ts`, le sondage répond `paid:false` pour TOUTES les
+   * commandes et l'écriture du timbre tombe dans le repli « état seul » : le
+   * comptoir affiche « impayé » sur des commandes réglées, et rien ne le
+   * signale — le faux impayé parfait. Le serveur le DIT déjà à chaque sondage
+   * (`degraded`), personne ne l'écoutait. Une fois par chargement, on l'affiche
+   * avec le remède exact, au lieu de laisser douter de chaque encaissement. */
+  function warnDegraded(degraded) {
+    try {
+      if (!Array.isArray(degraded) || !degraded.length || state.degradedWarned) return;
+      state.degradedWarned = 1;
+      var stack = document.getElementById('toast-stack');
+      if (stack) {
+        var el = document.createElement('div'); el.className = 'toast';
+        el.textContent = 'Base à migrer (' + degraded.join(', ') +
+          ') · statuts de paiement non fiables · lancer node tools/d1-schema.mjs';
+        stack.appendChild(el);
+        setTimeout(function () { el.classList.add('fade'); }, 8000);
+        setTimeout(function () { el.remove(); }, 8300);
       }
     } catch (_) {}
   }

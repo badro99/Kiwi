@@ -88,6 +88,11 @@ function floorMayAcceptOrder(b, orderRow, scope) {
 const MAX_ROWS = 100;
 const PENDING_TTL_MS = 30 * 60 * 1000;
 const KITCHEN_TTL_MS = 6 * 60 * 60 * 1000;
+/* Combien de temps une commande refusée reste lisible comme « expirée » dans
+ * le sondage. Deux heures : assez pour qu'un client qui arrive avec du retard
+ * retrouve sa commande au comptoir et la fasse reprendre, assez court pour ne
+ * pas transformer la file en archive. Voir le bloc `expired` dans onRequestGet. */
+const EXPIRED_MS = 2 * 60 * 60 * 1000;
 const MAX_LINES = 60;              // une commande, généreusement
 /* Au-delà de cet âge, le sondage d'un serveur en service ré-estampille les
  * sessions de ses tables. Cinq minutes : très en dessous des deux heures de
@@ -408,6 +413,57 @@ export async function onRequestGet(context) {
   if (service) sessions = sessions.filter((session) => service.allTables.has(normTable(session.table)));
   if (service) closedSessions = closedSessions.filter((session) => service.allTables.has(normTable(session.table)));
 
+  /* ── CE QUE LE TTL A TUÉ, LA CAISSE DOIT LE VOIR ──────────────────────────
+   * Le rejet automatique (trente minutes sans validation, plus haut) est
+   * terminal et INVISIBLE : `rejected` ne figure pas dans le WHERE de la
+   * file, donc une commande à emporter jamais validée disparaissait des deux
+   * côtés à la fois — plus au serveur, et l'instantané local la purgeait au
+   * rechargement (staleQueuedServerTicket). Le client arrivait, le comptoir
+   * ne trouvait rien, et personne ne pouvait dire si la commande n'avait
+   * jamais existé. Pire : le ticket `held` local survivait en mémoire et
+   * restait payable, c'est-à-dire qu'on pouvait encaisser une commande morte
+   * (le serveur répond 409, la cuisine locale imprime quand même).
+   *
+   * On expose donc les refus récents, en lecture seule. La caisse s'en sert
+   * à deux choses : invalider ses fantômes (un ticket local dont le serveur
+   * dit « refusée » n'est plus payable) et montrer « Expirée · N°X » avec
+   * reprise en un geste au lieu de « on ne trouve rien ». Lecture seule :
+   * aucune transition ne ressuscite, la reprise crée une commande neuve. */
+  let expired = [];
+  try {
+    const gone = await env.DB.prepare(
+      `SELECT id, number, mode, table_no, total, lines, created_ts, updated_ts FROM orders
+        WHERE merchant = ? AND status = 'rejected' AND updated_ts > ?
+        ORDER BY updated_ts DESC LIMIT 50`
+    ).bind(merchant, now - EXPIRED_MS).all();
+    expired = (gone.results || []).map((r) => {
+      let lines = [];
+      try {
+        const parsed = JSON.parse(r.lines);
+        if (Array.isArray(parsed)) {
+          lines = parsed.slice(0, MAX_LINES).map((l) => ({
+            name: String((l && l.name) || '').slice(0, 80),
+            qty: Math.min(99, Math.max(1, Math.round(Number((l && l.qty) || 1)))),
+            unitPrice: Math.max(0, Math.round(Number((l && l.unitPrice) || 0))),
+            note: String((l && l.note) || '').slice(0, 200),
+            station: String((l && l.station) || '').slice(0, 40),
+          })).filter((l) => l.name);
+        }
+      } catch (_) { lines = []; }
+      return {
+        id: r.id, number: r.number, mode: r.mode, table: r.table_no || '',
+        total: r.total, lines,
+        created_ts: r.created_ts, updated_ts: r.updated_ts,
+      };
+    });
+  } catch (_) { expired = []; }
+  if (service) {
+    expired = expired.filter((order) => {
+      if (order.mode !== 'table') return true;
+      return service.allTables.has(normTable(order.table));
+    });
+  }
+
   if (service) {
     /* The table number is furniture, not a bill id. Only expose orders that
        belong to the currently open visit on that table. This remains correct
@@ -451,6 +507,9 @@ export async function onRequestGet(context) {
        une commande écrite entre la prise de l'heure et la lecture n'est jamais
        présentée (voir pollCursor). */
     ok: true, orders, sessions, closedSessions, now: pollCursor(now), ordersAvailable: true,
+    /* Refus récents (TTL ou comptoir), lecture seule : invalider les fantômes
+       locaux et proposer la reprise. Absent = rien n'a été refusé récemment. */
+    expired: expired.length ? expired : undefined,
     /* Colonnes absentes de la base déployée. Vide = tout est là.
        `node tools/d1-schema.mjs` les pose. */
     degraded: degraded.length ? degraded : undefined,
