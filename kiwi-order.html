@@ -3162,6 +3162,7 @@ em, i, cite, dfn, var { font-style: normal; }
         send_table: "Envoyer en cuisine",
         send_takeout: "Passer commande",
         session_closed: "Cette visite est terminée. Rescannez le QR de la table pour commander.",
+        service_closed: "La caisse semble endormie. On réessaie tout seul · sinon appelez un serveur.",
         session_unavailable: "Impossible de relier cette table à la caisse. Réessayez ou appelez un serveur.",
         order_send_failed: "La commande n'a pas été envoyée. Votre panier est conservé · réessayez.",
         success_title_a: "Commande envoyée",
@@ -3337,6 +3338,7 @@ em, i, cite, dfn, var { font-style: normal; }
         send_table: "Send to kitchen",
         send_takeout: "Place order",
         session_closed: "This visit has ended. Scan the table QR again to order.",
+        service_closed: "The till looks asleep. Retrying on its own · otherwise call a waiter.",
         session_unavailable: "We couldn't connect this table to the till. Retry or call a waiter.",
         order_send_failed: "The order was not sent. Your cart is safe · please retry.",
         success_title_a: "Order sent to",
@@ -3512,6 +3514,7 @@ em, i, cite, dfn, var { font-style: normal; }
         send_table: "صيفط للمطبخ",
         send_takeout: "أكد الطلب",
         session_closed: "انتهت هذه الجلسة. امسح رمز الطاولة من جديد للطلب.",
+        service_closed: "يبدو أن الصندوق نائم. نعيد المحاولة تلقائياً · وإلا اطلب النادل.",
         session_unavailable: "تعذر ربط الطاولة بصندوق الدفع. أعد المحاولة أو اطلب النادل.",
         order_send_failed: "لم يتم إرسال الطلب. سلة طلبك محفوظة، أعد المحاولة.",
         success_title_a: "الطلب تصيفط",
@@ -4568,18 +4571,59 @@ em, i, cite, dfn, var { font-style: normal; }
     }
     function rememberTableSession(id) {
       tableSessionId = String(id || '');
-      try { sessionStorage.setItem(tableSessionKey(), tableSessionId); } catch (_) {}
+      /* localStorage, pas sessionStorage : un onglet jeté par l'OS (téléphone
+         en poche trois minutes) puis restauré repart avec la visite, au lieu
+         de retomber sur « session introuvable ». Le serveur revalide de toute
+         façon à la reprise — un identifiant périmé ne rouvre rien. */
+      try { localStorage.setItem(tableSessionKey(), tableSessionId); }
+      catch (_) { try { sessionStorage.setItem(tableSessionKey(), tableSessionId); } catch (_) {} }
+    }
+    function readStoredTableSession() {
+      try { return localStorage.getItem(tableSessionKey()) || sessionStorage.getItem(tableSessionKey()) || ''; }
+      catch (_) { try { return sessionStorage.getItem(tableSessionKey()) || ''; } catch (_) { return ''; } }
+    }
+    function clearStoredTableSession() {
+      try { localStorage.removeItem(tableSessionKey()); } catch (_) {}
+      try { sessionStorage.removeItem(tableSessionKey()); } catch (_) {}
     }
     function sessionError(code) {
       const err = new Error(code || 'session-unavailable');
       err.code = code || 'session-unavailable';
       return err;
     }
+    /* Un seul endroit qui choisit le mot : « fermée » (visite terminée),
+       « caisse endormie » (le comptoir ne répond pas, on réessaie seul),
+       sinon l'indisponible générique. */
+    function tableSessionErrKey(err) {
+      const code = err && err.code;
+      if (code === 'session-closed' || code === 'session-required') return 'session_closed';
+      if (code === 'service-closed') return 'service_closed';
+      return orderMode === 'table' ? 'session_unavailable' : 'order_send_failed';
+    }
     function setTableSessionClosed() {
       tableSessionStatus = 'closed';
       if (tableSessionPollId) clearInterval(tableSessionPollId);
       tableSessionPollId = null;
+      clearServiceRetry();
       syncSendGate();
+    }
+    /* La caisse dort (service-closed) : le téléphone ne doit pas mourir avec
+       elle. Un réveil silencieux toutes les trente secondes, onglet visible
+       seulement, jusqu'au succès ou à une vraie fermeture. Sans ça, une sieste
+       de la tablette laissait le menu mort même après son réveil — « plus rien
+       ne marche, même en rescannant », alors que rescanner retombait sur la
+       même caisse endormie. */
+    let serviceRetryId = null;
+    function clearServiceRetry() {
+      if (serviceRetryId) { clearTimeout(serviceRetryId); serviceRetryId = null; }
+    }
+    function scheduleServiceRetry() {
+      clearServiceRetry();
+      serviceRetryId = setTimeout(() => {
+        serviceRetryId = null;
+        if (document.hidden || tableSessionStatus !== 'error') return;
+        ensureTableSession().catch(() => {});
+      }, 30000);
     }
     function pollTableSession() {
       if (tableSessionPollId || !tableSessionId || !KiwiTenant || !KiwiTenant.slug) return;
@@ -4602,8 +4646,7 @@ em, i, cite, dfn, var { font-style: normal; }
       if (tableSessionPromise) return tableSessionPromise;
       tableSessionStatus = 'opening';
       syncSendGate();
-      let saved = '';
-      try { saved = sessionStorage.getItem(tableSessionKey()) || ''; } catch (_) {}
+      const saved = readStoredTableSession();
       const validate = saved
         ? fetch('/api/order/session?merchant=' + encodeURIComponent(T.slug) + '&session=' + encodeURIComponent(saved),
             { headers: { Accept: 'application/json' } })
@@ -4611,7 +4654,16 @@ em, i, cite, dfn, var { font-style: normal; }
         : Promise.resolve(null);
       tableSessionPromise = validate.then((existing) => {
         if (existing && existing.ok && existing.status === 'open') return { ok: true, session: saved };
-        if (existing && existing.ok && existing.status === 'closed') throw sessionError('session-closed');
+        /* ── UN MORT NE DOIT PAS EMPOISONNER LES RESCAN ───────────────────
+         * L'identifiant gardé appartenait à une visite fermée (addition
+         * réglée, table annulée au comptoir, ménage) : le jeter puis se
+         * rasseoir d'un geste, au lieu de répondre « fermée » à chaque nouvel
+         * essai. Avant, le rescan retombait sur le même identifiant mort et
+         * rendait la même erreur — « rescannez » qui ne marche jamais, quoi
+         * qu'on fasse. Le POST ci-dessous reprend la visite encore en cours
+         * s'il y en a une, sinon il en ouvre une neuve : dans les deux cas on
+         * avance, jamais on ne boucle sur un fantôme. */
+        if (existing && existing.ok && existing.status === 'closed') clearStoredTableSession();
         return fetch('/api/order/session', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -4626,12 +4678,17 @@ em, i, cite, dfn, var { font-style: normal; }
       }).then((data) => {
         rememberTableSession(data.session);
         tableSessionStatus = 'open';
+        clearServiceRetry();
         pollTableSession();
         syncSendGate();
         return tableSessionId;
       }).catch((err) => {
         if (err && err.code === 'session-closed') setTableSessionClosed();
-        else { tableSessionStatus = 'error'; syncSendGate(); }
+        else {
+          tableSessionStatus = 'error';
+          syncSendGate();
+          if (err && err.code === 'service-closed') scheduleServiceRetry();
+        }
         throw err;
       }).finally(() => { tableSessionPromise = null; });
       return tableSessionPromise;
@@ -4712,8 +4769,7 @@ em, i, cite, dfn, var { font-style: normal; }
         refreshCartUI();
       }).catch((err) => {
         btn.classList.remove('is-loading');
-        const closed = err && (err.code === 'session-closed' || err.code === 'session-required');
-        showToast(t(closed ? 'session_closed' : (orderMode === 'table' ? 'session_unavailable' : 'order_send_failed')));
+        showToast(t(tableSessionErrKey(err)));
         syncSendGate();
       });
     }
@@ -4772,7 +4828,7 @@ em, i, cite, dfn, var { font-style: normal; }
         gotoScreen('screen-menu');
         applyMenuMode();
       }).catch((err) => {
-        showToast(t(err && err.code === 'session-closed' ? 'session_closed' : 'session_unavailable'));
+        showToast(t(tableSessionErrKey(err)));
       });
     }
 
@@ -5310,7 +5366,7 @@ em, i, cite, dfn, var { font-style: normal; }
         if (menuScreen) menuScreen.classList.add('is-active');
         if (typeof applyMenuMode === 'function') applyMenuMode();
         ensureTableSession().catch((err) => {
-          showToast(t(err && err.code === 'session-closed' ? 'session_closed' : 'session_unavailable'));
+          showToast(t(tableSessionErrKey(err)));
         });
       }
 

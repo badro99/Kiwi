@@ -165,6 +165,33 @@ async function get(fn, qs, headers = {}) {
     /postOrderToTill\(totalNow,\s*linesCopy\)\.then/.test(publicOrderPage)
       && /order_send_failed/.test(publicOrderPage));
 
+  /* ═══ 3b. TÉLÉPHONE · ni déconnexion fantôme ni rescan empoisonné ════════
+   * Un identifiant gardé d'une visite fermée faisait répondre « fermée » à
+   * chaque nouvel essai du même onglet — le « rescannez » qui ne marche
+   * jamais. On le jette et on se rassoit d'un geste (le serveur reprend la
+   * visite en cours ou en ouvre une neuve). Et la caisse endormie ne laisse
+   * plus le menu mort : message dédié en trois langues, réessai silencieux
+   * toutes les trente secondes, visite conservée même si l'OS jette l'onglet.
+   * Côté OrderPro, les écrans « fermé / désactivé » réessaient aussi seuls. */
+  ok('le QR jette l’identifiant mort au lieu de boucler sur « fermée »',
+    /existing\.status === 'closed'\) clearStoredTableSession\(\)/.test(publicOrderPage));
+  ok('…et la visite survit au jet d’onglet par l’OS',
+    /localStorage\.setItem\(tableSessionKey\(\)/.test(publicOrderPage)
+      && /localStorage\.getItem\(tableSessionKey\(\)/.test(publicOrderPage));
+  ok('…avec un mot dédié quand la caisse dort, en trois langues',
+    /service_closed: "La caisse semble endormie/.test(publicOrderPage)
+      && /service_closed: "The till looks asleep/.test(publicOrderPage)
+      && /service_closed: "/.test(publicOrderPage)
+      && /tableSessionErrKey\(err\)/.test(publicOrderPage));
+  ok('…et un réveil silencieux toutes les trente secondes',
+    /scheduleServiceRetry\(\)/.test(publicOrderPage)
+      && /30000/.test(publicOrderPage)
+      && /tableSessionStatus !== 'error'/.test(publicOrderPage));
+  ok('OrderPro réessaie seul sur « fermé / désactivé »',
+    /scheduleBootRetry\(kind\)/.test(orderProPage)
+      && /retry: true/.test(orderProPage)
+      && /screen-boot/.test(orderProPage));
+
   /* ═══ 1b. À EMPORTER · ni disparition ni faux impayé ══════════════════════
    * Le timbre « payé » ne voyageait que par un appel non attendu : un trou
    * réseau, et l'argent était au journal pendant que la file disait « impayé ».
@@ -190,6 +217,7 @@ async function get(fn, qs, headers = {}) {
     /EXPIRY_WARN_MS = 20 \* 60 \* 1000/.test(inboxPage) && /state\.expiryWarned\[id\]/.test(inboxPage));
   ok('…et dit quand la base non migrée rend les statuts de paiement non fiables',
     /warnDegraded\(j\.degraded\)/.test(inboxPage) && /statuts de paiement non fiables/.test(inboxPage));
+
   ok('la semaine restaurant commence lundi à minuit au Maroc',
     startOfWeek(Date.parse('2026-08-03T12:00:00Z')) === Date.parse('2026-08-02T23:00:00Z'));
   ok('le dimanche reste dans la semaine qui précède',

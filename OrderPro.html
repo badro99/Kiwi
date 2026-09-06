@@ -5838,7 +5838,30 @@ em, i, cite, dfn, var { font-style: normal; }
     }
 
     /* ============ boot screen states ============ */
+    /* La caisse dort, pas le restaurant : « fermé » est transitoire et doit se
+       réveiller seul. Même traitement pour « off », que le commerçant peut
+       réactiver à tout moment. Sans réessai, le téléphone restait mort même
+       après le réveil du comptoir — rescan compris, qui retombait pareil. */
+    let bootRetryId = null;
+    function clearBootRetry() {
+      if (bootRetryId) { clearTimeout(bootRetryId); bootRetryId = null; }
+    }
+    function scheduleBootRetry(kind) {
+      clearBootRetry();
+      if (kind !== 'closed' && kind !== 'off') return;
+      bootRetryId = setTimeout(() => {
+        bootRetryId = null;
+        const boot = document.getElementById('screen-boot');
+        if (document.hidden || !boot || !boot.classList.contains('is-active')) return;
+        bootFromLink();
+      }, 30000);
+    }
     function bootState(kind, opts) {
+      clearBootRetry();
+      if (kind === 'closed' || kind === 'off') {
+        opts = Object.assign({ retry: true }, opts || {});
+        scheduleBootRetry(kind);
+      }
       const spinner = $('#boot-spinner');
       const icon = $('#boot-icon');
       const title = $('#boot-title');
