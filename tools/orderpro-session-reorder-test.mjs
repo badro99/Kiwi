@@ -14,6 +14,7 @@ const ORDERPRO_SRC = fs.readFileSync(path.join(ROOT, 'OrderPro.html'), 'utf8');
 const CAISSE_SRC   = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
 const SESSION_SRC  = fs.readFileSync(path.join(ROOT, 'functions/api/order/session.js'), 'utf8');
 const INBOX_SRC    = fs.readFileSync(path.join(ROOT, 'assets/orderpro-inbox.js'), 'utf8');
+const QUEUE_SRC    = fs.readFileSync(path.join(ROOT, 'functions/api/order/queue.js'), 'utf8');
 
 let passed = 0;
 let failed = 0;
@@ -103,6 +104,28 @@ console.log('■ Commandes Clients Print Button Removal');
 // 6. Print button removal in inbox
 ok('orderpro-inbox.js omits kop-print button from action row',
   !/class="[^"]*kop-print/.test(INBOX_SRC));
+
+console.log('■ Expired Takeaway Orders Dismissal & Vider Prevention');
+
+// 7. Expired orders dismissal & Vider prevention
+ok('expiredRow provides a Supprimer action button with data-exp-dismiss',
+  /data-exp-dismiss=/.test(CAISSE_SRC) &&
+  /data-exp-reprendre=/.test(CAISSE_SRC));
+
+ok('reprendreExpired tracks vrapResumedExpiredId and dismisses order from expired list',
+  /reprendreExpired\(id\)[\s\S]*?vrapResumedExpiredId\s*=\s*String\(id\);[\s\S]*?dismissExpired\(id\);/.test(CAISSE_SRC));
+
+ok('clearCart dismisses resumed expired order so it does not return to Expirées',
+  /clearCart\(\)\s*\{[\s\S]*?if\s*\(vrapResumedExpiredId\)\s*\{[\s\S]*?dismissExpired\(vrapResumedExpiredId\);[\s\S]*?vrapResumedExpiredId\s*=\s*null;/.test(CAISSE_SRC));
+
+ok('cancelOrderProTakeaway dismisses order so it never lands in Expirées',
+  /cancelOrderProTakeaway\(o\)[\s\S]*?dismissExpired\(o\.opId\);[\s\S]*?opPush\(o,\s*'rejected',\s*\{\s*server:\s*'dismissed'\s*\}\)/.test(CAISSE_SRC));
+
+ok('queue.js onRequestPost handles dismiss_expired and marks server_name dismissed',
+  /action\s*===\s*'dismiss_expired'[\s\S]*?server_name\s*=\s*'dismissed'/.test(QUEUE_SRC));
+
+ok('queue.js GET query excludes orders marked dismissed',
+  /WHERE merchant = \? AND status = 'rejected'[\s\S]*?AND \(server_name IS NULL OR server_name <> 'dismissed'\)/.test(QUEUE_SRC));
 
 console.log(`\nResults: ${passed} passed, ${failed} failed.\n`);
 if (failed > 0) process.exit(1);

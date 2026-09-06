@@ -433,7 +433,9 @@ export async function onRequestGet(context) {
   try {
     const gone = await env.DB.prepare(
       `SELECT id, number, mode, table_no, total, lines, created_ts, updated_ts FROM orders
-        WHERE merchant = ? AND status = 'rejected' AND updated_ts > ?
+        WHERE merchant = ? AND status = 'rejected'
+          AND (server_name IS NULL OR server_name <> 'dismissed')
+          AND updated_ts > ?
         ORDER BY updated_ts DESC LIMIT 50`
     ).bind(merchant, now - EXPIRED_MS).all();
     expired = (gone.results || []).map((r) => {
@@ -552,6 +554,22 @@ export async function onRequestPost(context) {
    * only ever required knowing its slug. */
   const merchant = await entitledMerchant(request, env, asked, { allowTill: true, allowEmployee: true });
   if (!merchant) return json({ error: 'forbidden-merchant' }, 403);
+
+  /* Permettre au caissier de congédier une commande expirée ou annulée pour qu'elle
+   * ne pollue plus l'écran "Expirées · à reprendre". */
+  if (b && (b.action === 'dismiss_expired' || b.dismiss === true) && b.id) {
+    const orderId = String(b.id).trim();
+    if (!ORDER_ID.test(orderId)) return json({ error: 'bad-request' }, 400);
+    try {
+      await env.DB.prepare(
+        `UPDATE orders SET server_name = 'dismissed', updated_ts = ?
+          WHERE id = ? AND merchant = ?`
+      ).bind(now, orderId, merchant).run();
+      return json({ ok: true, id: orderId, dismissed: true });
+    } catch (e) {
+      return json({ error: 'write-failed', detail: String((e && e.message) || e) }, 500);
+    }
+  }
 
   /* Employee cookies may only CREATE a ticket for a real table in this store's
    * owner-managed floor plan. "Toutes les tables" is intentional coverage:

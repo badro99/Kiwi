@@ -9148,6 +9148,40 @@
        vrapDiscount holds a manager-approved réduction on the cart. */
     let vrapEditingNum = null;
     let vrapDiscount   = null;  // { kind, value, amount, reason } | null
+    let vrapResumedExpiredId = null; // id d'une commande expirée reprise en cours dans le panier
+
+    const dismissedExpiredIds = new Set((() => {
+      try { return JSON.parse(localStorage.getItem('kiwi_dismissed_expired') || '[]'); } catch (_) { return []; }
+    })());
+
+    function persistDismissedExpired() {
+      try {
+        const arr = Array.from(dismissedExpiredIds).slice(-200);
+        localStorage.setItem('kiwi_dismissed_expired', JSON.stringify(arr));
+      } catch (_) {}
+    }
+
+    function dismissExpired(id) {
+      if (!id) return;
+      const strId = String(id);
+      dismissedExpiredIds.add(strId);
+      persistDismissedExpired();
+      if (Array.isArray(expiredOrders)) {
+        expiredOrders = expiredOrders.filter(x => x && String(x.id) !== strId);
+      }
+      try {
+        const m = (typeof opMerchant === 'function' ? opMerchant() : '') ||
+                  (typeof currentMerchantSlug === 'function' ? currentMerchantSlug() : '') ||
+                  (typeof slug !== 'undefined' ? slug : '') || '';
+        if (m) {
+          fetch('/api/order/queue', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ merchant: m, id: strId, action: 'dismiss_expired', dismiss: true })
+          }).catch(() => {});
+        }
+      } catch (_) {}
+    }
 
     /* ---- Waitlist (liste d'attente) · walk-in parties at the door ---- */
     let waitlist = [];          // [{ id, name, size, pref, addedAt }]
@@ -9838,10 +9872,15 @@
     }
 
     function clearCart() {
+      if (vrapResumedExpiredId) {
+        dismissExpired(vrapResumedExpiredId);
+        vrapResumedExpiredId = null;
+      }
       cart = [];
       vrapDiscount = null;
       renderMenu();
       renderCart();
+      if (typeof renderVrapBoard === 'function') renderVrapBoard();
     }
 
     function renderCart() {
@@ -18569,11 +18608,14 @@
         return mins < 1 ? "à l'instant" : `il y a ${mins} min`;
       } catch (_) { return ''; } })();
       const where = e.mode === 'table' && e.table ? `Table ${kdsEsc(e.table)}` : 'À emporter';
-      return `<div class="vrap-hrow">
+      return `<div class="vrap-hrow" data-exp-row="${kdsEsc(e.id)}">
         <span class="vrap-hrow-num">N°${kdsEsc(e.number)} · ${where}</span>
         <span class="vrap-hrow-items">${kdsEsc(items)} <span style="opacity:.6">· ${kdsEsc(when)}</span></span>
         <span class="vrap-hrow-total">${fmtMAD(e.total || 0)}</span>
-        <button class="vrap-act vrap-act-send" data-exp-reprendre="${kdsEsc(e.id)}">Reprendre</button>
+        <div style="display:inline-flex;gap:6px;align-items:center;flex-shrink:0;">
+          <button class="vrap-act vrap-act-send" data-exp-reprendre="${kdsEsc(e.id)}">Reprendre</button>
+          <button class="vrap-act vrap-act-cancel" data-exp-dismiss="${kdsEsc(e.id)}" title="Supprimer de la liste">Supprimer</button>
+        </div>
       </div>`;
     }
 
@@ -18584,6 +18626,8 @@
       const e = (expiredOrders || []).find(x => x && String(x.id) === String(id));
       if (!e || !(e.lines || []).length) { toast('Expirée introuvable'); return; }
       if (mode !== 'vrap') setMode('vrap');
+      vrapResumedExpiredId = String(id);
+      dismissExpired(id);
       vrapEditingNum = null;
       vrapDiscount = null;
       /* UN CHOIX DE FORMULE COÛTE ZÉRO, ET CE ZÉRO EST UN PRIX, PAS UN TROU.
@@ -18634,6 +18678,7 @@
       setVrapView('builder');
       renderMenu();
       renderCart();
+      renderVrapBoard();
       toast(`N°${e.number} reprise · vérifie et encaisse`);
     }
 
@@ -18721,7 +18766,8 @@
       const label = ticketNo(o);
       if (!confirm(`Annuler la commande ${label} ?`)) return false;
       toast(`Annulation de ${label}…`);
-      Promise.resolve(opPush(o, 'rejected')).then((result) => {
+      dismissExpired(o.opId);
+      Promise.resolve(opPush(o, 'rejected', { server: 'dismissed' })).then((result) => {
         if (!result || !result.ok) {
           toast(`Commande ${label} non annulée · réessayez`);
           return;
@@ -18745,6 +18791,10 @@
     /* Card / cash cleared in À emporter mode. For an order being edited this
        settles it on the board; for a fresh counter sale it just clears. */
     function settleVrapPayment() {
+      if (vrapResumedExpiredId) {
+        dismissExpired(vrapResumedExpiredId);
+        vrapResumedExpiredId = null;
+      }
       if (vrapEditingNum != null) {
         const o = kdsOrders.find(x => x.num === vrapEditingNum);
         if (o) {
@@ -18919,6 +18969,13 @@
       if (ho) { vrapHandover(Number(ho.dataset.vrapHandover)); return; }
       const exp = e.target.closest('[data-exp-reprendre]');
       if (exp) { reprendreExpired(exp.dataset.expReprendre); return; }
+      const dismiss = e.target.closest('[data-exp-dismiss]');
+      if (dismiss) {
+        dismissExpired(dismiss.dataset.expDismiss);
+        renderVrapBoard();
+        toast('Commande retirée des expirées');
+        return;
+      }
       // Any other click on an order card opens it (unpaid → edit + checkout).
       const card = e.target.closest('.vrap-order');
       if (card) { openVrapOrder(Number(card.dataset.vrapNum)); return; }
@@ -19506,7 +19563,8 @@
             }
             if (touched) { try { persistShift(); } catch (_) {} }
           }
-          const freshExpired = Array.isArray(expired) ? expired.slice(0, 50) : [];
+          const freshExpired = (Array.isArray(expired) ? expired.slice(0, 50) : [])
+            .filter(e => e && e.id && !dismissedExpiredIds.has(String(e.id)));
           if (JSON.stringify(freshExpired.map(e => e && e.id)) !== JSON.stringify(expiredOrders.map(e => e && e.id))) {
             expiredOrders = freshExpired;
             touched = true;
