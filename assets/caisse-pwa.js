@@ -61,6 +61,22 @@
     var b = document.getElementById('kiwi-install'); if (b) b.remove();
   });
 
+  function toast(msg) {
+    var stack = document.getElementById('toast-stack');
+    if (!stack) {
+      stack = document.createElement('div');
+      stack.id = 'toast-stack';
+      stack.className = 'toast-stack';
+      document.body.appendChild(stack);
+    }
+    var el = document.createElement('div');
+    el.className = 'toast';
+    el.textContent = msg;
+    stack.appendChild(el);
+    setTimeout(function () { el.classList.add('fade'); }, 3000);
+    setTimeout(function () { el.remove(); }, 3300);
+  }
+
   // Offline/online + real server queue reflection — visible enough to act on.
   var refreshingStatus = false;
   function status() {
@@ -91,6 +107,7 @@
       }
       return s;
     })();
+    if (d.dataset.syncing === '1') return;
     var q = { pending: 0, blocked: 0, storageError: false };
     try { if (window.KiwiLive?.queueStatus) q = window.KiwiLive.queueStatus(); } catch (_) {}
     var tone, label, detail;
@@ -129,8 +146,51 @@
     }
     d.title = label + ' · ' + detail;
     d.onclick = function () {
-      try { if (window.KiwiLive && window.KiwiLive.flush) window.KiwiLive.flush(true); } catch (_) {}
-      status();
+      if (d.dataset.syncing === '1') return;
+      var qNow = { pending: 0, blocked: 0, storageError: false };
+      try { if (window.KiwiLive && window.KiwiLive.queueStatus) qNow = window.KiwiLive.queueStatus(); } catch (_) {}
+      if (!qNow.pending && !qNow.blocked && !qNow.storageError) {
+        status();
+        return;
+      }
+      if (!navigator.onLine) {
+        toast('Appareil hors ligne · connexion Internet requise');
+        status();
+        return;
+      }
+      d.dataset.syncing = '1';
+      if (dot) dot.style.background = '#F2A900';
+      d.style.background = '#A56A16';
+      d.style.borderColor = 'rgba(255,255,255,.14)';
+      d.style.color = '#F7F5F0';
+      d.style.opacity = '1';
+      if (txt) txt.textContent = 'Synchronisation en cours…';
+      if (sub) sub.textContent = 'Envoi des opérations au serveur…';
+      var flushPromise;
+      try {
+        flushPromise = (window.KiwiLive && window.KiwiLive.flush) ? window.KiwiLive.flush(true) : Promise.resolve();
+      } catch (err) {
+        flushPromise = Promise.reject(err);
+      }
+      Promise.resolve(flushPromise).then(function () {
+        delete d.dataset.syncing;
+        var after = { pending: 0, blocked: 0, storageError: false };
+        try { if (window.KiwiLive && window.KiwiLive.queueStatus) after = window.KiwiLive.queueStatus(); } catch (_) {}
+        if (!after.pending && !after.blocked && !after.storageError) {
+          toast('Synchronisation réussie · opérations transmises');
+        } else if (after.lastStatus === 401 || after.lastStatus === 403) {
+          toast('Erreur d’authentification (' + after.lastStatus + ') · vérifiez l’appairage');
+        } else if (after.lastStatus >= 500) {
+          toast('Serveur momentanément indisponible (' + after.lastStatus + ') · réessai automatique');
+        } else if (after.lastError) {
+          toast('Synchronisation en attente · ' + after.lastError);
+        }
+        status();
+      }).catch(function (err) {
+        delete d.dataset.syncing;
+        toast('Échec de synchronisation · ' + (err && err.message || 'erreur réseau'));
+        status();
+      });
     };
   }
   window.addEventListener('online', status);

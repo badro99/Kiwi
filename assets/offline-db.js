@@ -159,7 +159,7 @@
         return db.outbox.where('[tenant+channel]').equals([scope.tenant, scope.channel]).toArray().then(function (rows) {
           rows = rows.filter(function (row) {
             return row && (row.state === 'pending' && (opts.force || (+row.nextAt || 0) <= at)
-              || row.state === 'sending' && (+row.leaseUntil || 0) <= at);
+              || row.state === 'sending' && (opts.force || (+row.leaseUntil || 0) <= at));
           }).sort(function (a, b) { return (+a.createdAt || 0) - (+b.createdAt || 0); });
           var row = rows[0];
           if (!row) return null;
@@ -240,10 +240,12 @@
         if (row.state === 'blocked') out.blocked++;
         else out.pending++;
         if (row.state === 'sending') out.sending++;
+        if (row.lastStatus) out.lastStatus = row.lastStatus;
+        if (row.lastError) out.lastError = row.lastError;
         return out;
-      }, { pending: 0, blocked: 0, sending: 0, total: 0, storageError: false });
+      }, { pending: 0, blocked: 0, sending: 0, total: 0, storageError: false, lastStatus: 0, lastError: '' });
     }).catch(function () {
-      return { pending: 0, blocked: 0, sending: 0, total: 0, storageError: true };
+      return { pending: 0, blocked: 0, sending: 0, total: 0, storageError: true, lastStatus: 0, lastError: '' };
     });
   }
 

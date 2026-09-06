@@ -324,9 +324,16 @@ async function routeRequest(context) {
   /* Only a clocked-in floor-service employee may cross from the private
    * employee app into the shared operational channels. Kitchen/dishwasher and
    * off-shift accounts remain limited to schedule, hours and pointage. */
-  if ((path === '/api/order/queue' || path === '/api/service/events' || path === '/api/employee-clients'
-      || path === '/api/sale')
+  if ((path === '/api/order/queue' || path === '/api/service/events' || path === '/api/employee-clients')
       && authSecret && await activeServiceEmployee(request, env)) return next();
+  /* Les écritures financières de caisse (/api/sale, /api/sale/refund, /api/sale/cancel).
+   * Les caisses appairées détiennent un cookie `kiwi_till` (Max-Age 365j) mais
+   * n'ont pas forcément de session commerçant `kiwi_sess` active. Les trois
+   * handlers authentifient eux-mêmes strictement l'appelant via
+   * `entitledMerchant(..., { allowTill: true })` ou `verifyStaffPin(..., { requireTill: true })`
+   * et rejettent tout accès illégitime en 403. POST seulement — les lectures
+   * d'audit (GET /api/sale/cancel) restent gardées derrière la session propriétaire. */
+  if (method === 'POST' && (path === '/api/sale' || path === '/api/sale/refund' || path === '/api/sale/cancel')) return next();
   // La page de réinitialisation de mot de passe. Quelqu'un qui a perdu son mot
   // de passe n'a par définition AUCUNE session : la porte du site la lui
   // refuserait, et le lien qu'on vient de lui envoyer tomberait sur l'écran de

@@ -147,15 +147,15 @@ var SHELL = [
   '/assets/caisse-skin.css?v=3',
   '/assets/pos-mobile.css?v=3',
   '/assets/caisse-motion.js?v=1',
-  '/assets/caisse-pwa.js?v=481',
+  '/assets/caisse-pwa.js?v=482',
   '/assets/vendor/dexie.min.js?v=1',
-  '/assets/offline-db.js?v=4',
+  '/assets/offline-db.js?v=5',
   '/assets/platform-kernel.js?v=5',
   '/assets/platform-ops.js?v=5',
   '/assets/platform-ops.css?v=1',
   '/assets/operations.js?v=10',
   '/assets/operations-ui.js?v=12',
-  '/assets/live-link.js?v=24',
+  '/assets/live-link.js?v=25',
   '/assets/channel-sales.js?v=3',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois

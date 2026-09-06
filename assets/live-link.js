@@ -260,6 +260,8 @@
         total: outboxStatus.total,
         storageError: !!outboxStatus.storageError,
         engine: 'indexeddb',
+        lastStatus: outboxStatus.lastStatus || lastSyncStatus || 0,
+        lastError: outboxStatus.lastError || lastSyncError || '',
       };
     }
     var q = qRead();
@@ -272,6 +274,8 @@
       total: q.length,
       storageError: !!queueStorageError,
       engine: 'localstorage',
+      lastStatus: lastSyncStatus || 0,
+      lastError: lastSyncError || '',
     };
   }
 
@@ -335,95 +339,135 @@
   }
 
   var flushing = false, queueStorageError = false;
+  var flushStartedAt = 0;
+  var lastSyncStatus = 0, lastSyncError = '';
+
   function flushLegacyQueue() {
-    if (flushing) return;
+    if (flushing) return Promise.resolve(queueStatus());
     var q = qRead();
-    if (!q.length) return;
+    if (!q.length) return Promise.resolve(queueStatus());
     var active = merchant();
-    if (!active) { queueSignal(); return; }
+    if (!active) { queueSignal(); return Promise.resolve(queueStatus()); }
     /* A rejected record stays available for support but cannot hold every valid
        sale behind it hostage. A queue can also survive a terminal re-pairing:
        retain the former merchant's debt for support, but never submit it with
        the new merchant's till cookie or let it block the new store's sales. */
     var body = q.find(function (x) { return x && !x._blocked && x.merchant === active; });
-    if (!body) { queueSignal(); return; }
+    if (!body) { queueSignal(); return Promise.resolve(queueStatus()); }
     flushing = true;
-    function done(settled, blocked, status) {
-      flushing = false;
-      var current = qRead();
-      if (settled) {
-        var rest = current.filter(function (x) { return x && x.id !== body.id; });
-        qWrite(rest);
-        moneySignal(body, 'accepted', status);
-        pingLocal();                           // the row exists now — tell the dashboards
-        if (rest.some(function (x) { return x && !x._blocked; })) flushLegacyQueue();
-        return;
+    return new Promise(function (resolve) {
+      function done(settled, blocked, status) {
+        flushing = false;
+        lastSyncStatus = status || 0;
+        lastSyncError = settled ? '' : (status ? 'HTTP ' + status : 'network');
+        var current = qRead();
+        if (settled) {
+          var rest = current.filter(function (x) { return x && x.id !== body.id; });
+          qWrite(rest);
+          moneySignal(body, 'accepted', status);
+          pingLocal();                           // the row exists now — tell the dashboards
+          if (rest.some(function (x) { return x && !x._blocked; })) return resolve(flushLegacyQueue());
+          return resolve(queueStatus());
+        }
+        if (blocked) {
+          current.forEach(function (x) {
+            if (x && x.id === body.id) { x._blocked = true; x._status = status || 0; x._blockedAt = Date.now(); }
+          });
+          qWrite(current);                       // retained, visible, skipped on the next send
+          moneySignal(body, 'blocked', status);
+          if (current.some(function (x) { return x && !x._blocked; })) return resolve(flushLegacyQueue());
+          return resolve(queueStatus());
+        } else {
+          moneySignal(body, 'retry', status);
+          queueSignal();                          // offline/transient → unchanged and retryable
+          return resolve(queueStatus());
+        }
       }
-      if (blocked) {
-        current.forEach(function (x) {
-          if (x && x.id === body.id) { x._blocked = true; x._status = status || 0; x._blockedAt = Date.now(); }
+      try {
+        var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+        var timeoutId = controller ? setTimeout(function () { controller.abort(); }, 12000) : null;
+        fetch(body && body.kind === 'refund' ? '/api/sale/refund' : '/api/sale', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+          keepalive: true,
+          signal: controller ? controller.signal : undefined,
+        }).then(function (r) {
+          if (timeoutId) clearTimeout(timeoutId);
+          /* Only 2xx proves D1 accepted the sale. A structurally rejected body is
+             quarantined for support, never deleted. Auth failures remain retryable:
+             pairing/session repair can make the exact same sale valid later. */
+          var BLOCK = { 400: 1, 409: 1, 422: 1 };
+          done(!!(r && r.ok), !!(r && BLOCK[r.status]), r && r.status);
+        }).catch(function () {
+          if (timeoutId) clearTimeout(timeoutId);
+          done(false, false, 0);
         });
-        qWrite(current);                       // retained, visible, skipped on the next send
-        moneySignal(body, 'blocked', status);
-        if (current.some(function (x) { return x && !x._blocked; })) flushLegacyQueue();
-      } else {
-        moneySignal(body, 'retry', status);
-        queueSignal();                          // offline/transient → unchanged and retryable
-      }
-    }
-    try {
-      fetch(body && body.kind === 'refund' ? '/api/sale/refund' : '/api/sale', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-        keepalive: true,
-      }).then(function (r) {
-        /* Only 2xx proves D1 accepted the sale. A structurally rejected body is
-           quarantined for support, never deleted. Auth failures remain retryable:
-           pairing/session repair can make the exact same sale valid later. */
-        var BLOCK = { 400: 1, 409: 1, 422: 1 };
-        done(!!(r && r.ok), !!(r && BLOCK[r.status]), r && r.status);
-      }).catch(function () { done(false, false, 0); });
-    } catch (_) { done(false, false, 0); }
+      } catch (_) { done(false, false, 0); }
+    });
   }
 
   function flushOutbox(force) {
-    if (flushing || !navigator.onLine) return;
+    if (force) {
+      flushing = false;
+    } else if (flushing && flushStartedAt && (Date.now() - flushStartedAt) > 15000) {
+      flushing = false;
+    }
+    if (flushing || !navigator.onLine) return Promise.resolve(outboxStatus);
     var O = window.KiwiOffline;
     var active = merchant();
-    if (!O || !active) { queueSignal(); return; }
+    if (!O || !active) { queueSignal(); return Promise.resolve(outboxStatus); }
     flushing = true;
-    O.claim(OUTBOX_CHANNEL, active, { force: !!force }).then(function (row) {
-      if (!row) { flushing = false; return refreshOutboxStatus(); }
+    flushStartedAt = Date.now();
+    return O.claim(OUTBOX_CHANNEL, active, { force: !!force }).then(function (row) {
+      if (!row) {
+        flushing = false;
+        flushStartedAt = 0;
+        return refreshOutboxStatus();
+      }
       var body = row.payload;
       function settle(ok, permanent, status, error) {
+        lastSyncStatus = status || 0;
+        lastSyncError = ok ? '' : (error || (status ? 'HTTP ' + status : 'network'));
         var action = ok
           ? O.acknowledge(row.id, row.leaseToken)
           : O.reject(row.id, row.leaseToken, { permanent: permanent, status: status, error: error });
         return action.then(function () {
           flushing = false;
+          flushStartedAt = 0;
           if (ok) { moneySignal(body, 'accepted', status); pingLocal(); }
           else moneySignal(body, permanent ? 'blocked' : 'retry', status);
           return refreshOutboxStatus();
         }).then(function (state) {
-          if (state.pending > 0 && navigator.onLine) flushOutbox();
+          if (state && state.pending > 0 && navigator.onLine) return flushOutbox(force);
+          return state;
         });
       }
+      var controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+      var timeoutId = controller ? setTimeout(function () { controller.abort(); }, 12000) : null;
       return fetch(body && body.kind === 'refund' ? '/api/sale/refund' : '/api/sale', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
         keepalive: true,
+        signal: controller ? controller.signal : undefined,
       }).then(function (response) {
+        if (timeoutId) clearTimeout(timeoutId);
         var BLOCK = { 400: 1, 409: 1, 422: 1 };
         return settle(!!response.ok, !!BLOCK[response.status], response.status, response.ok ? '' : 'HTTP ' + response.status);
       }).catch(function (err) {
-        return settle(false, false, 0, err && err.message || 'network');
+        if (timeoutId) clearTimeout(timeoutId);
+        var errMsg = err && (err.name === 'AbortError' ? 'timeout' : err.message) || 'network';
+        return settle(false, false, 0, errMsg);
       });
     }).catch(function () {
       flushing = false;
+      flushStartedAt = 0;
+      lastSyncStatus = 0;
+      lastSyncError = 'storage-error';
       outboxStatus.storageError = true;
       queueSignal();
+      return outboxStatus;
     });
   }
 
