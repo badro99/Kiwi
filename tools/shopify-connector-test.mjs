@@ -357,6 +357,14 @@ ok('a missing row is not a grant', isClientCredentials(null) === false);
     !/json\(\{[^}]*access_token/.test(direct) && !direct.includes('token.access_token,\n    grant'));
   ok('connect-direct never returns the client secret',
     !direct.includes('SHOPIFY_CLIENT_SECRET }') && !/json\([^)]*CLIENT_SECRET/.test(direct));
+  /* Cloudflare remplace le corps de toute réponse 5xx d'une Pages Function par
+   * sa propre page d'erreur. Un refus d'identifiants renvoyé en 5xx perd donc
+   * le `detail` qui dit pourquoi, et ressemble à une panne de Kiwi. Mesuré en
+   * production le 2026-09-06 ; ce contrôle empêche la rechute. */
+  const refusal = (direct.match(/client-credentials-refused[^;]*?\}, (\d{3})\)/) || [])[1];
+  ok('the credentials refusal is reported, not a 5xx Cloudflare eats',
+    !!refusal && Number(refusal) >= 400 && Number(refusal) < 500, `status ${refusal}`);
+  ok('no branch of connect-direct returns 502', !/\}, 502\)/.test(direct));
   ok('connect-direct keeps the shop exclusive to one merchant',
     direct.includes("'shop-already-connected'") && direct.includes("'merchant-already-connected'"));
   ok('changing shop clears the old variant mapping',

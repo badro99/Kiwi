@@ -66,12 +66,22 @@ export async function onRequestPost({ request, env }) {
   let token;
   try { token = await exchangeClientCredentials(env, shop); }
   catch (e) {
-    /* 401/403 ici veut presque toujours dire l'une de trois choses : l'app
-     * n'est pas installée sur cette boutique, les deux ne sont pas dans la
-     * même organisation, ou les identifiants configurés sont ceux d'une autre
-     * app. Le message le dit sans rien révéler des identifiants. */
+    /* 401/403 côté Shopify veut presque toujours dire l'une de trois choses :
+     * l'app n'est pas installée sur cette boutique, les deux ne sont pas dans
+     * la même organisation, ou les identifiants configurés sont ceux d'une
+     * autre app. Le message le dit sans rien révéler des identifiants.
+     *
+     * ── Pourquoi 409 et surtout pas 5xx ───────────────────────────────────
+     * Cloudflare REMPLACE le corps de toute réponse 5xx d'une Pages Function
+     * par sa propre page « Error 502: Bad gateway ». Mesuré en production le
+     * 2026-09-06 : `{shop:'pas-un-domaine'}` revenait bien en 400 avec notre
+     * JSON, tandis que le refus d'identifiants revenait en 502 avec la page
+     * de Cloudflare — le `detail` qui dit POURQUOI n'atteignait donc jamais
+     * l'écran, et le refus ressemblait à une panne de Kiwi. Un code 4xx passe
+     * intact. Ce n'est pas une préférence de style : c'est la différence entre
+     * un diagnostic et un cul-de-sac. */
     const code = String((e && e.message) || '').replace(/[^a-z0-9-]/gi, '').slice(0, 60);
-    return json({ error: 'client-credentials-refused', detail: code, shop }, 502);
+    return json({ error: 'client-credentials-refused', detail: code, shop }, 409);
   }
 
   const now = Date.now();
