@@ -2,8 +2,8 @@
 // back to the authenticated Kiwi merchant that initiated the connection.
 
 import {
-  encryptToken, exchangeAuthorizationCode, normalizeShopDomain, sha256Hex,
-  shopifyGraphQL, verifyOAuthHmac,
+  encryptToken, exchangeAuthorizationCode, normalizeShopDomain, registerWebhooks,
+  sha256Hex, verifyOAuthHmac,
 } from './_lib.js';
 
 const redirect = (request, value) => {
@@ -11,29 +11,6 @@ const redirect = (request, value) => {
   target.searchParams.set('shopify', value);
   return Response.redirect(target.toString(), 302);
 };
-
-async function registerWebhooks(env, merchant, linkId, request) {
-  const appUrl = String(env.SHOPIFY_APP_URL || new URL(request.url).origin).replace(/\/$/, '');
-  const uri = `${appUrl}/api/channel/shopify/${linkId}`;
-  const query = `mutation KiwiWebhook($topic: WebhookSubscriptionTopic!, $webhook: WebhookSubscriptionInput!) {
-    webhookSubscriptionCreate(topic: $topic, webhookSubscription: $webhook) {
-      webhookSubscription { id topic uri }
-      userErrors { field message }
-    }
-  }`;
-  const failures = [];
-  for (const topic of ['ORDERS_CREATE', 'INVENTORY_LEVELS_UPDATE', 'APP_UNINSTALLED']) {
-    try {
-      const out = await shopifyGraphQL(env, merchant, query, { topic, webhook: { uri } });
-      const errors = (out.data.webhookSubscriptionCreate && out.data.webhookSubscriptionCreate.userErrors) || [];
-      // Re-authorising can encounter an already-existing subscription. That is
-      // healthy and must not make the connector look broken.
-      const real = errors.filter((e) => !/already|taken|exists/i.test(String(e && e.message || '')));
-      if (real.length) failures.push(`${topic}: ${real.map((e) => e.message).join(' · ')}`);
-    } catch (e) { failures.push(`${topic}: ${e && e.message || e}`); }
-  }
-  return failures.join(' · ').slice(0, 600);
-}
 
 export async function onRequestGet({ request, env }) {
   if (!env.DB || !env.SHOPIFY_CLIENT_ID || !env.SHOPIFY_CLIENT_SECRET || !env.SHOPIFY_TOKEN_KEY) return redirect(request, 'not-configured');

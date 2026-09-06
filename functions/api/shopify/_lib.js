@@ -104,21 +104,71 @@ export async function exchangeAuthorizationCode(env, shop, code) {
   return data;
 }
 
-async function refreshConnectionToken(env, row) {
-  const refresh = await decryptToken(row.refresh_token_enc, env.SHOPIFY_TOKEN_KEY);
-  if (!refresh) throw new Error('shopify-refresh-missing');
-  const res = await fetch(`https://${row.shop_domain}/admin/oauth/access_token`, {
+/* ── Le don d'identifiants client (client credentials) ──────────────────────
+ * Shopify n'impose la ronde du navigateur — autoriser, rediriger, revenir avec
+ * un `code` — que lorsque l'app et la boutique appartiennent à des
+ * organisations DIFFÉRENTES. Quand elles sont dans la même organisation, la
+ * boutique nous connaît déjà : un POST serveur à serveur suffit, sans `state`,
+ * sans redirection, sans callback public. C'est le seul chemin praticable quand
+ * l'app n'a pas d'App URL publique — Shopify affiche alors « Example Domain »
+ * et l'autorisation ne peut pas revenir.
+ *
+ * Ce que Shopify rend ici ne comporte PAS de `refresh_token` : le jeton vit
+ * environ 24 h et on en redemande un, avec les mêmes identifiants, quand il
+ * approche de sa fin. C'est précisément ce qui distingue les deux modes en
+ * base, et pourquoi aucune colonne nouvelle n'est nécessaire : voir
+ * `isClientCredentials`. */
+export async function exchangeClientCredentials(env, shop) {
+  const res = await fetch(`https://${shop}/admin/oauth/access_token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
     body: new URLSearchParams({
-      grant_type: 'refresh_token',
+      grant_type: 'client_credentials',
       client_id: env.SHOPIFY_CLIENT_ID || '',
       client_secret: env.SHOPIFY_CLIENT_SECRET || '',
-      refresh_token: refresh,
     }),
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok || !data.access_token || !data.refresh_token) throw new Error(`shopify-refresh-${res.status}`);
+  /* Le corps d'erreur de Shopify peut contenir de quoi identifier l'app. On ne
+   * relaie que le code HTTP : ni le secret, ni le corps, ne doivent atteindre
+   * un log ou une réponse. */
+  if (!res.ok || !data.access_token) throw new Error(`shopify-client-credentials-${res.status}`);
+  return data;
+}
+
+/* Une connexion par don d'identifiants n'a pas de jeton de rafraîchissement —
+ * `exchangeAuthorizationCode` en exige un et refuse sans, donc son absence
+ * identifie le mode sans ambiguïté et sans colonne supplémentaire. C'est
+ * délibéré : une colonne neuve serait absente de la base DÉPLOYÉE tant que la
+ * migration n'a pas été passée, et tout ce fichier retomberait en silence dans
+ * le mauvais mode — l'exacte panne que ce dépôt a déjà connue trois fois. */
+export function isClientCredentials(row) {
+  return !!row && !row.refresh_token_enc;
+}
+
+async function refreshConnectionToken(env, row) {
+  /* Deux façons d'obtenir un jeton neuf, un seul appelant. Le don
+   * d'identifiants n'a rien à rafraîchir : on redemande simplement, avec les
+   * mêmes identifiants d'app, ce que la boutique nous donnerait aujourd'hui. */
+  let data;
+  if (isClientCredentials(row)) {
+    data = await exchangeClientCredentials(env, row.shop_domain);
+  } else {
+    const refresh = await decryptToken(row.refresh_token_enc, env.SHOPIFY_TOKEN_KEY);
+    if (!refresh) throw new Error('shopify-refresh-missing');
+    const res = await fetch(`https://${row.shop_domain}/admin/oauth/access_token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'application/json' },
+      body: new URLSearchParams({
+        grant_type: 'refresh_token',
+        client_id: env.SHOPIFY_CLIENT_ID || '',
+        client_secret: env.SHOPIFY_CLIENT_SECRET || '',
+        refresh_token: refresh,
+      }),
+    });
+    data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.access_token || !data.refresh_token) throw new Error(`shopify-refresh-${res.status}`);
+  }
   const now = Date.now();
   // Refreshing a token must never activate inventory writes before the merchant
   // confirms the mapping preview.
@@ -130,13 +180,43 @@ async function refreshConnectionToken(env, row) {
       WHERE merchant = ?`
   ).bind(
     await encryptToken(data.access_token, env.SHOPIFY_TOKEN_KEY),
-    await encryptToken(data.refresh_token, env.SHOPIFY_TOKEN_KEY),
+    /* NULL, et non une chaîne chiffrée vide : c'est cette absence qui dit
+     * « don d'identifiants » au prochain passage. L'écraser romprait le mode. */
+    data.refresh_token ? await encryptToken(data.refresh_token, env.SHOPIFY_TOKEN_KEY) : null,
     now + Math.max(60, Number(data.expires_in) || 3600) * 1000,
-    now + Math.max(3600, Number(data.refresh_token_expires_in) || 7776000) * 1000,
+    data.refresh_token ? now + Math.max(3600, Number(data.refresh_token_expires_in) || 7776000) * 1000 : 0,
     status, now, row.merchant
   ).run();
   return data.access_token;
 }
+
+/* Les abonnements aux webhooks sont identiques quel que soit le don qui a
+ * produit le jeton. Ils vivaient dans callback.js ; les deux chemins de
+ * connexion les partagent désormais, pour qu'un sujet ajouté ici n'oublie
+ * jamais l'autre mode. */
+export async function registerWebhooks(env, merchant, linkId, request) {
+  const appUrl = String(env.SHOPIFY_APP_URL || new URL(request.url).origin).replace(/\/$/, '');
+  const uri = `${appUrl}/api/channel/shopify/${linkId}`;
+  const query = `mutation KiwiWebhook($topic: WebhookSubscriptionTopic!, $webhook: WebhookSubscriptionInput!) {
+    webhookSubscriptionCreate(topic: $topic, webhookSubscription: $webhook) {
+      webhookSubscription { id topic uri }
+      userErrors { field message }
+    }
+  }`;
+  const failures = [];
+  for (const topic of ['ORDERS_CREATE', 'INVENTORY_LEVELS_UPDATE', 'APP_UNINSTALLED']) {
+    try {
+      const out = await shopifyGraphQL(env, merchant, query, { topic, webhook: { uri } });
+      const errors = (out.data.webhookSubscriptionCreate && out.data.webhookSubscriptionCreate.userErrors) || [];
+      // Re-authorising can encounter an already-existing subscription. That is
+      // healthy and must not make the connector look broken.
+      const real = errors.filter((e) => !/already|taken|exists/i.test(String(e && e.message || '')));
+      if (real.length) failures.push(`${topic}: ${real.map((e) => e.message).join(' · ')}`);
+    } catch (e) { failures.push(`${topic}: ${e && e.message || e}`); }
+  }
+  return failures.join(' · ').slice(0, 600);
+}
+
 
 export async function connectionFor(env, merchant) {
   return env.DB.prepare(
@@ -154,7 +234,14 @@ export async function accessTokenFor(env, merchant) {
   if (Number(row.token_expires_ts || 0) > Date.now() + 120000) {
     return { row, token: await decryptToken(row.access_token_enc, env.SHOPIFY_TOKEN_KEY) };
   }
-  if (Number(row.refresh_expires_ts || 0) <= Date.now()) throw new Error('shopify-reauthorize');
+  /* Se réautoriser n'a de sens que pour le code d'autorisation : là, le jeton
+   * de rafraîchissement finit par périmer et seul le marchand peut le renouveler
+   * dans son navigateur. Le don d'identifiants, lui, n'a pas de fin — tant que
+   * l'app reste installée, on redemande un jeton. Faire tomber cette branche
+   * dessus déconnecterait la boutique toutes les 24 h. */
+  if (!isClientCredentials(row) && Number(row.refresh_expires_ts || 0) <= Date.now()) {
+    throw new Error('shopify-reauthorize');
+  }
   const lock = await sha256Hex(`shopify-refresh:${merchant}`);
   const now = Date.now();
   let acquired = false;

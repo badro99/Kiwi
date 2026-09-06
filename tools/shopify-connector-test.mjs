@@ -6,7 +6,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   buildExactVariantMapping, decryptToken, encryptToken, normalizeShopDomain,
-  enqueueStockChanges, flushShopifyOutbox, sha256Hex, stockSnapshot,
+  enqueueStockChanges, exchangeClientCredentials, flushShopifyOutbox,
+  isClientCredentials, sha256Hex, stockSnapshot,
   SHOPIFY_SCOPES, verifyOAuthHmac, verifyWebhookHmac,
 } from '../functions/api/shopify/_lib.js';
 import { __test as statusTest } from '../functions/api/shopify/status.js';
@@ -254,6 +255,126 @@ ok('direct integration cards preserve their connector channel', dashboardUi.incl
 ok('Shopify card opens its connector without the generic chooser', dashboardUi.includes("it.channel ? 'integration-connect' : 'add-integration'"));
 
 ok('state hashes are deterministic but do not expose input', (await sha256Hex('state')) !== 'state');
+
+/* ═══ DON D'IDENTIFIANTS CLIENT (client credentials) ═══════════════════════
+ * Le second chemin de connexion, pour une app et une boutique de la même
+ * organisation Shopify. Ce qu'on protège ici tient en deux phrases : le mode
+ * doit rester reconnaissable sans colonne de base (donc sans migration qui
+ * peut manquer en production), et ni le secret client ni le jeton ne doivent
+ * pouvoir atteindre le navigateur ou un journal. */
+
+// Le mode se lit sur la ligne elle-même : un don d'identifiants n'a pas de
+// jeton de rafraîchissement, et `exchangeAuthorizationCode` en exige un.
+ok('a row without a refresh token reads as client credentials',
+  isClientCredentials({ refresh_token_enc: null }) === true);
+ok('an empty refresh token also reads as client credentials',
+  isClientCredentials({ refresh_token_enc: '' }) === true);
+ok('an authorization-code row is not mistaken for client credentials',
+  isClientCredentials({ refresh_token_enc: 'v1.abc.def' }) === false);
+ok('a missing row is not a grant', isClientCredentials(null) === false);
+
+// L'échange lui-même : bon point d'accès, bon type de don, identifiants portés
+// dans le CORPS et jamais dans l'URL (une URL finit dans les journaux).
+{
+  const realFetch = globalThis.fetch;
+  let seen = null;
+  globalThis.fetch = async (url, init) => {
+    seen = { url: String(url), init };
+    return { ok: true, status: 200, json: async () => ({ access_token: 'shpat-test', expires_in: 86399, scope: SHOPIFY_SCOPES }) };
+  };
+  try {
+    const env = { SHOPIFY_CLIENT_ID: 'client-id-test', SHOPIFY_CLIENT_SECRET: 'client-secret-test' };
+    const data = await exchangeClientCredentials(env, 'atlas-casa.myshopify.com');
+    const body = seen && seen.init && String(seen.init.body || '');
+    ok('client credentials posts to the shop access_token endpoint',
+      seen.url === 'https://atlas-casa.myshopify.com/admin/oauth/access_token');
+    ok('client credentials uses POST', seen.init.method === 'POST');
+    ok('the grant type is client_credentials', /(^|&)grant_type=client_credentials(&|$)/.test(body));
+    ok('the client id travels in the body', body.includes('client_id=client-id-test'));
+    ok('the client secret travels in the body', body.includes('client_secret=client-secret-test'));
+    ok('no credential is ever put in the query string', !seen.url.includes('client_secret') && !seen.url.includes('?'));
+    ok('no authorization code is sent for this grant', !body.includes('code='));
+    ok('the returned token is handed back to the caller', data.access_token === 'shpat-test');
+    ok('the announced lifetime is read, not assumed', Number(data.expires_in) === 86399);
+  } finally { globalThis.fetch = realFetch; }
+}
+
+// Un refus doit rester muet sur les identifiants : seul le code HTTP sort.
+{
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async () => ({
+    ok: false, status: 401,
+    json: async () => ({ error: 'invalid_client', error_description: 'client_secret client-secret-test is wrong' }),
+  });
+  let message = '';
+  try {
+    await exchangeClientCredentials(
+      { SHOPIFY_CLIENT_ID: 'client-id-test', SHOPIFY_CLIENT_SECRET: 'client-secret-test' },
+      'atlas-casa.myshopify.com'
+    );
+  } catch (e) { message = String((e && e.message) || ''); }
+  finally { globalThis.fetch = realFetch; }
+  ok('a refused exchange throws', message !== '');
+  ok('the thrown error names only the HTTP status', message === 'shopify-client-credentials-401');
+  ok('the thrown error never carries the client secret', !message.includes('client-secret-test'));
+}
+
+// Un jeton sans `access_token` n'est pas un succès, quel que soit le code HTTP.
+{
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async () => ({ ok: true, status: 200, json: async () => ({}) });
+  let threw = false;
+  try {
+    await exchangeClientCredentials({ SHOPIFY_CLIENT_ID: 'a', SHOPIFY_CLIENT_SECRET: 'b' }, 'atlas-casa.myshopify.com');
+  } catch (_) { threw = true; } finally { globalThis.fetch = realFetch; }
+  ok('an empty 200 is not accepted as a token', threw);
+}
+
+// Le renouvellement et la réautorisation, lus à la source : une ligne « don
+// d'identifiants » ne doit jamais tomber dans la branche `shopify-reauthorize`,
+// sinon la boutique se déconnecterait toutes les 24 h.
+{
+  const lib = read('functions/api/shopify/_lib.js');
+  ok('the refresh path branches on the grant', lib.includes('if (isClientCredentials(row)) {')
+    && lib.includes('data = await exchangeClientCredentials(env, row.shop_domain);'));
+  ok('re-authorization is skipped for client credentials',
+    lib.includes("if (!isClientCredentials(row) && Number(row.refresh_expires_ts || 0) <= Date.now())"));
+  ok('a refreshed client-credentials row keeps a NULL refresh token',
+    lib.includes('data.refresh_token ? await encryptToken(data.refresh_token, env.SHOPIFY_TOKEN_KEY) : null'));
+  ok('webhook registration is shared by both grants', lib.includes('export async function registerWebhooks('));
+}
+
+// Le point d'entrée : tenancy stricte, et rien de secret dans la réponse.
+{
+  const direct = read('functions/api/shopify/connect-direct.js');
+  ok('connect-direct demands an owner session',
+    direct.includes("tenantFor(request, env, body && body.merchant, { strict: true })"));
+  ok('connect-direct refuses to run unconfigured',
+    direct.includes("return json({ error: 'shopify-not-configured' }, 503);"));
+  ok('connect-direct stores a NULL refresh token to mark the grant',
+    direct.includes('refresh_token_enc = NULL'));
+  ok('connect-direct never returns the access token',
+    !/json\(\{[^}]*access_token/.test(direct) && !direct.includes('token.access_token,\n    grant'));
+  ok('connect-direct never returns the client secret',
+    !direct.includes('SHOPIFY_CLIENT_SECRET }') && !/json\([^)]*CLIENT_SECRET/.test(direct));
+  ok('connect-direct keeps the shop exclusive to one merchant',
+    direct.includes("'shop-already-connected'") && direct.includes("'merchant-already-connected'"));
+  ok('changing shop clears the old variant mapping',
+    direct.includes('DELETE FROM shopify_variant_links WHERE merchant = ?'));
+}
+
+// Le navigateur n'envoie que le domaine, et tente le don direct en premier.
+{
+  const ui = read('assets/channel-link.js');
+  ok('the browser tries the direct grant before the redirect round',
+    ui.indexOf("'/api/shopify/connect-direct'") > -1
+    && ui.indexOf("'/api/shopify/connect-direct'") < ui.indexOf("'/api/shopify/connect'"));
+  ok('the browser still falls back to the authorization round',
+    ui.includes("if (!r.ok || !j.authorize) throw new Error(j.error || shopStr().invalid); return j; }); })"));
+  ok('an exclusivity conflict does not retry the other grant',
+    ui.includes("if (code === 'merchant-already-connected' || code === 'shop-already-connected')"));
+  ok('the browser never sends a client secret', !ui.includes('client_secret') && !ui.includes('SHOPIFY_CLIENT_SECRET'));
+}
 
 console.log(`\nShopify connector · ${pass} checks`);
 if (failures.length) {

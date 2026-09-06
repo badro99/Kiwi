@@ -228,13 +228,48 @@
     }).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.detail || j.error || 'shopify'); return j; }); });
   }
 
+  /* Deux dons possibles, une seule saisie. Quand l'app Shopify et la boutique
+     appartiennent à la même organisation, un POST serveur à serveur suffit et
+     personne ne quitte la page : c'est le seul chemin qui marche si l'App URL
+     de l'app est restée sur example.com, puisque Shopify n'aurait alors nulle
+     part où renvoyer le marchand. On tente donc ce chemin d'abord, et on
+     retombe sur la ronde d'autorisation classique s'il est refusé — un refus
+     signifie presque toujours « organisations différentes », ce qui est
+     exactement le cas que la ronde sait traiter.
+
+     Un refus attendu ne doit rien afficher d'alarmant : on ne remonte l'erreur
+     que si les DEUX chemins échouent, et c'est celle de la ronde, la plus
+     parlante pour le marchand. */
   function authorizeShopify(shop) {
-    return fetch('/api/shopify/connect', {
+    return fetch('/api/shopify/connect-direct', {
       method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({ shop: shop }),
     })
-      .then(function (r) { return r.json().then(function (j) { if (!r.ok || !j.authorize) throw new Error(j.error || shopStr().invalid); return j; }); })
-      .then(function (j) { window.location.assign(j.authorize); });
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, body: j }; }); })
+      .catch(function () { return { ok: false, body: {} }; })
+      .then(function (direct) {
+        if (direct.ok && direct.body && direct.body.ok) {
+          /* Même atterrissage que le callback OAuth, pour que l'écran de
+             réussite et la suite du parcours restent un seul chemin. */
+          var url = new URL(window.location.href);
+          url.searchParams.set('shopify', direct.body.warning ? 'connected-warning' : 'connected');
+          window.location.assign(url.toString());
+          return null;
+        }
+        /* Un conflit d'exclusivité n'est pas un mauvais don : cette boutique
+           ou ce marchand est déjà relié. Réessayer par la ronde donnerait le
+           même refus après un aller-retour inutile. */
+        var code = direct.body && direct.body.error;
+        if (code === 'merchant-already-connected' || code === 'shop-already-connected') {
+          throw new Error(code);
+        }
+        return fetch('/api/shopify/connect', {
+          method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ shop: shop }),
+        })
+          .then(function (r) { return r.json().then(function (j) { if (!r.ok || !j.authorize) throw new Error(j.error || shopStr().invalid); return j; }); })
+          .then(function (j) { window.location.assign(j.authorize); });
+      });
   }
 
   function shopButton(label, fn, ghost) {
