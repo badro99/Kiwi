@@ -156,6 +156,8 @@ ok('le bouton Annuler mesa distingue une commande déjà envoyée',
   /tableSentCount\(selectedId\) === 0/.test(cancelTableWire));
 ok('Annuler mesa remet une table sans commande à zéro',
   /cancelOpenTable\(selectedId\)/.test(cancelTableWire));
+ok('Annuler mesa exige le code opérateur si des articles non envoyés existent',
+  /tableSentCount\(selectedId\) === 0[\s\S]*?hasItems[\s\S]*?requireTillOperator\(/.test(cancelTableWire));
 ok('Annuler mesa protège une table avec commande en cours',
   /annulation impossible/.test(cancelTableWire));
 const cancelOpenFn = (CAISSE.match(/function cancelOpenTable\(id\)\s*\{[\s\S]{0,1400}?\n    \}/) || [''])[0];

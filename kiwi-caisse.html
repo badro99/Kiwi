@@ -5501,7 +5501,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=485" defer></script>
+  <script src="assets/caisse-pwa.js?v=486" defer></script>
   <script src="assets/live-link.js?v=25" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -10449,11 +10449,23 @@
           }
           if (selectedId) {
             /* A guest can open a table from the NFC menu, browse, then leave
-               without ordering. In that case this button must clear the local
-               table and close its OrderPro session. A meal already sent to
-               the kitchen must remain protected. */
+               without ordering. In that case this button clears the local
+               table and closes its OrderPro session without asking for PIN.
+               If items have been entered (an unsent order), cancelling is a loss:
+               it must pass through requireTillOperator. A meal already sent
+               to the kitchen remains protected outright. */
             if (tableSentCount(selectedId) === 0) {
-              cancelOpenTable(selectedId);
+              const hasItems = (tableOrders[selectedId] || []).length > 0;
+              if (!hasItems) {
+                cancelOpenTable(selectedId);
+                return;
+              }
+              const tid = selectedId;
+              requireTillOperator(`Annuler la table ${tid}`, (who) => {
+                cancelOpenTable(selectedId);
+                const by = who && who.name ? ` · ${who.name}` : '';
+                toast(`Table ${tid} annulée${by}`);
+              });
               return;
             }
             const t = tables[selectedId];
