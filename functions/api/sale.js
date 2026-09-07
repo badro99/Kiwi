@@ -119,7 +119,7 @@ export async function onRequestPost({ request, env }) {
   const split = b && b.split;
   if (split != null && (!employeeTable || !requestedSession || !split
     || !Number.isInteger(split.index) || !Number.isInteger(split.count)
-    || split.count < 2 || split.count > 50 || split.index < 0 || split.index >= split.count)) {
+    || split.count < 1 || split.count > 50 || split.index < 0 || split.index >= split.count)) {
     return json({ error: 'bad-split' }, 400);
   }
   let serviceSession = null;

@@ -416,6 +416,34 @@ async function main() {
     check('un indice hors limites est refusé', invalid.status === 400);
   }
 
+  console.log('\n7 · Une répartition par articles peut ne garder qu’une part non vide');
+  const singleVisit = 'tsx-split-single-part';
+  exec(`INSERT INTO table_sessions (id, merchant, mode, table_no, status, opened_ts, seen_ts)
+        VALUES (?, ?, 'table', '4', 'open', ?, ?)`, singleVisit, MERCHANT, Date.now(), Date.now());
+  exec(`INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status,
+        created_ts, updated_ts, session_id) VALUES (?, ?, 111, 'table', '4', 90, '[]', 'served', ?, ?, ?)`,
+    'order-' + singleVisit, MERCHANT, Date.now(), Date.now(), singleVisit);
+  const singleBody = {
+    merchant: MERCHANT, table: '4', session: singleVisit, amount: 90, amountCents: 9000,
+    method: 'cash', split: { index: 0, count: 1 }, id: 'single-device-id',
+  };
+  const beforeSingle = raw('SELECT COUNT(*) AS n FROM sales')[0].n;
+  for (const split of [{ index: 0, count: 0 }, { index: 1, count: 1 }]) {
+    const invalid = await post(sale.onRequestPost, { ...singleBody, split }, cookie);
+    check('une répartition vide ou un indice hors limites reste refusé', invalid.status === 400);
+  }
+  check('les répartitions invalides ne créent aucune vente', raw('SELECT COUNT(*) AS n FROM sales')[0].n === beforeSingle);
+  const single = await post(sale.onRequestPost, singleBody, cookie);
+  check('la seule part non vide est acceptée', single.status === 200 && single.body.ok, JSON.stringify(single.body));
+  const singleRows = raw('SELECT amount_cents, method FROM sales WHERE id = ?', single.body.id || 'missing');
+  check('la part unique conserve ses 90 MAD en cash', singleRows.length === 1
+    && singleRows[0].amount_cents === 9000 && singleRows[0].method === 'cash');
+  check('la part unique ferme sa visite', raw('SELECT status FROM table_sessions WHERE id = ?', singleVisit)[0].status === 'closed');
+  check('la part unique solde sa commande', raw('SELECT paid_ts FROM orders WHERE session_id = ?', singleVisit)[0].paid_ts != null);
+  const singleReplay = await post(sale.onRequestPost, { ...singleBody, id: 'another-device' }, cookie);
+  check('le rejeu de la part unique conserve le reçu sans doubler la recette', singleReplay.status === 200
+    && singleReplay.body.id === single.body.id && raw('SELECT COUNT(*) AS n FROM sales')[0].n === beforeSingle + 1);
+
   console.log(failures ? `\n${failures} échec(s)\n` : '\nTout passe.\n');
   process.exitCode = failures ? 1 : 0;
 }

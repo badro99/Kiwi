@@ -973,6 +973,7 @@ section('Whole-project regressions');
        caisse et écrivait les quatre clés à la main — sans la purge du commerce
        précédent. */
     'pairing-parity-test.mjs',
+    'split-bill-tender-test.mjs',
     'business-day-timezone-test.mjs',
     'takeaway-cancel-authorization-test.mjs',
     /* Les écarts de SURFACE : jetons recopiés, gris froids inventés, palette
