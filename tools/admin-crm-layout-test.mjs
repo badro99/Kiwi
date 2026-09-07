@@ -41,5 +41,6 @@ check('forms are protected from automatic polling', workspace.includes("state.ro
 check('freshness is explicit', html.includes('id="op-freshness"') && workspace.includes('données anciennes'));
 check('missing fleet coverage is never healthy', workspace.includes('Un résultat absent n’est pas un résultat sain'));
 check('keyboard search available', workspace.includes("e.key.toLowerCase()==='k'"));
+check('unattributed telemetry has an explicit diagnostic view', workspace.includes('errorList(m)') && workspace.includes('aucun client n’est deviné'));
 
 console.log(`admin-crm-layout-test: ${passed} controls passed`);
