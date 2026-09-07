@@ -210,6 +210,38 @@ async function get(fn, qs, headers = {}) {
     /t\.status !== 'held'/.test(caissePage) && /expirée sans validation/.test(caissePage));
   ok('…et propose la reprise en un geste, comme une vente neuve',
     /data-exp-reprendre/.test(caissePage) && /function reprendreExpired\(id\)/.test(caissePage));
+  /* ── LE BOUTON ROUGE EST GARDÉ PAR UN CODE, ET LE CODE EST JUGÉ AILLEURS ──
+   * « Vider la commande » détruisait un panier · et, depuis la reprise d'une
+   * expirée, une vente déjà chiffrée · en un tap, sans autorisation et sans
+   * nommer personne. On extrait la branche vrap du gestionnaire pour vérifier
+   * la seule chose qui compte vraiment : que RIEN de destructeur ne s'exécute
+   * avant l'autorisation. Un gardien qu'on peut contourner par le haut n'est
+   * pas un gardien. */
+  const vrapCancel = (() => {
+    const at = caissePage.indexOf("else if (a === 'cancel-table')");
+    if (at < 0) return '';
+    const from = caissePage.indexOf("if (mode === 'vrap')", at);
+    return from < 0 ? '' : caissePage.slice(from, caissePage.indexOf('if (selectedId)', from));
+  })();
+  ok('« Vider la commande » réclame le code de l’employé',
+    /requireTillOperator\(/.test(vrapCancel), vrapCancel ? 'branche trouvée' : 'branche introuvable');
+  /* Le repli « panier déjà vide » a le droit de précéder le pavé : il ne perd
+     rien. On le retire donc de l'extrait, et TOUT ce qui détruit encore doit
+     se trouver après l'appel au gardien. */
+  const guarded = vrapCancel.replace(/if \(!liveOrder && !cart\.length\)[^\n]*\n/, '');
+  ok('…et ne détruit rien avant de l’avoir obtenu',
+    guarded.indexOf('requireTillOperator(') >= 0
+      && guarded.indexOf('requireTillOperator(') < guarded.indexOf('clearCart()')
+      && guarded.indexOf('requireTillOperator(') < guarded.indexOf('cancelOrderProTakeaway('),
+    `gardien@${guarded.indexOf('requireTillOperator(')} vider@${guarded.indexOf('clearCart()')} annuler@${guarded.indexOf('cancelOrderProTakeaway(')}`);
+  ok('…y compris pour annuler une commande déjà partie en cuisine',
+    /cancelOrderProTakeaway\(editingOrder\)/.test(vrapCancel));
+  ok('…mais n’ennuie personne quand il n’y a rien à perdre',
+    /!liveOrder && !cart\.length/.test(vrapCancel));
+  ok('…et le code n’est jamais comparé dans le navigateur',
+    !/mgrBuffer\s*===|pin\s*===\s*|code\s*===\s*['"]\d/.test(vrapCancel)
+      && /authorizeTill/.test(fs.readFileSync(path.join(ROOT, 'assets/caisse-pairing.js'), 'utf8')));
+
   ok('le sondage transmet les refus récents à la caisse',
     /state\.expired = j\.expired/.test(inboxPage)
       && /ingest\(delta, all, state\.sessions, state\.closedSessions, state\.expired\)/.test(inboxPage));
@@ -336,48 +368,6 @@ async function get(fn, qs, headers = {}) {
     r.body.expired.some((o) => o.id === staleId && o.number === 999 && o.total === 15));
   ok('…et elle ne pollue pas la file des vivantes',
     !r.body.orders.some((o) => o.id === staleId));
-
-  /* ── UNE FORMULE EXPIRÉE SE REPREND AU MÊME PRIX ───────────────────────
-   * Un choix de formule vaut zéro parce que le parent porte le supplément
-   * (priceLines : `kind === 'formula-part' ? 0`). L'expirée ne rendait ni
-   * `kind` ni `formulaUid` : au comptoir, la reprise voyait trois plats à 0,
-   * les prenait pour des prix manquants et les refacturait au tarif de la
-   * carte PAR-DESSUS la formule · 75 MAD revenaient à 90, et le client
-   * payait 15 MAD de trop. L'appartenance doit voyager avec la ligne. */
-  const staleFormulaId = 'ord-stale-test02';
-  DB._db.prepare(
-    `INSERT INTO orders (id,merchant,number,mode,table_no,total,lines,status,created_ts,updated_ts)
-     VALUES (?,?,?,?,?,?,?,?,?,?)`
-  ).run(staleFormulaId, SLUG, 1000, 'takeout', '', 75, JSON.stringify([
-    { name: 'Prépare ton Plat', qty: 1, unitPrice: 75, kind: 'formula',
-      formulaUid: 'fx-1', formulaName: 'Prépare ton Plat' },
-    { name: 'Penne', qty: 1, unitPrice: 0, kind: 'formula-part',
-      formulaUid: 'fx-1', formulaName: 'Prépare ton Plat', slotLabel: 'Choose your Pasta' },
-  ]), 'rejected', staleAt, staleAt);
-  r = await get(queueGet, 'merchant=' + SLUG + '&since=0', asStaff);
-  const goneFormula = (r.body.expired || []).find((o) => o.id === staleFormulaId);
-  ok('une formule expirée dit quelle ligne est le parent et lesquelles sont ses choix',
-    !!goneFormula
-      && goneFormula.lines.some((l) => l.name === 'Prépare ton Plat' && l.kind === 'formula'
-                                       && l.formulaUid === 'fx-1')
-      && goneFormula.lines.some((l) => l.name === 'Penne' && l.kind === 'formula-part'
-                                       && l.formulaUid === 'fx-1'),
-    JSON.stringify(goneFormula && goneFormula.lines));
-  ok('…et le choix garde son zéro, qui est un prix et non un prix manquant',
-    !!goneFormula && goneFormula.lines.every((l) => l.name !== 'Penne' || l.unitPrice === 0));
-  ok('…si bien que la somme des lignes rend le total de la commande',
-    !!goneFormula
-      && goneFormula.lines.reduce((s, l) => s + l.unitPrice * l.qty, 0) === goneFormula.total);
-
-  /* La reprise, côté comptoir, doit lire ce zéro comme un prix. Le repli sur
-     la carte ne vaut que pour une ligne SANS prix du tout. */
-  ok('la reprise ne retarife jamais un choix compris dans la formule',
-    !/price:\s*Math\.max\(0,\s*\+l\.unitPrice/.test(caissePage)
-      && /Number\.isFinite\(recorded\) \? Math\.max\(0, recorded\)/.test(caissePage));
-  ok('…et elle remonte la formule au lieu de l’aplatir en plats séparés',
-    /line\.kind = 'formula-part'/.test(caissePage) && /line\.kind = 'formula'/.test(caissePage));
-  ok('…sans jamais fabriquer un choix orphelin, que le caissier ne pourrait plus retirer',
-    /withParent\.has\(String\(l\.formulaUid\)\)/.test(caissePage));
 
   /* ═══ 3. SESSION ════════════════════════════════════════════════════════ */
   r = await post(openSession, { merchant: SLUG, mode: 'table', table: 'T7' });

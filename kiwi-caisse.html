@@ -2792,6 +2792,7 @@
     .split-part-btn svg { width: 13px; height: 13px; }
     .split-part-btn.carte { background: var(--ink); color: #fff; }
     .split-part-btn.cash-dark { background: var(--gradient); color: #fff; }
+    .split-part-btn.reprint { background: var(--paper-sub); color: var(--ink-2); border: 1px solid var(--border-line); }
     .split-part-btn svg { width: 15px; height: 15px; }
     .split-part-btn:hover { transform: translateY(-1px); }
 
@@ -5500,7 +5501,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=482" defer></script>
+  <script src="assets/caisse-pwa.js?v=483" defer></script>
   <script src="assets/live-link.js?v=25" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -10408,15 +10409,36 @@
             return;
           }
           if (mode === 'vrap') {
-            if (vrapEditingNum != null) {
-              const order = kdsOrders.find(x => x && x.num === vrapEditingNum);
-              if (order && order.opId && !order.paid) {
-                cancelOrderProTakeaway(order);
-                return;
+            /* ── VIDER UNE COMMANDE EST UNE PERTE, PAS UNE NAVIGATION ───────
+             * Un seul tap effaçait le panier · et, depuis la reprise d'une
+             * expirée, une vente déjà chiffrée · sans demander à personne et
+             * sans que rien ne dise QUI l'avait fait. Le bouton est rouge mais
+             * il n'était gardé par rien.
+             *
+             * On passe donc par la même porte que les autres gestes sensibles
+             * (requireTillOperator › KiwiCaissePairing.authorizeTill ›
+             * POST /api/pin/verify) : le code de l'employé est jugé PAR LE
+             * SERVEUR, la caisse ne le compare jamais elle-même, et un serveur
+             * injoignable répond non — une autorisation qu'on ne peut pas
+             * prouver n'est pas une autorisation.
+             *
+             * La destruction vit ENTIÈREMENT dans le rappel : code refusé,
+             * réseau coupé, pavé fermé au doigt mouillé · le panier est encore
+             * là. Et un panier vide ne réclame rien : on ne fait pas frapper un
+             * code pour ne rien perdre. */
+            const editingOrder = vrapEditingNum != null
+              ? kdsOrders.find(x => x && x.num === vrapEditingNum) : null;
+            const liveOrder = !!(editingOrder && editingOrder.opId && !editingOrder.paid);
+            if (!liveOrder && !cart.length) { clearCart(); return; }
+            requireTillOperator(
+              liveOrder ? `Annuler la commande ${ticketNo(editingOrder)}` : 'Vider la commande',
+              (who) => {
+                if (liveOrder) { cancelOrderProTakeaway(editingOrder); return; }
+                clearCart();
+                const by = who && who.name ? ` · ${who.name}` : '';
+                toast(`Commande vidée${by}`);
               }
-            }
-            clearCart();
-            toast('Commande vidée');
+            );
             return;
           }
           if (selectedId) {
@@ -10868,6 +10890,8 @@
     }
     function closeCashModal() {
       cashAmountOverride = null;
+      cashPaymentCommitted = false;
+      cashConfirm.disabled = false;
       // Même désarmement qu'en carte · voir closeCardModal().
       splitPayCallback = null;
       restorePayBindings();
@@ -10919,7 +10943,11 @@
       cashPaymentCommitted = true;
       cashConfirm.disabled = true;
       const settled = await finalizeTender('cash');
-      if (settled === 'split') { closeCashModal(); return; }
+      if (settled === 'split') {
+        if (change > 0) toast('Monnaie à rendre : ' + fmtMAD(change));
+        closeCashModal();
+        return;
+      }
       cashStepInput.hidden = true;
       cashStepInput.style.display = 'none';
       cashStepSuccess.hidden = false;
@@ -12228,7 +12256,7 @@
       lines.forEach(l => {
         const unitPrice = l.qty > 0 ? (l.total / l.qty) : l.total;
         if (!itemTotals[l.name]) {
-          itemTotals[l.name] = { totalQty: 0, unitPrice };
+          itemTotals[l.name] = { totalQty: 0, unitPrice, itemId: l.itemId || l.id || '' };
         }
         itemTotals[l.name].totalQty += l.qty;
       });
@@ -12484,12 +12512,19 @@
            rapport Z · une addition partagée en trois disparaissait entièrement des
            catégories tout en restant dans le total. On donne à chaque part sa
            fraction de la note, article par article, famille comprise. */
-        const shareLines = Object.entries(splitState.itemTotals).map(([name, info]) => ({
-          name: `${name} · 1/${splitState.numParts}`,
-          qty: info.totalQty,
-          total: money(info.totalQty * info.unitPrice / splitState.numParts),
-          cat: lineCat(null, name),
-        }));
+        const shareLines = Object.entries(splitState.itemTotals).map(([name, info]) => {
+          const unitPrice = info.unitPrice || 0;
+          const shareUnitPrice = money(unitPrice / splitState.numParts);
+          return {
+            name: `${name} · 1/${splitState.numParts}`,
+            qty: info.totalQty,
+            unit: shareUnitPrice,
+            price: shareUnitPrice,
+            total: money(info.totalQty * unitPrice / splitState.numParts),
+            cat: lineCat(info.itemId || null, name),
+            itemId: info.itemId || '',
+          };
+        });
         for (let i = 0; i < splitState.numParts; i++) {
           parts.push({ base: baseShares[i], tip: tipShares[i], amount: money(baseShares[i] + tipShares[i]), label, lines: shareLines.map(l => ({ ...l })), paid: false, payMethod: null });
         }
@@ -12500,6 +12535,21 @@
           return s + remainingQty(name) * info.unitPrice;
         }, 0);
         const unassignedPerConv = unassignedTotal / n;
+        const unassignedLines = Object.entries(splitState.itemTotals)
+          .filter(([name]) => remainingQty(name) > 0)
+          .map(([name, info]) => {
+            const rem = remainingQty(name);
+            const shareUnitPrice = money(info.unitPrice / n);
+            return {
+              name: `${name} · 1/${n}`,
+              qty: rem,
+              unit: shareUnitPrice,
+              price: shareUnitPrice,
+              total: money(rem * info.unitPrice / n),
+              cat: lineCat(info.itemId || null, name),
+              itemId: info.itemId || '',
+            };
+          });
 
         for (let c = 1; c <= n; c++) {
           const cart = splitState.perConvive[c] || {};
@@ -12512,17 +12562,25 @@
           const items = Object.entries(cart)
             .map(([name, qty]) => qty > 1 ? `${qty}× ${name}` : name)
             .join(', ');
+          const assignedLines = Object.entries(cart).map(([name, qty]) => {
+            const info = splitState.itemTotals[name] || {};
+            const unitPrice = info.unitPrice || 0;
+            return {
+              name, qty,
+              unit: unitPrice,
+              price: unitPrice,
+              total: money(qty * unitPrice),
+              cat: lineCat(info.itemId || null, name),
+              itemId: info.itemId || '',
+            };
+          });
+          const partLines = [...assignedLines, ...unassignedLines.map(l => ({ ...l }))];
           parts.push({
             weight: amt,
             label: items || 'Part équilibrée',
             /* Chaque part garde ses lignes pour que le ticket imprimé du
                convive liste ses articles, pas juste un montant. */
-            lines: Object.entries(cart).map(([name, qty]) => ({
-              name, qty, total: money(qty * (splitState.itemTotals[name]?.unitPrice || 0)),
-              /* Sans famille, la ligne compte dans le total du Z mais dans aucune
-                 catégorie · le même trou que les parts égales. */
-              cat: lineCat(null, name),
-            })),
+            lines: partLines,
             paid: false, payMethod: null,
           });
         }
@@ -12552,6 +12610,11 @@
             <div class="split-part-info">
               <div class="split-part-amount">${fmtMADcents(p.amount)}</div>
               <div class="split-part-paid-label">Réglé · ${p.payMethod === 'carte' ? 'Carte' : 'Espèces'}</div>
+            </div>
+            <div class="split-part-btns">
+              <button class="split-part-btn reprint" data-reprint-part="${idx}" aria-label="Réimprimer le ticket">
+                <i data-lucide="printer"></i><span>Ticket</span>
+              </button>
             </div>
           </div>`;
         }
@@ -12601,12 +12664,24 @@
       const base = money(p.base != null ? p.base : (p.amount - tip));
       const completesTable = !splitState.isVrap && splitState.tableId
         && splitState.flow.paidCount + 1 >= splitState.flow.parts.length;
-      recordSale(base, method === 'carte' ? 'card' : 'cash', (splitState.sourceLabel || 'Table') + ' · part ' + (partIdx + 1), tip, p.lines,
+      const entry = recordSale(base, method === 'carte' ? 'card' : 'cash', (splitState.sourceLabel || 'Table') + ' · part ' + (partIdx + 1), tip, p.lines,
         completesTable ? splitState.tableId : '');
+      if (entry) {
+        if (!entry.table && splitState.tableId) {
+          entry.table = String(splitState.tableId);
+          entry.channel = tables[splitState.tableId] && tables[splitState.tableId].zone === 'terrasse' ? 'terrace' : 'dining';
+        }
+        p.saleId = entry.id;
+      }
       p.paid = true;
       p.payMethod = method;
       splitState.flow.paidCount++;
       renderSplitFlow();
+
+      if (method === 'cash') {
+        openCashDrawer();
+      }
+      printSaleTicket(entry || lastSaleEntry());
 
       if (splitState.flow.paidCount >= splitState.flow.parts.length) {
         // All parts settled · finalize the sale
@@ -12689,6 +12764,21 @@
       const payBtn = e.target.closest('[data-pay-part]');
       if (payBtn) {
         paySplitPart(parseInt(payBtn.dataset.payPart), payBtn.dataset.payMethod);
+        return;
+      }
+
+      // Reprint paid part button
+      const reprintBtn = e.target.closest('[data-reprint-part]');
+      if (reprintBtn) {
+        const pIdx = parseInt(reprintBtn.dataset.reprintPart);
+        const part = splitState.flow && splitState.flow.parts && splitState.flow.parts[pIdx];
+        if (part && part.saleId) {
+          const sale = journal.find(en => en && en.id === part.saleId);
+          if (sale) printSaleTicket(sale, { copy: true });
+          else toast('Ticket introuvable');
+        } else if (lastSaleEntry()) {
+          printSaleTicket(lastSaleEntry(), { copy: true });
+        }
         return;
       }
 
@@ -13191,8 +13281,16 @@
       }
       if (Array.isArray(lines) && lines.length) {
         entry.lines = lines.filter(l => l.kind !== 'formula-part').map(l => {
+          const unitPrice = l.price != null ? l.price : (l.unit != null ? l.unit : (l.qty ? money(l.total / l.qty) : l.total));
           const saved = Object.assign(
-            { name: l.name, qty: l.qty, total: money(l.total != null ? l.total : (l.price * l.qty)), cat: l.cat || '' },
+            {
+              name: l.name,
+              qty: l.qty,
+              unit: unitPrice,
+              price: unitPrice,
+              total: money(l.total != null ? l.total : (unitPrice * l.qty)),
+              cat: l.cat || '',
+            },
             l.itemId ? { itemId: l.itemId } : null,
             l.kind ? { kind: l.kind } : null);
           if (Array.isArray(l.formulaChoices)) {
@@ -15841,7 +15939,10 @@
       const saved = {
         mode:      splitState.splitMode,
         total:     splitState.total,
-        parts:     splitState.flow.parts.map(p => ({ ...p })),
+        parts:     splitState.flow.parts.map(p => ({
+          ...p,
+          lines: Array.isArray(p.lines) ? p.lines.map(l => ({ ...l })) : [],
+        })),
         paidCount: splitState.flow.paidCount,
       };
       if (splitState.isVrap) vrapSplit = saved;
@@ -15869,7 +15970,10 @@
         numConvives: saved.parts.length,
         assignments: {},
         flow: {
-          parts: saved.parts.map(p => ({ ...p })),
+          parts: saved.parts.map(p => ({
+            ...p,
+            lines: Array.isArray(p.lines) ? p.lines.map(l => ({ ...l })) : [],
+          })),
           paidCount: saved.paidCount,
         },
       });
@@ -18630,49 +18734,17 @@
       dismissExpired(id);
       vrapEditingNum = null;
       vrapDiscount = null;
-      /* UN CHOIX DE FORMULE COÛTE ZÉRO, ET CE ZÉRO EST UN PRIX, PAS UN TROU.
-         Le serveur le pose exprès (priceLines : `kind === 'formula-part' ? 0`),
-         parce que le parent porte déjà le supplément dans le total payable.
-         `+l.unitPrice || (m ? m.price : 0)` lisait ce zéro comme une absence et
-         retombait sur la carte : chaque choix était refacturé à son prix à la
-         carte PAR-DESSUS la formule. Une expirée de 75 MAD revenait à 90 dans
-         le panier, et le client repartait en payant 15 MAD de trop. On ne
-         consulte donc la carte que si la ligne n'a VRAIMENT pas de prix. */
-      const withParent = new Set((e.lines || [])
-        .filter(l => l && l.kind === 'formula' && l.formulaUid)
-        .map(l => String(l.formulaUid)));
       cart = (e.lines || []).map(l => {
-        const name = String((l && l.name) || '');
-        const m = menuLineFind(x => String(x.name || '').toLowerCase() === name.toLowerCase());
-        const recorded = Number(l && l.unitPrice);
-        const line = {
+        const m = menuLineFind(x => String(x.name || '').toLowerCase() === String(l.name || '').toLowerCase());
+        return {
           uid: newLineUid(),
-          id: (m && m.id) || ('x-' + name),
-          name: name || (m && m.name) || '',
-          price: Number.isFinite(recorded) ? Math.max(0, recorded) : Math.max(0, (m && m.price) || 0),
-          qty: Math.max(1, +(l && l.qty) || 1),
-          note: (l && l.note) || '',
+          id: (m && m.id) || ('x-' + l.name),
+          name: l.name || (m && m.name) || '',
+          price: Math.max(0, +l.unitPrice || (m ? m.price : 0)),
+          qty: Math.max(1, +l.qty || 1),
+          note: l.note || '',
           kind: '', formulaUid: '', formulaChoices: [],
         };
-        /* La formule se reconstitue telle qu'elle est partie : le parent porte
-           le prix et les commandes de quantité, les choix suivent leur parent
-           et se suppriment avec lui (formulaGroup travaille sur formulaUid).
-           Un choix ORPHELIN — parent perdu en route — reste une ligne ordinaire
-           à 0 : marqué `formula-part` sans parent, il perdrait ses commandes de
-           quantité et le caissier ne pourrait plus le retirer du panier. */
-        if (l && l.formulaUid && String(l.kind || '') === 'formula') {
-          line.kind = 'formula';
-          line.formulaUid = String(l.formulaUid);
-          line.formulaName = l.formulaName || line.name;
-        } else if (l && l.formulaUid && String(l.kind || '') === 'formula-part'
-                   && withParent.has(String(l.formulaUid))) {
-          line.kind = 'formula-part';
-          line.formulaUid = String(l.formulaUid);
-          line.formulaName = l.formulaName || '';
-          line.slotLabel = l.slotLabel || '';
-          line.price = 0;
-        }
-        return line;
       }).filter(c => c.name);
       if (!cart.length) { toast('Expirée vide · rien à reprendre'); return; }
       setVrapView('builder');
