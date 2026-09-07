@@ -51,8 +51,8 @@ ok('la vente cloud transporte l’identifiant OrderPro sans dépendre du libell�
 ok('le reçu imprime le même numéro que la caisse et la cuisine',
   /ref: vrapOrder \? ticketNo\(vrapOrder\)/.test(CAISSE));
 ok('une commande OrderPro non payée peut être annulée depuis son ticket',
-  /function cancelOrderProTakeaway\(o\)[\s\S]{0,500}opPush\(o,\s*'rejected'/.test(CAISSE)
+  /function cancelOrderProTakeaway\(o,\s*authorizedWho\s*=\s*null\)[\s\S]{0,900}opPush\(o,\s*'rejected'/.test(CAISSE)
     && /data-vrap-cancel/.test(CAISSE)
-    && /mode === 'vrap'[\s\S]{0,1800}cancelOrderProTakeaway\(editingOrder\)/.test(CAISSE));
+    && /mode === 'vrap'[\s\S]{0,1800}cancelOrderProTakeaway\(editingOrder,\s*who\)/.test(CAISSE));
 if (failed) process.exit(1);
 console.log('\n  Caisse takeout + OrderPro confirmation boundaries verified.\n');

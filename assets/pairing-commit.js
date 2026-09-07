@@ -81,6 +81,7 @@
          partagée : il porte le journal, les additions et les mouvements
          d'espèces, c'est-à-dire l'argent d'un commerce. */
       try { localStorage.removeItem('kiwi-caisse-shift'); } catch (_) {}
+      try { localStorage.removeItem('kiwi-caisse-shift:' + (was.merchant || was.slug)); } catch (_) {}
       try {
         purgeTenantData();
       } catch (err) {

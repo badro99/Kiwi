@@ -116,6 +116,12 @@ export async function onRequestPost({ request, env }) {
    * Both caisse and employee surfaces pass the same session id; deriving the
    * ledger id from it makes a cross-device retry hit the same primary key. */
   const requestedSession = String((b && b.session) || '').trim().slice(0, 64);
+  const split = b && b.split;
+  if (split != null && (!employeeTable || !requestedSession || !split
+    || !Number.isInteger(split.index) || !Number.isInteger(split.count)
+    || split.count < 2 || split.count > 50 || split.index < 0 || split.index >= split.count)) {
+    return json({ error: 'bad-split' }, 400);
+  }
   let serviceSession = null;
   if (requestedSession || employeeTable) {
     try {
@@ -179,7 +185,10 @@ export async function onRequestPost({ request, env }) {
   // takings twice. The client now sends a stable id per sale (see the queue in
   // assets/live-link.js) and INSERT OR IGNORE makes the retry a no-op. Callers
   // that send no id keep the old behaviour: a fresh row every time.
-  const id = serviceSession
+  const splitPrefix = split && serviceSession
+    ? ('visit-' + String(serviceSession.id).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40) + '-split-') : '';
+  const splitIds = splitPrefix ? Array.from({ length: split.count }, (_, i) => splitPrefix + i + '-emp') : [];
+  const id = splitPrefix ? splitIds[split.index] : serviceSession
     ? ('visit-' + String(serviceSession.id).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 52) + '-emp')
     : (String((b && b.id) || '').slice(0, 64) || ('sale-' + ts + '-' + Math.random().toString(36).slice(2, 8)));
 
@@ -357,7 +366,20 @@ export async function onRequestPost({ request, env }) {
   }
 
   let settlementPending = false;
-  if (employeeTable || serviceSession) {
+  let splitComplete = !split;
+  if (split) {
+    // Distinct, deterministic rows preserve each tender and make retries safe.
+    // Closing depends on durable receipts, never on a client's pre-fetch count.
+    try {
+      const receipts = await env.DB.prepare(
+        `SELECT id FROM sales WHERE merchant = ? AND id IN (${splitIds.map(() => '?').join(',')})`
+      ).bind(merchant, ...splitIds).all();
+      splitComplete = new Set((receipts.results || []).map(row => row.id)).size === split.count;
+    } catch (_) {
+      return json({ error: 'split-receipts-unavailable' }, 503);
+    }
+  }
+  if ((employeeTable || serviceSession) && splitComplete) {
     const settledTable = employeeTable || String(serviceSession.table_no || '');
     /* ── ON SOLDE UNE VISITE, PAS UN NUMÉRO DE TABLE ─────────────────────────
      * Cette requête disait `WHERE table_no = ? AND created_ts >= startOfDay`.

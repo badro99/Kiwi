@@ -5501,7 +5501,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=492" defer></script>
+  <script src="assets/caisse-pwa.js?v=493" defer></script>
   <script src="assets/live-link.js?v=26" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -5509,10 +5509,10 @@
   <!-- Ce qui appartient à un commerçant, et part quand cet appareil en change.
        AVANT caisse-pairing.js : c'est l'appairage qui déclenche la purge, et une
        serrure chargée après la porte ne ferme rien. -->
-  <script src="assets/tenant-purge.js?v=1" defer></script>
+  <script src="assets/tenant-purge.js?v=2" defer></script>
   <!-- Le geste partagé qui pose l'appairage et déclenche cette purge. Partagé
        avec kiwi-cuisine.html, qui s'appaire sur la même route. -->
-  <script src="assets/pairing-commit.js?v=1" defer></script>
+  <script src="assets/pairing-commit.js?v=2" defer></script>
   <!-- Hosted: 6-digit pairing pad binds this caisse to its store (no demo PINs). -->
   <script src="assets/caisse-pairing.js?v=17" defer></script>
   <script src="assets/kiwi-select.js?v=2" defer></script>
@@ -9150,7 +9150,6 @@
     let vrapEditingNum = null;
     let vrapDiscount   = null;  // { kind, value, amount, reason } | null
     let vrapResumedExpiredId = null; // id d'une commande expirée reprise en cours dans le panier
-    let vrapCancellingAuthorized = false;
 
     const dismissedExpiredIds = new Set((() => {
       try { return JSON.parse(localStorage.getItem('kiwi_dismissed_expired') || '[]'); } catch (_) { return []; }
@@ -10435,9 +10434,7 @@
               liveOrder ? `Annuler la commande ${ticketNo(editingOrder)}` : 'Vider la commande',
               (who) => {
                 if (liveOrder) {
-                  vrapCancellingAuthorized = who || true;
-                  cancelOrderProTakeaway(editingOrder);
-                  vrapCancellingAuthorized = false;
+                  cancelOrderProTakeaway(editingOrder, who);
                   return;
                 }
                 clearCart();
@@ -18851,10 +18848,9 @@
       o.total = cart.reduce((s, c) => s + c.price * c.qty, 0);  // gross · réduction is checkout-only
     }
 
-    function cancelOrderProTakeaway(o) {
+    function cancelOrderProTakeaway(o, authorizedWho = null) {
       if (!o || !o.opId || o.paid) return false;
       const label = ticketNo(o);
-      const preAuth = vrapCancellingAuthorized;
       const proceed = (who) => {
         toast(`Annulation de ${label}…`);
         dismissExpired(o.opId);
@@ -18878,7 +18874,7 @@
           toast(`Commande ${label} annulée${by}`);
         });
       };
-      if (preAuth) { proceed(preAuth); return true; }
+      if (authorizedWho) { proceed(authorizedWho); return true; }
       requireTillOperator(`Annuler la commande ${label}`, proceed);
       return true;
     }

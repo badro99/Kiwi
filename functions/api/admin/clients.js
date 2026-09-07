@@ -20,6 +20,7 @@
 // worked before the registry stops working now.
 
 import { isOperator, isSeniorOperator, slugMerchant, json, operatorActor } from '../../auth/_lib.js';
+import { businessDayStart } from '../_business-day.js';
 
 export async function onRequestGet(context) {
   const { request, env } = context;
@@ -36,10 +37,7 @@ export async function onRequestGet(context) {
 
   // Start of "today" respecting the 5:00 AM business day cutoff.
   const now = Date.now();
-  const CUTOFF_MS = 5 * 3600000;
-  const currentBizDate = new Date(now - CUTOFF_MS);
-  currentBizDate.setHours(0, 0, 0, 0);
-  const dayStart = currentBizDate.getTime() + CUTOFF_MS;
+  const dayStart = businessDayStart(now);
 
   const map = new Map(); // merchant slug → row
   function row(m) {

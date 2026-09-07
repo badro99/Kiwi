@@ -235,7 +235,7 @@ async function get(fn, qs, headers = {}) {
       && guarded.indexOf('requireTillOperator(') < guarded.indexOf('cancelOrderProTakeaway('),
     `gardien@${guarded.indexOf('requireTillOperator(')} vider@${guarded.indexOf('clearCart()')} annuler@${guarded.indexOf('cancelOrderProTakeaway(')}`);
   ok('…y compris pour annuler une commande déjà partie en cuisine',
-    /cancelOrderProTakeaway\(editingOrder\)/.test(vrapCancel));
+    /cancelOrderProTakeaway\(editingOrder,\s*who\)/.test(vrapCancel));
   ok('…mais n’ennuie personne quand il n’y a rien à perdre',
     /!liveOrder && !cart\.length/.test(vrapCancel));
   ok('…et le code n’est jamais comparé dans le navigateur',
@@ -245,7 +245,7 @@ async function get(fn, qs, headers = {}) {
   /* cancelOrderProTakeaway protège la destruction par code opérateur quel que soit
      le chemin d'appel (bouton vrap ou clic direct data-vrap-cancel sur le board). */
   const cancelTakeawayFn = (() => {
-    const at = caissePage.indexOf('function cancelOrderProTakeaway(o)');
+    const at = caissePage.indexOf('function cancelOrderProTakeaway(o, authorizedWho = null)');
     if (at < 0) return '';
     return caissePage.slice(at, caissePage.indexOf('function settleVrapPayment()', at));
   })();

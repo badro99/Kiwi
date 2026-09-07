@@ -973,6 +973,8 @@ section('Whole-project regressions');
        caisse et écrivait les quatre clés à la main — sans la purge du commerce
        précédent. */
     'pairing-parity-test.mjs',
+    'business-day-timezone-test.mjs',
+    'takeaway-cancel-authorization-test.mjs',
     /* Les écarts de SURFACE : jetons recopiés, gris froids inventés, palette
        étrangère collée, sélecteur d'élément nu qui fuit dans une page qui ne
        l'attendait pas. Cette famille-là ne casse rien — la page rend 200, la

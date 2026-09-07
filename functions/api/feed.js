@@ -249,10 +249,15 @@ export async function onRequestGet({ request, env }) {
    * that identity back to the canonical order queue so the owner sees the same
    * reference as caisse, plus who took the order and through which surface. No
    * extra sales columns or migration are needed: old rows become richer too. */
-  const visitIds = Array.from(new Set(rows.map((r) => {
-    const id = String(r && r.id || '');
-    return id.startsWith('visit-') && id.endsWith('-emp') ? id.slice(6, -4) : '';
-  }).filter(Boolean)));
+  /* Une addition partagée a une ligne financière par part :
+     visit-<session>-split-<index>-emp. Pour l'attribution serveur/canal, toutes
+     rejoignent pourtant la même visite et le même bon canonique. */
+  const visitFromSaleId = (value) => {
+    const id = String(value || '');
+    if (!id.startsWith('visit-') || !id.endsWith('-emp')) return '';
+    return id.slice(6, -4).replace(/-split-\d+$/, '');
+  };
+  const visitIds = Array.from(new Set(rows.map((r) => visitFromSaleId(r && r.id)).filter(Boolean)));
   const orderByVisit = new Map();
   for (let offset = 0; offset < visitIds.length; offset += 75) {
     const batch = visitIds.slice(offset, offset + 75);
@@ -282,7 +287,7 @@ export async function onRequestGet({ request, env }) {
     sale.discountReason = String(sale.discount_reason || '');
     sale.actorId = String(sale.discount_actor_id || '');
     const id = String(sale.id || '');
-    const visit = id.startsWith('visit-') && id.endsWith('-emp') ? id.slice(6, -4) : '';
+    const visit = visitFromSaleId(id);
     const order = visit ? orderByVisit.get(visit) : null;
     sale.orderRef = String((visit ? sale.label : sale.ref) || sale.label || sale.ref
       || (order && order.number != null ? order.number : '')).slice(0, 80);

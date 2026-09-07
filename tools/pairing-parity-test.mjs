@@ -131,6 +131,7 @@ function residueOfA() {
     kiwiCustomVenues: '[{"slug":"restaurant-a"}]',
     kiwiPins: '[{"name":"Amira"}]',
     'kiwi-caisse-shift': '{"journal":"A"}',
+    'kiwi-caisse-shift:restaurant-a': '{"journal":"A"}',
     kiwiCuisineCookingV2: '["bon-A-12"]',
     /* Ce qui doit SURVIVRE : l'appareil, pas le commerçant. */
     'kiwi:posDevice': 'tablette-passe-01',
@@ -151,7 +152,7 @@ function residueOfA() {
   ok(store.memory.get('kiwiLiveMerchant') === 'restaurant-b', 'cuisine : le nouveau commerçant est posé');
 
   for (const dead of ['kiwiSales:scoped@restaurant-a', 'kiwi:bqDay', 'kiwiBoutiqueCatalog:restaurant-a',
-    'kiwiCustomVenues', 'kiwiPins', 'kiwi-caisse-shift', 'kiwiCuisineCookingV2']) {
+    'kiwiCustomVenues', 'kiwiPins', 'kiwi-caisse-shift', 'kiwi-caisse-shift:restaurant-a', 'kiwiCuisineCookingV2']) {
     ok(!store.memory.has(dead), `cuisine : « ${dead} » du commerce précédent est parti`);
   }
   ok(store.memory.get('kiwi:posDevice') === 'tablette-passe-01',
@@ -197,12 +198,22 @@ function residueOfA() {
   const store = makeStore({
     kiwiPairedVenue: JSON.stringify({ merchant: 'restaurant-b', venueId: '', type: '', subtype: '', name: 'Chez B', location: '' }),
     'kiwiSales:scoped@restaurant-b': '[{"total":120}]',
+    'kiwi-caisse-shift:restaurant-b': '{"journal":"B"}',
   });
   const { commit } = boot(store);
   const res = commit('123456', API_RESPONSE_B, {});
   ok(res.switched === false, 'même commerce ⇒ aucun changement de locataire');
   ok(store.memory.get('kiwiSales:scoped@restaurant-b') === '[{"total":120}]',
     'même commerce ⇒ ses propres ventes ne sont PAS effacées');
+  ok(store.memory.get('kiwi-caisse-shift:restaurant-b') === '{"journal":"B"}',
+    'même commerce ⇒ le service compartimenté est conservé');
+}
+
+{
+  const store = makeStore(residueOfA());
+  boot(store).purge.purge();
+  ok(!store.memory.has('kiwi-caisse-shift:restaurant-a'),
+    'changement de compte ⇒ la purge partagée efface aussi le service compartimenté');
 }
 
 /* ── 6 · un premier appairage ne purge rien ─────────────────────────────── */

@@ -42,7 +42,7 @@
   // Toute clé commençant par l'un de ces préfixes est de la donnée par
   // établissement → elle part au changement de commerçant.
   var TENANT_PREFIXES = ['kiwi:', 'kiwiSales:', 'kiwiBoutiqueCatalog:', 'kiwiLiveIngested:',
-    'kiwiBarcodeSeq:', 'kiwiSet:biz:'];
+    'kiwiBarcodeSeq:', 'kiwiSet:biz:', 'kiwi-caisse-shift:'];
   // Chrome de l'appareil / préférences d'affichage : ce n'est PAS la donnée d'un
   // commerçant, et ça doit survivre au changement.
   var PRESERVE = {

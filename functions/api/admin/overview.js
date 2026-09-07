@@ -23,6 +23,7 @@
 //     que d'afficher un zéro qui ressemble à un fait.
 
 import { isOperator, slugMerchant, json } from '../../auth/_lib.js';
+import { businessDayStart, businessDayWindows } from '../_business-day.js';
 
 /* Le tarif public, tel qu'il est vendu (voir CLAUDE.md § Phase 1). Ultimate est
  * SUR DEVIS : il n'a pas de prix ici, et c'est exactement pourquoi
@@ -56,10 +57,7 @@ export async function onRequestGet(context) {
   if (!env.DB) return json({ error: 'no-db' }, 503);
 
   const now = Date.now();
-  const CUTOFF_MS = 5 * 3600000;
-  const currentBizDate = new Date(now - CUTOFF_MS);
-  currentBizDate.setHours(0, 0, 0, 0);
-  const dayStart = currentBizDate.getTime() + CUTOFF_MS;
+  const dayStart = businessDayStart(now);
   const d7 = now - 7 * DAY;
   const d30 = now - 30 * DAY;
 
@@ -173,14 +171,18 @@ export async function onRequestGet(context) {
     /* La courbe des 30 jours. Groupée en SQL par (magasin, jour) — au plus
      * trente lignes par établissement — puis partagée réel/démo ici, parce que
      * SQL ne connaît pas la règle « un magasin sans propriétaire est une démo ». */
+    // D1 has no IANA timezone conversion. Bind real civil-day windows so the
+    // Ramadan offset changes are also correct within the thirty-day series.
+    const days = businessDayWindows(now);
+    const windows = `WITH days(d, start_ts, end_ts) AS (VALUES ${days.map(() => '(?, ?, ?)').join(',')})`;
     const perDay = await tryAll(env, [
-      `SELECT merchant, date((ts - 18000000)/1000,'unixepoch') AS d, COALESCE(SUM(COALESCE(amount_cents, amount * 100)),0) / 100.0 AS amount
-         FROM sales WHERE ts >= ? AND void_ts IS NULL GROUP BY merchant, d`,
-      `SELECT merchant, date((ts - 18000000)/1000,'unixepoch') AS d, COALESCE(SUM(amount),0) AS amount
-         FROM sales WHERE ts >= ? AND void_ts IS NULL GROUP BY merchant, d`,
-      `SELECT merchant, date((ts - 18000000)/1000,'unixepoch') AS d, COALESCE(SUM(amount),0) AS amount
-         FROM sales WHERE ts >= ? GROUP BY merchant, d`,
-    ], [d30]);
+      `${windows} SELECT merchant, d, COALESCE(SUM(COALESCE(amount_cents, amount * 100)),0) / 100.0 AS amount
+         FROM sales JOIN days ON ts >= start_ts AND ts < end_ts WHERE void_ts IS NULL GROUP BY merchant, d`,
+      `${windows} SELECT merchant, d, COALESCE(SUM(amount),0) AS amount
+         FROM sales JOIN days ON ts >= start_ts AND ts < end_ts WHERE void_ts IS NULL GROUP BY merchant, d`,
+      `${windows} SELECT merchant, d, COALESCE(SUM(amount),0) AS amount
+         FROM sales JOIN days ON ts >= start_ts AND ts < end_ts GROUP BY merchant, d`,
+    ], days.flatMap(day => [day.d, day.from, day.to]));
     const realSet = new Set(real.map((s) => s.merchant));
     const byDay = new Map();
     for (const r of perDay.rows) {
@@ -189,12 +191,7 @@ export async function onRequestGet(context) {
     }
     // Trente entrées, y compris les jours sans vente : une courbe qui saute les
     // jours creux dessine une activité qui n'a pas eu lieu.
-    const series = [];
-    const bizNow = new Date(now - CUTOFF_MS);
-    for (let i = 29; i >= 0; i--) {
-      const d = new Date(bizNow.getTime() - i * DAY).toISOString().slice(0, 10);
-      series.push({ d, amount: byDay.get(d) || 0 });
-    }
+    const series = days.map(({ d }) => ({ d, amount: byDay.get(d) || 0 }));
 
     /* ── 4. Ce que NOUS faisons ─────────────────────────────────────────────
      * Le montant convenu (mrr) l'emporte sur le tarif du palier : c'est lui qui

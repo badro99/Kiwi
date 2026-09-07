@@ -4860,7 +4860,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
   <script src="assets/staff-roles.js?v=1" defer></script>
   <!-- Real employee identity, planning, floor and attendance bridge. -->
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/employee-live.js?v=488" defer></script>
+  <script src="assets/employee-live.js?v=489" defer></script>
   <script src="assets/employee-planning.js?v=8" defer></script>
   <link rel="stylesheet" href="assets/employee-trade-shell.css?v=2">
   <script src="assets/employee-trade-shell.js?v=2" defer></script>
@@ -9984,13 +9984,13 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
        customers, and come back to keep encaisser. */
     const tableSplits = new Map();  // tableId → { mode, parts, paidCount, total }
 
-    function saveSplitFlow() {
-      if (!splitState.tableId || !splitState.flow) return;
-      tableSplits.set(splitState.tableId, {
-        mode: splitState.splitMode,
-        total: splitState.total,
-        parts: splitState.flow.parts.map(p => ({ ...p })),
-        paidCount: splitState.flow.paidCount,
+    function saveSplitFlow(state = splitState) {
+      if (!state.tableId || !state.flow) return;
+      tableSplits.set(state.tableId, {
+        mode: state.splitMode,
+        total: state.total,
+        parts: state.flow.parts,
+        paidCount: state.flow.paidCount,
       });
     }
 
@@ -10001,7 +10001,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       splitState.total    = saved.total;
       splitState.splitMode = saved.mode;
       splitState.flow = {
-        parts: saved.parts.map(p => ({ ...p })),
+        parts: saved.parts,
         paidCount: saved.paidCount,
       };
       return true;
@@ -10441,36 +10441,42 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       }
     }
     async function markSplitPartPaid(partIdx, method) {
-      const p = splitState.flow && splitState.flow.parts && splitState.flow.parts[partIdx];
+      const state = { ...splitState };
+      const flow = state.flow;
+      const p = flow && flow.parts && flow.parts[partIdx];
       if (!p || p.paid) return false;
 
-      const tableId = splitState.tableId;
+      const tableId = state.tableId;
       const t = tableId && tables[tableId];
       const payMethod = (method === 'carte' || method === 'card') ? 'card' : 'cash';
-      const completesTable = Boolean(tableId && (splitState.flow.paidCount + 1 >= splitState.flow.parts.length));
 
       const partFlightKey = tableId ? (tableId + ':split:' + partIdx) : ('split:' + partIdx);
       if (employeePaymentsInFlight.has(partFlightKey)) return false;
-      employeePaymentsInFlight.add(partFlightKey);
 
       const merchant = (liveEmployeeState && liveEmployeeState.merchant) || svSlug();
       const canonical = Array.from(serviceCanonicalOrders.values()).find((order) => order && !order.paid
         && String(order.table) === String(tableId) && order.session);
       const session = (tableId && serviceTableSessions.get(tableId)) || (canonical && String(canonical.session)) || '';
+      if (!SV_DEMO && (!merchant || !session)) {
+        toast('Session de service expirée · reconnectez-vous', 5200);
+        return false;
+      }
       const orderRef = tableId ? serviceTableOrderRef(tableId) : '';
       const partPaymentId = p.saleId || (tableId ? employeePaymentId(tableId + ':split:' + partIdx) : '');
 
       let saved = null;
+      employeePaymentsInFlight.add(partFlightKey);
       try {
-        if (!SV_DEMO && merchant && session) {
+        if (!SV_DEMO) {
           const response = await fetch('/api/sale', {
             method: 'POST', credentials: 'same-origin', cache: 'no-store',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               id: partPaymentId,
               merchant,
-              table: completesTable ? tableId : '',
+              table: tableId,
               session,
+              split: { index: partIdx, count: flow.parts.length },
               amount: Math.round(p.amount * 100) / 100,
               amountCents: Math.round(p.amount * 100),
               method: payMethod,
@@ -10491,7 +10497,6 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
           }
         }
       } catch (_) {
-        employeePaymentsInFlight.delete(partFlightKey);
         toast(`Table ${tableId || ''} · part ${partIdx + 1} non enregistrée, réessayez`, 5200);
         return false;
       } finally {
@@ -10500,20 +10505,25 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
 
       p.paid = true;
       p.payMethod = method;
-      if (partPaymentId) p.saleId = partPaymentId;
-      splitState.flow.paidCount++;
+      if (partPaymentId) p.saleId = (saved && saved.id) || partPaymentId;
+      flow.paidCount = flow.parts.filter(part => part.paid).length;
+      const completesTable = Boolean(tableId && flow.parts.every(part => part.paid));
+      const visibleFlow = splitState.flow && splitState.flow.parts === flow.parts;
+      if (visibleFlow) splitState.flow.paidCount = flow.paidCount;
 
       // Persist progress so it survives a modal dismissal
-      saveSplitFlow();
-      renderSplitFlow();
+      saveSplitFlow(state);
+      if (visibleFlow) renderSplitFlow();
 
       // Live-update the underlying table card if visible
       if (currentTab === 'tables') renderTables();
       if (currentTab === 'notifications') renderNotifications();
 
       if (completesTable) {
-        $('#split-parts-list').style.opacity = '0.45';
-        $('#split-all-done').hidden = false;
+        if (visibleFlow) {
+          $('#split-parts-list').style.opacity = '0.45';
+          $('#split-all-done').hidden = false;
+        }
 
         const paidClient = tableId && tableClients.get(tableId);
         if (paidClient && !SV_DEMO) {
@@ -10521,7 +10531,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
             method: 'POST', credentials: 'same-origin', cache: 'no-store',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              merchant, clientId: paidClient.id, amount: splitState.total,
+              merchant, clientId: paidClient.id, amount: state.total,
               ref: 'employee-payment:' + tableId + ':' + Date.now(),
             }),
           }).then((r) => r.ok ? r.json() : null).then((data) => {
@@ -10544,7 +10554,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
           if (saved && saved.settlementPending) {
             publishServiceTableState(tableId, 'khawya', 0, true);
           }
-          for (let i = 0; i < splitState.flow.parts.length; i++) {
+          for (let i = 0; i < flow.parts.length; i++) {
             employeePaymentRefForget(tableId + ':split:' + i);
           }
           employeePaymentRefForget(tableId);
@@ -10552,7 +10562,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
           tablesPaid++;
 
           try {
-            if (typeof kgShiftRevenue !== 'undefined') kgShiftRevenue += (splitState.total || 0);
+            if (typeof kgShiftRevenue !== 'undefined') kgShiftRevenue += (state.total || 0);
             if (typeof kgShiftTurnMin !== 'undefined') kgShiftTurnMin += (t && t.elapsed) || 0;
             if (typeof shiftStart !== 'undefined' && shiftStart && typeof kgRenderProfil === 'function') kgRenderProfil();
             if (typeof kgUpdateRankChip === 'function') kgUpdateRankChip();

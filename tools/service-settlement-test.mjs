@@ -378,6 +378,44 @@ async function main() {
   check('sans cookie employé, le règlement est refusé', offShift.status === 403,
     `reçu ${offShift.status}`);
 
+  console.log('\n6 · Les parts restent distinctes, la visite ferme après la dernière');
+  for (const concurrent of [false, true]) {
+    const visitSplit = 'tsx-split-' + (concurrent ? 'concurrent' : 'sequential');
+    exec(`INSERT INTO table_sessions (id, merchant, mode, table_no, status, opened_ts, seen_ts)
+          VALUES (?, ?, 'table', '4', 'open', ?, ?)`, visitSplit, MERCHANT, Date.now(), Date.now());
+    exec(`INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status,
+          created_ts, updated_ts, session_id) VALUES (?, ?, 110, 'table', '4', 90, '[]', 'served', ?, ?, ?)`,
+      'order-' + visitSplit, MERCHANT, Date.now(), Date.now(), visitSplit);
+    const bodies = [35, 55].map((amount, index) => ({
+      merchant: MERCHANT, table: '4', session: visitSplit, amount, amountCents: amount * 100,
+      method: index ? 'card' : 'cash', split: { index, count: 2 }, id: 'device-' + index,
+    }));
+    let results;
+    if (concurrent) {
+      results = await Promise.all(bodies.map(body => post(sale.onRequestPost, body, cookie)));
+    } else {
+      const firstPart = await post(sale.onRequestPost, bodies[0], cookie);
+      check('la première part laisse la visite ouverte', raw('SELECT status FROM table_sessions WHERE id = ?', visitSplit)[0].status === 'open');
+      check('la première part ne solde pas les commandes', raw('SELECT paid_ts FROM orders WHERE session_id = ?', visitSplit)[0].paid_ts == null);
+      const retryPart = await post(sale.onRequestPost, { ...bodies[0], id: 'another-device' }, cookie);
+      check('le rejeu partiel conserve son identifiant canonique', retryPart.body.id === firstPart.body.id);
+      results = [firstPart, await post(sale.onRequestPost, bodies[1], cookie)];
+    }
+    check('les deux paiements sont confirmés', results.every(r => r.status === 200 && r.body.ok));
+    check('les deux reçus ont des identifiants différents', results[0].body.id !== results[1].body.id);
+    const receipts = raw('SELECT amount_cents, method FROM sales WHERE id IN (?, ?) ORDER BY amount_cents', results[0].body.id, results[1].body.id);
+    check('35 MAD cash et 55 MAD carte existent ensemble en base', receipts.length === 2
+      && receipts[0].amount_cents === 3500 && receipts[0].method === 'cash'
+      && receipts[1].amount_cents === 5500 && receipts[1].method === 'card');
+    check('la dernière part ferme la visite', raw('SELECT status FROM table_sessions WHERE id = ?', visitSplit)[0].status === 'closed');
+    check('la dernière part solde la commande', raw('SELECT paid_ts FROM orders WHERE session_id = ?', visitSplit)[0].paid_ts != null);
+    const beforeReplay = raw('SELECT COUNT(*) AS n FROM sales')[0].n;
+    await Promise.all(bodies.map(body => post(sale.onRequestPost, { ...body, id: 'new-device-id' }, cookie)));
+    check('rejouer les deux parts ne double aucune recette', raw('SELECT COUNT(*) AS n FROM sales')[0].n === beforeReplay);
+    const invalid = await post(sale.onRequestPost, { ...bodies[0], split: { index: 2, count: 2 } }, cookie);
+    check('un indice hors limites est refusé', invalid.status === 400);
+  }
+
   console.log(failures ? `\n${failures} échec(s)\n` : '\nTout passe.\n');
   process.exitCode = failures ? 1 : 0;
 }

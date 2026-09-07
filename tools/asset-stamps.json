@@ -120,8 +120,8 @@
     "sha": "449476091b2c6ead"
   },
   "assets/caisse-pwa.js": {
-    "v": "492",
-    "sha": "46929eaaecb18849"
+    "v": "493",
+    "sha": "23b6b851be39ac77"
   },
   "assets/caisse-refresh.js": {
     "v": "1",
@@ -196,8 +196,8 @@
     "sha": "cd751f73c0180449"
   },
   "assets/dashboard-pwa.js": {
-    "v": "489",
-    "sha": "30feff369af513df"
+    "v": "490",
+    "sha": "5467a745fbf3fd16"
   },
   "assets/dashboard-startup-gate.js": {
     "v": "1",
@@ -252,8 +252,8 @@
     "sha": "5d6507bf65311b04"
   },
   "assets/employee-live.js": {
-    "v": "488",
-    "sha": "28858844d1224a2d"
+    "v": "489",
+    "sha": "c1e2e5ec081c01ea"
   },
   "assets/employee-planning.js": {
     "v": "8",
@@ -528,8 +528,8 @@
     "sha": "1c16c2f7e5e3e5c4"
   },
   "assets/pairing-commit.js": {
-    "v": "1",
-    "sha": "83f9e0cf3f55606c"
+    "v": "2",
+    "sha": "80659153aaf8ad0f"
   },
   "assets/phone.js": {
     "v": "1",
@@ -856,8 +856,8 @@
     "sha": "9fba6c04ce3b80a0"
   },
   "assets/tenant-purge.js": {
-    "v": "1",
-    "sha": "a118015a9b97ba95"
+    "v": "2",
+    "sha": "64673f83b7dd7b23"
   },
   "assets/tokens.css": {
     "v": "2052",

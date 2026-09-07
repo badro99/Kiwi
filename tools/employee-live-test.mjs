@@ -345,6 +345,31 @@ const settledEmployeeOrder = sqlite.prepare("SELECT paid_ts FROM orders WHERE id
 ok(afterEmployeeRetryRows.sales.length === 1 && Number(settledEmployeeOrder.paid_ts) > 0,
   'un nouvel envoi du même paiement reste idempotent et la commande devient payée une seule fois');
 
+put(`INSERT INTO table_sessions
+  (id,merchant,mode,table_no,status,closed_by,opened_ts,seen_ts)
+  VALUES (?,?,?,?,?,?,?,?)`,
+  'tsx-employee-split', 'amira-cafe', 'table', '98', 'open', '', ledgerNow - 20000, ledgerNow);
+put(`INSERT INTO orders
+  (id,merchant,number,mode,table_no,total,lines,status,created_ts,updated_ts,session_id,server_name,channel)
+  VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+  'ord-employee-split', 'amira-cafe', 980, 'table', '98', 90, '[]', 'served',
+  ledgerNow - 10000, ledgerNow - 10000, 'tsx-employee-split', 'Sara Serveuse', 'kiwi');
+for (const [index, amount, method] of [[0, 35, 'cash'], [1, 55, 'card']]) {
+  const response = await salePost({
+    merchant: 'amira-cafe', table: '98', session: 'tsx-employee-split',
+    split: { index, count: 2 }, amount, amountCents: amount * 100, method,
+    ts: ledgerNow, label: `SB-SPLIT · Part ${index + 1}`, ref: `SB-SPLIT · Part ${index + 1}`,
+  }, cookie);
+  ok(response.status === 200, `la part ${index + 1} est acquittée par le grand livre`);
+}
+const splitFeedResponse = await paidFeed(ledgerNow - 120000);
+const splitFeedRows = (await splitFeedResponse.json()).sales
+  .filter(row => String(row.id).startsWith('visit-tsx-employee-split-split-'));
+ok(splitFeedRows.length === 2
+  && splitFeedRows.every(row => row.server === 'Sara Serveuse'
+    && row.origin === 'employee' && row.channel === 'dining'),
+  'les parts gardent le serveur, la surface et le canal de leur visite dans le flux financier');
+
 const pause = await teamLivePost({ action: 'manager-pause', memberId: 'mem-sara' });
 ok(pause.status === 200, 'la caisse donne la pause dans le pointage partagé');
 const duringPause = await get(cookie); const pausedState = await duringPause.json();
@@ -726,8 +751,11 @@ ok(liveLinkSource.includes("localStorage.getItem('kiwiEmployeeMerchant')")
 ok(!/markTablePaid\([^)]*['"]split['"]\)/.test(serviceSource)
   && /async\s+function\s+markSplitPartPaid\s*\(\s*partIdx\s*,\s*method\s*\)[\s\S]*?fetch\(\s*['"]\/api\/sale['"]/.test(serviceSource)
   && /employeePaymentId\([^)]*?:split:/.test(serviceSource)
-  && /table:\s*completesTable\s*\?\s*tableId\s*:\s*['"]['"]/.test(serviceSource),
+  && /split:\s*\{\s*index:\s*partIdx,\s*count:\s*flow\.parts\.length\s*\}/.test(serviceSource)
+  && /flow\.parts\.every\(part\s*=>\s*part\.paid\)/.test(serviceSource),
   "le partage d'addition employé enregistre chaque part avec sa vraie méthode (carte/cash) et préserve la ventilation");
+ok(/if\s*\(!SV_DEMO\s*&&\s*\(!merchant\s*\|\|\s*!session\)\)[\s\S]{0,180}Session de service expirée/.test(serviceSource),
+  "une session absente refuse la part au lieu de l'afficher payée sans écriture cloud");
 
 if (failures) process.exit(1);
 console.log('\n✓ employee app live gate green');

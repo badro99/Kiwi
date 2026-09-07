@@ -119,7 +119,7 @@ ok('clearCart dismisses resumed expired order so it does not return to Expirées
   /clearCart\(\)\s*\{[\s\S]*?if\s*\(vrapResumedExpiredId\)\s*\{[\s\S]*?dismissExpired\(vrapResumedExpiredId\);[\s\S]*?vrapResumedExpiredId\s*=\s*null;/.test(CAISSE_SRC));
 
 ok('cancelOrderProTakeaway dismisses order so it never lands in Expirées',
-  /cancelOrderProTakeaway\(o\)[\s\S]*?dismissExpired\(o\.opId\);[\s\S]*?opPush\(o,\s*'rejected',\s*\{\s*server:\s*'dismissed'\s*\}\)/.test(CAISSE_SRC));
+  /cancelOrderProTakeaway\(o,\s*authorizedWho\s*=\s*null\)[\s\S]*?dismissExpired\(o\.opId\);[\s\S]*?opPush\(o,\s*'rejected',\s*\{\s*server:\s*'dismissed'\s*\}\)/.test(CAISSE_SRC));
 
 ok('queue.js onRequestPost handles dismiss_expired and marks server_name dismissed',
   /action\s*===\s*'dismiss_expired'[\s\S]*?server_name\s*=\s*'dismissed'/.test(QUEUE_SRC));
