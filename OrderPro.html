@@ -5370,8 +5370,13 @@ em, i, cite, dfn, var { font-style: normal; }
         const children = [];
         formulaSlots.forEach(slot => {
           const selected = l.options?.[slot.key];
-          const ids = slot.type === 'multi' ? (Array.isArray(selected) ? selected : [])
-            : (selected == null ? [] : [selected]);
+          /* Une étape facultative jamais touchée vaut '' (initialCustomizerSelections),
+             pas `undefined` : `== null` la laissait passer et on envoyait un
+             composant d'identifiant vide. Le serveur ne le trouvait dans aucun
+             choix du créneau et refusait TOUTE la formule — « Options à
+             rechoisir » sur un plat pourtant correctement composé. */
+          const ids = (slot.type === 'multi' ? (Array.isArray(selected) ? selected : [])
+            : (selected == null ? [] : [selected])).filter(Boolean);
           ids.forEach((id, choiceIndex) => children.push({
             id, qty: l.qty, kind: 'formula-part', formulaUid,
             formulaName: nameOf(l.id), slotLabel: slot.label || '',
