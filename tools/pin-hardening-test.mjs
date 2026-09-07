@@ -1,7 +1,12 @@
 import { DatabaseSync } from 'node:sqlite';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { onRequestPost as verifyPinPost } from '../functions/api/pin/verify.js';
 import { onRequestPost as cancelPost } from '../functions/api/sale/cancel.js';
 import { tillToken, makeSession, sessionCookie, hashPassword } from '../functions/auth/_lib.js';
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 const failures = [];
 function check(desc, cond) {
@@ -495,6 +500,46 @@ console.log('\n3 · Shared Verifier on Sale Cancellation (/api/sale/cancel)');
   });
   const blockedRes = await cancelPost({ request: blockedReq, env });
   check('cancel endpoint inherits rate limiting and returns 429 when throttled', blockedRes.status === 429);
+}
+
+console.log('\n4 · Dashboard Offline Gate & Invariants');
+
+{
+  const dashSrc = fs.readFileSync(path.join(ROOT, 'dashboard.html'), 'utf8');
+  check('dashboard.html fails closed on offline when account is configured',
+    dashSrc.includes("if (answer === null && (!demosOn() || isConfiguredAccount())) { rejectPin('offline'); return; }"));
+  check('dashboard.html defines isConfiguredAccount helper',
+    dashSrc.includes('function isConfiguredAccount()'));
+  check('dashboard.html displays dedicated offline message in rejectPin',
+    dashSrc.includes("reason === 'offline'") && dashSrc.includes('Connexion requise pour vérifier le code · appareil hors ligne'));
+
+  // Invariant: No shipped file writes kiwiPins
+  const shippedFiles = [];
+  for (const f of fs.readdirSync(ROOT)) {
+    if (f.endsWith('.html') || (f.endsWith('.js') && !f.startsWith('tools'))) {
+      shippedFiles.push(f);
+    }
+  }
+  const assetsDir = path.join(ROOT, 'assets');
+  if (fs.existsSync(assetsDir)) {
+    for (const f of fs.readdirSync(assetsDir, { recursive: true })) {
+      if (typeof f === 'string' && f.endsWith('.js')) {
+        shippedFiles.push(path.join('assets', f));
+      }
+    }
+  }
+
+  let writesKiwiPins = false;
+  let offendingFile = '';
+  for (const rel of shippedFiles) {
+    const code = fs.readFileSync(path.join(ROOT, rel), 'utf8');
+    if (/\bsetItem\(\s*['"]kiwiPins['"]/.test(code)) {
+      writesKiwiPins = true;
+      offendingFile = rel;
+      break;
+    }
+  }
+  check('no shipped file writes kiwiPins (via setItem)', !writesKiwiPins && offendingFile === '');
 }
 
 if (failures.length) {

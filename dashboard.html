@@ -6233,7 +6233,7 @@
 <script src="assets/dateRange.js?v=17" defer></script>
 <script src="assets/mobile-nav.js?v=2" defer></script>
 <script defer src="assets/pwa-update.js?v=359"></script>
-<script defer src="assets/dashboard-pwa.js?v=480"></script>
+<script defer src="assets/dashboard-pwa.js?v=481"></script>
 <script defer src="assets/dashboard-native.js?v=1"></script>
 <!-- Same durable outbox as the tills. It also lets this surface report the
      real device sync state instead of inferring it from navigator.onLine. -->
@@ -6572,6 +6572,20 @@
     } catch (_) { return 0; }
   }
 
+  function isConfiguredAccount() {
+    if (serverRosterSize() > 0 || allPins().length > 0) return true;
+    try {
+      if (localStorage.getItem('kiwiOnboarded') === '1' || localStorage.getItem('kiwiOnboarded') === 'true') return true;
+      if (localStorage.getItem('kiwiAccountKey')) return true;
+      const venues = JSON.parse(localStorage.getItem('kiwiCustomVenues') || '[]');
+      if (Array.isArray(venues) && venues.length > 0) return true;
+      const m = localStorage.getItem('kiwiLiveMerchant');
+      if (m && m !== 'cafe-atlas') return true;
+      if (window.KiwiConfig && window.KiwiConfig.loaded && (window.KiwiConfig.type || window.KiwiConfig.plan)) return true;
+    } catch (_) {}
+    return false;
+  }
+
   /* Le serveur tranche : le code frappé contre le personnel de TOUT le compte
    * (verifyAccountPin, dérivé de la session · un slug n'est jamais demandé).
    *   { name, access }  le code appartient à cette personne
@@ -6638,15 +6652,24 @@
       helpEl.innerHTML = helpHTML;
     }
   }
-  function rejectPin() {
+  function rejectPin(reason) {
     pinInput.value = '';
     cells.forEach((c) => { c.classList.remove('is-filled'); c.textContent = ''; });
     if (pinRow) { pinRow.classList.remove('is-wrong'); void pinRow.offsetWidth; pinRow.classList.add('is-wrong'); }
     if (helpEl) {
       let lang = 'fr';
       try { lang = localStorage.getItem('kiwiLang') || 'fr'; } catch (_) {}
-      const msg = { fr: 'Code incorrect, réessayez.', en: 'Wrong code, try again.', ar: 'رمز غير صحيح، أعد المحاولة.' };
-      helpEl.textContent = msg[lang] || msg.fr;
+      if (reason === 'offline') {
+        const msgOffline = {
+          fr: 'Connexion requise pour vérifier le code · appareil hors ligne',
+          en: 'Connection required to verify code · device offline',
+          ar: 'الاتصال مطلوب للتحقق من الرمز · الجهاز غير متصل بالإنترنت',
+        };
+        helpEl.textContent = msgOffline[lang] || msgOffline.fr;
+      } else {
+        const msg = { fr: 'Code incorrect, réessayez.', en: 'Wrong code, try again.', ar: 'رمز غير صحيح، أعد المحاولة.' };
+        helpEl.textContent = msg[lang] || msg.fr;
+      }
       helpEl.classList.add('is-error');
     }
     try { pinInput.focus(); } catch (_) {}
@@ -6802,6 +6825,11 @@
       askServer(val).then((answer) => {
         if (val !== pinInput.value.replace(/\D/g, '').slice(0, 4)) return;   // la saisie a bougé
         if (answer && answer !== 'no') { finishUnlock(val, answer, true); return; }
+        /* null = serveur injoignable. Le repli d'avant ne connaissait que les codes
+           locaux, et il était sûr TANT QUE kiwiPins en détenait. Depuis qu'ils
+           ne sont plus expédiés, il laissait passer n'importe quels quatre chiffres.
+           Un compte configuré qu'on ne peut pas vérifier se ferme. */
+        if (answer === null && (!demosOn() || isConfiguredAccount())) { rejectPin('offline'); return; }
         const configured = knownHere || serverRosterSize();
         // 'no' = le serveur a tranché. null = on ne sait pas → règle d'avant.
         if (!demosOn() && configured && (answer === 'no' || knownHere)) { rejectPin(); return; }
