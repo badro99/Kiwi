@@ -308,7 +308,11 @@ export async function onRequestPost({ request, env }) {
       old.status = 'cancelled'; old.updatedAt = now;
       const indexInDoc = doc.bookings.findIndex((x) => x.id === old.id);
       if (indexInDoc >= 0) doc.bookings[indexInDoc] = old;
-      pruneReservationsDoc(doc, now);
+      /* Le bornage ne s'applique QUE si hotel_reservations existe. Sans la table,
+         le document est l'unique copie : l'élaguer détruirait pour de bon toute
+         réservation confirmée au-delà de la fenêtre, et la chambre repartirait
+         à la vente. La disponibilité retombe déjà sur le document dans ce cas. */
+      if (hasResTable) pruneReservationsDoc(doc, now);
       try {
         const next = await writeReservationWithEvents(env, { merchant, doc, rev, now, actor, events: [{ previous, current: old, action: 'cancel' }] });
         if (next) { await poke(env, merchant, 'reservations'); return json({ ok: true, rev: next, booking: old }); }
@@ -417,7 +421,11 @@ export async function onRequestPost({ request, env }) {
     };
     const index = old ? doc.bookings.findIndex((x) => x.id === old.id) : -1;
     if (index < 0) doc.bookings.push(rec); else doc.bookings[index] = rec;
-    pruneReservationsDoc(doc, now);
+    /* Le bornage ne s'applique QUE si hotel_reservations existe. Sans la table,
+       le document est l'unique copie : l'élaguer détruirait pour de bon toute
+       réservation confirmée au-delà de la fenêtre, et la chambre repartirait
+       à la vente. La disponibilité retombe déjà sur le document dans ce cas. */
+    if (hasResTable) pruneReservationsDoc(doc, now);
     try {
       const next = await writeReservationWithEvents(env, { merchant, doc, rev, now, actor, events: [{ previous: old, current: rec, action: old ? 'update' : 'create' }] });
       if (next) { await poke(env, merchant, 'reservations'); return json({ ok: true, rev: next, booking: rec }); }

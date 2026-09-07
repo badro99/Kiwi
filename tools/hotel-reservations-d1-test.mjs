@@ -362,4 +362,40 @@ console.log('--- Test 6: Transient Error Discipline (No Silent Fallback to Doc) 
   console.log('  ✓ Returns 503 when D1 errors, strictly protecting against double-booking');
 }
 
+console.log('--- Test 7: Prod D1 Lag · Le bornage ne doit PAS s’appliquer sans la table ---');
+
+/* CLAUDE.md : « Prod D1 lags schema.sql. Every time. » Tant que la migration n’est
+ * pas passee, hotel_reservations n’existe pas : le document store_docs est alors
+ * L’UNIQUE copie de la reservation. L’elaguer detruirait definitivement tout sejour
+ * confirme au-dela de la fenetre [-3j, +14j] et remettrait la chambre en vente.
+ * La disponibilite retombe deja sur le document dans ce cas ; le bornage doit suivre. */
+{
+  sql.exec('DROP TABLE IF EXISTS hotel_reservations');
+  resetTableStateCacheForTests();
+  assert.equal(await hotelReservationsTableExists(env), false,
+    'la sonde voit bien la table absente');
+
+  const res = await callPost({
+    action: 'save',
+    merchant: 'chellah',
+    clientRef: 'lag-far-future',
+    roomTypeId: 'type-deluxe',
+    checkIn: day(30),
+    checkOut: day(33),
+    partySize: 2,
+    customer: { name: 'Atelier de Voyage' },
+  });
+  assert.equal(res.status, 200, 'une reservation lointaine est acceptee sans la table');
+
+  const row = sql.prepare("SELECT data FROM store_docs WHERE merchant=? AND feature='reservations'").get('chellah');
+  const saved = JSON.parse(row.data);
+  const kept = saved.bookings.find((b) => b.publicRef === 'lag-far-future');
+  assert.ok(kept, 'le sejour a +30j SURVIT dans store_docs quand hotel_reservations est absente');
+  assert.ok(saved.bookings.length > 0, 'le document n’est pas vide');
+  console.log('  ✓ Sans la table, le sejour a +30j est conserve (aucune destruction silencieuse)');
+
+  sql.exec(fs.readFileSync(new URL('../migrations/2026-09-07-hotel-reservations.sql', import.meta.url), 'utf8'));
+  resetTableStateCacheForTests();
+}
+
 console.log('\nAll hotel reservations D1 migration tests PASSED cleanly.');

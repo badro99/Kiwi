@@ -266,7 +266,11 @@ export async function onRequestPost({ request, env }) {
       const room=category.rooms[0],code='H-'+crypto.randomUUID().replace(/-/g,'').slice(0,8).toUpperCase(),token=crypto.randomUUID().replace(/-/g,'');
       const rec={id:'bk-'+crypto.randomUUID(),code,customer:{name,phone,email},serviceId:category.id,resourceId:room.id,startAt:stay.startAt,endAt:stay.endAt,partySize,status:doc.settings.confirmation==='request'?'requested':'confirmed',source:'public',note:str(b?.note,600),manageToken:token,publicRef:ref,hotel:{roomTypeName:category.name,checkIn:stay.checkIn,checkOut:stay.checkOut,nights:stay.nights,rate:category.rate,total:category.total,channel:'direct',externalRef:'',guestSegments:normalizeGuestSegments([],[],partySize,stay.checkIn,stay.checkOut),roomSegments:currentRoomSegment(room.id,stay.checkIn,stay.checkOut)},createdAt:now,updatedAt:now};
       doc.bookings.push(rec);
-      pruneReservationsDoc(doc, now);
+      /* Le bornage ne s'applique QUE si hotel_reservations existe. Sans la table,
+         le document est l'unique copie : l'élaguer détruirait pour de bon toute
+         réservation confirmée au-delà de la fenêtre, et la chambre repartirait
+         à la vente. La disponibilité retombe déjà sur le document dans ce cas. */
+      if (d1BusyRooms !== null) pruneReservationsDoc(doc, now);
       try{const next=await writeReservationWithEvents(env,{merchant,doc,rev,now,actor:{id:'public-booking',role:'public'},events:[{previous:null,current:rec,action:'create'}]});if(next){await poke(env,merchant,'reservations');await limitClear(request,env,'booking');return json({ok:true,id:rec.id,code,status:rec.status,checkIn:stay.checkIn,checkOut:stay.checkOut,nights:stay.nights,total:category.total,manageToken:token});}}catch(_){return json({error:'write-failed'},503);}
       continue;
     }

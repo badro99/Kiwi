@@ -1,7 +1,7 @@
 // Shared OTA calendar importer for Pages Functions and the scheduled Worker.
 // Feed URLs are bearer secrets: D1 receives authenticated ciphertext only and
 // the browser receives connection metadata, never the URL.
-import { currentRoomSegment, normalizeGuestSegments, writeReservationWithEvents } from './_stay-events.js';
+import { currentRoomSegment, normalizeGuestSegments, writeReservationWithEvents, hotelReservationsTableExists } from './_stay-events.js';
 import { pruneReservationsDoc } from './stays.js';
 
 const enc = new TextEncoder();
@@ -206,7 +206,13 @@ export async function syncHotelChannel(env, row) {
         const previous={...rec,hotel:{...rec.hotel}}; rec.status = 'cancelled'; rec.updatedAt = now; rec.hotel.syncedAt = now; stayEvents.push({ previous, current:rec, action:'cancel' }); cancelled++; changed++;
       }
     }
-    pruneReservationsDoc(doc, now);
+    /* Le bornage ne s'applique QUE si hotel_reservations existe. Sans la table,
+       le document est l'unique copie : l'élaguer détruirait pour de bon toute
+       réservation confirmée au-delà de la fenêtre, et la chambre repartirait
+       à la vente. La disponibilité retombe déjà sur le document dans ce cas. */
+    let hasResTable = false;
+    try { hasResTable = await hotelReservationsTableExists(env); } catch (_) { continue; }
+    if (hasResTable) pruneReservationsDoc(doc, now);
     if (changed && !(await writeReservationWithEvents(env, { merchant, doc, rev:+rows.reservations?.rev||0, now, actor:{id:`channel:${feedId}`,role:'system'}, events:stayEvents }))) continue;
     const nextConfig = { ...cfg };
     if (Object.keys(nextMissing).length) nextConfig.missingEvents = nextMissing; else delete nextConfig.missingEvents;
