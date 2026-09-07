@@ -396,8 +396,10 @@
           if (timeoutId) clearTimeout(timeoutId);
           /* Only 2xx proves D1 accepted the sale. A structurally rejected body is
              quarantined for support, never deleted. Auth failures remain retryable:
-             pairing/session repair can make the exact same sale valid later. */
-          var BLOCK = { 400: 1, 409: 1, 422: 1 };
+             pairing/session repair can make the exact same sale valid later.
+             409 conflicts (open-service-session-required, etc.) are reconcilable
+             after table/session synchronization and must remain retryable. */
+          var BLOCK = { 400: 1, 422: 1 };
           done(!!(r && r.ok), !!(r && BLOCK[r.status]), r && r.status);
         }).catch(function () {
           if (timeoutId) clearTimeout(timeoutId);
@@ -453,7 +455,7 @@
         signal: controller ? controller.signal : undefined,
       }).then(function (response) {
         if (timeoutId) clearTimeout(timeoutId);
-        var BLOCK = { 400: 1, 409: 1, 422: 1 };
+        var BLOCK = { 400: 1, 422: 1 };
         return settle(!!response.ok, !!BLOCK[response.status], response.status, response.ok ? '' : 'HTTP ' + response.status);
       }).catch(function (err) {
         if (timeoutId) clearTimeout(timeoutId);

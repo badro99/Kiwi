@@ -148,6 +148,9 @@ sqlite.prepare('INSERT INTO merchant_config (merchant, account_id, name, type, s
     liveSrc.includes('lastError: outboxStatus.lastError || lastSyncError || \'\''));
   ok('live-link flushQueue returns promise chain',
     liveSrc.includes('return flushOutbox(force === true);'));
+  ok('live-link treats 409 as retryable rather than permanent quarantine block',
+    !/BLOCK\s*=\s*\{[^}]*409:\s*1[^}]*\}/.test(liveSrc) &&
+    /BLOCK\s*=\s*\{\s*400:\s*1,\s*422:\s*1\s*\}/.test(liveSrc));
 }
 
 // ── 5. assets/caisse-pwa.js Visual Feedback Contract ────────────────────────
