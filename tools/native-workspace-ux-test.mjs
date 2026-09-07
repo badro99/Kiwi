@@ -80,7 +80,7 @@ const window = {
 };
 window.window = window;
 const context = vm.createContext({ window, document, location, history, localStorage, sessionStorage, navigator: {}, console, Promise, Date, JSON, Math, Error, String, Number, Array, Object, RegExp, Map, Set, URL, setTimeout, clearTimeout,
-  MutationObserver: class { constructor(callback) { observers.push(callback); } observe() {} }, MouseEvent: class { constructor(type) { this.type = type; } }, getComputedStyle: (node) => ({ display: node.hidden ? 'none' : 'block', visibility: 'visible', opacity: '1' }) });
+  MutationObserver: class { constructor(callback) { observers.push(callback); } observe() {} }, MouseEvent: class { constructor(type) { this.type = type; } }, getComputedStyle: (node) => ({ display: node.hidden ? 'none' : 'block', visibility: 'visible', opacity: node.opacity || '1' }) });
 new vm.Script(source, { filename: 'app/src/native-runtime.js' }).runInContext(context);
 await new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -116,6 +116,7 @@ appearanceListeners.forEach((handler) => handler({ matches: false }));
 ok(statusBarCalls.at(-1) === 'DARK', 'native setup keeps light status text on its ink background in system light mode');
 body.classList.remove('native-shell-page');
 const clockin = element('is-visible'); clockin.id = 'clockin-screen';
+clockin.opacity = '0'; // first frame of the shipped entrance animation
 namedElements.set(clockin.id, clockin);
 observers.forEach((callback) => callback([{ target: clockin }]));
 ok(statusBarCalls.at(-1) === 'DARK', 'dark clock-in overlay keeps status text readable in a light workspace');

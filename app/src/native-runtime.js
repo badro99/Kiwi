@@ -100,7 +100,9 @@
       if (!node || node.hidden) return false;
       if (node.id !== 'pin-screen' && !node.classList.contains('is-visible')) return false;
       var style = getComputedStyle(node);
-      return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
+      // Entrance animations start at opacity zero, but the gate is already
+      // active. Do not flash navigation or dark status text during that frame.
+      return style.display !== 'none' && style.visibility !== 'hidden';
     });
   }
   var lastStatusBarStyle = '';
