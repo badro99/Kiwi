@@ -616,6 +616,41 @@ CREATE TABLE IF NOT EXISTS hotel_stay_events (
 CREATE INDEX IF NOT EXISTS idx_hotel_stay_events_stay
   ON hotel_stay_events (merchant, stay_id, srv_cursor);
 
+-- ── RÉSERVATIONS D'HÔTEL · STOCK RELATIONNEL ET DISPONIBILITÉS ───────────
+-- Complément relationnel du document store_docs (feature='reservations').
+-- Porte l'autorité de disponibilité pour les séjours au-delà de la fenêtre
+-- chaude opérationnelle ([-3j, +14j]), évitant le surbooking sur la longue traîne.
+CREATE TABLE IF NOT EXISTS hotel_reservations (
+  merchant        TEXT NOT NULL,
+  id              TEXT NOT NULL,
+  code            TEXT NOT NULL,
+  room_id         TEXT NOT NULL,
+  room_type_id    TEXT NOT NULL,
+  start_at        INTEGER NOT NULL,
+  end_at          INTEGER NOT NULL,
+  check_in        TEXT NOT NULL,
+  check_out       TEXT NOT NULL,
+  status          TEXT NOT NULL,
+  channel         TEXT NOT NULL DEFAULT 'direct',
+  external_ref    TEXT NOT NULL DEFAULT '',
+  customer_name   TEXT NOT NULL DEFAULT '',
+  customer_phone  TEXT NOT NULL DEFAULT '',
+  customer_email  TEXT NOT NULL DEFAULT '',
+  party_size      INTEGER NOT NULL DEFAULT 1,
+  rate            INTEGER NOT NULL DEFAULT 0,
+  total           INTEGER NOT NULL DEFAULT 0,
+  raw_json        TEXT NOT NULL,
+  created_ts      INTEGER NOT NULL,
+  updated_ts      INTEGER NOT NULL,
+  PRIMARY KEY (merchant, id)
+);
+CREATE INDEX IF NOT EXISTS idx_hotel_reservations_room_dates
+  ON hotel_reservations (merchant, room_id, status, start_at, end_at);
+CREATE INDEX IF NOT EXISTS idx_hotel_reservations_dates
+  ON hotel_reservations (merchant, start_at, end_at);
+CREATE INDEX IF NOT EXISTS idx_hotel_reservations_lookup
+  ON hotel_reservations (merchant, status, check_in, check_out);
+
 -- ── STOCK RÉEL · REGISTRE DE MOUVEMENTS ──────────────────────────────────
 -- Une quantité de stock n'est jamais écrasée : elle est la somme de ce journal
 -- append-only. L'identifiant vient du client et rend le rejeu hors-ligne

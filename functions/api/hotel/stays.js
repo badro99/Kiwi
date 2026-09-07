@@ -7,7 +7,9 @@ import { poke } from '../_live.js';
 import {
   currentRoomSegment, normalizeGuestSegments, readGuestSegments, readRoomSegments,
   resolveStayActor, writeReservationWithEvents,
+  hotelReservationsTableExists, hydrateReservation,
 } from './_stay-events.js';
+
 
 const ACTIVE = new Set(['requested', 'confirmed', 'checked_in']);
 const CHANNELS = new Set(['direct', 'booking', 'airbnb', 'expedia', 'walkin', 'other']);
@@ -112,10 +114,85 @@ function currentRoomFree(hotel, room, startAt, endAt) {
   const p = dateParts(stamp || Date.now()), day = `${p.year}-${p.month}-${p.day}`;
   return !overlaps(startAt, endAt, zonedEpoch(day, '15:00'), zonedEpoch(addDays(day, folio?.nights || 1), '11:00'));
 }
+export const MAX_DOC_BOOKINGS = 250;
+export const HARD_DOC_LIMIT = 300;
+
+export function pruneReservationsDoc(doc, now = Date.now()) {
+  if (!doc || !Array.isArray(doc.bookings)) return doc;
+  const p = dateParts(now);
+  const today = `${p.year}-${p.month}-${p.day}`;
+  const pastBound = addDays(today, -3);
+  const futureBound = addDays(today, 14);
+
+  const hotelBookings = [];
+  const otherBookings = [];
+
+  for (const b of doc.bookings) {
+    if (!b || !b.id) continue;
+    if (!b.hotel) {
+      otherBookings.push(b);
+      continue;
+    }
+    const cin = b.hotel.checkIn || '';
+    const cout = b.hotel.checkOut || '';
+    if (cout >= pastBound && cin <= futureBound) {
+      hotelBookings.push(b);
+    }
+  }
+
+  if (hotelBookings.length > MAX_DOC_BOOKINGS) {
+    const todayEpoch = Date.parse(`${today}T12:00:00Z`);
+    hotelBookings.sort((a, b) => {
+      const aInHouse = a.status === 'checked_in' ? 0 : 1;
+      const bInHouse = b.status === 'checked_in' ? 0 : 1;
+      if (aInHouse !== bInHouse) return aInHouse - bInHouse;
+
+      const aToday = (a.hotel?.checkIn === today || a.hotel?.checkOut === today) ? 0 : 1;
+      const bToday = (b.hotel?.checkIn === today || b.hotel?.checkOut === today) ? 0 : 1;
+      if (aToday !== bToday) return aToday - bToday;
+
+      const aActive = (a.status === 'confirmed' || a.status === 'requested') ? 0 : 1;
+      const bActive = (b.status === 'confirmed' || b.status === 'requested') ? 0 : 1;
+      if (aActive !== bActive) return aActive - bActive;
+
+      const aDist = Math.abs((a.startAt || 0) - todayEpoch);
+      const bDist = Math.abs((b.startAt || 0) - todayEpoch);
+      return aDist - bDist;
+    });
+
+    hotelBookings.splice(HARD_DOC_LIMIT);
+  }
+
+  const combined = hotelBookings.concat(otherBookings.slice(-100));
+  doc.bookings = combined.slice(-HARD_DOC_LIMIT);
+  return doc;
+}
+
 function roomFree(doc, hotel, room, startAt, endAt, ignoreId) {
   if (!currentRoomFree(hotel, room, startAt, endAt)) return false;
   return !doc.bookings.some((b) => b.id !== ignoreId && ACTIVE.has(b.status) && b.resourceId === room.id && overlaps(startAt, endAt, b.startAt, b.endAt));
 }
+
+async function d1RoomFree(env, merchant, roomId, startAt, endAt, ignoreId) {
+  const row = await env.DB.prepare(
+    "SELECT id FROM hotel_reservations " +
+    "WHERE merchant = ? AND room_id = ? AND status IN ('requested','confirmed','checked_in') " +
+    "AND start_at < ? AND end_at > ? AND id != ? LIMIT 1"
+  ).bind(merchant, roomId, endAt, startAt, ignoreId || '').first();
+  return !row;
+}
+
+async function d1BusyRoomsForType(env, merchant, roomTypeId, startAt, endAt, ignoreId) {
+  const stmt = env.DB.prepare(
+    "SELECT DISTINCT room_id FROM hotel_reservations " +
+    "WHERE merchant = ? AND room_type_id = ? AND status IN ('requested','confirmed','checked_in') " +
+    "AND start_at < ? AND end_at > ? AND id != ?"
+  ).bind(merchant, roomTypeId, endAt, startAt, ignoreId || '');
+  const rows = typeof stmt.all === 'function' ? await stmt.all() : (typeof stmt.rows === 'function' ? await stmt.rows() : null);
+  return new Set((rows?.results || []).map((r) => r.room_id));
+}
+
+
 async function rowsFor(env, merchant) {
   const rows = await env.DB.batch([
     env.DB.prepare("SELECT data, rev FROM store_docs WHERE merchant = ? AND feature = 'reservations'").bind(merchant),
@@ -124,6 +201,73 @@ async function rowsFor(env, merchant) {
   const first = (r) => r?.results?.[0] || null;
   return { reservation: first(rows[0]), rooms: first(rows[1]) };
 }
+
+export async function onRequestGet({ request, env }) {
+  if (!env.DB) return json({ error: 'not-configured' }, 503);
+  const u = new URL(request.url);
+  const merchantParam = str(u.searchParams.get('merchant'), 64);
+  const merchant = await tenantFor(request, env, merchantParam, { strict: true });
+  if (!merchant) return json({ error: 'unauthorized' }, 401);
+
+  const fromParam = str(u.searchParams.get('from'), 32);
+  const toParam = str(u.searchParams.get('to'), 32);
+  const roomId = str(u.searchParams.get('roomId'), 64);
+  const statusParam = str(u.searchParams.get('status'), 24);
+
+  const fromEpoch = DATE.test(fromParam)
+    ? zonedEpoch(fromParam, '00:00')
+    : (Number.isFinite(+fromParam) && +fromParam > 0 ? +fromParam : 0);
+  const toEpoch = DATE.test(toParam)
+    ? zonedEpoch(toParam, '23:59')
+    : (Number.isFinite(+toParam) && +toParam > 0 ? +toParam : Number.MAX_SAFE_INTEGER);
+
+  let hasResTable = false;
+  try {
+    hasResTable = await hotelReservationsTableExists(env);
+  } catch (_) {
+    return json({ error: 'service-unavailable' }, 503);
+  }
+
+  if (hasResTable) {
+    try {
+      let query = "SELECT * FROM hotel_reservations WHERE merchant = ? AND start_at < ? AND end_at > ? AND status != 'cancelled'";
+      const params = [merchant, toEpoch, fromEpoch];
+
+      if (roomId) {
+        query += " AND room_id = ?";
+        params.push(roomId);
+      }
+      if (statusParam && STATUSES.has(statusParam)) {
+        query += " AND status = ?";
+        params.push(statusParam);
+      }
+      query += " ORDER BY start_at ASC LIMIT 1000";
+
+      const stmt = env.DB.prepare(query).bind(...params);
+      const rows = typeof stmt.all === 'function' ? await stmt.all() : (typeof stmt.rows === 'function' ? await stmt.rows() : null);
+      const stays = (rows?.results || []).map(hydrateReservation).filter(Boolean);
+      return json({ ok: true, stays }, 200, { 'Cache-Control': 'no-store' });
+
+    } catch (_) {
+      return json({ error: 'service-unavailable' }, 503);
+    }
+  }
+
+  try {
+    const row = await env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'reservations'").bind(merchant).first();
+    const doc = safeDoc(row?.data);
+    const stays = (doc.bookings || []).filter((b) => {
+      if (!b.hotel || b.status === 'cancelled') return false;
+      if (roomId && b.resourceId !== roomId) return false;
+      if (statusParam && b.status !== statusParam) return false;
+      return overlaps(fromEpoch, toEpoch, b.startAt, b.endAt);
+    });
+    return json({ ok: true, stays }, 200, { 'Cache-Control': 'no-store' });
+  } catch (_) {
+    return json({ error: 'service-unavailable' }, 503);
+  }
+}
+
 export async function onRequestPost({ request, env }) {
   if (!env.DB || !env.AUTH_SECRET) return json({ error: 'not-configured' }, 503);
   let b; try { b = await request.json(); } catch (_) { return json({ error: 'bad-json' }, 400); }
@@ -135,7 +279,23 @@ export async function onRequestPost({ request, env }) {
   for (let attempt = 0; attempt < 4; attempt++) {
     let rows; try { rows = await rowsFor(env, merchant); } catch (_) { return json({ error: 'unavailable' }, 503); }
     const doc = safeDoc(rows.reservation?.data), hotel = safeRooms(rows.rooms?.data), rev = +rows.reservation?.rev || 0;
-    const old = existingId ? doc.bookings.find((x) => x.id === existingId && x.hotel) : null;
+    let old = existingId ? doc.bookings.find((x) => x.id === existingId && x.hotel) : null;
+
+    let hasResTable = false;
+    try {
+      hasResTable = await hotelReservationsTableExists(env);
+    } catch (_) {
+      return json({ error: 'service-unavailable' }, 503);
+    }
+
+    if (existingId && !old && hasResTable) {
+      try {
+        const row = await env.DB.prepare("SELECT * FROM hotel_reservations WHERE merchant = ? AND id = ?").bind(merchant, existingId).first();
+        if (row) old = hydrateReservation(row);
+      } catch (_) {
+        return json({ error: 'service-unavailable' }, 503);
+      }
+    }
     if (existingId && !old) return json({ error: 'stay-not-found' }, 404);
     const now = Date.now();
 
@@ -146,6 +306,9 @@ export async function onRequestPost({ request, env }) {
       }
       const previous = { ...old, hotel: { ...old.hotel } };
       old.status = 'cancelled'; old.updatedAt = now;
+      const indexInDoc = doc.bookings.findIndex((x) => x.id === old.id);
+      if (indexInDoc >= 0) doc.bookings[indexInDoc] = old;
+      pruneReservationsDoc(doc, now);
       try {
         const next = await writeReservationWithEvents(env, { merchant, doc, rev, now, actor, events: [{ previous, current: old, action: 'cancel' }] });
         if (next) { await poke(env, merchant, 'reservations'); return json({ ok: true, rev: next, booking: old }); }
@@ -171,10 +334,53 @@ export async function onRequestPost({ request, env }) {
       const replay = doc.bookings.find((x) => x.publicRef === clientRef);
       if (replay) return json({ ok: true, rev, booking: replay, replayed: true });
     }
-    if (externalRef && doc.bookings.some((x) => x.id !== existingId && x.hotel?.channel === channel && x.hotel?.externalRef === externalRef)) return json({ error: 'duplicate-reference' }, 409);
-    const candidates = hotel.rooms.filter((r) => r.typeId === typeId && (!askedRoom || r.id === askedRoom) && roomFree(doc, hotel, r, startAt, endAt, existingId));
-    if (!candidates.length) return json({ error: 'room-unavailable' }, 409);
-    const room = candidates[0], rate = type.rate == null ? hotel.baseRate : type.rate;
+    if (externalRef) {
+      if (hasResTable) {
+        try {
+          const dupRow = await env.DB.prepare(
+            "SELECT id FROM hotel_reservations WHERE merchant = ? AND channel = ? AND external_ref = ? AND id != ? LIMIT 1"
+          ).bind(merchant, channel, externalRef, existingId || '').first();
+          if (dupRow) return json({ error: 'duplicate-reference' }, 409);
+        } catch (_) {
+          return json({ error: 'service-unavailable' }, 503);
+        }
+      } else if (doc.bookings.some((x) => x.id !== existingId && x.hotel?.channel === channel && x.hotel?.externalRef === externalRef)) {
+        return json({ error: 'duplicate-reference' }, 409);
+      }
+    }
+
+    let room = null;
+    if (hasResTable) {
+      if (askedRoom) {
+        const candidate = hotel.rooms.find((r) => r.id === askedRoom && r.typeId === typeId && currentRoomFree(hotel, r, startAt, endAt) && roomFree(doc, hotel, r, startAt, endAt, existingId));
+        if (!candidate) return json({ error: 'room-unavailable' }, 409);
+        let isFree = false;
+        try {
+          isFree = await d1RoomFree(env, merchant, askedRoom, startAt, endAt, existingId);
+        } catch (_) {
+          return json({ error: 'service-unavailable' }, 503);
+        }
+        if (!isFree) return json({ error: 'room-unavailable' }, 409);
+        room = candidate;
+      } else {
+        let busyRooms = new Set();
+        try {
+          busyRooms = await d1BusyRoomsForType(env, merchant, typeId, startAt, endAt, existingId);
+        } catch (_) {
+          return json({ error: 'service-unavailable' }, 503);
+        }
+        const candidates = hotel.rooms.filter((r) => r.typeId === typeId && !busyRooms.has(r.id) && currentRoomFree(hotel, r, startAt, endAt) && roomFree(doc, hotel, r, startAt, endAt, existingId));
+        if (!candidates.length) return json({ error: 'room-unavailable' }, 409);
+        room = candidates[0];
+      }
+    } else {
+      const candidates = hotel.rooms.filter((r) => r.typeId === typeId && (!askedRoom || r.id === askedRoom) && roomFree(doc, hotel, r, startAt, endAt, existingId));
+      if (!candidates.length) return json({ error: 'room-unavailable' }, 409);
+      room = candidates[0];
+    }
+
+
+    const rate = type.rate == null ? hotel.baseRate : type.rate;
     const saveGuests = (Array.isArray(b?.guests) ? b.guests : (old?.guests || [])).slice(0, 20).map((g) => ({
       id: str(g?.id, 64) || ('gst_' + crypto.randomUUID().slice(0, 12)),
       name: str(g?.name, 100),
@@ -211,6 +417,7 @@ export async function onRequestPost({ request, env }) {
     };
     const index = old ? doc.bookings.findIndex((x) => x.id === old.id) : -1;
     if (index < 0) doc.bookings.push(rec); else doc.bookings[index] = rec;
+    pruneReservationsDoc(doc, now);
     try {
       const next = await writeReservationWithEvents(env, { merchant, doc, rev, now, actor, events: [{ previous: old, current: rec, action: old ? 'update' : 'create' }] });
       if (next) { await poke(env, merchant, 'reservations'); return json({ ok: true, rev: next, booking: rec }); }
@@ -218,3 +425,4 @@ export async function onRequestPost({ request, env }) {
   }
   return json({ error: 'write-conflict' }, 409);
 }
+

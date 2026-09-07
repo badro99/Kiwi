@@ -347,6 +347,32 @@
   function cuVenueId() {
     try { return String(window.KiwiVenue?.getVenue?.() || ''); } catch (_) { return ''; }
   }
+  const cuD1Stays = new Map();
+
+  async function cuFetchStaysForWindow(start, end) {
+    const slug = window.KiwiStore?.slugFor?.(cuVenueId()) || '';
+    if (!slug) return [];
+    try {
+      const res = await fetch(`/api/hotel/stays?merchant=${encodeURIComponent(slug)}&from=${encodeURIComponent(start)}&to=${encodeURIComponent(end)}`);
+      if (!res.ok) return [];
+      const data = await res.json();
+      if (Array.isArray(data.stays)) {
+        data.stays.forEach((s) => { if (s && s.id) cuD1Stays.set(s.id, s); });
+      }
+      return data.stays || [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function cuAllStays() {
+    const doc = window.KiwiReservations?.get?.() || { bookings: [] };
+    const all = new Map();
+    (doc.bookings || []).forEach((b) => { if (b && b.id) all.set(b.id, b); });
+    cuD1Stays.forEach((b, id) => { if (b) all.set(id, b); });
+    return all;
+  }
+
   function cuStateId() {
     const id = cuVenueId();
     if (id !== 'scoped' && id !== 'own') return id;
@@ -1362,10 +1388,11 @@
 
   function cuReceptionBody() {
     const sold = cuState().sold;
-    const doc = window.KiwiReservations?.get?.() || { bookings: [] };
+    const allStaysMap = cuAllStays();
     const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 
-    const activeStays = (doc.bookings || []).filter((b) => b.hotel && b.status !== 'cancelled' && b.status !== 'no_show');
+    const activeStays = Array.from(allStaysMap.values()).filter((b) => b.hotel && b.status !== 'cancelled' && b.status !== 'no_show');
+
     const exceptionsList = [];
     activeStays.forEach((b) => {
       const errs = cuEvaluateStayExceptions(b, today);
@@ -1823,7 +1850,7 @@
   function cuSejoursBody() {
     const st = cuState();
     const rooms = Object.values(st.rooms || {}).sort((a, b) => a.n - b.n);
-    const doc = window.KiwiReservations?.get?.() || { bookings: [] };
+    const allStaysMap = cuAllStays();
     const active = { requested: 1, confirmed: 1, checked_in: 1 };
     const channels = { direct: 'Direct', booking: 'Booking.com', airbnb: 'Airbnb', expedia: 'Expedia', walkin: 'Walk-in', other: 'Autre OTA' };
     const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
@@ -1832,7 +1859,8 @@
     const start = add(today, cuTapeOffset);
     const end = add(start, 14);
     const dates = Array.from({ length: 14 }, (_, i) => add(start, i));
-    const real = (doc.bookings || []).filter((b) => b.hotel && b.hotel.checkIn && b.hotel.checkOut && b.status !== 'cancelled' && b.status !== 'no_show');
+    const real = Array.from(allStaysMap.values()).filter((b) => b.hotel && b.hotel.checkIn && b.hotel.checkOut && b.status !== 'cancelled' && b.status !== 'no_show');
+
     const matched = new Set(real.map((b) => b.resourceId));
     const walkins = Object.values(st.folios || {}).filter((f) => f && !matched.has(st.rooms?.[f.room]?.id)).map((f) => {
       const room = st.rooms?.[f.room], stamp = +f.updatedAt || Date.now();
@@ -2596,13 +2624,27 @@
         const decls = data.declarations || [];
         const latest = decls[0] || null;
 
-        const doc = window.KiwiReservations?.get?.() || { bookings: [] };
         const [yStr, mStr] = month.split('-');
         const y = parseInt(yStr, 10), mVal = parseInt(mStr, 10);
         const mStart = `${month}-01`;
         const mEnd = mVal === 12 ? `${y + 1}-01-01` : `${y}-${String(mVal + 1).padStart(2, '0')}-01`;
 
-        const monthStays = (doc.bookings || []).filter((b) => b.hotel && b.status !== 'cancelled' && b.status !== 'no_show' && b.hotel.checkIn < mEnd && b.hotel.checkOut > mStart);
+        let d1Stays = [];
+        try {
+          const sRes = await fetch(`/api/hotel/stays?merchant=${encodeURIComponent(slug)}&from=${encodeURIComponent(mStart)}&to=${encodeURIComponent(mEnd)}`);
+          if (sRes.ok) {
+            const sData = await sRes.json();
+            if (Array.isArray(sData.stays)) d1Stays = sData.stays;
+          }
+        } catch (_) {}
+
+        const allMonthStays = new Map();
+        const doc = window.KiwiReservations?.get?.() || { bookings: [] };
+        (doc.bookings || []).forEach((b) => { if (b && b.id) allMonthStays.set(b.id, b); });
+        d1Stays.forEach((b) => { if (b && b.id) allMonthStays.set(b.id, b); });
+
+        const monthStays = Array.from(allMonthStays.values()).filter((b) => b.hotel && b.status !== 'cancelled' && b.status !== 'no_show' && b.hotel.checkIn < mEnd && b.hotel.checkOut > mStart);
+
         const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 
         const exceptions = [];
@@ -2711,18 +2753,41 @@
 
   /* — custom-hotel controls — */
   handlers['hx-monthly-closing'] = () => { if (isCustomHotel()) cuMonthlyClosingModal(); };
-  handlers['hx-tape-prev'] = () => { cuTapeOffset -= 14; rerender(); };
-    handlers['hx-tape-next'] = () => { cuTapeOffset += 14; rerender(); };
-    handlers['hx-tape-today'] = () => { cuTapeOffset = 0; rerender(); };
-    handlers['hx-stay-new'] = () => { if (isCustomHotel()) cuStayEditor(null); };
-    handlers['hx-stay-edit'] = (el, arg) => {
-      if (!isCustomHotel() || String(arg).startsWith('folio:')) return;
-      const booking = window.KiwiReservations?.get?.().bookings.find((b) => b.id === String(arg));
-      if (booking?.hotel) cuStayEditor(booking);
-    };
-    handlers['hx-stay-cancel'] = (el, arg) => {
-      const booking = window.KiwiReservations?.get?.().bookings.find((b) => b.id === String(arg));
-      if (!booking) return;
+  handlers['hx-tape-prev'] = async () => {
+    cuTapeOffset -= 14;
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+    const add = (ymd, n) => { const d = new Date(ymd + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+    const start = add(today, cuTapeOffset);
+    const end = add(start, 14);
+    if (cuTapeOffset < -3 || cuTapeOffset + 14 > 14) {
+      await cuFetchStaysForWindow(start, end);
+    }
+    rerender();
+  };
+  handlers['hx-tape-next'] = async () => {
+    cuTapeOffset += 14;
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+    const add = (ymd, n) => { const d = new Date(ymd + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+    const start = add(today, cuTapeOffset);
+    const end = add(start, 14);
+    if (cuTapeOffset < -3 || cuTapeOffset + 14 > 14) {
+      await cuFetchStaysForWindow(start, end);
+    }
+    rerender();
+  };
+  handlers['hx-tape-today'] = () => { cuTapeOffset = 0; rerender(); };
+  handlers['hx-stay-new'] = () => { if (isCustomHotel()) cuStayEditor(null); };
+  handlers['hx-stay-edit'] = (el, arg) => {
+    if (!isCustomHotel() || String(arg).startsWith('folio:')) return;
+    let booking = window.KiwiReservations?.get?.().bookings.find((b) => b.id === String(arg));
+    if (!booking) booking = cuD1Stays.get(String(arg));
+    if (booking?.hotel) cuStayEditor(booking);
+  };
+  handlers['hx-stay-cancel'] = (el, arg) => {
+    let booking = window.KiwiReservations?.get?.().bookings.find((b) => b.id === String(arg));
+    if (!booking) booking = cuD1Stays.get(String(arg));
+    if (!booking) return;
+
       openModal?.close?.();
       const m = K().modal({ tag: 'ANNULATION', title: 'Libérer cette chambre ?', desc: booking.customer.name + ' · ' + booking.hotel.checkIn + ' → ' + booking.hotel.checkOut, width: 460,
         body: '<p style="font-size:13px;line-height:1.6;color:var(--n-600);">Le séjour restera dans l’historique avec le statut annulé. La chambre redeviendra immédiatement réservable en direct et sur la saisie OTA.</p><div class="hx-room-form-actions"><button class="hx-btn ghost" data-action="hx-stay-cancel-close">Garder le séjour</button><button class="hx-btn warn" data-action="hx-stay-cancel-confirm" data-arg="' + esc(booking.id) + '">Annuler et libérer</button></div>' });

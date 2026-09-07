@@ -2,6 +2,7 @@
 // Feed URLs are bearer secrets: D1 receives authenticated ciphertext only and
 // the browser receives connection metadata, never the URL.
 import { currentRoomSegment, normalizeGuestSegments, writeReservationWithEvents } from './_stay-events.js';
+import { pruneReservationsDoc } from './stays.js';
 
 const enc = new TextEncoder();
 const dec = new TextDecoder();
@@ -205,7 +206,7 @@ export async function syncHotelChannel(env, row) {
         const previous={...rec,hotel:{...rec.hotel}}; rec.status = 'cancelled'; rec.updatedAt = now; rec.hotel.syncedAt = now; stayEvents.push({ previous, current:rec, action:'cancel' }); cancelled++; changed++;
       }
     }
-    if (doc.bookings.length > 4000) doc.bookings = doc.bookings.slice(-4000);
+    pruneReservationsDoc(doc, now);
     if (changed && !(await writeReservationWithEvents(env, { merchant, doc, rev:+rows.reservations?.rev||0, now, actor:{id:`channel:${feedId}`,role:'system'}, events:stayEvents }))) continue;
     const nextConfig = { ...cfg };
     if (Object.keys(nextMissing).length) nextConfig.missingEvents = nextMissing; else delete nextConfig.missingEvents;

@@ -2,7 +2,8 @@
 import { json, limitCheck, limitFail, limitClear } from '../auth/_lib.js';
 import { storeSubscriptionPending } from './_private.js';
 import { poke } from './_live.js';
-import { currentRoomSegment, normalizeGuestSegments, writeReservationWithEvents } from './hotel/_stay-events.js';
+import { currentRoomSegment, normalizeGuestSegments, writeReservationWithEvents, hotelReservationsTableExists } from './hotel/_stay-events.js';
+import { pruneReservationsDoc } from './hotel/stays.js';
 
 const ACTIVE = new Set(['requested', 'confirmed', 'checked_in']);
 const ID = /^[a-z0-9][a-z0-9-]{2,63}$/;
@@ -167,12 +168,13 @@ function currentRoomFree(hotel, room, startAt, endAt) {
   const busyStart=zonedEpoch(day,'15:00'), busyEnd=zonedEpoch(addDays(day,folio?.nights||1),'11:00');
   return !overlaps(startAt,endAt,busyStart,busyEnd);
 }
-function hotelCategories(doc, hotel, stay, guests, onlyType='') {
+function hotelCategories(doc, hotel, stay, guests, onlyType='', d1BusyRooms = null) {
   guests=num(guests,1,12,1);
   return hotel.types.filter((t)=>t.public&&t.maxGuests>=guests&&(!onlyType||t.id===onlyType)).map((t)=>{
     const rate=t.rate == null ? hotel.baseRate : t.rate;
-    const rooms=hotel.rooms.filter((r)=>r.typeId===t.id&&currentRoomFree(hotel,r,stay.startAt,stay.endAt)&&free(doc,r.id,stay.startAt,stay.endAt));
+    const rooms=hotel.rooms.filter((r)=>r.typeId===t.id&&currentRoomFree(hotel,r,stay.startAt,stay.endAt)&&(!d1BusyRooms||!d1BusyRooms.has(r.id))&&free(doc,r.id,stay.startAt,stay.endAt));
     return { ...t, rate, total:rate == null ? null : Math.round(rate*stay.nights), rooms };
+
   }).filter((t)=>t.rate != null);
 }
 function publicHotelCategory(x) { return { id:x.id,name:x.name,description:x.description,maxGuests:x.maxGuests,beds:x.beds,sizeM2:x.sizeM2,view:x.view,amenities:x.amenities,photos:x.photos,rate:x.rate,total:x.total,available:x.rooms.length }; }
@@ -200,10 +202,28 @@ export async function onRequestGet({ request, env }) {
   if (hotelTrade(rows.merchant)) {
     const checkIn=str(u.searchParams.get('checkIn'),10), checkOut=str(u.searchParams.get('checkOut'),10), guests=num(u.searchParams.get('guests'),1,12,2);
     let stay=null,categories=[];
-    if (checkIn||checkOut) { stay=stayRange(checkIn,checkOut,doc.settings); if(!stay)return json({error:'invalid-dates'},400); categories=hotelCategories(doc,rows.hotel,stay,guests).map(publicHotelCategory); }
+    if (checkIn||checkOut) {
+      stay=stayRange(checkIn,checkOut,doc.settings);
+      if(!stay)return json({error:'invalid-dates'},400);
+      let d1BusyRooms = null;
+      if (await hotelReservationsTableExists(env)) {
+        try {
+          const stmt = env.DB.prepare(
+            "SELECT DISTINCT room_id FROM hotel_reservations WHERE merchant = ? AND status IN ('requested','confirmed','checked_in') AND start_at < ? AND end_at > ?"
+          ).bind(merchant, stay.endAt, stay.startAt);
+          const busyRows = typeof stmt.all === 'function' ? await stmt.all() : (typeof stmt.rows === 'function' ? await stmt.rows() : null);
+          d1BusyRooms = new Set((busyRows?.results || []).map((r) => r.room_id));
+        } catch (_) {
+          return json({ error: 'service-unavailable' }, 503);
+        }
+
+      }
+      categories=hotelCategories(doc,rows.hotel,stay,guests,'',d1BusyRooms).map(publicHotelCategory);
+    }
     else categories=rows.hotel.types.filter((t)=>t.public&&t.maxGuests>=guests).map((t)=>publicHotelCategory({...t,rate:t.rate==null?rows.hotel.baseRate:t.rate,total:null,rooms:[]})).filter((t)=>t.rate!=null);
     return json({ok:true,kind:'hotel',merchant,name:str(rows.merchant.name,100),trade:str(rows.merchant.type,60),settings:{confirmation:doc.settings.confirmation,cancellationHours:doc.settings.cancellationHours,windowDays:doc.settings.windowDays},hotel:{checkIn:stay?.checkIn||'',checkOut:stay?.checkOut||'',nights:stay?.nights||0,guests,categories}},200,{'Cache-Control':'no-store'});
   }
+
   const sid = str(u.searchParams.get('service'),64), date = str(u.searchParams.get('date'),10), rid = str(u.searchParams.get('resource'),64), partySize = num(u.searchParams.get('partySize'),1,999,1);
   let slots = [];
   if (sid && DATE.test(date)) { const svc = doc.services.find((x)=>x.id===sid && x.active); if (!svc) return json({ error:'service-not-found' },404); slots = slotsFor(doc,svc,date,rows.hours,rid,partySize,rows.team); }
@@ -228,14 +248,29 @@ export async function onRequestPost({ request, env }) {
     if(recentForContact>=5||activeFuture>=2000){await limitFail(request,env,'booking');return json({error:'booking-limit'},429);}
     if(hotelTrade(rows.merchant)){
       const stay=stayRange(str(b?.checkIn,10),str(b?.checkOut,10),doc.settings);if(!stay)return json({error:'invalid-dates'},400);
-      const categories=hotelCategories(doc,rows.hotel,stay,partySize,sid),category=categories[0];
+      let d1BusyRooms = null;
+      if (await hotelReservationsTableExists(env)) {
+        try {
+          const stmt = env.DB.prepare(
+            "SELECT DISTINCT room_id FROM hotel_reservations WHERE merchant = ? AND status IN ('requested','confirmed','checked_in') AND start_at < ? AND end_at > ?"
+          ).bind(merchant, stay.endAt, stay.startAt);
+          const busyRows = typeof stmt.all === 'function' ? await stmt.all() : (typeof stmt.rows === 'function' ? await stmt.rows() : null);
+          d1BusyRooms = new Set((busyRows?.results || []).map((r) => r.room_id));
+        } catch (_) {
+          return json({ error: 'service-unavailable' }, 503);
+        }
+
+      }
+      const categories=hotelCategories(doc,rows.hotel,stay,partySize,sid,d1BusyRooms),category=categories[0];
       if(!category||!category.rooms.length)return json({error:'room-unavailable'},409);
       const room=category.rooms[0],code='H-'+crypto.randomUUID().replace(/-/g,'').slice(0,8).toUpperCase(),token=crypto.randomUUID().replace(/-/g,'');
       const rec={id:'bk-'+crypto.randomUUID(),code,customer:{name,phone,email},serviceId:category.id,resourceId:room.id,startAt:stay.startAt,endAt:stay.endAt,partySize,status:doc.settings.confirmation==='request'?'requested':'confirmed',source:'public',note:str(b?.note,600),manageToken:token,publicRef:ref,hotel:{roomTypeName:category.name,checkIn:stay.checkIn,checkOut:stay.checkOut,nights:stay.nights,rate:category.rate,total:category.total,channel:'direct',externalRef:'',guestSegments:normalizeGuestSegments([],[],partySize,stay.checkIn,stay.checkOut),roomSegments:currentRoomSegment(room.id,stay.checkIn,stay.checkOut)},createdAt:now,updatedAt:now};
       doc.bookings.push(rec);
+      pruneReservationsDoc(doc, now);
       try{const next=await writeReservationWithEvents(env,{merchant,doc,rev,now,actor:{id:'public-booking',role:'public'},events:[{previous:null,current:rec,action:'create'}]});if(next){await poke(env,merchant,'reservations');await limitClear(request,env,'booking');return json({ok:true,id:rec.id,code,status:rec.status,checkIn:stay.checkIn,checkOut:stay.checkOut,nights:stay.nights,total:category.total,manageToken:token});}}catch(_){return json({error:'write-failed'},503);}
       continue;
     }
+
     if(!startAt)return json({error:'invalid'},400);
     const svc=doc.services.find((x)=>x.id===sid&&x.active);if(!svc)return json({error:'service-not-found'},409);
     const endAt=startAt+svc.duration*60000, date=dateParts(startAt,TZ), ymd=`${date.year}-${date.month}-${date.day}`;
