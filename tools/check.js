@@ -375,6 +375,15 @@ section('Financial ledger invariant');
   else fail(`financial-ledger-invariant-test.mjs exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
 }
 
+section('Caisse handover & closure accounting');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'caisse-accounting-handover-test.mjs')], { encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0) ok(`caisse handover & closure accounting green (${(out.match(/✓/g) || []).length} controls)`);
+  else fail(`caisse-accounting-handover-test.mjs exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+}
+
 /* ── 4e · durable browser outbox wiring ────────────────────────────────────
  * The behavioral fixtures run in a real browser; this zero-dependency gate
  * locks their tested engine into every operational shell and the PWA cache. */

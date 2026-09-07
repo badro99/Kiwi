@@ -13058,23 +13058,72 @@
       return 'KW-' + (28000 + Math.floor(Math.random() * 1999));
     }
 
-    /* Roll up the ledger · single source of truth for revenue / tenders */
-    function journalTotals() {
-      let revenueC = 0, cardC = 0, cashC = 0, tipsC = 0, cashTipsC = 0, n = 0;
+    /* ── AGRÉGATION COMPTABLE DU JOURNAL ET DU POSTE ─────────────────────────
+     * Source unique de vérité pour le chiffre d'affaires, les modes de règlement,
+     * les pourboires, le nombre de transactions et les mouvements d'espèces.
+     * Tout le calcul financier est conduit en centimes entiers (minor).
+     *
+     *  - sans `sinceMs` : couvre l'ensemble du service (clôture Z).
+     *  - avec `sinceMs` : restreint aux écritures du poste courant (passation).
+     *
+     * RÈGLES DE RECOUVREMENT COMPTABLE :
+     *  1. e.voided est strictement exclu (sortie des livres par le support).
+     *  2. Un remboursement (kind === 'refund') réduit le net et son mode d'encaissement,
+     *     mais ne compte PAS comme une transaction (n'incrémente pas txns).
+     *  3. Les pourboires d'une vente annulée sont également exclus.
+     *  4. Mouvements d'espèces (cashMovements) ventilés en centimes entiers.
+     * ─────────────────────────────────────────────────────────────────────────── */
+    function rollupLedger(sinceMs) {
+      const hasSince = typeof sinceMs === 'number' && Number.isFinite(sinceMs);
+      let revenueC = 0, cardC = 0, cashC = 0, tipsC = 0, cashTipsC = 0, txns = 0;
       for (const e of journal) {
+        if (!e) continue;
         if (e.voided) continue;               // sortie des livres par le support
+        if (hasSince) {
+          const t = (e.time instanceof Date ? e.time : new Date(e.time)).getTime();
+          if (t < sinceMs) continue;
+        }
         /* A refund changes net revenue and the tender balance, but it is not a
            second sale. Counting it in `txns` made one 100 MAD sale followed by
            a 20 MAD refund display 2 transactions and a 40 MAD average basket. */
-        if (e.amount > 0 && e.kind !== 'refund') n++;
+        if (e.amount > 0 && e.kind !== 'refund') txns++;
         revenueC += minor(e.amount);
         if (e.method === 'cash') cashC += minor(e.amount); else cardC += minor(e.amount);
         const tip = e.tip || 0;
         tipsC += minor(tip);
         if (e.method === 'cash') cashTipsC += minor(tip);
       }
-      return { revenue: major(revenueC), card: major(cardC), cash: major(cashC), txns: n,
-               tips: major(tipsC), cashTips: major(cashTipsC) };
+      let movesInC = 0, movesOutC = 0;
+      for (const m of cashMovements) {
+        if (!m) continue;
+        if (hasSince) {
+          const t = (m.time instanceof Date ? m.time : new Date(m.time)).getTime();
+          if (t < sinceMs) continue;
+        }
+        if (m.type === 'in') movesInC += minor(m.amount); else movesOutC += minor(m.amount);
+      }
+      return {
+        revenue: major(revenueC),
+        card: major(cardC),
+        cash: major(cashC),
+        tips: major(tipsC),
+        cashTips: major(cashTipsC),
+        txns,
+        movesIn: major(movesInC),
+        movesOut: major(movesOutC),
+        revenueC,
+        cardC,
+        cashC,
+        tipsC,
+        cashTipsC,
+        movesInC,
+        movesOutC,
+      };
+    }
+
+    /* Roll up the ledger · single source of truth for revenue / tenders */
+    function journalTotals() {
+      return rollupLedger();
     }
 
     /* ── UNE VENTE SORTIE DES LIVRES DOIT QUITTER LE COMPTOIR AUSSI ──────────
@@ -13116,7 +13165,10 @@
       });
       if (!touched) return 0;
       renderShiftStats();
-      try { if ($('#journal-drawer').classList.contains('is-open')) renderJournal(); } catch (_) {}
+      try { if ($('#journal-drawer') && $('#journal-drawer').classList.contains('is-open')) renderJournal(); } catch (_) {}
+      try { if ($('#handover-modal') && $('#handover-modal').classList.contains('is-open')) renderHandoverCount(true); } catch (_) {}
+      try { if ($('#cloture-modal') && $('#cloture-modal').classList.contains('is-open')) renderCloture(true); } catch (_) {}
+      try { if ($('#cm-modal') && $('#cm-modal').classList.contains('is-open') && typeof renderCashMovements === 'function') renderCashMovements(); } catch (_) {}
       /* persistShift() écrit le journal · donc les drapeaux. saveProvisional()
          écrit le rapport du jour. Il faut les DEUX : sans le premier un simple
          rechargement ressuscitait la vente annulée dans les totaux ; sans le
@@ -14338,17 +14390,18 @@
       line.classList.remove('is-ok', 'is-off');
       const raw = inp ? inp.value : '';
       if (raw === '' || raw == null) { out.textContent = '·'; return; }
-      const ecart = (parseFloat(raw) || 0) - clotureExpected;
+      const counted = money(parseFloat(raw) || 0);
+      const ecart = major(minor(counted) - minor(clotureExpected));
       const sign  = ecart > 0 ? '+ ' : (ecart < 0 ? '− ' : '');
       out.textContent = sign + fmtMAD(Math.abs(ecart));
       line.classList.add(Math.abs(ecart) <= 5 ? 'is-ok' : 'is-off');
     }
     function openCloture() {
-      renderCloture();
+      renderCloture(false);
       $('#cloture-modal').classList.add('is-open');
       if (window.lucide) lucide.createIcons();
     }
-    function renderCloture() {
+    function renderCloture(preserveCount = false) {
       const now      = new Date();
       const openedAt = shiftOpenedAt || now;
       const durMin   = Math.max(0, Math.floor((now - openedAt) / 60000));
@@ -14391,22 +14444,20 @@
 
       // Tiroir-caisse · full reconciliation (float + cash sales + cash tips ± movements).
       // Cash pourboires physically land in the till; card tips do not.
-      let movesIn = 0, movesOut = 0;
-      for (const m of cashMovements) { if (m.type === 'in') movesIn += m.amount; else movesOut += m.amount; }
-      clotureExpected = openingFloat + tot.cash + tot.cashTips + movesIn - movesOut;
+      clotureExpected = major(minor(openingFloat) + tot.cashC + tot.cashTipsC + tot.movesInC - tot.movesOutC);
       const dLines = [
         ["Fond d'ouverture",   fmtMAD(openingFloat),    ''],
         ['Espèces encaissées', '+ ' + fmtMAD(tot.cash), ''],
       ];
       if (tot.cashTips > 0) dLines.push(['Pourboires espèces', '+ ' + fmtMAD(tot.cashTips), '']);
-      if (movesIn  > 0) dLines.push(['Entrées de caisse', '+ ' + fmtMAD(movesIn),  '']);
-      if (movesOut > 0) dLines.push(['Sorties de caisse', '− ' + fmtMAD(movesOut), '']);
+      if (tot.movesIn  > 0) dLines.push(['Entrées de caisse', '+ ' + fmtMAD(tot.movesIn),  '']);
+      if (tot.movesOut > 0) dLines.push(['Sorties de caisse', '− ' + fmtMAD(tot.movesOut), '']);
       dLines.push(['Attendu en caisse', fmtMAD(clotureExpected), 'is-total']);
       $('#clo-drawer-lines').innerHTML = dLines.map(l =>
         `<div class="clo-drawer-line ${l[2]}"><span>${l[0]}</span><span class="mono">${l[1]}</span></div>`
       ).join('');
       const countEl = $('#clo-count');
-      if (countEl) countEl.value = '';
+      if (!preserveCount && countEl) countEl.value = '';
       updateEcart();
 
       // Highlight · objectif d'lyoum progress
@@ -14679,11 +14730,16 @@
       } catch (_) {}
 
       const closedAt = Date.now();
+      const tot = journalTotals();
+      clotureExpected = major(minor(openingFloat) + tot.cashC + tot.cashTipsC + tot.movesInC - tot.movesOutC);
+      const expectedCents = minor(clotureExpected);
+      const countedCents = counted == null ? null : minor(counted);
+      const gapCents = countedCents == null ? null : countedCents - expectedCents;
       emitCashSession({
         sessionId: cashSessionId(), eventType: 'close',
-        expectedCents: Math.round(clotureExpected * 100),
-        countedCents: counted == null ? null : Math.round(counted * 100),
-        gapCents: counted == null ? null : Math.round((counted - clotureExpected) * 100),
+        expectedCents: expectedCents,
+        countedCents: countedCents,
+        gapCents: gapCents,
         actorId: cashActorId(), openedAt: shiftOpenedAt.getTime(), occurredAt: closedAt
       });
 
@@ -15089,10 +15145,8 @@
 
     /* ---- Fond de caisse · opening float + cash sales + cash tips + movements ---- */
     function drawerExpected() {
-      let mv = 0;
-      for (const m of cashMovements) mv += (m.type === 'in' ? m.amount : -m.amount);
       const t = journalTotals();
-      return openingFloat + t.cash + t.cashTips + mv;
+      return major(minor(openingFloat) + t.cashC + t.cashTipsC + t.movesInC - t.movesOutC);
     }
 
     const CM_REASONS = {
@@ -16606,7 +16660,7 @@
              .map(w => w[0] || '').join('').slice(0, 2).toUpperCase();
     }
     function fmtEcart(e) {
-      e = Math.round(e || 0);
+      e = money(e);
       if (e === 0) return '0 MAD';
       return (e > 0 ? '+ ' : '− ') + fmtMAD(Math.abs(e));
     }
@@ -16614,24 +16668,7 @@
 
     /* Roll up journal + cash movements for ONE poste (entries since `sinceMs`). */
     function posteRollup(sinceMs) {
-      let revenue = 0, card = 0, cash = 0, tips = 0, cashTips = 0, txns = 0;
-      for (const e of journal) {
-        const t = (e.time instanceof Date ? e.time : new Date(e.time)).getTime();
-        if (t < sinceMs) continue;
-        revenue += e.amount;
-        if (e.method === 'cash') cash += e.amount; else card += e.amount;
-        const tip = e.tip || 0;
-        tips += tip;
-        if (e.method === 'cash') cashTips += tip;
-        txns++;
-      }
-      let movesIn = 0, movesOut = 0;
-      for (const m of cashMovements) {
-        const t = (m.time instanceof Date ? m.time : new Date(m.time)).getTime();
-        if (t < sinceMs) continue;
-        if (m.type === 'in') movesIn += m.amount; else movesOut += m.amount;
-      }
-      return { revenue, card, cash, tips, cashTips, txns, movesIn, movesOut };
+      return rollupLedger(sinceMs);
     }
 
     /* Apply the live cashier identity to the sidebar card. */
@@ -16684,12 +16721,12 @@
     }
 
     /* Step 1 · outgoing cashier's poste recap + drawer reconciliation. */
-    function renderHandoverCount() {
+    function renderHandoverCount(preserveCount = false) {
       const now      = new Date();
       const openedAt = posteOpenedAt || shiftOpenedAt || now;
       const durMin   = Math.max(0, Math.floor((now - openedAt) / 60000));
       const r        = posteRollup(openedAt.getTime());
-      handoverState.expected = posteOpeningFloat + r.cash + r.cashTips + r.movesIn - r.movesOut;
+      handoverState.expected = major(minor(posteOpeningFloat) + r.cashC + r.cashTipsC + r.movesInC - r.movesOutC);
 
       $('#ho-count-sub').textContent =
         `${currentCashier.name} termine son poste, compte le tiroir.`;
@@ -16716,12 +16753,16 @@
         `<div class="ho-recon-line ${l[2]}"><span>${l[0]}</span><span class="mono">${l[1]}</span></div>`
       ).join('');
 
-      $('#ho-count').value = '';
+      if (!preserveCount) {
+        const inp = $('#ho-count');
+        if (inp) inp.value = '';
+      }
       updateHandoverEcart();
     }
 
     function updateHandoverEcart() {
       const box = $('#ho-ecart'), out = $('#ho-ecart-val'), inp = $('#ho-count');
+      if (!box || !out) return;
       box.classList.remove('is-ok', 'is-off');
       const raw = inp ? inp.value : '';
       if (raw === '' || raw == null) { out.textContent = '·'; return; }
@@ -16730,7 +16771,7 @@
          d'écart sur un tiroir pourtant juste · et le caissier repartait chercher
          une erreur qui n'existait pas. On garde le centime. */
       handoverState.counted = money(parseFloat(raw) || 0);
-      const ecart = handoverState.counted - handoverState.expected;
+      const ecart = major(minor(handoverState.counted) - minor(handoverState.expected));
       out.textContent = fmtEcart(ecart);
       box.classList.add(Math.abs(ecart) <= 5 ? 'is-ok' : 'is-off');
     }
@@ -16763,8 +16804,9 @@
     function updateHandoverVerdict() {
       const v   = $('#ho-verdict');
       const btn = $('#ho-verify-confirm');
+      if (!v || !btn) return;
       v.classList.remove('is-idle', 'is-ok', 'is-warn');
-      const raw = $('#ho-verify').value;
+      const raw = $('#ho-verify') ? $('#ho-verify').value : '';
       let icon, msg, cls, enabled = false;
       if (!handoverState.incoming) {
         cls = 'is-idle'; icon = 'info';
@@ -16772,13 +16814,16 @@
       } else if (raw === '' || raw == null) {
         cls = 'is-idle'; icon = 'calculator';
         msg = `<b>${handoverState.incoming.name}</b> recompte le tiroir pour vérifier.`;
-      } else if (handoverState.verifyCount === handoverState.counted) {
-        cls = 'is-ok'; icon = 'shield-check'; enabled = true;
-        msg = `Les deux comptes concordent, <b>${fmtMAD(handoverState.counted)}</b>. Caisse vérifiée.`;
       } else {
-        cls = 'is-warn'; icon = 'alert-triangle';
-        const diff = handoverState.verifyCount - handoverState.counted;
-        msg = `Écart de <b>${fmtEcart(diff)}</b> avec le sortant, recomptez ensemble.`;
+        handoverState.verifyCount = money(parseFloat(raw) || 0);
+        if (minor(handoverState.verifyCount) === minor(handoverState.counted)) {
+          cls = 'is-ok'; icon = 'shield-check'; enabled = true;
+          msg = `Les deux comptes concordent, <b>${fmtMAD(handoverState.counted)}</b>. Caisse vérifiée.`;
+        } else {
+          cls = 'is-warn'; icon = 'alert-triangle';
+          const diff = major(minor(handoverState.verifyCount) - minor(handoverState.counted));
+          msg = `Écart de <b>${fmtEcart(diff)}</b> avec le sortant, recomptez ensemble.`;
+        }
       }
       v.classList.add(cls);
       v.innerHTML = `<i data-lucide="${icon}"></i><span>${msg}</span>`;
@@ -16817,7 +16862,7 @@
       handoverState.counted = 0;
       handoverState.incoming = null;
       handoverState.verifyCount = 0;
-      renderHandoverCount();
+      renderHandoverCount(false);
       showHandoverStep('count');
       handoverModal.classList.add('is-open');
       if (window.lucide) lucide.createIcons();
@@ -16829,25 +16874,30 @@
       const inc = handoverState.incoming;
       if (!inc) { toast('Choisis le caissier entrant'); return; }
       if ($('#ho-verify').value === '' ||
-          handoverState.verifyCount !== handoverState.counted) {
+          minor(handoverState.verifyCount) !== minor(handoverState.counted)) {
         toast('Les deux comptes doivent concorder'); return;
       }
       const now = new Date();
+      const openedAt = posteOpenedAt || shiftOpenedAt || now;
+      const r = posteRollup(openedAt.getTime());
+      const freshExpected = major(minor(posteOpeningFloat) + r.cashC + r.cashTipsC + r.movesInC - r.movesOutC);
+      handoverState.expected = freshExpected;
+      const ecart = major(minor(handoverState.counted) - minor(freshExpected));
       const rec = {
         id: 'ho-' + Date.now(),
         time: now,
         fromName: currentCashier.name,
         toName: inc.name,
-        posteOpenedAt: (posteOpenedAt || shiftOpenedAt || now),
-        expected: handoverState.expected,
+        posteOpenedAt: openedAt,
+        expected: freshExpected,
         counted: handoverState.counted,
-        ecart: handoverState.counted - handoverState.expected,
+        ecart: ecart,
       };
       handovers.push(rec);
       emitCashSession({
         sessionId: cashSessionId(), eventType: 'handover',
-        expectedCents: Math.round(rec.expected * 100), countedCents: Math.round(rec.counted * 100),
-        gapCents: Math.round(rec.ecart * 100), actorId: cashActorId(currentCashier.id),
+        expectedCents: minor(rec.expected), countedCents: minor(rec.counted),
+        gapCents: minor(rec.ecart), actorId: cashActorId(currentCashier.id),
         counterpartyActorId: cashActorRef(inc.id), openedAt: shiftOpenedAt.getTime(), occurredAt: now.getTime()
       });
       // The incoming cashier takes the counted drawer over as their float.
@@ -16861,6 +16911,18 @@
       if (window.lucide) lucide.createIcons();
       toast('Passation enregistrée · ' + inc.name + ' prend la caisse');
     }
+
+    /* Operational accounting API exposed for verification and cross-module inspection */
+    window.KiwiCaisseAccounting = Object.freeze({
+      rollupLedger,
+      journalTotals,
+      posteRollup,
+      drawerExpected,
+      renderHandoverCount,
+      confirmHandover,
+      renderCloture,
+      reconcileVoids,
+    });
 
     handoverModal.addEventListener('click', (e) => {
       if (e.target === handoverModal)            { closeHandover(); return; }
