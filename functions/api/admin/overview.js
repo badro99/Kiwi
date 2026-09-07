@@ -56,8 +56,10 @@ export async function onRequestGet(context) {
   if (!env.DB) return json({ error: 'no-db' }, 503);
 
   const now = Date.now();
-  const midnight = new Date(now); midnight.setHours(0, 0, 0, 0);
-  const dayStart = midnight.getTime();
+  const CUTOFF_MS = 5 * 3600000;
+  const currentBizDate = new Date(now - CUTOFF_MS);
+  currentBizDate.setHours(0, 0, 0, 0);
+  const dayStart = currentBizDate.getTime() + CUTOFF_MS;
   const d7 = now - 7 * DAY;
   const d30 = now - 30 * DAY;
 
@@ -172,11 +174,11 @@ export async function onRequestGet(context) {
      * trente lignes par établissement — puis partagée réel/démo ici, parce que
      * SQL ne connaît pas la règle « un magasin sans propriétaire est une démo ». */
     const perDay = await tryAll(env, [
-      `SELECT merchant, date(ts/1000,'unixepoch') AS d, COALESCE(SUM(COALESCE(amount_cents, amount * 100)),0) / 100.0 AS amount
+      `SELECT merchant, date((ts - 18000000)/1000,'unixepoch') AS d, COALESCE(SUM(COALESCE(amount_cents, amount * 100)),0) / 100.0 AS amount
          FROM sales WHERE ts >= ? AND void_ts IS NULL GROUP BY merchant, d`,
-      `SELECT merchant, date(ts/1000,'unixepoch') AS d, COALESCE(SUM(amount),0) AS amount
+      `SELECT merchant, date((ts - 18000000)/1000,'unixepoch') AS d, COALESCE(SUM(amount),0) AS amount
          FROM sales WHERE ts >= ? AND void_ts IS NULL GROUP BY merchant, d`,
-      `SELECT merchant, date(ts/1000,'unixepoch') AS d, COALESCE(SUM(amount),0) AS amount
+      `SELECT merchant, date((ts - 18000000)/1000,'unixepoch') AS d, COALESCE(SUM(amount),0) AS amount
          FROM sales WHERE ts >= ? GROUP BY merchant, d`,
     ], [d30]);
     const realSet = new Set(real.map((s) => s.merchant));
@@ -188,8 +190,9 @@ export async function onRequestGet(context) {
     // Trente entrées, y compris les jours sans vente : une courbe qui saute les
     // jours creux dessine une activité qui n'a pas eu lieu.
     const series = [];
+    const bizNow = new Date(now - CUTOFF_MS);
     for (let i = 29; i >= 0; i--) {
-      const d = new Date(now - i * DAY).toISOString().slice(0, 10);
+      const d = new Date(bizNow.getTime() - i * DAY).toISOString().slice(0, 10);
       series.push({ d, amount: byDay.get(d) || 0 });
     }
 

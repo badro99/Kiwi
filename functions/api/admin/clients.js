@@ -34,12 +34,12 @@ export async function onRequestGet(context) {
      griser sans raison ou de laisser découvrir un 403 après avoir tout saisi. */
   const senior = await isSeniorOperator(request, env);
 
-  // Start of "today" in the server's clock (UTC on Workers). Good enough for a
-  // pilot; the console shows the day's running tally, not an accounting close.
+  // Start of "today" respecting the 5:00 AM business day cutoff.
   const now = Date.now();
-  const startOfDay = new Date(now);
-  startOfDay.setHours(0, 0, 0, 0);
-  const dayStart = startOfDay.getTime();
+  const CUTOFF_MS = 5 * 3600000;
+  const currentBizDate = new Date(now - CUTOFF_MS);
+  currentBizDate.setHours(0, 0, 0, 0);
+  const dayStart = currentBizDate.getTime() + CUTOFF_MS;
 
   const map = new Map(); // merchant slug → row
   function row(m) {

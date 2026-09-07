@@ -15693,8 +15693,8 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     const cutoffH = (() => {
       try {
         const h = window.KiwiDayReport?.cutoff?.(merchant) ?? window.KiwiDayReport?.cutoff?.();
-        return (typeof h === 'number' && isFinite(h) && h >= 0 && h <= 12) ? h : 0;
-      } catch (_) { return 0; }
+        return (typeof h === 'number' && isFinite(h) && h >= 0 && h <= 12) ? h : 5;
+      } catch (_) { return 5; }
     })();
     const now = Date.now();
     const currentBizDate = new Date(now - cutoffH * 3600000);
