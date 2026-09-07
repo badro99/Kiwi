@@ -73,11 +73,17 @@ ok(liveLink.includes("identity.ready.then(function (state)") && liveLink.include
   'God Mode client data starts only after the server confirms the operator');
 ok(liveLink.includes('{ oneShot: !!snapshot }') && liveLink.includes('else if (oneShot) stop()'),
   'God Mode consumes a complete one-time snapshot instead of the merchant polling loop');
-ok(dashboard.includes('assets/entitlements.js?v=3') && dashboard.includes('assets/entitlements.css?v=3'),
+const stamps = JSON.parse(fs.readFileSync(new URL('./asset-stamps.json', import.meta.url), 'utf8'));
+const entJsVer = stamps['assets/entitlements.js']?.v || '6';
+const entCssVer = stamps['assets/entitlements.css']?.v || '5';
+const liveVer = stamps['assets/live-link.js']?.v || '26';
+const idVer = stamps['assets/identity.js']?.v || '2';
+
+ok(dashboard.includes(`assets/entitlements.js?v=${entJsVer}`) && dashboard.includes(`assets/entitlements.css?v=${entCssVer}`),
   'the dashboard loads the entitlement layer with a cache-busting version');
-ok(dashboard.includes('assets/identity.js?v=2') &&
-   dashboard.indexOf('assets/identity.js?v=2') < dashboard.indexOf('assets/live-link.js?v=8') &&
-   dashboard.indexOf('assets/identity.js?v=2') < dashboard.indexOf('assets/entitlements.js?v=3'),
+ok(dashboard.includes(`assets/identity.js?v=${idVer}`) &&
+   dashboard.indexOf(`assets/identity.js?v=${idVer}`) < dashboard.indexOf(`assets/live-link.js?v=${liveVer}`) &&
+   dashboard.indexOf(`assets/identity.js?v=${idVer}`) < dashboard.indexOf(`assets/entitlements.js?v=${entJsVer}`),
   'God Mode data and confidential mode consume a fresh, already-published identity gate');
 ok(sw.includes('assets/entitlements.js') && sw.includes('assets/entitlements.css'),
   'the entitlement layer is available through the dashboard PWA cache');

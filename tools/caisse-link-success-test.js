@@ -27,8 +27,10 @@ ok(link.includes("getElementById('kiwi-op-banner')") && link.includes("classList
 ok(link.includes('role="status" aria-live="polite"'), 'assistive technology receives a polite connection update');
 ok(link.includes("updateChip();") && link.includes("window.open('kiwi-caisse.html?pair=1'"), 'existing launcher truth and same-device handoff remain wired');
 ok(!/font-style\s*:\s*italic/.test(link), 'connection treatment keeps roman type');
-ok(dashboard.includes('assets/caisse-link.js?v=7'), 'dashboard loads the revised shared connection component');
-ok(sw.includes("'/assets/caisse-link.js?v=7'"), 'the same revised component is available offline');
+const stamps = JSON.parse(read('tools/asset-stamps.json'));
+const linkVer = stamps['assets/caisse-link.js']?.v || '10';
+ok(dashboard.includes(`assets/caisse-link.js?v=${linkVer}`), 'dashboard loads the revised shared connection component');
+ok(sw.includes(`'/assets/caisse-link.js?v=${linkVer}'`), 'the same revised component is available offline');
 ok((link.match(/function panelBody\(/g) || []).length === 1 && !/panelBody[A-Z]|panelBody\s*\[/.test(link), 'every store type uses one shared connection presentation');
 
 console.log(`\n✓ caisse-link success treatment green (${count} checks)`);

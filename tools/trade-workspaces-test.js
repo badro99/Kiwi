@@ -20,12 +20,21 @@ const css = read('assets/trade-workspaces.css') + read('assets/pos-workspaces.cs
   .forEach((trade) => ok(new RegExp('^    ' + trade + ':', 'm').test(venues), trade + ' has an exact dashboard profile'));
 ['channels','waste','delivery','quotes','deposits','vehicle','credit','suppliers','prescriptions','insurers','expiries','duty','bookorders','schoollists','flowerorders','freshness','packages','formulas','chairs','checkins','renewals','workflows']
   .forEach((nav) => ok(venues.includes("nav: '" + nav + "'"), nav + ' has an exact trade route'));
-ok(dash.includes('assets/trade-workspace-schema.js?v=3') && dash.includes('assets/trade-workspaces.js?v=3') && dash.includes('assets/trade-workspaces.css?v=3'), 'dashboard loads the validated operational workspace layer');
-ok(caisse.includes('assets/trade-workspace-schema.js?v=3') && caisse.includes('assets/pos-workspaces.js?v=3') && caisse.includes('assets/pos-workspaces.css?v=3'), 'caisse loads the same validated operational schema and editor');
+const stamps = JSON.parse(read('tools/asset-stamps.json'));
+function assetWithStamp(asset) {
+  const ver = stamps[asset]?.v;
+  return ver ? `${asset}?v=${ver}` : asset;
+}
+
+ok(dash.includes(assetWithStamp('assets/trade-workspace-schema.js')) && dash.includes(assetWithStamp('assets/trade-workspaces.js')) && dash.includes(assetWithStamp('assets/trade-workspaces.css')), 'dashboard loads the validated operational workspace layer');
+ok(caisse.includes(assetWithStamp('assets/trade-workspace-schema.js')) && caisse.includes(assetWithStamp('assets/pos-workspaces.js')) && caisse.includes(assetWithStamp('assets/pos-workspaces.css')), 'caisse loads the same validated operational schema and editor');
 ok(posDispatch.includes("'0016': { id: 'autre'") && posDispatch.includes('KiwiPosWorkspaces.mount(root, id)'), 'other activity has its own till and every exact till mounts shared operations');
 ok(read('assets/pos-workspaces.js').includes("pressing:'native'") && read('assets/pos-workspaces.js').includes('KiwiPressingOps?.summary'), 'pressing till exposes its shared live garment operations explicitly');
-['trade-workspace-schema.js?v=3','trade-workspaces.js?v=3','trade-workspaces.css?v=3','pos-workspaces.js?v=3','pos-workspaces.css?v=3','pos-autre.js','pos-autre.css']
-  .forEach((asset) => ok(sw.includes("'/assets/" + asset + "'"), asset + ' is available offline'));
+['trade-workspace-schema.js','trade-workspaces.js','trade-workspaces.css','pos-workspaces.js','pos-workspaces.css','pos-autre.js','pos-autre.css']
+  .forEach((asset) => {
+    const stamped = assetWithStamp('assets/' + asset).replace('assets/', '');
+    ok(sw.includes("'/assets/" + stamped + "'"), asset + ' is available offline');
+  });
 ok(!/font-style\s*:\s*italic/.test(css), 'new trade surfaces keep roman type');
 ok(!/#b44338|#f59e0b|#3b82f6|#8b5cf6/i.test(css), 'new trade surfaces add no off-palette accents');
 ok(/workspaces:\s*\{\s*keys:\s*\['trade', 'records'\]/.test(read('functions/api/store.js')), 'tenant store accepts only the bounded workspace document shape');

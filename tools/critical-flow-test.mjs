@@ -26,10 +26,10 @@ const configApi = read('functions/api/config.js');
 
 ok('PIN roster network errors fail closed', pairing.includes("showPinLoadError(venue)") && !pairing.includes(".catch(function () { return []; })"));
 ok('pairing redemption is single-flight', pairing.includes('if (pairSubmitting) return;') && pairing.includes('pairSubmitting = true;'));
-ok('manager authorization uses a manager-level paired roster role', pairing.includes('authorizeManager: function (code)') && caisse.includes('managerCodeValid(mgrBuffer)'));
+ok('manager authorization uses a manager-level paired roster role', pairing.includes('authorizeManager: function (code, action)') && caisse.includes('managerCodeValid(attempt)'));
 ok('cashier PIN can close the register without widening manager-only actions',
   pairing.includes('authorizeTill: function (code)')
-  && pairing.includes("roles.opensTill((p && p.role) || '')")
+  && pairing.includes("roles.opensTill(who.role || '')")
   && caisse.includes("requireTillOperator('Fermeture de caisse', closeRegister)")
   && caisse.includes("requireManager('Remboursement'"));
 ok('owner dashboard PIN spans all stores while manager PIN stays store-scoped',

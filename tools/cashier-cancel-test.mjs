@@ -7,9 +7,9 @@ const secret = 'cancel-test-secret';
 const merchant = 'amira-cafe';
 
 function db(pinWorks, role = 'Caisse') {
-  const batches = [];
+  const operations = [];
   return {
-    batches,
+    operations,
     prepare(sql) {
       return {
         sql, args: [],
@@ -22,9 +22,12 @@ function db(pinWorks, role = 'Caisse') {
           };
           return null;
         },
+        async run() {
+          operations.push({ sql, args: this.args });
+          return { meta: { changes: 1 }, changes: 1, success: true };
+        },
       };
     },
-    async batch(stmts) { batches.push(stmts); return stmts.map(() => ({ success: true })); },
   };
 }
 
@@ -32,7 +35,16 @@ function db(pinWorks, role = 'Caisse') {
   const database = db(true, 'Serveur');
   const res = await call(database, '2819');
   assert.equal(res.status, 403, 'a waiter PIN must never authorize a till operation');
-  assert.equal(database.batches.length, 0, 'unauthorized roles must not void a sale');
+  assert.equal(database.operations.filter(op => /sales|sale_audit/i.test(op.sql)).length, 0, 'unauthorized roles must not void a sale');
+}
+
+{
+  const database = db(true, 'Caisse');
+  const res = await call(database, '2819');
+  const body = await res.json();
+  assert.equal(res.status, 403, 'a cashier PIN cannot void a completed sale');
+  assert.equal(body.error, 'manager-required');
+  assert.equal(database.operations.filter(op => /sales|sale_audit/i.test(op.sql)).length, 0, 'cashier must not void a sale');
 }
 
 async function call(database, pin) {
@@ -48,22 +60,21 @@ async function call(database, pin) {
   const database = db(false);
   const res = await call(database, '9999');
   assert.equal(res.status, 401);
-  assert.equal(database.batches.length, 0, 'wrong PIN must not write anything');
+  assert.equal(database.operations.filter(op => /sales|sale_audit/i.test(op.sql)).length, 0, 'wrong PIN must not modify sales or write audit records');
 }
 
 {
-  const database = db(true);
+  const database = db(true, 'Manager');
   const res = await call(database, '2819');
   const body = await res.json();
   assert.equal(res.status, 200);
   assert.equal(body.ok, true);
   assert.equal(body.actor, 'Sara');
-  assert.equal(database.batches.length, 1);
-  assert.equal(database.batches[0].length, 2, 'void and audit must be written together');
-  assert.match(database.batches[0][0].sql, /UPDATE sales SET void_ts/);
-  assert.match(database.batches[0][1].sql, /INSERT INTO sale_audit/);
-  assert.equal(database.batches[0][1].args[5], 'Sara');
-  assert.equal(database.batches[0][1].args[7], 250);
+  assert.equal(database.operations.length >= 2, true, 'void and audit must be written');
+  assert.match(database.operations[0].sql, /UPDATE sales SET void_ts/);
+  assert.match(database.operations[1].sql, /INSERT INTO sale_audit/);
+  assert.equal(database.operations[1].args[5], 'Sara');
+  assert.equal(database.operations[1].args[7], 250);
 }
 
-console.log('  ✓ annulation caisse (PIN caissier uniquement, vente neutralisée, audit employé)');
+console.log('  ✓ annulation vente (PIN manager/propriétaire requis, caisse et serveur rejetés, audit employé)');
