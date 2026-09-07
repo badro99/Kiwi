@@ -4860,7 +4860,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
   <script src="assets/staff-roles.js?v=1" defer></script>
   <!-- Real employee identity, planning, floor and attendance bridge. -->
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/employee-live.js?v=483" defer></script>
+  <script src="assets/employee-live.js?v=484" defer></script>
   <script src="assets/employee-planning.js?v=8" defer></script>
   <link rel="stylesheet" href="assets/employee-trade-shell.css?v=2">
   <script src="assets/employee-trade-shell.js?v=2" defer></script>
@@ -10293,8 +10293,19 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         const tipPct = effectiveTipPct();
         const perPerson = (splitState.total * (1 + tipPct / 100)) / splitState.numParts;
         const label = tipPct > 0 ? `+ pourboire ${tipPct}%` : 'Part égale';
+        const shareLines = Object.entries(splitState.itemTotals).map(([name, info]) => {
+          const unitPrice = info.unitPrice || 0;
+          const shareUnitPrice = Math.round((unitPrice / splitState.numParts) * 100) / 100;
+          return {
+            name: `${name} · 1/${splitState.numParts}`,
+            qty: info.totalQty,
+            unit: shareUnitPrice,
+            price: shareUnitPrice,
+            total: Math.round((info.totalQty * unitPrice / splitState.numParts) * 100) / 100,
+          };
+        });
         for (let i = 0; i < splitState.numParts; i++) {
-          parts.push({ amount: perPerson, label, paid: false, payMethod: null });
+          parts.push({ amount: perPerson, label, lines: shareLines.map(l => ({ ...l })), paid: false, payMethod: null });
         }
       } else {
         const n = splitState.numConvives;
@@ -10303,6 +10314,19 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
           return s + remainingQty(name) * info.unitPrice;
         }, 0);
         const unassignedPerConv = unassignedTotal / n;
+        const unassignedLines = Object.entries(splitState.itemTotals)
+          .filter(([name]) => remainingQty(name) > 0)
+          .map(([name, info]) => {
+            const rem = remainingQty(name);
+            const shareUnitPrice = Math.round((info.unitPrice / n) * 100) / 100;
+            return {
+              name: `${name} · 1/${n}`,
+              qty: rem,
+              unit: shareUnitPrice,
+              price: shareUnitPrice,
+              total: Math.round((rem * info.unitPrice / n) * 100) / 100,
+            };
+          });
 
         for (let c = 1; c <= n; c++) {
           const cart = splitState.perConvive[c] || {};
@@ -10315,9 +10339,21 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
           const items = Object.entries(cart)
             .map(([name, qty]) => qty > 1 ? `${qty}× ${name}` : name)
             .join(', ');
+          const assignedLines = Object.entries(cart).map(([name, qty]) => {
+            const unitPrice = splitState.itemTotals[name]?.unitPrice || 0;
+            return {
+              name,
+              qty,
+              unit: unitPrice,
+              price: unitPrice,
+              total: Math.round(qty * unitPrice * 100) / 100,
+            };
+          });
+          const partLines = [...assignedLines, ...unassignedLines.map(l => ({ ...l }))];
           parts.push({
             amount: amt,
             label: items || 'Part équilibrée',
+            lines: partLines,
             paid: false, payMethod: null,
           });
         }
@@ -10404,27 +10440,135 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         setTimeout(() => cashInput.focus(), 60);
       }
     }
-    function markSplitPartPaid(partIdx, method) {
-      const p = splitState.flow.parts[partIdx];
+    async function markSplitPartPaid(partIdx, method) {
+      const p = splitState.flow && splitState.flow.parts && splitState.flow.parts[partIdx];
+      if (!p || p.paid) return false;
+
+      const tableId = splitState.tableId;
+      const t = tableId && tables[tableId];
+      const payMethod = (method === 'carte' || method === 'card') ? 'card' : 'cash';
+      const completesTable = Boolean(tableId && (splitState.flow.paidCount + 1 >= splitState.flow.parts.length));
+
+      const partFlightKey = tableId ? (tableId + ':split:' + partIdx) : ('split:' + partIdx);
+      if (employeePaymentsInFlight.has(partFlightKey)) return false;
+      employeePaymentsInFlight.add(partFlightKey);
+
+      const merchant = (liveEmployeeState && liveEmployeeState.merchant) || svSlug();
+      const canonical = Array.from(serviceCanonicalOrders.values()).find((order) => order && !order.paid
+        && String(order.table) === String(tableId) && order.session);
+      const session = (tableId && serviceTableSessions.get(tableId)) || (canonical && String(canonical.session)) || '';
+      const orderRef = tableId ? serviceTableOrderRef(tableId) : '';
+      const partPaymentId = p.saleId || (tableId ? employeePaymentId(tableId + ':split:' + partIdx) : '');
+
+      let saved = null;
+      try {
+        if (!SV_DEMO && merchant && session) {
+          const response = await fetch('/api/sale', {
+            method: 'POST', credentials: 'same-origin', cache: 'no-store',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: partPaymentId,
+              merchant,
+              table: completesTable ? tableId : '',
+              session,
+              amount: Math.round(p.amount * 100) / 100,
+              amountCents: Math.round(p.amount * 100),
+              method: payMethod,
+              ts: Date.now(),
+              label: (orderRef ? (orderRef + ' · ') : '') + `Part ${partIdx + 1}`,
+              ref: (orderRef ? (orderRef + ' · ') : '') + `Part ${partIdx + 1}`,
+              lines: (Array.isArray(p.lines) && p.lines.length) ? p.lines : [{
+                name: (tableId ? `Table ${tableId}` : 'Table') + ` · part ${partIdx + 1}`,
+                qty: 1,
+                total: Math.round(p.amount * 100) / 100,
+                cat: '',
+              }],
+            }),
+          });
+          saved = await response.json().catch(() => null);
+          if (!response.ok || !saved || !saved.ok) {
+            throw new Error((saved && saved.error) || ('http-' + response.status));
+          }
+        }
+      } catch (_) {
+        employeePaymentsInFlight.delete(partFlightKey);
+        toast(`Table ${tableId || ''} · part ${partIdx + 1} non enregistrée, réessayez`, 5200);
+        return false;
+      } finally {
+        employeePaymentsInFlight.delete(partFlightKey);
+      }
+
       p.paid = true;
       p.payMethod = method;
+      if (partPaymentId) p.saleId = partPaymentId;
       splitState.flow.paidCount++;
+
       // Persist progress so it survives a modal dismissal
       saveSplitFlow();
       renderSplitFlow();
+
       // Live-update the underlying table card if visible
       if (currentTab === 'tables') renderTables();
       if (currentTab === 'notifications') renderNotifications();
 
-      if (splitState.flow.paidCount >= splitState.flow.parts.length) {
+      if (completesTable) {
         $('#split-parts-list').style.opacity = '0.45';
         $('#split-all-done').hidden = false;
-        if (splitState.tableId) {
-          tableSplits.delete(splitState.tableId);
-          markTablePaid(splitState.tableId, 'split');
+
+        const paidClient = tableId && tableClients.get(tableId);
+        if (paidClient && !SV_DEMO) {
+          fetch('/api/employee-clients', {
+            method: 'POST', credentials: 'same-origin', cache: 'no-store',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              merchant, clientId: paidClient.id, amount: splitState.total,
+              ref: 'employee-payment:' + tableId + ':' + Date.now(),
+            }),
+          }).then((r) => r.ok ? r.json() : null).then((data) => {
+            if (data && data.ok && !data.replayed) toast(`${paidClient.name} · fidélité mise à jour`);
+          }).catch(() => {});
+        }
+
+        if (tableId) {
+          tableClients.delete(tableId);
+          if (t) {
+            t.status = 'khawya';
+            t.covers = 0;
+            t.elapsed = 0;
+            delete t.orderNo;
+          }
+          serviceTableSessions.delete(tableId);
+          delete tableOrders[tableId];
+          dirtyOrders.delete(tableId);
+          tableSplits.delete(tableId);
+          if (saved && saved.settlementPending) {
+            publishServiceTableState(tableId, 'khawya', 0, true);
+          }
+          for (let i = 0; i < splitState.flow.parts.length; i++) {
+            employeePaymentRefForget(tableId + ':split:' + i);
+          }
+          employeePaymentRefForget(tableId);
+          employeePaymentsInFlight.delete(tableId);
+          tablesPaid++;
+
+          try {
+            if (typeof kgShiftRevenue !== 'undefined') kgShiftRevenue += (splitState.total || 0);
+            if (typeof kgShiftTurnMin !== 'undefined') kgShiftTurnMin += (t && t.elapsed) || 0;
+            if (typeof shiftStart !== 'undefined' && shiftStart && typeof kgRenderProfil === 'function') kgRenderProfil();
+            if (typeof kgUpdateRankChip === 'function') kgUpdateRankChip();
+          } catch (_) {}
+
+          if (activeTableId === tableId) {
+            returnToFloor();
+          }
+          if (currentTab === 'tables') renderTables();
+          if (currentTab === 'notifications') renderNotifications();
+          if (currentTab === 'profil') renderProfil();
+          toast(`Table ${tableId} · réglée ✓`);
         }
         lucide.createIcons();
       }
+      return true;
     }
     $('#split-modal').addEventListener('click', (e) => {
       const tab = e.target.closest('[data-split-tab]');

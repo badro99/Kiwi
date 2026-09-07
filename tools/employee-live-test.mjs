@@ -723,5 +723,11 @@ ok(liveLinkSource.includes("localStorage.getItem('kiwiEmployeeMerchant')")
   && liveLinkSource.includes('if (employeeMerchant) return employeeMerchant'),
   "le paiement employé route vers son magasin avant la validation serveur du pointage");
 
+ok(!/markTablePaid\([^)]*['"]split['"]\)/.test(serviceSource)
+  && /async\s+function\s+markSplitPartPaid\s*\(\s*partIdx\s*,\s*method\s*\)[\s\S]*?fetch\(\s*['"]\/api\/sale['"]/.test(serviceSource)
+  && /employeePaymentId\([^)]*?:split:/.test(serviceSource)
+  && /table:\s*completesTable\s*\?\s*tableId\s*:\s*['"]['"]/.test(serviceSource),
+  "le partage d'addition employé enregistre chaque part avec sa vraie méthode (carte/cash) et préserve la ventilation");
+
 if (failures) process.exit(1);
 console.log('\n✓ employee app live gate green');
