@@ -345,6 +345,28 @@ export async function onRequestGet(context) {
   // aurait à gérer. Elle continue d'interroger et s'allume au déploiement.
   if (!rows) return json({ ok: true, orders: [], sessions: [], now: pollCursor(now), ordersAvailable: false });
 
+  // Handover is an immutable course milestone, not updated_ts (payment replays
+  // also move that clock). Keep the orders schema fallbacks independent of the
+  // optional course table; legacy rows must expose an honest unknown timestamp.
+  const servedById = new Map();
+  const servedIds = (rows.results || []).filter((r) => r.status === 'served').map((r) => r.id);
+  if (servedIds.length) {
+    try {
+      // D1 allows 100 bound values; reserve one for the merchant predicate.
+      for (let offset = 0; offset < servedIds.length; offset += 99) {
+        const ids = servedIds.slice(offset, offset + 99);
+        const courses = await env.DB.prepare(
+          `SELECT order_id, served_ts FROM order_course
+            WHERE merchant = ? AND order_id IN (${ids.map(() => '?').join(',')})`
+        ).bind(merchant, ...ids).all();
+        for (const course of (courses.results || [])) {
+          const ts = Number(course.served_ts);
+          if (Number.isInteger(ts) && ts > 0 && ts <= 8640000000000000) servedById.set(course.order_id, ts);
+        }
+      }
+    } catch (_) { degraded = [...degraded, 'order_course']; }
+  }
+
   let orders = (rows.results || []).map((r) => {
     let lines = [];
     try { lines = JSON.parse(r.lines) || []; } catch (_) { lines = []; }
@@ -362,6 +384,7 @@ export async function onRequestGet(context) {
       server: r.server_name || '',
       paid: !!r.paid_ts,
       created_ts: r.created_ts, updated_ts: r.updated_ts,
+      served_ts: r.status === 'served' ? (servedById.get(r.id) || null) : null,
     };
   });
   if (service) {

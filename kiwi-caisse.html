@@ -3082,6 +3082,8 @@
     .clockin-greet { font-size: 26px; font-weight: 600; letter-spacing: -0.02em; }
     .clockin-greet em { font-family: var(--serif); font-weight: 400; color: var(--mint); }
     .clockin-role { font-size: 13px; color: rgba(255,255,255,0.5); margin-top: 6px; letter-spacing: 0.04em; }
+    #operator-service-notice { max-width: 440px; margin-top: 16px; font-size: 13px; line-height: 1.5; color: var(--mint); }
+    #operator-dashboard-link { display: block; margin-top: 6px; color: inherit; text-decoration: underline; }
     .clockin-clock {
       font-family: var(--mono); font-size: 88px; font-weight: 700;
       letter-spacing: -0.04em; line-height: 1; margin-top: 26px;
@@ -5502,7 +5504,7 @@
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
   <script src="assets/caisse-pwa.js?v=493" defer></script>
-  <script src="assets/live-link.js?v=29" defer></script>
+  <script src="assets/live-link.js?v=30" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
   <script src="assets/staff-roles.js?v=1" defer></script>
@@ -5648,6 +5650,10 @@
     <div class="clockin-mid">
       <div class="clockin-greet">Bonjour <em>Othmane</em></div>
       <div class="clockin-role">Caissier · Café Atlas</div>
+      <div id="operator-service-notice" hidden>
+        Accès support · ouvrir la caisse ouvre ou reprend un service réel et ses rapports.
+        <a id="operator-dashboard-link" href="/kiwi-admin">Consulter les chiffres sans ouvrir de service</a>
+      </div>
       <div class="clockin-clock" id="ci-time">14:32</div>
       <div class="clockin-date" id="ci-date">Vendredi 24 avril</div>
       <div class="clockin-float">
@@ -5899,6 +5905,7 @@
       </div>
 
       <div class="stats-section" aria-label="Stats du shift">
+        <div id="stat-service-scope" class="stat-label" style="grid-column:1/-1" aria-live="polite">Aucun service ouvert</div>
         <button class="stat-card stat-card--tap" id="stat-txns-card" type="button" aria-label="Ouvrir le journal des ventes">
           <div class="stat-label">Transactions</div>
           <div class="stat-value" id="stat-txns">53</div>
@@ -12830,24 +12837,12 @@
       });
     }
 
-    /* Ouverture directe · le bouton « Caisse directe » de la console opérateur.
-     * Deux portes séparent l'opérateur du registre : le code personnel, que
-     * caisse-pairing lève déjà sous ?op=1 après avoir fait prouver la session
-     * nommée par /api/me, et l'écran « fond d'ouverture », qui n'est pas une
-     * sécurité mais une saisie · et le support n'a rien à saisir.
-     *
-     * Le drapeau ne suffit jamais seul : il exige ?op=1, donc la preuve
-     * serveur qui a déjà eu lieu en amont. Ajouter &direct=1 à la main sur une
-     * caisse de commerçant ne donne rien de plus que l'écran de code habituel.
-     *
-     * Le fond est mis à ZÉRO, pas à 500. Ouvrir un service au nom d'un
-     * commerçant réel écrit un évènement de caisse chez lui ; un fond inventé
-     * fausserait son Z sans que rien ne le signale, tandis qu'un fond nul est
-     * visiblement faux et se corrige d'un mouvement de caisse. */
-    function wantsDirectOpen() {
+    /* Support access skips a staff PIN only after pairing proves the named
+       operator. It is NOT permission to open a new merchant service on load,
+       overwrite its provisional Z, or resume a local cashier's journal. */
+    function operatorCaisseRequested() {
       try {
-        const q = location.search || '';
-        return /[?&]op=1\b/.test(q) && /[?&]direct=1\b/.test(q);
+        return new URLSearchParams(location.search || '').get('op') === '1';
       } catch (_) { return false; }
     }
 
@@ -12857,15 +12852,11 @@
        * run from openService(), once the cashier opens the register. */
       const clockinEl = document.getElementById('clockin-screen');
 
-      if (wantsDirectOpen()) {
-        openingFloat = 0;
-        if (pinScreen) pinScreen.style.display = 'none';
-        /* doOpenService() et non openService() : le contrôle des horaires pose
-           une question, et une ouverture directe est faite pour n'en poser
-           aucune. */
-        doOpenService();
-        setTimeout(() => toast('Caisse ouverte en direct · fond d’ouverture 0 MAD'), 900);
-        return;
+      if (operatorCaisseRequested()) {
+        const notice = document.getElementById('operator-service-notice');
+        if (notice) notice.hidden = false;
+        const link = document.getElementById('operator-dashboard-link');
+        if (link) link.href = '/dashboard?op=1&merchant=' + encodeURIComponent(currentMerchantSlug());
       }
 
       // t=0..210: success pop on the 4 dots, staggered left → right.
@@ -13559,16 +13550,28 @@
       try {
         if (window.KiwiLive) {
           const posted = window.KiwiLive.postSale(entry);
-          if (posted && posted.id) {
+          if (posted && posted.ok === true && posted.queued === true && posted.id) {
             entry.serverSaleId = posted.id;
+            delete entry.saleSyncPending;
+            delete entry.saleSyncError;
             /* The feed echoes this same sale under `posted.id`. Persist that
                bridge immediately: without it, a reload before the next
                autosave forgot the relationship and displayed the local row
                plus its cloud echo as two cash transactions. */
             try { persistShift(); } catch (_) {}
+          } else {
+            entry.saleSyncPending = true;
+            entry.saleSyncError = String((posted && posted.reason) || 'sale-sync-unavailable').slice(0, 96);
+            try { persistShift(); } catch (_) {}
+            if (posted && posted.ok === false) toast('Échec de synchronisation de la vente · ne fermez pas cette caisse');
           }
         }
-      } catch (_) {}
+      } catch (_) {
+        entry.saleSyncPending = true;
+        entry.saleSyncError = 'sale-enqueue-failed';
+        try { persistShift(); } catch (_) {}
+        toast('Échec de synchronisation de la vente · ne fermez pas cette caisse');
+      }
       renderShiftStats();
       if ($('#journal-drawer').classList.contains('is-open')) renderJournal();
       refreshOpenReconciliationModals();
@@ -14424,6 +14427,10 @@
       set('#stat-txns-delta',    `Carte ${cardPct}% · Cash ${100 - cardPct}%`);
       set('#stat-avg',           fmtMAD(t.txns > 0 ? t.revenue / t.txns : 0));
       set('#stat-tables',        String(shift.tablesPaid));
+      const scope = $('#stat-service-scope');
+      if (scope) scope.textContent = shiftOpenedAt
+        ? 'Service depuis ' + shiftOpenedAt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+        : 'Aucun service ouvert';
     }
 
     function fmtDur(min) {
@@ -14470,6 +14477,18 @@
     }
 
     function openService() {
+      // Deliberate support entry can resume this browser's real service, but
+      // must not replace its receipts with a fresh zero-transaction snapshot.
+      if (operatorCaisseRequested() && !shiftOpenedAt) {
+        const saved = loadPersistedShift();
+        if (saved && saved.merchant === currentMerchantSlug()) {
+          shiftMerchant = currentMerchantSlug();
+          restoreShift(saved);
+          enterShellDirectly();
+          startEmployeeSaleJournalSync();
+          return;
+        }
+      }
       /* Le contrôle horaire passe AVANT toute écriture d'état : reposer la
        * question après avoir ouvert le poste laisserait un service à moitié
        * commencé si le responsable annule. */
@@ -14738,13 +14757,28 @@
     function reconcileJournalSales(onlyMissing) {
       if (!window.KiwiLive || !window.KiwiLive.postSale) return 0;
       let n = 0;
+      let syncChanged = false;
       journal.forEach((entry) => {
         if (!entry || entry.origin || entry.voided || entry.kind === 'refund' || !(Number(entry.amount) > 0)) return;
-        if (onlyMissing && entry.serverSaleId) return;
+        if (onlyMissing && entry.serverSaleId && !entry.saleSyncPending) return;
         try {
           const queued = window.KiwiLive.postSale(entry);
-          if (queued && queued.id) { entry.serverSaleId = queued.id; n++; }
-        } catch (_) {}
+          if (queued && queued.ok === true && queued.queued === true && queued.id) {
+            entry.serverSaleId = queued.id;
+            delete entry.saleSyncPending;
+            delete entry.saleSyncError;
+            n++;
+          } else {
+            const error = String((queued && queued.reason) || 'sale-sync-unavailable').slice(0, 96);
+            if (!entry.saleSyncPending || entry.saleSyncError !== error) syncChanged = true;
+            entry.saleSyncPending = true;
+            entry.saleSyncError = error;
+          }
+        } catch (_) {
+          if (!entry.saleSyncPending || entry.saleSyncError !== 'sale-enqueue-failed') syncChanged = true;
+          entry.saleSyncPending = true;
+          entry.saleSyncError = 'sale-enqueue-failed';
+        }
       });
       /* Refunds use the same durable queue, but carry the manager identity
          proved at approval time. This second pass closes the crash window
@@ -14764,10 +14798,10 @@
         if (!actor || !actor.id || !actor.name || !actor.role || !actor.approval) return;
         try {
           const queued = window.KiwiLive.postRefund(entry, orig, actor);
-          if (queued && queued.id) { entry.serverSaleId = queued.id; n++; }
+          if (queued && queued.ok === true && queued.queued === true && queued.id) { entry.serverSaleId = queued.id; n++; }
         } catch (_) {}
       });
-      if (n) { try { persistShift(); } catch (_) {} }
+      if (n || syncChanged) { try { persistShift(); } catch (_) {} }
       try { window.KiwiLive.flush(true); } catch (_) {}
       return n;
     }
@@ -18971,12 +19005,31 @@
       </div>`;
     }
 
+    function vrapHandoverTimestamp(value) {
+      if (typeof value !== 'number' && typeof value !== 'string') return null;
+      const ts = Number(value);
+      return Number.isInteger(ts) && ts > 0 && ts <= 8640000000000000 ? ts : null;
+    }
+
+    function vrapHistoryDay(ts) {
+      const DR = window.KiwiDayReport;
+      if (DR && typeof DR.businessDay === 'function') return DR.businessDay(ts, opMerchant());
+      // Same default as day-report.js when that optional module is unavailable.
+      const d = new Date(ts - 5 * 3600000);
+      return [d.getFullYear(), d.getMonth() + 1, d.getDate()].join('-');
+    }
+
+    function vrapHandoverTime(ts) {
+      return ts ? new Date(ts).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '';
+    }
+
     function vrapHistoryRow(o) {
+      const ts = vrapHandoverTimestamp(o.pickedUpTs);
       return `<div class="vrap-hrow">
         <span class="vrap-hrow-num">${ticketNo(o)}</span>
         <span class="vrap-hrow-items">${vrapItemsLine(o)}</span>
         <span class="vrap-hrow-total">${fmtMAD(o.total)}</span>
-        <span class="vrap-hrow-done"><i data-lucide="check"></i> Remise ${kdsEsc(o.pickedUpAt || '')}</span>
+        <span class="vrap-hrow-done"><i data-lucide="check"></i> ${ts ? 'Remise ' + kdsEsc(vrapHandoverTime(ts)) : 'Remise · heure inconnue'}</span>
       </div>`;
     }
 
@@ -19039,7 +19092,14 @@
       const orders = kdsOrders.filter(o => o.type === 'takeaway');
       const active = orders.filter(o => !o.pickedUp)
         .sort((a, b) => ((b.status === 'ready') - (a.status === 'ready')) || (b.num - a.num));
-      const done   = orders.filter(o => o.pickedUp).sort((a, b) => b.num - a.num);
+      const today = vrapHistoryDay(Date.now());
+      const done = orders.filter(o => o.pickedUp && vrapHandoverTimestamp(o.pickedUpTs)
+        && vrapHistoryDay(Number(o.pickedUpTs)) === today)
+        .sort((a, b) => Number(b.pickedUpTs) - Number(a.pickedUpTs) || b.num - a.num);
+      // An old HH:mm value has no date and may have been fabricated on import.
+      // Neither order creation nor payment is evidence of the handover day.
+      const undated = orders.filter(o => o.pickedUp && !vrapHandoverTimestamp(o.pickedUpTs))
+        .sort((a, b) => b.num - a.num);
 
       const cntEl = $('#vrap-board-count');
       if (cntEl) cntEl.textContent = active.length
@@ -19066,6 +19126,10 @@
       if (done.length) {
         html += `<div class="vrap-section"><div class="vrap-section-label">Historique · servies aujourd'hui</div>`
           + `<div class="vrap-hrows">${done.map(vrapHistoryRow).join('')}</div></div>`;
+      }
+      if (undated.length) {
+        html += `<div class="vrap-section"><div class="vrap-section-label">Historique · date de remise inconnue</div>`
+          + `<div class="vrap-hrows">${undated.map(vrapHistoryRow).join('')}</div></div>`;
       }
       body.innerHTML = html;
       if (window.lucide) lucide.createIcons();
@@ -19279,7 +19343,8 @@
         o.readyAt = kdsNowHM();
       }
       o.pickedUp = true;
-      o.pickedUpAt = kdsNowHM();
+      o.pickedUpTs = Date.now();
+      o.pickedUpAt = vrapHandoverTime(o.pickedUpTs);
       renderVrapBoard();
       /* Remise en main propre : c'est le point final. Le téléphone bascule sur
          le remerciement et ne peut plus commander · pour un retrait au
@@ -19772,7 +19837,8 @@
           })),
           sentAt: new Date(o.created_ts || Date.now()),
           paid: !!o.paid, pickedUp: o.status === 'served',
-          pickedUpAt: o.status === 'served' ? kdsNowHM() : null,
+          pickedUpTs: o.status === 'served' ? vrapHandoverTimestamp(o.served_ts) : null,
+          pickedUpAt: o.status === 'served' ? vrapHandoverTime(vrapHandoverTimestamp(o.served_ts)) : null,
           total: o.total || 0,
         };
         kdsOrders.push(t);
@@ -19831,8 +19897,12 @@
           if (navigator.vibrate) navigator.vibrate([30, 50, 30]);
         } catch (_) {}
       }
-      if (o.status === 'served' && !known.pickedUp) {
-        known.pickedUp = true; known.pickedUpAt = known.pickedUpAt || kdsNowHM();
+      if (o.status === 'served') {
+        known.pickedUp = true;
+        // The immutable server milestone replaces a local handover observation
+        // or a legacy load-time string, including tickets already marked served.
+        known.pickedUpTs = vrapHandoverTimestamp(o.served_ts) || vrapHandoverTimestamp(known.pickedUpTs);
+        known.pickedUpAt = vrapHandoverTime(known.pickedUpTs);
       }
       if (o.status === 'accepted' && known.status === 'held') {
         known.status = 'new';
@@ -20199,6 +20269,7 @@
       })).sort((a, b) => a.table.localeCompare(b.table, undefined, { numeric: true }));
     }
     function publishServiceFloor() {
+      if (operatorCaisseRequested() && !shiftOpenedAt) return;
       if (serviceFloorPublishing || !storeIsReal()) return;
       const merchant = currentMerchantSlug();
       if (!merchant) return;
@@ -20476,7 +20547,14 @@
         if (e.tip)             entry.tip      = e.tip;       // pourboire
         if (e.lines)           entry.lines    = e.lines;     // itemised receipt
         if (e.cashier)         entry.cashier  = e.cashier;   // ringing cashier
+        /* Journal-only recovery must replay the payment as it was captured.
+           Do not infer a visit, split or discount from today's mutable order;
+           legacy receipts keep absent metadata absent. The API validates it. */
         if (e.serverSaleId)    entry.serverSaleId = e.serverSaleId;
+        ['orderId', 'table', 'session', 'split', 'amountCents', 'grossAmountCents',
+          'discountAmountCents', 'discountReason', 'actorId', 'saleSyncPending', 'saleSyncError'].forEach((key) => {
+          if (Object.prototype.hasOwnProperty.call(e, key)) entry[key] = e[key];
+        });
         if (e.refundActor && typeof e.refundActor === 'object') {
           entry.refundActor = {
             id: String(e.refundActor.id || '').slice(0, 96), name: String(e.refundActor.name || '').slice(0, 80),
@@ -20583,6 +20661,9 @@
 
     /* On load · if a recent shift was saved, resume straight into the shell */
     (function () {
+      // A support URL must first present the explicit opening screen. Keep the
+      // merchant's saved shift intact; never replay it merely by inspecting.
+      if (operatorCaisseRequested()) return;
       const saved = loadPersistedShift();
       if (!saved) return;
       // A REAL / paired store must never surface DEMO shift data. A device that once

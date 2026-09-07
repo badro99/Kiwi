@@ -252,16 +252,22 @@
   }
   function queueStatus() {
     if (outboxUsing) {
+      // IndexedDB can be available while an individual enqueue fails. The
+      // synchronous write-ahead/fallback queue remains debt, not an empty till.
+      var fallback = qRead();
+      var activeTenant = merchant();
+      var localDebt = fallback.filter(function (row) { return row && row.merchant === activeTenant; });
+      var localBlocked = localDebt.filter(function (row) { return row._blocked; }).length;
       return {
-        pending: outboxStatus.pending,
-        blocked: outboxStatus.blocked,
+        pending: (outboxStatus.pending || 0) + localDebt.length - localBlocked,
+        blocked: (outboxStatus.blocked || 0) + localBlocked,
         sending: outboxStatus.sending,
-        foreign: 0,
-        total: outboxStatus.total,
-        storageError: !!outboxStatus.storageError,
+        foreign: fallback.length - localDebt.length,
+        total: (outboxStatus.total || 0) + localDebt.length,
+        storageError: !!(outboxStatus.storageError || queueStorageError),
         engine: 'indexeddb',
         lastStatus: outboxStatus.lastStatus || lastSyncStatus || 0,
-        lastError: outboxStatus.lastError || lastSyncError || '',
+        lastError: queueStorageError ? 'queue-storage-full' : (outboxStatus.lastError || lastSyncError || ''),
       };
     }
     var q = qRead();
@@ -404,6 +410,7 @@
           return resolve(queueStatus());
         } else {
           moneySignal(body, 'retry', status);
+          scheduleRecovery();
           queueSignal();                          // offline/transient → unchanged and retryable
           return resolve(queueStatus());
         }
@@ -511,7 +518,16 @@
   }
 
   function flushQueue(force) {
-    if (outboxUsing && window.KiwiOffline && window.KiwiOffline.available()) return flushOutbox(force === true);
+    if (outboxUsing && window.KiwiOffline && window.KiwiOffline.available()) {
+      // A failed IDB enqueue is retained in localStorage. Do not abandon that
+      // exact command merely because the IDB engine later becomes usable.
+      // Stable receipt IDs make a simultaneous write-ahead replay idempotent.
+      var active = merchant();
+      if (qRead().some(function (row) { return row && row.merchant === active; })) {
+        return flushLegacyQueue().then(function () { return flushOutbox(force === true); });
+      }
+      return flushOutbox(force === true);
+    }
     return flushLegacyQueue();
   }
 
@@ -711,6 +727,30 @@
    *    a bfcache restore, the network coming back, or a ping from a till in this
    *    same browser. Whatever happened while we were away lands immediately. */
   var FAST_MS = 2500, SLOW_MS = 20000;
+  var operatorSnapshot = null;
+  function publishSnapshot(state) {
+    operatorSnapshot = Object.assign({}, state);
+    paintSnapshot();
+    try { document.dispatchEvent(new CustomEvent('kiwi:operator-snapshot', { detail: Object.assign({}, state) })); } catch (_) {}
+  }
+  /* A short page is evidence only when it is a valid response for this scope.
+     Do not interpret a login page, missing DB response, or stuck cursor as zero. */
+  function validateSnapshotPage(data, tenant, since) {
+    if (!data || data.error || !Array.isArray(data.sales) || data.sales.length > 50 ||
+        !Array.isArray(data.voided)) throw new Error('invalid-feed');
+    if (!tenant || data.merchant !== tenant) throw new Error('scope');
+    var cursor = since;
+    data.sales.forEach(function (s) {
+      var amount = s && (s.amountCents != null ? s.amountCents : s.amount);
+      if (!s || !Number.isSafeInteger(s.cursor) || s.cursor <= cursor ||
+          typeof amount !== 'number' || !Number.isFinite(amount) ||
+          (s.amountCents != null && !Number.isSafeInteger(s.amountCents)) ||
+          typeof s.ts !== 'number' || !Number.isFinite(s.ts) || s.ts <= 0) throw new Error('invalid-sales');
+      cursor = s.cursor;
+    });
+    if (!Number.isSafeInteger(data.cursor) || data.cursor !== cursor) throw new Error('cursor');
+    if (data.voided.some(function (v) { return !v || !Number.isSafeInteger(v.c) || v.c <= 0; })) throw new Error('invalid-feed');
+  }
   function watchFeed(onSales, intervalMs, options) {
     if (!on()) return function () {};
     var oneShot = !!(options && options.oneShot);
@@ -718,6 +758,14 @@
     var drainBackfill = false;
     var lastTenant = null;
     var bound = [];
+    var state = { phase: 'loading', merchant: merchant(), pages: 0, rows: 0, cursor: 0,
+      startedAt: Date.now(), lastPageAt: 0, completedAt: 0, error: null };
+    function report() {
+      if (!oneShot) return;
+      if (options && options.onState) options.onState(Object.assign({}, state));
+      else if (opMode()) publishSnapshot(state);
+    }
+    if (oneShot) { feedComplete[state.merchant] = false; report(); }
     function delay() {
       if (intervalMs) return intervalMs;
       try { return document.hidden ? SLOW_MS : FAST_MS; } catch (_) { return FAST_MS; }
@@ -740,8 +788,16 @@
       var tenant = merchant();
       if (tenant !== lastTenant) { lastTenant = tenant; since = 0; backfill = true; }
       fetch('/api/feed?merchant=' + encodeURIComponent(tenant) + '&since=' + since, { headers: { Accept: 'application/json' } })
-        .then(function (r) { return (r && r.ok) ? r.json() : null; })
+        .then(function (r) {
+          if (oneShot && (!r || !r.ok)) throw new Error(r && (r.status === 401 || r.status === 403) ? 'auth' : 'http');
+          return (r && r.ok) ? r.json() : null;
+        })
         .then(function (data) {
+          if (stopped) return;
+          if (oneShot) {
+            if (tenant !== state.merchant || merchant() !== tenant) throw new Error('scope');
+            validateSnapshotPage(data, tenant, since);
+          }
           if (!data) return;                   // network/gate failure → still the first batch
           lastSync = Date.now();
           /* Les ventes RETIRÉES des livres, avant celles qui arrivent. Le flux
@@ -750,7 +806,7 @@
              déjà recopié la vente. Appliqué à chaque sondage, quel que soit le
              curseur : idempotent, et un appareil neuf se retrouve d'aplomb au
              premier passage. */
-          if (Array.isArray(data.voided)) applyVoids(data.voided, tenant);
+          if (Array.isArray(data.voided) && !oneShot) applyVoids(data.voided, tenant);
           if (Array.isArray(data.sales)) {
             if (data.sales.length) since = data.cursor || since;
             /* /api/feed pages at 50. A shorter page proves the complete
@@ -758,11 +814,15 @@
             if (data.sales.length < 50) {
               var firstComplete = !feedComplete[tenant];
               feedComplete[tenant] = true;
-              if (firstComplete) {
+              if (firstComplete && !oneShot) {
                 try { document.dispatchEvent(new CustomEvent('kiwi:live-backfill-complete', { detail: { merchant: tenant } })); } catch (_) {}
               }
             }
-            try { onSales(data.sales, backfill, tenant); } catch (_) {}
+            if (oneShot) {
+              var applied = onSales(data.sales, backfill, tenant, data.voided);
+              if (applied && applied.venue) state.venue = applied.venue;
+            }
+            else { try { onSales(data.sales, backfill, tenant); } catch (_) {} }
             /* The feed is paginated at 50 rows. A full first page does NOT end
                startup history: every following page is still old ledger data
                and must stay silent. Drain full pages immediately, and unlock
@@ -773,9 +833,27 @@
               drainBackfill = data.sales.length === 50;
               if (!drainBackfill) backfill = false;
             }
+            if (oneShot) {
+              state.pages++; state.rows += data.sales.length; state.cursor = since;
+              state.lastPageAt = Date.now();
+              if (!drainBackfill) {
+                state.phase = 'complete'; state.completedAt = Date.now();
+                if (!options.onState) {
+                  try { document.dispatchEvent(new CustomEvent('kiwi:live-backfill-complete', { detail: { merchant: tenant } })); } catch (_) {}
+                }
+              }
+              report();
+            }
           }
         })
-        .catch(function () {})
+        .catch(function (err) {
+          if (!oneShot || stopped) return;
+          drainBackfill = false;
+          feedComplete[tenant] = false;
+          state.phase = state.pages ? 'incomplete' : 'error';
+          state.error = /^(auth|http|scope|invalid-feed|invalid-sales|cursor|ledger)$/.test(err && err.message) ? err.message : 'network-json';
+          report();
+        })
         .then(function () {
           busy = false;
           if (stopped) return;
@@ -1073,30 +1151,97 @@
    * card into, so a layout the module doesn't recognise can never silently stop
    * the dashboard from receiving sales. */
   var pumping = false;
+  function snapshotVenue(tenant) {
+    var KV = window.KiwiVenue;
+    var vid = KV && KV.getVenue && KV.getVenue();
+    var data = KV && KV.getCurrentVenueData && KV.getCurrentVenueData();
+    return vid && data && (data.slug || slugify(data.name)) === tenant && merchant() === tenant ? vid : null;
+  }
+  function verifySnapshotLedger(tenant) {
+    var vid = snapshotVenue(tenant);
+    if (!vid || !window.KiwiSales || !window.KiwiSales.list) throw new Error('ledger');
+    var expected = feedSales.filter(function (row) { return row.tenant === tenant; }).map(function (row) { return row.s; });
+    function cents(s) { return s.amountCents != null ? Number(s.amountCents) : Math.round(Number(s.amount) * 100); }
+    function matches(rows, sign) {
+      var want = expected.filter(function (s) { return cents(s) * sign > 0; });
+      if (!Array.isArray(rows) || rows.length !== want.length) return false;
+      var byCursor = {};
+      rows.forEach(function (s) { byCursor[s.cursor] = s; });
+      return want.every(function (s) {
+        var saved = byCursor[s.cursor];
+        return saved && cents(saved) === cents(s) * sign && Number(saved.ts) === s.ts;
+      });
+    }
+    var refunds = window.KiwiRefunds && window.KiwiRefunds.list ? window.KiwiRefunds.list(vid) : [];
+    if (!matches(window.KiwiSales.list(vid), 1) || !matches(refunds, -1)) throw new Error('ledger');
+    return { venue: vid };
+  }
   function initPump(snapshot) {
     if (!on() || pumping) return;
     pumping = true;
+    var snapshotFeed = null, snapshotVoids = [];
+    function bridgeSnapshot() {
+      if (!snapshotFeed) return;
+      var state = Object.assign({}, snapshotFeed);
+      if (state.phase === 'complete') {
+        try {
+          if (!snapshotVenue(state.merchant)) throw new Error('venue');
+          applyVoids(snapshotVoids, state.merchant);
+          bridgeToStore();
+          state.venue = verifySnapshotLedger(state.merchant).venue;
+        } catch (err) {
+          state.phase = 'incomplete'; state.completedAt = 0;
+          state.error = err && err.message === 'venue' ? 'venue' : 'ledger';
+        }
+      }
+      publishSnapshot(state);
+      if (state.phase === 'complete') {
+        try { document.dispatchEvent(new CustomEvent('kiwi:live-backfill-complete', { detail: { merchant: state.merchant } })); } catch (_) {}
+      }
+    }
     if (!snapshot) flushQueue(); // a merchant device may still owe the server a sale
-    watchFeed(function (sales, backfill, tenant) {
+    watchFeed(function (sales, backfill, tenant, voids) {
       accumulateFeed(sales, tenant);
+      if (snapshot) { snapshotVoids = voids; return; }
       /* A full history arrives in 50-row pages. Rebuilding and reconciling the
          complete ledger after every page made mature merchants progressively
          slower. The final short page sets feedComplete before this callback. */
       if (!backfill || feedComplete[tenant]) bridgeToStore();
       if (!backfill) sales.forEach(notifySale);
-    }, null, { oneShot: !!snapshot });
+    }, null, { oneShot: !!snapshot, onState: snapshot ? function (state) { snapshotFeed = state; bridgeSnapshot(); } : null });
     // Re-run the bridge whenever the venue settles/changes — the operator scoped
     // venue and the real-merchant "own" venue both resolve AFTER this first poll,
     // so without this the pre-resolution sales would never reach the venue the
     // dashboard reads. Idempotent (cursor-deduped), so extra calls never double-count.
     try {
       if (window.KiwiVenue && window.KiwiVenue.subscribe) {
-        window.KiwiVenue.subscribe(function () { bridgeToStore(); });
+        window.KiwiVenue.subscribe(function () {
+          if (snapshot) bridgeSnapshot();
+          else bridgeToStore();
+        });
       }
     } catch (_) {}
   }
 
   /* ─── operator view banner ─── */
+  function paintSnapshot() {
+    var status = document.getElementById && document.getElementById('kiwi-op-snapshot');
+    if (!status || !operatorSnapshot) return;
+    var s = operatorSnapshot;
+    var errors = { auth: 'Session expirée ou accès refusé', scope: 'Portée du client non confirmée',
+      http: 'Serveur indisponible', 'network-json': 'Réseau ou réponse JSON invalide',
+      'invalid-feed': 'Réponse du journal invalide', 'invalid-sales': 'Ventes illisibles',
+      cursor: 'Pagination invalide', ledger: 'Journal local non vérifié', identity: 'Identité non confirmée',
+      venue: 'Journal reçu · établissement en attente de résolution' };
+    var progress = s.pages + ' page(s) · ' + s.rows + ' écriture(s) reçue(s)';
+    var message = s.phase === 'complete'
+      ? 'Instantané complet · ' + progress + ' · reçu le ' + new Date(s.completedAt).toLocaleString() + ' · hors direct'
+      : s.phase === 'loading' ? 'Chargement du journal · ' + progress + ' · chiffres indisponibles'
+        : (s.phase === 'incomplete' ? 'Instantané incomplet' : 'Échec du chargement') + ' · ' + (errors[s.error] || 'Journal indisponible') + ' · ' + progress + ' · chiffres indisponibles';
+    status.textContent = 'Client : ' + s.merchant + ' · historique autorisé servi par /api/feed · ' + message;
+    status.setAttribute('data-state', s.phase);
+    status.setAttribute('aria-busy', String(s.phase === 'loading'));
+  }
   // When the console opens a client with ?op=1, make it unmistakable that this is
   // the operator looking at THAT client (not the operator's own account), and
   // give a one-click way back. Read-only affordance; no client data is altered.
@@ -1105,13 +1250,19 @@
     var bar = el('div');
     bar.id = 'kiwi-op-banner';
     bar.setAttribute('style', 'position:fixed;top:0;left:0;right:0;z-index:2147482000;display:flex;align-items:center;' +
-      'justify-content:center;gap:10px;padding:7px 14px;background:linear-gradient(90deg,#053B2C,#0B6E4F);color:#eafff4;' +
+      'justify-content:center;flex-wrap:wrap;gap:10px;padding:7px 14px;background:linear-gradient(90deg,#053B2C,#0B6E4F);color:#eafff4;' +
       'font:600 12.5px/1.35 -apple-system,BlinkMacSystemFont,"Inter Tight",Inter,sans-serif;letter-spacing:.02em;' +
       'box-shadow:0 2px 14px -5px rgba(0,0,0,.55)');
     var dot = el('span');
     dot.setAttribute('style', 'width:7px;height:7px;border-radius:50%;background:#7DF2B0');
     bar.appendChild(dot);
     bar.appendChild(document.createTextNode('Vue opérateur · ' + merchant() + ' · données du client'));
+    var status = el('span');
+    status.id = 'kiwi-op-snapshot';
+    status.setAttribute('role', 'status');
+    status.setAttribute('aria-live', 'polite');
+    status.setAttribute('aria-atomic', 'true');
+    bar.appendChild(status);
     var back = el('a', null, 'Retour console ›');
     back.setAttribute('href', '/kiwi-admin.html');
     back.setAttribute('style', 'margin-inline-start:14px;color:#7DF2B0;text-decoration:none;font-weight:700');
@@ -1124,9 +1275,12 @@
     refresh.onclick = function () { location.reload(); };
     bar.appendChild(refresh);
     document.body.appendChild(bar);
+    paintSnapshot();
     try {
       var pt = parseFloat(getComputedStyle(document.body).paddingTop) || 0;
-      document.body.style.paddingTop = (pt + 34) + 'px';
+      function fitBanner() { document.body.style.paddingTop = (pt + (bar.offsetHeight || 34)) + 'px'; }
+      fitBanner();
+      if (window.ResizeObserver) new window.ResizeObserver(fitBanner).observe(bar);
     } catch (_) {}
   }
 
@@ -1195,24 +1349,30 @@
          Mode view receives the whole entitled ledger exactly once, then becomes
          a stable snapshot. Owners keep the normal live 2.5 s feed. */
       var identity = window.KiwiIdentity;
+      function snapshotUnavailable(reason) {
+        publishSnapshot({ phase: 'error', merchant: merchant(), pages: 0, rows: 0, completedAt: 0, error: reason });
+      }
       if (identity && identity.ready && typeof identity.ready.then === 'function') {
         identity.ready.then(function (state) {
           var confirmed = !!(state && state.operator === true);
-          if (!confirmed) return;
+          if (!confirmed) { snapshotUnavailable('identity'); return; }
           /* The banner and PIN bypass do not depend on the sales store. Some
              dashboard bundles publish KiwiSales a beat after DOMContentLoaded;
              coupling all operator UI to its presence made an authenticated view
              look half-authorized. Give that store one short boot window, never a
              recurring data poll. */
           initOperatorBanner(true);
+          publishSnapshot({ phase: 'loading', merchant: merchant(), pages: 0, rows: 0, completedAt: 0, error: null });
           opSkipLock(true);
           var tries = 0;
           (function startSnapshot() {
             if (window.KiwiSales) { initPump(true); return; }
             if (tries++ < 20) setTimeout(startSnapshot, 50);
+            else snapshotUnavailable('ledger');
           })();
-        }, function () {});
+        }, function () { snapshotUnavailable('identity'); });
       }
+      else snapshotUnavailable('identity');
     }
     else if (window.KiwiSales) initPump(false);
     // Pas de magasin de ventes ⇒ nous sommes sur une caisse : elle n'a pas
@@ -1240,6 +1400,7 @@
 
   window.KiwiLive = {
     isOn: on, merchant: merchant, postSale: postSale, postRefund: postRefund,
+    snapshotStatus: function () { return operatorSnapshot ? Object.assign({}, operatorSnapshot) : null; },
     moneyId: function (entry) { var m = merchant(); return m && entry ? stableId(m, entry) : ''; }, watchFeed: watchFeed,
     flush: flushQueue, pending: function () { return queueStatus().total; },
     queueStatus: queueStatus, refreshQueue: refreshOutboxStatus,
@@ -1269,6 +1430,7 @@
         on: on(), merchant: merchant(), lastSync: lastSync,
         bridged: feedSales.length, backfillComplete: !!feedComplete[merchant()], queued: queueStatus().total,
         queue: queueStatus(),
+        snapshot: operatorSnapshot ? Object.assign({}, operatorSnapshot) : null,
       };
     },
   };

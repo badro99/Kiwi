@@ -145,7 +145,7 @@ sqlite.prepare('INSERT INTO merchant_config (merchant, account_id, name, type, s
     liveSrc.includes('new AbortController()') && liveSrc.includes('controller.abort()'));
   ok('live-link queueStatus exposes lastStatus and lastError',
     liveSrc.includes('lastStatus: outboxStatus.lastStatus || lastSyncStatus || 0') &&
-    liveSrc.includes('lastError: outboxStatus.lastError || lastSyncError || \'\''));
+    liveSrc.includes("lastError: queueStorageError ? 'queue-storage-full' : (outboxStatus.lastError || lastSyncError || '')"));
   ok('live-link flushQueue returns promise chain',
     liveSrc.includes('return flushOutbox(force === true);'));
   ok('live-link treats 409 as retryable rather than permanent quarantine block',

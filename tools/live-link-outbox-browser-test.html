@@ -11,6 +11,7 @@
   localStorage.setItem('kiwiPairedVenue', JSON.stringify({ merchant: window.__testTenant }));
   window.__fetchMode = 'fail';
   window.__posts = [];
+  window.__failedPosts = 0;
   window.fetch = function (url, opts) {
     if (url === '/api/sale') {
       window.__posts.push(JSON.parse(opts.body));
@@ -19,6 +20,7 @@
         settlementPending: window.__fetchMode === 'pending'
       }), { status: 201 }));
       if (window.__fetchMode === 'blocked') return Promise.resolve({ ok: false, status: 422 });
+      window.__failedPosts++;
       return Promise.reject(new Error('offline test'));
     }
     return Promise.resolve({ ok: true, json: function () { return Promise.resolve({ sales: [], voided: [] }); } });
@@ -56,13 +58,15 @@
       window.__fetchMode = 'fail';
       var accepted = KiwiLive.postSale({ amount: 123, method: 'cash', label: 'Offline test', ref: ref });
       assert(accepted && accepted.ok && accepted.durable === 'indexeddb', 'uses IndexedDB');
-      await waitFor(async function () { return (await KiwiOffline.stats('sale', window.__testTenant)).pending === 1; }, 3000);
+      // Enqueued/pending is visible before the asynchronous first POST. Keep
+      // the endpoint offline until a real failed attempt has happened.
+      await waitFor(async function () { return window.__failedPosts > 0 && (await KiwiOffline.stats('sale', window.__testTenant)).pending === 1; }, 3000);
       line('a failed POST remains durable in IndexedDB');
 
       window.__fetchMode = 'ok';
       KiwiLive.flush(true);
       await waitFor(async function () { return (await KiwiOffline.stats('sale', window.__testTenant)).total === 0; }, 3000);
-      assert(window.__posts.length >= 2 && window.__posts[0].id === window.__posts[1].id, 'stable replay id');
+      assert(window.__posts.length >= 2 && window.__posts.every(function (p) { return p.id === accepted.id; }), 'stable replay id');
       line('reconnect replays the same id and acknowledges it');
 
       window.__fetchMode = 'pending';

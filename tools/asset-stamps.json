@@ -216,8 +216,8 @@
     "sha": "a3636b0a0729db7e"
   },
   "assets/dateRange.js": {
-    "v": "17",
-    "sha": "f08c5430b68a96d3"
+    "v": "18",
+    "sha": "e2206630eac7e58b"
   },
   "assets/day-report-dash.js": {
     "v": "10",
@@ -432,8 +432,8 @@
     "sha": "c9d6036ca657c76e"
   },
   "assets/live-link.js": {
-    "v": "29",
-    "sha": "551a4cce2ff61898"
+    "v": "30",
+    "sha": "b82f23d78e9c9629"
   },
   "assets/live-socket.js": {
     "v": "4",

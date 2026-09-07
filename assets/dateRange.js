@@ -1536,12 +1536,14 @@
 
   function animateNumber(el, from, to, { duration = 800, format } = {}) {
     if (!el) return;
+    if (operatorLedgerPending()) { el.textContent = '…'; return; }
     // Hidden tabs freeze requestAnimationFrame — set the final value at once
     // so a background re-render never leaves a tile blank.
     if (document.hidden) { el['inner' + 'HTML'] = format(to); return; }
     const start = performance.now();
     const ease = t => 1 - Math.pow(1 - t, 3);
     function tick(now) {
+      if (operatorLedgerPending()) { el.textContent = '…'; return; }
       const p = Math.min(1, (now - start) / duration);
       const v = from + (to - from) * ease(p);
       el.innerHTML = format(v);
@@ -1997,7 +1999,42 @@
 
   /* ═══════════════ RENDER: HERO ═══════════════ */
 
+  // dateRange loads before live-link. An operator URL starts unverified even
+  // before identity/feed initialization; cached or partial totals are not zero.
+  function operatorLedgerPending() {
+    if (!/[?&]op=1(?:&|$)/.test(location.search)) return false;
+    const live = window.KiwiLive;
+    const state = live?.snapshotStatus?.();
+    const requested = new URLSearchParams(location.search).get('merchant');
+    const venue = window.KiwiVenue?.getCurrentVenueData?.();
+    return !state || state.phase !== 'complete' || (requested && state.merchant !== requested) ||
+      !venue || (venue.slug && venue.slug !== state.merchant) ||
+      !state.venue || state.venue !== window.KiwiVenue?.getVenue?.();
+  }
+  function operatorUnavailableText() {
+    const state = window.KiwiLive?.snapshotStatus?.();
+    const loading = !state || state.phase === 'loading';
+    const lang = getLang();
+    return (loading
+      ? { fr: 'Chargement du journal…', en: 'Loading ledger…', ar: 'جارٍ تحميل السجل…' }
+      : { fr: 'Chiffres indisponibles · actualiser le journal', en: 'Figures unavailable · refresh the ledger', ar: 'الأرقام غير متاحة · حدّث السجل' })[lang] || 'Journal indisponible';
+  }
+  function guardOperatorFigures(selector) {
+    if (!operatorLedgerPending()) return false;
+    document.querySelectorAll(selector).forEach(el => { el.textContent = ''; });
+    return true;
+  }
+
   function renderHero() {
+    if (guardOperatorFigures('.hero-breakdown')) {
+      const amount = document.querySelector('[data-hero-amount]');
+      if (amount) { amount.textContent = '…'; amount.setAttribute('aria-label', operatorUnavailableText()); }
+      const label = document.querySelector('[data-hero-label]');
+      if (label) label.textContent = operatorUnavailableText();
+      const greet = document.querySelector('.hero-left-today .greet');
+      if (greet) greet.style.display = 'none';
+      return;
+    }
     const lang = getLang();
     const effective = effRange();
     let data = vData(heroDataByVenue, currentRange);
@@ -2039,10 +2076,11 @@
     // depuis 08h12") is a today-only concept — a ticking LIVE clock over a
     // 7-day or 30-day aggregate is misleading. Show it only on aujourd'hui.
     const greetEl = document.querySelector('.hero-left-today .greet');
-    if (greetEl) greetEl.style.display = (effective === 'aujourdhui') ? '' : 'none';
+    if (greetEl) greetEl.style.display = (effective === 'aujourdhui' && !/[?&]op=1(?:&|$)/.test(location.search)) ? '' : 'none';
 
     const amtEl = document.querySelector('[data-hero-amount]');
     if (amtEl) {
+      amtEl.removeAttribute('aria-label');
       const fromVal = parseAmountFromEl(amtEl);
       // Resize font to fit the wider of from/to so the number never wraps mid-animation.
       fitHeroAmount(amtEl, Math.max(fromVal, data.amount));
@@ -2182,6 +2220,11 @@
   /* ═══════════════ RENDER: HERO GOAL BAR ═══════════════ */
 
   function renderGoal() {
+    if (guardOperatorFigures('[data-goal-label], [data-goal-pct]')) {
+      const fill = document.querySelector('[data-goal-fill]');
+      if (fill) fill.style.width = '0%';
+      return;
+    }
     const lang = getLang();
     const effective = effRange();
     let data = vData(goalByVenue, currentRange);
@@ -2572,6 +2615,11 @@
   }
 
   function renderKpiBand() {
+    if (guardOperatorFigures('[data-kpi-band]')) {
+      const wrap = document.querySelector('[data-kpi-band]');
+      if (wrap) wrap.textContent = operatorUnavailableText();
+      return;
+    }
     const lang = getLang();
     let data = vData(kpiByVenue, currentRange);
     if (!data) return;
@@ -2971,6 +3019,13 @@
   }
 
   function renderRevChart() {
+    if (guardOperatorFigures('[data-rev-svg], [data-rev-legend], [data-rev-hero-delta], [data-rev-range-badge], [data-rev-compare-caption]')) {
+      const value = document.querySelector('[data-rev-hero-val]');
+      if (value) value.textContent = '…';
+      const sub = document.querySelector('[data-rev-sub]');
+      if (sub) sub.textContent = operatorUnavailableText();
+      return;
+    }
     const lang = getLang();
     const effective = effRange();
     let data = vData(revChartByVenue, currentRange);
@@ -5351,6 +5406,9 @@
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true });
     else init();
   }
+  document.addEventListener('kiwi:operator-snapshot', () => {
+    renderHero(); renderGoal(); renderKpiBand(); renderRevChart();
+  });
   if (window.KiwiDashboardBoot?.whenUnlocked) window.KiwiDashboardBoot.whenUnlocked(startDashboardRendering);
   else startDashboardRendering();
 
