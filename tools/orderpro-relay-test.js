@@ -242,6 +242,22 @@ async function get(fn, qs, headers = {}) {
     !/mgrBuffer\s*===|pin\s*===\s*|code\s*===\s*['"]\d/.test(vrapCancel)
       && /authorizeTill/.test(fs.readFileSync(path.join(ROOT, 'assets/caisse-pairing.js'), 'utf8')));
 
+  /* cancelOrderProTakeaway protège la destruction par code opérateur quel que soit
+     le chemin d'appel (bouton vrap ou clic direct data-vrap-cancel sur le board). */
+  const cancelTakeawayFn = (() => {
+    const at = caissePage.indexOf('function cancelOrderProTakeaway(o)');
+    if (at < 0) return '';
+    return caissePage.slice(at, caissePage.indexOf('function settleVrapPayment()', at));
+  })();
+  ok('cancelOrderProTakeaway requiert le code opérateur en son sein et n’utilise aucun confirm natif',
+    cancelTakeawayFn.includes('requireTillOperator(') && !cancelTakeawayFn.includes('confirm('));
+  ok('cancelOrderProTakeaway place la destruction (opPush, dismissExpired) dans le rappel d’approbation',
+    cancelTakeawayFn.indexOf('requireTillOperator(') > 0
+      && cancelTakeawayFn.indexOf('const proceed =') < cancelTakeawayFn.indexOf('dismissExpired(')
+      && cancelTakeawayFn.indexOf('dismissExpired(') < cancelTakeawayFn.indexOf('opPush('));
+  ok('le clic data-vrap-cancel sur le tableau passe par cancelOrderProTakeaway',
+    caissePage.includes('cancel.dataset.vrapCancel') && caissePage.includes('cancelOrderProTakeaway(kdsOrders.find('));
+
   ok('le sondage transmet les refus récents à la caisse',
     /state\.expired = j\.expired/.test(inboxPage)
       && /ingest\(delta, all, state\.sessions, state\.closedSessions, state\.expired\)/.test(inboxPage));

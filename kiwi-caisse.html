@@ -5501,7 +5501,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=484" defer></script>
+  <script src="assets/caisse-pwa.js?v=485" defer></script>
   <script src="assets/live-link.js?v=25" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -9150,6 +9150,7 @@
     let vrapEditingNum = null;
     let vrapDiscount   = null;  // { kind, value, amount, reason } | null
     let vrapResumedExpiredId = null; // id d'une commande expirée reprise en cours dans le panier
+    let vrapCancellingAuthorized = false;
 
     const dismissedExpiredIds = new Set((() => {
       try { return JSON.parse(localStorage.getItem('kiwi_dismissed_expired') || '[]'); } catch (_) { return []; }
@@ -10433,7 +10434,12 @@
             requireTillOperator(
               liveOrder ? `Annuler la commande ${ticketNo(editingOrder)}` : 'Vider la commande',
               (who) => {
-                if (liveOrder) { cancelOrderProTakeaway(editingOrder); return; }
+                if (liveOrder) {
+                  vrapCancellingAuthorized = who || true;
+                  cancelOrderProTakeaway(editingOrder);
+                  vrapCancellingAuthorized = false;
+                  return;
+                }
                 clearCart();
                 const by = who && who.name ? ` · ${who.name}` : '';
                 toast(`Commande vidée${by}`);
@@ -18836,27 +18842,32 @@
     function cancelOrderProTakeaway(o) {
       if (!o || !o.opId || o.paid) return false;
       const label = ticketNo(o);
-      if (!confirm(`Annuler la commande ${label} ?`)) return false;
-      toast(`Annulation de ${label}…`);
-      dismissExpired(o.opId);
-      Promise.resolve(opPush(o, 'rejected', { server: 'dismissed' })).then((result) => {
-        if (!result || !result.ok) {
-          toast(`Commande ${label} non annulée · réessayez`);
-          return;
-        }
-        opTickets.delete(o.opId);
-        const index = kdsOrders.indexOf(o);
-        if (index >= 0) kdsOrders.splice(index, 1);
-        if (vrapEditingNum === o.num) {
-          vrapEditingNum = null;
-          clearCart();
-          setVrapView('board');
-        } else renderVrapBoard();
-        updateKdsCount();
-        if (kdsEl.classList.contains('is-open')) kdsPaint();
-        try { persistShift(); } catch (_) {}
-        toast(`Commande ${label} annulée`);
-      });
+      const preAuth = vrapCancellingAuthorized;
+      const proceed = (who) => {
+        toast(`Annulation de ${label}…`);
+        dismissExpired(o.opId);
+        Promise.resolve(opPush(o, 'rejected', { server: 'dismissed' })).then((result) => {
+          if (!result || !result.ok) {
+            toast(`Commande ${label} non annulée · réessayez`);
+            return;
+          }
+          opTickets.delete(o.opId);
+          const index = kdsOrders.indexOf(o);
+          if (index >= 0) kdsOrders.splice(index, 1);
+          if (vrapEditingNum === o.num) {
+            vrapEditingNum = null;
+            clearCart();
+            setVrapView('board');
+          } else renderVrapBoard();
+          updateKdsCount();
+          if (kdsEl.classList.contains('is-open')) kdsPaint();
+          try { persistShift(); } catch (_) {}
+          const by = who && who.name ? ` · ${who.name}` : '';
+          toast(`Commande ${label} annulée${by}`);
+        });
+      };
+      if (preAuth) { proceed(preAuth); return true; }
+      requireTillOperator(`Annuler la commande ${label}`, proceed);
       return true;
     }
 
