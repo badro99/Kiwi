@@ -97,7 +97,7 @@ export async function onRequestGet(context) {
   let row = null, hasCols = true;
   try {
     row = await context.env.DB.prepare(
-      `SELECT features, plan, type, city, mrr, subscription_kind, billing_cycle,
+      `SELECT features, plan, type, city, mrr, updated_ts, subscription_kind, billing_cycle,
               subscription_start, subscription_end, trial_start, trial_end, trial_days
          FROM merchant_config WHERE merchant = ?`
     ).bind(merchant).first();
@@ -111,6 +111,7 @@ export async function onRequestGet(context) {
   if (row && row.features) { try { features = JSON.parse(row.features) || {}; } catch (_) { features = {}; } }
   return json({
     features,
+    revision: row && hasCols ? Number(row.updated_ts) || 0 : null,
     plan: (row && row.plan) || '',
     type: (row && row.type) || '',
     city: (row && row.city) || '',
@@ -124,6 +125,34 @@ export async function onRequestGet(context) {
     trialDays: (row && row.trial_days != null) ? Number(row.trial_days) : null,
     columns: { city: hasCols, mrr: hasCols, lifecycle: hasCols },
   });
+}
+
+// Single-feature changes use a compare-and-swap and commit their audit atomically.
+// The compatibility PUT stays available to older clients; the operator switch
+// never sends a stale whole configuration or rewrites the commercial plan.
+export async function onRequestPatch(context) {
+  const bad=await guard(context,true);if(bad)return bad;
+  const origin=context.request.headers.get('Origin');
+  if(origin&&origin!==new URL(context.request.url).origin)return json({error:'cross-origin'},403);
+  let body;try{body=await context.request.json();}catch(_){return json({error:'bad-json'},400);}
+  const {merchant,feature,enabled,revision}=body;
+  if(!/^[a-z0-9][a-z0-9_-]{0,63}$/.test(merchant||'')||!/^[a-zA-Z0-9_-]{1,40}$/.test(feature||'')||typeof enabled!=='boolean'||!Number.isSafeInteger(revision)||revision<0)return json({error:'invalid-feature-change'},400);
+  try {
+    const before=await context.env.DB.prepare('SELECT features,updated_ts FROM merchant_config WHERE merchant=?').bind(merchant).first();
+    if(!before)return json({error:'config-not-found'},404);
+    if(Number(before.updated_ts)!==revision)return json({error:'version-conflict'},409);
+    let flags;try{flags=JSON.parse(before.features);}catch(_){return json({error:'corrupt-config'},409);}
+    if(!flags||typeof flags!=='object'||Array.isArray(flags))return json({error:'corrupt-config'},409);
+    if(flags[feature]===enabled)return json({ok:true,revision,replayed:true});
+    flags[feature]=enabled;
+    const next=Math.max(Date.now(),revision+1),actor=await actorOf(context), serialized=JSON.stringify(flags);
+    const result=await context.env.DB.batch([
+      context.env.DB.prepare('INSERT INTO config_audit(merchant,feature,enabled,actor,actor_id,ts) SELECT merchant,?,?,?,?,? FROM merchant_config WHERE merchant=? AND updated_ts=? AND features=?').bind(feature,enabled?1:0,actor.label,actor.id,next,merchant,revision,before.features),
+      context.env.DB.prepare('UPDATE merchant_config SET features=?,updated_ts=? WHERE merchant=? AND updated_ts=? AND features=?').bind(serialized,next,merchant,revision,before.features),
+    ]);
+    if(!result[1].meta.changes)return json({error:'version-conflict'},409);
+    return json({ok:true,revision:next});
+  }catch(_){return json({error:'config-storage-unavailable'},503);}
 }
 
 export async function onRequestPut(context) {

@@ -63,8 +63,8 @@ export async function onRequestGet({ request, env }) {
       `SELECT COUNT(*) AS total,
               SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) AS active,
               MAX(last_ts) AS last_ts,
-              MAX(CASE WHEN last_err <> '' THEN last_err ELSE NULL END) AS last_error
-         FROM channel_links WHERE merchant = ?`, [merchant], 'channels', missing),
+              (SELECT last_err FROM channel_links WHERE merchant = ? AND last_err <> '' ORDER BY last_ts DESC LIMIT 1) AS last_error
+         FROM channel_links WHERE merchant = ?`, [merchant, merchant], 'channels', missing),
     first(env,
       'SELECT rev, updated_ts FROM catalogs WHERE merchant = ?',
       [merchant], 'catalog', missing),

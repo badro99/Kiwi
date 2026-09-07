@@ -7,13 +7,25 @@
     "v": "1",
     "sha": "6ef7c5da9e6ebf75"
   },
+  "assets/admin-policy.js": {
+    "v": "2",
+    "sha": "d3376f98f0ff85b2"
+  },
   "assets/admin-support.css": {
     "v": "2",
     "sha": "a11e007869b4b084"
   },
   "assets/admin-support.js": {
-    "v": "5",
-    "sha": "d70236efb83cab54"
+    "v": "7",
+    "sha": "47f6217b3932f467"
+  },
+  "assets/admin-workspace.css": {
+    "v": "3",
+    "sha": "16b009fb839f239f"
+  },
+  "assets/admin-workspace.js": {
+    "v": "4",
+    "sha": "33a3e167174f43cb"
   },
   "assets/agent-action-center.js": {
     "v": "2",

@@ -3,6 +3,7 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import * as calendar from '../functions/api/_business-day.js';
+import policy from '../assets/admin-policy.js';
 
 const stamp = Date.parse;
 const cases = [
@@ -46,7 +47,7 @@ async function route(file, now) {
     .replace(/^import .*;$/gm, '').replace(/export /g, '');
   class FixedDate extends Date { static now() { return now; } }
   const ctx = vm.createContext({
-    ...calendar, Date: FixedDate, console, isOperator: async () => true,
+    ...calendar, policy, Date: FixedDate, console, isOperator: async () => true,
     isSeniorOperator: async () => true, slugMerchant: value => value,
     json: (data, status = 200) => ({ status, data }),
   });

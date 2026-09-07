@@ -24,6 +24,7 @@
 
 import { isOperator, slugMerchant, json } from '../../auth/_lib.js';
 import { businessDayStart, businessDayWindows } from '../_business-day.js';
+import policy from '../../../assets/admin-policy.js';
 
 /* Le tarif public, tel qu'il est vendu (voir CLAUDE.md § Phase 1). Ultimate est
  * SUR DEVIS : il n'a pas de prix ici, et c'est exactement pourquoi
@@ -45,10 +46,10 @@ async function tryAll(env, queries, binds = []) {
     if (!list[i]) continue;
     try {
       const r = await env.DB.prepare(list[i]).bind(...binds).all();
-      return { rows: r.results || [], full: i === 0 };
+      return { rows: r.results || [], full: i === 0, index: i };
     } catch (_) {}
   }
-  return { rows: [], full: false };
+  throw new Error('overview-source-unavailable');
 }
 
 export async function onRequestGet(context) {
@@ -74,15 +75,21 @@ export async function onRequestGet(context) {
     };
 
     const cfg = await tryAll(env, [
+      'SELECT merchant, plan, account_id, status, city, mrr, subscription_kind, subscription_start, subscription_end, trial_start, trial_end FROM merchant_config',
       'SELECT merchant, plan, account_id, status, city, mrr FROM merchant_config',
       'SELECT merchant, plan, account_id, status FROM merchant_config',
     ]);
-    const columns = { city: cfg.full, mrr: cfg.full };
+    const columns = { city: cfg.index < 2, mrr: cfg.index < 2, lifecycle: cfg.full };
     for (const c of cfg.rows) {
       const s = store(c.merchant);
       s.plan = (c.plan || '').toLowerCase();
       s.accountId = c.account_id || '';
-      if (c.status === 'suspended') s.status = 'suspended';
+      s.status = c.status || 'active';
+      s.subscription_kind = c.subscription_kind || 'paid';
+      s.subscription_start = c.subscription_start || '';
+      s.subscription_end = c.subscription_end || '';
+      s.trial_start = c.trial_start || '';
+      s.trial_end = c.trial_end || '';
       s.city = (c.city || '').trim();
       s.mrr = (c.mrr == null || c.mrr === '') ? null : Number(c.mrr);
     }
@@ -120,9 +127,9 @@ export async function onRequestGet(context) {
               COALESCE(SUM(amount),0)                                   AS total,
               COALESCE(SUM(CASE WHEN amount > 0 THEN 1 ELSE 0 END),0)   AS tcount,
               MAX(ts)                                                   AS last_ts
-         FROM sales GROUP BY merchant`,
+         FROM sales WHERE void_ts IS NULL GROUP BY merchant`,
     ], [dayStart, d7, d30, d30]);
-    const voidAware = perStore.full;
+    const voidAware = true; // Both supported amount schemas exclude voided sales.
     const salesOf = new Map();
     for (const r of perStore.rows) {
       store(r.merchant);
@@ -180,8 +187,6 @@ export async function onRequestGet(context) {
          FROM sales JOIN days ON ts >= start_ts AND ts < end_ts WHERE void_ts IS NULL GROUP BY merchant, d`,
       `${windows} SELECT merchant, d, COALESCE(SUM(amount),0) AS amount
          FROM sales JOIN days ON ts >= start_ts AND ts < end_ts WHERE void_ts IS NULL GROUP BY merchant, d`,
-      `${windows} SELECT merchant, d, COALESCE(SUM(amount),0) AS amount
-         FROM sales JOIN days ON ts >= start_ts AND ts < end_ts GROUP BY merchant, d`,
     ], days.flatMap(day => [day.d, day.from, day.to]));
     const realSet = new Set(real.map((s) => s.merchant));
     const byDay = new Map();
@@ -200,7 +205,7 @@ export async function onRequestGet(context) {
      * établissement suspendu ne facture plus : il sort du MRR et se compte à
      * part, sinon un client parti resterait du chiffre d'affaires. */
     const tiers = new Map();
-    const mrr = { total: 0, custom: 0, customStores: 0, untariffed: 0, suspended: 0, suspendedAmount: 0 };
+    const mrr = { total: 0, custom: 0, customStores: 0, untariffed: 0, suspended: 0, suspendedAmount: 0, excluded: 0, contributions: [] };
     for (const s of real) {
       const suspended = s.status === 'suspended' ||
         (s.owner && s.owner.status === 'suspended');
@@ -214,7 +219,11 @@ export async function onRequestGet(context) {
       if (!t) { t = { plan: key, stores: 0, amount: 0, unit: listed, untariffed: 0, suspended: 0 }; tiers.set(key, t); }
       t.stores++;
 
-      if (suspended) { mrr.suspended++; if (amount) mrr.suspendedAmount += amount; t.suspended++; continue; }
+      if (suspended) { mrr.suspended++; if (amount) mrr.suspendedAmount += amount; t.suspended++; mrr.contributions.push({merchant:s.merchant,name:s.owner.business||s.merchant,plan:s.plan,status:'suspended',amount:null}); continue; }
+      const commercial = policy.commercial({...s, store_status:s.status, status:s.owner.status}, now);
+      const eligible = columns.lifecycle && ['active', 'unpriced'].includes(commercial);
+      mrr.contributions.push({merchant:s.merchant, name:s.owner.business || s.merchant, plan:s.plan, status:columns.lifecycle ? commercial : 'unknown', amount:eligible && amount != null ? amount : null});
+      if (!eligible) { mrr.excluded++; continue; }
       if (amount == null) { mrr.untariffed++; t.untariffed++; continue; }
       mrr.total += amount;
       t.amount += amount;

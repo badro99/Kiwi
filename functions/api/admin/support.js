@@ -49,7 +49,8 @@ export async function onRequestPatch({request,env}){
     let delivery={ok:false,reason:'manual-whatsapp-handoff'};
     if(ticket.channel==='email')delivery=await sendMail(env,{to:ticket.contact,subject:`Re: ${ticket.reference} · Kiwi Support`,text:`${body}\n\nRépondez à cet e-mail en gardant ${ticket.reference} dans l’objet.`});
     await env.DB.prepare(`INSERT INTO support_messages (id,ticket_id,kind,channel,author,body,delivery,ts) VALUES (?,?,?,?,?,?,?,?)`).bind('msg-'+crypto.randomUUID(),id,'reply',ticket.channel,actor,body,delivery.ok?'sent':delivery.reason,now).run();
-    await env.DB.prepare(`UPDATE support_tickets SET status='waiting-client',updated_ts=? WHERE id=?`).bind(now,id).run();
+    // A manual WhatsApp handoff or failed email has not reached the customer.
+    await env.DB.prepare(`UPDATE support_tickets SET status=?,updated_ts=? WHERE id=?`).bind(delivery.ok?'waiting-client':'open',now,id).run();
     return json({ok:true,delivery,whatsapp:ticket.channel==='whatsapp'?{contact:ticket.contact,text:`${ticket.reference} · ${body}`} : null});
   }else return json({error:'bad-action'},400);
   return json({ok:true,ticket:await hydrate(env,await env.DB.prepare(`SELECT * FROM support_tickets WHERE id=?`).bind(id).first())});

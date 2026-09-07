@@ -68,7 +68,7 @@ export async function onRequestGet(context) {
                 COALESCE(SUM(CASE WHEN ts >= ? THEN COALESCE(amount_cents, amount * 100) ELSE 0 END), 0) / 100.0 AS today_amount,
                 COALESCE(SUM(CASE WHEN ts >= ? AND COALESCE(amount_cents, amount * 100) > 0 THEN 1 ELSE 0 END), 0) AS today_count,
                 MAX(ts) AS last_ts
-         FROM sales GROUP BY merchant`
+         FROM sales WHERE void_ts IS NULL GROUP BY merchant`
       ).bind(dayStart, dayStart).all();
     } catch (_) {
       sales = await env.DB.prepare(
@@ -76,7 +76,7 @@ export async function onRequestGet(context) {
                 COALESCE(SUM(CASE WHEN ts >= ? THEN amount ELSE 0 END), 0) AS today_amount,
                 COALESCE(SUM(CASE WHEN ts >= ? AND amount > 0 THEN 1 ELSE 0 END), 0) AS today_count,
                 MAX(ts) AS last_ts
-         FROM sales GROUP BY merchant`
+         FROM sales WHERE void_ts IS NULL GROUP BY merchant`
       ).bind(dayStart, dayStart).all();
     }
     for (const s of (sales.results || [])) {
@@ -96,7 +96,7 @@ export async function onRequestGet(context) {
     try {
       // `city` est posée par l'opérateur (voir /api/admin/overview) : la console
       // la montre dans le roster ET la cherche, donc elle voyage avec la ligne.
-      cfg = await env.DB.prepare(`SELECT merchant, plan, type, account_id, name, status, city,
+      cfg = await env.DB.prepare(`SELECT merchant, plan, type, account_id, name, status, city, mrr,
         subscription_kind, billing_cycle, subscription_start, subscription_end,
         trial_start, trial_end, trial_days FROM merchant_config`).all();
     } catch (_0) {
@@ -115,6 +115,7 @@ export async function onRequestGet(context) {
       r.plan = c.plan || '';
       r.type = c.type || '';
       r.city = c.city || '';
+      r.mrr = c.mrr == null ? null : Number(c.mrr);
       r.subscription_kind = c.subscription_kind || 'paid';
       r.billing_cycle = c.billing_cycle || 'monthly';
       r.subscription_start = c.subscription_start || '';

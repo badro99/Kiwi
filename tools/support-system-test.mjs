@@ -98,6 +98,7 @@ ok(landing.includes('https://wa.me/212624495159'), 'landing calls-to-action use 
 ok(legal.includes('+212 6 24 49 51 59'), 'legal contact details show the official Kiwi number');
 ok(!account.includes('Support WhatsApp 7j/7'), 'billing no longer promises an unverified response schedule');
 ok(dashboard.includes('assets/help-centre.js?v=4'), 'dashboard loads the active help client');
-ok(admin.includes('assets/admin-support.js?v=5'), 'God Mode loads the support console');
+const stamps = JSON.parse(fs.readFileSync(new URL('./asset-stamps.json',import.meta.url),'utf8'));
+ok(admin.includes('assets/admin-support.js?v='+stamps['assets/admin-support.js'].v), 'God Mode loads the stamped support console');
 
 console.log(`support-system-test: ${controls} controls passed`);

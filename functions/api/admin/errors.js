@@ -21,7 +21,7 @@ export async function onRequestGet(context) {
 
   const url = new URL(request.url);
   const merchant = (url.searchParams.get('merchant') || '').trim();
-  const limit = Math.min(100, Math.max(1, parseInt(url.searchParams.get('limit') || '50', 10)));
+  const limit = Math.min(100, Math.max(1, parseInt(url.searchParams.get('limit') || '50', 10) || 50));
 
   try {
     let rows;
@@ -49,7 +49,6 @@ export async function onRequestGet(context) {
       now: Date.now()
     });
   } catch (err) {
-    // If table doesn't exist yet, return empty array gracefully
-    return json({ ok: true, errors: [], count: 0, now: Date.now() });
+    return json({ ok: false, error: 'error-source-unavailable', errors: null, count: null, now: Date.now() }, 503);
   }
 }
