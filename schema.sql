@@ -365,6 +365,9 @@ CREATE TABLE IF NOT EXISTS orders (
   priced_ts   INTEGER,            -- NULL = prix jamais recalculés côté serveur
   client_ref  TEXT,               -- clé d'idempotence du téléphone
   paid_ts     INTEGER,            -- encaissée (au comptoir, ou avec l'addition de la table)
+  cancel_actor_id TEXT NOT NULL DEFAULT '',
+  cancel_actor_name TEXT NOT NULL DEFAULT '',
+  cancel_ts INTEGER,
   -- ── Canaux extérieurs (voir le commentaire sous la table) ────────────────
   -- Elles n'étaient déclarées QUE dans un ALTER commenté : une base neuve ne
   -- les recevait donc jamais, et le repli en cascade de queue.js masquait leur
@@ -1005,6 +1008,8 @@ CREATE TABLE IF NOT EXISTS table_sessions (
   table_no    TEXT NOT NULL DEFAULT '',       -- vide pour un retrait au comptoir
   status      TEXT NOT NULL DEFAULT 'open',   -- 'open' | 'closed'
   closed_by   TEXT NOT NULL DEFAULT '',       -- 'settle' | 'caisse' | 'expiry' — pourquoi elle s'est fermée
+  closed_actor_id TEXT NOT NULL DEFAULT '',
+  closed_actor_name TEXT NOT NULL DEFAULT '',
   opened_ts   INTEGER NOT NULL,
   seen_ts     INTEGER NOT NULL,               -- dernier signe de vie du téléphone : c'est LUI qui allume la table sur le plan de salle
   closed_ts   INTEGER

@@ -15549,6 +15549,11 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       salesDayByMerchant[merchant] = Math.max(0, Math.min(6, Number(offset) || 0));
       renderRealTransactions('transactions', STARTERS.transactions);
     };
+    H['sales-kind'] = (_el, kind) => {
+      salesKindByMerchant[auditMerchant()] = ['sale', 'refund', 'cancel'].includes(kind) ? kind : 'all';
+      renderRealTransactions('transactions', STARTERS.transactions);
+    };
+    H['sales-activity-retry'] = () => { loadCancelAudit(true); };
     H['sales-method'] = (_el, method) => {
       const merchant = auditMerchant() || String(window.KiwiVenue?.getCurrentVenueData?.()?.id || 'venue');
       const allowed = ['cash', 'card', 'delivery'];
@@ -15621,16 +15626,24 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       '.rtx-void-title{font-size:14px;font-weight:650;margin-bottom:4px}.rtx-void-sub{font-size:12px;color:var(--n-500);margin-bottom:10px}' +
       '.rtx-void-row{display:grid;grid-template-columns:auto minmax(120px,1fr) minmax(150px,2fr) auto;gap:12px;align-items:center;padding:11px 2px;border-bottom:1px solid var(--n-100)}' +
       '.rtx-void-who{font-size:13px;font-weight:600}.rtx-void-lines{font-size:12px;color:var(--n-500);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
-      '.rtx-void-amount{font-family:var(--mono);font-size:13px;font-weight:650;color:#b44338;white-space:nowrap}';
+      '.rtx-void-amount{font-family:var(--mono);font-size:13px;font-weight:650;color:#b44338;white-space:nowrap}' +
+      '.rtx-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:18px 0 24px}.rtx-summary>div{padding:18px;border:1px solid var(--n-200);border-radius:16px;background:var(--n-0,#fff)}.rtx-summary span{display:block;font-size:12px;color:var(--n-500)}.rtx-summary strong{display:block;font-size:26px;color:var(--g-700,#087454);margin-top:7px}.rtx-summary small{font-size:12px;font-weight:500}.rtx-summary .is-refund strong{color:#b44338}' +
+      '.rtx-activity-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:16px;padding:18px 0;border-bottom:1px solid var(--n-100);align-items:start}.rtx-activity-tag{font-size:11px;font-weight:650;color:#81501a;background:#fcf0da;padding:5px 9px;border-radius:7px}.rtx-activity-value{text-align:end;font-weight:650;font-size:15px}.rtx-activity-value small{display:block;font-size:11px;font-weight:400;color:var(--n-500);margin-top:5px;max-width:200px}.rtx-detail{font-size:12px;color:var(--n-500);overflow-wrap:anywhere}.rtx-detail summary{cursor:pointer;min-height:44px;display:flex;align-items:center;text-decoration:underline;text-underline-offset:3px}.rtx-detail p{margin:6px 0}.rtx-notice{padding:12px 16px;border-radius:12px;background:#fcf0da;color:#81501a;font-size:13px}.rtx-method,.rtx-day{min-height:44px}.rtx button:focus-visible,.rtx summary:focus-visible{outline:2px solid var(--g-700,#087454);outline-offset:3px}' +
+      '@media(max-width:600px){.rtx-summary{gap:6px}.rtx-summary>div{padding:12px 8px}.rtx-summary strong{font-size:19px}.rtx-summary span{font-size:11px}.rtx-activity-row{grid-template-columns:auto minmax(0,1fr);gap:10px}.rtx-activity-value{grid-column:2;text-align:start}.rtx-activity-value small{max-width:none}.rtx-identity{flex-wrap:wrap}.rtx-row{grid-template-columns:auto minmax(0,1fr) auto;gap:10px;padding:18px 0}.rtx-row>.rtx-t{grid-column:1;grid-row:1}.rtx-row>.rtx-m{grid-column:2;grid-row:1;justify-self:start}.rtx-row>.rtx-a{grid-column:3;grid-row:1}.rtx-row>.rtx-products{grid-column:1/-1;grid-row:2;width:100%}.rtx-row>.rtx-actions{grid-column:3;grid-row:3}.rtx-product-name{white-space:normal}.rtx-product{gap:12px}}';
     document.head.appendChild(s);
   }
 
   let cancelAudit = [];
   let cancelAuditMerchant = '';
   let cancelAuditLoading = false;
+  let cancelAuditError = false;
+  let cancelAuditWindow = null;
+  let cancelAuditRequest = 0;
+  let cancelAuditLoadedAt = 0;
   let cancelAuditVoidSig = '';
   const salesDayByMerchant = Object.create(null);
   const salesMethodsByMerchant = Object.create(null);
+  const salesKindByMerchant = Object.create(null);
   function salesMethodKey(s) {
     const raw = String((s && s.method) || '').toLowerCase();
     return ({ 'espèces': 'cash', especes: 'cash', carte: 'card', livraison: 'delivery' })[raw] || raw;
@@ -15640,18 +15653,46 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
   }
   function loadCancelAudit(force) {
     const merchant = auditMerchant();
-    if (!merchant || cancelAuditLoading || (!force && cancelAuditMerchant === merchant)) return;
-    if (cancelAuditMerchant && cancelAuditMerchant !== merchant) cancelAudit = [];
+    const windowKey = cancelAuditWindow;
+    if (!merchant || !windowKey || windowKey.merchant !== merchant) return;
+    const key = `${merchant}:${windowKey.from}:${windowKey.to}`;
+    if (!force && cancelAuditMerchant === key && (cancelAuditLoading || Date.now() - cancelAuditLoadedAt < 30000)) return;
+    if (cancelAuditMerchant !== key) cancelAudit = [];
+    cancelAuditMerchant = key;
     cancelAuditLoading = true;
-    const from = Date.now() - 366 * 86400000;
-    fetch(`/api/sale/cancel?merchant=${encodeURIComponent(merchant)}&from=${from}`, { credentials: 'same-origin' })
-      .then(r => r.ok ? r.json() : null)
-      .then(j => {
-        cancelAudit = (j && Array.isArray(j.cancellations)) ? j.cancellations : [];
-        cancelAuditMerchant = merchant;
-        const H = window.Kiwi && window.Kiwi.handlers;
-        if (document.querySelector('[data-real-tx], [data-starter-nav="transactions"]') && H?.['nav-transactions']) H['nav-transactions']();
-      }).catch(() => {}).finally(() => { cancelAuditLoading = false; });
+    cancelAuditError = false;
+    const generation = ++cancelAuditRequest;
+    (async () => {
+      const events = [], cursors = new Set();
+      let next = null;
+      do {
+        const query = new URLSearchParams({ merchant, from: windowKey.from, to: windowKey.to });
+        if (next) { query.set('before', next.before); query.set('beforeId', next.beforeId); }
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 12000);
+        let data;
+        try {
+          const response = await fetch(`/api/order/activity?${query}`, { credentials: 'same-origin', signal: controller.signal });
+          if (!response.ok) throw new Error('activity-unavailable');
+          data = await response.json();
+        } finally { clearTimeout(timeout); }
+        if (generation !== cancelAuditRequest || merchant !== auditMerchant()) return;
+        if (data.merchant !== merchant || data.from !== windowKey.from || data.to !== windowKey.to || !Array.isArray(data.events)) throw new Error('activity-scope');
+        events.push(...data.events);
+        next = data.next;
+        if (next) {
+          const cursor = JSON.stringify(next);
+          if (cursors.has(cursor) || cursors.size >= 100) throw new Error('activity-incomplete');
+          cursors.add(cursor);
+        }
+      } while (next);
+      cancelAudit = events;
+    })().catch(() => { if (generation === cancelAuditRequest) cancelAuditError = true; }).finally(() => {
+      if (generation !== cancelAuditRequest) return;
+      cancelAuditLoading = false;
+      cancelAuditLoadedAt = Date.now();
+      if (merchant === auditMerchant() && document.querySelector('[data-real-tx]')) renderRealTransactions('transactions', STARTERS.transactions);
+    });
   }
 
   /* A custom/real venue's Ventes page shows the merchant's ACTUAL sales from
@@ -15674,7 +15715,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     };
     const L = ML[lang] || ML.fr;
     const SUM = { fr: { n: 'ventes', one: 'vente', total: 'Total' }, en: { n: 'sales', one: 'sale', total: 'Total' }, ar: { n: 'مبيعات', one: 'بيع', total: 'المجموع' } }[lang] || { n: 'ventes', one: 'vente', total: 'Total' };
-    const fmt = n => { try { return (Math.round(n) || 0).toLocaleString(lang === 'ar' ? 'ar-MA' : 'fr-FR'); } catch (_) { return String(Math.round(n) || 0); } };
+    const fmt = n => { try { return (Number(n) || 0).toLocaleString(lang === 'ar' ? 'ar-MA' : 'fr-FR', { maximumFractionDigits: 2 }); } catch (_) { return String(Number(n) || 0); } };
     /* ── La MÊME fenêtre que le tableau de bord ────────────────────────────
      * Cette page additionnait tout l'historique du navigateur et imprimait le
      * résultat en gros, sous un tableau de bord qui, lui, affichait la période
@@ -15701,12 +15742,34 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
     currentBizDate.setHours(0, 0, 0, 0);
     const todayLo = currentBizDate.getTime() + cutoffH * 3600000;
     const lo = todayLo - dayOffset * 864e5;
-    const hi = dayOffset === 0 ? Infinity : (todayLo - (dayOffset - 1) * 864e5);
+    const hi = todayLo - (dayOffset - 1) * 864e5;
+    cancelAuditWindow = { merchant: auditMerchant(), from: lo, to: hi };
+    loadCancelAudit();
+    const activity = cancelAuditMerchant === `${auditMerchant()}:${lo}:${hi}` ? cancelAudit : [];
+    // Refund audit metadata enriches the existing receipt, never adds a second
+    // debit. A refund absent from a stale local feed remains visible from D1.
+    const refundById = new Map(refunds.map(r => [String(r.saleId || r.id), r]));
+    activity.filter(a => a.kind === 'refund' && a.refundId).forEach(a => {
+      const old = refundById.get(String(a.refundId)) || {};
+      refundById.set(String(a.refundId), { ...old, id: a.refundId, kind: 'refund', ts: a.ts,
+        amount: -Math.abs(a.amountCents / 100), method: a.method, ref: a.ref,
+        reason: a.reason, actor: a.actor, actorId: a.actorId, originalRef: a.originalRef || a.saleId,
+        lines: old.lines || [], origin: 'caisse' });
+    });
     const selectedDay = new Date(currentBizDate.getTime() - dayOffset * 864e5);
-    const daySales = sales.concat(refunds).filter((s) => { const ts = +(s && s.ts) || 0; return ts >= lo && ts < hi; });
-    const inWindow = selectedMethods.length
+    const daySales = sales.concat([...refundById.values()]).filter((s) => { const ts = +(s && s.ts) || 0; return ts >= lo && ts < hi; });
+    const financialWindow = selectedMethods.length
       ? daySales.filter((s) => selectedMethods.includes(salesMethodKey(s)))
       : daySales;
+    const selectedKind = salesKindByMerchant[auditMerchant()] || 'all';
+    const inWindow = financialWindow.filter(s => selectedKind === 'all' ||
+      (selectedKind === 'refund' ? s.kind === 'refund' || s.amount < 0 : selectedKind === 'sale' && s.kind !== 'refund' && s.amount >= 0));
+    const kindButtons = [
+      ['all', T({ fr: 'Tout', en: 'All', ar: 'الكل' })],
+      ['sale', T({ fr: 'Ventes', en: 'Sales', ar: 'المبيعات' })],
+      ['refund', T({ fr: 'Remboursements', en: 'Refunds', ar: 'المبالغ المستردة' })],
+      ['cancel', T({ fr: 'Annulations', en: 'Cancellations', ar: 'الإلغاءات' })],
+    ].map(([kind, label]) => `<button class="rtx-method${selectedKind === kind ? ' on' : ''}" type="button" data-action="sales-kind" data-arg="${kind}" aria-pressed="${selectedKind === kind}">${escS(label)}</button>`).join('');
     const dayLabel = dayOffset === 0 ? T({ fr: "aujourd'hui", en: 'today', ar: 'اليوم' })
       : dayOffset === 1 ? T({ fr: 'hier', en: 'yesterday', ar: 'أمس' })
       : selectedDay.toLocaleDateString(lang === 'ar' ? 'ar-MA' : lang, { weekday: 'long', day: 'numeric', month: 'short' });
@@ -15725,8 +15788,10 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       const active = method === 'all' ? selectedMethods.length === 0 : selectedMethods.includes(method);
       return `<button class="rtx-method${active ? ' on' : ''}" type="button" data-action="sales-method" data-arg="${method}" aria-pressed="${active}">${escS(methodLabels[method])}</button>`;
     }).join('');
-    const total = inWindow.reduce((a, s) => a + (s.amount || 0), 0);
-    const count = inWindow.filter((s) => s.kind !== 'refund' && Number(s.amount) > 0).length;
+    const collected = financialWindow.reduce((a, s) => a + Math.max(0, Math.round(Number(s.amount || 0) * 100)), 0) / 100;
+    const returned = financialWindow.reduce((a, s) => a + Math.max(0, -Math.round(Number(s.amount || 0) * 100)), 0) / 100;
+    const total = Math.round((collected - returned) * 100) / 100;
+    const count = financialWindow.filter((s) => s.kind !== 'refund' && Number(s.amount) > 0).length;
     const rows = inWindow.slice().sort((a, b) => (+b.ts || 0) - (+a.ts || 0)).map((s, i) => {
       const isRefund = s.kind === 'refund' || Number(s.amount) < 0;
       const d = new Date(s.ts || Date.now());
@@ -15771,39 +15836,55 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       return `<div class="rtx-row${i === 0 ? ' is-new' : ''}${isRefund ? ' is-refund' : ''}">` +
         `<span class="rtx-t">${when}</span>` +
         `<span class="rtx-m">${escS(m)}</span>` +
-        `<span class="rtx-products">${identity}${products}</span>` +
+        `<span class="rtx-products">${identity}${products}${isRefund ? `<details class="rtx-detail"><summary>${escS(T({ fr: 'Détails du remboursement', en: 'Refund details', ar: 'تفاصيل الاسترداد' }))}</summary><p>${escS(s.originalRef || s.originalSaleId || T({ fr: 'Ticket d’origine non enregistré', en: 'Original receipt not recorded', ar: 'الإيصال الأصلي غير مسجل' }))}</p><p>${escS(s.actor || s.actorId || T({ fr: 'Identité non enregistrée', en: 'Identity not recorded', ar: 'الهوية غير مسجلة' }))} · ${escS(s.reason || T({ fr: 'Motif non enregistré', en: 'Reason not recorded', ar: 'السبب غير مسجل' }))}</p><p>${escS(d.toLocaleString(lang))} · ${escS(L[salesMethodKey(s)] || L.unknown)}</p></details>` : ''}</span>` +
         `<span class="rtx-a">${fmt(s.amount)}<span class="rtx-cur"> MAD</span></span>` +
         invoiceActions +
         `</div>`;
     }).join('');
-    const voids = cancelAudit.filter((v) => {
+    const voids = activity.filter((v) => {
       const ts = +(v && v.ts) || 0;
-      return ts >= lo && ts < hi;
+      return v.kind !== 'refund' && ts >= lo && ts < hi && (!selectedMethods.length || selectedMethods.includes(salesMethodKey(v)));
     });
     const voidRows = voids.map((v) => {
       const d = new Date(v.ts || Date.now());
       const when = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
       const detail = (v.lines || []).map(l => `${Number(l.qty) || 1} × ${l.name || 'Article'}`).join(' · ') || v.label || 'Vente';
-      return `<div class="rtx-void-row"><span class="rtx-t">${escS(when)}</span><span class="rtx-void-who">${escS(v.actor || 'Employé')} · ${escS(v.ref || '')}</span><span class="rtx-void-lines" title="${escS(detail)}">${escS(detail)}</span><span class="rtx-void-amount">− ${fmt(v.amount)} MAD</span></div>`;
+      const label = v.kind === 'closure' ? T({ fr: 'Table fermée / remise à zéro', en: 'Table closed / reset', ar: 'إغلاق / إعادة ضبط الطاولة' })
+        : v.kind === 'order-cancel' ? T({ fr: 'Commande annulée', en: 'Order cancelled', ar: 'طلب ملغى' })
+        : v.kind === 'restore' ? T({ fr: 'Vente rétablie', en: 'Sale restored', ar: 'استعادة البيع' }) : T({ fr: 'Vente annulée', en: 'Sale voided', ar: 'بيع ملغى' });
+      const who = v.actor || v.actorId || T({ fr: 'Identité non enregistrée', en: 'Identity not recorded', ar: 'الهوية غير مسجلة' });
+      const cashNote = ['closure', 'order-cancel'].includes(v.kind) ? T({ fr: 'Sans mouvement d’argent', en: 'No cash movement', ar: 'بدون حركة مالية' }) : T({ fr: 'Correction de vente, pas un remboursement', en: 'Sale correction, not a refund', ar: 'تصحيح بيع، وليس استردادًا' });
+      const source = v.source === 'caisse' ? T({ fr: 'Caisse', en: 'Till', ar: 'الصندوق' }) : v.source || '';
+      const orderValue = v.kind === 'closure' ? v.orderAmountCents : v.amountCents;
+      const refs = v.kind === 'closure' ? `${T({ fr: 'Table', en: 'Table', ar: 'طاولة' })} ${v.tableNo || '?'} · ${(v.orders || []).map(o => '#' + o.number).join(', ')}` : v.ref || v.originalRef || v.saleId;
+      return `<div class="rtx-activity-row"><span class="rtx-t">${escS(when)}</span><div><div class="rtx-identity"><span class="rtx-activity-tag">${escS(label)}</span><strong>${escS(refs)}</strong></div><div class="rtx-source">${escS(who)}${source ? ' · ' + escS(source) : ''}</div><details class="rtx-detail"><summary>${escS(T({ fr: 'Voir les détails', en: 'View details', ar: 'عرض التفاصيل' }))}</summary><p>${escS(detail)}</p><p>${escS(v.reason || '')} · ${escS(d.toLocaleString(lang))}</p><p>${escS(v.sessionId || v.saleId || '')}</p>${v.detailsTruncated ? `<p>${escS(T({ fr: 'Détail partiel (250 commandes maximum)', en: 'Partial detail (250 orders maximum)', ar: 'تفاصيل جزئية (250 طلبًا كحد أقصى)' }))}</p>` : ''}</details></div><div class="rtx-activity-value">${fmt(orderValue / 100)} MAD<small>${escS(cashNote)}</small></div></div>`;
     }).join('');
-    const startingUp = T({ fr: 'compte en démarrage', en: 'account getting started', ar: 'حساب قيد الإعداد' });
+    const startingUp = T({ fr: 'Historique des opérations', en: 'Operations history', ar: 'سجل العمليات' });
     window.Kiwi.appPage('transactions', {
-      title: starterTitle(nav, meta),
+      title: T({ fr: 'Ventes & activité', en: 'Sales & activity', ar: 'المبيعات والنشاط' }),
       subtitle: `${vd.name || 'Votre établissement'} · ${startingUp}`,
       body: `
         <div data-real-tx class="rtx">
           <div class="rtx-head">
             <div class="rtx-count">${count} ${escS(count === 1 ? SUM.one : SUM.n)} · ${escS(dayLabel)}</div>
-            <div class="rtx-total">${escS(SUM.total)} · <b>${fmt(total)} MAD</b></div>
+            <div class="rtx-total">${voids.filter(v => v.kind !== 'restore').length} ${escS(T({ fr: 'annulations / fermetures', en: 'cancellations / closures', ar: 'إلغاءات / إغلاقات' }))}</div>
           </div>
+          <div class="rtx-summary">${[
+            [T({ fr: 'Encaissements', en: 'Collected', ar: 'المقبوضات' }), collected, ''],
+            [T({ fr: 'Remboursements', en: 'Refunded', ar: 'المبالغ المستردة' }), -returned, 'is-refund'],
+            [T({ fr: 'Net encaissé', en: 'Net collected', ar: 'صافي المقبوضات' }), total, ''],
+          ].map(([label, value, cls]) => `<div class="${cls}"><span>${escS(label)}</span><strong>${fmt(value)} <small>MAD</small></strong></div>`).join('')}</div>
           <div class="rtx-days" role="group" aria-label="${escS(T({ fr: 'Jour des ventes', en: 'Sales day', ar: 'يوم المبيعات' }))}">${dayButtons}</div>
+          <div class="rtx-methods" role="group" aria-label="${escS(T({ fr: 'Activité', en: 'Activity', ar: 'النشاط' }))}">${kindButtons}</div>
           <div class="rtx-methods" role="group" aria-label="${escS(T({ fr: 'Type de vente', en: 'Sale type', ar: 'نوع البيع' }))}">${methodButtons}</div>
-          <div class="rtx-list">${rows || `<div class="rtx-row"><span class="rtx-products-missing">${escS(T({
-            fr: 'Aucune vente sur cette période.',
-            en: 'No sales in this period.',
-            ar: 'لا توجد مبيعات في هذه الفترة.',
+          ${cancelAuditLoading ? `<p class="rtx-notice" role="status">${escS(T({ fr: 'Chargement du journal…', en: 'Loading activity…', ar: 'جارٍ تحميل السجل…' }))}</p>` : ''}
+          ${cancelAuditError ? `<p class="rtx-notice" role="alert">${escS(T({ fr: 'Journal indisponible. Les remboursements et annulations peuvent être incomplets.', en: 'Activity unavailable. Refunds and cancellations may be incomplete.', ar: 'السجل غير متاح. قد تكون المبالغ المستردة والإلغاءات غير مكتملة.' }))} <button type="button" class="rtx-method" data-action="sales-activity-retry">${escS(T({ fr: 'Réessayer', en: 'Retry', ar: 'إعادة المحاولة' }))}</button></p>` : ''}
+          <div class="rtx-list">${rows || (voids.length && ['all', 'cancel'].includes(selectedKind)) || cancelAuditLoading || cancelAuditError ? rows : `<div class="rtx-row"><span class="rtx-products-missing">${escS(T({
+            fr: 'Aucune activité pour ces filtres.',
+            en: 'No activity for these filters.',
+            ar: 'لا يوجد نشاط لهذه الفلاتر.',
           }))}</span></div>`}</div>
-          ${voids.length ? `<div class="rtx-voids"><div class="rtx-void-title">${escS(T({ fr:'Annulations employés', en:'Staff cancellations', ar:'إلغاءات الموظفين' }))}</div><div class="rtx-void-sub">${escS(T({ fr:'Vente neutralisée · employé, ticket, articles et montant conservés dans le journal.', en:'Voided sale · employee, receipt, items and amount retained in the audit log.', ar:'بيع ملغى · يتم حفظ الموظف والإيصال والمواد والمبلغ في السجل.' }))}</div>${voidRows}</div>` : ''}
+          ${voids.length && ['all', 'cancel'].includes(selectedKind) ? `<section class="rtx-voids"><h3 class="rtx-void-title">${escS(T({ fr:'Annulations & fermetures', en:'Cancellations & closures', ar:'الإلغاءات والإغلاقات' }))}</h3><p class="rtx-void-sub">${escS(T({ fr:'Valeurs des commandes à titre informatif. Ces actions ne sont pas déduites une seconde fois du net encaissé.', en:'Order values are informational. These actions are not deducted again from net collected.', ar:'قيم الطلبات للمعلومات فقط. لا تُخصم هذه الإجراءات مرة أخرى من صافي المقبوضات.' }))}</p>${voidRows}</section>` : ''}
         </div>
       `,
     });
@@ -15813,7 +15894,7 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
   function renderStarter(nav, meta) {
     /* Ventes: once the merchant has real sales (rung locally OR bridged from a
      * Live-Link caisse), show the actual list, not the "nothing yet" placeholder. */
-    if (nav === 'transactions' && ((window.KiwiSales?.list && window.KiwiSales.list().length) || cancelAudit.length)) {
+    if (nav === 'transactions') {
       return renderRealTransactions(nav, meta);
     }
     /* Cette destination est celle affichée : une copie serveur qui arrive
@@ -15921,6 +16002,15 @@ handlers['bqx-cat-del-ok'] = (_el, arg) => {
       const H = window.Kiwi && window.Kiwi.handlers;
       try { if (H && H['nav-transactions']) H['nav-transactions'](); } catch (_) {}
     });
+    if (window.KiwiRefunds?.subscribe) window.KiwiRefunds.subscribe(() => {
+      if (document.querySelector('[data-real-tx]')) renderRealTransactions('transactions', STARTERS.transactions);
+    });
+    const refreshActivity = () => {
+      if (!document.hidden && document.querySelector('[data-real-tx]')) loadCancelAudit();
+    };
+    window.setInterval(refreshActivity, 30000);
+    window.addEventListener('online', refreshActivity);
+    document.addEventListener('visibilitychange', refreshActivity);
     window.addEventListener('kiwi-day-report-ready', () => {
       if (!document.querySelector('[data-real-tx], [data-starter-nav="transactions"]')) return;
       const H = window.Kiwi && window.Kiwi.handlers;

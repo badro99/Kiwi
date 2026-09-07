@@ -165,6 +165,25 @@ export async function readManagerRefundProof(token, authSecret) {
   return body;
 }
 
+// Identity attestation only: the receiving route still enforces merchant/till
+// authorization. Never trust a client-supplied display name as a PIN identity.
+export async function tillActorProof(secret, merchant, staff) {
+  if (!secret || !merchant || !staff?.id) return '';
+  const body = { merchant, id: staff.id, name: staff.name, role: staff.role, exp: Date.now() + 5 * 60000 };
+  const payload = bytesToB64url(encoder.encode(JSON.stringify(body)));
+  return payload + '.' + await hmacHex(secret, 'kiwi-till-actor-v1:' + payload);
+}
+export async function readTillActorProof(token, secret, merchant) {
+  if (!secret || typeof token !== 'string' || token.length > 2048 || !token.includes('.')) return null;
+  const [payload, signature] = token.split('.');
+  const expected = await hmacHex(secret, 'kiwi-till-actor-v1:' + payload);
+  if (!timingSafeEqualHex(signature || '', expected)) return null;
+  try {
+    const body = JSON.parse(new TextDecoder().decode(b64urlToBytes(payload)));
+    return body.merchant === merchant && body.id && Number.isFinite(body.exp) && body.exp > Date.now() ? body : null;
+  } catch (_) { return null; }
+}
+
 // ── Gate tokens (staff bypass + operator console) ───────────────────────────
 // Both are unforgeable HMACs. The staff token is keyed by the shared SITE_PASSWORD
 // (so it matches the "Accès équipe" cookie in _middleware.js). The legacy operator

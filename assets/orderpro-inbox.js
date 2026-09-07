@@ -168,6 +168,13 @@
   function setStatus(id, status, extra) {
     var m = merchant();
     if (!m) return Promise.resolve(null);
+    if (status === 'rejected' && !(extra && (extra.actorProof || extra.pinAuthorized)) && window.KiwiAuthorizeTillAction) {
+      return new Promise(function (resolve) {
+        window.KiwiAuthorizeTillAction('Annuler la commande', function (who) {
+          resolve(setStatus(id, status, Object.assign({}, extra, { actorProof: who && who.actorProof || '', pinAuthorized: true })));
+        });
+      });
+    }
     var prev = state.orders[id];
     // Optimistic, then reconciled by the next poll: the till must feel instant.
     if (prev) {
@@ -196,6 +203,7 @@
     // paiement d'un retrait au comptoir : deux informations que SEULE la caisse
     // détient à cet instant, et qui doivent voyager avec la transition.
     if (extra && extra.server) body.server = extra.server;
+    if (extra && extra.actorProof) body.actorProof = extra.actorProof;
     if (extra && extra.paid) body.paid = true;
     if (extra && extra.station) body.station = extra.station;
     return fetch('/api/order/queue', {
@@ -255,6 +263,7 @@
     var m = merchant();
     if (!m || !detail) return;
     var body = { merchant: m, closedBy: detail.why || 'settle' };
+    if (detail.actorProof) body.actorProof = detail.actorProof;
     var key = '';
     if (detail.session) { body.closeSession = detail.session; key = 's:' + detail.session; }
     else if (detail.table) { body.closeTable = String(detail.table); key = 't:' + normCloseTable(detail.table); }
@@ -725,9 +734,10 @@
       Object.keys(state.orders).forEach(function (id) {
         var o = state.orders[id];
         if (!o || o.mode !== 'table') return;
-        if ((d.session && String(o.session) === String(d.session)) ||
+        if (d.session ? String(o.session) === String(d.session) :
             (d.table && normCloseTable(o.table) === normCloseTable(d.table))) {
-          o.paid = true;
+          // A reset closes the visit, not a payment. Keep the recorded paid flag.
+          if (d.why === 'settle') o.paid = true;
           if (o.session && state.closedSessions.indexOf(String(o.session)) < 0) {
             state.closedSessions.push(String(o.session));
           }

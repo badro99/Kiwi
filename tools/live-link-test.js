@@ -52,7 +52,7 @@ function check(ok, label) {
   check(duplicate && duplicate.duplicate && queue().length === 1, 'same receipt cannot enter queue twice');
 
   reply = () => Promise.resolve({ ok: false, status: 400 });
-  window.KiwiLive.flush();
+  window.KiwiLive.flush(true); // explicit retry advances a backed-off failed POST
   await wait(); await wait();
   check(queue().length === 1 && queue()[0]._blocked === true, 'rejected sale is quarantined, never deleted');
 

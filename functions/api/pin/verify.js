@@ -9,7 +9,7 @@
 // Both shapes are rate-limited and answer with an identity, never with a code.
 import {
   verifyStaffPin, verifyAccountPin, employeeRoleOpensDashboard,
-  managerRefundProof, json,
+  managerRefundProof, tillActorProof, employeeRoleOpensTill, json,
 } from '../../auth/_lib.js';
 
 export async function onRequestPost(context) {
@@ -48,6 +48,7 @@ export async function onRequestPost(context) {
   return json({
     ok: true,
     staff: verified.staff,
+    ...(merchant && employeeRoleOpensTill(verified.staff.role) ? { actorProof: await tillActorProof(env.AUTH_SECRET, merchant, verified.staff) } : {}),
     ...(approval ? { approval } : {}),
     ...(verified.merchant ? { merchant: verified.merchant } : {}),
   });

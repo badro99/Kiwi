@@ -61,7 +61,7 @@
     var b = document.getElementById('kiwi-install'); if (b) b.remove();
   });
 
-  function toast(msg) {
+  function toast(msg, kind) {
     var stack = document.getElementById('toast-stack');
     if (!stack) {
       stack = document.createElement('div');
@@ -70,7 +70,7 @@
       document.body.appendChild(stack);
     }
     var el = document.createElement('div');
-    el.className = 'toast';
+    el.className = 'toast' + (kind ? ' is-' + kind : '');
     el.textContent = msg;
     stack.appendChild(el);
     setTimeout(function () { el.classList.add('fade'); }, 3000);
@@ -114,15 +114,19 @@
     if (q.storageError || q.blocked) {
       tone = '#9F3028';
       label = q.storageError ? 'Protection locale à vérifier' : q.blocked + ' opération' + (q.blocked > 1 ? 's' : '') + ' conservée' + (q.blocked > 1 ? 's' : '');
-      detail = 'Touchez pour relancer · rien n’est supprimé';
+      detail = 'À vérifier avec le support · rien n’est supprimé';
     } else if (!navigator.onLine) {
       tone = '#B85245';
       label = 'Hors ligne' + (q.pending ? ' · ' + q.pending + ' en attente' : '');
       detail = q.pending ? 'Opérations protégées sur cet appareil' : 'La caisse continue normalement';
+    } else if (q.pending && (q.lastStatus === 401 || q.lastStatus === 403)) {
+      tone = '#9F3028';
+      label = 'Appairage à vérifier · ' + q.pending + ' en attente';
+      detail = 'Accès refusé (' + q.lastStatus + ') · opérations conservées';
     } else if (q.pending) {
       tone = '#A56A16';
       label = q.pending + ' opération' + (q.pending > 1 ? 's' : '') + ' à synchroniser';
-      detail = q.sending ? 'Envoi sécurisé en cours' : 'Touchez pour envoyer maintenant';
+      detail = q.sending ? 'Envoi sécurisé en cours' : 'Reprise automatique · toucher pour réessayer';
     } else {
       tone = '#287B55';
       label = 'Synchronisé';
@@ -154,7 +158,7 @@
         return;
       }
       if (!navigator.onLine) {
-        toast('Appareil hors ligne · connexion Internet requise');
+        toast('Appareil hors ligne · connexion Internet requise', 'warn');
         status();
         return;
       }
@@ -179,16 +183,16 @@
         if (!after.pending && !after.blocked && !after.storageError) {
           toast('Synchronisation réussie · opérations transmises');
         } else if (after.lastStatus === 401 || after.lastStatus === 403) {
-          toast('Erreur d’authentification (' + after.lastStatus + ') · vérifiez l’appairage');
+          toast('Erreur d’authentification (' + after.lastStatus + ') · vérifiez l’appairage', 'danger');
         } else if (after.lastStatus >= 500) {
-          toast('Serveur momentanément indisponible (' + after.lastStatus + ') · réessai automatique');
+          toast('Serveur momentanément indisponible (' + after.lastStatus + ') · réessai automatique', 'warn');
         } else if (after.lastError) {
-          toast('Synchronisation en attente · ' + after.lastError);
+          toast('Synchronisation en attente · ' + after.lastError, 'warn');
         }
         status();
       }).catch(function (err) {
         delete d.dataset.syncing;
-        toast('Échec de synchronisation · ' + (err && err.message || 'erreur réseau'));
+        toast('Échec de synchronisation · ' + (err && err.message || 'erreur réseau'), 'danger');
         status();
       });
     };

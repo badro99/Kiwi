@@ -382,8 +382,8 @@ function invoiceEnv(sale) {
   const block = queue.slice(queue.indexOf('if (employee) {'), queue.indexOf("error: 'floor-table-required'"));
   ok('le bloc employé refuse closeSession avant tout autre contrôle',
     /if \(b && b\.closeSession\) \{[^]{0,120}403\)/.test(block), 'garde absente du bloc employé');
-  ok('et le règlement reste bien ce que closeSession déclenche',
-    /if \(closeSession\) \{[^]{0,300}UPDATE orders SET paid_ts/.test(queue));
+  ok('seule une fermeture pour règlement marque les commandes payées',
+    /if \(closeSession && why === 'settle'\) \{[^]{0,300}UPDATE orders SET paid_ts/.test(queue));
   const serveur = fs.readFileSync(new URL('../kiwi-serveur.html', import.meta.url), 'utf8');
   ok('aucune surface employé n\'envoie closeSession (sinon la garde casserait le métier)',
     !/body: JSON\.stringify\(\{[^}]*closeSession/.test(serveur));

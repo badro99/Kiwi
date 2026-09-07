@@ -74,7 +74,7 @@ ok('une commande COMMENCÉE garde son garde-fou',
 
 // Annuler doit réussir même sans mesa — c'était la dernière issue, et elle
 // partait en `return` silencieux.
-const cancelFn = (CAISSE.match(/function cancelNewOrder\(\)\s*\{[\s\S]{0,3400}?\n {4}\}/) || [''])[0];
+const cancelFn = (CAISSE.match(/function cancelNewOrder\(who = null\)\s*\{[\s\S]{0,3800}?\n {4}\}/) || [''])[0];
 ok('cancelNewOrder existe toujours', !!cancelFn);
 ok("cancelNewOrder ne renonce plus quand il n'y a pas de mesa",
   !/^\s*if \(!selectedId\) return;/m.test(cancelFn));
@@ -160,12 +160,12 @@ ok('Annuler mesa exige le code opérateur si des articles non envoyés existent'
   /tableSentCount\(selectedId\) === 0[\s\S]*?hasItems[\s\S]*?requireTillOperator\(/.test(cancelTableWire));
 ok('Annuler mesa protège une table avec commande en cours',
   /annulation impossible/.test(cancelTableWire));
-const cancelOpenFn = (CAISSE.match(/function cancelOpenTable\(id\)\s*\{[\s\S]{0,1400}?\n    \}/) || [''])[0];
+const cancelOpenFn = (CAISSE.match(/function cancelOpenTable\(id, who = null\)\s*\{[\s\S]{0,1600}?\n    \}/) || [''])[0];
 ok('cancelOpenTable existe et libère la session OrderPro',
-  /releasePhoneTable\(id, 'caisse', true\)/.test(cancelOpenFn));
+  /releasePhoneTable\(id, 'caisse', true, who.actorProof \|\| ''\)/.test(cancelOpenFn));
 ok('cancelOpenTable remet le statut à khawya',
   /t\.status = 'khawya'/.test(cancelOpenFn));
-const releaseFn = (CAISSE.match(/function releasePhoneTable\(id, why, force\)\s*\{[\s\S]{0,900}?\n    \}/) || [''])[0];
+const releaseFn = (CAISSE.match(/function releasePhoneTable\(id, why, force, actorProof = ''\)\s*\{[\s\S]{0,1000}?\n    \}/) || [''])[0];
 ok('releasePhoneTable peut fermer une session sans pastille locale',
   /!seat && !force/.test(releaseFn));
 

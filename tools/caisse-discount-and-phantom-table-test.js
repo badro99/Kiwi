@@ -66,11 +66,11 @@ ok('markPaid deletes discount immediately and forces release',
   /delete t\.discount;/.test(CAISSE_SRC));
 
 ok('cancelNewOrder deletes discount and forces release',
-  /function cancelNewOrder\(\) \{[\s\S]{0,2500}releasePhoneTable\(selectedId, 'caisse', true\);/.test(CAISSE_SRC) &&
+  /function cancelNewOrder\(who = null\) \{[\s\S]{0,3000}releasePhoneTable\(selectedId, 'caisse', true, who.actorProof \|\| ''\);/.test(CAISSE_SRC) &&
   /delete t\.discount;/.test(CAISSE_SRC));
 
 ok('cancelOpenTable deletes discount and forces release',
-  /function cancelOpenTable\(id\) \{[\s\S]{0,300}delete t\.discount;[\s\S]{0,300}releasePhoneTable\(id, 'caisse', true\);/.test(CAISSE_SRC));
+  /function cancelOpenTable\(id, who = null\) \{[\s\S]{0,600}delete t\.discount;[\s\S]{0,300}releasePhoneTable\(id, 'caisse', true, who.actorProof \|\| ''\);/.test(CAISSE_SRC));
 
 ok('confirmNewTable clears any lingering discount on table',
   /function confirmNewTable\(\) \{[\s\S]{0,300}delete t\.discount;/.test(CAISSE_SRC));
@@ -86,7 +86,7 @@ ok('tableClosedAt registry tracks local closure timestamps',
   /const tableClosedAt = Object\.create\(null\);/.test(CAISSE_SRC));
 
 ok('releasePhoneTable records closure timestamp in tableClosedAt',
-  /function releasePhoneTable\(id, why, force\) \{[\s\S]{0,200}tableClosedAt\[k\] = Date\.now\(\);/.test(CAISSE_SRC));
+  /function releasePhoneTable\(id, why, force, actorProof = ''\) \{[\s\S]{0,200}tableClosedAt\[k\] = Date\.now\(\);/.test(CAISSE_SRC));
 
 ok('KiwiCaisseKitchen.ingest checks tableClosedAt and prunes stale sessions',
   /closedAt > 0 && \(\(openTs > 0 && openTs <= closedAt\) \|\| \(Date\.now\(\) - closedAt < 60000\)\)[\s\S]{0,300}why: 'prune-stale'/.test(CAISSE_SRC));

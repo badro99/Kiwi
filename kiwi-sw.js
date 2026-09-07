@@ -147,7 +147,7 @@ var SHELL = [
   '/assets/caisse-skin.css?v=3',
   '/assets/pos-mobile.css?v=3',
   '/assets/caisse-motion.js?v=1',
-  '/assets/caisse-pwa.js?v=493',
+  '/assets/caisse-pwa.js?v=495',
   '/assets/vendor/dexie.min.js?v=1',
   '/assets/offline-db.js?v=5',
   '/assets/platform-kernel.js?v=5',
@@ -155,7 +155,7 @@ var SHELL = [
   '/assets/platform-ops.css?v=1',
   '/assets/operations.js?v=10',
   '/assets/operations-ui.js?v=12',
-  '/assets/live-link.js?v=30',
+  '/assets/live-link.js?v=33',
   '/assets/channel-sales.js?v=3',
   /* Le rapport journalier. Dans la coquille hors-ligne parce qu'une clôture ne
      peut pas dépendre du réseau : un commerçant ferme sa caisse le soir, parfois
@@ -248,7 +248,7 @@ var SHELL = [
   // OrderPro · publisher + NFC panel (dashboard), inbox (caisse).
   '/assets/orderpro-publish.js?v=6',
   '/assets/orderpro-panel.js?v=1',
-  '/assets/orderpro-inbox.js?v=13',
+  '/assets/orderpro-inbox.js?v=14',
   /* Le relais cuisine · la caisse pose ses bons, la tablette du passe les lit.
      Dans la coquille pour les deux pages : c'est lui qui porte la file de
      secours hors ligne, donc il doit exister QUAND le réseau n'existe pas. */
@@ -306,7 +306,7 @@ var SHELL = [
   '/assets/pos-autre.js?v=2',
   '/assets/pos-maison.css?v=21',
   '/assets/pos-maison.js?v=21',
-  '/assets/caisse-pairing.js?v=17',
+  '/assets/caisse-pairing.js?v=18',
   /* Réimprimer un ticket. Dans la coquille hors-ligne parce que c'est un geste
      de panne : le rouleau bourre, le réseau est tombé, et c'est précisément là
      qu'il faut pouvoir ressortir le ticket. Un bouton de secours qui a besoin du

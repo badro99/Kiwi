@@ -78,6 +78,7 @@ console.log('\n1 · Client-side Live Link (assets/live-link.js)');
       kiwiPairedVenue: JSON.stringify({ merchant: merchantSlug, name: merchantSlug }),
     };
     const mockWindow = {
+      addEventListener() {},
       location: { hostname: 'app.kiwi.local', search: '' },
       document: { readyState: 'complete', addEventListener() {}, dispatchEvent() {}, getElementById: () => null },
       localStorage: {
@@ -268,6 +269,7 @@ console.log('\n4 · End-to-end KiwiSales Ingestion');
   let addedSales = [];
 
   const mockWindow = {
+    addEventListener() {},
     location: { hostname: 'app.kiwi.local', search: '' },
     document: { readyState: 'complete', addEventListener() {}, dispatchEvent() {}, getElementById: () => null },
     localStorage: {

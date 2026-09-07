@@ -128,16 +128,16 @@
     "sha": "216d8525555e8c8b"
   },
   "assets/caisse-pairing.js": {
-    "v": "17",
-    "sha": "449476091b2c6ead"
+    "v": "18",
+    "sha": "18979319d717bb43"
   },
   "assets/caisse-pwa.js": {
-    "v": "493",
-    "sha": "23b6b851be39ac77"
+    "v": "495",
+    "sha": "82f9bf4da3d0b253"
   },
   "assets/caisse-refresh.js": {
-    "v": "1",
-    "sha": "b0255a09597a8e14"
+    "v": "2",
+    "sha": "046824221d7614a7"
   },
   "assets/caisse-skin.css": {
     "v": "3",
@@ -432,8 +432,8 @@
     "sha": "c9d6036ca657c76e"
   },
   "assets/live-link.js": {
-    "v": "30",
-    "sha": "b82f23d78e9c9629"
+    "v": "33",
+    "sha": "f01407aa412b15f2"
   },
   "assets/live-socket.js": {
     "v": "4",
@@ -520,8 +520,8 @@
     "sha": "47b1d8a268c10551"
   },
   "assets/orderpro-inbox.js": {
-    "v": "13",
-    "sha": "782adc61cdace467"
+    "v": "14",
+    "sha": "e5a4a990ed49aedf"
   },
   "assets/orderpro-panel.js": {
     "v": "1",
@@ -532,8 +532,8 @@
     "sha": "57b562b061dc24d0"
   },
   "assets/pages-pro.js": {
-    "v": "2094",
-    "sha": "b1768cc1bba1db38"
+    "v": "2096",
+    "sha": "c5ce08cc465840bc"
   },
   "assets/pages.js": {
     "v": "5",

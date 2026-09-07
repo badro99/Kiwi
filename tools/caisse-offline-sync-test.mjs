@@ -139,8 +139,8 @@ sqlite.prepare('INSERT INTO merchant_config (merchant, account_id, name, type, s
 // ── 4. assets/live-link.js Flush & QueueStatus Contract ─────────────────────
 {
   const liveSrc = read('assets/live-link.js');
-  ok('live-link flushOutbox handles force flag to reset stuck flushing lock',
-    liveSrc.includes('if (force) {') && liveSrc.includes('flushing = false;'));
+  ok('live-link force retry preserves the in-flight sender lock',
+    liveSrc.includes('if (flushing || !navigator.onLine) return Promise.resolve(outboxStatus);') && !liveSrc.includes('if (force) {\n      flushing = false;'));
   ok('live-link flushOutbox uses AbortController timeout on fetch',
     liveSrc.includes('new AbortController()') && liveSrc.includes('controller.abort()'));
   ok('live-link queueStatus exposes lastStatus and lastError',
@@ -165,9 +165,9 @@ sqlite.prepare('INSERT INTO merchant_config (merchant, account_id, name, type, s
   ok('caisse-pwa click handler awaits flush and surfaces success toast',
     pwaSrc.includes("toast('Synchronisation réussie · opérations transmises');"));
   ok('caisse-pwa click handler surfaces auth error toast on 401/403',
-    pwaSrc.includes("toast('Erreur d’authentification (' + after.lastStatus + ') · vérifiez l’appairage');"));
+    pwaSrc.includes("toast('Erreur d’authentification (' + after.lastStatus + ') · vérifiez l’appairage', 'danger');"));
   ok('caisse-pwa click handler surfaces server error toast on 5xx',
-    pwaSrc.includes("toast('Serveur momentanément indisponible (' + after.lastStatus + ') · réessai automatique');"));
+    pwaSrc.includes("toast('Serveur momentanément indisponible (' + after.lastStatus + ') · réessai automatique', 'warn');"));
   // Ensure user-facing strings in caisse-pwa contain no em dash
   const stringDashes = [...pwaSrc.matchAll(/'([^'\n\r]*—[^'\n\r]*)'/g)];
   ok('caisse-pwa string literals contain no U+2014 em dash', stringDashes.length === 0);

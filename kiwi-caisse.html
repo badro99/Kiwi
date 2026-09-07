@@ -5503,8 +5503,8 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=493" defer></script>
-  <script src="assets/live-link.js?v=30" defer></script>
+  <script src="assets/caisse-pwa.js?v=495" defer></script>
+  <script src="assets/live-link.js?v=33" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
   <script src="assets/staff-roles.js?v=1" defer></script>
@@ -5516,7 +5516,7 @@
        avec kiwi-cuisine.html, qui s'appaire sur la même route. -->
   <script src="assets/pairing-commit.js?v=2" defer></script>
   <!-- Hosted: 6-digit pairing pad binds this caisse to its store (no demo PINs). -->
-  <script src="assets/caisse-pairing.js?v=17" defer></script>
+  <script src="assets/caisse-pairing.js?v=18" defer></script>
   <script src="assets/kiwi-select.js?v=2" defer></script>
   <script src="assets/cash-sessions.js?v=2" defer></script>
   <!-- La copie serveur des données d'établissement (fidélité, carnet) : une
@@ -5579,7 +5579,7 @@
   <script src="assets/food-production-print.js?v=2" defer></script>
   <!-- OrderPro · orders placed on a customer's phone arrive here over WiFi;
        staff accept one and it becomes a kitchen ticket. Paired terminals only. -->
-  <script src="assets/orderpro-inbox.js?v=13" defer></script>
+  <script src="assets/orderpro-inbox.js?v=14" defer></script>
   <script src="assets/caisse-menu-availability.js?v=4" defer></script>
   <!-- Operator feature flags + managed PINs. Fail-safe: no backend ⇒ no change. -->
   <script src="assets/merchant-config.js?v=270" defer></script>
@@ -5587,7 +5587,7 @@
        pressing, et les seize métiers de pos-dispatch) : il redemande au serveur
        l'inventaire, les documents du magasin, les commandes en ligne et les
        modules, sans jamais recharger la page. -->
-  <script src="assets/caisse-refresh.js?v=1" defer></script>
+  <script src="assets/caisse-refresh.js?v=2" defer></script>
   <script src="assets/caisse-attendance-code.js?v=3" defer></script>
   <!-- « Réimprimer » · même pied de rail, même raison : le rouleau bourre sur
        les seize métiers, pas seulement au restaurant. Ressort un ticket de la
@@ -8026,7 +8026,7 @@
        resterait « assis » à une table libre et pourrait continuer à commander.
        L'état local part TOUT DE SUITE (la pastille s'éteint sous le doigt du
        caissier) et le réseau suit à son rythme, porté par orderpro-inbox.js. */
-    function releasePhoneTable(id, why, force) {
+    function releasePhoneTable(id, why, force, actorProof = '') {
       const k = tableKey(id);
       tableClosedAt[k] = Date.now();
       const seat = phoneSeats.get(k);
@@ -8037,7 +8037,7 @@
          the guest seated after the cashier has made the table free. */
       if (!seat && !force) return;
       document.dispatchEvent(new CustomEvent('kiwi-table-released', {
-        detail: { table: String(id), session: seat ? seat.session : '', why: why || 'settle' },
+        detail: { table: String(id), session: seat ? seat.session : '', why: why || 'settle', actorProof },
       }));
     }
 
@@ -10454,7 +10454,7 @@
           if (selectedId) {
             /* A guest can open a table from the NFC menu, browse, then leave
                without ordering. In that case this button clears the local
-               table and closes its OrderPro session without asking for PIN.
+               table and closes its OrderPro session after identifying the actor.
                If items have been entered (an unsent order), cancelling is a loss:
                it must pass through requireTillOperator. A meal already sent
                to the kitchen remains protected outright. */
@@ -10466,7 +10466,7 @@
               }
               const tid = selectedId;
               requireTillOperator(`Annuler la table ${tid}`, (who) => {
-                cancelOpenTable(selectedId);
+                cancelOpenTable(tid, who);
                 const by = who && who.name ? ` · ${who.name}` : '';
                 toast(`Table ${tid} annulée${by}`);
               });
@@ -12092,8 +12092,9 @@
     /* Cancel an open table from Salle without touching a kitchen order. Salle
        has no unsent-order editor, but it can still own an OrderPro phone
        session that must be closed. */
-    function cancelOpenTable(id) {
+    function cancelOpenTable(id, who = null) {
       if (!id || tableSentCount(id) > 0) return false;
+      if (!who) { requireTillOperator(`Annuler la table ${id}`, actor => cancelOpenTable(id, actor)); return false; }
       delete tableOrders[id];
       const t = tables[id];
       if (t) {
@@ -12103,7 +12104,7 @@
       }
       /* Force the event when this caisse missed the local phone-seat badge.
          orderpro-inbox.js safely falls back to closing by table number. */
-      releasePhoneTable(id, 'caisse', true);
+      releasePhoneTable(id, 'caisse', true, who.actorProof || '');
       refreshTableNode(id);
       if (selectedId === id) selectedId = null;
       backToSalle();
@@ -12112,7 +12113,7 @@
     }
 
     /* ---- cancel new order ---- */
-    function cancelNewOrder() {
+    function cancelNewOrder(who = null) {
       /* ── UNE MESA QUI MANGE DÉJÀ ────────────────────────────────────────────
          Le serveur a rouvert la table pour un dessert, puis se ravise. Ce qui
          s'annule, ce sont SES ajouts · pas le repas en cours. Vider
@@ -12132,6 +12133,11 @@
       /* Pas de table sous la main ? On sort quand même. Refuser ici était le
          cœur du blocage : la dernière issue ne faisait rien. */
       if (selectedId) {
+        if (!who || !who.name) {
+          const target = selectedId;
+          requireTillOperator(`Annuler la table ${target}`, actor => { if (selectedId === target) cancelNewOrder(actor); });
+          return;
+        }
         delete tableOrders[selectedId];
         const t = tables[selectedId];
         /* La table peut avoir disparu sous nos pieds · setupRealSalle() efface
@@ -12141,7 +12147,7 @@
         /* La table est rendue sans encaissement. Sans ça, le téléphone resterait
            « assis » à une table redevenue libre et pourrait continuer à commander
            · le trou exact que la session existe pour boucher. */
-        releasePhoneTable(selectedId, 'caisse', true);
+        releasePhoneTable(selectedId, 'caisse', true, who.actorProof || '');
         // Restore original covers (2 by default if we changed it)
         refreshTableNode(selectedId);
         selectedId = null;
@@ -14529,6 +14535,7 @@
       startEmployeeSaleJournalSync();
 
       setTimeout(() => runEntrySequence(clockinEl), 540);
+      signalTillServiceReady();
     }
 
     /* Greeting flash + iOS shell dive-in · runs after the register opens */
@@ -15760,6 +15767,7 @@
     function requireTillOperator(actionLabel, onApprove) {
       openAuthorization(actionLabel, onApprove, 'till');
     }
+    window.KiwiAuthorizeTillAction = requireTillOperator;
 
     function openAuthorization(actionLabel, onApprove, access, authContext) {
       mgrBuffer = '';
@@ -19182,7 +19190,7 @@
       const proceed = (who) => {
         toast(`Annulation de ${label}…`);
         dismissExpired(o.opId);
-        Promise.resolve(opPush(o, 'rejected', { server: 'dismissed' })).then((result) => {
+        Promise.resolve(opPush(o, 'rejected', { server: 'dismissed', actorProof: who && who.actorProof || '' })).then((result) => {
           if (!result || !result.ok) {
             toast(`Commande ${label} non annulée · réessayez`);
             return;
@@ -20645,6 +20653,11 @@
         updateKdsCount();
       }
     }
+    function signalTillServiceReady() {
+      window.KiwiTillServiceReady = currentMerchantSlug();
+      document.dispatchEvent(new CustomEvent('kiwi:caisse-service-ready'));
+    }
+
     function enterShellDirectly() {
       const pin = $('#pin-screen');    if (pin) pin.style.display = 'none';
       const ci  = $('#clockin-screen'); if (ci)  ci.style.display = 'none';
@@ -20657,6 +20670,7 @@
       renderShiftStats();
       renderCashierCard();
       if (window.lucide) lucide.createIcons();
+      signalTillServiceReady();
     }
 
     /* On load · if a recent shift was saved, resume straight into the shell */

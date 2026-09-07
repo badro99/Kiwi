@@ -619,7 +619,7 @@
       .then(function (r) { return r && r.ok ? r.json() : null; })
       .then(function (d) {
         if (!(d && d.ok && d.staff)) return null;
-        return Object.assign({}, d.staff, d.approval ? { approval: String(d.approval) } : {});
+        return Object.assign({}, d.staff, d.approval ? { approval: String(d.approval) } : {}, d.actorProof ? { actorProof: String(d.actorProof) } : {});
       })
       .catch(function () { return null; });
   }
@@ -641,7 +641,7 @@
       if (!roles || typeof roles.opensTill !== 'function') return Promise.resolve(false);
       return verifyCode(code).then(function (who) {
         if (!who || !roles.opensTill(who.role || '')) return false;
-        lastOperator = { id: String(who.id || '').slice(0, 80), name: String(who.name || '').trim() || 'Caissier', role: String(who.role || '').trim() };
+        lastOperator = { id: String(who.id || '').slice(0, 80), name: String(who.name || '').trim() || 'Caissier', role: String(who.role || '').trim(), actorProof: who.actorProof || '' };
         return true;
       });
     },

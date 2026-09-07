@@ -41,7 +41,7 @@
 //    dans la même réponse : la caisse allume ses tables sur le plan de salle
 //    sans un deuxième sondage, et sans une deuxième horloge à désynchroniser.
 
-import { json, entitledMerchant, activeServiceEmployee } from '../../auth/_lib.js';
+import { json, entitledMerchant, activeServiceEmployee, readTillActorProof } from '../../auth/_lib.js';
 import { startOfDay, nextOrderNumber, deskTouch, normTable, priceOrder, newSessionId, SESSION_ID, pollCursor } from './_lib.js';
 import { recordOrderCourse, closeOrderCourses } from './_course.js';
 
@@ -678,6 +678,9 @@ export async function onRequestPost(context) {
   }
 
   const now = Date.now();
+
+  const pinActor = b.actorProof ? await readTillActorProof(b.actorProof, env.AUTH_SECRET, merchant) : null;
+  if (b.actorProof && !pinActor) return json({ error: 'invalid-action-identity' }, 403);
 
   /* Seating is the beginning of the visit, not the first kitchen ticket.
    * Persist the visit as soon as the employee confirms the covers so caisse,
@@ -1488,15 +1491,15 @@ export async function onRequestPost(context) {
     try {
       const res = closeSession
         ? await env.DB.prepare(
-            `UPDATE table_sessions SET status = 'closed', closed_ts = ?, closed_by = ?
+            `UPDATE table_sessions SET status = 'closed', closed_ts = ?, closed_by = ?, closed_actor_id = ?, closed_actor_name = ?
               WHERE id = ? AND merchant = ? AND status = 'open'`
-          ).bind(now, why, closeSession, merchant).run()
+          ).bind(now, why, pinActor?.id || '', pinActor?.name || '', closeSession, merchant).run()
         : await env.DB.prepare(
-            `UPDATE table_sessions SET status = 'closed', closed_ts = ?, closed_by = ?
+            `UPDATE table_sessions SET status = 'closed', closed_ts = ?, closed_by = ?, closed_actor_id = ?, closed_actor_name = ?
               WHERE merchant = ? AND table_no = ? AND status = 'open'`
-          ).bind(now, why, merchant, closeTable).run();
+          ).bind(now, why, pinActor?.id || employee?.member?.id || '', pinActor?.name || (employee ? employeeName(employee.member) : ''), merchant, closeTable).run();
       closed = (res && res.meta && res.meta.changes) || 0;
-    } catch (_) { /* table pas migrée → rien à fermer, et surtout pas d'échec de vente */ }
+    } catch (_) { return json({ error: 'closure-write-failed' }, 503); }
 
     /* Les commandes de cette session sont soldées avec elle. `paid_ts` n'est pas
      * un état : une commande peut être servie et payée, ou payée puis servie
@@ -1504,8 +1507,9 @@ export async function onRequestPost(context) {
      * à connaître la caisse.
      *
      * ── L'ASYMÉTRIE AVEC `closeTable` EST VOULUE ────────────────────────────
-     * `closeSession` vient de markPaid() : l'addition VIENT d'être encaissée,
-     * donc solder est la vérité. `closeTable` ne dit que « cette table est
+     * Seul `closeSession` avec `closedBy: settle` vient du règlement.
+     * Une remise à zéro (`caisse`, `prune-stale`) peut aussi porter un ID de
+     * session : elle ne prouve jamais un paiement. `closeTable` dit « cette table est
      * libre » — un départ sans payer, une table nettoyée à la main, une remise
      * à zéro. Y ajouter `paid_ts` INVENTERAIT une recette : le rapport Z
      * compterait une addition que personne n'a réglée.
@@ -1516,7 +1520,7 @@ export async function onRequestPost(context) {
      * laissée impayée par un `closeTable` reste donc impayée — visible comme
      * telle — au lieu d'être ramassée par le paiement de la tablée suivante. */
     try {
-      if (closeSession) {
+      if (closeSession && why === 'settle') {
         await env.DB.prepare(
           `UPDATE orders SET paid_ts = ?, updated_ts = ?
             WHERE merchant = ? AND session_id = ? AND paid_ts IS NULL`
@@ -1692,12 +1696,16 @@ export async function onRequestPost(context) {
       `UPDATE orders
           SET status = ?, updated_ts = ?,
               server_name = COALESCE(NULLIF(?, ''), server_name),
+              cancel_actor_id = CASE WHEN ? = 'rejected' THEN ? ELSE cancel_actor_id END,
+              cancel_actor_name = CASE WHEN ? = 'rejected' THEN ? ELSE cancel_actor_name END,
+              cancel_ts = CASE WHEN ? = 'rejected' THEN ? ELSE cancel_ts END,
               paid_ts = CASE WHEN ? = 1 AND paid_ts IS NULL THEN ? ELSE paid_ts END
         WHERE id = ? AND merchant = ? AND status IN (${marks})
           AND (? <> 'rejected' OR paid_ts IS NULL)
         RETURNING id, status, number`
-    ).bind(status, now, server, paid ? 1 : 0, now, id, merchant, ...from, status).first();
+    ).bind(status, now, server, status, pinActor?.id || '', status, pinActor?.name || '', status, now, paid ? 1 : 0, now, id, merchant, ...from, status).first();
   } catch (_) {
+    if (status === 'rejected') return json({ error: 'cancellation-write-failed' }, 503);
     // Colonnes de session pas encore migrées : on fait avancer l'état seul.
     try {
       row = await env.DB.prepare(
@@ -1721,6 +1729,9 @@ export async function onRequestPost(context) {
         .bind(id, merchant).first();
     } catch (_) {}
     if (!cur) return json({ error: 'not-found' }, 404);
+    if (status === 'rejected' && cur.status === 'rejected') {
+      return json({ ok: true, id, status: cur.status, number: cur.number, replayed: true });
+    }
     /* Encaisser an already accepted/ready takeaway is not a kitchen status
        transition; it is an idempotent payment stamp. Previously the repeated
        status returned 409 before paid_ts was written, so the sale reached the

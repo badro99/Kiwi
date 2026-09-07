@@ -64,7 +64,7 @@
       line('a failed POST remains durable in IndexedDB');
 
       window.__fetchMode = 'ok';
-      KiwiLive.flush(true);
+      window.dispatchEvent(new Event('online'));
       await waitFor(async function () { return (await KiwiOffline.stats('sale', window.__testTenant)).total === 0; }, 3000);
       assert(window.__posts.length >= 2 && window.__posts.every(function (p) { return p.id === accepted.id; }), 'stable replay id');
       line('reconnect replays the same id and acknowledges it');

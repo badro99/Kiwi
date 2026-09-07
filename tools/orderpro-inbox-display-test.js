@@ -37,8 +37,8 @@ ok('list() filters out paid table orders',
 ok('list() filters out closed session table orders',
   /closedSet\[String\(o\.session\)\]/.test(INBOX_SRC));
 
-ok('kiwi-table-released marks matching local orders paid and closed',
-  /document\.addEventListener\('kiwi-table-released'[\s\S]{0,400}o\.paid = true/.test(INBOX_SRC));
+ok('kiwi-table-released marks only settled matching local orders paid',
+  /document\.addEventListener\('kiwi-table-released'[\s\S]{0,800}if \(d.why === 'settle'\) o\.paid = true/.test(INBOX_SRC));
 
 ok('linesHtml supports kind === "formula" and kind === "formula-part"',
   /l\.kind === 'formula'/.test(INBOX_SRC) && /l\.kind === 'formula-part'/.test(INBOX_SRC));

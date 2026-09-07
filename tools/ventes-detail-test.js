@@ -16,7 +16,7 @@ const checks = [
   ["['all', 'cash', 'card', 'delivery']", 'Tout plus the three requested payment filters are rendered'],
   ['current.length >= 2', 'choosing a third payment type resets the filter'],
   ['selectedMethods.includes(salesMethodKey(s))', 'sale rows are filtered by payment type'],
-  ['inWindow.reduce((a, s) => a + (s.amount || 0), 0)', 'the displayed total uses the filtered rows'],
+  ['financialWindow.reduce(', 'the cash summary uses the payment-filtered rows independently of activity type'],
   ['String(s.ref || s.label || \'\')', 'each sale resolves its caisse/order reference'],
   ["origin === 'employee'", 'employee-origin sales are labelled separately'],
   ["origin === 'orderpro'", 'OrderPro-origin sales are labelled separately'],

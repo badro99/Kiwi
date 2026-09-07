@@ -300,15 +300,19 @@
   /* Move the old synchronous queue only after Dexie's transaction commits.
      Until then qRead/qWrite remain the fully working fallback, so an IndexedDB
      denial (private mode, storage policy, damaged profile) never loses a sale. */
+  var outboxInitPromise = null, outboxSubscribed = false;
   function initOutbox() {
+    if (outboxUsing) return Promise.resolve(true);
+    if (outboxInitPromise) return outboxInitPromise;
     var O = window.KiwiOffline;
     if (!O) return Promise.resolve(false);
     try {
-      O.subscribe(function (event) {
+      if (!outboxSubscribed) O.subscribe(function (event) {
         if (!event || !event.channel || event.channel === OUTBOX_CHANNEL) refreshOutboxStatus();
       });
+      outboxSubscribed = true;
     } catch (_) {}
-    return O.migrateLegacy(Q_KEY, OUTBOX_CHANNEL, function (row) {
+    outboxInitPromise = O.migrateLegacy(Q_KEY, OUTBOX_CHANNEL, function (row) {
       if (!row || !row.id || !row.merchant) return null;
       return {
         id: row.id,
@@ -325,7 +329,8 @@
     }).catch(function () {
       outboxUsing = false;
       return false;
-    });
+    }).finally(function () { outboxInitPromise = null; });
+    return outboxInitPromise;
   }
   function uid() {
     try {
@@ -349,6 +354,7 @@
   var flushStartedAt = 0;
   var lastSyncStatus = 0, lastSyncError = '';
   var recoveryTimer = null;
+  var authRetryAt = 0, authRetryMerchant = '';
   function scheduleRecovery() {
     if (recoveryTimer != null) return;
     recoveryTimer = setTimeout(function () { recoveryTimer = null; flushQueue(); }, 3000);
@@ -363,7 +369,8 @@
   }
 
   function flushLegacyQueue() {
-    if (flushing) return Promise.resolve(queueStatus());
+    if (flushing || (typeof navigator !== 'undefined' && navigator.onLine === false)) return Promise.resolve(queueStatus());
+    if (authRetryMerchant === merchant() && authRetryAt > Date.now()) { scheduleRecovery(); return Promise.resolve(queueStatus()); }
     var q = qRead();
     if (!q.length) return Promise.resolve(queueStatus());
     var active = merchant();
@@ -383,6 +390,8 @@
         flushing = false;
         lastSyncStatus = status || 0;
         lastSyncError = settled ? '' : (pending ? 'settlement-pending' : (status ? 'HTTP ' + status : 'network'));
+        if (status === 401 || status === 403) { authRetryAt = Date.now() + 60000; authRetryMerchant = body.merchant; }
+        else if (settled) authRetryAt = 0;
         var current = qRead();
         if (settled) {
           var rest = current.filter(function (x) { return x && x.id !== body.id; });
@@ -409,6 +418,13 @@
           if (current.some(function (x) { return x && !x._blocked; })) return resolve(flushLegacyQueue());
           return resolve(queueStatus());
         } else {
+          current.forEach(function (x) {
+            if (x && x.id === body.id) {
+              x._attempts = (Number(x._attempts) || 0) + 1;
+              x._retryAfter = Date.now() + Math.min(300000, 3000 * Math.pow(2, Math.min(x._attempts - 1, 7)));
+            }
+          });
+          qWrite(current);
           moneySignal(body, 'retry', status);
           scheduleRecovery();
           queueSignal();                          // offline/transient → unchanged and retryable
@@ -425,7 +441,6 @@
           keepalive: true,
           signal: controller ? controller.signal : undefined,
         }).then(function (r) {
-          if (timeoutId) clearTimeout(timeoutId);
           /* Only 2xx proves D1 accepted the sale. A structurally rejected body is
              quarantined for support, never deleted. Auth failures remain retryable:
              pairing/session repair can make the exact same sale valid later.
@@ -433,6 +448,7 @@
              after table/session synchronization and must remain retryable. */
           var BLOCK = { 400: 1, 422: 1 };
           return paymentCompletion(r).then(function (result) {
+            if (timeoutId) clearTimeout(timeoutId);
             done(result.complete, !!(r && BLOCK[r.status]), r && r.status, result.pending);
           });
         }).catch(function () {
@@ -444,12 +460,9 @@
   }
 
   function flushOutbox(force) {
-    if (force) {
-      flushing = false;
-    } else if (flushing && flushStartedAt && (Date.now() - flushStartedAt) > 15000) {
-      flushing = false;
-    }
+    // A retry can advance due work, never steal an in-flight sender's lock.
     if (flushing || !navigator.onLine) return Promise.resolve(outboxStatus);
+    if (authRetryMerchant === merchant() && authRetryAt > Date.now()) { scheduleRecovery(); return Promise.resolve(outboxStatus); }
     var O = window.KiwiOffline;
     var active = merchant();
     if (!O || !active) { queueSignal(); return Promise.resolve(outboxStatus); }
@@ -468,6 +481,8 @@
       function settle(ok, permanent, status, error) {
         lastSyncStatus = status || 0;
         lastSyncError = ok ? '' : (error || (status ? 'HTTP ' + status : 'network'));
+        if (status === 401 || status === 403) { authRetryAt = Date.now() + 60000; authRetryMerchant = body.merchant; }
+        else if (ok) authRetryAt = 0;
         var action = ok
           ? O.acknowledge(row.id, row.leaseToken)
           : O.reject(row.id, row.leaseToken, { permanent: permanent, status: status, error: error });
@@ -495,9 +510,9 @@
         keepalive: true,
         signal: controller ? controller.signal : undefined,
       }).then(function (response) {
-        if (timeoutId) clearTimeout(timeoutId);
         var BLOCK = { 400: 1, 422: 1 };
         return paymentCompletion(response).then(function (result) {
+          if (timeoutId) clearTimeout(timeoutId);
           return settle(result.complete, !!BLOCK[response.status], response.status,
             result.pending ? 'settlement-pending' : (response.ok ? 'unverified-response' : 'HTTP ' + response.status));
         });
@@ -518,6 +533,12 @@
   }
 
   function flushQueue(force) {
+    if (force === true && !flushing) {
+      authRetryAt = 0;
+      const pending = qRead();
+      pending.forEach(function (row) { if (row && row.merchant === merchant()) delete row._retryAfter; });
+      if (pending.length) qWrite(pending);
+    }
     if (outboxUsing && window.KiwiOffline && window.KiwiOffline.available()) {
       // A failed IDB enqueue is retained in localStorage. Do not abandon that
       // exact command merely because the IDB engine later becomes usable.
@@ -1344,7 +1365,8 @@
     // card and poll the feed on the caisse and the serveur too, purely because
     // those pages happen to have a <main> — a card the cashier had no use for
     // and a poll for data the page never read.
-    if (opMode()) {
+    var tillPage = /\/kiwi-caisse(?:\.html)?\/?$/.test(location.pathname || '');
+    if (opMode() && !tillPage) {
       /* Query parameters request a scope; /api/me authorizes it. A confirmed God
          Mode view receives the whole entitled ledger exactly once, then becomes
          a stable snapshot. Owners keep the normal live 2.5 s feed. */
@@ -1380,14 +1402,42 @@
     else watchVoids();
     // Retry the queue whenever the network comes back, on every page (a till is
     // where the sales are, and it is the device most likely to be offline).
-    if (!opMode()) {
-      try { window.addEventListener('online', function () { flushQueue(true); }); } catch (_) {}
-    }
     /* Opening IndexedDB and atomically importing the legacy queue is async.
        Flush only after that choice has settled, otherwise the old array and
        the new outbox could race to submit the same sale (the server would
        dedupe it, but the terminal would briefly report two debts). */
-    if (!opMode()) initOutbox().then(flushQueue);
+    var recoveryStarted = false, lastWake = 0;
+    function startRecovery() {
+      if (recoveryStarted) return;
+      recoveryStarted = true;
+      function wake(force) {
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
+        var now = Date.now();
+        if (!force && now - lastWake < 1000) return;
+        lastWake = now;
+        initOutbox().then(function () { return flushQueue(force === true); }).catch(function () { scheduleRecovery(); });
+      }
+      window.addEventListener('online', function () { wake(true); });
+      window.addEventListener('focus', function () { wake(false); });
+      document.addEventListener('visibilitychange', function () { if (!document.hidden) wake(false); });
+      document.addEventListener('kiwi-paired', function () { lastWake = 0; wake(true); });
+      document.addEventListener('kiwi-config', function () { wake(false); });
+      // WebViews sometimes miss online/focus. Probe pending debt only; failed
+      // requests retain their own backoff and never change identity or payload.
+      function watchdog() {
+        if (queueStatus().pending > 0) wake(false);
+        setTimeout(watchdog, 30000);
+      }
+      setTimeout(watchdog, 30000);
+      wake(false);
+    }
+    if (!opMode()) startRecovery();
+    else if (tillPage) {
+      // Inspecting a support till is still read-only. Explicitly opening or
+      // resuming its service enables the same recovery as a paired till.
+      document.addEventListener('kiwi:caisse-service-ready', startRecovery);
+      if (window.KiwiTillServiceReady === merchant()) startRecovery();
+    }
     /* Operator UI is mounted only in the signed-identity branch above. An URL
        containing `op=1` alone must show neither the banner nor the PIN bypass. */
   }
