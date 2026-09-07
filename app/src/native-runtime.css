@@ -29,6 +29,20 @@ html.kiwi-native .menu-item-price{font-size:calc(17px * var(--type-scale,1));whi
 html.kiwi-native .rp-table,html.kiwi-native .pay-charge-lbl{font-size:calc(16px * var(--type-scale,1))}
 html.kiwi-native .rp-item,html.kiwi-native .rp-summary-row,html.kiwi-native .pay-btn{font-size:calc(13px * var(--type-scale,1))}
 html.kiwi-native .team-trigger,html.kiwi-native .mode-pill,html.kiwi-native .cat-pill,html.kiwi-native .floor-pill,html.kiwi-native .vrap-back-btn,html.kiwi-native .mlibre-toggle,html.kiwi-native .meta-btn,html.kiwi-native .qty-btn{min-height:44px}
+html.kiwi-native .qty-btn{min-width:44px}
+html.kiwi-native :is(button,a,input,select,textarea,[tabindex]):focus-visible{outline:3px solid #0B6E4F;outline-offset:3px}
+html.kiwi-native:is([data-theme="dark"],[data-vexel-mode="dark"]) :is(button,a,input,select,textarea,[tabindex]):focus-visible{outline-color:#7DF2B0}
+html.kiwi-native :is(.pin-screen,.clockin-screen){box-sizing:border-box;overflow-y:auto;overscroll-behavior:contain;padding:calc(var(--kiwi-safe-top) + 20px) max(20px,var(--kiwi-safe-right)) calc(var(--kiwi-safe-bottom) + 20px) max(20px,var(--kiwi-safe-left))}
+html.kiwi-native .clockin-screen{justify-content:flex-start;gap:clamp(16px,3vh,28px)}
+html.kiwi-native .pin-screen{flex-direction:column;justify-content:flex-start}
+html.kiwi-native .pin-card{flex-shrink:0;margin-block:auto}
+html.kiwi-native .clockin-screen>*{flex-shrink:0}
+html.kiwi-native .clockin-top{margin-top:auto}
+html.kiwi-native .clockin-bottom{margin-bottom:auto}
+html.kiwi-native .clockin-clock{font-size:clamp(48px,10vh,96px)}
+html.kiwi-native .clockin-float-chips{flex-wrap:wrap;justify-content:center}
+html.kiwi-native :is(.clockin-role,.clockin-date,.clockin-tagline,.clockin-float-label,.clockin-foot){color:rgba(247,245,240,.76)}
+html.kiwi-native :is(.pin-screen,.clockin-screen) :focus-visible{outline-color:#7DF2B0}
 
 .kiwi-native-tabbar{display:none}
 html.kiwi-native body.kiwi-native-hosted .kiwi-native-tabbar{display:none!important}
@@ -65,11 +79,11 @@ html.kiwi-native body.kiwi-native-hosted .kiwi-native-tabbar{display:none!import
   html.kiwi-native body.kiwi-native-till.ticket-open .rp-meta{gap:8px;padding-bottom:12px;flex-wrap:wrap}
   html.kiwi-native body.kiwi-native-till.ticket-open .meta-btn{min-width:44px;padding:10px 8px}
   html.kiwi-native body.kiwi-native-till.ticket-open .meta-btn.danger{flex-basis:100%;justify-content:center;margin-left:0;border:1px solid currentColor;border-radius:10px}
-  html.kiwi-native body.kiwi-native-till .menu-grid{grid-template-columns:repeat(auto-fill,minmax(128px,1fr));grid-auto-rows:178px}
-  html.kiwi-native body.kiwi-native-till .menu-item{height:178px;min-height:178px;overflow:hidden}
+  html.kiwi-native body.kiwi-native-till .menu-grid{grid-template-columns:repeat(auto-fill,minmax(128px,1fr));grid-auto-rows:minmax(192px,auto)}
+  html.kiwi-native body.kiwi-native-till .menu-item{height:auto;min-height:192px;overflow:hidden}
   html.kiwi-native body.kiwi-native-till .menu-item-art{width:34px;height:34px;margin-bottom:5px}
   html.kiwi-native body.kiwi-native-till .menu-item-foot{min-height:58px;margin-top:5px;display:flex;flex-direction:column;align-items:stretch;gap:4px}
-  html.kiwi-native body.kiwi-native-till .menu-item-add,html.kiwi-native body.kiwi-native-till .menu-item-stepper{width:100%;min-height:34px;justify-content:center;border-radius:10px}
+  html.kiwi-native body.kiwi-native-till .menu-item-add,html.kiwi-native body.kiwi-native-till .menu-item-stepper{width:100%;min-height:44px;justify-content:center;border-radius:10px}
   html.kiwi-native body.kiwi-native-till.kiwi-native-category-filtered .menu-item-cat{visibility:hidden;height:0;margin:0}
   html.kiwi-native body.kiwi-native-till #vrap-builder{display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-rows:auto minmax(0,1fr);gap:8px 6px}
   html.kiwi-native body.kiwi-native-till #vrap-builder[hidden]{display:none}

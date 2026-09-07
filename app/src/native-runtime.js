@@ -95,11 +95,23 @@
   }
   function hapticLight() { return call(haptics, 'impact', { style: 'LIGHT' }); }
   function hapticNotice(kind) { return call(haptics, 'notification', { type: kind === 'danger' ? 'ERROR' : 'SUCCESS' }); }
+  function nativeBlockingLayer() {
+    return [document.getElementById('pin-screen'), document.getElementById('clockin-screen'), document.querySelector('[data-kiwi-greet]')].some(function (node) {
+      if (!node || node.hidden) return false;
+      if (node.id !== 'pin-screen' && !node.classList.contains('is-visible')) return false;
+      var style = getComputedStyle(node);
+      return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
+    });
+  }
+  var lastStatusBarStyle = '';
   function paintStatusBar() {
     // SwiftUI setup has an ink background regardless of the web/system theme.
     var setup = document.body && document.body.classList.contains('native-shell-page');
-    var dark = setup || root.getAttribute('data-theme') === 'dark' || root.getAttribute('data-vexel-mode') === 'dark' || (appearance && appearance.matches && !root.getAttribute('data-theme'));
-    call(statusBar, 'setStyle', { style: dark ? 'DARK' : 'LIGHT' });
+    var dark = setup || nativeBlockingLayer() || root.getAttribute('data-theme') === 'dark' || root.getAttribute('data-vexel-mode') === 'dark' || (appearance && appearance.matches && !root.getAttribute('data-theme'));
+    var nextStyle = dark ? 'DARK' : 'LIGHT';
+    if (nextStyle === lastStatusBarStyle) return;
+    lastStatusBarStyle = nextStyle;
+    call(statusBar, 'setStyle', { style: nextStyle });
     if (cap.getPlatform && cap.getPlatform() === 'android') call(statusBar, 'setBackgroundColor', { color: dark ? '#0A0F0D' : '#F7F5F0' });
   }
   function keyboardInsets() {
@@ -262,10 +274,11 @@
       });
       nativeHostPost({
         version:1, screen:'workspace', role:'caisse', locale:String(root.lang || 'fr'), rtl:root.dir === 'rtl', selected:selected,
-        tabs:tabItems.map(function (item) { return { id:item[0], label:item[1] }; })
+        tabs:nativeBlockingLayer() ? [] : tabItems.map(function (item) { return { id:item[0], label:item[1] }; })
       });
     }
     function activateNativeTab(mode) {
+      if (nativeBlockingLayer()) return false;
       if (mode === 'more') {
         document.body.classList.add('nav-open');
         hapticLight();
@@ -514,6 +527,23 @@
     keyboardInsets();
   }
   new MutationObserver(paintStatusBar).observe(root, { attributes: true, attributeFilter: ['data-theme', 'data-vexel-mode', 'lang', 'dir'] });
+  // These overlays are always dark, even in a light workspace. Observe only
+  // their changes: native tab publication itself mutates unrelated body nodes.
+  function syncBlockingLayer() {
+    paintStatusBar();
+    if (window.KiwiNativeHostRequestState) window.KiwiNativeHostRequestState();
+  }
+  function isBlockingNode(node) {
+    return node && (node.id === 'pin-screen' || node.id === 'clockin-screen' || (node.hasAttribute && node.hasAttribute('data-kiwi-greet')));
+  }
+  if (document.body) new MutationObserver(function (records) {
+    if (records.some(function (record) {
+      return isBlockingNode(record.target) || Array.from(record.removedNodes || []).some(isBlockingNode) || Array.from(record.addedNodes || []).some(isBlockingNode);
+    })) syncBlockingLayer();
+  }).observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['class', 'hidden', 'style'] });
+  document.addEventListener('animationend', function (event) {
+    if (isBlockingNode(event.target)) syncBlockingLayer();
+  });
   if (appearance) {
     if (typeof appearance.addEventListener === 'function') appearance.addEventListener('change', paintStatusBar);
     else if (typeof appearance.addListener === 'function') appearance.addListener(paintStatusBar);

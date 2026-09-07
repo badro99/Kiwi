@@ -6,6 +6,7 @@ import WebKit
 private let kiwiInk = Color(red: 10 / 255, green: 15 / 255, blue: 13 / 255)
 private let kiwiMint = Color(red: 0, green: 1, blue: 174 / 255)
 private let kiwiPaper = Color(red: 247 / 255, green: 245 / 255, blue: 240 / 255)
+private let kiwiAtlas = Color(red: 11 / 255, green: 110 / 255, blue: 79 / 255)
 
 // JSON is already a JavaScript expression. Keep its UTF-8 intact: atob() yields
 // byte-valued characters, not Unicode, and used to corrupt non-ASCII passwords.
@@ -244,6 +245,11 @@ private struct KiwiNativeSetupRoot: View {
     @State private var host = ""
     @State private var port = "9100"
     @State private var paper = "80"
+    @State private var passwordVisible = false
+    @FocusState private var focusedField: String?
+    @AccessibilityFocusState private var headingFocused: Bool
+    @ScaledMetric(relativeTo: .largeTitle) private var titleSize = 30
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         ZStack {
@@ -256,6 +262,21 @@ private struct KiwiNativeSetupRoot: View {
         }
         .environment(\.layoutDirection, model.context.rtl ? .rightToLeft : .leftToRight)
         .onReceive(model.$revision) { _ in hydrateFields() }
+        .onChange(of: model.context.kind) { _ in
+            focusedField = nil
+            passwordVisible = false
+            password = ""
+            headingFocused = true
+        }
+        .onChange(of: model.context.status) { value in
+            if !value.isEmpty { UIAccessibility.post(notification: .announcement, argument: value) }
+        }
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button(copy("Terminé", "Done", "تم")) { focusedField = nil }
+            }
+        }
     }
 
     private var setup: some View {
@@ -265,15 +286,18 @@ private struct KiwiNativeSetupRoot: View {
                 progress
                 VStack(alignment: .leading, spacing: 18) {
                     if !model.context.eyebrow.isEmpty { Text(model.context.eyebrow.uppercased()).font(.caption.weight(.bold)).tracking(1.6).foregroundStyle(kiwiInk.opacity(0.58)) }
-                    Text(model.context.title).font(.system(size: 34, weight: .bold, design: .rounded)).foregroundStyle(kiwiInk).fixedSize(horizontal: false, vertical: true)
+                    Text(model.context.title).font(.system(size: titleSize, weight: .semibold)).foregroundStyle(kiwiInk).fixedSize(horizontal: false, vertical: true)
+                        .accessibilityAddTraits(.isHeader).accessibilityFocused($headingFocused)
                     if !model.context.message.isEmpty { Text(model.context.message).font(.body).foregroundStyle(kiwiInk.opacity(0.66)).fixedSize(horizontal: false, vertical: true) }
                     content
                     status
                     actions
                 }
-                .padding(24)
+                .padding(dynamicTypeSize.isAccessibilitySize ? 18 : 24)
                 .background(kiwiPaper, in: RoundedRectangle(cornerRadius: 30, style: .continuous))
             }
+            .frame(maxWidth: 640)
+            .frame(maxWidth: .infinity)
             .padding(.horizontal, 18)
             .padding(.top, 14)
             .padding(.bottom, 28)
@@ -286,18 +310,20 @@ private struct KiwiNativeSetupRoot: View {
                 ForEach(1...model.context.progressTotal, id: \.self) { index in
                     Capsule().fill(index <= model.context.progress ? kiwiMint : kiwiPaper.opacity(0.2)).frame(maxWidth: .infinity).frame(height: 4)
                 }
-            }.accessibilityLabel("\(model.context.progress) / \(model.context.progressTotal)")
+            }.accessibilityElement(children: .ignore)
+                .accessibilityLabel(copy("Étape", "Step", "الخطوة"))
+                .accessibilityValue("\(model.context.progress) / \(model.context.progressTotal)")
         }
     }
 
     @ViewBuilder private var content: some View {
         if model.context.kind == "account", !model.context.fields.isEmpty {
-            nativeField(label: field("email")?.label ?? "Email", text: $email, secure: false, keyboard: .emailAddress)
-            nativeField(label: field("password")?.label ?? "Password", text: $password, secure: true, keyboard: .default)
+            nativeField(id: "email", label: field("email")?.label ?? "Email", text: $email, secure: false, keyboard: .emailAddress)
+            nativeField(id: "password", label: field("password")?.label ?? "Password", text: $password, secure: true, keyboard: .default)
         }
         if model.context.kind == "printer" {
-            nativeField(label: field("host")?.label ?? "IP", text: $host, secure: false, keyboard: .numbersAndPunctuation)
-            nativeField(label: field("port")?.label ?? "Port", text: $port, secure: false, keyboard: .numberPad)
+            nativeField(id: "host", label: field("host")?.label ?? "IP", text: $host, secure: false, keyboard: .numbersAndPunctuation)
+            nativeField(id: "port", label: field("port")?.label ?? "Port", text: $port, secure: false, keyboard: .numberPad)
         }
         VStack(spacing: 10) {
             ForEach(model.context.choices) { choice in choiceButton(choice) }
@@ -305,8 +331,11 @@ private struct KiwiNativeSetupRoot: View {
         if !model.context.summary.isEmpty {
             VStack(spacing: 0) {
                 ForEach(model.context.summary) { item in
-                    HStack { Text(item.label).fontWeight(.semibold); Spacer(); Text(item.value).foregroundStyle(kiwiInk.opacity(item.muted ? 0.42 : 0.72)) }
-                        .padding(.vertical, 13)
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text(item.label).font(.subheadline.weight(.semibold))
+                        Text(item.value).foregroundStyle(kiwiInk.opacity(0.72)).fixedSize(horizontal: false, vertical: true)
+                    }.frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, 13).accessibilityElement(children: .combine)
                     if item.id != model.context.summary.last?.id { Divider().overlay(kiwiInk.opacity(0.08)) }
                 }
             }.padding(.horizontal, 16).background(kiwiInk.opacity(0.04), in: RoundedRectangle(cornerRadius: 18))
@@ -317,23 +346,54 @@ private struct KiwiNativeSetupRoot: View {
 
     private func hydrateFields() {
         if let value = field("email")?.value, email.isEmpty { email = value }
-        if let value = field("host")?.value, !value.isEmpty { host = value }
-        if let value = field("port")?.value, !value.isEmpty { port = value }
+        if let value = field("host")?.value, !value.isEmpty, focusedField != "host" { host = value }
+        if let value = field("port")?.value, !value.isEmpty, focusedField != "port" { port = value }
+        if model.context.fields.isEmpty { password = ""; passwordVisible = false }
         if let selectedPaper = model.context.choices.first(where: { $0.group == "paper" && $0.selected })?.id { paper = selectedPaper }
     }
 
-    private func nativeField(label: String, text: Binding<String>, secure: Bool, keyboard: UIKeyboardType) -> some View {
+    private func copy(_ fr: String, _ en: String, _ ar: String) -> String {
+        model.context.locale.hasPrefix("ar") ? ar : (model.context.locale.hasPrefix("en") ? en : fr)
+    }
+
+    private func nativeField(id: String, label: String, text: Binding<String>, secure: Bool, keyboard: UIKeyboardType) -> some View {
         VStack(alignment: .leading, spacing: 7) {
             Text(label).font(.subheadline.weight(.semibold)).foregroundStyle(kiwiInk.opacity(0.65))
-            Group {
-                if secure { SecureField(label, text: text) } else { TextField(label, text: text) }
+                .accessibilityHidden(true)
+            HStack(spacing: 4) {
+                Group {
+                    if secure && !passwordVisible { SecureField(label, text: text) }
+                    else { TextField(label, text: text) }
+                }
+                .foregroundStyle(kiwiInk)
+                .focused($focusedField, equals: id)
+                .textContentType(id == "email" ? .username : (secure ? .password : nil))
+                .submitLabel(id == "email" || id == "host" ? .next : .go)
+                .onSubmit {
+                    if id == "email" { focusedField = "password" }
+                    else if id == "host" { focusedField = "port" }
+                    else if let action = model.context.actions.first(where: { $0.id == (secure ? "login" : "printer-test") && $0.enabled }) { perform(action) }
+                }
+                .accessibilityIdentifier("kiwi-field-\(id)")
+                .environment(\.layoutDirection, .leftToRight)
+                if secure {
+                    Button {
+                        passwordVisible.toggle()
+                        focusedField = id
+                    } label: {
+                        Image(systemName: passwordVisible ? "eye.slash" : "eye")
+                            .frame(minWidth: 44, minHeight: 44)
+                    }.buttonStyle(.plain).foregroundStyle(kiwiAtlas)
+                        .accessibilityLabel(passwordVisible ? copy("Masquer le mot de passe", "Hide password", "إخفاء كلمة المرور") : copy("Afficher le mot de passe", "Show password", "إظهار كلمة المرور"))
+                        .accessibilityIdentifier("kiwi-password-toggle")
+                }
             }
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled()
             .keyboardType(keyboard)
-            .padding(.horizontal, 16).frame(minHeight: 54)
-            .background(Color.white.opacity(0.72), in: RoundedRectangle(cornerRadius: 16))
-            .overlay(RoundedRectangle(cornerRadius: 16).stroke(kiwiInk.opacity(0.12), lineWidth: 1))
+            .padding(.horizontal, 16).padding(.vertical, 8).frame(minHeight: 54)
+            .background(kiwiPaper, in: RoundedRectangle(cornerRadius: 16))
+            .overlay(RoundedRectangle(cornerRadius: 16).stroke(focusedField == id ? kiwiAtlas : kiwiInk.opacity(0.20), lineWidth: focusedField == id ? 2 : 1))
         }
     }
 
@@ -345,10 +405,10 @@ private struct KiwiNativeSetupRoot: View {
             else if choice.group == "printer" { host = choice.id; model.send("select-printer", id: choice.id) }
         } label: {
             HStack(spacing: 14) {
-                Image(systemName: symbol(choice.id)).font(.title3.weight(.semibold)).frame(width: 28).foregroundStyle(choice.selected ? kiwiMint : kiwiInk.opacity(0.62))
+                Image(systemName: symbol(choice.id)).font(.title3.weight(.semibold)).frame(width: 28).foregroundStyle(choice.selected ? kiwiAtlas : kiwiInk.opacity(0.62)).accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(choice.title).font(.headline).foregroundStyle(kiwiInk)
-                    if !choice.subtitle.isEmpty { Text(choice.subtitle).font(.subheadline).foregroundStyle(kiwiInk.opacity(0.56)) }
+                    Text(choice.title).font(.headline).foregroundStyle(kiwiInk).fixedSize(horizontal: false, vertical: true)
+                    if !choice.subtitle.isEmpty { Text(choice.subtitle).font(.subheadline).foregroundStyle(kiwiInk.opacity(0.68)).fixedSize(horizontal: false, vertical: true) }
                 }
                 Spacer()
                 if choice.selected || (choice.group == "paper" && paper == choice.id) { Image(systemName: "checkmark.circle.fill").foregroundStyle(kiwiInk) }
@@ -356,6 +416,8 @@ private struct KiwiNativeSetupRoot: View {
             .padding(15).background(choice.selected ? kiwiMint.opacity(0.12) : Color.white.opacity(0.55), in: RoundedRectangle(cornerRadius: 18))
             .overlay(RoundedRectangle(cornerRadius: 18).stroke(choice.selected ? kiwiMint.opacity(0.8) : kiwiInk.opacity(0.08), lineWidth: 1))
         }.buttonStyle(.plain)
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(choice.selected ? .isSelected : [])
     }
 
     @ViewBuilder private var status: some View {
@@ -374,17 +436,19 @@ private struct KiwiNativeSetupRoot: View {
         VStack(spacing: 10) {
             ForEach(model.context.actions) { action in
                 Button { perform(action) } label: {
-                    Text(action.label).font(.headline).frame(maxWidth: .infinity).frame(minHeight: 54)
-                        .foregroundStyle(action.style == "primary" ? kiwiPaper : kiwiInk)
-                        .background(action.style == "primary" ? kiwiInk : Color.clear, in: RoundedRectangle(cornerRadius: 17))
+                    Text(action.label).font(.headline).multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, 14).padding(.vertical, 12).frame(maxWidth: .infinity).frame(minHeight: 54)
+                        .foregroundStyle(!action.enabled ? kiwiInk.opacity(0.65) : (action.style == "primary" ? kiwiPaper : kiwiInk))
+                        .background(!action.enabled ? kiwiInk.opacity(0.08) : (action.style == "primary" ? kiwiAtlas : Color.clear), in: RoundedRectangle(cornerRadius: 17))
                         .overlay(RoundedRectangle(cornerRadius: 17).stroke(kiwiInk.opacity(action.style == "primary" ? 0 : 0.18), lineWidth: 1))
-                }.buttonStyle(.plain).disabled(!action.enabled).opacity(action.enabled ? 1 : 0.42)
+                }.buttonStyle(.plain).disabled(!action.enabled).accessibilityIdentifier("kiwi-action-\(action.id)")
             }
         }
     }
 
     private func perform(_ action: KiwiHostAction) {
-        if action.id == "login" { model.send(action.id, values: ["email": email, "password": password]); password = "" }
+        focusedField = nil
+        if action.id == "login" { passwordVisible = false; model.send(action.id, values: ["email": email, "password": password]) }
         else if action.id == "printer-test" { model.send(action.id, values: ["host": host, "port": port, "paper": paper]) }
         else { model.send(action.id) }
     }

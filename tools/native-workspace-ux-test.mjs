@@ -38,6 +38,8 @@ function element(className = '') {
 const root = element(); root.lang = 'fr';
 const body = element();
 const layers = [];
+const namedElements = new Map();
+const observers = [];
 const docListeners = {};
 const document = {
   documentElement: root, body, readyState: 'complete',
@@ -46,7 +48,7 @@ const document = {
     return null;
   },
   querySelectorAll(selector) { return selector.includes('.modal-veil.is-open') ? layers.filter((node) => node.classList.contains('is-open')) : []; },
-  getElementById() { return null; }, createElement() { return element(); },
+  getElementById(id) { return namedElements.get(id) || null; }, createElement() { return element(); },
   addEventListener(type, handler) { (docListeners[type] ||= []).push(handler); }
 };
 const windowListeners = {};
@@ -78,7 +80,7 @@ const window = {
 };
 window.window = window;
 const context = vm.createContext({ window, document, location, history, localStorage, sessionStorage, navigator: {}, console, Promise, Date, JSON, Math, Error, String, Number, Array, Object, RegExp, Map, Set, URL, setTimeout, clearTimeout,
-  MutationObserver: class { observe() {} }, MouseEvent: class { constructor(type) { this.type = type; } }, getComputedStyle: () => ({ display: 'block', visibility: 'visible' }) });
+  MutationObserver: class { constructor(callback) { observers.push(callback); } observe() {} }, MouseEvent: class { constructor(type) { this.type = type; } }, getComputedStyle: (node) => ({ display: node.hidden ? 'none' : 'block', visibility: 'visible', opacity: '1' }) });
 new vm.Script(source, { filename: 'app/src/native-runtime.js' }).runInContext(context);
 await new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -113,6 +115,22 @@ body.classList.add('native-shell-page');
 appearanceListeners.forEach((handler) => handler({ matches: false }));
 ok(statusBarCalls.at(-1) === 'DARK', 'native setup keeps light status text on its ink background in system light mode');
 body.classList.remove('native-shell-page');
+const clockin = element('is-visible'); clockin.id = 'clockin-screen';
+namedElements.set(clockin.id, clockin);
+observers.forEach((callback) => callback([{ target: clockin }]));
+ok(statusBarCalls.at(-1) === 'DARK', 'dark clock-in overlay keeps status text readable in a light workspace');
+clockin.classList.remove('is-visible');
+observers.forEach((callback) => callback([{ target: clockin }]));
+ok(statusBarCalls.at(-1) === 'LIGHT', 'closing clock-in restores status text for the light workspace');
+const pin = element(); pin.id = 'pin-screen'; namedElements.set(pin.id, pin);
+observers.forEach((callback) => callback([{ target: pin }]));
+ok(statusBarCalls.at(-1) === 'DARK', 'PIN overlay also overrides the workspace status style');
+namedElements.delete(pin.id);
+observers.forEach((callback) => callback([{ target: body, removedNodes: [pin] }]));
+ok(statusBarCalls.at(-1) === 'LIGHT', 'removing a PIN overlay restores the underlying status style');
+const styleCount = statusBarCalls.length;
+observers.forEach((callback) => callback([{ target: body }]));
+ok(statusBarCalls.length === styleCount, 'unchanged style does not repeatedly cross the native bridge');
 ok(root.style.getPropertyValue('--type-scale') === '1.3', 'Dynamic Type scale reaches workspace pages, not only onboarding');
 ok((source.match(/!document\.body\.classList\.contains\('kiwi-native-hosted'\)/g) || []).length === 2,
   'native host publication cannot retrigger its own body-class observer on iOS or Android');

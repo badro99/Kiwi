@@ -1097,6 +1097,7 @@ section('Whole-project regressions');
     'app-release-test.mjs',
     'biometric-unlock-test.mjs',
     'native-workspace-ux-test.mjs',
+    'native-device-layout-test.mjs',
     'native-host-bridge-test.mjs',
     'account-deletion-test.mjs',
     'account-deletion-ui-test.mjs',

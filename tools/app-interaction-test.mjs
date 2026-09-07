@@ -138,6 +138,16 @@ function applyPluginStub(pluginCfg) {
     return new Promise(function (res) { setTimeout(function () { res(value); }, ms); });
   }
   var secure = typeof pluginCfg === 'string' ? pluginCfg : (pluginCfg && pluginCfg.secure);
+  if (secure === 'controlled') {
+    // Own the watchdog clock only in the two paint assertions. Their bridge is
+    // explicitly released by the test; the separate hang case tests the real
+    // 2500ms production watchdog. A busy machine cannot consume this window.
+    var nativeSetTimeout = window.setTimeout.bind(window);
+    window.setTimeout = function (fn, delay) {
+      if (delay === 2500) return -1;
+      return nativeSetTimeout.apply(window, arguments);
+    };
+  }
   var scanMode = pluginCfg && typeof pluginCfg === 'object' ? pluginCfg.scan : null;
   var appInfo = pluginCfg && typeof pluginCfg === 'object' ? pluginCfg.appInfo : null;
   var dtCfg = pluginCfg && typeof pluginCfg === 'object' ? pluginCfg.dynamicType : null;
@@ -152,6 +162,16 @@ function applyPluginStub(pluginCfg) {
     },
     secureSet: function () { return Promise.resolve({}); },
     secureGet: function () {
+      if (secure === 'controlled') {
+        if (window.__secureGetReleased) return Promise.resolve({ value: '' });
+        return new Promise(function (resolve) {
+          (window.__secureGetWaiters || (window.__secureGetWaiters = [])).push(resolve);
+          window.__releaseSecureGet = function (value) {
+            window.__secureGetReleased = true;
+            window.__secureGetWaiters.splice(0).forEach(function (finish) { finish(value); });
+          };
+        });
+      }
       if (secure === 'value') return Promise.resolve({ value: 'caisse' });
       if (secure === 'reject') return Promise.reject(new Error('denied'));
       if (secure === 'hang') return new Promise(function () {});
@@ -217,6 +237,7 @@ function applyPluginStub(pluginCfg) {
 }
 
 const browser = await puppeteer.launch({ executablePath: bin, headless: 'new', args: ['--no-sandbox', '--disable-dev-shm-usage'] });
+try {
 
 async function openShell({ locale = 'fr', viewport = 'iphone', me = 'login', plugin = null, login = null } = {}) {
   const vp = VP[viewport];
@@ -296,8 +317,8 @@ async function fromRole(page, role = 'caisse') {
 /* ── 1 · boot: the launch void can never return ───────────────────────── */
 {
   // slow bridge: boot paints first, shell follows, boot is removed
-  let p = await openShell({ plugin: 'slow' });
-  await new Promise((r) => setTimeout(r, 250));
+  let p = await openShell({ plugin: 'controlled' });
+  await p.waitForFunction(() => typeof window.__releaseSecureGet === 'function');
   const early = await p.evaluate(() => {
     const boot = document.querySelector('#boot');
     const shell = document.querySelector('#shell');
@@ -305,7 +326,8 @@ async function fromRole(page, role = 'caisse') {
     const r = boot.getBoundingClientRect();
     return r.width > 0 && shell.hidden ? 'boot-visible' : 'boot-broken';
   });
-  early === 'boot-visible' ? ok('boot stage paints before secure storage resolves (shell still hidden)') : bad(`boot stage wrong at 250ms: ${early}`);
+  early === 'boot-visible' ? ok('boot stage paints before secure storage resolves (shell still hidden)') : bad(`boot stage wrong before secure storage resolves: ${early}`);
+  await p.evaluate(() => window.__releaseSecureGet({ value: '' }));
   await shot(p, 'boot-slow-bridge');
   await waitShell(p);
   (await p.evaluate(() => !!document.querySelector('#boot'))) ? bad('boot node lingers after shell shows') : ok('boot node removed once the shell shows');
@@ -1017,10 +1039,10 @@ for (const viewport of ['small320', 'ipadPortrait', 'ipadLandscape']) {
 
 /* ── 7 · reduced motion freezes ────────────────────────────────────────── */
 {
-  const p = await openShell({ plugin: 'slow' });
+  const p = await openShell({ plugin: 'controlled' });
   const sess = await p.createCDPSession();
   await sess.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
-  await new Promise((r) => setTimeout(r, 300));
+  await p.waitForFunction(() => typeof window.__releaseSecureGet === 'function');
   const frozen = await p.evaluate(() => {
     const ring = document.querySelector('.boot-ring');
     if (!ring) return 'no-boot';
@@ -1028,6 +1050,7 @@ for (const viewport of ['small320', 'ipadPortrait', 'ipadLandscape']) {
     return d < 0.01 ? 'frozen' : `animating:${d}s`;
   });
   frozen === 'frozen' ? ok('boot ring freezes under reduced motion') : bad(`boot ring state under reduced motion: ${frozen}`);
+  await p.evaluate(() => window.__releaseSecureGet({ value: '' }));
   await waitShell(p);
   const tileDur = await p.evaluate(() => {
     const t = document.querySelector('.tile');
@@ -1951,9 +1974,11 @@ for (const locale of ['fr', 'en', 'ar']) {
   await p.closeCtx();
 }
 
-await browser.close();
-server.close();
-fs.rmSync(work, { recursive: true, force: true });
+} finally {
+  await browser.close();
+  server.close();
+  fs.rmSync(work, { recursive: true, force: true });
+}
 console.log(`shots → ${shotsDir}`);
 console.log(failures ? `\napp-interaction-test : ${failures} échec(s), ${controls} contrôles` : `\napp-interaction-test : ${controls} contrôles, tout passe`);
 process.exit(failures ? 1 : 0);
