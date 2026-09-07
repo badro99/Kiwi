@@ -5501,7 +5501,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=486" defer></script>
+  <script src="assets/caisse-pwa.js?v=487" defer></script>
   <script src="assets/live-link.js?v=25" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -19873,7 +19873,15 @@
     /* ===========================================================
        === Persistence ===  (the shift survives a reload)
        =========================================================== */
-    const KC_STORE = 'kiwi-caisse-shift';
+    function kcStoreKey(slug) {
+      const s = slug != null ? slug : currentMerchantSlug();
+      return s ? ('kiwi-caisse-shift:' + s) : 'kiwi-caisse-shift';
+    }
+    const KC_STORE = {
+      toString() { return kcStoreKey(); },
+      valueOf() { return kcStoreKey(); },
+      [Symbol.toPrimitive]() { return kcStoreKey(); },
+    };
     let registerClosing = false;
 
     /* Un bon portant `opNum` vient du relais serveur. Les anciens instantanés
@@ -20149,10 +20157,29 @@
         }));
       } catch (e) {}
     }
+    function migrateLegacyShift() {
+      try {
+        const legacyRaw = localStorage.getItem('kiwi-caisse-shift');
+        if (!legacyRaw) return;
+        const legacy = JSON.parse(legacyRaw);
+        if (!legacy || legacy.v !== 1) return;
+        const targetSlug = legacy.merchant || currentMerchantSlug();
+        if (!targetSlug) return;
+        const targetKey = 'kiwi-caisse-shift:' + targetSlug;
+        if (!localStorage.getItem(targetKey)) {
+          localStorage.setItem(targetKey, legacyRaw);
+        }
+        localStorage.removeItem('kiwi-caisse-shift');
+      } catch (_) {}
+    }
     function clearPersistedShift() {
-      try { localStorage.removeItem(KC_STORE); } catch (e) {}
+      try {
+        localStorage.removeItem(KC_STORE);
+        localStorage.removeItem('kiwi-caisse-shift');
+      } catch (e) {}
     }
     function loadPersistedShift() {
+      migrateLegacyShift();
       try {
         const raw = localStorage.getItem(KC_STORE);
         if (!raw) return null;
@@ -20313,17 +20340,15 @@
          suivant partait chez B avec l'argent de A dedans, jusque sur le serveur
          (cf. la note dans persistShift).
 
-         On jette, on ne migre pas : un service ouvert chez quelqu'un d'autre
-         n'a aucun sens ici, et le seul geste sûr est de rouvrir propre. Un
-         enregistrement SANS commerçant est d'avant ce correctif ; on ne le
-         garde que si l'on n'est appairé nulle part, sinon rien ne prouve qu'il
-         est d'ici. */
+         Le stockage est désormais compartimenté par commerçant (KC_STORE).
+         Si le snapshot rechargé n'appartient pas à cet établissement, on ne le
+         restaure pas, mais on ne l'efface surtout pas : ré-appairer la caisse
+         ne doit pas détruire le service ouvert de l'autre commerce. */
       try {
         const here = (function () {
           try { return (storePaired() || {}).merchant || ''; } catch (_) { return ''; }
         })();
         if (here && String(saved.merchant || '') !== here) {
-          localStorage.removeItem(KC_STORE);
           return;
         }
       } catch (_) {}

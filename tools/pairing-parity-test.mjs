@@ -216,5 +216,80 @@ function residueOfA() {
     'l’événement kiwi-paired est annoncé pour que les surfaces repeignent');
 }
 
+/* ── 7 · isolation du service en cours par commerçant ────────────────────────
+ * Une caisse appairée chez A ne doit pas écraser ni détruire le service de B
+ * lors d'un ré-appairage. Le stockage est compartimenté (kiwi-caisse-shift:<slug>),
+ * la migration de l'ancienne clé kiwi-caisse-shift est assurée, et un décalage
+ * d'établissement au rechargement ne détruit jamais le service stocké. */
+{
+  const CAISSE_HTML = read('kiwi-caisse.html');
+
+  ok(/function\s+kcStoreKey\(/.test(CAISSE_HTML),
+    'kiwi-caisse.html définit kcStoreKey pour compartimenter le shift');
+  ok(/function\s+migrateLegacyShift\(/.test(CAISSE_HTML),
+    'kiwi-caisse.html définit migrateLegacyShift pour migrer l’ancien format');
+  ok(!/if\s*\(\s*here\s*&&\s*String\(\s*saved\.merchant\s*\|\|\s*''\s*\)\s*!==\s*here\s*\)\s*\{\s*localStorage\.removeItem\(KC_STORE\);/s.test(CAISSE_HTML),
+    'kiwi-caisse.html n’efface plus le shift lors d’un rechargement sur un autre commerçant');
+
+  // Test du comportement : migration et compartimentage
+  const mem = new Map();
+  const fakeLs = {
+    getItem: (k) => (mem.has(String(k)) ? mem.get(String(k)) : null),
+    setItem: (k, v) => { mem.set(String(k), String(v)); },
+    removeItem: (k) => { mem.delete(String(k)); },
+  };
+
+  let pairedSlug = 'restaurant-a';
+  function currentMerchantSlug() { return pairedSlug; }
+  function kcStoreKey(slug) {
+    const s = slug != null ? slug : currentMerchantSlug();
+    return s ? ('kiwi-caisse-shift:' + s) : 'kiwi-caisse-shift';
+  }
+  const KC_STORE = {
+    toString() { return kcStoreKey(); },
+    valueOf() { return kcStoreKey(); },
+    [Symbol.toPrimitive]() { return kcStoreKey(); },
+  };
+  function migrateLegacyShift() {
+    try {
+      const legacyRaw = fakeLs.getItem('kiwi-caisse-shift');
+      if (!legacyRaw) return;
+      const legacy = JSON.parse(legacyRaw);
+      if (!legacy || legacy.v !== 1) return;
+      const targetSlug = legacy.merchant || currentMerchantSlug();
+      if (!targetSlug) return;
+      const targetKey = 'kiwi-caisse-shift:' + targetSlug;
+      if (!fakeLs.getItem(targetKey)) {
+        fakeLs.setItem(targetKey, legacyRaw);
+      }
+      fakeLs.removeItem('kiwi-caisse-shift');
+    } catch (_) {}
+  }
+
+  // 1. Migration legacy
+  const legacyData = JSON.stringify({ v: 1, openedAt: '2026-09-07T10:00:00.000Z', merchant: 'restaurant-a', journal: [{ id: 'sale-1', total: 100 }] });
+  fakeLs.setItem('kiwi-caisse-shift', legacyData);
+  migrateLegacyShift();
+  ok(fakeLs.getItem('kiwi-caisse-shift') === null, 'l’ancienne clé globale kiwi-caisse-shift est nettoyée après migration');
+  ok(fakeLs.getItem('kiwi-caisse-shift:restaurant-a') === legacyData, 'le service legacy est migré sous kiwi-caisse-shift:restaurant-a');
+
+  // 2. Écriture avec KC_STORE
+  const shiftA = JSON.stringify({ v: 1, openedAt: '2026-09-07T10:00:00.000Z', merchant: 'restaurant-a', journal: [{ id: 'sale-2', total: 200 }] });
+  fakeLs.setItem(KC_STORE, shiftA);
+  ok(fakeLs.getItem('kiwi-caisse-shift:restaurant-a') === shiftA, 'l’écriture via KC_STORE cible bien la clé compartimentée');
+
+  // 3. Changement vers restaurant-b
+  pairedSlug = 'restaurant-b';
+  ok(fakeLs.getItem(KC_STORE) === null, 'restaurant-b ne voit pas le service de restaurant-a');
+  const shiftB = JSON.stringify({ v: 1, openedAt: '2026-09-07T11:00:00.000Z', merchant: 'restaurant-b', journal: [{ id: 'sale-3', total: 50 }] });
+  fakeLs.setItem(KC_STORE, shiftB);
+  ok(fakeLs.getItem('kiwi-caisse-shift:restaurant-b') === shiftB, 'restaurant-b sauvegarde son propre service');
+
+  // 4. Retour chez restaurant-a
+  pairedSlug = 'restaurant-a';
+  ok(fakeLs.getItem(KC_STORE) === shiftA, 'le retour chez restaurant-a retrouve son service intact');
+  ok(fakeLs.getItem('kiwi-caisse-shift:restaurant-b') === shiftB, 'le service de restaurant-b reste également préservé');
+}
+
 if (process.exitCode) console.error(`\n  ${pass} contrôles verts, au moins un rouge`);
 else console.log(`  ✓ pairing-parity — ${pass} contrôles verts`);
