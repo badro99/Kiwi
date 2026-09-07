@@ -4852,7 +4852,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
   <script src="assets/platform-kernel.js?v=5" defer></script>
   <script src="assets/platform-ops.js?v=5" defer></script>
   <script src="assets/operations.js?v=10" defer></script>
-<script src="assets/live-link.js?v=26" defer></script>
+<script src="assets/live-link.js?v=29" defer></script>
   <!-- Operator feature flags + managed PINs. Fail-safe: no backend ⇒ no change. -->
   <script src="assets/merchant-config.js?v=270" defer></script>
   <!-- The staff-role catalogue the operator console files PINs against — it says
@@ -8823,7 +8823,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         if (isCollapsed) {
           const ch = s.choices[0];
           const chItem = (typeof svFormulaItems !== 'undefined' ? svFormulaItems : menuItems).find(x => x.id === ch.itemId);
-          const chName = chItem ? chItem.name : ch.itemId;
+          const chName = chItem ? chItem.name : 'Option indisponible';
           const extraTxt = ch.extra ? `+${ch.extra} MAD` : 'inclus';
           return `
             <div class="fml-slot">
@@ -8840,8 +8840,8 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
 
         const chips = (s.choices || []).map(ch => {
           const chItem = (typeof svFormulaItems !== 'undefined' ? svFormulaItems : menuItems).find(x => x.id === ch.itemId);
-          const chName = chItem ? chItem.name : ch.itemId;
-          const avail = chItem ? (chItem.avail !== false) : true;
+          const chName = chItem ? chItem.name : 'Option indisponible';
+          const avail = chItem ? (chItem.avail !== false) : false;
           const on = sel.has(ch.itemId);
           const extraTxt = ch.extra ? `+${ch.extra} MAD` : 'inclus';
           return `

@@ -104,7 +104,18 @@ async function floorTargets(env, merchant) {
   } catch (_) {}
   return out;
 }
-async function syncTableSnapshot(env, merchant, rawTables, source) {
+// Evaluated inside the mutating SQL statement, not merely before an await.
+// Closing an old visit can never grant ownership of a reused table.
+export function serviceVisitGuard(merchant, table, visit) {
+  return {
+    sql: `EXISTS (SELECT 1 FROM table_sessions WHERE id = ? AND merchant = ? AND table_no = ? AND status = 'closed')
+      AND NOT EXISTS (SELECT 1 FROM table_sessions WHERE merchant = ? AND table_no = ? AND id <> ?
+        AND (status = 'open' OR opened_ts >= ?))`,
+    args: [visit.id, merchant, table, merchant, table, visit.id, Number(visit.opened_ts) || 0],
+  };
+}
+
+async function syncTableSnapshot(env, merchant, rawTables, source, visit) {
   const targets = await floorTargets(env, merchant);
   const incoming = Object.create(null);
   (Array.isArray(rawTables) ? rawTables : []).slice(0, 250).forEach((src) => {
@@ -118,7 +129,16 @@ async function syncTableSnapshot(env, merchant, rawTables, source) {
     };
   });
   if (!Object.keys(incoming).length) return { ok: false, events: [] };
+  const guard = visit ? serviceVisitGuard(merchant, Object.keys(incoming)[0], visit) : null;
   for (let attempt = 0; attempt < 4; attempt++) {
+    if (visit) {
+      try {
+        const newer = await env.DB.prepare(`SELECT id FROM table_sessions
+          WHERE merchant = ? AND table_no = ? AND id <> ? AND (status = 'open' OR opened_ts >= ?) LIMIT 1`)
+          .bind(merchant, Object.keys(incoming)[0], visit.id, Number(visit.opened_ts) || 0).first();
+        if (newer) return { ok: true, superseded: true, events: [] };
+      } catch (_) { return { ok: false, events: [] }; }
+    }
     const row = await readDoc(env, merchant);
     const previous = row.data.states && typeof row.data.states === 'object' ? row.data.states : {};
     const states = { ...previous };
@@ -165,12 +185,15 @@ async function syncTableSnapshot(env, merchant, rawTables, source) {
       if (row.rev) {
         const res = await env.DB.prepare(
           'UPDATE store_docs SET data = ?, rev = ?, updated_ts = ? WHERE merchant = ? AND feature = ? AND rev = ?'
-        ).bind(text, row.rev + 1, Date.now(), merchant, FEATURE, row.rev).run();
+            + (guard ? ' AND ' + guard.sql : '')
+        ).bind(text, row.rev + 1, Date.now(), merchant, FEATURE, row.rev, ...(guard ? guard.args : [])).run();
         if (Number(res && res.meta && res.meta.changes) > 0) return { ok: true, events: emitted };
       } else {
         const res = await env.DB.prepare(
-          'INSERT OR IGNORE INTO store_docs (merchant, feature, data, rev, updated_ts) VALUES (?, ?, ?, 1, ?)'
-        ).bind(merchant, FEATURE, text, Date.now()).run();
+          guard
+            ? 'INSERT OR IGNORE INTO store_docs (merchant, feature, data, rev, updated_ts) SELECT ?, ?, ?, 1, ? WHERE ' + guard.sql
+            : 'INSERT OR IGNORE INTO store_docs (merchant, feature, data, rev, updated_ts) VALUES (?, ?, ?, 1, ?)'
+        ).bind(merchant, FEATURE, text, Date.now(), ...(guard ? guard.args : [])).run();
         if (Number(res && res.meta && res.meta.changes) > 0) return { ok: true, events: emitted };
       }
     } catch (_) { return { ok: false, events: [] }; }
@@ -214,13 +237,13 @@ export async function publishGuestServiceRequest(env, merchant, rawTable, action
  * this after the employee sale is durable so the shared floor reaches the
  * terminal FREE state before the payment request can report success. Retrying
  * is safe: both the sale id and this state replacement are idempotent. */
-export async function settleServiceTable(env, merchant, rawTable) {
+export async function settleServiceTable(env, merchant, rawTable, visit) {
   const table = tableKey(rawTable);
   const targets = await floorTargets(env, merchant);
   if (!table || !targets[table]) return { ok: false, error: 'floor-table-required' };
   const result = await syncTableSnapshot(env, merchant, [{
     table, status: 'khawya', covers: 0, syncVersion: 4,
-  }], 'employee');
+  }], 'employee', visit);
   if (!result.ok) return { ok: false, error: 'state-write-failed' };
   await poke(env, merchant, FEATURE);
   return { ok: true, table, events: result.events };

@@ -384,9 +384,36 @@ section('Caisse handover & closure accounting');
   else fail(`caisse-accounting-handover-test.mjs exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
 }
 
+section('MixMax reconciliation, Gap A & Gap B repair');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'mixmax-reconciliation-repair-test.mjs')], { encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0) ok(`mixmax reconciliation repair green (${(out.match(/✓/g) || []).length} controls)`);
+  else fail(`mixmax-reconciliation-repair-test.mjs exited ${r.status} - ${out.trim().split('\n').slice(-3).join(' | ')}`);
+}
+
+section('Production split payment, authoritative void & menu resolution');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'production-split-void-menu-test.mjs')], { encoding: 'utf8' });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0) ok(`production split, void & menu resolution green (${(out.match(/✓/g) || []).length} controls)`);
+  else fail(`production-split-void-menu-test.mjs exited ${r.status} - ${out.trim().split('\n').slice(-3).join(' | ')}`);
+}
+
 /* ── 4e · durable browser outbox wiring ────────────────────────────────────
  * The behavioral fixtures run in a real browser; this zero-dependency gate
  * locks their tested engine into every operational shell and the PWA cache. */
+section('Settlement recovery and durable pending commands');
+{
+  const { spawnSync } = require('child_process');
+  for (const file of ['settlement-recovery-test.mjs', 'live-link-settlement-test.mjs', 'live-link-outbox-browser-test.mjs']) {
+    const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', file)], { encoding: 'utf8' });
+    if (r.status === 0) ok(`${file} green`);
+    else fail(`${file}: ${((r.stdout || '') + (r.stderr || '')).slice(-2000)}`);
+  }
+}
 section('Offline transaction foundation (tools/offline-foundation-test.mjs)');
 {
   const { spawnSync } = require('child_process');

@@ -5502,7 +5502,7 @@
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
   <script src="assets/caisse-pwa.js?v=493" defer></script>
-  <script src="assets/live-link.js?v=26" defer></script>
+  <script src="assets/live-link.js?v=29" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
   <script src="assets/staff-roles.js?v=1" defer></script>
@@ -5529,7 +5529,7 @@
        avec le tableau de bord. Après cloud-doc.js, dont il tient sa copie
        serveur · c'est ce qui fait qu'un Z clôturé sur l'iPad du comptoir
        s'ouvre le lendemain sur le téléphone du patron. -->
-  <script src="assets/day-report.js?v=5" defer></script>
+  <script src="assets/day-report.js?v=7" defer></script>
   <!-- Fidélité · Carnet clients: the shared client book (KiwiStore), captured on
        the till, read live on the owner's dashboard. venue-store → clients-store → book. -->
   <script src="assets/venue-store.js?v=3" defer></script>
@@ -12608,7 +12608,8 @@
         });
       }
 
-      splitState.flow = { parts, paidCount: 0 };
+      const flowSession = (splitState.tableId && phoneSessionOf(splitState.tableId)) || ('flow-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7));
+      splitState.flow = { parts, paidCount: 0, session: flowSession };
       $('#split-setup').hidden = true;
       $('#split-flow').hidden = false;
       renderSplitFlow();
@@ -12677,19 +12678,15 @@
       const p = splitState.flow.parts[partIdx];
       const tip = money(p.tip || 0);
       const base = money(p.base != null ? p.base : (p.amount - tip));
-      const completesTable = !splitState.isVrap && splitState.tableId
-        && splitState.flow.paidCount + 1 >= splitState.flow.parts.length;
-      const entry = recordSale(base, method === 'carte' ? 'card' : 'cash', (splitState.sourceLabel || 'Table') + ' · part ' + (partIdx + 1), tip, p.lines,
-        completesTable ? splitState.tableId : '');
+      const splitInfo = { index: partIdx, count: splitState.flow.parts.length };
+      const entry = recordSale(base, method === 'carte' ? 'card' : 'cash',
+        (splitState.sourceLabel || 'Table') + ' · part ' + (partIdx + 1), tip, p.lines,
+        splitState.tableId || '', null, splitInfo);
       if (entry) {
-        if (!entry.table && splitState.tableId) {
-          entry.table = String(splitState.tableId);
-          entry.channel = tables[splitState.tableId] && tables[splitState.tableId].zone === 'terrasse' ? 'terrace' : 'dining';
-        }
+        if (splitState.flow && splitState.flow.session && !entry.session) entry.session = String(splitState.flow.session);
         p.saleId = entry.id;
       }
-      p.paid = true;
-      p.payMethod = method;
+      p.paid = true; p.payMethod = method;
       splitState.flow.paidCount++;
       renderSplitFlow();
 
@@ -13138,52 +13135,195 @@
      * drapeau `voided` porté par l'écriture est le registre · ce qui rend
      * l'opération idempotente sur les quatre-vingt-dix secondes suivantes.
      * Même mécanique que la boutique (assets/pos-boutique.js). */
-    function reconcileVoids(refs, saleIds) {
+    function refreshOpenReconciliationModals() {
+      try {
+        if ($('#handover-modal') && $('#handover-modal').classList.contains('is-open')) {
+          renderHandoverCount(true);
+          if ($('#ho-verify') && $('#ho-verify').value !== '') updateHandoverVerdict();
+        }
+      } catch (_) {}
+      try {
+        if ($('#cloture-modal') && $('#cloture-modal').classList.contains('is-open')) {
+          renderCloture(true);
+        }
+      } catch (_) {}
+      try {
+        if ($('#cm-modal') && $('#cm-modal').classList.contains('is-open') && typeof renderCashMovements === 'function') {
+          renderCashMovements();
+        }
+      } catch (_) {}
+    }
+
+    const activeCloudSaleIds = new Set();
+
+    function reconcileVoids(refs, saleIds, voidEvents, opts) {
       if (!storeIsReal()) return 0;
       const KP = window.KiwiPosSale;
       const hit = (KP && KP.refMatcher) ? KP.refMatcher(refs) : null;
       const ids = new Set((saleIds || []).map((id) => String(id || '')).filter(Boolean));
+      const activeIds = (opts && opts.activeSaleIds) ? opts.activeSaleIds : ((typeof activeCloudSaleIds !== 'undefined' && activeCloudSaleIds.size) ? activeCloudSaleIds : null);
+      const restoredIds = (opts && opts.restoredIds) ? opts.restoredIds : null;
+
+      function isFormattedFiscal(ref) {
+        const s = String(ref || '').trim();
+        if (!s) return false;
+        if (/^\d{6}-/i.test(s)) return true;
+        if (/^(kw|opd|rec|fac|ticket|cmd)-/i.test(s)) return true;
+        if (/-\w{2}$/.test(s) && s.length >= 6) return true;
+        return false;
+      }
+
+      const voidMapById = new Map();
+      const voidMapByRef = new Map();
+      if (Array.isArray(voidEvents)) {
+        voidEvents.forEach((ev) => {
+          if (!ev) return;
+          const vts = ev.voidTs != null ? Number(ev.voidTs) : (ev.vts != null ? Number(ev.vts) : null);
+          if (ev.id) voidMapById.set(String(ev.id), vts);
+          if (ev.ref) voidMapByRef.set(String(ev.ref), vts);
+        });
+      }
+
       let touched = 0;
       journal.forEach((e) => {
         if (!e) return;
         let serverId = '';
         try { serverId = window.KiwiLive?.saleIdFor?.(e, currentMerchantSlug()) || ''; } catch (_) {}
-        const out = !!((hit && e.ref && hit(e.ref)) || ids.has(String(e.id || '')) || (serverId && ids.has(serverId)));
-        if (out === !!e.voided) return;
-        e.voided = out;
-        /* La vente a sorti sa marchandise en entrant (recordSale plus bas). La
-           sortir des livres sans rendre les articles laisse l'inventaire plus
-           bas que le réel, définitivement. Le contre-mouvement dérive son
-           identifiant du mouvement d'origine : rejouer l'annulation ne rend pas
-           deux fois. Même geste que assets/pos-sale.js (dropRefs).
-           Le rétablissement d'une vente annulée ne re-sort PAS la marchandise ·
-           les identifiants de mouvement sont déterministes, donc un second
-           record() est ignoré. C'est le comportement des quatorze métiers ;
-           un aller-retour annulation→rétablissement laisse le stock haut. */
-        if (out) { try { window.KiwiInventoryConsumption?.reverse?.(e.ref, 'Vente sortie des livres'); } catch (_) {} }
-        touched++;
+
+        const entryId = String(e.id || '');
+        const entryRef = String(e.ref || '').trim();
+        const saleTs = (e.time instanceof Date ? e.time.getTime() : new Date(e.time || 0).getTime()) || 0;
+
+        // Explicit restoration evidence: restores any voided entry
+        if (e.voided && restoredIds && ((entryId && restoredIds.has(entryId)) || (serverId && restoredIds.has(serverId)) || (entryRef && restoredIds.has(entryRef)))) {
+          e.voided = false;
+          delete e.voidConfirmed;
+          delete e.voidAuthority;
+          delete e.voidTs;
+          delete e.voidAt;
+          touched++;
+          return;
+        }
+
+        let matched = false;
+
+        // 1. Exact unique ID match (authoritative: independent of untrusted client clock)
+        if ((entryId && ids.has(entryId)) || (serverId && ids.has(serverId))) {
+          matched = true;
+        }
+
+        let refHitInFeed = false;
+        let allowRefMatch = false;
+        let causalityFailed = false;
+
+        // 2. Reference match (only if not already matched, and reference is not a bare table/seat identifier)
+        if (!matched && hit && entryRef) {
+          const isBareTable = /^\d{1,4}$/.test(entryRef);
+          const isTableSeat = /^[A-Za-z]{1,4}-\d{1,3}$/.test(entryRef);
+          const isTableSale = Boolean(e.table || e.session || entryId.startsWith('visit-'));
+
+          // Bare table numbers or table sales with non-fiscal refs MUST NEVER be matched by ref
+          allowRefMatch = !isBareTable && (!isTableSale || (!isTableSeat && isFormattedFiscal(entryRef)));
+
+          if (hit(entryRef)) {
+            refHitInFeed = true;
+            if (allowRefMatch) {
+              const voidTs = voidMapByRef.get(entryRef);
+              if (voidTs == null || saleTs <= voidTs + 60000) {
+                matched = true;
+              } else {
+                causalityFailed = true;
+              }
+            }
+          }
+        }
+
+        if (matched) {
+          const isServerConfirmed = Boolean(
+            (entryId && ids.has(entryId)) ||
+            (serverId && ids.has(serverId)) ||
+            (entryId && voidMapById.has(entryId)) ||
+            (serverId && voidMapById.has(serverId))
+          );
+          const newAuthority = isServerConfirmed ? 'server' : 'ref';
+
+          if (!e.voided || (isServerConfirmed && !e.voidConfirmed)) {
+            e.voided = true;
+            if (isServerConfirmed) e.voidConfirmed = true;
+            e.voidAuthority = newAuthority;
+            const voidTs = (entryId && voidMapById.get(entryId)) || (serverId && voidMapById.get(serverId)) || (entryRef && voidMapByRef.get(entryRef)) || Date.now();
+            e.voidTs = voidTs;
+            e.voidAt = Date.now();
+            if (typeof activeCloudSaleIds !== 'undefined') {
+              if (entryId) activeCloudSaleIds.delete(entryId);
+              if (serverId) activeCloudSaleIds.delete(serverId);
+            }
+            try { window.KiwiInventoryConsumption?.reverse?.(e.ref, 'Vente sortie des livres'); } catch (_) {}
+            touched++;
+          }
+          return;
+        }
+
+        // --- At this point, matched === false ---
+
+        // A confirmed server void MUST NEVER be cleared by an empty feed, partial feed, or feed omission.
+        // It remains durable unless explicit restoration evidence is provided (restoredIds).
+        if (e.voided && e.voidConfirmed) {
+          return;
+        }
+
+        // A void based on reference authority also remains durable; omission from subsequent feeds
+        // does not resurrect it without explicit restoration or confirmed server state.
+        if (e.voided && e.voidAuthority === 'ref') {
+          return;
+        }
+
+        // An ambiguous legacy local flag (voided === true without voidConfirmed):
+        // Heals ONLY when authoritative receipt-level evidence confirms it is active on the server
+        // (i.e. receipt identity is in activeIds / active cloud sales with void_ts IS NULL).
+        // Unrelated reference collisions in the void feed must NEVER infer that the receipt is active.
+        if (e.voided && !e.voidConfirmed) {
+          const isCloudActive = Boolean(activeIds && (activeIds.has(entryId) || (serverId && activeIds.has(serverId))));
+          if (isCloudActive) {
+            e.voided = false;
+            delete e.voidConfirmed;
+            delete e.voidAuthority;
+            delete e.voidTs;
+            delete e.voidAt;
+            touched++;
+          }
+          return;
+        }
       });
       if (!touched) return 0;
       renderShiftStats();
-      try { if ($('#journal-drawer') && $('#journal-drawer').classList.contains('is-open')) renderJournal(); } catch (_) {}
-      try { if ($('#handover-modal') && $('#handover-modal').classList.contains('is-open')) renderHandoverCount(true); } catch (_) {}
-      try { if ($('#cloture-modal') && $('#cloture-modal').classList.contains('is-open')) renderCloture(true); } catch (_) {}
-      try { if ($('#cm-modal') && $('#cm-modal').classList.contains('is-open') && typeof renderCashMovements === 'function') renderCashMovements(); } catch (_) {}
-      /* persistShift() écrit le journal · donc les drapeaux. saveProvisional()
-         écrit le rapport du jour. Il faut les DEUX : sans le premier un simple
-         rechargement ressuscitait la vente annulée dans les totaux ; sans le
+      if ($('#journal-drawer') && $('#journal-drawer').classList.contains('is-open')) renderJournal();
+      try { if (typeof refreshOpenReconciliationModals === 'function') refreshOpenReconciliationModals(); } catch (_) {}
+      /* persistShift() ecrit le journal - donc les drapeaux. saveProvisional()
+         ecrit le rapport du jour. Il faut les DEUX : sans le premier un simple
+         rechargement ressuscitait la vente annulee dans les totaux ; sans le
          second le rapport provisoire du tableau de bord la comptait encore. */
       try { persistShift(); } catch (_) {}
       try { saveProvisional(true); } catch (_) {}
       return touched;
     }
     document.addEventListener('kiwi-sales-voided', (e) => {
-      try { reconcileVoids((e && e.detail && e.detail.refs) || [], (e && e.detail && e.detail.ids) || []); } catch (_) {}
+      try {
+        reconcileVoids(
+          (e && e.detail && e.detail.refs) || [],
+          (e && e.detail && e.detail.ids) || [],
+          (e && e.detail && e.detail.voidEvents) || []
+        );
+      } catch (_) {}
     });
     /* Le sondage qui a précédé cet écouteur ne se rejouera pas tout seul. */
     try {
       if (window.KiwiLive && window.KiwiLive.voidedRefs) {
-        reconcileVoids(window.KiwiLive.voidedRefs(), window.KiwiLive.voidedSaleIds ? window.KiwiLive.voidedSaleIds() : []);
+        reconcileVoids(
+          window.KiwiLive.voidedRefs(),
+          window.KiwiLive.voidedSaleIds ? window.KiwiLive.voidedSaleIds() : [],
+          window.KiwiLive.voidEvents ? window.KiwiLive.voidEvents() : []
+        );
       }
     } catch (_) {}
 
@@ -13293,7 +13433,7 @@
         actorId: String(d.actorId || (currentCashier && currentCashier.id) || '').slice(0, 96)
       };
     }
-    function recordSale(amount, method, label, tip, lines, settlementTable, tenderOrder) {
+    function recordSale(amount, method, label, tip, lines, settlementTable, tenderOrder, split) {
       amount = money(amount);
       if (amount <= 0) return;
       /* An OrderPro takeaway is one commercial event even if the success modal
@@ -13340,11 +13480,24 @@
              journal. The employee feed then recognizes this caisse payment as
              already present, while employee payments carry the same -emp id
              and are imported exactly once. */
-          entry.id = 'visit-' + String(visit).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 52) + '-emp';
+          const splitIndex = (split && Number.isFinite(split.index)) ? Number(split.index) : null;
+          entry.id = splitIndex != null
+            ? ('visit-' + String(visit).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40) + '-split-' + splitIndex + '-emp')
+            : ('visit-' + String(visit).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 52) + '-emp');
+        } else if (split && Number.isFinite(split.index)) {
+          entry.id = entry.id + '-split-' + Number(split.index);
         }
         entry.channel = tables[settlementTable] && tables[settlementTable].zone === 'terrasse' ? 'terrace' : 'dining';
       } else if (mode === 'vrap') {
         entry.channel = 'takeaway';
+        if (split && Number.isFinite(split.index)) {
+          entry.id = entry.id + '-split-' + Number(split.index);
+        }
+      } else if (split && Number.isFinite(split.index)) {
+        entry.id = entry.id + '-split-' + Number(split.index);
+      }
+      if (split && Number.isFinite(split.index) && Number.isFinite(split.count)) {
+        entry.split = { index: Number(split.index), count: Number(split.count) };
       }
       if (Array.isArray(lines) && lines.length) {
         entry.lines = lines.filter(l => l.kind !== 'formula-part').map(l => {
@@ -13418,6 +13571,7 @@
       } catch (_) {}
       renderShiftStats();
       if ($('#journal-drawer').classList.contains('is-open')) renderJournal();
+      refreshOpenReconciliationModals();
       return entry;
     }
 
@@ -13464,6 +13618,18 @@
       const saleId = String(sale.id || sale.saleId || '');
       if (saleId && (String(entry.id || '') === saleId
         || String(entry.serverSaleId || '') === saleId)) return true;
+
+      // Do not conflate different parts of a split bill
+      const entryId = String(entry.id || '');
+      const entryIsSplit = entryId.includes('-split-') || /·\s*part\s*\d+/i.test(String(entry.label || ''));
+      const saleIsSplit = saleId.includes('-split-') || /·\s*part\s*\d+/i.test(String(sale.label || sale.orderRef || ''));
+      if (entryIsSplit || saleIsSplit) {
+        if (saleId && entryId && entryId !== saleId) return false;
+        const entryPartMatch = String(entry.label || '').match(/·\s*part\s*(\d+)/i) || entryId.match(/-split-(\d+)/);
+        const salePartMatch = String(sale.label || sale.orderRef || '').match(/·\s*part\s*(\d+)/i) || saleId.match(/-split-(\d+)/);
+        if (entryPartMatch && salePartMatch && entryPartMatch[1] !== salePartMatch[1]) return false;
+      }
+
       const saleOrderId = String(sale.orderId || '');
       if (saleOrderId && String(entry.orderId || '') === saleOrderId) return true;
 
@@ -13482,7 +13648,7 @@
       return localRefs.some((ref) => cloudRefs.includes(ref));
     }
 
-    function reconcileCloudSaleInJournal(sale) {
+    function reconcileCloudSaleInJournal(sale, meta) {
       const matches = [];
       journal.forEach((entry, index) => {
         if (journalEntryMatchesCloudSale(entry, sale)) matches.push(index);
@@ -13496,6 +13662,33 @@
       const keepIndex = matches.find((index) => !journal[index].origin) ?? matches[0];
       const keep = journal[keepIndex];
       keep.serverSaleId = String(sale.id || sale.saleId || keep.serverSaleId || '');
+      if (keep.voided) {
+        if (keep.voidConfirmed || keep.voidAuthority === 'ref' || keep.voidAt || keep.voidTs) {
+          // A confirmed server void must NEVER be resurrected by an older active-sale feed response.
+          // It can only be restored with explicit restoration evidence (e.g. sale.restored or post-void freshness).
+          const isExplicitRestore = sale.restored === true
+            || (sale.restoredTs && keep.voidTs && Number(sale.restoredTs) > Number(keep.voidTs));
+          const hasPostVoidFreshness = Boolean(meta && meta.requestTime && keep.voidAt && (meta.requestTime > keep.voidAt)
+            && !(window.KiwiLive && window.KiwiLive.voidedSaleIds && window.KiwiLive.voidedSaleIds().includes(keep.serverSaleId)));
+
+          if (isExplicitRestore || hasPostVoidFreshness) {
+            keep.voided = false;
+            delete keep.voidConfirmed;
+            delete keep.voidAuthority;
+            delete keep.voidTs;
+            delete keep.voidAt;
+          }
+        } else {
+          // An ambiguous legacy local flag (voided: true without voidConfirmed):
+          // A matching cloud sale arriving from D1 (where void_ts IS NULL) is authoritative receipt-level
+          // evidence that this sale is currently active on the server.
+          keep.voided = false;
+          delete keep.voidConfirmed;
+          delete keep.voidAuthority;
+          delete keep.voidTs;
+          delete keep.voidAt;
+        }
+      }
       if (!keep.orderId && sale.orderId) keep.orderId = String(sale.orderId);
       const permanentRef = String(sale.receiptRef || sale.ref || '').trim();
       if (permanentRef && (keep.channel === 'takeaway'
@@ -13514,6 +13707,7 @@
     }
 
     function ingestSettledCloudSales(sales) {
+      const meta = arguments[1];
       /* Never advance/drop the financial feed before a register exists. This
          was the parity bug: watchFeed started at DOMContentLoaded, called this
          branch while shiftOpenedAt was null, then advanced its cursor forever. */
@@ -13521,6 +13715,8 @@
       let changed = false;
       (sales || []).forEach((sale) => {
         if (!sale || !(Number(sale.amount) > 0)) return;
+        const sid = String(sale.id || sale.saleId || '');
+        if (sid) activeCloudSaleIds.add(sid);
         /* The caisse journal is THIS service, not the commercial day. Closing
            the register freezes and clears it; reopening at 19:20 must start at
            0 even though Dashboard keeps the full day's ledger. Employee and
@@ -13530,7 +13726,7 @@
            had just been printed. */
         const saleTs = Number(sale.ts || 0);
         if (!saleTs || saleTs < shiftOpenedAt.getTime()) return;
-        if (reconcileCloudSaleInJournal(sale)) { changed = true; return; }
+        if (reconcileCloudSaleInJournal(sale, meta)) { changed = true; return; } // reconcileCloudSaleInJournal(sale)
         const entry = cloudSaleJournalEntry(sale);
         attachReceipt(entry);
         journal.push(entry);
@@ -13553,6 +13749,7 @@
       try { saveProvisional(true); } catch (_) {}
       renderShiftStats();
       if ($('#journal-drawer').classList.contains('is-open')) renderJournal();
+      refreshOpenReconciliationModals();
       return 1;
     }
 
@@ -13563,12 +13760,14 @@
       const merchant = currentMerchantSlug();
       if (!merchant) return Promise.resolve(false);
       const from = shiftOpenedAt.getTime();
+      const requestTime = Date.now();
       return fetch('/api/feed?merchant=' + encodeURIComponent(merchant) + '&from=' + from, {
         credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' },
       }).then((r) => r.ok ? r.json() : null)
         .then((data) => {
           if (!data || !Array.isArray(data.sales)) return false;
-          ingestSettledCloudSales(data.sales);
+          ingestSettledCloudSales(data.sales, { requestTime, responseTime: Date.now() });
+          refreshOpenReconciliationModals();
           return true;
         }).catch(() => false);
     }
@@ -14525,7 +14724,7 @@
       const pv = storePaired() || {};
       return DR.build({
         day: currentBusinessDay(),
-        sales: journal,
+        sales: journal.filter(e => e && !e.voided),
         session: sess,
         store: { slug: DR.storeSlug(), name: storeName(), location: storeCity(), type: pv.type || '' },
         source: 'caisse',
@@ -15254,6 +15453,7 @@
           movementAmountCents: Math.round(amount * 100), movementReason: finalReason,
           actorId: actorId, openedAt: shiftOpenedAt.getTime(), occurredAt: Date.now()
         });
+        refreshOpenReconciliationModals();
         toast(`${cmType === 'in' ? 'Entrée' : 'Sortie'} de caisse · ${fmtMAD(amount)} (${actorName})`);
         closeCashMove();
       });
@@ -16587,6 +16787,7 @@
         try { persistShift(); } catch (_) {}
         try { saveProvisional(true); } catch (_) {}
         if ($('#journal-drawer').classList.contains('is-open')) renderJournal();
+        refreshOpenReconciliationModals();
         closeRefund();
         if (window.KiwiEnv?.isReal?.() && (!refundQueued || refundQueued.ok === false)) {
           toast('Remboursement enregistré ici · synchronisation à reprendre');
@@ -16922,6 +17123,7 @@
       confirmHandover,
       renderCloture,
       reconcileVoids,
+      refreshOpenReconciliationModals,
     });
 
     handoverModal.addEventListener('click', (e) => {
@@ -20267,6 +20469,10 @@
         if (e.refundedAmount != null) entry.refundedAmount = money(e.refundedAmount);
         if (e.reason)          entry.reason   = e.reason;
         if (e.voided)          entry.voided   = true;
+        if (e.voidConfirmed)   entry.voidConfirmed = true;
+        if (e.voidAuthority)   entry.voidAuthority = String(e.voidAuthority).slice(0, 32);
+        if (e.voidTs != null)  entry.voidTs   = Number(e.voidTs);
+        if (e.voidAt != null)  entry.voidAt   = Number(e.voidAt);
         if (e.tip)             entry.tip      = e.tip;       // pourboire
         if (e.lines)           entry.lines    = e.lines;     // itemised receipt
         if (e.cashier)         entry.cashier  = e.cashier;   // ringing cashier

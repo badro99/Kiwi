@@ -331,6 +331,7 @@
   function stableId(merchantId, entry) {
     var source = String((entry && (entry.id || entry.ref)) || '');
     if (!source) return uid();
+    if (source.startsWith('visit-')) return source.slice(0, 64);
     /* FNV-1a: deterministic across reloads, short enough for the 64-char DB
        key, and includes the tenant so two shops may both own ticket #42. */
     var s = String(merchantId || '') + '|' + source, h = 2166136261;
@@ -341,6 +342,19 @@
   var flushing = false, queueStorageError = false;
   var flushStartedAt = 0;
   var lastSyncStatus = 0, lastSyncError = '';
+  var recoveryTimer = null;
+  function scheduleRecovery() {
+    if (recoveryTimer != null) return;
+    recoveryTimer = setTimeout(function () { recoveryTimer = null; flushQueue(); }, 3000);
+  }
+  function paymentCompletion(response) {
+    if (!response || !response.ok) return Promise.resolve({ complete: false, pending: false });
+    // 2xx accepts the receipt, but only the body proves settlement completed.
+    // An unreadable acknowledgement stays retryable under the original ID.
+    return response.json().then(function (data) {
+      return { complete: !!(data && data.ok && !data.settlementPending), pending: !!(data && data.ok && data.settlementPending) };
+    });
+  }
 
   function flushLegacyQueue() {
     if (flushing) return Promise.resolve(queueStatus());
@@ -352,14 +366,17 @@
        sale behind it hostage. A queue can also survive a terminal re-pairing:
        retain the former merchant's debt for support, but never submit it with
        the new merchant's till cookie or let it block the new store's sales. */
-    var body = q.find(function (x) { return x && !x._blocked && x.merchant === active; });
-    if (!body) { queueSignal(); return Promise.resolve(queueStatus()); }
+    var body = q.find(function (x) { return x && !x._blocked && x.merchant === active && !(x._retryAfter > Date.now()); });
+    if (!body) {
+      if (q.some(function (x) { return x && !x._blocked && x.merchant === active; })) scheduleRecovery();
+      queueSignal(); return Promise.resolve(queueStatus());
+    }
     flushing = true;
     return new Promise(function (resolve) {
-      function done(settled, blocked, status) {
+      function done(settled, blocked, status, pending) {
         flushing = false;
         lastSyncStatus = status || 0;
-        lastSyncError = settled ? '' : (status ? 'HTTP ' + status : 'network');
+        lastSyncError = settled ? '' : (pending ? 'settlement-pending' : (status ? 'HTTP ' + status : 'network'));
         var current = qRead();
         if (settled) {
           var rest = current.filter(function (x) { return x && x.id !== body.id; });
@@ -368,6 +385,14 @@
           pingLocal();                           // the row exists now — tell the dashboards
           if (rest.some(function (x) { return x && !x._blocked; })) return resolve(flushLegacyQueue());
           return resolve(queueStatus());
+        }
+        if (pending) {
+          current.forEach(function (x) { if (x && x.id === body.id) { x._retryAfter = Date.now() + 3000; x._settlementPending = true; } });
+          qWrite(current);
+          moneySignal(body, 'retry', status);
+          pingLocal();
+          scheduleRecovery();
+          return resolve(flushLegacyQueue());
         }
         if (blocked) {
           current.forEach(function (x) {
@@ -400,7 +425,9 @@
              409 conflicts (open-service-session-required, etc.) are reconcilable
              after table/session synchronization and must remain retryable. */
           var BLOCK = { 400: 1, 422: 1 };
-          done(!!(r && r.ok), !!(r && BLOCK[r.status]), r && r.status);
+          return paymentCompletion(r).then(function (result) {
+            done(result.complete, !!(r && BLOCK[r.status]), r && r.status, result.pending);
+          });
         }).catch(function () {
           if (timeoutId) clearTimeout(timeoutId);
           done(false, false, 0);
@@ -425,7 +452,10 @@
       if (!row) {
         flushing = false;
         flushStartedAt = 0;
-        return refreshOutboxStatus();
+        return refreshOutboxStatus().then(function (state) {
+          if (state && state.pending > 0) scheduleRecovery();
+          return state;
+        });
       }
       var body = row.payload;
       function settle(ok, permanent, status, error) {
@@ -438,10 +468,14 @@
           flushing = false;
           flushStartedAt = 0;
           if (ok) { moneySignal(body, 'accepted', status); pingLocal(); }
-          else moneySignal(body, permanent ? 'blocked' : 'retry', status);
+          else {
+            moneySignal(body, permanent ? 'blocked' : 'retry', status);
+            if (!permanent) scheduleRecovery();
+            if (error === 'settlement-pending') pingLocal();
+          }
           return refreshOutboxStatus();
         }).then(function (state) {
-          if (state && state.pending > 0 && navigator.onLine) return flushOutbox(force);
+          if (state && state.pending > 0 && navigator.onLine) return flushOutbox(false);
           return state;
         });
       }
@@ -456,7 +490,10 @@
       }).then(function (response) {
         if (timeoutId) clearTimeout(timeoutId);
         var BLOCK = { 400: 1, 422: 1 };
-        return settle(!!response.ok, !!BLOCK[response.status], response.status, response.ok ? '' : 'HTTP ' + response.status);
+        return paymentCompletion(response).then(function (result) {
+          return settle(result.complete, !!BLOCK[response.status], response.status,
+            result.pending ? 'settlement-pending' : (response.ok ? 'unverified-response' : 'HTTP ' + response.status));
+        });
       }).catch(function (err) {
         if (timeoutId) clearTimeout(timeoutId);
         var errMsg = err && (err.name === 'AbortError' ? 'timeout' : err.message) || 'network';
@@ -618,6 +655,10 @@
     if (entry.channel) body.channel = String(entry.channel).slice(0, 24);
     if (entry.orderId) body.orderId = String(entry.orderId).slice(0, 64);
     if (entry.session) body.session = String(entry.session).slice(0, 64);
+    if (entry.table) body.table = String(entry.table).slice(0, 32);
+    if (entry.split && Number.isInteger(Number(entry.split.index)) && Number.isInteger(Number(entry.split.count))) {
+      body.split = { index: Number(entry.split.index), count: Number(entry.split.count) };
+    }
     if (entry.discountAmountCents != null) {
       body.grossAmountCents = Math.round(Number(entry.grossAmountCents));
       body.discountAmountCents = Math.round(Number(entry.discountAmountCents));
@@ -861,29 +902,44 @@
      une vente sortie des livres, mais aussi une vente REMISE dedans, qui se
      signale justement par sa disparition de cette liste. Un delta ne dirait
      jamais la seconde. */
-  var voidedRefs = [], voidedIds = [];
+  var voidedRefs = [], voidedIds = [], voidedEvents = [];
   function voided() { return voidedRefs.slice(); }
   function voidedSaleIds() { return voidedIds.slice(); }
+  function voidedEventList() { return voidedEvents.slice(); }
 
   function applyVoids(list, tenant) {
     if (!list) return;
-    var cursors = [], refs = [], ids = [];
+    var cursors = [], refs = [], ids = [], events = [];
     list.forEach(function (v) {
       if (!v) return;
       var c = Number(v.c) || 0;
       if (c) { cursors.push(c); if (tenant) delete feedSeen[tenant + '#' + c]; }
       if (v.r) refs.push(String(v.r));
       if (v.i) ids.push(String(v.i));
+      events.push({
+        cursor: c,
+        id: v.i ? String(v.i) : '',
+        ref: v.r ? String(v.r) : '',
+        voidTs: v.vts != null ? Number(v.vts) : null,
+        ts: v.ts != null ? Number(v.ts) : null,
+      });
     });
     voidedRefs = refs;
     voidedIds = ids;
+    voidedEvents = events;
     /* Annoncé À CHAQUE passage, même quand la liste est vide ou inchangée. Le
        module métier qui écoute est idempotent par construction (il compare son
        journal à cette liste), et c'est ce passage-là qui lui apprend qu'une
        vente est revenue. */
     try {
       document.dispatchEvent(new CustomEvent('kiwi-sales-voided', {
-        detail: { refs: refs.slice(), ids: ids.slice(), merchant: tenant || '', source: 'live-link' },
+        detail: {
+          refs: refs.slice(),
+          ids: ids.slice(),
+          voidEvents: events.slice(),
+          merchant: tenant || '',
+          source: 'live-link'
+        },
       }));
     } catch (_) {}
     if (!list.length) return;
@@ -1200,6 +1256,7 @@
        l'état, non. */
     voidedRefs: voided,
     voidedSaleIds: voidedSaleIds,
+    voidEvents: voidedEventList,
     /* What the assistant prints under an answer: which tenant it is reading,
        when the server last answered, how many rows it has bridged, and how
        many sales this device still owes the server. A number a merchant can

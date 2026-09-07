@@ -274,10 +274,12 @@ function runVoids(journalRows, refs, opts) {
   const fn = new Function('scope', `
     const { journal, storeIsReal, currentMerchantSlug, window, renderShiftStats, persistShift, saveProvisional, $ } = scope;
     ${extract(caisse, 'reconcileVoids')}
-    return reconcileVoids(scope.__refs, scope.__ids);
+    return reconcileVoids(scope.__refs, scope.__ids, scope.__events, scope.__opts);
   `);
   scope.__refs = refs;
   scope.__ids = (opts && opts.ids) || [];
+  scope.__events = (opts && opts.events) || [];
+  scope.__opts = opts || {};
   const touched = fn(scope);
   return { touched, journal: journalRows, painted: scope.painted, persisted: scope.persisted };
 }
@@ -292,7 +294,7 @@ let v = runVoids(J, ['AB-1']);
 eq(v.touched, 1, 'une vente retirée est marquée');
 eq(J[0].voided, true, 'la bonne vente porte le drapeau');
 eq(!!J[1].voided, false, 'la voisine n\'est pas touchée');
-ok(v.persisted >= 1, 'le poste est réécrit — sinon un rechargement ressuscite la vente');
+ok(v.persisted >= 1, 'le poste est réécrit - sinon un rechargement ressuscite la vente');
 
 /* /api/feed renvoie la liste ENTIÈRE des retraits toutes les 90 s. Rejouer ne
    doit rien changer, sinon les totaux dérivent toute la journée. */
@@ -300,11 +302,16 @@ let drift = 0;
 for (let i = 0; i < 25; i++) drift += runVoids(J, ['AB-1']).touched;
 eq(drift, 0, 'vingt-cinq sondages de plus ne bougent rien (idempotent)');
 
-/* Rétablir : la liste ne contient plus la référence ⇒ la vente revient. */
+/* Rétablir : une simple omission ne ressuscite pas la vente annulee (durable). */
 v = runVoids(J, []);
-eq(v.touched, 1, 'le rétablissement est vu');
+eq(v.touched, 0, 'une simple omission ne ressuscite pas la vente annulee (durable)');
+eq(!!J[0].voided, true, 'la vente annulee reste sortie des livres');
+
+/* Le retablissement exige une preuve explicite (restoredIds ou etat actif serveur). */
+v = runVoids(J, [], { restoredIds: new Set(['AB-1']) });
+eq(v.touched, 1, 'le retablissement explicite est vu');
 eq(!!J[0].voided, false, 'la vente est remise dans les livres');
-eq(runVoids(J, []).touched, 0, 'et le rétablissement est idempotent lui aussi');
+eq(runVoids(J, [], { restoredIds: new Set(['AB-1']) }).touched, 0, 'et le retablissement est idempotent lui aussi');
 
 /* Une référence étrangère ne doit toucher à rien. */
 J = mkJournal();

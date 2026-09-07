@@ -3761,6 +3761,7 @@ em, i, cite, dfn, var { font-style: normal; }
         opt_choose_many: "plusieurs possibles",
         opt_required: "obligatoire",
         opt_required_missing: "Choisissez une option pour « {name} ».",
+        opt_unavailable: "Option indisponible",
         // Per-option translations go here, keyed opt_label_<key> and opt_<key>_<choiceId>.
         // Missing keys fall back to the OPT definition's own label. Add per client menu.
         opt_retirer_prefix: "Sans ",
@@ -3941,6 +3942,7 @@ em, i, cite, dfn, var { font-style: normal; }
         opt_choose_many: "pick any",
         opt_required: "required",
         opt_required_missing: "Choose an option for “{name}”.",
+        opt_unavailable: "Option unavailable",
         // Per-option translations go here, keyed opt_label_<key> and opt_<key>_<choiceId>.
         // Missing keys fall back to the OPT definition's own label. Add per client menu.
         opt_retirer_prefix: "No ",
@@ -4118,6 +4120,7 @@ em, i, cite, dfn, var { font-style: normal; }
         opt_choose_many: "اختار اللي بغيتي",
         opt_required: "ضروري",
         opt_required_missing: "اختار واحد الاختيار فـ «{name}».",
+        opt_unavailable: "خيار غير متوفر",
         // Per-option translations go here, keyed opt_label_<key> and opt_<key>_<choiceId>.
         // Missing keys fall back to the OPT definition's own label. Add per client menu.
         opt_retirer_prefix: "بلا ",
@@ -4644,15 +4647,69 @@ em, i, cite, dfn, var { font-style: normal; }
       return parts.join('|');
     }
 
-    function choiceLabel(optKey, choiceId) {
+    function choiceLabel(optKey, choiceId, optChoice, optGroup) {
       const key = `opt_${optKey}_${choiceId}`;
-      return I18N[currentLang]?.[key] || I18N.fr[key]
-          || OPT[optKey]?.choices.find(c => c.id === choiceId)?.label
-          || choiceId;
+      const staticVal = I18N[currentLang]?.[key] || I18N.fr?.[key];
+      if (staticVal) return staticVal;
+
+      const choiceStr = String(choiceId || '');
+      const catalogItem = (typeof MENU_ALL !== 'undefined' && MENU_ALL ? MENU_ALL.get(choiceStr) : null)
+        || (typeof allItems !== 'undefined' && Array.isArray(allItems) ? allItems.find(x => String(x.id) === choiceStr) : null);
+      if (catalogItem) {
+        const tr = (MENU_I18N[currentLang] && MENU_I18N[currentLang][choiceStr])
+          || (typeof menuTr === 'function' ? menuTr(catalogItem, currentLang) : null);
+        if (tr && tr.name) return String(tr.name);
+        if (catalogItem.name) return String(catalogItem.name);
+      }
+
+      const opt = optGroup || OPT[optKey];
+      let choice = optChoice || (opt && opt.choices ? opt.choices.find(c => String(c.id) === choiceStr) : null);
+      if (!choice && optKey && String(optKey).startsWith('formula_')) {
+        for (const [k, g] of Object.entries(OPT)) {
+          if (k.startsWith('formula_') && Array.isArray(g?.choices)) {
+            const found = g.choices.find(c => String(c.id) === choiceStr);
+            if (found) { choice = found; break; }
+          }
+        }
+      }
+
+      if (choice) {
+        if (choice.targetItem) {
+          const tr = (MENU_I18N[currentLang] && MENU_I18N[currentLang][choiceStr])
+            || (typeof menuTr === 'function' ? menuTr(choice.targetItem, currentLang) : null);
+          if (tr && tr.name) return String(tr.name);
+          if (choice.targetItem.name) return String(choice.targetItem.name);
+        }
+        if (choice._src && typeof menuTr === 'function') {
+          const tr = menuTr(choice._src, currentLang);
+          if (tr && tr.name) return String(tr.name);
+        }
+        if (choice.label) return String(choice.label);
+      }
+
+      if (/^(it|sl|opt)_[A-Za-z0-9_-]+$/i.test(choiceStr)) {
+        return t('opt_unavailable');
+      }
+
+      return choiceStr;
     }
     function groupLabel(optKey) {
       const key = `opt_label_${optKey}`;
-      return I18N[currentLang]?.[key] || I18N.fr[key] || OPT[optKey]?.label || optKey;
+      if (I18N[currentLang]?.[key]) return I18N[currentLang][key];
+      if (I18N.fr?.[key]) return I18N.fr[key];
+      const opt = OPT[optKey];
+      if (opt) {
+        if (opt._src && typeof menuTr === 'function') {
+          const tr = menuTr(opt._src, currentLang);
+          if (tr && tr.name) return String(tr.name);
+          if (tr && tr.label) return String(tr.label);
+        }
+        if (opt.label) return String(opt.label);
+      }
+      if (/^(it|sl|opt)_[A-Za-z0-9_-]+$/i.test(String(optKey || ''))) {
+        return t('opt_unavailable');
+      }
+      return String(optKey || '');
     }
     function choiceEmoji(optKey, choiceId) {
       return OPT[optKey]?.choices.find(c => c.id === choiceId)?.emoji || '';
@@ -4849,8 +4906,8 @@ em, i, cite, dfn, var { font-style: normal; }
                       data-opt="${opt.key}" data-choice="${c.id}" data-type="${opt.type}">
                 ${showChoiceImages ? `<span class="option-choice-media">${c.photo
                   ? `<img src="${escapeHtml(c.photo)}" alt="" loading="lazy" decoding="async" />`
-                  : `<span class="option-choice-fallback" aria-hidden="true">${escapeHtml(choiceLabel(opt.key, c.id).slice(0, 1).toUpperCase())}</span>`}</span>` : ''}
-                <span class="${showChoiceImages ? 'option-choice-copy' : ''}"><span class="${showChoiceImages ? 'option-choice-name' : ''}">${c.emoji ? `${escapeHtml(c.emoji)} ` : ''}${choiceLabel(opt.key, c.id)}</span>
+                  : `<span class="option-choice-fallback" aria-hidden="true">${escapeHtml(choiceLabel(opt.key, c.id, c, opt).slice(0, 1).toUpperCase())}</span>`}</span>` : ''}
+                <span class="${showChoiceImages ? 'option-choice-copy' : ''}"><span class="${showChoiceImages ? 'option-choice-name' : ''}">${c.emoji ? `${escapeHtml(c.emoji)} ` : ''}${choiceLabel(opt.key, c.id, c, opt)}</span>
                 ${c.delta ? `<span class="delta">+${c.delta} ${cur()}</span>` : ''}</span>
                 ${showChoiceImages ? '<span class="option-choice-check" aria-hidden="true"><i data-lucide="check"></i></span>' : ''}
               </button>
@@ -6062,8 +6119,10 @@ em, i, cite, dfn, var { font-style: normal; }
           type: g.kind === 'many' ? 'multi' : 'single',
           default: '',
           required: !!g.required,
+          _src: g,
           choices: g.choices.filter(c => c && c.id && c.name).map(c => ({
             id: String(c.id), label: String(c.name), emoji: String(c.emoji || ''), delta: Math.max(0, Number(c.price) || 0),
+            _src: c,
           })),
         };
         OPT[key] = mapped;
@@ -6071,11 +6130,23 @@ em, i, cite, dfn, var { font-style: normal; }
       });
 
       const names = {}, namesEn = {}, namesAr = {};
+      const allToTranslate = (Array.isArray(allItems) && allItems.length) ? allItems : items;
+      for (const it of allToTranslate) {
+        if (!it || !it.id) continue;
+        names[String(it.id)] = { name: String(it.name || ''), desc: String(it.desc || '') };
+        [['fr', names], ['en', namesEn], ['ar', namesAr]].forEach(([l, map]) => {
+          const x = menuTr(it, l);
+          if (x) map[String(it.id)] = { name: String(x.name), desc: x.desc != null ? String(x.desc) : String(it.desc || '') };
+        });
+      }
+
       for (const it of items) {
         const formulaOptions = it.formula && Array.isArray(it.formula.slots) ? it.formula.slots.map(s => {
-          const g = { key: 'formula_' + String(s.id), formulaSlotId: String(s.id), label: String(s.label || ''), type: (+s.max || 1) > 1 ? 'multi' : 'single', default: '', required: (+s.min || 0) > 0, min: Math.max(0, +s.min || 0), max: Math.max(1, +s.max || 1),
-            choices: (Array.isArray(s.choices) ? s.choices : []).map(c => { const target=allItems.find(x=>String(x.id)===String(c.itemId) && !x.archived && x.avail !== false); return target ? {id:String(c.itemId),label:String(target.name),emoji:'',delta:Math.max(0,Number(c.extra)||0),photo:target.showPhotoInFormulas === true ? String(target.photo || '') : ''} : null; }).filter(Boolean) };
-          OPT[g.key] = g; return g;
+          const g = { key: 'formula_' + String(it.id) + '_' + String(s.id), formulaSlotId: String(s.id), label: String(s.label || ''), type: (+s.max || 1) > 1 ? 'multi' : 'single', default: '', required: (+s.min || 0) > 0, min: Math.max(0, +s.min || 0), max: Math.max(1, +s.max || 1), _src: s,
+            choices: (Array.isArray(s.choices) ? s.choices : []).map(c => { const target=allItems.find(x=>String(x.id)===String(c.itemId) && !x.archived && x.avail !== false); return target ? {id:String(c.itemId),label:String(target.name),emoji:'',delta:Math.max(0,Number(c.extra)||0),photo:target.showPhotoInFormulas === true ? String(target.photo || '') : '', targetItem: target, _src: target} : null; }).filter(Boolean) };
+          OPT[g.key] = g;
+          if (!OPT['formula_' + String(s.id)]) OPT['formula_' + String(s.id)] = g;
+          return g;
         }).filter(g=>g.choices.length) : [];
         const formulaBroken = it.formula && Array.isArray(it.formula.slots)
           && it.formula.slots.some((slot) => {
@@ -6097,11 +6168,6 @@ em, i, cite, dfn, var { font-style: normal; }
           avail: it.avail !== false,
           options: (Array.isArray(it.opts) ? it.opts : []).map(id => groups.get(String(id))).filter(Boolean).concat(formulaOptions),
           formula: formulaOptions.length > 0,
-        });
-        names[String(it.id)] = { name: String(it.name || ''), desc: String(it.desc || '') };
-        [['fr', names], ['en', namesEn], ['ar', namesAr]].forEach(([l, map]) => {
-          const x = menuTr(it, l);
-          if (x) map[String(it.id)] = { name: String(x.name), desc: x.desc != null ? String(x.desc) : String(it.desc || '') };
         });
       }
       // Le patron écrit sa carte une fois ; ses traductions (tableau de bord →

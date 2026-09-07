@@ -5081,7 +5081,7 @@ em, i, cite, dfn, var { font-style: normal; }
       // traduit, ou plus à jour, retombe sur le texte du patron.
       configuredLangs.forEach((l) => {
         MENU_I18N[l] = MENU_I18N[l] || {};
-        items.forEach((it) => {
+        allItems.forEach((it) => {
           const x = menuTr(it, l);
           MENU_I18N[l][it.id] = x ? { name: x.name, desc: x.desc != null ? String(x.desc) : (it.desc || '') } : { name: it.name, desc: it.desc || '' };
         });

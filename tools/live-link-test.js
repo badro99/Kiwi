@@ -27,7 +27,10 @@ const context = {
   window, document, localStorage,
   location: { search: '', hostname: 'kiwi.test' },
   URLSearchParams, CustomEvent: function (type, init) { this.type = type; this.detail = init && init.detail; },
-  fetch: (...args) => reply(...args),
+  fetch: async (...args) => {
+    const r = await reply(...args);
+    return r && typeof r.json !== 'function' ? { ...r, json: async () => ({ ok: r.ok }) } : r;
+  },
   setTimeout: () => 1, clearTimeout: () => {}, console,
 };
 vm.runInNewContext(source, context, { filename: 'live-link.js' });

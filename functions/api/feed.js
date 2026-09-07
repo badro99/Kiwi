@@ -171,10 +171,13 @@ export async function onRequestGet({ request, env }) {
       rows = (rs && rs.results) || [];
     }
     const vs = await env.DB.prepare(
-      'SELECT rowid AS cursor, id, ref FROM sales WHERE merchant IN (?, ?) AND void_ts IS NOT NULL ' +
+      'SELECT rowid AS cursor, id, ref, ts, void_ts FROM sales WHERE merchant IN (?, ?) AND void_ts IS NOT NULL ' +
       'ORDER BY void_ts DESC LIMIT 500'
     ).bind(merchant, legacy || merchant).all();
-    voided = ((vs && vs.results) || []).map((r) => ({ c: r.cursor, i: r.id || '', r: r.ref || '' }));
+    voided = ((vs && vs.results) || []).map((r) => Object.assign({ c: r.cursor, i: r.id || '', r: r.ref || '' }, {
+      vts: r.void_ts != null ? Number(r.void_ts) : null,
+      ts: r.ts != null ? Number(r.ts) : null,
+    }));
   } catch (e) {
     const msg = String((e && e.message) || e);
     const noVoid = msg.includes('void_ts');
@@ -254,8 +257,9 @@ export async function onRequestGet({ request, env }) {
      rejoignent pourtant la même visite et le même bon canonique. */
   const visitFromSaleId = (value) => {
     const id = String(value || '');
-    if (!id.startsWith('visit-') || !id.endsWith('-emp')) return '';
-    return id.slice(6, -4).replace(/-split-\d+$/, '');
+    if (!id.startsWith('visit-') || (!id.endsWith('-emp') && !id.endsWith('-caisse'))) return '';
+    const core = id.endsWith('-emp') ? id.slice(6, -4) : id.slice(6, -7);
+    return core.replace(/-split-\d+$/, '');
   };
   const visitIds = Array.from(new Set(rows.map((r) => visitFromSaleId(r && r.id)).filter(Boolean)));
   const orderByVisit = new Map();
@@ -289,8 +293,14 @@ export async function onRequestGet({ request, env }) {
     const id = String(sale.id || '');
     const visit = visitFromSaleId(id);
     const order = visit ? orderByVisit.get(visit) : null;
-    sale.orderRef = String((visit ? sale.label : sale.ref) || sale.label || sale.ref
-      || (order && order.number != null ? order.number : '')).slice(0, 80);
+    const isSplit = /·\s*part\b/i.test(String(sale.label || '')) || /-split-\d+/i.test(id);
+    sale.orderRef = String(
+      (isSplit ? sale.label : '')
+      || (visit ? sale.label : sale.ref)
+      || sale.label
+      || sale.ref
+      || (order && order.number != null ? order.number : '')
+    ).slice(0, 80);
     sale.receiptRef = String(sale.ref || '').slice(0, 80);
     sale.server = String(order && order.server_name || '').slice(0, 80);
     sale.origin = sale.server ? 'employee' : (order && order.channel === 'kiwi' ? 'orderpro' : 'caisse');

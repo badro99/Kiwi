@@ -7,10 +7,10 @@
 // Requires a D1 binding named DB (see wrangler.toml / docs/ops/LIVE_LINK.md). If the
 // binding is missing the endpoint fails soft (503) so the app never breaks.
 
-import { entitledMerchant, activeServiceEmployee } from '../auth/_lib.js';
+import { entitledMerchant, activeServiceEmployee, isTillFor, isOperator, readSession, readCookie, SESS_COOKIE, storeOwner } from '../auth/_lib.js';
 import { storeSuspended, storeSubscriptionPending } from './_private.js';
 import { startOfDay } from './order/_lib.js';
-import { settleServiceTable } from './service/events.js';
+import { settleServiceTable, serviceVisitGuard } from './service/events.js';
 import { poke } from './_live.js';
 
 const MAX_AMOUNT_CENTS = 20000000; // 200,000 MAD in centimes
@@ -103,13 +103,30 @@ export async function onRequestPost({ request, env }) {
 
   /* A waiter payment names its table. That turns this endpoint from a generic
    * ledger append into the single settlement boundary: only an on-shift floor
-   * employee may use it, and success will also close the table/session below. */
+   * employee, paired till, or authorized store owner/operator may use it, and
+   * success will also close the table/session below. */
   const employeeTable = String((b && b.table) || '').trim().replace(/^table\s*/i, '').replace(/^t(?=\d+$)/i, '').slice(0, 32);
   let employee = null;
   if (employeeTable) {
     employee = await activeServiceEmployee(request, env, merchant);
-    if (!employee) return json({ error: 'on-shift-service-required' }, 403);
-    if (employee.attendance && employee.attendance.pauseTs) return json({ error: 'employee-on-pause' }, 403);
+    if (!employee) {
+      const isTill = await isTillFor(request, env, merchant);
+      let isOwnerOrOp = false;
+      if (!isTill) {
+        const sess = await readSession(readCookie(request, SESS_COOKIE), env && env.AUTH_SECRET);
+        if (sess && sess.aid) {
+          isOwnerOrOp = (await storeOwner(env, merchant)) === sess.aid;
+        }
+        if (!isOwnerOrOp) {
+          isOwnerOrOp = await isOperator(request, env);
+        }
+      }
+      if (!isTill && !isOwnerOrOp) {
+        return json({ error: 'on-shift-service-required' }, 403);
+      }
+    } else if (employee.attendance && employee.attendance.pauseTs) {
+      return json({ error: 'employee-on-pause' }, 403);
+    }
   }
 
   /* A restaurant payment settles a VISIT, never a reusable table number.
@@ -117,7 +134,7 @@ export async function onRequestPost({ request, env }) {
    * ledger id from it makes a cross-device retry hit the same primary key. */
   const requestedSession = String((b && b.session) || '').trim().slice(0, 64);
   const split = b && b.split;
-  if (split != null && (!employeeTable || !requestedSession || !split
+  if (split != null && (!split
     || !Number.isInteger(split.index) || !Number.isInteger(split.count)
     || split.count < 1 || split.count > 50 || split.index < 0 || split.index >= split.count)) {
     return json({ error: 'bad-split' }, 400);
@@ -127,24 +144,28 @@ export async function onRequestPost({ request, env }) {
     try {
       serviceSession = requestedSession
         ? await env.DB.prepare(
-            `SELECT id, table_no, status, opened_ts FROM table_sessions
+            `SELECT id, table_no, status, opened_ts, closed_ts FROM table_sessions
               WHERE id = ? AND merchant = ? AND mode = 'table' LIMIT 1`
           ).bind(requestedSession, merchant).first()
         : await env.DB.prepare(
-            `SELECT id, table_no, status, opened_ts FROM table_sessions
+            `SELECT id, table_no, status, opened_ts, closed_ts FROM table_sessions
               WHERE merchant = ? AND table_no = ? AND mode = 'table' AND status = 'open'
               ORDER BY opened_ts DESC LIMIT 1`
           ).bind(merchant, employeeTable).first();
     } catch (_) { serviceSession = null; }
-    if (!serviceSession || !serviceSession.id) return json({ error: 'open-service-session-required' }, 409);
-    if (employeeTable && String(serviceSession.table_no) !== employeeTable) {
+    if (requestedSession && (!serviceSession || !serviceSession.id)) {
+      return json({ error: 'table-session-missing' }, 404);
+    }
+    if (!serviceSession || !serviceSession.id) {
+      if (employee) return json({ error: 'open-service-session-required' }, 409);
+    } else if (employeeTable && String(serviceSession.table_no) !== employeeTable) {
       return json({ error: 'service-session-table-mismatch' }, 409);
     }
     /* Caisse persists its local receipt and closes the visit in parallel. The
        close request may arrive first; a closed visit must therefore still be
        allowed to write its deterministic sale row. INSERT OR IGNORE below is
        the arbiter, so a later replay remains one row. */
-    if (employee && serviceSession.status === 'open') {
+    if (employee && serviceSession && serviceSession.status === 'open') {
       let sent = null;
       try {
         sent = await env.DB.prepare(
@@ -185,12 +206,13 @@ export async function onRequestPost({ request, env }) {
   // takings twice. The client now sends a stable id per sale (see the queue in
   // assets/live-link.js) and INSERT OR IGNORE makes the retry a no-op. Callers
   // that send no id keep the old behaviour: a fresh row every time.
-  const splitPrefix = split && serviceSession
-    ? ('visit-' + String(serviceSession.id).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40) + '-split-') : '';
+  const effectiveSessionId = (serviceSession && serviceSession.id) || requestedSession;
+  const splitPrefix = split && effectiveSessionId
+    ? ('visit-' + String(effectiveSessionId).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 40) + '-split-') : '';
   const splitIds = splitPrefix ? Array.from({ length: split.count }, (_, i) => splitPrefix + i + '-emp') : [];
-  const id = splitPrefix ? splitIds[split.index] : serviceSession
+  const id = splitPrefix ? splitIds[split.index] : (serviceSession
     ? ('visit-' + String(serviceSession.id).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 52) + '-emp')
-    : (String((b && b.id) || '').slice(0, 64) || ('sale-' + ts + '-' + Math.random().toString(36).slice(2, 8)));
+    : (String((b && b.id) || '').slice(0, 64) || ('sale-' + ts + '-' + Math.random().toString(36).slice(2, 8))));
 
   /* The basket. Validated and re-serialised here rather than trusted: this is
    * client-supplied JSON going into a column the dashboard and the assistant
@@ -283,6 +305,55 @@ export async function onRequestPost({ request, env }) {
 
   let linesMode = 'stored';
   let stored = false;
+
+  // ── IDEMPOTENCY VS CONFLICT CHECK ─────────────────────────────────────────
+  // A replay of the exact same financial transaction is safe and idempotent.
+  // But a retry claiming the same unique sale ID with conflicting money or
+  // method is rejected to prevent silent ledger corruption.
+  let existing = null;
+  let preflightError = null;
+  try {
+    existing = await env.DB.prepare(
+      'SELECT id, amount, amount_cents, method FROM sales WHERE id = ? AND merchant = ? LIMIT 1'
+    ).bind(id, merchant).first();
+  } catch (err) {
+    const msg = String((err && err.message) || err);
+    if (msg.includes('no such column') || msg.includes('amount_cents')) {
+      try {
+        existing = await env.DB.prepare(
+          'SELECT id, amount, method FROM sales WHERE id = ? AND merchant = ? LIMIT 1'
+        ).bind(id, merchant).first();
+      } catch (fallbackErr) {
+        preflightError = fallbackErr;
+      }
+    } else {
+      preflightError = err;
+    }
+  }
+  if (preflightError) {
+    return json({
+      error: 'db-verification-failed',
+      detail: String((preflightError && preflightError.message) || preflightError),
+      id,
+    }, 503);
+  }
+  if (existing && existing.id) {
+    const existingCents = existing.amount_cents != null
+      ? Math.round(Number(existing.amount_cents))
+      : Math.round(Number(existing.amount || 0) * 100);
+    const existingMethod = String(existing.method || '');
+    if (existingCents !== amountCents || existingMethod !== method) {
+      return json({
+        error: 'sale-conflict',
+        detail: 'conflicting-financial-data',
+        id: id,
+        expected: { amountCents: existingCents, method: existingMethod },
+        received: { amountCents, method },
+      }, 409);
+    }
+    stored = true;
+  }
+
   if (hasDiscount) {
     try {
       await env.DB.prepare(
@@ -353,10 +424,68 @@ export async function onRequestPost({ request, env }) {
     }
   }
 
-  /* An idempotent replay can carry a later canonical restaurant number. The
-   * money, method, timestamp and basket are immutable; only the human-facing
-   * reference may be reconciled. INSERT OR IGNORE alone kept the temporary
-   * till counter forever in Dashboard even after Caisse and kitchen agreed. */
+  // -- DURABLE WRITE BOUNDARY CONFLICT VERIFICATION ---------------------------
+  // Under concurrency, competing requests with conflicting financial data
+  // may both pass preflight reads before either insert finishes.
+  // Inspect the winning persisted row in the database: if the stored row has
+  // a different amount or method, this request lost the race and must fail 409 Conflict.
+  let winning = null;
+  let verifyError = null;
+  try {
+    winning = await env.DB.prepare(
+      'SELECT id, amount, amount_cents, method FROM sales WHERE id = ? AND merchant = ? LIMIT 1'
+    ).bind(id, merchant).first();
+  } catch (err) {
+    const msg = String((err && err.message) || err);
+    if (msg.includes('no such column') || msg.includes('amount_cents')) {
+      try {
+        winning = await env.DB.prepare(
+          'SELECT id, amount, method FROM sales WHERE id = ? AND merchant = ? LIMIT 1'
+        ).bind(id, merchant).first();
+      } catch (fallbackErr) {
+        verifyError = fallbackErr;
+      }
+    } else {
+      verifyError = err;
+    }
+  }
+
+  // If reading the winning row failed due to an unexpected DB error, fail safely with 503
+  // so the client outbox retains and retries with the same idempotency key.
+  if (verifyError) {
+    return json({
+      error: 'db-verification-failed',
+      detail: String((verifyError && verifyError.message) || verifyError),
+      id,
+    }, 503);
+  }
+
+  // If the query returned null (no winning row found in database), persistence could not be verified.
+  if (!winning || !winning.id) {
+    return json({
+      error: 'sale-not-persisted',
+      id,
+    }, 503);
+  }
+
+  const winningCents = winning.amount_cents != null
+    ? Math.round(Number(winning.amount_cents))
+    : Math.round(Number(winning.amount || 0) * 100);
+  const winningMethod = String(winning.method || '');
+  if (winningCents !== amountCents || winningMethod !== method) {
+    return json({
+      error: 'sale-conflict',
+      detail: 'conflicting-financial-data',
+      id: id,
+      expected: { amountCents: winningCents, method: winningMethod },
+      received: { amountCents, method },
+    }, 409);
+  }
+
+  // ONLY after durable verification succeeds:
+  // An idempotent replay can carry a later canonical restaurant number.
+  // The money, method, timestamp and basket are immutable; only the human-facing
+  // reference may be reconciled.
   if (ref) {
     try {
       await env.DB.prepare(
@@ -368,112 +497,139 @@ export async function onRequestPost({ request, env }) {
   let settlementPending = false;
   let splitComplete = !split;
   if (split) {
-    // Distinct, deterministic rows preserve each tender and make retries safe.
-    // Closing depends on durable receipts, never on a client's pre-fetch count.
-    try {
-      const receipts = await env.DB.prepare(
-        `SELECT id FROM sales WHERE merchant = ? AND id IN (${splitIds.map(() => '?').join(',')})`
-      ).bind(merchant, ...splitIds).all();
-      splitComplete = new Set((receipts.results || []).map(row => row.id)).size === split.count;
-    } catch (_) {
-      return json({ error: 'split-receipts-unavailable' }, 503);
+    if (splitIds.length) {
+      // Distinct, deterministic rows preserve each tender and make retries safe.
+      // Closing depends on durable receipts, never on a client's pre-fetch count.
+      try {
+        const receipts = await env.DB.prepare(
+          `SELECT id FROM sales WHERE merchant = ? AND id IN (${splitIds.map(() => '?').join(',')})`
+        ).bind(merchant, ...splitIds).all();
+        splitComplete = new Set((receipts.results || []).map(row => row.id)).size === split.count;
+      } catch (_) {
+        return json({ error: 'split-receipts-unavailable' }, 503);
+      }
+    } else {
+      splitComplete = true;
     }
   }
-  if ((employeeTable || serviceSession) && splitComplete) {
+  if (serviceSession && serviceSession.id && splitComplete) {
     const settledTable = employeeTable || String(serviceSession.table_no || '');
-    /* ── ON SOLDE UNE VISITE, PAS UN NUMÉRO DE TABLE ─────────────────────────
-     * Cette requête disait `WHERE table_no = ? AND created_ts >= startOfDay`.
-     * Une table est réutilisée dix fois par jour : ce filtre soldait donc TOUTE
-     * commande impayée passée à cette table depuis minuit, quelle que soit la
-     * tablée. Tout le travail d'isolement par session — la raison d'être de
-     * `table_sessions` — était défait à l'instant précis où il compte, et une
-     * commande orpheline d'un service précédent se retrouvait « payée » sans
-     * avoir jamais été encaissée.
-     *
-     * On lit donc les sessions VIVANTES de cette table AVANT de les fermer, et
-     * on solde ce qui leur appartient. On y ajoute les commandes sans session
-     * (la caisse en dépose par createTicket, qui n'en pose pas) mais seulement
-     * celles nées PENDANT cette visite — sinon on rouvrirait exactement le trou
-     * qu'on vient de fermer. */
-    let visits = serviceSession && serviceSession.id
-      ? [{ id: serviceSession.id, opened_ts: serviceSession.opened_ts }]
-      : [];
-    if (!visits.length) {
+    const sessionWasOpen = serviceSession.status === 'open';
+
+    // Check if a newer visit has already opened on this table
+    let hasNewerVisit = false;
+    try {
+      const newerRow = await env.DB.prepare(
+        `SELECT id FROM table_sessions
+          WHERE merchant = ? AND table_no = ? AND id <> ?
+            AND (status = 'open' OR opened_ts >= ?)
+          LIMIT 1`
+      ).bind(merchant, settledTable, serviceSession.id, Number(serviceSession.opened_ts) || 0).first();
+      if (newerRow && newerRow.id) hasNewerVisit = true;
+    } catch (_) {
+      // Receipt is already durable. Keep the same command retryable, but do
+      // not interpret an unreadable ownership check as permission to settle.
+      await poke(env, merchant, 'sales');
+      return json({ ok: true, id, lines: linesMode, table: settledTable, settlementPending: true });
+    }
+
+    // 1. Close session if open, recording pending status until complete
+    if (sessionWasOpen) {
       try {
-        const rows = await env.DB.prepare(
-          `SELECT id, opened_ts FROM table_sessions
-            WHERE merchant = ? AND table_no = ? AND status = 'open'`
-        ).bind(merchant, settledTable).all();
-        visits = (rows.results || []).filter((r) => r && r.id);
-      } catch (_) { visits = []; }
+        await env.DB.prepare(
+          `UPDATE table_sessions SET status = 'closed', closed_ts = ?, closed_by = 'service-payment-pending'
+            WHERE id = ? AND merchant = ? AND status = 'open'`
+        ).bind(now, serviceSession.id, merchant).run();
+      } catch (err) {
+        console.error('[sale] Failed to mark table session closed for session', serviceSession.id, 'merchant', merchant);
+        settlementPending = true;
+      }
     }
 
+    // A no-op or failed close is not a completed stage. Re-read the durable
+    // boundary before freeing occupancy or paying unlinked orders.
+    let closedSession = null;
     try {
-      await env.DB.prepare(
-        `UPDATE table_sessions SET status = 'closed', closed_ts = ?, closed_by = 'service-payment'
-          WHERE merchant = ? AND table_no = ? AND status = 'open'`
-      ).bind(now, merchant, settledTable).run();
-    } catch (err) {
-      console.error('[sale] Failed to mark table session closed for table', settledTable, 'merchant', merchant);
+      closedSession = await env.DB.prepare('SELECT status, closed_ts, closed_by FROM table_sessions WHERE id = ? AND merchant = ?')
+        .bind(serviceSession.id, merchant).first();
+    } catch (_) { settlementPending = true; }
+    if (settlementPending || !closedSession || closedSession.status !== 'closed') {
+      await poke(env, merchant, 'sales');
+      return json({ ok: true, id, lines: linesMode, table: settledTable, settlementPending: true });
     }
 
-    /* Le début de la visite : la plus ancienne session encore ouverte. Aucune
-     * session connue (base sans `table_sessions`, ou table jamais ouverte
-     * proprement) ⇒ on retombe sur la journée, l'ancien comportement, parce
-     * qu'un service qui n'encaisse rien serait pire qu'un filtre trop large. */
-    const visitStart = visits.length
-      ? Math.min(...visits.map((v) => Number(v.opened_ts) || now))
-      : startOfDay(now);
-    const ids = visits.map((v) => String(v.id));
+    // 2. Settle orders
+    const visitStart = Number(serviceSession.opened_ts) || now;
+    const sessionCutoff = Number(closedSession.closed_ts) || Number(serviceSession.closed_ts) || now;
+    const visitGuard = serviceVisitGuard(merchant, settledTable, serviceSession);
     try {
-      if (ids.length) {
-        const marks = ids.map(() => '?').join(',');
-        /* Deux façons d'appartenir à cette addition, et il faut les deux :
-         *  · porter l'identifiant d'une des sessions qu'on vient de fermer ;
-         *  · ou être un bon SANS session né sur cette table PENDANT la visite,
-         *    avant le début de cet encaissement. Ce second membre rattrape les
-         *    bons que la caisse dépose sans session (createTicket n'en pose
-         *    pas), sans aspirer une nouvelle visite ouverte pendant que les
-         *    deux écritures de règlement se succèdent.
-         * Ce qui reste dehors est ce qu'on veut dehors : une commande d'une
-         * tablée précédente, ou une commande née après le début du paiement. */
+      if (!hasNewerVisit) {
         await env.DB.prepare(
           `UPDATE orders SET paid_ts = ?, updated_ts = ?
             WHERE merchant = ? AND paid_ts IS NULL
-              AND ( session_id IN (${marks})
+              AND ( session_id = ?
                  OR (session_id IS NULL AND table_no = ?
-                     AND created_ts BETWEEN ? AND ?) )`
-        ).bind(now, now, merchant, ...ids, settledTable, visitStart, now).run();
+                     AND created_ts BETWEEN ? AND ? AND ${visitGuard.sql}) )`
+        ).bind(now, now, merchant, serviceSession.id, settledTable, visitStart, sessionCutoff, ...visitGuard.args).run();
       } else {
+        // Newer visit exists: strictly settle orders belonging to this specific session only
         await env.DB.prepare(
           `UPDATE orders SET paid_ts = ?, updated_ts = ?
-            WHERE merchant = ? AND table_no = ? AND session_id IS NULL
-              AND created_ts BETWEEN ? AND ? AND paid_ts IS NULL`
-        ).bind(now, now, merchant, settledTable, visitStart, now).run();
+            WHERE merchant = ? AND paid_ts IS NULL AND session_id = ?`
+        ).bind(now, now, merchant, serviceSession.id).run();
       }
     } catch (_) {
-      /* Fail closed. Without the session-aware schema there is no race-safe way
-       * to decide which same-table orders belong to this visit: even a bounded
-       * timestamp fallback can capture a new visit created in the cutoff
-       * millisecond. The money is already durable, so report reconciliation as
-       * pending and leave every order untouched until the schema is migrated or
-       * the idempotent settlement is retried. */
       settlementPending = true;
     }
 
-    /* ── L'ARGENT EST ENREGISTRÉ : CE N'EST PLUS UN ÉCHEC DE PAIEMENT ────────
-     * Ici, la vente est DURABLE. Répondre 503 parce que l'état du plan de salle
-     * n'a pas pu s'écrire faisait afficher « paiement non enregistré,
-     * réessayez » sur un paiement bel et bien encaissé — et un serveur qui
-     * recharge alors l'application repayait la table, cette fois avec un
-     * identifiant neuf, donc une SECONDE vente en caisse.
-     *
-     * L'écriture qui échoue ici est un verrou optimiste sur un document que la
-     * caisse réécrit toutes les quatre secondes ; elle échoue sous charge, et
-     * c'est précisément pendant un coup de feu. Un plan de salle en retard se
-     * rattrape au battement suivant. Une vente comptée deux fois, non. */
-    const settled = await settleServiceTable(env, merchant, settledTable);
-    settlementPending = settlementPending || !settled.ok;
+    // Check if any orders for this session remain unpaid
+    try {
+      const unpaid = await env.DB.prepare(
+        `SELECT id FROM orders WHERE merchant = ? AND paid_ts IS NULL
+          AND (session_id = ? OR (session_id IS NULL AND table_no = ?
+            AND created_ts BETWEEN ? AND ? AND ${visitGuard.sql})) LIMIT 1`
+      ).bind(merchant, serviceSession.id, settledTable, visitStart, sessionCutoff, ...visitGuard.args).first();
+      if (unpaid && unpaid.id) settlementPending = true;
+    } catch (_) {
+      settlementPending = true;
+    }
+
+    // 3. Floor reconciliation (settleServiceTable)
+    // Only attempt floor settlement if no newer visit has taken over this table
+    if (!hasNewerVisit) {
+      let floorNeedsSettlement = true;
+      try {
+        const docRow = await env.DB.prepare(
+          "SELECT data FROM store_docs WHERE merchant = ? AND feature = 'service-events'"
+        ).bind(merchant).first();
+        const docData = JSON.parse((docRow && docRow.data) || '{}');
+        const st = docData && docData.states && docData.states[settledTable];
+        if (st && st.status === 'khawya') {
+          floorNeedsSettlement = false;
+        }
+      } catch (_) {}
+
+      if (floorNeedsSettlement) {
+        const settled = await settleServiceTable(env, merchant, settledTable, serviceSession);
+        if (!settled.ok) {
+          settlementPending = true;
+        }
+      }
+    }
+
+    // Finalize only after all stages are verified. The parallel caisse close
+    // may have won first, so its closed_by marker is not proof of completion.
+    if (!settlementPending) {
+      try {
+        await env.DB.prepare(
+          `UPDATE table_sessions SET closed_by = 'service-payment'
+            WHERE id = ? AND merchant = ? AND status = 'closed'`
+        ).bind(serviceSession.id, merchant).run();
+        const complete = await env.DB.prepare('SELECT status, closed_by FROM table_sessions WHERE id = ? AND merchant = ?')
+          .bind(serviceSession.id, merchant).first();
+        if (!complete || complete.status !== 'closed' || complete.closed_by !== 'service-payment') settlementPending = true;
+      } catch (_) { settlementPending = true; }
+    }
   }
   await poke(env, merchant, 'sales');
   return json({

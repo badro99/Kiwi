@@ -36,6 +36,17 @@ async function store(body) {
           return this;
         },
         async run() { return { success: true }; },
+        async first() {
+          if (insertBound) {
+            return {
+              id: insertBound[0],
+              amount: insertBound[2],
+              amount_cents: insertBound[9] != null ? insertBound[9] : Math.round(Number(insertBound[2]) * 100),
+              method: insertBound[3],
+            };
+          }
+          return null;
+        },
       };
     },
   };
@@ -81,6 +92,17 @@ ok('sale channel is written beside the immutable basket', rich._channel === 'cou
           if (/lines, channel/.test(sql)) throw new Error('no such column: channel');
           fallbackBound = this.args;
           return { success: true };
+        },
+        async first() {
+          if (fallbackBound) {
+            return {
+              id: fallbackBound[0],
+              amount: fallbackBound[2],
+              amount_cents: fallbackBound[9] != null ? fallbackBound[9] : Math.round(Number(fallbackBound[2]) * 100),
+              method: fallbackBound[3],
+            };
+          }
+          return null;
         },
       };
     },

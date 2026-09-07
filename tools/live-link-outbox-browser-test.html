@@ -14,7 +14,10 @@
   window.fetch = function (url, opts) {
     if (url === '/api/sale') {
       window.__posts.push(JSON.parse(opts.body));
-      if (window.__fetchMode === 'ok') return Promise.resolve({ ok: true, status: 201 });
+      if (window.__fetchMode === 'ok' || window.__fetchMode === 'pending') return Promise.resolve(new Response(JSON.stringify({
+        ok: true, id: window.__posts[window.__posts.length - 1].id,
+        settlementPending: window.__fetchMode === 'pending'
+      }), { status: 201 }));
       if (window.__fetchMode === 'blocked') return Promise.resolve({ ok: false, status: 422 });
       return Promise.reject(new Error('offline test'));
     }
@@ -23,7 +26,7 @@
 </script>
 <script src="../assets/vendor/dexie.min.js"></script>
 <script src="../assets/offline-db.js?v=3"></script>
-<script src="../assets/live-link.js?v=8"></script>
+<script src="../assets/live-link.js"></script>
 <script>
 (function () {
   'use strict';
@@ -61,6 +64,19 @@
       await waitFor(async function () { return (await KiwiOffline.stats('sale', window.__testTenant)).total === 0; }, 3000);
       assert(window.__posts.length >= 2 && window.__posts[0].id === window.__posts[1].id, 'stable replay id');
       line('reconnect replays the same id and acknowledges it');
+
+      window.__fetchMode = 'pending';
+      var beforePending = window.__posts.length;
+      KiwiLive.postSale({ id: ref + '-pending', amount: 60, method: 'cash', ref: ref + '-pending' });
+      await waitFor(async function () { return (await KiwiOffline.stats('sale', window.__testTenant)).lastError === 'settlement-pending'; }, 3000);
+      assert((await KiwiOffline.stats('sale', window.__testTenant)).total === 1, '200 pending stays durable');
+      line('accepted money with pending settlement remains in real IndexedDB');
+      window.__fetchMode = 'ok';
+      // No manual flush: the transport must schedule recovery itself.
+      await waitFor(async function () { return (await KiwiOffline.stats('sale', window.__testTenant)).total === 0; }, 9000);
+      var pendingPosts = window.__posts.slice(beforePending);
+      assert(pendingPosts.length >= 2 && pendingPosts.every(function (p) { return p.id === pendingPosts[0].id; }), 'pending replay retains its identity');
+      line('scheduled settlement retry uses the same receipt and acknowledges completion');
 
       window.__fetchMode = 'blocked';
       KiwiLive.postSale({ amount: 44, method: 'card', label: 'Invalid test', ref: ref + '-blocked' });

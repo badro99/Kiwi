@@ -216,8 +216,8 @@
     "sha": "44dd6ba2de061983"
   },
   "assets/day-report.js": {
-    "v": "5",
-    "sha": "db87c2940f314de9"
+    "v": "7",
+    "sha": "ecc9ecff0b7cc233"
   },
   "assets/demoClock.js": {
     "v": "1",
@@ -420,8 +420,8 @@
     "sha": "c9d6036ca657c76e"
   },
   "assets/live-link.js": {
-    "v": "26",
-    "sha": "9e97c793426f170d"
+    "v": "29",
+    "sha": "551a4cce2ff61898"
   },
   "assets/live-socket.js": {
     "v": "4",

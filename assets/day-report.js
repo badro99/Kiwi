@@ -357,6 +357,7 @@
       discount: num(s.discount),
       cashier: String(s.cashier || ''),
       lines: lines,
+      voided: Boolean(s.voided || s.void_ts),
     };
   }
 
@@ -382,8 +383,9 @@
     var seen = Object.create(null);
     var rows = [];
     (opts.sales || []).forEach(function (raw) {
+      if (raw && (raw.voided || raw.void_ts)) return;
       var s = normSale(raw);
-      if (!s || s.ts < b.from || s.ts >= b.to) return;
+      if (!s || s.voided || s.ts < b.from || s.ts >= b.to) return;
       var k = s.id || (s.ts + ':' + s.amount + ':' + s.ref);
       if (seen[k]) return;
       seen[k] = 1;

@@ -59,10 +59,10 @@ const ledgerRollupBlock = extractBody(
   'function journalTotals() {\n      return rollupLedger();\n    }'
 );
 
-// Extract reconcileVoids
+// Extract reconcileVoids and refreshOpenReconciliationModals
 const reconcileBlock = extractBody(
   caisseHtml,
-  'function reconcileVoids(refs, saleIds) {',
+  'function refreshOpenReconciliationModals() {',
   'return touched;\n    }'
 );
 
@@ -84,7 +84,7 @@ const drawerBlock = extractBody(
 const handoverBlock = extractBody(
   caisseHtml,
   'function fmtEcart(e) {',
-  'window.KiwiCaisseAccounting = Object.freeze({\n      rollupLedger,\n      journalTotals,\n      posteRollup,\n      drawerExpected,\n      renderHandoverCount,\n      confirmHandover,\n      renderCloture,\n      reconcileVoids,\n    });'
+  'window.KiwiCaisseAccounting = Object.freeze({\n      rollupLedger,\n      journalTotals,\n      posteRollup,\n      drawerExpected,\n      renderHandoverCount,\n      confirmHandover,\n      renderCloture,\n      reconcileVoids,\n      refreshOpenReconciliationModals,\n    });'
 );
 
 let controls = 0;
