@@ -49,9 +49,9 @@ try {
       pin.style.animation = 'none'; document.body.append(document.importNode(pin, true));
       const screen = document.getElementById('pin-screen');
       const top = screen.querySelector('.pin-card').getBoundingClientRect().top;
-      const exit = screen.querySelector('.pin-switch'); exit.scrollIntoView({ block: 'end' });
+      const exit = screen.querySelector('.pin-switch'); exit.scrollIntoView({ block: 'end', behavior: 'instant' });
       const rect = exit.getBoundingClientRect();
-      return { top, horizontal: screen.scrollWidth > screen.clientWidth + 1, reachable: rect.top >= 0 && rect.bottom <= innerHeight };
+      return { top, horizontal: screen.scrollWidth > screen.clientWidth + 1, reachable: rect.top >= 0 && rect.bottom <= innerHeight + 1, rect: { top: rect.top, bottom: rect.bottom }, viewport: innerHeight };
     }, source);
     assert.ok(pinLayout.top >= 24 && !pinLayout.horizontal && pinLayout.reachable, `${name}: PIN card and account-switch link must remain reachable: ${JSON.stringify(pinLayout)}`); checks++;
   }

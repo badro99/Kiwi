@@ -277,7 +277,7 @@
     if (heading) { heading.setAttribute('tabindex', '-1'); heading.focus({ preventScroll:true }); }
   }
   function enterManual() {
-    manual = true; shell.classList.add('manual'); $('#setup-progress').hidden = true; $('#shell-sub').textContent = tr('launcherSub'); showStep('role');
+    manual = true; shell.classList.add('manual'); $('#setup-progress').hidden = true; $('#manual-return').hidden = false; $('#shell-sub').textContent = tr('launcherSub'); showStep('role');
   }
   function selectRole(role) {
     state.role = ROLES[role] ? role : '';
@@ -289,6 +289,11 @@
     tile.addEventListener('click', function () { var role = tile.getAttribute('data-role'); if (manual) go(role); else selectRole(role); });
   });
   $('#manual-mode').addEventListener('click', enterManual);
+  $('#manual-return').addEventListener('click', function () {
+    manual = false; shell.classList.remove('manual'); $('#manual-return').hidden = true;
+    $('#setup-progress').hidden = false; $('#shell-sub').textContent = tr('welcomeSub');
+    showStep('account'); refreshAccount();
+  });
   $('#account-next').addEventListener('click', function () { showStep('role'); });
   all('[data-back]').forEach(function (button) { button.addEventListener('click', function () { showStep(button.getAttribute('data-back')); }); });
 
@@ -556,7 +561,7 @@
       if (!manual) {
         ctx.actions.push(hostAction('role-next', $('#role-next').textContent, 'primary', !$('#role-next').disabled));
         ctx.actions.push(hostAction('back', tr('back'), 'secondary', true));
-      }
+      } else ctx.actions.push(hostAction('manual-return', tr('back'), 'secondary', true));
     } else if (state.step === 'connect') {
       if (state.role === 'caisse' || state.role === 'cuisine') {
         state.stores.forEach(function (store, index) { ctx.choices.push(hostChoice(index, store.name, store.type || tr('store'), state.selectedStore === store, 'store')); });
@@ -616,6 +621,7 @@
     } else if (id === 'account-next' && state.account === 'connected') acctNext.click();
     else if (id === 'retry-account') refreshAccount();
     else if (id === 'manual') $('#manual-mode').click();
+    else if (id === 'manual-return') $('#manual-return').click();
     else if (id === 'logout') $('#logout').click();
     else if (id === 'select-role') { var roleNode = $('.tile[data-role="' + String(payload.id || '').replace(/[^a-z]/g, '') + '"]'); if (roleNode) roleNode.click(); }
     else if (id === 'select-store') selectStore(Number(payload.id));

@@ -1957,6 +1957,13 @@ for (const locale of ['fr', 'en', 'ar']) {
   const action = (payload) => p.evaluate((value) => window.KiwiNativeHostAction(value), payload);
   const step = (kind) => p.waitForFunction((value) => window.__nativeSetupState?.kind === value, { timeout: 9000 }, kind);
   await p.waitForFunction(() => window.__nativeSetupState?.actions.some(a => a.id === 'account-next' && a.enabled), { timeout: 9000 });
+  await action({ action: 'manual' });
+  await step('role');
+  const returnAction = await p.evaluate(() => window.__nativeSetupState.actions.some(a => a.id === 'manual-return' && a.enabled));
+  returnAction ? ok(`native manual role picker offers a return path (${locale})`) : bad(`native manual picker traps the user (${locale})`);
+  await action({ action: 'manual-return' });
+  await step('account');
+  await p.waitForFunction(() => window.__nativeSetupState?.actions.some(a => a.id === 'account-next' && a.enabled), { timeout: 9000 });
   await action({ action: 'account-next' });
   await step('role');
   await action({ action: 'select-role', id: 'caisse' });

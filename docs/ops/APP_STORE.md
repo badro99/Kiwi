@@ -76,8 +76,11 @@ complétée avec RC, IF, TP, ICE.
 
 ## 2. Compte démo pour la revue (P5)
 
-Les deux revues exigent un compte qui marche. Le créer depuis la console
-opérateur (`kiwi-admin.html`), jamais à la main dans D1 :
+Les deux revues exigent un compte qui marche. Le créer par le parcours normal
+d'inscription marchand, jamais à la main dans D1. Les identifiants ci-dessous
+décrivent le compte à préparer, pas un accès vérifié : le contrôle D1 du
+7 septembre 2026 ne trouvait ni ce compte ni son établissement. Valider ensuite
+la connexion dans le binaire candidat, sans utiliser les comptes des commerçants :
 
 - e-mail `demo-review@kiwi-os.com` (alias Zoho, gratuit), établissement
   **« Kiwi Démo »**, activité restaurant, formule Pro, dépôt-vente et nutrition
@@ -318,7 +321,10 @@ allégée ; inutile avant.
 
 ---
 
-**Résumé.** Le dépôt ne bloque plus rien : pages publiques, manifeste, plist,
-signature, script d'archive, textes et réponses sont prêts. Il reste au
-propriétaire : mentions légales complètes, D-U-N-S, inscription Apple
-Organisation, compte démo (§2), captures (§3) avant la soumission à la revue.
+**Résumé.** Les fichiers du dépôt et les tests automatisés ne constituent pas
+une autorisation de lancement. Vérifier le compte de revue (§2), le binaire
+exact et son empreinte, les captures et réponses App Privacy dans App Store
+Connect, puis la matrice sur appareils réels de `APP.md`. Une archive, un
+upload accepté, l'affectation TestFlight et une soumission App Review sont
+quatre états distincts. Les formalités du compte Apple dépendent du titulaire
+réel ; ne pas déduire son statut de ce document.
