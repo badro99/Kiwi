@@ -3548,6 +3548,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       background: var(--btn-primary-bg); color: var(--btn-primary-ink);
       font-size: 15px; font-weight: 600; box-shadow: var(--elev-accent);
     }
+    .split-launch:disabled { opacity: .55; cursor: not-allowed; }
     .split-cancel-link {
       display: block; text-align: center; margin-top: 10px;
       font-size: 12px; color: var(--ink-4);
@@ -4775,7 +4776,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
               <div class="split-help-box">
                 <i data-lucide="lightbulb"></i>
                 <div class="split-help-text">
-                  Choisissez un convive, puis tapez sur les articles qu'il a consommés.
+                  Attribuez chaque article entier à un convive avant d’encaisser. Aucun article restant ne sera divisé automatiquement.
                 </div>
               </div>
 
@@ -4860,7 +4861,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
   <script src="assets/staff-roles.js?v=1" defer></script>
   <!-- Real employee identity, planning, floor and attendance bridge. -->
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/employee-live.js?v=491" defer></script>
+  <script src="assets/employee-live.js?v=492" defer></script>
   <script src="assets/employee-planning.js?v=8" defer></script>
   <link rel="stylesheet" href="assets/employee-trade-shell.css?v=2">
   <script src="assets/employee-trade-shell.js?v=2" defer></script>
@@ -10210,6 +10211,9 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       $('#split-egal-content').hidden = splitState.splitMode !== 'egal';
       $('#split-article-content').hidden = splitState.splitMode !== 'article';
       if (splitState.splitMode === 'egal') {
+        $('#split-launch').disabled = false;
+        $('#split-launch').textContent = 'Lancer le split';
+        $('#split-launch').title = '';
         renderPartsChips(); renderTipChips(); updateSplitSummary();
       } else {
         renderArticleMode();
@@ -10235,7 +10239,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       return sum;
     }
     function assignUnit(itemName) {
-      if (remainingQty(itemName) <= 0) return;
+      if (!Number.isInteger(remainingQty(itemName)) || remainingQty(itemName) <= 0) return;
       const c = splitState.activeConvive;
       if (!splitState.perConvive[c]) splitState.perConvive[c] = {};
       splitState.perConvive[c][itemName] = (splitState.perConvive[c][itemName] || 0) + 1;
@@ -10254,7 +10258,33 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
       renderConvivesTabs();
       renderPool();
       renderConviveCart();
+      const allocation = splitArticleAllocation();
+      $('#split-launch').disabled = !allocation.ok;
+      $('#split-launch').textContent = allocation.ok ? 'Encaisser les articles attribués' : allocation.message;
+      $('#split-launch').title = allocation.message || '';
       lucide.createIcons();
+    }
+
+    function splitArticleAllocation() {
+      const items = Object.entries(splitState.itemTotals || {});
+      const n = Number(splitState.numConvives);
+      const invalid = () => ({ ok: false, message: 'Attribution invalide : vérifiez les articles' });
+      if (!items.length || !Number.isInteger(n) || n < 1) return invalid();
+      const totals = new Map(items.map(([name, info]) => [name, info.totalQty]));
+      const assigned = new Map();
+      for (const [convive, cart] of Object.entries(splitState.perConvive || {})) {
+        if (!Number.isInteger(Number(convive)) || Number(convive) < 1 || Number(convive) > n || !cart || typeof cart !== 'object') return invalid();
+        for (const [name, qty] of Object.entries(cart)) {
+          if (!totals.has(name) || !Number.isInteger(qty) || qty < 0) return invalid();
+          assigned.set(name, (assigned.get(name) || 0) + qty);
+        }
+      }
+      let remaining = 0;
+      for (const [name, qty] of totals) {
+        if (!Number.isInteger(qty) || qty < 0 || (assigned.get(name) || 0) > qty) return invalid();
+        remaining += qty - (assigned.get(name) || 0);
+      }
+      return remaining ? { ok: false, message: `${remaining} article${remaining > 1 ? 's' : ''} à attribuer` } : { ok: true, message: '' };
     }
 
     function renderConvivesTabs() {
@@ -10408,6 +10438,10 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
           </div>` : '');
     }
     function launchSplitFlow() {
+      if (splitState.splitMode !== 'egal') {
+        const allocation = splitArticleAllocation();
+        if (!allocation.ok) { toast(allocation.message); return; }
+      }
       const parts = [];
       if (splitState.splitMode === 'egal') {
         const tipPct = effectiveTipPct();
@@ -10429,30 +10463,12 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
         }
       } else {
         const n = splitState.numConvives;
-        // Total of items still unassigned — split evenly across all convives
-        const unassignedTotal = Object.entries(splitState.itemTotals).reduce((s, [name, info]) => {
-          return s + remainingQty(name) * info.unitPrice;
-        }, 0);
-        const unassignedPerConv = unassignedTotal / n;
-        const unassignedLines = Object.entries(splitState.itemTotals)
-          .filter(([name]) => remainingQty(name) > 0)
-          .map(([name, info]) => {
-            const rem = remainingQty(name);
-            const shareUnitPrice = Math.round((info.unitPrice / n) * 100) / 100;
-            return {
-              name: `${name} · 1/${n}`,
-              qty: rem,
-              unit: shareUnitPrice,
-              price: shareUnitPrice,
-              total: Math.round((rem * info.unitPrice / n) * 100) / 100,
-            };
-          });
 
         for (let c = 1; c <= n; c++) {
           const cart = splitState.perConvive[c] || {};
           const amt = Object.entries(cart).reduce((s, [name, qty]) => {
             return s + qty * (splitState.itemTotals[name]?.unitPrice || 0);
-          }, 0) + unassignedPerConv;
+          }, 0);
 
           if (amt < 0.01) continue; // skip empty convives
 
@@ -10469,7 +10485,7 @@ html[lang="ar"] { --sans: "IBM Plex Sans Arabic", "Inter Tight", "Cairo", sans-s
               total: Math.round(qty * unitPrice * 100) / 100,
             };
           });
-          const partLines = [...assignedLines, ...unassignedLines.map(l => ({ ...l }))];
+          const partLines = assignedLines;
           parts.push({
             amount: amt,
             label: items || 'Part équilibrée',

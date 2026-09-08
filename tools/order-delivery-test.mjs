@@ -25,6 +25,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
+import vm from 'node:vm';
 
 import { employeeToken, EMPLOYEE_COOKIE, tillToken, TILL_COOKIE } from '../functions/auth/_lib.js';
 import * as queue from '../functions/api/order/queue.js';
@@ -104,12 +105,13 @@ async function poll(since, role, cookie) {
 /* ═══ 3. Le bloc de rattrapage de la caisse, exécuté pour de vrai ═══════════
  * On EXTRAIT le bloc de kiwi-caisse.html et on le fait tourner avec des
  * dépendances de test. Ce n'est pas un contrôle de motif : les décisions
- * (ignorer ce qui est déjà attaché, retenter ce qui ne l'est pas, n'avertir
+ * (dédupliquer les lignes déjà attachées, retenter les manquantes, n'avertir
  * qu'une fois) sont réellement exécutées. Si le bloc déménage, l'extraction
  * échoue bruyamment — ce qui est le bon comportement. */
 function extractReconciliation() {
   const src = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
-  const start = src.indexOf('const attachedOrders = new Set();');
+  const ingest = src.indexOf('ingest(delta, all, sessions, closedSessions, expired)');
+  const start = src.indexOf('(all || []).forEach(o => {', ingest);
   const end = src.indexOf('const pend = new Map();', start);
   if (start < 0 || end < 0) return null;
   return src.slice(start, end);
@@ -118,11 +120,11 @@ function extractReconciliation() {
 function runReconciliation(body, world) {
   const fn = new Function(
     'all', 'tableOrders', 'tableKey', 'caisseTableId', 'opUnmatchedTables',
-    'attachOrderProTable', 'toast', 'console',
+    'attachOrderProTable', 'canRecoverCaisseTable', 'toast', 'console',
     `let touched = false;\n${body}\nreturn touched;`,
   );
   return fn(world.all, world.tableOrders, world.tableKey, world.caisseTableId,
-    world.opUnmatchedTables, world.attachOrderProTable, world.toast, world.console);
+    world.opUnmatchedTables, world.attachOrderProTable, world.canRecoverCaisseTable, world.toast, world.console);
 }
 
 async function main() {
@@ -194,28 +196,54 @@ async function main() {
 
   const attached = [];
   const warned = [];
+  const line = { id: 'i1', name: 'Harira', qty: 1, unitPrice: 90 };
+  const order = (id, extra = {}) => ({ id, mode: 'table', table: '3', status: 'accepted',
+    session: 'ses-live', total: 90, lines: [line], ...extra });
   const world = {
-    tableOrders: { T3: [{ orderProLine: 'ord-known:0' }] },
+    tableOrders: { T3: [{ orderProLine: 'ord-known:0', orderSession: 'ses-live',
+      orderProPending: false, id: 'i1', name: 'Harira', qty: 1, price: 90 }],
+      T4: [{ id: 'i1', name: 'Harira', qty: 1, price: 90, sent: true }] },
+    orders: {}, tables: { T3: { status: 'ka-yaklo' }, T4: { status: 'ka-yaklo' }, T9: { status: 'ka-yaklo' } },
+    phoneSeats: new Map(['T3', 'T4', 'T9'].map(id => [id, { session: 'ses-live', since: 0 }])),
+    servers: {}, selectedId: null, mode: 'salle',
+    menuLineFind: () => null, newLineUid: () => 'test-line', ticketNo: () => 'test-ticket',
+    refreshTableNode() {}, persistShift() {}, startTableTimer() {}, resetTableTimer() {},
     tableKey: (v) => String(v || '').toUpperCase().replace(/\s+/g, ''),
-    caisseTableId: (v) => (String(v) === '3' ? 'T3' : ''),   // la table 9 n'est pas au plan
+    caisseTableId: (v) => ({ 3: 'T3', 4: 'T4' }[String(v)] || ''), // la table 9 n'est pas au plan
     opUnmatchedTables: new Set(),
-    attachOrderProTable: (o) => { attached.push(o.id); return true; },
     toast: (m) => warned.push(m),
     console: { warn() {} },
     all: [
-      { id: 'ord-known', mode: 'table', table: '3', status: 'accepted' },   // déjà attachée
-      { id: 'ord-missed', mode: 'table', table: '3', status: 'accepted' },  // refusée au premier tour
-      { id: 'ord-paid', mode: 'table', table: '3', status: 'served', paid: true },
-      { id: 'ord-caisse', mode: 'table', table: '3', status: 'accepted', channel: 'caisse' },
-      { id: 'ord-nowhere', mode: 'table', table: '9', status: 'accepted' }, // table absente du plan
+      order('ord-known'),
+      order('ord-missed'),
+      order('ord-paid', { status: 'served', paid: true }),
+      order('ord-caisse', { table: '4', channel: 'caisse' }), // unmarked local bill: ambiguous
+      order('ord-recover', { channel: 'caisse' }), // canonical-only bill: recoverable
+      order('ord-nowhere', { table: '9' }),
     ],
+  };
+  const caisseSource = fs.readFileSync(path.join(ROOT, 'kiwi-caisse.html'), 'utf8');
+  const context = vm.createContext(world);
+  for (const name of ['canRecoverCaisseTable', 'attachOrderProTable']) {
+    const match = caisseSource.match(new RegExp(`^    function ${name}\\([^]*?^    }`, 'm'));
+    if (!match) throw new Error(`Missing production function: ${name}`);
+    vm.runInContext(match[0], context);
+  }
+  const attachProduction = world.attachOrderProTable;
+  world.attachOrderProTable = o => {
+    const changed = attachProduction(o);
+    if (changed) attached.push(o.id);
+    return changed;
   };
 
   const touched = runReconciliation(block, world);
   check('la commande manquée est rattrapée', attached.includes('ord-missed'));
   check('la commande déjà attachée n\'est pas ré-attachée', !attached.includes('ord-known'));
   check('une commande réglée est laissée tranquille', !attached.includes('ord-paid'));
-  check('un bon de caisse suit son propre chemin', !attached.includes('ord-caisse'));
+  check('un bon de caisse ne double pas les lignes locales non identifiées',
+    !attached.includes('ord-caisse') && world.tableOrders.T4.length === 1);
+  check('un bon caisse canonique sans copie locale est récupéré une seule fois',
+    attached.includes('ord-recover') && world.tableOrders.T3.filter(l => l.orderProLine === 'ord-recover:0').length === 1);
   check('une table absente du plan ne rattache rien', !attached.includes('ord-nowhere'));
   check('…mais elle est signalée à l\'écran', warned.length === 1, JSON.stringify(warned));
   check('le sondage se déclare modifié', touched === true);
@@ -223,15 +251,15 @@ async function main() {
   /* Deuxième tour : rien de neuf ne doit être attaché, et l'avertissement ne
      doit pas se répéter à chaque sondage — sinon la caisse crie toutes les six
      secondes et le message perd tout son sens. */
-  world.tableOrders.T3.push({ orderProLine: 'ord-missed:0' });
   attached.length = 0;
-  runReconciliation(block, world);
+  const changedAgain = runReconciliation(block, world);
   check('au tour suivant, plus rien à rattraper', attached.length === 0, JSON.stringify(attached));
+  check('le second sondage ne modifie ni ne double les lignes', changedAgain === false && world.tableOrders.T3.length === 3);
   check('l\'avertissement ne se répète pas', warned.length === 1, `${warned.length} avertissement(s)`);
 
   /* Et quand la table réapparaît au plan (chargement tardif, renommage annulé),
      la commande rentre enfin — c'est tout l'intérêt de réessayer. */
-  world.caisseTableId = (v) => (String(v) === '3' ? 'T3' : (String(v) === '9' ? 'T9' : ''));
+  world.caisseTableId = (v) => ({ 3: 'T3', 4: 'T4', 9: 'T9' }[String(v)] || '');
   runReconciliation(block, world);
   check('la table revenue au plan récupère sa commande', attached.includes('ord-nowhere'));
 

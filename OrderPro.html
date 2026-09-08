@@ -3862,6 +3862,8 @@ em, i, cite, dfn, var { font-style: normal; }
         order_sending: "Envoi…",
         order_failed: "Commande non envoyée · réessayez",
         order_offline: "Pas de connexion · commande non envoyée",
+        order_unconfirmed: "Envoi non confirmé · réessayez, sans créer une nouvelle commande",
+        order_retry_local: "Envoi non confirmé · gardez cette page ouverte et réessayez ici",
         boot_closed_title: "Service fermé",
         boot_closed_body: "L'établissement ne prend pas de commandes en ce moment. Repassez pendant le service.",
         order_closed: "Le service vient de fermer · commande non envoyée",
@@ -4042,6 +4044,8 @@ em, i, cite, dfn, var { font-style: normal; }
         order_sending: "Sending…",
         order_failed: "Order not sent · try again",
         order_offline: "No connection · order not sent",
+        order_unconfirmed: "Send unconfirmed · retry without creating a new order",
+        order_retry_local: "Send unconfirmed · keep this page open and retry here",
         boot_closed_title: "Closed",
         boot_closed_body: "This venue isn't taking orders right now. Come back during service.",
         order_closed: "Service just closed · order not sent",
@@ -4221,6 +4225,8 @@ em, i, cite, dfn, var { font-style: normal; }
         order_sending: "كنصيفطو…",
         order_failed: "الطلب ماتصيفطش · عاود جرّب",
         order_offline: "ماكاينش كونيكسيون · الطلب ماتصيفطش",
+        order_unconfirmed: "الإرسال ما تأكدش · عاود جرّب بلا ما تنشئ طلب جديد",
+        order_retry_local: "الإرسال ما تأكدش · خلي هاد الصفحة محلولة وعاود جرّب هنا",
         boot_closed_title: "الخدمة محلولة ماشي دابا",
         boot_closed_body: "هاد المحل ماكيديش الطلبات دابا. رجع فوقت الخدمة.",
         order_closed: "الخدمة تسدّات · الطلب ماتصيفطش",
@@ -5337,6 +5343,14 @@ em, i, cite, dfn, var { font-style: normal; }
       if (SESSION.closed) { gotoScreen('screen-thanks'); return; }
       const label = $('#send-label');
       const prevLabel = label ? label.textContent : '';
+      const loadingOwner = { scope: SESSION.sendScope() };
+      btn.orderProLoadingOwner = loadingOwner;
+      const releaseLoading = (restoreLabel = true) => {
+        if (btn.orderProLoadingOwner !== loadingOwner) return;
+        btn.classList.remove('is-loading');
+        if (label && restoreLabel) label.textContent = prevLabel;
+        delete btn.orderProLoadingOwner;
+      };
       btn.classList.add('is-loading');
       if (label) label.textContent = t('order_sending');
 
@@ -5347,21 +5361,23 @@ em, i, cite, dfn, var { font-style: normal; }
       // Snapshot current cart into sentLines (for à-table bill aggregation)
       const linesCopy = [...cart.values()].map(l => ({ ...l, options: { ...l.options } }));
 
-      /* Une clé par envoi. Un double-tap, ou un réseau qui repasse pendant que
-         la requête était en vol, doit retrouver LA MÊME commande — pas en
-         créer une seconde avec un second numéro que la cuisine préparerait
-         deux fois. Le serveur la reconnaît et rejoue sa réponse. */
-      if (!pendingRef) pendingRef = 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+      // Resolve the visit BEFORE choosing its retry identity.
+      if ((!SESSION.id || SESSION.mode !== orderMode || String(SESSION.table || '') !== String(orderMode === 'table' ? tableNumber : ''))
+          && !(await SESSION.open(orderMode, orderMode === 'table' ? tableNumber : ''))) {
+        releaseLoading();
+        return;
+      }
+      loadingOwner.scope = SESSION.sendScope();
 
       /* On n'envoie plus ni les noms ni les prix : rien que des identifiants et
          des quantités. Le serveur ouvre la carte publiée par le commerçant, y
          lit le prix et recalcule le total. Avant, une requête modifiée créait
          une commande à 1 MAD pour un plat à 250 et le ticket cuisine sortait
          avec le faux prix. */
-      const linesPayload = linesCopy.flatMap((l, lineIndex) => {
+      const makeLinesPayload = ref => linesCopy.flatMap((l, lineIndex) => {
         const item = itemOf(l.id);
         const formulaSlots = (item && item.options || []).filter(opt => opt.formulaSlotId);
-        const formulaUid = formulaSlots.length ? `${pendingRef}-${lineIndex}`.slice(0, 40) : '';
+        const formulaUid = formulaSlots.length ? `${ref}-${lineIndex}`.slice(0, 40) : '';
         const parent = {
           id: l.id, qty: l.qty,
           options: describeOptionChoices(l).map(p => `${groupLabel(p.group)}: ${p.label}`).join(' · '),
@@ -5391,9 +5407,21 @@ em, i, cite, dfn, var { font-style: normal; }
         return [parent].concat(children);
       });
 
-      if (!SESSION.id || SESSION.closed) {
-        await SESSION.open(orderMode, orderMode === 'table' ? tableNumber : '');
+      // Hash the exact payload with neutral formula IDs, then restore its ref
+      // before deriving the real formulaUid/lineId values. No basket is stored.
+      const neutralPayload = makeLinesPayload('');
+      const attempt = await SESSION.prepareSend(neutralPayload);
+      if (SESSION.closed || attempt.scope !== SESSION.sendScope()) {
+        SESSION.clearPendingSend(attempt);
+        pendingRef = '';
+        releaseLoading();
+        return;
       }
+      pendingRef = attempt.ref;
+      const linesPayload = neutralPayload.map(line => !line.formulaUid ? line : {
+        ...line, formulaUid: (pendingRef + line.formulaUid).slice(0, 40),
+        ...(line.lineId ? { lineId: (pendingRef + line.lineId).slice(0, 60) } : {}),
+      });
 
       let res = await NET.placeOrder({
         mode: orderMode,                       // 'table' | 'takeout'
@@ -5403,8 +5431,15 @@ em, i, cite, dfn, var { font-style: normal; }
         lines: linesPayload,
       });
 
-      btn.classList.remove('is-loading');
-      if (label) label.textContent = prevLabel;
+      const currentVisit = !SESSION.closed && attempt.scope === SESSION.sendScope();
+      releaseLoading(currentVisit);
+      // A response can outlive payment and an explicit reorder. Retire an
+      // acknowledged old attempt, but never apply it to the new visit's UI.
+      if (!currentVisit) {
+        if (res && res.ok) SESSION.clearPendingSend(attempt);
+        if (pendingRef === attempt.ref) pendingRef = '';
+        return;
+      }
 
       if (!res || !res.ok) {
         const err = res && res.error;
@@ -5420,6 +5455,7 @@ em, i, cite, dfn, var { font-style: normal; }
            retiré. On le dit avec le nom, et on retire la ligne : réessayer à
            l'identique échouerait exactement pareil. */
         if (err === 'menu-changed') {
+          SESSION.clearPendingSend(attempt);
           pendingRef = '';
           const invalidOpts = Array.isArray(res.invalidOptions) ? res.invalidOptions.filter(Boolean) : [];
           const gone = [].concat(res.unavailable || [], res.unknown || []).filter(Boolean);
@@ -5455,10 +5491,12 @@ em, i, cite, dfn, var { font-style: normal; }
           reloadMenu();
           return;
         }
-        showToast(err === 'network' ? t('order_offline') : t('order_failed'));
+        showToast(err === 'network' && !attempt.durable ? t('order_retry_local')
+          : err === 'network' ? t('order_unconfirmed') : t('order_failed'));
         return;                                // cart intact — they can retry
       }
 
+      SESSION.clearPendingSend(attempt);
       pendingRef = '';
       currentOrderId = String(res.id || '');
       lastStatus = '';
@@ -5511,6 +5549,64 @@ em, i, cite, dfn, var { font-style: normal; }
        ═══════════════════════════════════════════════════════════════════════ */
     const SESSION = {
       id: '', mode: '', table: '', closed: false, closedBy: '',
+      pendingSend: null,
+      retiredSendRefs: new Set(),
+      sendKey() { return 'kiwi-op-send:' + NET.slug; },
+      sendScope() { return JSON.stringify([NET.slug, this.id, this.mode, String(this.table || '')]); },
+      async prepareSend(lines) {
+        const key = this.sendKey(), scope = this.sendScope(), payload = JSON.stringify(lines);
+        const previous = this.pendingSend;
+        let fingerprint = '';
+        try {
+          const digest = await globalThis.crypto.subtle.digest('SHA-256', new TextEncoder().encode(payload));
+          fingerprint = Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, '0')).join('');
+        } catch (_) { /* unavailable storage/crypto permits only an in-page retry */ }
+        let ref = previous && previous.scope === scope && previous.payload === payload
+          && !this.retiredSendRefs.has(key + ':' + previous.ref) ? previous.ref : '';
+        if (!ref && fingerprint) {
+          try {
+            const saved = JSON.parse(localStorage.getItem(key) || 'null');
+            if (saved && saved.v === 1 && saved.scope === scope && saved.fingerprint === fingerprint
+                && /^r[A-Za-z0-9_-]{6,40}$/.test(saved.ref || '')
+                && !this.retiredSendRefs.has(key + ':' + saved.ref)
+                && localStorage.getItem(key + ':retired:' + saved.ref) !== '1') ref = saved.ref;
+          } catch (_) {}
+        }
+        if (!ref) ref = 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 14);
+        const attempt = { key, scope, payload, ref, durable: false };
+        if (fingerprint) {
+          try {
+            const record = JSON.stringify({ v: 1, scope, fingerprint, ref });
+            localStorage.setItem(key, record);
+            attempt.durable = localStorage.getItem(key) === record;
+          } catch (_) {}
+        }
+        this.pendingSend = attempt;
+        return attempt;
+      },
+      clearPendingSend(attempt = this.pendingSend) {
+        const key = attempt ? attempt.key : this.sendKey();
+        let retireDurably = !!attempt;
+        if (attempt) this.retiredSendRefs.add(key + ':' + attempt.ref);
+        try {
+          const saved = JSON.parse(localStorage.getItem(key) || 'null');
+          if (saved && (attempt ? saved.ref === attempt.ref && saved.scope === attempt.scope
+              : saved.scope === this.sendScope())) {
+            // Tombstone first: if removeItem fails, a successful write still
+            // prevents an acknowledged ref from being restored after navigation.
+            try { localStorage.setItem(key, 'null'); } catch (_) {}
+            localStorage.removeItem(key);
+          }
+          retireDurably = false;
+        } catch (_) {}
+        // If the shared slot cannot be read, do not overwrite a potentially
+        // newer attempt. Retire ONLY the captured ref in its own small marker;
+        // navigation can then reject the stale record once reads recover.
+        if (retireDurably) {
+          try { localStorage.setItem(key + ':retired:' + attempt.ref, '1'); } catch (_) {}
+        }
+        if (!attempt || this.pendingSend === attempt) this.pendingSend = null;
+      },
       _key() { return 'kiwi-op-ses:' + NET.slug; },
       _read() {
         try { return JSON.parse(localStorage.getItem(this._key()) || 'null') || null; }
@@ -5567,6 +5663,7 @@ em, i, cite, dfn, var { font-style: normal; }
       },
       markClosed(why) {
         if (this.closed) return;
+        this.clearPendingSend();
         this.closed = true; this.closedBy = why || '';
         this._write({ closedBy: this.closedBy, id: this.id, mode: this.mode, table: this.table, closedAt: Date.now(), hadOrder: !!currentOrderId || (Array.isArray(sentLines) && sentLines.length > 0) });
         onSessionClosed();
@@ -5579,6 +5676,11 @@ em, i, cite, dfn, var { font-style: normal; }
        ne puisse encore envoyer quoi que ce soit. */
     function onSessionClosed() {
       LIVE.stop();
+      const sendButton = $('#send-btn');
+      if (sendButton && sendButton.orderProLoadingOwner?.scope === SESSION.sendScope()) {
+        sendButton.classList.remove('is-loading');
+        delete sendButton.orderProLoadingOwner;
+      }
       pendingRef = '';
       cart.clear();
       refreshCartUI();

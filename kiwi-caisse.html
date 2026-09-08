@@ -2751,6 +2751,7 @@
       transition: opacity 150ms, transform 150ms;
     }
     .split-launch:hover { transform: translateY(-1px); }
+    .split-launch:disabled { opacity: .55; cursor: not-allowed; transform: none; }
     .split-cancel-link {
       display: block; text-align: center; margin-top: 12px;
       font-size: 12px; color: var(--ink-4); cursor: pointer; transition: color 150ms;
@@ -5503,7 +5504,7 @@
   <meta name="apple-mobile-web-app-title" content="Caisse" />
   <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/kiwi-employee-180.png?v=2" />
   <script src="assets/pwa-update.js?v=359" defer></script>
-  <script src="assets/caisse-pwa.js?v=498" defer></script>
+  <script src="assets/caisse-pwa.js?v=499" defer></script>
   <script src="assets/live-link.js?v=35" defer></script>
   <!-- The staff-role catalogue · says which roles may open the register. Loaded
        before the pad that asks the question. Missing ⇒ every valid code opens. -->
@@ -5579,7 +5580,7 @@
   <script src="assets/food-production-print.js?v=2" defer></script>
   <!-- OrderPro · orders placed on a customer's phone arrive here over WiFi;
        staff accept one and it becomes a kitchen ticket. Paired terminals only. -->
-  <script src="assets/orderpro-inbox.js?v=16" defer></script>
+  <script src="assets/orderpro-inbox.js?v=17" defer></script>
   <script src="assets/service-requests.js?v=1" defer></script>
   <script src="assets/caisse-menu-availability.js?v=4" defer></script>
   <!-- Operator feature flags + managed PINs. Fail-safe: no backend ⇒ no change. -->
@@ -6548,7 +6549,7 @@
           <div class="split-help-box">
             <i data-lucide="lightbulb"></i>
             <div class="split-help-text">
-              Sélectionnez un convive, puis tapez sur les articles qu'il a consommés. Chaque part suit son ticket et son TPE.
+              Sélectionnez un convive, puis attribuez chaque article entier avant d’encaisser. Aucun article restant ne sera divisé automatiquement.
             </div>
           </div>
 
@@ -7462,7 +7463,8 @@
       { name: 'Pâtisserie maison',    unit: 45 },
     ] : [];
     function generateOrder(tableId, t) {
-      if (orders[tableId]) return orders[tableId];
+      // A legacy transfer could leave an empty cache beside an intact bill.
+      if (orders[tableId] && (orders[tableId].length || !(tableOrders[tableId] || []).length)) return orders[tableId];
       // Live order built by cashier · convert to {qty,name,total} format
       if (tableId in tableOrders) {
         return tableOrders[tableId].map(l => ({ id: l.id, qty: l.qty, name: lineLabel(l),
@@ -7884,6 +7886,7 @@
        Mémorisées pour n'avertir qu'une fois par table, pas à chaque sondage. */
     const opUnmatchedTables = new Set();
     const phoneSeats = new Map();     // clé table → { session, since }
+    const phoneMovedVisits = new Map(); // session → acknowledged destination and superseded close marker
     const phonePending = new Map();   // clé table → nombre de commandes en attente
     const tableClosedAt = Object.create(null); // clé table → horodatage de fermeture/annulation locale
     if (!storeIsReal()) initDemoPlanes();
@@ -8858,7 +8861,7 @@
     function markPaid(id) {
       const t = tables[id];
       t.status = 'khlass';
-      t.elapsed = 0;
+      resetTableTimer(t);
       delete t.discount; // clear remise immédiatement à l'encaissement
       delete t.orderNo;
       tableOrders[id] = [];
@@ -9775,6 +9778,7 @@
         (tableOrders[selectedId] = tableOrders[selectedId] || []).push({
           uid: newLineUid(), id: 'libre', name: 'Article libre', price: amt, qty: 1, note: ''
         });
+        startTableTimer(selectedId);
         renderOrderPanel(selectedId);
       } else {
         cart.push({ uid: newLineUid(), id: 'libre', name: 'Article libre', price: amt,
@@ -11068,18 +11072,43 @@
     });
 
     /* ---------- Live elapsed minutes ---------- */
-    setInterval(() => {
+    function resetTableTimer(t) {
+      if (!t) return;
+      t.elapsed = 0;
+      delete t.orderStartedAt;
+      delete t.timerSession;
+    }
+    function startTableTimer(id, createdAt = 0) {
+      const t = tables[id];
+      if (!t) return 0;
+      const now = Date.now();
+      if (!(Number(t.orderStartedAt) > 0)) {
+        const created = Number(createdAt);
+        // Old shift snapshots have only elapsed minutes. Preserve that age;
+        // canonical orders supply their timestamp when a till reconnects.
+        t.orderStartedAt = created > 0 ? Math.min(now, created)
+          : now - Math.max(0, Number(t.elapsed) || 0) * 60000;
+      } else if (Number(createdAt) > 0) {
+        // A reconnect can deliver the newest ticket first. Earlier tickets
+        // move the anchor back; additional orders never restart the clock.
+        t.orderStartedAt = Math.min(t.orderStartedAt, Number(createdAt), now);
+      }
+      t.elapsed = Math.max(0, Math.floor((now - t.orderStartedAt) / 60000));
+      return t.orderStartedAt;
+    }
+    function updateTableTimers() {
       Object.keys(tables).forEach(id => {
         const t = tables[id];
         const hasOrder = (tableOrders[id] && tableOrders[id].length > 0) || (orders[id] && orders[id].length > 0);
         if (hasOrder && (t.status === 'ka-yaklo' || t.status === 'bgha-ykhlass' || t.status === 'a-commander')) {
-          t.elapsed = (t.elapsed || 0) + 1;
+          startTableTimer(id);
           // Update DOM in place (cheaper than full re-render)
           const node = document.querySelector(`[data-table="${id}"] .tbl-elapsed`);
           if (node) node.textContent = `${t.elapsed} mn`;
           // Update right panel substatus if this is the selected one
           if (id === selectedId) {
             const sub = $('#rp-substatus');
+            if (!sub) return;
             const flag = sub.dataset.flag;
             const map = {
               'bgha-ykhlass': 'Addition',
@@ -11088,9 +11117,11 @@
             };
             sub.textContent = `${map[flag]} · ${t.elapsed} mn`;
           }
-        }
+        } else if (!hasOrder || t.status === 'khawya' || t.status === 'khlass') resetTableTimer(t);
       });
-    }, 60_000);
+    }
+    setInterval(updateTableTimers, 60_000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) updateTableTimers(); });
 
     /* ---------- Khlass-fade for T7 (preset) ---------- */
     setTimeout(() => {
@@ -11147,7 +11178,7 @@
       t.covers  = newTableCovers;
       t.size    = newTableCovers >= 5 ? 6 : (newTableCovers <= 2 ? 2 : 4);
       t.status  = 'ka-yaklo';
-      t.elapsed = 0;
+      resetTableTimer(t);
       delete t.discount; // Toute nouvelle table démarre sans remise
       delete tableClosedAt[tableKey(newTableId)]; // Nouvelle table légitime · lever le filtre de fermeture
       tableOrders[newTableId] = [];
@@ -11283,7 +11314,7 @@
       if (t && t.status === 'khawya') {  // occupy the chosen table on the floor
         t.status  = 'a-commander';    // seated · server still needs to take the order
         t.covers  = e.size;
-        t.elapsed = 0;
+        resetTableTimer(t);
         delete orders[tableId];       // drop any cached/fabricated order
         tableOrders[tableId] = [];    // fresh table, ready to take their order
         refreshTableNode(tableId);
@@ -11348,6 +11379,65 @@
       return (tableOrders[id] || []).some(line => line.sent && !line.orderProPending);
     }
 
+    function caisseMobilityIntent(handler, from, to) {
+      const merchant = currentMerchantSlug();
+      const saved = handler.pendingIntent;
+      // Keep the same operation after an ambiguous network response.
+      if (saved && saved.merchant === merchant && saved.from === from && saved.to === to) return saved;
+      let seat = phoneSeats.get(tableKey(from));
+      if (!seat || !Number.isFinite(seat.revision)) {
+        // Empty visits are movable too. Recover the existing canonical visit
+        // from the inbox snapshot if its local badge has not been installed.
+        const sessions = window.KiwiOrderInbox?.sessions?.();
+        const visit = Array.isArray(sessions) && sessions.find(s => s.mode === 'table'
+          && caisseTableId(s.table) === from && (!seat?.session || String(s.id) === String(seat.session)));
+        if (visit && Number.isFinite(Number(visit.seen_ts))) {
+          seat = { session: visit.id, since: visit.opened_ts, revision: Number(visit.seen_ts) };
+        }
+      }
+      if (!seat || !seat.session || !Number.isFinite(seat.revision)) {
+        try { window.KiwiOrderInbox?.refresh?.(); } catch (_) {}
+        throw new Error('Visite à actualiser · réessayez après synchronisation');
+      }
+      return (handler.pendingIntent = {
+        merchant, from, to, operationId: crypto.randomUUID(),
+        expectedSession: String(seat.session), expectedRevision: seat.revision,
+        since: seat.since, destinationClosedAt: Number(tableClosedAt[tableKey(to)] || 0),
+      });
+    }
+
+    function applyCaisseMovedVisit(from, to, data, intent, merge) {
+      if (!data || !intent) return;
+      const session = String((merge ? data.targetSessionId : (data.movedSession || data.sessionId)) || '');
+      if (!session) return;
+      const fromKey = tableKey(from), toKey = tableKey(to);
+      const targetSeat = phoneSeats.get(toKey);
+      phoneSeats.delete(fromKey);
+      phoneSeats.set(toKey, {
+        session, since: merge && targetSeat?.session === session ? targetSeat.since : intent.since,
+        // Merge does not return a revision; wait for the canonical poll before another move.
+        revision: Number.isFinite(data.revision) ? data.revision : undefined,
+      });
+      phoneMovedVisits.set(session, { to: toKey, from: fromKey,
+        closedAt: intent.destinationClosedAt, revision: Number(data.revision || data.now) || 0 });
+      const pending = phonePending.get(fromKey) || 0;
+      phonePending.delete(fromKey);
+      phonePending.set(toKey, pending + (merge ? (phonePending.get(toKey) || 0) : 0));
+      (tableOrders[to] || []).forEach(line => {
+        if (line.orderProLine) line.orderSession = session;
+      });
+      // Acknowledged movement changes location/visit, never acceptance or payment.
+      try {
+        const inbox = window.KiwiOrderInbox?.orders?.() || {};
+        Object.values(inbox).forEach(order => {
+          if (order.mode === 'table' && tableKey(caisseTableId(order.table) || order.table) === fromKey && !order.paid && order.status !== 'rejected') {
+            order.table = to; order.session = session;
+          }
+        });
+      } catch (_) {}
+      if (tables[to]) tables[to].timerSession = session;
+    }
+
     function openCaisseTransferModal(tableId) {
       if (caisseTableKitchenLocked(tableId)) { toast('Déplacement impossible : commande déjà envoyée en cuisine'); return; }
       if (!hasTables() || isFeatureOff('tableTransfer') || isFeatureOff('table-transfer')) {
@@ -11399,18 +11489,25 @@
       if (!fromT || !toT) return;
 
       let transferData = null;
+      let transferIntent = null;
       if (!IS_DEMO) {
         try {
+          transferIntent = caisseMobilityIntent(confirmCaisseTransfer, from, to);
           const res = await fetch('/api/order/queue', {
             method: 'POST', credentials: 'same-origin', cache: 'no-store',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               merchant: currentMerchantSlug(),
-              transferTable: { from, to, covers: fromT.covers, server: fromT.server || 'Caisse' }
+              transferTable: { from, to, covers: fromT.covers, server: fromT.server || 'Caisse',
+                operationId: transferIntent.operationId, expectedSession: transferIntent.expectedSession,
+                expectedRevision: transferIntent.expectedRevision }
             })
           });
           const data = await res.json().catch(() => null);
-          if (!res.ok || !data || !data.ok) throw new Error((data && data.error) || 'transfer-failed');
+          if (!res.ok || !data || !data.ok) {
+            if (res.status >= 400 && res.status < 500) delete confirmCaisseTransfer.pendingIntent;
+            throw new Error((data && data.error) || 'transfer-failed');
+          }
           transferData = data;
         } catch (err) {
           if (confirmBtn) confirmBtn.disabled = false;
@@ -11420,14 +11517,20 @@
       }
 
       // Local state migration
+      if ((tableOrders[from] || orders[from] || []).length) startTableTimer(from);
       toT.status = fromT.status;
       toT.covers = fromT.covers;
       toT.elapsed = fromT.elapsed;
+      toT.orderStartedAt = fromT.orderStartedAt;
+      toT.timerSession = fromT.timerSession;
       toT.server = fromT.server;
       toT.orderNo = fromT.orderNo;
       toT.discount = fromT.discount;
       tableOrders[to] = tableOrders[from] || [];
-      orders[to] = orders[from] || [];
+      if (Array.isArray(orders[from]) && orders[from].length) orders[to] = orders[from];
+      else delete orders[to];
+      applyCaisseMovedVisit(from, to, transferData, transferIntent, false);
+      delete confirmCaisseTransfer.pendingIntent;
       if (typeof tableSplits !== 'undefined' && tableSplits.has(from)) {
         tableSplits.set(to, tableSplits.get(from));
         tableSplits.delete(from);
@@ -11436,12 +11539,14 @@
       // Clear source table
       fromT.status = 'khawya';
       fromT.covers = 0;
-      fromT.elapsed = 0;
+      resetTableTimer(fromT);
       delete fromT.orderNo;
       delete fromT.server;
       delete fromT.discount;
       delete tableOrders[from];
       delete orders[from];
+
+      try { persistShift(); publishServiceFloor(); } catch (_) {}
 
       refreshTableNode(from);
       refreshTableNode(to);
@@ -11519,18 +11624,25 @@
       if (!sourceT || !targetT) return;
 
       let mergeData = null;
+      let mergeIntent = null;
       if (!IS_DEMO) {
         try {
+          mergeIntent = caisseMobilityIntent(confirmCaisseMerge, source, target);
           const res = await fetch('/api/order/queue', {
             method: 'POST', credentials: 'same-origin', cache: 'no-store',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               merchant: currentMerchantSlug(),
-              mergeTables: { targetTable: target, sourceTable: source, server: targetT.server || 'Caisse' }
+              mergeTables: { targetTable: target, sourceTable: source, server: targetT.server || 'Caisse',
+                operationId: mergeIntent.operationId, expectedSession: mergeIntent.expectedSession,
+                expectedRevision: mergeIntent.expectedRevision }
             })
           });
           const data = await res.json().catch(() => null);
-          if (!res.ok || !data || !data.ok) throw new Error((data && data.error) || 'merge-failed');
+          if (!res.ok || !data || !data.ok) {
+            if (res.status >= 400 && res.status < 500) delete confirmCaisseMerge.pendingIntent;
+            throw new Error((data && data.error) || 'merge-failed');
+          }
           mergeData = data;
         } catch (err) {
           if (confirmBtn) confirmBtn.disabled = false;
@@ -11542,7 +11654,24 @@
       // Merge order lines
       const sourceLines = tableOrders[source] || [];
       const targetLines = tableOrders[target] || [];
+      const timerAnchors = [];
+      if (sourceLines.length || (orders[source] || []).length) timerAnchors.push(startTableTimer(source));
+      if (targetLines.length || (orders[target] || []).length) timerAnchors.push(startTableTimer(target));
+      if (timerAnchors.length) {
+        targetT.orderStartedAt = Math.min(...timerAnchors);
+        delete targetT.timerSession;
+        startTableTimer(target);
+      }
       tableOrders[target] = targetLines.concat(sourceLines);
+      // Cached rendered bills must include both sides, or yield to the live lines.
+      if ((orders[source] || []).length || (orders[target] || []).length) {
+        orders[target] = [
+          ...((orders[target] || []).length ? orders[target] : targetLines.map(l => ({ ...l, total: l.price * l.qty }))),
+          ...((orders[source] || []).length ? orders[source] : sourceLines.map(l => ({ ...l, total: l.price * l.qty }))),
+        ];
+      } else delete orders[target];
+      applyCaisseMovedVisit(source, target, mergeData, mergeIntent, true);
+      delete confirmCaisseMerge.pendingIntent;
       targetT.covers = (targetT.covers || 0) + (sourceT.covers || 0);
       if (typeof tableSplits !== 'undefined') {
         tableSplits.delete(source);
@@ -11552,12 +11681,14 @@
       // Clear source table
       sourceT.status = 'khawya';
       sourceT.covers = 0;
-      sourceT.elapsed = 0;
+      resetTableTimer(sourceT);
       delete sourceT.orderNo;
       delete sourceT.server;
       delete sourceT.discount;
       delete tableOrders[source];
       delete orders[source];
+
+      try { persistShift(); publishServiceFloor(); } catch (_) {}
 
       refreshTableNode(source);
       refreshTableNode(target);
@@ -11726,6 +11857,7 @@
       if (line) line.qty++;
       else tableOrders[tableId].push({ uid: newLineUid(), id: item.id, name: item.name,
         price: item.price + extra, qty: 1, note: '', opts: (opts || []).slice(), optSig: sig });
+      startTableTimer(tableId);
       // Pop animation on card
       const card = document.querySelector(`.menu-item[data-menu-id="${item.id}"]`);
       if (card) { card.classList.remove('pop'); void card.offsetWidth; card.classList.add('pop'); }
@@ -11738,7 +11870,7 @@
       if (!item) return;
       const groups = itemOptGroups(item);
       if (item.formula && Array.isArray(item.formula.slots) && item.formula.slots.length) {
-        openCaisseFormula(item, (parent, parts) => { (tableOrders[tableId] = tableOrders[tableId] || []).push(parent, ...parts); nativeHapticLight(); renderMenu(); renderOrderPanel(tableId); });
+        openCaisseFormula(item, (parent, parts) => { (tableOrders[tableId] = tableOrders[tableId] || []).push(parent, ...parts); startTableTimer(tableId); nativeHapticLight(); renderMenu(); renderOrderPanel(tableId); });
         return;
       }
       if (groups.length) {
@@ -11875,7 +12007,7 @@
       const n = (tableOrders[tableId] || []).reduce((s, l) => s + (l.sent ? 0 : l.qty), 0);
 
       t.status  = 'ka-yaklo';
-      t.elapsed = 0;
+      if ((tableOrders[tableId] || []).length) startTableTimer(tableId);
       refreshTableNode(tableId);
 
       // Retour salle, mesa toujours ouverte et sélectionnée : le serveur voit
@@ -12128,7 +12260,7 @@
       const t = tables[id];
       if (t) {
         t.status = 'khawya';
-        t.elapsed = 0;
+        resetTableTimer(t);
         delete t.discount;
       }
       /* Force the event when this caisse missed the local phone-seat badge.
@@ -12172,7 +12304,7 @@
         /* La table peut avoir disparu sous nos pieds · setupRealSalle() efface
            et reconstruit `tables` dès que le patron touche son plan depuis son
            téléphone. Ce n'est pas une raison pour rester coincé. */
-        if (t) { t.status = 'khawya'; t.elapsed = 0; delete t.discount; }
+        if (t) { t.status = 'khawya'; resetTableTimer(t); delete t.discount; }
         /* La table est rendue sans encaissement. Sans ça, le téléphone resterait
            « assis » à une table redevenue libre et pourrait continuer à commander
            · le trou exact que la session existe pour boucher. */
@@ -12357,7 +12489,7 @@
       return sum;
     }
     function assignUnit(itemName) {
-      if (remainingQty(itemName) <= 0) return;
+      if (!Number.isInteger(remainingQty(itemName)) || remainingQty(itemName) <= 0) return;
       const c = splitState.activeConvive;
       if (!splitState.perConvive[c]) splitState.perConvive[c] = {};
       splitState.perConvive[c][itemName] = (splitState.perConvive[c][itemName] || 0) + 1;
@@ -12386,6 +12518,9 @@
       $('#split-article-content').hidden = splitState.splitMode !== 'article';
 
       if (splitState.splitMode === 'egal') {
+        $('#split-launch').disabled = false;
+        $('#split-launch').textContent = 'Lancer le split';
+        $('#split-launch').title = '';
         renderPartsChips();
         renderTipChips();
         updateSplitSummary();
@@ -12401,7 +12536,35 @@
       renderConvivesTabs();
       renderPool();
       renderConviveCart();
+      const allocation = splitArticleAllocation();
+      $('#split-launch').disabled = !allocation.ok;
+      $('#split-launch').textContent = allocation.ok ? 'Encaisser les articles attribués' : allocation.message;
+      $('#split-launch').title = allocation.message || '';
       lucide.createIcons();
+    }
+
+    // Item splitting allocates whole units. Only explicit equal splitting may
+    // share the price of one dish between diners. Validate again at payment entry.
+    function splitArticleAllocation() {
+      const items = Object.entries(splitState.itemTotals || {});
+      const n = Number(splitState.numConvives);
+      const invalid = () => ({ ok: false, message: 'Attribution invalide : vérifiez les articles' });
+      if (!items.length || !Number.isInteger(n) || n < 1) return invalid();
+      const totals = new Map(items.map(([name, info]) => [name, info.totalQty]));
+      const assigned = new Map();
+      for (const [convive, cart] of Object.entries(splitState.perConvive || {})) {
+        if (!Number.isInteger(Number(convive)) || Number(convive) < 1 || Number(convive) > n || !cart || typeof cart !== 'object') return invalid();
+        for (const [name, qty] of Object.entries(cart)) {
+          if (!totals.has(name) || !Number.isInteger(qty) || qty < 0) return invalid();
+          assigned.set(name, (assigned.get(name) || 0) + qty);
+        }
+      }
+      let remaining = 0;
+      for (const [name, qty] of totals) {
+        if (!Number.isInteger(qty) || qty < 0 || (assigned.get(name) || 0) > qty) return invalid();
+        remaining += qty - (assigned.get(name) || 0);
+      }
+      return remaining ? { ok: false, message: `${remaining} article${remaining > 1 ? 's' : ''} à attribuer` } : { ok: true, message: '' };
     }
 
     function renderConvivesTabs() {
@@ -12557,6 +12720,10 @@
 
     /* ---- launch flow ---- */
     function launchSplitFlow() {
+      if (splitState.splitMode !== 'egal') {
+        const allocation = splitArticleAllocation();
+        if (!allocation.ok) { toast(allocation.message); return; }
+      }
       const parts = [];
       const tipTotal = money(splitState.total * effectiveTipPct() / 100);
       if (splitState.splitMode === 'egal') {
@@ -12587,32 +12754,12 @@
         }
       } else {
         const n = splitState.numConvives;
-        // Items that no convive picked → split evenly across all convives
-        const unassignedTotal = Object.entries(splitState.itemTotals).reduce((s, [name, info]) => {
-          return s + remainingQty(name) * info.unitPrice;
-        }, 0);
-        const unassignedPerConv = unassignedTotal / n;
-        const unassignedLines = Object.entries(splitState.itemTotals)
-          .filter(([name]) => remainingQty(name) > 0)
-          .map(([name, info]) => {
-            const rem = remainingQty(name);
-            const shareUnitPrice = money(info.unitPrice / n);
-            return {
-              name: `${name} · 1/${n}`,
-              qty: rem,
-              unit: shareUnitPrice,
-              price: shareUnitPrice,
-              total: money(rem * info.unitPrice / n),
-              cat: lineCat(info.itemId || null, name),
-              itemId: info.itemId || '',
-            };
-          });
 
         for (let c = 1; c <= n; c++) {
           const cart = splitState.perConvive[c] || {};
           const amt = Object.entries(cart).reduce((s, [name, qty]) => {
             return s + qty * (splitState.itemTotals[name]?.unitPrice || 0);
-          }, 0) + unassignedPerConv;
+          }, 0);
 
           if (amt < 0.01) continue; // skip empty convives
 
@@ -12631,7 +12778,7 @@
               itemId: info.itemId || '',
             };
           });
-          const partLines = [...assignedLines, ...unassignedLines.map(l => ({ ...l }))];
+          const partLines = assignedLines;
           parts.push({
             weight: amt,
             label: items || 'Part équilibrée',
@@ -17948,7 +18095,11 @@
          complet. Purger aussi le tableau déjà en mémoire, pas seulement le
          snapshot restauré au prochain rechargement. */
       for (let i = kdsOrders.length - 1; i >= 0; i--) {
-        if (staleQueuedServerTicket(kdsOrders[i])) kdsOrders.splice(i, 1);
+        if (staleQueuedServerTicket(kdsOrders[i])) {
+          const ticket = kdsOrders[i];
+          kdsOrders.splice(i, 1);
+          if (ticket.opId && opTickets.get(ticket.opId) === ticket) opTickets.delete(ticket.opId);
+        }
       }
       $('#kit-bar').innerHTML = kdsStationBar();
       $('#kit-history-toggle').innerHTML =
@@ -19852,10 +20003,11 @@
        seule fois, sans les rendre modifiables ni les renvoyer en cuisine. */
     function attachOrderProTable(o) {
       if (!o || o.mode !== 'table' || !o.table) return false;
+      if (o.paid && o.status !== 'rejected') return false;
       const id = caisseTableId(o.table);
       const t = id && tables[id];
       if (!t) return false;
-      const activeSeat = phoneSeats.get(tableKey(o.table));
+      const activeSeat = phoneSeats.get(tableKey(id));
       /* A table is reused hundreds of times. Only tickets from its CURRENT
          session belong to this bill. Legacy employee rows have a server but no
          session; importing them is precisely how one new item became eight in
@@ -19883,8 +20035,8 @@
         return changed;
       }
       if (t.status === 'khawya' || t.status === 'a-commander') {
+        if (t.status === 'khawya') resetTableTimer(t);
         t.status = 'ka-yaklo';
-        t.elapsed = 0;
         changed = true;
       }
       if (o.server && !t.server) {
@@ -19892,12 +20044,16 @@
         if (serverId) { t.server = serverId; changed = true; }
       }
 
-      const lines = tableOrders[id] || (tableOrders[id] = []);
+      if (activeSeat && activeSeat.session) {
+        if (t.timerSession && t.timerSession !== String(activeSeat.session)) resetTableTimer(t);
+        t.timerSession = String(activeSeat.session);
+      }
+      let lines = tableOrders[id] || (tableOrders[id] = []);
       if (activeSeat && activeSeat.session) {
         const curSession = String(activeSeat.session);
         const filtered = lines.filter(l => !l.orderSession || String(l.orderSession) === curSession);
         if (filtered.length !== lines.length) {
-          tableOrders[id] = filtered;
+          lines = tableOrders[id] = filtered;
           changed = true;
         }
       }
@@ -19921,11 +20077,13 @@
           slotLabel: l.slotLabel || '', formulaSlotId: l.formulaSlotId || '', lineId: l.lineId || '',
           formulaExtra: l.kind === 'formula-part' ? Math.max(0, +l.formulaExtra || 0) : undefined,
           sent: true, orderProLine: marker, orderSession: String(o.session || ''),
+          caisseRecovered: o.channel === 'caisse',
           orderProPending: o.status === 'pending',
         });
         changed = true;
       });
       if (changed) {
+        if ((tableOrders[id] || []).length) startTableTimer(id, o.created_ts);
         refreshTableNode(id);
         if (selectedId === id && mode === 'salle') renderRightPanel(id);
         try { persistShift(); } catch (_) {}
@@ -19952,9 +20110,24 @@
       try { persistShift(); } catch (_) {}
       return true;
     }
+    function canRecoverCaisseTable(o) {
+      if (!o || o.channel !== 'caisse' || o.mode !== 'table' || !o.session || o.paid || o.status === 'rejected') return false;
+      const id = caisseTableId(o.table);
+      const seat = id && phoneSeats.get(tableKey(id));
+      if (!seat || String(seat.session) !== String(o.session)) return false;
+      // Unmarked local lines cannot be safely matched to a canonical ticket by
+      // product/price alone. Leave that ambiguous bill intact, without importing.
+      if ((orders[id] || []).length || (tableOrders[id] || []).some(l => !l.orderProLine)) return false;
+      if (!Array.isArray(o.lines) || !o.lines.length || !Number.isFinite(o.total) || o.total <= 0) return false;
+      if (!o.lines.every(l => l && Number.isFinite(l.unitPrice) && l.unitPrice >= 0
+          && Number.isInteger(l.qty) && l.qty > 0)) return false;
+      const total = o.lines.reduce((sum, l) => sum + l.unitPrice * l.qty, 0);
+      return Math.round(total * 100) === Math.round(o.total * 100);
+    }
+
     function opIngest(o) {
       if (!o || !o.id) return;
-      opRepairFormulaParents(o);
+      if (o.channel !== 'caisse') opRepairFormulaParents(o);
       /* La carte des tickets vit en mémoire ; le SERVICE, lui, survit au
          rechargement (persistShift). Après un F5 en plein service, `opTickets`
          repart vide alors que `kdsOrders` contient encore les bons de la caisse
@@ -19976,18 +20149,24 @@
          the KDS ticket is already known: after the one-time browser cleanup,
          the current session must be able to rebuild its legitimate bill from
          the canonical queue without manufacturing another KDS ticket. */
-      if (o.channel !== 'caisse') {
+      if (o.channel !== 'caisse' || canRecoverCaisseTable(o)) {
         attachOrderProTable(o);
       } else if (o.channel === 'caisse' && o.mode === 'table') {
-        /* Repair only the exact echo rows created by the old bug. A genuine
-           cashier line has no orderProLine marker; its duplicate is stamped
-           `<this cashier ticket id>:<line index>`. No other item qualifies. */
         const id = caisseTableId(o.table);
-        const before = id && (tableOrders[id] || []).length;
-        if (id && before) {
-          tableOrders[id] = tableOrders[id].filter(line =>
-            !String(line.orderProLine || '').startsWith(String(o.id) + ':'));
-          if (tableOrders[id].length !== before) {
+        const bill = id && tableOrders[id];
+        if (bill && bill.length) {
+          const local = bill.filter(l => !l.orderProLine && l.sent && !l.orderProPending);
+          const kept = bill.filter(line => {
+            if (line.caisseRecovered || !String(line.orderProLine || '').startsWith(String(o.id) + ':')) return true;
+            // Only the old echo of an existing sent cashier line qualifies.
+            // Recovered canonical-only rows remain real bill lines, even if a
+            // cashier subsequently adds the same product at the same price.
+            return !local.some(l => String(l.id || '') === String(line.id || '')
+              && l.name === line.name && l.qty === line.qty && l.price === line.price
+              && String(l.note || '') === String(line.note || ''));
+          });
+          if (kept.length !== bill.length) {
+            tableOrders[id] = kept;
             refreshTableNode(id);
             if (selectedId === id) mode === 'order' ? renderOrderPanel(id) : renderRightPanel(id);
             try { persistShift(); } catch (_) {}
@@ -20004,7 +20183,22 @@
          new/cooking/ready), et le paiement le promeut. */
       if (o.status === 'rejected') {
         if (known) retireRejectedKitchenTicket(known);
+        opTickets.delete(o.id);
         return;
+      }
+      if (known && ['pending', 'accepted', 'ready', 'served'].includes(o.status)) {
+        // Repair a legacy age purge that removed the card but left its index.
+        if (!kdsOrders.includes(known)) kdsOrders.push(known);
+        if (o.mode === 'table' || o.mode === 'takeout') {
+          const type = o.mode === 'table' ? 'dineIn' : 'takeaway';
+          if (known.type !== type && vrapEditingNum === known.num) {
+            vrapEditingNum = null;
+            clearCart();
+            setVrapView('board');
+          }
+          known.type = type;
+          known.table = o.mode === 'table' ? o.table : null;
+        }
       }
       if (!known) {
         if (o.mode === 'table' && o.status === 'pending') return;   // la pastille suffit
@@ -20225,11 +20419,15 @@
         const seats = new Map();
         (sessions || []).forEach(s => {
           if (s.mode !== 'table' || !s.table) return;
-          const k = tableKey(s.table);
+          const k = tableKey(caisseTableId(s.table) || s.table);
           const closedAt = Number(tableClosedAt[k] || 0);
           const openTs = Number(s.opened_ts || 0);
+          const move = phoneMovedVisits.get(String(s.id));
+          // An older poll may still report the acknowledged visit at its source.
+          if (move && move.from === k && move.to !== k && Number(s.seen_ts || 0) <= move.revision) return;
+          const movedHere = move && move.to === k && move.closedAt === closedAt;
           // Si cette session a été ouverte à ou avant la fermeture/annulation locale de la table :
-          if (closedAt > 0 && ((openTs > 0 && openTs <= closedAt) || (Date.now() - closedAt < 60000))) {
+          if (!movedHere && closedAt > 0 && ((openTs > 0 && openTs <= closedAt) || (Date.now() - closedAt < 60000))) {
             if (openTs > 0 && openTs <= closedAt) {
               // Clore activement la session zombie côté serveur dans D1
               document.dispatchEvent(new CustomEvent('kiwi-table-released', {
@@ -20238,14 +20436,14 @@
             }
             return;
           }
-          seats.set(k, { session: s.id, since: s.opened_ts });
+          seats.set(k, { session: s.id, since: s.opened_ts, revision: Number(s.seen_ts) });
           /* S'asseoir depuis OrderPro réserve déjà réellement la table. Même
              avant l'acceptation du bon, le prochain tap doit ouvrir cette
              table et surtout pas recommencer par le nombre de couverts. */
           const id = caisseTableId(s.table);
           if (id && tables[id] && tables[id].status === 'khawya') {
             tables[id].status = 'ka-yaklo';
-            tables[id].elapsed = 0;
+            resetTableTimer(tables[id]);
             touched = true;
           }
         });
@@ -20260,12 +20458,12 @@
           if (!closed || closed.mode !== 'table' || !closed.table) return;
           const id = caisseTableId(closed.table);
           if (!id || !tables[id]) return;
-          const current = seats.get(tableKey(closed.table));
+          const current = seats.get(tableKey(id));
           if (current && String(current.session) !== String(closed.id)) return;
           if (mode === 'order' && selectedId === id) return;
           tables[id].status = 'khawya';
           tables[id].covers = 0;
-          tables[id].elapsed = 0;
+          resetTableTimer(tables[id]);
           delete orders[id];
           delete tableOrders[id];
           delete tables[id].discount;
@@ -20297,19 +20495,11 @@
          * présente est reconnue puis ignorée. Une commande refusée pour une
          * bonne raison sera refusée à nouveau, sans effet ; une commande
          * refusée pour une raison passagère rentre au tour suivant. */
-        const attachedOrders = new Set();
-        Object.keys(tableOrders).forEach(tid => {
-          (tableOrders[tid] || []).forEach(line => {
-            const marker = String(line.orderProLine || '');
-            const cut = marker.lastIndexOf(':');
-            if (cut > 0) attachedOrders.add(marker.slice(0, cut));
-          });
-        });
         (all || []).forEach(o => {
           if (!o || o.mode !== 'table' || !o.table) return;
-          if (o.channel === 'caisse') return;          // même règle que opIngest
+          if (o.channel === 'caisse' && !canRecoverCaisseTable(o)) return;
           if (o.paid || o.status === 'rejected') return;
-          if (attachedOrders.has(String(o.id))) return;
+          // Retry missing line markers too, not just entirely absent orders.
           /* Le plan de salle ne connaît pas cette table : renommée en plein
              service, ou pas encore chargée. On le DIT une fois · sans quoi
              c'est exactement le genre de perte qui ne se voit qu'au moment de
@@ -20330,7 +20520,7 @@
         const pend = new Map();
         (all || []).forEach(o => {
           if (o.mode !== 'table' || o.status !== 'pending' || !o.table) return;
-          const k = tableKey(o.table);
+          const k = tableKey(caisseTableId(o.table) || o.table);
           pend.set(k, (pend.get(k) || 0) + 1);
         });
 
@@ -20372,18 +20562,32 @@
           const orders = window.KiwiOrderInbox && KiwiOrderInbox.orders && KiwiOrderInbox.orders();
           remote = orders && orders[orderId];
         } catch (_) {}
+        if (remote && (remote.paid || remote.status === 'rejected')) {
+          toast('Commande déjà réglée ou annulée'); return false;
+        }
+        if (remote) opIngest(remote);
         const local = opTickets.get(orderId);
         if (remote && remote.mode === 'table') {
           const tableId = caisseTableId(remote.table);
           if (!tableId) { toast('Table introuvable sur le plan'); return false; }
+          if (remote.session && phoneSessionOf(tableId) !== String(remote.session)) {
+            toast('Cette commande appartient à une autre visite'); return false;
+          }
+          const bill = generateOrder(tableId, tables[tableId]);
+          if (!bill.length || !bill.every(l => Number.isFinite(l.total)) || bill.reduce((s, l) => s + l.total, 0) <= 0) {
+            toast('Addition non disponible · actualisez la commande'); return false;
+          }
           if (mode !== 'salle') setMode('salle');
           openTable(tableId);
           return true;
         }
         if (local && local.type === 'takeaway') {
+          if (!kdsOrders.includes(local) || local.paid || local.pickedUp || !vrapFinancialItems(local).length) {
+            toast('Commande indisponible pour encaissement'); return false;
+          }
           if (mode !== 'vrap') setMode('vrap');
           openVrapOrder(local.num);
-          return true;
+          return vrapEditingNum === local.num && cart.length > 0;
         }
         toast('Commande introuvable dans la caisse');
         return false;
@@ -20443,11 +20647,14 @@
        la file serveur a correctement laissé dans le service précédent. */
     function staleQueuedServerTicket(o, now) {
       if (!o || o.opNum == null) return false;
+      // Age is not cancellation or payment evidence. Keep active bills and
+      // paid takeaway orders awaiting collection until a canonical terminal event.
+      if (!o.pickedUp && (o.type === 'takeaway' || !o.paid)) return false;
       const at = new Date(o.sentAt).getTime();
       if (!Number.isFinite(at)) return false;
       const age = (now || Date.now()) - at;
-      if (o.status === 'new' || o.status === 'held') return age > 30 * 60 * 1000;
-      return o.status === 'cooking' && age > 6 * 60 * 60 * 1000;
+      if (o.status === 'held') return age > 30 * 60 * 1000;
+      return (o.status === 'new' || o.status === 'cooking') && age > 6 * 60 * 60 * 1000;
     }
 
     /* À QUEL commerçant appartient le service actuellement EN MÉMOIRE. Posé à
@@ -20594,7 +20801,8 @@
           if (!statusChanged && !terminalHadLocalBill) return;
           tables[id].status = state.status;
           tables[id].covers = state.status === 'khawya' ? 0 : Math.max(0, Number(state.covers) || tables[id].covers || 0);
-          tables[id].elapsed = 0;
+          if (terminalEmployeeState) resetTableTimer(tables[id]);
+          else if ((tableOrders[id] || []).length || (orders[id] || []).length) startTableTimer(id);
           serviceFloorLocalVersion[String(id)] = Number(state.ts) || Date.now();
           if (state.status === 'khawya' || state.status === 'khlass') {
             delete orders[id];

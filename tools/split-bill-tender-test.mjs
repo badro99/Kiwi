@@ -42,8 +42,8 @@ ok('markSplitPartPaid calls printSaleTicket with entry',
 ok('launchSplitFlow article mode populates partLines with name, qty, unit, price, total',
   /const assignedLines = Object\.entries\(cart\)\.map\(\(\[name,\s*qty\]\) => \{[\s\S]{0,400}unit:\s*unitPrice,\s*price:\s*unitPrice,\s*total:\s*money\(qty\s*\*\s*unitPrice\)/.test(CAISSE_SRC));
 
-ok('launchSplitFlow includes unassigned lines for each convive if unassigned items exist',
-  /const partLines = \[\.\.\.assignedLines,\s*\.\.\.unassignedLines\.map/.test(CAISSE_SRC));
+ok('article split never silently divides unassigned items between convives',
+  CAISSE_SRC.includes('const partLines = assignedLines;') && !CAISSE_SRC.includes('unassignedPerConv'));
 
 ok('openSplitModal stores itemId in itemTotals',
   /itemTotals\[l\.name\]\s*=\s*\{\s*totalQty:\s*0,\s*unitPrice,\s*itemId:\s*l\.itemId\s*\|\|\s*l\.id\s*\|\|\s*''\s*\};/.test(CAISSE_SRC));

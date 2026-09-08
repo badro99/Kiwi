@@ -98,7 +98,7 @@ ok('markPaid clears tableOrders synchronously',
   /function markPaid\(id\) \{[\s\S]{0,250}tableOrders\[id\] = \[\];/.test(CAISSE_SRC));
 
 ok('attachOrderProTable purges lines from other sessions',
-  /const lines = tableOrders\[id\] \|\| \(tableOrders\[id\] = \[\]\);[\s\S]{0,200}const curSession = String\(activeSeat\.session\);[\s\S]{0,200}const filtered = lines\.filter\(l => !l\.orderSession \|\| String\(l\.orderSession\) === curSession\);/.test(CAISSE_SRC));
+  /let lines = tableOrders\[id\] \|\| \(tableOrders\[id\] = \[\]\);[\s\S]{0,200}const curSession = String\(activeSeat\.session\);[\s\S]{0,200}const filtered = lines\.filter\(l => !l\.orderSession \|\| String\(l\.orderSession\) === curSession\);[\s\S]{0,150}lines = tableOrders\[id\] = filtered;/.test(CAISSE_SRC));
 
 console.log('■ Commandes Clients Print Button Removal');
 

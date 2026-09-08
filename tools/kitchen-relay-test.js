@@ -295,7 +295,15 @@ const SW = fs.readFileSync(path.join(ROOT, 'kiwi-sw.js'), 'utf8');
   ok('un rechargement en plein service ne duplique pas les bons',
     /kdsOrders\.find\(t => t && t\.opId === o\.id\)/.test(CAISSE));
   ok('un bon revenu de cette caisse ne double jamais la ligne de la table',
-    /if \(o\.channel !== 'caisse'\)\s*\{\s*attachOrderProTable\(o\)/.test(CAISSE));
+    /if \(o\.channel !== 'caisse' \|\| canRecoverCaisseTable\(o\)\)\s*\{\s*attachOrderProTable\(o\)/.test(CAISSE)
+      && /function canRecoverCaisseTable\(o\)[\s\S]{0,1000}?\(orders\[id\] \|\| \[\]\)\.length \|\| \(tableOrders\[id\] \|\| \[\]\)\.some\(l => !l\.orderProLine\)\) return false/.test(CAISSE));
+  ok('la récupération caisse vérifie visite, paiement et montant canonique',
+    /function canRecoverCaisseTable\(o\)[\s\S]{0,550}?o\.paid[\s\S]{0,550}?String\(seat\.session\) !== String\(o\.session\)/.test(CAISSE)
+      && /Math\.round\(total \* 100\) === Math\.round\(o\.total \* 100\)/.test(CAISSE));
+  ok('le nettoyage ancien protège les lignes canoniques récupérées et exige une ligne locale envoyée correspondante',
+    /bill\.filter\(l => !l\.orderProLine && l\.sent && !l\.orderProPending\)/.test(CAISSE)
+      && /if \(line\.caisseRecovered \|\| !String\(line\.orderProLine/.test(CAISSE)
+      && /l\.name === line\.name && l\.qty === line\.qty && l\.price === line\.price/.test(CAISSE));
   ok('une addition employé ne reçoit que la visite actuellement ouverte',
     /o\.session[\s\S]{0,180}?activeSeat\.session/.test(CAISSE)
       && /!o\.session && o\.server/.test(CAISSE)

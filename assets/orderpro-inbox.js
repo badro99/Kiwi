@@ -429,7 +429,10 @@
   /* ── render ───────────────────────────────────────────────────────────── */
   function list(status) {
     var closedSet = {};
-    (state.closedSessions || []).forEach(function (s) { if (s) closedSet[String(s)] = 1; });
+    (state.closedSessions || []).forEach(function (s) {
+      var id = s && typeof s === 'object' ? s.id : s;
+      if (id) closedSet[String(id)] = 1;
+    });
     return Object.keys(state.orders)
       .map(function (k) { return state.orders[k]; })
       .filter(function (o) {
