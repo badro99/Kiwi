@@ -4995,6 +4995,29 @@
       // restart after discarding the draft) is the way forward.
       const normField = (s) => String(s || '').trim().replace(/\s+/g, ' ').toLowerCase();
       const guestIdentity = (g) => [g && g.name, g && g.idDocNumber, g && g.nationality, g && g.birthDate, g && g.sex].map(normField).join('|');
+      // A reconciliation answer is only authoritative entry by entry
+      // (follow-up): nulls, primitives, arrays masquerading as bookings and
+      // records without identity (id) or status must never read as "no
+      // booking". That misreading used to fall through to POST, whose
+      // idempotent replay was then adopted with zero material checks.
+      const asBookingRecord = (value) => {
+        if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+        if (typeof value.id !== 'string' || !value.id) return null;
+        if (typeof value.status !== 'string' || !value.status) return null;
+        return value;
+      };
+      // Shared adoption gate for GET-found and POST-returned bookings
+      // (follow-up): cancelled/no-show refuses, then the material
+      // comparison. Fresh POSTs pass by construction (the server echoes the
+      // payload); idempotent replays pass only when the pre-existing booking
+      // still matches what we would write. Returns null when adoptable,
+      // otherwise { kind, field } for the caller to phrase.
+      const adoptionProblem = (booking, payload, room) => {
+        if (['cancelled', 'no_show'].includes(booking.status)) return { kind: 'cancelled' };
+        const mismatch = bookingMatchesPayload(booking, payload, room);
+        if (mismatch) return { kind: 'mismatch', field: mismatch };
+        return null;
+      };
       const bookingMatchesPayload = (existing, payload, room) => {
         const pairs = [
           ['chambre', existing.resourceId || existing.hotel?.roomId || '', room.id],
@@ -5058,10 +5081,22 @@
             const checkRes = await fetch('/api/hotel/stays?merchant=' + encodeURIComponent(initialMerchant) + '&clientRef=' + encodeURIComponent(clientRef) + '&includeCancelled=1', { cache: 'no-store' });
             if (checkRes.ok) {
               const checkData = await checkRes.json().catch(() => null);
-              if (checkData && Array.isArray(checkData.stays)) {
-                checkOk = true;
-                const first = checkData.stays[0];
-                existingBooking = (first && typeof first === 'object') ? first : null;
+              const stays = (checkData && Array.isArray(checkData.stays)) ? checkData.stays : null;
+              // Valid-empty ([]) authorizes the POST below; every non-empty
+              // answer must be entry-validated first. A single malformed
+              // entry poisons the whole lookup: treating it as "no booking"
+              // would route into POST, whose replay used to bypass every
+              // check. The returned identity must also answer to the
+              // reference we asked for.
+              if (stays !== null) {
+                const malformed = stays.some((s) => {
+                  const rec = asBookingRecord(s);
+                  return !rec || (typeof rec.publicRef === 'string' && rec.publicRef !== '' && rec.publicRef !== clientRef);
+                });
+                if (!malformed) {
+                  checkOk = true;
+                  existingBooking = stays.length ? stays[0] : null;
+                }
               }
             }
           } catch (_) { checkOk = false; }
@@ -5087,17 +5122,11 @@
           }
 
           if (existingBooking) {
-            if (['cancelled', 'no_show'].includes(existingBooking.status)) {
-              const errMsg = 'La réservation existante pour la chambre ' + room.n + ' est annulée ou non présentée (' + existingBooking.status + ').';
-              failedRooms[room.id] = errMsg;
-              persistStaged();
-              renderRooms();
-              throw new Error(errMsg);
-            }
-
-            const mismatch = bookingMatchesPayload(existingBooking, payload, room);
-            if (mismatch) {
-              const errMsg = 'Incompatibilité (' + mismatch + ') détectée pour la réservation existante (' + existingBooking.id + ') de la chambre ' + room.n + '. Le serveur a une version différente : aucune écriture, utilisez un avenant explicite.';
+            const problem = adoptionProblem(existingBooking, payload, room);
+            if (problem) {
+              const errMsg = problem.kind === 'cancelled'
+                ? 'La réservation existante pour la chambre ' + room.n + ' est annulée ou non présentée (' + existingBooking.status + ').'
+                : 'Incompatibilité (' + problem.field + ') détectée pour la réservation existante (' + existingBooking.id + ') de la chambre ' + room.n + '. Le serveur a une version différente : aucune écriture, utilisez un avenant explicite.';
               failedRooms[room.id] = errMsg;
               persistStaged();
               renderRooms();
@@ -5146,17 +5175,33 @@
             throw new Error('Erreur sur la chambre ' + room.n + ' : ' + errMsg);
           }
 
-          if (['cancelled', 'no_show'].includes(body.booking.status)) {
-            const errMsg = 'La réservation retournée pour la chambre ' + room.n + ' est annulée ou non présentée.';
+          // The POST answer goes through the same gate (follow-up): a
+          // malformed record is a failed write, never an adoption, and an
+          // idempotent replay is only adopted when it still matches what we
+          // would write — a replay carrying another device's edits must fail
+          // here, not masquerade as our fresh booking.
+          const returned = asBookingRecord(body.booking);
+          if (!returned || (typeof returned.publicRef === 'string' && returned.publicRef !== '' && returned.publicRef !== clientRef)) {
+            const errMsg = 'La réponse du serveur pour la chambre ' + room.n + ' est inexploitable. La reprise est en pause : réessayez avec le serveur joignable.';
+            failedRooms[room.id] = errMsg;
+            persistStaged();
+            renderRooms();
+            throw new Error(errMsg);
+          }
+          const postProblem = adoptionProblem(returned, payload, room);
+          if (postProblem) {
+            const errMsg = postProblem.kind === 'cancelled'
+              ? 'La réservation retournée pour la chambre ' + room.n + ' est annulée ou non présentée.'
+              : 'Incompatibilité (' + postProblem.field + ') détectée pour la réservation retournée (' + returned.id + ') de la chambre ' + room.n + '. Le serveur a une version différente : aucune écriture, utilisez un avenant explicite.';
             failedRooms[room.id] = errMsg;
             persistStaged();
             renderRooms();
             throw new Error(errMsg);
           }
 
-          savedRooms[room.id] = body.booking;
+          savedRooms[room.id] = returned;
           delete failedRooms[room.id];
-          initialCache.set(body.booking.id, body.booking);
+          initialCache.set(returned.id, returned);
           // First proven room freezes the dossier identity (defects 1+3):
           // the locked controls stop feeding submissions from here on.
           if (!committedTerms) { freezeTerms(terms); lockCommittedFields(); }

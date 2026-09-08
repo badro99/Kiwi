@@ -247,6 +247,15 @@ async function startOrigin(env, hooks = {}) {
       }
       if (u.pathname === '/api/hotel/stays') {
         if (req.method === 'GET') {
+          if (hooks.overrideStayGet) {
+            const spoof = hooks.overrideStayGet(u);
+            if (spoof) {
+              log.push({ type: 'stay-get-spoofed', clientRef: u.searchParams.get('clientRef') || '' });
+              res.writeHead(spoof.status || 200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify(spoof.json));
+              return;
+            }
+          }
           if (hooks.failStayGet && hooks.failStayGet(u)) {
             log.push({ type: 'stay-get-fault', clientRef: u.searchParams.get('clientRef') || '' });
             res.writeHead(503, { 'Content-Type': 'application/json' });
@@ -934,6 +943,136 @@ await withCtx({ hooks: { failStayPost: failRoomOnce('room_102') } }, async (ctx)
   ok(/nom du groupe/.test(await readError(page)), 'missing group name reported with its field');
   stays = await ctx.bookingsByDossier(dossier);
   ok(stays.length === 1 && !('groupName' in (stays[0].hotel || {})), 'legacy record preserved, nothing recreated');
+});
+
+/* One-shot reconciliation spoof: the next GET whose clientRef ends with
+   the given suffix answers with the exact body (malformed or lying). */
+function spoofStayGetOnce(suffix, status, json) {
+  let armed = true;
+  return (u) => {
+    const ref = u.searchParams.get('clientRef') || '';
+    if (armed && ref.endsWith(suffix)) { armed = false; return { status, json }; }
+    return null;
+  };
+}
+
+async function clearError(page) {
+  await page.$eval('[data-hx-group-error]', (el) => { el.textContent = ''; });
+}
+
+/* ── T15 · malformed [null] lookup pauses, then traveler mismatch ──── */
+console.log('\n■ T15 · reconciliation [null] pauses visibly, intent kept');
+await withCtx({ hooks: { failStayPost: failRoomOnce('room_102') } }, async (ctx) => {
+  const { page, log } = ctx;
+  const d = BASICS();
+  const dossier = await twoRoomSetup(page, d, false);
+  await submitAndSettle(page);
+  let stays = await ctx.bookingsByDossier(dossier);
+  ok(stays.length === 1 && stays[0].resourceId === 'room:101', 'room 101 saved');
+  step('another device renames the traveler');
+  await apiRenameGuest(ctx, stays[0].id, 'Karim Benchekroun', 'Karim Benali');
+  step('reconciliation answers 200 with [null]');
+  ctx.hooks.overrideStayGet = spoofStayGetOnce('room_101', 200, { stays: [null] });
+  await page.reload({ waitUntil: 'load' });
+  await openModal(page);
+  const r2 = await submitAndSettle(page);
+  ok(String(r2).startsWith('settled:'), 'retry settles instead of confirming');
+  const err = await readError(page);
+  ok(/revérifi/.test(err) && /pause/.test(err), 'malformed lookup pauses visibly');
+  ok(log.some((e) => e.type === 'stay-get-spoofed'), 'the spoofed lookup actually fired');
+  ok((await page.$('[data-hx-group-form]')) !== null, 'modal stays open');
+  const toasts = await page.evaluate(() => window.__toasts.map((t) => t.message).join(' | '));
+  ok(!/enregistrée/.test(toasts), 'no success toast announced');
+  stays = await ctx.bookingsByDossier(dossier);
+  ok(stays.length === 1, 'room 102 never attempted');
+  step('honest lookup now reports the traveler change instead');
+  const r3 = await submitAndSettle(page);
+  ok(String(r3).startsWith('settled:'), 'second retry settles');
+  ok(/oyageurs/.test(await readError(page)), 'renamed traveler caught on clean retry');
+});
+
+/* ── T16 · malformed [42] lookup pauses ────────────────────────────── */
+console.log('\n■ T16 · reconciliation [42] pauses visibly');
+await withCtx({ hooks: { failStayPost: failRoomOnce('room_102') } }, async (ctx) => {
+  const { page, log } = ctx;
+  const d = BASICS();
+  const dossier = await twoRoomSetup(page, d, false);
+  await submitAndSettle(page);
+  const stays = await ctx.bookingsByDossier(dossier);
+  ok(stays.length === 1, 'room 101 saved');
+  ctx.hooks.overrideStayGet = spoofStayGetOnce('room_101', 200, { stays: [42] });
+  await page.reload({ waitUntil: 'load' });
+  await openModal(page);
+  const r2 = await submitAndSettle(page);
+  ok(String(r2).startsWith('settled:'), 'retry settles instead of confirming');
+  const err = await readError(page);
+  ok(/revérifi/.test(err) && /pause/.test(err), 'primitive entry pauses visibly');
+  ok(log.some((e) => e.type === 'stay-get-spoofed'), 'the spoofed lookup actually fired');
+  ok((await page.$('[data-hx-group-form]')) !== null, 'modal stays open, intent kept');
+});
+
+/* ── T17 · malformed shapes table, then honest recovery ────────────── */
+console.log('\n■ T17 · every malformed shape pauses; honest state completes');
+await withCtx({ hooks: { failStayPost: failRoomOnce('room_102') } }, async (ctx) => {
+  const { page, log } = ctx;
+  const d = BASICS();
+  const dossier = await twoRoomSetup(page, d, false);
+  await submitAndSettle(page);
+  let stays = await ctx.bookingsByDossier(dossier);
+  ok(stays.length === 1, 'room 101 saved');
+  await page.reload({ waitUntil: 'load' });
+  await openModal(page);
+  const shapes = [
+    ['object-not-list', { stays: { 0: { id: 'bk-x', status: 'confirmed' } } }],
+    ['missing-status', { stays: [{ id: 'bk-x' }] }],
+    ['missing-id', { stays: [{ status: 'confirmed' }] }],
+    ['array-entry', { stays: [[{ id: 'bk-x', status: 'confirmed' }]] }],
+    ['string-entry', { stays: ['bk-x'] }],
+    ['no-envelope', { ok: true }],
+  ];
+  for (const [name, json] of shapes) {
+    ctx.hooks.overrideStayGet = spoofStayGetOnce('room_101', 200, json);
+    await clearError(page);
+    const r = await submitAndSettle(page);
+    ok(String(r).startsWith('settled:'), `${name}: settles instead of confirming`);
+    const err = await readError(page);
+    ok(/revérifi/.test(err) && /pause/.test(err), `${name}: pauses visibly`);
+  }
+  ok(log.filter((e) => e.type === 'stay-get-spoofed').length === shapes.length, 'every spoofed lookup fired');
+  step('honest lookup: adoption plus fresh room complete the group');
+  await clearError(page);
+  const done = await submitAndSettle(page);
+  ok(done === 'closed', 'honest state completes after the pauses');
+  stays = await ctx.bookingsByDossier(dossier);
+  ok(stays.length === 2, 'both rooms booked exactly once');
+});
+
+/* ── T18 · replay with changed travelers fails loudly ──────────────── */
+console.log('\n■ T18 · replay carrying edits fails the POST gate');
+await withCtx({ hooks: { failStayPost: failRoomOnce('room_102') } }, async (ctx) => {
+  const { page, log } = ctx;
+  const d = BASICS();
+  const dossier = await twoRoomSetup(page, d, false);
+  await submitAndSettle(page);
+  let stays = await ctx.bookingsByDossier(dossier);
+  ok(stays.length === 1, 'room 101 saved');
+  step('another device renames the traveler');
+  await apiRenameGuest(ctx, stays[0].id, 'Karim Benchekroun', 'Karim Benali');
+  step('reconciliation lies empty; the POST replay must still be checked');
+  ctx.hooks.overrideStayGet = spoofStayGetOnce('room_101', 200, { stays: [] });
+  await page.reload({ waitUntil: 'load' });
+  await openModal(page);
+  const r2 = await submitAndSettle(page);
+  ok(String(r2).startsWith('settled:'), 'retry settles instead of confirming');
+  ok(/oyageurs/.test(await readError(page)), 'replayed booking mismatch reported');
+  ok(log.some((e) => e.type === 'stay-get-spoofed'), 'the lying lookup fired');
+  const spoofAt = log.findIndex((e) => e.type === 'stay-get-spoofed');
+  const raced = log.slice(spoofAt + 1).filter((e) => e.type === 'stay-post' && String(e.clientRef || '').endsWith('room_101'));
+  ok(raced.length === 1, 'exactly one POST raced the lie');
+  stays = await ctx.bookingsByDossier(dossier);
+  ok(stays.length === 1, 'no second booking written');
+  ok(stays[0].guests.some((g) => g.name === 'Karim Benali'), 'renamed server copy preserved');
+  ok((await page.$('[data-hx-group-form]')) !== null, 'modal stays open');
 });
 
 /* ── T12 · tenant isolation over HTTP ──────────────────────────────── */

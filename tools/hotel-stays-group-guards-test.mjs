@@ -52,13 +52,25 @@ console.log('\n■ 3a. Unverifiable saved rooms pause, never pass (defect 1)');
   ok(hotelJs.includes('Rien n’a été validé à tort'), 'pause message states nothing was confirmed');
   ok(!hotelJs.includes('&& !checkOk) {\n            continue;'), 'the blind skip of unverified rooms is gone');
   ok(hotelJs.includes('Array.isArray(checkData.stays)'), 'lookup envelope validated as a list before use');
-  ok(hotelJs.includes("typeof first === 'object'"), 'first entry validated as an object before adoption');
+  ok(hotelJs.includes('const malformed = stays.some('), 'a single malformed entry poisons the whole lookup');
+  ok(hotelJs.includes('existingBooking = stays.length ? stays[0] : null'), 'valid-empty stays distinct from malformed entries');
 }
 
 console.log('\n■ 3b. Empty values compare as real changes (defect 2)');
 {
   ok(hotelJs.includes('if (normField(a) !== normField(b)) return label;'), 'fields compare without a truthiness exemption');
   ok(!hotelJs.includes('if (a && normField(a)'), 'the blanket truthiness exemption is gone');
+}
+
+console.log('\n■ 3c. Reconciliation entries validated, replays gated (follow-up)');
+{
+  ok(hotelJs.includes('const asBookingRecord = (value)'), 'booking-shaped record validator exists');
+  ok(hotelJs.includes("typeof value.status !== 'string'"), 'records without status are rejected');
+  ok(hotelJs.includes('rec.publicRef !== clientRef'), 'returned identity checked against the requested reference');
+  ok(hotelJs.includes('const adoptionProblem = (booking, payload, room)'), 'one adoption gate serves GET and POST results');
+  ok(hotelJs.includes('const postProblem = adoptionProblem(returned, payload, room)'), 'POST results pass the same gate, replays included');
+  ok(hotelJs.includes('est inexploitable'), 'malformed POST results fail instead of adopting');
+  ok(hotelJs.includes('La réservation retournée'), 'POST-path messages preserved');
 }
 
 console.log('\n■ 3. Saved rooms reconcile against the server (defect 3)');
