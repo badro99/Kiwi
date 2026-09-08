@@ -17,11 +17,13 @@ export function monthlyProduction(rows, window, accounts = []) {
   let reservations = 0, unassigned = 0;
   for (const r of rows) {
     if (!['confirmed', 'checked_in', 'completed'].includes(r.status)) continue;
-    if (!r.id || seen.has(r.id) || !dateOK(r.check_in) || !dateOK(r.check_out) || r.check_out <= r.check_in) problem('production-data-invalid');
+    if (!r.id || seen.has(r.id) || !dateOK(r.check_in) || !dateOK(r.check_out)) problem('production-data-invalid');
     seen.add(r.id);
     let raw;
     try { raw = JSON.parse(r.raw_json); } catch (_) { problem('production-data-invalid'); }
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) problem('production-data-invalid');
+    if (raw.hotel?.dayUse === true && r.check_in === r.check_out) continue;
+    if (r.check_out <= r.check_in) problem('production-data-invalid');
     const from = r.check_in > window.start ? r.check_in : window.start;
     const to = r.check_out < window.end ? r.check_out : window.end;
     if (from >= to) continue;

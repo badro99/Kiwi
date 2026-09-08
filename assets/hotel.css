@@ -1189,3 +1189,46 @@
   .hx-commercial .hx-h { align-items:start; flex-direction:column; }
 }
 @media(prefers-reduced-motion:reduce) { .hx-commercial .hx-btn,.hx-daily .hx-btn { transition:none; transform:none; } }
+.hx-billing { --line:var(--n-200); display:grid; gap:20px; min-width:0; color:var(--ink); }
+.hx-billing .hx-commercial-hero { display:flex; align-items:center; justify-content:space-between; gap:24px; padding:clamp(20px,3vw,32px); border:1px solid var(--inverse-line); border-radius:22px; color:var(--inverse-ink); background:var(--inverse-surface); }
+.hx-billing .hx-commercial-hero h2 { font:600 clamp(26px,3vw,40px)/1.1 var(--sans); letter-spacing:-.035em; margin:14px 0 12px; }
+.hx-billing .hx-commercial-hero p { font-size:14px; line-height:1.6; margin:0; max-width:52ch; }
+.hx-billing .hx-commercial-hero > div:last-child { flex-shrink:0; padding-inline-start:24px; border-inline-start:1px solid var(--inverse-line); }
+.hx-billing .hx-commercial-eyebrow { font-size:10px; letter-spacing:.1em; font-weight:600; }
+.hx-billing .hx-btn.atlas { background:var(--inverse-surface); color:var(--inverse-ink); border:1px solid var(--inverse-line); }
+.hx-billing .hx-btn.ghost { background:var(--surface); color:var(--ink); }
+.hx-billing button:disabled { opacity:.5; cursor:default; }
+.hx-billing :is(button,input,select) { min-height:44px; }
+.hx-billing :is(input,select) { width:100%; min-width:0; max-width:100%; font:400 16px var(--sans); color:var(--ink); background:var(--paper); border:1px solid var(--line); border-radius:10px; padding:10px 12px; }
+.hx-billing .hx-room-form label { min-width:0; }
+.hx-billing button { white-space:normal; }
+.hx-billing-notice { margin:0; padding:16px 20px; border:1px solid var(--line); border-radius:14px; background:var(--surface); font-size:13px; line-height:1.65; }
+.hx-dossier-rooms { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr)); gap:12px; }
+.hx-dossier-rooms article { display:grid; gap:8px; padding:18px; border:1px solid var(--line); border-radius:16px; overflow-wrap:anywhere; background:var(--surface); }
+.hx-dossier-rooms span { font-size:12px; line-height:1.5; }
+.hx-billing fieldset { border:0; padding:0; margin:0; min-width:0; }
+.hx-billing legend { font-size:18px; font-weight:650; padding:0 0 16px; }
+.hx-billing-line { padding:20px; border:1px solid var(--line); border-radius:16px; margin-bottom:12px; min-width:0; background:var(--surface); }
+.hx-billing-line .hx-room-form { grid-template-columns:1.3fr 1fr 1.3fr; }
+.hx-billing-line header { display:flex; justify-content:space-between; gap:16px; margin-bottom:16px; }
+.hx-billing-line header div { display:grid; gap:6px; min-width:0; overflow-wrap:anywhere; }
+.hx-billing-line header span { font-size:12px; line-height:1.5; }
+.hx-billing-line header strong { white-space:nowrap; font-variant-numeric:tabular-nums; }
+.hx-billing-summary { display:grid; gap:10px; padding:20px; border:1px solid var(--line); border-radius:16px; margin-top:20px; }
+.hx-billing-summary span { display:flex; justify-content:space-between; gap:12px; overflow-wrap:anywhere; }
+.hx-billing-note { display:grid; gap:8px; margin-top:20px; }
+.hx-billing-note textarea { width:100%; min-height:72px; padding:12px; font:inherit; color:var(--ink); background:var(--paper); border:1px solid var(--line); border-radius:12px; }
+.hx-billing summary { padding:12px 0; min-height:44px; cursor:pointer; font-weight:600; }
+.hx-billing [data-hx-draft-total] { display:block; margin-top:8px; font-size:24px; }
+.hx-billing [data-hx-billing-error] { font-size:13px; line-height:1.5; }
+.hx-billing :is(button,input,select,textarea,summary):focus-visible { outline:2px solid var(--ink); outline-offset:3px; }
+.hx-stay-form [data-hx-day-use][hidden] { display:none; }
+@media(max-width:600px) {
+  .hx-billing .hx-commercial-hero { flex-direction:column; align-items:stretch; }
+  .hx-billing .hx-commercial-hero > div:last-child { padding:16px 0 0; border-inline-start:0; border-top:1px solid var(--inverse-line); }
+  .hx-billing-line .hx-room-form { grid-template-columns:1fr; }
+  .hx-billing-line { padding:14px; }
+  .hx-billing-line header,.hx-billing-summary span { flex-direction:column; }
+  .hx-billing .hx-room-form-actions { flex-wrap:wrap; }
+  .hx-billing .hx-room-form-actions button { width:100%; }
+}

@@ -2,6 +2,7 @@ import {
   SESS_COOKIE, isOperator, isTerminalFor, isTillFor,
   operatorActor, readCookie, readSession,
 } from '../../auth/_lib.js';
+import { stayOptions } from './_stay-options.js';
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const COUNTRY = /^[A-Z]{2}$/;
@@ -84,6 +85,7 @@ export function stayEventPayload(booking) {
     roomId: text(booking?.resourceId, 64),
     checkIn: text(booking?.hotel?.checkIn, 10),
     checkOut: text(booking?.hotel?.checkOut, 10),
+    ...stayOptions(booking?.hotel),
     guestSegments: readGuestSegments(booking?.hotel?.guestSegments, booking?.hotel?.checkIn, booking?.hotel?.checkOut),
     roomSegments: readRoomSegments(booking?.hotel?.roomSegments, booking?.hotel?.checkIn, booking?.hotel?.checkOut),
   };
@@ -294,4 +296,3 @@ export async function writeReservationWithEvents(env, options) {
   const results = await env.DB.batch(statements);
   return (results?.[0]?.meta?.changes || 0) > 0 ? next : 0;
 }
-

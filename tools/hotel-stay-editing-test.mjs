@@ -110,6 +110,52 @@ async function fixture(mode) {
 }
 
 for (const mode of ['document', 'd1', 'd1-pruned']) {
+  test(`${mode}: day-use reserves hours, keeps zero nights and refuses overlapping bookings`, async () => {
+    const f = await fixture(mode);
+    try {
+      const spec = {dayUse:true, checkOut:f.input.checkIn, arrivalTime:'09:00', departureTime:'14:00', dayUseAmountCents:30025};
+      const first = await f.post(spec);
+      assert.equal(first.status,200,JSON.stringify(first.body));
+      assert.equal(first.body.booking.hotel.nights,0);
+      assert.equal(first.body.booking.hotel.total,300.25);
+      assert.deepEqual(first.body.booking.hotel.guestSegments,[]);
+      const before = f.snapshot();
+      const clash = await f.post({...spec, clientRef:'day-use-conflict-001',arrivalTime:'13:00',departureTime:'16:00'});
+      assert.equal(clash.status,409); assert.equal(f.snapshot(),before);
+      const overnight = await f.post({clientRef:'overnight-after-day-use'});
+      assert.equal(overnight.status,200,'overnight at 15:00 may follow day-use ending at 14:00');
+      assert.equal((await f.post({...spec,id:first.body.booking.id,dayUse:false})).status,400);
+      const edit = await f.post({...spec,id:first.body.booking.id,note:'Changed note'});
+      assert.equal(edit.status,200); assert.equal(edit.body.booking.hotel.total,300.25);
+      const repeated = await f.post(spec);
+      assert.equal(repeated.body.booking.id,first.body.booking.id);
+      for (const invalid of [{arrivalTime:'25:00'},{departureTime:'08:00'},{dayUseAmountCents:300.2},{dayUseAmountCents:-1},{checkOut:f.input.checkOut}]) {
+        const beforeInvalid = f.snapshot();
+        assert.ok((await f.post({...spec,...invalid,clientRef:'invalid-day-use-input'})).status>=400);
+        assert.equal(f.snapshot(),beforeInvalid);
+      }
+    } finally { f.sql.close(); }
+  });
+  test(`${mode}: linked rooms share a dossier but conflicts and cancellations remain independent`, async () => {
+    const f = await fixture(mode);
+    try {
+      const first = (await f.post({})).body.booking;
+      assert.equal(first.hotel.dossierId,first.id);
+      const before = f.snapshot();
+      assert.equal((await f.post({linkedStayId:first.id,clientRef:'linked-room-conflict'})).status,409);
+      assert.equal(f.snapshot(),before);
+      const second = await f.post({linkedStayId:first.id,clientRef:'linked-second-room',resourceId:'room:102'});
+      assert.equal(second.status,200); assert.notEqual(second.body.booking.id,first.id);
+      assert.equal(second.body.booking.hotel.dossierId,first.id);
+      const list = await f.get({dossierId:first.id,from:f.input.checkIn,to:f.input.checkOut,includeCancelled:'1'});
+      assert.equal(list.status,200); assert.equal(list.body.stays.length,2);
+      assert.equal((await f.post({action:'cancel',id:second.body.booking.id})).status,200);
+      const remaining = await f.get({dossierId:first.id,from:f.input.checkIn,to:f.input.checkOut,includeCancelled:'1'});
+      assert.equal(remaining.body.stays.find(b=>b.id===first.id).status,'confirmed');
+      const bad = await f.post({linkedStayId:'another-tenant-stay',clientRef:'linked-not-in-tenant',resourceId:'room:102'});
+      assert.equal(bad.status,404);
+    } finally { f.sql.close(); }
+  });
   test(`${mode}: stable clientRef retries return the original stay without another write`, async () => {
     const f = await fixture(mode);
     try {

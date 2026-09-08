@@ -13,6 +13,8 @@ import { onRequestPost as publicBooking } from '../functions/api/booking.js';
 import { resetTableStateCacheForTests } from '../functions/api/hotel/_stay-events.js';
 import { onRequestGet as productionGet } from '../functions/api/hotel/production.js';
 import { monthWindow, monthlyProduction } from '../functions/api/hotel/_production.js';
+import { onRequestGet as draftGet,onRequestPost as draftPost } from '../functions/api/hotel/billing-draft.js';
+import { draftSource,buildDraft } from '../functions/api/hotel/_billing-draft.js';
 
 const agency = { id: 'account-agency', kind: 'agency', name: 'Synthetic agency', legalName: 'Synthetic Agency SARL', paymentDays: 30, ice: 'SYNTHETIC' };
 const low = { id: 'contract-low', name: 'Basse saison', accountId: agency.id, roomTypeId: 'standard', from: '2027-01-01', to: '2027-06-30', occupancy: 2, board: 'bb', unit: 'room', amountCents: 50035, taxBasis: 'inclusive' };
@@ -64,13 +66,14 @@ async function fixture() {
   const rooms = { baseRate: 600, roomTypes: [{ id: 'standard', name: 'Standard', rate: 600, maxGuests: 3 }], rooms: [{ id: 'room:101', n: 101, typeId: 'standard', status: 'libre' }], folios: [] };
   sql.prepare('INSERT INTO store_docs (merchant,feature,data,rev,updated_ts) VALUES (?,?,?,?,?)').run(merchant, 'rooms', JSON.stringify(rooms), 1, 1);
   const cookie = sessionCookie(await makeSession('owner-test', env.AUTH_SECRET)).split(';')[0];
-  let race = false;
+  let race = false, draftRace = null;
   class Statement {
     constructor(query) { this.query = query; this.args = []; }
     bind(...args) { this.args = args; return this; }
     async first() { return sql.prepare(this.query).get(...this.args) || null; }
     async all() { return { results: sql.prepare(this.query).all(...this.args) }; }
     async run() {
+      if(draftRace && this.query.startsWith('INSERT INTO store_docs(merchant,feature,data,rev,updated_ts) SELECT')){const fn=draftRace;draftRace=null;fn(sql);}
       if (race && this.query.startsWith('UPDATE store_docs SET data=?,rev=rev+1')) {
         race = false;
         sql.prepare("UPDATE store_docs SET rev=rev+1 WHERE merchant=? AND feature='hotel-commercial'").run(merchant);
@@ -91,8 +94,86 @@ async function fixture() {
   const post = b => call(onRequestPost, b);
   async function seed() { await post({ action: 'account', rev: 0, item: agency }); await post({ action: 'contract', rev: 1, item: low }); await post({ action: 'contract', rev: 2, item: high }); }
   const stay = b => call(saveStay, { action: 'save', clientRef: 'test-stay-reference', roomTypeId: 'standard', resourceId: 'room:101', checkIn: input.checkIn, checkOut: input.checkOut, partySize: 2, channel: 'direct', status: 'confirmed', customer: { name: 'Synthetic Guest' }, ...b });
-  return { sql, env, merchant, post, call, seed, stay, race() { race = true; } };
+  return { sql, env, merchant, post, call, seed, stay, race() { race = true; },draftRace(fn){draftRace=fn;} };
 }
+
+test('preinvoice source conserves cents, separates same-day stays and keeps cancelled rooms without charges',()=>{
+  const b={id:'booking-first',code:'H-TEST',status:'confirmed',partySize:2,resourceId:'room:101',customer:{name:'Guest'},hotel:{checkIn:'2027-07-01',checkOut:'2027-07-04',total:100.01,roomTypeName:'Standard'}};
+  const source=draftSource([b,{...b,id:'booking-dayuse',hotel:{...b.hotel,dayUse:true,checkOut:'2027-07-01',arrivalTime:'09:00',departureTime:'14:00',total:12.35}},{...b,id:'booking-cancelled',status:'cancelled'}]);
+  assert.deepEqual(source.lines.map(l=>l.amountCents),[3334,3334,3333,1235]);
+  assert.equal(source.rooms.length,3);
+  const d=buildDraft(source,{extras:[],allocations:[]});
+  assert.equal(d.totalCents,11236);assert.equal(d.finalizable,false);assert.equal(d.paymentStatus,'not-reconciled');
+  const p=monthlyProduction([{id:b.id,check_in:'2027-07-01',check_out:'2027-07-01',status:'confirmed',raw_json:JSON.stringify({hotel:{dayUse:true}})}],monthWindow('2027-07'));
+  assert.equal(p.nights,0);
+});
+test('generic document sync cannot erase day-use hours, dossier membership or change lodging dates',async()=>{
+  const f=await fixture();try{
+    const response=await f.stay({dayUse:true,checkOut:input.checkIn,arrivalTime:'09:00',departureTime:'14:00',dayUseAmountCents:35025});
+    assert.equal(response.status,200);const b=response.body.booking;
+    const doc={bookings:[b]};assert.equal(await validateCommercialSync(f.env,f.merchant,doc,doc),true);
+    for(const mutation of [h=>delete h.dossierId,h=>h.dayUse=false,h=>h.arrivalTime='06:00',h=>h.checkIn='2027-01-01',h=>h.nights=1]){
+      const next=structuredClone(doc);mutation(next.bookings[0].hotel);
+      await assert.rejects(validateCommercialSync(f.env,f.merchant,doc,next),/commercial-stays-use-api/);
+    }
+  }finally{f.sql.close();}
+});
+test('preinvoice splits must conserve every cent and refuse unknown payers, invalid dates and duplicate extras',()=>{
+  const source={lines:[{id:'stay:test:date',amountCents:101,payer:'guest:test'}],payers:[{id:'guest:test',name:'Guest'},{id:'account:test',name:'Company'}]};
+  const allocations=[{lineId:'stay:test:date',parts:[{payer:'guest:test',amountCents:50},{payer:'account:test',amountCents:51}]}];
+  assert.deepEqual(buildDraft(source,{extras:[],allocations}).payers.map(p=>p.amountCents),[50,51]);
+  const wrong=structuredClone(allocations);wrong[0].parts[0].amountCents=49;
+  assert.throws(()=>buildDraft(source,{extras:[],allocations:wrong}),/allocation-unbalanced/);
+  const unknown=structuredClone(allocations);unknown[0].parts[0].payer='other-tenant';
+  assert.throws(()=>buildDraft(source,{extras:[],allocations:unknown}),/invalid-allocation/);
+  const extra={id:'extra-test-001',date:'2027-07-01',label:'Meal',quantity:2,unitCents:1235,payer:'guest:test'};
+  assert.equal(buildDraft(source,{extras:[extra],allocations}).totalCents,2571);
+  assert.throws(()=>buildDraft(source,{extras:[extra,extra],allocations}),/invalid-extra/);
+  assert.throws(()=>buildDraft(source,{extras:[{...extra,date:'2027-02-30'}],allocations}),/invalid-extra/);
+  assert.throws(()=>buildDraft(source,{extras:[{...extra,unitCents:12.35}],allocations}),/invalid-extra/);
+});
+test('private preinvoice saves exact split snapshots, safely retries and blocks final invoices',async()=>{
+  const f=await fixture();try{
+    await f.seed();const stay=(await f.stay({commercial:{accountId:agency.id,board:'bb',quoted:true},acceptQuote:true,quoteRevision:3})).body.booking;
+    const url='billing-draft?dossierId='+stay.id;
+    const r=await f.call(draftGet,null,true,url);assert.equal(r.status,200,JSON.stringify(r.body));
+    const d=r.body,parts=[{payer:'account:'+agency.id,amountCents:30000},{payer:'guest:'+stay.id,amountCents:20035}];
+    const input={extras:[],allocations:[{lineId:d.preview.lines[0].id,parts}],note:'Synthetic only'};
+    const command={action:'save-draft',dossierId:stay.id,rev:d.rev,sourceDigest:d.sourceDigest,directoryRev:d.directoryRev,commandId:'draft-command-001',input};
+    const first=await f.call(draftPost,command);assert.equal(first.status,200,JSON.stringify(first.body));
+    assert.deepEqual(first.body.saved.draft.lines[0].parts,parts);assert.equal(first.body.saved.draft.totalCents,130080);
+    assert.equal(first.body.saved.actor.id,'owner-test');
+    const replay=await f.call(draftPost,command);assert.equal(replay.status,200);assert.equal(replay.body.replayed,true);assert.equal(replay.body.rev,1);
+    assert.equal((await f.call(draftPost,{...command,input:{...input,note:'changed'}})).status,409);
+    assert.equal((await f.call(draftPost,{...command,action:'finalize'})).status,409);
+    assert.equal((await f.call(draftGet,null,false,url)).status,401);
+    assert.equal((await f.call(draftPost,command,false)).status,401);
+    assert.equal((await f.call(draftGet,null,true,'billing-draft?dossierId=foreign-dossier')).status,404);
+    f.sql.prepare('UPDATE hotel_reservations SET total=total+1 WHERE id=?').run(stay.id);
+    // An inconsistent accepted quote fails closed, not a misleading reprice.
+    assert.equal((await f.call(draftGet,null,true,url)).status,503);
+  }finally{f.sql.close();}
+});
+test('preinvoice CAS rejects source, directory and draft races without overwriting the saved version',async()=>{
+  for(const kind of ['source','directory','draft']){
+    const f=await fixture();try{
+      await f.seed();const stay=(await f.stay({})).body.booking;
+      const url='billing-draft?dossierId='+stay.id;
+      const d=(await f.call(draftGet,null,true,url)).body;
+      const command={action:'save-draft',dossierId:stay.id,rev:0,sourceDigest:d.sourceDigest,directoryRev:d.directoryRev,commandId:'draft-race-0001',input:{extras:[],allocations:[]}};
+      const saved=await f.call(draftPost,command);assert.equal(saved.status,200);
+      const old=f.sql.prepare('SELECT data FROM store_docs WHERE feature=?').get('hotel-billing-draft:'+stay.id).data;
+      f.draftRace(sql=>{
+        if(kind==='source')sql.prepare('UPDATE hotel_reservations SET updated_ts=updated_ts+1 WHERE id=?').run(stay.id);
+        if(kind==='directory')sql.exec("UPDATE store_docs SET rev=rev+1 WHERE feature='hotel-commercial'");
+        if(kind==='draft')sql.prepare('UPDATE store_docs SET rev=rev+1 WHERE feature=?').run('hotel-billing-draft:'+stay.id);
+      });
+      const result=await f.call(draftPost,{...command,rev:1,commandId:'draft-race-0002'});
+      assert.equal(result.status,409,kind+': '+JSON.stringify(result.body));
+      assert.equal(f.sql.prepare('SELECT data FROM store_docs WHERE feature=?').get('hotel-billing-draft:'+stay.id).data,old);
+    }finally{f.sql.close();}
+  }
+});
 
 test('daily quote crosses seasons in cents with exclusive checkout date', () => {
   const q = quote(directory(), input);

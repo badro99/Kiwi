@@ -224,7 +224,8 @@
       var status = ['requested','confirmed','checked_in','completed','cancelled','no_show'].indexOf(x && x.status) >= 0 ? x.status : 'requested';
       var hotel = x && x.hotel && typeof x.hotel === 'object' ? {
         roomTypeName: cleanText(x.hotel.roomTypeName, 100), checkIn: cleanText(x.hotel.checkIn, 10),
-        checkOut: cleanText(x.hotel.checkOut, 10), nights: number(x.hotel.nights, 1, 365, 1),
+        checkOut: cleanText(x.hotel.checkOut, 10), nights: x.hotel.dayUse === true ? 0 : number(x.hotel.nights, 1, 365, 1),
+        dayUse: x.hotel.dayUse === true, dossierId: cleanText(x.hotel.dossierId, 64), arrivalTime: cleanText(x.hotel.arrivalTime, 5), departureTime: cleanText(x.hotel.departureTime, 5),
         rate: number(x.hotel.rate, 0, 1000000, 0), total: number(x.hotel.total, 0, 100000000, 0),
         channel: ['direct','booking','airbnb','expedia','walkin','other'].indexOf(x.hotel.channel) >= 0 ? x.hotel.channel : (x.source === 'public' ? 'direct' : 'other'),
         externalRef: cleanText(x.hotel.externalRef, 80), feedId: cleanText(x.hotel.feedId, 64),

@@ -5,6 +5,7 @@ import { poke } from './_live.js';
 import { currentRoomSegment, normalizeGuestSegments, readGuestSegments, readRoomSegments, writeReservationWithEvents, hotelReservationsTableExists } from './hotel/_stay-events.js';
 import { pruneReservationsDoc } from './hotel/stays.js';
 import { commercialSnapshot } from './hotel/_commercial.js';
+import { stayOptions } from './hotel/_stay-options.js';
 
 const ACTIVE = new Set(['requested', 'confirmed', 'checked_in']);
 const ID = /^[a-z0-9][a-z0-9-]{2,63}$/;
@@ -51,6 +52,8 @@ function safeDoc(raw) {
     const original = originals.get(x.id);
     x.commercial = commercialSnapshot(original?.commercial);
     if (!x.hotel) return;
+    Object.assign(x.hotel, stayOptions(original?.hotel));
+    if (x.hotel.dayUse) x.hotel.nights = 0;
     // Public intake rewrites the shared document. Preserve bounded staff-only
     // identity/history fields, but never include them in the public response.
     x.guests = (Array.isArray(original?.guests) ? original.guests : []).slice(0, 20).map(g => ({

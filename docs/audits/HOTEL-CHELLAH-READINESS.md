@@ -4,7 +4,7 @@ Audit date: 2026-09-08. Reference: the user's meeting notes and 16 screenshots o
 
 ## Meeting answer
 
-Kiwi has real hotel foundations, but it is **not yet a complete replacement for Chellah's current PMS**. The follow-up implementation adds typed commercial accounts and accepted nightly contract pricing locally. The main outstanding work is unified stay accounting, multi-room/day-use, complete invoicing and two-way distribution. These changes do not turn an iCal import into a channel manager or a quote into a complete hotel invoice.
+Kiwi has real hotel foundations, but it is **not yet a complete replacement for Chellah's current PMS**. The latest follow-up adds linked multi-room dossiers, explicit same-day day-use, and a shared detailed pre-invoice with per-line payer splits. Final fiscal invoices, unified payment/charge posting, standalone free invoices and two-way OTA distribution remain unfinished. A pre-invoice is not a payment ledger or a final invoice. Historical findings below describe the earlier baseline; the latest follow-up section records the new implementation.
 
 Source baseline: `d753a0ab`. Existing full gate passed with one warning before this pass. Current verification and publication evidence belongs in the final handoff; source presence is not proof of deployed or connected functionality.
 
@@ -176,3 +176,25 @@ Verification:
 - This hotel candidate adds no schema migration. The broader audit's three migrations, Shopify worker rollout, native rebuilds and bridge restarts are separate, unperformed operations. Remote schema inspection was unavailable through the schema tool because its required Cloudflare environment settings were absent; the monthly route fails explicitly if the existing reservation ledger is unavailable.
 
 Publication must include only the verified hotel candidate, never the unrelated still-changing audit work. The canonical shared checkout must not be reset or broadly staged to incorporate a release made from the verification checkout. Preserve all concurrent work and reconcile against the published commit before its next release.
+
+## Latest follow-up: dossiers, day-use and pre-invoice allocation
+
+Entry: Reception → open a reservation → **Chambres & facturation du dossier**.
+
+- Add an independently confirmed room to the same dossier, including after the original reservation has left the compact cache. Server resolves the root in the current tenant. A failed room addition does not mutate the original, and cancelling one room does not cancel the others. This is sequential room addition, not an atomic group allotment or room-block booking engine.
+- Day-use creation accepts one calendar date, explicit arrival/departure hours in Africa/Casablanca, and an agreed TTC flat amount in centimes. No overnight or season price is guessed. Overlapping room hours are rejected; a later overnight stay can use the room after the day-use interval ends. Same-day stays have zero statistical nights; the monthly production report excludes them. The stay mode is locked after creation; changes remain subject to room availability.
+- Staff/public document writers and calendar refresh preserve dossier metadata. Generic whole-document sync cannot erase or forge protected dossier links, day-use times, prices or lodging dates. Existing iCal capabilities remain one-way; no new live OTA adapter was built or activated.
+- The private `/api/hotel/billing-draft` route reads the complete D1 dossier, not the compact cache. It derives dated lodging/package lines from accepted rates, preserves exact total centimes, supports proposed dated extras, and splits each line between one or two named payers. Different lines can use different guests, agencies or companies. Cancelled/no-show/requested rooms are visible but do not generate lodging lines; cancellation penalties are not guessed.
+- Drafts are tenant-scoped `store_docs` records under `hotel-billing-draft:<dossierId>`, inaccessible through generic store feature sync. A single conditional SQL write checks the exact reservation snapshot, account-directory revision and prior draft revision. Conflicts fail without replacing the prior draft. Lost-response retries preserve the same command; changed-payload reuse is rejected. These are mutable working drafts, not an immutable journal.
+- Saved-only A4 pre-invoice printing, payer totals, explicit warnings for unvalidated taxes and unreconciled payments, and disabled finalization. Source/account changes require deliberate review/reset. A reset explicitly replaces the old draft's allocations and proposed extras; it is not an automatic adjustment or credit note.
+- UI uses existing upright brand typography, surface/inverse token pairs, responsive cards, labelled controls, visible focus and at least 44px targets. Reservation and draft actions are scoped to the originating hotel.
+
+Verification: 20 real-handler/model commercial tests, 20 stay editing tests, 37 reception behavior tests (including non-overlapping day-use/overnight calendar positions), 17 calendar-sync checks, 60 Chromium commercial/production/billing layout scenarios at 320/390/768/1024/1440px across light/dark/Vexel themes, plus interactive draft-split/retry and day-use editor checks. These synthetic checks do not establish physical-device touch quality, deployment, authenticated merchant acceptance, payment reconciliation, or tax compliance. Hotel follow-up release gate: `/tmp/kiwi-hotel-dossier-release-gate.log`.
+
+### Still not finished or activated
+
+1. Immutable lodging/extra/tax/payment ledger shared with POS and restaurant room charges, receipts/refunds, split settlement, fiscal invoice numbering and credit notes. The new drafts deliberately do not post to the legacy POS ledgers or mark anything paid. Accountant-approved taxes, exemptions, payer rules and expected examples remain unknown, but there is also engineering work left here.
+2. Standalone facture libre, automatic account-wide invoicing across unrelated dossiers, and atomic multi-room allotments.
+3. Booking.com/Expedia two-way connectivity, mappings, credential provisioning, certified adapter behavior and live acceptance. Booking.com requires authorized property connections and specifies API go-live requirements: [Connections overview](https://developers.booking.com/connectivity/docs/connections-api/connections-overview), [Going live](https://developers.booking.com/connectivity/docs/going_live). A channel manager name and hotel/provider access have not been supplied. No provider enrolment, purchase or real guest mutation was performed.
+
+No new schema migration is required for these draft/dossier features. They use the existing hotel reservation table and `store_docs`; missing/corrupt D1 data fails closed. Do not announce a completed PMS, final invoicing capability, App Store/TestFlight release, or live OTA connection based on this follow-up.

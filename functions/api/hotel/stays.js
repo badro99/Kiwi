@@ -3,6 +3,7 @@
 // room accepted here disappears from public availability in the same write.
 import { json, entitledMerchant } from '../../auth/_lib.js';
 import { commercialSnapshot, readCommercial, quote, BOARDS } from './_commercial.js';
+import { stayOptions } from './_stay-options.js';
 import { tenantFor } from '../_private.js';
 import { poke } from '../_live.js';
 import {
@@ -44,7 +45,8 @@ function safeDoc(raw) {
   out.bookings = (Array.isArray(d.bookings) ? d.bookings : []).slice(-4000).map((x) => {
     const h = x?.hotel && typeof x.hotel === 'object' ? {
       roomTypeName: str(x.hotel.roomTypeName, 100), checkIn: str(x.hotel.checkIn, 10), checkOut: str(x.hotel.checkOut, 10),
-      nights: num(x.hotel.nights, 1, 365, 1), rate: num(x.hotel.rate, 0, 1000000, 0), total: num(x.hotel.total, 0, 100000000, 0),
+      ...stayOptions(x.hotel),
+      nights: x.hotel.dayUse === true ? 0 : num(x.hotel.nights, 1, 365, 1), rate: num(x.hotel.rate, 0, 1000000, 0), total: num(x.hotel.total, 0, 100000000, 0),
       channel: CHANNELS.has(x.hotel.channel) ? x.hotel.channel : (x.source === 'public' ? 'direct' : 'other'),
       externalRef: str(x.hotel.externalRef, 80),
       feedId: str(x.hotel.feedId, 64), syncedAt: +x.hotel.syncedAt || 0, conflict: !!x.hotel.conflict,
@@ -220,6 +222,8 @@ export async function onRequestGet({ request, env }) {
   const toParam = str(u.searchParams.get('to'), 32);
   const roomId = str(u.searchParams.get('roomId'), 64);
   const accountId = str(u.searchParams.get('accountId'), 80);
+  const dossierId = str(u.searchParams.get('dossierId'), 64);
+  const stayId = str(u.searchParams.get('id'), 64);
   const statusParam = str(u.searchParams.get('status'), 24);
   const includeCancelled = u.searchParams.get('includeCancelled') === '1' || statusParam === 'cancelled';
 
@@ -248,6 +252,11 @@ export async function onRequestGet({ request, env }) {
     try {
       let query = "SELECT * FROM hotel_reservations WHERE merchant = ? AND start_at < ? AND end_at > ?";
       const params = [merchant, toEpoch, fromEpoch];
+      if (stayId) { query += ' AND id = ?'; params.push(stayId); }
+      if (dossierId) {
+        query += " AND COALESCE(NULLIF(CASE WHEN json_valid(raw_json) THEN json_extract(raw_json, '$.hotel.dossierId') END,''),id) = ?";
+        params.push(dossierId);
+      }
       if (accountId) {
         query += " AND CASE WHEN json_valid(raw_json) THEN json_extract(raw_json, '$.commercial.accountId') END = ?";
         params.push(accountId);
@@ -279,7 +288,9 @@ export async function onRequestGet({ request, env }) {
     const doc = safeDoc(row?.data);
     const stays = (doc.bookings || []).filter((b) => {
       if (!b.hotel || (!includeCancelled && b.status === 'cancelled')) return false;
+      if (stayId && b.id !== stayId) return false;
       if (accountId && b.commercial?.accountId !== accountId) return false;
+      if (dossierId && (b.hotel.dossierId || b.id) !== dossierId) return false;
       if (roomId && b.resourceId !== roomId) return false;
       if (statusParam && b.status !== statusParam) return false;
       return overlaps(fromEpoch, toEpoch, b.startAt, b.endAt);
@@ -347,11 +358,18 @@ export async function onRequestPost({ request, env }) {
     const name = str(b?.customer?.name, 100), phone = str(b?.customer?.phone, 32), email = str(b?.customer?.email, 160), note = str(b?.note, 600);
     const channel = CHANNELS.has(b?.channel) ? b.channel : 'direct', externalRef = str(b?.externalRef, 80), status = STATUSES.has(b?.status) ? b.status : 'confirmed';
     const partySize = num(b?.partySize, 1, 12, 1), clientRef = str(b?.clientRef, 80);
-    if (!DATE.test(checkIn) || !DATE.test(checkOut) || checkOut <= checkIn || !typeId || !name || !REF.test(clientRef)) return json({ error: 'invalid' }, 400);
+    const dayUse = b.dayUse === undefined ? old?.hotel?.dayUse === true : b.dayUse === true;
+    const arrivalTime = dayUse ? str(b.arrivalTime ?? old?.hotel?.arrivalTime, 5) : '15:00';
+    const departureTime = dayUse ? str(b.departureTime ?? old?.hotel?.departureTime, 5) : '11:00';
+    if (!DATE.test(checkIn) || !DATE.test(checkOut) || (dayUse ? checkOut !== checkIn : checkOut <= checkIn) || !typeId || !name || !REF.test(clientRef)) return json({ error: 'invalid' }, 400);
     if (!isCalendarDate(checkIn) || !isCalendarDate(checkOut)) return json({ error: 'invalid-dates' }, 400);
     const nights = Math.round((Date.parse(checkOut + 'T12:00:00Z') - Date.parse(checkIn + 'T12:00:00Z')) / 86400000);
-    if (nights < 1 || nights > 365) return json({ error: 'invalid-dates' }, 400);
-    const startAt = zonedEpoch(checkIn, '15:00'), endAt = zonedEpoch(checkOut, '11:00');
+    if ((!dayUse && nights < 1) || nights > 365) return json({ error: 'invalid-dates' }, 400);
+    if (dayUse && (!/^([01]\d|2[0-3]):[0-5]\d$/.test(arrivalTime) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(departureTime) || arrivalTime >= departureTime)) return json({ error: 'invalid-day-use' }, 400);
+    if (old && !!old.hotel.dayUse !== dayUse) return json({ error: 'stay-mode-locked' }, 409);
+    if (dayUse && old?.hotel?.feedId) return json({ error: 'feed-day-use-unsupported' }, 409);
+    const startAt = zonedEpoch(checkIn, arrivalTime), endAt = zonedEpoch(checkOut, departureTime);
+    if (!Number.isFinite(startAt) || !Number.isFinite(endAt) || endAt <= startAt) return json({ error: 'invalid-day-use' }, 400);
     if (!old) {
       // Future stays may live only in D1. publicRef is stored in raw_json,
       // not a public_ref column; never let pruning defeat the form's retry key.
@@ -375,6 +393,17 @@ export async function onRequestPost({ request, env }) {
     if (!type) return json({ error: 'room-type-not-found' }, 409);
     if (old && !canTransition(old.status, status)) {
       return json({ error: 'invalid-status-transition', from: old.status, to: status }, 409);
+    }
+    // A linked room is a new independently cancellable reservation, not an
+    // update to the original room. The root is resolved in this tenant only.
+    let dossierId = old?.hotel?.dossierId || old?.id || '';
+    if (!old && b.linkedStayId) {
+      let linked;
+      try {
+        linked = hasResTable ? hydrateReservation(await env.DB.prepare('SELECT * FROM hotel_reservations WHERE merchant = ? AND id = ?').bind(merchant, str(b.linkedStayId, 64)).first()) : doc.bookings.find(x => x.id === b.linkedStayId);
+      } catch (_) { return json({ error: 'service-unavailable' }, 503); }
+      if (!linked?.hotel) return json({ error: 'linked-stay-not-found' }, 404);
+      dossierId = linked.hotel.dossierId || linked.id;
     }
     if (externalRef) {
       if (hasResTable) {
@@ -430,8 +459,16 @@ export async function onRequestPost({ request, env }) {
     let total = sameType && nights === old.hotel.nights
       ? old.hotel.total
       : (rate == null ? 0 : Math.round(rate * nights * 100) / 100);
+    if (dayUse) {
+      if ((await entitledMerchant(request, env, merchant)) !== merchant) return json({ error: 'commercial-forbidden' }, 403);
+      const cents = b.dayUseAmountCents === undefined && old ? Math.round(old.hotel.total * 100) : b.dayUseAmountCents;
+      if (!Number.isSafeInteger(cents) || cents < 0 || cents > 100000000) return json({ error: 'day-use-price-required' }, 400);
+      if (old && ['completed','cancelled','no_show'].includes(old.status) && (cents !== Math.round(old.hotel.total * 100) || startAt !== old.startAt || endAt !== old.endAt)) return json({ error: 'closed-commercial' }, 409);
+      total = cents / 100; rate = total;
+    }
     let commercial = commercialSnapshot(old?.commercial);
     const spec = b?.commercial;
+    if (dayUse && (spec?.quoted || commercial?.quoted)) return json({ error: 'day-use-contract-unsupported' }, 409);
     const changedStay = old && (old.serviceId !== typeId || old.hotel.checkIn !== checkIn || old.hotel.checkOut !== checkOut || old.partySize !== partySize);
     if (commercial?.quoted && changedStay && (!spec || !b.acceptQuote)) return json({ error: 'quote-required' }, 409);
     if (spec !== undefined) {
@@ -489,16 +526,18 @@ export async function onRequestPost({ request, env }) {
       guests: saveGuests, commercial,
       roomSegments: saveRoomSegments,
       hotel: {
+        dossierId, dayUse, arrivalTime, departureTime,
         roomTypeName: type.name, checkIn, checkOut, nights,
         rate: rate == null ? 0 : rate, total,
         channel, externalRef: externalRef || old?.hotel?.externalRef || '',
         feedId: old?.hotel?.feedId || '', syncedAt: old?.hotel?.syncedAt || 0,
         conflict: false,
-        guestSegments: normalizeGuestSegments(b?.guestSegments, old?.hotel?.guestSegments, partySize, checkIn, checkOut),
-        roomSegments: currentRoomSegment(room.id, checkIn, checkOut),
+        guestSegments: dayUse ? [] : normalizeGuestSegments(b?.guestSegments, old?.hotel?.guestSegments, partySize, checkIn, checkOut),
+        roomSegments: dayUse ? [] : currentRoomSegment(room.id, checkIn, checkOut),
       },
       createdAt: old?.createdAt || now, updatedAt: now,
     };
+    rec.hotel.dossierId ||= rec.id;
     const index = old ? doc.bookings.findIndex((x) => x.id === old.id) : -1;
     if (index < 0) doc.bookings.push(rec); else doc.bookings[index] = rec;
     /* Le bornage ne s'applique QUE si hotel_reservations existe. Sans la table,

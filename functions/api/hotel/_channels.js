@@ -3,6 +3,7 @@
 // the browser receives connection metadata, never the URL.
 import { currentRoomSegment, normalizeGuestSegments, writeReservationWithEvents, hotelReservationsTableExists } from './_stay-events.js';
 import { pruneReservationsDoc } from './stays.js';
+import { stayOptions } from './_stay-options.js';
 
 const enc = new TextEncoder();
 const dec = new TextDecoder();
@@ -188,7 +189,7 @@ export async function syncHotelChannel(env, row) {
         customer, serviceId: String(type.id), resourceId: String(room.id), startAt, endAt,
         partySize: Math.max(1, +rec?.partySize || 1), status: rec && PRESERVED_STATES.has(rec.status) ? rec.status : 'confirmed',
         source:'import', note:str(rec?.note,600), manageToken:str(rec?.manageToken,200),
-        publicRef: 'feed-' + digest, hotel: { roomTypeName:str(type.name,100), checkIn:event.checkIn, checkOut:event.checkOut, nights, rate, total:Math.round(rate*nights), channel:provider, externalRef, feedId, syncedAt:now, conflict, guestSegments:normalizeGuestSegments(null,rec?.hotel?.guestSegments,Math.max(1,+rec?.partySize||1),event.checkIn,event.checkOut), roomSegments:currentRoomSegment(room.id,event.checkIn,event.checkOut) },
+        publicRef: 'feed-' + digest, hotel: { ...stayOptions(rec?.hotel), roomTypeName:str(type.name,100), checkIn:event.checkIn, checkOut:event.checkOut, nights, rate, total:Math.round(rate*nights), channel:provider, externalRef, feedId, syncedAt:now, conflict, guestSegments:normalizeGuestSegments(null,rec?.hotel?.guestSegments,Math.max(1,+rec?.partySize||1),event.checkIn,event.checkOut), roomSegments:currentRoomSegment(room.id,event.checkIn,event.checkOut) },
         createdAt:+rec?.createdAt || now, updatedAt:+rec?.updatedAt || now,
       };
       if (!rec) { doc.bookings.push(next); stayEvents.push({ previous:null, current:next, action:'create' }); changed++; }

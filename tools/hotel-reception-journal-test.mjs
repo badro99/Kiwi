@@ -17,7 +17,7 @@ const instrumented = source.replace(/\}\)\(\);\s*$/, `
     cuRefreshReception, cuSubmitStay, cuStayScope,
     cuState, cuHydrate, cuDocument, cuMerge, nowLabel,
     cuCommercialState, cuCommercialBody, cuQuoteRows, cuStayQuoteSignature, cuWireStayCommercial, cuLoadCommercial,
-    cuProductionState, cuProductionBody, cuLoadProduction
+    cuProductionState, cuProductionBody, cuLoadProduction,cuSejoursBody
   };
 })();`);
 const TODAY = '2026-09-08';
@@ -112,7 +112,7 @@ function rowIds(html) {
   return Array.from(html.matchAll(/data-action="hx-stay-edit" data-arg="([^"]*)"/g), (m) => m[1]).sort();
 }
 function formFixture() {
-  const values = { name: 'Retry Guest', checkIn: TODAY, checkOut: '2026-09-10', roomTypeId: 'type:chambre', resourceId: '', partySize: '2', channel: 'direct', status: 'confirmed' };
+  const values = { name: 'Retry Guest', checkIn: TODAY, checkOut: '2026-09-10', roomTypeId: 'type:chambre', resourceId: '', partySize: '2', channel: 'direct', status: 'confirmed', stayMode:'overnight',dayUsePrice:'',arrivalTime:'09:00',departureTime:'18:00' };
   const elements = Object.fromEntries(Object.entries(values).map(([key, value]) => [key, { value, addEventListener() {} }]));
   elements.resourceId.options = [{ value: '', dataset: {} }];
   elements.resourceId.selectedOptions = elements.resourceId.options;
@@ -134,6 +134,15 @@ test('commercial directory renders typed filters, navigation and escaped identit
   assert.match(html, /hx-account-stays/); assert.match(html, /hx-account-edit/);
   assert.doesNotMatch(html, /data-arg="company-test"/);
   for (const action of ['hx-commercial', 'hx-account-new', 'hx-contract-new', 'hx-account-stays']) assert.equal(typeof f.handlers[action], 'function');
+});
+test('calendar separates same-day hourly occupancy from the following overnight stay',()=>{
+  const f=boot();
+  const st=f.api.cuState();st.rooms={101:{id:'room:101',n:101,typeId:'type:chambre',status:'libre'}};
+  f.setDoc([stay('day-use','confirmed',TODAY,TODAY,{resourceId:'room:101',hotel:{dayUse:true,arrivalTime:'09:00',departureTime:'14:00'}}),stay('night','confirmed',TODAY,'2026-09-09',{resourceId:'room:101',hotel:{arrivalTime:'15:00',departureTime:'11:00'}})]);
+  const html=f.api.cuSejoursBody(),bars=[...html.matchAll(/style="left:([\d.]+)%;width:calc\(([\d.]+)% - 1px\)" data-action="hx-stay-edit" data-arg="([^"]+)"/g)];
+  assert.equal(bars.length,2);assert.equal(bars[0][3],'day-use');
+  assert.ok(Number(bars[0][1])+Number(bars[0][2])<=Number(bars[1][1]),'day-use and overnight bars do not cover one another');
+  assert.match(html,/Day-use · 09:00–14:00/);
 });
 test('contract cards follow the account filter and monthly reporting stays reachable', () => {
   const f = boot(), st = f.api.cuCommercialState();

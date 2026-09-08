@@ -1,4 +1,5 @@
 // Hotel commercial accounts and accepted nightly quotes. Never a tax engine or invoice.
+import { stayOptions } from './_stay-options.js';
 export const FEATURE = 'hotel-commercial'; // Private route only; not in /api/store FEATURES.
 export const BOARDS = ['room_only', 'bb', 'hb_lunch', 'hb_dinner', 'full_board'];
 export const text = (v, n = 160) => String(v == null ? '' : v).trim().slice(0, n);
@@ -75,14 +76,15 @@ export function commercialSnapshot(raw) {
 // Legacy whole-document sync must not erase or rewrite server-accepted terms.
 // Such stays are edited exclusively through /hotel/stays, with a new quote when needed.
 export async function validateCommercialSync(env, merchant, previous, next) {
-  const before = new Map((previous?.bookings || []).filter(b => b?.commercial).map(b => [b.id, b]));
+  const protectedStay = b => b?.commercial || b?.hotel?.dossierId || b?.hotel?.dayUse;
+  const before = new Map((previous?.bookings || []).filter(protectedStay).map(b => [b.id, b]));
   const after = new Map((next?.bookings || []).map(b => [b.id, b]));
-  const ids = new Set([...before.keys(), ...[...after.values()].filter(b => b?.commercial).map(b => b.id)]);
+  const ids = new Set([...before.keys(), ...[...after.values()].filter(protectedStay).map(b => b.id)]);
   if (!ids.size) return false;
   const table = await env.DB.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='hotel_reservations'").first();
-  const protectedValue = b => JSON.stringify({ commercial: commercialSnapshot(b?.commercial),
+  const protectedValue = b => JSON.stringify({ commercial: commercialSnapshot(b?.commercial), options: stayOptions(b?.hotel),
     serviceId: b?.serviceId, resourceId: b?.resourceId, startAt: b?.startAt, endAt: b?.endAt,
-    partySize: b?.partySize, status: b?.status, rate: b?.hotel?.rate, total: b?.hotel?.total });
+    partySize: b?.partySize, status: b?.status, checkIn:b?.hotel?.checkIn, checkOut:b?.hotel?.checkOut,nights:b?.hotel?.nights,rate: b?.hotel?.rate, total: b?.hotel?.total });
   for (const id of ids) {
     let saved = before.get(id);
     if (table) {
