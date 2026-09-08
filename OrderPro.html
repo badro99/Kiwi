@@ -3185,7 +3185,7 @@ em, i, cite, dfn, var { font-style: normal; }
         </span>
         <button class="service-pill" type="button" data-service="call-server">
           <i data-lucide="bell-ring"></i>
-          <span data-i18n="service_call">Appeler un serveur</span>
+          <span data-i18n="service_call">Appeler l’équipe</span>
         </button>
         <button class="service-pill" type="button" data-service="ask-bill">
           <i data-lucide="receipt"></i>
@@ -3448,8 +3448,9 @@ em, i, cite, dfn, var { font-style: normal; }
       <div class="bill-sheet-backdrop" data-close-bill></div>
       <div class="bill-sheet-panel">
         <div class="cart-handle" data-close-bill></div>
-        <h2 class="bill-title" data-i18n="bill_title">Votre addition</h2>
+        <h2 class="bill-title" data-i18n="bill_title">Mes commandes</h2>
         <div class="bill-subtitle" id="bill-subtitle">Table <span id="bill-table"></span></div>
+        <p class="bill-subtitle" data-i18n="bill_scope">Commandes envoyées depuis ce téléphone. Demandez l’addition complète à l’équipe.</p>
 
         <ul class="bill-items" id="bill-items">
           <li class="bill-empty" data-i18n="bill_empty">Aucune commande passée, ajoutez d'abord au menu.</li>
@@ -3748,7 +3749,7 @@ em, i, cite, dfn, var { font-style: normal; }
         tab_savory: "Salé",
         tab_drink: "Boissons",
         tag_new: "Nouveau",
-        service_call: "Appeler un serveur",
+        service_call: "Appeler l’équipe",
         service_bill: "Addition",
         cart_pill: "Voir ma commande",
         custom_from: "À partir de",
@@ -3807,7 +3808,8 @@ em, i, cite, dfn, var { font-style: normal; }
         ready_title_em: "prête.",
         ready_loc_post: "",
         ready_cta: "Récupérer au comptoir",
-        bill_title: "Votre addition",
+        bill_title: "Mes commandes",
+        bill_scope: "Commandes envoyées depuis ce téléphone. Demandez l’addition complète à l’équipe.",
         bill_empty: "Aucune commande passée, ajoutez d'abord au menu.",
         bill_subtotal: "Sous-total",
         tip_eyebrow: "Pourboire pour l'équipe",
@@ -3836,7 +3838,7 @@ em, i, cite, dfn, var { font-style: normal; }
         split_person_pre: "Conv.",
         toast_split_egal: "Addition divisée ·",
         toast_added: "ajouté",
-        toast_server_coming_pre: "Un serveur arrive · Table",
+        toast_server_coming_pre: "Demande transmise à l’équipe · Table",
         toast_bill_asked_pre: "Addition demandée ·",
         toast_bill_tip_post: "pourboire",
         notif_ready_title: "Établissement",
@@ -3929,7 +3931,7 @@ em, i, cite, dfn, var { font-style: normal; }
         tab_savory: "Savory",
         tab_drink: "Drinks",
         tag_new: "New",
-        service_call: "Call the waiter",
+        service_call: "Call the team",
         service_bill: "Bill",
         cart_pill: "View my order",
         custom_from: "From",
@@ -3988,7 +3990,8 @@ em, i, cite, dfn, var { font-style: normal; }
         ready_title_em: "ready.",
         ready_loc_post: "",
         ready_cta: "Pick up at the counter",
-        bill_title: "Your check",
+        bill_title: "My orders",
+        bill_scope: "Orders sent from this phone. Ask the team for the complete table bill.",
         bill_empty: "No orders placed, add something from the menu first.",
         bill_subtotal: "Subtotal",
         tip_eyebrow: "Tip for the team",
@@ -4017,7 +4020,7 @@ em, i, cite, dfn, var { font-style: normal; }
         split_person_pre: "Pers.",
         toast_split_egal: "Bill split ·",
         toast_added: "added",
-        toast_server_coming_pre: "Waiter coming · Table",
+        toast_server_coming_pre: "Request sent to the team · Table",
         toast_bill_asked_pre: "Check requested ·",
         toast_bill_tip_post: "tip",
         notif_ready_title: "Venue",
@@ -4107,7 +4110,7 @@ em, i, cite, dfn, var { font-style: normal; }
         tab_savory: "ساندويتش",
         tab_drink: "مشروبات",
         tag_new: "جديد",
-        service_call: "عيّط على الجارسون",
+        service_call: "نادي على الطاقم",
         service_bill: "الحساب",
         cart_pill: "شوف الطلب ديالي",
         custom_from: "إبتدا من",
@@ -4166,7 +4169,8 @@ em, i, cite, dfn, var { font-style: normal; }
         ready_title_em: "واجد.",
         ready_loc_post: "",
         ready_cta: "خد الطلب من الكونتوار",
-        bill_title: "الحساب ديالك",
+        bill_title: "طلباتي",
+        bill_scope: "الطلبات المرسلة من هذا الهاتف. اطلب الحساب الكامل للطاولة من الطاقم.",
         bill_empty: "ما عندك حتى طلب، زيد شي حاجة من المنيو أول.",
         bill_subtotal: "المجموع الفرعي",
         tip_eyebrow: "البقشيش للفريق",
@@ -4195,7 +4199,7 @@ em, i, cite, dfn, var { font-style: normal; }
         split_person_pre: "ش.",
         toast_split_egal: "الحساب تقسم ·",
         toast_added: "تزاد",
-        toast_server_coming_pre: "الجارسون جاي · طاولة",
+        toast_server_coming_pre: "تم إرسال الطلب للطاقم · طاولة",
         toast_bill_asked_pre: "الحساب تطلب ·",
         toast_bill_tip_post: "بقشيش",
         notif_ready_title: "المحل",
@@ -5143,13 +5147,11 @@ em, i, cite, dfn, var { font-style: normal; }
     }
 
     async function confirmBill() {
-      const tipAmt = Math.round(sessionTotal * tipPercent / 100);
       if (!await sendServiceRequest('ask-bill')) return;
       closeBill();
-      const msg = tipAmt > 0
-        ? `${t('toast_bill_asked_pre')} ${sessionTotal + tipAmt} ${cur()} (+${tipAmt} ${t('toast_bill_tip_post')})`
-        : `${t('toast_bill_asked_pre')} ${sessionTotal} ${cur()}`;
-      showToast(msg);
+      // This requests the whole table's bill, not this phone's subtotal or an
+      // unsaved tip. A successful write is not a promise that staff has arrived.
+      showToast(`${t('toast_bill_asked_pre')} ${tableNumber}`);
     }
 
     /* ============ Split-bill (égal / par article) ============ */
@@ -5331,6 +5333,8 @@ em, i, cite, dfn, var { font-style: normal; }
     async function sendOrder() {
       if (!cart.size) return;
       const btn = $('#send-btn');
+      if (btn.classList.contains('is-loading')) return;
+      if (SESSION.closed) { gotoScreen('screen-thanks'); return; }
       const label = $('#send-label');
       const prevLabel = label ? label.textContent : '';
       btn.classList.add('is-loading');
@@ -5399,21 +5403,6 @@ em, i, cite, dfn, var { font-style: normal; }
         lines: linesPayload,
       });
 
-      if (res && res.error === 'session-closed' && (!currentOrderId || (cart && cart.size > 0))) {
-        SESSION.id = '';
-        SESSION.closed = false;
-        const reop = await SESSION.open(orderMode, orderMode === 'table' ? tableNumber : '');
-        if (reop) {
-          res = await NET.placeOrder({
-            mode: orderMode,
-            table: orderMode === 'table' ? tableNumber : '',
-            session: SESSION.id || '',
-            ref: pendingRef,
-            lines: linesPayload,
-          });
-        }
-      }
-
       btn.classList.remove('is-loading');
       if (label) label.textContent = prevLabel;
 
@@ -5423,10 +5412,6 @@ em, i, cite, dfn, var { font-style: normal; }
            d'être réglée. Le dire franchement vaut mieux qu'un « échec » qui
            inviterait à réessayer indéfiniment. */
         if (err === 'session-closed') {
-          if (!currentOrderId || (cart && cart.size > 0)) {
-            showToast(t('order_offline'));
-            return;
-          }
           SESSION.markClosed('settle');
           return;
         }
@@ -5594,6 +5579,7 @@ em, i, cite, dfn, var { font-style: normal; }
        ne puisse encore envoyer quoi que ce soit. */
     function onSessionClosed() {
       LIVE.stop();
+      pendingRef = '';
       cart.clear();
       refreshCartUI();
       const sub = $('#thanks-sub');
@@ -5631,12 +5617,8 @@ em, i, cite, dfn, var { font-style: normal; }
           // Injoignable ⇒ on ne conclut RIEN. Déclarer la session fermée sur un
           // réseau qui tousse mettrait le client dehors au milieu du repas.
           if (s && s.ok && s.status !== 'open') {
-            // Un client qui choisit encore son repas (aucune commande passée)
-            // ou qui a un panier en cours ne doit JAMAIS être expulsé ni voir son panier vidé !
-            if (!currentOrderId || (cart && cart.size > 0)) {
-              SESSION.id = '';
-              return;
-            }
+            // Settlement ends the shared visit for EVERY phone, including
+            // phones with a draft. Only the explicit reorder action may reseat.
             SESSION.markClosed(s.closedBy);
             return;
           }

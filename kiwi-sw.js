@@ -249,6 +249,7 @@ var SHELL = [
   '/assets/orderpro-publish.js?v=6',
   '/assets/orderpro-panel.js?v=1',
   '/assets/orderpro-inbox.js?v=15',
+  '/assets/service-requests.js?v=1',
   /* Le relais cuisine · la caisse pose ses bons, la tablette du passe les lit.
      Dans la coquille pour les deux pages : c'est lui qui porte la file de
      secours hors ligne, donc il doit exister QUAND le réseau n'existe pas. */

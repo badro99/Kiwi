@@ -44,6 +44,7 @@
 import { json, entitledMerchant, activeServiceEmployee, readTillActorProof } from '../../auth/_lib.js';
 import { startOfDay, nextOrderNumber, deskTouch, normTable, priceOrder, newSessionId, SESSION_ID, pollCursor } from './_lib.js';
 import { recordOrderCourse, closeOrderCourses } from './_course.js';
+import { kitchenLock, kitchenLocked } from './_table-mobility.js';
 
 function deferCourse(context, promise) {
   const safe = Promise.resolve(promise).catch(() => false);
@@ -441,7 +442,9 @@ export async function onRequestGet(context) {
   try {
     const live = await env.DB.prepare(
       `SELECT id, mode, table_no, opened_ts, seen_ts FROM table_sessions
-        WHERE merchant = ? AND status = 'open' AND seen_ts > ?
+        WHERE merchant = ? AND status = 'open' AND (seen_ts > ?
+          OR EXISTS (SELECT 1 FROM orders o WHERE o.merchant = table_sessions.merchant
+            AND o.session_id = table_sessions.id AND o.paid_ts IS NULL AND o.status <> 'rejected'))
         ORDER BY opened_ts LIMIT 200`
     ).bind(merchant, now - PRESENCE_MS).all();
     sessions = (live.results || []).map((s) => ({
@@ -837,6 +840,9 @@ export async function onRequestPost(context) {
             if (b.expectedRevision != null && Number(currentSession.seen_ts) !== Number(b.expectedRevision)) {
               return { stale: true, id: currentSession.id, revision: Number(currentSession.seen_ts) || 0 };
             }
+            // Keep the captured visit. Re-resolving after this await could
+            // open the next party's visit if settlement wins in between.
+            return currentSession;
           }
           return ensureServiceTableSession(env, merchant, table, now);
         })() : null;
@@ -865,11 +871,14 @@ export async function onRequestPost(context) {
       row = await env.DB.prepare(
         `INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status,
                              created_ts, updated_ts, server_name, menu_rev, priced_ts, client_ref, session_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 'accepted', ?, ?, ?, ?, ?, ?, ?)
+         SELECT ?, ?, ?, ?, ?, ?, ?, 'accepted', ?, ?, ?, ?, ?, ?, ?
+         WHERE ? IS NULL OR EXISTS (SELECT 1 FROM table_sessions
+           WHERE id = ? AND merchant = ? AND table_no = ? AND status = 'open')
          RETURNING number`
       ).bind(
         id, merchant, orderNumber, mode, table, total, linesJson, now, now,
-        server || null, priced.menuRev, priced.priced ? now : null, clientRef, serviceSession && serviceSession.id
+        server || null, priced.menuRev, priced.priced ? now : null, clientRef, serviceSession && serviceSession.id,
+        serviceSession && serviceSession.id, serviceSession && serviceSession.id, merchant, table
       ).first();
     } catch (_) {
       /* La clé a-t-elle parlé avant la migration ? Deux envois simultanés de la
@@ -891,15 +900,19 @@ export async function onRequestPost(context) {
         row = await env.DB.prepare(
           `INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status,
                                created_ts, updated_ts, session_id)
-           VALUES (?, ?, ?, ?, ?, ?, ?, 'accepted', ?, ?, ?)
+           SELECT ?, ?, ?, ?, ?, ?, ?, 'accepted', ?, ?, ?
+           WHERE ? IS NULL OR EXISTS (SELECT 1 FROM table_sessions
+             WHERE id = ? AND merchant = ? AND table_no = ? AND status = 'open')
            RETURNING number`
         ).bind(id, merchant, orderNumber, mode, table, total, linesJson, now, now,
-          serviceSession && serviceSession.id).first();
+          serviceSession && serviceSession.id, serviceSession && serviceSession.id,
+          serviceSession && serviceSession.id, merchant, table).first();
       } catch (e) {
         return json({ error: 'write-failed', detail: String((e && e.message) || e) }, 500);
       }
     }
 
+    if (!row) return json({ error: 'stale-table-visit', retry: true }, 409);
     deferCourse(context, recordOrderCourse(env, {
       merchant, orderId: id, orderNumber: (row && row.number) || 1,
       acceptedAt: now, sentAt: now,
@@ -960,6 +973,8 @@ export async function onRequestPost(context) {
       }
 
       const sessionId = String(sourceSession.id);
+      const mobility = kitchenLock(merchant, [fromTable]);
+      if (await kitchenLocked(env, mobility)) return json({ error: 'table-kitchen-locked' }, 409);
 
       const nextRevision = Math.max(now, (Number(sourceSession.seen_ts) || 0) + 1);
       const batch = await atomicStatements(env, [
@@ -973,10 +988,11 @@ export async function onRequestPost(context) {
                            WHERE id = ? AND merchant = ? AND table_no = ? AND status = 'open' AND seen_ts = ?)
              AND NOT EXISTS (SELECT 1 FROM table_sessions
                                WHERE merchant = ? AND table_no = ? AND mode = 'table' AND status = 'open')
-             AND NOT EXISTS (SELECT 1 FROM table_transfers WHERE id = ?)`,
+             AND NOT EXISTS (SELECT 1 FROM table_transfers WHERE id = ?)
+             AND NOT ${mobility.sql}`,
           transferId, merchant, fromTable, toTable, sessionId, server || null, covers,
           merchant, fromTable, now, sessionId, merchant, fromTable, expectedRevision,
-          merchant, toTable, transferId),
+          merchant, toTable, transferId, ...mobility.args),
         statement(env,
           `UPDATE table_sessions SET table_no = ?, seen_ts = ?
              WHERE id = ? AND merchant = ? AND table_no = ? AND status = 'open' AND seen_ts = ?
@@ -1004,6 +1020,7 @@ export async function onRequestPost(context) {
         if (raced) return json({ ok: true, transferId: raced.id, fromTable: raced.from_table,
           toTable: raced.to_table, sessionId: raced.session_id || null,
           ordersMoved: Number(raced.orders_count) || 0, replayed: true, now });
+        if (await kitchenLocked(env, mobility)) return json({ error: 'table-kitchen-locked' }, 409);
         return json({ error: 'table-operation-conflict', retry: true }, 409);
       }
       const moved = await env.DB.prepare(
@@ -1069,18 +1086,15 @@ export async function onRequestPost(context) {
           ordersMerged: Number(replay.orders_count) || 0, replayed: true, now });
       }
 
+      const mobility = kitchenLock(merchant, [sourceTable, targetTable]);
+      if (await kitchenLocked(env, mobility)) return json({ error: 'table-kitchen-locked' }, 409);
       // 1. Session cible
-      let targetSession = await env.DB.prepare(
+      const targetSession = await env.DB.prepare(
         `SELECT id, seen_ts FROM table_sessions WHERE merchant = ? AND table_no = ? AND mode = 'table' AND status = 'open' ORDER BY opened_ts DESC LIMIT 1`
       ).bind(merchant, targetTable).first();
-      if (!targetSession) {
-        targetSession = await ensureServiceTableSession(env, merchant, targetTable, now);
-        if (targetSession) targetSession = await env.DB.prepare(
-          'SELECT id, seen_ts FROM table_sessions WHERE id = ? AND merchant = ?'
-        ).bind(targetSession.id, merchant).first();
-      }
-      const targetSessionId = targetSession ? String(targetSession.id) : null;
-      if (!targetSessionId) return json({ error: 'target-session-unavailable' }, 503);
+      // Create an empty destination only inside the successful merge batch.
+      // A rejected kitchen race must not leave a ghost occupied table behind.
+      const targetSessionId = targetSession ? String(targetSession.id) : newSessionId();
 
       // 2. Session source
       const sourceSession = await env.DB.prepare(
@@ -1110,12 +1124,21 @@ export async function onRequestPost(context) {
              1, ?
            WHERE EXISTS (SELECT 1 FROM table_sessions
                            WHERE id = ? AND merchant = ? AND table_no = ? AND status = 'open' AND seen_ts = ?)
-             AND EXISTS (SELECT 1 FROM table_sessions
+             AND (EXISTS (SELECT 1 FROM table_sessions
                            WHERE id = ? AND merchant = ? AND table_no = ? AND status = 'open')
-             AND NOT EXISTS (SELECT 1 FROM table_transfers WHERE id = ?)`,
+               OR (? = 1 AND NOT EXISTS (SELECT 1 FROM table_sessions
+                           WHERE merchant = ? AND table_no = ? AND mode = 'table' AND status = 'open')))
+             AND NOT EXISTS (SELECT 1 FROM table_transfers WHERE id = ?)
+             AND NOT ${mobility.sql}`,
           mergeId, merchant, sourceTable, targetTable, targetSessionId, server || null,
           merchant, sourceTable, now, sourceSessionId, merchant, sourceTable, expectedRevision,
-          targetSessionId, merchant, targetTable, mergeId),
+          targetSessionId, merchant, targetTable, targetSession ? 0 : 1,
+          merchant, targetTable, mergeId, ...mobility.args),
+        statement(env,
+          `INSERT INTO table_sessions (id, merchant, table_no, mode, status, opened_ts, seen_ts)
+           SELECT ?, ?, ?, 'table', 'open', ?, ? WHERE ? = 1
+             AND EXISTS (SELECT 1 FROM table_transfers WHERE id = ? AND merchant = ?)`,
+          targetSessionId, merchant, targetTable, now, now, targetSession ? 0 : 1, mergeId, merchant),
         statement(env,
           `UPDATE table_sessions SET status = 'closed', closed_ts = ?, closed_by = ?, seen_ts = ?
              WHERE id = ? AND merchant = ? AND table_no = ? AND status = 'open' AND seen_ts = ?
@@ -1132,8 +1155,8 @@ export async function onRequestPost(context) {
           mergeId, merchant, targetSessionId, merchant, targetTable),
       ]);
       const claimChanged = Number(batch && batch[0] && batch[0].meta && batch[0].meta.changes) || 0;
-      const sourceChanged = Number(batch && batch[1] && batch[1].meta && batch[1].meta.changes) || 0;
-      const movedOrders = Number(batch && batch[2] && batch[2].meta && batch[2].meta.changes) || 0;
+      const sourceChanged = Number(batch && batch[2] && batch[2].meta && batch[2].meta.changes) || 0;
+      const movedOrders = Number(batch && batch[3] && batch[3].meta && batch[3].meta.changes) || 0;
       if (!claimChanged || !sourceChanged) {
         const raced = await env.DB.prepare(
           'SELECT id, from_table, to_table, session_id, orders_count FROM table_transfers WHERE id = ? AND merchant = ?'
@@ -1141,6 +1164,7 @@ export async function onRequestPost(context) {
         if (raced) return json({ ok: true, mergeId: raced.id, sourceTable: raced.from_table,
           targetTable: raced.to_table, targetSessionId: raced.session_id || null,
           ordersMerged: Number(raced.orders_count) || 0, replayed: true, now });
+        if (await kitchenLocked(env, mobility)) return json({ error: 'table-kitchen-locked' }, 409);
         return json({ error: 'table-operation-conflict', retry: true }, 409);
       }
 
@@ -2130,8 +2154,10 @@ async function createTicket(context, env, merchant, c, now) {
   let lastErr = null;
   for (const s of SHAPES) {
     try {
-      row = await env.DB.prepare(`INSERT INTO orders (${s.cols}) VALUES (${s.vals}) ${RETURN_NUMBER}`)
-        .bind(...head, ...s.mid).first();
+      row = await env.DB.prepare(`INSERT INTO orders (${s.cols}) SELECT ${s.vals}
+        WHERE ? IS NULL OR EXISTS (SELECT 1 FROM table_sessions
+          WHERE id = ? AND merchant = ? AND table_no = ? AND status = 'open') ${RETURN_NUMBER}`)
+        .bind(...head, ...s.mid, sessionId, sessionId, merchant, table).first();
       lastErr = null;
       break;
     } catch (e) { lastErr = e; row = null; }
@@ -2150,6 +2176,7 @@ async function createTicket(context, env, merchant, c, now) {
     return json({ error: 'write-failed', detail: String((lastErr && lastErr.message) || lastErr) }, 500);
   }
 
+  if (!row) return json({ error: 'stale-table-visit', retry: true }, 409);
   deferCourse(context, recordOrderCourse(env, {
     merchant, orderId: id, orderNumber: (row && row.number) || 1,
     acceptedAt: now, sentAt: now,

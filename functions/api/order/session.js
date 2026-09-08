@@ -43,6 +43,11 @@ import { publishGuestServiceRequest } from '../service/events.js';
  * court qu'une nuit. */
 const SESSION_MAX_MS = 6 * 60 * 60 * 1000;
 
+async function hasOpenOrders(env, merchant, id) {
+  return !!await env.DB.prepare(`SELECT 1 FROM orders WHERE merchant = ? AND session_id = ?
+    AND paid_ts IS NULL AND status <> 'rejected' LIMIT 1`).bind(merchant, id).first();
+}
+
 function slug(v) {
   return String(v == null ? '' : v).trim().toLowerCase().slice(0, 64);
 }
@@ -72,11 +77,12 @@ export async function onRequestPost(context) {
           WHERE id = ? AND merchant = ? AND mode = 'table' AND status = 'open'`
       ).bind(session, merchant).first();
     } catch (_) {}
-    if (!live || (Date.now() - Number(live.opened_ts || 0)) >= SESSION_MAX_MS) {
+    if (!live || ((Date.now() - Number(live.opened_ts || 0)) >= SESSION_MAX_MS
+        && !await hasOpenOrders(env, merchant, session))) {
       return json({ error: 'session-closed' }, 409);
     }
     if (!(await deskOpen(env, merchant))) return json({ error: 'service-closed' }, 409);
-    const result = await publishGuestServiceRequest(env, merchant, live.table_no, action);
+    const result = await publishGuestServiceRequest(env, merchant, live.table_no, action, session);
     return result.ok ? json(result) : json({ error: result.error || 'service-request-failed' }, 503);
   }
 
@@ -124,13 +130,17 @@ export async function onRequestPost(context) {
     // - tant qu'aucune commande n'a été passée (client qui choisit son repas), elle reste ouverte généreusement (6h / SESSION_MAX_MS)
     // - si une commande a déjà été passée, elle expire après 30 minutes sans activité
     const lastSeen = Number((live && (live.seen_ts || live.opened_ts)) || 0);
-    const isRecent = live && (now - Number(live.opened_ts || 0)) < SESSION_MAX_MS && (totalOrders === 0 || (now - lastSeen) < 30 * 60 * 1000);
+    // A long meal or sleeping phones must not split an unpaid table into two
+    // visits. Staff settlement/closure, not phone activity, ends its bill.
+    const unpaid = live && await hasOpenOrders(env, merchant, live.id);
+    const isRecent = live && (unpaid || ((now - Number(live.opened_ts || 0)) < SESSION_MAX_MS && (totalOrders === 0 || (now - lastSeen) < 30 * 60 * 1000)));
 
     if (isRecent && !allPaid) {
       try {
-        await env.DB.prepare('UPDATE table_sessions SET seen_ts = ? WHERE id = ?')
-          .bind(now, live.id).run();
-      } catch (_) {}
+        const resumed = await env.DB.prepare("UPDATE table_sessions SET seen_ts = ? WHERE id = ? AND merchant = ? AND table_no = ? AND status = 'open'")
+          .bind(now, live.id, merchant, table).run();
+        if (!Number(resumed?.meta?.changes)) return json({ error: 'session-closed' }, 409);
+      } catch (_) { return json({ error: 'session-read-failed' }, 503); }
       return json({ ok: true, session: live.id, mode, table, status: 'open', resumed: true });
     }
     /* Session vivante mais périmée, inactive ou déjà réglée : on la ferme d'abord,
@@ -139,8 +149,10 @@ export async function onRequestPost(context) {
       try {
         await env.DB.prepare(
           `UPDATE table_sessions SET status = 'closed', closed_ts = ?, closed_by = ?
-            WHERE id = ? AND status = 'open'`
-        ).bind(now, allPaid ? 'settle' : 'expiry', live.id).run();
+            WHERE id = ? AND status = 'open'
+              AND NOT EXISTS (SELECT 1 FROM orders WHERE merchant = ? AND session_id = ?
+                AND paid_ts IS NULL AND status <> 'rejected')`
+        ).bind(now, allPaid ? 'settle' : 'expiry', live.id, merchant, live.id).run();
       } catch (_) {}
     }
   }
@@ -196,7 +208,8 @@ export async function onRequestGet(context) {
   if (!row) return json({ ok: true, status: 'closed', closedBy: 'unknown' });
 
   const now = Date.now();
-  const stale = (now - (row.opened_ts || 0)) >= SESSION_MAX_MS;
+  const stale = (now - (row.opened_ts || 0)) >= SESSION_MAX_MS
+    && !await hasOpenOrders(env, merchant, id);
   if (row.status === 'open' && !stale) {
     try {
       await env.DB.prepare('UPDATE table_sessions SET seen_ts = ? WHERE id = ?').bind(now, id).run();

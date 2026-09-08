@@ -221,11 +221,14 @@ export async function onRequestPost(context) {
     row = await env.DB.prepare(
       `INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status,
                            created_ts, updated_ts, session_id, menu_rev, priced_ts, client_ref)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?)
+       SELECT ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?
+       WHERE ? IS NULL OR EXISTS (SELECT 1 FROM table_sessions
+         WHERE id = ? AND merchant = ? AND status = 'open' AND mode = ? AND table_no = ?)
        RETURNING number`
     ).bind(
       id, merchant, orderNumber, mode, table, total, linesJson, now, now,
-      session ? session.id : null, priced.menuRev, priced.priced ? now : null, clientRef
+      session ? session.id : null, priced.menuRev, priced.priced ? now : null, clientRef,
+      session ? session.id : null, session ? session.id : null, merchant, mode, table
     ).first();
   } catch (_) {
     /* ── Avant de dégrader, vérifier que ce n'est pas l'unicité qui a parlé ───
@@ -273,8 +276,9 @@ export async function onRequestPost(context) {
     }
   }
 
+  if (!row) return json({ error: 'session-closed' }, 409);
   return json({
-    ok: true, id, number: (row && row.number) || 1,
+    ok: true, id, number: row.number,
     total, lines: priced.lines,
   });
 }

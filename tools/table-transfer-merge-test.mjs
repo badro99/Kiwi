@@ -124,12 +124,14 @@ const validToken = await employeeToken(
 );
 const employeeCookie = `${EMPLOYEE_COOKIE}=${validToken}`;
 
-// Seed an open table session and order on Table 1
+// Mobility is now limited to orders not yet submitted to kitchen. These
+// positive protocol fixtures deliberately remain pending; sent-order refusal
+// and the submission race are covered by orderpro-shared-table-test.mjs.
 const now = Date.now();
 exec(`INSERT INTO table_sessions (id, merchant, table_no, mode, status, opened_ts, seen_ts)
       VALUES ('ses-t1', ?, '1', 'table', 'open', ?, ?)`, MERCHANT, now - 1000, now - 1000);
 exec(`INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status, session_id, created_ts, updated_ts)
-      VALUES ('ord-1', ?, 101, 'table', '1', 120, '[]', 'accepted', 'ses-t1', ?, ?)`, MERCHANT, now - 1000, now - 1000);
+      VALUES ('ord-1', ?, 101, 'table', '1', 120, '[]', 'pending', 'ses-t1', ?, ?)`, MERCHANT, now - 1000, now - 1000);
 
 // 1. Employee Transfer Table T1 -> T2
 const transferRes = await postQueue({
@@ -159,7 +161,7 @@ check('transferTable to unknown table returns 403', invalidTransferRes.status ==
 exec(`INSERT INTO table_sessions (id, merchant, table_no, mode, status, opened_ts, seen_ts)
       VALUES ('ses-t3', ?, '3', 'table', 'open', ?, ?)`, MERCHANT, now, now);
 exec(`INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status, session_id, created_ts, updated_ts)
-      VALUES ('ord-2', ?, 102, 'table', '3', 80, '[]', 'accepted', 'ses-t3', ?, ?)`, MERCHANT, now, now);
+      VALUES ('ord-2', ?, 102, 'table', '3', 80, '[]', 'pending', 'ses-t3', ?, ?)`, MERCHANT, now, now);
 
 const mergeRes = await postQueue({
   merchant: MERCHANT,
@@ -199,7 +201,7 @@ doc('floorplan', {
 exec(`INSERT INTO table_sessions (id, merchant, table_no, mode, status, opened_ts, seen_ts)
       VALUES ('ses-b', ?, '4', 'table', 'open', ?, ?)`, MERCHANT, now, now);
 exec(`INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status, session_id, created_ts, updated_ts)
-      VALUES ('ord-b', ?, 104, 'table', '4', 60, '[]', 'accepted', NULL, ?, ?)`, MERCHANT, now, now);
+      VALUES ('ord-b', ?, 104, 'table', '4', 60, '[]', 'pending', NULL, ?, ?)`, MERCHANT, now, now);
 const transferNull = await postQueue({
   merchant: MERCHANT,
   transferTable: { from: '4', to: '5', covers: 2 },
@@ -216,7 +218,7 @@ exec(`INSERT INTO table_sessions (id, merchant, table_no, mode, status, opened_t
 exec(`INSERT INTO table_sessions (id, merchant, table_no, mode, status, opened_ts, seen_ts)
       VALUES ('ses-new', ?, '6', 'table', 'open', ?, ?)`, MERCHANT, now - 1000, now - 1000);
 exec(`INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status, session_id, created_ts, updated_ts)
-      VALUES ('ord-c', ?, 105, 'table', '6', 90, '[]', 'accepted', 'ses-old', ?, ?)`, MERCHANT, now - 1000, now - 1000);
+      VALUES ('ord-c', ?, 105, 'table', '6', 90, '[]', 'pending', 'ses-old', ?, ?)`, MERCHANT, now - 1000, now - 1000);
 const transferStale = await postQueue({
   merchant: MERCHANT,
   transferTable: { from: '6', to: '7', covers: 2 },
@@ -229,9 +231,9 @@ check('stale line is re-stamped to the moved visit', movedStale && movedStale.ta
 exec(`INSERT INTO table_sessions (id, merchant, table_no, mode, status, opened_ts, seen_ts)
       VALUES ('ses-d', ?, '8', 'table', 'open', ?, ?)`, MERCHANT, now - 1000, now - 1000);
 exec(`INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status, session_id, created_ts, updated_ts)
-      VALUES ('ord-d1', ?, 106, 'table', '8', 120, '[]', 'accepted', 'ses-d', ?, ?)`, MERCHANT, now - 1000, now - 1000);
+      VALUES ('ord-d1', ?, 106, 'table', '8', 120, '[]', 'pending', 'ses-d', ?, ?)`, MERCHANT, now - 1000, now - 1000);
 exec(`INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status, session_id, paid_ts, created_ts, updated_ts)
-      VALUES ('ord-d2', ?, 107, 'table', '8', 200, '[]', 'served', 'ses-d', ?, ?, ?)`, MERCHANT, now - 1000, now - 1000, now - 1000);
+      VALUES ('ord-d2', ?, 107, 'table', '8', 200, '[]', 'pending', 'ses-d', ?, ?, ?)`, MERCHANT, now - 1000, now - 1000, now - 1000);
 const transferPaid = await postQueue({
   merchant: MERCHANT,
   transferTable: { from: '8', to: '9', covers: 2 },
@@ -245,9 +247,9 @@ check('response carries the moved visit id', transferPaid.data.movedSession === 
 exec(`INSERT INTO table_sessions (id, merchant, table_no, mode, status, opened_ts, seen_ts)
       VALUES ('ses-e-old', ?, '4', 'table', 'open', ?, ?)`, MERCHANT, now - 9000, now - 9000);
 exec(`INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status, session_id, created_ts, updated_ts)
-      VALUES ('ord-e', ?, 108, 'table', '4', 45, '[]', 'accepted', 'ses-e-old', ?, ?)`, MERCHANT, now - 1000, now - 1000);
+      VALUES ('ord-e', ?, 108, 'table', '4', 45, '[]', 'pending', 'ses-e-old', ?, ?)`, MERCHANT, now - 1000, now - 1000);
 exec(`INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status, session_id, paid_ts, created_ts, updated_ts)
-      VALUES ('ord-ep', ?, 109, 'table', '4', 300, '[]', 'served', 'ses-e-old', ?, ?, ?)`, MERCHANT, now - 1000, now - 1000, now - 1000);
+      VALUES ('ord-ep', ?, 109, 'table', '4', 300, '[]', 'pending', 'ses-e-old', ?, ?, ?)`, MERCHANT, now - 1000, now - 1000, now - 1000);
 const mergeStale = await postQueue({
   merchant: MERCHANT,
   mergeTables: { source: '4', target: '5', server: 'Yassine' },
@@ -263,7 +265,7 @@ const raceTs = Date.now();
 exec(`INSERT INTO table_sessions (id, merchant, table_no, mode, status, opened_ts, seen_ts)
       VALUES ('ses-race', ?, '10', 'table', 'open', ?, ?)`, MERCHANT, raceTs, raceTs);
 exec(`INSERT INTO orders (id, merchant, number, mode, table_no, total, lines, status, session_id, created_ts, updated_ts)
-      VALUES ('ord-race', ?, 110, 'table', '10', 35, '[]', 'accepted', 'ses-race', ?, ?)`, MERCHANT, raceTs, raceTs);
+      VALUES ('ord-race', ?, 110, 'table', '10', 35, '[]', 'pending', 'ses-race', ?, ?)`, MERCHANT, raceTs, raceTs);
 const raceExpected = raceTs;
 const [raceA, raceB] = await Promise.all([
   postQueue({ merchant: MERCHANT, transferTable: {

@@ -41,8 +41,10 @@ async function readDoc(env, merchant) {
   try {
     const row = await env.DB.prepare('SELECT data, rev FROM store_docs WHERE merchant = ? AND feature = ?')
       .bind(merchant, FEATURE).first();
-    return { data: parse(row && row.data), rev: Number(row && row.rev) || 0 };
-  } catch (_) { return { data: {}, rev: 0 }; }
+    const data = row ? JSON.parse(row.data) : {};
+    if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('invalid-service-document');
+    return { data, rev: Number(row && row.rev) || 0 };
+  } catch (_) { return { data: {}, rev: 0, failed: true }; }
 }
 async function append(env, merchant, event, statePatch) {
   for (let attempt = 0; attempt < 4; attempt++) {
@@ -204,33 +206,64 @@ async function syncTableSnapshot(env, merchant, rawTables, source, visit) {
 /* A guest may only ask for service through an already-open table session (the
  * session handler verifies that boundary before calling here). This keeps the
  * public route from becoming a merchant-wide notification writer. */
-export async function publishGuestServiceRequest(env, merchant, rawTable, action) {
+export async function publishGuestServiceRequest(env, merchant, rawTable, action, sessionId) {
   const table = tableKey(rawTable);
   const targets = await floorTargets(env, merchant);
   const target = targets[table];
   if (!table || !target) return { ok: false, error: 'floor-table-required' };
-  if (action === 'ask-bill') {
-    const current = await readDoc(env, merchant);
-    const currentState = current.data.states && current.data.states[table];
-    const result = await syncTableSnapshot(env, merchant, [{
-      table, status: 'bgha-ykhlass',
-      covers: Math.max(0, Number(currentState && currentState.covers) || 0),
-      syncVersion: 4,
-    }], 'guest');
-    if (!result.ok) return { ok: false, error: 'state-write-failed' };
-    await poke(env, merchant, FEATURE);
-    return { ok: true, table, events: result.events };
-  }
-  if (action !== 'call-server') return { ok: false, error: 'bad-service-action' };
+  if (!sessionId) return { ok: false, error: 'session-required' };
+  if (action !== 'call-server' && action !== 'ask-bill') return { ok: false, error: 'bad-service-action' };
   const ts = Date.now();
   const event = {
-    id: 'evt-' + crypto.randomUUID(), type: 'guest-call', ts, table,
+    id: 'evt-' + crypto.randomUUID(), type: action === 'ask-bill' ? 'table-state' : 'guest-call', ts, table,
+    ...(action === 'ask-bill' ? { status: 'bgha-ykhlass' } : {}),
+    action, sessionId, guestRequest: true,
     serverId: target.serverId || '', server: target.server || '',
     serverIds: target.serverIds || [], servers: target.servers || [],
   };
-  if (!await append(env, merchant, event, null)) return { ok: false, error: 'event-write-failed' };
-  await poke(env, merchant, FEATURE);
-  return { ok: true, table, event };
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const row = await readDoc(env, merchant);
+    // Pending requests survive the rolling event history and reconnects.
+    if (row.failed) return { ok: false, error: 'service-read-failed' };
+    const pending = await activeGuestRequests(env, merchant, row.data);
+    const duplicate = pending.find(r => r.sessionId === sessionId && r.action === action);
+    if (duplicate) return { ok: true, table, event: duplicate, replayed: true };
+    if (pending.length >= MAX_EVENTS) return { ok: false, error: 'service-queue-full' };
+    const states = { ...(row.data.states || {}) };
+    if (action === 'ask-bill') states[table] = {
+      table, status: 'bgha-ykhlass', covers: Number(states[table]?.covers) || 0,
+      source: 'guest', ts, syncVersion: 4,
+    };
+    const data = JSON.stringify({ ...row.data, states,
+      requests: [...pending, event],
+      events: [...(Array.isArray(row.data.events) ? row.data.events : []), event].slice(-MAX_EVENTS),
+    });
+    // Revocation and table moves are checked at the actual write boundary.
+    const guard = `EXISTS (SELECT 1 FROM table_sessions WHERE id = ? AND merchant = ?
+      AND table_no = ? AND mode = 'table' AND status = 'open')`;
+    try {
+      const result = row.rev
+        ? await env.DB.prepare(`UPDATE store_docs SET data = ?, rev = ?, updated_ts = ?
+            WHERE merchant = ? AND feature = ? AND rev = ? AND ${guard}`)
+          .bind(data, row.rev + 1, ts, merchant, FEATURE, row.rev, sessionId, merchant, String(rawTable)).run()
+        : await env.DB.prepare(`INSERT OR IGNORE INTO store_docs (merchant, feature, data, rev, updated_ts)
+            SELECT ?, ?, ?, 1, ? WHERE ${guard}`)
+          .bind(merchant, FEATURE, data, ts, sessionId, merchant, String(rawTable)).run();
+      if (Number(result?.meta?.changes) > 0) {
+        await poke(env, merchant, FEATURE);
+        return { ok: true, table, event };
+      }
+    } catch (_) { return { ok: false, error: 'event-write-failed' }; }
+  }
+  return { ok: false, error: 'service-request-conflict' };
+}
+
+async function activeGuestRequests(env, merchant, data) {
+  const sessions = await env.DB.prepare("SELECT id, table_no FROM table_sessions WHERE merchant = ? AND mode = 'table' AND status = 'open'")
+    .bind(merchant).all();
+  const active = new Map((sessions.results || []).map(s => [s.id, tableKey(s.table_no)]));
+  return (Array.isArray(data.requests) ? data.requests : [])
+    .filter(r => r && active.get(r.sessionId) === tableKey(r.table)).slice(-MAX_EVENTS);
 }
 
 /* Payment is a core operation, not a loose UI notification. `/api/sale` calls
@@ -258,6 +291,7 @@ export async function onRequestGet({ request, env }) {
     const merchant = await entitledMerchant(request, env, asked, { allowTill: true });
     if (!merchant) return json({ error: 'forbidden-merchant' }, 403);
     const row = await readDoc(env, merchant);
+    if (row.failed) return json({ error: 'service-read-failed' }, 503);
     const since = Math.max(0, Number(url.searchParams.get('since')) || 0);
     const now = Date.now();
     const rawLocks = (row && row.data && row.data.locks && typeof row.data.locks === 'object') ? row.data.locks : {};
@@ -268,6 +302,7 @@ export async function onRequestGet({ request, env }) {
     return json({
       ok: true,
       events: (Array.isArray(row.data.events) ? row.data.events : []).filter((event) => event && Number(event.ts) > since).slice(-MAX_EVENTS),
+      requests: await activeGuestRequests(env, merchant, row.data), rev: row.rev,
       states: row.data.states || {}, locks: activeLocks, now: pollCursor(Date.now()),
     });
   }
@@ -281,6 +316,7 @@ export async function onRequestGet({ request, env }) {
   const myId = String(employee.member.id || employee.session.staffId || '');
   const myName = norm(memberName(employee.member));
   const row = await readDoc(env, employee.merchant);
+  if (row.failed) return json({ error: 'service-read-failed' }, 503);
   let pausedIds = new Set(), pausedNames = new Set();
   try {
     const attendanceRow = await env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'attendance'")
@@ -294,9 +330,7 @@ export async function onRequestGet({ request, env }) {
       if (name) pausedNames.add(name);
     });
   } catch (_) { pausedIds = new Set(); pausedNames = new Set(); }
-  const events = (Array.isArray(row.data.events) ? row.data.events : [])
-    .filter((event) => event && Number(event.ts) > since)
-    .filter((event) => {
+  const visibleToEmployee = (event) => {
       if (employee.attendance && employee.attendance.pauseTs) return false;
       const eventIds = Array.isArray(event.serverIds) && event.serverIds.length
         ? event.serverIds.map(String) : (event.serverId ? [String(event.serverId)] : []);
@@ -307,15 +341,18 @@ export async function onRequestGet({ request, env }) {
         || eventNames.some((name) => pausedNames.has(name));
       const unassigned = !eventIds.length && !eventNames.length;
       return direct || coverage || unassigned;
-    })
-    .slice(-MAX_EVENTS);
+    };
+  const events = (Array.isArray(row.data.events) ? row.data.events : [])
+    .filter((event) => event && Number(event.ts) > since)
+    .filter(visibleToEmployee).slice(-MAX_EVENTS);
+  const requests = (await activeGuestRequests(env, employee.merchant, row.data)).filter(visibleToEmployee);
   const now = Date.now();
   const rawLocks = (row && row.data && row.data.locks && typeof row.data.locks === 'object') ? row.data.locks : {};
   const activeLocks = {};
   Object.keys(rawLocks).forEach(t => {
     if (rawLocks[t] && rawLocks[t].ts && (now - Number(rawLocks[t].ts)) <= 60000) activeLocks[t] = rawLocks[t];
   });
-  return json({ ok: true, events, states: row.data.states || {}, locks: activeLocks, now: pollCursor(Date.now()) });
+  return json({ ok: true, events, requests, rev: row.rev, states: row.data.states || {}, locks: activeLocks, now: pollCursor(Date.now()) });
 }
 
 export async function onRequestPost({ request, env }) {
@@ -326,6 +363,32 @@ export async function onRequestPost({ request, env }) {
   const employee = await activeServiceEmployee(request, env, asked);
   const merchant = employee ? employee.merchant : await entitledMerchant(request, env, asked, { allowTill: true });
   if (!merchant) return json({ error: 'forbidden-merchant' }, 403);
+
+  if (body.ackRequest) {
+    if (employee?.attendance?.pauseTs) return json({ error: 'employee-on-pause' }, 403);
+    const id = String(body.ackRequest).slice(0, 80);
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const row = await readDoc(env, merchant);
+      if (row.failed) return json({ error: 'service-read-failed' }, 503);
+      const pending = Array.isArray(row.data.requests) ? row.data.requests : [];
+      const item = pending.find(r => r && r.id === id);
+      if (!item) return json({ ok: true, replayed: true });
+      const event = { id: 'evt-' + crypto.randomUUID(), type: 'guest-resolved', requestId: id,
+        table: item.table, ts: Date.now(), actor: employee ? memberName(employee.member) : 'Caisse',
+        serverIds: item.serverIds || [], servers: item.servers || [] };
+      const data = JSON.stringify({ ...row.data, requests: pending.filter(r => r.id !== id),
+        events: [...(row.data.events || []), event].slice(-MAX_EVENTS) });
+      try {
+        const result = await env.DB.prepare('UPDATE store_docs SET data = ?, rev = ?, updated_ts = ? WHERE merchant = ? AND feature = ? AND rev = ?')
+          .bind(data, row.rev + 1, event.ts, merchant, FEATURE, row.rev).run();
+        if (Number(result?.meta?.changes) > 0) {
+          await poke(env, merchant, FEATURE);
+          return json({ ok: true, rev: row.rev + 1 });
+        }
+      } catch (_) { return json({ error: 'request-ack-failed' }, 503); }
+    }
+    return json({ error: 'request-ack-conflict' }, 409);
+  }
 
   /* ── Soft-lock d'une table pendant la prise de commande (anti-collision) ── */
   if (body.lock && typeof body.lock === 'object') {

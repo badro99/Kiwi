@@ -163,6 +163,19 @@ await setupAmiraVenue();
 const karimToken = await employeeToken(AUTH_SECRET, { memberId: STAFF_ID, staffId: STAFF_ID, merchant: MERCHANT });
 const karimCookie = `${EMPLOYEE_COOKIE}=${karimToken}`;
 
+// A transfer is only legal before the table has entered the kitchen boundary.
+// Open an empty Table 4, move it to Table 6, then send the actual ticket there.
+// This keeps the fixture aligned with the production kitchen-lock contract.
+const transferOpenRes = await postQueue({ merchant: MERCHANT, openTable: '4' }, karimCookie);
+const transferRes = await postQueue({
+  merchant: MERCHANT,
+  transferTable: {
+    from: '4', to: '6', covers: 2, server: 'Karim Serveur', operationId: 'amira-transfer-1',
+    expectedSession: transferOpenRes.data.session,
+    expectedRevision: transferOpenRes.data.revision,
+  },
+}, karimCookie);
+
 /* ── 1. SEND DISH WITH TEXT-ONLY "SANS OIGNON" ALLERGY MODIFIER ───────────── */
 console.log('■ 1. Allergy modifier fidelity on KDS (text-only "sans oignon")');
 
@@ -171,7 +184,7 @@ const orderSendRes = await postQueue({
   merchant: MERCHANT,
   create: true,
   mode: 'table',
-  table: '4',
+  table: '6',
   server: 'Karim Serveur',
   lines: [
     {
@@ -192,7 +205,7 @@ check('Waiter sends order from tablet (200 OK)', orderSendRes.status === 200 && 
 const kdsFeed = await getQueue(`merchant=${MERCHANT}&since=0`, karimCookie);
 check('KDS polling receives the active order', kdsFeed.status === 200 && Array.isArray(kdsFeed.data.orders) && kdsFeed.data.orders.length > 0);
 
-const kdsOrder = kdsFeed.data.orders.find(o => o.table === '4');
+const kdsOrder = kdsFeed.data.orders.find(o => o.table === '6');
 check('Order found in KDS queue', !!kdsOrder);
 check('KDS order line contains text-only visual "sans oignon"',
   kdsOrder && kdsOrder.lines[0].visuals.some(v => v.name === 'sans oignon' && v.emoji === ''));
@@ -208,21 +221,12 @@ console.log(`\n      Rendered KDS HTML snippet:\n      ${renderedHtml}\n`);
 /* ── 2. WAITER TABLET TABLE TRANSFER & LINE VOID ─────────────────────────── */
 console.log('■ 2. Waiter tablet table transfer & kitchen void (verifying 200 OK, not 403)');
 
-// Transfer Table 4 to Table 6 from waiter tablet
-const transferRes = await postQueue({
-  merchant: MERCHANT,
-  transferTable: {
-    from: '4', to: '6', covers: 2, server: 'Karim Serveur', operationId: 'amira-transfer-1',
-    expectedSession: orderSendRes.data.session,
-    expectedRevision: orderSendRes.data.revision,
-  },
-}, karimCookie);
-
-check('Waiter tablet transfers Table 4 to Table 6 (200 OK — NOT 403)', transferRes.status === 200 && transferRes.data.ok === true);
+check('Waiter tablet transfers Table 4 to Table 6 (200 OK — NOT 403)', transferRes.status === 200 && transferRes.data.ok === true,
+  JSON.stringify(transferRes));
 
 const auditTransferRow = db._db.prepare('SELECT from_table, to_table, is_merge FROM table_transfers WHERE merchant = ?').get(MERCHANT);
 check('Audit row written to table_transfers ledger in test DB',
-  auditTransferRow && auditTransferRow.from_table === '4' && auditTransferRow.to_table === '6');
+  auditTransferRow && auditTransferRow.from_table === '4' && auditTransferRow.to_table === '6', JSON.stringify(auditTransferRow));
 
 // Waiter voids the Shawarma line on Table 6 from waiter tablet
 const voidRes = await postQueue({
@@ -241,7 +245,7 @@ check('Waiter tablet voids line on Table 6 (200 OK — NOT 403)', voidRes.status
 
 const auditVoidRow = db._db.prepare('SELECT order_id, table_no, item_name, reason, status FROM kitchen_voids WHERE merchant = ?').get(MERCHANT);
 check('Audit row written to kitchen_voids pertes ledger in test DB with status approved',
-  auditVoidRow && auditVoidRow.order_id === kdsOrder.id && auditVoidRow.table_no === '6' && auditVoidRow.status === 'approved');
+  auditVoidRow && auditVoidRow.order_id === kdsOrder.id && auditVoidRow.table_no === '6' && auditVoidRow.status === 'approved', JSON.stringify(auditVoidRow));
 
 /* ── 3. D1 SCHEMA MIGRATION INTEGRITY ────────────────────────────────────── */
 console.log('\n■ 3. D1 Schema Migration File Integrity');

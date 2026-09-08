@@ -1106,6 +1106,7 @@ section('Whole-project regressions');
     'orderpro-formula-choice-images-test.mjs',
     'orderpro-invalid-options-test.mjs',
     'orderpro-session-reorder-test.mjs',
+    'orderpro-shared-table-test.mjs',
     'trade-copy-test.mjs',
     'floor-accept-test.mjs',
     'onboarding-gate-test.mjs',

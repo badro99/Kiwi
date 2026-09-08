@@ -5580,6 +5580,7 @@
   <!-- OrderPro · orders placed on a customer's phone arrive here over WiFi;
        staff accept one and it becomes a kitchen ticket. Paired terminals only. -->
   <script src="assets/orderpro-inbox.js?v=15" defer></script>
+  <script src="assets/service-requests.js?v=1" defer></script>
   <script src="assets/caisse-menu-availability.js?v=4" defer></script>
   <!-- Operator feature flags + managed PINs. Fail-safe: no backend ⇒ no change. -->
   <script src="assets/merchant-config.js?v=270" defer></script>
@@ -8636,6 +8637,11 @@
         const mgBtn = $('#rp-merge-table');
         if (trBtn) { trBtn.hidden = transferOff; trBtn.style.display = transferOff ? 'none' : ''; }
         if (mgBtn) { mgBtn.hidden = mergeOff; mgBtn.style.display = mergeOff ? 'none' : ''; }
+        [trBtn, mgBtn].forEach(button => {
+          if (!button) return;
+          button.disabled = caisseTableKitchenLocked(id);
+          button.title = button.disabled ? 'Commande déjà envoyée en cuisine : table verrouillée' : '';
+        });
         tt.hidden = transferOff && mergeOff;
         tt.style.display = (transferOff && mergeOff) ? 'none' : '';
       }
@@ -11325,7 +11331,12 @@
     let ctrfFromId = null;
     let ctrfSelectedToId = null;
 
+    function caisseTableKitchenLocked(id) {
+      return (tableOrders[id] || []).some(line => line.sent && !line.orderProPending);
+    }
+
     function openCaisseTransferModal(tableId) {
+      if (caisseTableKitchenLocked(tableId)) { toast('Déplacement impossible : commande déjà envoyée en cuisine'); return; }
       if (!hasTables() || isFeatureOff('tableTransfer') || isFeatureOff('table-transfer')) {
         toast('Déplacement de table non disponible');
         return;
@@ -11364,6 +11375,7 @@
 
     async function confirmCaisseTransfer() {
       if (!ctrfFromId || !ctrfSelectedToId) return;
+      if (caisseTableKitchenLocked(ctrfFromId)) { toast('Déplacement impossible : commande déjà envoyée en cuisine'); return; }
       const from = ctrfFromId;
       const to = ctrfSelectedToId;
       const confirmBtn = $('#ctrf-confirm');
@@ -11389,7 +11401,7 @@
           transferData = data;
         } catch (err) {
           if (confirmBtn) confirmBtn.disabled = false;
-          toast(`Déplacement impossible : ${err.message || 'erreur réseau'}`);
+          toast(`Déplacement impossible : ${err.message === 'table-kitchen-locked' ? 'commande déjà envoyée en cuisine' : (err.message || 'erreur réseau')}`);
           return;
         }
       }
@@ -11442,6 +11454,7 @@
     let cmrgSelectedTargetId = null;
 
     function openCaisseMergeModal(tableId) {
+      if (caisseTableKitchenLocked(tableId)) { toast('Fusion impossible : commande déjà envoyée en cuisine'); return; }
       if (!hasTables() || isFeatureOff('tableMerge') || isFeatureOff('table-merge')) {
         toast('Fusion de tables non disponible');
         return;
@@ -11480,6 +11493,9 @@
 
     async function confirmCaisseMerge() {
       if (!cmrgSourceId || !cmrgSelectedTargetId) return;
+      if (caisseTableKitchenLocked(cmrgSourceId) || caisseTableKitchenLocked(cmrgSelectedTargetId)) {
+        toast('Fusion impossible : commande déjà envoyée en cuisine'); return;
+      }
       const source = cmrgSourceId;
       const target = cmrgSelectedTargetId;
       const confirmBtn = $('#cmrg-confirm');
@@ -11505,7 +11521,7 @@
           mergeData = data;
         } catch (err) {
           if (confirmBtn) confirmBtn.disabled = false;
-          toast(`Fusion impossible : ${err.message || 'erreur réseau'}`);
+          toast(`Fusion impossible : ${err.message === 'table-kitchen-locked' ? 'commande déjà envoyée en cuisine' : (err.message || 'erreur réseau')}`);
           return;
         }
       }
@@ -14977,6 +14993,7 @@
       if (window.lucide) lucide.createIcons();
     }
     function finishClose() {
+      window.KiwiServiceRequests?.reset();
       const veil = $('#zsheet-modal'); if (veil) veil.classList.remove('is-open');
       toast(`Caisse fermée · à bientôt ${String(currentCashier.name || '').trim().split(/\s+/)[0] || ''}`.trim());
       setTimeout(() => location.reload(), 640);
@@ -20437,6 +20454,12 @@
       }).then((r) => r.ok ? r.json() : null).then((data) => {
         if (!data || !data.ok) return;
         serviceFloorSince = Number(data.now) || serviceFloorSince;
+        if (merchant !== currentMerchantSlug()) return;
+        if (shiftOpenedAt && document.body.classList.contains('is-unlocked') && !document.body.classList.contains('is-kitchen')) window.KiwiServiceRequests?.ingest(data, {
+          merchant, notify: toast, refresh: pollEmployeeFloor,
+          openTable: value => { const id = caisseTableId(value); if (id && tables[id]) openTable(id); },
+        });
+        else window.KiwiServiceRequests?.reset();
         if (data.locks && typeof data.locks === 'object') caisseTableLocks = data.locks;
         let changed = false;
         Object.keys(data.states || {}).forEach((key) => {

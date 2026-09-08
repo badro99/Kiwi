@@ -4,6 +4,7 @@
  * ═══════════════════════════════════════════════════════════════════════════ */
 import fs from 'node:fs';
 import path from 'node:path';
+import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -129,16 +130,139 @@ ok('queue.js GET query excludes orders marked dismissed',
 
 console.log('■ Guest Ordering Protection (No Kickout While Ordering)');
 
-// 8. Guest ordering protection against kickout
-ok('LIVE.tick protects guests while choosing order: never calls markClosed when !currentOrderId or cart > 0',
-  /if \(s && s\.ok && s\.status !== 'open'\) \{[\s\S]*?if \(!currentOrderId \|\| \(cart && cart\.size > 0\)\) \{[\s\S]*?SESSION\.id = '';[\s\S]*?return;/.test(ORDERPRO_SRC));
+// 8. Execute the shipped SESSION, onSessionClosed and LIVE together. The VM
+// supplies only DOM/network/timer seams; cart reset and closure routing remain
+// the production functions.
+const sessionSource = ORDERPRO_SRC.match(/    const SESSION = \{[\s\S]*?\n    \};\n\n    \/\* Le service est fini/);
+if (!sessionSource) throw new Error('FAIL: could not extract production SESSION object');
+const onClosedSource = ORDERPRO_SRC.match(/    function onSessionClosed\(\) \{[\s\S]*?\n    \}\n\n    \/\* ═══════════════════════════════════════════════════════════════════════\n       LE DIRECT/);
+if (!onClosedSource) throw new Error('FAIL: could not extract production onSessionClosed');
+const liveSource = ORDERPRO_SRC.match(/    const LIVE = \(\(\) => \{[\s\S]*?\n    \}\)\(\);/);
+if (!liveSource) throw new Error('FAIL: could not extract production LIVE');
+const sendOrderSource = ORDERPRO_SRC.match(/    async function sendOrder\(\) \{[\s\S]*?\n    \}\n\n    \/\* Table mode gets/);
+if (!sendOrderSource) throw new Error('FAIL: could not extract production sendOrder function');
+
+function deferred() {
+  let resolve;
+  const promise = new Promise((r) => { resolve = r; });
+  return { promise, resolve };
+}
+const flushPromises = () => new Promise((resolve) => setImmediate(resolve));
+
+function makeProductionContext(net, cart) {
+  const storage = new Map();
+  const thanksSub = { textContent: '' };
+  const screenEvents = [];
+  const refreshes = [];
+  const element = { classList: { add() {}, remove() {}, contains: () => false }, textContent: '' };
+  const context = vm.createContext({
+    NET: net,
+    cart,
+    currentOrderId: '',
+    sentLines: [],
+    pendingRef: '',
+    storage,
+    thanksSub,
+    screenEvents,
+    refreshes,
+    element,
+    localStorage: {
+      getItem: (key) => storage.get(key) || null,
+      setItem: (key, value) => storage.set(key, String(value)),
+      removeItem: (key) => storage.delete(key),
+    },
+    document: { hidden: false, addEventListener() {} },
+    window: { addEventListener() {} },
+    setTimeout: () => 1,
+    clearTimeout() {},
+    refreshCartUI: () => refreshes.push('cart'),
+    $: (selector) => selector === '#thanks-sub' ? thanksSub : element,
+    t: (key) => key,
+    gotoScreen: (screen) => screenEvents.push(screen),
+    applyOrderStatus() {},
+  });
+  const source = [
+    'let lastStatus = "";',
+    sessionSource[0].replace(/\n\n    \/\* Le service est fini[\s\S]*$/, ''),
+    onClosedSource[0].replace(/\n\n    \/\* ═══════════════════════════════════════════════════════════════════════\n       LE DIRECT[\s\S]*$/, ''),
+    liveSource[0],
+    'globalThis.__production = { SESSION, LIVE, storage, thanksSub, screenEvents, refreshes, element };',
+  ].join('\n');
+  new vm.Script(source, { filename: 'OrderPro.html · session/live production slice' }).runInContext(context);
+  return { context, ...context.__production };
+}
+
+const unreachable = deferred();
+let statusCalls = 0;
+const draftCart = new Map([['draft', { id: 'coffee', qty: 1 }]]);
+const liveProduction = makeProductionContext({
+  slug: 'cafe-atlas',
+  sessionStatus: () => { statusCalls++; return unreachable.promise; },
+}, draftCart);
+liveProduction.SESSION.id = 'session-network-unknown';
+liveProduction.SESSION.mode = 'table';
+liveProduction.SESSION.table = 'A';
+liveProduction.LIVE.start();
+unreachable.resolve({ ok: false, error: 'network' });
+await unreachable.promise;
+await flushPromises();
+ok('production LIVE.tick does not close or clear a draft on an unreachable session status',
+  statusCalls === 1 && liveProduction.SESSION.closed === false && draftCart.size === 1
+  && liveProduction.screenEvents.length === 0);
+liveProduction.LIVE.stop();
+
+const closedStatus = deferred();
+const closedCart = new Map([['draft', { id: 'coffee', qty: 1 }]]);
+const closedProduction = makeProductionContext({
+  slug: 'cafe-atlas',
+  sessionStatus: () => closedStatus.promise,
+}, closedCart);
+closedProduction.SESSION.id = 'session-closed-draft';
+closedProduction.SESSION.mode = 'table';
+closedProduction.SESSION.table = 'A';
+closedProduction.LIVE.start();
+closedStatus.resolve({ ok: true, status: 'closed', closedBy: 'settle' });
+await closedStatus.promise;
+await flushPromises();
+const closedPayload = closedProduction.SESSION._read();
+ok('production LIVE.tick invokes shipped onSessionClosed for a closed shared visit with a draft',
+  closedProduction.SESSION.closed === true && closedCart.size === 0
+  && closedProduction.refreshes.length === 1
+  && closedProduction.screenEvents.at(-1) === 'screen-thanks'
+  && closedPayload && closedPayload.closedBy === 'settle'
+  && closedProduction.SESSION.id === 'session-closed-draft');
+
+// The same VM context now executes the real sendOrder function. The only
+// network seam is a server-level session-closed response; SESSION.open is
+// wrapped only to prove this branch never silently reseats.
+const sendProduction = makeProductionContext({
+  slug: 'cafe-atlas',
+  placeOrder: async () => { sendProductionCalls++; return { ok: false, error: 'session-closed' }; },
+}, new Map([['draft', { id: 'coffee', qty: 1, options: {}, note: '', unitPrice: 20, qty: 1 }]]));
+let sendProductionCalls = 0;
+let openCalls = 0;
+const originalOpen = sendProduction.SESSION.open;
+sendProduction.SESSION.open = async (...args) => { openCalls++; return originalOpen.apply(sendProduction.SESSION, args); };
+sendProduction.SESSION.id = 'session-server-closed';
+sendProduction.SESSION.mode = 'table';
+sendProduction.SESSION.table = 'A';
+Object.assign(sendProduction.context, {
+  orderMode: 'table', tableNumber: 'A', sessionTotal: 0, sentLines: [],
+  nameOf: () => 'Coffee', totals: () => ({ total: 20 }), itemOf: () => ({ options: [] }),
+  describeOptionChoices: () => [], describeOptionVisuals: () => [], groupLabel: () => '',
+  watchTableOrder() {},
+});
+new vm.Script(`${sendOrderSource[0].replace(/\n\n    \/\* Table mode gets[\s\S]*$/, '')}\nglobalThis.__sendOrder = sendOrder;`, { filename: 'OrderPro.html · sendOrder production slice' }).runInContext(sendProduction.context);
+await sendProduction.context.__sendOrder();
+ok('production sendOrder handles server session-closed without reopening the visit',
+  sendProductionCalls === 1 && openCalls === 0 && sendProduction.SESSION.closed === true
+  && sendProduction.context.cart.size === 0
+  && sendProduction.screenEvents.at(-1) === 'screen-thanks'
+  && sendProduction.SESSION.id === 'session-server-closed');
 
 ok('SESSION.recentlySettled returns false if hadOrder === false or cart > 0',
   /if \(cart && cart\.size > 0\) return false;/.test(ORDERPRO_SRC) &&
   /if \(s\.hadOrder === false\) return false;/.test(ORDERPRO_SRC));
-
-ok('placeOrder retries transparently on session-closed when browsing',
-  /if \(res && res\.error === 'session-closed' && \(!currentOrderId \|\| \(cart && cart\.size > 0\)\)\) \{[\s\S]*?SESSION\.open\(orderMode/.test(ORDERPRO_SRC));
 
 ok('session.js allows full 6 hour lifetime when no orders are placed yet',
   /totalOrders === 0 \|\| \(now - lastSeen\) < 30 \* 60 \* 1000/.test(SESSION_SRC));
