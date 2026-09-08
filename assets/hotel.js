@@ -4976,10 +4976,23 @@
       });
 
       // Material comparison between a server booking and the payload we would
-      // write (defect 3). Room, dates, party and dossier are not enough: a
-      // guest renamed, a swapped account or meal plan, or a different booker
-      // on another device must surface as an incompatibility — never as a
-      // silent adopt, and never as a delete-and-recreate.
+      // write (defect 3, hardened). Room, dates, party and dossier are not
+      // enough: a guest renamed, a swapped account or meal plan, or a
+      // different booker on another device must surface as an
+      // incompatibility — never as a silent adopt, and never as a
+      // delete-and-recreate.
+      //
+      // Empty values compare as REAL values (defect 2): the old
+      // `if (a && ...)` guard let a cleared phone, e-mail, account, board or
+      // group name pass as "unchanged". Every field below is stored by every
+      // save path (room, dates, partySize, dossierId defaulted to the stay
+      // id, groupName since dossiers exist, channel defaulted, customer
+      // always written, commercial normalized to '' when absent), so an
+      // empty-vs-filled difference is a genuine change — including a legacy
+      // record that never contained the term. Such a record must not certify
+      // terms it never held: the run fails naming the field, the server
+      // version is preserved, and the explicit amendment flow (or a clean
+      // restart after discarding the draft) is the way forward.
       const normField = (s) => String(s || '').trim().replace(/\s+/g, ' ').toLowerCase();
       const guestIdentity = (g) => [g && g.name, g && g.idDocNumber, g && g.nationality, g && g.birthDate, g && g.sex].map(normField).join('|');
       const bookingMatchesPayload = (existing, payload, room) => {
@@ -4998,7 +5011,7 @@
           ['formule', (existing.commercial && existing.commercial.board) || '', (payload.commercial && payload.commercial.board) || ''],
         ];
         for (const [label, a, b] of pairs) {
-          if (a && normField(a) !== normField(b)) return label;
+          if (normField(a) !== normField(b)) return label;
         }
         // Guest identities, order-insensitive (homonyms stay distinct rows,
         // the server drops fully-empty rows exactly like the payload filter).
@@ -5034,15 +5047,21 @@
           // when the server itself is unreachable do we provisionally trust
           // the local snapshot (the following write would fail first anyway,
           // and the next online pass re-verifies).
+          // Reconciliation lookup, schema-validated (defect 1): only a
+          // well-formed envelope authorizes anything below. A failed HTTP
+          // status, a network fault, or a malformed body (stays missing,
+          // not a list, first entry not an object) all mean the same thing:
+          // this room is UNVERIFIED, and nothing may treat it as confirmed.
           let existingBooking = null;
           let checkOk = false;
           try {
             const checkRes = await fetch('/api/hotel/stays?merchant=' + encodeURIComponent(initialMerchant) + '&clientRef=' + encodeURIComponent(clientRef) + '&includeCancelled=1', { cache: 'no-store' });
             if (checkRes.ok) {
-              const checkData = await checkRes.json();
-              checkOk = true;
-              if (checkData.stays && checkData.stays.length) {
-                existingBooking = checkData.stays[0];
+              const checkData = await checkRes.json().catch(() => null);
+              if (checkData && Array.isArray(checkData.stays)) {
+                checkOk = true;
+                const first = checkData.stays[0];
+                existingBooking = (first && typeof first === 'object') ? first : null;
               }
             }
           } catch (_) { checkOk = false; }
@@ -5051,8 +5070,20 @@
             throw new Error('L’hôtel actif a changé pendant la vérification.');
           }
 
+          // A claimed-saved room the server could not confirm PAUSES the
+          // operation (defect 1): adopting it would bless a stale snapshot
+          // (e.g. a cancellation on another device), and skipping past it
+          // would let the run finish "successfully" around a hole — room 102
+          // saved, modal closed, room 101 quietly cancelled. The intent and
+          // draft records stay exactly as they are, the room keeps its
+          // failure badge, and the retry (server reachable again) re-runs
+          // this same lookup. Nothing is counted as confirmed here.
           if (!existingBooking && savedRooms[room.id] && !checkOk) {
-            continue;
+            const errMsg = 'La chambre ' + room.n + ' n’a pas pu être revérifiée auprès du serveur (réconciliation indisponible). La reprise est en pause : réessayez avec le serveur joignable. Rien n’a été validé à tort.';
+            failedRooms[room.id] = errMsg;
+            persistStaged();
+            renderRooms();
+            throw new Error(errMsg);
           }
 
           if (existingBooking) {

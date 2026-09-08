@@ -46,6 +46,21 @@ console.log('\n■ 2. Single authoritative versioned recovery record (defect 2)'
   ok(hotelJs.includes("intentNotice === 'adopted'") && hotelJs.includes("intentNotice === 'other-pending'"), 'intent/draft merges are said out loud');
 }
 
+console.log('\n■ 3a. Unverifiable saved rooms pause, never pass (defect 1)');
+{
+  ok(hotelJs.includes('n’a pas pu être revérifiée auprès du serveur'), 'pause message names the unverified room');
+  ok(hotelJs.includes('Rien n’a été validé à tort'), 'pause message states nothing was confirmed');
+  ok(!hotelJs.includes('&& !checkOk) {\n            continue;'), 'the blind skip of unverified rooms is gone');
+  ok(hotelJs.includes('Array.isArray(checkData.stays)'), 'lookup envelope validated as a list before use');
+  ok(hotelJs.includes("typeof first === 'object'"), 'first entry validated as an object before adoption');
+}
+
+console.log('\n■ 3b. Empty values compare as real changes (defect 2)');
+{
+  ok(hotelJs.includes('if (normField(a) !== normField(b)) return label;'), 'fields compare without a truthiness exemption');
+  ok(!hotelJs.includes('if (a && normField(a)'), 'the blanket truthiness exemption is gone');
+}
+
 console.log('\n■ 3. Saved rooms reconcile against the server (defect 3)');
 {
   ok(hotelJs.includes('const bookingMatchesPayload = (existing, payload, room)'), 'material comparison helper exists');

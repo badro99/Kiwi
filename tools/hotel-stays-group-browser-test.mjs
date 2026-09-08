@@ -152,6 +152,7 @@ function seedMerchant(env, merchant, accId) {
     accounts: [{ id: 'acc-agency-01', kind: 'agency', name: 'Atlas Voyages', legalName: '', address: '', city: 'Marrakech', country: 'Maroc', ice: '', taxId: '', rc: '', contact: 'M. Amrani', email: 'a@atlas.ma', phone: '+212661000002', paymentDays: 30, notes: '', archived: false }],
     contracts: [
       { id: 'ctr-000001', name: 'Séminaire 2026', accountId: 'acc-agency-01', roomTypeId: 'type:t1', from: ymd(5), to: ymd(30), occupancy: 1, board: 'hb_dinner', unit: 'room', amountCents: 85000, taxBasis: 'inclusive', currency: 'MAD', archived: false },
+      { id: 'ctr-000002', name: 'Séminaire logement seul', accountId: 'acc-agency-01', roomTypeId: 'type:t1', from: ymd(5), to: ymd(30), occupancy: 1, board: 'room_only', unit: 'room', amountCents: 60000, taxBasis: 'inclusive', currency: 'MAD', archived: false },
     ],
   };
   sql.prepare('INSERT INTO store_docs (merchant,feature,data,rev,updated_ts) VALUES (?,?,?,?,?)')
@@ -246,6 +247,12 @@ async function startOrigin(env, hooks = {}) {
       }
       if (u.pathname === '/api/hotel/stays') {
         if (req.method === 'GET') {
+          if (hooks.failStayGet && hooks.failStayGet(u)) {
+            log.push({ type: 'stay-get-fault', clientRef: u.searchParams.get('clientRef') || '' });
+            res.writeHead(503, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'unavailable' }));
+            return;
+          }
           const out = await getStays({ env, request: toHandlerRequest(`https://hx.test${req.url}`, req) });
           return sendHandler(res, out);
         }
@@ -343,7 +350,7 @@ async function withCtx(options, fn) {
   await page.goto(`${base}/hx-test?merchant=${MERCHANT}`, { waitUntil: 'load' });
   await page.evaluate((doc) => localStorage.setItem('kiwi:hotel-rooms:v2:hx-group-venue', JSON.stringify(doc)), clientRoomsDoc());
   const ctx = {
-    page, context, server, log, base, sessionValue, dir, hooks,
+    page, context, server, log, base, sessionValue, dir, hooks, sql: made.sql,
     async apiStays(params, method = 'GET', body) {
       const res = await fetch(`${base}/api/hotel/stays${params}`, {
         method, headers: { 'Content-Type': 'application/json', Cookie: `${SESS_COOKIE}=${sessionValue}`, 'x-hx-via': 'driver' },
@@ -489,10 +496,6 @@ function failRoomOnce(clientRefSuffix) {
 async function twoRoomSetup(page, d, commercial) {
   await openModal(page);
   await fillBasics(page, d);
-  if (commercial) {
-    await setField(page, 'select[name="accountId"]', 'acc-agency-01');
-    await setField(page, 'select[name="board"]', 'hb_dinner');
-  }
   await selectRooms(page, 101, 102);
   await page.click('[data-action="hx-add-group-traveler"]');
   await fillTraveler(page, 0, { name: 'Karim Benchekroun', roomN: 101 });
@@ -527,19 +530,27 @@ async function apiCancelStay(ctx, id) {
   return r.json.booking;
 }
 
-async function apiRenameGuest(ctx, id, from, to) {
+async function apiUpdateBooking(ctx, id, mutate, label) {
   const cur = await ctx.apiStays(`?merchant=${MERCHANT}&id=${encodeURIComponent(id)}`);
   assert.equal(cur.status, 200, 'booking readable before external edit');
   const b = cur.json.stays[0];
-  const guests = b.guests.map((g) => (g.name === from ? { ...g, name: to } : g));
-  const r = await ctx.apiStays(`?merchant=${MERCHANT}`, 'POST', {
+  const body = {
     merchant: MERCHANT, id: b.id, clientRef: b.publicRef, roomTypeId: b.serviceId, resourceId: b.resourceId,
     checkIn: b.hotel.checkIn, checkOut: b.hotel.checkOut, partySize: b.partySize,
     status: b.status, channel: b.hotel.channel,
-    customer: b.customer, guests, dossierId: b.hotel.dossierId, groupName: b.hotel.groupName,
-  });
-  assert.equal(r.status, 200, 'external guest edit lands');
+    customer: { ...b.customer }, guests: b.guests.map((g) => ({ ...g })),
+    dossierId: b.hotel.dossierId, groupName: b.hotel.groupName,
+  };
+  mutate(body, b);
+  const r = await ctx.apiStays(`?merchant=${MERCHANT}`, 'POST', body);
+  assert.equal(r.status, 200, label || 'external edit lands');
   return r.json.booking;
+}
+
+async function apiRenameGuest(ctx, id, from, to) {
+  return apiUpdateBooking(ctx, id, (body) => {
+    body.guests = body.guests.map((g) => (g.name === from ? { ...g, name: to } : g));
+  }, 'external guest edit lands');
 }
 
 function stayPostsFor(log, suffix) {
@@ -798,6 +809,131 @@ await withCtx({ hooks: {} }, async (ctx) => {
   const stays = await ctx.bookingsByDossier(dossier);
   ok(stays.length === 0, 'no booking saved with a stale total');
   ok((await page.$('[data-hx-group-accept-quote]')) === null, 'acceptance cleared, simulation required again');
+});
+
+/* ── T13 · unverifiable saved room pauses, never confirms ─────────── */
+console.log('\n■ T13 · reconciliation outage pauses the retry, intent kept');
+await withCtx({ hooks: { failStayPost: failRoomOnce('room_102') } }, async (ctx) => {
+  const { page, log } = ctx;
+  const d = BASICS();
+  const dossier = await twoRoomSetup(page, d, false);
+  await submitAndSettle(page);
+  let stays = await ctx.bookingsByDossier(dossier);
+  ok(stays.length === 1 && stays[0].resourceId === 'room:101', 'room 101 saved');
+  step('another device cancels room 101');
+  await apiCancelStay(ctx, stays[0].id);
+  step('retry with room 101 reconciliation answering 503');
+  let armed = true;
+  ctx.hooks.failStayGet = (u) => {
+    const ref = u.searchParams.get('clientRef') || '';
+    if (armed && ref.endsWith('room_101')) { armed = false; return true; }
+    return false;
+  };
+  await page.reload({ waitUntil: 'load' });
+  await openModal(page);
+  const r2 = await submitAndSettle(page);
+  ok(String(r2).startsWith('settled:'), 'retry settles instead of confirming');
+  const err = await readError(page);
+  ok(/revérifi/.test(err) && /pause/.test(err), 'error names the unverified room and the pause');
+  ok(log.some((e) => e.type === 'stay-get-fault'), 'the 503 intercept actually fired');
+  ok((await page.$('[data-hx-group-form]')) !== null, 'modal stays open: workflow unresolved');
+  ok(await page.$eval('[data-hx-group-submit]', (el) => !el.disabled), 'submit re-armed for the retry');
+  const intents = await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('kiwi_hx_intent_')));
+  ok(intents.length === 1, 'intent record retained, not cleared');
+  const toasts = await page.evaluate(() => window.__toasts.map((t) => t.message).join(' | '));
+  ok(!/enregistrée/.test(toasts), 'no success toast announced');
+  stays = await ctx.bookingsByDossier(dossier);
+  ok(stays.length === 1 && stays[0].status === 'cancelled', 'room 102 never attempted; cancellation intact');
+  step('connectivity back: safe retry detects the cancellation');
+  const r3 = await submitAndSettle(page);
+  ok(String(r3).startsWith('settled:'), 'second retry settles');
+  ok(/annul/.test(await readError(page)), 'cancellation now detected and reported');
+});
+
+/* ── T14a · cleared contact fields are reported, server kept ───────── */
+console.log('\n■ T14a · cleared phone then email surface by field, then recover');
+await withCtx({ hooks: { failStayPost: failRoomOnce('room_102') } }, async (ctx) => {
+  const { page } = ctx;
+  const d = BASICS();
+  const dossier = await twoRoomSetup(page, d, false);
+  await submitAndSettle(page);
+  let stays = await ctx.bookingsByDossier(dossier);
+  ok(stays.length === 1, 'room 101 saved');
+  step('another device clears phone and email');
+  await apiUpdateBooking(ctx, stays[0].id, (body) => {
+    body.customer.phone = ''; body.customer.email = '';
+  }, 'contact clearing lands');
+  await page.reload({ waitUntil: 'load' });
+  await openModal(page);
+  ok((await readError(page)) === '', 'no stale error before retry');
+  const r2 = await submitAndSettle(page);
+  ok(String(r2).startsWith('settled:'), 'retry settles');
+  ok(/téléphone/.test(await readError(page)), 'cleared phone reported with its field');
+  stays = await ctx.bookingsByDossier(dossier);
+  ok(stays.length === 1, 'no new booking written');
+  ok(stays[0].customer.phone === '' && stays[0].customer.email === '', 'cleared server values preserved, not reverted');
+  step('restore phone only: email mismatch surfaces next');
+  await apiUpdateBooking(ctx, stays[0].id, (body) => { body.customer.phone = d.contactPhone; }, 'phone restored');
+  await submitAndSettle(page);
+  ok(/e-mail/.test(await readError(page)), 'cleared email reported next');
+  step('restore email: recovery completes');
+  await apiUpdateBooking(ctx, stays[0].id, (body) => { body.customer.email = d.contactEmail; }, 'email restored');
+  ok((await submitAndSettle(page)) === 'closed', 'retry completes once server matches again');
+  stays = await ctx.bookingsByDossier(dossier);
+  ok(stays.length === 2, 'both rooms booked');
+});
+
+/* ── T14b · cleared commercial account is reported ─────────────────── */
+console.log('\n■ T14b · cleared account surfaces, booking kept');
+await withCtx({ hooks: { failStayPost: failRoomOnce('room_102') } }, async (ctx) => {
+  const { page } = ctx;
+  const d = BASICS();
+  const dossier = await twoRoomSetup(page, { ...d, accountId: 'acc-agency-01', board: 'room_only' }, true);
+  const shown = await displayedGroupTotal(page);
+  ok(shown === 2400, `accepted room-only total displayed (got ${shown})`);
+  await submitAndSettle(page);
+  let stays = await ctx.bookingsByDossier(dossier);
+  ok(stays.length === 1 && stays[0].commercial?.accountId === 'acc-agency-01', 'room 101 saved with account');
+  step('another device clears the account');
+  await apiUpdateBooking(ctx, stays[0].id, (body, b) => {
+    body.commercial = { accountId: '', booker: b.commercial.booker, board: 'room_only', quoted: false };
+    body.acceptQuote = true;
+  }, 'account clearing lands');
+  await page.reload({ waitUntil: 'load' });
+  await openModal(page);
+  const r2 = await submitAndSettle(page);
+  ok(String(r2).startsWith('settled:'), 'retry settles');
+  ok(/compte/.test(await readError(page)), 'cleared account reported with its field');
+  stays = await ctx.bookingsByDossier(dossier);
+  ok(stays.length === 1 && stays[0].commercial?.accountId === '', 'cleared account preserved, nothing recreated');
+});
+
+/* ── T14c · legacy record without group name is reported ───────────── */
+console.log('\n■ T14c · legacy record missing group name is reported, kept');
+await withCtx({ hooks: { failStayPost: failRoomOnce('room_102') } }, async (ctx) => {
+  const { page, sql } = ctx;
+  const d = BASICS();
+  const dossier = await twoRoomSetup(page, d, false);
+  await submitAndSettle(page);
+  let stays = await ctx.bookingsByDossier(dossier);
+  ok(stays.length === 1, 'room 101 saved');
+  step('simulate a legacy record: strip groupName server-side');
+  const row = sql.prepare('SELECT raw_json FROM hotel_reservations WHERE merchant = ? AND id = ?').get(MERCHANT, stays[0].id);
+  const raw = JSON.parse(row.raw_json);
+  delete raw.hotel.groupName;
+  sql.prepare('UPDATE hotel_reservations SET raw_json = ? WHERE merchant = ? AND id = ?').run(JSON.stringify(raw), MERCHANT, stays[0].id);
+  const docRow = sql.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'reservations'").get(MERCHANT);
+  const doc = JSON.parse(docRow.data);
+  const entry = doc.bookings.find((x) => x.id === stays[0].id);
+  if (entry && entry.hotel) delete entry.hotel.groupName;
+  sql.prepare("UPDATE store_docs SET data = ? WHERE merchant = ? AND feature = 'reservations'").run(JSON.stringify(doc), MERCHANT);
+  await page.reload({ waitUntil: 'load' });
+  await openModal(page);
+  const r2 = await submitAndSettle(page);
+  ok(String(r2).startsWith('settled:'), 'retry settles');
+  ok(/nom du groupe/.test(await readError(page)), 'missing group name reported with its field');
+  stays = await ctx.bookingsByDossier(dossier);
+  ok(stays.length === 1 && !('groupName' in (stays[0].hotel || {})), 'legacy record preserved, nothing recreated');
 });
 
 /* ── T12 · tenant isolation over HTTP ──────────────────────────────── */
