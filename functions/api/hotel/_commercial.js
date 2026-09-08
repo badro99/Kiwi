@@ -39,8 +39,10 @@ export async function readCommercial(env, merchant) {
 }
 export function quote(doc, input) {
   const { accountId, roomTypeId, checkIn, checkOut, occupancy, board } = input;
-  const a = doc.accounts.find(x => x.id === accountId && !x.archived);
-  if (!a) problem('account-unavailable');
+  if (!accountId || !String(accountId).trim()) problem('account-required');
+  const a = doc.accounts.find(x => x.id === accountId);
+  if (!a) problem('account-not-found');
+  if (a.archived) problem('account-archived');
   if (!dateOK(checkIn) || !dateOK(checkOut) || checkOut <= checkIn) problem('invalid-dates');
   const count = (Date.parse(checkOut + 'T12:00:00Z') - Date.parse(checkIn + 'T12:00:00Z')) / 86400000;
   if (count > 365 || !integer(occupancy, 1, 3) || !BOARDS.includes(board)) problem('invalid-formula');

@@ -4465,6 +4465,9 @@ ar: {
       const b = document.createElement('b'); b.textContent = o.title || ''; bc.appendChild(b);
     }
     setActivePage(navKey);
+    if (navKey !== 'payroll' && navKey !== 'equipe') {
+      try { window.__kiwiTeamDeactivate?.(); } catch (_) {}
+    }
     document.querySelectorAll('.sidebar nav a').forEach((a) => a.classList.remove('active'));
     const navEl = document.querySelector(`.sidebar nav a[data-nav="${navKey}"]`);
     if (navEl) navEl.classList.add('active');

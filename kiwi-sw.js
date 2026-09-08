@@ -49,7 +49,7 @@ var SHELL = [
   '/assets/pressing-dashboard.css?v=10',
   '/assets/trade-workspaces.css?v=3',
   '/assets/reservations.css?v=5',
-  '/assets/hotel.css?v=27',
+  '/assets/hotel.css?v=31',
   '/assets/hotel-economat.js?v=2',
   '/assets/genpage.css?v=2',
   '/assets/mobile.css?v=4',
@@ -81,7 +81,7 @@ var SHELL = [
      d'inscription la lisent à l'évaluation : sans elle hors ligne, un
      établissement retombe sur la famille par défaut. */
   '/assets/trades.js?v=6',
-  '/assets/interactive.js?v=29',
+  '/assets/interactive.js?v=30',
   '/assets/features.js?v=4',
   '/assets/invoicing.css?v=6',
   '/assets/invoicing.js?v=8',
@@ -237,7 +237,7 @@ var SHELL = [
   '/assets/employee-trade-shell.js?v=2',
   '/assets/planning-core.js?v=8',
   '/assets/planning-ui.css?v=10',
-  '/assets/team.js?v=282',
+  '/assets/team.js?v=283',
   '/assets/menu-i18n.js?v=5',
   '/assets/restaurant-menu-workspace.js?v=68',
   // Reprise du fichier d'articles de l'ancienne caisse (inventaire + carte).

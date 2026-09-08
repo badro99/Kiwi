@@ -197,6 +197,56 @@ test('gaps, overlaps, mixed tax basis, invalid dates and unsupported occupancy r
   assert.throws(() => quote(directory(), { ...input, occupancy: 4 }), /invalid-formula/);
   assert.throws(() => contract({ ...low, amountCents: 1.5 }), /invalid-price/);
 });
+test('quote simulation differentiates account-required, account-not-found, account-archived and invalid-formula and never creates reservations', async () => {
+  const d = directory();
+  assert.throws(() => quote(d, { ...input, accountId: '' }), /account-required/);
+  assert.throws(() => quote(d, { ...input, accountId: '   ' }), /account-required/);
+  assert.throws(() => quote(d, { ...input, accountId: 'non-existent' }), /account-not-found/);
+  const archivedDir = directory();
+  archivedDir.accounts[0].archived = true;
+  assert.throws(() => quote(archivedDir, input), /account-archived/);
+  assert.throws(() => quote(d, { ...input, occupancy: 0 }), /invalid-formula/);
+  assert.throws(() => quote(d, { ...input, occupancy: 4 }), /invalid-formula/);
+  assert.throws(() => quote(d, { ...input, board: 'all_inclusive' }), /invalid-formula/);
+
+  const f = await fixture();
+  try {
+    await f.seed();
+    const countBefore = f.sql.prepare("SELECT COUNT(*) as c FROM sqlite_master WHERE type='table' AND name='hotel_reservations'").get();
+    const storeBefore = f.sql.prepare("SELECT data FROM store_docs WHERE feature='reservations'").get();
+
+    const sim = await f.call(onRequestPost, { action: 'quote', ...input });
+    assert.equal(sim.status, 200);
+    assert.equal(sim.body.ok, true);
+    assert.equal(sim.body.quote.totalCents, 130080);
+    assert.equal(sim.body.quote.rows.length, 2);
+
+    const storeAfter = f.sql.prepare("SELECT data FROM store_docs WHERE feature='reservations'").get();
+    assert.deepEqual(storeBefore, storeAfter);
+    if (countBefore?.c) {
+      const resCount = f.sql.prepare("SELECT COUNT(*) as c FROM hotel_reservations").get();
+      assert.equal(resCount.c, 0);
+    }
+
+    const reqRes = await f.call(onRequestPost, { action: 'quote', ...input, accountId: '' });
+    assert.equal(reqRes.status, 400);
+    assert.equal(reqRes.body.error, 'account-required');
+
+    const nfRes = await f.call(onRequestPost, { action: 'quote', ...input, accountId: 'missing-id' });
+    assert.equal(nfRes.status, 400);
+    assert.equal(nfRes.body.error, 'account-not-found');
+
+    await f.post({ action: 'account', rev: 3, item: { ...agency, archived: true } });
+    const archRes = await f.call(onRequestPost, { action: 'quote', ...input });
+    assert.equal(archRes.status, 400);
+    assert.equal(archRes.body.error, 'account-archived');
+
+    await f.post({ action: 'account', rev: 4, item: { ...agency, archived: false } });
+    const formRes = await f.call(onRequestPost, { action: 'quote', ...input, accountId: agency.id, occupancy: 5 });
+    assert.equal(formRes.status, 400);
+    assert.equal(formRes.body.error, 'invalid-formula');
+  } finally { f.sql.close(); }
+});
 test('authenticated typed accounts round-trip, clear fields, archive and reject stale edits', async () => {
   const f = await fixture();
   try {

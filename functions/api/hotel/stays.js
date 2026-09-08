@@ -224,6 +224,7 @@ export async function onRequestGet({ request, env }) {
   const accountId = str(u.searchParams.get('accountId'), 80);
   const dossierId = str(u.searchParams.get('dossierId'), 64);
   const stayId = str(u.searchParams.get('id'), 64);
+  const clientRef = str(u.searchParams.get('clientRef'), 80);
   const statusParam = str(u.searchParams.get('status'), 24);
   const includeCancelled = u.searchParams.get('includeCancelled') === '1' || statusParam === 'cancelled';
 
@@ -253,6 +254,10 @@ export async function onRequestGet({ request, env }) {
       let query = "SELECT * FROM hotel_reservations WHERE merchant = ? AND start_at < ? AND end_at > ?";
       const params = [merchant, toEpoch, fromEpoch];
       if (stayId) { query += ' AND id = ?'; params.push(stayId); }
+      if (clientRef) {
+        query += " AND CASE WHEN json_valid(raw_json) THEN json_extract(raw_json, '$.publicRef') END = ?";
+        params.push(clientRef);
+      }
       if (dossierId) {
         query += " AND COALESCE(NULLIF(CASE WHEN json_valid(raw_json) THEN json_extract(raw_json, '$.hotel.dossierId') END,''),id) = ?";
         params.push(dossierId);
@@ -289,6 +294,7 @@ export async function onRequestGet({ request, env }) {
     const stays = (doc.bookings || []).filter((b) => {
       if (!b.hotel || (!includeCancelled && b.status === 'cancelled')) return false;
       if (stayId && b.id !== stayId) return false;
+      if (clientRef && b.publicRef !== clientRef) return false;
       if (accountId && b.commercial?.accountId !== accountId) return false;
       if (dossierId && (b.hotel.dossierId || b.id) !== dossierId) return false;
       if (roomId && b.resourceId !== roomId) return false;
@@ -396,7 +402,7 @@ export async function onRequestPost({ request, env }) {
     }
     // A linked room is a new independently cancellable reservation, not an
     // update to the original room. The root is resolved in this tenant only.
-    let dossierId = old?.hotel?.dossierId || old?.id || '';
+    let dossierId = str(b.dossierId, 64) || old?.hotel?.dossierId || old?.id || '';
     if (!old && b.linkedStayId) {
       let linked;
       try {
@@ -480,7 +486,8 @@ export async function onRequestPost({ request, env }) {
       try {
         const directory = await readCommercial(env, merchant);
         const selected = accountId ? directory.accounts.find(a => a.id === accountId) : null;
-        if (accountId && (!selected || (selected.archived && accountId !== commercial?.accountId))) return json({ error: 'account-unavailable' }, 409);
+        if (accountId && !selected) return json({ error: 'account-not-found' }, 409);
+        if (accountId && selected.archived && accountId !== commercial?.accountId) return json({ error: 'account-archived' }, 409);
         let accepted = commercial?.quote || null;
         if (quoted && (!commercial?.quoted || changedPricing || b.acceptQuote)) {
           if (old?.hotel?.feedId) return json({ error: 'feed-contract-unsupported' }, 409);
@@ -527,6 +534,7 @@ export async function onRequestPost({ request, env }) {
       roomSegments: saveRoomSegments,
       hotel: {
         dossierId, dayUse, arrivalTime, departureTime,
+        groupName: str(b?.groupName || b?.hotel?.groupName || old?.hotel?.groupName, 100),
         roomTypeName: type.name, checkIn, checkOut, nights,
         rate: rate == null ? 0 : rate, total,
         channel, externalRef: externalRef || old?.hotel?.externalRef || '',

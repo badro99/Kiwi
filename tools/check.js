@@ -432,7 +432,7 @@ for (const test of [
   'platform-kernel-test.mjs', 'platform-ops-test.mjs', 'media-upload-test.mjs', 'hotel-media-cleanup-test.mjs', 'operations-system-test.mjs',
   'vertical-feature-parity-test.mjs', 'pos-sale-cloud-sync-test.mjs',
   'caisse-opening-gate-test.mjs',
-  'hotel-rooms-test.mjs', 'hotel-room-plan-test.mjs', 'hotel-room-bulk-api-test.mjs', 'hotel-cloud-save-test.mjs', 'hotel-room-plan-ui-test.mjs', 'hotel-stays-test.mjs', 'hotel-reservations-d1-test.mjs', 'hotel-channel-sync-test.mjs', 'hotel-sync-worker-test.mjs', 'hotel-caisse-catalog-test.mjs',
+  'hotel-rooms-test.mjs', 'hotel-room-plan-test.mjs', 'hotel-room-bulk-api-test.mjs', 'hotel-cloud-save-test.mjs', 'hotel-room-plan-ui-test.mjs', 'hotel-stays-test.mjs', 'hotel-stays-group-test.mjs', 'hotel-stays-group-guards-test.mjs', 'hotel-reservations-d1-test.mjs', 'hotel-channel-sync-test.mjs', 'hotel-sync-worker-test.mjs', 'hotel-caisse-catalog-test.mjs',
   'sw-immutable-revalidation-test.mjs', 'load-test-suite-test.mjs',
 ]) {
   const { spawnSync } = require('child_process');
@@ -442,6 +442,25 @@ for (const test of [
   else {
     out.split('\n').filter((line) => line.includes('✗')).forEach((line) => fail(line.replace(/^\s*✗\s*/, '')));
     if (!out.includes('✗')) fail(`${test} exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
+  }
+}
+
+/* ── 4f · groupe hôtel, conduit pour de vrai dans Chromium ───────────────
+ * hotel-stays-group-browser-test.mjs ouvre le vrai modal de groupe, clique,
+ * rejoue les pannes (partiel, reload, réponse perdue, stockage HS,
+ * annulation externe, devis mixte) contre les vrais handlers et une vraie
+ * base. Sans Chromium ni puppeteer-core la suite se déclare SKIPPÉE (vert
+ * explicite) plutôt que de mentir. */
+section('Groupe hôtel · workflow navigateur (tools/hotel-stays-group-browser-test.mjs)');
+{
+  const { spawnSync } = require('child_process');
+  const r = spawnSync(process.execPath, [path.join(ROOT, 'tools', 'hotel-stays-group-browser-test.mjs')], { encoding: 'utf8', timeout: 420000 });
+  const out = (r.stdout || '') + (r.stderr || '');
+  if (r.status === 0 && out.includes('○ skip')) warn('group browser suite skipped (no Chromium — browser assertions not executed)');
+  else if (r.status === 0) ok(`group browser workflow green (${(out.match(/✓/g) || []).length} controls)`);
+  else {
+    out.split('\n').filter((line) => line.includes('✗')).forEach((line) => fail(line.replace(/^\s*✗\s*/, '')));
+    if (!out.includes('✗')) fail(`hotel-stays-group-browser-test.mjs exited ${r.status} — ${out.trim().split('\n').slice(-3).join(' | ')}`);
   }
 }
 

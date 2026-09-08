@@ -340,12 +340,12 @@
     "sha": "d597ba5cac11de01"
   },
   "assets/hotel.css": {
-    "v": "27",
-    "sha": "d550a1968a925247"
+    "v": "31",
+    "sha": "f147217696d27ab9"
   },
   "assets/hotel.js": {
-    "v": "40",
-    "sha": "eaae56ac8f831d02"
+    "v": "46",
+    "sha": "b578c3d8b06d462a"
   },
   "assets/hours-ui.js": {
     "v": "1",
@@ -376,8 +376,8 @@
     "sha": "21040572d903f0b8"
   },
   "assets/interactive.js": {
-    "v": "29",
-    "sha": "fe9d379b07488d8a"
+    "v": "30",
+    "sha": "e5912341abe2b06f"
   },
   "assets/inventory-consumption.js": {
     "v": "12",
@@ -868,8 +868,8 @@
     "sha": "4cfb2ff36ff53004"
   },
   "assets/team.js": {
-    "v": "282",
-    "sha": "9fba6c04ce3b80a0"
+    "v": "283",
+    "sha": "acc937d45f9509a7"
   },
   "assets/tenant-purge.js": {
     "v": "2",

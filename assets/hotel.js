@@ -964,7 +964,21 @@
   function rerender() {
     if (!openDrawer) return;
     const body = openDrawer.el.querySelector('.genpage-body') || openDrawer.el.querySelector('.kiwi-drawer-body');
-    if (body) body.innerHTML = openDrawer.bodyFn();
+    if (body) {
+      const scrollEl = body.closest('.genpage-scroll') || body;
+      const top = scrollEl ? scrollEl.scrollTop : 0;
+      const left = scrollEl ? scrollEl.scrollLeft : 0;
+      const winTop = typeof window !== 'undefined' ? window.scrollY : 0;
+      const winLeft = typeof window !== 'undefined' ? window.scrollX : 0;
+      body.innerHTML = openDrawer.bodyFn();
+      if (scrollEl) {
+        scrollEl.scrollTop = top;
+        scrollEl.scrollLeft = left;
+      }
+      if (typeof window !== 'undefined' && window.scrollTo) {
+        window.scrollTo(winLeft, winTop);
+      }
+    }
     if (openDrawer.page === 'chambres' && isCustomHotel()) {
       const first = openDrawer.el.querySelector('.genpage-head p .seg');
       if (first) first.textContent = roomCountLabel();
@@ -1750,7 +1764,7 @@
     }).sort((a, b) => String(a.customer?.name || '').localeCompare(String(b.customer?.name || ''), 'fr'));
     const load = cuStayLoads.get(cuStayScope());
     return `<section class="block hx-daily" aria-label="Journal de réception">
-      <div class="hx-daily-head"><div><span class="hx-kicker">JOURNAL DE RÉCEPTION</span><h3>${views[filter.view] || views.arrivals} · ${rows.length}</h3><p>Dates de séjour à l’heure du Maroc. Ouvrez un dossier pour modifier ses détails.</p></div><div class="hx-commercial-tools"><button class="hx-btn ghost" data-action="hx-commercial">Clients, agences & sociétés</button><button class="hx-btn atlas" data-action="hx-stay-new">+ Réservation</button></div></div>
+      <div class="hx-daily-head"><div><span class="hx-kicker">JOURNAL DE RÉCEPTION</span><h3>${views[filter.view] || views.arrivals} · ${rows.length}</h3><p>Dates de séjour à l’heure du Maroc. Ouvrez un dossier pour modifier ses détails.</p></div><div class="hx-commercial-tools"><button type="button" class="hx-btn ghost" data-action="hx-commercial">Clients, agences & sociétés</button><button type="button" class="hx-btn ghost" data-action="hx-group-new">+ Réservation de groupe</button><button type="button" class="hx-btn atlas" data-action="hx-stay-new">+ Réservation</button></div></div>
       <div class="hx-daily-controls">
         <label>Date des mouvements<input type="date" data-hx-daily-date value="${esc(day)}"></label>
         <label>Vue<select data-hx-daily-view>${Object.entries(views).map(([key, label]) => `<option value="${key}" ${filter.view === key ? 'selected' : ''}>${label} (${buckets[key].length})</option>`).join('')}</select></label>
@@ -2882,11 +2896,539 @@
     return `<div class="hx-page">
       ${cuStrip()}
       <div class="hx-cu-tape block">
-        <div class="hx-cu-tape-head"><div><span class="hx-kicker">DISPONIBILITÉ UNIFIÉE</span><h3>Chambres × 14 jours</h3><p>Direct, saisie manuelle et OTA bloquent tous la même chambre.</p></div><div class="hx-cu-tape-actions"><button class="hx-btn ghost" data-action="hx-tape-prev" aria-label="14 jours précédents">←</button><button class="hx-btn ghost" data-action="hx-tape-today">Aujourd’hui</button><button class="hx-btn ghost" data-action="hx-tape-next" aria-label="14 jours suivants">→</button><button class="hx-btn atlas" data-action="hx-stay-new">+ Réservation</button></div></div>
+        <div class="hx-cu-tape-head"><div><span class="hx-kicker">DISPONIBILITÉ UNIFIÉE</span><h3>Chambres × 14 jours</h3><p>Direct, saisie manuelle et OTA bloquent tous la même chambre.</p></div><div class="hx-cu-tape-actions"><button type="button" class="hx-btn ghost" data-action="hx-tape-prev" aria-label="14 jours précédents">←</button><button type="button" class="hx-btn ghost" data-action="hx-tape-today">Aujourd’hui</button><button type="button" class="hx-btn ghost" data-action="hx-tape-next" aria-label="14 jours suivants">→</button><button type="button" class="hx-btn ghost" data-action="hx-group-new">+ Réservation de groupe</button><button type="button" class="hx-btn atlas" data-action="hx-stay-new">+ Réservation</button></div></div>
         <div class="hx-cu-legend">${Object.keys(channels).map((c) => `<span class="src-${c}"><i></i>${channels[c]}</span>`).join('')}</div>
         ${rooms.length ? `<div class="hx-cu-tape-scroll"><div class="hx-cu-tape-grid"><div class="hx-cu-date-row"><div class="hx-cu-room"><span>CHAMBRE</span></div><div class="hx-cu-date-days">${dateHead}</div></div>${rows}<div class="hx-cu-occupancy"><div class="hx-cu-room"><b>Occupation</b><span>vendues</span></div><div>${occupancy}</div></div></div></div>` : `<div class="hx-cu-tape-empty"><b>Ajoutez d’abord vos chambres</b><p>Le tape chart attribue chaque séjour à une chambre réelle.</p><button class="hx-btn atlas" data-action="hx-room-add">Configurer les chambres</button></div>`}
       </div>
     </div>`;
+  }
+
+  function cuLang() {
+    try {
+      return (window.KiwiI18n && window.KiwiI18n.getLang && window.KiwiI18n.getLang()) || document.documentElement.lang || 'fr';
+    } catch (_) { return 'fr'; }
+  }
+
+  const cuNationalities = [
+    { code: "MA", demonym: {"fr":"Marocaine","en":"Moroccan","ar":"مغربية"}, name: {"fr":"Maroc","en":"Morocco","ar":"المغرب"}, aliases: ["maroc","morocco","moroccan"] },
+    { code: "FR", demonym: {"fr":"Française","en":"French","ar":"فرنسية"}, name: {"fr":"France","en":"France","ar":"فرنسا"}, aliases: ["france","french","francais"] },
+    { code: "ES", demonym: {"fr":"Espagnole","en":"Spanish","ar":"إسبانية"}, name: {"fr":"Espagne","en":"Spain","ar":"إسبانيا"}, aliases: ["espagne","spain","spanish","espana"] },
+    { code: "DZ", demonym: {"fr":"Algérienne","en":"Algerian","ar":"جزائرية"}, name: {"fr":"Algérie","en":"Algeria","ar":"الجزائر"}, aliases: ["algerie","algeria"] },
+    { code: "TN", demonym: {"fr":"Tunisienne","en":"Tunisian","ar":"تونسية"}, name: {"fr":"Tunisie","en":"Tunisia","ar":"تونس"}, aliases: ["tunisie","tunisia"] },
+    { code: "BE", demonym: {"fr":"Belge","en":"Belgian","ar":"بلجيكية"}, name: {"fr":"Belgique","en":"Belgium","ar":"بلجيكا"}, aliases: ["belgique","belgium"] },
+    { code: "CH", demonym: {"fr":"Suisse","en":"Swiss","ar":"سويسرية"}, name: {"fr":"Suisse","en":"Switzerland","ar":"سويسرا"}, aliases: ["suisse","switzerland"] },
+    { code: "DE", demonym: {"fr":"Allemande","en":"German","ar":"ألمانية"}, name: {"fr":"Allemagne","en":"Germany","ar":"ألمانيا"}, aliases: ["allemagne","germany","deutschland"] },
+    { code: "IT", demonym: {"fr":"Italienne","en":"Italian","ar":"إيطالية"}, name: {"fr":"Italie","en":"Italy","ar":"إيطاليا"}, aliases: ["italie","italy","italia"] },
+    { code: "GB", demonym: {"fr":"Britannique","en":"British","ar":"بريطانية"}, name: {"fr":"Royaume-Uni","en":"United Kingdom","ar":"المملكة المتحدة"}, aliases: ["royaume-uni","united kingdom","uk","great britain","england","angleterre","ecosse","scotland","wales","pays de galles"] },
+    { code: "US", demonym: {"fr":"Américaine","en":"American","ar":"أمريكية"}, name: {"fr":"États-Unis","en":"United States","ar":"الولايات المتحدة"}, aliases: ["etats-unis","usa","united states","america"] },
+    { code: "CA", demonym: {"fr":"Canadienne","en":"Canadian","ar":"كندية"}, name: {"fr":"Canada","en":"Canada","ar":"كندا"}, aliases: ["canada","canadian"] },
+    { code: "PT", demonym: {"fr":"Portugaise","en":"Portuguese","ar":"برتغالية"}, name: {"fr":"Portugal","en":"Portugal","ar":"البرتغال"}, aliases: ["portugal"] },
+    { code: "NL", demonym: {"fr":"Néerlandaise","en":"Dutch","ar":"هولندية"}, name: {"fr":"Pays-Bas","en":"Netherlands","ar":"هولندا"}, aliases: ["pays-bas","netherlands","hollande","holland"] },
+    { code: "SN", demonym: {"fr":"Sénégalaise","en":"Senegalese","ar":"سنغالية"}, name: {"fr":"Sénégal","en":"Senegal","ar":"السنغال"}, aliases: ["senegal"] },
+    { code: "CI", demonym: {"fr":"Ivoirienne","en":"Ivorian","ar":"إيفوارية"}, name: {"fr":"Côte d'Ivoire","en":"Ivory Coast","ar":"ساحل العاج"}, aliases: ["cote d'ivoire","ivory coast"] },
+    { code: "AE", demonym: {"fr":"Émirienne","en":"Emirati","ar":"إماراتية"}, name: {"fr":"Émirats arabes unis","en":"United Arab Emirates","ar":"الإمارات"}, aliases: ["emirats","uae","united arab emirates","dubai"] },
+    { code: "SA", demonym: {"fr":"Saoudienne","en":"Saudi","ar":"سعودية"}, name: {"fr":"Arabie saoudite","en":"Saudi Arabia","ar":"السعودية"}, aliases: ["arabie saoudite","saudi arabia","saudi"] },
+    { code: "QA", demonym: {"fr":"Qatarienne","en":"Qatari","ar":"قطرية"}, name: {"fr":"Qatar","en":"Qatar","ar":"قطر"}, aliases: ["qatar"] },
+    { code: "KW", demonym: {"fr":"Koweïtienne","en":"Kuwaiti","ar":"كويتية"}, name: {"fr":"Koweït","en":"Kuwait","ar":"الكويت"}, aliases: ["koweit","kuwait"] },
+    { code: "EG", demonym: {"fr":"Égyptienne","en":"Egyptian","ar":"مصرية"}, name: {"fr":"Égypte","en":"Egypt","ar":"مصر"}, aliases: ["egypte","egypt"] },
+    { code: "TR", demonym: {"fr":"Turque","en":"Turkish","ar":"تركية"}, name: {"fr":"Turquie","en":"Turkey","ar":"تركيا"}, aliases: ["turquie","turkey","turkiye"] },
+    { code: "MR", demonym: {"fr":"Mauritanienne","en":"Mauritanian","ar":"موريتانية"}, name: {"fr":"Mauritanie","en":"Mauritania","ar":"موريتانيا"}, aliases: ["mauritanie","mauritania"] },
+    { code: "ML", demonym: {"fr":"Malienne","en":"Malian","ar":"مالية"}, name: {"fr":"Mali","en":"Mali","ar":"مالي"}, aliases: ["mali"] },
+    { code: "GN", demonym: {"fr":"Guinéenne","en":"Guinean","ar":"غينية"}, name: {"fr":"Guinée","en":"Guinea","ar":"غينيا"}, aliases: ["guinee","guinea"] },
+    { code: "GA", demonym: {"fr":"Gabonaise","en":"Gabonese","ar":"غابونية"}, name: {"fr":"Gabon","en":"Gabon","ar":"الغابون"}, aliases: ["gabon"] },
+    { code: "CM", demonym: {"fr":"Camerounaise","en":"Cameroonian","ar":"كاميرونية"}, name: {"fr":"Cameroun","en":"Cameroon","ar":"الكاميرون"}, aliases: ["cameroun","cameroon"] },
+    { code: "CG", demonym: {"fr":"Congolaise","en":"Congolese","ar":"كونغولية"}, name: {"fr":"Congo","en":"Congo","ar":"الكونغو"}, aliases: ["congo"] },
+    { code: "CD", demonym: {"fr":"Congolaise (RDC)","en":"Congolese (DRC)","ar":"كونغولية ديمقراطية"}, name: {"fr":"RD Congo","en":"DR Congo","ar":"جمهورية الكونغو الديمقراطية"}, aliases: ["rdc","drc"] },
+    { code: "NG", demonym: {"fr":"Nigériane","en":"Nigerian","ar":"نيجيرية"}, name: {"fr":"Nigeria","en":"Nigeria","ar":"نيجيريا"}, aliases: ["nigeria"] },
+    { code: "ZA", demonym: {"fr":"Sud-Africaine","en":"South African","ar":"جنوب أفريقية"}, name: {"fr":"Afrique du Sud","en":"South Africa","ar":"جنوب أفريقيا"}, aliases: ["afrique du sud","south africa"] },
+    { code: "RU", demonym: {"fr":"Russe","en":"Russian","ar":"روسية"}, name: {"fr":"Russie","en":"Russia","ar":"روسيا"}, aliases: ["russie","russia"] },
+    { code: "UA", demonym: {"fr":"Ukrainienne","en":"Ukrainian","ar":"أوكرانية"}, name: {"fr":"Ukraine","en":"Ukraine","ar":"أوكرانيا"}, aliases: ["ukraine"] },
+    { code: "PL", demonym: {"fr":"Polonaise","en":"Polish","ar":"بولندية"}, name: {"fr":"Pologne","en":"Poland","ar":"بولندا"}, aliases: ["pologne","poland"] },
+    { code: "SE", demonym: {"fr":"Suédoise","en":"Swedish","ar":"سويدية"}, name: {"fr":"Suède","en":"Sweden","ar":"السويد"}, aliases: ["suede","sweden"] },
+    { code: "NO", demonym: {"fr":"Norvégienne","en":"Norwegian","ar":"نرويجية"}, name: {"fr":"Norvège","en":"Norway","ar":"النرويج"}, aliases: ["norvege","norway"] },
+    { code: "DK", demonym: {"fr":"Danoise","en":"Danish","ar":"دنماركية"}, name: {"fr":"Danemark","en":"Denmark","ar":"الدنمارك"}, aliases: ["danemark","denmark"] },
+    { code: "FI", demonym: {"fr":"Finlandaise","en":"Finnish","ar":"فنلندية"}, name: {"fr":"Finlande","en":"Finland","ar":"فنلندا"}, aliases: ["finlande","finland"] },
+    { code: "AT", demonym: {"fr":"Autrichienne","en":"Austrian","ar":"نمساوية"}, name: {"fr":"Autriche","en":"Austria","ar":"النمسا"}, aliases: ["autriche","austria"] },
+    { code: "IE", demonym: {"fr":"Irlandaise","en":"Irish","ar":"أيرلندية"}, name: {"fr":"Irlande","en":"Ireland","ar":"أيرلندا"}, aliases: ["irlande","ireland"] },
+    { code: "GR", demonym: {"fr":"Grecque","en":"Greek","ar":"يونانية"}, name: {"fr":"Grèce","en":"Greece","ar":"اليونان"}, aliases: ["grece","greece"] },
+    { code: "RO", demonym: {"fr":"Roumaine","en":"Romanian","ar":"رومانية"}, name: {"fr":"Roumanie","en":"Romania","ar":"رومانيا"}, aliases: ["roumanie","romania"] },
+    { code: "HU", demonym: {"fr":"Hongroise","en":"Hungarian","ar":"مجرية"}, name: {"fr":"Hongrie","en":"Hungary","ar":"المجر"}, aliases: ["hongrie","hungary"] },
+    { code: "CZ", demonym: {"fr":"Tchèque","en":"Czech","ar":"تشيكية"}, name: {"fr":"République tchèque","en":"Czech Republic","ar":"التشيك"}, aliases: ["tcheque","czech"] },
+    { code: "CN", demonym: {"fr":"Chinoise","en":"Chinese","ar":"صينية"}, name: {"fr":"Chine","en":"China","ar":"الصين"}, aliases: ["chine","china"] },
+    { code: "JP", demonym: {"fr":"Japonaise","en":"Japanese","ar":"يابانية"}, name: {"fr":"Japon","en":"Japan","ar":"اليابان"}, aliases: ["japon","japan"] },
+    { code: "KR", demonym: {"fr":"Sud-Coréenne","en":"South Korean","ar":"كورية جنوبية"}, name: {"fr":"Corée du Sud","en":"South Korea","ar":"كوريا الجنوبية"}, aliases: ["coree du sud","korea"] },
+    { code: "IN", demonym: {"fr":"Indienne","en":"Indian","ar":"هندية"}, name: {"fr":"Inde","en":"India","ar":"الهند"}, aliases: ["inde","india"] },
+    { code: "PK", demonym: {"fr":"Pakistanaise","en":"Pakistani","ar":"باكستانية"}, name: {"fr":"Pakistan","en":"Pakistan","ar":"باكستان"}, aliases: ["pakistan"] },
+    { code: "BR", demonym: {"fr":"Brésilienne","en":"Brazilian","ar":"برازيلية"}, name: {"fr":"Brésil","en":"Brazil","ar":"البرازيل"}, aliases: ["bresil","brazil"] },
+    { code: "AR", demonym: {"fr":"Argentine","en":"Argentine","ar":"أرجنتينية"}, name: {"fr":"Argentine","en":"Argentina","ar":"الأرجنتين"}, aliases: ["argentine","argentina"] },
+    { code: "MX", demonym: {"fr":"Mexicaine","en":"Mexican","ar":"مكسيكية"}, name: {"fr":"Mexique","en":"Mexico","ar":"المكسيك"}, aliases: ["mexique","mexico"] },
+    { code: "CL", demonym: {"fr":"Chilienne","en":"Chilean","ar":"تشيلية"}, name: {"fr":"Chili","en":"Chile","ar":"تشيلي"}, aliases: ["chili","chile"] },
+    { code: "CO", demonym: {"fr":"Colombienne","en":"Colombian","ar":"كولومبية"}, name: {"fr":"Colombie","en":"Colombia","ar":"كولومبيا"}, aliases: ["colombie","colombia"] },
+    { code: "AU", demonym: {"fr":"Australienne","en":"Australian","ar":"أسترالية"}, name: {"fr":"Australie","en":"Australia","ar":"أستراليا"}, aliases: ["australie","australia"] },
+    { code: "NZ", demonym: {"fr":"Néo-Zélandaise","en":"New Zealander","ar":"نيوزيلندية"}, name: {"fr":"Nouvelle-Zélande","en":"New Zealand","ar":"نيوزيلندا"}, aliases: ["nouvelle-zelande","new zealand"] },
+    { code: "LB", demonym: {"fr":"Libanaise","en":"Lebanese","ar":"لبنانية"}, name: {"fr":"Liban","en":"Lebanon","ar":"لبنان"}, aliases: ["liban","lebanon"] },
+    { code: "JO", demonym: {"fr":"Jordanienne","en":"Jordanian","ar":"أردنية"}, name: {"fr":"Jordanie","en":"Jordan","ar":"الأردن"}, aliases: ["jordanie","jordan"] },
+    { code: "IQ", demonym: {"fr":"Irakienne","en":"Iraqi","ar":"عراقية"}, name: {"fr":"Irak","en":"Iraq","ar":"العراق"}, aliases: ["irak","iraq"] },
+    { code: "SY", demonym: {"fr":"Syrienne","en":"Syrian","ar":"سورية"}, name: {"fr":"Syrie","en":"Syria","ar":"سوريا"}, aliases: ["syrie","syria"] },
+    { code: "YE", demonym: {"fr":"Yéménite","en":"Yemeni","ar":"يمنية"}, name: {"fr":"Yémen","en":"Yemen","ar":"اليمن"}, aliases: ["yemen"] },
+    { code: "OM", demonym: {"fr":"Omanaise","en":"Omani","ar":"عمانية"}, name: {"fr":"Oman","en":"Oman","ar":"عمان"}, aliases: ["oman"] },
+    { code: "BH", demonym: {"fr":"Bahreïnienne","en":"Bahraini","ar":"بحرينية"}, name: {"fr":"Bahreïn","en":"Bahrain","ar":"البحرين"}, aliases: ["bahrein","bahrain"] },
+    { code: "LY", demonym: {"fr":"Libyenne","en":"Libyan","ar":"ليبية"}, name: {"fr":"Libye","en":"Libya","ar":"ليبيا"}, aliases: ["libye","libya"] },
+    { code: "SD", demonym: {"fr":"Soudanaise","en":"Sudanese","ar":"سودانية"}, name: {"fr":"Soudan","en":"Sudan","ar":"السودان"}, aliases: ["soudan","sudan"] },
+    { code: "NE", demonym: {"fr":"Nigérienne","en":"Nigerien","ar":"نيجرية"}, name: {"fr":"Niger","en":"Niger","ar":"النيجر"}, aliases: ["niger"] },
+    { code: "TD", demonym: {"fr":"Tchadienne","en":"Chadian","ar":"تشادية"}, name: {"fr":"Tchad","en":"Chad","ar":"تشاد"}, aliases: ["tchad","chad"] },
+    { code: "BF", demonym: {"fr":"Burkinabè","en":"Burkinabe","ar":"بوركينية"}, name: {"fr":"Burkina Faso","en":"Burkina Faso","ar":"بوركينا فاسو"}, aliases: ["burkina"] },
+    { code: "BJ", demonym: {"fr":"Béninoise","en":"Beninese","ar":"بنينية"}, name: {"fr":"Bénin","en":"Benin","ar":"بنين"}, aliases: ["benin"] },
+    { code: "TG", demonym: {"fr":"Togolaise","en":"Togolese","ar":"توغولية"}, name: {"fr":"Togo","en":"Togo","ar":"توغو"}, aliases: ["togo"] },
+    { code: "GH", demonym: {"fr":"Ghanéenne","en":"Ghanaian","ar":"غانية"}, name: {"fr":"Ghana","en":"Ghana","ar":"غانا"}, aliases: ["ghana"] },
+    { code: "LU", demonym: {"fr":"Luxembourgeoise","en":"Luxembourgish","ar":"لوكسمبورغية"}, name: {"fr":"Luxembourg","en":"Luxembourg","ar":"لوكسمبورغ"}, aliases: ["luxembourg"] },
+    { code: "MC", demonym: {"fr":"Monégasque","en":"Monegasque","ar":"موناكية"}, name: {"fr":"Monaco","en":"Monaco","ar":"موناكو"}, aliases: ["monaco","monegasque"] },
+    { code: "AD", demonym: {"fr":"Andorrane","en":"Andorran","ar":"أندورية"}, name: {"fr":"Andorre","en":"Andorra","ar":"أندورا"}, aliases: ["andorre","andorra"] },
+    { code: "SM", demonym: {"fr":"Saint-Marinaise","en":"Sammarinese","ar":"سان مارينية"}, name: {"fr":"Saint-Marin","en":"San Marino","ar":"سان مارينو"}, aliases: ["saint-marin","san marino"] },
+    { code: "IS", demonym: {"fr":"Islandaise","en":"Icelandic","ar":"آيسلندية"}, name: {"fr":"Islande","en":"Iceland","ar":"آيسلندا"}, aliases: ["islande","iceland"] },
+    { code: "MT", demonym: {"fr":"Maltaise","en":"Maltese","ar":"مالطية"}, name: {"fr":"Malte","en":"Malta","ar":"مالطا"}, aliases: ["malte","malta"] },
+    { code: "CY", demonym: {"fr":"Chypriote","en":"Cypriot","ar":"قبرصية"}, name: {"fr":"Chypre","en":"Cyprus","ar":"قبرص"}, aliases: ["chypre","cyprus"] },
+    { code: "RS", demonym: {"fr":"Serbe","en":"Serbian","ar":"صربية"}, name: {"fr":"Serbie","en":"Serbia","ar":"صربيا"}, aliases: ["serbie","serbia"] },
+    { code: "HR", demonym: {"fr":"Croate","en":"Croatian","ar":"كرواتية"}, name: {"fr":"Croatie","en":"Croatia","ar":"كرواتيا"}, aliases: ["croatie","croatia"] },
+    { code: "SI", demonym: {"fr":"Slovène","en":"Slovenian","ar":"سلوفينية"}, name: {"fr":"Slovénie","en":"Slovenia","ar":"سلوفينيا"}, aliases: ["slovenie","slovenia"] },
+    { code: "BA", demonym: {"fr":"Bosnienne","en":"Bosnian","ar":"بوسنية"}, name: {"fr":"Bosnie-Herzégovine","en":"Bosnia and Herzegovina","ar":"البوسنة والهرسك"}, aliases: ["bosnie","bosnia"] },
+    { code: "ME", demonym: {"fr":"Monténégrine","en":"Montenegrin","ar":"مونتينيغرية"}, name: {"fr":"Monténégro","en":"Montenegro","ar":"الجبل الأسود"}, aliases: ["montenegro"] },
+    { code: "MK", demonym: {"fr":"Macédonienne","en":"Macedonian","ar":"مقدونية"}, name: {"fr":"Macédoine du Nord","en":"North Macedonia","ar":"مقدونيا الشمالية"}, aliases: ["macedoine","macedonia"] },
+    { code: "AL", demonym: {"fr":"Albanaise","en":"Albanian","ar":"ألبانية"}, name: {"fr":"Albanie","en":"Albania","ar":"ألبانيا"}, aliases: ["albanie","albania"] },
+    { code: "BG", demonym: {"fr":"Bulgare","en":"Bulgarian","ar":"بلغارية"}, name: {"fr":"Bulgarie","en":"Bulgaria","ar":"بلغاريا"}, aliases: ["bulgarie","bulgaria"] },
+    { code: "SK", demonym: {"fr":"Slovaque","en":"Slovak","ar":"سلوفاكية"}, name: {"fr":"Slovaquie","en":"Slovakia","ar":"سلوفاكيا"}, aliases: ["slovaquie","slovakia"] },
+    { code: "EE", demonym: {"fr":"Estonienne","en":"Estonian","ar":"إستونية"}, name: {"fr":"Estonie","en":"Estonia","ar":"إستونيا"}, aliases: ["estonie","estonia"] },
+    { code: "LV", demonym: {"fr":"Lettone","en":"Latvian","ar":"لاتفية"}, name: {"fr":"Lettonie","en":"Latvia","ar":"لاتفيا"}, aliases: ["lettonie","latvia"] },
+    { code: "LT", demonym: {"fr":"Lituanienne","en":"Lithuanian","ar":"ليتوانية"}, name: {"fr":"Lituanie","en":"Lithuania","ar":"ليتوانيا"}, aliases: ["lituanie","lithuania"] },
+    { code: "BY", demonym: {"fr":"Biélorusse","en":"Belarusian","ar":"بيلاروسية"}, name: {"fr":"Biélorussie","en":"Belarus","ar":"بيلاروسيا"}, aliases: ["bielorussie","belarus"] },
+    { code: "MD", demonym: {"fr":"Moldave","en":"Moldovan","ar":"مولدوفية"}, name: {"fr":"Moldavie","en":"Moldova","ar":"مولدوفا"}, aliases: ["moldavie","moldova"] },
+    { code: "GE", demonym: {"fr":"Géorgienne","en":"Georgian","ar":"جورجية"}, name: {"fr":"Géorgie","en":"Georgia","ar":"جورجيا"}, aliases: ["georgie","georgia"] },
+    { code: "AM", demonym: {"fr":"Arménienne","en":"Armenian","ar":"أرمينية"}, name: {"fr":"Arménie","en":"Armenia","ar":"أرمينيا"}, aliases: ["armenie","armenia"] },
+    { code: "AZ", demonym: {"fr":"Azerbaïdjanaise","en":"Azerbaijani","ar":"أذربيجانية"}, name: {"fr":"Azerbaïdjan","en":"Azerbaijan","ar":"أذربيجان"}, aliases: ["azerbaidjan","azerbaijan"] },
+    { code: "KZ", demonym: {"fr":"Kazakhe","en":"Kazakhstani","ar":"كازاخستانية"}, name: {"fr":"Kazakhstan","en":"Kazakhstan","ar":"كازاخستان"}, aliases: ["kazakhstan"] },
+    { code: "UZ", demonym: {"fr":"Ouzbèke","en":"Uzbek","ar":"أوزبكستانية"}, name: {"fr":"Ouzbékistan","en":"Uzbekistan","ar":"أوزبكستان"}, aliases: ["ouzbekistan","uzbekistan"] },
+    { code: "TM", demonym: {"fr":"Turkmène","en":"Turkmen","ar":"تركمانستانية"}, name: {"fr":"Turkménistan","en":"Turkmenistan","ar":"تركمانستان"}, aliases: ["turkmenistan"] },
+    { code: "KG", demonym: {"fr":"Kirghize","en":"Kyrgyzstani","ar":"قيرغيزستانية"}, name: {"fr":"Kirghizistan","en":"Kyrgyzstan","ar":"قيرغيزستان"}, aliases: ["kirghizistan","kyrgyzstan"] },
+    { code: "TJ", demonym: {"fr":"Tadjike","en":"Tajikistani","ar":"طاجيكستانية"}, name: {"fr":"Tadjikistan","en":"Tajikistan","ar":"طاجيكستان"}, aliases: ["tadjikistan","tajikistan"] },
+    { code: "IL", demonym: {"fr":"Israélienne","en":"Israeli","ar":"إسرائيلية"}, name: {"fr":"Israël","en":"Israel","ar":"إسرائيل"}, aliases: ["israel"] },
+    { code: "PS", demonym: {"fr":"Palestinienne","en":"Palestinian","ar":"فلسطينية"}, name: {"fr":"Palestine","en":"Palestine","ar":"فلسطين"}, aliases: ["palestine"] },
+    { code: "IR", demonym: {"fr":"Iranienne","en":"Iranian","ar":"إيرانية"}, name: {"fr":"Iran","en":"Iran","ar":"إيران"}, aliases: ["iran"] },
+    { code: "AF", demonym: {"fr":"Afghane","en":"Afghan","ar":"أفغانية"}, name: {"fr":"Afghanistan","en":"Afghanistan","ar":"أفغانستان"}, aliases: ["afghanistan"] },
+    { code: "BD", demonym: {"fr":"Bangladaise","en":"Bangladeshi","ar":"بنغلاديشية"}, name: {"fr":"Bangladesh","en":"Bangladesh","ar":"بنغلاديش"}, aliases: ["bangladesh"] },
+    { code: "LK", demonym: {"fr":"Sri-Lankaise","en":"Sri Lankan","ar":"سريلانكية"}, name: {"fr":"Sri Lanka","en":"Sri Lanka","ar":"سريلانكا"}, aliases: ["sri lanka"] },
+    { code: "NP", demonym: {"fr":"Népalaise","en":"Nepali","ar":"نيبالية"}, name: {"fr":"Népal","en":"Nepal","ar":"نيبال"}, aliases: ["nepal"] },
+    { code: "MM", demonym: {"fr":"Birmane","en":"Burmese","ar":"ميانمارية"}, name: {"fr":"Birmanie","en":"Myanmar","ar":"ميانمار"}, aliases: ["birmanie","myanmar","burma"] },
+    { code: "TH", demonym: {"fr":"Thaïlandaise","en":"Thai","ar":"تايلاندية"}, name: {"fr":"Thaïlande","en":"Thailand","ar":"تايلاند"}, aliases: ["thailande","thailand","siam"] },
+    { code: "VN", demonym: {"fr":"Vietnamienne","en":"Vietnamese","ar":"فيتنامية"}, name: {"fr":"Vietnam","en":"Vietnam","ar":"فيتنام"}, aliases: ["vietnam"] },
+    { code: "KH", demonym: {"fr":"Cambodgienne","en":"Cambodian","ar":"كمبودية"}, name: {"fr":"Cambodge","en":"Cambodia","ar":"كمبوديا"}, aliases: ["cambodge","cambodia"] },
+    { code: "LA", demonym: {"fr":"Laotienne","en":"Lao","ar":"لاوسية"}, name: {"fr":"Laos","en":"Laos","ar":"لاوس"}, aliases: ["laos"] },
+    { code: "MY", demonym: {"fr":"Malaisienne","en":"Malaysian","ar":"ماليزية"}, name: {"fr":"Malaisie","en":"Malaysia","ar":"ماليزيا"}, aliases: ["malaisie","malaysia"] },
+    { code: "SG", demonym: {"fr":"Singapourienne","en":"Singaporean","ar":"سنغافورية"}, name: {"fr":"Singapour","en":"Singapore","ar":"سنغافورة"}, aliases: ["singapour","singapore"] },
+    { code: "ID", demonym: {"fr":"Indonésienne","en":"Indonesian","ar":"إندونيسية"}, name: {"fr":"Indonésie","en":"Indonesia","ar":"إندونيسيا"}, aliases: ["indonesie","indonesia"] },
+    { code: "PH", demonym: {"fr":"Philippine","en":"Filipino","ar":"فلبينية"}, name: {"fr":"Philippines","en":"Philippines","ar":"الفلبين"}, aliases: ["philippines","filipino"] },
+    { code: "PE", demonym: {"fr":"Péruvienne","en":"Peruvian","ar":"بيروفية"}, name: {"fr":"Pérou","en":"Peru","ar":"بيرو"}, aliases: ["perou","peru"] },
+    { code: "VE", demonym: {"fr":"Vénézuélienne","en":"Venezuelan","ar":"فنزويلية"}, name: {"fr":"Venezuela","en":"Venezuela","ar":"فنزويلا"}, aliases: ["venezuela"] },
+    { code: "EC", demonym: {"fr":"Équatorienne","en":"Ecuadorian","ar":"إكوادورية"}, name: {"fr":"Équateur","en":"Ecuador","ar":"الإكوادور"}, aliases: ["equateur","ecuador"] },
+    { code: "BO", demonym: {"fr":"Bolivienne","en":"Bolivian","ar":"بوليفية"}, name: {"fr":"Bolivie","en":"Bolivia","ar":"بوليفيا"}, aliases: ["bolivie","bolivia"] },
+    { code: "PY", demonym: {"fr":"Paraguayenne","en":"Paraguayan","ar":"باراغوايانية"}, name: {"fr":"Paraguay","en":"Paraguay","ar":"باراغواي"}, aliases: ["paraguay"] },
+    { code: "UY", demonym: {"fr":"Uruguayenne","en":"Uruguayan","ar":"أوروغوايانية"}, name: {"fr":"Uruguay","en":"Uruguay","ar":"أوروغواي"}, aliases: ["uruguay"] },
+    { code: "CR", demonym: {"fr":"Costaricienne","en":"Costa Rican","ar":"كوستاريكية"}, name: {"fr":"Costa Rica","en":"Costa Rica","ar":"كوستاريكا"}, aliases: ["costa rica"] },
+    { code: "PA", demonym: {"fr":"Panaméenne","en":"Panamanian","ar":"بنمية"}, name: {"fr":"Panama","en":"Panama","ar":"بنما"}, aliases: ["panama"] },
+    { code: "CU", demonym: {"fr":"Cubaine","en":"Cuban","ar":"كوبية"}, name: {"fr":"Cuba","en":"Cuba","ar":"كوبا"}, aliases: ["cuba"] },
+    { code: "DO", demonym: {"fr":"Dominicaine","en":"Dominican","ar":"دومينيكانية"}, name: {"fr":"République dominicaine","en":"Dominican Republic","ar":"جمهورية الدومينيكان"}, aliases: ["republique dominicaine","dominican republic"] },
+    { code: "HT", demonym: {"fr":"Haïtienne","en":"Haitian","ar":"هايتية"}, name: {"fr":"Haïti","en":"Haiti","ar":"هايتي"}, aliases: ["haiti"] },
+    { code: "JM", demonym: {"fr":"Jamaïcaine","en":"Jamaican","ar":"جامايكية"}, name: {"fr":"Jamaïque","en":"Jamaica","ar":"جامايكا"}, aliases: ["jamaique","jamaica"] },
+    { code: "TT", demonym: {"fr":"Trinidadienne","en":"Trinidadian","ar":"ترينيدادية"}, name: {"fr":"Trinité-et-Tobago","en":"Trinidad and Tobago","ar":"ترينيداد وتوباغو"}, aliases: ["trinite-et-tobago","trinidad"] },
+    { code: "KE", demonym: {"fr":"Kényane","en":"Kenyan","ar":"كينية"}, name: {"fr":"Kenya","en":"Kenya","ar":"كينيا"}, aliases: ["kenya"] },
+    { code: "TZ", demonym: {"fr":"Tanzanienne","en":"Tanzanian","ar":"تنزانية"}, name: {"fr":"Tanzanie","en":"Tanzania","ar":"تنزانيا"}, aliases: ["tanzanie","tanzania"] },
+    { code: "UG", demonym: {"fr":"Ougandaise","en":"Ugandan","ar":"أوغندية"}, name: {"fr":"Ouganda","en":"Uganda","ar":"أوغندا"}, aliases: ["ouganda","uganda"] },
+    { code: "RW", demonym: {"fr":"Rwandaise","en":"Rwandan","ar":"رواندية"}, name: {"fr":"Rwanda","en":"Rwanda","ar":"رواندا"}, aliases: ["rwanda"] },
+    { code: "ET", demonym: {"fr":"Éthiopienne","en":"Ethiopian","ar":"إثيوبية"}, name: {"fr":"Éthiopie","en":"Ethiopia","ar":"إثيوبيا"}, aliases: ["ethiopie","ethiopia"] },
+    { code: "SO", demonym: {"fr":"Somalienne","en":"Somali","ar":"صومالية"}, name: {"fr":"Somalie","en":"Somalia","ar":"الصومال"}, aliases: ["somalie","somalia"] },
+    { code: "DJ", demonym: {"fr":"Djiboutienne","en":"Djiboutian","ar":"جيبوتية"}, name: {"fr":"Djibouti","en":"Djibouti","ar":"جيبوتي"}, aliases: ["djibouti"] },
+    { code: "KM", demonym: {"fr":"Comorienne","en":"Comorian","ar":"قمريّة"}, name: {"fr":"Comores","en":"Comoros","ar":"جزر القمر"}, aliases: ["comores","comoros"] },
+    { code: "MG", demonym: {"fr":"Malgache","en":"Malagasy","ar":"مدغشقرية"}, name: {"fr":"Madagascar","en":"Madagascar","ar":"مدغشقر"}, aliases: ["madagascar","malgache"] },
+    { code: "MU", demonym: {"fr":"Mauricienne","en":"Mauritian","ar":"موريشيوسية"}, name: {"fr":"Maurice","en":"Mauritius","ar":"موريشيوس"}, aliases: ["maurice","mauritius"] },
+    { code: "SC", demonym: {"fr":"Seychelloise","en":"Seychellois","ar":"سيشيلية"}, name: {"fr":"Seychelles","en":"Seychelles","ar":"سيشل"}, aliases: ["seychelles"] },
+    { code: "NA", demonym: {"fr":"Namibienne","en":"Namibian","ar":"ناميبية"}, name: {"fr":"Namibie","en":"Namibia","ar":"ناميبيا"}, aliases: ["namibie","namibia"] },
+    { code: "BW", demonym: {"fr":"Botswanaise","en":"Motswana","ar":"بوتسوانية"}, name: {"fr":"Botswana","en":"Botswana","ar":"بوتسوانا"}, aliases: ["botswana"] },
+    { code: "ZM", demonym: {"fr":"Zambienne","en":"Zambian","ar":"زامبية"}, name: {"fr":"Zambie","en":"Zambia","ar":"زامبيا"}, aliases: ["zambie","zambia"] },
+    { code: "ZW", demonym: {"fr":"Zimbabwéenne","en":"Zimbabwean","ar":"زيمبابوية"}, name: {"fr":"Zimbabwe","en":"Zimbabwe","ar":"زيمبابوي"}, aliases: ["zimbabwe"] },
+    { code: "AO", demonym: {"fr":"Angolaise","en":"Angolan","ar":"أنغولية"}, name: {"fr":"Angola","en":"Angola","ar":"أنغولا"}, aliases: ["angola"] },
+    { code: "MZ", demonym: {"fr":"Mozambicaine","en":"Mozambican","ar":"موزمبيقية"}, name: {"fr":"Mozambique","en":"Mozambique","ar":"موزمبيق"}, aliases: ["mozambique"] },
+    { code: "MV", demonym: {"fr":"Maldivienne","en":"Maldivian","ar":"مالديفية"}, name: {"fr":"Maldives","en":"Maldives","ar":"المالديف"}, aliases: ["maldives","maldivian","maldivienne"] },
+    { code: "BN", demonym: {"fr":"Brunéienne","en":"Bruneian","ar":"بروناوية"}, name: {"fr":"Brunei","en":"Brunei","ar":"بروناي"}, aliases: ["brunei","bruneian"] },
+    { code: "BT", demonym: {"fr":"Bhoutanaise","en":"Bhutanese","ar":"بوتانية"}, name: {"fr":"Bhoutan","en":"Bhutan","ar":"بوتان"}, aliases: ["bhoutan","bhutan"] },
+    { code: "MN", demonym: {"fr":"Mongole","en":"Mongolian","ar":"منغولية"}, name: {"fr":"Mongolie","en":"Mongolia","ar":"منغوليا"}, aliases: ["mongolie","mongolia"] },
+    { code: "BS", demonym: {"fr":"Bahaméenne","en":"Bahamian","ar":"باهامية"}, name: {"fr":"Bahamas","en":"Bahamas","ar":"جزر البهاما"}, aliases: ["bahamas","bahamian"] },
+    { code: "BB", demonym: {"fr":"Barbadienne","en":"Barbadian","ar":"باربادوسية"}, name: {"fr":"Barbade","en":"Barbados","ar":"باربادوس"}, aliases: ["barbade","barbados"] },
+    { code: "BZ", demonym: {"fr":"Bélizienne","en":"Belizean","ar":"بليزية"}, name: {"fr":"Belize","en":"Belize","ar":"بليز"}, aliases: ["belize"] },
+    { code: "GY", demonym: {"fr":"Guyanienne","en":"Guyanese","ar":"غيانية"}, name: {"fr":"Guyana","en":"Guyana","ar":"غيانا"}, aliases: ["guyana"] },
+    { code: "SR", demonym: {"fr":"Surinamaise","en":"Surinamese","ar":"سورينامية"}, name: {"fr":"Suriname","en":"Suriname","ar":"سورينام"}, aliases: ["suriname"] },
+    { code: "FJ", demonym: {"fr":"Fidjienne","en":"Fijian","ar":"فيجية"}, name: {"fr":"Fidji","en":"Fiji","ar":"فيجي"}, aliases: ["fidji","fiji"] },
+    { code: "PG", demonym: {"fr":"Papouasienne","en":"Papua New Guinean","ar":"بابوا غينيا الجديدة"}, name: {"fr":"Papouasie-Nouvelle-Guinée","en":"Papua New Guinea","ar":"بابوا غينيا الجديدة"}, aliases: ["papouasie","papua"] },
+    { code: "VU", demonym: {"fr":"Vanuatuane","en":"Ni-Vanuatu","ar":"فانواتية"}, name: {"fr":"Vanuatu","en":"Vanuatu","ar":"فانواتو"}, aliases: ["vanuatu"] },
+    { code: "WS", demonym: {"fr":"Samoane","en":"Samoan","ar":"ساموية"}, name: {"fr":"Samoa","en":"Samoa","ar":"ساموا"}, aliases: ["samoa"] },
+    { code: "TO", demonym: {"fr":"Tongienne","en":"Tongan","ar":"تونغية"}, name: {"fr":"Tonga","en":"Tonga","ar":"تونغا"}, aliases: ["tonga"] },
+    { code: "SB", demonym: {"fr":"Salomonienne","en":"Solomon Islander","ar":"جزر سليمان"}, name: {"fr":"Îles Salomon","en":"Solomon Islands","ar":"جزر سليمان"}, aliases: ["salomon","solomon"] },
+    { code: "FM", demonym: {"fr":"Micronésienne","en":"Micronesian","ar":"ميكرونيزية"}, name: {"fr":"Micronésie","en":"Micronesia","ar":"ولايات ميكرونيسيا المتحدة"}, aliases: ["micronesie","micronesia"] },
+    { code: "PW", demonym: {"fr":"Palaosienne","en":"Palauan","ar":"بالاوية"}, name: {"fr":"Palaos","en":"Palau","ar":"بالاو"}, aliases: ["palaos","palau"] },
+    { code: "MH", demonym: {"fr":"Marshallaise","en":"Marshallese","ar":"مارشالية"}, name: {"fr":"Îles Marshall","en":"Marshall Islands","ar":"جزر مارشال"}, aliases: ["marshall"] },
+    { code: "KI", demonym: {"fr":"Kiribatienne","en":"I-Kiribati","ar":"كيريباتية"}, name: {"fr":"Kiribati","en":"Kiribati","ar":"كيريباتي"}, aliases: ["kiribati"] },
+    { code: "NR", demonym: {"fr":"Nauruane","en":"Nauruan","ar":"ناورونية"}, name: {"fr":"Nauru","en":"Nauru","ar":"ناورو"}, aliases: ["nauru"] },
+    { code: "TV", demonym: {"fr":"Tuvaluane","en":"Tuvaluan","ar":"توفالوية"}, name: {"fr":"Tuvalu","en":"Tuvalu","ar":"توفالو"}, aliases: ["tuvalu"] },
+    { code: "CV", demonym: {"fr":"Cap-Verdienne","en":"Cape Verdean","ar":"رأس أخضرية"}, name: {"fr":"Cap-Vert","en":"Cape Verde","ar":"الرأس الأخضر"}, aliases: ["cap-vert","cape verde"] },
+    { code: "ST", demonym: {"fr":"Santoméenne","en":"São Toméan","ar":"ساو تومية"}, name: {"fr":"Sao Tomé-et-Principe","en":"Sao Tome and Principe","ar":"ساو تومي وبرينسيب"}, aliases: ["sao tome","sao tome-et-principe"] },
+    { code: "GQ", demonym: {"fr":"Équato-Guinéenne","en":"Equatorial Guinean","ar":"غينية استوائية"}, name: {"fr":"Guinée équatoriale","en":"Equatorial Guinea","ar":"غينيا الاستوائية"}, aliases: ["guinee equatoriale","equatorial guinea"] },
+    { code: "GW", demonym: {"fr":"Bissau-Guinéenne","en":"Bissau-Guinean","ar":"غينيا بيساو"}, name: {"fr":"Guinée-Bissau","en":"Guinea-Bissau","ar":"غينيا بيساو"}, aliases: ["guinee-bissau","guinea-bissau"] },
+    { code: "SL", demonym: {"fr":"Sierra-Léonaise","en":"Sierra Leonean","ar":"سيراليونية"}, name: {"fr":"Sierra Leone","en":"Sierra Leone","ar":"سيراليون"}, aliases: ["sierra leone"] },
+    { code: "LR", demonym: {"fr":"Libérienne","en":"Liberian","ar":"ليبيرية"}, name: {"fr":"Liberia","en":"Liberia","ar":"ليبيريا"}, aliases: ["liberia"] },
+    { code: "CF", demonym: {"fr":"Centrafricaine","en":"Central African","ar":"وسط أفريقية"}, name: {"fr":"République centrafricaine","en":"Central African Republic","ar":"جمهورية أفريقيا الوسطى"}, aliases: ["centrafrique","central african republic"] },
+    { code: "SS", demonym: {"fr":"Sud-Soudanaise","en":"South Sudanese","ar":"جنوب سودانية"}, name: {"fr":"Soudan du Sud","en":"South Sudan","ar":"جنوب السودان"}, aliases: ["soudan du sud","south sudan"] },
+    { code: "ER", demonym: {"fr":"Érythréenne","en":"Eritrean","ar":"إريترية"}, name: {"fr":"Érythrée","en":"Eritrea","ar":"إريتريا"}, aliases: ["erythree","eritrea"] },
+    { code: "BI", demonym: {"fr":"Burundaise","en":"Burundian","ar":"بوروندية"}, name: {"fr":"Burundi","en":"Burundi","ar":"بوروندي"}, aliases: ["burundi"] },
+    { code: "MW", demonym: {"fr":"Malawienne","en":"Malawian","ar":"مالاوية"}, name: {"fr":"Malawi","en":"Malawi","ar":"مالاوي"}, aliases: ["malawi"] },
+    { code: "LS", demonym: {"fr":"Lésothienne","en":"Basotho","ar":"ليسوتوية"}, name: {"fr":"Lesotho","en":"Lesotho","ar":"ليسوتو"}, aliases: ["lesotho"] },
+    { code: "SZ", demonym: {"fr":"Swazie","en":"Swazi","ar":"سوازية"}, name: {"fr":"Eswatini","en":"Eswatini","ar":"إسواتيني"}, aliases: ["eswatini","swaziland"] },
+    { code: "LI", demonym: {"fr":"Liechtensteinoise","en":"Liechtensteiner","ar":"ليختنشتاينية"}, name: {"fr":"Liechtenstein","en":"Liechtenstein","ar":"ليختنشتاين"}, aliases: ["liechtenstein"] },
+    { code: "VA", demonym: {"fr":"Vaticane","en":"Vatican","ar":"فاتيكانية"}, name: {"fr":"Vatican","en":"Vatican City","ar":"الفاتيكان"}, aliases: ["vatican"] },
+    { code: "AG", demonym: {"fr":"Antiguaise","en":"Antiguan","ar":"أنتيغوية"}, name: {"fr":"Antigua-et-Barbuda","en":"Antigua and Barbuda","ar":"أنتيغوا وبربودا"}, aliases: ["antigua"] },
+    { code: "DM", demonym: {"fr":"Dominiquaise","en":"Dominican","ar":"دومينيكية"}, name: {"fr":"Dominique","en":"Dominica","ar":"دومينيكا"}, aliases: ["dominique","dominica"] },
+    { code: "GD", demonym: {"fr":"Grenadienne","en":"Grenadian","ar":"غرينادية"}, name: {"fr":"Grenade","en":"Grenada","ar":"غرينادا"}, aliases: ["grenade","grenada"] },
+    { code: "KN", demonym: {"fr":"Kittitienne","en":"Kittitian","ar":"سانت كيتسية"}, name: {"fr":"Saint-Christophe-et-Niévès","en":"Saint Kitts and Nevis","ar":"سانت كيتس ونيفيس"}, aliases: ["saint-kitts","st kitts"] },
+    { code: "LC", demonym: {"fr":"Sainte-Lucienne","en":"Saint Lucian","ar":"سانت لوسية"}, name: {"fr":"Sainte-Lucie","en":"Saint Lucia","ar":"سانت لوسيا"}, aliases: ["sainte-lucie","st lucia"] },
+    { code: "VC", demonym: {"fr":"Vincentienne","en":"Vincentian","ar":"سانت فنسنتية"}, name: {"fr":"Saint-Vincent-et-les-Grenadines","en":"Saint Vincent and the Grenadines","ar":"سانت فنسنت والغرينادين"}, aliases: ["saint-vincent","st vincent"] },
+    { code: "TL", demonym: {"fr":"Est-Timoraise","en":"East Timorese","ar":"تيمورية شرقية"}, name: {"fr":"Timor oriental","en":"East Timor","ar":"تيمور الشرقية"}, aliases: ["timor","timor-leste","east timor"] },
+    { code: "KP", demonym: {"fr":"Nord-Coréenne","en":"North Korean","ar":"كورية شمالية"}, name: {"fr":"Corée du Nord","en":"North Korea","ar":"كوريا الشمالية"}, aliases: ["coree du nord","north korea"] },
+    { code: "HK", demonym: {"fr":"Hongkongaise","en":"Hong Konger","ar":"هونغ كونغية"}, name: {"fr":"Hong Kong","en":"Hong Kong","ar":"هونغ كونغ"}, aliases: ["hong kong","hong-kong"] },
+    { code: "MO", demonym: {"fr":"Macaïenne","en":"Macanese","ar":"ماكاوية"}, name: {"fr":"Macao","en":"Macau","ar":"ماكاو"}, aliases: ["macao","macau"] },
+    { code: "TW", demonym: {"fr":"Taïwanaise","en":"Taiwanese","ar":"تايوانية"}, name: {"fr":"Taïwan","en":"Taiwan","ar":"تايوان"}, aliases: ["taiwan","taipei"] },
+    { code: "PR", demonym: {"fr":"Portoricaine","en":"Puerto Rican","ar":"بورتوريكية"}, name: {"fr":"Porto Rico","en":"Puerto Rico","ar":"بورتوريكو"}, aliases: ["puerto rico","porto rico"] },
+    { code: "GF", demonym: {"fr":"Guyanaise","en":"French Guianese","ar":"غويانية فرنسية"}, name: {"fr":"Guyane française","en":"French Guiana","ar":"غويانا الفرنسية"}, aliases: ["guyane","guyane francaise"] },
+    { code: "GP", demonym: {"fr":"Guadeloupéenne","en":"Guadeloupean","ar":"غوادلوبية"}, name: {"fr":"Guadeloupe","en":"Guadeloupe","ar":"غوادلوب"}, aliases: ["guadeloupe"] },
+    { code: "MQ", demonym: {"fr":"Martiniquaise","en":"Martinican","ar":"مارتينيكية"}, name: {"fr":"Martinique","en":"Martinique","ar":"مارتينيك"}, aliases: ["martinique"] },
+    { code: "RE", demonym: {"fr":"Réunionnaise","en":"Reunionese","ar":"ريونيونية"}, name: {"fr":"La Réunion","en":"Reunion","ar":"لا ريونيون"}, aliases: ["reunion","la reunion"] },
+    { code: "YT", demonym: {"fr":"Mahoraise","en":"Mahoran","ar":"مايوتية"}, name: {"fr":"Mayotte","en":"Mayotte","ar":"مايوت"}, aliases: ["mayotte"] },
+    { code: "NC", demonym: {"fr":"Néo-Calédonienne","en":"New Caledonian","ar":"كاليدونية جديدة"}, name: {"fr":"Nouvelle-Calédonie","en":"New Caledonia","ar":"كاليدونيا الجديدة"}, aliases: ["nouvelle-caledonie","new caledonia"] },
+    { code: "PF", demonym: {"fr":"Polynésienne","en":"French Polynesian","ar":"بولينيزية فرنسية"}, name: {"fr":"Polynésie française","en":"French Polynesia","ar":"بولينيزيا الفرنسية"}, aliases: ["polynesie","tahiti"] },
+    { code: "GL", demonym: {"fr":"Groenlandaise","en":"Greenlandic","ar":"غرينلاندية"}, name: {"fr":"Groenland","en":"Greenland","ar":"غرينلاند"}, aliases: ["groenland","greenland"] },
+    { code: "FO", demonym: {"fr":"Féroïenne","en":"Faroese","ar":"فاروية"}, name: {"fr":"Îles Féroé","en":"Faroe Islands","ar":"جزر فارو"}, aliases: ["feroe","faroe"] },
+    { code: "GI", demonym: {"fr":"Gibraltarienne","en":"Gibraltarian","ar":"جبل طارقية"}, name: {"fr":"Gibraltar","en":"Gibraltar","ar":"جبل طارق"}, aliases: ["gibraltar"] },
+    { code: "BM", demonym: {"fr":"Bermudienne","en":"Bermudian","ar":"برمودية"}, name: {"fr":"Bermudes","en":"Bermuda","ar":"برمودا"}, aliases: ["bermudes","bermuda"] },
+    { code: "KY", demonym: {"fr":"Caïmanaise","en":"Caymanian","ar":"كايمانية"}, name: {"fr":"Îles Caïmans","en":"Cayman Islands","ar":"جزر كايمان"}, aliases: ["caimans","cayman"] },
+    { code: "AW", demonym: {"fr":"Arubaise","en":"Aruban","ar":"أروبية"}, name: {"fr":"Aruba","en":"Aruba","ar":"أروبا"}, aliases: ["aruba"] },
+    { code: "CW", demonym: {"fr":"Curaçaoane","en":"Curacaoan","ar":"كوراساوية"}, name: {"fr":"Curaçao","en":"Curacao","ar":"كوراساو"}, aliases: ["curacao"] },
+    { code: "IM", demonym: {"fr":"Mannoise","en":"Manx","ar":"مانكسية"}, name: {"fr":"Île de Man","en":"Isle of Man","ar":"جزيرة مان"}, aliases: ["man","isle of man","ile de man"] },
+    { code: "JE", demonym: {"fr":"Jersiaise","en":"Channel Islander","ar":"جيرزية"}, name: {"fr":"Jersey","en":"Jersey","ar":"جيرزي"}, aliases: ["jersey"] },
+    { code: "GG", demonym: {"fr":"Guernesiaise","en":"Channel Islander","ar":"غيرنزية"}, name: {"fr":"Guernesey","en":"Guernsey","ar":"غيرنزي"}, aliases: ["guernesey","guernsey"] },
+    { code: "SX", demonym: {"fr":"Saint-Martinoise","en":"Sint Maarten","ar":"سانت مارتينية"}, name: {"fr":"Saint-Martin (Pays-Bas)","en":"Sint Maarten","ar":"سينت مارتن"}, aliases: ["sint maarten","saint-martin"] },
+    { code: "MF", demonym: {"fr":"Saint-Martinoise","en":"Saint-Martinoise","ar":"سانت مارتينية"}, name: {"fr":"Saint-Martin (France)","en":"Saint Martin","ar":"سانت مارتن الفرنسية"}, aliases: ["saint martin","saint-martin"] },
+    { code: "BL", demonym: {"fr":"Barthéloméenne","en":"Barthélemois","ar":"بارثيلمية"}, name: {"fr":"Saint-Barthélemy","en":"Saint Barthélemy","ar":"سان بارتيلمي"}, aliases: ["saint-barthelemy","st barts"] },
+    { code: "PM", demonym: {"fr":"Saint-Pierraise","en":"Saint-Pierrais","ar":"سان بييرية"}, name: {"fr":"Saint-Pierre-et-Miquelon","en":"Saint Pierre and Miquelon","ar":"سان بيير وميكلون"}, aliases: ["saint-pierre","saint-pierre-et-miquelon"] },
+    { code: "WF", demonym: {"fr":"Wallisienne","en":"Wallisian","ar":"واليسية"}, name: {"fr":"Wallis-et-Futuna","en":"Wallis and Futuna","ar":"واليس وفوتونا"}, aliases: ["wallis","wallis-et-futuna"] },
+    { code: "TC", demonym: {"fr":"Turquoise","en":"Turks and Caicos Islander","ar":"تيركسية وكايكوسية"}, name: {"fr":"Îles Turques-et-Caïques","en":"Turks and Caicos Islands","ar":"جزر توركس وكايكوس"}, aliases: ["turks and caicos","turques-et-caiques"] },
+    { code: "MS", demonym: {"fr":"Montserratienne","en":"Montserratian","ar":"مونتسيراتية"}, name: {"fr":"Montserrat","en":"Montserrat","ar":"مونتسرات"}, aliases: ["montserrat"] },
+    { code: "AI", demonym: {"fr":"Anguillane","en":"Anguillan","ar":"أنغويلية"}, name: {"fr":"Anguilla","en":"Anguilla","ar":"أنغويلا"}, aliases: ["anguilla"] },
+    { code: "VG", demonym: {"fr":"Vierge britannique","en":"British Virgin Islander","ar":"جزر العذراء البريطانية"}, name: {"fr":"Îles Vierges britanniques","en":"British Virgin Islands","ar":"جزر العذراء البريطانية"}, aliases: ["bvi","virgin islands","vierges britanniques"] },
+    { code: "VI", demonym: {"fr":"Vierge des États-Unis","en":"U.S. Virgin Islander","ar":"جزر العذراء الأمريكية"}, name: {"fr":"Îles Vierges des États-Unis","en":"U.S. Virgin Islands","ar":"جزر العذراء الأمريكية"}, aliases: ["usvi","vierges americaines"] },
+    { code: "FK", demonym: {"fr":"Falklandaise","en":"Falkland Islander","ar":"فوكلاندية"}, name: {"fr":"Îles Malouines","en":"Falkland Islands","ar":"جزر فوكلاند"}, aliases: ["falkland","malouines"] },
+    { code: "SH", demonym: {"fr":"Sainte-Hélène","en":"Saint Helenian","ar":"سانت هيلانية"}, name: {"fr":"Sainte-Hélène","en":"Saint Helena","ar":"سانت هيلانة"}, aliases: ["saint helena","sainte-helene"] },
+    { code: "NU", demonym: {"fr":"Niouéenne","en":"Niuean","ar":"نيوية"}, name: {"fr":"Niue","en":"Niue","ar":"نييوي"}, aliases: ["niue"] },
+    { code: "CK", demonym: {"fr":"Cookienne","en":"Cook Islander","ar":"جزر كوك"}, name: {"fr":"Îles Cook","en":"Cook Islands","ar":"جزر كوك"}, aliases: ["cook islands","iles cook"] },
+    { code: "TK", demonym: {"fr":"Tokelauane","en":"Tokelauan","ar":"توكلوية"}, name: {"fr":"Tokelau","en":"Tokelau","ar":"توكيلاو"}, aliases: ["tokelau"] },
+    { code: "AS", demonym: {"fr":"Samoane américaine","en":"American Samoan","ar":"ساموية أمريكية"}, name: {"fr":"Samoa américaines","en":"American Samoa","ar":"ساموا الأمريكية"}, aliases: ["american samoa","samoa americaines"] },
+    { code: "GU", demonym: {"fr":"Guamanienne","en":"Guamanian","ar":"غوامية"}, name: {"fr":"Guam","en":"Guam","ar":"غوام"}, aliases: ["guam"] },
+    { code: "MP", demonym: {"fr":"Mariannaise","en":"Northern Mariana Islander","ar":"ماريانية شمالية"}, name: {"fr":"Îles Mariannes du Nord","en":"Northern Mariana Islands","ar":"جزر ماريانا الشمالية"}, aliases: ["mariannes","mariana"] },
+    { code: "EH", demonym: {"fr":"Sahraouie","en":"Sahrawi","ar":"صحراوية"}, name: {"fr":"Sahara occidental","en":"Western Sahara","ar":"الصحراء الغربية"}, aliases: ["sahara occidental","western sahara"] },
+    { code: "BQ", demonym: {"fr":"Caribéenne néerlandaise","en":"Dutch Caribbean","ar":"كاريبية هولندية"}, name: {"fr":"Pays-Bas caribéens","en":"Caribbean Netherlands","ar":"الجزر الكاريبية الهولندية"}, aliases: ["bonaire","saba","saint-eustache"] },
+  ];
+
+  function cuNormalizeText(s) {
+    return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  }
+
+  function cuMatchNationality(val, opts = {}) {
+    if (!val) return null;
+    const raw = String(val).trim();
+    if (!raw) return null;
+    const upper = raw.toUpperCase();
+    const byCode = cuNationalities.find((n) => n.code === upper);
+    if (byCode) return byCode.code;
+
+    const needle = cuNormalizeText(raw);
+    if (!needle) return null;
+
+    const exact = cuNationalities.filter((n) => {
+      if (n.code.toLowerCase() === needle) return true;
+      if (cuNormalizeText(n.demonym.fr) === needle) return true;
+      if (cuNormalizeText(n.demonym.en) === needle) return true;
+      if (cuNormalizeText(n.demonym.ar) === needle) return true;
+      if (cuNormalizeText(n.name.fr) === needle) return true;
+      if (cuNormalizeText(n.name.en) === needle) return true;
+      if (cuNormalizeText(n.name.ar) === needle) return true;
+      return (n.aliases || []).some((a) => cuNormalizeText(a) === needle);
+    });
+    if (exact.length === 1) return exact[0].code;
+    if (exact.length > 1) return null;
+
+    if (opts && opts.allowPrefix) {
+      const prefixMatches = cuNationalities.filter((n) => {
+        if (n.demonym.fr && cuNormalizeText(n.demonym.fr).startsWith(needle)) return true;
+        if (n.demonym.en && cuNormalizeText(n.demonym.en).startsWith(needle)) return true;
+        if (n.name.fr && cuNormalizeText(n.name.fr).startsWith(needle)) return true;
+        if (n.name.en && cuNormalizeText(n.name.en).startsWith(needle)) return true;
+        return (n.aliases || []).some((a) => cuNormalizeText(a).startsWith(needle));
+      });
+      if (prefixMatches.length === 1) return prefixMatches[0].code;
+    }
+
+    return null;
+  }
+
+  function cuNationalityLabel(code, l) {
+    if (!code) return '';
+    const lang = l || cuLang() || 'fr';
+    const item = cuNationalities.find((n) => n.code === code.toUpperCase());
+    if (!item) return code;
+    return item.demonym[lang] || item.demonym.fr || item.demonym.en || item.name[lang] || item.name.fr || code;
+  }
+
+  function cuNationalitySelectorHtml(g, idx, prefix = '', disabled = false) {
+    const raw = g?.nationality || '';
+    const matched = cuMatchNationality(raw);
+    const isLegacyUnmatched = !!raw && !matched;
+    const canonicalCode = matched || (isLegacyUnmatched ? raw : '');
+    const displayLabel = matched ? cuNationalityLabel(matched) : (isLegacyUnmatched ? raw : '');
+    const uid = 'nat_' + (prefix || 'gst_') + idx + '_' + Math.random().toString(36).slice(2, 8);
+    const inputId = uid + '_inp';
+    const menuId = uid + '_menu';
+
+    return `
+      <div class="hx-nat-combobox" data-hx-nat-box id="${uid}">
+        <input type="hidden" data-hx-guest-nationality value="${esc(canonicalCode)}">
+        <div class="hx-nat-input-wrap">
+          <input type="text" id="${inputId}" class="hx-nat-search" data-hx-nat-search autocomplete="off" placeholder="Rechercher une nationalité…" value="${esc(displayLabel)}" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="${menuId}" aria-haspopup="listbox" ${disabled ? 'disabled' : ''}>
+          <button type="button" class="hx-nat-clear" data-hx-nat-clear aria-label="Effacer la sélection" ${displayLabel && !disabled ? '' : 'hidden'}>&times;</button>
+        </div>
+        <div id="${menuId}" class="hx-nat-menu" data-hx-nat-menu role="listbox" aria-label="Nationalités" hidden></div>
+        ${isLegacyUnmatched ? `
+          <div class="hx-nat-legacy-alert" data-hx-nat-legacy role="status">
+            <span class="hx-badge-legacy">Valeur existante à vérifier : « ${esc(raw)} »</span>
+            ${!disabled ? '<button type="button" class="hx-link-btn" data-hx-nat-clear-legacy>Corriger</button>' : ''}
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }
+
+  function cuWireNationalitySelectors(container) {
+    if (!container) return;
+    const boxes = container.querySelectorAll('[data-hx-nat-box]');
+    boxes.forEach((box) => {
+      if (box.__hxWired) return;
+      box.__hxWired = true;
+      const hidden = box.querySelector('[data-hx-guest-nationality]');
+      const search = box.querySelector('[data-hx-nat-search]');
+      const clear = box.querySelector('[data-hx-nat-clear]');
+      const menu = box.querySelector('[data-hx-nat-menu]');
+      const legacy = box.querySelector('[data-hx-nat-legacy]');
+      const legacyBtn = box.querySelector('[data-hx-nat-clear-legacy]');
+      const menuId = menu?.id || ('hx_nat_menu_' + Math.random().toString(36).slice(2, 8));
+      if (menu && !menu.id) menu.id = menuId;
+
+      let activeIndex = -1;
+
+      const updateActiveDescendant = (items) => {
+        items.forEach((it, i) => {
+          const isAct = i === activeIndex;
+          it.classList.toggle('is-selected', isAct);
+          it.setAttribute('aria-selected', isAct ? 'true' : 'false');
+          if (isAct) {
+            search.setAttribute('aria-activedescendant', it.id);
+            it.scrollIntoView({ block: 'nearest' });
+          }
+        });
+        if (activeIndex < 0) {
+          search.removeAttribute('aria-activedescendant');
+        }
+      };
+
+      const renderMenu = (items) => {
+        if (!items.length) {
+          menu.innerHTML = '<div class="hx-nat-empty" role="none">Aucune nationalité correspondante</div>';
+          menu.hidden = false;
+          search.setAttribute('aria-expanded', 'true');
+          activeIndex = -1;
+          search.removeAttribute('aria-activedescendant');
+          return;
+        }
+        const lang = cuLang();
+        menu.innerHTML = items.slice(0, 40).map((n, idx) => `
+          <div class="hx-nat-item" role="option" id="${menuId}_opt_${idx}" data-idx="${idx}" data-code="${esc(n.code)}" aria-selected="false" tabindex="-1">
+            <div class="hx-nat-item-main">
+              <span class="hx-nat-item-code">${esc(n.code)}</span>
+              <span class="hx-nat-item-label">${esc(n.demonym[lang] || n.demonym.fr || n.code)}</span>
+            </div>
+            <span class="hx-nat-item-name">${esc(n.name[lang] || n.name.fr || n.code)}</span>
+          </div>
+        `).join('');
+        menu.hidden = false;
+        search.setAttribute('aria-expanded', 'true');
+        activeIndex = -1;
+        search.removeAttribute('aria-activedescendant');
+      };
+
+      const filterList = (query) => {
+        const q = cuNormalizeText(query);
+        if (!q) return cuNationalities;
+        return cuNationalities.filter((n) => {
+          if (n.code.toLowerCase().includes(q)) return true;
+          if (cuNormalizeText(n.demonym.fr).includes(q)) return true;
+          if (cuNormalizeText(n.demonym.en).includes(q)) return true;
+          if (cuNormalizeText(n.demonym.ar).includes(q)) return true;
+          if (cuNormalizeText(n.name.fr).includes(q)) return true;
+          if (cuNormalizeText(n.name.en).includes(q)) return true;
+          if (cuNormalizeText(n.name.ar).includes(q)) return true;
+          return (n.aliases || []).some((a) => cuNormalizeText(a).includes(q));
+        });
+      };
+
+      const selectCode = (code) => {
+        const item = cuNationalities.find((n) => n.code === code);
+        if (!item) return;
+        hidden.value = item.code;
+        search.value = cuNationalityLabel(item.code);
+        search.classList.remove('is-invalid');
+        clear.hidden = false;
+        menu.hidden = true;
+        search.setAttribute('aria-expanded', 'false');
+        search.removeAttribute('aria-activedescendant');
+        activeIndex = -1;
+        if (legacy) legacy.remove();
+        search.dispatchEvent(new Event('change', { bubbles: true }));
+      };
+
+      search.addEventListener('input', () => {
+        const q = search.value.trim();
+        clear.hidden = !q;
+        search.classList.remove('is-invalid');
+        // Immediately decouple canonical hidden input when user edits search text
+        // to prevent silent submission of prior country:
+        if (hidden.value) {
+          const currentLabel = cuNationalityLabel(hidden.value);
+          if (cuNormalizeText(currentLabel) !== cuNormalizeText(q)) {
+            hidden.value = '';
+          }
+        }
+        search.removeAttribute('aria-activedescendant');
+        renderMenu(filterList(q));
+      });
+
+      search.addEventListener('focus', () => {
+        renderMenu(filterList(search.value));
+      });
+
+      search.addEventListener('keydown', (e) => {
+        const items = menu.querySelectorAll('.hx-nat-item');
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          if (menu.hidden) { renderMenu(filterList(search.value)); return; }
+          activeIndex = Math.min(activeIndex + 1, items.length - 1);
+          updateActiveDescendant(items);
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          if (menu.hidden) return;
+          activeIndex = Math.max(activeIndex - 1, 0);
+          updateActiveDescendant(items);
+        } else if (e.key === 'Enter') {
+          if (!menu.hidden && activeIndex >= 0 && items[activeIndex]) {
+            e.preventDefault();
+            selectCode(items[activeIndex].dataset.code);
+          }
+        } else if (e.key === 'Tab') {
+          if (!menu.hidden && activeIndex >= 0 && items[activeIndex]) {
+            selectCode(items[activeIndex].dataset.code);
+          } else {
+            menu.hidden = true;
+            search.setAttribute('aria-expanded', 'false');
+            search.removeAttribute('aria-activedescendant');
+          }
+        } else if (e.key === 'Escape') {
+          menu.hidden = true;
+          search.setAttribute('aria-expanded', 'false');
+          search.removeAttribute('aria-activedescendant');
+          activeIndex = -1;
+        }
+      });
+
+      menu.addEventListener('mousedown', (e) => {
+        const item = e.target.closest('.hx-nat-item');
+        if (item && item.dataset.code) {
+          e.preventDefault();
+          selectCode(item.dataset.code);
+        }
+      });
+
+      clear.addEventListener('click', (e) => {
+        e.preventDefault();
+        hidden.value = '';
+        search.value = '';
+        search.classList.remove('is-invalid');
+        clear.hidden = true;
+        menu.hidden = true;
+        search.setAttribute('aria-expanded', 'false');
+        search.removeAttribute('aria-activedescendant');
+        activeIndex = -1;
+        if (legacy) legacy.remove();
+        search.focus();
+        search.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+
+      if (legacyBtn) {
+        legacyBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          hidden.value = '';
+          search.value = '';
+          search.classList.remove('is-invalid');
+          clear.hidden = true;
+          legacy.remove();
+          search.focus();
+          renderMenu(cuNationalities);
+          search.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+      }
+
+      document.addEventListener('click', (e) => {
+        if (!box.contains(e.target)) {
+          menu.hidden = true;
+          search.setAttribute('aria-expanded', 'false');
+          search.removeAttribute('aria-activedescendant');
+          activeIndex = -1;
+          const currentCode = hidden.value;
+          if (currentCode) {
+            const matched = cuMatchNationality(currentCode);
+            if (matched) {
+              search.value = cuNationalityLabel(matched);
+              search.classList.remove('is-invalid');
+            }
+          } else {
+            const txt = search.value.trim();
+            if (txt) {
+              const matched = cuMatchNationality(txt);
+              if (matched) {
+                selectCode(matched);
+              } else {
+                search.classList.add('is-invalid');
+              }
+            } else {
+              search.value = '';
+              clear.hidden = true;
+              search.classList.remove('is-invalid');
+            }
+          }
+        }
+      });
+    });
   }
 
   function cuStayEditor(booking, linked = null) {
@@ -2920,7 +3462,7 @@
             <option value="M" ${g.sex === 'M' ? 'selected' : ''}>Masculin (M)</option>
             <option value="F" ${g.sex === 'F' ? 'selected' : ''}>Féminin (F)</option>
           </select></label>
-          <label><span>Nationalité</span><input data-hx-guest-nationality placeholder="Ex. Marocaine, Française" value="${esc(g.nationality || '')}"></label>
+          <label><span>Nationalité</span>${cuNationalitySelectorHtml(g, idx)}</label>
           <label><span>Date de naissance</span><input type="date" data-hx-guest-birth value="${esc(g.birthDate || '')}"></label>
           <label><span>Mineurs accompagnants</span><input type="number" min="0" max="10" step="1" data-hx-guest-minors value="${esc(g.minorsUnder18 || 0)}"></label>
           <label><span>Pays de résidence</span><input data-hx-guest-residence placeholder="Ex. Maroc, France" value="${esc(g.residenceCountry || '')}"></label>
@@ -2951,7 +3493,7 @@
           <label><span>Chambre</span><select name="resourceId"><option value="">Attribution automatique</option>${rooms.map((r) => `<option value="${esc(r.id)}" data-type="${esc(r.typeId)}" ${r.id === booking?.resourceId ? 'selected' : ''}>Ch. ${r.n} · ${esc(roomTypeOf(r.n).name)}</option>`).join('')}</select></label>
           <label><span>Canal</span><select name="channel"><option value="direct">Direct</option><option value="booking">Booking.com</option><option value="airbnb">Airbnb</option><option value="expedia">Expedia</option><option value="walkin">Walk-in</option><option value="other">Autre OTA</option></select></label>
           <label><span>Statut</span><select name="status">${statusChoices.map((value) => `<option value="${value}">${statusLabels[value]}</option>`).join('')}</select></label>
-          <label><span>Voyageurs</span><input name="partySize" type="number" min="1" max="12" value="${booking?.partySize || 1}"></label>
+          <label><span>Voyageurs</span><input name="partySize" type="number" min="1" max="12" value="${booking?.partySize || 1}"><small class="hx-capacity-hint" data-hx-capacity-hint></small></label>
           <label><span>Référence OTA <small>· optionnel</small></span><input name="externalRef" maxlength="80" value="${esc(booking?.hotel?.externalRef || '')}" placeholder="Ex. 4219-8840"></label>
           <label><span>Téléphone <small>· optionnel</small></span><input name="phone" maxlength="32" value="${esc(booking?.customer?.phone || '')}"></label>
           <label><span>E-mail <small>· optionnel</small></span><input name="email" type="email" maxlength="160" value="${esc(booking?.customer?.email || '')}"></label>
@@ -2966,7 +3508,7 @@
             </div>
           </div>
           <label class="hx-room-form-wide"><span>Note interne</span><textarea name="note" maxlength="600" rows="2">${esc(booking?.note || '')}</textarea></label>
-        </div><p class="hx-stay-error" data-hx-stay-error role="status"></p><div class="hx-room-form-actions">${booking && ['requested', 'confirmed'].includes(booking.status) ? `<button type="button" class="hx-btn warn" data-action="hx-stay-cancel" data-arg="${esc(booking.id)}">Annuler le séjour</button>` : '<span></span>'}<button class="hx-btn atlas" type="submit">${booking ? 'Enregistrer' : 'Bloquer la chambre'}</button></div>
+        </div><p class="hx-stay-error" data-hx-stay-error role="status"></p><div class="hx-room-form-actions">${booking && ['requested', 'confirmed'].includes(booking.status) ? `<button type="button" class="hx-btn warn" data-action="hx-stay-cancel" data-arg="${esc(booking.id)}">Annuler le séjour</button>` : '<span></span>'}<button class="hx-btn atlas" type="submit">${booking ? 'Enregistrer les modifications' : (booking?.status === 'requested' ? 'Poser une option (bloquer la chambre)' : 'Confirmer la réservation')}</button></div>
       </form>` });
     const form = m.el.querySelector('[data-hx-stay-form]');
     form.__hxStayScope = cuStayScope();
@@ -2977,6 +3519,43 @@
       ['name','phone','email'].forEach(k => { form.elements[k].value = linked.customer?.[k] || ''; });
       if (linked.hotel.dayUse) form.elements.stayMode.value = 'day_use';
     }
+    const submitBtn = form.querySelector('[type="submit"]');
+    const updateSubmitButton = () => {
+      if (booking) {
+        submitBtn.textContent = 'Enregistrer les modifications';
+        return;
+      }
+      const val = form.elements.status?.value;
+      if (val === 'requested') {
+        submitBtn.textContent = 'Poser une option (bloquer la chambre)';
+      } else {
+        submitBtn.textContent = 'Confirmer la réservation';
+      }
+    };
+    form.elements.status.addEventListener('change', updateSubmitButton);
+    updateSubmitButton();
+
+    const updateCapacityValidation = () => {
+      const selectedTypeId = form.elements.roomTypeId.value;
+      const typeObj = types.find(t => t.id === selectedTypeId);
+      const maxGuests = typeObj?.maxGuests || 4;
+      form.elements.partySize.max = maxGuests;
+      const hint = form.querySelector('[data-hx-capacity-hint]');
+      if (hint) hint.textContent = 'Capacité max : ' + maxGuests + ' pers.';
+      const currentParty = Number(form.elements.partySize.value) || 1;
+      const err = form.querySelector('[data-hx-stay-error]');
+      if (currentParty > maxGuests) {
+        if (err) err.textContent = 'La catégorie « ' + (typeObj?.name || selectedTypeId) + ' » ne peut pas accueillir ' + currentParty + ' personnes (max : ' + maxGuests + '). Réduisez le nombre de personnes.';
+        submitBtn.disabled = true;
+      } else {
+        if (err && err.textContent.includes('ne peut pas accueillir')) err.textContent = '';
+        submitBtn.disabled = false;
+      }
+    };
+    form.elements.roomTypeId.addEventListener('change', updateCapacityValidation);
+    form.elements.partySize.addEventListener('input', updateCapacityValidation);
+    updateCapacityValidation();
+
     const toggleDayUse = () => {
       const day = form.elements.stayMode.value === 'day_use';
       form.querySelectorAll('[data-hx-day-use]').forEach(el => { el.hidden = !day; });
@@ -3002,7 +3581,9 @@
           const count = c.querySelectorAll('[data-hx-guest-row]').length;
           const wrap = document.createElement('div');
           wrap.innerHTML = guestRowHtml({}, count);
-          c.appendChild(wrap.firstElementChild);
+          const newRow = wrap.firstElementChild;
+          c.appendChild(newRow);
+          cuWireNationalitySelectors(newRow);
         }
       } else if (e.target.closest('[data-action="hx-remove-guest-row"]')) {
         const row = e.target.closest('[data-hx-guest-row]');
@@ -3011,6 +3592,7 @@
     });
     form.addEventListener('submit', (e) => { e.preventDefault(); cuSubmitStay(form, booking, m); });
     cuWireStayCommercial(form, booking).then(toggleDayUse);
+    cuWireNationalitySelectors(form);
     openModal = { el: m.el, close: m.close };
   }
 
@@ -3113,11 +3695,1503 @@
     }catch(e){host.textContent=e.message||'Dossier indisponible.';}
   }
 
+  function cuParseDelimitedLine(line) {
+    const parts = [];
+    let current = '';
+    let inQuotes = false;
+    let i = 0;
+    const len = line.length;
+    while (i < len) {
+      const c = line[i];
+      if (inQuotes) {
+        if (c === '"') {
+          if (i + 1 < len && line[i + 1] === '"') {
+            current += '"';
+            i += 2;
+            continue;
+          } else {
+            inQuotes = false;
+            i++;
+            continue;
+          }
+        } else {
+          current += c;
+          i++;
+        }
+      } else {
+        if (c === '"') {
+          inQuotes = true;
+          i++;
+        } else if (c === ',' || c === '\t' || c === ';') {
+          parts.push(current.trim());
+          current = '';
+          i++;
+        } else {
+          current += c;
+          i++;
+        }
+      }
+    }
+    parts.push(current.trim());
+    return parts;
+  }
+
+  async function cuGroupReservationModal() {
+    const initialScope = cuStayScope();
+    const initialMerchant = cuMerchantSlug();
+    const initialCache = cuStayCache();
+    const st = cuState(), types = cuTypes(), allRooms = Object.values(st.rooms || {}).sort((a, b) => a.n - b.n);
+    if (!types.length || !allRooms.length) { toast('Configurez vos chambres d’abord', { type: 'warn' }); return; }
+    await cuLoadCommercial();
+    if (initialScope !== cuStayScope() || initialMerchant !== cuMerchantSlug()) return;
+    const commState = cuCommercialState();
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+    const add = (ymd, n) => { const d = new Date(ymd + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+    const tomorrow = add(today, 1);
+
+    const stagedKey = 'kiwi:hotel-group-staged:' + initialMerchant;
+    let staged = null;
+    try {
+      staged = JSON.parse(localStorage.getItem(stagedKey) || 'null');
+    } catch (_) {}
+    if (!staged || staged.merchant !== initialMerchant) staged = null;
+
+    // ── Durable submission intent, v2 (defect 2) ──────────────────────────
+    // kiwi_hx_intent_<dossier> is the ONE authoritative recovery record: it
+    // carries the frozen terms, the exact per-room payloads attempted (with
+    // their stable clientRef identities), the quote position and a status.
+    // The staged draft (kiwi:hotel-group-staged:) stays a UI/progress cache;
+    // whenever both exist and disagree, the unresolved intent wins for the
+    // dossier it covers, and the merge is said out loud. v1 records (terms
+    // only, no rooms) are honoured for their terms and ignored for anything
+    // else. Proven local progress (savedRooms with server answers in hand)
+    // always outranks an unknown-outcome intent for ANOTHER dossier — that
+    // intent simply surfaces again once this dossier is done or discarded.
+    const INTENT_VERSION = 2;
+    const intentKeyFor = (dossierId) => 'kiwi_hx_intent_' + dossierId;
+    const readIntent = (dossierId) => {
+      try {
+        const raw = JSON.parse(localStorage.getItem(intentKeyFor(dossierId)) || 'null');
+        if (!raw || raw.merchant !== initialMerchant || raw.dossierId !== dossierId) return null;
+        return raw;
+      } catch (_) { return null; }
+    };
+    const readAnyUnresolvedIntent = () => {
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (!key || !key.startsWith('kiwi_hx_intent_')) continue;
+          let raw = null;
+          try { raw = JSON.parse(localStorage.getItem(key) || 'null'); } catch (_) { continue; }
+          if (raw && raw.merchant === initialMerchant && raw.status !== 'complete') return raw;
+        }
+      } catch (_) {}
+      return null;
+    };
+    const writeIntent = (record) => {
+      // Throws on quota/denied storage: the caller must stop before any
+      // booking write when the authoritative record cannot be persisted.
+      localStorage.setItem(intentKeyFor(record.dossierId), JSON.stringify(record));
+    };
+
+    const pendingIntent = readAnyUnresolvedIntent();
+    const draftSavedCount = (staged && staged.savedRooms) ? Object.keys(staged.savedRooms).length : 0;
+    // Adopt the in-flight dossier only when this draft holds no proven rooms.
+    const adoptIntent = !!(pendingIntent && pendingIntent.dossierId
+      && (!staged || staged.dossierId !== pendingIntent.dossierId)
+      && draftSavedCount === 0);
+    let intentNotice = '';
+    if (pendingIntent && pendingIntent.dossierId && (!staged || staged.dossierId !== pendingIntent.dossierId) && !adoptIntent) {
+      intentNotice = 'other-pending';
+    }
+    if (adoptIntent) {
+      staged = null;
+      intentNotice = 'adopted';
+    }
+    // Terms of the adopted intent (same dossier, or newly adopted dossier).
+    const intentTerms = (pendingIntent && (adoptIntent || (staged && staged.dossierId === pendingIntent.dossierId)) && pendingIntent.terms && typeof pendingIntent.terms === 'object')
+      ? { ...pendingIntent.terms }
+      : null;
+    const intentRooms = (pendingIntent && (adoptIntent || (staged && staged.dossierId === pendingIntent.dossierId)) && Array.isArray(pendingIntent.rooms))
+      ? pendingIntent.rooms.filter(r => r && r.roomId)
+      : [];
+    const intentTravelers = (pendingIntent && (adoptIntent || (staged && staged.dossierId === pendingIntent.dossierId)) && Array.isArray(pendingIntent.travelers) && pendingIntent.travelers.length)
+      ? pendingIntent.travelers
+      : null;
+
+    let groupDossierId = (staged && staged.dossierId)
+      ? staged.dossierId
+      : ((pendingIntent && adoptIntent)
+        ? pendingIntent.dossierId
+        : ('grp_' + Date.now() + '_' + crypto.randomUUID().slice(0, 8)));
+
+    let savedRooms = (staged && staged.savedRooms) ? staged.savedRooms : {};
+    let failedRooms = (staged && staged.failedRooms) ? staged.failedRooms : {};
+    let quoteBreakdown = (staged && staged.quoteBreakdown) ? staged.quoteBreakdown : {};
+    let quoteRevision = (staged && staged.quoteRevision != null) ? staged.quoteRevision : null;
+    let quoteAccepted = !!(staged && staged.quoteAccepted && staged.quoteBreakdown && Object.keys(staged.quoteBreakdown).length > 0);
+    if (!staged && pendingIntent && adoptIntent) {
+      quoteBreakdown = (pendingIntent.quoteBreakdown && typeof pendingIntent.quoteBreakdown === 'object') ? { ...pendingIntent.quoteBreakdown } : {};
+      quoteRevision = (pendingIntent.quoteRevision != null) ? pendingIntent.quoteRevision : null;
+      quoteAccepted = !!(pendingIntent.quoteAccepted && Object.keys(quoteBreakdown).length > 0);
+    }
+    // Frozen dossier terms (defect 1): once any room is saved, dates, account,
+    // meal plan, channel and group/contact identity are locked in the DOM and
+    // every later submit reads them from here — never from disabled controls
+    // that FormData silently drops. Intent terms (an actual attempt) outrank
+    // the draft cache.
+    let committedTerms = (staged && staged.committedTerms && typeof staged.committedTerms === 'object')
+      ? { ...staged.committedTerms }
+      : null;
+    if (!committedTerms && intentTerms) committedTerms = { ...intentTerms };
+    // Per-room commercial directory revision captured with each accepted quote
+    // (defect 4): a quote is only submittable when every room was priced under
+    // the single revision the group was reviewed with.
+    let quoteRevs = (staged && staged.quoteRevs && typeof staged.quoteRevs === 'object')
+      ? { ...staged.quoteRevs }
+      : {};
+    if (!staged && pendingIntent && adoptIntent && pendingIntent.quoteRevs && typeof pendingIntent.quoteRevs === 'object') {
+      quoteRevs = { ...pendingIntent.quoteRevs };
+    }
+
+    const selectedRoomIds = new Set(
+      (staged && Array.isArray(staged.selectedRoomIds) && staged.selectedRoomIds.length)
+        ? staged.selectedRoomIds
+        : []
+    );
+    for (const r of intentRooms) selectedRoomIds.add(r.roomId);
+
+    let travelers = (staged && Array.isArray(staged.travelers) && staged.travelers.length)
+      ? staged.travelers
+      : (intentTravelers
+        ? JSON.parse(JSON.stringify(intentTravelers))
+        : [{ id: 'gst_' + crypto.randomUUID().slice(0, 12), name: '', sex: '', nationality: '', residenceCountry: '', birthDate: '', idDocType: '', idDocNumber: '', roomId: '' }]);
+
+    const it = intentTerms || {};
+    const initialGroupName = (staged && staged.groupName) || it.groupName || '';
+    const initialCheckIn = (staged && staged.checkIn) || it.checkIn || today;
+    const initialCheckOut = (staged && staged.checkOut) || it.checkOut || tomorrow;
+    const initialContactName = (staged && staged.contactName) || it.contactName || '';
+    const initialContactPhone = (staged && staged.contactPhone) || it.contactPhone || '';
+    const initialContactEmail = (staged && staged.contactEmail) || it.contactEmail || '';
+    const initialAccountId = (staged && staged.accountId) || it.accountId || '';
+    const initialChannel = (staged && staged.channel) || it.channel || 'direct';
+    const initialBoard = (staged && staged.board) || it.board || 'room_only';
+
+    const hasSavedRooms = Object.keys(savedRooms).length > 0;
+
+    const m = K().modal({
+      tag: 'RÉSERVATION DE GROUPE',
+      title: 'Nouveau dossier groupe',
+      desc: 'Sélection multi-chambres avec contrôle de disponibilité serveur, répartition des voyageurs et pré-confirmation.',
+      width: 920,
+      body: `
+        <form class="hx-group-modal" data-hx-group-form>
+          <div data-hx-group-recovery-slot>
+            ${hasSavedRooms ? `
+              <div class="hx-group-partial-alert" data-hx-group-resume-alert>
+                <b>Dossier en cours de reprise</b> : ${Object.keys(savedRooms).length} chambre(s) déjà enregistrée(s) sous le dossier <code>${esc(groupDossierId)}</code>.
+                <br>Les chambres confirmées sont conservées et verrouillées. Vous pouvez finaliser les chambres restantes ou remplacer une chambre indisponible.
+                <div style="margin-top:6px;display:flex;gap:8px;">
+                  <button type="button" class="hx-link-btn" data-action="hx-discard-staged">Abandonner ce brouillon local</button>
+                </div>
+              </div>
+            ` : ''}
+          </div>
+
+          <div class="hx-commercial-hero">
+            <div>
+              <span class="hx-commercial-eyebrow">DOSSIER GROUPE · RÉSERVATION MULTI-CHAMBRES</span>
+              <h3 style="margin:4px 0;font-size:16px;">Séminaires, agences et groupes de voyageurs</h3>
+              <p style="font-size:12px;color:var(--n-600);margin:0;">Chaque chambre est contrôlée et garantie sous la même référence de dossier.</p>
+            </div>
+          </div>
+
+          <fieldset class="hx-room-form-wide" style="border:1px solid var(--n-200);border-radius:12px;padding:14px;">
+            <legend style="font-size:12px;font-weight:600;padding:0 6px;">1. Informations du groupe et séjour</legend>
+            <div class="hx-room-form hx-type-form">
+              <label class="hx-room-form-wide"><span>Nom du groupe / événement *</span><input name="groupName" required maxlength="120" placeholder="Ex. Séminaire Atlas Tech, Groupe Tourisme" value="${esc(initialGroupName)}"></label>
+              <label><span>Date d'arrivée *</span><input name="checkIn" type="date" required value="${esc(initialCheckIn)}"></label>
+              <label><span>Date de départ *</span><input name="checkOut" type="date" required value="${esc(initialCheckOut)}"></label>
+              <label><span>Contact principal (nom) *</span><input name="contactName" required maxlength="100" placeholder="Nom du responsable" value="${esc(initialContactName)}"></label>
+              <label><span>Téléphone contact</span><input name="contactPhone" maxlength="32" placeholder="Ex. +212 6..." value="${esc(initialContactPhone)}"></label>
+              <label><span>E-mail contact</span><input name="contactEmail" type="email" maxlength="160" placeholder="contact@groupe.com" value="${esc(initialContactEmail)}"></label>
+              <label><span>Compte commercial</span><select name="accountId">
+                <option value="">Sans compte commercial</option>
+                ${(commState.accounts || []).filter(a => !a.archived).map(a => `<option value="${esc(a.id)}" ${a.id === initialAccountId ? 'selected' : ''}>${esc(cuKinds[a.kind] + ' · ' + a.name)}</option>`).join('')}
+              </select></label>
+              <label><span>Canal</span><select name="channel">
+                <option value="direct" ${initialChannel === 'direct' ? 'selected' : ''}>Direct</option>
+                <option value="agency" ${initialChannel === 'agency' ? 'selected' : ''}>Agence</option>
+                <option value="booking" ${initialChannel === 'booking' ? 'selected' : ''}>Booking.com</option>
+                <option value="expedia" ${initialChannel === 'expedia' ? 'selected' : ''}>Expedia</option>
+                <option value="other" ${initialChannel === 'other' ? 'selected' : ''}>Autre</option>
+              </select></label>
+              <label><span>Formule repas par défaut</span><select name="board">
+                ${Object.entries(cuBoards).map(([v, l]) => `<option value="${v}" ${v === initialBoard ? 'selected' : ''}>${esc(l)}</option>`).join('')}
+              </select></label>
+            </div>
+          </fieldset>
+
+          <fieldset class="hx-room-form-wide" style="border:1px solid var(--n-200);border-radius:12px;padding:14px;">
+            <legend style="font-size:12px;font-weight:600;padding:0 6px;">2. Sélection des chambres</legend>
+            <div class="hx-group-filter-bar" style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start;margin-bottom:12px;font-size:12px;">
+              <div style="display:flex;flex-direction:column;gap:4px;">
+                <span style="font-weight:500;">Section / Étage (choix multiple) :</span>
+                <div class="hx-group-filter-floors" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;">
+                  ${Object.values(st.floors || {}).map(f => `
+                    <label class="hx-filter-pill-label">
+                      <input type="checkbox" data-hx-filter-floor="${esc(f.id)}">
+                      <span>${esc(f.name)}</span>
+                    </label>
+                  `).join('')}
+                </div>
+              </div>
+              <label>Catégorie :
+                <select data-hx-filter-type>
+                  <option value="">Toutes les catégories</option>
+                  ${types.map(t => `<option value="${esc(t.id)}">${esc(t.name)}</option>`).join('')}
+                </select>
+              </label>
+              <label>Vue :
+                <select data-hx-filter-view>
+                  <option value="">Toutes les vues</option>
+                  ${((Array.isArray(st.views) && st.views.length) ? st.views : DEFAULT_VIEWS).map(v => `<option value="${esc(v)}">${esc(VIEW_LABELS[v]?.fr || v)}</option>`).join('')}
+                </select>
+              </label>
+              <label>Capacité min. :
+                <select data-hx-filter-cap>
+                  <option value="0">Toutes capacités</option>
+                  <option value="1">1+ personne</option>
+                  <option value="2">2+ personnes</option>
+                  <option value="3">3+ personnes</option>
+                  <option value="4">4+ personnes</option>
+                </select>
+              </label>
+              <label>Portes communicantes :
+                <select data-hx-filter-conn>
+                  <option value="">Toutes</option>
+                  <option value="with">Avec porte communicante</option>
+                  <option value="without">Sans communicante</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="hx-group-rooms-grid" data-hx-group-rooms-grid></div>
+
+            <div class="hx-group-summary-card" data-hx-rooms-summary style="margin-top:10px;">
+              <span data-hx-rooms-counter>0 chambre sélectionnée</span>
+            </div>
+          </fieldset>
+
+          <fieldset class="hx-room-form-wide" style="border:1px solid var(--n-200);border-radius:12px;padding:14px;">
+            <legend style="font-size:12px;font-weight:600;padding:0 6px;">3. Fiche et répartition des voyageurs</legend>
+            <div class="hx-group-paste-wrap">
+              <details data-hx-import-details>
+                <summary style="font-size:12px;color:var(--atlas);cursor:pointer;font-weight:500;">Importer rapidement une liste de voyageurs (copier-coller CSV / TSV)</summary>
+                <div style="margin-top:8px;">
+                  <textarea class="hx-group-paste-area" data-hx-group-paste placeholder="Collez les voyageurs (un voyageur par ligne : &quot;Nom, Prénom&quot;, Nationalité, Document)..."></textarea>
+                  <div style="margin-top:6px;display:flex;gap:8px;align-items:center;">
+                    <button type="button" class="hx-btn ghost" data-action="hx-preview-paste">Prévisualiser l’import</button>
+                  </div>
+                  <div data-hx-import-preview-area style="margin-top:8px;"></div>
+                </div>
+              </details>
+            </div>
+
+            <div class="hx-group-travelers-sec" style="margin-top:10px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span style="font-size:12px;font-weight:600;color:var(--ink);" data-hx-travelers-count>${travelers.length} voyageur(s)</span>
+                <button type="button" class="hx-btn ghost" data-action="hx-add-group-traveler">+ Ajouter un voyageur</button>
+              </div>
+              <div data-hx-group-travelers-container></div>
+              <div data-hx-capacity-alerts style="margin-top:8px;"></div>
+            </div>
+          </fieldset>
+
+          <div data-hx-group-quote-slot></div>
+
+          <div class="hx-group-summary-card" data-hx-group-review>
+            <h4 style="margin:0 0 6px;font-size:13.5px;color:var(--ink);">Récapitulatif du dossier de groupe</h4>
+            <div class="hx-group-summary-grid">
+              <div><small style="color:var(--n-500);display:block;">Identifiant dossier</small><code style="font-family:var(--mono);font-size:11.5px;">${esc(groupDossierId)}</code></div>
+              <div><small style="color:var(--n-500);display:block;">Période</small><span data-hx-rev-dates>-</span></div>
+              <div><small style="color:var(--n-500);display:block;">Chambres réservées</small><b data-hx-rev-rooms>0 chambre</b></div>
+              <div><small style="color:var(--n-500);display:block;">Voyageurs enregistrés</small><span data-hx-rev-guests>0 pers.</span></div>
+            </div>
+          </div>
+
+          <p class="hx-stay-error" data-hx-group-error role="status" style="margin:4px 0;"></p>
+
+          <div class="hx-room-form-actions">
+            <button type="button" class="hx-btn ghost" data-action="hx-group-cancel">Fermer</button>
+            <button type="submit" class="hx-btn atlas" data-hx-group-submit>${hasSavedRooms ? 'Reprendre la confirmation (' + Object.keys(savedRooms).length + ' enregistrée(s))' : 'Confirmer la réservation du groupe'}</button>
+          </div>
+        </form>
+      `
+    });
+
+    openModal = { el: m.el, close: m.close };
+    const form = m.el.querySelector('[data-hx-group-form]');
+    const roomsGrid = form.querySelector('[data-hx-group-rooms-grid]');
+    const roomsCounter = form.querySelector('[data-hx-rooms-counter]');
+    const travelersContainer = form.querySelector('[data-hx-group-travelers-container]');
+    const travelersCountLabel = form.querySelector('[data-hx-travelers-count]');
+    const capacityAlerts = form.querySelector('[data-hx-capacity-alerts]');
+    const quoteSlot = form.querySelector('[data-hx-group-quote-slot]');
+    const errorEl = form.querySelector('[data-hx-group-error]');
+
+    let filterFloors = new Set();
+    let filterType = '';
+    let filterView = '';
+    let filterMinCap = 0;
+    let filterConn = '';
+
+    // A partially committed dossier is one commercial identity: group name,
+    // contact, channel, dates, account and meal plan all freeze with the
+    // first saved room. They must not LOOK editable afterwards — any edit
+    // would either split the dossier across two identities or be silently
+    // ignored for the rooms already on the server. The frozen values live in
+    // committedTerms (defect 1) and are restored from the draft cache.
+    const lockCommittedFields = () => {
+      // Locked once the dossier has proven rooms OR frozen terms (an adopted
+      // unresolved intent): in both cases the controls no longer feed the
+      // submission, and an editable look would promise edits that go nowhere.
+      const frozen = Object.keys(savedRooms).length > 0 || !!committedTerms;
+      for (const name of ['groupName', 'checkIn', 'checkOut', 'contactName', 'contactPhone', 'contactEmail', 'accountId', 'channel', 'board']) {
+        if (form.elements[name]) form.elements[name].disabled = frozen;
+      }
+    };
+
+    const persistStaged = () => {
+      try {
+        const payload = {
+          merchant: initialMerchant,
+          dossierId: groupDossierId,
+          groupName: String(form.elements.groupName?.value || '').trim(),
+          checkIn: form.elements.checkIn?.value,
+          checkOut: form.elements.checkOut?.value,
+          contactName: String(form.elements.contactName?.value || '').trim(),
+          contactPhone: String(form.elements.contactPhone?.value || '').trim(),
+          contactEmail: String(form.elements.contactEmail?.value || '').trim(),
+          accountId: form.elements.accountId?.value || '',
+          channel: form.elements.channel?.value || 'direct',
+          board: form.elements.board?.value || 'room_only',
+          committedTerms,
+          quoteRevs,
+          selectedRoomIds: Array.from(selectedRoomIds),
+          savedRooms,
+          failedRooms,
+          travelers,
+          quoteBreakdown,
+          quoteRevision,
+          quoteAccepted,
+          updatedAt: Date.now(),
+        };
+        localStorage.setItem(stagedKey, JSON.stringify(payload));
+        return true;
+      } catch (_) { return false; }
+    };
+
+    // Authoritative submission terms for this attempt (defect 1). Frozen
+    // terms win over live controls: after a partial save the controls that
+    // carry them are disabled (and therefore invisible to FormData), so the
+    // frozen model is the only honest source.
+    const getTerms = () => {
+      if (committedTerms) return { ...committedTerms };
+      return {
+        groupName: String(form.elements.groupName?.value || '').trim(),
+        checkIn: form.elements.checkIn?.value || '',
+        checkOut: form.elements.checkOut?.value || '',
+        contactName: String(form.elements.contactName?.value || '').trim(),
+        contactPhone: String(form.elements.contactPhone?.value || '').trim(),
+        contactEmail: String(form.elements.contactEmail?.value || '').trim(),
+        accountId: form.elements.accountId?.value || '',
+        channel: form.elements.channel?.value || 'direct',
+        board: form.elements.board?.value || 'room_only',
+      };
+    };
+    const freezeTerms = (terms) => {
+      committedTerms = { ...terms };
+      persistStaged();
+    };
+    const termsDiffer = (a, b) => {
+      const keys = ['groupName', 'checkIn', 'checkOut', 'contactName', 'contactPhone', 'contactEmail', 'accountId', 'channel', 'board'];
+      return keys.some(k => String(a?.[k] ?? '') !== String(b?.[k] ?? ''));
+    };
+
+    const cuGroupQuoteSignature = () => {
+      const checkIn = form.elements.checkIn?.value || '';
+      const checkOut = form.elements.checkOut?.value || '';
+      const board = form.elements.board?.value || 'room_only';
+      const accountId = form.elements.accountId?.value || '';
+      const selected = Array.from(selectedRoomIds).sort();
+      const roomsInfo = selected.map(rid => {
+        const room = allRooms.find(r => r.id === rid);
+        const count = travelers.filter(t => t.roomId === rid).length;
+        return `${rid}:${room?.typeId || ''}:${count}`;
+      }).join(';');
+      return `${checkIn}|${checkOut}|${board}|${accountId}|${roomsInfo}`;
+    };
+
+    let activeQuoteSignature = quoteAccepted ? cuGroupQuoteSignature() : '';
+
+    const invalidateQuote = () => {
+      quoteGen++;
+      quoteAccepted = false;
+      quoteBreakdown = {};
+      quoteRevision = null;
+      quoteRevs = {};
+      activeQuoteSignature = '';
+      renderQuoteBox();
+      persistStaged();
+    };
+
+    const syncTravelersFromDom = () => {
+      const rows = travelersContainer.querySelectorAll('[data-hx-group-traveler]');
+      if (!rows.length) return;
+      const updated = [];
+      rows.forEach((row) => {
+        const id = row.dataset.travelerId;
+        const name = String(row.querySelector('[data-hx-t-name]')?.value || '').trim();
+        const sex = String(row.querySelector('[data-hx-t-sex]')?.value || '').trim();
+        const nationality = String(row.querySelector('[data-hx-guest-nationality]')?.value || '').trim();
+        const birthDate = String(row.querySelector('[data-hx-t-birth]')?.value || '').trim();
+        const idDocNumber = String(row.querySelector('[data-hx-t-doc]')?.value || '').trim();
+        const roomId = String(row.querySelector('[data-hx-t-room]')?.value || '').trim();
+        const existing = travelers.find(t => t.id === id) || {};
+        updated.push({
+          ...existing,
+          id,
+          name,
+          sex,
+          nationality,
+          birthDate,
+          idDocNumber,
+          roomId,
+        });
+      });
+      travelers = updated;
+    };
+
+    const renderRooms = () => {
+      const filtered = allRooms.filter(r => {
+        if (filterFloors.size > 0 && !filterFloors.has(r.floorId) && !filterFloors.has(r.floor)) return false;
+        if (filterType && r.typeId !== filterType) return false;
+        if (filterView && r.view !== filterView) return false;
+        if (filterMinCap > 0 && (roomTypeOf(r.n).maxGuests || 2) < filterMinCap) return false;
+        const hasConn = Array.isArray(r.connectingRoomIds) && r.connectingRoomIds.length > 0;
+        if (filterConn === 'with' && !hasConn) return false;
+        if (filterConn === 'without' && hasConn) return false;
+        return true;
+      });
+
+      if (!filtered.length) {
+        roomsGrid.innerHTML = '<div style="padding:16px;color:var(--n-500);font-size:12px;text-align:center;">Aucune chambre correspondante aux filtres.</div>';
+        return;
+      }
+
+      roomsGrid.innerHTML = filtered.map(r => {
+        const type = roomTypeOf(r.n);
+        const isChecked = selectedRoomIds.has(r.id);
+        const isSaved = !!savedRooms[r.id];
+        const isFailed = !!failedRooms[r.id];
+        const connRoomNumbers = (r.connectingRoomIds || [])
+          .map(cid => allRooms.find(x => x.id === cid)?.n)
+          .filter(Boolean);
+
+        let badge = '';
+        if (isSaved) {
+          badge = '<span class="hx-badge-saved">Chambre enregistrée</span>';
+        } else if (isFailed) {
+          badge = '<span class="hx-badge-dup" style="font-size:10px;">Échec : ' + esc(failedRooms[r.id]) + '</span>';
+        }
+
+        return `
+          <label class="hx-group-room-card ${isChecked ? 'is-selected' : ''} ${isSaved ? 'is-saved' : ''}" data-room-card-id="${esc(r.id)}">
+            <input type="checkbox" data-hx-group-cb value="${esc(r.id)}" ${isChecked ? 'checked' : ''} ${isSaved ? 'disabled' : ''}>
+            <div class="hx-group-room-details">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span class="hx-group-room-title">Chambre ${r.n}</span>
+                ${badge}
+              </div>
+              <span class="hx-group-room-sub">${esc(type.name)} · max ${type.maxGuests || 4} pers. · ${type.base != null ? MAD(type.base) + '/nuit' : 'Tarif standard'}</span>
+              ${connRoomNumbers.length ? `<span class="hx-group-room-conn">Porte communicante : ch. ${esc(connRoomNumbers.join(', '))}</span>` : ''}
+            </div>
+          </label>
+        `;
+      }).join('');
+    };
+
+    const renderQuoteBreakdownHtml = () => {
+      const selected = allRooms.filter(r => selectedRoomIds.has(r.id));
+      let totalCentsAll = 0;
+      let allQuoted = true;
+      const lines = selected.map(r => {
+        const q = quoteBreakdown[r.id];
+        if (!q || !Array.isArray(q.rows) || !Number.isSafeInteger(q.totalCents)) {
+          allQuoted = false;
+          return `<div>Ch. ${r.n} (${esc(roomTypeOf(r.n).name)}) : <span style="color:var(--warn-ink);">En attente de calcul</span></div>`;
+        }
+        totalCentsAll += q.totalCents;
+        const roomMad = (q.totalCents / 100).toFixed(2);
+        const nights = q.rows.length;
+        const rates = q.rows.map(row => row.amountCents / 100);
+        const minRate = Math.min(...rates).toFixed(2);
+        const maxRate = Math.max(...rates).toFixed(2);
+        const rateSummary = minRate === maxRate ? `${minRate} MAD/nuit` : `de ${minRate} à ${maxRate} MAD/nuit`;
+        const taxLabel = q.taxBasis === 'exclusive' ? 'HT' : 'TTC';
+        return `<div>Ch. ${r.n} (${esc(roomTypeOf(r.n).name)}) : <b>${roomMad} MAD ${taxLabel}</b> (${nights} nuit${nights > 1 ? 's' : ''} · ${rateSummary})</div>`;
+      });
+      if (allQuoted && selected.length > 0) {
+        const totalMadAll = (totalCentsAll / 100).toFixed(2);
+        const groupTax = Object.values(quoteBreakdown)[0]?.taxBasis === 'exclusive' ? 'HT' : 'TTC';
+        lines.push(`<div style="margin-top:4px;font-weight:700;color:var(--ink);border-top:1px dashed var(--n-200);padding-top:4px;">Total commercial groupe : ${totalMadAll} MAD ${groupTax}</div>`);
+      }
+      return lines.join('');
+    };
+
+    const renderQuoteBox = () => {
+      const board = form.elements.board?.value || 'room_only';
+      const accountId = form.elements.accountId?.value || '';
+      const selected = allRooms.filter(r => selectedRoomIds.has(r.id));
+      const isCommercial = (board !== 'room_only' || !!accountId);
+      if (!isCommercial) {
+        quoteSlot.innerHTML = '';
+        return;
+      }
+
+      const allQuoted = selected.length > 0 && selected.every(r => quoteBreakdown[r.id] && Number.isSafeInteger(quoteBreakdown[r.id].totalCents));
+      const hasTaxExclusive = selected.some(r => quoteBreakdown[r.id]?.taxBasis === 'exclusive');
+
+      let unsupportedWarn = '';
+      if (board !== 'room_only' && !accountId) {
+        unsupportedWarn = '<p class="hx-warn-note" style="color:var(--warn-ink);background:var(--warn-soft);padding:6px 10px;border-radius:6px;font-size:11.5px;margin:4px 0;">Formule repas : un compte commercial avec des contrats actifs est requis pour cette formule.</p>';
+      } else {
+        const overCapRooms = selected.filter(r => {
+          const count = travelers.filter(t => t.roomId === r.id).length;
+          return count > 3;
+        });
+        if (overCapRooms.length > 0) {
+          unsupportedWarn = `<p class="hx-warn-note" style="color:var(--danger,#b91c1c);background:rgba(201,74,58,0.08);padding:6px 10px;border-radius:6px;font-size:11.5px;margin:4px 0;">Attention : La tarification contractuelle couvre au maximum 3 personnes par chambre. Les chambres ${overCapRooms.map(r => r.n).join(', ')} dépassent cette limite (1 à 3 pers.).</p>`;
+        }
+      }
+
+      let acceptCheckboxHtml = '';
+      if (allQuoted && !unsupportedWarn) {
+        if (hasTaxExclusive) {
+          acceptCheckboxHtml = '<p class="hx-warn-note" style="color:var(--warn-ink);margin-top:6px;font-size:11.5px;">Tarif HT détecté : la configuration fiscale est requise avant validation.</p>';
+        } else {
+          acceptCheckboxHtml = `
+            <label class="hx-quote-accept" style="font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;">
+              <input type="checkbox" data-hx-group-accept-quote ${quoteAccepted ? 'checked' : ''}>
+              <span>J’accepte ce devis commercial pour l’ensemble des chambres et la formule choisie.</span>
+            </label>
+          `;
+        }
+      } else {
+        acceptCheckboxHtml = `
+          <label class="hx-quote-accept" style="font-size:12px;display:flex;align-items:center;gap:6px;color:var(--n-500);cursor:not-allowed;">
+            <input type="checkbox" disabled>
+            <span>Simulez un devis complet et valide pour pouvoir accepter les tarifs.</span>
+          </label>
+        `;
+      }
+
+      quoteSlot.innerHTML = `
+        <div class="hx-quote-group-card">
+          <div class="hx-quote-group-title">Tarification commerciale · Formule : ${esc(cuBoards[board] || board)}</div>
+          ${quoteRevision != null ? `<div style="font-size:11px;color:var(--n-500);margin:2px 0 6px;">Révision commerciale n°${quoteRevision} · ${quoteAccepted ? 'devis accepté pour ces tarifs' : 'en attente d’acceptation'}</div>` : ''}
+          <p style="font-size:11.5px;color:var(--n-600);margin:0 0 8px;">Cette formule nécessite la simulation et l’acceptation d’un devis commercial avant validation.</p>
+          ${unsupportedWarn}
+          <div class="hx-quote-group-breakdown" data-hx-quote-breakdown>
+            ${allQuoted ? renderQuoteBreakdownHtml() : '<span style="font-style:italic;">Devis non encore simulé ou incomplet.</span>'}
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;margin-top:6px;">
+            <button type="button" class="hx-btn ghost" data-action="hx-simulate-group-quote" style="font-size:11.5px;padding:4px 10px;">Simuler / Actualiser le devis</button>
+          </div>
+          <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--n-100);">
+            ${acceptCheckboxHtml}
+          </div>
+        </div>
+      `;
+    };
+
+    // Monotonic quote generation (defect 4): overlapping simulations and
+    // late failures must neither replace nor clear a newer quote. The
+    // signature guard below only sees user edits; the generation sees time.
+    let quoteGen = 0;
+
+    const simulateQuotes = async () => {
+      syncTravelersFromDom();
+      const selected = allRooms.filter(r => selectedRoomIds.has(r.id));
+      if (!selected.length) {
+        toast('Sélectionnez au moins une chambre avant de simuler le devis.', { type: 'warn' });
+        return;
+      }
+      const board = form.elements.board?.value || 'room_only';
+      const accountId = form.elements.accountId?.value || null;
+      const checkIn = form.elements.checkIn.value;
+      const checkOut = form.elements.checkOut.value;
+
+      if (board !== 'room_only' && !accountId) {
+        toast('Formule repas : sélectionnez un compte commercial avant de simuler le devis.', { type: 'warn' });
+        return;
+      }
+
+      for (const room of selected) {
+        const occ = travelers.filter(t => t.roomId === room.id).length;
+        if (occ > 3) {
+          toast(`Chambre ${room.n} : la tarification contractuelle couvre de 1 à 3 personnes (actuellement ${occ}).`, { type: 'warn' });
+          return;
+        }
+      }
+
+      const simBtn = form.querySelector('[data-action="hx-simulate-group-quote"]');
+      if (simBtn) { simBtn.disabled = true; simBtn.textContent = 'Calcul en cours…'; }
+
+      quoteBreakdown = {};
+      quoteAccepted = false;
+      quoteRevision = null;
+      quoteRevs = {};
+      const targetSig = cuGroupQuoteSignature();
+      const gen = ++quoteGen;
+
+      try {
+        let firstRev = null;
+        const revs = {};
+        for (const room of selected) {
+          const roomGuests = travelers.filter(t => t.roomId === room.id);
+          const occupancy = Math.max(1, roomGuests.length);
+          const res = await fetch('/api/hotel/commercial', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'quote',
+              merchant: initialMerchant,
+              accountId,
+              roomTypeId: room.typeId,
+              checkIn,
+              checkOut,
+              occupancy,
+              board,
+            }),
+          });
+
+          if (initialScope !== cuStayScope() || initialMerchant !== cuMerchantSlug() || openModal?.el !== m.el || !form.isConnected) {
+            return;
+          }
+          if (gen !== quoteGen) {
+            return;
+          }
+          if (targetSig !== cuGroupQuoteSignature()) {
+            return;
+          }
+
+          const b = await res.json().catch(() => ({}));
+          if (gen !== quoteGen) {
+            return;
+          }
+          if (!res.ok || !b.quote) {
+            throw new Error('Chambre ' + room.n + ' : ' + (cuCommercialError(b.error) || b.error || 'Erreur devis'));
+          }
+          // One reviewed group, one directory revision (defect 4): if the
+          // commercial directory moved between two rooms' responses, the
+          // displayed totals would mix two price lists while the submission
+          // carries a single revision. Reject the whole simulation instead.
+          if (!Number.isSafeInteger(b.rev)) {
+            throw new Error('Chambre ' + room.n + ' : devis sans révision vérifiable. Relancez la simulation.');
+          }
+          if (firstRev === null) {
+            firstRev = b.rev;
+          } else if (b.rev !== firstRev) {
+            throw new Error('Le répertoire commercial a changé pendant la simulation (révision ' + firstRev + ' puis ' + b.rev + '). Relancez la simulation pour un devis cohérent.');
+          }
+          revs[room.id] = b.rev;
+          quoteBreakdown[room.id] = b.quote;
+        }
+
+        if (gen !== quoteGen) {
+          return;
+        }
+        quoteRevision = firstRev;
+        quoteRevs = revs;
+        activeQuoteSignature = targetSig;
+        renderQuoteBox();
+        persistStaged();
+        toast('Devis commercial simulé avec succès', { type: 'success' });
+      } catch (err) {
+        // A late failure from an older attempt must not wipe the newer
+        // quote it no longer owns (defect 4: async results clearing newer).
+        if (gen !== quoteGen) {
+          return;
+        }
+        quoteBreakdown = {};
+        quoteAccepted = false;
+        quoteRevision = null;
+        quoteRevs = {};
+        activeQuoteSignature = '';
+        renderQuoteBox();
+        const area = quoteSlot.querySelector('[data-hx-quote-breakdown]');
+        if (area) area.innerHTML = `<span style="color:var(--danger,#b91c1c);">${esc(err.message)}</span>`;
+      } finally {
+        const btn = form.querySelector('[data-action="hx-simulate-group-quote"]');
+        if (btn) { btn.disabled = false; btn.textContent = 'Simuler / Actualiser le devis'; }
+      }
+    };
+
+    const updateRoomsSummary = () => {
+      const selected = allRooms.filter(r => selectedRoomIds.has(r.id));
+      const totalCapacity = selected.reduce((acc, r) => acc + (roomTypeOf(r.n).maxGuests || 4), 0);
+      const nights = Math.max(1, Math.round((Date.parse(form.elements.checkOut.value + 'T12:00:00Z') - Date.parse(form.elements.checkIn.value + 'T12:00:00Z')) / 86400000) || 1);
+      const totalEst = selected.reduce((acc, r) => {
+        const baseRate = roomTypeOf(r.n).base ?? cuState().baseRate ?? 0;
+        return acc + (baseRate * nights);
+      }, 0);
+
+      const visibleSelectedCount = allRooms.filter(r => selectedRoomIds.has(r.id) &&
+        (filterFloors.size === 0 || filterFloors.has(r.floorId) || filterFloors.has(r.floor)) &&
+        (!filterType || r.typeId === filterType) &&
+        (!filterView || r.view === filterView) &&
+        (filterMinCap === 0 || (roomTypeOf(r.n).maxGuests || 2) >= filterMinCap) &&
+        (filterConn !== 'with' || (Array.isArray(r.connectingRoomIds) && r.connectingRoomIds.length > 0)) &&
+        (filterConn !== 'without' || (!Array.isArray(r.connectingRoomIds) || r.connectingRoomIds.length === 0))
+      ).length;
+
+      let counterHtml = `<b>${selected.length} chambre(s) sélectionnée(s)</b>`;
+      if (selected.length > 0 && visibleSelectedCount < selected.length) {
+        counterHtml += ` (${visibleSelectedCount} visible(s) selon les filtres)`;
+      }
+      counterHtml += ` · Capacité totale : ${totalCapacity} personnes · Estimation base : ${MAD(totalEst)} (${nights} nuit${nights > 1 ? 's' : ''})`;
+      roomsCounter.innerHTML = counterHtml;
+
+      form.querySelector('[data-hx-rev-dates]').textContent = `${form.elements.checkIn.value} → ${form.elements.checkOut.value} (${nights} nuit${nights > 1 ? 's' : ''})`;
+      form.querySelector('[data-hx-rev-rooms]').textContent = `${selected.length} chambre(s) (${Object.keys(savedRooms).length} validée(s))`;
+      form.querySelector('[data-hx-rev-guests]').textContent = `${travelers.length} voyageur(s)`;
+
+      renderQuoteBox();
+      updateTravelerRoomOptions();
+      validateCapacity();
+    };
+
+    const updateTravelerRoomOptions = () => {
+      // Committed rooms are not assignable (defect 3): a traveler parked on
+      // a saved room would never reach the server, and the UI would pretend
+      // otherwise. The row's own saved room stays visible so frozen rows
+      // keep showing where their travelers sleep.
+      const selected = allRooms.filter(r => selectedRoomIds.has(r.id));
+      const roomSelects = form.querySelectorAll('[data-hx-t-room]');
+      roomSelects.forEach(sel => {
+        const currentVal = sel.value;
+        const avail = selected.filter(r => !savedRooms[r.id] || r.id === currentVal);
+        sel.innerHTML = '<option value="">-- Sélectionner une chambre --</option>' + avail.map(r => `<option value="${esc(r.id)}" ${r.id === currentVal ? 'selected' : ''}>Ch. ${r.n} · ${esc(roomTypeOf(r.n).name)}</option>`).join('');
+      });
+    };
+
+    const travelerRowHtml = (t, idx) => {
+      const selected = allRooms.filter(r => selectedRoomIds.has(r.id));
+      const isUnassigned = !t.roomId;
+      const isRoomSaved = !!(t.roomId && savedRooms[t.roomId]);
+      return `
+        <div class="hx-guest-item ${isUnassigned ? 'is-unassigned' : ''} ${isRoomSaved ? 'is-frozen' : ''}" data-hx-group-traveler data-traveler-id="${esc(t.id || ('gst_' + crypto.randomUUID().slice(0, 12)))}" style="margin-bottom:10px;">
+          <div class="hx-guest-head" style="display:flex;justify-content:space-between;align-items:center;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span>VOYAGEUR ${idx + 1}</span>
+              ${isUnassigned ? '<span class="hx-badge-unassigned">Non attribué à une chambre</span>' : ''}
+              ${isRoomSaved ? '<span class="hx-badge-saved" style="font-size:11px;">Enregistré · Verrouillé</span>' : ''}
+            </div>
+            ${!isRoomSaved && travelers.length > 1 ? `<button type="button" class="hx-link-btn" data-action="hx-remove-group-traveler">Retirer</button>` : ''}
+          </div>
+          <div class="hx-guest-grid">
+            <label><span>Nom complet *</span><input data-hx-t-name required placeholder="Nom et prénom" value="${esc(t.name || '')}" ${isRoomSaved ? 'disabled' : ''}></label>
+            <label><span>Sexe</span><select data-hx-t-sex ${isRoomSaved ? 'disabled' : ''}>
+              <option value="">Indéterminé</option>
+              <option value="M" ${t.sex === 'M' ? 'selected' : ''}>Masculin (M)</option>
+              <option value="F" ${t.sex === 'F' ? 'selected' : ''}>Féminin (F)</option>
+            </select></label>
+            <label><span>Nationalité</span>${cuNationalitySelectorHtml(t, idx, 'grp_', isRoomSaved)}</label>
+            <label><span>Date de naissance</span><input type="date" data-hx-t-birth value="${esc(t.birthDate || '')}" ${isRoomSaved ? 'disabled' : ''}></label>
+            <label><span>N° de document</span><input data-hx-t-doc placeholder="Passeport / CNIE" value="${esc(t.idDocNumber || '')}" ${isRoomSaved ? 'disabled' : ''}></label>
+            <label><span>Chambre attribuée *</span><select data-hx-t-room ${isRoomSaved ? 'disabled' : ''} ${isUnassigned ? 'style="border-color:var(--warn-ink);"' : ''}>
+              <option value="">-- Sélectionner une chambre --</option>
+              ${selected.filter(r => !savedRooms[r.id] || r.id === t.roomId).map(r => `<option value="${esc(r.id)}" ${t.roomId === r.id ? 'selected' : ''}>Ch. ${r.n} · ${esc(roomTypeOf(r.n).name)}</option>`).join('')}
+            </select></label>
+          </div>
+        </div>
+      `;
+    };
+
+    const renderTravelers = () => {
+      travelersContainer.innerHTML = travelers.map((t, idx) => travelerRowHtml(t, idx)).join('');
+      travelersCountLabel.textContent = `${travelers.length} voyageur${travelers.length > 1 ? 's' : ''}`;
+      cuWireNationalitySelectors(travelersContainer);
+      validateCapacity();
+    };
+
+    const validateCapacity = () => {
+      syncTravelersFromDom();
+      const selected = allRooms.filter(r => selectedRoomIds.has(r.id));
+      const roomAssignedCounts = new Map();
+      const names = [];
+      let unassignedCount = 0;
+
+      travelers.forEach(t => {
+        const name = String(t.name || '').trim();
+        if (name) names.push(cuNormalizeText(name));
+        if (t.roomId) {
+          roomAssignedCounts.set(t.roomId, (roomAssignedCounts.get(t.roomId) || 0) + 1);
+        } else {
+          unassignedCount++;
+        }
+      });
+
+      const alerts = [];
+      if (unassignedCount > 0) {
+        alerts.push(`<p class="hx-warn-note" style="color:var(--warn-ink);background:var(--warn-soft);padding:6px 10px;border-radius:6px;font-size:11.5px;margin:3px 0;">Attention : ${unassignedCount} voyageur(s) ne sont pas encore attribués à une chambre.</p>`);
+      }
+
+      selected.forEach(r => {
+        const assigned = roomAssignedCounts.get(r.id) || 0;
+        const max = roomTypeOf(r.n).maxGuests || 4;
+        if (assigned === 0) {
+          alerts.push(`<p class="hx-warn-note" style="color:var(--warn-ink);background:var(--warn-soft);padding:6px 10px;border-radius:6px;font-size:11.5px;margin:3px 0;">Chambre ${r.n} : aucun voyageur attribué.</p>`);
+        } else if (assigned > max) {
+          alerts.push(`<p class="hx-warn-note" style="color:var(--danger,#b91c1c);background:rgba(201,74,58,0.08);padding:6px 10px;border-radius:6px;font-size:11.5px;margin:3px 0;">Attention : Chambre ${r.n} dépasse sa capacité maximale (${assigned} / ${max} pers.).</p>`);
+        }
+      });
+
+      const dups = names.filter((n, i) => names.indexOf(n) !== i);
+      if (dups.length) {
+        alerts.push(`<p class="hx-warn-note" style="color:var(--warn-ink);background:var(--warn-soft);padding:6px 10px;border-radius:6px;font-size:11.5px;margin:3px 0;">Noms en double détectés dans la liste des voyageurs. Vérifiez les homonymes.</p>`);
+      }
+
+      capacityAlerts.innerHTML = alerts.join('');
+    };
+
+    form.addEventListener('change', (e) => {
+      const floorCb = e.target.closest('[data-hx-filter-floor]');
+      if (floorCb) {
+        const val = floorCb.getAttribute('data-hx-filter-floor');
+        if (floorCb.checked) {
+          filterFloors.add(val);
+        } else {
+          filterFloors.delete(val);
+        }
+        renderRooms();
+        updateRoomsSummary();
+      }
+    });
+
+    form.querySelector('[data-hx-filter-type]')?.addEventListener('change', (e) => {
+      filterType = e.target.value; renderRooms(); updateRoomsSummary();
+    });
+    form.querySelector('[data-hx-filter-view]')?.addEventListener('change', (e) => {
+      filterView = e.target.value; renderRooms(); updateRoomsSummary();
+    });
+    form.querySelector('[data-hx-filter-cap]')?.addEventListener('change', (e) => {
+      filterMinCap = Number(e.target.value) || 0; renderRooms(); updateRoomsSummary();
+    });
+    form.querySelector('[data-hx-filter-conn]')?.addEventListener('change', (e) => {
+      filterConn = e.target.value; renderRooms(); updateRoomsSummary();
+    });
+
+    roomsGrid.addEventListener('change', (e) => {
+      const cb = e.target.closest('[data-hx-group-cb]');
+      if (cb) {
+        syncTravelersFromDom();
+        if (cb.checked) {
+          selectedRoomIds.add(cb.value);
+        } else {
+          selectedRoomIds.delete(cb.value);
+          // Preserve travelers by unassigning rather than deleting
+          travelers.forEach(t => {
+            if (t.roomId === cb.value) {
+              t.roomId = '';
+            }
+          });
+        }
+        invalidateQuote();
+        const card = cb.closest('.hx-group-room-card');
+        if (card) card.classList.toggle('is-selected', cb.checked);
+        renderTravelers();
+        updateRoomsSummary();
+        persistStaged();
+      }
+    });
+
+    form.elements.checkIn?.addEventListener('change', () => { invalidateQuote(); updateRoomsSummary(); persistStaged(); });
+    form.elements.checkOut?.addEventListener('change', () => { invalidateQuote(); updateRoomsSummary(); persistStaged(); });
+    form.elements.board?.addEventListener('change', () => { invalidateQuote(); updateRoomsSummary(); persistStaged(); });
+    form.elements.accountId?.addEventListener('change', () => { invalidateQuote(); updateRoomsSummary(); persistStaged(); });
+
+    form.addEventListener('change', (e) => {
+      if (e.target.matches('[data-hx-group-accept-quote]')) {
+        quoteAccepted = e.target.checked;
+        persistStaged();
+      }
+    });
+
+    form.addEventListener('click', (e) => {
+      if (e.target.closest('[data-action="hx-add-group-traveler"]')) {
+        syncTravelersFromDom();
+        travelers.push({ id: 'gst_' + crypto.randomUUID().slice(0, 12), name: '', sex: '', nationality: '', residenceCountry: '', birthDate: '', idDocType: '', idDocNumber: '', roomId: '' });
+        invalidateQuote();
+        renderTravelers();
+        persistStaged();
+      } else if (e.target.closest('[data-action="hx-remove-group-traveler"]')) {
+        syncTravelersFromDom();
+        const item = e.target.closest('[data-hx-group-traveler]');
+        if (item) {
+          const id = item.dataset.travelerId;
+          travelers = travelers.filter(t => t.id !== id);
+          if (!travelers.length) travelers.push({ id: 'gst_' + crypto.randomUUID().slice(0, 12), name: '', sex: '', nationality: '', residenceCountry: '', birthDate: '', idDocType: '', idDocNumber: '', roomId: '' });
+          invalidateQuote();
+          renderTravelers();
+          persistStaged();
+        }
+      } else if (e.target.closest('[data-action="hx-preview-paste"]')) {
+        const pasteText = String(form.querySelector('[data-hx-group-paste]')?.value || '').trim();
+        const previewArea = form.querySelector('[data-hx-import-preview-area]');
+        if (!pasteText) {
+          previewArea.innerHTML = '<span style="color:var(--warn-ink);font-size:11.5px;">Veuillez coller du texte avant de prévisualiser.</span>';
+          return;
+        }
+        const lines = pasteText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+        const parsed = lines.map(line => {
+          const parts = cuParseDelimitedLine(line);
+          const name = parts[0] || '';
+          const natRaw = parts[1] || '';
+          const doc = parts[2] || '';
+          const matchedNat = cuMatchNationality(natRaw);
+          return {
+            name,
+            natRaw,
+            natCode: matchedNat || '',
+            natLabel: matchedNat ? cuNationalityLabel(matchedNat) : '',
+            doc,
+          };
+        }).filter(p => p.name);
+
+        if (!parsed.length) {
+          previewArea.innerHTML = '<span style="color:var(--warn-ink);font-size:11.5px;">Aucun voyageur valide détecté dans le texte.</span>';
+          return;
+        }
+
+        form.__parsedImport = parsed;
+        previewArea.innerHTML = `
+          <div class="hx-import-preview-box">
+            <table class="hx-import-preview-table">
+              <thead><tr><th>#</th><th>Nom</th><th>Nationalité détectée</th><th>Document</th></tr></thead>
+              <tbody>
+                ${parsed.map((p, i) => `<tr><td>${i+1}</td><td><b>${esc(p.name)}</b></td><td>${esc(p.natLabel || p.natRaw || 'Indéterminée')}</td><td>${esc(p.doc || '-')}</td></tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:6px;">
+            <button type="button" class="hx-btn atlas" data-action="hx-confirm-import" style="font-size:11.5px;padding:4px 10px;">Confirmer l’import (${parsed.length} voyageurs)</button>
+            <button type="button" class="hx-btn ghost" data-action="hx-cancel-import" style="font-size:11.5px;padding:4px 10px;">Annuler</button>
+          </div>
+        `;
+      } else if (e.target.closest('[data-action="hx-confirm-import"]')) {
+        const parsed = form.__parsedImport || [];
+        if (parsed.length) {
+          syncTravelersFromDom();
+          const selected = allRooms.filter(r => selectedRoomIds.has(r.id));
+          let rIndex = 0;
+          parsed.forEach(p => {
+            const assignedRoom = selected.length ? selected[rIndex % selected.length].id : '';
+            travelers.push({
+              id: 'gst_' + crypto.randomUUID().slice(0, 12),
+              name: p.name,
+              sex: '',
+              nationality: p.natCode || p.natRaw || '',
+              residenceCountry: '',
+              birthDate: '',
+              idDocType: '',
+              idDocNumber: p.doc,
+              roomId: assignedRoom,
+            });
+            if (selected.length) rIndex++;
+          });
+          if (travelers.length > 1 && !travelers[0].name) {
+            travelers.shift();
+          }
+          invalidateQuote();
+          renderTravelers();
+          updateRoomsSummary();
+          persistStaged();
+          form.querySelector('[data-hx-group-paste]').value = '';
+          form.querySelector('[data-hx-import-preview-area]').innerHTML = '';
+          delete form.__parsedImport;
+          toast(`${parsed.length} voyageur(s) importé(s)`, { type: 'success' });
+        }
+      } else if (e.target.closest('[data-action="hx-cancel-import"]')) {
+        form.querySelector('[data-hx-import-preview-area]').innerHTML = '';
+        delete form.__parsedImport;
+      } else if (e.target.closest('[data-action="hx-simulate-group-quote"]')) {
+        simulateQuotes();
+      } else if (e.target.closest('[data-action="hx-discard-staged"]')) {
+        localStorage.removeItem(stagedKey);
+        try { localStorage.removeItem(intentKeyFor(groupDossierId)); } catch (_) {}
+        savedRooms = {};
+        failedRooms = {};
+        quoteBreakdown = {};
+        quoteAccepted = false;
+        quoteRevision = null;
+        quoteRevs = {};
+        committedTerms = null;
+        activeQuoteSignature = '';
+        groupDossierId = 'grp_' + Date.now() + '_' + crypto.randomUUID().slice(0, 8);
+        const recoverySlot = form.querySelector('[data-hx-group-recovery-slot]');
+        if (recoverySlot) recoverySlot.innerHTML = '';
+        lockCommittedFields();
+        renderRooms();
+        renderTravelers();
+        updateRoomsSummary();
+        toast('Brouillon local abandonné. Nouveau dossier prêt.', { type: 'info' });
+      } else if (e.target.closest('[data-action="hx-group-cancel"]')) {
+        m.close();
+        openModal = null;
+      }
+    });
+
+    travelersContainer.addEventListener('change', (e) => {
+      if (e.target.matches('[data-hx-t-room]')) {
+        invalidateQuote();
+      }
+      validateCapacity();
+      persistStaged();
+    });
+    travelersContainer.addEventListener('input', () => { validateCapacity(); persistStaged(); });
+
+    lockCommittedFields();
+    renderRooms();
+    renderTravelers();
+    updateRoomsSummary();
+    if (intentNotice === 'adopted') {
+      toast('Dossier en cours de finalisation restauré (' + groupDossierId + '). Les chambres seront revérifiées auprès du serveur avant tout nouvel enregistrement.', { type: 'info' });
+    } else if (intentNotice === 'other-pending' && pendingIntent) {
+      toast('Un autre dossier (' + pendingIntent.dossierId + ') attend encore sa finalisation. Terminez ou abandonnez ce brouillon pour le reprendre.', { type: 'info' });
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (form.__hxSubmitting) return;
+      errorEl.textContent = '';
+      const submitBtn = form.querySelector('[data-hx-group-submit]');
+
+      if (initialScope !== cuStayScope() || initialMerchant !== cuMerchantSlug()) {
+        errorEl.textContent = 'L’hôtel actif a changé. Ce dossier ne peut pas être finalisé dans un autre établissement.';
+        return;
+      }
+
+      syncTravelersFromDom();
+
+      // Defect 1: read the frozen submission model, never the (possibly
+      // disabled, hence FormData-invisible) controls. On a first attempt the
+      // model mirrors the live form; after any room is saved it is the exact
+      // terms that room was booked with.
+      const terms = getTerms();
+      const groupName = terms.groupName;
+      const checkIn = terms.checkIn;
+      const checkOut = terms.checkOut;
+      const contactName = terms.contactName;
+      const contactPhone = terms.contactPhone;
+      const contactEmail = terms.contactEmail;
+      const accountId = terms.accountId || null;
+      const channel = terms.channel;
+      const board = terms.board;
+      const isCommercial = (board !== 'room_only' || !!accountId);
+
+      if (!groupName) { errorEl.textContent = 'Indiquez le nom du groupe.'; return; }
+      if (!contactName) { errorEl.textContent = 'Indiquez le contact principal.'; return; }
+      if (!checkIn || !checkOut || checkOut <= checkIn) { errorEl.textContent = 'Vérifiez les dates d’arrivée et de départ.'; return; }
+      if (selectedRoomIds.size === 0) { errorEl.textContent = 'Sélectionnez au moins une chambre pour le groupe.'; return; }
+
+      // Check unassigned travelers
+      const unassigned = travelers.filter(t => !t.roomId);
+      if (unassigned.length > 0) {
+        errorEl.textContent = 'Tous les voyageurs doivent être attribués à une chambre. Veuillez attribuer ou retirer les ' + unassigned.length + ' voyageur(s) sans chambre.';
+        return;
+      }
+
+      // Check room capacity
+      const selected = allRooms.filter(r => selectedRoomIds.has(r.id));
+      for (const room of selected) {
+        const assignedCount = travelers.filter(t => t.roomId === room.id).length;
+        const maxCap = roomTypeOf(room.n).maxGuests || 4;
+        if (assignedCount === 0) {
+          errorEl.textContent = 'La chambre ' + room.n + ' n’a aucun voyageur attribué.';
+          return;
+        }
+        if (assignedCount > maxCap) {
+          errorEl.textContent = 'La chambre ' + room.n + ' dépasse sa capacité maximale (' + assignedCount + ' / ' + maxCap + ' pers.).';
+          return;
+        }
+      }
+
+      // Check quotes for meal plans and accounts (defect 4). The accepted
+      // quote must still describe THIS dossier: same signature as at accept
+      // time, one single revision across every quoted room, a complete entry
+      // for each room that is about to be written, and a directory revision
+      // that has not moved since. Anything else restarts the simulation —
+      // the operator reviews one total and the server books exactly it
+      // (the save endpoint re-checks the revision and 409s otherwise).
+      if (isCommercial && !quoteAccepted) {
+        errorEl.textContent = 'Veuillez simuler et accepter le devis commercial pour cette formule de séjour avant de confirmer le groupe.';
+        return;
+      }
+      if (isCommercial) {
+        if (!activeQuoteSignature || activeQuoteSignature !== cuGroupQuoteSignature() || quoteRevision == null) {
+          errorEl.textContent = 'Le devis accepté ne correspond plus au dossier (dates, chambres, voyageurs ou formule ont changé). Relancez la simulation.';
+          return;
+        }
+        const pendingRooms = allRooms.filter(r => selectedRoomIds.has(r.id) && !savedRooms[r.id]);
+        const incomplete = pendingRooms.find(r => {
+          const q = quoteBreakdown[r.id];
+          return !q || !Array.isArray(q.rows) || !Number.isSafeInteger(q.totalCents) || quoteRevs[r.id] !== quoteRevision;
+        });
+        if (incomplete) {
+          errorEl.textContent = 'Devis incomplet ou périmé pour la chambre ' + incomplete.n + '. Relancez la simulation pour l’ensemble du groupe.';
+          return;
+        }
+        try {
+          const revRes = await fetch('/api/hotel/commercial?merchant=' + encodeURIComponent(initialMerchant), { cache: 'no-store' });
+          const revBody = await revRes.json().catch(() => ({}));
+          if (revRes.ok && Number.isSafeInteger(revBody.rev) && revBody.rev !== quoteRevision) {
+            invalidateQuote();
+            errorEl.textContent = 'Le répertoire commercial a changé (révision ' + quoteRevision + ' → ' + revBody.rev + ') depuis le devis accepté. Relancez la simulation avant de confirmer.';
+            return;
+          }
+        } catch (_) { /* unreachable directory: the save endpoint re-checks per room */ }
+      }
+
+      // Build the exact per-room payloads first (defect 2): stable clientRef
+      // identities, frozen terms, traveler snapshot. Nothing is posted before
+      // these payloads — with the frozen terms — are durably recorded.
+      const roomPlans = allRooms
+        .filter(r => selectedRoomIds.has(r.id))
+        .map(room => {
+          const roomKey = String(room.id).replace(/[^A-Za-z0-9_-]/g, '_');
+          const clientRef = ('staff-grp-' + groupDossierId + '-' + roomKey).slice(0, 80);
+          const roomGuests = travelers.filter(t => t.roomId === room.id).map(g => ({
+            name: g.name,
+            sex: g.sex || '',
+            nationality: g.nationality || '',
+            birthDate: g.birthDate || '',
+            residenceCountry: g.residenceCountry || '',
+            idDocType: g.idDocType || '',
+            idDocNumber: g.idDocNumber || '',
+          }));
+          return {
+            room, clientRef,
+            payload: {
+              action: 'save',
+              merchant: initialMerchant,
+              dossierId: groupDossierId,
+              groupName,
+              clientRef,
+              roomTypeId: room.typeId,
+              resourceId: room.id,
+              checkIn,
+              checkOut,
+              partySize: Math.max(1, roomGuests.length),
+              status: 'confirmed',
+              channel,
+              customer: {
+                name: roomGuests[0]?.name || contactName,
+                phone: contactPhone,
+                email: contactEmail,
+              },
+              guests: roomGuests,
+              commercial: {
+                accountId,
+                booker: contactName,
+                board,
+                quoted: !!quoteAccepted,
+              },
+              quoteRevision: quoteRevision != null ? quoteRevision : undefined,
+              acceptQuote: !!quoteAccepted,
+            },
+          };
+        });
+
+      // Never overwrite an unresolved intent with incompatible edits: a retry
+      // reuses the frozen terms by construction, so any divergence here means
+      // the draft was tampered with outside the locked UI — stop loudly
+      // instead of splitting one dossier across two commercial identities.
+      const priorIntent = readIntent(groupDossierId);
+      if (priorIntent && priorIntent.status !== 'complete' && Object.keys(savedRooms).length > 0 && priorIntent.terms && termsDiffer(priorIntent.terms, terms)) {
+        errorEl.textContent = 'Ce dossier a changé depuis son enregistrement partiel et ne peut pas être repris tel quel. Abandonnez le brouillon local pour recommencer un dossier propre.';
+        return;
+      }
+
+      // Persist the authoritative intent before the first network write.
+      // A failure here stops everything: no booking is written without its
+      // recovery record. The draft cache (persistStaged) is best-effort —
+      // recovery is driven by the intent, never by the cache.
+      try {
+        writeIntent({
+          version: INTENT_VERSION,
+          status: 'in-progress',
+          merchant: initialMerchant,
+          dossierId: groupDossierId,
+          terms: { ...terms },
+          rooms: roomPlans.map(p => ({ roomId: p.room.id, roomN: p.room.n, clientRef: p.clientRef, payload: p.payload })),
+          travelers: JSON.parse(JSON.stringify(travelers)),
+          quoteBreakdown: JSON.parse(JSON.stringify(quoteBreakdown)),
+          quoteRevs: { ...quoteRevs },
+          quoteRevision,
+          quoteAccepted,
+          activeQuoteSignature,
+          createdAt: (priorIntent && priorIntent.createdAt) || Date.now(),
+          updatedAt: Date.now(),
+        });
+      } catch (storageErr) {
+        errorEl.textContent = 'Impossible de sécuriser l’intention de réservation en stockage local (' + (storageErr.message || 'quota dépassé') + '). Aucune chambre n’a été enregistrée : libérez de l’espace ou autorisez le stockage, puis relancez la confirmation.';
+        return;
+      }
+      // Read the record back: the loop below iterates the persisted attempt,
+      // proving the payloads were durable before the first booking write.
+      const attempt = readIntent(groupDossierId);
+      if (!attempt || attempt.status === 'complete' || !Array.isArray(attempt.rooms) || attempt.rooms.length !== roomPlans.length) {
+        errorEl.textContent = 'Intention de réservation illisible après écriture. Aucune chambre n’a été enregistrée : réessayez la confirmation.';
+        return;
+      }
+      if (!persistStaged()) {
+        toast('Brouillon local non sauvegardé (stockage indisponible). La reprise reste assurée par l’intention durable du dossier.', { type: 'warn' });
+      }
+
+      form.__hxSubmitting = true;
+      form.classList.add('is-submitting');
+      submitBtn.disabled = true;
+      errorEl.textContent = 'Contrôle des disponibilités et enregistrement des chambres…';
+
+      const formControls = Array.from(form.querySelectorAll('input, select, textarea, button'));
+      formControls.forEach(el => {
+        if (!el.disabled) {
+          el.setAttribute('data-hx-submitting-disabled', '1');
+          el.disabled = true;
+        }
+      });
+
+      // Material comparison between a server booking and the payload we would
+      // write (defect 3). Room, dates, party and dossier are not enough: a
+      // guest renamed, a swapped account or meal plan, or a different booker
+      // on another device must surface as an incompatibility — never as a
+      // silent adopt, and never as a delete-and-recreate.
+      const normField = (s) => String(s || '').trim().replace(/\s+/g, ' ').toLowerCase();
+      const guestIdentity = (g) => [g && g.name, g && g.idDocNumber, g && g.nationality, g && g.birthDate, g && g.sex].map(normField).join('|');
+      const bookingMatchesPayload = (existing, payload, room) => {
+        const pairs = [
+          ['chambre', existing.resourceId || existing.hotel?.roomId || '', room.id],
+          ['arrivée', existing.hotel?.checkIn || '', payload.checkIn],
+          ['départ', existing.hotel?.checkOut || '', payload.checkOut],
+          ['effectif', String(existing.partySize ?? ''), String(payload.partySize)],
+          ['dossier', existing.hotel?.dossierId || '', payload.dossierId],
+          ['nom du groupe', existing.hotel?.groupName || '', payload.groupName || ''],
+          ['canal', existing.hotel?.channel || '', payload.channel || ''],
+          ['contact', existing.customer?.name || '', (payload.customer && payload.customer.name) || ''],
+          ['téléphone', existing.customer?.phone || '', (payload.customer && payload.customer.phone) || ''],
+          ['e-mail', existing.customer?.email || '', (payload.customer && payload.customer.email) || ''],
+          ['compte', (existing.commercial && existing.commercial.accountId) || '', (payload.commercial && payload.commercial.accountId) || ''],
+          ['formule', (existing.commercial && existing.commercial.board) || '', (payload.commercial && payload.commercial.board) || ''],
+        ];
+        for (const [label, a, b] of pairs) {
+          if (a && normField(a) !== normField(b)) return label;
+        }
+        // Guest identities, order-insensitive (homonyms stay distinct rows,
+        // the server drops fully-empty rows exactly like the payload filter).
+        const keptGuests = (payload.guests || []).filter(g => g && (g.name || g.nationality || g.idDocNumber));
+        const aGuests = (existing.guests || []).map(guestIdentity).sort().join(';');
+        const bGuests = keptGuests.map(guestIdentity).sort().join(';');
+        if (aGuests !== bGuests) return 'voyageurs';
+        return null;
+      };
+
+      try {
+        // Iterate the persisted attempt (defect 2): every payload below was
+        // durable before the first booking write of this attempt.
+        for (const entry of attempt.rooms) {
+          const room = allRooms.find(r => r.id === entry.roomId);
+          if (!room) {
+            const errMsg = 'La chambre ' + (entry.roomN || entry.roomId) + ' n’existe plus au plan. Retirez-la du dossier pour continuer.';
+            failedRooms[entry.roomId] = errMsg;
+            persistStaged();
+            renderRooms();
+            throw new Error(errMsg);
+          }
+          const payload = entry.payload;
+          const clientRef = entry.clientRef;
+          if (initialScope !== cuStayScope() || initialMerchant !== cuMerchantSlug() || openModal?.el !== m.el || !form.isConnected) {
+            throw new Error('L’hôtel actif a changé pendant l’enregistrement.');
+          }
+
+          // Server reconciliation (defect 3): EVERY room is checked against
+          // the server by its stable clientRef — including rooms this browser
+          // already marks saved. A cancellation or an edit on another device
+          // must surface here, never hide behind an old local snapshot. Only
+          // when the server itself is unreachable do we provisionally trust
+          // the local snapshot (the following write would fail first anyway,
+          // and the next online pass re-verifies).
+          let existingBooking = null;
+          let checkOk = false;
+          try {
+            const checkRes = await fetch('/api/hotel/stays?merchant=' + encodeURIComponent(initialMerchant) + '&clientRef=' + encodeURIComponent(clientRef) + '&includeCancelled=1', { cache: 'no-store' });
+            if (checkRes.ok) {
+              const checkData = await checkRes.json();
+              checkOk = true;
+              if (checkData.stays && checkData.stays.length) {
+                existingBooking = checkData.stays[0];
+              }
+            }
+          } catch (_) { checkOk = false; }
+
+          if (initialScope !== cuStayScope() || initialMerchant !== cuMerchantSlug() || openModal?.el !== m.el || !form.isConnected) {
+            throw new Error('L’hôtel actif a changé pendant la vérification.');
+          }
+
+          if (!existingBooking && savedRooms[room.id] && !checkOk) {
+            continue;
+          }
+
+          if (existingBooking) {
+            if (['cancelled', 'no_show'].includes(existingBooking.status)) {
+              const errMsg = 'La réservation existante pour la chambre ' + room.n + ' est annulée ou non présentée (' + existingBooking.status + ').';
+              failedRooms[room.id] = errMsg;
+              persistStaged();
+              renderRooms();
+              throw new Error(errMsg);
+            }
+
+            const mismatch = bookingMatchesPayload(existingBooking, payload, room);
+            if (mismatch) {
+              const errMsg = 'Incompatibilité (' + mismatch + ') détectée pour la réservation existante (' + existingBooking.id + ') de la chambre ' + room.n + '. Le serveur a une version différente : aucune écriture, utilisez un avenant explicite.';
+              failedRooms[room.id] = errMsg;
+              persistStaged();
+              renderRooms();
+              throw new Error(errMsg);
+            }
+
+            savedRooms[room.id] = existingBooking;
+            delete failedRooms[room.id];
+            initialCache.set(existingBooking.id, existingBooking);
+            if (!committedTerms) { freezeTerms(terms); lockCommittedFields(); }
+            persistStaged();
+            renderRooms();
+            renderTravelers();
+            updateTravelerRoomOptions();
+            continue;
+          }
+
+          // A lost response is not a failed booking (defect 2): the server
+          // may have saved it. Name the room, keep the badge, and let the
+          // clientRef reconciliation adopt it on retry instead of guessing.
+          let res;
+          try {
+            res = await fetch('/api/hotel/stays', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload),
+            });
+          } catch (netErr) {
+            const errMsg = 'La réponse du serveur pour la chambre ' + room.n + ' a été perdue (' + ((netErr && netErr.message) || 'réseau') + '). La réservation sera vérifiée à la reprise.';
+            failedRooms[room.id] = errMsg;
+            persistStaged();
+            renderRooms();
+            throw new Error(errMsg);
+          }
+          const body = await res.json().catch(() => ({}));
+
+          if (initialScope !== cuStayScope() || initialMerchant !== cuMerchantSlug() || openModal?.el !== m.el || !form.isConnected) {
+            throw new Error('L’hôtel actif a changé pendant l’enregistrement.');
+          }
+
+          if (!res.ok || !body.booking) {
+            const errMsg = cuCommercialError(body.error) || body.error || 'chambre indisponible';
+            failedRooms[room.id] = errMsg;
+            persistStaged();
+            renderRooms();
+            throw new Error('Erreur sur la chambre ' + room.n + ' : ' + errMsg);
+          }
+
+          if (['cancelled', 'no_show'].includes(body.booking.status)) {
+            const errMsg = 'La réservation retournée pour la chambre ' + room.n + ' est annulée ou non présentée.';
+            failedRooms[room.id] = errMsg;
+            persistStaged();
+            renderRooms();
+            throw new Error(errMsg);
+          }
+
+          savedRooms[room.id] = body.booking;
+          delete failedRooms[room.id];
+          initialCache.set(body.booking.id, body.booking);
+          // First proven room freezes the dossier identity (defects 1+3):
+          // the locked controls stop feeding submissions from here on.
+          if (!committedTerms) { freezeTerms(terms); lockCommittedFields(); }
+          persistStaged();
+          renderRooms();
+          renderTravelers();
+          updateTravelerRoomOptions();
+        }
+
+        // Scope check before completing
+        if (initialScope !== cuStayScope() || initialMerchant !== cuMerchantSlug() || openModal?.el !== m.el || !form.isConnected) {
+          return;
+        }
+
+        // All rooms saved successfully: the intent is fulfilled, both the
+        // authoritative record and the draft cache go away together.
+        try { localStorage.removeItem(intentKeyFor(groupDossierId)); } catch (_) {}
+        try { localStorage.removeItem(stagedKey); } catch (_) {}
+
+        const doc = window.KiwiReservations?.get?.();
+        if (doc && Array.isArray(doc.bookings)) {
+          Object.values(savedRooms).forEach(b => {
+            const idx = doc.bookings.findIndex(x => x.id === b.id);
+            if (idx < 0) doc.bookings.push(b);
+            else doc.bookings[idx] = b;
+          });
+          window.KiwiReservations.set(doc);
+        }
+
+        m.close();
+        openModal = null;
+        toast('Réservation de groupe enregistrée', {
+          type: 'success',
+          desc: groupName + ' · ' + Object.keys(savedRooms).length + ' chambre(s) confirmée(s).',
+        });
+        rerender();
+      } catch (err) {
+        if (initialScope !== cuStayScope() || initialMerchant !== cuMerchantSlug() || openModal?.el !== m.el || !form.isConnected) {
+          return;
+        }
+        errorEl.textContent = (err.message || 'Échec de la réservation de groupe.') + (Object.keys(savedRooms).length ? ' Les chambres déjà enregistrées (' + Object.keys(savedRooms).length + ') restent conservées sous le dossier ' + groupDossierId + '.' : '');
+        if (Object.keys(savedRooms).length > 0) {
+          submitBtn.textContent = 'Reprendre la confirmation (' + Object.keys(savedRooms).length + ' enregistrée(s))';
+        }
+      } finally {
+        form.__hxSubmitting = false;
+        form.classList.remove('is-submitting');
+        formControls.forEach(el => {
+          if (el.hasAttribute('data-hx-submitting-disabled')) {
+            el.removeAttribute('data-hx-submitting-disabled');
+            el.disabled = false;
+          }
+        });
+        lockCommittedFields();
+        renderRooms();
+        renderTravelers();
+        submitBtn.disabled = false;
+      }
+    });
+  }
+
   async function cuSubmitStay(form, booking, modal) {
     if (form.__hxSubmitting) return;
     const fd = new FormData(form), submit = form.querySelector('[type="submit"]'), error = form.querySelector('[data-hx-stay-error]');
     if (form.__hxStayScope !== cuStayScope()) { error.textContent = 'L’hôtel actif a changé. Fermez ce dossier et rouvrez-le dans le bon établissement.'; return; }
-    const slug = window.KiwiStore?.slugFor?.(cuVenueId()) || '';
+    const slug = cuMerchantSlug();
     const guestRows = Array.from(form.querySelectorAll('[data-hx-guest-row]')).map((row) => ({
       id: row.getAttribute('data-hx-guest-id') || '',
       name: String(row.querySelector('[data-hx-guest-name]')?.value || '').trim(),
@@ -3130,7 +5204,15 @@
       idDocNumber: String(row.querySelector('[data-hx-guest-id-num]')?.value || '').trim(),
     })).filter((g) => g.name || g.nationality || g.idDocNumber);
 
-    const payload = { action: 'save', merchant: slug, id: booking?.id || '', clientRef: form.__hxClientRef, roomTypeId: fd.get('roomTypeId'), resourceId: fd.get('resourceId'), checkIn: fd.get('checkIn'), checkOut: fd.get('checkOut'), partySize: fd.get('partySize'), channel: fd.get('channel'), status: fd.get('status'), externalRef: fd.get('externalRef'), note: fd.get('note'), guests: guestRows, customer: { name: fd.get('name'), phone: fd.get('phone'), email: fd.get('email') } };
+    const partySize = Number(fd.get('partySize')) || 1;
+    const roomTypeId = fd.get('roomTypeId');
+    const selectedType = cuTypes().find((t) => t.id === roomTypeId);
+    if (selectedType && partySize > (selectedType.maxGuests || 4)) {
+      error.textContent = 'La catégorie « ' + (selectedType.name || roomTypeId) + ' » ne peut pas accueillir ' + partySize + ' personnes (capacité max : ' + (selectedType.maxGuests || 4) + ').';
+      return;
+    }
+
+    const payload = { action: 'save', merchant: slug, id: booking?.id || '', clientRef: form.__hxClientRef, roomTypeId, resourceId: fd.get('resourceId'), checkIn: fd.get('checkIn'), checkOut: fd.get('checkOut'), partySize, channel: fd.get('channel'), status: fd.get('status'), externalRef: fd.get('externalRef'), note: fd.get('note'), guests: guestRows, customer: { name: fd.get('name'), phone: fd.get('phone'), email: fd.get('email') } };
     payload.linkedStayId = form.__hxLinkedStayId || '';
     payload.dayUse = form.elements.stayMode?.value === 'day_use';
     if (payload.dayUse) {
@@ -3140,11 +5222,16 @@
       payload.arrivalTime = fd.get('arrivalTime'); payload.departureTime = fd.get('departureTime');
       payload.checkOut = payload.checkIn;
     }
+    const board = fd.get('board') || 'room_only';
+    const priceMode = fd.get('priceMode') || 'catalogue';
     if (form.__commercialReady) {
-      payload.commercial = { accountId: fd.get('accountId'), booker: fd.get('booker'), voucher: fd.get('voucher'), board: fd.get('board'), quoted: fd.get('priceMode') === 'contract' };
+      payload.commercial = { accountId: fd.get('accountId'), booker: fd.get('booker'), voucher: fd.get('voucher'), board, quoted: priceMode === 'contract' };
       const preview = form.__commercialQuote;
       if (preview && preview.signature === cuStayQuoteSignature(form) && form.querySelector('[data-hx-accept-quote]')?.checked) {
         payload.acceptQuote = true; payload.quoteRevision = preview.rev;
+      } else if (board !== 'room_only' || priceMode === 'contract') {
+        error.textContent = 'Formule repas ou tarif contractuel : simulez le contrat et cochez l’acceptation du prix avant de valider.';
+        return;
       }
     }
     if (!slug) { error.textContent = 'Cette boutique n’est pas encore reliée à son compte Kiwi.'; return; }
@@ -3154,14 +5241,30 @@
       const res = await fetch('/api/hotel/stays', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       const body = await res.json().catch(() => ({}));
       if (!res.ok || !body.booking) {
-        const messages = { 'room-unavailable': 'Cette chambre vient d’être prise sur ces dates. Choisissez-en une autre.', 'duplicate-reference': 'Cette référence OTA existe déjà.', 'invalid-dates': 'Les dates du séjour sont invalides.', invalid: 'Complétez le nom, les dates et la catégorie.', unauthorized: 'Votre session a expiré. Reconnectez-vous.' };
+        const messages = {
+          'room-unavailable': 'Cette chambre vient d’être prise sur ces dates. Choisissez-en une autre.',
+          'room-type-not-found': 'La catégorie choisie ne peut pas accueillir ' + partySize + ' personnes. Ajustez le nombre d’occupants ou changez de catégorie.',
+          'duplicate-reference': 'Cette référence OTA existe déjà.',
+          'invalid-dates': 'Les dates du séjour sont invalides.',
+          'account-required': 'Sélectionnez un compte commercial avant de simuler un contrat.',
+          'account-archived': 'Le compte commercial sélectionné est archivé. Choisissez un compte actif ou réactivez-le dans le Cardex.',
+          'account-not-found': 'Le compte commercial sélectionné est introuvable pour cet établissement.',
+          'invalid-formula': 'La tarification contractuelle couvre de 1 à 3 personnes. Ajustez le nombre d’occupants.',
+          invalid: 'Complétez le nom, les dates et la catégorie.',
+          unauthorized: 'Votre session a expiré. Reconnectez-vous.'
+        };
         error.textContent = messages[body.error] || cuCommercialError(body.error); return;
       }
       cache.set(body.booking.id, body.booking);
-      if (scope !== cuStayScope()) { modal.close(); return; }
-      const doc = window.KiwiReservations.get(), i = doc.bookings.findIndex((x) => x.id === body.booking.id);
-      if (i < 0) doc.bookings.push(body.booking); else doc.bookings[i] = body.booking;
-      window.KiwiReservations.set(doc); modal.close(); openModal = null;
+      if (scope !== cuStayScope() || cuMerchantSlug() !== slug) { return; }
+      const doc = window.KiwiReservations?.get?.();
+      if (doc && Array.isArray(doc.bookings)) {
+        const i = doc.bookings.findIndex((x) => x.id === body.booking.id);
+        if (i < 0) doc.bookings.push(body.booking); else doc.bookings[i] = body.booking;
+        window.KiwiReservations.set(doc);
+      }
+      modal?.close?.();
+      if (openModal?.el === modal?.el) openModal = null;
       toast('Séjour enregistré · ch. ' + (cuState().rooms && Object.values(cuState().rooms).find((r) => r.id === body.booking.resourceId)?.n || ''), { type: 'success', desc: body.booking.hotel.checkIn + ' → ' + body.booking.hotel.checkOut + ' · ' + (body.booking.hotel.channel || 'direct') });
       rerender();
     } catch (_) { error.textContent = 'Réponse serveur non reçue. Vérifiez le dossier ou réessayez : la même référence sera conservée pour éviter un doublon.'; }
@@ -3169,7 +5272,7 @@
   }
 
   async function cuCancelStay(id, button, modal) {
-    const slug = window.KiwiStore?.slugFor?.(cuVenueId()) || '';
+    const slug = cuMerchantSlug();
     if (!slug || !id) return;
     const scope = cuStayScope(), cache = cuStayCache();
     button.disabled = true;
@@ -3178,10 +5281,15 @@
       const body = await res.json().catch(() => ({}));
       if (!res.ok || !body.booking) { toast('Annulation impossible', { type: 'warn', desc: body.error || 'Réessayez.' }); return; }
       cache.set(body.booking.id, body.booking);
-      if (scope !== cuStayScope()) { modal?.close?.(); return; }
-      const doc = window.KiwiReservations.get(), i = doc.bookings.findIndex((x) => x.id === body.booking.id);
-      if (i >= 0) doc.bookings[i] = body.booking;
-      window.KiwiReservations.set(doc); modal?.close?.(); openModal?.close?.(); openModal = null;
+      if (scope !== cuStayScope() || cuMerchantSlug() !== slug) { return; }
+      const doc = window.KiwiReservations?.get?.();
+      if (doc && Array.isArray(doc.bookings)) {
+        const i = doc.bookings.findIndex((x) => x.id === body.booking.id);
+        if (i >= 0) doc.bookings[i] = body.booking;
+        window.KiwiReservations.set(doc);
+      }
+      modal?.close?.();
+      if (openModal?.el === modal?.el) openModal = null;
       toast('Séjour annulé dans Kiwi', { type: 'success', desc: 'La disponibilité directe est mise à jour. Vérifiez séparément l’annulation sur l’OTA ou auprès de l’agence.' });
       rerender();
     } catch (_) { toast('Confirmation non reçue', { type: 'warn', desc: 'Actualisez le dossier pour vérifier si l’annulation a été enregistrée.' }); }
@@ -3194,7 +5302,11 @@
     return JSON.stringify(['accountId', 'roomTypeId', 'checkIn', 'checkOut', 'partySize', 'board', 'priceMode'].map(k => form.elements[k]?.value || ''));
   }
   function cuQuoteRows(q) {
-    return `<div class="hx-quote-lines">${q.rows.map(r => `<div><span>${esc(r.date)} · ${esc(r.label)}</span><span>${r.quantity} × ${(r.unitCents / 100).toFixed(2)} = <b>${(r.amountCents / 100).toFixed(2)} MAD</b></span></div>`).join('')}</div><p><b>Total formule : ${(q.totalCents / 100).toFixed(2)} MAD ${q.taxBasis === 'exclusive' ? 'HT' : 'TTC'}</b></p><small>Simulation de séjour, pas une facture. Taxes locales, extras et réductions enfants non calculés ici.</small>`;
+    const period = q.contract?.from && q.contract?.to ? `${esc(q.contract.from)} → ${esc(q.contract.to)}` : '';
+    const occupancyLabel = ['', 'Single · 1 personne', 'Double · 2 personnes', 'Triple · 3 personnes'][q.contract?.occupancy] || (q.contract?.occupancy ? `${q.contract.occupancy} pers.` : '');
+    const accountName = q.account?.name || '';
+    const boardLabel = cuBoards[q.contract?.board] || q.contract?.board || '';
+    return `<div class="hx-simulation-notice"><strong>Simulation contractuelle informative</strong> · Aucune réservation ni blocage créé à cette étape.${accountName ? `<div>Compte : <b>${esc(accountName)}</b>${q.account?.paymentDays ? ` · Échéance ${q.account.paymentDays} j` : ''}</div>` : ''}${occupancyLabel ? `<div>Formule : ${esc(occupancyLabel)} · ${esc(boardLabel)}${period ? ` (${period})` : ''}</div>` : ''}</div><div class="hx-quote-lines">${q.rows.map(r => `<div><span>${esc(r.date)} · ${esc(r.label)}</span><span>${r.quantity} × ${(r.unitCents / 100).toFixed(2)} = <b>${(r.amountCents / 100).toFixed(2)} MAD</b></span></div>`).join('')}</div><p><b>Total formule : ${(q.totalCents / 100).toFixed(2)} MAD ${q.taxBasis === 'exclusive' ? 'HT' : 'TTC'}</b></p><small>Simulation de séjour, pas une facture. Taxes locales, extras et réductions enfants non calculés ici.</small>`;
   }
   async function cuWireStayCommercial(form, booking) {
     const box = form.querySelector('[data-hx-commercial-stay]');
@@ -3218,15 +5330,20 @@
     previewButton.addEventListener('click', async () => {
       if (scope !== cuStayScope()) return;
       const signature = cuStayQuoteSignature(form), fd = new FormData(form);
+      const accountId = fd.get('accountId');
+      if (!accountId || !String(accountId).trim()) {
+        result.innerHTML = '<p class="hx-warn-note" style="color:var(--warn-ink);background:var(--warn-soft);padding:8px 12px;border-radius:8px;font-size:12px;">Sélectionnez un compte commercial avant de simuler un contrat.</p>';
+        return;
+      }
       previewButton.disabled = true; form.__commercialQuote = null; result.textContent = 'Calcul des nuitées…';
       try {
-        const res = await fetch('/api/hotel/commercial', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'quote', merchant: cuChannelMerchant(), accountId: fd.get('accountId'), roomTypeId: fd.get('roomTypeId'), checkIn: fd.get('checkIn'), checkOut: fd.get('checkOut'), occupancy: Number(fd.get('partySize')), board: fd.get('board') }) });
+        const res = await fetch('/api/hotel/commercial', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'quote', merchant: cuMerchantSlug(), accountId, roomTypeId: fd.get('roomTypeId'), checkIn: fd.get('checkIn'), checkOut: fd.get('checkOut'), occupancy: Number(fd.get('partySize')), board: fd.get('board') }) });
         const b = await res.json();
         if (scope !== cuStayScope() || signature !== cuStayQuoteSignature(form)) return;
         if (!res.ok) { result.textContent = cuCommercialError(b.error); return; }
         form.elements.priceMode.value = 'contract';
         form.__commercialQuote = { rev: b.rev, signature: cuStayQuoteSignature(form) };
-        result.innerHTML = cuQuoteRows(b.quote) + (b.quote.taxBasis === 'inclusive' ? '<label class="hx-quote-accept"><input type="checkbox" data-hx-accept-quote> J’accepte ce prix pour la formule et les dates affichées.</label>' : '<p>HT : configuration fiscale nécessaire avant confirmation du séjour.</p>');
+        result.innerHTML = cuQuoteRows(b.quote) + (b.quote.taxBasis === 'inclusive' ? '<div class="hx-quote-accept-wrap"><label class="hx-quote-accept"><input type="checkbox" data-hx-accept-quote> J’accepte ce prix pour la formule et les dates affichées.</label></div>' : '<p class="hx-warn-note" style="color:var(--warn-ink);margin-top:6px;">HT : configuration fiscale nécessaire avant confirmation du séjour.</p>');
       } catch (_) { result.textContent = 'Simulation indisponible. Aucun nouveau tarif accepté.'; }
       finally { previewButton.disabled = false; }
     });
@@ -3241,7 +5358,13 @@
       'rate-gap': 'Une ou plusieurs nuits n’ont aucun tarif. Complétez les dates du contrat.',
       'rate-overlap': 'Deux tarifs couvrent les mêmes dates pour ce compte, cette catégorie, cette occupation et cette formule.',
       'mixed-tax-basis': 'Le séjour mélange des tarifs HT et TTC. Harmonisez le contrat.',
-      'account-unavailable': 'Le compte est absent ou archivé.', 'invalid-price': 'Saisissez un montant positif ou nul, avec deux décimales maximum.',
+      'account-required': 'Sélectionnez un compte commercial avant de simuler un contrat.',
+      'account-archived': 'Le compte commercial sélectionné est archivé. Choisissez un compte actif ou réactivez-le dans le Cardex.',
+      'account-not-found': 'Le compte commercial sélectionné est introuvable pour cet établissement.',
+      'account-unavailable': 'Le compte commercial est absent ou archivé.',
+      'room-type-not-found': 'La catégorie choisie ne peut pas accueillir ce nombre d’occupants ou est introuvable.',
+      'room-unavailable': 'Cette chambre vient d’être prise sur ces dates. Choisissez-en une autre.',
+      'invalid-price': 'Saisissez un montant positif ou nul, avec deux décimales maximum.',
       'quote-required': 'Simulez puis acceptez le tarif pour les dates et voyageurs sélectionnés.',
       'tax-configuration-required': 'Un tarif HT ne peut pas être confirmé avant configuration de la fiscalité hôtelière.',
       'feed-contract-unsupported': 'Un séjour importé par iCal ne peut pas encore recevoir un contrat tarifaire.',
@@ -3252,7 +5375,8 @@
       'day-use-contract-unsupported': 'Les contrats par nuit ne sont pas applicables au day-use. Indiquez son forfait TTC.',
       'linked-stay-not-found': 'Le dossier d’origine est introuvable dans cet hôtel.',
       unauthorized: 'Accès réservé au compte propriétaire ou à la console opérateur.',
-      'invalid-dates': 'Vérifiez les dates de début et de fin.', 'invalid-formula': 'La tarification contractuelle couvre une à trois personnes, sans réduction enfant automatique.' })[code] || 'Enregistrement indisponible. Vérifiez les champs et réessayez.';
+      'invalid-dates': 'Vérifiez les dates de début et de fin.',
+      'invalid-formula': 'La tarification contractuelle couvre de 1 à 3 personnes (Single, Double ou Triple). Ajustez le nombre d’occupants.' })[code] || 'Enregistrement indisponible. Vérifiez les champs et réessayez.';
   }
   async function cuLoadCommercial() {
     const st = cuCommercialState(), scope = cuStayScope(), merchant = cuChannelMerchant();
@@ -3375,7 +5499,7 @@
     </div>`;
   }
   const cuChannelState = { loading: false, loaded: false, rows: [], error: '' };
-  function cuChannelMerchant() { return window.KiwiStore?.slugFor?.(cuVenueId()) || ''; }
+  function cuChannelMerchant() { return cuMerchantSlug(); }
   async function cuLoadChannels(sync) {
     const merchant = cuChannelMerchant(); if (!merchant || cuChannelState.loading) return;
     cuChannelState.loading = true; cuChannelState.error = ''; rerender();
@@ -4146,6 +6270,7 @@
   };
   handlers['hx-tape-today'] = () => { cuTapeOffset = 0; rerender(); };
   handlers['hx-stay-new'] = () => { if (isCustomHotel()) cuStayEditor(null); };
+  handlers['hx-group-new'] = () => { if (isCustomHotel()) cuGroupReservationModal(); };
   handlers['hx-dossier'] = (el,arg) => { const booking=cuAllStays().get(String(arg));if(booking?.hotel)cuOpenDossier(booking); };
   handlers['hx-stay-edit'] = (el, arg) => {
     if (!isCustomHotel() || String(arg).startsWith('folio:')) return;
@@ -5194,6 +7319,11 @@
         cuSave(st);
       }
     },
+    nationalities: () => cuNationalities.slice(),
+    matchNationality: (input) => cuMatchNationality(input),
+    nationalityLabel: (val, lang) => cuNationalityLabel(val, lang),
+    nationalitySelectorHtml: (guest, index) => cuNationalitySelectorHtml(guest, index),
+    parseDelimitedLine: (line) => cuParseDelimitedLine(line),
   });
 
   register();

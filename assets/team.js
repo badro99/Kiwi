@@ -1368,10 +1368,17 @@
     render();
   }
 
+  function deactivateTeam() {
+    pageActive = false;
+    pageMode = null;
+    if (unsubscribeVenue) { try { unsubscribeVenue(); } catch (_) {} unsubscribeVenue = null; }
+  }
+  window.__kiwiTeamDeactivate = deactivateTeam;
+
   function showDashboard() {
     if (!pageActive) return;
     pageActive = false;
-    scheduleLiveTeam();          // plus personne ne regarde : on lève le pied
+    scheduleLiveTeam();          // plus personne ne regarde : on leve le pied
     pageMode = null;
     document.body.classList.remove('page-equipe');
     const bc = document.querySelector('.breadcrumb');
@@ -1380,11 +1387,19 @@
     window.Kiwi?.setActivePage?.('accueil');
   }
 
-  /* ═══════════════ RENDER ═══════════════ */
+  /* =============================== RENDER =============================== */
   function render() {
-    // L'éditeur de service est ancré sur une case : la case disparaît, lui aussi.
+    // L'editeur de service est ancre sur une case : la case disparait, lui aussi.
     closeShiftPop();
-    if (pageMode === 'payroll') { showPayroll(); return; }
+    if (pageMode === 'payroll') {
+      const payrollNav = document.querySelector('.sidebar nav a[data-nav="payroll"]');
+      if (!payrollNav?.classList.contains('active') && document.body.classList.contains('page-genpage')) {
+        deactivateTeam();
+        return;
+      }
+      showPayroll();
+      return;
+    }
     const root = document.querySelector('[data-equipe-root]');
     if (!root) return;
     root.removeAttribute('hidden');
