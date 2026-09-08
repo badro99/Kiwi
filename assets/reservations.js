@@ -170,6 +170,49 @@
   }
   function cleanText(v, max) { return String(v == null ? '' : v).trim().slice(0, max); }
   function number(v, min, max, fallback) { v = Number(v); return Number.isFinite(v) ? Math.max(min, Math.min(max, v)) : fallback; }
+  // Keep server-owned identities and dated segments through every get/set and
+  // merge. Normalization must not mint new guest ids or collapse room history.
+  function normalizeGuests(raw) {
+    return (Array.isArray(raw) ? raw : []).slice(0, 20).filter(function (g) { return g && typeof g === 'object'; }).map(function (g) {
+      return {
+        id: cleanText(g.id, 64), name: cleanText(g.name, 100),
+        sex: ['M', 'F'].indexOf(g.sex) >= 0 ? g.sex : '',
+        nationality: cleanText(g.nationality, 64), birthDate: cleanText(g.birthDate, 10),
+        residenceCountry: cleanText(g.residenceCountry, 64), minorsUnder18: number(g.minorsUnder18, 0, 10, 0),
+        idDocType: ['CNIE', 'passeport', 'carte_sejour', 'autre'].indexOf(g.idDocType) >= 0 ? g.idDocType : '',
+        idDocNumber: cleanText(g.idDocNumber, 40)
+      };
+    });
+  }
+  function normalizeRoomSegments(raw, cap) {
+    return (Array.isArray(raw) ? raw : []).slice(0, cap).filter(function (s) { return s && typeof s === 'object'; }).map(function (s) {
+      return { roomId: cleanText(s.roomId, 64), fromDate: cleanText(s.fromDate, 10), toDate: cleanText(s.toDate, 10) };
+    }).filter(function (s) { return s.roomId && s.fromDate && s.toDate; });
+  }
+  function normalizeGuestSegments(raw) {
+    return (Array.isArray(raw) ? raw : []).slice(0, 20).filter(function (s) { return s && typeof s === 'object'; }).map(function (s) {
+      return {
+        guestId: cleanText(s.guestId, 80), nationalityCountry: cleanText(s.nationalityCountry, 2),
+        usualResidenceCountry: cleanText(s.usualResidenceCountry, 2),
+        ageCategory: ['adult', 'minor', 'unknown'].indexOf(s.ageCategory) >= 0 ? s.ageCategory : 'unknown',
+        fromDate: cleanText(s.fromDate, 10), toDate: cleanText(s.toDate, 10)
+      };
+    }).filter(function (s) { return s.guestId; });
+  }
+  function normalizeCommercial(raw) {
+    if (!raw || typeof raw !== 'object') return null;
+    var a = raw.billTo, billTo = null;
+    if (a && typeof a === 'object') {
+      billTo = {};
+      ['id', 'kind', 'name', 'legalName', 'address', 'city', 'country', 'ice', 'taxId', 'rc', 'contact', 'email', 'phone', 'notes'].forEach(function (k) { billTo[k] = cleanText(a[k], k === 'notes' ? 600 : k === 'address' ? 500 : 160); });
+      billTo.paymentDays = number(a.paymentDays, 0, 365, 0); billTo.archived = a.archived === true;
+    }
+    var q = raw.quote, quote = null;
+    if (q && typeof q === 'object') quote = { currency: 'MAD', taxBasis: q.taxBasis === 'exclusive' ? 'exclusive' : 'inclusive', totalCents: number(q.totalCents, 0, 109500000000, 0), rows: (Array.isArray(q.rows) ? q.rows : []).slice(0, 365).map(function (r) {
+      return { date: cleanText(r.date, 10), contractId: cleanText(r.contractId, 80), label: cleanText(r.label, 160), unit: r.unit === 'person' ? 'person' : 'room', quantity: number(r.quantity, 1, 3, 1), unitCents: number(r.unitCents, 0, 100000000, 0), amountCents: number(r.amountCents, 0, 300000000, 0), taxBasis: r.taxBasis === 'exclusive' ? 'exclusive' : 'inclusive' };
+    }) };
+    return { accountId: cleanText(raw.accountId, 80), billTo: billTo, booker: cleanText(raw.booker, 160), voucher: cleanText(raw.voucher, 100), board: ['room_only','bb','hb_lunch','hb_dinner','full_board'].indexOf(raw.board) >= 0 ? raw.board : 'room_only', occupancy: number(raw.occupancy, 1, 12, 1), quoted: raw.quoted === true, acceptedAt: +raw.acceptedAt || 0, quote: quote };
+  }
   function normalize(raw) {
     var out = blank(), r = raw && typeof raw === 'object' ? raw : {};
     var s = r.settings || {};
@@ -185,13 +228,17 @@
         rate: number(x.hotel.rate, 0, 1000000, 0), total: number(x.hotel.total, 0, 100000000, 0),
         channel: ['direct','booking','airbnb','expedia','walkin','other'].indexOf(x.hotel.channel) >= 0 ? x.hotel.channel : (x.source === 'public' ? 'direct' : 'other'),
         externalRef: cleanText(x.hotel.externalRef, 80), feedId: cleanText(x.hotel.feedId, 64),
-        syncedAt: +x.hotel.syncedAt || 0, conflict: !!x.hotel.conflict
+        syncedAt: +x.hotel.syncedAt || 0, conflict: !!x.hotel.conflict,
+        guestSegments: normalizeGuestSegments(x.hotel.guestSegments),
+        roomSegments: normalizeRoomSegments(x.hotel.roomSegments, 40)
       } : null;
-      return { id: cleanText(x && x.id, 64) || id('bk'), code: cleanText(x && x.code, 24), customer: { name: cleanText(x && x.customer && x.customer.name, 100), phone: cleanText(x && x.customer && x.customer.phone, 32), email: cleanText(x && x.customer && x.customer.email, 160) }, serviceId: cleanText(x && x.serviceId, 64), resourceId: cleanText(x && x.resourceId, 64), startAt: +x.startAt || 0, endAt: +x.endAt || 0, partySize: number(x && x.partySize, 1, 999, 1), status: status, source: ['public','staff','import'].indexOf(x && x.source) >= 0 ? x.source : 'staff', note: cleanText(x && x.note, 600), manageToken: cleanText(x && x.manageToken, 80), publicRef: cleanText(x && x.publicRef, 80), hotel: hotel, createdAt: +x.createdAt || 0, updatedAt: +x.updatedAt || 0 };
+      return { id: cleanText(x && x.id, 64) || id('bk'), code: cleanText(x && x.code, 24), customer: { name: cleanText(x && x.customer && x.customer.name, 100), phone: cleanText(x && x.customer && x.customer.phone, 32), email: cleanText(x && x.customer && x.customer.email, 160) }, serviceId: cleanText(x && x.serviceId, 64), resourceId: cleanText(x && x.resourceId, 64), startAt: +x.startAt || 0, endAt: +x.endAt || 0, partySize: number(x && x.partySize, 1, 999, 1), status: status, source: ['public','staff','import'].indexOf(x && x.source) >= 0 ? x.source : 'staff', note: cleanText(x && x.note, 600), manageToken: cleanText(x && x.manageToken, 80), publicRef: cleanText(x && x.publicRef, 80), hotel: hotel, guests: normalizeGuests(x && x.guests), roomSegments: normalizeRoomSegments(x && x.roomSegments, 20), createdAt: +x.createdAt || 0, updatedAt: +x.updatedAt || 0 };
     }).filter(function (x) { return x.id && x.customer.name && x.serviceId && x.startAt && x.endAt > x.startAt; });
+    var originalBookings = byId(r.bookings);
+    out.bookings.forEach(function (b) { b.commercial = normalizeCommercial(originalBookings[b.id] && originalBookings[b.id].commercial); });
     return out;
   }
-  function byId(rows) { var out = Object.create(null); (rows || []).forEach(function (x) { if (x && x.id) out[x.id] = x; }); return out; }
+  function byId(rows) { var out = Object.create(null); (Array.isArray(rows) ? rows : []).forEach(function (x) { if (x && x.id) out[x.id] = x; }); return out; }
   function merge(a, b) {
     a = normalize(a); b = normalize(b);
     function records(aa, bb, cap) { var all = byId(aa); (bb || []).forEach(function (x) { var p = all[x.id]; if (!p || (+x.updatedAt || 0) > (+p.updatedAt || 0)) all[x.id] = x; }); return Object.keys(all).map(function (k) { return all[k]; }).sort(function (x, y) { return (+x.updatedAt || 0) - (+y.updatedAt || 0); }).slice(-cap); }

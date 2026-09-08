@@ -475,6 +475,11 @@ for (const test of [
   'inventory-universal-count-test.mjs',
   'inventory-expiry-test.mjs',
   'hotel-exceptions-test.mjs',
+  'hotel-reception-journal-test.mjs',
+  'hotel-stay-editing-test.mjs',
+  'hotel-commercial-test.mjs',
+  'hotel-commercial-layout-test.mjs',
+  'hotel-pos-billing-safety-test.mjs',
   'hotel-declarations-closing-test.mjs',
 ]) {
   const { spawnSync } = require('child_process');

@@ -46,6 +46,7 @@ import {
   validateEconomatCatalogue,
 } from './inventory/_economat-catalogue.js';
 import { hotelUnitDeactivationBlockers } from './inventory/_hotel-unit-deactivation.js';
+import { validateCommercialSync } from './hotel/_commercial.js';
 
 /* Les fonctionnalités qui ont le droit d'exister ici, et ce qu'on sait de leur
  * forme. La liste est FERMÉE : sans elle, n'importe quel client authentifié
@@ -494,6 +495,11 @@ export async function onRequestPost(context) {
     return json({ error: 'stale', feature, rev: serverRev, data: mine }, 409);
   }
 
+  if (feature === 'reservations') {
+    try { await validateCommercialSync(env, merchant, mine, clean.value); }
+    catch (e) { return json({ error: e?.code || 'commercial-unavailable', feature }, e?.code === 'commercial-stays-use-api' ? 409 : 503); }
+  }
+
   if (feature === HOTEL_UNITS_FEATURE) {
     const checked = validateHotelUnits(clean.value, mine);
     if (!checked.ok) {
@@ -528,7 +534,9 @@ export async function onRequestPost(context) {
 
   const rev = serverRev + 1;
   try {
-    const writeDoc = env.DB.prepare(
+    const writeDoc = feature === 'reservations' ? (serverRev
+      ? env.DB.prepare('UPDATE store_docs SET data=?,rev=?,updated_ts=? WHERE merchant=? AND feature=? AND rev=?').bind(text, rev, now, merchant, feature, serverRev)
+      : env.DB.prepare('INSERT INTO store_docs (merchant,feature,data,rev,updated_ts) VALUES (?,?,?,?,?) ON CONFLICT(merchant,feature) DO NOTHING').bind(merchant, feature, text, rev, now)) : env.DB.prepare(
       `INSERT INTO store_docs (merchant, feature, data, rev, updated_ts)
        VALUES (?, ?, ?, ?, ?)
        ON CONFLICT(merchant, feature) DO UPDATE SET
@@ -544,7 +552,8 @@ export async function onRequestPost(context) {
       ).bind(merchant, accessText, now);
       await env.DB.batch([writeDoc, writeAccess]);
     } else {
-      await writeDoc.run();
+      const written = await writeDoc.run();
+      if (feature === 'reservations' && Number(written.meta?.changes) !== 1) return json({ error: 'stale', feature }, 409);
     }
   } catch (_) { return json({ error: 'write-failed' }, 500); }
 

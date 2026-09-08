@@ -2,8 +2,9 @@
 import { json, limitCheck, limitFail, limitClear } from '../auth/_lib.js';
 import { storeSubscriptionPending } from './_private.js';
 import { poke } from './_live.js';
-import { currentRoomSegment, normalizeGuestSegments, writeReservationWithEvents, hotelReservationsTableExists } from './hotel/_stay-events.js';
+import { currentRoomSegment, normalizeGuestSegments, readGuestSegments, readRoomSegments, writeReservationWithEvents, hotelReservationsTableExists } from './hotel/_stay-events.js';
 import { pruneReservationsDoc } from './hotel/stays.js';
+import { commercialSnapshot } from './hotel/_commercial.js';
 
 const ACTIVE = new Set(['requested', 'confirmed', 'checked_in']);
 const ID = /^[a-z0-9][a-z0-9-]{2,63}$/;
@@ -45,6 +46,26 @@ function safeDoc(raw) {
   out.resources = (Array.isArray(d.resources) ? d.resources : []).slice(0, 120).map((x) => ({ id: str(x?.id, 64), name: str(x?.name, 100), kind: ['person','room','table'].includes(x?.kind) ? x.kind : 'person', capacity: num(x?.capacity, 1, 999, 1), active: x?.active !== false, week: x?.week && typeof x.week === 'object' ? x.week : null, updatedAt: +x?.updatedAt || 0 })).filter((x) => x.id && x.name);
   out.blocked = (Array.isArray(d.blocked) ? d.blocked : []).slice(-500).map((x) => ({ id: str(x?.id, 64), resourceId: str(x?.resourceId, 64), startAt: +x?.startAt || 0, endAt: +x?.endAt || 0, reason: str(x?.reason, 120), updatedAt: +x?.updatedAt || 0 })).filter((x) => x.startAt && x.endAt > x.startAt);
   out.bookings = (Array.isArray(d.bookings) ? d.bookings : []).slice(-4000).map((x) => ({ id: str(x?.id, 64), code: str(x?.code, 24), customer: { name: str(x?.customer?.name, 100), phone: str(x?.customer?.phone, 32), email: str(x?.customer?.email, 160) }, serviceId: str(x?.serviceId, 64), resourceId: str(x?.resourceId, 64), startAt: +x?.startAt || 0, endAt: +x?.endAt || 0, partySize: num(x?.partySize, 1, 999, 1), status: ['requested','confirmed','checked_in','completed','cancelled','no_show'].includes(x?.status) ? x.status : 'requested', source: ['public','staff','import'].includes(x?.source) ? x.source : 'staff', note: str(x?.note, 600), manageToken: str(x?.manageToken, 80), publicRef: str(x?.publicRef, 80), hotel: x?.hotel && typeof x.hotel === 'object' ? { roomTypeName:str(x.hotel.roomTypeName,100), checkIn:str(x.hotel.checkIn,10), checkOut:str(x.hotel.checkOut,10), nights:num(x.hotel.nights,1,365,1), rate:num(x.hotel.rate,0,1000000,0), total:num(x.hotel.total,0,100000000,0), channel:['direct','booking','airbnb','expedia','walkin','other'].includes(x.hotel.channel)?x.hotel.channel:(x.source==='public'?'direct':'other'), externalRef:str(x.hotel.externalRef,80), feedId:str(x.hotel.feedId,64), syncedAt:+x.hotel.syncedAt||0, conflict:!!x.hotel.conflict } : null, createdAt: +x?.createdAt || 0, updatedAt: +x?.updatedAt || 0 })).filter((x) => x.id && x.customer.name && x.serviceId && x.startAt && x.endAt > x.startAt);
+  const originals = new Map((Array.isArray(d.bookings) ? d.bookings : []).map(x => [x?.id, x]));
+  out.bookings.forEach(x => {
+    const original = originals.get(x.id);
+    x.commercial = commercialSnapshot(original?.commercial);
+    if (!x.hotel) return;
+    // Public intake rewrites the shared document. Preserve bounded staff-only
+    // identity/history fields, but never include them in the public response.
+    x.guests = (Array.isArray(original?.guests) ? original.guests : []).slice(0, 20).map(g => ({
+      id: str(g?.id, 64), name: str(g?.name, 100), sex: ['M', 'F'].includes(g?.sex) ? g.sex : '',
+      nationality: str(g?.nationality, 64), birthDate: str(g?.birthDate, 10), residenceCountry: str(g?.residenceCountry, 64),
+      minorsUnder18: num(g?.minorsUnder18, 0, 10, 0),
+      idDocType: ['CNIE', 'passeport', 'carte_sejour', 'autre'].includes(g?.idDocType) ? g.idDocType : '',
+      idDocNumber: str(g?.idDocNumber, 40),
+    })).filter(g => g.name || g.nationality || g.idDocNumber);
+    x.roomSegments = (Array.isArray(original?.roomSegments) ? original.roomSegments : []).slice(0, 20).map(r => ({
+      roomId: str(r?.roomId, 64), fromDate: str(r?.fromDate, 10), toDate: str(r?.toDate, 10),
+    })).filter(r => r.roomId && r.fromDate && r.toDate);
+    x.hotel.guestSegments = readGuestSegments(original?.hotel?.guestSegments, x.hotel.checkIn, x.hotel.checkOut);
+    x.hotel.roomSegments = readRoomSegments(original?.hotel?.roomSegments, x.hotel.checkIn, x.hotel.checkOut);
+  });
   return out;
 }
 function dateParts(epoch, tz = TZ) {

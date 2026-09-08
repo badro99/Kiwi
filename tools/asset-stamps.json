@@ -340,12 +340,12 @@
     "sha": "d597ba5cac11de01"
   },
   "assets/hotel.css": {
-    "v": "18",
-    "sha": "ca585476c687e2d4"
+    "v": "22",
+    "sha": "9fbbe797b1b696d3"
   },
   "assets/hotel.js": {
-    "v": "28",
-    "sha": "64e97841a4bbea10"
+    "v": "33",
+    "sha": "a7482de26f33cf74"
   },
   "assets/hours-ui.js": {
     "v": "1",
@@ -604,8 +604,8 @@
     "sha": "3673be5ef49cb7de"
   },
   "assets/pos-dispatch.js": {
-    "v": "35",
-    "sha": "c5defa491a4c9442"
+    "v": "36",
+    "sha": "5d514cad44dd7d8b"
   },
   "assets/pos-epicerie.css": {
     "v": "5",
@@ -648,12 +648,12 @@
     "sha": "3da516413a960632"
   },
   "assets/pos-hotel.css": {
-    "v": "12",
+    "v": "14",
     "sha": "ecf294d2c2574bd9"
   },
   "assets/pos-hotel.js": {
-    "v": "12",
-    "sha": "644da9146bc9d2e2"
+    "v": "14",
+    "sha": "7ac81391d3454891"
   },
   "assets/pos-inventory-count.js": {
     "v": "6",
@@ -808,8 +808,8 @@
     "sha": "564bac0e65269a9d"
   },
   "assets/reservations.js": {
-    "v": "13",
-    "sha": "6e049265c76a74fa"
+    "v": "15",
+    "sha": "0a76de52b62331b3"
   },
   "assets/restaurant-menu-workspace.js": {
     "v": "68",

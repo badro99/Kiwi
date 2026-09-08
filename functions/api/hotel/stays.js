@@ -1,7 +1,8 @@
 // Authenticated hotel stay writer. Manual, direct and OTA stays are committed
 // into the same revisioned reservations document used by /api/booking, so a
 // room accepted here disappears from public availability in the same write.
-import { json } from '../../auth/_lib.js';
+import { json, entitledMerchant } from '../../auth/_lib.js';
+import { commercialSnapshot, readCommercial, quote, BOARDS } from './_commercial.js';
 import { tenantFor } from '../_private.js';
 import { poke } from '../_live.js';
 import {
@@ -72,7 +73,7 @@ function safeDoc(raw) {
       partySize: num(x?.partySize, 1, 999, 1), status: STATUSES.has(x?.status) ? x.status : 'requested',
       source: ['public', 'staff', 'import'].includes(x?.source) ? x.source : 'staff', note: str(x?.note, 600),
       manageToken: str(x?.manageToken, 80), publicRef: str(x?.publicRef, 80), hotel: h,
-      guests, roomSegments,
+      guests, roomSegments, commercial: commercialSnapshot(x?.commercial),
       createdAt: +x?.createdAt || 0, updatedAt: +x?.updatedAt || 0,
     };
   }).filter((x) => x.id && x.customer.name && x.serviceId && x.startAt && x.endAt > x.startAt);
@@ -96,8 +97,14 @@ function dateParts(epoch) {
   const parts = new Intl.DateTimeFormat('en-CA', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(epoch));
   const out = {}; parts.forEach((p) => { if (p.type !== 'literal') out[p.type] = p.value; }); return out;
 }
+function isCalendarDate(date) {
+  if (!DATE.test(date) || date.startsWith('0000-')) return false;
+  const epoch = Date.parse(`${date}T12:00:00Z`);
+  // Date.parse normalizes e.g. February 30 into March instead of rejecting it.
+  return Number.isFinite(epoch) && new Date(epoch).toISOString().slice(0, 10) === date;
+}
 function zonedEpoch(date, time) {
-  if (!DATE.test(date)) return 0;
+  if (!isCalendarDate(date)) return 0;
   const target = Date.parse(`${date}T${time}:00Z`); let guess = target;
   for (let i = 0; i < 3; i++) { const p = dateParts(guess); const seen = Date.parse(`${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}:00Z`); guess += target - seen; }
   return guess;
@@ -212,7 +219,16 @@ export async function onRequestGet({ request, env }) {
   const fromParam = str(u.searchParams.get('from'), 32);
   const toParam = str(u.searchParams.get('to'), 32);
   const roomId = str(u.searchParams.get('roomId'), 64);
+  const accountId = str(u.searchParams.get('accountId'), 80);
   const statusParam = str(u.searchParams.get('status'), 24);
+  const includeCancelled = u.searchParams.get('includeCancelled') === '1' || statusParam === 'cancelled';
+
+  // Keep numeric epoch bounds, but never normalize impossible calendar dates
+  // or silently turn malformed date filters into an unbounded query.
+  if ([fromParam, toParam].some((value) => value && !isCalendarDate(value)
+    && !(Number.isFinite(+value) && +value >= 0))) {
+    return json({ error: 'invalid-dates' }, 400);
+  }
 
   const fromEpoch = DATE.test(fromParam)
     ? zonedEpoch(fromParam, '00:00')
@@ -230,8 +246,13 @@ export async function onRequestGet({ request, env }) {
 
   if (hasResTable) {
     try {
-      let query = "SELECT * FROM hotel_reservations WHERE merchant = ? AND start_at < ? AND end_at > ? AND status != 'cancelled'";
+      let query = "SELECT * FROM hotel_reservations WHERE merchant = ? AND start_at < ? AND end_at > ?";
       const params = [merchant, toEpoch, fromEpoch];
+      if (accountId) {
+        query += " AND CASE WHEN json_valid(raw_json) THEN json_extract(raw_json, '$.commercial.accountId') END = ?";
+        params.push(accountId);
+      }
+      if (!includeCancelled) query += " AND status != 'cancelled'";
 
       if (roomId) {
         query += " AND room_id = ?";
@@ -246,7 +267,7 @@ export async function onRequestGet({ request, env }) {
       const stmt = env.DB.prepare(query).bind(...params);
       const rows = typeof stmt.all === 'function' ? await stmt.all() : (typeof stmt.rows === 'function' ? await stmt.rows() : null);
       const stays = (rows?.results || []).map(hydrateReservation).filter(Boolean);
-      return json({ ok: true, stays }, 200, { 'Cache-Control': 'no-store' });
+      return json({ ok: true, stays, coverage: 'ledger', capped: stays.length === 1000 }, 200, { 'Cache-Control': 'no-store' });
 
     } catch (_) {
       return json({ error: 'service-unavailable' }, 503);
@@ -257,12 +278,13 @@ export async function onRequestGet({ request, env }) {
     const row = await env.DB.prepare("SELECT data FROM store_docs WHERE merchant = ? AND feature = 'reservations'").bind(merchant).first();
     const doc = safeDoc(row?.data);
     const stays = (doc.bookings || []).filter((b) => {
-      if (!b.hotel || b.status === 'cancelled') return false;
+      if (!b.hotel || (!includeCancelled && b.status === 'cancelled')) return false;
+      if (accountId && b.commercial?.accountId !== accountId) return false;
       if (roomId && b.resourceId !== roomId) return false;
       if (statusParam && b.status !== statusParam) return false;
       return overlaps(fromEpoch, toEpoch, b.startAt, b.endAt);
     });
-    return json({ ok: true, stays }, 200, { 'Cache-Control': 'no-store' });
+    return json({ ok: true, stays, coverage: 'document' }, 200, { 'Cache-Control': 'no-store' });
   } catch (_) {
     return json({ error: 'service-unavailable' }, 503);
   }
@@ -288,7 +310,7 @@ export async function onRequestPost({ request, env }) {
       return json({ error: 'service-unavailable' }, 503);
     }
 
-    if (existingId && !old && hasResTable) {
+    if (existingId && hasResTable) {
       try {
         const row = await env.DB.prepare("SELECT * FROM hotel_reservations WHERE merchant = ? AND id = ?").bind(merchant, existingId).first();
         if (row) old = hydrateReservation(row);
@@ -321,22 +343,38 @@ export async function onRequestPost({ request, env }) {
     }
     if (action !== 'save') return json({ error: 'bad-action' }, 400);
 
-    const checkIn = str(b?.checkIn, 10), checkOut = str(b?.checkOut, 10), typeId = str(b?.roomTypeId, 64), askedRoom = str(b?.resourceId, 64);
+    const checkIn = str(b?.checkIn, 32), checkOut = str(b?.checkOut, 32), typeId = str(b?.roomTypeId, 64), askedRoom = str(b?.resourceId, 64);
     const name = str(b?.customer?.name, 100), phone = str(b?.customer?.phone, 32), email = str(b?.customer?.email, 160), note = str(b?.note, 600);
     const channel = CHANNELS.has(b?.channel) ? b.channel : 'direct', externalRef = str(b?.externalRef, 80), status = STATUSES.has(b?.status) ? b.status : 'confirmed';
     const partySize = num(b?.partySize, 1, 12, 1), clientRef = str(b?.clientRef, 80);
     if (!DATE.test(checkIn) || !DATE.test(checkOut) || checkOut <= checkIn || !typeId || !name || !REF.test(clientRef)) return json({ error: 'invalid' }, 400);
+    if (!isCalendarDate(checkIn) || !isCalendarDate(checkOut)) return json({ error: 'invalid-dates' }, 400);
     const nights = Math.round((Date.parse(checkOut + 'T12:00:00Z') - Date.parse(checkIn + 'T12:00:00Z')) / 86400000);
     if (nights < 1 || nights > 365) return json({ error: 'invalid-dates' }, 400);
     const startAt = zonedEpoch(checkIn, '15:00'), endAt = zonedEpoch(checkOut, '11:00');
+    if (!old) {
+      // Future stays may live only in D1. publicRef is stored in raw_json,
+      // not a public_ref column; never let pruning defeat the form's retry key.
+      // Read D1 first so a stale compact copy cannot resurrect an old status.
+      let replay = null;
+      if (hasResTable) {
+        try {
+          const row = await env.DB.prepare(
+            "SELECT * FROM hotel_reservations WHERE merchant = ? " +
+            "AND CASE WHEN json_valid(raw_json) THEN json_extract(raw_json, '$.publicRef') END = ? LIMIT 1"
+          ).bind(merchant, clientRef).first();
+          if (row) replay = hydrateReservation(row);
+        } catch (_) {
+          return json({ error: 'service-unavailable' }, 503);
+        }
+      }
+      if (!replay) replay = doc.bookings.find((x) => x.publicRef === clientRef);
+      if (replay) return json({ ok: true, rev, booking: replay, replayed: true });
+    }
     const type = hotel.types.find((x) => x.id === typeId && x.maxGuests >= partySize);
     if (!type) return json({ error: 'room-type-not-found' }, 409);
     if (old && !canTransition(old.status, status)) {
       return json({ error: 'invalid-status-transition', from: old.status, to: status }, 409);
-    }
-    if (!old) {
-      const replay = doc.bookings.find((x) => x.publicRef === clientRef);
-      if (replay) return json({ ok: true, rev, booking: replay, replayed: true });
     }
     if (externalRef) {
       if (hasResTable) {
@@ -384,7 +422,49 @@ export async function onRequestPost({ request, env }) {
     }
 
 
-    const rate = type.rate == null ? hotel.baseRate : type.rate;
+    // A saved stay owns its price. Editing identity, status, dates or the room
+    // within the same category must not reprice it after a catalogue change.
+    // An explicit category change still takes that category's current rate.
+    const sameType = old && old.serviceId === type.id;
+    let rate = sameType ? old.hotel.rate : (type.rate == null ? hotel.baseRate : type.rate);
+    let total = sameType && nights === old.hotel.nights
+      ? old.hotel.total
+      : (rate == null ? 0 : Math.round(rate * nights * 100) / 100);
+    let commercial = commercialSnapshot(old?.commercial);
+    const spec = b?.commercial;
+    const changedStay = old && (old.serviceId !== typeId || old.hotel.checkIn !== checkIn || old.hotel.checkOut !== checkOut || old.partySize !== partySize);
+    if (commercial?.quoted && changedStay && (!spec || !b.acceptQuote)) return json({ error: 'quote-required' }, 409);
+    if (spec !== undefined) {
+      if ((await entitledMerchant(request, env, merchant)) !== merchant) return json({ error: 'commercial-forbidden' }, 403);
+      const accountId = str(spec?.accountId, 80), board = BOARDS.includes(spec?.board) ? spec.board : 'room_only';
+      const quoted = spec?.quoted === true;
+      const changedPricing = changedStay || accountId !== (commercial?.accountId || '') || board !== (commercial?.board || 'room_only') || quoted !== !!commercial?.quoted;
+      if (old && ['completed', 'cancelled', 'no_show'].includes(old.status) && (b.acceptQuote || changedPricing || str(spec?.voucher, 100) !== (commercial?.voucher || '') || str(spec?.booker, 160) !== (commercial?.booker || ''))) return json({ error: 'closed-commercial' }, 409);
+      try {
+        const directory = await readCommercial(env, merchant);
+        const selected = accountId ? directory.accounts.find(a => a.id === accountId) : null;
+        if (accountId && (!selected || (selected.archived && accountId !== commercial?.accountId))) return json({ error: 'account-unavailable' }, 409);
+        let accepted = commercial?.quote || null;
+        if (quoted && (!commercial?.quoted || changedPricing || b.acceptQuote)) {
+          if (old?.hotel?.feedId) return json({ error: 'feed-contract-unsupported' }, 409);
+          if (b.acceptQuote !== true || b.quoteRevision !== directory.rev) return json({ error: 'quote-required' }, 409);
+          accepted = quote(directory, { accountId, roomTypeId: typeId, checkIn, checkOut, occupancy: partySize, board });
+          // HT can be simulated but not booked as TTC until hotel taxes are configured.
+          if (accepted.taxBasis !== 'inclusive') return json({ error: 'tax-configuration-required' }, 409);
+        }
+        if (!quoted && board !== 'room_only') return json({ error: 'quote-required' }, 409);
+        commercial = { accountId, billTo: accountId === commercial?.accountId ? commercial.billTo : selected,
+          booker: str(spec?.booker, 160), voucher: str(spec?.voucher, 100), board, occupancy: partySize,
+          quoted, acceptedAt: quoted && b.acceptQuote ? now : (commercial?.acceptedAt || 0), quote: quoted ? accepted : null };
+        if (!quoted && old?.commercial?.quoted) {
+          if (!b.acceptQuote) return json({ error: 'quote-required' }, 409);
+          rate = type.rate == null ? hotel.baseRate : type.rate;
+          total = Math.round((rate || 0) * nights * 100) / 100;
+        }
+        if (!commercial.accountId && !commercial.booker && !commercial.voucher && !commercial.quoted) commercial = null;
+      } catch (e) { return json({ error: e?.code || 'commercial-unavailable' }, e?.code ? 409 : 503); }
+    }
+    if (commercial?.quoted && commercial.quote) { total = commercial.quote.totalCents / 100; rate = Math.round(total / nights * 100) / 100; }
     const saveGuests = (Array.isArray(b?.guests) ? b.guests : (old?.guests || [])).slice(0, 20).map((g) => ({
       id: str(g?.id, 64) || ('gst_' + crypto.randomUUID().slice(0, 12)),
       name: str(g?.name, 100),
@@ -406,11 +486,11 @@ export async function onRequestPost({ request, env }) {
       customer: { name, phone, email }, serviceId: type.id, resourceId: room.id, startAt, endAt, partySize, status,
       source: old?.source || (channel === 'direct' || channel === 'walkin' ? 'staff' : 'import'), note,
       manageToken: old?.manageToken || '', publicRef: old?.publicRef || clientRef,
-      guests: saveGuests,
+      guests: saveGuests, commercial,
       roomSegments: saveRoomSegments,
       hotel: {
         roomTypeName: type.name, checkIn, checkOut, nights,
-        rate: rate == null ? 0 : rate, total: rate == null ? 0 : Math.round(rate * nights),
+        rate: rate == null ? 0 : rate, total,
         channel, externalRef: externalRef || old?.hotel?.externalRef || '',
         feedId: old?.hotel?.feedId || '', syncedAt: old?.hotel?.syncedAt || 0,
         conflict: false,
@@ -433,4 +513,3 @@ export async function onRequestPost({ request, env }) {
   }
   return json({ error: 'write-conflict' }, 409);
 }
-

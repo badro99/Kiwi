@@ -136,6 +136,55 @@ ok(!/resourceIds:.*hotel\.categories/.test(bookingApiSource), 'hotel category re
 const hotelNormalized=R.normalize({bookings:[{id:'hotel-1',customer:{name:'Nora'},serviceId:'type-atlas',resourceId:'room:101',startAt:future,endAt:future+86400000,partySize:2,status:'confirmed',source:'public',hotel:{roomTypeName:'Suite Atlas',checkIn:'2026-09-01',checkOut:'2026-09-02',nights:1,rate:900,total:900,channel:'booking',externalRef:'OTA-42'}}]});
 ok(hotelNormalized.bookings[0].hotel.roomTypeName==='Suite Atlas' && hotelNormalized.bookings[0].hotel.total===900 && hotelNormalized.bookings[0].hotel.channel==='booking', 'dashboard normalization preserves the hotel stay and channel snapshot');
 
+// Execute the real normalization/get/set/merge paths with a synthetic manifest.
+const guestManifest = [
+  { id: 'gst_synthetic_001', name: 'Synthetic Adult', sex: 'F', nationality: 'Marocaine', birthDate: '1990-04-12', residenceCountry: 'Maroc', minorsUnder18: 1, idDocType: 'passeport', idDocNumber: 'TEST-DOC-001' },
+  { id: 'gst_synthetic_002', name: 'Synthetic Minor', sex: 'M', nationality: 'Française', birthDate: '2015-06-10', residenceCountry: 'France', minorsUnder18: 0, idDocType: 'autre', idDocNumber: 'TEST-DOC-002' },
+];
+const roomHistory = [
+  { roomId: 'room:101', fromDate: '2026-09-01', toDate: '2026-09-02' },
+  { roomId: 'room:102', fromDate: '2026-09-02', toDate: '2026-09-04' },
+];
+const guestHistory = [
+  { guestId: 'gst_synthetic_001', nationalityCountry: 'MA', usualResidenceCountry: 'MA', ageCategory: 'adult', fromDate: '2026-09-01', toDate: '2026-09-04' },
+  { guestId: 'gst_synthetic_002', nationalityCountry: 'FR', usualResidenceCountry: 'FR', ageCategory: 'minor', fromDate: '2026-09-02', toDate: '2026-09-04' },
+];
+const manifestBooking = {
+  ...hotelNormalized.bookings[0], updatedAt: 10, guests: guestManifest, roomSegments: roomHistory,
+  hotel: { ...hotelNormalized.bookings[0].hotel, checkOut: '2026-09-04', nights: 3, guestSegments: guestHistory, roomSegments: roomHistory },
+};
+const manifestOf = (b) => JSON.parse(JSON.stringify({ guests: b.guests, roomSegments: b.roomSegments, guestSegments: b.hotel.guestSegments, hotelRoomSegments: b.hotel.roomSegments }));
+const expectedManifest = manifestOf(manifestBooking);
+const normalizedManifest = R.normalize({ bookings: [manifestBooking] });
+assert.deepEqual(manifestOf(normalizedManifest.bookings[0]), expectedManifest);
+ok(normalizedManifest.bookings[0].guests !== guestManifest && normalizedManifest.bookings[0].guests[0] !== guestManifest[0], 'normalization preserves guest identity without retaining mutable input references');
+assert.deepEqual(manifestOf(R.normalize(normalizedManifest).bookings[0]), expectedManifest);
+let savedReservations = { bookings: [manifestBooking] };
+ctx.KiwiVenue = { getVenue: () => 'synthetic-hotel' };
+ctx.KiwiStore = { define(feature) {
+  assert.equal(feature, 'reservations');
+  return { subscribe() {}, get() { return savedReservations; }, set(value) { savedReservations = value; } };
+} };
+const fromStore = R.get();
+assert.deepEqual(manifestOf(fromStore.bookings[0]), expectedManifest);
+fromStore.bookings[0].note = 'Unrelated edit';
+R.set(fromStore);
+assert.deepEqual(manifestOf(savedReservations.bookings[0]), expectedManifest);
+assert.deepEqual(manifestOf(R.get().bookings[0]), expectedManifest);
+fromStore.bookings[0].guests[0].birthDate = '';
+fromStore.bookings[0].hotel.roomSegments[0].roomId = 'mutated-input';
+assert.deepEqual(manifestOf(R.get().bookings[0]), expectedManifest, 'mutating a prior caller object cannot erase stored guest or room history');
+ok(true, 'get/set preserves guest ids, birth dates, and independent room/guest segments');
+const newerManifest = structuredClone(manifestBooking);
+newerManifest.updatedAt = 11;
+newerManifest.guests[0].birthDate = '1990-04-13';
+for (const [a, b] of [[manifestBooking, newerManifest], [newerManifest, manifestBooking]]) {
+  assert.deepEqual(manifestOf(R.merge({ bookings: [a] }, { bookings: [b] }).bookings[0]), manifestOf(newerManifest));
+}
+ok(true, 'merge preserves the complete manifest from the newer booking in either order');
+const legacyManifest = R.normalize({ bookings: [{ ...manifestBooking, guests: null, roomSegments: null, hotel: { ...manifestBooking.hotel, guestSegments: null, roomSegments: null } }] }).bookings[0];
+ok(legacyManifest.guests.length === 0 && legacyManifest.roomSegments.length === 0 && legacyManifest.hotel.guestSegments.length === 0 && legacyManifest.hotel.roomSegments.length === 0, 'legacy absent manifest arrays normalize safely without inventing guests');
+
 const templates = R.restaurantTemplates();
 ok(templates.length === 3, 'restaurant onboarding provides three practical starter templates');
 ok(templates.every(x => x.services.length && x.resources.length), 'every restaurant template has usable services and tables');

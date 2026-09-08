@@ -348,20 +348,42 @@
     try { return String(window.KiwiVenue?.getVenue?.() || ''); } catch (_) { return ''; }
   }
   const cuD1Stays = new Map();
+  const cuStayLoads = new Map();
+  const cuInHouseSnapshots = new Map();
+  const cuReceptionFilters = new Map();
+  function cuStayScope() {
+    return String(window.KiwiStore?.slugFor?.(cuVenueId()) || cuStateId());
+  }
+  function cuStayCache() {
+    const scope = cuStayScope();
+    if (!cuD1Stays.has(scope)) cuD1Stays.set(scope, new Map());
+    return cuD1Stays.get(scope);
+  }
 
   async function cuFetchStaysForWindow(start, end) {
     const slug = window.KiwiStore?.slugFor?.(cuVenueId()) || '';
-    if (!slug) return [];
-    try {
-      const res = await fetch(`/api/hotel/stays?merchant=${encodeURIComponent(slug)}&from=${encodeURIComponent(start)}&to=${encodeURIComponent(end)}`);
-      if (!res.ok) return [];
-      const data = await res.json();
-      if (Array.isArray(data.stays)) {
-        data.stays.forEach((s) => { if (s && s.id) cuD1Stays.set(s.id, s); });
-      }
-      return data.stays || [];
-    } catch (_) {
+    if (!slug) {
+      cuStayLoads.set(cuStayScope(), { loading: false, error: 'Hôtel non connecté au serveur : liste non vérifiée.' });
       return [];
+    }
+    const scope = cuStayScope(), cache = cuStayCache();
+    const load = { loading: true, error: '' };
+    cuStayLoads.set(scope, load);
+    try {
+      const res = await fetch(`/api/hotel/stays?merchant=${encodeURIComponent(slug)}&from=${encodeURIComponent(start)}&to=${encodeURIComponent(end)}&includeCancelled=1`, { cache: 'no-store' });
+      if (!res.ok) throw new Error('unavailable');
+      const data = await res.json();
+      if (!Array.isArray(data.stays)) throw new Error('invalid-response');
+      data.stays.forEach((s) => {
+        if (s && s.id && (+s.updatedAt || 0) >= (+cache.get(s.id)?.updatedAt || 0)) cache.set(s.id, s);
+      });
+      if (data.stays.length >= 1000) load.error = 'Limite de lecture atteinte : cette liste peut être incomplète. Réduisez la période.';
+      return data.stays;
+    } catch (_) {
+      load.error = 'Actualisation indisponible. Les données affichées peuvent être anciennes ; réessayez avant de confirmer une disponibilité.';
+      return [];
+    } finally {
+      load.loading = false;
     }
   }
 
@@ -369,7 +391,9 @@
     const doc = window.KiwiReservations?.get?.() || { bookings: [] };
     const all = new Map();
     (doc.bookings || []).forEach((b) => { if (b && b.id) all.set(b.id, b); });
-    cuD1Stays.forEach((b, id) => { if (b) all.set(id, b); });
+    cuStayCache().forEach((b, id) => {
+      if (b && (+b.updatedAt || 0) >= (+all.get(id)?.updatedAt || 0)) all.set(id, b);
+    });
     return all;
   }
 
@@ -515,10 +539,10 @@
     });
     const folios = {};
     const folioRows = Array.isArray(raw.folios) ? raw.folios : Object.values(raw.folios || {});
-    folioRows.forEach((f) => { if (f && rooms[+f.room]) folios[+f.room] = f; });
+    folioRows.forEach((f) => { if (f && !f.closedAt && rooms[+f.room]) folios[+f.room] = f; });
     return {
       v: 4, rooms, roomRecords: roomRecords.slice(), roomTypes, typeRecords: typeRecords.slice(), floors,
-      floorRecords: floorRecords.slice(), folios,
+      floorRecords: floorRecords.slice(), folios, closedFolios: folioRows.filter((f) => f?.closedAt),
       baseRate: raw.baseRate != null && Number.isFinite(+raw.baseRate) && +raw.baseRate >= 0 ? +raw.baseRate : null,
       rateUpdatedAt: +raw.rateUpdatedAt || 0,
       sold: Math.max(0, +raw.sold || 0), updatedAt: +raw.updatedAt || 0,
@@ -537,7 +561,7 @@
     (st.floorRecords || []).forEach((f) => { if (f && f.id) floorById[f.id] = f; });
     Object.values(st.floors || {}).forEach((f) => { floorById[f.id] = f; });
     return {
-      v: 4, rooms: Object.values(byId), roomTypes: Object.values(typeById), floors: Object.values(floorById), folios: Object.values(st.folios || {}),
+      v: 4, rooms: Object.values(byId), roomTypes: Object.values(typeById), floors: Object.values(floorById), folios: (st.closedFolios || []).concat(Object.values(st.folios || {})),
       baseRate: st.baseRate, rateUpdatedAt: st.rateUpdatedAt || 0,
       sold: st.sold || 0, updatedAt: st.updatedAt || 0,
     };
@@ -665,11 +689,12 @@
     const live = window.KiwiLive;
     if (!live?.isOn?.() || !live?.postSale) return false;
     const key = String(identity || ('hotel-' + Date.now())).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 54);
-    return !!live.postSale({
+    const result = live.postSale({
       id: 'hotel-' + key, amount: Math.round(amount * 100) / 100, method: 'card',
       label: String(label || 'Encaissement hôtel').slice(0, 80), ref: key,
       time: new Date(), channel: 'hotel'
     });
+    return result?.ok === true;
   }
 
   function page(pageKey, title, subtitle, bodyFn) {
@@ -777,13 +802,13 @@
 
   function nowLabel() {
     const sim = window.KiwiDemoClock?.getSimState?.();
-    if (sim) return sim.simHourLabel.replace('h', 'h') + String(sim.simMinute).padStart(2, '0');
-    return '14h37';
+    if (!isCustomHotel() && sim) return sim.simHourLabel.replace('h', 'h') + String(sim.simMinute).padStart(2, '0');
+    return new Intl.DateTimeFormat('fr-FR', { timeZone: 'Africa/Casablanca', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date());
   }
   function postCharge(room, label, amt, src, silent) {
     const f = F()[room];
     if (!f) return;
-    f.lines.push({ t: nowLabel(), label, qty: '', amt, src, isNew: true });
+    f.lines.push({ t: nowLabel(), serviceAt: Date.now(), label, qty: '', amt, src, isNew: true });
     f.updatedAt = cuStamp();
     if (isCustomHotel()) cuSave();
     if (!silent) K().toast(label + ' → folio Ch. ' + room, { type: 'success', desc: (src === 'resto' ? 'Restaurant · POS' : 'Hammam & spa') + ' · ' + MAD(amt) + ' postés sur la note de chambre.' });
@@ -1386,8 +1411,94 @@
     return errs;
   }
 
+  function cuReceptionSelection() {
+    const key = cuStayScope();
+    if (!cuReceptionFilters.has(key)) cuReceptionFilters.set(key, { date: '', view: 'arrivals', q: '' });
+    return cuReceptionFilters.get(key);
+  }
+  function cuReceptionBuckets(stays, day, today) {
+    const buckets = { arrivals: [], departures: [], inhouse: [], attention: [] };
+    stays.forEach((b) => {
+      if (!b?.hotel || ['cancelled', 'no_show'].includes(b.status)) return;
+      const h = b.hotel;
+      if (h.checkIn === day) buckets.arrivals.push(b);
+      if (h.checkOut === day) buckets.departures.push(b);
+      // This is current presence, not a forecast inferred from booking dates.
+      if (b.status === 'checked_in') buckets.inhouse.push(b);
+      if ((b.status === 'checked_in' && h.checkOut < today) ||
+          (['requested', 'confirmed'].includes(b.status) && h.checkIn < today)) buckets.attention.push(b);
+    });
+    return buckets;
+  }
+  function cuReceptionJournal(stays, today) {
+    const filter = cuReceptionSelection(), day = filter.date || today;
+    const buckets = cuReceptionBuckets(stays, day, today);
+    const inhouse = cuInHouseSnapshots.get(cuStayScope());
+    if (inhouse) {
+      const current = (b) => inhouse.ids.has(b.id) || (+b.updatedAt || 0) > inhouse.startedAt;
+      buckets.inhouse = buckets.inhouse.filter(current);
+      buckets.attention = buckets.attention.filter((b) => b.status !== 'checked_in' || current(b));
+    }
+    const views = { arrivals: 'Arrivées', departures: 'Départs', inhouse: 'En maison maintenant', attention: 'Retards à vérifier' };
+    const labels = { requested: 'Demandée', confirmed: 'Confirmée', checked_in: 'En maison', completed: 'Terminée' };
+    const channels = { direct: 'Direct', booking: 'Booking.com', expedia: 'Expedia', airbnb: 'Airbnb', walkin: 'Walk-in', other: 'Autre' };
+    const normalized = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    const q = normalized(filter.q);
+    const rooms = Object.values(R());
+    const rows = (buckets[filter.view] || buckets.arrivals).filter((b) => {
+      const room = rooms.find((r) => r.id === b.resourceId);
+      return normalized([b.customer?.name, b.code, b.hotel.externalRef, room?.n, channels[b.hotel.channel]].join(' ')).includes(q);
+    }).sort((a, b) => String(a.customer?.name || '').localeCompare(String(b.customer?.name || ''), 'fr'));
+    const load = cuStayLoads.get(cuStayScope());
+    return `<section class="block hx-daily" aria-label="Journal de réception">
+      <div class="hx-daily-head"><div><span class="hx-kicker">JOURNAL DE RÉCEPTION</span><h3>${views[filter.view] || views.arrivals} · ${rows.length}</h3><p>Dates de séjour à l’heure du Maroc. Ouvrez un dossier pour modifier ses détails.</p></div><div class="hx-commercial-tools"><button class="hx-btn ghost" data-action="hx-commercial">Clients, agences & sociétés</button><button class="hx-btn atlas" data-action="hx-stay-new">+ Réservation</button></div></div>
+      <div class="hx-daily-controls">
+        <label>Date des mouvements<input type="date" data-hx-daily-date value="${esc(day)}"></label>
+        <label>Vue<select data-hx-daily-view>${Object.entries(views).map(([key, label]) => `<option value="${key}" ${filter.view === key ? 'selected' : ''}>${label} (${buckets[key].length})</option>`).join('')}</select></label>
+        <label class="hx-daily-search">Rechercher<input type="search" data-hx-daily-search value="${esc(filter.q)}" placeholder="Client, chambre, référence"></label>
+        <button class="hx-btn ghost" data-action="hx-daily-apply">Afficher</button>
+        <button class="hx-btn ghost" data-action="hx-daily-refresh" ${load?.loading ? 'disabled' : ''}>${load?.loading ? 'Actualisation…' : 'Actualiser'}</button>
+      </div>
+      ${load?.error ? `<p class="hx-daily-warning" role="status">${esc(load.error)}</p>` : ''}
+      ${['inhouse', 'attention'].includes(filter.view) ? '<p class="hx-daily-note">Cette vue suit les statuts actuels, indépendamment de la date des mouvements choisie.</p>' : ''}
+      <div class="hx-daily-list">${rows.map((b) => {
+        const room = rooms.find((r) => r.id === b.resourceId);
+        return `<article class="hx-daily-row"><div class="hx-daily-room">${room ? 'Ch. ' + esc(room.n) : 'Non attribuée'}</div><div class="hx-daily-guest"><b>${esc(b.customer?.name || 'Client')}</b><span>${esc(b.code || '')} · ${esc(channels[b.hotel.channel] || 'Autre')} ${b.hotel.externalRef ? '· ' + esc(b.hotel.externalRef) : ''}</span><span>${esc(b.hotel.checkIn)} → ${esc(b.hotel.checkOut)} · ${esc(b.partySize || 1)} pers. · ${esc(b.hotel.roomTypeName || '')}</span>${b.note ? `<span class="hx-daily-note">${esc(b.note)}</span>` : ''}</div><span class="hx-daily-status">${esc(labels[b.status] || b.status)}</span><button class="hx-btn ghost" data-action="hx-stay-edit" data-arg="${esc(b.id)}" aria-label="${esc('Ouvrir le dossier ' + (b.code || b.customer?.name || 'client'))}">Ouvrir le dossier</button></article>`;
+      }).join('') || '<p class="hx-empty">Aucun dossier dans cette vue. Vérifiez la date, les filtres et l’état de l’actualisation.</p>'}</div>
+      <p class="hx-daily-note">Les walk-ins encaissés séparément restent accessibles dans le plan des chambres et les folios. Cette liste présente les dossiers de réservation.</p>
+    </section>`;
+  }
+  async function cuRefreshReception() {
+    const scope = cuStayScope();
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+    const day = cuReceptionSelection().date || today;
+    // An independent status read includes overdue in-house stays outside the selected day.
+    const work = Promise.all([cuFetchStaysForWindow(day, day), cuFetchInHouseStays()]);
+    if (openDrawer?.page === 'reception') rerender();
+    await work;
+    if (scope === cuStayScope() && openDrawer?.page === 'reception') rerender();
+  }
+  async function cuFetchInHouseStays() {
+    const slug = window.KiwiStore?.slugFor?.(cuVenueId()) || '';
+    if (!slug) return;
+    const scope = cuStayScope(), cache = cuStayCache();
+    const startedAt = Date.now();
+    try {
+      const res = await fetch('/api/hotel/stays?merchant=' + encodeURIComponent(slug) + '&status=checked_in', { cache: 'no-store' });
+      if (!res.ok) throw new Error('unavailable');
+      const data = await res.json();
+      if (!Array.isArray(data.stays)) throw new Error('invalid-response');
+      data.stays.forEach((s) => { if (s?.id && (+s.updatedAt || 0) >= (+cache.get(s.id)?.updatedAt || 0)) cache.set(s.id, s); });
+      if (data.stays.length >= 1000) throw new Error('incomplete');
+      const previous = cuInHouseSnapshots.get(scope);
+      if (!previous || startedAt >= previous.startedAt) cuInHouseSnapshots.set(scope, { startedAt, ids: new Set(data.stays.map((s) => s.id)) });
+    } catch (_) {
+      const load = cuStayLoads.get(scope) || {};
+      load.error = 'Liste en maison non vérifiée. Actualisez avant de vous fier aux effectifs.';
+      cuStayLoads.set(scope, load);
+    }
+  }
   function cuReceptionBody() {
-    const sold = cuState().sold;
     const allStaysMap = cuAllStays();
     const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 
@@ -1447,20 +1558,7 @@
     return `<div class="hx-page">
       ${cuStrip()}
       ${auditCard}
-      <div class="hx-h"><span class="t">Arrivées & départs</span><span class="s">vos réservations apparaîtront ici · le walk-in fonctionne dès maintenant</span>
-        <button class="hx-btn atlas" data-action="hx-walkin">+ Walk-in · vendre une chambre</button>
-      </div>
-      <div class="block" style="padding:8px 14px;">
-        ${cuStarter(
-          sold ? 'La réception tourne.' : 'Encore rien ici, et c\'est normal.',
-          sold ? 'Vos walk-ins de ce soir sont sur le plan des chambres ; chaque vente alimente votre chiffre réel.'
-               : 'Votre journal d\'arrivées et de départs se remplit avec vos réservations et vos walk-ins.',
-          ['Check-in en un geste, la chambre passe « occupée », le folio s\'ouvre',
-           'Restaurant et spa postent sur la note de chambre automatiquement',
-           'Taxe de séjour calculée par personne et par nuit, prête à déclarer'],
-          '<button class="hx-btn ghost" data-action="nav-chambres">Plan des chambres →</button>'
-        )}
-      </div>
+      ${cuReceptionJournal(Array.from(allStaysMap.values()), today)}
     </div>`;
   }
   function cuTypes() {
@@ -1809,7 +1907,7 @@
     }).join('');
     return `<div class="hx-page">
       ${cuStrip()}
-      <div class="hx-h"><span class="t">Tarif général</span><span class="s">utilisé uniquement par les types sans tarif propre</span></div>
+      <div class="hx-h"><span class="t">Tarif général</span><span class="s">utilisé uniquement par les types sans tarif propre</span><button class="hx-btn ghost" data-action="hx-commercial">Contrats agences & sociétés</button></div>
       <div class="block" style="padding:22px 14px;display:flex;align-items:center;justify-content:center;gap:20px;">
         <button class="hx-btn ghost" data-action="hx-cb-rate-step" data-arg="-50">−50</button>
         <div style="font-family:var(--mono);font-size:30px;font-weight:600;">${st.baseRate == null ? '·' : fmt(st.baseRate)} <span style="font-size:13px;color:var(--n-500);">MAD / nuit</span></div>
@@ -1911,7 +2009,7 @@
       booking?.customer?.name ? [{ name: booking.customer.name, sex: '', nationality: '', residenceCountry: '', birthDate: '', idDocType: '', idDocNumber: '', minorsUnder18: 0 }] : [{ name: '', sex: '', nationality: '', residenceCountry: '', birthDate: '', idDocType: '', idDocNumber: '', minorsUnder18: 0 }]
     );
     const guestRowHtml = (g, idx) => `
-      <div class="hx-guest-item" data-hx-guest-row>
+      <div class="hx-guest-item" data-hx-guest-row data-hx-guest-id="${esc(g.id || ('gst_' + crypto.randomUUID().slice(0, 12)))}">
         <div class="hx-guest-head">
           <span>VOYAGEUR ${idx + 1}</span>
           ${idx > 0 ? `<button type="button" class="hx-link-btn hx-guest-remove" data-action="hx-remove-guest-row">Retirer</button>` : ''}
@@ -1924,6 +2022,8 @@
             <option value="F" ${g.sex === 'F' ? 'selected' : ''}>Féminin (F)</option>
           </select></label>
           <label><span>Nationalité</span><input data-hx-guest-nationality placeholder="Ex. Marocaine, Française" value="${esc(g.nationality || '')}"></label>
+          <label><span>Date de naissance</span><input type="date" data-hx-guest-birth value="${esc(g.birthDate || '')}"></label>
+          <label><span>Mineurs accompagnants</span><input type="number" min="0" max="10" step="1" data-hx-guest-minors value="${esc(g.minorsUnder18 || 0)}"></label>
           <label><span>Pays de résidence</span><input data-hx-guest-residence placeholder="Ex. Maroc, France" value="${esc(g.residenceCountry || '')}"></label>
           <label><span>Type de pièce</span><select data-hx-guest-id-type>
             <option value="">Sélectionner</option>
@@ -1950,9 +2050,10 @@
           <label><span>Référence OTA <small>· optionnel</small></span><input name="externalRef" maxlength="80" value="${esc(booking?.hotel?.externalRef || '')}" placeholder="Ex. 4219-8840"></label>
           <label><span>Téléphone <small>· optionnel</small></span><input name="phone" maxlength="32" value="${esc(booking?.customer?.phone || '')}"></label>
           <label><span>E-mail <small>· optionnel</small></span><input name="email" type="email" maxlength="160" value="${esc(booking?.customer?.email || '')}"></label>
+          <fieldset class="hx-room-form-wide hx-commercial-stay" data-hx-commercial-stay><legend>Compte & formule de réservation</legend><p role="status">Chargement des comptes…</p></fieldset>
           <div class="hx-room-form-wide hx-guest-block">
             <div class="hx-guest-block-head">
-              <b>Fiche Voyageurs · identité (fiche de police, Loi 80-14)</b>
+              <b>Fiche voyageurs · identité et séjour</b>
               <button type="button" class="hx-link-btn hx-guest-add" data-action="hx-add-guest-row">+ Ajouter un voyageur</button>
             </div>
             <div data-hx-guests-container>
@@ -1960,9 +2061,11 @@
             </div>
           </div>
           <label class="hx-room-form-wide"><span>Note interne</span><textarea name="note" maxlength="600" rows="2">${esc(booking?.note || '')}</textarea></label>
-        </div><p class="hx-stay-error" data-hx-stay-error></p><div class="hx-room-form-actions">${booking && booking.status !== 'cancelled' ? `<button type="button" class="hx-btn warn" data-action="hx-stay-cancel" data-arg="${esc(booking.id)}">Annuler le séjour</button>` : '<span></span>'}<button class="hx-btn atlas" type="submit">${booking ? 'Enregistrer' : 'Bloquer la chambre'}</button></div>
+        </div><p class="hx-stay-error" data-hx-stay-error role="status"></p><div class="hx-room-form-actions">${booking && ['requested', 'confirmed'].includes(booking.status) ? `<button type="button" class="hx-btn warn" data-action="hx-stay-cancel" data-arg="${esc(booking.id)}">Annuler le séjour</button>` : '<span></span>'}<button class="hx-btn atlas" type="submit">${booking ? 'Enregistrer' : 'Bloquer la chambre'}</button></div>
       </form>` });
     const form = m.el.querySelector('[data-hx-stay-form]');
+    form.__hxStayScope = cuStayScope();
+    form.__hxClientRef = booking?.publicRef || ('staff-' + crypto.randomUUID());
     form.elements.channel.value = booking?.hotel?.channel || (booking?.source === 'public' ? 'direct' : 'other');
     form.elements.status.value = booking?.status || 'confirmed';
     const filterRooms = () => { const selected = form.elements.resourceId.value; Array.from(form.elements.resourceId.options).forEach((o, i) => { if (!i) return; o.hidden = o.dataset.type !== form.elements.roomTypeId.value; }); if (selected && form.elements.resourceId.selectedOptions[0]?.hidden) form.elements.resourceId.value = ''; };
@@ -1982,55 +2085,245 @@
       }
     });
     form.addEventListener('submit', (e) => { e.preventDefault(); cuSubmitStay(form, booking, m); });
+    cuWireStayCommercial(form, booking);
     openModal = { el: m.el, close: m.close };
   }
 
   async function cuSubmitStay(form, booking, modal) {
+    if (form.__hxSubmitting) return;
     const fd = new FormData(form), submit = form.querySelector('[type="submit"]'), error = form.querySelector('[data-hx-stay-error]');
+    if (form.__hxStayScope !== cuStayScope()) { error.textContent = 'L’hôtel actif a changé. Fermez ce dossier et rouvrez-le dans le bon établissement.'; return; }
     const slug = window.KiwiStore?.slugFor?.(cuVenueId()) || '';
     const guestRows = Array.from(form.querySelectorAll('[data-hx-guest-row]')).map((row) => ({
+      id: row.getAttribute('data-hx-guest-id') || '',
       name: String(row.querySelector('[data-hx-guest-name]')?.value || '').trim(),
       sex: String(row.querySelector('[data-hx-guest-sex]')?.value || '').trim(),
       nationality: String(row.querySelector('[data-hx-guest-nationality]')?.value || '').trim(),
+      birthDate: String(row.querySelector('[data-hx-guest-birth]')?.value || '').trim(),
+      minorsUnder18: Number(row.querySelector('[data-hx-guest-minors]')?.value || 0),
       residenceCountry: String(row.querySelector('[data-hx-guest-residence]')?.value || '').trim(),
       idDocType: String(row.querySelector('[data-hx-guest-id-type]')?.value || '').trim(),
       idDocNumber: String(row.querySelector('[data-hx-guest-id-num]')?.value || '').trim(),
     })).filter((g) => g.name || g.nationality || g.idDocNumber);
 
-    const payload = { action: 'save', merchant: slug, id: booking?.id || '', clientRef: booking?.publicRef || ('staff-' + crypto.randomUUID()), roomTypeId: fd.get('roomTypeId'), resourceId: fd.get('resourceId'), checkIn: fd.get('checkIn'), checkOut: fd.get('checkOut'), partySize: fd.get('partySize'), channel: fd.get('channel'), status: fd.get('status'), externalRef: fd.get('externalRef'), note: fd.get('note'), guests: guestRows, customer: { name: fd.get('name'), phone: fd.get('phone'), email: fd.get('email') } };
+    const payload = { action: 'save', merchant: slug, id: booking?.id || '', clientRef: form.__hxClientRef, roomTypeId: fd.get('roomTypeId'), resourceId: fd.get('resourceId'), checkIn: fd.get('checkIn'), checkOut: fd.get('checkOut'), partySize: fd.get('partySize'), channel: fd.get('channel'), status: fd.get('status'), externalRef: fd.get('externalRef'), note: fd.get('note'), guests: guestRows, customer: { name: fd.get('name'), phone: fd.get('phone'), email: fd.get('email') } };
+    if (form.__commercialReady) {
+      payload.commercial = { accountId: fd.get('accountId'), booker: fd.get('booker'), voucher: fd.get('voucher'), board: fd.get('board'), quoted: fd.get('priceMode') === 'contract' };
+      const preview = form.__commercialQuote;
+      if (preview && preview.signature === cuStayQuoteSignature(form) && form.querySelector('[data-hx-accept-quote]')?.checked) {
+        payload.acceptQuote = true; payload.quoteRevision = preview.rev;
+      }
+    }
     if (!slug) { error.textContent = 'Cette boutique n’est pas encore reliée à son compte Kiwi.'; return; }
-    submit.disabled = true; error.textContent = '';
+    form.__hxSubmitting = true; submit.disabled = true; error.textContent = '';
+    const scope = cuStayScope(), cache = cuStayCache();
     try {
       const res = await fetch('/api/hotel/stays', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       const body = await res.json().catch(() => ({}));
       if (!res.ok || !body.booking) {
         const messages = { 'room-unavailable': 'Cette chambre vient d’être prise sur ces dates. Choisissez-en une autre.', 'duplicate-reference': 'Cette référence OTA existe déjà.', 'invalid-dates': 'Les dates du séjour sont invalides.', invalid: 'Complétez le nom, les dates et la catégorie.', unauthorized: 'Votre session a expiré. Reconnectez-vous.' };
-        error.textContent = messages[body.error] || 'Impossible d’enregistrer ce séjour pour le moment.'; return;
+        error.textContent = messages[body.error] || cuCommercialError(body.error); return;
       }
+      cache.set(body.booking.id, body.booking);
+      if (scope !== cuStayScope()) { modal.close(); return; }
       const doc = window.KiwiReservations.get(), i = doc.bookings.findIndex((x) => x.id === body.booking.id);
       if (i < 0) doc.bookings.push(body.booking); else doc.bookings[i] = body.booking;
       window.KiwiReservations.set(doc); modal.close(); openModal = null;
       toast('Séjour enregistré · ch. ' + (cuState().rooms && Object.values(cuState().rooms).find((r) => r.id === body.booking.resourceId)?.n || ''), { type: 'success', desc: body.booking.hotel.checkIn + ' → ' + body.booking.hotel.checkOut + ' · ' + (body.booking.hotel.channel || 'direct') });
       rerender();
-    } catch (_) { error.textContent = 'Réseau indisponible : rien n’a été enregistré.'; }
-    finally { submit.disabled = false; }
+    } catch (_) { error.textContent = 'Réponse serveur non reçue. Vérifiez le dossier ou réessayez : la même référence sera conservée pour éviter un doublon.'; }
+    finally { form.__hxSubmitting = false; submit.disabled = false; }
   }
 
   async function cuCancelStay(id, button, modal) {
     const slug = window.KiwiStore?.slugFor?.(cuVenueId()) || '';
     if (!slug || !id) return;
+    const scope = cuStayScope(), cache = cuStayCache();
     button.disabled = true;
     try {
       const res = await fetch('/api/hotel/stays', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'cancel', merchant: slug, id }) });
       const body = await res.json().catch(() => ({}));
       if (!res.ok || !body.booking) { toast('Annulation impossible', { type: 'warn', desc: body.error || 'Réessayez.' }); return; }
+      cache.set(body.booking.id, body.booking);
+      if (scope !== cuStayScope()) { modal?.close?.(); return; }
       const doc = window.KiwiReservations.get(), i = doc.bookings.findIndex((x) => x.id === body.booking.id);
       if (i >= 0) doc.bookings[i] = body.booking;
       window.KiwiReservations.set(doc); modal?.close?.(); openModal?.close?.(); openModal = null;
-      toast('Séjour annulé', { type: 'success', desc: 'La chambre est de nouveau disponible sur tous les canaux.' });
+      toast('Séjour annulé dans Kiwi', { type: 'success', desc: 'La disponibilité directe est mise à jour. Vérifiez séparément l’annulation sur l’OTA ou auprès de l’agence.' });
       rerender();
-    } catch (_) { toast('Réseau indisponible', { type: 'warn', desc: 'Le séjour n’a pas été annulé.' }); }
+    } catch (_) { toast('Confirmation non reçue', { type: 'warn', desc: 'Actualisez le dossier pour vérifier si l’annulation a été enregistrée.' }); }
     finally { button.disabled = false; }
+  }
+  const cuCommercialByScope = new Map();
+  const cuBoards = { room_only: 'Logement seul', bb: 'Bed & Breakfast', hb_lunch: 'Demi-pension · déjeuner', hb_dinner: 'Demi-pension · dîner', full_board: 'Pension complète' };
+  const cuKinds = { individual: 'Particulier', agency: 'Agence', company: 'Société' };
+  function cuStayQuoteSignature(form) {
+    return JSON.stringify(['accountId', 'roomTypeId', 'checkIn', 'checkOut', 'partySize', 'board', 'priceMode'].map(k => form.elements[k]?.value || ''));
+  }
+  function cuQuoteRows(q) {
+    return `<div class="hx-quote-lines">${q.rows.map(r => `<div><span>${esc(r.date)} · ${esc(r.label)}</span><span>${r.quantity} × ${(r.unitCents / 100).toFixed(2)} = <b>${(r.amountCents / 100).toFixed(2)} MAD</b></span></div>`).join('')}</div><p><b>Total formule : ${(q.totalCents / 100).toFixed(2)} MAD ${q.taxBasis === 'exclusive' ? 'HT' : 'TTC'}</b></p><small>Simulation de séjour, pas une facture. Taxes locales, extras et réductions enfants non calculés ici.</small>`;
+  }
+  async function cuWireStayCommercial(form, booking) {
+    const box = form.querySelector('[data-hx-commercial-stay]');
+    if (!box) return;
+    const scope = cuStayScope();
+    await cuLoadCommercial();
+    if (scope !== cuStayScope() || form.isConnected === false) return;
+    const st = cuCommercialState();
+    if (!st.loaded || st.error) { box.innerHTML = `<legend>Compte & formule</legend><p>${esc(st.error || 'Répertoire indisponible. Les informations existantes sont conservées.')}</p>`; return; }
+    const c = booking?.commercial || {};
+    box.innerHTML = `<legend>Compte & formule de réservation</legend><div class="hx-room-form hx-type-form"><label><span>Compte à facturer</span><select name="accountId"><option value="">Voyageur · sans compte commercial</option>${st.accounts.filter(a => !a.archived || a.id === c.accountId).map(a => `<option value="${esc(a.id)}" ${a.id === c.accountId ? 'selected' : ''}>${esc(cuKinds[a.kind] + ' · ' + a.name)}${a.archived ? ' (archivé)' : ''}</option>`).join('')}</select></label><label><span>Mode tarifaire</span><select name="priceMode"><option value="catalogue" ${c.quoted ? 'disabled' : ''}>Tarif de chambre · logement seul</option><option value="contract" ${c.quoted ? 'selected' : ''}>Contrat du compte</option></select></label><label><span>Réservant / interlocuteur</span><input name="booker" maxlength="160" value="${esc(c.booker || '')}"></label><label><span>Voucher / bon de commande</span><input name="voucher" maxlength="100" value="${esc(c.voucher || '')}"></label><label><span>Formule</span><select name="board">${Object.entries(cuBoards).map(([v,l]) => `<option value="${v}" ${v === c.board ? 'selected' : ''}>${l}</option>`).join('')}</select></label></div><p>Créez les comptes et leurs tarifs dans Clients, agences & sociétés. Occupation totale de 1 à 3 personnes, sans calcul enfant automatique.</p><button type="button" class="hx-btn ghost" data-hx-quote>Simuler le contrat</button><div data-hx-quote-result role="status">${c.quote ? '<p>Tarif précédemment accepté et conservé :</p>' + cuQuoteRows(c.quote) : ''}</div>`;
+    if (booking && ['completed', 'cancelled', 'no_show'].includes(booking.status)) { box.disabled = true; return; }
+    form.__commercialReady = true;
+    const previewButton = box.querySelector('[data-hx-quote]'), result = box.querySelector('[data-hx-quote-result]');
+    const reset = e => {
+      if (!['accountId', 'roomTypeId', 'checkIn', 'checkOut', 'partySize', 'board', 'priceMode'].includes(e.target?.name)) return;
+      form.__commercialQuote = null;
+      result.textContent = 'Paramètres modifiés. Simulez le contrat avant confirmation.';
+    };
+    form.addEventListener('input', reset); form.addEventListener('change', reset);
+    previewButton.addEventListener('click', async () => {
+      if (scope !== cuStayScope()) return;
+      const signature = cuStayQuoteSignature(form), fd = new FormData(form);
+      previewButton.disabled = true; form.__commercialQuote = null; result.textContent = 'Calcul des nuitées…';
+      try {
+        const res = await fetch('/api/hotel/commercial', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'quote', merchant: cuChannelMerchant(), accountId: fd.get('accountId'), roomTypeId: fd.get('roomTypeId'), checkIn: fd.get('checkIn'), checkOut: fd.get('checkOut'), occupancy: Number(fd.get('partySize')), board: fd.get('board') }) });
+        const b = await res.json();
+        if (scope !== cuStayScope() || signature !== cuStayQuoteSignature(form)) return;
+        if (!res.ok) { result.textContent = cuCommercialError(b.error); return; }
+        form.elements.priceMode.value = 'contract';
+        form.__commercialQuote = { rev: b.rev, signature: cuStayQuoteSignature(form) };
+        result.innerHTML = cuQuoteRows(b.quote) + (b.quote.taxBasis === 'inclusive' ? '<label class="hx-quote-accept"><input type="checkbox" data-hx-accept-quote> J’accepte ce prix pour la formule et les dates affichées.</label>' : '<p>HT : configuration fiscale nécessaire avant confirmation du séjour.</p>');
+      } catch (_) { result.textContent = 'Simulation indisponible. Aucun nouveau tarif accepté.'; }
+      finally { previewButton.disabled = false; }
+    });
+  }
+  function cuCommercialState() {
+    const scope = cuStayScope();
+    if (!cuCommercialByScope.has(scope)) cuCommercialByScope.set(scope, { accounts: [], contracts: [], rev: 0, loaded: false, loading: false, error: '', kind: '', search: '' });
+    return cuCommercialByScope.get(scope);
+  }
+  function cuCommercialError(code) {
+    return ({ stale: 'Le répertoire a changé sur un autre appareil. Actualisez avant de reprendre votre modification.',
+      'rate-gap': 'Une ou plusieurs nuits n’ont aucun tarif. Complétez les dates du contrat.',
+      'rate-overlap': 'Deux tarifs couvrent les mêmes dates pour ce compte, cette catégorie, cette occupation et cette formule.',
+      'mixed-tax-basis': 'Le séjour mélange des tarifs HT et TTC. Harmonisez le contrat.',
+      'account-unavailable': 'Le compte est absent ou archivé.', 'invalid-price': 'Saisissez un montant positif ou nul, avec deux décimales maximum.',
+      'quote-required': 'Simulez puis acceptez le tarif pour les dates et voyageurs sélectionnés.',
+      'tax-configuration-required': 'Un tarif HT ne peut pas être confirmé avant configuration de la fiscalité hôtelière.',
+      'feed-contract-unsupported': 'Un séjour importé par iCal ne peut pas encore recevoir un contrat tarifaire.',
+      'closed-commercial': 'Les informations commerciales d’un dossier clôturé sont verrouillées.',
+      unauthorized: 'Accès réservé au compte propriétaire ou à la console opérateur.',
+      'invalid-dates': 'Vérifiez les dates de début et de fin.', 'invalid-formula': 'La tarification contractuelle couvre une à trois personnes, sans réduction enfant automatique.' })[code] || 'Enregistrement indisponible. Vérifiez les champs et réessayez.';
+  }
+  async function cuLoadCommercial() {
+    const st = cuCommercialState(), scope = cuStayScope(), merchant = cuChannelMerchant();
+    if (!merchant || st.loading) return;
+    st.loading = true; st.error = '';
+    try {
+      const res = await fetch('/api/hotel/commercial?merchant=' + encodeURIComponent(merchant), { cache: 'no-store' });
+      const b = await res.json();
+      if (!res.ok || !Array.isArray(b.accounts) || !Array.isArray(b.contracts)) throw new Error(b.error || 'unavailable');
+      Object.assign(st, { accounts: b.accounts, contracts: b.contracts, rev: b.rev, loaded: true });
+    } catch (e) { st.error = cuCommercialError(e.message); }
+    finally { st.loading = false; if (scope === cuStayScope() && openDrawer?.page === 'commercial') rerender(); }
+  }
+  function cuCommercialBody() {
+    const st = cuCommercialState(), needle = st.search.toLocaleLowerCase('fr');
+    const accounts = st.accounts.filter(a => (!st.kind || a.kind === st.kind) && [a.name, a.legalName, a.contact, a.ice].join(' ').toLocaleLowerCase('fr').includes(needle));
+    const accountIds = new Set(accounts.map(a => a.id));
+    const contracts = st.contracts.filter(r => accountIds.has(r.accountId));
+    const active = st.accounts.filter(a => !a.archived);
+    return `<div class="hx-page hx-commercial"><div class="hx-commercial-head"><div><span class="hx-kicker">RELATIONS HÔTELIÈRES</span><h3>Chaque relation,<br>ses accords.</h3><p>Clients, agences & sociétés. Le voyageur reste distinct du réservant et du compte à facturer. Les tarifs acceptés sont conservés dans chaque séjour.</p></div><div class="hx-commercial-tools"><button class="hx-btn atlas" data-action="hx-account-new">+ Nouveau compte</button><button class="hx-btn ghost" data-action="clients-directory">Cardex voyageurs</button></div></div>
+      <div class="hx-commercial-summary" aria-label="Comptes actifs">${Object.entries(cuKinds).map(([kind, label]) => `<div><span>${label}</span><strong>${st.loaded ? active.filter(a => a.kind === kind).length : '…'}</strong><small>comptes actifs</small></div>`).join('')}<div><span>Tarifs contractuels</span><strong>${st.loaded ? st.contracts.filter(r => !r.archived).length : '…'}</strong><small>périodes définies</small></div></div>
+      <div class="hx-commercial-tools"><button class="hx-btn ghost" data-action="hx-contract-new">+ Tarif contractuel</button><button class="hx-btn ghost" data-action="hx-production">Production mensuelle</button><button class="hx-btn ghost" data-action="hx-commercial-refresh" ${st.loading ? 'disabled' : ''}>Actualiser</button></div>
+      <form class="hx-commercial-filter" data-hx-commercial-filter><label>Type<select name="kind"><option value="">Tous les comptes</option>${Object.entries(cuKinds).map(([v,l]) => `<option value="${v}" ${st.kind === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label><label>Recherche<input name="search" type="search" value="${esc(st.search)}" placeholder="Nom, contact, ICE"></label><button class="hx-btn ghost" type="submit">Filtrer</button></form>
+      <p class="hx-commercial-feedback" role="status">${esc(st.error || (st.loading ? 'Chargement du répertoire…' : `${accounts.length} compte(s) · ${contracts.filter(r => !r.archived).length} tarif(s) actif(s) dans cette sélection`))}</p>
+      <div class="hx-commercial-grid">${accounts.map(a => `<article class="block hx-commercial-card"><div><span class="hx-kicker">${cuKinds[a.kind]}${a.archived ? ' · ARCHIVÉ' : ''}</span><h3>${esc(a.name)}</h3><p>${esc(a.legalName || a.contact || 'Identité de facturation à compléter')}</p><small>${esc([a.city, a.ice ? 'ICE ' + a.ice : '', 'Échéance ' + a.paymentDays + ' j'].filter(Boolean).join(' · '))}</small></div><div class="hx-commercial-tools"><button class="hx-btn ghost" data-action="hx-account-edit" data-arg="${esc(a.id)}">Modifier <span class="sr-only">${esc(a.name)}</span></button><button class="hx-btn ghost" data-action="hx-account-stays" data-arg="${esc(a.id)}">Voir les séjours <span class="sr-only">${esc(a.name)}</span></button></div></article>`).join('') || '<p>Aucun compte dans cette sélection. Créez une agence, une société ou un particulier.</p>'}</div>
+      <div class="hx-h"><span class="t">Grille contractuelle</span><span class="s">Bornes inclusives · MAD · aucun tarif implicite hors période</span></div>
+      <div class="hx-commercial-grid">${contracts.map(r => `<article class="block hx-commercial-card"><div><span class="hx-kicker">${esc(st.accounts.find(a => a.id === r.accountId)?.name || 'Compte indisponible')}${r.archived ? ' · ARCHIVÉ' : ''}</span><h3>${esc(r.name)}</h3><p>${esc(cuTypes().find(t => t.id === r.roomTypeId)?.name || r.roomTypeId)} · ${['', 'Single', 'Double', 'Triple'][r.occupancy]} · ${cuBoards[r.board]}</p><small>${esc(r.from)} → ${esc(r.to)}</small><p class="hx-commercial-price">${(r.amountCents / 100).toFixed(2)} <small>MAD / ${r.unit === 'person' ? 'personne' : 'chambre'} / nuit · ${r.taxBasis === 'inclusive' ? 'TTC' : 'HT'}</small></p></div><button class="hx-btn ghost" data-action="hx-contract-edit" data-arg="${esc(r.id)}">Modifier <span class="sr-only">${esc(r.name)}</span></button></article>`).join('') || '<p class="hx-commercial-empty">Aucun tarif dans cette sélection. Ajoutez une période négociée avec ses dates exactes. Septembre à décembre doit être défini explicitement.</p>'}</div></div>`;
+  }
+  const cuProductionByScope = new Map();
+  function cuProductionState() {
+    const scope = cuStayScope();
+    if (!cuProductionByScope.has(scope)) cuProductionByScope.set(scope, {
+      month: new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Casablanca', year: 'numeric', month: '2-digit' }).format(new Date()).slice(0, 7),
+      report: null, loading: false, error: '', request: 0,
+    });
+    return cuProductionByScope.get(scope);
+  }
+  async function cuLoadProduction() {
+    const scope = cuStayScope(), st = cuProductionState(), sequence = ++st.request, month = st.month;
+    st.loading = true; st.error = ''; st.report = null;
+    if (openDrawer?.page === 'production') rerender();
+    try {
+      const res = await fetch('/api/hotel/production?' + new URLSearchParams({ merchant: cuChannelMerchant(), month }), { cache: 'no-store' });
+      const b = await res.json();
+      if (!res.ok || b.month !== month || !Array.isArray(b.groups) || !Array.isArray(b.totals)) throw new Error(b.error || 'unavailable');
+      if (st.request === sequence) st.report = b;
+    } catch (e) {
+      if (st.request === sequence) st.error = e.message === 'production-limit' ? 'Ce mois dépasse la limite de lecture. Aucun total partiel n’est affiché.' : 'Production indisponible. Le registre complet est nécessaire ; aucun total n’est estimé depuis le cache.';
+    } finally {
+      if (st.request === sequence) st.loading = false;
+      if (scope === cuStayScope() && st.request === sequence && openDrawer?.page === 'production') rerender();
+    }
+  }
+  function cuProductionBody() {
+    const st = cuProductionState(), r = st.report;
+    return `<div class="hx-page hx-commercial hx-production"><div class="hx-commercial-head"><div><span class="hx-kicker">PRODUCTION MENSUELLE</span><h3>Qui remplit<br>vos chambres.</h3><p>Chambres-nuits réservées par compte ou canal. Séjours confirmés, en maison et terminés ; annulations, no-shows et demandes exclus.</p></div><button class="hx-btn ghost" data-action="hx-commercial">Retour aux comptes</button></div>
+      <form data-hx-production-filter class="hx-commercial-filter"><label>Mois du séjour<input type="month" name="month" value="${esc(st.month)}" required min="0001-01" max="9998-12"></label><button type="submit" class="hx-btn atlas">Afficher le mois</button></form>
+      <p class="hx-commercial-feedback" role="status">${esc(st.error || (st.loading ? 'Lecture du registre des réservations…' : 'Une chambre-nuit correspond à une chambre réservée pour une nuit. Ce ne sont ni des encaissements ni un relevé de présence.'))}</p>
+      ${r ? `<div class="hx-commercial-summary"><div><span>Chambres-nuits</span><strong>${r.nights}</strong><small>sur le mois sélectionné</small></div><div><span>Réservations</span><strong>${r.reservations}</strong><small>croisant la période</small></div><div><span>Comptes & canaux</span><strong>${r.groups.length}</strong><small>avec une production</small></div><div><span>Sans chambre attribuée</span><strong>${r.unassigned}</strong><small>réservations incluses</small></div></div>
+      <div class="hx-production-scroll" tabindex="0" role="region" aria-label="Tableau mensuel défilant horizontalement"><table class="hx-production-table"><caption>Chambres-nuits · ${esc(r.month)} · faites défiler pour consulter tous les jours</caption><thead><tr><th scope="col">Compte / canal</th><th scope="col">Total</th>${r.totals.map((_, i) => `<th scope="col"><abbr title="${esc(r.month + '-' + String(i + 1).padStart(2, '0'))}">${i + 1}</abbr></th>`).join('')}</tr></thead><tbody>${r.groups.map(g => `<tr><th scope="row"><b>${esc(g.name)}</b><small>${esc(cuKinds[g.kind] || 'Canal de réservation')}</small></th><td><strong>${g.nights}</strong></td>${g.days.map(n => `<td${n ? ' class="has-nights"' : ''}>${n || '·'}</td>`).join('')}</tr>`).join('')}</tbody><tfoot><tr><th scope="row">Total chambres-nuits</th><td>${r.nights}</td>${r.totals.map(n => `<td>${n}</td>`).join('')}</tr></tfoot></table></div>${!r.groups.length ? '<p class="hx-commercial-empty">Aucune réservation confirmée sur ce mois.</p>' : ''}
+      <p class="hx-daily-note">La nuit du départ est exclue. Les séjours sans compte commercial sont regroupés par canal. Une réservation sans chambre attribuée reste comptée ; ce tableau ne mesure pas les chambres encore disponibles.</p>` : ''}</div>`;
+  }
+  async function cuAccountStays(id) {
+    const scope = cuStayScope(), account = cuCommercialState().accounts.find(a => a.id === id);
+    if (!account) return;
+    const m = K().modal({ tag: cuKinds[account.kind], title: 'Séjours · ' + account.name, width: 800, desc: 'Dossiers rattachés à ce compte. Les montants réservés ne sont ni des encaissements ni un solde débiteur.', body: '<div data-hx-account-stays role="status">Chargement des dossiers…</div>' });
+    const host = m.el.querySelector('[data-hx-account-stays]');
+    try {
+      const res = await fetch('/api/hotel/stays?' + new URLSearchParams({ merchant: cuChannelMerchant(), accountId: id, includeCancelled: '1' }), { cache: 'no-store' });
+      const b = await res.json();
+      if (scope !== cuStayScope()) { m.close(); return; }
+      if (!res.ok || !Array.isArray(b.stays)) throw new Error('unavailable');
+      host.innerHTML = `<p>${b.stays.length} dossier(s)${b.capped ? ' · limite de lecture atteinte, liste incomplète' : ''}${b.coverage === 'document' ? ' · document actif seulement, historique non vérifié' : ''}</p><div class="hx-commercial-grid">${b.stays.map(s => `<article class="block hx-commercial-card"><div><span class="hx-kicker">${esc(s.code)} · ${esc(({ confirmed: 'Confirmé', requested: 'Demandé', checked_in: 'En maison', completed: 'Terminé', cancelled: 'Annulé', no_show: 'No-show' })[s.status] || s.status)}</span><h3>${esc(s.customer?.name || '')}</h3><p>${esc(s.hotel?.checkIn)} → ${esc(s.hotel?.checkOut)} · ${esc(cuBoards[s.commercial?.board] || 'Logement seul')}</p><p>${Number(s.hotel?.total || 0).toFixed(2)} MAD réservés</p><small>${esc(s.commercial?.voucher || 'Sans voucher / bon de commande')}</small></div></article>`).join('') || '<p>Aucun séjour rattaché. Sélectionnez ce compte dans le dossier de réservation.</p>'}</div>`;
+    } catch (_) { host.textContent = 'Historique indisponible. Aucun dossier n’a été modifié.'; }
+  }
+  async function cuCommercialEditor(kind, id) {
+    const scope = cuStayScope();
+    await cuLoadCommercial();
+    if (scope !== cuStayScope()) return;
+    const st = cuCommercialState();
+    if (!st.loaded || st.error) { toast(st.error || 'Répertoire indisponible', { type: 'warn' }); return; }
+    const key = kind === 'account' ? 'accounts' : 'contracts';
+    const old = st[key].find(x => x.id === id);
+    if (id && !old) return;
+    const item = old || { id: 'hc-' + crypto.randomUUID(), kind: 'agency', paymentDays: 0, occupancy: 1, board: 'room_only', unit: 'room', taxBasis: 'inclusive' };
+    const field = (name, label, type = 'text', attrs = '') => `<label><span>${label}</span><input name="${name}" type="${type}" value="${esc(item[name] ?? '')}" ${attrs}></label>`;
+    const select = (name, label, options) => `<label><span>${label}</span><select name="${name}">${Object.entries(options).map(([v,l]) => `<option value="${esc(v)}" ${String(item[name]) === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label>`;
+    const accountFields = () => select('kind', 'Type de compte', cuKinds) + field('name', 'Nom usuel', 'text', 'required maxlength="160"') + field('legalName', 'Raison sociale / nom facturé', 'text', 'maxlength="160"') + field('contact', 'Contact', 'text', 'maxlength="160"') + field('address', 'Adresse de facturation', 'text', 'maxlength="500"') + field('city', 'Ville', 'text', 'maxlength="100"') + field('country', 'Pays', 'text', 'maxlength="100"') + field('ice', 'ICE', 'text', 'maxlength="40"') + field('taxId', 'Identifiant fiscal', 'text', 'maxlength="40"') + field('rc', 'Registre de commerce', 'text', 'maxlength="40"') + field('email', 'E-mail', 'email', 'maxlength="160"') + field('phone', 'Téléphone', 'tel', 'maxlength="40"') + field('paymentDays', 'Délai de paiement (jours)', 'number', 'required min="0" max="365" step="1"') + field('notes', 'Notes internes', 'text', 'maxlength="600"');
+    const contractFields = () => select('accountId', 'Compte contractant', Object.fromEntries(st.accounts.filter(a => !a.archived || a.id === item.accountId).map(a => [a.id, a.name]))) + field('name', 'Libellé du tarif', 'text', 'required maxlength="160"') + select('roomTypeId', 'Catégorie', Object.fromEntries(cuTypes().map(t => [t.id,t.name]))) + select('occupancy', 'Occupation totale', { 1: 'Single · 1 personne', 2: 'Double · 2 personnes', 3: 'Triple · 3 personnes' }) + select('board', 'Formule incluse', cuBoards) + select('unit', 'Prix par', { room: 'Chambre / nuit', person: 'Personne / nuit' }) + field('from', 'À partir du (inclus)', 'date', 'required') + field('to', 'Jusqu’au (inclus)', 'date', 'required') + `<label><span>Montant MAD</span><input name="amount" type="number" required min="0" max="1000000" step="0.01" value="${item.amountCents == null ? '' : (item.amountCents / 100).toFixed(2)}"></label>` + select('taxBasis', 'Base du prix', { inclusive: 'TTC', exclusive: 'HT · simulation seulement' });
+    const m = K().modal({ tag: kind === 'account' ? 'COMPTE HÔTEL' : 'TARIF CONTRACTUEL', title: old ? 'Modifier la fiche' : 'Créer une fiche', width: 720,
+      desc: kind === 'account' ? 'Les modifications ne remplacent pas l’identité de facturation déjà acceptée dans un séjour.' : 'Prix de la formule par nuit. Aucune taxe locale ou réduction enfant n’est ajoutée automatiquement. Faites valider le traitement fiscal avant facturation.',
+      body: `<form data-hx-commercial-editor><div class="hx-room-form hx-type-form">${kind === 'account' ? accountFields() : contractFields()}<label><span>État</span><select name="archived"><option value="false">Actif</option><option value="true" ${item.archived ? 'selected' : ''}>Archivé</option></select></label></div><p role="status" data-hx-commercial-error></p><div class="hx-room-form-actions"><button class="hx-btn atlas" type="submit">Enregistrer</button></div></form>` });
+    const form = m.el.querySelector('form'), revision = st.rev, merchant = cuChannelMerchant();
+    form.addEventListener('submit', async e => {
+      e.preventDefault(); if (form.__busy) return;
+      const error = form.querySelector('[data-hx-commercial-error]');
+      if (scope !== cuStayScope()) { error.textContent = 'L’hôtel actif a changé. Rouvrez cette fiche.'; return; }
+      const fd = Object.fromEntries(new FormData(form)), row = { ...fd, id: item.id, archived: fd.archived === 'true' };
+      if (kind === 'account') row.paymentDays = Number(fd.paymentDays);
+      else { row.occupancy = Number(fd.occupancy); row.amountCents = Math.round(Number(fd.amount) * 100); }
+      form.__busy = true; const button = form.querySelector('[type="submit"]'); button.disabled = true;
+      try {
+        const res = await fetch('/api/hotel/commercial', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ merchant, action: kind, rev: revision, item: row }) });
+        const b = await res.json(); if (!res.ok) { error.textContent = cuCommercialError(b.error); return; }
+        Object.assign(st, { accounts: b.accounts, contracts: b.contracts, rev: b.rev });
+        m.close(); if (scope === cuStayScope()) { rerender(); toast('Fiche enregistrée', { type: 'success' }); }
+      } catch (_) { error.textContent = 'Confirmation non reçue. Actualisez le répertoire avant de réessayer, votre référence de fiche est conservée.'; }
+      finally { form.__busy = false; button.disabled = false; }
+    });
   }
   function cuHotesBody() {
     return `<div class="hx-page">
@@ -2085,7 +2378,7 @@
       <button class="hx-btn ghost" data-action="hx-channel-status" data-arg="${esc(c.id)}:${c.status === 'paused' ? 'active' : 'paused'}">${c.status === 'paused' ? 'Réactiver' : 'Pause'}</button>
       <button class="hx-btn ghost" data-action="hx-channel-delete" data-arg="${esc(c.id)}">Retirer</button>
     </div>`).join('');
-    const choices = [{id:'booking',name:'Booking.com',fee:'15–18 %'},{id:'airbnb',name:'Airbnb',fee:'3 % + frais voyageur'}].map((c)=>`<div class="hx-arr"><span class="tm">ICAL</span><div class="who"><b>${c.name}</b><div class="sub">commission ${c.fee} · import automatique chambre par chambre</div></div><button class="hx-btn ghost" data-action="hx-cb-connect" data-arg="${c.id}">Connecter</button></div>`).join('');
+    const choices = [{id:'booking',name:'Booking.com'},{id:'airbnb',name:'Airbnb'}].map((c)=>`<div class="hx-arr"><span class="tm">ICAL</span><div class="who"><b>${c.name}</b><div class="sub">Import des dates bloquées, chambre par chambre, si le fournisseur propose un lien iCal</div></div><button class="hx-btn ghost" data-action="hx-cb-connect" data-arg="${c.id}">Importer un calendrier</button></div>`).join('');
     return `<div class="hx-page">
       <div class="hx-strip">
         <div class="hx-kpi"><div class="l">Réservation directe</div><div class="v">·</div><div class="d">source de réservations non connectée</div></div>
@@ -2097,9 +2390,9 @@
       <div class="block" style="padding:8px 14px;"><div class="hx-list">${choices}</div></div>
       <div class="block" style="padding:8px 14px;margin-top:14px;">
         ${cuStarter(
-          'Le vrai prix des OTA, enfin visible.',
-          'Une fois vos canaux connectés, Kiwi calcule ce que chaque canal vous coûte réellement, et combien la réservation directe vous fait économiser.',
-          ['Répartition des nuitées par canal', 'Commissions cumulées par mois, en MAD', 'Plan de reconquête des clients fidèles vers le direct']
+          'Import iCal, pas de synchronisation bidirectionnelle.',
+          'Les calendriers importent des périodes bloquées. Ils ne transmettent pas vos prix, vos stocks ou vos annulations de Kiwi vers les plateformes.',
+          ['Les détails clients, prestations et montants sont à vérifier sur la réservation d’origine', 'Expedia et les agences : saisie manuelle tant qu’une intégration dédiée n’est pas connectée', 'Les commissions réelles ne sont pas fournies par ces calendriers']
         )}
       </div>
     </div>`;
@@ -2487,7 +2780,7 @@
     if (!cuReservationEventsBound) {
       cuReservationEventsBound = true;
       window.addEventListener('kiwi-reservations-changed', () => {
-        if (isCustomHotel() && openDrawer?.page === 'sejours') rerender();
+        if (isCustomHotel() && ['sejours', 'reception'].includes(openDrawer?.page)) rerender();
       });
     }
 
@@ -2500,7 +2793,7 @@
      * starter pages on the live rack/folio engine; the riad keeps its demo. */
     const cu = isCustomHotel;
     handlers['nav-reception'] = () => cu()
-      ? page('reception', 'Réception', vName() + ' · arrivées, départs, walk-ins, en un geste', cuReceptionBody)
+      ? (page('reception', 'Réception', vName() + ' · arrivées, départs et dossiers en maison', cuReceptionBody), cuRefreshReception())
       : page('reception', 'Réception', 'Riad Yasmina · Médina, Marrakech · arrivées, départs, walk-ins, en un geste', receptionBody);
     handlers['nav-chambres'] = () => cu()
       ? page('chambres', 'Plan des chambres', roomCountLabel() + ' · toucher une chambre libre la vend en walk-in', cuRackBody)
@@ -2517,12 +2810,37 @@
     /* Backward-compatible alias for old bookmarks only. The hotel-specific
      * guest mock was removed from the sidebar; Hospitality+ is the real shared
      * client directory used by dashboard and reception caisse. */
-    handlers['nav-hotes'] = () => handlers['clients-directory']?.();
+    handlers['nav-hotes'] = () => cu() ? handlers['hx-commercial']() : handlers['clients-directory']?.();
+    handlers['hx-commercial'] = () => {
+      if (!cu()) return;
+      const p = page('commercial', 'Clients, agences & sociétés', 'Comptes de facturation · contrats · Cardex voyageurs', cuCommercialBody);
+      p.el.addEventListener('submit', e => {
+        if (!e.target.matches('[data-hx-commercial-filter]')) return;
+        e.preventDefault(); const fd = new FormData(e.target), st = cuCommercialState();
+        st.kind = fd.get('kind'); st.search = fd.get('search'); rerender();
+      });
+      cuLoadCommercial();
+    };
+    handlers['hx-commercial-refresh'] = () => cuLoadCommercial();
+    handlers['hx-production'] = () => {
+      if (!cu()) return;
+      const p = page('production', 'Production mensuelle', 'Comptes & canaux · chambres-nuits réservées', cuProductionBody);
+      p.el.addEventListener('submit', e => {
+        if (!e.target.matches('[data-hx-production-filter]')) return;
+        e.preventDefault(); cuProductionState().month = new FormData(e.target).get('month'); cuLoadProduction();
+      });
+      cuLoadProduction();
+    };
+    handlers['hx-account-new'] = () => cuCommercialEditor('account');
+    handlers['hx-account-edit'] = (el, id) => cuCommercialEditor('account', id);
+    handlers['hx-account-stays'] = (el, id) => cuAccountStays(id);
+    handlers['hx-contract-new'] = () => cuCommercialEditor('contract');
+    handlers['hx-contract-edit'] = (el, id) => cuCommercialEditor('contract', id);
     handlers['nav-folios'] = () => cu()
       ? page('folios', 'Notes clients · folios', 'Chambres + extras + taxe de séjour, une seule note par séjour', cuFoliosBody)
       : page('folios', 'Notes clients · folios', 'Chambres + restaurant + hammam + taxe de séjour, une seule note par séjour', foliosBody);
     handlers['nav-canaux'] = () => cu()
-      ? (page('canaux', 'Canaux & OTA', '100 % direct aujourd\'hui · connectez vos canaux quand vous êtes prêt', cuCanauxBody), setTimeout(()=>cuLoadChannels(false),0))
+      ? (page('canaux', 'Canaux & OTA', 'Calendriers importés et limites de synchronisation', cuCanauxBody), setTimeout(()=>cuLoadChannels(false),0))
       : page('canaux', 'Canaux & OTA', 'Booking.com, Expedia, Airbnb, direct · commissions visibles, enfin', canauxBody);
     handlers['nav-hotelintel'] = () => cu()
       ? (page('hotelintel', 'Intelligence hôtel', 'Prévisions, Économat et contrôle opérationnel', cuIntelBody), setTimeout(() => cuLoadEconomat(false), 0))
@@ -2752,6 +3070,19 @@
   }
 
   /* — custom-hotel controls — */
+  handlers['hx-daily-apply'] = (el) => {
+    const root = el.closest('.hx-daily');
+    if (!root || !isCustomHotel()) return;
+    const date = root.querySelector('[data-hx-daily-date]');
+    if (!date?.value || !date.checkValidity()) { date?.reportValidity(); return; }
+    const filter = cuReceptionSelection();
+    filter.date = date.value;
+    const view = root.querySelector('[data-hx-daily-view]')?.value;
+    filter.view = ['arrivals', 'departures', 'inhouse', 'attention'].includes(view) ? view : 'arrivals';
+    filter.q = String(root.querySelector('[data-hx-daily-search]')?.value || '').slice(0, 100);
+    cuRefreshReception();
+  };
+  handlers['hx-daily-refresh'] = () => { if (isCustomHotel()) cuRefreshReception(); };
   handlers['hx-monthly-closing'] = () => { if (isCustomHotel()) cuMonthlyClosingModal(); };
   handlers['hx-tape-prev'] = async () => {
     cuTapeOffset -= 14;
@@ -2779,13 +3110,11 @@
   handlers['hx-stay-new'] = () => { if (isCustomHotel()) cuStayEditor(null); };
   handlers['hx-stay-edit'] = (el, arg) => {
     if (!isCustomHotel() || String(arg).startsWith('folio:')) return;
-    let booking = window.KiwiReservations?.get?.().bookings.find((b) => b.id === String(arg));
-    if (!booking) booking = cuD1Stays.get(String(arg));
+    const booking = cuAllStays().get(String(arg));
     if (booking?.hotel) cuStayEditor(booking);
   };
   handlers['hx-stay-cancel'] = (el, arg) => {
-    let booking = window.KiwiReservations?.get?.().bookings.find((b) => b.id === String(arg));
-    if (!booking) booking = cuD1Stays.get(String(arg));
+    const booking = cuAllStays().get(String(arg));
     if (!booking) return;
 
       openModal?.close?.();
@@ -3172,20 +3501,30 @@
     handlers['hx-checkout-pay'] = (el, arg) => {
       const room = parseInt(arg, 10);
       const f = F()[room];
+      if (!f) return;
       const due = folioTotal(f) - folioPaid(f);
-      openModal?.close?.();
-      toast('Folio Ch. ' + room + ' encaissé · ' + MAD(due), { type: 'success', desc: 'Taxe de séjour incluse · règlement T+1 demain 9h00 sur votre IBAN.' });
       if (isCustomHotel()) {
-        recordSale(due, 'checkout-' + room + '-' + String(f.updatedAt || cuStamp()), 'Départ · Ch. ' + room);
+        if (!Number.isFinite(due) || due < 0 || (due > 0 && !recordSale(due, 'checkout-' + room + '-' + String(f.updatedAt || cuStamp()), 'Départ · Ch. ' + room))) {
+          toast('Clôture non enregistrée', { type: 'warn', desc: 'Le folio et la chambre sont conservés. Vérifiez la connexion et l’enregistrement du règlement avant de réessayer.' });
+          return;
+        }
+        const closedAt = Math.max(cuStamp(), (+f.updatedAt || 0) + 1);
+        const st = cuState();
+        st.closedFolios = (st.closedFolios || []).filter((x) => +x.room !== room);
+        st.closedFolios.push({ ...f, closedAt, updatedAt: closedAt, settlementAmount: due, settlementState: due > 0 ? 'queued' : 'previously-recorded' });
         const r = R()[room];
         r.status = 'sale'; r.hk = 'dirty'; r.guest = null;
         r.meta = 'Départ soldé · à remettre à blanc'; r.updatedAt = cuStamp();
         delete F()[room];
         cuSave();
+        openModal?.close?.();
+        toast('Départ enregistré · Ch. ' + room, { type: 'info', desc: due > 0 ? 'Règlement ajouté à la file de synchronisation. Vérifiez sa confirmation dans les transactions.' : 'Solde nul. Le dernier folio clôturé est conservé dans les données de la chambre.' });
         setTimeout(() => toast('Ch. ' + room + ' → à remettre à blanc', { type: 'info', desc: 'Marquez-la propre depuis Ménage pour la revendre ce soir.' }), 1400);
         rerender();
         return;
       }
+      openModal?.close?.();
+      toast('Folio Ch. ' + room + ' encaissé · ' + MAD(due), { type: 'success' });
       const dep = DEPARTURES.find((d) => d.room === room && !d.settled);
       if (dep) { dep.settled = true; dep.folio = folioTotal(f); }
       ROOMS[room].status = 'sale'; ROOMS[room].hk = 'dirty';
@@ -3231,18 +3570,24 @@
       const n = parseInt(arg, 10);
       const r = R()[n];
       const cu = isCustomHotel();
+      if (!r || r.status !== 'libre' || F()[n]) return;
       if (cu && roomTypeOf(n).base == null) {
         toast('Tarif non configuré', { type: 'info', desc: 'Ajoutez un tarif à cette chambre ou définissez le tarif général dans Tarifs.' });
         return;
       }
       const guest = cu ? 'Client sans nom' : 'Walk-in · M. Idrissi';
       const rate = roomTypeOf(n).base;
+      const stamp = cuStamp();
+      if (cu && !recordSale(rate, 'walkin-' + n + '-' + stamp, 'Walk-in · Ch. ' + n)) {
+        toast('Walk-in non enregistré', { type: 'warn', desc: 'La chambre reste libre. L’enregistrement du règlement est indisponible.' });
+        return;
+      }
       r.status = 'occ'; r.guest = guest; r.meta = 'Walk-in · 1 nuit · réglé d\'avance';
       F()[n] = { room: n, guest, src: 'walkin', pax: 1, nights: 1, lines: [
         { t: nowLabel(), label: 'Nuit 1 · ' + roomTypeOf(n).name, qty: '×1', amt: rate, src: 'room', paid: true },
         { t: 'auto', label: 'Taxe de séjour · 1 pers × 1 nuit', qty: '', amt: TAX_PP_NIGHT, src: 'taxe' },
-      ], updatedAt: cuStamp() };
-      if (cu) { r.updatedAt = cuStamp(); recordSale(rate, 'walkin-' + n + '-' + String(F()[n].updatedAt), 'Walk-in · Ch. ' + n); cuState().sold += 1; cuSave(); }
+      ], updatedAt: stamp };
+      if (cu) { r.updatedAt = stamp; cuState().sold += 1; cuSave(); }
       openModal?.close?.();
       toast('Ch. ' + n + ' vendue · ' + MAD(rate), { type: 'success', desc: 'Walk-in enregistré · occupation ce soir ' + counts().occToNight + ' / ' + totalRooms() + (cu ? ' · vente réelle au compteur.' : '.') });
       rerender();

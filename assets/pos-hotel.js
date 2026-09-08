@@ -155,6 +155,7 @@
       guest: cfg.guest, src: cfg.src,
       pax: cfg.pax, adults: cfg.adults != null ? cfg.adults : cfg.pax,
       nights: cfg.nights, day: cfg.day,
+      nightlyRate: roomRate(room),
       inAt, outAt,
       caution: cfg.caution || 'carte',
       cautionAmount: Math.max(0, +cfg.cautionAmount || 0),
@@ -303,8 +304,13 @@
 
   /* ───────────────────────── folio math ───────────────────────── */
   function chargeAmt(c) { return CHARGE[c.cid].unit * c.qty; }
+  // Old saved stays have no rate snapshot; keep their existing catalogue fallback.
+  function stayRate(st) {
+    return Number.isFinite(st.nightlyRate) && st.nightlyRate >= 0 ? st.nightlyRate : roomRate(st.room);
+  }
+  const POSTED_CHARGE_LOCK = 'Charge déjà enregistrée : modification indisponible sans annulation liée à la vente.';
   function stayTotals(st) {
-    const nuitees = roomRate(st.room) * st.nights;
+    const nuitees = stayRate(st) * st.nights;
     const taxe = TPT * st.adults * st.nights;
     const extras = st.charges.reduce((s, c) => s + chargeAmt(c), 0);
     const total = nuitees + taxe + extras;
@@ -401,7 +407,7 @@
      passée en ménage. Démo : no-op. */
   function staySaleLines(st, received) {
     const rows = [
-      { itemId: `chambre-${ROOMS[st.room].type}`, variantId: String(st.room), name: roomName(st.room), category: 'nuitees', qty: st.nights, unit: 'nuit', kind: 'service', base: roomRate(st.room) * st.nights },
+      { itemId: `chambre-${ROOMS[st.room].type}`, variantId: String(st.room), name: roomName(st.room), category: 'nuitees', qty: st.nights, unit: 'nuit', kind: 'service', base: stayRate(st) * st.nights },
       { itemId: 'taxe-sejour', name: 'Taxe de séjour', category: 'taxes', qty: st.adults * st.nights, unit: 'nuit-personne', kind: 'tax', base: TPT * st.adults * st.nights },
       ...st.charges.map((c) => ({ itemId: c.cid, variantId: c.uid, name: CHARGE[c.cid].label, category: 'extras', qty: c.qty, unit: CHARGE[c.cid].per, kind: 'service', base: chargeAmt(c) })),
     ].filter((r) => r.base > 0);
@@ -416,8 +422,25 @@
   }
   function postDay(total, method, label, ref, lines) {
     try {
-      if (window.KiwiPosSale) window.KiwiPosSale.record('hotel', { total, method, label, ref, lines });
+      if (typeof window.KiwiPosSale?.record !== 'function') return null;
+      const entry = window.KiwiPosSale.record('hotel', { total, method, label, ref, lines });
+      /* pos-sale.js returns { ts, total, m, method, ref, ... } or null,
+       * not KiwiLive.postSale's { ok, queued } result. Reject failure objects
+       * and malformed returns without requiring an `ok` field on real entries.
+       * Even a valid entry proves neither persistence nor a server ACK: the
+       * recorder currently swallows local-write and mirror failures. */
+      if (!entry || typeof entry !== 'object' || Array.isArray(entry)
+          || (entry.ok !== undefined && entry.ok !== true)
+          || typeof entry.then === 'function'
+          || !Number.isFinite(entry.ts) || entry.ts <= 0
+          || !Number.isFinite(entry.total) || entry.total <= 0
+          || entry.total !== Math.round(total * 100) / 100
+          || typeof entry.m !== 'string' || !entry.m.trim()
+          || typeof entry.method !== 'string' || !entry.method.trim()
+          || typeof entry.ref !== 'string' || !entry.ref.trim()) return null;
+      return entry;
     } catch (_) {}
+    return null;
   }
   /* Le numéro de facture repart AU-DELÀ de la dernière émise aujourd'hui :
      sans ça un rechargement le remet à F-1208 et deux séjours différents
@@ -1108,7 +1131,7 @@
             ${folioLine({
               cls: 'is-auto', art: ART.nuitee,
               name: `Nuitées · ${esc(roomName(n))} × ${st.nights}`,
-              sub: `${fmtMAD(roomRate(n)).replace(' MAD', '')} MAD/nuit · séjour complet`,
+              sub: `${fmtMAD(stayRate(st)).replace(' MAD', '')} MAD/nuit · séjour complet`,
               amt: t.nuitees, right: '<span class="ht-auto-pill">auto</span>',
             })}
             ${st.charges.map((c) => {
@@ -1118,11 +1141,12 @@
                 <span class="ht-fline-mid">
                   <span class="ht-fline-name">${esc(def.label)}${c.note ? ` · ${esc(c.note)}` : ''}</span>
                   <span class="ht-fline-sub">${esc(c.at)} · ${def.unit} MAD</span>
+                  ${c.saleId ? `<span class="ht-fline-sub">${esc(POSTED_CHARGE_LOCK)}</span>` : ''}
                 </span>
                 <span class="ht-fline-right">
                   <span class="ht-fline-amt">${fmtMAD(chargeAmt(c))}</span>
                   <span class="ht-fline-qty">
-                    <button data-ht-cminus="${c.uid}" aria-label="Retirer">−</button><b>${c.qty}</b><button data-ht-cplus="${c.uid}" aria-label="Ajouter">+</button>
+                    <button data-ht-cminus="${c.uid}" aria-label="Retirer" ${c.saleId ? `disabled title="${esc(POSTED_CHARGE_LOCK)}"` : ''}>−</button><b>${c.qty}</b><button data-ht-cplus="${c.uid}" aria-label="Ajouter" ${c.saleId ? `disabled title="${esc(POSTED_CHARGE_LOCK)}"` : ''}>+</button>
                   </span>
                 </span>
               </div>`;
@@ -1160,6 +1184,7 @@
       const idx = st.charges.findIndex((c) => c.uid === uid);
       if (idx < 0) return;
       const c = st.charges[idx];
+      if (c.saleId) { toast(POSTED_CHARGE_LOCK, 5000); return; }
       if (plus) { c.qty++; }
       else {
         c.qty--;
@@ -1241,7 +1266,7 @@
             return;
           }
         }
-        st.charges.push({ uid: `c${chargeUid++}`, cid, qty: sheet.qty, at: `auj. ${nowHM()}`, note: sheet.note, saleId });
+        st.charges.push({ uid: `c${chargeUid++}`, cid, qty: sheet.qty, at: new Date().toLocaleString('fr-FR'), note: sheet.note, saleId });
         close();
         queueIfOffline(`Charge ${def.label}`);
         toast(`${def.label} × ${sheet.qty}, posté sur le folio Ch. ${roomN} (+${fmtMAD(total)})`);
@@ -1378,13 +1403,22 @@
     };
 
     const done = (method, amount, rendu) => {
+      if (STAYS[n] !== st) return; // Ignore a repeated completion callback.
+      /* record() returns a browser journal entry, not a durable server ACK.
+       * Do not mutate the folio if even that recording step fails. */
+      if (amount > 0) {
+        const entry = postDay(amount, method, `Solde séjour · Ch. ${n} · ${st.guest}`, `F-${factureSeq}`, staySaleLines(st, amount));
+        if (pvReal() && !entry) {
+          toast('Paiement non enregistré. Séjour conservé ouvert. Vérifiez tout paiement déjà reçu avant de réessayer.', 6500);
+          return;
+        }
+      }
       if (method === 'carte') st.payments.push({ method, amount, label: 'Solde au départ · carte' });
       if (method === 'especes') st.payments.push({ method, amount, label: 'Solde au départ · espèces' });
       if (method === 'online') st.payments.push({ method, amount, label: `Réglé en ligne · ${online}` });
       /* Le folio déjà soldé passe par done(null, 0, 0) : rien n'est pris au
          comptoir ce jour-là, ce n'est donc pas une recette du jour — l'argent
          a été journalisé au moment où il est réellement rentré. */
-      if (amount > 0) postDay(amount, method, `Solde séjour · Ch. ${n} · ${st.guest}`, `F-${factureSeq}`, staySaleLines(st, amount));
       closeVeil('#ht-checkout-veil');
 
       /* clôture du séjour */
@@ -1430,7 +1464,7 @@
       ${st.police ? `<div class="row"><span>Fiche police</span><span>${st.police}</span></div>` : ''}
       <hr>
       <div class="row"><span class="nm">Nuitées · ${esc(roomName(st.room))} ×${st.nights}</span><span>${t.nuitees}</span></div>
-      ${st.charges.map((c) => `<div class="row"><span class="nm">${esc(CHARGE[c.cid].label)} ×${c.qty}${c.note ? ` (${esc(c.note)})` : ''}</span><span>${chargeAmt(c)}</span></div>`).join('')}
+      ${st.charges.map((c) => `<div class="row"><span class="nm">${c.at ? `${esc(c.at)} · ` : ''}${esc(CHARGE[c.cid].label)} ×${c.qty}${c.note ? ` (${esc(c.note)})` : ''}</span><span>${chargeAmt(c)}</span></div>`).join('')}
       <div class="row b"><span class="nm">Taxe de séjour (TPT) · ${st.adults} ad. ×${st.nights} nuits</span><span>${t.taxe}</span></div>
       <hr>
       <div class="row tot"><span>TOTAL</span><span>${t.total} MAD</span></div>
